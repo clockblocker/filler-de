@@ -13,26 +13,26 @@
 	"author": "clockblocker",
 	"license": "MIT",
 	"devDependencies": {
-		"@types/codemirror": "^5.60.15",
-		"@types/node": "^16.18.119",
-		"@types/tern": "^0.23.9",
-		"@typescript-eslint/eslint-plugin": "5.29.0",
-		"@typescript-eslint/parser": "5.29.0",
-		"builtin-modules": "3.3.0",
-		"esbuild": "0.17.3",
-		"eslint": "^9.23.0",
-		"eslint-config-prettier": "^10.1.1",
-		"eslint-plugin-prettier": "^5.2.5",
+		"@types/codemirror": "latest",
+		"@types/node": "latest",
+		"@types/tern": "latest",
+		"@typescript-eslint/eslint-plugin": "latest",
+		"@typescript-eslint/parser": "latest",
+		"builtin-modules": "latest",
+		"esbuild": "latest",
+		"eslint": "latest",
+		"eslint-config-prettier": "latest",
+		"eslint-plugin-prettier": "latest",
 		"obsidian": "latest",
-		"prettier": "^3.5.3",
-		"tslib": "2.4.0",
-		"typescript": "4.7.4"
+		"prettier": "latest",
+		"tslib": "latest",
+		"typescript": "latest"
 	},
 	"dependencies": {
-		"@google/generative-ai": "0.24.0",
-		"@types/sbd": "^1.0.5",
-		"sbd": "^1.0.19",
-		"typescript-eslint": "^8.28.0",
-		"zod": "^3.24.2"
+		"@google/generative-ai": "latest",
+		"@types/sbd": "latest",
+		"sbd": "latest",
+		"typescript-eslint": "latest",
+		"zod": "latest"
 	}
 }
