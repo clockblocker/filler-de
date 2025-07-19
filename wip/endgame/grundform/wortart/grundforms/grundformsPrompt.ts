@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod/v4';
 import { tests } from './tests';
 import { grundformsOutputSchema } from 'prompts/wip/endgame/zod/schemas';
 
@@ -82,14 +82,14 @@ const WortartSchema = z.enum([
 ]);
 
 const NomenGrundformSchema = z.object({
-  wortart: z.literal(WortartSchema.Enum.Nomen),
+  wortart: z.literal(WortartSchema.enum.Nomen),
   genus: GenusSchema,
   eigenname: z.optional(z.boolean()),
   ...CommonGrundformsFeildsSchema.shape,
 });
 
 const PronomenGrundformSchema = z.object({
-  wortart: z.literal(WortartSchema.Enum.Pronomen),
+  wortart: z.literal(WortartSchema.enum.Pronomen),
   pronomenType: PronomenTypeSchema,
   number: z.optional(z.array(NumerusSchema)),
   genera: z.optional(z.array(GenusSchema)),
@@ -97,62 +97,62 @@ const PronomenGrundformSchema = z.object({
 });
 
 const VerbGrundformSchema = z.object({
-  wortart: z.literal(WortartSchema.Enum.Verb),
+  wortart: z.literal(WortartSchema.enum.Verb),
   ...CommonGrundformsFeildsSchema.shape,
 });
 
 const AdjektivGrundformSchema = z.object({
-  wortart: z.literal(WortartSchema.Enum.Adjektiv),
+  wortart: z.literal(WortartSchema.enum.Adjektiv),
   ...CommonGrundformsFeildsSchema.shape,
 });
 
 const AdverbGrundformSchema = z.object({
-  wortart: z.literal(WortartSchema.Enum.Adverb),
+  wortart: z.literal(WortartSchema.enum.Adverb),
   ...CommonGrundformsFeildsSchema.shape,
 });
 
 const ArtikelGrundformSchema = z.object({
-  wortart: z.literal(WortartSchema.Enum.Artikel),
+  wortart: z.literal(WortartSchema.enum.Artikel),
   ...CommonGrundformsFeildsSchema.shape,
 });
 
 const PartikelGrundformSchema = z.object({
-  wortart: z.literal(WortartSchema.Enum.Partikel),
+  wortart: z.literal(WortartSchema.enum.Partikel),
   ...CommonGrundformsFeildsSchema.shape,
 });
 
 const KonjunktionGrundformSchema = z.object({
-  wortart: z.literal(WortartSchema.Enum.Konjunktion),
+  wortart: z.literal(WortartSchema.enum.Konjunktion),
   ...CommonGrundformsFeildsSchema.shape,
 });
 
 const PraepositionGrundformSchema = z.object({
-  wortart: z.literal(WortartSchema.Enum.Praeposition),
+  wortart: z.literal(WortartSchema.enum.Praeposition),
   ...CommonGrundformsFeildsSchema.shape,
 });
 
 const NumeraleGrundformSchema = z.object({
-  wortart: z.literal(WortartSchema.Enum.Numerale),
+  wortart: z.literal(WortartSchema.enum.Numerale),
   ...CommonGrundformsFeildsSchema.shape,
 });
 
 const PraefixGrundformSchema = z.object({
-  wortart: z.literal(WortartSchema.Enum.Praefix),
+  wortart: z.literal(WortartSchema.enum.Praefix),
   ...CommonGrundformsFeildsSchema.shape,
 });
 
 const InterjektionGrundformSchema = z.object({
-  wortart: z.literal(WortartSchema.Enum.Interjektion),
+  wortart: z.literal(WortartSchema.enum.Interjektion),
   ...CommonGrundformsFeildsSchema.shape,
 });
 
 const RedewendungGrundformSchema = z.object({
-    wortart: z.literal(WortartSchema.Enum.Redewendung),
+    wortart: z.literal(WortartSchema.enum.Redewendung),
     ...CommonGrundformsFeildsSchema.shape,
 });
 
 const UnbekanntGrundformSchema = z.object({
-    wortart: z.literal(WortartSchema.Enum.Unbekannt),
+    wortart: z.literal(WortartSchema.enum.Unbekannt),
     comment: z.string(),
     ...CommonGrundformsFeildsSchema.shape,
 });

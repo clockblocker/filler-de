@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod/v4';
 import {
 	GrundformSchema,
 	WortartSchema,
@@ -24,49 +24,49 @@ import {
 export type Grundform = z.infer<typeof GrundformSchema>;
 export type Nomen = z.infer<typeof NomenGrundformSchema>;
 export type Wortart = z.infer<typeof WortartSchema>;
-export const Wortart = WortartSchema.Enum;
+export const Wortart = WortartSchema.enum;
 
 // Genus, Kasus, NomenDeklination, Numerus
 export type Genus = z.infer<typeof GenusSchema>;
-export const Genus = GenusSchema.Enum;
+export const Genus = GenusSchema.enum;
 
 export type Kasus = z.infer<typeof KasusSchema>;
-export const Kasus = KasusSchema.Enum;
+export const Kasus = KasusSchema.enum;
 
 export type Regelmaessigkeit = z.infer<typeof RegelmaessigSchema>;
 
 export type Trennbarkeit = z.infer<typeof TrennbarkeitSchema>;
-export const Trennbarkeit = TrennbarkeitSchema.Enum;
+export const Trennbarkeit = TrennbarkeitSchema.enum;
 
 export type NomenDeklination = z.infer<typeof NomenDeklinationSchema>;
-export const NomenDeklination = NomenDeklinationSchema.Enum;
+export const NomenDeklination = NomenDeklinationSchema.enum;
 
 export type PartikelType = z.infer<typeof PartikelTypeSchema>;
-export const PartikelType = PartikelTypeSchema.Enum;
+export const PartikelType = PartikelTypeSchema.enum;
 
 export type AdverbCategory = z.infer<typeof AdverbCategorySchema>;
-export const AdverbCategory = AdverbCategorySchema.Enum;
+export const AdverbCategory = AdverbCategorySchema.enum;
 
 export type Numerus = z.infer<typeof NumerusSchema>;
-export const Numerus = NumerusSchema.Enum;
+export const Numerus = NumerusSchema.enum;
 
 export type PronomenType = z.infer<typeof PronomenTypeSchema>;
-export const PronomenType = PronomenTypeSchema.Enum;
+export const PronomenType = PronomenTypeSchema.enum;
 
 export type Morphem = z.infer<typeof MorphemSchema>;
-export const Morphem = MorphemSchema.Enum;
+export const Morphem = MorphemSchema.enum;
 
 // ---
 export type Steigerungsfaehigkeit = z.infer<typeof SteigerungsfaehigSchema>;
 
 export type Vergleichsgrad = z.infer<typeof VergleichsgradSchema>;
-export const Vergleichsgrad = VergleichsgradSchema.Enum;
+export const Vergleichsgrad = VergleichsgradSchema.enum;
 
 // ---
 
 export type GrundformsOutput = z.infer<typeof grundformsOutputSchema>;
 
-export const Match = MatchSchema.Enum;
+export const Match = MatchSchema.enum;
 export type Match = z.infer<typeof MatchSchema>;
 
 export type GrundformWithMatch = Grundform & { match: Match };

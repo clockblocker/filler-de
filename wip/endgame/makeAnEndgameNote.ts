@@ -13,8 +13,8 @@ import {
 import { formatGrundform } from './grundform/formatters/grundform';
 import { makeMorphemBlock } from './common-blocks/morphems';
 import { makeAdjektivBlock } from './grundform/wortart/adjektiv/makeAdjektivBlocks';
-import { makeNewFileContent } from './block-management/new-note';
-import { BlockId } from './block-management/types-and-constants';
+import { makeNewFileContent } from './note-block-management/new-note';
+import { BlockId } from './note-block-management/types-and-constants';
 import { setTimeout } from 'timers/promises';
 
 async function endgameLinkCase(

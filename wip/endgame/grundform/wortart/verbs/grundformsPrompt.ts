@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod/v4';
 import { tests } from './tests';
 import { grundformsOutputSchema } from 'prompts/wip/endgame/zod/schemas';
 
@@ -83,7 +83,7 @@ const GoverningPrepositionSchema = z.enum([
 ]);
 
 const NomenSchema = z.object({
-  wortart: z.literal(WortartSchema.Enum.Nomen),
+  wortart: z.literal(WortartSchema.enum.Nomen),
   genus: GenusSchema,
   deklination: NomenDeklinationSchema,
   eigenname: z.optional(z.boolean()),
@@ -91,7 +91,7 @@ const NomenSchema = z.object({
 });
 
 const PronomenSchema = z.object({
-  wortart: z.literal(WortartSchema.Enum.Pronomen),
+  wortart: z.literal(WortartSchema.enum.Pronomen),
   pronomenType: PronomenTypeSchema,
   number: z.optional(z.array(NumerusSchema)),
   genera: z.optional(z.array(GenusSchema)),
@@ -99,69 +99,69 @@ const PronomenSchema = z.object({
 });
 
 const VerbSchema = z.object({
-  wortart: z.literal(WortartSchema.Enum.Verb),
+  wortart: z.literal(WortartSchema.enum.Verb),
   trennbarkeit: z.optional(TrennbarkeitSchema),
   regelmaessig: RegelmaessigSchema,
   ...CommonFeildsSchema.shape,
 });
 
 const AdjektivSchema = z.object({
-  wortart: z.literal(WortartSchema.Enum.Adjektiv),
+  wortart: z.literal(WortartSchema.enum.Adjektiv),
   ...CommonFeildsSchema.shape,
 });
 
 const AdverbSchema = z.object({
-  wortart: z.literal(WortartSchema.Enum.Adverb),
+  wortart: z.literal(WortartSchema.enum.Adverb),
   adverbCategory: z.array(AdverbCategorySchema),
   ...CommonFeildsSchema.shape,
 });
 
 const ArtikelSchema = z.object({
-  wortart: z.literal(WortartSchema.Enum.Artikel),
+  wortart: z.literal(WortartSchema.enum.Artikel),
   artikelType: ArtikelTypeSchema,
   ...CommonFeildsSchema.shape,
 });
 
 const PartikelSchema = z.object({
-  wortart: z.literal(WortartSchema.Enum.Partikel),
+  wortart: z.literal(WortartSchema.enum.Partikel),
   partikelType: z.array(PartikelTypeSchema),
   ...CommonFeildsSchema.shape,
 });
 
 const KonjunktionSchema = z.object({
-  wortart: z.literal(WortartSchema.Enum.Konjunktion),
+  wortart: z.literal(WortartSchema.enum.Konjunktion),
   konjunktionType: KonjunktionTypeSchema,
   ...CommonFeildsSchema.shape,
 });
 
 const PraepositionSchema = z.object({
-  wortart: z.literal(WortartSchema.Enum.Praeposition),
+  wortart: z.literal(WortartSchema.enum.Praeposition),
   possibleGoverningKasuss: z.optional(z.array(KasusSchema)),
   ...CommonFeildsSchema.shape,
 });
 
 const NumeraleSchema = z.object({
-  wortart: z.literal(WortartSchema.Enum.Numerale),
+  wortart: z.literal(WortartSchema.enum.Numerale),
   ...CommonFeildsSchema.shape,
 });
 
 const PraefixSchema = z.object({
-  wortart: z.literal(WortartSchema.Enum.Praefix),
+  wortart: z.literal(WortartSchema.enum.Praefix),
   ...CommonFeildsSchema.shape,
 });
 
 const InterjektionSchema = z.object({
-  wortart: z.literal(WortartSchema.Enum.Interjektion),
+  wortart: z.literal(WortartSchema.enum.Interjektion),
   ...CommonFeildsSchema.shape,
 });
 
 const RedewendungSchema = z.object({
-    wortart: z.literal(WortartSchema.Enum.Redewendung),
+    wortart: z.literal(WortartSchema.enum.Redewendung),
     ...CommonFeildsSchema.shape,
 });
 
 const UnbekanntSchema = z.object({
-    wortart: z.literal(WortartSchema.Enum.Unbekannt),
+    wortart: z.literal(WortartSchema.enum.Unbekannt),
     comment: z.string(),
     ...CommonFeildsSchema.shape,
 });

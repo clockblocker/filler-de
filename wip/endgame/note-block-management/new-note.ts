@@ -1,21 +1,25 @@
-import { mergeBlockContentsFromIds } from './merging-blocks';
+import { mergeBlockContentsFromIds } from './merging-note-blocks';
 import {
-	BlockId,
+	NoteBlockId,
 	NEW_LINE,
 	ALL_BLOCK_IDS,
 	BlockStructure,
 	BLOCK_DELIMETER,
 	SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS,
-	ContentFromBlockId,
+	ContentFromNoteBlockId,
 	BlockRepr,
 	FileContent,
 	BlockContent,
+	noteBlockPropsFromNoteBlockId,
+	NOTE_BLOCK_TITLE_CSS_CLASS,
+	makeBlockHeaderElementFromNoteBlockId,
 } from './types-and-constants';
 
-function getBlockRegex({ blockId }: { blockId: BlockId }): RegExp {
-	const cssClass = cssClassNameFromBlockId[blockId];
+function getBlockRegex({ blockId }: { blockId: NoteBlockId }): RegExp {
+	const cssClass = noteBlockPropsFromNoteBlockId[blockId].cssClassName;
+
 	return new RegExp(
-		`(<span\\s+class=["']block_title\\s+${cssClass}["']>[^<]+</span>)([\\s\\S]*?)(?=(${BLOCK_DELIMETER}|<|$))`,
+		`(<span\\s+class=["']${NOTE_BLOCK_TITLE_CSS_CLASS}\\s+${cssClass}["']>[^<]+</span>)([\\s\\S]*?)(?=(${BLOCK_DELIMETER}|<|$))`,
 		'g'
 	);
 }
@@ -25,7 +29,7 @@ function extractBlockContent({
 	blockId,
 }: {
 	content: FileContent;
-	blockId: BlockId;
+	blockId: NoteBlockId;
 }): BlockContent {
 	const regex = getBlockRegex({ blockId });
 	const match = regex.exec(content);
@@ -34,9 +38,9 @@ function extractBlockContent({
 
 function BUILD_blockContentFromId_FROM_fileContent(
 	fileContent: string
-): Record<BlockId, BlockContent> {
-	const oldBlockContentRecord: Record<BlockId, BlockContent> = {} as Record<
-		BlockId,
+): Record<NoteBlockId, BlockContent> {
+	const oldBlockContentRecord: Record<NoteBlockId, BlockContent> = {} as Record<
+		NoteBlockId,
 		BlockContent
 	>;
 
@@ -50,29 +54,38 @@ function BUILD_blockContentFromId_FROM_fileContent(
 	return oldBlockContentRecord;
 }
 
-function getNewSortedListByBlockId<T extends { id: BlockId }>(
+function getNewSortedListByNoteBlockId<T extends { id: NoteBlockId }>(
 	blockIdsAndSomething: T[]
 ): T[] {
-	return [...blockIdsAndSomething].sort(
-		(a, b) => weightFromBlockId[a.id] - weightFromBlockId[b.id]
-	);
+	return [...blockIdsAndSomething].sort((a, b) => {
+		const { weight: weightA } = noteBlockPropsFromNoteBlockId[a.id];
+		const { weight: weightB } = noteBlockPropsFromNoteBlockId[b.id];
+
+		return weightA - weightB;
+	});
 }
 
-function BUILD_sortedBlockStructures_FROM_mergedContentFromBlockId(
-	mergedContentFromBlockId: Partial<ContentFromBlockId>
+function BUILD_sortedBlockStructures_FROM_mergedContentFromNoteBlockId(
+	mergedContentFromNoteBlockId: Partial<ContentFromNoteBlockId>
 ): BlockStructure[] {
-	const blocksIdsAndStructures: { id: BlockId; structure: BlockStructure }[] =
-		[];
+	const blocksIdsAndStructures: {
+		id: NoteBlockId;
+		structure: BlockStructure;
+	}[] = [];
 
 	ALL_BLOCK_IDS.forEach((id) => {
-		const blockContent = mergedContentFromBlockId?.[id];
+		const blockContent = mergedContentFromNoteBlockId?.[id];
 		if (blockContent === undefined) {
 			return;
 		}
 
-		const trimmedHeaderElement = blockHeaderElementFromBlockId[id].trim();
+		const trimmedHeaderElement =
+			makeBlockHeaderElementFromNoteBlockId(id).trim();
+
 		const trimmedContent = blockContent.trim();
-		const preDelimeterSpacing = preDelimeterSpacingFromBlockId[id];
+
+		const preDelimeterSpacing =
+			noteBlockPropsFromNoteBlockId[id].preDelimeterSpacing;
 
 		const structure = {
 			headerElement: trimmedHeaderElement,
@@ -84,7 +97,7 @@ function BUILD_sortedBlockStructures_FROM_mergedContentFromBlockId(
 		blocksIdsAndStructures.push({ id, structure });
 	});
 
-	return getNewSortedListByBlockId(blocksIdsAndStructures).map(
+	return getNewSortedListByNoteBlockId(blocksIdsAndStructures).map(
 		({ structure }) => structure
 	);
 }
@@ -114,24 +127,24 @@ function BUILD_fileContent_FROM_sortedBlockReprs(
 export async function makeNewFileContent({
 	oldFileContent,
 	newBlockContentFromId,
-	setOfBlockIdsToCreateIfEmpty = SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS,
+	setOfNoteBlockIdsToCreateIfEmpty = SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS,
 }: {
 	oldFileContent: FileContent;
-	newBlockContentFromId: Partial<ContentFromBlockId>;
-	setOfBlockIdsToCreateIfEmpty?: Set<BlockId>;
+	newBlockContentFromId: Partial<ContentFromNoteBlockId>;
+	setOfNoteBlockIdsToCreateIfEmpty?: Set<NoteBlockId>;
 }): Promise<FileContent> {
 	const oldBlockContentFromId =
 		BUILD_blockContentFromId_FROM_fileContent(oldFileContent);
 
 	const blockContentsFromIds = [newBlockContentFromId, oldBlockContentFromId];
-	const mergedContentFromBlockId = mergeBlockContentsFromIds({
+	const mergedContentFromNoteBlockId = mergeBlockContentsFromIds({
 		blockContentsFromIds,
-		setOfBlockIdsToCreateIfEmpty,
+		setOfNoteBlockIdsToCreateIfEmpty,
 	});
 
 	const sortedBlockStructures =
-		BUILD_sortedBlockStructures_FROM_mergedContentFromBlockId(
-			mergedContentFromBlockId
+		BUILD_sortedBlockStructures_FROM_mergedContentFromNoteBlockId(
+			mergedContentFromNoteBlockId
 		);
 
 	const sortedBlockReprs = BUILD_sortedBlockReprs_FROM_sortedBlockStructures(

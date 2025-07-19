@@ -7,7 +7,7 @@ export const COMMA = ',';
 export const SPACE = ' ';
 export const HASHTAG = '#';
 
-const blockIds = [
+const noteBlockIds = [
 	'Formen',
 	'Kontexte',
 	'Synonyme',
@@ -19,171 +19,183 @@ const blockIds = [
 	'Tags',
 ] as const;
 // Assume these constants are defined elsewhere in your code:
-const BlockIdSchema = z.enum(blockIds);
+const NoteBlockIdSchema = z.enum(noteBlockIds);
 
-export const BlockId = BlockIdSchema.enum;
-export type BlockId = z.infer<typeof BlockIdSchema>;
-export const ALL_BLOCK_IDS = [...blockIds] as BlockId[];
+export const NoteBlockId = NoteBlockIdSchema.enum;
+export type NoteBlockId = z.infer<typeof NoteBlockIdSchema>;
+export const ALL_BLOCK_IDS = [...noteBlockIds] as NoteBlockId[];
 
-type BlockProps = {
+export const NOTE_BLOCK_TITLE_CSS_CLASS = 'block_title';
+
+type NoteBlockProps = {
 	cssClassName: string;
 	deBlockTitle: string;
 	preDelimeterSpacing: string;
 	weight: number;
 };
 
-export const blockPropsFromBlockId: Record<BlockId, BlockProps> = {
-	[BlockId.Formen]: {
-		cssClassName: 'block_title_formen',
+export const noteBlockPropsFromNoteBlockId: Record<
+	NoteBlockId,
+	NoteBlockProps
+> = {
+	[NoteBlockId.Formen]: {
+		cssClassName: `${NOTE_BLOCK_TITLE_CSS_CLASS}_formen`,
 		deBlockTitle: 'Formen',
 		preDelimeterSpacing: NEW_LINE,
 		weight: 0,
 	},
-	[BlockId.Kontexte]: {
-		cssClassName: 'block_title_kontexte',
+	[NoteBlockId.Kontexte]: {
+		cssClassName: `${NOTE_BLOCK_TITLE_CSS_CLASS}_kontexte`,
 		deBlockTitle: 'Kontexte',
 		preDelimeterSpacing: `${NEW_LINE}${NEW_LINE}`,
 		weight: 1,
 	},
-	[BlockId.Synonyme]: {
-		cssClassName: 'block_title_synonyme',
+	[NoteBlockId.Synonyme]: {
+		cssClassName: `${NOTE_BLOCK_TITLE_CSS_CLASS}_synonyme`,
 		deBlockTitle: 'Beziehungen',
 		preDelimeterSpacing: NEW_LINE,
 		weight: 10,
 	},
-	[BlockId.Morpheme]: {
-		cssClassName: 'block_title_morpheme',
+	[NoteBlockId.Morpheme]: {
+		cssClassName: `${NOTE_BLOCK_TITLE_CSS_CLASS}_morpheme`,
 		deBlockTitle: 'Morpheme',
 		preDelimeterSpacing: NEW_LINE,
 		weight: 20,
 	},
-	[BlockId.Translations]: {
-		cssClassName: 'block_title_translations',
+	[NoteBlockId.Translations]: {
+		cssClassName: `${NOTE_BLOCK_TITLE_CSS_CLASS}_translations`,
 		deBlockTitle: 'Übersetzung',
 		preDelimeterSpacing: NEW_LINE,
 		weight: 30,
 	},
-	[BlockId.Related]: {
-		cssClassName: 'block_title_related',
+	[NoteBlockId.Related]: {
+		cssClassName: `${NOTE_BLOCK_TITLE_CSS_CLASS}_related`,
 		deBlockTitle: 'Verweise',
 		preDelimeterSpacing: NEW_LINE,
 		weight: 40,
 	},
-	[BlockId.Flexion]: {
-		cssClassName: 'block_title_flexion',
+	[NoteBlockId.Flexion]: {
+		cssClassName: `${NOTE_BLOCK_TITLE_CSS_CLASS}_flexion`,
 		deBlockTitle: 'Flexion',
 		preDelimeterSpacing: NEW_LINE,
 		weight: 50,
 	},
-	[BlockId.Grammatik]: {
-		cssClassName: 'block_title_grammatik',
+	[NoteBlockId.Grammatik]: {
+		cssClassName: `${NOTE_BLOCK_TITLE_CSS_CLASS}_grammatik`,
 		deBlockTitle: 'Grammatik',
 		preDelimeterSpacing: NEW_LINE,
 		weight: 60,
 	},
-	[BlockId.Tags]: {
-		cssClassName: 'block_title_tags',
+	[NoteBlockId.Tags]: {
+		cssClassName: `${NOTE_BLOCK_TITLE_CSS_CLASS}_tags`,
 		deBlockTitle: 'Tags',
 		preDelimeterSpacing: NEW_LINE,
 		weight: 100,
 	},
 };
 
-const makeBlockHeaderElementFromBlockId = (id: BlockId) => {
-	const { cssClassName, deBlockTitle } = blockPropsFromBlockId[id];
-	return `<span class="block_title ${cssClassName}">${deBlockTitle}</span>`;
+export const makeBlockHeaderElementFromNoteBlockId = (id: NoteBlockId) => {
+	const { cssClassName, deBlockTitle } = noteBlockPropsFromNoteBlockId[id];
+	return `<span class="${NOTE_BLOCK_TITLE_CSS_CLASS} ${cssClassName}">${deBlockTitle}</span>`;
 };
 
 export const BLOCK_DELIMETER = '---' as const;
 export type BlockContent = string;
 export type BlockHeaderElement = string;
-export type BlockPreDelimeterSpacing = string;
+export type NoteBlockPreDelimeterSpacing = string;
 
 export type BlockStructure = {
 	headerElement: BlockHeaderElement;
 	content: BlockContent;
-	preDelimeterSpacing: BlockPreDelimeterSpacing;
+	preDelimeterSpacing: NoteBlockPreDelimeterSpacing;
 	delimeter: typeof BLOCK_DELIMETER;
 };
 
 export type BlockRepr = string;
 export type FileContent = string;
-export type ContentFromBlockId = Record<BlockId, BlockStructure['content']>;
+export type ContentFromNoteBlockId = Record<
+	NoteBlockId,
+	BlockStructure['content']
+>;
 
-export const reprFromBlockSchema = z.record(BlockIdSchema, z.string());
+export const reprFromBlockSchema = z.record(NoteBlockIdSchema, z.string());
 
 // ---
-const meningfullBlockIdsSet = new Set([BlockId.Formen, BlockId.Kontexte]);
-const blockIdForFlexersSet = new Set([
-	BlockId.Synonyme,
-	BlockId.Morpheme,
-	BlockId.Translations,
-	BlockId.Flexion,
+const meningfullNoteBlockIdsSet = new Set([
+	NoteBlockId.Formen,
+	NoteBlockId.Kontexte,
+]);
+
+const noteBlockIdForFlexersSet = new Set([
+	NoteBlockId.Synonyme,
+	NoteBlockId.Morpheme,
+	NoteBlockId.Translations,
+	NoteBlockId.Flexion,
 ]);
 
 export const SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS = new Set([
-	BlockId.Related,
-	BlockId.Tags,
+	NoteBlockId.Related,
+	NoteBlockId.Tags,
 ]);
 
-export const RequiredSetOfBlockIdsFromWortart = {
+export const RequiredSetOfNoteBlockIdsFromWortart = {
 	Nomen: new Set([
-		...meningfullBlockIdsSet,
-		...blockIdForFlexersSet,
+		...meningfullNoteBlockIdsSet,
+		...noteBlockIdForFlexersSet,
 		...SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS,
 	]),
 	Pronomen: new Set([
-		...meningfullBlockIdsSet,
-		...blockIdForFlexersSet,
+		...meningfullNoteBlockIdsSet,
+		...noteBlockIdForFlexersSet,
 		...SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS,
 	]),
 	Verb: new Set([
-		...meningfullBlockIdsSet,
-		...blockIdForFlexersSet,
+		...meningfullNoteBlockIdsSet,
+		...noteBlockIdForFlexersSet,
 		...SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS,
 	]),
 	Adjektiv: new Set([
-		...meningfullBlockIdsSet,
-		...blockIdForFlexersSet,
+		...meningfullNoteBlockIdsSet,
+		...noteBlockIdForFlexersSet,
 		...SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS,
 	]),
 	Numerale: new Set([
-		...meningfullBlockIdsSet,
-		...blockIdForFlexersSet,
+		...meningfullNoteBlockIdsSet,
+		...noteBlockIdForFlexersSet,
 		...SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS,
 	]),
 
 	Artikel: new Set([
-		...meningfullBlockIdsSet,
-		BlockId.Grammatik,
+		...meningfullNoteBlockIdsSet,
+		NoteBlockId.Grammatik,
 		...SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS,
 	]),
 	Partikel: new Set([
-		...meningfullBlockIdsSet,
-		BlockId.Grammatik,
+		...meningfullNoteBlockIdsSet,
+		NoteBlockId.Grammatik,
 		...SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS,
 	]),
 	Praeposition: new Set([
-		...meningfullBlockIdsSet,
-		BlockId.Grammatik,
+		...meningfullNoteBlockIdsSet,
+		NoteBlockId.Grammatik,
 		...SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS,
 	]),
 	Konjunktion: new Set([
-		...meningfullBlockIdsSet,
-		BlockId.Grammatik,
+		...meningfullNoteBlockIdsSet,
+		NoteBlockId.Grammatik,
 		...SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS,
 	]),
 
 	Adverb: new Set([
-		...meningfullBlockIdsSet,
+		...meningfullNoteBlockIdsSet,
 		...SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS,
 	]),
 	Redewendung: new Set([
-		...meningfullBlockIdsSet,
+		...meningfullNoteBlockIdsSet,
 		...SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS,
 	]),
 	Interjektion: new Set([
-		...meningfullBlockIdsSet,
+		...meningfullNoteBlockIdsSet,
 		...SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS,
 	]),
 
@@ -195,11 +207,11 @@ export const RequiredSetOfBlockIdsFromWortart = {
 // ---
 
 export const noteExample = `
-<span class="block_title block_title_formen">Formen</span>
+<span class="note_block_title note_block_title_formen">Formen</span>
 🏭 das [[Kohlekraftwerk]], [ˈkoːləˌkraftvɛɐ̯k ♫](https://youglish.com/pronounce/Kohlekraftwerk/german)
 
 ----
-<span class="block_title block_title_kontexte">Deine Kontexte</span>
+<span class="note_block_title note_block_title_kontexte">Deine Kontexte</span>
 *[[Atom#^7|^]]* Polen will weg von der Kohle. Noch 2024 wurde weit über die [[Hälfte]] des polnischen Stroms durch [[Kohlekraftwerke]] [[erzeugt]] – mit fatalen Folgen für Klima und Umwelt. ^7
 
 
@@ -207,33 +219,33 @@ export const noteExample = `
 
 
 ---
-<span class="block_title block_title_synonyme">Semantische Beziehungen</span>
+<span class="note_block_title note_block_title_synonyme">Semantische Beziehungen</span>
 = [[Kraftwerk]], [[Stromerzeugungsanlage]], [[Stromerzeugungsanlage]]
 ≈ [[Industrieanlage]], [[Fabrik]]
 ≠ [[Windrad]], [[Solaranlage]]
 
 ---
-<span class="block_title block_title_morpheme">Morpheme</span>
+<span class="note_block_title note_block_title_morpheme">Morpheme</span>
 [[Kohle]]|[[kraft]]|[[werk]]|[[e]]
 [[Kohle]] + [[Kraftwerke]]
 
 ---
-<span class="block_title block_title_translations">Übersetzung</span>
+<span class="note_block_title note_block_title_translations">Übersetzung</span>
 coal-fired power plant | 
 угольная электростанция | 
 
 ---
-<span class="block_title block_title_related">Verweise</span>
+<span class="note_block_title note_block_title_related">Verweise</span>
 [[Kohle]], [[Kraftwerk]]
 
 ---
-<span class="block_title block_title_flexion">Flexion</span>
+<span class="note_block_title note_block_title_flexion">Flexion</span>
 N: das [[Kohlekraftwerk]], die [[Kohlekraftwerke]]  
 A: das [[Kohlekraftwerk]], die [[Kohlekraftwerke]]  
 G: des [[Kohlekraftwerkes]], der [[Kohlekraftwerke]]  
 D: dem [[Kohlekraftwerk]], den [[Kohlekraftwerken]]
 
 ---
-<span class="block_title block_title_tags">Tags</span>
+<span class="note_block_title note_block_title_tags">Tags</span>
 #Ablaut  #Ableitung  #Abtönung 
 `;

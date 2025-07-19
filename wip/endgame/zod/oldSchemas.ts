@@ -67,7 +67,7 @@
 // ]);
 
 // const NomenGrundformSchema = z.object({
-//   wortart: z.literal(WortartSchema.Enum.Nomen),
+//   wortart: z.literal(WortartSchema.enum.Nomen),
 //   genus: GenusSchema,
 //   deklination: NomenDeklinationSchema,
 //   eigenname: z.optional(z.boolean()),
@@ -75,7 +75,7 @@
 // });
 
 // const PronomenGrundformSchema = z.object({
-//   wortart: z.literal(WortartSchema.Enum.Pronomen),
+//   wortart: z.literal(WortartSchema.enum.Pronomen),
 //   pronomenType: PronomenTypeSchema,
 //   number: z.optional(z.array(NumerusSchema)),
 //   genera: z.optional(z.array(GenusSchema)),
@@ -83,69 +83,69 @@
 // });
 
 // const VerbGrundformSchema = z.object({
-//   wortart: z.literal(WortartSchema.Enum.Verb),
+//   wortart: z.literal(WortartSchema.enum.Verb),
 //   trennbarkeit: z.optional(TrennbarkeitSchema),
 //   regelmaessig: RegelmaessigSchema,
 //   ...CommonGrundformsFeildsSchema.shape,
 // });
 
 // const AdjektivGrundformSchema = z.object({
-//   wortart: z.literal(WortartSchema.Enum.Adjektiv),
+//   wortart: z.literal(WortartSchema.enum.Adjektiv),
 //   ...CommonGrundformsFeildsSchema.shape,
 // });
 
 // const AdverbGrundformSchema = z.object({
-//   wortart: z.literal(WortartSchema.Enum.Adverb),
+//   wortart: z.literal(WortartSchema.enum.Adverb),
 //   adverbCategory: z.array(AdverbCategorySchema),
 //   ...CommonGrundformsFeildsSchema.shape,
 // });
 
 // const ArtikelGrundformSchema = z.object({
-//   wortart: z.literal(WortartSchema.Enum.Artikel),
+//   wortart: z.literal(WortartSchema.enum.Artikel),
 //   artikelType: ArtikelTypeSchema,
 //   ...CommonGrundformsFeildsSchema.shape,
 // });
 
 // const PartikelGrundformSchema = z.object({
-//   wortart: z.literal(WortartSchema.Enum.Partikel),
+//   wortart: z.literal(WortartSchema.enum.Partikel),
 //   partikelType: z.array(PartikelTypeSchema),
 //   ...CommonGrundformsFeildsSchema.shape,
 // });
 
 // const KonjunktionGrundformSchema = z.object({
-//   wortart: z.literal(WortartSchema.Enum.Konjunktion),
+//   wortart: z.literal(WortartSchema.enum.Konjunktion),
 //   konjunktionType: KonjunktionTypeSchema,
 //   ...CommonGrundformsFeildsSchema.shape,
 // });
 
 // const PraepositionGrundformSchema = z.object({
-//   wortart: z.literal(WortartSchema.Enum.Praeposition),
+//   wortart: z.literal(WortartSchema.enum.Praeposition),
 //   possibleGoverningKasuss: z.optional(z.array(KasusSchema)),
 //   ...CommonGrundformsFeildsSchema.shape,
 // });
 
 // const NumeraleGrundformSchema = z.object({
-//   wortart: z.literal(WortartSchema.Enum.Numerale),
+//   wortart: z.literal(WortartSchema.enum.Numerale),
 //   ...CommonGrundformsFeildsSchema.shape,
 // });
 
 // const PraefixGrundformSchema = z.object({
-//   wortart: z.literal(WortartSchema.Enum.Praefix),
+//   wortart: z.literal(WortartSchema.enum.Praefix),
 //   ...CommonGrundformsFeildsSchema.shape,
 // });
 
 // const InterjektionGrundformSchema = z.object({
-//   wortart: z.literal(WortartSchema.Enum.Interjektion),
+//   wortart: z.literal(WortartSchema.enum.Interjektion),
 //   ...CommonGrundformsFeildsSchema.shape,
 // });
 
 // const RedewendungGrundformSchema = z.object({
-//     wortart: z.literal(WortartSchema.Enum.Redewendung),
+//     wortart: z.literal(WortartSchema.enum.Redewendung),
 //     ...CommonGrundformsFeildsSchema.shape,
 // });
 
 // const UnbekanntGrundformSchema = z.object({
-//     wortart: z.literal(WortartSchema.Enum.Unbekannt),
+//     wortart: z.literal(WortartSchema.enum.Unbekannt),
 //     comment: z.string(),
 //     ...CommonGrundformsFeildsSchema.shape,
 // });

@@ -1,6 +1,6 @@
 import {
-	ContentFromBlockId,
-	BlockId,
+	ContentFromNoteBlockId,
+	NoteBlockId,
 	BlockContent,
 	ALL_BLOCK_IDS,
 	NEW_LINE,
@@ -13,27 +13,27 @@ import {
 
 export function mergeBlockContentsFromIds({
 	blockContentsFromIds,
-	setOfBlockIdsToCreateIfEmpty,
+	setOfNoteBlockIdsToCreateIfEmpty,
 }: {
-	blockContentsFromIds: Partial<ContentFromBlockId>[];
-	setOfBlockIdsToCreateIfEmpty: Set<BlockId>;
-}): ContentFromBlockId {
-	const mergedBlockContentFromBlockId: ContentFromBlockId =
-		{} as ContentFromBlockId;
+	blockContentsFromIds: Partial<ContentFromNoteBlockId>[];
+	setOfNoteBlockIdsToCreateIfEmpty: Set<NoteBlockId>;
+}): ContentFromNoteBlockId {
+	const mergedBlockContentFromNoteBlockId: ContentFromNoteBlockId =
+		{} as ContentFromNoteBlockId;
 
 	ALL_BLOCK_IDS.forEach((blockId) => {
-		const mergedContent = mergerFromBlockId[blockId](
+		const mergedContent = mergerFromNoteBlockId[blockId](
 			blockContentsFromIds.map(
 				(blockContentFromId) => blockContentFromId[blockId] || ''
 			)
 		);
 
-		if (mergedContent || setOfBlockIdsToCreateIfEmpty.has(blockId)) {
-			mergedBlockContentFromBlockId[blockId] = mergedContent;
+		if (mergedContent || setOfNoteBlockIdsToCreateIfEmpty.has(blockId)) {
+			mergedBlockContentFromNoteBlockId[blockId] = mergedContent;
 		}
 	});
 
-	return mergedBlockContentFromBlockId;
+	return mergedBlockContentFromNoteBlockId;
 }
 
 type BlocksMerger = (contents: BlockContent[]) => BlockContent;
@@ -116,14 +116,14 @@ export const lastReplaces: BlocksMerger = (contents) => {
 	return trimmedAndFilteredContents[lastIndex];
 };
 
-const mergerFromBlockId: Record<BlockId, BlocksMerger> = {
-	[BlockId.Formen]: joinNonEmptyWithNewLine,
-	[BlockId.Kontexte]: joinNonEmptyWithNewLine,
-	[BlockId.Synonyme]: joinLinesWithVertikalStick,
-	[BlockId.Morpheme]: lastReplaces,
-	[BlockId.Translations]: joinLinesWithVertikalStick,
-	[BlockId.Related]: mergeWords,
-	[BlockId.Flexion]: joinNonEmptyWithNewLine,
-	[BlockId.Grammatik]: joinNonEmptyWithNewLine,
-	[BlockId.Tags]: mergeTags,
+const mergerFromNoteBlockId: Record<NoteBlockId, BlocksMerger> = {
+	[NoteBlockId.Formen]: joinNonEmptyWithNewLine,
+	[NoteBlockId.Kontexte]: joinNonEmptyWithNewLine,
+	[NoteBlockId.Synonyme]: joinLinesWithVertikalStick,
+	[NoteBlockId.Morpheme]: lastReplaces,
+	[NoteBlockId.Translations]: joinLinesWithVertikalStick,
+	[NoteBlockId.Related]: mergeWords,
+	[NoteBlockId.Flexion]: joinNonEmptyWithNewLine,
+	[NoteBlockId.Grammatik]: joinNonEmptyWithNewLine,
+	[NoteBlockId.Tags]: mergeTags,
 };

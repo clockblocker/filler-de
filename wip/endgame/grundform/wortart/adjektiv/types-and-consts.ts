@@ -5,7 +5,7 @@ import {
 	Numerus,
 	Vergleichsgrad,
 } from 'prompts/wip/endgame/zod/types';
-import { z } from 'zod';
+import { z } from 'zod/v4';
 
 const FormSchema = z.object({
 	artikel: z.string(),
