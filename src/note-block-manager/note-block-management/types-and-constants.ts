@@ -207,45 +207,30 @@ export const RequiredSetOfNoteBlockIdsFromWortart = {
 // ---
 
 export const noteExample = `
-<span class="note_block_title note_block_title_formen">Formen</span>
+
+<span class="note_block_title note_block_title_formen">Als 
+Nomen</span>
 🏭 das [[Kohlekraftwerk]], [ˈkoːləˌkraftvɛɐ̯k ♫](https://youglish.com/pronounce/Kohlekraftwerk/german)
-
-----
 <span class="note_block_title note_block_title_kontexte">Deine Kontexte</span>
-*[[Atom#^7|^]]* Polen will weg von der Kohle. Noch 2024 wurde weit über die [[Hälfte]] des polnischen Stroms durch [[Kohlekraftwerke]] [[erzeugt]] – mit fatalen Folgen für Klima und Umwelt. ^7
+![[Atom#^13|^]]
 
-
-*[[Atom#^13|^]]* Wenn sie die [[Kohlekraftwerke]] [[abschalten]], womit werden wir dann heizen? Wir haben kleine Kinder, also sind wir [[dagegen]]. ^13
-
-
----
+![[Atom#^14|^]]
 <span class="note_block_title note_block_title_synonyme">Semantische Beziehungen</span>
-= [[Kraftwerk]], [[Stromerzeugungsanlage]], [[Stromerzeugungsanlage]]
-≈ [[Industrieanlage]], [[Fabrik]]
-≠ [[Windrad]], [[Solaranlage]]
-
----
+= [[Kraftwerk]], [[Stromerzeugungsanlage]], [[Stromerzeugungsanlage]] 
+≈ [[Industrieanlage]], [[Fabrik]] 
+≠ [[Windrad]], [[Solaranlage]] 
 <span class="note_block_title note_block_title_morpheme">Morpheme</span>
-[[Kohle]]|[[kraft]]|[[werk]]|[[e]]
-[[Kohle]] + [[Kraftwerke]]
-
----
+ [[Kohle]]|[[kraft]]|[[werk]]|[[e]] 
+ [[Kohle]] + [[Kraftwerke]] 
 <span class="note_block_title note_block_title_translations">Übersetzung</span>
-coal-fired power plant | 
-угольная электростанция | 
-
----
+coal-fired power plant 
 <span class="note_block_title note_block_title_related">Verweise</span>
-[[Kohle]], [[Kraftwerk]]
-
----
+ [[Kohle]], [[Kraftwerk]]
 <span class="note_block_title note_block_title_flexion">Flexion</span>
-N: das [[Kohlekraftwerk]], die [[Kohlekraftwerke]]  
-A: das [[Kohlekraftwerk]], die [[Kohlekraftwerke]]  
-G: des [[Kohlekraftwerkes]], der [[Kohlekraftwerke]]  
-D: dem [[Kohlekraftwerk]], den [[Kohlekraftwerken]]
-
----
+N: das [[Kohlekraftwerk]], die [[Kohlekraftwerke]]   
+A: das [[Kohlekraftwerk]], die [[Kohlekraftwerke]]   
+G: des [[Kohlekraftwerkes]], der [[Kohlekraftwerke]]   
+D: dem [[Kohlekraftwerk]], den [[Kohlekraftwerken]] 
 <span class="note_block_title note_block_title_tags">Tags</span>
-#Ablaut  #Ableitung  #Abtönung 
+#Ablaut  #Ableitung  #Abtönung  
 `;

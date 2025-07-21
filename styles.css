@@ -1,0 +1,52 @@
+.note_block_title {
+	float: right;
+	justify-content: flex-end;
+
+	opacity: 0.1;
+
+	display: flex;
+	width: 100%;
+	border-bottom: 1px dashed white;
+
+	font-size: 12px;
+	line-height: 12px;
+
+	padding-bottom: 2px;
+	margin-bottom: 8px;
+	padding-top: 4px;
+}
+
+.cm-html-embed > .note_block_title {
+	font-size: 12px;
+	line-height: 12px;
+}
+
+.note_block_title.note_block_title_formen {
+	opacity: 0.2;
+	border-bottom: none;
+	border-top: 1px solid white;
+}
+
+.note_block_title.note_block_title_kontexte {
+	margin-bottom: 12px;
+}
+
+/* Obsidian components */
+
+/* File Header */
+.inline-title {
+	margin: 0;
+}
+
+/* Ref to block */
+.markdown-preview-sizer.markdown-preview-section > .el-p > p {
+	padding-right: 20px;
+}
+
+.markdown-embed-link {
+	opacity: 0.2;
+}
+
+.embed-title.markdown-embed-title {
+	display: none;
+}

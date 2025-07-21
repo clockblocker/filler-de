@@ -5,6 +5,7 @@
 	"minAppVersion": "1.8.0",
 	"description": "Go trough the german texts and build your own dictionary based on your own unique contexts",
 	"author": "clockblocker",
+	"styles": ["styles.css"],
 	"authorUrl": "https://github.com/clockblocker/",
 	"fundingUrl": "https://buymeacoffee.com/fniqc5g0nr",
 	"isDesktopOnly": false

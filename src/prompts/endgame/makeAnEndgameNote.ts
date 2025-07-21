@@ -13,7 +13,6 @@ import {
 import { formatGrundform } from './grundform/formatters/grundform';
 import { makeAdjektivBlock } from './grundform/wortart/adjektiv/makeAdjektivBlocks';
 import { makeNewFileContent } from '../../note-block-manager/note-block-management/new-note';
-import { setTimeout } from 'timers/promises';
 import { makeMorphemBlock } from 'note-block-manager/common-blocks/morphems';
 import { NoteBlockId } from 'note-block-manager/note-block-management/types-and-constants';
 

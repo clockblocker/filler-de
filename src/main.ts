@@ -179,6 +179,38 @@ export default class TextEaterPlugin extends Plugin {
 				return false;
 			},
 		});
+
+		this.registerDomEvent(document, 'click', (evt) => {
+			const target = evt.target as HTMLElement;
+
+			if (target.tagName === 'A') {
+				console.log(`target`, target);
+
+				const blockHtmlElement = target.parentElement?.parentElement;
+				console.log(
+					'blockHtmlElement?.textContent',
+					blockHtmlElement?.textContent
+				);
+
+				const parentHtmlElement = target.parentElement;
+				console.log(
+					'parentHtmlElement?.textContent',
+					parentHtmlElement?.textContent
+				);
+
+				const children = blockHtmlElement?.children;
+				if (children) {
+					const blockIdElement = Array.from(children).find((c) =>
+						c.classList.contains('cm-blockid')
+					);
+
+					if (blockIdElement) {
+						const textContent = blockIdElement.textContent;
+						console.log('blockIdElement', textContent, `\n\n\n`);
+					}
+				}
+			}
+		});
 	}
 
 	async loadSettings() {
