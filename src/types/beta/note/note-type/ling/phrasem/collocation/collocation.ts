@@ -1,4 +1,4 @@
-import z from 'zod';
+import z from 'zod/v4';
 import { CollocationStrengthSchema } from './collocation-strength/collocationStrength';
 import { CollocationTypeSchema } from './collocation-type/collocationType';
 import { PhrasemeType } from '../phrasem-base/phrasem-type/phrasemType';
@@ -12,19 +12,17 @@ const CollocationComponentSchema = z.object({
 	isAnchor: z.boolean().optional(),
 });
 
-export const CollocationSchema = z
-	.object({
-		type: z.literal(PhrasemeType.Collocation),
-		components: z
-			.array(CollocationComponentSchema)
-			.min(2)
-			.refine((arr) => arr.filter((c) => c.isAnchor === true).length === 1, {
-				message: 'One component must have isAnchor: true',
-			}),
-		collocationType: CollocationTypeSchema,
-		strength: CollocationStrengthSchema,
-	})
-	.extend(PhrasemeBaseSchema.shape);
+export const CollocationSchema = z.object({
+	type: z.literal(PhrasemeType.Collocation),
+	components: z
+		.array(CollocationComponentSchema)
+		.min(2)
+		.refine((arr) => arr.filter((c) => c.isAnchor === true).length === 1, {
+			message: 'One component must have isAnchor: true',
+		}),
+	collocationType: CollocationTypeSchema,
+	strength: CollocationStrengthSchema,
+});
 
 export type Collocation = z.infer<typeof CollocationSchema>;
 

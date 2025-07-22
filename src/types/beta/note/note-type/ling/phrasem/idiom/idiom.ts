@@ -1,6 +1,9 @@
-import z from 'zod';
+import z from 'zod/v4';
+import { PhrasemeBaseSchema } from '../phrasem-base/phrasemBase';
 import { PhrasemeType } from '../phrasem-base/phrasem-type/phrasemType';
-import { withPhrasemeBase } from '../phrasem-base/phrasemBase';
 
-export const IdiomSchema = withPhrasemeBase(PhrasemeType.Idiom, {});
+export const IdiomSchema = z.object({
+	type: z.literal(PhrasemeType.Idiom),
+});
+
 export type Idiom = z.infer<typeof IdiomSchema>;

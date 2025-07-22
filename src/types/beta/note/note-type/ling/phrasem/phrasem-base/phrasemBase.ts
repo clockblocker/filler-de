@@ -7,11 +7,3 @@ export const PhrasemeBaseSchema = z.object({
 	explanation: z.string(),
 	analog: z.string().optional(),
 });
-
-export const withPhrasemeBase = <T extends z.ZodRawShape>(
-	type: PhrasemeType,
-	shape: T
-) =>
-	z
-		.object({ type: z.literal(type) })
-		.extend({ ...PhrasemeBaseSchema.shape, ...shape });
