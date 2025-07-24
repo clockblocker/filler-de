@@ -3,7 +3,7 @@ import {
 	LINGUISTIC_UNIT_STR_TYPES,
 	MORPHEM,
 	LEXEM,
-} from './linguistics-consts';
+} from '../../general/consts/linguistics-consts';
 import { Morphem } from 'prompts/endgame/zod/types';
 
 // Meta note types
@@ -98,55 +98,7 @@ export type SemanticRelations = z.infer<typeof SemanticRelationsSchema>;
 export const SEMANTIC_RELATIONS = SemanticRelationsSchema.value;
 
 
-// LexicalRelations
-export const SynonymSchema = z.literal('Synonym');
-export type Synonym = z.infer<typeof SynonymSchema>;
-export const SYNONYM = SynonymSchema.value;
-
-export const AntonymSchema = z.literal('Antonym');
-export type Antonym = z.infer<typeof AntonymSchema>;
-export const ANTONYM = AntonymSchema.value;
-
-export const HyponymSchema = z.literal('Hyponym');
-export type Hyponym = z.infer<typeof HyponymSchema>;
-export const HYPONYM = HyponymSchema.value;
-
-export const HypernymSchema = z.literal('Hypernym');
-export type Hypernym = z.infer<typeof HypernymSchema>;
-export const HYPERNYM = HypernymSchema.value;
-
-export const MeronymSchema = z.literal('Meronym');
-export type Meronym = z.infer<typeof MeronymSchema>;
-export const MERONYM = MeronymSchema.value;
-
-export const HolonymSchema = z.literal('Holonym');
-export type Holonym = z.infer<typeof HolonymSchema>;
-export const HOLONYM = HolonymSchema.value;
-
-export const TroponymSchema = z.literal('Troponym');
-export type Troponym = z.infer<typeof TroponymSchema>;
-export const TROPONYM = TroponymSchema.value;
-
-export const ComplementSchema = z.literal('Complement');
-export type Complement = z.infer<typeof ComplementSchema>;
-export const COMPLEMENT = ComplementSchema.value;
-
-
-// c Semantics | String
 // Dimension: intensity, [force, manner, frequency, degree, count/amount, certainty, obligation,  space]]
-// Scalar degree: 3 | [-5:5] 
+// Scalar degree: 3 | [-5:5]
 // Usage context: taste, smell, argument, person
 // Domains: emotion, physical sensation, personality
-
-
-// -5 = negligible     
-// -4 = minimal        
-// -3 = weak           
-// -2 = softened       
-// -1 = low            
-// 0 = neutral        
-// 1 = mild  
-// 2 = moderate  
-// 3 = strong  
-// 4 = intense  
-// 5 = extreme

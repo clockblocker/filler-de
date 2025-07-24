@@ -1,12 +1,12 @@
 import {
 	CollocationStrength,
-	LinguisticUnitType,
+	LinguisticUnit,
 	PHRASEM,
 	PhrasemeType,
-} from 'types/beta/consts/linguistics-consts';
+} from 'types/beta/general/consts/linguistics-consts';
 
 const noteTree = {
-	[LinguisticUnitType.Phrasem]: {
+	[LinguisticUnit.Phrasem]: {
 		[PhrasemeType.Collocation]: {},
 		[PhrasemeType.CulturalQuotation]: {},
 		[PhrasemeType.DiscourseFormula]: {},
@@ -20,4 +20,3 @@ export const weightFromCollocationStrength = {
 	[CollocationStrength.Bound]: 1,
 	[CollocationStrength.Frozen]: 3,
 } as const;
-

@@ -7,61 +7,53 @@ import {
 	DiscourseFormulaRoleSchema,
 	CollocationType,
 	CollocationStrength,
-} from 'types/beta/consts/linguistics-consts';
+} from 'types/beta/general/consts/linguistics-consts';
 
-export const PhrasemeBaseSchema = z.object({
-	surface: z.string(),
-	translation: z.string(),
-	explanation: z.string(),
-	analog: z.string().optional(),
-});
-
-const CollocationComponentSchema = z.object({
+const PhrasemeComponentSchema = z.object({
 	surface: z.string(),
 	baseForm: z.string(),
 	pos: PartOfSpeech,
 	isAnchor: z.boolean().optional(),
 });
 
+const PhrasemeComponentsSchema = z
+	.array(PhrasemeComponentSchema)
+	.min(2)
+	.refine((arr) => arr.filter((c) => c.isAnchor === true).length >= 1, {
+		message: 'At least one component must have isAnchor: true',
+	});
+
+export const PhrasemeBaseSchema = z.object({
+	surface: z.string(),
+	phrasemeComponents: PhrasemeComponentsSchema,
+	translation: z.string(),
+	explanation: z.string().optional(),
+	analogs: z.array(z.string()).optional(),
+});
+
 export const CollocationSchema = z.object({
-	type: z.literal(PhrasemeType.Collocation),
-	components: z
-		.array(CollocationComponentSchema)
-		.min(2)
-		.refine((arr) => arr.filter((c) => c.isAnchor === true).length === 1, {
-			message: 'One component must have isAnchor: true',
-		}),
+	phrasemeType: z.literal(PhrasemeType.Collocation),
 	collocationType: CollocationTypeSchema,
 	strength: CollocationStrengthSchema,
 });
 
 export const CulturalQuotationSchema = z.object({
-	type: z.literal(PhrasemeType.CulturalQuotation),
+	phrasemeType: z.literal(PhrasemeType.CulturalQuotation),
 	source: z.string().optional(),
 });
 
 export const ProverbSchema = z.object({
-	type: z.literal(PhrasemeType.Proverb),
+	phrasemeType: z.literal(PhrasemeType.Proverb),
 });
 
 export const IdiomSchema = z.object({
-	type: z.literal(PhrasemeType.Idiom),
+	phrasemeType: z.literal(PhrasemeType.Idiom),
 });
 
 export const DiscourseFormulaSchema = z.object({
-	type: z.literal(PhrasemeType.DiscourseFormula),
+	phrasemeType: z.literal(PhrasemeType.DiscourseFormula),
 	role: DiscourseFormulaRoleSchema,
 });
-
-export type DiscourseFormula = z.infer<typeof DiscourseFormulaSchema>;
-
-export type Idiom = z.infer<typeof IdiomSchema>;
-
-export type Proverb = z.infer<typeof ProverbSchema>;
-
-export type CulturalQuotation = z.infer<typeof CulturalQuotationSchema>;
-
-export type Collocation = z.infer<typeof CollocationSchema>;
 
 export const PhrasemeSchema = z
 	.discriminatedUnion('type', [
@@ -75,10 +67,11 @@ export const PhrasemeSchema = z
 
 export type Phraseme = z.infer<typeof PhrasemeSchema>;
 
-export const collocationExamples: Record<Phraseme['surface'], Collocation> = {
+export const collocationExamples: Record<Phraseme['surface'], Phraseme> = {
 	'triftige Gründe': {
-		type: PhrasemeType.Collocation,
-		components: [
+		surface: 'triftige Gründe',
+		phrasemeType: PhrasemeType.Collocation,
+		phrasemeComponents: [
 			{
 				surface: 'triftige',
 				baseForm: 'triftig',
@@ -93,6 +86,7 @@ export const collocationExamples: Record<Phraseme['surface'], Collocation> = {
 		],
 		collocationType: CollocationType.ADJ_plus_NOUN,
 		strength: CollocationStrength.Bound,
+		translation: 'compelling reasons',
 	},
 };
 
