@@ -58,26 +58,34 @@ export default class TextEaterPlugin extends Plugin {
 		);
 		this.deprecatedFileService = new FileService(this.app, this.app.vault);
 
-		const clickListener = EditorView.domEventHandlers({
-			click: (event) => {
-				const t = event.target as HTMLElement | null;
-				if (!t || !t.matches('button.my-btn')) return false;
+		this.registerMarkdownPostProcessor((el, ctx) => {
+			el.querySelectorAll<HTMLButtonElement>(
+				'button.execute-command-button'
+			).forEach((btn) => {
+				// ensure no dupes on re-renders
+				const handler = () => {
+					console.log('Button (registerMarkdownPostProcessor) clicked:');
 
-				const btnId = t.id;
-				const action = t.dataset.action;
+					newGenCommand(this);
+				};
+				btn.removeEventListener('click', handler);
+				btn.addEventListener('click', handler);
+			});
+		});
+
+		this.registerDomEvent(document, 'click', (evt) => {
+			const target = evt.target as HTMLElement;
+
+			console.log('target.tagName:', target.tagName);
+
+			if (target.tagName === 'BUTTON') {
+				const btnId = target.id;
+				const action = target.dataset.action;
 				console.log('Button clicked:', btnId, action);
 				if (action === 'execute-new-gen-command') {
 					newGenCommand(this);
 				}
-
-				return true;
-			},
-		});
-
-		this.registerEditorExtension(clickListener);
-
-		this.registerDomEvent(document, 'click', (evt) => {
-			const target = evt.target as HTMLElement;
+			}
 
 			if (target.tagName === 'A') {
 				console.log(`target`, target);
