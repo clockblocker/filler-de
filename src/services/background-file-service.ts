@@ -1,6 +1,6 @@
 import { App, Vault, TFile, Editor, MarkdownView, TFolder } from 'obsidian';
-import { Maybe, PathParts } from './types/general';
-import { SLASH } from './types/constants';
+import { Maybe, PathParts } from '../types/general';
+import { SLASH } from '../types/constants';
 
 const pathToFolderFromPathParts = (pathParts: PathParts) =>
 	pathParts.join(SLASH);
@@ -25,18 +25,6 @@ export class FileService {
 		} catch (error) {
 			console.warn('error while getting file by path:', error);
 			return { error: true };
-		}
-	}
-
-	async getMaybeEditor(): Promise<Maybe<Editor>> {
-		try {
-			const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-			if (view && view?.file) {
-				return { error: false, data: view.editor };
-			}
-			return { error: true, errorText: `Failed to get Editor` };
-		} catch (error) {
-			return { error: true, errorText: `Failed to get Editor: ${error}` };
 		}
 	}
 

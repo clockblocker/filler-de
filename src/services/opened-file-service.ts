@@ -1,12 +1,9 @@
-import { MarkdownView, TFile, App, Vault, Editor, TFolder } from 'obsidian';
-import { FileService } from './background-file-service';
-import { Maybe } from './types/general';
+import { MarkdownView, TFile, App, TFolder } from 'obsidian';
+import { Maybe } from '../types/general';
+import { getMaybeEditor } from './helpers/get-maybe-editor';
 
 export class OpenedFileService {
-	constructor(
-		private app: App,
-		private fileService: FileService
-	) {}
+	constructor(private app: App) {}
 
 	async getMaybeOpenedFile(): Promise<Maybe<TFile>> {
 		try {
@@ -31,10 +28,6 @@ export class OpenedFileService {
 		}
 	}
 
-	async getMaybeEditor(): Promise<Maybe<Editor>> {
-		return this.fileService.getMaybeEditor();
-	}
-
 	async replaceContentInCurrentlyOpenedFile(
 		newContent: string
 	): Promise<Maybe<string>> {
@@ -47,7 +40,7 @@ export class OpenedFileService {
 	}
 
 	async writeToOpenedFile(text: string): Promise<Maybe<string>> {
-		const maybeEditor = await this.getMaybeEditor();
+		const maybeEditor = await getMaybeEditor(this.app);
 		if (maybeEditor.error) {
 			return maybeEditor;
 		}
@@ -98,7 +91,9 @@ export class OpenedFileService {
 
 	// Exposed method to hide and remove the loading overlay
 	public hideLoadingOverlay(): void {
-		const overlay = document.getElementById('opened-file-service-loading-overlay');
+		const overlay = document.getElementById(
+			'opened-file-service-loading-overlay'
+		);
 		if (overlay) {
 			overlay.remove();
 		}

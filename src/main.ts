@@ -1,7 +1,7 @@
 import { Editor, MarkdownView, Notice, Plugin } from 'obsidian';
 import { SettingsTab } from './settings';
 import { DEFAULT_SETTINGS, TextEaterSettings } from './types';
-import { ApiService } from './api';
+import { ApiService } from './services/api-service';
 import { FileService } from './file';
 import fillTemplate from './commands/fillTemplate';
 import getInfinitiveAndEmoji from './commands/getInfinitiveAndEmoji';
@@ -11,6 +11,7 @@ import formatSelectionWithNumber from './commands/formatSelectionWithNumber';
 import addBacklinksToCurrentFile from './commands/addBacklinksToCurrentFile';
 import insertReplyFromKeymaker from './commands/insertReplyFromC1Richter';
 import insertReplyFromC1Richter from './commands/insertReplyFromC1Richter';
+import newGenCommand from 'commands/new-gen-command';
 
 export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;
@@ -29,7 +30,7 @@ export default class TextEaterPlugin extends Plugin {
 
 	async loadPlugin() {
 		await this.loadSettings();
-		this.apiService = new ApiService(this.settings, this.app.vault);
+		this.apiService = new ApiService(this.settings);
 		this.fileService = new FileService(this.app, this.app.vault);
 
 		this.addCommand({
@@ -173,6 +174,24 @@ export default class TextEaterPlugin extends Plugin {
 				if (selection) {
 					if (!checking) {
 						insertReplyFromC1Richter(this, editor, selection);
+					}
+					return true;
+				}
+				return false;
+			},
+		});
+
+		this.addCommand({
+			id: 'new-gen-command',
+			name: 'new-gen-command',
+			editorCheckCallback: (
+				checking: boolean,
+				editor: Editor,
+				view: MarkdownView
+			) => {
+				if (view.file) {
+					if (!checking) {
+						newGenCommand(this, editor, view.file);
 					}
 					return true;
 				}

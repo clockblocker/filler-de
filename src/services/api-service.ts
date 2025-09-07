@@ -1,25 +1,14 @@
-import { z } from 'zod/v4';
-
-import {
-	GoogleGenerativeAI,
-	GenerationConfig,
-	HarmCategory,
-	HarmBlockThreshold,
-	ResponseSchema,
-} from '@google/generative-ai';
-import { TextEaterSettings } from './types';
-import { TFile, Vault, Notice, TAbstractFile, requestUrl } from 'obsidian';
-import { prompts } from './prompts';
+import { GoogleGenerativeAI, GenerationConfig } from '@google/generative-ai';
+import { TextEaterSettings } from '../types';
+import { Notice } from 'obsidian';
+import { prompts } from '../prompts';
 
 export class ApiService {
 	private genAI: GoogleGenerativeAI | null = null;
 	private model = 'gemini-2.0-flash-lite';
 	private chatSessions: { [key: string]: any } = {};
 
-	constructor(
-		private settings: TextEaterSettings,
-		private vault: Vault
-	) {
+	constructor(private settings: TextEaterSettings) {
 		try {
 			if (this.settings.apiProvider === 'google') {
 				this.genAI = new GoogleGenerativeAI(this.settings.googleApiKey);
