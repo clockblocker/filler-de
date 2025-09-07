@@ -1,27 +1,77 @@
+import z from 'zod/v4';
 import {
 	PartOfSpeech,
-	PosTag,
-	NOUN_TAG,
-	PRONOUN_TAG,
-	ARTICLE_TAG,
-	ADJECTIVE_TAG,
-	VERB_TAG,
-	PREPOSITION_TAG,
-	ADVERB_TAG,
-	PARTICLE_TAG,
-	CONJUNCTION_TAG,
-	INTERACTIONAL_UNIT_TAG,
+	InflectionalDimension,
+	Person,
+	Number,
+	Case,
 } from '../consts/linguistics-consts';
 
-export const posTagFormFromPos: Record<PartOfSpeech, PosTag> = {
-	[PartOfSpeech.Noun]: NOUN_TAG,
-	[PartOfSpeech.Pronoun]: PRONOUN_TAG,
-	[PartOfSpeech.Article]: ARTICLE_TAG,
-	[PartOfSpeech.Adjective]: ADJECTIVE_TAG,
-	[PartOfSpeech.Verb]: VERB_TAG,
-	[PartOfSpeech.Preposition]: PREPOSITION_TAG,
-	[PartOfSpeech.Adverb]: ADVERB_TAG,
-	[PartOfSpeech.Particle]: PARTICLE_TAG,
-	[PartOfSpeech.Conjunction]: CONJUNCTION_TAG,
-	[PartOfSpeech.InteractionalUnit]: INTERACTIONAL_UNIT_TAG,
-} as const;
+type AbstractInflection = Record<InflectionalDimension, string>;
+
+const DePerson = z.enum([Person.First, Person.Second, Person.Third]);
+const DeNumber = z.enum([Number.Singular, Number.Plural]);
+const DeCase = z.enum([
+	Case.Nominative,
+	Case.Dative,
+	Case.Accusative,
+	Case.Genitive,
+]);
+
+// type GermanInflection = {
+// 	[InflectionalDimension.Person]: Person.First | Person.Second | Person.Third;
+// 	[InflectionalDimension.Case]: Case.;
+// };
+
+export const posTagFormFromPos: Record<PartOfSpeech, InflectionalDimension[]> =
+	{
+		[PartOfSpeech.Noun]: [
+			InflectionalDimension.Case,
+			InflectionalDimension.Gender,
+			InflectionalDimension.Number,
+		],
+		[PartOfSpeech.Pronoun]: [
+			InflectionalDimension.Case,
+			InflectionalDimension.Gender,
+			InflectionalDimension.Number,
+		],
+		[PartOfSpeech.Article]: [
+			InflectionalDimension.Case,
+			InflectionalDimension.Gender,
+			InflectionalDimension.Number,
+		],
+		[PartOfSpeech.Adjective]: [
+			InflectionalDimension.Case,
+			InflectionalDimension.Gender,
+			InflectionalDimension.Number,
+			InflectionalDimension.Comparison,
+		],
+		[PartOfSpeech.Verb]: [
+			InflectionalDimension.Person,
+			InflectionalDimension.Number,
+			InflectionalDimension.Tense,
+			InflectionalDimension.Mood,
+			InflectionalDimension.Voice,
+		],
+		[PartOfSpeech.Preposition]: [],
+		[PartOfSpeech.Adverb]: [],
+		[PartOfSpeech.Particle]: [],
+		[PartOfSpeech.Conjunction]: [],
+		[PartOfSpeech.InteractionalUnit]: [],
+	} as const;
+
+// isTechnicalTerm?: boolean;
+// domain?: 'medicine' | 'physics' | 'law' | ...;
+
+// streuen
+// über jN
+
+const a = {
+	mainVerb: 'vorbereiten',
+	auxiliaries: ['hätte'],
+	modal: 'müssen',
+	reflexive: 'sich',
+	governedPhrases: ['auf den großen Moment'],
+	particles: ['vor'],
+};
+

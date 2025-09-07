@@ -13,7 +13,7 @@ const VerbFormTagSchema = z.enum([
 	'ZuInfinitiv',
 ]);
 
-// VerbFormTagSchema = z.record(VerbFormTagSchema, z.array(z.string())); // [ich,du,er,wir,ihr,sie]
+// VerbFormTagSchema = z.record(VerbFormTagSchema, z.array(z.string())); // [ich, du, er, wir, ihr, sie]
 
 const ConjugationSchema = z.enum(['Stark', 'Schwach', 'Gemischt']);
 const AdjektivDeklinationSchema = z.enum(['Stark', 'Schwach', 'Gemischt']);
@@ -34,6 +34,7 @@ const AdverbCategorySchema = z.enum([
 	'Kausal',
 	'Grad',
 ]);
+
 const ArtikelTypeSchema = z.enum(['Bestimmt', 'Unbestimmt']);
 const PartikelTypeSchema = z.enum([
 	'Intensität',
@@ -42,6 +43,7 @@ const PartikelTypeSchema = z.enum([
 	'Abtönung',
 	'Konnektiv',
 ]);
+
 const NumeraleTypeSchema = z.enum([
 	'Grundzahl',
 	'Ordnungszahl',

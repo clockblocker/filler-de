@@ -5,8 +5,11 @@ const PlusDelimeterSchema = z.literal('_plus_');
 export type PLUS_DELIMETER = z.infer<typeof PlusDelimeterSchema>;
 export const PLUS_DELIMETER = PlusDelimeterSchema.value;
 
-// Morphems
+const PhraseSchema = z.literal('phrase');
+export type PHRASE = z.infer<typeof PhraseSchema>;
+export const PHRASE = PhraseSchema.value;
 
+// Morphems
 export const RootLiteralSchema = z.literal('Root');
 export type ROOT = z.infer<typeof RootLiteralSchema>;
 export const ROOT = RootLiteralSchema.value;
@@ -363,8 +366,8 @@ const COLLOCATION_TYPES_STR = [
 	`${PosTag.NOUN}${PLUS_DELIMETER}${PosTag.VERB}`, // NOUN_plus_VERB e.g. "dogs bark", "alarms ring"
 	`${PosTag.VERB}${PLUS_DELIMETER}${PosTag.NOUN}`, // VERB_plus_NOUN e.g. "make a decision", "catch a cold"
 	`${PosTag.ADV}${PLUS_DELIMETER}${PosTag.ADJ}`, // ADV_plus_ADJ e.g. "deeply sorry", "highly unlikely"
-	`${PosTag.VERB}${PLUS_DELIMETER}${PosTag.PREP}`, // VERB_plus_PREP (Verb plus PREPositional phrase) e.g. "depend on", "look into"
 	`${PosTag.VERB}${PLUS_DELIMETER}${PosTag.ADV}`, // VERB_plus_ADV e.g. "speak loudly", "run fast"
+	`${PosTag.PREP}_${PHRASE},`,
 ] as const;
 
 export const CollocationTypeSchema = z.enum(COLLOCATION_TYPES_STR);
@@ -710,6 +713,129 @@ export type Person = z.infer<typeof PersonSchema>;
 export const Person = PersonSchema.enum;
 export const PERSONS = PersonSchema.options;
 
+// NUMBER
+
+export const SingularLiteralSchema = z.literal('Singular');
+export type SINGULAR = z.infer<typeof SingularLiteralSchema>;
+export const SINGULAR = SingularLiteralSchema.value;
+
+export const PluralLiteralSchema = z.literal('Plural');
+export type PLURAL = z.infer<typeof PluralLiteralSchema>;
+export const PLURAL = PluralLiteralSchema.value;
+
+export const DualLiteralSchema = z.literal('Dual');
+export type DUAL = z.infer<typeof DualLiteralSchema>;
+export const DUAL = DualLiteralSchema.value;
+
+export const NUMBER_VALUES_STR = [
+	SINGULAR, // one entity
+	PLURAL, // more than one
+	DUAL,
+] as const;
+
+export const NumberSchema = z.enum(NUMBER_VALUES_STR);
+export type Number = z.infer<typeof NumberSchema>;
+export const Number = NumberSchema.enum;
+export const NUMBERS = NumberSchema.options;
+
+// CASE
+export const NominativeLiteralSchema = z.literal('Nominative');
+export type NOMINATIVE = z.infer<typeof NominativeLiteralSchema>;
+export const NOMINATIVE = NominativeLiteralSchema.value;
+
+export const AccusativeLiteralSchema = z.literal('Accusative');
+export type ACCUSATIVE = z.infer<typeof AccusativeLiteralSchema>;
+export const ACCUSATIVE = AccusativeLiteralSchema.value;
+
+export const DativeLiteralSchema = z.literal('Dative');
+export type DATIVE = z.infer<typeof DativeLiteralSchema>;
+export const DATIVE = DativeLiteralSchema.value;
+
+export const GenitiveLiteralSchema = z.literal('Genitive');
+export type GENITIVE = z.infer<typeof GenitiveLiteralSchema>;
+export const GENITIVE = GenitiveLiteralSchema.value;
+
+export const CASE_VALUES_STR = [
+	NOMINATIVE, // subject position
+	ACCUSATIVE, // direct object
+	DATIVE, // indirect object
+	GENITIVE, // possession/association
+] as const;
+
+export const CaseSchema = z.enum(CASE_VALUES_STR);
+export type Case = z.infer<typeof CaseSchema>;
+export const Case = CaseSchema.enum;
+export const CASES = CaseSchema.options;
+
+// TENSE
+export const PresentLiteralSchema = z.literal('Present');
+export type PRESENT = z.infer<typeof PresentLiteralSchema>;
+export const PRESENT = PresentLiteralSchema.value;
+
+export const PreteriteLiteralSchema = z.literal('Preterite');
+export type PRETERITE = z.infer<typeof PreteriteLiteralSchema>;
+export const PRETERITE = PreteriteLiteralSchema.value;
+
+export const PerfectLiteralSchema = z.literal('Perfect');
+export type PERFECT = z.infer<typeof PerfectLiteralSchema>;
+export const PERFECT = PerfectLiteralSchema.value;
+
+export const PluperfectLiteralSchema = z.literal('Pluperfect');
+export type PLUPERFECT = z.infer<typeof PluperfectLiteralSchema>;
+export const PLUPERFECT = PluperfectLiteralSchema.value;
+
+export const FutureILiteralSchema = z.literal('FutureI');
+export type FUTURE_I = z.infer<typeof FutureILiteralSchema>;
+export const FUTURE_I = FutureILiteralSchema.value;
+
+export const FutureIILiteralSchema = z.literal('FutureII');
+export type FUTURE_II = z.infer<typeof FutureIILiteralSchema>;
+export const FUTURE_II = FutureIILiteralSchema.value;
+
+export const TENSE_VALUES_STR = [
+	PRESENT,
+	PRETERITE,
+	PERFECT,
+	PLUPERFECT,
+	FUTURE_I,
+	FUTURE_II,
+] as const;
+
+export const TenseSchema = z.enum(TENSE_VALUES_STR);
+export type Tense = z.infer<typeof TenseSchema>;
+export const Tense = TenseSchema.enum;
+export const TENSES = TenseSchema.options;
+
+// Verb Mood
+
+export const IndicativeLiteralSchema = z.literal('Indicative');
+export type INDICATIVE = z.infer<typeof IndicativeLiteralSchema>;
+export const INDICATIVE = IndicativeLiteralSchema.value;
+
+export const SubjunctiveILiteralSchema = z.literal('SubjunctiveI');
+export type SUBJUNCTIVE_I = z.infer<typeof SubjunctiveILiteralSchema>;
+export const SUBJUNCTIVE_I = SubjunctiveILiteralSchema.value;
+
+export const SubjunctiveIILiteralSchema = z.literal('SubjunctiveII');
+export type SUBJUNCTIVE_II = z.infer<typeof SubjunctiveIILiteralSchema>;
+export const SUBJUNCTIVE_II = SubjunctiveIILiteralSchema.value;
+
+export const ImperativeLiteralSchema = z.literal('Imperative');
+export type IMPERATIVE = z.infer<typeof ImperativeLiteralSchema>;
+export const IMPERATIVE = ImperativeLiteralSchema.value;
+
+export const VERB_MOODS_STR = [
+	INDICATIVE, // factual or real-world statements
+	SUBJUNCTIVE_I, // indirect speech, reported content
+	SUBJUNCTIVE_II, // hypothetical or counterfactual
+	IMPERATIVE, // command or request
+] as const;
+
+export const VerbMoodSchema = z.enum(VERB_MOODS_STR);
+export type VerbMood = z.infer<typeof VerbMoodSchema>;
+export const VerbMood = VerbMoodSchema.enum;
+export const VERB_MOODS = VerbMoodSchema.options;
+
 // Noun classes
 export const CommonSchema = z.literal('Common');
 export type Common = z.infer<typeof CommonSchema>;
@@ -738,3 +864,97 @@ export const NounClassSchema = z.enum(NOUN_CLASSES_STR);
 export type NounClass = z.infer<typeof NounClassSchema>;
 export const NounClass = NounClassSchema.enum;
 export const NOUN_CLASSES = NounClassSchema.options;
+
+// Com degree
+
+export const PositiveLiteralSchema = z.literal('Positive');
+export type POSITIVE = z.infer<typeof PositiveLiteralSchema>;
+export const POSITIVE = PositiveLiteralSchema.value;
+
+export const ComparativeLiteralSchema = z.literal('Comparative');
+export type COMPARATIVE = z.infer<typeof ComparativeLiteralSchema>;
+export const COMPARATIVE = ComparativeLiteralSchema.value;
+
+export const SuperlativeLiteralSchema = z.literal('Superlative');
+export type SUPERLATIVE = z.infer<typeof SuperlativeLiteralSchema>;
+export const SUPERLATIVE = SuperlativeLiteralSchema.value;
+
+export const COMPARISON_DEGREES_STR = [
+	POSITIVE, // base form (e.g. "fast")
+	COMPARATIVE, // comparative form (e.g. "faster")
+	SUPERLATIVE, // superlative form (e.g. "fastest")
+] as const;
+
+export const ComparisonDegreeSchema = z.enum(COMPARISON_DEGREES_STR);
+export type ComparisonDegree = z.infer<typeof ComparisonDegreeSchema>;
+export const ComparisonDegree = ComparisonDegreeSchema.enum;
+export const COMPARISON_DEGREES = ComparisonDegreeSchema.options;
+
+// Theta-Roles
+
+export const AgentLiteralSchema = z.literal('AGENT');
+export type AGENT = z.infer<typeof AgentLiteralSchema>;
+export const AGENT = AgentLiteralSchema.value;
+
+export const CauseLiteralSchema = z.literal('CAUSE');
+export type CAUSE = z.infer<typeof CauseLiteralSchema>;
+export const CAUSE = CauseLiteralSchema.value;
+
+export const ExperiencerLiteralSchema = z.literal('EXPERIENCER');
+export type EXPERIENCER = z.infer<typeof ExperiencerLiteralSchema>;
+export const EXPERIENCER = ExperiencerLiteralSchema.value;
+
+export const LocationLiteralSchema = z.literal('LOCATION');
+export type LOCATION = z.infer<typeof LocationLiteralSchema>;
+export const LOCATION = LocationLiteralSchema.value;
+
+export const GoalLiteralSchema = z.literal('GOAL');
+export type GOAL = z.infer<typeof GoalLiteralSchema>;
+export const GOAL = GoalLiteralSchema.value;
+
+export const BeneficiaryLiteralSchema = z.literal('BENEFICIARY');
+export type BENEFICIARY = z.infer<typeof BeneficiaryLiteralSchema>;
+export const BENEFICIARY = BeneficiaryLiteralSchema.value;
+
+export const PossessorLiteralSchema = z.literal('POSSESSOR');
+export type POSSESSOR = z.infer<typeof PossessorLiteralSchema>;
+export const POSSESSOR = PossessorLiteralSchema.value;
+
+export const PossessedLiteralSchema = z.literal('POSSESSED');
+export type POSSESSED = z.infer<typeof PossessedLiteralSchema>;
+export const POSSESSED = PossessedLiteralSchema.value;
+
+export const ThemeLiteralSchema = z.literal('THEME');
+export type THEME = z.infer<typeof ThemeLiteralSchema>;
+export const THEME = ThemeLiteralSchema.value;
+
+export const THETA_ROLES_STR = [
+	AGENT,
+	CAUSE,
+	EXPERIENCER,
+	LOCATION,
+	GOAL,
+	BENEFICIARY,
+	POSSESSOR,
+	POSSESSED,
+	THEME,
+] as const;
+
+export const ThetaRoleSchema = z.enum(THETA_ROLES_STR);
+export type ThetaRole = z.infer<typeof ThetaRoleSchema>;
+export const ThetaRole = ThetaRoleSchema.enum;
+export const THETA_ROLES = ThetaRoleSchema.options;
+
+// plural_nom, dat, akk, gen
+// Akteure, dem Akteur, den Akteur, des Akteurs
+// Gründe, dem Grund, den Grund, des Grundes
+// Erfahrer, dem Erfahrer, den Erfahrer, des Erfahrers
+// Orte, dem Ort, den Ort, des Ortes
+// Ziele, dem Ziel, das Ziel, des Ziels
+// Empfänger, dem Empfänger, den Empfänger, des Empfängers
+// Besitzer, dem Besitzer, den Besitzer, des Besitzers
+// Besitze, dem Besitz, den Besitz, des Besitzes
+// Gegenstände, dem Gegenstand, den Gegenstand, des Gegenstands
+// Themen, dem Thema, das Thema, des Themas
+
+// passen auf den Gegenstand auf
