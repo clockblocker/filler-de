@@ -76,12 +76,12 @@ export async function makeAnEndgameNoteTest(
 	word: string
 ): Promise<void> {
 	const { content: oldContent, error } =
-		await plugin.fileService.readFileContentByPath(file.path);
+		await plugin.deprecatedFileService.readFileContentByPath(file.path);
 	if (error) {
 		return;
 	}
 
-	plugin.fileService.showLoadingOverlay();
+	plugin.deprecatedFileService.showLoadingOverlay();
 
 	const newContent = await makeNewFileContent({
 		oldFileContent: oldContent,
@@ -90,14 +90,14 @@ export async function makeAnEndgameNoteTest(
 		},
 	});
 
-	await plugin.fileService.replaceContentInCurrentlyOpenedFile(
+	await plugin.deprecatedFileService.replaceContentInCurrentlyOpenedFile(
 		file.path,
 		newContent
 	);
 
 	await sleep(2000);
 
-	plugin.fileService.hideLoadingOverlay();
+	plugin.deprecatedFileService.hideLoadingOverlay();
 }
 
 export async function makeAnEndgameNote(
@@ -121,12 +121,12 @@ export async function makeAnEndgameNote(
 	);
 
 	const { content: oldContent, error } =
-		await plugin.fileService.readFileContentByPath(file.path);
+		await plugin.deprecatedFileService.readFileContentByPath(file.path);
 	if (error) {
 		return;
 	}
 
-	await plugin.fileService.replaceContentInCurrentlyOpenedFile(
+	await plugin.deprecatedFileService.replaceContentInCurrentlyOpenedFile(
 		file.path,
 		'asdsad'
 	);

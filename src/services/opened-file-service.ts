@@ -28,6 +28,32 @@ export class OpenedFileService {
 		}
 	}
 
+	async getMaybeContent(): Promise<Maybe<string>> {
+		try {
+			const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+			const mbEditor = await getMaybeEditor(this.app);
+
+			if (!activeView || mbEditor.error) {
+				console.warn('file not open or not active');
+				return { error: true };
+			}
+
+			const file = activeView.file;
+			const editor = mbEditor.data;
+
+			if (!file) {
+				console.warn('file not open or not active');
+				return { error: true };
+			}
+
+			const content = editor.getValue();
+			return { error: false, data: content };
+		} catch (error) {
+			console.error(`Failed to replace content: ${error}`);
+			return { error: true };
+		}
+	}
+
 	async replaceContentInCurrentlyOpenedFile(
 		newContent: string
 	): Promise<Maybe<string>> {

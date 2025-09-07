@@ -2,61 +2,70 @@ import { Editor, MarkdownView, Notice, TFile } from 'obsidian';
 import TextEaterPlugin from '../main';
 import { prompts } from '../prompts';
 import { longDash } from '../utils';
+import { unwrapMaybe } from 'types/general';
 
-export default async function newGenCommand(
-	plugin: TextEaterPlugin,
-	editor: Editor,
-	file: TFile,
-	callBack?: () => void
-) {
-	const word = file.basename;
-
+export default async function newGenCommand(plugin: TextEaterPlugin) {
 	try {
-		const [dictionaryEntry, froms, morphems, valence] = await Promise.all([
-			plugin.apiService.generateContent(
-				prompts.generate_dictionary_entry,
-				word
-			),
-			plugin.apiService.generateContent(prompts.generate_forms, word),
-			plugin.apiService.generateContent(prompts.morphems, word),
-			plugin.apiService.generateContent(prompts.generate_valence_block, word),
-		]);
-
-		const adjForms = extractAdjectiveForms(froms);
-
-		const trimmedBaseEntrie = `${dictionaryEntry.replace('<agent_output>', '').replace('</agent_output>', '')}`;
-
-		const baseBlock = await incertClipbordContentsInContextsBlock(
-			incertYouglishLinkInIpa(trimmedBaseEntrie)
+		const file = unwrapMaybe(
+			await plugin.openedFileService.getMaybeOpenedFile()
 		);
-		const morphemsBlock =
-			morphems.replace('\n', '') === longDash ? '' : `${morphems}\n`;
-		const valenceBlock =
-			valence.replace('\n', '') === longDash ? '' : `${valence}`;
-		const fromsBlock = froms.replace('\n', '') === longDash ? '' : `${froms}`;
-		const adjFormsBlock =
-			adjForms.replace('\n', '') === longDash ? '' : `${adjForms}`;
 
-		const blocks = [
-			baseBlock,
-			morphemsBlock,
-			valenceBlock,
-			fromsBlock,
-			adjFormsBlock,
-		];
-		const entrie = blocks.filter(Boolean).join('\n---\n');
+		const word = file.name;
+		// const [dictionaryEntry, froms, morphems, valence] = await Promise.all([
+		// 	plugin.apiService.generateContent(
+		// 		prompts.generate_dictionary_entry,
+		// 		word
+		// 	),
+		// 	plugin.apiService.generateContent(prompts.generate_forms, word),
+		// 	plugin.apiService.generateContent(prompts.morphems, word),
+		// 	plugin.apiService.generateContent(prompts.generate_valence_block, word),
+		// ]);
 
-		const normalForm = extractFirstBracketedWord(baseBlock);
+		const buttonsBlock = `<button id="execute-new-gen-command" class="execute-command-button" data-action="execute-new-gen-command">Open Today</button>`;
 
-		if (normalForm?.toLocaleLowerCase() === word.toLocaleLowerCase()) {
-			await plugin.fileService.writeToOpenedFile(file.path, entrie);
-		} else {
-			await plugin.fileService.writeToOpenedFile(
-				file.path,
-				`[[${normalForm}]]`
+		// const adjForms = extractAdjectiveForms(froms);
+
+		// const trimmedBaseEntrie = `${dictionaryEntry.replace('<agent_output>', '').replace('</agent_output>', '')}`;
+
+		// const baseBlock = await incertClipbordContentsInContextsBlock(
+		// 	incertYouglishLinkInIpa(trimmedBaseEntrie)
+		// );
+		// const morphemsBlock =
+		// 	morphems.replace('\n', '') === longDash ? '' : `${morphems}\n`;
+		// const valenceBlock =
+		// 	valence.replace('\n', '') === longDash ? '' : `${valence}`;
+		// const fromsBlock = froms.replace('\n', '') === longDash ? '' : `${froms}`;
+		// const adjFormsBlock =
+		// 	adjForms.replace('\n', '') === longDash ? '' : `${adjForms}`;
+
+		const blocks = [buttonsBlock];
+
+		const content = unwrapMaybe(
+			await plugin.openedFileService.getMaybeContent()
+		);
+
+		if (content.trim() === '') {
+			await Promise.all(
+				blocks.map((block) => {
+					plugin.openedFileService.writeToOpenedFile(block);
+				})
 			);
-			await navigator.clipboard.writeText(entrie);
+		} else {
+			plugin.openedFileService.writeToOpenedFile(word);
 		}
+
+		const entrie = blocks.filter(Boolean).join('\n---\n');
+		await plugin.openedFileService.writeToOpenedFile(entrie);
+
+		// if (normalForm?.toLocaleLowerCase() === word.toLocaleLowerCase()) {
+		// 	;
+		// } else {
+		// 	await plugin.deprecatedFileService.writeToOpenedFile(
+		// 		file.path,
+		// 		`[[${normalForm}]]`
+		// 	);
+		// 	await navigator.clipboard.writeText(entrie);
+		// }
 	} catch (error) {
 		new Notice(`Error: ${error.message}`);
 	}

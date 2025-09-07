@@ -13,7 +13,10 @@ export default async function getInfinitiveAndEmoji(
 		if (response) {
 			response = response.replace(/^\n+/, '');
 			response = response.trim();
-			await plugin.fileService.writeToOpenedFile(file.path, response + '\n');
+			await plugin.deprecatedFileService.writeToOpenedFile(
+				file.path,
+				response + '\n'
+			);
 		}
 	} catch (error) {
 		new Notice(`Error: ${error.message}`);

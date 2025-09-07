@@ -8,7 +8,7 @@ const pathToFolderFromPathParts = (pathParts: PathParts) =>
 const pathToFileFromPathParts = (pathParts: PathParts) =>
 	pathToFolderFromPathParts(pathParts) + '.md';
 
-export class FileService {
+export class BackgroundFileService {
 	constructor(
 		private app: App,
 		private vault: Vault

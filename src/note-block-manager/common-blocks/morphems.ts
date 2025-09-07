@@ -98,7 +98,7 @@ export async function makeMorphemBlock(
 			zodError: parsedMorphemAnalysisOutput.error,
 			output: generatedMorphemAnalysisOutput,
 		});
-		await plugin.fileService.writeToOpenedFile(
+		await plugin.deprecatedFileService.writeToOpenedFile(
 			file.path,
 			'Contact t.me/@clockblocker'
 		);

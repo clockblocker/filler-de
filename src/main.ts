@@ -12,11 +12,29 @@ import addBacklinksToCurrentFile from './commands/addBacklinksToCurrentFile';
 import insertReplyFromKeymaker from './commands/insertReplyFromC1Richter';
 import insertReplyFromC1Richter from './commands/insertReplyFromC1Richter';
 import newGenCommand from 'commands/new-gen-command';
+import { OpenedFileService } from 'services/opened-file-service';
+import { BackgroundFileService } from 'services/background-file-service';
+import { EditorView } from '@codemirror/view';
+
+// const clickListener = EditorView.domEventHandlers({
+// 	click: (event) => {
+// 	  const target = event.target as HTMLElement;
+// 	  if (target.matches("button.my-btn")) {
+// 		this.app.commands.executeCommandById('your:cmd');
+// 		return true;
+// 	  }
+// 	  return false;
+// 	}
+//   });
+//   this.registerEditorExtension(clickListener);
 
 export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;
 	apiService: ApiService;
-	fileService: FileService;
+	openedFileService: OpenedFileService;
+	backgroundFileService: BackgroundFileService;
+
+	deprecatedFileService: FileService;
 
 	async onload() {
 		try {
@@ -30,9 +48,72 @@ export default class TextEaterPlugin extends Plugin {
 
 	async loadPlugin() {
 		await this.loadSettings();
-		this.apiService = new ApiService(this.settings);
-		this.fileService = new FileService(this.app, this.app.vault);
+		await this.addCommands();
 
+		this.apiService = new ApiService(this.settings);
+		this.openedFileService = new OpenedFileService(this.app);
+		this.backgroundFileService = new BackgroundFileService(
+			this.app,
+			this.app.vault
+		);
+		this.deprecatedFileService = new FileService(this.app, this.app.vault);
+
+		const clickListener = EditorView.domEventHandlers({
+			click: (event) => {
+				const t = event.target as HTMLElement | null;
+				if (!t || !t.matches('button.my-btn')) return false;
+
+				const btnId = t.id;
+				const action = t.dataset.action;
+				console.log('Button clicked:', btnId, action);
+				if (action === 'execute-new-gen-command') {
+					newGenCommand(this);
+				}
+
+				return true;
+			},
+		});
+
+		this.registerEditorExtension(clickListener);
+
+		this.registerDomEvent(document, 'click', (evt) => {
+			const target = evt.target as HTMLElement;
+
+			if (target.tagName === 'A') {
+				console.log(`target`, target);
+
+				const blockHtmlElement = target.parentElement?.parentElement;
+				console.log(
+					'blockHtmlElement?.textContent',
+					blockHtmlElement?.textContent
+				);
+
+				const parentHtmlElement = target.parentElement;
+				console.log(
+					'parentHtmlElement?.textContent',
+					parentHtmlElement?.textContent
+				);
+
+				const children = blockHtmlElement?.children;
+				if (children) {
+					const blockIdElement = Array.from(children).find((c) =>
+						c.classList.contains('cm-blockid')
+					);
+
+					if (blockIdElement) {
+						const textContent = blockIdElement.textContent;
+						console.log('blockIdElement', textContent, `\n\n\n`);
+					}
+				}
+			}
+		});
+	}
+
+	private async loadSettings() {
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+	}
+
+	private async addCommands() {
 		this.addCommand({
 			id: 'backlink-all-to-current-file',
 			name: 'Populate all referenced files with a backlink to the current file',
@@ -191,49 +272,13 @@ export default class TextEaterPlugin extends Plugin {
 			) => {
 				if (view.file) {
 					if (!checking) {
-						newGenCommand(this, editor, view.file);
+						newGenCommand(this);
 					}
 					return true;
 				}
 				return false;
 			},
 		});
-
-		this.registerDomEvent(document, 'click', (evt) => {
-			const target = evt.target as HTMLElement;
-
-			if (target.tagName === 'A') {
-				console.log(`target`, target);
-
-				const blockHtmlElement = target.parentElement?.parentElement;
-				console.log(
-					'blockHtmlElement?.textContent',
-					blockHtmlElement?.textContent
-				);
-
-				const parentHtmlElement = target.parentElement;
-				console.log(
-					'parentHtmlElement?.textContent',
-					parentHtmlElement?.textContent
-				);
-
-				const children = blockHtmlElement?.children;
-				if (children) {
-					const blockIdElement = Array.from(children).find((c) =>
-						c.classList.contains('cm-blockid')
-					);
-
-					if (blockIdElement) {
-						const textContent = blockIdElement.textContent;
-						console.log('blockIdElement', textContent, `\n\n\n`);
-					}
-				}
-			}
-		});
-	}
-
-	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
 	}
 
 	async saveSettings() {

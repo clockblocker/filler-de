@@ -49,7 +49,7 @@ export async function makeAdjektivBlock(
 			zodError: parsedAdjektivOutput.error,
 			output: generatedAdjektivOutput,
 		});
-		await plugin.fileService.writeToOpenedFile(
+		await plugin.deprecatedFileService.writeToOpenedFile(
 			file.path,
 			'Contact t.me/@clockblocker'
 		);
