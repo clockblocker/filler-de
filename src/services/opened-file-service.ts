@@ -28,7 +28,7 @@ export class OpenedFileService {
 		}
 	}
 
-	async getMaybeContent(): Promise<Maybe<string>> {
+	async getMaybeFileContent(): Promise<Maybe<string>> {
 		try {
 			const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
 			const mbEditor = await getMaybeEditor(this.app);

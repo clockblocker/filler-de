@@ -43,11 +43,15 @@ export default async function newGenCommand(plugin: TextEaterPlugin) {
 
 		const blocks = [buttonsBlock];
 
-		const content = unwrapMaybe(
-			await plugin.openedFileService.getMaybeContent()
+		const fileContent = unwrapMaybe(
+			await plugin.openedFileService.getMaybeFileContent()
 		);
 
-		if (content.trim() === '') {
+		const exisingBlocks = plugin.blockManager.extractAllBlocks(fileContent);
+
+		console.log('exisingBlocks', exisingBlocks);
+
+		if (fileContent.trim() === '') {
 			await Promise.all(
 				blocks.map((block) => {
 					const a = plugin.openedFileService.writeToOpenedFile(block);

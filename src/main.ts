@@ -16,82 +16,14 @@ import insertReplyFromC1Richter from 'commands/old/insertReplyFromC1Richter';
 import insertReplyFromKeymaker from 'commands/old/insertReplyFromKeymaker';
 import normalizeSelection from 'commands/old/normalizeSelection';
 import translateSelection from 'commands/old/translateSelection';
-
-// const clickListener = EditorView.domEventHandlers({
-// 	click: (event) => {
-// 	  const target = event.target as HTMLElement;
-// 	  if (target.matches("button.my-btn")) {
-// 		this.app.commands.executeCommandById('your:cmd');
-// 		return true;
-// 	  }
-// 	  return false;
-// 	}
-//   });
-//   this.registerEditorExtension(clickListener);
-
-function onNewFileThenRun(
-	app: App,
-	file: TFile,
-	run: (view: MarkdownView) => void
-) {
-	let timeout: number | null = null;
-
-	// try immediately if it's already the active view
-	const tryRun = () => {
-		const view = app.workspace.getActiveViewOfType(MarkdownView);
-		if (view && view.file?.path === file.path) {
-			run(view);
-			return true;
-		}
-		return false;
-	};
-	if (tryRun()) return;
-
-	// wait for it to be opened
-	const openRef = app.workspace.on('file-open', (opened) => {
-		if (!opened || opened.path !== file.path) return;
-
-		// once opened, debounce on 'modify' to wait for templates/other plugins
-		const clearTimer = () => {
-			if (timeout) {
-				window.clearTimeout(timeout);
-				timeout = null;
-			}
-		};
-
-		const done = () => {
-			clearTimer();
-			// final guard: run against the active view of THIS file
-			const view = app.workspace.getActiveViewOfType(MarkdownView);
-			if (view && view.file?.path === file.path) run(view);
-			app.vault.offref(modRef);
-			app.workspace.offref(openRef);
-		};
-
-		const TIME_IN_MS_TO_WAIT_BEFORE_MAKING_CHNAGES_TO_AWOID_RACES = 60;
-
-		const arm = () => {
-			clearTimer();
-			timeout = window.setTimeout(
-				done,
-				TIME_IN_MS_TO_WAIT_BEFORE_MAKING_CHNAGES_TO_AWOID_RACES
-			);
-		};
-
-		// start the timer; any further modify resets it
-		arm();
-
-		const modRef = app.vault.on('modify', (f) => {
-			if (f instanceof TFile && f.path === file.path) arm();
-		});
-	});
-}
+import { BlockManager } from 'block-manager/block-manager';
 
 export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;
 	apiService: ApiService;
 	openedFileService: OpenedFileService;
 	backgroundFileService: BackgroundFileService;
+	blockManager: BlockManager;
 
 	deprecatedFileService: DeprecatedFileService;
 
@@ -119,6 +51,8 @@ export default class TextEaterPlugin extends Plugin {
 			this.app,
 			this.app.vault
 		);
+
+		this.blockManager = new BlockManager();
 
 		this.registerDomEvent(document, 'click', (evt) => {
 			const target = evt.target as HTMLElement;
@@ -349,4 +283,74 @@ export default class TextEaterPlugin extends Plugin {
 
 		return Math.max(0, ...numbers);
 	}
+}
+
+// const clickListener = EditorView.domEventHandlers({
+// 	click: (event) => {
+// 	  const target = event.target as HTMLElement;
+// 	  if (target.matches("button.my-btn")) {
+// 		this.app.commands.executeCommandById('your:cmd');
+// 		return true;
+// 	  }
+// 	  return false;
+// 	}
+//   });
+//   this.registerEditorExtension(clickListener);
+
+function onNewFileThenRun(
+	app: App,
+	file: TFile,
+	run: (view: MarkdownView) => void
+) {
+	let timeout: number | null = null;
+
+	// try immediately if it's already the active view
+	const tryRun = () => {
+		const view = app.workspace.getActiveViewOfType(MarkdownView);
+		if (view && view.file?.path === file.path) {
+			run(view);
+			return true;
+		}
+		return false;
+	};
+	if (tryRun()) return;
+
+	// wait for it to be opened
+	const openRef = app.workspace.on('file-open', (opened) => {
+		if (!opened || opened.path !== file.path) return;
+
+		// once opened, debounce on 'modify' to wait for templates/other plugins
+		const clearTimer = () => {
+			if (timeout) {
+				window.clearTimeout(timeout);
+				timeout = null;
+			}
+		};
+
+		const done = () => {
+			clearTimer();
+			// final guard: run against the active view of THIS file
+			const view = app.workspace.getActiveViewOfType(MarkdownView);
+			if (view && view.file?.path === file.path) run(view);
+			app.vault.offref(modRef);
+			app.workspace.offref(openRef);
+		};
+
+		const TIME_IN_MS_TO_WAIT_BEFORE_MAKING_CHNAGES_TO_AWOID_RACES = 60;
+
+		const arm = () => {
+			clearTimer();
+			timeout = window.setTimeout(
+				done,
+				TIME_IN_MS_TO_WAIT_BEFORE_MAKING_CHNAGES_TO_AWOID_RACES
+			);
+		};
+
+		// start the timer; any further modify resets it
+		arm();
+
+		const modRef = app.vault.on('modify', (f) => {
+			if (f instanceof TFile && f.path === file.path) arm();
+		});
+	});
 }
