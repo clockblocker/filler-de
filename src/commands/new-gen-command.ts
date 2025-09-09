@@ -1,6 +1,5 @@
 import { Editor, MarkdownView, Notice, TFile } from 'obsidian';
 import TextEaterPlugin from '../main';
-import { prompts } from '../prompts';
 import { longDash } from '../utils';
 import { unwrapMaybe } from 'types/general';
 
@@ -21,7 +20,11 @@ export default async function newGenCommand(plugin: TextEaterPlugin) {
 		// 	plugin.apiService.generateContent(prompts.generate_valence_block, word),
 		// ]);
 
-		const buttonsBlock = `<button id="execute-new-gen-command" class="execute-command-button" data-action="execute-new-gen-command">Open Today</button>`;
+		const buttonsBlock = ` <span class="note_block note_block_buttons">
+<button id="execute-new-gen-command" class="execute-command-button" data-action="execute-new-gen-command">Open Today</button>
+<button class="hidden">i do not do shit</button>
+</span>
+`;
 
 		// const adjForms = extractAdjectiveForms(froms);
 
@@ -47,15 +50,15 @@ export default async function newGenCommand(plugin: TextEaterPlugin) {
 		if (content.trim() === '') {
 			await Promise.all(
 				blocks.map((block) => {
-					plugin.openedFileService.writeToOpenedFile(block);
+					const a = plugin.openedFileService.writeToOpenedFile(block);
 				})
 			);
 		} else {
-			plugin.openedFileService.writeToOpenedFile(word);
+			// Change the buttons to somehting meaningfull
+			return null;
 		}
 
 		const entrie = blocks.filter(Boolean).join('\n---\n');
-		await plugin.openedFileService.writeToOpenedFile(entrie);
 
 		// if (normalForm?.toLocaleLowerCase() === word.toLocaleLowerCase()) {
 		// 	;

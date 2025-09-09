@@ -50,3 +50,24 @@
 .embed-title.markdown-embed-title {
 	display: none;
 }
+
+.hidden {
+	background-color: transparent !important;
+	border: none; /* No border */
+	box-shadow: none !important; /* No shadow */
+	outline: none !important; /* No focus outline */
+	color: transparent !important; /* Hides text */
+	padding: 0; /* Remove padding if needed */
+	margin: 0; /* Remove margin if needed */
+	box-shadow: transparent !important;
+
+	flex: 1;
+}
+
+.note_block {
+	display: flex;
+}
+
+span.cm-html-embed {
+	display: inline-block; /* keep it inline-ish */
+}

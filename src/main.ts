@@ -1,4 +1,4 @@
-import { Editor, MarkdownView, Notice, Plugin } from 'obsidian';
+import { App, Editor, MarkdownView, Notice, Plugin, TFile } from 'obsidian';
 import { SettingsTab } from './settings';
 import { DEFAULT_SETTINGS, TextEaterSettings } from './types';
 import { ApiService } from './services/api-service';
@@ -27,6 +27,60 @@ import { EditorView } from '@codemirror/view';
 // 	}
 //   });
 //   this.registerEditorExtension(clickListener);
+
+function onNewFileThenRun(
+	app: App,
+	file: TFile,
+	run: (view: MarkdownView) => void
+) {
+	let timeout: number | null = null;
+
+	// try immediately if it's already the active view
+	const tryRun = () => {
+		const view = app.workspace.getActiveViewOfType(MarkdownView);
+		if (view && view.file?.path === file.path) {
+			run(view);
+			return true;
+		}
+		return false;
+	};
+	if (tryRun()) return;
+
+	// wait for it to be opened
+	const openRef = app.workspace.on('file-open', (opened) => {
+		if (!opened || opened.path !== file.path) return;
+
+		// once opened, debounce on 'modify' to wait for templates/other plugins
+		const clearTimer = () => {
+			if (timeout) {
+				window.clearTimeout(timeout);
+				timeout = null;
+			}
+		};
+
+		const done = () => {
+			clearTimer();
+			// final guard: run against the active view of THIS file
+			const view = app.workspace.getActiveViewOfType(MarkdownView);
+			if (view && view.file?.path === file.path) run(view);
+			app.vault.offref(modRef);
+			app.workspace.offref(openRef);
+		};
+
+		// if nothing touches the file for 60ms, we consider it "settled"
+		const arm = () => {
+			clearTimer();
+			timeout = window.setTimeout(done, 60);
+		};
+
+		// start the timer; any further modify resets it
+		arm();
+
+		const modRef = app.vault.on('modify', (f) => {
+			if (f instanceof TFile && f.path === file.path) arm();
+		});
+	});
+}
 
 export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;
@@ -58,49 +112,19 @@ export default class TextEaterPlugin extends Plugin {
 		);
 		this.deprecatedFileService = new FileService(this.app, this.app.vault);
 
-		this.registerMarkdownPostProcessor((el, ctx) => {
-			el.querySelectorAll<HTMLButtonElement>(
-				'button.execute-command-button'
-			).forEach((btn) => {
-				// ensure no dupes on re-renders
-				const handler = () => {
-					console.log('Button (registerMarkdownPostProcessor) clicked:');
-
-					newGenCommand(this);
-				};
-				btn.removeEventListener('click', handler);
-				btn.addEventListener('click', handler);
-			});
-		});
-
 		this.registerDomEvent(document, 'click', (evt) => {
 			const target = evt.target as HTMLElement;
 
-			console.log('target.tagName:', target.tagName);
-
 			if (target.tagName === 'BUTTON') {
-				const btnId = target.id;
 				const action = target.dataset.action;
-				console.log('Button clicked:', btnId, action);
+
 				if (action === 'execute-new-gen-command') {
 					newGenCommand(this);
 				}
 			}
 
 			if (target.tagName === 'A') {
-				console.log(`target`, target);
-
 				const blockHtmlElement = target.parentElement?.parentElement;
-				console.log(
-					'blockHtmlElement?.textContent',
-					blockHtmlElement?.textContent
-				);
-
-				const parentHtmlElement = target.parentElement;
-				console.log(
-					'parentHtmlElement?.textContent',
-					parentHtmlElement?.textContent
-				);
 
 				const children = blockHtmlElement?.children;
 				if (children) {
@@ -115,6 +139,19 @@ export default class TextEaterPlugin extends Plugin {
 				}
 			}
 		});
+
+		this.registerEvent(
+			this.app.vault.on('create', (af) => {
+				if (!(af instanceof TFile) || af.extension !== 'md') return;
+
+				onNewFileThenRun(this.app, af, (view) => {
+					// now it’s safe: templates finished
+					// call your command or write directly
+					newGenCommand(this);
+					// or: view.editor.replaceRange("Your text\n", {line:0,ch:0});
+				});
+			})
+		);
 	}
 
 	private async loadSettings() {
