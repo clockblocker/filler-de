@@ -66,6 +66,7 @@ export class OpenedFileService {
 	}
 
 	async writeToOpenedFile(text: string): Promise<Maybe<string>> {
+		this.showLoadingOverlay();
 		const maybeEditor = await getMaybeEditor(this.app);
 		if (maybeEditor.error) {
 			return maybeEditor;
@@ -100,11 +101,14 @@ export class OpenedFileService {
 	}
 
 	public showLoadingOverlay(): void {
+		console.log('showLoadingOverlay');
 		if (document.getElementById('opened-file-service-loading-overlay')) {
 			return;
 		}
 		const overlay = document.createElement('div');
 		overlay.id = 'opened-file-service-loading-overlay';
+
+		document.body.appendChild(overlay);
 
 		const loadingText = document.createElement('div');
 		loadingText.innerText = 'Loading...';
@@ -112,7 +116,16 @@ export class OpenedFileService {
 		loadingText.style.color = '#fff';
 		overlay.appendChild(loadingText);
 
-		document.body.appendChild(overlay);
+		// overlay.style.position = 'fixed';
+		// overlay.style.top = '0';
+		// overlay.style.left = '0';
+		// overlay.style.width = '100%';
+		// overlay.style.height = '100%';
+		// overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)'; // Semi-transparent black
+		// overlay.style.display = 'flex';
+		// overlay.style.justifyContent = 'center';
+		// overlay.style.alignItems = 'center';
+		// overlay.style.zIndex = '1000'; // Ensure it's on top
 	}
 
 	// Exposed method to hide and remove the loading overlay

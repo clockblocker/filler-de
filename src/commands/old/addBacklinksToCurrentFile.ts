@@ -3,7 +3,7 @@ import {
 	appendToExistingFile,
 	getExisingOrCreatedFileInWorterDir,
 	doesExistingFileContainContent,
-} from '../utils';
+} from '../../utils';
 
 export default async function addBacklinksToCurrentFile(
 	file: TFile,

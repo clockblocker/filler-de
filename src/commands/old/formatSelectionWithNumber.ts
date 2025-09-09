@@ -1,6 +1,6 @@
 import { Editor, TFile } from 'obsidian';
-import TextEaterPlugin from '../main';
-import { formatSelectionWithBacklink } from '../utils';
+import TextEaterPlugin from '../../main';
+import { formatSelectionWithBacklink } from '../../utils';
 import { sentences } from 'sbd';
 
 export default async function formatSelectionWithNumber(

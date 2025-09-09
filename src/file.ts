@@ -1,7 +1,6 @@
 import { MarkdownView, TFile, App, Vault } from 'obsidian';
-import { appendToExistingFile, doesExistingFileContainContent } from './utils';
 
-export class FileService {
+export class DeprecatedFileService {
 	constructor(
 		private app: App,
 		private vault: Vault

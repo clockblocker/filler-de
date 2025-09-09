@@ -1,5 +1,5 @@
 import { Editor, MarkdownView, Notice, TFile } from 'obsidian';
-import TextEaterPlugin from '../main';
+import TextEaterPlugin from '../../main';
 
 export default async function getInfinitiveAndEmoji(
 	plugin: TextEaterPlugin,

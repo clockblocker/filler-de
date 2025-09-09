@@ -1,5 +1,5 @@
 import { Editor, Notice } from 'obsidian';
-import TextEaterPlugin from '../main';
+import TextEaterPlugin from '../../main';
 
 export default async function translateSelection(
 	plugin: TextEaterPlugin,

@@ -1,5 +1,5 @@
 import { Editor } from 'obsidian';
-import TextEaterPlugin from '../main';
+import TextEaterPlugin from '../../main';
 import { cleanMarkdownFormatting } from './functions';
 
 export default async function insertReplyFromC1Richter(

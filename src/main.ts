@@ -2,19 +2,20 @@ import { App, Editor, MarkdownView, Notice, Plugin, TFile } from 'obsidian';
 import { SettingsTab } from './settings';
 import { DEFAULT_SETTINGS, TextEaterSettings } from './types';
 import { ApiService } from './services/api-service';
-import { FileService } from './file';
-import fillTemplate from './commands/fillTemplate';
-import getInfinitiveAndEmoji from './commands/getInfinitiveAndEmoji';
-import normalizeSelection from './commands/normalizeSelection';
-import translateSelection from './commands/translateSelection';
-import formatSelectionWithNumber from './commands/formatSelectionWithNumber';
-import addBacklinksToCurrentFile from './commands/addBacklinksToCurrentFile';
-import insertReplyFromKeymaker from './commands/insertReplyFromC1Richter';
-import insertReplyFromC1Richter from './commands/insertReplyFromC1Richter';
+import { DeprecatedFileService } from './file';
+
 import newGenCommand from 'commands/new-gen-command';
 import { OpenedFileService } from 'services/opened-file-service';
 import { BackgroundFileService } from 'services/background-file-service';
 import { EditorView } from '@codemirror/view';
+import addBacklinksToCurrentFile from 'commands/old/addBacklinksToCurrentFile';
+import fillTemplate from 'commands/old/fillTemplate';
+import formatSelectionWithNumber from 'commands/old/formatSelectionWithNumber';
+import getInfinitiveAndEmoji from 'commands/old/getInfinitiveAndEmoji';
+import insertReplyFromC1Richter from 'commands/old/insertReplyFromC1Richter';
+import insertReplyFromKeymaker from 'commands/old/insertReplyFromKeymaker';
+import normalizeSelection from 'commands/old/normalizeSelection';
+import translateSelection from 'commands/old/translateSelection';
 
 // const clickListener = EditorView.domEventHandlers({
 // 	click: (event) => {
@@ -67,10 +68,14 @@ function onNewFileThenRun(
 			app.workspace.offref(openRef);
 		};
 
-		// if nothing touches the file for 60ms, we consider it "settled"
+		const TIME_IN_MS_TO_WAIT_BEFORE_MAKING_CHNAGES_TO_AWOID_RACES = 60;
+
 		const arm = () => {
 			clearTimer();
-			timeout = window.setTimeout(done, 60);
+			timeout = window.setTimeout(
+				done,
+				TIME_IN_MS_TO_WAIT_BEFORE_MAKING_CHNAGES_TO_AWOID_RACES
+			);
 		};
 
 		// start the timer; any further modify resets it
@@ -88,7 +93,7 @@ export default class TextEaterPlugin extends Plugin {
 	openedFileService: OpenedFileService;
 	backgroundFileService: BackgroundFileService;
 
-	deprecatedFileService: FileService;
+	deprecatedFileService: DeprecatedFileService;
 
 	async onload() {
 		try {
@@ -110,7 +115,10 @@ export default class TextEaterPlugin extends Plugin {
 			this.app,
 			this.app.vault
 		);
-		this.deprecatedFileService = new FileService(this.app, this.app.vault);
+		this.deprecatedFileService = new DeprecatedFileService(
+			this.app,
+			this.app.vault
+		);
 
 		this.registerDomEvent(document, 'click', (evt) => {
 			const target = evt.target as HTMLElement;
