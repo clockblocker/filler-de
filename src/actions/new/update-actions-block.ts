@@ -1,9 +1,9 @@
 import { Editor, MarkdownView, Notice, TFile } from 'obsidian';
-import TextEaterPlugin from '../main';
-import { longDash } from '../utils';
+import TextEaterPlugin from '../../main';
+import { longDash } from '../../utils';
 import { unwrapMaybe } from 'types/general';
 
-export default async function onNewFileCreated(plugin: TextEaterPlugin) {
+export default async function updateActionsBlock(plugin: TextEaterPlugin) {
 	try {
 		// const file = unwrapMaybe(
 		// 	await plugin.openedFileService.getMaybeOpenedFile()

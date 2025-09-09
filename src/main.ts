@@ -4,20 +4,21 @@ import { DEFAULT_SETTINGS, TextEaterSettings } from './types';
 import { ApiService } from './services/api-service';
 import { DeprecatedFileService } from './file';
 
-import newGenCommand from 'commands/new-gen-command';
+import newGenCommand from 'actions/new/new-gen-command';
 import { OpenedFileService } from 'services/opened-file-service';
 import { BackgroundFileService } from 'services/background-file-service';
 import { EditorView } from '@codemirror/view';
-import addBacklinksToCurrentFile from 'commands/old/addBacklinksToCurrentFile';
-import fillTemplate from 'commands/old/fillTemplate';
-import formatSelectionWithNumber from 'commands/old/formatSelectionWithNumber';
-import getInfinitiveAndEmoji from 'commands/old/getInfinitiveAndEmoji';
-import insertReplyFromC1Richter from 'commands/old/insertReplyFromC1Richter';
-import insertReplyFromKeymaker from 'commands/old/insertReplyFromKeymaker';
-import normalizeSelection from 'commands/old/normalizeSelection';
-import translateSelection from 'commands/old/translateSelection';
+import addBacklinksToCurrentFile from 'actions/old/addBacklinksToCurrentFile';
+import fillTemplate from 'actions/old/fillTemplate';
+import formatSelectionWithNumber from 'actions/old/formatSelectionWithNumber';
+import getInfinitiveAndEmoji from 'actions/old/getInfinitiveAndEmoji';
+import insertReplyFromC1Richter from 'actions/old/insertReplyFromC1Richter';
+import insertReplyFromKeymaker from 'actions/old/insertReplyFromKeymaker';
+import normalizeSelection from 'actions/old/normalizeSelection';
+import translateSelection from 'actions/old/translateSelection';
 import { WrappedBlockHtmlIo } from 'block-manager/block-manager';
-import onNewFileCreated from 'commands/on-new-file-created';
+import updateActionsBlock from 'actions/new/update-actions-block';
+import { ACTION_BY_NAME } from 'actions/actions';
 
 export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;
@@ -62,7 +63,7 @@ export default class TextEaterPlugin extends Plugin {
 				const action = target.dataset.action;
 
 				if (action === 'execute-new-gen-command') {
-					newGenCommand(this);
+					ACTION_BY_NAME['Generate'](this);
 				}
 			}
 
@@ -87,8 +88,8 @@ export default class TextEaterPlugin extends Plugin {
 			this.app.vault.on('create', (af) => {
 				if (!(af instanceof TFile) || af.extension !== 'md') return;
 
-				onNewFileThenRun(this.app, af, (view) => {
-					onNewFileCreated(this);
+				onNewFileThenRun(this.app, af, () => {
+					ACTION_BY_NAME['UpdateActionsBlock'](this);
 				});
 			})
 		);

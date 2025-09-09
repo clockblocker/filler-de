@@ -127,7 +127,7 @@ import {
 	POSSESSOR,
 	POSSESSED,
 	THEME,
-} from '../literals/literals';
+} from '../../literals';
 
 export const MORPHEME_TYPES_STR = [
 	ROOT, // core lexical base (e.g. "book", "write")

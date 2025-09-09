@@ -1,6 +1,6 @@
 import { Editor, MarkdownView, Notice, TFile } from 'obsidian';
-import TextEaterPlugin from '../main';
-import { longDash } from '../utils';
+import TextEaterPlugin from '../../main';
+import { longDash } from '../../utils';
 import { unwrapMaybe } from 'types/general';
 
 export default async function newGenCommand(plugin: TextEaterPlugin) {

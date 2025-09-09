@@ -5,6 +5,10 @@ const PlusDelimeterSchema = z.literal('_plus_');
 export type PLUS_DELIMETER = z.infer<typeof PlusDelimeterSchema>;
 export const PLUS_DELIMETER = PlusDelimeterSchema.value;
 
+const SlashSchema = z.literal('/');
+export type SLASH = z.infer<typeof SlashSchema>;
+export const SLASH = SlashSchema.value;
+
 const PhraseSchema = z.literal('Phrase');
 export type PHRASE = z.infer<typeof PhraseSchema>;
 export const PHRASE = PhraseSchema.value;
