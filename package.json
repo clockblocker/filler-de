@@ -32,7 +32,7 @@
 		"typescript": "latest"
 	},
 	"dependencies": {
-		"@codemirror/view": "^6.38.2",
+		"@codemirror/view": "latest",
 		"@google/generative-ai": "latest",
 		"@types/sbd": "latest",
 		"sbd": "latest",
