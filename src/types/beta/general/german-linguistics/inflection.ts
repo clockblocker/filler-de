@@ -74,4 +74,3 @@ const a = {
 	governedPhrases: ['auf den großen Moment'],
 	particles: ['vor'],
 };
-

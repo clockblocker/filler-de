@@ -37,5 +37,4 @@ PHRASEM
 ["geschlossen", {member: "mainVerb"}]
 ]
 
-
 ValencyFrames: {}

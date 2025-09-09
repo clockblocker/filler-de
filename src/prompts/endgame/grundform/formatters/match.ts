@@ -28,4 +28,3 @@ export function compareGrundforms(
 
 	return bScore - aScore;
 }
-

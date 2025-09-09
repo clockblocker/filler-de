@@ -97,7 +97,6 @@ export const SemanticRelationsSchema = z.literal('SemanticRelationss');
 export type SemanticRelations = z.infer<typeof SemanticRelationsSchema>;
 export const SEMANTIC_RELATIONS = SemanticRelationsSchema.value;
 
-
 // Dimension: intensity, [force, manner, frequency, degree, count/amount, certainty, obligation,  space]]
 // Scalar degree: 3 | [-5:5]
 // Usage context: taste, smell, argument, person
