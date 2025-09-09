@@ -3,7 +3,7 @@ import {
 	LINGUISTIC_UNIT_STR_TYPES,
 	MORPHEM,
 	LEXEM,
-} from '../../general/consts/linguistics-consts';
+} from '../../general/general-linguistic-enums/linguistics-enums';
 import { Morphem } from 'prompts/endgame/zod/types';
 
 // Meta note types

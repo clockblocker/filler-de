@@ -3,7 +3,7 @@ import {
 	LinguisticUnit,
 	PHRASEM,
 	PhrasemeType,
-} from 'types/beta/general/consts/linguistics-consts';
+} from 'types/beta/general/general-linguistic-enums/linguistics-enums';
 
 const noteTree = {
 	[LinguisticUnit.Phrasem]: {

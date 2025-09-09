@@ -5,7 +5,7 @@ import {
 	Person,
 	Number,
 	Case,
-} from '../consts/linguistics-consts';
+} from '../general-linguistic-enums/linguistics-enums';
 
 type AbstractInflection = Record<InflectionalDimension, string>;
 

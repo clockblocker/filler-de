@@ -3,7 +3,7 @@ import {
 	LinguisticUnit,
 	PartOfSpeech,
 	PhrasemeType,
-} from '../general/consts/linguistics-consts';
+} from '../general/general-linguistic-enums/linguistics-enums';
 import { MetaNoteType, NoteType } from './note-structure/note-structure-consts';
 
 type AbstractNote<T extends NoteType = NoteType> = {

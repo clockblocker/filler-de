@@ -7,7 +7,7 @@ import {
 	DiscourseFormulaRoleSchema,
 	CollocationType,
 	CollocationStrength,
-} from 'types/beta/general/consts/linguistics-consts';
+} from 'types/beta/general/general-linguistic-enums/linguistics-enums';
 
 const PhrasemeComponentSchema = z.object({
 	surface: z.string(),
