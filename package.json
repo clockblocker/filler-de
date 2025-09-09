@@ -4,12 +4,11 @@
 	"description": "Go trough the german texts, building your own dictionary from your personal contexts",
 	"main": "main.js",
 	"scripts": {
-		"gen:blocks": "tsx src/codegen/scripts/gen-blocks.ts",
 		"lint": "eslint . --ext .js,.jsx,.ts,.tsx",
 		"lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
 		"format": "prettier --write .",
-		"dev": "npm run gen:blocks && node esbuild.config.mjs",
-		"build": "npm run gen:blocks && npm run lint:fix && npm run format && tsc -noEmit -skipLibCheck && node esbuild.config.mjs production"
+		"dev": "node esbuild.config.mjs",
+		"build": "npm run lint:fix && npm run format && tsc -noEmit -skipLibCheck && node esbuild.config.mjs production"
 	},
 	"keywords": [],
 	"author": "clockblocker",
