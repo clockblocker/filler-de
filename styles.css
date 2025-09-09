@@ -31,9 +31,6 @@
 	margin-bottom: 12px;
 }
 
-/* Obsidian components */
-
-/* File Header */
 .inline-title {
 	margin: 0;
 }
@@ -66,8 +63,12 @@
 
 .note_block {
 	display: flex;
+	border-bottom: 1px dashed hsla(0, 0%, 100%, 0.3);
+	padding-bottom: 4px;
+	width: 100%;
 }
 
 span.cm-html-embed {
-	display: inline-block; /* keep it inline-ish */
+	display: inline-block;
+	width: 100%;
 }

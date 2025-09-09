@@ -16,14 +16,15 @@ import insertReplyFromC1Richter from 'commands/old/insertReplyFromC1Richter';
 import insertReplyFromKeymaker from 'commands/old/insertReplyFromKeymaker';
 import normalizeSelection from 'commands/old/normalizeSelection';
 import translateSelection from 'commands/old/translateSelection';
-import { BlockManager } from 'block-manager/block-manager';
+import { WrappedBlockHtmlIo } from 'block-manager/block-manager';
+import onNewFileCreated from 'commands/on-new-file-created';
 
 export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;
 	apiService: ApiService;
 	openedFileService: OpenedFileService;
 	backgroundFileService: BackgroundFileService;
-	blockManager: BlockManager;
+	blockManager: WrappedBlockHtmlIo;
 
 	deprecatedFileService: DeprecatedFileService;
 
@@ -52,7 +53,7 @@ export default class TextEaterPlugin extends Plugin {
 			this.app.vault
 		);
 
-		this.blockManager = new BlockManager();
+		this.blockManager = new WrappedBlockHtmlIo();
 
 		this.registerDomEvent(document, 'click', (evt) => {
 			const target = evt.target as HTMLElement;
@@ -87,10 +88,7 @@ export default class TextEaterPlugin extends Plugin {
 				if (!(af instanceof TFile) || af.extension !== 'md') return;
 
 				onNewFileThenRun(this.app, af, (view) => {
-					// now it’s safe: templates finished
-					// call your command or write directly
-					newGenCommand(this);
-					// or: view.editor.replaceRange("Your text\n", {line:0,ch:0});
+					onNewFileCreated(this);
 				});
 			})
 		);

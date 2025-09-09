@@ -1,11 +1,10 @@
-export type BlockExtract = {
+export type WrappedBlockExtract = {
 	blockName: string; // e.g. "buttons"
 	outerHTML: string; // full <span>…</span>
 	innerHTML: string; // inside contents
-	textContent: string; // plain text
 };
 
-export class BlockManager {
+export class WrappedBlockHtmlIo {
 	private parse(html: string): Document {
 		const parser = new DOMParser();
 		return parser.parseFromString(html, 'text/html');
@@ -21,7 +20,7 @@ export class BlockManager {
 	 * Extract contents from `<span class="note_block note_block_{blockName}">...</span>`
 	 * Returns all matches (there can be multiple blocks in the string).
 	 */
-	extractContents(html: string, blockName: string): BlockExtract[] {
+	extractContents(html: string, blockName: string): WrappedBlockExtract[] {
 		const doc = this.parse(html);
 		const nodes = Array.from(
 			doc.body.querySelectorAll(this.selector(blockName))
@@ -75,28 +74,8 @@ export class BlockManager {
 		return this.wrap(contentOrBlockHTML, blockName, extraClasses);
 	}
 
-	/**
-	 * Replace ALL blocks of a given name with a transformer over their INNER HTML.
-	 * Handy if you want to inject buttons or tweak content.
-	 */
-	transformBlocks(
-		html: string,
-		blockName: string,
-		transform: (innerHTML: string, el: HTMLSpanElement) => string
-	): string {
-		const doc = this.parse(html);
-		const nodes = Array.from(
-			doc.body.querySelectorAll(this.selector(blockName))
-		) as HTMLSpanElement[];
-		nodes.forEach((el) => {
-			const nextInner = transform(el.innerHTML, el);
-			el.innerHTML = nextInner;
-		});
-		return doc.body.innerHTML;
-	}
-
 	/** Extract all note_block spans of any type */
-	extractAllBlocks(html: string): BlockExtract[] {
+	extractAllBlocks(html: string): WrappedBlockExtract[] {
 		const doc = this.parse(html);
 
 		console.log('doc', doc);
@@ -114,7 +93,6 @@ export class BlockManager {
 				blockName,
 				outerHTML: el.outerHTML,
 				innerHTML: el.innerHTML,
-				textContent: el.textContent ?? '',
 			};
 		});
 	}
