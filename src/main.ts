@@ -35,8 +35,10 @@ export default class TextEaterPlugin extends Plugin {
 	backgroundFileService: BackgroundFileService;
 	blockManager: WrappedBlockHtmlIo;
 
-	private overlayEl: HTMLElement | null = null;
+	private toolbarEl: HTMLDivElement | null = null;
 	private attachedView: MarkdownView | null = null;
+	private cm: EditorView | null = null;
+	private overlayEl: HTMLElement | null = null;
 
 	deprecatedFileService: DeprecatedFileService;
 
@@ -125,15 +127,18 @@ export default class TextEaterPlugin extends Plugin {
 
 		// Create overlay element once; we’ll move it between views
 		this.overlayEl = this.createOverlay();
+		this.app.workspace.onLayoutReady(() => this.attach());
+		this.registerEvent(
+			this.app.workspace.on('active-leaf-change', () => this.attach())
+		);
+		this.registerEvent(
+			this.app.workspace.on('layout-change', () => this.attach())
+		);
 	}
 
 	onunload() {
 		this.detachOverlay();
-	}
-
-	private getActiveMarkdownView(): MarkdownView | null {
-		const leaf = this.app.workspace.getActiveViewOfType(MarkdownView);
-		return leaf ?? null;
+		this.detach();
 	}
 
 	private attachToActiveMarkdownView() {
@@ -404,6 +409,128 @@ export default class TextEaterPlugin extends Plugin {
 		});
 
 		return Math.max(0, ...numbers);
+	}
+
+	private getActiveMarkdownView(): MarkdownView | null {
+		return this.app.workspace.getActiveViewOfType(MarkdownView);
+	}
+
+	private attach() {
+		const view = this.getActiveMarkdownView();
+		if (this.attachedView === view) return;
+
+		this.detach();
+		if (!view || view.getMode() !== 'source') return; // Source mode only
+
+		// CM6 EditorView
+		// @ts-ignore - Obsidian exposes cm on editor
+		const cm: EditorView = (view.editor as any).cm;
+		this.cm = cm;
+		this.attachedView = view;
+
+		// Create toolbar once
+		this.toolbarEl = this.createToolbar();
+		const host = cm.dom as HTMLElement; // .cm-editor
+		host.style.position ||= 'relative';
+		host.appendChild(this.toolbarEl);
+
+		const showMaybe = () => setTimeout(() => this.updateToolbarPosition(), 0);
+		const hide = () => this.hideToolbar();
+
+		// Listeners
+		host.addEventListener('mouseup', showMaybe);
+		host.addEventListener('keyup', showMaybe);
+		cm.scrollDOM.addEventListener('scroll', hide, { passive: true });
+		this.register(() => host.removeEventListener('mouseup', showMaybe));
+		this.register(() => host.removeEventListener('keyup', showMaybe));
+		this.register(() => cm.scrollDOM.removeEventListener('scroll', hide));
+
+		// Hide on mode change (preview <-> source)
+		this.registerEvent(this.app.workspace.on('css-change', hide));
+	}
+
+	private detach() {
+		this.hideToolbar();
+		if (this.toolbarEl?.parentElement)
+			this.toolbarEl.parentElement.removeChild(this.toolbarEl);
+		this.toolbarEl = null;
+		this.cm = null;
+		this.attachedView = null;
+	}
+
+	private createToolbar(): HTMLDivElement {
+		const el = document.createElement('div');
+		el.className = 'selection-toolbar';
+		el.style.display = 'none';
+
+		const mkBtn = (label: string, fn: () => void) => {
+			const b = document.createElement('button');
+			b.className = 'selection-toolbar-btn';
+			b.textContent = label;
+			b.onclick = (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				fn();
+			};
+			return b;
+		};
+
+		el.append(
+			mkBtn('Bold', () => this.wrap('**')),
+			mkBtn('Italic', () => this.wrap('*')),
+			mkBtn('Copy', async () => {
+				const ed = this.attachedView?.editor;
+				if (!ed) return;
+				const s = ed.getSelection();
+				if (s) await navigator.clipboard.writeText(s);
+			})
+		);
+		return el;
+	}
+
+	private wrap(wrapper: string) {
+		const ed = this.attachedView?.editor;
+		if (!ed) return;
+		const s = ed.getSelection();
+		if (!s) return;
+		ed.replaceSelection(`${wrapper}${s}${wrapper}`);
+		this.updateToolbarPosition(); // keep it in place or hide if selection collapsed
+	}
+
+	private hideToolbar() {
+		if (this.toolbarEl) this.toolbarEl.style.display = 'none';
+	}
+
+	private updateToolbarPosition() {
+		if (!this.cm || !this.toolbarEl || !this.attachedView) return;
+
+		const sel = this.cm.state.selection.main;
+		if (sel.empty) return this.hideToolbar();
+
+		const from = this.cm.coordsAtPos(sel.from);
+		const to = this.cm.coordsAtPos(sel.to);
+		if (!from || !to) return this.hideToolbar();
+
+		const hostRect = (this.cm.dom as HTMLElement).getBoundingClientRect();
+		const midX =
+			(Math.min(from.left, to.left) + Math.max(from.right, to.right)) / 2;
+		const top = Math.min(from.top, to.top);
+
+		// Position centered above selection
+		const t = this.toolbarEl;
+		t.style.display = 'block';
+		t.style.position = 'absolute';
+		t.style.top = `${top - hostRect.top - t.offsetHeight - 8 + this.cm.scrollDOM.scrollTop}px`;
+		t.style.left = `${midX - hostRect.left - t.offsetWidth / 2 + this.cm.scrollDOM.scrollLeft}px`;
+
+		// If it would go outside, nudge inside
+		const maxLeft = this.cm.scrollDOM.scrollWidth - t.offsetWidth - 8;
+		const minLeft = 8;
+		const leftNum = Math.max(
+			minLeft,
+			Math.min(parseFloat(t.style.left), maxLeft)
+		);
+		t.style.left = `${leftNum}px`;
 	}
 }
 

@@ -120,3 +120,28 @@ body.hide-status-bar .status-bar {
 body.hide-status-bar .mod-root .workspace-split {
 	padding-bottom: max(0px, env(safe-area-inset-bottom));
 }
+
+/* ------ */
+
+.selection-toolbar {
+	z-index: 10000; /* above selection and status popups */
+	padding: 6px;
+	border-radius: 10px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+	display: flex;
+	gap: 6px;
+}
+
+.selection-toolbar-btn {
+	font: inherit;
+	padding: 4px 8px;
+	border-radius: 8px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-secondary);
+	cursor: pointer;
+}
+.selection-toolbar-btn:hover {
+	background: var(--background-secondary-alt);
+}
