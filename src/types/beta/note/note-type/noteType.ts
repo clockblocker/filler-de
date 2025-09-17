@@ -1,7 +1,6 @@
 import {
 	CollocationStrength,
 	LinguisticUnit,
-	PHRASEM,
 	PhrasemeType,
 } from 'types/beta/general/general-linguistic-enums/linguistics-enums';
 

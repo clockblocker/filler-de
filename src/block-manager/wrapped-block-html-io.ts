@@ -10,16 +10,10 @@ export class WrappedBlockHtmlIo {
 		return parser.parseFromString(html, 'text/html');
 	}
 
-	/** Build the CSS selector for a given blockName */
 	private selector(blockName: string): string {
-		// blockName should be simple; if you expect weird chars, consider CSS.escape
 		return `span.note_block.note_block_${blockName}`;
 	}
 
-	/**
-	 * Extract contents from `<span class="note_block note_block_{blockName}">...</span>`
-	 * Returns all matches (there can be multiple blocks in the string).
-	 */
 	extractContents(html: string, blockName: string): WrappedBlockExtract[] {
 		const doc = this.parse(html);
 		const nodes = Array.from(
@@ -78,17 +72,17 @@ export class WrappedBlockHtmlIo {
 	extractAllBlocks(html: string): WrappedBlockExtract[] {
 		const doc = this.parse(html);
 
-		console.log('doc', doc);
 		const nodes = Array.from(
 			doc.body.querySelectorAll('span.note_block')
 		) as HTMLSpanElement[];
 
 		return nodes.map((el) => {
-			// find the note_block_* part
 			const nameClass = Array.from(el.classList).find((c) =>
 				c.startsWith('note_block_')
 			);
+
 			const blockName = nameClass ? nameClass.replace('note_block_', '') : '';
+
 			return {
 				blockName,
 				outerHTML: el.outerHTML,

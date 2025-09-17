@@ -5,13 +5,12 @@ import updateActionsBlock from './new/update-actions-block';
 export const ACTION_NAME_LITERALS = [
 	'Generate',
 	'UpdateActionsBlock',
-
-	// 'AddContext',
-	// 'SplitContexts',
-	// 'SplitInBlocks',
-	// 'TranslateSelection',
-	// 'TranslateBlock',
-	// 'ExplainGrammar',
+	'AddContext',
+	'SplitContexts',
+	'SplitInBlocks',
+	'TranslateSelection',
+	'TranslateBlock',
+	'ExplainGrammar',
 ] as const;
 
 export const ActionNameSchema = z.enum(ACTION_NAME_LITERALS);
@@ -23,10 +22,11 @@ export const ActionNames = ActionNameSchema.options;
 export const ACTION_BY_NAME = {
 	[ActionName.Generate]: newGenCommand,
 	[ActionName.UpdateActionsBlock]: updateActionsBlock,
-	// [Action.AddContext]: newGenCommand,
-	// [Action.ExplainGrammar]: newGenCommand,
-	// [Action.SplitContexts]: newGenCommand,
-	// [Action.SplitInBlocks]: newGenCommand,
-	// [Action.TranslateBlock]: newGenCommand,
-	// [Action.TranslateSelection]: newGenCommand,
+
+	[ActionName.AddContext]: newGenCommand,
+	[ActionName.ExplainGrammar]: newGenCommand,
+	[ActionName.SplitContexts]: newGenCommand,
+	[ActionName.SplitInBlocks]: newGenCommand,
+	[ActionName.TranslateBlock]: newGenCommand,
+	[ActionName.TranslateSelection]: newGenCommand,
 } satisfies Record<ActionName, unknown>;

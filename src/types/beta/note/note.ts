@@ -1,9 +1,9 @@
 import {
-	INFLECTION,
 	LinguisticUnit,
 	PartOfSpeech,
 	PhrasemeType,
 } from '../general/general-linguistic-enums/linguistics-enums';
+import { INFLECTION } from '../literals';
 import { MetaNoteType, NoteType } from './note-structure/note-structure-consts';
 
 type AbstractNote<T extends NoteType = NoteType> = {

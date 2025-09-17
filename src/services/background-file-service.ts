@@ -1,6 +1,6 @@
 import { App, Vault, TFile, Editor, MarkdownView, TFolder } from 'obsidian';
 import { Maybe, PathParts } from '../types/general';
-import { SLASH } from '../types/constants';
+import { SLASH } from 'types/beta/literals';
 
 const pathToFolderFromPathParts = (pathParts: PathParts) =>
 	pathParts.join(SLASH);

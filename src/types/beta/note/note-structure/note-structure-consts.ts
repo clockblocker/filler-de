@@ -1,10 +1,5 @@
 import z from 'zod/v4';
-import {
-	LINGUISTIC_UNIT_STR_TYPES,
-	MORPHEM,
-	LEXEM,
-} from '../../general/general-linguistic-enums/linguistics-enums';
-import { Morphem } from 'prompts/endgame/zod/types';
+import { LINGUISTIC_UNIT_STR_TYPES } from '../../general/general-linguistic-enums/linguistics-enums';
 
 // Meta note types
 export const NavigationSchema = z.literal('Navigation');

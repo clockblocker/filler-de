@@ -1,4 +1,12 @@
-import { App, Editor, MarkdownView, Notice, Plugin, TFile } from 'obsidian';
+import {
+	App,
+	Editor,
+	MarkdownView,
+	Notice,
+	Plugin,
+	TFile,
+	WorkspaceLeaf,
+} from 'obsidian';
 import { SettingsTab } from './settings';
 import { DEFAULT_SETTINGS, TextEaterSettings } from './types';
 import { ApiService } from './services/api-service';
@@ -16,7 +24,7 @@ import insertReplyFromC1Richter from 'actions/old/insertReplyFromC1Richter';
 import insertReplyFromKeymaker from 'actions/old/insertReplyFromKeymaker';
 import normalizeSelection from 'actions/old/normalizeSelection';
 import translateSelection from 'actions/old/translateSelection';
-import { WrappedBlockHtmlIo } from 'block-manager/block-manager';
+import { WrappedBlockHtmlIo } from 'block-manager/wrapped-block-html-io';
 import updateActionsBlock from 'actions/new/update-actions-block';
 import { ACTION_BY_NAME } from 'actions/actions';
 
@@ -26,6 +34,9 @@ export default class TextEaterPlugin extends Plugin {
 	openedFileService: OpenedFileService;
 	backgroundFileService: BackgroundFileService;
 	blockManager: WrappedBlockHtmlIo;
+
+	private overlayEl: HTMLElement | null = null;
+	private attachedView: MarkdownView | null = null;
 
 	deprecatedFileService: DeprecatedFileService;
 
@@ -93,6 +104,118 @@ export default class TextEaterPlugin extends Plugin {
 				});
 			})
 		);
+
+		this.app.workspace.onLayoutReady(() => {
+			this.attachToActiveMarkdownView();
+		});
+
+		// Reattach when user switches panes/notes
+		this.registerEvent(
+			this.app.workspace.on('active-leaf-change', (_leaf: WorkspaceLeaf) => {
+				this.attachToActiveMarkdownView();
+			})
+		);
+
+		// Also re-check after major layout changes (splits, etc.)
+		this.registerEvent(
+			this.app.workspace.on('layout-change', () => {
+				this.attachToActiveMarkdownView();
+			})
+		);
+
+		// Create overlay element once; we’ll move it between views
+		this.overlayEl = this.createOverlay();
+	}
+
+	onunload() {
+		this.detachOverlay();
+	}
+
+	private getActiveMarkdownView(): MarkdownView | null {
+		const leaf = this.app.workspace.getActiveViewOfType(MarkdownView);
+		return leaf ?? null;
+	}
+
+	private attachToActiveMarkdownView() {
+		const view = this.getActiveMarkdownView();
+
+		// If we’re already attached to this view, nothing to do
+		if (view && this.attachedView === view && this.overlayEl?.isConnected)
+			return;
+
+		// Detach from old view if any
+		this.detachOverlay();
+
+		if (!view || !this.overlayEl) {
+			this.attachedView = null;
+			return;
+		}
+
+		// Attach to the new view’s content area
+		// `view.contentEl` is the scrollable region for the note
+		const container = view.contentEl;
+		container.addClass('bottom-overlay-host');
+		container.appendChild(this.overlayEl);
+
+		// Ensure the overlay sits at the bottom of the content area
+		// and does not hide the last lines: add bottom padding while present
+		container.style.paddingBottom = '64px'; // match overlay height
+
+		this.attachedView = view;
+	}
+
+	private detachOverlay() {
+		if (!this.overlayEl) return;
+
+		// Remove extra padding from old host
+		if (this.attachedView) {
+			const oldHost = this.attachedView.contentEl;
+			oldHost.style.paddingBottom = '';
+			oldHost.removeClass('bottom-overlay-host');
+		}
+
+		if (this.overlayEl.parentElement) {
+			this.overlayEl.parentElement.removeChild(this.overlayEl);
+		}
+
+		this.attachedView = null;
+	}
+
+	private createOverlay(): HTMLElement {
+		const el = document.createElement('div');
+		el.className = 'my-bottom-overlay';
+
+		// Example buttons — hook these up to your commands or logic
+		const btn1 = this.makeButton('Toggle Edit/Preview', async () => {
+			console.log('123');
+		});
+
+		const btn2 = this.makeButton('Copy Note Link', async () => {
+			const file = this.attachedView?.file;
+			if (!file) return;
+			const link = `[[${file.path}]]`;
+			await navigator.clipboard.writeText(link);
+			new Notice('Note link copied');
+		});
+
+		const btn3 = this.makeButton('Backlinks', () => {
+			// Example: open backlinks pane
+			// You can also `app.commands.executeCommandById("backlink:open")` if you prefer command IDs
+			// @ts-ignore (not typed in API, but present)
+			this.app.commands.executeCommandById('backlink:open');
+		});
+
+		el.append(btn1, btn2, btn3);
+		document.body.classList.add('hide-status-bar');
+		return el;
+	}
+
+	private makeButton(label: string, onClick: () => void): HTMLButtonElement {
+		const b = document.createElement('button');
+		b.className = 'my-bottom-overlay-btn';
+		b.textContent = label;
+		b.addEventListener('click', onClick);
+		return b;
 	}
 
 	private async loadSettings() {

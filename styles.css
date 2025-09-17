@@ -72,3 +72,51 @@ span.cm-html-embed {
 	display: inline-block;
 	width: 100%;
 }
+
+/* --- */
+
+/* Host marks the content area that currently has an overlay */
+.bottom-overlay-host {
+	position: relative; /* allows absolute child to anchor to bottom of the note area */
+}
+
+/* The overlay bar itself */
+.my-bottom-overlay {
+	position: absolute; /* anchored inside the note pane, not global */
+	left: 0;
+	right: 0;
+	bottom: 0;
+	height: 56px;
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	padding: 8px 12px;
+	border-top: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	backdrop-filter: blur(6px);
+	box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
+	z-index: 10; /* above note content, below app headers */
+}
+
+/* Buttons */
+.my-bottom-overlay-btn {
+	font: inherit;
+	padding: 6px 10px;
+	border-radius: 8px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-secondary);
+	cursor: pointer;
+}
+.my-bottom-overlay-btn:hover {
+	background: var(--background-secondary-alt);
+}
+
+/* Toggle this class from your plugin if you want */
+body.hide-status-bar .status-bar {
+	display: none !important;
+}
+
+/* Remove any bottom spacing when status bar is hidden */
+body.hide-status-bar .mod-root .workspace-split {
+	padding-bottom: max(0px, env(safe-area-inset-bottom));
+}
