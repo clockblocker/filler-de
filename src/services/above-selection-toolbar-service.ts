@@ -70,7 +70,7 @@ export class AboveSelectionToolbarService {
 		while (host.firstChild) host.removeChild(host.firstChild);
 		for (const a of this.actions) {
 			const b = document.createElement('button');
-			b.setAttribute('action', a.action);
+			b.dataset.action = a.action;
 			b.className = 'selection-toolbar-btn';
 			b.textContent = a.label;
 			host.appendChild(b);

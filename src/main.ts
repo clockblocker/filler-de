@@ -28,7 +28,11 @@ import updateActionsBlock from 'actions/new/update-actions-block';
 import { AboveSelectionToolbarService } from 'services/above-selection-toolbar-service';
 import { BottomToolbarService } from 'services/bottom-toolbar-service';
 import { ACTION_CONFIGS } from 'actions/actions-config';
-import { Action, ActionSchema } from 'types/beta/system/actions';
+import {
+	Action,
+	ActionPlacement,
+	ActionSchema,
+} from 'types/beta/system/actions';
 
 export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;
@@ -112,14 +116,33 @@ export default class TextEaterPlugin extends Plugin {
 
 		this.overlayService = new BottomToolbarService(this.app);
 		this.overlayService.init();
+
+		// Derive actions for toolbars from config
+		const entries = Object.entries(ACTION_CONFIGS) as Array<
+			[action: Action, cfg: { label: string; placement: ActionPlacement }]
+		>;
+		const bottomActions = entries
+			.filter(([, cfg]) => cfg.placement === ActionPlacement.Bottom)
+			.map(([action, cfg]) => ({ action, label: cfg.label }));
+		const aboveSelectionActions = entries
+			.filter(([, cfg]) => cfg.placement === ActionPlacement.AboveSelection)
+			.map(([action, cfg]) => ({ action, label: cfg.label }));
+
+		this.overlayService.setActions(bottomActions);
+		// Selection toolbar service
+		this.selectionToolbarService = new AboveSelectionToolbarService(this.app);
+		this.selectionToolbarService.setActions(aboveSelectionActions);
+
 		this.app.workspace.onLayoutReady(() => {
 			this.overlayService.attachToActiveMarkdownView();
+			this.selectionToolbarService.attach();
 		});
 
 		// Reattach when user switches panes/notes
 		this.registerEvent(
 			this.app.workspace.on('active-leaf-change', (_leaf: WorkspaceLeaf) => {
 				this.overlayService.attachToActiveMarkdownView();
+				this.selectionToolbarService.attach();
 			})
 		);
 
@@ -127,24 +150,25 @@ export default class TextEaterPlugin extends Plugin {
 		this.registerEvent(
 			this.app.workspace.on('layout-change', () => {
 				this.overlayService.attachToActiveMarkdownView();
+				this.selectionToolbarService.attach();
 			})
 		);
 
-		// Selection toolbar service
-		this.selectionToolbarService = new AboveSelectionToolbarService(this.app);
-		this.app.workspace.onLayoutReady(() =>
-			this.selectionToolbarService.attach()
-		);
-		this.registerEvent(
-			this.app.workspace.on('active-leaf-change', () =>
-				this.selectionToolbarService.attach()
-			)
-		);
-		this.registerEvent(
-			this.app.workspace.on('layout-change', () =>
-				this.selectionToolbarService.attach()
-			)
-		);
+		// // Selection toolbar service
+		// this.selectionToolbarService = new AboveSelectionToolbarService(this.app);
+		// this.app.workspace.onLayoutReady(() =>
+		// 	this.selectionToolbarService.attach()
+		// );
+		// this.registerEvent(
+		// 	this.app.workspace.on('active-leaf-change', () =>
+		// 		this.selectionToolbarService.attach()
+		// 	)
+		// );
+		// this.registerEvent(
+		// 	this.app.workspace.on('layout-change', () =>
+		// 		this.selectionToolbarService.attach()
+		// 	)
+		// );
 		this.registerEvent(
 			this.app.workspace.on('css-change', () =>
 				this.selectionToolbarService.onCssChange()
