@@ -2,7 +2,7 @@ import {
 	LinguisticUnit,
 	PartOfSpeech,
 	PhrasemeType,
-} from '../general/general-linguistic-enums/linguistics-enums';
+} from '../linguistics/general-linguistic-enums/linguistics-enums';
 import { INFLECTION } from '../literals';
 import { MetaNoteType, NoteType } from './note-structure/note-structure-consts';
 

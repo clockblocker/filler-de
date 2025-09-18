@@ -1,7 +1,7 @@
 import { App, MarkdownView } from 'obsidian';
 import { EditorView } from '@codemirror/view';
 
-export class SelectionToolbarService {
+export class AboveSelectionToolbarService {
 	private toolbarEl: HTMLDivElement | null = null;
 	private attachedView: MarkdownView | null = null;
 	private cm: EditorView | null = null;

@@ -47,9 +47,9 @@ export default async function newGenCommand(plugin: TextEaterPlugin) {
 			await plugin.openedFileService.getMaybeFileContent()
 		);
 
-		const exisingBlocks = plugin.blockManager.extractAllBlocks(fileContent);
+		// const exisingBlocks = plugin.blockManager.extractAllBlocks(fileContent);
 
-		console.log('exisingBlocks', exisingBlocks);
+		// console.log('exisingBlocks', exisingBlocks);
 
 		if (fileContent.trim() === '') {
 			await Promise.all(

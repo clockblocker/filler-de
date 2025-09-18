@@ -1,6 +1,6 @@
 import { App, MarkdownView } from 'obsidian';
 
-export class OverlayService {
+export class BottomToolbarService {
 	private overlayEl: HTMLElement | null = null;
 	private attachedView: MarkdownView | null = null;
 

@@ -24,21 +24,18 @@ import insertReplyFromC1Richter from 'actions/old/insertReplyFromC1Richter';
 import insertReplyFromKeymaker from 'actions/old/insertReplyFromKeymaker';
 import normalizeSelection from 'actions/old/normalizeSelection';
 import translateSelection from 'actions/old/translateSelection';
-import { WrappedBlockHtmlIo } from 'block-manager/wrapped-block-html-io';
 import updateActionsBlock from 'actions/new/update-actions-block';
-import { ACTION_BY_NAME } from 'actions/actions';
-import { SelectionToolbarService } from 'services/selection-toolbar-service';
-import { OverlayService } from 'services/overlay-service';
+import { AboveSelectionToolbarService } from 'services/above-selection-toolbar-service';
+import { BottomToolbarService } from 'services/bottom-toolbar-service';
 
 export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;
 	apiService: ApiService;
 	openedFileService: OpenedFileService;
 	backgroundFileService: BackgroundFileService;
-	blockManager: WrappedBlockHtmlIo;
 
-	selectionToolbarService: SelectionToolbarService;
-	overlayService: OverlayService;
+	selectionToolbarService: AboveSelectionToolbarService;
+	overlayService: BottomToolbarService;
 
 	deprecatedFileService: DeprecatedFileService;
 
@@ -67,16 +64,14 @@ export default class TextEaterPlugin extends Plugin {
 			this.app.vault
 		);
 
-		this.blockManager = new WrappedBlockHtmlIo();
-
 		this.registerDomEvent(document, 'click', (evt) => {
 			const target = evt.target as HTMLElement;
 
 			if (target.tagName === 'BUTTON') {
 				const action = target.dataset.action;
+				console.log('target', target);
 
 				if (action === 'execute-new-gen-command') {
-					ACTION_BY_NAME['Generate'](this);
 				}
 			}
 
@@ -101,13 +96,11 @@ export default class TextEaterPlugin extends Plugin {
 			this.app.vault.on('create', (af) => {
 				if (!(af instanceof TFile) || af.extension !== 'md') return;
 
-				onNewFileThenRun(this.app, af, () => {
-					ACTION_BY_NAME['UpdateActionsBlock'](this);
-				});
+				onNewFileThenRun(this.app, af, () => {});
 			})
 		);
 
-		this.overlayService = new OverlayService(this.app);
+		this.overlayService = new BottomToolbarService(this.app);
 		this.overlayService.init();
 		this.app.workspace.onLayoutReady(() => {
 			this.overlayService.attachToActiveMarkdownView();
@@ -128,7 +121,7 @@ export default class TextEaterPlugin extends Plugin {
 		);
 
 		// Selection toolbar service
-		this.selectionToolbarService = new SelectionToolbarService(this.app);
+		this.selectionToolbarService = new AboveSelectionToolbarService(this.app);
 		this.app.workspace.onLayoutReady(() =>
 			this.selectionToolbarService.attach()
 		);
