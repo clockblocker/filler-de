@@ -1,10 +1,12 @@
 import { App, MarkdownView } from 'obsidian';
 import { EditorView } from '@codemirror/view';
+import { Action } from 'types/beta/system/actions';
 
 export class AboveSelectionToolbarService {
 	private toolbarEl: HTMLDivElement | null = null;
 	private attachedView: MarkdownView | null = null;
 	private cm: EditorView | null = null;
+	private actions: { action: Action; label: string }[] = [];
 
 	constructor(private app: App) {}
 
@@ -54,39 +56,25 @@ export class AboveSelectionToolbarService {
 		const el = document.createElement('div');
 		el.className = 'selection-toolbar';
 		el.style.display = 'none';
-
-		const mkBtn = (label: string, fn: () => void) => {
-			const b = document.createElement('button');
-			b.className = 'selection-toolbar-btn';
-			b.textContent = label;
-			b.onclick = (e) => {
-				e.preventDefault();
-				e.stopPropagation();
-				fn();
-			};
-			return b;
-		};
-
-		el.append(
-			mkBtn('Bold', () => this.wrap('**')),
-			mkBtn('Italic', () => this.wrap('*')),
-			mkBtn('Copy', async () => {
-				const ed = this.attachedView?.editor;
-				if (!ed) return;
-				const s = ed.getSelection();
-				if (s) await navigator.clipboard.writeText(s);
-			})
-		);
+		this.renderButtons(el);
 		return el;
 	}
 
-	private wrap(wrapper: string) {
-		const ed = this.attachedView?.editor;
-		if (!ed) return;
-		const s = ed.getSelection();
-		if (!s) return;
-		ed.replaceSelection(`${wrapper}${s}${wrapper}`);
+	public setActions(actions: { action: Action; label: string }[]): void {
+		this.actions = Array.isArray(actions) ? actions : [];
+		if (this.toolbarEl) this.renderButtons(this.toolbarEl);
 		this.updateToolbarPosition();
+	}
+
+	private renderButtons(host: HTMLElement): void {
+		while (host.firstChild) host.removeChild(host.firstChild);
+		for (const a of this.actions) {
+			const b = document.createElement('button');
+			b.setAttribute('action', a.action);
+			b.className = 'selection-toolbar-btn';
+			b.textContent = a.label;
+			host.appendChild(b);
+		}
 	}
 
 	private hideToolbar() {

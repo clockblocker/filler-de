@@ -27,6 +27,8 @@ import translateSelection from 'actions/old/translateSelection';
 import updateActionsBlock from 'actions/new/update-actions-block';
 import { AboveSelectionToolbarService } from 'services/above-selection-toolbar-service';
 import { BottomToolbarService } from 'services/bottom-toolbar-service';
+import { ACTION_CONFIGS } from 'actions/actions-config';
+import { Action, ActionSchema } from 'types/beta/system/actions';
 
 export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;
@@ -67,11 +69,19 @@ export default class TextEaterPlugin extends Plugin {
 		this.registerDomEvent(document, 'click', (evt) => {
 			const target = evt.target as HTMLElement;
 
-			if (target.tagName === 'BUTTON') {
-				const action = target.dataset.action;
-				console.log('target', target);
-
-				if (action === 'execute-new-gen-command') {
+			// Handle toolbar/overlay generic buttons
+			const buttonEl = target.closest('button');
+			if (buttonEl) {
+				const actionId = buttonEl.getAttribute('data-action');
+				const parsed = ActionSchema.safeParse(actionId);
+				if (parsed.success) {
+					const action = parsed.data as Action;
+					const cfg = ACTION_CONFIGS[action];
+					try {
+						cfg.execute(this);
+					} catch (err) {
+						console.error('Failed to execute action', action, err);
+					}
 				}
 			}
 

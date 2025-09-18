@@ -1,8 +1,10 @@
 import { App, MarkdownView } from 'obsidian';
+import { Action } from 'types/beta/system/actions';
 
 export class BottomToolbarService {
 	private overlayEl: HTMLElement | null = null;
 	private attachedView: MarkdownView | null = null;
+	private actions: { action: Action; label: string }[] = [];
 
 	constructor(private app: App) {}
 
@@ -48,34 +50,25 @@ export class BottomToolbarService {
 	private createOverlay(): HTMLElement {
 		const el = document.createElement('div');
 		el.className = 'my-bottom-overlay';
-
-		const btn1 = this.makeButton('Toggle Edit/Preview', async () => {
-			console.log('123');
-		});
-
-		const btn2 = this.makeButton('Copy Note Link', async () => {
-			const file = this.attachedView?.file;
-			if (!file) return;
-			const link = `[[${file.path}]]`;
-			await navigator.clipboard.writeText(link);
-		});
-
-		const btn3 = this.makeButton('Backlinks', () => {
-			// @ts-ignore
-			this.app.commands.executeCommandById('backlink:open');
-		});
-
-		el.append(btn1, btn2, btn3);
+		this.renderButtons(el);
 		document.body.classList.add('hide-status-bar');
 		return el;
 	}
 
-	private makeButton(label: string, onClick: () => void): HTMLButtonElement {
-		const b = document.createElement('button');
-		b.className = 'my-bottom-overlay-btn';
-		b.textContent = label;
-		b.addEventListener('click', onClick);
-		return b;
+	public setActions(actions: { action: Action; label: string }[]): void {
+		this.actions = Array.isArray(actions) ? actions : [];
+		if (this.overlayEl) this.renderButtons(this.overlayEl);
+	}
+
+	private renderButtons(host: HTMLElement): void {
+		while (host.firstChild) host.removeChild(host.firstChild);
+		for (const a of this.actions) {
+			const b = document.createElement('button');
+			b.dataset.action = a.action;
+			b.className = 'my-bottom-overlay-btn';
+			b.textContent = a.label;
+			host.appendChild(b);
+		}
 	}
 
 	private getActiveMarkdownView(): MarkdownView | null {
