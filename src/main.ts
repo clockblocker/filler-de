@@ -27,6 +27,8 @@ import translateSelection from 'actions/old/translateSelection';
 import { WrappedBlockHtmlIo } from 'block-manager/wrapped-block-html-io';
 import updateActionsBlock from 'actions/new/update-actions-block';
 import { ACTION_BY_NAME } from 'actions/actions';
+import { SelectionToolbarService } from 'services/selection-toolbar-service';
+import { OverlayService } from 'services/overlay-service';
 
 export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;
@@ -35,10 +37,8 @@ export default class TextEaterPlugin extends Plugin {
 	backgroundFileService: BackgroundFileService;
 	blockManager: WrappedBlockHtmlIo;
 
-	private toolbarEl: HTMLDivElement | null = null;
-	private attachedView: MarkdownView | null = null;
-	private cm: EditorView | null = null;
-	private overlayEl: HTMLElement | null = null;
+	selectionToolbarService: SelectionToolbarService;
+	overlayService: OverlayService;
 
 	deprecatedFileService: DeprecatedFileService;
 
@@ -107,120 +107,51 @@ export default class TextEaterPlugin extends Plugin {
 			})
 		);
 
+		this.overlayService = new OverlayService(this.app);
+		this.overlayService.init();
 		this.app.workspace.onLayoutReady(() => {
-			this.attachToActiveMarkdownView();
+			this.overlayService.attachToActiveMarkdownView();
 		});
 
 		// Reattach when user switches panes/notes
 		this.registerEvent(
 			this.app.workspace.on('active-leaf-change', (_leaf: WorkspaceLeaf) => {
-				this.attachToActiveMarkdownView();
+				this.overlayService.attachToActiveMarkdownView();
 			})
 		);
 
 		// Also re-check after major layout changes (splits, etc.)
 		this.registerEvent(
 			this.app.workspace.on('layout-change', () => {
-				this.attachToActiveMarkdownView();
+				this.overlayService.attachToActiveMarkdownView();
 			})
 		);
 
-		// Create overlay element once; we’ll move it between views
-		this.overlayEl = this.createOverlay();
-		this.app.workspace.onLayoutReady(() => this.attach());
-		this.registerEvent(
-			this.app.workspace.on('active-leaf-change', () => this.attach())
+		// Selection toolbar service
+		this.selectionToolbarService = new SelectionToolbarService(this.app);
+		this.app.workspace.onLayoutReady(() =>
+			this.selectionToolbarService.attach()
 		);
 		this.registerEvent(
-			this.app.workspace.on('layout-change', () => this.attach())
+			this.app.workspace.on('active-leaf-change', () =>
+				this.selectionToolbarService.attach()
+			)
+		);
+		this.registerEvent(
+			this.app.workspace.on('layout-change', () =>
+				this.selectionToolbarService.attach()
+			)
+		);
+		this.registerEvent(
+			this.app.workspace.on('css-change', () =>
+				this.selectionToolbarService.onCssChange()
+			)
 		);
 	}
 
 	onunload() {
-		this.detachOverlay();
-		this.detach();
-	}
-
-	private attachToActiveMarkdownView() {
-		const view = this.getActiveMarkdownView();
-
-		// If we’re already attached to this view, nothing to do
-		if (view && this.attachedView === view && this.overlayEl?.isConnected)
-			return;
-
-		// Detach from old view if any
-		this.detachOverlay();
-
-		if (!view || !this.overlayEl) {
-			this.attachedView = null;
-			return;
-		}
-
-		// Attach to the new view’s content area
-		// `view.contentEl` is the scrollable region for the note
-		const container = view.contentEl;
-		container.addClass('bottom-overlay-host');
-		container.appendChild(this.overlayEl);
-
-		// Ensure the overlay sits at the bottom of the content area
-		// and does not hide the last lines: add bottom padding while present
-		container.style.paddingBottom = '64px'; // match overlay height
-
-		this.attachedView = view;
-	}
-
-	private detachOverlay() {
-		if (!this.overlayEl) return;
-
-		// Remove extra padding from old host
-		if (this.attachedView) {
-			const oldHost = this.attachedView.contentEl;
-			oldHost.style.paddingBottom = '';
-			oldHost.removeClass('bottom-overlay-host');
-		}
-
-		if (this.overlayEl.parentElement) {
-			this.overlayEl.parentElement.removeChild(this.overlayEl);
-		}
-
-		this.attachedView = null;
-	}
-
-	private createOverlay(): HTMLElement {
-		const el = document.createElement('div');
-		el.className = 'my-bottom-overlay';
-
-		// Example buttons — hook these up to your commands or logic
-		const btn1 = this.makeButton('Toggle Edit/Preview', async () => {
-			console.log('123');
-		});
-
-		const btn2 = this.makeButton('Copy Note Link', async () => {
-			const file = this.attachedView?.file;
-			if (!file) return;
-			const link = `[[${file.path}]]`;
-			await navigator.clipboard.writeText(link);
-			new Notice('Note link copied');
-		});
-
-		const btn3 = this.makeButton('Backlinks', () => {
-			// Example: open backlinks pane
-			// You can also `app.commands.executeCommandById("backlink:open")` if you prefer command IDs
-			// @ts-ignore (not typed in API, but present)
-			this.app.commands.executeCommandById('backlink:open');
-		});
-
-		el.append(btn1, btn2, btn3);
-		document.body.classList.add('hide-status-bar');
-		return el;
-	}
-
-	private makeButton(label: string, onClick: () => void): HTMLButtonElement {
-		const b = document.createElement('button');
-		b.className = 'my-bottom-overlay-btn';
-		b.textContent = label;
-		b.addEventListener('click', onClick);
-		return b;
+		if (this.overlayService) this.overlayService.detachOverlay();
+		if (this.selectionToolbarService) this.selectionToolbarService.detach();
 	}
 
 	private async loadSettings() {
@@ -413,124 +344,6 @@ export default class TextEaterPlugin extends Plugin {
 
 	private getActiveMarkdownView(): MarkdownView | null {
 		return this.app.workspace.getActiveViewOfType(MarkdownView);
-	}
-
-	private attach() {
-		const view = this.getActiveMarkdownView();
-		if (this.attachedView === view) return;
-
-		this.detach();
-		if (!view || view.getMode() !== 'source') return; // Source mode only
-
-		// CM6 EditorView
-		// @ts-ignore - Obsidian exposes cm on editor
-		const cm: EditorView = (view.editor as any).cm;
-		this.cm = cm;
-		this.attachedView = view;
-
-		// Create toolbar once
-		this.toolbarEl = this.createToolbar();
-		const host = cm.dom as HTMLElement; // .cm-editor
-		host.style.position ||= 'relative';
-		host.appendChild(this.toolbarEl);
-
-		const showMaybe = () => setTimeout(() => this.updateToolbarPosition(), 0);
-		const hide = () => this.hideToolbar();
-
-		// Listeners
-		host.addEventListener('mouseup', showMaybe);
-		host.addEventListener('keyup', showMaybe);
-		cm.scrollDOM.addEventListener('scroll', hide, { passive: true });
-		this.register(() => host.removeEventListener('mouseup', showMaybe));
-		this.register(() => host.removeEventListener('keyup', showMaybe));
-		this.register(() => cm.scrollDOM.removeEventListener('scroll', hide));
-
-		// Hide on mode change (preview <-> source)
-		this.registerEvent(this.app.workspace.on('css-change', hide));
-	}
-
-	private detach() {
-		this.hideToolbar();
-		if (this.toolbarEl?.parentElement)
-			this.toolbarEl.parentElement.removeChild(this.toolbarEl);
-		this.toolbarEl = null;
-		this.cm = null;
-		this.attachedView = null;
-	}
-
-	private createToolbar(): HTMLDivElement {
-		const el = document.createElement('div');
-		el.className = 'selection-toolbar';
-		el.style.display = 'none';
-
-		const mkBtn = (label: string, fn: () => void) => {
-			const b = document.createElement('button');
-			b.className = 'selection-toolbar-btn';
-			b.textContent = label;
-			b.onclick = (e) => {
-				e.preventDefault();
-				e.stopPropagation();
-				fn();
-			};
-			return b;
-		};
-
-		el.append(
-			mkBtn('Bold', () => this.wrap('**')),
-			mkBtn('Italic', () => this.wrap('*')),
-			mkBtn('Copy', async () => {
-				const ed = this.attachedView?.editor;
-				if (!ed) return;
-				const s = ed.getSelection();
-				if (s) await navigator.clipboard.writeText(s);
-			})
-		);
-		return el;
-	}
-
-	private wrap(wrapper: string) {
-		const ed = this.attachedView?.editor;
-		if (!ed) return;
-		const s = ed.getSelection();
-		if (!s) return;
-		ed.replaceSelection(`${wrapper}${s}${wrapper}`);
-		this.updateToolbarPosition(); // keep it in place or hide if selection collapsed
-	}
-
-	private hideToolbar() {
-		if (this.toolbarEl) this.toolbarEl.style.display = 'none';
-	}
-
-	private updateToolbarPosition() {
-		if (!this.cm || !this.toolbarEl || !this.attachedView) return;
-
-		const sel = this.cm.state.selection.main;
-		if (sel.empty) return this.hideToolbar();
-
-		const from = this.cm.coordsAtPos(sel.from);
-		const to = this.cm.coordsAtPos(sel.to);
-		if (!from || !to) return this.hideToolbar();
-
-		const hostRect = (this.cm.dom as HTMLElement).getBoundingClientRect();
-		const midX =
-			(Math.min(from.left, to.left) + Math.max(from.right, to.right)) / 2;
-		const top = Math.min(from.top, to.top);
-
-		// Position centered above selection
-		const t = this.toolbarEl;
-		t.style.display = 'block';
-		t.style.position = 'absolute';
-		t.style.top = `${top - hostRect.top - t.offsetHeight - 8 + this.cm.scrollDOM.scrollTop}px`;
-		t.style.left = `${midX - hostRect.left - t.offsetWidth / 2 + this.cm.scrollDOM.scrollLeft}px`;
-
-		// If it would go outside, nudge inside
-		const maxLeft = this.cm.scrollDOM.scrollWidth - t.offsetWidth - 8;
-		const minLeft = 8;
-		const leftNum = Math.max(
-			minLeft,
-			Math.min(parseFloat(t.style.left), maxLeft)
-		);
-		t.style.left = `${leftNum}px`;
 	}
 }
 
