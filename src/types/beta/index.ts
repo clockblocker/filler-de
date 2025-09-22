@@ -1,4 +1,4 @@
-import z from 'zod';
+import { z } from 'zod';
 
 const GenerateLiteralSchema = z.literal('Generate');
 export const GENERATE = GenerateLiteralSchema.value;

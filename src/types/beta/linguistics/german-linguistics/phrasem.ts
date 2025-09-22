@@ -1,6 +1,7 @@
-import z from 'zod/v4';
+import { z } from 'zod';
 import {
 	PartOfSpeech,
+	PartOfSpeechSchema,
 	PhrasemeType,
 	CollocationTypeSchema,
 	CollocationStrengthSchema,
@@ -12,7 +13,7 @@ import {
 const PhrasemeComponentSchema = z.object({
 	surface: z.string(),
 	baseForm: z.string(),
-	pos: PartOfSpeech,
+	pos: PartOfSpeechSchema,
 	isAnchor: z.boolean().optional(),
 });
 
@@ -56,7 +57,7 @@ export const DiscourseFormulaSchema = z.object({
 });
 
 export const PhrasemeSchema = z
-	.discriminatedUnion('type', [
+	.discriminatedUnion('phrasemeType', [
 		IdiomSchema,
 		ProverbSchema,
 		CulturalQuotationSchema,

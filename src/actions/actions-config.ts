@@ -1,4 +1,4 @@
-import z from 'zod';
+import { z } from 'zod';
 import newGenCommand from './new/new-gen-command';
 import updateActionsBlock from './new/update-actions-block';
 import { Action, ActionPlacement } from 'types/beta/system/actions';

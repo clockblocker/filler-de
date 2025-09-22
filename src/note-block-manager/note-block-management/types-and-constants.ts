@@ -1,4 +1,4 @@
-import { z } from 'zod/v4';
+import { z } from 'zod';
 
 export const NEW_LINE = '\n';
 export const VERTIKAL_STICK = ' | ';

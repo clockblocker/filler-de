@@ -1,4 +1,4 @@
-import { z } from 'zod/v4';
+import { z } from 'zod';
 import { tests } from './tests';
 import { grundformsOutputSchema } from 'prompts/endgame/zod/schemas';
 

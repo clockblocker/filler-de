@@ -1,4 +1,4 @@
-import z from 'zod';
+import { z } from 'zod';
 
 // Format
 const PlusDelimeterSchema = z.literal('_plus_');

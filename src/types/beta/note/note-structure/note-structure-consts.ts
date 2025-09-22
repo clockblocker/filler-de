@@ -1,4 +1,4 @@
-import z from 'zod/v4';
+import { z } from 'zod';
 import { LINGUISTIC_UNIT_STR_TYPES } from '../../linguistics/general-linguistic-enums/linguistics-enums';
 
 // Meta note types

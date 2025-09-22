@@ -5,7 +5,7 @@ import {
 	NomenDeklination,
 	Vergleichsgrad,
 } from 'prompts/endgame/zod/types';
-import { z } from 'zod/v4';
+import { z } from 'zod';
 
 const FormSchema = z.object({
 	artikel: z.string(),

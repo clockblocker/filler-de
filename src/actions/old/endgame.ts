@@ -9,7 +9,7 @@ export const message = 'Uncomment this, when the endgame promps are ready';
 // 	Nomen,
 // 	Genus,
 // } from '../prompts/wip/endgame/zod/types';
-// import { z } from 'zod/v4';
+// import { z } from 'zod';
 // import { makeGrundformsPrompt } from '../prompts/wip/endgame/grundform/wortart/grundforms/grundformsPrompt';
 // import {
 // 	makeAnEndgameNote,

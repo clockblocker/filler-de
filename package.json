@@ -34,8 +34,9 @@
 		"@codemirror/view": "latest",
 		"@google/generative-ai": "latest",
 		"@types/sbd": "latest",
+		"openai": "5.22.0",
 		"sbd": "latest",
 		"typescript-eslint": "latest",
-		"zod": "latest"
+		"zod": "3.23.8"
 	}
 }

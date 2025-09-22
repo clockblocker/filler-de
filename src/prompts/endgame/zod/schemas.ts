@@ -1,4 +1,4 @@
-import { z } from 'zod/v4';
+import { z } from 'zod';
 
 const VergleichsformSchema = z.enum(['Positiv', 'Komparativ', 'Superlativ']);
 const VerbFormTagSchema = z.enum([
