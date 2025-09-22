@@ -32,13 +32,16 @@ import {
 	Action,
 	ActionPlacement,
 	ActionSchema,
+	ALL_ACTIONS,
 } from 'types/beta/system/actions';
+import { SelectionService } from 'services/selection-service';
 
 export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;
 	apiService: ApiService;
 	openedFileService: OpenedFileService;
 	backgroundFileService: BackgroundFileService;
+	selectionService: SelectionService;
 
 	selectionToolbarService: AboveSelectionToolbarService;
 	overlayService: BottomToolbarService;
@@ -69,6 +72,8 @@ export default class TextEaterPlugin extends Plugin {
 			this.app,
 			this.app.vault
 		);
+		this.selectionToolbarService = new AboveSelectionToolbarService(this.app);
+		this.selectionService = new SelectionService(this.app);
 
 		this.registerDomEvent(document, 'click', (evt) => {
 			const target = evt.target as HTMLElement;
@@ -118,19 +123,26 @@ export default class TextEaterPlugin extends Plugin {
 		this.overlayService.init();
 
 		// Derive actions for toolbars from config
-		const entries = Object.entries(ACTION_CONFIGS) as Array<
-			[action: Action, cfg: { label: string; placement: ActionPlacement }]
-		>;
-		const bottomActions = entries
-			.filter(([, cfg]) => cfg.placement === ActionPlacement.Bottom)
-			.map(([action, cfg]) => ({ action, label: cfg.label }));
-		const aboveSelectionActions = entries
-			.filter(([, cfg]) => cfg.placement === ActionPlacement.AboveSelection)
-			.map(([action, cfg]) => ({ action, label: cfg.label }));
+
+		const bottomActions: { label: string; action: Action }[] = [];
+		const aboveSelectionActions: { label: string; action: Action }[] = [];
+
+		ALL_ACTIONS.forEach((action) => {
+			const { label, placement } = ACTION_CONFIGS[action];
+			console.log('label, placement', label, placement);
+			switch (placement) {
+				case ActionPlacement.AboveSelection:
+					aboveSelectionActions.push({ label, action });
+					break;
+				case ActionPlacement.Bottom:
+					bottomActions.push({ label, action });
+					break;
+				default:
+					break;
+			}
+		});
 
 		this.overlayService.setActions(bottomActions);
-		// Selection toolbar service
-		this.selectionToolbarService = new AboveSelectionToolbarService(this.app);
 		this.selectionToolbarService.setActions(aboveSelectionActions);
 
 		this.app.workspace.onLayoutReady(() => {
@@ -169,6 +181,7 @@ export default class TextEaterPlugin extends Plugin {
 		// 		this.selectionToolbarService.attach()
 		// 	)
 		// );
+
 		this.registerEvent(
 			this.app.workspace.on('css-change', () =>
 				this.selectionToolbarService.onCssChange()

@@ -14,7 +14,7 @@ export const ActionSchema = z.enum(ACTION_LITERALS);
 
 export type Action = z.infer<typeof ActionSchema>;
 export const Action = ActionSchema.enum;
-export const ACTIONS = ActionSchema.options;
+export const ALL_ACTIONS = ActionSchema.options;
 
 export const ACTION_PLACEMENT_LITERALS = [
 	'AboveSelection',

@@ -34,7 +34,7 @@ export class SelectionService {
 			const cursor = sel?.head ?? editor.getCursor();
 			const insertLine = Math.max(cursor.line + 1, 0);
 
-			editor.replaceRange('\n' + text, { line: insertLine, ch: 0 });
+			editor.replaceRange('\n\n' + text + '\n', { line: insertLine, ch: 0 });
 			return { error: false, data: undefined };
 		} catch (e) {
 			return {

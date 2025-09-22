@@ -3,6 +3,7 @@ import newGenCommand from './new/new-gen-command';
 import updateActionsBlock from './new/update-actions-block';
 import { Action, ActionPlacement } from 'types/beta/system/actions';
 import newTranslateSelection from './new/translateSelection';
+import TextEaterPlugin from 'main';
 
 export const ACTION_CONFIGS = {
 	[Action.Generate]: {
@@ -22,25 +23,29 @@ export const ACTION_CONFIGS = {
 	},
 	[Action.SplitContexts]: {
 		execute: newGenCommand,
-		label: 'Split Contexts',
+		label: 'Sort Contexts',
 		placement: ActionPlacement.ShortcutOnly,
 	},
 	[Action.SplitInBlocks]: {
 		execute: newGenCommand,
-		label: 'Generate',
+		label: 'Split',
 		placement: ActionPlacement.ShortcutOnly,
 	},
 	[Action.TranslateBlock]: {
 		execute: newGenCommand,
-		label: 'Generate',
+		label: 'Translate',
 		placement: ActionPlacement.ShortcutOnly,
 	},
 	[Action.TranslateSelection]: {
 		execute: newTranslateSelection,
-		label: 'Generate',
+		label: 'Translate',
 		placement: ActionPlacement.AboveSelection,
 	},
 } satisfies Record<
 	Action,
-	{ execute: unknown; label: string; placement: ActionPlacement }
+	{
+		execute: (plugin: TextEaterPlugin) => void;
+		label: string;
+		placement: ActionPlacement;
+	}
 >;
