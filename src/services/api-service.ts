@@ -1,20 +1,85 @@
-import { GoogleGenerativeAI, GenerationConfig } from '@google/generative-ai';
+import OpenAI from 'openai';
+import { Notice, requestUrl } from 'obsidian';
 import { TextEaterSettings } from '../types';
-import { Notice } from 'obsidian';
 import { prompts } from '../prompts';
 
+function normalizeHeaders(initHeaders?: HeadersInit): Record<string, string> {
+	if (!initHeaders) return {};
+	const out: Record<string, string> = {};
+
+	if (initHeaders instanceof Headers) {
+		initHeaders.forEach((value, key) => {
+			out[key] = value;
+		});
+	} else if (Array.isArray(initHeaders)) {
+		for (const [key, value] of initHeaders) {
+			out[key] = value;
+		}
+	} else {
+		// Already a plain object
+		Object.assign(out, initHeaders);
+	}
+	return out;
+}
+
 export class ApiService {
-	private genAI: GoogleGenerativeAI | null = null;
-	private model = 'gemini-2.0-flash-lite';
-	private chatSessions: { [key: string]: any } = {};
+	private openai: OpenAI | null = null;
+	private model = 'gemini-2.5-flash-lite';
+	private chatSessions: Record<
+		string,
+		OpenAI.Chat.Completions.ChatCompletion[]
+	> = {};
 
 	constructor(private settings: TextEaterSettings) {
 		try {
-			if (this.settings.apiProvider === 'google') {
-				this.genAI = new GoogleGenerativeAI(this.settings.googleApiKey);
+			if (this.settings.apiProvider !== 'google') {
+				new Notice('Only Google provider is configured in this build.');
 			}
-		} catch (error) {
+			if (!this.settings.googleApiKey) {
+				new Notice('Missing Google API key in settings.');
+			}
+
+			function fetchViaObsidian(
+				input: RequestInfo,
+				init?: RequestInit
+			): Promise<Response> {
+				const url = typeof input === 'string' ? input : (input as any).url;
+
+				const headers = normalizeHeaders(init?.headers);
+
+				// Ensure Authorization header is there for Google Gemini
+				if (!headers['authorization']) {
+					headers['authorization'] = `Bearer ${this.settings.googleApiKey}`;
+				}
+
+				if (init?.body && !headers['content-type']) {
+					headers['content-type'] = 'application/json';
+				}
+
+				return requestUrl({
+					url,
+					method: init?.method as any,
+					headers,
+					body: init?.body as any,
+					throw: false,
+				}).then((r) => {
+					return new Response(r.text, {
+						status: r.status,
+						headers: r.headers as any,
+					});
+				});
+			}
+
+			// Initialize OpenAI client with custom fetch
+			this.openai = new OpenAI({
+				dangerouslyAllowBrowser: true,
+				baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+				apiKey: this.settings.googleApiKey,
+				fetch: fetchViaObsidian,
+			});
+		} catch (error: any) {
 			new Notice(`Error initializing API service: ${error.message}`);
+			console.log(`Error initializing API service: ${error.message}`);
 		}
 	}
 
@@ -23,60 +88,31 @@ export class ApiService {
 		userInput: string,
 		responseSchema?: boolean
 	): Promise<string> {
-		const startTime = performance.now();
 		try {
-			let response: string | null = null;
-			// Remove leading tab characters from the system prompt
+			if (!this.openai) {
+				throw new Error('OpenAI client not initialized.');
+			}
+
+			// tidy system prompt
 			systemPrompt = systemPrompt.replace(/^\t+/gm, '');
 
-			if (this.settings.apiProvider !== 'google') {
-				if (!this.settings.googleApiKey) {
-					throw new Error('Google API key not configured.');
-				}
-				throw new Error('API provider not configured correctly.');
-			}
+			const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+				{ role: 'system', content: systemPrompt },
+			];
 
-			if (!this.genAI) {
-				this.genAI = new GoogleGenerativeAI(this.settings.googleApiKey);
-			}
+			messages.push({ role: 'user', content: userInput });
 
-			const generationConfig: GenerationConfig = !responseSchema
-				? {
-						temperature: 0,
-						topP: 0.95,
-						topK: 64,
-						maxOutputTokens: 2048,
-					}
-				: {
-						temperature: 0,
-						topP: 0.95,
-						topK: 64,
-						maxOutputTokens: 1024,
-						responseMimeType: `application/json`,
-					};
+			const completion = await this.openai.chat.completions.create({
+				model: this.model,
+				messages,
+				temperature: 0,
+				top_p: 0.95,
+				max_tokens: responseSchema ? 1024 : 2048,
+			});
 
-			const chatKey = systemPrompt;
-			if (!this.chatSessions[chatKey]) {
-				const model = this.genAI.getGenerativeModel({
-					model: this.model,
-					systemInstruction: systemPrompt,
-				});
-				this.chatSessions[chatKey] = model.startChat({
-					generationConfig: generationConfig,
-					history: [],
-				});
-			}
-
-			const chatSession = this.chatSessions[chatKey];
-
-			const result = await chatSession.sendMessage(userInput);
-			response = result.response.text();
-
-			const logResponse = response === null ? '' : response;
-			return logResponse;
+			const response = completion.choices?.[0]?.message?.content ?? '';
+			return response ?? '';
 		} catch (error: any) {
-			const endTime = performance.now();
-			const duration = endTime - startTime;
 			throw new Error(error.message);
 		}
 	}
@@ -110,5 +146,13 @@ export class ApiService {
 
 	async consultC1Richter(text: string): Promise<string> {
 		return this.generateContent(prompts.c1Richter, text);
+	}
+
+	clearChatSessions(): void {
+		this.chatSessions = {};
+	}
+
+	getChatSessionCount(): number {
+		return Object.keys(this.chatSessions).length;
 	}
 }
