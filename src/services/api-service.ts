@@ -22,9 +22,12 @@ function normalizeHeaders(initHeaders?: HeadersInit): Record<string, string> {
 	return out;
 }
 
+const TTL_SECONDS = 604800;
+
 export class ApiService {
 	private openai: OpenAI | null = null;
 	private model = 'gemini-2.5-flash-lite';
+	private cachedContentIds: Record<string, string> = {};
 	private chatSessions: Record<
 		string,
 		OpenAI.Chat.Completions.ChatCompletion[]
@@ -79,8 +82,67 @@ export class ApiService {
 			});
 		} catch (error: any) {
 			new Notice(`Error initializing API service: ${error.message}`);
-			console.log(`Error initializing API service: ${error.message}`);
+			console.error(`Error initializing API service: ${error.message}`);
 		}
+	}
+
+	private async postGoogleApi<T>(path: string, body: any): Promise<T> {
+		try {
+			const res = await requestUrl({
+				url: `https://generativelanguage.googleapis.com/v1beta/${path}`,
+				method: 'POST',
+				headers: {
+					'x-goog-api-key': this.settings.googleApiKey,
+					'content-type': 'application/json',
+				},
+				body: JSON.stringify(body),
+				throw: false,
+			});
+
+			if (res.status >= 200 && res.status < 300) {
+				return JSON.parse(res.text) as T;
+			}
+
+			throw new Error(`Google API error ${res.status}: ${res.text}`);
+		} catch (err: any) {
+			throw new Error(err.message || 'Failed to call Google API');
+		}
+	}
+
+	private async ensureCachedContentIdForSystemPrompt(
+		systemPrompt: string
+	): Promise<string | null> {
+		try {
+			const existing = this.cachedContentIds[systemPrompt];
+			if (existing) {
+				return existing;
+			}
+
+			const body = {
+				model: `models/${this.model}`,
+				systemInstruction: {
+					parts: [{ text: systemPrompt }],
+				},
+				ttl: `${TTL_SECONDS}s`,
+			};
+
+			const created = await this.postGoogleApi<{ name?: string }>(
+				'cachedContents',
+				body
+			);
+
+			const id = created?.name;
+			if (id) {
+				this.cachedContentIds[systemPrompt] = id;
+				return id;
+			}
+		} catch (error) {
+			console.warn(
+				'CachedContent creation failed; proceeding without cache',
+				error
+			);
+		}
+		return null;
 	}
 
 	async generateContent(
@@ -90,24 +152,38 @@ export class ApiService {
 	): Promise<string> {
 		try {
 			if (!this.openai) {
-				throw new Error('OpenAI client not initialized.');
+				throw new Error(
+					'OpenAI client not initialized. Make shure that you have configured the API key in the settings.'
+				);
 			}
 
 			// tidy system prompt
 			systemPrompt = systemPrompt.replace(/^\t+/gm, '');
 
-			const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-				{ role: 'system', content: systemPrompt },
-			];
+			// Try to use Google's CachedContent for the system prompt
+			const cachedId =
+				await this.ensureCachedContentIdForSystemPrompt(systemPrompt);
+
+			const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [];
+			// If we have a cached system instruction, do not duplicate it in messages
+			if (!cachedId) {
+				messages.push({ role: 'system', content: systemPrompt });
+			}
 
 			messages.push({ role: 'user', content: userInput });
-
 			const completion = await this.openai.chat.completions.create({
 				model: this.model,
 				messages,
 				temperature: 0,
 				top_p: 0.95,
 				max_tokens: responseSchema ? 1024 : 2048,
+				// Pass provider-specific options via extra_body for Google
+				...(cachedId
+					? {
+							// The OpenAI compatibility layer accepts provider extras via extra_body
+							extra_body: { google: { cached_content: cachedId } },
+						}
+					: {}),
 			});
 
 			const response = completion.choices?.[0]?.message?.content ?? '';

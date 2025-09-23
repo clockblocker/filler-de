@@ -24,7 +24,6 @@ import insertReplyFromC1Richter from 'actions/old/insertReplyFromC1Richter';
 import insertReplyFromKeymaker from 'actions/old/insertReplyFromKeymaker';
 import normalizeSelection from 'actions/old/normalizeSelection';
 import translateSelection from 'actions/old/translateSelection';
-import updateActionsBlock from 'actions/new/update-actions-block';
 import { AboveSelectionToolbarService } from 'services/above-selection-toolbar-service';
 import { BottomToolbarService } from 'services/bottom-toolbar-service';
 import { ACTION_CONFIGS } from 'actions/actions-config';
@@ -129,7 +128,7 @@ export default class TextEaterPlugin extends Plugin {
 
 		ALL_ACTIONS.forEach((action) => {
 			const { label, placement } = ACTION_CONFIGS[action];
-			console.log('label, placement', label, placement);
+
 			switch (placement) {
 				case ActionPlacement.AboveSelection:
 					aboveSelectionActions.push({ label, action });

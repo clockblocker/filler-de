@@ -10,9 +10,6 @@ importers:
       '@codemirror/view':
         specifier: latest
         version: 6.38.2
-      '@google/generative-ai':
-        specifier: latest
-        version: 0.24.1
       '@types/sbd':
         specifier: latest
         version: 1.0.5
@@ -386,13 +383,6 @@ packages:
         integrity: sha512-Z5kJ+wU3oA7MMIqVR9tyZRtjYPr4OC004Q4Rw7pgOKUOKkJfZ3O24nz3WYfGRpMDNmcOi3TwQOmgm7B7Tpii0w==,
       }
     engines: { node: ^18.18.0 || ^20.9.0 || >=21.1.0 }
-
-  '@google/generative-ai@0.24.1':
-    resolution:
-      {
-        integrity: sha512-MqO+MLfM6kjxcKoy0p1wRzG3b4ZZXtPI+z2IE26UogS2Cm/XHO+7gGRBh6gcJsOiIVoH93UwKvW4HdgiOZCy9Q==,
-      }
-    engines: { node: '>=18.0.0' }
 
   '@humanfs/core@0.19.1':
     resolution:
@@ -1613,8 +1603,6 @@ snapshots:
     dependencies:
       '@eslint/core': 0.15.2
       levn: 0.4.1
-
-  '@google/generative-ai@0.24.1': {}
 
   '@humanfs/core@0.19.1': {}
 
