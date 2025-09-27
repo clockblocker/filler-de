@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const ACTION_LITERALS = [
+export const USER_ACTION_LITERALS = [
 	'Generate',
 	'AddContext',
 	'SplitContexts',
@@ -10,20 +10,20 @@ export const ACTION_LITERALS = [
 	'ExplainGrammar',
 ] as const;
 
-export const ActionSchema = z.enum(ACTION_LITERALS);
+export const UserActionSchema = z.enum(USER_ACTION_LITERALS);
 
-export type Action = z.infer<typeof ActionSchema>;
-export const Action = ActionSchema.enum;
-export const ALL_ACTIONS = ActionSchema.options;
+export type UserAction = z.infer<typeof UserActionSchema>;
+export const UserAction = UserActionSchema.enum;
+export const ALL_USER_ACTIONS = UserActionSchema.options;
 
-export const ACTION_PLACEMENT_LITERALS = [
+export const USER_ACTION_PLACEMENT_LITERALS = [
 	'AboveSelection',
 	'Bottom',
 	'ShortcutOnly',
 ] as const;
 
-export const ActionPlacementSchema = z.enum(ACTION_PLACEMENT_LITERALS);
+export const UserActionPlacementSchema = z.enum(USER_ACTION_PLACEMENT_LITERALS);
 
-export type ActionPlacement = z.infer<typeof ActionPlacementSchema>;
-export const ActionPlacement = ActionPlacementSchema.enum;
-export const ACTION_PLACEMENTS = ActionPlacementSchema.options;
+export type UserActionPlacement = z.infer<typeof UserActionPlacementSchema>;
+export const UserActionPlacement = UserActionPlacementSchema.enum;
+export const USER_ACTION_PLACEMENTS = UserActionPlacementSchema.options;

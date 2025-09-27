@@ -9,12 +9,12 @@ import {
 } from 'obsidian';
 import { SettingsTab } from './settings';
 import { DEFAULT_SETTINGS, TextEaterSettings } from './types';
-import { ApiService } from './services/api-service';
+import { ApiService } from './obsidian-services/api-service';
 import { DeprecatedFileService } from './file';
 
 import newGenCommand from 'actions/new/new-gen-command';
-import { OpenedFileService } from 'services/opened-file-service';
-import { BackgroundFileService } from 'services/background-file-service';
+import { OpenedFileService } from 'obsidian-services/opened-file-service';
+import { BackgroundFileService } from 'obsidian-services/background-file-service';
 import addBacklinksToCurrentFile from 'actions/old/addBacklinksToCurrentFile';
 // import fillTemplate from 'actions/old/fillTemplate';
 import formatSelectionWithNumber from 'actions/old/formatSelectionWithNumber';
@@ -22,17 +22,16 @@ import formatSelectionWithNumber from 'actions/old/formatSelectionWithNumber';
 // import insertReplyFromC1Richter from 'actions/old/insertReplyFromC1Richter';
 // import insertReplyFromKeymaker from 'actions/old/insertReplyFromKeymaker';
 // import normalizeSelection from 'actions/old/normalizeSelection';
-import translateSelection from 'actions/old/translateSelection';
-import { AboveSelectionToolbarService } from 'services/above-selection-toolbar-service';
-import { BottomToolbarService } from 'services/bottom-toolbar-service';
+import { AboveSelectionToolbarService } from 'obsidian-services/above-selection-toolbar-service';
+import { BottomToolbarService } from 'obsidian-services/bottom-toolbar-service';
 import { ACTION_CONFIGS } from 'actions/actions-config';
 import {
-	Action,
-	ActionPlacement,
-	ActionSchema,
-	ALL_ACTIONS,
+	UserAction,
+	UserActionPlacement,
+	UserActionSchema,
+	ALL_USER_ACTIONS,
 } from 'types/beta/system/actions';
-import { SelectionService } from 'services/selection-service';
+import { SelectionService } from 'obsidian-services/selection-service';
 
 export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;
@@ -77,9 +76,9 @@ export default class TextEaterPlugin extends Plugin {
 			const buttonEl = target.closest('button');
 			if (buttonEl) {
 				const actionId = buttonEl.getAttribute('data-action');
-				const parsed = ActionSchema.safeParse(actionId);
+				const parsed = UserActionSchema.safeParse(actionId);
 				if (parsed.success) {
-					const action = parsed.data as Action;
+					const action = parsed.data as UserAction;
 					const cfg = ACTION_CONFIGS[action];
 					try {
 						cfg.execute(this);
@@ -100,7 +99,6 @@ export default class TextEaterPlugin extends Plugin {
 
 					if (blockIdElement) {
 						const textContent = blockIdElement.textContent;
-						console.log('blockIdElement', textContent, `\n\n\n`);
 					}
 				}
 			}
@@ -119,17 +117,17 @@ export default class TextEaterPlugin extends Plugin {
 
 		// Derive actions for toolbars from config
 
-		const bottomActions: { label: string; action: Action }[] = [];
-		const aboveSelectionActions: { label: string; action: Action }[] = [];
+		const bottomActions: { label: string; action: UserAction }[] = [];
+		const aboveSelectionActions: { label: string; action: UserAction }[] = [];
 
-		ALL_ACTIONS.forEach((action) => {
+		ALL_USER_ACTIONS.forEach((action) => {
 			const { label, placement } = ACTION_CONFIGS[action];
 
 			switch (placement) {
-				case ActionPlacement.AboveSelection:
+				case UserActionPlacement.AboveSelection:
 					aboveSelectionActions.push({ label, action });
 					break;
-				case ActionPlacement.Bottom:
+				case UserActionPlacement.Bottom:
 					bottomActions.push({ label, action });
 					break;
 				default:
@@ -285,7 +283,7 @@ export default class TextEaterPlugin extends Plugin {
 				const selection = editor.getSelection();
 				if (selection) {
 					if (!checking) {
-						translateSelection(this, editor, selection);
+						// translateSelection(this, editor, selection);
 					}
 					return true;
 				}

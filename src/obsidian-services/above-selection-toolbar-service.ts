@@ -1,12 +1,12 @@
 import { App, MarkdownView } from 'obsidian';
 import { EditorView } from '@codemirror/view';
-import { Action } from 'types/beta/system/actions';
+import { UserAction } from 'types/beta/system/actions';
 
 export class AboveSelectionToolbarService {
 	private toolbarEl: HTMLDivElement | null = null;
 	private attachedView: MarkdownView | null = null;
 	private cm: EditorView | null = null;
-	private actions: { action: Action; label: string }[] = [];
+	private actions: { action: UserAction; label: string }[] = [];
 
 	constructor(private app: App) {}
 
@@ -60,7 +60,7 @@ export class AboveSelectionToolbarService {
 		return el;
 	}
 
-	public setActions(actions: { action: Action; label: string }[]): void {
+	public setActions(actions: { action: UserAction; label: string }[]): void {
 		this.actions = Array.isArray(actions) ? actions : [];
 		if (this.toolbarEl) this.renderButtons(this.toolbarEl);
 		this.updateToolbarPosition();

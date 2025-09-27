@@ -1,7 +1,7 @@
 import { MarkdownView, TFile, App, TFolder } from 'obsidian';
 import { Maybe } from '../types/general';
 import { getMaybeEditor } from './helpers/get-maybe-editor';
-import { logError, throwWarning } from './helpers/issue-handlers';
+import { logError, logWarning } from './helpers/issue-handlers';
 
 export class OpenedFileService {
 	constructor(private app: App) {}
@@ -11,7 +11,7 @@ export class OpenedFileService {
 			const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
 
 			if (!activeView) {
-				throwWarning({
+				logWarning({
 					description: 'File not open or not active',
 					location: 'OpenedFileService',
 				});
@@ -21,7 +21,7 @@ export class OpenedFileService {
 			const file = activeView.file;
 
 			if (!file) {
-				throwWarning({
+				logWarning({
 					description: 'File not open or not active',
 					location: 'OpenedFileService',
 				});
@@ -44,7 +44,7 @@ export class OpenedFileService {
 			const mbEditor = await getMaybeEditor(this.app);
 
 			if (!activeView || mbEditor.error) {
-				throwWarning({
+				logWarning({
 					description: 'File not open or not active',
 					location: 'OpenedFileService',
 				});
@@ -55,7 +55,7 @@ export class OpenedFileService {
 			const editor = mbEditor.data;
 
 			if (!file) {
-				throwWarning({
+				logWarning({
 					description: 'File not open or not active',
 					location: 'OpenedFileService',
 				});

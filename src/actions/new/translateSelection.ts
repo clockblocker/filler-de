@@ -1,6 +1,6 @@
 import { Notice } from 'obsidian';
-import { ApiService } from 'services/api-service';
-import { SelectionService } from 'services/selection-service';
+import { ApiService } from 'obsidian-services/api-service';
+import { SelectionService } from 'obsidian-services/selection-service';
 import { prompts } from 'prompts';
 import { z } from 'zod';
 
@@ -16,7 +16,7 @@ export default async function newTranslateSelection({
 
 		const response = await apiService.generate({
 			systemPrompt: prompts.translate_de_to_eng,
-			userInput: selection,
+			userInput: await selection,
 			schema: z.string(),
 			withCache: false,
 		});

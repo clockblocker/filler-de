@@ -1,51 +1,48 @@
-import { z } from 'zod';
 import newGenCommand from './new/new-gen-command';
-import updateActionsBlock from './new/update-actions-block';
-import { Action, ActionPlacement } from 'types/beta/system/actions';
+import { UserAction, UserActionPlacement } from 'types/beta/system/actions';
 import newTranslateSelection from './new/translateSelection';
-import TextEaterPlugin from 'main';
 
 export const ACTION_CONFIGS = {
-	[Action.Generate]: {
+	[UserAction.Generate]: {
 		execute: newGenCommand,
 		label: 'Generate',
-		placement: ActionPlacement.Bottom,
+		placement: UserActionPlacement.Bottom,
 	},
-	[Action.AddContext]: {
+	[UserAction.AddContext]: {
 		execute: newGenCommand,
 		label: 'Add Context',
-		placement: ActionPlacement.ShortcutOnly,
+		placement: UserActionPlacement.ShortcutOnly,
 	},
-	[Action.ExplainGrammar]: {
+	[UserAction.ExplainGrammar]: {
 		execute: newGenCommand,
 		label: 'Explain Grammar',
-		placement: ActionPlacement.ShortcutOnly,
+		placement: UserActionPlacement.ShortcutOnly,
 	},
-	[Action.SplitContexts]: {
+	[UserAction.SplitContexts]: {
 		execute: newGenCommand,
 		label: 'Sort Contexts',
-		placement: ActionPlacement.ShortcutOnly,
+		placement: UserActionPlacement.ShortcutOnly,
 	},
-	[Action.SplitInBlocks]: {
+	[UserAction.SplitInBlocks]: {
 		execute: newGenCommand,
 		label: 'Split',
-		placement: ActionPlacement.ShortcutOnly,
+		placement: UserActionPlacement.ShortcutOnly,
 	},
-	[Action.TranslateBlock]: {
+	[UserAction.TranslateBlock]: {
 		execute: newGenCommand,
 		label: 'Translate',
-		placement: ActionPlacement.ShortcutOnly,
+		placement: UserActionPlacement.ShortcutOnly,
 	},
-	[Action.TranslateSelection]: {
+	[UserAction.TranslateSelection]: {
 		execute: newTranslateSelection,
 		label: 'Translate',
-		placement: ActionPlacement.AboveSelection,
+		placement: UserActionPlacement.AboveSelection,
 	},
 } satisfies Record<
-	Action,
+	UserAction,
 	{
-		execute: (plugin: TextEaterPlugin) => void;
+		execute: unknown;
 		label: string;
-		placement: ActionPlacement;
+		placement: UserActionPlacement;
 	}
 >;

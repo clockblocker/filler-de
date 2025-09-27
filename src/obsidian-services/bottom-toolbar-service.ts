@@ -1,10 +1,10 @@
 import { App, MarkdownView } from 'obsidian';
-import { Action } from 'types/beta/system/actions';
+import { UserAction } from 'types/beta/system/actions';
 
 export class BottomToolbarService {
 	private overlayEl: HTMLElement | null = null;
 	private attachedView: MarkdownView | null = null;
-	private actions: { action: Action; label: string }[] = [];
+	private actions: { action: UserAction; label: string }[] = [];
 
 	constructor(private app: App) {}
 
@@ -55,7 +55,7 @@ export class BottomToolbarService {
 		return el;
 	}
 
-	public setActions(actions: { action: Action; label: string }[]): void {
+	public setActions(actions: { action: UserAction; label: string }[]): void {
 		this.actions = Array.isArray(actions) ? actions : [];
 		if (this.overlayEl) this.renderButtons(this.overlayEl);
 	}
