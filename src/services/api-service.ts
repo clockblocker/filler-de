@@ -1,7 +1,6 @@
 import OpenAI from 'openai';
 import { Notice, requestUrl } from 'obsidian';
 import { TextEaterSettings } from '../types';
-import { prompts } from '../prompts';
 import { z } from 'zod';
 import { zodResponseFormat } from 'openai/helpers/zod';
 
@@ -24,6 +23,7 @@ function normalizeHeaders(initHeaders?: HeadersInit): Record<string, string> {
 	return out;
 }
 
+// 7 days
 const TTL_SECONDS = 604800;
 
 export class ApiService {

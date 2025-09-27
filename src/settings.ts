@@ -30,19 +30,6 @@ export class SettingsTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName('DeepSeek API key')
-			.setDesc('Enter your DeepSeek API key')
-			.addText((text) =>
-				text
-					.setPlaceholder('Enter your API key')
-					.setValue(this.plugin.settings.deepseekApiKey)
-					.onChange(async (value) => {
-						this.plugin.settings.deepseekApiKey = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
-		new Setting(containerEl)
 			.setName('API provider')
 			.setDesc('Choose your API provider')
 			.addDropdown((dropdown) => {

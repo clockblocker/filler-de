@@ -12,17 +12,11 @@ export default async function newTranslateSelection({
 	apiService: ApiService;
 }) {
 	try {
-		const maybeSel = selectionService.getMaybeSelection();
-		if (maybeSel.error) {
-			new Notice(maybeSel.errorText ?? 'No selection');
-			return;
-		}
-
-		const selectionText = maybeSel.data;
+		const selection = selectionService.getSelection();
 
 		const response = await apiService.generate({
 			systemPrompt: prompts.translate_de_to_eng,
-			userInput: selectionText,
+			userInput: selection,
 			schema: z.string(),
 			withCache: false,
 		});
