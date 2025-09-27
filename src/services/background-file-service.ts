@@ -1,6 +1,7 @@
 import { App, Vault, TFile, Editor, MarkdownView, TFolder } from 'obsidian';
 import { Maybe, PathParts } from '../types/general';
 import { SLASH } from 'types/beta/literals';
+import { formatError, logError, logWarning } from './helpers/issue-handlers';
 
 const pathToFolderFromPathParts = (pathParts: PathParts) =>
 	pathParts.join(SLASH);
@@ -20,9 +21,27 @@ export class BackgroundFileService {
 			}
 			return { data: file, error: false };
 		} catch (error) {
-			console.warn('error while getting file by path:', error);
+			logError({
+				description: `Failed to get file by path: ${error}`,
+				location: 'BackgroundFileService',
+			});
 			return { error: true };
 		}
+	}
+
+	async getFileByPathParts(pathParts: PathParts): Promise<TFile> {
+		const mbFile = await this.getMaybeFileByPathParts(pathParts);
+		if (mbFile.error) {
+			const err = {
+				description: mbFile.description ?? 'File not found',
+				location: 'BackgroundFileService',
+			};
+
+			logError(err);
+			throw new Error(formatError(err));
+		}
+
+		return mbFile.data;
 	}
 
 	async getSiblingsOfFile(file: TFile): Promise<Maybe<Array<TFile>>> {
@@ -45,11 +64,11 @@ export class BackgroundFileService {
 		try {
 			const file = await this.vault.create(`${path}`, content);
 			if (!(file instanceof TFile)) {
-				return { error: true, errorText: 'Created item is not a file' };
+				return { error: true, description: 'Created item is not a file' };
 			}
 			return { error: false, data: file };
 		} catch (error) {
-			return { error: true, errorText: `Failed to create file: ${error}` };
+			return { error: true, description: `Failed to create file: ${error}` };
 		}
 	}
 
@@ -59,7 +78,7 @@ export class BackgroundFileService {
 			const folder = await this.vault.createFolder(fullPath);
 			return { error: false, data: folder };
 		} catch (error) {
-			return { error: true, errorText: `Failed to create folder: ${error}` };
+			return { error: true, description: `Failed to create folder: ${error}` };
 		}
 	}
 
@@ -70,6 +89,7 @@ export class BackgroundFileService {
 	): Promise<Maybe<TFile>> {
 		const path = `${folder.path}/${fileName}`;
 		const maybeFile = await this.createFileInPath(path, content);
+
 		return maybeFile;
 	}
 
@@ -79,6 +99,7 @@ export class BackgroundFileService {
 	): Promise<Maybe<TFolder>> {
 		const path = `${folder.path}/${folderName}`;
 		const maybeFolder = await this.createFolderInPath(path);
+
 		return maybeFolder;
 	}
 
@@ -101,7 +122,7 @@ export class BackgroundFileService {
 		const parent = maybeFile.data.parent;
 
 		if (!parent) {
-			return { error: true, errorText: 'File does not have a parent' };
+			return { error: true, description: 'File does not have a parent' };
 		}
 
 		return { error: false, data: parent };
@@ -142,10 +163,10 @@ export class BackgroundFileService {
 		}
 
 		if (errors.length > 0) {
-			console.warn(
-				`[FileService.createManyFiles] ${errors.length} error(s):`,
-				errors
-			);
+			logWarning({
+				description: `Failed to create many files: ${errors.join(', ')}`,
+				location: 'BackgroundFileService',
+			});
 		}
 
 		return { error: false, data: created };
@@ -173,10 +194,10 @@ export class BackgroundFileService {
 		}
 
 		if (errors.length > 0) {
-			console.warn(
-				`[FileService.createManyFolders] ${errors.length} error(s):`,
-				errors
-			);
+			logWarning({
+				description: `Failed to create many folders: ${errors.join(', ')}`,
+				location: 'BackgroundFileService',
+			});
 		}
 
 		return { error: false, data: created };

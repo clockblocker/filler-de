@@ -1,55 +1,47 @@
-import { App, Editor, MarkdownView } from 'obsidian';
+import { App, Editor } from 'obsidian';
 import { Maybe } from 'types/general';
+import { getMaybeEditor } from './helpers/get-maybe-editor';
 
 export class SelectionService {
 	constructor(private app: App) {}
 
-	private getMaybeEditor(): Maybe<Editor> {
-		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-		if (!view) {
-			return { error: true, errorText: 'No active editor' };
-		}
-
-		return { error: false, data: view.editor };
-	}
-
-	private getEditor(): Editor {
-		const maybeEditor = this.getMaybeEditor();
+	private async getEditor(): Promise<Editor> {
+		const maybeEditor = await getMaybeEditor(this.app);
 		if (maybeEditor.error) {
-			throw new Error(maybeEditor.errorText ?? 'No active editor');
+			throw new Error(maybeEditor.description ?? 'No active editor');
 		}
 		return maybeEditor.data;
 	}
 
-	public getMaybeSelection(): Maybe<string> {
+	public async getMaybeSelection(): Promise<Maybe<string>> {
 		try {
-			const editor = this.getEditor();
+			const editor = await this.getEditor();
 			const selection = editor.getSelection();
 
 			if (!selection) {
-				return { error: true, errorText: 'Selection is empty' };
+				return { error: true, description: 'Selection is empty' };
 			}
 
 			return { error: false, data: selection };
 		} catch (e) {
 			return {
 				error: true,
-				errorText: e instanceof Error ? e.message : String(e),
+				description: e instanceof Error ? e.message : String(e),
 			};
 		}
 	}
 
-	public getSelection(): string {
-		const maybeSel = this.getMaybeSelection();
+	public async getSelection(): Promise<string> {
+		const maybeSel = await this.getMaybeSelection();
 		if (maybeSel.error) {
-			throw new Error(maybeSel.errorText ?? 'No selection');
+			throw new Error(maybeSel.description ?? 'No selection');
 		}
 		return maybeSel.data;
 	}
 
-	public appendBelow(text: string): Maybe<void> {
+	public async appendBelow(text: string): Promise<Maybe<void>> {
 		try {
-			const editor = this.getEditor();
+			const editor = await this.getEditor();
 
 			const sel = editor.listSelections?.()[0];
 			const cursor = sel?.head ?? editor.getCursor();
@@ -60,7 +52,7 @@ export class SelectionService {
 		} catch (e) {
 			return {
 				error: true,
-				errorText: e instanceof Error ? e.message : String(e),
+				description: e instanceof Error ? e.message : String(e),
 			};
 		}
 	}

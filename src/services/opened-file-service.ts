@@ -1,6 +1,7 @@
 import { MarkdownView, TFile, App, TFolder } from 'obsidian';
 import { Maybe } from '../types/general';
 import { getMaybeEditor } from './helpers/get-maybe-editor';
+import { logError, throwWarning } from './helpers/issue-handlers';
 
 export class OpenedFileService {
 	constructor(private app: App) {}
@@ -10,20 +11,29 @@ export class OpenedFileService {
 			const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
 
 			if (!activeView) {
-				console.warn('file not open or not active');
+				throwWarning({
+					description: 'File not open or not active',
+					location: 'OpenedFileService',
+				});
 				return { error: true };
 			}
 
 			const file = activeView.file;
 
 			if (!file) {
-				console.warn('file not open or not active');
+				throwWarning({
+					description: 'File not open or not active',
+					location: 'OpenedFileService',
+				});
 				return { error: true };
 			}
 
 			return { error: false, data: file };
 		} catch (error) {
-			console.error(`Failed to replace content: ${error}`);
+			logError({
+				description: `Failed to get maybe opened file: ${error}`,
+				location: 'OpenedFileService',
+			});
 			return { error: true };
 		}
 	}
@@ -34,7 +44,10 @@ export class OpenedFileService {
 			const mbEditor = await getMaybeEditor(this.app);
 
 			if (!activeView || mbEditor.error) {
-				console.warn('file not open or not active');
+				throwWarning({
+					description: 'File not open or not active',
+					location: 'OpenedFileService',
+				});
 				return { error: true };
 			}
 
@@ -42,14 +55,20 @@ export class OpenedFileService {
 			const editor = mbEditor.data;
 
 			if (!file) {
-				console.warn('file not open or not active');
+				throwWarning({
+					description: 'File not open or not active',
+					location: 'OpenedFileService',
+				});
 				return { error: true };
 			}
 
 			const content = editor.getValue();
 			return { error: false, data: content };
 		} catch (error) {
-			console.error(`Failed to replace content: ${error}`);
+			logError({
+				description: `Failed to get maybe file content: ${error}`,
+				location: 'OpenedFileService',
+			});
 			return { error: true };
 		}
 	}
@@ -94,14 +113,13 @@ export class OpenedFileService {
 		const parent = maybeFile.data.parent;
 
 		if (!parent) {
-			return { error: true, errorText: 'Opened file does not have a parent' };
+			return { error: true, description: 'Opened file does not have a parent' };
 		}
 
 		return { error: false, data: parent };
 	}
 
 	public showLoadingOverlay(): void {
-		console.log('showLoadingOverlay');
 		if (document.getElementById('opened-file-service-loading-overlay')) {
 			return;
 		}
@@ -143,8 +161,12 @@ export class OpenedFileService {
 			await this.app.workspace.getLeaf(true).openFile(file);
 			return { error: false, data: file };
 		} catch (error) {
-			console.warn(`Failed to open file: ${error}`);
-			return { error: true, errorText: `Failed to open file: ${error}` };
+			const description = `Failed to open file: ${error}`;
+			logError({
+				description,
+				location: 'OpenedFileService',
+			});
+			return { error: true, description };
 		}
 	}
 }

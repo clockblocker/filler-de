@@ -13,14 +13,14 @@ export class SelectionContentService {
 	public getSelection(): Maybe<string> {
 		try {
 			const editor = this.getEditor();
-			if (!editor) return { error: true, errorText: 'No active editor' };
+			if (!editor) return { error: true, description: 'No active editor' };
 			const sel = editor.getSelection();
-			if (!sel) return { error: true, errorText: 'No selection' };
+			if (!sel) return { error: true, description: 'No selection' };
 			return { error: false, data: sel };
 		} catch (e) {
 			return {
 				error: true,
-				errorText: e instanceof Error ? e.message : String(e),
+				description: e instanceof Error ? e.message : String(e),
 			};
 		}
 	}
@@ -28,7 +28,7 @@ export class SelectionContentService {
 	public appendBelow(text: string): Maybe<void> {
 		try {
 			const editor = this.getEditor();
-			if (!editor) return { error: true, errorText: 'No active editor' };
+			if (!editor) return { error: true, description: 'No active editor' };
 
 			const sel = editor.listSelections?.()[0];
 			const cursor = sel?.head ?? editor.getCursor();
@@ -39,7 +39,7 @@ export class SelectionContentService {
 		} catch (e) {
 			return {
 				error: true,
-				errorText: e instanceof Error ? e.message : String(e),
+				description: e instanceof Error ? e.message : String(e),
 			};
 		}
 	}

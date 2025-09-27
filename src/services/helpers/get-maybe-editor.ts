@@ -7,8 +7,8 @@ export async function getMaybeEditor(app: App): Promise<Maybe<Editor>> {
 		if (view && view?.file) {
 			return { error: false, data: view.editor };
 		}
-		return { error: true, errorText: `Failed to get Editor` };
+		return { error: true, description: `Failed to get Editor` };
 	} catch (error) {
-		return { error: true, errorText: `Failed to get Editor: ${error}` };
+		return { error: true, description: `Failed to get Editor: ${error}` };
 	}
 }

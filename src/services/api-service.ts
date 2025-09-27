@@ -3,9 +3,13 @@ import { Notice, requestUrl } from 'obsidian';
 import { TextEaterSettings } from '../types';
 import { z } from 'zod';
 import { zodResponseFormat } from 'openai/helpers/zod';
+import { formatError, logError, logWarning } from './helpers/issue-handlers';
 
 function normalizeHeaders(initHeaders?: HeadersInit): Record<string, string> {
-	if (!initHeaders) return {};
+	if (!initHeaders) {
+		return {};
+	}
+
 	const out: Record<string, string> = {};
 
 	if (initHeaders instanceof Headers) {
@@ -79,8 +83,10 @@ export class ApiService {
 				fetch: fetchViaObsidian,
 			});
 		} catch (error: any) {
-			new Notice(`Error initializing API service: ${error.message}`);
-			console.error(`Error initializing API service: ${error.message}`);
+			logError({
+				description: `Error initializing API service: ${error.message}`,
+				location: 'ApiService',
+			});
 		}
 	}
 
@@ -102,13 +108,15 @@ export class ApiService {
 			}
 
 			throw new Error(`Google API error: ${res.status}: ${res.text}`);
-		} catch (err: any) {
-			const errorMessage = err.message || 'Failed to call Google API';
-			console.error(errorMessage);
+		} catch (error: any) {
+			const errObj = {
+				description: error?.message || 'Failed to call Google API',
+				location: 'ApiService',
+			};
 
-			new Notice('Call to AI Model failed. Check console for more details.');
+			logError(errObj);
 
-			throw new Error(err.message || 'Failed to call Google API');
+			throw new Error(formatError(errObj));
 		}
 	}
 
@@ -139,11 +147,11 @@ export class ApiService {
 				this.cachedContentIds[systemPrompt] = id;
 				return id;
 			}
-		} catch (error) {
-			console.warn(
-				'CachedContent creation failed; proceeding without cache',
-				error
-			);
+		} catch (___errors) {
+			logWarning({
+				description: 'CachedContent creation failed; proceeding without cache',
+				location: 'ApiService',
+			});
 		}
 		return null;
 	}
@@ -195,7 +203,12 @@ export class ApiService {
 
 			if (parsed) return parsed;
 		} catch (err) {
-			throw new Error('');
+			throw new Error(
+				formatError({
+					description: `Failed to generate: ${err?.message}`,
+					location: 'ApiService',
+				})
+			);
 		}
 	}
 }
