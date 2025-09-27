@@ -29,48 +29,48 @@ import {
 	PathFromWort,
 } from './types-and-consts';
 
-export async function makeAdjektivBlock(
-	plugin: TextEaterPlugin,
-	file: TFile,
-	word: string
-): Promise<Block | null> {
-	const prompt = promtMakerFromKeyword[Wortart.Adjektiv]();
-	const generatedAdjektivOutput = await plugin.apiService.generateContent(
-		prompt,
-		word,
-		true
-	);
-	const parsedAdjektivOutput = adjektivOutputSchema.safeParse(
-		JSON.parse(generatedAdjektivOutput)
-	);
+// export async function makeAdjektivBlock(
+// 	plugin: TextEaterPlugin,
+// 	file: TFile,
+// 	word: string
+// ): Promise<Block | null> {
+// 	const prompt = promtMakerFromKeyword[Wortart.Adjektiv]();
+// 	const generatedAdjektivOutput = await plugin.apiService.generateContent(
+// 		prompt,
+// 		word,
+// 		true
+// 	);
+// 	const parsedAdjektivOutput = adjektivOutputSchema.safeParse(
+// 		JSON.parse(generatedAdjektivOutput)
+// 	);
 
-	if (parsedAdjektivOutput.error) {
-		console.error({
-			zodError: parsedAdjektivOutput.error,
-			output: generatedAdjektivOutput,
-		});
-		await plugin.deprecatedFileService.writeToOpenedFile(
-			file.path,
-			'Contact t.me/@clockblocker'
-		);
-		return null;
-	}
+// 	if (parsedAdjektivOutput.error) {
+// 		console.error({
+// 			zodError: parsedAdjektivOutput.error,
+// 			output: generatedAdjektivOutput,
+// 		});
+// 		await plugin.deprecatedFileService.writeToOpenedFile(
+// 			file.path,
+// 			'Contact t.me/@clockblocker'
+// 		);
+// 		return null;
+// 	}
 
-	const adjektivOutput = parsedAdjektivOutput.data;
+// 	const adjektivOutput = parsedAdjektivOutput.data;
 
-	const formSubblocks = await Promise.all(
-		adjektivOutput.map((o) =>
-			makeBlocksForAdjektivOutputElement(plugin, file, o)
-		)
-	);
-	const backlinks = formSubblocks.map((s) => s.backlinks).flat();
-	const adjektivOutputBlock = {
-		repr: formSubblocks.map(({ repr }) => repr).join('\n\n'),
-		backlinks: backlinks,
-	};
+// 	const formSubblocks = await Promise.all(
+// 		adjektivOutput.map((o) =>
+// 			makeBlocksForAdjektivOutputElement(plugin, file, o)
+// 		)
+// 	);
+// 	const backlinks = formSubblocks.map((s) => s.backlinks).flat();
+// 	const adjektivOutputBlock = {
+// 		repr: formSubblocks.map(({ repr }) => repr).join('\n\n'),
+// 		backlinks: backlinks,
+// 	};
 
-	return adjektivOutputBlock;
-}
+// 	return adjektivOutputBlock;
+// }
 
 async function makeBlocksForAdjektivOutputElement(
 	plugin: TextEaterPlugin,

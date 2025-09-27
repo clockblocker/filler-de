@@ -15,14 +15,13 @@ import { DeprecatedFileService } from './file';
 import newGenCommand from 'actions/new/new-gen-command';
 import { OpenedFileService } from 'services/opened-file-service';
 import { BackgroundFileService } from 'services/background-file-service';
-import { EditorView } from '@codemirror/view';
 import addBacklinksToCurrentFile from 'actions/old/addBacklinksToCurrentFile';
-import fillTemplate from 'actions/old/fillTemplate';
+// import fillTemplate from 'actions/old/fillTemplate';
 import formatSelectionWithNumber from 'actions/old/formatSelectionWithNumber';
-import getInfinitiveAndEmoji from 'actions/old/getInfinitiveAndEmoji';
-import insertReplyFromC1Richter from 'actions/old/insertReplyFromC1Richter';
-import insertReplyFromKeymaker from 'actions/old/insertReplyFromKeymaker';
-import normalizeSelection from 'actions/old/normalizeSelection';
+// import getInfinitiveAndEmoji from 'actions/old/getInfinitiveAndEmoji';
+// import insertReplyFromC1Richter from 'actions/old/insertReplyFromC1Richter';
+// import insertReplyFromKeymaker from 'actions/old/insertReplyFromKeymaker';
+// import normalizeSelection from 'actions/old/normalizeSelection';
 import translateSelection from 'actions/old/translateSelection';
 import { AboveSelectionToolbarService } from 'services/above-selection-toolbar-service';
 import { BottomToolbarService } from 'services/bottom-toolbar-service';
@@ -63,10 +62,7 @@ export default class TextEaterPlugin extends Plugin {
 
 		this.apiService = new ApiService(this.settings);
 		this.openedFileService = new OpenedFileService(this.app);
-		this.backgroundFileService = new BackgroundFileService(
-			this.app,
-			this.app.vault
-		);
+		this.backgroundFileService = new BackgroundFileService(this.app.vault);
 		this.deprecatedFileService = new DeprecatedFileService(
 			this.app,
 			this.app.vault
@@ -236,7 +232,7 @@ export default class TextEaterPlugin extends Plugin {
 			) => {
 				if (view.file) {
 					if (!checking) {
-						fillTemplate(this, editor, view.file);
+						// fillTemplate(this, editor, view.file);
 						// testEndgame(this, editor, view.file);
 					}
 					return true;
@@ -255,7 +251,7 @@ export default class TextEaterPlugin extends Plugin {
 			) => {
 				if (view.file) {
 					if (!checking) {
-						getInfinitiveAndEmoji(this, editor, view.file);
+						// getInfinitiveAndEmoji(this, editor, view.file);
 					}
 					return true;
 				}
@@ -274,7 +270,7 @@ export default class TextEaterPlugin extends Plugin {
 				const selection = editor.getSelection();
 				if (selection && view.file) {
 					if (!checking) {
-						normalizeSelection(this, editor, view.file, selection);
+						// normalizeSelection(this, editor, view.file, selection);
 					}
 					return true;
 				}
@@ -323,7 +319,7 @@ export default class TextEaterPlugin extends Plugin {
 				const selection = editor.getSelection();
 				if (selection) {
 					if (!checking) {
-						insertReplyFromKeymaker(this, editor, selection);
+						// insertReplyFromKeymaker(this, editor, selection);
 					}
 					return true;
 				}
@@ -338,7 +334,7 @@ export default class TextEaterPlugin extends Plugin {
 				const selection = editor.getSelection();
 				if (selection) {
 					if (!checking) {
-						insertReplyFromC1Richter(this, editor, selection);
+						// insertReplyFromC1Richter(this, editor, selection);
 					}
 					return true;
 				}

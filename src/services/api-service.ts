@@ -2,6 +2,8 @@ import OpenAI from 'openai';
 import { Notice, requestUrl } from 'obsidian';
 import { TextEaterSettings } from '../types';
 import { prompts } from '../prompts';
+import { z } from 'zod';
+import { zodResponseFormat } from 'openai/helpers/zod';
 
 function normalizeHeaders(initHeaders?: HeadersInit): Record<string, string> {
 	if (!initHeaders) return {};
@@ -28,10 +30,6 @@ export class ApiService {
 	private openai: OpenAI | null = null;
 	private model = 'gemini-2.5-flash-lite';
 	private cachedContentIds: Record<string, string> = {};
-	private chatSessions: Record<
-		string,
-		OpenAI.Chat.Completions.ChatCompletion[]
-	> = {};
 
 	constructor(private settings: TextEaterSettings) {
 		try {
@@ -103,8 +101,13 @@ export class ApiService {
 				return JSON.parse(res.text) as T;
 			}
 
-			throw new Error(`Google API error ${res.status}: ${res.text}`);
+			throw new Error(`Google API error: ${res.status}: ${res.text}`);
 		} catch (err: any) {
+			const errorMessage = err.message || 'Failed to call Google API';
+			console.error(errorMessage);
+
+			new Notice('Call to AI Model failed. Check console for more details.');
+
 			throw new Error(err.message || 'Failed to call Google API');
 		}
 	}
@@ -145,90 +148,54 @@ export class ApiService {
 		return null;
 	}
 
-	async generateContent(
-		systemPrompt: string,
-		userInput: string,
-		responseSchema?: boolean
-	): Promise<string> {
+	async generate<T extends z.ZodTypeAny>({
+		systemPrompt,
+		userInput,
+		schema,
+		withCache = true,
+	}: {
+		systemPrompt: string;
+		userInput: string;
+		schema: T;
+		withCache: boolean;
+	}): Promise<z.infer<T>> {
+		if (!this.openai) {
+			throw new Error(
+				'OpenAI client not initialized. Make shure that you have configured the API key in the settings.'
+			);
+		}
+
+		systemPrompt = systemPrompt.replace(/^\t+/gm, '');
+
+		const cachedId = withCache
+			? await this.ensureCachedContentIdForSystemPrompt(systemPrompt)
+			: null;
+
+		const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [];
+		if (!cachedId) {
+			messages.push({ role: 'system', content: systemPrompt });
+		}
+		messages.push({ role: 'user', content: userInput });
+
 		try {
-			if (!this.openai) {
-				throw new Error(
-					'OpenAI client not initialized. Make shure that you have configured the API key in the settings.'
-				);
-			}
-
-			// tidy system prompt
-			systemPrompt = systemPrompt.replace(/^\t+/gm, '');
-
-			// Try to use Google's CachedContent for the system prompt
-			const cachedId =
-				await this.ensureCachedContentIdForSystemPrompt(systemPrompt);
-
-			const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [];
-			// If we have a cached system instruction, do not duplicate it in messages
-			if (!cachedId) {
-				messages.push({ role: 'system', content: systemPrompt });
-			}
-
-			messages.push({ role: 'user', content: userInput });
-			const completion = await this.openai.chat.completions.create({
+			const completion = await this.openai.chat.completions.parse({
 				model: this.model,
 				messages,
 				temperature: 0,
 				top_p: 0.95,
-				max_tokens: responseSchema ? 1024 : 2048,
-				// Pass provider-specific options via extra_body for Google
+				response_format: zodResponseFormat(schema, 'data'),
 				...(cachedId
 					? {
-							// The OpenAI compatibility layer accepts provider extras via extra_body
 							extra_body: { google: { cached_content: cachedId } },
 						}
 					: {}),
 			});
 
-			const response = completion.choices?.[0]?.message?.content ?? '';
-			return response ?? '';
-		} catch (error: any) {
-			throw new Error(error.message);
+			const parsed = completion.choices?.[0]?.message?.parsed;
+
+			if (parsed) return parsed;
+		} catch (err) {
+			throw new Error('');
 		}
-	}
-
-	async fetchTemplate(word: string): Promise<string> {
-		const [dictionaryEntry, valenceBlock] = await Promise.all([
-			this.generateContent(prompts.generate_dictionary_entry, word),
-			this.generateContent(prompts.generate_valence_block, word),
-		]);
-		return `${dictionaryEntry.replace('<agent_output>', '').replace('</agent_output>', '')}\n\n---\n${valenceBlock}`;
-	}
-
-	async determineInfinitiveAndEmoji(word: string): Promise<string> {
-		return this.generateContent(
-			prompts.determine_infinitive_and_pick_emoji,
-			word
-		);
-	}
-
-	async normalize(text: string): Promise<string> {
-		return this.generateContent(prompts.normalize, text);
-	}
-
-	async translateText(text: string): Promise<string> {
-		return this.generateContent(prompts.translate_de_to_eng, text);
-	}
-
-	async consultKeymaker(text: string): Promise<string> {
-		return this.generateContent(prompts.keymaker, text);
-	}
-
-	async consultC1Richter(text: string): Promise<string> {
-		return this.generateContent(prompts.c1Richter, text);
-	}
-
-	clearChatSessions(): void {
-		this.chatSessions = {};
-	}
-
-	getChatSessionCount(): number {
-		return Object.keys(this.chatSessions).length;
 	}
 }

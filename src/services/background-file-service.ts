@@ -9,10 +9,7 @@ const pathToFileFromPathParts = (pathParts: PathParts) =>
 	pathToFolderFromPathParts(pathParts) + '.md';
 
 export class BackgroundFileService {
-	constructor(
-		private app: App,
-		private vault: Vault
-	) {}
+	constructor(private vault: Vault) {}
 
 	async getMaybeFileByPathParts(pathParts: PathParts): Promise<Maybe<TFile>> {
 		const filePath = pathToFileFromPathParts(pathParts);

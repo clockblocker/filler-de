@@ -1,21 +1,35 @@
 import { Notice } from 'obsidian';
-import TextEaterPlugin from '../../main';
+import { ApiService } from 'services/api-service';
+import { SelectionService } from 'services/selection-service';
+import { prompts } from 'prompts';
+import { z } from 'zod';
 
-export default async function newTranslateSelection(plugin: TextEaterPlugin) {
+export default async function newTranslateSelection({
+	selectionService,
+	apiService,
+}: {
+	selectionService: SelectionService;
+	apiService: ApiService;
+}) {
 	try {
-		const maybeSel = plugin.selectionService.getSelection();
+		const maybeSel = selectionService.getMaybeSelection();
 		if (maybeSel.error) {
 			new Notice(maybeSel.errorText ?? 'No selection');
 			return;
 		}
 
-		const sel = maybeSel.data;
+		const selectionText = maybeSel.data;
 
-		const response = await plugin.apiService.translateText(sel);
+		const response = await apiService.generate({
+			systemPrompt: prompts.translate_de_to_eng,
+			userInput: selectionText,
+			schema: z.string(),
+			withCache: false,
+		});
 
 		if (!response) return;
 
-		plugin.selectionService.appendBelow(response);
+		selectionService.appendBelow(response);
 	} catch (error) {
 		new Notice(`Error: ${error.message}`);
 	}

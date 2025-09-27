@@ -81,46 +81,46 @@ function getMorphemischeZerlegungBlock(
 	return { repr: reprs.join('|'), backlinks };
 }
 
-export async function makeMorphemBlock(
-	plugin: TextEaterPlugin,
-	file: TFile,
-	word: string
-): Promise<{ repr: string; backlinks: Backlink[] } | null> {
-	const prompt = promtMakerFromKeyword['Morphems']();
-	const generatedMorphemAnalysisOutput =
-		await plugin.apiService.generateContent(prompt, word, true);
-	const parsedMorphemAnalysisOutput = morphemAnalysisOutputSchema.safeParse(
-		JSON.parse(generatedMorphemAnalysisOutput)
-	);
+// export async function makeMorphemBlock(
+// 	plugin: TextEaterPlugin,
+// 	file: TFile,
+// 	word: string
+// ): Promise<{ repr: string; backlinks: Backlink[] } | null> {
+// 	const prompt = promtMakerFromKeyword['Morphems']();
+// 	const generatedMorphemAnalysisOutput =
+// 		await plugin.apiService.generateContent(prompt, word, true);
+// 	const parsedMorphemAnalysisOutput = morphemAnalysisOutputSchema.safeParse(
+// 		JSON.parse(generatedMorphemAnalysisOutput)
+// 	);
 
-	if (parsedMorphemAnalysisOutput.error) {
-		console.error({
-			zodError: parsedMorphemAnalysisOutput.error,
-			output: generatedMorphemAnalysisOutput,
-		});
-		await plugin.deprecatedFileService.writeToOpenedFile(
-			file.path,
-			'Contact t.me/@clockblocker'
-		);
-		return null;
-	}
+// 	if (parsedMorphemAnalysisOutput.error) {
+// 		console.error({
+// 			zodError: parsedMorphemAnalysisOutput.error,
+// 			output: generatedMorphemAnalysisOutput,
+// 		});
+// 		await plugin.deprecatedFileService.writeToOpenedFile(
+// 			file.path,
+// 			'Contact t.me/@clockblocker'
+// 		);
+// 		return null;
+// 	}
 
-	const morphemAnalysis = parsedMorphemAnalysisOutput.data;
-	const zusammengesetztAusBlock = await getZusammengesetztAusBlock(
-		plugin,
-		file,
-		morphemAnalysis
-	);
-	const morphemischeZerlegungBlock =
-		getMorphemischeZerlegungBlock(morphemAnalysis);
+// 	const morphemAnalysis = parsedMorphemAnalysisOutput.data;
+// 	const zusammengesetztAusBlock = await getZusammengesetztAusBlock(
+// 		plugin,
+// 		file,
+// 		morphemAnalysis
+// 	);
+// 	const morphemischeZerlegungBlock =
+// 		getMorphemischeZerlegungBlock(morphemAnalysis);
 
-	return {
-		repr: [morphemischeZerlegungBlock.repr, zusammengesetztAusBlock.repr].join(
-			'\n'
-		),
-		backlinks: [
-			...zusammengesetztAusBlock.backlinks,
-			...morphemischeZerlegungBlock.backlinks,
-		],
-	};
-}
+// 	return {
+// 		repr: [morphemischeZerlegungBlock.repr, zusammengesetztAusBlock.repr].join(
+// 			'\n'
+// 		),
+// 		backlinks: [
+// 			...zusammengesetztAusBlock.backlinks,
+// 			...morphemischeZerlegungBlock.backlinks,
+// 		],
+// 	};
+// }
