@@ -17,7 +17,7 @@ import { OpenedFileService } from 'obsidian-services/opened-file-service';
 import { BackgroundFileService } from 'obsidian-services/background-file-service';
 import addBacklinksToCurrentFile from 'actions/old/addBacklinksToCurrentFile';
 // import fillTemplate from 'actions/old/fillTemplate';
-import formatSelectionWithNumber from 'actions/old/formatSelectionWithNumber';
+// import formatSelectionWithNumber from 'actioold/formatSelectionWithNumber';
 // import getInfinitiveAndEmoji from 'actions/old/getInfinitiveAndEmoji';
 // import insertReplyFromC1Richter from 'actions/old/insertReplyFromC1Richter';
 // import insertReplyFromKeymaker from 'actions/old/insertReplyFromKeymaker';
@@ -159,22 +159,6 @@ export default class TextEaterPlugin extends Plugin {
 			})
 		);
 
-		// // Selection toolbar service
-		// this.selectionToolbarService = new AboveSelectionToolbarService(this.app);
-		// this.app.workspace.onLayoutReady(() =>
-		// 	this.selectionToolbarService.attach()
-		// );
-		// this.registerEvent(
-		// 	this.app.workspace.on('active-leaf-change', () =>
-		// 		this.selectionToolbarService.attach()
-		// 	)
-		// );
-		// this.registerEvent(
-		// 	this.app.workspace.on('layout-change', () =>
-		// 		this.selectionToolbarService.attach()
-		// 	)
-		// );
-
 		this.registerEvent(
 			this.app.workspace.on('css-change', () =>
 				this.selectionToolbarService.onCssChange()
@@ -279,34 +263,16 @@ export default class TextEaterPlugin extends Plugin {
 		this.addCommand({
 			id: 'translate-selection',
 			name: 'Translate selected text',
-			editorCheckCallback: (checking: boolean, editor: Editor) => {
-				const selection = editor.getSelection();
-				if (selection) {
-					if (!checking) {
-						// translateSelection(this, editor, selection);
-					}
-					return true;
-				}
-				return false;
+			editorCheckCallback: () => {
+				ACTION_CONFIGS.TranslateSelection.execute(this);
 			},
 		});
 
 		this.addCommand({
 			id: 'format-selection-with-number',
 			name: 'Split selection into linked blocks',
-			editorCheckCallback: (
-				checking: boolean,
-				editor: Editor,
-				view: MarkdownView
-			) => {
-				const selection = editor.getSelection();
-				if (selection && view.file) {
-					if (!checking) {
-						formatSelectionWithNumber(this, editor, view.file, selection);
-					}
-					return true;
-				}
-				return false;
+			editorCheckCallback: () => {
+				ACTION_CONFIGS.SplitInBlocks.execute(this);
 			},
 		});
 
@@ -361,22 +327,6 @@ export default class TextEaterPlugin extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
-	}
-
-	findHighestNumber(content: string): number {
-		const matches = content.match(/#\^(\d+)/g);
-		if (!matches) return 0;
-
-		const numbers = matches.map((match) => {
-			const num = match.replace('#^', '');
-			return parseInt(num, 10);
-		});
-
-		return Math.max(0, ...numbers);
-	}
-
-	private getActiveMarkdownView(): MarkdownView | null {
-		return this.app.workspace.getActiveViewOfType(MarkdownView);
 	}
 }
 

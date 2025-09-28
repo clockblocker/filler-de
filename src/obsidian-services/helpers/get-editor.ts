@@ -12,3 +12,13 @@ export async function getMaybeEditor(app: App): Promise<Maybe<Editor>> {
 		return { error: true, description: `Failed to get Editor: ${error}` };
 	}
 }
+
+export async function getEditor(app: App): Promise<Editor> {
+	const mbEditor = await getMaybeEditor(app);
+	if (mbEditor.error) {
+		throw new Error(mbEditor.description ?? 'No active editor');
+	}
+
+	const editor = mbEditor.data;
+	return editor;
+}

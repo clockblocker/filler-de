@@ -1,6 +1,6 @@
 import { MarkdownView, TFile, App, TFolder } from 'obsidian';
-import { Maybe } from '../types/general';
-import { getMaybeEditor } from './helpers/get-maybe-editor';
+import { Maybe, unwrapMaybe } from '../types/general';
+import { getMaybeEditor } from './helpers/get-editor';
 import { logError, logWarning } from './helpers/issue-handlers';
 
 export class OpenedFileService {
@@ -71,6 +71,10 @@ export class OpenedFileService {
 			});
 			return { error: true };
 		}
+	}
+
+	async getFileContent(): Promise<string> {
+		return unwrapMaybe(await this.getMaybeFileContent());
 	}
 
 	async replaceContentInCurrentlyOpenedFile(

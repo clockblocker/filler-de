@@ -1,6 +1,7 @@
 import newGenCommand from './new/new-gen-command';
 import { UserAction, UserActionPlacement } from 'types/beta/system/actions';
 import newTranslateSelection from './new/translateSelection';
+import newSplitCommand from './new/new-split-command';
 
 export const ACTION_CONFIGS = {
 	[UserAction.Generate]: {
@@ -24,7 +25,7 @@ export const ACTION_CONFIGS = {
 		placement: UserActionPlacement.ShortcutOnly,
 	},
 	[UserAction.SplitInBlocks]: {
-		execute: newGenCommand,
+		execute: newSplitCommand,
 		label: 'Split',
 		placement: UserActionPlacement.ShortcutOnly,
 	},

@@ -1,21 +1,14 @@
-import { App, Editor } from 'obsidian';
+import { App } from 'obsidian';
 import { Maybe } from 'types/general';
-import { getMaybeEditor } from './helpers/get-maybe-editor';
+import { getEditor } from './helpers/get-editor';
 
 export class SelectionService {
 	constructor(private app: App) {}
 
-	private async getEditor(): Promise<Editor> {
-		const maybeEditor = await getMaybeEditor(this.app);
-		if (maybeEditor.error) {
-			throw new Error(maybeEditor.description ?? 'No active editor');
-		}
-		return maybeEditor.data;
-	}
-
 	public async getMaybeSelection(): Promise<Maybe<string>> {
 		try {
-			const editor = await this.getEditor();
+			const editor = await getEditor(this.app);
+
 			const selection = editor.getSelection();
 
 			if (!selection) {
@@ -41,7 +34,7 @@ export class SelectionService {
 
 	public async appendBelow(text: string): Promise<Maybe<void>> {
 		try {
-			const editor = await this.getEditor();
+			const editor = await getEditor(this.app);
 
 			const sel = editor.listSelections?.()[0];
 			const cursor = sel?.head ?? editor.getCursor();
@@ -55,5 +48,10 @@ export class SelectionService {
 				description: e instanceof Error ? e.message : String(e),
 			};
 		}
+	}
+
+	public async replaceSelection(text: string): Promise<void> {
+		const editor = await getEditor(this.app);
+		editor.replaceSelection(text);
 	}
 }

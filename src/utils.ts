@@ -10,16 +10,16 @@ export const extractBacklinks = (content: string): string[] => {
 	return links;
 };
 
-export function formatSelectionWithBacklink(
-	selection: string,
+export function wrapTextInBacklinkBlock(
+	text: string,
 	currentFileName: string,
 	nextNumber: number
 ): string {
-	// Strip all newline characters and spaces from the end of the selection
-	selection = selection.replace(/[\s\n]+$/, '');
+	// Strip all newline characters and spaces from the end of the text
+	text = text.replace(/[\s\n]+$/, '');
 
 	const formattedBacklink = `*[[${currentFileName}#^${nextNumber}|^]]*`;
-	return `${formattedBacklink} ${selection} ^${nextNumber}\n`;
+	return `${formattedBacklink} ${text} ^${nextNumber}\n`;
 }
 
 export async function appendToExistingFile(
