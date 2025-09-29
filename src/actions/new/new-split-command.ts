@@ -14,7 +14,6 @@ export default async function newSplitSelectionInBlocks({
 }) {
 	try {
 		const selection = await selectionService.getSelection();
-
 		const fileContent = await openedFileService.getFileContent();
 
 		const splittedByNewLine = selection.split('\n');
@@ -26,6 +25,8 @@ export default async function newSplitSelectionInBlocks({
 		).name;
 
 		const formattedLines = [];
+		let highestBlockNumber = findHighestBlockNumber(fileContent);
+
 		for (const line of splittedByNewLine) {
 			// If the line starts with "#" or contains no letters, push as is and continue
 			if (line.trim().startsWith('#') || !/\p{L}/u.test(line)) {
@@ -33,32 +34,29 @@ export default async function newSplitSelectionInBlocks({
 				continue;
 			}
 
-			const sentencesInLine = sentences(line, {
-				preserve_whitespace: false,
-				newline_boundaries: false,
-				html_boundaries: false,
-				sanitize: true,
-			});
+			const sentencesInLine = segmentWithColonPrepass(line);
 
 			// Build blocks from sentencesInLine, merging short sentences with previous block
-			const blockContentsInLine = [];
+			const blockTextsInLine = [];
 			for (const sentence of sentencesInLine) {
 				const wordCount = sentence.trim().split(/\s+/).filter(Boolean).length;
-				if (wordCount <= 4 && blockContentsInLine.length > 0) {
-					blockContentsInLine[blockContentsInLine.length - 1] +=
+				if (wordCount <= 4 && blockTextsInLine.length > 0) {
+					blockTextsInLine[blockTextsInLine.length - 1] +=
 						' ' + sentence.trim();
 				} else {
-					blockContentsInLine.push(sentence.trim());
+					blockTextsInLine.push(sentence.trim());
 				}
 			}
-			blockContentsInLine.forEach((block) => {
+
+			blockTextsInLine.forEach((text) => {
 				formattedLines.push(
-					wrapTextInBacklinkBlock(
-						block,
-						nameOfTheOpenendFile,
-						findHighestBlockNumber(fileContent) + 1
-					)
+					wrapTextInBacklinkBlock({
+						text,
+						fileName: nameOfTheOpenendFile,
+						linkId: highestBlockNumber,
+					})
 				);
+				highestBlockNumber += 1;
 			});
 		}
 
@@ -81,4 +79,49 @@ function findHighestBlockNumber(content: string): number {
 	});
 
 	return Math.max(0, ...numbers);
+}
+
+/**
+ * Split text on colon-based sentence boundaries.
+ * @param keepColon - if true, keep ":" at end of the left chunk.
+ */
+export function splitOnColonEOS(text: string, keepColon = true): string[] {
+	// Colon-as-EOS: not part of a number/time, not a URL scheme, and followed by quote/Upper/Dash
+	const COLON_EOS =
+		/(?<!\p{Nd})(:)\s+(?!\/\/)(?=(\p{Quotation_Mark}|[\p{Lu}\p{Lt}]|[\p{Dash_Punctuation}—–-]))/gu;
+
+	const parts: string[] = [];
+	let last = 0;
+
+	for (const m of text.matchAll(COLON_EOS)) {
+		const matchStart = m.index!;
+		const matchLen = m[0].length; // ":" + spaces
+		const colonPos = matchStart + 1; // position of ":"
+
+		const leftEnd = keepColon ? colonPos : matchStart;
+		const rightStart = matchStart + matchLen; // skip the consumed spaces
+
+		const left = text.slice(last, leftEnd).trimEnd();
+		if (left) parts.push(left);
+
+		last = rightStart;
+	}
+
+	const tail = text.slice(last);
+	if (tail.trim().length) parts.push(tail);
+
+	return parts;
+}
+
+/** Run sbd on each colon-split chunk and flatten */
+export function segmentWithColonPrepass(text: string): string[] {
+	const chunks = splitOnColonEOS(text, /*keepColon=*/ true);
+	return chunks.flatMap((chunk) =>
+		sentences(chunk, {
+			preserve_whitespace: false,
+			newline_boundaries: false,
+			html_boundaries: false,
+			sanitize: true,
+		})
+	);
 }
