@@ -15,7 +15,7 @@ export default async function splitSelectionInSentences({
 		const selection = await selectionService.getSelection();
 		const fileContent = await openedFileService.getFileContent();
 
-		let highestBlockNumber = findHighestBlockNumber(fileContent);
+		const highestBlockNumber = findHighestBlockNumber(fileContent);
 
 		const nameOfTheOpenendFile = unwrapMaybe(
 			await openedFileService.getMaybeOpenedFile()

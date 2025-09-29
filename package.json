@@ -8,7 +8,10 @@
 		"lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
 		"format": "prettier --write .",
 		"dev": "node esbuild.config.mjs",
-		"build": "npm run lint:fix && npm run format && tsc -noEmit -skipLibCheck && node --disable-warning=ExperimentalWarning esbuild.config.mjs production"
+		"build": "npm run lint:fix && npm run format && tsc -noEmit -skipLibCheck && node --disable-warning=ExperimentalWarning esbuild.config.mjs production",
+		"test": "vitest",
+		"test:watch": "vitest -w",
+		"coverage": "vitest run --coverage"
 	},
 	"keywords": [],
 	"author": "clockblocker",
@@ -19,6 +22,7 @@
 		"@types/tern": "latest",
 		"@typescript-eslint/eslint-plugin": "latest",
 		"@typescript-eslint/parser": "latest",
+		"@vitest/coverage-v8": "latest",
 		"builtin-modules": "latest",
 		"esbuild": "latest",
 		"eslint": "latest",
@@ -27,8 +31,9 @@
 		"obsidian": "latest",
 		"prettier": "latest",
 		"tslib": "latest",
-		"tsx": "^4.20.5",
-		"typescript": "latest"
+		"tsx": "latest",
+		"typescript": "latest",
+		"vitest": "latest"
 	},
 	"dependencies": {
 		"@codemirror/view": "latest",
