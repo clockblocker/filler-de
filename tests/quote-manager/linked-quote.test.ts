@@ -1,0 +1,54 @@
+import { describe, it, expect } from 'vitest';
+import {
+	makeFormattedLinkedQuote,
+	parseFormattedLinkedQuote,
+} from '../../src/pure-formatters/quote-manager/linked-quote';
+import { BIRD } from '../../src/types/beta/literals';
+
+function expected(text: string, linkId: string | number): string {
+	return `${text}${BIRD}${linkId}`;
+}
+
+describe('makeFormattedLinkedQuote', () => {
+	it('formats text with link id', () => {
+		const text = 'Hello world.';
+		const linkId = 7;
+		const result = makeFormattedLinkedQuote({ text, linkId });
+		expect(result).toBe(expected(text, linkId));
+	});
+
+	it('keeps trailing spaces/newlines in text', () => {
+		const text = 'Line with spaces  \n';
+		const linkId = 3;
+		const result = makeFormattedLinkedQuote({ text, linkId });
+		expect(result).toBe(expected(text, linkId));
+	});
+});
+
+describe('parseFormattedLinkedQuote', () => {
+	it('parses well-formed input', () => {
+		const text = 'A sentence.';
+		const linkId = 101;
+		const formatted = expected(text, linkId);
+		const parsed = parseFormattedLinkedQuote(formatted);
+		expect(parsed).toEqual({ text, linkId });
+	});
+
+	it('returns null for empty text part', () => {
+		const formatted = expected('', 1);
+		expect(parseFormattedLinkedQuote(formatted)).toBeNull();
+	});
+
+	it('returns null when linkId is not numeric', () => {
+		const formatted = expected('Some text', 'NaN');
+		expect(parseFormattedLinkedQuote(formatted)).toBeNull();
+	});
+
+	it('handles multiline text', () => {
+		const text = 'Line 1\nLine 2\nLine 3';
+		const linkId = 55;
+		const formatted = expected(text, linkId);
+		const parsed = parseFormattedLinkedQuote(formatted);
+		expect(parsed).toEqual({ text, linkId });
+	});
+});

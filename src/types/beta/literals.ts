@@ -13,15 +13,36 @@ const BirdSchema = z.literal('^');
 export type BIRD = z.infer<typeof BirdSchema>;
 export const BIRD = BirdSchema.value;
 
-const PhraseSchema = z.literal('Phrase');
-export type PHRASE = z.infer<typeof PhraseSchema>;
-export const PHRASE = PhraseSchema.value;
+const StarSchema = z.literal('*');
+export type STAR = z.infer<typeof StarSchema>;
+export const STAR = StarSchema.value;
+
+const ObsidianLinkOpenSchema = z.literal('[[');
+export type OBSIDIAN_LINK_OPEN = z.infer<typeof ObsidianLinkOpenSchema>;
+export const OBSIDIAN_LINK_OPEN = ObsidianLinkOpenSchema.value;
+
+const ObsidianLinkCloseSchema = z.literal(']]');
+export type OBSIDIAN_LINK_CLOSE = z.infer<typeof ObsidianLinkCloseSchema>;
+export const OBSIDIAN_LINK_CLOSE = ObsidianLinkCloseSchema.value;
+
+const PipeSchema = z.literal('|');
+export type PIPE = z.infer<typeof PipeSchema>;
+export const PIPE = PipeSchema.value;
+
+const HashSchema = z.literal('#');
+export type HASH = z.infer<typeof HashSchema>;
+export const HASH = HashSchema.value;
 
 const LongDashSchema = z.literal('—');
 export type LONG_DASH = z.infer<typeof LongDashSchema>;
 export const LONG_DASH = LongDashSchema.value;
 
 // Morphems
+
+const PhraseSchema = z.literal('Phrase');
+export type PHRASE = z.infer<typeof PhraseSchema>;
+export const PHRASE = PhraseSchema.value;
+
 export const RootLiteralSchema = z.literal('Root');
 export type ROOT = z.infer<typeof RootLiteralSchema>;
 export const ROOT = RootLiteralSchema.value;

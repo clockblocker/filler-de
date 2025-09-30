@@ -1,14 +1,14 @@
 import { z } from 'zod';
 import { BacklinkToQuote } from './types';
 import { reEscape, reEscapeCharClass } from '../text-utils';
-
-// ── Delimiters / tokens ────────────────────────────────────────────────────────
-export const STAR = '*' as const;
-export const OBSIDIAN_LINK_OPEN = '[[' as const;
-export const OBSIDIAN_LINK_CLOSE = ']]' as const;
-export const PIPE = '|' as const; // name for |
-export const HASH = '#' as const; // name for #
-export const BIRD = '^' as const; // your caret delimiter
+import {
+	PIPE,
+	HASH,
+	STAR,
+	OBSIDIAN_LINK_OPEN,
+	BIRD,
+	OBSIDIAN_LINK_CLOSE,
+} from '../../types/beta/literals';
 
 // For characters inside a character class [...]
 
@@ -20,7 +20,7 @@ const FILE_NAME_CLASS = new RegExp(
 	`^[^${FORBIDDEN_FILENAME_CHARS.map(reEscapeCharClass).join('')}]+$`
 );
 
-export const BACKLINK_TO_QUOTE = {
+const BACKLINK_TO_QUOTE = {
 	make({ fileName, linkId }: BacklinkToQuote) {
 		return `${STAR}${OBSIDIAN_LINK_OPEN}${fileName}${HASH}${BIRD}${linkId}${PIPE}${BIRD}${OBSIDIAN_LINK_CLOSE}${STAR}` as const;
 	},
