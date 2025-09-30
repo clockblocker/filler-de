@@ -1,8 +1,8 @@
 import { Notice } from 'obsidian';
-import { OpenedFileService } from 'obsidian-related/obsidian-services/opened-file-service';
-import { SelectionService } from 'obsidian-related/obsidian-services/selection-service';
-import { toLinkedSegmentedSentences } from 'simple-text-processors/split-in-sentences';
-import { unwrapMaybe } from 'types/general';
+import { toLinkedSegmentedSentences } from '../../../simple-text-processors/split-in-sentences';
+import { unwrapMaybe } from '../../../types/general';
+import { OpenedFileService } from '../../obsidian-services/opened-file-service';
+import { SelectionService } from '../../obsidian-services/selection-service';
 
 export default async function splitSelectionInSentences({
 	selectionService,

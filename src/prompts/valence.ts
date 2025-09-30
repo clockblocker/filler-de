@@ -1,4 +1,4 @@
-import { LONG_DASH } from "../types/beta/literals";
+import { LONG_DASH } from '../types/beta/literals';
 
 const verfeinden_valenz =
 	'###### [[verfeinden]] *[[sich]]* `mit` jM\n' +

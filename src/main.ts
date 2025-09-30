@@ -12,10 +12,10 @@ import { DEFAULT_SETTINGS, TextEaterSettings } from './types';
 import { ApiService } from './obsidian-related/obsidian-services/api-service';
 import { DeprecatedFileService } from './file';
 
-import newGenCommand from 'actions/new/new-gen-command';
+import newGenCommand from 'obsidian-related/actions/new/new-gen-command';
 import { OpenedFileService } from 'obsidian-related/obsidian-services/opened-file-service';
 import { BackgroundFileService } from 'obsidian-related/obsidian-services/background-file-service';
-import addBacklinksToCurrentFile from 'actions/old/addBacklinksToCurrentFile';
+import addBacklinksToCurrentFile from 'obsidian-related/actions/old/addBacklinksToCurrentFile';
 // import fillTemplate from 'actions/old/fillTemplate';
 // import formatSelectionWithNumber from 'actioold/formatSelectionWithNumber';
 // import getInfinitiveAndEmoji from 'actions/old/getInfinitiveAndEmoji';
@@ -24,7 +24,7 @@ import addBacklinksToCurrentFile from 'actions/old/addBacklinksToCurrentFile';
 // import normalizeSelection from 'actions/old/normalizeSelection';
 import { AboveSelectionToolbarService } from 'obsidian-related/obsidian-services/above-selection-toolbar-service';
 import { BottomToolbarService } from 'obsidian-related/obsidian-services/bottom-toolbar-service';
-import { ACTION_CONFIGS } from 'actions/actions-config';
+import { ACTION_CONFIGS } from 'obsidian-related/actions/actions-config';
 import {
 	UserAction,
 	UserActionPlacement,
