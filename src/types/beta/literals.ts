@@ -9,6 +9,10 @@ const SlashSchema = z.literal('/');
 export type SLASH = z.infer<typeof SlashSchema>;
 export const SLASH = SlashSchema.value;
 
+const BirdSchema = z.literal('^');
+export type BIRD = z.infer<typeof BirdSchema>;
+export const BIRD = BirdSchema.value;
+
 const PhraseSchema = z.literal('Phrase');
 export type PHRASE = z.infer<typeof PhraseSchema>;
 export const PHRASE = PhraseSchema.value;

@@ -1,5 +1,5 @@
 import { Notice } from 'obsidian';
-import { toLinkedSegmentedSentences } from '../../../pure-formatters/simple-text-processors/split-in-sentences';
+import { toLinkedSegmentedSentences } from '../../../pure-formatters/quote-manager/split-in-sentences';
 import { unwrapMaybe } from '../../../types/general';
 import { OpenedFileService } from '../../obsidian-services/opened-file-service';
 import { SelectionService } from '../../obsidian-services/selection-service';

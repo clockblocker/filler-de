@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { splitOnColonEOS } from '../../src/pure-formatters/simple-text-processors/split-in-sentences';
+import { splitOnColonEOS } from '../../src/pure-formatters/quote-manager/split-in-sentences';
 
 const directMatches = [
 	{

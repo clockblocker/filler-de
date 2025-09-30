@@ -1,6 +1,61 @@
 import { sentences } from 'sbd';
 import { wrapTextInBacklinkBlock } from './text-utils';
 
+type LinkedQuote = {
+	fileName: string;
+	text: string;
+	linkId: number;
+};
+
+type Line = LinkedQuote | string;
+
+export function segmentInLines({
+	selection,
+	nameOfTheOpenendFile,
+	highestBlockNumber,
+}: {
+	selection: string;
+	nameOfTheOpenendFile: string;
+	highestBlockNumber: number;
+}) {
+	const splittedByNewLine = selection.split('\n');
+
+	const lines: Line[] = [];
+
+	for (const line of splittedByNewLine) {
+		if (line.trim().startsWith('#') || !/\p{L}/u.test(line)) {
+			lines.push(line);
+			continue;
+		}
+
+		const sentencesInLine = segmentWithColonPrepass(line);
+
+		// Build blocks from sentencesInLine, merging short sentences with previous block
+		const blockTextsInLine = [];
+		for (const sentence of sentencesInLine) {
+			const wordCount = sentence.trim().split(/\s+/).filter(Boolean).length;
+			if (wordCount <= 4 && blockTextsInLine.length > 0) {
+				blockTextsInLine[blockTextsInLine.length - 1] += ' ' + sentence.trim();
+			} else {
+				blockTextsInLine.push(sentence.trim());
+			}
+		}
+
+		blockTextsInLine.forEach((text) => {
+			lines.push(
+				wrapTextInBacklinkBlock({
+					text,
+					fileName: nameOfTheOpenendFile,
+					linkId: highestBlockNumber,
+				})
+			);
+			highestBlockNumber += 1;
+		});
+	}
+
+	return lines;
+}
+
 export function toLinkedSegmentedSentences({
 	selection,
 	nameOfTheOpenendFile,
