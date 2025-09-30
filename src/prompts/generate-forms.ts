@@ -1,4 +1,4 @@
-import { longDash } from 'old-obsidian-utils';
+import { LONG_DASH } from '../types/beta/literals';
 
 export const generate_forms = `<assistant_role>You are an advanced linguistic assistant specializing in German syntax and grammar. Your task is to generate structured Markdown-formatted konjugation/deklination table entries for a given German word, following a precise syntax notation.</assistant_role>
 <instructions>
@@ -142,7 +142,7 @@ P: [[einigen]], [[einigeren]], [[einzigsten]]</agent_output>
 </example>
 <example>
 <german_word>obwohl</german_word>
-<agent_output>${longDash}</agent_output>
+<agent_output>${LONG_DASH}</agent_output>
 </example>
 <example>
 <german_word>Rechercheergbnisse</german_word>
@@ -155,7 +155,7 @@ D: dem [[Rechercheergebnis]], den [[Rechercheergebnissen]]</agent_output>
 
 <example>
 <german_word>her</german_word>
-<agent_output>${longDash}</agent_output>
+<agent_output>${LONG_DASH}</agent_output>
 </example>
 
 <example>

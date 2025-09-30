@@ -1,7 +1,5 @@
 import { Notice, TFile, TFolder, Vault, normalizePath } from 'obsidian';
 
-export const longDash = '—';
-
 export function makeBacklink({
 	fileName,
 	linkId,

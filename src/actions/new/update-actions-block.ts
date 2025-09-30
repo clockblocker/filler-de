@@ -1,7 +1,7 @@
 import { Editor, MarkdownView, Notice, TFile } from 'obsidian';
 import TextEaterPlugin from '../../main';
-import { longDash } from '../../old-obsidian-utils';
 import { unwrapMaybe } from 'types/general';
+import { LONG_DASH } from '../../types/beta/literals';
 
 export default async function updateActionsBlock(plugin: TextEaterPlugin) {
 	try {
@@ -58,7 +58,7 @@ function extractAdjectiveForms(text: string): string {
 	const baseForms = extractBaseForms(text);
 
 	if (!baseForms) {
-		return longDash;
+		return LONG_DASH;
 	}
 
 	const endings = ['er', 'es', 'e', 'en', 'em'];

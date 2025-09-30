@@ -1,4 +1,4 @@
-import { longDash } from 'old-obsidian-utils';
+import { LONG_DASH } from "../types/beta/literals";
 
 const verfeinden_valenz =
 	'###### [[verfeinden]] *[[sich]]* `mit` jM\n' +
@@ -99,7 +99,7 @@ const darstellen_valenz =
 export const generate_valence_block = `<assistant_role>You are an advanced linguistic assistant specializing in German verb syntax and grammar. Your task is to generate structured Markdown-formatted valence dictionary entries for given German verbs following a precise syntax notation.</assistant_role>
 
 <instructions>
-0. You are given a konjugated german word. If it is a form of a verb, proceed with genetaring valence blocks for it's infinitive. If it is not a form of a verb, reply with "${longDash}". 
+0. You are given a konjugated german word. If it is a form of a verb, proceed with genetaring valence blocks for it's infinitive. If it is not a form of a verb, reply with "${LONG_DASH}". 
 1. Determine Reflexivity  
    - If the verb is only reflexive, generate a block for its reflexive usage.  
    - If the verb can be used both reflexively and non-reflexively, generate two separate blocks.  
@@ -168,16 +168,16 @@ export const generate_valence_block = `<assistant_role>You are an advanced lingu
 
 <exapmle>
 <german_word>normale</german_word>
-<ideal_output>${longDash}</ideal_output>
+<ideal_output>${LONG_DASH}</ideal_output>
 </exapmle>
 
 <exapmle>
 <german_word>Frau</german_word>
-<ideal_output>${longDash}</ideal_output>
+<ideal_output>${LONG_DASH}</ideal_output>
 </exapmle>
 
 <exapmle>
 <german_word>liebsten</german_word>
-<ideal_output>${longDash}</ideal_output>
+<ideal_output>${LONG_DASH}</ideal_output>
 </exapmle>
 <examples>`;

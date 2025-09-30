@@ -1,7 +1,7 @@
 import { Editor, MarkdownView, Notice, TFile } from 'obsidian';
 import TextEaterPlugin from '../../main';
 import { prompts } from '../../prompts';
-import { longDash } from '../../old-obsidian-utils';
+import { LONG_DASH } from '../../types/beta/literals';
 
 function extractFirstBracketedWord(text: string) {
 	const match = text.match(/\[\[([^\]]+)\]\]/);
@@ -98,12 +98,12 @@ async function incertClipbordContentsInContextsBlock(
 // 			incertYouglishLinkInIpa(trimmedBaseEntrie)
 // 		);
 // 		const morphemsBlock =
-// 			morphems.replace('\n', '') === longDash ? '' : `${morphems}\n`;
+// 			morphems.replace('\n', '') === LONG_DASH ? '' : `${morphems}\n`;
 // 		const valenceBlock =
-// 			valence.replace('\n', '') === longDash ? '' : `${valence}`;
-// 		const fromsBlock = froms.replace('\n', '') === longDash ? '' : `${froms}`;
+// 			valence.replace('\n', '') === LONG_DASH ? '' : `${valence}`;
+// 		const fromsBlock = froms.replace('\n', '') === LONG_DASH ? '' : `${froms}`;
 // 		const adjFormsBlock =
-// 			adjForms.replace('\n', '') === longDash ? '' : `${adjForms}`;
+// 			adjForms.replace('\n', '') === LONG_DASH ? '' : `${adjForms}`;
 
 // 		const blocks = [
 // 			baseBlock,
@@ -147,7 +147,7 @@ function extractAdjectiveForms(text: string): string {
 	const baseForms = extractBaseForms(text);
 
 	if (!baseForms) {
-		return longDash;
+		return LONG_DASH;
 	}
 
 	const endings = ['er', 'es', 'e', 'en', 'em'];

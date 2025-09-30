@@ -1,4 +1,4 @@
-import { longDash } from 'old-obsidian-utils';
+import { LONG_DASH } from '../types/beta/literals';
 
 export const generate_forms = `<assistant_role>You are an advanced linguistic assistant specializing in German syntax and grammar. Your task is to generate structured Markdown-formatted konjugation/deklination table entries for a given German word, following a precise syntax notation.</assistant_role>
 <instructions>
@@ -22,9 +22,9 @@ Present only your final entry. Do not write to the user your thought process. Do
 <example>
 <german_word>verfeinden</german_word>
 <agent_output>Person, Präsens, Präteritum, Imperativ, KI,  KII 
-ich, [[verfeind]] / [[verfeinde]], [[verfeindete]], [[verfeinde]], [[verfeindete]], ${longDash}
+ich, [[verfeind]] / [[verfeinde]], [[verfeindete]], [[verfeinde]], [[verfeindete]], ${LONG_DASH}
 du, [[verfeindest]], [[verfeindetest]], [[verfeindest]], [[verfeindetest]], [[verfeind]] / [[verfeinde]]
-er, [[verfeindet]], [[verfeindete]], [[verfeinde]], [[verfeindete]], ${longDash}
+er, [[verfeindet]], [[verfeindete]], [[verfeinde]], [[verfeindete]], ${LONG_DASH}
 wir, [[verfeinden]], [[verfeindeten]], [[verfeinden]], [[verfeindeten]], [[verfeinden]]
 ihr, [[verfeindet]], [[verfeindetet]], [[verfeindet]], [[verfeindetet]], [[verfeindet]]
 sie, [[verfeinden]], [[verfeindeten]], [[verfeinden]], [[verfeindeten]], [[verfeinden]]
@@ -36,9 +36,9 @@ Adjektive: [[verfeindend]], [[verfeindender]], [[verfeindendst]]</agent_output>
 <example>
 <german_word>tanztest</german_word>
 <agent_output>Person, Präsens, Präteritum, Imperativ, KI,  KII 
-ich, [[tanz]] / [[tanze]], [[tanzte]], [[tanze]], [[tanzte]], ${longDash}
+ich, [[tanz]] / [[tanze]], [[tanzte]], [[tanze]], [[tanzte]], ${LONG_DASH}
 du, [[tanzt]], [[tanztest]], [[tanzest]], [[tanztest]], [[tanz]] / [[tanze]]
-er, [[tanzt]], [[tanzte]], [[tanze]], [[tanzte]], ${longDash}
+er, [[tanzt]], [[tanzte]], [[tanze]], [[tanzte]], ${LONG_DASH}
 wir, [[tanzen]], [[tanzten]], [[tanzen]], [[tanzten]], [[tanzen]]
 ihr, [[tanzt]], [[tanztet]], [[tanzet]], [[tanztet]], [[tanzt]]
 sie, [[tanzen]], [[tanzten]], [[tanzen]], [[tanzten]], [[tanzen]]
@@ -70,9 +70,9 @@ D: dem [[Busch]], den [[Büschen]]</agent_output>
 
 <example>
 <german_word>anzurufen</german_word>
-<agent_output>ich, [[ruf an]] / [[rufe an]], [[rief an]], [[rufe an]], [[riefe an]], ${longDash}
+<agent_output>ich, [[ruf an]] / [[rufe an]], [[rief an]], [[rufe an]], [[riefe an]], ${LONG_DASH}
 du, [[rufst an]], [[riefst an]], [[rufest an]], [[riefest an]], [[ruf an]] / [[rufe an]]
-er, [[ruft an]], [[rief an]], [[rufe an]], [[riefe an]], ${longDash}
+er, [[ruft an]], [[rief an]], [[rufe an]], [[riefe an]], ${LONG_DASH}
 wir, [[rufen an]], [[riefen an]], [[rufen an]], [[riefen an]], [[rufen an]]
 ihr, [[ruft an]], [[rieft an]], [[rufet an]], [[riefet an]], [[ruft an]]
 sie, [[rufen an]], [[riefen an]], [[rufen an]], [[riefen an]], [[rufen an]]
@@ -142,7 +142,7 @@ P: [[einigen]], [[einigeren]], [[einzigsten]]</agent_output>
 </example>
 <example>
 <german_word>obwohl</german_word>
-<agent_output>${longDash}</agent_output>
+<agent_output>${LONG_DASH}</agent_output>
 </example>
 <example>
 <german_word>Rechercheergbnisse</german_word>
@@ -154,15 +154,15 @@ D: dem [[Rechercheergebnis]], den [[Rechercheergebnissen]]</agent_output>
 
 <example>
 <german_word>her</german_word>
-<agent_output>${longDash}</agent_output>
+<agent_output>${LONG_DASH}</agent_output>
 </example>
 
 <example>
 <german_word>verstopft</german_word>
 <agent_output>Person, Präsens, Präteritum, Imperativ, KI, KII
-ich, [[verstopf]] / [[verstopfe]], [[verstopfte]], [[verstopfe]], [[verstopfte]], ${longDash}
+ich, [[verstopf]] / [[verstopfe]], [[verstopfte]], [[verstopfe]], [[verstopfte]], ${LONG_DASH}
 du, [[verstopfst]], [[verstopftest]], [[verstopfst]], [[verstopftest]], [[verstopf]] / [[verstopfe]]
-er, [[verstopft]], [[verstopfte]], [[verstopfe]], [[verstopfte]], ${longDash}
+er, [[verstopft]], [[verstopfte]], [[verstopfe]], [[verstopfte]], ${LONG_DASH}
 wir, [[verstopfen]], [[verstopften]], [[verstopfen]], [[verstopften]], [[verstopfen]]
 ihr, [[verstopft]], [[verstopftet]], [[verstopfet]], [[verstopftet]], [[verstopft]]
 sie, [[verstopfen]], [[verstopften]], [[verstopfen]], [[verstopften]], [[verstopfen]]
@@ -188,19 +188,19 @@ D: der [[Bank]], den [[Banken]] | der [[Bank]], den [[Bänken]]
 <example>
 <german_word>See</german_word>
 <agent_output>
-N: der [[See]], die [[Seen]] | die [[See]], ${longDash}  
-A: den [[See]], die [[Seen]] | die [[See]], ${longDash}  
-G: des [[Sees]], der [[Seen]] | der [[See]], ${longDash}  
-D: dem [[See]], den [[Seen]] | der [[See]], ${longDash}
+N: der [[See]], die [[Seen]] | die [[See]], ${LONG_DASH}  
+A: den [[See]], die [[Seen]] | die [[See]], ${LONG_DASH}  
+G: des [[Sees]], der [[Seen]] | der [[See]], ${LONG_DASH}  
+D: dem [[See]], den [[Seen]] | der [[See]], ${LONG_DASH}
 </agent_output>
 </example>
 
 <example>
 <german_word>backen</german_word>
 <agent_output>
-ich, [[backe]], [[backte]], [[backe]], [[backte]], ${longDash}  
+ich, [[backe]], [[backte]], [[backe]], [[backte]], ${LONG_DASH}  
 du, [[backst]], [[backtest]], [[backe]], [[backtest]], [[backe]]  
-er, [[backt]], [[backte]], [[backe]], [[backte]], ${longDash}  
+er, [[backt]], [[backte]], [[backe]], [[backte]], ${LONG_DASH}  
 wir, [[backen]], [[backten]], [[backen]], [[backten]], [[backen]]  
 ihr, [[backt]], [[backtet]], [[backt]], [[backtet]], [[backt]]  
 sie, [[backen]], [[backten]], [[backen]], [[backten]], [[backen]]
@@ -208,9 +208,9 @@ sie, [[backen]], [[backten]], [[backen]], [[backten]], [[backen]]
 *Zu + Inf*: zu [[backen]], *Partizip II*: [[gebackt]]
 
 ---
-ich, [[backe]], [[buk]], [[backe]], [[buk]], ${longDash}  
+ich, [[backe]], [[buk]], [[backe]], [[buk]], ${LONG_DASH}  
 du, [[backst]], [[bukst]], [[backe]], [[bukst]], [[backe]]  
-er, [[backt]], [[buk]], [[backe]], [[buk]], ${longDash}  
+er, [[backt]], [[buk]], [[backe]], [[buk]], ${LONG_DASH}  
 wir, [[backen]], [[buken]], [[backen]], [[buken]], [[backen]]  
 ihr, [[backt]], [[buket]], [[backt]], [[buket]], [[backt]]  
 sie, [[backen]], [[buken]], [[backen]], [[buken]], [[backen]]

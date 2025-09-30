@@ -9,12 +9,12 @@ import {
 } from 'obsidian';
 import { SettingsTab } from './settings';
 import { DEFAULT_SETTINGS, TextEaterSettings } from './types';
-import { ApiService } from './obsidian-services/api-service';
+import { ApiService } from './obsidian-related/obsidian-services/api-service';
 import { DeprecatedFileService } from './file';
 
 import newGenCommand from 'actions/new/new-gen-command';
-import { OpenedFileService } from 'obsidian-services/opened-file-service';
-import { BackgroundFileService } from 'obsidian-services/background-file-service';
+import { OpenedFileService } from 'obsidian-related/obsidian-services/opened-file-service';
+import { BackgroundFileService } from 'obsidian-related/obsidian-services/background-file-service';
 import addBacklinksToCurrentFile from 'actions/old/addBacklinksToCurrentFile';
 // import fillTemplate from 'actions/old/fillTemplate';
 // import formatSelectionWithNumber from 'actioold/formatSelectionWithNumber';
@@ -22,8 +22,8 @@ import addBacklinksToCurrentFile from 'actions/old/addBacklinksToCurrentFile';
 // import insertReplyFromC1Richter from 'actions/old/insertReplyFromC1Richter';
 // import insertReplyFromKeymaker from 'actions/old/insertReplyFromKeymaker';
 // import normalizeSelection from 'actions/old/normalizeSelection';
-import { AboveSelectionToolbarService } from 'obsidian-services/above-selection-toolbar-service';
-import { BottomToolbarService } from 'obsidian-services/bottom-toolbar-service';
+import { AboveSelectionToolbarService } from 'obsidian-related/obsidian-services/above-selection-toolbar-service';
+import { BottomToolbarService } from 'obsidian-related/obsidian-services/bottom-toolbar-service';
 import { ACTION_CONFIGS } from 'actions/actions-config';
 import {
 	UserAction,
@@ -31,7 +31,7 @@ import {
 	UserActionSchema,
 	ALL_USER_ACTIONS,
 } from 'types/beta/system/actions';
-import { SelectionService } from 'obsidian-services/selection-service';
+import { SelectionService } from 'obsidian-related/obsidian-services/selection-service';
 
 export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;

@@ -1,5 +1,5 @@
 import { App, Vault, TFile, Editor, MarkdownView, TFolder } from 'obsidian';
-import { Maybe, PathParts } from '../types/general';
+import { Maybe, PathParts } from '../../types/general';
 import { SLASH } from 'types/beta/literals';
 import { formatError, logError, logWarning } from './helpers/issue-handlers';
 

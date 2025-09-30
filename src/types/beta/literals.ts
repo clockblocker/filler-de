@@ -13,6 +13,10 @@ const PhraseSchema = z.literal('Phrase');
 export type PHRASE = z.infer<typeof PhraseSchema>;
 export const PHRASE = PhraseSchema.value;
 
+const LongDashSchema = z.literal('—');
+export type LONG_DASH = z.infer<typeof LongDashSchema>;
+export const LONG_DASH = LongDashSchema.value;
+
 // Morphems
 export const RootLiteralSchema = z.literal('Root');
 export type ROOT = z.infer<typeof RootLiteralSchema>;
