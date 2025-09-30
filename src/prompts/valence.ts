@@ -1,4 +1,4 @@
-import { longDash } from 'utils';
+import { longDash } from 'old-obsidian-utils';
 
 const verfeinden_valenz =
 	'###### [[verfeinden]] *[[sich]]* `mit` jM\n' +

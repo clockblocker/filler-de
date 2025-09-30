@@ -1,7 +1,7 @@
 import { sentences } from 'sbd';
-import { wrapTextInBacklinkBlock } from 'utils';
+import { wrapTextInBacklinkBlock } from './text-utils';
 
-export function splitInSentences({
+export function toLinkedSegmentedSentences({
 	selection,
 	nameOfTheOpenendFile,
 	highestBlockNumber,

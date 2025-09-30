@@ -1,4 +1,4 @@
-import { longDash } from 'utils';
+import { longDash } from 'old-obsidian-utils';
 
 export const generate_forms = `<assistant_role>You are an advanced linguistic assistant specializing in German syntax and grammar. Your task is to generate structured Markdown-formatted konjugation/deklination table entries for a given German word, following a precise syntax notation.</assistant_role>
 <instructions>

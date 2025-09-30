@@ -1,16 +1,30 @@
 import { describe, it, expect } from 'vitest';
-import { splitOnColonEOS } from '../../src/simple-text-processors/split-in-sentences';
+import { splitOnQuoteEOS } from '../../src/simple-text-processors/split-in-sentences';
 
-describe('segmentWithColonPrepass', () => {
-	const text = `Einem reichen Manne, dem wurde seine Frau krank, und als sie fühlte, daß ihr Ende herankam, rief sie ihr einziges Töchterlein zu sich ans Bett und sprach: "Liebes Kind, bleibe fromm und gut, so wird dir der liebe Gott immer beistehen, und ich will vom Himmel auf dich herabblicken, und will um dich sein."`;
+const directMatches = [
+	{
+		name: '..!" Sie ...',
+		text: `"Soll die dumme Gans bei uns in der Stube sitzen!" sprachen sie, "wer Brot essen will, muß verdienen: hinaus mit der Küchenmagd!" Sie nahmen ihm seine schönen Kleider weg, zogen ihm einen grauen, alten Kittel an und gaben ihm hölzerne Schuhe.`,
+		expected: [
+			`"Soll die dumme Gans bei uns in der Stube sitzen!" sprachen sie, "wer Brot essen will, muß verdienen: hinaus mit der Küchenmagd!"`,
+			`Sie nahmen ihm seine schönen Kleider weg, zogen ihm einen grauen, alten Kittel an und gaben ihm hölzerne Schuhe.`,
+		],
+	},
+	{
+		name: 'Ach nein, das ist viel zu schmutzig, das darf sich nicht sehen lassen. Er wollte es aber durchaus haben, und Aschenputtel musste gerufen werden.',
+		text: `"Ach nein, das ist viel zu schmutzig, das darf sich nicht sehen lassen." Er wollte es aber durchaus haben, und Aschenputtel musste gerufen werden.`,
+		expected: [
+			`"Ach nein, das ist viel zu schmutzig, das darf sich nicht sehen lassen."`,
+			`Er wollte es aber durchaus haben, und Aschenputtel musste gerufen werden.`,
+		],
+	},
+];
 
-	const expected = [
-		'Einem reichen Manne, dem wurde seine Frau krank, und als sie fühlte, daß ihr Ende herankam, rief sie ihr einziges Töchterlein zu sich ans Bett und sprach:',
-		'"Liebes Kind, bleibe fromm und gut, so wird dir der liebe Gott immer beistehen, und ich will vom Himmel auf dich herabblicken, und will um dich sein."',
-	];
-
-	it(`Direct speach is split. " as quotation mark`, () => {
-		const parts = splitOnColonEOS(text);
-		expect(parts).toEqual(expected);
-	});
+describe('splitOnQuoteEOS', () => {
+	for (const match of directMatches) {
+		it(match.name, () => {
+			const parts = splitOnQuoteEOS(match.text);
+			expect(parts).toEqual(match.expected);
+		});
+	}
 });

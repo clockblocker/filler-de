@@ -1,7 +1,7 @@
 import { Notice } from 'obsidian';
 import { OpenedFileService } from 'obsidian-services/opened-file-service';
 import { SelectionService } from 'obsidian-services/selection-service';
-import { splitInSentences } from 'simple-text-processors/split-in-sentences';
+import { toLinkedSegmentedSentences } from 'simple-text-processors/split-in-sentences';
 import { unwrapMaybe } from 'types/general';
 
 export default async function splitSelectionInSentences({
@@ -22,13 +22,16 @@ export default async function splitSelectionInSentences({
 		).name;
 
 		// await navigator.clipboard.writeText(`${formattedText}`);
-		await selectionService.replaceSelection(
-			splitInSentences({
-				selection,
-				nameOfTheOpenendFile,
-				highestBlockNumber,
-			})
-		);
+
+		const asdasd = toLinkedSegmentedSentences({
+			selection,
+			nameOfTheOpenendFile,
+			highestBlockNumber,
+		});
+
+		console.log(asdasd);
+
+		await selectionService.replaceSelection(asdasd);
 	} catch (error) {
 		new Notice(`Error: ${error.message}`);
 	}
