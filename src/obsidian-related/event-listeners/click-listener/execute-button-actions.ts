@@ -3,7 +3,7 @@ import {
 	UserAction,
 } from '../../../types/beta/system/actions';
 import { ACTION_CONFIGS } from '../../actions/actions-config';
-import { TexfresserObsidianServices } from '../../obsidian-services/types';
+import { TexfresserObsidianServices } from '../../obsidian-services/interface';
 
 export const executeButtonAction = ({
 	buttonElement,

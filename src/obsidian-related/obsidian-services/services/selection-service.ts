@@ -1,6 +1,6 @@
 import { App } from 'obsidian';
 import { Maybe } from 'types/general';
-import { getEditor } from './helpers/get-editor';
+import { getEditor } from '../helpers/get-editor';
 
 export class SelectionService {
 	constructor(private app: App) {}

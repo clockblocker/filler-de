@@ -1,7 +1,7 @@
 import { MarkdownView, TFile, App, TFolder } from 'obsidian';
-import { Maybe, unwrapMaybe } from '../../types/general';
-import { getMaybeEditor } from './helpers/get-editor';
-import { logError, logWarning } from './helpers/issue-handlers';
+import { Maybe, unwrapMaybe } from '../../../types/general';
+import { getMaybeEditor } from '../helpers/get-editor';
+import { logError, logWarning } from '../helpers/issue-handlers';
 
 export class OpenedFileService {
 	constructor(private app: App) {}

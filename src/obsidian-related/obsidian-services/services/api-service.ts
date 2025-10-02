@@ -1,9 +1,9 @@
 import OpenAI from 'openai';
 import { Notice, requestUrl } from 'obsidian';
-import { TextEaterSettings } from '../../types';
+import { TextEaterSettings } from '../../../types';
 import { z } from 'zod';
 import { zodResponseFormat } from 'openai/helpers/zod';
-import { formatError, logError, logWarning } from './helpers/issue-handlers';
+import { formatError, logError, logWarning } from '../helpers/issue-handlers';
 
 function normalizeHeaders(initHeaders?: HeadersInit): Record<string, string> {
 	if (!initHeaders) {

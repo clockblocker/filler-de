@@ -9,12 +9,12 @@ import {
 } from 'obsidian';
 import { SettingsTab } from './settings';
 import { DEFAULT_SETTINGS, TextEaterSettings } from './types';
-import { ApiService } from './obsidian-related/obsidian-services/api-service';
+import { ApiService } from './obsidian-related/obsidian-services/services/api-service';
 import { DeprecatedFileService } from './file';
 
 import newGenCommand from 'obsidian-related/actions/new/new-gen-command';
-import { OpenedFileService } from 'obsidian-related/obsidian-services/opened-file-service';
-import { BackgroundFileService } from 'obsidian-related/obsidian-services/background-file-service';
+import { OpenedFileService } from 'obsidian-related/obsidian-services/services/opened-file-service';
+import { BackgroundFileService } from 'obsidian-related/obsidian-services/services/background-file-service';
 import addBacklinksToCurrentFile from 'obsidian-related/actions/old/addBacklinksToCurrentFile';
 // import fillTemplate from 'actions/old/fillTemplate';
 // import formatSelectionWithNumber from 'actioold/formatSelectionWithNumber';
@@ -22,8 +22,8 @@ import addBacklinksToCurrentFile from 'obsidian-related/actions/old/addBacklinks
 // import insertReplyFromC1Richter from 'actions/old/insertReplyFromC1Richter';
 // import insertReplyFromKeymaker from 'actions/old/insertReplyFromKeymaker';
 // import normalizeSelection from 'actions/old/normalizeSelection';
-import { AboveSelectionToolbarService } from 'obsidian-related/obsidian-services/above-selection-toolbar-service';
-import { BottomToolbarService } from 'obsidian-related/obsidian-services/bottom-toolbar-service';
+import { AboveSelectionToolbarService } from 'obsidian-related/obsidian-services/services/above-selection-toolbar-service';
+import { BottomToolbarService } from 'obsidian-related/obsidian-services/services/bottom-toolbar-service';
 import { ACTION_CONFIGS } from 'obsidian-related/actions/actions-config';
 import {
 	UserAction,
@@ -31,7 +31,7 @@ import {
 	UserActionSchema,
 	ALL_USER_ACTIONS,
 } from 'types/beta/system/actions';
-import { SelectionService } from 'obsidian-related/obsidian-services/selection-service';
+import { SelectionService } from 'obsidian-related/obsidian-services/services/selection-service';
 import { makeClickListener } from './obsidian-related/event-listeners/click-listener/click-listener';
 
 export default class TextEaterPlugin extends Plugin {
@@ -42,7 +42,7 @@ export default class TextEaterPlugin extends Plugin {
 	selectionService: SelectionService;
 
 	selectionToolbarService: AboveSelectionToolbarService;
-	overlayService: BottomToolbarService;
+	bottomToolbarService: BottomToolbarService;
 
 	deprecatedFileService: DeprecatedFileService;
 
@@ -80,8 +80,8 @@ export default class TextEaterPlugin extends Plugin {
 			})
 		);
 
-		this.overlayService = new BottomToolbarService(this.app);
-		this.overlayService.init();
+		this.bottomToolbarService = new BottomToolbarService(this.app);
+		this.bottomToolbarService.init();
 
 		// Derive actions for toolbars from config
 
@@ -103,18 +103,18 @@ export default class TextEaterPlugin extends Plugin {
 			}
 		});
 
-		this.overlayService.setActions(bottomActions);
+		this.bottomToolbarService.setActions(bottomActions);
 		this.selectionToolbarService.setActions(aboveSelectionActions);
 
 		this.app.workspace.onLayoutReady(() => {
-			this.overlayService.attachToActiveMarkdownView();
+			this.bottomToolbarService.attachToActiveMarkdownView();
 			this.selectionToolbarService.attach();
 		});
 
 		// Reattach when user switches panes/notes
 		this.registerEvent(
 			this.app.workspace.on('active-leaf-change', (_leaf: WorkspaceLeaf) => {
-				this.overlayService.attachToActiveMarkdownView();
+				this.bottomToolbarService.attachToActiveMarkdownView();
 				this.selectionToolbarService.attach();
 			})
 		);
@@ -122,7 +122,7 @@ export default class TextEaterPlugin extends Plugin {
 		// Also re-check after major layout changes (splits, etc.)
 		this.registerEvent(
 			this.app.workspace.on('layout-change', () => {
-				this.overlayService.attachToActiveMarkdownView();
+				this.bottomToolbarService.attachToActiveMarkdownView();
 				this.selectionToolbarService.attach();
 			})
 		);
@@ -135,7 +135,7 @@ export default class TextEaterPlugin extends Plugin {
 	}
 
 	onunload() {
-		if (this.overlayService) this.overlayService.detachOverlay();
+		if (this.bottomToolbarService) this.bottomToolbarService.detachOverlay();
 		if (this.selectionToolbarService) this.selectionToolbarService.detach();
 	}
 
