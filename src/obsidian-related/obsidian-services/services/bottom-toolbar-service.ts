@@ -1,5 +1,6 @@
 import { App, MarkdownView } from 'obsidian';
 import { UserAction } from 'obsidian-related/actions/types';
+import { LabeledAction } from '../../actions/interface';
 
 export class BottomToolbarService {
 	private overlayEl: HTMLElement | null = null;
@@ -12,12 +13,12 @@ export class BottomToolbarService {
 		if (!this.overlayEl) this.overlayEl = this.createOverlay();
 	}
 
-	public attachToActiveMarkdownView(): void {
+	public attach(): void {
 		const view = this.getActiveMarkdownView();
 		if (view && this.attachedView === view && this.overlayEl?.isConnected)
 			return;
 
-		this.detachOverlay();
+		this.detach();
 
 		if (!view || !this.overlayEl) {
 			this.attachedView = null;
@@ -31,7 +32,7 @@ export class BottomToolbarService {
 		this.attachedView = view;
 	}
 
-	public detachOverlay(): void {
+	public detach(): void {
 		if (!this.overlayEl) return;
 
 		if (this.attachedView) {
@@ -55,7 +56,7 @@ export class BottomToolbarService {
 		return el;
 	}
 
-	public setActions(actions: { action: UserAction; label: string }[]): void {
+	public setActions(actions: LabeledAction[]): void {
 		this.actions = Array.isArray(actions) ? actions : [];
 		if (this.overlayEl) this.renderButtons(this.overlayEl);
 	}

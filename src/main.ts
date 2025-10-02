@@ -2,7 +2,6 @@ import {
 	App,
 	Editor,
 	MarkdownView,
-	Notice,
 	Plugin,
 	TFile,
 	WorkspaceLeaf,
@@ -15,24 +14,16 @@ import newGenCommand from 'obsidian-related/actions/new/new-gen-command';
 import { OpenedFileService } from 'obsidian-related/obsidian-services/services/opened-file-service';
 import { BackgroundFileService } from 'obsidian-related/obsidian-services/services/background-file-service';
 import addBacklinksToCurrentFile from 'obsidian-related/actions/old/addBacklinksToCurrentFile';
-// import fillTemplate from 'actions/old/fillTemplate';
-// import formatSelectionWithNumber from 'actioold/formatSelectionWithNumber';
-// import getInfinitiveAndEmoji from 'actions/old/getInfinitiveAndEmoji';
-// import insertReplyFromC1Richter from 'actions/old/insertReplyFromC1Richter';
-// import insertReplyFromKeymaker from 'actions/old/insertReplyFromKeymaker';
-// import normalizeSelection from 'actions/old/normalizeSelection';
 import { AboveSelectionToolbarService } from 'obsidian-related/obsidian-services/services/above-selection-toolbar-service';
 import { BottomToolbarService } from 'obsidian-related/obsidian-services/services/bottom-toolbar-service';
 import { ACTION_CONFIGS } from 'obsidian-related/actions/actions-config';
-import {
-	UserAction,
-	UserActionPlacement,
-	UserActionSchema,
-	ALL_USER_ACTIONS,
-} from 'obsidian-related/actions/types';
 import { SelectionService } from 'obsidian-related/obsidian-services/services/selection-service';
 import { makeClickListener } from './obsidian-related/event-listeners/click-listener/click-listener';
 import { logError } from './obsidian-related/obsidian-services/helpers/issue-handlers';
+import {
+	BOTTOM_ACTIONS,
+	ALL_ACTIONS_ABOVE_SELECTION,
+} from './obsidian-related/actions/interface';
 
 export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;
@@ -81,36 +72,18 @@ export default class TextEaterPlugin extends Plugin {
 
 		// Derive actions for toolbars from config
 
-		const bottomActions: { label: string; action: UserAction }[] = [];
-		const aboveSelectionActions: { label: string; action: UserAction }[] = [];
-
-		ALL_USER_ACTIONS.forEach((action) => {
-			const { label, placement } = ACTION_CONFIGS[action];
-
-			switch (placement) {
-				case UserActionPlacement.AboveSelection:
-					aboveSelectionActions.push({ label, action });
-					break;
-				case UserActionPlacement.Bottom:
-					bottomActions.push({ label, action });
-					break;
-				default:
-					break;
-			}
-		});
-
-		this.bottomToolbarService.setActions(bottomActions);
-		this.selectionToolbarService.setActions(aboveSelectionActions);
+		this.bottomToolbarService.setActions(BOTTOM_ACTIONS);
+		this.selectionToolbarService.setActions(ALL_ACTIONS_ABOVE_SELECTION);
 
 		this.app.workspace.onLayoutReady(() => {
-			this.bottomToolbarService.attachToActiveMarkdownView();
+			this.bottomToolbarService.attach();
 			this.selectionToolbarService.attach();
 		});
 
 		// Reattach when user switches panes/notes
 		this.registerEvent(
 			this.app.workspace.on('active-leaf-change', (_leaf: WorkspaceLeaf) => {
-				this.bottomToolbarService.attachToActiveMarkdownView();
+				this.bottomToolbarService.attach();
 				this.selectionToolbarService.attach();
 			})
 		);
@@ -118,7 +91,7 @@ export default class TextEaterPlugin extends Plugin {
 		// Also re-check after major layout changes (splits, etc.)
 		this.registerEvent(
 			this.app.workspace.on('layout-change', () => {
-				this.bottomToolbarService.attachToActiveMarkdownView();
+				this.bottomToolbarService.attach();
 				this.selectionToolbarService.attach();
 			})
 		);
@@ -131,7 +104,7 @@ export default class TextEaterPlugin extends Plugin {
 	}
 
 	onunload() {
-		if (this.bottomToolbarService) this.bottomToolbarService.detachOverlay();
+		if (this.bottomToolbarService) this.bottomToolbarService.detach();
 		if (this.selectionToolbarService) this.selectionToolbarService.detach();
 	}
 
