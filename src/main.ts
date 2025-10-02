@@ -32,6 +32,7 @@ import {
 	ALL_USER_ACTIONS,
 } from 'types/beta/system/actions';
 import { SelectionService } from 'obsidian-related/obsidian-services/selection-service';
+import { makeClickListener } from './obsidian-related/event-listeners/click-listener/click-listener';
 
 export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;
@@ -69,40 +70,7 @@ export default class TextEaterPlugin extends Plugin {
 		this.selectionToolbarService = new AboveSelectionToolbarService(this.app);
 		this.selectionService = new SelectionService(this.app);
 
-		this.registerDomEvent(document, 'click', (evt) => {
-			const target = evt.target as HTMLElement;
-
-			// Handle toolbar/overlay generic buttons
-			const buttonEl = target.closest('button');
-			if (buttonEl) {
-				const actionId = buttonEl.getAttribute('data-action');
-				const parsed = UserActionSchema.safeParse(actionId);
-				if (parsed.success) {
-					const action = parsed.data as UserAction;
-					const cfg = ACTION_CONFIGS[action];
-					try {
-						cfg.execute(this);
-					} catch (err) {
-						console.error('Failed to execute action', action, err);
-					}
-				}
-			}
-
-			if (target.tagName === 'A') {
-				const blockHtmlElement = target.parentElement?.parentElement;
-
-				const children = blockHtmlElement?.children;
-				if (children) {
-					const blockIdElement = Array.from(children).find((c) =>
-						c.classList.contains('cm-blockid')
-					);
-
-					if (blockIdElement) {
-						const textContent = blockIdElement.textContent;
-					}
-				}
-			}
-		});
+		this.registerDomEvent(document, 'click', makeClickListener(this));
 
 		this.registerEvent(
 			this.app.vault.on('create', (af) => {

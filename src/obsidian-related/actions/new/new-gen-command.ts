@@ -1,23 +1,25 @@
 import { Notice } from 'obsidian';
-import TextEaterPlugin from '../../../main';
 import { unwrapMaybe } from 'types/general';
 import { LONG_DASH } from '../../../types/beta/literals';
+import { TexfresserObsidianServices } from '../../obsidian-services/types';
 
-export default async function newGenCommand(plugin: TextEaterPlugin) {
+export default async function newGenCommand(
+	services: TexfresserObsidianServices
+) {
 	try {
 		const file = unwrapMaybe(
-			await plugin.openedFileService.getMaybeOpenedFile()
+			await services.openedFileService.getMaybeOpenedFile()
 		);
 
 		const word = file.name;
 		// const [dictionaryEntry, froms, morphems, valence] = await Promise.all([
-		// 	plugin.apiService.generateContent(
+		// 	services.apiService.generateContent(
 		// 		prompts.generate_dictionary_entry,
 		// 		word
 		// 	),
-		// 	plugin.apiService.generateContent(prompts.generate_forms, word),
-		// 	plugin.apiService.generateContent(prompts.morphems, word),
-		// 	plugin.apiService.generateContent(prompts.generate_valence_block, word),
+		// 	services.apiService.generateContent(prompts.generate_forms, word),
+		// 	services.apiService.generateContent(prompts.morphems, word),
+		// 	services.apiService.generateContent(prompts.generate_valence_block, word),
 		// ]);
 
 		const buttonsBlock = ` <span class="note_block note_block_buttons">
@@ -44,17 +46,17 @@ export default async function newGenCommand(plugin: TextEaterPlugin) {
 		const blocks = [buttonsBlock];
 
 		const fileContent = unwrapMaybe(
-			await plugin.openedFileService.getMaybeFileContent()
+			await services.openedFileService.getMaybeFileContent()
 		);
 
-		// const exisingBlocks = plugin.blockManager.extractAllBlocks(fileContent);
+		// const exisingBlocks = services.blockManager.extractAllBlocks(fileContent);
 
 		// console.log('exisingBlocks', exisingBlocks);
 
 		if (fileContent.trim() === '') {
 			await Promise.all(
 				blocks.map((block) => {
-					const a = plugin.openedFileService.writeToOpenedFile(block);
+					const a = services.openedFileService.writeToOpenedFile(block);
 				})
 			);
 		} else {
@@ -67,7 +69,7 @@ export default async function newGenCommand(plugin: TextEaterPlugin) {
 		// if (normalForm?.toLocaleLowerCase() === word.toLocaleLowerCase()) {
 		// 	;
 		// } else {
-		// 	await plugin.deprecatedFileService.writeToOpenedFile(
+		// 	await services.deprecatedFileService.writeToOpenedFile(
 		// 		file.path,
 		// 		`[[${normalForm}]]`
 		// 	);

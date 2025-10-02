@@ -2,6 +2,7 @@ import newGenCommand from './new/new-gen-command';
 import { UserAction, UserActionPlacement } from 'types/beta/system/actions';
 import newTranslateSelection from './new/translateSelection';
 import newSplitCommand from './new/new-split-command';
+import { TexfresserObsidianServices } from '../obsidian-services/types';
 
 export const ACTION_CONFIGS = {
 	[UserAction.Generate]: {
@@ -42,7 +43,7 @@ export const ACTION_CONFIGS = {
 } satisfies Record<
 	UserAction,
 	{
-		execute: unknown;
+		execute: (services: Partial<TexfresserObsidianServices>) => void;
 		label: string;
 		placement: UserActionPlacement;
 	}
