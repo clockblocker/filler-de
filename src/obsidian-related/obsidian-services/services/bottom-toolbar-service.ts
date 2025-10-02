@@ -1,5 +1,5 @@
 import { App, MarkdownView } from 'obsidian';
-import { UserAction } from 'types/beta/system/actions';
+import { UserAction } from 'obsidian-related/actions/types';
 
 export class BottomToolbarService {
 	private overlayEl: HTMLElement | null = null;

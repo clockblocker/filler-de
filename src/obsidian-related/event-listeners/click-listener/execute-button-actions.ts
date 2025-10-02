@@ -1,7 +1,4 @@
-import {
-	UserActionSchema,
-	UserAction,
-} from '../../../types/beta/system/actions';
+import { UserActionSchema, UserAction } from '../../actions/types';
 import { ACTION_CONFIGS } from '../../actions/actions-config';
 import { TexfresserObsidianServices } from '../../obsidian-services/interface';
 

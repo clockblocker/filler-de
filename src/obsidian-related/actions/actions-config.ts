@@ -1,5 +1,8 @@
 import newGenCommand from './new/new-gen-command';
-import { UserAction, UserActionPlacement } from 'types/beta/system/actions';
+import {
+	UserAction,
+	UserActionPlacement,
+} from 'obsidian-related/actions/types';
 import newTranslateSelection from './new/translateSelection';
 import newSplitCommand from './new/new-split-command';
 import { TexfresserObsidianServices } from '../obsidian-services/interface';

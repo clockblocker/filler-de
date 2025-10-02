@@ -29,9 +29,10 @@ import {
 	UserActionPlacement,
 	UserActionSchema,
 	ALL_USER_ACTIONS,
-} from 'types/beta/system/actions';
+} from 'obsidian-related/actions/types';
 import { SelectionService } from 'obsidian-related/obsidian-services/services/selection-service';
 import { makeClickListener } from './obsidian-related/event-listeners/click-listener/click-listener';
+import { logError } from './obsidian-related/obsidian-services/helpers/issue-handlers';
 
 export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;
@@ -48,8 +49,10 @@ export default class TextEaterPlugin extends Plugin {
 			await this.loadPlugin();
 			this.addSettingTab(new SettingsTab(this.app, this));
 		} catch (error) {
-			console.error('Error during plugin initialization:', error);
-			new Notice(`Plugin failed to load: ${error.message}`);
+			logError({
+				description: `Error during plugin initialization: ${error.message}`,
+				location: 'TextEaterPlugin',
+			});
 		}
 	}
 
@@ -338,6 +341,7 @@ function onNewFileThenRun(
 			// final guard: run against the active view of THIS file
 			const view = app.workspace.getActiveViewOfType(MarkdownView);
 			if (view && view.file?.path === file.path) run(view);
+
 			app.vault.offref(modRef);
 			app.workspace.offref(openRef);
 		};
