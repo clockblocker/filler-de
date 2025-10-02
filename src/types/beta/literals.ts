@@ -15,11 +15,11 @@ export const BIRD = BirdSchema.value;
 
 const SpaceFormatSchema = z.literal(' ');
 export type SPACE_F = z.infer<typeof SpaceFormatSchema>;
-export const SPACE_F = BirdSchema.value;
+export const SPACE_F = SpaceFormatSchema.value;
 
 const LineBreakSchema = z.literal('\n');
 export type LINE_BREAK = z.infer<typeof LineBreakSchema>;
-export const LINE_BREAK = BirdSchema.value;
+export const LINE_BREAK = LineBreakSchema.value;
 
 const StarSchema = z.literal('*');
 export type STAR = z.infer<typeof StarSchema>;

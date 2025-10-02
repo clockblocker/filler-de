@@ -28,7 +28,7 @@ function handleIssue({
 
 	if (withNotice) {
 		new Notice(errorMessage);
-	}
+	}w
 	if (withLogs) {
 		issueType === 'error'
 			? console.error(errorMessage)
