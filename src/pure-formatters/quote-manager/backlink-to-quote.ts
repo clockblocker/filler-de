@@ -11,8 +11,6 @@ import {
 } from '../../types/beta/literals';
 
 // For characters inside a character class [...]
-
-// Forbidden filename characters (based on your link syntax)
 const FORBIDDEN_FILENAME_CHARS = ['[', ']', PIPE, HASH];
 
 // Build a filename validation regex that excludes the forbidden chars

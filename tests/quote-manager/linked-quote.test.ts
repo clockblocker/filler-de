@@ -6,7 +6,7 @@ import {
 import { BIRD } from '../../src/types/beta/literals';
 
 function expected(text: string, linkId: string | number): string {
-	return ` ${text} ${BIRD}${linkId} \n`;
+	return ` ${text} ${BIRD}${linkId}\n`;
 }
 
 describe('makeFormattedLinkedQuote', () => {

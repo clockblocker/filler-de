@@ -5,7 +5,7 @@ import { BIRD, SPACE_F, LINE_BREAK } from '../../types/beta/literals';
 
 export const LINKED_QUOTE = {
 	make({ text, linkId }: LinkedQuote) {
-		return `${SPACE_F}${text}${SPACE_F}${BIRD}${linkId}${SPACE_F}${LINE_BREAK}`;
+		return `${SPACE_F}${text}${SPACE_F}${BIRD}${linkId}${LINE_BREAK}`;
 	},
 
 	pattern: new RegExp(`^(?<text>[\\s\\S]*?) *${reEscape(BIRD)}(?<linkId>\\d+)`),

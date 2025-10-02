@@ -77,6 +77,62 @@ Darauf tat sie die Augen zu und verschied. Das Mädchen ging jeden Tag hinaus zu
 			},
 		],
 	},
+	{
+		name: 'Dialog with hashes',
+		text: `###### **ANNA:**
+Louis komm schon. Sascha! Die [[Post]]! Louis und ich haben die Post!  
+Gib mir die Post Louis!
+
+###### **SASCHA:** 
+Gib mir sofort die Post Louis!
+
+###### **ANNA:**
+Louis. Lass das fallen!
+
+###### **ANNA:**
+Guter Hund!
+`,
+		expected: [
+			'###### **ANNA:**',
+			{
+				fileName: 'Test File',
+				linkId: 0,
+				text: 'Louis komm schon. Sascha! Die [[Post]]!',
+			},
+			{
+				fileName: 'Test File',
+				linkId: 1,
+				text: 'Louis und ich haben die Post!',
+			},
+			{
+				fileName: 'Test File',
+				linkId: 2,
+				text: 'Gib mir die Post Louis!',
+			},
+			'',
+			'###### **SASCHA:** ',
+			{
+				fileName: 'Test File',
+				linkId: 3,
+				text: 'Gib mir sofort die Post Louis!',
+			},
+			'',
+			'###### **ANNA:**',
+			{
+				fileName: 'Test File',
+				linkId: 4,
+				text: 'Louis. Lass das fallen!',
+			},
+			'',
+			'###### **ANNA:**',
+			{
+				fileName: 'Test File',
+				linkId: 5,
+				text: 'Guter Hund!',
+			},
+			'',
+		],
+	},
 ];
 
 describe('segmentInQuotedLines', () => {
