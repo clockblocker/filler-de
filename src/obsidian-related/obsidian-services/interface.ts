@@ -1,4 +1,3 @@
-import { DeprecatedFileService } from '../../file';
 import { AboveSelectionToolbarService } from './services/above-selection-toolbar-service';
 import { ApiService } from './services/api-service';
 import { BackgroundFileService } from './services/background-file-service';
@@ -14,6 +13,4 @@ export type TexfresserObsidianServices = {
 
 	selectionToolbarService: AboveSelectionToolbarService;
 	bottomToolbarService: BottomToolbarService;
-
-	deprecatedFileService: DeprecatedFileService;
 };

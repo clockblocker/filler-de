@@ -33,6 +33,9 @@ export class AboveSelectionToolbarService {
 		host.addEventListener('mouseup', showMaybe);
 		host.addEventListener('keyup', showMaybe);
 		cm.scrollDOM.addEventListener('scroll', hide, { passive: true } as any);
+		cm.scrollDOM.addEventListener('scrollend', showMaybe, {
+			passive: true,
+		} as any);
 	}
 
 	public detach(): void {
@@ -84,11 +87,11 @@ export class AboveSelectionToolbarService {
 	public updateToolbarPosition() {
 		if (!this.cm || !this.toolbarEl || !this.attachedView) return;
 
-		const sel = this.cm.state.selection.main;
-		if (sel.empty) return this.hideToolbar();
+		const selectionRange = this.cm.state.selection.main;
+		if (selectionRange.empty) return this.hideToolbar();
 
-		const from = this.cm.coordsAtPos(sel.from);
-		const to = this.cm.coordsAtPos(sel.to);
+		const from = this.cm.coordsAtPos(selectionRange.from);
+		const to = this.cm.coordsAtPos(selectionRange.to);
 		if (!from || !to) return this.hideToolbar();
 
 		const hostRect = (this.cm.dom as HTMLElement).getBoundingClientRect();
@@ -97,6 +100,7 @@ export class AboveSelectionToolbarService {
 		const top = Math.min(from.top, to.top);
 
 		const t = this.toolbarEl;
+
 		t.style.display = 'block';
 		t.style.position = 'absolute';
 		t.style.top = `${top - hostRect.top - t.offsetHeight - 8 + this.cm.scrollDOM.scrollTop}px`;

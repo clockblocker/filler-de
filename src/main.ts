@@ -44,8 +44,6 @@ export default class TextEaterPlugin extends Plugin {
 	selectionToolbarService: AboveSelectionToolbarService;
 	bottomToolbarService: BottomToolbarService;
 
-	deprecatedFileService: DeprecatedFileService;
-
 	async onload() {
 		try {
 			await this.loadPlugin();
@@ -63,10 +61,6 @@ export default class TextEaterPlugin extends Plugin {
 		this.apiService = new ApiService(this.settings);
 		this.openedFileService = new OpenedFileService(this.app);
 		this.backgroundFileService = new BackgroundFileService(this.app.vault);
-		this.deprecatedFileService = new DeprecatedFileService(
-			this.app,
-			this.app.vault
-		);
 		this.selectionToolbarService = new AboveSelectionToolbarService(this.app);
 		this.selectionService = new SelectionService(this.app);
 
