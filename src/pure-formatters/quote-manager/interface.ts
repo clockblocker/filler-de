@@ -1,4 +1,3 @@
-import { sentences } from 'sbd';
 import { LinkedQuote } from './types';
 import { HASH } from '../../types/beta/literals';
 import {

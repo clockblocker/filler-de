@@ -8,6 +8,7 @@ import prettierConfig from 'eslint-config-prettier';
 export default defineConfig([
 	{
 		files: ['**/*.ts', '**/*.tsx'],
+		ignores: ['**/*.md'],
 		languageOptions: {
 			parser: tsParser,
 			parserOptions: {

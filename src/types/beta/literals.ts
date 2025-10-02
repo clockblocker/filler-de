@@ -45,15 +45,29 @@ const LongDashSchema = z.literal('—');
 export type LONG_DASH = z.infer<typeof LongDashSchema>;
 export const LONG_DASH = LongDashSchema.value;
 
+// File types
+
+export const TextSchema = z.literal('Text');
+export type TEXT = z.infer<typeof TextSchema>;
+export const TEXT = TextSchema.value;
+
+export const EntrieSchema = z.literal('Entrie');
+export type ENTRIE = z.infer<typeof EntrieSchema>;
+export const ENTRIE = EntrieSchema.value;
+
+export const NoteSchema = z.literal('Note');
+export type NOTE = z.infer<typeof NoteSchema>;
+export const NOTE = NoteSchema.value;
+
+export const RootSchema = z.literal('Root');
+export type ROOT = z.infer<typeof RootSchema>;
+export const ROOT = RootSchema.value;
+
 // Morphems
 
 const PhraseSchema = z.literal('Phrase');
 export type PHRASE = z.infer<typeof PhraseSchema>;
 export const PHRASE = PhraseSchema.value;
-
-export const RootLiteralSchema = z.literal('Root');
-export type ROOT = z.infer<typeof RootLiteralSchema>;
-export const ROOT = RootLiteralSchema.value;
 
 export const PrefixLiteralSchema = z.literal('Prefix');
 export type PREFIX = z.infer<typeof PrefixLiteralSchema>;

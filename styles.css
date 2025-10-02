@@ -145,3 +145,7 @@ body.hide-status-bar .mod-root .workspace-split {
 .selection-toolbar-btn:hover {
 	background: var(--background-secondary-alt);
 }
+
+#textfresser_meta_keep_me_invisible {
+	display: none;
+}
