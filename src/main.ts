@@ -10,7 +10,6 @@ import {
 import { SettingsTab } from './settings';
 import { DEFAULT_SETTINGS, TextEaterSettings } from './types';
 import { ApiService } from './obsidian-related/obsidian-services/services/api-service';
-import { DeprecatedFileService } from './file';
 
 import newGenCommand from 'obsidian-related/actions/new/new-gen-command';
 import { OpenedFileService } from 'obsidian-related/obsidian-services/services/opened-file-service';
