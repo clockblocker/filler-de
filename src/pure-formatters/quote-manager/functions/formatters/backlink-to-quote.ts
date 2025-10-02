@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { BacklinkToQuote } from './types';
-import { reEscape, reEscapeCharClass } from '../text-utils';
+import { BacklinkToQuote } from '../../types';
+import { reEscape, reEscapeCharClass } from '../../../text-utils';
 import {
 	PIPE,
 	HASH,
@@ -8,7 +8,7 @@ import {
 	OBSIDIAN_LINK_OPEN,
 	BIRD,
 	OBSIDIAN_LINK_CLOSE,
-} from '../../types/beta/literals';
+} from '../../../../types/beta/literals';
 
 // For characters inside a character class [...]
 const FORBIDDEN_FILENAME_CHARS = ['[', ']', PIPE, HASH];

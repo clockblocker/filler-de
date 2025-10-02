@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
+import { BIRD } from '../../src/types/beta/literals';
 import {
 	makeFormattedLinkedQuote,
 	extractFormattedLinkedQuote,
-} from '../../src/pure-formatters/quote-manager/linked-quote';
-import { BIRD } from '../../src/types/beta/literals';
+} from '../../src/pure-formatters/quote-manager/functions/formatters/linked-quote';
 
 function expected(text: string, linkId: string | number): string {
 	return ` ${text} ${BIRD}${linkId}\n`;

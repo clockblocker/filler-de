@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { splitOnColonEOS } from '../../src/pure-formatters/quote-manager/split-in-sentences';
+import { splitOnDoubleColon } from '../../src/pure-formatters/quote-manager/functions/splitters/split-on-colon';
 
 const directMatches = [
 	{
@@ -23,7 +23,7 @@ const directMatches = [
 describe('segmentWithColonPrepass', () => {
 	for (const match of directMatches) {
 		it(match.name, () => {
-			const parts = splitOnColonEOS(match.text);
+			const parts = splitOnDoubleColon(match.text);
 			expect(parts).toEqual(match.expected);
 		});
 	}

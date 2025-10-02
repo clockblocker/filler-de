@@ -2,7 +2,7 @@ import { Notice } from 'obsidian';
 import {
 	formatQuotedLines,
 	segmentInQuotedLines,
-} from '../../../pure-formatters/quote-manager/split-in-sentences';
+} from '../../../pure-formatters/quote-manager/interface';
 import { unwrapMaybe } from '../../../types/general';
 import { OpenedFileService } from '../../obsidian-services/services/opened-file-service';
 import { SelectionService } from '../../obsidian-services/services/selection-service';

@@ -1,7 +1,8 @@
 import { z } from 'zod';
-import { LinkedQuote } from './types';
-import { reEscape } from '../text-utils';
-import { BIRD, SPACE_F, LINE_BREAK } from '../../types/beta/literals';
+import { SPACE_F, BIRD } from '../../../../types/beta/literals';
+import { LINE_BREAK } from '../../../note-block-manager/note-block-management/types-and-constants';
+import { reEscape } from '../../../text-utils';
+import { LinkedQuote } from '../../types';
 
 export const LINKED_QUOTE = {
 	make({ text, linkId }: LinkedQuote) {

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
 	segmentInQuotedLines,
 	formatQuotedLines,
-} from '../../src/pure-formatters/quote-manager/split-in-sentences';
+} from '../../src/pure-formatters/quote-manager/interface';
 
 const directMatches = [
 	{

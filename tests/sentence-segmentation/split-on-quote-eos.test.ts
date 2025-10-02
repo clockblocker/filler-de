@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { splitOnQuoteEOS } from '../../src/pure-formatters/quote-manager/split-in-sentences';
+import { splitOnQuote } from '../../src/pure-formatters/quote-manager/functions/splitters/split-on-quote';
 
 const directMatches = [
 	{
@@ -23,7 +23,7 @@ const directMatches = [
 describe('splitOnQuoteEOS', () => {
 	for (const match of directMatches) {
 		it(match.name, () => {
-			const parts = splitOnQuoteEOS(match.text);
+			const parts = splitOnQuote(match.text);
 			expect(parts).toEqual(match.expected);
 		});
 	}

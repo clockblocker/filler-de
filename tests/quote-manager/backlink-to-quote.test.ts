@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import {
-	makeFormattedBacklinkToQuote,
-	extractFormattedBacklinkToQuote,
-} from '../../src/pure-formatters/quote-manager/backlink-to-quote';
-import {
 	STAR,
 	OBSIDIAN_LINK_OPEN,
 	HASH,
@@ -11,6 +7,10 @@ import {
 	PIPE,
 	OBSIDIAN_LINK_CLOSE,
 } from '../../src/types/beta/literals';
+import {
+	makeFormattedBacklinkToQuote,
+	extractFormattedBacklinkToQuote,
+} from '../../src/pure-formatters/quote-manager/functions/formatters/backlink-to-quote';
 
 function expectedBacklink(fileName: string, linkId: string | number): string {
 	return (
