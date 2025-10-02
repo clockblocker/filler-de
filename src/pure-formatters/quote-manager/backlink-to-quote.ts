@@ -38,12 +38,12 @@ const BACKLINK_TO_QUOTE = {
 	}),
 } as const;
 
-export function makeBacklinkToQuote(input: BacklinkToQuote) {
+export function makeFormattedBacklinkToQuote(input: BacklinkToQuote) {
 	const { fileName = '', linkId = '' as any } = input;
 	return BACKLINK_TO_QUOTE.make({ fileName, linkId });
 }
 
-export function parseBacklinkToQuote(
+export function extractFormattedBacklinkToQuote(
 	formatted: string
 ): BacklinkToQuote | null {
 	const m = BACKLINK_TO_QUOTE.pattern.exec(formatted);

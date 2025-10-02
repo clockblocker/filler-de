@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import {
 	makeFormattedLinkedQuote,
-	parseFormattedLinkedQuote,
+	extractFormattedLinkedQuote,
 } from '../../src/pure-formatters/quote-manager/linked-quote';
 import { BIRD } from '../../src/types/beta/literals';
 
 function expected(text: string, linkId: string | number): string {
-	return `${text}${BIRD}${linkId}`;
+	return `${text} ${BIRD}${linkId}\n`;
 }
 
 describe('makeFormattedLinkedQuote', () => {
@@ -30,25 +30,25 @@ describe('parseFormattedLinkedQuote', () => {
 		const text = 'A sentence.';
 		const linkId = 101;
 		const formatted = expected(text, linkId);
-		const parsed = parseFormattedLinkedQuote(formatted);
+		const parsed = extractFormattedLinkedQuote(formatted);
 		expect(parsed).toEqual({ text, linkId });
 	});
 
 	it('returns null for empty text part', () => {
 		const formatted = expected('', 1);
-		expect(parseFormattedLinkedQuote(formatted)).toBeNull();
+		expect(extractFormattedLinkedQuote(formatted)).toBeNull();
 	});
 
 	it('returns null when linkId is not numeric', () => {
 		const formatted = expected('Some text', 'NaN');
-		expect(parseFormattedLinkedQuote(formatted)).toBeNull();
+		expect(extractFormattedLinkedQuote(formatted)).toBeNull();
 	});
 
 	it('handles multiline text', () => {
 		const text = 'Line 1\nLine 2\nLine 3';
 		const linkId = 55;
 		const formatted = expected(text, linkId);
-		const parsed = parseFormattedLinkedQuote(formatted);
+		const parsed = extractFormattedLinkedQuote(formatted);
 		expect(parsed).toEqual({ text, linkId });
 	});
 });

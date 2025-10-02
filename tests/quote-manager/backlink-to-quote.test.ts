@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
-	makeBacklinkToQuote,
-	parseBacklinkToQuote,
+	makeFormattedBacklinkToQuote,
+	extractFormattedBacklinkToQuote,
 } from '../../src/pure-formatters/quote-manager/backlink-to-quote';
 import {
 	STAR,
@@ -24,47 +24,47 @@ function expectedBacklink(fileName: string, linkId: string | number): string {
 	);
 }
 
-describe('makeBacklinkToQuote', () => {
+describe('makeFormattedBacklinkToQuote', () => {
 	it('produces a backlink for typical inputs', () => {
 		const fileName = 'My Note';
 		const linkId = 123;
-		const result = makeBacklinkToQuote({ fileName, linkId });
+		const result = makeFormattedBacklinkToQuote({ fileName, linkId });
 		expect(result).toBe(expectedBacklink(fileName, linkId));
 	});
 
 	it('works with allowed punctuation in filename', () => {
 		const fileName = 'Project (alpha) – draft';
 		const linkId = 0;
-		const result = makeBacklinkToQuote({ fileName, linkId });
+		const result = makeFormattedBacklinkToQuote({ fileName, linkId });
 		expect(result).toBe(expectedBacklink(fileName, linkId));
 	});
 
 	it('falls back to empty parts if fields missing', () => {
 		// @ts-expect-error testing runtime fallback behavior
-		const result = makeBacklinkToQuote({});
+		const result = makeFormattedBacklinkToQuote({});
 		expect(result).toBe(expectedBacklink('', ''));
 	});
 });
 
-describe('parseBacklinkToQuote', () => {
+describe('extractFormattedBacklinkToQuote', () => {
 	it('parses a well-formed backlink', () => {
 		const fileName = 'My Note';
 		const linkId = 42;
 		const formatted = expectedBacklink(fileName, linkId);
-		const parsed = parseBacklinkToQuote(formatted);
+		const parsed = extractFormattedBacklinkToQuote(formatted);
 		expect(parsed).toEqual({ fileName, linkId });
 	});
 
 	it('returns null for malformed input', () => {
 		const bad = '*[[MissingParts]]*';
-		expect(parseBacklinkToQuote(bad)).toBeNull();
+		expect(extractFormattedBacklinkToQuote(bad)).toBeNull();
 	});
 
 	it('rejects forbidden filename characters via schema', () => {
 		const forbiddenNames = ['Name[bad]', 'Name]bad', 'Name|bad', 'Name#bad'];
 		for (const name of forbiddenNames) {
 			const formatted = expectedBacklink(name, 1);
-			expect(parseBacklinkToQuote(formatted)).toBeNull();
+			expect(extractFormattedBacklinkToQuote(formatted)).toBeNull();
 		}
 	});
 
@@ -73,6 +73,6 @@ describe('parseBacklinkToQuote', () => {
 			`${STAR}${OBSIDIAN_LINK_OPEN}` +
 			`File${HASH}${BIRD}notANumber${PIPE}${BIRD}` +
 			`${OBSIDIAN_LINK_CLOSE}${STAR}`;
-		expect(parseBacklinkToQuote(formatted)).toBeNull();
+		expect(extractFormattedBacklinkToQuote(formatted)).toBeNull();
 	});
 });

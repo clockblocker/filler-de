@@ -1,15 +1,15 @@
 import { sentences } from 'sbd';
 import { wrapTextInBacklinkBlock } from './text-utils';
+import { LinkedQuote } from './types';
+import { HASH } from '../../types/beta/literals';
+import {
+	extractFormattedLinkedQuote,
+	makeFormattedLinkedQuote,
+} from './linked-quote';
 
-type LinkedQuote = {
-	fileName: string;
-	text: string;
-	linkId: number;
-};
+type QuotedLine = LinkedQuote | string;
 
-type Line = LinkedQuote | string;
-
-export function segmentInLines({
+export function segmentInQuotedLines({
 	selection,
 	nameOfTheOpenendFile,
 	highestBlockNumber,
@@ -20,11 +20,24 @@ export function segmentInLines({
 }) {
 	const splittedByNewLine = selection.split('\n');
 
-	const lines: Line[] = [];
+	const lines: QuotedLine[] = [];
 
 	for (const line of splittedByNewLine) {
-		if (line.trim().startsWith('#') || !/\p{L}/u.test(line)) {
+		if (line.trim().startsWith(HASH) || !/\p{L}/u.test(line)) {
 			lines.push(line);
+			continue;
+		}
+
+		// If the line ends with a colon (possibly followed by spaces and optional asterisks), treat as a "speaker says" line and ignore (push as-is)
+		if (/:\s*(\*{0,2})\s*$/.test(line)) {
+			lines.push(line);
+			continue;
+		}
+
+		const mbLinkedQuote = extractFormattedLinkedQuote(line);
+
+		if (mbLinkedQuote) {
+			lines.push({ ...mbLinkedQuote, fileName: nameOfTheOpenendFile });
 			continue;
 		}
 
@@ -42,13 +55,11 @@ export function segmentInLines({
 		}
 
 		blockTextsInLine.forEach((text) => {
-			lines.push(
-				wrapTextInBacklinkBlock({
-					text,
-					fileName: nameOfTheOpenendFile,
-					linkId: highestBlockNumber,
-				})
-			);
+			lines.push({
+				text,
+				fileName: nameOfTheOpenendFile,
+				linkId: highestBlockNumber,
+			});
 			highestBlockNumber += 1;
 		});
 	}
@@ -56,52 +67,14 @@ export function segmentInLines({
 	return lines;
 }
 
-export function toLinkedSegmentedSentences({
-	selection,
-	nameOfTheOpenendFile,
-	highestBlockNumber,
-}: {
-	selection: string;
-	nameOfTheOpenendFile: string;
-	highestBlockNumber: number;
-}) {
-	const splittedByNewLine = selection.split('\n');
-
-	const formattedLines = [];
-
-	for (const line of splittedByNewLine) {
-		// If the line starts with "#" or contains no letters, push as is and continue
-		if (line.trim().startsWith('#') || !/\p{L}/u.test(line)) {
-			formattedLines.push(line);
-			continue;
+export const formatQuotedLines = (quotedLines: QuotedLine[]): string[] => {
+	return quotedLines.map((line) => {
+		if (typeof line === 'string') {
+			return line;
 		}
-
-		const sentencesInLine = segmentWithColonPrepass(line);
-
-		// Build blocks from sentencesInLine, merging short sentences with previous block
-		const blockTextsInLine = [];
-		for (const sentence of sentencesInLine) {
-			const wordCount = sentence.trim().split(/\s+/).filter(Boolean).length;
-			if (wordCount <= 4 && blockTextsInLine.length > 0) {
-				blockTextsInLine[blockTextsInLine.length - 1] += ' ' + sentence.trim();
-			} else {
-				blockTextsInLine.push(sentence.trim());
-			}
-		}
-
-		blockTextsInLine.forEach((text) => {
-			formattedLines.push(
-				wrapTextInBacklinkBlock({
-					text,
-					fileName: nameOfTheOpenendFile,
-					linkId: highestBlockNumber,
-				})
-			);
-			highestBlockNumber += 1;
-		});
-	}
-	return formattedLines.join('\n');
-}
+		return makeFormattedLinkedQuote(line);
+	});
+};
 
 /**
  * Split at: <non-space><quotation_mark><spaces><Capital|Titlecase|OpeningQuote>

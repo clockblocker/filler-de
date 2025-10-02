@@ -1,10 +1,13 @@
 import { Notice } from 'obsidian';
-import { toLinkedSegmentedSentences } from '../../../pure-formatters/quote-manager/split-in-sentences';
+import {
+	formatQuotedLines,
+	segmentInQuotedLines,
+} from '../../../pure-formatters/quote-manager/split-in-sentences';
 import { unwrapMaybe } from '../../../types/general';
 import { OpenedFileService } from '../../obsidian-services/opened-file-service';
 import { SelectionService } from '../../obsidian-services/selection-service';
 
-export default async function splitSelectionInSentences({
+export default async function wrapSentencesInQuoteAnchor({
 	selectionService,
 	openedFileService,
 }: {
@@ -23,11 +26,13 @@ export default async function splitSelectionInSentences({
 
 		// await navigator.clipboard.writeText(`${formattedText}`);
 
-		const asdasd = toLinkedSegmentedSentences({
-			selection,
-			nameOfTheOpenendFile,
-			highestBlockNumber,
-		});
+		const asdasd = formatQuotedLines(
+			segmentInQuotedLines({
+				selection,
+				nameOfTheOpenendFile,
+				highestBlockNumber,
+			})
+		).join('\n');
 
 		console.log(asdasd);
 
