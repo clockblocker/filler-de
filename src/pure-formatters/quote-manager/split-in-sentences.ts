@@ -10,27 +10,37 @@ import {
 type QuotedLine = LinkedQuote | string;
 
 export function segmentInQuotedLines({
-	selection,
+	text,
 	nameOfTheOpenendFile,
 	highestBlockNumber,
 }: {
-	selection: string;
+	text: string;
 	nameOfTheOpenendFile: string;
 	highestBlockNumber: number;
 }) {
-	const splittedByNewLine = selection.split('\n');
+	const splittedByNewLine = text.split('\n');
 
 	const lines: QuotedLine[] = [];
 
+	let prevLineWasLinkedQuote = false;
+
 	for (const line of splittedByNewLine) {
+		// Skip adding extra \n
+		if (line.trim().length === 0 && prevLineWasLinkedQuote) {
+			prevLineWasLinkedQuote = false;
+			continue;
+		}
+
 		if (line.trim().startsWith(HASH) || !/\p{L}/u.test(line)) {
 			lines.push(line);
+			prevLineWasLinkedQuote = false;
 			continue;
 		}
 
 		// If the line ends with a colon (possibly followed by spaces and optional asterisks), treat as a "speaker says" line and ignore (push as-is)
 		if (/:\s*(\*{0,2})\s*$/.test(line)) {
 			lines.push(line);
+			prevLineWasLinkedQuote = false;
 			continue;
 		}
 
@@ -38,6 +48,7 @@ export function segmentInQuotedLines({
 
 		if (mbLinkedQuote) {
 			lines.push({ ...mbLinkedQuote, fileName: nameOfTheOpenendFile });
+			prevLineWasLinkedQuote = true;
 			continue;
 		}
 
@@ -62,18 +73,22 @@ export function segmentInQuotedLines({
 			});
 			highestBlockNumber += 1;
 		});
+
+		prevLineWasLinkedQuote = false;
 	}
 
 	return lines;
 }
 
-export const formatQuotedLines = (quotedLines: QuotedLine[]): string[] => {
-	return quotedLines.map((line) => {
-		if (typeof line === 'string') {
-			return line;
-		}
-		return makeFormattedLinkedQuote(line);
-	});
+export const formatQuotedLines = (quotedLines: QuotedLine[]): string => {
+	return quotedLines
+		.map((line) => {
+			if (typeof line === 'string') {
+				return line;
+			}
+			return makeFormattedLinkedQuote(line);
+		})
+		.join('\n');
 };
 
 /**

@@ -24,19 +24,15 @@ export default async function wrapSentencesInQuoteAnchor({
 			await openedFileService.getMaybeOpenedFile()
 		).name;
 
-		// await navigator.clipboard.writeText(`${formattedText}`);
-
-		const asdasd = formatQuotedLines(
-			segmentInQuotedLines({
-				selection,
-				nameOfTheOpenendFile,
-				highestBlockNumber,
-			})
-		).join('\n');
-
-		console.log(asdasd);
-
-		await selectionService.replaceSelection(asdasd);
+		await selectionService.replaceSelection(
+			formatQuotedLines(
+				segmentInQuotedLines({
+					text: selection,
+					nameOfTheOpenendFile,
+					highestBlockNumber,
+				})
+			)
+		);
 	} catch (error) {
 		new Notice(`Error: ${error.message}`);
 	}
