@@ -13,7 +13,7 @@ export class BottomToolbarService {
 		if (!this.overlayEl) this.overlayEl = this.createOverlay();
 	}
 
-	public attach(): void {
+	public reattach(): void {
 		const view = this.getActiveMarkdownView();
 		if (view && this.attachedView === view && this.overlayEl?.isConnected)
 			return;

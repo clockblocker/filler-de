@@ -10,7 +10,7 @@ export class AboveSelectionToolbarService {
 
 	constructor(private app: App) {}
 
-	public attach(): void {
+	public reattach(): void {
 		const view = this.getActiveMarkdownView();
 		if (this.attachedView === view) return;
 
