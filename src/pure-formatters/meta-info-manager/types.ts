@@ -1,8 +1,8 @@
-import { z } from "zod";
-import { TEXT, ENTRIE, NOTE, ROOT } from "../../types/beta/literals";
+import { z } from 'zod';
+import { TEXT_ROOT, ENTRIE, NOTE, ROOT, PAGE } from '../../types/beta/literals';
 
 export const MetaInfoSchema = z.object({
-    fileType: z.enum([TEXT, ENTRIE, NOTE, ROOT]),
+	fileType: z.enum([PAGE, ENTRIE, NOTE, ROOT, TEXT_ROOT]),
 });
 
 export type MetaInfo = z.infer<typeof MetaInfoSchema>;

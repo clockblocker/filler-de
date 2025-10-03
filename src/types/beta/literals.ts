@@ -45,6 +45,10 @@ const LongDashSchema = z.literal('—');
 export type LONG_DASH = z.infer<typeof LongDashSchema>;
 export const LONG_DASH = LongDashSchema.value;
 
+const DashSchema = z.literal('—');
+export type DASH = z.infer<typeof DashSchema>;
+export const DASH = DashSchema.value;
+
 // File types
 
 export const TextSchema = z.literal('Text');
@@ -62,6 +66,14 @@ export const NOTE = NoteSchema.value;
 export const RootSchema = z.literal('Root');
 export type ROOT = z.infer<typeof RootSchema>;
 export const ROOT = RootSchema.value;
+
+export const PageSchema = z.literal('Page');
+export type PAGE = z.infer<typeof PageSchema>;
+export const PAGE = PageSchema.value;
+
+const TextRootSchema = z.literal(`${TEXT}${DASH}${ROOT}`);
+export type TEXT_ROOT = z.infer<typeof TextRootSchema>;
+export const TEXT_ROOT = TextRootSchema.value;
 
 // Morphems
 
