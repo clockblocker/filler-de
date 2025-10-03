@@ -4,12 +4,14 @@ import { BackgroundFileService } from './services/background-file-service';
 import { BottomToolbarService } from './services/bottom-toolbar-service';
 import { OpenedFileService } from './services/opened-file-service';
 import { SelectionService } from './services/selection-service';
+import { TextsManagerService } from './services/texts-manager-service';
 
 export type TexfresserObsidianServices = {
 	apiService: ApiService;
 	openedFileService: OpenedFileService;
 	backgroundFileService: BackgroundFileService;
 	selectionService: SelectionService;
+	textsManagerService: TextsManagerService;
 
 	selectionToolbarService: AboveSelectionToolbarService;
 	bottomToolbarService: BottomToolbarService;

@@ -5,6 +5,8 @@ import {
 } from 'obsidian-related/actions/types';
 import newTranslateSelection from './new/translateSelection';
 import newSplitCommand from './new/new-split-command';
+import { makeTextAction } from './new/make-text-action';
+import { navigatePagesAction } from './new/navigate-pages-action';
 import { TexfresserObsidianServices } from '../obsidian-services/interface';
 
 export const ACTION_CONFIGS = {
@@ -42,6 +44,21 @@ export const ACTION_CONFIGS = {
 		execute: newTranslateSelection,
 		label: 'Translate',
 		placement: UserActionPlacement.AboveSelection,
+	},
+	[UserAction.MakeText]: {
+		execute: makeTextAction,
+		label: 'Make this a text',
+		placement: UserActionPlacement.Bottom,
+	},
+	[UserAction.NavigatePages]: {
+		execute: (services) => navigatePagesAction(services, 'next'),
+		label: 'Next Page',
+		placement: UserActionPlacement.Bottom,
+	},
+	[UserAction.PreviousPage]: {
+		execute: (services) => navigatePagesAction(services, 'prev'),
+		label: 'Previous Page',
+		placement: UserActionPlacement.Bottom,
 	},
 } satisfies Record<
 	UserAction,

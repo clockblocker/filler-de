@@ -8,6 +8,9 @@ const USER_ACTION_LITERALS = [
 	'TranslateSelection',
 	'TranslateBlock',
 	'ExplainGrammar',
+	'MakeText',
+	'NavigatePages',
+	'PreviousPage',
 ] as const;
 
 const USER_ACTION_PLACEMENT_LITERALS = [

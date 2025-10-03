@@ -13,6 +13,7 @@ import { ApiService } from './obsidian-related/obsidian-services/services/api-se
 import newGenCommand from 'obsidian-related/actions/new/new-gen-command';
 import { OpenedFileService } from 'obsidian-related/obsidian-services/services/opened-file-service';
 import { BackgroundFileService } from 'obsidian-related/obsidian-services/services/background-file-service';
+import { TextsManagerService } from 'obsidian-related/obsidian-services/services/texts-manager-service';
 import addBacklinksToCurrentFile from 'obsidian-related/actions/old/addBacklinksToCurrentFile';
 import { AboveSelectionToolbarService } from 'obsidian-related/obsidian-services/services/above-selection-toolbar-service';
 import { BottomToolbarService } from 'obsidian-related/obsidian-services/services/bottom-toolbar-service';
@@ -32,6 +33,7 @@ export default class TextEaterPlugin extends Plugin {
 	openedFileService: OpenedFileService;
 	backgroundFileService: BackgroundFileService;
 	selectionService: SelectionService;
+	textsManagerService: TextsManagerService;
 
 	selectionToolbarService: AboveSelectionToolbarService;
 	bottomToolbarService: BottomToolbarService;
@@ -57,6 +59,7 @@ export default class TextEaterPlugin extends Plugin {
 		this.backgroundFileService = new BackgroundFileService(this.app.vault);
 		this.selectionToolbarService = new AboveSelectionToolbarService(this.app);
 		this.selectionService = new SelectionService(this.app);
+		this.textsManagerService = new TextsManagerService(this.app);
 
 		this.registerDomEvent(document, 'click', makeClickListener(this));
 
@@ -70,27 +73,31 @@ export default class TextEaterPlugin extends Plugin {
 
 		this.bottomToolbarService = new BottomToolbarService(this.app);
 		this.bottomToolbarService.init();
+		this.bottomToolbarService.setTextsManagerService(this.textsManagerService);
 
 		this.bottomToolbarService.setActions(BOTTOM_ACTIONS);
 		this.selectionToolbarService.setActions(ALL_ACTIONS_ABOVE_SELECTION);
 
-		this.app.workspace.onLayoutReady(() => {
-			this.bottomToolbarService.reattach();
+		this.app.workspace.onLayoutReady(async () => {
+			await this.bottomToolbarService.reattach();
 			this.selectionToolbarService.reattach();
 		});
 
 		// Reattach when user switches panes/notes
 		this.registerEvent(
-			this.app.workspace.on('active-leaf-change', (_leaf: WorkspaceLeaf) => {
-				this.bottomToolbarService.reattach();
-				this.selectionToolbarService.reattach();
-			})
+			this.app.workspace.on(
+				'active-leaf-change',
+				async (_leaf: WorkspaceLeaf) => {
+					await this.bottomToolbarService.reattach();
+					this.selectionToolbarService.reattach();
+				}
+			)
 		);
 
 		// Also re-check after major layout changes (splits, etc.)
 		this.registerEvent(
-			this.app.workspace.on('layout-change', () => {
-				this.bottomToolbarService.reattach();
+			this.app.workspace.on('layout-change', async () => {
+				await this.bottomToolbarService.reattach();
 				this.selectionToolbarService.reattach();
 			})
 		);
