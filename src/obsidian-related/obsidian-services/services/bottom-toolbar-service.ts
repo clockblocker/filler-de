@@ -1,11 +1,10 @@
 import { App, MarkdownView } from 'obsidian';
-import { UserAction } from 'obsidian-related/actions/types';
-import { LabeledAction } from '../../actions/interface';
+import { AnyActionConfig } from 'obsidian-related/actions/types';
 
 export class BottomToolbarService {
 	private overlayEl: HTMLElement | null = null;
 	private attachedView: MarkdownView | null = null;
-	private actions: { action: UserAction; label: string }[] = [];
+	private actionConfigs: AnyActionConfig[] = [];
 
 	constructor(private app: App) {}
 
@@ -56,8 +55,8 @@ export class BottomToolbarService {
 		return el;
 	}
 
-	public setActions(actions: LabeledAction[]): void {
-		this.actions = Array.isArray(actions) ? actions : [];
+	public setActions(actionConfigs: AnyActionConfig[]): void {
+		this.actionConfigs = actionConfigs;
 		if (this.overlayEl) this.renderButtons(this.overlayEl);
 	}
 
@@ -67,15 +66,16 @@ export class BottomToolbarService {
 
 	private renderButtons(
 		host: HTMLElement,
-		actionsToRender?: { action: UserAction; label: string }[]
+		actionsToRender?: AnyActionConfig[]
 	): void {
 		while (host.firstChild) host.removeChild(host.firstChild);
-		const actions = actionsToRender || this.actions;
-		for (const a of actions) {
+		const actions = actionsToRender || this.actionConfigs;
+		for (const actionConfig of actions) {
 			const b = document.createElement('button');
-			b.dataset.action = a.action;
+			// Ensure we set the action string, not the whole object
+			b.dataset.action = actionConfig.id;
 			b.className = 'my-bottom-overlay-btn';
-			b.textContent = a.label;
+			b.textContent = actionConfig.label;
 			host.appendChild(b);
 		}
 	}

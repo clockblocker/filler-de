@@ -71,7 +71,7 @@ export const PageSchema = z.literal('Page');
 export type PAGE = z.infer<typeof PageSchema>;
 export const PAGE = PageSchema.value;
 
-const TextRootSchema = z.literal(`${TEXT}${DASH}${ROOT}`);
+const TextRootSchema = z.literal(`${TEXT}${ROOT}`);
 export type TEXT_ROOT = z.infer<typeof TextRootSchema>;
 export const TEXT_ROOT = TextRootSchema.value;
 

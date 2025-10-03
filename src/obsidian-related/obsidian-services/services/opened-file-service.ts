@@ -1,5 +1,5 @@
 import { MarkdownView, TFile, App, TFolder } from 'obsidian';
-import { Maybe, unwrapMaybe } from '../../../types/general';
+import { Maybe, PathParts, unwrapMaybe } from '../../../types/general';
 import { getMaybeEditor } from '../helpers/get-editor';
 import { logError, logWarning } from '../helpers/issue-handlers';
 
@@ -176,5 +176,23 @@ export class OpenedFileService {
 			});
 			return { error: true, description };
 		}
+	}
+
+	private getMaybeFileNameAndPathParts(): Maybe<{
+		fileName: string;
+		pathParts: PathParts;
+	}> {
+		const file = this.app.workspace.getActiveFile();
+		if (!file) {
+			return { error: true };
+		}
+		return {
+			error: false,
+			data: { fileName: file.name, pathParts: file.path.split('/') },
+		};
+	}
+
+	public getFileNameAndPathParts(): { fileName: string; pathParts: PathParts } {
+		return unwrapMaybe(this.getMaybeFileNameAndPathParts());
 	}
 }

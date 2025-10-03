@@ -1,12 +1,12 @@
 import { App, MarkdownView } from 'obsidian';
 import { EditorView } from '@codemirror/view';
-import { UserAction } from 'obsidian-related/actions/types';
+import { AnyActionConfig, UserAction } from 'obsidian-related/actions/types';
 
 export class AboveSelectionToolbarService {
 	private toolbarEl: HTMLDivElement | null = null;
 	private attachedView: MarkdownView | null = null;
 	private cm: EditorView | null = null;
-	private actions: { action: UserAction; label: string }[] = [];
+	private actionConfigs: AnyActionConfig[] = [];
 
 	constructor(private app: App) {}
 
@@ -63,17 +63,17 @@ export class AboveSelectionToolbarService {
 		return el;
 	}
 
-	public setActions(actions: { action: UserAction; label: string }[]): void {
-		this.actions = Array.isArray(actions) ? actions : [];
+	public setActions(actions: AnyActionConfig[]): void {
+		this.actionConfigs = Array.isArray(actions) ? actions : [];
 		if (this.toolbarEl) this.renderButtons(this.toolbarEl);
 		this.updateToolbarPosition();
 	}
 
 	private renderButtons(host: HTMLElement): void {
 		while (host.firstChild) host.removeChild(host.firstChild);
-		for (const a of this.actions) {
+		for (const a of this.actionConfigs) {
 			const b = document.createElement('button');
-			b.dataset.action = a.action;
+			b.dataset.action = a.id;
 			b.className = 'selection-toolbar-btn';
 			b.textContent = a.label;
 			host.appendChild(b);

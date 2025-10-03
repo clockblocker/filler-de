@@ -1,11 +1,4 @@
-import {
-	App,
-	Editor,
-	MarkdownView,
-	Plugin,
-	TFile,
-	WorkspaceLeaf,
-} from 'obsidian';
+import { Editor, MarkdownView, Plugin, TFile, WorkspaceLeaf } from 'obsidian';
 import { SettingsTab } from './settings';
 import { DEFAULT_SETTINGS, TextEaterSettings } from './types';
 import { ApiService } from './obsidian-related/obsidian-services/services/api-service';
@@ -14,7 +7,6 @@ import newGenCommand from 'obsidian-related/actions/new/new-gen-command';
 import { OpenedFileService } from 'obsidian-related/obsidian-services/services/opened-file-service';
 import { BackgroundFileService } from 'obsidian-related/obsidian-services/services/background-file-service';
 import { TextsManagerService } from 'obsidian-related/obsidian-services/services/texts-manager-service';
-import { ConditionalActionsService } from 'obsidian-related/obsidian-services/services/conditional-actions-service';
 import addBacklinksToCurrentFile from 'obsidian-related/actions/old/addBacklinksToCurrentFile';
 import { AboveSelectionToolbarService } from 'obsidian-related/obsidian-services/services/above-selection-toolbar-service';
 import { BottomToolbarService } from 'obsidian-related/obsidian-services/services/bottom-toolbar-service';
@@ -22,12 +14,12 @@ import { ACTION_CONFIGS } from 'obsidian-related/actions/actions-config';
 import { SelectionService } from 'obsidian-related/obsidian-services/services/selection-service';
 import { makeClickListener } from './obsidian-related/event-listeners/click-listener/click-listener';
 import { logError } from './obsidian-related/obsidian-services/helpers/issue-handlers';
-import {
-	BOTTOM_ACTIONS,
-	ALL_ACTIONS_ABOVE_SELECTION,
-	BOTTOM_CONDITIONAL_ACTIONS,
-} from './obsidian-related/actions/interface';
 import { onNewFileThenRun } from './obsidian-related/event-listeners/create-new-file-listener/run-on-new-file';
+import {
+	getAboveSelectionActionConfigs,
+	getBottomActionConfigs,
+} from './obsidian-related/actions/interface';
+import { extractMetaInfo } from './pure-formatters/meta-info-manager/interface';
 
 export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;
@@ -36,7 +28,6 @@ export default class TextEaterPlugin extends Plugin {
 	backgroundFileService: BackgroundFileService;
 	selectionService: SelectionService;
 	textsManagerService: TextsManagerService;
-	conditionalActionsService: ConditionalActionsService;
 
 	selectionToolbarService: AboveSelectionToolbarService;
 	bottomToolbarService: BottomToolbarService;
@@ -63,10 +54,6 @@ export default class TextEaterPlugin extends Plugin {
 		this.selectionToolbarService = new AboveSelectionToolbarService(this.app);
 		this.selectionService = new SelectionService(this.app);
 		this.textsManagerService = new TextsManagerService(this.app);
-		this.conditionalActionsService = new ConditionalActionsService(
-			this.app,
-			this.textsManagerService
-		);
 
 		this.registerDomEvent(document, 'click', makeClickListener(this));
 
@@ -81,17 +68,11 @@ export default class TextEaterPlugin extends Plugin {
 		this.bottomToolbarService = new BottomToolbarService(this.app);
 		this.bottomToolbarService.init();
 
-		// Set regular bottom actions
-		this.bottomToolbarService.setActions(BOTTOM_ACTIONS);
-
-		// Update conditional actions
-		await this.updateConditionalActions();
-		this.selectionToolbarService.setActions(ALL_ACTIONS_ABOVE_SELECTION);
-
 		this.app.workspace.onLayoutReady(async () => {
-			this.bottomToolbarService.reattach();
-			await this.updateConditionalActions();
+			await this.updateBottomActions();
+			await this.updateSelectionActions();
 			this.selectionToolbarService.reattach();
+			this.bottomToolbarService.reattach();
 		});
 
 		// Reattach when user switches panes/notes
@@ -99,8 +80,7 @@ export default class TextEaterPlugin extends Plugin {
 			this.app.workspace.on(
 				'active-leaf-change',
 				async (_leaf: WorkspaceLeaf) => {
-					this.bottomToolbarService.reattach();
-					await this.updateConditionalActions();
+					await this.updateBottomActions();
 					this.selectionToolbarService.reattach();
 				}
 			)
@@ -109,8 +89,7 @@ export default class TextEaterPlugin extends Plugin {
 		// Also re-check after major layout changes (splits, etc.)
 		this.registerEvent(
 			this.app.workspace.on('layout-change', async () => {
-				this.bottomToolbarService.reattach();
-				await this.updateConditionalActions();
+				await this.updateBottomActions();
 				this.selectionToolbarService.reattach();
 			})
 		);
@@ -285,14 +264,40 @@ export default class TextEaterPlugin extends Plugin {
 		await this.saveData(this.settings);
 	}
 
-	private async updateConditionalActions(): Promise<void> {
-		try {
-			const visibleActions =
-				await this.conditionalActionsService.getVisibleActions();
-			const allBottomActions = [...BOTTOM_ACTIONS, ...visibleActions];
-			this.bottomToolbarService.setActions(allBottomActions);
-		} catch (error) {
-			console.error('Error updating conditional actions:', error);
-		}
+	private async updateBottomActions(): Promise<void> {
+		const { fileName, pathParts } =
+			this.openedFileService.getFileNameAndPathParts();
+
+		const metaInfo = extractMetaInfo(
+			await this.openedFileService.getFileContent()
+		);
+
+		this.bottomToolbarService.setActions(
+			getBottomActionConfigs({
+				metaInfo,
+				fileName,
+				pathParts,
+			})
+		);
+	}
+
+	private async updateSelectionActions(): Promise<void> {
+		const { fileName, pathParts } =
+			this.openedFileService.getFileNameAndPathParts();
+
+		const sectionText = await this.selectionService.getSelection();
+
+		const metaInfo = extractMetaInfo(
+			await this.openedFileService.getFileContent()
+		);
+
+		this.selectionToolbarService.setActions(
+			getAboveSelectionActionConfigs({
+				metaInfo,
+				fileName,
+				pathParts,
+				sectionText,
+			})
+		);
 	}
 }

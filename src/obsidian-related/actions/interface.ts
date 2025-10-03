@@ -1,32 +1,54 @@
-import { ACTION_CONFIGS } from './actions-config';
-import { ALL_USER_ACTIONS, UserAction, UserActionPlacement } from './types';
+import {
+	FileType,
+	MetaInfo,
+} from '../../pure-formatters/meta-info-manager/types';
+import { PathParts } from '../../types/general';
+import {
+	ACTION_CONFIGS,
+	CHANGE_FILE_TYPE_ACTIONS,
+	getAllAboveSelectionActions,
+	getAllBottomActions,
+	NAVIGATE_PAGES_ACTIONS,
+	OPTIONAL_BOTTOM_ACTIONS,
+} from './actions-config';
+import { AnyActionConfig } from './types';
 
-export type LabeledAction = {
-	label: string;
-	action: UserAction;
+export const getBottomActionConfigs = ({
+	metaInfo,
+	fileName,
+	pathParts,
+}: {
+	metaInfo: MetaInfo | null;
+	fileName: string;
+	pathParts: PathParts;
+}): AnyActionConfig[] => {
+	const actions = getAllBottomActions().filter((action) =>
+		OPTIONAL_BOTTOM_ACTIONS.includes(action)
+	);
+
+	if (!metaInfo) {
+		CHANGE_FILE_TYPE_ACTIONS.forEach((action) => actions.push(action));
+	}
+
+	if (metaInfo && metaInfo.fileType === FileType.Page) {
+		NAVIGATE_PAGES_ACTIONS.forEach((action) => actions.push(action));
+	}
+
+	return actions.map((action) => ACTION_CONFIGS[action]);
 };
 
-export const ALL_ACTIONS_ABOVE_SELECTION: LabeledAction[] =
-	ALL_USER_ACTIONS.filter(
-		(action) =>
-			ACTION_CONFIGS[action].placement === UserActionPlacement.AboveSelection
-	).map((action) => ({
-		label: ACTION_CONFIGS[action].label,
-		action,
-	}));
+export const getAboveSelectionActionConfigs = ({
+	metaInfo,
+	fileName,
+	pathParts,
+	sectionText,
+}: {
+	metaInfo: MetaInfo | null;
+	fileName: string;
+	pathParts: PathParts;
+	sectionText: string;
+}): AnyActionConfig[] => {
+	const actions = getAllAboveSelectionActions();
 
-export const BOTTOM_ACTIONS: LabeledAction[] = ALL_USER_ACTIONS.filter(
-	(action) => ACTION_CONFIGS[action].placement === UserActionPlacement.Bottom
-).map((action) => ({
-	label: ACTION_CONFIGS[action].label,
-	action,
-}));
-
-export const BOTTOM_CONDITIONAL_ACTIONS: LabeledAction[] =
-	ALL_USER_ACTIONS.filter(
-		(action) =>
-			ACTION_CONFIGS[action].placement === UserActionPlacement.BottomConditional
-	).map((action) => ({
-		label: ACTION_CONFIGS[action].label,
-		action,
-	}));
+	return actions.map((action) => ACTION_CONFIGS[action]);
+};
