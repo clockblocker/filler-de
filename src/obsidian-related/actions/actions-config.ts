@@ -48,17 +48,17 @@ export const ACTION_CONFIGS = {
 	[UserAction.MakeText]: {
 		execute: makeTextAction,
 		label: 'Make this a text',
-		placement: UserActionPlacement.Bottom,
+		placement: UserActionPlacement.BottomConditional,
 	},
 	[UserAction.NavigatePages]: {
 		execute: (services) => navigatePagesAction(services, 'next'),
 		label: 'Next Page',
-		placement: UserActionPlacement.Bottom,
+		placement: UserActionPlacement.BottomConditional,
 	},
 	[UserAction.PreviousPage]: {
 		execute: (services) => navigatePagesAction(services, 'prev'),
 		label: 'Previous Page',
-		placement: UserActionPlacement.Bottom,
+		placement: UserActionPlacement.BottomConditional,
 	},
 } satisfies Record<
 	UserAction,

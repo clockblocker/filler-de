@@ -21,3 +21,12 @@ export const BOTTOM_ACTIONS: LabeledAction[] = ALL_USER_ACTIONS.filter(
 	label: ACTION_CONFIGS[action].label,
 	action,
 }));
+
+export const BOTTOM_CONDITIONAL_ACTIONS: LabeledAction[] =
+	ALL_USER_ACTIONS.filter(
+		(action) =>
+			ACTION_CONFIGS[action].placement === UserActionPlacement.BottomConditional
+	).map((action) => ({
+		label: ACTION_CONFIGS[action].label,
+		action,
+	}));

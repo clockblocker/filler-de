@@ -17,6 +17,7 @@ const USER_ACTION_PLACEMENT_LITERALS = [
 	'AboveSelection',
 	'Bottom',
 	'ShortcutOnly',
+	'BottomConditional',
 ] as const;
 
 export const UserActionSchema = z.enum(USER_ACTION_LITERALS);

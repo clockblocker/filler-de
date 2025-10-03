@@ -1,12 +1,13 @@
 import { TexfresserObsidianServices } from '../../obsidian-services/interface';
+import { TextsManagerService } from '../../obsidian-services/services/texts-manager-service';
 
 export async function navigatePagesAction(
 	services: Partial<TexfresserObsidianServices>,
 	direction: 'prev' | 'next'
 ): Promise<void> {
-	const { openedFileService, textsManagerService } = services;
+	const { openedFileService } = services;
 
-	if (!openedFileService || !textsManagerService) {
+	if (!openedFileService) {
 		console.error('Missing required services for navigatePagesAction');
 		return;
 	}
@@ -19,6 +20,11 @@ export async function navigatePagesAction(
 	}
 
 	const currentFile = maybeFile.data;
+
+	// Create TextsManagerService instance
+	const textsManagerService = new TextsManagerService(
+		openedFileService.getApp()
+	);
 
 	try {
 		let targetPage: any = null;

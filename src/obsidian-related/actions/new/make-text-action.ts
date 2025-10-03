@@ -1,11 +1,12 @@
 import { TexfresserObsidianServices } from '../../obsidian-services/interface';
+import { TextsManagerService } from '../../obsidian-services/services/texts-manager-service';
 
 export async function makeTextAction(
 	services: Partial<TexfresserObsidianServices>
 ): Promise<void> {
-	const { openedFileService, textsManagerService } = services;
+	const { openedFileService } = services;
 
-	if (!openedFileService || !textsManagerService) {
+	if (!openedFileService) {
 		console.error('Missing required services for makeTextAction');
 		return;
 	}
@@ -18,6 +19,11 @@ export async function makeTextAction(
 	}
 
 	const currentFile = maybeFile.data;
+
+	// Create TextsManagerService instance
+	const textsManagerService = new TextsManagerService(
+		openedFileService.getApp()
+	);
 
 	// Check if metaInfo is empty
 	const hasEmptyMeta = await textsManagerService.hasEmptyMetaInfo(currentFile);

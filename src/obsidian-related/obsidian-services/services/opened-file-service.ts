@@ -6,6 +6,10 @@ import { logError, logWarning } from '../helpers/issue-handlers';
 export class OpenedFileService {
 	constructor(private app: App) {}
 
+	getApp(): App {
+		return this.app;
+	}
+
 	async getMaybeOpenedFile(): Promise<Maybe<TFile>> {
 		try {
 			const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
