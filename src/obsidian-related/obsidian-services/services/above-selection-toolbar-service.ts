@@ -1,6 +1,6 @@
 import { App, MarkdownView } from 'obsidian';
 import { EditorView } from '@codemirror/view';
-import { AnyActionConfig, UserAction } from 'obsidian-related/actions/types';
+import { AnyActionConfig } from 'obsidian-related/actions/types';
 
 export class AboveSelectionToolbarService {
 	private toolbarEl: HTMLDivElement | null = null;
@@ -59,23 +59,35 @@ export class AboveSelectionToolbarService {
 		const el = document.createElement('div');
 		el.className = 'selection-toolbar';
 		el.style.display = 'none';
-		this.renderButtons(el);
+		el.style.pointerEvents = 'auto';
+		el.style.zIndex = '1000';
+		this.rerenderButtons(el);
 		return el;
 	}
 
 	public setActions(actions: AnyActionConfig[]): void {
 		this.actionConfigs = Array.isArray(actions) ? actions : [];
-		if (this.toolbarEl) this.renderButtons(this.toolbarEl);
-		this.updateToolbarPosition();
 	}
 
-	private renderButtons(host: HTMLElement): void {
+	private rerenderButtons(host: HTMLElement): void {
 		while (host.firstChild) host.removeChild(host.firstChild);
 		for (const a of this.actionConfigs) {
 			const b = document.createElement('button');
 			b.dataset.action = a.id;
 			b.className = 'selection-toolbar-btn';
 			b.textContent = a.label;
+
+			// Ensure button is clickable
+			b.style.pointerEvents = 'auto';
+			b.style.cursor = 'pointer';
+			b.style.zIndex = '1000';
+			b.style.position = 'relative';
+			b.style.backgroundColor = '#ff0000'; // Red background for visibility
+			b.style.color = '#ffffff';
+			b.style.padding = '4px 8px';
+			b.style.border = '1px solid #000000';
+			b.style.borderRadius = '4px';
+
 			host.appendChild(b);
 		}
 	}

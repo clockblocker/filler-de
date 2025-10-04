@@ -86,6 +86,38 @@ export default class TextEaterPlugin extends Plugin {
 			)
 		);
 
+		// Add listeners to show the selection toolbar after drag or keyboard selection
+		this.registerDomEvent(document, 'dragend', async () => {
+			await this.updateSelectionActions();
+			this.selectionToolbarService.reattach();
+		});
+
+		this.registerDomEvent(document, 'mouseup', async () => {
+			await this.updateSelectionActions();
+			this.selectionToolbarService.reattach();
+		});
+
+		this.registerDomEvent(document, 'keyup', async (evt: KeyboardEvent) => {
+			// Only reattach for keys that could affect selection
+			const selectionKeys = [
+				'ArrowLeft',
+				'ArrowRight',
+				'ArrowUp',
+				'ArrowDown',
+				'Shift',
+				'Home',
+				'End',
+				'PageUp',
+				'PageDown',
+				'a',
+			];
+
+			if (evt.shiftKey || selectionKeys.includes(evt.key)) {
+				await this.updateSelectionActions();
+				this.selectionToolbarService.reattach();
+			}
+		});
+
 		// Also re-check after major layout changes (splits, etc.)
 		this.registerEvent(
 			this.app.workspace.on('layout-change', async () => {

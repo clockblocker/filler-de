@@ -8,14 +8,7 @@ export class SelectionService {
 	public async getMaybeSelection(): Promise<Maybe<string>> {
 		try {
 			const editor = await getEditor(this.app);
-
-			const selection = editor.getSelection();
-
-			if (!selection) {
-				return { error: true, description: 'Selection is empty' };
-			}
-
-			return { error: false, data: selection };
+			return { error: false, data: editor.getSelection() };
 		} catch (e) {
 			return {
 				error: true,

@@ -62,13 +62,13 @@ export const ACTION_CONFIGS = {
 	[UserAction.NavigatePages]: {
 		id: UserAction.NavigatePages,
 		execute: (services) => navigatePagesAction(services, 'next'),
-		label: 'Next Page',
+		label: '→',
 		placement: UserActionPlacement.Bottom,
 	},
 	[UserAction.PreviousPage]: {
 		id: UserAction.PreviousPage,
 		execute: (services) => navigatePagesAction(services, 'prev'),
-		label: 'Previous Page',
+		label: '←',
 		placement: UserActionPlacement.Bottom,
 	},
 } satisfies { [A in UserAction]: ActionConfig<A> };
