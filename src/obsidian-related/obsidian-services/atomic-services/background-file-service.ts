@@ -1,4 +1,4 @@
-import { App, Vault, TFile, Editor, MarkdownView, TFolder } from 'obsidian';
+import { Vault, TFile, TFolder } from 'obsidian';
 import {
 	Maybe,
 	PathParts,
@@ -7,6 +7,12 @@ import {
 } from '../../../types/general';
 import { SLASH } from 'types/beta/literals';
 import { logError, logWarning } from '../helpers/issue-handlers';
+import {
+	systemPathToFileFromPrettyPath,
+	systemPathToFolderFromPrettyPath,
+	systemPathToPrettyPath,
+	pathToFolderFromPathParts,
+} from '../../../pure-formatters/paths/path-helpers';
 
 export class BackgroundFileService {
 	constructor(private vault: Vault) {}
@@ -42,6 +48,28 @@ export class BackgroundFileService {
 		return maybeFile;
 	}
 
+	async renameFile(prettyPath: PrettyPath, newName: string): Promise<TFile> {
+		const systemPath = systemPathToFileFromPrettyPath(prettyPath);
+		const maybeFile = await this.renameMaybeFileInSystemPath(
+			systemPath,
+			newName
+		);
+
+		return unwrapMaybe(maybeFile);
+	}
+
+	async renameFolder(
+		prettyPath: PrettyPath,
+		newName: string
+	): Promise<TFolder> {
+		const systemPath = systemPathToFolderFromPrettyPath(prettyPath);
+		const maybeFolder = await this.renameMaybeFolderInSystemPath(
+			systemPath,
+			newName
+		);
+		return unwrapMaybe(maybeFolder);
+	}
+
 	async createFolderInFolder(
 		folder: TFolder,
 		title: PrettyPath['title']
@@ -59,19 +87,14 @@ export class BackgroundFileService {
 		return content;
 	}
 
-	private async getMaybeParentOfFileWithPath(
-		prettyPath: PrettyPath
-	): Promise<Maybe<TFolder>> {
-		const maybeFile = await this.getMaybeFileByPrettyPath(prettyPath);
-		if (maybeFile.error) return maybeFile;
+	async replaceFileContent(
+		prettyPath: PrettyPath,
+		content: string
+	): Promise<string> {
+		const maybeFile = await this.getFile(prettyPath);
+		await this.vault.modify(maybeFile, content);
 
-		const parent = maybeFile.data.parent;
-
-		if (!parent) {
-			return { error: true, description: 'File does not have a parent' };
-		}
-
-		return { error: false, data: parent };
+		return content;
 	}
 
 	async getParentOfFileWithPath(prettyPath: PrettyPath): Promise<TFolder> {
@@ -88,39 +111,31 @@ export class BackgroundFileService {
 		return this.getSiblingsOfFile(maybeFile.data);
 	}
 
-	async createManyFilesInExistingFolders(
+	async createManyFiles(
 		files: Array<{ prettyPath: PrettyPath; content?: string }>
-	): Promise<Maybe<TFile[]>> {
-		const created: TFile[] = [];
-		const errors: string[] = [];
-
-		for (const { prettyPath, content = '' } of files) {
+	): Promise<TFile[]> {
+		// Verify existence of all the folders for each file's path, and create them if missing
+		for (const { prettyPath } of files) {
 			const path = systemPathToFileFromPrettyPath(prettyPath);
-
-			const existing = this.vault.getAbstractFileByPath(path);
-			if (existing instanceof TFile) {
-				continue; // skip existing file
+			const folderPath = path.substring(0, path.lastIndexOf('/'));
+			if (folderPath && !this.vault.getAbstractFileByPath(folderPath)) {
+				// Recursively create missing folders
+				const parts = folderPath.split('/');
+				let currentPath = '';
+				for (const part of parts) {
+					currentPath = currentPath ? `${currentPath}/${part}` : part;
+					if (!this.vault.getAbstractFileByPath(currentPath)) {
+						await this.vault.createFolder(currentPath);
+					}
+				}
 			}
-
-			const file = await this.createMaybeFileInSystemPath(path, content);
-			if (file.error) {
-				errors.push(`${path}: ${file.description}`);
-				continue;
-			}
-			created.push(file.data);
 		}
 
-		if (errors.length > 0) {
-			logWarning({
-				description: `Failed to create many files: ${errors.join(', ')}`,
-				location: 'BackgroundFileService',
-			});
-		}
-
-		return { error: false, data: created };
+		const created = await this.createManyFilesInExistingFolders(files);
+		return unwrapMaybe(created);
 	}
 
-	public async createManyFolders(
+	async createManyFolders(
 		prettyPaths: PrettyPath[]
 	): Promise<Maybe<TFolder[]>> {
 		const created: TFolder[] = [];
@@ -153,6 +168,80 @@ export class BackgroundFileService {
 		return { error: false, data: created };
 	}
 
+	async renameManyFolders(
+		folders: Array<{ prettyPath: PrettyPath; newName: string }>
+	): Promise<TFolder[]> {
+		const renamed: TFolder[] = [];
+		const errors: string[] = [];
+
+		for (const { prettyPath, newName } of folders) {
+			const systemPath = systemPathToFolderFromPrettyPath(prettyPath);
+			const maybeFolder = await this.renameMaybeFolderInSystemPath(
+				systemPath,
+				newName
+			);
+			if (maybeFolder.error) {
+				errors.push(`${prettyPath}: ${maybeFolder.description}`);
+				continue;
+			}
+			renamed.push(maybeFolder.data);
+		}
+
+		if (errors.length > 0) {
+			logWarning({
+				description: `Failed to rename many folders: ${errors.join(', ')}`,
+				location: 'BackgroundFileService',
+			});
+		}
+
+		return renamed;
+	}
+
+	async renameManyFiles(
+		files: Array<{ prettyPath: PrettyPath; newName: string }>
+	): Promise<TFile[]> {
+		const renamed: TFile[] = [];
+		const errors: string[] = [];
+
+		for (const { prettyPath, newName } of files) {
+			const systemPath = systemPathToFolderFromPrettyPath(prettyPath);
+			const maybeFile = await this.renameMaybeFileInSystemPath(
+				systemPath,
+				newName
+			);
+
+			if (maybeFile.error) {
+				errors.push(`${prettyPath}: ${maybeFile.description}`);
+				continue;
+			}
+			renamed.push(maybeFile.data);
+		}
+
+		if (errors.length > 0) {
+			logWarning({
+				description: `Failed to rename many files: ${errors.join(', ')}`,
+				location: 'BackgroundFileService',
+			});
+		}
+
+		return renamed;
+	}
+
+	private async getMaybeParentOfFileWithPath(
+		prettyPath: PrettyPath
+	): Promise<Maybe<TFolder>> {
+		const maybeFile = await this.getMaybeFileByPrettyPath(prettyPath);
+		if (maybeFile.error) return maybeFile;
+
+		const parent = maybeFile.data.parent;
+
+		if (!parent) {
+			return { error: true, description: 'File does not have a parent' };
+		}
+
+		return { error: false, data: parent };
+	}
+
 	private async getSiblingsOfFile(file: TFile): Promise<Maybe<Array<TFile>>> {
 		const parent = file.parent;
 
@@ -182,6 +271,42 @@ export class BackgroundFileService {
 				location: 'BackgroundFileService',
 			});
 			return { error: true };
+		}
+	}
+
+	private async renameMaybeFileInSystemPath(
+		systemPath: string,
+		newName: string
+	): Promise<Maybe<TFile>> {
+		try {
+			const file = await this.vault.getFileByPath(systemPath);
+			if (!(file instanceof TFile)) {
+				return { error: true, description: 'Renamed item is not a file' };
+			}
+
+			await this.vault.rename(file, newName);
+
+			return { error: false, data: file };
+		} catch (error) {
+			return { error: true, description: `Failed to rename file: ${error}` };
+		}
+	}
+
+	private async renameMaybeFolderInSystemPath(
+		systemPath: string,
+		newName: string
+	): Promise<Maybe<TFolder>> {
+		try {
+			const folder = await this.vault.getFolderByPath(systemPath);
+			if (!(folder instanceof TFolder)) {
+				return { error: true, description: 'Renamed item is not a folder' };
+			}
+
+			await this.vault.rename(folder, newName);
+
+			return { error: false, data: folder };
+		} catch (error) {
+			return { error: true, description: `Failed to rename folder: ${error}` };
 		}
 	}
 
@@ -276,52 +401,36 @@ export class BackgroundFileService {
 			};
 		}
 	}
-}
 
-function systemPathToPrettyPath(path: string): PrettyPath {
-	if (!path || path === '/') return { pathParts: [], title: '' };
+	private async createManyFilesInExistingFolders(
+		files: Array<{ prettyPath: PrettyPath; content?: string }>
+	): Promise<Maybe<TFile[]>> {
+		const created: TFile[] = [];
+		const errors: string[] = [];
 
-	const splitPath = path.split(SLASH).filter(Boolean);
+		for (const { prettyPath, content = '' } of files) {
+			const path = systemPathToFileFromPrettyPath(prettyPath);
 
-	return {
-		title: splitPath.pop() ?? '',
-		pathParts: splitPath,
-	};
-}
+			const existing = this.vault.getAbstractFileByPath(path);
+			if (existing instanceof TFile) {
+				continue; // skip existing file
+			}
 
-function systemPathToFileFromPrettyPath(prettyPath: PrettyPath) {
-	return systemPathFromPrettyPath({ prettyPath, isFile: true });
-}
+			const file = await this.createMaybeFileInSystemPath(path, content);
+			if (file.error) {
+				errors.push(`${path}: ${file.description}`);
+				continue;
+			}
+			created.push(file.data);
+		}
 
-function systemPathToFolderFromPrettyPath(prettyPath: PrettyPath) {
-	return systemPathFromPrettyPath({ prettyPath, isFile: false });
-}
+		if (errors.length > 0) {
+			logWarning({
+				description: `Failed to create many files: ${errors.join(', ')}`,
+				location: 'BackgroundFileService',
+			});
+		}
 
-function systemPathFromPrettyPath({
-	prettyPath: { pathParts, title },
-	isFile,
-}: {
-	prettyPath: PrettyPath;
-	isFile: boolean;
-}): string {
-	return joinPosix(
-		pathToFolderFromPathParts(pathParts),
-		safeFileName(title) + (isFile ? '.md' : '')
-	);
-}
-
-function safeFileName(s: string): string {
-	return s.replace(/[\\/]/g, ' ').trim();
-}
-
-function pathToFolderFromPathParts(pathParts: string[]): string {
-	return joinPosix(...pathParts);
-}
-
-function joinPosix(...parts: string[]): string {
-	const cleaned = parts
-		.filter(Boolean)
-		.map((p) => p.replace(/(^[\\/]+)|([\\/]+$)/g, '')) // trim leading/trailing slashes/backslashes
-		.filter((p) => p.length > 0);
-	return cleaned.join('/');
+		return { error: false, data: created };
+	}
 }
