@@ -1,19 +1,175 @@
 import { App, Vault, TFile, Editor, MarkdownView, TFolder } from 'obsidian';
-import { Maybe, PathParts } from '../../../types/general';
+import {
+	Maybe,
+	PathParts,
+	PrettyPath,
+	unwrapMaybe,
+} from '../../../types/general';
 import { SLASH } from 'types/beta/literals';
-import { formatError, logError, logWarning } from '../helpers/issue-handlers';
-
-const pathToFolderFromPathParts = (pathParts: PathParts) =>
-	pathParts.join(SLASH);
-
-const pathToFileFromPathParts = (pathParts: PathParts) =>
-	pathToFolderFromPathParts(pathParts) + '.md';
+import { logError, logWarning } from '../helpers/issue-handlers';
 
 export class BackgroundFileService {
 	constructor(private vault: Vault) {}
 
-	async getMaybeFileByPathParts(pathParts: PathParts): Promise<Maybe<TFile>> {
-		const filePath = pathToFileFromPathParts(pathParts);
+	async getFile(prettyPath: PrettyPath): Promise<TFile> {
+		const mbFile = await this.getMaybeFileByPrettyPath(prettyPath);
+		return unwrapMaybe(mbFile);
+	}
+
+	async createFileInPrettyPath(
+		prettyPath: PrettyPath,
+		content: string = ''
+	): Promise<Maybe<TFile>> {
+		const systemPath = `${systemPathToFileFromPrettyPath(prettyPath)}`;
+		return await this.createMaybeFileInSystemPath(systemPath, content);
+	}
+
+	async createFolderInPrettyPath(
+		prettyPath: PrettyPath
+	): Promise<Maybe<TFolder>> {
+		const systemPath = `${systemPathToFolderFromPrettyPath(prettyPath)}`;
+
+		return await this.createMaybeFolderBySystemPath(systemPath);
+	}
+
+	async createFileInFolder(
+		folder: TFolder,
+		title: PrettyPath['title']
+	): Promise<Maybe<TFile>> {
+		const path = `${folder.path}/${title}`;
+		const maybeFile = await this.createMaybeFileInSystemPath(path);
+
+		return maybeFile;
+	}
+
+	async createFolderInFolder(
+		folder: TFolder,
+		title: PrettyPath['title']
+	): Promise<Maybe<TFolder>> {
+		const path = `${folder.path}/${title}`;
+		const maybeFolder = await this.createMaybeFolderBySystemPath(path);
+
+		return maybeFolder;
+	}
+
+	async readFileContent(prettyPath: PrettyPath): Promise<string> {
+		const maybeFile = await this.getFile(prettyPath);
+		const content = await this.vault.read(maybeFile);
+
+		return content;
+	}
+
+	private async getMaybeParentOfFileWithPath(
+		prettyPath: PrettyPath
+	): Promise<Maybe<TFolder>> {
+		const maybeFile = await this.getMaybeFileByPrettyPath(prettyPath);
+		if (maybeFile.error) return maybeFile;
+
+		const parent = maybeFile.data.parent;
+
+		if (!parent) {
+			return { error: true, description: 'File does not have a parent' };
+		}
+
+		return { error: false, data: parent };
+	}
+
+	async getParentOfFileWithPath(prettyPath: PrettyPath): Promise<TFolder> {
+		const maybeParent = await this.getMaybeParentOfFileWithPath(prettyPath);
+		return unwrapMaybe(maybeParent);
+	}
+
+	async getSiblingsOfFileWithPath(
+		prettyPath: PrettyPath
+	): Promise<Maybe<Array<TFile>>> {
+		const maybeFile = await this.getMaybeFileByPrettyPath(prettyPath);
+		if (maybeFile.error) return maybeFile;
+
+		return this.getSiblingsOfFile(maybeFile.data);
+	}
+
+	async createManyFilesInExistingFolders(
+		files: Array<{ prettyPath: PrettyPath; content?: string }>
+	): Promise<Maybe<TFile[]>> {
+		const created: TFile[] = [];
+		const errors: string[] = [];
+
+		for (const { prettyPath, content = '' } of files) {
+			const path = systemPathToFileFromPrettyPath(prettyPath);
+
+			const existing = this.vault.getAbstractFileByPath(path);
+			if (existing instanceof TFile) {
+				continue; // skip existing file
+			}
+
+			const file = await this.createMaybeFileInSystemPath(path, content);
+			if (file.error) {
+				errors.push(`${path}: ${file.description}`);
+				continue;
+			}
+			created.push(file.data);
+		}
+
+		if (errors.length > 0) {
+			logWarning({
+				description: `Failed to create many files: ${errors.join(', ')}`,
+				location: 'BackgroundFileService',
+			});
+		}
+
+		return { error: false, data: created };
+	}
+
+	public async createManyFolders(
+		prettyPaths: PrettyPath[]
+	): Promise<Maybe<TFolder[]>> {
+		const created: TFolder[] = [];
+		const errors: string[] = [];
+
+		for (const prettyPath of prettyPaths) {
+			const path = systemPathToFolderFromPrettyPath(prettyPath);
+
+			const existing = this.vault.getAbstractFileByPath(path);
+			if (existing instanceof TFolder) {
+				continue; // skip if already exists
+			}
+
+			const folder = await this.createMaybeFolderBySystemPath(path);
+
+			if (folder.error) {
+				errors.push(`${path}: ${folder.description}`);
+				continue;
+			}
+			created.push(folder.data);
+		}
+
+		if (errors.length > 0) {
+			logWarning({
+				description: `Failed to create many folders: ${errors.join(', ')}`,
+				location: 'BackgroundFileService',
+			});
+		}
+
+		return { error: false, data: created };
+	}
+
+	private async getSiblingsOfFile(file: TFile): Promise<Maybe<Array<TFile>>> {
+		const parent = file.parent;
+
+		if (parent && parent instanceof TFolder) {
+			const siblings = parent.children
+				.filter((child): child is TFile => child instanceof TFile)
+				.filter((f) => f.path !== file.path);
+			return { error: false, data: siblings };
+		}
+
+		return { error: false, data: [] };
+	}
+
+	private async getMaybeFileByPrettyPath(
+		prettyPath: PrettyPath
+	): Promise<Maybe<TFile>> {
+		const filePath = systemPathToFileFromPrettyPath(prettyPath);
 		try {
 			const file = this.vault.getAbstractFileByPath(filePath);
 			if (!file || !(file instanceof TFile)) {
@@ -29,177 +185,143 @@ export class BackgroundFileService {
 		}
 	}
 
-	async getFileByPathParts(pathParts: PathParts): Promise<TFile> {
-		const mbFile = await this.getMaybeFileByPathParts(pathParts);
-		if (mbFile.error) {
-			const err = {
-				description: mbFile.description ?? 'File not found',
-				location: 'BackgroundFileService',
-			};
-
-			logError(err);
-			throw new Error(formatError(err));
-		}
-
-		return mbFile.data;
-	}
-
-	async getSiblingsOfFile(file: TFile): Promise<Maybe<Array<TFile>>> {
-		const parent = file.parent;
-
-		if (parent && parent instanceof TFolder) {
-			const siblings = parent.children
-				.filter((child): child is TFile => child instanceof TFile)
-				.filter((f) => f.path !== file.path);
-			return { error: false, data: siblings };
-		}
-
-		return { error: false, data: [] };
-	}
-
-	private async createFileInPath(
-		path: string,
+	private async createMaybeFileInSystemPath(
+		systemPath: string,
 		content: string = ''
 	): Promise<Maybe<TFile>> {
 		try {
-			const file = await this.vault.create(`${path}`, content);
+			const file = await this.vault.create(`${systemPath}`, content);
 			if (!(file instanceof TFile)) {
 				return { error: true, description: 'Created item is not a file' };
 			}
+
 			return { error: false, data: file };
 		} catch (error) {
 			return { error: true, description: `Failed to create file: ${error}` };
 		}
 	}
 
-	private async createFolderInPath(path: string): Promise<Maybe<TFolder>> {
+	private async createMaybeFolderBySystemPath(
+		systemPath: string
+	): Promise<Maybe<TFolder>> {
 		try {
-			const fullPath = `${path}`;
-			const folder = await this.vault.createFolder(fullPath);
+			const folder = await this.vault.createFolder(systemPath);
+
 			return { error: false, data: folder };
 		} catch (error) {
 			return { error: true, description: `Failed to create folder: ${error}` };
 		}
 	}
 
-	async createFileInFolder(
-		folder: TFolder,
-		fileName: string,
-		content: string = ''
-	): Promise<Maybe<TFile>> {
-		const path = `${folder.path}/${fileName}`;
-		const maybeFile = await this.createFileInPath(path, content);
+	public async treeToItems(folder: TFolder): Promise<Maybe<Array<PrettyPath>>> {
+		const includeExt = ['md'].map((e) => e.toLowerCase());
 
-		return maybeFile;
-	}
+		try {
+			const out: Array<PrettyPath> = [];
+			const stack: TFolder[] = [folder];
 
-	async createFolderInFolder(
-		folder: TFolder,
-		folderName: string
-	): Promise<Maybe<TFolder>> {
-		const path = `${folder.path}/${folderName}`;
-		const maybeFolder = await this.createFolderInPath(path);
+			while (stack.length) {
+				const cur = stack.pop()!;
+				const curPrettyParts = systemPathToPrettyPath(cur.path);
 
-		return maybeFolder;
-	}
-
-	async readFileContentByPathParts(
-		pathParts: PathParts
-	): Promise<Maybe<string>> {
-		const maybeFile = await this.getMaybeFileByPathParts(pathParts);
-		if (maybeFile.error) {
-			return maybeFile;
-		}
-
-		const content = await this.vault.read(maybeFile.data);
-		return { data: content, error: false };
-	}
-
-	async getParentOfFileWithPath(pathParts: PathParts): Promise<Maybe<TFolder>> {
-		const maybeFile = await this.getMaybeFileByPathParts(pathParts);
-		if (maybeFile.error) return maybeFile;
-
-		const parent = maybeFile.data.parent;
-
-		if (!parent) {
-			return { error: true, description: 'File does not have a parent' };
-		}
-
-		return { error: false, data: parent };
-	}
-
-	public async getSiblingsOfFileWithPath(
-		pathParts: PathParts
-	): Promise<Maybe<Array<TFile>>> {
-		const maybeFile = await this.getMaybeFileByPathParts(pathParts);
-		if (maybeFile.error) return maybeFile;
-
-		return this.getSiblingsOfFile(maybeFile.data);
-	}
-
-	public async createManyFilesInExistingFolders(
-		files: Array<{ pathParts: PathParts; content?: string }>
-	): Promise<Maybe<TFile[]>> {
-		const created: TFile[] = [];
-		const errors: string[] = [];
-
-		for (const { pathParts, content = '' } of files) {
-			const path = pathToFileFromPathParts(pathParts) + '.md';
-			try {
-				const existing = this.vault.getAbstractFileByPath(path);
-				if (existing instanceof TFile) {
-					continue; // skip existing file
+				for (const child of cur.children) {
+					if (child instanceof TFolder) {
+						stack.push(child);
+					} else if (child instanceof TFile) {
+						if (
+							includeExt.length === 0 ||
+							includeExt.includes(child.extension.toLowerCase())
+						) {
+							out.push(curPrettyParts);
+						}
+					}
 				}
-
-				const file = await this.vault.create(path, content);
-				if (file instanceof TFile) {
-					created.push(file);
-				} else {
-					errors.push(`${path}: created item is not a TFile`);
-				}
-			} catch (e) {
-				errors.push(`${path}: ${e instanceof Error ? e.message : String(e)}`);
 			}
-		}
 
-		if (errors.length > 0) {
-			logWarning({
-				description: `Failed to create many files: ${errors.join(', ')}`,
-				location: 'BackgroundFileService',
+			out.sort((a, b) => {
+				const ap = a.pathParts.join(SLASH);
+				const bp = b.pathParts.join(SLASH);
+				const byPath = ap.localeCompare(bp, undefined, { sensitivity: 'base' });
+				return byPath !== 0
+					? byPath
+					: a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
 			});
-		}
 
-		return { error: false, data: created };
+			return { error: false, data: out };
+		} catch (e) {
+			return {
+				error: true,
+				description: `Failed to traverse tree: ${e instanceof Error ? e.message : String(e)}`,
+			};
+		}
 	}
 
-	public async createManyFolders(
-		folderPathPartsArray: PathParts[]
-	): Promise<Maybe<TFolder[]>> {
-		const created: TFolder[] = [];
-		const errors: string[] = [];
-
-		for (const pathParts of folderPathPartsArray) {
-			const path = pathToFolderFromPathParts(pathParts);
-			try {
-				const existing = this.vault.getAbstractFileByPath(path);
-				if (existing instanceof TFolder) {
-					continue; // skip if already exists
-				}
-
-				const folder = await this.vault.createFolder(path);
-				created.push(folder);
-			} catch (e) {
-				errors.push(`${path}: ${e instanceof Error ? e.message : String(e)}`);
+	/**
+	 * Convenience: start traversal from a folder path (PathParts).
+	 */
+	public async treeToItemsByPathParts(
+		pathParts: PathParts
+	): Promise<Maybe<Array<PrettyPath>>> {
+		const folderPath = pathToFolderFromPathParts(pathParts);
+		try {
+			const abs = this.vault.getAbstractFileByPath(folderPath);
+			if (!(abs instanceof TFolder)) {
+				return { error: true, description: `Not a folder: ${folderPath}` };
 			}
+			return this.treeToItems(abs);
+		} catch (e) {
+			return {
+				error: true,
+				description: `Failed to resolve folder: ${e instanceof Error ? e.message : String(e)}`,
+			};
 		}
-
-		if (errors.length > 0) {
-			logWarning({
-				description: `Failed to create many folders: ${errors.join(', ')}`,
-				location: 'BackgroundFileService',
-			});
-		}
-
-		return { error: false, data: created };
 	}
+}
+
+function systemPathToPrettyPath(path: string): PrettyPath {
+	if (!path || path === '/') return { pathParts: [], title: '' };
+
+	const splitPath = path.split(SLASH).filter(Boolean);
+
+	return {
+		title: splitPath.pop() ?? '',
+		pathParts: splitPath,
+	};
+}
+
+function systemPathToFileFromPrettyPath(prettyPath: PrettyPath) {
+	return systemPathFromPrettyPath({ prettyPath, isFile: true });
+}
+
+function systemPathToFolderFromPrettyPath(prettyPath: PrettyPath) {
+	return systemPathFromPrettyPath({ prettyPath, isFile: false });
+}
+
+function systemPathFromPrettyPath({
+	prettyPath: { pathParts, title },
+	isFile,
+}: {
+	prettyPath: PrettyPath;
+	isFile: boolean;
+}): string {
+	return joinPosix(
+		pathToFolderFromPathParts(pathParts),
+		safeFileName(title) + (isFile ? '.md' : '')
+	);
+}
+
+function safeFileName(s: string): string {
+	return s.replace(/[\\/]/g, ' ').trim();
+}
+
+function pathToFolderFromPathParts(pathParts: string[]): string {
+	return joinPosix(...pathParts);
+}
+
+function joinPosix(...parts: string[]): string {
+	const cleaned = parts
+		.filter(Boolean)
+		.map((p) => p.replace(/(^[\\/]+)|([\\/]+$)/g, '')) // trim leading/trailing slashes/backslashes
+		.filter((p) => p.length > 0);
+	return cleaned.join('/');
 }
