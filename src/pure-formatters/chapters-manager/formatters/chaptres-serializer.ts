@@ -1,12 +1,8 @@
 import { NormalizeOptions, ChapterItem } from '../types';
 
 /**
- * PARSE to structured items
- *
- * Reads the ORIGINAL (unmodified) markdown and reconstructs pathParts based on indentation.
- * - Any line with a wikilink is treated as a leaf.
- * - Any line without a wikilink but with text becomes a group node at its depth.
- * - Checkboxes are optional; default done=false if missing.
+ * Do NOT use for parsing the user's input
+ * Can only be safely used when the indents are guaranteed to be preserved
  */
 export function markdownToChapterItems(
 	md: string,
@@ -23,7 +19,7 @@ export function markdownToChapterItems(
 	const groupAtDepth: string[] = [];
 	const items: ChapterItem[] = [];
 
-	for (let raw of lines) {
+	for (const raw of lines) {
 		if (!raw.trim()) continue;
 
 		const depth = computeDepth(raw, spacesPerIndent);
@@ -141,7 +137,7 @@ export function normalizeMarkdownToPreview(
 	const lines = md.split(/\r?\n/);
 	const out: string[] = [];
 
-	for (let raw of lines) {
+	for (const raw of lines) {
 		if (!raw.trim()) continue;
 
 		const depth = computeDepth(raw, spacesPerIndent); // depth not used for preview, but could be.

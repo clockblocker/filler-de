@@ -26,10 +26,15 @@ export function extractMetaInfo(str: string): MetaInfo | null {
 export function editOrAddMetaInfo(str: string, meta: MetaInfo): string {
 	const metaSection = META_INFO_FORMATTER.make(meta);
 
-	let contentWithoutMeta = str.replace(META_INFO_FORMATTER.pattern, '').trimEnd();
+	let contentWithoutMeta = str
+		.replace(META_INFO_FORMATTER.pattern, '')
+		.trimEnd();
 
 	// Always ensure a line break before the meta section if content is not empty
-	if (contentWithoutMeta.length > 0 && !contentWithoutMeta.endsWith(LINE_BREAK)) {
+	if (
+		contentWithoutMeta.length > 0 &&
+		!contentWithoutMeta.endsWith(LINE_BREAK)
+	) {
 		contentWithoutMeta += LINE_BREAK;
 	}
 

@@ -12,7 +12,7 @@ export interface TextStructure {
 	textsRootFile?: TFile;
 }
 
-export class TextsManagerService {
+export class Currator {
 	constructor(private app: App) {}
 
 	/**

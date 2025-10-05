@@ -1,6 +1,6 @@
 import { Notice } from 'obsidian';
-import { ApiService } from 'obsidian-related/obsidian-services/services/api-service';
-import { SelectionService } from 'obsidian-related/obsidian-services/services/selection-service';
+import { ApiService } from 'obsidian-related/obsidian-services/atomic-services/api-service';
+import { SelectionService } from 'obsidian-related/obsidian-services/atomic-services/selection-service';
 import { prompts } from 'prompts';
 import { z } from 'zod';
 

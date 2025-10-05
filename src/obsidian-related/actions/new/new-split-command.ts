@@ -4,8 +4,8 @@ import {
 	segmentInQuotedLines,
 } from '../../../pure-formatters/quote-manager/interface';
 import { unwrapMaybe } from '../../../types/general';
-import { OpenedFileService } from '../../obsidian-services/services/opened-file-service';
-import { SelectionService } from '../../obsidian-services/services/selection-service';
+import { OpenedFileService } from '../../obsidian-services/atomic-services/opened-file-service';
+import { SelectionService } from '../../obsidian-services/atomic-services/selection-service';
 
 export default async function wrapSentencesInQuoteAnchor({
 	selectionService,

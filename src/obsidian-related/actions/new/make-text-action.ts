@@ -1,5 +1,5 @@
 import { TexfresserObsidianServices } from '../../obsidian-services/interface';
-import { TextsManagerService } from '../../obsidian-services/services/texts-manager-service';
+import { Currator } from '../../obsidian-services/managers/currator';
 
 export async function makeTextAction(
 	services: Partial<TexfresserObsidianServices>
@@ -21,9 +21,7 @@ export async function makeTextAction(
 	const currentFile = maybeFile.data;
 
 	// Create TextsManagerService instance
-	const textsManagerService = new TextsManagerService(
-		openedFileService.getApp()
-	);
+	const textsManagerService = new Currator(openedFileService.getApp());
 
 	// Check if metaInfo is empty
 	const hasEmptyMeta = await textsManagerService.hasEmptyMetaInfo(currentFile);
