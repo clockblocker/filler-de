@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { SPACE_F, BIRD } from '../../../../types/beta/literals';
 import { LINE_BREAK } from '../../../note-block-manager/note-block-management/types-and-constants';
 import { reEscape } from '../../../text-utils';
-import { LinkedQuote } from '../../types';
+import type { LinkedQuote } from '../../types';
 
 export const LINKED_QUOTE = {
 	make({ text, linkId }: LinkedQuote) {
@@ -31,7 +31,7 @@ export function extractFormattedLinkedQuote(
 	if (!m?.groups) return null;
 
 	const parsed = LINKED_QUOTE.schema.safeParse({
-		text: m.groups.text.trim(),
+		text: m.groups.text?.trim(),
 		linkId: m.groups.linkId,
 	});
 	return parsed.success ? parsed.data : null;

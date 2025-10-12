@@ -1,6 +1,6 @@
 import { LINE_BREAK } from '../note-block-manager/note-block-management/types-and-constants';
 import { META_INFO_FORMATTER } from './formatters/meta-info-formatter';
-import { MetaInfo } from './types';
+import type { MetaInfo } from './types';
 
 /**
  * Extracts the MetaInfo object from a string containing a special section.
@@ -17,9 +17,11 @@ export function extractMetaInfo(str: string): MetaInfo | null {
 	const match = str.match(META_INFO_FORMATTER.pattern);
 	if (!match) return null;
 
-	const jsonStr = match[1].trim();
+	const jsonStr = match[1]?.trim();
 
-	const parsed = META_INFO_FORMATTER.schema.safeParse(JSON.parse(jsonStr));
+	const parsed = META_INFO_FORMATTER.schema.safeParse(
+		JSON.parse(jsonStr ?? '')
+	);
 	return parsed.success ? parsed.data : null;
 }
 

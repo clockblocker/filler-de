@@ -1,4 +1,4 @@
-import { LinkedQuote } from './types';
+import type { LinkedQuote } from './types';
 import { HASH } from '../../types/beta/literals';
 import {
 	extractFormattedLinkedQuote,
@@ -54,7 +54,7 @@ export function segmentInQuotedLines({
 		const sentencesInLine = segmentWithColonPrepass(line);
 
 		// Build blocks from sentencesInLine, merging short sentences with previous block
-		const blockTextsInLine = [];
+		const blockTextsInLine: string[] = [];
 		for (const sentence of sentencesInLine) {
 			const wordCount = sentence.trim().split(/\s+/).filter(Boolean).length;
 			if (wordCount <= 4 && blockTextsInLine.length > 0) {

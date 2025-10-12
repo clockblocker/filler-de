@@ -1,4 +1,4 @@
-import { PathParts } from '../../types/general';
+import type { PathParts } from '../../types/general';
 
 export type ChapterItem = {
 	pathParts: string[];

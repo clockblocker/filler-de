@@ -3,16 +3,16 @@ import {
 	NoteBlockId,
 	NEW_LINE,
 	ALL_BLOCK_IDS,
-	BlockStructure,
 	BLOCK_DELIMETER,
 	SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS,
-	ContentFromNoteBlockId,
-	BlockRepr,
-	FileContent,
-	BlockContent,
 	noteBlockPropsFromNoteBlockId,
 	NOTE_BLOCK_TITLE_CSS_CLASS,
 	makeBlockHeaderElementFromNoteBlockId,
+	type BlockContent,
+	type BlockRepr,
+	type BlockStructure,
+	type ContentFromNoteBlockId,
+	type FileContent,
 } from './types-and-constants';
 
 function getBlockRegex({ blockId }: { blockId: NoteBlockId }): RegExp {
@@ -33,7 +33,7 @@ function extractBlockContent({
 }): BlockContent {
 	const regex = getBlockRegex({ blockId });
 	const match = regex.exec(content);
-	return match ? match[2].trim() : '';
+	return match ? (match[2] ?? '').trim() : '';
 }
 
 function BUILD_blockContentFromId_FROM_fileContent(

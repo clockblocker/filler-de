@@ -1,4 +1,4 @@
-import { Optional } from '../../types/helpers';
+import type { Optional } from '../../types/helpers';
 
 type FullQuote = {
 	fileName: string;

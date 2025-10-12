@@ -1,4 +1,4 @@
-import { ChapterItem, ChapterSerializeOptions } from '../types';
+import type { ChapterItem, ChapterSerializeOptions } from '../types';
 
 export function chapterItemsToMarkdown(
 	items: ChapterItem[],

@@ -1,5 +1,5 @@
 import { SLASH } from '../../types/beta/literals';
-import { PrettyPath } from '../../types/general';
+import type { PrettyPath } from '../../types/general';
 
 export function systemPathToPrettyPath(path: string): PrettyPath {
 	if (!path || path === '/') return { pathParts: [], title: '' };

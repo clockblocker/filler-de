@@ -1,5 +1,5 @@
 import { Vault, TFile, MetadataCache, Editor, Notice } from 'obsidian';
-import { Backlink } from 'prompts/endgame/zod/types';
+import type { Backlink } from '../../../prompts/endgame/zod/types';
 
 export async function addLinksToRelatedToBlock(
 	vault: Vault,

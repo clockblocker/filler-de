@@ -24,6 +24,10 @@
 		// Some stricter flags (disabled by default)
 		"noUnusedLocals": false,
 		"noUnusedParameters": false,
-		"noPropertyAccessFromIndexSignature": false
+		"noPropertyAccessFromIndexSignature": false,
+
+		// Override Bun's default settings that might affect discriminated unions
+		"isolatedModules": false,
+		"strictNullChecks": true
 	}
 }

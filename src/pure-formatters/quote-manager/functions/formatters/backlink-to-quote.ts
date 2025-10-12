@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { BacklinkToQuote } from '../../types';
+import type { BacklinkToQuote } from '../../types';
 import { reEscape, reEscapeCharClass } from '../../../text-utils';
 import {
 	PIPE,
@@ -37,8 +37,7 @@ const BACKLINK_TO_QUOTE = {
 } as const;
 
 export function makeFormattedBacklinkToQuote(input: BacklinkToQuote) {
-	const { fileName = '', linkId = '' as any } = input;
-	return BACKLINK_TO_QUOTE.make({ fileName, linkId });
+	return BACKLINK_TO_QUOTE.make(input);
 }
 
 export function extractFormattedBacklinkToQuote(

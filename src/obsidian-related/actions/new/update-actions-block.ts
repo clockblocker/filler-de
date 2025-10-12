@@ -51,7 +51,7 @@ function extractBaseForms(text: string): string[] | null {
 
 	const [_, base, comparative, superlative] = match;
 
-	return [base, comparative, superlative];
+	return [base ?? '', comparative ?? '', superlative ?? ''];
 }
 
 function extractAdjectiveForms(text: string): string {
@@ -81,7 +81,7 @@ function extractFirstBracketedWord(text: string) {
 
 function getIPAIndexes(str: string) {
 	const regex = /\[(?!\[)(.*?)(?<!\])\]/g;
-	const matches = [];
+	const matches: [number, number][] = [];
 	let match;
 
 	while ((match = regex.exec(str)) !== null) {

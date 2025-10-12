@@ -1,4 +1,4 @@
-import { Backlink } from 'prompts/endgame/zod/types';
+import type { Backlink } from '../../../prompts/endgame/zod/types';
 
 // plugin: TextEaterPlugin, file: TFile, word: string
 export async function tags(): Promise<{

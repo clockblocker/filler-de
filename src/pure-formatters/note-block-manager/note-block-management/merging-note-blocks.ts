@@ -1,7 +1,7 @@
 import {
-	ContentFromNoteBlockId,
+	type ContentFromNoteBlockId,
 	NoteBlockId,
-	BlockContent,
+	type BlockContent,
 	ALL_BLOCK_IDS,
 	NEW_LINE,
 	VERTIKAL_STICK,
@@ -65,7 +65,7 @@ export const joinLinesWithVertikalStick: BlocksMerger = (contents) => {
 
 		linesInContents.forEach((lines) => {
 			if (i < lines.length) {
-				lineParts.push(lines[i]);
+				lineParts.push(lines[i] ?? '');
 			} else {
 				lineParts.push('');
 			}
@@ -113,7 +113,7 @@ export const lastReplaces: BlocksMerger = (contents) => {
 		return '';
 	}
 
-	return trimmedAndFilteredContents[lastIndex];
+	return trimmedAndFilteredContents[lastIndex] ?? '';
 };
 
 const mergerFromNoteBlockId: Record<NoteBlockId, BlocksMerger> = {

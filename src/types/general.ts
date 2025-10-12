@@ -11,7 +11,7 @@ export function unwrapMaybe<T>(maybe: Maybe<T>, whoCalled?: string): T {
 	if (maybe.error) {
 		console.error(`${whoCalled ?? ''} ${maybe.description}`);
 		throw new Error(maybe.description);
-	} else if ('data' in maybe) {
-		return maybe.data;
 	}
+
+	return maybe.data;
 }

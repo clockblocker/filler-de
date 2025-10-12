@@ -1,4 +1,4 @@
-import { NormalizeOptions, ChapterItem } from '../types';
+import type { NormalizeOptions, ChapterItem } from '../types';
 
 /**
  * Do NOT use for parsing the user's input
@@ -37,7 +37,7 @@ export function markdownToChapterItems(
 			// Build path from known groups at shallower depths
 			const pathParts: string[] = [];
 			for (let d = 0; d < depth; d++) {
-				if (groupAtDepth[d]) pathParts.push(groupAtDepth[d]);
+				if (groupAtDepth[d]) pathParts.push(groupAtDepth[d] ?? '');
 			}
 
 			items.push({
@@ -114,7 +114,7 @@ function pullWikiLink(
 	if (!m || !m.groups) return null;
 	const target = m.groups['target'];
 	const display = m.groups['display'];
-	return { target, display };
+	return { target: target ?? '', display: display ?? '' };
 }
 
 /**

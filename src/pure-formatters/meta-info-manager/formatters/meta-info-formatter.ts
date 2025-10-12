@@ -1,4 +1,4 @@
-import { MetaInfo, MetaInfoSchema } from '../types';
+import { type MetaInfo, MetaInfoSchema } from '../types';
 import { reEscape } from '../../text-utils';
 
 const META_SECTION_ID = 'textfresser_meta_keep_me_invisible';
