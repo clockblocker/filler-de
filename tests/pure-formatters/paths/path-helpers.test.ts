@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'bun:test';
 
 import {
 	systemPathToPrettyPath,
@@ -9,7 +9,7 @@ import {
 	pathToFolderFromPathParts,
 	joinPosix,
 } from '../../../src/pure-formatters/paths/path-helpers';
-import { PrettyPath } from '../../../src/types/general';
+import type { PrettyPath } from '../../../src/types/general';
 
 describe('path-helpers', () => {
 	describe('systemPathToPrettyPath', () => {

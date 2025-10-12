@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'bun:test';
 import { splitOnDoubleColon } from '../../src/pure-formatters/quote-manager/functions/splitters/split-on-colon';
 
 const directMatches = [

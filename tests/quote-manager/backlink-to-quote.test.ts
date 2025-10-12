@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'bun:test';
 import {
 	STAR,
 	OBSIDIAN_LINK_OPEN,
@@ -29,20 +29,20 @@ describe('makeFormattedBacklinkToQuote', () => {
 		const fileName = 'My Note';
 		const linkId = 123;
 		const result = makeFormattedBacklinkToQuote({ fileName, linkId });
-		expect(result).toBe(expectedBacklink(fileName, linkId));
+		expect(result).toBe(expectedBacklink(fileName, linkId) as any);
 	});
 
 	it('works with allowed punctuation in filename', () => {
 		const fileName = 'Project (alpha) – draft';
 		const linkId = 0;
 		const result = makeFormattedBacklinkToQuote({ fileName, linkId });
-		expect(result).toBe(expectedBacklink(fileName, linkId));
+		expect(result).toBe(expectedBacklink(fileName, linkId) as any);
 	});
 
 	it('falls back to empty parts if fields missing', () => {
 		// @ts-expect-error testing runtime fallback behavior
 		const result = makeFormattedBacklinkToQuote({});
-		expect(result).toBe(expectedBacklink('', ''));
+		expect(result).toBe(expectedBacklink('', '') as any);
 	});
 });
 

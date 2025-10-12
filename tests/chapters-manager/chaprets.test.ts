@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'bun:test';
 import { chapterItemsToMarkdown } from '../../src/pure-formatters/chapters-manager/formatters/chaprets-deserialiser';
 import { markdownToChapterItems } from '../../src/pure-formatters/chapters-manager/formatters/chaptres-serializer';
 import { ChapterItem } from '../../src/pure-formatters/chapters-manager/types';
