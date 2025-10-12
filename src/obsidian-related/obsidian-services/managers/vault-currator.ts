@@ -12,7 +12,7 @@ export interface TextStructure {
 	textsRootFile?: TFile;
 }
 
-export class Currator {
+export class VaultCurrator {
 	constructor(private app: App) {}
 
 	/**
@@ -29,20 +29,16 @@ export class Currator {
 		const vault = this.app.vault;
 		const fileName = currentFile.basename;
 
-		// Create Texts folder structure
 		await this.ensureTextsFolderStructure(vault);
 
-		// Create text root file
 		const textRootFile = await this.createTextRootFile(
 			vault,
 			fileName,
 			content
 		);
 
-		// Split content into pages
 		const pages = await this.createPagesFromContent(vault, fileName, content);
 
-		// Update Texts.md with link to the new text
 		await this.updateTextsRootFile(vault, fileName);
 		const textsRootFile = await this.getTextsRootFile(vault);
 
@@ -57,9 +53,6 @@ export class Currator {
 		};
 	}
 
-	/**
-	 * Checks if the current file has empty metaInfo
-	 */
 	async hasEmptyMetaInfo(file: TFile) {
 		const content = await this.app.vault.read(file);
 
@@ -67,17 +60,11 @@ export class Currator {
 		return !metaInfo;
 	}
 
-	/**
-	 * Gets the current page number from a page file
-	 */
 	getPageNumber(pageFile: TFile): number {
 		const match = pageFile.basename.match(/^(\d{4})-/);
 		return match ? parseInt(match[1], 10) : 0;
 	}
 
-	/**
-	 * Gets the next page file in sequence
-	 */
 	async getNextPage(currentPageFile: TFile): Promise<TFile | null> {
 		const currentPageNumber = this.getPageNumber(currentPageFile);
 		const nextPageNumber = currentPageNumber + 1;
@@ -92,9 +79,6 @@ export class Currator {
 		);
 	}
 
-	/**
-	 * Gets the previous page file in sequence
-	 */
 	async getPreviousPage(currentPageFile: TFile): Promise<TFile | null> {
 		const currentPageNumber = this.getPageNumber(currentPageFile);
 		if (currentPageNumber <= 0) return null;
@@ -111,19 +95,14 @@ export class Currator {
 		);
 	}
 
-	/**
-	 * Ensures the Texts folder structure exists
-	 */
 	private async ensureTextsFolderStructure(vault: Vault): Promise<void> {
 		const textsFolder = 'Texts';
 		const textsFile = `${textsFolder}/Texts.md`;
 
-		// Create Texts folder if it doesn't exist
 		if (!vault.getAbstractFileByPath(textsFolder)) {
 			await vault.createFolder(textsFolder);
 		}
 
-		// Create Texts.md if it doesn't exist
 		if (!vault.getAbstractFileByPath(textsFile)) {
 			const textsContent = `# Texts\n\nThis is the root file for all texts.\n\n`;
 			const metaInfo: MetaInfo = { fileType: ROOT };
@@ -132,9 +111,6 @@ export class Currator {
 		}
 	}
 
-	/**
-	 * Creates the text root file (xxx.md)
-	 */
 	private async createTextRootFile(
 		vault: Vault,
 		fileName: string,
@@ -142,13 +118,11 @@ export class Currator {
 	): Promise<TFile> {
 		const textRootPath = `Texts/${fileName}/${fileName}.md`;
 
-		// Create the text folder
 		const textFolder = `Texts/${fileName}`;
 		if (!vault.getAbstractFileByPath(textFolder)) {
 			await vault.createFolder(textFolder);
 		}
 
-		// Create the text root file
 		const metaInfo: MetaInfo = { fileType: TEXT_ROOT };
 		const contentWithMeta = editOrAddMetaInfo(content, metaInfo);
 		await vault.create(textRootPath, contentWithMeta);
@@ -156,9 +130,6 @@ export class Currator {
 		return vault.getAbstractFileByPath(textRootPath) as TFile;
 	}
 
-	/**
-	 * Creates pages from content by splitting it
-	 */
 	private async createPagesFromContent(
 		vault: Vault,
 		fileName: string,
@@ -166,12 +137,10 @@ export class Currator {
 	): Promise<TFile[]> {
 		const pagesFolder = `Texts/${fileName}/Pages`;
 
-		// Create Pages folder
 		if (!vault.getAbstractFileByPath(pagesFolder)) {
 			await vault.createFolder(pagesFolder);
 		}
 
-		// Split content into pages (simple split by double newlines for now)
 		const pageContents = this.splitContentIntoPages(content);
 		const pages: TFile[] = [];
 
@@ -191,16 +160,11 @@ export class Currator {
 		return pages;
 	}
 
-	/**
-	 * Splits content into pages (simple implementation)
-	 */
 	private splitContentIntoPages(content: string): string[] {
-		// Simple split by double newlines, can be made more sophisticated
 		const pages = content
 			.split('\n\n')
 			.filter((page) => page.trim().length > 0);
 
-		// If no double newlines, split by single newlines
 		if (pages.length === 1) {
 			return content.split('\n').filter((line) => line.trim().length > 0);
 		}
@@ -208,9 +172,6 @@ export class Currator {
 		return pages;
 	}
 
-	/**
-	 * Updates Texts.md with a link to the new text
-	 */
 	private async updateTextsRootFile(
 		vault: Vault,
 		fileName: string

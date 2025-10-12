@@ -5,10 +5,14 @@
 - [ ] renaming a page/text shall rename all of the files
 - [ ] keep unedited text as a separate doc in texts folder
 - [x] meta shall always be at the end of file
+- Codex instad of root
 
-
-
-
+### Actions
+- All actions on one sidebar
+- Action set changes depending on the:
+    1) File meta data
+    2) cursor position
+    3) selection presence / contents 
 
 ### Techdebt
 - [ ] Single locations for lestenind for scrolls (reattaching selection menu)

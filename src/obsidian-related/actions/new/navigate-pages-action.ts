@@ -1,5 +1,5 @@
 import { TexfresserObsidianServices } from '../../obsidian-services/interface';
-import { Currator } from '../../obsidian-services/managers/currator';
+import { VaultCurrator } from '../../obsidian-services/managers/vault-currator';
 
 export async function navigatePagesAction(
 	services: Partial<TexfresserObsidianServices>,
@@ -22,7 +22,7 @@ export async function navigatePagesAction(
 	const currentFile = maybeFile.data;
 
 	// Create TextsManagerService instance
-	const textsManagerService = new Currator(openedFileService.getApp());
+	const textsManagerService = new VaultCurrator(openedFileService.getApp());
 
 	try {
 		let targetPage: any = null;

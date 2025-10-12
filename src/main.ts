@@ -6,7 +6,7 @@ import { ApiService } from './obsidian-related/obsidian-services/atomic-services
 import newGenCommand from 'obsidian-related/actions/new/new-gen-command';
 import { OpenedFileService } from 'obsidian-related/obsidian-services/atomic-services/opened-file-service';
 import { BackgroundFileService } from 'obsidian-related/obsidian-services/atomic-services/background-file-service';
-import { Currator } from 'obsidian-related/obsidian-services/managers/currator';
+import { VaultCurrator } from 'obsidian-related/obsidian-services/managers/vault-currator';
 import addBacklinksToCurrentFile from 'obsidian-related/actions/old/addBacklinksToCurrentFile';
 import { AboveSelectionToolbarService } from 'obsidian-related/obsidian-services/atomic-services/above-selection-toolbar-service';
 import { BottomToolbarService } from 'obsidian-related/obsidian-services/atomic-services/bottom-toolbar-service';
@@ -27,7 +27,7 @@ export default class TextEaterPlugin extends Plugin {
 	openedFileService: OpenedFileService;
 	backgroundFileService: BackgroundFileService;
 	selectionService: SelectionService;
-	textsManagerService: Currator;
+	textsManagerService: VaultCurrator;
 
 	selectionToolbarService: AboveSelectionToolbarService;
 	bottomToolbarService: BottomToolbarService;
@@ -53,7 +53,7 @@ export default class TextEaterPlugin extends Plugin {
 		this.backgroundFileService = new BackgroundFileService(this.app.vault);
 		this.selectionToolbarService = new AboveSelectionToolbarService(this.app);
 		this.selectionService = new SelectionService(this.app);
-		this.textsManagerService = new Currator(this.app);
+		this.textsManagerService = new VaultCurrator(this.app);
 
 		this.registerDomEvent(document, 'click', makeClickListener(this));
 
