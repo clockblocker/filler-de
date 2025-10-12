@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { TexfresserObsidianServices } from '../obsidian-services/interface';
+import type { TexfresserObsidianServices } from '../obsidian-services/interface';
 
 const USER_ACTION_LITERALS = [
 	'Generate',

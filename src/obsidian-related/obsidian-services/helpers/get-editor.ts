@@ -1,5 +1,5 @@
 import { App, Editor, MarkdownView } from 'obsidian';
-import { Maybe } from 'types/general';
+import { unwrapMaybe, type Maybe } from '../../../types/general';
 
 export async function getMaybeEditor(app: App): Promise<Maybe<Editor>> {
 	try {
@@ -19,6 +19,6 @@ export async function getEditor(app: App): Promise<Editor> {
 		throw new Error(mbEditor.description ?? 'No active editor');
 	}
 
-	const editor = mbEditor.data;
+	const editor = unwrapMaybe(mbEditor);
 	return editor;
 }

@@ -1,11 +1,11 @@
 import { Vault, TFile, TFolder } from 'obsidian';
 import {
-	Maybe,
-	PathParts,
-	PrettyPath,
+	type Maybe,
+	type PathParts,
+	type PrettyPath,
 	unwrapMaybe,
 } from '../../../types/general';
-import { SLASH } from 'types/beta/literals';
+import { SLASH } from '../../../types/beta/literals';
 import { logError, logWarning } from '../helpers/issue-handlers';
 import {
 	systemPathToFileFromPrettyPath,
@@ -106,9 +106,9 @@ export class BackgroundFileService {
 		prettyPath: PrettyPath
 	): Promise<Maybe<Array<TFile>>> {
 		const maybeFile = await this.getMaybeFileByPrettyPath(prettyPath);
-		if (maybeFile.error) return maybeFile;
+		const file = unwrapMaybe(maybeFile);
 
-		return this.getSiblingsOfFile(maybeFile.data);
+		return this.getSiblingsOfFile(file);
 	}
 
 	async createManyFiles(
@@ -149,13 +149,8 @@ export class BackgroundFileService {
 				continue; // skip if already exists
 			}
 
-			const folder = await this.createMaybeFolderBySystemPath(path);
-
-			if (folder.error) {
-				errors.push(`${path}: ${folder.description}`);
-				continue;
-			}
-			created.push(folder.data);
+			const maybeFolder = await this.createMaybeFolderBySystemPath(path);
+			created.push(unwrapMaybe(maybeFolder));
 		}
 
 		if (errors.length > 0) {
@@ -180,11 +175,13 @@ export class BackgroundFileService {
 				systemPath,
 				newName
 			);
+
 			if (maybeFolder.error) {
 				errors.push(`${prettyPath}: ${maybeFolder.description}`);
 				continue;
 			}
-			renamed.push(maybeFolder.data);
+
+			renamed.push(unwrapMaybe(maybeFolder));
 		}
 
 		if (errors.length > 0) {
@@ -214,7 +211,8 @@ export class BackgroundFileService {
 				errors.push(`${prettyPath}: ${maybeFile.description}`);
 				continue;
 			}
-			renamed.push(maybeFile.data);
+
+			renamed.push(unwrapMaybe(maybeFile));
 		}
 
 		if (errors.length > 0) {
@@ -233,7 +231,7 @@ export class BackgroundFileService {
 		const maybeFile = await this.getMaybeFileByPrettyPath(prettyPath);
 		if (maybeFile.error) return maybeFile;
 
-		const parent = maybeFile.data.parent;
+		const parent = unwrapMaybe(maybeFile).parent;
 
 		if (!parent) {
 			return { error: true, description: 'File does not have a parent' };
@@ -421,7 +419,8 @@ export class BackgroundFileService {
 				errors.push(`${path}: ${file.description}`);
 				continue;
 			}
-			created.push(file.data);
+
+			created.push(unwrapMaybe(file));
 		}
 
 		if (errors.length > 0) {

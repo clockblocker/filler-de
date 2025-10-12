@@ -1,4 +1,4 @@
-import { TexfresserObsidianServices } from '../../obsidian-services/interface';
+import type { TexfresserObsidianServices } from '../../obsidian-services/interface';
 import { executeButtonAction } from './execute-button-actions';
 import { handleLinkElementClicked } from './handle-link-element-clicked';
 

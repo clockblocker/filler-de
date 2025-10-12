@@ -1,6 +1,6 @@
 import { App, MarkdownView } from 'obsidian';
 import { EditorView } from '@codemirror/view';
-import { AnyActionConfig } from 'obsidian-related/actions/types';
+import type { AnyActionConfig } from '../../actions/types';
 
 export class AboveSelectionToolbarService {
 	private toolbarEl: HTMLDivElement | null = null;

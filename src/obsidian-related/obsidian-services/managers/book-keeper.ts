@@ -4,8 +4,7 @@ import {
 	extractMetaInfo,
 	editOrAddMetaInfo,
 } from '../../../pure-formatters/meta-info-manager/interface';
-import { MetaInfo } from '../../../pure-formatters/meta-info-manager/types';
-import { PrettyPath } from '../../../types/general';
+import type { PrettyPath } from '../../../types/general';
 
 export class BookKeeper {
 	constructor() {}

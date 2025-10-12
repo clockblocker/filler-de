@@ -1,4 +1,9 @@
-import { TexfresserObsidianServices } from '../../obsidian-services/interface';
+import { unwrapMaybe } from '../../../types/general';
+import {
+	logError,
+	logWarning,
+} from '../../obsidian-services/helpers/issue-handlers';
+import type { TexfresserObsidianServices } from '../../obsidian-services/interface';
 import { VaultCurrator } from '../../obsidian-services/managers/vault-currator';
 
 export async function navigatePagesAction(
@@ -12,16 +17,9 @@ export async function navigatePagesAction(
 		return;
 	}
 
-	// Get the currently opened file
 	const maybeFile = await openedFileService.getMaybeOpenedFile();
-	if (maybeFile.error) {
-		console.error('No active markdown file');
-		return;
-	}
+	const currentFile = unwrapMaybe(maybeFile);
 
-	const currentFile = maybeFile.data;
-
-	// Create TextsManagerService instance
 	const textsManagerService = new VaultCurrator(openedFileService.getApp());
 
 	try {
@@ -36,9 +34,15 @@ export async function navigatePagesAction(
 		if (targetPage) {
 			await openedFileService.openFile(targetPage);
 		} else {
-			console.log(`No ${direction} page found`);
+			logWarning({
+				description: `No ${direction} page found`,
+				location: 'navigatePagesAction',
+			});
 		}
 	} catch (error) {
-		console.error(`Error navigating to ${direction} page:`, error);
+		logError({
+			description: `Error navigating to ${direction} page: ${error}`,
+			location: 'navigatePagesAction',
+		});
 	}
 }

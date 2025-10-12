@@ -1,7 +1,7 @@
 import { Notice } from 'obsidian';
-import { unwrapMaybe } from 'types/general';
+import { unwrapMaybe } from '../../../types/general';
 import { LONG_DASH } from '../../../types/beta/literals';
-import { TexfresserObsidianServices } from '../../obsidian-services/interface';
+import type { TexfresserObsidianServices } from '../../obsidian-services/interface';
 
 export default async function newGenCommand(
 	services: TexfresserObsidianServices

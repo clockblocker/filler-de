@@ -1,17 +1,17 @@
 import { Editor, MarkdownView, Plugin, TFile, WorkspaceLeaf } from 'obsidian';
 import { SettingsTab } from './settings';
-import { DEFAULT_SETTINGS, TextEaterSettings } from './types';
+import { DEFAULT_SETTINGS, type TextEaterSettings } from './types';
 import { ApiService } from './obsidian-related/obsidian-services/atomic-services/api-service';
 
-import newGenCommand from 'obsidian-related/actions/new/new-gen-command';
-import { OpenedFileService } from 'obsidian-related/obsidian-services/atomic-services/opened-file-service';
-import { BackgroundFileService } from 'obsidian-related/obsidian-services/atomic-services/background-file-service';
-import { VaultCurrator } from 'obsidian-related/obsidian-services/managers/vault-currator';
-import addBacklinksToCurrentFile from 'obsidian-related/actions/old/addBacklinksToCurrentFile';
-import { AboveSelectionToolbarService } from 'obsidian-related/obsidian-services/atomic-services/above-selection-toolbar-service';
-import { BottomToolbarService } from 'obsidian-related/obsidian-services/atomic-services/bottom-toolbar-service';
-import { ACTION_CONFIGS } from 'obsidian-related/actions/actions-config';
-import { SelectionService } from 'obsidian-related/obsidian-services/atomic-services/selection-service';
+import newGenCommand from './obsidian-related/actions/new/new-gen-command';
+import { OpenedFileService } from './obsidian-related/obsidian-services/atomic-services/opened-file-service';
+import { BackgroundFileService } from './obsidian-related/obsidian-services/atomic-services/background-file-service';
+import { VaultCurrator } from './obsidian-related/obsidian-services/managers/vault-currator';
+import addBacklinksToCurrentFile from './obsidian-related/actions/old/addBacklinksToCurrentFile';
+import { AboveSelectionToolbarService } from './obsidian-related/obsidian-services/atomic-services/above-selection-toolbar-service';
+import { BottomToolbarService } from './obsidian-related/obsidian-services/atomic-services/bottom-toolbar-service';
+import { ACTION_CONFIGS } from './obsidian-related/actions/actions-config';
+import { SelectionService } from './obsidian-related/obsidian-services/atomic-services/selection-service';
 import { makeClickListener } from './obsidian-related/event-listeners/click-listener/click-listener';
 import { logError } from './obsidian-related/obsidian-services/helpers/issue-handlers';
 import { onNewFileThenRun } from './obsidian-related/event-listeners/create-new-file-listener/run-on-new-file';
@@ -32,7 +32,7 @@ export default class TextEaterPlugin extends Plugin {
 	selectionToolbarService: AboveSelectionToolbarService;
 	bottomToolbarService: BottomToolbarService;
 
-	async onload() {
+	override async onload() {
 		try {
 			await this.loadPlugin();
 			this.addSettingTab(new SettingsTab(this.app, this));
@@ -133,7 +133,7 @@ export default class TextEaterPlugin extends Plugin {
 		);
 	}
 
-	onunload() {
+	override onunload() {
 		if (this.bottomToolbarService) this.bottomToolbarService.detach();
 		if (this.selectionToolbarService) this.selectionToolbarService.detach();
 	}

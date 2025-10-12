@@ -1,8 +1,8 @@
 import {
 	FileType,
-	MetaInfo,
+	type MetaInfo,
 } from '../../pure-formatters/meta-info-manager/types';
-import { PathParts } from '../../types/general';
+import type { PathParts } from '../../types/general';
 import {
 	ACTION_CONFIGS,
 	CHANGE_FILE_TYPE_ACTIONS,
@@ -11,7 +11,7 @@ import {
 	NAVIGATE_PAGES_ACTIONS,
 	OPTIONAL_BOTTOM_ACTIONS,
 } from './actions-config';
-import { AnyActionConfig } from './types';
+import type { AnyActionConfig } from './types';
 
 export const getBottomActionConfigs = ({
 	metaInfo,

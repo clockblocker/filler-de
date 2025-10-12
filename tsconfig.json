@@ -1,19 +1,29 @@
 {
 	"compilerOptions": {
-		"baseUrl": "src",
-		"inlineSourceMap": true,
-		"inlineSources": true,
-		"module": "ESNext",
+		// Environment setup & latest features
+		"lib": ["ESNext", "DOM"],
+		"types": ["obsidian"],
 		"target": "ESNext",
+		"module": "Preserve",
+		"moduleDetection": "force",
 		"allowJs": true,
-		"noImplicitAny": true,
-		"moduleResolution": "node",
-		"importHelpers": true,
-		"isolatedModules": true,
-		"strictNullChecks": true,
-		"lib": ["DOM", "ES5", "ES6", "ES7", "ES2021"],
+
+		// Bundler mode
+		"moduleResolution": "bundler",
+		"allowImportingTsExtensions": true,
+		"verbatimModuleSyntax": true,
+		"noEmit": true,
+
+		// Best practices
+		"strictPropertyInitialization": false,
 		"skipLibCheck": true,
-		"types": ["node", "codemirror", "tern"]
-	},
-	"include": ["**/*.ts"]
+		"noFallthroughCasesInSwitch": true,
+		"noUncheckedIndexedAccess": true,
+		"noImplicitOverride": true,
+
+		// Some stricter flags (disabled by default)
+		"noUnusedLocals": false,
+		"noUnusedParameters": false,
+		"noPropertyAccessFromIndexSignature": false
+	}
 }

@@ -1,8 +1,8 @@
 import {
-	CollocationStrength,
 	LinguisticUnit,
 	PhrasemeType,
-} from 'types/beta/linguistics/general-linguistic-enums/linguistics-enums';
+	CollocationStrength,
+} from '../../linguistics/general-linguistic-enums/linguistics-enums';
 
 const noteTree = {
 	[LinguisticUnit.Phrasem]: {

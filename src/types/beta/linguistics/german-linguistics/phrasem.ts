@@ -1,14 +1,14 @@
 import { z } from 'zod';
 import {
-	PartOfSpeech,
 	PartOfSpeechSchema,
 	PhrasemeType,
 	CollocationTypeSchema,
 	CollocationStrengthSchema,
 	DiscourseFormulaRoleSchema,
+	PartOfSpeech,
 	CollocationType,
 	CollocationStrength,
-} from 'types/beta/linguistics/general-linguistic-enums/linguistics-enums';
+} from '../general-linguistic-enums/linguistics-enums';
 
 const PhrasemeComponentSchema = z.object({
 	surface: z.string(),

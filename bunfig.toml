@@ -1,0 +1,5 @@
+[build]
+external = ["obsidian", "electron", "@codemirror/*"]
+platform = "node"
+target = "node18"
+format = "cjs"

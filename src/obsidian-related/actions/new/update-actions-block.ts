@@ -1,6 +1,6 @@
 import { Editor, MarkdownView, Notice, TFile } from 'obsidian';
 import TextEaterPlugin from '../../../main';
-import { unwrapMaybe } from 'types/general';
+import { unwrapMaybe } from '../../../types/general';
 import { LONG_DASH } from '../../../types/beta/literals';
 
 export default async function updateActionsBlock(plugin: TextEaterPlugin) {

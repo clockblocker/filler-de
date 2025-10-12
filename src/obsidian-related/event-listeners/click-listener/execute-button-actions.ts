@@ -1,6 +1,6 @@
 import { UserActionSchema, UserAction } from '../../actions/types';
 import { ACTION_CONFIGS } from '../../actions/actions-config';
-import { TexfresserObsidianServices } from '../../obsidian-services/interface';
+import type { TexfresserObsidianServices } from '../../obsidian-services/interface';
 
 export const executeButtonAction = ({
 	buttonElement,

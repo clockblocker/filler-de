@@ -1,14 +1,15 @@
 import newGenCommand from './new/new-gen-command';
-import {
-	ActionConfig,
-	ALL_USER_ACTIONS,
-	UserAction,
-	UserActionPlacement,
-} from 'obsidian-related/actions/types';
+
 import newTranslateSelection from './new/translateSelection';
 import newSplitCommand from './new/new-split-command';
 import { makeTextAction } from './new/make-text-action';
 import { navigatePagesAction } from './new/navigate-pages-action';
+import {
+	UserAction,
+	UserActionPlacement,
+	ALL_USER_ACTIONS,
+	type ActionConfig,
+} from './types';
 
 export const ACTION_CONFIGS = {
 	[UserAction.Generate]: {
