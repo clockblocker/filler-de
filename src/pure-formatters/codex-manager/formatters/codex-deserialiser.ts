@@ -1,8 +1,8 @@
-import type { ChapterItem, ChapterSerializeOptions } from '../types';
+import type { CodexChapter, CodexSerializeOptions } from '../types';
 
-export function chapterItemsToMarkdown(
-	items: ChapterItem[],
-	opts: ChapterSerializeOptions = {}
+export function codexChaptersToMarkdown(
+	chapters: CodexChapter[],
+	opts: CodexSerializeOptions = {}
 ): string {
 	const {
 		indent = '\t',
@@ -19,13 +19,13 @@ export function chapterItemsToMarkdown(
 	type Node = {
 		name: string;
 		children: Map<string, Node>;
-		leaves: ChapterItem[];
+		leaves: CodexChapter[];
 	};
 
 	const root: Node = { name: '__ROOT__', children: new Map(), leaves: [] };
 
 	// Build tree
-	for (const it of items) {
+	for (const it of chapters) {
 		let cur = root;
 		for (const part of it.pathParts) {
 			if (!cur.children.has(part)) {

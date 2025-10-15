@@ -1,4 +1,4 @@
-import type { NormalizeOptions, ChapterItem } from '../types';
+import type { CodexNormalizeOptions, CodexChapter } from '../types';
 
 /**
  * Do NOT use for parsing the user's input
@@ -6,8 +6,8 @@ import type { NormalizeOptions, ChapterItem } from '../types';
  */
 export function markdownToChapterItems(
 	md: string,
-	opts: NormalizeOptions = {}
-): ChapterItem[] {
+	opts: CodexNormalizeOptions = {}
+): CodexChapter[] {
 	const {
 		deriveTitleFromTarget = (t) => t.replace(/-index$/i, '').replace(/_/g, ' '),
 		spacesPerIndent = 2,
@@ -17,7 +17,7 @@ export function markdownToChapterItems(
 
 	// Track the latest group name at each depth
 	const groupAtDepth: string[] = [];
-	const items: ChapterItem[] = [];
+	const items: CodexChapter[] = [];
 
 	for (const raw of lines) {
 		if (!raw.trim()) continue;
@@ -127,7 +127,7 @@ function pullWikiLink(
  */
 export function normalizeMarkdownToPreview(
 	md: string,
-	opts: NormalizeOptions = {}
+	opts: CodexNormalizeOptions = {}
 ): string {
 	const {
 		deriveTitleFromTarget = (t) => t.replace(/-index$/i, '').replace(/_/g, ' '),

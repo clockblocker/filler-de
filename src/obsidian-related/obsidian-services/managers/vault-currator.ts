@@ -4,7 +4,7 @@ import {
 	extractMetaInfo,
 	editOrAddMetaInfo,
 } from '../../../pure-formatters/meta-info-manager/interface';
-import { MetaInfo } from '../../../pure-formatters/meta-info-manager/types';
+import type { MetaInfo } from '../../../pure-formatters/meta-info-manager/types';
 
 export interface TextStructure {
 	textRootFile: TFile;
@@ -62,7 +62,7 @@ export class VaultCurrator {
 
 	getPageNumber(pageFile: TFile): number {
 		const match = pageFile.basename.match(/^(\d{4})-/);
-		return match ? parseInt(match[1], 10) : 0;
+		return match ? parseInt(match[1] ?? '0', 10) : 0;
 	}
 
 	async getNextPage(currentPageFile: TFile): Promise<TFile | null> {
@@ -150,7 +150,7 @@ export class VaultCurrator {
 			const pagePath = `${pagesFolder}/${pageFileName}`;
 
 			const metaInfo: MetaInfo = { fileType: PAGE };
-			const pageContent = editOrAddMetaInfo(pageContents[i], metaInfo);
+			const pageContent = editOrAddMetaInfo(pageContents[i] ?? '', metaInfo);
 
 			await vault.create(pagePath, pageContent);
 			const pageFile = vault.getAbstractFileByPath(pagePath) as TFile;

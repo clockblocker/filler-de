@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'bun:test';
-import { chapterItemsToMarkdown } from '../../src/pure-formatters/chapters-manager/formatters/chaprets-deserialiser';
-import { markdownToChapterItems } from '../../src/pure-formatters/chapters-manager/formatters/chaptres-serializer';
-import type { ChapterItem } from '../../src/pure-formatters/chapters-manager/types';
+import { codexChaptersToMarkdown } from '../../src/pure-formatters/codex-manager/formatters/codex-deserialiser';
+import { markdownToChapterItems } from '../../src/pure-formatters/codex-manager/formatters/codex-serializer';
+import type { CodexChapter } from '../../src/pure-formatters/codex-manager/types';
 
 const jsonRoundtripTests = [
 	[
@@ -53,7 +53,7 @@ const mdRoundtripTests = [
 					   * [ ] [[Sonne-index|Sonne]]`,
 ];
 
-function sortItems(arr: ChapterItem[]) {
+function sortItems(arr: CodexChapter[]) {
 	return arr.slice().sort((a, b) => {
 		const pathA = a.pathParts.join('/') + '/' + a.title;
 		const pathB = b.pathParts.join('/') + '/' + b.title;
@@ -64,7 +64,7 @@ function sortItems(arr: ChapterItem[]) {
 describe('chapterItemsToMarkdown / markdownToChapterItems roundtrip', () => {
 	it('should roundtrip a complex chapter structure', () => {
 		for (const items of jsonRoundtripTests) {
-			const md = chapterItemsToMarkdown(items);
+			const md = codexChaptersToMarkdown(items);
 			const parsed = markdownToChapterItems(md);
 			expect(sortItems(parsed)).toEqual(sortItems(items));
 		}
@@ -76,7 +76,7 @@ describe('markdownToChapterItems / chapterItemsToMarkdown roundtrip', () => {
 		for (const md of mdRoundtripTests) {
 			const items = markdownToChapterItems(md);
 
-			const md2 = chapterItemsToMarkdown(items);
+			const md2 = codexChaptersToMarkdown(items);
 			const parsed = markdownToChapterItems(md2);
 
 			expect(sortItems(parsed)).toEqual(sortItems(items));
