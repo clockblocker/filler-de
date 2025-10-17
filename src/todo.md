@@ -23,14 +23,15 @@
     2) cursor position
     3) selection presence / contents 
 
+### UX
+- can we long press on quote?
+
 
 ### Techdebt
 - [ ] Single locations for lestenind for scrolls (reattaching selection menu)
 
 
-
 ### Done
-
 - [x] "Make this a text" button in bottom sidebar (visible if metaInfo is empty)
 - [x] Split content into pages
 - [x] Create 
