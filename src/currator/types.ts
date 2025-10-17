@@ -31,4 +31,4 @@ export type TreeNode = SectionNode | EntryNode;
 type TargetNodeName = NodeName;
 type PrevNodeNames = NodeName[];
 
-export type TreePath = [...PrevNodeNames[], TargetNodeName];
+export type TreePath = [...PrevNodeNames, TargetNodeName];
