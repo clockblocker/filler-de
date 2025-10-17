@@ -1,7 +1,7 @@
 import { unwrapMaybe } from '../../../types/general';
 import { logError } from '../../obsidian-services/helpers/issue-handlers';
 import type { TexfresserObsidianServices } from '../../obsidian-services/interface';
-import { VaultCurrator } from '../../obsidian-services/managers/vault-currator';
+// import { VaultCurrator } from '../../obsidian-services/managers/vault-currator';
 
 export async function makeTextAction(
 	services: Partial<TexfresserObsidianServices>
@@ -19,23 +19,23 @@ export async function makeTextAction(
 	const maybeFile = await openedFileService.getMaybeOpenedFile();
 	const currentFile = unwrapMaybe(maybeFile);
 
-	const textsManagerService = new VaultCurrator(openedFileService.getApp());
+	// const textsManagerService = new VaultCurrator(openedFileService.getApp());
 
-	const hasEmptyMeta = await textsManagerService.hasEmptyMetaInfo(currentFile);
-	if (!hasEmptyMeta) {
-		return;
-	}
+	// const hasEmptyMeta = await textsManagerService.hasEmptyMetaInfo(currentFile);
+	// if (!hasEmptyMeta) {
+	// 	return;
+	// }
 
 	try {
 		const maybeContent = await openedFileService.getMaybeFileContent();
 		const content = unwrapMaybe(maybeContent);
 
-		const textStructure = await textsManagerService.createTextFromCurrentFile(
-			currentFile,
-			content
-		);
+		// const textStructure = await textsManagerService.createTextFromCurrentFile(
+		// 	currentFile,
+		// 	content
+		// );
 
-		await openedFileService.openFile(textStructure.textRootFile);
+		// await openedFileService.openFile(textStructure.textRootFile);
 	} catch (error) {
 		logError({
 			description: `Error creating text structure: ${error}`,

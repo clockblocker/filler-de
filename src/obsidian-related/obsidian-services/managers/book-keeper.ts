@@ -1,5 +1,5 @@
 import { App, TFile, Vault } from 'obsidian';
-import { ROOT, TEXT_ROOT, PAGE } from '../../../types/beta/literals';
+import { CODEX } from '../../../types/beta/literals';
 import {
 	extractMetaInfo,
 	editOrAddMetaInfo,

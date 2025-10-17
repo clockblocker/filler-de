@@ -36,13 +36,13 @@ describe('makeFormattedBacklinkToQuote', () => {
 		const fileName = 'Project (alpha) – draft';
 		const linkId = 0;
 		const result = makeFormattedBacklinkToQuote({ fileName, linkId });
+		console.log('[makeFormattedBacklinkToQuote] result', result);
 		expect(result).toBe(expectedBacklink(fileName, linkId) as any);
 	});
 
-	it('falls back to empty parts if fields missing', () => {
-		// @ts-expect-error testing runtime fallback behavior
-		const result = makeFormattedBacklinkToQuote({});
-		expect(result).toBe(expectedBacklink('', '') as any);
+	it('throws if required fields are missing', () => {
+		// @ts-expect-error testing default runtime behavior
+		expect(() => makeFormattedBacklinkToQuote({})).toThrow();
 	});
 });
 

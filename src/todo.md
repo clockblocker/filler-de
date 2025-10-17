@@ -1,11 +1,20 @@
-### Todo
+### Currator
+- [ ] Read files in folder as pathparts + meta
+- [ ] Make meta comply with currated tree's types
+- [ ] Convert tree -> (pathparts + meta) tree
+- [ ] Convert correct (pathparts + meta) -> tree
+- [ ] Convert incorrect (pathparts + meta) -> tree + nodes
+- [ ] Handle rename
+- [ ] Handle moving files
+- [ ] Format Codexes
+- [ ] "Command + A" to select [
+        all below cursor and above meta, 
+        all above meta,
+        all
+    ]
 - [ ] Split content into pages by number of sentences 
-- [ ] format xxx.md as todo list
-- [ ] format Texts.md as todo list
-- [ ] renaming a page/text shall rename all of the files
-- [ ] keep unedited text as a separate doc in texts folder
-- [x] meta shall always be at the end of file
-- Codex instad of root
+
+
 
 ### Actions
 - All actions on one sidebar
@@ -13,6 +22,7 @@
     1) File meta data
     2) cursor position
     3) selection presence / contents 
+
 
 ### Techdebt
 - [ ] Single locations for lestenind for scrolls (reattaching selection menu)

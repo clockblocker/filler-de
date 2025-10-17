@@ -1,8 +1,8 @@
 import { z } from 'zod';
-import { TEXT_ROOT, ENTRIE, NOTE, ROOT, PAGE } from '../../types/beta/literals';
+import { ENTRY, PAGE, TEXT, CODEX } from '../../types/beta/literals';
 
 export type FileType = z.infer<typeof FileTypeSchema>;
-export const FileTypeSchema = z.enum([PAGE, ENTRIE, NOTE, ROOT, TEXT_ROOT]);
+export const FileTypeSchema = z.enum([CODEX, ENTRY, PAGE, TEXT]);
 export const FileType = FileTypeSchema.enum;
 export const ALL_FILE_TYPES = FileTypeSchema.options;
 

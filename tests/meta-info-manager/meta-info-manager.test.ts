@@ -4,7 +4,7 @@ import {
 	extractMetaInfo,
 	editOrAddMetaInfo,
 } from '../../src/pure-formatters/meta-info-manager/interface';
-import { PAGE, NOTE } from '../../src/types/beta/literals';
+import { PAGE } from '../../src/types/beta/literals';
 
 describe('meta-info manager', () => {
 	describe('extractMetaInfo', () => {
@@ -32,16 +32,16 @@ describe('meta-info manager', () => {
 	describe('editOrAddMetaInfo', () => {
 		it('replaces existing meta section content', () => {
 			const original = `Start\n<section id={textfresser_meta_keep_me_invisible}>\n{"fileType":"Page"}\n</section>\nEnd`;
-			const updated = editOrAddMetaInfo(original, { fileType: NOTE });
+			const updated = editOrAddMetaInfo(original, { fileType: PAGE });
 
 			// Expect the meta block to be replaced (not duplicated) and updated
 			expect(updated).toContain(
 				`<section id={textfresser_meta_keep_me_invisible}>`
 			);
-			expect(updated).toContain(`{"fileType":"Note"}`);
+			expect(updated).toContain(`{"fileType":"Page"}`);
 
 			const afterExtract = extractMetaInfo(updated);
-			expect(afterExtract).toEqual({ fileType: NOTE });
+			expect(afterExtract).toEqual({ fileType: PAGE });
 		});
 
 		it('appends a new meta section when none exists', () => {

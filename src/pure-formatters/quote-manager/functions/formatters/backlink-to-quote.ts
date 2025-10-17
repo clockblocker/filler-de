@@ -37,6 +37,9 @@ const BACKLINK_TO_QUOTE = {
 } as const;
 
 export function makeFormattedBacklinkToQuote(input: BacklinkToQuote) {
+	if (!input.fileName || input.linkId === undefined) {
+		throw new Error('fileName and linkId are required');
+	}
 	return BACKLINK_TO_QUOTE.make(input);
 }
 

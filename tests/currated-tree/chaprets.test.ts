@@ -2,7 +2,7 @@ import { describe, it, expect } from 'bun:test';
 import {
 	NodeStatus,
 	NodeType,
-	type EntryNode,
+	type TextNode,
 	type TreeNode,
 } from '../../src/currator/types';
 import { CurratedTree } from '../../src/currator/currated-tree';
@@ -21,14 +21,31 @@ const nodes = [
 					{
 						name: 'Episode_1',
 						status: NodeStatus.NotStarted,
-						numberOfPages: 5,
-						type: NodeType.Entry,
+						type: NodeType.Text,
+						children: [
+							{
+								type: NodeType.Page,
+								status: NodeStatus.NotStarted,
+								index: 0,
+							},
+						],
 					},
 					{
 						name: 'Episode_2',
 						status: NodeStatus.NotStarted,
-						numberOfPages: 3,
-						type: NodeType.Entry,
+						type: NodeType.Text,
+						children: [
+							{
+								status: NodeStatus.NotStarted,
+								type: NodeType.Page,
+								index: 0,
+							},
+							{
+								type: NodeType.Page,
+								status: NodeStatus.NotStarted,
+								index: 1,
+							},
+						],
 					},
 				],
 			},
@@ -40,14 +57,26 @@ const nodes = [
 					{
 						name: 'Episode_2',
 						status: NodeStatus.NotStarted,
-						numberOfPages: 1,
-						type: NodeType.Entry,
+						children: [
+							{
+								type: NodeType.Page,
+								status: NodeStatus.NotStarted,
+								index: 0,
+							},
+						],
+						type: NodeType.Text,
 					},
 					{
 						name: 'Episode_2',
 						status: NodeStatus.NotStarted,
-						numberOfPages: 7,
-						type: NodeType.Entry,
+						children: [
+							{
+								type: NodeType.Page,
+								status: NodeStatus.NotStarted,
+								index: 0,
+							},
+						],
+						type: NodeType.Text,
 					},
 				],
 			},
@@ -56,8 +85,14 @@ const nodes = [
 	{
 		name: 'Intro',
 		status: NodeStatus.NotStarted,
-		numberOfPages: 1,
-		type: NodeType.Entry,
+		type: NodeType.Text,
+		children: [
+			{
+				type: NodeType.Page,
+				status: NodeStatus.NotStarted,
+				index: 0,
+			},
+		],
 	},
 ] as const satisfies TreeNode[];
 
@@ -65,15 +100,15 @@ describe('CurratedTree', () => {
 	it('should get Intro by path', () => {
 		const tree = new CurratedTree(nodes);
 		const node = tree.getMaybeNode(['Intro']);
-		expect(node).toEqual({ error: false, data: nodes[1] as EntryNode });
+		expect(node).toEqual({ error: false, data: nodes[1] as TextNode });
 	});
-	
+
 	it('should get Avatar-Season_1-Episode_1 by path', () => {
 		const tree = new CurratedTree(nodes);
 		const node = tree.getMaybeNode(['Avatar', 'Season_1', 'Episode_1']);
 		expect(node).toEqual({
 			error: false,
-			data: nodes[0]?.children[0]?.children[0] as EntryNode,
+			data: nodes[0]?.children[0]?.children[0] as TextNode,
 		});
 	});
 
@@ -82,7 +117,7 @@ describe('CurratedTree', () => {
 		const node = tree.getMaybeNode(['Avatar', 'Season_2', 'Episode_2']);
 		expect(node).toEqual({
 			error: false,
-			data: nodes[0]?.children[1]?.children[0] as EntryNode,
+			data: nodes[0]?.children[1]?.children[0] as TextNode,
 		});
 	});
 

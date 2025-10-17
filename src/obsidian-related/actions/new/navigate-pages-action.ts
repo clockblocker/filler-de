@@ -4,7 +4,7 @@ import {
 	logWarning,
 } from '../../obsidian-services/helpers/issue-handlers';
 import type { TexfresserObsidianServices } from '../../obsidian-services/interface';
-import { VaultCurrator } from '../../obsidian-services/managers/vault-currator';
+// import { VaultCurrator } from '../../obsidian-services/managers/vault-currator';
 
 export async function navigatePagesAction(
 	services: Partial<TexfresserObsidianServices>,
@@ -20,15 +20,15 @@ export async function navigatePagesAction(
 	const maybeFile = await openedFileService.getMaybeOpenedFile();
 	const currentFile = unwrapMaybe(maybeFile);
 
-	const textsManagerService = new VaultCurrator(openedFileService.getApp());
+	// const textsManagerService = new VaultCurrator(openedFileService.getApp());
 
 	try {
 		let targetPage: any = null;
 
 		if (direction === 'prev') {
-			targetPage = await textsManagerService.getPreviousPage(currentFile);
+			// targetPage = await textsManagerService.getPreviousPage(currentFile);
 		} else {
-			targetPage = await textsManagerService.getNextPage(currentFile);
+			// targetPage = await textsManagerService.getNextPage(currentFile);
 		}
 
 		if (targetPage) {

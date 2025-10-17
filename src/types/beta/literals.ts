@@ -49,31 +49,40 @@ const DashSchema = z.literal('—');
 export type DASH = z.infer<typeof DashSchema>;
 export const DASH = DashSchema.value;
 
-// File types
-
+// Nodes
 export const TextSchema = z.literal('Text');
 export type TEXT = z.infer<typeof TextSchema>;
 export const TEXT = TextSchema.value;
 
-export const EntrieSchema = z.literal('Entrie');
-export type ENTRIE = z.infer<typeof EntrieSchema>;
-export const ENTRIE = EntrieSchema.value;
-
-export const NoteSchema = z.literal('Note');
-export type NOTE = z.infer<typeof NoteSchema>;
-export const NOTE = NoteSchema.value;
-
-export const RootSchema = z.literal('Root');
-export type ROOT = z.infer<typeof RootSchema>;
-export const ROOT = RootSchema.value;
+export const SectionSchema = z.literal('Section');
+export type SECTION = z.infer<typeof SectionSchema>;
+export const SECTION = SectionSchema.value;
 
 export const PageSchema = z.literal('Page');
 export type PAGE = z.infer<typeof PageSchema>;
 export const PAGE = PageSchema.value;
 
-const TextRootSchema = z.literal(`${TEXT}${ROOT}`);
-export type TEXT_ROOT = z.infer<typeof TextRootSchema>;
-export const TEXT_ROOT = TextRootSchema.value;
+// Meta
+export const CodexSchema = z.literal('Codex');
+export type CODEX = z.infer<typeof CodexSchema>;
+export const CODEX = CodexSchema.value;
+
+export const EntrySchema = z.literal('Entry');
+export type ENTRY = z.infer<typeof EntrySchema>;
+export const ENTRY = EntrySchema.value;
+
+// Node statuses
+export const DoneSchema = z.literal('Done');
+export type DONE = z.infer<typeof DoneSchema>;
+export const DONE = DoneSchema.value;
+
+export const NotStartedSchema = z.literal('NotStarted');
+export type NOT_STARTED = z.infer<typeof NotStartedSchema>;
+export const NOT_STARTED = NotStartedSchema.value;
+
+export const InProgressSchema = z.literal('InProgress');
+export type IN_PROGRESS = z.infer<typeof InProgressSchema>;
+export const IN_PROGRESS = InProgressSchema.value;
 
 // Morphems
 
@@ -518,7 +527,6 @@ export type Third = z.infer<typeof ThirdSchema>;
 export const THIRD = ThirdSchema.value;
 
 // NUMBER
-
 export const SingularLiteralSchema = z.literal('Singular');
 export type SINGULAR = z.infer<typeof SingularLiteralSchema>;
 export const SINGULAR = SingularLiteralSchema.value;
@@ -574,7 +582,6 @@ export type FUTURE_II = z.infer<typeof FutureIILiteralSchema>;
 export const FUTURE_II = FutureIILiteralSchema.value;
 
 // Verb Mood
-
 export const IndicativeLiteralSchema = z.literal('Indicative');
 export type INDICATIVE = z.infer<typeof IndicativeLiteralSchema>;
 export const INDICATIVE = IndicativeLiteralSchema.value;
@@ -609,7 +616,6 @@ export type Collective = z.infer<typeof CollectiveSchema>;
 export const COLLECTIVE = CollectiveSchema.value;
 
 // Com degree
-
 export const PositiveLiteralSchema = z.literal('Positive');
 export type POSITIVE = z.infer<typeof PositiveLiteralSchema>;
 export const POSITIVE = PositiveLiteralSchema.value;
@@ -623,7 +629,6 @@ export type SUPERLATIVE = z.infer<typeof SuperlativeLiteralSchema>;
 export const SUPERLATIVE = SuperlativeLiteralSchema.value;
 
 // Theta-Roles
-
 export const AgentLiteralSchema = z.literal('AGENT');
 export type AGENT = z.infer<typeof AgentLiteralSchema>;
 export const AGENT = AgentLiteralSchema.value;

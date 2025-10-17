@@ -1,32 +1,46 @@
 import { z } from 'zod';
+import {
+	SECTION,
+	PAGE,
+	TEXT,
+	IN_PROGRESS,
+	NOT_STARTED,
+	DONE,
+} from '../types/beta/literals';
 
 // UnVettedName.strip().replaceAll(/\s+/g, '_')
 export type NodeName = string;
 
-export const NodeStatusSchema = z.enum(['Done', 'NotStarted', 'InProgress']);
+export const NodeStatusSchema = z.enum([DONE, NOT_STARTED, IN_PROGRESS]);
 export type NodeStatus = z.infer<typeof NodeStatusSchema>;
 export const NodeStatus = NodeStatusSchema.enum;
 
-export const NodeTypeSchema = z.enum(['Entry', 'Section']);
+export const NodeTypeSchema = z.enum([TEXT, SECTION, PAGE]);
 export type NodeType = z.infer<typeof NodeTypeSchema>;
 export const NodeType = NodeTypeSchema.enum;
 
 export type CommonNode = {
-	name: NodeName;
 	status: NodeStatus;
 };
 
-export type EntryNode = CommonNode & {
-	numberOfPages: number;
-	type: typeof NodeType.Entry;
+export type PageNode = CommonNode & {
+	type: typeof NodeType.Page;
+	index: number;
+};
+
+export type TextNode = CommonNode & {
+	name: NodeName;
+	type: typeof NodeType.Text;
+	children: PageNode[];
 };
 
 export type SectionNode = CommonNode & {
+	name: NodeName;
 	type: typeof NodeType.Section;
-	children: (SectionNode | EntryNode)[];
+	children: (SectionNode | TextNode)[];
 };
 
-export type TreeNode = SectionNode | EntryNode;
+export type TreeNode = SectionNode | TextNode;
 
 type TargetNodeName = NodeName;
 type PrevNodeNames = NodeName[];
