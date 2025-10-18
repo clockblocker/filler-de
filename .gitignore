@@ -23,3 +23,5 @@ data.json
 .DS_Store
 
 prompt.ts
+
+/tests/tracing/logs/**/*

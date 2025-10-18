@@ -49,6 +49,36 @@ export class CurratedTree {
 		return { error: false, data: textNode.data };
 	}
 
+	public getDiff(other: CurratedTree): (TreeNode | PageNode)[] {
+		// BFS function for tree: returns Set of "paths" referencing TreeNodes and PageNodes
+
+		// For each CurratedTree in other, build a set of path-keyed hashes
+		const otherSet = new Map<string, string>();
+		for (const { node, path } of bfs(other)) {
+			otherSet.set(path.join('-'), JSON.stringify(node));
+		}
+
+		const diff: (TreeNode | PageNode)[] = [];
+
+		for (const { node, path } of bfs(this)) {
+			const key = path.join('-');
+			const str = JSON.stringify(node);
+			let found = false;
+			if (otherSet.has(key) && otherSet.get(key) === JSON.stringify(node)) {
+				found = true;
+			}
+			if (!found) {
+				diff.push(node as TreeNode | PageNode);
+			}
+		}
+
+		return diff;
+	}
+
+	public isEqualTo(other: CurratedTree): boolean {
+		return this.getDiff(other).length === 0;
+	}
+
 	getMaybeNode({ path }: { path: TreePath }): Maybe<TreeNode | CurratedTree> {
 		// Empty path returns the tree itself (root)
 		if (path.length === 0) {
@@ -238,5 +268,29 @@ export class CurratedTree {
 		parent.children.push(textNode);
 
 		return { error: false, data: textNode };
+	}
+}
+
+function* bfs(
+	root: CurratedTree
+): Generator<{ node: TreeNode | PageNode; path: string[] }> {
+	const queue: { node: any; path: string[] }[] = [];
+	for (const child of root.children) {
+		queue.push({ node: child, path: [child.name] });
+	}
+
+	while (queue.length) {
+		const { node, path } = queue.shift()!;
+		if ('type' in node && node.type === NodeType.Text) {
+			yield { node, path };
+			for (const page of node.children) {
+				yield { node: page, path: [...path, page.index.toString()] };
+			}
+		} else if ('type' in node && node.type === NodeType.Section) {
+			yield { node, path };
+			for (const child of node.children) {
+				queue.push({ node: child, path: [...path, child.name] });
+			}
+		}
 	}
 }

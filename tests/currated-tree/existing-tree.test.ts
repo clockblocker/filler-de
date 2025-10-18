@@ -1,10 +1,5 @@
 import { describe, it, expect } from 'bun:test';
-import {
-	NodeStatus,
-	NodeType,
-	type TextNode,
-	type TreeNode,
-} from '../../src/currator/tree-types';
+import { type PageNode, type TextNode } from '../../src/currator/tree-types';
 import { CurratedTree } from '../../src/currator/currated-tree';
 import { DEFINED_BRANCHES } from './static/defined-branches';
 
@@ -24,7 +19,7 @@ describe('CurratedTree', () => {
 		});
 		expect(node).toEqual({
 			error: false,
-			data: avatarNodes[0]?.children[0]?.children[0] as TextNode,
+			data: (avatarNodes[0]?.children[0] as any)?.children[0] as TextNode,
 		});
 	});
 
@@ -35,7 +30,7 @@ describe('CurratedTree', () => {
 		});
 		expect(node).toEqual({
 			error: false,
-			data: avatarNodes[0]?.children[1]?.children[1] as TextNode,
+			data: (avatarNodes[0]?.children[1] as any)?.children[1] as TextNode,
 		});
 	});
 
@@ -55,7 +50,7 @@ describe('CurratedTree', () => {
 		const node = tree.getMaybePage({ path: ['Intro'], index: 0 });
 		expect(node).toEqual({
 			error: false,
-			data: avatarNodes[1]?.children[0],
+			data: avatarNodes[1]?.children[0] as PageNode,
 		});
 	});
 
@@ -78,5 +73,12 @@ describe('CurratedTree', () => {
 			error: true,
 			description: 'Page 1 not found',
 		});
+	});
+
+	it('Should be equal to itself', () => {
+		const tree = new CurratedTree(avatarNodes, 'Library');
+		const diff = tree.getDiff(tree);
+		expect(diff).toEqual([]);
+		expect(tree.isEqualTo(tree)).toBe(true);
 	});
 });
