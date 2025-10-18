@@ -46,3 +46,8 @@ type TargetNodeName = NodeName;
 type PrevNodeNames = NodeName[];
 
 export type TreePath = [...PrevNodeNames, TargetNodeName];
+
+export type SerializedText = {
+	path: TreePath;
+	pageStatuses: NodeStatus[];
+};

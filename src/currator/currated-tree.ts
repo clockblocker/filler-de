@@ -22,6 +22,33 @@ export class CurratedTree {
 		this.status = NodeStatus.InProgress;
 	}
 
+	public addText({
+		path,
+		pageStatuses,
+		status = 'NotStarted',
+	}: {
+		path: TreePath;
+		pageStatuses: NodeStatus[];
+		status?: NodeStatus;
+	}): Maybe<TextNode> {
+		const textNode = this.getOrCreateTextNode({ path, status });
+		if (textNode.error) {
+			return textNode;
+		}
+
+		textNode.data.children = Array.from(
+			{ length: pageStatuses.length },
+			(_, index) =>
+				({
+					index,
+					status: pageStatuses[index] ?? NodeStatus.NotStarted,
+					type: NodeType.Page,
+				}) satisfies PageNode
+		);
+
+		return { error: false, data: textNode.data };
+	}
+
 	getMaybeNode({ path }: { path: TreePath }): Maybe<TreeNode | CurratedTree> {
 		// Empty path returns the tree itself (root)
 		if (path.length === 0) {
@@ -77,6 +104,23 @@ export class CurratedTree {
 			error: false,
 			data: page,
 		};
+	}
+
+	getParentNode({ path }: { path: TreePath }): Maybe<TreeNode | CurratedTree> {
+		// Verify the node exists first
+		const nodeCheck = this.getMaybeNode({ path });
+		if (nodeCheck.error) {
+			return nodeCheck;
+		}
+
+		// For single-element paths, parent is the tree itself
+		if (path.length === 1) {
+			return { error: false, data: this };
+		}
+
+		// For longer paths, get the parent by slicing off the last element
+		const parentPath = path.slice(0, -1) as TreePath;
+		return this.getMaybeNode({ path: parentPath });
 	}
 
 	getOrCreateSectionNode({
@@ -194,22 +238,5 @@ export class CurratedTree {
 		parent.children.push(textNode);
 
 		return { error: false, data: textNode };
-	}
-
-	getParentNode({ path }: { path: TreePath }): Maybe<TreeNode | CurratedTree> {
-		// Verify the node exists first
-		const nodeCheck = this.getMaybeNode({ path });
-		if (nodeCheck.error) {
-			return nodeCheck;
-		}
-
-		// For single-element paths, parent is the tree itself
-		if (path.length === 1) {
-			return { error: false, data: this };
-		}
-
-		// For longer paths, get the parent by slicing off the last element
-		const parentPath = path.slice(0, -1) as TreePath;
-		return this.getMaybeNode({ path: parentPath });
 	}
 }
