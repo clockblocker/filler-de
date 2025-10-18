@@ -21,6 +21,7 @@ export const NodeType = NodeTypeSchema.enum;
 
 export type CommonNode = {
 	status: NodeStatus;
+	type: NodeType;
 };
 
 export type PageNode = CommonNode & {
@@ -40,7 +41,8 @@ export type SectionNode = CommonNode & {
 	children: (SectionNode | TextNode)[];
 };
 
-export type TreeNode = SectionNode | TextNode;
+export type BranchNode = SectionNode | TextNode;
+export type TreeNode = BranchNode | PageNode;
 
 type TargetNodeName = NodeName;
 type PrevNodeNames = NodeName[];

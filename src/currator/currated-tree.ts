@@ -1,21 +1,23 @@
 import type { Maybe } from '../types/general';
+import { areShallowEqual } from './pure-functions/node';
 import {
 	type TreePath,
-	type TreeNode,
+	type BranchNode,
 	NodeType,
 	type TextNode,
 	type PageNode,
 	NodeStatus,
 	type SectionNode,
+	type TreeNode,
 } from './tree-types';
 
 export class CurratedTree {
-	children: TreeNode[];
+	children: BranchNode[];
 	type: typeof NodeType.Section;
 	name: string;
 	status: NodeStatus;
 
-	constructor(nodes: TreeNode[], name: string) {
+	constructor(nodes: BranchNode[], name: string) {
 		this.children = nodes;
 		this.type = NodeType.Section;
 		this.name = name;
@@ -49,26 +51,25 @@ export class CurratedTree {
 		return { error: false, data: textNode.data };
 	}
 
-	public getDiff(other: CurratedTree): (TreeNode | PageNode)[] {
-		// BFS function for tree: returns Set of "paths" referencing TreeNodes and PageNodes
-
-		// For each CurratedTree in other, build a set of path-keyed hashes
-		const otherSet = new Map<string, string>();
+	public getDiff(other: CurratedTree): TreeNode[] {
+		const otherSet = new Map<string, TreeNode>();
 		for (const { node, path } of bfs(other)) {
-			otherSet.set(path.join('-'), JSON.stringify(node));
+			otherSet.set(path.join('-'), node);
 		}
 
-		const diff: (TreeNode | PageNode)[] = [];
+		const diff: TreeNode[] = [];
 
 		for (const { node, path } of bfs(this)) {
 			const key = path.join('-');
-			const str = JSON.stringify(node);
-			let found = false;
-			if (otherSet.has(key) && otherSet.get(key) === JSON.stringify(node)) {
-				found = true;
+			const otherNode = otherSet.get(key);
+			if (!otherNode) {
+				diff.push(node);
+				continue;
 			}
+
+			const found = areShallowEqual(node, otherNode);
 			if (!found) {
-				diff.push(node as TreeNode | PageNode);
+				diff.push(node);
 			}
 		}
 
@@ -79,14 +80,14 @@ export class CurratedTree {
 		return this.getDiff(other).length === 0;
 	}
 
-	getMaybeNode({ path }: { path: TreePath }): Maybe<TreeNode | CurratedTree> {
+	getMaybeNode({ path }: { path: TreePath }): Maybe<BranchNode | CurratedTree> {
 		// Empty path returns the tree itself (root)
 		if (path.length === 0) {
 			return { error: false, data: this };
 		}
 
 		let candidats = this.children;
-		let lastMatchingNode: TreeNode | undefined = undefined;
+		let lastMatchingNode: BranchNode | undefined = undefined;
 
 		for (const part of path) {
 			lastMatchingNode = candidats.find((node) => node.name === part);
@@ -136,19 +137,20 @@ export class CurratedTree {
 		};
 	}
 
-	getParentNode({ path }: { path: TreePath }): Maybe<TreeNode | CurratedTree> {
-		// Verify the node exists first
+	getParentNode({
+		path,
+	}: {
+		path: TreePath;
+	}): Maybe<BranchNode | CurratedTree> {
 		const nodeCheck = this.getMaybeNode({ path });
 		if (nodeCheck.error) {
 			return nodeCheck;
 		}
 
-		// For single-element paths, parent is the tree itself
 		if (path.length === 1) {
 			return { error: false, data: this };
 		}
 
-		// For longer paths, get the parent by slicing off the last element
 		const parentPath = path.slice(0, -1) as TreePath;
 		return this.getMaybeNode({ path: parentPath });
 	}
@@ -273,7 +275,7 @@ export class CurratedTree {
 
 function* bfs(
 	root: CurratedTree
-): Generator<{ node: TreeNode | PageNode; path: string[] }> {
+): Generator<{ node: TreeNode; path: string[] }> {
 	const queue: { node: any; path: string[] }[] = [];
 	for (const child of root.children) {
 		queue.push({ node: child, path: [child.name] });

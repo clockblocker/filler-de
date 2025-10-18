@@ -1,10 +1,6 @@
 import { z } from 'zod';
 
 // Format
-const PlusDelimeterSchema = z.literal('_plus_');
-export type PLUS_DELIMETER = z.infer<typeof PlusDelimeterSchema>;
-export const PLUS_DELIMETER = PlusDelimeterSchema.value;
-
 const SlashSchema = z.literal('/');
 export type SLASH = z.infer<typeof SlashSchema>;
 export const SLASH = SlashSchema.value;
@@ -48,6 +44,18 @@ export const LONG_DASH = LongDashSchema.value;
 const DashSchema = z.literal('—');
 export type DASH = z.infer<typeof DashSchema>;
 export const DASH = DashSchema.value;
+
+const NonBreakingHyphenSchema = z.literal('‑');
+export type NON_BREAKING_HYPHEN = z.infer<typeof NonBreakingHyphenSchema>;
+export const NON_BREAKING_HYPHEN = NonBreakingHyphenSchema.value;
+
+const UnderscoreSchema = z.literal('_');
+export type UNDERSCORE = z.infer<typeof UnderscoreSchema>;
+export const UNDERSCORE = UnderscoreSchema.value;
+
+const PlusDelimeterSchema = z.literal(`${UNDERSCORE}plus${UNDERSCORE}`); // _plus_
+export type PLUS_DELIMETER = z.infer<typeof PlusDelimeterSchema>;
+export const PLUS_DELIMETER = PlusDelimeterSchema.value;
 
 // Nodes
 export const TextSchema = z.literal('Text');

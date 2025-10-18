@@ -1,7 +1,7 @@
 import {
 	NodeStatus,
 	NodeType,
-	type TreeNode,
+	type BranchNode,
 	type TreePath,
 	type SerializedText,
 } from '../../../../src/currator/tree-types';
@@ -93,7 +93,7 @@ export const AVATAR_NODES = [
 			},
 		],
 	},
-] as const satisfies TreeNode[];
+] as const satisfies BranchNode[];
 
 export const AVATAR_TEXTS = [
 	{ path: ['Intro'], pageStatuses: [NodeStatus.NotStarted] },
