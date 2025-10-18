@@ -4,13 +4,13 @@ import {
 	NodeType,
 	type TextNode,
 	type SectionNode,
-} from '../../src/currator/types';
+} from '../../src/currator/tree-types';
 import { CurratedTree } from '../../src/currator/currated-tree';
 
 describe('CurratedTree - Building from scratch', () => {
 	describe('getOrCreateSectionNode', () => {
 		it('should create a new section at root level', () => {
-			const tree = new CurratedTree([]);
+			const tree = new CurratedTree([], 'Library');
 			const result = tree.getOrCreateSectionNode({
 				path: ['Books'],
 			});
@@ -25,7 +25,7 @@ describe('CurratedTree - Building from scratch', () => {
 		});
 
 		it('should create a nested section structure', () => {
-			const tree = new CurratedTree([]);
+			const tree = new CurratedTree([], 'Library');
 
 			// Create first level section
 			const booksResult = tree.getOrCreateSectionNode({
@@ -50,7 +50,7 @@ describe('CurratedTree - Building from scratch', () => {
 		});
 
 		it('should return existing section without creating duplicate', () => {
-			const tree = new CurratedTree([]);
+			const tree = new CurratedTree([], 'Library');
 
 			const first = tree.getOrCreateSectionNode({
 				path: ['Books'],
@@ -68,7 +68,7 @@ describe('CurratedTree - Building from scratch', () => {
 		});
 
 		it('should create section with specified status', () => {
-			const tree = new CurratedTree([]);
+			const tree = new CurratedTree([], 'Library');
 
 			const result = tree.getOrCreateSectionNode({
 				path: ['Books'],
@@ -82,7 +82,7 @@ describe('CurratedTree - Building from scratch', () => {
 		});
 
 		it('should fail if path is empty', () => {
-			const tree = new CurratedTree([]);
+			const tree = new CurratedTree([], 'Library');
 
 			const result = tree.getOrCreateSectionNode({
 				path: [] as any,
@@ -95,7 +95,7 @@ describe('CurratedTree - Building from scratch', () => {
 		});
 
 		it('should fail if parent does not exist', () => {
-			const tree = new CurratedTree([]);
+			const tree = new CurratedTree([], 'Library');
 
 			const result = tree.getOrCreateSectionNode({
 				path: ['NonExistent', 'Child'],
@@ -108,14 +108,17 @@ describe('CurratedTree - Building from scratch', () => {
 		});
 
 		it('should fail if parent is a text node, not a section', () => {
-			const tree = new CurratedTree([
-				{
-					name: 'Chapter1',
-					status: NodeStatus.NotStarted,
-					type: NodeType.Text,
-					children: [],
-				} as TextNode,
-			]);
+			const tree = new CurratedTree(
+				[
+					{
+						name: 'Chapter1',
+						status: NodeStatus.NotStarted,
+						type: NodeType.Text,
+						children: [],
+					} as TextNode,
+				],
+				'Library'
+			);
 
 			const result = tree.getOrCreateSectionNode({
 				path: ['Chapter1', 'Section'],
@@ -128,7 +131,7 @@ describe('CurratedTree - Building from scratch', () => {
 		});
 
 		it('should create multiple sections at root level', () => {
-			const tree = new CurratedTree([]);
+			const tree = new CurratedTree([], 'Library');
 
 			const books = tree.getOrCreateSectionNode({ path: ['Books'] });
 			const movies = tree.getOrCreateSectionNode({ path: ['Movies'] });
@@ -140,7 +143,7 @@ describe('CurratedTree - Building from scratch', () => {
 		});
 
 		it('should create deep nesting through multiple calls', () => {
-			const tree = new CurratedTree([]);
+			const tree = new CurratedTree([], 'Library');
 
 			tree.getOrCreateSectionNode({ path: ['A'] });
 			tree.getOrCreateSectionNode({ path: ['A', 'B'] });
@@ -158,14 +161,17 @@ describe('CurratedTree - Building from scratch', () => {
 
 	describe('getOrCreateTextNode', () => {
 		it('should create a text node under an existing section', () => {
-			const tree = new CurratedTree([
-				{
-					name: 'Books',
-					status: NodeStatus.NotStarted,
-					type: NodeType.Section,
-					children: [],
-				} as SectionNode,
-			]);
+			const tree = new CurratedTree(
+				[
+					{
+						name: 'Books',
+						status: NodeStatus.NotStarted,
+						type: NodeType.Section,
+						children: [],
+					} as SectionNode,
+				],
+				'Library'
+			);
 
 			const result = tree.getOrCreateTextNode({
 				path: ['Books', 'Chapter1'],
@@ -181,14 +187,17 @@ describe('CurratedTree - Building from scratch', () => {
 		});
 
 		it('should create text node with specified status', () => {
-			const tree = new CurratedTree([
-				{
-					name: 'Books',
-					status: NodeStatus.NotStarted,
-					type: NodeType.Section,
-					children: [],
-				} as SectionNode,
-			]);
+			const tree = new CurratedTree(
+				[
+					{
+						name: 'Books',
+						status: NodeStatus.NotStarted,
+						type: NodeType.Section,
+						children: [],
+					} as SectionNode,
+				],
+				'Library'
+			);
 
 			const result = tree.getOrCreateTextNode({
 				path: ['Books', 'Chapter1'],
@@ -202,14 +211,17 @@ describe('CurratedTree - Building from scratch', () => {
 		});
 
 		it('should return existing text node without creating duplicate', () => {
-			const tree = new CurratedTree([
-				{
-					name: 'Books',
-					status: NodeStatus.NotStarted,
-					type: NodeType.Section,
-					children: [],
-				} as SectionNode,
-			]);
+			const tree = new CurratedTree(
+				[
+					{
+						name: 'Books',
+						status: NodeStatus.NotStarted,
+						type: NodeType.Section,
+						children: [],
+					} as SectionNode,
+				],
+				'Library'
+			);
 
 			const first = tree.getOrCreateTextNode({
 				path: ['Books', 'Chapter1'],
@@ -227,7 +239,7 @@ describe('CurratedTree - Building from scratch', () => {
 		});
 
 		it('should create nested sections automatically before creating text node', () => {
-			const tree = new CurratedTree([]);
+			const tree = new CurratedTree([], 'Library');
 
 			const result = tree.getOrCreateTextNode({
 				path: ['Books', 'Fantasy', 'Chapter1'],
@@ -250,7 +262,7 @@ describe('CurratedTree - Building from scratch', () => {
 		});
 
 		it('should fail if path is empty', () => {
-			const tree = new CurratedTree([]);
+			const tree = new CurratedTree([], 'Library');
 
 			const result = tree.getOrCreateTextNode({
 				path: [] as any,
@@ -263,7 +275,7 @@ describe('CurratedTree - Building from scratch', () => {
 		});
 
 		it('should fail if path has only one element (no parent section)', () => {
-			const tree = new CurratedTree([]);
+			const tree = new CurratedTree([], 'Library');
 
 			const result = tree.getOrCreateTextNode({
 				path: ['OnlyName'],
@@ -278,14 +290,7 @@ describe('CurratedTree - Building from scratch', () => {
 		});
 
 		it('should fail if text name is empty after pop', () => {
-			const tree = new CurratedTree([
-				{
-					name: 'Books',
-					status: NodeStatus.NotStarted,
-					type: NodeType.Section,
-					children: [],
-				} as SectionNode,
-			]);
+			const tree = new CurratedTree([], 'Library');
 
 			// After pop, path becomes [] which is invalid
 			const result = tree.getOrCreateTextNode({
@@ -301,14 +306,7 @@ describe('CurratedTree - Building from scratch', () => {
 		});
 
 		it('should create multiple text nodes in same section', () => {
-			const tree = new CurratedTree([
-				{
-					name: 'Books',
-					status: NodeStatus.NotStarted,
-					type: NodeType.Section,
-					children: [],
-				} as SectionNode,
-			]);
+			const tree = new CurratedTree([], 'Library');
 
 			const ch1 = tree.getOrCreateTextNode({
 				path: ['Books', 'Chapter1'],
@@ -332,7 +330,7 @@ describe('CurratedTree - Building from scratch', () => {
 		});
 
 		it('should create complex nested structure with mixed sections and texts', () => {
-			const tree = new CurratedTree([]);
+			const tree = new CurratedTree([], 'Library');
 
 			// Create a structure like: Books/Fiction/Fantasy/Chapter1
 			tree.getOrCreateTextNode({
@@ -374,21 +372,24 @@ describe('CurratedTree - Building from scratch', () => {
 		});
 
 		it('should allow reusing existing sections when creating new text nodes', () => {
-			const tree = new CurratedTree([
-				{
-					name: 'Books',
-					status: NodeStatus.NotStarted,
-					type: NodeType.Section,
-					children: [
-						{
-							name: 'Fiction',
-							status: NodeStatus.NotStarted,
-							type: NodeType.Section,
-							children: [],
-						} as SectionNode,
-					],
-				} as SectionNode,
-			]);
+			const tree = new CurratedTree(
+				[
+					{
+						name: 'Books',
+						status: NodeStatus.NotStarted,
+						type: NodeType.Section,
+						children: [
+							{
+								name: 'Fiction',
+								status: NodeStatus.NotStarted,
+								type: NodeType.Section,
+								children: [],
+							} as SectionNode,
+						],
+					} as SectionNode,
+				],
+				'Library'
+			);
 
 			const result = tree.getOrCreateTextNode({
 				path: ['Books', 'Fiction', 'Chapter1'],
@@ -401,14 +402,17 @@ describe('CurratedTree - Building from scratch', () => {
 		});
 
 		it('should maintain status from first creation when getting existing text node', () => {
-			const tree = new CurratedTree([
-				{
-					name: 'Books',
-					status: NodeStatus.NotStarted,
-					type: NodeType.Section,
-					children: [],
-				} as SectionNode,
-			]);
+			const tree = new CurratedTree(
+				[
+					{
+						name: 'Books',
+						status: NodeStatus.NotStarted,
+						type: NodeType.Section,
+						children: [],
+					} as SectionNode,
+				],
+				'Library'
+			);
 
 			const first = tree.getOrCreateTextNode({
 				path: ['Books', 'Chapter1'],
@@ -428,9 +432,114 @@ describe('CurratedTree - Building from scratch', () => {
 		});
 	});
 
+	describe('getParentNode and root handling', () => {
+		it('should return tree itself when getting parent of single-element path', () => {
+			const tree = new CurratedTree(
+				[
+					{
+						name: 'Section1',
+						status: NodeStatus.NotStarted,
+						type: NodeType.Section,
+						children: [],
+					} as SectionNode,
+				],
+				'Library'
+			);
+
+			const result = tree.getParentNode({ path: ['Section1'] });
+
+			expect(result.error).toBe(false);
+			if (!result.error) {
+				expect(result.data).toBe(tree);
+			}
+		});
+
+		it('should return tree itself when getting parent of root-level node', () => {
+			const tree = new CurratedTree(
+				[
+					{
+						name: 'Books',
+						status: NodeStatus.NotStarted,
+						type: NodeType.Section,
+						children: [],
+					} as SectionNode,
+				],
+				'Library'
+			);
+
+			const result = tree.getParentNode({ path: ['Books'] });
+
+			expect(result.error).toBe(false);
+			if (!result.error) {
+				expect(result.data).toBe(tree);
+			}
+		});
+
+		it('should return correct parent for nested path', () => {
+			const tree = new CurratedTree(
+				[
+					{
+						name: 'Books',
+						status: NodeStatus.NotStarted,
+						type: NodeType.Section,
+						children: [
+							{
+								name: 'Fiction',
+								status: NodeStatus.NotStarted,
+								type: NodeType.Section,
+								children: [],
+							} as SectionNode,
+						],
+					} as SectionNode,
+				],
+				'Library'
+			);
+
+			const result = tree.getParentNode({ path: ['Books', 'Fiction'] });
+
+			expect(result.error).toBe(false);
+			if (!result.error) {
+				expect(result.data.type).toBe(NodeType.Section);
+				expect((result.data as SectionNode).name).toBe('Books');
+			}
+		});
+
+		it('should return error if node does not exist', () => {
+			const tree = new CurratedTree([], 'Library');
+
+			const result = tree.getParentNode({ path: ['NonExistent'] });
+
+			expect(result.error).toBe(true);
+			if (result.error) {
+				expect(result.description).toContain('not found');
+			}
+		});
+
+		it('should return tree itself when getMaybeNode is called with empty path', () => {
+			const tree = new CurratedTree(
+				[
+					{
+						name: 'Books',
+						status: NodeStatus.NotStarted,
+						type: NodeType.Section,
+						children: [],
+					} as SectionNode,
+				],
+				'Library'
+			);
+
+			const result = tree.getMaybeNode({ path: [] as any });
+
+			expect(result.error).toBe(false);
+			if (!result.error) {
+				expect(result.data).toBe(tree);
+			}
+		});
+	});
+
 	describe('Integration: Combined operations', () => {
 		it('should build complex tree from scratch using both create methods', () => {
-			const tree = new CurratedTree([]);
+			const tree = new CurratedTree([], 'Library');
 
 			// Create text node which auto-creates parent sections
 			tree.getOrCreateTextNode({

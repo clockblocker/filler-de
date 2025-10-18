@@ -4,7 +4,7 @@ import {
 	NodeType,
 	type TextNode,
 	type TreeNode,
-} from '../../src/currator/types';
+} from '../../src/currator/tree-types';
 import { CurratedTree } from '../../src/currator/currated-tree';
 
 const nodes = [
@@ -98,13 +98,13 @@ const nodes = [
 
 describe('CurratedTree', () => {
 	it('should get Intro by path', () => {
-		const tree = new CurratedTree(nodes);
+		const tree = new CurratedTree(nodes, 'Library');
 		const node = tree.getMaybeNode({ path: ['Intro'] });
 		expect(node).toEqual({ error: false, data: nodes[1] as TextNode });
 	});
 
 	it('should get Avatar-Season_1-Episode_1 by path', () => {
-		const tree = new CurratedTree(nodes);
+		const tree = new CurratedTree(nodes, 'Library');
 		const node = tree.getMaybeNode({
 			path: ['Avatar', 'Season_1', 'Episode_1'],
 		});
@@ -115,7 +115,7 @@ describe('CurratedTree', () => {
 	});
 
 	it('should get Avatar-Season_2-Episode_2 by path', () => {
-		const tree = new CurratedTree(nodes);
+		const tree = new CurratedTree(nodes, 'Library');
 		const node = tree.getMaybeNode({
 			path: ['Avatar', 'Season_2', 'Episode_2'],
 		});
@@ -126,7 +126,7 @@ describe('CurratedTree', () => {
 	});
 
 	it('should not get Avatar-Season_2-Episode_3 by path', () => {
-		const tree = new CurratedTree(nodes);
+		const tree = new CurratedTree(nodes, 'Library');
 		const node = tree.getMaybeNode({
 			path: ['Avatar', 'Season_2', 'Episode_3'],
 		});
@@ -137,7 +137,7 @@ describe('CurratedTree', () => {
 	});
 
 	it('should get 000-Intro by path', () => {
-		const tree = new CurratedTree(nodes);
+		const tree = new CurratedTree(nodes, 'Library');
 		const node = tree.getMaybePage({ path: ['Intro'], index: 0 });
 		expect(node).toEqual({
 			error: false,
@@ -146,7 +146,7 @@ describe('CurratedTree', () => {
 	});
 
 	it('should not get 001-Intro by path', () => {
-		const tree = new CurratedTree(nodes);
+		const tree = new CurratedTree(nodes, 'Library');
 		const node = tree.getMaybePage({ path: ['Intro'], index: 1 });
 		expect(node).toEqual({
 			error: true,
@@ -155,7 +155,7 @@ describe('CurratedTree', () => {
 	});
 
 	it('should not get 000-Avatar-Season_1-Episode_1 by path', () => {
-		const tree = new CurratedTree(nodes);
+		const tree = new CurratedTree(nodes, 'Library');
 		const node = tree.getMaybePage({
 			path: ['Avatar', 'Season_1', 'Episode_1'],
 			index: 1,

@@ -1,6 +1,6 @@
 // ---
 
-import type { NodeName } from "./types";
+import type { NodeName } from './tree-types';
 
 type SectionName = NodeName;
 

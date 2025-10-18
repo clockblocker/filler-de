@@ -7,16 +7,27 @@ import {
 	type PageNode,
 	NodeStatus,
 	type SectionNode,
-} from './types';
+} from './tree-types';
 
 export class CurratedTree {
-	private children: TreeNode[];
+	children: TreeNode[];
+	type: typeof NodeType.Section;
+	name: string;
+	status: NodeStatus;
 
-	constructor(nodes: TreeNode[]) {
+	constructor(nodes: TreeNode[], name: string) {
 		this.children = nodes;
+		this.type = NodeType.Section;
+		this.name = name;
+		this.status = NodeStatus.InProgress;
 	}
 
-	getMaybeNode({ path }: { path: TreePath }): Maybe<TreeNode> {
+	getMaybeNode({ path }: { path: TreePath }): Maybe<TreeNode | CurratedTree> {
+		// Empty path returns the tree itself (root)
+		if (path.length === 0) {
+			return { error: false, data: this };
+		}
+
 		let candidats = this.children;
 		let lastMatchingNode: TreeNode | undefined = undefined;
 
@@ -75,6 +86,13 @@ export class CurratedTree {
 		path: TreePath;
 		status?: NodeStatus;
 	}): Maybe<SectionNode> {
+		if (path.length === 0) {
+			return {
+				error: true,
+				description: `Path is empty`,
+			};
+		}
+
 		const mbNode = this.getMaybeNode({ path });
 		if (!mbNode.error && mbNode.data.type === NodeType.Section) {
 			return { error: false, data: mbNode.data };
@@ -176,5 +194,22 @@ export class CurratedTree {
 		parent.children.push(textNode);
 
 		return { error: false, data: textNode };
+	}
+
+	getParentNode({ path }: { path: TreePath }): Maybe<TreeNode | CurratedTree> {
+		// Verify the node exists first
+		const nodeCheck = this.getMaybeNode({ path });
+		if (nodeCheck.error) {
+			return nodeCheck;
+		}
+
+		// For single-element paths, parent is the tree itself
+		if (path.length === 1) {
+			return { error: false, data: this };
+		}
+
+		// For longer paths, get the parent by slicing off the last element
+		const parentPath = path.slice(0, -1) as TreePath;
+		return this.getMaybeNode({ path: parentPath });
 	}
 }
