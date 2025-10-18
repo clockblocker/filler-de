@@ -90,6 +90,20 @@ export class CurratedTree {
 			};
 		}
 
+		const sectionNode = {
+			name,
+			status: status ?? NodeStatus.NotStarted,
+			type: NodeType.Section,
+			children: [],
+		} satisfies SectionNode;
+
+		// Handle root-level section creation
+		if (pathToParent.length === 0) {
+			this.children.push(sectionNode);
+			return { error: false, data: sectionNode };
+		}
+
+		// Handle nested section creation
 		const mbParent = this.getMaybeNode({ path: pathToParent });
 
 		if (mbParent.error) {
@@ -102,14 +116,6 @@ export class CurratedTree {
 		}
 
 		const parent = mbParent.data;
-
-		const sectionNode = {
-			name,
-			status: status ?? NodeStatus.NotStarted,
-			type: NodeType.Section,
-			children: [],
-		} satisfies SectionNode;
-
 		parent.children.push(sectionNode);
 
 		return { error: false, data: sectionNode };
@@ -128,7 +134,7 @@ export class CurratedTree {
 		}
 
 		let parent: SectionNode | undefined = undefined;
-		for (let i = 0; i < path.length - 2; i++) {
+		for (let i = 0; i < path.length - 1; i++) {
 			const mbSection = this.getOrCreateSectionNode({
 				path: path.slice(0, i + 1) as TreePath,
 			});
