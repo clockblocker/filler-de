@@ -58,17 +58,33 @@ export class CurratedTree {
 			return;
 		}
 
+		// Handle root-level text nodes
+		if (path.length === 1) {
+			const textName = path[0];
+			const textIndex = this.children.findIndex(
+				(child) => child.type === NodeType.Text && child.name === textName
+			);
+
+			if (textIndex !== -1) {
+				this.children.splice(textIndex, 1);
+			}
+			return;
+		}
+
+		// Handle nested text nodes
 		const parentChain = this.getParentChain({ path });
 		if (parentChain.length === 0) {
 			return;
 		}
 
-		const [textName] = path.slice(-1);
+		const textName = path[path.length - 1];
 		const parent = parentChain[0];
+
 		if (!parent || !textName) {
 			return;
 		}
 
+		// Delete the text node from its parent
 		const textIndex = parent.children.findIndex(
 			(child) => child.type === NodeType.Text && child.name === textName
 		);
@@ -77,22 +93,41 @@ export class CurratedTree {
 			parent.children.splice(textIndex, 1);
 		}
 
-		for (let i = 0; i < parentChain.length - 1; i++) {
+		// Remove empty section nodes up the chain
+		for (let i = 0; i < parentChain.length; i++) {
 			const current = parentChain[i];
-			const grandParent = parentChain[i + 1];
+			const isLastNode = i === parentChain.length - 1;
+
 			if (current && current.children.length === 0) {
-				const sectionIndex = grandParent?.children.findIndex(
-					(child) =>
-						child.name === current?.name && child.type === current?.type
-				);
-				if (sectionIndex !== -1) {
-					grandParent?.children.splice(sectionIndex ?? 0, 1);
+				if (isLastNode) {
+					// Last node in chain - remove from root if it's empty
+					const rootIndex = this.children.findIndex(
+						(child) =>
+							child.name === current.name && child.type === current.type
+					);
+					if (rootIndex !== -1) {
+						this.children.splice(rootIndex, 1);
+					}
+				} else {
+					// Not the last node - remove from its parent
+					const grandParent = parentChain[i + 1];
+					if (grandParent) {
+						const sectionIndex = grandParent.children.findIndex(
+							(child) =>
+								child.name === current.name && child.type === current.type
+						);
+
+						if (sectionIndex !== -1) {
+							grandParent.children.splice(sectionIndex, 1);
+						}
+					}
 				}
 			} else {
+				// Stop if we find a non-empty parent
 				break;
 			}
 		}
-	} 
+	}
 
 	public getDiff(other: CurratedTree): TreeNode[] {
 		const otherSet = new Map<string, TreeNode>();
@@ -318,14 +353,24 @@ export class CurratedTree {
 	}
 
 	getParentChain({ path }: { path: TreePath }): BranchNode[] {
+		// Base case: stop at root level (path length 1)
+		if (path.length <= 1) {
+			return [];
+		}
+
 		const parent = this.getParentNode({ path });
 		if (parent.error) {
 			return [];
 		}
 
-		return [
-			parent.data,
-			...this.getParentChain({ path: path.slice(0, -1) as TreePath }),
-		];
+		// Only include BranchNodes in the chain, not the tree root
+		if ('children' in parent.data && parent.data !== this) {
+			return [
+				parent.data as BranchNode,
+				...this.getParentChain({ path: path.slice(0, -1) as TreePath }),
+			];
+		}
+
+		return [];
 	}
 }
