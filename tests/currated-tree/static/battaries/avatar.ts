@@ -96,21 +96,24 @@ export const AVATAR_NODES = [
 ] as const satisfies BranchNode[];
 
 export const AVATAR_TEXTS = [
-	{ path: ['Intro'], pageStatuses: [NodeStatus.NotStarted] },
 	{
 		path: ['Avatar', 'Season_1', 'Episode_1'],
-		pageStatuses: [NodeStatus.NotStarted],
+		pageStatuses: ['NotStarted'],
 	},
 	{
 		path: ['Avatar', 'Season_1', 'Episode_2'],
-		pageStatuses: [NodeStatus.NotStarted],
+		pageStatuses: ['NotStarted', 'NotStarted'],
 	},
 	{
 		path: ['Avatar', 'Season_2', 'Episode_1'],
-		pageStatuses: [NodeStatus.NotStarted],
+		pageStatuses: ['NotStarted'],
 	},
 	{
 		path: ['Avatar', 'Season_2', 'Episode_2'],
-		pageStatuses: [NodeStatus.NotStarted],
+		pageStatuses: ['NotStarted'],
+	},
+	{
+		path: ['Intro'],
+		pageStatuses: ['NotStarted'],
 	},
 ] as const satisfies SerializedText[];

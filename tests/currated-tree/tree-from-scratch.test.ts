@@ -5,7 +5,7 @@ import {
 	type TextNode,
 	type SectionNode,
 } from '../../src/currator/tree-types';
-import { CurratedTree } from '../../src/currator/currated-tree';
+import { CurratedTree } from '../../src/currator/currated-tree/currated-tree';
 
 describe('CurratedTree - Building from scratch', () => {
 	describe('getOrCreateSectionNode', () => {

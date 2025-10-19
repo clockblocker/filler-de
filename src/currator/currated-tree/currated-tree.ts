@@ -1,5 +1,5 @@
-import type { Maybe } from '../types/general';
-import { areShallowEqual } from './pure-functions/node';
+import type { Maybe } from '../../types/general';
+import { areShallowEqual } from '../pure-functions/node';
 import {
 	type TreePath,
 	type BranchNode,
@@ -9,7 +9,8 @@ import {
 	NodeStatus,
 	type SectionNode,
 	type TreeNode,
-} from './tree-types';
+} from '../tree-types';
+import { bfs } from './walks';
 
 export class CurratedTree {
 	children: BranchNode[];
@@ -174,8 +175,9 @@ export class CurratedTree {
 			return { error: false, data: mbNode.data };
 		}
 
-		const name = path.pop();
-		const pathToParent = path;
+		const pathCopy = [...path];
+		const name = pathCopy.pop();
+		const pathToParent = pathCopy;
 
 		if (!name) {
 			return {
@@ -198,7 +200,7 @@ export class CurratedTree {
 		}
 
 		// Handle nested section creation
-		const mbParent = this.getMaybeNode({ path: pathToParent });
+		const mbParent = this.getMaybeNode({ path: pathToParent as TreePath });
 
 		if (mbParent.error) {
 			return mbParent;
@@ -238,7 +240,8 @@ export class CurratedTree {
 			parent = mbSection.data;
 		}
 
-		const textName = path.pop();
+		const pathCopy = [...path];
+		const textName = pathCopy.pop();
 		if (!parent) {
 			return {
 				error: true,
@@ -270,29 +273,5 @@ export class CurratedTree {
 		parent.children.push(textNode);
 
 		return { error: false, data: textNode };
-	}
-}
-
-function* bfs(
-	root: CurratedTree
-): Generator<{ node: TreeNode; path: string[] }> {
-	const queue: { node: any; path: string[] }[] = [];
-	for (const child of root.children) {
-		queue.push({ node: child, path: [child.name] });
-	}
-
-	while (queue.length) {
-		const { node, path } = queue.shift()!;
-		if ('type' in node && node.type === NodeType.Text) {
-			yield { node, path };
-			for (const page of node.children) {
-				yield { node: page, path: [...path, page.index.toString()] };
-			}
-		} else if ('type' in node && node.type === NodeType.Section) {
-			yield { node, path };
-			for (const child of node.children) {
-				queue.push({ node: child, path: [...path, child.name] });
-			}
-		}
 	}
 }

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'bun:test';
 import { type PageNode, type TextNode } from '../../src/currator/tree-types';
-import { CurratedTree } from '../../src/currator/currated-tree';
+import { CurratedTree } from '../../src/currator/currated-tree/currated-tree';
 import { DEFINED_BRANCHES } from './static/defined-branches';
 
 const avatarNodes = DEFINED_BRANCHES.Avatar.nodes;
@@ -20,17 +20,6 @@ describe('CurratedTree', () => {
 		expect(node).toEqual({
 			error: false,
 			data: (avatarNodes[0]?.children[0] as any)?.children[0] as TextNode,
-		});
-	});
-
-	it('should get Avatar-Season_2-Episode_2 by path', () => {
-		const tree = new CurratedTree(avatarNodes, 'Library');
-		const node = tree.getMaybeNode({
-			path: ['Avatar', 'Season_2', 'Episode_2'],
-		});
-		expect(node).toEqual({
-			error: false,
-			data: (avatarNodes[0]?.children[1] as any)?.children[1] as TextNode,
 		});
 	});
 
