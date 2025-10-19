@@ -6,7 +6,7 @@ import { AVATAR_NODES, AVATAR_TEXTS } from './battaries/avatar';
 
 type BranchName = 'Avatar';
 
-export const DEFINED_BRANCHES: Record<
+export const VALID_BRANCHES: Record<
 	BranchName,
 	{ nodes: BranchNode[]; texts: SerializedText[] }
 > = {

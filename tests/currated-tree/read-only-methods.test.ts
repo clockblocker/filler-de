@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'bun:test';
 import { type PageNode, type TextNode } from '../../src/currator/tree-types';
 import { CurratedTree } from '../../src/currator/currated-tree/currated-tree';
-import { DEFINED_BRANCHES } from './static/defined-branches';
+import { VALID_BRANCHES } from './static/defined-branches';
 
-const avatarNodes = DEFINED_BRANCHES.Avatar.nodes;
+const avatarNodes = VALID_BRANCHES.Avatar.nodes;
 
 describe('CurratedTree', () => {
 	it('should get Intro by path', () => {

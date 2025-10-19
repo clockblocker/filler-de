@@ -52,6 +52,48 @@ export class CurratedTree {
 		return { error: false, data: textNode.data };
 	}
 
+	public deleteText({ path }: { path: TreePath }): void {
+		const node = this.getMaybeNode({ path });
+		if (node.error) {
+			return;
+		}
+
+		const parentChain = this.getParentChain({ path });
+		if (parentChain.length === 0) {
+			return;
+		}
+
+		const [textName] = path.slice(-1);
+		const parent = parentChain[0];
+		if (!parent || !textName) {
+			return;
+		}
+
+		const textIndex = parent.children.findIndex(
+			(child) => child.type === NodeType.Text && child.name === textName
+		);
+
+		if (textIndex !== -1) {
+			parent.children.splice(textIndex, 1);
+		}
+
+		for (let i = 0; i < parentChain.length - 1; i++) {
+			const current = parentChain[i];
+			const grandParent = parentChain[i + 1];
+			if (current && current.children.length === 0) {
+				const sectionIndex = grandParent?.children.findIndex(
+					(child) =>
+						child.name === current?.name && child.type === current?.type
+				);
+				if (sectionIndex !== -1) {
+					grandParent?.children.splice(sectionIndex ?? 0, 1);
+				}
+			} else {
+				break;
+			}
+		}
+	} 
+
 	public getDiff(other: CurratedTree): TreeNode[] {
 		const otherSet = new Map<string, TreeNode>();
 		for (const { node, path } of bfs(other)) {
@@ -273,5 +315,17 @@ export class CurratedTree {
 		parent.children.push(textNode);
 
 		return { error: false, data: textNode };
+	}
+
+	getParentChain({ path }: { path: TreePath }): BranchNode[] {
+		const parent = this.getParentNode({ path });
+		if (parent.error) {
+			return [];
+		}
+
+		return [
+			parent.data,
+			...this.getParentChain({ path: path.slice(0, -1) as TreePath }),
+		];
 	}
 }
