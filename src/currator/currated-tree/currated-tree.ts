@@ -9,6 +9,7 @@ import {
 	NodeStatus,
 	type SectionNode,
 	type TreeNode,
+	type SerializedText,
 } from '../tree-types';
 import { bfs } from './walks';
 
@@ -23,6 +24,22 @@ export class CurratedTree {
 		this.type = NodeType.Section;
 		this.name = name;
 		this.status = NodeStatus.InProgress;
+	}
+
+	public getTexts(path: TreePath): SerializedText[] {
+		const mbNode = this.getMaybeNode({ path });
+		if (mbNode.error) {
+			return [];
+		}
+
+		const textNodes = this.getTextNodes(mbNode.data as BranchNode);
+		return textNodes.map(
+			(node) =>
+				({
+					path: path,
+					pageStatuses: node.children.map((child) => child.status),
+				}) satisfies SerializedText
+		);
 	}
 
 	public addText({
@@ -372,5 +389,22 @@ export class CurratedTree {
 		}
 
 		return [];
+	}
+
+	private getTextNodes(node: BranchNode): TextNode[] {
+		const textNodes: TextNode[] = [];
+
+		function textFindingDfs(node: BranchNode) {
+			if (node.type === NodeType.Text) {
+				textNodes.push(node as TextNode);
+			} else if (node.type === NodeType.Section) {
+				for (const child of (node as SectionNode).children) {
+					textFindingDfs(child);
+				}
+			}
+		}
+
+		textFindingDfs(node);
+		return textNodes;
 	}
 }

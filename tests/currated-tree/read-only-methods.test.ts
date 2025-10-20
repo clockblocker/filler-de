@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'bun:test';
-import { type PageNode, type TextNode } from '../../src/currator/tree-types';
+import {
+	NodeStatus,
+	type PageNode,
+	type TextNode,
+} from '../../src/currator/tree-types';
 import { CurratedTree } from '../../src/currator/currated-tree/currated-tree';
 import { VALID_BRANCHES } from './static/defined-branches';
 
@@ -69,5 +73,35 @@ describe('CurratedTree', () => {
 		const diff = tree.getDiff(tree);
 		expect(diff).toEqual([]);
 		expect(tree.isEqualTo(tree)).toBe(true);
+	});
+
+	it('should get texts by path', () => {
+		const tree = new CurratedTree(avatarNodes, 'Library');
+		const texts = tree.getTexts(['Intro']);
+		expect(texts).toEqual([
+			{ path: ['Intro'], pageStatuses: [NodeStatus.NotStarted] },
+		]);
+	});
+
+	it('should get texts by path', () => {
+		const tree = new CurratedTree(avatarNodes, 'Library');
+		const texts = tree.getTexts(['Avatar', 'Season_1', 'Episode_1']);
+		expect(texts).toEqual([
+			{
+				path: ['Avatar', 'Season_1', 'Episode_1'],
+				pageStatuses: [NodeStatus.NotStarted],
+			},
+		]);
+	});
+
+	it('should get texts by path', () => {
+		const tree = new CurratedTree(avatarNodes, 'Library');
+		const texts = tree.getTexts(['Avatar', 'Season_2', 'Episode_1']);
+		expect(texts).toEqual([
+			{
+				path: ['Avatar', 'Season_2', 'Episode_1'],
+				pageStatuses: [NodeStatus.NotStarted],
+			},
+		]);
 	});
 });
