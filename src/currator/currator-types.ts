@@ -30,6 +30,7 @@ export const NodeType = NodeTypeSchema.enum;
 export type CommonNode = {
 	status: NodeStatus;
 	type: NodeType;
+	parent: BranchNode | null;
 };
 
 export type PageNode = CommonNode & {

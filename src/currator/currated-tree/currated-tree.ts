@@ -24,6 +24,30 @@ export class CurratedTree {
 		this.type = NodeType.Section;
 		this.name = name;
 		this.status = NodeStatus.InProgress;
+		// Set parent to null for all root-level nodes
+		this.initializeParents();
+	}
+
+	private initializeParents(): void {
+		for (const child of this.children) {
+			child.parent = null;
+			this.setChildParents(child);
+		}
+	}
+
+	private setChildParents(node: BranchNode): void {
+		if (node.type === NodeType.Section) {
+			const section = node as SectionNode;
+			for (const child of section.children) {
+				child.parent = node;
+				this.setChildParents(child);
+			}
+		} else if (node.type === NodeType.Text) {
+			const text = node as TextNode;
+			for (const page of text.children) {
+				page.parent = node;
+			}
+		}
 	}
 
 	public getTexts(path: TreePath): SerializedText[] {
@@ -63,6 +87,7 @@ export class CurratedTree {
 					index,
 					status: pageStatuses[index] ?? NodeStatus.NotStarted,
 					type: NodeType.Page,
+					parent: textNode.data,
 				}) satisfies PageNode
 		);
 
@@ -266,7 +291,7 @@ export class CurratedTree {
 
 		const mbNode = this.getMaybeNode({ path });
 		if (!mbNode.error && mbNode.data.type === NodeType.Section) {
-			return { error: false, data: mbNode.data };
+			return { error: false, data: mbNode.data as SectionNode };
 		}
 
 		const pathCopy = [...path];
@@ -280,15 +305,17 @@ export class CurratedTree {
 			};
 		}
 
-		const sectionNode = {
+		const sectionNode: SectionNode = {
 			name,
 			status: status ?? NodeStatus.NotStarted,
 			type: NodeType.Section,
 			children: [],
-		} satisfies SectionNode;
+			parent: null,
+		};
 
 		// Handle root-level section creation
 		if (pathToParent.length === 0) {
+			sectionNode.parent = null;
 			this.children.push(sectionNode);
 			return { error: false, data: sectionNode };
 		}
@@ -305,7 +332,8 @@ export class CurratedTree {
 			};
 		}
 
-		const parent = mbParent.data;
+		const parent = mbParent.data as SectionNode;
+		sectionNode.parent = parent;
 		parent.children.push(sectionNode);
 
 		return { error: false, data: sectionNode };
@@ -362,6 +390,7 @@ export class CurratedTree {
 			status: status,
 			type: NodeType.Text,
 			children: [],
+			parent: parent,
 		};
 
 		parent.children.push(textNode);
