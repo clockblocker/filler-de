@@ -11,7 +11,7 @@ import {
 	type TreeNode,
 	type SerializedText,
 } from '../tree-types';
-import { bfs } from './walks';
+import { bfs } from './helpers/walks';
 
 export class CurratedTree {
 	children: BranchNode[];

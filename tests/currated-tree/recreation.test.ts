@@ -4,7 +4,7 @@ import { CurratedTree } from '../../src/currator/currated-tree/currated-tree';
 import {
 	makeTextsFromTree,
 	makeTreeFromTexts,
-} from '../../src/currator/currated-tree/serialization';
+} from '../../src/currator/currated-tree/helpers/serialization';
 import { logToFile } from '../tracing/functions/write-log-to-file';
 
 describe('CurratedTree - add and remove all texts cycle', () => {

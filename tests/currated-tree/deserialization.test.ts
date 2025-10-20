@@ -5,7 +5,7 @@ import { CurratedTree } from '../../src/currator/currated-tree/currated-tree';
 import {
 	makeTextsFromTree,
 	makeTreeFromTexts,
-} from '../../src/currator/currated-tree/serialization';
+} from '../../src/currator/currated-tree/helpers/serialization';
 import { checkEqualityOfSerializedTexts } from '../../src/currator/pure-functions/serialized-text';
 
 describe('texts === texts -> tree -> texts', () => {
