@@ -1,4 +1,4 @@
-import { type TreeNode, NodeType } from '../../tree-types';
+import { type TreeNode, NodeType } from '../../currator-types';
 import type { CurratedTree } from '../currated-tree';
 
 export function* bfs(

@@ -4,7 +4,7 @@ import {
 	type SectionNode,
 	type TextNode,
 	type TreeNode,
-} from '../tree-types';
+} from '../currator-types';
 
 const haveSameType = (node1: TreeNode, node2: TreeNode) => {
 	return node1.type === node2.type;

@@ -1,11 +1,10 @@
 import { describe, it, expect } from 'bun:test';
-import { AVATAR_TEXTS } from './static/battaries/avatar';
-import { CurratedTree } from '../../src/currator/currated-tree/currated-tree';
 import {
 	makeTextsFromTree,
 	makeTreeFromTexts,
-} from '../../src/currator/currated-tree/helpers/serialization';
-import { logToFile } from '../tracing/functions/write-log-to-file';
+} from '../../../src/currator/currated-tree/helpers/serialization';
+import { logToFile } from '../../tracing/functions/write-log-to-file';
+import { AVATAR_TEXTS } from '../static/battaries/avatar';
 
 describe('CurratedTree - add and remove all texts cycle', () => {
 	it('can remove and re-add every text and result is identical', () => {

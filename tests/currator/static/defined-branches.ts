@@ -1,7 +1,7 @@
 import type {
 	BranchNode,
 	SerializedText,
-} from '../../../src/currator/tree-types';
+} from '../../../../src/currator/currator-types';
 import { AVATAR_NODES, AVATAR_TEXTS } from './battaries/avatar';
 
 type BranchName = 'Avatar';

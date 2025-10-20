@@ -57,6 +57,34 @@ const PlusDelimeterSchema = z.literal(`${UNDERSCORE}plus${UNDERSCORE}`); // _plu
 export type PLUS_DELIMETER = z.infer<typeof PlusDelimeterSchema>;
 export const PLUS_DELIMETER = PlusDelimeterSchema.value;
 
+export const SPACE_LIKE_CHARS = [
+	' ', // space
+	'\u00A0', // non-breaking space
+	'\t', // tab
+	'\n', // new line
+	'\r', // carriage return
+	'\v', // vertical tab
+	'\f', // form feed
+	'\u1680', // OGHAM SPACE MARK
+	'\u180E', // MONGOLIAN VOWEL SEPARATOR
+	'\u2000', // EN QUAD
+	'\u2001', // EM QUAD
+	'\u2002', // EN SPACE
+	'\u2003', // EM SPACE
+	'\u2004', // THREE-PER-EM SPACE
+	'\u2005', // FOUR-PER-EM SPACE
+	'\u2006', // SIX-PER-EM SPACE
+	'\u2007', // FIGURE SPACE
+	'\u2008', // PUNCTUATION SPACE
+	'\u2009', // THIN SPACE
+	'\u200A', // HAIR SPACE
+	'\u2028', // LINE SEPARATOR
+	'\u2029', // PARAGRAPH SEPARATOR
+	'\u202F', // NARROW NO-BREAK SPACE
+	'\u205F', // MEDIUM MATHEMATICAL SPACE
+	'\u3000', // IDEOGRAPHIC SPACE
+] as const;
+
 // Nodes
 export const TextSchema = z.literal('Text');
 export type TEXT = z.infer<typeof TextSchema>;
@@ -71,6 +99,10 @@ export type PAGE = z.infer<typeof PageSchema>;
 export const PAGE = PageSchema.value;
 
 // Meta
+export const UnmarkedSchema = z.literal('Unmarked');
+export type UNMARKED = z.infer<typeof UnmarkedSchema>;
+export const UNMARKED = UnmarkedSchema.value;
+
 export const CodexSchema = z.literal('Codex');
 export type CODEX = z.infer<typeof CodexSchema>;
 export const CODEX = CodexSchema.value;

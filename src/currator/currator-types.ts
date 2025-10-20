@@ -6,10 +6,18 @@ import {
 	IN_PROGRESS,
 	NOT_STARTED,
 	DONE,
+	CODEX,
+	UNMARKED,
 } from '../types/beta/literals';
 
-// UnVettedName.strip().replaceAll(/\s+/g, '_')
-export type NodeName = string;
+// Naming
+export const IndexedFileTypeSchema = z.enum([TEXT, CODEX, UNMARKED]);
+export type IndexedFileType = z.infer<typeof IndexedFileTypeSchema>;
+export const IndexedFileType = IndexedFileTypeSchema.enum;
+
+export type GuardedNodeName = string; // UnVettedName.strip().replaceAll(/\s+/g, '_')
+
+// Tree
 
 export const NodeStatusSchema = z.enum([DONE, NOT_STARTED, IN_PROGRESS]);
 export type NodeStatus = z.infer<typeof NodeStatusSchema>;
@@ -30,13 +38,13 @@ export type PageNode = CommonNode & {
 };
 
 export type TextNode = CommonNode & {
-	name: NodeName;
+	name: GuardedNodeName;
 	type: typeof NodeType.Text;
 	children: PageNode[];
 };
 
 export type SectionNode = CommonNode & {
-	name: NodeName;
+	name: GuardedNodeName;
 	type: typeof NodeType.Section;
 	children: (SectionNode | TextNode)[];
 };
@@ -44,8 +52,8 @@ export type SectionNode = CommonNode & {
 export type BranchNode = SectionNode | TextNode;
 export type TreeNode = BranchNode | PageNode;
 
-type TargetNodeName = NodeName;
-type PrevNodeNames = NodeName[];
+type TargetNodeName = GuardedNodeName;
+type PrevNodeNames = GuardedNodeName[];
 
 export type TreePath = [...PrevNodeNames, TargetNodeName];
 

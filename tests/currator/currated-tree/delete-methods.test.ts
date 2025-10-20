@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'bun:test';
-import { CurratedTree } from '../../src/currator/currated-tree/currated-tree';
-import { VALID_BRANCHES } from './static/defined-branches';
+import { CurratedTree } from '../../../src/currator/currated-tree/currated-tree';
+import { VALID_BRANCHES } from '../static/defined-branches';
 
 const avatarNodes = VALID_BRANCHES.Avatar.nodes;
 

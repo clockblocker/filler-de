@@ -1,8 +1,8 @@
 // ---
 
-import type { NodeName } from './tree-types';
+import type { GuardedNodeName } from './currator-types';
 
-type SectionName = NodeName;
+type SectionName = GuardedNodeName;
 
 type PrevSectionNames = SectionName[];
 type CurrentSectionName = SectionName;

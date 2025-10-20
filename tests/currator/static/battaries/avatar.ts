@@ -2,9 +2,8 @@ import {
 	NodeStatus,
 	NodeType,
 	type BranchNode,
-	type TreePath,
 	type SerializedText,
-} from '../../../../src/currator/tree-types';
+} from '../../../../src/currator/currator-types';
 
 export const AVATAR_NODES = [
 	{

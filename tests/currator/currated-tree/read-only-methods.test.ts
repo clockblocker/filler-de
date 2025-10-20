@@ -3,9 +3,9 @@ import {
 	NodeStatus,
 	type PageNode,
 	type TextNode,
-} from '../../src/currator/tree-types';
-import { CurratedTree } from '../../src/currator/currated-tree/currated-tree';
-import { VALID_BRANCHES } from './static/defined-branches';
+} from '../../../src/currator/currator-types';
+import { CurratedTree } from '../../../src/currator/currated-tree/currated-tree';
+import { VALID_BRANCHES } from '../static/defined-branches';
 
 const avatarNodes = VALID_BRANCHES.Avatar.nodes;
 

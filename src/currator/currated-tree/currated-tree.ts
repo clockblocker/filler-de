@@ -10,7 +10,7 @@ import {
 	type SectionNode,
 	type TreeNode,
 	type SerializedText,
-} from '../tree-types';
+} from '../currator-types';
 import { bfs } from './helpers/walks';
 
 export class CurratedTree {
