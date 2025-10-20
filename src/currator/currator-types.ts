@@ -9,16 +9,16 @@ import {
 	CODEX,
 	UNMARKED,
 } from '../types/beta/literals';
+import type { toGuardedNodeName } from './pure-functions/file-indexing';
 
 // Naming
 export const IndexedFileTypeSchema = z.enum([TEXT, CODEX, UNMARKED]);
 export type IndexedFileType = z.infer<typeof IndexedFileTypeSchema>;
 export const IndexedFileType = IndexedFileTypeSchema.enum;
 
-export type GuardedNodeName = string; // UnVettedName.strip().replaceAll(/\s+/g, '_')
+export type GuardedNodeName = ReturnType<typeof toGuardedNodeName>;
 
 // Tree
-
 export const NodeStatusSchema = z.enum([DONE, NOT_STARTED, IN_PROGRESS]);
 export type NodeStatus = z.infer<typeof NodeStatusSchema>;
 export const NodeStatus = NodeStatusSchema.enum;
