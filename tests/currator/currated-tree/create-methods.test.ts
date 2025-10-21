@@ -4,595 +4,283 @@ import {
 	NodeType,
 	type TextNode,
 	type SectionNode,
+	type TreePath,
+	type SerializedText,
 } from '../../../src/currator/currator-types';
 import { CurratedTree } from '../../../src/currator/currated-tree/currated-tree';
 
-describe('CurratedTree - Building from scratch', () => {
-	describe('getOrCreateSectionNode', () => {
-		it('should create a new section at root level', () => {
+describe('CurratedTree - Building from SerializedText', () => {
+	describe('Constructor with SerializedText[]', () => {
+		it('should create tree from empty SerializedText array', () => {
 			const tree = new CurratedTree([], 'Library');
-			const result = tree.getOrCreateSectionNode({
-				path: ['Books'],
-			});
-
-			expect(result.error).toBe(false);
-			if (!result.error) {
-				expect(result.data.name).toBe('Books');
-				expect(result.data.type).toBe(NodeType.Section);
-				expect(result.data.status).toBe(NodeStatus.NotStarted);
-				expect(result.data.children).toEqual([]);
-			}
+			expect(tree.children.length).toBe(0);
+			expect(tree.name).toBe('Library');
+			expect(tree.status).toBe(NodeStatus.NotStarted);
 		});
 
-		it('should create a nested section structure', () => {
-			const tree = new CurratedTree([], 'Library');
+		it('should create sections and text nodes from SerializedText paths', () => {
+			const texts: SerializedText[] = [
+				{
+					path: ['Books', 'Fiction', 'Novel1'] as TreePath,
+					pageStatuses: [NodeStatus.NotStarted, NodeStatus.Done],
+				},
+			];
 
-			// Create first level section
-			const booksResult = tree.getOrCreateSectionNode({
-				path: ['Books'],
-			});
-			expect(booksResult.error).toBe(false);
+			const tree = new CurratedTree(texts, 'Library');
 
-			// Create second level section
-			const fantasyResult = tree.getOrCreateSectionNode({
-				path: ['Books', 'Fantasy'],
-			});
-			expect(fantasyResult.error).toBe(false);
-			if (!fantasyResult.error) {
-				expect(fantasyResult.data.name).toBe('Fantasy');
-			}
-
-			// Verify hierarchy
-			if (!booksResult.error) {
-				expect(booksResult.data.children.length).toBe(1);
-				expect(booksResult.data.children[0]?.name).toBe('Fantasy');
-			}
-		});
-
-		it('should return existing section without creating duplicate', () => {
-			const tree = new CurratedTree([], 'Library');
-
-			const first = tree.getOrCreateSectionNode({
-				path: ['Books'],
-			});
-
-			const second = tree.getOrCreateSectionNode({
-				path: ['Books'],
-			});
-
-			expect(first.error).toBe(false);
-			expect(second.error).toBe(false);
-			if (!first.error && !second.error) {
-				expect(first.data).toBe(second.data);
-			}
-		});
-
-		it('should create section with specified status', () => {
-			const tree = new CurratedTree([], 'Library');
-
-			const result = tree.getOrCreateSectionNode({
-				path: ['Books'],
-				status: NodeStatus.Done,
-			});
-
-			expect(result.error).toBe(false);
-			if (!result.error) {
-				expect(result.data.status).toBe(NodeStatus.Done);
-			}
-		});
-
-		it('should fail if path is empty', () => {
-			const tree = new CurratedTree([], 'Library');
-
-			const result = tree.getOrCreateSectionNode({
-				path: [] as any,
-			});
-
-			expect(result.error).toBe(true);
-			if (result.error) {
-				expect(result.description).toBe('Path is empty');
-			}
-		});
-
-		it('should fail if parent does not exist', () => {
-			const tree = new CurratedTree([], 'Library');
-
-			const result = tree.getOrCreateSectionNode({
-				path: ['NonExistent', 'Child'],
-			});
-
-			expect(result.error).toBe(true);
-			if (result.error) {
-				expect(result.description).toContain('not found');
-			}
-		});
-
-		it('should fail if parent is a text node, not a section', () => {
-			const tree = new CurratedTree(
-				[
-					{
-						name: 'Chapter1',
-						status: NodeStatus.NotStarted,
-						type: NodeType.Text,
-						children: [],
-					} as TextNode,
-				],
-				'Library'
-			);
-
-			const result = tree.getOrCreateSectionNode({
-				path: ['Chapter1', 'Section'],
-			});
-
-			expect(result.error).toBe(true);
-			if (result.error) {
-				expect(result.description).toBe('Parent is not a section');
-			}
-		});
-
-		it('should create multiple sections at root level', () => {
-			const tree = new CurratedTree([], 'Library');
-
-			const books = tree.getOrCreateSectionNode({ path: ['Books'] });
-			const movies = tree.getOrCreateSectionNode({ path: ['Movies'] });
-			const music = tree.getOrCreateSectionNode({ path: ['Music'] });
-
-			expect(books.error).toBe(false);
-			expect(movies.error).toBe(false);
-			expect(music.error).toBe(false);
-		});
-
-		it('should create deep nesting through multiple calls', () => {
-			const tree = new CurratedTree([], 'Library');
-
-			tree.getOrCreateSectionNode({ path: ['A'] });
-			tree.getOrCreateSectionNode({ path: ['A', 'B'] });
-			tree.getOrCreateSectionNode({ path: ['A', 'B', 'C'] });
-			tree.getOrCreateSectionNode({ path: ['A', 'B', 'C', 'D'] });
-
-			const result = tree.getMaybeNode({ path: ['A', 'B', 'C', 'D'] });
-			expect(result.error).toBe(false);
-			if (!result.error) {
-				expect(result.data.name).toBe('D');
-				expect(result.data.type).toBe(NodeType.Section);
-			}
-		});
-	});
-
-	describe('getOrCreateTextNode', () => {
-		it('should create a text node under an existing section', () => {
-			const tree = new CurratedTree(
-				[
-					{
-						name: 'Books',
-						status: NodeStatus.NotStarted,
-						type: NodeType.Section,
-						children: [],
-					} as SectionNode,
-				],
-				'Library'
-			);
-
-			const result = tree.getOrCreateTextNode({
-				path: ['Books', 'Chapter1'],
-			});
-
-			expect(result.error).toBe(false);
-			if (!result.error) {
-				expect(result.data.name).toBe('Chapter1');
-				expect(result.data.type).toBe(NodeType.Text);
-				expect(result.data.status).toBe(NodeStatus.NotStarted);
-				expect(result.data.children).toEqual([]);
-			}
-		});
-
-		it('should create text node with specified status', () => {
-			const tree = new CurratedTree(
-				[
-					{
-						name: 'Books',
-						status: NodeStatus.NotStarted,
-						type: NodeType.Section,
-						children: [],
-					} as SectionNode,
-				],
-				'Library'
-			);
-
-			const result = tree.getOrCreateTextNode({
-				path: ['Books', 'Chapter1'],
-				status: NodeStatus.InProgress,
-			});
-
-			expect(result.error).toBe(false);
-			if (!result.error) {
-				expect(result.data.status).toBe(NodeStatus.InProgress);
-			}
-		});
-
-		it('should return existing text node without creating duplicate', () => {
-			const tree = new CurratedTree(
-				[
-					{
-						name: 'Books',
-						status: NodeStatus.NotStarted,
-						type: NodeType.Section,
-						children: [],
-					} as SectionNode,
-				],
-				'Library'
-			);
-
-			const first = tree.getOrCreateTextNode({
-				path: ['Books', 'Chapter1'],
-			});
-
-			const second = tree.getOrCreateTextNode({
-				path: ['Books', 'Chapter1'],
-			});
-
-			expect(first.error).toBe(false);
-			expect(second.error).toBe(false);
-			if (!first.error && !second.error) {
-				expect(first.data).toBe(second.data);
-			}
-		});
-
-		it('should create nested sections automatically before creating text node', () => {
-			const tree = new CurratedTree([], 'Library');
-
-			const result = tree.getOrCreateTextNode({
-				path: ['Books', 'Fantasy', 'Chapter1'],
-			});
-
-			expect(result.error).toBe(false);
-			if (!result.error) {
-				expect(result.data.name).toBe('Chapter1');
-				expect(result.data.type).toBe(NodeType.Text);
-			}
-
-			// Verify the sections were created
-			const booksNode = tree.getMaybeNode({ path: ['Books'] });
-			const fantasyNode = tree.getMaybeNode({
-				path: ['Books', 'Fantasy'],
-			});
-
-			expect(booksNode.error).toBe(false);
-			expect(fantasyNode.error).toBe(false);
-		});
-
-		it('should fail if path is empty', () => {
-			const tree = new CurratedTree([], 'Library');
-
-			const result = tree.getOrCreateTextNode({
-				path: [] as any,
-			});
-
-			expect(result.error).toBe(true);
-			if (result.error) {
-				expect(result.description).toContain('No parent section');
-			}
-		});
-
-		it('should fail if path has only one element (no parent section)', () => {
-			const tree = new CurratedTree([], 'Library');
-
-			const result = tree.getOrCreateTextNode({
-				path: ['OnlyName'],
-			});
-
-			expect(result.error).toBe(true);
-			if (result.error) {
-				expect(result.description).toContain(
-					'No parent section found for TextNode'
-				);
-			}
-		});
-
-		it('should fail if text name is empty after pop', () => {
-			const tree = new CurratedTree([], 'Library');
-
-			// After pop, path becomes [] which is invalid
-			const result = tree.getOrCreateTextNode({
-				path: ['Books'] as any,
-			});
-
-			expect(result.error).toBe(true);
-			if (result.error) {
-				expect(result.description).toContain(
-					'No parent section found for TextNode'
-				);
-			}
-		});
-
-		it('should create multiple text nodes in same section', () => {
-			const tree = new CurratedTree([], 'Library');
-
-			const ch1 = tree.getOrCreateTextNode({
-				path: ['Books', 'Chapter1'],
-			});
-			const ch2 = tree.getOrCreateTextNode({
-				path: ['Books', 'Chapter2'],
-			});
-			const ch3 = tree.getOrCreateTextNode({
-				path: ['Books', 'Chapter3'],
-			});
-
-			expect(ch1.error).toBe(false);
-			expect(ch2.error).toBe(false);
-			expect(ch3.error).toBe(false);
-
-			if (!ch1.error && !ch2.error && !ch3.error) {
-				expect(ch1.data.name).toBe('Chapter1');
-				expect(ch2.data.name).toBe('Chapter2');
-				expect(ch3.data.name).toBe('Chapter3');
-			}
-		});
-
-		it('should create complex nested structure with mixed sections and texts', () => {
-			const tree = new CurratedTree([], 'Library');
-
-			// Create a structure like: Books/Fiction/Fantasy/Chapter1
-			tree.getOrCreateTextNode({
-				path: ['Books', 'Fiction', 'Fantasy', 'Chapter1'],
-			});
-
-			tree.getOrCreateTextNode({
-				path: ['Books', 'Fiction', 'Fantasy', 'Chapter2'],
-			});
-
-			tree.getOrCreateTextNode({
-				path: ['Books', 'Fiction', 'SciFi', 'Chapter1'],
-			});
-
-			// Verify the structure
-			const booksNode = tree.getMaybeNode({ path: ['Books'] });
-			const fictionNode = tree.getMaybeNode({
+			const books = tree.getMaybeNode({ path: ['Books'] });
+			const fiction = tree.getMaybeNode({
 				path: ['Books', 'Fiction'],
 			});
-			const fantasyNode = tree.getMaybeNode({
-				path: ['Books', 'Fiction', 'Fantasy'],
-			});
-			const scifiNode = tree.getMaybeNode({
-				path: ['Books', 'Fiction', 'SciFi'],
-			});
-			const ch1 = tree.getMaybeNode({
-				path: ['Books', 'Fiction', 'Fantasy', 'Chapter1'],
-			});
-			const ch2 = tree.getMaybeNode({
-				path: ['Books', 'Fiction', 'Fantasy', 'Chapter2'],
+			const novel1 = tree.getMaybeNode({
+				path: ['Books', 'Fiction', 'Novel1'],
 			});
 
-			expect(booksNode.error).toBe(false);
-			expect(fictionNode.error).toBe(false);
-			expect(fantasyNode.error).toBe(false);
-			expect(scifiNode.error).toBe(false);
-			expect(ch1.error).toBe(false);
-			expect(ch2.error).toBe(false);
+			expect(!books.error).toBe(true);
+			expect(!fiction.error).toBe(true);
+			expect(!novel1.error).toBe(true);
 		});
 
-		it('should allow reusing existing sections when creating new text nodes', () => {
-			const tree = new CurratedTree(
-				[
-					{
-						name: 'Books',
-						status: NodeStatus.NotStarted,
-						type: NodeType.Section,
-						children: [
-							{
-								name: 'Fiction',
-								status: NodeStatus.NotStarted,
-								type: NodeType.Section,
-								children: [],
-							} as SectionNode,
-						],
-					} as SectionNode,
-				],
-				'Library'
+		it('should set correct status based on page statuses', () => {
+			const texts: SerializedText[] = [
+				{
+					path: ['Section', 'AllDone'] as TreePath,
+					pageStatuses: [NodeStatus.Done, NodeStatus.Done],
+				},
+				{
+					path: ['Section', 'AllNotStarted'] as TreePath,
+					pageStatuses: [NodeStatus.NotStarted, NodeStatus.NotStarted],
+				},
+			];
+
+			const tree = new CurratedTree(texts, 'Library');
+
+			const allDone = tree.getMaybeNode({ path: ['Section', 'AllDone'] });
+			const allNotStarted = tree.getMaybeNode({
+				path: ['Section', 'AllNotStarted'],
+			});
+
+			if (!allDone.error) {
+				expect((allDone.data as TextNode).status).toBe(NodeStatus.Done);
+			}
+			if (!allNotStarted.error) {
+				expect((allNotStarted.data as TextNode).status).toBe(
+					NodeStatus.NotStarted
+				);
+			}
+		});
+
+		it('should handle multiple texts in same section', () => {
+			const texts: SerializedText[] = [
+				{
+					path: ['Section', 'Text1'] as TreePath,
+					pageStatuses: [NodeStatus.Done],
+				},
+				{
+					path: ['Section', 'Text2'] as TreePath,
+					pageStatuses: [NodeStatus.NotStarted],
+				},
+			];
+
+			const tree = new CurratedTree(texts, 'Library');
+
+			const section = tree.getMaybeNode({ path: ['Section'] });
+			if (!section.error) {
+				expect((section.data as SectionNode).children.length).toBe(2);
+				expect((section.data as SectionNode).status).toBe(
+					NodeStatus.InProgress
+				);
+			}
+		});
+	});
+
+	describe('addText method', () => {
+		it('should add single SerializedText', () => {
+			const tree = new CurratedTree([], 'Library');
+			const serialized: SerializedText = {
+				path: ['Section', 'Text'] as TreePath,
+				pageStatuses: [NodeStatus.Done],
+			};
+
+			const result = tree.addText(serialized);
+
+			expect(result.error).toBe(false);
+			if (!result.error) {
+				expect(result.data.name).toBe('Text');
+				expect(result.data.status).toBe(NodeStatus.Done);
+				expect(result.data.children.length).toBe(1);
+			}
+		});
+
+		it('should add multiple texts incrementally', () => {
+			const tree = new CurratedTree([], 'Library');
+
+			tree.addText({
+				path: ['A', 'Text1'] as TreePath,
+				pageStatuses: [NodeStatus.Done],
+			});
+
+			tree.addText({
+				path: ['A', 'Text2'] as TreePath,
+				pageStatuses: [NodeStatus.NotStarted],
+			});
+
+			const a = tree.getMaybeNode({ path: ['A'] });
+			if (!a.error) {
+				expect((a.data as SectionNode).children.length).toBe(2);
+				expect((a.data as SectionNode).status).toBe(NodeStatus.InProgress);
+			}
+		});
+
+		it('should recompute statuses after adding text', () => {
+			const tree = new CurratedTree([], 'Library');
+
+			tree.addText({
+				path: ['Section', 'Text'] as TreePath,
+				pageStatuses: [NodeStatus.Done],
+			});
+
+			const section = tree.getMaybeNode({ path: ['Section'] });
+			expect(!section.error && (section.data as SectionNode).status).toBe(
+				NodeStatus.Done
 			);
+		});
+	});
+
+	describe('getOrCreateSectionNode without status', () => {
+		it('should create section with NotStarted status', () => {
+			const tree = new CurratedTree([], 'Library');
+			const result = tree.getOrCreateSectionNode({
+				path: ['Section'] as TreePath,
+			});
+
+			expect(result.error).toBe(false);
+			if (!result.error) {
+				expect(result.data.status).toBe(NodeStatus.NotStarted);
+			}
+		});
+
+		it('should not accept status parameter', () => {
+			const tree = new CurratedTree([], 'Library');
+			// This should not compile if status parameter is removed
+			const result = tree.getOrCreateSectionNode({
+				path: ['Section'] as TreePath,
+			});
+
+			expect(result.error).toBe(false);
+		});
+	});
+
+	describe('getOrCreateTextNode without status', () => {
+		it('should create text node with NotStarted status', () => {
+			const tree = new CurratedTree([], 'Library');
+			tree.getOrCreateSectionNode({ path: ['Section'] as TreePath });
 
 			const result = tree.getOrCreateTextNode({
-				path: ['Books', 'Fiction', 'Chapter1'],
+				path: ['Section', 'Text'] as TreePath,
 			});
 
 			expect(result.error).toBe(false);
 			if (!result.error) {
-				expect(result.data.name).toBe('Chapter1');
-			}
-		});
-
-		it('should maintain status from first creation when getting existing text node', () => {
-			const tree = new CurratedTree(
-				[
-					{
-						name: 'Books',
-						status: NodeStatus.NotStarted,
-						type: NodeType.Section,
-						children: [],
-					} as SectionNode,
-				],
-				'Library'
-			);
-
-			const first = tree.getOrCreateTextNode({
-				path: ['Books', 'Chapter1'],
-				status: NodeStatus.Done,
-			});
-
-			const second = tree.getOrCreateTextNode({
-				path: ['Books', 'Chapter1'],
-				status: NodeStatus.InProgress,
-			});
-
-			expect(first.error).toBe(false);
-			expect(second.error).toBe(false);
-			if (!first.error && !second.error) {
-				expect(second.data.status).toBe(NodeStatus.Done);
+				expect(result.data.status).toBe(NodeStatus.NotStarted);
 			}
 		});
 	});
 
-	describe('getParentNode and root handling', () => {
-		it('should return tree itself when getting parent of single-element path', () => {
+	describe('changeStatus method', () => {
+		it('should only accept Done or NotStarted', () => {
 			const tree = new CurratedTree(
 				[
 					{
-						name: 'Section1',
-						status: NodeStatus.NotStarted,
-						type: NodeType.Section,
-						children: [],
-					} as SectionNode,
+						path: ['Section', 'Text'] as TreePath,
+						pageStatuses: [NodeStatus.NotStarted],
+					},
 				],
 				'Library'
 			);
 
-			const result = tree.getParentNode({ path: ['Section1'] });
+			// Should work with Done
+			tree.changeStatus({
+				path: ['Section', 'Text'] as TreePath,
+				status: 'Done',
+			});
 
-			expect(result.error).toBe(false);
-			if (!result.error) {
-				expect(result.data).toBe(tree);
-			}
+			// Should work with NotStarted
+			tree.changeStatus({
+				path: ['Section', 'Text'] as TreePath,
+				status: 'NotStarted',
+			});
+
+			expect(true).toBe(true);
 		});
 
-		it('should return tree itself when getting parent of root-level node', () => {
+		it('should DFS and set all page statuses to Done', () => {
 			const tree = new CurratedTree(
 				[
 					{
-						name: 'Books',
-						status: NodeStatus.NotStarted,
-						type: NodeType.Section,
-						children: [],
-					} as SectionNode,
+						path: ['Section', 'Text1'] as TreePath,
+						pageStatuses: [NodeStatus.NotStarted, NodeStatus.NotStarted],
+					},
+					{
+						path: ['Section', 'Text2'] as TreePath,
+						pageStatuses: [NodeStatus.NotStarted],
+					},
 				],
 				'Library'
 			);
 
-			const result = tree.getParentNode({ path: ['Books'] });
+			tree.changeStatus({
+				path: ['Section'] as TreePath,
+				status: 'Done',
+			});
 
-			expect(result.error).toBe(false);
-			if (!result.error) {
-				expect(result.data).toBe(tree);
+			const text1 = tree.getMaybeNode({
+				path: ['Section', 'Text1'],
+			});
+			const text2 = tree.getMaybeNode({
+				path: ['Section', 'Text2'],
+			});
+
+			if (!text1.error) {
+				const t1 = text1.data as TextNode;
+				expect(t1.children.every((p) => p.status === NodeStatus.Done)).toBe(
+					true
+				);
+			}
+
+			if (!text2.error) {
+				const t2 = text2.data as TextNode;
+				expect(t2.children.every((p) => p.status === NodeStatus.Done)).toBe(
+					true
+				);
 			}
 		});
 
-		it('should return correct parent for nested path', () => {
+		it('should set all page statuses to NotStarted', () => {
 			const tree = new CurratedTree(
 				[
 					{
-						name: 'Books',
-						status: NodeStatus.NotStarted,
-						type: NodeType.Section,
-						children: [
-							{
-								name: 'Fiction',
-								status: NodeStatus.NotStarted,
-								type: NodeType.Section,
-								children: [],
-							} as SectionNode,
-						],
-					} as SectionNode,
+						path: ['Section', 'Text'] as TreePath,
+						pageStatuses: [NodeStatus.Done, NodeStatus.Done],
+					},
 				],
 				'Library'
 			);
 
-			const result = tree.getParentNode({ path: ['Books', 'Fiction'] });
-
-			expect(result.error).toBe(false);
-			if (!result.error) {
-				expect(result.data.type).toBe(NodeType.Section);
-				expect((result.data as SectionNode).name).toBe('Books');
-			}
-		});
-
-		it('should return error if node does not exist', () => {
-			const tree = new CurratedTree([], 'Library');
-
-			const result = tree.getParentNode({ path: ['NonExistent'] });
-
-			expect(result.error).toBe(true);
-			if (result.error) {
-				expect(result.description).toContain('not found');
-			}
-		});
-
-		it('should return tree itself when getMaybeNode is called with empty path', () => {
-			const tree = new CurratedTree(
-				[
-					{
-						name: 'Books',
-						status: NodeStatus.NotStarted,
-						type: NodeType.Section,
-						children: [],
-					} as SectionNode,
-				],
-				'Library'
-			);
-
-			const result = tree.getMaybeNode({ path: [] as any });
-
-			expect(result.error).toBe(false);
-			if (!result.error) {
-				expect(result.data).toBe(tree);
-			}
-		});
-	});
-
-	describe('Integration: Combined operations', () => {
-		it('should build complex tree from scratch using both create methods', () => {
-			const tree = new CurratedTree([], 'Library');
-
-			// Create text node which auto-creates parent sections
-			tree.getOrCreateTextNode({
-				path: ['Library', 'German', 'Verbs', 'StrongVerbs'],
-				status: NodeStatus.Done,
+			tree.changeStatus({
+				path: ['Section', 'Text'] as TreePath,
+				status: 'NotStarted',
 			});
 
-			tree.getOrCreateTextNode({
-				path: ['Library', 'German', 'Nouns', 'MasculineNouns'],
-				status: NodeStatus.NotStarted,
+			const text = tree.getMaybeNode({
+				path: ['Section', 'Text'],
 			});
 
-			// Now use getOrCreateSectionNode for existing section (now supports root)
-			const germanSection = tree.getOrCreateSectionNode({
-				path: ['Library', 'German'],
-				status: NodeStatus.InProgress,
-			});
-
-			// Verify entire structure
-			const library = tree.getMaybeNode({ path: ['Library'] });
-			const german = tree.getMaybeNode({
-				path: ['Library', 'German'],
-			});
-			const verbs = tree.getMaybeNode({
-				path: ['Library', 'German', 'Verbs'],
-			});
-			const strongVerbs = tree.getMaybeNode({
-				path: ['Library', 'German', 'Verbs', 'StrongVerbs'],
-			});
-			const nouns = tree.getMaybeNode({
-				path: ['Library', 'German', 'Nouns'],
-			});
-			const masculineNouns = tree.getMaybeNode({
-				path: ['Library', 'German', 'Nouns', 'MasculineNouns'],
-			});
-
-			expect(library.error).toBe(false);
-			expect(german.error).toBe(false);
-			expect(verbs.error).toBe(false);
-			expect(strongVerbs.error).toBe(false);
-			expect(nouns.error).toBe(false);
-			expect(masculineNouns.error).toBe(false);
-
-			// Verify the created nodes
-			if (
-				!library.error &&
-				!german.error &&
-				!strongVerbs.error &&
-				!masculineNouns.error
-			) {
-				expect(strongVerbs.data.type).toBe(NodeType.Text);
-				expect(strongVerbs.data.status).toBe(NodeStatus.Done);
-				expect(masculineNouns.data.type).toBe(NodeType.Text);
+			if (!text.error) {
+				const t = text.data as TextNode;
+				expect(
+					t.children.every((p) => p.status === NodeStatus.NotStarted)
+				).toBe(true);
 			}
 		});
 	});

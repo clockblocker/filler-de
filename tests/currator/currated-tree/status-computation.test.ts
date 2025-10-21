@@ -373,4 +373,208 @@ describe('CurratedTree - Status Computation', () => {
 			);
 		});
 	});
+
+	describe('changeStatus method', () => {
+		it('should change status of a text node', () => {
+			const tree = new CurratedTree([], 'Library');
+			tree.addText({
+				path: ['Section', 'Text'],
+				pageStatuses: [NodeStatus.NotStarted],
+			});
+
+			const result = tree.changeStatus({
+				path: ['Section', 'Text'],
+				status: NodeStatus.Done,
+			});
+
+			expect(result.error).toBe(false);
+			if (!result.error) {
+				expect(result.data.status).toBe(NodeStatus.Done);
+			}
+
+			const text = tree.getMaybeNode({ path: ['Section', 'Text'] });
+			if (!text.error) {
+				expect((text.data as TextNode).status).toBe(NodeStatus.Done);
+			}
+		});
+
+		it('should return error when node does not exist', () => {
+			const tree = new CurratedTree([], 'Library');
+
+			const result = tree.changeStatus({
+				path: ['NonExistent', 'Text'],
+				status: NodeStatus.Done,
+			});
+
+			expect(result.error).toBe(true);
+		});
+
+		it('should propagate status change to parent section', () => {
+			const tree = new CurratedTree([], 'Library');
+			tree.addText({
+				path: ['Section', 'Text1'],
+				pageStatuses: [NodeStatus.Done],
+			});
+			tree.addText({
+				path: ['Section', 'Text2'],
+				pageStatuses: [NodeStatus.Done],
+			});
+
+			let section = tree.getMaybeNode({ path: ['Section'] });
+			expect(!section.error && (section.data as SectionNode).status).toBe(
+				NodeStatus.Done
+			);
+
+			// Change one text to NotStarted
+			tree.changeStatus({
+				path: ['Section', 'Text1'],
+				status: NodeStatus.NotStarted,
+			});
+
+			// Section should now be InProgress (mixed statuses)
+			section = tree.getMaybeNode({ path: ['Section'] });
+			expect(!section.error && (section.data as SectionNode).status).toBe(
+				NodeStatus.InProgress
+			);
+		});
+
+		it('should propagate status change up multiple levels', () => {
+			const tree = new CurratedTree([], 'Library');
+			tree.addText({
+				path: ['Books', 'Fiction', 'Chapter1'],
+				pageStatuses: [NodeStatus.Done],
+			});
+			tree.addText({
+				path: ['Books', 'Fiction', 'Chapter2'],
+				pageStatuses: [NodeStatus.Done],
+			});
+
+			let books = tree.getMaybeNode({ path: ['Books'] });
+			expect(!books.error && (books.data as SectionNode).status).toBe(
+				NodeStatus.Done
+			);
+
+			// Change a deeply nested text
+			tree.changeStatus({
+				path: ['Books', 'Fiction', 'Chapter1'],
+				status: NodeStatus.NotStarted,
+			});
+
+			const fiction = tree.getMaybeNode({ path: ['Books', 'Fiction'] });
+			books = tree.getMaybeNode({ path: ['Books'] });
+
+			// Fiction should be InProgress (Chapter1 NotStarted, Chapter2 Done)
+			expect(!fiction.error && (fiction.data as SectionNode).status).toBe(
+				NodeStatus.InProgress
+			);
+			// Books should be InProgress too (Fiction is InProgress)
+			expect(!books.error && (books.data as SectionNode).status).toBe(
+				NodeStatus.InProgress
+			);
+		});
+
+		it('should allow changing section status directly', () => {
+			const tree = new CurratedTree([], 'Library');
+			tree.addText({
+				path: ['Section', 'Text1'],
+				pageStatuses: [NodeStatus.Done],
+			});
+			tree.addText({
+				path: ['Section', 'Text2'],
+				pageStatuses: [NodeStatus.NotStarted],
+			});
+
+			let section = tree.getMaybeNode({ path: ['Section'] });
+			expect(!section.error && (section.data as SectionNode).status).toBe(
+				NodeStatus.InProgress
+			);
+
+			// Change section status directly (override computed status)
+			tree.changeStatus({
+				path: ['Section'],
+				status: NodeStatus.Done,
+			});
+
+			section = tree.getMaybeNode({ path: ['Section'] });
+			expect(!section.error && (section.data as SectionNode).status).toBe(
+				NodeStatus.Done
+			);
+		});
+
+		it('should recompute parent status after changing multiple children', () => {
+			const tree = new CurratedTree([], 'Library');
+			tree.addText({
+				path: ['Section', 'Text1'],
+				pageStatuses: [NodeStatus.NotStarted],
+			});
+			tree.addText({
+				path: ['Section', 'Text2'],
+				pageStatuses: [NodeStatus.NotStarted],
+			});
+
+			let section = tree.getMaybeNode({ path: ['Section'] });
+			expect(!section.error && (section.data as SectionNode).status).toBe(
+				NodeStatus.NotStarted
+			);
+
+			// Change one text to Done
+			tree.changeStatus({
+				path: ['Section', 'Text1'],
+				status: NodeStatus.Done,
+			});
+
+			// Section should now be InProgress (mixed)
+			section = tree.getMaybeNode({ path: ['Section'] });
+			expect(!section.error && (section.data as SectionNode).status).toBe(
+				NodeStatus.InProgress
+			);
+
+			// Change other text to Done too
+			tree.changeStatus({
+				path: ['Section', 'Text2'],
+				status: NodeStatus.Done,
+			});
+
+			// Section should now be Done (all Done)
+			section = tree.getMaybeNode({ path: ['Section'] });
+			expect(!section.error && (section.data as SectionNode).status).toBe(
+				NodeStatus.Done
+			);
+		});
+
+		it('should handle status changes in complex nested structures', () => {
+			const tree = new CurratedTree([], 'Library');
+			tree.addText({
+				path: ['Root', 'A', 'A1', 'Text1'],
+				pageStatuses: [NodeStatus.Done],
+			});
+			tree.addText({
+				path: ['Root', 'B', 'B1', 'Text1'],
+				pageStatuses: [NodeStatus.Done],
+			});
+
+			const root = tree.getMaybeNode({ path: ['Root'] });
+			expect(!root.error && (root.data as SectionNode).status).toBe(
+				NodeStatus.Done
+			);
+
+			// Change one nested text
+			tree.changeStatus({
+				path: ['Root', 'A', 'A1', 'Text1'],
+				status: NodeStatus.NotStarted,
+			});
+
+			const rootAfter = tree.getMaybeNode({ path: ['Root'] });
+			const a = tree.getMaybeNode({ path: ['Root', 'A'] });
+
+			// A should be NotStarted (all its texts are NotStarted)
+			expect(!a.error && (a.data as SectionNode).status).toBe(
+				NodeStatus.NotStarted
+			);
+			// Root should be InProgress (A is NotStarted, B is Done)
+			expect(!rootAfter.error && (rootAfter.data as SectionNode).status).toBe(
+				NodeStatus.InProgress
+			);
+		});
+	});
 });

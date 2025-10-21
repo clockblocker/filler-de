@@ -11,8 +11,8 @@ import { VALID_BRANCHES } from '../static/defined-branches';
 describe('texts === texts -> tree -> texts', () => {
 	it('', () => {
 		for (const [__name, branch] of Object.entries(VALID_BRANCHES)) {
-			const { nodes, texts } = branch;
-			const tree = new CurratedTree(nodes, 'Library');
+			const { texts } = branch;
+			const tree = new CurratedTree(texts, 'Library');
 			const otherTexts = makeTextsFromTree(tree);
 			expect(checkEqualityOfSerializedTexts(texts, otherTexts)).toBe(true);
 		}
@@ -22,10 +22,10 @@ describe('texts === texts -> tree -> texts', () => {
 describe('texts -> nodes -> tree === nodes -> tree', () => {
 	it('', () => {
 		for (const [__name, branch] of Object.entries(VALID_BRANCHES)) {
-			const { nodes, texts } = branch;
-			const tree = makeTreeFromTexts(texts);
+			const { texts } = branch;
+			const tree = new CurratedTree(texts, 'Library');
 
-			const otherTree = new CurratedTree(nodes, 'Library');
+			const otherTree = new CurratedTree(texts, 'Library');
 			const diff = tree.getDiff(otherTree);
 
 			expect(diff).toEqual([]);

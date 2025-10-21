@@ -1,106 +1,97 @@
 import { describe, it, expect } from 'bun:test';
 import { CurratedTree } from '../../../src/currator/currated-tree/currated-tree';
 import { VALID_BRANCHES } from '../static/defined-branches';
-
-const avatarNodes = VALID_BRANCHES.Avatar.nodes;
+import {
+	NodeStatus,
+	type TreePath,
+	type SerializedText,
+} from '../../../src/currator/currator-types';
 
 describe('CurratedTree - deleteText', () => {
 	it('should delete existing text (Intro) from root', () => {
-		const tree = new CurratedTree(
-			JSON.parse(JSON.stringify(avatarNodes)),
-			'Library'
-		);
+		const tree = new CurratedTree(VALID_BRANCHES.Avatar.texts, 'Library');
 		// Confirm node exists
-		const foundBefore = tree.getMaybeNode({ path: ['Intro'] });
+		const foundBefore = tree.getMaybeNode({
+			path: ['Intro', 'Intro'] as TreePath,
+		});
 		expect(foundBefore.error).toBe(false);
 
-		tree.deleteText({ path: ['Intro'] });
+		tree.deleteText({ path: ['Intro', 'Intro'] as TreePath });
 
-		const foundAfter = tree.getMaybeNode({ path: ['Intro'] });
+		const foundAfter = tree.getMaybeNode({
+			path: ['Intro', 'Intro'] as TreePath,
+		});
 		expect(foundAfter.error).toBe(true);
 	});
 
 	it('should delete nested text ("Avatar" -> "Season_1" -> "Episode_1")', () => {
-		const tree = new CurratedTree(
-			JSON.parse(JSON.stringify(avatarNodes)),
-			'Library'
-		);
+		const tree = new CurratedTree(VALID_BRANCHES.Avatar.texts, 'Library');
 		const foundBefore = tree.getMaybeNode({
-			path: ['Avatar', 'Season_1', 'Episode_1'],
+			path: ['Avatar', 'Season_1', 'Episode_1'] as TreePath,
 		});
 		expect(foundBefore.error).toBe(false);
 
-		tree.deleteText({ path: ['Avatar', 'Season_1', 'Episode_1'] });
+		tree.deleteText({ path: ['Avatar', 'Season_1', 'Episode_1'] as TreePath });
 
 		const foundAfter = tree.getMaybeNode({
-			path: ['Avatar', 'Season_1', 'Episode_1'],
+			path: ['Avatar', 'Season_1', 'Episode_1'] as TreePath,
 		});
 		expect(foundAfter.error).toBe(true);
 
 		// Should not delete parent sections
-		expect(tree.getMaybeNode({ path: ['Avatar', 'Season_1'] }).error).toBe(
-			false
-		);
+		expect(
+			tree.getMaybeNode({ path: ['Avatar', 'Season_1'] as TreePath }).error
+		).toBe(false);
 	});
 
 	it('should do nothing when deleting non-existent text (wrong root child)', () => {
-		const tree = new CurratedTree(
-			JSON.parse(JSON.stringify(avatarNodes)),
-			'Library'
-		);
-		tree.deleteText({ path: ['NotARealThing'] });
+		const tree = new CurratedTree(VALID_BRANCHES.Avatar.texts, 'Library');
+		tree.deleteText({ path: ['NotARealThing'] as TreePath });
 		// Should not throw or change tree
-		expect(tree.getMaybeNode({ path: ['NotARealThing'] }).error).toBe(true);
+		expect(
+			tree.getMaybeNode({ path: ['NotARealThing'] as TreePath }).error
+		).toBe(true);
 		// Existing node still present
-		expect(tree.getMaybeNode({ path: ['Intro'] }).error).toBe(false);
+		expect(
+			tree.getMaybeNode({ path: ['Intro', 'Intro'] as TreePath }).error
+		).toBe(false);
 	});
 
 	it('should do nothing when deleting non-existent deeply nested text', () => {
-		const tree = new CurratedTree(
-			JSON.parse(JSON.stringify(avatarNodes)),
-			'Library'
-		);
-		tree.deleteText({ path: ['Avatar', 'Season_2', 'Episode_9'] });
+		const tree = new CurratedTree(VALID_BRANCHES.Avatar.texts, 'Library');
+		tree.deleteText({ path: ['Avatar', 'Season_2', 'Episode_9'] as TreePath });
 		expect(
-			tree.getMaybeNode({ path: ['Avatar', 'Season_2', 'Episode_9'] }).error
+			tree.getMaybeNode({
+				path: ['Avatar', 'Season_2', 'Episode_9'] as TreePath,
+			}).error
 		).toBe(true);
-		expect(tree.getMaybeNode({ path: ['Avatar', 'Season_2'] }).error).toBe(
-			false
-		);
+		expect(
+			tree.getMaybeNode({ path: ['Avatar', 'Season_2'] as TreePath }).error
+		).toBe(false);
 	});
 
 	it('should remove empty section nodes up the chain after deleting last child text', () => {
 		// We create a tree with a nested structure and just one deep text
-		const nodes = [
+		const texts: SerializedText[] = [
 			{
-				type: 'Section',
-				name: 'A',
-				status: 'NotStarted',
-				children: [
-					{
-						type: 'Section',
-						name: 'B',
-						status: 'NotStarted',
-						children: [
-							{
-								type: 'Text',
-								name: 'C',
-								status: 'NotStarted',
-								children: [],
-							},
-						],
-					},
-				],
+				path: ['A', 'B', 'C'] as TreePath,
+				pageStatuses: [],
 			},
 		];
-		const tree = new CurratedTree(JSON.parse(JSON.stringify(nodes)), 'Library');
-		expect(tree.getMaybeNode({ path: ['A', 'B', 'C'] }).error).toBe(false);
+		const tree = new CurratedTree(texts, 'Library');
+		expect(tree.getMaybeNode({ path: ['A', 'B', 'C'] as TreePath }).error).toBe(
+			false
+		);
 
-		tree.deleteText({ path: ['A', 'B', 'C'] });
+		tree.deleteText({ path: ['A', 'B', 'C'] as TreePath });
 
 		// All chain gone except root ("A" and "B" should be deleted too)
-		expect(tree.getMaybeNode({ path: ['A', 'B', 'C'] }).error).toBe(true);
-		expect(tree.getMaybeNode({ path: ['A', 'B'] }).error).toBe(true);
-		expect(tree.getMaybeNode({ path: ['A'] }).error).toBe(true);
+		expect(tree.getMaybeNode({ path: ['A', 'B', 'C'] as TreePath }).error).toBe(
+			true
+		);
+		expect(tree.getMaybeNode({ path: ['A', 'B'] as TreePath }).error).toBe(
+			true
+		);
+		expect(tree.getMaybeNode({ path: ['A'] as TreePath }).error).toBe(true);
 	});
 });

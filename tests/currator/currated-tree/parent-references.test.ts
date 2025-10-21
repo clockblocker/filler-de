@@ -6,6 +6,7 @@ import {
 	type SectionNode,
 } from '../../../src/currator/currator-types';
 import { CurratedTree } from '../../../src/currator/currated-tree/currated-tree';
+import { TreePath } from '../../../src/currator/currator-types';
 
 describe('CurratedTree - Parent References', () => {
 	describe('Creating tree with existing nodes', () => {
@@ -13,12 +14,9 @@ describe('CurratedTree - Parent References', () => {
 			const tree = new CurratedTree(
 				[
 					{
-						name: 'Section1',
-						status: NodeStatus.NotStarted,
-						type: NodeType.Section,
-						children: [],
-						parent: null,
-					} as SectionNode,
+						path: ['Section1', 'Text1'] as TreePath,
+						pageStatuses: [NodeStatus.NotStarted],
+					},
 				],
 				'Library'
 			);
@@ -28,25 +26,15 @@ describe('CurratedTree - Parent References', () => {
 		});
 
 		it('should set parent references for nested section nodes during tree initialization', () => {
-			const nestedStructure = [
-				{
-					name: 'Section1',
-					status: NodeStatus.NotStarted,
-					type: NodeType.Section,
-					children: [
-						{
-							name: 'SubSection1',
-							status: NodeStatus.NotStarted,
-							type: NodeType.Section,
-							children: [],
-							parent: null,
-						} as SectionNode,
-					],
-					parent: null,
-				} as SectionNode,
-			];
-
-			const tree = new CurratedTree(nestedStructure, 'Library');
+			const tree = new CurratedTree(
+				[
+					{
+						path: ['Section1', 'SubSection1'] as TreePath,
+						pageStatuses: [],
+					},
+				],
+				'Library'
+			);
 
 			const section1 = tree.children[0];
 			const subSection1 = (section1 as SectionNode).children[0];
@@ -56,25 +44,15 @@ describe('CurratedTree - Parent References', () => {
 		});
 
 		it('should set parent references for text nodes under sections', () => {
-			const structure = [
-				{
-					name: 'Section1',
-					status: NodeStatus.NotStarted,
-					type: NodeType.Section,
-					children: [
-						{
-							name: 'Text1',
-							status: NodeStatus.NotStarted,
-							type: NodeType.Text,
-							children: [],
-							parent: null,
-						} as TextNode,
-					],
-					parent: null,
-				} as SectionNode,
-			];
-
-			const tree = new CurratedTree(structure, 'Library');
+			const tree = new CurratedTree(
+				[
+					{
+						path: ['Section1', 'Text1'] as TreePath,
+						pageStatuses: [],
+					},
+				],
+				'Library'
+			);
 
 			const section1 = tree.children[0];
 			const text1 = (section1 as SectionNode).children[0];
@@ -84,32 +62,15 @@ describe('CurratedTree - Parent References', () => {
 		});
 
 		it('should set parent references for page nodes under text nodes', () => {
-			const structure = [
-				{
-					name: 'Section1',
-					status: NodeStatus.NotStarted,
-					type: NodeType.Section,
-					children: [
-						{
-							name: 'Text1',
-							status: NodeStatus.NotStarted,
-							type: NodeType.Text,
-							children: [
-								{
-									index: 0,
-									status: NodeStatus.NotStarted,
-									type: NodeType.Page,
-									parent: null,
-								},
-							],
-							parent: null,
-						} as TextNode,
-					],
-					parent: null,
-				} as SectionNode,
-			];
-
-			const tree = new CurratedTree(structure, 'Library');
+			const tree = new CurratedTree(
+				[
+					{
+						path: ['Section1', 'Text1'] as TreePath,
+						pageStatuses: [NodeStatus.NotStarted],
+					},
+				],
+				'Library'
+			);
 
 			const section1 = tree.children[0];
 			const text1 = (section1 as SectionNode).children[0] as TextNode;
@@ -121,33 +82,15 @@ describe('CurratedTree - Parent References', () => {
 		});
 
 		it('should handle deep nesting with correct parent chain', () => {
-			const structure = [
-				{
-					name: 'A',
-					status: NodeStatus.NotStarted,
-					type: NodeType.Section,
-					children: [
-						{
-							name: 'B',
-							status: NodeStatus.NotStarted,
-							type: NodeType.Section,
-							children: [
-								{
-									name: 'C',
-									status: NodeStatus.NotStarted,
-									type: NodeType.Section,
-									children: [],
-									parent: null,
-								} as SectionNode,
-							],
-							parent: null,
-						} as SectionNode,
-					],
-					parent: null,
-				} as SectionNode,
-			];
-
-			const tree = new CurratedTree(structure, 'Library');
+			const tree = new CurratedTree(
+				[
+					{
+						path: ['A', 'B', 'C'] as TreePath,
+						pageStatuses: [],
+					},
+				],
+				'Library'
+			);
 
 			const nodeA = tree.children[0];
 			const nodeB = (nodeA as SectionNode).children[0];

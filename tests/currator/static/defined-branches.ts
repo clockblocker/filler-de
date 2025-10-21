@@ -1,17 +1,10 @@
-import type {
-	BranchNode,
-	SerializedText,
-} from '../../../../src/currator/currator-types';
-import { AVATAR_NODES, AVATAR_TEXTS } from './battaries/avatar';
+import type { SerializedText } from '../../../src/currator/currator-types';
+import { AVATAR_TEXTS } from './battaries/avatar';
 
 type BranchName = 'Avatar';
 
-export const VALID_BRANCHES: Record<
-	BranchName,
-	{ nodes: BranchNode[]; texts: SerializedText[] }
-> = {
+export const VALID_BRANCHES: Record<BranchName, { texts: SerializedText[] }> = {
 	Avatar: {
-		nodes: AVATAR_NODES,
 		texts: AVATAR_TEXTS,
 	},
 } as const;

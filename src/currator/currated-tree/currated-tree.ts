@@ -19,13 +19,17 @@ export class CurratedTree {
 	name: string;
 	status: NodeStatus;
 
-	constructor(nodes: BranchNode[], name: string) {
-		this.children = nodes;
+	constructor(serializedTexts: SerializedText[], name: string) {
+		this.children = [];
 		this.type = NodeType.Section;
 		this.name = name;
-		this.status = NodeStatus.InProgress;
-		// Set parent to null for all root-level nodes
-		this.initializeParents();
+		this.status = NodeStatus.NotStarted;
+
+		// Build tree from serialized texts
+		for (const serializedText of serializedTexts) {
+			this.addText(serializedText);
+		}
+
 		// Compute initial statuses for all nodes
 		this.recomputeStatuses();
 	}
@@ -46,30 +50,25 @@ export class CurratedTree {
 		);
 	}
 
-	public addText({
-		path,
-		pageStatuses,
-		status = 'NotStarted',
-	}: {
-		path: TreePath;
-		pageStatuses: NodeStatus[];
-		status?: NodeStatus;
-	}): Maybe<TextNode> {
-		const textNode = this.getOrCreateTextNode({ path, status });
+	public addText(serializedText: SerializedText): Maybe<TextNode> {
+		const textNode = this.getOrCreateTextNode({ path: serializedText.path });
 		if (textNode.error) {
 			return textNode;
 		}
 
 		textNode.data.children = Array.from(
-			{ length: pageStatuses.length },
+			{ length: serializedText.pageStatuses.length },
 			(_, index) =>
 				({
 					index,
-					status: pageStatuses[index] ?? NodeStatus.NotStarted,
+					status: serializedText.pageStatuses[index] ?? NodeStatus.NotStarted,
 					type: NodeType.Page,
 					parent: textNode.data,
 				}) satisfies PageNode
 		);
+
+		// Initialize parent references for the newly created node
+		this.initializeParents();
 
 		// Recompute statuses after adding pages
 		this.recomputeStatuses();
@@ -156,6 +155,48 @@ export class CurratedTree {
 
 		// Recompute statuses after deletion
 		this.recomputeStatuses();
+	}
+
+	public changeStatus({
+		path,
+		status,
+	}: {
+		path: TreePath;
+		status: 'Done' | 'NotStarted';
+	}): Maybe<BranchNode> {
+		const mbNode = this.getMaybeNode({ path });
+		if (mbNode.error) {
+			return mbNode;
+		}
+
+		const node = mbNode.data as BranchNode;
+
+		// DFS to find all text nodes and update their page statuses
+		this.setPageStatusesRecursive(node, status);
+
+		// Recompute all statuses based on the new page statuses
+		this.recomputeStatuses();
+
+		return { error: false, data: node };
+	}
+
+	private setPageStatusesRecursive(
+		node: BranchNode,
+		status: 'Done' | 'NotStarted'
+	): void {
+		if (node.type === NodeType.Text) {
+			const textNode = node as TextNode;
+			// Set all page statuses to the given status
+			for (const page of textNode.children) {
+				page.status = status as NodeStatus;
+			}
+		} else if (node.type === NodeType.Section) {
+			const section = node as SectionNode;
+			// Recursively process all children
+			for (const child of section.children) {
+				this.setPageStatusesRecursive(child, status);
+			}
+		}
 	}
 
 	public getDiff(other: CurratedTree): TreeNode[] {
@@ -262,13 +303,7 @@ export class CurratedTree {
 		return this.getMaybeNode({ path: parentPath });
 	}
 
-	getOrCreateSectionNode({
-		path,
-		status = 'NotStarted',
-	}: {
-		path: TreePath;
-		status?: NodeStatus;
-	}): Maybe<SectionNode> {
+	getOrCreateSectionNode({ path }: { path: TreePath }): Maybe<SectionNode> {
 		if (path.length === 0) {
 			return {
 				error: true,
@@ -294,7 +329,7 @@ export class CurratedTree {
 
 		const sectionNode: SectionNode = {
 			name,
-			status: status ?? NodeStatus.NotStarted,
+			status: NodeStatus.NotStarted,
 			type: NodeType.Section,
 			children: [],
 			parent: null,
@@ -326,13 +361,7 @@ export class CurratedTree {
 		return { error: false, data: sectionNode };
 	}
 
-	getOrCreateTextNode({
-		path,
-		status = 'NotStarted',
-	}: {
-		path: TreePath;
-		status?: NodeStatus;
-	}): Maybe<TextNode> {
+	getOrCreateTextNode({ path }: { path: TreePath }): Maybe<TextNode> {
 		const mbNode = this.getMaybeNode({ path });
 		if (!mbNode.error && mbNode.data.type === NodeType.Text) {
 			return { error: false, data: mbNode.data };
@@ -374,7 +403,7 @@ export class CurratedTree {
 
 		const textNode: TextNode = {
 			name: textName,
-			status: status,
+			status: NodeStatus.NotStarted,
 			type: NodeType.Text,
 			children: [],
 			parent: parent,
