@@ -1,25 +1,25 @@
-import { z } from 'zod';
+import type { z } from "zod";
 import {
-	GrundformSchema,
-	WortartSchema,
-	NomenGrundformSchema,
-	GenusSchema,
-	RegelmaessigSchema,
-	TrennbarkeitSchema,
-	NomenDeklinationSchema,
-	KasusSchema,
-	PartikelTypeSchema,
-	AdverbCategorySchema,
-	NumerusSchema,
-	PronomenTypeSchema,
-	MorphemSchema,
-	morphemAnalysisOutputSchema,
-	SteigerungsfaehigSchema,
-	VergleichsgradSchema,
-	MatchSchema,
-	grundformsOutputSchema,
-	adjektivOutputSchema,
-} from './schemas';
+  AdverbCategorySchema,
+  type adjektivOutputSchema,
+  GenusSchema,
+  type GrundformSchema,
+  type grundformsOutputSchema,
+  KasusSchema,
+  MatchSchema,
+  MorphemSchema,
+  type morphemAnalysisOutputSchema,
+  NomenDeklinationSchema,
+  type NomenGrundformSchema,
+  NumerusSchema,
+  PartikelTypeSchema,
+  PronomenTypeSchema,
+  type RegelmaessigSchema,
+  type SteigerungsfaehigSchema,
+  TrennbarkeitSchema,
+  VergleichsgradSchema,
+  WortartSchema,
+} from "./schemas";
 
 export type Grundform = z.infer<typeof GrundformSchema>;
 export type Nomen = z.infer<typeof NomenGrundformSchema>;
@@ -71,7 +71,7 @@ export type Match = z.infer<typeof MatchSchema>;
 
 export type GrundformWithMatch = Grundform & { match: Match };
 
-export type GrundformKerl = Pick<Grundform, 'grundform' | 'wortart'>;
+export type GrundformKerl = Pick<Grundform, "grundform" | "wortart">;
 
 export type MorphemKerl = { grundform: string; morphem: Morphem };
 

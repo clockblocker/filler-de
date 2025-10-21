@@ -1,9 +1,9 @@
-import { z } from 'zod';
-import { tests } from './tests';
-import { adjektivOutputSchema } from 'prompts/endgame/zod/schemas';
+import { adjektivOutputSchema } from "prompts/endgame/zod/schemas";
+import { z } from "zod";
+import { tests } from "./tests";
 
 export const makeEndgameAdjektivPrompt = () => {
-	const instructions = `<agent_background>
+  const instructions = `<agent_background>
   You are a very smart and very helpful German language expert. You have deep expertise in linguistics and a thorough understanding of adjective gradation and its edge cases in the German language. You are very familiar with resources such as "dwds.de" and authoritative grammar references on adjective declension and gradation. You may even be a contributor.
 </agent_background>
 
@@ -89,7 +89,7 @@ const sauer = {
 
 </instructions>`;
 
-	const schema = `<schema>
+  const schema = `<schema>
 import { z } from "zod";
 const VergleichsgradSchema = z.enum(["Positiv", "Komparativ", "Superlativ"]);
 
@@ -106,21 +106,20 @@ const adjektivOutputSchema = z.array(z.object({
 </schema>
 <outputformat>outputformat shall be formattes as adjektivOutputSchema</outputformat>`;
 
-	const testsSchema = z.record(z.string(), adjektivOutputSchema);
-	const validationResult = testsSchema.safeParse(tests);
+  const testsSchema = z.record(z.string(), adjektivOutputSchema);
+  const validationResult = testsSchema.safeParse(tests);
 
-	if (!validationResult.success) {
-		console.error('Validation error:', validationResult.error);
-		return '';
-	} else {
-		const examplesXML = `<examples>${Object.entries(tests)
-			.map(
-				([key, value]) =>
-					`<example><adjektiv_grundform>${key.toLowerCase().trim()}</adjektiv_grundform><adjektiv_breakdown>${JSON.stringify(
-						value
-					)}</adjektiv_breakdown></example>`
-			)
-			.join('')}</examples>`;
-		return instructions + schema + examplesXML;
-	}
+  if (!validationResult.success) {
+    console.error("Validation error:", validationResult.error);
+    return "";
+  }
+  const examplesXML = `<examples>${Object.entries(tests)
+    .map(
+      ([key, value]) =>
+        `<example><adjektiv_grundform>${key.toLowerCase().trim()}</adjektiv_grundform><adjektiv_breakdown>${JSON.stringify(
+          value,
+        )}</adjektiv_breakdown></example>`,
+    )
+    .join("")}</examples>`;
+  return instructions + schema + examplesXML;
 };

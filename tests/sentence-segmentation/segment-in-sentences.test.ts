@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, expect, it } from 'bun:test';
 import {
-	segmentInQuotedLines,
 	formatQuotedLines,
+	segmentInQuotedLines,
 } from '../../src/pure-formatters/quote-manager/interface';
 
 const directMatches = [

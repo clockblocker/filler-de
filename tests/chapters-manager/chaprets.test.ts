@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, expect, it } from 'bun:test';
 import { codexChaptersToMarkdown } from '../../src/pure-formatters/codex-manager/formatters/codex-deserialiser';
 import { markdownToChapterItems } from '../../src/pure-formatters/codex-manager/formatters/codex-serializer';
 import type { CodexChapter } from '../../src/pure-formatters/codex-manager/types';

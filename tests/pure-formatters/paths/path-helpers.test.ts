@@ -1,13 +1,13 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, expect, it } from 'bun:test';
 
 import {
-	systemPathToPrettyPath,
+	joinPosix,
+	pathToFolderFromPathParts,
+	safeFileName,
+	systemPathFromPrettyPath,
 	systemPathToFileFromPrettyPath,
 	systemPathToFolderFromPrettyPath,
-	systemPathFromPrettyPath,
-	safeFileName,
-	pathToFolderFromPathParts,
-	joinPosix,
+	systemPathToPrettyPath,
 } from '../../../src/pure-formatters/paths/path-helpers';
 import type { PrettyPath } from '../../../src/types/general';
 

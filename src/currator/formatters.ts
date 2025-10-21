@@ -1,6 +1,6 @@
 // ---
 
-import type { GuardedNodeName } from './currator-types';
+import type { GuardedNodeName } from "./currator-types";
 
 type SectionName = GuardedNodeName;
 
@@ -10,12 +10,12 @@ type CurrentSectionName = SectionName;
 type CodexNameParts = [CurrentSectionName, ...PrevSectionNames[]];
 
 type CodexLine = {
-	done: boolean;
-	nameParts: CodexNameParts;
+  done: boolean;
+  nameParts: CodexNameParts;
 };
 
 type Codex = {
-	lines: CodexLine[];
+  lines: CodexLine[];
 };
 
 // {[sectionNames.join('-'), vettedName].join('-')}
@@ -30,6 +30,6 @@ type PageFullName = string;
 // };
 
 type SerialisedEntrie = {
-	name: EntrieFullName;
-	pages: { pageName: PageFullName; content: string }[];
+  name: EntrieFullName;
+  pages: { pageName: PageFullName; content: string }[];
 };

@@ -1,13 +1,12 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, expect, it } from 'bun:test';
+import { CurratedTree } from '../../../src/currator/currated-tree/currated-tree';
 import {
 	NodeStatus,
-	NodeType,
-	type TextNode,
 	type SectionNode,
-	type TreePath,
 	type SerializedText,
+	type TextNode,
+	type TreePath,
 } from '../../../src/currator/currator-types';
-import { CurratedTree } from '../../../src/currator/currated-tree/currated-tree';
 
 describe('CurratedTree - Building from SerializedText', () => {
 	describe('Constructor with SerializedText[]', () => {

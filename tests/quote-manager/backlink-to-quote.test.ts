@@ -1,16 +1,16 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, expect, it } from 'bun:test';
 import {
-	STAR,
-	OBSIDIAN_LINK_OPEN,
-	HASH,
-	BIRD,
-	PIPE,
-	OBSIDIAN_LINK_CLOSE,
-} from '../../src/types/beta/literals';
-import {
-	makeFormattedBacklinkToQuote,
 	extractFormattedBacklinkToQuote,
+	makeFormattedBacklinkToQuote,
 } from '../../src/pure-formatters/quote-manager/functions/formatters/backlink-to-quote';
+import {
+	BIRD,
+	HASH,
+	OBSIDIAN_LINK_CLOSE,
+	OBSIDIAN_LINK_OPEN,
+	PIPE,
+	STAR,
+} from '../../src/types/beta/literals';
 
 function expectedBacklink(fileName: string, linkId: string | number): string {
 	return (

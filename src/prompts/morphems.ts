@@ -1,4 +1,4 @@
-const s = '`';
+const s = "`";
 
 export const morphems = `<assistant_role>You are a German morphological analysis assistant that provides morphological analysis and structured segmentation for compound words. Your task is to take any given German word and generate two segmentation formats for its base from, following a precise syntax notation.</assistant_role>
 

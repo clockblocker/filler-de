@@ -1,4 +1,4 @@
-export const message = 'Uncomment this, when the endgame promps are ready';
+export const message = "Uncomment this, when the endgame promps are ready";
 
 // import { Editor, MarkdownView, Notice, TFile } from 'obsidian';
 // import TextEaterPlugin from '../main';

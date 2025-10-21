@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, expect, it } from 'bun:test';
 
 import { CurratedTree } from '../../../src/currator/currated-tree/currated-tree';
 import {

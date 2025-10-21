@@ -1,7 +1,7 @@
 import {
+	type BranchNode,
 	NodeStatus,
 	NodeType,
-	type BranchNode,
 	type SerializedText,
 } from '../../../../src/currator/currator-types';
 

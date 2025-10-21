@@ -1,8 +1,8 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, expect, it } from 'bun:test';
 
 import {
-	extractMetaInfo,
 	editOrAddMetaInfo,
+	extractMetaInfo,
 } from '../../src/pure-formatters/meta-info-manager/interface';
 import { PAGE } from '../../src/types/beta/literals';
 

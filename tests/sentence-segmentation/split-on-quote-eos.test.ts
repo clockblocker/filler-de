@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, expect, it } from 'bun:test';
 import { splitOnQuote } from '../../src/pure-formatters/quote-manager/functions/splitters/split-on-quote';
 
 const directMatches = [

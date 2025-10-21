@@ -1,9 +1,9 @@
-import { z } from 'zod';
-import { tests } from './tests';
-import { morphemAnalysisOutputSchema } from 'prompts/endgame/zod/schemas';
+import { morphemAnalysisOutputSchema } from "prompts/endgame/zod/schemas";
+import { z } from "zod";
+import { tests } from "./tests";
 
 export const makeEndgameMorhpemsPrompt = () => {
-	const instructions = `<agent_background>You are a language expert, highly knowledgeable in German linguistics, particularly in morphology and word formation. You are well-versed in traditional German linguistic terminology as well as modern analytical approaches.
+  const instructions = `<agent_background>You are a language expert, highly knowledgeable in German linguistics, particularly in morphology and word formation. You are well-versed in traditional German linguistic terminology as well as modern analytical approaches.
 </agent_background>
 <agent_role>
 Your role is to provide detailed morphemic analyses of German words. Decompose words into their individual morphemes (e.g., Stamm, Praefix, Suffix, Endung, Fugenelement) and, when applicable, summarize the compound’s principal components using their Grundformen. Adhere to a strict schema that distinguishes between the detailed breakdown and the compound summary.
@@ -17,7 +17,7 @@ Your role is to provide detailed morphemic analyses of German words. Decompose w
 </instructions>
 `;
 
-	const schema = `<schema>
+  const schema = `<schema>
 import { z } from "zod";
 
 const WortartSchema = z.enum([
@@ -55,21 +55,20 @@ const morphemAnalysisOutputSchema = z.object({
 </schema>
 <outputformat>outputformat shall be formattes as morphemAnalysisOutputSchema</outputformat>`;
 
-	const testsSchema = z.record(z.string(), morphemAnalysisOutputSchema);
-	const validationResult = testsSchema.safeParse(tests);
+  const testsSchema = z.record(z.string(), morphemAnalysisOutputSchema);
+  const validationResult = testsSchema.safeParse(tests);
 
-	if (!validationResult.success) {
-		console.error('Validation error:', validationResult.error);
-		return '';
-	} else {
-		const examplesXML = `<examples>${Object.entries(tests)
-			.map(
-				([key, value]) =>
-					`<example><word>${key.toLowerCase().trim()}</word><morphemicAnalyses>${JSON.stringify(
-						value
-					)}</morphemicAnalyses></example>`
-			)
-			.join('')}</examples>`;
-		return instructions + schema + examplesXML;
-	}
+  if (!validationResult.success) {
+    console.error("Validation error:", validationResult.error);
+    return "";
+  }
+  const examplesXML = `<examples>${Object.entries(tests)
+    .map(
+      ([key, value]) =>
+        `<example><word>${key.toLowerCase().trim()}</word><morphemicAnalyses>${JSON.stringify(
+          value,
+        )}</morphemicAnalyses></example>`,
+    )
+    .join("")}</examples>`;
+  return instructions + schema + examplesXML;
 };

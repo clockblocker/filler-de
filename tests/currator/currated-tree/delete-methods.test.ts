@@ -1,11 +1,11 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, expect, it } from 'bun:test';
 import { CurratedTree } from '../../../src/currator/currated-tree/currated-tree';
-import { VALID_BRANCHES } from '../static/defined-branches';
 import {
 	NodeStatus,
-	type TreePath,
 	type SerializedText,
+	type TreePath,
 } from '../../../src/currator/currator-types';
+import { VALID_BRANCHES } from '../static/defined-branches';
 
 describe('CurratedTree - deleteText', () => {
 	it('should delete existing text (Intro) from root', () => {

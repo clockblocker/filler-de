@@ -1,44 +1,44 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.2.4/schema.json",
-	"formatter": {
-		"enabled": true,
-		"indentStyle": "space",
-		"indentWidth": 2,
-		"lineEnding": "lf",
-		"includes": ["**/src/**/*.ts"],
-	},
-	"assist": { "actions": { "source": { "organizeImports": "on" } } },
-	"linter": {
-		"enabled": true,
-		"rules": {
-			"recommended": true,
-			"style": {
-				"useNamingConvention": "off",
-				"noParameterAssign": "error",
-				"useAsConstAssertion": "error",
-				"useDefaultParameterLast": "error",
-				"useEnumInitializers": "error",
-				"useSelfClosingElements": "error",
-				"useSingleVarDeclarator": "error",
-				"noUnusedTemplateLiteral": "error",
-				"useNumberNamespace": "error",
-				"noInferrableTypes": "error",
-				"noUselessElse": "error",
-			},
-			"correctness": {
-				// NOTE: Biome does not recognize aliased imports.
-				"noUndeclaredDependencies": "off",
-				"useImportExtensions": "off",
-				// NOTE: This isn't React...
-				"useHookAtTopLevel": "off",
-			},
-			"performance": {
-				"useTopLevelRegex": "off",
-			},
-			"suspicious": {
-				"noConsole": { "level": "off", "options": { "allow": ["log"] } },
-			},
-		},
-		"includes": ["**/src/**/*.ts"],
-	},
+  "$schema": "https://biomejs.dev/schemas/2.2.4/schema.json",
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineEnding": "lf",
+    "includes": ["**/src/**/*.ts"]
+  },
+  "assist": { "actions": { "source": { "organizeImports": "on" } } },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "style": {
+        "useNamingConvention": "off",
+        "noParameterAssign": "error",
+        "useAsConstAssertion": "error",
+        "useDefaultParameterLast": "error",
+        "useEnumInitializers": "error",
+        "useSelfClosingElements": "error",
+        "useSingleVarDeclarator": "error",
+        "noUnusedTemplateLiteral": "error",
+        "useNumberNamespace": "error",
+        "noInferrableTypes": "error",
+        "noUselessElse": "error"
+      },
+      "correctness": {
+        // NOTE: Biome does not recognize aliased imports.
+        "noUndeclaredDependencies": "off",
+        "useImportExtensions": "off",
+        // NOTE: This isn't React...
+        "useHookAtTopLevel": "off"
+      },
+      "performance": {
+        "useTopLevelRegex": "off"
+      },
+      "suspicious": {
+        "noConsole": { "level": "off", "options": { "allow": ["log"] } }
+      }
+    },
+    "includes": ["**/src/**/*.ts"]
+  }
 }

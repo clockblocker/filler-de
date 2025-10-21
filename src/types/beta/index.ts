@@ -1,9 +1,9 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-const GenerateLiteralSchema = z.literal('Generate');
+const GenerateLiteralSchema = z.literal("Generate");
 export const GENERATE = GenerateLiteralSchema.value;
 
-const SetupActionsLiteralSchema = z.literal('SetupActions');
+const SetupActionsLiteralSchema = z.literal("SetupActions");
 export const SETUP_ACTIONS = SetupActionsLiteralSchema.value;
 // export type GENERATE = z.infer<typeof GenerateLiteralSchema>;
 

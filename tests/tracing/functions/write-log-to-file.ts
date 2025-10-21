@@ -1,5 +1,5 @@
-import { join } from 'path';
 import { existsSync, mkdirSync, writeFileSync } from 'fs';
+import { join } from 'path';
 import { LOG_DIR } from '../consts';
 
 export const logToFile = (fileName, content) => {

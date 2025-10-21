@@ -1,48 +1,48 @@
-import { unwrapMaybe } from '../../../types/general';
+import { unwrapMaybe } from "../../../types/general";
 import {
-	logError,
-	logWarning,
-} from '../../obsidian-services/helpers/issue-handlers';
-import type { TexfresserObsidianServices } from '../../obsidian-services/interface';
+  logError,
+  logWarning,
+} from "../../obsidian-services/helpers/issue-handlers";
+import type { TexfresserObsidianServices } from "../../obsidian-services/interface";
 // import { VaultCurrator } from '../../obsidian-services/managers/vault-currator';
 
 export async function navigatePagesAction(
-	services: Partial<TexfresserObsidianServices>,
-	direction: 'prev' | 'next'
+  services: Partial<TexfresserObsidianServices>,
+  direction: "prev" | "next",
 ): Promise<void> {
-	const { openedFileService } = services;
+  const { openedFileService } = services;
 
-	if (!openedFileService) {
-		console.error('Missing required services for navigatePagesAction');
-		return;
-	}
+  if (!openedFileService) {
+    console.error("Missing required services for navigatePagesAction");
+    return;
+  }
 
-	const maybeFile = await openedFileService.getMaybeOpenedFile();
-	const currentFile = unwrapMaybe(maybeFile);
+  const maybeFile = await openedFileService.getMaybeOpenedFile();
+  const currentFile = unwrapMaybe(maybeFile);
 
-	// const textsManagerService = new VaultCurrator(openedFileService.getApp());
+  // const textsManagerService = new VaultCurrator(openedFileService.getApp());
 
-	try {
-		let targetPage: any = null;
+  try {
+    const targetPage: any = null;
 
-		if (direction === 'prev') {
-			// targetPage = await textsManagerService.getPreviousPage(currentFile);
-		} else {
-			// targetPage = await textsManagerService.getNextPage(currentFile);
-		}
+    if (direction === "prev") {
+      // targetPage = await textsManagerService.getPreviousPage(currentFile);
+    } else {
+      // targetPage = await textsManagerService.getNextPage(currentFile);
+    }
 
-		if (targetPage) {
-			await openedFileService.openFile(targetPage);
-		} else {
-			logWarning({
-				description: `No ${direction} page found`,
-				location: 'navigatePagesAction',
-			});
-		}
-	} catch (error) {
-		logError({
-			description: `Error navigating to ${direction} page: ${error}`,
-			location: 'navigatePagesAction',
-		});
-	}
+    if (targetPage) {
+      await openedFileService.openFile(targetPage);
+    } else {
+      logWarning({
+        description: `No ${direction} page found`,
+        location: "navigatePagesAction",
+      });
+    }
+  } catch (error) {
+    logError({
+      description: `Error navigating to ${direction} page: ${error}`,
+      location: "navigatePagesAction",
+    });
+  }
 }

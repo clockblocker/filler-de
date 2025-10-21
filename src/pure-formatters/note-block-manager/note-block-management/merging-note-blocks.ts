@@ -1,129 +1,129 @@
 import {
-	type ContentFromNoteBlockId,
-	NoteBlockId,
-	type BlockContent,
-	ALL_BLOCK_IDS,
-	NEW_LINE,
-	VERTIKAL_STICK,
-	COMMA,
-	LINE_BREAK,
-	SPACE,
-	HASHTAG,
-} from './types-and-constants';
+  ALL_BLOCK_IDS,
+  type BlockContent,
+  COMMA,
+  type ContentFromNoteBlockId,
+  HASHTAG,
+  LINE_BREAK,
+  NEW_LINE,
+  NoteBlockId,
+  SPACE,
+  VERTIKAL_STICK,
+} from "./types-and-constants";
 
 export function mergeBlockContentsFromIds({
-	blockContentsFromIds,
-	setOfNoteBlockIdsToCreateIfEmpty,
+  blockContentsFromIds,
+  setOfNoteBlockIdsToCreateIfEmpty,
 }: {
-	blockContentsFromIds: Partial<ContentFromNoteBlockId>[];
-	setOfNoteBlockIdsToCreateIfEmpty: Set<NoteBlockId>;
+  blockContentsFromIds: Partial<ContentFromNoteBlockId>[];
+  setOfNoteBlockIdsToCreateIfEmpty: Set<NoteBlockId>;
 }): ContentFromNoteBlockId {
-	const mergedBlockContentFromNoteBlockId: ContentFromNoteBlockId =
-		{} as ContentFromNoteBlockId;
+  const mergedBlockContentFromNoteBlockId: ContentFromNoteBlockId =
+    {} as ContentFromNoteBlockId;
 
-	ALL_BLOCK_IDS.forEach((blockId) => {
-		const mergedContent = mergerFromNoteBlockId[blockId](
-			blockContentsFromIds.map(
-				(blockContentFromId) => blockContentFromId[blockId] || ''
-			)
-		);
+  ALL_BLOCK_IDS.forEach((blockId) => {
+    const mergedContent = mergerFromNoteBlockId[blockId](
+      blockContentsFromIds.map(
+        (blockContentFromId) => blockContentFromId[blockId] || "",
+      ),
+    );
 
-		if (mergedContent || setOfNoteBlockIdsToCreateIfEmpty.has(blockId)) {
-			mergedBlockContentFromNoteBlockId[blockId] = mergedContent;
-		}
-	});
+    if (mergedContent || setOfNoteBlockIdsToCreateIfEmpty.has(blockId)) {
+      mergedBlockContentFromNoteBlockId[blockId] = mergedContent;
+    }
+  });
 
-	return mergedBlockContentFromNoteBlockId;
+  return mergedBlockContentFromNoteBlockId;
 }
 
 type BlocksMerger = (contents: BlockContent[]) => BlockContent;
 
 const leaveOnlyOneLeadingSymbol = (line: string) => {
-	const leadingSymbols = ['=', '≈', '≠'];
-	for (const s of leadingSymbols) {
-		if (line.includes(s)) {
-			return s + line.replaceAll(s, '');
-		}
-	}
-	return line;
+  const leadingSymbols = ["=", "≈", "≠"];
+  for (const s of leadingSymbols) {
+    if (line.includes(s)) {
+      return s + line.replaceAll(s, "");
+    }
+  }
+  return line;
 };
 
 const trimmedAndFiltered = (contents: BlockContent[]): BlockContent[] => {
-	return contents.map((c) => c.trim()).filter((c) => c);
+  return contents.map((c) => c.trim()).filter((c) => c);
 };
 
 export const joinLinesWithVertikalStick: BlocksMerger = (contents) => {
-	const linesInContents = trimmedAndFiltered(contents).map((c) =>
-		c.split(LINE_BREAK)
-	);
+  const linesInContents = trimmedAndFiltered(contents).map((c) =>
+    c.split(LINE_BREAK),
+  );
 
-	const theMostLines = Math.max(...linesInContents.map((ls) => ls.length));
-	const lines: string[] = [];
+  const theMostLines = Math.max(...linesInContents.map((ls) => ls.length));
+  const lines: string[] = [];
 
-	for (let i = 0; i < theMostLines; i++) {
-		const lineParts: string[] = [];
+  for (let i = 0; i < theMostLines; i++) {
+    const lineParts: string[] = [];
 
-		linesInContents.forEach((lines) => {
-			if (i < lines.length) {
-				lineParts.push(lines[i] ?? '');
-			} else {
-				lineParts.push('');
-			}
-		});
+    linesInContents.forEach((lines) => {
+      if (i < lines.length) {
+        lineParts.push(lines[i] ?? "");
+      } else {
+        lineParts.push("");
+      }
+    });
 
-		lines.push(
-			lineParts
-				.filter((l) => l)
-				.map((l) => leaveOnlyOneLeadingSymbol(l))
-				.join(VERTIKAL_STICK)
-		);
-	}
-	return lines.join(LINE_BREAK);
+    lines.push(
+      lineParts
+        .filter((l) => l)
+        .map((l) => leaveOnlyOneLeadingSymbol(l))
+        .join(VERTIKAL_STICK),
+    );
+  }
+  return lines.join(LINE_BREAK);
 };
 
 export const joinNonEmptyWithNewLine: BlocksMerger = (contents) => {
-	return trimmedAndFiltered(contents).join(NEW_LINE);
+  return trimmedAndFiltered(contents).join(NEW_LINE);
 };
 
 export const mergeWords: BlocksMerger = (contents) => {
-	const words: string[] = [];
+  const words: string[] = [];
 
-	trimmedAndFiltered(contents).forEach((c) =>
-		trimmedAndFiltered(c.split(COMMA)).forEach((word) => words.push(word))
-	);
+  trimmedAndFiltered(contents).forEach((c) =>
+    trimmedAndFiltered(c.split(COMMA)).forEach((word) => words.push(word)),
+  );
 
-	return words.join(COMMA + SPACE);
+  return words.join(COMMA + SPACE);
 };
 
 export const mergeTags: BlocksMerger = (contents) => {
-	const tags: string[] = [];
+  const tags: string[] = [];
 
-	trimmedAndFiltered(contents).forEach((c) =>
-		trimmedAndFiltered(c.split(HASHTAG)).forEach((tag) => tags.push(tag))
-	);
+  trimmedAndFiltered(contents).forEach((c) =>
+    trimmedAndFiltered(c.split(HASHTAG)).forEach((tag) => tags.push(tag)),
+  );
 
-	return tags.map((tag) => HASHTAG + tag).join(SPACE);
+  return tags.map((tag) => HASHTAG + tag).join(SPACE);
 };
 
 export const lastReplaces: BlocksMerger = (contents) => {
-	const trimmedAndFilteredContents = trimmedAndFiltered(contents);
-	const lastIndex = trimmedAndFilteredContents.length - 1;
+  const trimmedAndFilteredContents = trimmedAndFiltered(contents);
+  const lastIndex = trimmedAndFilteredContents.length - 1;
 
-	if (lastIndex < 0) {
-		return '';
-	}
+  if (lastIndex < 0) {
+    return "";
+  }
 
-	return trimmedAndFilteredContents[lastIndex] ?? '';
+  return trimmedAndFilteredContents[lastIndex] ?? "";
 };
 
 const mergerFromNoteBlockId: Record<NoteBlockId, BlocksMerger> = {
-	[NoteBlockId.Formen]: joinNonEmptyWithNewLine,
-	[NoteBlockId.Kontexte]: joinNonEmptyWithNewLine,
-	[NoteBlockId.Synonyme]: joinLinesWithVertikalStick,
-	[NoteBlockId.Morpheme]: lastReplaces,
-	[NoteBlockId.Translations]: joinLinesWithVertikalStick,
-	[NoteBlockId.Related]: mergeWords,
-	[NoteBlockId.Flexion]: joinNonEmptyWithNewLine,
-	[NoteBlockId.Grammatik]: joinNonEmptyWithNewLine,
-	[NoteBlockId.Tags]: mergeTags,
+  [NoteBlockId.Formen]: joinNonEmptyWithNewLine,
+  [NoteBlockId.Kontexte]: joinNonEmptyWithNewLine,
+  [NoteBlockId.Synonyme]: joinLinesWithVertikalStick,
+  [NoteBlockId.Morpheme]: lastReplaces,
+  [NoteBlockId.Translations]: joinLinesWithVertikalStick,
+  [NoteBlockId.Related]: mergeWords,
+  [NoteBlockId.Flexion]: joinNonEmptyWithNewLine,
+  [NoteBlockId.Grammatik]: joinNonEmptyWithNewLine,
+  [NoteBlockId.Tags]: mergeTags,
 };
