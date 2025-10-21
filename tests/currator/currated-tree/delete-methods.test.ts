@@ -12,14 +12,14 @@ describe('CurratedTree - deleteText', () => {
 		const tree = new CurratedTree(VALID_BRANCHES.Avatar.texts, 'Library');
 		// Confirm node exists
 		const foundBefore = tree.getMaybeNode({
-			path: ['Intro', 'Intro'] as TreePath,
+			path: ['Intro'] as TreePath,
 		});
 		expect(foundBefore.error).toBe(false);
 
-		tree.deleteText({ path: ['Intro', 'Intro'] as TreePath });
+		tree.deleteText({ path: ['Intro'] as TreePath });
 
 		const foundAfter = tree.getMaybeNode({
-			path: ['Intro', 'Intro'] as TreePath,
+			path: ['Intro'] as TreePath,
 		});
 		expect(foundAfter.error).toBe(true);
 	});
@@ -52,9 +52,9 @@ describe('CurratedTree - deleteText', () => {
 			tree.getMaybeNode({ path: ['NotARealThing'] as TreePath }).error
 		).toBe(true);
 		// Existing node still present
-		expect(
-			tree.getMaybeNode({ path: ['Intro', 'Intro'] as TreePath }).error
-		).toBe(false);
+		expect(tree.getMaybeNode({ path: ['Intro'] as TreePath }).error).toBe(
+			false
+		);
 	});
 
 	it('should do nothing when deleting non-existent deeply nested text', () => {

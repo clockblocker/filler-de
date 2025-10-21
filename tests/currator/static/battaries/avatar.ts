@@ -1,9 +1,4 @@
-import {
-	type BranchNode,
-	NodeStatus,
-	NodeType,
-	type SerializedText,
-} from '../../../../src/currator/currator-types';
+import { type SerializedText } from '../../../../src/currator/currator-types';
 
 export const AVATAR_TEXTS = [
 	{
@@ -23,7 +18,7 @@ export const AVATAR_TEXTS = [
 		pageStatuses: ['NotStarted'] as const,
 	},
 	{
-		path: ['Intro', 'Intro'] as const,
+		path: ['Intro'] as const,
 		pageStatuses: ['NotStarted'] as const,
 	},
 ] as const satisfies SerializedText[];

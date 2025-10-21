@@ -6,7 +6,7 @@ import { VALID_BRANCHES } from '../static/defined-branches';
 describe('CurratedTree', () => {
 	it('should get Intro by path', () => {
 		const tree = new CurratedTree(VALID_BRANCHES.Avatar.texts, 'Library');
-		const node = tree.getMaybeNode({ path: ['Intro', 'Intro'] as TreePath });
+		const node = tree.getMaybeNode({ path: ['Intro'] as TreePath });
 		expect(node.error).toBe(false);
 	});
 
@@ -32,7 +32,7 @@ describe('CurratedTree', () => {
 	it('should get 000-Intro by path', () => {
 		const tree = new CurratedTree(VALID_BRANCHES.Avatar.texts, 'Library');
 		const node = tree.getMaybePage({
-			path: ['Intro', 'Intro'] as TreePath,
+			path: ['Intro'] as TreePath,
 			index: 0,
 		});
 		expect(node.error).toBe(false);
@@ -41,7 +41,7 @@ describe('CurratedTree', () => {
 	it('should not get 001-Intro by path', () => {
 		const tree = new CurratedTree(VALID_BRANCHES.Avatar.texts, 'Library');
 		const node = tree.getMaybePage({
-			path: ['Intro', 'Intro'] as TreePath,
+			path: ['Intro'] as TreePath,
 			index: 1,
 		});
 		expect(node.error).toBe(true);

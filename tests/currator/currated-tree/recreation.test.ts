@@ -29,9 +29,6 @@ describe('CurratedTree - add and remove all texts cycle', () => {
 		const currTexts = makeTextsFromTree(initialTree);
 		const refilledTexts = makeTextsFromTree(refilledTree);
 
-		logToFile('currTexts.json', JSON.stringify(currTexts, null, 2));
-		logToFile('refilledTexts.json', JSON.stringify(refilledTexts, null, 2));
-
 		expect(currTexts).toEqual(refilledTexts);
 	});
 });
