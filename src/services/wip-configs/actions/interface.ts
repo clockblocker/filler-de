@@ -1,8 +1,8 @@
-import type { PathParts } from '../../../types/common-interface/maybe';
 import {
 	FileType,
 	type MetaInfo,
-} from '../../pure-formatters/meta-info-manager/types';
+	type PathParts,
+} from '../../../types/common-interface/dtos';
 import {
 	ACTION_CONFIGS,
 	CHANGE_FILE_TYPE_ACTIONS,
