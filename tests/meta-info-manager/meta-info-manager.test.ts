@@ -3,7 +3,7 @@ import { describe, expect, it } from 'bun:test';
 import {
 	editOrAddMetaInfo,
 	extractMetaInfo,
-} from '../../src/pure-formatters/meta-info-manager/interface';
+} from '../../src/services/pure-formatters/meta-info-manager/interface';
 import { PAGE } from '../../src/types/beta/literals';
 
 describe('meta-info manager', () => {

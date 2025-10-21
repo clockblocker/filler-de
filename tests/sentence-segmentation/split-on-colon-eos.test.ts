@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { splitOnDoubleColon } from '../../src/pure-formatters/quote-manager/functions/splitters/split-on-colon';
+import { splitOnDoubleColon } from '../../src/services/pure-formatters/quote-manager/functions/splitters/split-on-colon';
 
 const directMatches = [
 	{

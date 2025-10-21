@@ -5,26 +5,26 @@ import {
 	TFile,
 	type WorkspaceLeaf,
 } from 'obsidian';
-import { ACTION_CONFIGS } from './wip-configs/actions/actions-config';
+import { ACTION_CONFIGS } from './services/wip-configs/actions/actions-config';
 import {
 	getAboveSelectionActionConfigs,
 	getBottomActionConfigs,
-} from './wip-configs/actions/interface';
-import newGenCommand from './wip-configs/actions/new/new-gen-command';
+} from './services/wip-configs/actions/interface';
+import newGenCommand from './services/wip-configs/actions/new/new-gen-command';
 // import { VaultCurrator } from './obsidian-related/obsidian-services/managers/vault-currator';
-import addBacklinksToCurrentFile from './wip-configs/actions/old/addBacklinksToCurrentFile';
-import { makeClickListener } from './wip-configs/event-listeners/click-listener/click-listener';
-import { onNewFileThenRun } from './wip-configs/event-listeners/create-new-file-listener/run-on-new-file';
-import { extractMetaInfo } from './pure-formatters/meta-info-manager/interface';
-import { SettingsTab } from './settings';
+import addBacklinksToCurrentFile from './services/wip-configs/actions/old/addBacklinksToCurrentFile';
+import { makeClickListener } from './services/wip-configs/event-listeners/click-listener/click-listener';
+import { onNewFileThenRun } from './services/wip-configs/event-listeners/create-new-file-listener/run-on-new-file';
 import { DEFAULT_SETTINGS, type TextEaterSettings } from './types';
-import { AboveSelectionToolbarService } from './obsidian-services/atomic-services/above-selection-toolbar-service';
-import { ApiService } from './obsidian-services/atomic-services/api-service';
-import { BackgroundFileService } from './obsidian-services/atomic-services/background-file-service';
-import { BottomToolbarService } from './obsidian-services/atomic-services/bottom-toolbar-service';
-import { OpenedFileService } from './obsidian-services/atomic-services/opened-file-service';
-import { SelectionService } from './obsidian-services/atomic-services/selection-service';
-import { logError } from './obsidian-services/helpers/issue-handlers';
+import { AboveSelectionToolbarService } from './services/obsidian-services/atomic-services/above-selection-toolbar-service';
+import { ApiService } from './services/obsidian-services/atomic-services/api-service';
+import { BackgroundFileService } from './services/obsidian-services/atomic-services/background-file-service';
+import { BottomToolbarService } from './services/obsidian-services/atomic-services/bottom-toolbar-service';
+import { OpenedFileService } from './services/obsidian-services/atomic-services/opened-file-service';
+import { SelectionService } from './services/obsidian-services/atomic-services/selection-service';
+import { logError } from './services/obsidian-services/helpers/issue-handlers';
+import { extractMetaInfo } from './services/pure-formatters/meta-info-manager/interface';
+import { SettingsTab } from './settings';
 
 export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;

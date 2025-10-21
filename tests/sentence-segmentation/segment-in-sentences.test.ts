@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import {
 	formatQuotedLines,
 	segmentInQuotedLines,
-} from '../../src/pure-formatters/quote-manager/interface';
+} from '../../src/services/pure-formatters/quote-manager/interface';
 
 const directMatches = [
 	{
