@@ -1,4 +1,4 @@
-import { type SerializedText } from '../../../../src/managers/library-currator/currator-types';
+import { type SerializedText } from '../../../../src/managers/currator/currator-types';
 
 export const AVATAR_TEXTS = [
 	{

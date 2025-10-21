@@ -1,18 +1,16 @@
 import { z } from 'zod';
-import { CODEX, ENTRY, PAGE, TEXT } from '../literals';
+import { FileTypeSchema } from './enums';
 
 export type PathParts = string[];
-
-// PathParts.join('/')/title.md
-export type PrettyPath = { pathParts: PathParts; title: string };
-
-export type FileType = z.infer<typeof FileTypeSchema>;
-export const FileTypeSchema = z.enum([CODEX, ENTRY, PAGE, TEXT]);
-export const FileType = FileTypeSchema.enum;
-export const ALL_FILE_TYPES = FileTypeSchema.options;
+export type PrettyPath = { pathParts: PathParts; title: string }; // PathParts.join('/')/title.md
 
 export const MetaInfoSchema = z.object({
 	fileType: FileTypeSchema,
 });
 
 export type MetaInfo = z.infer<typeof MetaInfoSchema>;
+
+export type PrettyFile = {
+	prettyPath: PrettyPath;
+	metaInfo: MetaInfo;
+};

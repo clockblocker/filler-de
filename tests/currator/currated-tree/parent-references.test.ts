@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { CurratedTree } from '../../../src/managers/library-currator/currated-tree/currated-tree';
+import { CurratedTree } from '../../../src/managers/currator/currated-tree/currated-tree';
 import {
 	type BranchNode,
 	NodeStatus,
@@ -7,7 +7,7 @@ import {
 	type SectionNode,
 	type TextNode,
 	type TreePath,
-} from '../../../src/managers/library-currator/currator-types';
+} from '../../../src/managers/currator/currator-types';
 
 describe('CurratedTree - Parent References', () => {
 	describe('Creating tree with existing nodes', () => {

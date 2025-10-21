@@ -6,7 +6,7 @@ import {
 	systemPathToFileFromPrettyPath,
 	systemPathToFolderFromPrettyPath,
 	systemPathToPrettyPath,
-} from '../../pure-formatters/paths/path-helpers';
+} from '../../pure-formatters/pathfinder/path-helpers';
 import { logError, logWarning } from '../helpers/issue-handlers';
 import type {
 	PrettyPath,

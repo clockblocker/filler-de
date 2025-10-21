@@ -1,8 +1,8 @@
 import {
-	FileType,
 	type MetaInfo,
 	type PathParts,
 } from '../../../types/common-interface/dtos';
+import { FileType } from '../../../types/common-interface/enums';
 import {
 	ACTION_CONFIGS,
 	CHANGE_FILE_TYPE_ACTIONS,

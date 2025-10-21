@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'bun:test';
-import { CurratedTree } from '../../../src/managers/library-currator/currated-tree/currated-tree';
+import { CurratedTree } from '../../../src/managers/currator/currated-tree/currated-tree';
 import {
 	NodeStatus,
 	type SerializedText,
-} from '../../../src/managers/library-currator/currator-types';
-import { checkEqualityOfSerializedTexts } from '../../../src/managers/library-currator/pure-functions/serialized-text';
+} from '../../../src/managers/currator/currator-types';
+import { checkEqualityOfSerializedTexts } from '../../../src/managers/currator/pure-functions/serialized-text';
 import { VALID_BRANCHES } from '../static/defined-branches';
 
 describe('Explict testing of all methods ', () => {

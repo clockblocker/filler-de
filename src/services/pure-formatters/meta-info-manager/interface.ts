@@ -15,14 +15,14 @@ import type { MetaInfo } from '../../../types/common-interface/dtos';
  */
 export function extractMetaInfo(str: string): MetaInfo | null {
 	const match = str.match(META_INFO_FORMATTER.pattern);
-	if (!match) return null;
+	if (!match) return { fileType: 'Unknown' };
 
 	const jsonStr = match[1]?.trim();
 
 	const parsed = META_INFO_FORMATTER.schema.safeParse(
 		JSON.parse(jsonStr ?? '')
 	);
-	return parsed.success ? parsed.data : null;
+	return parsed.success ? parsed.data : { fileType: 'Unknown' };
 }
 
 export function editOrAddMetaInfo(str: string, meta: MetaInfo): string {

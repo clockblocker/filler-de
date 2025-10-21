@@ -8,8 +8,8 @@ import {
 	systemPathToFileFromPrettyPath,
 	systemPathToFolderFromPrettyPath,
 	systemPathToPrettyPath,
-} from '../../../src/services/pure-formatters/paths/path-helpers';
-import type { PrettyPath } from '../../../src/types/common-interface/maybe';
+} from '../../../src/services/pure-formatters/pathfinder/path-helpers';
+import type { PrettyPath } from '../../../src/types/common-interface/dtos';
 
 describe('path-helpers', () => {
 	describe('systemPathToPrettyPath', () => {

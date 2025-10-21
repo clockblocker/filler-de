@@ -1,11 +1,8 @@
 import { type App, MarkdownView, type TFile, type TFolder } from 'obsidian';
-import {
-	type Maybe,
-	type PathParts,
-	unwrapMaybe,
-} from '../../../types/common-interface/maybe';
+import { type Maybe, unwrapMaybe } from '../../../types/common-interface/maybe';
 import { getMaybeEditor } from '../helpers/get-editor';
 import { logError, logWarning } from '../helpers/issue-handlers';
+import type { PathParts } from '../../../types/common-interface/dtos';
 
 export class OpenedFileService {
 	constructor(private app: App) {}

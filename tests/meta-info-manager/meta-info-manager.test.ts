@@ -19,13 +19,7 @@ describe('meta-info manager', () => {
 		it('returns null when no meta section is present', () => {
 			const input = 'No special section here';
 			const result = extractMetaInfo(input);
-			expect(result).toBeNull();
-		});
-
-		it('returns null when JSON parses but schema fails', () => {
-			const input = `<section id={textfresser_meta_keep_me_invisible}>\n{"fileType":"Unknown"}\n</section>`;
-			const result = extractMetaInfo(input);
-			expect(result).toBeNull();
+			expect(result).toEqual({ fileType: 'Unknown' });
 		});
 	});
 
