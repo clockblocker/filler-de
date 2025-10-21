@@ -10,7 +10,7 @@ import {
 	OBSIDIAN_LINK_OPEN,
 	PIPE,
 	STAR,
-} from '../../src/types/beta/literals';
+} from '../../src/types/literals';
 
 function expectedBacklink(fileName: string, linkId: string | number): string {
 	return (

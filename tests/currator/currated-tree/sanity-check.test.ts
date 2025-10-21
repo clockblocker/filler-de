@@ -4,8 +4,8 @@ import {
 	NodeStatus,
 	type SerializedText,
 } from '../../../src/managers/library-currator/currator-types';
-import { VALID_BRANCHES } from '../static/defined-branches';
 import { checkEqualityOfSerializedTexts } from '../../../src/managers/library-currator/pure-functions/serialized-text';
+import { VALID_BRANCHES } from '../static/defined-branches';
 
 describe('Explict testing of all methods ', () => {
 	it('Basic operations on new tree', () => {

@@ -1,23 +1,23 @@
-import { z } from 'zod';
-import type { TexfresserObsidianServices } from '../../obsidian-services/interface';
+import { z } from "zod";
+import type { TexfresserObsidianServices } from "../../obsidian-services/interface";
 
 const USER_ACTION_LITERALS = [
-	'Generate',
-	'AddContext',
-	'SplitContexts',
-	'SplitInBlocks',
-	'TranslateSelection',
-	'TranslateBlock',
-	'ExplainGrammar',
-	'MakeText',
-	'NavigatePages',
-	'PreviousPage',
+  "Generate",
+  "AddContext",
+  "SplitContexts",
+  "SplitInBlocks",
+  "TranslateSelection",
+  "TranslateBlock",
+  "ExplainGrammar",
+  "MakeText",
+  "NavigatePages",
+  "PreviousPage",
 ] as const;
 
 const USER_ACTION_PLACEMENT_LITERALS = [
-	'AboveSelection',
-	'Bottom',
-	'ShortcutOnly',
+  "AboveSelection",
+  "Bottom",
+  "ShortcutOnly",
 ] as const;
 
 export const UserActionSchema = z.enum(USER_ACTION_LITERALS);
@@ -33,10 +33,10 @@ export const UserActionPlacement = UserActionPlacementSchema.enum;
 export const USER_ACTION_PLACEMENTS = UserActionPlacementSchema.options;
 
 export type ActionConfig<A extends UserAction> = {
-	id: A;
-	execute: (services: Partial<TexfresserObsidianServices>) => void;
-	label: string;
-	placement: UserActionPlacement;
+  id: A;
+  execute: (services: Partial<TexfresserObsidianServices>) => void;
+  label: string;
+  placement: UserActionPlacement;
 };
 
 export type AnyActionConfig = ActionConfig<UserAction>;

@@ -1,5 +1,4 @@
 import {
-  NodeStatus,
   NodeType,
   type PageNode,
   type SectionNode,

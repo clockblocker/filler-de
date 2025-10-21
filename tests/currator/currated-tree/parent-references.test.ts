@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'bun:test';
 import { CurratedTree } from '../../../src/managers/library-currator/currated-tree/currated-tree';
 import {
+	type BranchNode,
 	NodeStatus,
 	NodeType,
-	type BranchNode,
 	type SectionNode,
 	type TextNode,
 	type TreePath,

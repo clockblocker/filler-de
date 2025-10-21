@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'bun:test';
-
-import { BIRD } from '../../src/types/beta/literals';
 import {
-	makeFormattedLinkedQuote,
 	extractFormattedLinkedQuote,
+	makeFormattedLinkedQuote,
 } from '../../src/services/pure-formatters/quote-manager/functions/formatters/linked-quote';
+import { BIRD } from '../../src/types/literals';
 
 function expected(text: string, linkId: string | number): string {
 	return ` ${text} ${BIRD}${linkId}\n`;

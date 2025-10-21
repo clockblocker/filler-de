@@ -4,7 +4,7 @@ import {
 	editOrAddMetaInfo,
 	extractMetaInfo,
 } from '../../src/services/pure-formatters/meta-info-manager/interface';
-import { PAGE } from '../../src/types/beta/literals';
+import { PAGE } from '../../src/types/literals';
 
 describe('meta-info manager', () => {
 	describe('extractMetaInfo', () => {

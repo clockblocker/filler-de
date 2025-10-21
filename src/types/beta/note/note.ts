@@ -1,9 +1,9 @@
+import type { INFLECTION } from "../../literals";
 import {
   LinguisticUnit,
   type PartOfSpeech,
   type PhrasemeType,
 } from "../linguistics/general-linguistic-enums/linguistics-enums";
-import type { INFLECTION } from "../literals";
 import type {
   MetaNoteType,
   NoteType,

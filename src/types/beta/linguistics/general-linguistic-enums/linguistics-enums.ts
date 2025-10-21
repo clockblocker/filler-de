@@ -127,7 +127,7 @@ import {
   VOICE,
   VULGAR,
   WEAK,
-} from "../../literals";
+} from "../../../literals";
 
 export const MORPHEME_TYPES_STR = [
   ROOT, // core lexical base (e.g. "book", "write")
