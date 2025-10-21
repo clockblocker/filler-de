@@ -9,7 +9,7 @@ import {
 	CODEX,
 	UNMARKED,
 } from '../types/beta/literals';
-import type { toGuardedNodeName } from './pure-functions/file-indexing';
+import type { toGuardedNodeName } from './pure-functions/naming';
 
 // Naming
 export const IndexedFileTypeSchema = z.enum([TEXT, CODEX, UNMARKED]);

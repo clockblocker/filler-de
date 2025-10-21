@@ -26,28 +26,8 @@ export class CurratedTree {
 		this.status = NodeStatus.InProgress;
 		// Set parent to null for all root-level nodes
 		this.initializeParents();
-	}
-
-	private initializeParents(): void {
-		for (const child of this.children) {
-			child.parent = null;
-			this.setChildParents(child);
-		}
-	}
-
-	private setChildParents(node: BranchNode): void {
-		if (node.type === NodeType.Section) {
-			const section = node as SectionNode;
-			for (const child of section.children) {
-				child.parent = node;
-				this.setChildParents(child);
-			}
-		} else if (node.type === NodeType.Text) {
-			const text = node as TextNode;
-			for (const page of text.children) {
-				page.parent = node;
-			}
-		}
+		// Compute initial statuses for all nodes
+		this.recomputeStatuses();
 	}
 
 	public getTexts(path: TreePath): SerializedText[] {
@@ -56,7 +36,7 @@ export class CurratedTree {
 			return [];
 		}
 
-		const textNodes = this.getTextNodes(mbNode.data as BranchNode);
+		const textNodes = this.getTextNodesFromNode(mbNode.data as BranchNode);
 		return textNodes.map(
 			(node) =>
 				({
@@ -91,6 +71,9 @@ export class CurratedTree {
 				}) satisfies PageNode
 		);
 
+		// Recompute statuses after adding pages
+		this.recomputeStatuses();
+
 		return { error: false, data: textNode.data };
 	}
 
@@ -110,6 +93,7 @@ export class CurratedTree {
 			if (textIndex !== -1) {
 				this.children.splice(textIndex, 1);
 			}
+			this.recomputeStatuses();
 			return;
 		}
 
@@ -169,6 +153,9 @@ export class CurratedTree {
 				break;
 			}
 		}
+
+		// Recompute statuses after deletion
+		this.recomputeStatuses();
 	}
 
 	public getDiff(other: CurratedTree): TreeNode[] {
@@ -420,7 +407,7 @@ export class CurratedTree {
 		return [];
 	}
 
-	private getTextNodes(node: BranchNode): TextNode[] {
+	private getTextNodesFromNode(node: BranchNode): TextNode[] {
 		const textNodes: TextNode[] = [];
 
 		function textFindingDfs(node: BranchNode) {
@@ -435,5 +422,129 @@ export class CurratedTree {
 
 		textFindingDfs(node);
 		return textNodes;
+	}
+
+	private initializeParents(): void {
+		for (const child of this.children) {
+			child.parent = null;
+			this.setChildParents(child);
+		}
+	}
+
+	private setChildParents(node: BranchNode): void {
+		if (node.type === NodeType.Section) {
+			const section = node as SectionNode;
+			for (const child of section.children) {
+				child.parent = node;
+				this.setChildParents(child);
+			}
+		} else if (node.type === NodeType.Text) {
+			const text = node as TextNode;
+			for (const page of text.children) {
+				page.parent = node;
+			}
+		}
+	}
+
+	/**
+	 * Recomputes statuses for all nodes in the tree starting from the bottom.
+	 * Returns the closest to root node that had its status changed, or null if no changes.
+	 */
+	public recomputeStatuses(): BranchNode | null {
+		let closestChangedNode: BranchNode | null = null;
+
+		// Compute statuses for all nodes bottom-up
+		for (const child of this.children) {
+			const changed = this.computeNodeStatusBottomUp(child);
+			if (changed && !closestChangedNode) {
+				closestChangedNode = changed;
+			}
+		}
+
+		return closestChangedNode;
+	}
+
+	/**
+	 * Computes status for a single node and its ancestors bottom-up.
+	 * Returns the first (closest to root) node whose status changed.
+	 */
+	private computeNodeStatusBottomUp(node: BranchNode): BranchNode | null {
+		let closestChangedNode: BranchNode | null = null;
+
+		// First, recursively compute statuses for all children
+		if (node.type === NodeType.Section) {
+			const section = node as SectionNode;
+			for (const child of section.children) {
+				const changed = this.computeNodeStatusBottomUp(child);
+				if (changed && !closestChangedNode) {
+					closestChangedNode = changed;
+				}
+			}
+		}
+
+		// Then compute status for this node based on its children
+		const oldStatus = node.status;
+		const newStatus = this.computeNodeStatus(node);
+
+		if (oldStatus !== newStatus) {
+			node.status = newStatus;
+			// If this node's status changed, update parent chain
+			if (node.parent) {
+				const parentChanged = this.computeNodeStatusBottomUp(node.parent);
+				if (parentChanged && !closestChangedNode) {
+					closestChangedNode = parentChanged;
+				}
+			}
+			// Return the current node as the closest changed if no child changed
+			if (!closestChangedNode) {
+				closestChangedNode = node;
+			}
+		}
+
+		return closestChangedNode;
+	}
+
+	/**
+	 * Computes the status of a single node based on its children's statuses.
+	 * Rules:
+	 * - Text node: all pages Done → Done, all pages NotStarted → NotStarted, otherwise → InProgress
+	 * - Section node: all children Done → Done, all children NotStarted → NotStarted, otherwise → InProgress
+	 */
+	private computeNodeStatus(node: BranchNode): NodeStatus {
+		if (node.type === NodeType.Text) {
+			const textNode = node as TextNode;
+			if (textNode.children.length === 0) {
+				return NodeStatus.NotStarted;
+			}
+
+			const allDone = textNode.children.every(
+				(page) => page.status === NodeStatus.Done
+			);
+			const allNotStarted = textNode.children.every(
+				(page) => page.status === NodeStatus.NotStarted
+			);
+
+			if (allDone) return NodeStatus.Done;
+			if (allNotStarted) return NodeStatus.NotStarted;
+			return NodeStatus.InProgress;
+		} else if (node.type === NodeType.Section) {
+			const section = node as SectionNode;
+			if (section.children.length === 0) {
+				return NodeStatus.NotStarted;
+			}
+
+			const allDone = section.children.every(
+				(child) => child.status === NodeStatus.Done
+			);
+			const allNotStarted = section.children.every(
+				(child) => child.status === NodeStatus.NotStarted
+			);
+
+			if (allDone) return NodeStatus.Done;
+			if (allNotStarted) return NodeStatus.NotStarted;
+			return NodeStatus.InProgress;
+		}
+
+		return NodeStatus.NotStarted;
 	}
 }

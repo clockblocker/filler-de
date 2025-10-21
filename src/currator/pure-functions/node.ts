@@ -1,9 +1,11 @@
 import {
+	NodeStatus,
 	NodeType,
 	type PageNode,
 	type SectionNode,
 	type TextNode,
 	type TreeNode,
+	type TreePath,
 } from '../currator-types';
 
 const haveSameType = (node1: TreeNode, node2: TreeNode) => {
@@ -27,4 +29,20 @@ export const areShallowEqual = (node1: TreeNode, node2: TreeNode) => {
 		case NodeType.Section:
 			return node1.name === (node2 as SectionNode).name;
 	}
+};
+
+export const getNodePath = (node: TreeNode): TreePath => {
+	let current = node;
+	if (current.type === NodeType.Page) {
+		current = current.parent as TextNode;
+	}
+
+	let path: string[] = [];
+
+	while (current.parent) {
+		path.push(current.name);
+		current = current.parent;
+	}
+
+	return path.reverse() as TreePath;
 };

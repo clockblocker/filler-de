@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { toGuardedNodeName } from '../../../src/currator/pure-functions/file-indexing';
+import { toGuardedNodeName } from '../../../src/currator/pure-functions/naming';
 
 describe('toGuardedNodeName', () => {
 	it('replaces non-breaking hyphen with dash', () => {
