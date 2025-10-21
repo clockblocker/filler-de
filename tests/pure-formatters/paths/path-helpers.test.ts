@@ -9,7 +9,7 @@ import {
 	systemPathToFolderFromPrettyPath,
 	systemPathToPrettyPath,
 } from '../../../src/services/pure-formatters/paths/path-helpers';
-import type { PrettyPath } from '../../../src/types/general';
+import type { PrettyPath } from '../../../src/types/common-interface/maybe';
 
 describe('path-helpers', () => {
 	describe('systemPathToPrettyPath', () => {

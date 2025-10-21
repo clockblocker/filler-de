@@ -1,9 +1,9 @@
-import { unwrapMaybe } from '../../../../types/common-interface/maybe';
 import {
-	logError,
 	logWarning,
-} from '../../../obsidian-services/helpers/issue-handlers';
-import type { TexfresserObsidianServices } from '../../../obsidian-services/interface';
+	logError,
+} from '../../../services/obsidian-services/helpers/issue-handlers';
+import type { TexfresserObsidianServices } from '../../../services/obsidian-services/interface';
+import { unwrapMaybe } from '../../../types/common-interface/maybe';
 
 export async function navigatePagesAction(
 	services: Partial<TexfresserObsidianServices>,

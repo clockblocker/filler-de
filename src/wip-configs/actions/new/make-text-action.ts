@@ -1,6 +1,6 @@
-import { unwrapMaybe } from '../../../../types/common-interface/maybe';
-import { logError } from '../../../obsidian-services/helpers/issue-handlers';
-import type { TexfresserObsidianServices } from '../../../obsidian-services/interface';
+import { logError } from '../../../services/obsidian-services/helpers/issue-handlers';
+import type { TexfresserObsidianServices } from '../../../services/obsidian-services/interface';
+import { unwrapMaybe } from '../../../types/common-interface/maybe';
 // import { VaultCurrator } from '../../obsidian-services/managers/vault-currator';
 
 export async function makeTextAction(
