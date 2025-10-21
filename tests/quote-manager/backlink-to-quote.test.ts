@@ -41,7 +41,6 @@ describe('makeFormattedBacklinkToQuote', () => {
 	});
 
 	it('throws if required fields are missing', () => {
-		// @ts-expect-error testing default runtime behavior
 		expect(() => makeFormattedBacklinkToQuote({})).toThrow();
 	});
 });

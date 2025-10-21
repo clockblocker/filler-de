@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'bun:test';
 
-import { CurratedTree } from '../../../src/managers/currator/currated-tree/currated-tree';
-import { makeTextsFromTree } from '../../../src/managers/currator/currated-tree/helpers/serialization';
-import { checkEqualityOfSerializedTexts } from '../../../src/managers/currator/pure-functions/serialized-text';
+import { CurratedTree } from '../../../src/managers/library-currator/currated-tree/currated-tree';
+import { makeTextsFromTree } from '../../../src/managers/library-currator/currated-tree/helpers/serialization';
+import { checkEqualityOfSerializedTexts } from '../../../src/managers/library-currator/pure-functions/serialized-text';
 import { VALID_BRANCHES } from '../static/defined-branches';
 
 describe('texts === texts -> tree -> texts', () => {
