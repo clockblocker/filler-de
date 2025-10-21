@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'bun:test';
-import { CurratedTree } from '../../../src/currator/currated-tree/currated-tree';
+import { CurratedTree } from '../../../src/managers/currator/currated-tree/currated-tree';
 import {
 	NodeStatus,
 	NodeType,
+	type BranchNode,
 	type SectionNode,
-	type TextNode,TreePath 
-} from '../../../src/currator/currator-types';
+	type TextNode,
+	type TreePath,
+} from '../../../src/managers/currator/currator-types';
 
 describe('CurratedTree - Parent References', () => {
 	describe('Creating tree with existing nodes', () => {
@@ -76,7 +78,7 @@ describe('CurratedTree - Parent References', () => {
 			const page1 = text1.children[0];
 
 			expect(section1?.parent).toBe(null);
-			expect(text1?.parent).toBe(section1);
+			expect(text1?.parent).toBe(section1 as BranchNode);
 			expect(page1?.parent).toBe(text1);
 		});
 
@@ -97,7 +99,7 @@ describe('CurratedTree - Parent References', () => {
 
 			expect(nodeA?.parent).toBe(null);
 			expect(nodeB?.parent).toBe(nodeA);
-			expect(nodeC?.parent).toBe(nodeB);
+			expect(nodeC?.parent).toBe(nodeB as BranchNode);
 		});
 	});
 

@@ -2,8 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import {
 	makeTextsFromTree,
 	makeTreeFromTexts,
-} from '../../../src/currator/currated-tree/helpers/serialization';
-import { logToFile } from '../../tracing/functions/write-log-to-file';
+} from '../../../src/managers/currator/currated-tree/helpers/serialization';
 import { AVATAR_TEXTS } from '../static/battaries/avatar';
 
 describe('CurratedTree - add and remove all texts cycle', () => {

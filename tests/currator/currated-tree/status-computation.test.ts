@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'bun:test';
-import { CurratedTree } from '../../../src/currator/currated-tree/currated-tree';
+import { CurratedTree } from '../../../src/managers/currator/currated-tree/currated-tree';
 import {
 	NodeStatus,
 	NodeType,
 	type SectionNode,
 	type TextNode,
-} from '../../../src/currator/currator-types';
+} from '../../../src/managers/currator/currator-types';
 
 describe('CurratedTree - Status Computation', () => {
 	describe('Status computation on tree creation', () => {

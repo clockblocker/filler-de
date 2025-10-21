@@ -1,0 +1,25 @@
+import type { SerializedText, TreePath } from '../../currator-types';
+import { NodeType } from '../../currator-types';
+import { CurratedTree } from '../currated-tree';
+import { dfs } from './walks';
+
+export const makeTreeFromTexts = (texts: SerializedText[]): CurratedTree => {
+	const tree = new CurratedTree([], 'Library');
+	texts.forEach((text) => {
+		tree.addText(text);
+	});
+	return tree;
+};
+
+export const makeTextsFromTree = (tree: CurratedTree): SerializedText[] => {
+	const texts: SerializedText[] = [];
+	for (const { node, path } of dfs(tree)) {
+		if (node.type === NodeType.Text) {
+			texts.push({
+				path: path as TreePath,
+				pageStatuses: node.children.map((child) => child.status),
+			});
+		}
+	}
+	return texts;
+};
