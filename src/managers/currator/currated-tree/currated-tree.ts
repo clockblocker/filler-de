@@ -92,11 +92,11 @@ export class CurratedTree {
 
 		textNode.data.children = Array.from(
 			{ length: serializedText.pageStatuses.length },
-			(_, name) =>
+			(_, index) =>
 				({
-					name,
+					name: index,
 					parent: textNode.data,
-					status: NodeStatus.NotStarted,
+					status: serializedText.pageStatuses[index],
 					type: NodeType.Page,
 				}) satisfies PageNode,
 		);
