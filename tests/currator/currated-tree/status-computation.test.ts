@@ -5,7 +5,7 @@ import {
 	NodeType,
 	type SectionNode,
 	type TextNode,
-} from '../../../src/managers/currator/currator-types';
+} from '../../../src/managers/currator/types';
 
 describe('CurratedTree - Status Computation', () => {
 	describe('Status computation on tree creation', () => {

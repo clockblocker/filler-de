@@ -3,7 +3,7 @@ import { CurratedTree } from '../../../src/managers/currator/currated-tree/curra
 import {
 	NodeStatus,
 	type SerializedText,
-} from '../../../src/managers/currator/currator-types';
+} from '../../../src/managers/currator/types';
 import { checkEqualityOfSerializedTexts } from '../../../src/managers/currator/pure-functions/serialized-text';
 import { VALID_BRANCHES } from '../static/defined-branches';
 

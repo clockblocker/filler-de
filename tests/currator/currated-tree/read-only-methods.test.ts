@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import { CurratedTree } from '../../../src/managers/currator/currated-tree/currated-tree';
-import { type TreePath } from '../../../src/managers/currator/currator-types';
+import { type TreePath } from '../../../src/managers/currator/types';
 import { VALID_BRANCHES } from '../static/defined-branches';
 
 describe('CurratedTree', () => {

@@ -1,5 +1,3 @@
-import { Notice } from 'obsidian';
-import { z } from 'zod';
 import type { TexfresserObsidianServices } from '../../services/obsidian-services/interface';
 
 export class Currator {

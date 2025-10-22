@@ -9,7 +9,7 @@ import {
 	type TextNode,
 	type TreeNode,
 	type TreePath,
-} from '../currator-types';
+} from '../types';
 import { areShallowEqual } from '../pure-functions/node';
 import { bfs } from './helpers/walks';
 

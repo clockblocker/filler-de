@@ -7,7 +7,7 @@ import {
 	type SectionNode,
 	type TextNode,
 	type TreePath,
-} from '../../../src/managers/currator/currator-types';
+} from '../../../src/managers/currator/types';
 
 describe('CurratedTree - Parent References', () => {
 	describe('Creating tree with existing nodes', () => {

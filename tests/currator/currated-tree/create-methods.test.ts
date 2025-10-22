@@ -6,7 +6,7 @@ import {
 	type SerializedText,
 	type TextNode,
 	type TreePath,
-} from '../../../src/managers/currator/currator-types';
+} from '../../../src/managers/currator/types';
 
 describe('CurratedTree - Building from SerializedText', () => {
 	describe('Constructor with SerializedText[]', () => {

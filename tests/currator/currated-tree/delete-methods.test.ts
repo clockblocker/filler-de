@@ -3,7 +3,7 @@ import { CurratedTree } from '../../../src/managers/currator/currated-tree/curra
 import {
 	type SerializedText,
 	type TreePath,
-} from '../../../src/managers/currator/currator-types';
+} from '../../../src/managers/currator/types';
 import { VALID_BRANCHES } from '../static/defined-branches';
 
 describe('CurratedTree - deleteText', () => {
