@@ -1,7 +1,5 @@
 import {
 	NodeType,
-	type PageNode,
-	type SectionNode,
 	type TextNode,
 	type TreeNode,
 	type TreePath,
@@ -20,14 +18,7 @@ export const areShallowEqual = (node1: TreeNode, node2: TreeNode) => {
 		return false;
 	}
 
-	switch (node1.type) {
-		case NodeType.Page:
-			return node1.index === (node2 as PageNode).index;
-		case NodeType.Text:
-			return node1.name === (node2 as TextNode).name;
-		case NodeType.Section:
-			return node1.name === (node2 as SectionNode).name;
-	}
+	return node1.name === node2.name;
 };
 
 export const getNodePath = (node: TreeNode): TreePath => {

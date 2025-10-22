@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'bun:test';
 import { CurratedTree } from '../../../src/managers/currator/currated-tree/currated-tree';
+import { checkEqualityOfSerializedTexts } from '../../../src/managers/currator/pure-functions/serialized-text';
 import {
 	NodeStatus,
-	type SerializedText,
 } from '../../../src/managers/currator/types';
-import { checkEqualityOfSerializedTexts } from '../../../src/managers/currator/pure-functions/serialized-text';
 import { VALID_BRANCHES } from '../static/defined-branches';
 
 describe('Explict testing of all methods ', () => {
@@ -13,11 +12,11 @@ describe('Explict testing of all methods ', () => {
 		expect(tree.getAllTexts()).toEqual([]);
 
 		tree.addText({
-			path: ['Section', 'Text'],
 			pageStatuses: [NodeStatus.NotStarted],
+			path: ['Section', 'Text'],
 		});
 		expect(tree.getAllTexts()).toEqual([
-			{ path: ['Section', 'Text'], pageStatuses: [NodeStatus.NotStarted] },
+			{ pageStatuses: [NodeStatus.NotStarted], path: ['Section', 'Text'] },
 		]);
 
 		tree.deleteText({ path: ['Section', 'Text'] });
@@ -44,8 +43,8 @@ describe('Explict testing of all methods ', () => {
 		).toBe(true);
 
 		tree.addText({
-			path: ['Avatar', 'Season_1', 'Episode_1'],
 			pageStatuses: [NodeStatus.NotStarted],
+			path: ['Avatar', 'Season_1', 'Episode_1'],
 		});
 		expect(
 			checkEqualityOfSerializedTexts(

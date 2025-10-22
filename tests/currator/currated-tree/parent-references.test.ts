@@ -15,14 +15,14 @@ describe('CurratedTree - Parent References', () => {
 			const tree = new CurratedTree(
 				[
 					{
-						path: ['Section1', 'Text1'] as TreePath,
 						pageStatuses: [NodeStatus.NotStarted],
+						path: ['Section1', 'Text1'] as TreePath,
 					},
 				],
 				'Library'
 			);
 
-			const section1 = tree.children[0];
+			const section1 = tree.root.children[0];
 			expect(section1?.parent).toBe(null);
 		});
 
@@ -30,14 +30,14 @@ describe('CurratedTree - Parent References', () => {
 			const tree = new CurratedTree(
 				[
 					{
-						path: ['Section1', 'SubSection1'] as TreePath,
 						pageStatuses: [],
+						path: ['Section1', 'SubSection1'] as TreePath,
 					},
 				],
 				'Library'
 			);
 
-			const section1 = tree.children[0];
+			const section1 = tree.root.children[0];
 			const subSection1 = (section1 as SectionNode).children[0];
 
 			expect(section1?.parent).toBe(null);
@@ -48,14 +48,14 @@ describe('CurratedTree - Parent References', () => {
 			const tree = new CurratedTree(
 				[
 					{
-						path: ['Section1', 'Text1'] as TreePath,
 						pageStatuses: [],
+						path: ['Section1', 'Text1'] as TreePath,
 					},
 				],
 				'Library'
 			);
 
-			const section1 = tree.children[0];
+			const section1 = tree.root.children[0];
 			const text1 = (section1 as SectionNode).children[0];
 
 			expect(section1?.parent).toBe(null);
@@ -66,14 +66,14 @@ describe('CurratedTree - Parent References', () => {
 			const tree = new CurratedTree(
 				[
 					{
-						path: ['Section1', 'Text1'] as TreePath,
 						pageStatuses: [NodeStatus.NotStarted],
+						path: ['Section1', 'Text1'] as TreePath,
 					},
 				],
 				'Library'
 			);
 
-			const section1 = tree.children[0];
+			const section1 = tree.root.children[0];
 			const text1 = (section1 as SectionNode).children[0] as TextNode;
 			const page1 = text1.children[0];
 
@@ -86,14 +86,14 @@ describe('CurratedTree - Parent References', () => {
 			const tree = new CurratedTree(
 				[
 					{
-						path: ['A', 'B', 'C'] as TreePath,
 						pageStatuses: [],
+						path: ['A', 'B', 'C'] as TreePath,
 					},
 				],
 				'Library'
 			);
 
-			const nodeA = tree.children[0];
+			const nodeA = tree.root.children[0];
 			const nodeB = (nodeA as SectionNode).children[0];
 			const nodeC = (nodeB as SectionNode).children[0] as SectionNode;
 
@@ -146,8 +146,8 @@ describe('CurratedTree - Parent References', () => {
 
 			tree.getOrCreateSectionNode({ path: ['Section'] });
 			const result = tree.addText({
-				path: ['Section', 'Text'],
 				pageStatuses: [NodeStatus.NotStarted, NodeStatus.Done],
+				path: ['Section', 'Text'],
 			});
 
 			expect(result.error).toBe(false);

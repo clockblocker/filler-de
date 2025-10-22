@@ -14,16 +14,16 @@ import {
 import { bfs } from "./helpers/walks";
 
 export class CurratedTree {
-	children: BranchNode[];
-	type: typeof NodeType.Section;
-	name: string;
-	status: NodeStatus;
+	root: SectionNode;
 
 	constructor(serializedTexts: SerializedText[], name: string) {
-		this.children = [];
-		this.type = NodeType.Section;
-		this.name = name;
-		this.status = NodeStatus.NotStarted;
+		this.root = {
+			children: [],
+			name,
+			parent: null,
+			status: NodeStatus.NotStarted,
+			type: NodeType.Section,
+		};
 
 		// Build tree from serialized texts
 		for (const serializedText of serializedTexts) {
@@ -51,7 +51,7 @@ export class CurratedTree {
 	}
 
 	public getAllTexts(): SerializedText[] {
-		return this.children.flatMap((child) =>
+		return this.root.children.flatMap((child) =>
 			this.getAllTextsRecursive(child, [child.name]),
 		);
 	}
@@ -92,13 +92,11 @@ export class CurratedTree {
 
 		textNode.data.children = Array.from(
 			{ length: serializedText.pageStatuses.length },
-			(_, index) =>
+			(_, name) =>
 				({
-					index,
+					name,
 					parent: textNode.data,
-					status:
-						serializedText.pageStatuses[index] ??
-						NodeStatus.NotStarted,
+					status: NodeStatus.NotStarted,
 					type: NodeType.Page,
 				}) satisfies PageNode,
 		);
@@ -121,13 +119,13 @@ export class CurratedTree {
 		// Handle root-level text nodes
 		if (path.length === 1) {
 			const textName = path[0];
-			const textIndex = this.children.findIndex(
+			const textIndex = this.root.children.findIndex(
 				(child) =>
 					child.type === NodeType.Text && child.name === textName,
 			);
 
 			if (textIndex !== -1) {
-				this.children.splice(textIndex, 1);
+				this.root.children.splice(textIndex, 1);
 			}
 			this.recomputeStatuses();
 			return;
@@ -163,13 +161,13 @@ export class CurratedTree {
 			if (current && current.children.length === 0) {
 				if (isLastNode) {
 					// Last node in chain - remove from root if it's empty
-					const rootIndex = this.children.findIndex(
+					const rootIndex = this.root.children.findIndex(
 						(child) =>
 							child.name === current.name &&
 							child.type === current.type,
 					);
 					if (rootIndex !== -1) {
-						this.children.splice(rootIndex, 1);
+						this.root.children.splice(rootIndex, 1);
 					}
 				} else {
 					// Not the last node - remove from its parent
@@ -240,13 +238,13 @@ export class CurratedTree {
 
 	public getDiff(other: CurratedTree): TreeNode[] {
 		const otherSet = new Map<string, TreeNode>();
-		for (const { node, path } of bfs(other)) {
+		for (const { node, path } of bfs(other.root)) {
 			otherSet.set(path.join("-"), node);
 		}
 
 		const diff: TreeNode[] = [];
 
-		for (const { node, path } of bfs(this)) {
+		for (const { node, path } of bfs(this.root)) {
 			const key = path.join("-");
 			const otherNode = otherSet.get(key);
 			if (!otherNode) {
@@ -267,17 +265,13 @@ export class CurratedTree {
 		return this.getDiff(other).length === 0;
 	}
 
-	getMaybeNode({
-		path,
-	}: {
-		path: TreePath;
-	}): Maybe<BranchNode | CurratedTree> {
+	getMaybeNode({ path }: { path: TreePath }): Maybe<BranchNode> {
 		// Empty path returns the tree itself (root)
 		if (path.length === 0) {
-			return { data: this, error: false };
+			return { data: this.root, error: false };
 		}
 
-		let candidats = this.children;
+		let candidats = this.root.children;
 		let lastMatchingNode: BranchNode | undefined;
 
 		for (const part of path) {
@@ -300,10 +294,10 @@ export class CurratedTree {
 
 	getMaybePage({
 		path,
-		index,
+		name,
 	}: {
 		path: TreePath;
-		index: number;
+		name: number;
 	}): Maybe<PageNode> {
 		const maybeNode = this.getMaybeNode({ path });
 		if (maybeNode.error) {
@@ -318,9 +312,9 @@ export class CurratedTree {
 			};
 		}
 
-		const page = node.children.find((child) => child.index === index);
+		const page = node.children.find((child) => child.name === name);
 		if (!page) {
-			return { description: `Page ${index} not found`, error: true };
+			return { description: `Page ${name} not found`, error: true };
 		}
 
 		return {
@@ -329,18 +323,14 @@ export class CurratedTree {
 		};
 	}
 
-	getParentNode({
-		path,
-	}: {
-		path: TreePath;
-	}): Maybe<BranchNode | CurratedTree> {
+	getParentNode({ path }: { path: TreePath }): Maybe<BranchNode> {
 		const nodeCheck = this.getMaybeNode({ path });
 		if (nodeCheck.error) {
 			return nodeCheck;
 		}
 
 		if (path.length === 1) {
-			return { data: this, error: false };
+			return { data: this.root, error: false };
 		}
 
 		const parentPath = path.slice(0, -1) as TreePath;
@@ -382,7 +372,7 @@ export class CurratedTree {
 		// Handle root-level section creation
 		if (pathToParent.length === 0) {
 			sectionNode.parent = null;
-			this.children.push(sectionNode);
+			this.root.children.push(sectionNode);
 			return { data: sectionNode, error: false };
 		}
 
@@ -435,7 +425,7 @@ export class CurratedTree {
 		// Handle root-level text node (path.length === 1)
 		if (path.length === 1) {
 			// Check if TextNode with the same name already exists at root
-			const existing = this.children.find(
+			const existing = this.root.children.find(
 				(node) => node.type === NodeType.Text && node.name === textName,
 			) as TextNode;
 
@@ -451,7 +441,7 @@ export class CurratedTree {
 				type: NodeType.Text,
 			};
 
-			this.children.push(textNode);
+			this.root.children.push(textNode);
 			return { data: textNode, error: false };
 		}
 
@@ -497,7 +487,7 @@ export class CurratedTree {
 		}
 
 		// Only include BranchNodes in the chain, not the tree root
-		if ("children" in parent.data && parent.data !== this) {
+		if ("children" in parent.data && parent.data !== this.root) {
 			return [
 				parent.data as BranchNode,
 				...this.getParentChain({ path: path.slice(0, -1) as TreePath }),
@@ -525,7 +515,7 @@ export class CurratedTree {
 	}
 
 	private initializeParents(): void {
-		for (const child of this.children) {
+		for (const child of this.root.children) {
 			child.parent = null;
 			this.setChildParents(child);
 		}
@@ -554,7 +544,7 @@ export class CurratedTree {
 		let closestChangedNode: BranchNode | null = null;
 
 		// Compute statuses for all nodes bottom-up
-		for (const child of this.children) {
+		for (const child of this.root.children) {
 			const changed = this.computeNodeStatusBottomUp(child);
 			if (changed && !closestChangedNode) {
 				closestChangedNode = changed;

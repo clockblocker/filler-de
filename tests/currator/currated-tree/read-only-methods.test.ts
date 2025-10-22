@@ -32,8 +32,8 @@ describe('CurratedTree', () => {
 	it('should get 000-Intro by path', () => {
 		const tree = new CurratedTree(VALID_BRANCHES.Avatar.texts, 'Library');
 		const node = tree.getMaybePage({
+			name: 0,
 			path: ['Intro'] as TreePath,
-			index: 0,
 		});
 		expect(node.error).toBe(false);
 	});
@@ -41,8 +41,8 @@ describe('CurratedTree', () => {
 	it('should not get 001-Intro by path', () => {
 		const tree = new CurratedTree(VALID_BRANCHES.Avatar.texts, 'Library');
 		const node = tree.getMaybePage({
+			name: 1,
 			path: ['Intro'] as TreePath,
-			index: 1,
 		});
 		expect(node.error).toBe(true);
 	});
@@ -50,8 +50,8 @@ describe('CurratedTree', () => {
 	it('should not get 000-Avatar-Season_1-Episode_1 by path', () => {
 		const tree = new CurratedTree(VALID_BRANCHES.Avatar.texts, 'Library');
 		const node = tree.getMaybePage({
+			name: 5,
 			path: ['Avatar', 'Season_1', 'Episode_1'] as TreePath,
-			index: 5,
 		});
 		expect(node.error).toBe(true);
 	});

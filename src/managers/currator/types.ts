@@ -35,7 +35,7 @@ export type CommonNode = {
 
 export type PageNode = CommonNode & {
 	type: typeof NodeType.Page;
-	index: number;
+	name: number;
 };
 
 export type TextNode = CommonNode & {

@@ -12,16 +12,16 @@ describe('CurratedTree - Building from SerializedText', () => {
 	describe('Constructor with SerializedText[]', () => {
 		it('should create tree from empty SerializedText array', () => {
 			const tree = new CurratedTree([], 'Library');
-			expect(tree.children.length).toBe(0);
-			expect(tree.name).toBe('Library');
-			expect(tree.status).toBe(NodeStatus.NotStarted);
+			expect(tree.root.children.length).toBe(0);
+			expect(tree.root.name).toBe('Library');
+			expect(tree.root.status).toBe(NodeStatus.NotStarted);
 		});
 
 		it('should create sections and text nodes from SerializedText paths', () => {
 			const texts: SerializedText[] = [
 				{
-					path: ['Books', 'Fiction', 'Novel1'] as TreePath,
 					pageStatuses: [NodeStatus.NotStarted, NodeStatus.Done],
+					path: ['Books', 'Fiction', 'Novel1'] as TreePath,
 				},
 			];
 
@@ -43,12 +43,12 @@ describe('CurratedTree - Building from SerializedText', () => {
 		it('should set correct status based on page statuses', () => {
 			const texts: SerializedText[] = [
 				{
-					path: ['Section', 'AllDone'] as TreePath,
 					pageStatuses: [NodeStatus.Done, NodeStatus.Done],
+					path: ['Section', 'AllDone'] as TreePath,
 				},
 				{
-					path: ['Section', 'AllNotStarted'] as TreePath,
 					pageStatuses: [NodeStatus.NotStarted, NodeStatus.NotStarted],
+					path: ['Section', 'AllNotStarted'] as TreePath,
 				},
 			];
 
@@ -72,12 +72,12 @@ describe('CurratedTree - Building from SerializedText', () => {
 		it('should handle multiple texts in same section', () => {
 			const texts: SerializedText[] = [
 				{
-					path: ['Section', 'Text1'] as TreePath,
 					pageStatuses: [NodeStatus.Done],
+					path: ['Section', 'Text1'] as TreePath,
 				},
 				{
-					path: ['Section', 'Text2'] as TreePath,
 					pageStatuses: [NodeStatus.NotStarted],
+					path: ['Section', 'Text2'] as TreePath,
 				},
 			];
 
@@ -97,8 +97,8 @@ describe('CurratedTree - Building from SerializedText', () => {
 		it('should add single SerializedText', () => {
 			const tree = new CurratedTree([], 'Library');
 			const serialized: SerializedText = {
-				path: ['Section', 'Text'] as TreePath,
 				pageStatuses: [NodeStatus.Done],
+				path: ['Section', 'Text'] as TreePath,
 			};
 
 			const result = tree.addText(serialized);
@@ -115,13 +115,13 @@ describe('CurratedTree - Building from SerializedText', () => {
 			const tree = new CurratedTree([], 'Library');
 
 			tree.addText({
-				path: ['A', 'Text1'] as TreePath,
 				pageStatuses: [NodeStatus.Done],
+				path: ['A', 'Text1'] as TreePath,
 			});
 
 			tree.addText({
-				path: ['A', 'Text2'] as TreePath,
 				pageStatuses: [NodeStatus.NotStarted],
+				path: ['A', 'Text2'] as TreePath,
 			});
 
 			const a = tree.getMaybeNode({ path: ['A'] });
@@ -135,8 +135,8 @@ describe('CurratedTree - Building from SerializedText', () => {
 			const tree = new CurratedTree([], 'Library');
 
 			tree.addText({
-				path: ['Section', 'Text'] as TreePath,
 				pageStatuses: [NodeStatus.Done],
+				path: ['Section', 'Text'] as TreePath,
 			});
 
 			const section = tree.getMaybeNode({ path: ['Section'] });
@@ -191,8 +191,8 @@ describe('CurratedTree - Building from SerializedText', () => {
 			const tree = new CurratedTree(
 				[
 					{
-						path: ['Section', 'Text'] as TreePath,
 						pageStatuses: [NodeStatus.NotStarted],
+						path: ['Section', 'Text'] as TreePath,
 					},
 				],
 				'Library'
@@ -217,12 +217,12 @@ describe('CurratedTree - Building from SerializedText', () => {
 			const tree = new CurratedTree(
 				[
 					{
-						path: ['Section', 'Text1'] as TreePath,
 						pageStatuses: [NodeStatus.NotStarted, NodeStatus.NotStarted],
+						path: ['Section', 'Text1'] as TreePath,
 					},
 					{
-						path: ['Section', 'Text2'] as TreePath,
 						pageStatuses: [NodeStatus.NotStarted],
+						path: ['Section', 'Text2'] as TreePath,
 					},
 				],
 				'Library'
@@ -259,8 +259,8 @@ describe('CurratedTree - Building from SerializedText', () => {
 			const tree = new CurratedTree(
 				[
 					{
-						path: ['Section', 'Text'] as TreePath,
 						pageStatuses: [NodeStatus.Done, NodeStatus.Done],
+						path: ['Section', 'Text'] as TreePath,
 					},
 				],
 				'Library'

@@ -73,8 +73,8 @@ describe('CurratedTree - deleteText', () => {
 		// We create a tree with a nested structure and just one deep text
 		const texts: SerializedText[] = [
 			{
-				path: ['A', 'B', 'C'] as TreePath,
 				pageStatuses: [],
+				path: ['A', 'B', 'C'] as TreePath,
 			},
 		];
 		const tree = new CurratedTree(texts, 'Library');

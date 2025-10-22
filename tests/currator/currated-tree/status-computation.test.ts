@@ -39,8 +39,8 @@ describe('CurratedTree - Status Computation', () => {
 			const tree = new CurratedTree([], 'Library');
 			tree.getOrCreateSectionNode({ path: ['Section'] });
 			tree.addText({
-				path: ['Section', 'Text'],
 				pageStatuses: [NodeStatus.Done, NodeStatus.Done],
+				path: ['Section', 'Text'],
 			});
 
 			const text = tree.getMaybeNode({ path: ['Section', 'Text'] });
@@ -54,8 +54,8 @@ describe('CurratedTree - Status Computation', () => {
 			const tree = new CurratedTree([], 'Library');
 			tree.getOrCreateSectionNode({ path: ['Section'] });
 			tree.addText({
-				path: ['Section', 'Text'],
 				pageStatuses: [NodeStatus.Done, NodeStatus.NotStarted],
+				path: ['Section', 'Text'],
 			});
 
 			const text = tree.getMaybeNode({ path: ['Section', 'Text'] });
@@ -69,12 +69,12 @@ describe('CurratedTree - Status Computation', () => {
 			const tree = new CurratedTree([], 'Library');
 			tree.getOrCreateSectionNode({ path: ['Section'] });
 			tree.addText({
-				path: ['Section', 'Text1'],
 				pageStatuses: [NodeStatus.Done],
+				path: ['Section', 'Text1'],
 			});
 			tree.addText({
-				path: ['Section', 'Text2'],
 				pageStatuses: [NodeStatus.Done],
+				path: ['Section', 'Text2'],
 			});
 
 			const section = tree.getMaybeNode({ path: ['Section'] });
@@ -88,12 +88,12 @@ describe('CurratedTree - Status Computation', () => {
 			const tree = new CurratedTree([], 'Library');
 			tree.getOrCreateSectionNode({ path: ['Section'] });
 			tree.addText({
-				path: ['Section', 'Text1'],
 				pageStatuses: [NodeStatus.Done],
+				path: ['Section', 'Text1'],
 			});
 			tree.addText({
-				path: ['Section', 'Text2'],
 				pageStatuses: [NodeStatus.NotStarted],
+				path: ['Section', 'Text2'],
 			});
 
 			const section = tree.getMaybeNode({ path: ['Section'] });
@@ -108,12 +108,12 @@ describe('CurratedTree - Status Computation', () => {
 		it('should compute statuses correctly for nested sections', () => {
 			const tree = new CurratedTree([], 'Library');
 			tree.addText({
-				path: ['Books', 'Fiction', 'Fantasy', 'Chapter1'],
 				pageStatuses: [NodeStatus.Done],
+				path: ['Books', 'Fiction', 'Fantasy', 'Chapter1'],
 			});
 			tree.addText({
-				path: ['Books', 'Fiction', 'Fantasy', 'Chapter2'],
 				pageStatuses: [NodeStatus.Done],
+				path: ['Books', 'Fiction', 'Fantasy', 'Chapter2'],
 			});
 
 			const fantasy = tree.getMaybeNode({
@@ -139,8 +139,8 @@ describe('CurratedTree - Status Computation', () => {
 			const tree = new CurratedTree([], 'Library');
 			tree.getOrCreateSectionNode({ path: ['Section'] });
 			tree.addText({
-				path: ['Section', 'Text1'],
 				pageStatuses: [NodeStatus.Done],
+				path: ['Section', 'Text1'],
 			});
 
 			let section = tree.getMaybeNode({ path: ['Section'] });
@@ -149,8 +149,8 @@ describe('CurratedTree - Status Computation', () => {
 			);
 
 			tree.addText({
-				path: ['Section', 'Text2'],
 				pageStatuses: [NodeStatus.NotStarted],
+				path: ['Section', 'Text2'],
 			});
 
 			section = tree.getMaybeNode({ path: ['Section'] });
@@ -162,8 +162,8 @@ describe('CurratedTree - Status Computation', () => {
 		it('should update grandparent status when adding nested text', () => {
 			const tree = new CurratedTree([], 'Library');
 			tree.addText({
-				path: ['Books', 'Fiction', 'Text1'],
 				pageStatuses: [NodeStatus.Done],
+				path: ['Books', 'Fiction', 'Text1'],
 			});
 
 			let books = tree.getMaybeNode({ path: ['Books'] });
@@ -172,8 +172,8 @@ describe('CurratedTree - Status Computation', () => {
 			);
 
 			tree.addText({
-				path: ['Books', 'NonFiction', 'Text1'],
 				pageStatuses: [NodeStatus.NotStarted],
+				path: ['Books', 'NonFiction', 'Text1'],
 			});
 
 			books = tree.getMaybeNode({ path: ['Books'] });
@@ -187,12 +187,12 @@ describe('CurratedTree - Status Computation', () => {
 		it('should update section status when deleting a text node', () => {
 			const tree = new CurratedTree([], 'Library');
 			tree.addText({
-				path: ['Section', 'Text1'],
 				pageStatuses: [NodeStatus.Done],
+				path: ['Section', 'Text1'],
 			});
 			tree.addText({
-				path: ['Section', 'Text2'],
 				pageStatuses: [NodeStatus.Done],
+				path: ['Section', 'Text2'],
 			});
 
 			let section = tree.getMaybeNode({ path: ['Section'] });
@@ -217,8 +217,8 @@ describe('CurratedTree - Status Computation', () => {
 		it('should update parent status up the chain when deleting nodes', () => {
 			const tree = new CurratedTree([], 'Library');
 			tree.addText({
-				path: ['Books', 'Fiction', 'Chapter1'],
 				pageStatuses: [NodeStatus.Done],
+				path: ['Books', 'Fiction', 'Chapter1'],
 			});
 
 			let books = tree.getMaybeNode({ path: ['Books'] });
@@ -236,12 +236,12 @@ describe('CurratedTree - Status Computation', () => {
 		it('should handle deletion of one child in a multi-child section', () => {
 			const tree = new CurratedTree([], 'Library');
 			tree.addText({
-				path: ['Section', 'Text1'],
 				pageStatuses: [NodeStatus.Done],
+				path: ['Section', 'Text1'],
 			});
 			tree.addText({
-				path: ['Section', 'Text2'],
 				pageStatuses: [NodeStatus.NotStarted],
+				path: ['Section', 'Text2'],
 			});
 
 			let section = tree.getMaybeNode({ path: ['Section'] });
@@ -262,8 +262,8 @@ describe('CurratedTree - Status Computation', () => {
 		it('should return null when no statuses changed', () => {
 			const tree = new CurratedTree([], 'Library');
 			tree.addText({
-				path: ['Section', 'Text'],
 				pageStatuses: [NodeStatus.NotStarted],
+				path: ['Section', 'Text'],
 			});
 
 			// Calling recomputeStatuses when nothing changed should return null
@@ -274,8 +274,8 @@ describe('CurratedTree - Status Computation', () => {
 		it('should return the closest to root node that changed', () => {
 			const tree = new CurratedTree([], 'Library');
 			tree.addText({
-				path: ['Books', 'Fiction', 'Chapter1'],
 				pageStatuses: [NodeStatus.NotStarted],
+				path: ['Books', 'Fiction', 'Chapter1'],
 			});
 
 			// Manually change a page status to trigger recomputation
@@ -300,16 +300,16 @@ describe('CurratedTree - Status Computation', () => {
 
 			// Create a complex structure
 			tree.addText({
+				pageStatuses: [NodeStatus.Done],
 				path: ['Root', 'A', 'A1', 'Text1'],
-				pageStatuses: [NodeStatus.Done],
 			});
 			tree.addText({
-				path: ['Root', 'A', 'A2', 'Text1'],
 				pageStatuses: [NodeStatus.NotStarted],
+				path: ['Root', 'A', 'A2', 'Text1'],
 			});
 			tree.addText({
-				path: ['Root', 'B', 'B1', 'Text1'],
 				pageStatuses: [NodeStatus.Done],
+				path: ['Root', 'B', 'B1', 'Text1'],
 			});
 
 			const root = tree.getMaybeNode({ path: ['Root'] });
@@ -332,12 +332,12 @@ describe('CurratedTree - Status Computation', () => {
 
 			// Add texts
 			tree.addText({
-				path: ['Section', 'Text1'],
 				pageStatuses: [NodeStatus.Done],
+				path: ['Section', 'Text1'],
 			});
 			tree.addText({
-				path: ['Section', 'Text2'],
 				pageStatuses: [NodeStatus.Done],
+				path: ['Section', 'Text2'],
 			});
 
 			let section = tree.getMaybeNode({ path: ['Section'] });
@@ -347,8 +347,8 @@ describe('CurratedTree - Status Computation', () => {
 
 			// Add another text with NotStarted
 			tree.addText({
-				path: ['Section', 'Text3'],
 				pageStatuses: [NodeStatus.NotStarted],
+				path: ['Section', 'Text3'],
 			});
 
 			section = tree.getMaybeNode({ path: ['Section'] });
@@ -378,8 +378,8 @@ describe('CurratedTree - Status Computation', () => {
 		it('should change status of a text node', () => {
 			const tree = new CurratedTree([], 'Library');
 			tree.addText({
-				path: ['Section', 'Text'],
 				pageStatuses: [NodeStatus.NotStarted],
+				path: ['Section', 'Text'],
 			});
 
 			const result = tree.changeStatus({
@@ -412,12 +412,12 @@ describe('CurratedTree - Status Computation', () => {
 		it('should propagate status change to parent section', () => {
 			const tree = new CurratedTree([], 'Library');
 			tree.addText({
-				path: ['Section', 'Text1'],
 				pageStatuses: [NodeStatus.Done],
+				path: ['Section', 'Text1'],
 			});
 			tree.addText({
-				path: ['Section', 'Text2'],
 				pageStatuses: [NodeStatus.Done],
+				path: ['Section', 'Text2'],
 			});
 
 			let section = tree.getMaybeNode({ path: ['Section'] });
@@ -441,12 +441,12 @@ describe('CurratedTree - Status Computation', () => {
 		it('should propagate status change up multiple levels', () => {
 			const tree = new CurratedTree([], 'Library');
 			tree.addText({
-				path: ['Books', 'Fiction', 'Chapter1'],
 				pageStatuses: [NodeStatus.Done],
+				path: ['Books', 'Fiction', 'Chapter1'],
 			});
 			tree.addText({
-				path: ['Books', 'Fiction', 'Chapter2'],
 				pageStatuses: [NodeStatus.Done],
+				path: ['Books', 'Fiction', 'Chapter2'],
 			});
 
 			let books = tree.getMaybeNode({ path: ['Books'] });
@@ -476,12 +476,12 @@ describe('CurratedTree - Status Computation', () => {
 		it('should allow changing section status directly', () => {
 			const tree = new CurratedTree([], 'Library');
 			tree.addText({
-				path: ['Section', 'Text1'],
 				pageStatuses: [NodeStatus.Done],
+				path: ['Section', 'Text1'],
 			});
 			tree.addText({
-				path: ['Section', 'Text2'],
 				pageStatuses: [NodeStatus.NotStarted],
+				path: ['Section', 'Text2'],
 			});
 
 			let section = tree.getMaybeNode({ path: ['Section'] });
@@ -504,12 +504,12 @@ describe('CurratedTree - Status Computation', () => {
 		it('should recompute parent status after changing multiple children', () => {
 			const tree = new CurratedTree([], 'Library');
 			tree.addText({
-				path: ['Section', 'Text1'],
 				pageStatuses: [NodeStatus.NotStarted],
+				path: ['Section', 'Text1'],
 			});
 			tree.addText({
-				path: ['Section', 'Text2'],
 				pageStatuses: [NodeStatus.NotStarted],
+				path: ['Section', 'Text2'],
 			});
 
 			let section = tree.getMaybeNode({ path: ['Section'] });
@@ -545,12 +545,12 @@ describe('CurratedTree - Status Computation', () => {
 		it('should handle status changes in complex nested structures', () => {
 			const tree = new CurratedTree([], 'Library');
 			tree.addText({
-				path: ['Root', 'A', 'A1', 'Text1'],
 				pageStatuses: [NodeStatus.Done],
+				path: ['Root', 'A', 'A1', 'Text1'],
 			});
 			tree.addText({
-				path: ['Root', 'B', 'B1', 'Text1'],
 				pageStatuses: [NodeStatus.Done],
+				path: ['Root', 'B', 'B1', 'Text1'],
 			});
 
 			const root = tree.getMaybeNode({ path: ['Root'] });
