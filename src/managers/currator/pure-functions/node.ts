@@ -1,9 +1,5 @@
-import {
-	NodeType,
-	type TextNode,
-	type TreeNode,
-	type TreePath,
-} from "../types";
+import type { TreePath } from "../formatters";
+import { NodeType, type TextNode, type TreeNode } from "../types";
 
 const haveSameType = (node1: TreeNode, node2: TreeNode) => {
 	return node1.type === node2.type;

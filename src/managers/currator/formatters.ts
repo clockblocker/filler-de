@@ -1,35 +1,36 @@
-// ---
+import z from "zod/v4";
+import {
+	NON_BREAKING_HYPHEN,
+	SPACE_LIKE_CHARS,
+	UNDERSCORE,
+	UnderscoreSchema,
+} from "../../types/literals";
 
-import type { GuardedNodeName } from "./types";
-
-type SectionName = GuardedNodeName;
-
-type PrevSectionNames = SectionName[];
-type CurrentSectionName = SectionName;
-
-type CodexNameParts = [CurrentSectionName, ...PrevSectionNames[]];
-
-type CodexLine = {
-	done: boolean;
-	nameParts: CodexNameParts;
+const replaceSpaceLikeChars = (s: string) => {
+	return SPACE_LIKE_CHARS.reduce((s, ch) => s.replaceAll(ch, UNDERSCORE), s);
 };
 
-type Codex = {
-	lines: CodexLine[];
-};
+const GuardedNodeNameSchema = z
+	.string()
+	.transform((s) => replaceSpaceLikeChars(s));
 
-// {[sectionNames.join('-'), vettedName].join('-')}
-type EntrieFullName = string;
+export type GuardedNodeName = z.infer<typeof GuardedNodeNameSchema>;
 
-// {NNN-EntrieFullName}
-type PageFullName = string;
+const TreePathSchema = z.array(GuardedNodeNameSchema).min(1);
+export type TreePath = z.infer<typeof TreePathSchema>;
 
-// type SerializedCodex = {
-// 	name:
-// 	prevCodexName: EntrieFullName;
-// };
+const GuardedCodexNameSchema = z.templateLiteral([
+	UnderscoreSchema,
+	UnderscoreSchema,
+	z.string(),
+]);
 
-type SerialisedEntrie = {
-	name: EntrieFullName;
-	pages: { pageName: PageFullName; content: string }[];
-};
+export const GuardedCodexCodec = z.codec(
+	GuardedCodexNameSchema,
+	TreePathSchema,
+	{
+		decode: (s) => s.slice(2).split(NON_BREAKING_HYPHEN),
+		encode: (path) =>
+			`${UNDERSCORE}${UNDERSCORE}${path.join(NON_BREAKING_HYPHEN)}` as const,
+	},
+);

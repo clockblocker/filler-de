@@ -1,46 +1,46 @@
 {
-	"name": "cbcr-text-eater-de",
-	"version": "0.0.1",
-	"description": "Go trough the german texts, building your own dictionary from your personal contexts",
-	"main": "main.js",
-	"type": "commonjs",
-	"scripts": {
-		"format": "bun biome format --write .",
-		"dev": "node esbuild.config.mjs",
-		"build": "bun build ./src/main.ts --outfile=main.js --platform=node --format=cjs --external obsidian --external electron --external @codemirror/*",
-		"lint": "bun biome check",
-		"lint:fix": "bun biome check --write",
-		"clearTestLogs": "bun run tests/tracing/scripts/clear-test-logs.ts",
-		"test": "bun run clearTestLogs && bun test",
-		"test:watch": "bun run clearTestLogs && bun test --watch",
-		"coverage": "bun run clearTestLogs && bun test --coverage"
-	},
-	"keywords": [],
 	"author": "clockblocker",
-	"license": "MIT",
+	"dependencies": {
+		"@codemirror/view": "latest",
+		"@types/sbd": "latest",
+		"openai": "latest",
+		"sbd": "latest",
+		"typescript-eslint": "latest",
+		"zod": "latest"
+	},
+	"description": "Go trough the german texts, building your own dictionary from your personal contexts",
 	"devDependencies": {
-		"@biomejs/biome": "^2.2.4",
-		"@types/bun": "^1.3.0",
+		"@biomejs/biome": "latest",
+		"@types/bun": "latest",
 		"@types/codemirror": "latest",
 		"@types/node": "latest",
 		"@types/tern": "latest",
 		"@typescript-eslint/eslint-plugin": "latest",
 		"@typescript-eslint/parser": "latest",
 		"builtin-modules": "latest",
-		"bun-types": "^1.3.0",
+		"bun-types": "latest",
 		"esbuild": "latest",
 		"eslint": "latest",
-		"obsidian": "^1.10.0",
+		"obsidian": "latest",
 		"tslib": "latest",
 		"tsx": "latest",
 		"typescript": "latest"
 	},
-	"dependencies": {
-		"@codemirror/view": "latest",
-		"@types/sbd": "latest",
-		"openai": "5.22.0",
-		"sbd": "latest",
-		"typescript-eslint": "latest",
-		"zod": "3.23.8"
-	}
+	"keywords": [],
+	"license": "MIT",
+	"main": "main.js",
+	"name": "cbcr-text-eater-de",
+	"scripts": {
+		"build": "bun build ./src/main.ts --outfile=main.js --platform=node --format=cjs --external obsidian --external electron --external @codemirror/*",
+		"clearTestLogs": "bun run tests/tracing/scripts/clear-test-logs.ts",
+		"coverage": "bun run clearTestLogs && bun test --coverage",
+		"dev": "node esbuild.config.mjs",
+		"format": "bun biome format --write .",
+		"lint": "bun biome check",
+		"lint:fix": "bun biome check --write",
+		"test": "bun run clearTestLogs && bun test",
+		"test:watch": "bun run clearTestLogs && bun test --watch"
+	},
+	"type": "commonjs",
+	"version": "0.0.1"
 }

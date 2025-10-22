@@ -49,7 +49,7 @@ const NonBreakingHyphenSchema = z.literal("‑");
 export type NON_BREAKING_HYPHEN = z.infer<typeof NonBreakingHyphenSchema>;
 export const NON_BREAKING_HYPHEN = NonBreakingHyphenSchema.value;
 
-const UnderscoreSchema = z.literal("_");
+export const UnderscoreSchema = z.literal("_");
 export type UNDERSCORE = z.infer<typeof UnderscoreSchema>;
 export const UNDERSCORE = UnderscoreSchema.value;
 

@@ -1,3 +1,6 @@
+### [Important] Notes
+- zod 3.23.8 is required for openai
+
 ### Currator
 - [ ] Read files in folder as pathparts + meta
 - [ ] Make meta comply with currated tree's types

@@ -1,9 +1,14 @@
-import { type BranchNode, NodeType, type TreeNode } from "../../types";
+import {
+	type BranchNode,
+	NodeType,
+	type TreeNode,
+	type TreePath,
+} from "../../types";
 
 export function* bfs(
 	root: BranchNode,
-): Generator<{ node: TreeNode; path: string[] }> {
-	const queue: { node: any; path: string[] }[] = [];
+): Generator<{ node: TreeNode; path: TreePath }> {
+	const queue: { node: TreeNode; path: TreePath }[] = [];
 	for (const child of root.children) {
 		queue.push({ node: child, path: [child.name.toString()] });
 	}
@@ -26,8 +31,8 @@ export function* bfs(
 
 export function* dfs(
 	root: BranchNode,
-): Generator<{ node: TreeNode; path: string[] }> {
-	function* traverse(node: TreeNode, path: string[]) {
+): Generator<{ node: TreeNode; path: TreePath }> {
+	function* traverse(node: TreeNode, path: TreePath) {
 		if ("type" in node && node.type === NodeType.Text) {
 			yield { node, path };
 			for (const page of node.children) {

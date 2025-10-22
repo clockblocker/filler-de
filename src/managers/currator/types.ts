@@ -9,14 +9,13 @@ import {
 	TEXT,
 	UNMARKED,
 } from "../../types/literals";
-import type { toGuardedNodeName } from "./pure-functions/naming";
+import type { GuardedNodeName, TreePath } from "./formatters";
+export type { GuardedNodeName, TreePath };
 
 // Naming
 export const IndexedFileTypeSchema = z.enum([TEXT, CODEX, UNMARKED]);
 export type IndexedFileType = z.infer<typeof IndexedFileTypeSchema>;
 export const IndexedFileType = IndexedFileTypeSchema.enum;
-
-export type GuardedNodeName = ReturnType<typeof toGuardedNodeName>;
 
 // Tree
 export const NodeStatusSchema = z.enum([DONE, NOT_STARTED, IN_PROGRESS]);
@@ -52,11 +51,6 @@ export type SectionNode = CommonNode & {
 
 export type BranchNode = SectionNode | TextNode;
 export type TreeNode = BranchNode | PageNode;
-
-type TargetNodeName = GuardedNodeName;
-type PrevNodeNames = GuardedNodeName[];
-
-export type TreePath = [...PrevNodeNames, TargetNodeName];
 
 export type SerializedText = {
 	path: TreePath;
