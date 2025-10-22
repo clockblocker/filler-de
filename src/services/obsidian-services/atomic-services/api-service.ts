@@ -1,7 +1,7 @@
-import { z } from "zod";
-import OpenAI from "openai";
 import { Notice, requestUrl } from "obsidian";
+import OpenAI from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
+import type { z } from "zod";
 import type { TextEaterSettings } from "../../../types";
 import { formatError, logError, logWarning } from "../helpers/issue-handlers";
 
@@ -64,25 +64,25 @@ export class ApiService {
 				}
 
 				return requestUrl({
-					url,
-					method: init?.method as any,
-					headers,
 					body: init?.body as any,
+					headers,
+					method: init?.method as any,
 					throw: false,
+					url,
 				}).then((r) => {
 					return new Response(r.text, {
-						status: r.status,
 						headers: r.headers as any,
+						status: r.status,
 					});
 				});
 			}
 
 			// Initialize OpenAI client with custom fetch
 			this.openai = new OpenAI({
-				dangerouslyAllowBrowser: true,
+				apiKey: this.settings.googleApiKey,
 				baseURL:
 					"https://generativelanguage.googleapis.com/v1beta/openai/",
-				apiKey: this.settings.googleApiKey,
+				dangerouslyAllowBrowser: true,
 				fetch: fetchViaObsidian,
 			});
 		} catch (error: any) {
@@ -96,14 +96,14 @@ export class ApiService {
 	private async postGoogleApi<T>(path: string, body: any): Promise<T> {
 		try {
 			const res = await requestUrl({
-				url: `https://generativelanguage.googleapis.com/v1beta/${path}`,
-				method: "POST",
-				headers: {
-					"x-goog-api-key": this.settings.googleApiKey,
-					"content-type": "application/json",
-				},
 				body: JSON.stringify(body),
+				headers: {
+					"content-type": "application/json",
+					"x-goog-api-key": this.settings.googleApiKey,
+				},
+				method: "POST",
 				throw: false,
+				url: `https://generativelanguage.googleapis.com/v1beta/${path}`,
 			});
 
 			if (res.status >= 200 && res.status < 300) {
@@ -186,17 +186,17 @@ export class ApiService {
 		const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] =
 			[];
 		if (!cachedId) {
-			messages.push({ role: "system", content: systemPrompt });
+			messages.push({ content: systemPrompt, role: "system" });
 		}
-		messages.push({ role: "user", content: userInput });
+		messages.push({ content: userInput, role: "user" });
 
 		try {
 			const completion = await this.openai.chat.completions.parse({
-				model: this.model,
 				messages,
+				model: this.model,
+				response_format: zodResponseFormat(schema, "data"),
 				temperature: 0,
 				top_p: 0.95,
-				response_format: zodResponseFormat(schema, "data"),
 				...(cachedId
 					? {
 							extra_body: {

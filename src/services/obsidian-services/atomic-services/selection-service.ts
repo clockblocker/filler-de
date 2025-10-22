@@ -8,11 +8,11 @@ export class SelectionService {
 	public async getMaybeSelection(): Promise<Maybe<string>> {
 		try {
 			const editor = await getEditor(this.app);
-			return { error: false, data: editor.getSelection() };
+			return { data: editor.getSelection(), error: false };
 		} catch (e) {
 			return {
-				error: true,
 				description: e instanceof Error ? e.message : String(e),
+				error: true,
 			};
 		}
 	}
@@ -34,14 +34,14 @@ export class SelectionService {
 			const insertLine = Math.max(cursor.line + 1, 0);
 
 			editor.replaceRange("\n" + text + "\n", {
-				line: insertLine,
 				ch: 0,
+				line: insertLine,
 			});
-			return { error: false, data: undefined };
+			return { data: undefined, error: false };
 		} catch (e) {
 			return {
-				error: true,
 				description: e instanceof Error ? e.message : String(e),
+				error: true,
 			};
 		}
 	}

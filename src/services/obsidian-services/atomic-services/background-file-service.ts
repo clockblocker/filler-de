@@ -1,4 +1,8 @@
 import { TFile, TFolder, type Vault } from "obsidian";
+import type {
+	PathParts,
+	PrettyPath,
+} from "../../../types/common-interface/dtos";
 import { type Maybe, unwrapMaybe } from "../../../types/common-interface/maybe";
 import { SLASH } from "../../../types/literals";
 import {
@@ -8,10 +12,6 @@ import {
 	systemPathToPrettyPath,
 } from "../../pure-formatters/pathfinder/path-helpers";
 import { logError, logWarning } from "../helpers/issue-handlers";
-import type {
-	PrettyPath,
-	PathParts,
-} from "../../../types/common-interface/dtos";
 
 export class BackgroundFileService {
 	constructor(private vault: Vault) {}
@@ -159,7 +159,7 @@ export class BackgroundFileService {
 			});
 		}
 
-		return { error: false, data: created };
+		return { data: created, error: false };
 	}
 
 	async renameManyFolders(
@@ -233,10 +233,10 @@ export class BackgroundFileService {
 		const parent = unwrapMaybe(maybeFile).parent;
 
 		if (!parent) {
-			return { error: true, description: "File does not have a parent" };
+			return { description: "File does not have a parent", error: true };
 		}
 
-		return { error: false, data: parent };
+		return { data: parent, error: false };
 	}
 
 	private async getSiblingsOfFile(file: TFile): Promise<Maybe<Array<TFile>>> {
@@ -246,10 +246,10 @@ export class BackgroundFileService {
 			const siblings = parent.children
 				.filter((child): child is TFile => child instanceof TFile)
 				.filter((f) => f.path !== file.path);
-			return { error: false, data: siblings };
+			return { data: siblings, error: false };
 		}
 
-		return { error: false, data: [] };
+		return { data: [], error: false };
 	}
 
 	private async getMaybeFileByPrettyPath(
@@ -279,18 +279,18 @@ export class BackgroundFileService {
 			const file = await this.vault.getFileByPath(systemPath);
 			if (!(file instanceof TFile)) {
 				return {
-					error: true,
 					description: "Renamed item is not a file",
+					error: true,
 				};
 			}
 
 			await this.vault.rename(file, newName);
 
-			return { error: false, data: file };
+			return { data: file, error: false };
 		} catch (error) {
 			return {
-				error: true,
 				description: `Failed to rename file: ${error}`,
+				error: true,
 			};
 		}
 	}
@@ -303,18 +303,18 @@ export class BackgroundFileService {
 			const folder = await this.vault.getFolderByPath(systemPath);
 			if (!(folder instanceof TFolder)) {
 				return {
-					error: true,
 					description: "Renamed item is not a folder",
+					error: true,
 				};
 			}
 
 			await this.vault.rename(folder, newName);
 
-			return { error: false, data: folder };
+			return { data: folder, error: false };
 		} catch (error) {
 			return {
-				error: true,
 				description: `Failed to rename folder: ${error}`,
+				error: true,
 			};
 		}
 	}
@@ -327,16 +327,16 @@ export class BackgroundFileService {
 			const file = await this.vault.create(`${systemPath}`, content);
 			if (!(file instanceof TFile)) {
 				return {
-					error: true,
 					description: "Created item is not a file",
+					error: true,
 				};
 			}
 
-			return { error: false, data: file };
+			return { data: file, error: false };
 		} catch (error) {
 			return {
-				error: true,
 				description: `Failed to create file: ${error}`,
+				error: true,
 			};
 		}
 	}
@@ -347,11 +347,11 @@ export class BackgroundFileService {
 		try {
 			const folder = await this.vault.createFolder(systemPath);
 
-			return { error: false, data: folder };
+			return { data: folder, error: false };
 		} catch (error) {
 			return {
-				error: true,
 				description: `Failed to create folder: ${error}`,
+				error: true,
 			};
 		}
 	}
@@ -396,11 +396,11 @@ export class BackgroundFileService {
 						});
 			});
 
-			return { error: false, data: out };
+			return { data: out, error: false };
 		} catch (e) {
 			return {
-				error: true,
 				description: `Failed to traverse tree: ${e instanceof Error ? e.message : String(e)}`,
+				error: true,
 			};
 		}
 	}
@@ -416,15 +416,15 @@ export class BackgroundFileService {
 			const abs = this.vault.getAbstractFileByPath(folderPath);
 			if (!(abs instanceof TFolder)) {
 				return {
-					error: true,
 					description: `Not a folder: ${folderPath}`,
+					error: true,
 				};
 			}
 			return this.treeToItems(abs);
 		} catch (e) {
 			return {
-				error: true,
 				description: `Failed to resolve folder: ${e instanceof Error ? e.message : String(e)}`,
+				error: true,
 			};
 		}
 	}
@@ -459,6 +459,6 @@ export class BackgroundFileService {
 			});
 		}
 
-		return { error: false, data: created };
+		return { data: created, error: false };
 	}
 }

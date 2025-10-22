@@ -1,4 +1,5 @@
 import type { Maybe } from "../../../types/common-interface/maybe";
+import { areShallowEqual } from "../pure-functions/node";
 import {
 	type BranchNode,
 	NodeStatus,
@@ -10,7 +11,6 @@ import {
 	type TreeNode,
 	type TreePath,
 } from "../types";
-import { areShallowEqual } from "../pure-functions/node";
 import { bfs } from "./helpers/walks";
 
 export class CurratedTree {
@@ -44,8 +44,8 @@ export class CurratedTree {
 		return textNodes.map(
 			(node) =>
 				({
-					path: path,
 					pageStatuses: node.children.map((child) => child.status),
+					path: path,
 				}) satisfies SerializedText,
 		);
 	}
@@ -64,10 +64,10 @@ export class CurratedTree {
 			const textNode = node as TextNode;
 			return [
 				{
-					path: path,
 					pageStatuses: textNode.children.map(
 						(child) => child.status,
 					),
+					path: path,
 				} satisfies SerializedText,
 			];
 		}
@@ -95,11 +95,11 @@ export class CurratedTree {
 			(_, index) =>
 				({
 					index,
+					parent: textNode.data,
 					status:
 						serializedText.pageStatuses[index] ??
 						NodeStatus.NotStarted,
 					type: NodeType.Page,
-					parent: textNode.data,
 				}) satisfies PageNode,
 		);
 
@@ -109,7 +109,7 @@ export class CurratedTree {
 		// Recompute statuses after adding pages
 		this.recomputeStatuses();
 
-		return { error: false, data: textNode.data };
+		return { data: textNode.data, error: false };
 	}
 
 	public deleteText({ path }: { path: TreePath }): void {
@@ -216,7 +216,7 @@ export class CurratedTree {
 		// Recompute all statuses based on the new page statuses
 		this.recomputeStatuses();
 
-		return { error: false, data: node };
+		return { data: node, error: false };
 	}
 
 	private setPageStatusesRecursive(
@@ -274,7 +274,7 @@ export class CurratedTree {
 	}): Maybe<BranchNode | CurratedTree> {
 		// Empty path returns the tree itself (root)
 		if (path.length === 0) {
-			return { error: false, data: this };
+			return { data: this, error: false };
 		}
 
 		let candidats = this.children;
@@ -284,7 +284,7 @@ export class CurratedTree {
 			lastMatchingNode = candidats.find((node) => node.name === part);
 
 			if (!lastMatchingNode) {
-				return { error: true, description: `Node "${part}" not found` };
+				return { description: `Node "${part}" not found`, error: true };
 			}
 			if (lastMatchingNode.type === NodeType.Section) {
 				candidats = lastMatchingNode.children;
@@ -294,8 +294,8 @@ export class CurratedTree {
 		}
 
 		return lastMatchingNode
-			? { error: false, data: lastMatchingNode }
-			: { error: true, description: `Node ${path.join("-")} not found` };
+			? { data: lastMatchingNode, error: false }
+			: { description: `Node ${path.join("-")} not found`, error: true };
 	}
 
 	getMaybePage({
@@ -313,19 +313,19 @@ export class CurratedTree {
 		const node = maybeNode.data as TextNode;
 		if (node.type !== NodeType.Text) {
 			return {
-				error: true,
 				description: `Node ${path.join("-")} is not a text`,
+				error: true,
 			};
 		}
 
 		const page = node.children.find((child) => child.index === index);
 		if (!page) {
-			return { error: true, description: `Page ${index} not found` };
+			return { description: `Page ${index} not found`, error: true };
 		}
 
 		return {
-			error: false,
 			data: page,
+			error: false,
 		};
 	}
 
@@ -340,7 +340,7 @@ export class CurratedTree {
 		}
 
 		if (path.length === 1) {
-			return { error: false, data: this };
+			return { data: this, error: false };
 		}
 
 		const parentPath = path.slice(0, -1) as TreePath;
@@ -350,14 +350,14 @@ export class CurratedTree {
 	getOrCreateSectionNode({ path }: { path: TreePath }): Maybe<SectionNode> {
 		if (path.length === 0) {
 			return {
-				error: true,
 				description: "Path is empty",
+				error: true,
 			};
 		}
 
 		const mbNode = this.getMaybeNode({ path });
 		if (!mbNode.error && mbNode.data.type === NodeType.Section) {
-			return { error: false, data: mbNode.data as SectionNode };
+			return { data: mbNode.data as SectionNode, error: false };
 		}
 
 		const pathCopy = [...path];
@@ -366,24 +366,24 @@ export class CurratedTree {
 
 		if (!name) {
 			return {
-				error: true,
 				description: "Path is empty",
+				error: true,
 			};
 		}
 
 		const sectionNode: SectionNode = {
+			children: [],
 			name,
+			parent: null,
 			status: NodeStatus.NotStarted,
 			type: NodeType.Section,
-			children: [],
-			parent: null,
 		};
 
 		// Handle root-level section creation
 		if (pathToParent.length === 0) {
 			sectionNode.parent = null;
 			this.children.push(sectionNode);
-			return { error: false, data: sectionNode };
+			return { data: sectionNode, error: false };
 		}
 
 		// Handle nested section creation
@@ -394,8 +394,8 @@ export class CurratedTree {
 		}
 		if (mbParent.data.type !== NodeType.Section) {
 			return {
-				error: true,
 				description: "Parent is not a section",
+				error: true,
 			};
 		}
 
@@ -403,13 +403,13 @@ export class CurratedTree {
 		sectionNode.parent = parent;
 		parent.children.push(sectionNode);
 
-		return { error: false, data: sectionNode };
+		return { data: sectionNode, error: false };
 	}
 
 	getOrCreateTextNode({ path }: { path: TreePath }): Maybe<TextNode> {
 		const mbNode = this.getMaybeNode({ path });
 		if (!mbNode.error && mbNode.data.type === NodeType.Text) {
-			return { error: false, data: mbNode.data };
+			return { data: mbNode.data, error: false };
 		}
 
 		let parent: SectionNode | undefined;
@@ -427,8 +427,8 @@ export class CurratedTree {
 		const textName = pathCopy.pop();
 		if (!textName) {
 			return {
-				error: true,
 				description: "Text name is empty",
+				error: true,
 			};
 		}
 
@@ -440,26 +440,26 @@ export class CurratedTree {
 			) as TextNode;
 
 			if (existing) {
-				return { error: false, data: existing };
+				return { data: existing, error: false };
 			}
 
 			const textNode: TextNode = {
+				children: [],
 				name: textName,
+				parent: null,
 				status: NodeStatus.NotStarted,
 				type: NodeType.Text,
-				children: [],
-				parent: null,
 			};
 
 			this.children.push(textNode);
-			return { error: false, data: textNode };
+			return { data: textNode, error: false };
 		}
 
 		if (!parent) {
 			return {
-				error: true,
 				description:
 					"No parent section found for TextNode. Path too short?",
+				error: true,
 			};
 		}
 
@@ -469,20 +469,20 @@ export class CurratedTree {
 		) as TextNode;
 
 		if (existing) {
-			return { error: false, data: existing };
+			return { data: existing, error: false };
 		}
 
 		const textNode: TextNode = {
+			children: [],
 			name: textName,
+			parent: parent,
 			status: NodeStatus.NotStarted,
 			type: NodeType.Text,
-			children: [],
-			parent: parent,
 		};
 
 		parent.children.push(textNode);
 
-		return { error: false, data: textNode };
+		return { data: textNode, error: false };
 	}
 
 	getParentChain({ path }: { path: TreePath }): BranchNode[] {

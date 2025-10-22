@@ -16,8 +16,8 @@ export const makeTextsFromTree = (tree: CurratedTree): SerializedText[] => {
 	for (const { node, path } of dfs(tree)) {
 		if (node.type === NodeType.Text) {
 			texts.push({
-				path: path as TreePath,
 				pageStatuses: node.children.map((child) => child.status),
+				path: path as TreePath,
 			});
 		}
 	}

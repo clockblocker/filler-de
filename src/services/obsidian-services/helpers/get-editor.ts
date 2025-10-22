@@ -5,11 +5,11 @@ export async function getMaybeEditor(app: App): Promise<Maybe<Editor>> {
 	try {
 		const view = app.workspace.getActiveViewOfType(MarkdownView);
 		if (view && view?.file) {
-			return { error: false, data: view.editor };
+			return { data: view.editor, error: false };
 		}
-		return { error: true, description: "Failed to get Editor" };
+		return { description: "Failed to get Editor", error: true };
 	} catch (error) {
-		return { error: true, description: `Failed to get Editor: ${error}` };
+		return { description: `Failed to get Editor: ${error}`, error: true };
 	}
 }
 

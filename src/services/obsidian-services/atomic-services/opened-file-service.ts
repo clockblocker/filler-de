@@ -1,8 +1,8 @@
 import { type App, MarkdownView, type TFile, type TFolder } from "obsidian";
+import type { PathParts } from "../../../types/common-interface/dtos";
 import { type Maybe, unwrapMaybe } from "../../../types/common-interface/maybe";
 import { getMaybeEditor } from "../helpers/get-editor";
 import { logError, logWarning } from "../helpers/issue-handlers";
-import type { PathParts } from "../../../types/common-interface/dtos";
 
 export class OpenedFileService {
 	constructor(private app: App) {}
@@ -34,7 +34,7 @@ export class OpenedFileService {
 				return { error: true };
 			}
 
-			return { error: false, data: file };
+			return { data: file, error: false };
 		} catch (error) {
 			logError({
 				description: `Failed to get maybe opened file: ${error}`,
@@ -70,7 +70,7 @@ export class OpenedFileService {
 			}
 
 			const content = editor.getValue();
-			return { error: false, data: content };
+			return { data: content, error: false };
 		} catch (error) {
 			logError({
 				description: `Failed to get maybe file content: ${error}`,
@@ -92,7 +92,7 @@ export class OpenedFileService {
 			return maybeFile;
 		}
 
-		return { error: false, data: newContent };
+		return { data: newContent, error: false };
 	}
 
 	async writeToOpenedFile(text: string): Promise<Maybe<string>> {
@@ -103,9 +103,9 @@ export class OpenedFileService {
 		}
 
 		const editor = maybeEditor.data;
-		editor.replaceRange(text, { line: editor.lineCount(), ch: 0 });
+		editor.replaceRange(text, { ch: 0, line: editor.lineCount() });
 
-		return { error: false, data: text };
+		return { data: text, error: false };
 	}
 
 	async getPathOfOpenedFile(): Promise<Maybe<string>> {
@@ -114,7 +114,7 @@ export class OpenedFileService {
 			return maybeFile;
 		}
 
-		return { error: false, data: maybeFile.data.path };
+		return { data: maybeFile.data.path, error: false };
 	}
 
 	async getParentOfOpenedFile(): Promise<Maybe<TFolder>> {
@@ -125,12 +125,12 @@ export class OpenedFileService {
 
 		if (!parent) {
 			return {
-				error: true,
 				description: "Opened file does not have a parent",
+				error: true,
 			};
 		}
 
-		return { error: false, data: parent };
+		return { data: parent, error: false };
 	}
 
 	public showLoadingOverlay(): void {
@@ -173,14 +173,14 @@ export class OpenedFileService {
 	public async openFile(file: TFile): Promise<Maybe<TFile>> {
 		try {
 			await this.app.workspace.getLeaf(true).openFile(file);
-			return { error: false, data: file };
+			return { data: file, error: false };
 		} catch (error) {
 			const description = `Failed to open file: ${error}`;
 			logError({
 				description,
 				location: "OpenedFileService",
 			});
-			return { error: true, description };
+			return { description, error: true };
 		}
 	}
 
@@ -193,8 +193,8 @@ export class OpenedFileService {
 			return { error: true };
 		}
 		return {
-			error: false,
 			data: { fileName: file.name, pathParts: file.path.split("/") },
+			error: false,
 		};
 	}
 
