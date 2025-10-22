@@ -1,9 +1,9 @@
-import { z } from 'zod';
-import OpenAI from 'openai';
-import { Notice, requestUrl } from 'obsidian';
-import { zodResponseFormat } from 'openai/helpers/zod';
-import type { TextEaterSettings } from '../../../types';
-import { formatError, logError, logWarning } from '../helpers/issue-handlers';
+import { z } from "zod";
+import OpenAI from "openai";
+import { Notice, requestUrl } from "obsidian";
+import { zodResponseFormat } from "openai/helpers/zod";
+import type { TextEaterSettings } from "../../../types";
+import { formatError, logError, logWarning } from "../helpers/issue-handlers";
 
 function normalizeHeaders(initHeaders?: HeadersInit): Record<string, string> {
 	if (!initHeaders) {
@@ -32,33 +32,35 @@ const TTL_SECONDS = 604800;
 
 export class ApiService {
 	private openai: OpenAI | null = null;
-	private model = 'gemini-2.5-flash-lite';
+	private model = "gemini-2.5-flash-lite";
 	private cachedContentIds: Record<string, string> = {};
 
 	constructor(private settings: TextEaterSettings) {
 		try {
-			if (this.settings.apiProvider !== 'google') {
-				new Notice('Only Google provider is configured in this build.');
+			if (this.settings.apiProvider !== "google") {
+				new Notice("Only Google provider is configured in this build.");
 			}
 			if (!this.settings.googleApiKey) {
-				new Notice('Missing Google API key in settings.');
+				new Notice("Missing Google API key in settings.");
 			}
 
 			function fetchViaObsidian(
 				input: RequestInfo,
-				init?: RequestInit
+				init?: RequestInit,
 			): Promise<Response> {
-				const url = typeof input === 'string' ? input : (input as any).url;
+				const url =
+					typeof input === "string" ? input : (input as any).url;
 
 				const headers = normalizeHeaders(init?.headers);
 
 				// Ensure Authorization header is there for Google Gemini
-				if (!headers['authorization']) {
-					headers['authorization'] = `Bearer ${this.settings.googleApiKey}`;
+				if (!headers["authorization"]) {
+					headers["authorization"] =
+						`Bearer ${this.settings.googleApiKey}`;
 				}
 
-				if (init?.body && !headers['content-type']) {
-					headers['content-type'] = 'application/json';
+				if (init?.body && !headers["content-type"]) {
+					headers["content-type"] = "application/json";
 				}
 
 				return requestUrl({
@@ -78,14 +80,15 @@ export class ApiService {
 			// Initialize OpenAI client with custom fetch
 			this.openai = new OpenAI({
 				dangerouslyAllowBrowser: true,
-				baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+				baseURL:
+					"https://generativelanguage.googleapis.com/v1beta/openai/",
 				apiKey: this.settings.googleApiKey,
 				fetch: fetchViaObsidian,
 			});
 		} catch (error: any) {
 			logError({
 				description: `Error initializing API service: ${error.message}`,
-				location: 'ApiService',
+				location: "ApiService",
 			});
 		}
 	}
@@ -94,10 +97,10 @@ export class ApiService {
 		try {
 			const res = await requestUrl({
 				url: `https://generativelanguage.googleapis.com/v1beta/${path}`,
-				method: 'POST',
+				method: "POST",
 				headers: {
-					'x-goog-api-key': this.settings.googleApiKey,
-					'content-type': 'application/json',
+					"x-goog-api-key": this.settings.googleApiKey,
+					"content-type": "application/json",
 				},
 				body: JSON.stringify(body),
 				throw: false,
@@ -110,8 +113,8 @@ export class ApiService {
 			throw new Error(`Google API error: ${res.status}: ${res.text}`);
 		} catch (error: any) {
 			const errObj = {
-				description: error?.message || 'Failed to call Google API',
-				location: 'ApiService',
+				description: error?.message || "Failed to call Google API",
+				location: "ApiService",
 			};
 
 			logError(errObj);
@@ -121,7 +124,7 @@ export class ApiService {
 	}
 
 	private async ensureCachedContentIdForSystemPrompt(
-		systemPrompt: string
+		systemPrompt: string,
 	): Promise<string | null> {
 		try {
 			const existing = this.cachedContentIds[systemPrompt];
@@ -138,8 +141,8 @@ export class ApiService {
 			};
 
 			const created = await this.postGoogleApi<{ name?: string }>(
-				'cachedContents',
-				body
+				"cachedContents",
+				body,
 			);
 
 			const id = created?.name;
@@ -149,8 +152,9 @@ export class ApiService {
 			}
 		} catch (___errors) {
 			logWarning({
-				description: 'CachedContent creation failed; proceeding without cache',
-				location: 'ApiService',
+				description:
+					"CachedContent creation failed; proceeding without cache",
+				location: "ApiService",
 			});
 		}
 		return null;
@@ -169,21 +173,22 @@ export class ApiService {
 	}): Promise<z.infer<T>> {
 		if (!this.openai) {
 			throw new Error(
-				'OpenAI client not initialized. Make shure that you have configured the API key in the settings.'
+				"OpenAI client not initialized. Make shure that you have configured the API key in the settings.",
 			);
 		}
 
-		systemPrompt = systemPrompt.replace(/^\t+/gm, '');
+		systemPrompt = systemPrompt.replace(/^\t+/gm, "");
 
 		const cachedId = withCache
 			? await this.ensureCachedContentIdForSystemPrompt(systemPrompt)
 			: null;
 
-		const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [];
+		const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] =
+			[];
 		if (!cachedId) {
-			messages.push({ role: 'system', content: systemPrompt });
+			messages.push({ role: "system", content: systemPrompt });
 		}
-		messages.push({ role: 'user', content: userInput });
+		messages.push({ role: "user", content: userInput });
 
 		try {
 			const completion = await this.openai.chat.completions.parse({
@@ -191,10 +196,12 @@ export class ApiService {
 				messages,
 				temperature: 0,
 				top_p: 0.95,
-				response_format: zodResponseFormat(schema, 'data'),
+				response_format: zodResponseFormat(schema, "data"),
 				...(cachedId
 					? {
-							extra_body: { google: { cached_content: cachedId } },
+							extra_body: {
+								google: { cached_content: cachedId },
+							},
 						}
 					: {}),
 			});
@@ -206,8 +213,8 @@ export class ApiService {
 			throw new Error(
 				formatError({
 					description: `Failed to generate: ${err?.message}`,
-					location: 'ApiService',
-				})
+					location: "ApiService",
+				}),
 			);
 		}
 	}

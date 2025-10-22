@@ -1,4 +1,4 @@
-import type { Maybe } from '../../../types/common-interface/maybe';
+import type { Maybe } from "../../../types/common-interface/maybe";
 import {
 	type BranchNode,
 	NodeStatus,
@@ -9,9 +9,9 @@ import {
 	type TextNode,
 	type TreeNode,
 	type TreePath,
-} from '../types';
-import { areShallowEqual } from '../pure-functions/node';
-import { bfs } from './helpers/walks';
+} from "../types";
+import { areShallowEqual } from "../pure-functions/node";
+import { bfs } from "./helpers/walks";
 
 export class CurratedTree {
 	children: BranchNode[];
@@ -46,26 +46,28 @@ export class CurratedTree {
 				({
 					path: path,
 					pageStatuses: node.children.map((child) => child.status),
-				}) satisfies SerializedText
+				}) satisfies SerializedText,
 		);
 	}
 
 	public getAllTexts(): SerializedText[] {
 		return this.children.flatMap((child) =>
-			this.getAllTextsRecursive(child, [child.name])
+			this.getAllTextsRecursive(child, [child.name]),
 		);
 	}
 
 	private getAllTextsRecursive(
 		node: BranchNode,
-		path: TreePath
+		path: TreePath,
 	): SerializedText[] {
 		if (node.type === NodeType.Text) {
 			const textNode = node as TextNode;
 			return [
 				{
 					path: path,
-					pageStatuses: textNode.children.map((child) => child.status),
+					pageStatuses: textNode.children.map(
+						(child) => child.status,
+					),
 				} satisfies SerializedText,
 			];
 		}
@@ -73,7 +75,7 @@ export class CurratedTree {
 		if (node.type === NodeType.Section) {
 			const section = node as SectionNode;
 			return section.children.flatMap((child) =>
-				this.getAllTextsRecursive(child, [...path, child.name])
+				this.getAllTextsRecursive(child, [...path, child.name]),
 			);
 		}
 
@@ -81,7 +83,9 @@ export class CurratedTree {
 	}
 
 	public addText(serializedText: SerializedText): Maybe<TextNode> {
-		const textNode = this.getOrCreateTextNode({ path: serializedText.path });
+		const textNode = this.getOrCreateTextNode({
+			path: serializedText.path,
+		});
 		if (textNode.error) {
 			return textNode;
 		}
@@ -91,10 +95,12 @@ export class CurratedTree {
 			(_, index) =>
 				({
 					index,
-					status: serializedText.pageStatuses[index] ?? NodeStatus.NotStarted,
+					status:
+						serializedText.pageStatuses[index] ??
+						NodeStatus.NotStarted,
 					type: NodeType.Page,
 					parent: textNode.data,
-				}) satisfies PageNode
+				}) satisfies PageNode,
 		);
 
 		// Initialize parent references for the newly created node
@@ -116,7 +122,8 @@ export class CurratedTree {
 		if (path.length === 1) {
 			const textName = path[0];
 			const textIndex = this.children.findIndex(
-				(child) => child.type === NodeType.Text && child.name === textName
+				(child) =>
+					child.type === NodeType.Text && child.name === textName,
 			);
 
 			if (textIndex !== -1) {
@@ -141,7 +148,7 @@ export class CurratedTree {
 
 		// Delete the text node from its parent
 		const textIndex = parent.children.findIndex(
-			(child) => child.type === NodeType.Text && child.name === textName
+			(child) => child.type === NodeType.Text && child.name === textName,
 		);
 
 		if (textIndex !== -1) {
@@ -158,7 +165,8 @@ export class CurratedTree {
 					// Last node in chain - remove from root if it's empty
 					const rootIndex = this.children.findIndex(
 						(child) =>
-							child.name === current.name && child.type === current.type
+							child.name === current.name &&
+							child.type === current.type,
 					);
 					if (rootIndex !== -1) {
 						this.children.splice(rootIndex, 1);
@@ -169,7 +177,8 @@ export class CurratedTree {
 					if (grandParent) {
 						const sectionIndex = grandParent.children.findIndex(
 							(child) =>
-								child.name === current.name && child.type === current.type
+								child.name === current.name &&
+								child.type === current.type,
 						);
 
 						if (sectionIndex !== -1) {
@@ -192,7 +201,7 @@ export class CurratedTree {
 		status,
 	}: {
 		path: TreePath;
-		status: 'Done' | 'NotStarted';
+		status: "Done" | "NotStarted";
 	}): Maybe<BranchNode> {
 		const mbNode = this.getMaybeNode({ path });
 		if (mbNode.error) {
@@ -212,7 +221,7 @@ export class CurratedTree {
 
 	private setPageStatusesRecursive(
 		node: BranchNode,
-		status: 'Done' | 'NotStarted'
+		status: "Done" | "NotStarted",
 	): void {
 		if (node.type === NodeType.Text) {
 			const textNode = node as TextNode;
@@ -232,13 +241,13 @@ export class CurratedTree {
 	public getDiff(other: CurratedTree): TreeNode[] {
 		const otherSet = new Map<string, TreeNode>();
 		for (const { node, path } of bfs(other)) {
-			otherSet.set(path.join('-'), node);
+			otherSet.set(path.join("-"), node);
 		}
 
 		const diff: TreeNode[] = [];
 
 		for (const { node, path } of bfs(this)) {
-			const key = path.join('-');
+			const key = path.join("-");
 			const otherNode = otherSet.get(key);
 			if (!otherNode) {
 				diff.push(node);
@@ -258,7 +267,11 @@ export class CurratedTree {
 		return this.getDiff(other).length === 0;
 	}
 
-	getMaybeNode({ path }: { path: TreePath }): Maybe<BranchNode | CurratedTree> {
+	getMaybeNode({
+		path,
+	}: {
+		path: TreePath;
+	}): Maybe<BranchNode | CurratedTree> {
 		// Empty path returns the tree itself (root)
 		if (path.length === 0) {
 			return { error: false, data: this };
@@ -282,7 +295,7 @@ export class CurratedTree {
 
 		return lastMatchingNode
 			? { error: false, data: lastMatchingNode }
-			: { error: true, description: `Node ${path.join('-')} not found` };
+			: { error: true, description: `Node ${path.join("-")} not found` };
 	}
 
 	getMaybePage({
@@ -301,7 +314,7 @@ export class CurratedTree {
 		if (node.type !== NodeType.Text) {
 			return {
 				error: true,
-				description: `Node ${path.join('-')} is not a text`,
+				description: `Node ${path.join("-")} is not a text`,
 			};
 		}
 
@@ -338,7 +351,7 @@ export class CurratedTree {
 		if (path.length === 0) {
 			return {
 				error: true,
-				description: 'Path is empty',
+				description: "Path is empty",
 			};
 		}
 
@@ -354,7 +367,7 @@ export class CurratedTree {
 		if (!name) {
 			return {
 				error: true,
-				description: 'Path is empty',
+				description: "Path is empty",
 			};
 		}
 
@@ -382,7 +395,7 @@ export class CurratedTree {
 		if (mbParent.data.type !== NodeType.Section) {
 			return {
 				error: true,
-				description: 'Parent is not a section',
+				description: "Parent is not a section",
 			};
 		}
 
@@ -415,7 +428,7 @@ export class CurratedTree {
 		if (!textName) {
 			return {
 				error: true,
-				description: 'Text name is empty',
+				description: "Text name is empty",
 			};
 		}
 
@@ -423,7 +436,7 @@ export class CurratedTree {
 		if (path.length === 1) {
 			// Check if TextNode with the same name already exists at root
 			const existing = this.children.find(
-				(node) => node.type === NodeType.Text && node.name === textName
+				(node) => node.type === NodeType.Text && node.name === textName,
 			) as TextNode;
 
 			if (existing) {
@@ -445,13 +458,14 @@ export class CurratedTree {
 		if (!parent) {
 			return {
 				error: true,
-				description: 'No parent section found for TextNode. Path too short?',
+				description:
+					"No parent section found for TextNode. Path too short?",
 			};
 		}
 
 		// Check if TextNode with the same name already exists
 		const existing = parent.children.find(
-			(node) => node.type === NodeType.Text && node.name === textName
+			(node) => node.type === NodeType.Text && node.name === textName,
 		) as TextNode;
 
 		if (existing) {
@@ -483,7 +497,7 @@ export class CurratedTree {
 		}
 
 		// Only include BranchNodes in the chain, not the tree root
-		if ('children' in parent.data && parent.data !== this) {
+		if ("children" in parent.data && parent.data !== this) {
 			return [
 				parent.data as BranchNode,
 				...this.getParentChain({ path: path.slice(0, -1) as TreePath }),
@@ -576,7 +590,9 @@ export class CurratedTree {
 			node.status = newStatus;
 			// If this node's status changed, update parent chain
 			if (node.parent) {
-				const parentChanged = this.computeNodeStatusBottomUp(node.parent);
+				const parentChanged = this.computeNodeStatusBottomUp(
+					node.parent,
+				);
 				if (parentChanged && !closestChangedNode) {
 					closestChangedNode = parentChanged;
 				}
@@ -604,10 +620,10 @@ export class CurratedTree {
 			}
 
 			const allDone = textNode.children.every(
-				(page) => page.status === NodeStatus.Done
+				(page) => page.status === NodeStatus.Done,
 			);
 			const allNotStarted = textNode.children.every(
-				(page) => page.status === NodeStatus.NotStarted
+				(page) => page.status === NodeStatus.NotStarted,
 			);
 
 			if (allDone) return NodeStatus.Done;
@@ -621,10 +637,10 @@ export class CurratedTree {
 			}
 
 			const allDone = section.children.every(
-				(child) => child.status === NodeStatus.Done
+				(child) => child.status === NodeStatus.Done,
 			);
 			const allNotStarted = section.children.every(
-				(child) => child.status === NodeStatus.NotStarted
+				(child) => child.status === NodeStatus.NotStarted,
 			);
 
 			if (allDone) return NodeStatus.Done;

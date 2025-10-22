@@ -1,6 +1,6 @@
-import type { App } from 'obsidian';
-import type { Maybe } from '../../../types/common-interface/maybe';
-import { getEditor } from '../helpers/get-editor';
+import type { App } from "obsidian";
+import type { Maybe } from "../../../types/common-interface/maybe";
+import { getEditor } from "../helpers/get-editor";
 
 export class SelectionService {
 	constructor(private app: App) {}
@@ -20,7 +20,7 @@ export class SelectionService {
 	public async getSelection(): Promise<string> {
 		const maybeSel = await this.getMaybeSelection();
 		if (maybeSel.error) {
-			throw new Error(maybeSel.description ?? 'No selection');
+			throw new Error(maybeSel.description ?? "No selection");
 		}
 		return maybeSel.data;
 	}
@@ -33,7 +33,10 @@ export class SelectionService {
 			const cursor = sel?.head ?? editor.getCursor();
 			const insertLine = Math.max(cursor.line + 1, 0);
 
-			editor.replaceRange('\n' + text + '\n', { line: insertLine, ch: 0 });
+			editor.replaceRange("\n" + text + "\n", {
+				line: insertLine,
+				ch: 0,
+			});
 			return { error: false, data: undefined };
 		} catch (e) {
 			return {

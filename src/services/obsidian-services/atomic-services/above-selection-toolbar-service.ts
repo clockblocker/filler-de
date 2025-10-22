@@ -1,6 +1,6 @@
-import type { EditorView } from '@codemirror/view';
-import { type App, MarkdownView } from 'obsidian';
-import type { AnyActionConfig } from '../../wip-configs/actions/types';
+import type { EditorView } from "@codemirror/view";
+import { type App, MarkdownView } from "obsidian";
+import type { AnyActionConfig } from "../../wip-configs/actions/types";
 
 export class AboveSelectionToolbarService {
 	private toolbarEl: HTMLDivElement | null = null;
@@ -15,7 +15,7 @@ export class AboveSelectionToolbarService {
 		if (this.attachedView === view) return;
 
 		this.detach();
-		if (!view || view.getMode() !== 'source') return;
+		if (!view || view.getMode() !== "source") return;
 
 		const cm: EditorView = (view.editor as any).cm;
 		this.cm = cm;
@@ -23,16 +23,17 @@ export class AboveSelectionToolbarService {
 
 		this.toolbarEl = this.createToolbar();
 		const host = cm.dom as HTMLElement;
-		host.style.position ||= 'relative';
+		host.style.position ||= "relative";
 		host.appendChild(this.toolbarEl);
 
-		const showMaybe = () => setTimeout(() => this.updateToolbarPosition(), 0);
+		const showMaybe = () =>
+			setTimeout(() => this.updateToolbarPosition(), 0);
 		const hide = () => this.hideToolbar();
 
-		host.addEventListener('mouseup', showMaybe);
-		host.addEventListener('keyup', showMaybe);
-		cm.scrollDOM.addEventListener('scroll', hide, { passive: true } as any);
-		cm.scrollDOM.addEventListener('scrollend', showMaybe, {
+		host.addEventListener("mouseup", showMaybe);
+		host.addEventListener("keyup", showMaybe);
+		cm.scrollDOM.addEventListener("scroll", hide, { passive: true } as any);
+		cm.scrollDOM.addEventListener("scrollend", showMaybe, {
 			passive: true,
 		} as any);
 	}
@@ -55,11 +56,11 @@ export class AboveSelectionToolbarService {
 	}
 
 	private createToolbar(): HTMLDivElement {
-		const el = document.createElement('div');
-		el.className = 'selection-toolbar';
-		el.style.display = 'none';
-		el.style.pointerEvents = 'auto';
-		el.style.zIndex = '1000';
+		const el = document.createElement("div");
+		el.className = "selection-toolbar";
+		el.style.display = "none";
+		el.style.pointerEvents = "auto";
+		el.style.zIndex = "1000";
 		this.rerenderButtons(el);
 		return el;
 	}
@@ -71,28 +72,28 @@ export class AboveSelectionToolbarService {
 	private rerenderButtons(host: HTMLElement): void {
 		while (host.firstChild) host.removeChild(host.firstChild);
 		for (const a of this.actionConfigs) {
-			const b = document.createElement('button');
+			const b = document.createElement("button");
 			b.dataset.action = a.id;
-			b.className = 'selection-toolbar-btn';
+			b.className = "selection-toolbar-btn";
 			b.textContent = a.label;
 
 			// Ensure button is clickable
-			b.style.pointerEvents = 'auto';
-			b.style.cursor = 'pointer';
-			b.style.zIndex = '1000';
-			b.style.position = 'relative';
-			b.style.backgroundColor = 'black';
-			b.style.color = '#ffffff';
-			b.style.padding = '4px 8px';
-			b.style.border = '1px solid #000000';
-			b.style.borderRadius = '4px';
+			b.style.pointerEvents = "auto";
+			b.style.cursor = "pointer";
+			b.style.zIndex = "1000";
+			b.style.position = "relative";
+			b.style.backgroundColor = "black";
+			b.style.color = "#ffffff";
+			b.style.padding = "4px 8px";
+			b.style.border = "1px solid #000000";
+			b.style.borderRadius = "4px";
 
 			host.appendChild(b);
 		}
 	}
 
 	private hideToolbar() {
-		if (this.toolbarEl) this.toolbarEl.style.display = 'none';
+		if (this.toolbarEl) this.toolbarEl.style.display = "none";
 	}
 
 	public updateToolbarPosition() {
@@ -112,8 +113,8 @@ export class AboveSelectionToolbarService {
 
 		const t = this.toolbarEl;
 
-		t.style.display = 'block';
-		t.style.position = 'absolute';
+		t.style.display = "block";
+		t.style.position = "absolute";
 		t.style.top = `${top - hostRect.top - t.offsetHeight - 8 + this.cm.scrollDOM.scrollTop}px`;
 		t.style.left = `${midX - hostRect.left - t.offsetWidth / 2 + this.cm.scrollDOM.scrollLeft}px`;
 
@@ -121,7 +122,7 @@ export class AboveSelectionToolbarService {
 		const minLeft = 8;
 		const leftNum = Math.max(
 			minLeft,
-			Math.min(Number.parseFloat(t.style.left), maxLeft)
+			Math.min(Number.parseFloat(t.style.left), maxLeft),
 		);
 		t.style.left = `${leftNum}px`;
 	}

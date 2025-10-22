@@ -6,12 +6,12 @@ import { makeEndgameMorhpemsPrompt } from "./morphems/morphemsPrompt";
 const a = Wortart.Adjektiv;
 
 type PromtMakerFromWortart = Record<
-  typeof a | "Morphems" | "Grundform",
-  () => string
+	typeof a | "Morphems" | "Grundform",
+	() => string
 >;
 
 export const promtMakerFromKeyword: PromtMakerFromWortart = {
-  [Wortart.Adjektiv]: makeEndgameAdjektivPrompt,
-  Morphems: makeEndgameMorhpemsPrompt,
-  Grundform: makeGrundformsPrompt,
+	[Wortart.Adjektiv]: makeEndgameAdjektivPrompt,
+	Morphems: makeEndgameMorhpemsPrompt,
+	Grundform: makeGrundformsPrompt,
 };

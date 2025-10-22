@@ -1,8 +1,8 @@
-import { type App, MarkdownView, type TFile, type TFolder } from 'obsidian';
-import { type Maybe, unwrapMaybe } from '../../../types/common-interface/maybe';
-import { getMaybeEditor } from '../helpers/get-editor';
-import { logError, logWarning } from '../helpers/issue-handlers';
-import type { PathParts } from '../../../types/common-interface/dtos';
+import { type App, MarkdownView, type TFile, type TFolder } from "obsidian";
+import { type Maybe, unwrapMaybe } from "../../../types/common-interface/maybe";
+import { getMaybeEditor } from "../helpers/get-editor";
+import { logError, logWarning } from "../helpers/issue-handlers";
+import type { PathParts } from "../../../types/common-interface/dtos";
 
 export class OpenedFileService {
 	constructor(private app: App) {}
@@ -13,12 +13,13 @@ export class OpenedFileService {
 
 	async getMaybeOpenedFile(): Promise<Maybe<TFile>> {
 		try {
-			const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+			const activeView =
+				this.app.workspace.getActiveViewOfType(MarkdownView);
 
 			if (!activeView) {
 				logWarning({
-					description: 'File not open or not active',
-					location: 'OpenedFileService',
+					description: "File not open or not active",
+					location: "OpenedFileService",
 				});
 				return { error: true };
 			}
@@ -27,8 +28,8 @@ export class OpenedFileService {
 
 			if (!file) {
 				logWarning({
-					description: 'File not open or not active',
-					location: 'OpenedFileService',
+					description: "File not open or not active",
+					location: "OpenedFileService",
 				});
 				return { error: true };
 			}
@@ -37,7 +38,7 @@ export class OpenedFileService {
 		} catch (error) {
 			logError({
 				description: `Failed to get maybe opened file: ${error}`,
-				location: 'OpenedFileService',
+				location: "OpenedFileService",
 			});
 			return { error: true };
 		}
@@ -45,13 +46,14 @@ export class OpenedFileService {
 
 	async getMaybeFileContent(): Promise<Maybe<string>> {
 		try {
-			const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+			const activeView =
+				this.app.workspace.getActiveViewOfType(MarkdownView);
 			const mbEditor = await getMaybeEditor(this.app);
 
 			if (!activeView || mbEditor.error) {
 				logWarning({
-					description: 'File not open or not active',
-					location: 'OpenedFileService',
+					description: "File not open or not active",
+					location: "OpenedFileService",
 				});
 				return { error: true };
 			}
@@ -61,8 +63,8 @@ export class OpenedFileService {
 
 			if (!file) {
 				logWarning({
-					description: 'File not open or not active',
-					location: 'OpenedFileService',
+					description: "File not open or not active",
+					location: "OpenedFileService",
 				});
 				return { error: true };
 			}
@@ -72,7 +74,7 @@ export class OpenedFileService {
 		} catch (error) {
 			logError({
 				description: `Failed to get maybe file content: ${error}`,
-				location: 'OpenedFileService',
+				location: "OpenedFileService",
 			});
 			return { error: true };
 		}
@@ -83,7 +85,7 @@ export class OpenedFileService {
 	}
 
 	async replaceContentInCurrentlyOpenedFile(
-		newContent: string
+		newContent: string,
 	): Promise<Maybe<string>> {
 		const maybeFile = await this.getMaybeOpenedFile();
 		if (maybeFile.error) {
@@ -122,25 +124,28 @@ export class OpenedFileService {
 		const parent = maybeFile.data.parent;
 
 		if (!parent) {
-			return { error: true, description: 'Opened file does not have a parent' };
+			return {
+				error: true,
+				description: "Opened file does not have a parent",
+			};
 		}
 
 		return { error: false, data: parent };
 	}
 
 	public showLoadingOverlay(): void {
-		if (document.getElementById('opened-file-service-loading-overlay')) {
+		if (document.getElementById("opened-file-service-loading-overlay")) {
 			return;
 		}
-		const overlay = document.createElement('div');
-		overlay.id = 'opened-file-service-loading-overlay';
+		const overlay = document.createElement("div");
+		overlay.id = "opened-file-service-loading-overlay";
 
 		document.body.appendChild(overlay);
 
-		const loadingText = document.createElement('div');
-		loadingText.innerText = 'Loading...';
-		loadingText.style.fontSize = '2rem';
-		loadingText.style.color = '#fff';
+		const loadingText = document.createElement("div");
+		loadingText.innerText = "Loading...";
+		loadingText.style.fontSize = "2rem";
+		loadingText.style.color = "#fff";
 		overlay.appendChild(loadingText);
 
 		// overlay.style.position = 'fixed';
@@ -158,7 +163,7 @@ export class OpenedFileService {
 	// Exposed method to hide and remove the loading overlay
 	public hideLoadingOverlay(): void {
 		const overlay = document.getElementById(
-			'opened-file-service-loading-overlay'
+			"opened-file-service-loading-overlay",
 		);
 		if (overlay) {
 			overlay.remove();
@@ -173,7 +178,7 @@ export class OpenedFileService {
 			const description = `Failed to open file: ${error}`;
 			logError({
 				description,
-				location: 'OpenedFileService',
+				location: "OpenedFileService",
 			});
 			return { error: true, description };
 		}
@@ -189,11 +194,14 @@ export class OpenedFileService {
 		}
 		return {
 			error: false,
-			data: { fileName: file.name, pathParts: file.path.split('/') },
+			data: { fileName: file.name, pathParts: file.path.split("/") },
 		};
 	}
 
-	public getFileNameAndPathParts(): { fileName: string; pathParts: PathParts } {
+	public getFileNameAndPathParts(): {
+		fileName: string;
+		pathParts: PathParts;
+	} {
 		return unwrapMaybe(this.getMaybeFileNameAndPathParts());
 	}
 }

@@ -1,13 +1,13 @@
-import { SLASH } from '../../../types/literals';
-import type { PrettyPath } from '../../../types/common-interface/dtos';
+import { SLASH } from "../../../types/literals";
+import type { PrettyPath } from "../../../types/common-interface/dtos";
 
 export function systemPathToPrettyPath(path: string): PrettyPath {
-	if (!path || path === '/') return { pathParts: [], title: '' };
+	if (!path || path === "/") return { pathParts: [], title: "" };
 
 	const splitPath = path.split(SLASH).filter(Boolean);
 
 	return {
-		title: splitPath.pop() ?? '',
+		title: splitPath.pop() ?? "",
 		pathParts: splitPath,
 	};
 }
@@ -29,12 +29,12 @@ export function systemPathFromPrettyPath({
 }): string {
 	return joinPosix(
 		pathToFolderFromPathParts(pathParts),
-		safeFileName(title) + (isFile ? '.md' : '')
+		safeFileName(title) + (isFile ? ".md" : ""),
 	);
 }
 
 export function safeFileName(s: string): string {
-	return s.replace(/[\\/]/g, ' ').trim();
+	return s.replace(/[\\/]/g, " ").trim();
 }
 
 export function pathToFolderFromPathParts(pathParts: string[]): string {
@@ -44,7 +44,7 @@ export function pathToFolderFromPathParts(pathParts: string[]): string {
 export function joinPosix(...parts: string[]): string {
 	const cleaned = parts
 		.filter(Boolean)
-		.map((p) => p.replace(/(^[\\/]+)|([\\/]+$)/g, '')) // trim leading/trailing slashes/backslashes
+		.map((p) => p.replace(/(^[\\/]+)|([\\/]+$)/g, "")) // trim leading/trailing slashes/backslashes
 		.filter((p) => p.length > 0);
-	return cleaned.join('/');
+	return cleaned.join("/");
 }

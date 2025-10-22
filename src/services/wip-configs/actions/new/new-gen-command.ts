@@ -1,14 +1,14 @@
-import { Notice } from 'obsidian';
-import { unwrapMaybe } from '../../../../types/common-interface/maybe';
-import { LONG_DASH } from '../../../../types/literals';
-import type { TexfresserObsidianServices } from '../../../obsidian-services/interface';
+import { Notice } from "obsidian";
+import { unwrapMaybe } from "../../../../types/common-interface/maybe";
+import { LONG_DASH } from "../../../../types/literals";
+import type { TexfresserObsidianServices } from "../../../obsidian-services/interface";
 
 export default async function newGenCommand(
-	services: TexfresserObsidianServices
+	services: TexfresserObsidianServices,
 ) {
 	try {
 		const file = unwrapMaybe(
-			await services.openedFileService.getMaybeOpenedFile()
+			await services.openedFileService.getMaybeOpenedFile(),
 		);
 
 		const word = file.name;
@@ -46,25 +46,26 @@ export default async function newGenCommand(
 		const blocks = [buttonsBlock];
 
 		const fileContent = unwrapMaybe(
-			await services.openedFileService.getMaybeFileContent()
+			await services.openedFileService.getMaybeFileContent(),
 		);
 
 		// const exisingBlocks = services.blockManager.extractAllBlocks(fileContent);
 
 		// console.log('exisingBlocks', exisingBlocks);
 
-		if (fileContent.trim() === '') {
+		if (fileContent.trim() === "") {
 			await Promise.all(
 				blocks.map((block) => {
-					const a = services.openedFileService.writeToOpenedFile(block);
-				})
+					const a =
+						services.openedFileService.writeToOpenedFile(block);
+				}),
 			);
 		} else {
 			// Change the buttons to somehting meaningfull
 			return null;
 		}
 
-		const entrie = blocks.filter(Boolean).join('\n---\n');
+		const entrie = blocks.filter(Boolean).join("\n---\n");
 
 		// if (normalForm?.toLocaleLowerCase() === word.toLocaleLowerCase()) {
 		// 	;
@@ -82,7 +83,7 @@ export default async function newGenCommand(
 
 function extractBaseForms(text: string): string[] | null {
 	const match = text.match(
-		/Adjektive:\s*\[\[(.*?)\]\],\s*\[\[(.*?)\]\],\s*\[\[(.*?)\]\]/
+		/Adjektive:\s*\[\[(.*?)\]\],\s*\[\[(.*?)\]\],\s*\[\[(.*?)\]\]/,
 	);
 	if (!match) {
 		return null;
@@ -90,7 +91,7 @@ function extractBaseForms(text: string): string[] | null {
 
 	const [_, base, comparative, superlative] = match;
 
-	return [base ?? '', comparative ?? '', superlative ?? ''];
+	return [base ?? "", comparative ?? "", superlative ?? ""];
 }
 
 function extractAdjectiveForms(text: string): string {
@@ -100,7 +101,7 @@ function extractAdjectiveForms(text: string): string {
 		return LONG_DASH;
 	}
 
-	const endings = ['er', 'es', 'e', 'en', 'em'];
+	const endings = ["er", "es", "e", "en", "em"];
 
 	const result: string[] = [];
 
@@ -110,7 +111,7 @@ function extractAdjectiveForms(text: string): string {
 		}
 	}
 
-	return result.join(', ');
+	return result.join(", ");
 }
 
 function extractFirstBracketedWord(text: string) {
@@ -124,7 +125,7 @@ function getIPAIndexes(str: string) {
 	let match;
 
 	while ((match = regex.exec(str)) !== null) {
-		if (match.index === 0 || str[match.index - 1] !== '[') {
+		if (match.index === 0 || str[match.index - 1] !== "[") {
 			matches.push([match.index, regex.lastIndex - 1]);
 		}
 	}
@@ -154,29 +155,29 @@ function incertYouglishLinkInIpa(baseBlock: string) {
 }
 
 async function incertClipbordContentsInContextsBlock(
-	baseBlock: string
+	baseBlock: string,
 ): Promise<string> {
 	try {
-		let clipboardContent = '';
-		if (typeof navigator !== 'undefined' && navigator.clipboard) {
+		let clipboardContent = "";
+		if (typeof navigator !== "undefined" && navigator.clipboard) {
 			clipboardContent = await navigator.clipboard.readText();
 		}
-		const [first, ...rest] = baseBlock.split('---');
+		const [first, ...rest] = baseBlock.split("---");
 
 		if (rest.length >= 1) {
 			// Insert clipboard content between the first two dividers
 			return (
 				first +
-				'---\n' +
+				"---\n" +
 				clipboardContent.trim() +
-				rest.map((a) => a.trim()).join('\n\n---\n') +
-				'\n'
+				rest.map((a) => a.trim()).join("\n\n---\n") +
+				"\n"
 			);
 		}
 
 		return baseBlock;
 	} catch (error) {
-		console.error('Failed to read clipboard:', error);
+		console.error("Failed to read clipboard:", error);
 		return baseBlock;
 	}
 }

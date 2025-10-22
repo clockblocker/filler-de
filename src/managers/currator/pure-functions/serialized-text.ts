@@ -1,16 +1,16 @@
-import type { SerializedText } from '../types';
+import type { SerializedText } from "../types";
 
 export const sortSerializedTexts = (texts: SerializedText[]) =>
 	[...texts]
 		.map((t) => ({
-			joinedPath: t.path.join('-'),
-			joinedPageStatuses: [...t.pageStatuses].sort().join('-'),
+			joinedPath: t.path.join("-"),
+			joinedPageStatuses: [...t.pageStatuses].sort().join("-"),
 		}))
 		.sort((a, b) => a.joinedPath.localeCompare(b.joinedPath));
 
 export const checkEqualityOfSerializedTexts = (
 	a: SerializedText[],
-	b: SerializedText[]
+	b: SerializedText[],
 ): boolean => {
 	const aSorted = sortSerializedTexts(a);
 	const bSorted = sortSerializedTexts(b);

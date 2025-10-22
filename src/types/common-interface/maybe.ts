@@ -4,7 +4,7 @@ export type Maybe<T> =
 
 export function unwrapMaybe<T>(maybe: Maybe<T>, whoCalled?: string): T {
 	if (maybe.error) {
-		console.error(`${whoCalled ?? ''} ${maybe.description}`);
+		console.error(`${whoCalled ?? ""} ${maybe.description}`);
 		throw new Error(maybe.description);
 	}
 

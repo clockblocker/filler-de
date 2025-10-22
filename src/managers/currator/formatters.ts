@@ -1,6 +1,6 @@
 // ---
 
-import type { GuardedNodeName } from './types';
+import type { GuardedNodeName } from "./types";
 
 type SectionName = GuardedNodeName;
 

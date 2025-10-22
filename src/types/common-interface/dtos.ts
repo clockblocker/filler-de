@@ -1,5 +1,5 @@
-import { z } from 'zod';
-import { FileTypeSchema } from './enums';
+import { z } from "zod";
+import { FileTypeSchema } from "./enums";
 
 export type PathParts = string[];
 export type PrettyPath = { pathParts: PathParts; title: string }; // PathParts.join('/')/title.md

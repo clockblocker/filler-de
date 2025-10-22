@@ -1,11 +1,11 @@
-import { Notice } from 'obsidian';
-import { unwrapMaybe } from '../../../../types/common-interface/maybe';
-import type { OpenedFileService } from '../../../obsidian-services/atomic-services/opened-file-service';
-import type { SelectionService } from '../../../obsidian-services/atomic-services/selection-service';
+import { Notice } from "obsidian";
+import { unwrapMaybe } from "../../../../types/common-interface/maybe";
+import type { OpenedFileService } from "../../../obsidian-services/atomic-services/opened-file-service";
+import type { SelectionService } from "../../../obsidian-services/atomic-services/selection-service";
 import {
 	formatQuotedLines,
 	segmentInQuotedLines,
-} from '../../../pure-formatters/quote-manager/interface';
+} from "../../../pure-formatters/quote-manager/interface";
 
 export default async function wrapSentencesInQuoteAnchor({
 	selectionService,
@@ -21,7 +21,7 @@ export default async function wrapSentencesInQuoteAnchor({
 		const highestBlockNumber = findHighestBlockNumber(fileContent);
 
 		const nameOfTheOpenendFile = unwrapMaybe(
-			await openedFileService.getMaybeOpenedFile()
+			await openedFileService.getMaybeOpenedFile(),
 		).name;
 
 		await selectionService.replaceSelection(
@@ -30,8 +30,8 @@ export default async function wrapSentencesInQuoteAnchor({
 					text: selection,
 					nameOfTheOpenendFile,
 					highestBlockNumber,
-				})
-			)
+				}),
+			),
 		);
 	} catch (error) {
 		new Notice(`Error: ${error.message}`);
@@ -43,7 +43,7 @@ function findHighestBlockNumber(content: string): number {
 	if (!matches) return 0;
 
 	const numbers = matches.map((match) => {
-		const num = match.replace('#^', '');
+		const num = match.replace("#^", "");
 		return Number.parseInt(num, 10);
 	});
 

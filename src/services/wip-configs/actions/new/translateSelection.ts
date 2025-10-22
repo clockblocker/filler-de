@@ -5,26 +5,26 @@ import type { SelectionService } from "../../../obsidian-services/atomic-service
 import { prompts } from "../../../prompts";
 
 export default async function newTranslateSelection({
-  selectionService,
-  apiService,
+	selectionService,
+	apiService,
 }: {
-  selectionService: SelectionService;
-  apiService: ApiService;
+	selectionService: SelectionService;
+	apiService: ApiService;
 }) {
-  try {
-    const selection = selectionService.getSelection();
+	try {
+		const selection = selectionService.getSelection();
 
-    const response = await apiService.generate({
-      systemPrompt: prompts.translate_de_to_eng,
-      userInput: await selection,
-      schema: z.string(),
-      withCache: false,
-    });
+		const response = await apiService.generate({
+			systemPrompt: prompts.translate_de_to_eng,
+			userInput: await selection,
+			schema: z.string(),
+			withCache: false,
+		});
 
-    if (!response) return;
+		if (!response) return;
 
-    selectionService.appendBelow(response);
-  } catch (error) {
-    new Notice(`Error: ${error.message}`);
-  }
+		selectionService.appendBelow(response);
+	} catch (error) {
+		new Notice(`Error: ${error.message}`);
+	}
 }

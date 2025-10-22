@@ -7,7 +7,7 @@ import { tests } from "./tests";
 // </agent_role>
 
 export const makeGrundformsPrompt = () => {
-  const instructions = `<agent_background>
+	const instructions = `<agent_background>
   You are a very smart and very helpful German language expert. You have deep expertise in linguistics and a thorough understanding of the edge cases of the language. You are very familiar with resources such as "grammis.ids-mannheim.de", "verbformen.de" and "dwds.de". May even be a contributor.
 </agent_background>
 
@@ -41,7 +41,7 @@ The output shall be a valid JSON object with every given word or expression, tha
   Describe the common meanings with emojis: up to 3 emojis per meaning. Aim for as few as possible while describing the meaning thoroughly. Separate distinct meanings in different elements of emojiBeschreibungs array. So for "Der Schloss" it is ["🏰", "🔒"], for leisten it is ["🏆🎯", "💸"], for sitzen it is ["💺"] and for "alles unter einen Hut bringen" it is ["🎩🧩🤹‍♂️"].
 </instructions>`;
 
-  const schema = `<schema>
+	const schema = `<schema>
 const MatchSchema = z.enum(["Grundform", "Flexion", "Tippfehler", "Unbekannt"]);
 
 const GenusSchema = z.enum(["F", "M", "N"]); // ["Feminin", "Maskulin", "Neutrum"]
@@ -195,20 +195,20 @@ z.object({ // This shall be a priority. We need to find every walid way to inter
 </schema>
 <outputformat>outputformat shall be formattes as grundformsOutputSchema</outputformat>`;
 
-  const testsSchema = z.record(z.string(), grundformsOutputSchema);
-  const validationResult = testsSchema.safeParse(tests);
+	const testsSchema = z.record(z.string(), grundformsOutputSchema);
+	const validationResult = testsSchema.safeParse(tests);
 
-  if (!validationResult.success) {
-    console.error("Validation error:", validationResult.error);
-    return "";
-  }
-  const examplesXML = `<examples>${Object.entries(tests)
-    .map(
-      ([key, value]) =>
-        `<example><note>${key.toLowerCase().trim()}</note><grundforms>${JSON.stringify(
-          value,
-        )}</grundforms></example>`,
-    )
-    .join("")}</examples>`;
-  return instructions + schema + examplesXML;
+	if (!validationResult.success) {
+		console.error("Validation error:", validationResult.error);
+		return "";
+	}
+	const examplesXML = `<examples>${Object.entries(tests)
+		.map(
+			([key, value]) =>
+				`<example><note>${key.toLowerCase().trim()}</note><grundforms>${JSON.stringify(
+					value,
+				)}</grundforms></example>`,
+		)
+		.join("")}</examples>`;
+	return instructions + schema + examplesXML;
 };

@@ -1,8 +1,8 @@
 import {
 	type MetaInfo,
 	type PathParts,
-} from '../../../types/common-interface/dtos';
-import { FileType } from '../../../types/common-interface/enums';
+} from "../../../types/common-interface/dtos";
+import { FileType } from "../../../types/common-interface/enums";
 import {
 	ACTION_CONFIGS,
 	CHANGE_FILE_TYPE_ACTIONS,
@@ -10,8 +10,8 @@ import {
 	getAllBottomActions,
 	NAVIGATE_PAGES_ACTIONS,
 	OPTIONAL_BOTTOM_ACTIONS,
-} from './actions-config';
-import type { AnyActionConfig } from './types';
+} from "./actions-config";
+import type { AnyActionConfig } from "./types";
 
 export const getBottomActionConfigs = ({
 	metaInfo,
@@ -23,7 +23,7 @@ export const getBottomActionConfigs = ({
 	pathParts: PathParts;
 }): AnyActionConfig[] => {
 	const actions = getAllBottomActions().filter((action) =>
-		OPTIONAL_BOTTOM_ACTIONS.includes(action)
+		OPTIONAL_BOTTOM_ACTIONS.includes(action),
 	);
 
 	if (!metaInfo) {

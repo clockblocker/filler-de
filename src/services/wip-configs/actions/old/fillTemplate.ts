@@ -4,71 +4,71 @@ import { LONG_DASH } from "../../../../types/literals";
 import { prompts } from "../../../prompts";
 
 function extractFirstBracketedWord(text: string) {
-  const match = text.match(/\[\[([^\]]+)\]\]/);
-  return match ? match[1] : null;
+	const match = text.match(/\[\[([^\]]+)\]\]/);
+	return match ? match[1] : null;
 }
 
 function getIPAIndexes(str: string) {
-  const regex = /\[(?!\[)(.*?)(?<!\])\]/g;
-  const matches = [];
-  let match;
+	const regex = /\[(?!\[)(.*?)(?<!\])\]/g;
+	const matches = [];
+	let match;
 
-  while ((match = regex.exec(str)) !== null) {
-    if (match.index === 0 || str[match.index - 1] !== "[") {
-      matches.push([match.index, regex.lastIndex - 1]);
-    }
-  }
+	while ((match = regex.exec(str)) !== null) {
+		if (match.index === 0 || str[match.index - 1] !== "[") {
+			matches.push([match.index, regex.lastIndex - 1]);
+		}
+	}
 
-  return matches.length ? matches[0] : null;
+	return matches.length ? matches[0] : null;
 }
 
 function incertYouglishLinkInIpa(baseBlock: string) {
-  const ipaI = getIPAIndexes(baseBlock);
-  const word = extractFirstBracketedWord(baseBlock);
+	const ipaI = getIPAIndexes(baseBlock);
+	const word = extractFirstBracketedWord(baseBlock);
 
-  if (!ipaI || !word) {
-    return baseBlock;
-  }
+	if (!ipaI || !word) {
+		return baseBlock;
+	}
 
-  const ipa1 = ipaI[1];
+	const ipa1 = ipaI[1];
 
-  if (!ipa1) {
-    return baseBlock;
-  }
+	if (!ipa1) {
+		return baseBlock;
+	}
 
-  return (
-    baseBlock.slice(0, ipa1 + 1) +
-    `(https://youglish.com/pronounce/${word}/german)` +
-    baseBlock.slice(ipa1 + 1)
-  );
+	return (
+		baseBlock.slice(0, ipa1 + 1) +
+		`(https://youglish.com/pronounce/${word}/german)` +
+		baseBlock.slice(ipa1 + 1)
+	);
 }
 
 async function incertClipbordContentsInContextsBlock(
-  baseBlock: string,
+	baseBlock: string,
 ): Promise<string> {
-  try {
-    let clipboardContent = "";
-    if (typeof navigator !== "undefined" && navigator.clipboard) {
-      clipboardContent = await navigator.clipboard.readText();
-    }
-    const [first, ...rest] = baseBlock.split("---");
+	try {
+		let clipboardContent = "";
+		if (typeof navigator !== "undefined" && navigator.clipboard) {
+			clipboardContent = await navigator.clipboard.readText();
+		}
+		const [first, ...rest] = baseBlock.split("---");
 
-    if (rest.length >= 1) {
-      // Insert clipboard content between the first two dividers
-      return (
-        first +
-        "---\n" +
-        clipboardContent.trim() +
-        rest.map((a) => a.trim()).join("\n\n---\n") +
-        "\n"
-      );
-    }
+		if (rest.length >= 1) {
+			// Insert clipboard content between the first two dividers
+			return (
+				first +
+				"---\n" +
+				clipboardContent.trim() +
+				rest.map((a) => a.trim()).join("\n\n---\n") +
+				"\n"
+			);
+		}
 
-    return baseBlock;
-  } catch (error) {
-    console.error("Failed to read clipboard:", error);
-    return baseBlock;
-  }
+		return baseBlock;
+	} catch (error) {
+		console.error("Failed to read clipboard:", error);
+		return baseBlock;
+	}
 }
 
 // export default async function fillTemplate(
@@ -131,34 +131,34 @@ async function incertClipbordContentsInContextsBlock(
 // }
 
 function extractBaseForms(text: string): string[] | null {
-  const match = text.match(
-    /Adjektive:\s*\[\[(.*?)\]\],\s*\[\[(.*?)\]\],\s*\[\[(.*?)\]\]/,
-  );
-  if (!match) {
-    return null;
-  }
+	const match = text.match(
+		/Adjektive:\s*\[\[(.*?)\]\],\s*\[\[(.*?)\]\],\s*\[\[(.*?)\]\]/,
+	);
+	if (!match) {
+		return null;
+	}
 
-  const [_, base, comparative, superlative] = match;
+	const [_, base, comparative, superlative] = match;
 
-  return [base, comparative, superlative];
+	return [base, comparative, superlative];
 }
 
 function extractAdjectiveForms(text: string): string {
-  const baseForms = extractBaseForms(text);
+	const baseForms = extractBaseForms(text);
 
-  if (!baseForms) {
-    return LONG_DASH;
-  }
+	if (!baseForms) {
+		return LONG_DASH;
+	}
 
-  const endings = ["er", "es", "e", "en", "em"];
+	const endings = ["er", "es", "e", "en", "em"];
 
-  const result: string[] = [];
+	const result: string[] = [];
 
-  for (const suf of baseForms) {
-    for (const end of endings) {
-      result.push(`[[${suf + end}]]`);
-    }
-  }
+	for (const suf of baseForms) {
+		for (const end of endings) {
+			result.push(`[[${suf + end}]]`);
+		}
+	}
 
-  return result.join(", ");
+	return result.join(", ");
 }

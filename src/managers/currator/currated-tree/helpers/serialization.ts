@@ -1,10 +1,10 @@
-import type { SerializedText, TreePath } from '../../types';
-import { NodeType } from '../../types';
-import { CurratedTree } from '../currated-tree';
-import { dfs } from './walks';
+import type { SerializedText, TreePath } from "../../types";
+import { NodeType } from "../../types";
+import { CurratedTree } from "../currated-tree";
+import { dfs } from "./walks";
 
 export const makeTreeFromTexts = (texts: SerializedText[]): CurratedTree => {
-	const tree = new CurratedTree([], 'Library');
+	const tree = new CurratedTree([], "Library");
 	texts.forEach((text) => {
 		tree.addText(text);
 	});

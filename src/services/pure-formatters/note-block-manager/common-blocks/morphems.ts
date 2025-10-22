@@ -1,82 +1,82 @@
 import type { TFile } from "obsidian";
 import type TextEaterPlugin from "../../../main";
 import {
-  formatPathToNoteAsLink,
-  getPathsToGrundformNotes,
-  getPathsToMorphemNotes,
+	formatPathToNoteAsLink,
+	getPathsToGrundformNotes,
+	getPathsToMorphemNotes,
 } from "../../../prompts/endgame/grundform/formatters/link";
 import { makeTagChain, Tag } from "../../../prompts/endgame/zod/consts";
 import type {
-  Backlink,
-  Block,
-  GrundformKerl,
-  MorphemAnalysisOutput,
-  MorphemKerl,
+	Backlink,
+	Block,
+	GrundformKerl,
+	MorphemAnalysisOutput,
+	MorphemKerl,
 } from "../../../prompts/endgame/zod/types";
 
 async function getZusammengesetztAusBlock(
-  plugin: TextEaterPlugin,
-  file: TFile,
-  morphemAnalysis: MorphemAnalysisOutput,
+	plugin: TextEaterPlugin,
+	file: TFile,
+	morphemAnalysis: MorphemAnalysisOutput,
 ): Promise<Block> {
-  if (!morphemAnalysis.zusammengesetztAus) {
-    return { repr: "", backlinks: [] };
-  }
+	if (!morphemAnalysis.zusammengesetztAus) {
+		return { repr: "", backlinks: [] };
+	}
 
-  const kerls = morphemAnalysis.zusammengesetztAus.map((r) => ({
-    grundform: Object.keys(r)[0],
-    wortart: Object.values(r)[0],
-  }));
+	const kerls = morphemAnalysis.zusammengesetztAus.map((r) => ({
+		grundform: Object.keys(r)[0],
+		wortart: Object.values(r)[0],
+	}));
 
-  const paths = await getPathsToGrundformNotes(
-    plugin,
-    file,
-    kerls as GrundformKerl[],
-  );
+	const paths = await getPathsToGrundformNotes(
+		plugin,
+		file,
+		kerls as GrundformKerl[],
+	);
 
-  const backlinks: Backlink[] = [];
-  const reprs: string[] = [];
+	const backlinks: Backlink[] = [];
+	const reprs: string[] = [];
 
-  for (let i = 0; i < kerls.length; i++) {
-    backlinks.push({ path: paths[i] ?? "" });
-    reprs.push(
-      formatPathToNoteAsLink({
-        word: kerls[i]?.grundform ?? "",
-        path: paths[i] ?? "",
-        noteExists: false,
-      }),
-    );
-  }
+	for (let i = 0; i < kerls.length; i++) {
+		backlinks.push({ path: paths[i] ?? "" });
+		reprs.push(
+			formatPathToNoteAsLink({
+				word: kerls[i]?.grundform ?? "",
+				path: paths[i] ?? "",
+				noteExists: false,
+			}),
+		);
+	}
 
-  return { repr: reprs.join(" + "), backlinks };
+	return { repr: reprs.join(" + "), backlinks };
 }
 
 function getMorphemischeZerlegungBlock(
-  morphemAnalysis: MorphemAnalysisOutput,
+	morphemAnalysis: MorphemAnalysisOutput,
 ): Block {
-  const kerls = morphemAnalysis.morphemischeZerlegung.map((r) => ({
-    grundform: Object.keys(r)[0],
-    morphem: Object.values(r)[0],
-  }));
+	const kerls = morphemAnalysis.morphemischeZerlegung.map((r) => ({
+		grundform: Object.keys(r)[0],
+		morphem: Object.values(r)[0],
+	}));
 
-  const paths = getPathsToMorphemNotes(kerls as MorphemKerl[]);
+	const paths = getPathsToMorphemNotes(kerls as MorphemKerl[]);
 
-  const backlinks: Backlink[] = [];
-  const reprs: string[] = [];
+	const backlinks: Backlink[] = [];
+	const reprs: string[] = [];
 
-  for (let i = 0; i < kerls.length; i++) {
-    const tags = [makeTagChain([Tag.Morphem, kerls[i]?.morphem ?? ""])];
-    backlinks.push({ path: paths[i] ?? "", tags });
-    reprs.push(
-      formatPathToNoteAsLink({
-        word: kerls[i]?.grundform ?? "",
-        path: paths[i] ?? "",
-        noteExists: false,
-      }),
-    );
-  }
+	for (let i = 0; i < kerls.length; i++) {
+		const tags = [makeTagChain([Tag.Morphem, kerls[i]?.morphem ?? ""])];
+		backlinks.push({ path: paths[i] ?? "", tags });
+		reprs.push(
+			formatPathToNoteAsLink({
+				word: kerls[i]?.grundform ?? "",
+				path: paths[i] ?? "",
+				noteExists: false,
+			}),
+		);
+	}
 
-  return { repr: reprs.join("|"), backlinks };
+	return { repr: reprs.join("|"), backlinks };
 }
 
 // export async function makeMorphemBlock(

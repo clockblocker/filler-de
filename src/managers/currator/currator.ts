@@ -1,8 +1,8 @@
-import type { TexfresserObsidianServices } from '../../services/obsidian-services/interface';
+import type { TexfresserObsidianServices } from "../../services/obsidian-services/interface";
 
 export class Currator {
-	private backgroundFileService: TexfresserObsidianServices['backgroundFileService'];
-	private openedFileService: TexfresserObsidianServices['openedFileService'];
+	private backgroundFileService: TexfresserObsidianServices["backgroundFileService"];
+	private openedFileService: TexfresserObsidianServices["openedFileService"];
 
 	constructor({
 		backgroundFileService,

@@ -1,11 +1,11 @@
-import { reEscape } from '../../text-utils';
+import { reEscape } from "../../text-utils";
 import {
 	type MetaInfo,
 	MetaInfoSchema,
-} from '../../../../types/common-interface/dtos';
+} from "../../../../types/common-interface/dtos";
 
-const META_SECTION_ID = 'textfresser_meta_keep_me_invisible';
-const SECTION = 'section';
+const META_SECTION_ID = "textfresser_meta_keep_me_invisible";
+const SECTION = "section";
 
 export const META_INFO_FORMATTER = {
 	make(meta: MetaInfo) {
@@ -15,7 +15,7 @@ ${JSON.stringify(meta)}
 	},
 
 	pattern: new RegExp(
-		`<${SECTION}\\s+id=\\{${reEscape(META_SECTION_ID)}\\}>([\\s\\S]*?)<\\/${SECTION}>`
+		`<${SECTION}\\s+id=\\{${reEscape(META_SECTION_ID)}\\}>([\\s\\S]*?)<\\/${SECTION}>`,
 	),
 
 	schema: MetaInfoSchema,

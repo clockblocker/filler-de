@@ -1,18 +1,18 @@
 import {
 	logWarning,
 	logError,
-} from '../../../services/obsidian-services/helpers/issue-handlers';
-import type { TexfresserObsidianServices } from '../../../services/obsidian-services/interface';
-import { unwrapMaybe } from '../../../types/common-interface/maybe';
+} from "../../../services/obsidian-services/helpers/issue-handlers";
+import type { TexfresserObsidianServices } from "../../../services/obsidian-services/interface";
+import { unwrapMaybe } from "../../../types/common-interface/maybe";
 
 export async function navigatePagesAction(
 	services: Partial<TexfresserObsidianServices>,
-	direction: 'prev' | 'next'
+	direction: "prev" | "next",
 ): Promise<void> {
 	const { openedFileService } = services;
 
 	if (!openedFileService) {
-		console.error('Missing required services for navigatePagesAction');
+		console.error("Missing required services for navigatePagesAction");
 		return;
 	}
 
@@ -24,7 +24,7 @@ export async function navigatePagesAction(
 	try {
 		const targetPage: any = null;
 
-		if (direction === 'prev') {
+		if (direction === "prev") {
 			// targetPage = await textsManagerService.getPreviousPage(currentFile);
 		} else {
 			// targetPage = await textsManagerService.getNextPage(currentFile);
@@ -35,13 +35,13 @@ export async function navigatePagesAction(
 		} else {
 			logWarning({
 				description: `No ${direction} page found`,
-				location: 'navigatePagesAction',
+				location: "navigatePagesAction",
 			});
 		}
 	} catch (error) {
 		logError({
 			description: `Error navigating to ${direction} page: ${error}`,
-			location: 'navigatePagesAction',
+			location: "navigatePagesAction",
 		});
 	}
 }

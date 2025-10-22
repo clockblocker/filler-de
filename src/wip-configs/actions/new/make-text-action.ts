@@ -1,17 +1,17 @@
-import { logError } from '../../../services/obsidian-services/helpers/issue-handlers';
-import type { TexfresserObsidianServices } from '../../../services/obsidian-services/interface';
-import { unwrapMaybe } from '../../../types/common-interface/maybe';
+import { logError } from "../../../services/obsidian-services/helpers/issue-handlers";
+import type { TexfresserObsidianServices } from "../../../services/obsidian-services/interface";
+import { unwrapMaybe } from "../../../types/common-interface/maybe";
 // import { VaultCurrator } from '../../obsidian-services/managers/vault-currator';
 
 export async function makeTextAction(
-	services: Partial<TexfresserObsidianServices>
+	services: Partial<TexfresserObsidianServices>,
 ): Promise<void> {
 	const { openedFileService } = services;
 
 	if (!openedFileService) {
 		logError({
-			description: 'Missing required services for makeTextAction',
-			location: 'makeTextAction',
+			description: "Missing required services for makeTextAction",
+			location: "makeTextAction",
 		});
 		return;
 	}
@@ -39,7 +39,7 @@ export async function makeTextAction(
 	} catch (error) {
 		logError({
 			description: `Error creating text structure: ${error}`,
-			location: 'makeTextAction',
+			location: "makeTextAction",
 		});
 	}
 }

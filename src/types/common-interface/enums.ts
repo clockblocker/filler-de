@@ -1,5 +1,5 @@
-import { z } from 'zod';
-import { CODEX, ENTRY, PAGE, TEXT, UNKNOWN } from '../literals';
+import { z } from "zod";
+import { CODEX, ENTRY, PAGE, TEXT, UNKNOWN } from "../literals";
 
 export type FileType = z.infer<typeof FileTypeSchema>;
 export const FileTypeSchema = z.enum([CODEX, ENTRY, PAGE, TEXT, UNKNOWN]);

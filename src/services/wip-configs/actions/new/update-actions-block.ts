@@ -1,7 +1,7 @@
-import { Editor, MarkdownView, Notice, TFile } from 'obsidian';
-import type TextEaterPlugin from '../../../../main';
-import { unwrapMaybe } from '../../../../types/common-interface/maybe';
-import { LONG_DASH } from '../../../../types/literals';
+import { Editor, MarkdownView, Notice, TFile } from "obsidian";
+import type TextEaterPlugin from "../../../../main";
+import { unwrapMaybe } from "../../../../types/common-interface/maybe";
+import { LONG_DASH } from "../../../../types/literals";
 
 export default async function updateActionsBlock(plugin: TextEaterPlugin) {
 	try {
@@ -9,8 +9,8 @@ export default async function updateActionsBlock(plugin: TextEaterPlugin) {
 		// 	await plugin.openedFileService.getMaybeOpenedFile()
 		// );
 
-		const prefixBlock = '\n';
-		const postfixBlock = '\n';
+		const prefixBlock = "\n";
+		const postfixBlock = "\n";
 
 		const buttonsBlock = ` <span class="note_block note_block_buttons">
 <button id="execute-new-gen-command" class="execute-command-button" data-action="execute-new-gen-command">Generate</button>
@@ -20,17 +20,17 @@ export default async function updateActionsBlock(plugin: TextEaterPlugin) {
 
 		const blocks = [prefixBlock, buttonsBlock, postfixBlock];
 
-		console.log('blocks', blocks);
+		console.log("blocks", blocks);
 
 		const fileContent = unwrapMaybe(
-			await plugin.openedFileService.getMaybeFileContent()
+			await plugin.openedFileService.getMaybeFileContent(),
 		);
 
-		if (fileContent.trim() === '') {
+		if (fileContent.trim() === "") {
 			await Promise.all(
 				blocks.map((block) => {
 					const a = plugin.openedFileService.writeToOpenedFile(block);
-				})
+				}),
 			);
 		} else {
 			// Change the buttons to somehting meaningfull
@@ -43,7 +43,7 @@ export default async function updateActionsBlock(plugin: TextEaterPlugin) {
 
 function extractBaseForms(text: string): string[] | null {
 	const match = text.match(
-		/Adjektive:\s*\[\[(.*?)\]\],\s*\[\[(.*?)\]\],\s*\[\[(.*?)\]\]/
+		/Adjektive:\s*\[\[(.*?)\]\],\s*\[\[(.*?)\]\],\s*\[\[(.*?)\]\]/,
 	);
 	if (!match) {
 		return null;
@@ -51,7 +51,7 @@ function extractBaseForms(text: string): string[] | null {
 
 	const [_, base, comparative, superlative] = match;
 
-	return [base ?? '', comparative ?? '', superlative ?? ''];
+	return [base ?? "", comparative ?? "", superlative ?? ""];
 }
 
 function extractAdjectiveForms(text: string): string {
@@ -61,7 +61,7 @@ function extractAdjectiveForms(text: string): string {
 		return LONG_DASH;
 	}
 
-	const endings = ['er', 'es', 'e', 'en', 'em'];
+	const endings = ["er", "es", "e", "en", "em"];
 
 	const result: string[] = [];
 
@@ -71,7 +71,7 @@ function extractAdjectiveForms(text: string): string {
 		}
 	}
 
-	return result.join(', ');
+	return result.join(", ");
 }
 
 function extractFirstBracketedWord(text: string) {
@@ -85,7 +85,7 @@ function getIPAIndexes(str: string) {
 	let match;
 
 	while ((match = regex.exec(str)) !== null) {
-		if (match.index === 0 || str[match.index - 1] !== '[') {
+		if (match.index === 0 || str[match.index - 1] !== "[") {
 			matches.push([match.index, regex.lastIndex - 1]);
 		}
 	}
@@ -115,29 +115,29 @@ function incertYouglishLinkInIpa(baseBlock: string) {
 }
 
 async function incertClipbordContentsInContextsBlock(
-	baseBlock: string
+	baseBlock: string,
 ): Promise<string> {
 	try {
-		let clipboardContent = '';
-		if (typeof navigator !== 'undefined' && navigator.clipboard) {
+		let clipboardContent = "";
+		if (typeof navigator !== "undefined" && navigator.clipboard) {
 			clipboardContent = await navigator.clipboard.readText();
 		}
-		const [first, ...rest] = baseBlock.split('---');
+		const [first, ...rest] = baseBlock.split("---");
 
 		if (rest.length >= 1) {
 			// Insert clipboard content between the first two dividers
 			return (
 				first +
-				'---\n' +
+				"---\n" +
 				clipboardContent.trim() +
-				rest.map((a) => a.trim()).join('\n\n---\n') +
-				'\n'
+				rest.map((a) => a.trim()).join("\n\n---\n") +
+				"\n"
 			);
 		}
 
 		return baseBlock;
 	} catch (error) {
-		console.error('Failed to read clipboard:', error);
+		console.error("Failed to read clipboard:", error);
 		return baseBlock;
 	}
 }

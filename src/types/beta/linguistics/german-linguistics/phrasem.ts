@@ -1,94 +1,94 @@
 import { z } from "zod";
 import {
-  CollocationStrength,
-  CollocationStrengthSchema,
-  CollocationType,
-  CollocationTypeSchema,
-  DiscourseFormulaRoleSchema,
-  PartOfSpeech,
-  PartOfSpeechSchema,
-  PhrasemeType,
+	CollocationStrength,
+	CollocationStrengthSchema,
+	CollocationType,
+	CollocationTypeSchema,
+	DiscourseFormulaRoleSchema,
+	PartOfSpeech,
+	PartOfSpeechSchema,
+	PhrasemeType,
 } from "../general-linguistic-enums/linguistics-enums";
 
 const PhrasemeComponentSchema = z.object({
-  surface: z.string(),
-  baseForm: z.string(),
-  pos: PartOfSpeechSchema,
-  isAnchor: z.boolean().optional(),
+	surface: z.string(),
+	baseForm: z.string(),
+	pos: PartOfSpeechSchema,
+	isAnchor: z.boolean().optional(),
 });
 
 const PhrasemeComponentsSchema = z
-  .array(PhrasemeComponentSchema)
-  .min(2)
-  .refine((arr) => arr.filter((c) => c.isAnchor === true).length >= 1, {
-    message: "At least one component must have isAnchor: true",
-  });
+	.array(PhrasemeComponentSchema)
+	.min(2)
+	.refine((arr) => arr.filter((c) => c.isAnchor === true).length >= 1, {
+		message: "At least one component must have isAnchor: true",
+	});
 
 export const PhrasemeBaseSchema = z.object({
-  surface: z.string(),
-  phrasemeComponents: PhrasemeComponentsSchema,
-  translation: z.string(),
-  explanation: z.string().optional(),
-  analogs: z.array(z.string()).optional(),
+	surface: z.string(),
+	phrasemeComponents: PhrasemeComponentsSchema,
+	translation: z.string(),
+	explanation: z.string().optional(),
+	analogs: z.array(z.string()).optional(),
 });
 
 export const CollocationSchema = z.object({
-  phrasemeType: z.literal(PhrasemeType.Collocation),
-  collocationType: CollocationTypeSchema,
-  strength: CollocationStrengthSchema,
+	phrasemeType: z.literal(PhrasemeType.Collocation),
+	collocationType: CollocationTypeSchema,
+	strength: CollocationStrengthSchema,
 });
 
 export const CulturalQuotationSchema = z.object({
-  phrasemeType: z.literal(PhrasemeType.CulturalQuotation),
-  source: z.string().optional(),
+	phrasemeType: z.literal(PhrasemeType.CulturalQuotation),
+	source: z.string().optional(),
 });
 
 export const ProverbSchema = z.object({
-  phrasemeType: z.literal(PhrasemeType.Proverb),
+	phrasemeType: z.literal(PhrasemeType.Proverb),
 });
 
 export const IdiomSchema = z.object({
-  phrasemeType: z.literal(PhrasemeType.Idiom),
+	phrasemeType: z.literal(PhrasemeType.Idiom),
 });
 
 export const DiscourseFormulaSchema = z.object({
-  phrasemeType: z.literal(PhrasemeType.DiscourseFormula),
-  role: DiscourseFormulaRoleSchema,
+	phrasemeType: z.literal(PhrasemeType.DiscourseFormula),
+	role: DiscourseFormulaRoleSchema,
 });
 
 export const PhrasemeSchema = z
-  .discriminatedUnion("phrasemeType", [
-    IdiomSchema,
-    ProverbSchema,
-    CulturalQuotationSchema,
-    CollocationSchema,
-    DiscourseFormulaSchema,
-  ])
-  .and(PhrasemeBaseSchema);
+	.discriminatedUnion("phrasemeType", [
+		IdiomSchema,
+		ProverbSchema,
+		CulturalQuotationSchema,
+		CollocationSchema,
+		DiscourseFormulaSchema,
+	])
+	.and(PhrasemeBaseSchema);
 
 export type Phraseme = z.infer<typeof PhrasemeSchema>;
 
 export const collocationExamples: Record<Phraseme["surface"], Phraseme> = {
-  "triftige Gründe": {
-    surface: "triftige Gründe",
-    phrasemeType: PhrasemeType.Collocation,
-    phrasemeComponents: [
-      {
-        surface: "triftige",
-        baseForm: "triftig",
-        pos: PartOfSpeech.Adjective,
-      },
-      {
-        surface: "Gründe",
-        baseForm: "Grund",
-        pos: PartOfSpeech.Noun,
-        isAnchor: true,
-      },
-    ],
-    collocationType: CollocationType.ADJ_plus_NOUN,
-    strength: CollocationStrength.Bound,
-    translation: "compelling reasons",
-  },
+	"triftige Gründe": {
+		surface: "triftige Gründe",
+		phrasemeType: PhrasemeType.Collocation,
+		phrasemeComponents: [
+			{
+				surface: "triftige",
+				baseForm: "triftig",
+				pos: PartOfSpeech.Adjective,
+			},
+			{
+				surface: "Gründe",
+				baseForm: "Grund",
+				pos: PartOfSpeech.Noun,
+				isAnchor: true,
+			},
+		],
+		collocationType: CollocationType.ADJ_plus_NOUN,
+		strength: CollocationStrength.Bound,
+		translation: "compelling reasons",
+	},
 };
 
 // export const PhrasemeSchema = z.discriminatedUnion('type', [
