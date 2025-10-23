@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'bun:test';
-import { CurratedTree } from '../../../src/managers/currator/currated-tree/currated-tree';
-import { checkEqualityOfSerializedTexts } from '../../../src/managers/currator/pure-functions/serialized-text';
+import { LibraryTree } from '../../../src/managers/librarian/library-tree/library-tree';
+import { checkEqualityOfSerializedTexts } from '../../../src/managers/librarian/pure-functions/serialized-text';
 import {
 	NodeStatus,
-} from '../../../src/managers/currator/types';
+} from '../../../src/managers/librarian/types';
 import { VALID_BRANCHES } from '../static/defined-branches';
 
 describe('Explict testing of all methods ', () => {
 	it('Basic operations on new tree', () => {
-		const tree = new CurratedTree([], 'Library');
+		const tree = new LibraryTree([], 'Library');
 		expect(tree.getAllTexts()).toEqual([]);
 
 		tree.addText({
@@ -24,7 +24,7 @@ describe('Explict testing of all methods ', () => {
 	});
 
 	it('Basic operations on deep tree', () => {
-		const tree = new CurratedTree(VALID_BRANCHES.Avatar.texts, 'Library');
+		const tree = new LibraryTree(VALID_BRANCHES.Avatar.texts, 'Library');
 		expect(
 			checkEqualityOfSerializedTexts(
 				tree.getAllTexts(),

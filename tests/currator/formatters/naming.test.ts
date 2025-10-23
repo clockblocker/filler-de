@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { CodexNameFromTreePath, PageNameFromTreePath, toGuardedNodeName } from '../../../src/managers/currator/formatters';
+import { CodexNameFromTreePath, PageNameFromTreePath, toGuardedNodeName } from '../../../src/managers/librarian/formatters';
 import { NON_BREAKING_HYPHEN } from '../../../src/types/literals';
 
 

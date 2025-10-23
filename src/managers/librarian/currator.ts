@@ -1,6 +1,6 @@
 import type { TexfresserObsidianServices } from "../../services/obsidian-services/interface";
 
-export class Currator {
+export class Librarian {
 	private backgroundFileService: TexfresserObsidianServices["backgroundFileService"];
 	private openedFileService: TexfresserObsidianServices["openedFileService"];
 

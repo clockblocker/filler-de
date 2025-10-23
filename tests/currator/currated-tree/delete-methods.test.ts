@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'bun:test';
-import { CurratedTree } from '../../../src/managers/currator/currated-tree/currated-tree';
+import { LibraryTree } from '../../../src/managers/librarian/library-tree/library-tree';
 import {
 	type SerializedText,
 	type TreePath,
-} from '../../../src/managers/currator/types';
+} from '../../../src/managers/librarian/types';
 import { VALID_BRANCHES } from '../static/defined-branches';
 
 describe('CurratedTree - deleteText', () => {
 	it('should delete existing text (Intro) from root', () => {
-		const tree = new CurratedTree(VALID_BRANCHES.Avatar.texts, 'Library');
+		const tree = new LibraryTree(VALID_BRANCHES.Avatar.texts, 'Library');
 		// Confirm node exists
 		const foundBefore = tree.getMaybeNode({
 			path: ['Intro'] as TreePath,
@@ -24,7 +24,7 @@ describe('CurratedTree - deleteText', () => {
 	});
 
 	it('should delete nested text ("Avatar" -> "Season_1" -> "Episode_1")', () => {
-		const tree = new CurratedTree(VALID_BRANCHES.Avatar.texts, 'Library');
+		const tree = new LibraryTree(VALID_BRANCHES.Avatar.texts, 'Library');
 		const foundBefore = tree.getMaybeNode({
 			path: ['Avatar', 'Season_1', 'Episode_1'] as TreePath,
 		});
@@ -44,7 +44,7 @@ describe('CurratedTree - deleteText', () => {
 	});
 
 	it('should do nothing when deleting non-existent text (wrong root child)', () => {
-		const tree = new CurratedTree(VALID_BRANCHES.Avatar.texts, 'Library');
+		const tree = new LibraryTree(VALID_BRANCHES.Avatar.texts, 'Library');
 		tree.deleteText({ path: ['NotARealThing'] as TreePath });
 		// Should not throw or change tree
 		expect(
@@ -57,7 +57,7 @@ describe('CurratedTree - deleteText', () => {
 	});
 
 	it('should do nothing when deleting non-existent deeply nested text', () => {
-		const tree = new CurratedTree(VALID_BRANCHES.Avatar.texts, 'Library');
+		const tree = new LibraryTree(VALID_BRANCHES.Avatar.texts, 'Library');
 		tree.deleteText({ path: ['Avatar', 'Season_2', 'Episode_9'] as TreePath });
 		expect(
 			tree.getMaybeNode({
@@ -77,7 +77,7 @@ describe('CurratedTree - deleteText', () => {
 				path: ['A', 'B', 'C'] as TreePath,
 			},
 		];
-		const tree = new CurratedTree(texts, 'Library');
+		const tree = new LibraryTree(texts, 'Library');
 		expect(tree.getMaybeNode({ path: ['A', 'B', 'C'] as TreePath }).error).toBe(
 			false
 		);

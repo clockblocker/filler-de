@@ -1,5 +1,5 @@
-import { SLASH } from "../../../types/literals";
 import type { PrettyPath } from "../../../types/common-interface/dtos";
+import { SLASH } from "../../../types/literals";
 
 export function systemPathToPrettyPath(path: string): PrettyPath {
 	if (!path || path === "/") return { pathParts: [], title: "" };
@@ -7,17 +7,17 @@ export function systemPathToPrettyPath(path: string): PrettyPath {
 	const splitPath = path.split(SLASH).filter(Boolean);
 
 	return {
-		title: splitPath.pop() ?? "",
 		pathParts: splitPath,
+		title: splitPath.pop() ?? "",
 	};
 }
 
 export function systemPathToFileFromPrettyPath(prettyPath: PrettyPath) {
-	return systemPathFromPrettyPath({ prettyPath, isFile: true });
+	return systemPathFromPrettyPath({ isFile: true, prettyPath });
 }
 
 export function systemPathToFolderFromPrettyPath(prettyPath: PrettyPath) {
-	return systemPathFromPrettyPath({ prettyPath, isFile: false });
+	return systemPathFromPrettyPath({ isFile: false, prettyPath });
 }
 
 export function systemPathFromPrettyPath({

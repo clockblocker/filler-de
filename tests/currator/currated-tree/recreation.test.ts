@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import {
 	makeTextsFromTree,
 	makeTreeFromTexts,
-} from '../../../src/managers/currator/currated-tree/helpers/serialization';
+} from '../../../src/managers/librarian/library-tree/helpers/serialization';
 import { AVATAR_TEXTS } from '../static/battaries/avatar';
 
 describe('CurratedTree - add and remove all texts cycle', () => {

@@ -1,17 +1,17 @@
 import type { SerializedText, TreePath } from "../../types";
 import { NodeType } from "../../types";
-import { CurratedTree } from "../currated-tree";
+import { LibraryTree } from "../library-tree";
 import { dfs } from "./walks";
 
-export const makeTreeFromTexts = (texts: SerializedText[]): CurratedTree => {
-	const tree = new CurratedTree([], "Library");
+export const makeTreeFromTexts = (texts: SerializedText[]): LibraryTree => {
+	const tree = new LibraryTree([], "Library");
 	texts.forEach((text) => {
 		tree.addText(text);
 	});
 	return tree;
 };
 
-export const makeTextsFromTree = (tree: CurratedTree): SerializedText[] => {
+export const makeTextsFromTree = (tree: LibraryTree): SerializedText[] => {
 	const texts: SerializedText[] = [];
 	for (const { node, path } of dfs(tree.root)) {
 		if (node.type === NodeType.Text) {

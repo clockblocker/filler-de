@@ -1,11 +1,11 @@
 import { Notice } from "obsidian";
 import { unwrapMaybe } from "../../../../types/common-interface/maybe";
-import type { OpenedFileService } from "../../../obsidian-services/atomic-services/opened-file-service";
-import type { SelectionService } from "../../../obsidian-services/atomic-services/selection-service";
 import {
 	formatQuotedLines,
 	segmentInQuotedLines,
-} from "../../../pure-formatters/quote-manager/interface";
+} from "../../../dto-services/quote-manager/interface";
+import type { OpenedFileService } from "../../../obsidian-services/atomic-services/opened-file-service";
+import type { SelectionService } from "../../../obsidian-services/atomic-services/selection-service";
 
 export default async function wrapSentencesInQuoteAnchor({
 	selectionService,
@@ -27,9 +27,9 @@ export default async function wrapSentencesInQuoteAnchor({
 		await selectionService.replaceSelection(
 			formatQuotedLines(
 				segmentInQuotedLines({
-					text: selection,
-					nameOfTheOpenendFile,
 					highestBlockNumber,
+					nameOfTheOpenendFile,
+					text: selection,
 				}),
 			),
 		);

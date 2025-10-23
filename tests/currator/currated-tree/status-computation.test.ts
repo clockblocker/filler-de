@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'bun:test';
-import { CurratedTree } from '../../../src/managers/currator/currated-tree/currated-tree';
+import { LibraryTree } from '../../../src/managers/librarian/library-tree/library-tree';
 import {
 	NodeStatus,
 	NodeType,
 	type SectionNode,
 	type TextNode,
-} from '../../../src/managers/currator/types';
+} from '../../../src/managers/librarian/types';
 
 describe('CurratedTree - Status Computation', () => {
 	describe('Status computation on tree creation', () => {
 		it('should compute NotStarted status for empty text node', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 			tree.getOrCreateTextNode({
 				path: ['Section', 'Text'],
 			});
@@ -23,7 +23,7 @@ describe('CurratedTree - Status Computation', () => {
 		});
 
 		it('should compute NotStarted status for empty section', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 			tree.getOrCreateSectionNode({ path: ['Section'] });
 
 			const section = tree.getMaybeNode({ path: ['Section'] });
@@ -36,7 +36,7 @@ describe('CurratedTree - Status Computation', () => {
 		});
 
 		it('should compute Done status for text node with all pages Done', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 			tree.getOrCreateSectionNode({ path: ['Section'] });
 			tree.addText({
 				pageStatuses: [NodeStatus.Done, NodeStatus.Done],
@@ -51,7 +51,7 @@ describe('CurratedTree - Status Computation', () => {
 		});
 
 		it('should compute InProgress status for text node with mixed page statuses', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 			tree.getOrCreateSectionNode({ path: ['Section'] });
 			tree.addText({
 				pageStatuses: [NodeStatus.Done, NodeStatus.NotStarted],
@@ -66,7 +66,7 @@ describe('CurratedTree - Status Computation', () => {
 		});
 
 		it('should propagate status to parent section based on children', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 			tree.getOrCreateSectionNode({ path: ['Section'] });
 			tree.addText({
 				pageStatuses: [NodeStatus.Done],
@@ -85,7 +85,7 @@ describe('CurratedTree - Status Computation', () => {
 		});
 
 		it('should propagate InProgress to parent when children have mixed statuses', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 			tree.getOrCreateSectionNode({ path: ['Section'] });
 			tree.addText({
 				pageStatuses: [NodeStatus.Done],
@@ -106,7 +106,7 @@ describe('CurratedTree - Status Computation', () => {
 		});
 
 		it('should compute statuses correctly for nested sections', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 			tree.addText({
 				pageStatuses: [NodeStatus.Done],
 				path: ['Books', 'Fiction', 'Fantasy', 'Chapter1'],
@@ -136,7 +136,7 @@ describe('CurratedTree - Status Computation', () => {
 
 	describe('Status recomputation on adding nodes', () => {
 		it('should update section status to InProgress when adding a NotStarted text node', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 			tree.getOrCreateSectionNode({ path: ['Section'] });
 			tree.addText({
 				pageStatuses: [NodeStatus.Done],
@@ -160,7 +160,7 @@ describe('CurratedTree - Status Computation', () => {
 		});
 
 		it('should update grandparent status when adding nested text', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 			tree.addText({
 				pageStatuses: [NodeStatus.Done],
 				path: ['Books', 'Fiction', 'Text1'],
@@ -185,7 +185,7 @@ describe('CurratedTree - Status Computation', () => {
 
 	describe('Status recomputation on deleting nodes', () => {
 		it('should update section status when deleting a text node', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 			tree.addText({
 				pageStatuses: [NodeStatus.Done],
 				path: ['Section', 'Text1'],
@@ -215,7 +215,7 @@ describe('CurratedTree - Status Computation', () => {
 		});
 
 		it('should update parent status up the chain when deleting nodes', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 			tree.addText({
 				pageStatuses: [NodeStatus.Done],
 				path: ['Books', 'Fiction', 'Chapter1'],
@@ -234,7 +234,7 @@ describe('CurratedTree - Status Computation', () => {
 		});
 
 		it('should handle deletion of one child in a multi-child section', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 			tree.addText({
 				pageStatuses: [NodeStatus.Done],
 				path: ['Section', 'Text1'],
@@ -260,7 +260,7 @@ describe('CurratedTree - Status Computation', () => {
 
 	describe('recomputeStatuses return value', () => {
 		it('should return null when no statuses changed', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 			tree.addText({
 				pageStatuses: [NodeStatus.NotStarted],
 				path: ['Section', 'Text'],
@@ -272,7 +272,7 @@ describe('CurratedTree - Status Computation', () => {
 		});
 
 		it('should return the closest to root node that changed', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 			tree.addText({
 				pageStatuses: [NodeStatus.NotStarted],
 				path: ['Books', 'Fiction', 'Chapter1'],
@@ -296,7 +296,7 @@ describe('CurratedTree - Status Computation', () => {
 
 	describe('Complex scenarios', () => {
 		it('should correctly compute status for deeply nested structure', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 
 			// Create a complex structure
 			tree.addText({
@@ -328,7 +328,7 @@ describe('CurratedTree - Status Computation', () => {
 		});
 
 		it('should maintain correct statuses after multiple operations', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 
 			// Add texts
 			tree.addText({
@@ -376,7 +376,7 @@ describe('CurratedTree - Status Computation', () => {
 
 	describe('changeStatus method', () => {
 		it('should change status of a text node', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 			tree.addText({
 				pageStatuses: [NodeStatus.NotStarted],
 				path: ['Section', 'Text'],
@@ -399,7 +399,7 @@ describe('CurratedTree - Status Computation', () => {
 		});
 
 		it('should return error when node does not exist', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 
 			const result = tree.changeStatus({
 				path: ['NonExistent', 'Text'],
@@ -410,7 +410,7 @@ describe('CurratedTree - Status Computation', () => {
 		});
 
 		it('should propagate status change to parent section', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 			tree.addText({
 				pageStatuses: [NodeStatus.Done],
 				path: ['Section', 'Text1'],
@@ -439,7 +439,7 @@ describe('CurratedTree - Status Computation', () => {
 		});
 
 		it('should propagate status change up multiple levels', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 			tree.addText({
 				pageStatuses: [NodeStatus.Done],
 				path: ['Books', 'Fiction', 'Chapter1'],
@@ -474,7 +474,7 @@ describe('CurratedTree - Status Computation', () => {
 		});
 
 		it('should allow changing section status directly', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 			tree.addText({
 				pageStatuses: [NodeStatus.Done],
 				path: ['Section', 'Text1'],
@@ -502,7 +502,7 @@ describe('CurratedTree - Status Computation', () => {
 		});
 
 		it('should recompute parent status after changing multiple children', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 			tree.addText({
 				pageStatuses: [NodeStatus.NotStarted],
 				path: ['Section', 'Text1'],
@@ -543,7 +543,7 @@ describe('CurratedTree - Status Computation', () => {
 		});
 
 		it('should handle status changes in complex nested structures', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 			tree.addText({
 				pageStatuses: [NodeStatus.Done],
 				path: ['Root', 'A', 'A1', 'Text1'],

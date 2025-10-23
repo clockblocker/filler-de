@@ -2,13 +2,10 @@ import { describe, expect, it } from 'bun:test';
 import {
 	formatQuotedLines,
 	segmentInQuotedLines,
-} from '../../src/services/pure-formatters/quote-manager/interface';
+} from '../../src/services/dto-services/quote-manager/interface';
 
 const directMatches = [
 	{
-		name: 'With direct Speech',
-		text: `Einem reichen Manne, dem wurde seine Frau krank, und als sie fühlte, daß ihr Ende herankam, rief sie ihr einziges Töchterlein zu sich ans Bett und sprach: "Liebes Kind, bleibe fromm und gut, so wird dir der liebe Gott immer beistehen, und ich will vom Himmel auf dich herabblicken, und will um dich sein."
-Darauf tat sie die Augen zu und verschied. Das Mädchen ging jeden Tag hinaus zu dem Grabe der Mutter und weinte, und blieb fromm und gut. Als der Winter kam, deckte der Schnee ein weißes Tüchlein auf das Grab, und als die Sonne im Frühjahr es wieder herabgezogen hatte, nahm sich der Mann eine andere Frau.`,
 		expected: [
 			{
 				fileName: 'Test File',
@@ -36,22 +33,11 @@ Darauf tat sie die Augen zu und verschied. Das Mädchen ging jeden Tag hinaus zu
 				text: 'Als der Winter kam, deckte der Schnee ein weißes Tüchlein auf das Grab, und als die Sonne im Frühjahr es wieder herabgezogen hatte, nahm sich der Mann eine andere Frau.',
 			},
 		],
+		name: 'With direct Speech',
+		text: `Einem reichen Manne, dem wurde seine Frau krank, und als sie fühlte, daß ihr Ende herankam, rief sie ihr einziges Töchterlein zu sich ans Bett und sprach: "Liebes Kind, bleibe fromm und gut, so wird dir der liebe Gott immer beistehen, und ich will vom Himmel auf dich herabblicken, und will um dich sein."
+Darauf tat sie die Augen zu und verschied. Das Mädchen ging jeden Tag hinaus zu dem Grabe der Mutter und weinte, und blieb fromm und gut. Als der Winter kam, deckte der Schnee ein weißes Tüchlein auf das Grab, und als die Sonne im Frühjahr es wieder herabgezogen hatte, nahm sich der Mann eine andere Frau.`,
 	},
 	{
-		name: 'Dialog with hashes',
-		text: `###### **ANNA:**
-Louis komm schon. Sascha! Die [[Post]]! Louis und ich haben die Post!  
-Gib mir die Post Louis!
-
-###### **SASCHA:** 
-Gib mir sofort die Post Louis!
-
-###### **ANNA:**
-Louis. Lass das fallen!
-
-###### **ANNA:**
-Guter Hund!
-`,
 		expected: [
 			'###### **ANNA:**',
 			{
@@ -92,6 +78,20 @@ Guter Hund!
 			},
 			'',
 		],
+		name: 'Dialog with hashes',
+		text: `###### **ANNA:**
+Louis komm schon. Sascha! Die [[Post]]! Louis und ich haben die Post!  
+Gib mir die Post Louis!
+
+###### **SASCHA:** 
+Gib mir sofort die Post Louis!
+
+###### **ANNA:**
+Louis. Lass das fallen!
+
+###### **ANNA:**
+Guter Hund!
+`,
 	},
 ];
 
@@ -99,9 +99,9 @@ describe('segmentInQuotedLines matches expected', () => {
 	for (const match of directMatches) {
 		it(match.name, () => {
 			const parts = segmentInQuotedLines({
-				text: match.text,
-				nameOfTheOpenendFile: 'Test File',
 				highestBlockNumber: 0,
+				nameOfTheOpenendFile: 'Test File',
+				text: match.text,
 			});
 
 			console.log(parts);
@@ -115,17 +115,17 @@ describe('segmentInQuotedLines is idempotent', () => {
 	for (const match of directMatches) {
 		it(match.name, () => {
 			const parts = segmentInQuotedLines({
-				text: match.text,
-				nameOfTheOpenendFile: 'Test File',
 				highestBlockNumber: 0,
+				nameOfTheOpenendFile: 'Test File',
+				text: match.text,
 			});
 
 			const firstFormatted = formatQuotedLines(parts);
 
 			const parts2 = segmentInQuotedLines({
-				text: firstFormatted,
-				nameOfTheOpenendFile: 'Test File',
 				highestBlockNumber: 0,
+				nameOfTheOpenendFile: 'Test File',
+				text: firstFormatted,
 			});
 
 			expect(parts).toEqual(parts2);

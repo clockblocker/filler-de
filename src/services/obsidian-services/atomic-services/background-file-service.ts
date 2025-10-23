@@ -10,7 +10,7 @@ import {
 	systemPathToFileFromPrettyPath,
 	systemPathToFolderFromPrettyPath,
 	systemPathToPrettyPath,
-} from "../../pure-formatters/pathfinder/path-helpers";
+} from "../../dto-services/pathfinder/path-helpers";
 import { logError, logWarning } from "../helpers/issue-handlers";
 
 export class BackgroundFileService {

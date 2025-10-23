@@ -62,7 +62,7 @@ export function segmentInQuotedLines({
 				.filter(Boolean).length;
 			if (wordCount <= 4 && blockTextsInLine.length > 0) {
 				blockTextsInLine[blockTextsInLine.length - 1] +=
-					" " + sentence.trim();
+					` ${sentence.trim()}`;
 			} else {
 				blockTextsInLine.push(sentence.trim());
 			}
@@ -70,9 +70,9 @@ export function segmentInQuotedLines({
 
 		blockTextsInLine.forEach((text) => {
 			lines.push({
-				text,
 				fileName: nameOfTheOpenendFile,
 				linkId: highestBlockNumber,
+				text,
 			});
 			highestBlockNumber += 1;
 		});

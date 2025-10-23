@@ -13,7 +13,7 @@ import {
 } from "../types";
 import { bfs } from "./helpers/walks";
 
-export class CurratedTree {
+export class LibraryTree {
 	root: SectionNode;
 
 	constructor(serializedTexts: SerializedText[], name: string) {
@@ -236,7 +236,7 @@ export class CurratedTree {
 		}
 	}
 
-	public getDiff(other: CurratedTree): TreeNode[] {
+	public getDiff(other: LibraryTree): TreeNode[] {
 		const otherSet = new Map<string, TreeNode>();
 		for (const { node, path } of bfs(other.root)) {
 			otherSet.set(path.join("-"), node);
@@ -261,7 +261,7 @@ export class CurratedTree {
 		return diff;
 	}
 
-	public isEqualTo(other: CurratedTree): boolean {
+	public isEqualTo(other: LibraryTree): boolean {
 		return this.getDiff(other).length === 0;
 	}
 

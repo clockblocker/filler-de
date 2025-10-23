@@ -14,8 +14,8 @@ export const LINKED_QUOTE = {
 	),
 
 	schema: z.object({
-		text: z.string().min(1),
 		linkId: z.coerce.number().int().nonnegative(),
+		text: z.string().min(1),
 	}),
 } as const;
 
@@ -23,7 +23,7 @@ export function makeFormattedLinkedQuote({
 	text,
 	linkId,
 }: LinkedQuote): string {
-	return LINKED_QUOTE.make({ text, linkId });
+	return LINKED_QUOTE.make({ linkId, text });
 }
 
 export function extractFormattedLinkedQuote(
@@ -33,8 +33,8 @@ export function extractFormattedLinkedQuote(
 	if (!m?.groups) return null;
 
 	const parsed = LINKED_QUOTE.schema.safeParse({
-		text: m.groups.text?.trim(),
 		linkId: m.groups.linkId,
+		text: m.groups.text?.trim(),
 	});
 	return parsed.success ? parsed.data : null;
 }

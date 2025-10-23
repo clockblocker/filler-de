@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { CurratedTree } from '../../../src/managers/currator/currated-tree/currated-tree';
+import { LibraryTree } from '../../../src/managers/librarian/library-tree/library-tree';
 import {
 	type BranchNode,
 	NodeStatus,
@@ -7,12 +7,12 @@ import {
 	type SectionNode,
 	type TextNode,
 	type TreePath,
-} from '../../../src/managers/currator/types';
+} from '../../../src/managers/librarian/types';
 
 describe('CurratedTree - Parent References', () => {
 	describe('Creating tree with existing nodes', () => {
 		it('should set parent to null for direct children of the tree', () => {
-			const tree = new CurratedTree(
+			const tree = new LibraryTree(
 				[
 					{
 						pageStatuses: [NodeStatus.NotStarted],
@@ -27,7 +27,7 @@ describe('CurratedTree - Parent References', () => {
 		});
 
 		it('should set parent references for nested section nodes during tree initialization', () => {
-			const tree = new CurratedTree(
+			const tree = new LibraryTree(
 				[
 					{
 						pageStatuses: [],
@@ -45,7 +45,7 @@ describe('CurratedTree - Parent References', () => {
 		});
 
 		it('should set parent references for text nodes under sections', () => {
-			const tree = new CurratedTree(
+			const tree = new LibraryTree(
 				[
 					{
 						pageStatuses: [],
@@ -63,7 +63,7 @@ describe('CurratedTree - Parent References', () => {
 		});
 
 		it('should set parent references for page nodes under text nodes', () => {
-			const tree = new CurratedTree(
+			const tree = new LibraryTree(
 				[
 					{
 						pageStatuses: [NodeStatus.NotStarted],
@@ -83,7 +83,7 @@ describe('CurratedTree - Parent References', () => {
 		});
 
 		it('should handle deep nesting with correct parent chain', () => {
-			const tree = new CurratedTree(
+			const tree = new LibraryTree(
 				[
 					{
 						pageStatuses: [],
@@ -105,7 +105,7 @@ describe('CurratedTree - Parent References', () => {
 
 	describe('Adding new nodes', () => {
 		it('should set parent when creating a new section node at root', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 
 			const result = tree.getOrCreateSectionNode({ path: ['NewSection'] });
 
@@ -116,7 +116,7 @@ describe('CurratedTree - Parent References', () => {
 		});
 
 		it('should set parent when creating a nested section node', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 
 			tree.getOrCreateSectionNode({ path: ['Parent'] });
 			const result = tree.getOrCreateSectionNode({ path: ['Parent', 'Child'] });
@@ -129,7 +129,7 @@ describe('CurratedTree - Parent References', () => {
 		});
 
 		it('should set parent when creating a text node', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 
 			tree.getOrCreateSectionNode({ path: ['Section'] });
 			const result = tree.getOrCreateTextNode({ path: ['Section', 'Text'] });
@@ -142,7 +142,7 @@ describe('CurratedTree - Parent References', () => {
 		});
 
 		it('should set parent for page nodes when using addText', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 
 			tree.getOrCreateSectionNode({ path: ['Section'] });
 			const result = tree.addText({
@@ -158,7 +158,7 @@ describe('CurratedTree - Parent References', () => {
 		});
 
 		it('should maintain parent references when adding to nested structure', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 
 			tree.getOrCreateTextNode({
 				path: ['Books', 'Fiction', 'Fantasy', 'Chapter1'],
@@ -186,7 +186,7 @@ describe('CurratedTree - Parent References', () => {
 
 	describe('Deleting nodes', () => {
 		it('should remove text node while maintaining parent structure for siblings', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 
 			tree.getOrCreateTextNode({
 				path: ['Section', 'Chapter1'],
@@ -210,7 +210,7 @@ describe('CurratedTree - Parent References', () => {
 		});
 
 		it('should remove empty parent sections and adjust parent references', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 
 			tree.getOrCreateTextNode({
 				path: ['A', 'B', 'C', 'TextNode'],
@@ -223,7 +223,7 @@ describe('CurratedTree - Parent References', () => {
 		});
 
 		it('should preserve parent references for nodes in non-empty sections after deletion', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 
 			tree.getOrCreateTextNode({
 				path: ['Section', 'SubSection1', 'Text1'],
@@ -251,7 +251,7 @@ describe('CurratedTree - Parent References', () => {
 		});
 
 		it('should maintain correct parent chain after multiple deletions', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 
 			tree.getOrCreateTextNode({
 				path: ['Books', 'Fiction', 'Chapter1'],

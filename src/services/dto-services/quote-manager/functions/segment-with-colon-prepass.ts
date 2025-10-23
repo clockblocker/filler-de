@@ -9,9 +9,9 @@ export function segmentWithColonPrepass(text: string): string[] {
 
 	return quoteChunks.flatMap((chunk) =>
 		sentences(chunk, {
-			preserve_whitespace: false,
-			newline_boundaries: false,
 			html_boundaries: false,
+			newline_boundaries: false,
+			preserve_whitespace: false,
 			sanitize: true,
 		}),
 	);

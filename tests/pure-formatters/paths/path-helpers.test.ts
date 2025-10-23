@@ -8,7 +8,7 @@ import {
 	systemPathToFileFromPrettyPath,
 	systemPathToFolderFromPrettyPath,
 	systemPathToPrettyPath,
-} from '../../../src/services/pure-formatters/pathfinder/path-helpers';
+} from '../../../src/services/dto-services/pathfinder/path-helpers';
 import type { PrettyPath } from '../../../src/types/common-interface/dtos';
 
 describe('path-helpers', () => {
@@ -75,7 +75,7 @@ describe('path-helpers', () => {
 				pathParts: ['folder', 'subfolder'],
 				title: 'file',
 			};
-			const result = systemPathFromPrettyPath({ prettyPath, isFile: true });
+			const result = systemPathFromPrettyPath({ isFile: true, prettyPath });
 			expect(result).toBe('folder/subfolder/file.md');
 		});
 
@@ -84,7 +84,7 @@ describe('path-helpers', () => {
 				pathParts: ['folder', 'subfolder'],
 				title: 'folder',
 			};
-			const result = systemPathFromPrettyPath({ prettyPath, isFile: false });
+			const result = systemPathFromPrettyPath({ isFile: false, prettyPath });
 			expect(result).toBe('folder/subfolder/folder');
 		});
 
@@ -93,7 +93,7 @@ describe('path-helpers', () => {
 				pathParts: [],
 				title: 'file',
 			};
-			const result = systemPathFromPrettyPath({ prettyPath, isFile: true });
+			const result = systemPathFromPrettyPath({ isFile: true, prettyPath });
 			expect(result).toBe('file.md');
 		});
 
@@ -102,7 +102,7 @@ describe('path-helpers', () => {
 				pathParts: ['folder'],
 				title: '',
 			};
-			const result = systemPathFromPrettyPath({ prettyPath, isFile: true });
+			const result = systemPathFromPrettyPath({ isFile: true, prettyPath });
 			expect(result).toBe('folder/.md');
 		});
 	});

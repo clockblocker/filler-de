@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import {
 	extractFormattedLinkedQuote,
 	makeFormattedLinkedQuote,
-} from '../../src/services/pure-formatters/quote-manager/functions/formatters/linked-quote';
+} from '../../src/services/dto-services/quote-manager/functions/formatters/linked-quote';
 import { BIRD } from '../../src/types/literals';
 
 function expected(text: string, linkId: string | number): string {
@@ -13,14 +13,14 @@ describe('makeFormattedLinkedQuote', () => {
 	it('formats text with link id', () => {
 		const text = 'Hello world.';
 		const linkId = 7;
-		const result = makeFormattedLinkedQuote({ text, linkId });
+		const result = makeFormattedLinkedQuote({ linkId, text });
 		expect(result).toBe(expected(text, linkId));
 	});
 
 	it('keeps trailing spaces/newlines in text', () => {
 		const text = 'Line with spaces  \n';
 		const linkId = 3;
-		const result = makeFormattedLinkedQuote({ text, linkId });
+		const result = makeFormattedLinkedQuote({ linkId, text });
 		expect(result).toBe(expected(text, linkId));
 	});
 });
@@ -31,7 +31,7 @@ describe('parseFormattedLinkedQuote', () => {
 		const linkId = 101;
 		const formatted = expected(text, linkId);
 		const parsed = extractFormattedLinkedQuote(formatted);
-		expect(parsed).toEqual({ text, linkId });
+		expect(parsed).toEqual({ linkId, text });
 	});
 
 	it('returns null for empty text part', () => {
@@ -49,6 +49,6 @@ describe('parseFormattedLinkedQuote', () => {
 		const linkId = 55;
 		const formatted = expected(text, linkId);
 		const parsed = extractFormattedLinkedQuote(formatted);
-		expect(parsed).toEqual({ text, linkId });
+		expect(parsed).toEqual({ linkId, text });
 	});
 });

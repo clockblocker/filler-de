@@ -1,17 +1,17 @@
 import { describe, expect, it } from 'bun:test';
-import { CurratedTree } from '../../../src/managers/currator/currated-tree/currated-tree';
+import { LibraryTree } from '../../../src/managers/librarian/library-tree/library-tree';
 import {
 	NodeStatus,
 	type SectionNode,
 	type SerializedText,
 	type TextNode,
 	type TreePath,
-} from '../../../src/managers/currator/types';
+} from '../../../src/managers/librarian/types';
 
 describe('CurratedTree - Building from SerializedText', () => {
 	describe('Constructor with SerializedText[]', () => {
 		it('should create tree from empty SerializedText array', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 			expect(tree.root.children.length).toBe(0);
 			expect(tree.root.name).toBe('Library');
 			expect(tree.root.status).toBe(NodeStatus.NotStarted);
@@ -25,7 +25,7 @@ describe('CurratedTree - Building from SerializedText', () => {
 				},
 			];
 
-			const tree = new CurratedTree(texts, 'Library');
+			const tree = new LibraryTree(texts, 'Library');
 
 			const books = tree.getMaybeNode({ path: ['Books'] });
 			const fiction = tree.getMaybeNode({
@@ -52,7 +52,7 @@ describe('CurratedTree - Building from SerializedText', () => {
 				},
 			];
 
-			const tree = new CurratedTree(texts, 'Library');
+			const tree = new LibraryTree(texts, 'Library');
 
 			const allDone = tree.getMaybeNode({ path: ['Section', 'AllDone'] });
 			const allNotStarted = tree.getMaybeNode({
@@ -81,7 +81,7 @@ describe('CurratedTree - Building from SerializedText', () => {
 				},
 			];
 
-			const tree = new CurratedTree(texts, 'Library');
+			const tree = new LibraryTree(texts, 'Library');
 
 			const section = tree.getMaybeNode({ path: ['Section'] });
 			if (!section.error) {
@@ -95,7 +95,7 @@ describe('CurratedTree - Building from SerializedText', () => {
 
 	describe('addText method', () => {
 		it('should add single SerializedText', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 			const serialized: SerializedText = {
 				pageStatuses: [NodeStatus.Done],
 				path: ['Section', 'Text'] as TreePath,
@@ -112,7 +112,7 @@ describe('CurratedTree - Building from SerializedText', () => {
 		});
 
 		it('should add multiple texts incrementally', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 
 			tree.addText({
 				pageStatuses: [NodeStatus.Done],
@@ -132,7 +132,7 @@ describe('CurratedTree - Building from SerializedText', () => {
 		});
 
 		it('should recompute statuses after adding text', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 
 			tree.addText({
 				pageStatuses: [NodeStatus.Done],
@@ -148,7 +148,7 @@ describe('CurratedTree - Building from SerializedText', () => {
 
 	describe('getOrCreateSectionNode without status', () => {
 		it('should create section with NotStarted status', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 			const result = tree.getOrCreateSectionNode({
 				path: ['Section'] as TreePath,
 			});
@@ -160,7 +160,7 @@ describe('CurratedTree - Building from SerializedText', () => {
 		});
 
 		it('should not accept status parameter', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 			// This should not compile if status parameter is removed
 			const result = tree.getOrCreateSectionNode({
 				path: ['Section'] as TreePath,
@@ -172,7 +172,7 @@ describe('CurratedTree - Building from SerializedText', () => {
 
 	describe('getOrCreateTextNode without status', () => {
 		it('should create text node with NotStarted status', () => {
-			const tree = new CurratedTree([], 'Library');
+			const tree = new LibraryTree([], 'Library');
 			tree.getOrCreateSectionNode({ path: ['Section'] as TreePath });
 
 			const result = tree.getOrCreateTextNode({
@@ -188,7 +188,7 @@ describe('CurratedTree - Building from SerializedText', () => {
 
 	describe('changeStatus method', () => {
 		it('should only accept Done or NotStarted', () => {
-			const tree = new CurratedTree(
+			const tree = new LibraryTree(
 				[
 					{
 						pageStatuses: [NodeStatus.NotStarted],
@@ -214,7 +214,7 @@ describe('CurratedTree - Building from SerializedText', () => {
 		});
 
 		it('should DFS and set all page statuses to Done', () => {
-			const tree = new CurratedTree(
+			const tree = new LibraryTree(
 				[
 					{
 						pageStatuses: [NodeStatus.NotStarted, NodeStatus.NotStarted],
@@ -256,7 +256,7 @@ describe('CurratedTree - Building from SerializedText', () => {
 		});
 
 		it('should set all page statuses to NotStarted', () => {
-			const tree = new CurratedTree(
+			const tree = new LibraryTree(
 				[
 					{
 						pageStatuses: [NodeStatus.Done, NodeStatus.Done],

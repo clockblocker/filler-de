@@ -5,6 +5,7 @@ import {
 	TFile,
 	type WorkspaceLeaf,
 } from "obsidian";
+import { extractMetaInfo } from "./services/dto-services/meta-info-manager/interface";
 import { AboveSelectionToolbarService } from "./services/obsidian-services/atomic-services/above-selection-toolbar-service";
 import { ApiService } from "./services/obsidian-services/atomic-services/api-service";
 import { BackgroundFileService } from "./services/obsidian-services/atomic-services/background-file-service";
@@ -12,7 +13,6 @@ import { BottomToolbarService } from "./services/obsidian-services/atomic-servic
 import { OpenedFileService } from "./services/obsidian-services/atomic-services/opened-file-service";
 import { SelectionService } from "./services/obsidian-services/atomic-services/selection-service";
 import { logError } from "./services/obsidian-services/helpers/issue-handlers";
-import { extractMetaInfo } from "./services/pure-formatters/meta-info-manager/interface";
 import { ACTION_CONFIGS } from "./services/wip-configs/actions/actions-config";
 import {
 	getAboveSelectionActionConfigs,
@@ -155,8 +155,6 @@ export default class TextEaterPlugin extends Plugin {
 
 	private async addCommands() {
 		this.addCommand({
-			id: "backlink-all-to-current-file",
-			name: "Populate all referenced files with a backlink to the current file",
 			editorCheckCallback: (
 				checking: boolean,
 				editor: Editor,
@@ -180,11 +178,11 @@ export default class TextEaterPlugin extends Plugin {
 
 				return false;
 			},
+			id: "backlink-all-to-current-file",
+			name: "Populate all referenced files with a backlink to the current file",
 		});
 
 		this.addCommand({
-			id: "fill-template",
-			name: "Generate a dictionary entry for the word in the title of the file",
 			editorCheckCallback: (
 				checking: boolean,
 				editor: Editor,
@@ -199,11 +197,11 @@ export default class TextEaterPlugin extends Plugin {
 				}
 				return false;
 			},
+			id: "fill-template",
+			name: "Generate a dictionary entry for the word in the title of the file",
 		});
 
 		this.addCommand({
-			id: "get-infinitive-and-emoji",
-			name: "Get infinitive/normal form and emoji for current word",
 			editorCheckCallback: (
 				checking: boolean,
 				editor: Editor,
@@ -217,11 +215,11 @@ export default class TextEaterPlugin extends Plugin {
 				}
 				return false;
 			},
+			id: "get-infinitive-and-emoji",
+			name: "Get infinitive/normal form and emoji for current word",
 		});
 
 		this.addCommand({
-			id: "duplicate-selection",
-			name: "Add links to normal/inf forms to selected text",
 			editorCheckCallback: (
 				checking: boolean,
 				editor: Editor,
@@ -236,27 +234,27 @@ export default class TextEaterPlugin extends Plugin {
 				}
 				return false;
 			},
+			id: "duplicate-selection",
+			name: "Add links to normal/inf forms to selected text",
 		});
 
 		this.addCommand({
-			id: "translate-selection",
-			name: "Translate selected text",
 			editorCheckCallback: () => {
 				ACTION_CONFIGS.TranslateSelection.execute(this);
 			},
+			id: "translate-selection",
+			name: "Translate selected text",
 		});
 
 		this.addCommand({
-			id: "format-selection-with-number",
-			name: "Split selection into linked blocks",
 			editorCheckCallback: () => {
 				ACTION_CONFIGS.SplitInBlocks.execute(this);
 			},
+			id: "format-selection-with-number",
+			name: "Split selection into linked blocks",
 		});
 
 		this.addCommand({
-			id: "check-ru-de-translation",
-			name: "Keymaker",
 			editorCheckCallback: (checking: boolean, editor: Editor) => {
 				const selection = editor.getSelection();
 				if (selection) {
@@ -267,11 +265,11 @@ export default class TextEaterPlugin extends Plugin {
 				}
 				return false;
 			},
+			id: "check-ru-de-translation",
+			name: "Keymaker",
 		});
 
 		this.addCommand({
-			id: "check-schriben",
-			name: "Schriben check",
 			editorCheckCallback: (checking: boolean, editor: Editor) => {
 				const selection = editor.getSelection();
 				if (selection) {
@@ -282,11 +280,11 @@ export default class TextEaterPlugin extends Plugin {
 				}
 				return false;
 			},
+			id: "check-schriben",
+			name: "Schriben check",
 		});
 
 		this.addCommand({
-			id: "new-gen-command",
-			name: "new-gen-command",
 			editorCheckCallback: (
 				checking: boolean,
 				editor: Editor,
@@ -300,6 +298,8 @@ export default class TextEaterPlugin extends Plugin {
 				}
 				return false;
 			},
+			id: "new-gen-command",
+			name: "new-gen-command",
 		});
 	}
 
@@ -317,8 +317,8 @@ export default class TextEaterPlugin extends Plugin {
 
 		this.bottomToolbarService.setActions(
 			getBottomActionConfigs({
-				metaInfo,
 				fileName,
+				metaInfo,
 				pathParts,
 			}),
 		);
@@ -336,8 +336,8 @@ export default class TextEaterPlugin extends Plugin {
 
 		this.selectionToolbarService.setActions(
 			getAboveSelectionActionConfigs({
-				metaInfo,
 				fileName,
+				metaInfo,
 				pathParts,
 				sectionText,
 			}),
