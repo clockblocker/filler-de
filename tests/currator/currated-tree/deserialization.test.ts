@@ -10,7 +10,7 @@ describe('texts === texts -> tree -> texts', () => {
 			const { texts } = branch;
 			const tree = new LibraryTree(texts, 'Library');
 			const otherTexts = makeTextsFromTree(tree);
-			expect(checkEqualityOfSerializedTexts(texts, otherTexts)).toBe(true);
+			expect(checkEqualityOfSerializedTexts(texts.map(t => ({ ...t, path: [tree.root.name, ...t.path] })), otherTexts)).toBe(true);
 		}
 	});
 });

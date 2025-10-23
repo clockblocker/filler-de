@@ -82,10 +82,25 @@ export class LibraryTree {
 		return [];
 	}
 
+	/**
+	 * Adds a new text (as a TextNode) to the tree from a SerializedText object.
+	 *
+	 * Accepts a path that can optionally start with the tree root name, or directly with the text node name.
+	 * Handles both cases automatically.
+	 *
+	 * @param serializedText The serialized text to add, including its path and page statuses.
+	 * @returns A Maybe<TextNode> object containing the added TextNode or an error.
+	 */
 	public addText(serializedText: SerializedText): Maybe<TextNode> {
+		const path =
+			serializedText.path[0] === this.root.name
+				? serializedText.path.slice(1)
+				: serializedText.path;
+
 		const textNode = this.getOrCreateTextNode({
-			path: serializedText.path,
+			path,
 		});
+
 		if (textNode.error) {
 			return textNode;
 		}

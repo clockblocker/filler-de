@@ -3,8 +3,11 @@ import { NodeType } from "../../types";
 import { LibraryTree } from "../library-tree";
 import { dfs } from "./walks";
 
-export const makeTreeFromTexts = (texts: SerializedText[]): LibraryTree => {
-	const tree = new LibraryTree([], "Library");
+export const makeTreeFromTexts = (
+	texts: SerializedText[],
+	treeName = "Library",
+): LibraryTree => {
+	const tree = new LibraryTree([], treeName);
 	texts.forEach((text) => {
 		tree.addText(text);
 	});
@@ -17,7 +20,7 @@ export const makeTextsFromTree = (tree: LibraryTree): SerializedText[] => {
 		if (node.type === NodeType.Text) {
 			texts.push({
 				pageStatuses: node.children.map((child) => child.status),
-				path: path as TreePath,
+				path: [tree.root.name, ...path],
 			});
 		}
 	}
