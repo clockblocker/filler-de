@@ -4,7 +4,7 @@ import { type Maybe, unwrapMaybe } from "../../../types/common-interface/maybe";
 export async function getMaybeEditor(app: App): Promise<Maybe<Editor>> {
 	try {
 		const view = app.workspace.getActiveViewOfType(MarkdownView);
-		if (view && view?.file) {
+		if (view?.file) {
 			return { data: view.editor, error: false };
 		}
 		return { description: "Failed to get Editor", error: true };

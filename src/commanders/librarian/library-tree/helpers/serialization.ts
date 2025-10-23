@@ -1,4 +1,4 @@
-import type { SerializedText, TreePath } from "../../types";
+import type { SerializedText } from "../../types";
 import { NodeType } from "../../types";
 import { LibraryTree } from "../library-tree";
 import { dfs } from "./walks";

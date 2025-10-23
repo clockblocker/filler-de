@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { LibraryTree } from '../../../src/managers/librarian/library-tree/library-tree';
+import { LibraryTree } from '../../../src/commanders/librarian/library-tree/library-tree';
 import {
 	type BranchNode,
 	NodeStatus,
@@ -7,7 +7,7 @@ import {
 	type SectionNode,
 	type TextNode,
 	type TreePath,
-} from '../../../src/managers/librarian/types';
+} from '../../../src/commanders/librarian/types';
 
 describe('CurratedTree - Parent References', () => {
 	describe('Creating tree with existing nodes', () => {

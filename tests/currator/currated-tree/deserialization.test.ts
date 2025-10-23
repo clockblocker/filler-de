@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
-import { makeTextsFromTree } from '../../../src/managers/librarian/library-tree/helpers/serialization';
-import { LibraryTree } from '../../../src/managers/librarian/library-tree/library-tree';
-import { checkEqualityOfSerializedTexts } from '../../../src/managers/librarian/pure-functions/serialized-text';
+import { makeTextsFromTree } from '../../../src/commanders/librarian/library-tree/helpers/serialization';
+import { LibraryTree } from '../../../src/commanders/librarian/library-tree/library-tree';
+import { checkEqualityOfSerializedTexts } from '../../../src/commanders/librarian/pure-functions/serialized-text';
 import { VALID_BRANCHES } from '../static/defined-branches';
 
 describe('texts === texts -> tree -> texts', () => {

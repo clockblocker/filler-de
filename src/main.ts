@@ -5,6 +5,7 @@ import {
 	TFile,
 	type WorkspaceLeaf,
 } from "obsidian";
+import { Librarian } from "./commanders/librarian/currator";
 import { extractMetaInfo } from "./services/dto-services/meta-info-manager/interface";
 import { AboveSelectionToolbarService } from "./services/obsidian-services/atomic-services/above-selection-toolbar-service";
 import { ApiService } from "./services/obsidian-services/atomic-services/api-service";
@@ -32,10 +33,12 @@ export default class TextEaterPlugin extends Plugin {
 	openedFileService: OpenedFileService;
 	backgroundFileService: BackgroundFileService;
 	selectionService: SelectionService;
-	// textsManagerService: VaultCurrator;
 
 	selectionToolbarService: AboveSelectionToolbarService;
 	bottomToolbarService: BottomToolbarService;
+
+	// Commanders
+	librarian: Librarian;
 
 	override async onload() {
 		try {
@@ -60,6 +63,8 @@ export default class TextEaterPlugin extends Plugin {
 			this.app,
 		);
 		this.selectionService = new SelectionService(this.app);
+
+		this.librarian = new Librarian(this);
 		// this.textsManagerService = new VaultCurrator(this.app);
 
 		this.registerDomEvent(document, "click", makeClickListener(this));
@@ -274,7 +279,7 @@ export default class TextEaterPlugin extends Plugin {
 				const selection = editor.getSelection();
 				if (selection) {
 					if (!checking) {
-						// insertReplyFromC1Richter(this, editor, selection);
+						this.librarian.ls();
 					}
 					return true;
 				}

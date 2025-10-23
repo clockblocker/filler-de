@@ -10,7 +10,7 @@ type UserCommandType =
 	| "moveFile"
 	| string; // Allow extensibility
 
-type UserCommandPayload = any;
+type UserCommandPayload = unknown;
 
 type UserCommandHandler = (payload: UserCommandPayload) => void;
 
@@ -22,12 +22,12 @@ class UserCommandBus {
 		if (!this.listeners.has(type)) {
 			this.listeners.set(type, new Set());
 		}
-		this.listeners.get(type)!.add(handler);
+		this.listeners.get(type)?.add(handler);
 
 		// Return unsubscribe function
 		return () => {
-			this.listeners.get(type)!.delete(handler);
-			if (this.listeners.get(type)!.size === 0) {
+			this.listeners.get(type)?.delete(handler);
+			if (this.listeners.get(type)?.size === 0) {
 				this.listeners.delete(type);
 			}
 		};

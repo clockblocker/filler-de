@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'bun:test';
-import { LibraryTree } from '../../../src/managers/librarian/library-tree/library-tree';
+import { LibraryTree } from '../../../src/commanders/librarian/library-tree/library-tree';
 import {
 	type SerializedText,
 	type TreePath,
-} from '../../../src/managers/librarian/types';
+} from '../../../src/commanders/librarian/types';
 import { VALID_BRANCHES } from '../static/defined-branches';
 
 describe('CurratedTree - deleteText', () => {

@@ -193,6 +193,21 @@ export class BackgroundFileService {
 		return renamed;
 	}
 
+	async deepListFiles(
+		prettyPathToFolder: PrettyPath,
+	): Promise<Array<PrettyPath>> {
+		const files = await this.deepListMaybeFiles(prettyPathToFolder);
+		return unwrapMaybe(files);
+	}
+
+	async listFilesInFolder(
+		prettyPathToFolder: PrettyPath,
+	): Promise<Array<PrettyPath>> {
+		const maybeFiles =
+			await this.listMaybeFilesInFolder(prettyPathToFolder);
+		return unwrapMaybe(maybeFiles);
+	}
+
 	async renameManyFiles(
 		files: Array<{ prettyPath: PrettyPath; newName: string }>,
 	): Promise<TFile[]> {
@@ -269,6 +284,20 @@ export class BackgroundFileService {
 			});
 			return { error: true };
 		}
+	}
+
+	private async getMaybeFolderByPrettyPath(
+		prettyPath: PrettyPath,
+	): Promise<Maybe<TFolder>> {
+		const folderPath = systemPathToFolderFromPrettyPath(prettyPath);
+		const folder = this.vault.getAbstractFileByPath(folderPath);
+		if (!folder || !(folder instanceof TFolder)) {
+			return {
+				description: `Folder not found: ${folderPath}`,
+				error: true,
+			};
+		}
+		return { data: folder, error: false };
 	}
 
 	private async renameMaybeFileInSystemPath(
@@ -366,7 +395,7 @@ export class BackgroundFileService {
 			const stack: TFolder[] = [folder];
 
 			while (stack.length) {
-				const cur = stack.pop()!;
+				const cur = stack.pop() ?? { children: [], path: "" };
 				const curPrettyParts = systemPathToPrettyPath(cur.path);
 
 				for (const child of cur.children) {
@@ -460,5 +489,45 @@ export class BackgroundFileService {
 		}
 
 		return { data: created, error: false };
+	}
+
+	private async listMaybeFilesInFolder(
+		prettyPathToFolder: PrettyPath,
+	): Promise<Maybe<Array<PrettyPath>>> {
+		const maybeFolder =
+			await this.getMaybeFolderByPrettyPath(prettyPathToFolder);
+		if (maybeFolder.error) return maybeFolder;
+
+		const folder = unwrapMaybe(maybeFolder);
+		const files = folder.children.filter(
+			(child): child is TFile => child instanceof TFile,
+		);
+
+		return {
+			data: files.map((file) => systemPathToPrettyPath(file.path)),
+			error: false,
+		};
+	}
+
+	private async deepListMaybeFiles(
+		prettyPathToFolder: PrettyPath,
+	): Promise<Maybe<Array<PrettyPath>>> {
+		const maybeFolder =
+			await this.getMaybeFolderByPrettyPath(prettyPathToFolder);
+		if (maybeFolder.error) return maybeFolder;
+
+		const folder = unwrapMaybe(maybeFolder);
+		const files = await Promise.all(
+			folder.children.flatMap(async (child) => {
+				if (child instanceof TFile) {
+					return [systemPathToPrettyPath(child.path)];
+				}
+				return this.deepListMaybeFiles(
+					systemPathToPrettyPath(child.path),
+				).then(unwrapMaybe);
+			}),
+		);
+
+		return { data: files.flat(), error: false };
 	}
 }

@@ -17,6 +17,7 @@ export class AboveSelectionToolbarService {
 		this.detach();
 		if (!view || view.getMode() !== "source") return;
 
+		// biome-ignore lint/suspicious/noExplicitAny: <cm exists but is not inferred>
 		const cm: EditorView = (view.editor as any).cm;
 		this.cm = cm;
 		this.attachedView = view;
@@ -32,10 +33,10 @@ export class AboveSelectionToolbarService {
 
 		host.addEventListener("mouseup", showMaybe);
 		host.addEventListener("keyup", showMaybe);
-		cm.scrollDOM.addEventListener("scroll", hide, { passive: true } as any);
+		cm.scrollDOM.addEventListener("scroll", hide, { passive: true });
 		cm.scrollDOM.addEventListener("scrollend", showMaybe, {
 			passive: true,
-		} as any);
+		});
 	}
 
 	public detach(): void {

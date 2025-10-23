@@ -33,6 +33,7 @@ export function systemPathFromPrettyPath({
 	);
 }
 
+// exports for testing
 export function safeFileName(s: string): string {
 	return s.replace(/[\\/]/g, " ").trim();
 }

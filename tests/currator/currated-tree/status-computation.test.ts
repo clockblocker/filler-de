@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'bun:test';
-import { LibraryTree } from '../../../src/managers/librarian/library-tree/library-tree';
+import { LibraryTree } from '../../../src/commanders/librarian/library-tree/library-tree';
 import {
 	NodeStatus,
 	NodeType,
 	type SectionNode,
 	type TextNode,
-} from '../../../src/managers/librarian/types';
+} from '../../../src/commanders/librarian/types';
 
 describe('CurratedTree - Status Computation', () => {
 	describe('Status computation on tree creation', () => {

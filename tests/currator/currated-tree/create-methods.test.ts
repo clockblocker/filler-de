@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'bun:test';
-import { LibraryTree } from '../../../src/managers/librarian/library-tree/library-tree';
+import { LibraryTree } from '../../../src/commanders/librarian/library-tree/library-tree';
 import {
 	NodeStatus,
 	type SectionNode,
 	type SerializedText,
 	type TextNode,
 	type TreePath,
-} from '../../../src/managers/librarian/types';
+} from '../../../src/commanders/librarian/types';
 
 describe('CurratedTree - Building from SerializedText', () => {
 	describe('Constructor with SerializedText[]', () => {

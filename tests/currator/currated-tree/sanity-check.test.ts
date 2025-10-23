@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'bun:test';
-import { LibraryTree } from '../../../src/managers/librarian/library-tree/library-tree';
-import { checkEqualityOfSerializedTexts } from '../../../src/managers/librarian/pure-functions/serialized-text';
+import { LibraryTree } from '../../../src/commanders/librarian/library-tree/library-tree';
+import { checkEqualityOfSerializedTexts } from '../../../src/commanders/librarian/pure-functions/serialized-text';
 import {
 	NodeStatus,
-} from '../../../src/managers/librarian/types';
+} from '../../../src/commanders/librarian/types';
 import { VALID_BRANCHES } from '../static/defined-branches';
 
 describe('Explict testing of all methods ', () => {

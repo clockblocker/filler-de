@@ -1,6 +1,6 @@
+import type { MetaInfo } from "../../../types/common-interface/dtos";
 import { LINE_BREAK } from "../note-block-manager/note-block-management/types-and-constants";
 import { META_INFO_FORMATTER } from "./formatters/meta-info-formatter";
-import type { MetaInfo } from "../../../types/common-interface/dtos";
 
 /**
  * Extracts the MetaInfo object from a string containing a special section.

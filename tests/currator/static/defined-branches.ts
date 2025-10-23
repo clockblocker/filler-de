@@ -1,4 +1,4 @@
-import type { SerializedText } from '../../../src/managers/librarian/types';
+import type { SerializedText } from '../../../src/commanders/librarian/types';
 import { AVATAR_TEXTS } from './battaries/avatar';
 
 type BranchName = 'Avatar';
