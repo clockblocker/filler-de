@@ -8,16 +8,14 @@ import {
 } from "../../types/literals";
 
 export const toGuardedNodeName = (s: string) => {
-	return SPACE_LIKE_CHARS.reduce(
+	const result = SPACE_LIKE_CHARS.reduce(
 		(s, ch) => s.replaceAll(ch, UNDERSCORE),
 		s,
 	).replaceAll(NON_BREAKING_HYPHEN, DASH);
+	return result.replace(/_+/g, UNDERSCORE);
 };
 
-const GuardedNodeNameSchema = z
-	.string()
-	.min(1)
-	.transform((s) => toGuardedNodeName(s));
+const GuardedNodeNameSchema = z.string().min(1);
 
 export type GuardedNodeName = z.infer<typeof GuardedNodeNameSchema>;
 
@@ -51,17 +49,18 @@ const GuardedPageNameSchema = z.templateLiteral([
 
 export const PageNameFromTreePath = z.codec(
 	GuardedPageNameSchema,
-	z.array(GuardedNodeNameSchema).min(1),
+	z.array(GuardedNodeNameSchema).min(2),
 	{
 		decode: (name) => {
 			const [num, ...path] = name.split(NON_BREAKING_HYPHEN);
-			return [String(Number(num)), ...path].toReversed();
+			return [...path, String(Number(num))];
 		},
 		encode: (path) => {
-			const [mbNum, ...rest] = path.toReversed();
+			const pathCopy = [...path];
+			const mbNum = pathCopy.pop();
 			const paddedNumRepr = String(Number(mbNum) ?? "0").padStart(3, "0");
 			const nums = paddedNumRepr.split("").map(Number);
-			return `${nums[0] ?? 0}${nums[1] ?? 0}${nums[2] ?? 0}${NON_BREAKING_HYPHEN}${rest.join(NON_BREAKING_HYPHEN)}` as const;
+			return `${nums[0] ?? 0}${nums[1] ?? 0}${nums[2] ?? 0}${NON_BREAKING_HYPHEN}${pathCopy.join(NON_BREAKING_HYPHEN)}` as const;
 		},
 	},
 );

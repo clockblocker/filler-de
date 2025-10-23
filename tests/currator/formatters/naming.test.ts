@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test';
-import { toGuardedNodeName } from '../../../src/managers/currator/formatters';
+import { CodexNameFromTreePath, PageNameFromTreePath, toGuardedNodeName } from '../../../src/managers/currator/formatters';
+import { NON_BREAKING_HYPHEN } from '../../../src/types/literals';
 
 
 describe('toGuardedNodeName', () => {
@@ -23,8 +24,27 @@ describe('toGuardedNodeName', () => {
 	});
 
 	it('handles repeated spaces', () => {
-		expect(toGuardedNodeName('a  b   c')).toBe('a__b___c');
+		expect(toGuardedNodeName('a  b   c')).toBe('a_b_c');
+	});
+});
+
+describe('CodexNameFromTreePath', () => {
+	it('single node in path', () => {
+		expect(CodexNameFromTreePath.encode(['foo'])).toBe('__foo');
+	});
+
+	it('two nodes in path', () => {
+		expect(CodexNameFromTreePath.encode(['foo', 'bar'])).toBe(`__foo${NON_BREAKING_HYPHEN}bar`);
 	});
 });
 
 
+describe('PageNameFromTreePath', () => {
+	it('2 nodes', () => {
+		expect(PageNameFromTreePath.encode(['Avatar', '10'])).toBe(`010${NON_BREAKING_HYPHEN}Avatar`);
+	});
+
+	it('4 nodes', () => {
+		expect(PageNameFromTreePath.encode(['Avatar', 'Season_1', 'Episode_1', '1'])).toBe(`001${NON_BREAKING_HYPHEN}Avatar${NON_BREAKING_HYPHEN}Season_1${NON_BREAKING_HYPHEN}Episode_1`);
+	});
+});
