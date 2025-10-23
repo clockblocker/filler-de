@@ -2,7 +2,7 @@ import { z } from "zod";
 import { FileTypeSchema } from "./enums";
 
 export type PathParts = string[];
-export type SplitPathToMdFile = {
+export type PrettyPathToMdFile = {
 	pathParts: PathParts;
 	basename: string;
 };
@@ -14,6 +14,6 @@ export const MetaInfoSchema = z.object({
 export type MetaInfo = z.infer<typeof MetaInfoSchema>;
 
 export type WipPrettyFile = {
-	prettyPath: SplitPathToMdFile;
+	prettyPath: PrettyPathToMdFile;
 	metaInfo: MetaInfo;
 };

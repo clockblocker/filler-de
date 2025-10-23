@@ -1,5 +1,5 @@
 import { TFile, TFolder, type Vault } from "obsidian";
-import type { SplitPathToMdFile } from "../../../../types/common-interface/dtos";
+import type { PrettyPathToMdFile } from "../../../../types/common-interface/dtos";
 import {
 	type Maybe,
 	unwrapMaybe,
@@ -11,6 +11,7 @@ import {
 } from "../../../dto-services/pathfinder/path-helpers";
 import { logError, logWarning } from "../../helpers/issue-handlers";
 import { AbstractFileService } from "./helpers/abstract-file-service";
+import { prettyPathToSplitPath } from "./helpers/functions";
 import type { SplitPath } from "./types";
 
 export class BackgroundFileService {
@@ -20,14 +21,22 @@ export class BackgroundFileService {
 		this.abstractFileService = new AbstractFileService(this.vault);
 	}
 
-	async readFile(prettyPath: SplitPathToMdFile): Promise<TFile> {
-		const mbFile = await this.getMaybeFileByPrettyPath(prettyPath);
-		return unwrapMaybe(mbFile);
+	async readFileContent(prettyPath: PrettyPathToMdFile) {
+		const file = await this.getFile(prettyPath);
+		return await this.vault.read(file);
 	}
 
-	private async getFile(prettyPath: SplitPath): Promise<TFile> {
-		const mbFile = await this.getMaybeFileByPrettyPath(prettyPath);
-		return unwrapMaybe(mbFile);
+	async replaceFileContent(prettyPath: PrettyPathToMdFile, content: string) {
+		const file = await this.getFile(prettyPath);
+		await this.vault.modify(file, content);
+
+		return content;
+	}
+
+	private async getFile(prettyPath: PrettyPathToMdFile): Promise<TFile> {
+		return await this.abstractFileService.getAbstractFile(
+			prettyPathToSplitPath(prettyPath),
+		);
 	}
 
 	private async createFileInPrettyPath(
@@ -104,23 +113,6 @@ export class BackgroundFileService {
 		const maybeFolder = await this.createMaybeFolderBySystemPath(path);
 
 		return maybeFolder;
-	}
-
-	async readFileContent(prettyPath: SplitPath): Promise<string> {
-		const maybeFile = await this.getFile(prettyPath);
-		const content = await this.vault.read(maybeFile);
-
-		return content;
-	}
-
-	async replaceFileContent(
-		prettyPath: SplitPath,
-		content: string,
-	): Promise<string> {
-		const maybeFile = await this.getFile(prettyPath);
-		await this.vault.modify(maybeFile, content);
-
-		return content;
 	}
 
 	async getParentOfFileWithPath(prettyPath: SplitPath): Promise<TFolder> {
