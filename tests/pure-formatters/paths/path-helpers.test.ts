@@ -15,17 +15,17 @@ describe('path-helpers', () => {
 	describe('systemPathToPrettyPath', () => {
 		it('returns empty pathParts and title for empty string', () => {
 			const result = systemPathToPrettyPath('');
-			expect(result).toEqual({ pathParts: [], title: '' });
+			expect(result).toEqual({ pathParts: [], title: '', type: 'folder' });
 		});
 
 		it('returns empty pathParts and title for root path', () => {
 			const result = systemPathToPrettyPath('/');
-			expect(result).toEqual({ pathParts: [], title: '' });
+			expect(result).toEqual({ pathParts: [], title: '', type: 'folder' });
 		});
 
 		it('converts simple file path correctly', () => {
 			const result = systemPathToPrettyPath('/file.md');
-			expect(result).toEqual({ pathParts: [], title: 'file.md' });
+			expect(result).toEqual({ pathParts: [], title: 'file.md', type: 'folder' });
 		});
 
 		it('converts nested file path correctly', () => {
@@ -33,6 +33,7 @@ describe('path-helpers', () => {
 			expect(result).toEqual({
 				pathParts: ['folder', 'subfolder'],
 				title: 'file.md',
+				type: 'folder',
 			});
 		});
 
@@ -41,6 +42,7 @@ describe('path-helpers', () => {
 			expect(result).toEqual({
 				pathParts: ['folder'],
 				title: 'subfolder',
+				type: 'folder',
 			});
 		});
 
@@ -49,6 +51,7 @@ describe('path-helpers', () => {
 			expect(result).toEqual({
 				pathParts: ['folder'],
 				title: 'file.md',
+				type: 'folder',
 			});
 		});
 
@@ -57,6 +60,7 @@ describe('path-helpers', () => {
 			expect(result).toEqual({
 				pathParts: ['folder', 'subfolder'],
 				title: 'file.md',
+				type: 'folder',
 			});
 		});
 
@@ -65,6 +69,7 @@ describe('path-helpers', () => {
 			expect(result).toEqual({
 				pathParts: [],
 				title: 'folder',
+				type: 'folder',
 			});
 		});
 	});
@@ -72,10 +77,12 @@ describe('path-helpers', () => {
 	describe('systemPathFromPrettyPath', () => {
 		it('converts file pretty path to system path', () => {
 			const prettyPath: PrettyPath = {
+				extension: 'md',
 				pathParts: ['folder', 'subfolder'],
 				title: 'file',
+				type: 'file',
 			};
-			const result = systemPathFromPrettyPath({ isFile: true, prettyPath });
+			const result = systemPathFromPrettyPath(prettyPath);
 			expect(result).toBe('folder/subfolder/file.md');
 		});
 
@@ -83,35 +90,42 @@ describe('path-helpers', () => {
 			const prettyPath: PrettyPath = {
 				pathParts: ['folder', 'subfolder'],
 				title: 'folder',
+				type: 'folder',
 			};
-			const result = systemPathFromPrettyPath({ isFile: false, prettyPath });
+			const result = systemPathFromPrettyPath(prettyPath);
 			expect(result).toBe('folder/subfolder/folder');
 		});
 
 		it('handles empty pathParts', () => {
 			const prettyPath: PrettyPath = {
+				extension: 'md',
 				pathParts: [],
 				title: 'file',
+				type: 'file',
 			};
-			const result = systemPathFromPrettyPath({ isFile: true, prettyPath });
+			const result = systemPathFromPrettyPath(prettyPath);
 			expect(result).toBe('file.md');
 		});
 
 		it('handles empty title', () => {
 			const prettyPath: PrettyPath = {
+				extension: 'md',
 				pathParts: ['folder'],
 				title: '',
+				type: 'file',
 			};
-			const result = systemPathFromPrettyPath({ isFile: true, prettyPath });
+			const result = systemPathFromPrettyPath(prettyPath);
 			expect(result).toBe('folder/.md');
 		});
 	});
 
 	describe('systemPathToFileFromPrettyPath', () => {
 		it('converts pretty path to file system path', () => {
-			const prettyPath: PrettyPath = {
+			const prettyPath: Extract<PrettyPath, { type: 'file' }> = {
+				extension: 'md',
 				pathParts: ['folder'],
 				title: 'file',
+				type: 'file',
 			};
 			const result = systemPathToFileFromPrettyPath(prettyPath);
 			expect(result).toBe('folder/file.md');
@@ -120,9 +134,10 @@ describe('path-helpers', () => {
 
 	describe('systemPathToFolderFromPrettyPath', () => {
 		it('converts pretty path to folder system path', () => {
-			const prettyPath: PrettyPath = {
+			const prettyPath: Extract<PrettyPath, { type: 'folder' }> = {
 				pathParts: ['folder'],
 				title: 'subfolder',
+				type: 'folder',
 			};
 			const result = systemPathToFolderFromPrettyPath(prettyPath);
 			expect(result).toBe('folder/subfolder');

@@ -7,6 +7,7 @@ import { type Maybe, unwrapMaybe } from "../../../types/common-interface/maybe";
 import { SLASH } from "../../../types/literals";
 import {
 	pathToFolderFromPathParts,
+	systemFilePathToPrettyPath,
 	systemPathToFileFromPrettyPath,
 	systemPathToFolderFromPrettyPath,
 	systemPathToPrettyPath,
@@ -25,14 +26,26 @@ export class BackgroundFileService {
 		prettyPath: PrettyPath,
 		content = "",
 	): Promise<Maybe<TFile>> {
-		const systemPath = `${systemPathToFileFromPrettyPath(prettyPath)}`;
+		if (prettyPath.type !== "file") {
+			return {
+				description: "Expected file type in prettyPath",
+				error: true,
+			};
+		}
+		const systemPath = systemPathToFileFromPrettyPath(prettyPath);
 		return await this.createMaybeFileInSystemPath(systemPath, content);
 	}
 
 	async createFolderInPrettyPath(
 		prettyPath: PrettyPath,
 	): Promise<Maybe<TFolder>> {
-		const systemPath = `${systemPathToFolderFromPrettyPath(prettyPath)}`;
+		if (prettyPath.type !== "folder") {
+			return {
+				description: "Expected folder type in prettyPath",
+				error: true,
+			};
+		}
+		const systemPath = systemPathToFolderFromPrettyPath(prettyPath);
 
 		return await this.createMaybeFolderBySystemPath(systemPath);
 	}
@@ -48,6 +61,9 @@ export class BackgroundFileService {
 	}
 
 	async renameFile(prettyPath: PrettyPath, newName: string): Promise<TFile> {
+		if (prettyPath.type !== "file") {
+			throw new Error("Expected file type in prettyPath");
+		}
 		const systemPath = systemPathToFileFromPrettyPath(prettyPath);
 		const maybeFile = await this.renameMaybeFileInSystemPath(
 			systemPath,
@@ -61,6 +77,9 @@ export class BackgroundFileService {
 		prettyPath: PrettyPath,
 		newName: string,
 	): Promise<TFolder> {
+		if (prettyPath.type !== "folder") {
+			throw new Error("Expected folder type in prettyPath");
+		}
 		const systemPath = systemPathToFolderFromPrettyPath(prettyPath);
 		const maybeFolder = await this.renameMaybeFolderInSystemPath(
 			systemPath,
@@ -111,7 +130,10 @@ export class BackgroundFileService {
 	}
 
 	async createManyFiles(
-		files: Array<{ prettyPath: PrettyPath; content?: string }>,
+		files: Array<{
+			prettyPath: Extract<PrettyPath, { type: "file" }>;
+			content?: string;
+		}>,
 	): Promise<TFile[]> {
 		// Verify existence of all the folders for each file's path, and create them if missing
 		for (const { prettyPath } of files) {
@@ -135,7 +157,7 @@ export class BackgroundFileService {
 	}
 
 	async createManyFolders(
-		prettyPaths: PrettyPath[],
+		prettyPaths: Extract<PrettyPath, { type: "folder" }>[],
 	): Promise<Maybe<TFolder[]>> {
 		const created: TFolder[] = [];
 		const errors: string[] = [];
@@ -163,7 +185,10 @@ export class BackgroundFileService {
 	}
 
 	async renameManyFolders(
-		folders: Array<{ prettyPath: PrettyPath; newName: string }>,
+		folders: Array<{
+			prettyPath: Extract<PrettyPath, { type: "folder" }>;
+			newName: string;
+		}>,
 	): Promise<TFolder[]> {
 		const renamed: TFolder[] = [];
 		const errors: string[] = [];
@@ -209,13 +234,16 @@ export class BackgroundFileService {
 	}
 
 	async renameManyFiles(
-		files: Array<{ prettyPath: PrettyPath; newName: string }>,
+		files: Array<{
+			prettyPath: Extract<PrettyPath, { type: "file" }>;
+			newName: string;
+		}>,
 	): Promise<TFile[]> {
 		const renamed: TFile[] = [];
 		const errors: string[] = [];
 
 		for (const { prettyPath, newName } of files) {
-			const systemPath = systemPathToFolderFromPrettyPath(prettyPath);
+			const systemPath = systemPathToFileFromPrettyPath(prettyPath);
 			const maybeFile = await this.renameMaybeFileInSystemPath(
 				systemPath,
 				newName,
@@ -270,6 +298,12 @@ export class BackgroundFileService {
 	private async getMaybeFileByPrettyPath(
 		prettyPath: PrettyPath,
 	): Promise<Maybe<TFile>> {
+		if (prettyPath.type !== "file") {
+			return {
+				description: "Expected file type in prettyPath",
+				error: true,
+			};
+		}
 		const filePath = systemPathToFileFromPrettyPath(prettyPath);
 		try {
 			const file = this.vault.getAbstractFileByPath(filePath);
@@ -289,6 +323,12 @@ export class BackgroundFileService {
 	private async getMaybeFolderByPrettyPath(
 		prettyPath: PrettyPath,
 	): Promise<Maybe<TFolder>> {
+		if (prettyPath.type !== "folder") {
+			return {
+				description: "Expected folder type in prettyPath",
+				error: true,
+			};
+		}
 		const folderPath = systemPathToFolderFromPrettyPath(prettyPath);
 		const folder = this.vault.getAbstractFileByPath(folderPath);
 		if (!folder || !(folder instanceof TFolder)) {
@@ -459,7 +499,10 @@ export class BackgroundFileService {
 	}
 
 	private async createManyFilesInExistingFolders(
-		files: Array<{ prettyPath: PrettyPath; content?: string }>,
+		files: Array<{
+			prettyPath: Extract<PrettyPath, { type: "file" }>;
+			content?: string;
+		}>,
 	): Promise<Maybe<TFile[]>> {
 		const created: TFile[] = [];
 		const errors: string[] = [];
@@ -504,7 +547,7 @@ export class BackgroundFileService {
 		);
 
 		return {
-			data: files.map((file) => systemPathToPrettyPath(file.path)),
+			data: files.map((file) => systemFilePathToPrettyPath(file.path)),
 			error: false,
 		};
 	}
@@ -520,7 +563,7 @@ export class BackgroundFileService {
 		const files = await Promise.all(
 			folder.children.flatMap(async (child) => {
 				if (child instanceof TFile) {
-					return [systemPathToPrettyPath(child.path)];
+					return [systemFilePathToPrettyPath(child.path)];
 				}
 				return this.deepListMaybeFiles(
 					systemPathToPrettyPath(child.path),
