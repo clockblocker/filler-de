@@ -31,10 +31,12 @@ describe('toGuardedNodeName', () => {
 describe('CodexNameFromTreePath', () => {
 	it('single node in path', () => {
 		expect(CodexNameFromTreePath.encode(['foo'])).toBe('__foo');
+		expect(CodexNameFromTreePath.decode('__foo')).toEqual(['foo']);
 	});
 
 	it('two nodes in path', () => {
 		expect(CodexNameFromTreePath.encode(['foo', 'bar'])).toBe(`__foo${NON_BREAKING_HYPHEN}bar`);
+		expect(CodexNameFromTreePath.decode(`__foo${NON_BREAKING_HYPHEN}bar`)).toEqual(['foo', 'bar']);
 	});
 });
 
@@ -42,9 +44,11 @@ describe('CodexNameFromTreePath', () => {
 describe('PageNameFromTreePath', () => {
 	it('2 nodes', () => {
 		expect(PageNameFromTreePath.encode(['Avatar', '10'])).toBe(`010${NON_BREAKING_HYPHEN}Avatar`);
+		expect(PageNameFromTreePath.decode(`010${NON_BREAKING_HYPHEN}Avatar`)).toEqual(['Avatar', '10']);
 	});
 
 	it('4 nodes', () => {
 		expect(PageNameFromTreePath.encode(['Avatar', 'Season_1', 'Episode_1', '1'])).toBe(`001${NON_BREAKING_HYPHEN}Avatar${NON_BREAKING_HYPHEN}Season_1${NON_BREAKING_HYPHEN}Episode_1`);
+		expect(PageNameFromTreePath.decode(`001${NON_BREAKING_HYPHEN}Avatar${NON_BREAKING_HYPHEN}Season_1${NON_BREAKING_HYPHEN}Episode_1`)).toEqual(['Avatar', 'Season_1', 'Episode_1', '1']);
 	});
 });
