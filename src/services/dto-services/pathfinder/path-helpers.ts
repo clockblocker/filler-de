@@ -1,11 +1,11 @@
-import type { PrettyPath } from "../../../types/common-interface/dtos";
 import { SLASH } from "../../../types/literals";
+import type { SplitPath } from "../../obsidian-services/atomic-services/background-service/types";
 
 /**
  * Converts a system path to a PrettyPath, defaulting to folder type.
  * For file paths, use systemFilePathToPrettyPath or provide the extension explicitly.
  */
-export function systemPathToPrettyPath(path: string): PrettyPath {
+export function systemPathToPrettyPath(path: string): SplitPath {
 	if (!path || path === "/")
 		return { basename: "", pathParts: [], type: "folder" };
 
@@ -22,7 +22,7 @@ export function systemPathToPrettyPath(path: string): PrettyPath {
 /**
  * Converts a file path to a PrettyPath by extracting the extension from the filename.
  */
-export function systemFilePathToPrettyPath(path: string): PrettyPath {
+export function systemFilePathToPrettyPath(path: string): SplitPath {
 	if (!path || path === "/")
 		return { basename: "", pathParts: [], type: "folder" };
 
@@ -53,10 +53,10 @@ export function systemFilePathToPrettyPath(path: string): PrettyPath {
 	};
 }
 
-export function systemPathFromPrettyPath(prettyPath: PrettyPath): string {
-	const { pathParts, basename: title } = prettyPath;
+export function systemPathFromSplitPath(splitPath: SplitPath): string {
+	const { pathParts, basename: title } = splitPath;
 	const extension =
-		prettyPath.type === "file" ? `.${prettyPath.extension}` : "";
+		splitPath.type === "file" ? `.${splitPath.extension}` : "";
 	return joinPosix(
 		pathToFolderFromPathParts(pathParts),
 		safeFileName(title) + extension,

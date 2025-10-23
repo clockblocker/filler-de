@@ -4,12 +4,10 @@ import {
 	joinPosix,
 	pathToFolderFromPathParts,
 	safeFileName,
-	systemPathFromPrettyPath,
-	systemPathToFileFromPrettyPath,
-	systemPathToFolderFromPrettyPath,
+	systemPathFromSplitPath,
 	systemPathToPrettyPath,
 } from '../../../src/services/dto-services/pathfinder/path-helpers';
-import type { PrettyPath } from '../../../src/types/common-interface/dtos';
+import type { SplitPath } from '../../../src/services/obsidian-services/atomic-services/background-service/types';
 
 describe('path-helpers', () => {
 	describe('systemPathToPrettyPath', () => {
@@ -76,70 +74,70 @@ describe('path-helpers', () => {
 
 	describe('systemPathFromPrettyPath', () => {
 		it('converts file pretty path to system path', () => {
-			const prettyPath: PrettyPath = {
+			const prettyPath: SplitPath = {
 				basename: 'file',
 				extension: 'md',
 				pathParts: ['folder', 'subfolder'],
 				type: 'file',
 			};
-			const result = systemPathFromPrettyPath(prettyPath);
+			const result = systemPathFromSplitPath(prettyPath);
 			expect(result).toBe('folder/subfolder/file.md');
 		});
 
 		it('converts folder pretty path to system path', () => {
-			const prettyPath: PrettyPath = {
+			const prettyPath: SplitPath = {
 				basename: 'folder',
 				pathParts: ['folder', 'subfolder'],
 				type: 'folder',
 			};
-			const result = systemPathFromPrettyPath(prettyPath);
+			const result = systemPathFromSplitPath(prettyPath);
 			expect(result).toBe('folder/subfolder/folder');
 		});
 
 		it('handles empty pathParts', () => {
-			const prettyPath: PrettyPath = {
+			const prettyPath: SplitPath = {
 				basename: 'file',
 				extension: 'md',
 				pathParts: [],
 				type: 'file',
 			};
-			const result = systemPathFromPrettyPath(prettyPath);
+			const result = systemPathFromSplitPath(prettyPath);
 			expect(result).toBe('file.md');
 		});
 
 		it('handles empty title', () => {
-			const prettyPath: PrettyPath = {
+			const prettyPath: SplitPath = {
 				basename: '',
 				extension: 'md',
 				pathParts: ['folder'],
 				type: 'file',
 			};
-			const result = systemPathFromPrettyPath(prettyPath);
+			const result = systemPathFromSplitPath(prettyPath);
 			expect(result).toBe('folder/.md');
 		});
 	});
 
 	describe('systemPathToFileFromPrettyPath', () => {
 		it('converts pretty path to file system path', () => {
-			const prettyPath: Extract<PrettyPath, { type: 'file' }> = {
+			const prettyPath: Extract<SplitPath, { type: 'file' }> = {
 				basename: 'file',
 				extension: 'md',
 				pathParts: ['folder'],
 				type: 'file',
 			};
-			const result = systemPathToFileFromPrettyPath(prettyPath);
+			const result = systemPathFromSplitPath(prettyPath);
 			expect(result).toBe('folder/file.md');
 		});
 	});
 
 	describe('systemPathToFolderFromPrettyPath', () => {
 		it('converts pretty path to folder system path', () => {
-			const prettyPath: Extract<PrettyPath, { type: 'folder' }> = {
+			const prettyPath: Extract<SplitPath, { type: 'folder' }> = {
 				basename: 'subfolder',
 				pathParts: ['folder'],
 				type: 'folder',
 			};
-			const result = systemPathToFolderFromPrettyPath(prettyPath);
+			const result = systemPathFromSplitPath(prettyPath);
 			expect(result).toBe('folder/subfolder');
 		});
 	});

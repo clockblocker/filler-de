@@ -5,11 +5,11 @@ import {
 	TFile,
 	type WorkspaceLeaf,
 } from "obsidian";
-import { Librarian } from "./commanders/librarian/currator";
+import { Librarian } from "./commanders/librarian/librarian";
 import { extractMetaInfo } from "./services/dto-services/meta-info-manager/interface";
 import { AboveSelectionToolbarService } from "./services/obsidian-services/atomic-services/above-selection-toolbar-service";
 import { ApiService } from "./services/obsidian-services/atomic-services/api-service";
-import { BackgroundFileService } from "./services/obsidian-services/atomic-services/background-file-service";
+import { BackgroundFileService } from "./services/obsidian-services/atomic-services/background-service/background-file-service";
 import { BottomToolbarService } from "./services/obsidian-services/atomic-services/bottom-toolbar-service";
 import { OpenedFileService } from "./services/obsidian-services/atomic-services/opened-file-service";
 import { SelectionService } from "./services/obsidian-services/atomic-services/selection-service";
