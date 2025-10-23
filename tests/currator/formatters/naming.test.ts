@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test';
-import { toGuardedNodeName } from '../../../src/managers/currator/pure-functions/naming';
+import { toGuardedNodeName } from '../../../src/managers/currator/formatters';
+
 
 describe('toGuardedNodeName', () => {
 	it('replaces non-breaking hyphen with dash', () => {
@@ -25,3 +26,5 @@ describe('toGuardedNodeName', () => {
 		expect(toGuardedNodeName('a  b   c')).toBe('a__b___c');
 	});
 });
+
+

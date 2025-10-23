@@ -9,8 +9,7 @@ import {
 	TEXT,
 	UNMARKED,
 } from "../../types/literals";
-import type { GuardedNodeName, TreePath } from "./formatters";
-export type { GuardedNodeName, TreePath };
+import type { GuardedNodeName } from "./formatters";
 
 // Naming
 export const IndexedFileTypeSchema = z.enum([TEXT, CODEX, UNMARKED]);
@@ -25,6 +24,8 @@ export const NodeStatus = NodeStatusSchema.enum;
 export const NodeTypeSchema = z.enum([TEXT, SECTION, PAGE]);
 export type NodeType = z.infer<typeof NodeTypeSchema>;
 export const NodeType = NodeTypeSchema.enum;
+
+export type TreePath = GuardedNodeName[];
 
 export type CommonNode = {
 	status: NodeStatus;
