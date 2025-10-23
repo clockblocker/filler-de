@@ -14,8 +14,9 @@ export class Librarian {
 
 	async ls() {
 		const files = await this.backgroundFileService.deepListFiles({
+			basename: "Library",
 			pathParts: [],
-			title: "Library",
+			type: "folder",
 		});
 		console.log(files);
 	}

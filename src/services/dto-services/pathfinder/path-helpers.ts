@@ -7,14 +7,14 @@ import { SLASH } from "../../../types/literals";
  */
 export function systemPathToPrettyPath(path: string): PrettyPath {
 	if (!path || path === "/")
-		return { pathParts: [], title: "", type: "folder" };
+		return { basename: "", pathParts: [], type: "folder" };
 
 	const splitPath = path.split(SLASH).filter(Boolean);
 	const title = splitPath.pop() ?? "";
 
 	return {
+		basename: title,
 		pathParts: splitPath,
-		title,
 		type: "folder",
 	};
 }
@@ -24,7 +24,7 @@ export function systemPathToPrettyPath(path: string): PrettyPath {
  */
 export function systemFilePathToPrettyPath(path: string): PrettyPath {
 	if (!path || path === "/")
-		return { pathParts: [], title: "", type: "folder" };
+		return { basename: "", pathParts: [], type: "folder" };
 
 	const splitPath = path.split(SLASH).filter(Boolean);
 	const filename = splitPath.pop() ?? "";
@@ -38,53 +38,23 @@ export function systemFilePathToPrettyPath(path: string): PrettyPath {
 
 	if (extension) {
 		return {
+			basename: title,
 			extension,
 			pathParts: splitPath,
-			title,
 			type: "file",
 		};
 	}
 
 	// Fallback to folder if no extension found
 	return {
+		basename: filename,
 		pathParts: splitPath,
-		title: filename,
 		type: "folder",
 	};
 }
 
-export function systemPathToFileFromPrettyPath(
-	prettyPath: Extract<PrettyPath, { type: "file" }>,
-): string;
-export function systemPathToFileFromPrettyPath(
-	prettyPath: PrettyPath,
-): string | null;
-export function systemPathToFileFromPrettyPath(
-	prettyPath: PrettyPath,
-): string | null {
-	if (prettyPath.type !== "file") {
-		return null;
-	}
-	return systemPathFromPrettyPath(prettyPath);
-}
-
-export function systemPathToFolderFromPrettyPath(
-	prettyPath: Extract<PrettyPath, { type: "folder" }>,
-): string;
-export function systemPathToFolderFromPrettyPath(
-	prettyPath: PrettyPath,
-): string | null;
-export function systemPathToFolderFromPrettyPath(
-	prettyPath: PrettyPath,
-): string | null {
-	if (prettyPath.type !== "folder") {
-		return null;
-	}
-	return systemPathFromPrettyPath(prettyPath);
-}
-
 export function systemPathFromPrettyPath(prettyPath: PrettyPath): string {
-	const { pathParts, title } = prettyPath;
+	const { pathParts, basename: title } = prettyPath;
 	const extension =
 		prettyPath.type === "file" ? `.${prettyPath.extension}` : "";
 	return joinPosix(
