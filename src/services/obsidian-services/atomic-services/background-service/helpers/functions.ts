@@ -1,7 +1,7 @@
 import type { PrettyPathToMdFile } from "../../../../../types/common-interface/dtos";
 import type { SplitPathToFile } from "../types";
 
-export function prettyPathToSplitPath(
+export function splitPathFromPrettyPath(
 	prettyPath: PrettyPathToMdFile,
 ): SplitPathToFile {
 	return {
