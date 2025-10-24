@@ -1,6 +1,6 @@
 import type { TFile, Vault } from "obsidian";
 import type { PrettyPathToMdFile } from "../../../../types/common-interface/dtos";
-import { AbstractFileHelper } from "./helpers/abstract-file-helper";
+import { AbstractFileHelper } from "./abstract-file-helper";
 import { splitPathFromPrettyPath } from "./helpers/functions";
 
 export class BackgroundFileService {
@@ -22,12 +22,12 @@ export class BackgroundFileService {
 		return content;
 	}
 
-	create(file: FileWithContent): Promise<true>;
-	create(files: readonly FileWithContent[]): Promise<true>;
+	create(file: FileWithContent): Promise<void>;
+	create(files: readonly FileWithContent[]): Promise<void>;
 
 	async create(
 		arg: FileWithContent | readonly FileWithContent[],
-	): Promise<true> {
+	): Promise<void> {
 		if (isReadonlyArray(arg)) {
 			return await this.abstractFileService.createManyFiles(
 				arg.map(({ prettyPath, ...rest }) => ({
@@ -44,10 +44,10 @@ export class BackgroundFileService {
 		});
 	}
 
-	move(file: FileFromTo): Promise<true>;
-	move(files: readonly FileFromTo[]): Promise<true>;
+	move(file: FileFromTo): Promise<void>;
+	move(files: readonly FileFromTo[]): Promise<void>;
 
-	async move(arg: FileFromTo | readonly FileFromTo[]): Promise<true> {
+	async move(arg: FileFromTo | readonly FileFromTo[]): Promise<void> {
 		if (isReadonlyArray(arg)) {
 			return await this.abstractFileService.moveManyFiles(
 				arg.map(({ from, to }) => ({
@@ -64,12 +64,12 @@ export class BackgroundFileService {
 		});
 	}
 
-	delete(file: PrettyPathToMdFile): Promise<true>;
-	delete(files: readonly PrettyPathToMdFile[]): Promise<true>;
+	delete(file: PrettyPathToMdFile): Promise<void>;
+	delete(files: readonly PrettyPathToMdFile[]): Promise<void>;
 
 	async delete(
 		arg: PrettyPathToMdFile | readonly PrettyPathToMdFile[],
-	): Promise<true> {
+	): Promise<void> {
 		if (isReadonlyArray(arg)) {
 			return this.abstractFileService.deleteManyFiles(
 				arg.map((prettyPath) => ({
@@ -83,10 +83,10 @@ export class BackgroundFileService {
 		});
 	}
 
-	rename(file: FileFromTo): Promise<true>;
-	rename(files: readonly FileFromTo[]): Promise<true>;
+	rename(file: FileFromTo): Promise<void>;
+	rename(files: readonly FileFromTo[]): Promise<void>;
 
-	async rename(arg: FileFromTo | readonly FileFromTo[]): Promise<true> {
+	async rename(arg: FileFromTo | readonly FileFromTo[]): Promise<void> {
 		if (isReadonlyArray(arg)) {
 			return await this.move(arg);
 		}

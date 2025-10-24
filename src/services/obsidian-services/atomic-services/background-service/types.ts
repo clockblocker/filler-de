@@ -15,3 +15,13 @@ export type SplitPath = SplitPathToFolder | SplitPathToFile;
 export type AbstractFile<T extends SplitPath> = T extends { type: "file" }
 	? TFile
 	: TFolder;
+
+export type FileWithContent = {
+	splitPath: SplitPathToFile;
+	content?: string;
+};
+
+export type FileFromTo = {
+	from: SplitPathToFile;
+	to: SplitPathToFile;
+};

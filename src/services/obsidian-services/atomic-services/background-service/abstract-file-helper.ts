@@ -1,13 +1,13 @@
 import { TFile, TFolder, type Vault } from "obsidian";
-import type { PrettyPathToMdFile } from "../../../../../types/common-interface/dtos";
+import type { PrettyPathToMdFile } from "../../../../types/common-interface/dtos";
 import {
 	type Maybe,
 	unwrapMaybe,
-} from "../../../../../types/common-interface/maybe";
-import { SLASH } from "../../../../../types/literals";
-import { systemPathFromSplitPath } from "../../../../dto-services/pathfinder/path-helpers";
-import type { AbstractFile, SplitPath } from "../types";
-import { splitPathFromPrettyPath } from "./functions";
+} from "../../../../types/common-interface/maybe";
+import { SLASH } from "../../../../types/literals";
+import { systemPathFromSplitPath } from "../../../dto-services/pathfinder/path-helpers";
+import { splitPathFromPrettyPath } from "./helpers/functions";
+import type { AbstractFile, SplitPath } from "./types";
 
 export class AbstractFileHelper {
 	constructor(private vault: Vault) {}
