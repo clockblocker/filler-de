@@ -18,7 +18,7 @@ export class TFolderHelper {
 		return unwrapMaybe(mbFolder);
 	}
 
-	async createFolder(splitPath: SplitPathToFolder): Promise<TFolder> {
+	async createFolderChain(splitPath: SplitPathToFolder): Promise<TFolder> {
 		for (const [index, part] of splitPath.pathParts.entries()) {
 			const currentSplitPath: SplitPathToFolder = {
 				basename: part,
@@ -32,8 +32,12 @@ export class TFolderHelper {
 		return await this.getOrCreateOneFolder(splitPath);
 	}
 
-	async createFolders(splitPaths: SplitPathToFolder[]): Promise<TFolder[]> {
-		const folders = await Promise.all(splitPaths.map(this.createFolder));
+	async createFolderChains(
+		splitPaths: SplitPathToFolder[],
+	): Promise<TFolder[]> {
+		const folders = await Promise.all(
+			splitPaths.map(this.createFolderChain),
+		);
 		return folders;
 	}
 
@@ -44,6 +48,25 @@ export class TFolderHelper {
 
 	async trashFolders(splitPaths: SplitPathToFolder[]): Promise<void> {
 		await Promise.all(splitPaths.map(this.trashFolder));
+	}
+
+	async cleanUpFolderChain(
+		splitPathsToLastFolder: SplitPathToFolder,
+	): Promise<void> {
+		const folder = await this.getFolder(splitPathsToLastFolder);
+
+		let currentFolder = folder;
+		while (currentFolder.children.length === 0) {
+			const parentFolder = currentFolder.parent as TFolder;
+			await this.fileManager.trashFile(currentFolder);
+			currentFolder = parentFolder;
+		}
+	}
+
+	async cleanUpFolderChains(
+		splitPathsToLastFolders: SplitPathToFolder[],
+	): Promise<void> {
+		await Promise.all(splitPathsToLastFolders.map(this.cleanUpFolderChain));
 	}
 
 	async getMaybeFolder(

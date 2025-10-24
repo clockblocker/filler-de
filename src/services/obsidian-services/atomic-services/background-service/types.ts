@@ -1,11 +1,11 @@
 import type { TFile, TFolder } from "obsidian";
-import type { PrettyPathToMdFile } from "../../../../types/common-interface/dtos";
+import type { PrettyPath } from "../../../../types/common-interface/dtos";
 
-export type SplitPathToFolder = PrettyPathToMdFile & {
+export type SplitPathToFolder = PrettyPath & {
 	type: "folder";
 };
 
-export type SplitPathToFile = PrettyPathToMdFile & {
+export type SplitPathToFile = PrettyPath & {
 	type: "file";
 	extension: "md" | string;
 };

@@ -5,3 +5,6 @@ export type Prettify<T> = {
 export type Optional<T, K extends keyof T> = Prettify<
 	Omit<T, K> & Partial<Pick<T, K>>
 >;
+
+export const isReadonlyArray = <T>(x: T | readonly T[]): x is readonly T[] =>
+	Array.isArray(x);

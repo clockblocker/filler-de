@@ -1,43 +1,121 @@
 import { TFile, TFolder, type Vault } from "obsidian";
-import type { PrettyPathToMdFile } from "../../../../types/common-interface/dtos";
 import {
 	type Maybe,
 	unwrapMaybe,
 } from "../../../../types/common-interface/maybe";
 import { SLASH } from "../../../../types/literals";
 import { systemPathFromSplitPath } from "../../../dto-services/pathfinder/path-helpers";
-import { splitPathFromPrettyPath } from "./helpers/functions";
-import type { AbstractFile, SplitPath } from "./types";
+import { TFileHelper } from "./helpers/tfile-helper";
+import { TFolderHelper } from "./helpers/tfolder-helper";
+import type {
+	AbstractFile,
+	FileFromTo,
+	FileWithContent,
+	SplitPath,
+	SplitPathToFile,
+	SplitPathToFolder,
+} from "./types";
 
 export class AbstractFileHelper {
-	constructor(private vault: Vault) {}
+	private tfileHelper: TFileHelper;
+	private tfolderHelper: TFolderHelper;
 
-	async getAbstractFile<T extends SplitPath>(
-		splitPath: T,
-	): Promise<AbstractFile<T>> {
-		const mbFile = await this.getMaybeAbstractFile(splitPath);
-		return unwrapMaybe(mbFile);
+	constructor(private vault: Vault) {
+		this.tfileHelper = new TFileHelper(this.vault);
+		this.tfolderHelper = new TFolderHelper(this.vault);
 	}
 
-	getPrettyPath<T extends SplitPath>(abstractFile: AbstractFile<T>): T {
-		const path = abstractFile.path;
-		const splitPath = path.split(SLASH).filter(Boolean);
-		const title = splitPath.pop() ?? "";
+	async createFile({ splitPath, content }: FileWithContent): Promise<void> {
+		const splitPathToParentFolder =
+			this.getSplitPathToParentFolder(splitPath);
 
-		if (abstractFile instanceof TFolder) {
+		await this.tfolderHelper.createFolderChain(splitPathToParentFolder);
+		await this.tfileHelper.createFile({
+			content,
+			splitPath,
+		});
+	}
+
+	async createFiles(files: readonly FileWithContent[]): Promise<void> {
+		const splitPathToParentFolders = files.map(({ splitPath }) =>
+			this.getSplitPathToParentFolder(splitPath),
+		);
+
+		await this.tfolderHelper.createFolderChains(splitPathToParentFolders);
+		await this.tfileHelper.createFiles(files);
+	}
+
+	async moveFile({ from, to }: FileFromTo): Promise<void> {
+		const splitPathToParentTargetFolder =
+			this.getSplitPathToParentFolder(to);
+
+		await this.tfolderHelper.createFolderChain(
+			splitPathToParentTargetFolder,
+		);
+
+		await this.tfileHelper.moveFile({
+			from,
+			to,
+		});
+
+		await this.tfolderHelper.cleanUpFolderChain(
+			splitPathToParentTargetFolder,
+		);
+	}
+
+	async moveFiles(fromTos: readonly FileFromTo[]): Promise<void> {
+		const splitPathToParentTargetFolders = fromTos.map(({ from, to }) => ({
+			from: this.getSplitPathToParentFolder(from),
+			to: this.getSplitPathToParentFolder(to),
+		}));
+
+		await this.tfolderHelper.createFolderChains(
+			splitPathToParentTargetFolders.map(({ to }) => to),
+		);
+
+		await this.tfileHelper.moveFiles(fromTos);
+
+		await this.tfolderHelper.cleanUpFolderChains(
+			splitPathToParentTargetFolders.map(({ to }) => to),
+		);
+	}
+
+	private getSplitPathToParentFolder(
+		splitPathToFile: SplitPathToFile,
+	): SplitPathToFolder {
+		return unwrapMaybe(
+			this.getMaybeSplitPathToParentFolder(splitPathToFile),
+			"AbstractFileHelper.createFiles",
+		);
+	}
+
+	private getMaybeSplitPathToParentFolder(
+		splitPathToFile: SplitPathToFile,
+	): Maybe<SplitPathToFolder> {
+		const filePathParts = [...splitPathToFile.pathParts];
+
+		if (filePathParts.length < 2) {
 			return {
-				basename: title,
-				pathParts: splitPath,
-				type: "folder",
-			} as T;
+				description: "Expected at least 2 path parts for file",
+				error: true,
+			};
 		}
 
+		const basename = filePathParts.pop() ?? "";
+		const pathParts = filePathParts;
+
 		return {
-			basename: abstractFile.basename,
-			extension: abstractFile.extension,
-			pathParts: splitPath,
-			type: "file",
-		} as T;
+			data: {
+				basename,
+				pathParts,
+				type: "folder",
+			},
+			error: false,
+		};
+	}
+
+	async getMdFile(splitPath: SplitPathToFile): Promise<TFile> {
+		return unwrapMaybe(await this.getMaybeAbstractFile(splitPath));
 	}
 
 	async getMaybeAbstractFile<T extends SplitPath>(
@@ -79,44 +157,23 @@ export class AbstractFileHelper {
 		};
 	}
 
-	private async getOrCreateFile(
-		prettyPath: PrettyPathToMdFile,
-		content = "",
-	) {
-		const file = await this.getNullableFile(prettyPath);
-		if (file) return file;
+	// private async checkIfFileExists(prettyPath: PrettyPath) {
+	// 	return !!(await this.getNullableFile(prettyPath));
+	// }
 
-		const systemPath = systemPathFromSplitPath(
-			splitPathFromPrettyPath(prettyPath),
-		);
-		return await this.vault.create(`${systemPath}`, content);
-	}
+	// private async getMaybeFolder(
+	// 	prettyPath: SplitPath,
+	// ): Promise<Maybe<TFolder>> {
+	// 	if (prettyPath.type !== "folder") {
+	// 		return {
+	// 			description: "Expected folder type in prettyPath",
+	// 			error: true,
+	// 		};
+	// 	}
+	// 	const systemPath = systemPathFromSplitPath(prettyPath);
 
-	private async getNullableFile(prettyPath: PrettyPathToMdFile) {
-		const mbFile = await this.getMaybeAbstractFile(
-			splitPathFromPrettyPath(prettyPath),
-		);
-
-		return mbFile.error ? null : mbFile.data;
-	}
-
-	private async checkIfFileExists(prettyPath: PrettyPathToMdFile) {
-		return !!(await this.getNullableFile(prettyPath));
-	}
-
-	private async getMaybeFolder(
-		prettyPath: SplitPath,
-	): Promise<Maybe<TFolder>> {
-		if (prettyPath.type !== "folder") {
-			return {
-				description: "Expected folder type in prettyPath",
-				error: true,
-			};
-		}
-		const systemPath = systemPathFromSplitPath(prettyPath);
-
-		return await this.createMaybeFolderBySystemPath(systemPath);
-	}
+	// 	return await this.createMaybeFolderBySystemPath(systemPath);
+	// }
 }
 
 // Legacy implementation

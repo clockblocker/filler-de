@@ -1,7 +1,8 @@
-import type { TFile, Vault } from "obsidian";
-import type { PrettyPathToMdFile } from "../../../../types/common-interface/dtos";
+import type { Vault } from "obsidian";
+import type { PrettyPath } from "../../../../types/common-interface/dtos";
+import { isReadonlyArray } from "../../../../types/helpers";
 import { AbstractFileHelper } from "./abstract-file-helper";
-import { splitPathFromPrettyPath } from "./helpers/functions";
+import { splitPathToMdFileFromPrettyPath } from "./helpers/functions";
 
 export class BackgroundFileService {
 	private abstractFileService: AbstractFileHelper;
@@ -10,106 +11,78 @@ export class BackgroundFileService {
 		this.abstractFileService = new AbstractFileHelper(this.vault);
 	}
 
-	async readContent(prettyPath: PrettyPathToMdFile) {
-		const file = await this.getFile(prettyPath);
+	async readContent(prettyPath: PrettyPath) {
+		const file = await this.abstractFileService.getMdFile(
+			splitPathToMdFileFromPrettyPath(prettyPath),
+		);
 		return await this.vault.read(file);
 	}
 
-	async replaceContent(prettyPath: PrettyPathToMdFile, content = "") {
-		const file = await this.getFile(prettyPath);
+	async replaceContent(prettyPath: PrettyPath, content = "") {
+		const file = await this.abstractFileService.getMdFile(
+			splitPathToMdFileFromPrettyPath(prettyPath),
+		);
 		await this.vault.modify(file, content);
 
 		return content;
 	}
 
-	create(file: FileWithContent): Promise<void>;
-	create(files: readonly FileWithContent[]): Promise<void>;
+	create(file: PrettyFileWithContent): Promise<void>;
+	create(files: readonly PrettyFileWithContent[]): Promise<void>;
 
 	async create(
-		arg: FileWithContent | readonly FileWithContent[],
+		arg: PrettyFileWithContent | readonly PrettyFileWithContent[],
 	): Promise<void> {
 		if (isReadonlyArray(arg)) {
-			return await this.abstractFileService.createManyFiles(
+			return await this.abstractFileService.createFiles(
 				arg.map(({ prettyPath, ...rest }) => ({
 					...rest,
-					path: splitPathFromPrettyPath(prettyPath),
+					splitPath: splitPathToMdFileFromPrettyPath(prettyPath),
 				})),
 			);
 		}
 
 		const { prettyPath, ...rest } = arg;
 		return await this.abstractFileService.createFile({
-			...rest,
-			path: splitPathFromPrettyPath(prettyPath),
+			content: rest.content,
+			splitPath: splitPathToMdFileFromPrettyPath(prettyPath),
 		});
 	}
 
-	move(file: FileFromTo): Promise<void>;
-	move(files: readonly FileFromTo[]): Promise<void>;
+	move(file: PrettyFileFromTo): Promise<void>;
+	move(files: readonly PrettyFileFromTo[]): Promise<void>;
 
-	async move(arg: FileFromTo | readonly FileFromTo[]): Promise<void> {
+	async move(
+		arg: PrettyFileFromTo | readonly PrettyFileFromTo[],
+	): Promise<void> {
 		if (isReadonlyArray(arg)) {
-			return await this.abstractFileService.moveManyFiles(
+			return await this.abstractFileService.moveFiles(
 				arg.map(({ from, to }) => ({
-					from: splitPathFromPrettyPath(from),
-					to: splitPathFromPrettyPath(to),
+					from: splitPathToMdFileFromPrettyPath(from),
+					to: splitPathToMdFileFromPrettyPath(to),
 				})),
 			);
 		}
 
 		const { from, to } = arg;
 		return await this.abstractFileService.moveFile({
-			from: splitPathFromPrettyPath(from),
-			to: splitPathFromPrettyPath(to),
+			from: splitPathToMdFileFromPrettyPath(from),
+			to: splitPathToMdFileFromPrettyPath(to),
 		});
 	}
 
-	delete(file: PrettyPathToMdFile): Promise<void>;
-	delete(files: readonly PrettyPathToMdFile[]): Promise<void>;
+	rename(file: PrettyFileFromTo): Promise<void>;
+	rename(files: readonly PrettyFileFromTo[]): Promise<void>;
 
-	async delete(
-		arg: PrettyPathToMdFile | readonly PrettyPathToMdFile[],
+	async rename(
+		arg: PrettyFileFromTo | readonly PrettyFileFromTo[],
 	): Promise<void> {
-		if (isReadonlyArray(arg)) {
-			return this.abstractFileService.deleteManyFiles(
-				arg.map((prettyPath) => ({
-					prettyPath: splitPathFromPrettyPath(prettyPath),
-				})),
-			);
-		}
-
-		return await this.abstractFileService.deleteFile({
-			prettyPath: splitPathFromPrettyPath(prettyPath),
-		});
-	}
-
-	rename(file: FileFromTo): Promise<void>;
-	rename(files: readonly FileFromTo[]): Promise<void>;
-
-	async rename(arg: FileFromTo | readonly FileFromTo[]): Promise<void> {
 		if (isReadonlyArray(arg)) {
 			return await this.move(arg);
 		}
 		return await this.move(arg);
 	}
-
-	private async getFile(prettyPath: PrettyPathToMdFile): Promise<TFile> {
-		return await this.abstractFileService.getAbstractFile(
-			splitPathFromPrettyPath(prettyPath),
-		);
-	}
 }
 
-// async ls(path: SplitPathToFolder): Promise<Array<PrettyPathToMdFile>> {
-// 	return [];
-// }
-
-// async lsDeep(path: SplitPathToFolder): Promise<Array<PrettyPathToMdFile>> {
-// 	return [];
-// }
-
-type FileWithContent = { prettyPath: PrettyPathToMdFile; content?: string };
-type FileFromTo = { from: PrettyPathToMdFile; to: PrettyPathToMdFile };
-
-const isReadonlyArray = <T>(x: T | readonly T[]): x is readonly T[] =>
-	Array.isArray(x);
+type PrettyFileWithContent = { prettyPath: PrettyPath; content?: string };
+type PrettyFileFromTo = { from: PrettyPath; to: PrettyPath };
