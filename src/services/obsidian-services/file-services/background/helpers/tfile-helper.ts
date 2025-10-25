@@ -3,6 +3,7 @@ import {
 	type Maybe,
 	unwrapMaybeByThrowing,
 } from "../../../../../types/common-interface/maybe";
+import { logWarning } from "../../../helpers/issue-handlers";
 import { systemPathFromSplitPath } from "../../pathfinder";
 import type { FileFromTo, FileWithContent, SplitPathToFile } from "../../types";
 
@@ -157,8 +158,16 @@ export class TFileHelper {
 		try {
 			return await this.vault.create(systemPath, content ?? "");
 		} catch (error) {
-			console.error("Error creating file", splitPath, error);
+			logWarning({
+				description: `Failed to create file (${systemPath}): ${error.message}`,
+				location: "TFileHelper.createOneFileInExistingFolder",
+			});
+
 			if (error.message.includes("already exists")) {
+				logWarning({
+					description: `Race condition detected: File (${systemPath}) already created by another process`,
+					location: "TFileHelper.createOneFileInExistingFolder",
+				});
 				return this.getFile(splitPath);
 			}
 			throw error;
