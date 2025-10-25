@@ -1,21 +1,16 @@
-import { type FileManager, TFolder, type Vault } from "obsidian";
+import { FileManager, TFolder, type Vault } from "obsidian";
 import {
 	type Maybe,
 	unwrapMaybeByThrowing,
 } from "../../../../../types/common-interface/maybe";
-import { systemPathFromSplitPath } from "../../pathfinder";
-import type { SplitPathToFolder } from "../../types";
+import type { SplitPathToFolder } from "../types";
+import { systemPathFromSplitPath } from "./functions";
 
 export class TFolderHelper {
 	private fileManager: FileManager;
-	private vault: Vault;
 
-	constructor({
-		vault,
-		fileManager,
-	}: { vault: Vault; fileManager: FileManager }) {
-		this.vault = vault;
-		this.fileManager = fileManager;
+	constructor(private vault: Vault) {
+		this.fileManager = new FileManager();
 	}
 
 	async getFolder(splitPath: SplitPathToFolder): Promise<TFolder> {
@@ -34,15 +29,14 @@ export class TFolderHelper {
 			await this.getOrCreateOneFolder(currentSplitPath);
 		}
 
-		const folder = await this.getOrCreateOneFolder(splitPath);
-		return folder;
+		return await this.getOrCreateOneFolder(splitPath);
 	}
 
 	async createFolderChains(
 		splitPaths: SplitPathToFolder[],
 	): Promise<TFolder[]> {
 		const folders = await Promise.all(
-			splitPaths.map((splitPath) => this.createFolderChain(splitPath)),
+			splitPaths.map(this.createFolderChain),
 		);
 		return folders;
 	}
@@ -53,9 +47,7 @@ export class TFolderHelper {
 	}
 
 	async trashFolders(splitPaths: SplitPathToFolder[]): Promise<void> {
-		await Promise.all(
-			splitPaths.map((splitPath) => this.trashFolder(splitPath)),
-		);
+		await Promise.all(splitPaths.map(this.trashFolder));
 	}
 
 	async cleanUpFolderChain(
@@ -74,11 +66,7 @@ export class TFolderHelper {
 	async cleanUpFolderChains(
 		splitPathsToLastFolders: SplitPathToFolder[],
 	): Promise<void> {
-		await Promise.all(
-			splitPathsToLastFolders.map((splitPath) =>
-				this.cleanUpFolderChain(splitPath),
-			),
-		);
+		await Promise.all(splitPathsToLastFolders.map(this.cleanUpFolderChain));
 	}
 
 	async getMaybeFolder(
@@ -120,15 +108,6 @@ export class TFolderHelper {
 		splitPath: SplitPathToFolder,
 	): Promise<TFolder> {
 		const systemPath = systemPathFromSplitPath(splitPath);
-		try {
-			const folder = await this.vault.createFolder(systemPath);
-			return folder;
-		} catch (error) {
-			console.error("Error creating folder", splitPath, error);
-			if (error.message.includes("already exists")) {
-				return this.getFolder(splitPath);
-			}
-			throw error;
-		}
+		return await this.vault.createFolder(systemPath);
 	}
 }

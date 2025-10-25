@@ -1,5 +1,5 @@
 import { Notice } from "obsidian";
-import { unwrapMaybe } from "../../../../types/common-interface/maybe";
+import { unwrapMaybeByThrowing } from "../../../../types/common-interface/maybe";
 import {
 	formatQuotedLines,
 	segmentInQuotedLines,
@@ -20,7 +20,7 @@ export default async function wrapSentencesInQuoteAnchor({
 
 		const highestBlockNumber = findHighestBlockNumber(fileContent);
 
-		const nameOfTheOpenendFile = unwrapMaybe(
+		const nameOfTheOpenendFile = unwrapMaybeByThrowing(
 			await openedFileService.getMaybeOpenedFile(),
 		).name;
 

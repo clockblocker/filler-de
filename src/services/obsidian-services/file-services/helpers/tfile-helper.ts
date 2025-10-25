@@ -1,10 +1,10 @@
-import { type FileManager, TFile, type Vault } from "obsidian";
+import { FileManager, TFile, type Vault } from "obsidian";
 import {
 	type Maybe,
 	unwrapMaybeByThrowing,
-} from "../../../../../types/common-interface/maybe";
-import { systemPathFromSplitPath } from "../../pathfinder";
-import type { FileFromTo, FileWithContent, SplitPathToFile } from "../../types";
+} from "../../../../types/common-interface/maybe";
+import { systemPathFromSplitPath } from "../pathfinder";
+import type { FileFromTo, FileWithContent, SplitPathToFile } from "../types";
 
 /**
  * Helper for TFile operations in the vault.
@@ -13,14 +13,9 @@ import type { FileFromTo, FileWithContent, SplitPathToFile } from "../../types";
  */
 export class TFileHelper {
 	private fileManager: FileManager;
-	private vault: Vault;
 
-	constructor({
-		vault,
-		fileManager,
-	}: { vault: Vault; fileManager: FileManager }) {
-		this.vault = vault;
-		this.fileManager = fileManager;
+	constructor(private vault: Vault) {
+		this.fileManager = new FileManager();
 	}
 
 	/**
@@ -44,7 +39,7 @@ export class TFileHelper {
 	 * Assumes all parent folders are already present.
 	 */
 	async createFiles(files: readonly FileWithContent[]): Promise<TFile[]> {
-		return await Promise.all(files.map((file) => this.createFile(file)));
+		return await Promise.all(files.map(this.createFile));
 	}
 
 	/**
@@ -59,9 +54,7 @@ export class TFileHelper {
 	 * Trash multiple files by their split paths.
 	 */
 	async trashFiles(splitPaths: SplitPathToFile[]): Promise<void> {
-		await Promise.all(
-			splitPaths.map((splitPath) => this.trashFile(splitPath)),
-		);
+		await Promise.all(splitPaths.map(this.trashFile));
 	}
 
 	/**
@@ -69,24 +62,9 @@ export class TFileHelper {
 	 * Assumes the target (to) folder already exists.
 	 */
 	async moveFile({ from, to }: FileFromTo): Promise<void> {
-		const mbFromFile = await this.getMaybeFile(from);
-
-		if (mbFromFile.error) {
-			const mbToFile = await this.getMaybeFile(to);
-			if (mbToFile.error) {
-				unwrapMaybeByThrowing(
-					mbToFile,
-					"TFileHelper.moveFile",
-					`Both from (${systemPathFromSplitPath(from)}) and to (${systemPathFromSplitPath(to)}) files not found`,
-				);
-			}
-
-			// FromFile not found, but ToFile found. Assume the file is already correctly moved.
-			return;
-		}
-
+		const fromFile = await this.getFile(from);
 		await this.fileManager.renameFile(
-			mbFromFile.data,
+			fromFile,
 			systemPathFromSplitPath(to),
 		);
 	}
@@ -95,8 +73,8 @@ export class TFileHelper {
 	 * Move multiple files from source to destination.
 	 * Assumes all target (to) folders already exist.
 	 */
-	async moveFiles(fromTos: readonly FileFromTo[]): Promise<void> {
-		await Promise.all(fromTos.map((fromTo) => this.moveFile(fromTo)));
+	async moveFiles(files: readonly FileFromTo[]): Promise<void> {
+		await Promise.all(files.map(this.moveFile));
 	}
 
 	/**
@@ -154,15 +132,7 @@ export class TFileHelper {
 		content,
 	}: FileWithContent): Promise<TFile> {
 		const systemPath = systemPathFromSplitPath(splitPath);
-		try {
-			return await this.vault.create(systemPath, content ?? "");
-		} catch (error) {
-			console.error("Error creating file", splitPath, error);
-			if (error.message.includes("already exists")) {
-				return this.getFile(splitPath);
-			}
-			throw error;
-		}
+		return await this.vault.create(systemPath, content ?? "");
 	}
 }
 

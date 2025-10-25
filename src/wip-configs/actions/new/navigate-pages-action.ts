@@ -1,9 +1,9 @@
 import {
-	logWarning,
 	logError,
+	logWarning,
 } from "../../../services/obsidian-services/helpers/issue-handlers";
 import type { TexfresserObsidianServices } from "../../../services/obsidian-services/interface";
-import { unwrapMaybe } from "../../../types/common-interface/maybe";
+import { unwrapMaybeByThrowing } from "../../../types/common-interface/maybe";
 
 export async function navigatePagesAction(
 	services: Partial<TexfresserObsidianServices>,
@@ -17,7 +17,7 @@ export async function navigatePagesAction(
 	}
 
 	const maybeFile = await openedFileService.getMaybeOpenedFile();
-	const currentFile = unwrapMaybe(maybeFile);
+	const currentFile = unwrapMaybeByThrowing(maybeFile);
 
 	// const textsManagerService = new VaultCurrator(openedFileService.getApp());
 

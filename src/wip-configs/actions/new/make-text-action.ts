@@ -1,6 +1,6 @@
 import { logError } from "../../../services/obsidian-services/helpers/issue-handlers";
 import type { TexfresserObsidianServices } from "../../../services/obsidian-services/interface";
-import { unwrapMaybe } from "../../../types/common-interface/maybe";
+import { unwrapMaybeByThrowing } from "../../../types/common-interface/maybe";
 // import { VaultCurrator } from '../../obsidian-services/managers/vault-currator';
 
 export async function makeTextAction(
@@ -17,7 +17,7 @@ export async function makeTextAction(
 	}
 
 	const maybeFile = await openedFileService.getMaybeOpenedFile();
-	const currentFile = unwrapMaybe(maybeFile);
+	const currentFile = unwrapMaybeByThrowing(maybeFile);
 
 	// const textsManagerService = new VaultCurrator(openedFileService.getApp());
 
@@ -28,7 +28,7 @@ export async function makeTextAction(
 
 	try {
 		const maybeContent = await openedFileService.getMaybeFileContent();
-		const content = unwrapMaybe(maybeContent);
+		const content = unwrapMaybeByThrowing(maybeContent);
 
 		// const textStructure = await textsManagerService.createTextFromCurrentFile(
 		// 	currentFile,

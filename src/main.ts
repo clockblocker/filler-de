@@ -25,6 +25,7 @@ import addBacklinksToCurrentFile from "./services/wip-configs/actions/old/addBac
 import { makeClickListener } from "./services/wip-configs/event-listeners/click-listener/click-listener";
 import { onNewFileThenRun } from "./services/wip-configs/event-listeners/create-new-file-listener/run-on-new-file";
 import { SettingsTab } from "./settings";
+import { LibrarianTester } from "./testers/librarian-tester";
 import { DEFAULT_SETTINGS, type TextEaterSettings } from "./types";
 
 export default class TextEaterPlugin extends Plugin {
@@ -209,9 +210,8 @@ export default class TextEaterPlugin extends Plugin {
 
 		this.addCommand({
 			editorCheckCallback: () => {
-				// console.log("this.librarian test", this.librarian);
-
-				this.librarian.test();
+				const librarianTester = new LibrarianTester(this.librarian);
+				librarianTester.testFileMethods();
 			},
 			id: "get-infinitive-and-emoji",
 			name: "Get infinitive/normal form and emoji for current word",

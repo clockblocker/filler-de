@@ -1,9 +1,8 @@
-import { type FileManager, TFile, TFolder, type Vault } from "obsidian";
+import { TFile, TFolder, type Vault } from "obsidian";
 import {
 	type Maybe,
 	unwrapMaybeByThrowing,
 } from "../../../../types/common-interface/maybe";
-import { systemPathFromSplitPath } from "../pathfinder";
 import type {
 	AbstractFile,
 	FileFromTo,
@@ -12,21 +11,17 @@ import type {
 	SplitPathToFile,
 	SplitPathToFolder,
 } from "../types";
+import { systemPathFromSplitPath } from "./helpers/functions";
 import { TFileHelper } from "./helpers/tfile-helper";
 import { TFolderHelper } from "./helpers/tfolder-helper";
 
 export class AbstractFileHelper {
-	private vault: Vault;
 	private tfileHelper: TFileHelper;
 	private tfolderHelper: TFolderHelper;
 
-	constructor({
-		vault,
-		fileManager,
-	}: { vault: Vault; fileManager: FileManager }) {
-		this.vault = vault;
-		this.tfileHelper = new TFileHelper({ fileManager, vault });
-		this.tfolderHelper = new TFolderHelper({ fileManager, vault });
+	constructor(private vault: Vault) {
+		this.tfileHelper = new TFileHelper(this.vault);
+		this.tfolderHelper = new TFolderHelper(this.vault);
 	}
 
 	async createFile({ splitPath, content }: FileWithContent): Promise<void> {

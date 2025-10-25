@@ -15,9 +15,9 @@ export default async function newTranslateSelection({
 		const selection = selectionService.getSelection();
 
 		const response = await apiService.generate({
+			schema: z.string(),
 			systemPrompt: prompts.translate_de_to_eng,
 			userInput: await selection,
-			schema: z.string(),
 			withCache: false,
 		});
 

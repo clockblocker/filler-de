@@ -1,5 +1,5 @@
 import { Notice } from "obsidian";
-import { unwrapMaybe } from "../../../../types/common-interface/maybe";
+import { unwrapMaybeByThrowing } from "../../../../types/common-interface/maybe";
 import { LONG_DASH } from "../../../../types/literals";
 import type { TexfresserObsidianServices } from "../../../obsidian-services/interface";
 
@@ -7,7 +7,7 @@ export default async function newGenCommand(
 	services: TexfresserObsidianServices,
 ) {
 	try {
-		const file = unwrapMaybe(
+		const file = unwrapMaybeByThrowing(
 			await services.openedFileService.getMaybeOpenedFile(),
 		);
 
@@ -45,7 +45,7 @@ export default async function newGenCommand(
 
 		const blocks = [buttonsBlock];
 
-		const fileContent = unwrapMaybe(
+		const fileContent = unwrapMaybeByThrowing(
 			await services.openedFileService.getMaybeFileContent(),
 		);
 

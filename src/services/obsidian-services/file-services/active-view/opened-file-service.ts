@@ -2,7 +2,7 @@ import { type App, MarkdownView, type TFile, type TFolder } from "obsidian";
 import type { PathParts } from "../../../../types/common-interface/dtos";
 import {
 	type Maybe,
-	unwrapMaybe,
+	unwrapMaybeByThrowing,
 } from "../../../../types/common-interface/maybe";
 import { getMaybeEditor } from "../../helpers/get-editor";
 import { logError, logWarning } from "../../helpers/issue-handlers";
@@ -12,7 +12,9 @@ export class OpenedFileService {
 	constructor(private app: App) {}
 
 	async prettyPwd() {
-		const activeView = unwrapMaybe(await this.getMaybeOpenedFile());
+		const activeView = unwrapMaybeByThrowing(
+			await this.getMaybeOpenedFile(),
+		);
 		return splitPathFromAbstractFile(activeView);
 	}
 
@@ -90,7 +92,7 @@ export class OpenedFileService {
 	}
 
 	async getFileContent(): Promise<string> {
-		return unwrapMaybe(await this.getMaybeFileContent());
+		return unwrapMaybeByThrowing(await this.getMaybeFileContent());
 	}
 
 	async replaceContentInCurrentlyOpenedFile(
@@ -211,6 +213,6 @@ export class OpenedFileService {
 		fileName: string;
 		pathParts: PathParts;
 	} {
-		return unwrapMaybe(this.getMaybeFileNameAndPathParts());
+		return unwrapMaybeByThrowing(this.getMaybeFileNameAndPathParts());
 	}
 }
