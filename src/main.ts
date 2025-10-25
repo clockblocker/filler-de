@@ -19,7 +19,7 @@ import {
 	getAboveSelectionActionConfigs,
 	getBottomActionConfigs,
 } from "./services/wip-configs/actions/interface";
-import newGenCommand from "./services/wip-configs/actions/new/new-gen-command";
+// import newGenCommand from "./services/wip-configs/actions/new/new-gen-command";
 // import { VaultCurrator } from './obsidian-related/obsidian-services/managers/vault-currator';
 import addBacklinksToCurrentFile from "./services/wip-configs/actions/old/addBacklinksToCurrentFile";
 import { makeClickListener } from "./services/wip-configs/event-listeners/click-listener/click-listener";
@@ -58,7 +58,7 @@ export default class TextEaterPlugin extends Plugin {
 
 		this.apiService = new ApiService(this.settings);
 		this.openedFileService = new OpenedFileService(this.app);
-		this.backgroundFileService = new BackgroundFileService(this.app.vault);
+		this.backgroundFileService = new BackgroundFileService(this.app);
 		this.selectionToolbarService = new AboveSelectionToolbarService(
 			this.app,
 		);
@@ -190,17 +190,17 @@ export default class TextEaterPlugin extends Plugin {
 
 		this.addCommand({
 			editorCheckCallback: (
-				checking: boolean,
-				editor: Editor,
-				view: MarkdownView,
+				// checking: boolean,
+				// editor: Editor,
+				// view: MarkdownView,
 			) => {
-				if (view.file) {
-					if (!checking) {
-						// fillTemplate(this, editor, view.file);
-						// testEndgame(this, editor, view.file);
-					}
-					return true;
-				}
+				// if (view.file) {
+				// 	if (!checking) {
+				// 		// fillTemplate(this, editor, view.file);
+				// 		// testEndgame(this, editor, view.file);
+				// 	}
+				// 	return true;
+				// }
 				return false;
 			},
 			id: "fill-template",
@@ -209,7 +209,7 @@ export default class TextEaterPlugin extends Plugin {
 
 		this.addCommand({
 			editorCheckCallback: () => {
-				console.log("this.librarian test", this.librarian);
+				// console.log("this.librarian test", this.librarian);
 
 				this.librarian.test();
 			},
@@ -284,17 +284,17 @@ export default class TextEaterPlugin extends Plugin {
 
 		this.addCommand({
 			editorCheckCallback: (
-				checking: boolean,
-				editor: Editor,
-				view: MarkdownView,
+				// checking: boolean,
+				// editor: Editor,
+				// view: MarkdownView,
 			) => {
-				if (view.file) {
-					if (!checking) {
-						newGenCommand(this);
-					}
-					return true;
-				}
-				return false;
+				// if (view.file) {
+				// 	if (!checking) {
+				// 		newGenCommand(this);
+				// 	}
+				// 	return true;
+				// }
+				// return false;
 			},
 			id: "new-gen-command",
 			name: "new-gen-command",

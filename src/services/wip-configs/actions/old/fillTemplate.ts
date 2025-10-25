@@ -1,5 +1,5 @@
 import { Editor, MarkdownView, Notice, TFile } from "obsidian";
-import TextEaterPlugin from "../../../../main";
+import TextEaterPluginStripped from "../../../../main-stripped";
 import { LONG_DASH } from "../../../../types/literals";
 import { prompts } from "../../../prompts";
 

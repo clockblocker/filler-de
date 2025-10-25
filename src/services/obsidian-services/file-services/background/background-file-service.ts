@@ -1,4 +1,4 @@
-import type { Vault } from "obsidian";
+import type { FileManager, Vault } from "obsidian";
 import type { PrettyPath } from "../../../../types/common-interface/dtos";
 import { isReadonlyArray } from "../../../../types/helpers";
 import { splitPathToMdFileFromPrettyPath } from "../pathfinder";
@@ -8,9 +8,15 @@ export class BackgroundFileService {
 	private abstractFileService: AbstractFileHelper;
 	private vault: Vault;
 
-	constructor(vault: Vault) {
+	constructor({
+		vault,
+		fileManager,
+	}: { vault: Vault; fileManager: FileManager }) {
 		this.vault = vault;
-		this.abstractFileService = new AbstractFileHelper(this.vault);
+		this.abstractFileService = new AbstractFileHelper({
+			fileManager,
+			vault,
+		});
 	}
 
 	async readContent(prettyPath: PrettyPath) {

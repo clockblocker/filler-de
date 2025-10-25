@@ -1,10 +1,10 @@
 import { type App, PluginSettingTab, Setting } from "obsidian";
-import type TextEaterPlugin from "./main";
+import type TextEaterPluginStripped from "./main-stripped";
 
 export class SettingsTab extends PluginSettingTab {
-	plugin: TextEaterPlugin;
+	plugin: TextEaterPluginStripped;
 
-	constructor(app: App, plugin: TextEaterPlugin) {
+	constructor(app: App, plugin: TextEaterPluginStripped) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}

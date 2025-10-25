@@ -1,4 +1,4 @@
-import { TFile, TFolder, type Vault } from "obsidian";
+import { type FileManager, TFile, TFolder, type Vault } from "obsidian";
 import {
 	type Maybe,
 	unwrapMaybe,
@@ -20,10 +20,13 @@ export class AbstractFileHelper {
 	private tfileHelper: TFileHelper;
 	private tfolderHelper: TFolderHelper;
 
-	constructor(vault: Vault) {
+	constructor({
+		vault,
+		fileManager,
+	}: { vault: Vault; fileManager: FileManager }) {
 		this.vault = vault;
-		this.tfileHelper = new TFileHelper(this.vault);
-		this.tfolderHelper = new TFolderHelper(this.vault);
+		this.tfileHelper = new TFileHelper({ fileManager, vault });
+		this.tfolderHelper = new TFolderHelper({ fileManager, vault });
 	}
 
 	async createFile({ splitPath, content }: FileWithContent): Promise<void> {

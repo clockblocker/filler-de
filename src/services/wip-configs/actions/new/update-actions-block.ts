@@ -1,9 +1,11 @@
 import { Editor, MarkdownView, Notice, TFile } from "obsidian";
-import type TextEaterPlugin from "../../../../main";
+import type TextEaterPluginStripped from "../../../../main-stripped";
 import { unwrapMaybe } from "../../../../types/common-interface/maybe";
 import { LONG_DASH } from "../../../../types/literals";
 
-export default async function updateActionsBlock(plugin: TextEaterPlugin) {
+export default async function updateActionsBlock(
+	plugin: TextEaterPluginStripped,
+) {
 	try {
 		// const file = unwrapMaybe(
 		// 	await plugin.openedFileService.getMaybeOpenedFile()

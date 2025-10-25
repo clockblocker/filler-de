@@ -1,4 +1,4 @@
-import { FileManager, TFolder, type Vault } from "obsidian";
+import { type FileManager, TFolder, type Vault } from "obsidian";
 import {
 	type Maybe,
 	unwrapMaybe,
@@ -10,9 +10,12 @@ export class TFolderHelper {
 	private fileManager: FileManager;
 	private vault: Vault;
 
-	constructor(vault: Vault) {
+	constructor({
+		vault,
+		fileManager,
+	}: { vault: Vault; fileManager: FileManager }) {
 		this.vault = vault;
-		this.fileManager = new FileManager();
+		this.fileManager = fileManager;
 	}
 
 	async getFolder(splitPath: SplitPathToFolder): Promise<TFolder> {

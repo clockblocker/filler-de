@@ -7,7 +7,10 @@ export class Librarian {
 	constructor({
 		backgroundFileService,
 		openedFileService,
-	}: TexfresserObsidianServices) {
+	}: Pick<
+		TexfresserObsidianServices,
+		"backgroundFileService" | "openedFileService"
+	>) {
 		this.backgroundFileService = backgroundFileService;
 		this.openedFileService = openedFileService;
 	}
