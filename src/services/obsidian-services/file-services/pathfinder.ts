@@ -1,7 +1,7 @@
 import { TFolder } from "obsidian";
-import type { PrettyPath } from "../../../../../types/common-interface/dtos";
-import { SLASH } from "../../../../../types/literals";
-import type { AbstractFile, SplitPath, SplitPathToFile } from "../types";
+import type { PrettyPath } from "../../../types/common-interface/dtos";
+import { SLASH } from "../../../types/literals";
+import type { AbstractFile, SplitPath, SplitPathToFile } from "./types";
 
 export function splitPathToMdFileFromPrettyPath(
 	prettyPath: PrettyPath,

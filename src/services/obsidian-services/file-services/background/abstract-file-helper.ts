@@ -3,9 +3,7 @@ import {
 	type Maybe,
 	unwrapMaybe,
 } from "../../../../types/common-interface/maybe";
-import { systemPathFromSplitPath } from "./helpers/functions";
-import { TFileHelper } from "./helpers/tfile-helper";
-import { TFolderHelper } from "./helpers/tfolder-helper";
+import { systemPathFromSplitPath } from "../pathfinder";
 import type {
 	AbstractFile,
 	FileFromTo,
@@ -13,7 +11,9 @@ import type {
 	SplitPath,
 	SplitPathToFile,
 	SplitPathToFolder,
-} from "./types";
+} from "../types";
+import { TFileHelper } from "./helpers/tfile-helper";
+import { TFolderHelper } from "./helpers/tfolder-helper";
 
 export class AbstractFileHelper {
 	private tfileHelper: TFileHelper;

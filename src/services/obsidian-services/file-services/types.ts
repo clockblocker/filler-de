@@ -1,5 +1,5 @@
 import type { TFile, TFolder } from "obsidian";
-import type { PrettyPath } from "../../../../types/common-interface/dtos";
+import type { PrettyPath } from "../../../types/common-interface/dtos";
 
 export type SplitPathToFolder = PrettyPath & {
 	type: "folder";

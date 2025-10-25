@@ -3,8 +3,8 @@ import {
 	type Maybe,
 	unwrapMaybe,
 } from "../../../../../types/common-interface/maybe";
-import type { SplitPathToFolder } from "../types";
-import { systemPathFromSplitPath } from "./functions";
+import { systemPathFromSplitPath } from "../../pathfinder";
+import type { SplitPathToFolder } from "../../types";
 
 export class TFolderHelper {
 	private fileManager: FileManager;

@@ -3,8 +3,8 @@ import {
 	formatQuotedLines,
 	segmentInQuotedLines,
 } from "../../../services/dto-services/quote-manager/interface";
-import type { OpenedFileService } from "../../../services/obsidian-services/atomic-services/opened-file-service";
 import type { SelectionService } from "../../../services/obsidian-services/atomic-services/selection-service";
+import type { OpenedFileService } from "../../../services/obsidian-services/file-services/active-view/opened-file-service";
 import { unwrapMaybe } from "../../../types/common-interface/maybe";
 
 export default async function wrapSentencesInQuoteAnchor({

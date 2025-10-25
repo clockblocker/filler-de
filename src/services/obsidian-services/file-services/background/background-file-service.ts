@@ -1,8 +1,8 @@
 import type { Vault } from "obsidian";
 import type { PrettyPath } from "../../../../types/common-interface/dtos";
 import { isReadonlyArray } from "../../../../types/helpers";
+import { splitPathToMdFileFromPrettyPath } from "../pathfinder";
 import { AbstractFileHelper } from "./abstract-file-helper";
-import { splitPathToMdFileFromPrettyPath } from "./helpers/functions";
 
 export class BackgroundFileService {
 	private abstractFileService: AbstractFileHelper;

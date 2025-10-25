@@ -4,8 +4,8 @@ import {
 	formatQuotedLines,
 	segmentInQuotedLines,
 } from "../../../dto-services/quote-manager/interface";
-import type { OpenedFileService } from "../../../obsidian-services/atomic-services/opened-file-service";
 import type { SelectionService } from "../../../obsidian-services/atomic-services/selection-service";
+import type { OpenedFileService } from "../../../obsidian-services/file-services/active-view/opened-file-service";
 
 export default async function wrapSentencesInQuoteAnchor({
 	selectionService,

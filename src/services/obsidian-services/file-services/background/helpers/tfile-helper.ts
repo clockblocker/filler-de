@@ -3,8 +3,8 @@ import {
 	type Maybe,
 	unwrapMaybe,
 } from "../../../../../types/common-interface/maybe";
-import type { FileFromTo, FileWithContent, SplitPathToFile } from "../types";
-import { systemPathFromSplitPath } from "./functions";
+import { systemPathFromSplitPath } from "../../pathfinder";
+import type { FileFromTo, FileWithContent, SplitPathToFile } from "../../types";
 
 /**
  * Helper for TFile operations in the vault.

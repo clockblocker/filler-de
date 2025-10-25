@@ -9,10 +9,10 @@ import { Librarian } from "./commanders/librarian/librarian";
 import { extractMetaInfo } from "./services/dto-services/meta-info-manager/interface";
 import { AboveSelectionToolbarService } from "./services/obsidian-services/atomic-services/above-selection-toolbar-service";
 import { ApiService } from "./services/obsidian-services/atomic-services/api-service";
-import { BackgroundFileService } from "./services/obsidian-services/atomic-services/background-service/background-file-service";
 import { BottomToolbarService } from "./services/obsidian-services/atomic-services/bottom-toolbar-service";
-import { OpenedFileService } from "./services/obsidian-services/atomic-services/opened-file-service";
 import { SelectionService } from "./services/obsidian-services/atomic-services/selection-service";
+import { OpenedFileService } from "./services/obsidian-services/file-services/active-view/opened-file-service";
+import { BackgroundFileService } from "./services/obsidian-services/file-services/background/background-file-service";
 import { logError } from "./services/obsidian-services/helpers/issue-handlers";
 import { ACTION_CONFIGS } from "./services/wip-configs/actions/actions-config";
 import {
