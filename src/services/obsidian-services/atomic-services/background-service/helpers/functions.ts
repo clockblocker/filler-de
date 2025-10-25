@@ -13,7 +13,7 @@ export function splitPathToMdFileFromPrettyPath(
 	};
 }
 
-export function getPrettyPath<T extends SplitPath>(
+export function splitPathFromAbstractFile<T extends SplitPath>(
 	abstractFile: AbstractFile<T>,
 ): T {
 	const path = abstractFile.path;
@@ -34,4 +34,30 @@ export function getPrettyPath<T extends SplitPath>(
 		pathParts: splitPath,
 		type: "file",
 	} as T;
+}
+
+export function systemPathFromSplitPath(splitPath: SplitPath): string {
+	const { pathParts, basename: title } = splitPath;
+	const extension =
+		splitPath.type === "file" ? `.${splitPath.extension}` : "";
+	return joinPosix(
+		pathToFolderFromPathParts(pathParts),
+		safeFileName(title) + extension,
+	);
+}
+
+export function safeFileName(s: string): string {
+	return s.replace(/[\\/]/g, " ").trim();
+}
+
+export function pathToFolderFromPathParts(pathParts: string[]): string {
+	return joinPosix(...pathParts);
+}
+
+export function joinPosix(...parts: string[]): string {
+	const cleaned = parts
+		.filter(Boolean)
+		.map((p) => p.replace(/(^[\\/]+)|([\\/]+$)/g, "")) // trim leading/trailing slashes/backslashes
+		.filter((p) => p.length > 0);
+	return cleaned.join("/");
 }

@@ -3,9 +3,15 @@ import type { PathParts } from "../../../types/common-interface/dtos";
 import { type Maybe, unwrapMaybe } from "../../../types/common-interface/maybe";
 import { getMaybeEditor } from "../helpers/get-editor";
 import { logError, logWarning } from "../helpers/issue-handlers";
+import { splitPathFromAbstractFile } from "./background-service/helpers/functions";
 
 export class OpenedFileService {
 	constructor(private app: App) {}
+
+	async logPwd() {
+		const activeView = unwrapMaybe(await this.getMaybeOpenedFile());
+		console.log(splitPathFromAbstractFile(activeView));
+	}
 
 	getApp(): App {
 		return this.app;

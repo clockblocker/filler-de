@@ -207,18 +207,8 @@ export default class TextEaterPlugin extends Plugin {
 		});
 
 		this.addCommand({
-			editorCheckCallback: (
-				checking: boolean,
-				editor: Editor,
-				view: MarkdownView,
-			) => {
-				if (view.file) {
-					if (!checking) {
-						// getInfinitiveAndEmoji(this, editor, view.file);
-					}
-					return true;
-				}
-				return false;
+			editorCheckCallback: () => {
+				this.openedFileService.logPwd();
 			},
 			id: "get-infinitive-and-emoji",
 			name: "Get infinitive/normal form and emoji for current word",

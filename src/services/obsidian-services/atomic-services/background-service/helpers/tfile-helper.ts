@@ -3,8 +3,8 @@ import {
 	type Maybe,
 	unwrapMaybe,
 } from "../../../../../types/common-interface/maybe";
-import { systemPathFromSplitPath } from "../../../../dto-services/pathfinder/path-helpers";
 import type { FileFromTo, FileWithContent, SplitPathToFile } from "../types";
+import { systemPathFromSplitPath } from "./functions";
 
 /**
  * Helper for TFile operations in the vault.
@@ -135,3 +135,17 @@ export class TFileHelper {
 		return await this.vault.create(systemPath, content ?? "");
 	}
 }
+
+// private async getOrCreateOneFileInExistingFolder({
+// 	splitPath,
+// 	content,
+// }: FileWithContent): Promise<TFile> {
+// 	const mbFile = await this.getMaybeFile(splitPath);
+
+// 	return mbFile.error
+// 		? await this.createOneFileInExistingFolder({
+// 				content,
+// 				splitPath,
+// 			})
+// 		: mbFile.data;
+// }

@@ -3,8 +3,7 @@ import {
 	type Maybe,
 	unwrapMaybe,
 } from "../../../../types/common-interface/maybe";
-import { SLASH } from "../../../../types/literals";
-import { systemPathFromSplitPath } from "../../../dto-services/pathfinder/path-helpers";
+import { systemPathFromSplitPath } from "./helpers/functions";
 import { TFileHelper } from "./helpers/tfile-helper";
 import { TFolderHelper } from "./helpers/tfolder-helper";
 import type {
