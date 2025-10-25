@@ -8,8 +8,10 @@ import type { SplitPathToFolder } from "../../types";
 
 export class TFolderHelper {
 	private fileManager: FileManager;
+	private vault: Vault;
 
-	constructor(private vault: Vault) {
+	constructor(vault: Vault) {
+		this.vault = vault;
 		this.fileManager = new FileManager();
 	}
 

@@ -65,6 +65,7 @@ export default class TextEaterPlugin extends Plugin {
 		this.selectionService = new SelectionService(this.app);
 
 		this.librarian = new Librarian(this);
+		console.log("this.librarian init", this.librarian);
 		// this.textsManagerService = new VaultCurrator(this.app);
 
 		this.registerDomEvent(document, "click", makeClickListener(this));
@@ -208,7 +209,9 @@ export default class TextEaterPlugin extends Plugin {
 
 		this.addCommand({
 			editorCheckCallback: () => {
-				this.openedFileService.logPwd();
+				console.log("this.librarian test", this.librarian);
+
+				this.librarian.test();
 			},
 			id: "get-infinitive-and-emoji",
 			name: "Get infinitive/normal form and emoji for current word",
@@ -269,7 +272,7 @@ export default class TextEaterPlugin extends Plugin {
 				const selection = editor.getSelection();
 				if (selection) {
 					if (!checking) {
-						this.librarian.ls();
+						// this.librarian.ls();
 					}
 					return true;
 				}

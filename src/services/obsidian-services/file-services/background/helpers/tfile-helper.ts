@@ -13,8 +13,10 @@ import type { FileFromTo, FileWithContent, SplitPathToFile } from "../../types";
  */
 export class TFileHelper {
 	private fileManager: FileManager;
+	private vault: Vault;
 
-	constructor(private vault: Vault) {
+	constructor(vault: Vault) {
+		this.vault = vault;
 		this.fileManager = new FileManager();
 	}
 

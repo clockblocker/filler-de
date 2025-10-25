@@ -12,12 +12,18 @@ export class Librarian {
 		this.openedFileService = openedFileService;
 	}
 
-	async ls() {
-		const files = await this.backgroundFileService.deepListFiles({
-			basename: "Library",
-			pathParts: [],
-			type: "folder",
-		});
-		console.log(files);
+	async test() {
+		const prettyPwd = await this.openedFileService.prettyPwd();
+		const content = await this.backgroundFileService.readContent(prettyPwd);
+		console.log(content);
 	}
+
+	// async ls() {
+	// 	const files = await this.backgroundFileService.deepListFiles({
+	// 		basename: "Library",
+	// 		pathParts: [],
+	// 		type: "folder",
+	// 	});
+	// 	console.log(files);
+	// }
 }

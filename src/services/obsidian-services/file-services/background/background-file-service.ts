@@ -6,8 +6,10 @@ import { AbstractFileHelper } from "./abstract-file-helper";
 
 export class BackgroundFileService {
 	private abstractFileService: AbstractFileHelper;
+	private vault: Vault;
 
-	constructor(private vault: Vault) {
+	constructor(vault: Vault) {
+		this.vault = vault;
 		this.abstractFileService = new AbstractFileHelper(this.vault);
 	}
 

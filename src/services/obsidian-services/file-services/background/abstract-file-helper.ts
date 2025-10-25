@@ -16,10 +16,12 @@ import { TFileHelper } from "./helpers/tfile-helper";
 import { TFolderHelper } from "./helpers/tfolder-helper";
 
 export class AbstractFileHelper {
+	private vault: Vault;
 	private tfileHelper: TFileHelper;
 	private tfolderHelper: TFolderHelper;
 
-	constructor(private vault: Vault) {
+	constructor(vault: Vault) {
+		this.vault = vault;
 		this.tfileHelper = new TFileHelper(this.vault);
 		this.tfolderHelper = new TFolderHelper(this.vault);
 	}
