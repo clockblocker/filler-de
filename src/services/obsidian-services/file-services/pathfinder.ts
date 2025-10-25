@@ -1,7 +1,12 @@
-import { TFolder } from "obsidian";
+import { type TFile, TFolder } from "obsidian";
 import type { PrettyPath } from "../../../types/common-interface/dtos";
 import { SLASH } from "../../../types/literals";
-import type { AbstractFile, SplitPath, SplitPathToFile } from "./types";
+import type {
+	AbstractFile,
+	SplitPath,
+	SplitPathToFile,
+	SplitPathToFolder,
+} from "./types";
 
 export function splitPathToMdFileFromPrettyPath(
 	prettyPath: PrettyPath,
@@ -13,6 +18,8 @@ export function splitPathToMdFileFromPrettyPath(
 	};
 }
 
+export function splitPathFromAbstractFile(file: TFile): SplitPathToFile;
+export function splitPathFromAbstractFile(folder: TFolder): SplitPathToFolder;
 export function splitPathFromAbstractFile<T extends SplitPath>(
 	abstractFile: AbstractFile<T>,
 ): T {

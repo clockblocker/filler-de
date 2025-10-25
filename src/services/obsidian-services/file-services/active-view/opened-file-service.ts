@@ -11,9 +11,9 @@ import { splitPathFromAbstractFile } from "../pathfinder";
 export class OpenedFileService {
 	constructor(private app: App) {}
 
-	async logPwd() {
+	async prettyPwd() {
 		const activeView = unwrapMaybe(await this.getMaybeOpenedFile());
-		console.log(splitPathFromAbstractFile(activeView));
+		return splitPathFromAbstractFile(activeView);
 	}
 
 	getApp(): App {
