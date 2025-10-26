@@ -306,39 +306,34 @@ export default class TextEaterPlugin extends Plugin {
 	}
 
 	private async updateBottomActions(): Promise<void> {
-		const { fileName, pathParts } =
-			this.openedFileService.getFileNameAndPathParts();
-
-		const metaInfo = extractMetaInfo(
-			await this.openedFileService.getFileContent(),
-		);
-
-		this.bottomToolbarService.setActions(
-			getBottomActionConfigs({
-				fileName,
-				metaInfo,
-				pathParts,
-			}),
-		);
+		// const { fileName, pathParts } =
+		// 	this.openedFileService.getFileNameAndPathParts();
+		// const metaInfo = extractMetaInfo(
+		// 	await this.openedFileService.getFileContent(),
+		// );
+		// this.bottomToolbarService.setActions(
+		// 	getBottomActionConfigs({
+		// 		fileName,
+		// 		metaInfo,
+		// 		pathParts,
+		// 	}),
+		// );
 	}
 
 	private async updateSelectionActions(): Promise<void> {
-		const { fileName, pathParts } =
-			this.openedFileService.getFileNameAndPathParts();
-
-		const sectionText = await this.selectionService.getSelection();
-
-		const metaInfo = extractMetaInfo(
-			await this.openedFileService.getFileContent(),
-		);
-
-		this.selectionToolbarService.setActions(
-			getAboveSelectionActionConfigs({
-				fileName,
-				metaInfo,
-				pathParts,
-				sectionText,
-			}),
-		);
+		// const { fileName, pathParts } =
+		// 	this.openedFileService.getFileNameAndPathParts();
+		// const sectionText = await this.selectionService.getSelection();
+		// const metaInfo = extractMetaInfo(
+		// 	await this.openedFileService.getFileContent(),
+		// );
+		// this.selectionToolbarService.setActions(
+		// 	getAboveSelectionActionConfigs({
+		// 		fileName,
+		// 		metaInfo,
+		// 		pathParts,
+		// 		sectionText,
+		// 	}),
+		// );
 	}
 }

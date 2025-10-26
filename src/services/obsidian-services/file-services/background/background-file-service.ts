@@ -51,10 +51,12 @@ export class BackgroundFileService {
 		}
 
 		const { prettyPath, ...rest } = arg;
-		return await this.abstractFileService.createFile({
-			content: rest.content,
-			splitPath: splitPathToMdFileFromPrettyPath(prettyPath),
-		});
+		return await this.abstractFileService.createFiles([
+			{
+				content: rest.content,
+				splitPath: splitPathToMdFileFromPrettyPath(prettyPath),
+			},
+		]);
 	}
 
 	move(file: PrettyFileFromTo): Promise<void>;
@@ -73,10 +75,12 @@ export class BackgroundFileService {
 		}
 
 		const { from, to } = arg;
-		return await this.abstractFileService.moveFile({
-			from: splitPathToMdFileFromPrettyPath(from),
-			to: splitPathToMdFileFromPrettyPath(to),
-		});
+		return await this.abstractFileService.moveFiles([
+			{
+				from: splitPathToMdFileFromPrettyPath(from),
+				to: splitPathToMdFileFromPrettyPath(to),
+			},
+		]);
 	}
 
 	rename(file: PrettyFileFromTo): Promise<void>;

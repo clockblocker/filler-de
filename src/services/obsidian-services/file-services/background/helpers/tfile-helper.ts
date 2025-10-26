@@ -29,35 +29,52 @@ export class TFileHelper {
 		return unwrapMaybeByThrowing(mbFile);
 	}
 
-	async createFile(file: FileWithContent): Promise<TFile> {
+	async createFiles(files: readonly FileWithContent[]): Promise<TFile[]> {
+		const tFiles: TFile[] = [];
+		for (const file of files) {
+			tFiles.push(await this.createFile(file));
+		}
+		return tFiles;
+	}
+
+	async trashFiles(splitPaths: SplitPathToFile[]): Promise<void> {
+		for (const splitPath of splitPaths) {
+			await this.trashFile(splitPath);
+		}
+	}
+
+	async moveFiles(fromTos: readonly FileFromTo[]): Promise<void> {
+		for (const fromTo of fromTos) {
+			await this.moveFile(fromTo);
+		}
+	}
+
+	private async createFile(file: FileWithContent): Promise<TFile> {
 		return await this.getOrCreateOneFile(file);
 	}
 
-	async createFiles(files: readonly FileWithContent[]): Promise<TFile[]> {
-		return await Promise.all(files.map((file) => this.createFile(file)));
-	}
-
-	async trashFile(splitPath: SplitPathToFile): Promise<void> {
+	private async trashFile(splitPath: SplitPathToFile): Promise<void> {
 		const file = await this.getFile(splitPath);
 		await this.fileManager.trashFile(file);
 	}
 
-	async trashFiles(splitPaths: SplitPathToFile[]): Promise<void> {
-		await Promise.all(
-			splitPaths.map((splitPath) => this.trashFile(splitPath)),
-		);
-	}
-
-	async moveFile({ from, to }: FileFromTo): Promise<void> {
+	private async moveFile({ from, to }: FileFromTo): Promise<void> {
 		const mbFromFile = await this.getMaybeFile(from);
 		const mbToFile = await this.getMaybeFile(to);
 
+		console.log("\n\nmbFromFile", mbFromFile);
+		console.log("mbToFile", mbToFile);
+
 		if (mbFromFile.error) {
+			console.log("1");
+
 			if (mbToFile.error) {
+				console.log("2");
+
 				unwrapMaybeByThrowing(
 					mbToFile,
 					"TFileHelper.moveFile",
-					`Both from (${systemPathFromSplitPath(from)}) and to (${systemPathFromSplitPath(to)}) files not found`,
+					`Both source \n(${systemPathFromSplitPath(from)}) \n and target \n (${systemPathFromSplitPath(to)}) \n files not found`,
 				);
 			}
 
@@ -65,11 +82,17 @@ export class TFileHelper {
 			return;
 		}
 
+		console.log("3");
+
 		if (!mbToFile.error) {
+			console.log("4");
+
 			const targetContent = await this.vault.read(mbToFile.data);
 			const sourceContent = await this.vault.read(mbFromFile.data);
 
 			if (targetContent === sourceContent) {
+				console.log("5");
+
 				await this.fileManager.trashFile(mbFromFile.data);
 				return;
 			}
@@ -82,16 +105,13 @@ export class TFileHelper {
 			return;
 		}
 
+		console.log("6\n\n");
+
 		await this.fileManager.renameFile(
 			mbFromFile.data,
 			systemPathFromSplitPath(to),
 		);
 	}
-
-	async moveFiles(fromTos: readonly FileFromTo[]): Promise<void> {
-		await Promise.all(fromTos.map((fromTo) => this.moveFile(fromTo)));
-	}
-
 	private async getMaybeFile(
 		splitPath: SplitPathToFile,
 	): Promise<Maybe<TFile>> {

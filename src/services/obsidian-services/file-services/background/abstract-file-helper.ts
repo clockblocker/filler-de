@@ -29,17 +29,6 @@ export class AbstractFileHelper {
 		this.tfolderHelper = new TFolderHelper({ fileManager, vault });
 	}
 
-	async createFile({ splitPath, content }: FileWithContent): Promise<void> {
-		const splitPathToParentFolder =
-			this.getSplitPathToParentFolder(splitPath);
-
-		await this.tfolderHelper.createFolderChain(splitPathToParentFolder);
-		await this.tfileHelper.createFile({
-			content,
-			splitPath,
-		});
-	}
-
 	async createFiles(files: readonly FileWithContent[]): Promise<void> {
 		const splitPathToParentFolders = files.map(({ splitPath }) =>
 			this.getSplitPathToParentFolder(splitPath),
@@ -47,24 +36,6 @@ export class AbstractFileHelper {
 
 		await this.tfolderHelper.createFolderChains(splitPathToParentFolders);
 		await this.tfileHelper.createFiles(files);
-	}
-
-	async moveFile({ from, to }: FileFromTo): Promise<void> {
-		const splitPathToParentTargetFolder =
-			this.getSplitPathToParentFolder(to);
-
-		await this.tfolderHelper.createFolderChain(
-			splitPathToParentTargetFolder,
-		);
-
-		await this.tfileHelper.moveFile({
-			from,
-			to,
-		});
-
-		await this.tfolderHelper.cleanUpFolderChain(
-			splitPathToParentTargetFolder,
-		);
 	}
 
 	async moveFiles(fromTos: readonly FileFromTo[]): Promise<void> {
@@ -181,6 +152,38 @@ export class AbstractFileHelper {
 	// 	return await this.createMaybeFolderBySystemPath(systemPath);
 	// }
 }
+
+// private async createFile({
+// 	splitPath,
+// 	content,
+// }: FileWithContent): Promise<void> {
+// 	const splitPathToParentFolder =
+// 		this.getSplitPathToParentFolder(splitPath);
+
+// 	await this.tfolderHelper.createFolderChain(splitPathToParentFolder);
+// 	await this.tfileHelper.createFile({
+// 		content,
+// 		splitPath,
+// 	});
+// }
+
+// private async moveFile({ from, to }: FileFromTo): Promise<void> {
+// 	const splitPathToParentTargetFolder =
+// 		this.getSplitPathToParentFolder(to);
+
+// 	await this.tfolderHelper.createFolderChain(
+// 		splitPathToParentTargetFolder,
+// 	);
+
+// 	await this.tfileHelper.moveFile({
+// 		from,
+// 		to,
+// 	});
+
+// 	await this.tfolderHelper.cleanUpFolderChain(
+// 		splitPathToParentTargetFolder,
+// 	);
+// }
 
 // Legacy implementation
 // async createFileInFolder(
