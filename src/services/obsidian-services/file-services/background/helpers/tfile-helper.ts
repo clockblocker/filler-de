@@ -3,14 +3,14 @@ import {
 	type Maybe,
 	unwrapMaybeByThrowing,
 } from "../../../../../types/common-interface/maybe";
-import { logWarning } from "../../../helpers/issue-handlers";
+import { logError, logWarning } from "../../../helpers/issue-handlers";
 import { systemPathFromSplitPath } from "../../pathfinder";
 import type { FileFromTo, FileWithContent, SplitPathToFile } from "../../types";
 
 /**
  * Helper for TFile operations in the vault.
  *
- * NOTE: The create and move commands assume that the target folders already exist.
+ * INVARIANT: The create / move commands assume that the target folders already exist.
  */
 export class TFileHelper {
 	private fileManager: FileManager;
@@ -24,56 +24,35 @@ export class TFileHelper {
 		this.fileManager = fileManager;
 	}
 
-	/**
-	 * Get a TFile by its split path, throws if not found or not a file.
-	 */
 	async getFile(splitPath: SplitPathToFile): Promise<TFile> {
 		const mbFile = await this.getMaybeFile(splitPath);
 		return unwrapMaybeByThrowing(mbFile);
 	}
 
-	/**
-	 * Create a file in an existing folder, or return it if it exists.
-	 * Assumes the parent folder is already present.
-	 */
 	async createFile(file: FileWithContent): Promise<TFile> {
-		return await this.getOrCreateOneFileInExistingFolder(file);
+		return await this.getOrCreateOneFile(file);
 	}
 
-	/**
-	 * Create multiple files (in existing folders, or return if existing).
-	 * Assumes all parent folders are already present.
-	 */
 	async createFiles(files: readonly FileWithContent[]): Promise<TFile[]> {
 		return await Promise.all(files.map((file) => this.createFile(file)));
 	}
 
-	/**
-	 * Trash a file by its split path.
-	 */
 	async trashFile(splitPath: SplitPathToFile): Promise<void> {
 		const file = await this.getFile(splitPath);
 		await this.fileManager.trashFile(file);
 	}
 
-	/**
-	 * Trash multiple files by their split paths.
-	 */
 	async trashFiles(splitPaths: SplitPathToFile[]): Promise<void> {
 		await Promise.all(
 			splitPaths.map((splitPath) => this.trashFile(splitPath)),
 		);
 	}
 
-	/**
-	 * Move a file from a source to a destination.
-	 * Assumes the target (to) folder already exists.
-	 */
 	async moveFile({ from, to }: FileFromTo): Promise<void> {
 		const mbFromFile = await this.getMaybeFile(from);
+		const mbToFile = await this.getMaybeFile(to);
 
 		if (mbFromFile.error) {
-			const mbToFile = await this.getMaybeFile(to);
 			if (mbToFile.error) {
 				unwrapMaybeByThrowing(
 					mbToFile,
@@ -86,23 +65,33 @@ export class TFileHelper {
 			return;
 		}
 
+		if (!mbToFile.error) {
+			const targetContent = await this.vault.read(mbToFile.data);
+			const sourceContent = await this.vault.read(mbFromFile.data);
+
+			if (targetContent === sourceContent) {
+				await this.fileManager.trashFile(mbFromFile.data);
+				return;
+			}
+
+			logError({
+				description: `Target file (${systemPathFromSplitPath(to)}) exists and it's content differs from the source file (${systemPathFromSplitPath(from)})`,
+				location: "TFileHelper.moveFile",
+			});
+
+			return;
+		}
+
 		await this.fileManager.renameFile(
 			mbFromFile.data,
 			systemPathFromSplitPath(to),
 		);
 	}
 
-	/**
-	 * Move multiple files from source to destination.
-	 * Assumes all target (to) folders already exist.
-	 */
 	async moveFiles(fromTos: readonly FileFromTo[]): Promise<void> {
 		await Promise.all(fromTos.map((fromTo) => this.moveFile(fromTo)));
 	}
 
-	/**
-	 * Get a Maybe<TFile> for a split path.
-	 */
 	private async getMaybeFile(
 		splitPath: SplitPathToFile,
 	): Promise<Maybe<TFile>> {
@@ -128,29 +117,21 @@ export class TFileHelper {
 		};
 	}
 
-	/**
-	 * Utility to get or create the file in an existing folder.
-	 * Assumes the folder exists.
-	 */
-	private async getOrCreateOneFileInExistingFolder({
+	private async getOrCreateOneFile({
 		splitPath,
 		content,
 	}: FileWithContent): Promise<TFile> {
 		const mbFile = await this.getMaybeFile(splitPath);
 
 		return mbFile.error
-			? await this.createOneFileInExistingFolder({
+			? await this.safelyCreateNewFile({
 					content,
 					splitPath,
 				})
 			: mbFile.data;
 	}
 
-	/**
-	 * Low-level: create a new file in an existing folder.
-	 * Assumes the folder exists.
-	 */
-	private async createOneFileInExistingFolder({
+	private async safelyCreateNewFile({
 		splitPath,
 		content,
 	}: FileWithContent): Promise<TFile> {
@@ -160,13 +141,13 @@ export class TFileHelper {
 		} catch (error) {
 			logWarning({
 				description: `Failed to create file (${systemPath}): ${error.message}`,
-				location: "TFileHelper.createOneFileInExistingFolder",
+				location: "TFileHelper.createOneFile",
 			});
 
 			if (error.message.includes("already exists")) {
 				logWarning({
 					description: `Race condition detected: File (${systemPath}) already created by another process`,
-					location: "TFileHelper.createOneFileInExistingFolder",
+					location: "TFileHelper.createOneFile",
 				});
 				return this.getFile(splitPath);
 			}
@@ -175,14 +156,14 @@ export class TFileHelper {
 	}
 }
 
-// private async getOrCreateOneFileInExistingFolder({
+// private async getOrCreateOneFile({
 // 	splitPath,
 // 	content,
 // }: FileWithContent): Promise<TFile> {
 // 	const mbFile = await this.getMaybeFile(splitPath);
 
 // 	return mbFile.error
-// 		? await this.createOneFileInExistingFolder({
+// 		? await this.createOneFile({
 // 				content,
 // 				splitPath,
 // 			})

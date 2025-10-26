@@ -112,11 +112,11 @@ export class TFolderHelper {
 		const mbFolder = await this.getMaybeFolder(splitPath);
 
 		return mbFolder.error
-			? await this.createOneFolder(splitPath)
+			? await this.safelyCreateOneFolder(splitPath)
 			: mbFolder.data;
 	}
 
-	private async createOneFolder(
+	private async safelyCreateOneFolder(
 		splitPath: SplitPathToFolder,
 	): Promise<TFolder> {
 		const systemPath = systemPathFromSplitPath(splitPath);
