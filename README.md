@@ -1,4 +1,5 @@
-# Textfresser (Obsidian Plugin)
+# Textfresser 
+### (Obsidian Plugin)
 
 <p align="center">
    <img src="img/new-icon.png" alt="icon" width="300"/>
