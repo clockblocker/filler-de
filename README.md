@@ -1,9 +1,11 @@
-# Textfresser 
-### (Obsidian Plugin)
+### Textfresser 
 
-<p align="center">
+
+<p align="left">
    <img src="img/new-icon.png" alt="icon" width="300"/>
 </p>
+
+An Obsidian plugin for efficient language learning 
 
 Open a German text.\
 Go to an unknown word.\
