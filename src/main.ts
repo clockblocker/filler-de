@@ -6,7 +6,6 @@ import {
 	type WorkspaceLeaf,
 } from "obsidian";
 import { Librarian } from "./commanders/librarian/librarian";
-import { extractMetaInfo } from "./services/dto-services/meta-info-manager/interface";
 import { AboveSelectionToolbarService } from "./services/obsidian-services/atomic-services/above-selection-toolbar-service";
 import { ApiService } from "./services/obsidian-services/atomic-services/api-service";
 import { BottomToolbarService } from "./services/obsidian-services/atomic-services/bottom-toolbar-service";
@@ -15,17 +14,13 @@ import { OpenedFileService } from "./services/obsidian-services/file-services/ac
 import { BackgroundFileService } from "./services/obsidian-services/file-services/background/background-file-service";
 import { logError } from "./services/obsidian-services/helpers/issue-handlers";
 import { ACTION_CONFIGS } from "./services/wip-configs/actions/actions-config";
-import {
-	getAboveSelectionActionConfigs,
-	getBottomActionConfigs,
-} from "./services/wip-configs/actions/interface";
 // import newGenCommand from "./services/wip-configs/actions/new/new-gen-command";
 // import { VaultCurrator } from './obsidian-related/obsidian-services/managers/vault-currator';
 import addBacklinksToCurrentFile from "./services/wip-configs/actions/old/addBacklinksToCurrentFile";
 import { makeClickListener } from "./services/wip-configs/event-listeners/click-listener/click-listener";
 import { onNewFileThenRun } from "./services/wip-configs/event-listeners/create-new-file-listener/run-on-new-file";
 import { SettingsTab } from "./settings";
-import { LibrarianTester } from "./testers/librarian-tester";
+import { LibrarianTester } from "./testers/librarian/librarian-tester";
 import { DEFAULT_SETTINGS, type TextEaterSettings } from "./types";
 
 export default class TextEaterPlugin extends Plugin {

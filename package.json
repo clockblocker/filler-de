@@ -5,6 +5,7 @@
 		"@types/sbd": "latest",
 		"openai": "latest",
 		"sbd": "latest",
+		"ts-plugin-sort-import-suggestions": "^1.0.4",
 		"typescript-eslint": "latest",
 		"zod": "latest"
 	},
@@ -24,7 +25,7 @@
 		"obsidian": "latest",
 		"tslib": "latest",
 		"tsx": "latest",
-		"typescript": "latest"
+		"typescript": "^5.9.3"
 	},
 	"keywords": [],
 	"license": "MIT",

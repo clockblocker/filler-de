@@ -83,6 +83,20 @@ export class BackgroundFileService {
 		]);
 	}
 
+	trash(file: PrettyPath): Promise<void>;
+	trash(files: readonly PrettyPath[]): Promise<void>;
+	async trash(arg: PrettyPath | readonly PrettyPath[]): Promise<void> {
+		if (isReadonlyArray(arg)) {
+			return await this.abstractFileService.trashFiles(
+				arg.map((file) => splitPathToMdFileFromPrettyPath(file)),
+			);
+		}
+
+		return await this.abstractFileService.trashFiles([
+			splitPathToMdFileFromPrettyPath(arg),
+		]);
+	}
+
 	rename(file: PrettyFileFromTo): Promise<void>;
 	rename(files: readonly PrettyFileFromTo[]): Promise<void>;
 
@@ -96,5 +110,7 @@ export class BackgroundFileService {
 	}
 }
 
-type PrettyFileWithContent = { prettyPath: PrettyPath; content?: string };
+export type PrettyFileWithContent = PrettyPath & {
+	content?: string;
+};
 type PrettyFileFromTo = { from: PrettyPath; to: PrettyPath };

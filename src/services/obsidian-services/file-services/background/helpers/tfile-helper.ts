@@ -37,7 +37,7 @@ export class TFileHelper {
 		return tFiles;
 	}
 
-	async trashFiles(splitPaths: SplitPathToFile[]): Promise<void> {
+	async trashFiles(splitPaths: readonly SplitPathToFile[]): Promise<void> {
 		for (const splitPath of splitPaths) {
 			await this.trashFile(splitPath);
 		}
@@ -61,7 +61,6 @@ export class TFileHelper {
 	private async moveFile({ from, to }: FileFromTo): Promise<void> {
 		const mbFromFile = await this.getMaybeFile(from);
 		const mbToFile = await this.getMaybeFile(to);
-
 
 		if (mbFromFile.error) {
 			if (mbToFile.error) {
@@ -98,6 +97,7 @@ export class TFileHelper {
 			systemPathFromSplitPath(to),
 		);
 	}
+
 	private async getMaybeFile(
 		splitPath: SplitPathToFile,
 	): Promise<Maybe<TFile>> {
@@ -161,17 +161,3 @@ export class TFileHelper {
 		}
 	}
 }
-
-// private async getOrCreateOneFile({
-// 	splitPath,
-// 	content,
-// }: FileWithContent): Promise<TFile> {
-// 	const mbFile = await this.getMaybeFile(splitPath);
-
-// 	return mbFile.error
-// 		? await this.createOneFile({
-// 				content,
-// 				splitPath,
-// 			})
-// 		: mbFile.data;
-// }

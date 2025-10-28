@@ -1,33 +1,40 @@
 {
-	"compilerOptions": {
-		// Environment setup & latest features
-		"lib": ["ESNext", "DOM"],
-		"types": ["obsidian", "bun-types"],
-		"target": "ESNext",
-		"module": "Preserve",
-		"moduleDetection": "force",
-		"allowJs": true,
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "allowJs": true,
 
-		// Bundler mode
-		"moduleResolution": "bundler",
-		"allowImportingTsExtensions": true,
-		"verbatimModuleSyntax": true,
-		"noEmit": true,
+    // Override Bun's default settings that might affect discriminated unions
+    "isolatedModules": false,
+    // Environment setup & latest features
+    "lib": ["ESNext", "DOM"],
+    "module": "Preserve",
+    "moduleDetection": "force",
 
-		// Best practices
-		"strictPropertyInitialization": false,
-		"skipLibCheck": true,
-		"noFallthroughCasesInSwitch": true,
-		"noUncheckedIndexedAccess": true,
-		"noImplicitOverride": true,
+    // Bundler mode
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": false,
+    "noUncheckedIndexedAccess": true,
 
-		// Some stricter flags (disabled by default)
-		"noUnusedLocals": false,
-		"noUnusedParameters": false,
-		"noPropertyAccessFromIndexSignature": false,
+    // Some stricter flags (disabled by default)
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "skipLibCheck": true,
+    "strictNullChecks": true,
 
-		// Override Bun's default settings that might affect discriminated unions
-		"isolatedModules": false,
-		"strictNullChecks": true
-	}
+    // Best practices
+    "strictPropertyInitialization": false,
+    "target": "ESNext",
+    "types": ["obsidian", "bun-types"],
+    "verbatimModuleSyntax": true
+  },
+  "plugins": [
+    {
+      "moveDownPatterns": ["dist"],
+      "moveUpPatterns": ["@/", "\\.{1,2}/"],
+      "name": "ts-plugin-sort-import-suggestions"
+    }
+  ]
 }

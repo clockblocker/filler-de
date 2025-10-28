@@ -3,7 +3,10 @@ import {
 	type Maybe,
 	unwrapMaybeByThrowing,
 } from "../../../../types/common-interface/maybe";
-import { systemPathFromSplitPath } from "../pathfinder";
+import {
+	splitPathFromAbstractFile,
+	systemPathFromSplitPath,
+} from "../pathfinder";
 import type {
 	AbstractFile,
 	FileFromTo,
@@ -23,7 +26,10 @@ export class AbstractFileHelper {
 	constructor({
 		vault,
 		fileManager,
-	}: { vault: Vault; fileManager: FileManager }) {
+	}: {
+		vault: Vault;
+		fileManager: FileManager;
+	}) {
 		this.vault = vault;
 		this.tfileHelper = new TFileHelper({ fileManager, vault });
 		this.tfolderHelper = new TFolderHelper({ fileManager, vault });
@@ -39,19 +45,31 @@ export class AbstractFileHelper {
 	}
 
 	async moveFiles(fromTos: readonly FileFromTo[]): Promise<void> {
-		const splitPathToParentTargetFolders = fromTos.map(({ from, to }) => ({
+		const splitPathsToParentTargetFolders = fromTos.map(({ from, to }) => ({
 			from: this.getSplitPathToParentFolder(from),
 			to: this.getSplitPathToParentFolder(to),
 		}));
 
 		await this.tfolderHelper.createFolderChains(
-			splitPathToParentTargetFolders.map(({ to }) => to),
+			splitPathsToParentTargetFolders.map(({ to }) => to),
 		);
 
 		await this.tfileHelper.moveFiles(fromTos);
 
 		await this.tfolderHelper.cleanUpFolderChains(
-			splitPathToParentTargetFolders.map(({ from }) => from),
+			splitPathsToParentTargetFolders.map(({ from }) => from),
+		);
+	}
+
+	async trashFiles(files: readonly SplitPathToFile[]): Promise<void> {
+		const splitPathsToParentTargetFolders = files.map((file) =>
+			this.getSplitPathToParentFolder(file),
+		);
+
+		await this.tfileHelper.trashFiles(files);
+
+		await this.tfolderHelper.cleanUpFolderChains(
+			splitPathsToParentTargetFolders,
 		);
 	}
 
@@ -134,24 +152,60 @@ export class AbstractFileHelper {
 		};
 	}
 
-	// private async checkIfFileExists(prettyPath: PrettyPath) {
-	// 	return !!(await this.getNullableFile(prettyPath));
-	// }
+	async deepListMdFiles(
+		folderSplitPath: SplitPathToFolder,
+	): Promise<SplitPathToFile[]> {
+		// Resolve the folder (throws if not found / not a folder)
+		const folder = unwrapMaybeByThrowing(
+			await this.getMaybeAbstractFile(folderSplitPath),
+			"AbstractFileHelper.deepListMdFiles",
+		);
 
-	// private async getMaybeFolder(
-	// 	prettyPath: SplitPath,
-	// ): Promise<Maybe<TFolder>> {
-	// 	if (prettyPath.type !== "folder") {
-	// 		return {
-	// 			description: "Expected folder type in prettyPath",
-	// 			error: true,
-	// 		};
-	// 	}
-	// 	const systemPath = systemPathFromSplitPath(prettyPath);
+		const out: SplitPathToFile[] = [];
+		const stack: TFolder[] = [folder];
 
-	// 	return await this.createMaybeFolderBySystemPath(systemPath);
-	// }
+		while (stack.length > 0) {
+			const current = stack.pop();
+			if (!current) {
+				continue;
+			}
+
+			for (const child of current.children) {
+				if (child instanceof TFolder) {
+					stack.push(child);
+					continue;
+				}
+
+				if (
+					child instanceof TFile &&
+					child.extension.toLowerCase() === "md"
+				) {
+					out.push(splitPathFromAbstractFile(child));
+				}
+			}
+		}
+
+		return out;
+	}
 }
+
+// private async checkIfFileExists(prettyPath: PrettyPath) {
+// 	return !!(await this.getNullableFile(prettyPath));
+// }
+
+// private async getMaybeFolder(
+// 	prettyPath: SplitPath,
+// ): Promise<Maybe<TFolder>> {
+// 	if (prettyPath.type !== "folder") {
+// 		return {
+// 			description: "Expected folder type in prettyPath",
+// 			error: true,
+// 		};
+// 	}
+// 	const systemPath = systemPathFromSplitPath(prettyPath);
+
+// 	return await this.createMaybeFolderBySystemPath(systemPath);
+// }
 
 // private async createFile({
 // 	splitPath,
@@ -330,55 +384,6 @@ export class AbstractFileHelper {
 // 	if (errors.length > 0) {
 // 		logWarning({
 // 			description: `Failed to rename many folders: ${errors.join(", ")}`,
-// 			location: "BackgroundFileService",
-// 		});
-// 	}
-
-// 	return renamed;
-// }
-
-// async deepListFiles(
-// 	prettyPathToFolder: SplitPath,
-// ): Promise<Array<SplitPath>> {
-// 	const files = await this.deepListMaybeFiles(prettyPathToFolder);
-// 	return unwrapMaybe(files);
-// }
-
-// async listFilesInFolder(
-// 	prettyPathToFolder: SplitPath,
-// ): Promise<Array<SplitPath>> {
-// 	const maybeFiles =
-// 		await this.listMaybeFilesInFolder(prettyPathToFolder);
-// 	return unwrapMaybe(maybeFiles);
-// }
-
-// async renameManyFiles(
-// 	files: Array<{
-// 		prettyPath: Extract<SplitPath, { type: "file" }>;
-// 		newName: string;
-// 	}>,
-// ): Promise<TFile[]> {
-// 	const renamed: TFile[] = [];
-// 	const errors: string[] = [];
-
-// 	for (const { prettyPath, newName } of files) {
-// 		const systemPath = systemPathFromSplitPath(prettyPath);
-// 		const maybeFile = await this.renameMaybeFileInSystemPath(
-// 			systemPath,
-// 			newName,
-// 		);
-
-// 		if (maybeFile.error) {
-// 			errors.push(`${prettyPath}: ${maybeFile.description}`);
-// 			continue;
-// 		}
-
-// 		renamed.push(unwrapMaybe(maybeFile));
-// 	}
-
-// 	if (errors.length > 0) {
-// 		logWarning({
-// 			description: `Failed to rename many files: ${errors.join(", ")}`,
 // 			location: "BackgroundFileService",
 // 		});
 // 	}

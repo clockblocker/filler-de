@@ -15,7 +15,9 @@ export class AboveSelectionToolbarService {
 		if (this.attachedView === view) return;
 
 		this.detach();
-		if (!view || view.getMode() !== "source") return;
+		if (!view || view.getMode() !== "source") {
+			return;
+		}
 
 		// biome-ignore lint/suspicious/noExplicitAny: <cm exists but is not inferred>
 		const cm: EditorView = (view.editor as any).cm;
