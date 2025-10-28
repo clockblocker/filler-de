@@ -35,26 +35,23 @@ export class BackgroundFileService {
 		return content;
 	}
 
-	create(file: PrettyFileWithContent): Promise<void>;
-	create(files: readonly PrettyFileWithContent[]): Promise<void>;
+	create(file: PrettyFileDto): Promise<void>;
+	create(files: readonly PrettyFileDto[]): Promise<void>;
 
-	async create(
-		arg: PrettyFileWithContent | readonly PrettyFileWithContent[],
-	): Promise<void> {
+	async create(arg: PrettyFileDto | readonly PrettyFileDto[]): Promise<void> {
 		if (isReadonlyArray(arg)) {
 			return await this.abstractFileService.createFiles(
-				arg.map(({ prettyPath, ...rest }) => ({
-					...rest,
-					splitPath: splitPathToMdFileFromPrettyPath(prettyPath),
+				arg.map((file) => ({
+					...file,
+					splitPath: splitPathToMdFileFromPrettyPath(file),
 				})),
 			);
 		}
 
-		const { prettyPath, ...rest } = arg;
 		return await this.abstractFileService.createFiles([
 			{
-				content: rest.content,
-				splitPath: splitPathToMdFileFromPrettyPath(prettyPath),
+				content: arg.content,
+				splitPath: splitPathToMdFileFromPrettyPath(arg),
 			},
 		]);
 	}
@@ -110,7 +107,7 @@ export class BackgroundFileService {
 	}
 }
 
-export type PrettyFileWithContent = PrettyPath & {
+export type PrettyFileDto = PrettyPath & {
 	content?: string;
 };
-type PrettyFileFromTo = { from: PrettyPath; to: PrettyPath };
+type PrettyFileFromTo = { from: PrettyFileDto; to: PrettyFileDto };

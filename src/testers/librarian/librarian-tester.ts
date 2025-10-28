@@ -1,6 +1,5 @@
 import type { Librarian } from "../../commanders/librarian/librarian";
-import type { PrettyPath } from "../../types/common-interface/dtos";
-import { testFile } from "./consts";
+import { testLibrary } from "./consts";
 
 export class LibrarianTester {
 	private librarian: Librarian;
@@ -10,102 +9,45 @@ export class LibrarianTester {
 	}
 
 	async testFileMethods() {
-		await this.createAvatar();
+		await this.createAvatarS1E1();
 		await sleep(100);
-		await this.moveAll();
+		await this.moveE1ToE2();
+		await sleep(100);
+		await this.trashE2();
 	}
 
-	private async createAvatar() {
+	private async createAvatarS1E1() {
 		this.librarian.backgroundFileService.create([
-			testFile.avatarCodex,
-			testFile.avatarSeason1Codex,
-			testFile.avatarSeason1Episode1Codex,
-			testFile.avatarSeason1Episode1Page000,
-			testFile.avatarSeason1Episode1Page001,
+			testLibrary.avatar.codex,
+			testLibrary.avatar.s1.codex,
+			testLibrary.avatar.s1.e1.codex,
+			testLibrary.avatar.s1.e1.page000,
+			testLibrary.avatar.s1.e1.page001,
 		]);
 	}
 
-	private async moveAllPages() {
+	private async moveE1ToE2() {
 		this.librarian.backgroundFileService.move([
 			{
-				from: testFile.avatarSeason1Episode1Page000,
-				to: testFile.avatarSeason1Episode2Page000,
+				from: testLibrary.avatar.s1.e1.codex,
+				to: testLibrary.avatar.s1.e2.codex,
+			},
+			{
+				from: testLibrary.avatar.s1.e1.page000,
+				to: testLibrary.avatar.s1.e2.page000,
+			},
+			{
+				from: testLibrary.avatar.s1.e1.page001,
+				to: testLibrary.avatar.s1.e2.page001,
 			},
 		]);
 	}
 
-	private async moveAll() {
-		this.librarian.backgroundFileService.move([
-			{
-				from: {
-					basename: "__Avatar-Season_1-Episode_1",
-					pathParts: [
-						"Tests",
-						"Library",
-						"Avatar",
-						"Season_1",
-						"Episode_1",
-					],
-				},
-				to: {
-					basename: "__Avatar-Season_1-Episode_2",
-					pathParts: [
-						"Tests",
-						"Library",
-						"Avatar",
-						"Season_1",
-						"Episode_2",
-					],
-				},
-			},
-			{
-				from: {
-					basename: "000-Avatar-Season_1-Episode_1",
-					pathParts: [
-						"Tests",
-						"Library",
-						"Avatar",
-						"Season_1",
-						"Episode_1",
-						"Pages",
-					],
-				},
-				to: {
-					basename: "000-Avatar-Season_1-Episode_2",
-					pathParts: [
-						"Tests",
-						"Library",
-						"Avatar",
-						"Season_1",
-						"Episode_2",
-						"Pages",
-					],
-				},
-			},
-			{
-				from: {
-					basename: "001-Avatar-Season_1-Episode_1",
-					pathParts: [
-						"Tests",
-						"Library",
-						"Avatar",
-						"Season_1",
-						"Episode_1",
-						"Pages",
-					],
-				},
-				to: {
-					basename: "001-Avatar-Season_1-Episode_2",
-					pathParts: [
-						"Tests",
-						"Library",
-						"Avatar",
-						"Season_1",
-						"Episode_2",
-						"Pages",
-					],
-				},
-			},
+	private async trashE2() {
+		this.librarian.backgroundFileService.trash([
+			testLibrary.avatar.s1.e2.codex,
+			testLibrary.avatar.s1.e2.page000,
+			testLibrary.avatar.s1.e2.page001,
 		]);
 	}
 }

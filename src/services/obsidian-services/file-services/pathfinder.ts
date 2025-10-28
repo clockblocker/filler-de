@@ -1,6 +1,6 @@
 import { type TFile, TFolder } from "obsidian";
 import { SLASH } from "../../../types/literals";
-import type { PrettyFileWithContent } from "./background/background-file-service";
+import type { PrettyFileDto } from "./background/background-file-service";
 import type {
 	AbstractFile,
 	SplitPath,
@@ -9,7 +9,7 @@ import type {
 } from "./types";
 
 export function splitPathToMdFileFromPrettyPath(
-	prettyPath: PrettyFileWithContent,
+	prettyPath: PrettyFileDto,
 ): SplitPathToFile {
 	return {
 		...prettyPath,
