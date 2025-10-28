@@ -81,9 +81,14 @@ export class TFolderHelper {
 	private async cleanUpFolderChain(
 		splitPathsToLastFolder: SplitPathToFolder,
 	): Promise<void> {
-		const folder = await this.getFolder(splitPathsToLastFolder);
+		const folder = await this.getMaybeFolder(splitPathsToLastFolder);
 
-		let currentFolder = folder;
+		if (folder.error) {
+			return;
+		}
+
+		let currentFolder = unwrapMaybeByThrowing(folder);
+
 		while (currentFolder.children.length === 0) {
 			const parentFolder = currentFolder.parent as TFolder;
 			await this.fileManager.trashFile(currentFolder);

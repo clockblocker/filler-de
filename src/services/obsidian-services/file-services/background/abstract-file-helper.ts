@@ -51,7 +51,7 @@ export class AbstractFileHelper {
 		await this.tfileHelper.moveFiles(fromTos);
 
 		await this.tfolderHelper.cleanUpFolderChains(
-			splitPathToParentTargetFolders.map(({ to }) => to),
+			splitPathToParentTargetFolders.map(({ from }) => from),
 		);
 	}
 

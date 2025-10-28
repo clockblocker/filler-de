@@ -9,7 +9,7 @@ export class LibrarianTester {
 
 	async testFileMethods() {
 		await this.createAvatar();
-		await sleep(10);
+		await sleep(100);
 		await this.moveAll();
 
 		// await this.moveOnePage();
@@ -21,7 +21,6 @@ export class LibrarianTester {
 
 		// const content =
 		// 	await this.librarian.backgroundFileService.readContent(prettyPwd);
-		// console.log(content);
 
 		this.librarian.backgroundFileService.create([
 			{
@@ -218,5 +217,4 @@ export class LibrarianTester {
 // 		pathParts: [],
 // 		type: "folder",
 // 	});
-// 	console.log(files);
 // }

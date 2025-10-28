@@ -17,9 +17,7 @@ export class Librarian {
 
 	async testCreate() {
 		const prettyPwd = await this.openedFileService.prettyPwd();
-		console.log("prettyPwd", prettyPwd);
 		const content = await this.backgroundFileService.readContent(prettyPwd);
-		console.log(content);
 
 		this.backgroundFileService.create([
 			{
@@ -83,9 +81,7 @@ export class Librarian {
 
 	async testMove() {
 		const prettyPwd = await this.openedFileService.prettyPwd();
-		console.log("prettyPwd", prettyPwd);
 		const content = await this.backgroundFileService.readContent(prettyPwd);
-		console.log(content);
 
 		this.backgroundFileService.move([
 			{

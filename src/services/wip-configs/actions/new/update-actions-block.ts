@@ -22,8 +22,6 @@ export default async function updateActionsBlock(
 
 		const blocks = [prefixBlock, buttonsBlock, postfixBlock];
 
-		console.log("blocks", blocks);
-
 		const fileContent = unwrapMaybeByThrowing(
 			await plugin.openedFileService.getMaybeFileContent(),
 		);

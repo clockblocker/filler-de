@@ -104,8 +104,6 @@ describe('segmentInQuotedLines matches expected', () => {
 				text: match.text,
 			});
 
-			console.log(parts);
-
 			expect(parts).toEqual(match.expected);
 		});
 	}

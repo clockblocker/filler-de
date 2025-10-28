@@ -62,15 +62,9 @@ export class TFileHelper {
 		const mbFromFile = await this.getMaybeFile(from);
 		const mbToFile = await this.getMaybeFile(to);
 
-		console.log("\n\nmbFromFile", mbFromFile);
-		console.log("mbToFile", mbToFile);
 
 		if (mbFromFile.error) {
-			console.log("1");
-
 			if (mbToFile.error) {
-				console.log("2");
-
 				unwrapMaybeByThrowing(
 					mbToFile,
 					"TFileHelper.moveFile",
@@ -82,17 +76,11 @@ export class TFileHelper {
 			return;
 		}
 
-		console.log("3");
-
 		if (!mbToFile.error) {
-			console.log("4");
-
 			const targetContent = await this.vault.read(mbToFile.data);
 			const sourceContent = await this.vault.read(mbFromFile.data);
 
 			if (targetContent === sourceContent) {
-				console.log("5");
-
 				await this.fileManager.trashFile(mbFromFile.data);
 				return;
 			}
@@ -104,8 +92,6 @@ export class TFileHelper {
 
 			return;
 		}
-
-		console.log("6\n\n");
 
 		await this.fileManager.renameFile(
 			mbFromFile.data,

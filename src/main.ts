@@ -66,7 +66,6 @@ export default class TextEaterPlugin extends Plugin {
 		this.selectionService = new SelectionService(this.app);
 
 		this.librarian = new Librarian(this);
-		console.log("this.librarian init", this.librarian);
 		// this.textsManagerService = new VaultCurrator(this.app);
 
 		this.registerDomEvent(document, "click", makeClickListener(this));
