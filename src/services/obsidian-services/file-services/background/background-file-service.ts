@@ -2,6 +2,7 @@ import type { FileManager, Vault } from "obsidian";
 import type { PrettyPath } from "../../../../types/common-interface/dtos";
 import { isReadonlyArray } from "../../../../types/helpers";
 import { splitPathToMdFileFromPrettyPath } from "../pathfinder";
+import type { SplitPathToFolder } from "../types";
 import { AbstractFileHelper } from "./abstract-file-helper";
 
 export class BackgroundFileService {
@@ -104,6 +105,14 @@ export class BackgroundFileService {
 			return await this.move(arg);
 		}
 		return await this.move(arg);
+	}
+
+	async ls(pathToFoulder: SplitPathToFolder): Promise<PrettyFileDto[]> {
+		const files =
+			await this.abstractFileService.deepListMdFiles(pathToFoulder);
+
+		console.log(files);
+		return files;
 	}
 }
 

@@ -90,6 +90,15 @@ export const TextSchema = z.literal("Text");
 export type TEXT = z.infer<typeof TextSchema>;
 export const TEXT = TextSchema.value;
 
+export const BookSchema = z.literal("Book");
+export type BOOK = z.infer<typeof BookSchema>;
+export const BOOK = BookSchema.value;
+
+export const ScrollSchema = z.literal("Scroll");
+export type SCROLL = z.infer<typeof ScrollSchema>;
+export const SCROLL = ScrollSchema.value;
+
+
 export const SectionSchema = z.literal("Section");
 export type SECTION = z.infer<typeof SectionSchema>;
 export const SECTION = SectionSchema.value;
