@@ -29,10 +29,6 @@ export type CommonNode = {
 	parent: BranchNode | null;
 };
 
-export type ScrollNode = CommonNode & {
-	type: typeof NodeType.Scroll;
-};
-
 export type PageNode = CommonNode & {
 	type: typeof NodeType.Page;
 };
@@ -44,14 +40,14 @@ export type BookNode = CommonNode & {
 
 export type SectionNode = CommonNode & {
 	type: typeof NodeType.Section;
-	children: (SectionNode | BookNode | ScrollNode)[];
+	children: (SectionNode | BookNode)[];
 };
 
 export type BranchNode = SectionNode | BookNode;
-export type TreeNode = BranchNode | PageNode | ScrollNode;
+export type TreeNode = BranchNode | PageNode;
 
-export type TextNode = ScrollNode | BookNode;
-export type LeafNode = PageNode | ScrollNode;
+export type TextNode = BookNode;
+export type LeafNode = PageNode;
 
 export type PageDto = Pick<PageNode, "name" | "status"> & {
 	pathToParent: TreePath;

@@ -10,7 +10,6 @@ import {
 	type LeafNode,
 	NodeType,
 	type PageNode,
-	type ScrollNode,
 	type SectionNode,
 	type TextDto,
 	type TextNode,
@@ -95,7 +94,6 @@ export class LibraryTree {
 	): void {
 		switch (node.type) {
 			case NodeType.Page:
-			case NodeType.Scroll:
 				node.status = status;
 				break;
 			case NodeType.Book: {
@@ -169,10 +167,7 @@ export class LibraryTree {
 	public getMaybeText({ path }: { path: TreePath }): Maybe<TextNode> {
 		const mbNode = this.getMaybeNode({ path });
 		if (!mbNode.error) {
-			if (
-				mbNode.data.type === NodeType.Book ||
-				mbNode.data.type === NodeType.Scroll
-			) {
+			if (mbNode.data.type === NodeType.Book) {
 				return { data: mbNode.data, error: false };
 			}
 			return {
@@ -231,10 +226,7 @@ export class LibraryTree {
 		name: TreeNode["name"];
 		endOfTheChain: TreeNode;
 	}): Maybe<TreeNode> {
-		if (
-			endOfTheChain.type === NodeType.Page ||
-			endOfTheChain.type === NodeType.Scroll
-		) {
+		if (endOfTheChain.type === NodeType.Page) {
 			return {
 				description: `Node ${endOfTheChain.name} is a leaf. It's child ${name} was looked up.`,
 				error: true,
@@ -322,29 +314,19 @@ export class LibraryTree {
 			}),
 		);
 
-		const textNode: TextNode =
-			pageNodes.length > 1
-				? {
-						children: pageNodes,
-						name: newTextNodeName,
-						parent: parent,
-						status: TextStatus.NotStarted,
-						type: NodeType.Book,
-					}
-				: {
-						name: newTextNodeName,
-						parent: parent,
-						status: pageNodes[0]?.status ?? TextStatus.NotStarted,
-						type: NodeType.Scroll,
-					};
+		const textNode: TextNode = {
+			children: pageNodes,
+			name: newTextNodeName,
+			parent: parent,
+			status: TextStatus.NotStarted,
+			type: NodeType.Book,
+		};
 
 		// Add the text node to its parent's children
 		parent.children.push(textNode);
 
-		if (textNode.type === NodeType.Book) {
-			for (const page of pageNodes) {
-				page.parent = textNode;
-			}
+		for (const page of pageNodes) {
+			page.parent = textNode;
 		}
 
 		// Fix parent references (root children should point to root)
@@ -363,7 +345,6 @@ export class LibraryTree {
 				case NodeType.Page:
 					return;
 				case NodeType.Book:
-				case NodeType.Scroll:
 					textNodes.push(node);
 					break;
 				case NodeType.Section:
@@ -390,7 +371,6 @@ export class LibraryTree {
 	setNodeChildrensParentToNode(node: TreeNode): void {
 		switch (node.type) {
 			case NodeType.Page:
-			case NodeType.Scroll:
 				break;
 			case NodeType.Book: {
 				const bookNode = node;
@@ -430,7 +410,7 @@ export class LibraryTree {
 
 		node.status = newStatus;
 
-		if (node.type === NodeType.Scroll || node.type === NodeType.Page) {
+		if (node.type === NodeType.Page) {
 			if (newStatus !== oldStatus) {
 				affectedLeaves.push(node);
 			}
@@ -461,7 +441,6 @@ export class LibraryTree {
 		const inner = (node: TreeNode): TextStatus => {
 			switch (node.type) {
 				case NodeType.Page:
-				case NodeType.Scroll:
 					return node.status;
 				case NodeType.Book:
 				case NodeType.Section: {
@@ -511,7 +490,7 @@ export class LibraryTree {
 		if (parent.type === NodeType.Section || parent.type === NodeType.Book) {
 			parent.children = parent.children.filter(
 				(c) => c.name !== node.name,
-			) as (SectionNode | BookNode | ScrollNode)[] | PageNode[];
+			) as (SectionNode | BookNode)[] | PageNode[];
 		}
 
 		// Clean up node's children

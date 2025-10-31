@@ -37,7 +37,7 @@ describe('CurratedTree - Read-only methods', () => {
 			const text = tree.getMaybeText({ path: ['Intro'] as TreePath });
 			expect(text.error).toBe(false);
 			if (!text.error) {
-				expect(text.data.type).toBe(NodeType.Scroll);
+				expect(text.data.type).toBe(NodeType.Book);
 			}
 		});
 
