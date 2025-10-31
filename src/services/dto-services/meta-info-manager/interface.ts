@@ -7,7 +7,7 @@ import type { MetaInfo } from "./types";
  * The section is expected to look like:
  * <section id={textfresser_meta_keep_me_invisible}>
  * {
- *   "fileType": "Text"
+ *   "fileType": "Scroll"
  * }
  * </section>
  *
@@ -15,14 +15,14 @@ import type { MetaInfo } from "./types";
  */
 export function extractMetaInfo(str: string): MetaInfo | null {
 	const match = str.match(META_INFO_FORMATTER.pattern);
-	if (!match) return { fileType: "Unknown" };
+	if (!match) return null;
 
 	const jsonStr = match[1]?.trim();
 
 	const parsed = META_INFO_FORMATTER.schema.safeParse(
 		JSON.parse(jsonStr ?? ""),
 	);
-	return parsed.success ? parsed.data : { fileType: "Unknown" };
+	return parsed.success ? parsed.data : null;
 }
 
 export function editOrAddMetaInfo(str: string, meta: MetaInfo): string {

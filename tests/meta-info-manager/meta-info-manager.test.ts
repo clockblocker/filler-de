@@ -20,7 +20,7 @@ describe('meta-info manager', () => {
 		it('returns null when no meta section is present', () => {
 			const input = 'No special section here';
 			const result = extractMetaInfo(input);
-			expect(result).toEqual({ fileType: 'Unknown' });
+			expect(result).toBeNull();
 		});
 	});
 
