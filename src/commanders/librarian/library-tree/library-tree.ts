@@ -12,7 +12,7 @@ import {
 	type PageNode,
 	type ScrollNode,
 	type SectionNode,
-	type SerializedText,
+	type TextDto,
 	type TextNode,
 	type TreeNode,
 	type TreePath,
@@ -22,7 +22,7 @@ import { bfs } from "./helpers/walks";
 export class LibraryTree {
 	root: SectionNode;
 
-	constructor(serializedTexts: SerializedText[], name: string) {
+	constructor(serializedTexts: TextDto[], name: string) {
 		this.root = {
 			children: [],
 			name,
@@ -40,7 +40,7 @@ export class LibraryTree {
 		this.recomputeTreeStatuses();
 	}
 
-	public getTexts(path: TreePath): SerializedText[] {
+	public getTexts(path: TreePath): TextDto[] {
 		const mbNode = this.getMaybeNode({ path });
 		if (mbNode.error) {
 			return [];
@@ -50,11 +50,11 @@ export class LibraryTree {
 		return textNodes.map((node) => serializeTextNode(node));
 	}
 
-	public getAllTextsInTree(): SerializedText[] {
+	public getAllTextsInTree(): TextDto[] {
 		return this.getTexts([]);
 	}
 
-	public addText(serializedText: SerializedText): Maybe<TextNode> {
+	public addText(serializedText: TextDto): Maybe<TextNode> {
 		const newText = this.getOrCreateTextNode(serializedText);
 		this.recomputeTreeStatuses();
 		return newText;
@@ -281,10 +281,7 @@ export class LibraryTree {
 		return { data: newSectionNode, error: false };
 	}
 
-	getOrCreateTextNode({
-		path,
-		pageStatuses,
-	}: SerializedText): Maybe<TextNode> {
+	getOrCreateTextNode({ path, pageStatuses }: TextDto): Maybe<TextNode> {
 		const newTextNodeName = path[path.length - 1];
 
 		if (path.length === 0 || !newTextNodeName) {

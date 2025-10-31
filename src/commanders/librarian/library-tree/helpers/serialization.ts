@@ -1,11 +1,11 @@
 import { serializeTextNode } from "../../pure-functions/node";
-import type { SerializedText } from "../../types";
+import type { TextDto } from "../../types";
 import { NodeType } from "../../types";
 import { LibraryTree } from "../library-tree";
 import { dfs } from "./walks";
 
 export const makeTreeFromTexts = (
-	texts: SerializedText[],
+	texts: TextDto[],
 	treeName = "Library",
 ): LibraryTree => {
 	const tree = new LibraryTree([], treeName);
@@ -15,8 +15,8 @@ export const makeTreeFromTexts = (
 	return tree;
 };
 
-export const makeTextsFromTree = (tree: LibraryTree): SerializedText[] => {
-	const texts: SerializedText[] = [];
+export const makeTextsFromTree = (tree: LibraryTree): TextDto[] => {
+	const texts: TextDto[] = [];
 	for (const { node, path } of dfs(tree.root)) {
 		if (node.type === NodeType.Book || node.type === NodeType.Scroll) {
 			// Use the path from DFS directly, prepending root name

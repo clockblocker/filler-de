@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { LibraryTree } from '../../../src/commanders/librarian/library-tree/library-tree';
 import {
-	type SerializedText,
+	type TextDto,
 	type TreePath,
 } from '../../../src/commanders/librarian/types';
 import { VALID_BRANCHES } from '../static/defined-branches';
@@ -71,7 +71,7 @@ describe('CurratedTree - deleteText', () => {
 
 	it('should remove empty section nodes up the chain after deleting last child text', () => {
 		// We create a tree with a nested structure and just one deep text
-		const texts: SerializedText[] = [
+		const texts: TextDto[] = [
 			{
 				pageStatuses: {},
 				path: ['A', 'B', 'C'] as TreePath,

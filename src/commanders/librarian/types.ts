@@ -53,7 +53,11 @@ export type TreeNode = BranchNode | PageNode | ScrollNode;
 export type TextNode = ScrollNode | BookNode;
 export type LeafNode = PageNode | ScrollNode;
 
-export type SerializedText = {
+export type PageDto = Pick<PageNode, "name" | "status"> & {
+	pathToParent: TreePath;
+};
+
+export type TextDto = {
 	path: TreePath;
 	pageStatuses: Record<CommonNode["name"], CommonNode["status"]>;
 };

@@ -1,6 +1,6 @@
-import type { SerializedText } from "../types";
+import type { TextDto } from "../types";
 
-export const toRepr = (text: SerializedText) => {
+export const toRepr = (text: TextDto) => {
 	return {
 		joinedPageStatuses: Object.entries(text.pageStatuses)
 			.sort(([nameA, __statusA], [nameB, __statusB]) =>
@@ -12,7 +12,7 @@ export const toRepr = (text: SerializedText) => {
 	};
 };
 
-export const toSortedReprs = (texts: readonly SerializedText[]) => {
+export const toSortedReprs = (texts: readonly TextDto[]) => {
 	const copy = [...texts];
 	return [...copy]
 		.map((t) => toRepr(t))
@@ -20,8 +20,8 @@ export const toSortedReprs = (texts: readonly SerializedText[]) => {
 };
 
 export const checkEqualityOfSerializedTexts = (
-	a: SerializedText[],
-	b: SerializedText[],
+	a: TextDto[],
+	b: TextDto[],
 ): boolean => {
 	const aSorted = toSortedReprs(a);
 	const bSorted = toSortedReprs(b);

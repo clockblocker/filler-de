@@ -4,7 +4,7 @@ import {
 	type BookNode,
 	NodeType,
 	type SectionNode,
-	type SerializedText,
+	type TextDto,
 	type TreePath,
 } from '../../../src/commanders/librarian/types';
 import { TextStatus } from '../../../src/types/common-interface/enums';
@@ -19,7 +19,7 @@ describe('CurratedTree - Building from SerializedText', () => {
 		});
 
 		it('should create sections and text nodes from SerializedText paths', () => {
-			const texts: SerializedText[] = [
+			const texts: TextDto[] = [
 				{
 					pageStatuses: { 'Page1': TextStatus.NotStarted, 'Page2': TextStatus.Done },
 					path: ['Books', 'Fiction', 'Novel1'] as TreePath,
@@ -42,7 +42,7 @@ describe('CurratedTree - Building from SerializedText', () => {
 		});
 
 		it('should set correct status based on page statuses', () => {
-			const texts: SerializedText[] = [
+			const texts: TextDto[] = [
 				{
 					pageStatuses: { 'Page1': TextStatus.Done, 'Page2': TextStatus.Done },
 					path: ['Section', 'AllDone'] as TreePath,
@@ -71,7 +71,7 @@ describe('CurratedTree - Building from SerializedText', () => {
 		});
 
 		it('should handle multiple texts in same section', () => {
-			const texts: SerializedText[] = [
+			const texts: TextDto[] = [
 				{
 					pageStatuses: { 'Page1': TextStatus.Done },
 					path: ['Section', 'Text1'] as TreePath,
@@ -97,7 +97,7 @@ describe('CurratedTree - Building from SerializedText', () => {
 	describe('addText method', () => {
 		it('should add single SerializedText', () => {
 			const tree = new LibraryTree([], 'Library');
-			const serialized: SerializedText = {
+			const serialized: TextDto = {
 				pageStatuses: { 'Page1': TextStatus.Done },
 				path: ['Section', 'Text'] as TreePath,
 			};

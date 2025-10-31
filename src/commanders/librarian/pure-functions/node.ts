@@ -1,7 +1,7 @@
 import {
 	type BookNode,
 	NodeType,
-	type SerializedText,
+	type TextDto,
 	type TextNode,
 	type TreeNode,
 	type TreePath,
@@ -46,7 +46,7 @@ export const getNodeId = (node: TreeNode): string => {
 export function serializeTextNode(
 	node: TextNode,
 	providedPath?: TreePath,
-): SerializedText {
+): TextDto {
 	const path = providedPath ?? computeNodePath(node);
 	const pageStatuses =
 		node.type === NodeType.Book

@@ -1,4 +1,4 @@
-import { type SerializedText } from '../../../../src/commanders/librarian/types';
+import { type TextDto } from '../../../../src/commanders/librarian/types';
 
 export const AVATAR_TEXTS = [
 	{
@@ -23,4 +23,4 @@ export const AVATAR_TEXTS = [
 		pageStatuses: { 'Intro': 'NotStarted' } as const,
 		path: ['Intro'] as const,
 	},
-] as const satisfies SerializedText[];
+] as const satisfies TextDto[];
