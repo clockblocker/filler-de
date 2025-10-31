@@ -12,11 +12,12 @@ describe('Explict testing of all methods ', () => {
 		expect(tree.getAllTextsInTree()).toEqual([]);
 
 		tree.addText({
-			pageStatuses: [NodeStatus.NotStarted],
+			pageStatuses: { 'Text': NodeStatus.NotStarted },
 			path: ['Section', 'Text'],
 		});
+		// For ScrollNodes, serialization uses the node name as the page name
 		expect(tree.getAllTextsInTree()).toEqual([
-			{ pageStatuses: [NodeStatus.NotStarted], path: ['Section', 'Text'] },
+			{ pageStatuses: { 'Text': NodeStatus.NotStarted }, path: ['Section', 'Text'] },
 		]);
 
 		tree.deleteText({ path: ['Section', 'Text'] });
@@ -43,7 +44,7 @@ describe('Explict testing of all methods ', () => {
 		).toBe(true);
 
 		tree.addText({
-			pageStatuses: [NodeStatus.NotStarted],
+			pageStatuses: { 'Episode_1': NodeStatus.NotStarted },
 			path: ['Avatar', 'Season_1', 'Episode_1'],
 		});
 		expect(

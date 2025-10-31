@@ -14,11 +14,18 @@ export function* bfs(
 	}
 
 	while (queue.length) {
-		const { node, path } = queue.shift()!;
-		if ("type" in node && node.type === NodeType.Text) {
+		const item = queue.shift();
+		if (!item) break;
+		const { node, path } = item;
+		if (
+			"type" in node &&
+			(node.type === NodeType.Book || node.type === NodeType.Scroll)
+		) {
 			yield { node, path };
-			for (const page of node.children) {
-				yield { node: page, path: [...path, page.name.toString()] };
+			if (node.type === NodeType.Book) {
+				for (const page of node.children) {
+					yield { node: page, path: [...path, page.name.toString()] };
+				}
 			}
 		} else if ("type" in node && node.type === NodeType.Section) {
 			yield { node, path };
@@ -33,10 +40,15 @@ export function* dfs(
 	root: BranchNode,
 ): Generator<{ node: TreeNode; path: TreePath }> {
 	function* traverse(node: TreeNode, path: TreePath) {
-		if ("type" in node && node.type === NodeType.Text) {
+		if (
+			"type" in node &&
+			(node.type === NodeType.Book || node.type === NodeType.Scroll)
+		) {
 			yield { node, path };
-			for (const page of node.children) {
-				yield { node: page, path: [...path, page.name.toString()] };
+			if (node.type === NodeType.Book) {
+				for (const page of node.children) {
+					yield { node: page, path: [...path, page.name.toString()] };
+				}
 			}
 		} else if ("type" in node && node.type === NodeType.Section) {
 			yield { node, path };

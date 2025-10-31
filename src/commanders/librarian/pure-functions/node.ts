@@ -53,7 +53,8 @@ export function serializeTextNode(
 			? Object.fromEntries(
 					node.children.map(({ name, status }) => [name, status]),
 				)
-			: { [node.name]: node.status };
+			: // For ScrollNodes, use the node name as the page name
+				{ [node.name]: node.status };
 
 	return {
 		pageStatuses,

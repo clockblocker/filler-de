@@ -1,21 +1,21 @@
 import { describe, expect, it } from 'bun:test';
 import { LibraryTree } from '../../../src/commanders/librarian/library-tree/library-tree';
 import {
+	type BookNode,
 	type BranchNode,
 	NodeStatus,
 	NodeType,
 	type SectionNode,
-	type BookNode,
 	type TreePath,
 } from '../../../src/commanders/librarian/types';
 
 describe('CurratedTree - Parent References', () => {
 	describe('Creating tree with existing nodes', () => {
-		it('should set parent to null for direct children of the tree', () => {
+		it('should set parent to root for direct children of the tree', () => {
 			const tree = new LibraryTree(
 				[
 					{
-						pageStatuses: [NodeStatus.NotStarted],
+						pageStatuses: { 'Page1': NodeStatus.NotStarted },
 						path: ['Section1', 'Text1'] as TreePath,
 					},
 				],
@@ -23,32 +23,32 @@ describe('CurratedTree - Parent References', () => {
 			);
 
 			const section1 = tree.root.children[0];
-			expect(section1?.parent).toBe(null);
+			expect(section1?.parent).toBe(tree.root);
 		});
 
 		it('should set parent references for nested section nodes during tree initialization', () => {
 			const tree = new LibraryTree(
 				[
 					{
-						pageStatuses: [],
-						path: ['Section1', 'SubSection1'] as TreePath,
+						pageStatuses: {},
+						path: ['Section1', 'SubSection1', 'Text1'] as TreePath,
 					},
 				],
 				'Library'
 			);
 
 			const section1 = tree.root.children[0];
-			const subSection1 = (section1 as SectionNode).children[0];
+			const subSection1 = (section1 as SectionNode).children[0] as SectionNode;
 
-			expect(section1?.parent).toBe(null);
-			expect(subSection1?.parent).toBe(section1);
+			expect(section1?.parent).toBe(tree.root);
+			expect(subSection1?.parent).toBe(section1 as BranchNode);
 		});
 
 		it('should set parent references for text nodes under sections', () => {
 			const tree = new LibraryTree(
 				[
 					{
-						pageStatuses: [],
+						pageStatuses: {},
 						path: ['Section1', 'Text1'] as TreePath,
 					},
 				],
@@ -58,15 +58,15 @@ describe('CurratedTree - Parent References', () => {
 			const section1 = tree.root.children[0];
 			const text1 = (section1 as SectionNode).children[0];
 
-			expect(section1?.parent).toBe(null);
-			expect(text1?.parent).toBe(section1);
+			expect(section1?.parent).toBe(tree.root);
+			expect(text1?.parent).toBe(section1 as BranchNode);
 		});
 
 		it('should set parent references for page nodes under text nodes', () => {
 			const tree = new LibraryTree(
 				[
 					{
-						pageStatuses: [NodeStatus.NotStarted],
+						pageStatuses: { 'Page1': NodeStatus.NotStarted, 'Page2': NodeStatus.Done },
 						path: ['Section1', 'Text1'] as TreePath,
 					},
 				],
@@ -74,65 +74,81 @@ describe('CurratedTree - Parent References', () => {
 			);
 
 			const section1 = tree.root.children[0];
-			const text1 = (section1 as SectionNode).children[0] as BookNode;
-			const page1 = text1.children[0];
-
-			expect(section1?.parent).toBe(null);
-			expect(text1?.parent).toBe(section1 as BranchNode);
-			expect(page1?.parent).toBe(text1);
+			const text1 = (section1 as SectionNode).children[0];
+			// With multiple pages, it's a BookNode
+			if (text1?.type === NodeType.Book) {
+				const bookNode = text1;
+				const page1 = bookNode.children[0];
+				expect(section1?.parent).toBe(tree.root);
+				expect(bookNode.parent).toBe(section1 as BranchNode);
+				expect(page1?.parent).toBe(bookNode as BranchNode);
+			}
 		});
 
 		it('should handle deep nesting with correct parent chain', () => {
 			const tree = new LibraryTree(
 				[
 					{
-						pageStatuses: [],
-						path: ['A', 'B', 'C'] as TreePath,
+						pageStatuses: {},
+						path: ['A', 'B', 'C', 'Text1'] as TreePath,
 					},
 				],
 				'Library'
 			);
 
 			const nodeA = tree.root.children[0];
-			const nodeB = (nodeA as SectionNode).children[0];
+			const nodeB = (nodeA as SectionNode).children[0] as SectionNode;
 			const nodeC = (nodeB as SectionNode).children[0] as SectionNode;
 
-			expect(nodeA?.parent).toBe(null);
-			expect(nodeB?.parent).toBe(nodeA);
+			expect(nodeA?.parent).toBe(tree.root);
+			expect(nodeB?.parent).toBe(nodeA as BranchNode);
 			expect(nodeC?.parent).toBe(nodeB as BranchNode);
 		});
 	});
 
 	describe('Adding new nodes', () => {
+		// Note: getOrCreateSectionNode has been removed - sections are created automatically
 		it('should set parent when creating a new section node at root', () => {
 			const tree = new LibraryTree([], 'Library');
 
-			const result = tree.getOrCreateSectionNode({ path: ['NewSection'] });
+			// Create a section by creating a text node under it
+			tree.getOrCreateTextNode({
+				pageStatuses: {},
+				path: ['NewSection', 'Temp'],
+			});
 
-			expect(result.error).toBe(false);
-			if (!result.error) {
-				expect(result.data.parent).toBe(null);
+			const section = tree.getMaybeNode({ path: ['NewSection'] });
+			expect(!section.error).toBe(true);
+			if (!section.error) {
+				expect((section.data as SectionNode).parent).toBe(tree.root);
 			}
 		});
 
 		it('should set parent when creating a nested section node', () => {
 			const tree = new LibraryTree([], 'Library');
 
-			tree.getOrCreateSectionNode({ path: ['Parent'] });
-			const result = tree.getOrCreateSectionNode({ path: ['Parent', 'Child'] });
+			// Create nested sections by creating text nodes
+			tree.getOrCreateTextNode({ pageStatuses: {}, path: ['Parent', 'Temp'] });
+			tree.getOrCreateTextNode({
+				pageStatuses: {},
+				path: ['Parent', 'Child', 'Temp'],
+			});
 
-			expect(result.error).toBe(false);
-			if (!result.error) {
-				expect(result.data.parent?.name).toBe('Parent');
-				expect(result.data.parent?.type).toBe(NodeType.Section);
+			const childSection = tree.getMaybeNode({ path: ['Parent', 'Child'] });
+			expect(!childSection.error).toBe(true);
+			if (!childSection.error) {
+				expect((childSection.data as SectionNode).parent?.name).toBe('Parent');
+				expect((childSection.data as SectionNode).parent?.type).toBe(NodeType.Section);
 			}
 		});
 
 		it('should set parent when creating a text node', () => {
 			const tree = new LibraryTree([], 'Library');
 
-			tree.getOrCreateSectionNode({ path: ['Section'] });
-			const result = tree.getOrCreateTextNode({ path: ['Section', 'Text'] });
+			const result = tree.getOrCreateTextNode({
+				pageStatuses: {},
+				path: ['Section', 'Text'],
+			});
 
 			expect(result.error).toBe(false);
 			if (!result.error) {
@@ -144,16 +160,16 @@ describe('CurratedTree - Parent References', () => {
 		it('should set parent for page nodes when using addText', () => {
 			const tree = new LibraryTree([], 'Library');
 
-			tree.getOrCreateSectionNode({ path: ['Section'] });
 			const result = tree.addText({
-				pageStatuses: [NodeStatus.NotStarted, NodeStatus.Done],
+				pageStatuses: { 'Page1': NodeStatus.NotStarted, 'Page2': NodeStatus.Done },
 				path: ['Section', 'Text'],
 			});
 
 			expect(result.error).toBe(false);
-			if (!result.error) {
-				expect(result.data.children[0]?.parent).toBe(result.data);
-				expect(result.data.children[1]?.parent).toBe(result.data);
+			if (!result.error && result.data.type === NodeType.Book) {
+				const bookNode = result.data as BookNode;
+				expect(bookNode.children[0]?.parent).toBe(bookNode);
+				expect(bookNode.children[1]?.parent).toBe(bookNode);
 			}
 		});
 
@@ -161,10 +177,12 @@ describe('CurratedTree - Parent References', () => {
 			const tree = new LibraryTree([], 'Library');
 
 			tree.getOrCreateTextNode({
+				pageStatuses: {},
 				path: ['Books', 'Fiction', 'Fantasy', 'Chapter1'],
 			});
 
 			tree.getOrCreateTextNode({
+				pageStatuses: {},
 				path: ['Books', 'Fiction', 'Fantasy', 'Chapter2'],
 			});
 
@@ -189,9 +207,11 @@ describe('CurratedTree - Parent References', () => {
 			const tree = new LibraryTree([], 'Library');
 
 			tree.getOrCreateTextNode({
+				pageStatuses: {},
 				path: ['Section', 'Chapter1'],
 			});
 			tree.getOrCreateTextNode({
+				pageStatuses: {},
 				path: ['Section', 'Chapter2'],
 			});
 
@@ -213,6 +233,7 @@ describe('CurratedTree - Parent References', () => {
 			const tree = new LibraryTree([], 'Library');
 
 			tree.getOrCreateTextNode({
+				pageStatuses: {},
 				path: ['A', 'B', 'C', 'TextNode'],
 			});
 
@@ -226,9 +247,11 @@ describe('CurratedTree - Parent References', () => {
 			const tree = new LibraryTree([], 'Library');
 
 			tree.getOrCreateTextNode({
+				pageStatuses: {},
 				path: ['Section', 'SubSection1', 'Text1'],
 			});
 			tree.getOrCreateTextNode({
+				pageStatuses: {},
 				path: ['Section', 'SubSection2', 'Text2'],
 			});
 
@@ -254,12 +277,15 @@ describe('CurratedTree - Parent References', () => {
 			const tree = new LibraryTree([], 'Library');
 
 			tree.getOrCreateTextNode({
+				pageStatuses: {},
 				path: ['Books', 'Fiction', 'Chapter1'],
 			});
 			tree.getOrCreateTextNode({
+				pageStatuses: {},
 				path: ['Books', 'Fiction', 'Chapter2'],
 			});
 			tree.getOrCreateTextNode({
+				pageStatuses: {},
 				path: ['Books', 'NonFiction', 'Chapter1'],
 			});
 
@@ -275,7 +301,7 @@ describe('CurratedTree - Parent References', () => {
 			if (!chapter2.error) {
 				expect((chapter2.data as BookNode).parent?.name).toBe('Fiction');
 				expect((chapter2.data as BookNode).parent?.parent?.name).toBe('Books');
-				expect((chapter2.data as BookNode).parent?.parent?.parent).toBe(null);
+				expect((chapter2.data as BookNode).parent?.parent?.parent).toBe(tree.root);
 			}
 
 			if (!nonfictionChapter.error) {

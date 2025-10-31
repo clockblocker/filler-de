@@ -1,3 +1,4 @@
+import { serializeTextNode } from "../../pure-functions/node";
 import type { SerializedText } from "../../types";
 import { NodeType } from "../../types";
 import { LibraryTree } from "../library-tree";
@@ -17,10 +18,13 @@ export const makeTreeFromTexts = (
 export const makeTextsFromTree = (tree: LibraryTree): SerializedText[] => {
 	const texts: SerializedText[] = [];
 	for (const { node, path } of dfs(tree.root)) {
-		if (node.type === NodeType.Text) {
+		if (node.type === NodeType.Book || node.type === NodeType.Scroll) {
+			// Use the path from DFS directly, prepending root name
+			const fullPath: TreePath = [tree.root.name, ...path];
+			const serialized = serializeTextNode(node, path);
 			texts.push({
-				pageStatuses: node.children.map((child) => child.status),
-				path: [tree.root.name, ...path],
+				...serialized,
+				path: fullPath,
 			});
 		}
 	}

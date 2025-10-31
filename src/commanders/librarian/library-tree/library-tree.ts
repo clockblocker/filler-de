@@ -166,7 +166,7 @@ export class LibraryTree {
 		return { data: endOfTheChain, error: false };
 	}
 
-	private getMaybeTextNode({ path }: { path: TreePath }): Maybe<TextNode> {
+	public getMaybeText({ path }: { path: TreePath }): Maybe<TextNode> {
 		const mbNode = this.getMaybeNode({ path });
 		if (!mbNode.error) {
 			if (
@@ -182,6 +182,46 @@ export class LibraryTree {
 		}
 
 		return { description: mbNode.description, error: true };
+	}
+
+	public getMaybePage({
+		textPath,
+		pageName,
+	}: {
+		textPath: TreePath;
+		pageName: string;
+	}): Maybe<PageNode> {
+		const mbTextNode = this.getMaybeText({ path: textPath });
+		if (mbTextNode.error) {
+			return {
+				description: `Text node at ${textPath.join("-")} not found: ${mbTextNode.description}`,
+				error: true,
+			};
+		}
+
+		const textNode = mbTextNode.data;
+		if (textNode.type !== NodeType.Book) {
+			return {
+				description: `Node at ${textPath.join("-")} is a ScrollNode, not a BookNode. Pages can only be accessed from BookNodes.`,
+				error: true,
+			};
+		}
+
+		const bookNode = textNode as BookNode;
+		const page = bookNode.children.find((p) => p.name === pageName);
+
+		if (!page) {
+			return {
+				description: `Page "${pageName}" not found in BookNode at ${textPath.join("-")}`,
+				error: true,
+			};
+		}
+
+		return { data: page, error: false };
+	}
+
+	private getMaybeTextNode({ path }: { path: TreePath }): Maybe<TextNode> {
+		return this.getMaybeText({ path });
 	}
 
 	private getMaybeChildNode({
@@ -259,7 +299,7 @@ export class LibraryTree {
 			return mbTextNode;
 		}
 
-		const parent = this.root;
+		let parent: SectionNode = this.root;
 		for (const name of path.slice(0, -1)) {
 			const mbNewSection = this.getOrCreateChildSectionNode({
 				name,
@@ -272,6 +312,8 @@ export class LibraryTree {
 					error: true,
 				};
 			}
+
+			parent = mbNewSection.data;
 		}
 
 		const pageNodes: PageNode[] = Object.entries(pageStatuses).map(
@@ -299,11 +341,17 @@ export class LibraryTree {
 						type: NodeType.Scroll,
 					};
 
+		// Add the text node to its parent's children
+		parent.children.push(textNode);
+
 		if (textNode.type === NodeType.Book) {
 			for (const page of pageNodes) {
 				page.parent = textNode;
 			}
 		}
+
+		// Fix parent references (root children should point to root)
+		this.initializeParents();
 
 		this.recomputeTreeStatuses();
 
@@ -335,7 +383,9 @@ export class LibraryTree {
 
 	initializeParents(): void {
 		this.root.parent = null;
+		// Root's children should point to root as their parent
 		for (const child of this.root.children) {
+			child.parent = this.root;
 			this.setNodeChildrensParentToNode(child);
 		}
 	}
@@ -411,7 +461,7 @@ export class LibraryTree {
 		status: NodeStatus;
 	} {
 		const cache: Record<string, NodeStatus> = initialCache;
-		function inner(node: TreeNode): NodeStatus {
+		const inner = (node: TreeNode): NodeStatus => {
 			switch (node.type) {
 				case NodeType.Page:
 				case NodeType.Scroll:
@@ -423,9 +473,14 @@ export class LibraryTree {
 						return cached;
 					}
 
-					const statuses = node.children.map((c) =>
-						this.computeNodeStatus(c),
-					);
+					// Empty sections/books should be NotStarted
+					if (node.children.length === 0) {
+						const status = NodeStatus.NotStarted;
+						cache[getNodeId(node)] = status;
+						return status;
+					}
+
+					const statuses = node.children.map((c) => inner(c));
 
 					const allDone = statuses.every((s) => s === "Done");
 					const allNotStarted = statuses.every(
@@ -442,7 +497,7 @@ export class LibraryTree {
 					return status;
 				}
 			}
-		}
+		};
 
 		return { cache, status: inner(node) };
 	}
@@ -455,92 +510,30 @@ export class LibraryTree {
 			return;
 		}
 
+		// Remove from parent's children
 		if (parent.type === NodeType.Section || parent.type === NodeType.Book) {
 			parent.children = parent.children.filter(
 				(c) => c.name !== node.name,
 			) as (SectionNode | BookNode | ScrollNode)[] | PageNode[];
 		}
 
+		// Clean up node's children
 		if (node.type === NodeType.Section || node.type === NodeType.Book) {
 			node.children = [];
 		}
 
 		node.parent = null;
+
+		// Recursively delete empty parent sections (but not root)
+		if (
+			parent &&
+			parent !== this.root &&
+			parent.type === NodeType.Section
+		) {
+			const sectionParent = parent as SectionNode;
+			if (sectionParent.children.length === 0) {
+				this.deleteNode(sectionParent);
+			}
+		}
 	}
 }
-
-// Handle root-level text nodes
-// if (path.length === 1) {
-// 	const textName = path[0];
-// 	const textIndex = this.root.children.findIndex(
-// 		(child) =>
-// 			child.type === NodeType.Text && child.name === textName,
-// 	);
-
-// 	if (textIndex !== -1) {
-// 		this.root.children.splice(textIndex, 1);
-// 	}
-// 	this.recomputeTreeStatuses();
-// 	return;
-// }
-
-// // Handle nested text nodes
-// const parentChain = this.getParentChain({ path });
-// if (parentChain.length === 0) {
-// 	return;
-// }
-
-// const textName = path[path.length - 1];
-// const parent = parentChain[0];
-
-// if (!parent || !textName) {
-// 	return;
-// }
-
-// // Delete the text node from its parent
-// const textIndex = parent.children.findIndex(
-// 	(child) => child.type === NodeType.Text && child.name === textName,
-// );
-
-// if (textIndex !== -1) {
-// 	parent.children.splice(textIndex, 1);
-// }
-
-// // Remove empty section nodes up the chain
-// for (let i = 0; i < parentChain.length; i++) {
-// 	const current = parentChain[i];
-// 	const isLastNode = i === parentChain.length - 1;
-
-// 	if (current && current.children.length === 0) {
-// 		if (isLastNode) {
-// 			// Last node in chain - remove from root if it's empty
-// 			const rootIndex = this.root.children.findIndex(
-// 				(child) =>
-// 					child.name === current.name &&
-// 					child.type === current.type,
-// 			);
-// 			if (rootIndex !== -1) {
-// 				this.root.children.splice(rootIndex, 1);
-// 			}
-// 		} else {
-// 			// Not the last node - remove from its parent
-// 			const grandParent = parentChain[i + 1];
-// 			if (grandParent) {
-// 				const sectionIndex = grandParent.children.findIndex(
-// 					(child) =>
-// 						child.name === current.name &&
-// 						child.type === current.type,
-// 				);
-
-// 				if (sectionIndex !== -1) {
-// 					grandParent.children.splice(sectionIndex, 1);
-// 				}
-// 			}
-// 		}
-// 	} else {
-// 		// Stop if we find a non-empty parent
-// 		break;
-// 	}
-// }
-
-// // Recompute statuses after deletion
