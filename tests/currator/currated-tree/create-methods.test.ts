@@ -4,7 +4,7 @@ import {
 	NodeStatus,
 	type SectionNode,
 	type SerializedText,
-	type TextNode,
+	type BookNode,
 	type TreePath,
 } from '../../../src/commanders/librarian/types';
 
@@ -60,10 +60,10 @@ describe('CurratedTree - Building from SerializedText', () => {
 			});
 
 			if (!allDone.error) {
-				expect((allDone.data as TextNode).status).toBe(NodeStatus.Done);
+				expect((allDone.data as BookNode).status).toBe(NodeStatus.Done);
 			}
 			if (!allNotStarted.error) {
-				expect((allNotStarted.data as TextNode).status).toBe(
+				expect((allNotStarted.data as BookNode).status).toBe(
 					NodeStatus.NotStarted
 				);
 			}
@@ -241,14 +241,14 @@ describe('CurratedTree - Building from SerializedText', () => {
 			});
 
 			if (!text1.error) {
-				const t1 = text1.data as TextNode;
+				const t1 = text1.data as BookNode;
 				expect(t1.children.every((p) => p.status === NodeStatus.Done)).toBe(
 					true
 				);
 			}
 
 			if (!text2.error) {
-				const t2 = text2.data as TextNode;
+				const t2 = text2.data as BookNode;
 				expect(t2.children.every((p) => p.status === NodeStatus.Done)).toBe(
 					true
 				);
@@ -276,7 +276,7 @@ describe('CurratedTree - Building from SerializedText', () => {
 			});
 
 			if (!text.error) {
-				const t = text.data as TextNode;
+				const t = text.data as BookNode;
 				expect(
 					t.children.every((p) => p.status === NodeStatus.NotStarted)
 				).toBe(true);

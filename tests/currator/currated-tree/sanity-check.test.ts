@@ -9,25 +9,25 @@ import { VALID_BRANCHES } from '../static/defined-branches';
 describe('Explict testing of all methods ', () => {
 	it('Basic operations on new tree', () => {
 		const tree = new LibraryTree([], 'Library');
-		expect(tree.getAllTexts()).toEqual([]);
+		expect(tree.getAllTextsInTree()).toEqual([]);
 
 		tree.addText({
 			pageStatuses: [NodeStatus.NotStarted],
 			path: ['Section', 'Text'],
 		});
-		expect(tree.getAllTexts()).toEqual([
+		expect(tree.getAllTextsInTree()).toEqual([
 			{ pageStatuses: [NodeStatus.NotStarted], path: ['Section', 'Text'] },
 		]);
 
 		tree.deleteText({ path: ['Section', 'Text'] });
-		expect(tree.getAllTexts()).toEqual([]);
+		expect(tree.getAllTextsInTree()).toEqual([]);
 	});
 
 	it('Basic operations on deep tree', () => {
 		const tree = new LibraryTree(VALID_BRANCHES.Avatar.texts, 'Library');
 		expect(
 			checkEqualityOfSerializedTexts(
-				tree.getAllTexts(),
+				tree.getAllTextsInTree(),
 				VALID_BRANCHES.Avatar.texts
 			)
 		).toBe(true);
@@ -35,7 +35,7 @@ describe('Explict testing of all methods ', () => {
 		tree.deleteText({ path: ['Avatar', 'Season_1', 'Episode_1'] });
 		expect(
 			checkEqualityOfSerializedTexts(
-				tree.getAllTexts(),
+				tree.getAllTextsInTree(),
 				VALID_BRANCHES.Avatar.texts.filter(
 					(text) => text.path.join('-') !== 'Avatar-Season_1-Episode_1'
 				)
@@ -48,7 +48,7 @@ describe('Explict testing of all methods ', () => {
 		});
 		expect(
 			checkEqualityOfSerializedTexts(
-				tree.getAllTexts(),
+				tree.getAllTextsInTree(),
 				VALID_BRANCHES.Avatar.texts
 			)
 		).toBe(true);

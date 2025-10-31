@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'bun:test';
 import { LibraryTree } from '../../../src/commanders/librarian/library-tree/library-tree';
 import {
+	type BookNode,
 	NodeStatus,
 	NodeType,
 	type SectionNode,
-	type TextNode,
 } from '../../../src/commanders/librarian/types';
 
 describe('CurratedTree - Status Computation', () => {
@@ -18,7 +18,7 @@ describe('CurratedTree - Status Computation', () => {
 			const text = tree.getMaybeNode({ path: ['Section', 'Text'] });
 			expect(!text.error).toBe(true);
 			if (!text.error) {
-				expect((text.data as TextNode).status).toBe(NodeStatus.NotStarted);
+				expect((text.data as BookNode).status).toBe(NodeStatus.NotStarted);
 			}
 		});
 
@@ -46,7 +46,7 @@ describe('CurratedTree - Status Computation', () => {
 			const text = tree.getMaybeNode({ path: ['Section', 'Text'] });
 			expect(!text.error).toBe(true);
 			if (!text.error) {
-				expect((text.data as TextNode).status).toBe(NodeStatus.Done);
+				expect((text.data as BookNode).status).toBe(NodeStatus.Done);
 			}
 		});
 
@@ -61,7 +61,7 @@ describe('CurratedTree - Status Computation', () => {
 			const text = tree.getMaybeNode({ path: ['Section', 'Text'] });
 			expect(!text.error).toBe(true);
 			if (!text.error) {
-				expect((text.data as TextNode).status).toBe(NodeStatus.InProgress);
+				expect((text.data as BookNode).status).toBe(NodeStatus.InProgress);
 			}
 		});
 
@@ -283,7 +283,7 @@ describe('CurratedTree - Status Computation', () => {
 				path: ['Books', 'Fiction', 'Chapter1'],
 			});
 			if (!chapter.error) {
-				const text = chapter.data as TextNode;
+				const text = chapter.data as BookNode;
 				text.children[0]!.status = NodeStatus.Done;
 
 				const result = tree.recomputeStatuses();
@@ -394,7 +394,7 @@ describe('CurratedTree - Status Computation', () => {
 
 			const text = tree.getMaybeNode({ path: ['Section', 'Text'] });
 			if (!text.error) {
-				expect((text.data as TextNode).status).toBe(NodeStatus.Done);
+				expect((text.data as BookNode).status).toBe(NodeStatus.Done);
 			}
 		});
 
