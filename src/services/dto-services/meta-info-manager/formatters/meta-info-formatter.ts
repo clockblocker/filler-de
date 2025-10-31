@@ -1,8 +1,5 @@
-import {
-	type MetaInfo,
-	MetaInfoSchema,
-} from "../../../../types/common-interface/dtos";
 import { reEscape } from "../../text-utils";
+import { type MetaInfo, MetaInfoSchema } from "../types";
 
 const META_SECTION_ID = "textfresser_meta_keep_me_invisible";
 const SECTION = "section";

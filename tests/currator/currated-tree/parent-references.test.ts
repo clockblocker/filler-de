@@ -3,11 +3,11 @@ import { LibraryTree } from '../../../src/commanders/librarian/library-tree/libr
 import {
 	type BookNode,
 	type BranchNode,
-	NodeStatus,
 	NodeType,
 	type SectionNode,
 	type TreePath,
 } from '../../../src/commanders/librarian/types';
+import { TextStatus } from '../../../src/types/common-interface/enums';
 
 describe('CurratedTree - Parent References', () => {
 	describe('Creating tree with existing nodes', () => {
@@ -15,7 +15,7 @@ describe('CurratedTree - Parent References', () => {
 			const tree = new LibraryTree(
 				[
 					{
-						pageStatuses: { 'Page1': NodeStatus.NotStarted },
+						pageStatuses: { 'Page1': TextStatus.NotStarted },
 						path: ['Section1', 'Text1'] as TreePath,
 					},
 				],
@@ -66,7 +66,7 @@ describe('CurratedTree - Parent References', () => {
 			const tree = new LibraryTree(
 				[
 					{
-						pageStatuses: { 'Page1': NodeStatus.NotStarted, 'Page2': NodeStatus.Done },
+						pageStatuses: { 'Page1': TextStatus.NotStarted, 'Page2': TextStatus.Done },
 						path: ['Section1', 'Text1'] as TreePath,
 					},
 				],
@@ -161,7 +161,7 @@ describe('CurratedTree - Parent References', () => {
 			const tree = new LibraryTree([], 'Library');
 
 			const result = tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.NotStarted, 'Page2': NodeStatus.Done },
+				pageStatuses: { 'Page1': TextStatus.NotStarted, 'Page2': TextStatus.Done },
 				path: ['Section', 'Text'],
 			});
 

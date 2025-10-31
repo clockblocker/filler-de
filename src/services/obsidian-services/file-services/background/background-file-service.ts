@@ -1,7 +1,10 @@
-import type { FileManager, Vault } from "obsidian";
+import type { FileManager, TFile, Vault } from "obsidian";
 import type { PrettyPath } from "../../../../types/common-interface/dtos";
 import { isReadonlyArray } from "../../../../types/helpers";
-import { splitPathToMdFileFromPrettyPath } from "../pathfinder";
+import {
+	splitPathFromAbstractFile,
+	splitPathToMdFileFromPrettyPath,
+} from "../pathfinder";
 import type { SplitPathToFolder } from "../types";
 import { AbstractFileHelper } from "./abstract-file-helper";
 
@@ -107,14 +110,28 @@ export class BackgroundFileService {
 		return await this.move(arg);
 	}
 
-	async ls(pathToFoulder: SplitPathToFolder): Promise<PrettyFileDto[]> {
-		const files =
+	async getReadersToAllMdFilesInFolder(
+		pathToFoulder: SplitPathToFolder,
+	): Promise<PrettyFileWithReader[]> {
+		const tFiles = await this.lsTfiles(pathToFoulder);
+
+		return tFiles.map((tfile) => ({
+			...splitPathFromAbstractFile(tfile),
+			readContent: async () => await this.vault.read(tfile),
+		}));
+	}
+
+	private async lsTfiles(pathToFoulder: SplitPathToFolder): Promise<TFile[]> {
+		const tFiles =
 			await this.abstractFileService.deepListMdFiles(pathToFoulder);
 
-		console.log(files);
-		return files;
+		return tFiles;
 	}
 }
+
+export type PrettyFileWithReader = PrettyPath & {
+	readContent: () => Promise<string>;
+};
 
 export type PrettyFileDto = PrettyPath & {
 	content?: string;

@@ -1,3 +1,4 @@
+import { TextStatus } from "../../../types/common-interface/enums";
 import type { Maybe } from "../../../types/common-interface/maybe";
 import {
 	areShallowEqual,
@@ -7,7 +8,6 @@ import {
 import {
 	type BookNode,
 	type LeafNode,
-	NodeStatus,
 	NodeType,
 	type PageNode,
 	type ScrollNode,
@@ -27,7 +27,7 @@ export class LibraryTree {
 			children: [],
 			name,
 			parent: null,
-			status: NodeStatus.NotStarted,
+			status: TextStatus.NotStarted,
 			type: NodeType.Section,
 		};
 
@@ -91,7 +91,7 @@ export class LibraryTree {
 
 	private setStatusOnNodeAndItsDescendants(
 		node: TreeNode,
-		status: NodeStatus,
+		status: TextStatus,
 	): void {
 		switch (node.type) {
 			case NodeType.Page:
@@ -274,7 +274,7 @@ export class LibraryTree {
 			children: [],
 			name,
 			parent,
-			status: NodeStatus.NotStarted,
+			status: TextStatus.NotStarted,
 			type: NodeType.Section,
 		};
 		parent.children.push(newSectionNode);
@@ -331,13 +331,13 @@ export class LibraryTree {
 						children: pageNodes,
 						name: newTextNodeName,
 						parent: parent,
-						status: NodeStatus.NotStarted,
+						status: TextStatus.NotStarted,
 						type: NodeType.Book,
 					}
 				: {
 						name: newTextNodeName,
 						parent: parent,
-						status: pageNodes[0]?.status ?? NodeStatus.NotStarted,
+						status: pageNodes[0]?.status ?? TextStatus.NotStarted,
 						type: NodeType.Scroll,
 					};
 
@@ -421,7 +421,7 @@ export class LibraryTree {
 	recomputeStatuses(
 		node: TreeNode,
 		affectedLeaves: LeafNode[] = [],
-		mbCache?: Record<string, NodeStatus>,
+		mbCache?: Record<string, TextStatus>,
 	): LeafNode[] {
 		const cache = mbCache ?? this.computeNodeStatus(this.root).cache;
 		const newStatus = cache[getNodeId(node)];
@@ -455,13 +455,13 @@ export class LibraryTree {
 	 */
 	computeNodeStatus(
 		node: TreeNode,
-		initialCache: Record<string, NodeStatus> = {},
+		initialCache: Record<string, TextStatus> = {},
 	): {
-		cache: Record<string, NodeStatus>;
-		status: NodeStatus;
+		cache: Record<string, TextStatus>;
+		status: TextStatus;
 	} {
-		const cache: Record<string, NodeStatus> = initialCache;
-		const inner = (node: TreeNode): NodeStatus => {
+		const cache: Record<string, TextStatus> = initialCache;
+		const inner = (node: TreeNode): TextStatus => {
 			switch (node.type) {
 				case NodeType.Page:
 				case NodeType.Scroll:
@@ -475,7 +475,7 @@ export class LibraryTree {
 
 					// Empty sections/books should be NotStarted
 					if (node.children.length === 0) {
-						const status = NodeStatus.NotStarted;
+						const status = TextStatus.NotStarted;
 						cache[getNodeId(node)] = status;
 						return status;
 					}
@@ -488,10 +488,10 @@ export class LibraryTree {
 					);
 
 					const status = allDone
-						? NodeStatus.Done
+						? TextStatus.Done
 						: allNotStarted
-							? NodeStatus.NotStarted
-							: NodeStatus.InProgress;
+							? TextStatus.NotStarted
+							: TextStatus.InProgress;
 
 					cache[getNodeId(node)] = status;
 					return status;

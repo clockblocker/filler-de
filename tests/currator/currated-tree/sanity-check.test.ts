@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { LibraryTree } from '../../../src/commanders/librarian/library-tree/library-tree';
 import { checkEqualityOfSerializedTexts } from '../../../src/commanders/librarian/pure-functions/serialized-text';
-import {
-	NodeStatus,
-} from '../../../src/commanders/librarian/types';
+import { TextStatus } from '../../../src/types/common-interface/enums';
 import { VALID_BRANCHES } from '../static/defined-branches';
 
 describe('Explict testing of all methods ', () => {
@@ -12,12 +10,12 @@ describe('Explict testing of all methods ', () => {
 		expect(tree.getAllTextsInTree()).toEqual([]);
 
 		tree.addText({
-			pageStatuses: { 'Text': NodeStatus.NotStarted },
+			pageStatuses: { 'Text': TextStatus.NotStarted },
 			path: ['Section', 'Text'],
 		});
 		// For ScrollNodes, serialization uses the node name as the page name
 		expect(tree.getAllTextsInTree()).toEqual([
-			{ pageStatuses: { 'Text': NodeStatus.NotStarted }, path: ['Section', 'Text'] },
+			{ pageStatuses: { 'Text': TextStatus.NotStarted }, path: ['Section', 'Text'] },
 		]);
 
 		tree.deleteText({ path: ['Section', 'Text'] });
@@ -44,7 +42,7 @@ describe('Explict testing of all methods ', () => {
 		).toBe(true);
 
 		tree.addText({
-			pageStatuses: { 'Episode_1': NodeStatus.NotStarted },
+			pageStatuses: { 'Episode_1': TextStatus.NotStarted },
 			path: ['Avatar', 'Season_1', 'Episode_1'],
 		});
 		expect(

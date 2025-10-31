@@ -2,10 +2,10 @@ import { describe, expect, it } from 'bun:test';
 import { LibraryTree } from '../../../src/commanders/librarian/library-tree/library-tree';
 import {
 	type BookNode,
-	NodeStatus,
 	NodeType,
 	type SectionNode,
 } from '../../../src/commanders/librarian/types';
+import { TextStatus } from '../../../src/types/common-interface/enums';
 
 describe('CurratedTree - Status Computation', () => {
 	describe('Status computation on tree creation', () => {
@@ -19,7 +19,7 @@ describe('CurratedTree - Status Computation', () => {
 			const text = tree.getMaybeNode({ path: ['Section', 'Text'] });
 			expect(!text.error).toBe(true);
 			if (!text.error) {
-				expect((text.data as BookNode).status).toBe(NodeStatus.NotStarted);
+				expect((text.data as BookNode).status).toBe(TextStatus.NotStarted);
 			}
 		});
 
@@ -44,7 +44,7 @@ describe('CurratedTree - Status Computation', () => {
 			expect(!section.error).toBe(true);
 			if (!section.error) {
 				expect((section.data as SectionNode).status).toBe(
-					NodeStatus.NotStarted
+					TextStatus.NotStarted
 				);
 			}
 		});
@@ -52,57 +52,57 @@ describe('CurratedTree - Status Computation', () => {
 		it('should compute Done status for text node with all pages Done', () => {
 			const tree = new LibraryTree([], 'Library');
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.Done, 'Page2': NodeStatus.Done },
+				pageStatuses: { 'Page1': TextStatus.Done, 'Page2': TextStatus.Done },
 				path: ['Section', 'Text'],
 			});
 
 			const text = tree.getMaybeNode({ path: ['Section', 'Text'] });
 			expect(!text.error).toBe(true);
 			if (!text.error) {
-				expect((text.data as BookNode).status).toBe(NodeStatus.Done);
+				expect((text.data as BookNode).status).toBe(TextStatus.Done);
 			}
 		});
 
 		it('should compute InProgress status for text node with mixed page statuses', () => {
 			const tree = new LibraryTree([], 'Library');
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.Done, 'Page2': NodeStatus.NotStarted },
+				pageStatuses: { 'Page1': TextStatus.Done, 'Page2': TextStatus.NotStarted },
 				path: ['Section', 'Text'],
 			});
 
 			const text = tree.getMaybeNode({ path: ['Section', 'Text'] });
 			expect(!text.error).toBe(true);
 			if (!text.error) {
-				expect((text.data as BookNode).status).toBe(NodeStatus.InProgress);
+				expect((text.data as BookNode).status).toBe(TextStatus.InProgress);
 			}
 		});
 
 		it('should propagate status to parent section based on children', () => {
 			const tree = new LibraryTree([], 'Library');
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.Done },
+				pageStatuses: { 'Page1': TextStatus.Done },
 				path: ['Section', 'Text1'],
 			});
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.Done },
+				pageStatuses: { 'Page1': TextStatus.Done },
 				path: ['Section', 'Text2'],
 			});
 
 			const section = tree.getMaybeNode({ path: ['Section'] });
 			expect(!section.error).toBe(true);
 			if (!section.error) {
-				expect((section.data as SectionNode).status).toBe(NodeStatus.Done);
+				expect((section.data as SectionNode).status).toBe(TextStatus.Done);
 			}
 		});
 
 		it('should propagate InProgress to parent when children have mixed statuses', () => {
 			const tree = new LibraryTree([], 'Library');
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.Done },
+				pageStatuses: { 'Page1': TextStatus.Done },
 				path: ['Section', 'Text1'],
 			});
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.NotStarted },
+				pageStatuses: { 'Page1': TextStatus.NotStarted },
 				path: ['Section', 'Text2'],
 			});
 
@@ -110,7 +110,7 @@ describe('CurratedTree - Status Computation', () => {
 			expect(!section.error).toBe(true);
 			if (!section.error) {
 				expect((section.data as SectionNode).status).toBe(
-					NodeStatus.InProgress
+					TextStatus.InProgress
 				);
 			}
 		});
@@ -118,11 +118,11 @@ describe('CurratedTree - Status Computation', () => {
 		it('should compute statuses correctly for nested sections', () => {
 			const tree = new LibraryTree([], 'Library');
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.Done },
+				pageStatuses: { 'Page1': TextStatus.Done },
 				path: ['Books', 'Fiction', 'Fantasy', 'Chapter1'],
 			});
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.Done },
+				pageStatuses: { 'Page1': TextStatus.Done },
 				path: ['Books', 'Fiction', 'Fantasy', 'Chapter2'],
 			});
 
@@ -133,13 +133,13 @@ describe('CurratedTree - Status Computation', () => {
 			const books = tree.getMaybeNode({ path: ['Books'] });
 
 			if (!fantasy.error) {
-				expect((fantasy.data as SectionNode).status).toBe(NodeStatus.Done);
+				expect((fantasy.data as SectionNode).status).toBe(TextStatus.Done);
 			}
 			if (!fiction.error) {
-				expect((fiction.data as SectionNode).status).toBe(NodeStatus.Done);
+				expect((fiction.data as SectionNode).status).toBe(TextStatus.Done);
 			}
 			if (!books.error) {
-				expect((books.data as SectionNode).status).toBe(NodeStatus.Done);
+				expect((books.data as SectionNode).status).toBe(TextStatus.Done);
 			}
 		});
 	});
@@ -148,46 +148,46 @@ describe('CurratedTree - Status Computation', () => {
 		it('should update section status to InProgress when adding a NotStarted text node', () => {
 			const tree = new LibraryTree([], 'Library');
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.Done },
+				pageStatuses: { 'Page1': TextStatus.Done },
 				path: ['Section', 'Text1'],
 			});
 
 			let section = tree.getMaybeNode({ path: ['Section'] });
 			expect(!section.error && (section.data as SectionNode).status).toBe(
-				NodeStatus.Done
+				TextStatus.Done
 			);
 
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.NotStarted },
+				pageStatuses: { 'Page1': TextStatus.NotStarted },
 				path: ['Section', 'Text2'],
 			});
 
 			section = tree.getMaybeNode({ path: ['Section'] });
 			expect(!section.error && (section.data as SectionNode).status).toBe(
-				NodeStatus.InProgress
+				TextStatus.InProgress
 			);
 		});
 
 		it('should update grandparent status when adding nested text', () => {
 			const tree = new LibraryTree([], 'Library');
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.Done },
+				pageStatuses: { 'Page1': TextStatus.Done },
 				path: ['Books', 'Fiction', 'Text1'],
 			});
 
 			let books = tree.getMaybeNode({ path: ['Books'] });
 			expect(!books.error && (books.data as SectionNode).status).toBe(
-				NodeStatus.Done
+				TextStatus.Done
 			);
 
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.NotStarted },
+				pageStatuses: { 'Page1': TextStatus.NotStarted },
 				path: ['Books', 'NonFiction', 'Text1'],
 			});
 
 			books = tree.getMaybeNode({ path: ['Books'] });
 			expect(!books.error && (books.data as SectionNode).status).toBe(
-				NodeStatus.InProgress
+				TextStatus.InProgress
 			);
 		});
 	});
@@ -196,24 +196,24 @@ describe('CurratedTree - Status Computation', () => {
 		it('should update section status when deleting a text node', () => {
 			const tree = new LibraryTree([], 'Library');
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.Done },
+				pageStatuses: { 'Page1': TextStatus.Done },
 				path: ['Section', 'Text1'],
 			});
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.Done },
+				pageStatuses: { 'Page1': TextStatus.Done },
 				path: ['Section', 'Text2'],
 			});
 
 			let section = tree.getMaybeNode({ path: ['Section'] });
 			expect(!section.error && (section.data as SectionNode).status).toBe(
-				NodeStatus.Done
+				TextStatus.Done
 			);
 
 			tree.deleteText({ path: ['Section', 'Text1'] });
 
 			section = tree.getMaybeNode({ path: ['Section'] });
 			expect(!section.error && (section.data as SectionNode).status).toBe(
-				NodeStatus.Done
+				TextStatus.Done
 			);
 
 			tree.deleteText({ path: ['Section', 'Text2'] });
@@ -226,13 +226,13 @@ describe('CurratedTree - Status Computation', () => {
 		it('should update parent status up the chain when deleting nodes', () => {
 			const tree = new LibraryTree([], 'Library');
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.Done },
+				pageStatuses: { 'Page1': TextStatus.Done },
 				path: ['Books', 'Fiction', 'Chapter1'],
 			});
 
 			let books = tree.getMaybeNode({ path: ['Books'] });
 			expect(!books.error && (books.data as SectionNode).status).toBe(
-				NodeStatus.Done
+				TextStatus.Done
 			);
 
 			tree.deleteText({ path: ['Books', 'Fiction', 'Chapter1'] });
@@ -245,24 +245,24 @@ describe('CurratedTree - Status Computation', () => {
 		it('should handle deletion of one child in a multi-child section', () => {
 			const tree = new LibraryTree([], 'Library');
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.Done },
+				pageStatuses: { 'Page1': TextStatus.Done },
 				path: ['Section', 'Text1'],
 			});
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.NotStarted },
+				pageStatuses: { 'Page1': TextStatus.NotStarted },
 				path: ['Section', 'Text2'],
 			});
 
 			let section = tree.getMaybeNode({ path: ['Section'] });
 			expect(!section.error && (section.data as SectionNode).status).toBe(
-				NodeStatus.InProgress
+				TextStatus.InProgress
 			);
 
 			tree.deleteText({ path: ['Section', 'Text1'] });
 
 			section = tree.getMaybeNode({ path: ['Section'] });
 			expect(!section.error && (section.data as SectionNode).status).toBe(
-				NodeStatus.NotStarted
+				TextStatus.NotStarted
 			);
 		});
 	});
@@ -271,7 +271,7 @@ describe('CurratedTree - Status Computation', () => {
 		it('should return affected leaves array', () => {
 			const tree = new LibraryTree([], 'Library');
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.NotStarted },
+				pageStatuses: { 'Page1': TextStatus.NotStarted },
 				path: ['Section', 'Text'],
 			});
 
@@ -283,7 +283,7 @@ describe('CurratedTree - Status Computation', () => {
 		it('should return affected leaves when statuses change', () => {
 			const tree = new LibraryTree([], 'Library');
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.NotStarted },
+				pageStatuses: { 'Page1': TextStatus.NotStarted },
 				path: ['Books', 'Fiction', 'Chapter1'],
 			});
 
@@ -295,9 +295,9 @@ describe('CurratedTree - Status Computation', () => {
 				// For a ScrollNode, change its status directly
 				if (chapter.data.type === NodeType.Book) {
 					const text = chapter.data as BookNode;
-					text.children[0]!.status = NodeStatus.Done;
+					text.children[0]!.status = TextStatus.Done;
 				} else {
-					chapter.data.status = NodeStatus.Done;
+					chapter.data.status = TextStatus.Done;
 				}
 
 				const result = tree.recomputeTreeStatuses();
@@ -314,15 +314,15 @@ describe('CurratedTree - Status Computation', () => {
 
 			// Create a complex structure
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.Done },
+				pageStatuses: { 'Page1': TextStatus.Done },
 				path: ['Root', 'A', 'A1', 'Text1'],
 			});
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.NotStarted },
+				pageStatuses: { 'Page1': TextStatus.NotStarted },
 				path: ['Root', 'A', 'A2', 'Text1'],
 			});
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.Done },
+				pageStatuses: { 'Page1': TextStatus.Done },
 				path: ['Root', 'B', 'B1', 'Text1'],
 			});
 
@@ -331,13 +331,13 @@ describe('CurratedTree - Status Computation', () => {
 			const b = tree.getMaybeNode({ path: ['Root', 'B'] });
 
 			if (!root.error) {
-				expect((root.data as SectionNode).status).toBe(NodeStatus.InProgress);
+				expect((root.data as SectionNode).status).toBe(TextStatus.InProgress);
 			}
 			if (!a.error) {
-				expect((a.data as SectionNode).status).toBe(NodeStatus.InProgress);
+				expect((a.data as SectionNode).status).toBe(TextStatus.InProgress);
 			}
 			if (!b.error) {
-				expect((b.data as SectionNode).status).toBe(NodeStatus.Done);
+				expect((b.data as SectionNode).status).toBe(TextStatus.Done);
 			}
 		});
 
@@ -346,28 +346,28 @@ describe('CurratedTree - Status Computation', () => {
 
 			// Add texts
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.Done },
+				pageStatuses: { 'Page1': TextStatus.Done },
 				path: ['Section', 'Text1'],
 			});
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.Done },
+				pageStatuses: { 'Page1': TextStatus.Done },
 				path: ['Section', 'Text2'],
 			});
 
 			let section = tree.getMaybeNode({ path: ['Section'] });
 			expect(!section.error && (section.data as SectionNode).status).toBe(
-				NodeStatus.Done
+				TextStatus.Done
 			);
 
 			// Add another text with NotStarted
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.NotStarted },
+				pageStatuses: { 'Page1': TextStatus.NotStarted },
 				path: ['Section', 'Text3'],
 			});
 
 			section = tree.getMaybeNode({ path: ['Section'] });
 			expect(!section.error && (section.data as SectionNode).status).toBe(
-				NodeStatus.InProgress
+				TextStatus.InProgress
 			);
 
 			// Delete one Done text
@@ -375,7 +375,7 @@ describe('CurratedTree - Status Computation', () => {
 
 			section = tree.getMaybeNode({ path: ['Section'] });
 			expect(!section.error && (section.data as SectionNode).status).toBe(
-				NodeStatus.InProgress
+				TextStatus.InProgress
 			);
 
 			// Delete remaining Done text
@@ -383,7 +383,7 @@ describe('CurratedTree - Status Computation', () => {
 
 			section = tree.getMaybeNode({ path: ['Section'] });
 			expect(!section.error && (section.data as SectionNode).status).toBe(
-				NodeStatus.NotStarted
+				TextStatus.NotStarted
 			);
 		});
 	});
@@ -392,7 +392,7 @@ describe('CurratedTree - Status Computation', () => {
 		it('should change status of a text node', () => {
 			const tree = new LibraryTree([], 'Library');
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.NotStarted },
+				pageStatuses: { 'Page1': TextStatus.NotStarted },
 				path: ['Section', 'Text'],
 			});
 
@@ -403,12 +403,12 @@ describe('CurratedTree - Status Computation', () => {
 
 			expect(result.error).toBe(false);
 			if (!result.error) {
-				expect(result.data.status).toBe(NodeStatus.Done);
+				expect(result.data.status).toBe(TextStatus.Done);
 			}
 
 			const text = tree.getMaybeNode({ path: ['Section', 'Text'] });
 			if (!text.error) {
-				expect((text.data as BookNode).status).toBe(NodeStatus.Done);
+				expect((text.data as BookNode).status).toBe(TextStatus.Done);
 			}
 		});
 
@@ -426,17 +426,17 @@ describe('CurratedTree - Status Computation', () => {
 		it('should propagate status change to parent section', () => {
 			const tree = new LibraryTree([], 'Library');
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.Done },
+				pageStatuses: { 'Page1': TextStatus.Done },
 				path: ['Section', 'Text1'],
 			});
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.Done },
+				pageStatuses: { 'Page1': TextStatus.Done },
 				path: ['Section', 'Text2'],
 			});
 
 			let section = tree.getMaybeNode({ path: ['Section'] });
 			expect(!section.error && (section.data as SectionNode).status).toBe(
-				NodeStatus.Done
+				TextStatus.Done
 			);
 
 			// Change one text to NotStarted
@@ -448,24 +448,24 @@ describe('CurratedTree - Status Computation', () => {
 			// Section should now be InProgress (mixed statuses)
 			section = tree.getMaybeNode({ path: ['Section'] });
 			expect(!section.error && (section.data as SectionNode).status).toBe(
-				NodeStatus.InProgress
+				TextStatus.InProgress
 			);
 		});
 
 		it('should propagate status change up multiple levels', () => {
 			const tree = new LibraryTree([], 'Library');
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.Done },
+				pageStatuses: { 'Page1': TextStatus.Done },
 				path: ['Books', 'Fiction', 'Chapter1'],
 			});
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.Done },
+				pageStatuses: { 'Page1': TextStatus.Done },
 				path: ['Books', 'Fiction', 'Chapter2'],
 			});
 
 			let books = tree.getMaybeNode({ path: ['Books'] });
 			expect(!books.error && (books.data as SectionNode).status).toBe(
-				NodeStatus.Done
+				TextStatus.Done
 			);
 
 			// Change a deeply nested text
@@ -479,28 +479,28 @@ describe('CurratedTree - Status Computation', () => {
 
 			// Fiction should be InProgress (Chapter1 NotStarted, Chapter2 Done)
 			expect(!fiction.error && (fiction.data as SectionNode).status).toBe(
-				NodeStatus.InProgress
+				TextStatus.InProgress
 			);
 			// Books should be InProgress too (Fiction is InProgress)
 			expect(!books.error && (books.data as SectionNode).status).toBe(
-				NodeStatus.InProgress
+				TextStatus.InProgress
 			);
 		});
 
 		it('should allow changing section status directly', () => {
 			const tree = new LibraryTree([], 'Library');
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.Done },
+				pageStatuses: { 'Page1': TextStatus.Done },
 				path: ['Section', 'Text1'],
 			});
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.NotStarted },
+				pageStatuses: { 'Page1': TextStatus.NotStarted },
 				path: ['Section', 'Text2'],
 			});
 
 			let section = tree.getMaybeNode({ path: ['Section'] });
 			expect(!section.error && (section.data as SectionNode).status).toBe(
-				NodeStatus.InProgress
+				TextStatus.InProgress
 			);
 
 			// Change section status directly (override computed status)
@@ -511,24 +511,24 @@ describe('CurratedTree - Status Computation', () => {
 
 			section = tree.getMaybeNode({ path: ['Section'] });
 			expect(!section.error && (section.data as SectionNode).status).toBe(
-				NodeStatus.Done
+				TextStatus.Done
 			);
 		});
 
 		it('should recompute parent status after changing multiple children', () => {
 			const tree = new LibraryTree([], 'Library');
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.NotStarted },
+				pageStatuses: { 'Page1': TextStatus.NotStarted },
 				path: ['Section', 'Text1'],
 			});
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.NotStarted },
+				pageStatuses: { 'Page1': TextStatus.NotStarted },
 				path: ['Section', 'Text2'],
 			});
 
 			let section = tree.getMaybeNode({ path: ['Section'] });
 			expect(!section.error && (section.data as SectionNode).status).toBe(
-				NodeStatus.NotStarted
+				TextStatus.NotStarted
 			);
 
 			// Change one text to Done
@@ -540,7 +540,7 @@ describe('CurratedTree - Status Computation', () => {
 			// Section should now be InProgress (mixed)
 			section = tree.getMaybeNode({ path: ['Section'] });
 			expect(!section.error && (section.data as SectionNode).status).toBe(
-				NodeStatus.InProgress
+				TextStatus.InProgress
 			);
 
 			// Change other text to Done too
@@ -552,24 +552,24 @@ describe('CurratedTree - Status Computation', () => {
 			// Section should now be Done (all Done)
 			section = tree.getMaybeNode({ path: ['Section'] });
 			expect(!section.error && (section.data as SectionNode).status).toBe(
-				NodeStatus.Done
+				TextStatus.Done
 			);
 		});
 
 		it('should handle status changes in complex nested structures', () => {
 			const tree = new LibraryTree([], 'Library');
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.Done },
+				pageStatuses: { 'Page1': TextStatus.Done },
 				path: ['Root', 'A', 'A1', 'Text1'],
 			});
 			tree.addText({
-				pageStatuses: { 'Page1': NodeStatus.Done },
+				pageStatuses: { 'Page1': TextStatus.Done },
 				path: ['Root', 'B', 'B1', 'Text1'],
 			});
 
 			const root = tree.getMaybeNode({ path: ['Root'] });
 			expect(!root.error && (root.data as SectionNode).status).toBe(
-				NodeStatus.Done
+				TextStatus.Done
 			);
 
 			// Change one nested text
@@ -583,11 +583,11 @@ describe('CurratedTree - Status Computation', () => {
 
 			// A should be NotStarted (all its texts are NotStarted)
 			expect(!a.error && (a.data as SectionNode).status).toBe(
-				NodeStatus.NotStarted
+				TextStatus.NotStarted
 			);
 			// Root should be InProgress (A is NotStarted, B is Done)
 			expect(!rootAfter.error && (rootAfter.data as SectionNode).status).toBe(
-				NodeStatus.InProgress
+				TextStatus.InProgress
 			);
 		});
 	});

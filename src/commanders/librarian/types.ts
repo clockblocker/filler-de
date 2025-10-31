@@ -1,10 +1,8 @@
 import { z } from "zod";
+import type { TextStatus } from "../../types/common-interface/enums";
 import {
 	BOOK,
 	CODEX,
-	DONE,
-	IN_PROGRESS,
-	NOT_STARTED,
 	PAGE,
 	SCROLL,
 	SECTION,
@@ -18,10 +16,6 @@ export type IndexedFileType = z.infer<typeof IndexedFileTypeSchema>;
 export const IndexedFileType = IndexedFileTypeSchema.enum;
 
 // Tree
-export const NodeStatusSchema = z.enum([DONE, NOT_STARTED, IN_PROGRESS]);
-export type NodeStatus = z.infer<typeof NodeStatusSchema>;
-export const NodeStatus = NodeStatusSchema.enum;
-
 export const NodeTypeSchema = z.enum([BOOK, SCROLL, SECTION, PAGE]);
 export type NodeType = z.infer<typeof NodeTypeSchema>;
 export const NodeType = NodeTypeSchema.enum;
@@ -30,7 +24,7 @@ export type TreePath = GuardedNodeName[];
 
 export type CommonNode = {
 	name: GuardedNodeName;
-	status: NodeStatus;
+	status: TextStatus;
 	type: NodeType;
 	parent: BranchNode | null;
 };
