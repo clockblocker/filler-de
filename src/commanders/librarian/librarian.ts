@@ -4,12 +4,14 @@ import { TextStatus } from "../../types/common-interface/enums";
 import { LibraryTree } from "./library-tree/library-tree";
 import type { PageDto, TextDto } from "./types";
 
+// [TODO]: Read this from settings
+const ROOTS = ["Library"] as const;
+type RootName = (typeof ROOTS)[number];
+
 export class Librarian {
 	backgroundFileService: TexfresserObsidianServices["backgroundFileService"];
 	openedFileService: TexfresserObsidianServices["openedFileService"];
-	trees: {
-		Library: LibraryTree;
-	};
+	trees: Record<RootName, LibraryTree>;
 
 	constructor({
 		backgroundFileService,
@@ -20,9 +22,7 @@ export class Librarian {
 	>) {
 		this.backgroundFileService = backgroundFileService;
 		this.openedFileService = openedFileService;
-		this.trees = {
-			Library: new LibraryTree([], "Library"),
-		};
+		this.initTrees();
 	}
 
 	private async readPagesInFolder(dirBasename: string) {
@@ -51,60 +51,56 @@ export class Librarian {
 		return pageDtos.filter((pageDto) => pageDto !== null);
 	}
 
-	private groupUpPages(pages: PageDto[]): Map<string, TextDto[]> {
-		const buckets: Map<string, Map<string, PageDto[]>> = new Map();
-		for (const page of pages) {
-			const pathToParent = page.pathToParent;
-			const rootName = pathToParent[0];
-			if (!rootName) {
-				continue;
-			}
-			const joinedPathToParent = pathToParent.slice(1).join("-");
-			const mbBucket = buckets.get(rootName);
-			if (!mbBucket) {
-				buckets.set(rootName, new Map([[joinedPathToParent, [page]]]));
-			} else {
-				const mbBook = mbBucket.get(joinedPathToParent);
-				if (!mbBook) {
-					mbBucket.set(joinedPathToParent, [page]);
-				} else {
-					mbBook.push(page);
-				}
-			}
-		}
-
-		const bucketedTexts: Map<string, TextDto[]> = new Map();
-
-		for (const [rootName, bucket] of buckets.entries()) {
-			for (const [joinedPathToParent, pages] of bucket.entries()) {
-				const path = joinedPathToParent.split("-");
-				const textDto: TextDto = {
-					pageStatuses: Object.fromEntries(
-						pages.map((page) => [page.name, page.status]),
-					),
-					path,
-				};
-				bucketedTexts[rootName].push(textDto);
-			}
-		}
-
-		return bucketedTexts;
-	}
-
 	private async initTrees() {
 		const pages: PageDto[] = [];
-		for (const name of Object.keys(this.trees)) {
+		for (const name of ROOTS) {
 			const pagesInFolder = await this.readPagesInFolder(name);
 			pages.concat(pagesInFolder);
 		}
 
-		const bucketedTexts = this.groupUpPages(pages);
-		for (const [rootName, textDtos] of bucketedTexts.entries()) {
-			const tree = this.trees[rootName];
-			if (!tree) {
-				this.trees[rootName] = new LibraryTree([], rootName);
-			}
-			tree.addTexts(textDtos);
+		const grouppedUpTexts = grouppedUpTextsFromPages(pages);
+		for (const [rootName, textDtos] of grouppedUpTexts.entries()) {
+			this.trees[rootName] = new LibraryTree(textDtos, rootName);
 		}
 	}
+}
+
+function grouppedUpTextsFromPages(pages: PageDto[]): Map<RootName, TextDto[]> {
+	const buckets: Map<string, Map<string, PageDto[]>> = new Map();
+	for (const page of pages) {
+		const pathToParent = page.pathToParent;
+		const rootName = pathToParent[0];
+		if (!rootName) {
+			continue;
+		}
+		const joinedPathToParent = pathToParent.slice(1).join("-");
+		const mbBucket = buckets.get(rootName);
+		if (!mbBucket) {
+			buckets.set(rootName, new Map([[joinedPathToParent, [page]]]));
+		} else {
+			const mbBook = mbBucket.get(joinedPathToParent);
+			if (!mbBook) {
+				mbBucket.set(joinedPathToParent, [page]);
+			} else {
+				mbBook.push(page);
+			}
+		}
+	}
+
+	const grouppedUpTexts: Map<RootName, TextDto[]> = new Map();
+
+	for (const [rootName, bucket] of buckets.entries()) {
+		for (const [joinedPathToParent, pages] of bucket.entries()) {
+			const path = joinedPathToParent.split("-");
+			const textDto: TextDto = {
+				pageStatuses: Object.fromEntries(
+					pages.map((page) => [page.name, page.status]),
+				),
+				path,
+			};
+			grouppedUpTexts[rootName].push(textDto);
+		}
+	}
+
+	return grouppedUpTexts;
 }
