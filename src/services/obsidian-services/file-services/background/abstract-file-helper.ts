@@ -3,10 +3,7 @@ import {
 	type Maybe,
 	unwrapMaybeByThrowing,
 } from "../../../../types/common-interface/maybe";
-import {
-	splitPathFromAbstractFile,
-	systemPathFromSplitPath,
-} from "../pathfinder";
+import { systemPathFromSplitPath } from "../pathfinder";
 import type {
 	AbstractFile,
 	FileFromTo,

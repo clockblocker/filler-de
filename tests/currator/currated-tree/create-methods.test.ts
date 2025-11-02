@@ -109,7 +109,7 @@ describe('CurratedTree - Building from SerializedText', () => {
 				expect(result.data.name).toBe('Text');
 				expect(result.data.status).toBe(TextStatus.Done);
 				// For a single page, it should be a ScrollNode (no children)
-				if (result.data.type === NodeType.Book) {
+				if (result.data.type === NodeType.Text) {
 					expect(result.data.children.length).toBe(1);
 				}
 			}
@@ -232,7 +232,7 @@ describe('CurratedTree - Building from SerializedText', () => {
 
 			if (!text2.error) {
 				// Text2 is a ScrollNode (single page), so check its status directly
-				if (text2.data.type === NodeType.Book) {
+				if (text2.data.type === NodeType.Text) {
 					const t2 = text2.data as BookNode;
 					expect(t2.children.every((p) => p.status === TextStatus.Done)).toBe(
 						true

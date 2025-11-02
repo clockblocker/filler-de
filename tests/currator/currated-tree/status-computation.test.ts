@@ -293,7 +293,7 @@ describe('CurratedTree - Status Computation', () => {
 			});
 			if (!chapter.error) {
 				// For a ScrollNode, change its status directly
-				if (chapter.data.type === NodeType.Book) {
+				if (chapter.data.type === NodeType.Text) {
 					const text = chapter.data as BookNode;
 					text.children[0]!.status = TextStatus.Done;
 				} else {

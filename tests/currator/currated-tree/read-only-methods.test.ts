@@ -37,7 +37,7 @@ describe('CurratedTree - Read-only methods', () => {
 			const text = tree.getMaybeText({ path: ['Intro'] as TreePath });
 			expect(text.error).toBe(false);
 			if (!text.error) {
-				expect(text.data.type).toBe(NodeType.Book);
+				expect(text.data.type).toBe(NodeType.Text);
 			}
 		});
 
@@ -49,8 +49,7 @@ describe('CurratedTree - Read-only methods', () => {
 			expect(text.error).toBe(false);
 			if (!text.error) {
 				expect(
-					text.data.type === NodeType.Book ||
-						text.data.type === NodeType.Scroll
+					text.data.type === NodeType.Text 
 				).toBe(true);
 			}
 		});
@@ -62,7 +61,7 @@ describe('CurratedTree - Read-only methods', () => {
 			});
 			expect(text.error).toBe(false);
 			if (!text.error) {
-				expect(text.data.type).toBe(NodeType.Book);
+				expect(text.data.type).toBe(NodeType.Text);
 			}
 		});
 

@@ -205,8 +205,7 @@ export default class TextEaterPlugin extends Plugin {
 		this.addCommand({
 			editorCheckCallback: () => {
 				const librarianTester = new LibrarianTester(this.librarian);
-				// librarianTester.testFileMethods();
-				librarianTester.testLs();
+				librarianTester.testFileMethods();
 			},
 			id: "get-infinitive-and-emoji",
 			name: "Get infinitive/normal form and emoji for current word",

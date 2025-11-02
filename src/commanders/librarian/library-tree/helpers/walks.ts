@@ -17,12 +17,9 @@ export function* bfs(
 		const item = queue.shift();
 		if (!item) break;
 		const { node, path } = item;
-		if (
-			"type" in node &&
-			(node.type === NodeType.Book || node.type === NodeType.Scroll)
-		) {
+		if ("type" in node && node.type === NodeType.Text) {
 			yield { node, path };
-			if (node.type === NodeType.Book) {
+			if (node.type === NodeType.Text) {
 				for (const page of node.children) {
 					yield { node: page, path: [...path, page.name.toString()] };
 				}
@@ -40,12 +37,9 @@ export function* dfs(
 	root: BranchNode,
 ): Generator<{ node: TreeNode; path: TreePath }> {
 	function* traverse(node: TreeNode, path: TreePath) {
-		if (
-			"type" in node &&
-			(node.type === NodeType.Book || node.type === NodeType.Scroll)
-		) {
+		if ("type" in node && node.type === NodeType.Text) {
 			yield { node, path };
-			if (node.type === NodeType.Book) {
+			if (node.type === NodeType.Text) {
 				for (const page of node.children) {
 					yield { node: page, path: [...path, page.name.toString()] };
 				}

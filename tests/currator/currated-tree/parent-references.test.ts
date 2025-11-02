@@ -76,7 +76,7 @@ describe('CurratedTree - Parent References', () => {
 			const section1 = tree.root.children[0];
 			const text1 = (section1 as SectionNode).children[0];
 			// With multiple pages, it's a BookNode
-			if (text1?.type === NodeType.Book) {
+			if (text1?.type === NodeType.Text) {
 				const bookNode = text1;
 				const page1 = bookNode.children[0];
 				expect(section1?.parent).toBe(tree.root);
@@ -166,7 +166,7 @@ describe('CurratedTree - Parent References', () => {
 			});
 
 			expect(result.error).toBe(false);
-			if (!result.error && result.data.type === NodeType.Book) {
+			if (!result.error && result.data.type === NodeType.Text) {
 				const bookNode = result.data as BookNode;
 				expect(bookNode.children[0]?.parent).toBe(bookNode);
 				expect(bookNode.children[1]?.parent).toBe(bookNode);

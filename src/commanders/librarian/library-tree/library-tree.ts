@@ -30,13 +30,7 @@ export class LibraryTree {
 			type: NodeType.Section,
 		};
 
-		// Build tree from serialized texts
-		for (const serializedText of serializedTexts) {
-			this.addText(serializedText);
-		}
-
-		// Compute initial statuses for all nodes
-		this.recomputeTreeStatuses();
+		this.addTexts(serializedTexts);
 	}
 
 	public getTexts(path: TreePath): TextDto[] {
@@ -53,20 +47,32 @@ export class LibraryTree {
 		return this.getTexts([]);
 	}
 
-	public addText(serializedText: TextDto): Maybe<TextNode> {
-		const newText = this.getOrCreateTextNode(serializedText);
+	public addTexts(serializedTexts: TextDto[]): void {
+		for (const serializedText of serializedTexts) {
+			this.addText(serializedText);
+		}
+		this.initializeParents();
 		this.recomputeTreeStatuses();
+	}
+
+	public deleteTexts(paths: { path: TreePath }[]): void {
+		for (const path of paths) {
+			this.deleteText(path);
+		}
+		this.initializeParents();
+		this.recomputeTreeStatuses();
+	}
+
+	private addText(serializedText: TextDto): Maybe<TextNode> {
+		const newText = this.getOrCreateTextNode(serializedText);
 		return newText;
 	}
 
-	public deleteText({ path }: { path: TreePath }): void {
+	private deleteText({ path }: { path: TreePath }): void {
 		const mbTextNode = this.getMaybeTextNode({ path });
 		if (mbTextNode.error) {
 			return;
 		}
-
-		this.deleteNode(mbTextNode.data);
-		this.recomputeTreeStatuses();
 	}
 
 	public changeStatus({
@@ -96,7 +102,7 @@ export class LibraryTree {
 			case NodeType.Page:
 				node.status = status;
 				break;
-			case NodeType.Book: {
+			case NodeType.Text: {
 				const bookNode = node;
 				for (const page of bookNode.children) {
 					page.status = status;
@@ -167,7 +173,7 @@ export class LibraryTree {
 	public getMaybeText({ path }: { path: TreePath }): Maybe<TextNode> {
 		const mbNode = this.getMaybeNode({ path });
 		if (!mbNode.error) {
-			if (mbNode.data.type === NodeType.Book) {
+			if (mbNode.data.type === NodeType.Text) {
 				return { data: mbNode.data, error: false };
 			}
 			return {
@@ -195,7 +201,7 @@ export class LibraryTree {
 		}
 
 		const textNode = mbTextNode.data;
-		if (textNode.type !== NodeType.Book) {
+		if (textNode.type !== NodeType.Text) {
 			return {
 				description: `Node at ${textPath.join("-")} is a ScrollNode, not a BookNode. Pages can only be accessed from BookNodes.`,
 				error: true,
@@ -319,7 +325,7 @@ export class LibraryTree {
 			name: newTextNodeName,
 			parent: parent,
 			status: TextStatus.NotStarted,
-			type: NodeType.Book,
+			type: NodeType.Text,
 		};
 
 		// Add the text node to its parent's children
@@ -328,11 +334,6 @@ export class LibraryTree {
 		for (const page of pageNodes) {
 			page.parent = textNode;
 		}
-
-		// Fix parent references (root children should point to root)
-		this.initializeParents();
-
-		this.recomputeTreeStatuses();
 
 		return { data: textNode, error: false };
 	}
@@ -344,7 +345,7 @@ export class LibraryTree {
 			switch (node.type) {
 				case NodeType.Page:
 					return;
-				case NodeType.Book:
+				case NodeType.Text:
 					textNodes.push(node);
 					break;
 				case NodeType.Section:
@@ -372,7 +373,7 @@ export class LibraryTree {
 		switch (node.type) {
 			case NodeType.Page:
 				break;
-			case NodeType.Book: {
+			case NodeType.Text: {
 				const bookNode = node;
 				for (const page of bookNode.children) {
 					page.parent = bookNode;
@@ -442,7 +443,7 @@ export class LibraryTree {
 			switch (node.type) {
 				case NodeType.Page:
 					return node.status;
-				case NodeType.Book:
+				case NodeType.Text:
 				case NodeType.Section: {
 					const cached = cache[getNodeId(node)];
 					if (cached) {
@@ -487,14 +488,14 @@ export class LibraryTree {
 		}
 
 		// Remove from parent's children
-		if (parent.type === NodeType.Section || parent.type === NodeType.Book) {
+		if (parent.type === NodeType.Section || parent.type === NodeType.Text) {
 			parent.children = parent.children.filter(
 				(c) => c.name !== node.name,
 			) as (SectionNode | BookNode)[] | PageNode[];
 		}
 
 		// Clean up node's children
-		if (node.type === NodeType.Section || node.type === NodeType.Book) {
+		if (node.type === NodeType.Section || node.type === NodeType.Text) {
 			node.children = [];
 		}
 

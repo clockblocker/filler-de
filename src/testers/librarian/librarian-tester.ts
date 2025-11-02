@@ -16,10 +16,6 @@ export class LibrarianTester {
 		await this.trashE2();
 	}
 
-	async testLs() {
-		await this.librarian.ls();
-	}
-
 	private async createAvatarS1E1() {
 		this.librarian.backgroundFileService.create([
 			testLibrary.avatar.codex,

@@ -6,17 +6,24 @@ import {
 	PAGE,
 	SCROLL,
 	SECTION,
+	TEXT,
 	UNMARKED,
 } from "../../types/literals";
 import type { GuardedNodeName } from "./formatters";
 
 // Naming
-export const IndexedFileTypeSchema = z.enum([BOOK, SCROLL, CODEX, UNMARKED]);
+export const IndexedFileTypeSchema = z.enum([
+	BOOK,
+	SCROLL,
+	CODEX,
+	PAGE,
+	UNMARKED,
+]);
 export type IndexedFileType = z.infer<typeof IndexedFileTypeSchema>;
 export const IndexedFileType = IndexedFileTypeSchema.enum;
 
 // Tree
-export const NodeTypeSchema = z.enum([BOOK, SCROLL, SECTION, PAGE]);
+export const NodeTypeSchema = z.enum([TEXT, SECTION, PAGE]);
 export type NodeType = z.infer<typeof NodeTypeSchema>;
 export const NodeType = NodeTypeSchema.enum;
 
@@ -34,7 +41,7 @@ export type PageNode = CommonNode & {
 };
 
 export type BookNode = CommonNode & {
-	type: typeof NodeType.Book;
+	type: typeof NodeType.Text;
 	children: PageNode[];
 };
 

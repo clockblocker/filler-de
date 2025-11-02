@@ -49,7 +49,7 @@ export function serializeTextNode(
 ): TextDto {
 	const path = providedPath ?? computeNodePath(node);
 	const pageStatuses =
-		node.type === NodeType.Book
+		node.type === NodeType.Text
 			? Object.fromEntries(
 					node.children.map(({ name, status }) => [name, status]),
 				)
