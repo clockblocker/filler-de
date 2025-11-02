@@ -15,7 +15,7 @@ describe('CurratedTree - deleteText', () => {
 		});
 		expect(foundBefore.error).toBe(false);
 
-		tree.deleteText({ path: ['Intro'] as TreePath });
+		tree.deleteTexts([{ path: ['Intro'] as TreePath }]);
 
 		const foundAfter = tree.getMaybeNode({
 			path: ['Intro'] as TreePath,
@@ -30,7 +30,7 @@ describe('CurratedTree - deleteText', () => {
 		});
 		expect(foundBefore.error).toBe(false);
 
-		tree.deleteText({ path: ['Avatar', 'Season_1', 'Episode_1'] as TreePath });
+		tree.deleteTexts([{ path: ['Avatar', 'Season_1', 'Episode_1'] as TreePath }]);
 
 		const foundAfter = tree.getMaybeNode({
 			path: ['Avatar', 'Season_1', 'Episode_1'] as TreePath,
@@ -45,7 +45,7 @@ describe('CurratedTree - deleteText', () => {
 
 	it('should do nothing when deleting non-existent text (wrong root child)', () => {
 		const tree = new LibraryTree(VALID_BRANCHES.Avatar.texts, 'Library');
-		tree.deleteText({ path: ['NotARealThing'] as TreePath });
+		tree.deleteTexts([{ path: ['NotARealThing'] as TreePath }]);
 		// Should not throw or change tree
 		expect(
 			tree.getMaybeNode({ path: ['NotARealThing'] as TreePath }).error
@@ -58,7 +58,7 @@ describe('CurratedTree - deleteText', () => {
 
 	it('should do nothing when deleting non-existent deeply nested text', () => {
 		const tree = new LibraryTree(VALID_BRANCHES.Avatar.texts, 'Library');
-		tree.deleteText({ path: ['Avatar', 'Season_2', 'Episode_9'] as TreePath });
+		tree.deleteTexts([{ path: ['Avatar', 'Season_2', 'Episode_9'] as TreePath }]);
 		expect(
 			tree.getMaybeNode({
 				path: ['Avatar', 'Season_2', 'Episode_9'] as TreePath,
@@ -82,7 +82,7 @@ describe('CurratedTree - deleteText', () => {
 			false
 		);
 
-		tree.deleteText({ path: ['A', 'B', 'C'] as TreePath });
+		tree.deleteTexts([{ path: ['A', 'B', 'C'] as TreePath }]);
 
 		// All chain gone except root ("A" and "B" should be deleted too)
 		expect(tree.getMaybeNode({ path: ['A', 'B', 'C'] as TreePath }).error).toBe(

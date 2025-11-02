@@ -12,13 +12,13 @@ describe('CurratedTree - add and remove all texts cycle', () => {
 
 		// Step 2: remove every text from tree, iterating by AVATAR_TEXTS
 		for (const text of AVATAR_TEXTS) {
-			initialTree.deleteText({ path: text.path });
+			initialTree.deleteTexts([{ path: text.path }]);
 		}
 		// Tree is now empty except root
 
 		// Step 3: add text to tree, iterating by AVATAR_TEXTS
 		for (const text of AVATAR_TEXTS) {
-			initialTree.addText(text);
+			initialTree.addTexts([text]);
 		}
 
 		// Step 4: compare the resulting tree to freshly-created one from AVATAR_TEXTS

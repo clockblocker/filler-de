@@ -102,31 +102,23 @@ describe('CurratedTree - Building from SerializedText', () => {
 				path: ['Section', 'Text'] as TreePath,
 			};
 
-			const result = tree.addText(serialized);
+			const result = tree.addTexts([serialized]);
 
-			expect(result.error).toBe(false);
-			if (!result.error) {
-				expect(result.data.name).toBe('Text');
-				expect(result.data.status).toBe(TextStatus.Done);
-				// For a single page, it should be a ScrollNode (no children)
-				if (result.data.type === NodeType.Text) {
-					expect(result.data.children.length).toBe(1);
-				}
-			}
+			expect(tree.getAllTextsInTree()).toEqual([serialized]);
 		});
 
 		it('should add multiple texts incrementally', () => {
 			const tree = new LibraryTree([], 'Library');
 
-			tree.addText({
+			tree.addTexts([{
 				pageStatuses: { 'Page1': TextStatus.Done },
 				path: ['A', 'Text1'] as TreePath,
-			});
+			}]);
 
-			tree.addText({
+			tree.addTexts([{
 				pageStatuses: { 'Page1': TextStatus.NotStarted },
 				path: ['A', 'Text2'] as TreePath,
-			});
+			}]);
 
 			const a = tree.getMaybeNode({ path: ['A'] });
 			if (!a.error) {
@@ -138,10 +130,10 @@ describe('CurratedTree - Building from SerializedText', () => {
 		it('should recompute statuses after adding text', () => {
 			const tree = new LibraryTree([], 'Library');
 
-			tree.addText({
+			tree.addTexts([{
 				pageStatuses: { 'Page1': TextStatus.Done },
 				path: ['Section', 'Text'] as TreePath,
-			});
+			}]);
 
 			const section = tree.getMaybeNode({ path: ['Section'] });
 			expect(!section.error && (section.data as SectionNode).status).toBe(

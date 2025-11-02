@@ -9,16 +9,16 @@ describe('Explict testing of all methods ', () => {
 		const tree = new LibraryTree([], 'Library');
 		expect(tree.getAllTextsInTree()).toEqual([]);
 
-		tree.addText({
+		tree.addTexts([{
 			pageStatuses: { 'Text': TextStatus.NotStarted },
 			path: ['Section', 'Text'],
-		});
+		}]);
 		// For ScrollNodes, serialization uses the node name as the page name
 		expect(tree.getAllTextsInTree()).toEqual([
 			{ pageStatuses: { 'Text': TextStatus.NotStarted }, path: ['Section', 'Text'] },
 		]);
 
-		tree.deleteText({ path: ['Section', 'Text'] });
+		tree.deleteTexts([{ path: ['Section', 'Text'] }]);
 		expect(tree.getAllTextsInTree()).toEqual([]);
 	});
 
@@ -31,7 +31,7 @@ describe('Explict testing of all methods ', () => {
 			)
 		).toBe(true);
 
-		tree.deleteText({ path: ['Avatar', 'Season_1', 'Episode_1'] });
+		tree.deleteTexts([{ path: ['Avatar', 'Season_1', 'Episode_1'] }]);
 		expect(
 			checkEqualityOfSerializedTexts(
 				tree.getAllTextsInTree(),
@@ -41,10 +41,10 @@ describe('Explict testing of all methods ', () => {
 			)
 		).toBe(true);
 
-		tree.addText({
+		tree.addTexts([{
 			pageStatuses: { 'Episode_1': TextStatus.NotStarted },
 			path: ['Avatar', 'Season_1', 'Episode_1'],
-		});
+		}]);
 		expect(
 			checkEqualityOfSerializedTexts(
 				tree.getAllTextsInTree(),

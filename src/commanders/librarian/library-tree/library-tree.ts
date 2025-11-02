@@ -73,6 +73,7 @@ export class LibraryTree {
 		if (mbTextNode.error) {
 			return;
 		}
+		this.deleteNode(mbTextNode.data);
 	}
 
 	public changeStatus({

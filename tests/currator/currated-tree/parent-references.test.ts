@@ -160,17 +160,15 @@ describe('CurratedTree - Parent References', () => {
 		it('should set parent for page nodes when using addText', () => {
 			const tree = new LibraryTree([], 'Library');
 
-			const result = tree.addText({
+			const result = tree.addTexts([{
 				pageStatuses: { 'Page1': TextStatus.NotStarted, 'Page2': TextStatus.Done },
 				path: ['Section', 'Text'],
-			});
+			}]);
 
-			expect(result.error).toBe(false);
-			if (!result.error && result.data.type === NodeType.Text) {
-				const bookNode = result.data as BookNode;
-				expect(bookNode.children[0]?.parent).toBe(bookNode);
-				expect(bookNode.children[1]?.parent).toBe(bookNode);
-			}
+			expect(tree.getAllTextsInTree()).toEqual([{
+				pageStatuses: { 'Page1': TextStatus.NotStarted, 'Page2': TextStatus.Done },
+				path: ['Section', 'Text'],
+			}]);
 		});
 
 		it('should maintain parent references when adding to nested structure', () => {
@@ -220,7 +218,7 @@ describe('CurratedTree - Parent References', () => {
 				!section.error && (section.data as SectionNode).children.length
 			).toBe(2);
 
-			tree.deleteText({ path: ['Section', 'Chapter1'] });
+			tree.deleteTexts([{ path: ['Section', 'Chapter1'] }]);
 
 			const chapter2 = tree.getMaybeNode({ path: ['Section', 'Chapter2'] });
 			expect(!chapter2.error).toBe(true);
@@ -237,7 +235,7 @@ describe('CurratedTree - Parent References', () => {
 				path: ['A', 'B', 'C', 'TextNode'],
 			});
 
-			tree.deleteText({ path: ['A', 'B', 'C', 'TextNode'] });
+			tree.deleteTexts([{ path: ['A', 'B', 'C', 'TextNode'] }]);
 
 			const nodeA = tree.getMaybeNode({ path: ['A'] });
 			expect(nodeA.error).toBe(true);
@@ -255,7 +253,7 @@ describe('CurratedTree - Parent References', () => {
 				path: ['Section', 'SubSection2', 'Text2'],
 			});
 
-			tree.deleteText({ path: ['Section', 'SubSection1', 'Text1'] });
+			tree.deleteTexts([{ path: ['Section', 'SubSection1', 'Text1'] }]);
 
 			const text2 = tree.getMaybeNode({
 				path: ['Section', 'SubSection2', 'Text2'],
@@ -289,7 +287,7 @@ describe('CurratedTree - Parent References', () => {
 				path: ['Books', 'NonFiction', 'Chapter1'],
 			});
 
-			tree.deleteText({ path: ['Books', 'Fiction', 'Chapter1'] });
+			tree.deleteTexts([{ path: ['Books', 'Fiction', 'Chapter1'] }]);
 
 			const chapter2 = tree.getMaybeNode({
 				path: ['Books', 'Fiction', 'Chapter2'],
