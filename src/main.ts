@@ -3,7 +3,6 @@ import {
 	type MarkdownView,
 	Plugin,
 	type TAbstractFile,
-	TFile,
 	type WorkspaceLeaf,
 } from "obsidian";
 import { Librarian } from "./commanders/librarian/librarian";
@@ -19,7 +18,6 @@ import { ACTION_CONFIGS } from "./services/wip-configs/actions/actions-config";
 // import { VaultCurrator } from './obsidian-related/obsidian-services/managers/vault-currator';
 import addBacklinksToCurrentFile from "./services/wip-configs/actions/old/addBacklinksToCurrentFile";
 import { makeClickListener } from "./services/wip-configs/event-listeners/click-listener/click-listener";
-import { onNewFileThenRun } from "./services/wip-configs/event-listeners/create-new-file-listener/run-on-new-file";
 import { SettingsTab } from "./settings";
 import { LibrarianTester } from "./testers/librarian/librarian-tester";
 import { DEFAULT_SETTINGS, type TextEaterSettings } from "./types";
@@ -89,19 +87,15 @@ export default class TextEaterPlugin extends Plugin {
 	 */
 	private whenMetadataResolved(): Promise<void> {
 		return new Promise((resolve) => {
-			// Best-effort fast path: if it's already finished, Obsidian
-			// won't fire "resolved" again; listen once and also set a backup microtask.
 			let resolved = false;
 
-			const off = this.app.metadataCache.on("resolved", () => {
+			this.app.metadataCache.on("resolved", () => {
 				if (resolved) return;
 				resolved = true;
 				this.app.metadataCache.off("resolved", () => null);
 				resolve();
 			});
 
-			// In practice "resolved" should always fire. As an extra guard,
-			// if metadata is effectively available (no official flag), we resolve next tick.
 			queueMicrotask(() => {
 				if (!resolved && this.hasUsableMetadataSignal()) {
 					resolved = true;
@@ -112,18 +106,8 @@ export default class TextEaterPlugin extends Plugin {
 		});
 	}
 
-	/**
-	 * Heuristic: treat metadata as usable once there are files and no initial scans pending.
-	 * (There’s no public boolean; this just prevents getting stuck if the event already fired.)
-	 */
 	private hasUsableMetadataSignal(): boolean {
-		// Vault has files? If yes, we can usually proceed safely.
-		// This is conservative and only used as a fallback.
-		const hasFiles = false;
-		this.app.vault
-			.getAllLoadedFiles()
-			.some((_f: TAbstractFile) => hasFiles);
-		return hasFiles;
+		return !!this.app.vault.getRoot();
 	}
 
 	private sleep(ms: number) {
