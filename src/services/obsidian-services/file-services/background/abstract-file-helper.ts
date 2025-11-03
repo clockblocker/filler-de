@@ -114,7 +114,13 @@ export class AbstractFileHelper {
 		splitPath: T,
 	): Promise<Maybe<AbstractFile<T>>> {
 		const systemPath = systemPathFromSplitPath(splitPath);
+		console.log("this.vault", this.vault);
+		console.log(
+			"systemPath",
+			this.vault.getAbstractFileByPath("Grammatik"),
+		);
 		const mbTabstractFile = this.vault.getAbstractFileByPath(systemPath);
+
 		if (!mbTabstractFile) {
 			return {
 				description: `Failed to get file by path: ${systemPath}`,

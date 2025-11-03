@@ -7,9 +7,30 @@ import {
 import { getMaybeEditor } from "../../helpers/get-editor";
 import { logError, logWarning } from "../../helpers/issue-handlers";
 import { splitPathFromAbstractFile } from "../pathfinder";
+import type { SplitPathToFile } from "../types";
 
 export class OpenedFileService {
-	constructor(private app: App) {}
+	lastOpenedFiles: SplitPathToFile[];
+
+	constructor(
+		private app: App,
+		initiallyOpenedFile: TFile | null,
+	) {
+		this.lastOpenedFiles = [];
+		this.addToLastOpenedFiles(initiallyOpenedFile);
+
+		this.app.workspace.on("file-open", (file) => {
+			this.addToLastOpenedFiles(file);
+		});
+	}
+
+	private addToLastOpenedFiles(file: TFile | null) {
+		if (!file) return;
+		this.lastOpenedFiles.push(splitPathFromAbstractFile(file));
+		if (this.lastOpenedFiles.length > 10) {
+			this.lastOpenedFiles.shift();
+		}
+	}
 
 	async prettyPwd() {
 		const activeView = unwrapMaybeByThrowing(
@@ -21,6 +42,11 @@ export class OpenedFileService {
 	getApp(): App {
 		return this.app;
 	}
+
+	// async getActiveFile() {
+	// 	const file = this.app.workspace.getActiveFile();
+	// 	return
+	// }
 
 	async getMaybeOpenedFile(): Promise<Maybe<TFile>> {
 		try {

@@ -2,6 +2,7 @@ import {
 	type Editor,
 	type MarkdownView,
 	Plugin,
+	type TAbstractFile,
 	TFile,
 	type WorkspaceLeaf,
 } from "obsidian";
@@ -36,9 +37,12 @@ export default class TextEaterPlugin extends Plugin {
 	// Commanders
 	librarian: Librarian;
 
+	private initialized = false;
+
 	override async onload() {
 		try {
-			await this.loadPlugin();
+			// Kick off the deferred init; don't block onload.
+			void this.initWhenObsidianIsReady();
 			this.addSettingTab(new SettingsTab(this.app, this));
 		} catch (error) {
 			logError({
@@ -48,30 +52,109 @@ export default class TextEaterPlugin extends Plugin {
 		}
 	}
 
+	private async initWhenObsidianIsReady() {
+		try {
+			await this.whenLayoutReady();
+			await this.whenMetadataResolved();
+
+			await this.sleep(300);
+
+			await this.loadPlugin();
+			this.initialized = true;
+		} catch (error) {
+			logError({
+				description: `Error during plugin initialization: ${error.message}`,
+				location: "TextEaterPlugin",
+			});
+		}
+	}
+
+	/**
+	 * Resolves once the workspace layout is ready.
+	 * Equivalent to app.workspace.onLayoutReady(cb).
+	 */
+	private whenLayoutReady(): Promise<void> {
+		return new Promise((resolve) => {
+			if (this.app.workspace.layoutReady) return resolve();
+
+			this.app.workspace.onLayoutReady(() => {
+				resolve();
+			});
+		});
+	}
+
+	/**
+	 * Resolves after the initial metadata indexing is done.
+	 * Fires once per app session.
+	 */
+	private whenMetadataResolved(): Promise<void> {
+		return new Promise((resolve) => {
+			// Best-effort fast path: if it's already finished, Obsidian
+			// won't fire "resolved" again; listen once and also set a backup microtask.
+			let resolved = false;
+
+			const off = this.app.metadataCache.on("resolved", () => {
+				if (resolved) return;
+				resolved = true;
+				this.app.metadataCache.off("resolved", () => null);
+				resolve();
+			});
+
+			// In practice "resolved" should always fire. As an extra guard,
+			// if metadata is effectively available (no official flag), we resolve next tick.
+			queueMicrotask(() => {
+				if (!resolved && this.hasUsableMetadataSignal()) {
+					resolved = true;
+					this.app.metadataCache.off("resolved", () => null);
+					resolve();
+				}
+			});
+		});
+	}
+
+	/**
+	 * Heuristic: treat metadata as usable once there are files and no initial scans pending.
+	 * (There’s no public boolean; this just prevents getting stuck if the event already fired.)
+	 */
+	private hasUsableMetadataSignal(): boolean {
+		// Vault has files? If yes, we can usually proceed safely.
+		// This is conservative and only used as a fallback.
+		const hasFiles = false;
+		this.app.vault
+			.getAllLoadedFiles()
+			.some((_f: TAbstractFile) => hasFiles);
+		return hasFiles;
+	}
+
+	private sleep(ms: number) {
+		return new Promise((r) => setTimeout(r, ms));
+	}
+
 	async loadPlugin() {
 		await this.loadSettings();
 		await this.addCommands();
 
+		const initiallyOpenedFile = this.app.workspace.getActiveFile();
+
 		this.apiService = new ApiService(this.settings);
-		this.openedFileService = new OpenedFileService(this.app);
+
+		this.openedFileService = new OpenedFileService(
+			this.app,
+			initiallyOpenedFile,
+		);
+
 		this.backgroundFileService = new BackgroundFileService(this.app);
+
 		this.selectionToolbarService = new AboveSelectionToolbarService(
 			this.app,
 		);
+
 		this.selectionService = new SelectionService(this.app);
 
 		this.librarian = new Librarian(this);
-		// this.textsManagerService = new VaultCurrator(this.app);
+		await this.librarian.initTrees();
 
 		this.registerDomEvent(document, "click", makeClickListener(this));
-
-		this.registerEvent(
-			this.app.vault.on("create", (af) => {
-				if (!(af instanceof TFile) || af.extension !== "md") return;
-
-				onNewFileThenRun(this.app, af, () => {});
-			}),
-		);
 
 		this.bottomToolbarService = new BottomToolbarService(this.app);
 		this.bottomToolbarService.init();

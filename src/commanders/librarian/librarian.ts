@@ -1,3 +1,4 @@
+import type { App, TAbstractFile, TFile } from "obsidian";
 import { extractMetaInfo } from "../../services/dto-services/meta-info-manager/interface";
 import type { TexfresserObsidianServices } from "../../services/obsidian-services/interface";
 import { TextStatus } from "../../types/common-interface/enums";
@@ -14,15 +15,19 @@ export class Librarian {
 	trees: Record<RootName, LibraryTree>;
 
 	constructor({
+		app,
 		backgroundFileService,
 		openedFileService,
-	}: Pick<
+	}: { app: App } & Pick<
 		TexfresserObsidianServices,
 		"backgroundFileService" | "openedFileService"
 	>) {
 		this.backgroundFileService = backgroundFileService;
 		this.openedFileService = openedFileService;
-		this.initTrees();
+
+		app.vault.on("create", (e) => {
+			this.onCreate(e);
+		});
 	}
 
 	private async readPagesInFolder(dirBasename: string) {
@@ -51,7 +56,7 @@ export class Librarian {
 		return pageDtos.filter((pageDto) => pageDto !== null);
 	}
 
-	private async initTrees() {
+	async initTrees() {
 		const pages: PageDto[] = [];
 		for (const name of ROOTS) {
 			const pagesInFolder = await this.readPagesInFolder(name);
@@ -62,6 +67,15 @@ export class Librarian {
 		for (const [rootName, textDtos] of grouppedUpTexts.entries()) {
 			this.trees[rootName] = new LibraryTree(textDtos, rootName);
 		}
+	}
+
+	async onCreate(file: TAbstractFile) {
+		// console.log("[onCreate] file", file);
+		// console.log(
+		// 	"[onCreate] lastOpenedFiles",
+		// 	this.openedFileService.lastOpenedFiles[-1],
+		// );
+		// console.log("[onCreate] prettyPwd", this.openedFileService.prettyPwd());
 	}
 }
 
