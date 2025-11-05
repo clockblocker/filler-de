@@ -53,6 +53,41 @@ export function systemPathFromSplitPath(splitPath: SplitPath): string {
 	);
 }
 
+export function splitPathFromSystemPath(systemPath: string): SplitPath {
+	// Remove leading/trailing slashes and normalize
+	const normalized = systemPath.replace(/^[\\/]+|[\\/]+$/g, "");
+	if (!normalized) {
+		// Edge case: root path
+		return {
+			basename: "",
+			pathParts: [],
+			type: "folder",
+		};
+	}
+	const parts = normalized.split("/").filter(Boolean);
+
+	const last = parts[parts.length - 1] ?? "";
+	const hasExtension = last.includes(".");
+
+	if (hasExtension) {
+		const dotIdx = last.lastIndexOf(".");
+		const basename = last.substring(0, dotIdx);
+		const extension = last.substring(dotIdx + 1);
+		return {
+			basename,
+			extension,
+			pathParts: parts.slice(0, -1),
+			type: "file",
+		};
+	}
+
+	return {
+		basename: last,
+		pathParts: parts.slice(0, -1),
+		type: "folder",
+	};
+}
+
 export function safeFileName(s: string): string {
 	return s.replace(/[\\/]/g, " ").trim();
 }

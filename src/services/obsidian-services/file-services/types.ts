@@ -1,14 +1,19 @@
 import type { TFile, TFolder } from "obsidian";
 import type { PrettyPath } from "../../../types/common-interface/dtos";
+import type { Prettify } from "../../../types/helpers";
 
-export type SplitPathToFolder = PrettyPath & {
-	type: "folder";
-};
+export type SplitPathToFolder = Prettify<
+	PrettyPath & {
+		type: "folder";
+	}
+>;
 
-export type SplitPathToFile = PrettyPath & {
-	type: "file";
-	extension: "md" | string;
-};
+export type SplitPathToFile = Prettify<
+	PrettyPath & {
+		type: "file";
+		extension: "md" | string;
+	}
+>;
 
 export type SplitPath = SplitPathToFolder | SplitPathToFile;
 

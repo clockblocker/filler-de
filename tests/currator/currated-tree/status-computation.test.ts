@@ -396,7 +396,7 @@ describe('CurratedTree - Status Computation', () => {
 				path: ['Section', 'Text'],
 			}]);
 
-			const result = tree.changeStatus({
+			const result = tree.setStatus({
 				path: ['Section', 'Text'],
 				status: 'Done',
 			});
@@ -415,7 +415,7 @@ describe('CurratedTree - Status Computation', () => {
 		it('should return error when node does not exist', () => {
 			const tree = new LibraryTree([], 'Library');
 
-			const result = tree.changeStatus({
+			const result = tree.setStatus({
 				path: ['NonExistent', 'Text'],
 				status: 'Done',
 			});
@@ -440,7 +440,7 @@ describe('CurratedTree - Status Computation', () => {
 			);
 
 			// Change one text to NotStarted
-			tree.changeStatus({
+			tree.setStatus({
 				path: ['Section', 'Text1'],
 				status: 'NotStarted',
 			});
@@ -469,7 +469,7 @@ describe('CurratedTree - Status Computation', () => {
 			);
 
 			// Change a deeply nested text
-			tree.changeStatus({
+			tree.setStatus({
 				path: ['Books', 'Fiction', 'Chapter1'],
 				status: 'NotStarted',
 			});
@@ -504,7 +504,7 @@ describe('CurratedTree - Status Computation', () => {
 			);
 
 			// Change section status directly (override computed status)
-			tree.changeStatus({
+			tree.setStatus({
 				path: ['Section'],
 				status: 'Done',
 			});
@@ -532,7 +532,7 @@ describe('CurratedTree - Status Computation', () => {
 			);
 
 			// Change one text to Done
-			tree.changeStatus({
+			tree.setStatus({
 				path: ['Section', 'Text1'],
 				status: 'Done',
 			});
@@ -544,7 +544,7 @@ describe('CurratedTree - Status Computation', () => {
 			);
 
 			// Change other text to Done too
-			tree.changeStatus({
+			tree.setStatus({
 				path: ['Section', 'Text2'],
 				status: 'Done',
 			});
@@ -573,7 +573,7 @@ describe('CurratedTree - Status Computation', () => {
 			);
 
 			// Change one nested text
-			tree.changeStatus({
+			tree.setStatus({
 				path: ['Root', 'A', 'A1', 'Text1'],
 				status: 'NotStarted',
 			});

@@ -1,9 +1,14 @@
-import type { App, TAbstractFile, TFile } from "obsidian";
+import type { App, TAbstractFile } from "obsidian";
 import { extractMetaInfo } from "../../services/dto-services/meta-info-manager/interface";
+import {
+	splitPathFromAbstractFile,
+	splitPathFromSystemPath,
+} from "../../services/obsidian-services/file-services/pathfinder";
+import type { SplitPath } from "../../services/obsidian-services/file-services/types";
 import type { TexfresserObsidianServices } from "../../services/obsidian-services/interface";
 import { TextStatus } from "../../types/common-interface/enums";
 import { LibraryTree } from "./library-tree/library-tree";
-import type { PageDto, TextDto } from "./types";
+import type { PageDto, TextDto, TreePath } from "./types";
 
 // [TODO]: Read this from settings
 const ROOTS = ["Library"] as const;
@@ -25,8 +30,12 @@ export class Librarian {
 		this.backgroundFileService = backgroundFileService;
 		this.openedFileService = openedFileService;
 
-		app.vault.on("create", (e) => {
-			this.onCreate(e);
+		app.vault.on("delete", (tAbstarctFile) => {
+			this.onDelete(tAbstarctFile);
+		});
+
+		app.vault.on("rename", (newTAbstarctFile, oldSystemPath) => {
+			this.onRename(newTAbstarctFile, oldSystemPath);
 		});
 	}
 
@@ -69,14 +78,59 @@ export class Librarian {
 		}
 	}
 
-	async onCreate(file: TAbstractFile) {
-		// console.log("[onCreate] file", file);
-		// console.log(
-		// 	"[onCreate] lastOpenedFiles",
-		// 	this.openedFileService.lastOpenedFiles[-1],
-		// );
-		// console.log("[onCreate] prettyPwd", this.openedFileService.prettyPwd());
+	async сreateNewTextInTheCurrentFolderAndOpenIt() {
+		const pwd = await this.openedFileService.prettyPwd();
+		// Parse as tree path
+		const treePathToPwd = treePathFromSplitPath(pwd);
+		// find the nearest text node
+		const affectedTree = this.getAffectedTree(pwd);
+		if (!affectedTree) {
+			return;
+		}
+
+		const nearestSectionNode =
+			affectedTree.getNearestSectionNode(treePathToPwd);
+
+		nearestSectionNode
+
+		this.openedFileService.cd(file);
+
+		// const backgroundFileService = this.openedFileService.prettyPwd();
+
+		// console.log("[Librarian] [onCreate] file", file);
+		// console.log("[Librarian] [onCreate] lastOpenedFile", lastOpenedFile);
 	}
+
+	private async onDelete(file: TAbstractFile) {
+		const lastOpenedFile = this.openedFileService.getLastOpenedFile();
+		console.log("[Librarian] [onDelete] file", file);
+	}
+
+	private async onRename(
+		newTAbstarctFile: TAbstractFile,
+		oldSystemPath: string,
+	) {
+		console.log(
+			"[Librarian] [onRename] newTAbstarctFile",
+			newTAbstarctFile,
+		);
+		console.log("[Librarian] [onRename] oldSystemPath", oldSystemPath);
+	}
+
+	private getAffectedTree(path: SplitPath): LibraryTree | null;
+	private getAffectedTree(path: string): LibraryTree | null;
+	private getAffectedTree(path: SplitPath | string): LibraryTree | null {
+		const splitPath =
+			typeof path === "string" ? splitPathFromSystemPath(path) : path;
+
+		const rootName = splitPath.pathParts[0] ?? "";
+
+		return this.trees[rootName] ?? null;
+	}
+}
+
+function treePathFromSplitPath(splitPath: SplitPath): TreePath {
+	return [...splitPath.pathParts.slice(1), splitPath.basename];
 }
 
 function grouppedUpTextsFromPages(pages: PageDto[]): Map<RootName, TextDto[]> {

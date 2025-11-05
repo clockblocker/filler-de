@@ -10,26 +10,29 @@ import { splitPathFromAbstractFile } from "../pathfinder";
 import type { SplitPathToFile } from "../types";
 
 export class OpenedFileService {
-	lastOpenedFiles: SplitPathToFile[];
+	private lastOpenedFiles: SplitPathToFile[];
 
 	constructor(
 		private app: App,
 		initiallyOpenedFile: TFile | null,
 	) {
-		this.lastOpenedFiles = [];
-		this.addToLastOpenedFiles(initiallyOpenedFile);
-
-		this.app.workspace.on("file-open", (file) => {
-			this.addToLastOpenedFiles(file);
-		});
+		console.log(
+			"[OpenedFileService] constructor fired",
+			initiallyOpenedFile,
+		);
 	}
 
-	private addToLastOpenedFiles(file: TFile | null) {
-		if (!file) return;
-		this.lastOpenedFiles.push(splitPathFromAbstractFile(file));
-		if (this.lastOpenedFiles.length > 10) {
-			this.lastOpenedFiles.shift();
-		}
+	getLastOpenedFiles() {
+		return this.app.workspace.getLastOpenFiles();
+	}
+
+	getLastOpenedFile() {
+		return this.lastOpenedFiles[this.lastOpenedFiles.length - 1];
+	}
+
+	async cd(file: TFile) {
+		const leaf = this.app.workspace.getLeaf(false);
+		return await leaf.openFile(file);
 	}
 
 	async prettyPwd() {

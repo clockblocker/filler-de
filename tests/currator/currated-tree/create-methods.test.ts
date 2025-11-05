@@ -174,13 +174,13 @@ describe('CurratedTree - Building from SerializedText', () => {
 			);
 
 			// Should work with Done
-			tree.changeStatus({
+			tree.setStatus({
 				path: ['Section', 'Text'] as TreePath,
 				status: 'Done',
 			});
 
 			// Should work with NotStarted
-			tree.changeStatus({
+			tree.setStatus({
 				path: ['Section', 'Text'] as TreePath,
 				status: 'NotStarted',
 			});
@@ -203,7 +203,7 @@ describe('CurratedTree - Building from SerializedText', () => {
 				'Library'
 			);
 
-			tree.changeStatus({
+			tree.setStatus({
 				path: ['Section'] as TreePath,
 				status: 'Done',
 			});
@@ -246,7 +246,7 @@ describe('CurratedTree - Building from SerializedText', () => {
 				'Library'
 			);
 
-			tree.changeStatus({
+			tree.setStatus({
 				path: ['Section', 'Text'] as TreePath,
 				status: 'NotStarted',
 			});

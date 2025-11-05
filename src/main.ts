@@ -2,7 +2,6 @@ import {
 	type Editor,
 	type MarkdownView,
 	Plugin,
-	type TAbstractFile,
 	type WorkspaceLeaf,
 } from "obsidian";
 import { Librarian } from "./commanders/librarian/librarian";
@@ -89,12 +88,12 @@ export default class TextEaterPlugin extends Plugin {
 		return new Promise((resolve) => {
 			let resolved = false;
 
-			this.app.metadataCache.on("resolved", () => {
-				if (resolved) return;
-				resolved = true;
-				this.app.metadataCache.off("resolved", () => null);
-				resolve();
-			});
+			// this.app.metadataCache.on("resolved", () => {
+			// 	if (resolved) return;
+			// 	resolved = true;
+			// 	this.app.metadataCache.off("resolved", () => null);
+			// 	resolve();
+			// });
 
 			queueMicrotask(() => {
 				if (!resolved && this.hasUsableMetadataSignal()) {

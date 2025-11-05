@@ -1,8 +1,6 @@
 import {
-	type BookNode,
+	type LibraryFile,
 	NodeType,
-	type TextDto,
-	type TextNode,
 	type TreeNode,
 	type TreePath,
 } from "../types";
@@ -25,10 +23,6 @@ export const areShallowEqual = (node1: TreeNode, node2: TreeNode) => {
 
 export const computeNodePath = (node: TreeNode): TreePath => {
 	let current = node;
-	if (current.type === NodeType.Page) {
-		current = current.parent as BookNode;
-	}
-
 	const path: string[] = [];
 
 	while (current.parent) {
@@ -42,22 +36,3 @@ export const computeNodePath = (node: TreeNode): TreePath => {
 export const getNodeId = (node: TreeNode): string => {
 	return [...computeNodePath(node), node.type].join("-");
 };
-
-export function serializeTextNode(
-	node: TextNode,
-	providedPath?: TreePath,
-): TextDto {
-	const path = providedPath ?? computeNodePath(node);
-	const pageStatuses =
-		node.type === NodeType.Text
-			? Object.fromEntries(
-					node.children.map(({ name, status }) => [name, status]),
-				)
-			: // For ScrollNodes, use the node name as the page name
-				{ [node.name]: node.status };
-
-	return {
-		pageStatuses,
-		path,
-	};
-}

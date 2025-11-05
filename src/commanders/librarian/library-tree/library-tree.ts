@@ -1,12 +1,7 @@
 import { TextStatus } from "../../../types/common-interface/enums";
 import type { Maybe } from "../../../types/common-interface/maybe";
+import { areShallowEqual, getNodeId } from "../pure-functions/node";
 import {
-	areShallowEqual,
-	getNodeId,
-	serializeTextNode,
-} from "../pure-functions/node";
-import {
-	type BookNode,
 	type LeafNode,
 	NodeType,
 	type PageNode,
@@ -16,6 +11,7 @@ import {
 	type TreeNode,
 	type TreePath,
 } from "../types";
+import { serializeTextNode } from "./helpers/serialization";
 import { bfs } from "./helpers/walks";
 
 export class LibraryTree {
@@ -63,6 +59,32 @@ export class LibraryTree {
 		this.recomputeTreeStatuses();
 	}
 
+	public getNearestSectionNode(arg: TreePath): SectionNode;
+	public getNearestSectionNode(arg: TreeNode): SectionNode;
+	public getNearestSectionNode(arg: TreePath | TreeNode): SectionNode {
+		const mbNode = Array.isArray(arg)
+			? this.getMaybeNode({ path: arg })
+			: { data: arg, error: false };
+
+		if (mbNode.error) {
+			return this.root;
+		}
+
+		const node = mbNode.data;
+
+		if (!node || !node.parent) {
+			return this.root;
+		}
+
+		switch (node.type) {
+			case NodeType.Page:
+			case NodeType.Text:
+				return this.getNearestSectionNode(node.parent);
+			case NodeType.Section:
+				return node;
+		}
+	}
+
 	private addText(serializedText: TextDto): Maybe<TextNode> {
 		const newText = this.getOrCreateTextNode(serializedText);
 		return newText;
@@ -76,7 +98,7 @@ export class LibraryTree {
 		this.deleteNode(mbTextNode.data);
 	}
 
-	public changeStatus({
+	public setStatus({
 		path,
 		status,
 	}: {
@@ -89,6 +111,10 @@ export class LibraryTree {
 		}
 
 		const node = mbNode.data;
+		if (node.status === status) {
+			return { data: node, error: false };
+		}
+
 		this.setStatusOnNodeAndItsDescendants(node, status);
 		this.recomputeTreeStatuses();
 
@@ -104,8 +130,8 @@ export class LibraryTree {
 				node.status = status;
 				break;
 			case NodeType.Text: {
-				const bookNode = node;
-				for (const page of bookNode.children) {
+				const textNode = node;
+				for (const page of textNode.children) {
 					page.status = status;
 				}
 				break;
@@ -204,17 +230,16 @@ export class LibraryTree {
 		const textNode = mbTextNode.data;
 		if (textNode.type !== NodeType.Text) {
 			return {
-				description: `Node at ${textPath.join("-")} is a ScrollNode, not a BookNode. Pages can only be accessed from BookNodes.`,
+				description: `Node at ${textPath.join("-")} is a ScrollNode, not a TextNode. Pages can only be accessed from TextNodes.`,
 				error: true,
 			};
 		}
 
-		const bookNode = textNode as BookNode;
-		const page = bookNode.children.find((p) => p.name === pageName);
+		const page = textNode.children.find((p) => p.name === pageName);
 
 		if (!page) {
 			return {
-				description: `Page "${pageName}" not found in BookNode at ${textPath.join("-")}`,
+				description: `Page "${pageName}" not found in TextNode at ${textPath.join("-")}`,
 				error: true,
 			};
 		}
@@ -375,9 +400,9 @@ export class LibraryTree {
 			case NodeType.Page:
 				break;
 			case NodeType.Text: {
-				const bookNode = node;
-				for (const page of bookNode.children) {
-					page.parent = bookNode;
+				const textNode = node;
+				for (const page of textNode.children) {
+					page.parent = textNode;
 				}
 				break;
 			}
@@ -492,7 +517,7 @@ export class LibraryTree {
 		if (parent.type === NodeType.Section || parent.type === NodeType.Text) {
 			parent.children = parent.children.filter(
 				(c) => c.name !== node.name,
-			) as (SectionNode | BookNode)[] | PageNode[];
+			) as (SectionNode | TextNode)[] | PageNode[];
 		}
 
 		// Clean up node's children

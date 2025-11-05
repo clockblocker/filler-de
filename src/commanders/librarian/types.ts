@@ -1,5 +1,11 @@
 import { z } from "zod";
+import type {
+	LibraryNoteMetaInfo,
+	MetaInfo,
+} from "../../services/dto-services/meta-info-manager/types";
+import type { SplitPathToFile } from "../../services/obsidian-services/file-services/types";
 import type { TextStatus } from "../../types/common-interface/enums";
+import type { Prettify } from "../../types/helpers";
 import {
 	BOOK,
 	CODEX,
@@ -36,31 +42,43 @@ export type CommonNode = {
 	parent: BranchNode | null;
 };
 
-export type PageNode = CommonNode & {
-	type: typeof NodeType.Page;
-};
+export type PageNode = Prettify<
+	CommonNode & {
+		type: typeof NodeType.Page;
+	}
+>;
 
-export type BookNode = CommonNode & {
-	type: typeof NodeType.Text;
-	children: PageNode[];
-};
+export type TextNode = Prettify<
+	CommonNode & {
+		type: typeof NodeType.Text;
+		children: PageNode[];
+	}
+>;
 
-export type SectionNode = CommonNode & {
-	type: typeof NodeType.Section;
-	children: (SectionNode | BookNode)[];
-};
+export type SectionNode = Prettify<
+	CommonNode & {
+		type: typeof NodeType.Section;
+		children: (SectionNode | TextNode)[];
+	}
+>;
 
-export type BranchNode = SectionNode | BookNode;
-export type TreeNode = BranchNode | PageNode;
+export type BranchNode = SectionNode | TextNode;
+export type TreeNode = Prettify<BranchNode | PageNode>;
 
-export type TextNode = BookNode;
-export type LeafNode = PageNode;
+export type LeafNode = Prettify<PageNode>;
 
-export type PageDto = Pick<PageNode, "name" | "status"> & {
-	pathToParent: TreePath;
-};
+export type PageDto = Prettify<
+	Pick<PageNode, "name" | "status"> & {
+		pathToParent: TreePath;
+	}
+>;
 
 export type TextDto = {
 	path: TreePath;
 	pageStatuses: Record<CommonNode["name"], CommonNode["status"]>;
+};
+
+export type LibraryFile = {
+	metaInfo: LibraryNoteMetaInfo;
+	splitPath: SplitPathToFile;
 };
