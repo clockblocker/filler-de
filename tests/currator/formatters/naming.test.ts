@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { CodexNameFromTreePath, PageNameFromTreePath, toGuardedNodeName } from '../../../src/commanders/librarian/formatters';
+import { codexNameFromTreePath, pageNameFromTreePath, toGuardedNodeName } from '../../../src/commanders/librarian/formatters';
 import { DASH } from '../../../src/types/literals';
 
 
@@ -11,8 +11,8 @@ describe('toGuardedNodeName', () => {
 		expect(toGuardedNodeName('foo\u00A0bar')).toBe('foo_bar');
 	});
 
-	it('preserves all other characters', () => {
-		expect(toGuardedNodeName('x/y*z')).toBe('x/y*z');
+	it('Removes forbidden characters', () => {
+		expect(toGuardedNodeName('x/y*z|||/|\\:')).toBe('xy*z');
 	});
 
 	it('handles repeated spaces', () => {
@@ -22,25 +22,25 @@ describe('toGuardedNodeName', () => {
 
 describe('CodexNameFromTreePath', () => {
 	it('single node in path', () => {
-		expect(CodexNameFromTreePath.encode(['foo'])).toBe('__foo');
-		expect(CodexNameFromTreePath.decode('__foo')).toEqual(['foo']);
+		expect(codexNameFromTreePath.encode(['foo'])).toBe('__foo');
+		expect(codexNameFromTreePath.decode('__foo')).toEqual(['foo']);
 	});
 
 	it('two nodes in path', () => {
-		expect(CodexNameFromTreePath.encode(['foo', 'bar'])).toBe(`__foo${DASH}bar`);
-		expect(CodexNameFromTreePath.decode(`__foo${DASH}bar`)).toEqual(['foo', 'bar']);
+		expect(codexNameFromTreePath.encode([ 'bar', 'foo'])).toBe(`__foo${DASH}bar`);
+		expect(codexNameFromTreePath.decode(`__foo${DASH}bar`)).toEqual(['bar', 'foo']);
 	});
 });
 
 
 describe('PageNameFromTreePath', () => {
 	it('2 nodes', () => {
-		expect(PageNameFromTreePath.encode(['Avatar', '10'])).toBe(`010${DASH}Avatar`);
-		expect(PageNameFromTreePath.decode(`010${DASH}Avatar`)).toEqual(['Avatar', '10']);
+		expect(pageNameFromTreePath.encode(['Avatar', '10'])).toBe(`010${DASH}Avatar`);
+		expect(pageNameFromTreePath.decode(`010${DASH}Avatar`)).toEqual(['Avatar', '10']);
 	});
 
 	it('4 nodes', () => {
-		expect(PageNameFromTreePath.encode(['Avatar', 'Season_1', 'Episode_1', '1'])).toBe(`001${DASH}Avatar${DASH}Season_1${DASH}Episode_1`);
-		expect(PageNameFromTreePath.decode(`001${DASH}Avatar${DASH}Season_1${DASH}Episode_1`)).toEqual(['Avatar', 'Season_1', 'Episode_1', '1']);
+		expect(pageNameFromTreePath.encode(['Avatar', 'Season_1', 'Episode_1', '1'])).toBe(`001${DASH}Episode_1${DASH}Season_1${DASH}Avatar`);
+		expect(pageNameFromTreePath.decode(`001${DASH}Episode_1${DASH}Season_1${DASH}Avatar`)).toEqual(['Avatar', 'Season_1', 'Episode_1', '1']);
 	});
 });
