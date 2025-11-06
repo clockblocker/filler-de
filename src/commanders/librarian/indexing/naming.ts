@@ -2,14 +2,22 @@ import type { MetaInfo } from "../../../services/dto-services/meta-info-manager/
 import type { SplitPathToFile } from "../../../services/obsidian-services/file-services/types";
 import { UNKNOWN } from "../../../types/literals";
 import { getTreePathFromNode } from "../pure-functions/node";
-import { type LibraryFile, NodeType, type TreeNode } from "../types";
+import {
+	type LibraryFile,
+	NodeType,
+	type TreeNode,
+	type TreePath,
+} from "../types";
 import {
 	codexNameFromTreePath,
+	GuardedCodexNameSchema,
+	GuardedPageNameSchema,
+	GuardedScrollNameSchema,
 	pageNameFromTreePath,
 	scrollNameFromTreePath,
 } from "./formatters";
 
-export function getSplitPathToFileFromNode(node: TreeNode): LibraryFile {
+export function getLibraryFileToFileFromNode(node: TreeNode): LibraryFile {
 	const treePath = getTreePathFromNode(node);
 
 	let metaInfo: MetaInfo = {
@@ -71,4 +79,32 @@ export function getSplitPathToFileFromNode(node: TreeNode): LibraryFile {
 		metaInfo,
 		splitPath,
 	};
+}
+
+export function getTreePathFromLibraryFile(libraryFile: LibraryFile): TreePath {
+	const { metaInfo, splitPath } = libraryFile;
+	const { basename } = splitPath;
+
+	switch (metaInfo.fileType) {
+		case "Scroll": {
+			const parsedBasename = GuardedScrollNameSchema.parse(basename);
+			return scrollNameFromTreePath.decode(parsedBasename);
+		}
+		case "Page": {
+			const parsedBasename = GuardedPageNameSchema.parse(basename);
+			return pageNameFromTreePath.decode(parsedBasename);
+		}
+		case "Codex": {
+			const parsedBasename = GuardedCodexNameSchema.parse(basename);
+			return codexNameFromTreePath.decode(parsedBasename);
+		}
+		case "Unknown": {
+			// For Unknown fileType, we can't decode from basename
+			// Return pathParts + basename (without extension) as best guess
+			return [
+				...splitPath.pathParts,
+				basename.replace(/\.md$/, ""),
+			] as TreePath;
+		}
+	}
 }

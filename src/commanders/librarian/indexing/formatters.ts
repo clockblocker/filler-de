@@ -24,7 +24,7 @@ const GuardedNodeNameSchema = z.string().min(1);
 
 export type GuardedNodeName = z.infer<typeof GuardedNodeNameSchema>;
 
-const GuardedCodexNameSchema = z.templateLiteral([
+export const GuardedCodexNameSchema = z.templateLiteral([
 	UnderscoreSchema,
 	UnderscoreSchema,
 	z.string().min(1),
@@ -44,7 +44,7 @@ export const codexNameFromTreePath = z.codec(
 
 const numRepr = z.int().min(0).max(9);
 
-const GuardedPageNameSchema = z.templateLiteral([
+export const GuardedPageNameSchema = z.templateLiteral([
 	numRepr,
 	numRepr,
 	numRepr,
@@ -70,7 +70,7 @@ export const pageNameFromTreePath = z.codec(
 	},
 );
 
-const GuardedScrollNameSchema = z.templateLiteral([z.string().min(1)]);
+export const GuardedScrollNameSchema = z.templateLiteral([z.string().min(1)]);
 
 export const scrollNameFromTreePath = z.codec(
 	GuardedScrollNameSchema,
