@@ -3,7 +3,7 @@ import type { SplitPathToFile } from "../../../services/obsidian-services/file-s
 import { UNKNOWN } from "../../../types/literals";
 import { getTreePathFromNode } from "../pure-functions/node";
 import {
-	type LibraryFile,
+	type LibraryFileDto,
 	NodeType,
 	type TreeNode,
 	type TreePath,
@@ -17,7 +17,7 @@ import {
 	scrollNameFromTreePath,
 } from "./formatters";
 
-export function getLibraryFileToFileFromNode(node: TreeNode): LibraryFile {
+export function getLibraryFileToFileFromNode(node: TreeNode): LibraryFileDto {
 	const treePath = getTreePathFromNode(node);
 
 	let metaInfo: MetaInfo = {
@@ -81,7 +81,9 @@ export function getLibraryFileToFileFromNode(node: TreeNode): LibraryFile {
 	};
 }
 
-export function getTreePathFromLibraryFile(libraryFile: LibraryFile): TreePath {
+export function getTreePathFromLibraryFile(
+	libraryFile: LibraryFileDto,
+): TreePath {
 	const { metaInfo, splitPath } = libraryFile;
 	const { basename } = splitPath;
 

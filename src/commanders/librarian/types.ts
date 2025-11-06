@@ -78,7 +78,7 @@ export type TextDto = {
 	pageStatuses: Record<CommonNode["name"], CommonNode["status"]>;
 };
 
-export type LibraryFile = {
+export type LibraryFileDto = {
 	metaInfo: LibraryNoteMetaInfo;
 	splitPath: SplitPathToFile;
 };
