@@ -1,4 +1,4 @@
-import { computeNodePath } from "../../pure-functions/node";
+import { getTreePathFromNode } from "../../pure-functions/node";
 import type { TextDto, TextNode, TreePath } from "../../types";
 import { NodeType } from "../../types";
 import { LibraryTree } from "../library-tree";
@@ -33,7 +33,7 @@ export function serializeTextNode(
 	node: TextNode,
 	providedPath?: TreePath,
 ): TextDto {
-	const path = providedPath ?? computeNodePath(node);
+	const path = providedPath ?? getTreePathFromNode(node);
 	const pageStatuses =
 		node.type === NodeType.Text
 			? Object.fromEntries(

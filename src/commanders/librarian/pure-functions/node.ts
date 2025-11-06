@@ -1,9 +1,4 @@
-import {
-	type LibraryFile,
-	NodeType,
-	type TreeNode,
-	type TreePath,
-} from "../types";
+import type { TreeNode, TreePath } from "../types";
 
 const haveSameType = (node1: TreeNode, node2: TreeNode) => {
 	return node1.type === node2.type;
@@ -21,7 +16,7 @@ export const areShallowEqual = (node1: TreeNode, node2: TreeNode) => {
 	return node1.name === node2.name;
 };
 
-export const computeNodePath = (node: TreeNode): TreePath => {
+export const getTreePathFromNode = (node: TreeNode): TreePath => {
 	let current = node;
 	const path: string[] = [];
 
@@ -30,9 +25,9 @@ export const computeNodePath = (node: TreeNode): TreePath => {
 		current = current.parent;
 	}
 
-	return path.reverse() as TreePath;
+	return path.reverse();
 };
 
 export const getNodeId = (node: TreeNode): string => {
-	return [...computeNodePath(node), node.type].join("-");
+	return [...getTreePathFromNode(node), node.type].join("-");
 };

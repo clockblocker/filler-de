@@ -15,7 +15,7 @@ import {
 	TEXT,
 	UNMARKED,
 } from "../../types/literals";
-import type { GuardedNodeName } from "./formatters";
+import type { GuardedNodeName } from "./indexing/formatters";
 
 // Naming
 export const IndexedFileTypeSchema = z.enum([

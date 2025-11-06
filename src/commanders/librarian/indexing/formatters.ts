@@ -4,7 +4,7 @@ import {
 	SPACE_LIKE_CHARS,
 	UNDERSCORE,
 	UnderscoreSchema,
-} from "../../types/literals";
+} from "../../../types/literals";
 
 export const toGuardedNodeName = (s: string) => {
 	const result = SPACE_LIKE_CHARS.reduce(
