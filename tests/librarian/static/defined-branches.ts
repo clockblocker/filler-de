@@ -1,5 +1,5 @@
 import type { TextDto } from '../../../src/commanders/librarian/types';
-import { AVATAR_TEXTS } from './battaries/avatar';
+import { AVATAR_TEXTS } from './batteries/avatar';
 
 type BranchName = 'Avatar';
 

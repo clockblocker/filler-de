@@ -1,14 +1,14 @@
 import type { App, TAbstractFile } from "obsidian";
-import { extractMetaInfo } from "../../services/dto-services/meta-info-manager/interface";
-import {
-	splitPathFromAbstractFile,
-	splitPathFromSystemPath,
-} from "../../services/obsidian-services/file-services/pathfinder";
+import { splitPathFromSystemPath } from "../../services/obsidian-services/file-services/pathfinder";
 import type { SplitPath } from "../../services/obsidian-services/file-services/types";
 import type { TexfresserObsidianServices } from "../../services/obsidian-services/interface";
 import { TextStatus } from "../../types/common-interface/enums";
+import {
+	getTreePathFromLibraryFile,
+	prettyFilesWithReaderToLibraryFileDtos,
+} from "./indexing/libraryFileAdapters";
 import { LibraryTree } from "./library-tree/library-tree";
-import type { PageDto, TextDto, TreePath } from "./types";
+import type { LibraryFileDto, TextDto, TreePath } from "./types";
 
 // [TODO]: Read this from settings
 const ROOTS = ["Library"] as const;
@@ -39,7 +39,9 @@ export class Librarian {
 		});
 	}
 
-	private async readPagesInFolder(dirBasename: string) {
+	private async readLibraryFileDtosInFolder(
+		dirBasename: string,
+	): Promise<LibraryFileDto[]> {
 		const fileReaders =
 			await this.backgroundFileService.getReadersToAllMdFilesInFolder({
 				basename: dirBasename,
@@ -47,32 +49,20 @@ export class Librarian {
 				type: "folder",
 			});
 
-		const pageDtos = await Promise.all(
-			fileReaders.map(async (fileReader) => {
-				const content = await fileReader.readContent();
-				const metaInfo = extractMetaInfo(content);
-				if (metaInfo?.fileType === "Page") {
-					return {
-						name: fileReader.basename,
-						pathToParent: fileReader.pathParts.slice(1),
-						status: metaInfo?.status ?? TextStatus.NotStarted,
-					};
-				}
-				return null;
-			}),
-		);
-
-		return pageDtos.filter((pageDto) => pageDto !== null);
+		return await prettyFilesWithReaderToLibraryFileDtos(fileReaders);
 	}
 
 	async initTrees() {
-		const pages: PageDto[] = [];
+		const libraryFileDtos: LibraryFileDto[] = [];
 		for (const name of ROOTS) {
-			const pagesInFolder = await this.readPagesInFolder(name);
-			pages.concat(pagesInFolder);
+			const libraryFileDtosInFolder =
+				await this.readLibraryFileDtosInFolder(name);
+			libraryFileDtos.push(...libraryFileDtosInFolder);
 		}
 
-		const grouppedUpTexts = grouppedUpTextsFromPages(pages);
+		const grouppedUpTexts =
+			grouppedUpTextsFromLibraryFileDtos(libraryFileDtos);
+
 		for (const [rootName, textDtos] of grouppedUpTexts.entries()) {
 			this.trees[rootName] = new LibraryTree(textDtos, rootName);
 		}
@@ -90,10 +80,6 @@ export class Librarian {
 
 		const nearestSectionNode =
 			affectedTree.getNearestSectionNode(treePathToPwd);
-
-		nearestSectionNode
-
-		this.openedFileService.cd(file);
 
 		// const backgroundFileService = this.openedFileService.prettyPwd();
 
@@ -129,14 +115,21 @@ export class Librarian {
 	}
 }
 
+function isRootName(name: string): name is RootName {
+	return ROOTS.includes(name as RootName);
+}
+
 function treePathFromSplitPath(splitPath: SplitPath): TreePath {
 	return [...splitPath.pathParts.slice(1), splitPath.basename];
 }
 
-function grouppedUpTextsFromPages(pages: PageDto[]): Map<RootName, TextDto[]> {
-	const buckets: Map<string, Map<string, PageDto[]>> = new Map();
-	for (const page of pages) {
-		const pathToParent = page.pathToParent;
+function grouppedUpTextsFromLibraryFileDtos(
+	libraryFileDtos: LibraryFileDto[],
+): Map<RootName, TextDto[]> {
+	const buckets: Map<string, Map<string, LibraryFileDto[]>> = new Map();
+	for (const libraryFileDto of libraryFileDtos) {
+		const treePath = getTreePathFromLibraryFile(libraryFileDto);
+		const pathToParent = treePath.slice(0, -1);
 		const rootName = pathToParent[0];
 		if (!rootName) {
 			continue;
@@ -144,13 +137,16 @@ function grouppedUpTextsFromPages(pages: PageDto[]): Map<RootName, TextDto[]> {
 		const joinedPathToParent = pathToParent.slice(1).join("-");
 		const mbBucket = buckets.get(rootName);
 		if (!mbBucket) {
-			buckets.set(rootName, new Map([[joinedPathToParent, [page]]]));
+			buckets.set(
+				rootName,
+				new Map([[joinedPathToParent, [libraryFileDto]]]),
+			);
 		} else {
 			const mbBook = mbBucket.get(joinedPathToParent);
 			if (!mbBook) {
-				mbBucket.set(joinedPathToParent, [page]);
+				mbBucket.set(joinedPathToParent, [libraryFileDto]);
 			} else {
-				mbBook.push(page);
+				mbBook.push(libraryFileDto);
 			}
 		}
 	}
@@ -158,15 +154,31 @@ function grouppedUpTextsFromPages(pages: PageDto[]): Map<RootName, TextDto[]> {
 	const grouppedUpTexts: Map<RootName, TextDto[]> = new Map();
 
 	for (const [rootName, bucket] of buckets.entries()) {
-		for (const [joinedPathToParent, pages] of bucket.entries()) {
+		if (!isRootName(rootName)) {
+			continue;
+		}
+		for (const [joinedPathToParent, libraryFileDtos] of bucket.entries()) {
 			const path = joinedPathToParent.split("-");
 			const textDto: TextDto = {
 				pageStatuses: Object.fromEntries(
-					pages.map((page) => [page.name, page.status]),
+					libraryFileDtos.map((libraryFileDto) => {
+						const treePath =
+							getTreePathFromLibraryFile(libraryFileDto);
+						const name = treePath[treePath.length - 1];
+						const status =
+							libraryFileDto.metaInfo.status ??
+							TextStatus.NotStarted;
+						return [name, status];
+					}),
 				),
 				path,
 			};
-			grouppedUpTexts[rootName].push(textDto);
+			const existingTextDtos = grouppedUpTexts.get(rootName);
+			if (!existingTextDtos) {
+				grouppedUpTexts.set(rootName, [textDto]);
+			} else {
+				existingTextDtos.push(textDto);
+			}
 		}
 	}
 

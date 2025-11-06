@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import { LibraryTree } from '../../../src/commanders/librarian/library-tree/library-tree';
 import {
-	type BookNode,
 	type BranchNode,
 	NodeType,
 	type SectionNode,
@@ -15,7 +14,7 @@ describe('CurratedTree - Parent References', () => {
 			const tree = new LibraryTree(
 				[
 					{
-						pageStatuses: { 'Page1': TextStatus.NotStarted },
+						pageStatuses: { '000': TextStatus.NotStarted },
 						path: ['Section1', 'Text1'] as TreePath,
 					},
 				],
@@ -66,7 +65,7 @@ describe('CurratedTree - Parent References', () => {
 			const tree = new LibraryTree(
 				[
 					{
-						pageStatuses: { 'Page1': TextStatus.NotStarted, 'Page2': TextStatus.Done },
+						pageStatuses: { '000': TextStatus.NotStarted, '001': TextStatus.Done },
 						path: ['Section1', 'Text1'] as TreePath,
 					},
 				],
@@ -161,12 +160,12 @@ describe('CurratedTree - Parent References', () => {
 			const tree = new LibraryTree([], 'Library');
 
 			const result = tree.addTexts([{
-				pageStatuses: { 'Page1': TextStatus.NotStarted, 'Page2': TextStatus.Done },
+				pageStatuses: { '000': TextStatus.NotStarted, '001': TextStatus.Done },
 				path: ['Section', 'Text'],
 			}]);
 
 			expect(tree.getAllTextsInTree()).toEqual([{
-				pageStatuses: { 'Page1': TextStatus.NotStarted, 'Page2': TextStatus.Done },
+				pageStatuses: { '000': TextStatus.NotStarted, '001': TextStatus.Done },
 				path: ['Section', 'Text'],
 			}]);
 		});
@@ -192,10 +191,10 @@ describe('CurratedTree - Parent References', () => {
 			});
 
 			if (!chapter1.error && !chapter2.error) {
-				expect((chapter1.data as BookNode).parent?.name).toBe('Fantasy');
-				expect((chapter2.data as BookNode).parent?.name).toBe('Fantasy');
-				expect((chapter1.data as BookNode).parent?.type).toBe(NodeType.Section);
-				expect((chapter2.data as BookNode).parent?.type).toBe(NodeType.Section);
+				expect((chapter1.data).parent?.name).toBe('Fantasy');
+				expect((chapter2.data).parent?.name).toBe('Fantasy');
+				expect((chapter1.data).parent?.type).toBe(NodeType.Section);
+				expect((chapter2.data).parent?.type).toBe(NodeType.Section);
 			}
 		});
 	});
@@ -223,7 +222,7 @@ describe('CurratedTree - Parent References', () => {
 			const chapter2 = tree.getMaybeNode({ path: ['Section', 'Chapter2'] });
 			expect(!chapter2.error).toBe(true);
 			if (!chapter2.error) {
-				expect((chapter2.data as BookNode).parent?.name).toBe('Section');
+				expect((chapter2.data).parent?.name).toBe('Section');
 			}
 		});
 
@@ -266,7 +265,7 @@ describe('CurratedTree - Parent References', () => {
 			expect(!subSection2.error).toBe(true);
 
 			if (!text2.error && !subSection2.error) {
-				expect((text2.data as BookNode).parent?.name).toBe('SubSection2');
+				expect((text2.data).parent?.name).toBe('SubSection2');
 				expect((subSection2.data as SectionNode).parent?.name).toBe('Section');
 			}
 		});
@@ -297,16 +296,16 @@ describe('CurratedTree - Parent References', () => {
 			});
 
 			if (!chapter2.error) {
-				expect((chapter2.data as BookNode).parent?.name).toBe('Fiction');
-				expect((chapter2.data as BookNode).parent?.parent?.name).toBe('Books');
-				expect((chapter2.data as BookNode).parent?.parent?.parent).toBe(tree.root);
+				expect((chapter2.data).parent?.name).toBe('Fiction');
+				expect((chapter2.data).parent?.parent?.name).toBe('Books');
+				expect((chapter2.data).parent?.parent?.parent).toBe(tree.root);
 			}
 
 			if (!nonfictionChapter.error) {
-				expect((nonfictionChapter.data as BookNode).parent?.name).toBe(
+				expect((nonfictionChapter.data).parent?.name).toBe(
 					'NonFiction'
 				);
-				expect((nonfictionChapter.data as BookNode).parent?.parent?.name).toBe(
+				expect((nonfictionChapter.data).parent?.parent?.name).toBe(
 					'Books'
 				);
 			}

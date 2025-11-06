@@ -8,7 +8,7 @@ export const AVATAR_TEXTS = [
 	},
 	{
 		// For BookNodes (multiple pages), page names are preserved
-		pageStatuses: { 'Page1': 'NotStarted', 'Page2': 'NotStarted' } as const,
+		pageStatuses: { '000': 'NotStarted', '001': 'NotStarted' } as const,
 		path: ['Avatar', 'Season_1', 'Episode_2'] as const,
 	},
 	{

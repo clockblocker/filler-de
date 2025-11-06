@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'bun:test';
 import { LibraryTree } from '../../../src/commanders/librarian/library-tree/library-tree';
 import {
-	type BookNode,
 	NodeType,
 	type SectionNode,
 	type TextDto,
+	type TextNode,
 	type TreePath,
 } from '../../../src/commanders/librarian/types';
 import { TextStatus } from '../../../src/types/common-interface/enums';
@@ -21,7 +21,7 @@ describe('CurratedTree - Building from SerializedText', () => {
 		it('should create sections and text nodes from SerializedText paths', () => {
 			const texts: TextDto[] = [
 				{
-					pageStatuses: { 'Page1': TextStatus.NotStarted, 'Page2': TextStatus.Done },
+					pageStatuses: { '000': TextStatus.NotStarted, '001': TextStatus.Done },
 					path: ['Books', 'Fiction', 'Novel1'] as TreePath,
 				},
 			];
@@ -44,11 +44,11 @@ describe('CurratedTree - Building from SerializedText', () => {
 		it('should set correct status based on page statuses', () => {
 			const texts: TextDto[] = [
 				{
-					pageStatuses: { 'Page1': TextStatus.Done, 'Page2': TextStatus.Done },
+					pageStatuses: { '000': TextStatus.Done, '001': TextStatus.Done },
 					path: ['Section', 'AllDone'] as TreePath,
 				},
 				{
-					pageStatuses: { 'Page1': TextStatus.NotStarted, 'Page2': TextStatus.NotStarted },
+					pageStatuses: { '000': TextStatus.NotStarted, '001': TextStatus.NotStarted },
 					path: ['Section', 'AllNotStarted'] as TreePath,
 				},
 			];
@@ -61,10 +61,10 @@ describe('CurratedTree - Building from SerializedText', () => {
 			});
 
 			if (!allDone.error) {
-				expect((allDone.data as BookNode).status).toBe(TextStatus.Done);
+				expect((allDone.data ).status).toBe(TextStatus.Done);
 			}
 			if (!allNotStarted.error) {
-				expect((allNotStarted.data as BookNode).status).toBe(
+				expect((allNotStarted.data ).status).toBe(
 					TextStatus.NotStarted
 				);
 			}
@@ -73,11 +73,11 @@ describe('CurratedTree - Building from SerializedText', () => {
 		it('should handle multiple texts in same section', () => {
 			const texts: TextDto[] = [
 				{
-					pageStatuses: { 'Page1': TextStatus.Done },
+					pageStatuses: { '000': TextStatus.Done },
 					path: ['Section', 'Text1'] as TreePath,
 				},
 				{
-					pageStatuses: { 'Page1': TextStatus.NotStarted },
+					pageStatuses: { '000': TextStatus.NotStarted },
 					path: ['Section', 'Text2'] as TreePath,
 				},
 			];
@@ -98,7 +98,7 @@ describe('CurratedTree - Building from SerializedText', () => {
 		it('should add single SerializedText', () => {
 			const tree = new LibraryTree([], 'Library');
 			const serialized: TextDto = {
-				pageStatuses: { 'Page1': TextStatus.Done },
+				pageStatuses: { '000': TextStatus.Done },
 				path: ['Section', 'Text'] as TreePath,
 			};
 
@@ -111,12 +111,12 @@ describe('CurratedTree - Building from SerializedText', () => {
 			const tree = new LibraryTree([], 'Library');
 
 			tree.addTexts([{
-				pageStatuses: { 'Page1': TextStatus.Done },
+				pageStatuses: { '000': TextStatus.Done },
 				path: ['A', 'Text1'] as TreePath,
 			}]);
 
 			tree.addTexts([{
-				pageStatuses: { 'Page1': TextStatus.NotStarted },
+				pageStatuses: { '000': TextStatus.NotStarted },
 				path: ['A', 'Text2'] as TreePath,
 			}]);
 
@@ -131,7 +131,7 @@ describe('CurratedTree - Building from SerializedText', () => {
 			const tree = new LibraryTree([], 'Library');
 
 			tree.addTexts([{
-				pageStatuses: { 'Page1': TextStatus.Done },
+				pageStatuses: { '000': TextStatus.Done },
 				path: ['Section', 'Text'] as TreePath,
 			}]);
 
@@ -166,7 +166,7 @@ describe('CurratedTree - Building from SerializedText', () => {
 			const tree = new LibraryTree(
 				[
 					{
-						pageStatuses: { 'Page1': TextStatus.NotStarted },
+						pageStatuses: { '000': TextStatus.NotStarted },
 						path: ['Section', 'Text'] as TreePath,
 					},
 				],
@@ -192,11 +192,11 @@ describe('CurratedTree - Building from SerializedText', () => {
 			const tree = new LibraryTree(
 				[
 					{
-						pageStatuses: { 'Page1': TextStatus.NotStarted, 'Page2': TextStatus.NotStarted },
+						pageStatuses: { '000': TextStatus.NotStarted, '001': TextStatus.NotStarted },
 						path: ['Section', 'Text1'] as TreePath,
 					},
 					{
-						pageStatuses: { 'Page1': TextStatus.NotStarted },
+						pageStatuses: { '000': TextStatus.NotStarted },
 						path: ['Section', 'Text2'] as TreePath,
 					},
 				],
@@ -216,8 +216,8 @@ describe('CurratedTree - Building from SerializedText', () => {
 			});
 
 			if (!text1.error) {
-				const t1 = text1.data as BookNode;
-				expect(t1.children.every((p) => p.status === TextStatus.Done)).toBe(
+				const t1 = text1.data ;
+				expect((t1 as TextNode).children.every((p) => p.status === TextStatus.Done)).toBe(
 					true
 				);
 			}
@@ -225,7 +225,7 @@ describe('CurratedTree - Building from SerializedText', () => {
 			if (!text2.error) {
 				// Text2 is a ScrollNode (single page), so check its status directly
 				if (text2.data.type === NodeType.Text) {
-					const t2 = text2.data as BookNode;
+					const t2 = text2.data ;
 					expect(t2.children.every((p) => p.status === TextStatus.Done)).toBe(
 						true
 					);
@@ -239,7 +239,7 @@ describe('CurratedTree - Building from SerializedText', () => {
 			const tree = new LibraryTree(
 				[
 					{
-						pageStatuses: { 'Page1': TextStatus.Done, 'Page2': TextStatus.Done },
+						pageStatuses: { '000': TextStatus.Done, '001': TextStatus.Done },
 						path: ['Section', 'Text'] as TreePath,
 					},
 				],
@@ -256,9 +256,9 @@ describe('CurratedTree - Building from SerializedText', () => {
 			});
 
 			if (!text.error) {
-				const t = text.data as BookNode;
+				const t = text.data ;
 				expect(
-					t.children.every((p) => p.status === TextStatus.NotStarted)
+					(t as TextNode).children.every((p) => p.status === TextStatus.NotStarted)
 				).toBe(true);
 			}
 		});

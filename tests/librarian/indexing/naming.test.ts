@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import {
 	getLibraryFileToFileFromNode,
 	getTreePathFromLibraryFile,
-} from '../../../src/commanders/librarian/indexing/naming';
+} from '../../../src/commanders/librarian/indexing/libraryFileAdapters';
 import { LibraryTree } from '../../../src/commanders/librarian/library-tree/library-tree';
 import { getTreePathFromNode } from '../../../src/commanders/librarian/pure-functions/node';
 import type { TreeNode, TreePath } from '../../../src/commanders/librarian/types';

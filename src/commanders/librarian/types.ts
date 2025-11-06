@@ -1,32 +1,10 @@
 import { z } from "zod";
-import type {
-	LibraryNoteMetaInfo,
-	MetaInfo,
-} from "../../services/dto-services/meta-info-manager/types";
+import type { LibraryNoteMetaInfo } from "../../services/dto-services/meta-info-manager/types";
 import type { SplitPathToFile } from "../../services/obsidian-services/file-services/types";
 import type { TextStatus } from "../../types/common-interface/enums";
 import type { Prettify } from "../../types/helpers";
-import {
-	BOOK,
-	CODEX,
-	PAGE,
-	SCROLL,
-	SECTION,
-	TEXT,
-	UNMARKED,
-} from "../../types/literals";
+import { PAGE, SECTION, TEXT } from "../../types/literals";
 import type { GuardedNodeName } from "./indexing/formatters";
-
-// Naming
-export const IndexedFileTypeSchema = z.enum([
-	BOOK,
-	SCROLL,
-	CODEX,
-	PAGE,
-	UNMARKED,
-]);
-export type IndexedFileType = z.infer<typeof IndexedFileTypeSchema>;
-export const IndexedFileType = IndexedFileTypeSchema.enum;
 
 // Tree
 export const NodeTypeSchema = z.enum([TEXT, SECTION, PAGE]);

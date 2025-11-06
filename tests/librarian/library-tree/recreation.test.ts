@@ -3,7 +3,7 @@ import {
 	makeTextsFromTree,
 	makeTreeFromTexts,
 } from '../../../src/commanders/librarian/library-tree/helpers/serialization';
-import { AVATAR_TEXTS } from '../static/battaries/avatar';
+import { AVATAR_TEXTS } from '../static/batteries/avatar';
 
 describe('CurratedTree - add and remove all texts cycle', () => {
 	it('can remove and re-add every text and result is identical', () => {

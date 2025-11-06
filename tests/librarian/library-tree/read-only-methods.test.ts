@@ -83,36 +83,36 @@ describe('CurratedTree - Read-only methods', () => {
 	});
 
 	describe('getMaybePage', () => {
-		it('should get Page1 from Episode_2 book', () => {
+		it('should get 000 from Episode_2 book', () => {
 			const tree = new LibraryTree(VALID_BRANCHES.Avatar.texts, 'Library');
 			const page = tree.getMaybePage({
-				pageName: 'Page1',
+				pageName: '000',
 				textPath: ['Avatar', 'Season_1', 'Episode_2'] as TreePath,
 			});
 			expect(page.error).toBe(false);
 			if (!page.error) {
 				expect(page.data.type).toBe(NodeType.Page);
-				expect(page.data.name).toBe('Page1');
+				expect(page.data.name).toBe('000');
 			}
 		});
 
-		it('should get Page2 from Episode_2 book', () => {
+		it('should get 001 from Episode_2 book', () => {
 			const tree = new LibraryTree(VALID_BRANCHES.Avatar.texts, 'Library');
 			const page = tree.getMaybePage({
-				pageName: 'Page2',
+				pageName: '001',
 				textPath: ['Avatar', 'Season_1', 'Episode_2'] as TreePath,
 			});
 			expect(page.error).toBe(false);
 			if (!page.error) {
 				expect(page.data.type).toBe(NodeType.Page);
-				expect(page.data.name).toBe('Page2');
+				expect(page.data.name).toBe('001');
 			}
 		});
 
 		it('should not get page from ScrollNode (Intro)', () => {
 			const tree = new LibraryTree(VALID_BRANCHES.Avatar.texts, 'Library');
 			const page = tree.getMaybePage({
-				pageName: 'Page1',
+				pageName: '000',
 				textPath: ['Intro'] as TreePath,
 			});
 			expect(page.error).toBe(true);
@@ -121,7 +121,7 @@ describe('CurratedTree - Read-only methods', () => {
 		it('should not get page from ScrollNode (Episode_1)', () => {
 			const tree = new LibraryTree(VALID_BRANCHES.Avatar.texts, 'Library');
 			const page = tree.getMaybePage({
-				pageName: 'Page1',
+				pageName: '000',
 				textPath: ['Avatar', 'Season_1', 'Episode_1'] as TreePath,
 			});
 			expect(page.error).toBe(true);
@@ -139,7 +139,7 @@ describe('CurratedTree - Read-only methods', () => {
 		it('should not get page from non-existent text', () => {
 			const tree = new LibraryTree(VALID_BRANCHES.Avatar.texts, 'Library');
 			const page = tree.getMaybePage({
-				pageName: 'Page1',
+				pageName: '000',
 				textPath: ['Avatar', 'Season_2', 'Episode_3'] as TreePath,
 			});
 			expect(page.error).toBe(true);

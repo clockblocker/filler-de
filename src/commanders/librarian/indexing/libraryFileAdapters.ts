@@ -1,13 +1,11 @@
+import { extractMetaInfo } from "../../../services/dto-services/meta-info-manager/interface";
 import type { MetaInfo } from "../../../services/dto-services/meta-info-manager/types";
+import type { PrettyFileWithReader } from "../../../services/obsidian-services/file-services/background/background-file-service";
 import type { SplitPathToFile } from "../../../services/obsidian-services/file-services/types";
 import { UNKNOWN } from "../../../types/literals";
 import { getTreePathFromNode } from "../pure-functions/node";
-import {
-	type LibraryFileDto,
-	NodeType,
-	type TreeNode,
-	type TreePath,
-} from "../types";
+import type { LibraryFileDto } from "../types";
+import { NodeType, type TreeNode, type TreePath } from "../types";
 import {
 	codexNameFromTreePath,
 	GuardedCodexNameSchema,
@@ -109,4 +107,40 @@ export function getTreePathFromLibraryFile(
 			] as TreePath;
 		}
 	}
+}
+
+export async function prettyFileWithReaderToLibraryFileDto(
+	fileReader: PrettyFileWithReader,
+): Promise<LibraryFileDto | null> {
+	const content = await fileReader.readContent();
+	const metaInfo = extractMetaInfo(content);
+	if (
+		metaInfo !== null &&
+		metaInfo.fileType === "Page" &&
+		"index" in metaInfo
+	) {
+		return {
+			metaInfo,
+			splitPath: {
+				basename: fileReader.basename,
+				extension: "md",
+				pathParts: fileReader.pathParts,
+				type: "file",
+			},
+		};
+	}
+	return null;
+}
+
+export async function prettyFilesWithReaderToLibraryFileDtos(
+	fileReaders: readonly PrettyFileWithReader[],
+): Promise<LibraryFileDto[]> {
+	const libraryFileDtos = await Promise.all(
+		fileReaders.map(prettyFileWithReaderToLibraryFileDto),
+	);
+
+	return libraryFileDtos.filter(
+		(libraryFileDto): libraryFileDto is LibraryFileDto =>
+			libraryFileDto !== null,
+	);
 }
