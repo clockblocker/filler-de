@@ -2,6 +2,7 @@ import { extractMetaInfo } from "../../../services/dto-services/meta-info-manage
 import type { MetaInfo } from "../../../services/dto-services/meta-info-manager/types";
 import type { PrettyFileWithReader } from "../../../services/obsidian-services/file-services/background/background-file-service";
 import type { SplitPathToFile } from "../../../services/obsidian-services/file-services/types";
+import { TextStatus } from "../../../types/common-interface/enums";
 import { UNKNOWN } from "../../../types/literals";
 import { getTreePathFromNode } from "../pure-functions/node";
 import type { LibraryFileDto } from "../types";
@@ -34,7 +35,13 @@ export function getLibraryFileToFileFromNode(node: TreeNode): LibraryFileDto {
 		case NodeType.Page: {
 			if (node.parent?.children.length === 1) {
 				metaInfo = { fileType: "Scroll", status: node.status };
-				splitPath.basename = scrollNameFromTreePath.encode(treePath);
+				// scrollNameFromTreePath requires min 2 elements, so use node name directly for single-element paths
+				if (treePath.length < 2) {
+					splitPath.basename = node.name;
+				} else {
+					splitPath.basename =
+						scrollNameFromTreePath.encode(treePath);
+				}
 				break;
 			}
 			splitPath.basename = pageNameFromTreePath.encode(treePath);
@@ -59,7 +66,13 @@ export function getLibraryFileToFileFromNode(node: TreeNode): LibraryFileDto {
 		case NodeType.Text: {
 			if (node.children.length === 1) {
 				metaInfo = { fileType: "Scroll", status: node.status };
-				splitPath.basename = scrollNameFromTreePath.encode(treePath);
+				// scrollNameFromTreePath requires min 2 elements, so use node name directly for single-element paths
+				if (treePath.length < 2) {
+					splitPath.basename = node.name;
+				} else {
+					splitPath.basename =
+						scrollNameFromTreePath.encode(treePath);
+				}
 				break;
 			}
 			splitPath.basename = codexNameFromTreePath.encode(treePath);
@@ -88,7 +101,18 @@ export function getTreePathFromLibraryFile(
 	switch (metaInfo.fileType) {
 		case "Scroll": {
 			const parsedBasename = GuardedScrollNameSchema.parse(basename);
-			return scrollNameFromTreePath.decode(parsedBasename);
+			try {
+				const decoded = scrollNameFromTreePath.decode(parsedBasename);
+				// scrollNameFromTreePath requires min 2 elements, so single-element paths will fail
+				// For single-element paths, use the basename directly
+				if (decoded.length < 2) {
+					return [parsedBasename] as TreePath;
+				}
+				return decoded;
+			} catch {
+				// If decoding fails (e.g., single-element path), use the basename directly
+				return [parsedBasename] as TreePath;
+			}
 		}
 		case "Page": {
 			const parsedBasename = GuardedPageNameSchema.parse(basename);
@@ -109,16 +133,70 @@ export function getTreePathFromLibraryFile(
 	}
 }
 
+/**
+ * Infers MetaInfo from filename when meta section is missing.
+ * Uses naming conventions: Codex (__prefix), Page (000-prefix), Scroll (other).
+ */
+function inferMetaInfoFromBasename(basename: string): MetaInfo | null {
+	// Try Codex: starts with __
+	const codexResult = GuardedCodexNameSchema.safeParse(basename);
+	if (codexResult.success) {
+		return {
+			fileType: "Codex",
+			status: TextStatus.NotStarted,
+		};
+	}
+
+	// Try Page: starts with 000-, 001-, etc.
+	const pageResult = GuardedPageNameSchema.safeParse(basename);
+	if (pageResult.success) {
+		try {
+			const decoded = pageNameFromTreePath.decode(pageResult.data);
+			const pageNum = decoded[0];
+			if (pageNum) {
+				const index = Number(pageNum);
+				if (index >= 0 && index <= 999) {
+					return {
+						fileType: "Page",
+						index,
+						status: TextStatus.NotStarted,
+					};
+				}
+			}
+		} catch {
+			// Decoding failed, skip
+		}
+	}
+
+	// Try Scroll: any other valid name
+	const scrollResult = GuardedScrollNameSchema.safeParse(basename);
+	if (scrollResult.success) {
+		return {
+			fileType: "Scroll",
+			status: TextStatus.NotStarted,
+		};
+	}
+
+	return null;
+}
+
 export async function prettyFileWithReaderToLibraryFileDto(
 	fileReader: PrettyFileWithReader,
 ): Promise<LibraryFileDto | null> {
 	const content = await fileReader.readContent();
-	const metaInfo = extractMetaInfo(content);
-	if (
-		metaInfo !== null &&
-		metaInfo.fileType === "Page" &&
-		"index" in metaInfo
-	) {
+	let metaInfo = extractMetaInfo(content);
+
+	// Fallback: infer from filename if meta section is missing
+	if (metaInfo === null) {
+		metaInfo = inferMetaInfoFromBasename(fileReader.basename);
+	}
+
+	if (metaInfo === null || metaInfo.fileType === "Unknown") {
+		return null;
+	}
+
+	// Handle Page files
+	if (metaInfo.fileType === "Page" && "index" in metaInfo) {
 		return {
 			metaInfo,
 			splitPath: {
@@ -129,6 +207,31 @@ export async function prettyFileWithReaderToLibraryFileDto(
 			},
 		};
 	}
+	// Handle Scroll files
+	if (metaInfo.fileType === "Scroll") {
+		return {
+			metaInfo,
+			splitPath: {
+				basename: fileReader.basename,
+				extension: "md",
+				pathParts: fileReader.pathParts,
+				type: "file",
+			},
+		};
+	}
+	// Handle Codex files
+	if (metaInfo.fileType === "Codex") {
+		return {
+			metaInfo,
+			splitPath: {
+				basename: fileReader.basename,
+				extension: "md",
+				pathParts: fileReader.pathParts,
+				type: "file",
+			},
+		};
+	}
+
 	return null;
 }
 

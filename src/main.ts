@@ -136,6 +136,7 @@ export default class TextEaterPlugin extends Plugin {
 
 		this.librarian = new Librarian(this);
 		await this.librarian.initTrees();
+		console.log("[main] Librarian and trees initialized:", this.librarian);
 
 		this.registerDomEvent(document, "click", makeClickListener(this));
 
@@ -275,6 +276,14 @@ export default class TextEaterPlugin extends Plugin {
 			},
 			id: "get-infinitive-and-emoji",
 			name: "Get infinitive/normal form and emoji for current word",
+		});
+
+		this.addCommand({
+			editorCheckCallback: () => {
+				this.librarian.сreateNewTextInTheCurrentFolderAndOpenIt();
+			},
+			id: "create-new-text-in-the-current-folder-and-open-it",
+			name: "Create new text in the current folder and open it",
 		});
 
 		this.addCommand({
