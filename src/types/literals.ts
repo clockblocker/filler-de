@@ -41,7 +41,7 @@ const LongDashSchema = z.literal("—");
 export type LONG_DASH = z.infer<typeof LongDashSchema>;
 export const LONG_DASH = LongDashSchema.value;
 
-const DashSchema = z.literal("—");
+const DashSchema = z.literal("-");
 export type DASH = z.infer<typeof DashSchema>;
 export const DASH = DashSchema.value;
 
@@ -98,7 +98,6 @@ export const ScrollSchema = z.literal("Scroll");
 export type SCROLL = z.infer<typeof ScrollSchema>;
 export const SCROLL = ScrollSchema.value;
 
-
 export const SectionSchema = z.literal("Section");
 export type SECTION = z.infer<typeof SectionSchema>;
 export const SECTION = SectionSchema.value;
@@ -123,6 +122,11 @@ export const ENTRY = EntrySchema.value;
 export const UnknownSchema = z.literal("Unknown");
 export type UNKNOWN = z.infer<typeof UnknownSchema>;
 export const UNKNOWN = UnknownSchema.value;
+
+// Defined folder names
+export const PagesSchema = z.literal("Pages");
+export type PAGES = z.infer<typeof PagesSchema>;
+export const PAGES = PagesSchema.value;
 
 // Node statuses
 export const DoneSchema = z.literal("Done");

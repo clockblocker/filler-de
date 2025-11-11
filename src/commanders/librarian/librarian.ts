@@ -68,13 +68,18 @@ export class Librarian {
 			const libraryFileDtosInFolder =
 				await this.readLibraryFileDtosInFolder(rootName);
 
+			console.log(
+				"[Librarian] [initTrees] libraryFileDtosInFolder",
+				libraryFileDtosInFolder,
+			);
+
 			const grouppedUpTexts = grouppedUpTextsFromLibraryFileDtos(
 				libraryFileDtosInFolder,
 				rootName,
 			);
 			console.log(
 				"[Librarian] [initTrees] grouppedUpTexts entries:",
-				grouppedUpTexts.size,
+				grouppedUpTexts,
 			);
 
 			for (const [

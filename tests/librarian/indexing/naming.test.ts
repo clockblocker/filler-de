@@ -14,7 +14,7 @@ describe('naming functions', () => {
 			const tree = new LibraryTree(
 				[
 					{
-						pageStatuses: { '0': TextStatus.NotStarted, '1': TextStatus.Done },
+						pageStatuses: { '000': TextStatus.NotStarted, '001': TextStatus.Done },
 						path: ['Section', 'Text'] as TreePath,
 					},
 				],
@@ -66,9 +66,9 @@ describe('naming functions', () => {
 				[
 					{
 						pageStatuses: {
-							'0': TextStatus.NotStarted,
-							'1': TextStatus.Done,
-							'2': TextStatus.InProgress,
+							'000': TextStatus.NotStarted,
+							'001': TextStatus.Done,
+							'002': TextStatus.InProgress,
 						},
 						path: ['Section', 'Text'] as TreePath,
 					},
@@ -91,7 +91,7 @@ describe('naming functions', () => {
 			const tree = new LibraryTree(
 				[
 					{
-						pageStatuses: { '0': TextStatus.NotStarted },
+						pageStatuses: { '000': TextStatus.NotStarted },
 						path: ['Section1', 'SubSection', 'Text'] as TreePath,
 					},
 				],
@@ -114,8 +114,8 @@ describe('naming functions', () => {
 				[
 					{
 						pageStatuses: {
-							'5': TextStatus.NotStarted,
-							'10': TextStatus.Done,
+							'005': TextStatus.NotStarted,
+							'010': TextStatus.Done,
 						},
 						path: ['Book', 'Chapter', 'Section', 'Text'] as TreePath,
 					},
@@ -130,7 +130,7 @@ describe('naming functions', () => {
 			if (textNode.error) return;
 
 			const pageNode = (textNode.data).type === 'Text'
-				? (textNode.data).children.find((p) => p.name === '5')
+				? (textNode.data).children.find((p) => p.name === '005')
 				: null;
 
 			expect(pageNode).not.toBeNull();

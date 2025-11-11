@@ -35,12 +35,12 @@ describe('CodexNameFromTreePath', () => {
 
 describe('PageNameFromTreePath', () => {
 	it('2 nodes', () => {
-		expect(pageNameFromTreePath.encode(['Avatar', '10'])).toBe(`010${DASH}Avatar`);
-		expect(pageNameFromTreePath.decode(`010${DASH}Avatar`)).toEqual(['Avatar', '10']);
+		expect(pageNameFromTreePath.encode(['Avatar', '010'])).toBe(`010${DASH}Avatar`);
+		expect(pageNameFromTreePath.decode(`010${DASH}Avatar`)).toEqual(['Avatar', '010']);
 	});
 
 	it('4 nodes', () => {
-		expect(pageNameFromTreePath.encode(['Avatar', 'Season_1', 'Episode_1', '1'])).toBe(`001${DASH}Episode_1${DASH}Season_1${DASH}Avatar`);
-		expect(pageNameFromTreePath.decode(`001${DASH}Episode_1${DASH}Season_1${DASH}Avatar`)).toEqual(['Avatar', 'Season_1', 'Episode_1', '1']);
+		expect(pageNameFromTreePath.encode(['Avatar', 'Season_1', 'Episode_1', '001'])).toBe(`001${DASH}Episode_1${DASH}Season_1${DASH}Avatar`);
+		expect(pageNameFromTreePath.decode(`001${DASH}Episode_1${DASH}Season_1${DASH}Avatar`)).toEqual(['Avatar', 'Season_1', 'Episode_1', '001']);
 	});
 });

@@ -1,6 +1,6 @@
 import type { FileManager, TFile, Vault } from "obsidian";
 import type { PrettyPath } from "../../../../types/common-interface/dtos";
-import { isReadonlyArray } from "../../../../types/helpers";
+import { isReadonlyArray, type Prettify } from "../../../../types/helpers";
 import {
 	splitPathFromAbstractFile,
 	splitPathToMdFileFromPrettyPath,
@@ -112,7 +112,7 @@ export class BackgroundFileService {
 
 	async getReadersToAllMdFilesInFolder(
 		pathToFoulder: SplitPathToFolder,
-	): Promise<PrettyFileWithReader[]> {
+	): Promise<ReadablePrettyFile[]> {
 		const tFiles = await this.lsTfiles(pathToFoulder);
 
 		return tFiles.map((tfile) => ({
@@ -129,11 +129,15 @@ export class BackgroundFileService {
 	}
 }
 
-export type PrettyFileWithReader = PrettyPath & {
-	readContent: () => Promise<string>;
-};
+export type ReadablePrettyFile = Prettify<
+	PrettyPath & {
+		readContent: () => Promise<string>;
+	}
+>;
 
-export type PrettyFileDto = PrettyPath & {
-	content?: string;
-};
+export type PrettyFileDto = Prettify<
+	PrettyPath & {
+		content?: string;
+	}
+>;
 type PrettyFileFromTo = { from: PrettyFileDto; to: PrettyFileDto };

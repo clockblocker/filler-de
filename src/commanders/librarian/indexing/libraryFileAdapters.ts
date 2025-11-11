@@ -1,9 +1,9 @@
 import { extractMetaInfo } from "../../../services/dto-services/meta-info-manager/interface";
 import type { MetaInfo } from "../../../services/dto-services/meta-info-manager/types";
-import type { PrettyFileWithReader } from "../../../services/obsidian-services/file-services/background/background-file-service";
+import type { ReadablePrettyFile } from "../../../services/obsidian-services/file-services/background/background-file-service";
 import type { SplitPathToFile } from "../../../services/obsidian-services/file-services/types";
 import { TextStatus } from "../../../types/common-interface/enums";
-import { UNKNOWN } from "../../../types/literals";
+import { PAGES, UNKNOWN } from "../../../types/literals";
 import { getTreePathFromNode } from "../pure-functions/node";
 import type { LibraryFileDto } from "../types";
 import { NodeType, type TreeNode, type TreePath } from "../types";
@@ -110,7 +110,6 @@ export function getTreePathFromLibraryFile(
 				}
 				return decoded;
 			} catch {
-				// If decoding fails (e.g., single-element path), use the basename directly
 				return [parsedBasename] as TreePath;
 			}
 		}
@@ -123,8 +122,6 @@ export function getTreePathFromLibraryFile(
 			return codexNameFromTreePath.decode(parsedBasename);
 		}
 		case "Unknown": {
-			// For Unknown fileType, we can't decode from basename
-			// Return pathParts + basename (without extension) as best guess
 			return [
 				...splitPath.pathParts,
 				basename.replace(/\.md$/, ""),
@@ -134,11 +131,12 @@ export function getTreePathFromLibraryFile(
 }
 
 /**
- * Infers MetaInfo from filename when meta section is missing.
- * Uses naming conventions: Codex (__prefix), Page (000-prefix), Scroll (other).
+ * Infers MetaInfo from filename and pathParts when meta section is missing.
  */
-function inferMetaInfoFromBasename(basename: string): MetaInfo | null {
-	// Try Codex: starts with __
+function inferMetaInfo({
+	basename,
+	pathParts,
+}: Pick<ReadablePrettyFile, "basename" | "pathParts">): MetaInfo | null {
 	const codexResult = GuardedCodexNameSchema.safeParse(basename);
 	if (codexResult.success) {
 		return {
@@ -147,9 +145,10 @@ function inferMetaInfoFromBasename(basename: string): MetaInfo | null {
 		};
 	}
 
-	// Try Page: starts with 000-, 001-, etc.
 	const pageResult = GuardedPageNameSchema.safeParse(basename);
-	if (pageResult.success) {
+	console.log("[inferMetaInfo] basename, pageResult", basename, pageResult);
+
+	if (pageResult.success && pathParts.includes(PAGES)) {
 		try {
 			const decoded = pageNameFromTreePath.decode(pageResult.data);
 			const pageNum = decoded[0];
@@ -164,7 +163,7 @@ function inferMetaInfoFromBasename(basename: string): MetaInfo | null {
 				}
 			}
 		} catch {
-			// Decoding failed, skip
+			return null;
 		}
 	}
 
@@ -181,14 +180,14 @@ function inferMetaInfoFromBasename(basename: string): MetaInfo | null {
 }
 
 export async function prettyFileWithReaderToLibraryFileDto(
-	fileReader: PrettyFileWithReader,
+	fileReader: ReadablePrettyFile,
 ): Promise<LibraryFileDto | null> {
 	const content = await fileReader.readContent();
 	let metaInfo = extractMetaInfo(content);
 
 	// Fallback: infer from filename if meta section is missing
 	if (metaInfo === null) {
-		metaInfo = inferMetaInfoFromBasename(fileReader.basename);
+		metaInfo = inferMetaInfo(fileReader);
 	}
 
 	if (metaInfo === null || metaInfo.fileType === "Unknown") {
@@ -236,7 +235,7 @@ export async function prettyFileWithReaderToLibraryFileDto(
 }
 
 export async function prettyFilesWithReaderToLibraryFileDtos(
-	fileReaders: readonly PrettyFileWithReader[],
+	fileReaders: readonly ReadablePrettyFile[],
 ): Promise<LibraryFileDto[]> {
 	const libraryFileDtos = await Promise.all(
 		fileReaders.map(prettyFileWithReaderToLibraryFileDto),

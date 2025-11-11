@@ -11,39 +11,39 @@ const avatarCodex = {
 } as const satisfies PrettyFileDto;
 
 const avatarSeason1Codex = {
-	basename: "__Avatar-Season_1",
+	basename: "__Season_1-Avatar",
 	pathParts: ["Library", "Avatar", "Season_1"],
 } as const satisfies PrettyFileDto;
 
 // E2
 const avatarSeason1Episode1Codex = {
-	basename: "__Avatar-Season_1-Episode_1",
+	basename: "__Episode_1-Season_1-Avatar",
 	pathParts: ["Library", "Avatar", "Season_1", "Episode_1"],
 } as const satisfies PrettyFileDto;
 
 const avatarSeason1Episode1Page000 = {
-	basename: "000-Avatar-Season_1-Episode_1",
+	basename: "000-Episode_1-Season_1-Avatar",
 	pathParts: ["Library", "Avatar", "Season_1", "Episode_1", "Pages"],
 } as const satisfies PrettyFileDto;
 
 const avatarSeason1Episode1Page001 = {
-	basename: "001-Avatar-Season_1-Episode_1",
+	basename: "001-Episode_1-Season_1-Avatar",
 	pathParts: ["Library", "Avatar", "Season_1", "Episode_1", "Pages"],
 };
 
 // E2
 const avatarSeason1Episode2Codex = {
-	basename: "__Avatar-Season_1-Episode_2",
+	basename: "__Episode_2-Season_1-Avatar",
 	pathParts: ["Library", "Avatar", "Season_1", "Episode_2"],
 } as const satisfies PrettyFileDto;
 
 const avatarSeason1Episode2Page000 = {
-	basename: "000-Avatar-Season_1-Episode_2",
+	basename: "000-Episode_2-Season_1-Avatar",
 	pathParts: ["Library", "Avatar", "Season_1", "Episode_2", "Pages"],
 } as const satisfies PrettyFileDto;
 
 const avatarSeason1Episode2Page001 = {
-	basename: "001-Avatar-Season_1-Episode_2",
+	basename: "001-Episode_2-Season_1-Avatar",
 	pathParts: ["Library", "Avatar", "Season_1", "Episode_1", "Pages"],
 };
 
