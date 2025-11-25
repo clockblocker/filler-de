@@ -357,6 +357,11 @@ export class Librarian {
 			tree.addTexts([{ pageStatuses, path: textPath }]);
 		});
 
+		// Flush queue to ensure files are created before writing content
+		if (this.actionQueue) {
+			await this.actionQueue.flushNow();
+		}
+
 		// Write page content (the diff/queue handles structure, we handle content)
 		for (let i = 0; i < pages.length; i++) {
 			const pageIndex = formatPageIndex(i);
@@ -375,10 +380,10 @@ export class Librarian {
 					pageContent,
 				);
 			} else {
-				// Book page: NNN-reversed-path.md
+				// Book page: in Pages subfolder, NNN-reversed-path.md
 				const pagePath = {
 					basename: `${pageIndex}-${textPath.toReversed().join("-")}`,
-					pathParts: [rootName, ...sectionPath, textName],
+					pathParts: [rootName, ...sectionPath, textName, "Pages"],
 				};
 				await this.backgroundFileService.replaceContent(
 					pagePath,

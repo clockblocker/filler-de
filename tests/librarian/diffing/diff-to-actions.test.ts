@@ -121,9 +121,10 @@ describe("DiffToActionsMapper", () => {
 				(a) => a.type === BackgroundVaultActionType.CreateFile,
 			);
 
-			// 1 folder for book
-			expect(createFolderActions.length).toBe(1);
+			// 1 folder for book + 1 Pages subfolder
+			expect(createFolderActions.length).toBe(2);
 			expect(createFolderActions?.[0]?.payload?.prettyPath.basename).toBe("Book");
+			expect(createFolderActions?.[1]?.payload?.prettyPath.basename).toBe("Pages");
 
 			// 2 pages + 1 codex
 			expect(createFileActions.length).toBe(3);
@@ -185,8 +186,8 @@ describe("DiffToActionsMapper", () => {
 
 			// 2 pages + 1 codex
 			expect(trashFileActions.length).toBe(3);
-			// 1 book folder
-			expect(trashFolderActions.length).toBe(1);
+			// 1 Pages folder + 1 book folder
+			expect(trashFolderActions.length).toBe(2);
 		});
 	});
 

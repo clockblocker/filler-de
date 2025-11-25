@@ -181,6 +181,14 @@ export class DiffToActionsMapper {
 				type: BackgroundVaultActionType.CreateFolder,
 			});
 
+			// Create Pages subfolder
+			actions.push({
+				payload: {
+					prettyPath: this.pagesFolderToPrettyPath(text.path),
+				},
+				type: BackgroundVaultActionType.CreateFolder,
+			});
+
 			// Create page files
 			for (const pageName of pageNames) {
 				actions.push({
@@ -241,6 +249,14 @@ export class DiffToActionsMapper {
 					prettyPath: this.bookCodexToPrettyPath(text.path),
 				},
 				type: BackgroundVaultActionType.TrashFile,
+			});
+
+			// Trash Pages folder
+			actions.push({
+				payload: {
+					prettyPath: this.pagesFolderToPrettyPath(text.path),
+				},
+				type: BackgroundVaultActionType.TrashFolder,
 			});
 
 			// Trash book folder
@@ -333,6 +349,11 @@ export class DiffToActionsMapper {
 		const pathParts = [this.rootName, ...textPath.slice(0, -1)];
 		const basename = textPath[textPath.length - 1] ?? "";
 		return { basename, pathParts };
+	}
+
+	private pagesFolderToPrettyPath(textPath: TreePath): PrettyPath {
+		const pathParts = [this.rootName, ...textPath];
+		return { basename: "Pages", pathParts };
 	}
 
 	private bookCodexToPrettyPath(textPath: TreePath): PrettyPath {

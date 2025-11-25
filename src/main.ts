@@ -5,6 +5,7 @@ import {
 	type WorkspaceLeaf,
 } from "obsidian";
 import { Librarian } from "./commanders/librarian/librarian";
+import { splitTextIntoPages } from "./commanders/librarian/text-splitter/text-splitter";
 import { AboveSelectionToolbarService } from "./services/obsidian-services/atomic-services/above-selection-toolbar-service";
 import { ApiService } from "./services/obsidian-services/atomic-services/api-service";
 import { BottomToolbarService } from "./services/obsidian-services/atomic-services/bottom-toolbar-service";
@@ -307,9 +308,16 @@ export default class TextEaterPlugin extends Plugin {
 		});
 
 		this.addCommand({
-			editorCheckCallback: (checking: boolean, _editor: Editor, view: MarkdownView) => {
+			editorCheckCallback: (
+				checking: boolean,
+				_editor: Editor,
+				view: MarkdownView,
+			) => {
 				// Only show if file is in a Library folder
-				if (!view.file || !this.librarian.isInLibraryFolder(view.file)) {
+				if (
+					!view.file ||
+					!this.librarian.isInLibraryFolder(view.file)
+				) {
 					return false;
 				}
 				if (!checking) {
