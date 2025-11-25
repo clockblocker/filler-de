@@ -1,0 +1,274 @@
+import { describe, expect, it, beforeEach, mock } from "bun:test";
+import { Librarian } from "../../../src/commanders/librarian/librarian";
+import { LibraryTree } from "../../../src/commanders/librarian/library-tree/library-tree";
+import { BackgroundVaultActionType } from "../../../src/services/obsidian-services/file-services/background/background-vault-actions";
+import type { VaultActionQueue } from "../../../src/services/obsidian-services/file-services/background/vault-action-queue";
+import { TextStatus } from "../../../src/types/common-interface/enums";
+import type { TextDto, TreePath } from "../../../src/commanders/librarian/types";
+
+/**
+ * Integration tests for Librarian's withDiff mechanism.
+ * Verifies that tree mutations generate correct actions and queue them.
+ */
+describe("Librarian withDiff integration", () => {
+	let mockQueue: {
+		push: ReturnType<typeof mock>;
+		pushMany: ReturnType<typeof mock>;
+		flushNow: ReturnType<typeof mock>;
+		clear: ReturnType<typeof mock>;
+	};
+	let mockBackgroundFileService: {
+		getReadersToAllMdFilesInFolder: ReturnType<typeof mock>;
+		create: ReturnType<typeof mock>;
+	};
+	let mockOpenedFileService: {
+		prettyPwd: ReturnType<typeof mock>;
+		getLastOpenedFile: ReturnType<typeof mock>;
+		getApp: ReturnType<typeof mock>;
+		openFile: ReturnType<typeof mock>;
+	};
+	let mockApp: {
+		vault: { on: ReturnType<typeof mock> };
+	};
+
+	beforeEach(() => {
+		mockQueue = {
+			clear: mock(() => {}),
+			flushNow: mock(() => Promise.resolve()),
+			push: mock(() => {}),
+			pushMany: mock(() => {}),
+		};
+
+		mockBackgroundFileService = {
+			create: mock(() => Promise.resolve()),
+			getReadersToAllMdFilesInFolder: mock(() => Promise.resolve([])),
+		};
+
+		mockOpenedFileService = {
+			getApp: mock(() => ({ vault: { getAbstractFileByPath: () => null } })),
+			getLastOpenedFile: mock(() => null),
+			openFile: mock(() => Promise.resolve()),
+			prettyPwd: mock(() =>
+				Promise.resolve({ basename: "test", pathParts: ["Library"] }),
+			),
+		};
+
+		mockApp = {
+			vault: { on: mock(() => {}) },
+		};
+	});
+
+	describe("setStatus", () => {
+		it("should queue actions when status changes", () => {
+			// Create librarian with mock queue
+			const librarian = new Librarian({
+				actionQueue: mockQueue as unknown as VaultActionQueue,
+				// biome-ignore lint/suspicious/noExplicitAny: test mock
+				app: mockApp as any,
+				// biome-ignore lint/suspicious/noExplicitAny: test mock
+				backgroundFileService: mockBackgroundFileService as any,
+				// biome-ignore lint/suspicious/noExplicitAny: test mock
+				openedFileService: mockOpenedFileService as any,
+			});
+
+			// Manually set up a tree with a text
+			const textDto: TextDto = {
+				pageStatuses: { "000": TextStatus.NotStarted },
+				path: ["Section", "MyText"] as TreePath,
+			};
+			librarian.trees = {
+				Library: new LibraryTree([textDto], "Library"),
+			};
+
+			// Change status
+			librarian.setStatus("Library", ["Section", "MyText", "000"], "Done");
+
+			// Verify actions were queued
+			expect(mockQueue.pushMany).toHaveBeenCalled();
+			const calls = mockQueue.pushMany.mock.calls;
+			expect(calls.length).toBe(1);
+
+			const actions = calls[0]?.[0];
+			expect(Array.isArray(actions)).toBe(true);
+			// Status change should generate ProcessFile actions for affected Codex files
+			const hasProcessAction = actions.some(
+				// biome-ignore lint/suspicious/noExplicitAny: test mock
+				(a: any) => a.type === BackgroundVaultActionType.ProcessFile,
+			);
+			expect(hasProcessAction).toBe(true);
+		});
+
+		it("should not queue actions when status unchanged", () => {
+			const librarian = new Librarian({
+				actionQueue: mockQueue as unknown as VaultActionQueue,
+				// biome-ignore lint/suspicious/noExplicitAny: test mock
+				app: mockApp as any,
+				// biome-ignore lint/suspicious/noExplicitAny: test mock
+				backgroundFileService: mockBackgroundFileService as any,
+				// biome-ignore lint/suspicious/noExplicitAny: test mock
+				openedFileService: mockOpenedFileService as any,
+			});
+
+			const textDto: TextDto = {
+				pageStatuses: { "000": TextStatus.Done },
+				path: ["Section", "MyText"] as TreePath,
+			};
+			librarian.trees = {
+				Library: new LibraryTree([textDto], "Library"),
+			};
+
+			// Set status to same value
+			librarian.setStatus("Library", ["Section", "MyText", "000"], "Done");
+
+			// pushMany should not be called when actions array is empty
+			expect(mockQueue.pushMany).not.toHaveBeenCalled();
+		});
+	});
+
+	describe("addTexts", () => {
+		it("should queue CreateFile actions for new texts", () => {
+			const librarian = new Librarian({
+				actionQueue: mockQueue as unknown as VaultActionQueue,
+				// biome-ignore lint/suspicious/noExplicitAny: test mock
+				app: mockApp as any,
+				// biome-ignore lint/suspicious/noExplicitAny: test mock
+				backgroundFileService: mockBackgroundFileService as any,
+				// biome-ignore lint/suspicious/noExplicitAny: test mock
+				openedFileService: mockOpenedFileService as any,
+			});
+
+			// Start with empty tree
+			librarian.trees = {
+				Library: new LibraryTree([], "Library"),
+			};
+
+			// Add a new text
+			const newText: TextDto = {
+				pageStatuses: { "000": TextStatus.NotStarted },
+				path: ["NewSection", "NewText"] as TreePath,
+			};
+			librarian.addTexts("Library", [newText]);
+
+			expect(mockQueue.pushMany).toHaveBeenCalled();
+			const actions = mockQueue.pushMany.mock.calls[0]?.[0];
+
+			// Should have CreateFolder for section and CreateFile for scroll
+			const hasCreateFolder = actions.some(
+				// biome-ignore lint/suspicious/noExplicitAny: test mock
+				(a: any) => a.type === BackgroundVaultActionType.CreateFolder,
+			);
+			const hasCreateFile = actions.some(
+				// biome-ignore lint/suspicious/noExplicitAny: test mock
+				(a: any) => a.type === BackgroundVaultActionType.CreateFile,
+			);
+			expect(hasCreateFolder).toBe(true);
+			expect(hasCreateFile).toBe(true);
+		});
+	});
+
+	describe("deleteTexts", () => {
+		it("should queue TrashFile actions for removed texts", () => {
+			const librarian = new Librarian({
+				actionQueue: mockQueue as unknown as VaultActionQueue,
+				// biome-ignore lint/suspicious/noExplicitAny: test mock
+				app: mockApp as any,
+				// biome-ignore lint/suspicious/noExplicitAny: test mock
+				backgroundFileService: mockBackgroundFileService as any,
+				// biome-ignore lint/suspicious/noExplicitAny: test mock
+				openedFileService: mockOpenedFileService as any,
+			});
+
+			const textDto: TextDto = {
+				pageStatuses: { "000": TextStatus.Done },
+				path: ["Section", "TextToDelete"] as TreePath,
+			};
+			librarian.trees = {
+				Library: new LibraryTree([textDto], "Library"),
+			};
+
+			// Delete the text
+			librarian.deleteTexts("Library", [["Section", "TextToDelete"]]);
+
+			expect(mockQueue.pushMany).toHaveBeenCalled();
+			const actions = mockQueue.pushMany.mock.calls[0]?.[0];
+
+			// Should have TrashFile for the scroll
+			const hasTrashFile = actions.some(
+				// biome-ignore lint/suspicious/noExplicitAny: test mock
+				(a: any) => a.type === BackgroundVaultActionType.TrashFile,
+			);
+			expect(hasTrashFile).toBe(true);
+		});
+	});
+
+	describe("getSnapshot", () => {
+		it("should return current tree snapshot", () => {
+			const librarian = new Librarian({
+				actionQueue: mockQueue as unknown as VaultActionQueue,
+				// biome-ignore lint/suspicious/noExplicitAny: test mock
+				app: mockApp as any,
+				// biome-ignore lint/suspicious/noExplicitAny: test mock
+				backgroundFileService: mockBackgroundFileService as any,
+				// biome-ignore lint/suspicious/noExplicitAny: test mock
+				openedFileService: mockOpenedFileService as any,
+			});
+
+			const textDto: TextDto = {
+				pageStatuses: { "000": TextStatus.Done },
+				path: ["Section", "MyText"] as TreePath,
+			};
+			librarian.trees = {
+				Library: new LibraryTree([textDto], "Library"),
+			};
+
+			const snapshot = librarian.getSnapshot("Library");
+			expect(snapshot).not.toBeNull();
+			expect(snapshot?.texts.length).toBe(1);
+			expect(snapshot?.sectionPaths.length).toBe(1);
+		});
+
+		it("should return null for non-existent tree", () => {
+			const librarian = new Librarian({
+				actionQueue: mockQueue as unknown as VaultActionQueue,
+				// biome-ignore lint/suspicious/noExplicitAny: test mock
+				app: mockApp as any,
+				// biome-ignore lint/suspicious/noExplicitAny: test mock
+				backgroundFileService: mockBackgroundFileService as any,
+				// biome-ignore lint/suspicious/noExplicitAny: test mock
+				openedFileService: mockOpenedFileService as any,
+			});
+			librarian.trees = {};
+
+			const snapshot = librarian.getSnapshot("Library");
+			expect(snapshot).toBeNull();
+		});
+	});
+
+	describe("queue optional", () => {
+		it("should work without queue (no actions queued)", () => {
+			const librarian = new Librarian({
+				// No actionQueue provided
+				// biome-ignore lint/suspicious/noExplicitAny: test mock
+				app: mockApp as any,
+				// biome-ignore lint/suspicious/noExplicitAny: test mock
+				backgroundFileService: mockBackgroundFileService as any,
+				// biome-ignore lint/suspicious/noExplicitAny: test mock
+				openedFileService: mockOpenedFileService as any,
+			});
+
+			const textDto: TextDto = {
+				pageStatuses: { "000": TextStatus.NotStarted },
+				path: ["Section", "MyText"] as TreePath,
+			};
+			librarian.trees = {
+				Library: new LibraryTree([textDto], "Library"),
+			};
+
+			// Should not throw
+			expect(() => {
+				librarian.setStatus("Library", ["Section", "MyText", "000"], "Done");
+			}).not.toThrow();
+		});
+	});
+});
+

@@ -27,7 +27,7 @@ describe("TreeDiffer", () => {
 			const diff = differ.diff(before, after);
 
 			expect(diff.addedTexts.length).toBe(1);
-			expect(diff.addedTexts[0].path).toEqual(["Section", "NewText"]);
+			expect(diff.addedTexts?.[0]?.path).toEqual(["Section", "NewText"]);
 			expect(diff.removedTexts.length).toBe(0);
 		});
 
@@ -50,7 +50,7 @@ describe("TreeDiffer", () => {
 			const diff = differ.diff(before, after);
 
 			expect(diff.removedTexts.length).toBe(1);
-			expect(diff.removedTexts[0].path).toEqual(["Section", "OldText"]);
+			expect(diff.removedTexts?.[0]?.path).toEqual(["Section", "OldText"]);
 			expect(diff.addedTexts.length).toBe(0);
 		});
 
@@ -74,9 +74,9 @@ describe("TreeDiffer", () => {
 			const diff = differ.diff(before, after);
 
 			expect(diff.addedTexts.length).toBe(1);
-			expect(diff.addedTexts[0].path).toEqual(["A", "Text3"]);
+			expect(diff.addedTexts?.[0]?.path).toEqual(["A", "Text3"]);
 			expect(diff.removedTexts.length).toBe(1);
-			expect(diff.removedTexts[0].path).toEqual(["A", "Text1"]);
+			expect(diff.removedTexts?.[0]?.path).toEqual(["A", "Text1"]);
 		});
 	});
 
@@ -166,9 +166,9 @@ describe("TreeDiffer", () => {
 			const diff = differ.diff(before, after);
 
 			expect(diff.statusChanges.length).toBe(1);
-			expect(diff.statusChanges[0].path).toEqual(["Section", "Text", "000"]);
-			expect(diff.statusChanges[0].oldStatus).toBe(TextStatus.NotStarted);
-			expect(diff.statusChanges[0].newStatus).toBe(TextStatus.Done);
+			expect(diff.statusChanges?.[0]?.path).toEqual(["Section", "Text", "000"]);
+			expect(diff.statusChanges?.[0]?.oldStatus).toBe(TextStatus.NotStarted);
+			expect(diff.statusChanges?.[0]?.newStatus).toBe(TextStatus.Done);
 		});
 
 		it("should detect multiple page status changes in same text", () => {

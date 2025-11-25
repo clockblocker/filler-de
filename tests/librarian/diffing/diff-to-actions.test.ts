@@ -24,7 +24,7 @@ describe("DiffToActionsMapper", () => {
 				(a) => a.type === BackgroundVaultActionType.CreateFolder,
 			);
 			expect(createFolderActions.length).toBe(1);
-			expect(createFolderActions[0].payload.prettyPath.basename).toBe("NewSection");
+			expect(createFolderActions?.[0]?.payload.prettyPath.basename).toBe("NewSection");
 		});
 
 		it("should create trash folder action for removed section", () => {
@@ -64,9 +64,9 @@ describe("DiffToActionsMapper", () => {
 			);
 
 			// Deepest first
-			expect(trashFolderActions[0].payload.prettyPath.basename).toBe("C");
-			expect(trashFolderActions[1].payload.prettyPath.basename).toBe("B");
-			expect(trashFolderActions[2].payload.prettyPath.basename).toBe("A");
+			expect(trashFolderActions?.[0]?.payload.prettyPath.basename).toBe("C");
+			expect(trashFolderActions?.[1]?.payload.prettyPath.basename).toBe("B");
+			expect(trashFolderActions?.[2]?.payload.prettyPath.basename).toBe("A");
 		});
 	});
 
@@ -92,7 +92,7 @@ describe("DiffToActionsMapper", () => {
 			);
 			expect(createFileActions.length).toBe(1);
 			// Scroll filename is reversed path
-			expect(createFileActions[0].payload.prettyPath.basename).toBe("Scroll-Section");
+			expect(createFileActions?.[0]?.payload.prettyPath.basename).toBe("Scroll-Section");
 		});
 
 		it("should create folder + pages + codex for book (multiple pages)", () => {
@@ -123,7 +123,7 @@ describe("DiffToActionsMapper", () => {
 
 			// 1 folder for book
 			expect(createFolderActions.length).toBe(1);
-			expect(createFolderActions[0].payload.prettyPath.basename).toBe("Book");
+			expect(createFolderActions?.[0]?.payload?.prettyPath.basename).toBe("Book");
 
 			// 2 pages + 1 codex
 			expect(createFileActions.length).toBe(3);

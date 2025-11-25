@@ -96,10 +96,13 @@ export class VaultActionExecutor {
 		});
 	}
 
-	private async renameFolder(from: PrettyPath, to: PrettyPath): Promise<void> {
+	private async renameFolder(
+		from: PrettyPath,
+		to: PrettyPath,
+	): Promise<void> {
 		// Would need to extend BackgroundFileService for folder rename
 		logWarning({
-			description: `RenameFolder not yet implemented`,
+			description: "RenameFolder not yet implemented",
 			location: "VaultActionExecutor.renameFolder",
 		});
 	}
@@ -107,7 +110,7 @@ export class VaultActionExecutor {
 	private async trashFolder(prettyPath: PrettyPath): Promise<void> {
 		// Would need to extend BackgroundFileService for folder trash
 		logWarning({
-			description: `TrashFolder not yet implemented`,
+			description: "TrashFolder not yet implemented",
 			location: "VaultActionExecutor.trashFolder",
 		});
 	}
@@ -149,4 +152,3 @@ export class VaultActionExecutor {
 		await this.fileService.replaceContent(prettyPath, content);
 	}
 }
-

@@ -11,6 +11,8 @@ import { BottomToolbarService } from "./services/obsidian-services/atomic-servic
 import { SelectionService } from "./services/obsidian-services/atomic-services/selection-service";
 import { OpenedFileService } from "./services/obsidian-services/file-services/active-view/opened-file-service";
 import { BackgroundFileService } from "./services/obsidian-services/file-services/background/background-file-service";
+import { VaultActionExecutor } from "./services/obsidian-services/file-services/background/vault-action-executor";
+import { VaultActionQueue } from "./services/obsidian-services/file-services/background/vault-action-queue";
 import { logError } from "./services/obsidian-services/helpers/issue-handlers";
 import { ACTION_CONFIGS } from "./services/wip-configs/actions/actions-config";
 // import newGenCommand from "./services/wip-configs/actions/new/new-gen-command";
@@ -30,6 +32,10 @@ export default class TextEaterPlugin extends Plugin {
 
 	selectionToolbarService: AboveSelectionToolbarService;
 	bottomToolbarService: BottomToolbarService;
+
+	// File management
+	vaultActionQueue: VaultActionQueue;
+	vaultActionExecutor: VaultActionExecutor;
 
 	// Commanders
 	librarian: Librarian;
@@ -126,7 +132,16 @@ export default class TextEaterPlugin extends Plugin {
 			initiallyOpenedFile,
 		);
 
-		this.backgroundFileService = new BackgroundFileService(this.app);
+		this.backgroundFileService = new BackgroundFileService({
+			fileManager: this.app.fileManager,
+			vault: this.app.vault,
+		});
+
+		// Initialize vault action queue and executor
+		this.vaultActionExecutor = new VaultActionExecutor(
+			this.backgroundFileService,
+		);
+		this.vaultActionQueue = new VaultActionQueue(this.vaultActionExecutor);
 
 		this.selectionToolbarService = new AboveSelectionToolbarService(
 			this.app,
@@ -134,7 +149,12 @@ export default class TextEaterPlugin extends Plugin {
 
 		this.selectionService = new SelectionService(this.app);
 
-		this.librarian = new Librarian(this);
+		this.librarian = new Librarian({
+			actionQueue: this.vaultActionQueue,
+			app: this.app,
+			backgroundFileService: this.backgroundFileService,
+			openedFileService: this.openedFileService,
+		});
 		await this.librarian.initTrees();
 		console.log("[main] Librarian and trees initialized:", this.librarian);
 
