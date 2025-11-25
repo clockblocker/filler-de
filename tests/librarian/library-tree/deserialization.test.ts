@@ -8,10 +8,10 @@ describe('texts === texts -> tree -> texts', () => {
 	it('', () => {
 		for (const [__name, branch] of Object.entries(VALID_BRANCHES)) {
 			const { texts } = branch;
-		const tree = new LibraryTree(texts, 'Library');
-		const otherTexts = makeTextsFromTree(tree);
-		const expectedTexts = texts.map(t => ({ ...t, path: [tree.root.name, ...t.path] }));
-		expect(checkEqualityOfSerializedTexts(expectedTexts, otherTexts)).toBe(true);
+			const tree = new LibraryTree(texts, 'Library');
+			const otherTexts = makeTextsFromTree(tree);
+			// TextDto.path does NOT include root - it's relative to tree root
+			expect(checkEqualityOfSerializedTexts(texts, otherTexts)).toBe(true);
 		}
 	});
 });

@@ -1,8 +1,8 @@
-import type { PrettyPath } from "../../../types/common-interface/dtos";
 import {
 	type BackgroundVaultAction,
 	BackgroundVaultActionType,
 } from "../../../services/obsidian-services/file-services/background/background-vault-actions";
+import type { PrettyPath } from "../../../types/common-interface/dtos";
 import type { TextDto, TreePath } from "../types";
 import type { StatusChange, TreeDiff } from "./types";
 
@@ -52,7 +52,9 @@ export class DiffToActionsMapper {
 		// Handle status changes
 		// Status changes affect Codex files, but we don't generate content here
 		// Just collect the affected paths for downstream processing
-		const affectedCodexPaths = this.getAffectedCodexPaths(diff.statusChanges);
+		const affectedCodexPaths = this.getAffectedCodexPaths(
+			diff.statusChanges,
+		);
 		for (const codexPath of affectedCodexPaths) {
 			// Placeholder: actual Codex content generation happens elsewhere
 			// This just marks that these Codex files need updating
@@ -87,19 +89,19 @@ export class DiffToActionsMapper {
 
 	private createFolderAction(sectionPath: TreePath): BackgroundVaultAction {
 		return {
-			type: BackgroundVaultActionType.CreateFolder,
 			payload: {
 				prettyPath: this.sectionPathToPrettyPath(sectionPath),
 			},
+			type: BackgroundVaultActionType.CreateFolder,
 		};
 	}
 
 	private trashFolderAction(sectionPath: TreePath): BackgroundVaultAction {
 		return {
-			type: BackgroundVaultActionType.TrashFolder,
 			payload: {
 				prettyPath: this.sectionPathToPrettyPath(sectionPath),
 			},
+			type: BackgroundVaultActionType.TrashFolder,
 		};
 	}
 
@@ -112,41 +114,44 @@ export class DiffToActionsMapper {
 			const pageName = pageNames[0];
 			if (pageName) {
 				actions.push({
-					type: BackgroundVaultActionType.CreateFile,
 					payload: {
-						prettyPath: this.scrollPathToPrettyPath(text.path),
 						content: "", // Content will be set by Codex generator or user
+						prettyPath: this.scrollPathToPrettyPath(text.path),
 					},
+					type: BackgroundVaultActionType.CreateFile,
 				});
 			}
 		} else {
 			// Book (multiple pages)
 			// Create folder for the book
 			actions.push({
-				type: BackgroundVaultActionType.CreateFolder,
 				payload: {
 					prettyPath: this.bookFolderToPrettyPath(text.path),
 				},
+				type: BackgroundVaultActionType.CreateFolder,
 			});
 
 			// Create page files
 			for (const pageName of pageNames) {
 				actions.push({
-					type: BackgroundVaultActionType.CreateFile,
 					payload: {
-						prettyPath: this.pagePathToPrettyPath(text.path, pageName),
 						content: "", // Content will be set by user
+						prettyPath: this.pagePathToPrettyPath(
+							text.path,
+							pageName,
+						),
 					},
+					type: BackgroundVaultActionType.CreateFile,
 				});
 			}
 
 			// Create Codex file for the book
 			actions.push({
-				type: BackgroundVaultActionType.CreateFile,
 				payload: {
-					prettyPath: this.bookCodexToPrettyPath(text.path),
 					content: "", // Content will be set by Codex generator
+					prettyPath: this.bookCodexToPrettyPath(text.path),
 				},
+				type: BackgroundVaultActionType.CreateFile,
 			});
 		}
 
@@ -160,36 +165,39 @@ export class DiffToActionsMapper {
 		if (pageNames.length === 1) {
 			// Scroll
 			actions.push({
-				type: BackgroundVaultActionType.TrashFile,
 				payload: {
 					prettyPath: this.scrollPathToPrettyPath(text.path),
 				},
+				type: BackgroundVaultActionType.TrashFile,
 			});
 		} else {
 			// Book - trash pages first, then folder
 			for (const pageName of pageNames) {
 				actions.push({
-					type: BackgroundVaultActionType.TrashFile,
 					payload: {
-						prettyPath: this.pagePathToPrettyPath(text.path, pageName),
+						prettyPath: this.pagePathToPrettyPath(
+							text.path,
+							pageName,
+						),
 					},
+					type: BackgroundVaultActionType.TrashFile,
 				});
 			}
 
 			// Trash Codex file
 			actions.push({
-				type: BackgroundVaultActionType.TrashFile,
 				payload: {
 					prettyPath: this.bookCodexToPrettyPath(text.path),
 				},
+				type: BackgroundVaultActionType.TrashFile,
 			});
 
 			// Trash book folder
 			actions.push({
-				type: BackgroundVaultActionType.TrashFolder,
 				payload: {
 					prettyPath: this.bookFolderToPrettyPath(text.path),
 				},
+				type: BackgroundVaultActionType.TrashFolder,
 			});
 		}
 
@@ -200,16 +208,17 @@ export class DiffToActionsMapper {
 	 * Placeholder action for Codex updates.
 	 * Actual content generation happens in Codex module.
 	 */
-	private updateCodexPlaceholder(codexPathKey: string): BackgroundVaultAction {
+	private updateCodexPlaceholder(
+		codexPathKey: string,
+	): BackgroundVaultAction {
 		const pathParts = codexPathKey.split("/");
 		const basename = pathParts.pop() ?? "";
 
 		return {
-			type: BackgroundVaultActionType.ProcessFile,
 			payload: {
 				prettyPath: {
-					pathParts: [this.rootName, ...pathParts],
 					basename: `__${basename}`,
+					pathParts: [this.rootName, ...pathParts],
 				},
 				transform: (content) => {
 					// Placeholder: actual transform will be injected
@@ -217,6 +226,7 @@ export class DiffToActionsMapper {
 					return content;
 				},
 			},
+			type: BackgroundVaultActionType.ProcessFile,
 		};
 	}
 
@@ -225,33 +235,35 @@ export class DiffToActionsMapper {
 	private sectionPathToPrettyPath(sectionPath: TreePath): PrettyPath {
 		const pathParts = [this.rootName, ...sectionPath.slice(0, -1)];
 		const basename = sectionPath[sectionPath.length - 1] ?? "";
-		return { pathParts, basename };
+		return { basename, pathParts };
 	}
 
 	private scrollPathToPrettyPath(textPath: TreePath): PrettyPath {
 		// Scroll filename: Name-Parent-Grandparent.md (reversed path)
 		const pathParts = [this.rootName, ...textPath.slice(0, -1)];
 		const basename = textPath.toReversed().join("-");
-		return { pathParts, basename };
+		return { basename, pathParts };
 	}
 
 	private bookFolderToPrettyPath(textPath: TreePath): PrettyPath {
 		const pathParts = [this.rootName, ...textPath.slice(0, -1)];
 		const basename = textPath[textPath.length - 1] ?? "";
-		return { pathParts, basename };
+		return { basename, pathParts };
 	}
 
 	private bookCodexToPrettyPath(textPath: TreePath): PrettyPath {
 		const pathParts = [this.rootName, ...textPath];
 		const basename = `__${textPath.toReversed().join("-")}`;
-		return { pathParts, basename };
+		return { basename, pathParts };
 	}
 
-	private pagePathToPrettyPath(textPath: TreePath, pageName: string): PrettyPath {
+	private pagePathToPrettyPath(
+		textPath: TreePath,
+		pageName: string,
+	): PrettyPath {
 		const pathParts = [this.rootName, ...textPath, "Pages"];
 		// Page filename: 000-TextName-Parent.md
 		const basename = `${pageName}-${textPath.toReversed().join("-")}`;
-		return { pathParts, basename };
+		return { basename, pathParts };
 	}
 }
-

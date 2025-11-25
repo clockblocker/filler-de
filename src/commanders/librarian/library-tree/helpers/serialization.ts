@@ -20,14 +20,7 @@ export const makeTextsFromTree = (tree: LibraryTree): TextDto[] => {
 		const node = stack.pop();
 		if (!node) break;
 		if (node.type === NodeType.Text) {
-			const s = serializeTextNode(node);
-			console.log(
-				"[makeTextsFromTree] Text node",
-				node.name,
-				node.children,
-				s,
-			);
-			texts.push(s);
+			texts.push(serializeTextNode(node));
 		}
 		if (node.type === NodeType.Section) {
 			stack.push(...node.children);
@@ -39,13 +32,10 @@ export const makeTextsFromTree = (tree: LibraryTree): TextDto[] => {
 
 export function serializeTextNode(node: TextNode): TextDto {
 	const path = getTreePathFromNode(node);
-	const pages = node.children;
-	const pageStatuses =
-		pages.length === 1
-			? { [node.name]: node.status }
-			: Object.fromEntries(
-					node.children.map(({ name, status }) => [name, status]),
-				);
+	// Always use actual page names (works for both scrolls and books)
+	const pageStatuses = Object.fromEntries(
+		node.children.map(({ name, status }) => [name, status]),
+	);
 
 	return {
 		pageStatuses,
