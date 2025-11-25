@@ -12,11 +12,12 @@ Hybrid Diff-based + Event Queue approach for maintaining Library files.
 │  │ (pure state) │    │ (derive ops) │    │  (batch & execute)   │ │
 │  └──────────────┘    └──────────────┘    └──────────────────────┘ │
 └────────────────────────────────────────────────────────────────────┘
-                                                      │
-                                                      ▼
-                                           ┌──────────────────────┐
-                                           │ BackgroundFileService│
-                                           └──────────────────────┘
+                                                     │
+                                                     ▼
+                                          ┌──────────────────────┐
+                                          │ BackgroundFileService│
+                                          │   (single ops only)  │
+                                          └──────────────────────┘
 ```
 
 ## Core Idea
@@ -27,6 +28,20 @@ Hybrid Diff-based + Event Queue approach for maintaining Library files.
 4. **DiffToActionsMapper** derives file operations from diff
 5. **VaultActionQueue** collects, dedupes, sorts, batches actions
 6. **Executor** flushes queue to disk via BackgroundFileService
+
+## Responsibility Split
+
+| Layer | Responsibility |
+|-------|----------------|
+| `LibraryTree` | Pure state mutations, status computation, snapshot |
+| `TreeDiffer` | Detect what changed (added/removed/status) |
+| `DiffToActionsMapper` | Derive file ops + **chain logic** (folder order) |
+| `VaultActionQueue` | Dedupe (same file → one write), sort by weight, debounce |
+| `VaultActionExecutor` | Execute actions via BackgroundFileService |
+| `BackgroundFileService` | **Single file ops only** (no chains) |
+| `TFileHelper` / `TFolderHelper` | Low-level Obsidian vault ops |
+
+**Key design**: Chain logic (create parents before children, cleanup empty folders) lives in `DiffToActionsMapper`, NOT in the file service layer.
 
 ## Why This Approach
 
@@ -67,24 +82,25 @@ Operations execute in weight order (lower = first):
 
 6: ProcessFile    — content transforms
 7: WriteFile      — content replacement
+8: ReadFile       — no-op in queue
 ```
 
 ## Flow Example
 
 ```typescript
 // User marks page done
-librarian.setPageStatus(path, "Done");
+librarian.setStatus("Library", ["Avatar", "Season_1", "Episode_1", "000"], "Done");
 
-// Internally:
+// Internally (withDiff wrapper):
 const before = tree.snapshot();
 tree.setStatus(path, "Done");  // mutates + recomputes ancestors
 const after = tree.snapshot();
 
-const diff = differ.diff(before, after);
-// → { statusChanges: [Episode_1, Season_1, Library] }
+const diff = treeDiffer.diff(before, after);
+// → { statusChanges: [{ path, oldStatus, newStatus }] }
 
-const actions = mapper.mapDiffToActions(diff, tree);
-// → [WriteFile(Codex_Episode_1), WriteFile(Codex_Season_1), WriteFile(Codex_Library)]
+const actions = mapper.mapDiffToActions(diff);
+// → [ProcessFile(Codex_Episode_1), ProcessFile(Codex_Season_1), ...]
 
 queue.pushMany(actions);
 // Queue dedupes by target path
@@ -119,7 +135,7 @@ After sort:     [CreateFolder, CreateFile, WriteFile, TrashFile]
 ```typescript
 type TreeSnapshot = {
   texts: TextDto[];           // All texts with page statuses
-  sections: TreePath[];       // All section paths
+  sectionPaths: TreePath[];   // All section paths (excluding root)
 };
 ```
 
@@ -137,10 +153,11 @@ type TreeDiff = {
 ### BackgroundVaultAction
 ```typescript
 type BackgroundVaultAction =
-  | { type: "CreateFolder"; path: SplitPathToFolder }
-  | { type: "CreateFile"; path: SplitPathToFile; content: string }
-  | { type: "WriteFile"; path: SplitPathToFile; content: string }
-  | { type: "TrashFile"; path: SplitPathToFile }
+  | { type: "CreateFolder"; payload: { prettyPath: PrettyPath } }
+  | { type: "CreateFile"; payload: { prettyPath: PrettyPath; content?: string } }
+  | { type: "WriteFile"; payload: { prettyPath: PrettyPath; content: string } }
+  | { type: "ProcessFile"; payload: { prettyPath: PrettyPath; transform: (s) => s } }
+  | { type: "TrashFile"; payload: { prettyPath: PrettyPath } }
   // ... etc
 ```
 
@@ -148,18 +165,27 @@ type BackgroundVaultAction =
 
 ```
 src/commanders/librarian/
-├── librarian.ts              // Uses withDiff() wrapper
+├── librarian.ts              // withDiff() wrapper, setStatus, addTexts, etc.
 ├── library-tree/
-│   └── library-tree.ts       // snapshot()
-├── codex/                    // Codex generation
+│   ├── library-tree.ts       // snapshot(), getAllTextsInTree(), etc.
+│   └── helpers/
+│       └── serialization.ts  // makeTextsFromTree, serializeTextNode
+├── codex/                    // Codex generation (TODO)
 └── diffing/
-    ├── tree-differ.ts
-    └── diff-to-actions.ts
+    ├── types.ts              // TreeSnapshot, TreeDiff, StatusChange
+    ├── tree-differ.ts        // TreeDiffer.diff()
+    ├── diff-to-actions.ts    // DiffToActionsMapper.mapDiffToActions()
+    └── index.ts
 
 src/services/obsidian-services/file-services/background/
-├── background-vault-actions.ts   // Action types + weights
+├── background-vault-actions.ts   // Action types + weights + helpers
 ├── vault-action-queue.ts         // Queue + debounce
-└── vault-action-executor.ts      // Execute actions
+├── vault-action-executor.ts      // Execute actions via BackgroundFileService
+├── background-file-service.ts    // High-level file/folder ops (single ops only)
+├── abstract-file-helper.ts       // Orchestrates TFileHelper/TFolderHelper
+└── helpers/
+    ├── tfile-helper.ts           // Low-level file ops
+    └── tfolder-helper.ts         // Low-level folder ops (single folder only)
 ```
 
 ## Benefits
@@ -170,4 +196,11 @@ src/services/obsidian-services/file-services/background/
 4. **Testability** — can inspect queue without executing
 5. **Separation** — tree logic is pure, file ops are derived
 6. **Debouncing** — rapid user actions don't spam disk
+7. **Simplicity** — file service is dumb, chain logic in one place (mapper)
 
+## Implementation Status
+
+- ✅ Phase 1: Queue Infrastructure (VaultActionQueue, VaultActionExecutor)
+- ✅ Phase 2: Tree Snapshots & Diffing (TreeDiffer, DiffToActionsMapper)
+- ✅ Phase 3: Librarian Integration (withDiff, setStatus, addTexts, etc.)
+- ⏳ Phase 4: Codex Integration (pending)
