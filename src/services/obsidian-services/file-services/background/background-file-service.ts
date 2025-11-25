@@ -1,13 +1,22 @@
-import type { FileManager, TFile, Vault } from "obsidian";
+import type { FileManager, TFile, TFolder, Vault } from "obsidian";
 import type { PrettyPath } from "../../../../types/common-interface/dtos";
 import { isReadonlyArray, type Prettify } from "../../../../types/helpers";
 import {
 	splitPathFromAbstractFile,
+	splitPathToFolderFromPrettyPath,
 	splitPathToMdFileFromPrettyPath,
 } from "../pathfinder";
 import type { SplitPathToFolder } from "../types";
 import { AbstractFileHelper } from "./abstract-file-helper";
 
+/**
+ * High-level file/folder service using PrettyPath.
+ *
+ * NOTE: Chain logic (create parent folders, cleanup empty folders)
+ * is handled by DiffToActionsMapper + VaultActionQueue, NOT here.
+ *
+ * @see src/commanders/librarian/diffing/diff-to-actions.ts
+ */
 export class BackgroundFileService {
 	private abstractFileService: AbstractFileHelper;
 	private vault: Vault;
@@ -23,6 +32,8 @@ export class BackgroundFileService {
 		});
 	}
 
+	// ─── File Operations ─────────────────────────────────────────────
+
 	async readContent(prettyPath: PrettyPath) {
 		const file = await this.abstractFileService.getMdFile(
 			splitPathToMdFileFromPrettyPath(prettyPath),
@@ -35,7 +46,6 @@ export class BackgroundFileService {
 			splitPathToMdFileFromPrettyPath(prettyPath),
 		);
 		await this.vault.modify(file, content);
-
 		return content;
 	}
 
@@ -109,6 +119,29 @@ export class BackgroundFileService {
 		}
 		return await this.move(arg);
 	}
+
+	// ─── Folder Operations ───────────────────────────────────────────
+
+	async createFolder(prettyPath: PrettyPath): Promise<TFolder> {
+		return this.abstractFileService.createFolder(
+			splitPathToFolderFromPrettyPath(prettyPath),
+		);
+	}
+
+	async trashFolder(prettyPath: PrettyPath): Promise<void> {
+		return this.abstractFileService.trashFolder(
+			splitPathToFolderFromPrettyPath(prettyPath),
+		);
+	}
+
+	async renameFolder(from: PrettyPath, to: PrettyPath): Promise<void> {
+		return this.abstractFileService.renameFolder(
+			splitPathToFolderFromPrettyPath(from),
+			splitPathToFolderFromPrettyPath(to),
+		);
+	}
+
+	// ─── Read Operations ─────────────────────────────────────────────
 
 	async getReadersToAllMdFilesInFolder(
 		pathToFoulder: SplitPathToFolder,

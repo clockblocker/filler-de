@@ -15,6 +15,15 @@ import type {
 import { TFileHelper } from "./helpers/tfile-helper";
 import { TFolderHelper } from "./helpers/tfolder-helper";
 
+/**
+ * Orchestrates file and folder operations.
+ *
+ * NOTE: Chain logic (create parent folders before files, cleanup empty folders)
+ * is now handled by DiffToActionsMapper + VaultActionQueue.
+ *
+ * This class performs SINGLE operations only.
+ * @see src/commanders/librarian/diffing/diff-to-actions.ts
+ */
 export class AbstractFileHelper {
 	private vault: Vault;
 	private tfileHelper: TFileHelper;
@@ -32,77 +41,38 @@ export class AbstractFileHelper {
 		this.tfolderHelper = new TFolderHelper({ fileManager, vault });
 	}
 
-	async createFiles(files: readonly FileWithContent[]): Promise<void> {
-		const splitPathToParentFolders = files.map(({ splitPath }) =>
-			this.getSplitPathToParentFolder(splitPath),
-		);
+	// ─── File Operations ─────────────────────────────────────────────
 
-		await this.tfolderHelper.createFolderChains(splitPathToParentFolders);
+	async createFiles(files: readonly FileWithContent[]): Promise<void> {
 		await this.tfileHelper.createFiles(files);
 	}
 
 	async moveFiles(fromTos: readonly FileFromTo[]): Promise<void> {
-		const splitPathsToParentTargetFolders = fromTos.map(({ from, to }) => ({
-			from: this.getSplitPathToParentFolder(from),
-			to: this.getSplitPathToParentFolder(to),
-		}));
-
-		await this.tfolderHelper.createFolderChains(
-			splitPathsToParentTargetFolders.map(({ to }) => to),
-		);
-
 		await this.tfileHelper.moveFiles(fromTos);
-
-		await this.tfolderHelper.cleanUpFolderChains(
-			splitPathsToParentTargetFolders.map(({ from }) => from),
-		);
 	}
 
 	async trashFiles(files: readonly SplitPathToFile[]): Promise<void> {
-		const splitPathsToParentTargetFolders = files.map((file) =>
-			this.getSplitPathToParentFolder(file),
-		);
-
 		await this.tfileHelper.trashFiles(files);
-
-		await this.tfolderHelper.cleanUpFolderChains(
-			splitPathsToParentTargetFolders,
-		);
 	}
 
-	private getSplitPathToParentFolder(
-		splitPathToFile: SplitPathToFile,
-	): SplitPathToFolder {
-		return unwrapMaybeByThrowing(
-			this.getMaybeSplitPathToParentFolder(splitPathToFile),
-			"AbstractFileHelper.createFiles",
-		);
+	// ─── Folder Operations ───────────────────────────────────────────
+
+	async createFolder(splitPath: SplitPathToFolder): Promise<TFolder> {
+		return this.tfolderHelper.createFolder(splitPath);
 	}
 
-	private getMaybeSplitPathToParentFolder(
-		splitPathToFile: SplitPathToFile,
-	): Maybe<SplitPathToFolder> {
-		const filePathParts = [...splitPathToFile.pathParts];
-
-		if (filePathParts.length < 2) {
-			return {
-				description: "Expected at least 2 path parts for file",
-				error: true,
-			};
-		}
-
-		const basename = filePathParts.pop() ?? "";
-		const pathParts = filePathParts;
-
-		return {
-			data: {
-				basename,
-				pathParts,
-				type: "folder",
-			},
-			error: false,
-		};
+	async trashFolder(splitPath: SplitPathToFolder): Promise<void> {
+		return this.tfolderHelper.trashFolder(splitPath);
 	}
+
+	async renameFolder(
+		from: SplitPathToFolder,
+		to: SplitPathToFolder,
+	): Promise<void> {
+		return this.tfolderHelper.renameFolder(from, to);
+	}
+
+	// ─── Read Operations ─────────────────────────────────────────────
 
 	async getMdFile(splitPath: SplitPathToFile): Promise<TFile> {
 		return unwrapMaybeByThrowing(
@@ -153,7 +123,6 @@ export class AbstractFileHelper {
 	async deepListMdFiles(
 		folderSplitPath: SplitPathToFolder,
 	): Promise<TFile[]> {
-		// Resolve the folder (throws if not found / not a folder)
 		const folder = unwrapMaybeByThrowing(
 			await this.getMaybeAbstractFile(folderSplitPath),
 			"AbstractFileHelper.deepListMdFiles",

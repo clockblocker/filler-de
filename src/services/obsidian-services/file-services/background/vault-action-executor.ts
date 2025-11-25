@@ -11,6 +11,10 @@ import {
  * Executes vault actions via BackgroundFileService.
  *
  * Actions should already be sorted by weight before calling execute().
+ *
+ * NOTE: Chain logic (parent folder creation, empty folder cleanup)
+ * is handled by DiffToActionsMapper, NOT here.
+ * @see src/commanders/librarian/diffing/diff-to-actions.ts
  */
 export class VaultActionExecutor {
 	constructor(private fileService: BackgroundFileService) {}
@@ -37,27 +41,33 @@ export class VaultActionExecutor {
 
 		switch (type) {
 			case BackgroundVaultActionType.CreateFolder:
-				await this.createFolder(payload.prettyPath);
+				await this.fileService.createFolder(payload.prettyPath);
 				break;
 
 			case BackgroundVaultActionType.RenameFolder:
-				await this.renameFolder(payload.from, payload.to);
+				await this.fileService.renameFolder(payload.from, payload.to);
 				break;
 
 			case BackgroundVaultActionType.TrashFolder:
-				await this.trashFolder(payload.prettyPath);
+				await this.fileService.trashFolder(payload.prettyPath);
 				break;
 
 			case BackgroundVaultActionType.CreateFile:
-				await this.createFile(payload.prettyPath, payload.content);
+				await this.fileService.create({
+					...payload.prettyPath,
+					content: payload.content,
+				});
 				break;
 
 			case BackgroundVaultActionType.RenameFile:
-				await this.renameFile(payload.from, payload.to);
+				await this.fileService.move({
+					from: { ...payload.from },
+					to: { ...payload.to },
+				});
 				break;
 
 			case BackgroundVaultActionType.TrashFile:
-				await this.trashFile(payload.prettyPath);
+				await this.fileService.trash(payload.prettyPath);
 				break;
 
 			case BackgroundVaultActionType.ProcessFile:
@@ -65,13 +75,14 @@ export class VaultActionExecutor {
 				break;
 
 			case BackgroundVaultActionType.WriteFile:
-				await this.writeFile(payload.prettyPath, payload.content);
+				await this.fileService.replaceContent(
+					payload.prettyPath,
+					payload.content,
+				);
 				break;
 
 			case BackgroundVaultActionType.ReadFile:
 				// ReadFile is a no-op in executor (result not captured)
-				// This action type exists for completeness but typically
-				// you'd read files directly, not through the queue
 				logWarning({
 					description: `ReadFile action in queue is a no-op: ${getActionTargetPath(action)}`,
 					location: "VaultActionExecutor.executeOne",
@@ -79,61 +90,10 @@ export class VaultActionExecutor {
 				break;
 
 			default: {
-				// Exhaustive check
 				const _exhaustive: never = type;
 				throw new Error(`Unknown action type: ${_exhaustive}`);
 			}
 		}
-	}
-
-	private async createFolder(prettyPath: PrettyPath): Promise<void> {
-		// BackgroundFileService.create handles folder creation internally
-		// For explicit folder creation, we'd need to extend the service
-		// For now, folders are created implicitly when files are created
-		logWarning({
-			description: `CreateFolder not yet implemented: ${prettyPath.pathParts.join("/")}/${prettyPath.basename}`,
-			location: "VaultActionExecutor.createFolder",
-		});
-	}
-
-	private async renameFolder(
-		from: PrettyPath,
-		to: PrettyPath,
-	): Promise<void> {
-		// Would need to extend BackgroundFileService for folder rename
-		logWarning({
-			description: "RenameFolder not yet implemented",
-			location: "VaultActionExecutor.renameFolder",
-		});
-	}
-
-	private async trashFolder(prettyPath: PrettyPath): Promise<void> {
-		// Would need to extend BackgroundFileService for folder trash
-		logWarning({
-			description: "TrashFolder not yet implemented",
-			location: "VaultActionExecutor.trashFolder",
-		});
-	}
-
-	private async createFile(
-		prettyPath: PrettyPath,
-		content?: string,
-	): Promise<void> {
-		await this.fileService.create({
-			...prettyPath,
-			content,
-		});
-	}
-
-	private async renameFile(from: PrettyPath, to: PrettyPath): Promise<void> {
-		await this.fileService.move({
-			from: { ...from },
-			to: { ...to },
-		});
-	}
-
-	private async trashFile(prettyPath: PrettyPath): Promise<void> {
-		await this.fileService.trash(prettyPath);
 	}
 
 	private async processFile(
@@ -143,12 +103,5 @@ export class VaultActionExecutor {
 		const currentContent = await this.fileService.readContent(prettyPath);
 		const newContent = await transform(currentContent);
 		await this.fileService.replaceContent(prettyPath, newContent);
-	}
-
-	private async writeFile(
-		prettyPath: PrettyPath,
-		content: string,
-	): Promise<void> {
-		await this.fileService.replaceContent(prettyPath, content);
 	}
 }

@@ -6,6 +6,14 @@ import {
 import { systemPathFromSplitPath } from "../../pathfinder";
 import type { SplitPathToFolder } from "../../types";
 
+/**
+ * Low-level folder operations.
+ *
+ * NOTE: Chain logic (create parent folders, cleanup empty folders)
+ * is handled by DiffToActionsMapper, NOT here.
+ *
+ * @see src/commanders/librarian/diffing/diff-to-actions.ts
+ */
 export class TFolderHelper {
 	private fileManager: FileManager;
 	private vault: Vault;
@@ -21,36 +29,6 @@ export class TFolderHelper {
 	async getFolder(splitPath: SplitPathToFolder): Promise<TFolder> {
 		const mbFolder = await this.getMaybeFolder(splitPath);
 		return unwrapMaybeByThrowing(mbFolder);
-	}
-
-	async createFolderChains(
-		splitPaths: readonly SplitPathToFolder[],
-	): Promise<TFolder[]> {
-		const folders: TFolder[] = [];
-		for (const splitPath of splitPaths) {
-			folders.push(await this.createFolderChain(splitPath));
-		}
-
-		return folders;
-	}
-
-	async trashFolder(splitPaths: SplitPathToFolder): Promise<void> {
-		const folder = await this.getFolder(splitPaths);
-		await this.fileManager.trashFile(folder);
-	}
-
-	async trashFolders(splitPaths: SplitPathToFolder[]): Promise<void> {
-		for (const splitPath of splitPaths) {
-			await this.trashFolder(splitPath);
-		}
-	}
-
-	async cleanUpFolderChains(
-		splitPathsToLastFolders: SplitPathToFolder[],
-	): Promise<void> {
-		for (const splitPath of splitPathsToLastFolders) {
-			await this.cleanUpFolderChain(splitPath);
-		}
 	}
 
 	async getMaybeFolder(
@@ -78,64 +56,47 @@ export class TFolderHelper {
 		};
 	}
 
-	private async cleanUpFolderChain(
-		splitPathsToLastFolder: SplitPathToFolder,
-	): Promise<void> {
-		const folder = await this.getMaybeFolder(splitPathsToLastFolder);
-
-		if (folder.error) {
-			return;
-		}
-
-		let currentFolder = unwrapMaybeByThrowing(folder);
-
-		while (currentFolder.children.length === 0) {
-			const parentFolder = currentFolder.parent as TFolder;
-			await this.fileManager.trashFile(currentFolder);
-			currentFolder = parentFolder;
-		}
-	}
-
-	private async createFolderChain(
-		splitPath: SplitPathToFolder,
-	): Promise<TFolder> {
-		for (const [index, part] of splitPath.pathParts.entries()) {
-			const currentSplitPath: SplitPathToFolder = {
-				basename: part,
-				pathParts: splitPath.pathParts.slice(0, index),
-				type: "folder",
-			};
-
-			await this.getOrCreateOneFolder(currentSplitPath);
-		}
-
-		const folder = await this.getOrCreateOneFolder(splitPath);
-		return folder;
-	}
-
-	private async getOrCreateOneFolder(
-		splitPath: SplitPathToFolder,
-	): Promise<TFolder> {
+	/**
+	 * Create a single folder. Does NOT create parent chain.
+	 * Assumes parent folder exists.
+	 */
+	async createFolder(splitPath: SplitPathToFolder): Promise<TFolder> {
 		const mbFolder = await this.getMaybeFolder(splitPath);
+		if (!mbFolder.error) {
+			return mbFolder.data; // Already exists
+		}
 
-		return mbFolder.error
-			? await this.safelyCreateOneFolder(splitPath)
-			: mbFolder.data;
-	}
-
-	private async safelyCreateOneFolder(
-		splitPath: SplitPathToFolder,
-	): Promise<TFolder> {
 		const systemPath = systemPathFromSplitPath(splitPath);
 		try {
-			const folder = await this.vault.createFolder(systemPath);
-			return folder;
+			return await this.vault.createFolder(systemPath);
 		} catch (error) {
-			console.error("Error creating folder", splitPath, error);
-			if (error.message.includes("already exists")) {
+			if (error.message?.includes("already exists")) {
 				return this.getFolder(splitPath);
 			}
 			throw error;
 		}
+	}
+
+	/**
+	 * Trash a single folder. Does NOT cleanup parent chain.
+	 */
+	async trashFolder(splitPath: SplitPathToFolder): Promise<void> {
+		const mbFolder = await this.getMaybeFolder(splitPath);
+		if (mbFolder.error) {
+			return; // Already gone
+		}
+		await this.fileManager.trashFile(mbFolder.data);
+	}
+
+	/**
+	 * Rename/move a folder.
+	 */
+	async renameFolder(
+		from: SplitPathToFolder,
+		to: SplitPathToFolder,
+	): Promise<void> {
+		const folder = await this.getFolder(from);
+		const toSystemPath = systemPathFromSplitPath(to);
+		await this.fileManager.renameFile(folder, toSystemPath);
 	}
 }
