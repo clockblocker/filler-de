@@ -140,4 +140,4 @@ export type PrettyFileDto = Prettify<
 		content?: string;
 	}
 >;
-type PrettyFileFromTo = { from: PrettyFileDto; to: PrettyFileDto };
+export type PrettyFileFromTo = { from: PrettyFileDto; to: PrettyFileDto };

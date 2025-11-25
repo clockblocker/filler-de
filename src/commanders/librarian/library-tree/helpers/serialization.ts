@@ -1,8 +1,7 @@
 import { getTreePathFromNode } from "../../pure-functions/node";
-import type { TextDto, TextNode, TreePath } from "../../types";
+import type { TextDto, TextNode, TreeNode, TreePath } from "../../types";
 import { NodeType } from "../../types";
 import { LibraryTree } from "../library-tree";
-import { dfs } from "./walks";
 
 export const makeTreeFromTexts = (
 	texts: TextDto[],
@@ -15,32 +14,38 @@ export const makeTreeFromTexts = (
 
 export const makeTextsFromTree = (tree: LibraryTree): TextDto[] => {
 	const texts: TextDto[] = [];
-	for (const { node, path } of dfs(tree.root)) {
+	const stack: TreeNode[] = [tree.root];
+
+	while (stack.length) {
+		const node = stack.pop();
+		if (!node) break;
 		if (node.type === NodeType.Text) {
-			// Use the path from DFS directly, prepending root name
-			const fullPath: TreePath = [tree.root.name, ...path];
-			const serialized = serializeTextNode(node, path);
-			texts.push({
-				...serialized,
-				path: fullPath,
-			});
+			const s = serializeTextNode(node);
+			console.log(
+				"[makeTextsFromTree] Text node",
+				node.name,
+				node.children,
+				s,
+			);
+			texts.push(s);
+		}
+		if (node.type === NodeType.Section) {
+			stack.push(...node.children);
 		}
 	}
+
 	return texts;
 };
 
-export function serializeTextNode(
-	node: TextNode,
-	providedPath?: TreePath,
-): TextDto {
-	const path = providedPath ?? getTreePathFromNode(node);
+export function serializeTextNode(node: TextNode): TextDto {
+	const path = getTreePathFromNode(node);
+	const pages = node.children;
 	const pageStatuses =
-		node.type === NodeType.Text
-			? Object.fromEntries(
+		pages.length === 1
+			? { [node.name]: node.status }
+			: Object.fromEntries(
 					node.children.map(({ name, status }) => [name, status]),
-				)
-			: // For ScrollNodes, use the node name as the page name
-				{ [node.name]: node.status };
+				);
 
 	return {
 		pageStatuses,

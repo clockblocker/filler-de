@@ -1,6 +1,7 @@
 import type { App, TAbstractFile } from "obsidian";
 import { TFile } from "obsidian";
 import { editOrAddMetaInfo } from "../../services/dto-services/meta-info-manager/interface";
+import type { PrettyFileFromTo } from "../../services/obsidian-services/file-services/background/background-file-service";
 import {
 	splitPathFromSystemPath,
 	systemPathFromSplitPath,
@@ -16,11 +17,14 @@ import {
 import { makeTextsFromTree } from "./library-tree/helpers/serialization";
 import { LibraryTree } from "./library-tree/library-tree";
 import { getTreePathFromNode } from "./pure-functions/node";
-import type { LibraryFileDto, TextDto, TreePath } from "./types";
+import type { LibraryFileDto, PageNode, TextDto, TreePath } from "./types";
 
 // [TODO]: Read this from settings
 const ROOTS = ["Library"] as const;
 type RootName = (typeof ROOTS)[number];
+
+// Moving Pages is not allowed
+// We can only move Texts / Scrolls and Sections
 
 export class Librarian {
 	backgroundFileService: TexfresserObsidianServices["backgroundFileService"];
@@ -45,6 +49,21 @@ export class Librarian {
 		app.vault.on("rename", (newTAbstarctFile, oldSystemPath) => {
 			this.onRename(newTAbstarctFile, oldSystemPath);
 		});
+	}
+
+	async moveText({
+		from,
+		to,
+	}: {
+		from: TreePath;
+		to: TreePath;
+	}): Promise<void> {
+		// const fromSplitPath = splitPathFromTreePath(from);
+		// const toSplitPath = splitPathFromTreePath(to);
+		// await this.backgroundFileService.move({
+		// 	from: fromSplitPath,
+		// 	to: toSplitPath,
+		// });
 	}
 
 	private async readLibraryFileDtosInFolder(
@@ -120,14 +139,17 @@ export class Librarian {
 			await this.initTrees();
 		}
 
-		console.log("[Librarian] tree", makeTextsFromTree(this.trees.Library));
-
 		const treePathToPwd = treePathFromSplitPath(pwd);
 		const affectedTree = this.getAffectedTree(pwd);
-		console.log("[Librarian] affectedTree", affectedTree);
+
 		if (!affectedTree) {
 			return;
 		}
+
+		console.log(
+			"[Librarian] affectedTree",
+			makeTextsFromTree(affectedTree),
+		);
 
 		const nearestSectionNode =
 			affectedTree.getNearestSectionNode(treePathToPwd);
