@@ -1,6 +1,11 @@
 import { TextStatus } from "../../../types/common-interface/enums";
 import type { Maybe } from "../../../types/common-interface/maybe";
-import { areShallowEqual, getNodeId } from "../pure-functions/node";
+import type { TreeSnapshot } from "../diffing/types";
+import {
+	areShallowEqual,
+	getNodeId,
+	getTreePathFromNode,
+} from "../pure-functions/node";
 import {
 	type LeafNode,
 	NodeType,
@@ -41,6 +46,35 @@ export class LibraryTree {
 
 	public getAllTextsInTree(): TextDto[] {
 		return this.getTexts([]);
+	}
+
+	/**
+	 * Get all section paths in the tree (excluding root).
+	 */
+	public getAllSectionPaths(): TreePath[] {
+		const paths: TreePath[] = [];
+
+		const collectSections = (node: SectionNode): void => {
+			for (const child of node.children) {
+				if (child.type === NodeType.Section) {
+					paths.push(getTreePathFromNode(child));
+					collectSections(child);
+				}
+			}
+		};
+
+		collectSections(this.root);
+		return paths;
+	}
+
+	/**
+	 * Create a snapshot of current tree state for diffing.
+	 */
+	public snapshot(): TreeSnapshot {
+		return {
+			sectionPaths: this.getAllSectionPaths(),
+			texts: this.getAllTextsInTree(),
+		};
 	}
 
 	public addTexts(serializedTexts: TextDto[]): void {

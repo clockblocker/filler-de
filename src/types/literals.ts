@@ -106,6 +106,10 @@ export const ReadSchema = z.literal("Read");
 export type READ = z.infer<typeof ReadSchema>;
 export const READ = ReadSchema.value;
 
+export const WriteSchema = z.literal("Write");
+export type WRITE = z.infer<typeof WriteSchema>;
+export const WRITE = WriteSchema.value;
+
 export const FileSchema = z.literal("File");
 export type FILE = z.infer<typeof FileSchema>;
 export const FILE = FileSchema.value;
