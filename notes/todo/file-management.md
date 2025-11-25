@@ -37,31 +37,30 @@
 
 ---
 
-## ⏳ Phase 4: Codex Integration (PENDING)
+## ✅ Phase 4: Codex Integration
 
-See `notes/todo/codexes.md` for detailed breakdown.
+### ✅ 4.1 Wire Codex Generation (DONE)
+- [x] Create `CodexGenerator` (tree node → CodexContent)
+- [x] Create `CodexFormatter` (CodexContent → markdown)
+- [x] Inject into DiffToActionsMapper via `getNode` callback
 
-### 4.1 Wire Codex Generation
-- [ ] Create `CodexGenerator` (tree node → CodexContent)
-- [ ] Create `CodexFormatter` (CodexContent → markdown)
-- [ ] Inject into DiffToActionsMapper
+### ✅ 4.2 Update DiffToActionsMapper (DONE)
+- [x] `createSectionCodexAction()` — generate content for new sections
+- [x] `createTextActions()` — includes book Codex creation
+- [x] `updateCodexAction()` — regenerate on status change
+- [x] `getAffectedCodexPaths()` — all ancestor paths
 
-### 4.2 Update DiffToActionsMapper
-- [ ] `createCodexAction()` — generate content for new sections/books
-- [ ] `updateCodexAction()` — regenerate on status change
-- [ ] `getAffectedCodexPaths()` — all ancestor paths (already has placeholder)
+### ✅ 4.3 Handle All Cases (DONE)
+- [x] Section created → `createSectionCodexAction()`
+- [x] Section deleted → `trashSectionCodexAction()`
+- [x] Book created → in `createTextActions()`
+- [x] Book deleted → in `trashTextActions()`
+- [x] Status changed → `updateCodexAction()` via `getAffectedCodexPaths()`
 
-### 4.3 Handle All Cases
-- [ ] Section created → create Codex
-- [ ] Section deleted → delete Codex
-- [ ] Book created → create Codex
-- [ ] Book deleted → delete Codex
-- [ ] Status changed → update ancestor Codexes
-
-### 4.4 Tests
-- [ ] Integration: create section → Codex file exists
-- [ ] Integration: status change → Codex checkbox updated
-- [ ] Integration: rapid status changes → single Codex write
+### ✅ 4.4 Integration Tests (DONE)
+- [x] Integration: create section → Codex file with correct content
+- [x] Integration: status change → Codex checkbox updated
+- [x] Integration: scroll exclusion, ancestor chain, root handling
 
 ---
 

@@ -72,6 +72,13 @@ export class DiffToActionsMapper {
 		);
 		for (const codexPathKey of affectedCodexPaths) {
 			const path = codexPathKey.split("/") as TreePath;
+			// Skip scrolls (single-page texts) - they don't have Codexes
+			if (getNode) {
+				const node = getNode(path);
+				if (node && !codexGenerator.getCodexType(node)) {
+					continue;
+				}
+			}
 			actions.push(this.updateCodexAction(path, getNode));
 		}
 
