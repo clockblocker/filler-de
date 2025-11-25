@@ -5,7 +5,6 @@ import {
 	type WorkspaceLeaf,
 } from "obsidian";
 import { Librarian } from "./commanders/librarian/librarian";
-import { splitTextIntoPages } from "./commanders/librarian/text-splitter/text-splitter";
 import { AboveSelectionToolbarService } from "./services/obsidian-services/atomic-services/above-selection-toolbar-service";
 import { ApiService } from "./services/obsidian-services/atomic-services/api-service";
 import { BottomToolbarService } from "./services/obsidian-services/atomic-services/bottom-toolbar-service";
@@ -15,6 +14,7 @@ import { BackgroundFileService } from "./services/obsidian-services/file-service
 import { VaultActionExecutor } from "./services/obsidian-services/file-services/background/vault-action-executor";
 import { VaultActionQueue } from "./services/obsidian-services/file-services/background/vault-action-queue";
 import { logError } from "./services/obsidian-services/helpers/issue-handlers";
+import { VaultEventService } from "./services/obsidian-services/vault-event-service";
 import { ACTION_CONFIGS } from "./services/wip-configs/actions/actions-config";
 // import newGenCommand from "./services/wip-configs/actions/new/new-gen-command";
 // import { VaultCurrator } from './obsidian-related/obsidian-services/managers/vault-currator';
@@ -37,6 +37,7 @@ export default class TextEaterPlugin extends Plugin {
 	// File management
 	vaultActionQueue: VaultActionQueue;
 	vaultActionExecutor: VaultActionExecutor;
+	vaultEventService: VaultEventService;
 
 	// Commanders
 	librarian: Librarian;
@@ -152,12 +153,18 @@ export default class TextEaterPlugin extends Plugin {
 
 		this.librarian = new Librarian({
 			actionQueue: this.vaultActionQueue,
-			app: this.app,
 			backgroundFileService: this.backgroundFileService,
 			openedFileService: this.openedFileService,
 		});
 		await this.librarian.initTrees();
 		console.log("[main] Librarian and trees initialized:", this.librarian);
+
+		// Start listening to vault events after trees are ready
+		this.vaultEventService = new VaultEventService(
+			this.app,
+			this.librarian,
+		);
+		this.vaultEventService.start();
 
 		this.registerDomEvent(document, "click", makeClickListener(this));
 

@@ -1,4 +1,4 @@
-import type { App, TAbstractFile } from "obsidian";
+import type { TAbstractFile } from "obsidian";
 import { TFile } from "obsidian";
 import { editOrAddMetaInfo } from "../../services/dto-services/meta-info-manager/interface";
 import type { BackgroundVaultAction } from "../../services/obsidian-services/file-services/background/background-vault-actions";
@@ -45,11 +45,10 @@ export class Librarian {
 	private diffMappers: Map<RootName, DiffToActionsMapper> = new Map();
 
 	constructor({
-		app,
 		backgroundFileService,
 		openedFileService,
 		actionQueue,
-	}: { app: App; actionQueue?: VaultActionQueue } & Pick<
+	}: { actionQueue?: VaultActionQueue } & Pick<
 		TexfresserObsidianServices,
 		"backgroundFileService" | "openedFileService"
 	>) {
@@ -61,14 +60,6 @@ export class Librarian {
 		for (const rootName of ROOTS) {
 			this.diffMappers.set(rootName, new DiffToActionsMapper(rootName));
 		}
-
-		app.vault.on("delete", (tAbstarctFile) => {
-			this.onDelete(tAbstarctFile);
-		});
-
-		app.vault.on("rename", (newTAbstarctFile, oldSystemPath) => {
-			this.onRename(newTAbstarctFile, oldSystemPath);
-		});
 	}
 
 	/**
@@ -474,22 +465,31 @@ export class Librarian {
 		return candidate;
 	}
 
-	private async onDelete(file: TAbstractFile) {
-		const lastOpenedFile = this.openedFileService.getLastOpenedFile();
-		console.log("[Librarian] [onDelete] file", file);
-		// TODO: Use withDiff to track deletion
+	// ─── Vault Event Handlers ────────────────────────────────────────
+	// Called by VaultEventService when files change
+
+	/**
+	 * Handle file deletion in library folders.
+	 */
+	onFileDeleted(file: TAbstractFile): void {
+		console.log("[Librarian] [onFileDeleted]", file.path);
+		// TODO: Remove from tree, update parent Codex
 	}
 
-	private async onRename(
-		newTAbstarctFile: TAbstractFile,
-		oldSystemPath: string,
-	) {
-		console.log(
-			"[Librarian] [onRename] newTAbstarctFile",
-			newTAbstarctFile,
-		);
-		console.log("[Librarian] [onRename] oldSystemPath", oldSystemPath);
-		// TODO: Use withDiff to track rename
+	/**
+	 * Handle file rename/move in library folders.
+	 */
+	onFileRenamed(file: TAbstractFile, oldPath: string): void {
+		console.log("[Librarian] [onFileRenamed]", oldPath, "→", file.path);
+		// TODO: Update tree, rename files, update Codexes
+	}
+
+	/**
+	 * Handle file creation in library folders.
+	 */
+	onFileCreated(file: TAbstractFile): void {
+		console.log("[Librarian] [onFileCreated]", file.path);
+		// TODO: Check if needs to be added to tree
 	}
 
 	private getAffectedTree(path: SplitPath): LibraryTree | null;
