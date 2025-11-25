@@ -2,17 +2,19 @@ import type { App, TAbstractFile } from "obsidian";
 import { TFile } from "obsidian";
 import { editOrAddMetaInfo } from "../../services/dto-services/meta-info-manager/interface";
 import type { BackgroundVaultAction } from "../../services/obsidian-services/file-services/background/background-vault-actions";
+import type { VaultActionQueue } from "../../services/obsidian-services/file-services/background/vault-action-queue";
 import {
 	splitPathFromSystemPath,
 	systemPathFromSplitPath,
 } from "../../services/obsidian-services/file-services/pathfinder";
 import type { SplitPath } from "../../services/obsidian-services/file-services/types";
-import type { VaultActionQueue } from "../../services/obsidian-services/file-services/background/vault-action-queue";
+import { logWarning } from "../../services/obsidian-services/helpers/issue-handlers";
 import type { TexfresserObsidianServices } from "../../services/obsidian-services/interface";
 import { TextStatus } from "../../types/common-interface/enums";
 import { DiffToActionsMapper } from "./diffing/diff-to-actions";
 import { treeDiffer } from "./diffing/tree-differ";
 import type { TreeSnapshot } from "./diffing/types";
+import { toGuardedNodeName } from "./indexing/formatters";
 import {
 	getLibraryFileToFileFromNode,
 	getTreePathFromLibraryFile,
@@ -21,6 +23,10 @@ import {
 import { makeTextsFromTree } from "./library-tree/helpers/serialization";
 import { LibraryTree } from "./library-tree/library-tree";
 import { getTreePathFromNode } from "./pure-functions/node";
+import {
+	formatPageIndex,
+	splitTextIntoPages,
+} from "./text-splitter/text-splitter";
 import type { LibraryFileDto, TextDto, TreePath } from "./types";
 
 // [TODO]: Read this from settings
@@ -278,6 +284,129 @@ export class Librarian {
 		if (file instanceof TFile) {
 			await this.openedFileService.openFile(file);
 		}
+	}
+
+	/**
+	 * Convert the current note into a managed text (scroll or book).
+	 * Only works on files in librarian-maintained folders.
+	 */
+	async makeNoteAText(): Promise<boolean> {
+		const app = this.openedFileService.getApp();
+		const currentFile = app.workspace.getActiveFile();
+
+		if (!currentFile) {
+			logWarning({
+				description: "No file is currently open.",
+				location: "Librarian.makeNoteAText",
+			});
+			return false;
+		}
+
+		const splitPath = splitPathFromSystemPath(currentFile.path);
+		const rootName = splitPath.pathParts[0];
+
+		// Check if file is in a librarian-maintained folder
+		if (!rootName || !isRootName(rootName)) {
+			logWarning({
+				description: `File must be in a Library folder. Found: ${rootName}`,
+				location: "Librarian.makeNoteAText",
+			});
+			return false;
+		}
+
+		const affectedTree = this.getAffectedTree(splitPath);
+		if (!affectedTree) {
+			logWarning({
+				description: "Could not find tree for this folder.",
+				location: "Librarian.makeNoteAText",
+			});
+			return false;
+		}
+
+		// Read file content
+		const content = await this.backgroundFileService.readContent({
+			basename: splitPath.basename,
+			pathParts: splitPath.pathParts,
+		});
+
+		if (!content.trim()) {
+			logWarning({
+				description: "File is empty.",
+				location: "Librarian.makeNoteAText",
+			});
+			return false;
+		}
+
+		// Derive tree path from file location
+		// E.g., Library/Section/MyNote.md → ["Section", "MyNote"]
+		const textName = toGuardedNodeName(splitPath.basename);
+
+		// Split content into pages with formatted sentences
+		const { pages, isBook } = splitTextIntoPages(content, textName);
+		const sectionPath = splitPath.pathParts.slice(1); // Remove root
+		const textPath: TreePath = [...sectionPath, textName];
+
+		// Build pageStatuses
+		const pageStatuses: Record<string, TextStatus> = {};
+		for (let i = 0; i < pages.length; i++) {
+			pageStatuses[formatPageIndex(i)] = TextStatus.NotStarted;
+		}
+
+		// Add to tree with diff tracking
+		this.withDiff(rootName, (tree) => {
+			tree.addTexts([{ pageStatuses, path: textPath }]);
+		});
+
+		// Write page content (the diff/queue handles structure, we handle content)
+		for (let i = 0; i < pages.length; i++) {
+			const pageIndex = formatPageIndex(i);
+			const pageContent = pages[i] ?? "";
+
+			// For scroll: content goes to the scroll file directly
+			// For book: content goes to individual page files
+			if (!isBook) {
+				// Scroll: single file with reversed name
+				const scrollPath = {
+					basename: textPath.toReversed().join("-"),
+					pathParts: [rootName, ...sectionPath],
+				};
+				await this.backgroundFileService.replaceContent(
+					scrollPath,
+					pageContent,
+				);
+			} else {
+				// Book page: NNN-reversed-path.md
+				const pagePath = {
+					basename: `${pageIndex}-${textPath.toReversed().join("-")}`,
+					pathParts: [rootName, ...sectionPath, textName],
+				};
+				await this.backgroundFileService.replaceContent(
+					pagePath,
+					pageContent,
+				);
+			}
+		}
+
+		// Trash original file (it's now replaced by the managed text)
+		await this.backgroundFileService.trash({
+			basename: splitPath.basename,
+			pathParts: splitPath.pathParts,
+		});
+
+		console.log(
+			`[Librarian] ${isBook ? `Created book "${textName}" with ${pages.length} pages.` : `Created scroll "${textName}".`}`,
+		);
+
+		return true;
+	}
+
+	/**
+	 * Check if file is in a librarian-maintained folder.
+	 */
+	isInLibraryFolder(file: TFile): boolean {
+		const splitPath = splitPathFromSystemPath(file.path);
+		const rootName = splitPath.pathParts[0];
+		return !!rootName && isRootName(rootName);
 	}
 
 	/**

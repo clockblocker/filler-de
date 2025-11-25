@@ -307,6 +307,21 @@ export default class TextEaterPlugin extends Plugin {
 		});
 
 		this.addCommand({
+			editorCheckCallback: (checking: boolean, _editor: Editor, view: MarkdownView) => {
+				// Only show if file is in a Library folder
+				if (!view.file || !this.librarian.isInLibraryFolder(view.file)) {
+					return false;
+				}
+				if (!checking) {
+					this.librarian.makeNoteAText();
+				}
+				return true;
+			},
+			id: "make-note-a-text",
+			name: "Make this note a text",
+		});
+
+		this.addCommand({
 			editorCheckCallback: (
 				checking: boolean,
 				editor: Editor,

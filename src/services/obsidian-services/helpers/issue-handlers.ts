@@ -1,4 +1,12 @@
-import { Notice } from "obsidian";
+// Notice is optional - may not be available in test environment
+let Notice: (new (message: string) => unknown) | null = null;
+try {
+	// Dynamic import would be better but causes issues with bundling
+	// eslint-disable-next-line @typescript-eslint/no-require-imports
+	Notice = require("obsidian").Notice;
+} catch {
+	// Notice not available (test environment)
+}
 
 type TextfresserError = {
 	description: string;
@@ -26,7 +34,7 @@ function handleIssue({
 		location,
 	});
 
-	if (withNotice) {
+	if (withNotice && Notice) {
 		new Notice(errorMessage);
 	}
 
