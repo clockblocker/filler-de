@@ -208,12 +208,12 @@ describe("DiffToActionsMapper", () => {
 
 			const actions = mapper.mapDiffToActions(diff);
 
-			const processActions = actions.filter(
-				(a) => a.type === BackgroundVaultActionType.ProcessFile,
+			const writeActions = actions.filter(
+				(a) => a.type === BackgroundVaultActionType.WriteFile,
 			);
 
 			// Should affect: Section/Book codex and Section codex
-			expect(processActions.length).toBe(2);
+			expect(writeActions.length).toBe(2);
 		});
 	});
 

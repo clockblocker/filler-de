@@ -91,7 +91,20 @@ export class Librarian {
 
 		const diff = treeDiffer.diff(before, after);
 		const mapper = this.diffMappers.get(rootName);
-		const actions = mapper ? mapper.mapDiffToActions(diff) : [];
+
+		// Provide getNode callback for Codex content generation
+		const getNode = (path: TreePath) => {
+			const mbNode = tree.getMaybeNode({ path });
+			if (mbNode.error) return undefined;
+			const node = mbNode.data;
+			// Only return section or text nodes (not pages)
+			if (node.type === "Section" || node.type === "Text") {
+				return node;
+			}
+			return undefined;
+		};
+
+		const actions = mapper ? mapper.mapDiffToActions(diff, getNode) : [];
 
 		if (this.actionQueue && actions.length > 0) {
 			this.actionQueue.pushMany(actions);

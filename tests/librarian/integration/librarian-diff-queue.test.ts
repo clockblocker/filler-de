@@ -90,12 +90,12 @@ describe("Librarian withDiff integration", () => {
 
 			const actions = calls[0]?.[0];
 			expect(Array.isArray(actions)).toBe(true);
-			// Status change should generate ProcessFile actions for affected Codex files
-			const hasProcessAction = actions.some(
+			// Status change should generate WriteFile actions for affected Codex files
+			const hasWriteAction = actions.some(
 				// biome-ignore lint/suspicious/noExplicitAny: test mock
-				(a: any) => a.type === BackgroundVaultActionType.ProcessFile,
+				(a: any) => a.type === BackgroundVaultActionType.WriteFile,
 			);
-			expect(hasProcessAction).toBe(true);
+			expect(hasWriteAction).toBe(true);
 		});
 
 		it("should not queue actions when status unchanged", () => {

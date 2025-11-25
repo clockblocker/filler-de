@@ -3,15 +3,23 @@ import {
 	BackgroundVaultActionType,
 } from "../../../services/obsidian-services/file-services/background/background-vault-actions";
 import type { PrettyPath } from "../../../types/common-interface/dtos";
-import type { TextDto, TreePath } from "../types";
+import { codexFormatter, codexGenerator } from "../codex";
+import type { SectionNode, TextDto, TextNode, TreePath } from "../types";
 import type { StatusChange, TreeDiff } from "./types";
+
+/**
+ * Callback to get a node from the tree by path.
+ * Used for Codex content generation.
+ */
+export type GetNodeFn = (
+	path: TreePath,
+) => (SectionNode | TextNode) | undefined;
 
 /**
  * Maps tree diffs to vault actions.
  *
- * Note: Codex content generation is NOT handled here.
- * This mapper produces structural actions only.
- * Codex-specific logic should be added via composition or extension.
+ * Chain logic (folder order, cleanup) is handled here.
+ * Codex content is generated via CodexGenerator/CodexFormatter.
  */
 export class DiffToActionsMapper {
 	private rootName: string;
@@ -22,18 +30,26 @@ export class DiffToActionsMapper {
 
 	/**
 	 * Convert a tree diff into vault actions.
+	 *
+	 * @param diff The tree diff to process
+	 * @param getNode Optional callback to get nodes for Codex generation.
+	 *                If not provided, Codex files are created with empty content.
 	 */
-	mapDiffToActions(diff: TreeDiff): BackgroundVaultAction[] {
+	mapDiffToActions(
+		diff: TreeDiff,
+		getNode?: GetNodeFn,
+	): BackgroundVaultAction[] {
 		const actions: BackgroundVaultAction[] = [];
 
-		// Handle added sections (create folders)
+		// Handle added sections (create folders + Codex)
 		for (const sectionPath of diff.addedSections) {
 			actions.push(this.createFolderAction(sectionPath));
+			actions.push(this.createSectionCodexAction(sectionPath, getNode));
 		}
 
 		// Handle added texts (create files)
 		for (const text of diff.addedTexts) {
-			actions.push(...this.createTextActions(text));
+			actions.push(...this.createTextActions(text, getNode));
 		}
 
 		// Handle removed texts (trash files)
@@ -41,24 +57,22 @@ export class DiffToActionsMapper {
 			actions.push(...this.trashTextActions(text));
 		}
 
-		// Handle removed sections (trash folders) - in reverse order (deepest first)
+		// Handle removed sections (trash folders + Codex) - deepest first
 		const sortedRemovedSections = [...diff.removedSections].sort(
 			(a, b) => b.length - a.length,
 		);
 		for (const sectionPath of sortedRemovedSections) {
+			actions.push(this.trashSectionCodexAction(sectionPath));
 			actions.push(this.trashFolderAction(sectionPath));
 		}
 
-		// Handle status changes
-		// Status changes affect Codex files, but we don't generate content here
-		// Just collect the affected paths for downstream processing
+		// Handle status changes → update affected Codex files
 		const affectedCodexPaths = this.getAffectedCodexPaths(
 			diff.statusChanges,
 		);
-		for (const codexPath of affectedCodexPaths) {
-			// Placeholder: actual Codex content generation happens elsewhere
-			// This just marks that these Codex files need updating
-			actions.push(this.updateCodexPlaceholder(codexPath));
+		for (const codexPathKey of affectedCodexPaths) {
+			const path = codexPathKey.split("/") as TreePath;
+			actions.push(this.updateCodexAction(path, getNode));
 		}
 
 		return actions;
@@ -87,6 +101,8 @@ export class DiffToActionsMapper {
 		return paths;
 	}
 
+	// ─── Section Actions ─────────────────────────────────────────────
+
 	private createFolderAction(sectionPath: TreePath): BackgroundVaultAction {
 		return {
 			payload: {
@@ -105,22 +121,49 @@ export class DiffToActionsMapper {
 		};
 	}
 
-	private createTextActions(text: TextDto): BackgroundVaultAction[] {
+	private createSectionCodexAction(
+		sectionPath: TreePath,
+		getNode?: GetNodeFn,
+	): BackgroundVaultAction {
+		const content = this.generateCodexContent(sectionPath, getNode);
+		return {
+			payload: {
+				content,
+				prettyPath: this.sectionCodexToPrettyPath(sectionPath),
+			},
+			type: BackgroundVaultActionType.CreateFile,
+		};
+	}
+
+	private trashSectionCodexAction(
+		sectionPath: TreePath,
+	): BackgroundVaultAction {
+		return {
+			payload: {
+				prettyPath: this.sectionCodexToPrettyPath(sectionPath),
+			},
+			type: BackgroundVaultActionType.TrashFile,
+		};
+	}
+
+	// ─── Text Actions ────────────────────────────────────────────────
+
+	private createTextActions(
+		text: TextDto,
+		getNode?: GetNodeFn,
+	): BackgroundVaultAction[] {
 		const actions: BackgroundVaultAction[] = [];
 		const pageNames = Object.keys(text.pageStatuses);
 
 		if (pageNames.length === 1) {
-			// Scroll (single page = single file)
-			const pageName = pageNames[0];
-			if (pageName) {
-				actions.push({
-					payload: {
-						content: "", // Content will be set by Codex generator or user
-						prettyPath: this.scrollPathToPrettyPath(text.path),
-					},
-					type: BackgroundVaultActionType.CreateFile,
-				});
-			}
+			// Scroll (single page = single file, no Codex)
+			actions.push({
+				payload: {
+					content: "",
+					prettyPath: this.scrollPathToPrettyPath(text.path),
+				},
+				type: BackgroundVaultActionType.CreateFile,
+			});
 		} else {
 			// Book (multiple pages)
 			// Create folder for the book
@@ -135,7 +178,7 @@ export class DiffToActionsMapper {
 			for (const pageName of pageNames) {
 				actions.push({
 					payload: {
-						content: "", // Content will be set by user
+						content: "",
 						prettyPath: this.pagePathToPrettyPath(
 							text.path,
 							pageName,
@@ -146,9 +189,10 @@ export class DiffToActionsMapper {
 			}
 
 			// Create Codex file for the book
+			const content = this.generateCodexContent(text.path, getNode);
 			actions.push({
 				payload: {
-					content: "", // Content will be set by Codex generator
+					content,
 					prettyPath: this.bookCodexToPrettyPath(text.path),
 				},
 				type: BackgroundVaultActionType.CreateFile,
@@ -171,7 +215,7 @@ export class DiffToActionsMapper {
 				type: BackgroundVaultActionType.TrashFile,
 			});
 		} else {
-			// Book - trash pages first, then folder
+			// Book - trash pages first, then Codex, then folder
 			for (const pageName of pageNames) {
 				actions.push({
 					payload: {
@@ -204,33 +248,61 @@ export class DiffToActionsMapper {
 		return actions;
 	}
 
-	/**
-	 * Placeholder action for Codex updates.
-	 * Actual content generation happens in Codex module.
-	 */
-	private updateCodexPlaceholder(
-		codexPathKey: string,
+	// ─── Codex Update Action ─────────────────────────────────────────
+
+	private updateCodexAction(
+		path: TreePath,
+		getNode?: GetNodeFn,
 	): BackgroundVaultAction {
-		const pathParts = codexPathKey.split("/");
-		const basename = pathParts.pop() ?? "";
+		const prettyPath = this.pathToCodexPrettyPath(path);
 
 		return {
 			payload: {
-				prettyPath: {
-					basename: `__${basename}`,
-					pathParts: [this.rootName, ...pathParts],
-				},
-				transform: (content) => {
-					// Placeholder: actual transform will be injected
-					// This just marks the file as needing update
-					return content;
-				},
+				content: this.generateCodexContent(path, getNode),
+				prettyPath,
 			},
-			type: BackgroundVaultActionType.ProcessFile,
+			type: BackgroundVaultActionType.WriteFile,
 		};
 	}
 
-	// Path conversion helpers
+	// ─── Codex Content Generation ────────────────────────────────────
+
+	private generateCodexContent(path: TreePath, getNode?: GetNodeFn): string {
+		if (!getNode) {
+			return ""; // No tree access, empty content
+		}
+
+		const node = getNode(path);
+		if (!node) {
+			return ""; // Node not found
+		}
+
+		const codexContent = codexGenerator.forNode(node);
+		if (!codexContent) {
+			return ""; // Not a codex-able node (e.g., scroll)
+		}
+
+		const codexType = codexGenerator.getCodexType(node);
+		if (!codexType) {
+			return "";
+		}
+
+		return codexFormatter.format(codexContent, codexType);
+	}
+
+	// ─── Path Conversion Helpers ─────────────────────────────────────
+
+	/**
+	 * Determine the correct Codex path for any node path.
+	 * Handles both sections and books.
+	 */
+	private pathToCodexPrettyPath(path: TreePath): PrettyPath {
+		// For sections: Codex is in parent folder
+		// For books: Codex is inside the book folder
+		// We can't know which without the node, so use section convention
+		// (book codex paths are computed in createTextActions)
+		return this.sectionCodexToPrettyPath(path);
+	}
 
 	private sectionPathToPrettyPath(sectionPath: TreePath): PrettyPath {
 		const pathParts = [this.rootName, ...sectionPath.slice(0, -1)];
@@ -238,8 +310,13 @@ export class DiffToActionsMapper {
 		return { basename, pathParts };
 	}
 
+	private sectionCodexToPrettyPath(sectionPath: TreePath): PrettyPath {
+		const pathParts = [this.rootName, ...sectionPath.slice(0, -1)];
+		const basename = `__${sectionPath.toReversed().join("-")}`;
+		return { basename, pathParts };
+	}
+
 	private scrollPathToPrettyPath(textPath: TreePath): PrettyPath {
-		// Scroll filename: Name-Parent-Grandparent.md (reversed path)
 		const pathParts = [this.rootName, ...textPath.slice(0, -1)];
 		const basename = textPath.toReversed().join("-");
 		return { basename, pathParts };
@@ -262,7 +339,6 @@ export class DiffToActionsMapper {
 		pageName: string,
 	): PrettyPath {
 		const pathParts = [this.rootName, ...textPath, "Pages"];
-		// Page filename: 000-TextName-Parent.md
 		const basename = `${pageName}-${textPath.toReversed().join("-")}`;
 		return { basename, pathParts };
 	}
