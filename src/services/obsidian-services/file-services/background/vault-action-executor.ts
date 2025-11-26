@@ -53,10 +53,11 @@ export class VaultActionExecutor {
 				break;
 
 			case BackgroundVaultActionType.CreateFile:
-				await this.fileService.create({
-					...payload.prettyPath,
-					content: payload.content,
-				});
+				// Use createOrUpdate to handle both new files and updates (e.g., codex files)
+				await this.fileService.createOrUpdate(
+					payload.prettyPath,
+					payload.content,
+				);
 				break;
 
 			case BackgroundVaultActionType.RenameFile:

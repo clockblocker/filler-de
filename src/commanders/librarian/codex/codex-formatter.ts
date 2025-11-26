@@ -1,14 +1,15 @@
 import { TextStatus } from "../../../types/common-interface/enums";
-import type { BackLink, CodexContent, CodexItem, CodexType } from "./types";
+import type { BackLink, CodexContent, CodexItem } from "./types";
 
 /**
  * Formats CodexContent to Obsidian markdown.
+ * All codexes use the same nested format - indentation is determined by children.
  */
 export class CodexFormatter {
 	/**
 	 * Format full Codex content to markdown.
 	 */
-	format(content: CodexContent, type: CodexType): string {
+	format(content: CodexContent): string {
 		const lines: string[] = [];
 
 		// Back link
@@ -17,12 +18,8 @@ export class CodexFormatter {
 			lines.push(""); // Empty line after back link
 		}
 
-		// Items
-		if (type === "section") {
-			lines.push(...this.formatNestedItems(content.items, 0));
-		} else {
-			lines.push(...this.formatFlatItems(content.items));
-		}
+		// Items - always nested, depth determined by children
+		lines.push(...this.formatItems(content.items, 0));
 
 		return lines.join("\n");
 	}
@@ -34,7 +31,7 @@ export class CodexFormatter {
 		return `[[${backLink.target}|← ${backLink.displayName}]]`;
 	}
 
-	private formatNestedItems(items: CodexItem[], depth: number): string[] {
+	private formatItems(items: CodexItem[], depth: number): string[] {
 		const lines: string[] = [];
 		const indent = "\t".repeat(depth);
 
@@ -45,19 +42,11 @@ export class CodexFormatter {
 
 			// Recurse into children
 			if (item.children.length > 0) {
-				lines.push(...this.formatNestedItems(item.children, depth + 1));
+				lines.push(...this.formatItems(item.children, depth + 1));
 			}
 		}
 
 		return lines;
-	}
-
-	private formatFlatItems(items: CodexItem[]): string[] {
-		return items.map((item) => {
-			const checkbox = this.statusToCheckbox(item.status);
-			const link = `[[${item.target}|${item.displayName}]]`;
-			return `- ${checkbox} ${link}`;
-		});
 	}
 
 	private statusToCheckbox(status: TextStatus): string {

@@ -13,7 +13,10 @@ export type BackLink = {
 
 /**
  * Single item in a Codex list.
- * Can be nested (for sections) or flat (for book pages).
+ * Items can have nested children:
+ * - Sections: children are their contents (sections, books, scrolls)
+ * - Books: children are their pages
+ * - Scrolls/Pages: no children
  */
 export type CodexItem = {
 	/** Link target (file basename without extension) */
@@ -22,7 +25,7 @@ export type CodexItem = {
 	displayName: string;
 	/** Status determines checkbox state */
 	status: TextStatus;
-	/** Nested children (only for section codex, empty for book pages) */
+	/** Nested children */
 	children: CodexItem[];
 };
 
@@ -32,11 +35,6 @@ export type CodexItem = {
 export type CodexContent = {
 	/** Back link to parent (null for root) */
 	backLink: BackLink;
-	/** List items (nested for section, flat for book) */
+	/** List items with nested structure */
 	items: CodexItem[];
 };
-
-/**
- * Codex type determines formatting behavior.
- */
-export type CodexType = "section" | "book";

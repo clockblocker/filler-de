@@ -10,7 +10,7 @@ import { splitPathFromAbstractFile } from "../pathfinder";
 import type { SplitPathToFile } from "../types";
 
 export class OpenedFileService {
-	private lastOpenedFiles: SplitPathToFile[];
+	private lastOpenedFiles: SplitPathToFile[] = [];
 
 	constructor(
 		private app: App,
@@ -26,7 +26,7 @@ export class OpenedFileService {
 		return this.app.workspace.getLastOpenFiles();
 	}
 
-	getLastOpenedFile() {
+	getLastOpenedFile(): SplitPathToFile | undefined {
 		return this.lastOpenedFiles[this.lastOpenedFiles.length - 1];
 	}
 

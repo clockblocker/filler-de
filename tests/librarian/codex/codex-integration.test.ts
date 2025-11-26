@@ -170,7 +170,7 @@ describe("Codex Integration", () => {
 	});
 
 	describe("Status change → Codex update", () => {
-		it("should generate WriteFile action with updated content", () => {
+		it("should generate CreateFile action with updated content", () => {
 			// Set up tree with a book
 			tree.addTexts([
 				{
@@ -204,23 +204,23 @@ describe("Codex Integration", () => {
 
 			const actions = mapper.mapDiffToActions(diff, getNode);
 
-			// Should have WriteFile actions for affected Codexes
-			const writeActions = actions.filter(
-				(a) => a.type === BackgroundVaultActionType.WriteFile,
+			// Should have CreateFile actions for affected Codexes
+			const createActions = actions.filter(
+				(a) => a.type === BackgroundVaultActionType.CreateFile,
 			);
 
 			// Episode_1 (book) and Avatar (parent section)
-			expect(writeActions.length).toBe(2);
+			expect(createActions.length).toBe(2);
 
 			// Find the book codex update
-			const bookUpdate = writeActions.find((a) =>
+			const bookUpdate = createActions.find((a) =>
 				a.payload.prettyPath.basename.includes("Episode_1"),
 			);
 
 			expect(bookUpdate).toBeDefined();
 
 			const content =
-				bookUpdate?.type === BackgroundVaultActionType.WriteFile
+				bookUpdate?.type === BackgroundVaultActionType.CreateFile
 					? bookUpdate.payload.content
 					: "";
 
@@ -258,18 +258,18 @@ describe("Codex Integration", () => {
 
 			const actions = mapper.mapDiffToActions(diff, getNode);
 
-			const writeActions = actions.filter(
-				(a) => a.type === BackgroundVaultActionType.WriteFile,
+			const createActions = actions.filter(
+				(a) => a.type === BackgroundVaultActionType.CreateFile,
 			);
 
 			// Should update: A/B/C/Text, A/B/C, A/B, A = 4 codexes
 			// But Text is a scroll (single page), so only sections: A/B/C, A/B, A = 3
-			expect(writeActions.length).toBe(3);
+			expect(createActions.length).toBe(3);
 		});
 	});
 
 	describe("Scroll (no Codex)", () => {
-		it("should not create Codex for single-page text", () => {
+		it("should not create Codex for single-page text itself", () => {
 			const diff: TreeDiff = {
 				addedSections: [],
 				addedTexts: [
@@ -285,15 +285,25 @@ describe("Codex Integration", () => {
 
 			const actions = mapper.mapDiffToActions(diff, getNode);
 
-			// Should only create the scroll file, no Codex
+			// Should create: 1 scroll file + 1 parent section codex update
 			const createActions = actions.filter(
 				(a) => a.type === BackgroundVaultActionType.CreateFile,
 			);
 
-			expect(createActions.length).toBe(1);
-			expect(createActions[0]?.payload.prettyPath.basename).not.toContain(
-				"__",
+			expect(createActions.length).toBe(2);
+
+			// The scroll file itself shouldn't have __ prefix (not a codex)
+			const scrollAction = createActions.find(
+				(a) => a.payload.prettyPath.basename === "MySong-Songs",
 			);
+			expect(scrollAction).toBeDefined();
+			expect(scrollAction?.payload.prettyPath.basename).not.toContain("__");
+
+			// The parent section should get a codex update
+			const sectionCodexAction = createActions.find(
+				(a) => a.payload.prettyPath.basename.startsWith("__"),
+			);
+			expect(sectionCodexAction).toBeDefined();
 		});
 	});
 

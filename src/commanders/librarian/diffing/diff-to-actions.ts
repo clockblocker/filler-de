@@ -4,7 +4,13 @@ import {
 } from "../../../services/obsidian-services/file-services/background/background-vault-actions";
 import type { PrettyPath } from "../../../types/common-interface/dtos";
 import { codexFormatter, codexGenerator } from "../codex";
-import type { SectionNode, TextDto, TextNode, TreePath } from "../types";
+import {
+	NodeType,
+	type SectionNode,
+	type TextDto,
+	type TextNode,
+	type TreePath,
+} from "../types";
 import type { StatusChange, TreeDiff } from "./types";
 
 /**
@@ -70,12 +76,26 @@ export class DiffToActionsMapper {
 		const affectedCodexPaths = this.getAffectedCodexPaths(
 			diff.statusChanges,
 		);
+
+		// Also update parent section codexes when texts are added/removed
+		for (const text of diff.addedTexts) {
+			// Add parent section paths (not the text itself)
+			for (let i = 1; i <= text.path.length - 1; i++) {
+				affectedCodexPaths.add(text.path.slice(0, i).join("/"));
+			}
+		}
+		for (const text of diff.removedTexts) {
+			for (let i = 1; i <= text.path.length - 1; i++) {
+				affectedCodexPaths.add(text.path.slice(0, i).join("/"));
+			}
+		}
+
 		for (const codexPathKey of affectedCodexPaths) {
 			const path = codexPathKey.split("/") as TreePath;
 			// Skip scrolls (single-page texts) - they don't have Codexes
 			if (getNode) {
 				const node = getNode(path);
-				if (node && !codexGenerator.getCodexType(node)) {
+				if (node && !codexGenerator.hasCodex(node)) {
 					continue;
 				}
 			}
@@ -277,14 +297,15 @@ export class DiffToActionsMapper {
 		path: TreePath,
 		getNode?: GetNodeFn,
 	): BackgroundVaultAction {
-		const prettyPath = this.pathToCodexPrettyPath(path);
+		const prettyPath = this.pathToCodexPrettyPath(path, getNode);
 
+		// Use CreateFile - it creates if not exists, or we'll handle overwrite
 		return {
 			payload: {
 				content: this.generateCodexContent(path, getNode),
 				prettyPath,
 			},
-			type: BackgroundVaultActionType.WriteFile,
+			type: BackgroundVaultActionType.CreateFile,
 		};
 	}
 
@@ -305,25 +326,31 @@ export class DiffToActionsMapper {
 			return ""; // Not a codex-able node (e.g., scroll)
 		}
 
-		const codexType = codexGenerator.getCodexType(node);
-		if (!codexType) {
-			return "";
-		}
-
-		return codexFormatter.format(codexContent, codexType);
+		return codexFormatter.format(codexContent);
 	}
 
 	// ─── Path Conversion Helpers ─────────────────────────────────────
 
 	/**
 	 * Determine the correct Codex path for any node path.
-	 * Handles both sections and books.
+	 * - Sections: Codex is in the section folder itself
+	 * - Books (texts with pages): Codex is inside the book folder
 	 */
-	private pathToCodexPrettyPath(path: TreePath): PrettyPath {
-		// For sections: Codex is in parent folder
-		// For books: Codex is inside the book folder
-		// We can't know which without the node, so use section convention
-		// (book codex paths are computed in createTextActions)
+	private pathToCodexPrettyPath(
+		path: TreePath,
+		getNode?: GetNodeFn,
+	): PrettyPath {
+		if (getNode) {
+			const node = getNode(path);
+			if (node) {
+				// Use node.type to distinguish Section from Text
+				if (node.type === NodeType.Text && node.children.length > 1) {
+					// It's a book (multi-page text) - codex lives inside the book folder
+					return this.bookCodexToPrettyPath(path);
+				}
+				// Section or scroll (single-page text) - use section-style path
+			}
+		}
 		return this.sectionCodexToPrettyPath(path);
 	}
 
@@ -336,6 +363,14 @@ export class DiffToActionsMapper {
 	private sectionCodexToPrettyPath(sectionPath: TreePath): PrettyPath {
 		const pathParts = [this.rootName, ...sectionPath.slice(0, -1)];
 		const basename = `__${sectionPath.toReversed().join("-")}`;
+		return { basename, pathParts };
+	}
+
+	private bookCodexToPrettyPath(textPath: TreePath): PrettyPath {
+		// Book codex lives inside the book folder
+		// e.g., Library/Fairy_Tales/Aschenputtel/__Aschenputtel-Fairy_Tales.md
+		const pathParts = [this.rootName, ...textPath];
+		const basename = `__${textPath.toReversed().join("-")}`;
 		return { basename, pathParts };
 	}
 
@@ -354,12 +389,6 @@ export class DiffToActionsMapper {
 	private pagesFolderToPrettyPath(textPath: TreePath): PrettyPath {
 		const pathParts = [this.rootName, ...textPath];
 		return { basename: "Pages", pathParts };
-	}
-
-	private bookCodexToPrettyPath(textPath: TreePath): PrettyPath {
-		const pathParts = [this.rootName, ...textPath];
-		const basename = `__${textPath.toReversed().join("-")}`;
-		return { basename, pathParts };
 	}
 
 	private pagePathToPrettyPath(

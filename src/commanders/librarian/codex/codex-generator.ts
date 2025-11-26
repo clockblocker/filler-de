@@ -2,7 +2,7 @@ import { codexNameFromTreePath } from "../indexing/formatters";
 import { getTreePathFromNode } from "../pure-functions/node";
 import type { PageNode, SectionNode, TextNode, TreePath } from "../types";
 import { NodeType } from "../types";
-import type { BackLink, CodexContent, CodexItem, CodexType } from "./types";
+import type { BackLink, CodexContent, CodexItem } from "./types";
 
 /**
  * Generates CodexContent from tree nodes.
@@ -50,16 +50,15 @@ export class CodexGenerator {
 	}
 
 	/**
-	 * Get the Codex type for a node.
+	 * Check if a node has a Codex file.
+	 * Sections and books have codexes, scrolls don't.
 	 */
-	getCodexType(node: SectionNode | TextNode): CodexType | null {
+	hasCodex(node: SectionNode | TextNode): boolean {
 		if (node.type === NodeType.Section) {
-			return "section";
+			return true;
 		}
-		if (node.children.length > 1) {
-			return "book";
-		}
-		return null; // scroll
+		// Text: only books (multi-page) have codex
+		return node.children.length > 1;
 	}
 
 	// ─── Private Helpers ─────────────────────────────────────────────
@@ -108,10 +107,10 @@ export class CodexGenerator {
 			};
 		}
 
-		// TextNode
+		// TextNode - books show pages as children, scrolls have no children
 		const isBook = node.children.length > 1;
 		return {
-			children: [], // Texts don't have nested children in parent's codex
+			children: isBook ? this.generateBookItems(node) : [],
 			displayName: node.name.replace(/_/g, " "),
 			status: node.status,
 			target: isBook

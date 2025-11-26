@@ -49,6 +49,27 @@ export class BackgroundFileService {
 		return content;
 	}
 
+	/**
+	 * Create file if it doesn't exist, or update content if it does.
+	 * Useful for codex files that may or may not exist.
+	 */
+	async createOrUpdate(prettyPath: PrettyPath, content = ""): Promise<void> {
+		const splitPath = splitPathToMdFileFromPrettyPath(prettyPath);
+		const maybeFile = await this.abstractFileService.getMaybeAbstractFile(
+			splitPath,
+		);
+
+		if (maybeFile.error) {
+			// File doesn't exist - create it
+			await this.abstractFileService.createFiles([
+				{ content, splitPath },
+			]);
+		} else {
+			// File exists - update content
+			await this.vault.modify(maybeFile.data, content);
+		}
+	}
+
 	create(file: PrettyFileDto): Promise<void>;
 	create(files: readonly PrettyFileDto[]): Promise<void>;
 

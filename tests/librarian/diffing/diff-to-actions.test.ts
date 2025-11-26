@@ -90,9 +90,13 @@ describe("DiffToActionsMapper", () => {
 			const createFileActions = actions.filter(
 				(a) => a.type === BackgroundVaultActionType.CreateFile,
 			);
-			expect(createFileActions.length).toBe(1);
+			// 1 scroll + 1 parent section codex
+			expect(createFileActions.length).toBe(2);
 			// Scroll filename is reversed path
-			expect(createFileActions?.[0]?.payload.prettyPath.basename).toBe("Scroll-Section");
+			const scrollAction = createFileActions.find(
+				(a) => a.payload.prettyPath.basename === "Scroll-Section",
+			);
+			expect(scrollAction).toBeDefined();
 		});
 
 		it("should create folder + pages + codex for book (multiple pages)", () => {
@@ -126,8 +130,8 @@ describe("DiffToActionsMapper", () => {
 			expect(createFolderActions?.[0]?.payload?.prettyPath.basename).toBe("Book");
 			expect(createFolderActions?.[1]?.payload?.prettyPath.basename).toBe("Pages");
 
-			// 2 pages + 1 codex
-			expect(createFileActions.length).toBe(3);
+			// 2 pages + 1 book codex + 1 parent section codex
+			expect(createFileActions.length).toBe(4);
 
 			// Check page files have correct path
 			const pageFiles = createFileActions.filter((a) =>
@@ -209,12 +213,12 @@ describe("DiffToActionsMapper", () => {
 
 			const actions = mapper.mapDiffToActions(diff);
 
-			const writeActions = actions.filter(
-				(a) => a.type === BackgroundVaultActionType.WriteFile,
+			const createActions = actions.filter(
+				(a) => a.type === BackgroundVaultActionType.CreateFile,
 			);
 
 			// Should affect: Section/Book codex and Section codex
-			expect(writeActions.length).toBe(2);
+			expect(createActions.length).toBe(2);
 		});
 	});
 

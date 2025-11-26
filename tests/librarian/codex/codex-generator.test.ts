@@ -223,8 +223,8 @@ describe("CodexGenerator", () => {
 		});
 	});
 
-	describe("getCodexType", () => {
-		it("should return 'section' for section nodes", () => {
+	describe("hasCodex", () => {
+		it("should return true for section nodes", () => {
 			const section: SectionNode = {
 				children: [],
 				name: "Test",
@@ -233,10 +233,10 @@ describe("CodexGenerator", () => {
 				type: NodeType.Section,
 			};
 
-			expect(generator.getCodexType(section)).toBe("section");
+			expect(generator.hasCodex(section)).toBe(true);
 		});
 
-		it("should return 'book' for multi-page texts", () => {
+		it("should return true for multi-page texts (books)", () => {
 			const book: TextNode = {
 				children: [
 					{ name: "000", parent: null, status: TextStatus.Done, type: NodeType.Page } as PageNode,
@@ -248,10 +248,10 @@ describe("CodexGenerator", () => {
 				type: NodeType.Text,
 			};
 
-			expect(generator.getCodexType(book)).toBe("book");
+			expect(generator.hasCodex(book)).toBe(true);
 		});
 
-		it("should return null for scrolls", () => {
+		it("should return false for scrolls", () => {
 			const scroll: TextNode = {
 				children: [
 					{ name: "000", parent: null, status: TextStatus.Done, type: NodeType.Page } as PageNode,
@@ -262,7 +262,7 @@ describe("CodexGenerator", () => {
 				type: NodeType.Text,
 			};
 
-			expect(generator.getCodexType(scroll)).toBeNull();
+			expect(generator.hasCodex(scroll)).toBe(false);
 		});
 	});
 });
