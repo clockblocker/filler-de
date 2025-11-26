@@ -1,7 +1,7 @@
 import type { TAbstractFile } from "obsidian";
 import { TFile } from "obsidian";
 import { editOrAddMetaInfo } from "../../services/dto-services/meta-info-manager/interface";
-import type { BackgroundVaultAction } from "../../services/obsidian-services/file-services/background/background-vault-actions";
+import type { VaultAction } from "../../services/obsidian-services/file-services/background/background-vault-actions";
 import type { VaultActionQueue } from "../../services/obsidian-services/file-services/background/vault-action-queue";
 import {
 	splitPathFromSystemPath,
@@ -75,7 +75,7 @@ export class Librarian {
 	private withDiff<T>(
 		rootName: RootName,
 		mutation: (tree: LibraryTree) => T,
-	): { actions: BackgroundVaultAction[]; result: T } {
+	): { actions: VaultAction[]; result: T } {
 		const tree = this.trees[rootName];
 		if (!tree) {
 			throw new Error(`Tree not found for root: ${rootName}`);
@@ -101,7 +101,7 @@ export class Librarian {
 		};
 
 		const actions = mapper ? mapper.mapDiffToActions(diff, getNode) : [];
-
+		console.log("[Librarian] [withDiff] actions", actions);
 		if (this.actionQueue && actions.length > 0) {
 			this.actionQueue.pushMany(actions);
 		}
@@ -117,7 +117,7 @@ export class Librarian {
 	private withDiffAsync<T>(
 		rootName: RootName,
 		mutation: (tree: LibraryTree) => T,
-	): Promise<{ actions: BackgroundVaultAction[]; result: T }> {
+	): Promise<{ actions: VaultAction[]; result: T }> {
 		return Promise.resolve(this.withDiff(rootName, mutation));
 	}
 

@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import { DiffToActionsMapper } from "../../../src/commanders/librarian/diffing/diff-to-actions";
 import type { TreeDiff } from "../../../src/commanders/librarian/diffing/types";
 import { LibraryTree } from "../../../src/commanders/librarian/library-tree/library-tree";
@@ -9,7 +9,7 @@ import type {
 	TreePath,
 } from "../../../src/commanders/librarian/types";
 import { NodeType } from "../../../src/commanders/librarian/types";
-import { BackgroundVaultActionType } from "../../../src/services/obsidian-services/file-services/background/background-vault-actions";
+import { VaultActionType } from "../../../src/services/obsidian-services/file-services/background/background-vault-actions";
 import { TextStatus } from "../../../src/types/common-interface/enums";
 
 describe("Codex Integration", () => {
@@ -50,18 +50,18 @@ describe("Codex Integration", () => {
 
 			const actions = mapper.mapDiffToActions(diff, getNode);
 
-			// Find the CreateFile action for the section Codex
+			// Find the UpdateOrCreateFile action for the section Codex
 			const codexAction = actions.find(
 				(a) =>
-					a.type === BackgroundVaultActionType.CreateFile &&
+					a.type === VaultActionType.UpdateOrCreateFile &&
 					a.payload.prettyPath.basename.startsWith("__"),
 			);
 
 			expect(codexAction).toBeDefined();
-			expect(codexAction?.type).toBe(BackgroundVaultActionType.CreateFile);
+			expect(codexAction?.type).toBe(VaultActionType.UpdateOrCreateFile);
 
 			const content =
-				codexAction?.type === BackgroundVaultActionType.CreateFile
+				codexAction?.type === VaultActionType.UpdateOrCreateFile
 					? codexAction.payload.content
 					: "";
 
@@ -97,12 +97,12 @@ describe("Codex Integration", () => {
 
 			const codexAction = actions.find(
 				(a) =>
-					a.type === BackgroundVaultActionType.CreateFile &&
+					a.type === VaultActionType.UpdateOrCreateFile &&
 					a.payload.prettyPath.basename === "__Avatar",
 			);
 
 			const content =
-				codexAction?.type === BackgroundVaultActionType.CreateFile
+				codexAction?.type === VaultActionType.UpdateOrCreateFile
 					? codexAction.payload.content
 					: "";
 
@@ -147,7 +147,7 @@ describe("Codex Integration", () => {
 			// Find book codex action
 			const bookCodexAction = actions.find(
 				(a) =>
-					a.type === BackgroundVaultActionType.CreateFile &&
+					a.type === VaultActionType.UpdateOrCreateFile &&
 					a.payload.prettyPath.basename.includes("Episode_1") &&
 					a.payload.prettyPath.basename.startsWith("__"),
 			);
@@ -155,7 +155,7 @@ describe("Codex Integration", () => {
 			expect(bookCodexAction).toBeDefined();
 
 			const content =
-				bookCodexAction?.type === BackgroundVaultActionType.CreateFile
+				bookCodexAction?.type === VaultActionType.UpdateOrCreateFile
 					? bookCodexAction.payload.content
 					: "";
 
@@ -170,7 +170,7 @@ describe("Codex Integration", () => {
 	});
 
 	describe("Status change → Codex update", () => {
-		it("should generate CreateFile action with updated content", () => {
+		it("should generate UpdateOrCreateFile action with updated content", () => {
 			// Set up tree with a book
 			tree.addTexts([
 				{
@@ -204,9 +204,9 @@ describe("Codex Integration", () => {
 
 			const actions = mapper.mapDiffToActions(diff, getNode);
 
-			// Should have CreateFile actions for affected Codexes
+			// Should have UpdateOrCreateFile actions for affected Codexes
 			const createActions = actions.filter(
-				(a) => a.type === BackgroundVaultActionType.CreateFile,
+				(a) => a.type === VaultActionType.UpdateOrCreateFile,
 			);
 
 			// Episode_1 (book) and Avatar (parent section)
@@ -220,7 +220,7 @@ describe("Codex Integration", () => {
 			expect(bookUpdate).toBeDefined();
 
 			const content =
-				bookUpdate?.type === BackgroundVaultActionType.CreateFile
+				bookUpdate?.type === VaultActionType.UpdateOrCreateFile
 					? bookUpdate.payload.content
 					: "";
 
@@ -259,7 +259,7 @@ describe("Codex Integration", () => {
 			const actions = mapper.mapDiffToActions(diff, getNode);
 
 			const createActions = actions.filter(
-				(a) => a.type === BackgroundVaultActionType.CreateFile,
+				(a) => a.type === VaultActionType.UpdateOrCreateFile,
 			);
 
 			// Should update: A/B/C/Text, A/B/C, A/B, A = 4 codexes
@@ -287,7 +287,7 @@ describe("Codex Integration", () => {
 
 			// Should create: 1 scroll file + 1 parent section codex update
 			const createActions = actions.filter(
-				(a) => a.type === BackgroundVaultActionType.CreateFile,
+				(a) => a.type === VaultActionType.UpdateOrCreateFile,
 			);
 
 			expect(createActions.length).toBe(2);

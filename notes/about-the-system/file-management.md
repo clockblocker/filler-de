@@ -94,11 +94,11 @@ User clicks page link → ClickListener  → navigate/open
 Operations execute in weight order (lower = first):
 
 ```
-0: CreateFolder   — must exist before files
+0: UpdateOrCreateFolder   — must exist before files
 1: RenameFolder
 2: TrashFolder    — after contents moved
 
-3: CreateFile
+3: UpdateOrCreateFile
 4: RenameFile
 5: TrashFile      — after renames
 
@@ -125,8 +125,8 @@ Only ONE flush happens 200ms after last click
 
 ### Sorting
 ```
-Queue contains: [TrashFile, CreateFolder, WriteFile, CreateFile]
-After sort:     [CreateFolder, CreateFile, WriteFile, TrashFile]
+Queue contains: [TrashFile, UpdateOrCreateFolder, WriteFile, UpdateOrCreateFile]
+After sort:     [UpdateOrCreateFolder, UpdateOrCreateFile, WriteFile, TrashFile]
 ```
 
 ## File Structure
@@ -147,7 +147,7 @@ src/
 │   │   └── text-splitter.ts          // Split text into pages
 │   └── diffing/
 │       ├── tree-differ.ts            // diff(before, after)
-│       └── diff-to-actions.ts        // diff → BackgroundVaultActions
+│       └── diff-to-actions.ts        // diff → VaultActions
 │
 ├── services/obsidian-services/
 │   ├── vault-event-service.ts        // Listen to vault events

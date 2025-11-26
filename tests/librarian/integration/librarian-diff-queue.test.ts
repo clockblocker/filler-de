@@ -1,10 +1,10 @@
-import { describe, expect, it, beforeEach, mock } from "bun:test";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { Librarian } from "../../../src/commanders/librarian/librarian";
 import { LibraryTree } from "../../../src/commanders/librarian/library-tree/library-tree";
-import { BackgroundVaultActionType } from "../../../src/services/obsidian-services/file-services/background/background-vault-actions";
+import type { TextDto, TreePath } from "../../../src/commanders/librarian/types";
+import { VaultActionType } from "../../../src/services/obsidian-services/file-services/background/background-vault-actions";
 import type { VaultActionQueue } from "../../../src/services/obsidian-services/file-services/background/vault-action-queue";
 import { TextStatus } from "../../../src/types/common-interface/enums";
-import type { TextDto, TreePath } from "../../../src/commanders/librarian/types";
 
 /**
  * Integration tests for Librarian's withDiff mechanism.
@@ -90,10 +90,10 @@ describe("Librarian withDiff integration", () => {
 
 			const actions = calls[0]?.[0];
 			expect(Array.isArray(actions)).toBe(true);
-			// Status change should generate CreateFile actions for affected Codex files
+			// Status change should generate UpdateOrCreateFile actions for affected Codex files
 			const hasCreateAction = actions.some(
 				// biome-ignore lint/suspicious/noExplicitAny: test mock
-				(a: any) => a.type === BackgroundVaultActionType.CreateFile,
+				(a: any) => a.type === VaultActionType.UpdateOrCreateFile,
 			);
 			expect(hasCreateAction).toBe(true);
 		});
@@ -126,7 +126,7 @@ describe("Librarian withDiff integration", () => {
 	});
 
 	describe("addTexts", () => {
-		it("should queue CreateFile actions for new texts", () => {
+		it("should queue UpdateOrCreateFile actions for new texts", () => {
 			const librarian = new Librarian({
 				actionQueue: mockQueue as unknown as VaultActionQueue,
 				// biome-ignore lint/suspicious/noExplicitAny: test mock
@@ -152,17 +152,17 @@ describe("Librarian withDiff integration", () => {
 			expect(mockQueue.pushMany).toHaveBeenCalled();
 			const actions = mockQueue.pushMany.mock.calls[0]?.[0];
 
-			// Should have CreateFolder for section and CreateFile for scroll
-			const hasCreateFolder = actions.some(
+			// Should have UpdateOrCreateFolder for section and UpdateOrCreateFile for scroll
+			const hasUpdateOrCreateFolder = actions.some(
 				// biome-ignore lint/suspicious/noExplicitAny: test mock
-				(a: any) => a.type === BackgroundVaultActionType.CreateFolder,
+				(a: any) => a.type === VaultActionType.UpdateOrCreateFolder,
 			);
-			const hasCreateFile = actions.some(
+			const hasUpdateOrCreateFile = actions.some(
 				// biome-ignore lint/suspicious/noExplicitAny: test mock
-				(a: any) => a.type === BackgroundVaultActionType.CreateFile,
+				(a: any) => a.type === VaultActionType.UpdateOrCreateFile,
 			);
-			expect(hasCreateFolder).toBe(true);
-			expect(hasCreateFile).toBe(true);
+			expect(hasUpdateOrCreateFolder).toBe(true);
+			expect(hasUpdateOrCreateFile).toBe(true);
 		});
 	});
 
@@ -195,7 +195,7 @@ describe("Librarian withDiff integration", () => {
 			// Should have TrashFile for the scroll
 			const hasTrashFile = actions.some(
 				// biome-ignore lint/suspicious/noExplicitAny: test mock
-				(a: any) => a.type === BackgroundVaultActionType.TrashFile,
+				(a: any) => a.type === VaultActionType.TrashFile,
 			);
 			expect(hasTrashFile).toBe(true);
 		});

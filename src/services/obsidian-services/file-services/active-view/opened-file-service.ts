@@ -148,6 +148,23 @@ export class OpenedFileService {
 		return { data: text, error: false };
 	}
 
+	async replaceAllContentInOpenedFile(content: string): Promise<Maybe<void>> {
+		const maybeEditor = await getMaybeEditor(this.app);
+		if (maybeEditor.error) {
+			return maybeEditor;
+		}
+
+		const editor = maybeEditor.data;
+		editor.setValue(content);
+
+		return { data: undefined, error: false };
+	}
+
+	isFileActive(filePath: string): boolean {
+		const activeFile = this.app.workspace.getActiveFile();
+		return activeFile?.path === filePath;
+	}
+
 	async getPathOfOpenedFile(): Promise<Maybe<string>> {
 		const maybeFile = await this.getMaybeOpenedFile();
 		if (maybeFile.error) {

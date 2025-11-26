@@ -1,7 +1,7 @@
 import {
-	type BackgroundVaultAction,
 	getActionKey,
 	sortActionsByWeight,
+	type VaultAction,
 } from "./background-vault-actions";
 import type { VaultActionExecutor } from "./vault-action-executor";
 
@@ -16,7 +16,7 @@ const DEFAULT_FLUSH_DELAY_MS = 200;
  * - Sorting: executes actions in weight order (folders before files, etc.)
  */
 export class VaultActionQueue {
-	private queue: Map<string, BackgroundVaultAction> = new Map();
+	private queue: Map<string, VaultAction> = new Map();
 	private flushTimeout: ReturnType<typeof setTimeout> | null = null;
 	private flushDelayMs: number;
 	private isFlushing = false;
@@ -33,7 +33,7 @@ export class VaultActionQueue {
 	 * Add an action to the queue.
 	 * If an action with the same key exists, it will be overwritten.
 	 */
-	push(action: BackgroundVaultAction): void {
+	push(action: VaultAction): void {
 		const key = getActionKey(action);
 		this.queue.set(key, action);
 		this.scheduleFlush();
@@ -42,7 +42,7 @@ export class VaultActionQueue {
 	/**
 	 * Add multiple actions to the queue.
 	 */
-	pushMany(actions: readonly BackgroundVaultAction[]): void {
+	pushMany(actions: readonly VaultAction[]): void {
 		for (const action of actions) {
 			this.push(action);
 		}
@@ -66,7 +66,7 @@ export class VaultActionQueue {
 	 * Get queued actions (for testing/debugging).
 	 * Returns a copy to prevent external mutation.
 	 */
-	getQueuedActions(): BackgroundVaultAction[] {
+	getQueuedActions(): VaultAction[] {
 		return [...this.queue.values()];
 	}
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { DiffToActionsMapper } from "../../../src/commanders/librarian/diffing/diff-to-actions";
 import type { TreeDiff } from "../../../src/commanders/librarian/diffing/types";
 import type { TreePath } from "../../../src/commanders/librarian/types";
-import { BackgroundVaultActionType } from "../../../src/services/obsidian-services/file-services/background/background-vault-actions";
+import { VaultActionType } from "../../../src/services/obsidian-services/file-services/background/background-vault-actions";
 import { TextStatus } from "../../../src/types/common-interface/enums";
 
 const mapper = new DiffToActionsMapper("Library");
@@ -21,7 +21,7 @@ describe("DiffToActionsMapper", () => {
 			const actions = mapper.mapDiffToActions(diff);
 
 			const createFolderActions = actions.filter(
-				(a) => a.type === BackgroundVaultActionType.CreateFolder,
+				(a) => a.type === VaultActionType.UpdateOrCreateFolder,
 			);
 			expect(createFolderActions.length).toBe(1);
 			expect(createFolderActions?.[0]?.payload.prettyPath.basename).toBe("NewSection");
@@ -39,7 +39,7 @@ describe("DiffToActionsMapper", () => {
 			const actions = mapper.mapDiffToActions(diff);
 
 			const trashFolderActions = actions.filter(
-				(a) => a.type === BackgroundVaultActionType.TrashFolder,
+				(a) => a.type === VaultActionType.TrashFolder,
 			);
 			expect(trashFolderActions.length).toBe(1);
 		});
@@ -60,7 +60,7 @@ describe("DiffToActionsMapper", () => {
 			const actions = mapper.mapDiffToActions(diff);
 
 			const trashFolderActions = actions.filter(
-				(a) => a.type === BackgroundVaultActionType.TrashFolder,
+				(a) => a.type === VaultActionType.TrashFolder,
 			);
 
 			// Deepest first
@@ -88,7 +88,7 @@ describe("DiffToActionsMapper", () => {
 			const actions = mapper.mapDiffToActions(diff);
 
 			const createFileActions = actions.filter(
-				(a) => a.type === BackgroundVaultActionType.CreateFile,
+				(a) => a.type === VaultActionType.UpdateOrCreateFile,
 			);
 			// 1 scroll + 1 parent section codex
 			expect(createFileActions.length).toBe(2);
@@ -119,10 +119,10 @@ describe("DiffToActionsMapper", () => {
 			const actions = mapper.mapDiffToActions(diff);
 
 			const createFolderActions = actions.filter(
-				(a) => a.type === BackgroundVaultActionType.CreateFolder,
+				(a) => a.type === VaultActionType.UpdateOrCreateFolder,
 			);
 			const createFileActions = actions.filter(
-				(a) => a.type === BackgroundVaultActionType.CreateFile,
+				(a) => a.type === VaultActionType.UpdateOrCreateFile,
 			);
 
 			// 1 folder for book + 1 Pages subfolder
@@ -157,7 +157,7 @@ describe("DiffToActionsMapper", () => {
 			const actions = mapper.mapDiffToActions(diff);
 
 			const trashFileActions = actions.filter(
-				(a) => a.type === BackgroundVaultActionType.TrashFile,
+				(a) => a.type === VaultActionType.TrashFile,
 			);
 			expect(trashFileActions.length).toBe(1);
 		});
@@ -182,10 +182,10 @@ describe("DiffToActionsMapper", () => {
 			const actions = mapper.mapDiffToActions(diff);
 
 			const trashFileActions = actions.filter(
-				(a) => a.type === BackgroundVaultActionType.TrashFile,
+				(a) => a.type === VaultActionType.TrashFile,
 			);
 			const trashFolderActions = actions.filter(
-				(a) => a.type === BackgroundVaultActionType.TrashFolder,
+				(a) => a.type === VaultActionType.TrashFolder,
 			);
 
 			// 2 pages + 1 codex
@@ -214,7 +214,7 @@ describe("DiffToActionsMapper", () => {
 			const actions = mapper.mapDiffToActions(diff);
 
 			const createActions = actions.filter(
-				(a) => a.type === BackgroundVaultActionType.CreateFile,
+				(a) => a.type === VaultActionType.UpdateOrCreateFile,
 			);
 
 			// Should affect: Section/Book codex and Section codex

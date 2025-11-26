@@ -1,18 +1,22 @@
 import { z } from "zod";
 import type { PrettyPath } from "../../../../types/common-interface/dtos";
 import {
-	CREATE,
 	FILE,
 	FOLDER,
 	PROCESS,
 	READ,
 	RENAME,
 	TRASH,
+	UPDATE_OR_CREATE,
 	WRITE,
 } from "../../../../types/literals";
 
 // Action type schema construction
-export const DirActionSchema = z.enum([CREATE, TRASH, RENAME] as const);
+export const DirActionSchema = z.enum([
+	UPDATE_OR_CREATE,
+	TRASH,
+	RENAME,
+] as const);
 export const ContentActionSchema = z.enum([PROCESS, READ, WRITE] as const);
 export const AbstractFileTypeSchema = z.enum([FILE, FOLDER] as const);
 const AbstractFileType = AbstractFileTypeSchema.enum;
@@ -27,98 +31,93 @@ const ContentActionTypeValues = ContentActionSchema.options.map(
 	(c) => `${c}${AbstractFileType.File}` as const,
 );
 
-export const BackgroundVaultActionTypeSchema = z.enum([
+export const VaultActionTypeSchema = z.enum([
 	...DirActionTypeValues,
 	...ContentActionTypeValues,
 ] as const);
 
-export const BackgroundVaultActionType = BackgroundVaultActionTypeSchema.enum;
-export type BackgroundVaultActionType = z.infer<
-	typeof BackgroundVaultActionTypeSchema
->;
+export const VaultActionType = VaultActionTypeSchema.enum;
+export type VaultActionType = z.infer<typeof VaultActionTypeSchema>;
 
 // Action payloads
-export type BackgroundVaultAction =
+export type VaultAction =
 	| {
-			type: typeof BackgroundVaultActionType.CreateFolder;
+			type: typeof VaultActionType.UpdateOrCreateFolder;
 			payload: { prettyPath: PrettyPath };
 	  }
 	| {
-			type: typeof BackgroundVaultActionType.RenameFolder;
+			type: typeof VaultActionType.RenameFolder;
 			payload: { from: PrettyPath; to: PrettyPath };
 	  }
 	| {
-			type: typeof BackgroundVaultActionType.TrashFolder;
+			type: typeof VaultActionType.TrashFolder;
 			payload: { prettyPath: PrettyPath };
 	  }
 	| {
-			type: typeof BackgroundVaultActionType.CreateFile;
+			type: typeof VaultActionType.UpdateOrCreateFile;
 			payload: { prettyPath: PrettyPath; content?: string };
 	  }
 	| {
-			type: typeof BackgroundVaultActionType.RenameFile;
+			type: typeof VaultActionType.RenameFile;
 			payload: { from: PrettyPath; to: PrettyPath };
 	  }
 	| {
-			type: typeof BackgroundVaultActionType.TrashFile;
+			type: typeof VaultActionType.TrashFile;
 			payload: { prettyPath: PrettyPath };
 	  }
 	| {
-			type: typeof BackgroundVaultActionType.ProcessFile;
+			type: typeof VaultActionType.ProcessFile;
 			payload: {
 				prettyPath: PrettyPath;
 				transform: (content: string) => string | Promise<string>;
 			};
 	  }
 	| {
-			type: typeof BackgroundVaultActionType.ReadFile;
+			type: typeof VaultActionType.ReadFile;
 			payload: { prettyPath: PrettyPath };
 	  }
 	| {
-			type: typeof BackgroundVaultActionType.WriteFile;
+			type: typeof VaultActionType.WriteFile;
 			payload: { prettyPath: PrettyPath; content: string };
 	  };
 
 // Execution order weights (lower = execute first)
-export const weightForVaultActionType: Record<
-	BackgroundVaultActionType,
-	number
-> = {
+export const weightForVaultActionType: Record<VaultActionType, number> = {
 	// Folders first (must exist before files can be created in them)
-	[BackgroundVaultActionType.CreateFolder]: 0,
-	[BackgroundVaultActionType.RenameFolder]: 1,
-	[BackgroundVaultActionType.TrashFolder]: 2,
+	[VaultActionType.UpdateOrCreateFolder]: 0,
+	[VaultActionType.RenameFolder]: 1,
+	[VaultActionType.TrashFolder]: 2,
 
 	// Files second
-	[BackgroundVaultActionType.CreateFile]: 3,
-	[BackgroundVaultActionType.RenameFile]: 4,
-	[BackgroundVaultActionType.TrashFile]: 5,
+	[VaultActionType.UpdateOrCreateFile]: 3,
+	[VaultActionType.RenameFile]: 4,
+	[VaultActionType.TrashFile]: 5,
 
 	// Content operations last (file must exist)
-	[BackgroundVaultActionType.ProcessFile]: 6,
-	[BackgroundVaultActionType.WriteFile]: 7,
-	[BackgroundVaultActionType.ReadFile]: 8,
+	[VaultActionType.ProcessFile]: 6,
+	[VaultActionType.WriteFile]: 7,
+	[VaultActionType.ReadFile]: 8,
 } as const;
 
 /**
  * Get a unique key for an action based on its target path.
  * Used for deduplication in the queue.
  */
-export function getActionKey(action: BackgroundVaultAction): string {
+export function getActionKey(action: VaultAction): string {
 	const { type, payload } = action;
 
 	switch (type) {
-		case BackgroundVaultActionType.CreateFolder:
-		case BackgroundVaultActionType.TrashFolder:
-		case BackgroundVaultActionType.CreateFile:
-		case BackgroundVaultActionType.TrashFile:
-		case BackgroundVaultActionType.ProcessFile:
-		case BackgroundVaultActionType.ReadFile:
-		case BackgroundVaultActionType.WriteFile:
+		case VaultActionType.UpdateOrCreateFolder:
+		case VaultActionType.TrashFolder:
+		case VaultActionType.UpdateOrCreateFile:
+		case VaultActionType.TrashFile:
+		case VaultActionType.ProcessFile:
+		case VaultActionType.ReadFile:
+		case VaultActionType.WriteFile:
 			return `${type}:${prettyPathToKey(payload.prettyPath)}`;
 
-		case BackgroundVaultActionType.RenameFolder:
-		case BackgroundVaultActionType.RenameFile:
+		case VaultActionType.RenameFolder:
+		case VaultActionType.RenameFile:
 			// For renames, key by source path to dedupe multiple renames of same file
 			return `${type}:${prettyPathToKey(payload.from)}`;
 	}
@@ -127,21 +126,21 @@ export function getActionKey(action: BackgroundVaultAction): string {
 /**
  * Get the target path of an action (for logging/debugging).
  */
-export function getActionTargetPath(action: BackgroundVaultAction): string {
+export function getActionTargetPath(action: VaultAction): string {
 	const { type, payload } = action;
 
 	switch (type) {
-		case BackgroundVaultActionType.CreateFolder:
-		case BackgroundVaultActionType.TrashFolder:
-		case BackgroundVaultActionType.CreateFile:
-		case BackgroundVaultActionType.TrashFile:
-		case BackgroundVaultActionType.ProcessFile:
-		case BackgroundVaultActionType.ReadFile:
-		case BackgroundVaultActionType.WriteFile:
+		case VaultActionType.UpdateOrCreateFolder:
+		case VaultActionType.TrashFolder:
+		case VaultActionType.UpdateOrCreateFile:
+		case VaultActionType.TrashFile:
+		case VaultActionType.ProcessFile:
+		case VaultActionType.ReadFile:
+		case VaultActionType.WriteFile:
 			return prettyPathToKey(payload.prettyPath);
 
-		case BackgroundVaultActionType.RenameFolder:
-		case BackgroundVaultActionType.RenameFile:
+		case VaultActionType.RenameFolder:
+		case VaultActionType.RenameFile:
 			return `${prettyPathToKey(payload.from)} → ${prettyPathToKey(payload.to)}`;
 	}
 }
@@ -153,9 +152,7 @@ function prettyPathToKey(prettyPath: PrettyPath): string {
 /**
  * Sort actions by execution weight.
  */
-export function sortActionsByWeight(
-	actions: BackgroundVaultAction[],
-): BackgroundVaultAction[] {
+export function sortActionsByWeight(actions: VaultAction[]): VaultAction[] {
 	return [...actions].sort(
 		(a, b) =>
 			weightForVaultActionType[a.type] - weightForVaultActionType[b.type],

@@ -1,41 +1,41 @@
-import { describe, expect, it, mock, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 import {
-	type BackgroundVaultAction,
-	BackgroundVaultActionType,
 	getActionKey,
 	sortActionsByWeight,
+	type VaultAction,
+	VaultActionType,
 } from "../../src/services/obsidian-services/file-services/background/background-vault-actions";
-import { VaultActionQueue } from "../../src/services/obsidian-services/file-services/background/vault-action-queue";
 import type { VaultActionExecutor } from "../../src/services/obsidian-services/file-services/background/vault-action-executor";
+import { VaultActionQueue } from "../../src/services/obsidian-services/file-services/background/vault-action-queue";
 
 // Mock executor that records actions
 function createMockExecutor() {
-	const executedActions: BackgroundVaultAction[][] = [];
+	const executedActions: VaultAction[][] = [];
 	const executor: VaultActionExecutor = {
-		execute: async (actions: readonly BackgroundVaultAction[]) => {
+		execute: async (actions: readonly VaultAction[]) => {
 			executedActions.push([...actions]);
 		},
 	} as VaultActionExecutor;
-	return { executor, executedActions };
+	return { executedActions, executor };
 }
 
-describe("BackgroundVaultAction utilities", () => {
+describe("VaultAction utilities", () => {
 	describe("getActionKey", () => {
-		it("should return unique key for CreateFile", () => {
-			const action: BackgroundVaultAction = {
-				type: BackgroundVaultActionType.CreateFile,
-				payload: { prettyPath: { pathParts: ["Library", "Avatar"], basename: "test" } },
+		it("should return unique key for UpdateOrCreateFile", () => {
+			const action: VaultAction = {
+				payload: { prettyPath: { basename: "test", pathParts: ["Library", "Avatar"] } },
+				type: VaultActionType.UpdateOrCreateFile,
 			};
-			expect(getActionKey(action)).toBe("CreateFile:Library/Avatar/test");
+			expect(getActionKey(action)).toBe("UpdateOrCreateFile:Library/Avatar/test");
 		});
 
 		it("should return unique key for RenameFile using source path", () => {
-			const action: BackgroundVaultAction = {
-				type: BackgroundVaultActionType.RenameFile,
+			const action: VaultAction = {
 				payload: {
-					from: { pathParts: ["Library"], basename: "old" },
-					to: { pathParts: ["Library"], basename: "new" },
+					from: { basename: "old", pathParts: ["Library"] },
+					to: { basename: "new", pathParts: ["Library"] },
 				},
+				type: VaultActionType.RenameFile,
 			};
 			expect(getActionKey(action)).toBe("RenameFile:Library/old");
 		});
@@ -43,46 +43,46 @@ describe("BackgroundVaultAction utilities", () => {
 
 	describe("sortActionsByWeight", () => {
 		it("should sort folders before files", () => {
-			const actions: BackgroundVaultAction[] = [
-				{ type: BackgroundVaultActionType.CreateFile, payload: { prettyPath: { pathParts: [], basename: "a" } } },
-				{ type: BackgroundVaultActionType.CreateFolder, payload: { prettyPath: { pathParts: [], basename: "b" } } },
+			const actions: VaultAction[] = [
+				{ payload: { prettyPath: { basename: "a", pathParts: [] } }, type: VaultActionType.UpdateOrCreateFile },
+				{ payload: { prettyPath: { basename: "b", pathParts: [] } }, type: VaultActionType.UpdateOrCreateFolder },
 			];
 
 			const sorted = sortActionsByWeight(actions);
 
-			expect(sorted[0].type).toBe(BackgroundVaultActionType.CreateFolder);
-			expect(sorted[1].type).toBe(BackgroundVaultActionType.CreateFile);
+			expect(sorted[0].type).toBe(VaultActionType.UpdateOrCreateFolder);
+			expect(sorted[1].type).toBe(VaultActionType.UpdateOrCreateFile);
 		});
 
 		it("should sort creates before trashes", () => {
-			const actions: BackgroundVaultAction[] = [
-				{ type: BackgroundVaultActionType.TrashFile, payload: { prettyPath: { pathParts: [], basename: "a" } } },
-				{ type: BackgroundVaultActionType.CreateFile, payload: { prettyPath: { pathParts: [], basename: "b" } } },
+			const actions: VaultAction[] = [
+				{ payload: { prettyPath: { basename: "a", pathParts: [] } }, type: VaultActionType.TrashFile },
+				{ payload: { prettyPath: { basename: "b", pathParts: [] } }, type: VaultActionType.UpdateOrCreateFile },
 			];
 
 			const sorted = sortActionsByWeight(actions);
 
-			expect(sorted[0].type).toBe(BackgroundVaultActionType.CreateFile);
-			expect(sorted[1].type).toBe(BackgroundVaultActionType.TrashFile);
+			expect(sorted[0].type).toBe(VaultActionType.UpdateOrCreateFile);
+			expect(sorted[1].type).toBe(VaultActionType.TrashFile);
 		});
 
 		it("should sort all action types correctly", () => {
-			const actions: BackgroundVaultAction[] = [
-				{ type: BackgroundVaultActionType.WriteFile, payload: { prettyPath: { pathParts: [], basename: "a" }, content: "" } },
-				{ type: BackgroundVaultActionType.TrashFolder, payload: { prettyPath: { pathParts: [], basename: "b" } } },
-				{ type: BackgroundVaultActionType.CreateFolder, payload: { prettyPath: { pathParts: [], basename: "c" } } },
-				{ type: BackgroundVaultActionType.TrashFile, payload: { prettyPath: { pathParts: [], basename: "d" } } },
-				{ type: BackgroundVaultActionType.CreateFile, payload: { prettyPath: { pathParts: [], basename: "e" } } },
+			const actions: VaultAction[] = [
+				{ payload: { content: "", prettyPath: { basename: "a", pathParts: [] } }, type: VaultActionType.WriteFile },
+				{ payload: { prettyPath: { basename: "b", pathParts: [] } }, type: VaultActionType.TrashFolder },
+				{ payload: { prettyPath: { basename: "c", pathParts: [] } }, type: VaultActionType.UpdateOrCreateFolder },
+				{ payload: { prettyPath: { basename: "d", pathParts: [] } }, type: VaultActionType.TrashFile },
+				{ payload: { prettyPath: { basename: "e", pathParts: [] } }, type: VaultActionType.UpdateOrCreateFile },
 			];
 
 			const sorted = sortActionsByWeight(actions);
 
 			expect(sorted.map((a) => a.type)).toEqual([
-				BackgroundVaultActionType.CreateFolder,
-				BackgroundVaultActionType.TrashFolder,
-				BackgroundVaultActionType.CreateFile,
-				BackgroundVaultActionType.TrashFile,
-				BackgroundVaultActionType.WriteFile,
+				VaultActionType.UpdateOrCreateFolder,
+				VaultActionType.TrashFolder,
+				VaultActionType.UpdateOrCreateFile,
+				VaultActionType.TrashFile,
+				VaultActionType.WriteFile,
 			]);
 		});
 	});
@@ -95,8 +95,8 @@ describe("VaultActionQueue", () => {
 			const queue = new VaultActionQueue(executor, { flushDelayMs: 1000 });
 
 			queue.push({
-				type: BackgroundVaultActionType.CreateFile,
-				payload: { prettyPath: { pathParts: ["Library"], basename: "test" } },
+				payload: { prettyPath: { basename: "test", pathParts: ["Library"] } },
+				type: VaultActionType.UpdateOrCreateFile,
 			});
 
 			expect(queue.size).toBe(1);
@@ -107,20 +107,20 @@ describe("VaultActionQueue", () => {
 			const queue = new VaultActionQueue(executor, { flushDelayMs: 1000 });
 
 			queue.push({
-				type: BackgroundVaultActionType.WriteFile,
-				payload: { prettyPath: { pathParts: ["Library"], basename: "test" }, content: "v1" },
+				payload: { content: "v1", prettyPath: { basename: "test", pathParts: ["Library"] } },
+				type: VaultActionType.WriteFile,
 			});
 
 			queue.push({
-				type: BackgroundVaultActionType.WriteFile,
-				payload: { prettyPath: { pathParts: ["Library"], basename: "test" }, content: "v2" },
+				payload: { content: "v2", prettyPath: { basename: "test", pathParts: ["Library"] } },
+				type: VaultActionType.WriteFile,
 			});
 
 			expect(queue.size).toBe(1);
 
 			const actions = queue.getQueuedActions();
-			expect(actions[0].type).toBe(BackgroundVaultActionType.WriteFile);
-			if (actions[0].type === BackgroundVaultActionType.WriteFile) {
+			expect(actions[0].type).toBe(VaultActionType.WriteFile);
+			if (actions[0].type === VaultActionType.WriteFile) {
 				expect(actions[0].payload.content).toBe("v2");
 			}
 		});
@@ -130,13 +130,13 @@ describe("VaultActionQueue", () => {
 			const queue = new VaultActionQueue(executor, { flushDelayMs: 1000 });
 
 			queue.push({
-				type: BackgroundVaultActionType.WriteFile,
-				payload: { prettyPath: { pathParts: ["Library"], basename: "file1" }, content: "a" },
+				payload: { content: "a", prettyPath: { basename: "file1", pathParts: ["Library"] } },
+				type: VaultActionType.WriteFile,
 			});
 
 			queue.push({
-				type: BackgroundVaultActionType.WriteFile,
-				payload: { prettyPath: { pathParts: ["Library"], basename: "file2" }, content: "b" },
+				payload: { content: "b", prettyPath: { basename: "file2", pathParts: ["Library"] } },
+				type: VaultActionType.WriteFile,
 			});
 
 			expect(queue.size).toBe(2);
@@ -149,9 +149,9 @@ describe("VaultActionQueue", () => {
 			const queue = new VaultActionQueue(executor, { flushDelayMs: 1000 });
 
 			queue.pushMany([
-				{ type: BackgroundVaultActionType.CreateFile, payload: { prettyPath: { pathParts: [], basename: "a" } } },
-				{ type: BackgroundVaultActionType.CreateFile, payload: { prettyPath: { pathParts: [], basename: "b" } } },
-				{ type: BackgroundVaultActionType.CreateFile, payload: { prettyPath: { pathParts: [], basename: "c" } } },
+				{ payload: { prettyPath: { basename: "a", pathParts: [] } }, type: VaultActionType.UpdateOrCreateFile },
+				{ payload: { prettyPath: { basename: "b", pathParts: [] } }, type: VaultActionType.UpdateOrCreateFile },
+				{ payload: { prettyPath: { basename: "c", pathParts: [] } }, type: VaultActionType.UpdateOrCreateFile },
 			]);
 
 			expect(queue.size).toBe(3);
@@ -164,8 +164,8 @@ describe("VaultActionQueue", () => {
 			const queue = new VaultActionQueue(executor, { flushDelayMs: 1000 });
 
 			queue.push({
-				type: BackgroundVaultActionType.CreateFile,
-				payload: { prettyPath: { pathParts: [], basename: "test" } },
+				payload: { prettyPath: { basename: "test", pathParts: [] } },
+				type: VaultActionType.UpdateOrCreateFile,
 			});
 
 			await queue.flushNow();
@@ -180,17 +180,17 @@ describe("VaultActionQueue", () => {
 			const queue = new VaultActionQueue(executor, { flushDelayMs: 1000 });
 
 			queue.pushMany([
-				{ type: BackgroundVaultActionType.WriteFile, payload: { prettyPath: { pathParts: [], basename: "a" }, content: "" } },
-				{ type: BackgroundVaultActionType.CreateFolder, payload: { prettyPath: { pathParts: [], basename: "b" } } },
-				{ type: BackgroundVaultActionType.CreateFile, payload: { prettyPath: { pathParts: [], basename: "c" } } },
+				{ payload: { content: "", prettyPath: { basename: "a", pathParts: [] } }, type: VaultActionType.WriteFile },
+				{ payload: { prettyPath: { basename: "b", pathParts: [] } }, type: VaultActionType.UpdateOrCreateFolder },
+				{ payload: { prettyPath: { basename: "c", pathParts: [] } }, type: VaultActionType.UpdateOrCreateFile },
 			]);
 
 			await queue.flushNow();
 
 			expect(executedActions[0].map((a) => a.type)).toEqual([
-				BackgroundVaultActionType.CreateFolder,
-				BackgroundVaultActionType.CreateFile,
-				BackgroundVaultActionType.WriteFile,
+				VaultActionType.UpdateOrCreateFolder,
+				VaultActionType.UpdateOrCreateFile,
+				VaultActionType.WriteFile,
 			]);
 		});
 
@@ -210,8 +210,8 @@ describe("VaultActionQueue", () => {
 			const queue = new VaultActionQueue(executor, { flushDelayMs: 1000 });
 
 			queue.push({
-				type: BackgroundVaultActionType.CreateFile,
-				payload: { prettyPath: { pathParts: [], basename: "test" } },
+				payload: { prettyPath: { basename: "test", pathParts: [] } },
+				type: VaultActionType.UpdateOrCreateFile,
 			});
 
 			queue.clear();
@@ -230,8 +230,8 @@ describe("VaultActionQueue", () => {
 			const queue = new VaultActionQueue(executor, { flushDelayMs: 50 });
 
 			queue.push({
-				type: BackgroundVaultActionType.CreateFile,
-				payload: { prettyPath: { pathParts: [], basename: "test" } },
+				payload: { prettyPath: { basename: "test", pathParts: [] } },
+				type: VaultActionType.UpdateOrCreateFile,
 			});
 
 			// Not flushed immediately
@@ -248,16 +248,16 @@ describe("VaultActionQueue", () => {
 			const queue = new VaultActionQueue(executor, { flushDelayMs: 50 });
 
 			queue.push({
-				type: BackgroundVaultActionType.CreateFile,
-				payload: { prettyPath: { pathParts: [], basename: "a" } },
+				payload: { prettyPath: { basename: "a", pathParts: [] } },
+				type: VaultActionType.UpdateOrCreateFile,
 			});
 
 			// Wait partial time
 			await new Promise((r) => setTimeout(r, 30));
 
 			queue.push({
-				type: BackgroundVaultActionType.CreateFile,
-				payload: { prettyPath: { pathParts: [], basename: "b" } },
+				payload: { prettyPath: { basename: "b", pathParts: [] } },
+				type: VaultActionType.UpdateOrCreateFile,
 			});
 
 			// Still not flushed (timer reset)

@@ -142,6 +142,7 @@ export default class TextEaterPlugin extends Plugin {
 		// Initialize vault action queue and executor
 		this.vaultActionExecutor = new VaultActionExecutor(
 			this.backgroundFileService,
+			this.openedFileService,
 		);
 		this.vaultActionQueue = new VaultActionQueue(this.vaultActionExecutor);
 

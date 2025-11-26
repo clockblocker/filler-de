@@ -1,6 +1,6 @@
 import {
-	type BackgroundVaultAction,
-	BackgroundVaultActionType,
+	type VaultAction,
+	VaultActionType,
 } from "../../../services/obsidian-services/file-services/background/background-vault-actions";
 import type { PrettyPath } from "../../../types/common-interface/dtos";
 import { codexFormatter, codexGenerator } from "../codex";
@@ -41,11 +41,8 @@ export class DiffToActionsMapper {
 	 * @param getNode Optional callback to get nodes for Codex generation.
 	 *                If not provided, Codex files are created with empty content.
 	 */
-	mapDiffToActions(
-		diff: TreeDiff,
-		getNode?: GetNodeFn,
-	): BackgroundVaultAction[] {
-		const actions: BackgroundVaultAction[] = [];
+	mapDiffToActions(diff: TreeDiff, getNode?: GetNodeFn): VaultAction[] {
+		const actions: VaultAction[] = [];
 
 		// Handle added sections (create folders + Codex)
 		for (const sectionPath of diff.addedSections) {
@@ -130,46 +127,44 @@ export class DiffToActionsMapper {
 
 	// ─── Section Actions ─────────────────────────────────────────────
 
-	private createFolderAction(sectionPath: TreePath): BackgroundVaultAction {
+	private createFolderAction(sectionPath: TreePath): VaultAction {
 		return {
 			payload: {
 				prettyPath: this.sectionPathToPrettyPath(sectionPath),
 			},
-			type: BackgroundVaultActionType.CreateFolder,
+			type: VaultActionType.UpdateOrCreateFolder,
 		};
 	}
 
-	private trashFolderAction(sectionPath: TreePath): BackgroundVaultAction {
+	private trashFolderAction(sectionPath: TreePath): VaultAction {
 		return {
 			payload: {
 				prettyPath: this.sectionPathToPrettyPath(sectionPath),
 			},
-			type: BackgroundVaultActionType.TrashFolder,
+			type: VaultActionType.TrashFolder,
 		};
 	}
 
 	private createSectionCodexAction(
 		sectionPath: TreePath,
 		getNode?: GetNodeFn,
-	): BackgroundVaultAction {
+	): VaultAction {
 		const content = this.generateCodexContent(sectionPath, getNode);
 		return {
 			payload: {
 				content,
 				prettyPath: this.sectionCodexToPrettyPath(sectionPath),
 			},
-			type: BackgroundVaultActionType.CreateFile,
+			type: VaultActionType.UpdateOrCreateFile,
 		};
 	}
 
-	private trashSectionCodexAction(
-		sectionPath: TreePath,
-	): BackgroundVaultAction {
+	private trashSectionCodexAction(sectionPath: TreePath): VaultAction {
 		return {
 			payload: {
 				prettyPath: this.sectionCodexToPrettyPath(sectionPath),
 			},
-			type: BackgroundVaultActionType.TrashFile,
+			type: VaultActionType.TrashFile,
 		};
 	}
 
@@ -178,8 +173,8 @@ export class DiffToActionsMapper {
 	private createTextActions(
 		text: TextDto,
 		getNode?: GetNodeFn,
-	): BackgroundVaultAction[] {
-		const actions: BackgroundVaultAction[] = [];
+	): VaultAction[] {
+		const actions: VaultAction[] = [];
 		const pageNames = Object.keys(text.pageStatuses);
 
 		if (pageNames.length === 1) {
@@ -189,7 +184,7 @@ export class DiffToActionsMapper {
 					content: "",
 					prettyPath: this.scrollPathToPrettyPath(text.path),
 				},
-				type: BackgroundVaultActionType.CreateFile,
+				type: VaultActionType.UpdateOrCreateFile,
 			});
 		} else {
 			// Book (multiple pages)
@@ -198,7 +193,7 @@ export class DiffToActionsMapper {
 				payload: {
 					prettyPath: this.bookFolderToPrettyPath(text.path),
 				},
-				type: BackgroundVaultActionType.CreateFolder,
+				type: VaultActionType.UpdateOrCreateFolder,
 			});
 
 			// Create Pages subfolder
@@ -206,7 +201,7 @@ export class DiffToActionsMapper {
 				payload: {
 					prettyPath: this.pagesFolderToPrettyPath(text.path),
 				},
-				type: BackgroundVaultActionType.CreateFolder,
+				type: VaultActionType.UpdateOrCreateFolder,
 			});
 
 			// Create page files
@@ -219,7 +214,7 @@ export class DiffToActionsMapper {
 							pageName,
 						),
 					},
-					type: BackgroundVaultActionType.CreateFile,
+					type: VaultActionType.UpdateOrCreateFile,
 				});
 			}
 
@@ -230,15 +225,15 @@ export class DiffToActionsMapper {
 					content,
 					prettyPath: this.bookCodexToPrettyPath(text.path),
 				},
-				type: BackgroundVaultActionType.CreateFile,
+				type: VaultActionType.UpdateOrCreateFile,
 			});
 		}
 
 		return actions;
 	}
 
-	private trashTextActions(text: TextDto): BackgroundVaultAction[] {
-		const actions: BackgroundVaultAction[] = [];
+	private trashTextActions(text: TextDto): VaultAction[] {
+		const actions: VaultAction[] = [];
 		const pageNames = Object.keys(text.pageStatuses);
 
 		if (pageNames.length === 1) {
@@ -247,7 +242,7 @@ export class DiffToActionsMapper {
 				payload: {
 					prettyPath: this.scrollPathToPrettyPath(text.path),
 				},
-				type: BackgroundVaultActionType.TrashFile,
+				type: VaultActionType.TrashFile,
 			});
 		} else {
 			// Book - trash pages first, then Codex, then folder
@@ -259,7 +254,7 @@ export class DiffToActionsMapper {
 							pageName,
 						),
 					},
-					type: BackgroundVaultActionType.TrashFile,
+					type: VaultActionType.TrashFile,
 				});
 			}
 
@@ -268,7 +263,7 @@ export class DiffToActionsMapper {
 				payload: {
 					prettyPath: this.bookCodexToPrettyPath(text.path),
 				},
-				type: BackgroundVaultActionType.TrashFile,
+				type: VaultActionType.TrashFile,
 			});
 
 			// Trash Pages folder
@@ -276,7 +271,7 @@ export class DiffToActionsMapper {
 				payload: {
 					prettyPath: this.pagesFolderToPrettyPath(text.path),
 				},
-				type: BackgroundVaultActionType.TrashFolder,
+				type: VaultActionType.TrashFolder,
 			});
 
 			// Trash book folder
@@ -284,7 +279,7 @@ export class DiffToActionsMapper {
 				payload: {
 					prettyPath: this.bookFolderToPrettyPath(text.path),
 				},
-				type: BackgroundVaultActionType.TrashFolder,
+				type: VaultActionType.TrashFolder,
 			});
 		}
 
@@ -296,16 +291,16 @@ export class DiffToActionsMapper {
 	private updateCodexAction(
 		path: TreePath,
 		getNode?: GetNodeFn,
-	): BackgroundVaultAction {
+	): VaultAction {
 		const prettyPath = this.pathToCodexPrettyPath(path, getNode);
 
-		// Use CreateFile - it creates if not exists, or we'll handle overwrite
+		// Use UpdateOrCreateFile - it creates if not exists, or we'll handle overwrite
 		return {
 			payload: {
 				content: this.generateCodexContent(path, getNode),
 				prettyPath,
 			},
-			type: BackgroundVaultActionType.CreateFile,
+			type: VaultActionType.UpdateOrCreateFile,
 		};
 	}
 

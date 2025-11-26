@@ -90,6 +90,10 @@ export const CreateSchema = z.literal("Create");
 export type CREATE = z.infer<typeof CreateSchema>;
 export const CREATE = CreateSchema.value;
 
+export const UpdateOrCreateSchema = z.literal("UpdateOrCreate");
+export type UPDATE_OR_CREATE = z.infer<typeof UpdateOrCreateSchema>;
+export const UPDATE_OR_CREATE = UpdateOrCreateSchema.value;
+
 export const TrashSchema = z.literal("Trash");
 export type TRASH = z.infer<typeof TrashSchema>;
 export const TRASH = TrashSchema.value;

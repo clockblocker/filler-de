@@ -2,7 +2,7 @@
 
 ## ✅ Phase 1: Queue Infrastructure (DONE)
 
-- [x] Complete `BackgroundVaultAction` union type
+- [x] Complete `VaultAction` union type
 - [x] Define weight map for execution order
 - [x] Add helper `getActionKey()` for deduplication
 - [x] Add helper `sortActionsByWeight()`

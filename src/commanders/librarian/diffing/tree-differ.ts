@@ -1,4 +1,4 @@
-import type { TextStatus } from "../../../types/common-interface/enums";
+import { TextStatus } from "../../../types/common-interface/enums";
 import type { TextDto, TreePath } from "../types";
 import {
 	EMPTY_DIFF,
@@ -99,8 +99,8 @@ export class TreeDiffer {
 				if (oldStatus !== newStatus) {
 					const pagePath = [...afterText.path, pageName];
 					changes.push({
-						newStatus: newStatus ?? ("NotStarted" as TextStatus),
-						oldStatus: oldStatus ?? ("NotStarted" as TextStatus),
+						newStatus: newStatus ?? TextStatus.NotStarted,
+						oldStatus: oldStatus ?? TextStatus.NotStarted,
 						path: pagePath,
 					});
 				}
