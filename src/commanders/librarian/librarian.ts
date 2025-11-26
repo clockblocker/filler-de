@@ -20,7 +20,6 @@ import {
 	getTreePathFromLibraryFile,
 	prettyFilesWithReaderToLibraryFileDtos,
 } from "./indexing/libraryFileAdapters";
-import { makeTextsFromTree } from "./library-tree/helpers/serialization";
 import { LibraryTree } from "./library-tree/library-tree";
 import { getTreePathFromNode } from "./pure-functions/node";
 import {
@@ -146,60 +145,29 @@ export class Librarian {
 	}
 
 	async initTrees() {
-		console.log("[Librarian] [initTrees] starting");
 		this.trees = {} as Record<RootName, LibraryTree>;
 		for (const rootName of ROOTS) {
-			console.log("[Librarian] [initTrees] processing root:", rootName);
 			const libraryFileDtosInFolder =
 				await this.readLibraryFileDtosInFolder(rootName);
-
-			console.log(
-				"[Librarian] [initTrees] libraryFileDtosInFolder",
-				libraryFileDtosInFolder,
-			);
 
 			const grouppedUpTexts = grouppedUpTextsFromLibraryFileDtos(
 				libraryFileDtosInFolder,
 				rootName,
-			);
-			console.log(
-				"[Librarian] [initTrees] grouppedUpTexts entries:",
-				grouppedUpTexts,
 			);
 
 			for (const [
 				groupedRootName,
 				textDtos,
 			] of grouppedUpTexts.entries()) {
-				console.log(
-					"[Librarian] [initTrees] groupedRootName:",
-					groupedRootName,
-					"rootName:",
-					rootName,
-					"match:",
-					groupedRootName === rootName,
-				);
 				if (groupedRootName === rootName) {
 					this.trees[rootName] = new LibraryTree(textDtos, rootName);
-					console.log(
-						"[Librarian] [initTrees] created tree for",
-						rootName,
-						"with",
-						textDtos.length,
-						"texts",
-					);
 				}
 			}
 		}
-		console.log(
-			"[Librarian] [initTrees] completed, trees keys:",
-			Object.keys(this.trees),
-		);
 	}
 
 	async сreateNewTextInTheCurrentFolderAndOpenIt() {
 		const pwd = await this.openedFileService.prettyPwd();
-		console.log("[Librarian] pwd", pwd);
 
 		if (Object.keys(this.trees).length === 0) {
 			await this.initTrees();
@@ -213,23 +181,15 @@ export class Librarian {
 			return;
 		}
 
-		console.log(
-			"[Librarian] affectedTree",
-			makeTextsFromTree(affectedTree),
-		);
-
 		const nearestSectionNode =
 			affectedTree.getNearestSectionNode(treePathToPwd);
 
-		console.log("[Librarian] nearestSectionNode", nearestSectionNode);
 		const newTextName = this.generateUniqueTextName(nearestSectionNode);
 
 		const textPath: TreePath = [
 			...getTreePathFromNode(nearestSectionNode),
 			newTextName,
 		];
-
-		console.log("[Librarian] textPath", textPath);
 
 		// Use withDiff to track changes and queue actions
 		const { result: mbTextNode } = this.withDiff(rootName, (tree) =>
@@ -245,8 +205,6 @@ export class Librarian {
 
 		const textNode = mbTextNode.data;
 
-		console.log("[Librarian] textNode", textNode);
-
 		// Get file info from node
 		const libraryFileDto = getLibraryFileToFileFromNode(textNode);
 		const { splitPath, metaInfo } = libraryFileDto;
@@ -256,8 +214,6 @@ export class Librarian {
 			...splitPath,
 			pathParts: [affectedTree.root.name, ...splitPath.pathParts],
 		};
-
-		console.log("[Librarian] fullSplitPath", fullSplitPath);
 
 		// Create file with metainfo (direct call - queue handles the actual file ops)
 		const content = editOrAddMetaInfo("", metaInfo);
@@ -271,7 +227,6 @@ export class Librarian {
 		const systemPath = systemPathFromSplitPath(fullSplitPath);
 		const file = app.vault.getAbstractFileByPath(systemPath);
 
-		console.log("[Librarian] file", file);
 		if (file instanceof TFile) {
 			await this.openedFileService.openFile(file);
 		}
@@ -389,10 +344,6 @@ export class Librarian {
 			pathParts: splitPath.pathParts,
 		});
 
-		console.log(
-			`[Librarian] ${isBook ? `Created book "${textName}" with ${pages.length} pages.` : `Created scroll "${textName}".`}`,
-		);
-
 		return true;
 	}
 
@@ -499,13 +450,6 @@ export class Librarian {
 			typeof path === "string" ? splitPathFromSystemPath(path) : path;
 
 		const rootName = splitPath.pathParts[0] ?? "";
-
-		console.log(
-			"[Librarian] [getAffectedTree] rootName",
-			rootName,
-			"available trees:",
-			Object.keys(this.trees),
-		);
 
 		return this.trees[rootName] ?? null;
 	}
