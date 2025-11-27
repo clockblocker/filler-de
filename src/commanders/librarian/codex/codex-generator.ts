@@ -1,4 +1,7 @@
-import { codexNameFromTreePath } from "../indexing/formatters";
+import {
+	codexNameFromTreePath,
+	pageNameFromTreePath,
+} from "../indexing/formatters";
 import { getTreePathFromNode } from "../pure-functions/node";
 import type { PageNode, SectionNode, TextNode, TreePath } from "../types";
 import { NodeType } from "../types";
@@ -135,10 +138,11 @@ export class CodexGenerator {
 
 	/**
 	 * Generate target for a page file.
-	 * Page files are named: 000-TextName-Parent.md
+	 * Page files are named: 000-Page-TextName-Parent.md
 	 */
 	private pageTarget(textPath: TreePath, pageIndex: string): string {
-		return `${pageIndex}-${textPath.toReversed().join("-")}`;
+		const fullPath: TreePath = [...textPath, pageIndex];
+		return pageNameFromTreePath.encode(fullPath);
 	}
 }
 

@@ -1,6 +1,7 @@
 import z from "zod/v4";
 import {
 	DASH,
+	PAGE,
 	SPACE_LIKE_CHARS,
 	UNDERSCORE,
 	UnderscoreSchema,
@@ -78,21 +79,31 @@ export const codexNameFromTreePath = z.codec(
 export const GuardedPageNameSchema = z.templateLiteral([
 	pageNumberReprSchema,
 	DASH,
+	PAGE,
+	DASH,
 	z.string().min(1),
 ]);
 
 export const pageNameFromTreePath = z.codec(
 	GuardedPageNameSchema,
-	z.array(GuardedNodeNameSchema).min(2),
+	z.array(GuardedNodeNameSchema).min(3),
 	{
 		decode: (name) => {
-			const [num, ...path] = name.split(DASH);
+			const [num, page, ...path] = name.split(DASH);
 			// intInPageRangeFromString returns a number in expected range, type safe
 			if (!num) {
-				throw new Error("num is undefined");
+				throw new Error("[pageNameFromTreePath] num is undefined");
+			}
+			if (!page) {
+				throw new Error("[pageNameFromTreePath] page is undefined");
+			}
+			if (page !== PAGE) {
+				throw new Error("[pageNameFromTreePath] page is not PAGE");
 			}
 			const decodedNum = intInPageRangeFromString.decode(Number(num));
-			return [decodedNum, ...path].toReversed();
+			// Return path without "Page" literal: [...textPath, pageNumber]
+			// path is reversed in encoded format, so reverse it back and append page number
+			return [...path.toReversed(), decodedNum];
 		},
 		encode: (path) => {
 			const pathCopy = [...path];
@@ -103,7 +114,7 @@ export const pageNameFromTreePath = z.codec(
 			const paddedNumRepr = paddedNumberReprFromIntInPageRange.encode(
 				intInPageRangeFromString.encode(String(mbNum)),
 			);
-			return `${paddedNumRepr}${DASH}${pathCopy.toReversed().join(DASH)}` as const;
+			return `${paddedNumRepr}${DASH}${PAGE}${DASH}${pathCopy.toReversed().join(DASH)}` as const;
 		},
 	},
 );

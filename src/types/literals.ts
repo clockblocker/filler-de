@@ -176,11 +176,6 @@ export const UnknownSchema = z.literal("Unknown");
 export type UNKNOWN = z.infer<typeof UnknownSchema>;
 export const UNKNOWN = UnknownSchema.value;
 
-// Defined folder names
-export const PagesSchema = z.literal("Pages");
-export type PAGES = z.infer<typeof PagesSchema>;
-export const PAGES = PagesSchema.value;
-
 // Node statuses
 export const DoneSchema = z.literal("Done");
 export type DONE = z.infer<typeof DoneSchema>;

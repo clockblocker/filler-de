@@ -141,7 +141,9 @@ export class LibraryTree {
 			if (!filesystemText) continue;
 
 			// Update page statuses if different
-			const mbTextNode = this.getMaybeTextNode({ path: currentText.path });
+			const mbTextNode = this.getMaybeTextNode({
+				path: currentText.path,
+			});
 			if (mbTextNode.error) continue;
 
 			const textNode = mbTextNode.data;
@@ -328,7 +330,7 @@ export class LibraryTree {
 		const textNode = mbTextNode.data;
 		if (textNode.type !== NodeType.Text) {
 			return {
-				description: `Node at ${textPath.join("-")} is a ScrollNode, not a TextNode. Pages can only be accessed from TextNodes.`,
+				description: `Node at ${textPath.join("-")} is a ScrollNode, not a TextNode. Page can only be accessed from TextNodes.`,
 				error: true,
 			};
 		}

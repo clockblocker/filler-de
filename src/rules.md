@@ -36,7 +36,7 @@ Textfresser/
         Texts.md
         .../.../xxx/
             xxx.md
-            Pages/
+            Page/
                 0000-xxx.md
                 0001-xxx.md
                 ...

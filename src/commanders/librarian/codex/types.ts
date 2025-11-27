@@ -16,7 +16,7 @@ export type BackLink = {
  * Items can have nested children:
  * - Sections: children are their contents (sections, books, scrolls)
  * - Books: children are their pages
- * - Scrolls/Pages: no children
+ * - Scrolls/Page: no children
  */
 export type CodexItem = {
 	/** Link target (file basename without extension) */

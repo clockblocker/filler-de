@@ -125,17 +125,17 @@ describe("DiffToActionsMapper", () => {
 				(a) => a.type === VaultActionType.UpdateOrCreateFile,
 			);
 
-			// 1 folder for book + 1 Pages subfolder
+			// 1 folder for book + 1 Page subfolder
 			expect(createFolderActions.length).toBe(2);
 			expect(createFolderActions?.[0]?.payload?.prettyPath.basename).toBe("Book");
-			expect(createFolderActions?.[1]?.payload?.prettyPath.basename).toBe("Pages");
+			expect(createFolderActions?.[1]?.payload?.prettyPath.basename).toBe("Page");
 
 			// 2 pages + 1 book codex + 1 parent section codex + 1 root codex
 			expect(createFileActions.length).toBe(5);
 
 			// Check page files have correct path
 			const pageFiles = createFileActions.filter((a) =>
-				a.payload.prettyPath.pathParts.includes("Pages"),
+				a.payload.prettyPath.pathParts.includes("Page"),
 			);
 			expect(pageFiles.length).toBe(2);
 		});
@@ -190,7 +190,7 @@ describe("DiffToActionsMapper", () => {
 
 			// 2 pages + 1 codex
 			expect(trashFileActions.length).toBe(3);
-			// 1 Pages folder + 1 book folder
+			// 1 Page folder + 1 book folder
 			expect(trashFolderActions.length).toBe(2);
 		});
 	});

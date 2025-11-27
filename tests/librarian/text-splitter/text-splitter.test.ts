@@ -1,16 +1,16 @@
 import { describe, expect, it } from "bun:test";
 import {
 	formatPageIndex,
-	splitTextIntoPages,
+	splitTextIntoP_ages,
 } from "../../../src/commanders/librarian/text-splitter/text-splitter";
 
 describe("TextSplitter", () => {
-	describe("splitTextIntoPages", () => {
+	describe("splitTextIntoP_ages", () => {
 		const textName = "TestText";
 
 		it("should return single page for short text (scroll)", () => {
 			const content = "This is a short text. It has just two sentences.";
-			const result = splitTextIntoPages(content, textName, 15);
+			const result = splitTextIntoP_ages(content, textName, 15);
 
 			expect(result.isBook).toBe(false);
 			expect(result.pages.length).toBe(1);
@@ -26,14 +26,14 @@ describe("TextSplitter", () => {
 			);
 			const content = sentences.join(" ");
 
-			const result = splitTextIntoPages(content, textName, 15);
+			const result = splitTextIntoP_ages(content, textName, 15);
 
 			expect(result.isBook).toBe(true);
 			expect(result.pages.length).toBe(2);
 		});
 
 		it("should handle empty content", () => {
-			const result = splitTextIntoPages("", textName, 15);
+			const result = splitTextIntoP_ages("", textName, 15);
 
 			expect(result.isBook).toBe(false);
 			expect(result.pages.length).toBe(1);
@@ -46,7 +46,7 @@ describe("TextSplitter", () => {
 			);
 			const content = sentences.join(" ");
 
-			const result = splitTextIntoPages(content, textName, 15);
+			const result = splitTextIntoP_ages(content, textName, 15);
 
 			expect(result.isBook).toBe(false);
 			expect(result.pages.length).toBe(1);
@@ -61,7 +61,7 @@ describe("TextSplitter", () => {
 			);
 			const content = sentences.join(" ");
 
-			const result = splitTextIntoPages(content, textName, 10);
+			const result = splitTextIntoP_ages(content, textName, 10);
 
 			expect(result.isBook).toBe(true);
 			expect(result.pages.length).toBeGreaterThanOrEqual(2);
@@ -70,7 +70,7 @@ describe("TextSplitter", () => {
 		it("should preserve headers in output", () => {
 			const content = "# My Header\n\nThis is content after header.";
 
-			const result = splitTextIntoPages(content, textName, 15);
+			const result = splitTextIntoP_ages(content, textName, 15);
 
 			expect(result.isBook).toBe(false);
 			expect(result.pages[0]).toContain("# My Header");
@@ -84,7 +84,7 @@ describe("TextSplitter", () => {
 			);
 			const content = sentences.join(" ");
 
-			const result = splitTextIntoPages(content, textName);
+			const result = splitTextIntoP_ages(content, textName);
 
 			expect(result.isBook).toBe(false);
 			expect(result.pages.length).toBe(1);
@@ -97,7 +97,7 @@ describe("TextSplitter", () => {
 				Hans antwortete: "Nein, danke."
 			`.trim();
 
-			const result = splitTextIntoPages(germanText, textName, 15);
+			const result = splitTextIntoP_ages(germanText, textName, 15);
 
 			expect(result.isBook).toBe(false);
 			expect(result.pages.length).toBe(1);
@@ -105,7 +105,7 @@ describe("TextSplitter", () => {
 
 		it("should format content with linked quotes", () => {
 			const content = "First sentence here. Second sentence follows.";
-			const result = splitTextIntoPages(content, textName, 15);
+			const result = splitTextIntoP_ages(content, textName, 15);
 
 			// Output should contain block references (^number format)
 			expect(result.pages[0]).toMatch(/\^[\d]+/);

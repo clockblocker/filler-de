@@ -22,13 +22,13 @@ const avatarSeason1Episode1Codex = {
 } as const satisfies PrettyFileDto;
 
 const avatarSeason1Episode1Page000 = {
-	basename: "000-Episode_1-Season_1-Avatar",
-	pathParts: ["Library", "Avatar", "Season_1", "Episode_1", "Pages"],
+	basename: "000-Page-Episode_1-Season_1-Avatar",
+	pathParts: ["Library", "Avatar", "Season_1", "Episode_1", "Page"],
 } as const satisfies PrettyFileDto;
 
 const avatarSeason1Episode1Page001 = {
-	basename: "001-Episode_1-Season_1-Avatar",
-	pathParts: ["Library", "Avatar", "Season_1", "Episode_1", "Pages"],
+	basename: "001-Page-Episode_1-Season_1-Avatar",
+	pathParts: ["Library", "Avatar", "Season_1", "Episode_1", "Page"],
 };
 
 // E2
@@ -38,13 +38,13 @@ const avatarSeason1Episode2Codex = {
 } as const satisfies PrettyFileDto;
 
 const avatarSeason1Episode2Page000 = {
-	basename: "000-Episode_2-Season_1-Avatar",
-	pathParts: ["Library", "Avatar", "Season_1", "Episode_2", "Pages"],
+	basename: "000-Page-Episode_2-Season_1-Avatar",
+	pathParts: ["Library", "Avatar", "Season_1", "Episode_2", "Page"],
 } as const satisfies PrettyFileDto;
 
 const avatarSeason1Episode2Page001 = {
-	basename: "001-Episode_2-Season_1-Avatar",
-	pathParts: ["Library", "Avatar", "Season_1", "Episode_1", "Pages"],
+	basename: "001-Page-Episode_2-Season_1-Avatar",
+	pathParts: ["Library", "Avatar", "Season_1", "Episode_1", "Page"],
 };
 
 export const testLibrary = {

@@ -33,8 +33,8 @@ System-managed navigation + TODO files for the Library.
 *__Episode_1-Season_1-Avatar.md* (Book Codex)
 
 [[__Season_1-Avatar|← Season 1]]
-- [ ] [[000-Episode_1-Season_1-Avatar|Page 1]]
-- [ ] [[001-Episode_1-Season_1-Avatar|Page 2]]
+- [ ] [[000-Page-Episode_1-Season_1-Avatar|Page 1]]
+- [ ] [[001-Page-Episode_1-Season_1-Avatar|Page 2]]
 ```
 
 ## Codex Types
@@ -42,7 +42,7 @@ System-managed navigation + TODO files for the Library.
 | Context | Lists | Example |
 |---------|-------|---------|
 | Section Codex | Children (Sections + Texts) nested | `__Library.md` shows Avatar, Songs... |
-| Book Codex | Pages flat | `__Episode_1-Season_1-Avatar.md` shows 000, 001... |
+| Book Codex | Page flat | `__Episode_1-Season_1-Avatar.md` shows 000, 001... |
 
 ## Naming Convention
 

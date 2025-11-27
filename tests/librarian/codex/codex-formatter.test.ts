@@ -125,13 +125,13 @@ describe("CodexFormatter", () => {
 						children: [],
 						displayName: "000",
 						status: TextStatus.Done,
-						target: "000-Episode_1-Season_1-Avatar",
+						target: "000-Page-Episode_1-Season_1-Avatar",
 					},
 					{
 						children: [],
 						displayName: "001",
 						status: TextStatus.NotStarted,
-						target: "001-Episode_1-Season_1-Avatar",
+						target: "001-Page-Episode_1-Season_1-Avatar",
 					},
 				],
 			};
@@ -139,8 +139,8 @@ describe("CodexFormatter", () => {
 			const result = formatter.format(content);
 
 			expect(result).toContain("[[__Season_1-Avatar|← Season 1]] ");
-			expect(result).toContain("- [x] [[000-Episode_1-Season_1-Avatar|000]] ");
-			expect(result).toContain("- [ ] [[001-Episode_1-Season_1-Avatar|001]] ");
+			expect(result).toContain("- [x] [[000-Page-Episode_1-Season_1-Avatar|000]] ");
+			expect(result).toContain("- [ ] [[001-Page-Episode_1-Season_1-Avatar|001]] ");
 			// Book pages are flat (no nesting)
 			expect(result).not.toContain("\t-");
 		});

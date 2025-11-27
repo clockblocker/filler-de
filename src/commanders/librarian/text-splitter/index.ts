@@ -1,6 +1,5 @@
 export {
 	formatPageIndex,
-	splitTextIntoPages,
 	type SplitResult,
+	splitTextIntoP_ages,
 } from "./text-splitter";
-

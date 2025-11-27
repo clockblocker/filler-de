@@ -60,9 +60,9 @@
   - Rename: rename file + update parent
   - Move: update old + new parents
 
-- [ ] Fix `Pages` folder convention
+- [ ] Fix `Page` folder convention
   - Align `getLibraryFileToFileFromNode` with expected structure
-  - Page pathParts should include "Pages"
+  - Page pathParts should include "Page"
 
 ## Phase 6: Polish
 
@@ -90,7 +90,7 @@
 3. `CodexChapter` model doesn't match spec — replace with new types
 4. `getLibraryFileToFileFromNode` returns empty Codex — add content generation
 5. No sync between tree status and Codex checkboxes
-6. Pages folder inconsistency in naming
+6. Page folder inconsistency in naming
 
 ## File Structure
 

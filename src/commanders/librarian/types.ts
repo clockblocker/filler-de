@@ -45,12 +45,6 @@ export type TreeNode = Prettify<BranchNode | PageNode>;
 
 export type LeafNode = Prettify<PageNode>;
 
-export type PageDto = Prettify<
-	Pick<PageNode, "name" | "status"> & {
-		pathToParent: TreePath;
-	}
->;
-
 export type TextDto = {
 	path: TreePath;
 	pageStatuses: Record<CommonNode["name"], CommonNode["status"]>;

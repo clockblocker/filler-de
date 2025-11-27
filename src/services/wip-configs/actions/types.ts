@@ -10,7 +10,7 @@ const USER_ACTION_LITERALS = [
 	"TranslateBlock",
 	"ExplainGrammar",
 	"MakeText",
-	"NavigatePages",
+	"NavigatePage",
 	"PreviousPage",
 ] as const;
 

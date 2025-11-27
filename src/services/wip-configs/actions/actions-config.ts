@@ -1,5 +1,5 @@
 import { makeTextAction } from "./new/make-text-action";
-import { navigatePagesAction } from "./new/navigate-pages-action";
+import { navigatePageAction } from "./new/navigate-pages-action";
 import newGenCommand from "./new/new-gen-command";
 import newSplitCommand from "./new/new-split-command";
 import newTranslateSelection from "./new/translateSelection";
@@ -12,62 +12,62 @@ import {
 
 export const ACTION_CONFIGS = {
 	[UserAction.Generate]: {
-		id: UserAction.Generate,
 		execute: newGenCommand,
+		id: UserAction.Generate,
 		label: "Generate",
 		placement: UserActionPlacement.Bottom,
 	},
 	[UserAction.AddContext]: {
-		id: UserAction.AddContext,
 		execute: newGenCommand,
+		id: UserAction.AddContext,
 		label: "Add Context",
 		placement: UserActionPlacement.ShortcutOnly,
 	},
 	[UserAction.ExplainGrammar]: {
-		id: UserAction.ExplainGrammar,
 		execute: newGenCommand,
+		id: UserAction.ExplainGrammar,
 		label: "Explain Grammar",
 		placement: UserActionPlacement.ShortcutOnly,
 	},
 	[UserAction.SplitContexts]: {
-		id: UserAction.SplitContexts,
 		execute: newGenCommand,
+		id: UserAction.SplitContexts,
 		label: "Sort Contexts",
 		placement: UserActionPlacement.ShortcutOnly,
 	},
 	[UserAction.SplitInBlocks]: {
-		id: UserAction.SplitInBlocks,
 		execute: newSplitCommand,
+		id: UserAction.SplitInBlocks,
 		label: "Split",
 		placement: UserActionPlacement.ShortcutOnly,
 	},
 	[UserAction.TranslateBlock]: {
-		id: UserAction.TranslateBlock,
 		execute: newGenCommand,
+		id: UserAction.TranslateBlock,
 		label: "Translate",
 		placement: UserActionPlacement.ShortcutOnly,
 	},
 	[UserAction.TranslateSelection]: {
-		id: UserAction.TranslateSelection,
 		execute: newTranslateSelection,
+		id: UserAction.TranslateSelection,
 		label: "Translate",
 		placement: UserActionPlacement.AboveSelection,
 	},
 	[UserAction.MakeText]: {
-		id: UserAction.MakeText,
 		execute: makeTextAction,
+		id: UserAction.MakeText,
 		label: "Make this a text",
 		placement: UserActionPlacement.Bottom,
 	},
-	[UserAction.NavigatePages]: {
-		id: UserAction.NavigatePages,
-		execute: (services) => navigatePagesAction(services, "next"),
+	[UserAction.NavigatePage]: {
+		execute: (services) => navigatePageAction(services, "next"),
+		id: UserAction.NavigatePage,
 		label: "→",
 		placement: UserActionPlacement.Bottom,
 	},
 	[UserAction.PreviousPage]: {
+		execute: (services) => navigatePageAction(services, "prev"),
 		id: UserAction.PreviousPage,
-		execute: (services) => navigatePagesAction(services, "prev"),
 		label: "←",
 		placement: UserActionPlacement.Bottom,
 	},
@@ -86,9 +86,9 @@ export const getAllBottomActions = (): UserAction[] =>
 			ACTION_CONFIGS[action].placement === UserActionPlacement.Bottom,
 	);
 
-export const NAVIGATE_PAGES_ACTIONS: UserAction[] = [
+export const NAVIGATE_PAGE_ACTIONS: UserAction[] = [
 	UserAction.PreviousPage,
-	UserAction.NavigatePages,
+	UserAction.NavigatePage,
 ] as const;
 
 export const CHANGE_FILE_TYPE_ACTIONS: UserAction[] = [
@@ -96,6 +96,6 @@ export const CHANGE_FILE_TYPE_ACTIONS: UserAction[] = [
 ] as const;
 
 export const OPTIONAL_BOTTOM_ACTIONS = [
-	...NAVIGATE_PAGES_ACTIONS,
+	...NAVIGATE_PAGE_ACTIONS,
 	...CHANGE_FILE_TYPE_ACTIONS,
 ];

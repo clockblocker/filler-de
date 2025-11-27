@@ -5,14 +5,14 @@ import {
 import type { TexfresserObsidianServices } from "../../../services/obsidian-services/interface";
 import { unwrapMaybeByThrowing } from "../../../types/common-interface/maybe";
 
-export async function navigatePagesAction(
+export async function navigatePageAction(
 	services: Partial<TexfresserObsidianServices>,
 	direction: "prev" | "next",
 ): Promise<void> {
 	const { openedFileService } = services;
 
 	if (!openedFileService) {
-		console.error("Missing required services for navigatePagesAction");
+		console.error("Missing required services for navigatePageAction");
 		return;
 	}
 
@@ -35,13 +35,13 @@ export async function navigatePagesAction(
 		} else {
 			logWarning({
 				description: `No ${direction} page found`,
-				location: "navigatePagesAction",
+				location: "navigatePageAction",
 			});
 		}
 	} catch (error) {
 		logError({
 			description: `Error navigating to ${direction} page: ${error}`,
-			location: "navigatePagesAction",
+			location: "navigatePageAction",
 		});
 	}
 }

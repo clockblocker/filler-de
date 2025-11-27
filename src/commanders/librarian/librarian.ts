@@ -14,7 +14,7 @@ import { TextStatus } from "../../types/common-interface/enums";
 import { DiffToActionsMapper } from "./diffing/diff-to-actions";
 import { treeDiffer } from "./diffing/tree-differ";
 import type { TreeSnapshot } from "./diffing/types";
-import { toGuardedNodeName } from "./indexing/formatters";
+import { pageNameFromTreePath, toGuardedNodeName } from "./indexing/formatters";
 import {
 	getLibraryFileToFileFromNode,
 	getTreePathFromLibraryFile,
@@ -24,7 +24,7 @@ import { LibraryTree } from "./library-tree/library-tree";
 import { getTreePathFromNode } from "./pure-functions/node";
 import {
 	formatPageIndex,
-	splitTextIntoPages,
+	splitTextIntoP_ages,
 } from "./text-splitter/text-splitter";
 import type { LibraryFileDto, TextDto, TreePath } from "./types";
 
@@ -32,7 +32,7 @@ import type { LibraryFileDto, TextDto, TreePath } from "./types";
 const ROOTS = ["Library"] as const;
 type RootName = (typeof ROOTS)[number];
 
-// Moving Pages is not allowed
+// Moving Page is not allowed
 // We can only move Texts / Scrolls and Sections
 
 export class Librarian {
@@ -364,7 +364,7 @@ export class Librarian {
 		const textName = toGuardedNodeName(splitPath.basename);
 
 		// Split content into pages with formatted sentences
-		const { pages, isBook } = splitTextIntoPages(content, textName);
+		const { pages, isBook } = splitTextIntoP_ages(content, textName);
 		const sectionPath = splitPath.pathParts.slice(1); // Remove root
 		const textPath: TreePath = [...sectionPath, textName];
 
@@ -406,10 +406,11 @@ export class Librarian {
 					pageContent,
 				);
 			} else {
-				// Book page: in Pages subfolder, NNN-reversed-path.md
+				// Book page: in Page subfolder, 000-Page-TextName-Parent.md
+				const fullPagePath: TreePath = [...textPath, pageIndex];
 				const pagePath = {
-					basename: `${pageIndex}-${textPath.toReversed().join("-")}`,
-					pathParts: [rootName, ...sectionPath, textName, "Pages"],
+					basename: pageNameFromTreePath.encode(fullPagePath),
+					pathParts: [rootName, ...sectionPath, textName, "Page"],
 				};
 				await this.backgroundFileService.replaceContent(
 					pagePath,

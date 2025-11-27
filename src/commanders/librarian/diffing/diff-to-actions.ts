@@ -1,9 +1,12 @@
+import { editOrAddMetaInfo } from "../../../services/dto-services/meta-info-manager/interface";
+import type { MetaInfo } from "../../../services/dto-services/meta-info-manager/types";
 import {
 	type VaultAction,
 	VaultActionType,
 } from "../../../services/obsidian-services/file-services/background/background-vault-actions";
 import type { PrettyPath } from "../../../types/common-interface/dtos";
 import { codexFormatter, codexGenerator } from "../codex";
+import { pageNameFromTreePath } from "../indexing/formatters";
 import {
 	NodeType,
 	type SectionNode,
@@ -69,7 +72,14 @@ export class DiffToActionsMapper {
 			actions.push(this.trashFolderAction(sectionPath));
 		}
 
-		// Handle status changes → update affected Codex files
+		// Handle status changes → update page/scroll files AND affected Codex files
+		for (const change of diff.statusChanges) {
+			const action = this.createPageStatusUpdateAction(change, getNode);
+			if (action) {
+				actions.push(action);
+			}
+		}
+
 		const affectedCodexPaths = this.getAffectedCodexPaths(
 			diff.statusChanges,
 		);
@@ -188,9 +198,15 @@ export class DiffToActionsMapper {
 
 		if (pageNames.length === 1) {
 			// Scroll (single page = single file, no Codex)
+			const pageName = pageNames[0];
+			const status = pageName ? text.pageStatuses[pageName] : undefined;
+			const scrollMeta: MetaInfo = {
+				fileType: "Scroll",
+				status: status ?? "NotStarted",
+			};
 			actions.push({
 				payload: {
-					content: "",
+					content: editOrAddMetaInfo("", scrollMeta),
 					prettyPath: this.scrollPathToPrettyPath(text.path),
 				},
 				type: VaultActionType.UpdateOrCreateFile,
@@ -205,7 +221,7 @@ export class DiffToActionsMapper {
 				type: VaultActionType.UpdateOrCreateFolder,
 			});
 
-			// Create Pages subfolder
+			// Create Page subfolder
 			actions.push({
 				payload: {
 					prettyPath: this.pagesFolderToPrettyPath(text.path),
@@ -213,11 +229,17 @@ export class DiffToActionsMapper {
 				type: VaultActionType.UpdateOrCreateFolder,
 			});
 
-			// Create page files
+			// Create page files with meta section
 			for (const pageName of pageNames) {
+				const status = text.pageStatuses[pageName];
+				const pageMeta: MetaInfo = {
+					fileType: "Page",
+					index: Number(pageName),
+					status: status ?? "NotStarted",
+				};
 				actions.push({
 					payload: {
-						content: "",
+						content: editOrAddMetaInfo("", pageMeta),
 						prettyPath: this.pagePathToPrettyPath(
 							text.path,
 							pageName,
@@ -275,7 +297,7 @@ export class DiffToActionsMapper {
 				type: VaultActionType.TrashFile,
 			});
 
-			// Trash Pages folder
+			// Trash Page folder
 			actions.push({
 				payload: {
 					prettyPath: this.pagesFolderToPrettyPath(text.path),
@@ -293,6 +315,61 @@ export class DiffToActionsMapper {
 		}
 
 		return actions;
+	}
+
+	// ─── Page/Scroll Status Update Action ─────────────────────────────
+
+	/**
+	 * Create an action to update a page/scroll file's meta section with new status.
+	 * Returns null if the status change doesn't apply to a leaf node file.
+	 */
+	private createPageStatusUpdateAction(
+		change: StatusChange,
+		getNode?: GetNodeFn,
+	): VaultAction | null {
+		// Path format: [...textPath, pageName]
+		// e.g., ["Section", "BookName", "000"] or ["Section", "ScrollName", "000"]
+		if (change.path.length < 2) {
+			return null; // Invalid path
+		}
+
+		const textPath = change.path.slice(0, -1);
+		const pageName = change.path[change.path.length - 1];
+
+		if (!pageName) {
+			return null;
+		}
+
+		// Get the text node to determine if it's a book or scroll
+		const textNode = getNode?.(textPath);
+		const isBook =
+			textNode?.type === NodeType.Text && textNode.children.length > 1;
+
+		// Determine file path
+		const prettyPath = isBook
+			? this.pagePathToPrettyPath(textPath, pageName)
+			: this.scrollPathToPrettyPath(textPath);
+
+		// Build meta info based on file type
+		const metaInfo: MetaInfo = isBook
+			? {
+					fileType: "Page",
+					index: Number(pageName),
+					status: change.newStatus,
+				}
+			: {
+					fileType: "Scroll",
+					status: change.newStatus,
+				};
+
+		return {
+			payload: {
+				prettyPath,
+				transform: (content: string) =>
+					editOrAddMetaInfo(content, metaInfo),
+			},
+			type: VaultActionType.ProcessFile,
+		};
 	}
 
 	// ─── Codex Update Action ─────────────────────────────────────────
@@ -404,15 +481,17 @@ export class DiffToActionsMapper {
 
 	private pagesFolderToPrettyPath(textPath: TreePath): PrettyPath {
 		const pathParts = [this.rootName, ...textPath];
-		return { basename: "Pages", pathParts };
+		return { basename: "Page", pathParts };
 	}
 
 	private pagePathToPrettyPath(
 		textPath: TreePath,
 		pageName: string,
 	): PrettyPath {
-		const pathParts = [this.rootName, ...textPath, "Pages"];
-		const basename = `${pageName}-${textPath.toReversed().join("-")}`;
+		const pathParts = [this.rootName, ...textPath, "Page"];
+		// Use encoder to get proper format: 000-Page-TextName-Parent
+		const fullPath: TreePath = [...textPath, pageName];
+		const basename = pageNameFromTreePath.encode(fullPath);
 		return { basename, pathParts };
 	}
 }
