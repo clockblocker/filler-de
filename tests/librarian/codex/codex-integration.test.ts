@@ -159,9 +159,9 @@ describe("Codex Integration", () => {
 					? bookCodexAction.payload.content
 					: "";
 
-			// Should have pages
-			expect(content).toContain("Page 1");
-			expect(content).toContain("Page 2");
+			// Should have pages (displayed as raw names)
+			expect(content).toContain("|000]]");
+			expect(content).toContain("|001]]");
 			// First page is done
 			expect(content).toContain("[x]");
 			// Second page is not started
@@ -336,5 +336,5 @@ describe("Codex Integration", () => {
 			expect(markdown).toContain("Avatar");
 		});
 	});
-});
 
+});

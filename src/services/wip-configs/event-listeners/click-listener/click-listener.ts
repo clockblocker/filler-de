@@ -18,12 +18,15 @@ export const makeClickListener =
 		// Handle checkbox clicks (Codex task lists)
 		if (isTaskCheckbox(target)) {
 			const handled = handleCheckboxClicked({
+				app: services.openedFileService.getApp(),
 				checkbox: target,
 				librarian: services.librarian,
-				app: services.openedFileService.getApp(),
 			});
 			if (handled) {
-				// Don't prevent default - let Obsidian update the checkbox visually
+				// Prevent Obsidian's native checkbox handler from running
+				// We fully control the checkbox state via setStatus and codex regeneration
+				evt.preventDefault();
+				evt.stopPropagation();
 				return;
 			}
 		}

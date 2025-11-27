@@ -73,9 +73,11 @@ export function isTaskCheckbox(
 /**
  * Parse a Codex link target into rootName and treePath.
  *
- * Handles two formats:
+ * Handles three formats:
  * 1. Path format: "Library/Section/Text" → root="Library", path=["Section", "Text"]
- * 2. Codex filename: "__Text-Section" or "Text-Section" → root="Library", path=["Section", "Text"]
+ * 2. Page filename: "001-Text-Section" → root="Library", path=["Section", "Text", "001"]
+ *    (page number is extracted and included in path)
+ * 3. Codex filename: "__Text-Section" or "Text-Section" → root="Library", path=["Section", "Text"]
  *    (parts are reversed and joined with `-`)
  */
 function parseCodexLinkTarget(href: string): {
@@ -98,6 +100,20 @@ function parseCodexLinkTarget(href: string): {
 		return {
 			rootName,
 			treePath: pathParts.slice(1) as TreePath,
+		};
+	}
+
+	// Check if it's a page filename (starts with 3 digits followed by dash)
+	// Format: "001-Text-Section" → path should be ["Section", "Text", "001"]
+	const pageFileMatch = cleanHref.match(/^(\d{3})-(.+)$/);
+	if (pageFileMatch) {
+		const pageNum = pageFileMatch[1]; // "001"
+		const rest = pageFileMatch[2]; // "Text-Section"
+		const pathParts = rest.split("-").toReversed(); // ["Section", "Text"]
+		// Include page number as last element in path
+		return {
+			rootName: "Library",
+			treePath: [...pathParts, pageNum] as TreePath,
 		};
 	}
 

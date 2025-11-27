@@ -116,13 +116,12 @@ export class CodexGenerator {
 
 	private pageToItem(page: PageNode, parentText: TextNode): CodexItem {
 		const textPath = getTreePathFromNode(parentText);
-		const pageIndex = page.name; // "000", "001", etc.
 
 		return {
 			children: [],
-			displayName: `Page ${Number.parseInt(pageIndex, 10) + 1}`,
+			displayName: page.name.replace(/_/g, " "),
 			status: page.status,
-			target: this.pageTarget(textPath, pageIndex),
+			target: this.pageTarget(textPath, page.name),
 		};
 	}
 

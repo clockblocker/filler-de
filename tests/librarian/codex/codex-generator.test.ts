@@ -166,9 +166,9 @@ describe("CodexGenerator", () => {
 			const content = generator.forBook(book);
 
 			expect(content.items.length).toBe(2);
-			expect(content.items?.[0]?.displayName).toBe("Page 1");
+			expect(content.items?.[0]?.displayName).toBe("000");
 			expect(content.items?.[0]?.status).toBe(TextStatus.Done);
-			expect(content.items?.[1]?.displayName).toBe("Page 2");
+			expect(content.items?.[1]?.displayName).toBe("001");
 			expect(content.items?.[1]?.status).toBe(TextStatus.NotStarted);
 		});
 	});
