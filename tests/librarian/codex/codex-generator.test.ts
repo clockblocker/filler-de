@@ -12,7 +12,7 @@ describe("CodexGenerator", () => {
 	const generator = new CodexGenerator();
 
 	describe("forSection", () => {
-		it("should generate back link to parent", () => {
+		it("should generate back link to parent codex", () => {
 			const parent: SectionNode = {
 				children: [],
 				name: "Library",
@@ -34,6 +34,7 @@ describe("CodexGenerator", () => {
 
 			expect(content.backLink).not.toBeNull();
 			expect(content.backLink?.displayName).toBe("Library");
+			expect(content.backLink?.target).toBe("__Library");
 		});
 
 		it("should return null backLink for root", () => {

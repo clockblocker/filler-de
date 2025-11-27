@@ -7,18 +7,18 @@ describe("CodexFormatter", () => {
 	const formatter = new CodexFormatter();
 
 	describe("format - section type", () => {
-		it("should format back link", () => {
+		it("should format back link to parent codex", () => {
 			const content: CodexContent = {
 				backLink: {
 					displayName: "Library",
-					target: "Library",
+					target: "__Library",
 				},
 				items: [],
 			};
 
 			const result = formatter.format(content);
 
-			expect(result).toContain("[[Library|← Library]] ");
+			expect(result).toContain("[[__Library|← Library]] ");
 		});
 
 		it("should omit back link when null", () => {

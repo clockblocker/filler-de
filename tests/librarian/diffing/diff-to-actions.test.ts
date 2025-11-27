@@ -90,8 +90,8 @@ describe("DiffToActionsMapper", () => {
 			const createFileActions = actions.filter(
 				(a) => a.type === VaultActionType.UpdateOrCreateFile,
 			);
-			// 1 scroll + 1 parent section codex
-			expect(createFileActions.length).toBe(2);
+			// 1 scroll + 1 parent section codex + 1 root codex
+			expect(createFileActions.length).toBe(3);
 			// Scroll filename is reversed path
 			const scrollAction = createFileActions.find(
 				(a) => a.payload.prettyPath.basename === "Scroll-Section",
@@ -130,8 +130,8 @@ describe("DiffToActionsMapper", () => {
 			expect(createFolderActions?.[0]?.payload?.prettyPath.basename).toBe("Book");
 			expect(createFolderActions?.[1]?.payload?.prettyPath.basename).toBe("Pages");
 
-			// 2 pages + 1 book codex + 1 parent section codex
-			expect(createFileActions.length).toBe(4);
+			// 2 pages + 1 book codex + 1 parent section codex + 1 root codex
+			expect(createFileActions.length).toBe(5);
 
 			// Check page files have correct path
 			const pageFiles = createFileActions.filter((a) =>
@@ -217,8 +217,8 @@ describe("DiffToActionsMapper", () => {
 				(a) => a.type === VaultActionType.UpdateOrCreateFile,
 			);
 
-			// Should affect: Section/Book codex and Section codex
-			expect(createActions.length).toBe(2);
+			// Should affect: Section/Book codex, Section codex, and root codex
+			expect(createActions.length).toBe(3);
 		});
 	});
 
@@ -237,7 +237,8 @@ describe("DiffToActionsMapper", () => {
 			expect(paths.has("A/B/C")).toBe(true);
 			expect(paths.has("A/B")).toBe(true);
 			expect(paths.has("A")).toBe(true);
-			expect(paths.size).toBe(3);
+			expect(paths.has("")).toBe(true); // root
+			expect(paths.size).toBe(4);
 		});
 
 		it("should dedupe paths from multiple changes", () => {
@@ -256,8 +257,8 @@ describe("DiffToActionsMapper", () => {
 
 			const paths = mapper.getAffectedCodexPaths(statusChanges);
 
-			// A/B and A - each counted once
-			expect(paths.size).toBe(2);
+			// A/B, A, and root ("") - each counted once
+			expect(paths.size).toBe(3);
 		});
 	});
 });

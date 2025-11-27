@@ -75,13 +75,16 @@ export class DiffToActionsMapper {
 		);
 
 		// Also update parent section codexes when texts are added/removed
+		// Including root codex
 		for (const text of diff.addedTexts) {
-			// Add parent section paths (not the text itself)
+			// Add parent section paths including root
+			affectedCodexPaths.add(""); // root
 			for (let i = 1; i <= text.path.length - 1; i++) {
 				affectedCodexPaths.add(text.path.slice(0, i).join("/"));
 			}
 		}
 		for (const text of diff.removedTexts) {
+			affectedCodexPaths.add(""); // root
 			for (let i = 1; i <= text.path.length - 1; i++) {
 				affectedCodexPaths.add(text.path.slice(0, i).join("/"));
 			}
@@ -104,22 +107,25 @@ export class DiffToActionsMapper {
 
 	/**
 	 * Get all Codex paths affected by status changes.
-	 * Includes all ancestors up to (but not including) root.
+	 * Includes all ancestors INCLUDING root (empty path = "").
 	 */
 	getAffectedCodexPaths(statusChanges: StatusChange[]): Set<string> {
 		const paths = new Set<string>();
 
 		for (const change of statusChanges) {
-			// Walk up the path, adding each ancestor
+			// Walk up the path, adding each ancestor including root
 			// A status change at ['A', 'B', 'C', '000'] affects:
 			// - ['A', 'B', 'C'] (the text/book)
 			// - ['A', 'B'] (parent section)
 			// - ['A'] (grandparent section)
+			// - [] (root) - represented as ""
 			let current = change.path.slice(0, -1); // Remove page name
 			while (current.length > 0) {
 				paths.add(current.join("/"));
 				current = current.slice(0, -1);
 			}
+			// Add root
+			paths.add("");
 		}
 
 		return paths;
@@ -328,6 +334,7 @@ export class DiffToActionsMapper {
 
 	/**
 	 * Determine the correct Codex path for any node path.
+	 * - Root (empty path): Codex is Library/__Library.md
 	 * - Sections: Codex is in the section folder itself
 	 * - Books (texts with pages): Codex is inside the book folder
 	 */
@@ -335,6 +342,11 @@ export class DiffToActionsMapper {
 		path: TreePath,
 		getNode?: GetNodeFn,
 	): PrettyPath {
+		// Root codex
+		if (path.length === 0) {
+			return this.rootCodexToPrettyPath();
+		}
+
 		if (getNode) {
 			const node = getNode(path);
 			if (node) {
@@ -356,9 +368,15 @@ export class DiffToActionsMapper {
 	}
 
 	private sectionCodexToPrettyPath(sectionPath: TreePath): PrettyPath {
-		const pathParts = [this.rootName, ...sectionPath.slice(0, -1)];
+		// Codex goes inside the section folder
+		const pathParts = [this.rootName, ...sectionPath];
 		const basename = `__${sectionPath.toReversed().join("-")}`;
 		return { basename, pathParts };
+	}
+
+	private rootCodexToPrettyPath(): PrettyPath {
+		// Root codex: Library/__Library.md
+		return { basename: `__${this.rootName}`, pathParts: [this.rootName] };
 	}
 
 	private bookCodexToPrettyPath(textPath: TreePath): PrettyPath {

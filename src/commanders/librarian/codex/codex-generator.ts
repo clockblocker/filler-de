@@ -71,16 +71,11 @@ export class CodexGenerator {
 			return null;
 		}
 
-		// Parent is root - link to root
-		if (!parent.parent) {
-			return {
-				displayName: parent.name,
-				target: parent.name, // Just the name, not a codex path
-			};
-		}
-
-		// Regular parent - link to parent's codex
-		const parentPath = getTreePathFromNode(parent);
+		// All parents now have codexes - link to parent's codex
+		// For root parent, use [name] directly since getTreePathFromNode returns []
+		const parentPath = parent.parent
+			? getTreePathFromNode(parent)
+			: [parent.name];
 		return {
 			displayName: parent.name.replace(/_/g, " "),
 			target: codexNameFromTreePath.encode(parentPath),

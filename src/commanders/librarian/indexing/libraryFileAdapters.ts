@@ -75,12 +75,16 @@ export function getLibraryFileToFileFromNode(node: TreeNode): LibraryFileDto {
 				}
 				break;
 			}
+			// Codex goes inside the book folder
+			splitPath.pathParts = [...treePath];
 			splitPath.basename = codexNameFromTreePath.encode(treePath);
 			metaInfo = { fileType: "Codex", status: node.status };
 
 			break;
 		}
 		case NodeType.Section: {
+			// Codex goes inside the section folder
+			splitPath.pathParts = [...treePath];
 			splitPath.basename = codexNameFromTreePath.encode(treePath);
 			metaInfo = { fileType: "Codex", status: node.status };
 		}

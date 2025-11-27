@@ -65,8 +65,8 @@ describe("Codex Integration", () => {
 					? codexAction.payload.content
 					: "";
 
-			// Should have back link to Library (parent)
-			expect(content).toContain("[[Library|← Library]]");
+			// Should have back link to Library codex (parent)
+			expect(content).toContain("[[__Library|← Library]]");
 			// Should have checkbox for Episode_1
 			expect(content).toContain("[ ]");
 			expect(content).toContain("Episode 1");
@@ -209,8 +209,8 @@ describe("Codex Integration", () => {
 				(a) => a.type === VaultActionType.UpdateOrCreateFile,
 			);
 
-			// Episode_1 (book) and Avatar (parent section)
-			expect(createActions.length).toBe(2);
+			// Episode_1 (book), Avatar (parent section), and root codex
+			expect(createActions.length).toBe(3);
 
 			// Find the book codex update
 			const bookUpdate = createActions.find((a) =>
@@ -262,9 +262,9 @@ describe("Codex Integration", () => {
 				(a) => a.type === VaultActionType.UpdateOrCreateFile,
 			);
 
-			// Should update: A/B/C/Text, A/B/C, A/B, A = 4 codexes
-			// But Text is a scroll (single page), so only sections: A/B/C, A/B, A = 3
-			expect(createActions.length).toBe(3);
+			// Should update: A/B/C/Text, A/B/C, A/B, A, root = 5 codexes
+			// But Text is a scroll (single page), so only sections: A/B/C, A/B, A, root = 4
+			expect(createActions.length).toBe(4);
 		});
 	});
 
@@ -285,12 +285,12 @@ describe("Codex Integration", () => {
 
 			const actions = mapper.mapDiffToActions(diff, getNode);
 
-			// Should create: 1 scroll file + 1 parent section codex update
+			// Should create: 1 scroll file + 1 parent section codex + 1 root codex
 			const createActions = actions.filter(
 				(a) => a.type === VaultActionType.UpdateOrCreateFile,
 			);
 
-			expect(createActions.length).toBe(2);
+			expect(createActions.length).toBe(3);
 
 			// The scroll file itself shouldn't have __ prefix (not a codex)
 			const scrollAction = createActions.find(
