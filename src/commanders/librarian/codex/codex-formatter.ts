@@ -28,7 +28,10 @@ export class CodexFormatter {
 		// Items - always nested, depth determined by children
 		lines.push(...this.formatItems(content.items, 0));
 
-		return lines.join(`${SPACE_F}${LINE_BREAK}`);
+		return (
+			LINE_BREAK +
+			lines.map((l) => `${l}${SPACE_F}${LINE_BREAK}`).join("")
+		);
 	}
 
 	// ─── Private Helpers ─────────────────────────────────────────────

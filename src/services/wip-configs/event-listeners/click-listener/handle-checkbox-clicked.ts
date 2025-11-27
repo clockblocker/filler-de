@@ -46,15 +46,15 @@ export function handleCheckboxClicked({
 	// Note: checkbox.checked is the NEW state after click
 	const newStatus = checkbox.checked ? "Done" : "NotStarted";
 
-	// Call librarian to update status
-	try {
-		// rootName is validated to be "Library" in parseCodexLinkTarget
-		librarian.setStatus(rootName as "Library", treePath, newStatus);
-		return true;
-	} catch (error) {
-		console.error("[handleCheckboxClicked] Failed to set status:", error);
-		return false;
-	}
+	// Call librarian to update status (fire-and-forget async)
+	// rootName is validated to be "Library" in parseCodexLinkTarget
+	librarian.setStatus(rootName as "Library", treePath, newStatus).catch(
+		(error) => {
+			console.error("[handleCheckboxClicked] Failed to set status:", error);
+		},
+	);
+
+	return true;
 }
 
 /**

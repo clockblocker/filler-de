@@ -93,6 +93,70 @@ export class LibraryTree {
 		this.recomputeTreeStatuses();
 	}
 
+	/**
+	 * Reconcile a subtree with filesystem state.
+	 * Syncs the tree at the given path to match the provided TextDtos.
+	 *
+	 * @param subtreePath - Path to the subtree to reconcile (empty = whole tree)
+	 * @param filesystemTexts - TextDtos read from filesystem for this subtree
+	 */
+	public reconcileSubtree(
+		subtreePath: TreePath,
+		filesystemTexts: TextDto[],
+	): void {
+		// Get current texts in tree at this path
+		const currentTexts = this.getTexts(subtreePath);
+
+		// Build sets for comparison
+		const currentTextKeys = new Set(
+			currentTexts.map((t) => t.path.join("/")),
+		);
+		const filesystemTextKeys = new Set(
+			filesystemTexts.map((t) => t.path.join("/")),
+		);
+		const filesystemTextMap = new Map(
+			filesystemTexts.map((t) => [t.path.join("/"), t]),
+		);
+
+		// Delete texts that exist in tree but not in filesystem
+		const textsToDelete = currentTexts.filter(
+			(t) => !filesystemTextKeys.has(t.path.join("/")),
+		);
+		for (const text of textsToDelete) {
+			this.deleteText({ path: text.path });
+		}
+
+		// Add texts that exist in filesystem but not in tree
+		const textsToAdd = filesystemTexts.filter(
+			(t) => !currentTextKeys.has(t.path.join("/")),
+		);
+		for (const text of textsToAdd) {
+			this.addText(text);
+		}
+
+		// Update statuses for texts that exist in both
+		for (const currentText of currentTexts) {
+			const key = currentText.path.join("/");
+			const filesystemText = filesystemTextMap.get(key);
+			if (!filesystemText) continue;
+
+			// Update page statuses if different
+			const mbTextNode = this.getMaybeTextNode({ path: currentText.path });
+			if (mbTextNode.error) continue;
+
+			const textNode = mbTextNode.data;
+			for (const page of textNode.children) {
+				const fsStatus = filesystemText.pageStatuses[page.name];
+				if (fsStatus !== undefined && fsStatus !== page.status) {
+					page.status = fsStatus;
+				}
+			}
+		}
+
+		this.initializeParents();
+		this.recomputeTreeStatuses();
+	}
+
 	public getNearestSectionNode(arg: TreePath): SectionNode;
 	public getNearestSectionNode(arg: TreeNode): SectionNode;
 	public getNearestSectionNode(arg: TreePath | TreeNode): SectionNode {

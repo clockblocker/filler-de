@@ -59,7 +59,7 @@ describe("Librarian withDiff integration", () => {
 	});
 
 	describe("setStatus", () => {
-		it("should queue actions when status changes", () => {
+		it("should queue actions when status changes", async () => {
 			// Create librarian with mock queue
 			const librarian = new Librarian({
 				actionQueue: mockQueue as unknown as VaultActionQueue,
@@ -71,6 +71,9 @@ describe("Librarian withDiff integration", () => {
 				openedFileService: mockOpenedFileService as any,
 			});
 
+			// Skip reconciliation for testing (tree is set up manually)
+			librarian._setSkipReconciliation(true);
+
 			// Manually set up a tree with a text
 			const textDto: TextDto = {
 				pageStatuses: { "000": TextStatus.NotStarted },
@@ -81,7 +84,7 @@ describe("Librarian withDiff integration", () => {
 			};
 
 			// Change status
-			librarian.setStatus("Library", ["Section", "MyText", "000"], "Done");
+			await librarian.setStatus("Library", ["Section", "MyText", "000"], "Done");
 
 			// Verify actions were queued
 			expect(mockQueue.pushMany).toHaveBeenCalled();
@@ -98,7 +101,7 @@ describe("Librarian withDiff integration", () => {
 			expect(hasCreateAction).toBe(true);
 		});
 
-		it("should not queue actions when status unchanged", () => {
+		it("should not queue actions when status unchanged", async () => {
 			const librarian = new Librarian({
 				actionQueue: mockQueue as unknown as VaultActionQueue,
 				// biome-ignore lint/suspicious/noExplicitAny: test mock
@@ -108,6 +111,9 @@ describe("Librarian withDiff integration", () => {
 				// biome-ignore lint/suspicious/noExplicitAny: test mock
 				openedFileService: mockOpenedFileService as any,
 			});
+
+			// Skip reconciliation for testing
+			librarian._setSkipReconciliation(true);
 
 			const textDto: TextDto = {
 				pageStatuses: { "000": TextStatus.Done },
@@ -118,7 +124,7 @@ describe("Librarian withDiff integration", () => {
 			};
 
 			// Set status to same value
-			librarian.setStatus("Library", ["Section", "MyText", "000"], "Done");
+			await librarian.setStatus("Library", ["Section", "MyText", "000"], "Done");
 
 			// pushMany should not be called when actions array is empty
 			expect(mockQueue.pushMany).not.toHaveBeenCalled();
@@ -126,7 +132,7 @@ describe("Librarian withDiff integration", () => {
 	});
 
 	describe("addTexts", () => {
-		it("should queue UpdateOrCreateFile actions for new texts", () => {
+		it("should queue UpdateOrCreateFile actions for new texts", async () => {
 			const librarian = new Librarian({
 				actionQueue: mockQueue as unknown as VaultActionQueue,
 				// biome-ignore lint/suspicious/noExplicitAny: test mock
@@ -136,6 +142,9 @@ describe("Librarian withDiff integration", () => {
 				// biome-ignore lint/suspicious/noExplicitAny: test mock
 				openedFileService: mockOpenedFileService as any,
 			});
+
+			// Skip reconciliation for testing
+			librarian._setSkipReconciliation(true);
 
 			// Start with empty tree
 			librarian.trees = {
@@ -147,7 +156,7 @@ describe("Librarian withDiff integration", () => {
 				pageStatuses: { "000": TextStatus.NotStarted },
 				path: ["NewSection", "NewText"] as TreePath,
 			};
-			librarian.addTexts("Library", [newText]);
+			await librarian.addTexts("Library", [newText]);
 
 			expect(mockQueue.pushMany).toHaveBeenCalled();
 			const actions = mockQueue.pushMany.mock.calls[0]?.[0];
@@ -167,7 +176,7 @@ describe("Librarian withDiff integration", () => {
 	});
 
 	describe("deleteTexts", () => {
-		it("should queue TrashFile actions for removed texts", () => {
+		it("should queue TrashFile actions for removed texts", async () => {
 			const librarian = new Librarian({
 				actionQueue: mockQueue as unknown as VaultActionQueue,
 				// biome-ignore lint/suspicious/noExplicitAny: test mock
@@ -178,6 +187,9 @@ describe("Librarian withDiff integration", () => {
 				openedFileService: mockOpenedFileService as any,
 			});
 
+			// Skip reconciliation for testing
+			librarian._setSkipReconciliation(true);
+
 			const textDto: TextDto = {
 				pageStatuses: { "000": TextStatus.Done },
 				path: ["Section", "TextToDelete"] as TreePath,
@@ -187,7 +199,7 @@ describe("Librarian withDiff integration", () => {
 			};
 
 			// Delete the text
-			librarian.deleteTexts("Library", [["Section", "TextToDelete"]]);
+			await librarian.deleteTexts("Library", [["Section", "TextToDelete"]]);
 
 			expect(mockQueue.pushMany).toHaveBeenCalled();
 			const actions = mockQueue.pushMany.mock.calls[0]?.[0];
@@ -245,7 +257,7 @@ describe("Librarian withDiff integration", () => {
 	});
 
 	describe("queue optional", () => {
-		it("should work without queue (no actions queued)", () => {
+		it("should work without queue (no actions queued)", async () => {
 			const librarian = new Librarian({
 				// No actionQueue provided
 				// biome-ignore lint/suspicious/noExplicitAny: test mock
@@ -256,6 +268,9 @@ describe("Librarian withDiff integration", () => {
 				openedFileService: mockOpenedFileService as any,
 			});
 
+			// Skip reconciliation for testing
+			librarian._setSkipReconciliation(true);
+
 			const textDto: TextDto = {
 				pageStatuses: { "000": TextStatus.NotStarted },
 				path: ["Section", "MyText"] as TreePath,
@@ -265,9 +280,9 @@ describe("Librarian withDiff integration", () => {
 			};
 
 			// Should not throw
-			expect(() => {
-				librarian.setStatus("Library", ["Section", "MyText", "000"], "Done");
-			}).not.toThrow();
+			await expect(
+				librarian.setStatus("Library", ["Section", "MyText", "000"], "Done"),
+			).resolves.toBeUndefined();
 		});
 	});
 });

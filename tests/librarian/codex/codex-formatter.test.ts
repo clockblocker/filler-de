@@ -16,9 +16,9 @@ describe("CodexFormatter", () => {
 				items: [],
 			};
 
-			const result = formatter.format(content, "section");
+			const result = formatter.format(content);
 
-			expect(result).toContain("[[Library|← Library]]");
+			expect(result).toContain("[[Library|← Library]] ");
 		});
 
 		it("should omit back link when null", () => {
@@ -27,7 +27,7 @@ describe("CodexFormatter", () => {
 				items: [],
 			};
 
-			const result = formatter.format(content, "section");
+			const result = formatter.format(content);
 
 			expect(result).not.toContain("[[");
 		});
@@ -52,10 +52,10 @@ describe("CodexFormatter", () => {
 				],
 			};
 
-			const result = formatter.format(content, "section");
+			const result = formatter.format(content);
 
-			expect(result).toContain("- [ ] [[__Season_1-Avatar|Season 1]]");
-			expect(result).toContain("\t- [x] [[__Episode_1-Season_1|Episode 1]]");
+			expect(result).toContain("- [ ] [[__Season_1-Avatar|Season 1]] ");
+			expect(result).toContain("\t- [x] [[__Episode_1-Season_1|Episode 1]] ");
 		});
 
 		it("should use [x] for Done status", () => {
@@ -71,7 +71,7 @@ describe("CodexFormatter", () => {
 				],
 			};
 
-			const result = formatter.format(content, "section");
+			const result = formatter.format(content);
 
 			expect(result).toContain("[x]");
 		});
@@ -89,7 +89,7 @@ describe("CodexFormatter", () => {
 				],
 			};
 
-			const result = formatter.format(content, "section");
+			const result = formatter.format(content);
 
 			expect(result).toContain("[ ]");
 		});
@@ -107,7 +107,7 @@ describe("CodexFormatter", () => {
 				],
 			};
 
-			const result = formatter.format(content, "section");
+			const result = formatter.format(content);
 
 			expect(result).toContain("[ ]");
 		});
@@ -136,11 +136,11 @@ describe("CodexFormatter", () => {
 				],
 			};
 
-			const result = formatter.format(content, "book");
+			const result = formatter.format(content);
 
-			expect(result).toContain("[[__Season_1-Avatar|← Season 1]]");
-			expect(result).toContain("- [x] [[000-Episode_1-Season_1-Avatar|Page 1]]");
-			expect(result).toContain("- [ ] [[001-Episode_1-Season_1-Avatar|Page 2]]");
+			expect(result).toContain("[[__Season_1-Avatar|← Season 1]] ");
+			expect(result).toContain("- [x] [[000-Episode_1-Season_1-Avatar|Page 1]] ");
+			expect(result).toContain("- [ ] [[001-Episode_1-Season_1-Avatar|Page 2]] ");
 			// Book pages are flat (no nesting)
 			expect(result).not.toContain("\t-");
 		});
@@ -174,12 +174,13 @@ describe("CodexFormatter", () => {
 				],
 			};
 
-			const result = formatter.format(content, "section");
+			const result = formatter.format(content);
 
 			const lines = result.split("\n");
-			expect(lines[0]).toBe("- [x] [[__Avatar|Avatar]]");
-			expect(lines[1]).toBe("\t- [x] [[__Season_1-Avatar|Season 1]]");
-			expect(lines[2]).toBe("\t\t- [x] [[__Episode_1-Season_1-Avatar|Episode 1]]");
+			expect(lines[0]).toBe("");
+			expect(lines[1]).toBe("- [x] [[__Avatar|Avatar]] ");
+			expect(lines[2]).toBe("\t- [x] [[__Season_1-Avatar|Season 1]] ");
+			expect(lines[3]).toBe("\t\t- [x] [[__Episode_1-Season_1-Avatar|Episode 1]] ");
 		});
 	});
 });
