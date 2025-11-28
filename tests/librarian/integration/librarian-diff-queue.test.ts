@@ -22,10 +22,10 @@ describe("Librarian withDiff integration", () => {
 		create: ReturnType<typeof mock>;
 	};
 	let mockOpenedFileService: {
-		prettyPwd: ReturnType<typeof mock>;
+		pwd: ReturnType<typeof mock>;
 		getLastOpenedFile: ReturnType<typeof mock>;
 		getApp: ReturnType<typeof mock>;
-		openFile: ReturnType<typeof mock>;
+		cd: ReturnType<typeof mock>;
 	};
 	let mockApp: {
 		vault: { on: ReturnType<typeof mock> };
@@ -45,10 +45,10 @@ describe("Librarian withDiff integration", () => {
 		};
 
 		mockOpenedFileService = {
+			cd: mock(() => Promise.resolve()),
 			getApp: mock(() => ({ vault: { getAbstractFileByPath: () => null } })),
 			getLastOpenedFile: mock(() => null),
-			openFile: mock(() => Promise.resolve()),
-			prettyPwd: mock(() =>
+			pwd: mock(() =>
 				Promise.resolve({ basename: "test", pathParts: ["Library"] }),
 			),
 		};

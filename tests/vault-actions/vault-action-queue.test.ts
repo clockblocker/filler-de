@@ -50,8 +50,8 @@ describe("VaultAction utilities", () => {
 
 			const sorted = sortActionsByWeight(actions);
 
-			expect(sorted[0].type).toBe(VaultActionType.UpdateOrCreateFolder);
-			expect(sorted[1].type).toBe(VaultActionType.UpdateOrCreateFile);
+			expect(sorted[0]?.type).toBe(VaultActionType.UpdateOrCreateFolder);
+			expect(sorted[1]?.type).toBe(VaultActionType.UpdateOrCreateFile);
 		});
 
 		it("should sort creates before trashes", () => {
@@ -62,8 +62,8 @@ describe("VaultAction utilities", () => {
 
 			const sorted = sortActionsByWeight(actions);
 
-			expect(sorted[0].type).toBe(VaultActionType.UpdateOrCreateFile);
-			expect(sorted[1].type).toBe(VaultActionType.TrashFile);
+			expect(sorted[0]?.type).toBe(VaultActionType.UpdateOrCreateFile);
+			expect(sorted[1]?.type).toBe(VaultActionType.TrashFile);
 		});
 
 		it("should sort all action types correctly", () => {
@@ -119,9 +119,9 @@ describe("VaultActionQueue", () => {
 			expect(queue.size).toBe(1);
 
 			const actions = queue.getQueuedActions();
-			expect(actions[0].type).toBe(VaultActionType.WriteFile);
-			if (actions[0].type === VaultActionType.WriteFile) {
-				expect(actions[0].payload.content).toBe("v2");
+			expect(actions[0]?.type).toBe(VaultActionType.WriteFile);
+			if (actions[0]?.type === VaultActionType.WriteFile) {
+				expect(actions[0]?.payload.content).toBe("v2");
 			}
 		});
 
@@ -171,7 +171,7 @@ describe("VaultActionQueue", () => {
 			await queue.flushNow();
 
 			expect(executedActions.length).toBe(1);
-			expect(executedActions[0].length).toBe(1);
+			expect(executedActions[0]?.length).toBe(1);
 			expect(queue.isEmpty).toBe(true);
 		});
 
@@ -187,7 +187,7 @@ describe("VaultActionQueue", () => {
 
 			await queue.flushNow();
 
-			expect(executedActions[0].map((a) => a.type)).toEqual([
+			expect(executedActions[0]?.map((a) => a.type)).toEqual([
 				VaultActionType.UpdateOrCreateFolder,
 				VaultActionType.UpdateOrCreateFile,
 				VaultActionType.WriteFile,
@@ -268,7 +268,7 @@ describe("VaultActionQueue", () => {
 
 			// Now flushed with both actions
 			expect(executedActions.length).toBe(1);
-			expect(executedActions[0].length).toBe(2);
+			expect(executedActions[0]?.length).toBe(2);
 		});
 	});
 });

@@ -3,7 +3,7 @@ import { TFile } from "obsidian";
 import { editOrAddMetaInfo } from "../../services/dto-services/meta-info-manager/interface";
 import type { FullPath } from "../../services/obsidian-services/atomic-services/pathfinder";
 import {
-	splitPathFromSystemPath,
+	fullPathFromSystemPath,
 	systemPathFromFullPath,
 } from "../../services/obsidian-services/atomic-services/pathfinder";
 import type { VaultAction } from "../../services/obsidian-services/file-services/background/background-vault-actions";
@@ -253,7 +253,7 @@ export class Librarian {
 	}
 
 	async сreateNewTextInTheCurrentFolderAndOpenIt() {
-		const pwd = await this.openedFileService.prettyPwd();
+		const pwd = await this.openedFileService.pwd();
 
 		if (Object.keys(this.trees).length === 0) {
 			await this.initTrees();
@@ -294,12 +294,12 @@ export class Librarian {
 
 		// Get file info from node
 		const libraryFileDto = getLibraryFileToFileFromNode(textNode);
-		const { splitPath, metaInfo } = libraryFileDto;
+		const { fullPath, metaInfo } = libraryFileDto;
 
 		// Add root name to pathParts
 		const fullFullPath: FullPath = {
-			...splitPath,
-			pathParts: [affectedTree.root.name, ...splitPath.pathParts],
+			...fullPath,
+			pathParts: [affectedTree.root.name, ...fullPath.pathParts],
 		};
 
 		// Create file with metainfo (direct call - queue handles the actual file ops)
@@ -315,7 +315,7 @@ export class Librarian {
 		const file = app.vault.getAbstractFileByPath(systemPath);
 
 		if (file instanceof TFile) {
-			await this.openedFileService.openFile(file);
+			await this.openedFileService.cd(file);
 		}
 	}
 
@@ -335,8 +335,8 @@ export class Librarian {
 			return false;
 		}
 
-		const splitPath = splitPathFromSystemPath(currentFile.path);
-		const rootName = splitPath.pathParts[0];
+		const fullPath = fullPathFromSystemPath(currentFile.path);
+		const rootName = fullPath.pathParts[0];
 
 		// Check if file is in a librarian-maintained folder
 		if (!rootName || !isRootName(rootName)) {
@@ -347,7 +347,7 @@ export class Librarian {
 			return false;
 		}
 
-		const affectedTree = this.getAffectedTree(splitPath);
+		const affectedTree = this.getAffectedTree(fullPath);
 		if (!affectedTree) {
 			logWarning({
 				description: "Could not find tree for this folder.",
@@ -358,8 +358,8 @@ export class Librarian {
 
 		// Read file content
 		const content = await this.backgroundFileService.readContent({
-			basename: splitPath.basename,
-			pathParts: splitPath.pathParts,
+			basename: fullPath.basename,
+			pathParts: fullPath.pathParts,
 		});
 
 		if (!content.trim()) {
@@ -372,11 +372,11 @@ export class Librarian {
 
 		// Derive tree path from file location
 		// E.g., Library/Section/MyNote.md → ["Section", "MyNote"]
-		const textName = toGuardedNodeName(splitPath.basename);
+		const textName = toGuardedNodeName(fullPath.basename);
 
 		// Split content into pages with formatted sentences
 		const { pages, isBook } = splitTextIntoP_ages(content, textName);
-		const sectionPath = splitPath.pathParts.slice(1); // Remove root
+		const sectionPath = fullPath.pathParts.slice(1); // Remove root
 		const textPath: TreePath = [...sectionPath, textName];
 
 		// Build pageStatuses
@@ -432,8 +432,8 @@ export class Librarian {
 
 		// Trash original file (it's now replaced by the managed text)
 		await this.backgroundFileService.trash({
-			basename: splitPath.basename,
-			pathParts: splitPath.pathParts,
+			basename: fullPath.basename,
+			pathParts: fullPath.pathParts,
 		});
 
 		return true;
@@ -443,8 +443,8 @@ export class Librarian {
 	 * Check if file is in a librarian-maintained folder.
 	 */
 	isInLibraryFolder(file: TFile): boolean {
-		const splitPath = splitPathFromSystemPath(file.path);
-		const rootName = splitPath.pathParts[0];
+		const fullPath = fullPathFromSystemPath(file.path);
+		const rootName = fullPath.pathParts[0];
 		return !!rootName && isRootName(rootName);
 	}
 
@@ -577,10 +577,10 @@ export class Librarian {
 	private getAffectedTree(path: FullPath): LibraryTree | null;
 	private getAffectedTree(path: string): LibraryTree | null;
 	private getAffectedTree(path: FullPath | string): LibraryTree | null {
-		const splitPath =
-			typeof path === "string" ? splitPathFromSystemPath(path) : path;
+		const fullPath =
+			typeof path === "string" ? fullPathFromSystemPath(path) : path;
 
-		const rootName = splitPath.pathParts[0] ?? "";
+		const rootName = fullPath.pathParts[0] ?? "";
 
 		return this.trees[rootName] ?? null;
 	}
@@ -590,8 +590,8 @@ function isRootName(name: string): name is RootName {
 	return ROOTS.includes(name as RootName);
 }
 
-function treePathFromFullPath(splitPath: FullPath): TreePath {
-	return [...splitPath.pathParts.slice(1), splitPath.basename];
+function treePathFromFullPath(fullPath: FullPath): TreePath {
+	return [...fullPath.pathParts.slice(1), fullPath.basename];
 }
 
 /**

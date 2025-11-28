@@ -24,7 +24,7 @@ export function getLibraryFileToFileFromNode(node: TreeNode): LibraryFileDto {
 		status: node.status,
 	};
 
-	const splitPath: FullPathToFile = {
+	const fullPath: FullPathToFile = {
 		basename: UNKNOWN,
 		extension: "md",
 		pathParts: treePath.slice(0, -1),
@@ -37,14 +37,13 @@ export function getLibraryFileToFileFromNode(node: TreeNode): LibraryFileDto {
 				metaInfo = { fileType: "Scroll", status: node.status };
 				// scrollNameFromTreePath requires min 2 elements, so use node name directly for single-element paths
 				if (treePath.length < 2) {
-					splitPath.basename = node.name;
+					fullPath.basename = node.name;
 				} else {
-					splitPath.basename =
-						scrollNameFromTreePath.encode(treePath);
+					fullPath.basename = scrollNameFromTreePath.encode(treePath);
 				}
 				break;
 			}
-			splitPath.basename = pageNameFromTreePath.encode(treePath);
+			fullPath.basename = pageNameFromTreePath.encode(treePath);
 			const pageName = treePath[treePath.length - 1];
 
 			if (!pageName) {
@@ -68,39 +67,38 @@ export function getLibraryFileToFileFromNode(node: TreeNode): LibraryFileDto {
 				metaInfo = { fileType: "Scroll", status: node.status };
 				// scrollNameFromTreePath requires min 2 elements, so use node name directly for single-element paths
 				if (treePath.length < 2) {
-					splitPath.basename = node.name;
+					fullPath.basename = node.name;
 				} else {
-					splitPath.basename =
-						scrollNameFromTreePath.encode(treePath);
+					fullPath.basename = scrollNameFromTreePath.encode(treePath);
 				}
 				break;
 			}
 			// Codex goes inside the book folder
-			splitPath.pathParts = [...treePath];
-			splitPath.basename = codexNameFromTreePath.encode(treePath);
+			fullPath.pathParts = [...treePath];
+			fullPath.basename = codexNameFromTreePath.encode(treePath);
 			metaInfo = { fileType: "Codex", status: node.status };
 
 			break;
 		}
 		case NodeType.Section: {
 			// Codex goes inside the section folder
-			splitPath.pathParts = [...treePath];
-			splitPath.basename = codexNameFromTreePath.encode(treePath);
+			fullPath.pathParts = [...treePath];
+			fullPath.basename = codexNameFromTreePath.encode(treePath);
 			metaInfo = { fileType: "Codex", status: node.status };
 		}
 	}
 
 	return {
+		fullPath,
 		metaInfo,
-		splitPath,
 	};
 }
 
 export function getTreePathFromLibraryFile(
 	libraryFile: LibraryFileDto,
 ): TreePath {
-	const { metaInfo, splitPath } = libraryFile;
-	const { basename } = splitPath;
+	const { metaInfo, fullPath } = libraryFile;
+	const { basename } = fullPath;
 
 	switch (metaInfo.fileType) {
 		case "Scroll": {
@@ -127,7 +125,7 @@ export function getTreePathFromLibraryFile(
 		}
 		case "Unknown": {
 			return [
-				...splitPath.pathParts,
+				...fullPath.pathParts,
 				basename.replace(/\.md$/, ""),
 			] as TreePath;
 		}
@@ -200,37 +198,37 @@ export async function prettyFileWithReaderToLibraryFileDto(
 	// Handle Page files
 	if (metaInfo.fileType === "Page" && "index" in metaInfo) {
 		return {
-			metaInfo,
-			splitPath: {
+			fullPath: {
 				basename: fileReader.basename,
 				extension: "md",
 				pathParts: fileReader.pathParts,
 				type: "file",
 			},
+			metaInfo,
 		};
 	}
 	// Handle Scroll files
 	if (metaInfo.fileType === "Scroll") {
 		return {
-			metaInfo,
-			splitPath: {
+			fullPath: {
 				basename: fileReader.basename,
 				extension: "md",
 				pathParts: fileReader.pathParts,
 				type: "file",
 			},
+			metaInfo,
 		};
 	}
 	// Handle Codex files
 	if (metaInfo.fileType === "Codex") {
 		return {
-			metaInfo,
-			splitPath: {
+			fullPath: {
 				basename: fileReader.basename,
 				extension: "md",
 				pathParts: fileReader.pathParts,
 				type: "file",
 			},
+			metaInfo,
 		};
 	}
 

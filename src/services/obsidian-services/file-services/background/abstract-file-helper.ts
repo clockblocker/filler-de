@@ -53,12 +53,12 @@ export class AbstractFileHelper {
 
 	// ─── Folder Operations ───────────────────────────────────────────
 
-	async createFolder(splitPath: FullPathToFolder): Promise<TFolder> {
-		return this.tfolderHelper.createFolder(splitPath);
+	async createFolder(fullPath: FullPathToFolder): Promise<TFolder> {
+		return this.tfolderHelper.createFolder(fullPath);
 	}
 
-	async trashFolder(splitPath: FullPathToFolder): Promise<void> {
-		return this.tfolderHelper.trashFolder(splitPath);
+	async trashFolder(fullPath: FullPathToFolder): Promise<void> {
+		return this.tfolderHelper.trashFolder(fullPath);
 	}
 
 	async renameFolder(
@@ -70,16 +70,14 @@ export class AbstractFileHelper {
 
 	// ─── Read Operations ─────────────────────────────────────────────
 
-	async getMdFile(splitPath: FullPathToFile): Promise<TFile> {
-		return unwrapMaybeByThrowing(
-			await this.getMaybeAbstractFile(splitPath),
-		);
+	async getMdFile(fullPath: FullPathToFile): Promise<TFile> {
+		return unwrapMaybeByThrowing(await this.getMaybeAbstractFile(fullPath));
 	}
 
 	async getMaybeAbstractFile<T extends FullPath>(
-		splitPath: T,
+		fullPath: T,
 	): Promise<Maybe<AbstractFile<T>>> {
-		const systemPath = systemPathFromFullPath(splitPath);
+		const systemPath = systemPathFromFullPath(fullPath);
 		const mbTabstractFile = this.vault.getAbstractFileByPath(systemPath);
 
 		if (!mbTabstractFile) {
@@ -89,7 +87,7 @@ export class AbstractFileHelper {
 			};
 		}
 
-		switch (splitPath.type) {
+		switch (fullPath.type) {
 			case "file":
 				if (mbTabstractFile instanceof TFile) {
 					return {

@@ -8,7 +8,7 @@ export default async function newGenCommand(
 ) {
 	try {
 		const file = unwrapMaybeByThrowing(
-			await services.openedFileService.getMaybeOpenedFile(),
+			await services.openedFileService.getMaybeOpenedTFile(),
 		);
 
 		const word = file.name;
@@ -46,7 +46,7 @@ export default async function newGenCommand(
 		const blocks = [buttonsBlock];
 
 		const fileContent = unwrapMaybeByThrowing(
-			await services.openedFileService.getMaybeFileContent(),
+			await services.openedFileService.getMaybeContent(),
 		);
 
 		// const exisingBlocks = services.blockManager.extractAllBlocks(fileContent);

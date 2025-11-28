@@ -145,15 +145,15 @@ describe('naming functions', () => {
 
 		it('should handle Unknown fileType correctly', () => {
 			const libraryFile = {
-				metaInfo: {
-					fileType: 'Unknown' as const,
-					status: TextStatus.NotStarted,
-				},
-				splitPath: {
+				fullPath: {
 					basename: 'some-file',
 					extension: 'md',
 					pathParts: ['Folder1', 'Folder2'],
 					type: 'file' as const,
+				},
+				metaInfo: {
+					fileType: 'Unknown' as const,
+					status: TextStatus.NotStarted,
 				},
 			};
 

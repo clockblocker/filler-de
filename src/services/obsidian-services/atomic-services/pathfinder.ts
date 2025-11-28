@@ -3,7 +3,7 @@ import type { PrettyPath } from "../../../types/common-interface/dtos";
 import type { Prettify } from "../../../types/helpers";
 import { SLASH } from "../../../types/literals";
 
-export function splitPathToMdFileFromPrettyPath(
+export function fullPathToMdFileFromPrettyPath(
 	prettyPath: PrettyPath,
 ): FullPathToFile {
 	return {
@@ -13,7 +13,7 @@ export function splitPathToMdFileFromPrettyPath(
 	};
 }
 
-export function splitPathToFolderFromPrettyPath(
+export function fullPathToFolderFromPrettyPath(
 	prettyPath: PrettyPath,
 ): FullPathToFolder {
 	return {
@@ -22,19 +22,19 @@ export function splitPathToFolderFromPrettyPath(
 	};
 }
 
-export function splitPathFromAbstractFile(file: TFile): FullPathToFile;
-export function splitPathFromAbstractFile(folder: TFolder): FullPathToFolder;
-export function splitPathFromAbstractFile<T extends FullPath>(
+export function getFullPathForAbstractFile(file: TFile): FullPathToFile;
+export function getFullPathForAbstractFile(folder: TFolder): FullPathToFolder;
+export function getFullPathForAbstractFile<T extends FullPath>(
 	abstractFile: AbstractFile<T>,
 ): T {
 	const path = abstractFile.path;
-	const splitPath = path.split(SLASH).filter(Boolean);
-	const title = splitPath.pop() ?? "";
+	const fullPath = path.split(SLASH).filter(Boolean);
+	const title = fullPath.pop() ?? "";
 
 	if (abstractFile instanceof TFolder) {
 		return {
 			basename: title,
-			pathParts: splitPath,
+			pathParts: fullPath,
 			type: "folder",
 		} as T;
 	}
@@ -42,22 +42,21 @@ export function splitPathFromAbstractFile<T extends FullPath>(
 	return {
 		basename: abstractFile.basename,
 		extension: abstractFile.extension,
-		pathParts: splitPath,
+		pathParts: fullPath,
 		type: "file",
 	} as T;
 }
 
-export function systemPathFromFullPath(splitPath: FullPath): string {
-	const { pathParts, basename: title } = splitPath;
-	const extension =
-		splitPath.type === "file" ? `.${splitPath.extension}` : "";
+export function systemPathFromFullPath(fullPath: FullPath): string {
+	const { pathParts, basename: title } = fullPath;
+	const extension = fullPath.type === "file" ? `.${fullPath.extension}` : "";
 	return joinPosix(
 		pathToFolderFromPathParts(pathParts),
 		safeFileName(title) + extension,
 	);
 }
 
-export function splitPathFromSystemPath(systemPath: string): FullPath {
+export function fullPathFromSystemPath(systemPath: string): FullPath {
 	// Remove leading/trailing slashes and normalize
 	const normalized = systemPath.replace(/^[\\/]+|[\\/]+$/g, "");
 	if (!normalized) {
@@ -128,7 +127,7 @@ export type AbstractFile<T extends FullPath> = T extends { type: "file" }
 	: TFolder;
 
 export type FileWithContent = {
-	splitPath: FullPathToFile;
+	fullPath: FullPathToFile;
 	content?: string;
 };
 

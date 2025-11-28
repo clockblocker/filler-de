@@ -16,12 +16,12 @@ export default async function wrapSentencesInQuoteAnchor({
 }) {
 	try {
 		const selection = await selectionService.getSelection();
-		const fileContent = await openedFileService.getFileContent();
+		const fileContent = await openedFileService.getContent();
 
 		const highestBlockNumber = findHighestBlockNumber(fileContent);
 
 		const nameOfTheOpenendFile = unwrapMaybeByThrowing(
-			await openedFileService.getMaybeOpenedFile(),
+			await openedFileService.getMaybeOpenedTFile(),
 		).name;
 
 		await selectionService.replaceSelection(

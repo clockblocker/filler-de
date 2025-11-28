@@ -3,9 +3,9 @@ import type { PrettyPath } from "../../../../types/common-interface/dtos";
 import { isReadonlyArray, type Prettify } from "../../../../types/helpers";
 import type { FullPathToFolder } from "../../atomic-services/pathfinder";
 import {
-	splitPathFromAbstractFile,
-	splitPathToFolderFromPrettyPath,
-	splitPathToMdFileFromPrettyPath,
+	fullPathToFolderFromPrettyPath,
+	fullPathToMdFileFromPrettyPath,
+	getFullPathForAbstractFile,
 } from "../../atomic-services/pathfinder";
 import { AbstractFileHelper } from "./abstract-file-helper";
 
@@ -36,14 +36,14 @@ export class BackgroundFileService {
 
 	async readContent(prettyPath: PrettyPath) {
 		const file = await this.abstractFileService.getMdFile(
-			splitPathToMdFileFromPrettyPath(prettyPath),
+			fullPathToMdFileFromPrettyPath(prettyPath),
 		);
 		return await this.vault.read(file);
 	}
 
 	async replaceContent(prettyPath: PrettyPath, content = "") {
 		const file = await this.abstractFileService.getMdFile(
-			splitPathToMdFileFromPrettyPath(prettyPath),
+			fullPathToMdFileFromPrettyPath(prettyPath),
 		);
 		await this.vault.modify(file, content);
 		return content;
@@ -54,15 +54,13 @@ export class BackgroundFileService {
 	 * Useful for codex files that may or may not exist.
 	 */
 	async createOrUpdate(prettyPath: PrettyPath, content = ""): Promise<void> {
-		const splitPath = splitPathToMdFileFromPrettyPath(prettyPath);
+		const fullPath = fullPathToMdFileFromPrettyPath(prettyPath);
 		const maybeFile =
-			await this.abstractFileService.getMaybeAbstractFile(splitPath);
+			await this.abstractFileService.getMaybeAbstractFile(fullPath);
 
 		if (maybeFile.error) {
 			// File doesn't exist - create it
-			await this.abstractFileService.createFiles([
-				{ content, splitPath },
-			]);
+			await this.abstractFileService.createFiles([{ content, fullPath }]);
 		} else {
 			// File exists - update content
 			await this.vault.modify(maybeFile.data, content);
@@ -77,7 +75,7 @@ export class BackgroundFileService {
 			return await this.abstractFileService.createFiles(
 				arg.map((file) => ({
 					...file,
-					splitPath: splitPathToMdFileFromPrettyPath(file),
+					fullPath: fullPathToMdFileFromPrettyPath(file),
 				})),
 			);
 		}
@@ -85,7 +83,7 @@ export class BackgroundFileService {
 		return await this.abstractFileService.createFiles([
 			{
 				content: arg.content,
-				splitPath: splitPathToMdFileFromPrettyPath(arg),
+				fullPath: fullPathToMdFileFromPrettyPath(arg),
 			},
 		]);
 	}
@@ -99,8 +97,8 @@ export class BackgroundFileService {
 		if (isReadonlyArray(arg)) {
 			return await this.abstractFileService.moveFiles(
 				arg.map(({ from, to }) => ({
-					from: splitPathToMdFileFromPrettyPath(from),
-					to: splitPathToMdFileFromPrettyPath(to),
+					from: fullPathToMdFileFromPrettyPath(from),
+					to: fullPathToMdFileFromPrettyPath(to),
 				})),
 			);
 		}
@@ -108,8 +106,8 @@ export class BackgroundFileService {
 		const { from, to } = arg;
 		return await this.abstractFileService.moveFiles([
 			{
-				from: splitPathToMdFileFromPrettyPath(from),
-				to: splitPathToMdFileFromPrettyPath(to),
+				from: fullPathToMdFileFromPrettyPath(from),
+				to: fullPathToMdFileFromPrettyPath(to),
 			},
 		]);
 	}
@@ -119,12 +117,12 @@ export class BackgroundFileService {
 	async trash(arg: PrettyPath | readonly PrettyPath[]): Promise<void> {
 		if (isReadonlyArray(arg)) {
 			return await this.abstractFileService.trashFiles(
-				arg.map((file) => splitPathToMdFileFromPrettyPath(file)),
+				arg.map((file) => fullPathToMdFileFromPrettyPath(file)),
 			);
 		}
 
 		return await this.abstractFileService.trashFiles([
-			splitPathToMdFileFromPrettyPath(arg),
+			fullPathToMdFileFromPrettyPath(arg),
 		]);
 	}
 
@@ -144,20 +142,20 @@ export class BackgroundFileService {
 
 	async createFolder(prettyPath: PrettyPath): Promise<TFolder> {
 		return this.abstractFileService.createFolder(
-			splitPathToFolderFromPrettyPath(prettyPath),
+			fullPathToFolderFromPrettyPath(prettyPath),
 		);
 	}
 
 	async trashFolder(prettyPath: PrettyPath): Promise<void> {
 		return this.abstractFileService.trashFolder(
-			splitPathToFolderFromPrettyPath(prettyPath),
+			fullPathToFolderFromPrettyPath(prettyPath),
 		);
 	}
 
 	async renameFolder(from: PrettyPath, to: PrettyPath): Promise<void> {
 		return this.abstractFileService.renameFolder(
-			splitPathToFolderFromPrettyPath(from),
-			splitPathToFolderFromPrettyPath(to),
+			fullPathToFolderFromPrettyPath(from),
+			fullPathToFolderFromPrettyPath(to),
 		);
 	}
 
@@ -169,7 +167,7 @@ export class BackgroundFileService {
 		const tFiles = await this.lsTfiles(pathToFoulder);
 
 		return tFiles.map((tfile) => ({
-			...splitPathFromAbstractFile(tfile),
+			...getFullPathForAbstractFile(tfile),
 			readContent: async () => await this.vault.read(tfile),
 		}));
 	}

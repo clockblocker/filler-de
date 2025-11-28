@@ -8,7 +8,7 @@ export default async function updateActionsBlock(
 ) {
 	try {
 		// const file = unwrapMaybe(
-		// 	await plugin.openedFileService.getMaybeOpenedFile()
+		// 	await plugin.openedFileService.getMaybeOpenedTFile()
 		// );
 
 		const prefixBlock = "\n";
@@ -23,7 +23,7 @@ export default async function updateActionsBlock(
 		const blocks = [prefixBlock, buttonsBlock, postfixBlock];
 
 		const fileContent = unwrapMaybeByThrowing(
-			await plugin.openedFileService.getMaybeFileContent(),
+			await plugin.openedFileService.getMaybeContent(),
 		);
 
 		if (fileContent.trim() === "") {

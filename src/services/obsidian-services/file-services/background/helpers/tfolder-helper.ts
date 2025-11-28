@@ -21,13 +21,13 @@ export class TFolderHelper {
 		this.fileManager = fileManager;
 	}
 
-	async getFolder(splitPath: FullPathToFolder): Promise<TFolder> {
-		const mbFolder = await this.getMaybeFolder(splitPath);
+	async getFolder(fullPath: FullPathToFolder): Promise<TFolder> {
+		const mbFolder = await this.getMaybeFolder(fullPath);
 		return unwrapMaybeByThrowing(mbFolder);
 	}
 
-	async getMaybeFolder(splitPath: FullPathToFolder): Promise<Maybe<TFolder>> {
-		const systemPath = systemPathFromFullPath(splitPath);
+	async getMaybeFolder(fullPath: FullPathToFolder): Promise<Maybe<TFolder>> {
+		const systemPath = systemPathFromFullPath(fullPath);
 		const tAbstractFile = this.vault.getAbstractFileByPath(systemPath);
 		if (!tAbstractFile) {
 			return {
@@ -44,7 +44,7 @@ export class TFolderHelper {
 		}
 
 		return {
-			description: `Expected folder type missmatched the found type: ${splitPath}`,
+			description: `Expected folder type missmatched the found type: ${fullPath}`,
 			error: true,
 		};
 	}
@@ -53,18 +53,18 @@ export class TFolderHelper {
 	 * Create a single folder.
 	 * Assumes parent folder exists.
 	 */
-	async createFolder(splitPath: FullPathToFolder): Promise<TFolder> {
-		const mbFolder = await this.getMaybeFolder(splitPath);
+	async createFolder(fullPath: FullPathToFolder): Promise<TFolder> {
+		const mbFolder = await this.getMaybeFolder(fullPath);
 		if (!mbFolder.error) {
 			return mbFolder.data; // Already exists
 		}
 
-		const systemPath = systemPathFromFullPath(splitPath);
+		const systemPath = systemPathFromFullPath(fullPath);
 		try {
 			return await this.vault.createFolder(systemPath);
 		} catch (error) {
 			if (error.message?.includes("already exists")) {
-				return this.getFolder(splitPath);
+				return this.getFolder(fullPath);
 			}
 			throw error;
 		}
@@ -73,8 +73,8 @@ export class TFolderHelper {
 	/**
 	 * Trash a single folder
 	 */
-	async trashFolder(splitPath: FullPathToFolder): Promise<void> {
-		const mbFolder = await this.getMaybeFolder(splitPath);
+	async trashFolder(fullPath: FullPathToFolder): Promise<void> {
+		const mbFolder = await this.getMaybeFolder(fullPath);
 		if (mbFolder.error) {
 			return; // Already gone
 		}

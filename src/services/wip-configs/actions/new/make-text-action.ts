@@ -16,7 +16,7 @@ export async function makeTextAction(
 		return;
 	}
 
-	const maybeFile = await openedFileService.getMaybeOpenedFile();
+	const maybeFile = await openedFileService.getMaybeOpenedTFile();
 	const currentFile = unwrapMaybeByThrowing(maybeFile);
 
 	// const textsManagerService = new VaultCurrator(openedFileService.getApp());
@@ -27,7 +27,7 @@ export async function makeTextAction(
 	// }
 
 	try {
-		const maybeContent = await openedFileService.getMaybeFileContent();
+		const maybeContent = await openedFileService.getMaybeContent();
 		const content = unwrapMaybeByThrowing(maybeContent);
 
 		// const textStructure = await textsManagerService.createTextFromCurrentFile(

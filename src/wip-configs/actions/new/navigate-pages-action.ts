@@ -16,7 +16,7 @@ export async function navigatePageAction(
 		return;
 	}
 
-	const maybeFile = await openedFileService.getMaybeOpenedFile();
+	const maybeFile = await openedFileService.getMaybeOpenedTFile();
 	const currentFile = unwrapMaybeByThrowing(maybeFile);
 
 	// const textsManagerService = new VaultCurrator(openedFileService.getApp());
@@ -31,7 +31,7 @@ export async function navigatePageAction(
 		}
 
 		if (targetPage) {
-			await openedFileService.openFile(targetPage);
+			await openedFileService.cd(targetPage);
 		} else {
 			logWarning({
 				description: `No ${direction} page found`,

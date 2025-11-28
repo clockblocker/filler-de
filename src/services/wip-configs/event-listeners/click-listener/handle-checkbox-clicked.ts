@@ -112,16 +112,19 @@ function parseCodexLinkTarget(href: string): {
 		};
 	}
 
-	// Check if it's a page filename (new format: "000-Page-TextName-Parent")
+	// Check if it's a page filename (format: "000-TextName-Parent")
+	// After refactor: pages stored in parent/000-TextName-Parent.md (no Page subfolder)
 	// Use the decoder to properly parse it
 	try {
 		const decodedPath = pageNameFromTreePath.decode(cleanHref);
+		// decodedPath format: [...textPath, pageNumber]
+		// e.g., "002-Mann_gegen_mann-Rammstein-Songs" → ["Songs", "Rammstein", "Mann_gegen_mann", "002"]
 		return {
 			rootName: "Library",
 			treePath: decodedPath,
 		};
 	} catch {
-		// Not a page filename in the new format, continue to other formats
+		// Not a page filename in the expected format, continue to other formats
 	}
 
 	// Codex filename format: "Text-Section" or just "Text"

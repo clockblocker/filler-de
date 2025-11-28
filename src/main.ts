@@ -9,6 +9,7 @@ import { AboveSelectionToolbarService } from "./services/obsidian-services/atomi
 import { ApiService } from "./services/obsidian-services/atomic-services/api-service";
 import { BottomToolbarService } from "./services/obsidian-services/atomic-services/bottom-toolbar-service";
 import { SelectionService } from "./services/obsidian-services/atomic-services/selection-service";
+import { OpenedFileReader } from "./services/obsidian-services/file-services/active-view/opened-file-reader";
 import { OpenedFileService } from "./services/obsidian-services/file-services/active-view/opened-file-service";
 import { BackgroundFileService } from "./services/obsidian-services/file-services/background/background-file-service";
 import { VaultActionExecutor } from "./services/obsidian-services/file-services/background/vault-action-executor";
@@ -26,6 +27,7 @@ import { DEFAULT_SETTINGS, type TextEaterSettings } from "./types";
 export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;
 	apiService: ApiService;
+	openedFileReader: OpenedFileReader;
 	openedFileService: OpenedFileService;
 	backgroundFileService: BackgroundFileService;
 	selectionService: SelectionService;
@@ -123,13 +125,12 @@ export default class TextEaterPlugin extends Plugin {
 		await this.loadSettings();
 		await this.addCommands();
 
-		const initiallyOpenedFile = this.app.workspace.getActiveFile();
-
 		this.apiService = new ApiService(this.settings);
+		this.openedFileReader = new OpenedFileReader(this.app);
 
 		this.openedFileService = new OpenedFileService(
 			this.app,
-			initiallyOpenedFile,
+			this.openedFileReader,
 		);
 
 		this.backgroundFileService = new BackgroundFileService({
@@ -421,7 +422,7 @@ export default class TextEaterPlugin extends Plugin {
 		// const { fileName, pathParts } =
 		// 	this.openedFileService.getFileNameAndPathParts();
 		// const metaInfo = extractMetaInfo(
-		// 	await this.openedFileService.getFileContent(),
+		// 	await this.openedFileService.getContent(),
 		// );
 		// this.bottomToolbarService.setActions(
 		// 	getBottomActionConfigs({
@@ -437,7 +438,7 @@ export default class TextEaterPlugin extends Plugin {
 		// 	this.openedFileService.getFileNameAndPathParts();
 		// const sectionText = await this.selectionService.getSelection();
 		// const metaInfo = extractMetaInfo(
-		// 	await this.openedFileService.getFileContent(),
+		// 	await this.openedFileService.getContent(),
 		// );
 		// this.selectionToolbarService.setActions(
 		// 	getAboveSelectionActionConfigs({

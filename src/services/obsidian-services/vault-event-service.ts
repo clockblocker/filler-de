@@ -1,6 +1,6 @@
 import type { App, TAbstractFile } from "obsidian";
 import type { Librarian } from "../../commanders/librarian/librarian";
-import { splitPathFromSystemPath } from "./atomic-services/pathfinder";
+import { fullPathFromSystemPath } from "./atomic-services/pathfinder";
 
 /**
  * Listens to vault events and delegates to appropriate handlers.
@@ -82,8 +82,8 @@ export class VaultEventService {
 	}
 
 	private isInLibraryFolder(path: string): boolean {
-		const splitPath = splitPathFromSystemPath(path);
-		const rootName = splitPath.pathParts[0];
+		const fullPath = fullPathFromSystemPath(path);
+		const rootName = fullPath.pathParts[0];
 		// TODO: Use shared ROOTS constant
 		return rootName === "Library";
 	}

@@ -16,7 +16,7 @@ import {
 export class VaultActionExecutor {
 	constructor(
 		private fileService: BackgroundFileService,
-		private openedFileService: OpenedFileService | null = null,
+		private openedFileService: OpenedFileService,
 	) {}
 
 	/**
@@ -39,6 +39,13 @@ export class VaultActionExecutor {
 	private async executeOne(action: VaultAction): Promise<void> {
 		const { type, payload } = action;
 
+		// biome-ignore lint/suspicious/noExplicitAny: action payload is dynamic
+		const prettyPath = (payload as Record<string, any>)?.prettyPath ?? null;
+
+		const isActive = prettyPath
+			? await this.openedFileService.isFileActive(prettyPath)
+			: false;
+
 		switch (type) {
 			case VaultActionType.UpdateOrCreateFolder:
 				await this.fileService.createFolder(payload.prettyPath);
@@ -53,11 +60,11 @@ export class VaultActionExecutor {
 				break;
 
 			case VaultActionType.UpdateOrCreateFile:
-				// Check if file exists and is active - if so, use editor
-				if (this.isFileActive(payload.prettyPath)) {
-					await this.writeToActiveFile(payload.content ?? "");
+				if (isActive) {
+					await this.openedFileService.replaceAllContentInOpenedFile(
+						payload.content ?? "",
+					);
 				} else {
-					// Use createOrUpdate to handle both new files and updates (e.g., codex files)
 					await this.fileService.createOrUpdate(
 						payload.prettyPath,
 						payload.content,
@@ -80,9 +87,11 @@ export class VaultActionExecutor {
 				await this.processFile(payload.prettyPath, payload.transform);
 				break;
 
-			case VaultActionType.WriteFile:
-				if (this.isFileActive(payload.prettyPath)) {
-					await this.writeToActiveFile(payload.content);
+			case VaultActionType.WriteFile: {
+				if (isActive) {
+					await this.openedFileService.replaceAllContentInOpenedFile(
+						payload.content,
+					);
 				} else {
 					await this.fileService.replaceContent(
 						payload.prettyPath,
@@ -90,6 +99,7 @@ export class VaultActionExecutor {
 					);
 				}
 				break;
+			}
 
 			case VaultActionType.ReadFile:
 				// ReadFile is a no-op in executor (result not captured)
@@ -110,72 +120,19 @@ export class VaultActionExecutor {
 		prettyPath: PrettyPath,
 		transform: (content: string) => string | Promise<string>,
 	): Promise<void> {
-		if (this.isFileActive(prettyPath)) {
-			const currentContent = await this.readFromActiveFile();
+		const isActive = await this.openedFileService.isFileActive(prettyPath);
+
+		if (isActive) {
+			const currentContent = await this.openedFileService.getContent();
 			const newContent = await transform(currentContent);
-			await this.writeToActiveFile(newContent);
+			await this.openedFileService.replaceAllContentInOpenedFile(
+				newContent,
+			);
 		} else {
 			const currentContent =
 				await this.fileService.readContent(prettyPath);
 			const newContent = await transform(currentContent);
 			await this.fileService.replaceContent(prettyPath, newContent);
-		}
-	}
-
-	private isFileActive(prettyPath: PrettyPath): boolean {
-		if (!this.openedFileService) {
-			return false;
-		}
-		const filePath = this.prettyPathToFilePath(prettyPath);
-		const isActive = this.openedFileService.isFileActive(filePath);
-
-		// Double-check: verify the active file path matches exactly
-		if (isActive) {
-			const activeFile = this.openedFileService
-				.getApp()
-				.workspace.getActiveFile();
-			if (activeFile?.path !== filePath) {
-				// Path mismatch - file might have changed
-				return false;
-			}
-		}
-
-		return isActive;
-	}
-
-	private prettyPathToFilePath(prettyPath: PrettyPath): string {
-		// PrettyPath basename doesn't include extension, but Obsidian file paths do
-		const path = [
-			...prettyPath.pathParts,
-			`${prettyPath.basename}.md`,
-		].join("/");
-		// Normalize path (remove leading slash if present, handle empty pathParts)
-		return path.startsWith("/") ? path.slice(1) : path;
-	}
-
-	private async readFromActiveFile(): Promise<string> {
-		if (!this.openedFileService) {
-			throw new Error("OpenedFileService not available");
-		}
-		const maybeContent = await this.openedFileService.getMaybeFileContent();
-		if (maybeContent.error) {
-			throw new Error(
-				`Failed to read from active file: ${maybeContent.description ?? "Unknown error"}`,
-			);
-		}
-		return maybeContent.data;
-	}
-
-	private async writeToActiveFile(content: string): Promise<void> {
-		if (!this.openedFileService) {
-			throw new Error("OpenedFileService not available");
-		}
-		const maybeResult =
-			await this.openedFileService.replaceAllContentInOpenedFile(content);
-		if (maybeResult.error) {
-			throw new Error(
-				`Failed to write to active file: ${maybeResult.description ?? "Unknown error"}`,
-			);
 		}
 	}
 }
