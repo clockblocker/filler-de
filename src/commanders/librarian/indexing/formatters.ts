@@ -79,26 +79,18 @@ export const codexNameFromTreePath = z.codec(
 export const GuardedPageNameSchema = z.templateLiteral([
 	pageNumberReprSchema,
 	DASH,
-	PAGE,
-	DASH,
 	z.string().min(1),
 ]);
 
 export const pageNameFromTreePath = z.codec(
 	GuardedPageNameSchema,
-	z.array(GuardedNodeNameSchema).min(3),
+	z.array(GuardedNodeNameSchema).min(2),
 	{
 		decode: (name) => {
-			const [num, page, ...path] = name.split(DASH);
+			const [num, ...path] = name.split(DASH);
 			// intInPageRangeFromString returns a number in expected range, type safe
 			if (!num) {
 				throw new Error("[pageNameFromTreePath] num is undefined");
-			}
-			if (!page) {
-				throw new Error("[pageNameFromTreePath] page is undefined");
-			}
-			if (page !== PAGE) {
-				throw new Error("[pageNameFromTreePath] page is not PAGE");
 			}
 			const decodedNum = intInPageRangeFromString.decode(Number(num));
 			// Return path without "Page" literal: [...textPath, pageNumber]
@@ -114,7 +106,7 @@ export const pageNameFromTreePath = z.codec(
 			const paddedNumRepr = paddedNumberReprFromIntInPageRange.encode(
 				intInPageRangeFromString.encode(String(mbNum)),
 			);
-			return `${paddedNumRepr}${DASH}${PAGE}${DASH}${pathCopy.toReversed().join(DASH)}` as const;
+			return `${paddedNumRepr}${DASH}${pathCopy.toReversed().join(DASH)}` as const;
 		},
 	},
 );

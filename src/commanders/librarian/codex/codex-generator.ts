@@ -124,7 +124,7 @@ export class CodexGenerator {
 			children: [],
 			displayName: page.name.replace(/_/g, " "),
 			status: page.status,
-			target: this.pageTarget(textPath, page.name),
+			target: this.pageTarget(textPath, parentText.name, page.name),
 		};
 	}
 
@@ -138,10 +138,17 @@ export class CodexGenerator {
 
 	/**
 	 * Generate target for a page file.
-	 * Page files are named: 000-Page-TextName-Parent.md
+	 * Page files are named: 000-TextName-Parent.md
+	 * After refactor: pages are stored in parent/000-TextName-Parent.md (not parent/page/)
+	 * 
+	 * Note: getTreePathFromNode includes the node's name only if it has a parent.
+	 * For root-level texts, textPath is empty, so we need to include textName.
 	 */
-	private pageTarget(textPath: TreePath, pageIndex: string): string {
-		const fullPath: TreePath = [...textPath, pageIndex];
+	private pageTarget(textPath: TreePath, textName: string, pageIndex: string): string {
+		// textPath already includes textName if text has a parent, otherwise it's empty
+		const fullPath: TreePath = textPath.length > 0 
+			? [...textPath, pageIndex] 
+			: [textName, pageIndex];
 		return pageNameFromTreePath.encode(fullPath);
 	}
 }

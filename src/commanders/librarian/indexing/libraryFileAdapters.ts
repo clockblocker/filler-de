@@ -3,7 +3,7 @@ import type { MetaInfo } from "../../../services/dto-services/meta-info-manager/
 import type { ReadablePrettyFile } from "../../../services/obsidian-services/file-services/background/background-file-service";
 import type { SplitPathToFile } from "../../../services/obsidian-services/file-services/types";
 import { TextStatus } from "../../../types/common-interface/enums";
-import { PAGE, UNKNOWN } from "../../../types/literals";
+import { UNKNOWN } from "../../../types/literals";
 import { getTreePathFromNode } from "../pure-functions/node";
 import type { LibraryFileDto } from "../types";
 import { NodeType, type TreeNode, type TreePath } from "../types";
@@ -139,7 +139,6 @@ export function getTreePathFromLibraryFile(
  */
 function inferMetaInfo({
 	basename,
-	pathParts,
 }: Pick<ReadablePrettyFile, "basename" | "pathParts">): MetaInfo | null {
 	const codexResult = GuardedCodexNameSchema.safeParse(basename);
 	if (codexResult.success) {
@@ -152,7 +151,7 @@ function inferMetaInfo({
 	const pageResult = GuardedPageNameSchema.safeParse(basename);
 	console.log("[inferMetaInfo] basename, pageResult", basename, pageResult);
 
-	if (pageResult.success && pathParts.includes(PAGE)) {
+	if (pageResult.success) {
 		try {
 			const decoded = pageNameFromTreePath.decode(pageResult.data);
 			const pageNum = decoded[0];

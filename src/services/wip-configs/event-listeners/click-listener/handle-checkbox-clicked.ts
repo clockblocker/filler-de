@@ -1,6 +1,7 @@
 import type { App } from "obsidian";
 import { MarkdownView } from "obsidian";
 import type { Librarian } from "../../../../commanders/librarian/librarian";
+import { pageNameFromTreePath } from "../../../../commanders/librarian/indexing/formatters";
 import type { TreePath } from "../../../../commanders/librarian/types";
 
 /**
@@ -39,12 +40,20 @@ export function handleCheckboxClicked({
 	// Could be: "Library/Section/Text" or "__Text-Section" (Codex filename)
 	const { rootName, treePath } = parseCodexLinkTarget(href);
 	if (!rootName || treePath.length === 0) {
+		console.log("[handleCheckboxClicked] Failed to parse link target:", href);
 		return false;
 	}
 
 	// Determine new status from checkbox state
 	// Note: checkbox.checked is the NEW state after click
 	const newStatus = checkbox.checked ? "Done" : "NotStarted";
+
+	console.log("[handleCheckboxClicked] Setting status:", {
+		href,
+		rootName,
+		treePath,
+		newStatus,
+	});
 
 	// Call librarian to update status (fire-and-forget async)
 	// rootName is validated to be "Library" in parseCodexLinkTarget
@@ -103,18 +112,16 @@ function parseCodexLinkTarget(href: string): {
 		};
 	}
 
-	// Check if it's a page filename (starts with 3 digits followed by dash)
-	// Format: "001-Text-Section" → path should be ["Section", "Text", "001"]
-	const pageFileMatch = cleanHref.match(/^(\d{3})-(.+)$/);
-	if (pageFileMatch) {
-		const pageNum = pageFileMatch[1]; // "001"
-		const rest = pageFileMatch[2]; // "Text-Section"
-		const pathParts = rest.split("-").toReversed(); // ["Section", "Text"]
-		// Include page number as last element in path
+	// Check if it's a page filename (new format: "000-Page-TextName-Parent")
+	// Use the decoder to properly parse it
+	try {
+		const decodedPath = pageNameFromTreePath.decode(cleanHref);
 		return {
 			rootName: "Library",
-			treePath: [...pathParts, pageNum] as TreePath,
+			treePath: decodedPath,
 		};
+	} catch {
+		// Not a page filename in the new format, continue to other formats
 	}
 
 	// Codex filename format: "Text-Section" or just "Text"

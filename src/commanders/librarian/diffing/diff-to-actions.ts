@@ -221,15 +221,7 @@ export class DiffToActionsMapper {
 				type: VaultActionType.UpdateOrCreateFolder,
 			});
 
-			// Create Page subfolder
-			actions.push({
-				payload: {
-					prettyPath: this.pagesFolderToPrettyPath(text.path),
-				},
-				type: VaultActionType.UpdateOrCreateFolder,
-			});
-
-			// Create page files with meta section
+			// Create page files with meta section (pages stored directly in book folder, no Page subfolder)
 			for (const pageName of pageNames) {
 				const status = text.pageStatuses[pageName];
 				const pageMeta: MetaInfo = {
@@ -254,7 +246,7 @@ export class DiffToActionsMapper {
 			actions.push({
 				payload: {
 					content,
-					prettyPath: this.bookCodexToPrettyPath(text.path),
+					prettyPath: this.sectionCodexToPrettyPath(text.path),
 				},
 				type: VaultActionType.UpdateOrCreateFile,
 			});
@@ -292,20 +284,11 @@ export class DiffToActionsMapper {
 			// Trash Codex file
 			actions.push({
 				payload: {
-					prettyPath: this.bookCodexToPrettyPath(text.path),
+					prettyPath: this.sectionCodexToPrettyPath(text.path),
 				},
 				type: VaultActionType.TrashFile,
 			});
 
-			// Trash Page folder
-			actions.push({
-				payload: {
-					prettyPath: this.pagesFolderToPrettyPath(text.path),
-				},
-				type: VaultActionType.TrashFolder,
-			});
-
-			// Trash book folder
 			actions.push({
 				payload: {
 					prettyPath: this.bookFolderToPrettyPath(text.path),
@@ -412,12 +395,6 @@ export class DiffToActionsMapper {
 
 	// ─── Path Conversion Helpers ─────────────────────────────────────
 
-	/**
-	 * Determine the correct Codex path for any node path.
-	 * - Root (empty path): Codex is Library/__Library.md
-	 * - Sections: Codex is in the section folder itself
-	 * - Books (texts with pages): Codex is inside the book folder
-	 */
 	private pathToCodexPrettyPath(
 		path: TreePath,
 		getNode?: GetNodeFn,
@@ -427,17 +404,6 @@ export class DiffToActionsMapper {
 			return this.rootCodexToPrettyPath();
 		}
 
-		if (getNode) {
-			const node = getNode(path);
-			if (node) {
-				// Use node.type to distinguish Section from Text
-				if (node.type === NodeType.Text && node.children.length > 1) {
-					// It's a book (multi-page text) - codex lives inside the book folder
-					return this.bookCodexToPrettyPath(path);
-				}
-				// Section or scroll (single-page text) - use section-style path
-			}
-		}
 		return this.sectionCodexToPrettyPath(path);
 	}
 
@@ -448,7 +414,6 @@ export class DiffToActionsMapper {
 	}
 
 	private sectionCodexToPrettyPath(sectionPath: TreePath): PrettyPath {
-		// Codex goes inside the section folder
 		const pathParts = [this.rootName, ...sectionPath];
 		const basename = `__${sectionPath.toReversed().join("-")}`;
 		return { basename, pathParts };
@@ -459,13 +424,13 @@ export class DiffToActionsMapper {
 		return { basename: `__${this.rootName}`, pathParts: [this.rootName] };
 	}
 
-	private bookCodexToPrettyPath(textPath: TreePath): PrettyPath {
-		// Book codex lives inside the book folder
-		// e.g., Library/Fairy_Tales/Aschenputtel/__Aschenputtel-Fairy_Tales.md
-		const pathParts = [this.rootName, ...textPath];
-		const basename = `__${textPath.toReversed().join("-")}`;
-		return { basename, pathParts };
-	}
+	// private bookCodexToPrettyPath(textPath: TreePath): PrettyPath {
+	// 	// Book codex lives inside the book folder
+	// 	// e.g., Library/Fairy_Tales/Aschenputtel/__Aschenputtel-Fairy_Tales.md
+	// 	const pathParts = [this.rootName, ...textPath];
+	// 	const basename = `__${textPath.toReversed().join("-")}`;
+	// 	return { basename, pathParts };
+	// }
 
 	private scrollPathToPrettyPath(textPath: TreePath): PrettyPath {
 		const pathParts = [this.rootName, ...textPath.slice(0, -1)];
@@ -479,18 +444,13 @@ export class DiffToActionsMapper {
 		return { basename, pathParts };
 	}
 
-	private pagesFolderToPrettyPath(textPath: TreePath): PrettyPath {
-		const pathParts = [this.rootName, ...textPath];
-		return { basename: "Page", pathParts };
-	}
-
 	private pagePathToPrettyPath(
 		textPath: TreePath,
 		pageName: string,
 	): PrettyPath {
-		const pathParts = [this.rootName, ...textPath, "Page"];
-		// Use encoder to get proper format: 000-Page-TextName-Parent
 		const fullPath: TreePath = [...textPath, pageName];
+
+		const pathParts = [this.rootName, ...fullPath.slice(0, -1)];
 		const basename = pageNameFromTreePath.encode(fullPath);
 		return { basename, pathParts };
 	}

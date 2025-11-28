@@ -5,7 +5,6 @@ import {
 	ENTRY,
 	PAGE,
 	SCROLL,
-	UNKNOWN,
 	UnknownSchema,
 } from "../../../types/literals";
 

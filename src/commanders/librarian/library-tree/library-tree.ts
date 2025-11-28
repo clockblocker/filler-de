@@ -78,6 +78,7 @@ export class LibraryTree {
 	}
 
 	public addTexts(serializedTexts: TextDto[]): void {
+		console.log("[LibraryTree.addTexts] Adding texts:", serializedTexts);
 		for (const serializedText of serializedTexts) {
 			this.addText(serializedText);
 		}
@@ -186,7 +187,18 @@ export class LibraryTree {
 	}
 
 	private addText(serializedText: TextDto): Maybe<TextNode> {
+		console.log("[LibraryTree.addText] Adding text:", serializedText);
 		const newText = this.getOrCreateTextNode(serializedText);
+		if (newText.error) {
+			console.log("[LibraryTree.addText] Failed:", newText.description);
+		} else {
+			console.log("[LibraryTree.addText] Success, created text node:", {
+				childrenCount: newText.data.children.length,
+				childrenNames: newText.data.children.map((c) => c.name),
+				name: newText.data.name,
+				type: newText.data.type,
+			});
+		}
 		return newText;
 	}
 
@@ -207,11 +219,25 @@ export class LibraryTree {
 	}): Maybe<TreeNode> {
 		const mbNode = this.getMaybeNode({ path });
 		if (mbNode.error) {
+			console.log(
+				"[LibraryTree.setStatus] Node not found:",
+				path,
+				mbNode,
+			);
 			return mbNode;
 		}
 
 		const node = mbNode.data;
+		console.log("[LibraryTree.setStatus] Current status:", {
+			currentStatus: node.status,
+			newStatus: status,
+			path,
+			willChange: node.status !== status,
+		});
 		if (node.status === status) {
+			console.log(
+				"[LibraryTree.setStatus] Status already matches, no change",
+			);
 			return { data: node, error: false };
 		}
 
@@ -278,13 +304,37 @@ export class LibraryTree {
 	getMaybeNode({ path }: { path: TreePath }): Maybe<TreeNode> {
 		let endOfTheChain: TreeNode = this.root;
 
-		for (const name of path) {
+		for (let i = 0; i < path.length; i++) {
+			const name = path[i];
+			if (!name) {
+				return {
+					description: `Node ${path.join("-")} not found: Name is undefined`,
+					error: true,
+				};
+			}
+
 			const mbNextInChain = this.getMaybeChildNode({
 				endOfTheChain,
 				name,
 			});
 
 			if (mbNextInChain.error) {
+				// Log available children for debugging
+				if (endOfTheChain.type !== NodeType.Page) {
+					const childrenNames = endOfTheChain.children.map(
+						(c) => c.name,
+					);
+					console.log(
+						`[LibraryTree.getMaybeNode] Failed at step ${i}/${path.length}:`,
+						{
+							availableChildren: childrenNames,
+							currentNode: endOfTheChain.name,
+							currentNodeType: endOfTheChain.type,
+							fullPath: path,
+							lookingFor: name,
+						},
+					);
+				}
 				return {
 					description: `Node ${path.join("-")} not found: ${mbNextInChain.description}`,
 					error: true,

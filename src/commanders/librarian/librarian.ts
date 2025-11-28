@@ -98,9 +98,20 @@ export class Librarian {
 			return;
 		}
 
+		console.log(
+			"[Librarian.reconcileSubtree] Reading from filesystem:",
+			subtreePath,
+		);
 		const filesystemTexts = await this.readSubtreeFromFilesystem(
 			rootName,
 			subtreePath,
+		);
+		console.log(
+			"[Librarian.reconcileSubtree] Filesystem texts:",
+			filesystemTexts.map((t) => ({
+				pageStatuses: t.pageStatuses,
+				path: t.path,
+			})),
 		);
 
 		tree.reconcileSubtree(subtreePath, filesystemTexts);
@@ -406,11 +417,11 @@ export class Librarian {
 					pageContent,
 				);
 			} else {
-				// Book page: in Page subfolder, 000-Page-TextName-Parent.md
+				// Book page: stored in parent/000-TextName-Parent.md (no Page subfolder)
 				const fullPagePath: TreePath = [...textPath, pageIndex];
 				const pagePath = {
 					basename: pageNameFromTreePath.encode(fullPagePath),
-					pathParts: [rootName, ...sectionPath, textName, "Page"],
+					pathParts: [rootName, ...sectionPath, textName],
 				};
 				await this.backgroundFileService.replaceContent(
 					pagePath,
@@ -446,13 +457,26 @@ export class Librarian {
 		path: TreePath,
 		status: "Done" | "NotStarted",
 	): Promise<void> {
+		console.log("[Librarian.setStatus] Called:", {
+			path,
+			rootName,
+			status,
+		});
 		// Reconcile the parent section before setting status
 		const parentPath = path.slice(0, -1);
-		await this.withDiffAsync(
+		console.log(
+			"[Librarian.setStatus] Reconciling parent path:",
+			parentPath,
+		);
+		const result = await this.withDiffAsync(
 			rootName,
 			(tree) => tree.setStatus({ path, status }),
 			parentPath.length > 0 ? [parentPath] : [],
 		);
+		console.log("[Librarian.setStatus] Result:", {
+			actions: result.actions,
+			actionsCount: result.actions.length,
+		});
 	}
 
 	/**
