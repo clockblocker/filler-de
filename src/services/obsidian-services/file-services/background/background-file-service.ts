@@ -1,12 +1,12 @@
 import type { FileManager, TFile, TFolder, Vault } from "obsidian";
 import type { PrettyPath } from "../../../../types/common-interface/dtos";
 import { isReadonlyArray, type Prettify } from "../../../../types/helpers";
+import type { FullPathToFolder } from "../../atomic-services/pathfinder";
 import {
 	splitPathFromAbstractFile,
 	splitPathToFolderFromPrettyPath,
 	splitPathToMdFileFromPrettyPath,
-} from "../pathfinder";
-import type { SplitPathToFolder } from "../types";
+} from "../../atomic-services/pathfinder";
 import { AbstractFileHelper } from "./abstract-file-helper";
 
 /**
@@ -55,9 +55,8 @@ export class BackgroundFileService {
 	 */
 	async createOrUpdate(prettyPath: PrettyPath, content = ""): Promise<void> {
 		const splitPath = splitPathToMdFileFromPrettyPath(prettyPath);
-		const maybeFile = await this.abstractFileService.getMaybeAbstractFile(
-			splitPath,
-		);
+		const maybeFile =
+			await this.abstractFileService.getMaybeAbstractFile(splitPath);
 
 		if (maybeFile.error) {
 			// File doesn't exist - create it
@@ -165,7 +164,7 @@ export class BackgroundFileService {
 	// ─── Read Operations ─────────────────────────────────────────────
 
 	async getReadersToAllMdFilesInFolder(
-		pathToFoulder: SplitPathToFolder,
+		pathToFoulder: FullPathToFolder,
 	): Promise<ReadablePrettyFile[]> {
 		const tFiles = await this.lsTfiles(pathToFoulder);
 
@@ -175,7 +174,7 @@ export class BackgroundFileService {
 		}));
 	}
 
-	private async lsTfiles(pathToFoulder: SplitPathToFolder): Promise<TFile[]> {
+	private async lsTfiles(pathToFoulder: FullPathToFolder): Promise<TFile[]> {
 		const tFiles =
 			await this.abstractFileService.deepListMdFiles(pathToFoulder);
 

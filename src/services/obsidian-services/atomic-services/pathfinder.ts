@@ -1,16 +1,11 @@
 import { type TFile, TFolder } from "obsidian";
 import type { PrettyPath } from "../../../types/common-interface/dtos";
+import type { Prettify } from "../../../types/helpers";
 import { SLASH } from "../../../types/literals";
-import type {
-	AbstractFile,
-	SplitPath,
-	SplitPathToFile,
-	SplitPathToFolder,
-} from "./types";
 
 export function splitPathToMdFileFromPrettyPath(
 	prettyPath: PrettyPath,
-): SplitPathToFile {
+): FullPathToFile {
 	return {
 		...prettyPath,
 		extension: "md",
@@ -20,16 +15,16 @@ export function splitPathToMdFileFromPrettyPath(
 
 export function splitPathToFolderFromPrettyPath(
 	prettyPath: PrettyPath,
-): SplitPathToFolder {
+): FullPathToFolder {
 	return {
 		...prettyPath,
 		type: "folder",
 	};
 }
 
-export function splitPathFromAbstractFile(file: TFile): SplitPathToFile;
-export function splitPathFromAbstractFile(folder: TFolder): SplitPathToFolder;
-export function splitPathFromAbstractFile<T extends SplitPath>(
+export function splitPathFromAbstractFile(file: TFile): FullPathToFile;
+export function splitPathFromAbstractFile(folder: TFolder): FullPathToFolder;
+export function splitPathFromAbstractFile<T extends FullPath>(
 	abstractFile: AbstractFile<T>,
 ): T {
 	const path = abstractFile.path;
@@ -52,7 +47,7 @@ export function splitPathFromAbstractFile<T extends SplitPath>(
 	} as T;
 }
 
-export function systemPathFromSplitPath(splitPath: SplitPath): string {
+export function systemPathFromFullPath(splitPath: FullPath): string {
 	const { pathParts, basename: title } = splitPath;
 	const extension =
 		splitPath.type === "file" ? `.${splitPath.extension}` : "";
@@ -62,7 +57,7 @@ export function systemPathFromSplitPath(splitPath: SplitPath): string {
 	);
 }
 
-export function splitPathFromSystemPath(systemPath: string): SplitPath {
+export function splitPathFromSystemPath(systemPath: string): FullPath {
 	// Remove leading/trailing slashes and normalize
 	const normalized = systemPath.replace(/^[\\/]+|[\\/]+$/g, "");
 	if (!normalized) {
@@ -112,3 +107,32 @@ export function joinPosix(...parts: string[]): string {
 		.filter((p) => p.length > 0);
 	return cleaned.join("/");
 }
+
+export type FullPathToFolder = Prettify<
+	PrettyPath & {
+		type: "folder";
+	}
+>;
+
+export type FullPathToFile = Prettify<
+	PrettyPath & {
+		type: "file";
+		extension: "md" | string;
+	}
+>;
+
+export type FullPath = FullPathToFolder | FullPathToFile;
+
+export type AbstractFile<T extends FullPath> = T extends { type: "file" }
+	? TFile
+	: TFolder;
+
+export type FileWithContent = {
+	splitPath: FullPathToFile;
+	content?: string;
+};
+
+export type FileFromTo = {
+	from: FullPathToFile;
+	to: FullPathToFile;
+};

@@ -3,8 +3,8 @@ import {
 	type Maybe,
 	unwrapMaybeByThrowing,
 } from "../../../../../types/common-interface/maybe";
-import { systemPathFromSplitPath } from "../../pathfinder";
-import type { SplitPathToFolder } from "../../types";
+import type { FullPathToFolder } from "../../../atomic-services/pathfinder";
+import { systemPathFromFullPath } from "../../../atomic-services/pathfinder";
 
 /**
  * Low-level folder operations.
@@ -21,15 +21,13 @@ export class TFolderHelper {
 		this.fileManager = fileManager;
 	}
 
-	async getFolder(splitPath: SplitPathToFolder): Promise<TFolder> {
+	async getFolder(splitPath: FullPathToFolder): Promise<TFolder> {
 		const mbFolder = await this.getMaybeFolder(splitPath);
 		return unwrapMaybeByThrowing(mbFolder);
 	}
 
-	async getMaybeFolder(
-		splitPath: SplitPathToFolder,
-	): Promise<Maybe<TFolder>> {
-		const systemPath = systemPathFromSplitPath(splitPath);
+	async getMaybeFolder(splitPath: FullPathToFolder): Promise<Maybe<TFolder>> {
+		const systemPath = systemPathFromFullPath(splitPath);
 		const tAbstractFile = this.vault.getAbstractFileByPath(systemPath);
 		if (!tAbstractFile) {
 			return {
@@ -55,13 +53,13 @@ export class TFolderHelper {
 	 * Create a single folder.
 	 * Assumes parent folder exists.
 	 */
-	async createFolder(splitPath: SplitPathToFolder): Promise<TFolder> {
+	async createFolder(splitPath: FullPathToFolder): Promise<TFolder> {
 		const mbFolder = await this.getMaybeFolder(splitPath);
 		if (!mbFolder.error) {
 			return mbFolder.data; // Already exists
 		}
 
-		const systemPath = systemPathFromSplitPath(splitPath);
+		const systemPath = systemPathFromFullPath(splitPath);
 		try {
 			return await this.vault.createFolder(systemPath);
 		} catch (error) {
@@ -75,7 +73,7 @@ export class TFolderHelper {
 	/**
 	 * Trash a single folder
 	 */
-	async trashFolder(splitPath: SplitPathToFolder): Promise<void> {
+	async trashFolder(splitPath: FullPathToFolder): Promise<void> {
 		const mbFolder = await this.getMaybeFolder(splitPath);
 		if (mbFolder.error) {
 			return; // Already gone
@@ -87,11 +85,11 @@ export class TFolderHelper {
 	 * Rename/move a folder.
 	 */
 	async renameFolder(
-		from: SplitPathToFolder,
-		to: SplitPathToFolder,
+		from: FullPathToFolder,
+		to: FullPathToFolder,
 	): Promise<void> {
 		const folder = await this.getFolder(from);
-		const toSystemPath = systemPathFromSplitPath(to);
+		const toSystemPath = systemPathFromFullPath(to);
 		await this.fileManager.renameFile(folder, toSystemPath);
 	}
 }

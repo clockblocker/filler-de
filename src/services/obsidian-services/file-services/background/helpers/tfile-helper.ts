@@ -3,9 +3,13 @@ import {
 	type Maybe,
 	unwrapMaybeByThrowing,
 } from "../../../../../types/common-interface/maybe";
+import type {
+	FileFromTo,
+	FileWithContent,
+	FullPathToFile,
+} from "../../../atomic-services/pathfinder";
+import { systemPathFromFullPath } from "../../../atomic-services/pathfinder";
 import { logError, logWarning } from "../../../helpers/issue-handlers";
-import { systemPathFromSplitPath } from "../../pathfinder";
-import type { FileFromTo, FileWithContent, SplitPathToFile } from "../../types";
 
 /**
  * Helper for TFile operations in the vault.
@@ -24,7 +28,7 @@ export class TFileHelper {
 		this.fileManager = fileManager;
 	}
 
-	async getFile(splitPath: SplitPathToFile): Promise<TFile> {
+	async getFile(splitPath: FullPathToFile): Promise<TFile> {
 		const mbFile = await this.getMaybeFile(splitPath);
 		return unwrapMaybeByThrowing(mbFile);
 	}
@@ -37,7 +41,7 @@ export class TFileHelper {
 		return tFiles;
 	}
 
-	async trashFiles(splitPaths: readonly SplitPathToFile[]): Promise<void> {
+	async trashFiles(splitPaths: readonly FullPathToFile[]): Promise<void> {
 		for (const splitPath of splitPaths) {
 			await this.trashFile(splitPath);
 		}
@@ -53,7 +57,7 @@ export class TFileHelper {
 		return await this.getOrCreateOneFile(file);
 	}
 
-	private async trashFile(splitPath: SplitPathToFile): Promise<void> {
+	private async trashFile(splitPath: FullPathToFile): Promise<void> {
 		const file = await this.getFile(splitPath);
 		await this.fileManager.trashFile(file);
 	}
@@ -67,7 +71,7 @@ export class TFileHelper {
 				unwrapMaybeByThrowing(
 					mbToFile,
 					"TFileHelper.moveFile",
-					`Both source \n(${systemPathFromSplitPath(from)}) \n and target \n (${systemPathFromSplitPath(to)}) \n files not found`,
+					`Both source \n(${systemPathFromFullPath(from)}) \n and target \n (${systemPathFromFullPath(to)}) \n files not found`,
 				);
 			}
 
@@ -85,7 +89,7 @@ export class TFileHelper {
 			}
 
 			logError({
-				description: `Target file (${systemPathFromSplitPath(to)}) exists and it's content differs from the source file (${systemPathFromSplitPath(from)})`,
+				description: `Target file (${systemPathFromFullPath(to)}) exists and it's content differs from the source file (${systemPathFromFullPath(from)})`,
 				location: "TFileHelper.moveFile",
 			});
 
@@ -94,14 +98,14 @@ export class TFileHelper {
 
 		await this.fileManager.renameFile(
 			mbFromFile.data,
-			systemPathFromSplitPath(to),
+			systemPathFromFullPath(to),
 		);
 	}
 
 	private async getMaybeFile(
-		splitPath: SplitPathToFile,
+		splitPath: FullPathToFile,
 	): Promise<Maybe<TFile>> {
-		const systemPath = systemPathFromSplitPath(splitPath);
+		const systemPath = systemPathFromFullPath(splitPath);
 		const tAbstractFile = this.vault.getAbstractFileByPath(systemPath);
 		if (!tAbstractFile) {
 			return {
@@ -141,7 +145,7 @@ export class TFileHelper {
 		splitPath,
 		content,
 	}: FileWithContent): Promise<TFile> {
-		const systemPath = systemPathFromSplitPath(splitPath);
+		const systemPath = systemPathFromFullPath(splitPath);
 		try {
 			return await this.vault.create(systemPath, content ?? "");
 		} catch (error) {

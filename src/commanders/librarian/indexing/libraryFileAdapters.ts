@@ -1,7 +1,7 @@
 import { extractMetaInfo } from "../../../services/dto-services/meta-info-manager/interface";
 import type { MetaInfo } from "../../../services/dto-services/meta-info-manager/types";
+import type { FullPathToFile } from "../../../services/obsidian-services/atomic-services/pathfinder";
 import type { ReadablePrettyFile } from "../../../services/obsidian-services/file-services/background/background-file-service";
-import type { SplitPathToFile } from "../../../services/obsidian-services/file-services/types";
 import { TextStatus } from "../../../types/common-interface/enums";
 import { UNKNOWN } from "../../../types/literals";
 import { getTreePathFromNode } from "../pure-functions/node";
@@ -24,7 +24,7 @@ export function getLibraryFileToFileFromNode(node: TreeNode): LibraryFileDto {
 		status: node.status,
 	};
 
-	const splitPath: SplitPathToFile = {
+	const splitPath: FullPathToFile = {
 		basename: UNKNOWN,
 		extension: "md",
 		pathParts: treePath.slice(0, -1),

@@ -4,13 +4,13 @@ import {
 	type Maybe,
 	unwrapMaybeByThrowing,
 } from "../../../../types/common-interface/maybe";
+import type { FullPathToFile } from "../../atomic-services/pathfinder";
+import { splitPathFromAbstractFile } from "../../atomic-services/pathfinder";
 import { getMaybeEditor } from "../../helpers/get-editor";
 import { logError, logWarning } from "../../helpers/issue-handlers";
-import { splitPathFromAbstractFile } from "../pathfinder";
-import type { SplitPathToFile } from "../types";
 
 export class OpenedFileService {
-	private lastOpenedFiles: SplitPathToFile[] = [];
+	private lastOpenedFiles: FullPathToFile[] = [];
 
 	constructor(
 		private app: App,

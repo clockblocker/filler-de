@@ -3,15 +3,15 @@ import {
 	type Maybe,
 	unwrapMaybeByThrowing,
 } from "../../../../types/common-interface/maybe";
-import { systemPathFromSplitPath } from "../pathfinder";
 import type {
 	AbstractFile,
 	FileFromTo,
 	FileWithContent,
-	SplitPath,
-	SplitPathToFile,
-	SplitPathToFolder,
-} from "../types";
+	FullPath,
+	FullPathToFile,
+	FullPathToFolder,
+} from "../../atomic-services/pathfinder";
+import { systemPathFromFullPath } from "../../atomic-services/pathfinder";
 import { TFileHelper } from "./helpers/tfile-helper";
 import { TFolderHelper } from "./helpers/tfolder-helper";
 
@@ -47,39 +47,39 @@ export class AbstractFileHelper {
 		await this.tfileHelper.moveFiles(fromTos);
 	}
 
-	async trashFiles(files: readonly SplitPathToFile[]): Promise<void> {
+	async trashFiles(files: readonly FullPathToFile[]): Promise<void> {
 		await this.tfileHelper.trashFiles(files);
 	}
 
 	// ─── Folder Operations ───────────────────────────────────────────
 
-	async createFolder(splitPath: SplitPathToFolder): Promise<TFolder> {
+	async createFolder(splitPath: FullPathToFolder): Promise<TFolder> {
 		return this.tfolderHelper.createFolder(splitPath);
 	}
 
-	async trashFolder(splitPath: SplitPathToFolder): Promise<void> {
+	async trashFolder(splitPath: FullPathToFolder): Promise<void> {
 		return this.tfolderHelper.trashFolder(splitPath);
 	}
 
 	async renameFolder(
-		from: SplitPathToFolder,
-		to: SplitPathToFolder,
+		from: FullPathToFolder,
+		to: FullPathToFolder,
 	): Promise<void> {
 		return this.tfolderHelper.renameFolder(from, to);
 	}
 
 	// ─── Read Operations ─────────────────────────────────────────────
 
-	async getMdFile(splitPath: SplitPathToFile): Promise<TFile> {
+	async getMdFile(splitPath: FullPathToFile): Promise<TFile> {
 		return unwrapMaybeByThrowing(
 			await this.getMaybeAbstractFile(splitPath),
 		);
 	}
 
-	async getMaybeAbstractFile<T extends SplitPath>(
+	async getMaybeAbstractFile<T extends FullPath>(
 		splitPath: T,
 	): Promise<Maybe<AbstractFile<T>>> {
-		const systemPath = systemPathFromSplitPath(splitPath);
+		const systemPath = systemPathFromFullPath(splitPath);
 		const mbTabstractFile = this.vault.getAbstractFileByPath(systemPath);
 
 		if (!mbTabstractFile) {
@@ -116,11 +116,9 @@ export class AbstractFileHelper {
 		};
 	}
 
-	async deepListMdFiles(
-		folderSplitPath: SplitPathToFolder,
-	): Promise<TFile[]> {
+	async deepListMdFiles(folderFullPath: FullPathToFolder): Promise<TFile[]> {
 		const folder = unwrapMaybeByThrowing(
-			await this.getMaybeAbstractFile(folderSplitPath),
+			await this.getMaybeAbstractFile(folderFullPath),
 			"AbstractFileHelper.deepListMdFiles",
 		);
 

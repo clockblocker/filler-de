@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { LibraryNoteMetaInfo } from "../../services/dto-services/meta-info-manager/types";
-import type { SplitPathToFile } from "../../services/obsidian-services/file-services/types";
+import type { FullPathToFile } from "../../services/obsidian-services/file-services/types";
 import type { TextStatus } from "../../types/common-interface/enums";
 import type { Prettify } from "../../types/helpers";
 import { PAGE, SECTION, TEXT } from "../../types/literals";
@@ -52,5 +52,5 @@ export type TextDto = {
 
 export type LibraryFileDto = {
 	metaInfo: LibraryNoteMetaInfo;
-	splitPath: SplitPathToFile;
+	splitPath: FullPathToFile;
 };

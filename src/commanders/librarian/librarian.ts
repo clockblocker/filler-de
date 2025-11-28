@@ -1,13 +1,13 @@
 import type { TAbstractFile } from "obsidian";
 import { TFile } from "obsidian";
 import { editOrAddMetaInfo } from "../../services/dto-services/meta-info-manager/interface";
-import type { VaultAction } from "../../services/obsidian-services/file-services/background/background-vault-actions";
-import type { VaultActionQueue } from "../../services/obsidian-services/file-services/background/vault-action-queue";
+import type { FullPath } from "../../services/obsidian-services/atomic-services/pathfinder";
 import {
 	splitPathFromSystemPath,
-	systemPathFromSplitPath,
-} from "../../services/obsidian-services/file-services/pathfinder";
-import type { SplitPath } from "../../services/obsidian-services/file-services/types";
+	systemPathFromFullPath,
+} from "../../services/obsidian-services/atomic-services/pathfinder";
+import type { VaultAction } from "../../services/obsidian-services/file-services/background/background-vault-actions";
+import type { VaultActionQueue } from "../../services/obsidian-services/file-services/background/vault-action-queue";
 import { logWarning } from "../../services/obsidian-services/helpers/issue-handlers";
 import type { TexfresserObsidianServices } from "../../services/obsidian-services/interface";
 import { TextStatus } from "../../types/common-interface/enums";
@@ -259,7 +259,7 @@ export class Librarian {
 			await this.initTrees();
 		}
 
-		const treePathToPwd = treePathFromSplitPath(pwd);
+		const treePathToPwd = treePathFromFullPath(pwd);
 		const rootName = pwd.pathParts[0] as RootName | undefined;
 		const affectedTree = this.getAffectedTree(pwd);
 
@@ -297,7 +297,7 @@ export class Librarian {
 		const { splitPath, metaInfo } = libraryFileDto;
 
 		// Add root name to pathParts
-		const fullSplitPath: SplitPath = {
+		const fullFullPath: FullPath = {
 			...splitPath,
 			pathParts: [affectedTree.root.name, ...splitPath.pathParts],
 		};
@@ -305,13 +305,13 @@ export class Librarian {
 		// Create file with metainfo (direct call - queue handles the actual file ops)
 		const content = editOrAddMetaInfo("", metaInfo);
 		await this.backgroundFileService.create({
-			...fullSplitPath,
+			...fullFullPath,
 			content,
 		});
 
 		// Get the created file and open it
 		const app = this.openedFileService.getApp();
-		const systemPath = systemPathFromSplitPath(fullSplitPath);
+		const systemPath = systemPathFromFullPath(fullFullPath);
 		const file = app.vault.getAbstractFileByPath(systemPath);
 
 		if (file instanceof TFile) {
@@ -574,9 +574,9 @@ export class Librarian {
 		// TODO: Check if needs to be added to tree
 	}
 
-	private getAffectedTree(path: SplitPath): LibraryTree | null;
+	private getAffectedTree(path: FullPath): LibraryTree | null;
 	private getAffectedTree(path: string): LibraryTree | null;
-	private getAffectedTree(path: SplitPath | string): LibraryTree | null {
+	private getAffectedTree(path: FullPath | string): LibraryTree | null {
 		const splitPath =
 			typeof path === "string" ? splitPathFromSystemPath(path) : path;
 
@@ -590,7 +590,7 @@ function isRootName(name: string): name is RootName {
 	return ROOTS.includes(name as RootName);
 }
 
-function treePathFromSplitPath(splitPath: SplitPath): TreePath {
+function treePathFromFullPath(splitPath: FullPath): TreePath {
 	return [...splitPath.pathParts.slice(1), splitPath.basename];
 }
 

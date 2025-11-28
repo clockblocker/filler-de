@@ -1,6 +1,6 @@
 import type { App, TAbstractFile } from "obsidian";
 import type { Librarian } from "../../commanders/librarian/librarian";
-import { splitPathFromSystemPath } from "./file-services/pathfinder";
+import { splitPathFromSystemPath } from "./atomic-services/pathfinder";
 
 /**
  * Listens to vault events and delegates to appropriate handlers.
