@@ -11,12 +11,7 @@ import {
 /**
  * Executes vault actions via BackgroundFileService or OpenedFileService.
  * Routes to OpenedFileService if the target file is currently active.
- *
  * Actions should already be sorted by weight before calling execute().
- *
- * NOTE: Chain logic (parent folder creation, empty folder cleanup)
- * is handled by DiffToActionsMapper, NOT here.
- * @see src/commanders/librarian/diffing/diff-to-actions.ts
  */
 export class VaultActionExecutor {
 	constructor(

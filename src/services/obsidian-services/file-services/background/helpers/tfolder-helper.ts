@@ -8,11 +8,6 @@ import type { SplitPathToFolder } from "../../types";
 
 /**
  * Low-level folder operations.
- *
- * NOTE: Chain logic (create parent folders, cleanup empty folders)
- * is handled by DiffToActionsMapper, NOT here.
- *
- * @see src/commanders/librarian/diffing/diff-to-actions.ts
  */
 export class TFolderHelper {
 	private fileManager: FileManager;
@@ -57,7 +52,7 @@ export class TFolderHelper {
 	}
 
 	/**
-	 * Create a single folder. Does NOT create parent chain.
+	 * Create a single folder.
 	 * Assumes parent folder exists.
 	 */
 	async createFolder(splitPath: SplitPathToFolder): Promise<TFolder> {
@@ -78,7 +73,7 @@ export class TFolderHelper {
 	}
 
 	/**
-	 * Trash a single folder. Does NOT cleanup parent chain.
+	 * Trash a single folder
 	 */
 	async trashFolder(splitPath: SplitPathToFolder): Promise<void> {
 		const mbFolder = await this.getMaybeFolder(splitPath);

@@ -18,11 +18,7 @@ import { TFolderHelper } from "./helpers/tfolder-helper";
 /**
  * Orchestrates file and folder operations.
  *
- * NOTE: Chain logic (create parent folders before files, cleanup empty folders)
- * is now handled by DiffToActionsMapper + VaultActionQueue.
- *
  * This class performs SINGLE operations only.
- * @see src/commanders/librarian/diffing/diff-to-actions.ts
  */
 export class AbstractFileHelper {
 	private vault: Vault;

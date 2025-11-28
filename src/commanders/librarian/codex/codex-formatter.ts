@@ -9,23 +9,14 @@ import {
 } from "../../../types/literals";
 import type { BackLink, CodexContent, CodexItem } from "./types";
 
-/**
- * Formats CodexContent to Obsidian markdown.
- * All codexes use the same nested format - indentation is determined by children.
- */
 export class CodexFormatter {
-	/**
-	 * Format full Codex content to markdown.
-	 */
 	format(content: CodexContent): string {
 		const lines: string[] = [];
 
-		// Back link
 		if (content.backLink) {
 			lines.push(this.formatBackLink(content.backLink));
 		}
 
-		// Items - always nested, depth determined by children
 		lines.push(...this.formatItems(content.items, 0));
 
 		return (

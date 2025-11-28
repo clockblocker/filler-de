@@ -1,4 +1,4 @@
-import type { App, TAbstractFile, TFile } from "obsidian";
+import type { App, TAbstractFile } from "obsidian";
 import type { Librarian } from "../../commanders/librarian/librarian";
 import { splitPathFromSystemPath } from "./file-services/pathfinder";
 
@@ -23,19 +23,16 @@ export class VaultEventService {
 		const deleteRef = this.app.vault.on("delete", (file) => {
 			this.handleDelete(file);
 		});
-		this.unsubscribers.push(() => this.app.vault.offref(deleteRef));
 
 		// Rename event (also fires for moves)
 		const renameRef = this.app.vault.on("rename", (file, oldPath) => {
 			this.handleRename(file, oldPath);
 		});
-		this.unsubscribers.push(() => this.app.vault.offref(renameRef));
 
 		// Create event
 		const createRef = this.app.vault.on("create", (file) => {
 			this.handleCreate(file);
 		});
-		this.unsubscribers.push(() => this.app.vault.offref(createRef));
 
 		console.log("[VaultEventService] Started listening to vault events");
 	}
@@ -91,4 +88,3 @@ export class VaultEventService {
 		return rootName === "Library";
 	}
 }
-

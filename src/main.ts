@@ -14,7 +14,6 @@ import { BackgroundFileService } from "./services/obsidian-services/file-service
 import { VaultActionExecutor } from "./services/obsidian-services/file-services/background/vault-action-executor";
 import { VaultActionQueue } from "./services/obsidian-services/file-services/background/vault-action-queue";
 import { logError } from "./services/obsidian-services/helpers/issue-handlers";
-import { VaultEventService } from "./services/obsidian-services/vault-event-service";
 import { ACTION_CONFIGS } from "./services/wip-configs/actions/actions-config";
 // import newGenCommand from "./services/wip-configs/actions/new/new-gen-command";
 // import { VaultCurrator } from './obsidian-related/obsidian-services/managers/vault-currator';
@@ -37,7 +36,6 @@ export default class TextEaterPlugin extends Plugin {
 	// File management
 	vaultActionQueue: VaultActionQueue;
 	vaultActionExecutor: VaultActionExecutor;
-	vaultEventService: VaultEventService;
 
 	// Commanders
 	librarian: Librarian;
@@ -139,7 +137,6 @@ export default class TextEaterPlugin extends Plugin {
 			vault: this.app.vault,
 		});
 
-		// Initialize vault action queue and executor
 		this.vaultActionExecutor = new VaultActionExecutor(
 			this.backgroundFileService,
 			this.openedFileService,
@@ -161,11 +158,6 @@ export default class TextEaterPlugin extends Plugin {
 		console.log("[main] Librarian and trees initialized:", this.librarian);
 
 		// Start listening to vault events after trees are ready
-		this.vaultEventService = new VaultEventService(
-			this.app,
-			this.librarian,
-		);
-		this.vaultEventService.start();
 
 		this.registerDomEvent(document, "click", makeClickListener(this));
 

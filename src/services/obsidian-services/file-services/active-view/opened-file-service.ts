@@ -16,18 +16,10 @@ export class OpenedFileService {
 		private app: App,
 		initiallyOpenedFile: TFile | null,
 	) {
-		console.log(
-			"[OpenedFileService] constructor fired",
-			initiallyOpenedFile,
-		);
-	}
-
-	getLastOpenedFiles() {
-		return this.app.workspace.getLastOpenFiles();
-	}
-
-	getLastOpenedFile(): SplitPathToFile | undefined {
-		return this.lastOpenedFiles[this.lastOpenedFiles.length - 1];
+		initiallyOpenedFile &&
+			this.lastOpenedFiles.push(
+				splitPathFromAbstractFile(initiallyOpenedFile),
+			);
 	}
 
 	async cd(file: TFile) {
@@ -45,11 +37,6 @@ export class OpenedFileService {
 	getApp(): App {
 		return this.app;
 	}
-
-	// async getActiveFile() {
-	// 	const file = this.app.workspace.getActiveFile();
-	// 	return
-	// }
 
 	async getMaybeOpenedFile(): Promise<Maybe<TFile>> {
 		try {

@@ -55,9 +55,6 @@ export class VaultActionQueue {
 		return this.queue.size;
 	}
 
-	/**
-	 * Check if queue is empty.
-	 */
 	get isEmpty(): boolean {
 		return this.queue.size === 0;
 	}
@@ -115,14 +112,11 @@ export class VaultActionQueue {
 			return;
 		}
 
-		// Grab current queue and clear it
 		const actions = [...this.queue.values()];
 		this.queue.clear();
 
-		// Sort by weight
 		const sortedActions = sortActionsByWeight(actions);
 
-		// Execute
 		this.isFlushing = true;
 		try {
 			await this.executor.execute(sortedActions);
