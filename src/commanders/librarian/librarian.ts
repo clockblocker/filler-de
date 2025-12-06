@@ -10,7 +10,11 @@ import { TextStatus } from "../../types/common-interface/enums";
 import { DiffToActions } from "./diffing/diff-to-actions";
 import type { NoteSnapshot } from "./diffing/note-differ";
 import { noteDiffer } from "./diffing/note-differ";
-import { toNodeName, treePathToPageBasename } from "./indexing/codecs";
+import {
+	toNodeName,
+	treePathToPageBasename,
+	treePathToScrollBasename,
+} from "./indexing/codecs";
 import { prettyFilesWithReaderToLibraryFileDtos } from "./indexing/libraryFileAdapters";
 import { LibraryTree } from "./library-tree/library-tree";
 import { noteDtosFromLibraryFileDtos } from "./pure-functions/note-dtos-from-library-file-dtos";
@@ -246,7 +250,7 @@ export class Librarian {
 
 		// Open the created file
 		const app = this.openedFileService.getApp();
-		const scrollBasename = notePath.toReversed().join("-");
+		const scrollBasename = treePathToScrollBasename.encode(notePath);
 		const systemPath = [
 			rootName,
 			...sectionPath,
@@ -340,7 +344,10 @@ export class Librarian {
 
 			if (!isBook) {
 				const scrollPath = {
-					basename: [...sectionPath, textName].toReversed().join("-"),
+					basename: treePathToScrollBasename.encode([
+						...sectionPath,
+						textName,
+					]),
 					pathParts: [rootName, ...sectionPath],
 				};
 				await this.backgroundFileService.replaceContent(

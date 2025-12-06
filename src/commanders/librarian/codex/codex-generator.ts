@@ -98,7 +98,7 @@ export class CodexGenerator {
 			// Parent is root - use root name
 			return {
 				displayName: parent.name.replace(/_/g, " "),
-				target: `__${parent.name}`,
+				target: treePathToCodexBasename.encode([parent.name]),
 			};
 		}
 

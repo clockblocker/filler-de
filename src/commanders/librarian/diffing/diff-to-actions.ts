@@ -7,7 +7,11 @@ import {
 import type { PrettyPath } from "../../../types/common-interface/dtos";
 import { codexFormatter } from "../codex";
 import { createCodexGenerator } from "../codex/codex-generator";
-import { treePathToPageBasename } from "../indexing/codecs";
+import {
+	treePathToCodexBasename,
+	treePathToPageBasename,
+	treePathToScrollBasename,
+} from "../indexing/codecs";
 import type { NoteDto, NoteNode, SectionNode, TreePath } from "../types";
 import { NodeType } from "../types";
 import type { NoteDiff, NoteStatusChange } from "./note-differ";
@@ -277,7 +281,7 @@ export class DiffToActions {
 		}
 		// Scroll: Library/Section/Scroll-Section.md
 		const pathParts = [this.rootName, ...notePath.slice(0, -1)];
-		const basename = notePath.toReversed().join("-");
+		const basename = treePathToScrollBasename.encode(notePath);
 		return { basename, pathParts };
 	}
 
@@ -291,13 +295,13 @@ export class DiffToActions {
 		if (path.length === 0) {
 			// Root codex: Library/__Library.md
 			return {
-				basename: `__${this.rootName}`,
+				basename: treePathToCodexBasename.encode([this.rootName]),
 				pathParts: [this.rootName],
 			};
 		}
 		// Section/Book codex: Library/Section/__Section.md
 		const pathParts = [this.rootName, ...path];
-		const basename = `__${path.toReversed().join("-")}`;
+		const basename = treePathToCodexBasename.encode(path);
 		return { basename, pathParts };
 	}
 
