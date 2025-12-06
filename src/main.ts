@@ -13,7 +13,7 @@ import { OpenedFileReader } from "./services/obsidian-services/file-services/act
 import { OpenedFileService } from "./services/obsidian-services/file-services/active-view/opened-file-service";
 import { BackgroundFileService } from "./services/obsidian-services/file-services/background/background-file-service";
 import { VaultActionExecutor } from "./services/obsidian-services/file-services/background/vault-action-executor";
-import { VaultActionQueue } from "./services/obsidian-services/file-services/background/vault-action-queue";
+import { VaultActionQueue } from "./services/obsidian-services/file-services/vault-action-queue";
 import { logError } from "./services/obsidian-services/helpers/issue-handlers";
 import { ACTION_CONFIGS } from "./services/wip-configs/actions/actions-config";
 // import newGenCommand from "./services/wip-configs/actions/new/new-gen-command";

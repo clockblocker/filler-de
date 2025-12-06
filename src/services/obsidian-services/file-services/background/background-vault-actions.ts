@@ -17,7 +17,7 @@ export const DirActionSchema = z.enum([
 	TRASH,
 	RENAME,
 ] as const);
-export const ContentActionSchema = z.enum([PROCESS, READ, WRITE] as const);
+export const ContentActionSchema = z.enum([PROCESS, WRITE] as const);
 export const AbstractFileTypeSchema = z.enum([FILE, FOLDER] as const);
 const AbstractFileType = AbstractFileTypeSchema.enum;
 
@@ -73,10 +73,6 @@ export type VaultAction =
 			};
 	  }
 	| {
-			type: typeof VaultActionType.ReadFile;
-			payload: { prettyPath: PrettyPath };
-	  }
-	| {
 			type: typeof VaultActionType.WriteFile;
 			payload: { prettyPath: PrettyPath; content: string };
 	  };
@@ -96,7 +92,6 @@ export const weightForVaultActionType: Record<VaultActionType, number> = {
 	// Content operations last (file must exist)
 	[VaultActionType.ProcessFile]: 6,
 	[VaultActionType.WriteFile]: 7,
-	[VaultActionType.ReadFile]: 8,
 } as const;
 
 /**
@@ -112,7 +107,6 @@ export function getActionKey(action: VaultAction): string {
 		case VaultActionType.UpdateOrCreateFile:
 		case VaultActionType.TrashFile:
 		case VaultActionType.ProcessFile:
-		case VaultActionType.ReadFile:
 		case VaultActionType.WriteFile:
 			return `${type}:${prettyPathToKey(payload.prettyPath)}`;
 
@@ -135,7 +129,6 @@ export function getActionTargetPath(action: VaultAction): string {
 		case VaultActionType.UpdateOrCreateFile:
 		case VaultActionType.TrashFile:
 		case VaultActionType.ProcessFile:
-		case VaultActionType.ReadFile:
 		case VaultActionType.WriteFile:
 			return prettyPathToKey(payload.prettyPath);
 

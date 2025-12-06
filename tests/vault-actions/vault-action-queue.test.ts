@@ -6,7 +6,7 @@ import {
 	VaultActionType,
 } from "../../src/services/obsidian-services/file-services/background/background-vault-actions";
 import type { VaultActionExecutor } from "../../src/services/obsidian-services/file-services/background/vault-action-executor";
-import { VaultActionQueue } from "../../src/services/obsidian-services/file-services/background/vault-action-queue";
+import { VaultActionQueue } from "../../src/services/obsidian-services/file-services/vault-action-queue";
 
 // Mock executor that records actions
 function createMockExecutor() {

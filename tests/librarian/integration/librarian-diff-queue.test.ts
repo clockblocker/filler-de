@@ -3,7 +3,7 @@ import { Librarian } from "../../../src/commanders/librarian/librarian";
 import { LibraryTree } from "../../../src/commanders/librarian/library-tree/library-tree";
 import type { TextDto, TreePath } from "../../../src/commanders/librarian/types";
 import { VaultActionType } from "../../../src/services/obsidian-services/file-services/background/background-vault-actions";
-import type { VaultActionQueue } from "../../../src/services/obsidian-services/file-services/background/vault-action-queue";
+import type { VaultActionQueue } from "../../../src/services/obsidian-services/file-services/vault-action-queue";
 import { TextStatus } from "../../../src/types/common-interface/enums";
 
 /**

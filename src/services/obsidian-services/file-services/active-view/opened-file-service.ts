@@ -1,8 +1,5 @@
-import { type App, MarkdownView, type TFile, type TFolder } from "obsidian";
-import type {
-	PathParts,
-	PrettyPath,
-} from "../../../../types/common-interface/dtos";
+import type { App, TFile } from "obsidian";
+import type { PrettyPath } from "../../../../types/common-interface/dtos";
 import {
 	type Maybe,
 	unwrapMaybeByThrowing,
@@ -74,43 +71,6 @@ export class OpenedFileService {
 		);
 	}
 
-	private showLoadingOverlay(): void {
-		if (document.getElementById("opened-file-service-loading-overlay")) {
-			return;
-		}
-		const overlay = document.createElement("div");
-		overlay.id = "opened-file-service-loading-overlay";
-
-		document.body.appendChild(overlay);
-
-		const loadingText = document.createElement("div");
-		loadingText.innerText = "Loading...";
-		loadingText.style.fontSize = "2rem";
-		loadingText.style.color = "#fff";
-		overlay.appendChild(loadingText);
-
-		// overlay.style.position = 'fixed';
-		// overlay.style.top = '0';
-		// overlay.style.left = '0';
-		// overlay.style.width = '100%';
-		// overlay.style.height = '100%';
-		// overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)'; // Semi-transparent black
-		// overlay.style.display = 'flex';
-		// overlay.style.justifyContent = 'center';
-		// overlay.style.alignItems = 'center';
-		// overlay.style.zIndex = '1000'; // Ensure it's on top
-	}
-
-	// Exposed method to hide and remove the loading overlay
-	private hideLoadingOverlay(): void {
-		const overlay = document.getElementById(
-			"opened-file-service-loading-overlay",
-		);
-		if (overlay) {
-			overlay.remove();
-		}
-	}
-
 	public async cd(file: TFile): Promise<Maybe<TFile>> {
 		try {
 			await this.app.workspace.getLeaf(true).openFile(file);
@@ -124,4 +84,40 @@ export class OpenedFileService {
 			return { description, error: true };
 		}
 	}
+
+	// private showLoadingOverlay(): void {
+	// 	if (document.getElementById("opened-file-service-loading-overlay")) {
+	// 		return;
+	// 	}
+	// 	const overlay = document.createElement("div");
+	// 	overlay.id = "opened-file-service-loading-overlay";
+
+	// 	document.body.appendChild(overlay);
+
+	// 	const loadingText = document.createElement("div");
+	// 	loadingText.innerText = "Loading...";
+	// 	loadingText.style.fontSize = "2rem";
+	// 	loadingText.style.color = "#fff";
+	// 	overlay.appendChild(loadingText);
+
+	// 	// overlay.style.position = 'fixed';
+	// 	// overlay.style.top = '0';
+	// 	// overlay.style.left = '0';
+	// 	// overlay.style.width = '100%';
+	// 	// overlay.style.height = '100%';
+	// 	// overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)'; // Semi-transparent black
+	// 	// overlay.style.display = 'flex';
+	// 	// overlay.style.justifyContent = 'center';
+	// 	// overlay.style.alignItems = 'center';
+	// 	// overlay.style.zIndex = '1000'; // Ensure it's on top
+	// }
+
+	// private hideLoadingOverlay(): void {
+	// 	const overlay = document.getElementById(
+	// 		"opened-file-service-loading-overlay",
+	// 	);
+	// 	if (overlay) {
+	// 		overlay.remove();
+	// 	}
+	// }
 }

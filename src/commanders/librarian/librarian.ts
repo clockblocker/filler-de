@@ -7,7 +7,7 @@ import {
 	systemPathFromFullPath,
 } from "../../services/obsidian-services/atomic-services/pathfinder";
 import type { VaultAction } from "../../services/obsidian-services/file-services/background/background-vault-actions";
-import type { VaultActionQueue } from "../../services/obsidian-services/file-services/background/vault-action-queue";
+import type { VaultActionQueue } from "../../services/obsidian-services/file-services/vault-action-queue";
 import { logWarning } from "../../services/obsidian-services/helpers/issue-handlers";
 import type { TexfresserObsidianServices } from "../../services/obsidian-services/interface";
 import { TextStatus } from "../../types/common-interface/enums";

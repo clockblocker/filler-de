@@ -17,6 +17,18 @@ export class OpenedFileReader {
 		return getFullPathForAbstractFile(activeView);
 	}
 
+	async getContent(): Promise<string> {
+		return unwrapMaybeByThrowing(await this.getMaybeContent());
+	}
+
+	async getParent(): Promise<TFolder> {
+		return unwrapMaybeByThrowing(await this.getMaybeParent());
+	}
+
+	async getOpenedTFile(): Promise<TFile> {
+		return unwrapMaybeByThrowing(await this.getMaybeOpenedTFile());
+	}
+
 	async getMaybeContent(): Promise<Maybe<string>> {
 		const mbEditor = await getMaybeEditor(this.app);
 		if (mbEditor.error) {
@@ -25,10 +37,6 @@ export class OpenedFileReader {
 
 		const content = mbEditor.data.getValue();
 		return { data: content ?? "", error: false };
-	}
-
-	async getContent(): Promise<string> {
-		return unwrapMaybeByThrowing(await this.getMaybeContent());
 	}
 
 	async getMaybeParent(): Promise<Maybe<TFolder>> {
@@ -44,11 +52,6 @@ export class OpenedFileReader {
 		}
 
 		return { data: parent, error: false };
-	}
-
-	// [TODO] Make it private
-	async getOpenedTFile(): Promise<TFile> {
-		return unwrapMaybeByThrowing(await this.getMaybeOpenedTFile());
 	}
 
 	// [TODO] Make it private

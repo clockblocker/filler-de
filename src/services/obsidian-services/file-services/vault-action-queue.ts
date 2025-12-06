@@ -2,8 +2,8 @@ import {
 	getActionKey,
 	sortActionsByWeight,
 	type VaultAction,
-} from "./background-vault-actions";
-import type { VaultActionExecutor } from "./vault-action-executor";
+} from "./background/background-vault-actions";
+import type { VaultActionExecutor } from "./background/vault-action-executor";
 
 const DEFAULT_FLUSH_DELAY_MS = 200;
 
@@ -84,16 +84,13 @@ export class VaultActionQueue {
 	}
 
 	private scheduleFlush(): void {
-		// If already flushing, mark that we need another flush after
 		if (this.isFlushing) {
 			this.pendingFlush = true;
 			return;
 		}
 
-		// Cancel existing scheduled flush
 		this.cancelScheduledFlush();
 
-		// Schedule new flush
 		this.flushTimeout = setTimeout(() => {
 			this.flushTimeout = null;
 			void this.flush();
@@ -124,7 +121,6 @@ export class VaultActionQueue {
 			this.isFlushing = false;
 		}
 
-		// If new actions came in during flush, schedule another
 		if (this.pendingFlush) {
 			this.pendingFlush = false;
 			this.scheduleFlush();

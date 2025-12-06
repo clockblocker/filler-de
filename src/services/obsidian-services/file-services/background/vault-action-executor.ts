@@ -101,14 +101,6 @@ export class VaultActionExecutor {
 				break;
 			}
 
-			case VaultActionType.ReadFile:
-				// ReadFile is a no-op in executor (result not captured)
-				logWarning({
-					description: `ReadFile action in queue is a no-op: ${getActionTargetPath(action)}`,
-					location: "VaultActionExecutor.executeOne",
-				});
-				break;
-
 			default: {
 				const _exhaustive: never = type;
 				throw new Error(`Unknown action type: ${_exhaustive}`);
