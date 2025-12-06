@@ -14,3 +14,4 @@ export type TexfresserObsidianServices = {
 	selectionToolbarService: AboveSelectionToolbarService;
 	bottomToolbarService: BottomToolbarService;
 };
+

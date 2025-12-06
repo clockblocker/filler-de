@@ -75,9 +75,6 @@ export class Librarian {
 		this._skipReconciliation = skip;
 	}
 
-	/**
-	 * Set the action queue (for deferred initialization).
-	 */
 	setActionQueue(queue: VaultActionQueue): void {
 		this.actionQueue = queue;
 	}
@@ -97,23 +94,10 @@ export class Librarian {
 		if (!tree) {
 			return;
 		}
-
-		console.log(
-			"[Librarian.reconcileSubtree] Reading from filesystem:",
-			subtreePath,
-		);
 		const filesystemTexts = await this.readSubtreeFromFilesystem(
 			rootName,
 			subtreePath,
 		);
-		console.log(
-			"[Librarian.reconcileSubtree] Filesystem texts:",
-			filesystemTexts.map((t) => ({
-				pageStatuses: t.pageStatuses,
-				path: t.path,
-			})),
-		);
-
 		tree.reconcileSubtree(subtreePath, filesystemTexts);
 	}
 
