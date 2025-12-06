@@ -37,9 +37,8 @@ function getPathFromNode(node: TreeNode, root: SectionNode): TreePath {
 }
 
 /**
- * Generates CodexContent from V2 tree nodes.
+ * Generates CodexContent from tree nodes.
  *
- * In V2:
  * - SectionNode can contain Sections or Notes
  * - Books are Sections containing Notes with numeric names (000, 001, etc.)
  * - Scrolls are Notes with non-numeric names

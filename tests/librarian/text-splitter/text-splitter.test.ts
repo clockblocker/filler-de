@@ -1,8 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import {
-	formatPageIndex,
-	splitTextIntoP_ages,
-} from "../../../src/commanders/librarian/text-splitter/text-splitter";
+import { pageNumberFromInt } from "../../../src/commanders/librarian/indexing/codecs";
+import { splitTextIntoP_ages } from "../../../src/commanders/librarian/text-splitter/text-splitter";
 
 describe("TextSplitter", () => {
 	describe("splitTextIntoP_ages", () => {
@@ -112,23 +110,23 @@ describe("TextSplitter", () => {
 		});
 	});
 
-	describe("formatPageIndex", () => {
+	describe("pageNumberFromInt", () => {
 		it("should pad single digit to 3 characters", () => {
-			expect(formatPageIndex(0)).toBe("000");
-			expect(formatPageIndex(5)).toBe("005");
-			expect(formatPageIndex(9)).toBe("009");
+			expect(pageNumberFromInt.encode(0)).toBe("000");
+			expect(pageNumberFromInt.encode(5)).toBe("005");
+			expect(pageNumberFromInt.encode(9)).toBe("009");
 		});
 
 		it("should pad double digit to 3 characters", () => {
-			expect(formatPageIndex(10)).toBe("010");
-			expect(formatPageIndex(42)).toBe("042");
-			expect(formatPageIndex(99)).toBe("099");
+			expect(pageNumberFromInt.encode(10)).toBe("010");
+			expect(pageNumberFromInt.encode(42)).toBe("042");
+			expect(pageNumberFromInt.encode(99)).toBe("099");
 		});
 
 		it("should preserve triple digit", () => {
-			expect(formatPageIndex(100)).toBe("100");
-			expect(formatPageIndex(500)).toBe("500");
-			expect(formatPageIndex(999)).toBe("999");
+			expect(pageNumberFromInt.encode(100)).toBe("100");
+			expect(pageNumberFromInt.encode(500)).toBe("500");
+			expect(pageNumberFromInt.encode(999)).toBe("999");
 		});
 	});
 });

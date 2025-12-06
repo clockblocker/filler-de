@@ -12,7 +12,7 @@ import {
 type TreeNode = SectionNode | NoteNode;
 
 /**
- * Snapshot for diffing V2 trees
+ * Snapshot for diffing trees
  */
 export type TreeSnapshot = {
 	notes: NoteDto[];

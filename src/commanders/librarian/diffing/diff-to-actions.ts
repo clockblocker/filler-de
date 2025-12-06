@@ -17,7 +17,7 @@ import { NodeType } from "../types";
 import type { NoteDiff, NoteStatusChange } from "./note-differ";
 
 /**
- * Callback to get a V2 node from the tree by path.
+ * Callback to get a node from the tree by path.
  */
 export type GetNodeFn = (path: TreePath) => SectionNode | NoteNode | undefined;
 
@@ -36,13 +36,6 @@ function getBookPath(pagePath: TreePath): TreePath {
 	return pagePath.slice(0, -1);
 }
 
-/**
- * Maps V2 tree diffs to vault actions.
- *
- * Simpler than V1:
- * - Notes are flat (no pageStatuses grouping)
- * - Scroll vs Book determined by path pattern
- */
 export class DiffToActions {
 	private rootName: string;
 

@@ -4,7 +4,7 @@ import { TextStatus } from '../../../src/types/common-interface/enums';
 import { AVATAR_NOTES } from '../static/batteries/avatar';
 
 /**
- * Tests for NoteDto format (V2)
+ * Tests for NoteDto format
  * 
  * NoteDto is a flat structure where each file = one DTO:
  * - Scroll: single NoteDto with path = [...sectionPath, scrollName]
@@ -12,7 +12,7 @@ import { AVATAR_NOTES } from '../static/batteries/avatar';
  * 
  * This replaces TextDto's pageStatuses: Record<name, status> pattern.
  */
-describe('NoteDto format (V2)', () => {
+describe('NoteDto format', () => {
 	describe('Structure validation', () => {
 		it('should have path and status fields', () => {
 			const note: NoteDto = {

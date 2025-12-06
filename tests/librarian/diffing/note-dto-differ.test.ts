@@ -8,7 +8,7 @@ import { TextStatus } from "../../../src/types/common-interface/enums";
 
 const differ = noteDiffer;
 
-describe("NoteDiffer (V2)", () => {
+describe("NoteDiffer", () => {
 	describe("diff - notes", () => {
 		it("should detect added note", () => {
 			const before: NoteSnapshot = {
@@ -210,11 +210,8 @@ describe("NoteDiffer (V2)", () => {
 		});
 	});
 
-	describe("V2 vs V1 comparison", () => {
-		it("NoteDto status change is direct (no pageStatuses flattening)", () => {
-			// V1 (TextDto): statusChanges path = [...textPath, pageName]
-			// V2 (NoteDto): statusChanges path = note.path (already flat)
-			
+	describe("NoteDto status change", () => {
+		it("NoteDto status change is direct", () => {
 			const before: NoteSnapshot = {
 				notes: [
 					{ path: ["Section", "Book", "000"] as TreePath, status: TextStatus.NotStarted },
@@ -236,9 +233,6 @@ describe("NoteDiffer (V2)", () => {
 		});
 
 		it("scroll status change has same path structure as note", () => {
-			// In V1, scroll's page was named same as text
-			// In V2, scroll is just a note at section level
-
 			const before: NoteSnapshot = {
 				notes: [
 					{ path: ["Section", "Scroll"] as TreePath, status: TextStatus.NotStarted },

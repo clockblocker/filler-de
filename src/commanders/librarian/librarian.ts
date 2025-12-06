@@ -11,6 +11,7 @@ import { DiffToActions } from "./diffing/diff-to-actions";
 import type { NoteSnapshot } from "./diffing/note-differ";
 import { noteDiffer } from "./diffing/note-differ";
 import {
+	pageNumberFromInt,
 	toNodeName,
 	treePathToPageBasename,
 	treePathToScrollBasename,
@@ -18,10 +19,7 @@ import {
 import { prettyFilesWithReaderToLibraryFileDtos } from "./indexing/libraryFileAdapters";
 import { LibraryTree } from "./library-tree/library-tree";
 import { noteDtosFromLibraryFileDtos } from "./pure-functions/note-dtos-from-library-file-dtos";
-import {
-	formatPageIndex,
-	splitTextIntoP_ages,
-} from "./text-splitter/text-splitter";
+import { splitTextIntoP_ages } from "./text-splitter/text-splitter";
 import type { LibraryFileDto, NoteDto, TreePath } from "./types";
 
 const ROOTS = ["Library"] as const;
@@ -324,7 +322,11 @@ export class Librarian {
 			// Book: multiple notes under a section
 			for (let i = 0; i < pages.length; i++) {
 				notesToAdd.push({
-					path: [...sectionPath, textName, formatPageIndex(i)],
+					path: [
+						...sectionPath,
+						textName,
+						pageNumberFromInt.encode(i),
+					],
 					status: TextStatus.NotStarted,
 				});
 			}
@@ -358,7 +360,7 @@ export class Librarian {
 				const fullPagePath: TreePath = [
 					...sectionPath,
 					textName,
-					formatPageIndex(i),
+					pageNumberFromInt.encode(i),
 				];
 				const pagePath = {
 					basename: treePathToPageBasename.encode(fullPagePath),

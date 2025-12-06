@@ -1,9 +1,25 @@
 import { describe, expect, it } from "bun:test";
 import { DiffToActions } from "../../../src/commanders/librarian/diffing/diff-to-actions";
 import type { NoteDiff } from "../../../src/commanders/librarian/diffing/note-differ";
+import {
+	treePathToCodexBasename,
+	treePathToPageBasename,
+	treePathToScrollBasename,
+} from "../../../src/commanders/librarian/indexing/codecs";
 import type { TreePath } from "../../../src/commanders/librarian/types";
-import { VaultActionType } from "../../../src/services/obsidian-services/file-services/background/background-vault-actions";
+import {
+	type VaultAction,
+	VaultActionType,
+} from "../../../src/services/obsidian-services/file-services/background/background-vault-actions";
+import type { PrettyPath } from "../../../src/types/common-interface/dtos";
 import { TextStatus } from "../../../src/types/common-interface/enums";
+
+// Type guard for actions with prettyPath (excludes Rename actions)
+type ActionWithPrettyPath = VaultAction & {
+	payload: { prettyPath: PrettyPath };
+};
+const hasPrettyPath = (a: VaultAction): a is ActionWithPrettyPath =>
+	"prettyPath" in a.payload;
 
 const mapper = new DiffToActions("Library");
 
@@ -27,11 +43,14 @@ describe("DiffToActions", () => {
 
 			const actions = mapper.mapDiffToActions(diff);
 
-			const fileAction = actions.find(
-				(a) =>
-					a.type === VaultActionType.UpdateOrCreateFile &&
-					a.payload.prettyPath.basename === "Scroll-Section",
-			);
+			const fileAction = actions
+				.filter(hasPrettyPath)
+				.find(
+					(a) =>
+						a.type === VaultActionType.UpdateOrCreateFile &&
+						a.payload.prettyPath.basename ===
+							treePathToScrollBasename.encode(["Section", "Scroll"]),
+				);
 
 			expect(fileAction).toBeDefined();
 			expect(fileAction?.payload.prettyPath.pathParts).toEqual(["Library", "Section"]);
@@ -47,11 +66,14 @@ describe("DiffToActions", () => {
 
 			const actions = mapper.mapDiffToActions(diff);
 
-			const fileAction = actions.find(
-				(a) =>
-					a.type === VaultActionType.UpdateOrCreateFile &&
-					a.payload.prettyPath.basename === "000-Book-Section",
-			);
+			const fileAction = actions
+				.filter(hasPrettyPath)
+				.find(
+					(a) =>
+						a.type === VaultActionType.UpdateOrCreateFile &&
+						a.payload.prettyPath.basename ===
+							treePathToPageBasename.encode(["Section", "Book", "000"]),
+				);
 
 			expect(fileAction).toBeDefined();
 			expect(fileAction?.payload.prettyPath.pathParts).toEqual([
@@ -107,11 +129,14 @@ describe("DiffToActions", () => {
 
 			const actions = mapper.mapDiffToActions(diff);
 
-			const trashAction = actions.find(
-				(a) =>
-					a.type === VaultActionType.TrashFile &&
-					a.payload.prettyPath.basename === "Scroll-Section",
-			);
+			const trashAction = actions
+				.filter(hasPrettyPath)
+				.find(
+					(a) =>
+						a.type === VaultActionType.TrashFile &&
+						a.payload.prettyPath.basename ===
+							treePathToScrollBasename.encode(["Section", "Scroll"]),
+				);
 
 			expect(trashAction).toBeDefined();
 		});
@@ -126,11 +151,14 @@ describe("DiffToActions", () => {
 
 			const actions = mapper.mapDiffToActions(diff);
 
-			const trashAction = actions.find(
-				(a) =>
-					a.type === VaultActionType.TrashFile &&
-					a.payload.prettyPath.basename === "001-Book",
-			);
+			const trashAction = actions
+				.filter(hasPrettyPath)
+				.find(
+					(a) =>
+						a.type === VaultActionType.TrashFile &&
+						a.payload.prettyPath.basename ===
+							treePathToPageBasename.encode(["Book", "001"]),
+				);
 
 			expect(trashAction).toBeDefined();
 		});
@@ -151,14 +179,18 @@ describe("DiffToActions", () => {
 
 			const actions = mapper.mapDiffToActions(diff);
 
-			const processAction = actions.find(
-				(a) =>
-					a.type === VaultActionType.ProcessFile &&
-					a.payload.prettyPath.basename === "Scroll-Section",
-			);
+			const processAction = actions
+				.filter(hasPrettyPath)
+				.find(
+					(a) =>
+						a.type === VaultActionType.ProcessFile &&
+						a.payload.prettyPath.basename ===
+							treePathToScrollBasename.encode(["Section", "Scroll"]),
+				);
 
 			expect(processAction).toBeDefined();
-			expect(processAction?.payload.transform).toBeDefined();
+			// transform exists on ProcessFile actions
+			expect("transform" in (processAction?.payload ?? {})).toBe(true);
 		});
 
 		it("should create ProcessFile action for page status change", () => {
@@ -175,12 +207,14 @@ describe("DiffToActions", () => {
 
 			const actions = mapper.mapDiffToActions(diff);
 
-			const processAction = actions.find(
-				(a) => a.type === VaultActionType.ProcessFile,
-			);
+			const processAction = actions
+				.filter(hasPrettyPath)
+				.find((a) => a.type === VaultActionType.ProcessFile);
 
 			expect(processAction).toBeDefined();
-			expect(processAction?.payload.prettyPath.basename).toBe("000-Book");
+			expect(processAction?.payload.prettyPath.basename).toBe(
+				treePathToPageBasename.encode(["Book", "000"]),
+			);
 		});
 	});
 
@@ -193,11 +227,13 @@ describe("DiffToActions", () => {
 
 			const actions = mapper.mapDiffToActions(diff);
 
-			const folderAction = actions.find(
-				(a) =>
-					a.type === VaultActionType.UpdateOrCreateFolder &&
-					a.payload.prettyPath.basename === "NewSection",
-			);
+			const folderAction = actions
+				.filter(hasPrettyPath)
+				.find(
+					(a) =>
+						a.type === VaultActionType.UpdateOrCreateFolder &&
+						a.payload.prettyPath.basename === "NewSection",
+				);
 
 			expect(folderAction).toBeDefined();
 			expect(folderAction?.payload.prettyPath.pathParts).toEqual(["Library"]);
@@ -211,11 +247,14 @@ describe("DiffToActions", () => {
 
 			const actions = mapper.mapDiffToActions(diff);
 
-			const codexAction = actions.find(
-				(a) =>
-					a.type === VaultActionType.UpdateOrCreateFile &&
-					a.payload.prettyPath.basename === "__NewSection",
-			);
+			const codexAction = actions
+				.filter(hasPrettyPath)
+				.find(
+					(a) =>
+						a.type === VaultActionType.UpdateOrCreateFile &&
+						a.payload.prettyPath.basename ===
+							treePathToCodexBasename.encode(["NewSection"]),
+				);
 
 			expect(codexAction).toBeDefined();
 			expect(codexAction?.payload.prettyPath.pathParts).toEqual([
@@ -232,12 +271,14 @@ describe("DiffToActions", () => {
 
 			const actions = mapper.mapDiffToActions(diff);
 
-			const codexTrash = actions.findIndex(
+			const actionsWithPath = actions.filter(hasPrettyPath);
+			const codexTrash = actionsWithPath.findIndex(
 				(a) =>
 					a.type === VaultActionType.TrashFile &&
-					a.payload.prettyPath.basename === "__OldSection",
+					a.payload.prettyPath.basename ===
+						treePathToCodexBasename.encode(["OldSection"]),
 			);
-			const folderTrash = actions.findIndex(
+			const folderTrash = actionsWithPath.findIndex(
 				(a) =>
 					a.type === VaultActionType.TrashFolder &&
 					a.payload.prettyPath.basename === "OldSection",
@@ -259,9 +300,9 @@ describe("DiffToActions", () => {
 
 			const actions = mapper.mapDiffToActions(diff);
 
-			const folderActions = actions.filter(
-				(a) => a.type === VaultActionType.TrashFolder,
-			);
+			const folderActions = actions
+				.filter(hasPrettyPath)
+				.filter((a) => a.type === VaultActionType.TrashFolder);
 
 			// C should be before B, B before A
 			const cIdx = folderActions.findIndex(
@@ -290,11 +331,14 @@ describe("DiffToActions", () => {
 
 			const actions = mapper.mapDiffToActions(diff);
 
-			const rootCodex = actions.find(
-				(a) =>
-					a.type === VaultActionType.UpdateOrCreateFile &&
-					a.payload.prettyPath.basename === "__Library",
-			);
+			const rootCodex = actions
+				.filter(hasPrettyPath)
+				.find(
+					(a) =>
+						a.type === VaultActionType.UpdateOrCreateFile &&
+						a.payload.prettyPath.basename ===
+							treePathToCodexBasename.encode(["Library"]),
+				);
 
 			expect(rootCodex).toBeDefined();
 		});
@@ -314,16 +358,18 @@ describe("DiffToActions", () => {
 			const actions = mapper.mapDiffToActions(diff);
 
 			// Should update codexes for: root, A, A/B
-			const codexUpdates = actions.filter(
-				(a) =>
-					a.type === VaultActionType.UpdateOrCreateFile &&
-					a.payload.prettyPath.basename.startsWith("__"),
-			);
+			const codexUpdates = actions
+				.filter(hasPrettyPath)
+				.filter(
+					(a) =>
+						a.type === VaultActionType.UpdateOrCreateFile &&
+						a.payload.prettyPath.basename.startsWith("__"),
+				);
 
 			const basenames = codexUpdates.map((a) => a.payload.prettyPath.basename);
-			expect(basenames).toContain("__Library");
-			expect(basenames).toContain("__A");
-			expect(basenames).toContain("__B-A");
+			expect(basenames).toContain(treePathToCodexBasename.encode(["Library"]));
+			expect(basenames).toContain(treePathToCodexBasename.encode(["A"]));
+			expect(basenames).toContain(treePathToCodexBasename.encode(["A", "B"]));
 		});
 
 		it("should update book codex when page status changes", () => {
@@ -340,11 +386,14 @@ describe("DiffToActions", () => {
 
 			const actions = mapper.mapDiffToActions(diff);
 
-			const bookCodex = actions.find(
-				(a) =>
-					a.type === VaultActionType.UpdateOrCreateFile &&
-					a.payload.prettyPath.basename === "__Book-Section",
-			);
+			const bookCodex = actions
+				.filter(hasPrettyPath)
+				.find(
+					(a) =>
+						a.type === VaultActionType.UpdateOrCreateFile &&
+						a.payload.prettyPath.basename ===
+							treePathToCodexBasename.encode(["Section", "Book"]),
+				);
 
 			expect(bookCodex).toBeDefined();
 		});

@@ -2,7 +2,7 @@ import type { TextStatus } from "../../../types/common-interface/enums";
 import type { NoteDto, TreePath } from "../types";
 
 /**
- * Snapshot of V2 tree state for diffing.
+ * Snapshot of tree state for diffing.
  */
 export type NoteSnapshot = {
 	notes: NoteDto[];
@@ -53,13 +53,6 @@ export function isNoteDiffEmpty(diff: NoteDiff): boolean {
 	);
 }
 
-/**
- * V2 differ for NoteDto format.
- *
- * Simpler than V1 TreeDiffer:
- * - No pageStatuses flattening needed
- * - Status changes are direct (path = note.path)
- */
 export class NoteDiffer {
 	diff(before: NoteSnapshot, after: NoteSnapshot): NoteDiff {
 		const beforeNoteKeys = new Set(

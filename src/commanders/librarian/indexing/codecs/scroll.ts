@@ -11,7 +11,7 @@ export const isScrollBasename = (s: string): s is ScrollBasename =>
 
 export const treePathToScrollBasename = z.codec(
 	ScrollBasenameSchema,
-	z.array(NodeNameSchema).min(2),
+	z.array(NodeNameSchema).min(1),
 	{
 		decode: (name) => {
 			const treePath = name.split(DASH).toReversed();

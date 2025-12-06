@@ -1,9 +1,10 @@
 import { TextStatus } from "../../../types/common-interface/enums";
+import { pageNumberFromInt } from "../indexing/codecs";
 import { getTreePathFromLibraryFile } from "../indexing/libraryFileAdapters";
 import type { LibraryFileDto, NoteDto, TreePath } from "../types";
 
 /**
- * Convert LibraryFileDtos to NoteDtos (V2 flat format).
+ * Convert LibraryFileDtos to NoteDtos).
  * Each file becomes one NoteDto - no grouping by text.
  */
 export function noteDtosFromLibraryFileDtos(
@@ -41,9 +42,8 @@ export function noteDtosFromLibraryFileDtos(
 		) {
 			// Page: use parent path + padded index
 			const parentPath = treePath.slice(0, -1);
-			const pageIndex = String(libraryFileDto.metaInfo.index).padStart(
-				3,
-				"0",
+			const pageIndex = pageNumberFromInt.encode(
+				libraryFileDto.metaInfo.index,
 			);
 			notePath = [...parentPath, pageIndex];
 		} else {

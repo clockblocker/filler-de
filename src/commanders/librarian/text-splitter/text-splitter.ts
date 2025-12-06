@@ -72,10 +72,3 @@ export function splitTextIntoP_ages(
 		pages,
 	};
 }
-
-/**
- * Format page index as 3-digit padded string.
- */
-export function formatPageIndex(index: number): string {
-	return String(index).padStart(3, "0");
-}
