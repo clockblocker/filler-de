@@ -103,43 +103,20 @@ export class LibraryTree {
 		path: TreePath;
 		status: "Done" | "NotStarted";
 	}): Maybe<TreeNode> {
-		console.log("[LibraryTree] [setStatus] path:", path, "status:", status);
 		const mbNode = this.getMaybeNode({ path });
 		if (mbNode.error) {
-			console.log(
-				"[LibraryTree] [setStatus] ERROR: node not found:",
-				mbNode.description,
-			);
 			return mbNode;
 		}
 
 		const node = mbNode.data;
-		console.log(
-			"[LibraryTree] [setStatus] found node:",
-			node.name,
-			"current status:",
-			node.status,
-		);
+
 		if (node.status === status) {
-			console.log(
-				"[LibraryTree] [setStatus] status unchanged, returning early",
-			);
 			return { data: node, error: false };
 		}
 
-		console.log(
-			"[LibraryTree] [setStatus] changing status from",
-			node.status,
-			"to",
-			status,
-		);
 		this.setStatusRecursively(node, status);
 		this.recomputeStatuses();
 
-		console.log(
-			"[LibraryTree] [setStatus] after recompute, node status:",
-			node.status,
-		);
 		return { data: node, error: false };
 	}
 

@@ -23,14 +23,6 @@ import type { LibraryFileDto, NoteDto, TreePath } from "./types";
 const ROOTS = ["Library"] as const;
 type RootName = (typeof ROOTS)[number];
 
-/**
- * Librarian - Uses simplified V2 tree structure (Section → Note)
- *
- * Key differences from V1:
- * - Uses LibraryTree (2 levels) instead of LibraryTree (3 levels)
- * - Uses NoteDto (flat) instead of TextDto (grouped)
- * - Uses NoteDiffer + DiffToActions
- */
 export class Librarian {
 	backgroundFileService: TexfresserObsidianServices["backgroundFileService"];
 	openedFileService: TexfresserObsidianServices["openedFileService"];
@@ -238,7 +230,7 @@ export class Librarian {
 		);
 		const notePath: TreePath = [...sectionPath, newNoteName];
 
-		const { result } = await this.withDiff(
+		await this.withDiff(
 			rootName,
 			(tree) =>
 				tree.addNotes([
