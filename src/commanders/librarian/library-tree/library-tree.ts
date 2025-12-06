@@ -77,7 +77,7 @@ export class LibraryTree {
 		};
 	}
 
-	public addTexts(serializedTexts: TextDto[]): void {
+	public  addTexts(serializedTexts: TextDto[]): void {
 		for (const serializedText of serializedTexts) {
 			this.addText(serializedText);
 		}

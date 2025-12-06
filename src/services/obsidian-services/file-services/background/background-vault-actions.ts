@@ -4,12 +4,15 @@ import {
 	FILE,
 	FOLDER,
 	PROCESS,
-	READ,
 	RENAME,
 	TRASH,
 	UPDATE_OR_CREATE,
 	WRITE,
 } from "../../../../types/literals";
+
+export const ContentActionSchema = z.enum([PROCESS, WRITE] as const);
+export const AbstractFileTypeSchema = z.enum([FILE, FOLDER] as const);
+const AbstractFileType = AbstractFileTypeSchema.enum;
 
 // Action type schema construction
 export const DirActionSchema = z.enum([
@@ -17,9 +20,6 @@ export const DirActionSchema = z.enum([
 	TRASH,
 	RENAME,
 ] as const);
-export const ContentActionSchema = z.enum([PROCESS, WRITE] as const);
-export const AbstractFileTypeSchema = z.enum([FILE, FOLDER] as const);
-const AbstractFileType = AbstractFileTypeSchema.enum;
 
 const DirActionTypeValues = DirActionSchema.options.flatMap((action) =>
 	AbstractFileTypeSchema.options.map(

@@ -17,11 +17,11 @@ import type { TreeSnapshot } from "./diffing/types";
 import { pageNameFromTreePath, toGuardedNodeName } from "./indexing/formatters";
 import {
 	getLibraryFileToFileFromNode,
-	getTreePathFromLibraryFile,
 	prettyFilesWithReaderToLibraryFileDtos,
 } from "./indexing/libraryFileAdapters";
 import { LibraryTree } from "./library-tree/library-tree";
 import { getTreePathFromNode } from "./pure-functions/node";
+import { textDtosFromLibraryFileDtos } from "./pure-functions/text-Dtos-From-Library-File-Dtos";
 import {
 	formatPageIndex,
 	splitTextIntoP_ages,
@@ -94,7 +94,7 @@ export class Librarian {
 		if (!tree) {
 			return;
 		}
-		const filesystemTexts = await this.readSubtreeFromFilesystem(
+		const filesystemTexts = await this.readTextsInSubtreeFromFilesystem(
 			rootName,
 			subtreePath,
 		);
@@ -102,10 +102,37 @@ export class Librarian {
 	}
 
 	/**
+	 * Execute an async mutation with diff tracking and optional pre-reconciliation.
+	 * Reconciles affected paths with filesystem before taking snapshot.
+	 *
+	 * @param rootName - The root tree to operate on
+	 * @param mutation - Synchronous tree mutation function
+	 * @param affectedPaths - Paths to reconcile with filesystem before mutation
+	 */
+	private async withDiff<T>(
+		rootName: RootName,
+		mutation: (tree: LibraryTree) => T,
+		affectedPaths?: TreePath[],
+	): Promise<{ actions: VaultAction[]; result: T }> {
+		// Reconcile affected paths before taking snapshot (unless skipped for testing)
+		if (
+			!this._skipReconciliation &&
+			affectedPaths &&
+			affectedPaths.length > 0
+		) {
+			for (const path of affectedPaths) {
+				await this.reconcileSubtree(rootName, path);
+			}
+		}
+
+		return this.withDiffSync(rootName, mutation);
+	}
+
+	/**
 	 * Execute a mutation on a tree with automatic diff and action queuing.
 	 * Returns the result of the mutation function.
 	 */
-	private withDiff<T>(
+	private withDiffSync<T>(
 		rootName: RootName,
 		mutation: (tree: LibraryTree) => T,
 	): { actions: VaultAction[]; result: T } {
@@ -134,49 +161,13 @@ export class Librarian {
 		};
 
 		const actions = mapper ? mapper.mapDiffToActions(diff, getNode) : [];
+
 		console.log("[Librarian] [withDiff] actions", actions);
 		if (this.actionQueue && actions.length > 0) {
 			this.actionQueue.pushMany(actions);
 		}
 
 		return { actions, result };
-	}
-
-	/**
-	 * Execute an async mutation with diff tracking and optional pre-reconciliation.
-	 * Reconciles affected paths with filesystem before taking snapshot.
-	 *
-	 * @param rootName - The root tree to operate on
-	 * @param mutation - Synchronous tree mutation function
-	 * @param affectedPaths - Paths to reconcile with filesystem before mutation
-	 */
-	private async withDiffAsync<T>(
-		rootName: RootName,
-		mutation: (tree: LibraryTree) => T,
-		affectedPaths?: TreePath[],
-	): Promise<{ actions: VaultAction[]; result: T }> {
-		// Reconcile affected paths before taking snapshot (unless skipped for testing)
-		if (
-			!this._skipReconciliation &&
-			affectedPaths &&
-			affectedPaths.length > 0
-		) {
-			for (const path of affectedPaths) {
-				await this.reconcileSubtree(rootName, path);
-			}
-		}
-
-		return this.withDiff(rootName, mutation);
-	}
-
-	async moveText({
-		from,
-		to,
-	}: {
-		from: TreePath;
-		to: TreePath;
-	}): Promise<void> {
-		// TODO: Implement with withDiff
 	}
 
 	private async readLibraryFileDtosInFolder(
@@ -198,15 +189,15 @@ export class Librarian {
 	 * @param rootName - The root folder name (e.g., "Library")
 	 * @param subtreePath - Path within the root to read (empty = entire root)
 	 */
-	async readSubtreeFromFilesystem(
+	private async readTextsInSubtreeFromFilesystem(
 		rootName: RootName,
 		subtreePath: TreePath = [],
 	): Promise<TextDto[]> {
-		// Determine folder to read
 		const folderBasename =
 			subtreePath.length > 0
 				? (subtreePath[subtreePath.length - 1] ?? rootName)
 				: rootName;
+
 		const pathParts =
 			subtreePath.length > 1
 				? [rootName, ...subtreePath.slice(0, -1)]
@@ -231,7 +222,8 @@ export class Librarian {
 	async initTrees() {
 		this.trees = {} as Record<RootName, LibraryTree>;
 		for (const rootName of ROOTS) {
-			const textDtos = await this.readSubtreeFromFilesystem(rootName);
+			const textDtos =
+				await this.readTextsInSubtreeFromFilesystem(rootName);
 			this.trees[rootName] = new LibraryTree(textDtos, rootName);
 		}
 	}
@@ -260,7 +252,7 @@ export class Librarian {
 		const textPath: TreePath = [...sectionPath, newTextName];
 
 		// Use withDiffAsync to reconcile the section before mutation
-		const { result: mbTextNode } = await this.withDiffAsync(
+		const { result: mbTextNode } = await this.withDiff(
 			rootName,
 			(tree) =>
 				tree.getOrCreateTextNode({
@@ -370,7 +362,7 @@ export class Librarian {
 		}
 
 		// Add to tree with diff tracking, reconciling section first
-		await this.withDiffAsync(
+		await this.withDiff(
 			rootName,
 			(tree) => {
 				tree.addTexts([{ pageStatuses, path: textPath }]);
@@ -441,26 +433,12 @@ export class Librarian {
 		path: TreePath,
 		status: "Done" | "NotStarted",
 	): Promise<void> {
-		console.log("[Librarian.setStatus] Called:", {
-			path,
-			rootName,
-			status,
-		});
-		// Reconcile the parent section before setting status
 		const parentPath = path.slice(0, -1);
-		console.log(
-			"[Librarian.setStatus] Reconciling parent path:",
-			parentPath,
-		);
-		const result = await this.withDiffAsync(
+		await this.withDiff(
 			rootName,
 			(tree) => tree.setStatus({ path, status }),
 			parentPath.length > 0 ? [parentPath] : [],
 		);
-		console.log("[Librarian.setStatus] Result:", {
-			actions: result.actions,
-			actionsCount: result.actions.length,
-		});
 	}
 
 	/**
@@ -474,7 +452,7 @@ export class Librarian {
 			.map((p) => p.split("/").filter(Boolean) as TreePath)
 			.filter((p) => p.length > 0);
 
-		await this.withDiffAsync(
+		await this.withDiff(
 			rootName,
 			(tree) => tree.addTexts(texts),
 			parentPaths,
@@ -492,7 +470,7 @@ export class Librarian {
 			.map((p) => p.split("/").filter(Boolean) as TreePath)
 			.filter((p) => p.length > 0);
 
-		await this.withDiffAsync(
+		await this.withDiff(
 			rootName,
 			(tree) => tree.deleteTexts(paths.map((path) => ({ path }))),
 			parentPaths,
@@ -510,7 +488,7 @@ export class Librarian {
 	private generateUniqueTextName(sectionNode: {
 		children: Array<{ name: string }>;
 	}): string {
-		const baseName = "New Text";
+		const baseName = "New_Text";
 		const existingNames = new Set(
 			sectionNode.children
 				.filter((child) => child.name.startsWith(baseName))
@@ -576,85 +554,4 @@ function isRootName(name: string): name is RootName {
 
 function treePathFromFullPath(fullPath: FullPath): TreePath {
 	return [...fullPath.pathParts.slice(1), fullPath.basename];
-}
-
-/**
- * Convert LibraryFileDtos to TextDtos, filtering by subtree path.
- * Groups pages of the same text together.
- */
-function textDtosFromLibraryFileDtos(
-	libraryFileDtos: LibraryFileDto[],
-	subtreePath: TreePath = [],
-): TextDto[] {
-	// Group files by their text path (all pages of the same text go together)
-	const buckets: Map<string, LibraryFileDto[]> = new Map();
-
-	for (const libraryFileDto of libraryFileDtos) {
-		// Skip Codex files - they're organizational nodes, not texts
-		if (libraryFileDto.metaInfo.fileType === "Codex") {
-			continue;
-		}
-
-		const treePath = getTreePathFromLibraryFile(libraryFileDto);
-
-		// Filter: only include files under subtreePath
-		if (subtreePath.length > 0) {
-			const matchesSubtree = subtreePath.every(
-				(segment, i) => treePath[i] === segment,
-			);
-			if (!matchesSubtree) {
-				continue;
-			}
-		}
-
-		const isPage = libraryFileDto.metaInfo.fileType === "Page";
-		const textPath = isPage ? treePath.slice(0, -1) : treePath;
-		const joinedTextPath = textPath.join("-");
-
-		const bucket = buckets.get(joinedTextPath);
-		if (!bucket) {
-			buckets.set(joinedTextPath, [libraryFileDto]);
-		} else {
-			bucket.push(libraryFileDto);
-		}
-	}
-
-	const textDtos: TextDto[] = [];
-
-	for (const [, fileDtos] of buckets.entries()) {
-		const firstFile = fileDtos[0];
-		if (!firstFile) {
-			continue;
-		}
-
-		const firstTreePath = getTreePathFromLibraryFile(firstFile);
-		const isFirstPage = firstFile.metaInfo.fileType === "Page";
-		const path = isFirstPage ? firstTreePath.slice(0, -1) : firstTreePath;
-
-		const textDto: TextDto = {
-			pageStatuses: Object.fromEntries(
-				fileDtos.map((libraryFileDto) => {
-					const treePath = getTreePathFromLibraryFile(libraryFileDto);
-					let name = treePath[treePath.length - 1];
-					if (
-						libraryFileDto.metaInfo.fileType === "Page" &&
-						"index" in libraryFileDto.metaInfo
-					) {
-						name = String(libraryFileDto.metaInfo.index).padStart(
-							3,
-							"0",
-						);
-					}
-					const status =
-						libraryFileDto.metaInfo.status ?? TextStatus.NotStarted;
-					return [name, status];
-				}),
-			),
-			path,
-		};
-
-		textDtos.push(textDto);
-	}
-
-	return textDtos;
 }

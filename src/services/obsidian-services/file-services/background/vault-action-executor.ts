@@ -1,5 +1,5 @@
 import type { PrettyPath } from "../../../../types/common-interface/dtos";
-import { logError, logWarning } from "../../helpers/issue-handlers";
+import { logError } from "../../helpers/issue-handlers";
 import type { OpenedFileService } from "../active-view/opened-file-service";
 import type { BackgroundFileService } from "./background-file-service";
 import {
