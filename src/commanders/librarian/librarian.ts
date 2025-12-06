@@ -35,7 +35,7 @@ type RootName = (typeof ROOTS)[number];
 // Moving Page is not allowed
 // We can only move Texts / Scrolls and Sections
 
-export class Librarian {
+class Librarian {
 	backgroundFileService: TexfresserObsidianServices["backgroundFileService"];
 	openedFileService: TexfresserObsidianServices["openedFileService"];
 	trees: Record<RootName, LibraryTree>;

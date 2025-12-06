@@ -1,0 +1,359 @@
+import { describe, expect, it } from "bun:test";
+import { DiffToActionsV2 } from "../../../src/commanders/librarian/diffing/diff-to-actions-v2";
+import type { NoteDiff } from "../../../src/commanders/librarian/diffing/note-differ";
+import type { TreePath } from "../../../src/commanders/librarian/types";
+import { VaultActionType } from "../../../src/services/obsidian-services/file-services/background/background-vault-actions";
+import { TextStatus } from "../../../src/types/common-interface/enums";
+
+const mapper = new DiffToActionsV2("Library");
+
+const emptyDiff: NoteDiff = {
+	addedNotes: [],
+	addedSections: [],
+	removedNotes: [],
+	removedSections: [],
+	statusChanges: [],
+};
+
+describe("DiffToActionsV2", () => {
+	describe("added notes", () => {
+		it("should create scroll file for non-book note", () => {
+			const diff: NoteDiff = {
+				...emptyDiff,
+				addedNotes: [
+					{ path: ["Section", "Scroll"] as TreePath, status: TextStatus.NotStarted },
+				],
+			};
+
+			const actions = mapper.mapDiffToActions(diff);
+
+			const fileAction = actions.find(
+				(a) =>
+					a.type === VaultActionType.UpdateOrCreateFile &&
+					a.payload.prettyPath.basename === "Scroll-Section",
+			);
+
+			expect(fileAction).toBeDefined();
+			expect(fileAction?.payload.prettyPath.pathParts).toEqual(["Library", "Section"]);
+		});
+
+		it("should create page file for book note (numeric suffix)", () => {
+			const diff: NoteDiff = {
+				...emptyDiff,
+				addedNotes: [
+					{ path: ["Section", "Book", "000"] as TreePath, status: TextStatus.Done },
+				],
+			};
+
+			const actions = mapper.mapDiffToActions(diff);
+
+			const fileAction = actions.find(
+				(a) =>
+					a.type === VaultActionType.UpdateOrCreateFile &&
+					a.payload.prettyPath.basename === "000-Book-Section",
+			);
+
+			expect(fileAction).toBeDefined();
+			expect(fileAction?.payload.prettyPath.pathParts).toEqual([
+				"Library",
+				"Section",
+				"Book",
+			]);
+		});
+
+		it("should include meta info in scroll content", () => {
+			const diff: NoteDiff = {
+				...emptyDiff,
+				addedNotes: [
+					{ path: ["Scroll"] as TreePath, status: TextStatus.Done },
+				],
+			};
+
+			const actions = mapper.mapDiffToActions(diff);
+			const fileAction = actions.find(
+				(a) => a.type === VaultActionType.UpdateOrCreateFile,
+			);
+
+			expect(fileAction?.payload.content).toContain("Scroll");
+			expect(fileAction?.payload.content).toContain("Done");
+		});
+
+		it("should include page index in page meta info", () => {
+			const diff: NoteDiff = {
+				...emptyDiff,
+				addedNotes: [
+					{ path: ["Book", "042"] as TreePath, status: TextStatus.NotStarted },
+				],
+			};
+
+			const actions = mapper.mapDiffToActions(diff);
+			const fileAction = actions.find(
+				(a) => a.type === VaultActionType.UpdateOrCreateFile,
+			);
+
+			expect(fileAction?.payload.content).toContain("Page");
+			expect(fileAction?.payload.content).toContain("42"); // index
+		});
+	});
+
+	describe("removed notes", () => {
+		it("should trash scroll file", () => {
+			const diff: NoteDiff = {
+				...emptyDiff,
+				removedNotes: [
+					{ path: ["Section", "Scroll"] as TreePath, status: TextStatus.Done },
+				],
+			};
+
+			const actions = mapper.mapDiffToActions(diff);
+
+			const trashAction = actions.find(
+				(a) =>
+					a.type === VaultActionType.TrashFile &&
+					a.payload.prettyPath.basename === "Scroll-Section",
+			);
+
+			expect(trashAction).toBeDefined();
+		});
+
+		it("should trash page file", () => {
+			const diff: NoteDiff = {
+				...emptyDiff,
+				removedNotes: [
+					{ path: ["Book", "001"] as TreePath, status: TextStatus.Done },
+				],
+			};
+
+			const actions = mapper.mapDiffToActions(diff);
+
+			const trashAction = actions.find(
+				(a) =>
+					a.type === VaultActionType.TrashFile &&
+					a.payload.prettyPath.basename === "001-Book",
+			);
+
+			expect(trashAction).toBeDefined();
+		});
+	});
+
+	describe("status changes", () => {
+		it("should create ProcessFile action for scroll status change", () => {
+			const diff: NoteDiff = {
+				...emptyDiff,
+				statusChanges: [
+					{
+						newStatus: TextStatus.Done,
+						oldStatus: TextStatus.NotStarted,
+						path: ["Section", "Scroll"] as TreePath,
+					},
+				],
+			};
+
+			const actions = mapper.mapDiffToActions(diff);
+
+			const processAction = actions.find(
+				(a) =>
+					a.type === VaultActionType.ProcessFile &&
+					a.payload.prettyPath.basename === "Scroll-Section",
+			);
+
+			expect(processAction).toBeDefined();
+			expect(processAction?.payload.transform).toBeDefined();
+		});
+
+		it("should create ProcessFile action for page status change", () => {
+			const diff: NoteDiff = {
+				...emptyDiff,
+				statusChanges: [
+					{
+						newStatus: TextStatus.Done,
+						oldStatus: TextStatus.NotStarted,
+						path: ["Book", "000"] as TreePath,
+					},
+				],
+			};
+
+			const actions = mapper.mapDiffToActions(diff);
+
+			const processAction = actions.find(
+				(a) => a.type === VaultActionType.ProcessFile,
+			);
+
+			expect(processAction).toBeDefined();
+			expect(processAction?.payload.prettyPath.basename).toBe("000-Book");
+		});
+	});
+
+	describe("sections", () => {
+		it("should create folder for added section", () => {
+			const diff: NoteDiff = {
+				...emptyDiff,
+				addedSections: [["NewSection"] as TreePath],
+			};
+
+			const actions = mapper.mapDiffToActions(diff);
+
+			const folderAction = actions.find(
+				(a) =>
+					a.type === VaultActionType.UpdateOrCreateFolder &&
+					a.payload.prettyPath.basename === "NewSection",
+			);
+
+			expect(folderAction).toBeDefined();
+			expect(folderAction?.payload.prettyPath.pathParts).toEqual(["Library"]);
+		});
+
+		it("should create codex for added section", () => {
+			const diff: NoteDiff = {
+				...emptyDiff,
+				addedSections: [["NewSection"] as TreePath],
+			};
+
+			const actions = mapper.mapDiffToActions(diff);
+
+			const codexAction = actions.find(
+				(a) =>
+					a.type === VaultActionType.UpdateOrCreateFile &&
+					a.payload.prettyPath.basename === "__NewSection",
+			);
+
+			expect(codexAction).toBeDefined();
+			expect(codexAction?.payload.prettyPath.pathParts).toEqual([
+				"Library",
+				"NewSection",
+			]);
+		});
+
+		it("should trash codex then folder for removed section", () => {
+			const diff: NoteDiff = {
+				...emptyDiff,
+				removedSections: [["OldSection"] as TreePath],
+			};
+
+			const actions = mapper.mapDiffToActions(diff);
+
+			const codexTrash = actions.findIndex(
+				(a) =>
+					a.type === VaultActionType.TrashFile &&
+					a.payload.prettyPath.basename === "__OldSection",
+			);
+			const folderTrash = actions.findIndex(
+				(a) =>
+					a.type === VaultActionType.TrashFolder &&
+					a.payload.prettyPath.basename === "OldSection",
+			);
+
+			expect(codexTrash).toBeGreaterThanOrEqual(0);
+			expect(folderTrash).toBeGreaterThan(codexTrash); // folder after codex
+		});
+
+		it("should remove deepest sections first", () => {
+			const diff: NoteDiff = {
+				...emptyDiff,
+				removedSections: [
+					["A"] as TreePath,
+					["A", "B"] as TreePath,
+					["A", "B", "C"] as TreePath,
+				],
+			};
+
+			const actions = mapper.mapDiffToActions(diff);
+
+			const folderActions = actions.filter(
+				(a) => a.type === VaultActionType.TrashFolder,
+			);
+
+			// C should be before B, B before A
+			const cIdx = folderActions.findIndex(
+				(a) => a.payload.prettyPath.basename === "C",
+			);
+			const bIdx = folderActions.findIndex(
+				(a) => a.payload.prettyPath.basename === "B",
+			);
+			const aIdx = folderActions.findIndex(
+				(a) => a.payload.prettyPath.basename === "A",
+			);
+
+			expect(cIdx).toBeLessThan(bIdx);
+			expect(bIdx).toBeLessThan(aIdx);
+		});
+	});
+
+	describe("codex updates", () => {
+		it("should update root codex when note added", () => {
+			const diff: NoteDiff = {
+				...emptyDiff,
+				addedNotes: [
+					{ path: ["Section", "Note"] as TreePath, status: TextStatus.Done },
+				],
+			};
+
+			const actions = mapper.mapDiffToActions(diff);
+
+			const rootCodex = actions.find(
+				(a) =>
+					a.type === VaultActionType.UpdateOrCreateFile &&
+					a.payload.prettyPath.basename === "__Library",
+			);
+
+			expect(rootCodex).toBeDefined();
+		});
+
+		it("should update ancestor codexes on status change", () => {
+			const diff: NoteDiff = {
+				...emptyDiff,
+				statusChanges: [
+					{
+						newStatus: TextStatus.Done,
+						oldStatus: TextStatus.NotStarted,
+						path: ["A", "B", "Note"] as TreePath,
+					},
+				],
+			};
+
+			const actions = mapper.mapDiffToActions(diff);
+
+			// Should update codexes for: root, A, A/B
+			const codexUpdates = actions.filter(
+				(a) =>
+					a.type === VaultActionType.UpdateOrCreateFile &&
+					a.payload.prettyPath.basename.startsWith("__"),
+			);
+
+			const basenames = codexUpdates.map((a) => a.payload.prettyPath.basename);
+			expect(basenames).toContain("__Library");
+			expect(basenames).toContain("__A");
+			expect(basenames).toContain("__B-A");
+		});
+
+		it("should update book codex when page status changes", () => {
+			const diff: NoteDiff = {
+				...emptyDiff,
+				statusChanges: [
+					{
+						newStatus: TextStatus.Done,
+						oldStatus: TextStatus.NotStarted,
+						path: ["Section", "Book", "000"] as TreePath,
+					},
+				],
+			};
+
+			const actions = mapper.mapDiffToActions(diff);
+
+			const bookCodex = actions.find(
+				(a) =>
+					a.type === VaultActionType.UpdateOrCreateFile &&
+					a.payload.prettyPath.basename === "__Book-Section",
+			);
+
+			expect(bookCodex).toBeDefined();
+		});
+	});
+
+	describe("empty diff", () => {
+		it("should return empty actions for empty diff", () => {
+			const actions = mapper.mapDiffToActions(emptyDiff);
+			expect(actions.length).toBe(0);
+		});
+	});
+});

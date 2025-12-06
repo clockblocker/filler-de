@@ -159,6 +159,10 @@ export const PageSchema = z.literal("Page");
 export type PAGE = z.infer<typeof PageSchema>;
 export const PAGE = PageSchema.value;
 
+export const NoteSchema = z.literal("Note");
+export type NOTE = z.infer<typeof NoteSchema>;
+export const NOTE = NoteSchema.value;
+
 // Meta
 export const UnmarkedSchema = z.literal("Unmarked");
 export type UNMARKED = z.infer<typeof UnmarkedSchema>;

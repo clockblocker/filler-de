@@ -4,7 +4,8 @@ import {
 	Plugin,
 	type WorkspaceLeaf,
 } from "obsidian";
-import { Librarian } from "./commanders/librarian/librarian";
+import { LibrarianV2 } from "./commanders/librarian/librarian-v2";
+// import { Librarian } from "./commanders/librarian/librarian";
 import { AboveSelectionToolbarService } from "./services/obsidian-services/atomic-services/above-selection-toolbar-service";
 import { ApiService } from "./services/obsidian-services/atomic-services/api-service";
 import { BottomToolbarService } from "./services/obsidian-services/atomic-services/bottom-toolbar-service";
@@ -40,7 +41,7 @@ export default class TextEaterPlugin extends Plugin {
 	vaultActionExecutor: VaultActionExecutor;
 
 	// Commanders
-	librarian: Librarian;
+	librarian: LibrarianV2;
 
 	private initialized = false;
 
@@ -150,7 +151,7 @@ export default class TextEaterPlugin extends Plugin {
 
 		this.selectionService = new SelectionService(this.app);
 
-		this.librarian = new Librarian({
+		this.librarian = new LibrarianV2({
 			actionQueue: this.vaultActionQueue,
 			backgroundFileService: this.backgroundFileService,
 			openedFileService: this.openedFileService,
@@ -302,7 +303,7 @@ export default class TextEaterPlugin extends Plugin {
 
 		this.addCommand({
 			editorCheckCallback: () => {
-				this.librarian.сreateNewTextInTheCurrentFolderAndOpenIt();
+				this.librarian.createNewNoteInCurrentFolder();
 			},
 			id: "create-new-text-in-the-current-folder-and-open-it",
 			name: "Create new text in the current folder and open it",
