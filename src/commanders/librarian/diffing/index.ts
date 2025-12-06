@@ -1,2 +1,2 @@
-export { DiffToActionsV2 } from "./diff-to-actions-v2";
+export { DiffToActions } from "./diff-to-actions";
 export { type NoteDiff, type NoteSnapshot, noteDiffer } from "./note-differ";

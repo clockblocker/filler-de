@@ -2,33 +2,33 @@ import { TextStatus } from "../../../types/common-interface/enums";
 import type { Maybe } from "../../../types/common-interface/maybe";
 import type { GuardedNodeName } from "../indexing/formatters";
 import {
-	NodeTypeV2,
+	NodeType,
 	type NoteDto,
 	type NoteNode,
-	type SectionNodeV2,
+	type SectionNode,
 	type TreePath,
 } from "../types";
 
-type TreeNodeV2 = SectionNodeV2 | NoteNode;
+type TreeNode = SectionNode | NoteNode;
 
 /**
  * Snapshot for diffing V2 trees
  */
-export type TreeSnapshotV2 = {
+export type TreeSnapshot = {
 	notes: NoteDto[];
 	sectionPaths: TreePath[];
 };
 
 /**
- * LibraryTreeV2 - Simplified tree with 2 levels: Section → Note
+ * LibraryTree - Simplified tree with 2 levels: Section → Note
  *
  * Key differences from V1:
  * - Input: NoteDto[] (flat, one per file) instead of TextDto[] (grouped by text)
  * - Structure: Section → Note (no intermediate Text node)
  * - Books are just Sections containing multiple Notes
  */
-export class LibraryTreeV2 {
-	root: SectionNodeV2;
+export class LibraryTree {
+	root: SectionNode;
 
 	constructor(notes: NoteDto[], name: string) {
 		this.root = {
@@ -36,7 +36,7 @@ export class LibraryTreeV2 {
 			name,
 			parent: null,
 			status: TextStatus.NotStarted,
-			type: NodeTypeV2.Section,
+			type: NodeType.Section,
 		};
 
 		this.addNotes(notes);
@@ -60,9 +60,9 @@ export class LibraryTreeV2 {
 	public getAllSectionPaths(): TreePath[] {
 		const paths: TreePath[] = [];
 
-		const collectSections = (node: SectionNodeV2): void => {
+		const collectSections = (node: SectionNode): void => {
 			for (const child of node.children) {
-				if (child.type === NodeTypeV2.Section) {
+				if (child.type === NodeType.Section) {
 					paths.push(this.getPathFromNode(child));
 					collectSections(child);
 				}
@@ -73,7 +73,7 @@ export class LibraryTreeV2 {
 		return paths;
 	}
 
-	public snapshot(): TreeSnapshotV2 {
+	public snapshot(): TreeSnapshot {
 		return {
 			notes: this.getAllNotes(),
 			sectionPaths: this.getAllSectionPaths(),
@@ -102,17 +102,12 @@ export class LibraryTreeV2 {
 	}: {
 		path: TreePath;
 		status: "Done" | "NotStarted";
-	}): Maybe<TreeNodeV2> {
-		console.log(
-			"[LibraryTreeV2] [setStatus] path:",
-			path,
-			"status:",
-			status,
-		);
+	}): Maybe<TreeNode> {
+		console.log("[LibraryTree] [setStatus] path:", path, "status:", status);
 		const mbNode = this.getMaybeNode({ path });
 		if (mbNode.error) {
 			console.log(
-				"[LibraryTreeV2] [setStatus] ERROR: node not found:",
+				"[LibraryTree] [setStatus] ERROR: node not found:",
 				mbNode.description,
 			);
 			return mbNode;
@@ -120,20 +115,20 @@ export class LibraryTreeV2 {
 
 		const node = mbNode.data;
 		console.log(
-			"[LibraryTreeV2] [setStatus] found node:",
+			"[LibraryTree] [setStatus] found node:",
 			node.name,
 			"current status:",
 			node.status,
 		);
 		if (node.status === status) {
 			console.log(
-				"[LibraryTreeV2] [setStatus] status unchanged, returning early",
+				"[LibraryTree] [setStatus] status unchanged, returning early",
 			);
 			return { data: node, error: false };
 		}
 
 		console.log(
-			"[LibraryTreeV2] [setStatus] changing status from",
+			"[LibraryTree] [setStatus] changing status from",
 			node.status,
 			"to",
 			status,
@@ -142,14 +137,14 @@ export class LibraryTreeV2 {
 		this.recomputeStatuses();
 
 		console.log(
-			"[LibraryTreeV2] [setStatus] after recompute, node status:",
+			"[LibraryTree] [setStatus] after recompute, node status:",
 			node.status,
 		);
 		return { data: node, error: false };
 	}
 
-	public getMaybeNode({ path }: { path: TreePath }): Maybe<TreeNodeV2> {
-		let current: TreeNodeV2 = this.root;
+	public getMaybeNode({ path }: { path: TreePath }): Maybe<TreeNode> {
+		let current: TreeNode = this.root;
 
 		for (const name of path) {
 			if (!name) {
@@ -159,7 +154,7 @@ export class LibraryTreeV2 {
 				};
 			}
 
-			if (current.type === NodeTypeV2.Note) {
+			if (current.type === NodeType.Note) {
 				return {
 					description: `Cannot traverse into Note node: ${current.name}`,
 					error: true,
@@ -186,7 +181,7 @@ export class LibraryTreeV2 {
 			return mbNode;
 		}
 
-		if (mbNode.data.type !== NodeTypeV2.Note) {
+		if (mbNode.data.type !== NodeType.Note) {
 			return {
 				description: `Node at ${path.join("/")} is not a Note`,
 				error: true,
@@ -196,13 +191,13 @@ export class LibraryTreeV2 {
 		return { data: mbNode.data, error: false };
 	}
 
-	public getMaybeSection({ path }: { path: TreePath }): Maybe<SectionNodeV2> {
+	public getMaybeSection({ path }: { path: TreePath }): Maybe<SectionNode> {
 		const mbNode = this.getMaybeNode({ path });
 		if (mbNode.error) {
 			return mbNode;
 		}
 
-		if (mbNode.data.type !== NodeTypeV2.Section) {
+		if (mbNode.data.type !== NodeType.Section) {
 			return {
 				description: `Node at ${path.join("/")} is not a Section`,
 				error: true,
@@ -212,14 +207,14 @@ export class LibraryTreeV2 {
 		return { data: mbNode.data, error: false };
 	}
 
-	public getNearestSection(path: TreePath): SectionNodeV2 {
+	public getNearestSection(path: TreePath): SectionNode {
 		const mbNode = this.getMaybeNode({ path });
 		if (mbNode.error) {
 			return this.root;
 		}
 
 		const node = mbNode.data;
-		if (node.type === NodeTypeV2.Section) {
+		if (node.type === NodeType.Section) {
 			return node;
 		}
 
@@ -242,7 +237,7 @@ export class LibraryTreeV2 {
 		}
 
 		// Ensure parent sections exist
-		let parent: SectionNodeV2 = this.root;
+		let parent: SectionNode = this.root;
 		for (const name of path.slice(0, -1)) {
 			const mbSection = this.getOrCreateSection(parent, name);
 			if (mbSection.error) {
@@ -254,7 +249,7 @@ export class LibraryTreeV2 {
 		// Check if note already exists
 		const existing = parent.children.find((c) => c.name === noteName);
 		if (existing) {
-			if (existing.type === NodeTypeV2.Note) {
+			if (existing.type === NodeType.Note) {
 				existing.status = status;
 				return { data: existing, error: false };
 			}
@@ -269,7 +264,7 @@ export class LibraryTreeV2 {
 			name: noteName,
 			parent,
 			status,
-			type: NodeTypeV2.Note,
+			type: NodeType.Note,
 		};
 
 		parent.children.push(noteNode);
@@ -296,7 +291,7 @@ export class LibraryTreeV2 {
 		this.cleanupEmptySections(parent);
 	}
 
-	private cleanupEmptySections(section: SectionNodeV2): void {
+	private cleanupEmptySections(section: SectionNode): void {
 		if (section === this.root) {
 			return;
 		}
@@ -311,13 +306,13 @@ export class LibraryTreeV2 {
 	}
 
 	private getOrCreateSection(
-		parent: SectionNodeV2,
+		parent: SectionNode,
 		name: GuardedNodeName,
-	): Maybe<SectionNodeV2> {
+	): Maybe<SectionNode> {
 		const existing = parent.children.find((c) => c.name === name);
 
 		if (existing) {
-			if (existing.type === NodeTypeV2.Section) {
+			if (existing.type === NodeType.Section) {
 				return { data: existing, error: false };
 			}
 			return {
@@ -326,20 +321,20 @@ export class LibraryTreeV2 {
 			};
 		}
 
-		const section: SectionNodeV2 = {
+		const section: SectionNode = {
 			children: [],
 			name,
 			parent,
 			status: TextStatus.NotStarted,
-			type: NodeTypeV2.Section,
+			type: NodeType.Section,
 		};
 
 		parent.children.push(section);
 		return { data: section, error: false };
 	}
 
-	private collectNotesFromNode(node: TreeNodeV2): NoteDto[] {
-		if (node.type === NodeTypeV2.Note) {
+	private collectNotesFromNode(node: TreeNode): NoteDto[] {
+		if (node.type === NodeType.Note) {
 			return [
 				{
 					path: this.getPathFromNode(node),
@@ -355,9 +350,9 @@ export class LibraryTreeV2 {
 		return notes;
 	}
 
-	private getPathFromNode(node: TreeNodeV2): TreePath {
+	private getPathFromNode(node: TreeNode): TreePath {
 		const path: TreePath = [];
-		let current: TreeNodeV2 | null = node;
+		let current: TreeNode | null = node;
 
 		while (current && current !== this.root) {
 			path.unshift(current.name);
@@ -370,10 +365,10 @@ export class LibraryTreeV2 {
 	private initializeParents(): void {
 		this.root.parent = null;
 
-		const setParents = (node: SectionNodeV2): void => {
+		const setParents = (node: SectionNode): void => {
 			for (const child of node.children) {
 				child.parent = node;
-				if (child.type === NodeTypeV2.Section) {
+				if (child.type === NodeType.Section) {
 					setParents(child);
 				}
 			}
@@ -386,8 +381,8 @@ export class LibraryTreeV2 {
 		this.computeStatus(this.root);
 	}
 
-	private computeStatus(node: TreeNodeV2): TextStatus {
-		if (node.type === NodeTypeV2.Note) {
+	private computeStatus(node: TreeNode): TextStatus {
+		if (node.type === NodeType.Note) {
 			return node.status;
 		}
 
@@ -412,10 +407,10 @@ export class LibraryTreeV2 {
 		return node.status;
 	}
 
-	private setStatusRecursively(node: TreeNodeV2, status: TextStatus): void {
+	private setStatusRecursively(node: TreeNode, status: TextStatus): void {
 		node.status = status;
 
-		if (node.type === NodeTypeV2.Section) {
+		if (node.type === NodeType.Section) {
 			for (const child of node.children) {
 				this.setStatusRecursively(child, status);
 			}

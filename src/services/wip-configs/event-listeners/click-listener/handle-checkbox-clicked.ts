@@ -1,7 +1,7 @@
 import type { App } from "obsidian";
 import { MarkdownView } from "obsidian";
 import { pageNameFromTreePath } from "../../../../commanders/librarian/indexing/formatters";
-import type { LibrarianV2 } from "../../../../commanders/librarian/librarian-v2";
+import type { Librarian } from "../../../../commanders/librarian/librarian";
 import type { TreePath } from "../../../../commanders/librarian/types";
 
 /**
@@ -14,7 +14,7 @@ export function handleCheckboxClicked({
 	app,
 }: {
 	checkbox: HTMLInputElement;
-	librarian: LibrarianV2;
+	librarian: Librarian;
 	app: App;
 }): boolean {
 	// Find the line container (works in both Live Preview and Reading view)

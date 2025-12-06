@@ -4,14 +4,14 @@ import {
 	scrollNameFromTreePath,
 } from "../indexing/formatters";
 import {
-	NodeTypeV2,
+	NodeType,
 	type NoteNode,
-	type SectionNodeV2,
+	type SectionNode,
 	type TreePath,
 } from "../types";
 import type { BackLink, CodexContent, CodexItem } from "./types";
 
-type TreeNodeV2 = SectionNodeV2 | NoteNode;
+type TreeNode = SectionNode | NoteNode;
 
 /**
  * Check if a note path represents a book page (numeric suffix like "000").
@@ -24,9 +24,9 @@ function isBookPage(notePath: TreePath): boolean {
 /**
  * Get path from node by walking up to root.
  */
-function getPathFromNode(node: TreeNodeV2, root: SectionNodeV2): TreePath {
+function getPathFromNode(node: TreeNode, root: SectionNode): TreePath {
 	const path: TreePath = [];
-	let current: TreeNodeV2 | null = node;
+	let current: TreeNode | null = node;
 
 	while (current && current !== root) {
 		path.unshift(current.name);
@@ -40,21 +40,21 @@ function getPathFromNode(node: TreeNodeV2, root: SectionNodeV2): TreePath {
  * Generates CodexContent from V2 tree nodes.
  *
  * In V2:
- * - SectionNodeV2 can contain Sections or Notes
+ * - SectionNode can contain Sections or Notes
  * - Books are Sections containing Notes with numeric names (000, 001, etc.)
  * - Scrolls are Notes with non-numeric names
  */
-export class CodexGeneratorV2 {
-	private root: SectionNodeV2;
+export class CodexGenerator {
+	private root: SectionNode;
 
-	constructor(root: SectionNodeV2) {
+	constructor(root: SectionNode) {
 		this.root = root;
 	}
 
 	/**
 	 * Generate Codex for a section node.
 	 */
-	forSection(node: SectionNodeV2): CodexContent {
+	forSection(node: SectionNode): CodexContent {
 		return {
 			backLink: this.generateBackLink(node),
 			items: this.generateSectionItems(node),
@@ -64,12 +64,12 @@ export class CodexGeneratorV2 {
 	/**
 	 * Check if section is a "book" (all children are notes with numeric names).
 	 */
-	isBook(node: SectionNodeV2): boolean {
+	isBook(node: SectionNode): boolean {
 		if (node.children.length === 0) return false;
 
 		return node.children.every(
 			(child) =>
-				child.type === NodeTypeV2.Note && /^\d{3}$/.test(child.name),
+				child.type === NodeType.Note && /^\d{3}$/.test(child.name),
 		);
 	}
 
@@ -78,13 +78,13 @@ export class CodexGeneratorV2 {
 	 * All sections have codexes (including books).
 	 * Notes (scrolls/pages) don't have codexes.
 	 */
-	hasCodex(node: TreeNodeV2): boolean {
-		return node.type === NodeTypeV2.Section;
+	hasCodex(node: TreeNode): boolean {
+		return node.type === NodeType.Section;
 	}
 
 	// ─── Private Helpers ─────────────────────────────────────────────
 
-	private generateBackLink(node: SectionNodeV2): BackLink {
+	private generateBackLink(node: SectionNode): BackLink {
 		const parent = node.parent;
 
 		// Root has no back link
@@ -108,14 +108,14 @@ export class CodexGeneratorV2 {
 		};
 	}
 
-	private generateSectionItems(node: SectionNodeV2): CodexItem[] {
+	private generateSectionItems(node: SectionNode): CodexItem[] {
 		return node.children.map((child) => this.nodeToItem(child));
 	}
 
-	private nodeToItem(node: TreeNodeV2): CodexItem {
+	private nodeToItem(node: TreeNode): CodexItem {
 		const path = this.getPath(node);
 
-		if (node.type === NodeTypeV2.Note) {
+		if (node.type === NodeType.Note) {
 			// Note - determine if book page or scroll
 			const isPage = isBookPage(path);
 
@@ -151,14 +151,14 @@ export class CodexGeneratorV2 {
 		};
 	}
 
-	private getPath(node: TreeNodeV2): TreePath {
+	private getPath(node: TreeNode): TreePath {
 		return getPathFromNode(node, this.root);
 	}
 }
 
 /**
- * Create a CodexGeneratorV2 instance for a tree.
+ * Create a CodexGenerator instance for a tree.
  */
-export function createCodexGeneratorV2(root: SectionNodeV2): CodexGeneratorV2 {
-	return new CodexGeneratorV2(root);
+export function createCodexGenerator(root: SectionNode): CodexGenerator {
+	return new CodexGenerator(root);
 }

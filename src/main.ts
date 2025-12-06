@@ -4,7 +4,7 @@ import {
 	Plugin,
 	type WorkspaceLeaf,
 } from "obsidian";
-import { LibrarianV2 } from "./commanders/librarian/librarian-v2";
+import { Librarian } from "./commanders/librarian/librarian";
 import { AboveSelectionToolbarService } from "./services/obsidian-services/atomic-services/above-selection-toolbar-service";
 import { ApiService } from "./services/obsidian-services/atomic-services/api-service";
 import { BottomToolbarService } from "./services/obsidian-services/atomic-services/bottom-toolbar-service";
@@ -40,7 +40,7 @@ export default class TextEaterPlugin extends Plugin {
 	vaultActionExecutor: VaultActionExecutor;
 
 	// Commanders
-	librarian: LibrarianV2;
+	librarian: Librarian;
 
 	private initialized = false;
 
@@ -150,7 +150,7 @@ export default class TextEaterPlugin extends Plugin {
 
 		this.selectionService = new SelectionService(this.app);
 
-		this.librarian = new LibrarianV2({
+		this.librarian = new Librarian({
 			actionQueue: this.vaultActionQueue,
 			backgroundFileService: this.backgroundFileService,
 			openedFileService: this.openedFileService,

@@ -1,10 +1,10 @@
-import type { LibrarianV2 } from "../../commanders/librarian/librarian-v2";
+import type { Librarian } from "../../commanders/librarian/librarian";
 import { testLibrary } from "./consts";
 
 export class LibrarianTester {
-	private librarian: LibrarianV2;
+	private librarian: Librarian;
 
-	constructor(librarian: LibrarianV2) {
+	constructor(librarian: Librarian) {
 		this.librarian = librarian;
 	}
 

@@ -1,48 +1,43 @@
 import type { TAbstractFile } from "obsidian";
 import { TFile } from "obsidian";
-import { editOrAddMetaInfo } from "../../services/dto-services/meta-info-manager/interface";
 import type { FullPath } from "../../services/obsidian-services/atomic-services/pathfinder";
-import {
-	fullPathFromSystemPath,
-	systemPathFromFullPath,
-} from "../../services/obsidian-services/atomic-services/pathfinder";
+import { fullPathFromSystemPath } from "../../services/obsidian-services/atomic-services/pathfinder";
 import type { VaultAction } from "../../services/obsidian-services/file-services/background/background-vault-actions";
 import type { VaultActionQueue } from "../../services/obsidian-services/file-services/vault-action-queue";
 import { logWarning } from "../../services/obsidian-services/helpers/issue-handlers";
 import type { TexfresserObsidianServices } from "../../services/obsidian-services/interface";
 import { TextStatus } from "../../types/common-interface/enums";
-import { DiffToActionsV2 } from "./diffing/diff-to-actions-v2";
+import { DiffToActions } from "./diffing/diff-to-actions";
 import type { NoteSnapshot } from "./diffing/note-differ";
 import { noteDiffer } from "./diffing/note-differ";
 import { pageNameFromTreePath, toGuardedNodeName } from "./indexing/formatters";
 import { prettyFilesWithReaderToLibraryFileDtos } from "./indexing/libraryFileAdapters";
-import { LibraryTreeV2 } from "./library-tree/library-tree-v2";
+import { LibraryTree } from "./library-tree/library-tree";
 import { noteDtosFromLibraryFileDtos } from "./pure-functions/note-dtos-from-library-file-dtos";
 import {
 	formatPageIndex,
 	splitTextIntoP_ages,
 } from "./text-splitter/text-splitter";
 import type { LibraryFileDto, NoteDto, TreePath } from "./types";
-import { NodeTypeV2 } from "./types";
 
 const ROOTS = ["Library"] as const;
 type RootName = (typeof ROOTS)[number];
 
 /**
- * LibrarianV2 - Uses simplified V2 tree structure (Section → Note)
+ * Librarian - Uses simplified V2 tree structure (Section → Note)
  *
  * Key differences from V1:
- * - Uses LibraryTreeV2 (2 levels) instead of LibraryTree (3 levels)
+ * - Uses LibraryTree (2 levels) instead of LibraryTree (3 levels)
  * - Uses NoteDto (flat) instead of TextDto (grouped)
- * - Uses NoteDiffer + DiffToActionsV2
+ * - Uses NoteDiffer + DiffToActions
  */
-export class LibrarianV2 {
+export class Librarian {
 	backgroundFileService: TexfresserObsidianServices["backgroundFileService"];
 	openedFileService: TexfresserObsidianServices["openedFileService"];
-	trees: Record<RootName, LibraryTreeV2>;
+	trees: Record<RootName, LibraryTree>;
 
 	private actionQueue: VaultActionQueue | null = null;
-	private diffMappers: Map<RootName, DiffToActionsV2> = new Map();
+	private diffMappers: Map<RootName, DiffToActions> = new Map();
 	private _skipReconciliation = false;
 
 	constructor({
@@ -58,7 +53,7 @@ export class LibrarianV2 {
 		this.actionQueue = actionQueue ?? null;
 
 		for (const rootName of ROOTS) {
-			this.diffMappers.set(rootName, new DiffToActionsV2(rootName));
+			this.diffMappers.set(rootName, new DiffToActions(rootName));
 		}
 	}
 
@@ -73,11 +68,10 @@ export class LibrarianV2 {
 	// ─── Tree Initialization ──────────────────────────────────────────
 
 	async initTrees(): Promise<void> {
-		this.trees = {} as Record<RootName, LibraryTreeV2>;
+		this.trees = {} as Record<RootName, LibraryTree>;
 		for (const rootName of ROOTS) {
 			const notes = await this.readNotesFromFilesystem(rootName);
-			this.trees[rootName] = new LibraryTreeV2(notes, rootName);
-			console.log(`[LibrarianV2] [initTrees] ${rootName}:`, notes);
+			this.trees[rootName] = new LibraryTree(notes, rootName);
 		}
 
 		// Regenerate all codexes to ensure sync with tree state
@@ -129,7 +123,7 @@ export class LibrarianV2 {
 
 	private async withDiff<T>(
 		rootName: RootName,
-		mutation: (tree: LibraryTreeV2) => T,
+		mutation: (tree: LibraryTree) => T,
 		affectedPaths?: TreePath[],
 	): Promise<{ actions: VaultAction[]; result: T }> {
 		if (
@@ -147,7 +141,7 @@ export class LibrarianV2 {
 
 	private withDiffSync<T>(
 		rootName: RootName,
-		mutation: (tree: LibraryTreeV2) => T,
+		mutation: (tree: LibraryTree) => T,
 	): { actions: VaultAction[]; result: T } {
 		const tree = this.trees[rootName];
 		if (!tree) {
@@ -155,55 +149,25 @@ export class LibrarianV2 {
 		}
 
 		const before = tree.snapshot();
-		console.log("[LibrarianV2] [withDiffSync] BEFORE snapshot:", {
-			notes: before.notes,
-			sectionPaths: before.sectionPaths,
-		});
 
 		const result = mutation(tree);
 
 		const after = tree.snapshot();
-		console.log("[LibrarianV2] [withDiffSync] AFTER snapshot:", {
-			notes: after.notes,
-			sectionPaths: after.sectionPaths,
-		});
 
 		const diff = noteDiffer.diff(before, after);
-		console.log("[LibrarianV2] [withDiffSync] DIFF:", {
-			addedNotes: diff.addedNotes,
-			addedSections: diff.addedSections,
-			removedNotes: diff.removedNotes,
-			removedSections: diff.removedSections,
-			statusChanges: diff.statusChanges,
-		});
 
 		const mapper = this.diffMappers.get(rootName);
 
 		const getNode = (path: TreePath) => {
 			const mbNode = tree.getMaybeNode({ path });
 			if (mbNode.error) {
-				console.log(
-					"[LibrarianV2] [getNode] ERROR for path:",
-					path,
-					mbNode.description,
-				);
 				return undefined;
 			}
-			console.log(
-				"[LibrarianV2] [getNode] found:",
-				path,
-				mbNode.data.type,
-			);
 			return mbNode.data;
 		};
 
 		const actions = mapper ? mapper.mapDiffToActions(diff, getNode) : [];
 
-		console.log(
-			"[LibrarianV2] [withDiffSync] ACTIONS:",
-			actions.length,
-			actions,
-		);
 		if (this.actionQueue && actions.length > 0) {
 			this.actionQueue.pushMany(actions);
 		}
@@ -310,7 +274,7 @@ export class LibrarianV2 {
 		if (!currentFile) {
 			logWarning({
 				description: "No file is currently open.",
-				location: "LibrarianV2.makeNoteAText",
+				location: "Librarian.makeNoteAText",
 			});
 			return false;
 		}
@@ -321,7 +285,7 @@ export class LibrarianV2 {
 		if (!rootName || !isRootName(rootName)) {
 			logWarning({
 				description: `File must be in a Library folder. Found: ${rootName}`,
-				location: "LibrarianV2.makeNoteAText",
+				location: "Librarian.makeNoteAText",
 			});
 			return false;
 		}
@@ -330,7 +294,7 @@ export class LibrarianV2 {
 		if (!affectedTree) {
 			logWarning({
 				description: "Could not find tree for this folder.",
-				location: "LibrarianV2.makeNoteAText",
+				location: "Librarian.makeNoteAText",
 			});
 			return false;
 		}
@@ -343,7 +307,7 @@ export class LibrarianV2 {
 		if (!content.trim()) {
 			logWarning({
 				description: "File is empty.",
-				location: "LibrarianV2.makeNoteAText",
+				location: "Librarian.makeNoteAText",
 			});
 			return false;
 		}
@@ -427,17 +391,11 @@ export class LibrarianV2 {
 		path: TreePath,
 		status: "Done" | "NotStarted",
 	): Promise<void> {
-		console.log("[LibrarianV2] [setStatus] called:", {
-			path,
-			rootName,
-			status,
-		});
 		const parentPath = path.slice(0, -1);
-		console.log("[LibrarianV2] [setStatus] parentPath:", parentPath);
+
 		await this.withDiff(
 			rootName,
 			(tree) => {
-				console.log("[LibrarianV2] [setStatus] calling tree.setStatus");
 				return tree.setStatus({ path, status });
 			},
 			parentPath.length > 0 ? [parentPath] : [],
@@ -497,10 +455,6 @@ export class LibrarianV2 {
 			const sectionPaths = tree.getAllSectionPaths();
 			const actions = mapper.regenerateAllCodexes(sectionPaths, getNode);
 
-			console.log(
-				`[LibrarianV2] [regenerateAllCodexes] ${rootName}: ${actions.length} actions`,
-			);
-
 			if (this.actionQueue && actions.length > 0) {
 				this.actionQueue.pushMany(actions);
 			}
@@ -514,15 +468,15 @@ export class LibrarianV2 {
 	// ─── Vault Event Handlers ─────────────────────────────────────────
 
 	onFileDeleted(file: TAbstractFile): void {
-		console.log("[LibrarianV2] [onFileDeleted]", file.path);
+		console.log("[Librarian] [onFileDeleted]", file.path);
 	}
 
 	onFileRenamed(file: TAbstractFile, oldPath: string): void {
-		console.log("[LibrarianV2] [onFileRenamed]", oldPath, "→", file.path);
+		console.log("[Librarian] [onFileRenamed]", oldPath, "→", file.path);
 	}
 
 	onFileCreated(file: TAbstractFile): void {
-		console.log("[LibrarianV2] [onFileCreated]", file.path);
+		console.log("[Librarian] [onFileCreated]", file.path);
 	}
 
 	// ─── Private Helpers ──────────────────────────────────────────────
@@ -554,7 +508,7 @@ export class LibrarianV2 {
 			name: string;
 			parent: { name: string; parent: unknown } | null;
 		},
-		tree: LibraryTreeV2,
+		tree: LibraryTree,
 	): TreePath {
 		const path: TreePath = [];
 		let current = section;
@@ -569,9 +523,9 @@ export class LibrarianV2 {
 		return path;
 	}
 
-	private getAffectedTree(path: FullPath): LibraryTreeV2 | null;
-	private getAffectedTree(path: string): LibraryTreeV2 | null;
-	private getAffectedTree(path: FullPath | string): LibraryTreeV2 | null {
+	private getAffectedTree(path: FullPath): LibraryTree | null;
+	private getAffectedTree(path: string): LibraryTree | null;
+	private getAffectedTree(path: FullPath | string): LibraryTree | null {
 		const fullPath =
 			typeof path === "string" ? fullPathFromSystemPath(path) : path;
 		const rootName = fullPath.pathParts[0] ?? "";

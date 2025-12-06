@@ -6,18 +6,16 @@ import {
 } from "../../../services/obsidian-services/file-services/background/background-vault-actions";
 import type { PrettyPath } from "../../../types/common-interface/dtos";
 import { codexFormatter } from "../codex";
-import { createCodexGeneratorV2 } from "../codex/codex-generator-v2";
+import { createCodexGenerator } from "../codex/codex-generator";
 import { pageNameFromTreePath } from "../indexing/formatters";
-import type { NoteDto, NoteNode, SectionNodeV2, TreePath } from "../types";
-import { NodeTypeV2 } from "../types";
+import type { NoteDto, NoteNode, SectionNode, TreePath } from "../types";
+import { NodeType } from "../types";
 import type { NoteDiff, NoteStatusChange } from "./note-differ";
 
 /**
  * Callback to get a V2 node from the tree by path.
  */
-export type GetNodeV2Fn = (
-	path: TreePath,
-) => SectionNodeV2 | NoteNode | undefined;
+export type GetNodeFn = (path: TreePath) => SectionNode | NoteNode | undefined;
 
 /**
  * Check if a note path represents a book page (numeric suffix like "000").
@@ -41,7 +39,7 @@ function getBookPath(pagePath: TreePath): TreePath {
  * - Notes are flat (no pageStatuses grouping)
  * - Scroll vs Book determined by path pattern
  */
-export class DiffToActionsV2 {
+export class DiffToActions {
 	private rootName: string;
 
 	constructor(rootName: string) {
@@ -51,19 +49,11 @@ export class DiffToActionsV2 {
 	/**
 	 * Convert a note diff into vault actions.
 	 */
-	mapDiffToActions(diff: NoteDiff, getNode?: GetNodeV2Fn): VaultAction[] {
+	mapDiffToActions(diff: NoteDiff, getNode?: GetNodeFn): VaultAction[] {
 		const actions: VaultAction[] = [];
 
 		// Track which book sections need codex updates
 		const affectedBookPaths = new Set<string>();
-
-		console.log("[DiffToActionsV2] Processing diff:", {
-			addedNotes: diff.addedNotes.length,
-			addedSections: diff.addedSections.length,
-			removedNotes: diff.removedNotes.length,
-			removedSections: diff.removedSections.length,
-			statusChanges: diff.statusChanges.length,
-		});
 
 		// Handle added sections (create folders + Codex)
 		for (const sectionPath of diff.addedSections) {
@@ -104,53 +94,26 @@ export class DiffToActionsV2 {
 
 		// Handle status changes
 		for (const change of diff.statusChanges) {
-			console.log("[DiffToActionsV2] Processing status change:", change);
 			actions.push(this.createStatusUpdateAction(change));
 
 			// Track affected sections for codex updates
 			if (isBookPage(change.path)) {
-				console.log(
-					"[DiffToActionsV2] Is book page, adding book path:",
-					getBookPath(change.path),
-				);
 				affectedBookPaths.add(getBookPath(change.path).join("/"));
 			}
 			this.addAncestorPaths(change.path, affectedBookPaths);
 		}
 
-		console.log("[DiffToActionsV2] Affected codex paths:", [
-			...affectedBookPaths,
-		]);
-
 		// Update affected codexes
 		for (const pathKey of affectedBookPaths) {
 			const path = pathKey === "" ? [] : (pathKey.split("/") as TreePath);
-			console.log(
-				"[DiffToActionsV2] Checking codex path:",
-				pathKey,
-				"->",
-				path,
-			);
 
-			// Check if this path has a codex (sections and books do, scrolls don't)
 			if (getNode) {
 				const node = getNode(path);
-				console.log(
-					"[DiffToActionsV2] Node at path:",
-					path,
-					node?.type,
-				);
-				if (node && node.type === NodeTypeV2.Note) {
-					// Notes (scrolls) don't have codexes
-					console.log(
-						"[DiffToActionsV2] Skipping Note (no codex):",
-						path,
-					);
+				if (node && node.type === NodeType.Note) {
 					continue;
 				}
 			}
 
-			console.log("[DiffToActionsV2] Adding codex update for:", path);
 			actions.push(this.updateCodexAction(path, getNode));
 		}
 
@@ -248,7 +211,7 @@ export class DiffToActionsV2 {
 
 	private createCodexAction(
 		sectionPath: TreePath,
-		getNode?: GetNodeV2Fn,
+		getNode?: GetNodeFn,
 	): VaultAction {
 		return {
 			payload: {
@@ -261,7 +224,7 @@ export class DiffToActionsV2 {
 
 	private updateCodexAction(
 		path: TreePath,
-		getNode?: GetNodeV2Fn,
+		getNode?: GetNodeFn,
 	): VaultAction {
 		return {
 			payload: {
@@ -281,26 +244,23 @@ export class DiffToActionsV2 {
 		};
 	}
 
-	private generateCodexContent(
-		path: TreePath,
-		getNode?: GetNodeV2Fn,
-	): string {
+	private generateCodexContent(path: TreePath, getNode?: GetNodeFn): string {
 		if (!getNode) {
 			return ""; // No tree access
 		}
 
 		// Get root to create generator
 		const root = getNode([]);
-		if (!root || root.type !== NodeTypeV2.Section) {
+		if (!root || root.type !== NodeType.Section) {
 			return ""; // Root not found or invalid
 		}
 
 		const node = path.length === 0 ? root : getNode(path);
-		if (!node || node.type !== NodeTypeV2.Section) {
+		if (!node || node.type !== NodeType.Section) {
 			return ""; // Node not found or not a section (notes don't have codexes)
 		}
 
-		const generator = createCodexGeneratorV2(root);
+		const generator = createCodexGenerator(root);
 		const codexContent = generator.forSection(node);
 
 		return codexFormatter.format(codexContent);
@@ -349,7 +309,7 @@ export class DiffToActionsV2 {
 	 */
 	regenerateAllCodexes(
 		sectionPaths: TreePath[],
-		getNode: GetNodeV2Fn,
+		getNode: GetNodeFn,
 	): VaultAction[] {
 		const actions: VaultAction[] = [];
 

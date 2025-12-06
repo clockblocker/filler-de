@@ -1,5 +1,5 @@
 import type { App, TAbstractFile } from "obsidian";
-import type { LibrarianV2 } from "../../commanders/librarian/librarian-v2";
+import type { Librarian } from "../../commanders/librarian/librarian";
 import { fullPathFromSystemPath } from "./atomic-services/pathfinder";
 
 /**
@@ -11,7 +11,7 @@ export class VaultEventService {
 
 	constructor(
 		private app: App,
-		private librarian: LibrarianV2,
+		private librarian: Librarian,
 	) {}
 
 	/**

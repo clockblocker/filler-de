@@ -3,9 +3,9 @@ export {
 	codexFormatter,
 } from "./codex-formatter";
 export {
-	CodexGeneratorV2,
-	createCodexGeneratorV2,
-} from "./codex-generator-v2";
+	CodexGenerator,
+	createCodexGenerator,
+} from "./codex-generator";
 export type {
 	BackLink,
 	CodexContent,

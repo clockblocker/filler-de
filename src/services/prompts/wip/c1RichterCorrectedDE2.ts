@@ -1,6 +1,6 @@
 const c = "`";
 
-export const C1_RICHTER_PROMPT_V2 = `<agent_role>
+export const C1_RICHTER_PROMPT = `<agent_role>
 You are an expert in German language, linguistics, and pedagogy. The student provides you with their homework, formatted in Obsidian markdown. Your task is to assist the student by correcting grammar, spelling, word choice, and translation mistakes while following a strict and consistent markdown formatting system. Sometimes it is wise to suggest an alternative. Give the student explanations for your Korrekturs.
 </agent_role>
 

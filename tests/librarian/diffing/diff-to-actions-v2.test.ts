@@ -1,11 +1,11 @@
 import { describe, expect, it } from "bun:test";
-import { DiffToActionsV2 } from "../../../src/commanders/librarian/diffing/diff-to-actions-v2";
+import { DiffToActions } from "../../../src/commanders/librarian/diffing/diff-to-actions";
 import type { NoteDiff } from "../../../src/commanders/librarian/diffing/note-differ";
 import type { TreePath } from "../../../src/commanders/librarian/types";
 import { VaultActionType } from "../../../src/services/obsidian-services/file-services/background/background-vault-actions";
 import { TextStatus } from "../../../src/types/common-interface/enums";
 
-const mapper = new DiffToActionsV2("Library");
+const mapper = new DiffToActions("Library");
 
 const emptyDiff: NoteDiff = {
 	addedNotes: [],
@@ -15,7 +15,7 @@ const emptyDiff: NoteDiff = {
 	statusChanges: [],
 };
 
-describe("DiffToActionsV2", () => {
+describe("DiffToActions", () => {
 	describe("added notes", () => {
 		it("should create scroll file for non-book note", () => {
 			const diff: NoteDiff = {
