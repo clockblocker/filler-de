@@ -7,7 +7,7 @@ import {
 	SPACE_F,
 	TAB,
 } from "../../../types/literals";
-import { guardedPageNameSchema } from "../indexing/codecs";
+import { PageBasenameSchema } from "../indexing/codecs";
 import type { BackLink, CodexContent, CodexItem } from "./types";
 
 export class CodexFormatter {
@@ -40,7 +40,7 @@ export class CodexFormatter {
 		for (const item of items) {
 			const checkbox = this.statusToCheckbox(item.status);
 			const link = `[[${item.target}|${item.displayName}]]`;
-			if (guardedPageNameSchema.safeParse(item.target).success) {
+			if (PageBasenameSchema.safeParse(item.target).success) {
 				if (depth > 1) {
 					continue;
 				}

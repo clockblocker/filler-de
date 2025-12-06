@@ -7,7 +7,7 @@ import {
 import type { PrettyPath } from "../../../types/common-interface/dtos";
 import { codexFormatter } from "../codex";
 import { createCodexGenerator } from "../codex/codex-generator";
-import { pageNameFromTreePath } from "../indexing/codecs";
+import { treePathToPageBasename } from "../indexing/codecs";
 import type { NoteDto, NoteNode, SectionNode, TreePath } from "../types";
 import { NodeType } from "../types";
 import type { NoteDiff, NoteStatusChange } from "./note-differ";
@@ -272,7 +272,7 @@ export class DiffToActions {
 		if (isBookPage(notePath)) {
 			// Book page: Library/Section/Book/000-Book-Section.md
 			const pathParts = [this.rootName, ...notePath.slice(0, -1)];
-			const basename = pageNameFromTreePath.encode(notePath);
+			const basename = treePathToPageBasename.encode(notePath);
 			return { basename, pathParts };
 		}
 		// Scroll: Library/Section/Scroll-Section.md

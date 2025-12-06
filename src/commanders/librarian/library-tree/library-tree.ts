@@ -1,6 +1,6 @@
 import { TextStatus } from "../../../types/common-interface/enums";
 import type { Maybe } from "../../../types/common-interface/maybe";
-import type { GuardedNodeName } from "../indexing/codecs";
+import type { NodeName } from "../indexing/codecs";
 import {
 	NodeType,
 	type NoteDto,
@@ -284,7 +284,7 @@ export class LibraryTree {
 
 	private getOrCreateSection(
 		parent: SectionNode,
-		name: GuardedNodeName,
+		name: NodeName,
 	): Maybe<SectionNode> {
 		const existing = parent.children.find((c) => c.name === name);
 

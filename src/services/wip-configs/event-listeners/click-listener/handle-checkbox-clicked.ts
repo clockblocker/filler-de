@@ -1,6 +1,6 @@
 import type { App } from "obsidian";
 import { MarkdownView } from "obsidian";
-import { pageNameFromTreePath } from "../../../../commanders/librarian/indexing/codecs";
+import { treePathToPageBasename } from "../../../../commanders/librarian/indexing/codecs";
 import type { Librarian } from "../../../../commanders/librarian/librarian";
 import type { TreePath } from "../../../../commanders/librarian/types";
 
@@ -122,7 +122,7 @@ function parseCodexLinkTarget(href: string): {
 	// After refactor: pages stored in parent/000-TextName-Parent.md (no Page subfolder)
 	// Use the decoder to properly parse it
 	try {
-		const decodedPath = pageNameFromTreePath.decode(cleanHref);
+		const decodedPath = treePathToPageBasename.decode(cleanHref);
 		// decodedPath format: [...textPath, pageNumber]
 		// e.g., "002-Mann_gegen_mann-Rammstein-Songs" → ["Songs", "Rammstein", "Mann_gegen_mann", "002"]
 		return {

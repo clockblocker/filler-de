@@ -10,7 +10,7 @@ import { TextStatus } from "../../types/common-interface/enums";
 import { DiffToActions } from "./diffing/diff-to-actions";
 import type { NoteSnapshot } from "./diffing/note-differ";
 import { noteDiffer } from "./diffing/note-differ";
-import { pageNameFromTreePath, toGuardedNodeName } from "./indexing/codecs";
+import { toNodeName, treePathToPageBasename } from "./indexing/codecs";
 import { prettyFilesWithReaderToLibraryFileDtos } from "./indexing/libraryFileAdapters";
 import { LibraryTree } from "./library-tree/library-tree";
 import { noteDtosFromLibraryFileDtos } from "./pure-functions/note-dtos-from-library-file-dtos";
@@ -304,7 +304,7 @@ export class Librarian {
 			return false;
 		}
 
-		const textName = toGuardedNodeName(fullPath.basename);
+		const textName = toNodeName(fullPath.basename);
 		const { pages, isBook } = splitTextIntoP_ages(content, textName);
 		const sectionPath = fullPath.pathParts.slice(1);
 
@@ -354,7 +354,7 @@ export class Librarian {
 					formatPageIndex(i),
 				];
 				const pagePath = {
-					basename: pageNameFromTreePath.encode(fullPagePath),
+					basename: treePathToPageBasename.encode(fullPagePath),
 					pathParts: [rootName, ...sectionPath, textName],
 				};
 				await this.backgroundFileService.replaceContent(

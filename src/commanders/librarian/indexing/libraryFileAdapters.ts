@@ -4,12 +4,12 @@ import type { ReadablePrettyFile } from "../../../services/obsidian-services/fil
 import { TextStatus } from "../../../types/common-interface/enums";
 import type { LibraryFileDto, TreePath } from "../types";
 import {
-	codexNameFromTreePath,
-	GuardedCodexNameSchema,
-	GuardedScrollNameSchema,
-	guardedPageNameSchema,
-	noteNameFromTreePath,
-	pageNameFromTreePath,
+	CodexBaseameSchema,
+	PageBasenameSchema,
+	ScrollBasenameSchema,
+	treePathToCodexBasename,
+	treePathToPageBasename,
+	treePathToScrollBasename,
 } from "./codecs";
 
 export function getTreePathFromLibraryFile(
@@ -20,9 +20,9 @@ export function getTreePathFromLibraryFile(
 
 	switch (metaInfo.fileType) {
 		case "Scroll": {
-			const parsedBasename = GuardedScrollNameSchema.parse(basename);
+			const parsedBasename = ScrollBasenameSchema.parse(basename);
 			try {
-				const decoded = noteNameFromTreePath.decode(parsedBasename);
+				const decoded = treePathToScrollBasename.decode(parsedBasename);
 				// scrollNameFromTreePath requires min 2 elements, so single-element paths will fail
 				// For single-element paths, use the basename directly
 				if (decoded.length < 2) {
@@ -34,12 +34,12 @@ export function getTreePathFromLibraryFile(
 			}
 		}
 		case "Page": {
-			const parsedBasename = guardedPageNameSchema.parse(basename);
-			return pageNameFromTreePath.decode(parsedBasename);
+			const parsedBasename = PageBasenameSchema.parse(basename);
+			return treePathToPageBasename.decode(parsedBasename);
 		}
 		case "Codex": {
-			const parsedBasename = GuardedCodexNameSchema.parse(basename);
-			return codexNameFromTreePath.decode(parsedBasename);
+			const parsedBasename = CodexBaseameSchema.parse(basename);
+			return treePathToCodexBasename.decode(parsedBasename);
 		}
 		case "Unknown": {
 			return [
@@ -56,7 +56,7 @@ export function getTreePathFromLibraryFile(
 function inferMetaInfo({
 	basename,
 }: Pick<ReadablePrettyFile, "basename" | "pathParts">): MetaInfo | null {
-	const codexResult = GuardedCodexNameSchema.safeParse(basename);
+	const codexResult = CodexBaseameSchema.safeParse(basename);
 	if (codexResult.success) {
 		return {
 			fileType: "Codex",
@@ -64,12 +64,12 @@ function inferMetaInfo({
 		};
 	}
 
-	const pageResult = guardedPageNameSchema.safeParse(basename);
+	const pageResult = PageBasenameSchema.safeParse(basename);
 	console.log("[inferMetaInfo] basename, pageResult", basename, pageResult);
 
 	if (pageResult.success) {
 		try {
-			const decoded = pageNameFromTreePath.decode(pageResult.data);
+			const decoded = treePathToPageBasename.decode(pageResult.data);
 			const pageNum = decoded[0];
 			if (pageNum) {
 				const index = Number(pageNum);
@@ -87,7 +87,7 @@ function inferMetaInfo({
 	}
 
 	// Try Scroll: any other valid name
-	const scrollResult = GuardedScrollNameSchema.safeParse(basename);
+	const scrollResult = ScrollBasenameSchema.safeParse(basename);
 	if (scrollResult.success) {
 		return {
 			fileType: "Scroll",

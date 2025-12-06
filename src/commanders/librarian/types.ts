@@ -4,24 +4,24 @@ import type { FullPathToFile } from "../../services/obsidian-services/atomic-ser
 import type { TextStatus } from "../../types/common-interface/enums";
 import type { Prettify } from "../../types/helpers";
 import { NOTE, SECTION } from "../../types/literals";
-import type { GuardedNodeName } from "./indexing/codecs";
+import type { NodeName } from "./indexing/codecs";
 
 // Tree structure: Section → Note (2 levels)
 export const NodeTypeSchema = z.enum([SECTION, NOTE]);
 export type NodeType = z.infer<typeof NodeTypeSchema>;
 export const NodeType = NodeTypeSchema.enum;
 
-export type TreePath = GuardedNodeName[];
+export type TreePath = NodeName[];
 
 export type NoteNode = Prettify<{
-	name: GuardedNodeName;
+	name: NodeName;
 	status: TextStatus;
 	type: typeof NodeType.Note;
 	parent: SectionNode | null;
 }>;
 
 export type SectionNode = Prettify<{
-	name: GuardedNodeName;
+	name: NodeName;
 	status: TextStatus;
 	type: typeof NodeType.Section;
 	parent: SectionNode | null;

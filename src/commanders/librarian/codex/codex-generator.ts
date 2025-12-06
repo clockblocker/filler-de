@@ -1,7 +1,7 @@
 import {
-	codexNameFromTreePath,
-	noteNameFromTreePath,
-	pageNameFromTreePath,
+	treePathToCodexBasename,
+	treePathToPageBasename,
+	treePathToScrollBasename,
 } from "../indexing/codecs";
 import {
 	NodeType,
@@ -104,7 +104,7 @@ export class CodexGenerator {
 
 		return {
 			displayName: parent.name.replace(/_/g, " "),
-			target: codexNameFromTreePath.encode(parentPath),
+			target: treePathToCodexBasename.encode(parentPath),
 		};
 	}
 
@@ -124,8 +124,8 @@ export class CodexGenerator {
 				displayName: node.name.replace(/_/g, " "),
 				status: node.status,
 				target: isPage
-					? pageNameFromTreePath.encode(path)
-					: noteNameFromTreePath.encode(path),
+					? treePathToPageBasename.encode(path)
+					: treePathToScrollBasename.encode(path),
 			};
 		}
 
@@ -138,7 +138,7 @@ export class CodexGenerator {
 				children: this.generateSectionItems(node),
 				displayName: node.name.replace(/_/g, " "),
 				status: node.status,
-				target: codexNameFromTreePath.encode(path),
+				target: treePathToCodexBasename.encode(path),
 			};
 		}
 
@@ -147,7 +147,7 @@ export class CodexGenerator {
 			children: this.generateSectionItems(node),
 			displayName: node.name.replace(/_/g, " "),
 			status: node.status,
-			target: codexNameFromTreePath.encode(path),
+			target: treePathToCodexBasename.encode(path),
 		};
 	}
 
