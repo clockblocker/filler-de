@@ -1,4 +1,5 @@
 import z from "zod/v4";
+import { logError } from "../../../services/obsidian-services/helpers/issue-handlers";
 import {
 	DASH,
 	SPACE_LIKE_CHARS,
@@ -75,32 +76,35 @@ export const codexNameFromTreePath = z.codec(
 	},
 );
 
-export const GuardedPageNameSchema = z.templateLiteral([
+export const guardedPageNameSchema = z.templateLiteral([
 	pageNumberReprSchema,
 	DASH,
 	z.string().min(1),
 ]);
 
 export const pageNameFromTreePath = z.codec(
-	GuardedPageNameSchema,
+	guardedPageNameSchema,
 	z.array(GuardedNodeNameSchema).min(2),
 	{
 		decode: (name) => {
 			const [num, ...path] = name.split(DASH);
-			// intInPageRangeFromString returns a number in expected range, type safe
 			if (!num) {
-				throw new Error("[pageNameFromTreePath] num is undefined");
+				logError({
+					description: "num is undefined",
+					location: "pageNameFromTreePath",
+				});
 			}
 			const decodedNum = intInPageRangeFromString.decode(Number(num));
-			// Return path without "Page" literal: [...textPath, pageNumber]
-			// path is reversed in encoded format, so reverse it back and append page number
 			return [...path.toReversed(), decodedNum];
 		},
 		encode: (path) => {
 			const pathCopy = [...path];
 			const mbNum = pathCopy.pop();
 			if (!mbNum) {
-				throw new Error("mbNum is undefined");
+				logError({
+					description: "mbNum is undefined",
+					location: "pageNameFromTreePath",
+				});
 			}
 			const paddedNumRepr = paddedNumberReprFromIntInPageRange.encode(
 				intInPageRangeFromString.encode(String(mbNum)),
@@ -112,7 +116,7 @@ export const pageNameFromTreePath = z.codec(
 
 export const GuardedScrollNameSchema = z.templateLiteral([z.string().min(1)]);
 
-export const scrollNameFromTreePath = z.codec(
+export const noteNameFromTreePath = z.codec(
 	GuardedScrollNameSchema,
 	z.array(GuardedNodeNameSchema).min(2),
 	{

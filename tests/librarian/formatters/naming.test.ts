@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { codexNameFromTreePath, pageNameFromTreePath, toGuardedNodeName } from '../../../src/commanders/librarian/indexing/formatters';
+import { codexNameFromTreePath, pageNameFromTreePath, toGuardedNodeName } from '../../../src/commanders/librarian/indexing/codecs';
 import { DASH, PAGE } from '../../../src/types/literals';
 
 

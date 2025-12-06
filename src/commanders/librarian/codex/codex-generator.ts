@@ -1,8 +1,8 @@
 import {
 	codexNameFromTreePath,
+	noteNameFromTreePath,
 	pageNameFromTreePath,
-	scrollNameFromTreePath,
-} from "../indexing/formatters";
+} from "../indexing/codecs";
 import {
 	NodeType,
 	type NoteNode,
@@ -125,7 +125,7 @@ export class CodexGenerator {
 				status: node.status,
 				target: isPage
 					? pageNameFromTreePath.encode(path)
-					: scrollNameFromTreePath.encode(path),
+					: noteNameFromTreePath.encode(path),
 			};
 		}
 

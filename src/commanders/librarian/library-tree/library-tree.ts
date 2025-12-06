@@ -1,6 +1,6 @@
 import { TextStatus } from "../../../types/common-interface/enums";
 import type { Maybe } from "../../../types/common-interface/maybe";
-import type { GuardedNodeName } from "../indexing/formatters";
+import type { GuardedNodeName } from "../indexing/codecs";
 import {
 	NodeType,
 	type NoteDto,

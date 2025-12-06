@@ -6,11 +6,11 @@ import type { LibraryFileDto, TreePath } from "../types";
 import {
 	codexNameFromTreePath,
 	GuardedCodexNameSchema,
-	GuardedPageNameSchema,
 	GuardedScrollNameSchema,
+	guardedPageNameSchema,
+	noteNameFromTreePath,
 	pageNameFromTreePath,
-	scrollNameFromTreePath,
-} from "./formatters";
+} from "./codecs";
 
 export function getTreePathFromLibraryFile(
 	libraryFile: LibraryFileDto,
@@ -22,7 +22,7 @@ export function getTreePathFromLibraryFile(
 		case "Scroll": {
 			const parsedBasename = GuardedScrollNameSchema.parse(basename);
 			try {
-				const decoded = scrollNameFromTreePath.decode(parsedBasename);
+				const decoded = noteNameFromTreePath.decode(parsedBasename);
 				// scrollNameFromTreePath requires min 2 elements, so single-element paths will fail
 				// For single-element paths, use the basename directly
 				if (decoded.length < 2) {
@@ -34,7 +34,7 @@ export function getTreePathFromLibraryFile(
 			}
 		}
 		case "Page": {
-			const parsedBasename = GuardedPageNameSchema.parse(basename);
+			const parsedBasename = guardedPageNameSchema.parse(basename);
 			return pageNameFromTreePath.decode(parsedBasename);
 		}
 		case "Codex": {
@@ -64,7 +64,7 @@ function inferMetaInfo({
 		};
 	}
 
-	const pageResult = GuardedPageNameSchema.safeParse(basename);
+	const pageResult = guardedPageNameSchema.safeParse(basename);
 	console.log("[inferMetaInfo] basename, pageResult", basename, pageResult);
 
 	if (pageResult.success) {

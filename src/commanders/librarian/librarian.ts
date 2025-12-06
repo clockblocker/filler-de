@@ -10,7 +10,7 @@ import { TextStatus } from "../../types/common-interface/enums";
 import { DiffToActions } from "./diffing/diff-to-actions";
 import type { NoteSnapshot } from "./diffing/note-differ";
 import { noteDiffer } from "./diffing/note-differ";
-import { pageNameFromTreePath, toGuardedNodeName } from "./indexing/formatters";
+import { pageNameFromTreePath, toGuardedNodeName } from "./indexing/codecs";
 import { prettyFilesWithReaderToLibraryFileDtos } from "./indexing/libraryFileAdapters";
 import { LibraryTree } from "./library-tree/library-tree";
 import { noteDtosFromLibraryFileDtos } from "./pure-functions/note-dtos-from-library-file-dtos";

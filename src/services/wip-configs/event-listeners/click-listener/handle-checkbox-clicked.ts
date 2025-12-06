@@ -1,6 +1,6 @@
 import type { App } from "obsidian";
 import { MarkdownView } from "obsidian";
-import { pageNameFromTreePath } from "../../../../commanders/librarian/indexing/formatters";
+import { pageNameFromTreePath } from "../../../../commanders/librarian/indexing/codecs";
 import type { Librarian } from "../../../../commanders/librarian/librarian";
 import type { TreePath } from "../../../../commanders/librarian/types";
 

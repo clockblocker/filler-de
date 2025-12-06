@@ -4,7 +4,7 @@ import type { FullPathToFile } from "../../services/obsidian-services/atomic-ser
 import type { TextStatus } from "../../types/common-interface/enums";
 import type { Prettify } from "../../types/helpers";
 import { NOTE, SECTION } from "../../types/literals";
-import type { GuardedNodeName } from "./indexing/formatters";
+import type { GuardedNodeName } from "./indexing/codecs";
 
 // Tree structure: Section → Note (2 levels)
 export const NodeTypeSchema = z.enum([SECTION, NOTE]);
