@@ -1,12 +1,8 @@
 import { extractMetaInfo } from "../../../services/dto-services/meta-info-manager/interface";
 import type { MetaInfo } from "../../../services/dto-services/meta-info-manager/types";
-import type { FullPathToFile } from "../../../services/obsidian-services/atomic-services/pathfinder";
 import type { ReadablePrettyFile } from "../../../services/obsidian-services/file-services/background/background-file-service";
 import { TextStatus } from "../../../types/common-interface/enums";
-import { UNKNOWN } from "../../../types/literals";
-import { getTreePathFromNode } from "../pure-functions/node";
-import type { LibraryFileDto } from "../types";
-import { NodeType, type TreeNode, type TreePath } from "../types";
+import type { LibraryFileDto, TreePath } from "../types";
 import {
 	codexNameFromTreePath,
 	GuardedCodexNameSchema,
@@ -15,84 +11,6 @@ import {
 	pageNameFromTreePath,
 	scrollNameFromTreePath,
 } from "./formatters";
-
-export function getLibraryFileToFileFromNode(node: TreeNode): LibraryFileDto {
-	const treePath = getTreePathFromNode(node);
-
-	let metaInfo: MetaInfo = {
-		fileType: "Unknown",
-		status: node.status,
-	};
-
-	const fullPath: FullPathToFile = {
-		basename: UNKNOWN,
-		extension: "md",
-		pathParts: treePath.slice(0, -1),
-		type: "file",
-	};
-
-	switch (node.type) {
-		case NodeType.Page: {
-			if (node.parent?.children.length === 1) {
-				metaInfo = { fileType: "Scroll", status: node.status };
-				// scrollNameFromTreePath requires min 2 elements, so use node name directly for single-element paths
-				if (treePath.length < 2) {
-					fullPath.basename = node.name;
-				} else {
-					fullPath.basename = scrollNameFromTreePath.encode(treePath);
-				}
-				break;
-			}
-			fullPath.basename = pageNameFromTreePath.encode(treePath);
-			const pageName = treePath[treePath.length - 1];
-
-			if (!pageName) {
-				break;
-			}
-
-			const index = Number(pageName);
-			if (index < 0 || index > 999) {
-				break;
-			}
-
-			metaInfo = {
-				fileType: "Page",
-				index,
-				status: node.status,
-			};
-			break;
-		}
-		case NodeType.Text: {
-			if (node.children.length === 1) {
-				metaInfo = { fileType: "Scroll", status: node.status };
-				// scrollNameFromTreePath requires min 2 elements, so use node name directly for single-element paths
-				if (treePath.length < 2) {
-					fullPath.basename = node.name;
-				} else {
-					fullPath.basename = scrollNameFromTreePath.encode(treePath);
-				}
-				break;
-			}
-			// Codex goes inside the book folder
-			fullPath.pathParts = [...treePath];
-			fullPath.basename = codexNameFromTreePath.encode(treePath);
-			metaInfo = { fileType: "Codex", status: node.status };
-
-			break;
-		}
-		case NodeType.Section: {
-			// Codex goes inside the section folder
-			fullPath.pathParts = [...treePath];
-			fullPath.basename = codexNameFromTreePath.encode(treePath);
-			metaInfo = { fileType: "Codex", status: node.status };
-		}
-	}
-
-	return {
-		fullPath,
-		metaInfo,
-	};
-}
 
 export function getTreePathFromLibraryFile(
 	libraryFile: LibraryFileDto,

@@ -1,7 +1,7 @@
 import type { App } from "obsidian";
 import { MarkdownView } from "obsidian";
-import type { Librarian } from "../../../../commanders/librarian/librarian";
 import { pageNameFromTreePath } from "../../../../commanders/librarian/indexing/formatters";
+import type { LibrarianV2 } from "../../../../commanders/librarian/librarian-v2";
 import type { TreePath } from "../../../../commanders/librarian/types";
 
 /**
@@ -14,7 +14,7 @@ export function handleCheckboxClicked({
 	app,
 }: {
 	checkbox: HTMLInputElement;
-	librarian: Librarian;
+	librarian: LibrarianV2;
 	app: App;
 }): boolean {
 	// Find the line container (works in both Live Preview and Reading view)
@@ -40,7 +40,10 @@ export function handleCheckboxClicked({
 	// Could be: "Library/Section/Text" or "__Text-Section" (Codex filename)
 	const { rootName, treePath } = parseCodexLinkTarget(href);
 	if (!rootName || treePath.length === 0) {
-		console.log("[handleCheckboxClicked] Failed to parse link target:", href);
+		console.log(
+			"[handleCheckboxClicked] Failed to parse link target:",
+			href,
+		);
 		return false;
 	}
 
@@ -50,18 +53,21 @@ export function handleCheckboxClicked({
 
 	console.log("[handleCheckboxClicked] Setting status:", {
 		href,
+		newStatus,
 		rootName,
 		treePath,
-		newStatus,
 	});
 
 	// Call librarian to update status (fire-and-forget async)
 	// rootName is validated to be "Library" in parseCodexLinkTarget
-	librarian.setStatus(rootName as "Library", treePath, newStatus).catch(
-		(error) => {
-			console.error("[handleCheckboxClicked] Failed to set status:", error);
-		},
-	);
+	librarian
+		.setStatus(rootName as "Library", treePath, newStatus)
+		.catch((error) => {
+			console.error(
+				"[handleCheckboxClicked] Failed to set status:",
+				error,
+			);
+		});
 
 	return true;
 }

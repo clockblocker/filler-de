@@ -5,7 +5,6 @@ import {
 	type WorkspaceLeaf,
 } from "obsidian";
 import { LibrarianV2 } from "./commanders/librarian/librarian-v2";
-// import { Librarian } from "./commanders/librarian/librarian";
 import { AboveSelectionToolbarService } from "./services/obsidian-services/atomic-services/above-selection-toolbar-service";
 import { ApiService } from "./services/obsidian-services/atomic-services/api-service";
 import { BottomToolbarService } from "./services/obsidian-services/atomic-services/bottom-toolbar-service";

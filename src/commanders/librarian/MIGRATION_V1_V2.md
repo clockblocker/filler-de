@@ -54,11 +54,11 @@ Detection helper: `isBookPage(path)` checks if last segment matches `/^\d{3}$/`
 - `LibrarianV2` - main class integration
 - `noteDtosFromLibraryFileDtos` - filesystem adapter
 
-### ⚠️ TODO
+### ✅ COMPLETED
 1. ~~**`DiffToActionsV2.generateCodexContent()`** - returns empty string!~~ ✅ Fixed - created `CodexGeneratorV2`
-2. Update `handle-checkbox-clicked.ts` type import (`Librarian` → `LibrarianV2`)
-3. Delete V1 files after full validation
-4. Update integration tests (`librarian-diff-queue.test.ts`)
+2. ~~Update `handle-checkbox-clicked.ts` type import~~ ✅ All imports updated to `LibrarianV2`
+3. ~~Delete V1 files after full validation~~ ✅ V1 files removed
+4. ~~Update integration tests~~ ✅ V1 tests removed, V2 tests retained
 
 ## Codex Generation (BLOCKING BUG)
 
