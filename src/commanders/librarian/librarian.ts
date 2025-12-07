@@ -241,14 +241,16 @@ export class Librarian {
 			[sectionPath],
 		);
 
-		// Flush queue
 		if (this.actionQueue) {
 			await this.actionQueue.flushNow();
 		}
 
-		// Open the created file
 		const app = this.openedFileService.getApp();
 		const scrollBasename = treePathToScrollBasename.encode(notePath);
+		this.openedFileService.cd({
+			basename: scrollBasename,
+			pathParts: [rootName, ...sectionPath],
+		});
 		const systemPath = [
 			rootName,
 			...sectionPath,

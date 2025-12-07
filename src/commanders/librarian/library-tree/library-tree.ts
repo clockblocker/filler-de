@@ -21,11 +21,6 @@ export type TreeSnapshot = {
 
 /**
  * LibraryTree - Simplified tree with 2 levels: Section → Note
- *
- * Key differences from V1:
- * - Input: NoteDto[] (flat, one per file) instead of TextDto[] (grouped by text)
- * - Structure: Section → Note (no intermediate Text node)
- * - Books are just Sections containing multiple Notes
  */
 export class LibraryTree {
 	root: SectionNode;

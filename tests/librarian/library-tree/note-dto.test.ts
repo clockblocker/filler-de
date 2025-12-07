@@ -9,8 +9,6 @@ import { AVATAR_NOTES } from '../static/batteries/avatar';
  * NoteDto is a flat structure where each file = one DTO:
  * - Scroll: single NoteDto with path = [...sectionPath, scrollName]
  * - Book: multiple NoteDtos with path = [...sectionPath, bookName, pageIndex]
- * 
- * This replaces TextDto's pageStatuses: Record<name, status> pattern.
  */
 describe('NoteDto format', () => {
 	describe('Structure validation', () => {
