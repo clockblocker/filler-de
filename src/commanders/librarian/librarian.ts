@@ -1,5 +1,5 @@
 import type { TAbstractFile } from "obsidian";
-import { TFile } from "obsidian";
+import { TFile, TFolder } from "obsidian";
 import {
 	editOrAddMetaInfo,
 	extractMetaInfo,
@@ -204,7 +204,7 @@ export class Librarian {
 			);
 		}
 
-		// Codex cleanup: remove codex files in folders without notes
+		// Codex/Folder tracking: record whether folders have notes
 		for (const reader of fileReaders) {
 			const prettyPath: PrettyPath = {
 				basename: reader.basename,
@@ -234,6 +234,22 @@ export class Librarian {
 				entry.hasNote = true;
 			}
 			folderContents.set(folderKey, entry);
+		}
+
+		// Propagate note presence to ancestor folders
+		for (const [folderKey, info] of folderContents.entries()) {
+			if (!info.hasNote) continue;
+			const parts = folderKey.split("/").filter(Boolean);
+			for (let i = 1; i <= parts.length; i++) {
+				const ancestorKey = parts.slice(0, i).join("/");
+				const ancestorEntry = folderContents.get(ancestorKey) ?? {
+					codexPaths: [],
+					hasCodex: false,
+					hasNote: false,
+				};
+				ancestorEntry.hasNote = true;
+				folderContents.set(ancestorKey, ancestorEntry);
+			}
 		}
 
 		// Add meta info to notes missing it
@@ -286,17 +302,23 @@ export class Librarian {
 		}
 
 		for (const [folderKey, info] of folderContents.entries()) {
-			// Skip root codex cleanup
+			// Skip root
 			if (folderKey === rootName) continue;
 			if (info.hasNote) continue;
-			if (!info.hasCodex) continue;
 
-			for (const codexPath of info.codexPaths) {
-				actions.push({
-					payload: { prettyPath: codexPath },
-					type: VaultActionType.TrashFile,
-				});
-			}
+			const parts = folderKey.split("/").filter(Boolean);
+			if (parts.length === 0) continue;
+			if (isInUntracked(parts)) continue;
+
+			const basename = parts[parts.length - 1] ?? "";
+			const pathParts = parts.slice(0, -1);
+
+			actions.push({
+				payload: {
+					prettyPath: { basename, pathParts },
+				},
+				type: VaultActionType.TrashFolder,
+			});
 		}
 
 		if (actions.length === 0) {
@@ -607,6 +629,7 @@ export class Librarian {
 
 		const parentPath = canonical.treePath.slice(0, -1);
 
+		await this.healRootFilesystem(rootName);
 		await this.reconcileSubtree(rootName, parentPath);
 		await this.regenerateAllCodexes();
 
@@ -641,40 +664,36 @@ export class Librarian {
 	// ─── Public API ───────────────────────────────────────────────────
 
 	logDeepLs(): void {
+		const app = this.openedFileService.getApp();
+
 		for (const rootName of LIBRARY_ROOTS) {
-			const tree = this.trees[rootName];
-			if (!tree) continue;
+			const folder = app.vault.getAbstractFileByPath(rootName);
+			if (!folder || !(folder instanceof TFolder)) {
+				console.log(`[Librarian] Root not found: ${rootName}`);
+				continue;
+			}
 
 			const lines: string[] = [];
 
-			const walk = (
-				node: {
-					name: string;
-					type: NodeType;
-					children?: unknown[];
-				},
-				indent: string,
-			): void => {
-				const marker = node.type === NodeType.Section ? "📁" : "📄";
-				lines.push(`${indent}${marker} ${node.name}`);
+			const walkFolder = (node: TFolder, indent: string): void => {
+				lines.push(`${indent}📁 ${node.name}`);
+				// Codex for this folder
+				lines.push(`${indent}  📜 __${node.name}`);
 
-				if (node.type === NodeType.Section) {
-					lines.push(`${indent}  📜 __${node.name ?? rootName}`);
-					for (const child of node.children ?? []) {
-						walk(
-							child as {
-								name: string;
-								type: NodeType;
-								children?: unknown[];
-							},
-							`${indent}  `,
-						);
+				for (const child of node.children) {
+					if (child instanceof TFile) {
+						if (child.extension === "md") {
+							// Skip listing codex files twice (we already emitted 📜)
+							if (child.basename.startsWith("__")) continue;
+							lines.push(`${indent}  📄 ${child.basename}`);
+						}
+					} else if (child instanceof TFolder) {
+						walkFolder(child, `${indent}  `);
 					}
 				}
 			};
 
-			walk(tree.root, "");
-
+			walkFolder(folder, "");
 			console.log(
 				`[Librarian] Deep LS for ${rootName}:\n${lines.join("\n")}`,
 			);
@@ -704,7 +723,7 @@ export class Librarian {
 
 		await this.withDiff(
 			rootName,
-			(tree) =>
+			(tree) =>	
 				tree.addNotes([
 					{ path: notePath, status: TextStatus.NotStarted },
 				]),
