@@ -6,7 +6,7 @@ import {
 import type {
 	FileFromTo,
 	FileWithContent,
-	FullPathToFile,
+	FullPathToMdFile,
 } from "../../../atomic-services/pathfinder";
 import { systemPathFromFullPath } from "../../../atomic-services/pathfinder";
 import { logError, logWarning } from "../../../helpers/issue-handlers";
@@ -28,7 +28,7 @@ export class TFileHelper {
 		this.fileManager = fileManager;
 	}
 
-	async getFile(fullPath: FullPathToFile): Promise<TFile> {
+	async getFile(fullPath: FullPathToMdFile): Promise<TFile> {
 		const mbFile = await this.getMaybeFile(fullPath);
 		return unwrapMaybeByThrowing(mbFile);
 	}
@@ -41,7 +41,7 @@ export class TFileHelper {
 		return tFiles;
 	}
 
-	async trashFiles(fullPaths: readonly FullPathToFile[]): Promise<void> {
+	async trashFiles(fullPaths: readonly FullPathToMdFile[]): Promise<void> {
 		for (const fullPath of fullPaths) {
 			await this.trashFile(fullPath);
 		}
@@ -57,7 +57,7 @@ export class TFileHelper {
 		return await this.getOrCreateOneFile(file);
 	}
 
-	private async trashFile(fullPath: FullPathToFile): Promise<void> {
+	private async trashFile(fullPath: FullPathToMdFile): Promise<void> {
 		const file = await this.getFile(fullPath);
 		await this.fileManager.trashFile(file);
 	}
@@ -103,7 +103,7 @@ export class TFileHelper {
 	}
 
 	private async getMaybeFile(
-		fullPath: FullPathToFile,
+		fullPath: FullPathToMdFile,
 	): Promise<Maybe<TFile>> {
 		const systemPath = systemPathFromFullPath(fullPath);
 		const tAbstractFile = this.vault.getAbstractFileByPath(systemPath);

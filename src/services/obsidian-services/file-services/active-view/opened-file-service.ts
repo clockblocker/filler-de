@@ -5,7 +5,7 @@ import {
 	unwrapMaybeByThrowing,
 } from "../../../../types/common-interface/maybe";
 import {
-	type FullPathToFile,
+	type FullPathToMdFile,
 	fullPathToMdFileFromPrettyPath,
 	systemPathFromFullPath,
 } from "../../atomic-services/pathfinder";
@@ -14,7 +14,7 @@ import { logError } from "../../helpers/issue-handlers";
 import type { OpenedFileReader } from "./opened-file-reader";
 
 export class OpenedFileService {
-	private lastOpenedFiles: FullPathToFile[] = [];
+	private lastOpenedFiles: FullPathToMdFile[] = [];
 	private reader: OpenedFileReader;
 
 	constructor(
@@ -76,10 +76,10 @@ export class OpenedFileService {
 	}
 
 	public async cd(file: TFile): Promise<Maybe<TFile>>;
-	public async cd(file: FullPathToFile): Promise<Maybe<TFile>>;
+	public async cd(file: FullPathToMdFile): Promise<Maybe<TFile>>;
 	public async cd(file: PrettyPath): Promise<Maybe<TFile>>;
 	public async cd(
-		file: TFile | FullPathToFile | PrettyPath,
+		file: TFile | FullPathToMdFile | PrettyPath,
 	): Promise<Maybe<TFile>> {
 		let tfile: TFile;
 		if (
@@ -88,8 +88,8 @@ export class OpenedFileService {
 		) {
 			tfile = file as TFile;
 		} else if (
-			typeof (file as FullPathToFile).basename === "string" &&
-			Array.isArray((file as FullPathToFile).pathParts)
+			typeof (file as FullPathToMdFile).basename === "string" &&
+			Array.isArray((file as FullPathToMdFile).pathParts)
 		) {
 			const full = fullPathToMdFileFromPrettyPath(file as PrettyPath);
 			const systemPath = systemPathFromFullPath(full);

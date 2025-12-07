@@ -8,8 +8,8 @@ import type {
 	FileFromTo,
 	FileWithContent,
 	FullPath,
-	FullPathToFile,
 	FullPathToFolder,
+	FullPathToMdFile,
 } from "../../atomic-services/pathfinder";
 import { systemPathFromFullPath } from "../../atomic-services/pathfinder";
 import { TFileHelper } from "./helpers/tfile-helper";
@@ -47,7 +47,7 @@ export class AbstractFileHelper {
 		await this.tfileHelper.moveFiles(fromTos);
 	}
 
-	async trashFiles(files: readonly FullPathToFile[]): Promise<void> {
+	async trashFiles(files: readonly FullPathToMdFile[]): Promise<void> {
 		await this.tfileHelper.trashFiles(files);
 	}
 
@@ -70,7 +70,7 @@ export class AbstractFileHelper {
 
 	// ─── Read Operations ─────────────────────────────────────────────
 
-	async getMdFile(fullPath: FullPathToFile): Promise<TFile> {
+	async getMdFile(fullPath: FullPathToMdFile): Promise<TFile> {
 		return unwrapMaybeByThrowing(await this.getMaybeAbstractFile(fullPath));
 	}
 

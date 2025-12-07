@@ -5,7 +5,7 @@ import { SLASH } from "../../../types/literals";
 
 export function fullPathToMdFileFromPrettyPath(
 	prettyPath: PrettyPath,
-): FullPathToFile {
+): FullPathToMdFile {
 	return {
 		...prettyPath,
 		extension: "md",
@@ -22,7 +22,7 @@ export function fullPathToFolderFromPrettyPath(
 	};
 }
 
-export function getFullPathForAbstractFile(file: TFile): FullPathToFile;
+export function getFullPathForAbstractFile(file: TFile): FullPathToMdFile;
 export function getFullPathForAbstractFile(folder: TFolder): FullPathToFolder;
 export function getFullPathForAbstractFile<T extends FullPath>(
 	abstractFile: AbstractFile<T>,
@@ -56,8 +56,9 @@ export function systemPathFromFullPath(fullPath: FullPath): string {
 	);
 }
 
+// SystemPath shall point to folder or MD file
 export function fullPathFromSystemPath(systemPath: string): FullPath {
-	// Remove leading/trailing slashes and normalize
+	// TODO: replace manual string parsing with codec if/when available
 	const normalized = systemPath.replace(/^[\\/]+|[\\/]+$/g, "");
 	if (!normalized) {
 		// Edge case: root path
@@ -76,6 +77,10 @@ export function fullPathFromSystemPath(systemPath: string): FullPath {
 		const dotIdx = last.lastIndexOf(".");
 		const basename = last.substring(0, dotIdx);
 		const extension = last.substring(dotIdx + 1);
+		if (extension !== "md") {
+			throw new Error(`Invalid extension: ${extension}`);
+		}
+
 		return {
 			basename,
 			extension,
@@ -113,25 +118,25 @@ export type FullPathToFolder = Prettify<
 	}
 >;
 
-export type FullPathToFile = Prettify<
+export type FullPathToMdFile = Prettify<
 	PrettyPath & {
 		type: "file";
-		extension: "md" | string;
+		extension: "md";
 	}
 >;
 
-export type FullPath = FullPathToFolder | FullPathToFile;
+export type FullPath = FullPathToFolder | FullPathToMdFile;
 
 export type AbstractFile<T extends FullPath> = T extends { type: "file" }
 	? TFile
 	: TFolder;
 
 export type FileWithContent = {
-	fullPath: FullPathToFile;
+	fullPath: FullPathToMdFile;
 	content?: string;
 };
 
 export type FileFromTo = {
-	from: FullPathToFile;
-	to: FullPathToFile;
+	from: FullPathToMdFile;
+	to: FullPathToMdFile;
 };
