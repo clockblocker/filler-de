@@ -61,6 +61,21 @@ function sanitizeSegments(segments: readonly string[]): string[] {
 	return segments.map((segment) => toNodeName(segment));
 }
 
+function stripRedundantSuffix(path: string[]): string[] {
+	if (path.length < 2) return path;
+	const leaf = path[path.length - 1];
+	const parent = path[path.length - 2];
+	if (leaf && parent && leaf.endsWith(`-${parent}`)) {
+		const trimmed = leaf.slice(0, leaf.length - parent.length - 1);
+		if (trimmed) {
+			const copy = [...path];
+			copy[copy.length - 1] = trimmed;
+			return copy;
+		}
+	}
+	return path;
+}
+
 function arraysEqual(a: readonly string[], b: readonly string[]): boolean {
 	if (a.length !== b.length) return false;
 	return a.every((v, i) => v === b[i]);
@@ -136,10 +151,11 @@ export function canonicalizePrettyPath({
 		const pageNumber =
 			decoded.treePath[decoded.treePath.length - 1] ?? "000";
 
-		const parentPath =
+		const parentPath = stripRedundantSuffix(
 			decodedParent.length > 0 && arraysEqual(decodedParent, folderPath)
 				? decodedParent
-				: folderPath.slice();
+				: folderPath.slice(),
+		);
 
 		const treePath: TreePath = [...parentPath, pageNumber];
 
@@ -160,10 +176,11 @@ export function canonicalizePrettyPath({
 	const name = toNodeName(
 		decoded.treePath[decoded.treePath.length - 1] ?? "",
 	);
-	const parentPath =
+	const parentPath = stripRedundantSuffix(
 		decodedParent.length > 0 && arraysEqual(decodedParent, folderPath)
 			? decodedParent
-			: folderPath.slice();
+			: folderPath.slice(),
+	);
 
 	const treePath: TreePath = [...parentPath, name];
 

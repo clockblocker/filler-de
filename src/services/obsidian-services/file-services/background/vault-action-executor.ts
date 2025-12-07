@@ -40,7 +40,7 @@ export class VaultActionExecutor {
 			try {
 				await this.executeOne(action);
 			} catch (error) {
-				logError({
+				logWarning({
 					description: `Failed to execute ${action.type} on ${getActionTargetPath(action)}: ${error instanceof Error ? error.message : String(error)}`,
 					location: "VaultActionExecutor.execute",
 				});
@@ -98,10 +98,17 @@ export class VaultActionExecutor {
 				break;
 
 			case VaultActionType.RenameFile:
-				await this.fileService.move({
-					from: { ...payload.from },
-					to: { ...payload.to },
-				});
+				try {
+					await this.fileService.move({
+						from: { ...payload.from },
+						to: { ...payload.to },
+					});
+				} catch (error) {
+					logWarning({
+						description: `Rename skipped for ${getActionTargetPath(action)}: ${error instanceof Error ? error.message : String(error)}`,
+						location: "VaultActionExecutor.executeOne",
+					});
+				}
 				break;
 
 			case VaultActionType.TrashFile:

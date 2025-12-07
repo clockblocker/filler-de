@@ -162,10 +162,8 @@ export class Librarian {
 			}
 
 			const canonical = canonicalizePrettyPath({ prettyPath, rootName });
-			let targetPath: PrettyPath;
 
 			if ("reason" in canonical) {
-				targetPath = canonical.destination;
 				actions.push(
 					...this.createFolderActionsForPathParts(
 						canonical.destination.pathParts,
@@ -183,11 +181,9 @@ export class Librarian {
 			}
 
 			if (isCanonical(prettyPath, canonical.canonicalPrettyPath)) {
-				targetPath = prettyPath;
 				continue;
 			}
 
-			targetPath = canonical.canonicalPrettyPath;
 			actions.push(
 				...this.createFolderActionsForPathParts(
 					canonical.canonicalPrettyPath.pathParts,
@@ -311,6 +307,14 @@ export class Librarian {
 
 			const basename = parts[parts.length - 1] ?? "";
 			const pathParts = parts.slice(0, -1);
+
+			// Remove codex files first, then folder
+			for (const codexPath of info.codexPaths) {
+				actions.push({
+					payload: { prettyPath: codexPath },
+					type: VaultActionType.TrashFile,
+				});
+			}
 
 			actions.push({
 				payload: {
@@ -501,7 +505,7 @@ export class Librarian {
 		if (isInUntracked(fullPath.pathParts)) return;
 
 		const prettyPath: PrettyPath = {
-			basename: fullPath.basename,
+			basename: toNodeName(fullPath.basename),
 			pathParts: fullPath.pathParts,
 		};
 
@@ -572,7 +576,7 @@ export class Librarian {
 		if (!this.trees[rootName]) return;
 
 		const newPrettyPath: PrettyPath = {
-			basename: newFull.basename,
+			basename: toNodeName(newFull.basename),
 			pathParts: newFull.pathParts,
 		};
 		const currentPrettyPath = newPrettyPath;
@@ -785,15 +789,20 @@ export class Librarian {
 		}
 
 		const textName = toNodeName(fullPath.basename);
-		const { pages, isBook } = splitTextIntoP_ages(content, textName);
 		const sectionPath = fullPath.pathParts.slice(1);
+		const lastFolder = sectionPath[sectionPath.length - 1];
+		const normalizedTextName =
+			lastFolder && textName.endsWith(`-${lastFolder}`)
+				? textName.slice(0, textName.length - lastFolder.length - 1)
+				: textName;
+		const { pages, isBook } = splitTextIntoP_ages(content, textName);
 
 		// Create notes for each page
 		const notesToAdd: NoteDto[] = [];
 		if (!isBook) {
 			// Scroll: single note
 			notesToAdd.push({
-				path: [...sectionPath, textName],
+				path: [...sectionPath, normalizedTextName],
 				status: TextStatus.NotStarted,
 			});
 		} else {
@@ -802,7 +811,7 @@ export class Librarian {
 				notesToAdd.push({
 					path: [
 						...sectionPath,
-						textName,
+						normalizedTextName,
 						pageNumberFromInt.encode(i),
 					],
 					status: TextStatus.NotStarted,
