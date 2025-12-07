@@ -427,6 +427,14 @@ export default class TextEaterPlugin extends Plugin {
 			id: "new-gen-command",
 			name: "new-gen-command",
 		});
+
+		this.addCommand({
+			callback: () => {
+				this.librarian.logDeepLs();
+			},
+			id: "librarian-log-deep-ls",
+			name: "Librarian: log tree structure",
+		});
 	}
 
 	async saveSettings() {

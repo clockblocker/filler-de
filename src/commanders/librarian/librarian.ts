@@ -39,6 +39,7 @@ import { LibraryTree } from "./library-tree/library-tree";
 import { noteDtosFromLibraryFiles } from "./pure-functions/note-dtos-from-library-file-dtos";
 import { splitTextIntoP_ages } from "./text-splitter/text-splitter";
 import type { LibraryFile, NoteDto, TreePath } from "./types";
+import { NodeType } from "./types";
 
 export class Librarian {
 	backgroundFileService: TexfresserObsidianServices["backgroundFileService"];
@@ -638,6 +639,47 @@ export class Librarian {
 	}
 
 	// ─── Public API ───────────────────────────────────────────────────
+
+	logDeepLs(): void {
+		for (const rootName of LIBRARY_ROOTS) {
+			const tree = this.trees[rootName];
+			if (!tree) continue;
+
+			const lines: string[] = [];
+
+			const walk = (
+				node: {
+					name: string;
+					type: NodeType;
+					children?: unknown[];
+				},
+				indent: string,
+			): void => {
+				const marker = node.type === NodeType.Section ? "📁" : "📄";
+				lines.push(`${indent}${marker} ${node.name}`);
+
+				if (node.type === NodeType.Section) {
+					lines.push(`${indent}  📜 __${node.name ?? rootName}`);
+					for (const child of node.children ?? []) {
+						walk(
+							child as {
+								name: string;
+								type: NodeType;
+								children?: unknown[];
+							},
+							`${indent}  `,
+						);
+					}
+				}
+			};
+
+			walk(tree.root, "");
+
+			console.log(
+				`[Librarian] Deep LS for ${rootName}:\n${lines.join("\n")}`,
+			);
+		}
+	}
 
 	async createNewNoteInCurrentFolder(): Promise<void> {
 		const pwd = await this.openedFileService.pwd();
