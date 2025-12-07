@@ -1,11 +1,21 @@
 import type { TAbstractFile, TFile } from "obsidian";
 import type { FullPath } from "../../services/obsidian-services/atomic-services/pathfinder";
 import { fullPathFromSystemPath } from "../../services/obsidian-services/atomic-services/pathfinder";
-import type { VaultAction } from "../../services/obsidian-services/file-services/background/background-vault-actions";
+import {
+	type VaultAction,
+	VaultActionType,
+} from "../../services/obsidian-services/file-services/background/background-vault-actions";
 import type { VaultActionQueue } from "../../services/obsidian-services/file-services/vault-action-queue";
 import { logWarning } from "../../services/obsidian-services/helpers/issue-handlers";
 import type { TexfresserObsidianServices } from "../../services/obsidian-services/interface";
+import type { PrettyPath } from "../../types/common-interface/dtos";
 import { TextStatus } from "../../types/common-interface/enums";
+import {
+	isInUntracked,
+	isRootName,
+	LIBRARY_ROOTS,
+	type RootName,
+} from "./constants";
 import { DiffToActions } from "./diffing/diff-to-actions";
 import type { NoteSnapshot } from "./diffing/note-differ";
 import { noteDiffer } from "./diffing/note-differ";
@@ -16,13 +26,14 @@ import {
 	treePathToScrollBasename,
 } from "./indexing/codecs";
 import { prettyFilesWithReaderToLibraryFiles } from "./indexing/libraryFileAdapters";
+import {
+	canonicalizePrettyPath,
+	isCanonical,
+} from "./invariants/path-canonicalizer";
 import { LibraryTree } from "./library-tree/library-tree";
 import { noteDtosFromLibraryFiles } from "./pure-functions/note-dtos-from-library-file-dtos";
 import { splitTextIntoP_ages } from "./text-splitter/text-splitter";
 import type { LibraryFile, NoteDto, TreePath } from "./types";
-
-const ROOTS = ["Library"] as const;
-type RootName = (typeof ROOTS)[number];
 
 export class Librarian {
 	backgroundFileService: TexfresserObsidianServices["backgroundFileService"];
@@ -45,7 +56,7 @@ export class Librarian {
 		this.openedFileService = openedFileService;
 		this.actionQueue = actionQueue ?? null;
 
-		for (const rootName of ROOTS) {
+		for (const rootName of LIBRARY_ROOTS) {
 			this.diffMappers.set(rootName, new DiffToActions(rootName));
 		}
 	}
@@ -58,11 +69,106 @@ export class Librarian {
 		this.actionQueue = queue;
 	}
 
+	private createFolderActionsForPathParts(
+		pathParts: string[],
+		seen: Set<string>,
+	): VaultAction[] {
+		const actions: VaultAction[] = [];
+
+		for (let depth = 1; depth < pathParts.length; depth++) {
+			const key = pathParts.slice(0, depth + 1).join("/");
+			if (seen.has(key)) continue;
+			seen.add(key);
+
+			const basename = pathParts[depth] ?? "";
+			const parentParts = pathParts.slice(0, depth);
+
+			actions.push({
+				payload: { prettyPath: { basename, pathParts: parentParts } },
+				type: VaultActionType.UpdateOrCreateFolder,
+			});
+		}
+
+		return actions;
+	}
+
+	private async auditRoot(rootName: RootName): Promise<void> {
+		const fileReaders =
+			await this.backgroundFileService.getReadersToAllMdFilesInFolder({
+				basename: rootName,
+				pathParts: [],
+				type: "folder",
+			});
+
+		const actions: VaultAction[] = [];
+		const seenFolders = new Set<string>();
+
+		for (const reader of fileReaders) {
+			const prettyPath: PrettyPath = {
+				basename: reader.basename,
+				pathParts: reader.pathParts,
+			};
+
+			if (isInUntracked(prettyPath.pathParts)) {
+				continue;
+			}
+
+			const canonical = canonicalizePrettyPath({ prettyPath, rootName });
+
+			if ("reason" in canonical) {
+				actions.push(
+					...this.createFolderActionsForPathParts(
+						canonical.destination.pathParts,
+						seenFolders,
+					),
+					{
+						payload: {
+							from: prettyPath,
+							to: canonical.destination,
+						},
+						type: VaultActionType.RenameFile,
+					},
+				);
+				continue;
+			}
+
+			if (isCanonical(prettyPath, canonical.canonicalPrettyPath)) {
+				continue;
+			}
+
+			actions.push(
+				...this.createFolderActionsForPathParts(
+					canonical.canonicalPrettyPath.pathParts,
+					seenFolders,
+				),
+				{
+					payload: {
+						from: prettyPath,
+						to: canonical.canonicalPrettyPath,
+					},
+					type: VaultActionType.RenameFile,
+				},
+			);
+		}
+
+		if (actions.length === 0) {
+			return;
+		}
+
+		if (!this.actionQueue) {
+			return;
+		}
+
+		this.actionQueue.pushMany(actions);
+		await this.actionQueue.flushNow();
+	}
+
 	// ─── Tree Initialization ──────────────────────────────────────────
 
 	async initTrees(): Promise<void> {
 		this.trees = {} as Record<RootName, LibraryTree>;
-		for (const rootName of ROOTS) {
+		for (const rootName of LIBRARY_ROOTS) {
+			await this.auditRoot(rootName);
 			const notes = await this.readNotesFromFilesystem(rootName);
 			this.trees[rootName] = new LibraryTree(notes, rootName);
 		}
@@ -205,7 +311,11 @@ export class Librarian {
 			pathParts,
 		);
 
-		return noteDtosFromLibraryFiles(libraryFiles, subtreePath);
+		const trackedLibraryFiles = libraryFiles.filter(
+			(file) => !isInUntracked(file.fullPath.pathParts),
+		);
+
+		return noteDtosFromLibraryFiles(trackedLibraryFiles, subtreePath);
 	}
 
 	// ─── Public API ───────────────────────────────────────────────────
@@ -430,7 +540,7 @@ export class Librarian {
 	 * Use when codexes are out of sync (e.g., after migration).
 	 */
 	async regenerateAllCodexes(): Promise<void> {
-		for (const rootName of ROOTS) {
+		for (const rootName of LIBRARY_ROOTS) {
 			const tree = this.trees[rootName];
 			if (!tree) continue;
 
@@ -521,10 +631,6 @@ export class Librarian {
 		const rootName = fullPath.pathParts[0] ?? "";
 		return this.trees[rootName] ?? null;
 	}
-}
-
-function isRootName(name: string): name is RootName {
-	return ROOTS.includes(name as RootName);
 }
 
 function treePathFromFullPath(fullPath: FullPath): TreePath {
