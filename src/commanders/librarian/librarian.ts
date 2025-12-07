@@ -45,7 +45,7 @@ export class Librarian {
 	openedFileService: TexfresserObsidianServices["openedFileService"];
 	trees: Record<RootName, LibraryTree>;
 
-	private actionQueue: VaultActionQueue | null = null;
+	private actionQueue: VaultActionQueue;
 	private diffMappers: Map<RootName, DiffToActions> = new Map();
 	private _skipReconciliation = false;
 	private selfEventKeys: Set<string> = new Set();
@@ -54,13 +54,13 @@ export class Librarian {
 		backgroundFileService,
 		openedFileService,
 		actionQueue,
-	}: { actionQueue?: VaultActionQueue } & Pick<
+	}: { actionQueue: VaultActionQueue } & Pick<
 		TexfresserObsidianServices,
 		"backgroundFileService" | "openedFileService"
 	>) {
 		this.backgroundFileService = backgroundFileService;
 		this.openedFileService = openedFileService;
-		this.actionQueue = actionQueue ?? null;
+		this.actionQueue = actionQueue;
 
 		for (const rootName of LIBRARY_ROOTS) {
 			this.diffMappers.set(rootName, new DiffToActions(rootName));
@@ -69,10 +69,6 @@ export class Librarian {
 
 	_setSkipReconciliation(skip: boolean): void {
 		this._skipReconciliation = skip;
-	}
-
-	setActionQueue(queue: VaultActionQueue): void {
-		this.actionQueue = queue;
 	}
 
 	private toSystemKey(prettyPath: PrettyPath): string {
@@ -328,10 +324,6 @@ export class Librarian {
 			return;
 		}
 
-		if (!this.actionQueue) {
-			return;
-		}
-
 		this.actionQueue.pushMany(actions);
 		await this.actionQueue.flushNow();
 	}
@@ -440,7 +432,7 @@ export class Librarian {
 
 		const actions = mapper ? mapper.mapDiffToActions(diff, getNode) : [];
 
-		if (this.actionQueue && actions.length > 0) {
+		if (actions.length > 0) {
 			this.actionQueue.pushMany(actions);
 		}
 
@@ -526,11 +518,9 @@ export class Librarian {
 				},
 			];
 
-			if (this.actionQueue) {
-				this.registerSelfActions(actions);
-				this.actionQueue.pushMany(actions);
-				await this.actionQueue.flushNow();
-			}
+			this.registerSelfActions(actions);
+			this.actionQueue.pushMany(actions);
+			await this.actionQueue.flushNow();
 			return;
 		}
 
@@ -549,11 +539,9 @@ export class Librarian {
 				},
 			];
 
-			if (this.actionQueue) {
-				this.registerSelfActions(actions);
-				this.actionQueue.pushMany(actions);
-				await this.actionQueue.flushNow();
-			}
+			this.registerSelfActions(actions);
+			this.actionQueue.pushMany(actions);
+			await this.actionQueue.flushNow();
 		}
 
 		if (!this.trees[rootName]) return;
@@ -600,11 +588,9 @@ export class Librarian {
 					type: VaultActionType.RenameFile,
 				},
 			];
-			if (this.actionQueue) {
-				this.registerSelfActions(actions);
-				this.actionQueue.pushMany(actions);
-				await this.actionQueue.flushNow();
-			}
+			this.registerSelfActions(actions);
+			this.actionQueue.pushMany(actions);
+			await this.actionQueue.flushNow();
 			return;
 		}
 
@@ -623,11 +609,9 @@ export class Librarian {
 				},
 			];
 
-			if (this.actionQueue) {
-				this.registerSelfActions(actions);
-				this.actionQueue.pushMany(actions);
-				await this.actionQueue.flushNow();
-			}
+			this.registerSelfActions(actions);
+			this.actionQueue.pushMany(actions);
+			await this.actionQueue.flushNow();
 		}
 
 		const parentPath = canonical.treePath.slice(0, -1);
@@ -635,8 +619,7 @@ export class Librarian {
 		await this.healRootFilesystem(rootName);
 		await this.reconcileSubtree(rootName, parentPath);
 		await this.regenerateAllCodexes();
-
-		if (this.actionQueue) await this.actionQueue.flushNow();
+		await this.actionQueue.flushNow();
 	}
 
 	async onFileDeleted(file: TAbstractFile): Promise<void> {
@@ -662,45 +645,6 @@ export class Librarian {
 		const parentPath = canonical.treePath.slice(0, -1);
 		await this.reconcileSubtree(rootName, parentPath);
 		await this.regenerateAllCodexes();
-	}
-
-	// ─── Public API ───────────────────────────────────────────────────
-
-	logDeepLs(): void {
-		const app = this.openedFileService.getApp();
-
-		for (const rootName of LIBRARY_ROOTS) {
-			const folder = app.vault.getAbstractFileByPath(rootName);
-			if (!folder || !(folder instanceof TFolder)) {
-				console.log(`[Librarian] Root not found: ${rootName}`);
-				continue;
-			}
-
-			const lines: string[] = [];
-
-			const walkFolder = (node: TFolder, indent: string): void => {
-				lines.push(`${indent}📁 ${node.name}`);
-				// Codex for this folder
-				lines.push(`${indent}  📜 __${node.name}`);
-
-				for (const child of node.children) {
-					if (child instanceof TFile) {
-						if (child.extension === "md") {
-							// Skip listing codex files twice (we already emitted 📜)
-							if (child.basename.startsWith("__")) continue;
-							lines.push(`${indent}  📄 ${child.basename}`);
-						}
-					} else if (child instanceof TFolder) {
-						walkFolder(child, `${indent}  `);
-					}
-				}
-			};
-
-			walkFolder(folder, "");
-			console.log(
-				`[Librarian] Deep LS for ${rootName}:\n${lines.join("\n")}`,
-			);
-		}
 	}
 
 	async createNewNoteInCurrentFolder(): Promise<void> {
@@ -733,9 +677,7 @@ export class Librarian {
 			[sectionPath],
 		);
 
-		if (this.actionQueue) {
-			await this.actionQueue.flushNow();
-		}
+		await this.actionQueue.flushNow();
 
 		await this.openedFileService.cd({
 			basename: treePathToScrollBasename.encode(notePath),
@@ -788,14 +730,20 @@ export class Librarian {
 			return false;
 		}
 
-		const textName = toNodeName(fullPath.basename);
+		const rawTextName = toNodeName(fullPath.basename);
 		const sectionPath = fullPath.pathParts.slice(1);
 		const lastFolder = sectionPath[sectionPath.length - 1];
 		const normalizedTextName =
-			lastFolder && textName.endsWith(`-${lastFolder}`)
-				? textName.slice(0, textName.length - lastFolder.length - 1)
-				: textName;
-		const { pages, isBook } = splitTextIntoP_ages(content, textName);
+			lastFolder && rawTextName.endsWith(`-${lastFolder}`)
+				? rawTextName.slice(
+						0,
+						rawTextName.length - lastFolder.length - 1,
+					)
+				: rawTextName;
+		const { pages, isBook } = splitTextIntoP_ages(
+			content,
+			normalizedTextName,
+		);
 
 		// Create notes for each page
 		const notesToAdd: NoteDto[] = [];
@@ -823,11 +771,12 @@ export class Librarian {
 			sectionPath,
 		]);
 
-		if (this.actionQueue) {
-			await this.actionQueue.flushNow();
-		}
+		await this.actionQueue.flushNow();
 
-		// Write content to files
+		// Write content to files (queue if available)
+		const actions: VaultAction[] = [];
+		const seenFolders = new Set<string>();
+
 		for (let i = 0; i < pages.length; i++) {
 			const pageContent = pages[i] ?? "";
 
@@ -835,35 +784,76 @@ export class Librarian {
 				const scrollPath = {
 					basename: treePathToScrollBasename.encode([
 						...sectionPath,
-						textName,
+						normalizedTextName,
 					]),
 					pathParts: [rootName, ...sectionPath],
 				};
-				await this.backgroundFileService.replaceContent(
-					scrollPath,
-					pageContent,
+
+				actions.push(
+					...this.createFolderActionsForPathParts(
+						scrollPath.pathParts,
+						seenFolders,
+					),
+					{
+						payload: {
+							content: pageContent,
+							prettyPath: scrollPath,
+						},
+						type: VaultActionType.UpdateOrCreateFile,
+					},
 				);
 			} else {
 				const fullPagePath: TreePath = [
 					...sectionPath,
-					textName,
+					normalizedTextName,
 					pageNumberFromInt.encode(i),
 				];
 				const pagePath = {
 					basename: treePathToPageBasename.encode(fullPagePath),
-					pathParts: [rootName, ...sectionPath, textName],
+					pathParts: [rootName, ...sectionPath, normalizedTextName],
 				};
-				await this.backgroundFileService.replaceContent(
-					pagePath,
-					pageContent,
+
+				actions.push(
+					...this.createFolderActionsForPathParts(
+						pagePath.pathParts,
+						seenFolders,
+					),
+					{
+						payload: {
+							content: pageContent,
+							prettyPath: pagePath,
+						},
+						type: VaultActionType.UpdateOrCreateFile,
+					},
 				);
 			}
 		}
 
-		await this.backgroundFileService.trash({
+		const originalPrettyPath = {
 			basename: fullPath.basename,
 			pathParts: fullPath.pathParts,
+		};
+
+		actions.push({
+			payload: { prettyPath: originalPrettyPath },
+			type: VaultActionType.TrashFile,
 		});
+
+		const mapper = this.diffMappers.get(rootName);
+		if (mapper) {
+			const sectionPaths = affectedTree.getAllSectionPaths();
+			const getNode = (path: TreePath) => {
+				const mbNode = affectedTree.getMaybeNode({ path });
+				return mbNode.error ? undefined : mbNode.data;
+			};
+			actions.push(...mapper.regenerateAllCodexes(sectionPaths, getNode));
+		}
+
+		if (actions.length > 0) {
+			this.registerSelfActions(actions);
+			this.actionQueue.pushMany(actions);
+			await this.actionQueue.flushNow();
+		}
 
 		return true;
 	}
@@ -943,14 +933,12 @@ export class Librarian {
 			const sectionPaths = tree.getAllSectionPaths();
 			const actions = mapper.regenerateAllCodexes(sectionPaths, getNode);
 
-			if (this.actionQueue && actions.length > 0) {
+			if (actions.length > 0) {
 				this.actionQueue.pushMany(actions);
 			}
 		}
 
-		if (this.actionQueue) {
-			await this.actionQueue.flushNow();
-		}
+		await this.actionQueue.flushNow();
 	}
 
 	// ─── Private Helpers ──────────────────────────────────────────────

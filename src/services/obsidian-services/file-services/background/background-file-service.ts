@@ -1,4 +1,5 @@
-import type { FileManager, TFile, TFolder, Vault } from "obsidian";
+import { TFile, TFolder } from "obsidian";
+import type { FileManager, Vault } from "obsidian";
 import type { PrettyPath } from "../../../../types/common-interface/dtos";
 import { isReadonlyArray, type Prettify } from "../../../../types/helpers";
 import type { FullPathToFolder } from "../../atomic-services/pathfinder";
@@ -8,6 +9,7 @@ import {
 	getFullPathForAbstractFile,
 } from "../../atomic-services/pathfinder";
 import { AbstractFileHelper } from "./abstract-file-helper";
+import { LIBRARY_ROOTS } from "../../../../commanders/librarian/constants";
 
 /**
  * High-level file/folder service using PrettyPath.
@@ -47,6 +49,42 @@ export class BackgroundFileService {
 		);
 		await this.vault.modify(file, content);
 		return content;
+	}
+
+	logDeepLs(): void {
+		for (const rootName of LIBRARY_ROOTS) {
+			const folder = this.vault.getAbstractFileByPath(rootName);
+			if (!folder || !(folder instanceof TFolder)) {
+				console.log(`[BackgroundFileService] Root not found: ${rootName}`);
+				continue;
+			}
+
+			const lines: string[] = [];
+
+			const walkFolder = (node: TFolder, indent: string): void => {
+				lines.push(`${indent}📁 ${node.name}`);
+
+				for (const child of node.children) {
+					if (child instanceof TFile) {
+						if (child.extension === "md") {
+							if (child.basename.startsWith("__")) {
+								lines.push(`${indent}  📜 __${node.name}`);
+							}
+							lines.push(`${indent}  📄 ${child.basename}`);
+						}
+					} else if (child instanceof TFolder) {
+						walkFolder(child, `${indent}  `);
+					}
+				}
+			};
+
+			walkFolder(folder, "");
+			console.log(
+				`[BackgroundFileService] Deep LS for ${rootName}:\n${lines.join(
+					"\n",
+				)}`,
+			);
+		}
 	}
 
 	/**

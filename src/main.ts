@@ -430,7 +430,7 @@ export default class TextEaterPlugin extends Plugin {
 
 		this.addCommand({
 			callback: () => {
-				this.librarian.logDeepLs();
+				this.backgroundFileService.logDeepLs();
 			},
 			id: "librarian-log-deep-ls",
 			name: "Librarian: log tree structure",
