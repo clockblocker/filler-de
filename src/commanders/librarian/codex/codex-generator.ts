@@ -50,10 +50,7 @@ export class CodexGenerator {
 		this.root = root;
 	}
 
-	/**
-	 * Generate Codex for a section node.
-	 */
-	forSection(node: SectionNode): CodexContent {
+	generateCodexForSection(node: SectionNode): CodexContent {
 		return {
 			backLink: this.generateBackLink(node),
 			items: this.generateSectionItems(node),

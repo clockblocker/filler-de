@@ -33,25 +33,34 @@ type DecodedBasename = {
 };
 
 function decodeBasename(basename: string): DecodedBasename | null {
-	if (CodexBaseameSchema.safeParse(basename).success) {
+	try {
+		const parsed = CodexBaseameSchema.parse(basename);
 		return {
 			kind: "codex",
-			treePath: treePathToCodexBasename.decode(basename),
+			treePath: treePathToCodexBasename.decode(parsed),
 		};
+	} catch {
+		// fall through
 	}
 
-	if (PageBasenameSchema.safeParse(basename).success) {
+	try {
+		const parsed = PageBasenameSchema.parse(basename);
 		return {
 			kind: "page",
-			treePath: treePathToPageBasename.decode(basename),
+			treePath: treePathToPageBasename.decode(parsed),
 		};
+	} catch {
+		// fall through
 	}
 
-	if (ScrollBasenameSchema.safeParse(basename).success) {
+	try {
+		const parsed = ScrollBasenameSchema.parse(basename);
 		return {
 			kind: "scroll",
-			treePath: treePathToScrollBasename.decode(basename),
+			treePath: treePathToScrollBasename.decode(parsed),
 		};
+	} catch {
+		// fall through
 	}
 
 	return null;

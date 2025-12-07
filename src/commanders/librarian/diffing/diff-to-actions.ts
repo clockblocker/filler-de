@@ -258,7 +258,7 @@ export class DiffToActions {
 		}
 
 		const generator = createCodexGenerator(root);
-		const codexContent = generator.forSection(node);
+		const codexContent = generator.generateCodexForSection(node);
 
 		return codexFormatter.format(codexContent);
 	}

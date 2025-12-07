@@ -6,7 +6,28 @@ export {
 	CodexBaseameSchema,
 	isCodexBasename,
 	treePathToCodexBasename,
-} from "./codex";
+} from "./basenames/codex";
+
+export {
+	isNoteBasename,
+	type NoteBasename,
+	NoteBasenameSchema,
+} from "./basenames/note";
+
+export {
+	isPageBasename,
+	type PageBasename,
+	PageBasenameSchema,
+	treePathToPageBasename,
+} from "./basenames/page";
+
+export {
+	isScrollBasename,
+	type ScrollBasename,
+	ScrollBasenameSchema,
+	treePathToScrollBasename,
+} from "./basenames/scroll";
+
 export {
 	type NodeName,
 	NodeNameSchema,
@@ -16,19 +37,6 @@ export {
 } from "./guards";
 
 export {
-	isNoteBasename,
-	type NoteBasename,
-	NoteBasenameSchema,
-} from "./note";
-
-export {
-	isPageBasename,
-	type PageBasename,
-	PageBasenameSchema,
-	treePathToPageBasename,
-} from "./page";
-
-export {
 	intFromPageNumberString,
 	intInPageRangeSchema,
 	type PageNumber,
@@ -36,15 +44,8 @@ export {
 	pageNumberFromInt,
 } from "./primitives";
 
-export {
-	isScrollBasename,
-	type ScrollBasename,
-	ScrollBasenameSchema,
-	treePathToScrollBasename,
-} from "./scroll";
-
 // Library basename union
-import type { CodexBaseame } from "./codex";
-import type { NoteBasename } from "./note";
+import type { CodexBaseame } from "./basenames/codex";
+import type { NoteBasename } from "./basenames/note";
 
 export type LibraryBasename = CodexBaseame | NoteBasename;

@@ -1,6 +1,6 @@
 import z from "zod/v4";
-import { DASH } from "../../../../types/literals";
-import { NodeNameSchema } from "./guards";
+import { DASH } from "../../../../../types/literals";
+import { NodeNameSchema } from "../guards";
 
 export const ScrollBasenameSchema = z.templateLiteral([z.string().min(1)]);
 

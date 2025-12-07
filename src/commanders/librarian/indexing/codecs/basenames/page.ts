@@ -1,12 +1,12 @@
 import z from "zod/v4";
-import { logError } from "../../../../services/obsidian-services/helpers/issue-handlers";
-import { DASH } from "../../../../types/literals";
-import { NodeNameSchema } from "./guards";
+import { logError } from "../../../../../services/obsidian-services/helpers/issue-handlers";
+import { DASH } from "../../../../../types/literals";
+import { NodeNameSchema } from "../guards";
 import {
 	intFromPageNumberString,
 	PageNumberSchema,
 	pageNumberFromInt,
-} from "./primitives";
+} from "../primitives";
 
 export const PageBasenameSchema = z.templateLiteral([
 	PageNumberSchema,

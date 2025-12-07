@@ -1,6 +1,6 @@
 import z from "zod/v4";
-import { DASH, UnderscoreSchema } from "../../../../types/literals";
-import { NodeNameSchema } from "./guards";
+import { DASH, UnderscoreSchema } from "../../../../../types/literals";
+import { NodeNameSchema } from "../guards";
 
 export const CodexBaseameSchema = z.templateLiteral([
 	UnderscoreSchema,
