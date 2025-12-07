@@ -1,5 +1,5 @@
 import type { TAbstractFile } from "obsidian";
-import { TFile, TFolder } from "obsidian";
+import { TFile } from "obsidian";
 import {
 	editOrAddMetaInfo,
 	extractMetaInfo,

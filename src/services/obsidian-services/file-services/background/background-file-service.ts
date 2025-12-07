@@ -1,5 +1,6 @@
-import { TFile, TFolder } from "obsidian";
 import type { FileManager, Vault } from "obsidian";
+import { TFile, TFolder } from "obsidian";
+import { LIBRARY_ROOTS } from "../../../../commanders/librarian/constants";
 import type { PrettyPath } from "../../../../types/common-interface/dtos";
 import { isReadonlyArray, type Prettify } from "../../../../types/helpers";
 import type { FullPathToFolder } from "../../atomic-services/pathfinder";
@@ -9,7 +10,6 @@ import {
 	getFullPathForAbstractFile,
 } from "../../atomic-services/pathfinder";
 import { AbstractFileHelper } from "./abstract-file-helper";
-import { LIBRARY_ROOTS } from "../../../../commanders/librarian/constants";
 
 /**
  * High-level file/folder service using PrettyPath.
@@ -55,7 +55,9 @@ export class BackgroundFileService {
 		for (const rootName of LIBRARY_ROOTS) {
 			const folder = this.vault.getAbstractFileByPath(rootName);
 			if (!folder || !(folder instanceof TFolder)) {
-				console.log(`[BackgroundFileService] Root not found: ${rootName}`);
+				console.log(
+					`[BackgroundFileService] Root not found: ${rootName}`,
+				);
 				continue;
 			}
 
@@ -69,8 +71,9 @@ export class BackgroundFileService {
 						if (child.extension === "md") {
 							if (child.basename.startsWith("__")) {
 								lines.push(`${indent}  📜 __${node.name}`);
+							} else {
+								lines.push(`${indent}  📄 ${child.basename}`);
 							}
-							lines.push(`${indent}  📄 ${child.basename}`);
 						}
 					} else if (child instanceof TFolder) {
 						walkFolder(child, `${indent}  `);
