@@ -101,10 +101,16 @@ export function canonicalizePrettyPath({
 	const folderPath = sanitizeSegments(prettyPath.pathParts.slice(1));
 
 	if (decoded.kind === "codex") {
-		const sectionPath =
+		const decodedPath =
 			decoded.treePath.length === 1 && decoded.treePath[0] === rootName
 				? []
 				: sanitizeSegments(decoded.treePath);
+		const useFolderPath =
+			decodedPath.length > 0 &&
+			folderPath.length > 0 &&
+			folderPath[folderPath.length - 1] ===
+				decodedPath[decodedPath.length - 1];
+		const sectionPath = useFolderPath ? folderPath : decodedPath;
 
 		const canonicalPrettyPath: PrettyPath = {
 			basename:

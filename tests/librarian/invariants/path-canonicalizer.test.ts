@@ -68,4 +68,21 @@ describe("path-canonicalizer", () => {
 		expect(result.canonicalPrettyPath.basename).toBe("test-bar-Fairy_Tales");
 		expect(result.treePath).toEqual(["Fairy_Tales", "bar", "test"]);
 	});
+
+	it("keeps codex in its folder when name matches", () => {
+		const prettyPath = {
+			basename: "__foo",
+			pathParts: [rootName, "bar", "foo"],
+		};
+
+		const result = canonicalizePrettyPath({ prettyPath, rootName });
+		if ("reason" in result) throw new Error("unexpected quarantine");
+
+		expect(result.canonicalPrettyPath.pathParts).toEqual([
+			rootName,
+			"bar",
+			"foo",
+		]);
+		expect(result.canonicalPrettyPath.basename).toBe("__foo-bar");
+	});
 });

@@ -39,7 +39,6 @@ import { LibraryTree } from "./library-tree/library-tree";
 import { noteDtosFromLibraryFiles } from "./pure-functions/note-dtos-from-library-file-dtos";
 import { splitTextIntoP_ages } from "./text-splitter/text-splitter";
 import type { LibraryFile, NoteDto, TreePath } from "./types";
-import { NodeType } from "./types";
 
 export class Librarian {
 	backgroundFileService: TexfresserObsidianServices["backgroundFileService"];
@@ -723,7 +722,7 @@ export class Librarian {
 
 		await this.withDiff(
 			rootName,
-			(tree) =>	
+			(tree) =>
 				tree.addNotes([
 					{ path: notePath, status: TextStatus.NotStarted },
 				]),
