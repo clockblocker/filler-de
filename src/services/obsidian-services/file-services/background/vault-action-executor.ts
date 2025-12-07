@@ -19,6 +19,18 @@ export class VaultActionExecutor {
 		private openedFileService: OpenedFileService,
 	) {}
 
+	private async isActiveSafe(prettyPath: PrettyPath): Promise<boolean> {
+		try {
+			return await this.openedFileService.isFileActive(prettyPath);
+		} catch (error) {
+			logWarning({
+				description: `isFileActive failed for ${[...prettyPath.pathParts, prettyPath.basename].join("/")}: ${error instanceof Error ? error.message : String(error)}`,
+				location: "VaultActionExecutor.isActiveSafe",
+			});
+			return false;
+		}
+	}
+
 	/**
 	 * Execute a list of actions in order.
 	 * Continues on error (logs and moves to next action).
@@ -69,7 +81,7 @@ export class VaultActionExecutor {
 
 			case VaultActionType.UpdateOrCreateFile:
 				{
-					const isActive = await this.openedFileService.isFileActive(
+					const isActive = await this.isActiveSafe(
 						payload.prettyPath,
 					);
 					if (isActive) {
@@ -101,9 +113,7 @@ export class VaultActionExecutor {
 				break;
 
 			case VaultActionType.WriteFile: {
-				const isActive = await this.openedFileService.isFileActive(
-					payload.prettyPath,
-				);
+				const isActive = await this.isActiveSafe(payload.prettyPath);
 				if (isActive) {
 					await this.openedFileService.replaceAllContentInOpenedFile(
 						payload.content,
@@ -128,7 +138,7 @@ export class VaultActionExecutor {
 		prettyPath: PrettyPath,
 		transform: (content: string) => string | Promise<string>,
 	): Promise<void> {
-		const isActive = await this.openedFileService.isFileActive(prettyPath);
+		const isActive = await this.isActiveSafe(prettyPath);
 
 		if (isActive) {
 			const currentContent = await this.openedFileService.getContent();

@@ -61,6 +61,11 @@ function sanitizeSegments(segments: readonly string[]): string[] {
 	return segments.map((segment) => toNodeName(segment));
 }
 
+function arraysEqual(a: readonly string[], b: readonly string[]): boolean {
+	if (a.length !== b.length) return false;
+	return a.every((v, i) => v === b[i]);
+}
+
 function quarantinePath({
 	prettyPath,
 	rootName,
@@ -126,7 +131,9 @@ export function canonicalizePrettyPath({
 			decoded.treePath[decoded.treePath.length - 1] ?? "000";
 
 		const parentPath =
-			decodedParent.length > 0 ? decodedParent : folderPath.slice();
+			decodedParent.length > 0 && arraysEqual(decodedParent, folderPath)
+				? decodedParent
+				: folderPath.slice();
 
 		const treePath: TreePath = [...parentPath, pageNumber];
 
@@ -148,7 +155,9 @@ export function canonicalizePrettyPath({
 		decoded.treePath[decoded.treePath.length - 1] ?? "",
 	);
 	const parentPath =
-		decodedParent.length > 0 ? decodedParent : folderPath.slice();
+		decodedParent.length > 0 && arraysEqual(decodedParent, folderPath)
+			? decodedParent
+			: folderPath.slice();
 
 	const treePath: TreePath = [...parentPath, name];
 

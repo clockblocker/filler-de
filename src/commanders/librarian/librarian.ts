@@ -1,5 +1,9 @@
 import type { TAbstractFile } from "obsidian";
 import { TFile } from "obsidian";
+import {
+	editOrAddMetaInfo,
+	extractMetaInfo,
+} from "../../services/dto-services/meta-info-manager/interface";
 import type { FullPath } from "../../services/obsidian-services/atomic-services/pathfinder";
 import { fullPathFromSystemPath } from "../../services/obsidian-services/atomic-services/pathfinder";
 import {
@@ -132,7 +136,7 @@ export class Librarian {
 		return actions;
 	}
 
-	private async auditRoot(rootName: RootName): Promise<void> {
+	private async healRootFilesystem(rootName: RootName): Promise<void> {
 		const fileReaders =
 			await this.backgroundFileService.getReadersToAllMdFilesInFolder({
 				basename: rootName,
@@ -142,6 +146,10 @@ export class Librarian {
 
 		const actions: VaultAction[] = [];
 		const seenFolders = new Set<string>();
+		const folderContents = new Map<
+			string,
+			{ hasCodex: boolean; hasNote: boolean; codexPaths: PrettyPath[] }
+		>();
 
 		for (const reader of fileReaders) {
 			const prettyPath: PrettyPath = {
@@ -154,8 +162,10 @@ export class Librarian {
 			}
 
 			const canonical = canonicalizePrettyPath({ prettyPath, rootName });
+			let targetPath: PrettyPath;
 
 			if ("reason" in canonical) {
+				targetPath = canonical.destination;
 				actions.push(
 					...this.createFolderActionsForPathParts(
 						canonical.destination.pathParts,
@@ -173,9 +183,11 @@ export class Librarian {
 			}
 
 			if (isCanonical(prettyPath, canonical.canonicalPrettyPath)) {
+				targetPath = prettyPath;
 				continue;
 			}
 
+			targetPath = canonical.canonicalPrettyPath;
 			actions.push(
 				...this.createFolderActionsForPathParts(
 					canonical.canonicalPrettyPath.pathParts,
@@ -189,6 +201,101 @@ export class Librarian {
 					type: VaultActionType.RenameFile,
 				},
 			);
+		}
+
+		// Codex cleanup: remove codex files in folders without notes
+		for (const reader of fileReaders) {
+			const prettyPath: PrettyPath = {
+				basename: reader.basename,
+				pathParts: reader.pathParts,
+			};
+
+			if (isInUntracked(prettyPath.pathParts)) continue;
+
+			const canonical = canonicalizePrettyPath({ prettyPath, rootName });
+			const targetPath =
+				"reason" in canonical
+					? canonical.destination
+					: canonical.canonicalPrettyPath;
+
+			const folderKey = targetPath.pathParts.join("/");
+			const entry = folderContents.get(folderKey) ?? {
+				codexPaths: [],
+				hasCodex: false,
+				hasNote: false,
+			};
+
+			const isCodex = targetPath.basename.startsWith("__");
+			if (isCodex) {
+				entry.hasCodex = true;
+				entry.codexPaths.push(targetPath);
+			} else {
+				entry.hasNote = true;
+			}
+			folderContents.set(folderKey, entry);
+		}
+
+		// Add meta info to notes missing it
+		for (const reader of fileReaders) {
+			const prettyPath: PrettyPath = {
+				basename: reader.basename,
+				pathParts: reader.pathParts,
+			};
+			if (isInUntracked(prettyPath.pathParts)) continue;
+
+			const canonical = canonicalizePrettyPath({ prettyPath, rootName });
+			if ("reason" in canonical) continue;
+
+			const kind = canonical.kind;
+			if (kind === "codex") continue;
+
+			const content = await reader.readContent();
+			const meta = extractMetaInfo(content);
+			if (meta !== null) continue;
+
+			if (kind === "scroll") {
+				actions.push({
+					payload: {
+						prettyPath,
+						transform: (old) =>
+							editOrAddMetaInfo(old, {
+								fileType: "Scroll",
+								status: TextStatus.NotStarted,
+							}),
+					},
+					type: VaultActionType.ProcessFile,
+				});
+			} else if (kind === "page") {
+				const pageStr =
+					canonical.treePath[canonical.treePath.length - 1] ?? "0";
+				const idx = Number(pageStr);
+				actions.push({
+					payload: {
+						prettyPath,
+						transform: (old) =>
+							editOrAddMetaInfo(old, {
+								fileType: "Page",
+								index: Number.isFinite(idx) ? idx : 0,
+								status: TextStatus.NotStarted,
+							}),
+					},
+					type: VaultActionType.ProcessFile,
+				});
+			}
+		}
+
+		for (const [folderKey, info] of folderContents.entries()) {
+			// Skip root codex cleanup
+			if (folderKey === rootName) continue;
+			if (info.hasNote) continue;
+			if (!info.hasCodex) continue;
+
+			for (const codexPath of info.codexPaths) {
+				actions.push({
+					payload: { prettyPath: codexPath },
+					type: VaultActionType.TrashFile,
+				});
+			}
 		}
 
 		if (actions.length === 0) {
@@ -208,7 +315,7 @@ export class Librarian {
 	async initTrees(): Promise<void> {
 		this.trees = {} as Record<RootName, LibraryTree>;
 		for (const rootName of LIBRARY_ROOTS) {
-			await this.auditRoot(rootName);
+			await this.healRootFilesystem(rootName);
 			const notes = await this.readNotesFromFilesystem(rootName);
 			this.trees[rootName] = new LibraryTree(notes, rootName);
 		}

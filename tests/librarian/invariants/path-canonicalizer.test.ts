@@ -34,13 +34,9 @@ describe("path-canonicalizer", () => {
 		const result = canonicalizePrettyPath({ prettyPath, rootName });
 		if ("reason" in result) throw new Error("unexpected quarantine");
 
-		expect(result.canonicalPrettyPath.basename).toBe("Note-Child-Parent");
-		expect(result.canonicalPrettyPath.pathParts).toEqual([
-			rootName,
-			"Parent",
-			"Child",
-		]);
-		expect(result.treePath).toEqual(["Parent", "Child", "Note"]);
+		expect(result.canonicalPrettyPath.basename).toBe("Note-Parent");
+		expect(result.canonicalPrettyPath.pathParts).toEqual([rootName, "Parent"]);
+		expect(result.treePath).toEqual(["Parent", "Note"]);
 	});
 
 	it("leaves canonical codex intact", () => {
@@ -53,5 +49,23 @@ describe("path-canonicalizer", () => {
 		if ("reason" in result) throw new Error("unexpected quarantine");
 
 		expect(isCanonical(prettyPath, result.canonicalPrettyPath)).toBe(true);
+	});
+
+	it("uses actual folder when basename ancestry is stale", () => {
+		const prettyPath = {
+			basename: "test-bar-bas-Fairy_Tales",
+			pathParts: [rootName, "Fairy_Tales", "bar"],
+		};
+
+		const result = canonicalizePrettyPath({ prettyPath, rootName });
+		if ("reason" in result) throw new Error("unexpected quarantine");
+
+		expect(result.canonicalPrettyPath.pathParts).toEqual([
+			rootName,
+			"Fairy_Tales",
+			"bar",
+		]);
+		expect(result.canonicalPrettyPath.basename).toBe("test-bar-Fairy_Tales");
+		expect(result.treePath).toEqual(["Fairy_Tales", "bar", "test"]);
 	});
 });

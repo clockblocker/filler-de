@@ -66,7 +66,7 @@ describe("Librarian audit", () => {
 			{
 				payload: {
 					from: { basename: "child-parent", pathParts: ["Library"] },
-					to: { basename: "child-parent", pathParts: ["Library", "parent"] },
+					to: { basename: "child", pathParts: ["Library"] },
 				},
 				type: VaultActionType.RenameFile,
 			},
@@ -87,9 +87,8 @@ describe("Librarian audit", () => {
 			folderCreates.some(
 				(a) =>
 					"prettyPath" in a.payload &&
-					a.payload.prettyPath.basename === "parent" &&
-					a.payload.prettyPath.pathParts.join("/") === "Library",
+					a.payload.prettyPath.basename === "parent",
 			),
-		).toBe(true);
+		).toBe(false);
 	});
 });
