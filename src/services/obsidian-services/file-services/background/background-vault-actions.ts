@@ -146,8 +146,25 @@ function prettyPathToKey(prettyPath: PrettyPath): string {
  * Sort actions by execution weight.
  */
 export function sortActionsByWeight(actions: VaultAction[]): VaultAction[] {
-	return [...actions].sort(
-		(a, b) =>
-			weightForVaultActionType[a.type] - weightForVaultActionType[b.type],
-	);
+	const pathDepth = (action: VaultAction): number => {
+		switch (action.type) {
+			case VaultActionType.UpdateOrCreateFolder:
+			case VaultActionType.TrashFolder:
+				return action.payload.prettyPath.pathParts.length;
+			case VaultActionType.RenameFolder:
+				return action.payload.to.pathParts.length;
+			default:
+				return 0;
+		}
+	};
+
+	return [...actions].sort((a, b) => {
+		const weightDelta =
+			weightForVaultActionType[a.type] - weightForVaultActionType[b.type];
+		if (weightDelta !== 0) return weightDelta;
+
+		// Within same weight, ensure parent folders before children
+		const depthDelta = pathDepth(a) - pathDepth(b);
+		return depthDelta;
+	});
 }

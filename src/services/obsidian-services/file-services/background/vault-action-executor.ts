@@ -1,5 +1,5 @@
 import type { PrettyPath } from "../../../../types/common-interface/dtos";
-import { logError } from "../../helpers/issue-handlers";
+import { logError, logWarning } from "../../helpers/issue-handlers";
 import type { OpenedFileService } from "../active-view/opened-file-service";
 import type { BackgroundFileService } from "./background-file-service";
 import {
@@ -39,16 +39,24 @@ export class VaultActionExecutor {
 	private async executeOne(action: VaultAction): Promise<void> {
 		const { type, payload } = action;
 
-		// biome-ignore lint/suspicious/noExplicitAny: action payload is dynamic
-		const prettyPath = (payload as Record<string, any>)?.prettyPath ?? null;
-
-		const isActive = prettyPath
-			? await this.openedFileService.isFileActive(prettyPath)
-			: false;
-
 		switch (type) {
 			case VaultActionType.UpdateOrCreateFolder:
-				await this.fileService.createFolder(payload.prettyPath);
+				try {
+					await this.fileService.createFolder(payload.prettyPath);
+				} catch (error) {
+					const message =
+						error instanceof Error ? error.message : String(error);
+					const alreadyExists =
+						message.includes("already exists") ||
+						message.includes("EEXIST");
+					if (!alreadyExists) {
+						throw error;
+					}
+					logWarning({
+						description: `Folder already exists, skipping: ${getActionTargetPath(action)}`,
+						location: "VaultActionExecutor.executeOne",
+					});
+				}
 				break;
 
 			case VaultActionType.RenameFolder:
@@ -60,15 +68,20 @@ export class VaultActionExecutor {
 				break;
 
 			case VaultActionType.UpdateOrCreateFile:
-				if (isActive) {
-					await this.openedFileService.replaceAllContentInOpenedFile(
-						payload.content ?? "",
-					);
-				} else {
-					await this.fileService.createOrUpdate(
+				{
+					const isActive = await this.openedFileService.isFileActive(
 						payload.prettyPath,
-						payload.content,
 					);
+					if (isActive) {
+						await this.openedFileService.replaceAllContentInOpenedFile(
+							payload.content ?? "",
+						);
+					} else {
+						await this.fileService.createOrUpdate(
+							payload.prettyPath,
+							payload.content,
+						);
+					}
 				}
 				break;
 
@@ -88,6 +101,9 @@ export class VaultActionExecutor {
 				break;
 
 			case VaultActionType.WriteFile: {
+				const isActive = await this.openedFileService.isFileActive(
+					payload.prettyPath,
+				);
 				if (isActive) {
 					await this.openedFileService.replaceAllContentInOpenedFile(
 						payload.content,

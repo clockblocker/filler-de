@@ -159,6 +159,21 @@ export default class TextEaterPlugin extends Plugin {
 		console.log("[main] Librarian and trees initialized:", this.librarian);
 
 		// Start listening to vault events after trees are ready
+		this.registerEvent(
+			this.app.vault.on("create", (file) => {
+				void this.librarian.onFileCreated(file);
+			}),
+		);
+		this.registerEvent(
+			this.app.vault.on("rename", (file, oldPath) => {
+				void this.librarian.onFileRenamed(file, oldPath);
+			}),
+		);
+		this.registerEvent(
+			this.app.vault.on("delete", (file) => {
+				void this.librarian.onFileDeleted(file);
+			}),
+		);
 
 		this.registerDomEvent(document, "click", makeClickListener(this));
 

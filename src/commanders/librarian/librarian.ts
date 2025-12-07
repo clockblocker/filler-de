@@ -1,4 +1,5 @@
-import type { TAbstractFile, TFile } from "obsidian";
+import type { TAbstractFile } from "obsidian";
+import { TFile } from "obsidian";
 import type { FullPath } from "../../services/obsidian-services/atomic-services/pathfinder";
 import { fullPathFromSystemPath } from "../../services/obsidian-services/atomic-services/pathfinder";
 import {
@@ -43,6 +44,7 @@ export class Librarian {
 	private actionQueue: VaultActionQueue | null = null;
 	private diffMappers: Map<RootName, DiffToActions> = new Map();
 	private _skipReconciliation = false;
+	private selfEventKeys: Set<string> = new Set();
 
 	constructor({
 		backgroundFileService,
@@ -67,6 +69,44 @@ export class Librarian {
 
 	setActionQueue(queue: VaultActionQueue): void {
 		this.actionQueue = queue;
+	}
+
+	private toSystemKey(prettyPath: PrettyPath): string {
+		return [...prettyPath.pathParts, `${prettyPath.basename}.md`].join("/");
+	}
+
+	private registerSelfActions(actions: VaultAction[]): void {
+		for (const action of actions) {
+			switch (action.type) {
+				case VaultActionType.RenameFile: {
+					this.selfEventKeys.add(
+						this.toSystemKey(action.payload.from),
+					);
+					this.selfEventKeys.add(this.toSystemKey(action.payload.to));
+					break;
+				}
+				case VaultActionType.TrashFile:
+				case VaultActionType.UpdateOrCreateFile:
+				case VaultActionType.ProcessFile:
+				case VaultActionType.WriteFile: {
+					this.selfEventKeys.add(
+						this.toSystemKey(action.payload.prettyPath),
+					);
+					break;
+				}
+				default:
+					break;
+			}
+		}
+	}
+
+	private popSelfKey(path: string): boolean {
+		const normalized = path.replace(/^[\\/]+|[\\/]+$/g, "");
+		if (this.selfEventKeys.has(normalized)) {
+			this.selfEventKeys.delete(normalized);
+			return true;
+		}
+		return false;
 	}
 
 	private createFolderActionsForPathParts(
@@ -318,6 +358,178 @@ export class Librarian {
 		return noteDtosFromLibraryFiles(trackedLibraryFiles, subtreePath);
 	}
 
+	// ─── Vault Event Handlers ─────────────────────────────────────────
+
+	async onFileCreated(file: TAbstractFile): Promise<void> {
+		if (this.popSelfKey(file.path)) return;
+		if (!(file instanceof TFile)) return;
+		if (file.extension !== "md") return;
+
+		const fullPath = fullPathFromSystemPath(file.path);
+		const rootName = fullPath.pathParts[0];
+
+		if (!rootName || !isRootName(rootName)) return;
+		if (isInUntracked(fullPath.pathParts)) return;
+
+		const prettyPath: PrettyPath = {
+			basename: fullPath.basename,
+			pathParts: fullPath.pathParts,
+		};
+
+		const canonical = canonicalizePrettyPath({ prettyPath, rootName });
+
+		if ("reason" in canonical) {
+			const actions = [
+				...this.createFolderActionsForPathParts(
+					canonical.destination.pathParts,
+					new Set<string>(),
+				),
+				{
+					payload: {
+						from: prettyPath,
+						to: canonical.destination,
+					},
+					type: VaultActionType.RenameFile,
+				},
+			];
+
+			if (this.actionQueue) {
+				this.registerSelfActions(actions);
+				this.actionQueue.pushMany(actions);
+				await this.actionQueue.flushNow();
+			}
+			return;
+		}
+
+		if (!isCanonical(prettyPath, canonical.canonicalPrettyPath)) {
+			const actions = [
+				...this.createFolderActionsForPathParts(
+					canonical.canonicalPrettyPath.pathParts,
+					new Set<string>(),
+				),
+				{
+					payload: {
+						from: prettyPath,
+						to: canonical.canonicalPrettyPath,
+					},
+					type: VaultActionType.RenameFile,
+				},
+			];
+
+			if (this.actionQueue) {
+				this.registerSelfActions(actions);
+				this.actionQueue.pushMany(actions);
+				await this.actionQueue.flushNow();
+			}
+		}
+
+		if (!this.trees[rootName]) return;
+
+		const parentPath = canonical.treePath.slice(0, -1);
+		await this.reconcileSubtree(rootName, parentPath);
+		await this.regenerateAllCodexes();
+	}
+
+	async onFileRenamed(file: TAbstractFile, oldPath: string): Promise<void> {
+		if (this.popSelfKey(oldPath) || this.popSelfKey(file.path)) return;
+		if (!(file instanceof TFile)) return;
+		if (file.extension !== "md") return;
+
+		const newFull = fullPathFromSystemPath(file.path);
+		const rootName = newFull.pathParts[0];
+
+		if (!rootName || !isRootName(rootName)) return;
+		if (isInUntracked(newFull.pathParts)) return;
+		if (!this.trees[rootName]) return;
+
+		const newPrettyPath: PrettyPath = {
+			basename: newFull.basename,
+			pathParts: newFull.pathParts,
+		};
+		const currentPrettyPath = newPrettyPath;
+
+		const canonical = canonicalizePrettyPath({
+			prettyPath: newPrettyPath,
+			rootName,
+		});
+
+		if ("reason" in canonical) {
+			const actions = [
+				...this.createFolderActionsForPathParts(
+					canonical.destination.pathParts,
+					new Set<string>(),
+				),
+				{
+					payload: {
+						from: currentPrettyPath,
+						to: canonical.destination,
+					},
+					type: VaultActionType.RenameFile,
+				},
+			];
+			if (this.actionQueue) {
+				this.registerSelfActions(actions);
+				this.actionQueue.pushMany(actions);
+				await this.actionQueue.flushNow();
+			}
+			return;
+		}
+
+		if (!isCanonical(newPrettyPath, canonical.canonicalPrettyPath)) {
+			const actions = [
+				...this.createFolderActionsForPathParts(
+					canonical.canonicalPrettyPath.pathParts,
+					new Set<string>(),
+				),
+				{
+					payload: {
+						from: currentPrettyPath,
+						to: canonical.canonicalPrettyPath,
+					},
+					type: VaultActionType.RenameFile,
+				},
+			];
+
+			if (this.actionQueue) {
+				this.registerSelfActions(actions);
+				this.actionQueue.pushMany(actions);
+				await this.actionQueue.flushNow();
+			}
+		}
+
+		const parentPath = canonical.treePath.slice(0, -1);
+
+		await this.reconcileSubtree(rootName, parentPath);
+		await this.regenerateAllCodexes();
+
+		if (this.actionQueue) await this.actionQueue.flushNow();
+	}
+
+	async onFileDeleted(file: TAbstractFile): Promise<void> {
+		if (this.popSelfKey(file.path)) return;
+		if (!(file instanceof TFile)) return;
+		if (file.extension !== "md") return;
+
+		const fullPath = fullPathFromSystemPath(file.path);
+		const rootName = fullPath.pathParts[0];
+
+		if (!rootName || !isRootName(rootName)) return;
+		if (isInUntracked(fullPath.pathParts)) return;
+		if (!this.trees[rootName]) return;
+
+		const prettyPath: PrettyPath = {
+			basename: fullPath.basename,
+			pathParts: fullPath.pathParts,
+		};
+
+		const canonical = canonicalizePrettyPath({ prettyPath, rootName });
+		if ("reason" in canonical) return;
+
+		const parentPath = canonical.treePath.slice(0, -1);
+		await this.reconcileSubtree(rootName, parentPath);
+		await this.regenerateAllCodexes();
+	}
+
 	// ─── Public API ───────────────────────────────────────────────────
 
 	async createNewNoteInCurrentFolder(): Promise<void> {
@@ -563,20 +775,6 @@ export class Librarian {
 		if (this.actionQueue) {
 			await this.actionQueue.flushNow();
 		}
-	}
-
-	// ─── Vault Event Handlers ─────────────────────────────────────────
-
-	onFileDeleted(file: TAbstractFile): void {
-		console.log("[Librarian] [onFileDeleted]", file.path);
-	}
-
-	onFileRenamed(file: TAbstractFile, oldPath: string): void {
-		console.log("[Librarian] [onFileRenamed]", oldPath, "→", file.path);
-	}
-
-	onFileCreated(file: TAbstractFile): void {
-		console.log("[Librarian] [onFileCreated]", file.path);
 	}
 
 	// ─── Private Helpers ──────────────────────────────────────────────
