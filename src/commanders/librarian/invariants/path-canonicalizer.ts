@@ -33,34 +33,28 @@ type DecodedBasename = {
 };
 
 function decodeBasename(basename: string): DecodedBasename | null {
-	try {
-		const parsed = CodexBaseameSchema.parse(basename);
+	const codexResult = CodexBaseameSchema.safeParse(basename);
+	if (codexResult.success) {
 		return {
 			kind: "codex",
-			treePath: treePathToCodexBasename.decode(parsed),
+			treePath: treePathToCodexBasename.decode(codexResult.data),
 		};
-	} catch {
-		// fall through
 	}
 
-	try {
-		const parsed = PageBasenameSchema.parse(basename);
+	const pageResult = PageBasenameSchema.safeParse(basename);
+	if (pageResult.success) {
 		return {
 			kind: "page",
-			treePath: treePathToPageBasename.decode(parsed),
+			treePath: treePathToPageBasename.decode(pageResult.data),
 		};
-	} catch {
-		// fall through
 	}
 
-	try {
-		const parsed = ScrollBasenameSchema.parse(basename);
+	const scrollResult = ScrollBasenameSchema.safeParse(basename);
+	if (scrollResult.success) {
 		return {
 			kind: "scroll",
-			treePath: treePathToScrollBasename.decode(parsed),
+			treePath: treePathToScrollBasename.decode(scrollResult.data),
 		};
-	} catch {
-		// fall through
 	}
 
 	return null;
@@ -72,8 +66,10 @@ function sanitizeSegments(segments: readonly string[]): string[] {
 
 function stripRedundantSuffix(path: string[]): string[] {
 	if (path.length < 2) return path;
+
 	const leaf = path[path.length - 1];
 	const parent = path[path.length - 2];
+
 	if (leaf && parent && leaf.endsWith(`-${parent}`)) {
 		const trimmed = leaf.slice(0, leaf.length - parent.length - 1);
 		if (trimmed) {
