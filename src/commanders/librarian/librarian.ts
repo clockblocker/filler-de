@@ -1,5 +1,4 @@
-import type { TAbstractFile } from "obsidian";
-import { TFile } from "obsidian";
+import type { TAbstractFile, TFile } from "obsidian";
 import type { FullPath } from "../../services/obsidian-services/atomic-services/pathfinder";
 import { fullPathFromSystemPath } from "../../services/obsidian-services/atomic-services/pathfinder";
 import type { VaultAction } from "../../services/obsidian-services/file-services/background/background-vault-actions";
@@ -16,11 +15,11 @@ import {
 	treePathToPageBasename,
 	treePathToScrollBasename,
 } from "./indexing/codecs";
-import { prettyFilesWithReaderToLibraryFileDtos } from "./indexing/libraryFileAdapters";
+import { prettyFilesWithReaderToLibraryFiles } from "./indexing/libraryFileAdapters";
 import { LibraryTree } from "./library-tree/library-tree";
-import { noteDtosFromLibraryFileDtos } from "./pure-functions/note-dtos-from-library-file-dtos";
+import { noteDtosFromLibraryFiles } from "./pure-functions/note-dtos-from-library-file-dtos";
 import { splitTextIntoP_ages } from "./text-splitter/text-splitter";
-import type { LibraryFileDto, NoteDto, TreePath } from "./types";
+import type { LibraryFile, NoteDto, TreePath } from "./types";
 
 const ROOTS = ["Library"] as const;
 type RootName = (typeof ROOTS)[number];
@@ -171,10 +170,10 @@ export class Librarian {
 
 	// ─── Filesystem Reading ───────────────────────────────────────────
 
-	private async readLibraryFileDtosInFolder(
+	private async readLibraryFilesInFolder(
 		dirBasename: string,
 		pathParts: string[] = [],
-	): Promise<LibraryFileDto[]> {
+	): Promise<LibraryFile[]> {
 		const fileReaders =
 			await this.backgroundFileService.getReadersToAllMdFilesInFolder({
 				basename: dirBasename,
@@ -182,7 +181,7 @@ export class Librarian {
 				type: "folder",
 			});
 
-		return await prettyFilesWithReaderToLibraryFileDtos(fileReaders);
+		return await prettyFilesWithReaderToLibraryFiles(fileReaders);
 	}
 
 	private async readNotesFromFilesystem(
@@ -201,12 +200,12 @@ export class Librarian {
 					? [rootName]
 					: [];
 
-		const libraryFileDtos = await this.readLibraryFileDtosInFolder(
+		const libraryFiles = await this.readLibraryFilesInFolder(
 			folderBasename,
 			pathParts,
 		);
 
-		return noteDtosFromLibraryFileDtos(libraryFileDtos, subtreePath);
+		return noteDtosFromLibraryFiles(libraryFiles, subtreePath);
 	}
 
 	// ─── Public API ───────────────────────────────────────────────────
@@ -245,22 +244,10 @@ export class Librarian {
 			await this.actionQueue.flushNow();
 		}
 
-		const app = this.openedFileService.getApp();
-		const scrollBasename = treePathToScrollBasename.encode(notePath);
-		this.openedFileService.cd({
-			basename: scrollBasename,
+		await this.openedFileService.cd({
+			basename: treePathToScrollBasename.encode(notePath),
 			pathParts: [rootName, ...sectionPath],
 		});
-		const systemPath = [
-			rootName,
-			...sectionPath,
-			`${scrollBasename}.md`,
-		].join("/");
-		const file = app.vault.getAbstractFileByPath(systemPath);
-
-		if (file instanceof TFile) {
-			await this.openedFileService.cd(file);
-		}
 	}
 
 	async makeNoteAText(): Promise<boolean> {

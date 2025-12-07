@@ -1,25 +1,25 @@
 import { TextStatus } from "../../../types/common-interface/enums";
 import { pageNumberFromInt } from "../indexing/codecs";
 import { getTreePathFromLibraryFile } from "../indexing/libraryFileAdapters";
-import type { LibraryFileDto, NoteDto, TreePath } from "../types";
+import type { LibraryFile, NoteDto, TreePath } from "../types";
 
 /**
- * Convert LibraryFileDtos to NoteDtos).
+ * Convert LibraryFiles to NoteDtos).
  * Each file becomes one NoteDto - no grouping by text.
  */
-export function noteDtosFromLibraryFileDtos(
-	libraryFileDtos: LibraryFileDto[],
+export function noteDtosFromLibraryFiles(
+	libraryFiles: LibraryFile[],
 	subtreePath: TreePath = [],
 ): NoteDto[] {
 	const noteDtos: NoteDto[] = [];
 
-	for (const libraryFileDto of libraryFileDtos) {
+	for (const libraryFile of libraryFiles) {
 		// Skip Codex files - they're organizational nodes, not notes
-		if (libraryFileDto.metaInfo.fileType === "Codex") {
+		if (libraryFile.metaInfo.fileType === "Codex") {
 			continue;
 		}
 
-		const treePath = getTreePathFromLibraryFile(libraryFileDto);
+		const treePath = getTreePathFromLibraryFile(libraryFile);
 
 		// Filter: only include files under subtreePath
 		if (subtreePath.length > 0) {
@@ -37,13 +37,13 @@ export function noteDtosFromLibraryFileDtos(
 		let notePath: TreePath;
 
 		if (
-			libraryFileDto.metaInfo.fileType === "Page" &&
-			"index" in libraryFileDto.metaInfo
+			libraryFile.metaInfo.fileType === "Page" &&
+			"index" in libraryFile.metaInfo
 		) {
 			// Page: use parent path + padded index
 			const parentPath = treePath.slice(0, -1);
 			const pageIndex = pageNumberFromInt.encode(
-				libraryFileDto.metaInfo.index,
+				libraryFile.metaInfo.index,
 			);
 			notePath = [...parentPath, pageIndex];
 		} else {
@@ -51,7 +51,7 @@ export function noteDtosFromLibraryFileDtos(
 			notePath = treePath;
 		}
 
-		const status = libraryFileDto.metaInfo.status ?? TextStatus.NotStarted;
+		const status = libraryFile.metaInfo.status ?? TextStatus.NotStarted;
 
 		noteDtos.push({
 			path: notePath,

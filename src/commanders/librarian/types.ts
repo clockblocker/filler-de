@@ -33,7 +33,7 @@ export type NoteDto = {
 	status: TextStatus;
 };
 
-export type LibraryFileDto = {
+export type LibraryFile = {
 	metaInfo: LibraryNoteMetaInfo;
 	fullPath: FullPathToFile;
 };

@@ -2,7 +2,7 @@ import { extractMetaInfo } from "../../../services/dto-services/meta-info-manage
 import type { MetaInfo } from "../../../services/dto-services/meta-info-manager/types";
 import type { ReadablePrettyFile } from "../../../services/obsidian-services/file-services/background/background-file-service";
 import { TextStatus } from "../../../types/common-interface/enums";
-import type { LibraryFileDto, TreePath } from "../types";
+import type { LibraryFile, TreePath } from "../types";
 import {
 	CodexBaseameSchema,
 	PageBasenameSchema,
@@ -12,26 +12,14 @@ import {
 	treePathToScrollBasename,
 } from "./codecs";
 
-export function getTreePathFromLibraryFile(
-	libraryFile: LibraryFileDto,
-): TreePath {
+export function getTreePathFromLibraryFile(libraryFile: LibraryFile): TreePath {
 	const { metaInfo, fullPath } = libraryFile;
 	const { basename } = fullPath;
 
 	switch (metaInfo.fileType) {
 		case "Scroll": {
 			const parsedBasename = ScrollBasenameSchema.parse(basename);
-			try {
-				const decoded = treePathToScrollBasename.decode(parsedBasename);
-				// scrollNameFromTreePath requires min 2 elements, so single-element paths will fail
-				// For single-element paths, use the basename directly
-				if (decoded.length < 2) {
-					return [parsedBasename] as TreePath;
-				}
-				return decoded;
-			} catch {
-				return [parsedBasename] as TreePath;
-			}
+			return treePathToScrollBasename.decode(parsedBasename);
 		}
 		case "Page": {
 			const parsedBasename = PageBasenameSchema.parse(basename);
@@ -65,7 +53,6 @@ function inferMetaInfo({
 	}
 
 	const pageResult = PageBasenameSchema.safeParse(basename);
-	console.log("[inferMetaInfo] basename, pageResult", basename, pageResult);
 
 	if (pageResult.success) {
 		try {
@@ -86,7 +73,6 @@ function inferMetaInfo({
 		}
 	}
 
-	// Try Scroll: any other valid name
 	const scrollResult = ScrollBasenameSchema.safeParse(basename);
 	if (scrollResult.success) {
 		return {
@@ -98,9 +84,9 @@ function inferMetaInfo({
 	return null;
 }
 
-export async function prettyFileWithReaderToLibraryFileDto(
+export async function prettyFileWithReaderToLibraryFile(
 	fileReader: ReadablePrettyFile,
-): Promise<LibraryFileDto | null> {
+): Promise<LibraryFile | null> {
 	const content = await fileReader.readContent();
 	let metaInfo = extractMetaInfo(content);
 
@@ -113,7 +99,6 @@ export async function prettyFileWithReaderToLibraryFileDto(
 		return null;
 	}
 
-	// Handle Page files
 	if (metaInfo.fileType === "Page" && "index" in metaInfo) {
 		return {
 			fullPath: {
@@ -125,7 +110,7 @@ export async function prettyFileWithReaderToLibraryFileDto(
 			metaInfo,
 		};
 	}
-	// Handle Scroll files
+
 	if (metaInfo.fileType === "Scroll") {
 		return {
 			fullPath: {
@@ -137,7 +122,7 @@ export async function prettyFileWithReaderToLibraryFileDto(
 			metaInfo,
 		};
 	}
-	// Handle Codex files
+
 	if (metaInfo.fileType === "Codex") {
 		return {
 			fullPath: {
@@ -153,15 +138,14 @@ export async function prettyFileWithReaderToLibraryFileDto(
 	return null;
 }
 
-export async function prettyFilesWithReaderToLibraryFileDtos(
+export async function prettyFilesWithReaderToLibraryFiles(
 	fileReaders: readonly ReadablePrettyFile[],
-): Promise<LibraryFileDto[]> {
-	const libraryFileDtos = await Promise.all(
-		fileReaders.map(prettyFileWithReaderToLibraryFileDto),
+): Promise<LibraryFile[]> {
+	const libraryFiles = await Promise.all(
+		fileReaders.map(prettyFileWithReaderToLibraryFile),
 	);
 
-	return libraryFileDtos.filter(
-		(libraryFileDto): libraryFileDto is LibraryFileDto =>
-			libraryFileDto !== null,
+	return libraryFiles.filter(
+		(libraryFile): libraryFile is LibraryFile => libraryFile !== null,
 	);
 }

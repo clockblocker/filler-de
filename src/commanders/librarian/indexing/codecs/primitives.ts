@@ -12,13 +12,21 @@ export const PageNumberSchema = z.templateLiteral([
 
 export type PageNumber = z.infer<typeof PageNumberSchema>;
 
-export const pageNumberFromInt = z.codec(PageNumberSchema, intInPageRangeSchema, {
-	decode: (paddedNumRepr) => intInPageRangeSchema.parse(Number(paddedNumRepr)),
-	encode: (num) => PageNumberSchema.parse(String(num).padStart(3, "0")),
-});
+export const pageNumberFromInt = z.codec(
+	PageNumberSchema,
+	intInPageRangeSchema,
+	{
+		decode: (paddedNumRepr) =>
+			intInPageRangeSchema.parse(Number(paddedNumRepr)),
+		encode: (num) => PageNumberSchema.parse(String(num).padStart(3, "0")),
+	},
+);
 
-export const intFromPageNumberString = z.codec(intInPageRangeSchema, z.string(), {
-	decode: (num) => String(num).padStart(3, "0"),
-	encode: (str) => intInPageRangeSchema.parse(Number(str.toString())),
-});
-
+export const intFromPageNumberString = z.codec(
+	intInPageRangeSchema,
+	z.string(),
+	{
+		decode: (num) => String(num).padStart(3, "0"),
+		encode: (str) => intInPageRangeSchema.parse(Number(str.toString())),
+	},
+);

@@ -14,20 +14,20 @@ export {
 	TreePathSchema,
 	toNodeName,
 } from "./guards";
-// Note (Page | Scroll)
+
 export {
 	isNoteBasename,
 	type NoteBasename,
 	NoteBasenameSchema,
 } from "./note";
 
-// Page
 export {
 	isPageBasename,
 	type PageBasename,
 	PageBasenameSchema,
 	treePathToPageBasename,
 } from "./page";
+
 export {
 	intFromPageNumberString,
 	intInPageRangeSchema,
@@ -35,7 +35,7 @@ export {
 	PageNumberSchema,
 	pageNumberFromInt,
 } from "./primitives";
-// Scroll
+
 export {
 	isScrollBasename,
 	type ScrollBasename,
