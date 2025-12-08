@@ -15,6 +15,7 @@ import { logWarning } from "../../services/obsidian-services/helpers/issue-handl
 import type { TexfresserObsidianServices } from "../../services/obsidian-services/interface";
 import type { PrettyPath } from "../../types/common-interface/dtos";
 import { TextStatus } from "../../types/common-interface/enums";
+import { DASH, UNDERSCORE } from "../../types/literals";
 import {
 	isInUntracked,
 	isRootName,
@@ -31,6 +32,7 @@ import { readNoteDtos } from "./filesystem/library-reader";
 import {
 	pageNumberFromInt,
 	toNodeName,
+	treePathToCodexBasename,
 	treePathToPageBasename,
 	treePathToScrollBasename,
 } from "./indexing/codecs";
@@ -182,7 +184,6 @@ export class Librarian {
 						transform: (old) =>
 							editOrAddMetaInfo(old, {
 								fileType: "Scroll",
-								index: undefined,
 								status: meta.status ?? TextStatus.NotStarted,
 							}),
 					},
@@ -588,7 +589,6 @@ export class Librarian {
 					transform: (old) =>
 						editOrAddMetaInfo(old, {
 							fileType: "Scroll",
-							index: undefined,
 							status: TextStatus.NotStarted,
 						}),
 				},
@@ -853,19 +853,30 @@ export class Librarian {
 			pathParts: fullPath.pathParts,
 		};
 
-		actions.push({
-			payload: { prettyPath: originalPrettyPath },
-			type: VaultActionType.TrashFile,
-		});
+		const unmarkedBasename = `Unmarked${isBook ? DASH : UNDERSCORE}${fullPath.basename}`;
+		const unmarkedPathParts = isBook
+			? [rootName, ...sectionPath, normalizedTextName]
+			: originalPrettyPath.pathParts;
 
-		// Regenerate codexes
-		const sectionPaths = affectedTree.getAllSectionPaths();
-		const getNode = (path: TreePath) => {
-			const mbNode = affectedTree.getMaybeNode({ path });
-			return mbNode.error ? undefined : mbNode.data;
+		let unmarkedPrettyPath = {
+			basename: unmarkedBasename,
+			pathParts: unmarkedPathParts,
 		};
+
+		if (await this.backgroundFileService.exists(unmarkedPrettyPath)) {
+			unmarkedPrettyPath =
+				await this.generateUniquePrettyPath(unmarkedPrettyPath);
+		}
+
 		actions.push(
-			...regenerateCodexActions(sectionPaths, rootName, getNode),
+			...createFolderActionsForPathParts(
+				unmarkedPrettyPath.pathParts,
+				seenFolders,
+			),
+			{
+				payload: { from: originalPrettyPath, to: unmarkedPrettyPath },
+				type: VaultActionType.RenameFile,
+			},
 		);
 
 		if (actions.length > 0) {
@@ -873,6 +884,28 @@ export class Librarian {
 			this.actionQueue.pushMany(actions);
 			await this.actionQueue.flushNow();
 		}
+
+		const codexTargetSectionPath = isBook
+			? [...sectionPath, normalizedTextName]
+			: sectionPath;
+
+		await this.reconcileSubtree(rootName, codexTargetSectionPath);
+		await this.regenerateAllCodexes();
+
+		const codexPrettyPath =
+			codexTargetSectionPath.length > 0
+				? {
+						basename: treePathToCodexBasename.encode(
+							codexTargetSectionPath,
+						),
+						pathParts: [rootName, ...codexTargetSectionPath],
+					}
+				: {
+						basename: treePathToCodexBasename.encode([rootName]),
+						pathParts: [rootName],
+					};
+
+		await this.openedFileService.cd(codexPrettyPath);
 
 		return true;
 	}
