@@ -206,8 +206,11 @@ export function isCanonical(
 	prettyPath: PrettyPath,
 	canonical: PrettyPath,
 ): boolean {
+	// Case-insensitive compare to avoid unnecessary renames on macOS
 	return (
-		prettyPath.basename === canonical.basename &&
-		prettyPath.pathParts.join("/") === canonical.pathParts.join("/")
+		prettyPath.basename.toLowerCase() ===
+			canonical.basename.toLowerCase() &&
+		prettyPath.pathParts.join("/").toLowerCase() ===
+			canonical.pathParts.join("/").toLowerCase()
 	);
 }
