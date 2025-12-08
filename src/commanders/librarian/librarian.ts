@@ -144,32 +144,46 @@ export class Librarian {
 
 			const content = await reader.readContent();
 			const meta = extractMetaInfo(content);
-			if (meta !== null) continue;
-
-			if (kind === "scroll") {
+			if (meta === null) {
+				if (kind === "scroll") {
+					actions.push({
+						payload: {
+							prettyPath,
+							transform: (old) =>
+								editOrAddMetaInfo(old, {
+									fileType: "Scroll",
+									status: TextStatus.NotStarted,
+								}),
+						},
+						type: VaultActionType.ProcessFile,
+					});
+				} else if (kind === "page") {
+					const pageStr =
+						canonical.treePath[canonical.treePath.length - 1] ??
+						"0";
+					const idx = Number(pageStr);
+					actions.push({
+						payload: {
+							prettyPath,
+							transform: (old) =>
+								editOrAddMetaInfo(old, {
+									fileType: "Page",
+									index: Number.isFinite(idx) ? idx : 0,
+									status: TextStatus.NotStarted,
+								}),
+						},
+						type: VaultActionType.ProcessFile,
+					});
+				}
+			} else if (kind !== "page" && meta.fileType === "Page") {
 				actions.push({
 					payload: {
 						prettyPath,
 						transform: (old) =>
 							editOrAddMetaInfo(old, {
 								fileType: "Scroll",
-								status: TextStatus.NotStarted,
-							}),
-					},
-					type: VaultActionType.ProcessFile,
-				});
-			} else if (kind === "page") {
-				const pageStr =
-					canonical.treePath[canonical.treePath.length - 1] ?? "0";
-				const idx = Number(pageStr);
-				actions.push({
-					payload: {
-						prettyPath,
-						transform: (old) =>
-							editOrAddMetaInfo(old, {
-								fileType: "Page",
-								index: Number.isFinite(idx) ? idx : 0,
-								status: TextStatus.NotStarted,
+								index: undefined,
+								status: meta.status ?? TextStatus.NotStarted,
 							}),
 					},
 					type: VaultActionType.ProcessFile,
@@ -449,6 +463,7 @@ export class Librarian {
 		};
 
 		const decoded = decodeBasename(prettyPath.basename);
+		const wasPage = decoded?.kind === "page";
 
 		if (decoded?.kind === "codex") {
 			const revertAction: VaultAction = {
@@ -565,6 +580,21 @@ export class Librarian {
 				type: VaultActionType.RenameFile,
 			},
 		];
+
+		if (wasPage) {
+			moveActions.push({
+				payload: {
+					prettyPath: targetPrettyPath,
+					transform: (old) =>
+						editOrAddMetaInfo(old, {
+							fileType: "Scroll",
+							index: undefined,
+							status: TextStatus.NotStarted,
+						}),
+				},
+				type: VaultActionType.ProcessFile,
+			});
+		}
 
 		this.selfEventTracker.register(moveActions);
 		this.actionQueue.pushMany(moveActions);
