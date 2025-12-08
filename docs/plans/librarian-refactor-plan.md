@@ -1,12 +1,11 @@
 Status
-- ActionDispatcher, LibrarianState, FilesystemHealer, TreeReconciler extracted; Librarian delegates init/reconcile/diff; NoteOperations created and wired; business methods passthrough.
-- Librarian shrunk to ~490 lines; healing logic moved out; diff now delegated.
+- ActionDispatcher, LibrarianState, FilesystemHealer, TreeReconciler extracted.
+- NoteOperations finished (helpers moved); business flows flush dispatcher.
+- VaultEventHandler extracted with rename debounce; Librarian delegates events.
+- Librarian now thin (~180 lines).
 
 Remaining
-- VaultEventHandler: extract onFileCreated/onFileRenamed/onFileDeleted + rename debounce state; wire dispatcher/self-tracker; ensure authority rules unchanged.
-- NoteOperations finish: move remaining helpers (generateUniqueNoteName, getPathFromSection) fully out of Librarian; remove leftover unused imports; ensure commands use reconciler/dispatcher only.
-- Librarian cleanup: drop unused helpers/imports, keep thin passthroughs; ensure tree references use state.
-- Tests: add unit coverage for FilesystemHealer, TreeReconciler, NoteOperations basics; integration for rename debounce path.
+- Docs: confirm outline synced; add any open risks if discovered.
 
 Notes
 - withDiff requires affectedPaths; skip flag lives in LibrarianState.

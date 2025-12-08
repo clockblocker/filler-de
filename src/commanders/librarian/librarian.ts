@@ -80,8 +80,6 @@ export class Librarian {
 		this.state.skipReconciliation = skip;
 	}
 
-	// ─── Tree Initialization ──────────────────────────────────────────
-
 	async initTrees(): Promise<void> {
 		await this.treeReconciler.initTrees();
 		this.trees = this.state.trees;
