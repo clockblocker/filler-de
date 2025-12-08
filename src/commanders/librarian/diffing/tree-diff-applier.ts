@@ -7,6 +7,7 @@ import {
 import type { PrettyPath } from "../../../types/common-interface/dtos";
 import { codexFormatter } from "../codex";
 import { createCodexGenerator } from "../codex/codex-generator";
+import type { RootName } from "../constants";
 import {
 	treePathToCodexBasename,
 	treePathToPageBasename,
@@ -14,6 +15,7 @@ import {
 } from "../indexing/codecs";
 import type { NoteDto, NoteNode, SectionNode, TreePath } from "../types";
 import { NodeType } from "../types";
+import { treePathToPrettyPath } from "../utils/path-conversions";
 import type { NoteDiff, NoteStatusChange } from "./note-differ";
 
 /**
@@ -21,66 +23,47 @@ import type { NoteDiff, NoteStatusChange } from "./note-differ";
  */
 export type GetNodeFn = (path: TreePath) => SectionNode | NoteNode | undefined;
 
-/**
- * Check if a note path represents a book page (numeric suffix like "000").
- */
 function isBookPage(notePath: TreePath): boolean {
 	const lastSegment = notePath[notePath.length - 1];
 	return !!lastSegment && /^\d{3}$/.test(lastSegment);
 }
 
-/**
- * Get the book path from a page path (removes the page index).
- */
 function getBookPath(pagePath: TreePath): TreePath {
 	return pagePath.slice(0, -1);
 }
 
-export class DiffToActions {
-	private rootName: string;
+export class TreeDiffApplier {
+	private readonly rootName: RootName;
 
-	constructor(rootName: string) {
+	constructor(rootName: RootName) {
 		this.rootName = rootName;
 	}
 
-	/**
-	 * Convert a note diff into vault actions.
-	 */
 	mapDiffToActions(diff: NoteDiff, getNode?: GetNodeFn): VaultAction[] {
 		const actions: VaultAction[] = [];
-
-		// Track which book sections need codex updates
 		const affectedBookPaths = new Set<string>();
 
-		// Handle added sections (create folders + Codex)
 		for (const sectionPath of diff.addedSections) {
 			actions.push(this.createFolderAction(sectionPath));
 			actions.push(this.createCodexAction(sectionPath, getNode));
 		}
 
-		// Handle added notes
 		for (const note of diff.addedNotes) {
 			actions.push(this.createNoteAction(note));
-
-			// Track affected books/sections for codex updates
 			if (isBookPage(note.path)) {
 				affectedBookPaths.add(getBookPath(note.path).join("/"));
 			}
-			// All ancestors need codex update
 			this.addAncestorPaths(note.path, affectedBookPaths);
 		}
 
-		// Handle removed notes
 		for (const note of diff.removedNotes) {
 			actions.push(this.trashNoteAction(note));
-
 			if (isBookPage(note.path)) {
 				affectedBookPaths.add(getBookPath(note.path).join("/"));
 			}
 			this.addAncestorPaths(note.path, affectedBookPaths);
 		}
 
-		// Handle removed sections (trash folders + Codex) - deepest first
 		const sortedRemovedSections = [...diff.removedSections].sort(
 			(a, b) => b.length - a.length,
 		);
@@ -89,18 +72,14 @@ export class DiffToActions {
 			actions.push(this.trashFolderAction(sectionPath));
 		}
 
-		// Handle status changes
 		for (const change of diff.statusChanges) {
 			actions.push(this.createStatusUpdateAction(change));
-
-			// Track affected sections for codex updates
 			if (isBookPage(change.path)) {
 				affectedBookPaths.add(getBookPath(change.path).join("/"));
 			}
 			this.addAncestorPaths(change.path, affectedBookPaths);
 		}
 
-		// Update affected codexes
 		for (const pathKey of affectedBookPaths) {
 			const path = pathKey === "" ? [] : (pathKey.split("/") as TreePath);
 
@@ -117,16 +96,12 @@ export class DiffToActions {
 		return actions;
 	}
 
-	// ─── Helper Methods ───────────────────────────────────────────────
-
 	private addAncestorPaths(notePath: TreePath, paths: Set<string>): void {
 		paths.add(""); // root
 		for (let i = 1; i < notePath.length; i++) {
 			paths.add(notePath.slice(0, i).join("/"));
 		}
 	}
-
-	// ─── Note Actions ─────────────────────────────────────────────────
 
 	private createNoteAction(note: NoteDto): VaultAction {
 		const isPage = isBookPage(note.path);
@@ -145,7 +120,7 @@ export class DiffToActions {
 		return {
 			payload: {
 				content: editOrAddMetaInfo("", metaInfo),
-				prettyPath: this.notePathToPrettyPath(note.path),
+				prettyPath: treePathToPrettyPath(note.path, this.rootName),
 			},
 			type: VaultActionType.UpdateOrCreateFile,
 		};
@@ -154,7 +129,7 @@ export class DiffToActions {
 	private trashNoteAction(note: NoteDto): VaultAction {
 		return {
 			payload: {
-				prettyPath: this.notePathToPrettyPath(note.path),
+				prettyPath: treePathToPrettyPath(note.path, this.rootName),
 			},
 			type: VaultActionType.TrashFile,
 		};
@@ -176,15 +151,13 @@ export class DiffToActions {
 
 		return {
 			payload: {
-				prettyPath: this.notePathToPrettyPath(change.path),
+				prettyPath: treePathToPrettyPath(change.path, this.rootName),
 				transform: (content: string) =>
 					editOrAddMetaInfo(content, metaInfo),
 			},
 			type: VaultActionType.ProcessFile,
 		};
 	}
-
-	// ─── Section Actions ──────────────────────────────────────────────
 
 	private createFolderAction(sectionPath: TreePath): VaultAction {
 		return {
@@ -203,8 +176,6 @@ export class DiffToActions {
 			type: VaultActionType.TrashFolder,
 		};
 	}
-
-	// ─── Codex Actions ────────────────────────────────────────────────
 
 	private createCodexAction(
 		sectionPath: TreePath,
@@ -243,39 +214,23 @@ export class DiffToActions {
 
 	private generateCodexContent(path: TreePath, getNode?: GetNodeFn): string {
 		if (!getNode) {
-			return ""; // No tree access
+			return "";
 		}
 
-		// Get root to create generator
 		const root = getNode([]);
 		if (!root || root.type !== NodeType.Section) {
-			return ""; // Root not found or invalid
+			return "";
 		}
 
 		const node = path.length === 0 ? root : getNode(path);
 		if (!node || node.type !== NodeType.Section) {
-			return ""; // Node not found or not a section (notes don't have codexes)
+			return "";
 		}
 
 		const generator = createCodexGenerator(root);
 		const codexContent = generator.generateCodexForSection(node);
 
 		return codexFormatter.format(codexContent);
-	}
-
-	// ─── Path Conversion ──────────────────────────────────────────────
-
-	private notePathToPrettyPath(notePath: TreePath): PrettyPath {
-		if (isBookPage(notePath)) {
-			// Book page: Library/Section/Book/000-Book-Section.md
-			const pathParts = [this.rootName, ...notePath.slice(0, -1)];
-			const basename = treePathToPageBasename.encode(notePath);
-			return { basename, pathParts };
-		}
-		// Scroll: Library/Section/Scroll-Section.md
-		const pathParts = [this.rootName, ...notePath.slice(0, -1)];
-		const basename = treePathToScrollBasename.encode(notePath);
-		return { basename, pathParts };
 	}
 
 	private sectionPathToPrettyPath(sectionPath: TreePath): PrettyPath {
@@ -286,38 +241,25 @@ export class DiffToActions {
 
 	private codexPrettyPath(path: TreePath): PrettyPath {
 		if (path.length === 0) {
-			// Root codex: Library/__Library.md
 			return {
 				basename: treePathToCodexBasename.encode([this.rootName]),
 				pathParts: [this.rootName],
 			};
 		}
-		// Section/Book codex: Library/Section/__Section.md
 		const pathParts = [this.rootName, ...path];
 		const basename = treePathToCodexBasename.encode(path);
 		return { basename, pathParts };
 	}
 
-	// ─── Bulk Operations ─────────────────────────────────────────────
-
-	/**
-	 * Generate actions to regenerate all codexes in the tree.
-	 * Use when codexes are out of sync with tree state.
-	 */
 	regenerateAllCodexes(
 		sectionPaths: TreePath[],
 		getNode: GetNodeFn,
 	): VaultAction[] {
 		const actions: VaultAction[] = [];
-
-		// Root codex
 		actions.push(this.updateCodexAction([], getNode));
-
-		// All section codexes
 		for (const path of sectionPaths) {
 			actions.push(this.updateCodexAction(path, getNode));
 		}
-
 		return actions;
 	}
 }

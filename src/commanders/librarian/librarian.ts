@@ -21,24 +21,25 @@ import {
 	LIBRARY_ROOTS,
 	type RootName,
 } from "./constants";
-import { DiffToActions } from "./diffing/diff-to-actions";
 import type { NoteSnapshot } from "./diffing/note-differ";
 import { noteDiffer } from "./diffing/note-differ";
+import { TreeDiffApplier } from "./diffing/tree-diff-applier";
+import { LibraryReader } from "./filesystem/library-reader";
 import {
 	pageNumberFromInt,
 	toNodeName,
 	treePathToPageBasename,
 	treePathToScrollBasename,
 } from "./indexing/codecs";
-import { prettyFilesWithReaderToLibraryFiles } from "./indexing/libraryFileAdapters";
 import {
 	canonicalizePrettyPath,
 	isCanonical,
 } from "./invariants/path-canonicalizer";
 import { LibraryTree } from "./library-tree/library-tree";
-import { noteDtosFromLibraryFiles } from "./pure-functions/note-dtos-from-library-file-dtos";
 import { splitTextIntoP_ages } from "./text-splitter/text-splitter";
-import type { LibraryFile, NoteDto, TreePath } from "./types";
+import type { NoteDto, TreePath } from "./types";
+import { createFolderActionsForPathParts } from "./utils/folder-actions";
+import { SelfEventTracker } from "./utils/self-event-tracker";
 
 export class Librarian {
 	backgroundFileService: TexfresserObsidianServices["backgroundFileService"];
@@ -46,9 +47,10 @@ export class Librarian {
 	trees: Record<RootName, LibraryTree>;
 
 	private actionQueue: VaultActionQueue;
-	private diffMappers: Map<RootName, DiffToActions> = new Map();
+	private diffMappers: Map<RootName, TreeDiffApplier> = new Map();
 	private _skipReconciliation = false;
-	private selfEventKeys: Set<string> = new Set();
+	private libraryReader: LibraryReader;
+	private selfEventTracker = new SelfEventTracker();
 
 	constructor({
 		backgroundFileService,
@@ -61,75 +63,15 @@ export class Librarian {
 		this.backgroundFileService = backgroundFileService;
 		this.openedFileService = openedFileService;
 		this.actionQueue = actionQueue;
+		this.libraryReader = new LibraryReader(backgroundFileService);
 
 		for (const rootName of LIBRARY_ROOTS) {
-			this.diffMappers.set(rootName, new DiffToActions(rootName));
+			this.diffMappers.set(rootName, new TreeDiffApplier(rootName));
 		}
 	}
 
 	_setSkipReconciliation(skip: boolean): void {
 		this._skipReconciliation = skip;
-	}
-
-	private toSystemKey(prettyPath: PrettyPath): string {
-		return [...prettyPath.pathParts, `${prettyPath.basename}.md`].join("/");
-	}
-
-	private registerSelfActions(actions: VaultAction[]): void {
-		for (const action of actions) {
-			switch (action.type) {
-				case VaultActionType.RenameFile: {
-					this.selfEventKeys.add(
-						this.toSystemKey(action.payload.from),
-					);
-					this.selfEventKeys.add(this.toSystemKey(action.payload.to));
-					break;
-				}
-				case VaultActionType.TrashFile:
-				case VaultActionType.UpdateOrCreateFile:
-				case VaultActionType.ProcessFile:
-				case VaultActionType.WriteFile: {
-					this.selfEventKeys.add(
-						this.toSystemKey(action.payload.prettyPath),
-					);
-					break;
-				}
-				default:
-					break;
-			}
-		}
-	}
-
-	private popSelfKey(path: string): boolean {
-		const normalized = path.replace(/^[\\/]+|[\\/]+$/g, "");
-		if (this.selfEventKeys.has(normalized)) {
-			this.selfEventKeys.delete(normalized);
-			return true;
-		}
-		return false;
-	}
-
-	private createFolderActionsForPathParts(
-		pathParts: string[],
-		seen: Set<string>,
-	): VaultAction[] {
-		const actions: VaultAction[] = [];
-
-		for (let depth = 1; depth < pathParts.length; depth++) {
-			const key = pathParts.slice(0, depth + 1).join("/");
-			if (seen.has(key)) continue;
-			seen.add(key);
-
-			const basename = pathParts[depth] ?? "";
-			const parentParts = pathParts.slice(0, depth);
-
-			actions.push({
-				payload: { prettyPath: { basename, pathParts: parentParts } },
-				type: VaultActionType.UpdateOrCreateFolder,
-			});
-		}
-
-		return actions;
 	}
 
 	private async healRootFilesystem(rootName: RootName): Promise<void> {
@@ -161,7 +103,7 @@ export class Librarian {
 
 			if ("reason" in canonical) {
 				actions.push(
-					...this.createFolderActionsForPathParts(
+					...createFolderActionsForPathParts(
 						canonical.destination.pathParts,
 						seenFolders,
 					),
@@ -181,7 +123,7 @@ export class Librarian {
 			}
 
 			actions.push(
-				...this.createFolderActionsForPathParts(
+				...createFolderActionsForPathParts(
 					canonical.canonicalPrettyPath.pathParts,
 					seenFolders,
 				),
@@ -334,7 +276,7 @@ export class Librarian {
 		this.trees = {} as Record<RootName, LibraryTree>;
 		for (const rootName of LIBRARY_ROOTS) {
 			await this.healRootFilesystem(rootName);
-			const notes = await this.readNotesFromFilesystem(rootName);
+			const notes = await this.libraryReader.readNoteDtos(rootName);
 			this.trees[rootName] = new LibraryTree(notes, rootName);
 		}
 
@@ -351,7 +293,7 @@ export class Librarian {
 		const tree = this.trees[rootName];
 		if (!tree) return;
 
-		const filesystemNotes = await this.readNotesFromFilesystem(
+		const filesystemNotes = await this.libraryReader.readNoteDtos(
 			rootName,
 			subtreePath,
 		);
@@ -439,54 +381,10 @@ export class Librarian {
 		return { actions, result };
 	}
 
-	// ─── Filesystem Reading ───────────────────────────────────────────
-
-	private async readLibraryFilesInFolder(
-		dirBasename: string,
-		pathParts: string[] = [],
-	): Promise<LibraryFile[]> {
-		const fileReaders =
-			await this.backgroundFileService.getReadersToAllMdFilesInFolder({
-				basename: dirBasename,
-				pathParts,
-				type: "folder",
-			});
-
-		return await prettyFilesWithReaderToLibraryFiles(fileReaders);
-	}
-
-	private async readNotesFromFilesystem(
-		rootName: RootName,
-		subtreePath: TreePath = [],
-	): Promise<NoteDto[]> {
-		const folderBasename =
-			subtreePath.length > 0
-				? (subtreePath[subtreePath.length - 1] ?? rootName)
-				: rootName;
-
-		const pathParts =
-			subtreePath.length > 1
-				? [rootName, ...subtreePath.slice(0, -1)]
-				: subtreePath.length === 1
-					? [rootName]
-					: [];
-
-		const libraryFiles = await this.readLibraryFilesInFolder(
-			folderBasename,
-			pathParts,
-		);
-
-		const trackedLibraryFiles = libraryFiles.filter(
-			(file) => !isInUntracked(file.fullPath.pathParts),
-		);
-
-		return noteDtosFromLibraryFiles(trackedLibraryFiles, subtreePath);
-	}
-
 	// ─── Vault Event Handlers ─────────────────────────────────────────
 
 	async onFileCreated(file: TAbstractFile): Promise<void> {
-		if (this.popSelfKey(file.path)) return;
+		if (this.selfEventTracker.pop(file.path)) return;
 		if (!(file instanceof TFile)) return;
 		if (file.extension !== "md") return;
 
@@ -505,7 +403,7 @@ export class Librarian {
 
 		if ("reason" in canonical) {
 			const actions = [
-				...this.createFolderActionsForPathParts(
+				...createFolderActionsForPathParts(
 					canonical.destination.pathParts,
 					new Set<string>(),
 				),
@@ -518,7 +416,7 @@ export class Librarian {
 				},
 			];
 
-			this.registerSelfActions(actions);
+			this.selfEventTracker.register(actions);
 			this.actionQueue.pushMany(actions);
 			await this.actionQueue.flushNow();
 			return;
@@ -526,7 +424,7 @@ export class Librarian {
 
 		if (!isCanonical(prettyPath, canonical.canonicalPrettyPath)) {
 			const actions = [
-				...this.createFolderActionsForPathParts(
+				...createFolderActionsForPathParts(
 					canonical.canonicalPrettyPath.pathParts,
 					new Set<string>(),
 				),
@@ -539,7 +437,7 @@ export class Librarian {
 				},
 			];
 
-			this.registerSelfActions(actions);
+			this.selfEventTracker.register(actions);
 			this.actionQueue.pushMany(actions);
 			await this.actionQueue.flushNow();
 		}
@@ -552,7 +450,11 @@ export class Librarian {
 	}
 
 	async onFileRenamed(file: TAbstractFile, oldPath: string): Promise<void> {
-		if (this.popSelfKey(oldPath) || this.popSelfKey(file.path)) return;
+		if (
+			this.selfEventTracker.pop(oldPath) ||
+			this.selfEventTracker.pop(file.path)
+		)
+			return;
 		if (!(file instanceof TFile)) return;
 		if (file.extension !== "md") return;
 
@@ -576,7 +478,7 @@ export class Librarian {
 
 		if ("reason" in canonical) {
 			const actions = [
-				...this.createFolderActionsForPathParts(
+				...createFolderActionsForPathParts(
 					canonical.destination.pathParts,
 					new Set<string>(),
 				),
@@ -588,7 +490,7 @@ export class Librarian {
 					type: VaultActionType.RenameFile,
 				},
 			];
-			this.registerSelfActions(actions);
+			this.selfEventTracker.register(actions);
 			this.actionQueue.pushMany(actions);
 			await this.actionQueue.flushNow();
 			return;
@@ -596,7 +498,7 @@ export class Librarian {
 
 		if (!isCanonical(newPrettyPath, canonical.canonicalPrettyPath)) {
 			const actions = [
-				...this.createFolderActionsForPathParts(
+				...createFolderActionsForPathParts(
 					canonical.canonicalPrettyPath.pathParts,
 					new Set<string>(),
 				),
@@ -609,7 +511,7 @@ export class Librarian {
 				},
 			];
 
-			this.registerSelfActions(actions);
+			this.selfEventTracker.register(actions);
 			this.actionQueue.pushMany(actions);
 			await this.actionQueue.flushNow();
 		}
@@ -623,7 +525,7 @@ export class Librarian {
 	}
 
 	async onFileDeleted(file: TAbstractFile): Promise<void> {
-		if (this.popSelfKey(file.path)) return;
+		if (this.selfEventTracker.pop(file.path)) return;
 		if (!(file instanceof TFile)) return;
 		if (file.extension !== "md") return;
 
@@ -790,7 +692,7 @@ export class Librarian {
 				};
 
 				actions.push(
-					...this.createFolderActionsForPathParts(
+					...createFolderActionsForPathParts(
 						scrollPath.pathParts,
 						seenFolders,
 					),
@@ -814,7 +716,7 @@ export class Librarian {
 				};
 
 				actions.push(
-					...this.createFolderActionsForPathParts(
+					...createFolderActionsForPathParts(
 						pagePath.pathParts,
 						seenFolders,
 					),
@@ -850,7 +752,7 @@ export class Librarian {
 		}
 
 		if (actions.length > 0) {
-			this.registerSelfActions(actions);
+			this.selfEventTracker.register(actions);
 			this.actionQueue.pushMany(actions);
 			await this.actionQueue.flushNow();
 		}

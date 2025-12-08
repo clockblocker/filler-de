@@ -15,9 +15,9 @@ import { AbstractFileHelper } from "./abstract-file-helper";
  * High-level file/folder service using PrettyPath.
  *
  * NOTE: Chain logic (create parent folders, cleanup empty folders)
- * is handled by DiffToActionsMapper + VaultActionQueue, NOT here.
+ * is handled by TreeDiffApplier + VaultActionQueue, NOT here.
  *
- * @see src/commanders/librarian/diffing/diff-to-actions.ts
+ * @see src/commanders/librarian/diffing/tree-diff-applier.ts
  */
 export class BackgroundFileService {
 	private abstractFileService: AbstractFileHelper;

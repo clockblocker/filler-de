@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { DiffToActions } from "../../../src/commanders/librarian/diffing/diff-to-actions";
 import type { NoteDiff } from "../../../src/commanders/librarian/diffing/note-differ";
+import { TreeDiffApplier } from "../../../src/commanders/librarian/diffing/tree-diff-applier";
 import {
 	treePathToCodexBasename,
 	treePathToPageBasename,
@@ -14,14 +14,13 @@ import {
 import type { PrettyPath } from "../../../src/types/common-interface/dtos";
 import { TextStatus } from "../../../src/types/common-interface/enums";
 
-// Type guard for actions with prettyPath (excludes Rename actions)
 type ActionWithPrettyPath = VaultAction & {
 	payload: { prettyPath: PrettyPath };
 };
 const hasPrettyPath = (a: VaultAction): a is ActionWithPrettyPath =>
 	"prettyPath" in a.payload;
 
-const mapper = new DiffToActions("Library");
+const mapper = new TreeDiffApplier("Library");
 
 const emptyDiff: NoteDiff = {
 	addedNotes: [],
@@ -31,7 +30,7 @@ const emptyDiff: NoteDiff = {
 	statusChanges: [],
 };
 
-describe("DiffToActions", () => {
+describe("TreeDiffApplier", () => {
 	describe("added notes", () => {
 		it("should create scroll file for non-book note", () => {
 			const diff: NoteDiff = {
@@ -114,7 +113,7 @@ describe("DiffToActions", () => {
 			);
 
 			expect(fileAction?.payload.content).toContain("Page");
-			expect(fileAction?.payload.content).toContain("42"); // index
+			expect(fileAction?.payload.content).toContain("42");
 		});
 	});
 
@@ -189,7 +188,6 @@ describe("DiffToActions", () => {
 				);
 
 			expect(processAction).toBeDefined();
-			// transform exists on ProcessFile actions
 			expect("transform" in (processAction?.payload ?? {})).toBe(true);
 		});
 
@@ -285,7 +283,7 @@ describe("DiffToActions", () => {
 			);
 
 			expect(codexTrash).toBeGreaterThanOrEqual(0);
-			expect(folderTrash).toBeGreaterThan(codexTrash); // folder after codex
+			expect(folderTrash).toBeGreaterThan(codexTrash);
 		});
 
 		it("should remove deepest sections first", () => {
@@ -304,7 +302,6 @@ describe("DiffToActions", () => {
 				.filter(hasPrettyPath)
 				.filter((a) => a.type === VaultActionType.TrashFolder);
 
-			// C should be before B, B before A
 			const cIdx = folderActions.findIndex(
 				(a) => a.payload.prettyPath.basename === "C",
 			);
@@ -357,7 +354,6 @@ describe("DiffToActions", () => {
 
 			const actions = mapper.mapDiffToActions(diff);
 
-			// Should update codexes for: root, A, A/B
 			const codexUpdates = actions
 				.filter(hasPrettyPath)
 				.filter(
