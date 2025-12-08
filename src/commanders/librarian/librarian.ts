@@ -114,6 +114,7 @@ export class Librarian {
 
 		if (actions.length === 0) return;
 
+		this.selfEventTracker.register(actions);
 		this.actionQueue.pushMany(actions);
 		await this.actionQueue.flushNow();
 	}
@@ -461,6 +462,49 @@ export class Librarian {
 		}
 
 		if (pathPartsChanged) {
+			if (decoded?.kind === "page") {
+				const decodedParent = decoded.treePath.slice(0, -1);
+				const leafName = toNodeName(
+					decodedParent[decodedParent.length - 1] ??
+						decodedParent[0] ??
+						"",
+				);
+				const targetTreePath: TreePath = [
+					...newFull.pathParts.slice(1),
+					leafName,
+				];
+				const targetPrettyPath = {
+					basename: treePathToScrollBasename.encode(targetTreePath),
+					pathParts: [rootName, ...targetTreePath.slice(0, -1)],
+				};
+
+				let finalPrettyPath = targetPrettyPath;
+				if (await this.backgroundFileService.exists(finalPrettyPath)) {
+					finalPrettyPath =
+						await this.generateUniquePrettyPath(finalPrettyPath);
+				}
+
+				const seenFolders = new Set<string>();
+				const moveActions: VaultAction[] = [
+					...createFolderActionsForPathParts(
+						finalPrettyPath.pathParts,
+						seenFolders,
+					),
+					{
+						payload: { from: prettyPath, to: finalPrettyPath },
+						type: VaultActionType.RenameFile,
+					},
+				];
+
+				this.selfEventTracker.register(moveActions);
+				this.actionQueue.pushMany(moveActions);
+				await this.actionQueue.flushNow();
+
+				this.pendingRenameRoots.add(rootName);
+				this.scheduleRenameFlush();
+				return;
+			}
+
 			// Layer 1: Immediate per-file heal (fixes basename)
 			const healResult = healFile(prettyPath, rootName);
 			if (healResult.actions.length > 0) {
