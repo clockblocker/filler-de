@@ -103,7 +103,7 @@ Librarian
 
 ## Refactor Steps
 
-### Phase 1: Create healing.ts (pure functions)
+### Phase 1: Create healing.ts (pure functions) ✅ DONE
 
 **Create:** `src/commanders/librarian/filesystem/healing.ts`
 
@@ -142,7 +142,7 @@ export function healFiles(files: PrettyPath[], rootName: RootName): VaultAction[
 
 ---
 
-### Phase 2: Convert TreeDiffApplier to pure functions
+### Phase 2: Convert TreeDiffApplier to pure functions ✅ DONE
 
 **Refactor:** `src/commanders/librarian/diffing/tree-diff-applier.ts`
 
@@ -174,7 +174,7 @@ function generateCodexContent(path: TreePath, getNode: GetNodeFn): string { ... 
 
 ---
 
-### Phase 3: Convert LibraryReader to pure function
+### Phase 3: Convert LibraryReader to pure function ✅ DONE
 
 **Refactor:** `src/commanders/librarian/filesystem/library-reader.ts`
 
@@ -192,7 +192,7 @@ export async function readNoteDtos(
 
 ---
 
-### Phase 4: Simplify Librarian event handlers
+### Phase 4: Simplify Librarian event handlers ✅ DONE
 
 **After refactor, event handler becomes linear orchestration:**
 
@@ -443,9 +443,34 @@ Currently in Librarian, runs at startup.
 
 ## Success Criteria
 
-- [ ] Event handlers are linear orchestration (< 30 lines each)
-- [ ] `healFile`, `mapDiffToActions`, `readNoteDtos` are pure functions
+- [x] Event handlers are linear orchestration (< 30 lines each)
+- [x] `healFile`, `mapDiffToActions`, `readNoteDtos` are pure functions
 - [ ] No "stateless classes" — only Librarian, LibraryTree, SelfEventTracker hold state
 - [ ] All 4 case studies from outline.md work correctly
-- [ ] Existing tests pass
-- [ ] New tests for `healFile`, converted functions
+- [x] Existing tests pass
+- [x] New tests for `healFile`, converted functions
+
+---
+
+## ⚠️ Notes & Known Issues
+
+**onFileRenamed still calls healRootFilesystem(rootName)**
+
+```typescript
+// Layer 2: Reconcile tree (full root heal for folder moves)
+await this.healRootFilesystem(rootName);
+```
+
+This scans the entire root on every rename. Plan said "Replace with targeted heal" (Q4).
+
+**OK for now** — folder moves need this. Optimize later with batching/debouncing.
+
+---
+
+## Follow-up Tasks
+
+- [ ] Remove deprecated `TreeDiffApplier` class (keep only pure functions)
+- [ ] Remove deprecated `LibraryReader` class (keep only pure functions)
+- [ ] Update tests to use pure functions directly (not deprecated classes)
+- [ ] Optimize `onFileRenamed` to avoid full root scan (targeted heal)
+- [ ] Consider moving `selfEventTracker` to VaultEventService (Q2/Q8)

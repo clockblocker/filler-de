@@ -21,20 +21,20 @@ import {
 	LIBRARY_ROOTS,
 	type RootName,
 } from "./constants";
-import type { NoteSnapshot } from "./diffing/note-differ";
-import { noteDiffer } from "./diffing/note-differ";
-import { TreeDiffApplier } from "./diffing/tree-diff-applier";
-import { LibraryReader } from "./filesystem/library-reader";
+import { type NoteSnapshot, noteDiffer } from "./diffing/note-differ";
+import {
+	mapDiffToActions,
+	regenerateCodexActions,
+} from "./diffing/tree-diff-applier";
+import { healFile } from "./filesystem/healing";
+import { readNoteDtos } from "./filesystem/library-reader";
 import {
 	pageNumberFromInt,
 	toNodeName,
 	treePathToPageBasename,
 	treePathToScrollBasename,
 } from "./indexing/codecs";
-import {
-	canonicalizePrettyPath,
-	isCanonical,
-} from "./invariants/path-canonicalizer";
+import { canonicalizePrettyPath } from "./invariants/path-canonicalizer";
 import { LibraryTree } from "./library-tree/library-tree";
 import { splitTextIntoP_ages } from "./text-splitter/text-splitter";
 import type { NoteDto, TreePath } from "./types";
@@ -47,9 +47,7 @@ export class Librarian {
 	trees: Record<RootName, LibraryTree>;
 
 	private actionQueue: VaultActionQueue;
-	private diffMappers: Map<RootName, TreeDiffApplier> = new Map();
 	private _skipReconciliation = false;
-	private libraryReader: LibraryReader;
 	private selfEventTracker = new SelfEventTracker();
 
 	constructor({
@@ -63,16 +61,13 @@ export class Librarian {
 		this.backgroundFileService = backgroundFileService;
 		this.openedFileService = openedFileService;
 		this.actionQueue = actionQueue;
-		this.libraryReader = new LibraryReader(backgroundFileService);
-
-		for (const rootName of LIBRARY_ROOTS) {
-			this.diffMappers.set(rootName, new TreeDiffApplier(rootName));
-		}
 	}
 
 	_setSkipReconciliation(skip: boolean): void {
 		this._skipReconciliation = skip;
 	}
+
+	// ─── Filesystem Healing (Layer 1) ────────────────────────────────────
 
 	private async healRootFilesystem(rootName: RootName): Promise<void> {
 		const fileReaders =
@@ -89,55 +84,20 @@ export class Librarian {
 			{ hasCodex: boolean; hasNote: boolean; codexPaths: PrettyPath[] }
 		>();
 
+		// Layer 1: Heal file paths using pure function
 		for (const reader of fileReaders) {
 			const prettyPath: PrettyPath = {
 				basename: reader.basename,
 				pathParts: reader.pathParts,
 			};
 
-			if (isInUntracked(prettyPath.pathParts)) {
-				continue;
-			}
+			if (isInUntracked(prettyPath.pathParts)) continue;
 
-			const canonical = canonicalizePrettyPath({ prettyPath, rootName });
-
-			if ("reason" in canonical) {
-				actions.push(
-					...createFolderActionsForPathParts(
-						canonical.destination.pathParts,
-						seenFolders,
-					),
-					{
-						payload: {
-							from: prettyPath,
-							to: canonical.destination,
-						},
-						type: VaultActionType.RenameFile,
-					},
-				);
-				continue;
-			}
-
-			if (isCanonical(prettyPath, canonical.canonicalPrettyPath)) {
-				continue;
-			}
-
-			actions.push(
-				...createFolderActionsForPathParts(
-					canonical.canonicalPrettyPath.pathParts,
-					seenFolders,
-				),
-				{
-					payload: {
-						from: prettyPath,
-						to: canonical.canonicalPrettyPath,
-					},
-					type: VaultActionType.RenameFile,
-				},
-			);
+			const healResult = healFile(prettyPath, rootName, seenFolders);
+			actions.push(...healResult.actions);
 		}
 
-		// Codex/Folder tracking: record whether folders have notes
+		// Track folder contents for cleanup
 		for (const reader of fileReaders) {
 			const prettyPath: PrettyPath = {
 				basename: reader.basename,
@@ -234,8 +194,8 @@ export class Librarian {
 			}
 		}
 
+		// Cleanup orphan folders
 		for (const [folderKey, info] of folderContents.entries()) {
-			// Skip root
 			if (folderKey === rootName) continue;
 			if (info.hasNote) continue;
 
@@ -246,7 +206,6 @@ export class Librarian {
 			const basename = parts[parts.length - 1] ?? "";
 			const pathParts = parts.slice(0, -1);
 
-			// Remove codex files first, then folder
 			for (const codexPath of info.codexPaths) {
 				actions.push({
 					payload: { prettyPath: codexPath },
@@ -255,16 +214,12 @@ export class Librarian {
 			}
 
 			actions.push({
-				payload: {
-					prettyPath: { basename, pathParts },
-				},
+				payload: { prettyPath: { basename, pathParts } },
 				type: VaultActionType.TrashFolder,
 			});
 		}
 
-		if (actions.length === 0) {
-			return;
-		}
+		if (actions.length === 0) return;
 
 		this.actionQueue.pushMany(actions);
 		await this.actionQueue.flushNow();
@@ -276,15 +231,17 @@ export class Librarian {
 		this.trees = {} as Record<RootName, LibraryTree>;
 		for (const rootName of LIBRARY_ROOTS) {
 			await this.healRootFilesystem(rootName);
-			const notes = await this.libraryReader.readNoteDtos(rootName);
+			const notes = await readNoteDtos(
+				this.backgroundFileService,
+				rootName,
+			);
 			this.trees[rootName] = new LibraryTree(notes, rootName);
 		}
 
-		// Regenerate all codexes to ensure sync with tree state
 		await this.regenerateAllCodexes();
 	}
 
-	// ─── Reconciliation ───────────────────────────────────────────────
+	// ─── Reconciliation (Layer 2) ─────────────────────────────────────
 
 	private async reconcileSubtree(
 		rootName: RootName,
@@ -293,12 +250,12 @@ export class Librarian {
 		const tree = this.trees[rootName];
 		if (!tree) return;
 
-		const filesystemNotes = await this.libraryReader.readNoteDtos(
+		const filesystemNotes = await readNoteDtos(
+			this.backgroundFileService,
 			rootName,
 			subtreePath,
 		);
 
-		// Get current notes in subtree
 		const currentNotes = tree.getNotes(subtreePath);
 
 		// Delete notes not in filesystem
@@ -325,7 +282,7 @@ export class Librarian {
 		}
 	}
 
-	// ─── Diff-Based Mutations ─────────────────────────────────────────
+	// ─── Diff-Based Mutations (Layer 3) ───────────────────────────────
 
 	private async withDiff<T>(
 		rootName: RootName,
@@ -355,24 +312,17 @@ export class Librarian {
 		}
 
 		const before = tree.snapshot();
-
 		const result = mutation(tree);
-
 		const after = tree.snapshot();
 
 		const diff = noteDiffer.diff(before, after);
 
-		const mapper = this.diffMappers.get(rootName);
-
 		const getNode = (path: TreePath) => {
 			const mbNode = tree.getMaybeNode({ path });
-			if (mbNode.error) {
-				return undefined;
-			}
-			return mbNode.data;
+			return mbNode.error ? undefined : mbNode.data;
 		};
 
-		const actions = mapper ? mapper.mapDiffToActions(diff, getNode) : [];
+		const actions = mapDiffToActions(diff, rootName, getNode);
 
 		if (actions.length > 0) {
 			this.actionQueue.pushMany(actions);
@@ -399,53 +349,24 @@ export class Librarian {
 			pathParts: fullPath.pathParts,
 		};
 
-		const canonical = canonicalizePrettyPath({ prettyPath, rootName });
-
-		if ("reason" in canonical) {
-			const actions = [
-				...createFolderActionsForPathParts(
-					canonical.destination.pathParts,
-					new Set<string>(),
-				),
-				{
-					payload: {
-						from: prettyPath,
-						to: canonical.destination,
-					},
-					type: VaultActionType.RenameFile,
-				},
-			];
-
-			this.selfEventTracker.register(actions);
-			this.actionQueue.pushMany(actions);
-			await this.actionQueue.flushNow();
-			return;
-		}
-
-		if (!isCanonical(prettyPath, canonical.canonicalPrettyPath)) {
-			const actions = [
-				...createFolderActionsForPathParts(
-					canonical.canonicalPrettyPath.pathParts,
-					new Set<string>(),
-				),
-				{
-					payload: {
-						from: prettyPath,
-						to: canonical.canonicalPrettyPath,
-					},
-					type: VaultActionType.RenameFile,
-				},
-			];
-
-			this.selfEventTracker.register(actions);
-			this.actionQueue.pushMany(actions);
+		// Layer 1: Heal filesystem
+		const healResult = healFile(prettyPath, rootName);
+		if (healResult.actions.length > 0) {
+			this.selfEventTracker.register(healResult.actions);
+			this.actionQueue.pushMany(healResult.actions);
 			await this.actionQueue.flushNow();
 		}
 
 		if (!this.trees[rootName]) return;
 
+		// Layer 2: Reconcile tree
+		const canonical = canonicalizePrettyPath({ prettyPath, rootName });
+		if ("reason" in canonical) return;
+
 		const parentPath = canonical.treePath.slice(0, -1);
 		await this.reconcileSubtree(rootName, parentPath);
+
+		// Layer 3: Update codexes
 		await this.regenerateAllCodexes();
 	}
 
@@ -465,61 +386,29 @@ export class Librarian {
 		if (isInUntracked(newFull.pathParts)) return;
 		if (!this.trees[rootName]) return;
 
-		const newPrettyPath: PrettyPath = {
+		const prettyPath: PrettyPath = {
 			basename: toNodeName(newFull.basename),
 			pathParts: newFull.pathParts,
 		};
-		const currentPrettyPath = newPrettyPath;
 
-		const canonical = canonicalizePrettyPath({
-			prettyPath: newPrettyPath,
-			rootName,
-		});
-
-		if ("reason" in canonical) {
-			const actions = [
-				...createFolderActionsForPathParts(
-					canonical.destination.pathParts,
-					new Set<string>(),
-				),
-				{
-					payload: {
-						from: currentPrettyPath,
-						to: canonical.destination,
-					},
-					type: VaultActionType.RenameFile,
-				},
-			];
-			this.selfEventTracker.register(actions);
-			this.actionQueue.pushMany(actions);
-			await this.actionQueue.flushNow();
-			return;
-		}
-
-		if (!isCanonical(newPrettyPath, canonical.canonicalPrettyPath)) {
-			const actions = [
-				...createFolderActionsForPathParts(
-					canonical.canonicalPrettyPath.pathParts,
-					new Set<string>(),
-				),
-				{
-					payload: {
-						from: currentPrettyPath,
-						to: canonical.canonicalPrettyPath,
-					},
-					type: VaultActionType.RenameFile,
-				},
-			];
-
-			this.selfEventTracker.register(actions);
-			this.actionQueue.pushMany(actions);
+		// Layer 1: Heal filesystem
+		const healResult = healFile(prettyPath, rootName);
+		if (healResult.actions.length > 0) {
+			this.selfEventTracker.register(healResult.actions);
+			this.actionQueue.pushMany(healResult.actions);
 			await this.actionQueue.flushNow();
 		}
 
-		const parentPath = canonical.treePath.slice(0, -1);
-
+		// Layer 2: Reconcile tree (full root heal for folder moves)
 		await this.healRootFilesystem(rootName);
-		await this.reconcileSubtree(rootName, parentPath);
+
+		const canonical = canonicalizePrettyPath({ prettyPath, rootName });
+		if (!("reason" in canonical)) {
+			const parentPath = canonical.treePath.slice(0, -1);
+			await this.reconcileSubtree(rootName, parentPath);
+		}
+
+		// Layer 3: Update codexes
 		await this.regenerateAllCodexes();
 		await this.actionQueue.flushNow();
 	}
@@ -544,10 +433,15 @@ export class Librarian {
 		const canonical = canonicalizePrettyPath({ prettyPath, rootName });
 		if ("reason" in canonical) return;
 
+		// Layer 2: Reconcile tree
 		const parentPath = canonical.treePath.slice(0, -1);
 		await this.reconcileSubtree(rootName, parentPath);
+
+		// Layer 3: Update codexes
 		await this.regenerateAllCodexes();
 	}
+
+	// ─── Business Operations ──────────────────────────────────────────
 
 	async createNewNoteInCurrentFolder(): Promise<void> {
 		const pwd = await this.openedFileService.pwd();
@@ -650,13 +544,11 @@ export class Librarian {
 		// Create notes for each page
 		const notesToAdd: NoteDto[] = [];
 		if (!isBook) {
-			// Scroll: single note
 			notesToAdd.push({
 				path: [...sectionPath, normalizedTextName],
 				status: TextStatus.NotStarted,
 			});
 		} else {
-			// Book: multiple notes under a section
 			for (let i = 0; i < pages.length; i++) {
 				notesToAdd.push({
 					path: [
@@ -675,7 +567,7 @@ export class Librarian {
 
 		await this.actionQueue.flushNow();
 
-		// Write content to files (queue if available)
+		// Write content to files
 		const actions: VaultAction[] = [];
 		const seenFolders = new Set<string>();
 
@@ -741,15 +633,15 @@ export class Librarian {
 			type: VaultActionType.TrashFile,
 		});
 
-		const mapper = this.diffMappers.get(rootName);
-		if (mapper) {
-			const sectionPaths = affectedTree.getAllSectionPaths();
-			const getNode = (path: TreePath) => {
-				const mbNode = affectedTree.getMaybeNode({ path });
-				return mbNode.error ? undefined : mbNode.data;
-			};
-			actions.push(...mapper.regenerateAllCodexes(sectionPaths, getNode));
-		}
+		// Regenerate codexes
+		const sectionPaths = affectedTree.getAllSectionPaths();
+		const getNode = (path: TreePath) => {
+			const mbNode = affectedTree.getMaybeNode({ path });
+			return mbNode.error ? undefined : mbNode.data;
+		};
+		actions.push(
+			...regenerateCodexActions(sectionPaths, rootName, getNode),
+		);
 
 		if (actions.length > 0) {
 			this.selfEventTracker.register(actions);
@@ -775,9 +667,7 @@ export class Librarian {
 
 		await this.withDiff(
 			rootName,
-			(tree) => {
-				return tree.setStatus({ path, status });
-			},
+			(tree) => tree.setStatus({ path, status }),
 			parentPath.length > 0 ? [parentPath] : [],
 		);
 	}
@@ -815,17 +705,10 @@ export class Librarian {
 		return tree ? tree.snapshot() : null;
 	}
 
-	/**
-	 * Regenerate all codex files from current tree state.
-	 * Use when codexes are out of sync (e.g., after migration).
-	 */
 	async regenerateAllCodexes(): Promise<void> {
 		for (const rootName of LIBRARY_ROOTS) {
 			const tree = this.trees[rootName];
 			if (!tree) continue;
-
-			const mapper = this.diffMappers.get(rootName);
-			if (!mapper) continue;
 
 			const getNode = (path: TreePath) => {
 				const mbNode = tree.getMaybeNode({ path });
@@ -833,7 +716,11 @@ export class Librarian {
 			};
 
 			const sectionPaths = tree.getAllSectionPaths();
-			const actions = mapper.regenerateAllCodexes(sectionPaths, getNode);
+			const actions = regenerateCodexActions(
+				sectionPaths,
+				rootName,
+				getNode,
+			);
 
 			if (actions.length > 0) {
 				this.actionQueue.pushMany(actions);
