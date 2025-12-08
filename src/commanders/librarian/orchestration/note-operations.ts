@@ -9,7 +9,7 @@ import type { TexfresserObsidianServices } from "../../../services/obsidian-serv
 import type { PrettyPath } from "../../../types/common-interface/dtos";
 import { TextStatus } from "../../../types/common-interface/enums";
 import type { ActionDispatcher } from "../action-dispatcher";
-import type { RootName } from "../constants";
+import { isRootName, type RootName } from "../constants";
 import { regenerateCodexActions } from "../diffing/tree-diff-applier";
 import {
 	pageNumberFromInt,
@@ -52,8 +52,10 @@ export class NoteOperations {
 			await this.deps.treeReconciler.initTrees();
 		}
 
-		const treePathToPwd = pwd.pathParts.slice(1) as TreePath;
-		const rootName = pwd.pathParts[0] as RootName | undefined;
+		const treePathToPwd: TreePath = pwd.pathParts.slice(1);
+		const rootName = isRootName(pwd.pathParts[0])
+			? pwd.pathParts[0]
+			: undefined;
 		const affectedTree = this.getAffectedTree(pwd);
 
 		if (!affectedTree || !rootName) return;
@@ -96,7 +98,9 @@ export class NoteOperations {
 		}
 
 		const fullPath = fullPathFromSystemPath(currentFile.path);
-		const rootName = fullPath.pathParts[0] as RootName | undefined;
+		const rootName = isRootName(fullPath.pathParts[0])
+			? fullPath.pathParts[0]
+			: undefined;
 
 		if (!rootName) {
 			logWarning({
@@ -132,7 +136,7 @@ export class NoteOperations {
 		}
 
 		const rawTextName = toNodeName(fullPath.basename);
-		const sectionPath = fullPath.pathParts.slice(1);
+		const sectionPath: TreePath = fullPath.pathParts.slice(1);
 		const lastFolder = sectionPath[sectionPath.length - 1];
 		const textName =
 			lastFolder && rawTextName.endsWith(`-${lastFolder}`)
@@ -301,45 +305,51 @@ export class NoteOperations {
 	}
 
 	async setStatus(
-		rootName: string,
+		rootName: RootName,
 		path: TreePath,
 		status: "Done" | "NotStarted",
 	): Promise<void> {
 		const parentPath = path.slice(0, -1);
 
 		await this.deps.treeReconciler.withDiff(
-			rootName as string,
+			rootName,
 			(tree) => tree.setStatus({ path, status }),
 			parentPath.length > 0 ? [parentPath] : [],
 		);
+
+		await this.deps.dispatcher.flushNow();
 	}
 
-	async addNotes(rootName: string, notes: NoteDto[]): Promise<void> {
-		const parentPaths = [
+	async addNotes(rootName: RootName, notes: NoteDto[]): Promise<void> {
+		const parentPaths: TreePath[] = [
 			...new Set(notes.map((n) => n.path.slice(0, -1).join("/"))),
 		]
-			.map((p) => (p ? (p.split("/") as TreePath) : []))
-			.filter((p) => p.length > 0);
+			.map((p) => (p ? p.split("/") : []))
+			.filter((p): p is TreePath => p.length > 0);
 
 		await this.deps.treeReconciler.withDiff(
-			rootName as string,
+			rootName,
 			(tree) => tree.addNotes(notes),
 			parentPaths,
 		);
+
+		await this.deps.dispatcher.flushNow();
 	}
 
-	async deleteNotes(rootName: string, paths: TreePath[]): Promise<void> {
-		const parentPaths = [
+	async deleteNotes(rootName: RootName, paths: TreePath[]): Promise<void> {
+		const parentPaths: TreePath[] = [
 			...new Set(paths.map((p) => p.slice(0, -1).join("/"))),
 		]
-			.map((p) => (p ? (p.split("/") as TreePath) : []))
-			.filter((p) => p.length > 0);
+			.map((p) => (p ? p.split("/") : []))
+			.filter((p): p is TreePath => p.length > 0);
 
 		await this.deps.treeReconciler.withDiff(
-			rootName as string,
+			rootName,
 			(tree) => tree.deleteNotes(paths),
 			parentPaths,
 		);
+
+		await this.deps.dispatcher.flushNow();
 	}
 
 	private getPathFromSection(
@@ -353,13 +363,15 @@ export class NoteOperations {
 			path.unshift(current.name);
 			current = current.parent;
 		}
-		return path as TreePath;
+		return path;
 	}
 
 	private getAffectedTree(fullPath: {
 		pathParts: string[];
 	}): LibraryTree | undefined {
-		const rootName = fullPath.pathParts[0] as RootName | undefined;
+		const rootName = isRootName(fullPath.pathParts[0])
+			? fullPath.pathParts[0]
+			: undefined;
 		if (!rootName) return undefined;
 		return this.deps.state.trees[rootName];
 	}
