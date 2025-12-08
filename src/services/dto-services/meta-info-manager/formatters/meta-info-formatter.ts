@@ -8,11 +8,11 @@ export const META_INFO_FORMATTER = {
 	make(meta: MetaInfo) {
 		return `<${SECTION} id={${META_SECTION_ID}}>
 ${JSON.stringify(meta)}
-</${SECTION}>` as const;
+</${SECTION}>\n` as const;
 	},
 
 	pattern: new RegExp(
-		`<${SECTION}\\s+id=\\{${reEscape(META_SECTION_ID)}\\}>([\\s\\S]*?)<\\/${SECTION}>`,
+		`<${SECTION}\\s+id=\\{${reEscape(META_SECTION_ID)}\\}>([\\s\\S]*?)<\\/${SECTION}>\\s*`,
 	),
 
 	schema: MetaInfoSchema,

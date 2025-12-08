@@ -51,10 +51,30 @@ class Librarian {
 
 ### Event Flow: `onFileRenamed`
 
+**Authority selection:** depends on what user changed.
+
+| User changes | Authority | Result |
+|--------------|-----------|--------|
+| basename only | basename | Move file to decoded path |
+| folder (pathParts) | folder | Rename basename to match |
+| both | folder | Folder wins |
+
+**Special cases:**
+- Codex rename → revert immediately (auto-generated)
+- Page rename → convert to scroll (strip page number)
+- Conflict at target → unique suffix (`_1`, `_2`)
+
 ```
-1. Immediate heal: healFile(path) → fix basename
-2. Debounce (100ms): collect affected roots
-3. Flush:
+1. Detect: basename-only vs folder move
+2. If codex → revert
+3. If basename-only:
+   - decodeBasename() → treePath
+   - computeCanonicalPath(authority: "basename") → target
+   - Create folders + move file
+4. If folder move:
+   - healFile() → fix basename (folder authoritative)
+5. Debounce (100ms): collect affected roots
+6. Flush:
    - healRootFilesystem() for each root
    - reconcileSubtree(root, [])
    - regenerateAllCodexes()
