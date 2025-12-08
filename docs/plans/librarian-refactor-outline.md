@@ -10,12 +10,12 @@ Proposed Structure
 Extract into focused modules + thin orchestrator:
 librarian/
 ├── orchestration/
-│   ├── filesystem-healer.ts      # Layer 1: healRootFilesystem, initializeMetaInfo, cleanupOrphanFolders
-│   ├── tree-reconciler.ts        # Layer 2: initTrees, reconcileSubtree, withDiff, withDiffSync
-│   ├── vault-event-handler.ts    # Events: onFileCreated/Renamed/Deleted; owns RenameBatcher state
-│   └── note-operations.ts        # Business: createNewNote, makeNoteAText, setStatus, addNotes, deleteNotes, splitTextToPages
-├── action-dispatcher.ts          # Wrap queue + selfEventTracker; single enqueue/flush surface
-├── librarian-state.ts            # Trees map + skip flag (no debounce state)
+│   ├── filesystem-healer.ts      # Layer 1: healRootFilesystem, initializeMetaInfo, cleanupOrphanFolders ✅
+│   ├── tree-reconciler.ts        # Layer 2: initTrees, reconcileSubtree, withDiff, withDiffSync ✅
+│   ├── vault-event-handler.ts    # Events: onFileCreated/Renamed/Deleted; owns RenameBatcher state ⏳
+│   └── note-operations.ts        # Business: createNewNote, makeNoteAText, setStatus, addNotes, deleteNotes, splitTextToPages 🚧 (commands mostly moved)
+├── action-dispatcher.ts          # Wrap queue + selfEventTracker; single enqueue/flush surface ✅
+├── librarian-state.ts            # Trees map + skip flag (no debounce state) ✅
 ├── librarian.ts                  # Thin orchestrator ~100 lines
 └── ... (existing subdirs)
 Module Responsibilities
