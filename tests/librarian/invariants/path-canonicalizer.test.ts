@@ -1,6 +1,8 @@
 import { describe, expect, it } from "bun:test";
 import {
 	canonicalizePrettyPath,
+	computeCanonicalPath,
+	decodeBasename,
 	isCanonical,
 } from "../../../src/commanders/librarian/invariants/path-canonicalizer";
 
@@ -84,5 +86,51 @@ describe("path-canonicalizer", () => {
 			"foo",
 		]);
 		expect(result.canonicalPrettyPath.basename).toBe("__foo-bar");
+	});
+
+	it("decodes basenames for all kinds", () => {
+		expect(decodeBasename("__Library")?.kind).toBe("codex");
+		expect(decodeBasename("000-book-note")?.kind).toBe("page");
+		expect(decodeBasename("note-parent")?.kind).toBe("scroll");
+	});
+
+	it("uses basename authority to move into encoded path", () => {
+		const decoded = decodeBasename("test1-bar-bas");
+		if (!decoded) throw new Error("expected decoded");
+
+		const result = computeCanonicalPath({
+			authority: "basename",
+			currentPrettyPath: {
+				basename: "test1-bar-bas",
+				pathParts: [rootName, "foo"],
+			},
+			decoded,
+			folderPath: [],
+			rootName,
+		});
+
+		expect(result.canonicalPrettyPath.pathParts).toEqual([
+			rootName,
+			"bas",
+			"bar",
+		]);
+		expect(result.canonicalPrettyPath.basename).toBe("test1-bar-bas");
+	});
+
+	it("converts page to parent folders when folder authority", () => {
+		const prettyPath = {
+			basename: "000-book-foo",
+			pathParts: [rootName, "foo"],
+		};
+
+		const result = canonicalizePrettyPath({ prettyPath, rootName });
+		if ("reason" in result) throw new Error("unexpected quarantine");
+
+		expect(result.canonicalPrettyPath.pathParts).toEqual([
+			rootName,
+			"foo",
+		]);
+		expect(result.canonicalPrettyPath.basename).toBe("000-foo");
+		expect(result.treePath).toEqual(["foo", "000"]);
 	});
 });

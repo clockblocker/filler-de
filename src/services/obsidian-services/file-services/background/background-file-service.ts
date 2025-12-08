@@ -43,6 +43,13 @@ export class BackgroundFileService {
 		return await this.vault.read(file);
 	}
 
+	async exists(prettyPath: PrettyPath): Promise<boolean> {
+		const maybeFile = await this.abstractFileService.getMaybeAbstractFile(
+			fullPathToMdFileFromPrettyPath(prettyPath),
+		);
+		return !maybeFile.error;
+	}
+
 	async replaceContent(prettyPath: PrettyPath, content = "") {
 		const file = await this.abstractFileService.getMdFile(
 			fullPathToMdFileFromPrettyPath(prettyPath),

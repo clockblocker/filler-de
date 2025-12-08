@@ -27,12 +27,12 @@ export type QuarantinedFile = {
 	reason: "undecodable";
 };
 
-type DecodedBasename = {
+export type DecodedBasename = {
 	kind: CanonicalFileKind;
 	treePath: TreePath;
 };
 
-function decodeBasename(basename: string): DecodedBasename | null {
+export function decodeBasename(basename: string): DecodedBasename | null {
 	const codexResult = CodexBaseameSchema.safeParse(basename);
 	if (codexResult.success) {
 		return {
@@ -101,6 +101,118 @@ function quarantinePath({
 	};
 }
 
+export type Authority = "folder" | "basename";
+
+export function computeCanonicalPath({
+	authority,
+	decoded,
+	folderPath,
+	rootName,
+	currentPrettyPath,
+}: {
+	authority: Authority;
+	decoded: DecodedBasename;
+	folderPath: string[];
+	rootName: RootName;
+	currentPrettyPath: PrettyPath;
+}): CanonicalizedFile {
+	const sanitizedFolderPath = sanitizeSegments(folderPath);
+	const decodedPath = sanitizeSegments(decoded.treePath);
+
+	const useFolderPathForCodex =
+		authority === "folder" &&
+		decodedPath.length > 0 &&
+		sanitizedFolderPath.length > 0 &&
+		sanitizedFolderPath[sanitizedFolderPath.length - 1] ===
+			decodedPath[decodedPath.length - 1];
+
+	if (decoded.kind === "codex") {
+		const sectionPath =
+			authority === "basename"
+				? decodedPath.length === 1 && decodedPath[0] === rootName
+					? []
+					: decodedPath
+				: useFolderPathForCodex
+					? sanitizedFolderPath
+					: decodedPath.length === 1 && decodedPath[0] === rootName
+						? []
+						: decodedPath;
+
+		const canonicalPrettyPath: PrettyPath = {
+			basename:
+				sectionPath.length === 0
+					? treePathToCodexBasename.encode([rootName])
+					: treePathToCodexBasename.encode(sectionPath),
+			pathParts: [rootName, ...sectionPath],
+		};
+
+		const treePath: TreePath =
+			sectionPath.length === 0 ? [rootName] : sectionPath;
+
+		return {
+			canonicalPrettyPath,
+			currentPrettyPath,
+			kind: decoded.kind,
+			treePath,
+		};
+	}
+
+	if (decoded.kind === "page") {
+		const decodedParent = decodedPath.slice(0, -1);
+		const pageNumber = decodedPath[decodedPath.length - 1] ?? "000";
+
+		const parentPath =
+			authority === "folder"
+				? stripRedundantSuffix(
+						decodedParent.length > 0 &&
+							arraysEqual(decodedParent, sanitizedFolderPath)
+							? decodedParent
+							: sanitizedFolderPath.slice(),
+					)
+				: stripRedundantSuffix(decodedParent);
+
+		const treePath: TreePath = [...parentPath, pageNumber];
+
+		const canonicalPrettyPath: PrettyPath = {
+			basename: treePathToPageBasename.encode(treePath),
+			pathParts: [rootName, ...parentPath],
+		};
+
+		return {
+			canonicalPrettyPath,
+			currentPrettyPath,
+			kind: decoded.kind,
+			treePath,
+		};
+	}
+
+	const decodedParent = decodedPath.slice(0, -1);
+	const name = toNodeName(decodedPath[decodedPath.length - 1] ?? "");
+	const parentPath =
+		authority === "folder"
+			? stripRedundantSuffix(
+					decodedParent.length > 0 &&
+						arraysEqual(decodedParent, sanitizedFolderPath)
+						? decodedParent
+						: sanitizedFolderPath.slice(),
+				)
+			: stripRedundantSuffix(decodedParent);
+
+	const treePath: TreePath = [...parentPath, name];
+
+	const canonicalPrettyPath: PrettyPath = {
+		basename: treePathToScrollBasename.encode(treePath),
+		pathParts: [rootName, ...parentPath],
+	};
+
+	return {
+		canonicalPrettyPath,
+		currentPrettyPath,
+		kind: decoded.kind,
+		treePath,
+	};
+}
+
 export function canonicalizePrettyPath({
 	rootName,
 	prettyPath,
@@ -118,88 +230,13 @@ export function canonicalizePrettyPath({
 		};
 	}
 
-	const folderPath = sanitizeSegments(prettyPath.pathParts.slice(1));
-
-	if (decoded.kind === "codex") {
-		const decodedPath =
-			decoded.treePath.length === 1 && decoded.treePath[0] === rootName
-				? []
-				: sanitizeSegments(decoded.treePath);
-		const useFolderPath =
-			decodedPath.length > 0 &&
-			folderPath.length > 0 &&
-			folderPath[folderPath.length - 1] ===
-				decodedPath[decodedPath.length - 1];
-		const sectionPath = useFolderPath ? folderPath : decodedPath;
-
-		const canonicalPrettyPath: PrettyPath = {
-			basename:
-				sectionPath.length === 0
-					? treePathToCodexBasename.encode([rootName])
-					: treePathToCodexBasename.encode(sectionPath),
-			pathParts: [rootName, ...sectionPath],
-		};
-
-		const treePath: TreePath =
-			sectionPath.length === 0 ? [rootName] : sectionPath;
-
-		return {
-			canonicalPrettyPath,
-			currentPrettyPath: prettyPath,
-			kind: decoded.kind,
-			treePath,
-		};
-	}
-
-	if (decoded.kind === "page") {
-		const decodedParent = sanitizeSegments(decoded.treePath.slice(0, -1));
-		const pageNumber =
-			decoded.treePath[decoded.treePath.length - 1] ?? "000";
-
-		const parentPath = stripRedundantSuffix(
-			decodedParent.length > 0 && arraysEqual(decodedParent, folderPath)
-				? decodedParent
-				: folderPath.slice(),
-		);
-
-		const treePath: TreePath = [...parentPath, pageNumber];
-
-		const canonicalPrettyPath: PrettyPath = {
-			basename: treePathToPageBasename.encode(treePath),
-			pathParts: [rootName, ...parentPath],
-		};
-
-		return {
-			canonicalPrettyPath,
-			currentPrettyPath: prettyPath,
-			kind: decoded.kind,
-			treePath,
-		};
-	}
-
-	const decodedParent = sanitizeSegments(decoded.treePath.slice(0, -1));
-	const name = toNodeName(
-		decoded.treePath[decoded.treePath.length - 1] ?? "",
-	);
-	const parentPath = stripRedundantSuffix(
-		decodedParent.length > 0 && arraysEqual(decodedParent, folderPath)
-			? decodedParent
-			: folderPath.slice(),
-	);
-
-	const treePath: TreePath = [...parentPath, name];
-
-	const canonicalPrettyPath: PrettyPath = {
-		basename: treePathToScrollBasename.encode(treePath),
-		pathParts: [rootName, ...parentPath],
-	};
-
-	return {
-		canonicalPrettyPath,
+	return computeCanonicalPath({
+		authority: "folder",
 		currentPrettyPath: prettyPath,
-		kind: decoded.kind,
-		treePath,
-	};
+		decoded,
+		folderPath: prettyPath.pathParts.slice(1),
+		rootName,
+	});
 }
 
 export function isCanonical(

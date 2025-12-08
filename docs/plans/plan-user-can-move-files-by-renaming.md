@@ -2,7 +2,7 @@
 
 ## Summary
 
-Split `canonicalizePrettyPath` into primitives. Add basename-authoritative mode to `onFileRenamed`.
+Option C only: split `canonicalizePrettyPath` into primitives (decode + compute with authority). Add basename-authoritative branch to `onFileRenamed`.
 
 ---
 
@@ -20,7 +20,7 @@ export function decodeBasename(basename: string): DecodedBasename | null
 **File:** `invariants/path-canonicalizer.ts`
 **Tests:** Add unit tests for decode edge cases
 
-### 1.2 Create `computeCanonicalPath` with authority param
+### 1.2 Create `computeCanonicalPath` with authority param (Option C)
 
 New function that takes decoded basename + folder path + authority mode:
 
@@ -42,7 +42,7 @@ export function computeCanonicalPath({
 
 **Logic:**
 - `authority === "folder"`: current behavior (folder wins)
-- `authority === "basename"`: decoded treePath wins, compute target folder from it
+- `authority === "basename"`: decoded treePath wins, folderPath ignored (basename authoritative)
 
 **File:** `invariants/path-canonicalizer.ts`
 **Tests:** Unit tests for both authority modes
@@ -80,6 +80,7 @@ Before processing, check if file is codex → revert immediately:
 if (decoded?.kind === "codex") {
   // Revert: rename back to old path
   const revertAction = { type: RenameFile, from: newPath, to: oldPath };
+  this.selfEventTracker.register([revertAction]); // avoid loop
   this.actionQueue.push(revertAction);
   return;
 }
@@ -96,6 +97,7 @@ if (decoded?.kind === "codex") {
 ```typescript
 const oldParts = splitSystemPath(oldPath);
 const newParts = splitSystemPath(file.path);
+// Basenames must be sanitized via toNodeName before decode (dash rules preserved)
 
 const pathPartsChanged = !arraysEqual(
   oldParts.pathParts, 
@@ -135,13 +137,13 @@ if (decoded.kind === "codex") {
 }
 
 if (decoded.kind === "page") {
-  // Strip page number, treat as scroll
+  // Strip page number, treat as scroll (chosen behavior)
   // "000-book-bar-foo" → scroll "book" at path ["foo", "bar"]
   const scrollDecoded = {
     kind: "scroll",
     treePath: decoded.treePath.slice(0, -1), // drop page number
   };
-  // ... continue with scrollDecoded
+  decoded = scrollDecoded;
 }
 
 const canonical = computeCanonicalPath({
@@ -159,6 +161,7 @@ const moveActions = [
 
 this.selfEventTracker.register(moveActions);
 this.actionQueue.pushMany(moveActions);
+// Debounce still applies (keep existing debounce flow)
 ```
 
 ### 3.3 Add conflict resolution
@@ -171,7 +174,7 @@ const targetExists = await this.backgroundFileService.exists(
 );
 
 if (targetExists) {
-  // Generate unique name: note_1, note_2, etc.
+  // Generate unique name: note_1, note_2, etc. (underscore; dashes reserved)
   canonical.canonicalPrettyPath.basename = generateUniqueName(
     canonical.canonicalPrettyPath.basename,
     existingNames
@@ -228,7 +231,14 @@ await this.regenerateAllCodexes();
 - Target exists → `_1` suffix
 - Multiple conflicts → `_2`, `_3`, etc.
 
-### 5.3 Integration tests (later)
+### 5.3 Unit-ish tests for rename logic (as much as possible without full E2E)
+
+- Basename-only rename → basename-authoritative path chosen, move actions produced
+- Folder move rename → folder-authoritative path chosen
+- Codex rename → revert action enqueued, self-event registered
+- Page rename → scroll conversion applied
+
+### 5.4 Integration tests (later)
 
 - Full rename flow
 - Codex revert

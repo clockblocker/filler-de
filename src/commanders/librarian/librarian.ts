@@ -34,7 +34,11 @@ import {
 	treePathToPageBasename,
 	treePathToScrollBasename,
 } from "./indexing/codecs";
-import { canonicalizePrettyPath } from "./invariants/path-canonicalizer";
+import {
+	canonicalizePrettyPath,
+	computeCanonicalPath,
+	decodeBasename,
+} from "./invariants/path-canonicalizer";
 import { LibraryTree } from "./library-tree/library-tree";
 import { splitTextIntoP_ages } from "./text-splitter/text-splitter";
 import type { NoteDto, TreePath } from "./types";
@@ -412,35 +416,116 @@ export class Librarian {
 	}
 
 	async onFileRenamed(file: TAbstractFile, oldPath: string): Promise<void> {
-		if (
-			this.selfEventTracker.pop(oldPath) ||
-			this.selfEventTracker.pop(file.path)
-		)
-			return;
+		const fromSelf = this.selfEventTracker.pop(oldPath);
+		const toSelf = this.selfEventTracker.pop(file.path);
+		if (fromSelf || toSelf) return;
 		if (!(file instanceof TFile)) return;
 		if (file.extension !== "md") return;
 
 		const newFull = fullPathFromSystemPath(file.path);
+		const oldFull = fullPathFromSystemPath(oldPath);
 		const rootName = newFull.pathParts[0];
 
 		if (!rootName || !isRootName(rootName)) return;
 		if (isInUntracked(newFull.pathParts)) return;
 		if (!this.trees[rootName]) return;
 
+		const pathPartsChanged = !arePathPartsEqual(
+			oldFull.pathParts,
+			newFull.pathParts,
+		);
+		const basenameChanged = oldFull.basename !== newFull.basename;
+
+		if (!basenameChanged && !pathPartsChanged) return;
+
 		const prettyPath: PrettyPath = {
 			basename: toNodeName(newFull.basename),
 			pathParts: newFull.pathParts,
 		};
+		const oldPrettyPath: PrettyPath = {
+			basename: toNodeName(oldFull.basename),
+			pathParts: oldFull.pathParts,
+		};
 
-		// Layer 1: Immediate per-file heal (fixes basename)
-		const healResult = healFile(prettyPath, rootName);
-		if (healResult.actions.length > 0) {
-			this.selfEventTracker.register(healResult.actions);
-			this.actionQueue.pushMany(healResult.actions);
+		const decoded = decodeBasename(prettyPath.basename);
+
+		if (decoded?.kind === "codex") {
+			const revertAction: VaultAction = {
+				payload: { from: prettyPath, to: oldPrettyPath },
+				type: VaultActionType.RenameFile,
+			};
+			this.selfEventTracker.register([revertAction]);
+			this.actionQueue.push(revertAction);
 			await this.actionQueue.flushNow();
+			return;
 		}
 
-		// Debounce: collect roots, run full pipeline after settling
+		if (pathPartsChanged) {
+			// Layer 1: Immediate per-file heal (fixes basename)
+			const healResult = healFile(prettyPath, rootName);
+			if (healResult.actions.length > 0) {
+				this.selfEventTracker.register(healResult.actions);
+				this.actionQueue.pushMany(healResult.actions);
+				await this.actionQueue.flushNow();
+			}
+
+			this.pendingRenameRoots.add(rootName);
+			this.scheduleRenameFlush();
+			return;
+		}
+
+		// Basename-only branch: basename is authoritative
+		if (!decoded) {
+			const healResult = healFile(prettyPath, rootName);
+			if (healResult.actions.length > 0) {
+				this.selfEventTracker.register(healResult.actions);
+				this.actionQueue.pushMany(healResult.actions);
+				await this.actionQueue.flushNow();
+			}
+			this.pendingRenameRoots.add(rootName);
+			this.scheduleRenameFlush();
+			return;
+		}
+
+		const effectiveDecoded =
+			decoded.kind === "page"
+				? {
+						kind: "scroll" as const,
+						treePath: decoded.treePath.slice(0, -1),
+					}
+				: decoded;
+
+		const canonical = computeCanonicalPath({
+			authority: "basename",
+			currentPrettyPath: prettyPath,
+			decoded: effectiveDecoded,
+			folderPath: [],
+			rootName,
+		});
+
+		let targetPrettyPath = canonical.canonicalPrettyPath;
+
+		if (await this.backgroundFileService.exists(targetPrettyPath)) {
+			targetPrettyPath =
+				await this.generateUniquePrettyPath(targetPrettyPath);
+		}
+
+		const seenFolders = new Set<string>();
+		const moveActions: VaultAction[] = [
+			...createFolderActionsForPathParts(
+				targetPrettyPath.pathParts,
+				seenFolders,
+			),
+			{
+				payload: { from: prettyPath, to: targetPrettyPath },
+				type: VaultActionType.RenameFile,
+			},
+		];
+
+		this.selfEventTracker.register(moveActions);
+		this.actionQueue.pushMany(moveActions);
+		await this.actionQueue.flushNow();
+
 		this.pendingRenameRoots.add(rootName);
 		this.scheduleRenameFlush();
 	}
@@ -840,6 +925,23 @@ export class Librarian {
 		return path;
 	}
 
+	private async generateUniquePrettyPath(
+		prettyPath: PrettyPath,
+	): Promise<PrettyPath> {
+		let candidate = prettyPath;
+		let counter = 1;
+
+		while (await this.backgroundFileService.exists(candidate)) {
+			candidate = {
+				...prettyPath,
+				basename: `${prettyPath.basename}_${counter}`,
+			};
+			counter += 1;
+		}
+
+		return candidate;
+	}
+
 	private getAffectedTree(path: FullPath): LibraryTree | null;
 	private getAffectedTree(path: string): LibraryTree | null;
 	private getAffectedTree(path: FullPath | string): LibraryTree | null {
@@ -852,4 +954,9 @@ export class Librarian {
 
 function treePathFromFullPath(fullPath: FullPath): TreePath {
 	return [...fullPath.pathParts.slice(1), fullPath.basename];
+}
+
+function arePathPartsEqual(a: string[], b: string[]): boolean {
+	if (a.length !== b.length) return false;
+	return a.every((value, idx) => value === b[idx]);
 }
