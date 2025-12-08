@@ -295,27 +295,3 @@ export function regenerateCodexActions(
 	}
 	return actions;
 }
-
-// ─── Legacy Class (deprecated, for backward compatibility) ───────────────
-
-/**
- * @deprecated Use `mapDiffToActions` and `regenerateCodexActions` functions instead.
- */
-export class TreeDiffApplier {
-	private readonly rootName: RootName;
-
-	constructor(rootName: RootName) {
-		this.rootName = rootName;
-	}
-
-	mapDiffToActions(diff: NoteDiff, getNode?: GetNodeFn): VaultAction[] {
-		return mapDiffToActions(diff, this.rootName, getNode);
-	}
-
-	regenerateAllCodexes(
-		sectionPaths: TreePath[],
-		getNode: GetNodeFn,
-	): VaultAction[] {
-		return regenerateCodexActions(sectionPaths, this.rootName, getNode);
-	}
-}

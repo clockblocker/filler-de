@@ -3,5 +3,4 @@ export {
 	type GetNodeFn,
 	mapDiffToActions,
 	regenerateCodexActions,
-	TreeDiffApplier, // deprecated, kept for backward compatibility
 } from "./tree-diff-applier";

@@ -69,27 +69,3 @@ export async function readNoteDtos(
 
 	return noteDtosFromLibraryFiles(trackedLibraryFiles, subtreePath);
 }
-
-// ─── Legacy Class (deprecated, for backward compatibility) ───────────────
-
-/**
- * @deprecated Use `readNoteDtos` and `readFilesInFolder` functions instead.
- */
-export class LibraryReader {
-	private readonly backgroundFileService: BackgroundFileService;
-
-	constructor(backgroundFileService: BackgroundFileService) {
-		this.backgroundFileService = backgroundFileService;
-	}
-
-	async readFilesInFolder(folder: PrettyPath): Promise<LibraryFile[]> {
-		return readFilesInFolder(this.backgroundFileService, folder);
-	}
-
-	async readNoteDtos(
-		rootName: RootName,
-		subtreePath: TreePath = [],
-	): Promise<NoteDto[]> {
-		return readNoteDtos(this.backgroundFileService, rootName, subtreePath);
-	}
-}

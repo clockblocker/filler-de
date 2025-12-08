@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { LibraryReader } from "../../../src/commanders/librarian/filesystem/library-reader";
+import { readNoteDtos } from "../../../src/commanders/librarian/filesystem/library-reader";
 import { treePathToCodexBasename, treePathToScrollBasename } from "../../../src/commanders/librarian/indexing/codecs";
 import type { ReadablePrettyFile } from "../../../src/services/obsidian-services/file-services/background/background-file-service";
 import type { TexfresserObsidianServices } from "../../../src/services/obsidian-services/interface";
@@ -14,9 +14,11 @@ const mkReader = (
 	readContent: async () => content,
 });
 
-describe("LibraryReader", () => {
+type BgService = Pick<TexfresserObsidianServices["backgroundFileService"], "getReadersToAllMdFilesInFolder">;
+
+describe("readNoteDtos", () => {
 	it("filters untracked and codex files, keeps tracked notes", async () => {
-		const backgroundFileService = {
+		const bgService: BgService = {
 			getReadersToAllMdFilesInFolder: async () => [
 				// tracked scroll (no meta; inferred)
 				mkReader(
@@ -34,17 +36,16 @@ describe("LibraryReader", () => {
 					["Library", "Untracked"],
 				),
 			],
-		} satisfies Pick<TexfresserObsidianServices["backgroundFileService"], "getReadersToAllMdFilesInFolder">;
+		};
 
-		const reader = new LibraryReader(backgroundFileService);
-		const notes = await reader.readNoteDtos("Library");
+		const notes = await readNoteDtos(bgService, "Library");
 
 		expect(notes).toHaveLength(1);
 		expect(notes[0]?.path).toEqual(["Section", "Note"]);
 	});
 
 	it("supports subtree filtering", async () => {
-		const backgroundFileService = {
+		const bgService: BgService = {
 			getReadersToAllMdFilesInFolder: async () => [
 				mkReader(
 					treePathToScrollBasename.encode(["A", "One"]),
@@ -55,10 +56,9 @@ describe("LibraryReader", () => {
 					["Library", "B"],
 				),
 			],
-		} satisfies Pick<TexfresserObsidianServices["backgroundFileService"], "getReadersToAllMdFilesInFolder">;
+		};
 
-		const reader = new LibraryReader(backgroundFileService);
-		const notes = await reader.readNoteDtos("Library", ["A"]);
+		const notes = await readNoteDtos(bgService, "Library", ["A"]);
 
 		expect(notes).toHaveLength(1);
 		expect(notes[0]?.path).toEqual(["A", "One"]);

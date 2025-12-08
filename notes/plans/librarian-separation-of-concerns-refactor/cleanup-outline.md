@@ -20,27 +20,12 @@ Post-refactor cleanup to finalize the 3-layer architecture.
 
 ---
 
-### 2. `healRootFilesystem` is a 150-line monolith
+### 2. ~~`healRootFilesystem` is a 150-line monolith~~ ✅ DONE
 
-**Current responsibilities (lines 72-226):**
-```
-1. Heal file paths (uses healFile)           ← Layer 1 ✓
-2. Track folder contents for cleanup         ← Layer 1?
-3. Propagate note presence to ancestors      ← Layer 1?
-4. Add meta-info to files missing it         ← Separate concern
-5. Cleanup orphan folders                    ← Layer 3? (Q7)
-```
-
-**Problem:** Mixes Layer 1 (healing) with Layer 3 concerns (cleanup) and meta-info initialization.
-
-**Options:**
-| Option | Approach |
-|--------|----------|
-| A) Extract `initializeMetaInfo()` | Separate function for meta-info |
-| B) Extract `cleanupOrphanFolders()` | Move to Layer 3 or separate pass |
-| C) Keep as-is | Pragmatic, works, optimize later |
-
-**Recommendation:** Start with C, extract later if complexity grows.
+**Extracted:**
+- `initializeMetaInfo()` — 56 lines
+- `cleanupOrphanFolders()` — 86 lines
+- `healRootFilesystem()` — 35 lines (thin orchestrator)
 
 ---
 
@@ -78,42 +63,17 @@ await this.healRootFilesystem(rootName);
 
 ---
 
-### 5. Meta-info initialization mixed with healing
+### 5. ~~Meta-info initialization mixed with healing~~ ✅ DONE
 
-**Current (lines 148-195):** Inside `healRootFilesystem`, reads file content to check meta.
-
-**Problem:** 
-- Healing should be pure path operations
-- Meta-info initialization requires async file reads
-- Different concerns mixed
-
-**Options:**
-| Option | Approach |
-|--------|----------|
-| A) Extract to `initializeMetaInfo(files)` | Called after healing |
-| B) Make it Layer 3 (derived artifact) | Like codexes |
-| C) Keep as-is | Pragmatic for startup |
-
-**Recommendation:** A — extract but keep in `initTrees()` flow.
+Extracted to `initializeMetaInfo()`. Called at startup + after renames.
 
 ---
 
-### 6. Orphan folder cleanup belongs in Layer 3
+### 6. ~~Orphan folder cleanup belongs in Layer 3~~ ✅ DONE
 
-**Current (lines 197-220):** Inside `healRootFilesystem`, tracks folders and trashes empty ones.
+Extracted to `cleanupOrphanFolders()`. Called at startup + after renames.
 
-**Plan (Q7):** Move to Layer 3 — diff sees "section has no notes" → trash folder.
-
-**Problem:** Currently not diff-based, runs at startup and on rename.
-
-**Options:**
-| Option | Approach |
-|--------|----------|
-| A) Move to `mapDiffToActions` | Diff detects empty sections |
-| B) Separate `cleanupOrphanFolders()` | Called explicitly |
-| C) Keep as-is | Works at startup |
-
-**Recommendation:** B for now — extract, optimize later.
+**Future:** Could move to diff-based Layer 3 if needed.
 
 ---
 
@@ -131,8 +91,8 @@ await this.healRootFilesystem(rootName);
 
 | Task | Effort | Impact |
 |------|--------|--------|
-| Extract `initializeMetaInfo()` from `healRootFilesystem` | 2hr | Separation of concerns |
-| Extract `cleanupOrphanFolders()` from `healRootFilesystem` | 2hr | Separation of concerns |
+| ~~Extract `initializeMetaInfo()` from `healRootFilesystem`~~ | ~~2hr~~ | ✅ DONE |
+| ~~Extract `cleanupOrphanFolders()` from `healRootFilesystem`~~ | ~~2hr~~ | ✅ DONE |
 | Move `selfEventTracker` to `VaultEventService` | 2hr | Architecture alignment |
 
 ### Deferred (optimize later)
@@ -148,8 +108,8 @@ await this.healRootFilesystem(rootName);
 ## Proposed Order
 
 1. **Remove deprecated classes** — clean up first
-2. **Extract `initializeMetaInfo()`** — clearer responsibilities
-3. **Extract `cleanupOrphanFolders()`** — clearer responsibilities
+2. ~~**Extract `initializeMetaInfo()`**~~ ✅ DONE
+3. ~~**Extract `cleanupOrphanFolders()`**~~ ✅ DONE
 4. **Move `selfEventTracker`** — if touching event flow
 5. **Performance optimization** — only if measured need
 
@@ -162,7 +122,7 @@ await this.healRootFilesystem(rootName);
 | `diffing/tree-diff-applier.ts` | Remove deprecated class |
 | `diffing/index.ts` | Remove deprecated class export |
 | `filesystem/library-reader.ts` | Remove deprecated class |
-| `librarian.ts` | Extract `initializeMetaInfo()`, `cleanupOrphanFolders()` |
+| `librarian.ts` | ~~Extract `initializeMetaInfo()`, `cleanupOrphanFolders()`~~ ✅ |
 | `vault-event-service.ts` | (Maybe) receive `selfEventTracker` |
 | `tests/librarian/diffing/tree-diff-applier.test.ts` | Use pure functions |
 | `tests/librarian/filesystem/library-reader.test.ts` | Use pure functions |
@@ -186,7 +146,7 @@ await this.healRootFilesystem(rootName);
 ## Success Criteria
 
 - [ ] No deprecated class wrappers in codebase
-- [ ] `healRootFilesystem` < 50 lines (extractions done)
-- [ ] Clear separation: healing vs meta-info vs cleanup
+- [x] `healRootFilesystem` < 50 lines (35 lines ✅)
+- [x] Clear separation: healing vs meta-info vs cleanup ✅
 - [ ] Tests use pure functions directly
 - [ ] (Optional) `selfEventTracker` in `VaultEventService`

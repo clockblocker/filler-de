@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import type { NoteDiff } from "../../../src/commanders/librarian/diffing/note-differ";
-import { TreeDiffApplier } from "../../../src/commanders/librarian/diffing/tree-diff-applier";
+import { mapDiffToActions } from "../../../src/commanders/librarian/diffing/tree-diff-applier";
 import {
 	treePathToCodexBasename,
 	treePathToPageBasename,
@@ -20,7 +20,7 @@ type ActionWithPrettyPath = VaultAction & {
 const hasPrettyPath = (a: VaultAction): a is ActionWithPrettyPath =>
 	"prettyPath" in a.payload;
 
-const mapper = new TreeDiffApplier("Library");
+const ROOT_NAME = "Library";
 
 const emptyDiff: NoteDiff = {
 	addedNotes: [],
@@ -30,7 +30,7 @@ const emptyDiff: NoteDiff = {
 	statusChanges: [],
 };
 
-describe("TreeDiffApplier", () => {
+describe("mapDiffToActions", () => {
 	describe("added notes", () => {
 		it("should create scroll file for non-book note", () => {
 			const diff: NoteDiff = {
@@ -40,7 +40,7 @@ describe("TreeDiffApplier", () => {
 				],
 			};
 
-			const actions = mapper.mapDiffToActions(diff);
+			const actions = mapDiffToActions(diff, ROOT_NAME);
 
 			const fileAction = actions
 				.filter(hasPrettyPath)
@@ -63,7 +63,7 @@ describe("TreeDiffApplier", () => {
 				],
 			};
 
-			const actions = mapper.mapDiffToActions(diff);
+			const actions = mapDiffToActions(diff, ROOT_NAME);
 
 			const fileAction = actions
 				.filter(hasPrettyPath)
@@ -90,7 +90,7 @@ describe("TreeDiffApplier", () => {
 				],
 			};
 
-			const actions = mapper.mapDiffToActions(diff);
+			const actions = mapDiffToActions(diff, ROOT_NAME);
 			const fileAction = actions.find(
 				(a) => a.type === VaultActionType.UpdateOrCreateFile,
 			);
@@ -107,7 +107,7 @@ describe("TreeDiffApplier", () => {
 				],
 			};
 
-			const actions = mapper.mapDiffToActions(diff);
+			const actions = mapDiffToActions(diff, ROOT_NAME);
 			const fileAction = actions.find(
 				(a) => a.type === VaultActionType.UpdateOrCreateFile,
 			);
@@ -126,7 +126,7 @@ describe("TreeDiffApplier", () => {
 				],
 			};
 
-			const actions = mapper.mapDiffToActions(diff);
+			const actions = mapDiffToActions(diff, ROOT_NAME);
 
 			const trashAction = actions
 				.filter(hasPrettyPath)
@@ -148,7 +148,7 @@ describe("TreeDiffApplier", () => {
 				],
 			};
 
-			const actions = mapper.mapDiffToActions(diff);
+			const actions = mapDiffToActions(diff, ROOT_NAME);
 
 			const trashAction = actions
 				.filter(hasPrettyPath)
@@ -176,7 +176,7 @@ describe("TreeDiffApplier", () => {
 				],
 			};
 
-			const actions = mapper.mapDiffToActions(diff);
+			const actions = mapDiffToActions(diff, ROOT_NAME);
 
 			const processAction = actions
 				.filter(hasPrettyPath)
@@ -203,7 +203,7 @@ describe("TreeDiffApplier", () => {
 				],
 			};
 
-			const actions = mapper.mapDiffToActions(diff);
+			const actions = mapDiffToActions(diff, ROOT_NAME);
 
 			const processAction = actions
 				.filter(hasPrettyPath)
@@ -223,7 +223,7 @@ describe("TreeDiffApplier", () => {
 				addedSections: [["NewSection"] as TreePath],
 			};
 
-			const actions = mapper.mapDiffToActions(diff);
+			const actions = mapDiffToActions(diff, ROOT_NAME);
 
 			const folderAction = actions
 				.filter(hasPrettyPath)
@@ -243,7 +243,7 @@ describe("TreeDiffApplier", () => {
 				addedSections: [["NewSection"] as TreePath],
 			};
 
-			const actions = mapper.mapDiffToActions(diff);
+			const actions = mapDiffToActions(diff, ROOT_NAME);
 
 			const codexAction = actions
 				.filter(hasPrettyPath)
@@ -267,7 +267,7 @@ describe("TreeDiffApplier", () => {
 				removedSections: [["OldSection"] as TreePath],
 			};
 
-			const actions = mapper.mapDiffToActions(diff);
+			const actions = mapDiffToActions(diff, ROOT_NAME);
 
 			const actionsWithPath = actions.filter(hasPrettyPath);
 			const codexTrash = actionsWithPath.findIndex(
@@ -296,7 +296,7 @@ describe("TreeDiffApplier", () => {
 				],
 			};
 
-			const actions = mapper.mapDiffToActions(diff);
+			const actions = mapDiffToActions(diff, ROOT_NAME);
 
 			const folderActions = actions
 				.filter(hasPrettyPath)
@@ -326,7 +326,7 @@ describe("TreeDiffApplier", () => {
 				],
 			};
 
-			const actions = mapper.mapDiffToActions(diff);
+			const actions = mapDiffToActions(diff, ROOT_NAME);
 
 			const rootCodex = actions
 				.filter(hasPrettyPath)
@@ -352,7 +352,7 @@ describe("TreeDiffApplier", () => {
 				],
 			};
 
-			const actions = mapper.mapDiffToActions(diff);
+			const actions = mapDiffToActions(diff, ROOT_NAME);
 
 			const codexUpdates = actions
 				.filter(hasPrettyPath)
@@ -380,7 +380,7 @@ describe("TreeDiffApplier", () => {
 				],
 			};
 
-			const actions = mapper.mapDiffToActions(diff);
+			const actions = mapDiffToActions(diff, ROOT_NAME);
 
 			const bookCodex = actions
 				.filter(hasPrettyPath)
@@ -397,7 +397,7 @@ describe("TreeDiffApplier", () => {
 
 	describe("empty diff", () => {
 		it("should return empty actions for empty diff", () => {
-			const actions = mapper.mapDiffToActions(emptyDiff);
+			const actions = mapDiffToActions(emptyDiff, ROOT_NAME);
 			expect(actions.length).toBe(0);
 		});
 	});
