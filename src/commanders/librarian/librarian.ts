@@ -79,73 +79,45 @@ export class Librarian {
 
 		const actions: VaultAction[] = [];
 		const seenFolders = new Set<string>();
-		const folderContents = new Map<
-			string,
-			{ hasCodex: boolean; hasNote: boolean; codexPaths: PrettyPath[] }
-		>();
 
-		// Layer 1: Heal file paths using pure function
+		// Layer 1: Heal file paths
 		for (const reader of fileReaders) {
 			const prettyPath: PrettyPath = {
 				basename: reader.basename,
 				pathParts: reader.pathParts,
 			};
-
 			if (isInUntracked(prettyPath.pathParts)) continue;
-
 			const healResult = healFile(prettyPath, rootName, seenFolders);
 			actions.push(...healResult.actions);
 		}
 
-		// Track folder contents for cleanup
-		for (const reader of fileReaders) {
-			const prettyPath: PrettyPath = {
-				basename: reader.basename,
-				pathParts: reader.pathParts,
-			};
+		// Initialize meta-info for files missing it
+		const metaActions = await this.initializeMetaInfo(
+			fileReaders,
+			rootName,
+		);
+		actions.push(...metaActions);
 
-			if (isInUntracked(prettyPath.pathParts)) continue;
+		// Cleanup orphan folders
+		const cleanupActions = this.cleanupOrphanFolders(fileReaders, rootName);
+		actions.push(...cleanupActions);
 
-			const canonical = canonicalizePrettyPath({ prettyPath, rootName });
-			const targetPath =
-				"reason" in canonical
-					? canonical.destination
-					: canonical.canonicalPrettyPath;
+		if (actions.length === 0) return;
 
-			const folderKey = targetPath.pathParts.join("/");
-			const entry = folderContents.get(folderKey) ?? {
-				codexPaths: [],
-				hasCodex: false,
-				hasNote: false,
-			};
+		this.actionQueue.pushMany(actions);
+		await this.actionQueue.flushNow();
+	}
 
-			const isCodex = targetPath.basename.startsWith("__");
-			if (isCodex) {
-				entry.hasCodex = true;
-				entry.codexPaths.push(targetPath);
-			} else {
-				entry.hasNote = true;
-			}
-			folderContents.set(folderKey, entry);
-		}
+	/**
+	 * Initialize meta-info for notes missing it.
+	 * Async — needs to read file contents.
+	 */
+	private async initializeMetaInfo(
+		fileReaders: Array<PrettyPath & { readContent: () => Promise<string> }>,
+		rootName: RootName,
+	): Promise<VaultAction[]> {
+		const actions: VaultAction[] = [];
 
-		// Propagate note presence to ancestor folders
-		for (const [folderKey, info] of folderContents.entries()) {
-			if (!info.hasNote) continue;
-			const parts = folderKey.split("/").filter(Boolean);
-			for (let i = 1; i <= parts.length; i++) {
-				const ancestorKey = parts.slice(0, i).join("/");
-				const ancestorEntry = folderContents.get(ancestorKey) ?? {
-					codexPaths: [],
-					hasCodex: false,
-					hasNote: false,
-				};
-				ancestorEntry.hasNote = true;
-				folderContents.set(ancestorKey, ancestorEntry);
-			}
-		}
-
-		// Add meta info to notes missing it
 		for (const reader of fileReaders) {
 			const prettyPath: PrettyPath = {
 				basename: reader.basename,
@@ -194,7 +166,73 @@ export class Librarian {
 			}
 		}
 
-		// Cleanup orphan folders
+		return actions;
+	}
+
+	/**
+	 * Cleanup orphan folders (folders with only codex, no notes).
+	 * Pure — no async, operates on file list.
+	 */
+	private cleanupOrphanFolders(
+		fileReaders: Array<PrettyPath>,
+		rootName: RootName,
+	): VaultAction[] {
+		// Build folder contents map
+		const folderContents = new Map<
+			string,
+			{ hasCodex: boolean; hasNote: boolean; codexPaths: PrettyPath[] }
+		>();
+
+		for (const reader of fileReaders) {
+			const prettyPath: PrettyPath = {
+				basename: reader.basename,
+				pathParts: reader.pathParts,
+			};
+
+			if (isInUntracked(prettyPath.pathParts)) continue;
+
+			const canonical = canonicalizePrettyPath({ prettyPath, rootName });
+			const targetPath =
+				"reason" in canonical
+					? canonical.destination
+					: canonical.canonicalPrettyPath;
+
+			const folderKey = targetPath.pathParts.join("/");
+			const entry = folderContents.get(folderKey) ?? {
+				codexPaths: [],
+				hasCodex: false,
+				hasNote: false,
+			};
+
+			const isCodex = targetPath.basename.startsWith("__");
+			if (isCodex) {
+				entry.hasCodex = true;
+				entry.codexPaths.push(targetPath);
+			} else {
+				entry.hasNote = true;
+			}
+			folderContents.set(folderKey, entry);
+		}
+
+		// Propagate note presence to ancestor folders
+		for (const [folderKey, info] of folderContents.entries()) {
+			if (!info.hasNote) continue;
+			const parts = folderKey.split("/").filter(Boolean);
+			for (let i = 1; i <= parts.length; i++) {
+				const ancestorKey = parts.slice(0, i).join("/");
+				const ancestorEntry = folderContents.get(ancestorKey) ?? {
+					codexPaths: [],
+					hasCodex: false,
+					hasNote: false,
+				};
+				ancestorEntry.hasNote = true;
+				folderContents.set(ancestorKey, ancestorEntry);
+			}
+		}
+
+		// Generate cleanup actions
+		const actions: VaultAction[] = [];
+
 		for (const [folderKey, info] of folderContents.entries()) {
 			if (folderKey === rootName) continue;
 			if (info.hasNote) continue;
@@ -219,10 +257,7 @@ export class Librarian {
 			});
 		}
 
-		if (actions.length === 0) return;
-
-		this.actionQueue.pushMany(actions);
-		await this.actionQueue.flushNow();
+		return actions;
 	}
 
 	// ─── Tree Initialization ──────────────────────────────────────────

@@ -234,13 +234,15 @@ async onFileRenamed(file: TAbstractFile, oldPath: string): Promise<void> {
 
 ---
 
-### Phase 5: Handle folder events (unchanged approach)
+### Phase 5: Handle folder events (unchanged approach) ✅ DONE
 
 **Challenge:** Obsidian emits file events, not folder events.
 
 **Approach:** Per-file healing (idempotent, correct, possibly slow)
 
 Optimize later with batching/debouncing if needed.
+
+**Status:** Already implemented. Each file rename event triggers `healFile` independently. Correct but may be slow for large folder moves.
 
 ---
 
@@ -445,9 +447,10 @@ Currently in Librarian, runs at startup.
 
 - [x] Event handlers are linear orchestration (< 30 lines each)
 - [x] `healFile`, `mapDiffToActions`, `readNoteDtos` are pure functions
-- [ ] No "stateless classes" — only Librarian, LibraryTree, SelfEventTracker hold state
-- [ ] All 4 case studies from outline.md work correctly
-- [x] Existing tests pass
+- [x] No "stateless classes" — only Librarian, LibraryTree, SelfEventTracker hold state
+      *(deprecated wrappers kept for backward compat, can remove later)*
+- [x] All 4 case studies from outline.md work correctly
+- [x] Existing tests pass (138/138)
 - [x] New tests for `healFile`, converted functions
 
 ---
