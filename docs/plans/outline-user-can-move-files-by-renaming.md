@@ -129,12 +129,13 @@ Move may require new folders and leave old ones empty
 - Cleanup: existing `cleanupEmptySections` + `cleanupOrphanFolders`
 - Order matters: create target before move, cleanup after
 Q: What if folder creation fails (permissions, name conflict)? 
-A: Idk, what do we do currenly?
+A: `VaultActionExecutor` logs warning and continues. If "already exists" → skips silently. Move may fail but won't crash.
 
 ### 8. Self-event tracking
 Our move triggers another `onFileRenamed` — must not loop
 - Current `SelfEventTracker` should handle
-- Need to register both old and new paths? Idk, how we do it currenly?
+- Q: Need to register both old and new paths?
+- A: Already does! `RenameFile` case registers both `from` and `to` paths.
 - Edge: rapid user rename during our move? Their problem if so
 
 ### 9. Testing/perf
