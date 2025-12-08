@@ -1,0 +1,386 @@
+import { editOrAddMetaInfo } from "../../../services/dto-services/meta-info-manager/interface";
+import { fullPathFromSystemPath } from "../../../services/obsidian-services/atomic-services/pathfinder";
+import {
+	type VaultAction,
+	VaultActionType,
+} from "../../../services/obsidian-services/file-services/background/background-vault-actions";
+import { logWarning } from "../../../services/obsidian-services/helpers/issue-handlers";
+import type { TexfresserObsidianServices } from "../../../services/obsidian-services/interface";
+import type { PrettyPath } from "../../../types/common-interface/dtos";
+import { TextStatus } from "../../../types/common-interface/enums";
+import type { ActionDispatcher } from "../action-dispatcher";
+import type { RootName } from "../constants";
+import { regenerateCodexActions } from "../diffing/tree-diff-applier";
+import {
+	pageNumberFromInt,
+	toNodeName,
+	treePathToCodexBasename,
+	treePathToPageBasename,
+	treePathToScrollBasename,
+} from "../indexing/codecs";
+import type { LibrarianState } from "../librarian-state";
+import type { LibraryTree } from "../library-tree/library-tree";
+import { splitTextIntoPages } from "../text-splitter/text-splitter";
+import type { NoteDto, TreePath } from "../types";
+import { createFolderActionsForPathParts } from "../utils/folder-actions";
+import type { TreeReconciler } from "./tree-reconciler";
+
+export class NoteOperations {
+	constructor(
+		private readonly deps: {
+			state: LibrarianState;
+			dispatcher: ActionDispatcher;
+			treeReconciler: TreeReconciler;
+			regenerateAllCodexes: () => Promise<void>;
+			generateUniquePrettyPath: (
+				prettyPath: PrettyPath,
+			) => Promise<PrettyPath>;
+		} & Pick<
+			TexfresserObsidianServices,
+			"openedFileService" | "backgroundFileService"
+		>,
+	) {}
+
+	get trees(): Record<RootName, LibraryTree> {
+		return this.deps.state.trees;
+	}
+
+	async createNewNoteInCurrentFolder(): Promise<void> {
+		const pwd = await this.deps.openedFileService.pwd();
+
+		if (Object.keys(this.deps.state.trees).length === 0) {
+			await this.deps.treeReconciler.initTrees();
+		}
+
+		const treePathToPwd = pwd.pathParts.slice(1) as TreePath;
+		const rootName = pwd.pathParts[0] as RootName | undefined;
+		const affectedTree = this.getAffectedTree(pwd);
+
+		if (!affectedTree || !rootName) return;
+
+		const nearestSection = affectedTree.getNearestSection(treePathToPwd);
+		const newNoteName = this.generateUniqueNoteName(nearestSection);
+		const sectionPath = this.getPathFromSection(
+			nearestSection,
+			affectedTree,
+		);
+		const notePath: TreePath = [...sectionPath, newNoteName];
+
+		await this.deps.treeReconciler.withDiff(
+			rootName,
+			(tree) =>
+				tree.addNotes([
+					{ path: notePath, status: TextStatus.NotStarted },
+				]),
+			[sectionPath],
+		);
+
+		await this.deps.dispatcher.flushNow();
+
+		await this.deps.openedFileService.cd({
+			basename: treePathToScrollBasename.encode(notePath),
+			pathParts: [rootName, ...sectionPath],
+		});
+	}
+
+	async makeNoteAText(): Promise<boolean> {
+		const app = this.deps.openedFileService.getApp();
+		const currentFile = app.workspace.getActiveFile();
+
+		if (!currentFile) {
+			logWarning({
+				description: "No file is currently open.",
+				location: "Librarian.makeNoteAText",
+			});
+			return false;
+		}
+
+		const fullPath = fullPathFromSystemPath(currentFile.path);
+		const rootName = fullPath.pathParts[0] as RootName | undefined;
+
+		if (!rootName) {
+			logWarning({
+				description: `File must be in a Library folder. Found: ${rootName}`,
+				location: "Librarian.makeNoteAText",
+			});
+			return false;
+		}
+
+		if (!this.deps.state.trees[rootName]) {
+			logWarning({
+				description: "Tree not initialized for this root.",
+				location: "Librarian.makeNoteAText",
+			});
+			return false;
+		}
+
+		const originalPrettyPath: PrettyPath = {
+			basename: fullPath.basename,
+			pathParts: fullPath.pathParts,
+		};
+		const content =
+			await this.deps.backgroundFileService.readContent(
+				originalPrettyPath,
+			);
+
+		if (!content.trim()) {
+			logWarning({
+				description: "File is empty.",
+				location: "Librarian.makeNoteAText",
+			});
+			return false;
+		}
+
+		const rawTextName = toNodeName(fullPath.basename);
+		const sectionPath = fullPath.pathParts.slice(1);
+		const lastFolder = sectionPath[sectionPath.length - 1];
+		const textName =
+			lastFolder && rawTextName.endsWith(`-${lastFolder}`)
+				? rawTextName.slice(
+						0,
+						rawTextName.length - lastFolder.length - 1,
+					)
+				: rawTextName;
+
+		const { pages, isBook } = splitTextIntoPages(content, textName);
+
+		const seenFolders = new Set<string>();
+		let destinationPrettyPath: PrettyPath;
+
+		if (!isBook) {
+			const unmarkedBasename = `Unmarked_${fullPath.basename}`;
+			let unmarkedPrettyPath: PrettyPath = {
+				basename: unmarkedBasename,
+				pathParts: originalPrettyPath.pathParts,
+			};
+			if (
+				await this.deps.backgroundFileService.exists(unmarkedPrettyPath)
+			) {
+				unmarkedPrettyPath =
+					await this.deps.generateUniquePrettyPath(
+						unmarkedPrettyPath,
+					);
+			}
+
+			const renameAction: VaultAction = {
+				payload: { from: originalPrettyPath, to: unmarkedPrettyPath },
+				type: VaultActionType.RenameFile,
+			};
+			this.deps.dispatcher.registerSelf([renameAction]);
+			this.deps.dispatcher.push(renameAction);
+			await this.deps.dispatcher.flushNow();
+
+			const scrollTreePath: TreePath = [...sectionPath, textName];
+			const scrollPrettyPath: PrettyPath = {
+				basename: treePathToScrollBasename.encode(scrollTreePath),
+				pathParts: [rootName, ...sectionPath],
+			};
+
+			const createActions: VaultAction[] = [
+				...createFolderActionsForPathParts(
+					scrollPrettyPath.pathParts,
+					seenFolders,
+				),
+				{
+					payload: {
+						content: editOrAddMetaInfo(pages[0] ?? "", {
+							fileType: "Scroll",
+							status: TextStatus.NotStarted,
+						}),
+						prettyPath: scrollPrettyPath,
+					},
+					type: VaultActionType.UpdateOrCreateFile,
+				},
+			];
+
+			this.deps.dispatcher.registerSelf(createActions);
+			this.deps.dispatcher.pushMany(createActions);
+			await this.deps.dispatcher.flushNow();
+
+			this.deps.state.trees[rootName]?.addNotes([
+				{ path: scrollTreePath, status: TextStatus.NotStarted },
+			]);
+
+			await this.deps.regenerateAllCodexes();
+
+			destinationPrettyPath = scrollPrettyPath;
+		} else {
+			const bookFolderPathParts = [rootName, ...sectionPath, textName];
+
+			const phase1Actions: VaultAction[] = [
+				...createFolderActionsForPathParts(
+					bookFolderPathParts,
+					seenFolders,
+				),
+			];
+
+			const unmarkedBasename = `Unmarked-${fullPath.basename}`;
+			let unmarkedPrettyPath: PrettyPath = {
+				basename: unmarkedBasename,
+				pathParts: bookFolderPathParts,
+			};
+			if (
+				await this.deps.backgroundFileService.exists(unmarkedPrettyPath)
+			) {
+				unmarkedPrettyPath =
+					await this.deps.generateUniquePrettyPath(
+						unmarkedPrettyPath,
+					);
+			}
+
+			phase1Actions.push({
+				payload: { from: originalPrettyPath, to: unmarkedPrettyPath },
+				type: VaultActionType.RenameFile,
+			});
+
+			this.deps.dispatcher.registerSelf(phase1Actions);
+			this.deps.dispatcher.pushMany(phase1Actions);
+			await this.deps.dispatcher.flushNow();
+
+			const phase2Actions: VaultAction[] = [];
+
+			for (let i = 0; i < pages.length; i++) {
+				const pageTreePath: TreePath = [
+					...sectionPath,
+					textName,
+					pageNumberFromInt.encode(i),
+				];
+				const pagePrettyPath: PrettyPath = {
+					basename: treePathToPageBasename.encode(pageTreePath),
+					pathParts: bookFolderPathParts,
+				};
+
+				phase2Actions.push({
+					payload: {
+						content: editOrAddMetaInfo(pages[i] ?? "", {
+							fileType: "Page",
+							index: i,
+							status: TextStatus.NotStarted,
+						}),
+						prettyPath: pagePrettyPath,
+					},
+					type: VaultActionType.UpdateOrCreateFile,
+				});
+			}
+
+			this.deps.dispatcher.registerSelf(phase2Actions);
+			this.deps.dispatcher.pushMany(phase2Actions);
+			await this.deps.dispatcher.flushNow();
+
+			const bookSectionPath: TreePath = [...sectionPath, textName];
+			destinationPrettyPath = {
+				basename: treePathToCodexBasename.encode(bookSectionPath),
+				pathParts: bookFolderPathParts,
+			};
+
+			await this.deps.treeReconciler.reconcileSubtree(
+				rootName,
+				bookSectionPath,
+			);
+
+			const tree = this.deps.state.trees[rootName];
+			if (tree) {
+				const getNode = (path: TreePath) => {
+					const mbNode = tree.getMaybeNode({ path });
+					return mbNode.error ? undefined : mbNode.data;
+				};
+				const codexActions = regenerateCodexActions(
+					[bookSectionPath],
+					rootName,
+					getNode,
+				);
+				this.deps.dispatcher.registerSelf(codexActions);
+				this.deps.dispatcher.pushMany(codexActions);
+				await this.deps.dispatcher.flushNow();
+			}
+		}
+
+		await this.deps.openedFileService.cd(destinationPrettyPath);
+
+		return true;
+	}
+
+	async setStatus(
+		rootName: string,
+		path: TreePath,
+		status: "Done" | "NotStarted",
+	): Promise<void> {
+		const parentPath = path.slice(0, -1);
+
+		await this.deps.treeReconciler.withDiff(
+			rootName as string,
+			(tree) => tree.setStatus({ path, status }),
+			parentPath.length > 0 ? [parentPath] : [],
+		);
+	}
+
+	async addNotes(rootName: string, notes: NoteDto[]): Promise<void> {
+		const parentPaths = [
+			...new Set(notes.map((n) => n.path.slice(0, -1).join("/"))),
+		]
+			.map((p) => (p ? (p.split("/") as TreePath) : []))
+			.filter((p) => p.length > 0);
+
+		await this.deps.treeReconciler.withDiff(
+			rootName as string,
+			(tree) => tree.addNotes(notes),
+			parentPaths,
+		);
+	}
+
+	async deleteNotes(rootName: string, paths: TreePath[]): Promise<void> {
+		const parentPaths = [
+			...new Set(paths.map((p) => p.slice(0, -1).join("/"))),
+		]
+			.map((p) => (p ? (p.split("/") as TreePath) : []))
+			.filter((p) => p.length > 0);
+
+		await this.deps.treeReconciler.withDiff(
+			rootName as string,
+			(tree) => tree.deleteNotes(paths),
+			parentPaths,
+		);
+	}
+
+	private getPathFromSection(
+		section: { name: string; parent: { name: string } | null },
+		tree: LibraryTree,
+	): TreePath {
+		const path: string[] = [];
+		let current: { name: string; parent: { name: string } | null } | null =
+			section;
+		while (current && tree.root !== current) {
+			path.unshift(current.name);
+			current = current.parent;
+		}
+		return path as TreePath;
+	}
+
+	private getAffectedTree(fullPath: {
+		pathParts: string[];
+	}): LibraryTree | undefined {
+		const rootName = fullPath.pathParts[0] as RootName | undefined;
+		if (!rootName) return undefined;
+		return this.deps.state.trees[rootName];
+	}
+
+	private generateUniqueNoteName(section: {
+		children: Array<{ name: string }>;
+	}): string {
+		const baseName = "New_Note";
+		const existingNames = new Set(
+			section.children
+				.filter((child) => child.name.startsWith(baseName))
+				.map((child) => child.name),
+		);
+
+		if (!existingNames.has(baseName)) return baseName;
+
+		let counter = 1;
+		while (existingNames.has(`${baseName}_${counter}`)) {
+			counter += 1;
+		}
+
+		return `${baseName}_${counter}`;
+	}
+}
