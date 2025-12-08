@@ -41,6 +41,8 @@ import type { NoteDto, TreePath } from "./types";
 import { createFolderActionsForPathParts } from "./utils/folder-actions";
 import { SelfEventTracker } from "./utils/self-event-tracker";
 
+const RENAME_DEBOUNCE_MS = 100;
+
 export class Librarian {
 	backgroundFileService: TexfresserObsidianServices["backgroundFileService"];
 	openedFileService: TexfresserObsidianServices["openedFileService"];
@@ -49,6 +51,10 @@ export class Librarian {
 	private actionQueue: VaultActionQueue;
 	private _skipReconciliation = false;
 	private selfEventTracker = new SelfEventTracker();
+
+	// Debounce state for rename events (folder moves trigger N events)
+	private pendingRenameRoots = new Set<RootName>();
+	private renameDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 	constructor({
 		backgroundFileService,
@@ -426,7 +432,7 @@ export class Librarian {
 			pathParts: newFull.pathParts,
 		};
 
-		// Layer 1: Heal filesystem
+		// Layer 1: Immediate per-file heal (fixes basename)
 		const healResult = healFile(prettyPath, rootName);
 		if (healResult.actions.length > 0) {
 			this.selfEventTracker.register(healResult.actions);
@@ -434,16 +440,41 @@ export class Librarian {
 			await this.actionQueue.flushNow();
 		}
 
-		// Layer 2: Reconcile tree (full root heal for folder moves)
-		await this.healRootFilesystem(rootName);
+		// Debounce: collect roots, run full pipeline after settling
+		this.pendingRenameRoots.add(rootName);
+		this.scheduleRenameFlush();
+	}
 
-		const canonical = canonicalizePrettyPath({ prettyPath, rootName });
-		if (!("reason" in canonical)) {
-			const parentPath = canonical.treePath.slice(0, -1);
-			await this.reconcileSubtree(rootName, parentPath);
+	/**
+	 * Schedule debounced flush for pending renames.
+	 * Folder moves trigger N rename events — we batch them.
+	 */
+	private scheduleRenameFlush(): void {
+		if (this.renameDebounceTimer) {
+			clearTimeout(this.renameDebounceTimer);
+		}
+		this.renameDebounceTimer = setTimeout(() => {
+			this.renameDebounceTimer = null;
+			void this.flushPendingRenames();
+		}, RENAME_DEBOUNCE_MS);
+	}
+
+	/**
+	 * Run full pipeline (heal → tree → codex) for all pending roots.
+	 */
+	private async flushPendingRenames(): Promise<void> {
+		const roots = [...this.pendingRenameRoots];
+		this.pendingRenameRoots.clear();
+
+		for (const rootName of roots) {
+			// Layer 1+2: Full filesystem heal + tree reconcile
+			await this.healRootFilesystem(rootName);
+
+			// Reconcile entire root (folder moves may affect multiple subtrees)
+			await this.reconcileSubtree(rootName, []);
 		}
 
-		// Layer 3: Update codexes
+		// Layer 3: Update all codexes
 		await this.regenerateAllCodexes();
 		await this.actionQueue.flushNow();
 	}
