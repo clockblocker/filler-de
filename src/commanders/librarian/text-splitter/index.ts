@@ -1,1 +1,1 @@
-export { type SplitResult, splitTextIntoP_ages } from "./text-splitter";
+export { type SplitResult, splitTextIntoPages } from "./text-splitter";

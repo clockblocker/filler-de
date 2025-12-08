@@ -15,7 +15,6 @@ import { logWarning } from "../../services/obsidian-services/helpers/issue-handl
 import type { TexfresserObsidianServices } from "../../services/obsidian-services/interface";
 import type { PrettyPath } from "../../types/common-interface/dtos";
 import { TextStatus } from "../../types/common-interface/enums";
-import { DASH, UNDERSCORE } from "../../types/literals";
 import {
 	isInUntracked,
 	isRootName,
@@ -42,7 +41,7 @@ import {
 	decodeBasename,
 } from "./invariants/path-canonicalizer";
 import { LibraryTree } from "./library-tree/library-tree";
-import { splitTextIntoP_ages } from "./text-splitter/text-splitter";
+import { splitTextIntoPages } from "./text-splitter/text-splitter";
 import type { NoteDto, TreePath } from "./types";
 import { createFolderActionsForPathParts } from "./utils/folder-actions";
 import { SelfEventTracker } from "./utils/self-event-tracker";
@@ -729,19 +728,21 @@ export class Librarian {
 			return false;
 		}
 
-		const affectedTree = this.getAffectedTree(fullPath);
-		if (!affectedTree) {
+		if (!this.trees[rootName]) {
 			logWarning({
-				description: "Could not find tree for this folder.",
+				description: "Tree not initialized for this root.",
 				location: "Librarian.makeNoteAText",
 			});
 			return false;
 		}
 
-		const content = await this.backgroundFileService.readContent({
+		// 1) Read content
+		const originalPrettyPath: PrettyPath = {
 			basename: fullPath.basename,
 			pathParts: fullPath.pathParts,
-		});
+		};
+		const content =
+			await this.backgroundFileService.readContent(originalPrettyPath);
 
 		if (!content.trim()) {
 			logWarning({
@@ -751,161 +752,174 @@ export class Librarian {
 			return false;
 		}
 
+		// Parse text name from basename
 		const rawTextName = toNodeName(fullPath.basename);
 		const sectionPath = fullPath.pathParts.slice(1);
 		const lastFolder = sectionPath[sectionPath.length - 1];
-		const normalizedTextName =
+		const textName =
 			lastFolder && rawTextName.endsWith(`-${lastFolder}`)
 				? rawTextName.slice(
 						0,
 						rawTextName.length - lastFolder.length - 1,
 					)
 				: rawTextName;
-		const { pages, isBook } = splitTextIntoP_ages(
-			content,
-			normalizedTextName,
-		);
 
-		// Create notes for each page
-		const notesToAdd: NoteDto[] = [];
-		if (!isBook) {
-			notesToAdd.push({
-				path: [...sectionPath, normalizedTextName],
-				status: TextStatus.NotStarted,
-			});
-		} else {
-			for (let i = 0; i < pages.length; i++) {
-				notesToAdd.push({
-					path: [
-						...sectionPath,
-						normalizedTextName,
-						pageNumberFromInt.encode(i),
-					],
-					status: TextStatus.NotStarted,
-				});
-			}
-		}
+		// Split text into pages
+		const { pages, isBook } = splitTextIntoPages(content, textName);
 
-		await this.withDiff(rootName, (tree) => tree.addNotes(notesToAdd), [
-			sectionPath,
-		]);
-
-		await this.actionQueue.flushNow();
-
-		// Write content to files
-		const actions: VaultAction[] = [];
 		const seenFolders = new Set<string>();
+		let destinationPrettyPath: PrettyPath;
 
-		for (let i = 0; i < pages.length; i++) {
-			const pageContent = pages[i] ?? "";
-
-			if (!isBook) {
-				const scrollPath = {
-					basename: treePathToScrollBasename.encode([
-						...sectionPath,
-						normalizedTextName,
-					]),
-					pathParts: [rootName, ...sectionPath],
-				};
-
-				actions.push(
-					...createFolderActionsForPathParts(
-						scrollPath.pathParts,
-						seenFolders,
-					),
-					{
-						payload: {
-							content: pageContent,
-							prettyPath: scrollPath,
-						},
-						type: VaultActionType.UpdateOrCreateFile,
-					},
-				);
-			} else {
-				const fullPagePath: TreePath = [
-					...sectionPath,
-					normalizedTextName,
-					pageNumberFromInt.encode(i),
-				];
-				const pagePath = {
-					basename: treePathToPageBasename.encode(fullPagePath),
-					pathParts: [rootName, ...sectionPath, normalizedTextName],
-				};
-
-				actions.push(
-					...createFolderActionsForPathParts(
-						pagePath.pathParts,
-						seenFolders,
-					),
-					{
-						payload: {
-							content: pageContent,
-							prettyPath: pagePath,
-						},
-						type: VaultActionType.UpdateOrCreateFile,
-					},
-				);
+		if (!isBook) {
+			// Single page → scroll
+			// Phase 1: Move original to Unmarked_FILE
+			const unmarkedBasename = `Unmarked_${fullPath.basename}`;
+			let unmarkedPrettyPath: PrettyPath = {
+				basename: unmarkedBasename,
+				pathParts: originalPrettyPath.pathParts,
+			};
+			if (await this.backgroundFileService.exists(unmarkedPrettyPath)) {
+				unmarkedPrettyPath =
+					await this.generateUniquePrettyPath(unmarkedPrettyPath);
 			}
-		}
 
-		const originalPrettyPath = {
-			basename: fullPath.basename,
-			pathParts: fullPath.pathParts,
-		};
-
-		const unmarkedBasename = `Unmarked${isBook ? DASH : UNDERSCORE}${fullPath.basename}`;
-		const unmarkedPathParts = isBook
-			? [rootName, ...sectionPath, normalizedTextName]
-			: originalPrettyPath.pathParts;
-
-		let unmarkedPrettyPath = {
-			basename: unmarkedBasename,
-			pathParts: unmarkedPathParts,
-		};
-
-		if (await this.backgroundFileService.exists(unmarkedPrettyPath)) {
-			unmarkedPrettyPath =
-				await this.generateUniquePrettyPath(unmarkedPrettyPath);
-		}
-
-		actions.push(
-			...createFolderActionsForPathParts(
-				unmarkedPrettyPath.pathParts,
-				seenFolders,
-			),
-			{
+			const renameAction: VaultAction = {
 				payload: { from: originalPrettyPath, to: unmarkedPrettyPath },
 				type: VaultActionType.RenameFile,
-			},
-		);
-
-		if (actions.length > 0) {
-			this.selfEventTracker.register(actions);
-			this.actionQueue.pushMany(actions);
+			};
+			this.selfEventTracker.register([renameAction]);
+			this.actionQueue.push(renameAction);
 			await this.actionQueue.flushNow();
+
+			// Phase 2: Create new scroll with content
+			const scrollTreePath: TreePath = [...sectionPath, textName];
+			const scrollPrettyPath: PrettyPath = {
+				basename: treePathToScrollBasename.encode(scrollTreePath),
+				pathParts: [rootName, ...sectionPath],
+			};
+
+			const createActions: VaultAction[] = [
+				...createFolderActionsForPathParts(
+					scrollPrettyPath.pathParts,
+					seenFolders,
+				),
+				{
+					payload: {
+						content: editOrAddMetaInfo(pages[0] ?? "", {
+							fileType: "Scroll",
+							status: TextStatus.NotStarted,
+						}),
+						prettyPath: scrollPrettyPath,
+					},
+					type: VaultActionType.UpdateOrCreateFile,
+				},
+			];
+
+			this.selfEventTracker.register(createActions);
+			this.actionQueue.pushMany(createActions);
+			await this.actionQueue.flushNow();
+
+			// Update tree state
+			this.trees[rootName]?.addNotes([
+				{ path: scrollTreePath, status: TextStatus.NotStarted },
+			]);
+
+			// Regenerate codexes for scroll case
+			await this.regenerateAllCodexes();
+
+			destinationPrettyPath = scrollPrettyPath;
+		} else {
+			// Multiple pages → book
+			// Phase 1: Create folder + move original to FILE/Unmarked-FILE
+			const bookFolderPathParts = [rootName, ...sectionPath, textName];
+
+			const phase1Actions: VaultAction[] = [
+				...createFolderActionsForPathParts(
+					bookFolderPathParts,
+					seenFolders,
+				),
+			];
+
+			const unmarkedBasename = `Unmarked-${fullPath.basename}`;
+			let unmarkedPrettyPath: PrettyPath = {
+				basename: unmarkedBasename,
+				pathParts: bookFolderPathParts,
+			};
+			if (await this.backgroundFileService.exists(unmarkedPrettyPath)) {
+				unmarkedPrettyPath =
+					await this.generateUniquePrettyPath(unmarkedPrettyPath);
+			}
+
+			phase1Actions.push({
+				payload: { from: originalPrettyPath, to: unmarkedPrettyPath },
+				type: VaultActionType.RenameFile,
+			});
+
+			this.selfEventTracker.register(phase1Actions);
+			this.actionQueue.pushMany(phase1Actions);
+			await this.actionQueue.flushNow();
+
+			// Phase 2: Create page files directly with content+meta
+			const phase2Actions: VaultAction[] = [];
+
+			for (let i = 0; i < pages.length; i++) {
+				const pageTreePath: TreePath = [
+					...sectionPath,
+					textName,
+					pageNumberFromInt.encode(i),
+				];
+				const pagePrettyPath: PrettyPath = {
+					basename: treePathToPageBasename.encode(pageTreePath),
+					pathParts: bookFolderPathParts,
+				};
+
+				phase2Actions.push({
+					payload: {
+						content: editOrAddMetaInfo(pages[i] ?? "", {
+							fileType: "Page",
+							index: i,
+							status: TextStatus.NotStarted,
+						}),
+						prettyPath: pagePrettyPath,
+					},
+					type: VaultActionType.UpdateOrCreateFile,
+				});
+			}
+
+			this.selfEventTracker.register(phase2Actions);
+			this.actionQueue.pushMany(phase2Actions);
+			await this.actionQueue.flushNow();
+
+			// CD to codex
+			const bookSectionPath: TreePath = [...sectionPath, textName];
+			destinationPrettyPath = {
+				basename: treePathToCodexBasename.encode(bookSectionPath),
+				pathParts: bookFolderPathParts,
+			};
+
+			// Reconcile tree from filesystem to pick up new pages
+			await this.reconcileSubtree(rootName, bookSectionPath);
+
+			// Generate codex for the new book section
+			const tree = this.trees[rootName];
+			if (tree) {
+				const getNode = (path: TreePath) => {
+					const mbNode = tree.getMaybeNode({ path });
+					return mbNode.error ? undefined : mbNode.data;
+				};
+				const codexActions = regenerateCodexActions(
+					[bookSectionPath],
+					rootName,
+					getNode,
+				);
+				this.selfEventTracker.register(codexActions);
+				this.actionQueue.pushMany(codexActions);
+				await this.actionQueue.flushNow();
+			}
 		}
 
-		const codexTargetSectionPath = isBook
-			? [...sectionPath, normalizedTextName]
-			: sectionPath;
-
-		await this.reconcileSubtree(rootName, codexTargetSectionPath);
-		await this.regenerateAllCodexes();
-
-		const codexPrettyPath =
-			codexTargetSectionPath.length > 0
-				? {
-						basename: treePathToCodexBasename.encode(
-							codexTargetSectionPath,
-						),
-						pathParts: [rootName, ...codexTargetSectionPath],
-					}
-				: {
-						basename: treePathToCodexBasename.encode([rootName]),
-						pathParts: [rootName],
-					};
-
-		await this.openedFileService.cd(codexPrettyPath);
+		// CD to destination
+		await this.openedFileService.cd(destinationPrettyPath);
 
 		return true;
 	}

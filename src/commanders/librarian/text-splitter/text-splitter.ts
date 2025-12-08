@@ -17,7 +17,7 @@ type QuotedLine = LinkedQuote | string;
  * Splits text content into pages using formatted sentence segmentation.
  * Preserves headers, handles direct speech, and creates linked quotes.
  */
-export function splitTextIntoP_ages(
+export function splitTextIntoPages(
 	content: string,
 	textName: string,
 	maxBlocksPerPage = DEFAULT_MAX_BLOCKS_PER_PAGE,
