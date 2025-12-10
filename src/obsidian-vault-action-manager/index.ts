@@ -1,21 +1,29 @@
+import { z } from "zod";
+import { CREATE, FILE, RENAME, TRASH } from "./types/literals";
 import type { FileSplitPath } from "./types/split-path";
 import type { VaultAction } from "./types/vault-action";
 
-/**
- * Generic vault-facing events. No librarian coupling.
- */
+export const VaultEventTypeSchema = z.enum([
+	`${FILE}${CREATE}d`,
+	`${FILE}${RENAME}d`,
+	`${FILE}${TRASH}ed`,
+] as const);
+
+export const VaultEventType = VaultEventTypeSchema.enum;
+export type VaultEventType = z.infer<typeof VaultEventTypeSchema>;
+
 export type VaultEvent =
 	| {
-			kind: "file-created";
+			type: typeof VaultEventType.FileCreated;
 			splitPath: FileSplitPath;
 	  }
 	| {
-			kind: "file-renamed";
+			type: typeof VaultEventType.FileRenamed;
 			from: FileSplitPath;
 			to: FileSplitPath;
 	  }
 	| {
-			kind: "file-deleted";
+			type: typeof VaultEventType.FileTrashed;
 			splitPath: FileSplitPath;
 	  };
 

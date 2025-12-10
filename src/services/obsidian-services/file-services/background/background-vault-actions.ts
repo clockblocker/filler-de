@@ -1,14 +1,11 @@
 import { z } from "zod";
-import type { PrettyPath } from "../../../../types/common-interface/dtos";
 import {
 	FILE,
 	FOLDER,
 	PROCESS,
-	RENAME,
-	TRASH,
-	UPDATE_OR_CREATE,
 	WRITE,
-} from "../../../../types/literals";
+} from "../../../../obsidian-vault-action-manager/types/literals";
+import type { PrettyPath } from "../../../../types/common-interface/dtos";
 
 export const ContentActionSchema = z.enum([PROCESS, WRITE] as const);
 export const AbstractFileTypeSchema = z.enum([FILE, FOLDER] as const);

@@ -5,13 +5,13 @@ export const CreateSchema = z.literal("Create");
 export type CREATE = z.infer<typeof CreateSchema>;
 export const CREATE = CreateSchema.value;
 
-export const MoveSchema = z.literal("Move");
-export type MOVE = z.infer<typeof MoveSchema>;
-export const MOVE = MoveSchema.value;
+export const RenameSchema = z.literal("Rename");
+export type RENAME = z.infer<typeof RenameSchema>;
+export const RENAME = RenameSchema.value;
 
-export const DeleteSchema = z.literal("Delete");
-export type DELETE = z.infer<typeof DeleteSchema>;
-export const DELETE = DeleteSchema.value;
+export const TrashSchema = z.literal("Trash");
+export type TRASH = z.infer<typeof TrashSchema>;
+export const TRASH = TrashSchema.value;
 
 export const ProcessSchema = z.literal("Process");
 export type PROCESS = z.infer<typeof ProcessSchema>;
