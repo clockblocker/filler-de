@@ -1,4 +1,10 @@
-import { type App, type TAbstractFile, TFile, TFolder } from "obsidian";
+import {
+	type App,
+	MarkdownView,
+	type TAbstractFile,
+	TFile,
+	TFolder,
+} from "obsidian";
 import type {
 	CoreSplitPath,
 	SplitPath,
@@ -25,6 +31,51 @@ export class OpenedFileService {
 
 	async exists(splitPath: SplitPath): Promise<boolean> {
 		return this.getAbstract(splitPath) !== null;
+	}
+
+	async writeContent(
+		target: SplitPathToMdFile,
+		content: string,
+	): Promise<void> {
+		const activeView = this.getActiveMarkdownView();
+		if (activeView && activeView.file?.path === splitPathKey(target)) {
+			const editor = activeView.editor;
+			const cursor = editor.getCursor();
+			editor.setValue(content);
+			editor.setCursor(cursor);
+			editor.scrollIntoView(
+				{
+					from: cursor,
+					to: cursor,
+				},
+				true,
+			);
+			return;
+		}
+
+		const file = this.getFile(target);
+		if (!file) throw new Error(`File not found: ${splitPathKey(target)}`);
+		if (file.extension !== MD_EXTENSION) {
+			throw new Error(`Expected md file: ${splitPathKey(target)}`);
+		}
+		await this.app.vault.modify(file, content);
+	}
+
+	async renameFile(
+		from: SplitPathToFile | SplitPathToMdFile,
+		to: SplitPathToFile | SplitPathToMdFile,
+	): Promise<void> {
+		const file = this.getFile(from);
+		if (!file) throw new Error(`File not found: ${splitPathKey(from)}`);
+		await this.app.fileManager.renameFile(file, splitPathKey(to));
+	}
+
+	async trashFile(
+		target: SplitPathToFile | SplitPathToMdFile,
+	): Promise<void> {
+		const file = this.getFile(target);
+		if (!file) return;
+		await this.app.vault.delete(file);
 	}
 
 	async list(folderPath: SplitPathToFolder): Promise<SplitPath[]> {
@@ -76,6 +127,10 @@ export class OpenedFileService {
 	private getFolder(splitPath: SplitPath): TFolder | null {
 		const abstract = this.getAbstract(splitPath);
 		return abstract instanceof TFolder ? abstract : null;
+	}
+
+	private getActiveMarkdownView(): MarkdownView | null {
+		return this.app.workspace.getActiveViewOfType(MarkdownView);
 	}
 }
 
