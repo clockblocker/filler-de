@@ -1,11 +1,13 @@
 import { z } from "zod";
-import {
-	FILE,
-	FOLDER,
-	PROCESS,
-	WRITE,
-} from "../../../../obsidian-vault-action-manager/types/literals";
 import type { PrettyPath } from "../../../../types/common-interface/dtos";
+
+const UPDATE_OR_CREATE = "UpdateOrCreate" as const;
+const TRASH = "Trash" as const;
+const RENAME = "Rename" as const;
+const PROCESS = "Process" as const;
+const WRITE = "Write" as const;
+const FILE = "File" as const;
+const FOLDER = "Folder" as const;
 
 export const ContentActionSchema = z.enum([PROCESS, WRITE] as const);
 export const AbstractFileTypeSchema = z.enum([FILE, FOLDER] as const);
@@ -111,6 +113,8 @@ export function getActionKey(action: VaultAction): string {
 		case VaultActionType.RenameFile:
 			// For renames, key by source path to dedupe multiple renames of same file
 			return `${type}:${prettyPathToKey(payload.from)}`;
+		default:
+			return unreachable(type);
 	}
 }
 
@@ -132,11 +136,17 @@ export function getActionTargetPath(action: VaultAction): string {
 		case VaultActionType.RenameFolder:
 		case VaultActionType.RenameFile:
 			return `${prettyPathToKey(payload.from)} → ${prettyPathToKey(payload.to)}`;
+		default:
+			return unreachable(type);
 	}
 }
 
 function prettyPathToKey(prettyPath: PrettyPath): string {
 	return [...prettyPath.pathParts, prettyPath.basename].join("/");
+}
+
+function unreachable(x: never): never {
+	throw new Error(`Unhandled action type: ${String(x)}`);
 }
 
 /**

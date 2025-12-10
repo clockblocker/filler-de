@@ -127,3 +127,6 @@ export class VaultActionQueue {
 		}
 	}
 }
+
+// Legacy alias maintained during migration away from this queue impl.
+export const DeprecatedVaultActionQueue = VaultActionQueue;
