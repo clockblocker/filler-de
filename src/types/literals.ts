@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+export const ReadSchema = z.literal("Read");
+export type READ = z.infer<typeof ReadSchema>;
+export const READ = ReadSchema.value;
+
 // Format
 const SlashSchema = z.literal("/");
 export type SLASH = z.infer<typeof SlashSchema>;

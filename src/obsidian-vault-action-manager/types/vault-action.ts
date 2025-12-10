@@ -1,108 +1,88 @@
 // ─── Vault Action Definitions (moved here for platform boundary) ───
 
 import z from "zod";
-import type { PrettyPath } from "../../types/common-interface/dtos";
 import {
+	CREATE,
+	DELETE,
 	FILE,
 	FOLDER,
 	MD_FILE,
+	MOVE,
 	PROCESS,
-	RENAME,
-	TRASH,
-	UPDATE_OR_CREATE,
 	WRITE,
 } from "./literals";
+import type { CoreSplitPath } from "./split-path";
 
-export const ContentActionSchema = z.enum([PROCESS, WRITE] as const);
-export const AbstractFileTypeSchema = z.enum([FILE, FOLDER, MD_FILE] as const);
-const AbstractFileType = AbstractFileTypeSchema.enum;
+const OperationSchema = z.enum([CREATE, MOVE, DELETE] as const);
 
-export const DirActionSchema = z.enum([
-	UPDATE_OR_CREATE,
-	TRASH,
-	RENAME,
-] as const);
+const TargetSchema = z.enum([FOLDER, FILE, MD_FILE] as const);
+const Target = TargetSchema.enum;
 
-const DirActionTypeValues = DirActionSchema.options.flatMap((action) =>
-	AbstractFileTypeSchema.options.map(
-		(entity) => `${action}${entity}` as const,
-	),
-);
-
-const ContentActionTypeValues = ContentActionSchema.options.map(
-	(c) => `${c}${AbstractFileType.File}` as const,
-);
+const ContentOpsSchema = z.enum([PROCESS, WRITE] as const);
 
 export const VaultActionTypeSchema = z.enum([
-	...DirActionTypeValues,
-	...ContentActionTypeValues,
+	...OperationSchema.options.flatMap((op) =>
+		TargetSchema.options.map((target) => `${op}${target}` as const),
+	),
+	...ContentOpsSchema.options.map((op) => `${op}${Target.MdFile}` as const),
 ] as const);
 
 export const VaultActionType = VaultActionTypeSchema.enum;
 export type VaultActionType = z.infer<typeof VaultActionTypeSchema>;
 
+type MovePayload = { from: CoreSplitPath; to: CoreSplitPath };
+type CreatePayload = { prettyPath: CoreSplitPath; content?: string };
+type DeletePayload = { prettyPath: CoreSplitPath };
+type ProcessPayload = {
+	prettyPath: CoreSplitPath;
+	transform: (content: string) => string | Promise<string>;
+};
+type WritePayload = { prettyPath: CoreSplitPath; content: string };
+
 export type VaultAction =
-	| {
-			type: typeof VaultActionType.UpdateOrCreateFolder;
-			payload: { prettyPath: PrettyPath };
-	  }
-	| {
-			type: typeof VaultActionType.RenameFolder;
-			payload: { from: PrettyPath; to: PrettyPath };
-	  }
-	| {
-			type: typeof VaultActionType.TrashFolder;
-			payload: { prettyPath: PrettyPath };
-	  }
-	| {
-			type: typeof VaultActionType.UpdateOrCreateFile;
-			payload: { prettyPath: PrettyPath; content?: string };
-	  }
-	| {
-			type: typeof VaultActionType.RenameFile;
-			payload: { from: PrettyPath; to: PrettyPath };
-	  }
-	| {
-			type: typeof VaultActionType.TrashFile;
-			payload: { prettyPath: PrettyPath };
-	  }
-	| {
-			type: typeof VaultActionType.ProcessFile;
-			payload: {
-				prettyPath: PrettyPath;
-				transform: (content: string) => string | Promise<string>;
-			};
-	  }
-	| {
-			type: typeof VaultActionType.WriteFile;
-			payload: { prettyPath: PrettyPath; content: string };
-	  };
+	| { type: typeof VaultActionType.CreateFolder; payload: CreatePayload }
+	| { type: typeof VaultActionType.MoveFolder; payload: MovePayload }
+	| { type: typeof VaultActionType.DeleteFolder; payload: DeletePayload }
+	| { type: typeof VaultActionType.CreateFile; payload: CreatePayload }
+	| { type: typeof VaultActionType.MoveFile; payload: MovePayload }
+	| { type: typeof VaultActionType.DeleteFile; payload: DeletePayload }
+	| { type: typeof VaultActionType.CreateMdFile; payload: CreatePayload }
+	| { type: typeof VaultActionType.MoveMdFile; payload: MovePayload }
+	| { type: typeof VaultActionType.DeleteMdFile; payload: DeletePayload }
+	| { type: typeof VaultActionType.ProcessMdFile; payload: ProcessPayload }
+	| { type: typeof VaultActionType.WriteMdFile; payload: WritePayload };
 
 export const weightForVaultActionType: Record<VaultActionType, number> = {
-	[VaultActionType.UpdateOrCreateFolder]: 0,
-	[VaultActionType.RenameFolder]: 1,
-	[VaultActionType.TrashFolder]: 2,
-	[VaultActionType.UpdateOrCreateFile]: 3,
-	[VaultActionType.RenameFile]: 4,
-	[VaultActionType.TrashFile]: 5,
-	[VaultActionType.ProcessFile]: 6,
-	[VaultActionType.WriteFile]: 7,
+	[VaultActionType.CreateFolder]: 0,
+	[VaultActionType.MoveFolder]: 1,
+	[VaultActionType.DeleteFolder]: 2,
+	[VaultActionType.CreateFile]: 3,
+	[VaultActionType.MoveFile]: 4,
+	[VaultActionType.DeleteFile]: 5,
+	[VaultActionType.CreateMdFile]: 6,
+	[VaultActionType.MoveMdFile]: 7,
+	[VaultActionType.DeleteMdFile]: 8,
+	[VaultActionType.ProcessMdFile]: 9,
+	[VaultActionType.WriteMdFile]: 10,
 } as const;
 
 export function getActionKey(action: VaultAction): string {
 	const { type, payload } = action;
 
 	switch (type) {
-		case VaultActionType.UpdateOrCreateFolder:
-		case VaultActionType.TrashFolder:
-		case VaultActionType.UpdateOrCreateFile:
-		case VaultActionType.TrashFile:
-		case VaultActionType.ProcessFile:
-		case VaultActionType.WriteFile:
+		case VaultActionType.CreateFolder:
+		case VaultActionType.DeleteFolder:
+		case VaultActionType.CreateFile:
+		case VaultActionType.DeleteFile:
+		case VaultActionType.CreateMdFile:
+		case VaultActionType.DeleteMdFile:
+		case VaultActionType.ProcessMdFile:
+		case VaultActionType.WriteMdFile:
 			return `${type}:${prettyPathToKey(payload.prettyPath)}`;
 
-		case VaultActionType.RenameFolder:
-		case VaultActionType.RenameFile:
+		case VaultActionType.MoveFolder:
+		case VaultActionType.MoveFile:
+		case VaultActionType.MoveMdFile:
 			return `${type}:${prettyPathToKey(payload.from)}`;
 	}
 }
@@ -111,16 +91,19 @@ export function getActionTargetPath(action: VaultAction): string {
 	const { type, payload } = action;
 
 	switch (type) {
-		case VaultActionType.UpdateOrCreateFolder:
-		case VaultActionType.TrashFolder:
-		case VaultActionType.UpdateOrCreateFile:
-		case VaultActionType.TrashFile:
-		case VaultActionType.ProcessFile:
-		case VaultActionType.WriteFile:
+		case VaultActionType.CreateFolder:
+		case VaultActionType.DeleteFolder:
+		case VaultActionType.CreateFile:
+		case VaultActionType.DeleteFile:
+		case VaultActionType.CreateMdFile:
+		case VaultActionType.DeleteMdFile:
+		case VaultActionType.ProcessMdFile:
+		case VaultActionType.WriteMdFile:
 			return prettyPathToKey(payload.prettyPath);
 
-		case VaultActionType.RenameFolder:
-		case VaultActionType.RenameFile:
+		case VaultActionType.MoveFolder:
+		case VaultActionType.MoveFile:
+		case VaultActionType.MoveMdFile:
 			return `${prettyPathToKey(payload.from)} → ${prettyPathToKey(payload.to)}`;
 	}
 }
@@ -128,10 +111,10 @@ export function getActionTargetPath(action: VaultAction): string {
 export function sortActionsByWeight(actions: VaultAction[]): VaultAction[] {
 	const pathDepth = (action: VaultAction): number => {
 		switch (action.type) {
-			case VaultActionType.UpdateOrCreateFolder:
-			case VaultActionType.TrashFolder:
+			case VaultActionType.CreateFolder:
+			case VaultActionType.DeleteFolder:
 				return action.payload.prettyPath.pathParts.length;
-			case VaultActionType.RenameFolder:
+			case VaultActionType.MoveFolder:
 				return action.payload.to.pathParts.length;
 			default:
 				return 0;
@@ -148,6 +131,6 @@ export function sortActionsByWeight(actions: VaultAction[]): VaultAction[] {
 	});
 }
 
-function prettyPathToKey(prettyPath: PrettyPath): string {
+function prettyPathToKey(prettyPath: CoreSplitPath): string {
 	return [...prettyPath.pathParts, prettyPath.basename].join("/");
 }
