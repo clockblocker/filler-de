@@ -78,3 +78,5 @@ export class OpenedFileService {
 		return abstract instanceof TFolder ? abstract : null;
 	}
 }
+
+export { splitPath, splitPathKey } from "./split-path";

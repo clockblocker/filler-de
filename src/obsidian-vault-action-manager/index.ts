@@ -69,5 +69,8 @@ export function splitPath(file: TAbstractFile): SplitPath;
 export function splitPath(
 	input: string | TAbstractFile,
 ): SplitPath | SplitPathToFile | SplitPathToMdFile | SplitPathToFolder {
+	if (typeof input === "string") {
+		return buildSplitPath(input);
+	}
 	return buildSplitPath(input);
 }
