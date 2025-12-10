@@ -1,10 +1,11 @@
+import type { TAbstractFile, TFile, TFolder } from "obsidian";
 import { z } from "zod";
 import { CREATE, FILE, RENAME, TRASH } from "./types/literals";
 import type {
-	FileSplitPath,
-	FolderSplitPath,
-	MdFileSplitPath,
 	SplitPath,
+	SplitPathToFile,
+	SplitPathToFolder,
+	SplitPathToMdFile,
 } from "./types/split-path";
 import type { VaultAction } from "./types/vault-action";
 
@@ -20,16 +21,16 @@ export type VaultEventType = z.infer<typeof VaultEventTypeSchema>;
 export type VaultEvent =
 	| {
 			type: typeof VaultEventType.FileCreated;
-			splitPath: FileSplitPath;
+			splitPath: SplitPathToFile;
 	  }
 	| {
 			type: typeof VaultEventType.FileRenamed;
-			from: FileSplitPath;
-			to: FileSplitPath;
+			from: SplitPathToFile;
+			to: SplitPathToFile;
 	  }
 	| {
 			type: typeof VaultEventType.FileTrashed;
-			splitPath: FileSplitPath;
+			splitPath: SplitPathToFile;
 	  };
 
 export type VaultEventHandler = (event: VaultEvent) => Promise<void>;
@@ -41,8 +42,14 @@ export interface ObsidianVaultActionManager {
 	dispatch(actions: readonly VaultAction[]): Promise<void>;
 
 	// Read-only operations
-	read(path: MdFileSplitPath): Promise<string>;
-	exists(path: SplitPath): Promise<boolean>;
-	list(path: FolderSplitPath): Promise<SplitPath[]>;
-	pwd(): Promise<FileSplitPath>;
+	read(splitPath: SplitPathToMdFile): Promise<string>;
+	exists(splitPath: SplitPath): Promise<boolean>;
+	list(splitPath: SplitPathToFolder): Promise<SplitPath[]>;
+	pwd(): Promise<SplitPathToFile>;
+
+	// Helpers
+	splitPath(systemPath: string): SplitPath;
+	splitPath(tFile: TFile): SplitPathToFile | SplitPathToMdFile;
+	splitPath(tFolder: TFolder): SplitPathToFolder;
+	splitPath(tAbstractFile: TAbstractFile): SplitPath;
 }
