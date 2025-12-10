@@ -8,7 +8,7 @@ const cacheDir = path.resolve(".obsidian-cache");
 // choose Obsidian versions to test (force stable; ignore env that may include beta)
 const stableVersions = "latest/latest";
 const desktopVersions = await parseObsidianVersions(stableVersions, { cacheDir });
-const mobileVersions: Array<[string, string]> = [];
+const mobileVersions = await parseObsidianVersions(stableVersions, { cacheDir });
 if (env.CI) {
     // Print the resolved Obsidian versions to use as the workflow cache key
     // (see .github/workflows/test.yaml)
@@ -20,17 +20,32 @@ export const config: WebdriverIO.Config = {
     cacheDir: cacheDir,
 
     // "matrix" to test your plugin on multiple Obsidian versions and with emulateMobile
-    capabilities: desktopVersions.map<WebdriverIO.Capabilities>(([appVersion, installerVersion]) => ({
-        browserName: 'obsidian',
-        'wdio:obsidianOptions': {
-            appVersion,
-            installerVersion,
-            plugins: ["."],
-            // If you need to switch between multiple vaults, you can omit this and
-            // use `reloadObsidian` to open vaults during the test.
-            vault: "tests/simple",
-        },
-    })),
+    capabilities: [
+        ...desktopVersions.map<WebdriverIO.Capabilities>(([appVersion, installerVersion]) => ({
+            browserName: 'obsidian',
+            'wdio:obsidianOptions': {
+                appVersion,
+                installerVersion,
+                plugins: ["."],
+                vault: "tests/simple",
+            },
+        })),
+        ...mobileVersions.map<WebdriverIO.Capabilities>(([appVersion, installerVersion]) => ({
+            browserName: 'obsidian',
+            'goog:chromeOptions': {
+                mobileEmulation: {
+                    deviceMetrics: { height: 844, width: 390 },
+                },
+            },
+            'wdio:obsidianOptions': {
+                appVersion,
+                emulateMobile: true,
+                installerVersion,
+                plugins: ["."],
+                vault: "tests/simple",
+            },
+        })),
+    ],
     framework: 'mocha',
     logLevel: "warn",
 
