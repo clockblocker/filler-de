@@ -1,5 +1,6 @@
 import type { TAbstractFile, TFile, TFolder } from "obsidian";
 import { z } from "zod";
+import { splitPath as buildSplitPath, splitPathKey } from "./impl/split-path";
 import { CREATE, FILE, RENAME, TRASH } from "./types/literals";
 import type {
 	SplitPath,
@@ -57,4 +58,16 @@ export interface ObsidianVaultActionManager {
 	splitPath(tFile: TFile): SplitPathToFile | SplitPathToMdFile;
 	splitPath(tFolder: TFolder): SplitPathToFolder;
 	splitPath(tAbstractFile: TAbstractFile): SplitPath;
+}
+
+export { splitPathKey };
+
+export function splitPath(path: string): SplitPath;
+export function splitPath(file: TFile): SplitPathToFile | SplitPathToMdFile;
+export function splitPath(folder: TFolder): SplitPathToFolder;
+export function splitPath(file: TAbstractFile): SplitPath;
+export function splitPath(
+	input: string | TAbstractFile,
+): SplitPath | SplitPathToFile | SplitPathToMdFile | SplitPathToFolder {
+	return buildSplitPath(input);
 }
