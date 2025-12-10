@@ -6,7 +6,7 @@ import { mapDiffToActions } from "../diffing/tree-diff-applier";
 import { readNoteDtos } from "../filesystem/library-reader";
 import type { LibrarianState } from "../librarian-state";
 import { LibraryTree } from "../library-tree/library-tree";
-import type { NoteDto, TreePath } from "../types";
+import type { TreePath } from "../types";
 import type { FilesystemHealer } from "./filesystem-healer";
 
 export class TreeReconciler {
@@ -18,27 +18,26 @@ export class TreeReconciler {
 		} & Pick<TexfresserObsidianServices, "backgroundFileService">,
 	) {}
 
-	get trees(): Record<RootName, LibraryTree> {
-		return this.deps.state.trees;
+	get tree(): LibraryTree | null {
+		return this.deps.state.tree;
 	}
 
 	async initTrees(): Promise<void> {
-		this.deps.state.trees = {} as Record<RootName, LibraryTree>;
-		for (const rootName of LIBRARY_ROOTS) {
-			await this.deps.filesystemHealer.healRootFilesystem(rootName);
-			const notes = await readNoteDtos(
-				this.deps.backgroundFileService,
-				rootName,
-			);
-			this.deps.state.trees[rootName] = new LibraryTree(notes, rootName);
-		}
+		const rootName = LIBRARY_ROOTS[0];
+		await this.deps.filesystemHealer.healRootFilesystem(rootName);
+		const notes = await readNoteDtos(
+			this.deps.backgroundFileService,
+			rootName,
+		);
+		this.deps.state.tree = new LibraryTree(notes, rootName);
 	}
 
 	async reconcileSubtree(
 		rootName: RootName,
 		subtreePath: TreePath = [],
 	): Promise<void> {
-		const tree = this.deps.state.trees[rootName];
+		if (rootName !== LIBRARY_ROOTS[0]) return;
+		const tree = this.deps.state.tree;
 		if (!tree) return;
 
 		const filesystemNotes = await readNoteDtos(
@@ -91,7 +90,10 @@ export class TreeReconciler {
 		rootName: RootName,
 		mutation: (tree: LibraryTree) => T,
 	): { actions: ReturnType<typeof mapDiffToActions>; result: T } {
-		const tree = this.deps.state.trees[rootName];
+		if (rootName !== LIBRARY_ROOTS[0]) {
+			throw new Error(`Tree not found for root: ${rootName}`);
+		}
+		const tree = this.deps.state.tree;
 		if (!tree) {
 			throw new Error(`Tree not found for root: ${rootName}`);
 		}
@@ -117,7 +119,8 @@ export class TreeReconciler {
 	}
 
 	getSnapshot(rootName: RootName): NoteSnapshot | null {
-		const tree = this.deps.state.trees[rootName];
+		if (rootName !== LIBRARY_ROOTS[0]) return null;
+		const tree = this.deps.state.tree;
 		return tree ? tree.snapshot() : null;
 	}
 }

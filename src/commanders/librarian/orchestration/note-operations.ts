@@ -9,7 +9,7 @@ import type { TexfresserObsidianServices } from "../../../services/obsidian-serv
 import type { PrettyPath } from "../../../types/common-interface/dtos";
 import { TextStatus } from "../../../types/common-interface/enums";
 import type { ActionDispatcher } from "../action-dispatcher";
-import { isRootName, type RootName } from "../constants";
+import { isRootName, LIBRARY_ROOTS, type RootName } from "../constants";
 import { regenerateCodexActions } from "../diffing/tree-diff-applier";
 import {
 	pageNumberFromInt,
@@ -21,7 +21,7 @@ import {
 import type { LibrarianState } from "../librarian-state";
 import type { LibraryTree } from "../library-tree/library-tree";
 import { splitTextIntoPages } from "../text-splitter/text-splitter";
-import type { NoteDto, TreePath } from "../types";
+import type { NoteDto, SectionNode, TreePath } from "../types";
 import { createFolderActionsForPathParts } from "../utils/folder-actions";
 import type { TreeReconciler } from "./tree-reconciler";
 
@@ -41,21 +41,23 @@ export class NoteOperations {
 		>,
 	) {}
 
-	get trees(): Record<RootName, LibraryTree> {
-		return this.deps.state.trees;
+	get tree(): LibraryTree | null {
+		return this.deps.state.tree;
 	}
 
 	async createNewNoteInCurrentFolder(): Promise<void> {
 		const pwd = await this.deps.openedFileService.pwd();
 
-		if (Object.keys(this.deps.state.trees).length === 0) {
+		if (!this.deps.state.tree) {
 			await this.deps.treeReconciler.initTrees();
 		}
 
 		const treePathToPwd: TreePath = pwd.pathParts.slice(1);
-		const rootName = isRootName(pwd.pathParts[0])
-			? pwd.pathParts[0]
-			: undefined;
+		const rootCandidate = pwd.pathParts[0];
+		const rootName =
+			rootCandidate && isRootName(rootCandidate)
+				? rootCandidate
+				: undefined;
 		const affectedTree = this.getAffectedTree(pwd);
 
 		if (!affectedTree || !rootName) return;
@@ -98,9 +100,11 @@ export class NoteOperations {
 		}
 
 		const fullPath = fullPathFromSystemPath(currentFile.path);
-		const rootName = isRootName(fullPath.pathParts[0])
-			? fullPath.pathParts[0]
-			: undefined;
+		const rootCandidate = fullPath.pathParts[0];
+		const rootName =
+			rootCandidate && isRootName(rootCandidate)
+				? rootCandidate
+				: undefined;
 
 		if (!rootName) {
 			logWarning({
@@ -110,7 +114,7 @@ export class NoteOperations {
 			return false;
 		}
 
-		if (!this.deps.state.trees[rootName]) {
+		if (!this.deps.state.tree) {
 			logWarning({
 				description: "Tree not initialized for this root.",
 				location: "Librarian.makeNoteAText",
@@ -201,7 +205,7 @@ export class NoteOperations {
 			this.deps.dispatcher.pushMany(createActions);
 			await this.deps.dispatcher.flushNow();
 
-			this.deps.state.trees[rootName]?.addNotes([
+			this.deps.state.tree?.addNotes([
 				{ path: scrollTreePath, status: TextStatus.NotStarted },
 			]);
 
@@ -282,7 +286,7 @@ export class NoteOperations {
 				bookSectionPath,
 			);
 
-			const tree = this.deps.state.trees[rootName];
+			const tree = this.deps.state.tree;
 			if (tree) {
 				const getNode = (path: TreePath) => {
 					const mbNode = tree.getMaybeNode({ path });
@@ -353,12 +357,11 @@ export class NoteOperations {
 	}
 
 	private getPathFromSection(
-		section: { name: string; parent: { name: string } | null },
+		section: SectionNode,
 		tree: LibraryTree,
 	): TreePath {
 		const path: string[] = [];
-		let current: { name: string; parent: { name: string } | null } | null =
-			section;
+		let current: SectionNode | null = section;
 		while (current && tree.root !== current) {
 			path.unshift(current.name);
 			current = current.parent;
@@ -369,11 +372,15 @@ export class NoteOperations {
 	private getAffectedTree(fullPath: {
 		pathParts: string[];
 	}): LibraryTree | undefined {
-		const rootName = isRootName(fullPath.pathParts[0])
-			? fullPath.pathParts[0]
-			: undefined;
+		const rootCandidate = fullPath.pathParts[0];
+		const rootName =
+			rootCandidate && isRootName(rootCandidate)
+				? rootCandidate
+				: undefined;
 		if (!rootName) return undefined;
-		return this.deps.state.trees[rootName];
+		return rootName === LIBRARY_ROOTS[0]
+			? (this.deps.state.tree ?? undefined)
+			: undefined;
 	}
 
 	private generateUniqueNoteName(section: {

@@ -19,7 +19,7 @@ import { SelfEventTracker } from "./utils/self-event-tracker";
 export class Librarian {
 	backgroundFileService: TexfresserObsidianServices["backgroundFileService"];
 	openedFileService: TexfresserObsidianServices["openedFileService"];
-	trees: Record<RootName, LibraryTree>;
+	tree: LibraryTree | null;
 
 	private dispatcher: ActionDispatcher;
 	private state: LibrarianState;
@@ -73,7 +73,7 @@ export class Librarian {
 			state: this.state,
 			treeReconciler: this.treeReconciler,
 		});
-		this.trees = this.state.trees;
+		this.tree = this.state.tree;
 	}
 
 	_setSkipReconciliation(skip: boolean): void {
@@ -82,7 +82,7 @@ export class Librarian {
 
 	async initTrees(): Promise<void> {
 		await this.treeReconciler.initTrees();
-		this.trees = this.state.trees;
+		this.tree = this.state.tree;
 		await this.regenerateAllCodexes();
 	}
 
@@ -137,10 +137,9 @@ export class Librarian {
 	}
 
 	async regenerateAllCodexes(): Promise<void> {
-		for (const rootName of LIBRARY_ROOTS) {
-			const tree = this.trees[rootName];
-			if (!tree) continue;
-
+		const rootName = LIBRARY_ROOTS[0];
+		const tree = this.tree;
+		if (rootName && tree) {
 			const getNode = (path: TreePath) => {
 				const mbNode = tree.getMaybeNode({ path });
 				return mbNode.error ? undefined : mbNode.data;

@@ -10,7 +10,12 @@ import type { TexfresserObsidianServices } from "../../../services/obsidian-serv
 import type { PrettyPath } from "../../../types/common-interface/dtos";
 import { TextStatus } from "../../../types/common-interface/enums";
 import type { ActionDispatcher } from "../action-dispatcher";
-import { isInUntracked, isRootName, type RootName } from "../constants";
+import {
+	isInUntracked,
+	isRootName,
+	LIBRARY_ROOTS,
+	type RootName,
+} from "../constants";
 import { healFile } from "../filesystem/healing";
 import { toNodeName, treePathToScrollBasename } from "../indexing/codecs";
 import {
@@ -68,7 +73,8 @@ export class VaultEventHandler {
 			await this.deps.dispatcher.flushNow();
 		}
 
-		if (!this.deps.state.trees[rootName]) return;
+		if (rootName !== LIBRARY_ROOTS[0]) return;
+		if (!this.deps.state.tree) return;
 
 		const canonical = canonicalizePrettyPath({ prettyPath, rootName });
 		if ("reason" in canonical) return;
@@ -91,7 +97,8 @@ export class VaultEventHandler {
 
 		if (!rootName || !isRootName(rootName)) return;
 		if (isInUntracked(newFull.pathParts)) return;
-		if (!this.deps.state.trees[rootName]) return;
+		if (rootName !== LIBRARY_ROOTS[0]) return;
+		if (!this.deps.state.tree) return;
 
 		const pathPartsChanged = !arePathPartsEqual(
 			oldFull.pathParts,
@@ -265,7 +272,8 @@ export class VaultEventHandler {
 
 		if (!rootName || !isRootName(rootName)) return;
 		if (isInUntracked(fullPath.pathParts)) return;
-		if (!this.deps.state.trees[rootName]) return;
+		if (rootName !== LIBRARY_ROOTS[0]) return;
+		if (!this.deps.state.tree) return;
 
 		const prettyPath: PrettyPath = {
 			basename: fullPath.basename,

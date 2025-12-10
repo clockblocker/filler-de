@@ -21,7 +21,7 @@ Pure, sync, no tree access. Returns `VaultAction[]` — caller executes.
 
 **Purpose:** In-memory state reflecting filesystem.
 
-**State:** `LibraryTree` per root (nodes = notes/sections with status)
+**State:** `LibraryTree` (single root; nodes = notes/sections with status)
 
 **Functions:**
 - `readNoteDtos()` — filesystem → `NoteDto[]`
@@ -41,13 +41,7 @@ Pure, sync, no tree access. Returns `VaultAction[]` — caller executes.
 
 Holds state, routes events through layers.
 
-```typescript
-class Librarian {
-  trees: Record<RootName, LibraryTree>
-  selfEventTracker: SelfEventTracker
-  actionQueue: VaultActionQueue
-}
-```
+`Librarian` holds the tree, a `SelfEventTracker`, and an `ActionDispatcher`/queue.
 
 ### Event Flow: `onFileRenamed`
 
