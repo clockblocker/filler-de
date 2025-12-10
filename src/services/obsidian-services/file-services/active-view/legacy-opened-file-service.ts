@@ -13,7 +13,7 @@ import { getMaybeEditor } from "../../helpers/get-editor";
 import { logError } from "../../helpers/issue-handlers";
 import type { OpenedFileReader } from "./opened-file-reader";
 
-export class OpenedFileService {
+export class LegacyOpenedFileService {
 	private lastOpenedFiles: FullPathToMdFile[] = [];
 	private reader: OpenedFileReader;
 

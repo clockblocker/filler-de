@@ -9,8 +9,8 @@ import { AboveSelectionToolbarService } from "./services/obsidian-services/atomi
 import { ApiService } from "./services/obsidian-services/atomic-services/api-service";
 import { BottomToolbarService } from "./services/obsidian-services/atomic-services/bottom-toolbar-service";
 import { SelectionService } from "./services/obsidian-services/atomic-services/selection-service";
+import { LegacyOpenedFileService } from "./services/obsidian-services/file-services/active-view/legacy-opened-file-service";
 import { OpenedFileReader } from "./services/obsidian-services/file-services/active-view/opened-file-reader";
-import { OpenedFileService } from "./services/obsidian-services/file-services/active-view/opened-file-service";
 import { BackgroundFileService } from "./services/obsidian-services/file-services/background/background-file-service";
 import { VaultActionExecutor } from "./services/obsidian-services/file-services/background/vault-action-executor";
 import { VaultActionQueue } from "./services/obsidian-services/file-services/vault-action-queue";
@@ -128,7 +128,7 @@ export default class TextEaterPlugin extends Plugin {
 		this.apiService = new ApiService(this.settings);
 		this.openedFileReader = new OpenedFileReader(this.app);
 
-		this.openedFileService = new OpenedFileService(
+		this.openedFileService = new LegacyOpenedFileService(
 			this.app,
 			this.openedFileReader,
 		);

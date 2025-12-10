@@ -42,10 +42,15 @@ export interface ObsidianVaultActionManager {
 	dispatch(actions: readonly VaultAction[]): Promise<void>;
 
 	// Read-only operations
-	read(splitPath: SplitPathToMdFile): Promise<string>;
+	readContent(splitPath: SplitPathToMdFile): Promise<string>;
 	exists(splitPath: SplitPath): Promise<boolean>;
+	isInActiveView(splitPath: SplitPath): Promise<boolean>;
 	list(splitPath: SplitPathToFolder): Promise<SplitPath[]>;
 	pwd(): Promise<SplitPathToFile>;
+
+	getAbstractFile<SP extends SplitPath>(
+		splitPath: SP,
+	): Promise<SP["type"] extends "Folder" ? TFolder : TFile>;
 
 	// Helpers
 	splitPath(systemPath: string): SplitPath;

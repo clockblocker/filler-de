@@ -5,14 +5,14 @@ import {
 	segmentInQuotedLines,
 } from "../../../dto-services/quote-manager/interface";
 import type { SelectionService } from "../../../obsidian-services/atomic-services/selection-service";
-import type { OpenedFileService } from "../../../obsidian-services/file-services/active-view/opened-file-service";
+import type { LegacyOpenedFileService } from "../../../obsidian-services/file-services/active-view/legacy-opened-file-service";
 
 export default async function wrapSentencesInQuoteAnchor({
 	selectionService,
 	openedFileService,
 }: {
 	selectionService: SelectionService;
-	openedFileService: OpenedFileService;
+	openedFileService: LegacyOpenedFileService;
 }) {
 	try {
 		const selection = await selectionService.getSelection();

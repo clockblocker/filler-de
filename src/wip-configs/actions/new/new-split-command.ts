@@ -4,7 +4,7 @@ import {
 	segmentInQuotedLines,
 } from "../../../services/dto-services/quote-manager/interface";
 import type { SelectionService } from "../../../services/obsidian-services/atomic-services/selection-service";
-import type { OpenedFileService } from "../../../services/obsidian-services/file-services/active-view/opened-file-service";
+import type { LegacyOpenedFileService } from "../../../services/obsidian-services/file-services/active-view/legacy-opened-file-service";
 import { unwrapMaybeByThrowing } from "../../../types/common-interface/maybe";
 
 export default async function wrapSentencesInQuoteAnchor({
@@ -12,7 +12,7 @@ export default async function wrapSentencesInQuoteAnchor({
 	openedFileService,
 }: {
 	selectionService: SelectionService;
-	openedFileService: OpenedFileService;
+	openedFileService: LegacyOpenedFileService;
 }) {
 	try {
 		const selection = await selectionService.getSelection();

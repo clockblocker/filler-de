@@ -1,6 +1,6 @@
 import type { PrettyPath } from "../../../../types/common-interface/dtos";
 import { logError, logWarning } from "../../helpers/issue-handlers";
-import type { OpenedFileService } from "../active-view/opened-file-service";
+import type { LegacyOpenedFileService } from "../active-view/legacy-opened-file-service";
 import type { BackgroundFileService } from "./background-file-service";
 import {
 	getActionTargetPath,
@@ -9,14 +9,14 @@ import {
 } from "./background-vault-actions";
 
 /**
- * Executes vault actions via BackgroundFileService or OpenedFileService.
- * Routes to OpenedFileService if the target file is currently active.
+ * Executes vault actions via BackgroundFileService or LegacyOpenedFileService.
+ * Routes to LegacyOpenedFileService if the target file is currently active.
  * Actions should already be sorted by weight before calling execute().
  */
 export class VaultActionExecutor {
 	constructor(
 		private fileService: BackgroundFileService,
-		private openedFileService: OpenedFileService,
+		private openedFileService: LegacyOpenedFileService,
 	) {}
 
 	private async isActiveSafe(prettyPath: PrettyPath): Promise<boolean> {
