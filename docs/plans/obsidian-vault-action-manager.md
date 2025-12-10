@@ -26,10 +26,11 @@ callers still hit BackgroundFileService/OpenedFileService directly, defeating th
 - Routing policy unresolved: when to use opened vs background; need robust detection of visible/active files.
 - No cross-root guards (current stance: allow cross-root actions, but keying must keep roots distinct).
 
-## Implementation plan
+## Hight level punks to get right
 1) Solidify types & helpers
    - Keep `split-path.ts` with literal discriminants; add `splitPathKey` reused by collapse/dedupe.
    - Ensure `VaultAction` helpers align with split-path types.
+   - Dispatcher/executor live entirely inside `obsidian-vault-action-manager` (no Librarian leakage).
 
 2) Collapse logic
    - Implement `collapseActions(actions: VaultAction[]): VaultAction[]` using a per-path Map.
@@ -61,12 +62,12 @@ callers still hit BackgroundFileService/OpenedFileService directly, defeating th
    - Obsidian events → `VaultEvent` via `splitPath` overloads; hook in self-event tracking to avoid loops.
 
 9) Migration
-   - Keep `DeprecatedVaultActionQueue` for compatibility; new dispatcher wraps/extends behavior.
+   - Keep `DeprecatedVaultActionQueue` unchanged; focus on implementing the new dispatcher/executor first.
    - Legacy services remain but are renamed `Deprecated...` when consumed; migrate callers incrementally to facade.
 
 10) Testing
-   - Unit: split-path parsing, collapse rules, sorting, executor mapping with fakes, reader functions.
-   - Integration: dispatcher + executor with fake executor capturing ordered calls; event adapter mapping from mocked Obsidian events.
+   - Unit: pure helpers (split-path parsing, collapse rules, sorting, executor mapping with fakes, reader functions).
+   - E2E/integration: Obsidian-touching flows (dispatcher + executor path, event adapter mapping from real Obsidian events or closest harness).
 
 ## Routing policy (opened vs background)
 - Rule: if a file is open/visible, use `OpenedFileService` to preserve cursor/scroll/dirty state; otherwise use `BackgroundFileService`.
@@ -112,3 +113,15 @@ callers still hit BackgroundFileService/OpenedFileService directly, defeating th
     - `collapse.ts`: `collapseActions` (coalesce per-path with merge rules)
   - `executor.ts`: bridges to manager-owned file services (new impl); legacy services renamed to `Deprecated...`
   - `reader.ts`: read-only ops (`read/exists/list/pwd`) with routing
+
+### Implimentatation Plan
+1) OpenedFileService + e2e
+2) BackgroundFileService + e2e
+3) Reader + e2e
+4) Collapse logic + unit tests
+5) Sorting + unit tests
+6) Facade
+7) Dispatcher
+8) Executor
+9) Event adapter
+10) Migration
