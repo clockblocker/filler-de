@@ -6,10 +6,16 @@ import {
 } from "obsidian";
 import { Librarian } from "./commanders/librarian/librarian";
 import {
+	BackgroundFileService as NewBackgroundFileService,
+	splitPath as splitPathForBackground,
+	splitPathKey as splitPathKeyForBackground,
+} from "./obsidian-vault-action-manager/impl/background-file-service";
+import {
 	OpenedFileService,
 	splitPath,
 	splitPathKey,
 } from "./obsidian-vault-action-manager/impl/opened-file-service";
+import { Reader } from "./obsidian-vault-action-manager/impl/reader";
 import { AboveSelectionToolbarService } from "./services/obsidian-services/atomic-services/above-selection-toolbar-service";
 import { ApiService } from "./services/obsidian-services/atomic-services/api-service";
 import { BottomToolbarService } from "./services/obsidian-services/atomic-services/bottom-toolbar-service";
@@ -35,6 +41,8 @@ export default class TextEaterPlugin extends Plugin {
 	openedFileReader: OpenedFileReader;
 	legacyOpenedFileService: LegacyOpenedFileService;
 	testingOpenedFileService: OpenedFileService;
+	testingBackgroundFileService: NewBackgroundFileService;
+	testingReader: Reader;
 	backgroundFileService: BackgroundFileService;
 	selectionService: SelectionService;
 
@@ -139,6 +147,14 @@ export default class TextEaterPlugin extends Plugin {
 			this.openedFileReader,
 		);
 		this.testingOpenedFileService = new OpenedFileService(this.app);
+		this.testingBackgroundFileService = new NewBackgroundFileService(
+			this.app,
+		);
+		this.testingReader = new Reader(
+			this.testingOpenedFileService,
+			this.testingBackgroundFileService,
+		);
+		this.setTestingGlobals();
 
 		this.backgroundFileService = new BackgroundFileService({
 			fileManager: this.app.fileManager,
@@ -450,14 +466,34 @@ export default class TextEaterPlugin extends Plugin {
 						__textfresserTesting?: Record<string, unknown>;
 					}
 				).__textfresserTesting = {
+					backgroundFileService: this.testingBackgroundFileService,
 					openedFileService: this.testingOpenedFileService,
+					reader: this.testingReader,
 					splitPath,
+					splitPathBackground: splitPathForBackground,
 					splitPathKey,
+					splitPathKeyBackground: splitPathKeyForBackground,
 				};
 			},
 			id: "textfresser-testing-expose-opened-service",
 			name: "Testing: expose opened file service",
 		});
+	}
+
+	private setTestingGlobals() {
+		(
+			window as unknown as {
+				__textfresserTesting?: Record<string, unknown>;
+			}
+		).__textfresserTesting = {
+			backgroundFileService: this.testingBackgroundFileService,
+			openedFileService: this.testingOpenedFileService,
+			reader: this.testingReader,
+			splitPath,
+			splitPathBackground: splitPathForBackground,
+			splitPathKey,
+			splitPathKeyBackground: splitPathKeyForBackground,
+		};
 	}
 
 	getOpenedFileServiceForTesting() {
@@ -467,6 +503,22 @@ export default class TextEaterPlugin extends Plugin {
 	getOpenedFileServiceTestingApi() {
 		return {
 			openedFileService: this.testingOpenedFileService,
+			splitPath,
+			splitPathKey,
+		};
+	}
+
+	getBackgroundFileServiceTestingApi() {
+		return {
+			backgroundFileService: this.testingBackgroundFileService,
+			splitPath: splitPathForBackground,
+			splitPathKey: splitPathKeyForBackground,
+		};
+	}
+
+	getReaderTestingApi() {
+		return {
+			reader: this.testingReader,
 			splitPath,
 			splitPathKey,
 		};
