@@ -10,6 +10,7 @@ import {
 	treePathToPageBasename,
 	treePathToScrollBasename,
 } from "../indexing/codecs";
+
 import type { TreePath } from "../types";
 
 export type CanonicalFileKind = "scroll" | "page" | "codex";
