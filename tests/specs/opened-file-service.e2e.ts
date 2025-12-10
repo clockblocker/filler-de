@@ -9,6 +9,11 @@ describe("OpenedFileService e2e", () => {
 	});
 
 	it("reads active md, reports active view, and returns pwd", async () => {
+		await browser.executeObsidian(async ({ app }) => {
+			await app.commands.executeCommandById(
+				"textfresser-testing-expose-opened-service",
+			);
+		});
 		const result = await browser.executeObsidian(async ({ app }) => {
 			// Obsidian plugin registry is untyped in this environment.
 			const plugin = app.plugins.plugins["cbcr-text-eater-de"] as unknown as {

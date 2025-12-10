@@ -11,6 +11,10 @@ mock.module("obsidian", () => ({
 		path = "";
 		children: unknown[] = [];
 	},
+	MarkdownView: class MarkdownView {
+		file: unknown;
+		editor: unknown;
+	},
 }));
 
 // CJS fallback (kept for any require-using code paths)
@@ -29,6 +33,10 @@ if (typeof require !== "undefined") {
 			TFolder: class TFolder {
 				path = "";
 				children: unknown[] = [];
+			},
+			MarkdownView: class MarkdownView {
+				file: unknown;
+				editor: unknown;
 			},
 		},
 	};

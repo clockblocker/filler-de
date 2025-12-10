@@ -9,6 +9,11 @@ describe("BackgroundFileService e2e", () => {
 	});
 
 	it("creates, writes, reads, renames, and trashes md files", async () => {
+		await browser.executeObsidian(async ({ app }) => {
+			await app.commands.executeCommandById(
+				"textfresser-testing-expose-opened-service",
+			);
+		});
 		const result = await browser.executeObsidian(async ({ app }) => {
 			const plugin = app.plugins.plugins["cbcr-text-eater-de"] as unknown as {
 				getBackgroundFileServiceTestingApi?: () => {

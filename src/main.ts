@@ -6,6 +6,10 @@ import {
 } from "obsidian";
 import { Librarian } from "./commanders/librarian/librarian";
 import {
+	splitPath as managerSplitPath,
+	ObsidianVaultActionManagerImpl,
+} from "./obsidian-vault-action-manager";
+import {
 	BackgroundFileService as NewBackgroundFileService,
 	splitPath as splitPathForBackground,
 	splitPathKey as splitPathKeyForBackground,
@@ -43,6 +47,7 @@ export default class TextEaterPlugin extends Plugin {
 	testingOpenedFileService: OpenedFileService;
 	testingBackgroundFileService: NewBackgroundFileService;
 	testingReader: Reader;
+	vaultActionManager: ObsidianVaultActionManagerImpl;
 	backgroundFileService: BackgroundFileService;
 	selectionService: SelectionService;
 
@@ -154,6 +159,7 @@ export default class TextEaterPlugin extends Plugin {
 			this.testingOpenedFileService,
 			this.testingBackgroundFileService,
 		);
+		this.vaultActionManager = new ObsidianVaultActionManagerImpl(this.app);
 		this.setTestingGlobals();
 
 		this.backgroundFileService = new BackgroundFileService({
@@ -467,12 +473,14 @@ export default class TextEaterPlugin extends Plugin {
 					}
 				).__textfresserTesting = {
 					backgroundFileService: this.testingBackgroundFileService,
+					managerSplitPath,
 					openedFileService: this.testingOpenedFileService,
 					reader: this.testingReader,
 					splitPath,
 					splitPathBackground: splitPathForBackground,
 					splitPathKey,
 					splitPathKeyBackground: splitPathKeyForBackground,
+					vaultActionManager: this.vaultActionManager,
 				};
 			},
 			id: "textfresser-testing-expose-opened-service",
@@ -487,12 +495,14 @@ export default class TextEaterPlugin extends Plugin {
 			}
 		).__textfresserTesting = {
 			backgroundFileService: this.testingBackgroundFileService,
+			managerSplitPath,
 			openedFileService: this.testingOpenedFileService,
 			reader: this.testingReader,
 			splitPath,
 			splitPathBackground: splitPathForBackground,
 			splitPathKey,
 			splitPathKeyBackground: splitPathKeyForBackground,
+			vaultActionManager: this.vaultActionManager,
 		};
 	}
 
@@ -521,6 +531,13 @@ export default class TextEaterPlugin extends Plugin {
 			reader: this.testingReader,
 			splitPath,
 			splitPathKey,
+		};
+	}
+
+	getVaultActionManagerTestingApi() {
+		return {
+			manager: this.vaultActionManager,
+			splitPath: managerSplitPath,
 		};
 	}
 

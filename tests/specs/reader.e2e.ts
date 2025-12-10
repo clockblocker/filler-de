@@ -9,6 +9,11 @@ describe("Reader e2e", () => {
 	});
 
 	it("reads active md, checks exists, lists folder, and pwd", async () => {
+		await browser.executeObsidian(async ({ app }) => {
+			await app.commands.executeCommandById(
+				"textfresser-testing-expose-opened-service",
+			);
+		});
 		const result = await browser.executeObsidian(async ({ app }) => {
 			const plugin = app.plugins.plugins["cbcr-text-eater-de"] as unknown as {
 				getReaderTestingApi?: () => {
