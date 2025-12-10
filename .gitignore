@@ -25,3 +25,10 @@ data.json
 prompt.ts
 
 /tests/tracing/logs/**/*
+
+.obsidian-cache
+.env
+
+
+# Bun
+bun.lockb

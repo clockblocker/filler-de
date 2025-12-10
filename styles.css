@@ -1,19 +1,19 @@
 .note_block_title {
 	float: right;
-	justify-content: flex-end;
-
-	opacity: 0.1;
 
 	display: flex;
+	justify-content: flex-end;
 	width: 100%;
-	border-bottom: 1px dashed white;
-
-	font-size: 12px;
-	line-height: 12px;
+	padding-top: 4px;
 
 	padding-bottom: 2px;
 	margin-bottom: 8px;
-	padding-top: 4px;
+
+	font-size: 12px;
+	line-height: 12px;
+	border-bottom: 1px dashed white;
+
+	opacity: 0.1;
 }
 
 .cm-html-embed > .note_block_title {
@@ -22,9 +22,9 @@
 }
 
 .note_block_title.note_block_title_formen {
-	opacity: 0.2;
-	border-bottom: none;
 	border-top: 1px solid white;
+	border-bottom: none;
+	opacity: 0.2;
 }
 
 .note_block_title.note_block_title_kontexte {
@@ -49,23 +49,22 @@
 }
 
 .hidden {
+	flex: 1;
+	padding: 0; /* Remove padding if needed */
+	margin: 0; /* Remove margin if needed */
+	color: transparent !important; /* Hides text */
+	outline: none !important; /* No focus outline */
 	background-color: transparent !important;
 	border: none; /* No border */
 	box-shadow: none !important; /* No shadow */
-	outline: none !important; /* No focus outline */
-	color: transparent !important; /* Hides text */
-	padding: 0; /* Remove padding if needed */
-	margin: 0; /* Remove margin if needed */
 	box-shadow: transparent !important;
-
-	flex: 1;
 }
 
 .note_block {
 	display: flex;
-	border-bottom: 1px dashed hsla(0, 0%, 100%, 0.3);
-	padding-bottom: 4px;
 	width: 100%;
+	padding-bottom: 4px;
+	border-bottom: 1px dashed hsla(0, 0%, 100%, 0.3);
 }
 
 span.cm-html-embed {
@@ -83,29 +82,29 @@ span.cm-html-embed {
 /* The overlay bar itself */
 .my-bottom-overlay {
 	position: absolute; /* anchored inside the note pane, not global */
-	left: 0;
 	right: 0;
 	bottom: 0;
-	height: 56px;
+	left: 0;
+	z-index: 10; /* above note content, below app headers */
 	display: flex;
 	gap: 8px;
 	align-items: center;
+	height: 56px;
 	padding: 8px 12px;
-	border-top: 1px solid var(--background-modifier-border);
 	background: var(--background-primary);
-	backdrop-filter: blur(6px);
+	border-top: 1px solid var(--background-modifier-border);
 	box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
-	z-index: 10; /* above note content, below app headers */
+	backdrop-filter: blur(6px); /* above note content, below app headers */
 }
 
 /* Buttons */
 .my-bottom-overlay-btn {
-	font: inherit;
 	padding: 6px 10px;
-	border-radius: 8px;
-	border: 1px solid var(--background-modifier-border);
-	background: var(--background-secondary);
+	font: inherit;
 	cursor: pointer;
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
 }
 .my-bottom-overlay-btn:hover {
 	background: var(--background-secondary-alt);
@@ -125,22 +124,22 @@ body.hide-status-bar .mod-root .workspace-split {
 
 .selection-toolbar {
 	z-index: 10000; /* above selection and status popups */
-	padding: 6px;
-	border-radius: 10px;
-	border: 1px solid var(--background-modifier-border);
-	background: var(--background-primary);
-	box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
 	display: flex;
 	gap: 6px;
+	padding: 6px;
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 10px;
+	box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
 }
 
 .selection-toolbar-btn {
-	font: inherit;
 	padding: 4px 8px;
-	border-radius: 8px;
-	border: 1px solid var(--background-modifier-border);
-	background: var(--background-secondary);
+	font: inherit;
 	cursor: pointer;
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
 }
 .selection-toolbar-btn:hover {
 	background: var(--background-secondary-alt);
