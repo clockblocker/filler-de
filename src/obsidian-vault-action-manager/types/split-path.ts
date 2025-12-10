@@ -9,17 +9,17 @@ const SplitPathTypeSchema = z.enum(["Folder", "File", "MdFile"]);
 const SplitPathType = SplitPathTypeSchema.enum;
 
 const FolderSplitPathSchema = CoreSplitPathSchema.extend({
-	type: SplitPathType.Folder,
+	type: z.literal(SplitPathType.Folder),
 });
 
-const FileSplitPathSchema = FolderSplitPathSchema.extend({
+const FileSplitPathSchema = CoreSplitPathSchema.extend({
 	extension: z.string(),
-	type: SplitPathType.File,
+	type: z.literal(SplitPathType.File),
 });
 
-const MdFileSplitPathSchema = FileSplitPathSchema.extend({
+const MdFileSplitPathSchema = CoreSplitPathSchema.extend({
 	extension: z.literal("md"),
-	type: SplitPathType.MdFile,
+	type: z.literal(SplitPathType.MdFile),
 });
 
 const SplitPathSchema = z.discriminatedUnion("type", [
