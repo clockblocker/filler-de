@@ -2,6 +2,10 @@ import { mock } from "bun:test";
 
 // ESM-friendly mock for "obsidian" so imports resolve in tests
 mock.module("obsidian", () => ({
+	MarkdownView: class MarkdownView {
+		file: unknown;
+		editor: unknown;
+	},
 	TFile: class TFile {
 		path = "";
 		basename = "";
@@ -10,10 +14,6 @@ mock.module("obsidian", () => ({
 	TFolder: class TFolder {
 		path = "";
 		children: unknown[] = [];
-	},
-	MarkdownView: class MarkdownView {
-		file: unknown;
-		editor: unknown;
 	},
 }));
 
@@ -25,6 +25,10 @@ if (typeof require !== "undefined") {
 	// @ts-expect-error - require.cache shape
 	require.cache["obsidian"] = {
 		exports: {
+			MarkdownView: class MarkdownView {
+				file: unknown;
+				editor: unknown;
+			},
 			TFile: class TFile {
 				path = "";
 				basename = "";
@@ -33,10 +37,6 @@ if (typeof require !== "undefined") {
 			TFolder: class TFolder {
 				path = "";
 				children: unknown[] = [];
-			},
-			MarkdownView: class MarkdownView {
-				file: unknown;
-				editor: unknown;
 			},
 		},
 	};
