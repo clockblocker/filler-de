@@ -5,6 +5,11 @@ import {
 	type WorkspaceLeaf,
 } from "obsidian";
 import { Librarian } from "./commanders/librarian/librarian";
+import {
+	OpenedFileService,
+	splitPath,
+	splitPathKey,
+} from "./obsidian-vault-action-manager/impl/opened-file-service";
 import { AboveSelectionToolbarService } from "./services/obsidian-services/atomic-services/above-selection-toolbar-service";
 import { ApiService } from "./services/obsidian-services/atomic-services/api-service";
 import { BottomToolbarService } from "./services/obsidian-services/atomic-services/bottom-toolbar-service";
@@ -28,7 +33,8 @@ export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;
 	apiService: ApiService;
 	openedFileReader: OpenedFileReader;
-	openedFileService: OpenedFileService;
+	legacyOpenedFileService: LegacyOpenedFileService;
+	testingOpenedFileService: OpenedFileService;
 	backgroundFileService: BackgroundFileService;
 	selectionService: SelectionService;
 
@@ -128,10 +134,11 @@ export default class TextEaterPlugin extends Plugin {
 		this.apiService = new ApiService(this.settings);
 		this.openedFileReader = new OpenedFileReader(this.app);
 
-		this.openedFileService = new LegacyOpenedFileService(
+		this.legacyOpenedFileService = new LegacyOpenedFileService(
 			this.app,
 			this.openedFileReader,
 		);
+		this.testingOpenedFileService = new OpenedFileService(this.app);
 
 		this.backgroundFileService = new BackgroundFileService({
 			fileManager: this.app.fileManager,
@@ -140,7 +147,7 @@ export default class TextEaterPlugin extends Plugin {
 
 		this.vaultActionExecutor = new VaultActionExecutor(
 			this.backgroundFileService,
-			this.openedFileService,
+			this.legacyOpenedFileService,
 		);
 		this.vaultActionQueue = new VaultActionQueue(this.vaultActionExecutor);
 
@@ -153,7 +160,7 @@ export default class TextEaterPlugin extends Plugin {
 		this.librarian = new Librarian({
 			actionQueue: this.vaultActionQueue,
 			backgroundFileService: this.backgroundFileService,
-			openedFileService: this.openedFileService,
+			openedFileService: this.legacyOpenedFileService,
 		});
 		await this.librarian.initTrees();
 		console.log("[main] Librarian and trees initialized:", this.librarian);
@@ -435,6 +442,34 @@ export default class TextEaterPlugin extends Plugin {
 			id: "librarian-log-deep-ls",
 			name: "Librarian: log tree structure",
 		});
+
+		this.addCommand({
+			callback: () => {
+				(
+					window as unknown as {
+						__textfresserTesting?: Record<string, unknown>;
+					}
+				).__textfresserTesting = {
+					openedFileService: this.testingOpenedFileService,
+					splitPath,
+					splitPathKey,
+				};
+			},
+			id: "textfresser-testing-expose-opened-service",
+			name: "Testing: expose opened file service",
+		});
+	}
+
+	getOpenedFileServiceForTesting() {
+		return this.testingOpenedFileService;
+	}
+
+	getOpenedFileServiceTestingApi() {
+		return {
+			openedFileService: this.testingOpenedFileService,
+			splitPath,
+			splitPathKey,
+		};
 	}
 
 	async saveSettings() {

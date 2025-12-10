@@ -1,23 +1,7 @@
 import { browser } from "@wdio/globals";
-import { build } from "esbuild";
-import path from "path";
 import { obsidianPage } from "wdio-obsidian-service";
 
 const VAULT_PATH = "tests/simple";
-
-const openedFileServiceBundle = build({
-	bundle: true,
-	entryPoints: [
-		path.resolve(
-			process.cwd(),
-			"src/obsidian-vault-action-manager/impl/opened-file-service.ts",
-		),
-	],
-	external: ["obsidian"],
-	format: "cjs",
-	platform: "node",
-	write: false,
-}).then((result) => result.outputFiles[0]?.text ?? "");
 
 describe("OpenedFileService e2e", () => {
 	beforeEach(async () => {
@@ -25,43 +9,37 @@ describe("OpenedFileService e2e", () => {
 	});
 
 	it("reads active md, reports active view, and returns pwd", async () => {
-		const code = await openedFileServiceBundle;
-		const result = await browser.executeObsidian(
-			async ({ app }, { code }) => {
-				const loadModule = (bundle: string) => {
-					const module: { exports: Record<string, unknown> } = {
-						exports: {},
+		const result = await browser.executeObsidian(async ({ app }) => {
+			// Obsidian plugin registry is untyped in this environment.
+			const plugin = app.plugins.plugins["cbcr-text-eater-de"] as unknown as {
+				getOpenedFileServiceTestingApi?: () => {
+					openedFileService: {
+						readContent: (p: unknown) => Promise<string>;
+						pwd: () => Promise<unknown>;
+						isInActiveView: (p: unknown) => Promise<boolean>;
 					};
-					// eslint-disable-next-line no-new-func
-					const loader = new Function(
-						"require",
-						"module",
-						"exports",
-						bundle,
-					);
-					loader(require, module, module.exports);
-					return module.exports;
+					splitPath: (input: string) => unknown;
+					splitPathKey: (p: unknown) => string;
 				};
+			};
+			const api = plugin.getOpenedFileServiceTestingApi?.();
+			if (!api) throw new Error("testing api unavailable");
 
-				const { OpenedFileService, splitPath, splitPathKey } =
-					loadModule(code);
-				const service = new OpenedFileService(app);
+			const { openedFileService, splitPath, splitPathKey } = api;
 
-				await app.workspace.openLinkText("Welcome.md", "", false);
-				const target = splitPath("Welcome.md");
+			await app.workspace.openLinkText("Welcome.md", "", false);
+			const target = splitPath("Welcome.md");
 
-				const content = await service.readContent(target);
-				const pwd = await service.pwd();
-				const isActive = await service.isInActiveView(target);
+			const content = await openedFileService.readContent(target);
+			const pwd = await openedFileService.pwd();
+			const isActive = await openedFileService.isInActiveView(target);
 
-				return {
-					content,
-					isActive,
-					pwd: splitPathKey(pwd),
-				};
-			},
-			{ code },
-		);
+			return {
+				content,
+				isActive,
+				pwd: splitPathKey(pwd),
+			};
+		});
 
 		expect(result.content.startsWith("This is your vault")).toBe(true);
 		expect(result.pwd).toBe("Welcome.md");
@@ -69,47 +47,40 @@ describe("OpenedFileService e2e", () => {
 	});
 
 	it("lists folder children and checks existence", async () => {
-		const code = await openedFileServiceBundle;
-		const result = await browser.executeObsidian(
-			async ({ app }, { code }) => {
-				const loadModule = (bundle: string) => {
-					const module: { exports: Record<string, unknown> } = {
-						exports: {},
+		const result = await browser.executeObsidian(async ({ app }) => {
+			// Obsidian plugin registry is untyped in this environment.
+			const plugin = app.plugins.plugins["cbcr-text-eater-de"] as unknown as {
+				getOpenedFileServiceTestingApi?: () => {
+					openedFileService: {
+						list: (p: unknown) => Promise<unknown[]>;
+						exists: (p: unknown) => Promise<boolean>;
 					};
-					// eslint-disable-next-line no-new-func
-					const loader = new Function(
-						"require",
-						"module",
-						"exports",
-						bundle,
-					);
-					loader(require, module, module.exports);
-					return module.exports;
+					splitPath: (input: string) => unknown;
+					splitPathKey: (p: unknown) => string;
 				};
+			};
+			const api = plugin.getOpenedFileServiceTestingApi?.();
+			if (!api) throw new Error("testing api unavailable");
 
-				const { OpenedFileService, splitPath, splitPathKey } =
-					loadModule(code);
-				const service = new OpenedFileService(app);
+			const { openedFileService, splitPath, splitPathKey } = api;
 
-				await app.vault.createFolder("TempE2E").catch(() => {});
-				await app.vault.create("TempE2E/Note.md", "note").catch(() => {});
+			await app.vault.createFolder("TempE2E").catch(() => {});
+			await app.vault.create("TempE2E/Note.md", "note").catch(() => {});
 
-				const folder = splitPath("TempE2E");
-				const file = splitPath("TempE2E/Note.md");
-				const missing = splitPath("Missing/Nope.md");
+			const folder = splitPath("TempE2E");
+			const file = splitPath("TempE2E/Note.md");
+			const missing = splitPath("Missing/Nope.md");
 
-				const listed = await service.list(folder);
-				const existsFile = await service.exists(file);
-				const existsMissing = await service.exists(missing);
+			const listed = await openedFileService.list(folder);
+			const existsFile = await openedFileService.exists(file);
+			const existsMissing = await openedFileService.exists(missing);
 
-				return {
-					existsFile,
-					existsMissing,
-					listed: listed.map(splitPathKey).sort(),
-				};
-			},
-			{ code },
-		);
+			return {
+				existsFile,
+				existsMissing,
+				listed: listed.map(splitPathKey).sort(),
+			};
+		});
 
 		expect(result.existsFile).toBe(true);
 		expect(result.existsMissing).toBe(false);
