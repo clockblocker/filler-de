@@ -65,9 +65,6 @@ export class Librarian {
 			treeReconciler: this.treeReconciler,
 		});
 		this.eventHandler = new VaultEventHandler({
-			backgroundFileService: this.backgroundFileService,
-			filesystemHealer: this.filesystemHealer,
-			generateUniqueSplitPath: (p) => this.generateUniqueSplitPath(p),
 			manager: this.manager,
 			regenerateAllCodexes: () => this.regenerateAllCodexes(),
 			state: this.state,
