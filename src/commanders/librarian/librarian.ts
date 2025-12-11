@@ -1,8 +1,8 @@
 import type { TAbstractFile, TFile } from "obsidian";
 import { fullPathFromSystemPath } from "../../services/obsidian-services/atomic-services/pathfinder";
-import type { VaultActionQueue } from "../../services/obsidian-services/file-services/vault-action-queue";
 import type { TexfresserObsidianServices } from "../../services/obsidian-services/interface";
 import type { PrettyPath } from "../../types/common-interface/dtos";
+import type { ObsidianVaultActionManager } from "../obsidian-vault-action-manager";
 import { ActionDispatcher } from "./action-dispatcher";
 import { isRootName, LIBRARY_ROOTS, type RootName } from "./constants";
 import type { NoteSnapshot } from "./diffing/note-differ";
@@ -32,18 +32,17 @@ export class Librarian {
 	constructor({
 		backgroundFileService,
 		openedFileService,
-		actionQueue,
-	}: { actionQueue: VaultActionQueue } & Pick<
+		manager,
+	}: {
+		manager: ObsidianVaultActionManager;
+	} & Pick<
 		TexfresserObsidianServices,
 		"backgroundFileService" | "openedFileService"
 	>) {
 		this.backgroundFileService = backgroundFileService;
 		this.openedFileService = openedFileService;
 		this.state = new LibrarianState();
-		this.dispatcher = new ActionDispatcher(
-			actionQueue,
-			this.selfEventTracker,
-		);
+		this.dispatcher = new ActionDispatcher(manager, this.selfEventTracker);
 		this.filesystemHealer = new FilesystemHealer({
 			backgroundFileService,
 			dispatcher: this.dispatcher,

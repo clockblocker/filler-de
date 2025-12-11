@@ -27,8 +27,6 @@ import { SelectionService } from "./services/obsidian-services/atomic-services/s
 import { LegacyOpenedFileService } from "./services/obsidian-services/file-services/active-view/legacy-opened-file-service";
 import { OpenedFileReader } from "./services/obsidian-services/file-services/active-view/opened-file-reader";
 import { BackgroundFileService } from "./services/obsidian-services/file-services/background/background-file-service";
-import { VaultActionExecutor } from "./services/obsidian-services/file-services/background/vault-action-executor";
-import { VaultActionQueue } from "./services/obsidian-services/file-services/vault-action-queue";
 import { logError } from "./services/obsidian-services/helpers/issue-handlers";
 import { ACTION_CONFIGS } from "./services/wip-configs/actions/actions-config";
 // import newGenCommand from "./services/wip-configs/actions/new/new-gen-command";
@@ -53,10 +51,6 @@ export default class TextEaterPlugin extends Plugin {
 
 	selectionToolbarService: AboveSelectionToolbarService;
 	bottomToolbarService: BottomToolbarService;
-
-	// File management
-	vaultActionQueue: VaultActionQueue;
-	vaultActionExecutor: VaultActionExecutor;
 
 	// Commanders
 	librarian: Librarian;
@@ -167,12 +161,6 @@ export default class TextEaterPlugin extends Plugin {
 			vault: this.app.vault,
 		});
 
-		this.vaultActionExecutor = new VaultActionExecutor(
-			this.backgroundFileService,
-			this.legacyOpenedFileService,
-		);
-		this.vaultActionQueue = new VaultActionQueue(this.vaultActionExecutor);
-
 		this.selectionToolbarService = new AboveSelectionToolbarService(
 			this.app,
 		);
@@ -180,8 +168,8 @@ export default class TextEaterPlugin extends Plugin {
 		this.selectionService = new SelectionService(this.app);
 
 		this.librarian = new Librarian({
-			actionQueue: this.vaultActionQueue,
 			backgroundFileService: this.backgroundFileService,
+			manager: this.vaultActionManager,
 			openedFileService: this.legacyOpenedFileService,
 		});
 		await this.librarian.initTrees();

@@ -1,32 +1,34 @@
 import { describe, expect, it } from "bun:test";
 import { SelfEventTracker } from "../../../../src/commanders/librarian/utils/self-event-tracker";
+import type { CoreSplitPath } from "../../../../src/obsidian-vault-action-manager/types/split-path";
 import {
 	type VaultAction,
 	VaultActionType,
-} from "../../../../src/services/obsidian-services/file-services/background/background-vault-actions";
-import type { PrettyPath } from "../../../../src/types/common-interface/dtos";
+} from "../../../../src/obsidian-vault-action-manager/types/vault-action";
 
-const pp = (path: string): PrettyPath => {
+const cp = (path: string): CoreSplitPath => {
 	const parts = path.split("/").filter(Boolean);
 	const basenameWithExt = parts.pop() ?? "";
-	const basename = basenameWithExt.replace(/\.md$/, "");
-	return { basename, pathParts: parts };
+	const dot = basenameWithExt.lastIndexOf(".");
+	const basename = dot === -1 ? basenameWithExt : basenameWithExt.slice(0, dot);
+	const pathParts = parts;
+	return { basename, pathParts };
 };
 
-const rename = (from: PrettyPath, to: PrettyPath): VaultAction => ({
+const rename = (from: CoreSplitPath, to: CoreSplitPath): VaultAction => ({
 	payload: { from, to },
-	type: VaultActionType.RenameFile,
+	type: VaultActionType.RenameMdFile,
 });
 
-const write = (prettyPath: PrettyPath): VaultAction => ({
-	payload: { content: "", prettyPath },
-	type: VaultActionType.UpdateOrCreateFile,
+const write = (coreSplitPath: CoreSplitPath): VaultAction => ({
+	payload: { content: "", coreSplitPath },
+	type: VaultActionType.WriteMdFile,
 });
 
 describe("SelfEventTracker", () => {
 	it("pops registered rename keys once", () => {
 		const tracker = new SelfEventTracker();
-		tracker.register([rename(pp("a/b.md"), pp("c/d.md"))]);
+		tracker.register([rename(cp("a/b.md"), cp("c/d.md"))]);
 
 		expect(tracker.pop("a/b.md")).toBe(true);
 		expect(tracker.pop("c/d.md")).toBe(true);
@@ -36,11 +38,11 @@ describe("SelfEventTracker", () => {
 	it("tracks write/process/trash keys", () => {
 		const tracker = new SelfEventTracker();
 		tracker.register([
-			write(pp("x/y.md")),
-			{ payload: { prettyPath: pp("z.md") }, type: VaultActionType.TrashFile },
+			write(cp("x/y.md")),
+			{ payload: { coreSplitPath: cp("z.md") }, type: VaultActionType.TrashMdFile },
 			{
-				payload: { prettyPath: pp("w.md"), transform: (s: string) => s },
-				type: VaultActionType.ProcessFile,
+				payload: { coreSplitPath: cp("w.md"), transform: (s: string) => s },
+				type: VaultActionType.ProcessMdFile,
 			},
 		]);
 
@@ -51,7 +53,7 @@ describe("SelfEventTracker", () => {
 
 	it("normalizes slashes on pop", () => {
 		const tracker = new SelfEventTracker();
-		tracker.register([write(pp("root/file.md"))]);
+		tracker.register([write(cp("root/file.md"))]);
 
 		expect(tracker.pop("/root/file.md")).toBe(true);
 		expect(tracker.pop("\\root\\file.md")).toBe(false);

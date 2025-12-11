@@ -1,5 +1,5 @@
-import type { LegacyVaultAction } from "../../services/obsidian-services/file-services/background/background-vault-actions";
-import type { VaultActionQueue } from "../../services/obsidian-services/file-services/vault-action-queue";
+import type { ObsidianVaultActionManager } from "../obsidian-vault-action-manager";
+import type { VaultAction } from "../obsidian-vault-action-manager/types/vault-action";
 import type { SelfEventTracker } from "./utils/self-event-tracker";
 
 /**
@@ -7,27 +7,34 @@ import type { SelfEventTracker } from "./utils/self-event-tracker";
  * Keeps call sites concise and consistent.
  */
 export class ActionDispatcher {
-	private readonly queue: VaultActionQueue;
-	private readonly tracker: SelfEventTracker;
+	private readonly manager: ObsidianVaultActionManager;
+	private readonly buffer: VaultAction[] = [];
+	private readonly tracker?: SelfEventTracker;
 
-	constructor(queue: VaultActionQueue, tracker: SelfEventTracker) {
-		this.queue = queue;
+	constructor(
+		manager: ObsidianVaultActionManager,
+		tracker?: SelfEventTracker,
+	) {
+		this.manager = manager;
 		this.tracker = tracker;
 	}
 
-	registerSelf(actions: LegacyVaultAction[]): void {
-		this.tracker.register(actions);
+	registerSelf(actions: VaultAction[]): void {
+		this.tracker?.register(actions);
 	}
 
-	push(action: LegacyVaultAction): void {
-		this.queue.push(action);
+	push(action: VaultAction): void {
+		this.buffer.push(action);
 	}
 
-	pushMany(actions: LegacyVaultAction[]): void {
-		this.queue.pushMany(actions);
+	pushMany(actions: VaultAction[]): void {
+		this.buffer.push(...actions);
 	}
 
 	async flushNow(): Promise<void> {
-		await this.queue.flushNow();
+		if (this.buffer.length === 0) return;
+		const actions = [...this.buffer];
+		this.buffer.length = 0;
+		await this.manager.dispatch(actions);
 	}
 }

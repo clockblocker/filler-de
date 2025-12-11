@@ -1,26 +1,22 @@
 import { describe, expect, it } from "bun:test";
 import { Librarian } from "../../../../src/commanders/librarian/librarian";
-import type { ReadablePrettyFile } from "../../../../src/services/obsidian-services/file-services/background/background-file-service";
+import type { ObsidianVaultActionManager } from "../../../../src/commanders/obsidian-vault-action-manager";
 import {
 	type VaultAction,
 	VaultActionType,
-} from "../../../../src/services/obsidian-services/file-services/background/background-vault-actions";
-import type { VaultActionExecutor } from "../../../../src/services/obsidian-services/file-services/background/vault-action-executor";
-import { VaultActionQueue } from "../../../../src/services/obsidian-services/file-services/vault-action-queue";
+} from "../../../../src/obsidian-vault-action-manager/types/vault-action";
+import type { ReadablePrettyFile } from "../../../../src/services/obsidian-services/file-services/background/background-file-service";
 import type { TexfresserObsidianServices } from "../../../../src/services/obsidian-services/interface";
 
-function createQueueRecorder() {
+function createManagerRecorder() {
 	const executedActions: VaultAction[][] = [];
-	const executor = {
-		execute: async (actions: readonly VaultAction[]) => {
+	const manager = {
+		dispatch: async (actions: readonly VaultAction[]) => {
 			executedActions.push([...actions]);
 		},
-	};
+	} as unknown as ObsidianVaultActionManager;
 
-	return {
-		executedActions,
-		queue: new VaultActionQueue(executor as VaultActionExecutor, { flushDelayMs: 0 }),
-	};
+	return { executedActions, manager };
 }
 
 describe("Librarian audit", () => {
@@ -38,7 +34,7 @@ describe("Librarian audit", () => {
 			},
 		];
 
-		const { executedActions, queue } = createQueueRecorder();
+		const { executedActions, manager } = createManagerRecorder();
 
 		// Test double: only methods touched by initTrees/audit
 		const backgroundFileService =
@@ -51,8 +47,8 @@ describe("Librarian audit", () => {
 			{} as TexfresserObsidianServices["openedFileService"];
 
 		const librarian = new Librarian({
-			actionQueue: queue,
 			backgroundFileService,
+			manager,
 			openedFileService,
 		});
 
