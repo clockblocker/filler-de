@@ -3,10 +3,10 @@ import { createFolderActionsForPathParts } from "../../../../src/commanders/libr
 import {
 	type VaultAction,
 	VaultActionType,
-} from "../../../../src/services/obsidian-services/file-services/background/background-vault-actions";
+} from "../../../../src/obsidian-vault-action-manager/types/vault-action";
 
 const toNames = (actions: VaultAction[]): string[] =>
-	actions.map((a) => a.payload.prettyPath.basename);
+	actions.map((a) => a.payload.coreSplitPath.basename);
 
 describe("createFolderActionsForPathParts", () => {
 	it("creates actions for missing segments after root", () => {
@@ -17,8 +17,8 @@ describe("createFolderActionsForPathParts", () => {
 		);
 
 		expect(actions.map((a) => a.type)).toEqual([
-			VaultActionType.UpdateOrCreateFolder,
-			VaultActionType.UpdateOrCreateFolder,
+			VaultActionType.CreateFolder,
+			VaultActionType.CreateFolder,
 		]);
 		expect(toNames(actions)).toEqual(["A", "B"]);
 	});

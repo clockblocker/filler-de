@@ -3,7 +3,7 @@ import {
 	healFile,
 	healFiles,
 } from "../../../../src/commanders/librarian/filesystem/healing";
-import { VaultActionType } from "../../../../src/services/obsidian-services/file-services/background/background-vault-actions";
+import { VaultActionType } from "../../../../src/obsidian-vault-action-manager/types/vault-action";
 
 describe("healFile", () => {
 	const rootName: "Library" = "Library";
@@ -34,13 +34,11 @@ describe("healFile", () => {
 		expect(result.targetPath.pathParts).toEqual([rootName, "Section"]);
 
 		const renameAction = result.actions.find(
-			(a) => a.type === VaultActionType.RenameFile,
+			(a) => a.type === VaultActionType.RenameMdFile,
 		);
 		expect(renameAction).toBeDefined();
-		expect(renameAction?.payload.from.basename).toBe("Note.md");
-		expect(renameAction?.payload.from.extension).toBe("md");
-		expect(renameAction?.payload.to.basename).toBe("Note-Section.md");
-		expect(renameAction?.payload.to.extension).toBe("md");
+		expect(renameAction?.payload.from.basename).toBe("Note");
+		expect(renameAction?.payload.to.basename).toBe("Note-Section");
 	});
 
 	// Note: ScrollBasenameSchema accepts any non-empty string,
@@ -72,7 +70,7 @@ describe("healFile", () => {
 
 		// Folder actions are created for all folders in target path
 		const folderActions = result.actions.filter(
-			(a) => a.type === VaultActionType.UpdateOrCreateFolder,
+			(a) => a.type === VaultActionType.CreateFolder,
 		);
 		// Section folder action created (even if it exists, queue handles dedup)
 		expect(folderActions).toHaveLength(1);
@@ -89,7 +87,7 @@ describe("healFile", () => {
 		const result = healFile(prettyPath, rootName, seen);
 
 		const folderActions = result.actions.filter(
-			(a) => a.type === VaultActionType.UpdateOrCreateFolder,
+			(a) => a.type === VaultActionType.CreateFolder,
 		);
 		// Section already in seen, no folder action needed
 		expect(folderActions).toHaveLength(0);

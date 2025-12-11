@@ -149,7 +149,7 @@ export class VaultEventHandler {
 			basename: toNodeName(newFull.basename),
 			pathParts: newFull.pathParts,
 		};
-		const oldPath: CoreSplitPath = {
+		const oldSplitPath: CoreSplitPath = {
 			basename: toNodeName(oldFull.basename),
 			pathParts: oldFull.pathParts,
 		};
@@ -161,7 +161,7 @@ export class VaultEventHandler {
 			const revertAction: VaultAction = {
 				payload: {
 					from: newPath,
-					to: oldPath,
+					to: oldSplitPath,
 				},
 				type: VaultActionType.RenameMdFile,
 			};

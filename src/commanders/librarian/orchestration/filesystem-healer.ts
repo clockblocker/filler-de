@@ -1,4 +1,7 @@
-import type { CoreSplitPath } from "../../../obsidian-vault-action-manager/types/split-path";
+import type {
+	CoreSplitPath,
+	SplitPathToMdFile,
+} from "../../../obsidian-vault-action-manager/types/split-path";
 import {
 	type VaultAction,
 	VaultActionType,
@@ -62,20 +65,16 @@ export class FilesystemHealer {
 
 	private async initializeMetaInfo(
 		fileReaders: Array<
-			CoreSplitPath & { readContent: () => Promise<string> }
+			SplitPathToMdFile & { readContent: () => Promise<string> }
 		>,
 		rootName: RootName,
 	): Promise<VaultAction[]> {
 		const actions: VaultAction[] = [];
 
 		for (const reader of fileReaders) {
-			const splitPath: CoreSplitPath = {
-				basename: reader.basename,
-				pathParts: reader.pathParts,
-			};
-			if (isInUntracked(splitPath.pathParts)) continue;
+			if (isInUntracked(reader.pathParts)) continue;
 
-			const canonical = canonicalizePath({ path: splitPath, rootName });
+			const canonical = canonicalizePath({ path: reader, rootName });
 			if ("reason" in canonical) continue;
 
 			const kind = canonical.kind;
@@ -87,7 +86,7 @@ export class FilesystemHealer {
 				if (kind === "scroll") {
 					actions.push({
 						payload: {
-							coreSplitPath: splitPath,
+							coreSplitPath: reader,
 							transform: (old) =>
 								editOrAddMetaInfo(old, {
 									fileType: "Scroll",
@@ -103,7 +102,7 @@ export class FilesystemHealer {
 					const idx = Number(pageStr);
 					actions.push({
 						payload: {
-							coreSplitPath: splitPath,
+							coreSplitPath: reader,
 							transform: (old) =>
 								editOrAddMetaInfo(old, {
 									fileType: "Page",
@@ -117,7 +116,7 @@ export class FilesystemHealer {
 			} else if (kind !== "page" && meta.fileType === "Page") {
 				actions.push({
 					payload: {
-						coreSplitPath: splitPath,
+						coreSplitPath: reader,
 						transform: (old) =>
 							editOrAddMetaInfo(old, {
 								fileType: "Scroll",
@@ -133,7 +132,7 @@ export class FilesystemHealer {
 	}
 
 	private cleanupOrphanFolders(
-		fileReaders: Array<CoreSplitPath>,
+		fileReaders: Array<SplitPathToMdFile>,
 		rootName: RootName,
 	): VaultAction[] {
 		// Build folder contents map
@@ -143,14 +142,9 @@ export class FilesystemHealer {
 		>();
 
 		for (const reader of fileReaders) {
-			const splitPath: CoreSplitPath = {
-				basename: reader.basename,
-				pathParts: reader.pathParts,
-			};
+			if (isInUntracked(reader.pathParts)) continue;
 
-			if (isInUntracked(splitPath.pathParts)) continue;
-
-			const canonical = canonicalizePath({ path: splitPath, rootName });
+			const canonical = canonicalizePath({ path: reader, rootName });
 			const targetPath =
 				"reason" in canonical
 					? canonical.destination
