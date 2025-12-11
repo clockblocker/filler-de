@@ -1,4 +1,4 @@
-import type { LegacyActionDispatcher } from "../action-dispatcher";
+import type { ObsidianVaultActionManager } from "../../../obsidian-vault-action-manager";
 import { LIBRARY_ROOT, type RootName } from "../constants";
 import { type NoteSnapshot, noteDiffer } from "../diffing/note-differ";
 import { mapDiffToActions } from "../diffing/tree-diff-applier";
@@ -13,7 +13,7 @@ export class TreeReconciler {
 	constructor(
 		private readonly deps: {
 			state: LibrarianState;
-			dispatcher: LegacyActionDispatcher;
+			manager: ObsidianVaultActionManager;
 			filesystemHealer: FilesystemHealer;
 			backgroundFileService: ManagerFsAdapter;
 		},
@@ -84,13 +84,13 @@ export class TreeReconciler {
 			}
 		}
 
-		return this.withDiffSync(rootName, mutation);
+		return await this.withDiffSync(rootName, mutation);
 	}
 
-	withDiffSync<T>(
+	async withDiffSync<T>(
 		rootName: RootName,
 		mutation: (tree: LibraryTree) => T,
-	): { actions: ReturnType<typeof mapDiffToActions>; result: T } {
+	): Promise<{ actions: ReturnType<typeof mapDiffToActions>; result: T }> {
 		if (rootName !== LIBRARY_ROOT) {
 			throw new Error(`Tree not found for root: ${rootName}`);
 		}
@@ -113,7 +113,7 @@ export class TreeReconciler {
 		const actions = mapDiffToActions(diff, rootName, getNode);
 
 		if (actions.length > 0) {
-			this.deps.dispatcher.pushMany(actions);
+			await this.deps.manager.dispatch(actions);
 		}
 
 		return { actions, result };

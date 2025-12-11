@@ -7,7 +7,6 @@ import { splitPathKey } from "../../obsidian-vault-action-manager";
 import type { CoreSplitPath } from "../../obsidian-vault-action-manager/types/split-path";
 import { fullPathFromSystemPath } from "../../services/obsidian-services/atomic-services/pathfinder";
 import type { LegacyOpenedFileService } from "../../services/obsidian-services/file-services/active-view/legacy-opened-file-service";
-import { LegacyActionDispatcher } from "./action-dispatcher";
 import { isRootName, LIBRARY_ROOT, type RootName } from "./constants";
 import type { NoteSnapshot } from "./diffing/note-differ";
 import { regenerateCodexActions } from "./diffing/tree-diff-applier";
@@ -16,13 +15,12 @@ import type { LibraryTree } from "./library-tree/library-tree";
 import { FilesystemHealer } from "./orchestration/filesystem-healer";
 import { NoteOperations } from "./orchestration/note-operations";
 import { TreeReconciler } from "./orchestration/tree-reconciler";
-import { LegacyVaultEventHandler } from "./orchestration/vault-event-handler";
+import { VaultEventHandler } from "./orchestration/vault-event-handler";
 import type { NoteDto, TreePath } from "./types";
 import {
 	type ManagerFsAdapter,
 	makeManagerFsAdapter,
 } from "./utils/manager-fs-adapter.ts";
-import { LegacySelfEventTracker } from "./utils/self-event-tracker";
 
 export class Librarian {
 	backgroundFileService: ManagerFsAdapter;
@@ -30,13 +28,11 @@ export class Librarian {
 	manager: ObsidianVaultActionManager;
 	tree: LibraryTree | null;
 
-	private dispatcher: LegacyActionDispatcher;
 	private state: LibrarianState;
-	private legacySelfEventTracker = new LegacySelfEventTracker();
 	private filesystemHealer: FilesystemHealer;
 	private treeReconciler: TreeReconciler;
 	private noteOperations: NoteOperations;
-	private legacyEventHandler: LegacyVaultEventHandler;
+	private eventHandler: VaultEventHandler;
 
 	constructor({
 		manager,
@@ -49,36 +45,31 @@ export class Librarian {
 		this.backgroundFileService = makeManagerFsAdapter(manager);
 		this.openedFileService = openedFileService;
 		this.state = new LibrarianState();
-		this.dispatcher = new LegacyActionDispatcher(
-			manager,
-			this.legacySelfEventTracker,
-		);
 		this.filesystemHealer = new FilesystemHealer({
 			backgroundFileService: this.backgroundFileService,
-			dispatcher: this.dispatcher,
+			manager: this.manager,
 		});
 		this.treeReconciler = new TreeReconciler({
 			backgroundFileService: this.backgroundFileService,
-			dispatcher: this.dispatcher,
 			filesystemHealer: this.filesystemHealer,
+			manager: this.manager,
 			state: this.state,
 		});
 		this.noteOperations = new NoteOperations({
 			backgroundFileService: this.backgroundFileService,
-			dispatcher: this.dispatcher,
 			generateUniqueSplitPath: (p) => this.generateUniqueSplitPath(p),
+			manager: this.manager,
 			openedFileService: this.openedFileService,
 			regenerateAllCodexes: () => this.regenerateAllCodexes(),
 			state: this.state,
 			treeReconciler: this.treeReconciler,
 		});
-		this.legacyEventHandler = new LegacyVaultEventHandler({
+		this.eventHandler = new VaultEventHandler({
 			backgroundFileService: this.backgroundFileService,
-			dispatcher: this.dispatcher,
 			filesystemHealer: this.filesystemHealer,
 			generateUniqueSplitPath: (p) => this.generateUniqueSplitPath(p),
+			manager: this.manager,
 			regenerateAllCodexes: () => this.regenerateAllCodexes(),
-			selfEventTracker: this.legacySelfEventTracker,
 			state: this.state,
 			treeReconciler: this.treeReconciler,
 		});
@@ -98,33 +89,33 @@ export class Librarian {
 	// ─── Vault Event Handlers ─────────────────────────────────────────
 
 	async onFileCreated(file: TAbstractFile): Promise<void> {
-		await this.legacyEventHandler.onFileCreated(file);
+		await this.eventHandler.onFileCreated(file);
 	}
 
 	async onFileRenamed(file: TAbstractFile, oldPath: string): Promise<void> {
-		await this.legacyEventHandler.onFileRenamed(file, oldPath);
+		await this.eventHandler.onFileRenamed(file, oldPath);
 	}
 
 	async onFileDeleted(file: TAbstractFile): Promise<void> {
-		await this.legacyEventHandler.onFileDeleted(file);
+		await this.eventHandler.onFileDeleted(file);
 	}
 
 	// Manager-driven events (self-filtered inside manager)
 	async onManagedVaultEvent(event: VaultEvent): Promise<void> {
 		switch (event.type) {
 			case "FileCreated":
-				await this.legacyEventHandler.onFileCreatedFromSplitPath(
+				await this.eventHandler.onFileCreatedFromSplitPath(
 					event.splitPath,
 				);
 				return;
 			case "FileRenamed":
-				await this.legacyEventHandler.onFileRenamedFromSplitPath(
+				await this.eventHandler.onFileRenamedFromSplitPath(
 					event.to,
 					splitPathKey(event.from),
 				);
 				return;
 			case "FileTrashed":
-				await this.legacyEventHandler.onFileDeletedFromSplitPath(
+				await this.eventHandler.onFileDeletedFromSplitPath(
 					event.splitPath,
 				);
 				return;
@@ -184,11 +175,9 @@ export class Librarian {
 			);
 
 			if (actions.length > 0) {
-				this.dispatcher.pushMany(actions);
+				await this.manager.dispatch(actions);
 			}
 		}
-
-		await this.dispatcher.flushNow();
 	}
 
 	// ─── Private Helpers ──────────────────────────────────────────────

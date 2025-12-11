@@ -1,5 +1,6 @@
 import type { TAbstractFile } from "obsidian";
 import { TFile } from "obsidian";
+import type { ObsidianVaultActionManager } from "../../../obsidian-vault-action-manager";
 import { splitPathKey } from "../../../obsidian-vault-action-manager";
 import type {
 	CoreSplitPath,
@@ -13,7 +14,6 @@ import {
 import { editOrAddMetaInfo } from "../../../services/dto-services/meta-info-manager/interface";
 import { fullPathFromSystemPath } from "../../../services/obsidian-services/atomic-services/pathfinder";
 import { TextStatus } from "../../../types/common-interface/enums";
-import type { LegacyActionDispatcher } from "../action-dispatcher";
 import {
 	isInUntracked,
 	isRootName,
@@ -31,23 +31,21 @@ import type { LibrarianState } from "../librarian-state";
 import type { TreePath } from "../types";
 import { createFolderActionsForPathParts } from "../utils/folder-actions";
 import type { ManagerFsAdapter } from "../utils/manager-fs-adapter.ts";
-import type { LegacySelfEventTracker } from "../utils/self-event-tracker";
 import type { FilesystemHealer } from "./filesystem-healer";
 import type { TreeReconciler } from "./tree-reconciler";
 
 const RENAME_DEBOUNCE_MS = 100;
 
-export class LegacyVaultEventHandler {
+export class VaultEventHandler {
 	private pendingRenameRoots = new Set<RootName>();
 	private renameDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 	constructor(
 		private readonly deps: {
-			dispatcher: LegacyActionDispatcher;
+			manager: ObsidianVaultActionManager;
 			filesystemHealer: FilesystemHealer;
 			treeReconciler: TreeReconciler;
 			state: LibrarianState;
-			selfEventTracker: LegacySelfEventTracker;
 			regenerateAllCodexes: () => Promise<void>;
 			generateUniqueSplitPath: (
 				path: CoreSplitPath,
@@ -64,9 +62,7 @@ export class LegacyVaultEventHandler {
 
 		const healResult = healFile(splitPath, rootName);
 		if (healResult.actions.length > 0) {
-			this.deps.dispatcher.registerSelf(healResult.actions);
-			this.deps.dispatcher.pushMany(healResult.actions);
-			await this.deps.dispatcher.flushNow();
+			await this.deps.manager.dispatch(healResult.actions);
 		}
 
 		if (rootName !== LIBRARY_ROOT) return;
@@ -81,7 +77,6 @@ export class LegacyVaultEventHandler {
 	}
 
 	async onFileCreated(file: TAbstractFile): Promise<void> {
-		if (this.deps.selfEventTracker.pop(file.path)) return;
 		if (!(file instanceof TFile)) return;
 		if (file.extension !== "md") return;
 
@@ -122,9 +117,6 @@ export class LegacyVaultEventHandler {
 	}
 
 	async onFileRenamed(file: TAbstractFile, oldPath: string): Promise<void> {
-		const fromSelf = this.deps.selfEventTracker.pop(oldPath);
-		const toSelf = this.deps.selfEventTracker.pop(file.path);
-		if (fromSelf || toSelf) return;
 		if (!(file instanceof TFile)) return;
 		if (file.extension !== "md") return;
 
@@ -165,9 +157,7 @@ export class LegacyVaultEventHandler {
 				},
 				type: VaultActionType.RenameMdFile,
 			};
-			this.deps.dispatcher.registerSelf([revertAction]);
-			this.deps.dispatcher.push(revertAction);
-			await this.deps.dispatcher.flushNow();
+			await this.deps.manager.dispatch([revertAction]);
 			return;
 		}
 
@@ -215,9 +205,7 @@ export class LegacyVaultEventHandler {
 					},
 				];
 
-				this.deps.dispatcher.registerSelf(moveActions);
-				this.deps.dispatcher.pushMany(moveActions);
-				await this.deps.dispatcher.flushNow();
+				await this.deps.manager.dispatch(moveActions);
 
 				this.pendingRenameRoots.add(rootName);
 				this.scheduleRenameFlush();
@@ -226,9 +214,7 @@ export class LegacyVaultEventHandler {
 
 			const healResult = healFile(newPath, rootName);
 			if (healResult.actions.length > 0) {
-				this.deps.dispatcher.registerSelf(healResult.actions);
-				this.deps.dispatcher.pushMany(healResult.actions);
-				await this.deps.dispatcher.flushNow();
+				await this.deps.manager.dispatch(healResult.actions);
 			}
 
 			this.pendingRenameRoots.add(rootName);
@@ -239,9 +225,7 @@ export class LegacyVaultEventHandler {
 		if (!decoded) {
 			const healResult = healFile(newPath, rootName);
 			if (healResult.actions.length > 0) {
-				this.deps.dispatcher.registerSelf(healResult.actions);
-				this.deps.dispatcher.pushMany(healResult.actions);
-				await this.deps.dispatcher.flushNow();
+				await this.deps.manager.dispatch(healResult.actions);
 			}
 			this.pendingRenameRoots.add(rootName);
 			this.scheduleRenameFlush();
@@ -300,16 +284,13 @@ export class LegacyVaultEventHandler {
 			});
 		}
 
-		this.deps.dispatcher.registerSelf(moveActions);
-		this.deps.dispatcher.pushMany(moveActions);
-		await this.deps.dispatcher.flushNow();
+		await this.deps.manager.dispatch(moveActions);
 
 		this.pendingRenameRoots.add(rootName);
 		this.scheduleRenameFlush();
 	}
 
 	async onFileDeleted(file: TAbstractFile): Promise<void> {
-		if (this.deps.selfEventTracker.pop(file.path)) return;
 		if (!(file instanceof TFile)) return;
 		if (file.extension !== "md") return;
 
@@ -366,7 +347,6 @@ export class LegacyVaultEventHandler {
 		}
 
 		await this.deps.regenerateAllCodexes();
-		await this.deps.dispatcher.flushNow();
 	}
 }
 

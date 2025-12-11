@@ -1,3 +1,4 @@
+import type { ObsidianVaultActionManager } from "../../../obsidian-vault-action-manager";
 import type { CoreSplitPath } from "../../../obsidian-vault-action-manager/types/split-path";
 import {
 	type VaultAction,
@@ -8,7 +9,6 @@ import { fullPathFromSystemPath } from "../../../services/obsidian-services/atom
 import type { LegacyOpenedFileService } from "../../../services/obsidian-services/file-services/active-view/legacy-opened-file-service";
 import { logWarning } from "../../../services/obsidian-services/helpers/issue-handlers";
 import { TextStatus } from "../../../types/common-interface/enums";
-import type { LegacyActionDispatcher } from "../action-dispatcher";
 import { isRootName, LIBRARY_ROOT, type RootName } from "../constants";
 import { regenerateCodexActions } from "../diffing/tree-diff-applier";
 import {
@@ -30,7 +30,7 @@ export class NoteOperations {
 	constructor(
 		private readonly deps: {
 			state: LibrarianState;
-			dispatcher: LegacyActionDispatcher;
+			manager: ObsidianVaultActionManager;
 			treeReconciler: TreeReconciler;
 			regenerateAllCodexes: () => Promise<void>;
 			generateUniqueSplitPath: (
@@ -78,8 +78,6 @@ export class NoteOperations {
 				]),
 			[sectionPath],
 		);
-
-		await this.deps.dispatcher.flushNow();
 
 		await this.deps.openedFileService.cd({
 			basename: treePathToScrollBasename.encode(notePath),
@@ -175,9 +173,7 @@ export class NoteOperations {
 				},
 				type: VaultActionType.RenameMdFile,
 			};
-			this.deps.dispatcher.registerSelf([renameAction]);
-			this.deps.dispatcher.push(renameAction);
-			await this.deps.dispatcher.flushNow();
+			await this.deps.manager.dispatch([renameAction]);
 
 			const scrollTreePath: TreePath = [...sectionPath, textName];
 			const scrollPrettyPath: CoreSplitPath = {
@@ -202,9 +198,7 @@ export class NoteOperations {
 				},
 			];
 
-			this.deps.dispatcher.registerSelf(createActions);
-			this.deps.dispatcher.pushMany(createActions);
-			await this.deps.dispatcher.flushNow();
+			await this.deps.manager.dispatch(createActions);
 
 			this.deps.state.tree?.addNotes([
 				{ path: scrollTreePath, status: TextStatus.NotStarted },
@@ -243,9 +237,7 @@ export class NoteOperations {
 				type: VaultActionType.RenameMdFile,
 			});
 
-			this.deps.dispatcher.registerSelf(phase1Actions);
-			this.deps.dispatcher.pushMany(phase1Actions);
-			await this.deps.dispatcher.flushNow();
+			await this.deps.manager.dispatch(phase1Actions);
 
 			const phase2Actions: VaultAction[] = [];
 
@@ -273,9 +265,7 @@ export class NoteOperations {
 				});
 			}
 
-			this.deps.dispatcher.registerSelf(phase2Actions);
-			this.deps.dispatcher.pushMany(phase2Actions);
-			await this.deps.dispatcher.flushNow();
+			await this.deps.manager.dispatch(phase2Actions);
 
 			const bookSectionPath: TreePath = [...sectionPath, textName];
 			destinationPrettyPath = {
@@ -299,9 +289,7 @@ export class NoteOperations {
 					rootName,
 					getNode,
 				);
-				this.deps.dispatcher.registerSelf(codexActions);
-				this.deps.dispatcher.pushMany(codexActions);
-				await this.deps.dispatcher.flushNow();
+				await this.deps.manager.dispatch(codexActions);
 			}
 		}
 
@@ -322,8 +310,6 @@ export class NoteOperations {
 			(tree) => tree.setStatus({ path, status }),
 			parentPath.length > 0 ? [parentPath] : [],
 		);
-
-		await this.deps.dispatcher.flushNow();
 	}
 
 	async addNotes(rootName: RootName, notes: NoteDto[]): Promise<void> {
@@ -338,8 +324,6 @@ export class NoteOperations {
 			(tree) => tree.addNotes(notes),
 			parentPaths,
 		);
-
-		await this.deps.dispatcher.flushNow();
 	}
 
 	async deleteNotes(rootName: RootName, paths: TreePath[]): Promise<void> {
@@ -354,8 +338,6 @@ export class NoteOperations {
 			(tree) => tree.deleteNotes(paths),
 			parentPaths,
 		);
-
-		await this.deps.dispatcher.flushNow();
 	}
 
 	private getPathFromSection(

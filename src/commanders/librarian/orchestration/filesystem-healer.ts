@@ -1,3 +1,4 @@
+import type { ObsidianVaultActionManager } from "../../../obsidian-vault-action-manager";
 import type {
 	CoreSplitPath,
 	SplitPathToMdFile,
@@ -11,7 +12,6 @@ import {
 	extractMetaInfo,
 } from "../../../services/dto-services/meta-info-manager/interface";
 import { TextStatus } from "../../../types/common-interface/enums";
-import type { LegacyActionDispatcher } from "../action-dispatcher";
 import { isInUntracked, type RootName } from "../constants";
 import { healFile } from "../filesystem/healing";
 import { canonicalizePath } from "../invariants/path-canonicalizer";
@@ -20,8 +20,8 @@ import type { ManagerFsAdapter } from "../utils/manager-fs-adapter.ts";
 export class FilesystemHealer {
 	constructor(
 		private readonly deps: {
+			manager: ObsidianVaultActionManager;
 			backgroundFileService: ManagerFsAdapter;
-			dispatcher: LegacyActionDispatcher;
 		},
 	) {}
 
@@ -58,9 +58,7 @@ export class FilesystemHealer {
 
 		if (actions.length === 0) return;
 
-		this.deps.dispatcher.registerSelf(actions);
-		this.deps.dispatcher.pushMany(actions);
-		await this.deps.dispatcher.flushNow();
+		await this.deps.manager.dispatch(actions);
 	}
 
 	private async initializeMetaInfo(
