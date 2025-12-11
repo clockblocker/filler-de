@@ -1,12 +1,16 @@
 import type { App, TAbstractFile } from "obsidian";
 import type { VaultEvent, VaultEventHandler } from "../index";
 import { CREATE, FILE, RENAME, TRASH } from "../types/literals";
-import { splitPath } from "./split-path";
+import type { SelfEventTracker } from "./self-event-tracker";
+import { splitPath, splitPathKey } from "./split-path";
 
 export class EventAdapter {
 	private listeners: Array<() => void> = [];
 
-	constructor(private readonly app: App) {}
+	constructor(
+		private readonly app: App,
+		private readonly selfEvents: SelfEventTracker,
+	) {}
 
 	start(handler: VaultEventHandler): void {
 		const onCreate = this.app.vault.on("create", (file) =>
@@ -36,6 +40,7 @@ export class EventAdapter {
 	): void {
 		const split = splitPath(file);
 		if (split.type === "Folder") return;
+		if (this.selfEvents.consume(splitPathKey(split))) return;
 		void handler({
 			splitPath: split,
 			type: `${FILE}${CREATE}d` as const,
@@ -51,6 +56,11 @@ export class EventAdapter {
 		if (split.type === "Folder") return;
 		const from = splitPath(oldPath);
 		if (from.type === "Folder") return;
+		if (
+			this.selfEvents.consume(splitPathKey(split)) ||
+			this.selfEvents.consume(splitPathKey(from))
+		)
+			return;
 		void handler({
 			from,
 			to: split,
@@ -64,6 +74,7 @@ export class EventAdapter {
 	): void {
 		const split = splitPath(file);
 		if (split.type === "Folder") return;
+		if (this.selfEvents.consume(splitPathKey(split))) return;
 		void handler({
 			splitPath: split,
 			type: `${FILE}${TRASH}ed` as const,

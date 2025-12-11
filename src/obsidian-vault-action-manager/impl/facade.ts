@@ -16,7 +16,9 @@ import { Dispatcher } from "./dispatcher";
 import { EventAdapter } from "./event-adapter";
 import { Executor } from "./executor";
 import { OpenedFileService } from "./opened-file-service";
+import { pathsForAction } from "./paths-for-action";
 import { Reader } from "./reader";
+import { SelfEventTracker } from "./self-event-tracker";
 import { splitPath } from "./split-path";
 
 export class ObsidianVaultActionManagerImpl
@@ -27,6 +29,7 @@ export class ObsidianVaultActionManagerImpl
 	private readonly reader: Reader;
 	private readonly dispatcher: Dispatcher;
 	private readonly eventAdapter: EventAdapter;
+	private readonly selfEvents = new SelfEventTracker();
 	private readonly subscribers = new Set<VaultEventHandler>();
 
 	constructor(app: App) {
@@ -35,7 +38,7 @@ export class ObsidianVaultActionManagerImpl
 		const executor = new Executor(this.background, this.opened);
 		this.reader = new Reader(this.opened, this.background);
 		this.dispatcher = new Dispatcher(executor);
-		this.eventAdapter = new EventAdapter(app);
+		this.eventAdapter = new EventAdapter(app, this.selfEvents);
 	}
 
 	subscribe(handler: VaultEventHandler): Teardown {
@@ -54,6 +57,7 @@ export class ObsidianVaultActionManagerImpl
 	}
 
 	async dispatch(actions: readonly VaultAction[]): Promise<void> {
+		this.selfEvents.register(pathsForAction(actions));
 		await this.dispatcher.dispatch(actions);
 	}
 
