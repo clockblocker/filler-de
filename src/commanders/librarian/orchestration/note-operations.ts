@@ -1,11 +1,11 @@
 import { editOrAddMetaInfo } from "../../../services/dto-services/meta-info-manager/interface";
 import { fullPathFromSystemPath } from "../../../services/obsidian-services/atomic-services/pathfinder";
+import type { LegacyOpenedFileService } from "../../../services/obsidian-services/file-services/active-view/legacy-opened-file-service";
 import {
 	type VaultAction,
 	VaultActionType,
 } from "../../../services/obsidian-services/file-services/background/background-vault-actions";
 import { logWarning } from "../../../services/obsidian-services/helpers/issue-handlers";
-import type { TexfresserObsidianServices } from "../../../services/obsidian-services/interface";
 import type { PrettyPath } from "../../../types/common-interface/dtos";
 import { TextStatus } from "../../../types/common-interface/enums";
 import type { ActionDispatcher } from "../action-dispatcher";
@@ -23,6 +23,7 @@ import type { LibraryTree } from "../library-tree/library-tree";
 import { splitTextIntoPages } from "../text-splitter/text-splitter";
 import type { NoteDto, SectionNode, TreePath } from "../types";
 import { createFolderActionsForPathParts } from "../utils/folder-actions";
+import type { ManagerFsAdapter } from "../utils/manager-fs-adapter";
 import {
 	prettyPathToFolder,
 	prettyPathToMdFile,
@@ -39,10 +40,9 @@ export class NoteOperations {
 			generateUniquePrettyPath: (
 				prettyPath: PrettyPath,
 			) => Promise<PrettyPath>;
-		} & Pick<
-			TexfresserObsidianServices,
-			"openedFileService" | "backgroundFileService"
-		>,
+			openedFileService: LegacyOpenedFileService;
+			backgroundFileService: ManagerFsAdapter;
+		},
 	) {}
 
 	get tree(): LibraryTree | null {

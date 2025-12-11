@@ -1,8 +1,8 @@
 import { extractMetaInfo } from "../../../services/dto-services/meta-info-manager/interface";
 import type { MetaInfo } from "../../../services/dto-services/meta-info-manager/types";
-import type { ReadablePrettyFile } from "../../../services/obsidian-services/file-services/background/background-file-service";
 import { TextStatus } from "../../../types/common-interface/enums";
 import type { LibraryFile, TreePath } from "../types";
+import type { ManagerFsReader } from "../utils/manager-fs-adapter";
 import {
 	CodexBaseameSchema,
 	PageBasenameSchema,
@@ -43,7 +43,7 @@ export function getTreePathFromLibraryFile(libraryFile: LibraryFile): TreePath {
  */
 function inferMetaInfo({
 	basename,
-}: Pick<ReadablePrettyFile, "basename" | "pathParts">): MetaInfo | null {
+}: Pick<ManagerFsReader, "basename" | "pathParts">): MetaInfo | null {
 	const codexResult = CodexBaseameSchema.safeParse(basename);
 	if (codexResult.success) {
 		return {
@@ -85,7 +85,7 @@ function inferMetaInfo({
 }
 
 export async function prettyFileWithReaderToLibraryFile(
-	fileReader: ReadablePrettyFile,
+	fileReader: ManagerFsReader,
 ): Promise<LibraryFile | null> {
 	const content = await fileReader.readContent();
 	let metaInfo = extractMetaInfo(content);
@@ -139,7 +139,7 @@ export async function prettyFileWithReaderToLibraryFile(
 }
 
 export async function prettyFilesWithReaderToLibraryFiles(
-	fileReaders: readonly ReadablePrettyFile[],
+	fileReaders: readonly ManagerFsReader[],
 ): Promise<LibraryFile[]> {
 	const libraryFiles = await Promise.all(
 		fileReaders.map(prettyFileWithReaderToLibraryFile),

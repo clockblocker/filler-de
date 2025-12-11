@@ -5,6 +5,7 @@ import type {
 } from "../../obsidian-vault-action-manager";
 import { splitPathKey } from "../../obsidian-vault-action-manager";
 import { fullPathFromSystemPath } from "../../services/obsidian-services/atomic-services/pathfinder";
+import type { LegacyOpenedFileService } from "../../services/obsidian-services/file-services/active-view/legacy-opened-file-service";
 import type { PrettyPath } from "../../types/common-interface/dtos";
 import { ActionDispatcher } from "./action-dispatcher";
 import { isRootName, LIBRARY_ROOTS, type RootName } from "./constants";
@@ -17,12 +18,16 @@ import { NoteOperations } from "./orchestration/note-operations";
 import { TreeReconciler } from "./orchestration/tree-reconciler";
 import { VaultEventHandler } from "./orchestration/vault-event-handler";
 import type { NoteDto, TreePath } from "./types";
-import { makeManagerFsAdapter } from "./utils/manager-fs-adapter";
+import {
+	type ManagerFsAdapter,
+	makeManagerFsAdapter,
+} from "./utils/manager-fs-adapter";
 import { SelfEventTracker } from "./utils/self-event-tracker";
 
 export class Librarian {
-	backgroundFileService: ReturnType<typeof makeManagerFsAdapter>;
-	openedFileService: unknown;
+	backgroundFileService: ManagerFsAdapter;
+	openedFileService: LegacyOpenedFileService;
+	manager: ObsidianVaultActionManager;
 	tree: LibraryTree | null;
 
 	private dispatcher: ActionDispatcher;
@@ -33,9 +38,16 @@ export class Librarian {
 	private noteOperations: NoteOperations;
 	private eventHandler: VaultEventHandler;
 
-	constructor({ manager }: { manager: ObsidianVaultActionManager }) {
+	constructor({
+		manager,
+		openedFileService,
+	}: {
+		manager: ObsidianVaultActionManager;
+		openedFileService: LegacyOpenedFileService;
+	}) {
+		this.manager = manager;
 		this.backgroundFileService = makeManagerFsAdapter(manager);
-		this.openedFileService = undefined;
+		this.openedFileService = openedFileService;
 		this.state = new LibrarianState();
 		this.dispatcher = new ActionDispatcher(manager, this.selfEventTracker);
 		this.filesystemHealer = new FilesystemHealer({

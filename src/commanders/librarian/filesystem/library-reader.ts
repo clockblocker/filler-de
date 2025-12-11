@@ -1,15 +1,14 @@
-import type { TexfresserObsidianServices } from "../../../services/obsidian-services/interface";
 import type { PrettyPath } from "../../../types/common-interface/dtos";
 import { isInUntracked, type RootName } from "../constants";
 import { prettyFilesWithReaderToLibraryFiles } from "../indexing/libraryFileAdapters";
 import { noteDtosFromLibraryFiles } from "../pure-functions/note-dtos-from-library-file-dtos";
 import type { LibraryFile, NoteDto, TreePath } from "../types";
+import type { ManagerFsAdapter } from "../utils/manager-fs-adapter";
 
 /**
  * Type for the background file service dependency.
  */
-export type BackgroundFileService =
-	TexfresserObsidianServices["backgroundFileService"];
+export type BackgroundFileService = ManagerFsAdapter;
 
 // ─── Exported Pure Functions ─────────────────────────────────────────────
 

@@ -7,6 +7,7 @@ import {
 	type VaultAction,
 	VaultActionType,
 } from "../../../../src/obsidian-vault-action-manager/types/vault-action";
+import type { LegacyOpenedFileService } from "../../../../src/services/obsidian-services/file-services/active-view/legacy-opened-file-service";
 
 function createManagerRecorder(readers: { basename: string; pathParts: string[] }[]) {
 	const executedActions: VaultAction[][] = [];
@@ -62,9 +63,24 @@ describe("Librarian audit", () => {
 		];
 
 		const { executedActions, manager } = createManagerRecorder(readers);
+		const openedFileService = {
+			cd: async () => {},
+			getApp: () =>
+				({
+					workspace: {
+						getActiveFile: () => null,
+					},
+				}) as unknown,
+			pwd: async () => ({
+				basename: "",
+				pathParts: [],
+				type: "Folder",
+			}),
+		} as unknown as LegacyOpenedFileService;
 
 		const librarian = new Librarian({
 			manager,
+			openedFileService,
 		});
 
 		await librarian.initTrees();

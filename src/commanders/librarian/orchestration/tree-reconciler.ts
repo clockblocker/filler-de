@@ -1,4 +1,3 @@
-import type { TexfresserObsidianServices } from "../../../services/obsidian-services/interface";
 import type { ActionDispatcher } from "../action-dispatcher";
 import { LIBRARY_ROOTS, type RootName } from "../constants";
 import { type NoteSnapshot, noteDiffer } from "../diffing/note-differ";
@@ -7,6 +6,7 @@ import { readNoteDtos } from "../filesystem/library-reader";
 import type { LibrarianState } from "../librarian-state";
 import { LibraryTree } from "../library-tree/library-tree";
 import type { TreePath } from "../types";
+import type { ManagerFsAdapter } from "../utils/manager-fs-adapter";
 import type { FilesystemHealer } from "./filesystem-healer";
 
 export class TreeReconciler {
@@ -15,7 +15,8 @@ export class TreeReconciler {
 			state: LibrarianState;
 			dispatcher: ActionDispatcher;
 			filesystemHealer: FilesystemHealer;
-		} & Pick<TexfresserObsidianServices, "backgroundFileService">,
+			backgroundFileService: ManagerFsAdapter;
+		},
 	) {}
 
 	get tree(): LibraryTree | null {

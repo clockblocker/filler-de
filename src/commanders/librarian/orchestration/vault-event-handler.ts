@@ -7,7 +7,6 @@ import {
 	type VaultAction,
 	VaultActionType,
 } from "../../../services/obsidian-services/file-services/background/background-vault-actions";
-import type { TexfresserObsidianServices } from "../../../services/obsidian-services/interface";
 import type { PrettyPath } from "../../../types/common-interface/dtos";
 import { TextStatus } from "../../../types/common-interface/enums";
 import type { ActionDispatcher } from "../action-dispatcher";
@@ -27,6 +26,7 @@ import {
 import type { LibrarianState } from "../librarian-state";
 import type { TreePath } from "../types";
 import { createFolderActionsForPathParts } from "../utils/folder-actions";
+import type { ManagerFsAdapter } from "../utils/manager-fs-adapter";
 import type { SelfEventTracker } from "../utils/self-event-tracker";
 import type { FilesystemHealer } from "./filesystem-healer";
 import type { TreeReconciler } from "./tree-reconciler";
@@ -48,7 +48,8 @@ export class VaultEventHandler {
 			generateUniquePrettyPath: (
 				prettyPath: PrettyPath,
 			) => Promise<PrettyPath>;
-		} & Pick<TexfresserObsidianServices, "backgroundFileService">,
+			backgroundFileService: ManagerFsAdapter;
+		},
 	) {}
 
 	private async handleFileCreated(prettyPath: PrettyPath): Promise<void> {

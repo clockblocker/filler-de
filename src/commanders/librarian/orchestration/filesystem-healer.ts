@@ -6,20 +6,20 @@ import {
 	type VaultAction,
 	VaultActionType,
 } from "../../../services/obsidian-services/file-services/background/background-vault-actions";
-import type { TexfresserObsidianServices } from "../../../services/obsidian-services/interface";
 import type { PrettyPath } from "../../../types/common-interface/dtos";
 import { TextStatus } from "../../../types/common-interface/enums";
 import type { ActionDispatcher } from "../action-dispatcher";
 import { isInUntracked, type RootName } from "../constants";
 import { healFile } from "../filesystem/healing";
 import { canonicalizePrettyPath } from "../invariants/path-canonicalizer";
+import type { ManagerFsAdapter } from "../utils/manager-fs-adapter";
 
 export class FilesystemHealer {
 	constructor(
-		private readonly deps: Pick<
-			TexfresserObsidianServices,
-			"backgroundFileService"
-		> & { dispatcher: ActionDispatcher },
+		private readonly deps: {
+			backgroundFileService: ManagerFsAdapter;
+			dispatcher: ActionDispatcher;
+		},
 	) {}
 
 	async healRootFilesystem(rootName: RootName): Promise<void> {

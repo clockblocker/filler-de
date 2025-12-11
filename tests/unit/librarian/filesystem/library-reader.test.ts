@@ -1,20 +1,24 @@
 import { describe, expect, it } from "bun:test";
 import { readNoteDtos } from "../../../../src/commanders/librarian/filesystem/library-reader";
 import { treePathToCodexBasename, treePathToScrollBasename } from "../../../../src/commanders/librarian/indexing/codecs";
-import type { ReadablePrettyFile } from "../../../../src/services/obsidian-services/file-services/background/background-file-service";
-import type { TexfresserObsidianServices } from "../../../../src/services/obsidian-services/interface";
+import type {
+	ManagerFsAdapter,
+	ManagerFsReader,
+} from "../../../../src/commanders/librarian/utils/manager-fs-adapter";
 
 const mkReader = (
 	basename: string,
 	pathParts: string[],
 	content = "",
-): ReadablePrettyFile => ({
+): ManagerFsReader => ({
 	basename,
 	pathParts,
 	readContent: async () => content,
 });
 
-type BgService = Pick<TexfresserObsidianServices["backgroundFileService"], "getReadersToAllMdFilesInFolder">;
+type BgService = {
+	getReadersToAllMdFilesInFolder: ManagerFsAdapter["getReadersToAllMdFilesInFolder"];
+};
 
 describe("readNoteDtos", () => {
 	it("filters untracked and codex files, keeps tracked notes", async () => {

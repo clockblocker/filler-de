@@ -1,7 +1,7 @@
 import type { ObsidianVaultActionManager } from "../../obsidian-vault-action-manager";
 import { prettyPathToFolder, prettyPathToMdFile } from "./path-conversions";
 
-type Reader = {
+export type ManagerFsReader = {
 	basename: string;
 	pathParts: string[];
 	readContent: () => Promise<string>;
@@ -11,7 +11,7 @@ type Reader = {
  * Minimal adapter over ObsidianVaultActionManager to satisfy read-only
  * background file service needs (exists/readContent/deep list md files).
  */
-export function makeManagerFsAdapter(manager: ObsidianVaultActionManager): {
+export type ManagerFsAdapter = {
 	exists(prettyPath: {
 		basename: string;
 		pathParts: string[];
@@ -24,8 +24,12 @@ export function makeManagerFsAdapter(manager: ObsidianVaultActionManager): {
 		basename: string;
 		pathParts: string[];
 		type: "folder";
-	}): Promise<Reader[]>;
-} {
+	}): Promise<ManagerFsReader[]>;
+};
+
+export function makeManagerFsAdapter(
+	manager: ObsidianVaultActionManager,
+): ManagerFsAdapter {
 	const exists = async (prettyPath: {
 		basename: string;
 		pathParts: string[];
@@ -40,8 +44,8 @@ export function makeManagerFsAdapter(manager: ObsidianVaultActionManager): {
 		basename: string;
 		pathParts: string[];
 		type: "folder";
-	}): Promise<Reader[]> => {
-		const readers: Reader[] = [];
+	}): Promise<ManagerFsReader[]> => {
+		const readers: ManagerFsReader[] = [];
 
 		const walk = async (folderPath: {
 			basename: string;

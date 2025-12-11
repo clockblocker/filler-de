@@ -26,7 +26,6 @@ import { BottomToolbarService } from "./services/obsidian-services/atomic-servic
 import { SelectionService } from "./services/obsidian-services/atomic-services/selection-service";
 import { LegacyOpenedFileService } from "./services/obsidian-services/file-services/active-view/legacy-opened-file-service";
 import { OpenedFileReader } from "./services/obsidian-services/file-services/active-view/opened-file-reader";
-import { BackgroundFileService } from "./services/obsidian-services/file-services/background/background-file-service";
 import { logError } from "./services/obsidian-services/helpers/issue-handlers";
 import { ACTION_CONFIGS } from "./services/wip-configs/actions/actions-config";
 // import newGenCommand from "./services/wip-configs/actions/new/new-gen-command";
@@ -46,7 +45,6 @@ export default class TextEaterPlugin extends Plugin {
 	testingBackgroundFileService: NewBackgroundFileService;
 	testingReader: Reader;
 	vaultActionManager: ObsidianVaultActionManagerImpl;
-	backgroundFileService: BackgroundFileService;
 	selectionService: SelectionService;
 
 	selectionToolbarService: AboveSelectionToolbarService;
@@ -157,11 +155,6 @@ export default class TextEaterPlugin extends Plugin {
 		this.vaultActionManager = new ObsidianVaultActionManagerImpl(this.app);
 		this.setTestingGlobals();
 
-		this.backgroundFileService = new BackgroundFileService({
-			fileManager: this.app.fileManager,
-			vault: this.app.vault,
-		});
-
 		this.selectionToolbarService = new AboveSelectionToolbarService(
 			this.app,
 		);
@@ -170,6 +163,7 @@ export default class TextEaterPlugin extends Plugin {
 
 		this.librarian = new Librarian({
 			manager: this.vaultActionManager,
+			openedFileService: this.legacyOpenedFileService,
 		});
 		await this.librarian.initTrees();
 		console.log("[main] Librarian and trees initialized:", this.librarian);
@@ -445,14 +439,6 @@ export default class TextEaterPlugin extends Plugin {
 			},
 			id: "new-gen-command",
 			name: "new-gen-command",
-		});
-
-		this.addCommand({
-			callback: () => {
-				this.backgroundFileService.logDeepLs();
-			},
-			id: "librarian-log-deep-ls",
-			name: "Librarian: log tree structure",
 		});
 
 		this.addCommand({
