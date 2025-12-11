@@ -5,24 +5,24 @@ export const CoreSplitPathSchema = z.object({
 	pathParts: z.array(z.string()),
 });
 
-const SplitPathTypeSchema = z.enum(["Folder", "File", "MdFile"]);
+export const SplitPathTypeSchema = z.enum(["Folder", "File", "MdFile"]);
 const SplitPathType = SplitPathTypeSchema.enum;
 
-const SplitPathToFolderSchema = CoreSplitPathSchema.extend({
+export const SplitPathToFolderSchema = CoreSplitPathSchema.extend({
 	type: z.literal(SplitPathType.Folder),
 });
 
-const SplitPathToFileSchema = CoreSplitPathSchema.extend({
+export const SplitPathToFileSchema = CoreSplitPathSchema.extend({
 	extension: z.string(),
 	type: z.literal(SplitPathType.File),
 });
 
-const SplitPathToMdFileSchema = CoreSplitPathSchema.extend({
+export const SplitPathToMdFileSchema = CoreSplitPathSchema.extend({
 	extension: z.literal("md"),
 	type: z.literal(SplitPathType.MdFile),
 });
 
-const SplitPathSchema = z.discriminatedUnion("type", [
+export const SplitPathSchema = z.discriminatedUnion("type", [
 	SplitPathToFolderSchema,
 	SplitPathToFileSchema,
 	SplitPathToMdFileSchema,

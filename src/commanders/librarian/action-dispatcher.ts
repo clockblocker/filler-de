@@ -1,4 +1,4 @@
-import type { VaultAction } from "../../services/obsidian-services/file-services/background/background-vault-actions";
+import type { LegacyVaultAction } from "../../services/obsidian-services/file-services/background/background-vault-actions";
 import type { VaultActionQueue } from "../../services/obsidian-services/file-services/vault-action-queue";
 import type { SelfEventTracker } from "./utils/self-event-tracker";
 
@@ -15,15 +15,15 @@ export class ActionDispatcher {
 		this.tracker = tracker;
 	}
 
-	registerSelf(actions: VaultAction[]): void {
+	registerSelf(actions: LegacyVaultAction[]): void {
 		this.tracker.register(actions);
 	}
 
-	push(action: VaultAction): void {
+	push(action: LegacyVaultAction): void {
 		this.queue.push(action);
 	}
 
-	pushMany(actions: VaultAction[]): void {
+	pushMany(actions: LegacyVaultAction[]): void {
 		this.queue.pushMany(actions);
 	}
 

@@ -1,11 +1,7 @@
-import { z } from "zod";
+import {
+	type SplitPath,
+	SplitPathSchema,
+} from "../obsidian-vault-action-manager/types/split-path";
 
-export const PathPartsSchema = z.array(z.string());
-export type PathParts = z.infer<typeof PathPartsSchema>;
-
-export const PrettyPathSchema = z.object({
-	basename: z.string(),
-	pathParts: PathPartsSchema,
-});
-
-export type PrettyPath = z.infer<typeof PrettyPathSchema>;
+export const PrettyPathSchema = SplitPathSchema;
+export type PrettyPath = SplitPath;
