@@ -1,12 +1,12 @@
-import { editOrAddMetaInfo } from "../../../services/dto-services/meta-info-manager/interface";
-import { fullPathFromSystemPath } from "../../../services/obsidian-services/atomic-services/pathfinder";
-import type { LegacyOpenedFileService } from "../../../services/obsidian-services/file-services/active-view/legacy-opened-file-service";
+import type { CoreSplitPath } from "../../../obsidian-vault-action-manager/types/split-path";
 import {
 	type VaultAction,
 	VaultActionType,
-} from "../../../services/obsidian-services/file-services/background/background-vault-actions";
+} from "../../../obsidian-vault-action-manager/types/vault-action";
+import { editOrAddMetaInfo } from "../../../services/dto-services/meta-info-manager/interface";
+import { fullPathFromSystemPath } from "../../../services/obsidian-services/atomic-services/pathfinder";
+import type { LegacyOpenedFileService } from "../../../services/obsidian-services/file-services/active-view/legacy-opened-file-service";
 import { logWarning } from "../../../services/obsidian-services/helpers/issue-handlers";
-import type { PrettyPath } from "../../../types/common-interface/dtos";
 import { TextStatus } from "../../../types/common-interface/enums";
 import type { ActionDispatcher } from "../action-dispatcher";
 import { isRootName, LIBRARY_ROOTS, type RootName } from "../constants";
@@ -23,11 +23,7 @@ import type { LibraryTree } from "../library-tree/library-tree";
 import { splitTextIntoPages } from "../text-splitter/text-splitter";
 import type { NoteDto, SectionNode, TreePath } from "../types";
 import { createFolderActionsForPathParts } from "../utils/folder-actions";
-import type { ManagerFsAdapter } from "../utils/manager-fs-adapter";
-import {
-	prettyPathToFolder,
-	prettyPathToMdFile,
-} from "../utils/path-conversions";
+import type { ManagerFsAdapter } from "../utils/manager-fs-adapter.ts";
 import type { TreeReconciler } from "./tree-reconciler";
 
 export class NoteOperations {
@@ -38,8 +34,8 @@ export class NoteOperations {
 			treeReconciler: TreeReconciler;
 			regenerateAllCodexes: () => Promise<void>;
 			generateUniquePrettyPath: (
-				prettyPath: PrettyPath,
-			) => Promise<PrettyPath>;
+				prettyPath: CoreSplitPath,
+			) => Promise<CoreSplitPath>;
 			openedFileService: LegacyOpenedFileService;
 			backgroundFileService: ManagerFsAdapter;
 		},
@@ -126,7 +122,7 @@ export class NoteOperations {
 			return false;
 		}
 
-		const originalPrettyPath: PrettyPath = {
+		const originalPrettyPath: CoreSplitPath = {
 			basename: fullPath.basename,
 			pathParts: fullPath.pathParts,
 		};
@@ -157,11 +153,11 @@ export class NoteOperations {
 		const { pages, isBook } = splitTextIntoPages(content, textName);
 
 		const seenFolders = new Set<string>();
-		let destinationPrettyPath: PrettyPath;
+		let destinationPrettyPath: CoreSplitPath;
 
 		if (!isBook) {
 			const unmarkedBasename = `Unmarked_${fullPath.basename}`;
-			let unmarkedPrettyPath: PrettyPath = {
+			let unmarkedPrettyPath: CoreSplitPath = {
 				basename: unmarkedBasename,
 				pathParts: originalPrettyPath.pathParts,
 			};
@@ -176,17 +172,17 @@ export class NoteOperations {
 
 			const renameAction: VaultAction = {
 				payload: {
-					from: prettyPathToMdFile(originalPrettyPath),
-					to: prettyPathToMdFile(unmarkedPrettyPath),
+					from: originalPrettyPath,
+					to: unmarkedPrettyPath,
 				},
-				type: VaultActionType.RenameFile,
+				type: VaultActionType.RenameMdFile,
 			};
 			this.deps.dispatcher.registerSelf([renameAction]);
 			this.deps.dispatcher.push(renameAction);
 			await this.deps.dispatcher.flushNow();
 
 			const scrollTreePath: TreePath = [...sectionPath, textName];
-			const scrollPrettyPath: PrettyPath = {
+			const scrollPrettyPath: CoreSplitPath = {
 				basename: treePathToScrollBasename.encode(scrollTreePath),
 				pathParts: [rootName, ...sectionPath],
 			};
@@ -202,9 +198,9 @@ export class NoteOperations {
 							fileType: "Scroll",
 							status: TextStatus.NotStarted,
 						}),
-						prettyPath: prettyPathToMdFile(scrollPrettyPath),
+						coreSplitPath: scrollPrettyPath,
 					},
-					type: VaultActionType.UpdateOrCreateFile,
+					type: VaultActionType.CreateMdFile,
 				},
 			];
 
@@ -230,7 +226,7 @@ export class NoteOperations {
 			];
 
 			const unmarkedBasename = `Unmarked-${fullPath.basename}`;
-			let unmarkedPrettyPath: PrettyPath = {
+			let unmarkedPrettyPath: CoreSplitPath = {
 				basename: unmarkedBasename,
 				pathParts: bookFolderPathParts,
 			};
@@ -245,10 +241,10 @@ export class NoteOperations {
 
 			phase1Actions.push({
 				payload: {
-					from: prettyPathToMdFile(originalPrettyPath),
-					to: prettyPathToMdFile(unmarkedPrettyPath),
+					from: originalPrettyPath,
+					to: unmarkedPrettyPath,
 				},
-				type: VaultActionType.RenameFile,
+				type: VaultActionType.RenameMdFile,
 			});
 
 			this.deps.dispatcher.registerSelf(phase1Actions);
@@ -263,7 +259,7 @@ export class NoteOperations {
 					textName,
 					pageNumberFromInt.encode(i),
 				];
-				const pagePrettyPath: PrettyPath = {
+				const pagePrettyPath: CoreSplitPath = {
 					basename: treePathToPageBasename.encode(pageTreePath),
 					pathParts: bookFolderPathParts,
 				};
@@ -275,9 +271,9 @@ export class NoteOperations {
 							index: i,
 							status: TextStatus.NotStarted,
 						}),
-						prettyPath: prettyPathToMdFile(pagePrettyPath),
+						coreSplitPath: pagePrettyPath,
 					},
-					type: VaultActionType.UpdateOrCreateFile,
+					type: VaultActionType.CreateMdFile,
 				});
 			}
 

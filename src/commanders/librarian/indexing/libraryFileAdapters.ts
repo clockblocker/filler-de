@@ -2,7 +2,7 @@ import { extractMetaInfo } from "../../../services/dto-services/meta-info-manage
 import type { MetaInfo } from "../../../services/dto-services/meta-info-manager/types";
 import { TextStatus } from "../../../types/common-interface/enums";
 import type { LibraryFile, TreePath } from "../types";
-import type { ManagerFsReader } from "../utils/manager-fs-adapter";
+import type { ManagerFsReader } from "../utils/manager-fs-adapter.ts";
 import {
 	CodexBaseameSchema,
 	PageBasenameSchema,

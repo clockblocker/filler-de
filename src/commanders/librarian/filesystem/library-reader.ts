@@ -1,4 +1,3 @@
-import type { ObsidianVaultActionManager } from "../../../obsidian-vault-action-manager";
 import type {
 	CoreSplitPath,
 	SplitPathToFolder,
@@ -7,6 +6,7 @@ import { isInUntracked, type RootName } from "../constants";
 import { prettyFilesWithReaderToLibraryFiles } from "../indexing/libraryFileAdapters";
 import { noteDtosFromLibraryFiles } from "../pure-functions/note-dtos-from-library-file-dtos";
 import type { LibraryFile, NoteDto, TreePath } from "../types";
+import type { ManagerFsAdapter } from "../utils/manager-fs-adapter.ts";
 
 // ─── Exported Pure Functions ─────────────────────────────────────────────
 
@@ -18,7 +18,7 @@ import type { LibraryFile, NoteDto, TreePath } from "../types";
  * @returns Array of library files
  */
 export async function readFilesInFolder(
-	manager: ObsidianVaultActionManager,
+	manager: ManagerFsAdapter,
 	folder: CoreSplitPath,
 ): Promise<LibraryFile[]> {
 	const fileReaders = await manager.getReadersToAllMdFilesInFolder({
@@ -38,7 +38,7 @@ export async function readFilesInFolder(
  * @returns Array of note DTOs
  */
 export async function readNoteDtos(
-	manager: ObsidianVaultActionManager,
+	manager: ManagerFsAdapter,
 	rootName: RootName,
 	subtreePath: TreePath = [],
 ): Promise<NoteDto[]> {

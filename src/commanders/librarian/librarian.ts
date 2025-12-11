@@ -4,9 +4,9 @@ import type {
 	VaultEvent,
 } from "../../obsidian-vault-action-manager";
 import { splitPathKey } from "../../obsidian-vault-action-manager";
+import type { CoreSplitPath } from "../../obsidian-vault-action-manager/types/split-path";
 import { fullPathFromSystemPath } from "../../services/obsidian-services/atomic-services/pathfinder";
 import type { LegacyOpenedFileService } from "../../services/obsidian-services/file-services/active-view/legacy-opened-file-service";
-import type { PrettyPath } from "../../types/common-interface/dtos";
 import { ActionDispatcher } from "./action-dispatcher";
 import { isRootName, LIBRARY_ROOTS, type RootName } from "./constants";
 import type { NoteSnapshot } from "./diffing/note-differ";
@@ -21,7 +21,7 @@ import type { NoteDto, TreePath } from "./types";
 import {
 	type ManagerFsAdapter,
 	makeManagerFsAdapter,
-} from "./utils/manager-fs-adapter";
+} from "./utils/manager-fs-adapter.ts";
 import { SelfEventTracker } from "./utils/self-event-tracker";
 
 export class Librarian {
@@ -109,7 +109,7 @@ export class Librarian {
 	// Manager-driven events (self-filtered inside manager)
 	async onVaultEventFileCreated(event: VaultEvent): Promise<void> {
 		if (event.type !== "FileCreated") return;
-		const prettyPath: PrettyPath = {
+		const prettyPath: CoreSplitPath = {
 			basename: event.splitPath.basename,
 			pathParts: event.splitPath.pathParts,
 		};
@@ -118,13 +118,9 @@ export class Librarian {
 
 	async onVaultEventFileRenamed(event: VaultEvent): Promise<void> {
 		if (event.type !== "FileRenamed") return;
-		const toPretty: PrettyPath = {
+		const toPretty: CoreSplitPath = {
 			basename: event.to.basename,
 			pathParts: event.to.pathParts,
-		};
-		const fromPretty: PrettyPath = {
-			basename: event.from.basename,
-			pathParts: event.from.pathParts,
 		};
 		await this.eventHandler.onFileRenamedFromPretty(
 			toPretty,
@@ -134,7 +130,7 @@ export class Librarian {
 
 	async onVaultEventFileTrashed(event: VaultEvent): Promise<void> {
 		if (event.type !== "FileTrashed") return;
-		const prettyPath: PrettyPath = {
+		const prettyPath: CoreSplitPath = {
 			basename: event.splitPath.basename,
 			pathParts: event.splitPath.pathParts,
 		};
@@ -204,8 +200,8 @@ export class Librarian {
 	// ─── Private Helpers ──────────────────────────────────────────────
 
 	private async generateUniquePrettyPath(
-		prettyPath: PrettyPath,
-	): Promise<PrettyPath> {
+		prettyPath: CoreSplitPath,
+	): Promise<CoreSplitPath> {
 		let candidate = prettyPath;
 		let counter = 1;
 

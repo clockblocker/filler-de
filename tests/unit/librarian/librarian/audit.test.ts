@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { Librarian } from "../../../../src/commanders/librarian/librarian";
-import type { ObsidianVaultActionManager } from "../../../../src/commanders/obsidian-vault-action-manager";
+import type { ObsidianVaultActionManager } from "../../../../src/obsidian-vault-action-manager";
 import { splitPathKey } from "../../../../src/obsidian-vault-action-manager";
 import type { SplitPath } from "../../../../src/obsidian-vault-action-manager/types/split-path";
 import {
@@ -87,51 +87,47 @@ describe("Librarian audit", () => {
 
 		const flatActions = executedActions.flat();
 		const renameActions = flatActions.filter(
-			(a) => a.type === VaultActionType.RenameFile,
+			(a) => a.type === VaultActionType.RenameMdFile,
 		);
 
 		expect(renameActions).toEqual([
 			expect.objectContaining({
 				payload: {
 					from: expect.objectContaining({
-						basename: "child-parent.md",
-						extension: "md",
+						basename: "child-parent",
 						pathParts: ["Library"],
 					}),
 					to: expect.objectContaining({
-						basename: "child.md",
-						extension: "md",
+						basename: "child",
 						pathParts: ["Library"],
 					}),
 				},
-				type: VaultActionType.RenameFile,
+				type: VaultActionType.RenameMdFile,
 			}),
 			expect.objectContaining({
 				payload: {
 					from: expect.objectContaining({
-						basename: "NewName.md",
-						extension: "md",
+						basename: "NewName",
 						pathParts: ["Library", "Parent"],
 					}),
 					to: expect.objectContaining({
-						basename: "NewName-Parent.md",
-						extension: "md",
+						basename: "NewName-Parent",
 						pathParts: ["Library", "Parent"],
 					}),
 				},
-				type: VaultActionType.RenameFile,
+				type: VaultActionType.RenameMdFile,
 			}),
 		]);
 
 		const folderCreates = flatActions.filter(
-			(a) => a.type === VaultActionType.UpdateOrCreateFolder,
+			(a) => a.type === VaultActionType.CreateFolder,
 		);
 
 		expect(
 			folderCreates.some(
 				(a) =>
-					"prettyPath" in a.payload &&
-					a.payload.prettyPath.basename === "parent",
+					"coreSplitPath" in a.payload &&
+					a.payload.coreSplitPath.basename === "parent",
 			),
 		).toBe(false);
 	});

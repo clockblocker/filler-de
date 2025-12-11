@@ -1,13 +1,13 @@
 import type { TAbstractFile } from "obsidian";
 import { TFile } from "obsidian";
 import { splitPathKey } from "../../../obsidian-vault-action-manager";
-import { editOrAddMetaInfo } from "../../../services/dto-services/meta-info-manager/interface";
-import { fullPathFromSystemPath } from "../../../services/obsidian-services/atomic-services/pathfinder";
+import type { CoreSplitPath } from "../../../obsidian-vault-action-manager/types/split-path";
 import {
 	type VaultAction,
 	VaultActionType,
-} from "../../../services/obsidian-services/file-services/background/background-vault-actions";
-import type { PrettyPath } from "../../../types/common-interface/dtos";
+} from "../../../obsidian-vault-action-manager/types/vault-action";
+import { editOrAddMetaInfo } from "../../../services/dto-services/meta-info-manager/interface";
+import { fullPathFromSystemPath } from "../../../services/obsidian-services/atomic-services/pathfinder";
 import { TextStatus } from "../../../types/common-interface/enums";
 import type { ActionDispatcher } from "../action-dispatcher";
 import {
@@ -19,14 +19,14 @@ import {
 import { healFile } from "../filesystem/healing";
 import { toNodeName, treePathToScrollBasename } from "../indexing/codecs";
 import {
-	canonicalizePrettyPath,
+	canonicalizePath,
 	computeCanonicalPath,
 	decodeBasename,
 } from "../invariants/path-canonicalizer";
 import type { LibrarianState } from "../librarian-state";
 import type { TreePath } from "../types";
 import { createFolderActionsForPathParts } from "../utils/folder-actions";
-import type { ManagerFsAdapter } from "../utils/manager-fs-adapter";
+import type { ManagerFsAdapter } from "../utils/manager-fs-adapter.ts";
 import type { SelfEventTracker } from "../utils/self-event-tracker";
 import type { FilesystemHealer } from "./filesystem-healer";
 import type { TreeReconciler } from "./tree-reconciler";
@@ -46,13 +46,13 @@ export class VaultEventHandler {
 			selfEventTracker: SelfEventTracker;
 			regenerateAllCodexes: () => Promise<void>;
 			generateUniquePrettyPath: (
-				prettyPath: PrettyPath,
-			) => Promise<PrettyPath>;
+				prettyPath: CoreSplitPath,
+			) => Promise<CoreSplitPath>;
 			backgroundFileService: ManagerFsAdapter;
 		},
 	) {}
 
-	private async handleFileCreated(prettyPath: PrettyPath): Promise<void> {
+	private async handleFileCreated(prettyPath: CoreSplitPath): Promise<void> {
 		const rootName = prettyPath.pathParts[0];
 
 		if (!rootName || !isRootName(rootName)) return;
@@ -68,7 +68,7 @@ export class VaultEventHandler {
 		if (rootName !== LIBRARY_ROOTS[0]) return;
 		if (!this.deps.state.tree) return;
 
-		const canonical = canonicalizePrettyPath({ prettyPath, rootName });
+		const canonical = canonicalizePath({ path: prettyPath, rootName });
 		if ("reason" in canonical) return;
 
 		const parentPath = canonical.treePath.slice(0, -1);
@@ -87,7 +87,7 @@ export class VaultEventHandler {
 		if (!rootName || !isRootName(rootName)) return;
 		if (isInUntracked(fullPath.pathParts)) return;
 
-		const prettyPath: PrettyPath = {
+		const prettyPath: CoreSplitPath = {
 			basename: toNodeName(fullPath.basename),
 			pathParts: fullPath.pathParts,
 		};
@@ -95,11 +95,11 @@ export class VaultEventHandler {
 		await this.handleFileCreated(prettyPath);
 	}
 
-	async onFileCreatedFromPretty(prettyPath: PrettyPath): Promise<void> {
+	async onFileCreatedFromPretty(prettyPath: CoreSplitPath): Promise<void> {
 		await this.handleFileCreated(prettyPath);
 	}
 
-	private async handleFileDeleted(prettyPath: PrettyPath): Promise<void> {
+	private async handleFileDeleted(prettyPath: CoreSplitPath): Promise<void> {
 		const rootName = prettyPath.pathParts[0];
 
 		if (!rootName || !isRootName(rootName)) return;
@@ -107,7 +107,7 @@ export class VaultEventHandler {
 		if (rootName !== LIBRARY_ROOTS[0]) return;
 		if (!this.deps.state.tree) return;
 
-		const canonical = canonicalizePrettyPath({ prettyPath, rootName });
+		const canonical = canonicalizePath({ path: prettyPath, rootName });
 		if ("reason" in canonical) return;
 
 		const parentPath = canonical.treePath.slice(0, -1);
@@ -139,11 +139,11 @@ export class VaultEventHandler {
 
 		if (!basenameChanged && !pathPartsChanged) return;
 
-		const prettyPath: PrettyPath = {
+		const prettyPath: CoreSplitPath = {
 			basename: toNodeName(newFull.basename),
 			pathParts: newFull.pathParts,
 		};
-		const oldPrettyPath: PrettyPath = {
+		const oldPrettyPath: CoreSplitPath = {
 			basename: toNodeName(oldFull.basename),
 			pathParts: oldFull.pathParts,
 		};
@@ -154,10 +154,10 @@ export class VaultEventHandler {
 		if (decoded?.kind === "codex") {
 			const revertAction: VaultAction = {
 				payload: {
-					from: prettyPathToMdFile(prettyPath),
-					to: prettyPathToMdFile(oldPrettyPath),
+					from: prettyPath,
+					to: oldPrettyPath,
 				},
-				type: VaultActionType.RenameFile,
+				type: VaultActionType.RenameMdFile,
 			};
 			this.deps.dispatcher.registerSelf([revertAction]);
 			this.deps.dispatcher.push(revertAction);
@@ -177,7 +177,7 @@ export class VaultEventHandler {
 					...newFull.pathParts.slice(1),
 					leafName,
 				];
-				const targetPrettyPath = {
+				const targetPrettyPath: CoreSplitPath = {
 					basename: treePathToScrollBasename.encode(targetTreePath),
 					pathParts: [rootName, ...targetTreePath.slice(0, -1)],
 				};
@@ -202,10 +202,10 @@ export class VaultEventHandler {
 					),
 					{
 						payload: {
-							from: prettyPathToMdFile(prettyPath),
-							to: prettyPathToMdFile(finalPrettyPath),
+							from: prettyPath,
+							to: finalPrettyPath,
 						},
-						type: VaultActionType.RenameFile,
+						type: VaultActionType.RenameMdFile,
 					},
 				];
 
@@ -252,13 +252,13 @@ export class VaultEventHandler {
 
 		const canonical = computeCanonicalPath({
 			authority: "basename",
-			currentPrettyPath: prettyPath,
+			currentPath: prettyPath,
 			decoded: effectiveDecoded,
 			folderPath: [],
 			rootName,
 		});
 
-		let targetPrettyPath = canonical.canonicalPrettyPath;
+		let targetPrettyPath = canonical.canonicalPath;
 
 		if (await this.deps.backgroundFileService.exists(targetPrettyPath)) {
 			targetPrettyPath =
@@ -273,24 +273,24 @@ export class VaultEventHandler {
 			),
 			{
 				payload: {
-					from: prettyPathToMdFile(prettyPath),
-					to: prettyPathToMdFile(targetPrettyPath),
+					from: prettyPath,
+					to: targetPrettyPath,
 				},
-				type: VaultActionType.RenameFile,
+				type: VaultActionType.RenameMdFile,
 			},
 		];
 
 		if (wasPage) {
 			moveActions.push({
 				payload: {
-					prettyPath: prettyPathToMdFile(targetPrettyPath),
+					coreSplitPath: targetPrettyPath,
 					transform: (old) =>
 						editOrAddMetaInfo(old, {
 							fileType: "Scroll",
 							status: TextStatus.NotStarted,
 						}),
 				},
-				type: VaultActionType.ProcessFile,
+				type: VaultActionType.ProcessMdFile,
 			});
 		}
 
@@ -315,7 +315,7 @@ export class VaultEventHandler {
 		if (rootName !== LIBRARY_ROOTS[0]) return;
 		if (!this.deps.state.tree) return;
 
-		const prettyPath: PrettyPath = {
+		const prettyPath: CoreSplitPath = {
 			basename: fullPath.basename,
 			pathParts: fullPath.pathParts,
 		};
@@ -323,12 +323,12 @@ export class VaultEventHandler {
 		await this.handleFileDeleted(prettyPath);
 	}
 
-	async onFileDeletedFromPretty(prettyPath: PrettyPath): Promise<void> {
+	async onFileDeletedFromPretty(prettyPath: CoreSplitPath): Promise<void> {
 		await this.handleFileDeleted(prettyPath);
 	}
 
 	async onFileRenamedFromPretty(
-		prettyPath: PrettyPath,
+		prettyPath: CoreSplitPath,
 		oldPath: string,
 	): Promise<void> {
 		await this.onFileRenamed(

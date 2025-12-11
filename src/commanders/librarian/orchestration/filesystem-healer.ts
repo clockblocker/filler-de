@@ -1,18 +1,18 @@
+import type { CoreSplitPath } from "../../../obsidian-vault-action-manager/types/split-path";
+import {
+	type VaultAction,
+	VaultActionType,
+} from "../../../obsidian-vault-action-manager/types/vault-action";
 import {
 	editOrAddMetaInfo,
 	extractMetaInfo,
 } from "../../../services/dto-services/meta-info-manager/interface";
-import {
-	type VaultAction,
-	VaultActionType,
-} from "../../../services/obsidian-services/file-services/background/background-vault-actions";
-import type { PrettyPath } from "../../../types/common-interface/dtos";
 import { TextStatus } from "../../../types/common-interface/enums";
 import type { ActionDispatcher } from "../action-dispatcher";
 import { isInUntracked, type RootName } from "../constants";
 import { healFile } from "../filesystem/healing";
-import { canonicalizePrettyPath } from "../invariants/path-canonicalizer";
-import type { ManagerFsAdapter } from "../utils/manager-fs-adapter";
+import { canonicalizePath } from "../invariants/path-canonicalizer";
+import type { ManagerFsAdapter } from "../utils/manager-fs-adapter.ts";
 
 export class FilesystemHealer {
 	constructor(
@@ -28,7 +28,7 @@ export class FilesystemHealer {
 				{
 					basename: rootName,
 					pathParts: [],
-					type: "folder",
+					type: "Folder",
 				},
 			);
 
@@ -37,7 +37,7 @@ export class FilesystemHealer {
 
 		// Layer 1: Heal file paths
 		for (const reader of fileReaders) {
-			const prettyPath: PrettyPath = {
+			const prettyPath: CoreSplitPath = {
 				basename: reader.basename,
 				pathParts: reader.pathParts,
 			};
@@ -65,19 +65,21 @@ export class FilesystemHealer {
 	}
 
 	private async initializeMetaInfo(
-		fileReaders: Array<PrettyPath & { readContent: () => Promise<string> }>,
+		fileReaders: Array<
+			CoreSplitPath & { readContent: () => Promise<string> }
+		>,
 		rootName: RootName,
 	): Promise<VaultAction[]> {
 		const actions: VaultAction[] = [];
 
 		for (const reader of fileReaders) {
-			const prettyPath: PrettyPath = {
+			const prettyPath: CoreSplitPath = {
 				basename: reader.basename,
 				pathParts: reader.pathParts,
 			};
 			if (isInUntracked(prettyPath.pathParts)) continue;
 
-			const canonical = canonicalizePrettyPath({ prettyPath, rootName });
+			const canonical = canonicalizePath({ path: prettyPath, rootName });
 			if ("reason" in canonical) continue;
 
 			const kind = canonical.kind;
@@ -89,14 +91,14 @@ export class FilesystemHealer {
 				if (kind === "scroll") {
 					actions.push({
 						payload: {
-							prettyPath,
+							coreSplitPath: prettyPath,
 							transform: (old) =>
 								editOrAddMetaInfo(old, {
 									fileType: "Scroll",
 									status: TextStatus.NotStarted,
 								}),
 						},
-						type: VaultActionType.ProcessFile,
+						type: VaultActionType.ProcessMdFile,
 					});
 				} else if (kind === "page") {
 					const pageStr =
@@ -105,7 +107,7 @@ export class FilesystemHealer {
 					const idx = Number(pageStr);
 					actions.push({
 						payload: {
-							prettyPath,
+							coreSplitPath: prettyPath,
 							transform: (old) =>
 								editOrAddMetaInfo(old, {
 									fileType: "Page",
@@ -113,20 +115,20 @@ export class FilesystemHealer {
 									status: TextStatus.NotStarted,
 								}),
 						},
-						type: VaultActionType.ProcessFile,
+						type: VaultActionType.ProcessMdFile,
 					});
 				}
 			} else if (kind !== "page" && meta.fileType === "Page") {
 				actions.push({
 					payload: {
-						prettyPath,
+						coreSplitPath: prettyPath,
 						transform: (old) =>
 							editOrAddMetaInfo(old, {
 								fileType: "Scroll",
 								status: meta.status ?? TextStatus.NotStarted,
 							}),
 					},
-					type: VaultActionType.ProcessFile,
+					type: VaultActionType.ProcessMdFile,
 				});
 			}
 		}
@@ -135,28 +137,28 @@ export class FilesystemHealer {
 	}
 
 	private cleanupOrphanFolders(
-		fileReaders: Array<PrettyPath>,
+		fileReaders: Array<CoreSplitPath>,
 		rootName: RootName,
 	): VaultAction[] {
 		// Build folder contents map
 		const folderContents = new Map<
 			string,
-			{ hasCodex: boolean; hasNote: boolean; codexPaths: PrettyPath[] }
+			{ hasCodex: boolean; hasNote: boolean; codexPaths: CoreSplitPath[] }
 		>();
 
 		for (const reader of fileReaders) {
-			const prettyPath: PrettyPath = {
+			const prettyPath: CoreSplitPath = {
 				basename: reader.basename,
 				pathParts: reader.pathParts,
 			};
 
 			if (isInUntracked(prettyPath.pathParts)) continue;
 
-			const canonical = canonicalizePrettyPath({ prettyPath, rootName });
+			const canonical = canonicalizePath({ path: prettyPath, rootName });
 			const targetPath =
 				"reason" in canonical
 					? canonical.destination
-					: canonical.canonicalPrettyPath;
+					: canonical.canonicalPath;
 
 			const folderKey = targetPath.pathParts.join("/");
 			const entry = folderContents.get(folderKey) ?? {
@@ -207,13 +209,13 @@ export class FilesystemHealer {
 
 			for (const codexPath of info.codexPaths) {
 				actions.push({
-					payload: { prettyPath: codexPath },
-					type: VaultActionType.TrashFile,
+					payload: { coreSplitPath: codexPath },
+					type: VaultActionType.TrashMdFile,
 				});
 			}
 
 			actions.push({
-				payload: { prettyPath: { basename, pathParts } },
+				payload: { coreSplitPath: { basename, pathParts } },
 				type: VaultActionType.TrashFolder,
 			});
 		}

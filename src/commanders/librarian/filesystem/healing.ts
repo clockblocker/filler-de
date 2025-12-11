@@ -47,8 +47,8 @@ export function healFile(
 			),
 			{
 				payload: {
-					from: corePathToMdFile(path),
-					to: corePathToMdFile(canonical.destination),
+					from: path,
+					to: canonical.destination,
 				},
 				type: VaultActionType.RenameMdFile,
 			},
@@ -77,8 +77,8 @@ export function healFile(
 		),
 		{
 			payload: {
-				from: corePathToMdFile(path),
-				to: corePathToMdFile(canonical.canonicalPath),
+				from: path,
+				to: canonical.canonicalPath,
 			},
 			type: VaultActionType.RenameMdFile,
 		},
