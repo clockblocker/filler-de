@@ -13,7 +13,7 @@ import type { ActionDispatcher } from "../action-dispatcher";
 import {
 	isInUntracked,
 	isRootName,
-	LIBRARY_ROOTS,
+	LIBRARY_ROOT,
 	type RootName,
 } from "../constants";
 import { healFile } from "../filesystem/healing";
@@ -45,8 +45,8 @@ export class VaultEventHandler {
 			state: LibrarianState;
 			selfEventTracker: SelfEventTracker;
 			regenerateAllCodexes: () => Promise<void>;
-			generateUniquePrettyPath: (
-				prettyPath: CoreSplitPath,
+			generateUniqueSplitPath: (
+				path: CoreSplitPath,
 			) => Promise<CoreSplitPath>;
 			backgroundFileService: ManagerFsAdapter;
 		},
@@ -65,7 +65,7 @@ export class VaultEventHandler {
 			await this.deps.dispatcher.flushNow();
 		}
 
-		if (rootName !== LIBRARY_ROOTS[0]) return;
+		if (rootName !== LIBRARY_ROOT) return;
 		if (!this.deps.state.tree) return;
 
 		const canonical = canonicalizePath({ path: prettyPath, rootName });
@@ -95,7 +95,7 @@ export class VaultEventHandler {
 		await this.handleFileCreated(prettyPath);
 	}
 
-	async onFileCreatedFromPretty(prettyPath: CoreSplitPath): Promise<void> {
+	async onFileCreatedFromSplitPath(prettyPath: CoreSplitPath): Promise<void> {
 		await this.handleFileCreated(prettyPath);
 	}
 
@@ -104,7 +104,7 @@ export class VaultEventHandler {
 
 		if (!rootName || !isRootName(rootName)) return;
 		if (isInUntracked(prettyPath.pathParts)) return;
-		if (rootName !== LIBRARY_ROOTS[0]) return;
+		if (rootName !== LIBRARY_ROOT) return;
 		if (!this.deps.state.tree) return;
 
 		const canonical = canonicalizePath({ path: prettyPath, rootName });
@@ -128,7 +128,7 @@ export class VaultEventHandler {
 
 		if (!rootName || !isRootName(rootName)) return;
 		if (isInUntracked(newFull.pathParts)) return;
-		if (rootName !== LIBRARY_ROOTS[0]) return;
+		if (rootName !== LIBRARY_ROOT) return;
 		if (!this.deps.state.tree) return;
 
 		const pathPartsChanged = !arePathPartsEqual(
@@ -189,7 +189,7 @@ export class VaultEventHandler {
 					)
 				) {
 					finalPrettyPath =
-						await this.deps.generateUniquePrettyPath(
+						await this.deps.generateUniqueSplitPath(
 							finalPrettyPath,
 						);
 				}
@@ -262,7 +262,7 @@ export class VaultEventHandler {
 
 		if (await this.deps.backgroundFileService.exists(targetPrettyPath)) {
 			targetPrettyPath =
-				await this.deps.generateUniquePrettyPath(targetPrettyPath);
+				await this.deps.generateUniqueSplitPath(targetPrettyPath);
 		}
 
 		const seenFolders = new Set<string>();
@@ -312,7 +312,7 @@ export class VaultEventHandler {
 
 		if (!rootName || !isRootName(rootName)) return;
 		if (isInUntracked(fullPath.pathParts)) return;
-		if (rootName !== LIBRARY_ROOTS[0]) return;
+		if (rootName !== LIBRARY_ROOT) return;
 		if (!this.deps.state.tree) return;
 
 		const prettyPath: CoreSplitPath = {
@@ -323,11 +323,11 @@ export class VaultEventHandler {
 		await this.handleFileDeleted(prettyPath);
 	}
 
-	async onFileDeletedFromPretty(prettyPath: CoreSplitPath): Promise<void> {
+	async onFileDeletedFromSplitPath(prettyPath: CoreSplitPath): Promise<void> {
 		await this.handleFileDeleted(prettyPath);
 	}
 
-	async onFileRenamedFromPretty(
+	async onFileRenamedFromSplitPath(
 		prettyPath: CoreSplitPath,
 		oldPath: string,
 	): Promise<void> {

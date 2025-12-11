@@ -1,5 +1,5 @@
 import type { ActionDispatcher } from "../action-dispatcher";
-import { LIBRARY_ROOTS, type RootName } from "../constants";
+import { LIBRARY_ROOT, type RootName } from "../constants";
 import { type NoteSnapshot, noteDiffer } from "../diffing/note-differ";
 import { mapDiffToActions } from "../diffing/tree-diff-applier";
 import { readNoteDtos } from "../filesystem/library-reader";
@@ -24,7 +24,7 @@ export class TreeReconciler {
 	}
 
 	async initTrees(): Promise<void> {
-		const rootName = LIBRARY_ROOTS[0];
+		const rootName = LIBRARY_ROOT;
 		await this.deps.filesystemHealer.healRootFilesystem(rootName);
 		const notes = await readNoteDtos(
 			this.deps.backgroundFileService,
@@ -37,7 +37,7 @@ export class TreeReconciler {
 		rootName: RootName,
 		subtreePath: TreePath = [],
 	): Promise<void> {
-		if (rootName !== LIBRARY_ROOTS[0]) return;
+		if (rootName !== LIBRARY_ROOT) return;
 		const tree = this.deps.state.tree;
 		if (!tree) return;
 
@@ -91,7 +91,7 @@ export class TreeReconciler {
 		rootName: RootName,
 		mutation: (tree: LibraryTree) => T,
 	): { actions: ReturnType<typeof mapDiffToActions>; result: T } {
-		if (rootName !== LIBRARY_ROOTS[0]) {
+		if (rootName !== LIBRARY_ROOT) {
 			throw new Error(`Tree not found for root: ${rootName}`);
 		}
 		const tree = this.deps.state.tree;
@@ -120,7 +120,7 @@ export class TreeReconciler {
 	}
 
 	getSnapshot(rootName: RootName): NoteSnapshot | null {
-		if (rootName !== LIBRARY_ROOTS[0]) return null;
+		if (rootName !== LIBRARY_ROOT) return null;
 		const tree = this.deps.state.tree;
 		return tree ? tree.snapshot() : null;
 	}

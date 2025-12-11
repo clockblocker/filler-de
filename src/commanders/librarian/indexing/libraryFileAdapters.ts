@@ -105,7 +105,7 @@ export async function prettyFileWithReaderToLibraryFile(
 				basename: fileReader.basename,
 				extension: "md",
 				pathParts: fileReader.pathParts,
-				type: "file",
+				type: "MdFile" as const,
 			},
 			metaInfo,
 		};
@@ -117,7 +117,7 @@ export async function prettyFileWithReaderToLibraryFile(
 				basename: fileReader.basename,
 				extension: "md",
 				pathParts: fileReader.pathParts,
-				type: "file",
+				type: "MdFile" as const,
 			},
 			metaInfo,
 		};
@@ -129,7 +129,7 @@ export async function prettyFileWithReaderToLibraryFile(
 				basename: fileReader.basename,
 				extension: "md",
 				pathParts: fileReader.pathParts,
-				type: "file",
+				type: "MdFile" as const,
 			},
 			metaInfo,
 		};

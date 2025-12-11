@@ -8,11 +8,13 @@ Obsidian Event → Layer 1 (Heal) → Layer 2 (Tree) → Layer 3 (Codex)
 
 ## Layer 1: Filesystem Healing
 
+- Single root invariant: root name is fixed to `Library` (one root only).
+
 **Purpose:** Enforce filename invariant. Fix basename/folder mismatches.
 
 **Functions:** `healFile()`, `healFiles()` in `filesystem/healing.ts`
 
-**Input:** `PrettyPath` + `RootName`  
+**Input:** `CoreSplitPath` + `RootName`  
 **Output:** `HealResult { actions, targetPath, quarantine }`
 
 Pure, sync, no tree access. Returns `VaultAction[]` — caller executes.
@@ -94,6 +96,6 @@ Debounce handles folder moves (N events → one pipeline run).
 |------|---------|
 | `utils/self-event-tracker.ts` | Prevent reacting to own events |
 | `utils/folder-actions.ts` | Generate mkdir actions for path |
-| `utils/path-conversions.ts` | `PrettyPath` ↔ `TreePath` ↔ `FullPath` |
+| `utils/path-conversions.ts` | `CoreSplitPath` ↔ `TreePath` ↔ `FullPath` |
 | `invariants/path-canonicalizer.ts` | Canonical path computation |
 | `indexing/codecs/` | Basename ↔ TreePath encoding |

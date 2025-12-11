@@ -36,7 +36,7 @@ export function healFile(
 	rootName: RootName,
 	seen: Set<string> = new Set(),
 ): HealResult {
-	const canonical = canonicalizePrettyPath({ path, rootName });
+	const canonical = canonicalizePath({ path, rootName });
 
 	// Quarantine case: undecodable basename
 	if ("reason" in canonical) {

@@ -9,7 +9,7 @@ import type { LegacyOpenedFileService } from "../../../services/obsidian-service
 import { logWarning } from "../../../services/obsidian-services/helpers/issue-handlers";
 import { TextStatus } from "../../../types/common-interface/enums";
 import type { ActionDispatcher } from "../action-dispatcher";
-import { isRootName, LIBRARY_ROOTS, type RootName } from "../constants";
+import { isRootName, LIBRARY_ROOT, type RootName } from "../constants";
 import { regenerateCodexActions } from "../diffing/tree-diff-applier";
 import {
 	pageNumberFromInt,
@@ -33,8 +33,8 @@ export class NoteOperations {
 			dispatcher: ActionDispatcher;
 			treeReconciler: TreeReconciler;
 			regenerateAllCodexes: () => Promise<void>;
-			generateUniquePrettyPath: (
-				prettyPath: CoreSplitPath,
+			generateUniqueSplitPath: (
+				path: CoreSplitPath,
 			) => Promise<CoreSplitPath>;
 			openedFileService: LegacyOpenedFileService;
 			backgroundFileService: ManagerFsAdapter;
@@ -165,9 +165,7 @@ export class NoteOperations {
 				await this.deps.backgroundFileService.exists(unmarkedPrettyPath)
 			) {
 				unmarkedPrettyPath =
-					await this.deps.generateUniquePrettyPath(
-						unmarkedPrettyPath,
-					);
+					await this.deps.generateUniqueSplitPath(unmarkedPrettyPath);
 			}
 
 			const renameAction: VaultAction = {
@@ -234,9 +232,7 @@ export class NoteOperations {
 				await this.deps.backgroundFileService.exists(unmarkedPrettyPath)
 			) {
 				unmarkedPrettyPath =
-					await this.deps.generateUniquePrettyPath(
-						unmarkedPrettyPath,
-					);
+					await this.deps.generateUniqueSplitPath(unmarkedPrettyPath);
 			}
 
 			phase1Actions.push({
@@ -384,7 +380,7 @@ export class NoteOperations {
 				? rootCandidate
 				: undefined;
 		if (!rootName) return undefined;
-		return rootName === LIBRARY_ROOTS[0]
+		return rootName === LIBRARY_ROOT
 			? (this.deps.state.tree ?? undefined)
 			: undefined;
 	}

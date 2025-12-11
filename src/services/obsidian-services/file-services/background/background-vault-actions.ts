@@ -117,12 +117,12 @@ export function getLegacyActionKey(action: LegacyVaultAction): string {
 		case LegacyVaultActionType.TrashFile:
 		case LegacyVaultActionType.ProcessFile:
 		case LegacyVaultActionType.WriteFile:
-			return `${type}:${prettyPathToKey(payload.prettyPath)}`;
+			return `${type}:${splitPathToKey(payload.prettyPath)}`;
 
 		case LegacyVaultActionType.RenameFolder:
 		case LegacyVaultActionType.RenameFile:
 			// For renames, key by source path to dedupe multiple renames of same file
-			return `${type}:${prettyPathToKey(payload.from)}`;
+			return `${type}:${splitPathToKey(payload.from)}`;
 		default:
 			return unreachable(type);
 	}
@@ -144,11 +144,11 @@ export function getLegacyActionTargetPath(action: LegacyVaultAction): string {
 		case LegacyVaultActionType.TrashFile:
 		case LegacyVaultActionType.ProcessFile:
 		case LegacyVaultActionType.WriteFile:
-			return prettyPathToKey(payload.prettyPath);
+			return splitPathToKey(payload.prettyPath);
 
 		case LegacyVaultActionType.RenameFolder:
 		case LegacyVaultActionType.RenameFile:
-			return `${prettyPathToKey(payload.from)} → ${prettyPathToKey(payload.to)}`;
+			return `${splitPathToKey(payload.from)} → ${splitPathToKey(payload.to)}`;
 		default:
 			return unreachable(type);
 	}
@@ -157,8 +157,8 @@ export function getActionTargetPath(action: LegacyVaultAction): string {
 	return getLegacyActionTargetPath(action);
 }
 
-function prettyPathToKey(prettyPath: SplitPath): string {
-	return [...prettyPath.pathParts, prettyPath.basename].join("/");
+function splitPathToKey(path: SplitPath): string {
+	return [...path.pathParts, path.basename].join("/");
 }
 
 function unreachable(x: never): never {

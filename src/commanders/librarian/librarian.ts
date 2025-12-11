@@ -8,7 +8,7 @@ import type { CoreSplitPath } from "../../obsidian-vault-action-manager/types/sp
 import { fullPathFromSystemPath } from "../../services/obsidian-services/atomic-services/pathfinder";
 import type { LegacyOpenedFileService } from "../../services/obsidian-services/file-services/active-view/legacy-opened-file-service";
 import { ActionDispatcher } from "./action-dispatcher";
-import { isRootName, LIBRARY_ROOTS, type RootName } from "./constants";
+import { isRootName, LIBRARY_ROOT, type RootName } from "./constants";
 import type { NoteSnapshot } from "./diffing/note-differ";
 import { regenerateCodexActions } from "./diffing/tree-diff-applier";
 import { LibrarianState } from "./librarian-state";
@@ -63,7 +63,7 @@ export class Librarian {
 		this.noteOperations = new NoteOperations({
 			backgroundFileService: this.backgroundFileService,
 			dispatcher: this.dispatcher,
-			generateUniquePrettyPath: (p) => this.generateUniquePrettyPath(p),
+			generateUniqueSplitPath: (p) => this.generateUniqueSplitPath(p),
 			openedFileService: this.openedFileService,
 			regenerateAllCodexes: () => this.regenerateAllCodexes(),
 			state: this.state,
@@ -73,7 +73,7 @@ export class Librarian {
 			backgroundFileService: this.backgroundFileService,
 			dispatcher: this.dispatcher,
 			filesystemHealer: this.filesystemHealer,
-			generateUniquePrettyPath: (p) => this.generateUniquePrettyPath(p),
+			generateUniqueSplitPath: (p) => this.generateUniqueSplitPath(p),
 			regenerateAllCodexes: () => this.regenerateAllCodexes(),
 			selfEventTracker: this.selfEventTracker,
 			state: this.state,
@@ -113,7 +113,7 @@ export class Librarian {
 			basename: event.splitPath.basename,
 			pathParts: event.splitPath.pathParts,
 		};
-		await this.eventHandler.onFileCreatedFromPretty(prettyPath);
+		await this.eventHandler.onFileCreatedFromSplitPath(prettyPath);
 	}
 
 	async onVaultEventFileRenamed(event: VaultEvent): Promise<void> {
@@ -122,7 +122,7 @@ export class Librarian {
 			basename: event.to.basename,
 			pathParts: event.to.pathParts,
 		};
-		await this.eventHandler.onFileRenamedFromPretty(
+		await this.eventHandler.onFileRenamedFromSplitPath(
 			toPretty,
 			splitPathKey(event.from),
 		);
@@ -134,7 +134,7 @@ export class Librarian {
 			basename: event.splitPath.basename,
 			pathParts: event.splitPath.pathParts,
 		};
-		await this.eventHandler.onFileDeletedFromPretty(prettyPath);
+		await this.eventHandler.onFileDeletedFromSplitPath(prettyPath);
 	}
 
 	// ─── Business Operations ──────────────────────────────────────────
@@ -174,7 +174,7 @@ export class Librarian {
 	}
 
 	async regenerateAllCodexes(): Promise<void> {
-		const rootName = LIBRARY_ROOTS[0];
+		const rootName = LIBRARY_ROOT;
 		const tree = this.tree;
 		if (rootName && tree) {
 			const getNode = (path: TreePath) => {
@@ -199,16 +199,16 @@ export class Librarian {
 
 	// ─── Private Helpers ──────────────────────────────────────────────
 
-	private async generateUniquePrettyPath(
-		prettyPath: CoreSplitPath,
+	private async generateUniqueSplitPath(
+		path: CoreSplitPath,
 	): Promise<CoreSplitPath> {
-		let candidate = prettyPath;
+		let candidate = path;
 		let counter = 1;
 
 		while (await this.backgroundFileService.exists(candidate)) {
 			candidate = {
-				...prettyPath,
-				basename: `${prettyPath.basename}_${counter}`,
+				...path,
+				basename: `${path.basename}_${counter}`,
 			};
 			counter += 1;
 		}
