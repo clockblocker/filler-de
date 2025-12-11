@@ -1,3 +1,5 @@
+import { splitPath } from "../../../obsidian-vault-action-manager";
+import type { SplitPathToFolder } from "../../../obsidian-vault-action-manager/types/split-path";
 import {
 	type VaultAction,
 	VaultActionType,
@@ -19,9 +21,11 @@ export function createFolderActionsForPathParts(
 
 		const basename = pathParts[depth] ?? "";
 		const parentParts = pathParts.slice(0, depth);
+		const folderPath = [...parentParts, basename].join("/");
+		const prettyPath = splitPath(folderPath) as SplitPathToFolder;
 
 		actions.push({
-			payload: { prettyPath: { basename, pathParts: parentParts } },
+			payload: { prettyPath },
 			type: VaultActionType.UpdateOrCreateFolder,
 		});
 	}

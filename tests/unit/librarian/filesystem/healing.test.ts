@@ -37,8 +37,10 @@ describe("healFile", () => {
 			(a) => a.type === VaultActionType.RenameFile,
 		);
 		expect(renameAction).toBeDefined();
-		expect(renameAction?.payload.from).toEqual(prettyPath);
-		expect(renameAction?.payload.to.basename).toBe("Note-Section");
+		expect(renameAction?.payload.from.basename).toBe("Note.md");
+		expect(renameAction?.payload.from.extension).toBe("md");
+		expect(renameAction?.payload.to.basename).toBe("Note-Section.md");
+		expect(renameAction?.payload.to.extension).toBe("md");
 	});
 
 	// Note: ScrollBasenameSchema accepts any non-empty string,

@@ -19,6 +19,8 @@ type ActionWithPrettyPath = VaultAction & {
 };
 const hasPrettyPath = (a: VaultAction): a is ActionWithPrettyPath =>
 	"prettyPath" in a.payload;
+const basenameWithoutMd = (a: ActionWithPrettyPath): string =>
+	a.payload.prettyPath.basename.replace(/\.md$/, "");
 
 const ROOT_NAME = "Library";
 
@@ -47,7 +49,7 @@ describe("mapDiffToActions", () => {
 				.find(
 					(a) =>
 						a.type === VaultActionType.UpdateOrCreateFile &&
-						a.payload.prettyPath.basename ===
+						basenameWithoutMd(a) ===
 							treePathToScrollBasename.encode(["Section", "Scroll"]),
 				);
 
@@ -70,7 +72,7 @@ describe("mapDiffToActions", () => {
 				.find(
 					(a) =>
 						a.type === VaultActionType.UpdateOrCreateFile &&
-						a.payload.prettyPath.basename ===
+						basenameWithoutMd(a) ===
 							treePathToPageBasename.encode(["Section", "Book", "000"]),
 				);
 
@@ -133,7 +135,7 @@ describe("mapDiffToActions", () => {
 				.find(
 					(a) =>
 						a.type === VaultActionType.TrashFile &&
-						a.payload.prettyPath.basename ===
+						basenameWithoutMd(a) ===
 							treePathToScrollBasename.encode(["Section", "Scroll"]),
 				);
 
@@ -155,7 +157,7 @@ describe("mapDiffToActions", () => {
 				.find(
 					(a) =>
 						a.type === VaultActionType.TrashFile &&
-						a.payload.prettyPath.basename ===
+						basenameWithoutMd(a) ===
 							treePathToPageBasename.encode(["Book", "001"]),
 				);
 
@@ -183,7 +185,7 @@ describe("mapDiffToActions", () => {
 				.find(
 					(a) =>
 						a.type === VaultActionType.ProcessFile &&
-						a.payload.prettyPath.basename ===
+						basenameWithoutMd(a) ===
 							treePathToScrollBasename.encode(["Section", "Scroll"]),
 				);
 
@@ -211,7 +213,7 @@ describe("mapDiffToActions", () => {
 
 			expect(processAction).toBeDefined();
 			expect(processAction?.payload.prettyPath.basename).toBe(
-				treePathToPageBasename.encode(["Book", "000"]),
+				`${treePathToPageBasename.encode(["Book", "000"])}.md`,
 			);
 		});
 	});
@@ -250,7 +252,7 @@ describe("mapDiffToActions", () => {
 				.find(
 					(a) =>
 						a.type === VaultActionType.UpdateOrCreateFile &&
-						a.payload.prettyPath.basename ===
+						basenameWithoutMd(a) ===
 							treePathToCodexBasename.encode(["NewSection"]),
 				);
 
@@ -273,7 +275,7 @@ describe("mapDiffToActions", () => {
 			const codexTrash = actionsWithPath.findIndex(
 				(a) =>
 					a.type === VaultActionType.TrashFile &&
-					a.payload.prettyPath.basename ===
+					basenameWithoutMd(a) ===
 						treePathToCodexBasename.encode(["OldSection"]),
 			);
 			const folderTrash = actionsWithPath.findIndex(
@@ -333,7 +335,7 @@ describe("mapDiffToActions", () => {
 				.find(
 					(a) =>
 						a.type === VaultActionType.UpdateOrCreateFile &&
-						a.payload.prettyPath.basename ===
+						basenameWithoutMd(a) ===
 							treePathToCodexBasename.encode(["Library"]),
 				);
 
@@ -363,9 +365,15 @@ describe("mapDiffToActions", () => {
 				);
 
 			const basenames = codexUpdates.map((a) => a.payload.prettyPath.basename);
-			expect(basenames).toContain(treePathToCodexBasename.encode(["Library"]));
-			expect(basenames).toContain(treePathToCodexBasename.encode(["A"]));
-			expect(basenames).toContain(treePathToCodexBasename.encode(["A", "B"]));
+			expect(basenames).toContain(
+				`${treePathToCodexBasename.encode(["Library"])}.md`,
+			);
+			expect(basenames).toContain(
+				`${treePathToCodexBasename.encode(["A"])}.md`,
+			);
+			expect(basenames).toContain(
+				`${treePathToCodexBasename.encode(["A", "B"])}.md`,
+			);
 		});
 
 		it("should update book codex when page status changes", () => {
@@ -387,7 +395,7 @@ describe("mapDiffToActions", () => {
 				.find(
 					(a) =>
 						a.type === VaultActionType.UpdateOrCreateFile &&
-						a.payload.prettyPath.basename ===
+						basenameWithoutMd(a) ===
 							treePathToCodexBasename.encode(["Section", "Book"]),
 				);
 

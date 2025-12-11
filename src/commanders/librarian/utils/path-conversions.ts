@@ -1,3 +1,8 @@
+import { splitPath } from "../../../obsidian-vault-action-manager";
+import type {
+	SplitPathToFolder,
+	SplitPathToMdFile,
+} from "../../../obsidian-vault-action-manager/types/split-path";
 import type { FullPath } from "../../../services/obsidian-services/atomic-services/pathfinder";
 import type { PrettyPath } from "../../../types/common-interface/dtos";
 import { isRootName, type RootName } from "../constants";
@@ -70,4 +75,18 @@ export function fullPathToTreePath(fullPath: FullPath): TreePath {
 	};
 
 	return prettyPathToTreePath(prettyPath);
+}
+
+export function prettyPathToFolder(prettyPath: PrettyPath): SplitPathToFolder {
+	const path = [...prettyPath.pathParts, prettyPath.basename]
+		.filter(Boolean)
+		.join("/");
+	return splitPath(path) as SplitPathToFolder;
+}
+
+export function prettyPathToMdFile(prettyPath: PrettyPath): SplitPathToMdFile {
+	const path = [...prettyPath.pathParts, prettyPath.basename]
+		.filter(Boolean)
+		.join("/");
+	return splitPath(`${path}.md`) as SplitPathToMdFile;
 }

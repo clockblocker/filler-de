@@ -9,6 +9,10 @@ import {
 	isCanonical,
 } from "../invariants/path-canonicalizer";
 import { createFolderActionsForPathParts } from "../utils/folder-actions";
+import {
+	prettyPathToFolder,
+	prettyPathToMdFile,
+} from "../utils/path-conversions";
 
 /**
  * Result of healing a file: actions to execute + metadata.
@@ -45,7 +49,10 @@ export function healFile(
 				seen,
 			),
 			{
-				payload: { from: prettyPath, to: canonical.destination },
+				payload: {
+					from: prettyPathToMdFile(prettyPath),
+					to: prettyPathToMdFile(canonical.destination),
+				},
 				type: VaultActionType.RenameFile,
 			},
 		];
@@ -72,7 +79,10 @@ export function healFile(
 			seen,
 		),
 		{
-			payload: { from: prettyPath, to: canonical.canonicalPrettyPath },
+			payload: {
+				from: prettyPathToMdFile(prettyPath),
+				to: prettyPathToMdFile(canonical.canonicalPrettyPath),
+			},
 			type: VaultActionType.RenameFile,
 		},
 	];

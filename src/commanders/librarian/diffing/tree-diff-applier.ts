@@ -11,7 +11,11 @@ import type { RootName } from "../constants";
 import { treePathToCodexBasename } from "../indexing/codecs";
 import type { NoteDto, NoteNode, SectionNode, TreePath } from "../types";
 import { NodeType } from "../types";
-import { treePathToPrettyPath } from "../utils/path-conversions";
+import {
+	prettyPathToFolder,
+	prettyPathToMdFile,
+	treePathToPrettyPath,
+} from "../utils/path-conversions";
 import type { NoteDiff, NoteStatusChange } from "./note-differ";
 
 /**
@@ -54,7 +58,9 @@ function createNoteAction(note: NoteDto, rootName: RootName): VaultAction {
 	return {
 		payload: {
 			content: editOrAddMetaInfo("", metaInfo),
-			prettyPath: treePathToPrettyPath(note.path, rootName),
+			prettyPath: prettyPathToMdFile(
+				treePathToPrettyPath(note.path, rootName),
+			),
 		},
 		type: VaultActionType.UpdateOrCreateFile,
 	};
@@ -63,7 +69,9 @@ function createNoteAction(note: NoteDto, rootName: RootName): VaultAction {
 function trashNoteAction(note: NoteDto, rootName: RootName): VaultAction {
 	return {
 		payload: {
-			prettyPath: treePathToPrettyPath(note.path, rootName),
+			prettyPath: prettyPathToMdFile(
+				treePathToPrettyPath(note.path, rootName),
+			),
 		},
 		type: VaultActionType.TrashFile,
 	};
@@ -88,7 +96,9 @@ function createStatusUpdateAction(
 
 	return {
 		payload: {
-			prettyPath: treePathToPrettyPath(change.path, rootName),
+			prettyPath: prettyPathToMdFile(
+				treePathToPrettyPath(change.path, rootName),
+			),
 			transform: (content: string) =>
 				editOrAddMetaInfo(content, metaInfo),
 		},
@@ -144,7 +154,9 @@ function createFolderAction(
 ): VaultAction {
 	return {
 		payload: {
-			prettyPath: sectionPathToPrettyPath(sectionPath, rootName),
+			prettyPath: prettyPathToFolder(
+				sectionPathToPrettyPath(sectionPath, rootName),
+			),
 		},
 		type: VaultActionType.UpdateOrCreateFolder,
 	};
@@ -156,7 +168,9 @@ function trashFolderAction(
 ): VaultAction {
 	return {
 		payload: {
-			prettyPath: sectionPathToPrettyPath(sectionPath, rootName),
+			prettyPath: prettyPathToFolder(
+				sectionPathToPrettyPath(sectionPath, rootName),
+			),
 		},
 		type: VaultActionType.TrashFolder,
 	};
@@ -170,7 +184,9 @@ function createCodexAction(
 	return {
 		payload: {
 			content: generateCodexContent(sectionPath, getNode),
-			prettyPath: codexPrettyPath(sectionPath, rootName),
+			prettyPath: prettyPathToMdFile(
+				codexPrettyPath(sectionPath, rootName),
+			),
 		},
 		type: VaultActionType.UpdateOrCreateFile,
 	};
@@ -184,7 +200,7 @@ function updateCodexAction(
 	return {
 		payload: {
 			content: generateCodexContent(path, getNode),
-			prettyPath: codexPrettyPath(path, rootName),
+			prettyPath: prettyPathToMdFile(codexPrettyPath(path, rootName)),
 		},
 		type: VaultActionType.UpdateOrCreateFile,
 	};
@@ -196,7 +212,9 @@ function trashCodexAction(
 ): VaultAction {
 	return {
 		payload: {
-			prettyPath: codexPrettyPath(sectionPath, rootName),
+			prettyPath: prettyPathToMdFile(
+				codexPrettyPath(sectionPath, rootName),
+			),
 		},
 		type: VaultActionType.TrashFile,
 	};

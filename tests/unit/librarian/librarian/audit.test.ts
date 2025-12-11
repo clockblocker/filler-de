@@ -64,20 +64,36 @@ describe("Librarian audit", () => {
 		);
 
 		expect(renameActions).toEqual([
-			{
+			expect.objectContaining({
 				payload: {
-					from: { basename: "child-parent", pathParts: ["Library"] },
-					to: { basename: "child", pathParts: ["Library"] },
+					from: expect.objectContaining({
+						basename: "child-parent.md",
+						extension: "md",
+						pathParts: ["Library"],
+					}),
+					to: expect.objectContaining({
+						basename: "child.md",
+						extension: "md",
+						pathParts: ["Library"],
+					}),
 				},
 				type: VaultActionType.RenameFile,
-			},
-			{
+			}),
+			expect.objectContaining({
 				payload: {
-					from: { basename: "NewName", pathParts: ["Library", "Parent"] },
-					to: { basename: "NewName-Parent", pathParts: ["Library", "Parent"] },
+					from: expect.objectContaining({
+						basename: "NewName.md",
+						extension: "md",
+						pathParts: ["Library", "Parent"],
+					}),
+					to: expect.objectContaining({
+						basename: "NewName-Parent.md",
+						extension: "md",
+						pathParts: ["Library", "Parent"],
+					}),
 				},
 				type: VaultActionType.RenameFile,
-			},
+			}),
 		]);
 
 		const folderCreates = flatActions.filter(

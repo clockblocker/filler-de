@@ -122,7 +122,10 @@ export class VaultEventHandler {
 
 		if (decoded?.kind === "codex") {
 			const revertAction: VaultAction = {
-				payload: { from: prettyPath, to: oldPrettyPath },
+				payload: {
+					from: prettyPathToMdFile(prettyPath),
+					to: prettyPathToMdFile(oldPrettyPath),
+				},
 				type: VaultActionType.RenameFile,
 			};
 			this.deps.dispatcher.registerSelf([revertAction]);
@@ -167,7 +170,10 @@ export class VaultEventHandler {
 						seenFolders,
 					),
 					{
-						payload: { from: prettyPath, to: finalPrettyPath },
+						payload: {
+							from: prettyPathToMdFile(prettyPath),
+							to: prettyPathToMdFile(finalPrettyPath),
+						},
 						type: VaultActionType.RenameFile,
 					},
 				];
@@ -235,7 +241,10 @@ export class VaultEventHandler {
 				seenFolders,
 			),
 			{
-				payload: { from: prettyPath, to: targetPrettyPath },
+				payload: {
+					from: prettyPathToMdFile(prettyPath),
+					to: prettyPathToMdFile(targetPrettyPath),
+				},
 				type: VaultActionType.RenameFile,
 			},
 		];
@@ -243,7 +252,7 @@ export class VaultEventHandler {
 		if (wasPage) {
 			moveActions.push({
 				payload: {
-					prettyPath: targetPrettyPath,
+					prettyPath: prettyPathToMdFile(targetPrettyPath),
 					transform: (old) =>
 						editOrAddMetaInfo(old, {
 							fileType: "Scroll",

@@ -23,6 +23,10 @@ import type { LibraryTree } from "../library-tree/library-tree";
 import { splitTextIntoPages } from "../text-splitter/text-splitter";
 import type { NoteDto, SectionNode, TreePath } from "../types";
 import { createFolderActionsForPathParts } from "../utils/folder-actions";
+import {
+	prettyPathToFolder,
+	prettyPathToMdFile,
+} from "../utils/path-conversions";
 import type { TreeReconciler } from "./tree-reconciler";
 
 export class NoteOperations {
@@ -171,7 +175,10 @@ export class NoteOperations {
 			}
 
 			const renameAction: VaultAction = {
-				payload: { from: originalPrettyPath, to: unmarkedPrettyPath },
+				payload: {
+					from: prettyPathToMdFile(originalPrettyPath),
+					to: prettyPathToMdFile(unmarkedPrettyPath),
+				},
 				type: VaultActionType.RenameFile,
 			};
 			this.deps.dispatcher.registerSelf([renameAction]);
@@ -195,7 +202,7 @@ export class NoteOperations {
 							fileType: "Scroll",
 							status: TextStatus.NotStarted,
 						}),
-						prettyPath: scrollPrettyPath,
+						prettyPath: prettyPathToMdFile(scrollPrettyPath),
 					},
 					type: VaultActionType.UpdateOrCreateFile,
 				},
@@ -237,7 +244,10 @@ export class NoteOperations {
 			}
 
 			phase1Actions.push({
-				payload: { from: originalPrettyPath, to: unmarkedPrettyPath },
+				payload: {
+					from: prettyPathToMdFile(originalPrettyPath),
+					to: prettyPathToMdFile(unmarkedPrettyPath),
+				},
 				type: VaultActionType.RenameFile,
 			});
 
@@ -265,7 +275,7 @@ export class NoteOperations {
 							index: i,
 							status: TextStatus.NotStarted,
 						}),
-						prettyPath: pagePrettyPath,
+						prettyPath: prettyPathToMdFile(pagePrettyPath),
 					},
 					type: VaultActionType.UpdateOrCreateFile,
 				});
