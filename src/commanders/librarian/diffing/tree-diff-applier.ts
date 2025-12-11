@@ -202,7 +202,7 @@ function updateCodexAction(
 			content: generateCodexContent(path, getNode),
 			coreSplitPath: corePathToMdFile(codexCorePath(path, rootName)),
 		},
-		type: VaultActionType.ProcessMdFile,
+		type: VaultActionType.WriteMdFile,
 	};
 }
 

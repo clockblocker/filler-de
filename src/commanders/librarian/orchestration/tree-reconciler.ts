@@ -14,7 +14,6 @@ export class TreeReconciler {
 			filesystemHealer: FilesystemHealer;
 			getTree: () => LibraryTree | null;
 			setTree: (tree: LibraryTree) => void;
-			getSkipReconciliation: () => boolean;
 		},
 	) {}
 
@@ -74,7 +73,7 @@ export class TreeReconciler {
 		mutation: (tree: LibraryTree) => T,
 		affectedPaths: TreePath[],
 	): Promise<{ actions: ReturnType<typeof mapDiffToActions>; result: T }> {
-		if (!this.deps.getSkipReconciliation() && affectedPaths.length > 0) {
+		if (affectedPaths.length > 0) {
 			for (const path of affectedPaths) {
 				await this.reconcileSubtree(rootName, path);
 			}

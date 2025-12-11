@@ -76,6 +76,7 @@ export default class TextEaterPlugin extends Plugin {
 			await this.loadPlugin();
 			this.initialized = true;
 		} catch (error) {
+			console.error("[TextEaterPlugin:initWhenObsidianIsReady]", error);
 			logError({
 				description: `Error during plugin initialization: ${error.message}`,
 				location: "TextEaterPlugin",

@@ -1,4 +1,4 @@
-import type { TAbstractFile, TFile } from "obsidian";
+import type { TFile } from "obsidian";
 import type {
 	ObsidianVaultActionManager,
 	VaultEvent,
@@ -18,7 +18,6 @@ import type { NoteDto, TreePath } from "./types";
 export class Librarian {
 	manager: ObsidianVaultActionManager;
 	tree: LibraryTree | null = null;
-	private skipReconciliation = false;
 	private filesystemHealer: FilesystemHealer;
 	private treeReconciler: TreeReconciler;
 	private noteOperations: NoteOperations;
@@ -35,7 +34,6 @@ export class Librarian {
 		});
 		this.treeReconciler = new TreeReconciler({
 			filesystemHealer: this.filesystemHealer,
-			getSkipReconciliation: () => this.skipReconciliation,
 			getTree: () => this.tree,
 			manager: this.manager,
 			setTree: (tree) => {
@@ -55,27 +53,9 @@ export class Librarian {
 		});
 	}
 
-	_setSkipReconciliation(skip: boolean): void {
-		this.skipReconciliation = skip;
-	}
-
 	async initTrees(): Promise<void> {
 		await this.treeReconciler.initTrees();
 		await this.regenerateAllCodexes();
-	}
-
-	// ─── Vault Event Handlers ─────────────────────────────────────────
-
-	async onFileCreated(file: TAbstractFile): Promise<void> {
-		await this.eventHandler.onFileCreated(file);
-	}
-
-	async onFileRenamed(file: TAbstractFile, oldPath: string): Promise<void> {
-		await this.eventHandler.onFileRenamed(file, oldPath);
-	}
-
-	async onFileDeleted(file: TAbstractFile): Promise<void> {
-		await this.eventHandler.onFileDeleted(file);
 	}
 
 	// Manager-driven events (self-filtered inside manager)
@@ -157,6 +137,4 @@ export class Librarian {
 			}
 		}
 	}
-
-	// ─── Private Helpers ──────────────────────────────────────────────
 }

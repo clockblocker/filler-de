@@ -10,7 +10,7 @@ describe("obsidian-vault-action-manager splitPath helpers", () => {
 		const split = splitPath("root/notes/file.md");
 
 		expect(split).toEqual({
-			basename: "file.md",
+			basename: "file",
 			extension: "md",
 			pathParts: ["root", "notes"],
 			type: "MdFile",
@@ -45,11 +45,13 @@ describe("obsidian-vault-action-manager splitPath helpers", () => {
 		const file = new TFile();
 		file.path = "root/notes/file.md";
 		file.extension = "md";
+		// @ts-expect-error allow assigning for test double
+		file.basename = "file";
 
 		const split = splitPath(file);
 
 		expect(split).toEqual({
-			basename: "file.md",
+			basename: "file",
 			extension: "md",
 			pathParts: ["root", "notes"],
 			type: "MdFile",

@@ -11,6 +11,15 @@ import type {
 const MD_EXTENSION = "md";
 
 export function splitPathKey(splitPath: CoreSplitPath): string {
+	if ("extension" in splitPath) {
+		const alreadyHasExt = splitPath.basename.endsWith(
+			`.${splitPath.extension}`,
+		);
+		const base = alreadyHasExt
+			? splitPath.basename
+			: `${splitPath.basename}.${splitPath.extension}`;
+		return [...splitPath.pathParts, base].join("/");
+	}
 	return [...splitPath.pathParts, splitPath.basename].join("/");
 }
 
@@ -29,37 +38,49 @@ export function splitPath(
 
 function splitPathFromAbstract(file: TAbstractFile): SplitPath {
 	const parts = file.path.split("/").filter(Boolean);
-	const basename = parts.pop() ?? "";
+	const rawBasename = parts.pop() ?? "";
 	const pathParts = parts;
 
 	if (file instanceof TFolder) {
-		return { basename, pathParts, type: "Folder" };
+		return { basename: rawBasename, pathParts, type: "Folder" };
 	}
 
 	const extension = file instanceof TFile ? (file.extension ?? "") : "";
 	if (extension === MD_EXTENSION) {
-		return { basename, extension, pathParts, type: "MdFile" };
+		const basename =
+			file instanceof TFile && file.basename
+				? file.basename
+				: rawBasename.replace(/\.md$/i, "");
+		return { basename, extension: "md", pathParts, type: "MdFile" };
 	}
 
-	return { basename, extension, pathParts, type: "File" };
+	return { basename: rawBasename, extension, pathParts, type: "File" };
 }
 
 function splitPathFromString(path: string): SplitPath {
 	const parts = path.split("/").filter(Boolean);
-	const basename = parts.pop() ?? "";
+	const rawBasename = parts.pop() ?? "";
 	const pathParts = parts;
 
-	const hasDot = basename.includes(".");
-	const ext = hasDot ? basename.slice(basename.lastIndexOf(".") + 1) : "";
+	const hasDot = rawBasename.includes(".");
+	const ext = hasDot
+		? rawBasename.slice(rawBasename.lastIndexOf(".") + 1)
+		: "";
 
 	if (ext === MD_EXTENSION) {
+		const basename = rawBasename.slice(0, rawBasename.lastIndexOf("."));
 		return { basename, extension: "md", pathParts, type: "MdFile" };
 	}
 
 	if (hasDot) {
-		return { basename, extension: ext, pathParts, type: "File" };
+		return {
+			basename: rawBasename,
+			extension: ext,
+			pathParts,
+			type: "File",
+		};
 	}
 
 	// Default: treat as folder when no extension present
-	return { basename, pathParts, type: "Folder" };
+	return { basename: rawBasename, pathParts, type: "Folder" };
 }

@@ -215,7 +215,7 @@ describe("mapDiffToActions", () => {
 
 			expect(processAction).toBeDefined();
 			expect(processAction?.payload.coreSplitPath.basename).toBe(
-				`${treePathToPageBasename.encode(["Book", "000"])}.md`,
+				treePathToPageBasename.encode(["Book", "000"]),
 			);
 		});
 	});
@@ -336,9 +336,9 @@ describe("mapDiffToActions", () => {
 			.filter(hasCorePath)
 			.find(
 				(a) =>
-					a.type === VaultActionType.ProcessMdFile &&
-					basenameWithoutMd(a) ===
-						treePathToCodexBasename.encode(["Library"]),
+						a.type === VaultActionType.WriteMdFile &&
+						basenameWithoutMd(a) ===
+							treePathToCodexBasename.encode(["Library"]),
 			);
 
 			expect(rootCodex).toBeDefined();
@@ -362,7 +362,7 @@ describe("mapDiffToActions", () => {
 				.filter(hasCorePath)
 				.filter(
 					(a) =>
-						a.type === VaultActionType.ProcessMdFile &&
+						a.type === VaultActionType.WriteMdFile &&
 						a.payload.coreSplitPath.basename.startsWith("__"),
 				);
 
@@ -396,7 +396,7 @@ describe("mapDiffToActions", () => {
 				.filter(hasCorePath)
 				.find(
 					(a) =>
-						a.type === VaultActionType.ProcessMdFile &&
+						a.type === VaultActionType.WriteMdFile &&
 						basenameWithoutMd(a) ===
 							treePathToCodexBasename.encode(["Section", "Book"]),
 				);
