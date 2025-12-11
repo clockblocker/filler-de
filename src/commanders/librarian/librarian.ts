@@ -4,8 +4,13 @@ import type {
 	VaultEvent,
 } from "../../obsidian-vault-action-manager";
 import { splitPathKey } from "../../obsidian-vault-action-manager";
-import { getActionTargetPath } from "../../obsidian-vault-action-manager/types/vault-action";
+import {
+	getActionTargetPath,
+	type VaultAction,
+	VaultActionType,
+} from "../../obsidian-vault-action-manager/types/vault-action";
 import { fullPathFromSystemPath } from "../../services/obsidian-services/atomic-services/pathfinder";
+import type { TextStatus } from "../../types/common-interface/enums";
 import { isRootName, LIBRARY_ROOT, type RootName } from "./constants";
 import type { NoteSnapshot } from "./diffing/note-differ";
 import { regenerateCodexActions } from "./diffing/tree-diff-applier";
@@ -125,27 +130,22 @@ export class Librarian {
 
 		const lines: string[] = [];
 
-		const walk = (
-			node: { name: string; status: TextStatus; children?: any[] },
-			depth: number,
-		) => {
+		type TreeLogNode = {
+			name: string;
+			status: TextStatus;
+			children?: TreeLogNode[];
+		};
+
+		const walk = (node: TreeLogNode, depth: number) => {
 			const indent = "  ".repeat(depth);
 			lines.push(`${indent}- ${node.name} [${node.status}]`);
-			if (Array.isArray((node as any).children)) {
-				for (const child of (node as any).children) {
-					walk(child, depth + 1);
-				}
+			if (!Array.isArray(node.children)) return;
+			for (const child of node.children) {
+				walk(child, depth + 1);
 			}
 		};
 
-		walk(
-			this.tree.root as unknown as {
-				name: string;
-				status: TextStatus;
-				children?: any[];
-			},
-			0,
-		);
+		walk(this.tree.root as unknown as TreeLogNode, 0);
 		console.log("[logTreeStatuses]\n" + lines.join("\n"));
 	}
 
@@ -165,12 +165,80 @@ export class Librarian {
 				getNode,
 			);
 
-			if (actions.length > 0) {
-				console.log("[regenerateAllCodexes] actions", {
-					count: actions.length,
-					samples: actions.slice(0, 5).map(getActionTargetPath),
+			const adjustedActions: VaultAction[] = [];
+
+			const ensureFolderActions: VaultAction[] = [];
+			const folderKeys = new Set<string>();
+			const addFolderIfMissing = async (folderPath: {
+				basename: string;
+				pathParts: string[];
+			}) => {
+				const key = [...folderPath.pathParts, folderPath.basename].join(
+					"/",
+				);
+				if (folderKeys.has(key)) return;
+				folderKeys.add(key);
+
+				const exists = await this.manager.exists({
+					...folderPath,
+					type: "Folder",
 				});
-				await this.manager.dispatch(actions);
+				if (!exists) {
+					ensureFolderActions.push({
+						payload: {
+							coreSplitPath: {
+								basename: folderPath.basename,
+								pathParts: folderPath.pathParts,
+							},
+						},
+						type: VaultActionType.CreateFolder,
+					});
+				}
+			};
+
+			// Root folder
+			await addFolderIfMissing({ basename: rootName, pathParts: [] });
+
+			// Section folders
+			for (const sectionPath of sectionPaths) {
+				const basename =
+					sectionPath[sectionPath.length - 1] ?? rootName;
+				const pathParts =
+					sectionPath.length > 1
+						? [rootName, ...sectionPath.slice(0, -1)]
+						: [rootName];
+				await addFolderIfMissing({ basename, pathParts });
+			}
+
+			for (const action of actions) {
+				if (action.type === VaultActionType.WriteMdFile) {
+					const exists = await this.manager.exists(
+						action.payload.coreSplitPath,
+					);
+					if (exists) {
+						adjustedActions.push(action);
+					} else {
+						adjustedActions.push({
+							payload: {
+								content: action.payload.content,
+								coreSplitPath: action.payload.coreSplitPath,
+							},
+							type: VaultActionType.CreateMdFile,
+						});
+					}
+				} else {
+					adjustedActions.push(action);
+				}
+			}
+
+			const allActions = [...ensureFolderActions, ...adjustedActions];
+
+			if (allActions.length > 0) {
+				console.log("[regenerateAllCodexes] actions", {
+					count: allActions.length,
+					samples: allActions.slice(0, 5).map(getActionTargetPath),
+				});
+				await this.manager.dispatch(allActions);
 			} else {
 				console.log("[regenerateAllCodexes] no actions generated");
 			}

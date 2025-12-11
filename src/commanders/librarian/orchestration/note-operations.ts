@@ -320,6 +320,9 @@ export class NoteOperations {
 			(tree) => tree.setStatus({ path, status }),
 			parentPath.length > 0 ? [parentPath] : [],
 		);
+
+		// Codex files must reflect the updated status immediately.
+		await this.deps.regenerateAllCodexes();
 	}
 
 	async addNotes(rootName: RootName, notes: NoteDto[]): Promise<void> {

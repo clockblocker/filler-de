@@ -1,12 +1,19 @@
 import type { ObsidianVaultActionManager } from "../../../obsidian-vault-action-manager";
 import type {
 	CoreSplitPath,
+	SplitPath,
 	SplitPathToFolder,
 } from "../../../obsidian-vault-action-manager/types/split-path";
 import { isInUntracked, type RootName } from "../constants";
 import { prettyFilesWithReaderToLibraryFiles } from "../indexing/libraryFileAdapters";
 import { noteDtosFromLibraryFiles } from "../pure-functions/note-dtos-from-library-file-dtos";
 import type { LibraryFile, NoteDto, TreePath } from "../types";
+
+type ManagerMdReader = CoreSplitPath & { readContent: () => Promise<string> };
+
+function isFolder(entry: SplitPath): entry is SplitPathToFolder {
+	return entry.type === "Folder";
+}
 
 // ─── Exported Pure Functions ─────────────────────────────────────────────
 
@@ -17,15 +24,31 @@ import type { LibraryFile, NoteDto, TreePath } from "../types";
  * @param folder - Folder to read
  * @returns Array of library files
  */
+async function getAllMdFileReaders(
+	manager: ObsidianVaultActionManager,
+	folder: SplitPathToFolder,
+): Promise<ManagerMdReader[]> {
+	const fullPathParts = [...folder.pathParts, folder.basename];
+	if (isInUntracked(fullPathParts)) {
+		return [];
+	}
+
+	const fileReaders = await manager.getReadersToAllMdFilesInFolder(folder);
+	const entries = await manager.list(folder);
+
+	const nestedReaders: ManagerMdReader[] = [];
+	for (const entry of entries.filter(isFolder)) {
+		nestedReaders.push(...(await getAllMdFileReaders(manager, entry)));
+	}
+
+	return [...fileReaders, ...nestedReaders];
+}
+
 export async function readFilesInFolder(
 	manager: ObsidianVaultActionManager,
-	folder: CoreSplitPath,
+	folder: SplitPathToFolder,
 ): Promise<LibraryFile[]> {
-	const fileReaders = await manager.getReadersToAllMdFilesInFolder({
-		...folder,
-		type: "Folder",
-	} as SplitPathToFolder);
-
+	const fileReaders = await getAllMdFileReaders(manager, folder);
 	return await prettyFilesWithReaderToLibraryFiles(fileReaders);
 }
 
@@ -57,6 +80,7 @@ export async function readNoteDtos(
 	const libraryFiles = await readFilesInFolder(manager, {
 		basename: folderBasename,
 		pathParts,
+		type: "Folder",
 	});
 
 	const trackedLibraryFiles = libraryFiles.filter(
