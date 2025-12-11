@@ -1,30 +1,23 @@
 import { type TFile, TFolder } from "obsidian";
-import type { PrettyPath } from "../../../types/common-interface/dtos";
-import type { Prettify } from "../../../types/helpers";
+import type {
+	CoreSplitPath,
+	SplitPath,
+	SplitPathToFolder,
+	SplitPathToMdFile,
+} from "../../../obsidian-vault-action-manager/types/split-path";
 import { SLASH } from "../../../types/literals";
 
-export function fullPathToMdFileFromPrettyPath(
-	prettyPath: PrettyPath,
-): FullPathToMdFile {
-	return {
-		...prettyPath,
-		extension: "md",
-		type: "file",
-	};
+export function splitPathToMdFile(path: CoreSplitPath): SplitPathToMdFile {
+	return { ...path, extension: "md", type: "MdFile" };
 }
 
-export function fullPathToFolderFromPrettyPath(
-	prettyPath: PrettyPath,
-): FullPathToFolder {
-	return {
-		...prettyPath,
-		type: "folder",
-	};
+export function splitPathToFolder(path: CoreSplitPath): SplitPathToFolder {
+	return { ...path, type: "Folder" };
 }
 
-export function getFullPathForAbstractFile(file: TFile): FullPathToMdFile;
-export function getFullPathForAbstractFile(folder: TFolder): FullPathToFolder;
-export function getFullPathForAbstractFile<T extends FullPath>(
+export function getFullPathForAbstractFile(file: TFile): SplitPathToMdFile;
+export function getFullPathForAbstractFile(folder: TFolder): SplitPathToFolder;
+export function getFullPathForAbstractFile<T extends SplitPath>(
 	abstractFile: AbstractFile<T>,
 ): T {
 	const path = abstractFile.path;
@@ -35,7 +28,7 @@ export function getFullPathForAbstractFile<T extends FullPath>(
 		return {
 			basename: title,
 			pathParts: fullPath,
-			type: "folder",
+			type: "Folder",
 		} as T;
 	}
 
@@ -43,13 +36,14 @@ export function getFullPathForAbstractFile<T extends FullPath>(
 		basename: abstractFile.basename,
 		extension: abstractFile.extension,
 		pathParts: fullPath,
-		type: "file",
+		type: "MdFile",
 	} as T;
 }
 
-export function systemPathFromFullPath(fullPath: FullPath): string {
+export function systemPathFromFullPath(fullPath: SplitPath): string {
 	const { pathParts, basename: title } = fullPath;
-	const extension = fullPath.type === "file" ? `.${fullPath.extension}` : "";
+	const extension =
+		fullPath.type === "Folder" ? "" : `.${fullPath.extension}`;
 	return joinPosix(
 		pathToFolderFromPathParts(pathParts),
 		safeFileName(title) + extension,
@@ -57,7 +51,7 @@ export function systemPathFromFullPath(fullPath: FullPath): string {
 }
 
 // SystemPath shall point to folder or MD file
-export function fullPathFromSystemPath(systemPath: string): FullPath {
+export function fullPathFromSystemPath(systemPath: string): SplitPath {
 	// TODO: replace manual string parsing with codec if/when available
 	const normalized = systemPath.replace(/^[\\/]+|[\\/]+$/g, "");
 	if (!normalized) {
@@ -65,7 +59,7 @@ export function fullPathFromSystemPath(systemPath: string): FullPath {
 		return {
 			basename: "",
 			pathParts: [],
-			type: "folder",
+			type: "Folder",
 		};
 	}
 	const parts = normalized.split("/").filter(Boolean);
@@ -85,14 +79,14 @@ export function fullPathFromSystemPath(systemPath: string): FullPath {
 			basename,
 			extension,
 			pathParts: parts.slice(0, -1),
-			type: "file",
+			type: "MdFile",
 		};
 	}
 
 	return {
 		basename: last,
 		pathParts: parts.slice(0, -1),
-		type: "folder",
+		type: "Folder",
 	};
 }
 
@@ -112,22 +106,11 @@ export function joinPosix(...parts: string[]): string {
 	return cleaned.join("/");
 }
 
-export type FullPathToFolder = Prettify<
-	PrettyPath & {
-		type: "folder";
-	}
->;
+export type FullPathToFolder = SplitPathToFolder;
+export type FullPathToMdFile = SplitPathToMdFile;
+export type FullPath = SplitPath;
 
-export type FullPathToMdFile = Prettify<
-	PrettyPath & {
-		type: "file";
-		extension: "md";
-	}
->;
-
-export type FullPath = FullPathToFolder | FullPathToMdFile;
-
-export type AbstractFile<T extends FullPath> = T extends { type: "file" }
+export type AbstractFile<T extends FullPath> = T extends { type: "MdFile" }
 	? TFile
 	: TFolder;
 

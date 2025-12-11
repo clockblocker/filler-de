@@ -3,6 +3,7 @@ import { z } from "zod";
 import { splitPath as buildSplitPath, splitPathKey } from "./impl/split-path";
 import { CREATE, FILE, RENAME, TRASH } from "./types/literals";
 import type {
+	CoreSplitPath,
 	SplitPath,
 	SplitPathToFile,
 	SplitPathToFolder,
@@ -38,14 +39,23 @@ export type VaultEventHandler = (event: VaultEvent) => Promise<void>;
 
 export type Teardown = () => void;
 
+type MdFileReader = CoreSplitPath & {
+	readContent: () => Promise<string>;
+};
+
 export interface ObsidianVaultActionManager {
 	subscribe(handler: VaultEventHandler): Teardown;
 	dispatch(actions: readonly VaultAction[]): Promise<void>;
 
 	// Read-only operations
 	readContent(splitPath: SplitPathToMdFile): Promise<string>;
+	getReadersToAllMdFilesInFolder(
+		folder: SplitPathToFolder,
+	): Promise<MdFileReader>;
+
 	exists(splitPath: SplitPath): Promise<boolean>;
 	isInActiveView(splitPath: SplitPath): Promise<boolean>;
+
 	list(splitPath: SplitPathToFolder): Promise<SplitPath[]>;
 	pwd(): Promise<SplitPathToFile | SplitPathToMdFile>;
 

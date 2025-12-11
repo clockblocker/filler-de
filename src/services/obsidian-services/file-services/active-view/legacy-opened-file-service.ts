@@ -1,12 +1,12 @@
 import { type App, TFile } from "obsidian";
-import type { PrettyPath } from "../../../../types/common-interface/dtos";
+import type { CoreSplitPath } from "../../../../obsidian-vault-action-manager/types/split-path";
 import {
 	type Maybe,
 	unwrapMaybeByThrowing,
 } from "../../../../types/common-interface/maybe";
 import {
 	type FullPathToMdFile,
-	fullPathToMdFileFromPrettyPath,
+	splitPathToMdFile,
 	systemPathFromFullPath,
 } from "../../atomic-services/pathfinder";
 import { getMaybeEditor } from "../../helpers/get-editor";
@@ -63,7 +63,7 @@ export class LegacyOpenedFileService {
 		return { data: content, error: false };
 	}
 
-	async isFileActive(prettyPath: PrettyPath): Promise<boolean> {
+	async isFileActive(prettyPath: CoreSplitPath): Promise<boolean> {
 		const pwd = await this.pwd();
 		// Check both pathParts and basename to ensure it's the same file
 		return (
@@ -77,9 +77,9 @@ export class LegacyOpenedFileService {
 
 	public async cd(file: TFile): Promise<Maybe<TFile>>;
 	public async cd(file: FullPathToMdFile): Promise<Maybe<TFile>>;
-	public async cd(file: PrettyPath): Promise<Maybe<TFile>>;
+	public async cd(file: CoreSplitPath): Promise<Maybe<TFile>>;
 	public async cd(
-		file: TFile | FullPathToMdFile | PrettyPath,
+		file: TFile | FullPathToMdFile | CoreSplitPath,
 	): Promise<Maybe<TFile>> {
 		let tfile: TFile;
 		if (
@@ -91,7 +91,7 @@ export class LegacyOpenedFileService {
 			typeof (file as FullPathToMdFile).basename === "string" &&
 			Array.isArray((file as FullPathToMdFile).pathParts)
 		) {
-			const full = fullPathToMdFileFromPrettyPath(file as PrettyPath);
+			const full = splitPathToMdFile(file as CoreSplitPath);
 			const systemPath = systemPathFromFullPath(full);
 
 			const tfileMaybe = this.app.vault.getAbstractFileByPath(systemPath);

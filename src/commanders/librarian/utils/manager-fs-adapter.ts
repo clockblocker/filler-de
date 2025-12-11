@@ -1,4 +1,4 @@
-import type { ObsidianVaultActionManager } from "../../obsidian-vault-action-manager";
+import type { ObsidianVaultActionManager } from "../../../obsidian-vault-action-manager";
 import { prettyPathToFolder, prettyPathToMdFile } from "./path-conversions";
 
 export type ManagerFsReader = {
