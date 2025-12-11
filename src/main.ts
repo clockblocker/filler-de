@@ -169,9 +169,7 @@ export default class TextEaterPlugin extends Plugin {
 		this.selectionService = new SelectionService(this.app);
 
 		this.librarian = new Librarian({
-			backgroundFileService: this.backgroundFileService,
 			manager: this.vaultActionManager,
-			openedFileService: this.legacyOpenedFileService,
 		});
 		await this.librarian.initTrees();
 		console.log("[main] Librarian and trees initialized:", this.librarian);

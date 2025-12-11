@@ -5,7 +5,6 @@ import type {
 } from "../../obsidian-vault-action-manager";
 import { splitPathKey } from "../../obsidian-vault-action-manager";
 import { fullPathFromSystemPath } from "../../services/obsidian-services/atomic-services/pathfinder";
-import type { TexfresserObsidianServices } from "../../services/obsidian-services/interface";
 import type { PrettyPath } from "../../types/common-interface/dtos";
 import { ActionDispatcher } from "./action-dispatcher";
 import { isRootName, LIBRARY_ROOTS, type RootName } from "./constants";
@@ -18,11 +17,12 @@ import { NoteOperations } from "./orchestration/note-operations";
 import { TreeReconciler } from "./orchestration/tree-reconciler";
 import { VaultEventHandler } from "./orchestration/vault-event-handler";
 import type { NoteDto, TreePath } from "./types";
+import { makeManagerFsAdapter } from "./utils/manager-fs-adapter";
 import { SelfEventTracker } from "./utils/self-event-tracker";
 
 export class Librarian {
-	backgroundFileService: TexfresserObsidianServices["backgroundFileService"];
-	openedFileService: TexfresserObsidianServices["openedFileService"];
+	backgroundFileService: ReturnType<typeof makeManagerFsAdapter>;
+	openedFileService: unknown;
 	tree: LibraryTree | null;
 
 	private dispatcher: ActionDispatcher;
@@ -33,41 +33,32 @@ export class Librarian {
 	private noteOperations: NoteOperations;
 	private eventHandler: VaultEventHandler;
 
-	constructor({
-		backgroundFileService,
-		openedFileService,
-		manager,
-	}: {
-		manager: ObsidianVaultActionManager;
-	} & Pick<
-		TexfresserObsidianServices,
-		"backgroundFileService" | "openedFileService"
-	>) {
-		this.backgroundFileService = backgroundFileService;
-		this.openedFileService = openedFileService;
+	constructor({ manager }: { manager: ObsidianVaultActionManager }) {
+		this.backgroundFileService = makeManagerFsAdapter(manager);
+		this.openedFileService = undefined;
 		this.state = new LibrarianState();
 		this.dispatcher = new ActionDispatcher(manager, this.selfEventTracker);
 		this.filesystemHealer = new FilesystemHealer({
-			backgroundFileService,
+			backgroundFileService: this.backgroundFileService,
 			dispatcher: this.dispatcher,
 		});
 		this.treeReconciler = new TreeReconciler({
-			backgroundFileService,
+			backgroundFileService: this.backgroundFileService,
 			dispatcher: this.dispatcher,
 			filesystemHealer: this.filesystemHealer,
 			state: this.state,
 		});
 		this.noteOperations = new NoteOperations({
-			backgroundFileService,
+			backgroundFileService: this.backgroundFileService,
 			dispatcher: this.dispatcher,
 			generateUniquePrettyPath: (p) => this.generateUniquePrettyPath(p),
-			openedFileService,
+			openedFileService: this.openedFileService,
 			regenerateAllCodexes: () => this.regenerateAllCodexes(),
 			state: this.state,
 			treeReconciler: this.treeReconciler,
 		});
 		this.eventHandler = new VaultEventHandler({
-			backgroundFileService,
+			backgroundFileService: this.backgroundFileService,
 			dispatcher: this.dispatcher,
 			filesystemHealer: this.filesystemHealer,
 			generateUniquePrettyPath: (p) => this.generateUniquePrettyPath(p),
