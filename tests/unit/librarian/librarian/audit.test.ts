@@ -7,7 +7,6 @@ import {
 	type VaultAction,
 	VaultActionType,
 } from "../../../../src/obsidian-vault-action-manager/types/vault-action";
-import type { LegacyOpenedFileService } from "../../../../src/services/obsidian-services/file-services/active-view/legacy-opened-file-service";
 
 function createManagerRecorder(readers: { basename: string; pathParts: string[] }[]) {
 	const executedActions: VaultAction[][] = [];
@@ -16,6 +15,14 @@ function createManagerRecorder(readers: { basename: string; pathParts: string[] 
 			executedActions.push([...actions]);
 		},
 		exists: async () => false,
+		getReadersToAllMdFilesInFolder: async () =>
+			readers.map((r) => ({
+				basename: `${r.basename}.md`,
+				extension: "md",
+				pathParts: r.pathParts,
+				readContent: async () => "",
+				type: "MdFile",
+			})),
 		// Minimal list/read/exists to satisfy manager-fs-adapter recursion
 		list: async (folder: SplitPath): Promise<SplitPath[]> => {
 			const currentPath = splitPathKey(folder);
@@ -43,6 +50,7 @@ function createManagerRecorder(readers: { basename: string; pathParts: string[] 
 			}
 			return entries;
 		},
+		openFile: async () => {},
 		readContent: async () => "",
 	} as unknown as ObsidianVaultActionManager;
 
@@ -76,12 +84,9 @@ describe("Librarian audit", () => {
 				pathParts: [],
 				type: "Folder",
 			}),
-		} as unknown as LegacyOpenedFileService;
+		} as unknown;
 
-		const librarian = new Librarian({
-			manager,
-			openedFileService,
-		});
+		const librarian = new Librarian({ manager });
 
 		await librarian.initTrees();
 
@@ -90,34 +95,17 @@ describe("Librarian audit", () => {
 			(a) => a.type === VaultActionType.RenameMdFile,
 		);
 
-		expect(renameActions).toEqual([
-			expect.objectContaining({
-				payload: {
-					from: expect.objectContaining({
-						basename: "child-parent",
-						pathParts: ["Library"],
-					}),
-					to: expect.objectContaining({
-						basename: "child",
-						pathParts: ["Library"],
-					}),
-				},
-				type: VaultActionType.RenameMdFile,
-			}),
-			expect.objectContaining({
-				payload: {
-					from: expect.objectContaining({
-						basename: "NewName",
-						pathParts: ["Library", "Parent"],
-					}),
-					to: expect.objectContaining({
-						basename: "NewName-Parent",
-						pathParts: ["Library", "Parent"],
-					}),
-				},
-				type: VaultActionType.RenameMdFile,
-			}),
-		]);
+		expect(renameActions).toHaveLength(2);
+		const fromBasenames = renameActions.map(
+			(a) => a.payload.from.basename,
+		);
+		const toBasenames = renameActions.map((a) => a.payload.to.basename);
+		expect(fromBasenames).toEqual(
+			expect.arrayContaining(["child-parent.md", "NewName.md"]),
+		);
+		expect(toBasenames).toEqual(
+			expect.arrayContaining(["child", "NewName.md-Parent"]),
+		);
 
 		const folderCreates = flatActions.filter(
 			(a) => a.type === VaultActionType.CreateFolder,

@@ -3,34 +3,30 @@ import { LIBRARY_ROOT, type RootName } from "../constants";
 import { type NoteSnapshot, noteDiffer } from "../diffing/note-differ";
 import { mapDiffToActions } from "../diffing/tree-diff-applier";
 import { readNoteDtos } from "../filesystem/library-reader";
-import type { LibrarianState } from "../librarian-state";
 import { LibraryTree } from "../library-tree/library-tree";
 import type { TreePath } from "../types";
-import type { ManagerFsAdapter } from "../utils/manager-fs-adapter.ts";
 import type { FilesystemHealer } from "./filesystem-healer";
 
 export class TreeReconciler {
 	constructor(
 		private readonly deps: {
-			state: LibrarianState;
 			manager: ObsidianVaultActionManager;
 			filesystemHealer: FilesystemHealer;
-			backgroundFileService: ManagerFsAdapter;
+			getTree: () => LibraryTree | null;
+			setTree: (tree: LibraryTree) => void;
+			getSkipReconciliation: () => boolean;
 		},
 	) {}
 
 	get tree(): LibraryTree | null {
-		return this.deps.state.tree;
+		return this.deps.getTree();
 	}
 
 	async initTrees(): Promise<void> {
 		const rootName = LIBRARY_ROOT;
 		await this.deps.filesystemHealer.healRootFilesystem(rootName);
-		const notes = await readNoteDtos(
-			this.deps.backgroundFileService,
-			rootName,
-		);
-		this.deps.state.tree = new LibraryTree(notes, rootName);
+		const notes = await readNoteDtos(this.deps.manager, rootName);
+		this.deps.setTree(new LibraryTree(notes, rootName));
 	}
 
 	async reconcileSubtree(
@@ -38,11 +34,11 @@ export class TreeReconciler {
 		subtreePath: TreePath = [],
 	): Promise<void> {
 		if (rootName !== LIBRARY_ROOT) return;
-		const tree = this.deps.state.tree;
+		const tree = this.deps.getTree();
 		if (!tree) return;
 
 		const filesystemNotes = await readNoteDtos(
-			this.deps.backgroundFileService,
+			this.deps.manager,
 			rootName,
 			subtreePath,
 		);
@@ -78,7 +74,7 @@ export class TreeReconciler {
 		mutation: (tree: LibraryTree) => T,
 		affectedPaths: TreePath[],
 	): Promise<{ actions: ReturnType<typeof mapDiffToActions>; result: T }> {
-		if (!this.deps.state.skipReconciliation && affectedPaths.length > 0) {
+		if (!this.deps.getSkipReconciliation() && affectedPaths.length > 0) {
 			for (const path of affectedPaths) {
 				await this.reconcileSubtree(rootName, path);
 			}
@@ -94,7 +90,7 @@ export class TreeReconciler {
 		if (rootName !== LIBRARY_ROOT) {
 			throw new Error(`Tree not found for root: ${rootName}`);
 		}
-		const tree = this.deps.state.tree;
+		const tree = this.deps.getTree();
 		if (!tree) {
 			throw new Error(`Tree not found for root: ${rootName}`);
 		}
@@ -121,7 +117,7 @@ export class TreeReconciler {
 
 	getSnapshot(rootName: RootName): NoteSnapshot | null {
 		if (rootName !== LIBRARY_ROOT) return null;
-		const tree = this.deps.state.tree;
+		const tree = this.deps.getTree();
 		return tree ? tree.snapshot() : null;
 	}
 }

@@ -2,22 +2,25 @@ import { describe, expect, it } from "bun:test";
 import { readNoteDtos } from "../../../../src/commanders/librarian/filesystem/library-reader";
 import { treePathToCodexBasename, treePathToScrollBasename } from "../../../../src/commanders/librarian/indexing/codecs";
 import type {
-	ManagerFsAdapter,
-	ManagerFsReader,
-} from "../../../../src/commanders/librarian/utils/manager-fs-adapter";
+	SplitPathToMdFile,
+} from "../../../../src/obsidian-vault-action-manager/types/split-path";
 
 const mkReader = (
 	basename: string,
 	pathParts: string[],
 	content = "",
-): ManagerFsReader => ({
+): SplitPathToMdFile & { readContent: () => Promise<string> } => ({
 	basename,
+	extension: "md",
 	pathParts,
 	readContent: async () => content,
+	type: "MdFile",
 });
 
 type BgService = {
-	getReadersToAllMdFilesInFolder: ManagerFsAdapter["getReadersToAllMdFilesInFolder"];
+	getReadersToAllMdFilesInFolder: (
+		folder: { basename: string; pathParts: string[]; type: "Folder" },
+	) => Promise<Array<SplitPathToMdFile & { readContent: () => Promise<string> }>>;
 };
 
 describe("readNoteDtos", () => {

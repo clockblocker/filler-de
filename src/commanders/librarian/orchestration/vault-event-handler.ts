@@ -8,7 +8,6 @@ import type {
 } from "../../../obsidian-vault-action-manager/types/split-path";
 import { fullPathFromSystemPath } from "../../../services/obsidian-services/atomic-services/pathfinder";
 import { isInUntracked, isRootName, LIBRARY_ROOT } from "../constants";
-import type { LibrarianState } from "../librarian-state";
 import type { TreePath } from "../types";
 import type { TreeReconciler } from "./tree-reconciler";
 
@@ -17,7 +16,6 @@ export class VaultEventHandler {
 		private readonly deps: {
 			manager: ObsidianVaultActionManager;
 			treeReconciler: TreeReconciler;
-			state: LibrarianState;
 			regenerateAllCodexes: () => Promise<void>;
 		},
 	) {}

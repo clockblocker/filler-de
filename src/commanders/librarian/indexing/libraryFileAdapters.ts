@@ -1,8 +1,8 @@
+import type { SplitPathToMdFile } from "../../../obsidian-vault-action-manager/types/split-path";
 import { extractMetaInfo } from "../../../services/dto-services/meta-info-manager/interface";
 import type { MetaInfo } from "../../../services/dto-services/meta-info-manager/types";
 import { TextStatus } from "../../../types/common-interface/enums";
 import type { LibraryFile, TreePath } from "../types";
-import type { ManagerFsReader } from "../utils/manager-fs-adapter.ts";
 import {
 	CodexBaseameSchema,
 	PageBasenameSchema,
@@ -43,7 +43,7 @@ export function getTreePathFromLibraryFile(libraryFile: LibraryFile): TreePath {
  */
 function inferMetaInfo({
 	basename,
-}: Pick<ManagerFsReader, "basename" | "pathParts">): MetaInfo | null {
+}: Pick<SplitPathToMdFile, "basename" | "pathParts">): MetaInfo | null {
 	const codexResult = CodexBaseameSchema.safeParse(basename);
 	if (codexResult.success) {
 		return {
@@ -85,7 +85,7 @@ function inferMetaInfo({
 }
 
 export async function prettyFileWithReaderToLibraryFile(
-	fileReader: ManagerFsReader,
+	fileReader: SplitPathToMdFile & { readContent: () => Promise<string> },
 ): Promise<LibraryFile | null> {
 	const content = await fileReader.readContent();
 	let metaInfo = extractMetaInfo(content);

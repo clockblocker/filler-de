@@ -74,7 +74,7 @@ describe("healFile", () => {
 		);
 		// Section folder action created (even if it exists, queue handles dedup)
 		expect(folderActions).toHaveLength(1);
-		expect(folderActions[0]?.payload.prettyPath.basename).toBe("Section");
+		expect(folderActions[0]?.payload.coreSplitPath.basename).toBe("Section");
 	});
 
 	it("deduplicates folders using seen set", () => {
@@ -118,7 +118,9 @@ describe("healFiles", () => {
 		const actions = healFiles(files, rootName);
 
 		const renameActions = actions.filter(
-			(a) => a.type === VaultActionType.RenameFile,
+			(a) =>
+				a.type === VaultActionType.RenameFile ||
+				a.type === VaultActionType.RenameMdFile,
 		);
 		expect(renameActions).toHaveLength(2);
 	});

@@ -1,12 +1,14 @@
 import type { ObsidianVaultActionManager } from "../../../obsidian-vault-action-manager";
-import type { CoreSplitPath } from "../../../obsidian-vault-action-manager/types/split-path";
+import type {
+	CoreSplitPath,
+	SplitPathToMdFile,
+} from "../../../obsidian-vault-action-manager/types/split-path";
 import {
 	type VaultAction,
 	VaultActionType,
 } from "../../../obsidian-vault-action-manager/types/vault-action";
 import { editOrAddMetaInfo } from "../../../services/dto-services/meta-info-manager/interface";
-import { fullPathFromSystemPath } from "../../../services/obsidian-services/atomic-services/pathfinder";
-import type { LegacyOpenedFileService } from "../../../services/obsidian-services/file-services/active-view/legacy-opened-file-service";
+import { splitPathToMdFile } from "../../../services/obsidian-services/atomic-services/pathfinder";
 import { logWarning } from "../../../services/obsidian-services/helpers/issue-handlers";
 import { TextStatus } from "../../../types/common-interface/enums";
 import { isRootName, LIBRARY_ROOT, type RootName } from "../constants";
@@ -18,37 +20,30 @@ import {
 	treePathToPageBasename,
 	treePathToScrollBasename,
 } from "../indexing/codecs";
-import type { LibrarianState } from "../librarian-state";
 import type { LibraryTree } from "../library-tree/library-tree";
 import { splitTextIntoPages } from "../text-splitter/text-splitter";
 import type { NoteDto, SectionNode, TreePath } from "../types";
 import { createFolderActionsForPathParts } from "../utils/folder-actions";
-import type { ManagerFsAdapter } from "../utils/manager-fs-adapter.ts";
 import type { TreeReconciler } from "./tree-reconciler";
 
 export class NoteOperations {
 	constructor(
 		private readonly deps: {
-			state: LibrarianState;
+			getTree: () => LibraryTree | null;
 			manager: ObsidianVaultActionManager;
 			treeReconciler: TreeReconciler;
 			regenerateAllCodexes: () => Promise<void>;
-			generateUniqueSplitPath: (
-				path: CoreSplitPath,
-			) => Promise<CoreSplitPath>;
-			openedFileService: LegacyOpenedFileService;
-			backgroundFileService: ManagerFsAdapter;
 		},
 	) {}
 
 	get tree(): LibraryTree | null {
-		return this.deps.state.tree;
+		return this.deps.getTree();
 	}
 
 	async createNewNoteInCurrentFolder(): Promise<void> {
-		const pwd = await this.deps.openedFileService.pwd();
+		const pwd = await this.deps.manager.pwd();
 
-		if (!this.deps.state.tree) {
+		if (!this.deps.getTree()) {
 			await this.deps.treeReconciler.initTrees();
 		}
 
@@ -79,25 +74,16 @@ export class NoteOperations {
 			[sectionPath],
 		);
 
-		await this.deps.openedFileService.cd({
+		await this.deps.manager.openFile({
 			basename: treePathToScrollBasename.encode(notePath),
+			extension: "md",
 			pathParts: [rootName, ...sectionPath],
+			type: "MdFile",
 		});
 	}
 
 	async makeNoteAText(): Promise<boolean> {
-		const app = this.deps.openedFileService.getApp();
-		const currentFile = app.workspace.getActiveFile();
-
-		if (!currentFile) {
-			logWarning({
-				description: "No file is currently open.",
-				location: "Librarian.makeNoteAText",
-			});
-			return false;
-		}
-
-		const fullPath = fullPathFromSystemPath(currentFile.path);
+		const fullPath = await this.deps.manager.pwd();
 		const rootCandidate = fullPath.pathParts[0];
 		const rootName =
 			rootCandidate && isRootName(rootCandidate)
@@ -112,7 +98,7 @@ export class NoteOperations {
 			return false;
 		}
 
-		if (!this.deps.state.tree) {
+		if (!this.deps.getTree()) {
 			logWarning({
 				description: "Tree not initialized for this root.",
 				location: "Librarian.makeNoteAText",
@@ -120,14 +106,13 @@ export class NoteOperations {
 			return false;
 		}
 
-		const originalPrettyPath: CoreSplitPath = {
+		const originalPrettyPath: SplitPathToMdFile = {
 			basename: fullPath.basename,
+			extension: "md",
 			pathParts: fullPath.pathParts,
+			type: "MdFile",
 		};
-		const content =
-			await this.deps.backgroundFileService.readContent(
-				originalPrettyPath,
-			);
+		const content = await this.deps.manager.readContent(originalPrettyPath);
 
 		if (!content.trim()) {
 			logWarning({
@@ -160,10 +145,12 @@ export class NoteOperations {
 				pathParts: originalPrettyPath.pathParts,
 			};
 			if (
-				await this.deps.backgroundFileService.exists(unmarkedPrettyPath)
+				await this.deps.manager.exists(
+					splitPathToMdFile(unmarkedPrettyPath),
+				)
 			) {
 				unmarkedPrettyPath =
-					await this.deps.generateUniqueSplitPath(unmarkedPrettyPath);
+					await this.generateUniqueSplitPath(unmarkedPrettyPath);
 			}
 
 			const renameAction: VaultAction = {
@@ -200,9 +187,11 @@ export class NoteOperations {
 
 			await this.deps.manager.dispatch(createActions);
 
-			this.deps.state.tree?.addNotes([
-				{ path: scrollTreePath, status: TextStatus.NotStarted },
-			]);
+			this.deps
+				.getTree()
+				?.addNotes([
+					{ path: scrollTreePath, status: TextStatus.NotStarted },
+				]);
 
 			await this.deps.regenerateAllCodexes();
 
@@ -223,10 +212,12 @@ export class NoteOperations {
 				pathParts: bookFolderPathParts,
 			};
 			if (
-				await this.deps.backgroundFileService.exists(unmarkedPrettyPath)
+				await this.deps.manager.exists(
+					splitPathToMdFile(unmarkedPrettyPath),
+				)
 			) {
 				unmarkedPrettyPath =
-					await this.deps.generateUniqueSplitPath(unmarkedPrettyPath);
+					await this.generateUniqueSplitPath(unmarkedPrettyPath);
 			}
 
 			phase1Actions.push({
@@ -278,7 +269,7 @@ export class NoteOperations {
 				bookSectionPath,
 			);
 
-			const tree = this.deps.state.tree;
+			const tree = this.deps.getTree();
 			if (tree) {
 				const getNode = (path: TreePath) => {
 					const mbNode = tree.getMaybeNode({ path });
@@ -293,9 +284,28 @@ export class NoteOperations {
 			}
 		}
 
-		await this.deps.openedFileService.cd(destinationPrettyPath);
+		await this.deps.manager.openFile(
+			splitPathToMdFile(destinationPrettyPath),
+		);
 
 		return true;
+	}
+
+	private async generateUniqueSplitPath(
+		path: CoreSplitPath,
+	): Promise<CoreSplitPath> {
+		let candidate = path;
+		let counter = 1;
+
+		while (await this.deps.manager.exists(splitPathToMdFile(candidate))) {
+			candidate = {
+				...path,
+				basename: `${path.basename}_${counter}`,
+			};
+			counter += 1;
+		}
+
+		return candidate;
 	}
 
 	async setStatus(
@@ -363,7 +373,7 @@ export class NoteOperations {
 				: undefined;
 		if (!rootName) return undefined;
 		return rootName === LIBRARY_ROOT
-			? (this.deps.state.tree ?? undefined)
+			? (this.deps.getTree() ?? undefined)
 			: undefined;
 	}
 

@@ -15,25 +15,21 @@ import { TextStatus } from "../../../types/common-interface/enums";
 import { isInUntracked, type RootName } from "../constants";
 import { healFile } from "../filesystem/healing";
 import { canonicalizePath } from "../invariants/path-canonicalizer";
-import type { ManagerFsAdapter } from "../utils/manager-fs-adapter.ts";
 
 export class FilesystemHealer {
 	constructor(
 		private readonly deps: {
 			manager: ObsidianVaultActionManager;
-			backgroundFileService: ManagerFsAdapter;
 		},
 	) {}
 
 	async healRootFilesystem(rootName: RootName): Promise<void> {
 		const fileReaders =
-			await this.deps.backgroundFileService.getReadersToAllMdFilesInFolder(
-				{
-					basename: rootName,
-					pathParts: [],
-					type: "Folder",
-				},
-			);
+			await this.deps.manager.getReadersToAllMdFilesInFolder({
+				basename: rootName,
+				pathParts: [],
+				type: "Folder",
+			});
 
 		const actions: VaultAction[] = [];
 		const seenFolders = new Set<string>();

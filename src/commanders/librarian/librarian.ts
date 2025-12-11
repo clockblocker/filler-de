@@ -4,31 +4,21 @@ import type {
 	VaultEvent,
 } from "../../obsidian-vault-action-manager";
 import { splitPathKey } from "../../obsidian-vault-action-manager";
-import type { CoreSplitPath } from "../../obsidian-vault-action-manager/types/split-path";
 import { fullPathFromSystemPath } from "../../services/obsidian-services/atomic-services/pathfinder";
-import type { LegacyOpenedFileService } from "../../services/obsidian-services/file-services/active-view/legacy-opened-file-service";
 import { isRootName, LIBRARY_ROOT, type RootName } from "./constants";
 import type { NoteSnapshot } from "./diffing/note-differ";
 import { regenerateCodexActions } from "./diffing/tree-diff-applier";
-import { LibrarianState } from "./librarian-state";
 import type { LibraryTree } from "./library-tree/library-tree";
 import { FilesystemHealer } from "./orchestration/filesystem-healer";
 import { NoteOperations } from "./orchestration/note-operations";
 import { TreeReconciler } from "./orchestration/tree-reconciler";
 import { VaultEventHandler } from "./orchestration/vault-event-handler";
 import type { NoteDto, TreePath } from "./types";
-import {
-	type ManagerFsAdapter,
-	makeManagerFsAdapter,
-} from "./utils/manager-fs-adapter.ts";
 
 export class Librarian {
-	backgroundFileService: ManagerFsAdapter;
-	openedFileService: LegacyOpenedFileService;
 	manager: ObsidianVaultActionManager;
-	tree: LibraryTree | null;
-
-	private state: LibrarianState;
+	tree: LibraryTree | null = null;
+	private skipReconciliation = false;
 	private filesystemHealer: FilesystemHealer;
 	private treeReconciler: TreeReconciler;
 	private noteOperations: NoteOperations;
@@ -36,50 +26,41 @@ export class Librarian {
 
 	constructor({
 		manager,
-		openedFileService,
 	}: {
 		manager: ObsidianVaultActionManager;
-		openedFileService: LegacyOpenedFileService;
 	}) {
 		this.manager = manager;
-		this.backgroundFileService = makeManagerFsAdapter(manager);
-		this.openedFileService = openedFileService;
-		this.state = new LibrarianState();
 		this.filesystemHealer = new FilesystemHealer({
-			backgroundFileService: this.backgroundFileService,
 			manager: this.manager,
 		});
 		this.treeReconciler = new TreeReconciler({
-			backgroundFileService: this.backgroundFileService,
 			filesystemHealer: this.filesystemHealer,
+			getSkipReconciliation: () => this.skipReconciliation,
+			getTree: () => this.tree,
 			manager: this.manager,
-			state: this.state,
+			setTree: (tree) => {
+				this.tree = tree;
+			},
 		});
 		this.noteOperations = new NoteOperations({
-			backgroundFileService: this.backgroundFileService,
-			generateUniqueSplitPath: (p) => this.generateUniqueSplitPath(p),
+			getTree: () => this.tree,
 			manager: this.manager,
-			openedFileService: this.openedFileService,
-			regenerateAllCodexes: () => this.regenerateAllCodexes(),
-			state: this.state,
+			regenerateAllCodexes: this.regenerateAllCodexes,
 			treeReconciler: this.treeReconciler,
 		});
 		this.eventHandler = new VaultEventHandler({
 			manager: this.manager,
-			regenerateAllCodexes: () => this.regenerateAllCodexes(),
-			state: this.state,
+			regenerateAllCodexes: this.regenerateAllCodexes,
 			treeReconciler: this.treeReconciler,
 		});
-		this.tree = this.state.tree;
 	}
 
 	_setSkipReconciliation(skip: boolean): void {
-		this.state.skipReconciliation = skip;
+		this.skipReconciliation = skip;
 	}
 
 	async initTrees(): Promise<void> {
 		await this.treeReconciler.initTrees();
-		this.tree = this.state.tree;
 		await this.regenerateAllCodexes();
 	}
 
@@ -178,21 +159,4 @@ export class Librarian {
 	}
 
 	// ─── Private Helpers ──────────────────────────────────────────────
-
-	private async generateUniqueSplitPath(
-		path: CoreSplitPath,
-	): Promise<CoreSplitPath> {
-		let candidate = path;
-		let counter = 1;
-
-		while (await this.backgroundFileService.exists(candidate)) {
-			candidate = {
-				...path,
-				basename: `${path.basename}_${counter}`,
-			};
-			counter += 1;
-		}
-
-		return candidate;
-	}
 }

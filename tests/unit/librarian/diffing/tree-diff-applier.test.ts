@@ -49,7 +49,7 @@ describe("mapDiffToActions", () => {
 					(a) =>
 						a.type === VaultActionType.CreateMdFile &&
 						basenameWithoutMd(a) ===
-							`${treePathToScrollBasename.encode(["Section", "Scroll"])}.md`,
+							treePathToScrollBasename.encode(["Section", "Scroll"]),
 				);
 
 			expect(fileAction).toBeDefined();
@@ -75,7 +75,7 @@ describe("mapDiffToActions", () => {
 					(a) =>
 						a.type === VaultActionType.CreateMdFile &&
 						basenameWithoutMd(a) ===
-							`${treePathToPageBasename.encode(["Section", "Book", "000"])}.md`,
+							treePathToPageBasename.encode(["Section", "Book", "000"]),
 				);
 
 			expect(fileAction).toBeDefined();
@@ -138,7 +138,7 @@ describe("mapDiffToActions", () => {
 					(a) =>
 						a.type === VaultActionType.TrashMdFile &&
 						basenameWithoutMd(a) ===
-							`${treePathToScrollBasename.encode(["Section", "Scroll"])}.md`,
+							treePathToScrollBasename.encode(["Section", "Scroll"]),
 				);
 
 			expect(trashAction).toBeDefined();
@@ -160,7 +160,7 @@ describe("mapDiffToActions", () => {
 					(a) =>
 						a.type === VaultActionType.TrashMdFile &&
 						basenameWithoutMd(a) ===
-							`${treePathToPageBasename.encode(["Book", "001"])}.md`,
+							treePathToPageBasename.encode(["Book", "001"]),
 				);
 
 			expect(trashAction).toBeDefined();
@@ -188,7 +188,7 @@ describe("mapDiffToActions", () => {
 					(a) =>
 						a.type === VaultActionType.ProcessMdFile &&
 						basenameWithoutMd(a) ===
-							`${treePathToScrollBasename.encode(["Section", "Scroll"])}.md`,
+							treePathToScrollBasename.encode(["Section", "Scroll"]),
 				);
 
 			expect(processAction).toBeDefined();
@@ -255,7 +255,7 @@ describe("mapDiffToActions", () => {
 				(a) =>
 					a.type === VaultActionType.CreateMdFile &&
 					basenameWithoutMd(a) ===
-						`${treePathToCodexBasename.encode(["NewSection"])}.md`,
+						treePathToCodexBasename.encode(["NewSection"]),
 			);
 
 			expect(codexAction).toBeDefined();
@@ -276,9 +276,9 @@ describe("mapDiffToActions", () => {
 			const actionsWithPath = actions.filter(hasCorePath);
 			const codexTrash = actionsWithPath.findIndex(
 				(a) =>
-					a.type === VaultActionType.TrashMdFile &&
-					basenameWithoutMd(a) ===
-						`${treePathToCodexBasename.encode(["OldSection"])}.md`,
+				a.type === VaultActionType.TrashMdFile &&
+				basenameWithoutMd(a) ===
+					treePathToCodexBasename.encode(["OldSection"]),
 			);
 			const folderTrash = actionsWithPath.findIndex(
 				(a) =>
@@ -336,9 +336,9 @@ describe("mapDiffToActions", () => {
 			.filter(hasCorePath)
 			.find(
 				(a) =>
-					a.type === VaultActionType.CreateMdFile &&
+					a.type === VaultActionType.ProcessMdFile &&
 					basenameWithoutMd(a) ===
-						`${treePathToCodexBasename.encode(["Library"])}.md`,
+						treePathToCodexBasename.encode(["Library"]),
 			);
 
 			expect(rootCodex).toBeDefined();
@@ -362,21 +362,19 @@ describe("mapDiffToActions", () => {
 				.filter(hasCorePath)
 				.filter(
 					(a) =>
-						a.type === VaultActionType.CreateMdFile &&
+						a.type === VaultActionType.ProcessMdFile &&
 						a.payload.coreSplitPath.basename.startsWith("__"),
 				);
 
-			const basenames = codexUpdates.map(
-				(a) => a.payload.coreSplitPath.basename,
+			const basenames = codexUpdates.map((a) =>
+				a.payload.coreSplitPath.basename.replace(/\.md$/, ""),
 			);
 			expect(basenames).toContain(
-				`${treePathToCodexBasename.encode(["Library"])}.md`,
+				treePathToCodexBasename.encode(["Library"]),
 			);
+			expect(basenames).toContain(treePathToCodexBasename.encode(["A"]));
 			expect(basenames).toContain(
-				`${treePathToCodexBasename.encode(["A"])}.md`,
-			);
-			expect(basenames).toContain(
-				`${treePathToCodexBasename.encode(["A", "B"])}.md`,
+				treePathToCodexBasename.encode(["A", "B"]),
 			);
 		});
 
@@ -398,9 +396,9 @@ describe("mapDiffToActions", () => {
 				.filter(hasCorePath)
 				.find(
 					(a) =>
-						a.type === VaultActionType.CreateMdFile &&
+						a.type === VaultActionType.ProcessMdFile &&
 						basenameWithoutMd(a) ===
-							`${treePathToCodexBasename.encode(["Section", "Book"])}.md`,
+							treePathToCodexBasename.encode(["Section", "Book"]),
 				);
 
 			expect(bookCodex).toBeDefined();

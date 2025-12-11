@@ -81,6 +81,10 @@ export class ObsidianVaultActionManagerImpl
 		return this.reader.pwd();
 	}
 
+	openFile(target: SplitPathToFile | SplitPathToMdFile): Promise<void> {
+		return this.opened.openFile(target);
+	}
+
 	getReadersToAllMdFilesInFolder(folder: SplitPathToFolder) {
 		return this.reader.getReadersToAllMdFilesInFolder(folder);
 	}

@@ -58,6 +58,7 @@ export interface ObsidianVaultActionManager {
 
 	list(splitPath: SplitPathToFolder): Promise<SplitPath[]>;
 	pwd(): Promise<SplitPathToFile | SplitPathToMdFile>;
+	openFile(target: SplitPathToFile | SplitPathToMdFile): Promise<void>;
 
 	getAbstractFile<SP extends SplitPath>(
 		splitPath: SP,

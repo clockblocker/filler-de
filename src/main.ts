@@ -161,7 +161,6 @@ export default class TextEaterPlugin extends Plugin {
 
 		this.librarian = new Librarian({
 			manager: this.vaultActionManager,
-			openedFileService: this.legacyOpenedFileService,
 		});
 		await this.librarian.initTrees();
 		console.log("[main] Librarian and trees initialized:", this.librarian);
@@ -457,18 +456,6 @@ export default class TextEaterPlugin extends Plugin {
 			splitPath,
 			splitPathKey,
 			vaultActionManager: this.vaultActionManager,
-		};
-	}
-
-	getOpenedFileServiceForTesting() {
-		return this.testingOpenedFileService;
-	}
-
-	getOpenedFileServiceTestingApi() {
-		return {
-			openedFileService: this.testingOpenedFileService,
-			splitPath,
-			splitPathKey,
 		};
 	}
 

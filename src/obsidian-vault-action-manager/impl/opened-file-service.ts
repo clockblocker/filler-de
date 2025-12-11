@@ -96,6 +96,14 @@ export class OpenedFileService {
 		return split;
 	}
 
+	async openFile(target: SplitPathToFile | SplitPathToMdFile): Promise<void> {
+		const file = this.getFile(target);
+		if (!file) {
+			throw new Error(`File not found: ${splitPathKey(target)}`);
+		}
+		await this.app.workspace.getLeaf(true).openFile(file);
+	}
+
 	async isInActiveView(target: SplitPath): Promise<boolean> {
 		const active = this.app.workspace.getActiveFile();
 		if (!active) return false;
