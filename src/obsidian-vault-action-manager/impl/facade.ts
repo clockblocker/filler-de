@@ -81,6 +81,10 @@ export class ObsidianVaultActionManagerImpl
 		return this.reader.pwd();
 	}
 
+	getReadersToAllMdFilesInFolder(folder: SplitPathToFolder) {
+		return this.reader.getReadersToAllMdFilesInFolder(folder);
+	}
+
 	getAbstractFile<SP extends SplitPath>(
 		splitPathArg: SP,
 	): Promise<SP["type"] extends "Folder" ? TFolder : TFile> {

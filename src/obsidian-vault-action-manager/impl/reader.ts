@@ -50,6 +50,21 @@ export class Reader {
 		}
 		return this.background.getAbstractFile(target);
 	}
+
+	async getReadersToAllMdFilesInFolder(
+		folder: SplitPathToFolder,
+	): Promise<
+		Array<SplitPathToMdFile & { readContent: () => Promise<string> }>
+	> {
+		const entries = await this.list(folder);
+		const mdFiles = entries.filter(
+			(e): e is SplitPathToMdFile => e.type === "MdFile",
+		);
+		return mdFiles.map((file) => ({
+			...file,
+			readContent: () => this.readContent(file),
+		}));
+	}
 }
 
 export type ReaderApi = {

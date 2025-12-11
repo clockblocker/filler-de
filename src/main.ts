@@ -9,11 +9,7 @@ import {
 	splitPath as managerSplitPath,
 	ObsidianVaultActionManagerImpl,
 } from "./obsidian-vault-action-manager";
-import {
-	BackgroundFileService as NewBackgroundFileService,
-	splitPath as splitPathForBackground,
-	splitPathKey as splitPathKeyForBackground,
-} from "./obsidian-vault-action-manager/impl/background-file-service";
+import { BackgroundFileService as NewBackgroundFileService } from "./obsidian-vault-action-manager/impl/background-file-service";
 import {
 	OpenedFileService,
 	splitPath,
@@ -41,6 +37,7 @@ export default class TextEaterPlugin extends Plugin {
 	apiService: ApiService;
 	openedFileReader: OpenedFileReader;
 	legacyOpenedFileService: LegacyOpenedFileService;
+	openedFileService: LegacyOpenedFileService;
 	testingOpenedFileService: OpenedFileService;
 	testingBackgroundFileService: NewBackgroundFileService;
 	testingReader: Reader;
@@ -144,6 +141,7 @@ export default class TextEaterPlugin extends Plugin {
 			this.app,
 			this.openedFileReader,
 		);
+		this.openedFileService = this.legacyOpenedFileService;
 		this.testingOpenedFileService = new OpenedFileService(this.app);
 		this.testingBackgroundFileService = new NewBackgroundFileService(
 			this.app,
@@ -171,17 +169,7 @@ export default class TextEaterPlugin extends Plugin {
 		// Subscribe to manager events (self-filtered inside manager)
 		this.vaultEventsTeardown = this.vaultActionManager.subscribe(
 			async (event) => {
-				switch (event.type) {
-					case "FileCreated":
-						await this.librarian.onVaultEventFileCreated(event);
-						break;
-					case "FileRenamed":
-						await this.librarian.onVaultEventFileRenamed(event);
-						break;
-					case "FileTrashed":
-						await this.librarian.onVaultEventFileTrashed(event);
-						break;
-				}
+				await this.librarian.onManagedVaultEvent(event);
 			},
 		);
 
@@ -448,19 +436,14 @@ export default class TextEaterPlugin extends Plugin {
 						__textfresserTesting?: Record<string, unknown>;
 					}
 				).__textfresserTesting = {
-					backgroundFileService: this.testingBackgroundFileService,
 					managerSplitPath,
-					openedFileService: this.testingOpenedFileService,
-					reader: this.testingReader,
 					splitPath,
-					splitPathBackground: splitPathForBackground,
 					splitPathKey,
-					splitPathKeyBackground: splitPathKeyForBackground,
 					vaultActionManager: this.vaultActionManager,
 				};
 			},
-			id: "textfresser-testing-expose-opened-service",
-			name: "Testing: expose opened file service",
+			id: "textfresser-testing-expose-manager",
+			name: "Testing: expose manager",
 		});
 	}
 
@@ -470,14 +453,9 @@ export default class TextEaterPlugin extends Plugin {
 				__textfresserTesting?: Record<string, unknown>;
 			}
 		).__textfresserTesting = {
-			backgroundFileService: this.testingBackgroundFileService,
 			managerSplitPath,
-			openedFileService: this.testingOpenedFileService,
-			reader: this.testingReader,
 			splitPath,
-			splitPathBackground: splitPathForBackground,
 			splitPathKey,
-			splitPathKeyBackground: splitPathKeyForBackground,
 			vaultActionManager: this.vaultActionManager,
 		};
 	}
@@ -491,14 +469,6 @@ export default class TextEaterPlugin extends Plugin {
 			openedFileService: this.testingOpenedFileService,
 			splitPath,
 			splitPathKey,
-		};
-	}
-
-	getBackgroundFileServiceTestingApi() {
-		return {
-			backgroundFileService: this.testingBackgroundFileService,
-			splitPath: splitPathForBackground,
-			splitPathKey: splitPathKeyForBackground,
 		};
 	}
 

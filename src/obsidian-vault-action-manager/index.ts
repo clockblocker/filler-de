@@ -51,7 +51,7 @@ export interface ObsidianVaultActionManager {
 	readContent(splitPath: SplitPathToMdFile): Promise<string>;
 	getReadersToAllMdFilesInFolder(
 		folder: SplitPathToFolder,
-	): Promise<MdFileReader>;
+	): Promise<MdFileReader[]>;
 
 	exists(splitPath: SplitPath): Promise<boolean>;
 	isInActiveView(splitPath: SplitPath): Promise<boolean>;
