@@ -1,7 +1,11 @@
 import type { TAbstractFile } from "obsidian";
 import { TFile } from "obsidian";
 import { splitPathKey } from "../../../obsidian-vault-action-manager";
-import type { CoreSplitPath } from "../../../obsidian-vault-action-manager/types/split-path";
+import type {
+	CoreSplitPath,
+	SplitPathToFile,
+	SplitPathToMdFile,
+} from "../../../obsidian-vault-action-manager/types/split-path";
 import {
 	type VaultAction,
 	VaultActionType,
@@ -95,8 +99,10 @@ export class VaultEventHandler {
 		await this.handleFileCreated(prettyPath);
 	}
 
-	async onFileCreatedFromSplitPath(prettyPath: CoreSplitPath): Promise<void> {
-		await this.handleFileCreated(prettyPath);
+	async onFileCreatedFromSplitPath(
+		createdPath: SplitPathToFile | SplitPathToMdFile,
+	): Promise<void> {
+		await this.handleFileCreated(createdPath);
 	}
 
 	private async handleFileDeleted(prettyPath: CoreSplitPath): Promise<void> {

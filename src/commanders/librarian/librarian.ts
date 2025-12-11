@@ -107,34 +107,25 @@ export class Librarian {
 	}
 
 	// Manager-driven events (self-filtered inside manager)
-	async onVaultEventFileCreated(event: VaultEvent): Promise<void> {
-		if (event.type !== "FileCreated") return;
-		const prettyPath: CoreSplitPath = {
-			basename: event.splitPath.basename,
-			pathParts: event.splitPath.pathParts,
-		};
-		await this.eventHandler.onFileCreatedFromSplitPath(prettyPath);
-	}
-
-	async onVaultEventFileRenamed(event: VaultEvent): Promise<void> {
-		if (event.type !== "FileRenamed") return;
-		const toPretty: CoreSplitPath = {
-			basename: event.to.basename,
-			pathParts: event.to.pathParts,
-		};
-		await this.eventHandler.onFileRenamedFromSplitPath(
-			toPretty,
-			splitPathKey(event.from),
-		);
-	}
-
-	async onVaultEventFileTrashed(event: VaultEvent): Promise<void> {
-		if (event.type !== "FileTrashed") return;
-		const prettyPath: CoreSplitPath = {
-			basename: event.splitPath.basename,
-			pathParts: event.splitPath.pathParts,
-		};
-		await this.eventHandler.onFileDeletedFromSplitPath(prettyPath);
+	async onManagedVaultEvent(event: VaultEvent): Promise<void> {
+		switch (event.type) {
+			case "FileCreated":
+				await this.eventHandler.onFileCreatedFromSplitPath(
+					event.splitPath,
+				);
+				return;
+			case "FileRenamed":
+				await this.eventHandler.onFileRenamedFromSplitPath(
+					event.to,
+					splitPathKey(event.from),
+				);
+				return;
+			case "FileTrashed":
+				await this.eventHandler.onFileDeletedFromSplitPath(
+					event.splitPath,
+				);
+				return;
+		}
 	}
 
 	// ─── Business Operations ──────────────────────────────────────────
