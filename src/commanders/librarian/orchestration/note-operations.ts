@@ -8,7 +8,7 @@ import { fullPathFromSystemPath } from "../../../services/obsidian-services/atom
 import type { LegacyOpenedFileService } from "../../../services/obsidian-services/file-services/active-view/legacy-opened-file-service";
 import { logWarning } from "../../../services/obsidian-services/helpers/issue-handlers";
 import { TextStatus } from "../../../types/common-interface/enums";
-import type { ActionDispatcher } from "../action-dispatcher";
+import type { LegacyActionDispatcher } from "../action-dispatcher";
 import { isRootName, LIBRARY_ROOT, type RootName } from "../constants";
 import { regenerateCodexActions } from "../diffing/tree-diff-applier";
 import {
@@ -30,7 +30,7 @@ export class NoteOperations {
 	constructor(
 		private readonly deps: {
 			state: LibrarianState;
-			dispatcher: ActionDispatcher;
+			dispatcher: LegacyActionDispatcher;
 			treeReconciler: TreeReconciler;
 			regenerateAllCodexes: () => Promise<void>;
 			generateUniqueSplitPath: (

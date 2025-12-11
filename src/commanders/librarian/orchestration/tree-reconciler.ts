@@ -1,4 +1,4 @@
-import type { ActionDispatcher } from "../action-dispatcher";
+import type { LegacyActionDispatcher } from "../action-dispatcher";
 import { LIBRARY_ROOT, type RootName } from "../constants";
 import { type NoteSnapshot, noteDiffer } from "../diffing/note-differ";
 import { mapDiffToActions } from "../diffing/tree-diff-applier";
@@ -13,7 +13,7 @@ export class TreeReconciler {
 	constructor(
 		private readonly deps: {
 			state: LibrarianState;
-			dispatcher: ActionDispatcher;
+			dispatcher: LegacyActionDispatcher;
 			filesystemHealer: FilesystemHealer;
 			backgroundFileService: ManagerFsAdapter;
 		},

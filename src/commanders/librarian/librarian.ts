@@ -7,7 +7,7 @@ import { splitPathKey } from "../../obsidian-vault-action-manager";
 import type { CoreSplitPath } from "../../obsidian-vault-action-manager/types/split-path";
 import { fullPathFromSystemPath } from "../../services/obsidian-services/atomic-services/pathfinder";
 import type { LegacyOpenedFileService } from "../../services/obsidian-services/file-services/active-view/legacy-opened-file-service";
-import { ActionDispatcher } from "./action-dispatcher";
+import { LegacyActionDispatcher } from "./action-dispatcher";
 import { isRootName, LIBRARY_ROOT, type RootName } from "./constants";
 import type { NoteSnapshot } from "./diffing/note-differ";
 import { regenerateCodexActions } from "./diffing/tree-diff-applier";
@@ -16,13 +16,13 @@ import type { LibraryTree } from "./library-tree/library-tree";
 import { FilesystemHealer } from "./orchestration/filesystem-healer";
 import { NoteOperations } from "./orchestration/note-operations";
 import { TreeReconciler } from "./orchestration/tree-reconciler";
-import { VaultEventHandler } from "./orchestration/vault-event-handler";
+import { LegacyVaultEventHandler } from "./orchestration/vault-event-handler";
 import type { NoteDto, TreePath } from "./types";
 import {
 	type ManagerFsAdapter,
 	makeManagerFsAdapter,
 } from "./utils/manager-fs-adapter.ts";
-import { SelfEventTracker } from "./utils/self-event-tracker";
+import { LegacySelfEventTracker } from "./utils/self-event-tracker";
 
 export class Librarian {
 	backgroundFileService: ManagerFsAdapter;
@@ -30,13 +30,13 @@ export class Librarian {
 	manager: ObsidianVaultActionManager;
 	tree: LibraryTree | null;
 
-	private dispatcher: ActionDispatcher;
+	private dispatcher: LegacyActionDispatcher;
 	private state: LibrarianState;
-	private selfEventTracker = new SelfEventTracker();
+	private legacySelfEventTracker = new LegacySelfEventTracker();
 	private filesystemHealer: FilesystemHealer;
 	private treeReconciler: TreeReconciler;
 	private noteOperations: NoteOperations;
-	private eventHandler: VaultEventHandler;
+	private legacyEventHandler: LegacyVaultEventHandler;
 
 	constructor({
 		manager,
@@ -49,7 +49,10 @@ export class Librarian {
 		this.backgroundFileService = makeManagerFsAdapter(manager);
 		this.openedFileService = openedFileService;
 		this.state = new LibrarianState();
-		this.dispatcher = new ActionDispatcher(manager, this.selfEventTracker);
+		this.dispatcher = new LegacyActionDispatcher(
+			manager,
+			this.legacySelfEventTracker,
+		);
 		this.filesystemHealer = new FilesystemHealer({
 			backgroundFileService: this.backgroundFileService,
 			dispatcher: this.dispatcher,
@@ -69,13 +72,13 @@ export class Librarian {
 			state: this.state,
 			treeReconciler: this.treeReconciler,
 		});
-		this.eventHandler = new VaultEventHandler({
+		this.legacyEventHandler = new LegacyVaultEventHandler({
 			backgroundFileService: this.backgroundFileService,
 			dispatcher: this.dispatcher,
 			filesystemHealer: this.filesystemHealer,
 			generateUniqueSplitPath: (p) => this.generateUniqueSplitPath(p),
 			regenerateAllCodexes: () => this.regenerateAllCodexes(),
-			selfEventTracker: this.selfEventTracker,
+			selfEventTracker: this.legacySelfEventTracker,
 			state: this.state,
 			treeReconciler: this.treeReconciler,
 		});
@@ -95,33 +98,33 @@ export class Librarian {
 	// ─── Vault Event Handlers ─────────────────────────────────────────
 
 	async onFileCreated(file: TAbstractFile): Promise<void> {
-		await this.eventHandler.onFileCreated(file);
+		await this.legacyEventHandler.onFileCreated(file);
 	}
 
 	async onFileRenamed(file: TAbstractFile, oldPath: string): Promise<void> {
-		await this.eventHandler.onFileRenamed(file, oldPath);
+		await this.legacyEventHandler.onFileRenamed(file, oldPath);
 	}
 
 	async onFileDeleted(file: TAbstractFile): Promise<void> {
-		await this.eventHandler.onFileDeleted(file);
+		await this.legacyEventHandler.onFileDeleted(file);
 	}
 
 	// Manager-driven events (self-filtered inside manager)
 	async onManagedVaultEvent(event: VaultEvent): Promise<void> {
 		switch (event.type) {
 			case "FileCreated":
-				await this.eventHandler.onFileCreatedFromSplitPath(
+				await this.legacyEventHandler.onFileCreatedFromSplitPath(
 					event.splitPath,
 				);
 				return;
 			case "FileRenamed":
-				await this.eventHandler.onFileRenamedFromSplitPath(
+				await this.legacyEventHandler.onFileRenamedFromSplitPath(
 					event.to,
 					splitPathKey(event.from),
 				);
 				return;
 			case "FileTrashed":
-				await this.eventHandler.onFileDeletedFromSplitPath(
+				await this.legacyEventHandler.onFileDeletedFromSplitPath(
 					event.splitPath,
 				);
 				return;

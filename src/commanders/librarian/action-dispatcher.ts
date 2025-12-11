@@ -1,19 +1,19 @@
-import type { ObsidianVaultActionManager } from "../obsidian-vault-action-manager";
-import type { VaultAction } from "../obsidian-vault-action-manager/types/vault-action";
-import type { SelfEventTracker } from "./utils/self-event-tracker";
+import type { ObsidianVaultActionManager } from "../../obsidian-vault-action-manager";
+import type { VaultAction } from "../../obsidian-vault-action-manager/types/vault-action";
+import type { LegacySelfEventTracker } from "./utils/self-event-tracker";
 
 /**
  * Centralized bridge for queue + self-event tracking.
  * Keeps call sites concise and consistent.
  */
-export class ActionDispatcher {
+export class LegacyActionDispatcher {
 	private readonly manager: ObsidianVaultActionManager;
 	private readonly buffer: VaultAction[] = [];
-	private readonly tracker?: SelfEventTracker;
+	private readonly tracker?: LegacySelfEventTracker;
 
 	constructor(
 		manager: ObsidianVaultActionManager,
-		tracker?: SelfEventTracker,
+		tracker?: LegacySelfEventTracker,
 	) {
 		this.manager = manager;
 		this.tracker = tracker;

@@ -5,11 +5,10 @@
 - Route all FS operations through ObsidianVaultActionManager (no direct OpenedFileService/BackgroundFileService outside manager).
 
 ## Current gaps
-- Manager FS adapter file missing (`utils/manager-fs-adapter`), but imported by librarian stack.
-- Librarian actions/events/tests still use PrettyPath and legacy background executor API.
-- PrettyPath type not defined in `types/common-interface`; implicit/any use risks type holes.
-- Main wiring exposes legacy services for testing; manager not the sole entry point.
-- SplitPath variants proliferated; legacy PrettyPath looseness added extra guards and decode helpers.
+- Manager FS adapter landed; callers now using SplitPath, but continue sweeping for stragglers.
+- PrettyPath references largely removed; ensure tests/docs stay aligned.
+- Legacy background executor/actions removed; rely solely on manager actions.
+- SplitPath variants were tightened; keep collapsing to Folder/File/MdFile + CoreSplitPath.
 
 ## Staged execution (preferred order)
 1) Adapter + types

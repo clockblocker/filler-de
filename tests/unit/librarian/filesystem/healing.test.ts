@@ -132,11 +132,11 @@ describe("healFiles", () => {
 		const actions = healFiles(files, rootName);
 
 		const folderActions = actions.filter(
-			(a) => a.type === VaultActionType.UpdateOrCreateFolder,
+			(a) => a.type === VaultActionType.CreateFolder,
 		);
 		// Section folder should only be created once
 		const sectionFolders = folderActions.filter(
-			(a) => a.payload.prettyPath.basename === "Section",
+			(a) => a.payload.coreSplitPath.basename === "Section",
 		);
 		expect(sectionFolders).toHaveLength(1);
 	});

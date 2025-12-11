@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { SelfEventTracker } from "../../../../src/commanders/librarian/utils/self-event-tracker";
+import { LegacySelfEventTracker } from "../../../../src/commanders/librarian/utils/self-event-tracker";
 import type { CoreSplitPath } from "../../../../src/obsidian-vault-action-manager/types/split-path";
 import {
 	type VaultAction,
@@ -27,7 +27,7 @@ const write = (coreSplitPath: CoreSplitPath): VaultAction => ({
 
 describe("SelfEventTracker", () => {
 	it("pops registered rename keys once", () => {
-		const tracker = new SelfEventTracker();
+		const tracker = new LegacySelfEventTracker();
 		tracker.register([rename(cp("a/b.md"), cp("c/d.md"))]);
 
 		expect(tracker.pop("a/b.md")).toBe(true);
@@ -36,7 +36,7 @@ describe("SelfEventTracker", () => {
 	});
 
 	it("tracks write/process/trash keys", () => {
-		const tracker = new SelfEventTracker();
+		const tracker = new LegacySelfEventTracker();
 		tracker.register([
 			write(cp("x/y.md")),
 			{ payload: { coreSplitPath: cp("z.md") }, type: VaultActionType.TrashMdFile },
@@ -52,7 +52,7 @@ describe("SelfEventTracker", () => {
 	});
 
 	it("normalizes slashes on pop", () => {
-		const tracker = new SelfEventTracker();
+		const tracker = new LegacySelfEventTracker();
 		tracker.register([write(cp("root/file.md"))]);
 
 		expect(tracker.pop("/root/file.md")).toBe(true);

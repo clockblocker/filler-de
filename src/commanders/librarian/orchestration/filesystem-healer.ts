@@ -11,7 +11,7 @@ import {
 	extractMetaInfo,
 } from "../../../services/dto-services/meta-info-manager/interface";
 import { TextStatus } from "../../../types/common-interface/enums";
-import type { ActionDispatcher } from "../action-dispatcher";
+import type { LegacyActionDispatcher } from "../action-dispatcher";
 import { isInUntracked, type RootName } from "../constants";
 import { healFile } from "../filesystem/healing";
 import { canonicalizePath } from "../invariants/path-canonicalizer";
@@ -21,7 +21,7 @@ export class FilesystemHealer {
 	constructor(
 		private readonly deps: {
 			backgroundFileService: ManagerFsAdapter;
-			dispatcher: ActionDispatcher;
+			dispatcher: LegacyActionDispatcher;
 		},
 	) {}
 

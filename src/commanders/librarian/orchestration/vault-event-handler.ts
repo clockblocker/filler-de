@@ -13,7 +13,7 @@ import {
 import { editOrAddMetaInfo } from "../../../services/dto-services/meta-info-manager/interface";
 import { fullPathFromSystemPath } from "../../../services/obsidian-services/atomic-services/pathfinder";
 import { TextStatus } from "../../../types/common-interface/enums";
-import type { ActionDispatcher } from "../action-dispatcher";
+import type { LegacyActionDispatcher } from "../action-dispatcher";
 import {
 	isInUntracked,
 	isRootName,
@@ -31,23 +31,23 @@ import type { LibrarianState } from "../librarian-state";
 import type { TreePath } from "../types";
 import { createFolderActionsForPathParts } from "../utils/folder-actions";
 import type { ManagerFsAdapter } from "../utils/manager-fs-adapter.ts";
-import type { SelfEventTracker } from "../utils/self-event-tracker";
+import type { LegacySelfEventTracker } from "../utils/self-event-tracker";
 import type { FilesystemHealer } from "./filesystem-healer";
 import type { TreeReconciler } from "./tree-reconciler";
 
 const RENAME_DEBOUNCE_MS = 100;
 
-export class VaultEventHandler {
+export class LegacyVaultEventHandler {
 	private pendingRenameRoots = new Set<RootName>();
 	private renameDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 	constructor(
 		private readonly deps: {
-			dispatcher: ActionDispatcher;
+			dispatcher: LegacyActionDispatcher;
 			filesystemHealer: FilesystemHealer;
 			treeReconciler: TreeReconciler;
 			state: LibrarianState;
-			selfEventTracker: SelfEventTracker;
+			selfEventTracker: LegacySelfEventTracker;
 			regenerateAllCodexes: () => Promise<void>;
 			generateUniqueSplitPath: (
 				path: CoreSplitPath,

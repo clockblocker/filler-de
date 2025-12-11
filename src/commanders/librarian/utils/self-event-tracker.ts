@@ -23,7 +23,7 @@ function toSystemKey(core: CoreSplitPath): string {
  *
  * Assumes events carry `file.path`-style strings (slash-separated).
  */
-export class SelfEventTracker {
+export class LegacySelfEventTracker {
 	private readonly keys = new Set<string>();
 
 	register(actions: VaultAction[]): void {
