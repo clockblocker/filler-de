@@ -313,12 +313,10 @@ export class NoteOperations {
 		path: TreePath,
 		status: "Done" | "NotStarted",
 	): Promise<void> {
-		const parentPath = path.slice(0, -1);
-
-		await this.deps.treeReconciler.withDiff(
-			rootName,
-			(tree) => tree.setStatus({ path, status }),
-			parentPath.length > 0 ? [parentPath] : [],
+		// Use in-memory diff only to avoid re-reading sibling branches and
+		// regressing their statuses from stale on-disk meta.
+		await this.deps.treeReconciler.withDiffSync(rootName, (tree) =>
+			tree.setStatus({ path, status }),
 		);
 
 		// Codex files must reflect the updated status immediately.
