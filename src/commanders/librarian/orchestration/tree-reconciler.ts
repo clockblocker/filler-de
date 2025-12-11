@@ -25,6 +25,7 @@ export class TreeReconciler {
 		const rootName = LIBRARY_ROOT;
 		await this.deps.filesystemHealer.healRootFilesystem(rootName);
 		const notes = await readNoteDtos(this.deps.manager, rootName);
+		console.log("[TreeReconciler:initTrees]", { notes: notes.length });
 		this.deps.setTree(new LibraryTree(notes, rootName));
 	}
 

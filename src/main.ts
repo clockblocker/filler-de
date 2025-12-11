@@ -16,6 +16,10 @@ import {
 	splitPathKey,
 } from "./obsidian-vault-action-manager/impl/opened-file-service";
 import { Reader } from "./obsidian-vault-action-manager/impl/reader";
+import type {
+	SplitPath,
+	SplitPathToFolder,
+} from "./obsidian-vault-action-manager/types/split-path";
 import { AboveSelectionToolbarService } from "./services/obsidian-services/atomic-services/above-selection-toolbar-service";
 import { ApiService } from "./services/obsidian-services/atomic-services/api-service";
 import { BottomToolbarService } from "./services/obsidian-services/atomic-services/bottom-toolbar-service";
@@ -412,6 +416,26 @@ export default class TextEaterPlugin extends Plugin {
 		});
 
 		this.addCommand({
+			checkCallback: async (checking) => {
+				if (checking) return true;
+				await this.logDeepLsFromActiveFolder();
+				return true;
+			},
+			id: "log-deep-ls",
+			name: "Log deep ls of active folder",
+		});
+
+		this.addCommand({
+			checkCallback: (checking) => {
+				if (checking) return true;
+				this.librarian.logTreeStatuses();
+				return true;
+			},
+			id: "log-tree-statuses",
+			name: "Log tree statuses",
+		});
+
+		this.addCommand({
 			editorCheckCallback: (
 				// checking: boolean,
 				// editor: Editor,
@@ -477,6 +501,68 @@ export default class TextEaterPlugin extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
+	}
+
+	private async logDeepLsFromActiveFolder() {
+		try {
+			const pwd = await this.vaultActionManager.pwd();
+
+			const folder: SplitPathToFolder | null =
+				pwd.type === "Folder"
+					? pwd
+					: pwd.pathParts.length > 0
+						? {
+								basename:
+									pwd.pathParts[pwd.pathParts.length - 1] ??
+									"",
+								pathParts: pwd.pathParts.slice(0, -1),
+								type: "Folder" as const,
+							}
+						: null;
+
+			if (!folder) {
+				console.log("[logDeepLs] No parent folder for active view");
+				return;
+			}
+
+			const lines: string[] = [];
+			const formatName = (entry: SplitPath): string => {
+				if (entry.type === "MdFile") return `${entry.basename}.md`;
+				if (entry.type === "File" && "extension" in entry) {
+					return `${entry.basename}.${entry.extension}`;
+				}
+				return `${entry.basename}/`;
+			};
+
+			const walk = async (dir: SplitPathToFolder, prefix: string) => {
+				const entries = await this.vaultActionManager.list(dir);
+				const sorted = entries.sort((a, b) => {
+					if (a.type === b.type) {
+						return a.basename.localeCompare(b.basename);
+					}
+					return a.type === "Folder" ? -1 : 1;
+				});
+
+				for (const entry of sorted) {
+					lines.push(`${prefix}${formatName(entry)}`);
+					if (entry.type === "Folder") {
+						await walk(entry, `${prefix}  `);
+					}
+				}
+			};
+
+			lines.push(
+				`[logDeepLs] from ${
+					[...folder.pathParts, folder.basename]
+						.filter(Boolean)
+						.join("/") || "/"
+				}`,
+			);
+			await walk(folder, "");
+			console.log(lines.join("\n"));
+		} catch (error) {
+			console.error("[logDeepLs] failed", error);
+		}
 	}
 
 	private async updateBottomActions(): Promise<void> {

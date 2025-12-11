@@ -4,6 +4,7 @@ import type {
 	VaultEvent,
 } from "../../obsidian-vault-action-manager";
 import { splitPathKey } from "../../obsidian-vault-action-manager";
+import { getActionTargetPath } from "../../obsidian-vault-action-manager/types/vault-action";
 import { fullPathFromSystemPath } from "../../services/obsidian-services/atomic-services/pathfinder";
 import { isRootName, LIBRARY_ROOT, type RootName } from "./constants";
 import type { NoteSnapshot } from "./diffing/note-differ";
@@ -116,6 +117,38 @@ export class Librarian {
 		return this.treeReconciler.getSnapshot(rootName);
 	}
 
+	logTreeStatuses(): void {
+		if (!this.tree) {
+			console.log("[logTreeStatuses] tree is null");
+			return;
+		}
+
+		const lines: string[] = [];
+
+		const walk = (
+			node: { name: string; status: TextStatus; children?: any[] },
+			depth: number,
+		) => {
+			const indent = "  ".repeat(depth);
+			lines.push(`${indent}- ${node.name} [${node.status}]`);
+			if (Array.isArray((node as any).children)) {
+				for (const child of (node as any).children) {
+					walk(child, depth + 1);
+				}
+			}
+		};
+
+		walk(
+			this.tree.root as unknown as {
+				name: string;
+				status: TextStatus;
+				children?: any[];
+			},
+			0,
+		);
+		console.log("[logTreeStatuses]\n" + lines.join("\n"));
+	}
+
 	async regenerateAllCodexes(): Promise<void> {
 		const rootName = LIBRARY_ROOT;
 		const tree = this.tree;
@@ -133,7 +166,13 @@ export class Librarian {
 			);
 
 			if (actions.length > 0) {
+				console.log("[regenerateAllCodexes] actions", {
+					count: actions.length,
+					samples: actions.slice(0, 5).map(getActionTargetPath),
+				});
 				await this.manager.dispatch(actions);
+			} else {
+				console.log("[regenerateAllCodexes] no actions generated");
 			}
 		}
 	}
