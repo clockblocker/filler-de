@@ -1,4 +1,8 @@
 import type { ObsidianVaultActionManager } from "../../../obsidian-vault-action-manager";
+import {
+	type VaultAction,
+	VaultActionType,
+} from "../../../obsidian-vault-action-manager/types/vault-action";
 import { LIBRARY_ROOT, type RootName } from "../constants";
 import { type NoteSnapshot, noteDiffer } from "../diffing/note-differ";
 import { mapDiffToActions } from "../diffing/tree-diff-applier";
@@ -108,11 +112,56 @@ export class TreeReconciler {
 
 		const actions = mapDiffToActions(diff, rootName, getNode);
 
-		if (actions.length > 0) {
-			await this.deps.manager.dispatch(actions);
+		const ensuredActions: VaultAction[] = [];
+
+		for (const action of actions) {
+			if (
+				action.type === VaultActionType.ProcessMdFile ||
+				action.type === VaultActionType.WriteMdFile
+			) {
+				const exists = await this.deps.manager.exists(
+					action.payload.coreSplitPath,
+				);
+
+				if (exists) {
+					ensuredActions.push(action);
+					continue;
+				}
+
+				if (action.type === VaultActionType.ProcessMdFile) {
+					const content = await action.payload.transform("");
+					ensuredActions.push({
+						payload: {
+							content,
+							coreSplitPath: action.payload.coreSplitPath,
+						},
+						type: VaultActionType.CreateMdFile,
+					});
+					continue;
+				}
+
+				// WriteMdFile
+				ensuredActions.push({
+					payload: {
+						content: action.payload.content,
+						coreSplitPath: action.payload.coreSplitPath,
+					},
+					type: VaultActionType.CreateMdFile,
+				});
+				continue;
+			}
+
+			ensuredActions.push(action);
 		}
 
-		return { actions, result };
+		if (ensuredActions.length > 0) {
+			await this.deps.manager.dispatch(ensuredActions);
+		}
+
+		return {
+			actions: ensuredActions as ReturnType<typeof mapDiffToActions>,
+			result,
+		};
 	}
 
 	getSnapshot(rootName: RootName): NoteSnapshot | null {
