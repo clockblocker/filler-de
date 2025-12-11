@@ -3,7 +3,7 @@ import type { SplitPathToFolder } from "../../../obsidian-vault-action-manager/t
 import {
 	type VaultAction,
 	VaultActionType,
-} from "../../../services/obsidian-services/file-services/background/background-vault-actions";
+} from "../../../obsidian-vault-action-manager/types/vault-action";
 
 /**
  * Assumes pathParts[0] exists; creates mkdir actions starting at depth 1.
@@ -25,8 +25,8 @@ export function createFolderActionsForPathParts(
 		const prettyPath = splitPath(folderPath) as SplitPathToFolder;
 
 		actions.push({
-			payload: { prettyPath },
-			type: VaultActionType.UpdateOrCreateFolder,
+			payload: { coreSplitPath: prettyPath },
+			type: VaultActionType.CreateFolder,
 		});
 	}
 

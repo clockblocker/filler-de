@@ -1,18 +1,15 @@
+import type { CoreSplitPath } from "../../../obsidian-vault-action-manager/types/split-path";
 import {
 	type VaultAction,
 	VaultActionType,
-} from "../../../services/obsidian-services/file-services/background/background-vault-actions";
-import type { PrettyPath } from "../../../types/common-interface/dtos";
+} from "../../../obsidian-vault-action-manager/types/vault-action";
 import type { RootName } from "../constants";
 import {
-	canonicalizePrettyPath,
+	canonicalizePath,
 	isCanonical,
 } from "../invariants/path-canonicalizer";
 import { createFolderActionsForPathParts } from "../utils/folder-actions";
-import {
-	prettyPathToFolder,
-	prettyPathToMdFile,
-} from "../utils/path-conversions";
+import { corePathToFolder, corePathToMdFile } from "../utils/path-conversions";
 
 /**
  * Result of healing a file: actions to execute + metadata.
@@ -20,7 +17,7 @@ import {
 export type HealResult = {
 	actions: VaultAction[];
 	/** The canonical path the file should be at (or quarantine destination) */
-	targetPath: PrettyPath;
+	targetPath: CoreSplitPath;
 	/** Whether the file was quarantined (undecodable basename) */
 	quarantined: boolean;
 };
@@ -29,17 +26,17 @@ export type HealResult = {
  * Heal a single file: determine canonical path and return actions to fix it.
  * Pure function — no filesystem access, no async.
  *
- * @param prettyPath - Current file location
+ * @param path - Current file location
  * @param rootName - Library root (e.g., "Worter")
  * @param seen - Set of folder paths already seen (for deduplication)
  * @returns Actions to execute (may be empty if already canonical)
  */
 export function healFile(
-	prettyPath: PrettyPath,
+	path: CoreSplitPath,
 	rootName: RootName,
 	seen: Set<string> = new Set(),
 ): HealResult {
-	const canonical = canonicalizePrettyPath({ prettyPath, rootName });
+	const canonical = canonicalizePrettyPath({ path, rootName });
 
 	// Quarantine case: undecodable basename
 	if ("reason" in canonical) {
@@ -50,10 +47,10 @@ export function healFile(
 			),
 			{
 				payload: {
-					from: prettyPathToMdFile(prettyPath),
-					to: prettyPathToMdFile(canonical.destination),
+					from: corePathToMdFile(path),
+					to: corePathToMdFile(canonical.destination),
 				},
-				type: VaultActionType.RenameFile,
+				type: VaultActionType.RenameMdFile,
 			},
 		];
 		return {
@@ -64,33 +61,33 @@ export function healFile(
 	}
 
 	// Already canonical — no actions needed
-	if (isCanonical(prettyPath, canonical.canonicalPrettyPath)) {
+	if (isCanonical(path, canonical.canonicalPath)) {
 		return {
 			actions: [],
 			quarantined: false,
-			targetPath: canonical.canonicalPrettyPath,
+			targetPath: canonical.canonicalPath,
 		};
 	}
 
 	// Needs healing: create folder + rename
 	const actions: VaultAction[] = [
 		...createFolderActionsForPathParts(
-			canonical.canonicalPrettyPath.pathParts,
+			canonical.canonicalPath.pathParts,
 			seen,
 		),
 		{
 			payload: {
-				from: prettyPathToMdFile(prettyPath),
-				to: prettyPathToMdFile(canonical.canonicalPrettyPath),
+				from: corePathToMdFile(path),
+				to: corePathToMdFile(canonical.canonicalPath),
 			},
-			type: VaultActionType.RenameFile,
+			type: VaultActionType.RenameMdFile,
 		},
 	];
 
 	return {
 		actions,
 		quarantined: false,
-		targetPath: canonical.canonicalPrettyPath,
+		targetPath: canonical.canonicalPath,
 	};
 }
 
@@ -103,7 +100,7 @@ export function healFile(
  * @returns Combined actions for all files
  */
 export function healFiles(
-	files: PrettyPath[],
+	files: CoreSplitPath[],
 	rootName: RootName,
 ): VaultAction[] {
 	const seen = new Set<string>();

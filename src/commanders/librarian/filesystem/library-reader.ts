@@ -1,14 +1,12 @@
-import type { PrettyPath } from "../../../types/common-interface/dtos";
+import type { ObsidianVaultActionManager } from "../../../obsidian-vault-action-manager";
+import type {
+	CoreSplitPath,
+	SplitPathToFolder,
+} from "../../../obsidian-vault-action-manager/types/split-path";
 import { isInUntracked, type RootName } from "../constants";
 import { prettyFilesWithReaderToLibraryFiles } from "../indexing/libraryFileAdapters";
 import { noteDtosFromLibraryFiles } from "../pure-functions/note-dtos-from-library-file-dtos";
 import type { LibraryFile, NoteDto, TreePath } from "../types";
-import type { ManagerFsAdapter } from "../utils/manager-fs-adapter";
-
-/**
- * Type for the background file service dependency.
- */
-export type BackgroundFileService = ManagerFsAdapter;
 
 // ─── Exported Pure Functions ─────────────────────────────────────────────
 
@@ -20,14 +18,13 @@ export type BackgroundFileService = ManagerFsAdapter;
  * @returns Array of library files
  */
 export async function readFilesInFolder(
-	bgService: BackgroundFileService,
-	folder: PrettyPath,
+	manager: ObsidianVaultActionManager,
+	folder: CoreSplitPath,
 ): Promise<LibraryFile[]> {
-	const fileReaders = await bgService.getReadersToAllMdFilesInFolder({
-		basename: folder.basename,
-		pathParts: folder.pathParts,
-		type: "folder",
-	});
+	const fileReaders = await manager.getReadersToAllMdFilesInFolder({
+		...folder,
+		type: "Folder",
+	} as SplitPathToFolder);
 
 	return await prettyFilesWithReaderToLibraryFiles(fileReaders);
 }
@@ -41,7 +38,7 @@ export async function readFilesInFolder(
  * @returns Array of note DTOs
  */
 export async function readNoteDtos(
-	bgService: BackgroundFileService,
+	manager: ObsidianVaultActionManager,
 	rootName: RootName,
 	subtreePath: TreePath = [],
 ): Promise<NoteDto[]> {
@@ -57,7 +54,7 @@ export async function readNoteDtos(
 				? [rootName]
 				: [];
 
-	const libraryFiles = await readFilesInFolder(bgService, {
+	const libraryFiles = await readFilesInFolder(manager, {
 		basename: folderBasename,
 		pathParts,
 	});

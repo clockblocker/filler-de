@@ -1,4 +1,4 @@
-import type { PrettyPath } from "../../../types/common-interface/dtos";
+import type { CoreSplitPath } from "../../obsidian-vault-action-manager/types/split-path";
 import type { RootName } from "../constants";
 import { UNTRACKED_FOLDER_NAME } from "../constants";
 import {
@@ -16,15 +16,15 @@ import type { TreePath } from "../types";
 export type CanonicalFileKind = "scroll" | "page" | "codex";
 
 export type CanonicalizedFile = {
-	canonicalPrettyPath: PrettyPath;
-	currentPrettyPath: PrettyPath;
+	canonicalPath: CoreSplitPath;
+	currentPath: CoreSplitPath;
 	kind: CanonicalFileKind;
 	treePath: TreePath;
 };
 
 export type QuarantinedFile = {
-	currentPrettyPath: PrettyPath;
-	destination: PrettyPath;
+	currentPath: CoreSplitPath;
+	destination: CoreSplitPath;
 	reason: "undecodable";
 };
 
@@ -88,16 +88,16 @@ function arraysEqual(a: readonly string[], b: readonly string[]): boolean {
 }
 
 function quarantinePath({
-	prettyPath,
+	path,
 	rootName,
 }: {
-	prettyPath: PrettyPath;
+	path: CoreSplitPath;
 	rootName: RootName;
-}): PrettyPath {
-	const folderPath = prettyPath.pathParts.slice(1);
+}): CoreSplitPath {
+	const folderPath = path.pathParts.slice(1);
 
 	return {
-		basename: prettyPath.basename,
+		basename: path.basename,
 		pathParts: [rootName, UNTRACKED_FOLDER_NAME, ...folderPath],
 	};
 }
@@ -109,13 +109,13 @@ export function computeCanonicalPath({
 	decoded,
 	folderPath,
 	rootName,
-	currentPrettyPath,
+	currentPath,
 }: {
 	authority: Authority;
 	decoded: DecodedBasename;
 	folderPath: string[];
 	rootName: RootName;
-	currentPrettyPath: PrettyPath;
+	currentPath: CoreSplitPath;
 }): CanonicalizedFile {
 	const sanitizedFolderPath = sanitizeSegments(folderPath);
 	const decodedPath = sanitizeSegments(decoded.treePath);
@@ -139,7 +139,7 @@ export function computeCanonicalPath({
 						? []
 						: decodedPath;
 
-		const canonicalPrettyPath: PrettyPath = {
+		const canonicalPath: CoreSplitPath = {
 			basename:
 				sectionPath.length === 0
 					? treePathToCodexBasename.encode([rootName])
@@ -151,8 +151,8 @@ export function computeCanonicalPath({
 			sectionPath.length === 0 ? [rootName] : sectionPath;
 
 		return {
-			canonicalPrettyPath,
-			currentPrettyPath,
+			canonicalPath,
+			currentPath,
 			kind: decoded.kind,
 			treePath,
 		};
@@ -174,14 +174,14 @@ export function computeCanonicalPath({
 
 		const treePath: TreePath = [...parentPath, pageNumber];
 
-		const canonicalPrettyPath: PrettyPath = {
+		const canonicalPath: CoreSplitPath = {
 			basename: treePathToPageBasename.encode(treePath),
 			pathParts: [rootName, ...parentPath],
 		};
 
 		return {
-			canonicalPrettyPath,
-			currentPrettyPath,
+			canonicalPath,
+			currentPath,
 			kind: decoded.kind,
 			treePath,
 		};
@@ -201,54 +201,53 @@ export function computeCanonicalPath({
 
 	const treePath: TreePath = [...parentPath, name];
 
-	const canonicalPrettyPath: PrettyPath = {
+	const canonicalPath: CoreSplitPath = {
 		basename: treePathToScrollBasename.encode(treePath),
 		pathParts: [rootName, ...parentPath],
 	};
 
 	return {
-		canonicalPrettyPath,
-		currentPrettyPath,
+		canonicalPath,
+		currentPath,
 		kind: decoded.kind,
 		treePath,
 	};
 }
 
-export function canonicalizePrettyPath({
+export function canonicalizePath({
 	rootName,
-	prettyPath,
+	path,
 }: {
 	rootName: RootName;
-	prettyPath: PrettyPath;
+	path: CoreSplitPath;
 }): CanonicalizedFile | QuarantinedFile {
-	const decoded = decodeBasename(prettyPath.basename);
+	const decoded = decodeBasename(path.basename);
 
 	if (!decoded) {
 		return {
-			currentPrettyPath: prettyPath,
-			destination: quarantinePath({ prettyPath, rootName }),
+			currentPath: path,
+			destination: quarantinePath({ path, rootName }),
 			reason: "undecodable",
 		};
 	}
 
 	return computeCanonicalPath({
 		authority: "folder",
-		currentPrettyPath: prettyPath,
+		currentPath: path,
 		decoded,
-		folderPath: prettyPath.pathParts.slice(1),
+		folderPath: path.pathParts.slice(1),
 		rootName,
 	});
 }
 
 export function isCanonical(
-	prettyPath: PrettyPath,
-	canonical: PrettyPath,
+	path: CoreSplitPath,
+	canonical: CoreSplitPath,
 ): boolean {
 	// Case-insensitive compare to avoid unnecessary renames on macOS
 	return (
-		prettyPath.basename.toLowerCase() ===
-			canonical.basename.toLowerCase() &&
-		prettyPath.pathParts.join("/").toLowerCase() ===
+		path.basename.toLowerCase() === canonical.basename.toLowerCase() &&
+		path.pathParts.join("/").toLowerCase() ===
 			canonical.pathParts.join("/").toLowerCase()
 	);
 }
