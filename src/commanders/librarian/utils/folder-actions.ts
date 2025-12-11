@@ -22,10 +22,10 @@ export function createFolderActionsForPathParts(
 		const basename = pathParts[depth] ?? "";
 		const parentParts = pathParts.slice(0, depth);
 		const folderPath = [...parentParts, basename].join("/");
-		const prettyPath = splitPath(folderPath) as SplitPathToFolder;
+		const folderSplitPath = splitPath(folderPath) as SplitPathToFolder;
 
 		actions.push({
-			payload: { coreSplitPath: prettyPath },
+			payload: { coreSplitPath: folderSplitPath },
 			type: VaultActionType.CreateFolder,
 		});
 	}

@@ -8,7 +8,7 @@ import type {
 	SplitPathToMdFile,
 } from "../../../obsidian-vault-action-manager/types/split-path";
 
-export type ManagerFsReader = CoreSplitPath & {
+export type ManagerFsReader = SplitPathToMdFile & {
 	readContent: () => Promise<string>;
 };
 
@@ -43,8 +43,18 @@ export function makeManagerFsAdapter(
 		exists(target) {
 			return manager.exists(toSplitPath(target));
 		},
-		getReadersToAllMdFilesInFolder(folder) {
-			return manager.getReadersToAllMdFilesInFolder(toFolder(folder));
+		async getReadersToAllMdFilesInFolder(folder) {
+			const readers = await manager.getReadersToAllMdFilesInFolder(
+				toFolder(folder),
+			);
+			const list = Array.isArray(readers) ? readers : [readers];
+			return list.map(
+				(reader): ManagerFsReader => ({
+					...reader,
+					extension: "md",
+					type: "MdFile",
+				}),
+			);
 		},
 		readContent(target) {
 			return manager.readContent(toMdFile(target));

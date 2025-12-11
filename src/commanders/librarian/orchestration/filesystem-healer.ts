@@ -37,12 +37,8 @@ export class FilesystemHealer {
 
 		// Layer 1: Heal file paths
 		for (const reader of fileReaders) {
-			const prettyPath: CoreSplitPath = {
-				basename: reader.basename,
-				pathParts: reader.pathParts,
-			};
-			if (isInUntracked(prettyPath.pathParts)) continue;
-			const healResult = healFile(prettyPath, rootName, seenFolders);
+			if (isInUntracked(reader.pathParts)) continue;
+			const healResult = healFile(reader, rootName, seenFolders);
 			actions.push(...healResult.actions);
 		}
 
@@ -73,13 +69,13 @@ export class FilesystemHealer {
 		const actions: VaultAction[] = [];
 
 		for (const reader of fileReaders) {
-			const prettyPath: CoreSplitPath = {
+			const splitPath: CoreSplitPath = {
 				basename: reader.basename,
 				pathParts: reader.pathParts,
 			};
-			if (isInUntracked(prettyPath.pathParts)) continue;
+			if (isInUntracked(splitPath.pathParts)) continue;
 
-			const canonical = canonicalizePath({ path: prettyPath, rootName });
+			const canonical = canonicalizePath({ path: splitPath, rootName });
 			if ("reason" in canonical) continue;
 
 			const kind = canonical.kind;
@@ -91,7 +87,7 @@ export class FilesystemHealer {
 				if (kind === "scroll") {
 					actions.push({
 						payload: {
-							coreSplitPath: prettyPath,
+							coreSplitPath: splitPath,
 							transform: (old) =>
 								editOrAddMetaInfo(old, {
 									fileType: "Scroll",
@@ -107,7 +103,7 @@ export class FilesystemHealer {
 					const idx = Number(pageStr);
 					actions.push({
 						payload: {
-							coreSplitPath: prettyPath,
+							coreSplitPath: splitPath,
 							transform: (old) =>
 								editOrAddMetaInfo(old, {
 									fileType: "Page",
@@ -121,7 +117,7 @@ export class FilesystemHealer {
 			} else if (kind !== "page" && meta.fileType === "Page") {
 				actions.push({
 					payload: {
-						coreSplitPath: prettyPath,
+						coreSplitPath: splitPath,
 						transform: (old) =>
 							editOrAddMetaInfo(old, {
 								fileType: "Scroll",
@@ -147,14 +143,14 @@ export class FilesystemHealer {
 		>();
 
 		for (const reader of fileReaders) {
-			const prettyPath: CoreSplitPath = {
+			const splitPath: CoreSplitPath = {
 				basename: reader.basename,
 				pathParts: reader.pathParts,
 			};
 
-			if (isInUntracked(prettyPath.pathParts)) continue;
+			if (isInUntracked(splitPath.pathParts)) continue;
 
-			const canonical = canonicalizePath({ path: prettyPath, rootName });
+			const canonical = canonicalizePath({ path: splitPath, rootName });
 			const targetPath =
 				"reason" in canonical
 					? canonical.destination

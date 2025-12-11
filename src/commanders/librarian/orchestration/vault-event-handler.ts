@@ -56,13 +56,13 @@ export class VaultEventHandler {
 		},
 	) {}
 
-	private async handleFileCreated(prettyPath: CoreSplitPath): Promise<void> {
-		const rootName = prettyPath.pathParts[0];
+	private async handleFileCreated(splitPath: CoreSplitPath): Promise<void> {
+		const rootName = splitPath.pathParts[0];
 
 		if (!rootName || !isRootName(rootName)) return;
-		if (isInUntracked(prettyPath.pathParts)) return;
+		if (isInUntracked(splitPath.pathParts)) return;
 
-		const healResult = healFile(prettyPath, rootName);
+		const healResult = healFile(splitPath, rootName);
 		if (healResult.actions.length > 0) {
 			this.deps.dispatcher.registerSelf(healResult.actions);
 			this.deps.dispatcher.pushMany(healResult.actions);
@@ -72,7 +72,7 @@ export class VaultEventHandler {
 		if (rootName !== LIBRARY_ROOT) return;
 		if (!this.deps.state.tree) return;
 
-		const canonical = canonicalizePath({ path: prettyPath, rootName });
+		const canonical = canonicalizePath({ path: splitPath, rootName });
 		if ("reason" in canonical) return;
 
 		const parentPath = canonical.treePath.slice(0, -1);
@@ -91,12 +91,12 @@ export class VaultEventHandler {
 		if (!rootName || !isRootName(rootName)) return;
 		if (isInUntracked(fullPath.pathParts)) return;
 
-		const prettyPath: CoreSplitPath = {
+		const splitPath: CoreSplitPath = {
 			basename: toNodeName(fullPath.basename),
 			pathParts: fullPath.pathParts,
 		};
 
-		await this.handleFileCreated(prettyPath);
+		await this.handleFileCreated(splitPath);
 	}
 
 	async onFileCreatedFromSplitPath(
@@ -105,15 +105,15 @@ export class VaultEventHandler {
 		await this.handleFileCreated(createdPath);
 	}
 
-	private async handleFileDeleted(prettyPath: CoreSplitPath): Promise<void> {
-		const rootName = prettyPath.pathParts[0];
+	private async handleFileDeleted(targetPath: CoreSplitPath): Promise<void> {
+		const rootName = targetPath.pathParts[0];
 
 		if (!rootName || !isRootName(rootName)) return;
-		if (isInUntracked(prettyPath.pathParts)) return;
+		if (isInUntracked(targetPath.pathParts)) return;
 		if (rootName !== LIBRARY_ROOT) return;
 		if (!this.deps.state.tree) return;
 
-		const canonical = canonicalizePath({ path: prettyPath, rootName });
+		const canonical = canonicalizePath({ path: targetPath, rootName });
 		if ("reason" in canonical) return;
 
 		const parentPath = canonical.treePath.slice(0, -1);
@@ -145,23 +145,23 @@ export class VaultEventHandler {
 
 		if (!basenameChanged && !pathPartsChanged) return;
 
-		const prettyPath: CoreSplitPath = {
+		const newPath: CoreSplitPath = {
 			basename: toNodeName(newFull.basename),
 			pathParts: newFull.pathParts,
 		};
-		const oldPrettyPath: CoreSplitPath = {
+		const oldPath: CoreSplitPath = {
 			basename: toNodeName(oldFull.basename),
 			pathParts: oldFull.pathParts,
 		};
 
-		const decoded = decodeBasename(prettyPath.basename);
+		const decoded = decodeBasename(newPath.basename);
 		const wasPage = decoded?.kind === "page";
 
 		if (decoded?.kind === "codex") {
 			const revertAction: VaultAction = {
 				payload: {
-					from: prettyPath,
-					to: oldPrettyPath,
+					from: newPath,
+					to: oldPath,
 				},
 				type: VaultActionType.RenameMdFile,
 			};
@@ -208,7 +208,7 @@ export class VaultEventHandler {
 					),
 					{
 						payload: {
-							from: prettyPath,
+							from: newPath,
 							to: finalPrettyPath,
 						},
 						type: VaultActionType.RenameMdFile,
@@ -224,7 +224,7 @@ export class VaultEventHandler {
 				return;
 			}
 
-			const healResult = healFile(prettyPath, rootName);
+			const healResult = healFile(newPath, rootName);
 			if (healResult.actions.length > 0) {
 				this.deps.dispatcher.registerSelf(healResult.actions);
 				this.deps.dispatcher.pushMany(healResult.actions);
@@ -237,7 +237,7 @@ export class VaultEventHandler {
 		}
 
 		if (!decoded) {
-			const healResult = healFile(prettyPath, rootName);
+			const healResult = healFile(newPath, rootName);
 			if (healResult.actions.length > 0) {
 				this.deps.dispatcher.registerSelf(healResult.actions);
 				this.deps.dispatcher.pushMany(healResult.actions);
@@ -258,7 +258,7 @@ export class VaultEventHandler {
 
 		const canonical = computeCanonicalPath({
 			authority: "basename",
-			currentPath: prettyPath,
+			currentPath: newPath,
 			decoded: effectiveDecoded,
 			folderPath: [],
 			rootName,
@@ -279,7 +279,7 @@ export class VaultEventHandler {
 			),
 			{
 				payload: {
-					from: prettyPath,
+					from: newPath,
 					to: targetPrettyPath,
 				},
 				type: VaultActionType.RenameMdFile,
@@ -321,26 +321,26 @@ export class VaultEventHandler {
 		if (rootName !== LIBRARY_ROOT) return;
 		if (!this.deps.state.tree) return;
 
-		const prettyPath: CoreSplitPath = {
+		const splitPath: CoreSplitPath = {
 			basename: fullPath.basename,
 			pathParts: fullPath.pathParts,
 		};
 
-		await this.handleFileDeleted(prettyPath);
+		await this.handleFileDeleted(splitPath);
 	}
 
-	async onFileDeletedFromSplitPath(prettyPath: CoreSplitPath): Promise<void> {
-		await this.handleFileDeleted(prettyPath);
+	async onFileDeletedFromSplitPath(targetPath: CoreSplitPath): Promise<void> {
+		await this.handleFileDeleted(targetPath);
 	}
 
 	async onFileRenamedFromSplitPath(
-		prettyPath: CoreSplitPath,
+		newPath: CoreSplitPath,
 		oldPath: string,
 	): Promise<void> {
 		await this.onFileRenamed(
 			{
 				extension: "md",
-				path: splitPathKey(prettyPath),
+				path: splitPathKey(newPath),
 			} as unknown as TFile,
 			oldPath,
 		);
