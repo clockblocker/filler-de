@@ -1,5 +1,6 @@
 import type { TAbstractFile } from "obsidian";
 import { TFile } from "obsidian";
+import { splitPathKey } from "../../../obsidian-vault-action-manager";
 import { editOrAddMetaInfo } from "../../../services/dto-services/meta-info-manager/interface";
 import { fullPathFromSystemPath } from "../../../services/obsidian-services/atomic-services/pathfinder";
 import {
@@ -50,6 +51,30 @@ export class VaultEventHandler {
 		} & Pick<TexfresserObsidianServices, "backgroundFileService">,
 	) {}
 
+	private async handleFileCreated(prettyPath: PrettyPath): Promise<void> {
+		const rootName = prettyPath.pathParts[0];
+
+		if (!rootName || !isRootName(rootName)) return;
+		if (isInUntracked(prettyPath.pathParts)) return;
+
+		const healResult = healFile(prettyPath, rootName);
+		if (healResult.actions.length > 0) {
+			this.deps.dispatcher.registerSelf(healResult.actions);
+			this.deps.dispatcher.pushMany(healResult.actions);
+			await this.deps.dispatcher.flushNow();
+		}
+
+		if (rootName !== LIBRARY_ROOTS[0]) return;
+		if (!this.deps.state.tree) return;
+
+		const canonical = canonicalizePrettyPath({ prettyPath, rootName });
+		if ("reason" in canonical) return;
+
+		const parentPath = canonical.treePath.slice(0, -1);
+		await this.deps.treeReconciler.reconcileSubtree(rootName, parentPath);
+		await this.deps.regenerateAllCodexes();
+	}
+
 	async onFileCreated(file: TAbstractFile): Promise<void> {
 		if (this.deps.selfEventTracker.pop(file.path)) return;
 		if (!(file instanceof TFile)) return;
@@ -66,13 +91,18 @@ export class VaultEventHandler {
 			pathParts: fullPath.pathParts,
 		};
 
-		const healResult = healFile(prettyPath, rootName);
-		if (healResult.actions.length > 0) {
-			this.deps.dispatcher.registerSelf(healResult.actions);
-			this.deps.dispatcher.pushMany(healResult.actions);
-			await this.deps.dispatcher.flushNow();
-		}
+		await this.handleFileCreated(prettyPath);
+	}
 
+	async onFileCreatedFromPretty(prettyPath: PrettyPath): Promise<void> {
+		await this.handleFileCreated(prettyPath);
+	}
+
+	private async handleFileDeleted(prettyPath: PrettyPath): Promise<void> {
+		const rootName = prettyPath.pathParts[0];
+
+		if (!rootName || !isRootName(rootName)) return;
+		if (isInUntracked(prettyPath.pathParts)) return;
 		if (rootName !== LIBRARY_ROOTS[0]) return;
 		if (!this.deps.state.tree) return;
 
@@ -289,12 +319,24 @@ export class VaultEventHandler {
 			pathParts: fullPath.pathParts,
 		};
 
-		const canonical = canonicalizePrettyPath({ prettyPath, rootName });
-		if ("reason" in canonical) return;
+		await this.handleFileDeleted(prettyPath);
+	}
 
-		const parentPath = canonical.treePath.slice(0, -1);
-		await this.deps.treeReconciler.reconcileSubtree(rootName, parentPath);
-		await this.deps.regenerateAllCodexes();
+	async onFileDeletedFromPretty(prettyPath: PrettyPath): Promise<void> {
+		await this.handleFileDeleted(prettyPath);
+	}
+
+	async onFileRenamedFromPretty(
+		prettyPath: PrettyPath,
+		oldPath: string,
+	): Promise<void> {
+		await this.onFileRenamed(
+			{
+				extension: "md",
+				path: splitPathKey(prettyPath),
+			} as unknown as TFile,
+			oldPath,
+		);
 	}
 
 	private scheduleRenameFlush(): void {

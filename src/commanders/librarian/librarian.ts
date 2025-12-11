@@ -1,8 +1,12 @@
 import type { TAbstractFile, TFile } from "obsidian";
+import type {
+	ObsidianVaultActionManager,
+	VaultEvent,
+} from "../../obsidian-vault-action-manager";
+import { splitPathKey } from "../../obsidian-vault-action-manager";
 import { fullPathFromSystemPath } from "../../services/obsidian-services/atomic-services/pathfinder";
 import type { TexfresserObsidianServices } from "../../services/obsidian-services/interface";
 import type { PrettyPath } from "../../types/common-interface/dtos";
-import type { ObsidianVaultActionManager } from "../obsidian-vault-action-manager";
 import { ActionDispatcher } from "./action-dispatcher";
 import { isRootName, LIBRARY_ROOTS, type RootName } from "./constants";
 import type { NoteSnapshot } from "./diffing/note-differ";
@@ -97,6 +101,41 @@ export class Librarian {
 
 	async onFileDeleted(file: TAbstractFile): Promise<void> {
 		await this.eventHandler.onFileDeleted(file);
+	}
+
+	// Manager-driven events (self-filtered inside manager)
+	async onVaultEventFileCreated(event: VaultEvent): Promise<void> {
+		if (event.type !== "FileCreated") return;
+		const prettyPath: PrettyPath = {
+			basename: event.splitPath.basename,
+			pathParts: event.splitPath.pathParts,
+		};
+		await this.eventHandler.onFileCreatedFromPretty(prettyPath);
+	}
+
+	async onVaultEventFileRenamed(event: VaultEvent): Promise<void> {
+		if (event.type !== "FileRenamed") return;
+		const toPretty: PrettyPath = {
+			basename: event.to.basename,
+			pathParts: event.to.pathParts,
+		};
+		const fromPretty: PrettyPath = {
+			basename: event.from.basename,
+			pathParts: event.from.pathParts,
+		};
+		await this.eventHandler.onFileRenamedFromPretty(
+			toPretty,
+			splitPathKey(event.from),
+		);
+	}
+
+	async onVaultEventFileTrashed(event: VaultEvent): Promise<void> {
+		if (event.type !== "FileTrashed") return;
+		const prettyPath: PrettyPath = {
+			basename: event.splitPath.basename,
+			pathParts: event.splitPath.pathParts,
+		};
+		await this.eventHandler.onFileDeletedFromPretty(prettyPath);
 	}
 
 	// ─── Business Operations ──────────────────────────────────────────

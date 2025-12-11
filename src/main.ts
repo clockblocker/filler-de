@@ -54,6 +54,7 @@ export default class TextEaterPlugin extends Plugin {
 
 	// Commanders
 	librarian: Librarian;
+	vaultEventsTeardown?: () => void;
 
 	private initialized = false;
 
@@ -175,21 +176,21 @@ export default class TextEaterPlugin extends Plugin {
 		await this.librarian.initTrees();
 		console.log("[main] Librarian and trees initialized:", this.librarian);
 
-		// Start listening to vault events after trees are ready
-		this.registerEvent(
-			this.app.vault.on("create", (file) => {
-				void this.librarian.onFileCreated(file);
-			}),
-		);
-		this.registerEvent(
-			this.app.vault.on("rename", (file, oldPath) => {
-				void this.librarian.onFileRenamed(file, oldPath);
-			}),
-		);
-		this.registerEvent(
-			this.app.vault.on("delete", (file) => {
-				void this.librarian.onFileDeleted(file);
-			}),
+		// Subscribe to manager events (self-filtered inside manager)
+		this.vaultEventsTeardown = this.vaultActionManager.subscribe(
+			async (event) => {
+				switch (event.type) {
+					case "FileCreated":
+						await this.librarian.onVaultEventFileCreated(event);
+						break;
+					case "FileRenamed":
+						await this.librarian.onVaultEventFileRenamed(event);
+						break;
+					case "FileTrashed":
+						await this.librarian.onVaultEventFileTrashed(event);
+						break;
+				}
+			},
 		);
 
 		this.registerDomEvent(document, "click", makeClickListener(this));
@@ -263,6 +264,9 @@ export default class TextEaterPlugin extends Plugin {
 	}
 
 	override onunload() {
+		if (this.vaultEventsTeardown) {
+			this.vaultEventsTeardown();
+		}
 		if (this.bottomToolbarService) this.bottomToolbarService.detach();
 		if (this.selectionToolbarService) this.selectionToolbarService.detach();
 	}
