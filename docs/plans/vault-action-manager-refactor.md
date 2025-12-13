@@ -91,18 +91,39 @@ This refactor aims to consolidate and modernize file/folder operations by:
 - [x] `CollisionStrategy` type exported from `common.ts`
 - [x] Shared helper functions centralized
 
+#### Executor Implementation
+- [x] Maps `VaultAction` types to `TFileHelper`/`TFolderHelper`/`OpenedFileService`
+- [x] Routes ProcessMdFile/ReplaceContentMdFile based on `isFileActive()`
+- [x] Ensures file exists before processing/writing
+- [x] Returns `Result<void, string>` per action
+- [x] Handles both opened (active view) and background operations
+
+#### Dispatcher Implementation
+- [x] Uses `collapseActions()` to minimize filesystem calls
+- [x] Uses `sortActionsByWeight()` for proper execution order
+- [x] Executes actions sequentially
+- [x] Collects all errors with action context
+- [x] Returns `DispatchResult = Result<void, DispatchError[]>`
+
+#### Collapse Implementation
+- [x] Comprehensive collapse rules (see [collapse-actions-spec.md](./collapse-actions-spec.md))
+- [x] ProcessMdFile composition
+- [x] ReplaceContentMdFile precedence
+- [x] Trash terminality
+- [x] CreateMdFile + ReplaceContentMdFile merging
+- [x] 20 unit tests passing
+
 ### 🚧 In Progress
 
-- [ ] Integration with `ObsidianVaultActionManager` facade
+- [ ] Integration with `ObsidianVaultActionManager` facade (partial)
 - [ ] Migration of `Librarian` to use new vault action manager
-- [ ] Removal of legacy `LegacyVaultActionQueue`
-- [ ] Migration of `ActionDispatcher` to new system
+- [ ] Event adapter implementation
+- [ ] Self-event tracking
 
 ### 📋 Pending
 
-- [ ] Update `AbstractFileHelper` to use new helpers
-- [ ] Migrate `BackgroundFileService` to new system
-- [ ] Update `OpenedFileService` to use new system
+- [ ] Remove legacy `LegacyVaultActionQueue`
+- [ ] Migration of `ActionDispatcher` to new system
 - [ ] Remove legacy file service implementations
 - [ ] Update all call sites to use new API
 - [ ] Comprehensive integration testing
@@ -119,17 +140,29 @@ Librarian
   └── ActionDispatcher
 ```
 
-### After (Target)
+### After (Current Implementation)
 
 ```
 Librarian
-  └── ObsidianVaultActionManager
+  └── ObsidianVaultActionManager (Facade)
       ├── Reader (Result<T, E>)
-      ├── Dispatcher (queue + event tracking)
+      │   ├── OpenedFileService
+      │   └── TFileHelper/TFolderHelper (background)
+      ├── Dispatcher
+      │   ├── collapseActions()
+      │   ├── sortActionsByWeight()
+      │   └── Executor.execute() (sequential)
       └── Executor
           ├── TFileHelper (Result<T, E>)
-          └── TFolderHelper (Result<T, E>)
+          ├── TFolderHelper (Result<T, E>)
+          └── OpenedFileService (for active files)
 ```
+
+**Key Differences:**
+- No `BackgroundFileService` wrapper - Executor uses `TFileHelper`/`TFolderHelper` directly
+- Dispatcher returns `DispatchResult` with error tracking
+- Executor ensures file existence before processing/writing
+- Collapse minimizes filesystem calls by combining operations
 
 ## Key Design Decisions
 
