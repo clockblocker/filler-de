@@ -12,7 +12,7 @@ E2E tests for `Dispatcher` verify the full integration flow:
 
 Each test should:
 - Use real `collapseActions` and `sortActionsByWeight` (not mocked)
-- Mock `Executor` to verify execution order and capture calls
+- Use real `Executor` to verify execution order and capture calls
 - Assert final state via `DispatchResult`
 
 ---
