@@ -1,13 +1,16 @@
 import { type App, MarkdownView, type TFile, type TFolder } from "obsidian";
+import { getMaybeEditor } from "../../../../obsidian-vault-action-manager/helpers/get-editor";
+import {
+	logError,
+	logWarning,
+} from "../../../../obsidian-vault-action-manager/helpers/issue-handlers";
 import {
 	type Maybe,
 	unwrapMaybeByThrowing,
 } from "../../../../types/common-interface/maybe";
 import { getFullPathForAbstractFile } from "../../atomic-services/pathfinder";
-import { getMaybeEditor } from "../../helpers/get-editor";
-import { logError, logWarning } from "../../helpers/issue-handlers";
 
-export class OpenedFileReader {
+export class LegacyOpenedFileReader {
 	constructor(private app: App) {}
 
 	async pwd() {

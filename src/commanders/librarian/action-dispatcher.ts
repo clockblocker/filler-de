@@ -1,5 +1,5 @@
-import type { VaultAction } from "../../services/obsidian-services/file-services/background/background-vault-actions";
-import type { VaultActionQueue } from "../../services/obsidian-services/file-services/vault-action-queue";
+import type { LegacyVaultAction } from "../../services/obsidian-services/file-services/background/background-vault-actions";
+import type { LegacyVaultActionQueue } from "../../services/obsidian-services/file-services/vault-action-queue";
 import type { SelfEventTracker } from "./utils/self-event-tracker";
 
 /**
@@ -7,23 +7,23 @@ import type { SelfEventTracker } from "./utils/self-event-tracker";
  * Keeps call sites concise and consistent.
  */
 export class ActionDispatcher {
-	private readonly queue: VaultActionQueue;
+	private readonly queue: LegacyVaultActionQueue;
 	private readonly tracker: SelfEventTracker;
 
-	constructor(queue: VaultActionQueue, tracker: SelfEventTracker) {
+	constructor(queue: LegacyVaultActionQueue, tracker: SelfEventTracker) {
 		this.queue = queue;
 		this.tracker = tracker;
 	}
 
-	registerSelf(actions: VaultAction[]): void {
+	registerSelf(actions: LegacyVaultAction[]): void {
 		this.tracker.register(actions);
 	}
 
-	push(action: VaultAction): void {
+	push(action: LegacyVaultAction): void {
 		this.queue.push(action);
 	}
 
-	pushMany(actions: VaultAction[]): void {
+	pushMany(actions: LegacyVaultAction[]): void {
 		this.queue.pushMany(actions);
 	}
 

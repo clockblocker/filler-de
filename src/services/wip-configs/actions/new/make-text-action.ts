@@ -1,5 +1,5 @@
+import { logError } from "../../../../obsidian-vault-action-manager/helpers/issue-handlers";
 import { unwrapMaybeByThrowing } from "../../../../types/common-interface/maybe";
-import { logError } from "../../../obsidian-services/helpers/issue-handlers";
 import type { TexfresserObsidianServices } from "../../../obsidian-services/interface";
 // import { VaultCurrator } from '../../obsidian-services/managers/vault-currator';
 

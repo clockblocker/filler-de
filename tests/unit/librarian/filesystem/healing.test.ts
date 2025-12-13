@@ -3,7 +3,7 @@ import {
 	healFile,
 	healFiles,
 } from "../../../../src/commanders/librarian/filesystem/healing";
-import { VaultActionType } from "../../../../src/services/obsidian-services/file-services/background/background-vault-actions";
+import { LegacyVaultActionType } from "../../../../src/services/obsidian-services/file-services/background/background-vault-actions";
 
 describe("healFile", () => {
 	const rootName: "Library" = "Library";
@@ -34,7 +34,7 @@ describe("healFile", () => {
 		expect(result.targetPath.pathParts).toEqual([rootName, "Section"]);
 
 		const renameAction = result.actions.find(
-			(a) => a.type === VaultActionType.RenameFile,
+			(a) => a.type === LegacyVaultActionType.RenameFile,
 		);
 		expect(renameAction).toBeDefined();
 		expect(renameAction?.payload.from).toEqual(prettyPath);
@@ -70,7 +70,7 @@ describe("healFile", () => {
 
 		// Folder actions are created for all folders in target path
 		const folderActions = result.actions.filter(
-			(a) => a.type === VaultActionType.UpdateOrCreateFolder,
+			(a) => a.type === LegacyVaultActionType.UpdateOrCreateFolder,
 		);
 		// Section folder action created (even if it exists, queue handles dedup)
 		expect(folderActions).toHaveLength(1);
@@ -87,7 +87,7 @@ describe("healFile", () => {
 		const result = healFile(prettyPath, rootName, seen);
 
 		const folderActions = result.actions.filter(
-			(a) => a.type === VaultActionType.UpdateOrCreateFolder,
+			(a) => a.type === LegacyVaultActionType.UpdateOrCreateFolder,
 		);
 		// Section already in seen, no folder action needed
 		expect(folderActions).toHaveLength(0);
@@ -118,7 +118,7 @@ describe("healFiles", () => {
 		const actions = healFiles(files, rootName);
 
 		const renameActions = actions.filter(
-			(a) => a.type === VaultActionType.RenameFile,
+			(a) => a.type === LegacyVaultActionType.RenameFile,
 		);
 		expect(renameActions).toHaveLength(2);
 	});
@@ -132,7 +132,7 @@ describe("healFiles", () => {
 		const actions = healFiles(files, rootName);
 
 		const folderActions = actions.filter(
-			(a) => a.type === VaultActionType.UpdateOrCreateFolder,
+			(a) => a.type === LegacyVaultActionType.UpdateOrCreateFolder,
 		);
 		// Section folder should only be created once
 		const sectionFolders = folderActions.filter(

@@ -1,6 +1,6 @@
 import {
-	type VaultAction,
-	VaultActionType,
+	type LegacyVaultAction,
+	LegacyVaultActionType,
 } from "../../../services/obsidian-services/file-services/background/background-vault-actions";
 import type { PrettyPath } from "../../../types/common-interface/dtos";
 import type { RootName } from "../constants";
@@ -14,7 +14,7 @@ import { createFolderActionsForPathParts } from "../utils/folder-actions";
  * Result of healing a file: actions to execute + metadata.
  */
 export type HealResult = {
-	actions: VaultAction[];
+	actions: LegacyVaultAction[];
 	/** The canonical path the file should be at (or quarantine destination) */
 	targetPath: PrettyPath;
 	/** Whether the file was quarantined (undecodable basename) */
@@ -39,14 +39,14 @@ export function healFile(
 
 	// Quarantine case: undecodable basename
 	if ("reason" in canonical) {
-		const actions: VaultAction[] = [
+		const actions: LegacyVaultAction[] = [
 			...createFolderActionsForPathParts(
 				canonical.destination.pathParts,
 				seen,
 			),
 			{
 				payload: { from: prettyPath, to: canonical.destination },
-				type: VaultActionType.RenameFile,
+				type: LegacyVaultActionType.RenameFile,
 			},
 		];
 		return {
@@ -66,14 +66,14 @@ export function healFile(
 	}
 
 	// Needs healing: create folder + rename
-	const actions: VaultAction[] = [
+	const actions: LegacyVaultAction[] = [
 		...createFolderActionsForPathParts(
 			canonical.canonicalPrettyPath.pathParts,
 			seen,
 		),
 		{
 			payload: { from: prettyPath, to: canonical.canonicalPrettyPath },
-			type: VaultActionType.RenameFile,
+			type: LegacyVaultActionType.RenameFile,
 		},
 	];
 
@@ -95,7 +95,7 @@ export function healFile(
 export function healFiles(
 	files: PrettyPath[],
 	rootName: RootName,
-): VaultAction[] {
+): LegacyVaultAction[] {
 	const seen = new Set<string>();
 	return files.flatMap((f) => healFile(f, rootName, seen).actions);
 }

@@ -1,6 +1,6 @@
 import {
-	type VaultAction,
-	VaultActionType,
+	type LegacyVaultAction,
+	LegacyVaultActionType,
 } from "../../../services/obsidian-services/file-services/background/background-vault-actions";
 import type { PrettyPath } from "../../../types/common-interface/dtos";
 
@@ -22,18 +22,18 @@ function toSystemKey(prettyPath: PrettyPath): string {
 export class SelfEventTracker {
 	private readonly keys = new Set<string>();
 
-	register(actions: VaultAction[]): void {
+	register(actions: LegacyVaultAction[]): void {
 		for (const action of actions) {
 			switch (action.type) {
-				case VaultActionType.RenameFile: {
+				case LegacyVaultActionType.RenameFile: {
 					this.keys.add(toSystemKey(action.payload.from));
 					this.keys.add(toSystemKey(action.payload.to));
 					break;
 				}
-				case VaultActionType.TrashFile:
-				case VaultActionType.UpdateOrCreateFile:
-				case VaultActionType.ProcessFile:
-				case VaultActionType.WriteFile: {
+				case LegacyVaultActionType.TrashFile:
+				case LegacyVaultActionType.UpdateOrCreateFile:
+				case LegacyVaultActionType.ProcessFile:
+				case LegacyVaultActionType.WriteFile: {
 					this.keys.add(toSystemKey(action.payload.prettyPath));
 					break;
 				}

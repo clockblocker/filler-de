@@ -2,8 +2,12 @@ import { Notice, requestUrl } from "obsidian";
 import OpenAI from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
 import type { z } from "zod";
+import {
+	formatError,
+	logError,
+	logWarning,
+} from "../../../obsidian-vault-action-manager/helpers/issue-handlers";
 import type { TextEaterSettings } from "../../../types";
-import { formatError, logError, logWarning } from "../helpers/issue-handlers";
 
 function normalizeHeaders(initHeaders?: HeadersInit): Record<string, string> {
 	if (!initHeaders) {

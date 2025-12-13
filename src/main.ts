@@ -9,6 +9,7 @@ import {
 	splitPath as managerSplitPath,
 	ObsidianVaultActionManagerImpl,
 } from "./obsidian-vault-action-manager";
+import { logError } from "./obsidian-vault-action-manager/helpers/issue-handlers";
 import {
 	BackgroundFileService as NewBackgroundFileService,
 	splitPath as splitPathForBackground,
@@ -25,11 +26,10 @@ import { ApiService } from "./services/obsidian-services/atomic-services/api-ser
 import { BottomToolbarService } from "./services/obsidian-services/atomic-services/bottom-toolbar-service";
 import { SelectionService } from "./services/obsidian-services/atomic-services/selection-service";
 import { LegacyOpenedFileService } from "./services/obsidian-services/file-services/active-view/legacy-opened-file-service";
-import { OpenedFileReader } from "./services/obsidian-services/file-services/active-view/opened-file-reader";
-import { BackgroundFileService } from "./services/obsidian-services/file-services/background/background-file-service";
+import { LegacyOpenedFileReader } from "./services/obsidian-services/file-services/active-view/opened-file-reader";
+import { LegacyBackgroundFileService } from "./services/obsidian-services/file-services/background/background-file-service";
 import { VaultActionExecutor } from "./services/obsidian-services/file-services/background/vault-action-executor";
-import { VaultActionQueue } from "./services/obsidian-services/file-services/vault-action-queue";
-import { logError } from "./services/obsidian-services/helpers/issue-handlers";
+import { LegacyVaultActionQueue } from "./services/obsidian-services/file-services/vault-action-queue";
 import { ACTION_CONFIGS } from "./services/wip-configs/actions/actions-config";
 // import newGenCommand from "./services/wip-configs/actions/new/new-gen-command";
 // import { VaultCurrator } from './obsidian-related/obsidian-services/managers/vault-currator';
@@ -42,20 +42,20 @@ import { DEFAULT_SETTINGS, type TextEaterSettings } from "./types";
 export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;
 	apiService: ApiService;
-	openedFileReader: OpenedFileReader;
+	openedFileReader: LegacyOpenedFileReader;
 	legacyOpenedFileService: LegacyOpenedFileService;
 	testingOpenedFileService: OpenedFileService;
 	testingBackgroundFileService: NewBackgroundFileService;
 	testingReader: Reader;
 	vaultActionManager: ObsidianVaultActionManagerImpl;
-	backgroundFileService: BackgroundFileService;
+	backgroundFileService: LegacyBackgroundFileService;
 	selectionService: SelectionService;
 
 	selectionToolbarService: AboveSelectionToolbarService;
 	bottomToolbarService: BottomToolbarService;
 
 	// File management
-	vaultActionQueue: VaultActionQueue;
+	vaultActionQueue: LegacyVaultActionQueue;
 	vaultActionExecutor: VaultActionExecutor;
 
 	// Commanders
@@ -145,7 +145,7 @@ export default class TextEaterPlugin extends Plugin {
 		await this.addCommands();
 
 		this.apiService = new ApiService(this.settings);
-		this.openedFileReader = new OpenedFileReader(this.app);
+		this.openedFileReader = new LegacyOpenedFileReader(this.app);
 
 		this.legacyOpenedFileService = new LegacyOpenedFileService(
 			this.app,
@@ -162,7 +162,7 @@ export default class TextEaterPlugin extends Plugin {
 		this.vaultActionManager = new ObsidianVaultActionManagerImpl(this.app);
 		this.setTestingGlobals();
 
-		this.backgroundFileService = new BackgroundFileService({
+		this.backgroundFileService = new LegacyBackgroundFileService({
 			fileManager: this.app.fileManager,
 			vault: this.app.vault,
 		});
@@ -171,7 +171,9 @@ export default class TextEaterPlugin extends Plugin {
 			this.backgroundFileService,
 			this.legacyOpenedFileService,
 		);
-		this.vaultActionQueue = new VaultActionQueue(this.vaultActionExecutor);
+		this.vaultActionQueue = new LegacyVaultActionQueue(
+			this.vaultActionExecutor,
+		);
 
 		this.selectionToolbarService = new AboveSelectionToolbarService(
 			this.app,

@@ -2,24 +2,24 @@ import { describe, expect, it } from "bun:test";
 import { Librarian } from "../../../../src/commanders/librarian/librarian";
 import type { ReadablePrettyFile } from "../../../../src/services/obsidian-services/file-services/background/background-file-service";
 import {
-	type VaultAction,
-	VaultActionType,
+	type LegacyVaultAction,
+	LegacyVaultActionType,
 } from "../../../../src/services/obsidian-services/file-services/background/background-vault-actions";
 import type { VaultActionExecutor } from "../../../../src/services/obsidian-services/file-services/background/vault-action-executor";
-import { VaultActionQueue } from "../../../../src/services/obsidian-services/file-services/vault-action-queue";
+import { LegacyVaultActionQueue } from "../../../../src/services/obsidian-services/file-services/vault-action-queue";
 import type { TexfresserObsidianServices } from "../../../../src/services/obsidian-services/interface";
 
 function createQueueRecorder() {
-	const executedActions: VaultAction[][] = [];
+	const executedActions: LegacyVaultAction[][] = [];
 	const executor = {
-		execute: async (actions: readonly VaultAction[]) => {
+		execute: async (actions: readonly LegacyVaultAction[]) => {
 			executedActions.push([...actions]);
 		},
 	};
 
 	return {
 		executedActions,
-		queue: new VaultActionQueue(executor as VaultActionExecutor, { flushDelayMs: 0 }),
+		queue: new LegacyVaultActionQueue(executor as VaultActionExecutor, { flushDelayMs: 0 }),
 	};
 }
 
@@ -60,7 +60,7 @@ describe("Librarian audit", () => {
 
 		const flatActions = executedActions.flat();
 		const renameActions = flatActions.filter(
-			(a) => a.type === VaultActionType.RenameFile,
+			(a) => a.type === LegacyVaultActionType.RenameFile,
 		);
 
 		expect(renameActions).toEqual([
@@ -69,19 +69,19 @@ describe("Librarian audit", () => {
 					from: { basename: "child-parent", pathParts: ["Library"] },
 					to: { basename: "child", pathParts: ["Library"] },
 				},
-				type: VaultActionType.RenameFile,
+				type: LegacyVaultActionType.RenameFile,
 			},
 			{
 				payload: {
 					from: { basename: "NewName", pathParts: ["Library", "Parent"] },
 					to: { basename: "NewName-Parent", pathParts: ["Library", "Parent"] },
 				},
-				type: VaultActionType.RenameFile,
+				type: LegacyVaultActionType.RenameFile,
 			},
 		]);
 
 		const folderCreates = flatActions.filter(
-			(a) => a.type === VaultActionType.UpdateOrCreateFolder,
+			(a) => a.type === LegacyVaultActionType.UpdateOrCreateFolder,
 		);
 
 		expect(

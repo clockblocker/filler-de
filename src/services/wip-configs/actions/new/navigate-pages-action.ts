@@ -1,8 +1,8 @@
-import { unwrapMaybeByThrowing } from "../../../../types/common-interface/maybe";
 import {
 	logError,
 	logWarning,
-} from "../../../obsidian-services/helpers/issue-handlers";
+} from "../../../../obsidian-vault-action-manager/helpers/issue-handlers";
+import { unwrapMaybeByThrowing } from "../../../../types/common-interface/maybe";
 import type { TexfresserObsidianServices } from "../../../obsidian-services/interface";
 
 export async function navigatePageAction(

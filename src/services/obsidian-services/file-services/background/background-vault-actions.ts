@@ -30,87 +30,87 @@ const ContentActionTypeValues = ContentActionSchema.options.map(
 	(c) => `${c}${AbstractFileType.File}` as const,
 );
 
-export const VaultActionTypeSchema = z.enum([
+export const LegacyVaultActionTypeSchema = z.enum([
 	...DirActionTypeValues,
 	...ContentActionTypeValues,
 ] as const);
 
-export const VaultActionType = VaultActionTypeSchema.enum;
-export type VaultActionType = z.infer<typeof VaultActionTypeSchema>;
+export const LegacyVaultActionType = LegacyVaultActionTypeSchema.enum;
+export type LegacyVaultActionType = z.infer<typeof LegacyVaultActionTypeSchema>;
 
 // Action payloads
-export type VaultAction =
+export type LegacyVaultAction =
 	| {
-			type: typeof VaultActionType.UpdateOrCreateFolder;
+			type: typeof LegacyVaultActionType.UpdateOrCreateFolder;
 			payload: { prettyPath: PrettyPath };
 	  }
 	| {
-			type: typeof VaultActionType.RenameFolder;
+			type: typeof LegacyVaultActionType.RenameFolder;
 			payload: { from: PrettyPath; to: PrettyPath };
 	  }
 	| {
-			type: typeof VaultActionType.TrashFolder;
+			type: typeof LegacyVaultActionType.TrashFolder;
 			payload: { prettyPath: PrettyPath };
 	  }
 	| {
-			type: typeof VaultActionType.UpdateOrCreateFile;
+			type: typeof LegacyVaultActionType.UpdateOrCreateFile;
 			payload: { prettyPath: PrettyPath; content?: string };
 	  }
 	| {
-			type: typeof VaultActionType.RenameFile;
+			type: typeof LegacyVaultActionType.RenameFile;
 			payload: { from: PrettyPath; to: PrettyPath };
 	  }
 	| {
-			type: typeof VaultActionType.TrashFile;
+			type: typeof LegacyVaultActionType.TrashFile;
 			payload: { prettyPath: PrettyPath };
 	  }
 	| {
-			type: typeof VaultActionType.ProcessFile;
+			type: typeof LegacyVaultActionType.ProcessFile;
 			payload: {
 				prettyPath: PrettyPath;
 				transform: (content: string) => string | Promise<string>;
 			};
 	  }
 	| {
-			type: typeof VaultActionType.WriteFile;
+			type: typeof LegacyVaultActionType.WriteFile;
 			payload: { prettyPath: PrettyPath; content: string };
 	  };
 
 // Execution order weights (lower = execute first)
-export const weightForVaultActionType: Record<VaultActionType, number> = {
+export const weightForVaultActionType: Record<LegacyVaultActionType, number> = {
 	// Folders first (must exist before files can be created in them)
-	[VaultActionType.UpdateOrCreateFolder]: 0,
-	[VaultActionType.RenameFolder]: 1,
-	[VaultActionType.TrashFolder]: 2,
+	[LegacyVaultActionType.UpdateOrCreateFolder]: 0,
+	[LegacyVaultActionType.RenameFolder]: 1,
+	[LegacyVaultActionType.TrashFolder]: 2,
 
 	// Files second
-	[VaultActionType.UpdateOrCreateFile]: 3,
-	[VaultActionType.RenameFile]: 4,
-	[VaultActionType.TrashFile]: 5,
+	[LegacyVaultActionType.UpdateOrCreateFile]: 3,
+	[LegacyVaultActionType.RenameFile]: 4,
+	[LegacyVaultActionType.TrashFile]: 5,
 
 	// Content operations last (file must exist)
-	[VaultActionType.ProcessFile]: 6,
-	[VaultActionType.WriteFile]: 7,
+	[LegacyVaultActionType.ProcessFile]: 6,
+	[LegacyVaultActionType.WriteFile]: 7,
 } as const;
 
 /**
  * Get a unique key for an action based on its target path.
  * Used for deduplication in the queue.
  */
-export function getActionKey(action: VaultAction): string {
+export function getActionKey(action: LegacyVaultAction): string {
 	const { type, payload } = action;
 
 	switch (type) {
-		case VaultActionType.UpdateOrCreateFolder:
-		case VaultActionType.TrashFolder:
-		case VaultActionType.UpdateOrCreateFile:
-		case VaultActionType.TrashFile:
-		case VaultActionType.ProcessFile:
-		case VaultActionType.WriteFile:
+		case LegacyVaultActionType.UpdateOrCreateFolder:
+		case LegacyVaultActionType.TrashFolder:
+		case LegacyVaultActionType.UpdateOrCreateFile:
+		case LegacyVaultActionType.TrashFile:
+		case LegacyVaultActionType.ProcessFile:
+		case LegacyVaultActionType.WriteFile:
 			return `${type}:${prettyPathToKey(payload.prettyPath)}`;
 
-		case VaultActionType.RenameFolder:
-		case VaultActionType.RenameFile:
+		case LegacyVaultActionType.RenameFolder:
+		case LegacyVaultActionType.RenameFile:
 			// For renames, key by source path to dedupe multiple renames of same file
 			return `${type}:${prettyPathToKey(payload.from)}`;
 		default:
@@ -121,20 +121,20 @@ export function getActionKey(action: VaultAction): string {
 /**
  * Get the target path of an action (for logging/debugging).
  */
-export function getActionTargetPath(action: VaultAction): string {
+export function getActionTargetPath(action: LegacyVaultAction): string {
 	const { type, payload } = action;
 
 	switch (type) {
-		case VaultActionType.UpdateOrCreateFolder:
-		case VaultActionType.TrashFolder:
-		case VaultActionType.UpdateOrCreateFile:
-		case VaultActionType.TrashFile:
-		case VaultActionType.ProcessFile:
-		case VaultActionType.WriteFile:
+		case LegacyVaultActionType.UpdateOrCreateFolder:
+		case LegacyVaultActionType.TrashFolder:
+		case LegacyVaultActionType.UpdateOrCreateFile:
+		case LegacyVaultActionType.TrashFile:
+		case LegacyVaultActionType.ProcessFile:
+		case LegacyVaultActionType.WriteFile:
 			return prettyPathToKey(payload.prettyPath);
 
-		case VaultActionType.RenameFolder:
-		case VaultActionType.RenameFile:
+		case LegacyVaultActionType.RenameFolder:
+		case LegacyVaultActionType.RenameFile:
 			return `${prettyPathToKey(payload.from)} → ${prettyPathToKey(payload.to)}`;
 		default:
 			return unreachable(type);
@@ -152,13 +152,15 @@ function unreachable(x: never): never {
 /**
  * Sort actions by execution weight.
  */
-export function sortActionsByWeight(actions: VaultAction[]): VaultAction[] {
-	const pathDepth = (action: VaultAction): number => {
+export function sortActionsByWeight(
+	actions: LegacyVaultAction[],
+): LegacyVaultAction[] {
+	const pathDepth = (action: LegacyVaultAction): number => {
 		switch (action.type) {
-			case VaultActionType.UpdateOrCreateFolder:
-			case VaultActionType.TrashFolder:
+			case LegacyVaultActionType.UpdateOrCreateFolder:
+			case LegacyVaultActionType.TrashFolder:
 				return action.payload.prettyPath.pathParts.length;
-			case VaultActionType.RenameFolder:
+			case LegacyVaultActionType.RenameFolder:
 				return action.payload.to.pathParts.length;
 			default:
 				return 0;

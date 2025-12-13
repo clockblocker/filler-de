@@ -1,6 +1,6 @@
 import type { App } from "obsidian";
+import { getEditor } from "../../../obsidian-vault-action-manager/helpers/get-editor";
 import type { Maybe } from "../../../types/common-interface/maybe";
-import { getEditor } from "../helpers/get-editor";
 
 export class SelectionService {
 	constructor(private app: App) {}

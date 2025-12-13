@@ -1,7 +1,7 @@
 import {
 	getActionKey,
+	type LegacyVaultAction,
 	sortActionsByWeight,
-	type VaultAction,
 } from "./background/background-vault-actions";
 import type { VaultActionExecutor } from "./background/vault-action-executor";
 
@@ -15,8 +15,8 @@ const DEFAULT_FLUSH_DELAY_MS = 200;
  * - Debouncing: waits for activity to settle before flushing
  * - Sorting: executes actions in weight order (folders before files, etc.)
  */
-export class VaultActionQueue {
-	private queue: Map<string, VaultAction> = new Map();
+export class LegacyVaultActionQueue {
+	private queue: Map<string, LegacyVaultAction> = new Map();
 	private flushTimeout: ReturnType<typeof setTimeout> | null = null;
 	private flushDelayMs: number;
 	private isFlushing = false;
@@ -33,7 +33,7 @@ export class VaultActionQueue {
 	 * Add an action to the queue.
 	 * If an action with the same key exists, it will be overwritten.
 	 */
-	push(action: VaultAction): void {
+	push(action: LegacyVaultAction): void {
 		const key = getActionKey(action);
 		this.queue.set(key, action);
 		this.scheduleFlush();
@@ -42,7 +42,7 @@ export class VaultActionQueue {
 	/**
 	 * Add multiple actions to the queue.
 	 */
-	pushMany(actions: readonly VaultAction[]): void {
+	pushMany(actions: readonly LegacyVaultAction[]): void {
 		for (const action of actions) {
 			this.push(action);
 		}
@@ -63,7 +63,7 @@ export class VaultActionQueue {
 	 * Get queued actions (for testing/debugging).
 	 * Returns a copy to prevent external mutation.
 	 */
-	getQueuedActions(): VaultAction[] {
+	getQueuedActions(): LegacyVaultAction[] {
 		return [...this.queue.values()];
 	}
 
@@ -129,4 +129,4 @@ export class VaultActionQueue {
 }
 
 // Legacy alias maintained during migration away from this queue impl.
-export const DeprecatedVaultActionQueue = VaultActionQueue;
+export const DeprecatedVaultActionQueue = LegacyVaultActionQueue;

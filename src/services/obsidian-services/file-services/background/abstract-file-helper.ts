@@ -12,18 +12,18 @@ import type {
 	FullPathToMdFile,
 } from "../../atomic-services/pathfinder";
 import { systemPathFromFullPath } from "../../atomic-services/pathfinder";
-import { TFileHelper } from "./helpers/tfile-helper";
-import { TFolderHelper } from "./helpers/tfolder-helper";
+import { LegacyTFileHelper } from "./helpers/tfile-helper";
+import { LegacyTFolderHelper } from "./helpers/tfolder-helper";
 
 /**
  * Orchestrates file and folder operations.
  *
  * This class performs SINGLE operations only.
  */
-export class AbstractFileHelper {
+export class LegacyAbstractFileHelper {
 	private vault: Vault;
-	private tfileHelper: TFileHelper;
-	private tfolderHelper: TFolderHelper;
+	private tfileHelper: LegacyTFileHelper;
+	private tfolderHelper: LegacyTFolderHelper;
 
 	constructor({
 		vault,
@@ -33,8 +33,8 @@ export class AbstractFileHelper {
 		fileManager: FileManager;
 	}) {
 		this.vault = vault;
-		this.tfileHelper = new TFileHelper({ fileManager, vault });
-		this.tfolderHelper = new TFolderHelper({ fileManager, vault });
+		this.tfileHelper = new LegacyTFileHelper({ fileManager, vault });
+		this.tfolderHelper = new LegacyTFolderHelper({ fileManager, vault });
 	}
 
 	// ─── File Operations ─────────────────────────────────────────────

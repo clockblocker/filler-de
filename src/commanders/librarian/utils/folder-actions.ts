@@ -1,6 +1,6 @@
 import {
-	type VaultAction,
-	VaultActionType,
+	type LegacyVaultAction,
+	LegacyVaultActionType,
 } from "../../../services/obsidian-services/file-services/background/background-vault-actions";
 
 /**
@@ -9,8 +9,8 @@ import {
 export function createFolderActionsForPathParts(
 	pathParts: string[],
 	seen: Set<string>,
-): VaultAction[] {
-	const actions: VaultAction[] = [];
+): LegacyVaultAction[] {
+	const actions: LegacyVaultAction[] = [];
 
 	for (let depth = 1; depth < pathParts.length; depth++) {
 		const key = pathParts.slice(0, depth + 1).join("/");
@@ -22,7 +22,7 @@ export function createFolderActionsForPathParts(
 
 		actions.push({
 			payload: { prettyPath: { basename, pathParts: parentParts } },
-			type: VaultActionType.UpdateOrCreateFolder,
+			type: LegacyVaultActionType.UpdateOrCreateFolder,
 		});
 	}
 

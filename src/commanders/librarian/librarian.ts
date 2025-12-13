@@ -1,6 +1,6 @@
 import type { TAbstractFile, TFile } from "obsidian";
 import { fullPathFromSystemPath } from "../../services/obsidian-services/atomic-services/pathfinder";
-import type { VaultActionQueue } from "../../services/obsidian-services/file-services/vault-action-queue";
+import type { LegacyVaultActionQueue } from "../../services/obsidian-services/file-services/vault-action-queue";
 import type { TexfresserObsidianServices } from "../../services/obsidian-services/interface";
 import type { PrettyPath } from "../../types/common-interface/dtos";
 import { ActionDispatcher } from "./action-dispatcher";
@@ -33,7 +33,7 @@ export class Librarian {
 		backgroundFileService,
 		openedFileService,
 		actionQueue,
-	}: { actionQueue: VaultActionQueue } & Pick<
+	}: { actionQueue: LegacyVaultActionQueue } & Pick<
 		TexfresserObsidianServices,
 		"backgroundFileService" | "openedFileService"
 	>) {

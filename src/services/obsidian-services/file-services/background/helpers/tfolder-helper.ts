@@ -9,7 +9,7 @@ import { systemPathFromFullPath } from "../../../atomic-services/pathfinder";
 /**
  * Low-level folder operations.
  */
-export class TFolderHelper {
+export class LegacyTFolderHelper {
 	private fileManager: FileManager;
 	private vault: Vault;
 

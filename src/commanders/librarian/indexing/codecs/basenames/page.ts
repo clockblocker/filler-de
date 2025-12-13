@@ -1,5 +1,5 @@
 import z from "zod/v4";
-import { logError } from "../../../../../services/obsidian-services/helpers/issue-handlers";
+import { logError } from "../../../../../obsidian-vault-action-manager/helpers/issue-handlers";
 import { DASH } from "../../../../../types/literals";
 import { NodeNameSchema } from "../guards";
 import {

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
 import { SelfEventTracker } from "../../../../src/commanders/librarian/utils/self-event-tracker";
 import {
-	type VaultAction,
-	VaultActionType,
+	type LegacyVaultAction,
+	LegacyVaultActionType,
 } from "../../../../src/services/obsidian-services/file-services/background/background-vault-actions";
 import type { PrettyPath } from "../../../../src/types/common-interface/dtos";
 
@@ -13,14 +13,14 @@ const pp = (path: string): PrettyPath => {
 	return { basename, pathParts: parts };
 };
 
-const rename = (from: PrettyPath, to: PrettyPath): VaultAction => ({
+const rename = (from: PrettyPath, to: PrettyPath): LegacyVaultAction => ({
 	payload: { from, to },
-	type: VaultActionType.RenameFile,
+	type: LegacyVaultActionType.RenameFile,
 });
 
-const write = (prettyPath: PrettyPath): VaultAction => ({
+const write = (prettyPath: PrettyPath): LegacyVaultAction => ({
 	payload: { content: "", prettyPath },
-	type: VaultActionType.UpdateOrCreateFile,
+	type: LegacyVaultActionType.UpdateOrCreateFile,
 });
 
 describe("SelfEventTracker", () => {
@@ -37,10 +37,10 @@ describe("SelfEventTracker", () => {
 		const tracker = new SelfEventTracker();
 		tracker.register([
 			write(pp("x/y.md")),
-			{ payload: { prettyPath: pp("z.md") }, type: VaultActionType.TrashFile },
+			{ payload: { prettyPath: pp("z.md") }, type: LegacyVaultActionType.TrashFile },
 			{
 				payload: { prettyPath: pp("w.md"), transform: (s: string) => s },
-				type: VaultActionType.ProcessFile,
+				type: LegacyVaultActionType.ProcessFile,
 			},
 		]);
 

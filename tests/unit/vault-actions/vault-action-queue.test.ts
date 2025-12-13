@@ -1,18 +1,18 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import {
 	getActionKey,
+	type LegacyVaultAction,
+	LegacyVaultActionType,
 	sortActionsByWeight,
-	type VaultAction,
-	VaultActionType,
 } from "../../../src/services/obsidian-services/file-services/background/background-vault-actions";
 import type { VaultActionExecutor } from "../../../src/services/obsidian-services/file-services/background/vault-action-executor";
-import { VaultActionQueue } from "../../../src/services/obsidian-services/file-services/vault-action-queue";
+import { LegacyVaultActionQueue } from "../../../src/services/obsidian-services/file-services/vault-action-queue";
 
 // Mock executor that records actions
 function createMockExecutor() {
-	const executedActions: VaultAction[][] = [];
+	const executedActions: LegacyVaultAction[][] = [];
 	const executor: VaultActionExecutor = {
-		execute: async (actions: readonly VaultAction[]) => {
+		execute: async (actions: readonly LegacyVaultAction[]) => {
 			executedActions.push([...actions]);
 		},
 	} as VaultActionExecutor;
@@ -22,20 +22,20 @@ function createMockExecutor() {
 describe("VaultAction utilities", () => {
 	describe("getActionKey", () => {
 		it("should return unique key for UpdateOrCreateFile", () => {
-			const action: VaultAction = {
+			const action: LegacyVaultAction = {
 				payload: { prettyPath: { basename: "test", pathParts: ["Library", "Avatar"] } },
-				type: VaultActionType.UpdateOrCreateFile,
+				type: LegacyVaultActionType.UpdateOrCreateFile,
 			};
 			expect(getActionKey(action)).toBe("UpdateOrCreateFile:Library/Avatar/test");
 		});
 
 		it("should return unique key for RenameFile using source path", () => {
-			const action: VaultAction = {
+			const action: LegacyVaultAction = {
 				payload: {
 					from: { basename: "old", pathParts: ["Library"] },
 					to: { basename: "new", pathParts: ["Library"] },
 				},
-				type: VaultActionType.RenameFile,
+				type: LegacyVaultActionType.RenameFile,
 			};
 			expect(getActionKey(action)).toBe("RenameFile:Library/old");
 		});
@@ -43,46 +43,46 @@ describe("VaultAction utilities", () => {
 
 	describe("sortActionsByWeight", () => {
 		it("should sort folders before files", () => {
-			const actions: VaultAction[] = [
-				{ payload: { prettyPath: { basename: "a", pathParts: [] } }, type: VaultActionType.UpdateOrCreateFile },
-				{ payload: { prettyPath: { basename: "b", pathParts: [] } }, type: VaultActionType.UpdateOrCreateFolder },
+			const actions: LegacyVaultAction[] = [
+				{ payload: { prettyPath: { basename: "a", pathParts: [] } }, type: LegacyVaultActionType.UpdateOrCreateFile },
+				{ payload: { prettyPath: { basename: "b", pathParts: [] } }, type: LegacyVaultActionType.UpdateOrCreateFolder },
 			];
 
 			const sorted = sortActionsByWeight(actions);
 
-			expect(sorted[0]?.type).toBe(VaultActionType.UpdateOrCreateFolder);
-			expect(sorted[1]?.type).toBe(VaultActionType.UpdateOrCreateFile);
+			expect(sorted[0]?.type).toBe(LegacyVaultActionType.UpdateOrCreateFolder);
+			expect(sorted[1]?.type).toBe(LegacyVaultActionType.UpdateOrCreateFile);
 		});
 
 		it("should sort creates before trashes", () => {
-			const actions: VaultAction[] = [
-				{ payload: { prettyPath: { basename: "a", pathParts: [] } }, type: VaultActionType.TrashFile },
-				{ payload: { prettyPath: { basename: "b", pathParts: [] } }, type: VaultActionType.UpdateOrCreateFile },
+			const actions: LegacyVaultAction[] = [
+				{ payload: { prettyPath: { basename: "a", pathParts: [] } }, type: LegacyVaultActionType.TrashFile },
+				{ payload: { prettyPath: { basename: "b", pathParts: [] } }, type: LegacyVaultActionType.UpdateOrCreateFile },
 			];
 
 			const sorted = sortActionsByWeight(actions);
 
-			expect(sorted[0]?.type).toBe(VaultActionType.UpdateOrCreateFile);
-			expect(sorted[1]?.type).toBe(VaultActionType.TrashFile);
+			expect(sorted[0]?.type).toBe(LegacyVaultActionType.UpdateOrCreateFile);
+			expect(sorted[1]?.type).toBe(LegacyVaultActionType.TrashFile);
 		});
 
 		it("should sort all action types correctly", () => {
-			const actions: VaultAction[] = [
-				{ payload: { content: "", prettyPath: { basename: "a", pathParts: [] } }, type: VaultActionType.WriteFile },
-				{ payload: { prettyPath: { basename: "b", pathParts: [] } }, type: VaultActionType.TrashFolder },
-				{ payload: { prettyPath: { basename: "c", pathParts: [] } }, type: VaultActionType.UpdateOrCreateFolder },
-				{ payload: { prettyPath: { basename: "d", pathParts: [] } }, type: VaultActionType.TrashFile },
-				{ payload: { prettyPath: { basename: "e", pathParts: [] } }, type: VaultActionType.UpdateOrCreateFile },
+			const actions: LegacyVaultAction[] = [
+				{ payload: { content: "", prettyPath: { basename: "a", pathParts: [] } }, type: LegacyVaultActionType.WriteFile },
+				{ payload: { prettyPath: { basename: "b", pathParts: [] } }, type: LegacyVaultActionType.TrashFolder },
+				{ payload: { prettyPath: { basename: "c", pathParts: [] } }, type: LegacyVaultActionType.UpdateOrCreateFolder },
+				{ payload: { prettyPath: { basename: "d", pathParts: [] } }, type: LegacyVaultActionType.TrashFile },
+				{ payload: { prettyPath: { basename: "e", pathParts: [] } }, type: LegacyVaultActionType.UpdateOrCreateFile },
 			];
 
 			const sorted = sortActionsByWeight(actions);
 
 			expect(sorted.map((a) => a.type)).toEqual([
-				VaultActionType.UpdateOrCreateFolder,
-				VaultActionType.TrashFolder,
-				VaultActionType.UpdateOrCreateFile,
-				VaultActionType.TrashFile,
-				VaultActionType.WriteFile,
+				LegacyVaultActionType.UpdateOrCreateFolder,
+				LegacyVaultActionType.TrashFolder,
+				LegacyVaultActionType.UpdateOrCreateFile,
+				LegacyVaultActionType.TrashFile,
+				LegacyVaultActionType.WriteFile,
 			]);
 		});
 	});
@@ -92,11 +92,11 @@ describe("VaultActionQueue", () => {
 	describe("push and deduplication", () => {
 		it("should add action to queue", () => {
 			const { executor } = createMockExecutor();
-			const queue = new VaultActionQueue(executor, { flushDelayMs: 1000 });
+			const queue = new LegacyVaultActionQueue(executor, { flushDelayMs: 1000 });
 
 			queue.push({
 				payload: { prettyPath: { basename: "test", pathParts: ["Library"] } },
-				type: VaultActionType.UpdateOrCreateFile,
+				type: LegacyVaultActionType.UpdateOrCreateFile,
 			});
 
 			expect(queue.size).toBe(1);
@@ -104,39 +104,39 @@ describe("VaultActionQueue", () => {
 
 		it("should dedupe actions with same key (last wins)", () => {
 			const { executor } = createMockExecutor();
-			const queue = new VaultActionQueue(executor, { flushDelayMs: 1000 });
+			const queue = new LegacyVaultActionQueue(executor, { flushDelayMs: 1000 });
 
 			queue.push({
 				payload: { content: "v1", prettyPath: { basename: "test", pathParts: ["Library"] } },
-				type: VaultActionType.WriteFile,
+				type: LegacyVaultActionType.WriteFile,
 			});
 
 			queue.push({
 				payload: { content: "v2", prettyPath: { basename: "test", pathParts: ["Library"] } },
-				type: VaultActionType.WriteFile,
+				type: LegacyVaultActionType.WriteFile,
 			});
 
 			expect(queue.size).toBe(1);
 
 			const actions = queue.getQueuedActions();
-			expect(actions[0]?.type).toBe(VaultActionType.WriteFile);
-			if (actions[0]?.type === VaultActionType.WriteFile) {
+			expect(actions[0]?.type).toBe(LegacyVaultActionType.WriteFile);
+			if (actions[0]?.type === LegacyVaultActionType.WriteFile) {
 				expect(actions[0]?.payload.content).toBe("v2");
 			}
 		});
 
 		it("should not dedupe actions with different keys", () => {
 			const { executor } = createMockExecutor();
-			const queue = new VaultActionQueue(executor, { flushDelayMs: 1000 });
+			const queue = new LegacyVaultActionQueue(executor, { flushDelayMs: 1000 });
 
 			queue.push({
 				payload: { content: "a", prettyPath: { basename: "file1", pathParts: ["Library"] } },
-				type: VaultActionType.WriteFile,
+				type: LegacyVaultActionType.WriteFile,
 			});
 
 			queue.push({
 				payload: { content: "b", prettyPath: { basename: "file2", pathParts: ["Library"] } },
-				type: VaultActionType.WriteFile,
+				type: LegacyVaultActionType.WriteFile,
 			});
 
 			expect(queue.size).toBe(2);
@@ -146,12 +146,12 @@ describe("VaultActionQueue", () => {
 	describe("pushMany", () => {
 		it("should add multiple actions", () => {
 			const { executor } = createMockExecutor();
-			const queue = new VaultActionQueue(executor, { flushDelayMs: 1000 });
+			const queue = new LegacyVaultActionQueue(executor, { flushDelayMs: 1000 });
 
 			queue.pushMany([
-				{ payload: { prettyPath: { basename: "a", pathParts: [] } }, type: VaultActionType.UpdateOrCreateFile },
-				{ payload: { prettyPath: { basename: "b", pathParts: [] } }, type: VaultActionType.UpdateOrCreateFile },
-				{ payload: { prettyPath: { basename: "c", pathParts: [] } }, type: VaultActionType.UpdateOrCreateFile },
+				{ payload: { prettyPath: { basename: "a", pathParts: [] } }, type: LegacyVaultActionType.UpdateOrCreateFile },
+				{ payload: { prettyPath: { basename: "b", pathParts: [] } }, type: LegacyVaultActionType.UpdateOrCreateFile },
+				{ payload: { prettyPath: { basename: "c", pathParts: [] } }, type: LegacyVaultActionType.UpdateOrCreateFile },
 			]);
 
 			expect(queue.size).toBe(3);
@@ -161,11 +161,11 @@ describe("VaultActionQueue", () => {
 	describe("flushNow", () => {
 		it("should execute all queued actions immediately", async () => {
 			const { executor, executedActions } = createMockExecutor();
-			const queue = new VaultActionQueue(executor, { flushDelayMs: 1000 });
+			const queue = new LegacyVaultActionQueue(executor, { flushDelayMs: 1000 });
 
 			queue.push({
 				payload: { prettyPath: { basename: "test", pathParts: [] } },
-				type: VaultActionType.UpdateOrCreateFile,
+				type: LegacyVaultActionType.UpdateOrCreateFile,
 			});
 
 			await queue.flushNow();
@@ -177,26 +177,26 @@ describe("VaultActionQueue", () => {
 
 		it("should sort actions by weight before executing", async () => {
 			const { executor, executedActions } = createMockExecutor();
-			const queue = new VaultActionQueue(executor, { flushDelayMs: 1000 });
+			const queue = new LegacyVaultActionQueue(executor, { flushDelayMs: 1000 });
 
 			queue.pushMany([
-				{ payload: { content: "", prettyPath: { basename: "a", pathParts: [] } }, type: VaultActionType.WriteFile },
-				{ payload: { prettyPath: { basename: "b", pathParts: [] } }, type: VaultActionType.UpdateOrCreateFolder },
-				{ payload: { prettyPath: { basename: "c", pathParts: [] } }, type: VaultActionType.UpdateOrCreateFile },
+				{ payload: { content: "", prettyPath: { basename: "a", pathParts: [] } }, type: LegacyVaultActionType.WriteFile },
+				{ payload: { prettyPath: { basename: "b", pathParts: [] } }, type: LegacyVaultActionType.UpdateOrCreateFolder },
+				{ payload: { prettyPath: { basename: "c", pathParts: [] } }, type: LegacyVaultActionType.UpdateOrCreateFile },
 			]);
 
 			await queue.flushNow();
 
 			expect(executedActions[0]?.map((a) => a.type)).toEqual([
-				VaultActionType.UpdateOrCreateFolder,
-				VaultActionType.UpdateOrCreateFile,
-				VaultActionType.WriteFile,
+				LegacyVaultActionType.UpdateOrCreateFolder,
+				LegacyVaultActionType.UpdateOrCreateFile,
+				LegacyVaultActionType.WriteFile,
 			]);
 		});
 
 		it("should not execute if queue is empty", async () => {
 			const { executor, executedActions } = createMockExecutor();
-			const queue = new VaultActionQueue(executor, { flushDelayMs: 1000 });
+			const queue = new LegacyVaultActionQueue(executor, { flushDelayMs: 1000 });
 
 			await queue.flushNow();
 
@@ -207,11 +207,11 @@ describe("VaultActionQueue", () => {
 	describe("clear", () => {
 		it("should remove all actions without executing", async () => {
 			const { executor, executedActions } = createMockExecutor();
-			const queue = new VaultActionQueue(executor, { flushDelayMs: 1000 });
+			const queue = new LegacyVaultActionQueue(executor, { flushDelayMs: 1000 });
 
 			queue.push({
 				payload: { prettyPath: { basename: "test", pathParts: [] } },
-				type: VaultActionType.UpdateOrCreateFile,
+				type: LegacyVaultActionType.UpdateOrCreateFile,
 			});
 
 			queue.clear();
@@ -227,11 +227,11 @@ describe("VaultActionQueue", () => {
 	describe("debouncing", () => {
 		it("should debounce flush with configured delay", async () => {
 			const { executor, executedActions } = createMockExecutor();
-			const queue = new VaultActionQueue(executor, { flushDelayMs: 50 });
+			const queue = new LegacyVaultActionQueue(executor, { flushDelayMs: 50 });
 
 			queue.push({
 				payload: { prettyPath: { basename: "test", pathParts: [] } },
-				type: VaultActionType.UpdateOrCreateFile,
+				type: LegacyVaultActionType.UpdateOrCreateFile,
 			});
 
 			// Not flushed immediately
@@ -245,11 +245,11 @@ describe("VaultActionQueue", () => {
 
 		it("should reset debounce timer on new push", async () => {
 			const { executor, executedActions } = createMockExecutor();
-			const queue = new VaultActionQueue(executor, { flushDelayMs: 50 });
+			const queue = new LegacyVaultActionQueue(executor, { flushDelayMs: 50 });
 
 			queue.push({
 				payload: { prettyPath: { basename: "a", pathParts: [] } },
-				type: VaultActionType.UpdateOrCreateFile,
+				type: LegacyVaultActionType.UpdateOrCreateFile,
 			});
 
 			// Wait partial time
@@ -257,7 +257,7 @@ describe("VaultActionQueue", () => {
 
 			queue.push({
 				payload: { prettyPath: { basename: "b", pathParts: [] } },
-				type: VaultActionType.UpdateOrCreateFile,
+				type: LegacyVaultActionType.UpdateOrCreateFile,
 			});
 
 			// Still not flushed (timer reset)

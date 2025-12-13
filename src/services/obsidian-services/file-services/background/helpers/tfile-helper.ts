@@ -1,5 +1,9 @@
 import { type FileManager, TFile, type Vault } from "obsidian";
 import {
+	logError,
+	logWarning,
+} from "../../../../../obsidian-vault-action-manager/helpers/issue-handlers";
+import {
 	type Maybe,
 	unwrapMaybeByThrowing,
 } from "../../../../../types/common-interface/maybe";
@@ -9,14 +13,13 @@ import type {
 	FullPathToMdFile,
 } from "../../../atomic-services/pathfinder";
 import { systemPathFromFullPath } from "../../../atomic-services/pathfinder";
-import { logError, logWarning } from "../../../helpers/issue-handlers";
 
 /**
  * Helper for TFile operations in the vault.
  *
  * INVARIANT: The create / move commands assume that the target folders already exist.
  */
-export class TFileHelper {
+export class LegacyTFileHelper {
 	private fileManager: FileManager;
 	private vault: Vault;
 

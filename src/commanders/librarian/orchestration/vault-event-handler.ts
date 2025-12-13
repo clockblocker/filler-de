@@ -3,8 +3,8 @@ import { TFile } from "obsidian";
 import { editOrAddMetaInfo } from "../../../services/dto-services/meta-info-manager/interface";
 import { fullPathFromSystemPath } from "../../../services/obsidian-services/atomic-services/pathfinder";
 import {
-	type VaultAction,
-	VaultActionType,
+	type LegacyVaultAction,
+	LegacyVaultActionType,
 } from "../../../services/obsidian-services/file-services/background/background-vault-actions";
 import type { TexfresserObsidianServices } from "../../../services/obsidian-services/interface";
 import type { PrettyPath } from "../../../types/common-interface/dtos";
@@ -121,9 +121,9 @@ export class VaultEventHandler {
 		const wasPage = decoded?.kind === "page";
 
 		if (decoded?.kind === "codex") {
-			const revertAction: VaultAction = {
+			const revertAction: LegacyVaultAction = {
 				payload: { from: prettyPath, to: oldPrettyPath },
-				type: VaultActionType.RenameFile,
+				type: LegacyVaultActionType.RenameFile,
 			};
 			this.deps.dispatcher.registerSelf([revertAction]);
 			this.deps.dispatcher.push(revertAction);
@@ -161,14 +161,14 @@ export class VaultEventHandler {
 				}
 
 				const seenFolders = new Set<string>();
-				const moveActions: VaultAction[] = [
+				const moveActions: LegacyVaultAction[] = [
 					...createFolderActionsForPathParts(
 						finalPrettyPath.pathParts,
 						seenFolders,
 					),
 					{
 						payload: { from: prettyPath, to: finalPrettyPath },
-						type: VaultActionType.RenameFile,
+						type: LegacyVaultActionType.RenameFile,
 					},
 				];
 
@@ -229,14 +229,14 @@ export class VaultEventHandler {
 		}
 
 		const seenFolders = new Set<string>();
-		const moveActions: VaultAction[] = [
+		const moveActions: LegacyVaultAction[] = [
 			...createFolderActionsForPathParts(
 				targetPrettyPath.pathParts,
 				seenFolders,
 			),
 			{
 				payload: { from: prettyPath, to: targetPrettyPath },
-				type: VaultActionType.RenameFile,
+				type: LegacyVaultActionType.RenameFile,
 			},
 		];
 
@@ -250,7 +250,7 @@ export class VaultEventHandler {
 							status: TextStatus.NotStarted,
 						}),
 				},
-				type: VaultActionType.ProcessFile,
+				type: LegacyVaultActionType.ProcessFile,
 			});
 		}
 

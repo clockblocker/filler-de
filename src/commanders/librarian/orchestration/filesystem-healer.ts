@@ -3,8 +3,8 @@ import {
 	extractMetaInfo,
 } from "../../../services/dto-services/meta-info-manager/interface";
 import {
-	type VaultAction,
-	VaultActionType,
+	type LegacyVaultAction,
+	LegacyVaultActionType,
 } from "../../../services/obsidian-services/file-services/background/background-vault-actions";
 import type { TexfresserObsidianServices } from "../../../services/obsidian-services/interface";
 import type { PrettyPath } from "../../../types/common-interface/dtos";
@@ -32,7 +32,7 @@ export class FilesystemHealer {
 				},
 			);
 
-		const actions: VaultAction[] = [];
+		const actions: LegacyVaultAction[] = [];
 		const seenFolders = new Set<string>();
 
 		// Layer 1: Heal file paths
@@ -67,8 +67,8 @@ export class FilesystemHealer {
 	private async initializeMetaInfo(
 		fileReaders: Array<PrettyPath & { readContent: () => Promise<string> }>,
 		rootName: RootName,
-	): Promise<VaultAction[]> {
-		const actions: VaultAction[] = [];
+	): Promise<LegacyVaultAction[]> {
+		const actions: LegacyVaultAction[] = [];
 
 		for (const reader of fileReaders) {
 			const prettyPath: PrettyPath = {
@@ -96,7 +96,7 @@ export class FilesystemHealer {
 									status: TextStatus.NotStarted,
 								}),
 						},
-						type: VaultActionType.ProcessFile,
+						type: LegacyVaultActionType.ProcessFile,
 					});
 				} else if (kind === "page") {
 					const pageStr =
@@ -113,7 +113,7 @@ export class FilesystemHealer {
 									status: TextStatus.NotStarted,
 								}),
 						},
-						type: VaultActionType.ProcessFile,
+						type: LegacyVaultActionType.ProcessFile,
 					});
 				}
 			} else if (kind !== "page" && meta.fileType === "Page") {
@@ -126,7 +126,7 @@ export class FilesystemHealer {
 								status: meta.status ?? TextStatus.NotStarted,
 							}),
 					},
-					type: VaultActionType.ProcessFile,
+					type: LegacyVaultActionType.ProcessFile,
 				});
 			}
 		}
@@ -137,7 +137,7 @@ export class FilesystemHealer {
 	private cleanupOrphanFolders(
 		fileReaders: Array<PrettyPath>,
 		rootName: RootName,
-	): VaultAction[] {
+	): LegacyVaultAction[] {
 		// Build folder contents map
 		const folderContents = new Map<
 			string,
@@ -192,7 +192,7 @@ export class FilesystemHealer {
 		}
 
 		// Generate cleanup actions
-		const actions: VaultAction[] = [];
+		const actions: LegacyVaultAction[] = [];
 
 		for (const [folderKey, info] of folderContents.entries()) {
 			if (folderKey === rootName) continue;
@@ -208,13 +208,13 @@ export class FilesystemHealer {
 			for (const codexPath of info.codexPaths) {
 				actions.push({
 					payload: { prettyPath: codexPath },
-					type: VaultActionType.TrashFile,
+					type: LegacyVaultActionType.TrashFile,
 				});
 			}
 
 			actions.push({
 				payload: { prettyPath: { basename, pathParts } },
-				type: VaultActionType.TrashFolder,
+				type: LegacyVaultActionType.TrashFolder,
 			});
 		}
 

@@ -9,7 +9,7 @@ import {
 	fullPathToMdFileFromPrettyPath,
 	getFullPathForAbstractFile,
 } from "../../atomic-services/pathfinder";
-import { AbstractFileHelper } from "./abstract-file-helper";
+import { LegacyAbstractFileHelper } from "./abstract-file-helper";
 
 /**
  * High-level file/folder service using PrettyPath.
@@ -19,8 +19,8 @@ import { AbstractFileHelper } from "./abstract-file-helper";
  *
  * @see src/commanders/librarian/diffing/tree-diff-applier.ts
  */
-export class BackgroundFileService {
-	private abstractFileService: AbstractFileHelper;
+export class LegacyBackgroundFileService {
+	private abstractFileService: LegacyAbstractFileHelper;
 	private vault: Vault;
 
 	constructor({
@@ -28,7 +28,7 @@ export class BackgroundFileService {
 		fileManager,
 	}: { vault: Vault; fileManager: FileManager }) {
 		this.vault = vault;
-		this.abstractFileService = new AbstractFileHelper({
+		this.abstractFileService = new LegacyAbstractFileHelper({
 			fileManager,
 			vault,
 		});

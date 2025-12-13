@@ -1,8 +1,8 @@
 import { editOrAddMetaInfo } from "../../../services/dto-services/meta-info-manager/interface";
 import type { MetaInfo } from "../../../services/dto-services/meta-info-manager/types";
 import {
-	type VaultAction,
-	VaultActionType,
+	type LegacyVaultAction,
+	LegacyVaultActionType,
 } from "../../../services/obsidian-services/file-services/background/background-vault-actions";
 import type { PrettyPath } from "../../../types/common-interface/dtos";
 import { codexFormatter } from "../codex";
@@ -37,7 +37,10 @@ function addAncestorPaths(notePath: TreePath, paths: Set<string>): void {
 	}
 }
 
-function createNoteAction(note: NoteDto, rootName: RootName): VaultAction {
+function createNoteAction(
+	note: NoteDto,
+	rootName: RootName,
+): LegacyVaultAction {
 	const isPage = isBookPage(note.path);
 
 	const metaInfo: MetaInfo = isPage
@@ -56,23 +59,23 @@ function createNoteAction(note: NoteDto, rootName: RootName): VaultAction {
 			content: editOrAddMetaInfo("", metaInfo),
 			prettyPath: treePathToPrettyPath(note.path, rootName),
 		},
-		type: VaultActionType.UpdateOrCreateFile,
+		type: LegacyVaultActionType.UpdateOrCreateFile,
 	};
 }
 
-function trashNoteAction(note: NoteDto, rootName: RootName): VaultAction {
+function trashNoteAction(note: NoteDto, rootName: RootName): LegacyVaultAction {
 	return {
 		payload: {
 			prettyPath: treePathToPrettyPath(note.path, rootName),
 		},
-		type: VaultActionType.TrashFile,
+		type: LegacyVaultActionType.TrashFile,
 	};
 }
 
 function createStatusUpdateAction(
 	change: NoteStatusChange,
 	rootName: RootName,
-): VaultAction {
+): LegacyVaultAction {
 	const isPage = isBookPage(change.path);
 
 	const metaInfo: MetaInfo = isPage
@@ -92,7 +95,7 @@ function createStatusUpdateAction(
 			transform: (content: string) =>
 				editOrAddMetaInfo(content, metaInfo),
 		},
-		type: VaultActionType.ProcessFile,
+		type: LegacyVaultActionType.ProcessFile,
 	};
 }
 
@@ -141,24 +144,24 @@ function generateCodexContent(path: TreePath, getNode?: GetNodeFn): string {
 function createFolderAction(
 	sectionPath: TreePath,
 	rootName: RootName,
-): VaultAction {
+): LegacyVaultAction {
 	return {
 		payload: {
 			prettyPath: sectionPathToPrettyPath(sectionPath, rootName),
 		},
-		type: VaultActionType.UpdateOrCreateFolder,
+		type: LegacyVaultActionType.UpdateOrCreateFolder,
 	};
 }
 
 function trashFolderAction(
 	sectionPath: TreePath,
 	rootName: RootName,
-): VaultAction {
+): LegacyVaultAction {
 	return {
 		payload: {
 			prettyPath: sectionPathToPrettyPath(sectionPath, rootName),
 		},
-		type: VaultActionType.TrashFolder,
+		type: LegacyVaultActionType.TrashFolder,
 	};
 }
 
@@ -166,13 +169,13 @@ function createCodexAction(
 	sectionPath: TreePath,
 	rootName: RootName,
 	getNode?: GetNodeFn,
-): VaultAction {
+): LegacyVaultAction {
 	return {
 		payload: {
 			content: generateCodexContent(sectionPath, getNode),
 			prettyPath: codexPrettyPath(sectionPath, rootName),
 		},
-		type: VaultActionType.UpdateOrCreateFile,
+		type: LegacyVaultActionType.UpdateOrCreateFile,
 	};
 }
 
@@ -180,25 +183,25 @@ function updateCodexAction(
 	path: TreePath,
 	rootName: RootName,
 	getNode?: GetNodeFn,
-): VaultAction {
+): LegacyVaultAction {
 	return {
 		payload: {
 			content: generateCodexContent(path, getNode),
 			prettyPath: codexPrettyPath(path, rootName),
 		},
-		type: VaultActionType.UpdateOrCreateFile,
+		type: LegacyVaultActionType.UpdateOrCreateFile,
 	};
 }
 
 function trashCodexAction(
 	sectionPath: TreePath,
 	rootName: RootName,
-): VaultAction {
+): LegacyVaultAction {
 	return {
 		payload: {
 			prettyPath: codexPrettyPath(sectionPath, rootName),
 		},
-		type: VaultActionType.TrashFile,
+		type: LegacyVaultActionType.TrashFile,
 	};
 }
 
@@ -217,8 +220,8 @@ export function mapDiffToActions(
 	diff: NoteDiff,
 	rootName: RootName,
 	getNode?: GetNodeFn,
-): VaultAction[] {
-	const actions: VaultAction[] = [];
+): LegacyVaultAction[] {
+	const actions: LegacyVaultAction[] = [];
 	const affectedBookPaths = new Set<string>();
 
 	for (const sectionPath of diff.addedSections) {
@@ -287,8 +290,8 @@ export function regenerateCodexActions(
 	sectionPaths: TreePath[],
 	rootName: RootName,
 	getNode: GetNodeFn,
-): VaultAction[] {
-	const actions: VaultAction[] = [];
+): LegacyVaultAction[] {
+	const actions: LegacyVaultAction[] = [];
 	actions.push(updateCodexAction([], rootName, getNode));
 	for (const path of sectionPaths) {
 		actions.push(updateCodexAction(path, rootName, getNode));

@@ -1,10 +1,10 @@
+import { logWarning } from "../../../obsidian-vault-action-manager/helpers/issue-handlers";
 import { editOrAddMetaInfo } from "../../../services/dto-services/meta-info-manager/interface";
 import { fullPathFromSystemPath } from "../../../services/obsidian-services/atomic-services/pathfinder";
 import {
-	type VaultAction,
-	VaultActionType,
+	type LegacyVaultAction,
+	LegacyVaultActionType,
 } from "../../../services/obsidian-services/file-services/background/background-vault-actions";
-import { logWarning } from "../../../services/obsidian-services/helpers/issue-handlers";
 import type { TexfresserObsidianServices } from "../../../services/obsidian-services/interface";
 import type { PrettyPath } from "../../../types/common-interface/dtos";
 import { TextStatus } from "../../../types/common-interface/enums";
@@ -170,9 +170,9 @@ export class NoteOperations {
 					);
 			}
 
-			const renameAction: VaultAction = {
+			const renameAction: LegacyVaultAction = {
 				payload: { from: originalPrettyPath, to: unmarkedPrettyPath },
-				type: VaultActionType.RenameFile,
+				type: LegacyVaultActionType.RenameFile,
 			};
 			this.deps.dispatcher.registerSelf([renameAction]);
 			this.deps.dispatcher.push(renameAction);
@@ -184,7 +184,7 @@ export class NoteOperations {
 				pathParts: [rootName, ...sectionPath],
 			};
 
-			const createActions: VaultAction[] = [
+			const createActions: LegacyVaultAction[] = [
 				...createFolderActionsForPathParts(
 					scrollPrettyPath.pathParts,
 					seenFolders,
@@ -197,7 +197,7 @@ export class NoteOperations {
 						}),
 						prettyPath: scrollPrettyPath,
 					},
-					type: VaultActionType.UpdateOrCreateFile,
+					type: LegacyVaultActionType.UpdateOrCreateFile,
 				},
 			];
 
@@ -215,7 +215,7 @@ export class NoteOperations {
 		} else {
 			const bookFolderPathParts = [rootName, ...sectionPath, textName];
 
-			const phase1Actions: VaultAction[] = [
+			const phase1Actions: LegacyVaultAction[] = [
 				...createFolderActionsForPathParts(
 					bookFolderPathParts,
 					seenFolders,
@@ -238,14 +238,14 @@ export class NoteOperations {
 
 			phase1Actions.push({
 				payload: { from: originalPrettyPath, to: unmarkedPrettyPath },
-				type: VaultActionType.RenameFile,
+				type: LegacyVaultActionType.RenameFile,
 			});
 
 			this.deps.dispatcher.registerSelf(phase1Actions);
 			this.deps.dispatcher.pushMany(phase1Actions);
 			await this.deps.dispatcher.flushNow();
 
-			const phase2Actions: VaultAction[] = [];
+			const phase2Actions: LegacyVaultAction[] = [];
 
 			for (let i = 0; i < pages.length; i++) {
 				const pageTreePath: TreePath = [
@@ -267,7 +267,7 @@ export class NoteOperations {
 						}),
 						prettyPath: pagePrettyPath,
 					},
-					type: VaultActionType.UpdateOrCreateFile,
+					type: LegacyVaultActionType.UpdateOrCreateFile,
 				});
 			}
 

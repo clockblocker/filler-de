@@ -1,4 +1,6 @@
 import { type App, TFile } from "obsidian";
+import { getMaybeEditor } from "../../../../obsidian-vault-action-manager/helpers/get-editor";
+import { logError } from "../../../../obsidian-vault-action-manager/helpers/issue-handlers";
 import type { PrettyPath } from "../../../../types/common-interface/dtos";
 import {
 	type Maybe,
@@ -9,17 +11,15 @@ import {
 	fullPathToMdFileFromPrettyPath,
 	systemPathFromFullPath,
 } from "../../atomic-services/pathfinder";
-import { getMaybeEditor } from "../../helpers/get-editor";
-import { logError } from "../../helpers/issue-handlers";
-import type { OpenedFileReader } from "./opened-file-reader";
+import type { LegacyOpenedFileReader } from "./opened-file-reader";
 
 export class LegacyOpenedFileService {
 	private lastOpenedFiles: FullPathToMdFile[] = [];
-	private reader: OpenedFileReader;
+	private reader: LegacyOpenedFileReader;
 
 	constructor(
 		private app: App,
-		reader: OpenedFileReader,
+		reader: LegacyOpenedFileReader,
 	) {
 		this.reader = reader;
 		this.init();

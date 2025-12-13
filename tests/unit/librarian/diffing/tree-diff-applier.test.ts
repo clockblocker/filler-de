@@ -8,16 +8,16 @@ import {
 } from "../../../../src/commanders/librarian/indexing/codecs";
 import type { TreePath } from "../../../../src/commanders/librarian/types";
 import {
-	type VaultAction,
-	VaultActionType,
+	type LegacyVaultAction,
+	LegacyVaultActionType,
 } from "../../../../src/services/obsidian-services/file-services/background/background-vault-actions";
 import type { PrettyPath } from "../../../../src/types/common-interface/dtos";
 import { TextStatus } from "../../../../src/types/common-interface/enums";
 
-type ActionWithPrettyPath = VaultAction & {
+type ActionWithPrettyPath = LegacyVaultAction & {
 	payload: { prettyPath: PrettyPath };
 };
-const hasPrettyPath = (a: VaultAction): a is ActionWithPrettyPath =>
+const hasPrettyPath = (a: LegacyVaultAction): a is ActionWithPrettyPath =>
 	"prettyPath" in a.payload;
 
 const ROOT_NAME = "Library";
@@ -46,7 +46,7 @@ describe("mapDiffToActions", () => {
 				.filter(hasPrettyPath)
 				.find(
 					(a) =>
-						a.type === VaultActionType.UpdateOrCreateFile &&
+						a.type === LegacyVaultActionType.UpdateOrCreateFile &&
 						a.payload.prettyPath.basename ===
 							treePathToScrollBasename.encode(["Section", "Scroll"]),
 				);
@@ -69,7 +69,7 @@ describe("mapDiffToActions", () => {
 				.filter(hasPrettyPath)
 				.find(
 					(a) =>
-						a.type === VaultActionType.UpdateOrCreateFile &&
+						a.type === LegacyVaultActionType.UpdateOrCreateFile &&
 						a.payload.prettyPath.basename ===
 							treePathToPageBasename.encode(["Section", "Book", "000"]),
 				);
@@ -92,7 +92,7 @@ describe("mapDiffToActions", () => {
 
 			const actions = mapDiffToActions(diff, ROOT_NAME);
 			const fileAction = actions.find(
-				(a) => a.type === VaultActionType.UpdateOrCreateFile,
+				(a) => a.type === LegacyVaultActionType.UpdateOrCreateFile,
 			);
 
 			expect(fileAction?.payload.content).toContain("Scroll");
@@ -109,7 +109,7 @@ describe("mapDiffToActions", () => {
 
 			const actions = mapDiffToActions(diff, ROOT_NAME);
 			const fileAction = actions.find(
-				(a) => a.type === VaultActionType.UpdateOrCreateFile,
+				(a) => a.type === LegacyVaultActionType.UpdateOrCreateFile,
 			);
 
 			expect(fileAction?.payload.content).toContain("Page");
@@ -132,7 +132,7 @@ describe("mapDiffToActions", () => {
 				.filter(hasPrettyPath)
 				.find(
 					(a) =>
-						a.type === VaultActionType.TrashFile &&
+						a.type === LegacyVaultActionType.TrashFile &&
 						a.payload.prettyPath.basename ===
 							treePathToScrollBasename.encode(["Section", "Scroll"]),
 				);
@@ -154,7 +154,7 @@ describe("mapDiffToActions", () => {
 				.filter(hasPrettyPath)
 				.find(
 					(a) =>
-						a.type === VaultActionType.TrashFile &&
+						a.type === LegacyVaultActionType.TrashFile &&
 						a.payload.prettyPath.basename ===
 							treePathToPageBasename.encode(["Book", "001"]),
 				);
@@ -182,7 +182,7 @@ describe("mapDiffToActions", () => {
 				.filter(hasPrettyPath)
 				.find(
 					(a) =>
-						a.type === VaultActionType.ProcessFile &&
+						a.type === LegacyVaultActionType.ProcessFile &&
 						a.payload.prettyPath.basename ===
 							treePathToScrollBasename.encode(["Section", "Scroll"]),
 				);
@@ -207,7 +207,7 @@ describe("mapDiffToActions", () => {
 
 			const processAction = actions
 				.filter(hasPrettyPath)
-				.find((a) => a.type === VaultActionType.ProcessFile);
+				.find((a) => a.type === LegacyVaultActionType.ProcessFile);
 
 			expect(processAction).toBeDefined();
 			expect(processAction?.payload.prettyPath.basename).toBe(
@@ -229,7 +229,7 @@ describe("mapDiffToActions", () => {
 				.filter(hasPrettyPath)
 				.find(
 					(a) =>
-						a.type === VaultActionType.UpdateOrCreateFolder &&
+						a.type === LegacyVaultActionType.UpdateOrCreateFolder &&
 						a.payload.prettyPath.basename === "NewSection",
 				);
 
@@ -249,7 +249,7 @@ describe("mapDiffToActions", () => {
 				.filter(hasPrettyPath)
 				.find(
 					(a) =>
-						a.type === VaultActionType.UpdateOrCreateFile &&
+						a.type === LegacyVaultActionType.UpdateOrCreateFile &&
 						a.payload.prettyPath.basename ===
 							treePathToCodexBasename.encode(["NewSection"]),
 				);
@@ -272,13 +272,13 @@ describe("mapDiffToActions", () => {
 			const actionsWithPath = actions.filter(hasPrettyPath);
 			const codexTrash = actionsWithPath.findIndex(
 				(a) =>
-					a.type === VaultActionType.TrashFile &&
+					a.type === LegacyVaultActionType.TrashFile &&
 					a.payload.prettyPath.basename ===
 						treePathToCodexBasename.encode(["OldSection"]),
 			);
 			const folderTrash = actionsWithPath.findIndex(
 				(a) =>
-					a.type === VaultActionType.TrashFolder &&
+					a.type === LegacyVaultActionType.TrashFolder &&
 					a.payload.prettyPath.basename === "OldSection",
 			);
 
@@ -300,7 +300,7 @@ describe("mapDiffToActions", () => {
 
 			const folderActions = actions
 				.filter(hasPrettyPath)
-				.filter((a) => a.type === VaultActionType.TrashFolder);
+				.filter((a) => a.type === LegacyVaultActionType.TrashFolder);
 
 			const cIdx = folderActions.findIndex(
 				(a) => a.payload.prettyPath.basename === "C",
@@ -332,7 +332,7 @@ describe("mapDiffToActions", () => {
 				.filter(hasPrettyPath)
 				.find(
 					(a) =>
-						a.type === VaultActionType.UpdateOrCreateFile &&
+						a.type === LegacyVaultActionType.UpdateOrCreateFile &&
 						a.payload.prettyPath.basename ===
 							treePathToCodexBasename.encode(["Library"]),
 				);
@@ -358,7 +358,7 @@ describe("mapDiffToActions", () => {
 				.filter(hasPrettyPath)
 				.filter(
 					(a) =>
-						a.type === VaultActionType.UpdateOrCreateFile &&
+						a.type === LegacyVaultActionType.UpdateOrCreateFile &&
 						a.payload.prettyPath.basename.startsWith("__"),
 				);
 
@@ -386,7 +386,7 @@ describe("mapDiffToActions", () => {
 				.filter(hasPrettyPath)
 				.find(
 					(a) =>
-						a.type === VaultActionType.UpdateOrCreateFile &&
+						a.type === LegacyVaultActionType.UpdateOrCreateFile &&
 						a.payload.prettyPath.basename ===
 							treePathToCodexBasename.encode(["Section", "Book"]),
 				);

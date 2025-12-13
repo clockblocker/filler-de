@@ -1,11 +1,14 @@
+import {
+	logError,
+	logWarning,
+} from "../../../../obsidian-vault-action-manager/helpers/issue-handlers";
 import type { PrettyPath } from "../../../../types/common-interface/dtos";
-import { logError, logWarning } from "../../helpers/issue-handlers";
 import type { LegacyOpenedFileService } from "../active-view/legacy-opened-file-service";
-import type { BackgroundFileService } from "./background-file-service";
+import type { LegacyBackgroundFileService } from "./background-file-service";
 import {
 	getActionTargetPath,
-	type VaultAction,
-	VaultActionType,
+	type LegacyVaultAction,
+	LegacyVaultActionType,
 } from "./background-vault-actions";
 
 /**
@@ -15,7 +18,7 @@ import {
  */
 export class VaultActionExecutor {
 	constructor(
-		private fileService: BackgroundFileService,
+		private fileService: LegacyBackgroundFileService,
 		private openedFileService: LegacyOpenedFileService,
 	) {}
 
@@ -35,7 +38,7 @@ export class VaultActionExecutor {
 	 * Execute a list of actions in order.
 	 * Continues on error (logs and moves to next action).
 	 */
-	async execute(actions: readonly VaultAction[]): Promise<void> {
+	async execute(actions: readonly LegacyVaultAction[]): Promise<void> {
 		for (const action of actions) {
 			try {
 				await this.executeOne(action);
@@ -48,11 +51,11 @@ export class VaultActionExecutor {
 		}
 	}
 
-	private async executeOne(action: VaultAction): Promise<void> {
+	private async executeOne(action: LegacyVaultAction): Promise<void> {
 		const { type, payload } = action;
 
 		switch (type) {
-			case VaultActionType.UpdateOrCreateFolder:
+			case LegacyVaultActionType.UpdateOrCreateFolder:
 				try {
 					await this.fileService.createFolder(payload.prettyPath);
 				} catch (error) {
@@ -71,15 +74,15 @@ export class VaultActionExecutor {
 				}
 				break;
 
-			case VaultActionType.RenameFolder:
+			case LegacyVaultActionType.RenameFolder:
 				await this.fileService.renameFolder(payload.from, payload.to);
 				break;
 
-			case VaultActionType.TrashFolder:
+			case LegacyVaultActionType.TrashFolder:
 				await this.fileService.trashFolder(payload.prettyPath);
 				break;
 
-			case VaultActionType.UpdateOrCreateFile:
+			case LegacyVaultActionType.UpdateOrCreateFile:
 				{
 					const isActive = await this.isActiveSafe(
 						payload.prettyPath,
@@ -97,7 +100,7 @@ export class VaultActionExecutor {
 				}
 				break;
 
-			case VaultActionType.RenameFile:
+			case LegacyVaultActionType.RenameFile:
 				try {
 					await this.fileService.move({
 						from: { ...payload.from },
@@ -111,15 +114,15 @@ export class VaultActionExecutor {
 				}
 				break;
 
-			case VaultActionType.TrashFile:
+			case LegacyVaultActionType.TrashFile:
 				await this.fileService.trash(payload.prettyPath);
 				break;
 
-			case VaultActionType.ProcessFile:
+			case LegacyVaultActionType.ProcessFile:
 				await this.processFile(payload.prettyPath, payload.transform);
 				break;
 
-			case VaultActionType.WriteFile: {
+			case LegacyVaultActionType.WriteFile: {
 				const isActive = await this.isActiveSafe(payload.prettyPath);
 				if (isActive) {
 					await this.openedFileService.replaceAllContentInOpenedFile(

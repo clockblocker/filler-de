@@ -2,7 +2,7 @@ import { type App, type Editor, MarkdownView } from "obsidian";
 import {
 	type Maybe,
 	unwrapMaybeByThrowing,
-} from "../../../types/common-interface/maybe";
+} from "../../types/common-interface/maybe";
 
 export async function getMaybeEditor(app: App): Promise<Maybe<Editor>> {
 	try {

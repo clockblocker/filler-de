@@ -1,11 +1,11 @@
 import { describe, expect, it } from "bun:test";
 import { createFolderActionsForPathParts } from "../../../../src/commanders/librarian/utils/folder-actions";
 import {
-	type VaultAction,
-	VaultActionType,
+	type LegacyVaultAction,
+	LegacyVaultActionType,
 } from "../../../../src/services/obsidian-services/file-services/background/background-vault-actions";
 
-const toNames = (actions: VaultAction[]): string[] =>
+const toNames = (actions: LegacyVaultAction[]): string[] =>
 	actions.map((a) => a.payload.prettyPath.basename);
 
 describe("createFolderActionsForPathParts", () => {
@@ -17,8 +17,8 @@ describe("createFolderActionsForPathParts", () => {
 		);
 
 		expect(actions.map((a) => a.type)).toEqual([
-			VaultActionType.UpdateOrCreateFolder,
-			VaultActionType.UpdateOrCreateFolder,
+			LegacyVaultActionType.UpdateOrCreateFolder,
+			LegacyVaultActionType.UpdateOrCreateFolder,
 		]);
 		expect(toNames(actions)).toEqual(["A", "B"]);
 	});
