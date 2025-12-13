@@ -1,14 +1,14 @@
 import { err, ok, type Result } from "neverthrow";
 import { type App, MarkdownView, type TFile, type TFolder } from "obsidian";
-import { getSplitPathForAbstractFile } from "../../helpers/pathfinder";
-import type { SplitPathToMdFile } from "../../types/split-path";
 import {
 	errorFileStale,
 	errorGetEditor,
 	errorNoActiveView,
 	errorNoFileParent,
 	errorNotInSourceMode,
-} from "./common";
+} from "../../errors";
+import { getSplitPathForAbstractFile } from "../../helpers/pathfinder";
+import type { SplitPathToMdFile } from "../../types/split-path";
 
 export class OpenedFileReader {
 	constructor(private app: App) {}
