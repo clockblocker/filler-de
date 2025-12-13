@@ -1,66 +1,6 @@
 import type { VaultAction } from "../types/vault-action";
 import { VaultActionType } from "../types/vault-action";
-
-function isProcess(
-	action: VaultAction,
-): action is Extract<
-	VaultAction,
-	{ type: typeof VaultActionType.ProcessMdFile }
-> {
-	return action.type === VaultActionType.ProcessMdFile;
-}
-
-function isWrite(
-	action: VaultAction,
-): action is Extract<
-	VaultAction,
-	{ type: typeof VaultActionType.WriteMdFile }
-> {
-	return action.type === VaultActionType.WriteMdFile;
-}
-
-function sameRenameTarget(a: VaultAction, b: VaultAction): boolean {
-	if (
-		a.type === VaultActionType.RenameFolder &&
-		b.type === VaultActionType.RenameFolder
-	) {
-		return (
-			a.payload.from.basename === b.payload.from.basename &&
-			a.payload.from.pathParts.join("/") ===
-				b.payload.from.pathParts.join("/") &&
-			a.payload.to.basename === b.payload.to.basename &&
-			a.payload.to.pathParts.join("/") ===
-				b.payload.to.pathParts.join("/")
-		);
-	}
-	if (
-		a.type === VaultActionType.RenameFile &&
-		b.type === VaultActionType.RenameFile
-	) {
-		return (
-			a.payload.from.basename === b.payload.from.basename &&
-			a.payload.from.pathParts.join("/") ===
-				b.payload.from.pathParts.join("/") &&
-			a.payload.to.basename === b.payload.to.basename &&
-			a.payload.to.pathParts.join("/") ===
-				b.payload.to.pathParts.join("/")
-		);
-	}
-	if (
-		a.type === VaultActionType.RenameMdFile &&
-		b.type === VaultActionType.RenameMdFile
-	) {
-		return (
-			a.payload.from.basename === b.payload.from.basename &&
-			a.payload.from.pathParts.join("/") ===
-				b.payload.from.pathParts.join("/") &&
-			a.payload.to.basename === b.payload.to.basename &&
-			a.payload.to.pathParts.join("/") ===
-				b.payload.to.pathParts.join("/")
-		);
-	}
-	return false;
-}
+import { splitPathKey } from "./split-path";
 
 export async function collapseActions(
 	actions: readonly VaultAction[],
@@ -71,12 +11,19 @@ export async function collapseActions(
 		const key = getPathKey(action);
 		const existing = byPath.get(key);
 
-		// Rename rules: drop duplicates with same from->to; otherwise latest wins.
-		if (
-			action.type === VaultActionType.RenameFolder ||
-			action.type === VaultActionType.RenameFile ||
-			action.type === VaultActionType.RenameMdFile
-		) {
+		// Trash wins - terminal operation
+		if (isTrash(action)) {
+			byPath.set(key, action);
+			continue;
+		}
+
+		// If existing is trash, skip (trash already won)
+		if (existing && isTrash(existing)) {
+			continue;
+		}
+
+		// Rename rules: drop duplicates with same from->to; otherwise latest wins
+		if (isRename(action)) {
 			if (existing && sameRenameTarget(existing, action)) {
 				continue;
 			}
@@ -84,32 +31,46 @@ export async function collapseActions(
 			continue;
 		}
 
-		// Writes: latest wins; replaces prior write/process/any.
-		if (isWrite(action)) {
+		// ReplaceContentMdFile: latest wins; replaces prior write/process
+		// Special case: if existing is CreateMdFile, merge into CreateMdFile
+		if (isReplaceContent(action)) {
+			if (existing && isCreateMdFile(existing)) {
+				byPath.set(key, {
+					payload: {
+						content: action.payload.content,
+						splitPath: existing.payload.splitPath,
+					},
+					type: VaultActionType.CreateMdFile,
+				});
+				continue;
+			}
 			byPath.set(key, action);
 			continue;
 		}
 
-		// Process rules
+		// ProcessMdFile rules
 		if (isProcess(action)) {
 			if (existing) {
-				if (isWrite(existing)) {
-					const nextContent = await Promise.resolve(
-						action.payload.transform(existing.payload.content),
+				if (isReplaceContent(existing)) {
+					// Apply transform to write content, convert to write
+					const transformed = await action.payload.transform(
+						existing.payload.content,
 					);
 					byPath.set(key, {
-						...existing,
-						payload: { ...existing.payload, content: nextContent },
+						payload: {
+							content: transformed,
+							splitPath: existing.payload.splitPath,
+						},
+						type: VaultActionType.ReplaceContentMdFile,
 					});
 					continue;
 				}
 				if (isProcess(existing)) {
-					const combined = async (content: string) =>
-						action.payload.transform(
-							await Promise.resolve(
-								existing.payload.transform(content),
-							),
-						);
+					// Compose transforms
+					const combined = async (content: string) => {
+						const first = await existing.payload.transform(content);
+						return await action.payload.transform(first);
+					};
 					byPath.set(key, {
 						...existing,
 						payload: {
@@ -119,12 +80,34 @@ export async function collapseActions(
 					});
 					continue;
 				}
+				if (isCreateMdFile(existing)) {
+					// Process on create - keep process (will read from disk)
+					byPath.set(key, action);
+					continue;
+				}
 			}
 			byPath.set(key, action);
 			continue;
 		}
 
-		// Default: newest wins for all other action types.
+		// CreateMdFile + ReplaceContentMdFile merge
+		if (isCreateMdFile(action)) {
+			if (existing && isReplaceContent(existing)) {
+				// Merge: create with final content
+				byPath.set(key, {
+					payload: {
+						content: existing.payload.content,
+						splitPath: action.payload.splitPath,
+					},
+					type: VaultActionType.CreateMdFile,
+				});
+				continue;
+			}
+			byPath.set(key, action);
+			continue;
+		}
+
+		// Default: newest wins for all other action types
 		byPath.set(key, action);
 	}
 
@@ -136,7 +119,7 @@ function getPathKey(action: VaultAction): string {
 		case VaultActionType.RenameFolder:
 		case VaultActionType.RenameFile:
 		case VaultActionType.RenameMdFile:
-			return coreKey(action.payload.from);
+			return splitPathKey(action.payload.from);
 		case VaultActionType.CreateFolder:
 		case VaultActionType.TrashFolder:
 		case VaultActionType.CreateFile:
@@ -144,11 +127,95 @@ function getPathKey(action: VaultAction): string {
 		case VaultActionType.CreateMdFile:
 		case VaultActionType.TrashMdFile:
 		case VaultActionType.ProcessMdFile:
-		case VaultActionType.WriteMdFile:
-			return coreKey(action.payload.coreSplitPath);
+		case VaultActionType.ReplaceContentMdFile:
+			return splitPathKey(action.payload.splitPath);
 	}
 }
 
-function coreKey(core: { pathParts: string[]; basename: string }): string {
-	return [...core.pathParts, core.basename].join("/");
+function isTrash(
+	action: VaultAction,
+): action is Extract<
+	VaultAction,
+	| { type: typeof VaultActionType.TrashFolder }
+	| { type: typeof VaultActionType.TrashFile }
+	| { type: typeof VaultActionType.TrashMdFile }
+> {
+	return (
+		action.type === VaultActionType.TrashFolder ||
+		action.type === VaultActionType.TrashFile ||
+		action.type === VaultActionType.TrashMdFile
+	);
+}
+
+function isRename(
+	action: VaultAction,
+): action is Extract<
+	VaultAction,
+	| { type: typeof VaultActionType.RenameFolder }
+	| { type: typeof VaultActionType.RenameFile }
+	| { type: typeof VaultActionType.RenameMdFile }
+> {
+	return (
+		action.type === VaultActionType.RenameFolder ||
+		action.type === VaultActionType.RenameFile ||
+		action.type === VaultActionType.RenameMdFile
+	);
+}
+
+function isReplaceContent(
+	action: VaultAction,
+): action is Extract<
+	VaultAction,
+	{ type: typeof VaultActionType.ReplaceContentMdFile }
+> {
+	return action.type === VaultActionType.ReplaceContentMdFile;
+}
+
+function isProcess(
+	action: VaultAction,
+): action is Extract<
+	VaultAction,
+	{ type: typeof VaultActionType.ProcessMdFile }
+> {
+	return action.type === VaultActionType.ProcessMdFile;
+}
+
+function isCreateMdFile(
+	action: VaultAction,
+): action is Extract<
+	VaultAction,
+	{ type: typeof VaultActionType.CreateMdFile }
+> {
+	return action.type === VaultActionType.CreateMdFile;
+}
+
+function sameRenameTarget(a: VaultAction, b: VaultAction): boolean {
+	if (
+		a.type === VaultActionType.RenameFolder &&
+		b.type === VaultActionType.RenameFolder
+	) {
+		return (
+			splitPathKey(a.payload.from) === splitPathKey(b.payload.from) &&
+			splitPathKey(a.payload.to) === splitPathKey(b.payload.to)
+		);
+	}
+	if (
+		a.type === VaultActionType.RenameFile &&
+		b.type === VaultActionType.RenameFile
+	) {
+		return (
+			splitPathKey(a.payload.from) === splitPathKey(b.payload.from) &&
+			splitPathKey(a.payload.to) === splitPathKey(b.payload.to)
+		);
+	}
+	if (
+		a.type === VaultActionType.RenameMdFile &&
+		b.type === VaultActionType.RenameMdFile
+	) {
+		return (
+			splitPathKey(a.payload.from) === splitPathKey(b.payload.from) &&
+			splitPathKey(a.payload.to) === splitPathKey(b.payload.to)
+		);
+	}
+	return false;
 }

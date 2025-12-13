@@ -11,7 +11,13 @@ import {
 	REPLACE_CONTENT,
 	TRASH,
 } from "./literals";
-import type { CoreSplitPath, SplitPathToMdFile } from "./split-path";
+import type {
+	SplitPath,
+	SplitPathFromTo,
+	SplitPathToFile,
+	SplitPathToFolder,
+	SplitPathToMdFile,
+} from "./split-path";
 
 const OperationSchema = z.enum([CREATE, RENAME, TRASH] as const);
 
@@ -32,29 +38,67 @@ export type VaultActionType = z.infer<typeof VaultActionTypeSchema>;
 
 export type Transform = (content: string) => string | Promise<string>;
 
-type RenamePayload = { from: CoreSplitPath; to: CoreSplitPath };
-type CreatePayload = { splitPath: CoreSplitPath; content?: string };
-type TrashPayload = { splitPath: CoreSplitPath };
-type ProcessPayload = {
+// Folder payloads
+type CreateFolderPayload = {
+	splitPath: SplitPathToFolder;
+	content?: string;
+};
+type RenameFolderPayload = SplitPathFromTo<SplitPathToFolder>;
+type TrashFolderPayload = { splitPath: SplitPathToFolder };
+
+// File payloads
+type CreateFilePayload = {
+	splitPath: SplitPathToFile;
+	content?: string;
+};
+type RenameFilePayload = SplitPathFromTo<SplitPathToFile>;
+type TrashFilePayload = { splitPath: SplitPathToFile };
+
+// MdFile payloads
+type CreateMdFilePayload = {
+	splitPath: SplitPathToMdFile;
+	content?: string;
+};
+type RenameMdFilePayload = SplitPathFromTo<SplitPathToMdFile>;
+type TrashMdFilePayload = { splitPath: SplitPathToMdFile };
+type ProcessMdFilePayload = {
 	splitPath: SplitPathToMdFile;
 	transform: Transform;
 };
-type ReplaceContentInPayload = { splitPath: CoreSplitPath; content: string };
+type ReplaceContentMdFilePayload = {
+	splitPath: SplitPathToMdFile;
+	content: string;
+};
 
 export type VaultAction =
-	| { type: typeof VaultActionType.CreateFolder; payload: CreatePayload }
-	| { type: typeof VaultActionType.RenameFolder; payload: RenamePayload }
-	| { type: typeof VaultActionType.TrashFolder; payload: TrashPayload }
-	| { type: typeof VaultActionType.CreateFile; payload: CreatePayload }
-	| { type: typeof VaultActionType.RenameFile; payload: RenamePayload }
-	| { type: typeof VaultActionType.TrashFile; payload: TrashPayload }
-	| { type: typeof VaultActionType.CreateMdFile; payload: CreatePayload }
-	| { type: typeof VaultActionType.RenameMdFile; payload: RenamePayload }
-	| { type: typeof VaultActionType.TrashMdFile; payload: TrashPayload }
-	| { type: typeof VaultActionType.ProcessMdFile; payload: ProcessPayload }
+	| {
+			type: typeof VaultActionType.CreateFolder;
+			payload: CreateFolderPayload;
+	  }
+	| {
+			type: typeof VaultActionType.RenameFolder;
+			payload: RenameFolderPayload;
+	  }
+	| { type: typeof VaultActionType.TrashFolder; payload: TrashFolderPayload }
+	| { type: typeof VaultActionType.CreateFile; payload: CreateFilePayload }
+	| { type: typeof VaultActionType.RenameFile; payload: RenameFilePayload }
+	| { type: typeof VaultActionType.TrashFile; payload: TrashFilePayload }
+	| {
+			type: typeof VaultActionType.CreateMdFile;
+			payload: CreateMdFilePayload;
+	  }
+	| {
+			type: typeof VaultActionType.RenameMdFile;
+			payload: RenameMdFilePayload;
+	  }
+	| { type: typeof VaultActionType.TrashMdFile; payload: TrashMdFilePayload }
+	| {
+			type: typeof VaultActionType.ProcessMdFile;
+			payload: ProcessMdFilePayload;
+	  }
 	| {
 			type: typeof VaultActionType.ReplaceContentMdFile;
-			payload: ReplaceContentInPayload;
+			payload: ReplaceContentMdFilePayload;
 	  };
 
 export const weightForVaultActionType: Record<VaultActionType, number> = {
@@ -121,21 +165,47 @@ export function sortActionsByWeight(actions: VaultAction[]): VaultAction[] {
 				return action.payload.splitPath.pathParts.length;
 			case VaultActionType.RenameFolder:
 				return action.payload.to.pathParts.length;
-			default:
-				return 0;
+			case VaultActionType.CreateFile:
+			case VaultActionType.TrashFile:
+			case VaultActionType.CreateMdFile:
+			case VaultActionType.TrashMdFile:
+			case VaultActionType.ProcessMdFile:
+			case VaultActionType.ReplaceContentMdFile:
+				return action.payload.splitPath.pathParts.length;
+			case VaultActionType.RenameFile:
+			case VaultActionType.RenameMdFile:
+				return action.payload.to.pathParts.length;
 		}
 	};
 
-	return [...actions].sort((a, b) => {
-		const weightDelta =
-			weightForVaultActionType[a.type] - weightForVaultActionType[b.type];
-		if (weightDelta !== 0) return weightDelta;
+	// Group by weight
+	const byWeight = new Map<number, VaultAction[]>();
+	for (const action of actions) {
+		const weight = weightForVaultActionType[action.type];
+		const group = byWeight.get(weight) ?? [];
+		group.push(action);
+		byWeight.set(weight, group);
+	}
 
-		const depthDelta = pathDepth(a) - pathDepth(b);
-		return depthDelta;
-	});
+	// Sort groups by weight, then sort each group by path depth
+	const sorted: VaultAction[] = [];
+	const sortedWeights = Array.from(byWeight.keys()).sort((a, b) => a - b);
+	for (const weight of sortedWeights) {
+		const group = byWeight.get(weight) ?? [];
+		const sortedGroup = group.sort((a, b) => pathDepth(a) - pathDepth(b));
+		sorted.push(...sortedGroup);
+	}
+
+	return sorted;
 }
 
-function coreSplitPathToKey(splitPath: CoreSplitPath): string {
-	return [...splitPath.pathParts, splitPath.basename].join("/");
+function coreSplitPathToKey(splitPath: SplitPath): string {
+	return [
+		...splitPath.pathParts,
+		splitPath.basename,
+		// biome-ignore lint/suspicious/noExplicitAny: Key extraction
+		(splitPath as any)?.extension ?? "",
+	]
+		.filter(Boolean)
+		.join("/");
 }

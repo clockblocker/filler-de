@@ -32,7 +32,7 @@ export class ObsidianVaultActionManagerImpl
 	constructor(app: App) {
 		this.opened = new OpenedFileService(app);
 		this.background = new BackgroundFileService(app);
-		const executor = new Executor(this.background, this.opened);
+		const executor = new Executor(this.background, this.opened, this.vault);
 		this.reader = new Reader(this.opened, this.background);
 		this.dispatcher = new Dispatcher(executor);
 		this.eventAdapter = new EventAdapter(app);
