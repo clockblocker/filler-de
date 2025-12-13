@@ -7,6 +7,7 @@ import type {
 } from "../../types/split-path";
 import type { Transform } from "../../types/vault-action";
 import {
+	errorFileStale,
 	errorGetEditor,
 	errorInvalidCdArgument,
 	errorNoTFileFound,
@@ -97,6 +98,16 @@ export class OpenedFileService {
 			return err(errorGetEditor());
 		}
 
+		// Verify file still exists in vault (may be deleted/renamed while open)
+		// Note: On rename, Obsidian may update view.file to a new TFile object,
+		// so we check path existence rather than object identity
+		const fileInVault = this.app.vault.getAbstractFileByPath(
+			view.file.path,
+		);
+		if (!fileInVault) {
+			return err(errorGetEditor(errorFileStale(view.file.path)));
+		}
+
 		if (view.getMode() !== "source") {
 			return err(errorGetEditor(errorNotInSourceMode()));
 		}
@@ -110,57 +121,49 @@ export class OpenedFileService {
 	): void {
 		// Save cursor position
 		const cursor = editor.getCursor();
-		// biome-ignore lint/suspicious/noExplicitAny: CodeMirror API not fully typed
-		const cm = (editor as any).cm as {
-			scrollDOM: { scrollTop: number };
-			lineAtHeight: (height: number) => number;
-		};
-
-		// Get top visible line index and content
-		const scrollTop = cm.scrollDOM.scrollTop;
-		const topLineIndex = Math.floor(cm.lineAtHeight(scrollTop));
-		const topLineContent = editor.getLine(topLineIndex) ?? "";
+		// Get the line content at cursor (as proxy for visible area)
+		const cursorLineContent = editor.getLine(cursor.line) ?? "";
 
 		editor.setValue(newContent);
 
 		const newLines = newContent.split("\n");
-		let targetLineIndex = topLineIndex;
+		const lineCount = newLines.length;
+		let targetLineIndex = cursor.line;
 
-		// Search for the line content, starting from original index
+		// Search for the cursor line content in new content, starting from original index
 		const foundIndex = newLines.findIndex(
-			(line, idx) => idx >= topLineIndex && line === topLineContent,
+			(line, idx) => idx >= cursor.line && line === cursorLineContent,
 		);
 		if (foundIndex !== -1) {
 			targetLineIndex = foundIndex;
 		} else {
 			// If not found from original index, search backwards
 			const foundIndexBackward = newLines
-				.slice(0, topLineIndex)
+				.slice(0, cursor.line)
 				.map((line, idx) => ({ idx, line }))
 				.reverse()
-				.find(({ line }) => line === topLineContent)?.idx;
+				.find(({ line }) => line === cursorLineContent)?.idx;
 			if (foundIndexBackward !== undefined) {
 				targetLineIndex = foundIndexBackward;
 			} else {
-				const foundIndexAnywhere = newLines.indexOf(topLineContent);
+				const foundIndexAnywhere = newLines.indexOf(cursorLineContent);
 				if (foundIndexAnywhere !== -1) {
 					targetLineIndex = foundIndexAnywhere;
 				} else {
 					// If not found at all, use original index (clamped to valid range)
-					targetLineIndex = Math.min(
-						topLineIndex,
-						newLines.length - 1,
-					);
+					targetLineIndex = Math.min(cursor.line, lineCount - 1);
 				}
 			}
 		}
 
-		// Restore cursor: use found line if cursor line doesn't exist
-		const lineCount = newLines.length;
+		// Restore cursor: preserve column if line exists, clamp to line length
 		if (cursor.line < lineCount) {
-			editor.setCursor(cursor);
+			// Line exists, clamp column to valid range
+			const lineLength = editor.getLine(cursor.line).length;
+			const clampedCh = Math.min(cursor.ch, lineLength);
+			editor.setCursor({ ch: clampedCh, line: cursor.line });
 		} else {
-			// Cursor line doesn't exist, use target line from scroll preservation
+			// Cursor line doesn't exist, use target line from line content preservation
 			editor.setCursor({ ch: 0, line: targetLineIndex });
 		}
 

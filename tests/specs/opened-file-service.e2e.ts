@@ -4,7 +4,17 @@ import { obsidianPage } from "wdio-obsidian-service";
 import { testGetContentErrorCases, testGetContentHappyPath } from "./opened-file-service/get-content.test";
 import { testGetOpenedTFileErrorCases, testGetOpenedTFileHappyPath } from "./opened-file-service/get-opened-tfile.test";
 import { testIsFileActiveErrorCases, testIsFileActiveHappyPath } from "./opened-file-service/is-file-active.test";
+import {
+	testProcessContentCursorPreservation,
+	testProcessContentErrorCases,
+	testProcessContentHappyPath,
+} from "./opened-file-service/process-content.test";
 import { testPwdErrorCases, testPwdHappyPath } from "./opened-file-service/pwd.test";
+import {
+	testReplaceAllContentErrorCases,
+	testReplaceAllContentHappyPath,
+	testReplaceAllContentScrollPreservation,
+} from "./opened-file-service/replace-all-content.test";
 import { VAULT_PATH } from "./opened-file-service/utils";
 
 describe("OpenedFileService", () => {
@@ -35,5 +45,17 @@ describe("OpenedFileService", () => {
 	describe("isFileActive()", () => {
 		it("should check if file is active (happy path)", testIsFileActiveHappyPath);
 		it("should return error when no file is open", testIsFileActiveErrorCases);
+	});
+
+	describe("replaceAllContentInOpenedFile()", () => {
+		it("should replace content (happy path)", testReplaceAllContentHappyPath);
+		it("should preserve scroll position", testReplaceAllContentScrollPreservation);
+		it("should return error when no file is open", testReplaceAllContentErrorCases);
+	});
+
+	describe("processContent()", () => {
+		it("should process content with transform (happy path)", testProcessContentHappyPath);
+		it("should preserve cursor position", testProcessContentCursorPreservation);
+		it("should return error cases", testProcessContentErrorCases);
 	});
 });

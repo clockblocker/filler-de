@@ -31,6 +31,10 @@ export type OpenedFileServiceTestingApi = {
 		getOpenedTFile: () => Promise<unknown>;
 		getContent: () => Promise<unknown>;
 		replaceAllContentInOpenedFile: (content: string) => Promise<unknown>;
+		processContent: (args: {
+			splitPath: unknown;
+			transform: (content: string) => string | Promise<string>;
+		}) => Promise<unknown>;
 		isFileActive: (splitPath: unknown) => Promise<unknown>;
 		cd: (file: unknown) => Promise<unknown>;
 	};

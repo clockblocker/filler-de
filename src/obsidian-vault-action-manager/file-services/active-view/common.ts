@@ -25,3 +25,7 @@ export function errorInvalidCdArgument(): string {
 export function errorOpenFileFailed(errorMessage: string): string {
 	return `Failed to open file: ${errorMessage}`;
 }
+
+export function errorFileStale(path: string): string {
+	return `File no longer exists in vault: ${path}`;
+}

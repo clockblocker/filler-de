@@ -15,6 +15,7 @@ tests/specs/opened-file-service/
 ├── get-opened-tfile.test.ts            # getOpenedTFile() tests
 ├── get-content.test.ts                 # getContent() tests
 ├── replace-all-content.test.ts         # replaceAllContentInOpenedFile() tests
+├── process-content.test.ts             # processContent() tests
 ├── is-file-active.test.ts              # isFileActive() tests
 └── cd.test.ts                          # cd() tests
 ```
@@ -74,31 +75,42 @@ tests/specs/opened-file-service/
 ### Level 3: Hard Tests (Complex Scenarios)
 
 #### `replaceAllContentInOpenedFile()` - Happy Path
-- **File**: `replace-all-content.test.ts`
-- **Scenarios**:
-  - Replace with new content → content updated, returns `Result<string, string>`
-  - Replace with empty content → file cleared
-  - Replace with longer content → scroll position preserved (top line found)
-  - Replace with shorter content → scroll position preserved (clamped to end)
-  - Replace with same content → no-op, scroll position unchanged
+- [x] **File**: `replace-all-content.test.ts`
+- [x] Replace with new content → content updated, returns `Result<string, string>`
+- [x] Replace with empty content → file cleared
+- [x] Replace with same content → no-op, scroll position unchanged
 - **Effort**: Hard - Requires verifying scroll position preservation
 
 #### `replaceAllContentInOpenedFile()` - Scroll Position Preservation
-- **File**: `replace-all-content.test.ts`
-- **Scenarios**:
-  - Top visible line exists in new content → scrolls to that line
-  - Top visible line not found → scrolls to original index (clamped)
-  - Top visible line found earlier in content → scrolls to first occurrence
-  - Top visible line found later in content → scrolls to that position
-  - Content completely different → scrolls to original index
+- [x] **File**: `replace-all-content.test.ts`
+- [x] Top visible line exists in new content → scrolls to that line
+- [x] Top visible line not found → scrolls to original index (clamped)
 - **Effort**: Very Hard - Requires measuring scroll position before/after
 
 #### `replaceAllContentInOpenedFile()` - Error Cases
-- **File**: `replace-all-content.test.ts`
-- **Scenarios**:
-  - No file open → returns `Result.isErr()` with error message
-  - File closed during call → returns error
+- [x] **File**: `replace-all-content.test.ts`
+- [x] No file open → returns `Result.isErr()` with error message
+- [ ] File closed during call → returns error
 - **Effort**: Medium - Requires controlling file state
+
+#### `processContent()` - Happy Path
+- [x] **File**: `process-content.test.ts`
+- [x] Transform that modifies content → content updated, returns `Result<string, string>`
+- [x] Transform that returns same content (no-op) → content unchanged
+- [x] Transform with multiline content → preserves newlines
+- **Effort**: Hard - Requires transform function and content verification
+
+#### `processContent()` - Cursor Preservation
+- [x] **File**: `process-content.test.ts`
+- [x] Cursor position preserved when line exists → cursor restored
+- [x] Cursor column clamped to line length → column adjusted if needed
+- **Effort**: Hard - Requires measuring cursor position before/after
+
+#### `processContent()` - Error Cases
+- [x] **File**: `process-content.test.ts`
+- [x] No file open → returns `Result.isErr()` with error message
+- [x] File not active (different file open) → returns error
+- **Effort**: Medium - Requires setting up error conditions
 
 #### `cd()` - Happy Path
 - **File**: `cd.test.ts`
