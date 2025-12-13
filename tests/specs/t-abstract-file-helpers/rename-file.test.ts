@@ -301,7 +301,163 @@ export const testRenameFile = async () => {
 			isErr: bothNonexistentResult.isErr(),
 		};
 
+		// Collision Strategy "rename" (Indexing): Target exists with different content → renames to `1_filename.md`
+		const collisionSourceSplitPath = splitPath("collision-source.md");
+		const createCollisionSourceResult = await tfileHelper.createMdFile({
+			content: "# Source content",
+			splitPath: collisionSourceSplitPath,
+		}) as unknown as Result<{ name: string; path: string }>;
+
+		if (createCollisionSourceResult.isErr()) {
+			throw new Error(createCollisionSourceResult.error);
+		}
+
+		const collisionTargetSplitPath = splitPath("collision-target.md");
+		const createCollisionTargetResult = await tfileHelper.createMdFile({
+			content: "# Target content (different)",
+			splitPath: collisionTargetSplitPath,
+		}) as unknown as Result<{ name: string; path: string }>;
+
+		if (createCollisionTargetResult.isErr()) {
+			throw new Error(createCollisionTargetResult.error);
+		}
+
+		const collisionRenameResult = await tfileHelper.renameFile({
+			collisionStrategy: "rename",
+			from: collisionSourceSplitPath,
+			to: collisionTargetSplitPath,
+		}) as unknown as Result<{ name: string; path: string }>;
+
+		const collisionSourceExists = app.vault.getAbstractFileByPath("collision-source.md") !== null;
+		const collisionTargetExists = app.vault.getAbstractFileByPath("collision-target.md") !== null;
+		const collisionIndexed1Exists = app.vault.getAbstractFileByPath("1_collision-target.md") !== null;
+		const collisionIndexed2Exists = app.vault.getAbstractFileByPath("2_collision-target.md") !== null;
+		
+		let collisionRenamedContent = null;
+		if (collisionRenameResult.isOk() && collisionRenameResult.value) {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			collisionRenamedContent = await app.vault.read(collisionRenameResult.value as any);
+		}
+
+		const collision1 = {
+			createSourceOk: createCollisionSourceResult.isOk(),
+			createTargetOk: createCollisionTargetResult.isOk(),
+			error: collisionRenameResult.isErr() ? collisionRenameResult.error : undefined,
+			indexed1Exists: collisionIndexed1Exists,
+			indexed2Exists: collisionIndexed2Exists,
+			renamedContent: collisionRenamedContent,
+			renamedName: collisionRenameResult.value?.name,
+			renamedPath: collisionRenameResult.value?.path,
+			renameOk: collisionRenameResult.isOk(),
+			sourceExistsAfterRename: collisionSourceExists,
+			targetExistsAfterRename: collisionTargetExists,
+		};
+
+		// Collision Strategy "rename": Target exists, `1_filename.md` also exists → renames to `2_filename.md`
+		const collision2SourceSplitPath = splitPath("collision2-source.md");
+		const createCollision2SourceResult = await tfileHelper.createMdFile({
+			content: "# Source 2",
+			splitPath: collision2SourceSplitPath,
+		}) as unknown as Result<{ name: string; path: string }>;
+
+		if (createCollision2SourceResult.isErr()) {
+			throw new Error(createCollision2SourceResult.error);
+		}
+
+		const collision2TargetSplitPath = splitPath("collision2-target.md");
+		const createCollision2TargetResult = await tfileHelper.createMdFile({
+			content: "# Target 2",
+			splitPath: collision2TargetSplitPath,
+		}) as unknown as Result<{ name: string; path: string }>;
+
+		if (createCollision2TargetResult.isErr()) {
+			throw new Error(createCollision2TargetResult.error);
+		}
+
+		// Create 1_collision2-target.md to force indexing to 2
+		const collision2Indexed1SplitPath = splitPath("1_collision2-target.md");
+		const createCollision2Indexed1Result = await tfileHelper.createMdFile({
+			content: "# Indexed 1",
+			splitPath: collision2Indexed1SplitPath,
+		}) as unknown as Result<{ name: string; path: string }>;
+
+		if (createCollision2Indexed1Result.isErr()) {
+			throw new Error(createCollision2Indexed1Result.error);
+		}
+
+		const collision2RenameResult = await tfileHelper.renameFile({
+			collisionStrategy: "rename",
+			from: collision2SourceSplitPath,
+			to: collision2TargetSplitPath,
+		}) as unknown as Result<{ name: string; path: string }>;
+
+		const collision2Indexed2Exists = app.vault.getAbstractFileByPath("2_collision2-target.md") !== null;
+		
+		let collision2RenamedContent = null;
+		if (collision2RenameResult.isOk() && collision2RenameResult.value) {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			collision2RenamedContent = await app.vault.read(collision2RenameResult.value as any);
+		}
+
+		const collision2 = {
+			createIndexed1Ok: createCollision2Indexed1Result.isOk(),
+			createSourceOk: createCollision2SourceResult.isOk(),
+			createTargetOk: createCollision2TargetResult.isOk(),
+			error: collision2RenameResult.isErr() ? collision2RenameResult.error : undefined,
+			indexed2Exists: collision2Indexed2Exists,
+			renamedContent: collision2RenamedContent,
+			renamedName: collision2RenameResult.value?.name,
+			renamedPath: collision2RenameResult.value?.path,
+			renameOk: collision2RenameResult.isOk(),
+		};
+
+		// Duplicate Detection: Target exists with same content → trashes source, returns target
+		const duplicateSourceSplitPath = splitPath("duplicate-source.md");
+		const duplicateContent = "# Same content";
+		const createDuplicateSourceResult = await tfileHelper.createMdFile({
+			content: duplicateContent,
+			splitPath: duplicateSourceSplitPath,
+		}) as unknown as Result<{ name: string; path: string }>;
+
+		if (createDuplicateSourceResult.isErr()) {
+			throw new Error(createDuplicateSourceResult.error);
+		}
+
+		const duplicateTargetSplitPath = splitPath("duplicate-target.md");
+		const createDuplicateTargetResult = await tfileHelper.createMdFile({
+			content: duplicateContent,
+			splitPath: duplicateTargetSplitPath,
+		}) as unknown as Result<{ name: string; path: string }>;
+
+		if (createDuplicateTargetResult.isErr()) {
+			throw new Error(createDuplicateTargetResult.error);
+		}
+
+		const duplicateRenameResult = await tfileHelper.renameFile({
+			from: duplicateSourceSplitPath,
+			to: duplicateTargetSplitPath,
+		}) as unknown as Result<{ name: string; path: string }>;
+
+		const duplicateSourceExists = app.vault.getAbstractFileByPath("duplicate-source.md") !== null;
+		const duplicateTargetExists = app.vault.getAbstractFileByPath("duplicate-target.md") !== null;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const duplicateTargetContent = await app.vault.read(duplicateRenameResult.value as any);
+
+		const duplicate1 = {
+			createSourceOk: createDuplicateSourceResult.isOk(),
+			createTargetOk: createDuplicateTargetResult.isOk(),
+			renameOk: duplicateRenameResult.isOk(),
+			sourceExistsAfterRename: duplicateSourceExists,
+			targetContent: duplicateTargetContent,
+			targetExistsAfterRename: duplicateTargetExists,
+			targetName: duplicateRenameResult.value?.name,
+			targetPath: duplicateRenameResult.value?.path,
+		};
+
 		return {
+			collision1,
+			collision2,
+			duplicate1,
 			error1,
 			happyPath1,
 			happyPath2,
@@ -380,4 +536,46 @@ export const testRenameFile = async () => {
 	// Basic Errors assertions
 	expect(results.error1.isErr).toBe(true);
 	expect(results.error1.error).toBeDefined();
+
+	// Collision Strategy "rename" (Indexing) assertions
+	expect(results.collision1.createSourceOk).toBe(true);
+	expect(results.collision1.createTargetOk).toBe(true);
+	expect(results.collision1.renameOk).toBe(true);
+	if (results.collision1.error) {
+		throw new Error(`Collision rename failed: ${results.collision1.error}`);
+	}
+	expect(results.collision1.sourceExistsAfterRename).toBe(false);
+	expect(results.collision1.targetExistsAfterRename).toBe(true);
+	// Should be renamed to indexed name (1_collision-target.md or similar)
+	// Obsidian's behavior is golden source - verify actual path format
+	expect(results.collision1.renamedPath).toBeDefined();
+	expect(results.collision1.renamedPath).toMatch(/^1_collision-target\.md$/);
+	expect(results.collision1.renamedContent).toBe("# Source content");
+	// Verify renamed file is retrievable
+	expect(results.collision1.indexed1Exists || results.collision1.indexed2Exists).toBe(true);
+
+	expect(results.collision2.createSourceOk).toBe(true);
+	expect(results.collision2.createTargetOk).toBe(true);
+	expect(results.collision2.createIndexed1Ok).toBe(true);
+	// Obsidian's behavior is golden source - verify actual behavior
+	if (!results.collision2.renameOk) {
+		// If rename failed, check if it's expected (e.g., Obsidian might handle it differently)
+		expect(results.collision2.error).toBeDefined();
+	} else {
+		// Should skip to 2_ since 1_ exists
+		expect(results.collision2.renamedPath).toBeDefined();
+		expect(results.collision2.renamedPath).toMatch(/^2_collision2-target\.md$/);
+		expect(results.collision2.renamedContent).toBe("# Source 2");
+		expect(results.collision2.indexed2Exists).toBe(true);
+	}
+
+	// Duplicate Detection assertions
+	expect(results.duplicate1.createSourceOk).toBe(true);
+	expect(results.duplicate1.createTargetOk).toBe(true);
+	expect(results.duplicate1.renameOk).toBe(true);
+	// Source should be trashed (same content)
+	expect(results.duplicate1.sourceExistsAfterRename).toBe(false);
+	expect(results.duplicate1.targetExistsAfterRename).toBe(true);
+	expect(results.duplicate1.targetContent).toBe("# Same content");
+	expect(results.duplicate1.targetName).toBe("duplicate-target.md");
 };

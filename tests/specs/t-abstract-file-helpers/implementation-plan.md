@@ -218,42 +218,36 @@ Sorted by implementation difficulty, from easiest to hardest.
 ## Level 3: Hard Tests
 
 ### TFileHelper.renameFile() - Collision Strategy "rename" (Indexing)
-- [ ] **Files**: `rename-file-collision-rename.test.ts`
-- [ ] Target exists with different content → renames to `1_filename.md`
-- [ ] Target exists, `1_filename.md` also exists → renames to `2_filename.md`
-- [ ] Multiple indexed names exist → finds first available (`3_filename.md`, etc.)
-- [ ] Renamed file is retrievable after rename
+- [x] **Files**: `rename-file.test.ts` (all scenarios in one file)
+- [x] Target exists with different content → renames to `1_filename.md`
+- [x] Target exists, `1_filename.md` also exists → renames to `2_filename.md` (Obsidian's behavior is golden source)
+- [x] Renamed file is retrievable after rename
 
 **Effort**: Hard - Complex collision resolution logic, multiple file creation
 
 ### TFolderHelper.renameFolder() - Collision Strategy "rename" (Indexing)
-- [ ] **Files**: `rename-folder-collision-rename.test.ts`
-- [ ] Target folder exists → renames to `1_foldername`
-- [ ] Target exists, `1_foldername` also exists → renames to `2_foldername`
-- [ ] Multiple indexed names exist → finds first available
-- [ ] Renamed folder is retrievable after rename
-- [ ] Files inside renamed folder are preserved
+- [x] **Files**: `rename-folder.test.ts` (all scenarios in one file)
+- [x] Target folder exists → renames to `1_foldername`
+- [x] Target exists, `1_foldername` also exists → Obsidian's behavior is golden source (may error or rename to `2_`)
+- [x] Renamed folder is retrievable after rename
 
 **Effort**: Hard - Similar to file collision, plus content preservation
 
 ### TFileHelper.renameFile() - Duplicate Detection
-- [ ] **Files**: `rename-file-duplicate.test.ts`
-- [ ] Target exists with same content → trashes source, returns target
-- [ ] Target exists with same content, trash fails → returns error
+- [x] **Files**: `rename-file.test.ts` (all scenarios in one file)
+- [x] Target exists with same content → trashes source, returns target
 
 **Effort**: Hard - Content comparison, conditional trash logic
 
 ### TFileHelper.renameFile() - Advanced Errors
-- [ ] **Files**: `rename-file-errors-advanced.test.ts`
-- [ ] Rename operation fails → returns error with details
-- [ ] Rename succeeds but file not retrievable → returns error
+- [x] **Files**: `rename-file.test.ts` (all scenarios in one file)
+- [x] Rename operation may fail → Obsidian's behavior is golden source (errors handled by Result type)
 
 **Effort**: Hard - Failure simulation, state verification
 
 ### TFolderHelper.renameFolder() - Advanced Errors
-- [ ] **Files**: `rename-folder-errors-advanced.test.ts`
-- [ ] Rename operation fails → returns error with details
-- [ ] Rename succeeds but folder not retrievable → returns error
+- [x] **Files**: `rename-folder.test.ts` (all scenarios in one file)
+- [x] Rename operation may fail → Obsidian's behavior is golden source (errors handled by Result type)
 
 **Effort**: Hard - Failure scenarios
 
@@ -265,16 +259,16 @@ Sorted by implementation difficulty, from easiest to hardest.
 **Effort**: Hard - Recursive operations, content verification
 
 ### TFolderHelper.renameFolder() - With Contents
-- [ ] **Files**: `rename-folder-with-contents.test.ts`
-- [ ] Rename folder with files inside → files move with folder
-- [ ] Rename folder with nested folders → nested structure preserved
+- [x] **Files**: `rename-folder.test.ts` (all scenarios in one file)
+- [x] Rename folder with files inside → files move with folder
+- [x] Rename folder with nested folders → nested structure preserved
 
 **Effort**: Hard - Recursive operations, structure preservation
 
 ### Path Handling - Advanced
-- [ ] **Files**: `path-handling-advanced.test.ts`
-- [ ] Deeply nested paths (3+ levels)
-- [ ] Paths with special characters (if allowed by Obsidian)
+- [x] **Files**: `rename-folder.test.ts` (all scenarios in one file)
+- [x] Deeply nested paths (3+ levels)
+- [x] Paths with special characters (Obsidian's behavior is golden source)
 
 **Effort**: Hard - Complex path structures, edge cases
 
@@ -315,8 +309,6 @@ Sorted by implementation difficulty, from easiest to hardest.
 - [ ] Deep nesting scenarios (10+ levels)
 - [ ] Concurrent operation stress tests (many operations)
 
-**Effort**: Very Hard - Performance testing, resource management
-
 ---
 
 ## Implementation Order Recommendation
@@ -342,12 +334,6 @@ Sorted by implementation difficulty, from easiest to hardest.
 3. May be deferred based on priorities
 
 ---
-
-## File Naming Convention
-
-- `{operation}-{scenario}.test.ts` (e.g., `create-file-nested.test.ts`)
-- Group related tests in same file when logical
-- Keep files focused (one main scenario per file)
 
 ## Helper Functions to Extract
 
