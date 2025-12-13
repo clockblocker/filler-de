@@ -4,6 +4,8 @@ import type { HelpersTestingApi, Result } from "./utils";
 
 export const testCreateFile = async () => {
 	const result = await browser.executeObsidian(async ({ app }) => {
+		// Inline definitions required - browser.executeObsidian serializes functions
+		// API must be obtained here because app is only available in this context
 		const getHelpersApi = () => {
 			const plugin = app.plugins.plugins["cbcr-text-eater-de"] as unknown as {
 				getHelpersTestingApi?: () => HelpersTestingApi;
@@ -12,7 +14,6 @@ export const testCreateFile = async () => {
 			if (!api) throw new Error("testing api unavailable");
 			return api;
 		};
-		
 		const asResult = <T>(r: unknown): Result<T> => r as Result<T>;
 		const { tfileHelper, splitPath } = getHelpersApi();
 

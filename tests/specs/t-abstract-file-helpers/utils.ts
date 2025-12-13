@@ -2,7 +2,6 @@
 
 export const VAULT_PATH = "tests/simple";
 
-// Why inline? browser.executeObsidian serializes functions and runs them in the Obsidian context, so external functions aren't accessible. The helper must be defined inside the callback.
 export type HelpersTestingApi = {
 	tfileHelper: {
 		getFile: (p: unknown) => Promise<unknown>;
@@ -21,3 +20,26 @@ export type Result<T> = {
 	error?: string;
 	value?: T;
 };
+
+// Helper functions for tests
+// NOTE: These cannot be imported directly in browser.executeObsidian callbacks due to serialization.
+// Copy the function bodies inline in test files, matching these implementations.
+
+export const getHelpersApi = (app: { plugins: { plugins: Record<string, unknown> } }): HelpersTestingApi => {
+	const plugin = app.plugins.plugins["cbcr-text-eater-de"] as unknown as {
+		getHelpersTestingApi?: () => HelpersTestingApi;
+	};
+	const api = plugin.getHelpersTestingApi?.();
+	if (!api) throw new Error("testing api unavailable");
+	return api;
+};
+
+export const asResult = <T>(r: unknown): Result<T> => r as Result<T>;
+
+// Helper to run test logic with API - reduces boilerplate
+// Test function receives the API and can use it directly
+// Note: browser must be passed from test files (can't import at module level)
+export type TestWithApi = (
+	api: HelpersTestingApi,
+	app: { vault: { read: (file: unknown) => Promise<string> } },
+) => Promise<unknown>;
