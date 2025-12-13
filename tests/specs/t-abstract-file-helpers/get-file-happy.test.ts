@@ -2,118 +2,88 @@
 import { browser, expect } from "@wdio/globals";
 import type { HelpersTestingApi, Result } from "./utils";
 
-export const testGetFileMarkdown = async () => {
-	const result = await browser.executeObsidian(async ({ app }: any) => {
-		const api = app?.plugins?.plugins?.["cbcr-text-eater-de"]?.getHelpersTestingApi?.() as HelpersTestingApi | undefined;
-		if (!api) throw new Error("testing api unavailable");
-
-		const { tfileHelper, splitPath } = api;
-
-		// Create file first
-		const fileSplitPath = splitPath("test.md");
-		const createResult = await tfileHelper.createMdFile({
-			content: "# Test",
-			splitPath: fileSplitPath,
-		}) as unknown as Result<{ name: string; path: string }>;
-
-		if (createResult.isErr()) {
-			return { error: createResult.error };
-		}
-
-		// Get the file
-		const getResult = await tfileHelper.getFile(fileSplitPath) as unknown as Result<{ name: string; path: string }>;
-
-		if (getResult.isErr()) {
-			return { error: getResult.error };
-		}
-
-		return {
-			fileName: getResult.value?.name,
-			filePath: getResult.value?.path,
-			success: true,
-		};
-	});
-
-	expect(result.error).toBeUndefined();
-	expect(result.success).toBe(true);
-	expect(result.fileName).toBe("test.md");
-	expect(result.filePath).toBe("test.md");
-};
-
-export const testGetFileNonMd = async () => {
-	const result = await browser.executeObsidian(async ({ app }: any) => {
-		const api = app?.plugins?.plugins?.["cbcr-text-eater-de"]?.getHelpersTestingApi?.() as HelpersTestingApi | undefined;
-		if (!api) throw new Error("testing api unavailable");
-
-		const { tfileHelper, splitPath } = api;
-
-		// Create non-md file using Obsidian API
-		const filePath = "test.txt";
-		await app.vault.create(filePath, "test content");
-
-		// Get the file
-		const fileSplitPath = splitPath(filePath);
-		const getResult = await tfileHelper.getFile(fileSplitPath) as unknown as Result<{ name: string; path: string }>;
-
-		if (getResult.isErr()) {
-			return { error: getResult.error };
-		}
-
-		return {
-			fileName: getResult.value?.name,
-			filePath: getResult.value?.path,
-			success: true,
-		};
-	});
-
-	expect(result.error).toBeUndefined();
-	expect(result.success).toBe(true);
-	expect(result.fileName).toBe("test.txt");
-	expect(result.filePath).toBe("test.txt");
-};
-
-export const testGetFileNested = async () => {
-	const result = await browser.executeObsidian(async ({ app }: any) => {
+export const testGetFileHappyPath = async () => {
+	const results = await browser.executeObsidian(async ({ app }: any) => {
 		const api = app?.plugins?.plugins?.["cbcr-text-eater-de"]?.getHelpersTestingApi?.() as HelpersTestingApi | undefined;
 		if (!api) throw new Error("testing api unavailable");
 
 		const { tfileHelper, tfolderHelper, splitPath } = api;
 
-		// Create nested folder first
-		const folderSplitPath = splitPath("nested/folder");
-		const folderResult = await tfolderHelper.createFolder(folderSplitPath) as unknown as Result<{ name: string; path: string }>;
+		const runTest = async (name: string, setup: () => Promise<{ filePath: string; expectedName: string; expectedPath: string }>) => {
+			const { filePath, expectedName, expectedPath } = await setup();
+			const fileSplitPath = splitPath(filePath);
+			const getResult = await tfileHelper.getFile(fileSplitPath) as unknown as Result<{ name: string; path: string }>;
 
-		if (folderResult.isErr()) {
-			return { error: folderResult.error };
-		}
+			if (getResult.isErr()) {
+				return { error: getResult.error, name };
+			}
 
-		// Create file in nested folder
-		const fileSplitPath = splitPath("nested/folder/file.md");
-		const createResult = await tfileHelper.createMdFile({
-			content: "# Nested",
-			splitPath: fileSplitPath,
-		}) as unknown as Result<{ name: string; path: string }>;
-
-		if (createResult.isErr()) {
-			return { error: createResult.error };
-		}
-
-		// Get the file
-		const getResult = await tfileHelper.getFile(fileSplitPath) as unknown as Result<{ name: string; path: string }>;
-
-		if (getResult.isErr()) {
-			return { error: getResult.error };
-		}
-
-		return {
-			fileName: getResult.value?.name,
-			filePath: getResult.value?.path,
-			success: true,
+			return {
+				expectedName,
+				expectedPath,
+				fileName: getResult.value?.name,
+				filePath: getResult.value?.path,
+				name,
+				success: true,
+			};
 		};
+
+		const markdown = await runTest("markdown", async () => {
+			const fileSplitPath = splitPath("test.md");
+			const createResult = await tfileHelper.createMdFile({
+				content: "# Test",
+				splitPath: fileSplitPath,
+			}) as unknown as Result<{ name: string; path: string }>;
+
+			if (createResult.isErr()) {
+				throw new Error(createResult.error);
+			}
+
+			return { expectedName: "test.md", expectedPath: "test.md", filePath: "test.md" };
+		});
+
+		const nonMd = await runTest("nonMd", async () => {
+			const filePath = "test.txt";
+			await app.vault.create(filePath, "test content");
+			return { expectedName: "test.txt", expectedPath: "test.txt", filePath };
+		});
+
+		const nested = await runTest("nested", async () => {
+			const folderSplitPath = splitPath("nested/folder");
+			const folderResult = await tfolderHelper.createFolder(folderSplitPath) as unknown as Result<{ name: string; path: string }>;
+
+			if (folderResult.isErr()) {
+				throw new Error(folderResult.error);
+			}
+
+			const fileSplitPath = splitPath("nested/folder/file.md");
+			const createResult = await tfileHelper.createMdFile({
+				content: "# Nested",
+				splitPath: fileSplitPath,
+			}) as unknown as Result<{ name: string; path: string }>;
+
+			if (createResult.isErr()) {
+				throw new Error(createResult.error);
+			}
+
+			return { expectedName: "file.md", expectedPath: "nested/folder/file.md", filePath: "nested/folder/file.md" };
+		});
+
+		return { markdown, nested, nonMd };
 	});
 
-	expect(result.error).toBeUndefined();
-	expect(result.success).toBe(true);
-	expect(result.fileName).toBe("file.md");
-	expect(result.filePath).toBe("nested/folder/file.md");
+	expect(results.markdown.error).toBeUndefined();
+	expect(results.markdown.success).toBe(true);
+	expect(results.markdown.fileName).toBe(results.markdown.expectedName);
+	expect(results.markdown.filePath).toBe(results.markdown.expectedPath);
+
+	expect(results.nonMd.error).toBeUndefined();
+	expect(results.nonMd.success).toBe(true);
+	expect(results.nonMd.fileName).toBe(results.nonMd.expectedName);
+	expect(results.nonMd.filePath).toBe(results.nonMd.expectedPath);
+
+	expect(results.nested.error).toBeUndefined();
+	expect(results.nested.success).toBe(true);
+	expect(results.nested.fileName).toBe(results.nested.expectedName);
+	expect(results.nested.filePath).toBe(results.nested.expectedPath);
 };
