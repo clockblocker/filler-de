@@ -22,51 +22,45 @@ tests/specs/opened-file-service/
 ## Test Categories by Difficulty
 
 ### Level 1: Easy Tests (Basic Happy Path)
-
+ 
 #### `pwd()` - Happy Path
-- **File**: `pwd.test.ts`
-- **Scenarios**:
-  - File is open → returns `Result<SplitPathToMdFile, string>` with correct path
-  - File in root folder → pathParts is empty array
-  - File in nested folder → pathParts matches folder structure
+- [x] **File**: `pwd.test.ts`
+- [x] File is open → returns `Result<SplitPathToMdFile, string>` with correct path
+- [x] File in root folder → pathParts is empty array
+- [x] File in nested folder → pathParts matches folder structure
 - **Effort**: Low - Direct API call, verify Result.isOk() and path structure
 
 #### `getOpenedTFile()` - Happy Path
-- **File**: `get-opened-tfile.test.ts`
-- **Scenarios**:
-  - File is open → returns `Result<TFile, string>` with correct TFile
-  - Verify TFile has correct path, name, extension
+- [x] **File**: `get-opened-tfile.test.ts`
+- [x] File is open → returns `Result<TFile, string>` with correct TFile
+- [x] Verify TFile has correct path, name, extension
 - **Effort**: Low - Direct API call, verify Result.isOk() and TFile properties
 
 #### `getContent()` - Happy Path
-- **File**: `get-content.test.ts`
-- **Scenarios**:
-  - File with content → returns `Result<string, string>` with full content
-  - File with empty content → returns empty string
-  - File with multiline content → preserves newlines
+- [x] **File**: `get-content.test.ts`
+- [x] File with content → returns `Result<string, string>` with full content
+- [x] File with empty content → returns empty string
+- [x] File with multiline content → preserves newlines
 - **Effort**: Low - Direct API call, verify Result.isOk() and content matches
 
 ### Level 2: Medium Tests (Error Cases & Edge Cases)
 
 #### `pwd()` - Error Cases
-- **File**: `pwd.test.ts`
-- **Scenarios**:
-  - No file open → returns `Result.isErr()` with error message
-  - File closed during call → returns error
+- [x] **File**: `pwd.test.ts`
+- [x] No file open → returns `Result.isErr()` with error message
+- [ ] File closed during call → returns error
 - **Effort**: Medium - Requires controlling file state
 
 #### `getOpenedTFile()` - Error Cases
-- **File**: `get-opened-tfile.test.ts`
-- **Scenarios**:
-  - No file open → returns `Result.isErr()` with error message
-  - File closed during call → returns error
+- [x] **File**: `get-opened-tfile.test.ts`
+- [x] No file open → returns `Result.isErr()` with error message
+- [ ] File closed during call → returns error
 - **Effort**: Medium - Requires controlling file state
 
 #### `getContent()` - Error Cases
-- **File**: `get-content.test.ts`
-- **Scenarios**:
-  - No file open → returns `Result.isErr()` with error message
-  - File closed during call → returns error
+- [x] **File**: `get-content.test.ts`
+- [x] No file open → returns `Result.isErr()` with error message
+- [ ] File closed during call → returns error
 - **Effort**: Medium - Requires controlling file state
 
 #### `isFileActive()` - Happy Path & Errors
