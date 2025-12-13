@@ -1,12 +1,11 @@
 import type { TFile, TFolder } from "obsidian";
+import type { OpenedFileService } from "../file-services/active-view/opened-file-service";
 import type {
 	SplitPath,
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
 } from "../types/split-path";
-import type { BackgroundFileService } from "./background-file-service";
-import type { OpenedFileService } from "./opened-file-service";
 import { splitPathKey } from "./split-path";
 
 export class Reader {

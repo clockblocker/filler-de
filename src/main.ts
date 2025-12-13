@@ -7,25 +7,20 @@ import {
 import { Librarian } from "./commanders/librarian/librarian";
 import {
 	splitPath as managerSplitPath,
-	ObsidianVaultActionManagerImpl,
+	// ObsidianVaultActionManagerImpl,
+	splitPath,
+	splitPathKey,
 } from "./obsidian-vault-action-manager";
 import { OpenedFileReader } from "./obsidian-vault-action-manager/file-services/active-view/opened-file-reader";
-import { OpenedFileService as OpenedFileServiceWithResult } from "./obsidian-vault-action-manager/file-services/active-view/opened-file-service";
+import {
+	OpenedFileService,
+	OpenedFileService as OpenedFileServiceWithResult,
+} from "./obsidian-vault-action-manager/file-services/active-view/opened-file-service";
 import { TFileHelper } from "./obsidian-vault-action-manager/file-services/background/helpers/tfile-helper";
 import { TFolderHelper } from "./obsidian-vault-action-manager/file-services/background/helpers/tfolder-helper";
 import { logError } from "./obsidian-vault-action-manager/helpers/issue-handlers";
 import { splitPathFromSystemPath } from "./obsidian-vault-action-manager/helpers/pathfinder";
-import {
-	BackgroundFileService as NewBackgroundFileService,
-	splitPath as splitPathForBackground,
-	splitPathKey as splitPathKeyForBackground,
-} from "./obsidian-vault-action-manager/impl/background-file-service";
-import {
-	OpenedFileService,
-	splitPath,
-	splitPathKey,
-} from "./obsidian-vault-action-manager/impl/opened-file-service";
-import { Reader } from "./obsidian-vault-action-manager/impl/reader";
+import type { Reader } from "./obsidian-vault-action-manager/impl/reader";
 import { AboveSelectionToolbarService } from "./services/obsidian-services/atomic-services/above-selection-toolbar-service";
 import { ApiService } from "./services/obsidian-services/atomic-services/api-service";
 import { BottomToolbarService } from "./services/obsidian-services/atomic-services/bottom-toolbar-service";
@@ -49,13 +44,11 @@ export default class TextEaterPlugin extends Plugin {
 	apiService: ApiService;
 	openedFileReader: LegacyOpenedFileReader;
 	legacyOpenedFileService: LegacyOpenedFileService;
-	testingOpenedFileService: OpenedFileService;
 	testingOpenedFileServiceWithResult: OpenedFileServiceWithResult;
-	testingBackgroundFileService: NewBackgroundFileService;
 	testingReader: Reader;
 	testingTFileHelper: TFileHelper;
 	testingTFolderHelper: TFolderHelper;
-	vaultActionManager: ObsidianVaultActionManagerImpl;
+	// vaultActionManager: ObsidianVaultActionManagerImpl;
 	backgroundFileService: LegacyBackgroundFileService;
 	selectionService: SelectionService;
 
@@ -159,17 +152,17 @@ export default class TextEaterPlugin extends Plugin {
 			this.app,
 			this.openedFileReader,
 		);
-		this.testingOpenedFileService = new OpenedFileService(this.app);
+		// this.testingOpenedFileService = new OpenedFileService(this.app);
 		const testingOpenedFileReader = new OpenedFileReader(this.app);
 		this.testingOpenedFileServiceWithResult =
 			new OpenedFileServiceWithResult(this.app, testingOpenedFileReader);
-		this.testingBackgroundFileService = new NewBackgroundFileService(
-			this.app,
-		);
-		this.testingReader = new Reader(
-			this.testingOpenedFileService,
-			this.testingBackgroundFileService,
-		);
+		// this.testingBackgroundFileService = new NewBackgroundFileService(
+		// 	this.app,
+		// );
+		// this.testingReader = new Reader(
+		// 	this.testingOpenedFileService,
+		// 	this.testingBackgroundFileService,
+		// );
 		this.testingTFileHelper = new TFileHelper({
 			fileManager: this.app.fileManager,
 			vault: this.app.vault,
@@ -179,7 +172,7 @@ export default class TextEaterPlugin extends Plugin {
 			vault: this.app.vault,
 		});
 		this.vaultActionManager = new ObsidianVaultActionManagerImpl(this.app);
-		this.setTestingGlobals();
+		// this.setTestingGlobals();
 
 		this.backgroundFileService = new LegacyBackgroundFileService({
 			fileManager: this.app.fileManager,
@@ -225,7 +218,7 @@ export default class TextEaterPlugin extends Plugin {
 			}),
 		);
 
-		this.registerDomEvent(document, "click", makeClickListener(this));
+		// this.registerDomEvent(document, "click", makeClickListener(this));
 
 		this.bottomToolbarService = new BottomToolbarService(this.app);
 		this.bottomToolbarService.init();
@@ -423,9 +416,9 @@ export default class TextEaterPlugin extends Plugin {
 		});
 
 		this.addCommand({
-			editorCheckCallback: () => {
-				ACTION_CONFIGS.SplitInBlocks.execute(this);
-			},
+			// editorCheckCallback: () => {
+			// 	ACTION_CONFIGS.SplitInBlocks.execute(this);
+			// },
 			id: "format-selection-with-number",
 			name: "Split selection into linked blocks",
 		});
@@ -486,68 +479,68 @@ export default class TextEaterPlugin extends Plugin {
 			name: "Librarian: log tree structure",
 		});
 
-		this.addCommand({
-			callback: () => {
-				(
-					window as unknown as {
-						__textfresserTesting?: Record<string, unknown>;
-					}
-				).__textfresserTesting = {
-					backgroundFileService: this.testingBackgroundFileService,
-					managerSplitPath,
-					openedFileService: this.testingOpenedFileService,
-					reader: this.testingReader,
-					splitPath,
-					splitPathBackground: splitPathForBackground,
-					splitPathKey,
-					splitPathKeyBackground: splitPathKeyForBackground,
-					vaultActionManager: this.vaultActionManager,
-				};
-			},
-			id: "textfresser-testing-expose-opened-service",
-			name: "Testing: expose opened file service",
-		});
+		// this.addCommand({
+		// 	callback: () => {
+		// 		(
+		// 			window as unknown as {
+		// 				__textfresserTesting?: Record<string, unknown>;
+		// 			}
+		// 		).__textfresserTesting = {
+		// 			backgroundFileService: this.testingBackgroundFileService,
+		// 			managerSplitPath,
+		// 			openedFileService: this.testingOpenedFileService,
+		// 			reader: this.testingReader,
+		// 			splitPath,
+		// 			splitPathBackground: splitPathForBackground,
+		// 			splitPathKey,
+		// 			splitPathKeyBackground: splitPathKeyForBackground,
+		// 			vaultActionManager: this.vaultActionManager,
+		// 		};
+		// 	},
+		// 	id: "textfresser-testing-expose-opened-service",
+		// 	name: "Testing: expose opened file service",
+		// });
 	}
 
-	private setTestingGlobals() {
-		(
-			window as unknown as {
-				__textfresserTesting?: Record<string, unknown>;
-			}
-		).__textfresserTesting = {
-			backgroundFileService: this.testingBackgroundFileService,
-			managerSplitPath,
-			openedFileService: this.testingOpenedFileService,
-			reader: this.testingReader,
-			splitPath,
-			splitPathBackground: splitPathForBackground,
-			splitPathKey,
-			splitPathKeyBackground: splitPathKeyForBackground,
-			vaultActionManager: this.vaultActionManager,
-		};
-	}
+	// private setTestingGlobals() {
+	// 	(
+	// 		window as unknown as {
+	// 			__textfresserTesting?: Record<string, unknown>;
+	// 		}
+	// 	).__textfresserTesting = {
+	// 		backgroundFileService: this.testingBackgroundFileService,
+	// 		managerSplitPath,
+	// 		openedFileService: this.testingOpenedFileService,
+	// 		reader: this.testingReader,
+	// 		splitPath,
+	// 		splitPathBackground: splitPathForBackground,
+	// 		splitPathKey,
+	// 		splitPathKeyBackground: splitPathKeyForBackground,
+	// 		vaultActionManager: this.vaultActionManager,
+	// 	};
+	// }
 
-	getOpenedFileServiceForTesting() {
-		return this.testingOpenedFileService;
-	}
+	// getOpenedFileServiceForTesting() {
+	// 	return this.testingOpenedFileService;
+	// }
 
-	getOpenedFileServiceTestingApi() {
-		return {
-			openedFileService: this.testingOpenedFileService,
-			openedFileServiceWithResult:
-				this.testingOpenedFileServiceWithResult,
-			splitPath,
-			splitPathKey,
-		};
-	}
+	// getOpenedFileServiceTestingApi() {
+	// 	return {
+	// 		openedFileService: this.testingOpenedFileService,
+	// 		openedFileServiceWithResult:
+	// 			this.testingOpenedFileServiceWithResult,
+	// 		splitPath,
+	// 		splitPathKey,
+	// 	};
+	// }
 
-	getBackgroundFileServiceTestingApi() {
-		return {
-			backgroundFileService: this.testingBackgroundFileService,
-			splitPath: splitPathForBackground,
-			splitPathKey: splitPathKeyForBackground,
-		};
-	}
+	// getBackgroundFileServiceTestingApi() {
+	// 	return {
+	// 		backgroundFileService: this.testingBackgroundFileService,
+	// 		splitPath: splitPathForBackground,
+	// 		splitPathKey: splitPathKeyForBackground,
+	// 	};
+	// }
 
 	getReaderTestingApi() {
 		return {
@@ -557,12 +550,12 @@ export default class TextEaterPlugin extends Plugin {
 		};
 	}
 
-	getVaultActionManagerTestingApi() {
-		return {
-			manager: this.vaultActionManager,
-			splitPath: managerSplitPath,
-		};
-	}
+	// getVaultActionManagerTestingApi() {
+	// 	return {
+	// 		manager: this.vaultActionManager,
+	// 		splitPath: managerSplitPath,
+	// 	};
+	// }
 
 	getHelpersTestingApi() {
 		return {

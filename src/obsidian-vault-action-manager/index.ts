@@ -75,4 +75,4 @@ export function splitPath(
 	return buildSplitPath(input);
 }
 
-export { ObsidianVaultActionManagerImpl } from "./impl/facade";
+// export { ObsidianVaultActionManagerImpl } from "./impl/facade";
