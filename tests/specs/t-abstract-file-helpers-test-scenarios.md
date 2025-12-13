@@ -211,13 +211,7 @@ Critical low-level file system operations. These are "shit-hits-the-fan" endpoin
 - Basic collision handling
 
 ### P1 (Important - Should Have)
-- Race condition handling
 - Collision strategy variations
 - Duplicate detection (files)
 - Edge cases with special characters
 
-### P2 (Nice to Have)
-- Deep nesting scenarios
-- Concurrent operation stress tests
-- Error message quality verification
-- Integration visibility checks

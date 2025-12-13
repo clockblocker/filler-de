@@ -2,6 +2,8 @@
 import { browser } from "@wdio/globals";
 import { obsidianPage } from "wdio-obsidian-service";
 import { testCreateFile } from "./t-abstract-file-helpers/create-file.test";
+import { testCreateMdFileHappyPath } from "./t-abstract-file-helpers/create-file-happy.test";
+import { testCreateMdFileIdempotent } from "./t-abstract-file-helpers/create-file-idempotent.test";
 import { testCreateFolder } from "./t-abstract-file-helpers/create-folder.test";
 import { testGetFileErrors } from "./t-abstract-file-helpers/get-file-errors.test";
 import { testGetFileHappyPath } from "./t-abstract-file-helpers/get-file-happy.test";
@@ -62,6 +64,14 @@ describe("TFileHelper and TFolderHelper", () => {
 	it("should create and get a folder", testCreateFolder);
 
 	it("should create and get a markdown file", testCreateFile);
+
+	describe("createMdFile() - Happy Path", () => {
+		it("should create files (with content, empty content, nested)", testCreateMdFileHappyPath);
+	});
+
+	describe("createMdFile() - Idempotency", () => {
+		it("should be idempotent (already exists, multiple times)", testCreateMdFileIdempotent);
+	});
 
 	describe("getFile() - Happy Path", () => {
 		it("should get existing files (markdown, non-md, nested)", testGetFileHappyPath);
