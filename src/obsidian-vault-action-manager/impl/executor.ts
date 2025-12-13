@@ -1,4 +1,4 @@
-import { err, ok } from "neverthrow";
+import { err, ok, type Result } from "neverthrow";
 import type { Vault } from "obsidian";
 import type { OpenedFileService } from "../file-services/active-view/opened-file-service";
 import type { TFileHelper } from "../file-services/background/helpers/tfile-helper";
@@ -78,6 +78,13 @@ export class Executor {
 				return result;
 			}
 			case VaultActionType.ProcessMdFile: {
+				const ensureResult = await this.ensureFileExists(
+					action.payload.splitPath,
+				);
+				if (ensureResult.isErr()) {
+					return ensureResult;
+				}
+
 				const isActive = await this.checkFileActive(
 					action.payload.splitPath,
 				);
@@ -95,6 +102,20 @@ export class Executor {
 				return result;
 			}
 			case VaultActionType.ReplaceContentMdFile: {
+				const fileResult = await this.tfileHelper.getFile(
+					action.payload.splitPath,
+				);
+				if (fileResult.isErr()) {
+					// File doesn't exist - create it with the content directly
+					const dto: MdFileWithContentDto = {
+						content: action.payload.content,
+						splitPath: action.payload.splitPath,
+					};
+					const createResult =
+						await this.tfileHelper.createMdFile(dto);
+					return createResult.map(() => undefined);
+				}
+
 				const isActive = await this.checkFileActive(
 					action.payload.splitPath,
 				);
@@ -119,5 +140,23 @@ export class Executor {
 	): Promise<boolean> {
 		const result = await this.opened.isFileActive(splitPath);
 		return result.isOk() && result.value;
+	}
+
+	private async ensureFileExists(
+		splitPath: SplitPathToMdFile,
+	): Promise<Result<void, string>> {
+		const fileResult = await this.tfileHelper.getFile(splitPath);
+		if (fileResult.isOk()) {
+			return ok(undefined);
+		}
+
+		// File doesn't exist - create it with empty content
+		// vault.create automatically creates parent folders
+		const dto: MdFileWithContentDto = {
+			content: "",
+			splitPath,
+		};
+		const createResult = await this.tfileHelper.createMdFile(dto);
+		return createResult.map(() => undefined);
 	}
 }
