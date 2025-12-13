@@ -9,6 +9,8 @@ import {
 	splitPath as managerSplitPath,
 	ObsidianVaultActionManagerImpl,
 } from "./obsidian-vault-action-manager";
+import { OpenedFileReader } from "./obsidian-vault-action-manager/file-services/active-view/opened-file-reader";
+import { OpenedFileService as OpenedFileServiceWithResult } from "./obsidian-vault-action-manager/file-services/active-view/opened-file-service";
 import { TFileHelper } from "./obsidian-vault-action-manager/file-services/background/helpers/tfile-helper";
 import { TFolderHelper } from "./obsidian-vault-action-manager/file-services/background/helpers/tfolder-helper";
 import { logError } from "./obsidian-vault-action-manager/helpers/issue-handlers";
@@ -48,6 +50,7 @@ export default class TextEaterPlugin extends Plugin {
 	openedFileReader: LegacyOpenedFileReader;
 	legacyOpenedFileService: LegacyOpenedFileService;
 	testingOpenedFileService: OpenedFileService;
+	testingOpenedFileServiceWithResult: OpenedFileServiceWithResult;
 	testingBackgroundFileService: NewBackgroundFileService;
 	testingReader: Reader;
 	testingTFileHelper: TFileHelper;
@@ -157,6 +160,9 @@ export default class TextEaterPlugin extends Plugin {
 			this.openedFileReader,
 		);
 		this.testingOpenedFileService = new OpenedFileService(this.app);
+		const testingOpenedFileReader = new OpenedFileReader(this.app);
+		this.testingOpenedFileServiceWithResult =
+			new OpenedFileServiceWithResult(this.app, testingOpenedFileReader);
 		this.testingBackgroundFileService = new NewBackgroundFileService(
 			this.app,
 		);
@@ -528,6 +534,8 @@ export default class TextEaterPlugin extends Plugin {
 	getOpenedFileServiceTestingApi() {
 		return {
 			openedFileService: this.testingOpenedFileService,
+			openedFileServiceWithResult:
+				this.testingOpenedFileServiceWithResult,
 			splitPath,
 			splitPathKey,
 		};
