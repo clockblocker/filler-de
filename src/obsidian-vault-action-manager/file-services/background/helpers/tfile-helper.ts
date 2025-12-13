@@ -11,7 +11,18 @@ import {
 	type SplitPathToMdFile,
 	SplitPathType,
 } from "../../../../obsidian-vault-action-manager/types/split-path";
-import { type CollisionStrategy, getExistingBasenamesInFolder } from "./common";
+import {
+	type CollisionStrategy,
+	errorBothSourceAndTargetNotFound,
+	errorCreateFailed,
+	errorCreationRaceCondition,
+	errorGetByPath,
+	errorRenameFailed,
+	errorRetrieveRenamed,
+	errorTrashDuplicateFile,
+	errorTypeMismatch,
+	getExistingBasenamesInFolder,
+} from "./common";
 
 /**
  * Helper for TFile operations in the vault.
@@ -36,16 +47,14 @@ export class TFileHelper {
 		const systemPath = systemPathToSplitPath.encode(splitPath);
 		const tAbstractFile = this.vault.getAbstractFileByPath(systemPath);
 		if (!tAbstractFile) {
-			return err(`Failed to get file by path: ${systemPath}`);
+			return err(errorGetByPath("file", systemPath));
 		}
 
 		if (tAbstractFile instanceof TFile) {
 			return ok(tAbstractFile);
 		}
 
-		return err(
-			`Expected file type missmatched the found type: ${systemPath}`,
-		);
+		return err(errorTypeMismatch("file", systemPath));
 	}
 
 	async createMdFile(
@@ -73,12 +82,14 @@ export class TFileHelper {
 					return ok(existingResult.value);
 				}
 				return err(
-					`File creation race condition: ${systemPath} was created but cannot be retrieved: ${existingResult.error}`,
+					errorCreationRaceCondition(
+						"file",
+						systemPath,
+						existingResult.error,
+					),
 				);
 			}
-			return err(
-				`Failed to create file: ${systemPath}: ${error.message}`,
-			);
+			return err(errorCreateFailed("file", systemPath, error.message));
 		}
 	}
 
@@ -109,7 +120,12 @@ export class TFileHelper {
 				const fromPath = systemPathToSplitPath.encode(from);
 				const toPath = systemPathToSplitPath.encode(to);
 				return err(
-					`Both source (${fromPath}) and target (${toPath}) files not found: ${toResult.error}`,
+					errorBothSourceAndTargetNotFound(
+						"file",
+						fromPath,
+						toPath,
+						toResult.error,
+					),
 				);
 			}
 			// FromFile not found, but ToFile found. Assume already moved.
@@ -132,7 +148,10 @@ export class TFileHelper {
 						return ok(toResult.value);
 					} catch (error) {
 						return err(
-							`Failed to trash duplicate file: ${systemPathToSplitPath.encode(from)}: ${error.message}`,
+							errorTrashDuplicateFile(
+								systemPathToSplitPath.encode(from),
+								error.message,
+							),
 						);
 					}
 				}
@@ -162,13 +181,22 @@ export class TFileHelper {
 				const renamedResult = await this.getFile(indexedPath);
 				if (renamedResult.isErr()) {
 					return err(
-						`Failed to retrieve renamed file: ${systemPathToSplitPath.encode(indexedPath)}: ${renamedResult.error}`,
+						errorRetrieveRenamed(
+							"file",
+							systemPathToSplitPath.encode(indexedPath),
+							renamedResult.error,
+						),
 					);
 				}
 				return ok(renamedResult.value);
 			} catch (error) {
 				return err(
-					`Failed to rename file: ${systemPathToSplitPath.encode(from)} to ${systemPathToSplitPath.encode(indexedPath)}: ${error.message}`,
+					errorRenameFailed(
+						"file",
+						systemPathToSplitPath.encode(from),
+						systemPathToSplitPath.encode(indexedPath),
+						error.message,
+					),
 				);
 			}
 		}
@@ -181,13 +209,22 @@ export class TFileHelper {
 			const renamedResult = await this.getFile(to);
 			if (renamedResult.isErr()) {
 				return err(
-					`Failed to retrieve renamed file: ${systemPathToSplitPath.encode(to)}: ${renamedResult.error}`,
+					errorRetrieveRenamed(
+						"file",
+						systemPathToSplitPath.encode(to),
+						renamedResult.error,
+					),
 				);
 			}
 			return ok(renamedResult.value);
 		} catch (error) {
 			return err(
-				`Failed to rename file: ${systemPathToSplitPath.encode(from)} to ${systemPathToSplitPath.encode(to)}: ${error.message}`,
+				errorRenameFailed(
+					"file",
+					systemPathToSplitPath.encode(from),
+					systemPathToSplitPath.encode(to),
+					error.message,
+				),
 			);
 		}
 	}

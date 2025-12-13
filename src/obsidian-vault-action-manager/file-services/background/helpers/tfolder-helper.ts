@@ -8,7 +8,17 @@ import type {
 	SplitPathFromTo,
 	SplitPathToFolder,
 } from "../../../../obsidian-vault-action-manager/types/split-path";
-import { type CollisionStrategy, getExistingBasenamesInFolder } from "./common";
+import {
+	type CollisionStrategy,
+	errorBothSourceAndTargetNotFound,
+	errorCreateFailed,
+	errorCreationRaceCondition,
+	errorGetByPath,
+	errorRenameFailed,
+	errorRetrieveRenamed,
+	errorTypeMismatch,
+	getExistingBasenamesInFolder,
+} from "./common";
 
 /**
  * Low-level folder operations.
@@ -31,16 +41,14 @@ export class TFolderHelper {
 		const systemPath = systemPathToSplitPath.encode(splitPath);
 		const tAbstractFile = this.vault.getAbstractFileByPath(systemPath);
 		if (!tAbstractFile) {
-			return err(`Failed to get folder by path: ${systemPath}`);
+			return err(errorGetByPath("folder", systemPath));
 		}
 
 		if (tAbstractFile instanceof TFolder) {
 			return ok(tAbstractFile);
 		}
 
-		return err(
-			`Expected folder type missmatched the found type: ${systemPath}`,
-		);
+		return err(errorTypeMismatch("folder", systemPath));
 	}
 
 	/**
@@ -63,16 +71,20 @@ export class TFolderHelper {
 			if (error.message?.includes("already exists")) {
 				// Race condition: folder was created by another process
 				const existingResult = await this.getFolder(splitPath);
+
 				if (existingResult.isOk()) {
 					return ok(existingResult.value);
 				}
+
 				return err(
-					`Folder creation race condition: ${systemPath} was created but cannot be retrieved: ${existingResult.error}`,
+					errorCreationRaceCondition(
+						"folder",
+						systemPath,
+						existingResult.error,
+					),
 				);
 			}
-			return err(
-				`Failed to create folder: ${systemPath}: ${error.message}`,
-			);
+			return err(errorCreateFailed("folder", systemPath, error.message));
 		}
 	}
 
@@ -106,7 +118,12 @@ export class TFolderHelper {
 				const fromPath = systemPathToSplitPath.encode(from);
 				const toPath = systemPathToSplitPath.encode(to);
 				return err(
-					`Both source (${fromPath}) and target (${toPath}) folders not found: ${toResult.error}`,
+					errorBothSourceAndTargetNotFound(
+						"folder",
+						fromPath,
+						toPath,
+						toResult.error,
+					),
 				);
 			}
 			// FromFolder not found, but ToFolder found. Assume already moved.
@@ -143,13 +160,22 @@ export class TFolderHelper {
 				const renamedResult = await this.getFolder(indexedPath);
 				if (renamedResult.isErr()) {
 					return err(
-						`Failed to retrieve renamed folder: ${systemPathToSplitPath.encode(indexedPath)}: ${renamedResult.error}`,
+						errorRetrieveRenamed(
+							"folder",
+							systemPathToSplitPath.encode(indexedPath),
+							renamedResult.error,
+						),
 					);
 				}
 				return ok(renamedResult.value);
 			} catch (error) {
 				return err(
-					`Failed to rename folder: ${systemPathToSplitPath.encode(from)} to ${systemPathToSplitPath.encode(indexedPath)}: ${error.message}`,
+					errorRenameFailed(
+						"folder",
+						systemPathToSplitPath.encode(from),
+						systemPathToSplitPath.encode(indexedPath),
+						error.message,
+					),
 				);
 			}
 		}
@@ -162,13 +188,22 @@ export class TFolderHelper {
 			const renamedResult = await this.getFolder(to);
 			if (renamedResult.isErr()) {
 				return err(
-					`Failed to retrieve renamed folder: ${systemPathToSplitPath.encode(to)}: ${renamedResult.error}`,
+					errorRetrieveRenamed(
+						"folder",
+						systemPathToSplitPath.encode(to),
+						renamedResult.error,
+					),
 				);
 			}
 			return ok(renamedResult.value);
 		} catch (error) {
 			return err(
-				`Failed to rename folder: ${systemPathToSplitPath.encode(from)} to ${systemPathToSplitPath.encode(to)}: ${error.message}`,
+				errorRenameFailed(
+					"folder",
+					systemPathToSplitPath.encode(from),
+					systemPathToSplitPath.encode(to),
+					error.message,
+				),
 			);
 		}
 	}
