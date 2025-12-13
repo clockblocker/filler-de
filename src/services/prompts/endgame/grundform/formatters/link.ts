@@ -85,15 +85,15 @@ export async function getFormatLinkToGrundformNote(
 	maybeExisitingNotePath: string | null,
 ) {
 	const path = getPathToNote({
-		word: g.grundform,
-		wortart: g.wortart,
 		match: Match.Grundform,
 		maybeExisitingNotePath,
+		word: g.grundform,
+		wortart: g.wortart,
 	});
 	return formatPathToNoteAsLink({
-		word: g.grundform,
-		path,
 		noteExists: !!maybeExisitingNotePath,
+		path,
+		word: g.grundform,
 	});
 }
 
@@ -109,10 +109,10 @@ export async function getPathsToGrundformNotes(
 			g.grundform,
 		);
 		return await getPathToNote({
-			word: g.grundform,
-			wortart: g.wortart,
 			match: Match.Grundform,
 			maybeExisitingNotePath,
+			word: g.grundform,
+			wortart: g.wortart,
 		});
 	});
 
@@ -131,10 +131,10 @@ export async function getPathsToNotes(
 			g.grundform,
 		);
 		return await getPathToNote({
-			word: g.grundform,
-			wortart: g.wortart,
 			match: g.match,
 			maybeExisitingNotePath,
+			word: g.grundform,
+			wortart: g.wortart,
 		});
 	});
 

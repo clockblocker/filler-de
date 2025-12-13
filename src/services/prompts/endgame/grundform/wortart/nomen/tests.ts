@@ -1,59 +1,59 @@
 const Mann = {
 	Mann: [
 		{
-			g: "maskulin",
-			r: "regelmäßig",
 			emoji: "👨",
-			Singular: [
-				{
-					N: ["Mann"],
-					G: ["Mannes", "Manns"],
-					D: ["Mann", "Manne"],
-				},
-			],
+			g: "maskulin",
 			Plural: [
 				{
-					N: ["Mannen"],
-					G: ["Mannen"],
 					D: ["Mannen"],
+					G: ["Mannen"],
+					N: ["Mannen"],
 				},
 			],
-		},
-		{
-			g: "maskulin",
-			r: "unregelmäßig",
-			emoji: "👨",
+			r: "regelmäßig",
 			Singular: [
 				{
-					N: ["Mann"],
-					G: ["Mannes", "Manns"],
 					D: ["Mann", "Manne"],
-				},
-			],
-			Plural: [
-				{
-					N: ["Männer"],
-					G: ["Männer"],
-					D: ["Männern"],
+					G: ["Mannes", "Manns"],
+					N: ["Mann"],
 				},
 			],
 		},
 		{
+			emoji: "👨",
 			g: "maskulin",
-			r: "unregelmäßig",
-			emoji: "🧑‍🤝‍🧑",
-			Singular: [
-				{
-					N: ["Mann"],
-					G: ["Manns"],
-					D: ["Mann"],
-				},
-			],
 			Plural: [
 				{
-					N: ["Leute"],
-					G: ["Leute"],
+					D: ["Männern"],
+					G: ["Männer"],
+					N: ["Männer"],
+				},
+			],
+			r: "unregelmäßig",
+			Singular: [
+				{
+					D: ["Mann", "Manne"],
+					G: ["Mannes", "Manns"],
+					N: ["Mann"],
+				},
+			],
+		},
+		{
+			emoji: "🧑‍🤝‍🧑",
+			g: "maskulin",
+			Plural: [
+				{
 					D: ["Leuten"],
+					G: ["Leute"],
+					N: ["Leute"],
+				},
+			],
+			r: "unregelmäßig",
+			Singular: [
+				{
+					D: ["Mann"],
+					G: ["Manns"],
+					N: ["Mann"],
 				},
 			],
 		},

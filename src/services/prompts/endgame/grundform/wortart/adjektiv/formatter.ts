@@ -41,7 +41,7 @@ export function makeAllDeclensionsFromAdjektivstamm(
 				const { artikel, agj: endung } =
 					fromFromFromKasusFromCaseDeclension[kasus][caseDec][0];
 				allDeclensions[nomenDeklination][kasus][caseDec] = roots.map(
-					(root) => ({ artikel, agj: root + endung }),
+					(root) => ({ agj: root + endung, artikel }),
 				);
 			}
 		}
@@ -65,7 +65,7 @@ export function makeReprSentenceForRoot(
 		if (path === undefined) {
 			return word;
 		}
-		return formatPathToNoteAsLink({ word, path, noteExists: false });
+		return formatPathToNoteAsLink({ noteExists: false, path, word });
 	});
 
 	// "Die klein[e] Mutter und ein klein[er] Sohn gaben klein[em] Vater ein klein[es] Geschenk klein[en] Onkels";

@@ -44,8 +44,8 @@ function BUILD_blockContentFromId_FROM_fileContent(
 
 	ALL_BLOCK_IDS.forEach((blockId) => {
 		oldBlockContentRecord[blockId] = extractBlockContent({
-			content: fileContent,
 			blockId,
+			content: fileContent,
 		});
 	});
 
@@ -86,10 +86,10 @@ function BUILD_sortedBlockStructures_FROM_mergedContentFromNoteBlockId(
 			noteBlockPropsFromNoteBlockId[id].preDelimeterSpacing;
 
 		const structure = {
-			headerElement: trimmedHeaderElement,
 			content: trimmedContent,
-			preDelimeterSpacing,
 			delimeter: BLOCK_DELIMETER,
+			headerElement: trimmedHeaderElement,
+			preDelimeterSpacing,
 		};
 
 		blocksIdsAndStructures.push({ id, structure });

@@ -20,7 +20,7 @@ export async function synonyms(): Promise<{
 	// const morphemischeZerlegungBlock = getMorphemischeZerlegungBlock(morphemAnalysis);
 
 	return await {
-		repr: "synonyms",
 		backlinks: [],
+		repr: "synonyms",
 	};
 }

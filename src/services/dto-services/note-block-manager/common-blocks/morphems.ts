@@ -20,7 +20,7 @@ async function getZusammengesetztAusBlock(
 	morphemAnalysis: MorphemAnalysisOutput,
 ): Promise<Block> {
 	if (!morphemAnalysis.zusammengesetztAus) {
-		return { repr: "", backlinks: [] };
+		return { backlinks: [], repr: "" };
 	}
 
 	const kerls = morphemAnalysis.zusammengesetztAus.map((r) => ({
@@ -41,14 +41,14 @@ async function getZusammengesetztAusBlock(
 		backlinks.push({ path: paths[i] ?? "" });
 		reprs.push(
 			formatPathToNoteAsLink({
-				word: kerls[i]?.grundform ?? "",
-				path: paths[i] ?? "",
 				noteExists: false,
+				path: paths[i] ?? "",
+				word: kerls[i]?.grundform ?? "",
 			}),
 		);
 	}
 
-	return { repr: reprs.join(" + "), backlinks };
+	return { backlinks, repr: reprs.join(" + ") };
 }
 
 function getMorphemischeZerlegungBlock(
@@ -69,14 +69,14 @@ function getMorphemischeZerlegungBlock(
 		backlinks.push({ path: paths[i] ?? "", tags });
 		reprs.push(
 			formatPathToNoteAsLink({
-				word: kerls[i]?.grundform ?? "",
-				path: paths[i] ?? "",
 				noteExists: false,
+				path: paths[i] ?? "",
+				word: kerls[i]?.grundform ?? "",
 			}),
 		);
 	}
 
-	return { repr: reprs.join("|"), backlinks };
+	return { backlinks, repr: reprs.join("|") };
 }
 
 // export async function makeMorphemBlock(

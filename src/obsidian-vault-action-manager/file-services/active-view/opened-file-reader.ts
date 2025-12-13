@@ -57,7 +57,7 @@ export class LegacyOpenedFileReader {
 		return { data: parent, error: false };
 	}
 
-	// [TODO] ? Make it private 
+	// [TODO] ? Make it private
 	async getMaybeOpenedTFile(): Promise<Maybe<TFile>> {
 		try {
 			const activeView =

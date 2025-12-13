@@ -12,6 +12,6 @@ type PromtMakerFromWortart = Record<
 
 export const promtMakerFromKeyword: PromtMakerFromWortart = {
 	[Wortart.Adjektiv]: makeEndgameAdjektivPrompt,
-	Morphems: makeEndgameMorhpemsPrompt,
 	Grundform: makeGrundformsPrompt,
+	Morphems: makeEndgameMorhpemsPrompt,
 };

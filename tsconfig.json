@@ -1,40 +1,40 @@
 {
-  "compilerOptions": {
-    "allowImportingTsExtensions": true,
-    "allowJs": true,
+	"compilerOptions": {
+		"allowImportingTsExtensions": true,
+		"allowJs": true,
 
-    // Override Bun's default settings that might affect discriminated unions
-    "isolatedModules": false,
-    // Environment setup & latest features
-    "lib": ["ESNext", "DOM"],
-    "module": "Preserve",
-    "moduleDetection": "force",
+		// Override Bun's default settings that might affect discriminated unions
+		"isolatedModules": false,
+		// Environment setup & latest features
+		"lib": ["ESNext", "DOM"],
+		"module": "Preserve",
+		"moduleDetection": "force",
 
-    // Bundler mode
-    "moduleResolution": "bundler",
-    "noEmit": true,
-    "noFallthroughCasesInSwitch": true,
-    "noImplicitOverride": true,
-    "noPropertyAccessFromIndexSignature": false,
-    "noUncheckedIndexedAccess": true,
+		// Bundler mode
+		"moduleResolution": "bundler",
+		"noEmit": true,
+		"noFallthroughCasesInSwitch": true,
+		"noImplicitOverride": true,
+		"noPropertyAccessFromIndexSignature": false,
+		"noUncheckedIndexedAccess": true,
 
-    // Some stricter flags (disabled by default)
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "skipLibCheck": true,
-    "strictNullChecks": true,
+		// Some stricter flags (disabled by default)
+		"noUnusedLocals": false,
+		"noUnusedParameters": false,
+		"skipLibCheck": true,
+		"strictNullChecks": true,
 
-    // Best practices
-    "strictPropertyInitialization": false,
-    "target": "ESNext",
-    "types": ["obsidian", "bun-types"],
-    "verbatimModuleSyntax": true
-  },
-  "plugins": [
-    {
-      "moveDownPatterns": ["dist"],
-      "moveUpPatterns": ["@/", "\\.{1,2}/"],
-      "name": "ts-plugin-sort-import-suggestions"
-    }
-  ]
+		// Best practices
+		"strictPropertyInitialization": false,
+		"target": "ESNext",
+		"types": ["obsidian", "bun-types"],
+		"verbatimModuleSyntax": true
+	},
+	"plugins": [
+		{
+			"moveDownPatterns": ["dist"],
+			"moveUpPatterns": ["@/", "\\.{1,2}/"],
+			"name": "ts-plugin-sort-import-suggestions"
+		}
+	]
 }

@@ -20,7 +20,7 @@ export async function tags(): Promise<{
 	// const morphemischeZerlegungBlock = getMorphemischeZerlegungBlock(morphemAnalysis);
 
 	return await {
-		repr: "tags",
 		backlinks: [],
+		repr: "tags",
 	};
 }

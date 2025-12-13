@@ -106,7 +106,7 @@ async function makeBlocksForAdjektivOutputElement(
 		adjektivOutputElement,
 		pathFromWord,
 	);
-	return { repr, backlinks };
+	return { backlinks, repr };
 }
 
 const makeReprForAdjektivOutputElement = (
@@ -246,8 +246,8 @@ async function makeDeclensionsMaps(
 	if (allDeclensionsFromGrad === undefined) {
 		return {
 			allDeclensionsFromGrad: undefined,
-			pathFromWortFromGrad: undefined,
 			error: true,
+			pathFromWortFromGrad: undefined,
 		};
 	}
 
@@ -280,15 +280,15 @@ async function makeDeclensionsMaps(
 		console.error(parsedPathFromWortFromGrad.error);
 		return {
 			allDeclensionsFromGrad: undefined,
-			pathFromWortFromGrad: undefined,
 			error: true,
+			pathFromWortFromGrad: undefined,
 		};
 	}
 
 	return {
 		allDeclensionsFromGrad,
-		pathFromWortFromGrad: parsedPathFromWortFromGrad.data,
 		error: false,
+		pathFromWortFromGrad: parsedPathFromWortFromGrad.data,
 	};
 }
 
@@ -311,8 +311,8 @@ async function makePathFromWordFromAllDeclensions(
 
 	const kerls = [...agjSet].map((grundform) => ({
 		grundform,
-		wortart: Wortart.Adjektiv,
 		match: Match.Flexion,
+		wortart: Wortart.Adjektiv,
 	}));
 
 	const paths = await getPathsToNotes(

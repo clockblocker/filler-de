@@ -1,44 +1,44 @@
 const valence = [
 	{
-		verb: "heizen",
-		separablePrefix: null,
 		arguments: [
 			{
+				case: "NOM",
+				function: "subject",
 				role: "AGENT",
 				surface: "wir",
-				function: "subject",
-				case: "NOM",
 			},
 			{
+				case: "mit+DAT",
+				function: "prep object (question)",
 				role: "INSTRUMENT",
 				surface: "womit",
-				function: "prep object (question)",
-				case: "mit+DAT",
 			},
 		],
+		separablePrefix: null,
+		verb: "heizen",
 		// voice: 'Active',
 		// mood: 'Interrogative',
 		// verbForm: 'Infinitive (werden + heizen)',
 		// auxiliaries: ['werden']
 	},
 	{
-		verb: "aufpassen",
-		separablePrefix: "auf",
 		arguments: [
 			{
+				case: "NOM",
+				function: "subject",
 				role: "AGENT",
 				surface: null, // imperative = subject is implicit
-				function: "subject",
-				case: "NOM",
 			},
 			{
+				case: "ACC",
+				function: "object of preposition",
+				preposition: "auf",
 				role: "THEME",
 				surface: "dich",
-				function: "object of preposition",
-				case: "ACC",
-				preposition: "auf",
 			},
 		],
+		separablePrefix: "auf",
+		verb: "aufpassen",
 		// voice: 'Active',
 		// mood: 'Imperative',
 		// verbForm: 'Finite',

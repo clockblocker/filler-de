@@ -20,7 +20,7 @@ export async function related(): Promise<{
 	// const morphemischeZerlegungBlock = getMorphemischeZerlegungBlock(morphemAnalysis);
 
 	return await {
-		repr: "related",
 		backlinks: [],
+		repr: "related",
 	};
 }

@@ -139,22 +139,33 @@ export const SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS = new Set([
 ]);
 
 export const RequiredSetOfNoteBlockIdsFromWortart = {
-	Nomen: new Set([
-		...meningfullNoteBlockIdsSet,
-		...noteBlockIdForFlexersSet,
-		...SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS,
-	]),
-	Pronomen: new Set([
-		...meningfullNoteBlockIdsSet,
-		...noteBlockIdForFlexersSet,
-		...SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS,
-	]),
-	Verb: new Set([
-		...meningfullNoteBlockIdsSet,
-		...noteBlockIdForFlexersSet,
-		...SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS,
-	]),
 	Adjektiv: new Set([
+		...meningfullNoteBlockIdsSet,
+		...noteBlockIdForFlexersSet,
+		...SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS,
+	]),
+
+	Adverb: new Set([
+		...meningfullNoteBlockIdsSet,
+		...SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS,
+	]),
+
+	Artikel: new Set([
+		...meningfullNoteBlockIdsSet,
+		NoteBlockId.Grammatik,
+		...SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS,
+	]),
+	Interjektion: new Set([
+		...meningfullNoteBlockIdsSet,
+		...SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS,
+	]),
+	Konjunktion: new Set([
+		...meningfullNoteBlockIdsSet,
+		NoteBlockId.Grammatik,
+		...SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS,
+	]),
+	Morphem: new Set([...SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS]),
+	Nomen: new Set([
 		...meningfullNoteBlockIdsSet,
 		...noteBlockIdForFlexersSet,
 		...SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS,
@@ -164,44 +175,33 @@ export const RequiredSetOfNoteBlockIdsFromWortart = {
 		...noteBlockIdForFlexersSet,
 		...SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS,
 	]),
-
-	Artikel: new Set([
-		...meningfullNoteBlockIdsSet,
-		NoteBlockId.Grammatik,
-		...SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS,
-	]),
 	Partikel: new Set([
 		...meningfullNoteBlockIdsSet,
 		NoteBlockId.Grammatik,
 		...SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS,
 	]),
+	Praefix: new Set([...SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS]),
 	Praeposition: new Set([
 		...meningfullNoteBlockIdsSet,
 		NoteBlockId.Grammatik,
 		...SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS,
 	]),
-	Konjunktion: new Set([
+	Pronomen: new Set([
 		...meningfullNoteBlockIdsSet,
-		NoteBlockId.Grammatik,
-		...SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS,
-	]),
-
-	Adverb: new Set([
-		...meningfullNoteBlockIdsSet,
+		...noteBlockIdForFlexersSet,
 		...SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS,
 	]),
 	Redewendung: new Set([
 		...meningfullNoteBlockIdsSet,
 		...SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS,
 	]),
-	Interjektion: new Set([
-		...meningfullNoteBlockIdsSet,
-		...SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS,
-	]),
 
 	Unbekannt: new Set([...SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS]),
-	Morphem: new Set([...SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS]),
-	Praefix: new Set([...SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS]),
+	Verb: new Set([
+		...meningfullNoteBlockIdsSet,
+		...noteBlockIdForFlexersSet,
+		...SET_OF_REQUIRED_TECHNIKAL_BLOCK_IDS,
+	]),
 };
 
 // ---

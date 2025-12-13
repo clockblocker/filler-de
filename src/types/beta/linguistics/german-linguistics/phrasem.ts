@@ -11,10 +11,10 @@ import {
 } from "../general-linguistic-enums/linguistics-enums";
 
 const PhrasemeComponentSchema = z.object({
-	surface: z.string(),
 	baseForm: z.string(),
-	pos: PartOfSpeechSchema,
 	isAnchor: z.boolean().optional(),
+	pos: PartOfSpeechSchema,
+	surface: z.string(),
 });
 
 const PhrasemeComponentsSchema = z
@@ -25,16 +25,16 @@ const PhrasemeComponentsSchema = z
 	});
 
 export const PhrasemeBaseSchema = z.object({
-	surface: z.string(),
-	phrasemeComponents: PhrasemeComponentsSchema,
-	translation: z.string(),
-	explanation: z.string().optional(),
 	analogs: z.array(z.string()).optional(),
+	explanation: z.string().optional(),
+	phrasemeComponents: PhrasemeComponentsSchema,
+	surface: z.string(),
+	translation: z.string(),
 });
 
 export const CollocationSchema = z.object({
-	phrasemeType: z.literal(PhrasemeType.Collocation),
 	collocationType: CollocationTypeSchema,
+	phrasemeType: z.literal(PhrasemeType.Collocation),
 	strength: CollocationStrengthSchema,
 });
 
@@ -70,23 +70,23 @@ export type Phraseme = z.infer<typeof PhrasemeSchema>;
 
 export const collocationExamples: Record<Phraseme["surface"], Phraseme> = {
 	"triftige Gründe": {
-		surface: "triftige Gründe",
-		phrasemeType: PhrasemeType.Collocation,
+		collocationType: CollocationType.ADJ_plus_NOUN,
 		phrasemeComponents: [
 			{
-				surface: "triftige",
 				baseForm: "triftig",
 				pos: PartOfSpeech.Adjective,
+				surface: "triftige",
 			},
 			{
-				surface: "Gründe",
 				baseForm: "Grund",
-				pos: PartOfSpeech.Noun,
 				isAnchor: true,
+				pos: PartOfSpeech.Noun,
+				surface: "Gründe",
 			},
 		],
-		collocationType: CollocationType.ADJ_plus_NOUN,
+		phrasemeType: PhrasemeType.Collocation,
 		strength: CollocationStrength.Bound,
+		surface: "triftige Gründe",
 		translation: "compelling reasons",
 	},
 };

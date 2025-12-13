@@ -2,17 +2,17 @@ import { type FileManager, TFile, type Vault } from "obsidian";
 import {
 	logError,
 	logWarning,
-} from "../../../../../obsidian-vault-action-manager/helpers/issue-handlers";
+} from "../../../../obsidian-vault-action-manager/helpers/issue-handlers";
+import type { MdFileWithContentDto } from "../../../../obsidian-vault-action-manager/helpers/pathfinder";
+import { systemPathToSplitPath } from "../../../../obsidian-vault-action-manager/helpers/pathfinder";
+import type {
+	SplitPathFromTo,
+	SplitPathToMdFile,
+} from "../../../../obsidian-vault-action-manager/types/split-path";
 import {
 	type Maybe,
 	unwrapMaybeByThrowing,
-} from "../../../../../types/common-interface/maybe";
-import type {
-	FileFromTo,
-	FileWithContent,
-	FullPathToMdFile,
-} from "../../../atomic-services/pathfinder";
-import { systemPathFromFullPath } from "../../../atomic-services/pathfinder";
+} from "../../../../types/common-interface/maybe";
 
 /**
  * Helper for TFile operations in the vault.
@@ -31,12 +31,14 @@ export class TFileHelper {
 		this.fileManager = fileManager;
 	}
 
-	async getFile(fullPath: FullPathToMdFile): Promise<TFile> {
-		const mbFile = await this.getMaybeFile(fullPath);
+	async getFile(splitPath: SplitPathToMdFile): Promise<TFile> {
+		const mbFile = await this.getMaybeFile(splitPath);
 		return unwrapMaybeByThrowing(mbFile);
 	}
 
-	async createFiles(files: readonly FileWithContent[]): Promise<TFile[]> {
+	async createFiles(
+		files: readonly MdFileWithContentDto[],
+	): Promise<TFile[]> {
 		const tFiles: TFile[] = [];
 		for (const file of files) {
 			tFiles.push(await this.createFile(file));
@@ -44,37 +46,44 @@ export class TFileHelper {
 		return tFiles;
 	}
 
-	async trashFiles(fullPaths: readonly FullPathToMdFile[]): Promise<void> {
-		for (const fullPath of fullPaths) {
-			await this.trashFile(fullPath);
+	async trashFiles(splitPaths: readonly SplitPathToMdFile[]): Promise<void> {
+		for (const splitPath of splitPaths) {
+			await this.trashFile(splitPath);
 		}
 	}
 
-	async moveFiles(fromTos: readonly FileFromTo[]): Promise<void> {
+	async moveFiles(
+		fromTos: readonly SplitPathFromTo<SplitPathToMdFile>[],
+	): Promise<void> {
 		for (const fromTo of fromTos) {
 			await this.moveFile(fromTo);
 		}
 	}
 
-	private async createFile(file: FileWithContent): Promise<TFile> {
+	private async createFile(file: MdFileWithContentDto): Promise<TFile> {
 		return await this.getOrCreateOneFile(file);
 	}
 
-	private async trashFile(fullPath: FullPathToMdFile): Promise<void> {
-		const file = await this.getFile(fullPath);
+	private async trashFile(splitPath: SplitPathToMdFile): Promise<void> {
+		const file = await this.getFile(splitPath);
 		await this.fileManager.trashFile(file);
 	}
 
-	private async moveFile({ from, to }: FileFromTo): Promise<void> {
+	private async moveFile({
+		from,
+		to,
+	}: SplitPathFromTo<SplitPathToMdFile>): Promise<void> {
 		const mbFromFile = await this.getMaybeFile(from);
 		const mbToFile = await this.getMaybeFile(to);
 
 		if (mbFromFile.error) {
 			if (mbToFile.error) {
+				const fromPath = systemPathToSplitPath.encode(from);
+				const toPath = systemPathToSplitPath.encode(to);
 				unwrapMaybeByThrowing(
 					mbToFile,
 					"TFileHelper.moveFile",
-					`Both source \n(${systemPathFromFullPath(from)}) \n and target \n (${systemPathFromFullPath(to)}) \n files not found`,
+					`Both source \n(${fromPath}) \n and target \n (${toPath}) \n files not found`,
 				);
 			}
 
@@ -91,8 +100,10 @@ export class TFileHelper {
 				return;
 			}
 
+			const fromPath = systemPathToSplitPath.encode(from);
+			const toPath = systemPathToSplitPath.encode(to);
 			logError({
-				description: `Target file (${systemPathFromFullPath(to)}) exists and it's content differs from the source file (${systemPathFromFullPath(from)})`,
+				description: `Target file (${toPath}) exists and it's content differs from the source file (${fromPath})`,
 				location: "TFileHelper.moveFile",
 			});
 
@@ -101,14 +112,14 @@ export class TFileHelper {
 
 		await this.fileManager.renameFile(
 			mbFromFile.data,
-			systemPathFromFullPath(to),
+			systemPathToSplitPath.encode(to),
 		);
 	}
 
 	private async getMaybeFile(
-		fullPath: FullPathToMdFile,
+		splitPath: SplitPathToMdFile,
 	): Promise<Maybe<TFile>> {
-		const systemPath = systemPathFromFullPath(fullPath);
+		const systemPath = systemPathToSplitPath.encode(splitPath);
 		const tAbstractFile = this.vault.getAbstractFileByPath(systemPath);
 		if (!tAbstractFile) {
 			return {
@@ -125,30 +136,30 @@ export class TFileHelper {
 		}
 
 		return {
-			description: `Expected file type missmatched the found type: ${fullPath}`,
+			description: `Expected file type missmatched the found type: ${systemPath}`,
 			error: true,
 		};
 	}
 
 	private async getOrCreateOneFile({
-		fullPath,
+		splitPath,
 		content,
-	}: FileWithContent): Promise<TFile> {
-		const mbFile = await this.getMaybeFile(fullPath);
+	}: MdFileWithContentDto): Promise<TFile> {
+		const mbFile = await this.getMaybeFile(splitPath);
 
 		return mbFile.error
 			? await this.safelyCreateNewFile({
 					content,
-					fullPath,
+					splitPath,
 				})
 			: mbFile.data;
 	}
 
 	private async safelyCreateNewFile({
-		fullPath,
+		splitPath,
 		content,
-	}: FileWithContent): Promise<TFile> {
-		const systemPath = systemPathFromFullPath(fullPath);
+	}: MdFileWithContentDto): Promise<TFile> {
+		const systemPath = systemPathToSplitPath.encode(splitPath);
 		try {
 			return await this.vault.create(systemPath, content ?? "");
 		} catch (error) {
@@ -162,7 +173,7 @@ export class TFileHelper {
 					description: `Race condition detected: File (${systemPath}) already created by another process`,
 					location: "TFileHelper.createOneFile",
 				});
-				return this.getFile(fullPath);
+				return this.getFile(splitPath);
 			}
 			throw error;
 		}

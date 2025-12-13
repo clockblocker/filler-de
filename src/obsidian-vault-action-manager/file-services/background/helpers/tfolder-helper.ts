@@ -1,15 +1,15 @@
 import { type FileManager, TFolder, type Vault } from "obsidian";
+import { systemPathToSplitPath } from "../../../../obsidian-vault-action-manager/helpers/pathfinder";
+import type { SplitPathToFolder } from "../../../../obsidian-vault-action-manager/types/split-path";
 import {
 	type Maybe,
 	unwrapMaybeByThrowing,
-} from "../../../../../types/common-interface/maybe";
-import type { FullPathToFolder } from "../../../atomic-services/pathfinder";
-import { systemPathFromFullPath } from "../../../atomic-services/pathfinder";
+} from "../../../../types/common-interface/maybe";
 
 /**
  * Low-level folder operations.
  */
-export class LegacyTFolderHelper {
+export class TFolderHelper {
 	private fileManager: FileManager;
 	private vault: Vault;
 
@@ -21,17 +21,19 @@ export class LegacyTFolderHelper {
 		this.fileManager = fileManager;
 	}
 
-	async getFolder(fullPath: FullPathToFolder): Promise<TFolder> {
-		const mbFolder = await this.getMaybeFolder(fullPath);
+	async getFolder(splitPath: SplitPathToFolder): Promise<TFolder> {
+		const mbFolder = await this.getMaybeFolder(splitPath);
 		return unwrapMaybeByThrowing(mbFolder);
 	}
 
-	async getMaybeFolder(fullPath: FullPathToFolder): Promise<Maybe<TFolder>> {
-		const systemPath = systemPathFromFullPath(fullPath);
+	async getMaybeFolder(
+		splitPath: SplitPathToFolder,
+	): Promise<Maybe<TFolder>> {
+		const systemPath = systemPathToSplitPath.encode(splitPath);
 		const tAbstractFile = this.vault.getAbstractFileByPath(systemPath);
 		if (!tAbstractFile) {
 			return {
-				description: `Failed to get file by path: ${systemPath}`,
+				description: `Failed to get folder by path: ${systemPath}`,
 				error: true,
 			};
 		}
@@ -44,7 +46,7 @@ export class LegacyTFolderHelper {
 		}
 
 		return {
-			description: `Expected folder type missmatched the found type: ${fullPath}`,
+			description: `Expected folder type missmatched the found type: ${systemPath}`,
 			error: true,
 		};
 	}
@@ -53,18 +55,18 @@ export class LegacyTFolderHelper {
 	 * Create a single folder.
 	 * Assumes parent folder exists.
 	 */
-	async createFolder(fullPath: FullPathToFolder): Promise<TFolder> {
-		const mbFolder = await this.getMaybeFolder(fullPath);
+	async createFolder(splitPath: SplitPathToFolder): Promise<TFolder> {
+		const mbFolder = await this.getMaybeFolder(splitPath);
 		if (!mbFolder.error) {
 			return mbFolder.data; // Already exists
 		}
 
-		const systemPath = systemPathFromFullPath(fullPath);
+		const systemPath = systemPathToSplitPath.encode(splitPath);
 		try {
 			return await this.vault.createFolder(systemPath);
 		} catch (error) {
 			if (error.message?.includes("already exists")) {
-				return this.getFolder(fullPath);
+				return this.getFolder(splitPath);
 			}
 			throw error;
 		}
@@ -73,8 +75,8 @@ export class LegacyTFolderHelper {
 	/**
 	 * Trash a single folder
 	 */
-	async trashFolder(fullPath: FullPathToFolder): Promise<void> {
-		const mbFolder = await this.getMaybeFolder(fullPath);
+	async trashFolder(splitPath: SplitPathToFolder): Promise<void> {
+		const mbFolder = await this.getMaybeFolder(splitPath);
 		if (mbFolder.error) {
 			return; // Already gone
 		}
@@ -85,11 +87,11 @@ export class LegacyTFolderHelper {
 	 * Rename/move a folder.
 	 */
 	async renameFolder(
-		from: FullPathToFolder,
-		to: FullPathToFolder,
+		from: SplitPathToFolder,
+		to: SplitPathToFolder,
 	): Promise<void> {
 		const folder = await this.getFolder(from);
-		const toSystemPath = systemPathFromFullPath(to);
+		const toSystemPath = systemPathToSplitPath.encode(to);
 		await this.fileManager.renameFile(folder, toSystemPath);
 	}
 }

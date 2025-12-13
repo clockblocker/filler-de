@@ -1,6 +1,6 @@
 import * as path from "path"
-import { parseObsidianVersions, obsidianBetaAvailable } from "wdio-obsidian-service";
 import { env } from "process";
+import { obsidianBetaAvailable, parseObsidianVersions } from "wdio-obsidian-service";
 
 // Use this wdio configuration to test Obsidian against the real Obsidian Android app.
 // Add `"test:android": "wdio run ./wdio.mobile.conf.mts"` to package.json to enable it.
@@ -23,29 +23,36 @@ if (env.CI) {
 }
 
 export const config: WebdriverIO.Config = {
-    runner: 'local',
-    framework: 'mocha',
 
-    specs: ['./test/specs/**/*.e2e.ts'],
-
-    maxInstances: 1, // Parallel tests don't work under appium
-    hostname: env.APPIUM_HOST || 'localhost',
-    port: parseInt(env.APPIUM_PORT || "4723"),
+    cacheDir: cacheDir,
 
     // (installerVersion isn't relevant for the mobile app)
     capabilities: versions.map<WebdriverIO.Capabilities>(([appVersion]) => ({
-        browserName: "obsidian",
-        platformName: 'Android',
+        'appium:adbExecTimeout': 60 * 1000,
         'appium:automationName': 'UiAutomator2',
         'appium:avd': "obsidian_test",
         'appium:noReset': true, // wdio-obsidian-service will handle installing Obsidian
-        'appium:adbExecTimeout': 60 * 1000,
+        browserName: "obsidian",
+        platformName: 'Android',
         'wdio:obsidianOptions': {
             appVersion: appVersion,
             plugins: ["."],
             vault: "test/vaults/simple",
         },
     })),
+    framework: 'mocha',
+    hostname: env.APPIUM_HOST || 'localhost',
+    logLevel: "warn",
+
+    maxInstances: 1, // Parallel tests don't work under appium
+
+    mochaOpts: {
+        timeout: 60 * 1000,
+        ui: 'bdd',
+    },
+    port: parseInt(env.APPIUM_PORT || "4723"),
+    reporters: ["obsidian"],
+    runner: 'local',
 
     services: [
         "obsidian",
@@ -53,15 +60,8 @@ export const config: WebdriverIO.Config = {
             args: { allowInsecure: "chromedriver_autodownload,adb_shell" },
         }],
     ],
-    reporters: ["obsidian"],
 
-    mochaOpts: {
-        ui: 'bdd',
-        timeout: 60 * 1000,
-    },
+    specs: ['./test/specs/**/*.e2e.ts'],
     waitforInterval: 250,
     waitforTimeout: 5 * 1000,
-    logLevel: "warn",
-
-    cacheDir: cacheDir,
 }

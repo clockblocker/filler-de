@@ -100,8 +100,8 @@ const PronomenTypeSchema = z.enum([
 const NumerusSchema = z.enum(["Einzahl", "Mehrzahl"]);
 
 const CommonGrundformsFeildsSchema = z.object({
-	grundform: z.string(),
 	emojiBeschreibungs: z.array(z.string().emoji()), // Describe the common meanings with emojies; Up to 3 emojies per meaning. Aim for less, if possible
+	grundform: z.string(),
 });
 
 const WortartSchema = z.enum([
@@ -122,17 +122,17 @@ const WortartSchema = z.enum([
 ]);
 
 const NomenGrundformSchema = z.object({
-	wortart: z.literal(WortartSchema.enum.Nomen),
-	genus: GenusSchema,
 	eigenname: z.optional(z.boolean()),
+	genus: GenusSchema,
+	wortart: z.literal(WortartSchema.enum.Nomen),
 	...CommonGrundformsFeildsSchema.shape,
 });
 
 const PronomenGrundformSchema = z.object({
-	wortart: z.literal(WortartSchema.enum.Pronomen),
-	pronomenType: PronomenTypeSchema,
-	number: z.optional(z.array(NumerusSchema)),
 	genera: z.optional(z.array(GenusSchema)),
+	number: z.optional(z.array(NumerusSchema)),
+	pronomenType: PronomenTypeSchema,
+	wortart: z.literal(WortartSchema.enum.Pronomen),
 	...CommonGrundformsFeildsSchema.shape,
 });
 
@@ -192,8 +192,8 @@ const RedewendungGrundformSchema = z.object({
 });
 
 const UnbekanntGrundformSchema = z.object({
-	wortart: z.literal(WortartSchema.enum.Unbekannt),
 	comment: z.string(),
+	wortart: z.literal(WortartSchema.enum.Unbekannt),
 	...CommonGrundformsFeildsSchema.shape,
 });
 

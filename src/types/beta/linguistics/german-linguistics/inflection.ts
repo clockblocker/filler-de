@@ -67,10 +67,10 @@ export const posTagFormFromPos: Record<PartOfSpeech, InflectionalDimension[]> =
 // über jN
 
 const a = {
-	mainVerb: "vorbereiten",
 	auxiliaries: ["hätte"],
-	modal: "müssen",
-	reflexive: "sich",
 	governedPhrases: ["auf den großen Moment"],
+	mainVerb: "vorbereiten",
+	modal: "müssen",
 	particles: ["vor"],
+	reflexive: "sich",
 };

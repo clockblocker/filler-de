@@ -4,6 +4,6 @@ export type TextEaterSettings = {
 };
 
 export const DEFAULT_SETTINGS: TextEaterSettings = {
-	googleApiKey: "",
 	apiProvider: "google",
+	googleApiKey: "",
 };
