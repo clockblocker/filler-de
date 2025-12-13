@@ -10,6 +10,10 @@ export function errorGetEditor(errorMessage?: string): string {
 	return `Failed to get editor${errorMessage ? `: ${errorMessage}` : ""}`;
 }
 
+export function errorNotInSourceMode(): string {
+	return "View not in source mode";
+}
+
 export function errorNoTFileFound(path: string): string {
 	return `No TFile found for path: ${path}`;
 }

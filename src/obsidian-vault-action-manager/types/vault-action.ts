@@ -30,14 +30,14 @@ export const VaultActionTypeSchema = z.enum([
 export const VaultActionType = VaultActionTypeSchema.enum;
 export type VaultActionType = z.infer<typeof VaultActionTypeSchema>;
 
-export type TransformCallback = (content: string) => string | Promise<string>;
+export type Transform = (content: string) => string | Promise<string>;
 
 type RenamePayload = { from: CoreSplitPath; to: CoreSplitPath };
 type CreatePayload = { splitPath: CoreSplitPath; content?: string };
 type TrashPayload = { splitPath: CoreSplitPath };
 type ProcessPayload = {
 	splitPath: SplitPathToMdFile;
-	transform: TransformCallback;
+	transform: Transform;
 };
 type RewritePayload = { splitPath: CoreSplitPath; content: string };
 

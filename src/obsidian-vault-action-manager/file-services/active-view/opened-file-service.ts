@@ -1,14 +1,16 @@
 import { err, ok, type Result } from "neverthrow";
-import { type App, MarkdownView, TFile } from "obsidian";
+import { type App, type Editor, MarkdownView, TFile } from "obsidian";
 import { splitPathKey } from "../../impl/split-path";
 import type {
 	SplitPathToFile,
 	SplitPathToMdFile,
 } from "../../types/split-path";
+import type { Transform } from "../../types/vault-action";
 import {
 	errorGetEditor,
 	errorInvalidCdArgument,
 	errorNoTFileFound,
+	errorNotInSourceMode,
 	errorOpenFileFailed,
 } from "./common";
 import type { OpenedFileReader } from "./opened-file-reader";
@@ -48,68 +50,13 @@ export class OpenedFileService {
 		content: string,
 	): Promise<Result<string, string>> {
 		try {
-			const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-			if (!view?.file) {
-				return err(errorGetEditor());
+			const editorResult = this.getEditor();
+			if (editorResult.isErr()) {
+				return err(editorResult.error);
 			}
 
-			const editor = view.editor;
-			// biome-ignore lint/suspicious/noExplicitAny: CodeMirror API not fully typed
-			const cm = (editor as any).cm as {
-				scrollDOM: { scrollTop: number };
-				lineAtHeight: (height: number) => number;
-			};
-
-			// 1) Get top visible line index and content
-			const scrollTop = cm.scrollDOM.scrollTop;
-			const topLineIndex = Math.floor(cm.lineAtHeight(scrollTop));
-			const topLineContent = editor.getLine(topLineIndex) ?? "";
-
-			// 2) Apply write
-			editor.setValue(content);
-
-			// 3) Find the saved line content in new content
-			const newLines = content.split("\n");
-			let targetLineIndex = topLineIndex;
-
-			// Search for the line content, starting from original index
-			const foundIndex = newLines.findIndex(
-				(line, idx) => idx >= topLineIndex && line === topLineContent,
-			);
-			if (foundIndex !== -1) {
-				targetLineIndex = foundIndex;
-			} else {
-				// If not found from original index, search backwards
-				const foundIndexBackward = newLines
-					.slice(0, topLineIndex)
-					.map((line, idx) => ({ idx, line }))
-					.reverse()
-					.find(({ line }) => line === topLineContent)?.idx;
-				if (foundIndexBackward !== undefined) {
-					targetLineIndex = foundIndexBackward;
-				} else {
-					const foundIndexAnywhere = newLines.indexOf(topLineContent);
-					if (foundIndexAnywhere !== -1) {
-						targetLineIndex = foundIndexAnywhere;
-					}
-					// If not found at all, use original index (clamped to valid range)
-					else {
-						targetLineIndex = Math.min(
-							topLineIndex,
-							newLines.length - 1,
-						);
-					}
-				}
-			}
-
-			// 4) Scroll to found line or original index
-			editor.scrollIntoView(
-				{
-					from: { ch: 0, line: targetLineIndex },
-					to: { ch: 0, line: targetLineIndex },
-				},
-				true,
-			);
+			const { editor } = editorResult.value;
+			this.setContentWithPositionPreservation(editor, content);
 
 			return ok(content);
 		} catch (error) {
@@ -139,6 +86,129 @@ export class OpenedFileService {
 			pwd.basename === splitPath.basename;
 
 		return ok(isActive);
+	}
+
+	private getEditor(): Result<
+		{ editor: Editor; view: MarkdownView },
+		string
+	> {
+		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+		if (!view?.file) {
+			return err(errorGetEditor());
+		}
+
+		if (view.getMode() !== "source") {
+			return err(errorGetEditor(errorNotInSourceMode()));
+		}
+
+		return ok({ editor: view.editor, view });
+	}
+
+	private setContentWithPositionPreservation(
+		editor: Editor,
+		newContent: string,
+	): void {
+		// Save cursor position
+		const cursor = editor.getCursor();
+		// biome-ignore lint/suspicious/noExplicitAny: CodeMirror API not fully typed
+		const cm = (editor as any).cm as {
+			scrollDOM: { scrollTop: number };
+			lineAtHeight: (height: number) => number;
+		};
+
+		// Get top visible line index and content
+		const scrollTop = cm.scrollDOM.scrollTop;
+		const topLineIndex = Math.floor(cm.lineAtHeight(scrollTop));
+		const topLineContent = editor.getLine(topLineIndex) ?? "";
+
+		editor.setValue(newContent);
+
+		const newLines = newContent.split("\n");
+		let targetLineIndex = topLineIndex;
+
+		// Search for the line content, starting from original index
+		const foundIndex = newLines.findIndex(
+			(line, idx) => idx >= topLineIndex && line === topLineContent,
+		);
+		if (foundIndex !== -1) {
+			targetLineIndex = foundIndex;
+		} else {
+			// If not found from original index, search backwards
+			const foundIndexBackward = newLines
+				.slice(0, topLineIndex)
+				.map((line, idx) => ({ idx, line }))
+				.reverse()
+				.find(({ line }) => line === topLineContent)?.idx;
+			if (foundIndexBackward !== undefined) {
+				targetLineIndex = foundIndexBackward;
+			} else {
+				const foundIndexAnywhere = newLines.indexOf(topLineContent);
+				if (foundIndexAnywhere !== -1) {
+					targetLineIndex = foundIndexAnywhere;
+				} else {
+					// If not found at all, use original index (clamped to valid range)
+					targetLineIndex = Math.min(
+						topLineIndex,
+						newLines.length - 1,
+					);
+				}
+			}
+		}
+
+		// Restore cursor: use found line if cursor line doesn't exist
+		const lineCount = newLines.length;
+		if (cursor.line < lineCount) {
+			editor.setCursor(cursor);
+		} else {
+			// Cursor line doesn't exist, use target line from scroll preservation
+			editor.setCursor({ ch: 0, line: targetLineIndex });
+		}
+
+		// Scroll to target line
+		editor.scrollIntoView(
+			{
+				from: { ch: 0, line: targetLineIndex },
+				to: { ch: 0, line: targetLineIndex },
+			},
+			true,
+		);
+	}
+
+	async processContent({
+		splitPath,
+		transform,
+	}: {
+		splitPath: SplitPathToMdFile;
+		transform: Transform;
+	}): Promise<Result<string, string>> {
+		const fileIsActive = await this.isFileActive(splitPath);
+		if (fileIsActive.isErr()) {
+			return err(fileIsActive.error);
+		}
+
+		if (!fileIsActive.value) {
+			return err("File is not active");
+		}
+
+		const editorResult = this.getEditor();
+		if (editorResult.isErr()) {
+			return err(editorResult.error);
+		}
+
+		const { editor } = editorResult.value;
+
+		try {
+			const before = editor.getValue();
+			const after = await transform(before);
+
+			if (after !== before) {
+				this.setContentWithPositionPreservation(editor, after);
+			}
+
+			return ok(after);
+		} catch (error) {
+			return err(error instanceof Error ? error.message : String(error));
+		}
 	}
 
 	public async cd(file: TFile): Promise<Result<TFile, string>>;

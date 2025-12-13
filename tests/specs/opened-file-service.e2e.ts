@@ -3,6 +3,7 @@ import { browser } from "@wdio/globals";
 import { obsidianPage } from "wdio-obsidian-service";
 import { testGetContentErrorCases, testGetContentHappyPath } from "./opened-file-service/get-content.test";
 import { testGetOpenedTFileErrorCases, testGetOpenedTFileHappyPath } from "./opened-file-service/get-opened-tfile.test";
+import { testIsFileActiveErrorCases, testIsFileActiveHappyPath } from "./opened-file-service/is-file-active.test";
 import { testPwdErrorCases, testPwdHappyPath } from "./opened-file-service/pwd.test";
 import { VAULT_PATH } from "./opened-file-service/utils";
 
@@ -29,5 +30,10 @@ describe("OpenedFileService", () => {
 	describe("getContent()", () => {
 		it("should return file content (happy path)", testGetContentHappyPath);
 		it("should return error when no file is open", testGetContentErrorCases);
+	});
+
+	describe("isFileActive()", () => {
+		it("should check if file is active (happy path)", testIsFileActiveHappyPath);
+		it("should return error when no file is open", testIsFileActiveErrorCases);
 	});
 });

@@ -2,7 +2,12 @@ import { err, ok, type Result } from "neverthrow";
 import { type App, MarkdownView, type TFile, type TFolder } from "obsidian";
 import { getSplitPathForAbstractFile } from "../../helpers/pathfinder";
 import type { SplitPathToMdFile } from "../../types/split-path";
-import { errorGetEditor, errorNoActiveView, errorNoFileParent } from "./common";
+import {
+	errorGetEditor,
+	errorNoActiveView,
+	errorNoFileParent,
+	errorNotInSourceMode,
+} from "./common";
 
 export class OpenedFileReader {
 	constructor(private app: App) {}
@@ -20,6 +25,10 @@ export class OpenedFileReader {
 			const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 			if (!view?.file) {
 				return err(errorGetEditor());
+			}
+
+			if (view.getMode() !== "source") {
+				return err(errorGetEditor(errorNotInSourceMode()));
 			}
 
 			const content = view.editor.getValue();

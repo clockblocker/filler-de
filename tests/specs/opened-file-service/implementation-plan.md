@@ -64,12 +64,11 @@ tests/specs/opened-file-service/
 - **Effort**: Medium - Requires controlling file state
 
 #### `isFileActive()` - Happy Path & Errors
-- **File**: `is-file-active.test.ts`
-- **Scenarios**:
-  - File is active → returns `Result<true, string>`
-  - Different file is active → returns `Result<false, string>`
-  - No file open → returns `Result.isErr()`
-  - File path matches but different case → verify behavior (case-sensitive?)
+- [x] **File**: `is-file-active.test.ts`
+- [x] File is active → returns `Result<true, string>`
+- [x] Different file is active → returns `Result<false, string>`
+- [x] No file open → returns `Result.isErr()`
+- [x] File path matches but different case → verify behavior (case-sensitive?)
 - **Effort**: Medium - Requires opening files and checking state
 
 ### Level 3: Hard Tests (Complex Scenarios)
