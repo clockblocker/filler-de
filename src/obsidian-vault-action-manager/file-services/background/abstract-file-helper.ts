@@ -44,7 +44,7 @@ export class LegacyAbstractFileHelper {
 	}
 
 	async moveFiles(fromTos: readonly FileFromTo[]): Promise<void> {
-		await this.tfileHelper.moveFiles(fromTos);
+		await this.tfileHelper.renameFiles(fromTos);
 	}
 
 	async trashFiles(files: readonly FullPathToMdFile[]): Promise<void> {

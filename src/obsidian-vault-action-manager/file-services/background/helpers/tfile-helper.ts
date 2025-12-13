@@ -68,11 +68,12 @@ export class TFileHelper {
 		}
 	}
 
-	async moveFiles<SPF extends SplitPathToMdFile | SplitPathToFile>(
+	async renameFiles<SPF extends SplitPathToMdFile | SplitPathToFile>(
 		fromTos: readonly SplitPathFromTo<SPF>[],
+		collisionStrategy?: CollisionStrategy,
 	): Promise<void> {
 		for (const fromTo of fromTos) {
-			await this.moveFile(fromTo);
+			await this.renameFile({ ...fromTo, collisionStrategy });
 		}
 	}
 
@@ -87,7 +88,7 @@ export class TFileHelper {
 		await this.fileManager.trashFile(file);
 	}
 
-	private async moveFile<SPF extends SplitPathToMdFile | SplitPathToFile>({
+	private async renameFile<SPF extends SplitPathToMdFile | SplitPathToFile>({
 		from,
 		to,
 		collisionStrategy = "rename",

@@ -1,32 +1,51 @@
 import { TFile, TFolder, type Vault } from "obsidian";
 import { pathToFolderFromPathParts } from "../../../helpers/pathfinder";
-import {
-	type SplitPathToFile,
-	type SplitPathToMdFile,
-	SplitPathType,
+import type {
+	SplitPath,
+	SplitPathToFile,
+	SplitPathToFolder,
+	SplitPathToMdFile,
 } from "../../../types/split-path";
+import { SplitPathType } from "../../../types/split-path";
 
-export async function getExistingBasenamesInFolder<
-	SPF extends SplitPathToMdFile | SplitPathToFile,
->(target: SPF, vault: Vault): Promise<Set<string>> {
+export async function getExistingBasenamesInFolder<SPF extends SplitPath>(
+	target: SPF,
+	vault: Vault,
+): Promise<Set<string>> {
 	const folderPath = pathToFolderFromPathParts(target.pathParts);
 	const targetFolder = vault.getAbstractFileByPath(folderPath);
 
 	const existingBasenames = new Set<string>();
-	const targetExtension =
-		target.type === SplitPathType.MdFile
-			? "md"
-			: target.type === SplitPathType.File
-				? target.extension
-				: undefined;
 
-	if (targetFolder && targetFolder instanceof TFolder && targetExtension) {
+	if (!targetFolder || !(targetFolder instanceof TFolder)) {
+		return existingBasenames;
+	}
+
+	if (target.type === SplitPathType.Folder) {
+		// For folders, collect all folder basenames
 		for (const child of targetFolder.children) {
-			if (
-				child instanceof TFile &&
-				child.extension.toLowerCase() === targetExtension.toLowerCase()
-			) {
-				existingBasenames.add(child.basename);
+			if (child instanceof TFolder) {
+				existingBasenames.add(child.name);
+			}
+		}
+	} else {
+		// For files, collect basenames matching the extension
+		const targetExtension =
+			target.type === SplitPathType.MdFile
+				? "md"
+				: target.type === SplitPathType.File
+					? target.extension
+					: undefined;
+
+		if (targetExtension) {
+			for (const child of targetFolder.children) {
+				if (
+					child instanceof TFile &&
+					child.extension.toLowerCase() ===
+						targetExtension.toLowerCase()
+				) {
+					existingBasenames.add(child.basename);
+				}
 			}
 		}
 	}
