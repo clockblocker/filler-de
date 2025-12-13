@@ -96,41 +96,6 @@ export const testCreateFolderAdvanced = async () => {
 		const specialCharsSplitPath = splitPath("folder-with-special-chars-!@#$%");
 		const specialCharsResult = await tfolderHelper.createFolder(specialCharsSplitPath) as unknown as Result<{ name: string; path: string }>;
 
-		if (specialCharsResult.isErr()) {
-			// Some special chars might be invalid, that's ok
-			const specialChars1 = {
-				error: specialCharsResult.error,
-				isErr: true,
-			};
-
-			// Try with more common special chars
-			const commonSpecialSplitPath = splitPath("folder-with-dashes_and_underscores");
-			const commonSpecialResult = await tfolderHelper.createFolder(commonSpecialSplitPath) as unknown as Result<{ name: string; path: string }>;
-
-			return {
-				idempotent1,
-				idempotent2,
-				nested1,
-				nested2,
-				specialChars1,
-				specialChars2: {
-					createOk: commonSpecialResult.isOk(),
-					folderName: commonSpecialResult.value?.name,
-					folderPath: commonSpecialResult.value?.path,
-				},
-			};
-		}
-
-		const specialChars1 = {
-			createOk: specialCharsResult.isOk(),
-			folderName: specialCharsResult.value?.name,
-			folderPath: specialCharsResult.value?.path,
-		};
-
-		// Try with spaces (common special case)
-		const spacesSplitPath = splitPath("folder with spaces");
-		const spacesResult = await tfolderHelper.createFolder(spacesSplitPath) as unknown as Result<{ name: string; path: string }>;
-
 		// Race Conditions: Multiple concurrent creates → one succeeds, others get existing
 		const raceFolderSplitPath = splitPath("race-folder");
 		
@@ -163,6 +128,43 @@ export const testCreateFolderAdvanced = async () => {
 			isOk: createAfterExternal.isOk(),
 			path: createAfterExternal.value?.path,
 		};
+
+		if (specialCharsResult.isErr()) {
+			// Some special chars might be invalid, that's ok
+			const specialChars1 = {
+				error: specialCharsResult.error,
+				isErr: true,
+			};
+
+			// Try with more common special chars
+			const commonSpecialSplitPath = splitPath("folder-with-dashes_and_underscores");
+			const commonSpecialResult = await tfolderHelper.createFolder(commonSpecialSplitPath) as unknown as Result<{ name: string; path: string }>;
+
+			return {
+				idempotent1,
+				idempotent2,
+				nested1,
+				nested2,
+				raceConcurrent,
+				raceExternal,
+				specialChars1,
+				specialChars2: {
+					createOk: commonSpecialResult.isOk(),
+					folderName: commonSpecialResult.value?.name,
+					folderPath: commonSpecialResult.value?.path,
+				},
+			};
+		}
+
+		const specialChars1 = {
+			createOk: specialCharsResult.isOk(),
+			folderName: specialCharsResult.value?.name,
+			folderPath: specialCharsResult.value?.path,
+		};
+
+		// Try with spaces (common special case)
+		const spacesSplitPath = splitPath("folder with spaces");
+		const spacesResult = await tfolderHelper.createFolder(spacesSplitPath) as unknown as Result<{ name: string; path: string }>;
 
 		return {
 			idempotent1,
@@ -206,15 +208,18 @@ export const testCreateFolderAdvanced = async () => {
 
 	// Special Characters assertions
 	// At least one special char test should succeed
-	if (results.specialChars1.isErr) {
+	const isSpecialCharsError = "isErr" in results.specialChars1 && results.specialChars1.isErr;
+	if (isSpecialCharsError) {
 		// Some special chars are invalid, that's expected
 		expect(results.specialChars1.error).toBeDefined();
 		// But common special chars should work
 		expect(results.specialChars2.createOk).toBe(true);
 		expect(results.specialChars2.folderName).toBeDefined();
 	} else {
-		expect(results.specialChars1.createOk).toBe(true);
-		expect(results.specialChars1.folderName).toBeDefined();
+		// TypeScript now knows this is the success case
+		const specialChars1Success = results.specialChars1 as { createOk: boolean; folderName: string | undefined; folderPath: string | undefined; };
+		expect(specialChars1Success.createOk).toBe(true);
+		expect(specialChars1Success.folderName).toBeDefined();
 		expect(results.specialChars2.createOk).toBe(true);
 		expect(results.specialChars2.folderName).toBeDefined();
 	}
