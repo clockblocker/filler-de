@@ -11,6 +11,8 @@ import { testCreateFolderAdvanced } from "./t-abstract-file-helpers/create-folde
 import { testGetFileErrors } from "./t-abstract-file-helpers/get-file-errors.test";
 import { testGetFileHappyPath } from "./t-abstract-file-helpers/get-file-happy.test";
 import { testGetFolder } from "./t-abstract-file-helpers/get-folder.test";
+import { testRenameFile } from "./t-abstract-file-helpers/rename-file.test";
+import { testRenameFolder } from "./t-abstract-file-helpers/rename-folder.test";
 import { testTrashFile } from "./t-abstract-file-helpers/trash-file.test";
 import { testTrashFolder } from "./t-abstract-file-helpers/trash-folder.test";
 import { VAULT_PATH } from "./t-abstract-file-helpers/utils";
@@ -109,5 +111,13 @@ describe("TFileHelper and TFolderHelper", () => {
 
 	describe("trashFolder()", () => {
 		it("should trash folders (happy path, idempotency, errors, with contents)", testTrashFolder);
+	});
+
+	describe("renameFile()", () => {
+		it("should rename files (happy path, move, skip, idempotency, errors)", testRenameFile);
+	});
+
+	describe("renameFolder()", () => {
+		it("should rename folders (happy path, move, skip, idempotency, errors)", testRenameFolder);
 	});
 });

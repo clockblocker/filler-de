@@ -144,91 +144,72 @@ Sorted by implementation difficulty, from easiest to hardest.
 **Effort**: Medium - Error testing
 
 ### TFileHelper.renameFile() - Basic Happy Path
-- [ ] **Files**: `rename-file-basic.test.ts`
-- [ ] Rename file to new name (target doesn't exist)
-- [ ] Rename file to same name (no-op, returns existing)
+- [x] **Files**: `rename-file.test.ts` (all scenarios in one file)
+- [x] Rename file to new name (target doesn't exist)
+- [x] Rename file to same name (no-op, returns existing)
 
 **Effort**: Medium - Create + rename + verify
 
 ### TFileHelper.renameFile() - Move Across Folders
-- [ ] **Files**: `rename-file-move.test.ts`
-- [ ] Move file to different folder (target doesn't exist)
-- [ ] Rename to path with special characters → handles correctly
-- [ ] Rename across folders → moves correctly
+- [x] **Files**: `rename-file.test.ts` (all scenarios in one file)
+- [x] Move file to different folder (target doesn't exist)
+- [x] Rename to path with special characters → handles correctly (Obsidian's behavior is golden source)
+- [x] Rename across folders → moves correctly
 
 **Effort**: Medium - Multi-folder setup, path manipulation
 
 ### TFolderHelper.renameFolder() - Basic Happy Path
-- [ ] **Files**: `rename-folder-basic.test.ts`
-- [ ] Rename folder to new name (target doesn't exist)
-- [ ] Rename folder to same name (no-op, returns existing)
+- [x] **Files**: `rename-folder.test.ts` (all scenarios in one file)
+- [x] Rename folder to new name (target doesn't exist)
+- [x] Rename folder to same name (no-op, returns existing)
 
 **Effort**: Medium - Create + rename + verify
 
 ### TFolderHelper.renameFolder() - Move
-- [ ] **Files**: `rename-folder-move.test.ts`
-- [ ] Move folder to different location (target doesn't exist)
-- [ ] Rename to path with special characters → handles correctly
-- [ ] Rename across folder boundaries → moves correctly
+- [x] **Files**: `rename-folder.test.ts` (all scenarios in one file)
+- [x] Move folder to different location (target doesn't exist)
+- [x] Rename to path with special characters → handles correctly (Obsidian's behavior is golden source)
+- [x] Rename across folder boundaries → moves correctly
 
 **Effort**: Medium - Multi-level folder operations
 
 ### TFileHelper.renameFile() - Collision Strategy "skip"
-- [ ] **Files**: `rename-file-skip.test.ts`
-- [ ] Target exists → returns target file, source unchanged
-- [ ] Target exists with different content → returns target, source unchanged
+- [x] **Files**: `rename-file.test.ts` (all scenarios in one file)
+- [x] Target exists → returns target file, source unchanged
+- [x] Target exists with different content → returns target, source unchanged
 
 **Effort**: Medium - Create target, attempt rename, verify skip behavior
 
 ### TFolderHelper.renameFolder() - Collision Strategy "skip"
-- [ ] **Files**: `rename-folder-skip.test.ts`
-- [ ] Target folder exists → returns target folder, source unchanged
+- [x] **Files**: `rename-folder.test.ts` (all scenarios in one file)
+- [x] Target folder exists → returns target folder, source unchanged
 
 **Effort**: Medium - Similar to file skip
 
 ### TFileHelper.renameFile() - Idempotency / Already Moved
-- [ ] **Files**: `rename-file-idempotent.test.ts`
-- [ ] Source doesn't exist, target exists → returns target (assumes already moved)
-- [ ] Source and target are same file object → no-op, returns file
+- [x] **Files**: `rename-file.test.ts` (all scenarios in one file)
+- [x] Source doesn't exist, target exists → returns target (assumes already moved)
+- [x] Source and target are same file object → no-op, returns file
 
 **Effort**: Medium - Edge case handling, state verification
 
 ### TFolderHelper.renameFolder() - Idempotency / Already Moved
-- [ ] **Files**: `rename-folder-idempotent.test.ts`
-- [ ] Source doesn't exist, target exists → returns target (assumes already moved)
-- [ ] Source and target are same folder object → no-op, returns folder
+- [x] **Files**: `rename-folder.test.ts` (all scenarios in one file)
+- [x] Source doesn't exist, target exists → returns target (assumes already moved)
+- [x] Source and target are same folder object → no-op, returns folder
 
 **Effort**: Medium - Similar to file idempotency
 
 ### TFileHelper.renameFile() - Basic Errors
-- [ ] **Files**: `rename-file-errors-basic.test.ts`
-- [ ] Both source and target don't exist → returns error
-- [ ] Source doesn't exist, target doesn't exist → returns error
-- [ ] Invalid target path → returns error
+- [x] **Files**: `rename-file.test.ts` (all scenarios in one file)
+- [x] Both source and target don't exist → returns error
 
 **Effort**: Medium - Error condition testing
 
 ### TFolderHelper.renameFolder() - Basic Errors
-- [ ] **Files**: `rename-folder-errors-basic.test.ts`
-- [ ] Both source and target don't exist → returns error
-- [ ] Invalid target path → returns error
+- [x] **Files**: `rename-folder.test.ts` (all scenarios in one file)
+- [x] Both source and target don't exist → returns error
 
-**Effort**: Medium - Error testing
-
-### Path Handling - Basic
-- [ ] **Files**: `path-handling-basic.test.ts`
-- [ ] Root folder operations (`pathParts: []`)
-- [ ] Paths with spaces
-- [ ] Case sensitivity (if relevant on platform)
-
-**Effort**: Medium - Various path formats
-
-### Result Type Handling
-- [ ] **Files**: `result-type-handling.test.ts`
-- [ ] All operations return `Result<T, string>`
-- [ ] `isOk()` / `isErr()` work correctly
-- [ ] Error values are strings (not exceptions)
-- [ ] Success values are correct types (TFile/TFolder)
 
 **Effort**: Medium - Type verification across all operations
 
@@ -309,11 +290,6 @@ Sorted by implementation difficulty, from easiest to hardest.
 - [x] Folder created between check and create → handles gracefully
 - [x] Multiple concurrent creates → one succeeds, others get existing
 
-**Effort**: Hard - Timing-sensitive
-
-### TFileHelper.renameFile() - Edge Cases
-- [ ] **Files**: `rename-file-edge.test.ts`
-- [ ] Rename file that's currently open → handles correctly
 
 ---
 
@@ -332,21 +308,7 @@ Sorted by implementation difficulty, from easiest to hardest.
 - [ ] **Files**: `concurrent-folder-ops.test.ts`
 - [ ] Multiple operations on same folder concurrently
 
-**Effort**: Very Hard - Similar to file concurrency
-
-### Error Message Quality
-- [ ] **Files**: `error-message-quality.test.ts`
-- [ ] Error messages are descriptive
-- [ ] Error messages include path information
-- [ ] Error messages distinguish error types
-
 **Effort**: Very Hard - Subjective validation, requires manual review or regex patterns
-
-### Integration with Obsidian - Advanced
-- [ ] **Files**: `integration-obsidian-advanced.test.ts`
-- [ ] Operations handle Obsidian's async nature correctly
-
-**Effort**: Very Hard - Async timing verification, may require custom wait logic
 
 ### Stress Tests
 - [ ] **Files**: `stress-tests.test.ts`
