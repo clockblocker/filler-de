@@ -2,6 +2,7 @@
 import { browser } from "@wdio/globals";
 import { obsidianPage } from "wdio-obsidian-service";
 import { testCreateFile } from "./t-abstract-file-helpers/create-file.test";
+import { testCreateMdFileErrors } from "./t-abstract-file-helpers/create-file-errors.test";
 import { testCreateMdFileHappyPath } from "./t-abstract-file-helpers/create-file-happy.test";
 import { testCreateMdFileIdempotent } from "./t-abstract-file-helpers/create-file-idempotent.test";
 import { testCreateFolder } from "./t-abstract-file-helpers/create-folder.test";
@@ -71,6 +72,10 @@ describe("TFileHelper and TFolderHelper", () => {
 
 	describe("createMdFile() - Idempotency", () => {
 		it("should be idempotent (already exists, multiple times)", testCreateMdFileIdempotent);
+	});
+
+	describe("createMdFile() - Error Cases", () => {
+		it("should return errors (parent not exists, invalid path)", testCreateMdFileErrors);
 	});
 
 	describe("getFile() - Happy Path", () => {
