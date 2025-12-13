@@ -18,10 +18,12 @@ export type HelpersTestingApi = {
 	tfileHelper: {
 		getFile: (p: unknown) => Promise<unknown>;
 		createMdFile: (p: unknown) => Promise<unknown>;
+		trashFile: (p: unknown) => Promise<unknown>;
 	};
 	tfolderHelper: {
 		getFolder: (p: unknown) => Promise<unknown>;
 		createFolder: (p: unknown) => Promise<unknown>;
+		trashFolder: (p: unknown) => Promise<unknown>;
 	};
 	splitPath: (input: string) => unknown;
 };

@@ -5,9 +5,12 @@ import { testCreateFile } from "./t-abstract-file-helpers/create-file.test";
 import { testCreateMdFileErrors } from "./t-abstract-file-helpers/create-file-errors.test";
 import { testCreateMdFileHappyPath } from "./t-abstract-file-helpers/create-file-happy.test";
 import { testCreateMdFileIdempotent } from "./t-abstract-file-helpers/create-file-idempotent.test";
+import { testCreateMdFileRaceConditions } from "./t-abstract-file-helpers/create-file-race.test";
 import { testCreateFolder } from "./t-abstract-file-helpers/create-folder.test";
 import { testGetFileErrors } from "./t-abstract-file-helpers/get-file-errors.test";
 import { testGetFileHappyPath } from "./t-abstract-file-helpers/get-file-happy.test";
+import { testGetFolder } from "./t-abstract-file-helpers/get-folder.test";
+import { testTrashFile } from "./t-abstract-file-helpers/trash-file.test";
 import { VAULT_PATH } from "./t-abstract-file-helpers/utils";
 
 describe("TFileHelper and TFolderHelper", () => {
@@ -74,6 +77,10 @@ describe("TFileHelper and TFolderHelper", () => {
 		it("should be idempotent (already exists, multiple times)", testCreateMdFileIdempotent);
 	});
 
+	describe("createMdFile() - Race Conditions", () => {
+		it("should handle race conditions (concurrent creates, external creation)", testCreateMdFileRaceConditions);
+	});
+
 	describe("createMdFile() - Error Cases", () => {
 		it("should return errors (parent not exists, invalid path)", testCreateMdFileErrors);
 	});
@@ -84,5 +91,13 @@ describe("TFileHelper and TFolderHelper", () => {
 
 	describe("getFile() - Error Cases", () => {
 		it("should return errors (not exists, points to folder, invalid path)", testGetFileErrors);
+	});
+
+	describe("getFolder()", () => {
+		it("should get folders (happy path, errors)", testGetFolder);
+	});
+
+	describe("trashFile()", () => {
+		it("should trash files (happy path, idempotency, errors)", testTrashFile);
 	});
 });
