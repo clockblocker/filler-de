@@ -131,11 +131,46 @@ export const testCreateFolderAdvanced = async () => {
 		const spacesSplitPath = splitPath("folder with spaces");
 		const spacesResult = await tfolderHelper.createFolder(spacesSplitPath) as unknown as Result<{ name: string; path: string }>;
 
+		// Race Conditions: Multiple concurrent creates → one succeeds, others get existing
+		const raceFolderSplitPath = splitPath("race-folder");
+		
+		// Create folder 3 times concurrently
+		const [raceCreate1, raceCreate2, raceCreate3] = await Promise.all([
+			tfolderHelper.createFolder(raceFolderSplitPath) as unknown as Promise<Result<{ name: string; path: string }>>,
+			tfolderHelper.createFolder(raceFolderSplitPath) as unknown as Promise<Result<{ name: string; path: string }>>,
+			tfolderHelper.createFolder(raceFolderSplitPath) as unknown as Promise<Result<{ name: string; path: string }>>,
+		]);
+
+		const raceConcurrent = {
+			allOk: raceCreate1.isOk() && raceCreate2.isOk() && raceCreate3.isOk(),
+			allSamePath: raceCreate1.value?.path === raceCreate2.value?.path && raceCreate2.value?.path === raceCreate3.value?.path,
+			path1: raceCreate1.value?.path,
+			path2: raceCreate2.value?.path,
+			path3: raceCreate3.value?.path,
+		};
+
+		// Race Conditions: Folder created between check and create → handles gracefully
+		// Simulate by creating folder externally, then trying to create again
+		const externalFolderSplitPath = splitPath("external-race-folder");
+		
+		// Create folder using Obsidian API directly (external creation)
+		await app.vault.createFolder("external-race-folder");
+		
+		// Now try to create via helper (should return existing)
+		const createAfterExternal = await tfolderHelper.createFolder(externalFolderSplitPath) as unknown as Result<{ name: string; path: string }>;
+
+		const raceExternal = {
+			isOk: createAfterExternal.isOk(),
+			path: createAfterExternal.value?.path,
+		};
+
 		return {
 			idempotent1,
 			idempotent2,
 			nested1,
 			nested2,
+			raceConcurrent,
+			raceExternal,
 			specialChars1,
 			specialChars2: {
 				createOk: spacesResult.isOk(),
@@ -183,4 +218,14 @@ export const testCreateFolderAdvanced = async () => {
 		expect(results.specialChars2.createOk).toBe(true);
 		expect(results.specialChars2.folderName).toBeDefined();
 	}
+
+	// Race Conditions assertions
+	// Verify concurrent creates all succeed and return same folder
+	expect(results.raceConcurrent.allOk).toBe(true);
+	expect(results.raceConcurrent.allSamePath).toBe(true);
+	expect(results.raceConcurrent.path1).toBe("race-folder");
+
+	// Verify external creation is handled gracefully
+	expect(results.raceExternal.isOk).toBe(true);
+	expect(results.raceExternal.path).toBe("external-race-folder");
 };

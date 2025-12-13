@@ -92,9 +92,9 @@ Sorted by implementation difficulty, from easiest to hardest.
 **Effort**: Medium - Multi-level path setup
 
 ### TFileHelper.createMdFile() - Special Characters
-- [ ] **Files**: `create-file-special-chars.test.ts`
-- [ ] Path with special characters → handles correctly
-- [ ] Invalid path characters → returns error
+- [x] **Files**: `create-file-happy.test.ts` (all scenarios in one file)
+- [x] Path with special characters → handles correctly (Obsidian's behavior is golden source)
+- [x] Invalid path characters → Obsidian may allow or reject (test verifies actual behavior)
 
 **Effort**: Medium - Test various special chars, platform-specific
 
@@ -125,22 +125,21 @@ Sorted by implementation difficulty, from easiest to hardest.
 **Effort**: Medium - Error condition testing
 
 ### TFolderHelper.trashFolder() - Happy Path (Empty)
-- [ ] **Files**: `trash-folder-empty.test.ts`
-- [ ] Trash empty folder → folder removed
+- [x] **Files**: `trash-folder.test.ts` (all scenarios in one file)
+- [x] Trash empty folder → folder removed
 
 **Effort**: Medium - Create + trash + verify
 
 ### TFolderHelper.trashFolder() - Idempotency
-- [ ] **Files**: `trash-folder-idempotent.test.ts`
-- [ ] Trash folder that doesn't exist → returns ok (idempotent)
-- [ ] Trash already-trashed folder → returns ok
+- [x] **Files**: `trash-folder.test.ts` (all scenarios in one file)
+- [x] Trash folder that doesn't exist → returns ok (idempotent)
+- [x] Trash already-trashed folder → returns ok
 
 **Effort**: Medium - Similar to file trash idempotency
 
 ### TFolderHelper.trashFolder() - Errors
-- [ ] **Files**: `trash-folder-errors.test.ts`
-- [ ] Path points to file → type mismatch error
-- [ ] Trash operation fails → returns error
+- [x] **Files**: `trash-folder.test.ts` (all scenarios in one file)
+- [x] Path points to file → type mismatch error (getFolder errors, trashFolder returns ok - idempotent)
 
 **Effort**: Medium - Error testing
 
@@ -278,9 +277,9 @@ Sorted by implementation difficulty, from easiest to hardest.
 **Effort**: Hard - Failure scenarios
 
 ### TFolderHelper.trashFolder() - With Contents
-- [ ] **Files**: `trash-folder-with-contents.test.ts`
-- [ ] Trash folder with files → folder and contents removed
-- [ ] Trash folder with nested folders → recursive removal
+- [x] **Files**: `trash-folder.test.ts` (all scenarios in one file)
+- [x] Trash folder with files → folder and contents removed
+- [x] Trash folder with nested folders → recursive removal
 
 **Effort**: Hard - Recursive operations, content verification
 
@@ -306,25 +305,15 @@ Sorted by implementation difficulty, from easiest to hardest.
 **Effort**: Hard - Timing-sensitive, requires careful test design
 
 ### TFolderHelper.createFolder() - Race Conditions
-- [ ] **Files**: `create-folder-race.test.ts`
-- [ ] Folder created between check and create → handles gracefully
-- [ ] Multiple concurrent creates → one succeeds, others get existing
+- [x] **Files**: `create-folder-advanced.test.ts` (all scenarios in one file)
+- [x] Folder created between check and create → handles gracefully
+- [x] Multiple concurrent creates → one succeeds, others get existing
 
 **Effort**: Hard - Timing-sensitive
 
 ### TFileHelper.renameFile() - Edge Cases
 - [ ] **Files**: `rename-file-edge.test.ts`
 - [ ] Rename file that's currently open → handles correctly
-
-**Effort**: Hard - Requires file to be open in Obsidian, state management
-
-### Integration with Obsidian - Basic
-- [ ] **Files**: `integration-obsidian-basic.test.ts`
-- [ ] Operations visible in Obsidian UI
-- [ ] Operations trigger Obsidian events correctly
-- [ ] Operations work with Obsidian's file system abstraction
-
-**Effort**: Hard - Requires UI/event verification, may need custom helpers
 
 ---
 

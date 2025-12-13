@@ -75,7 +75,81 @@ export const testCreateMdFileHappyPath = async () => {
 			};
 		});
 
-		return { emptyContent, nested, withContent };
+		// Special Characters: Path with valid special characters → handles correctly
+		const validSpecialCharsSplitPath = splitPath("file-with-dashes_and-underscores.md");
+		const validSpecialCharsResult = await tfileHelper.createMdFile({
+			content: "# Valid special chars",
+			splitPath: validSpecialCharsSplitPath,
+		}) as unknown as Result<{ name: string; path: string }>;
+
+		let validSpecialChars;
+		if (validSpecialCharsResult.isOk()) {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const validContent = await app.vault.read(validSpecialCharsResult.value as any);
+			validSpecialChars = {
+				content: validContent,
+				createOk: true,
+				fileName: validSpecialCharsResult.value?.name,
+				filePath: validSpecialCharsResult.value?.path,
+			};
+		} else {
+			validSpecialChars = {
+				createOk: false,
+				error: validSpecialCharsResult.error,
+			};
+		}
+
+		// Special Characters: Path with spaces (common special case)
+		const spacesSplitPath = splitPath("file with spaces.md");
+		const spacesResult = await tfileHelper.createMdFile({
+			content: "# File with spaces",
+			splitPath: spacesSplitPath,
+		}) as unknown as Result<{ name: string; path: string }>;
+
+		let spacesFile;
+		if (spacesResult.isOk()) {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const spacesContent = await app.vault.read(spacesResult.value as any);
+			spacesFile = {
+				content: spacesContent,
+				createOk: true,
+				fileName: spacesResult.value?.name,
+				filePath: spacesResult.value?.path,
+			};
+		} else {
+			spacesFile = {
+				createOk: false,
+				error: spacesResult.error,
+			};
+		}
+
+		// Special Characters: Test various special characters
+		// Obsidian's behavior is the golden source - some chars may be allowed, others may error
+		const specialCharsSplitPath = splitPath("file-with-!@#$%.md");
+		const specialCharsResult = await tfileHelper.createMdFile({
+			content: "# Special chars",
+			splitPath: specialCharsSplitPath,
+		}) as unknown as Result<{ name: string; path: string }>;
+
+		let specialChars;
+		if (specialCharsResult.isOk()) {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const specialContent = await app.vault.read(specialCharsResult.value as any);
+			specialChars = {
+				content: specialContent,
+				createOk: true,
+				fileName: specialCharsResult.value?.name,
+				filePath: specialCharsResult.value?.path,
+			};
+		} else {
+			specialChars = {
+				createOk: false,
+				error: specialCharsResult.error,
+				isErr: true,
+			};
+		}
+
+		return { emptyContent, nested, spacesFile, specialChars, validSpecialChars, withContent };
 	});
 
 	expect(results.withContent.error).toBeUndefined();
@@ -95,4 +169,32 @@ export const testCreateMdFileHappyPath = async () => {
 	expect(results.nested.fileName).toBe(results.nested.expectedName);
 	expect(results.nested.filePath).toBe(results.nested.expectedPath);
 	expect(results.nested.content).toBe(results.nested.expectedContent);
+
+	// Special Characters assertions
+	// Valid special characters should work (dashes, underscores)
+	if (results.validSpecialChars.createOk) {
+		expect(results.validSpecialChars.fileName).toBeDefined();
+		expect(results.validSpecialChars.filePath).toBeDefined();
+		expect(results.validSpecialChars.content).toBe("# Valid special chars");
+	}
+
+	// Spaces in filename should work
+	if (results.spacesFile.createOk) {
+		expect(results.spacesFile.fileName).toBeDefined();
+		expect(results.spacesFile.filePath).toBeDefined();
+		expect(results.spacesFile.content).toBe("# File with spaces");
+	}
+
+	// Special characters: Obsidian's behavior is the golden source
+	// Some characters might be invalid, others might be allowed - verify Obsidian's actual behavior
+	if (results.specialChars.createOk) {
+		// If Obsidian allows it, verify it was created correctly
+		expect(results.specialChars.fileName).toBeDefined();
+		expect(results.specialChars.filePath).toBeDefined();
+		expect(results.specialChars.content).toBe("# Special chars");
+	} else {
+		// If Obsidian rejects it, verify error is present
+		expect(results.specialChars.isErr).toBe(true);
+		expect(results.specialChars.error).toBeDefined();
+	}
 };

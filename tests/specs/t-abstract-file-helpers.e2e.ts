@@ -12,6 +12,7 @@ import { testGetFileErrors } from "./t-abstract-file-helpers/get-file-errors.tes
 import { testGetFileHappyPath } from "./t-abstract-file-helpers/get-file-happy.test";
 import { testGetFolder } from "./t-abstract-file-helpers/get-folder.test";
 import { testTrashFile } from "./t-abstract-file-helpers/trash-file.test";
+import { testTrashFolder } from "./t-abstract-file-helpers/trash-folder.test";
 import { VAULT_PATH } from "./t-abstract-file-helpers/utils";
 
 describe("TFileHelper and TFolderHelper", () => {
@@ -104,5 +105,9 @@ describe("TFileHelper and TFolderHelper", () => {
 
 	describe("trashFile()", () => {
 		it("should trash files (happy path, idempotency, errors)", testTrashFile);
+	});
+
+	describe("trashFolder()", () => {
+		it("should trash folders (happy path, idempotency, errors, with contents)", testTrashFolder);
 	});
 });

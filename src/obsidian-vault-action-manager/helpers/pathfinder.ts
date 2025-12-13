@@ -126,9 +126,11 @@ export function splitPathFromSystemPath(systemPath: string): SplitPath {
 }
 
 export function safeFileName(s: string): string {
-	// Replace invalid filename characters with spaces
-	// Invalid chars: \ / | : * ? " < > [ ] #
-	return s.replace(/[\\/|:*?"<>[\]#]/g, " ").trim();
+	// Replace truly invalid filename characters with spaces
+	// Path separators must be sanitized: \ /
+	// Other characters are preserved - Obsidian's behavior is the golden source
+	// Obsidian accepts: ! @ # $ % and many other special chars
+	return s.replace(/[\\/]/g, " ").trim();
 }
 
 export function pathToFolderFromPathParts(pathParts: string[]): string {

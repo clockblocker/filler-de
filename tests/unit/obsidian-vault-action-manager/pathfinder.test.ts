@@ -188,6 +188,29 @@ describe("systemPathToSplitPath codec", () => {
 			expect(result).toBe("root/file name.md");
 		});
 
+		it("preserves special characters that Obsidian allows", () => {
+			const splitPath = {
+				basename: "file-with-!@#$%",
+				extension: "md",
+				pathParts: ["root"],
+				type: SplitPathType.MdFile,
+			};
+			const result = systemPathToSplitPath.encode(splitPath);
+			// Obsidian accepts these characters - they should be preserved
+			expect(result).toBe("root/file-with-!@#$%.md");
+		});
+
+		it("preserves spaces in basename", () => {
+			const splitPath = {
+				basename: "file with spaces",
+				extension: "md",
+				pathParts: ["root"],
+				type: SplitPathType.MdFile,
+			};
+			const result = systemPathToSplitPath.encode(splitPath);
+			expect(result).toBe("root/file with spaces.md");
+		});
+
 		it("trims basename whitespace", () => {
 			const splitPath = {
 				basename: "  file  ",
@@ -314,16 +337,29 @@ describe("systemPathToSplitPath codec", () => {
 			expect(decoded).toEqual(splitPath);
 		});
 
-		it("handles special characters in basename (sanitized)", () => {
+		it("sanitizes path separators in basename", () => {
 			const splitPath = {
-				basename: "file/name\\with|chars",
+				basename: "file/name\\with-separators",
 				extension: "md",
 				pathParts: ["root"],
 				type: SplitPathType.MdFile,
 			};
 			const encoded = systemPathToSplitPath.encode(splitPath);
-			// Slashes/backslashes are sanitized to spaces
-			expect(encoded).toBe("root/file name with chars.md");
+			// Only path separators (/ and \) are sanitized to spaces
+			// Other special chars are preserved (Obsidian's behavior is golden source)
+			expect(encoded).toBe("root/file name with-separators.md");
+		});
+
+		it("preserves Obsidian-allowed special characters", () => {
+			const splitPath = {
+				basename: "file!@#$%with-special",
+				extension: "md",
+				pathParts: ["root"],
+				type: SplitPathType.MdFile,
+			};
+			const encoded = systemPathToSplitPath.encode(splitPath);
+			// Obsidian accepts these characters - they should be preserved
+			expect(encoded).toBe("root/file!@#$%with-special.md");
 		});
 	});
 });
