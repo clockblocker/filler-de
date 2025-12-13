@@ -1,86 +1,153 @@
-import { type App, TFile } from "obsidian";
-import { getMaybeEditor } from "../../../../obsidian-vault-action-manager/helpers/get-editor";
-import { logError } from "../../../../obsidian-vault-action-manager/helpers/issue-handlers";
-import type { PrettyPath } from "../../../../types/common-interface/dtos";
+import { err, ok, type Result } from "neverthrow";
+import { type App, MarkdownView, TFile } from "obsidian";
+import { splitPathKey } from "../../impl/split-path";
+import type {
+	SplitPathToFile,
+	SplitPathToMdFile,
+} from "../../types/split-path";
 import {
-	type Maybe,
-	unwrapMaybeByThrowing,
-} from "../../../../types/common-interface/maybe";
-import {
-	type FullPathToMdFile,
-	fullPathToMdFileFromPrettyPath,
-	systemPathFromFullPath,
-} from "../../atomic-services/pathfinder";
-import type { LegacyOpenedFileReader } from "./opened-file-reader";
+	errorGetEditor,
+	errorInvalidCdArgument,
+	errorNoTFileFound,
+	errorOpenFileFailed,
+} from "./common";
+import type { OpenedFileReader } from "./opened-file-reader";
 
-export class LegacyOpenedFileService {
-	private lastOpenedFiles: FullPathToMdFile[] = [];
-	private reader: LegacyOpenedFileReader;
+export class OpenedFileService {
+	private lastOpenedFiles: SplitPathToMdFile[] = [];
+	private reader: OpenedFileReader;
 
 	constructor(
 		private app: App,
-		reader: LegacyOpenedFileReader,
+		reader: OpenedFileReader,
 	) {
 		this.reader = reader;
 		this.init();
 	}
 
 	private async init() {
-		this.lastOpenedFiles.push(await this.reader.pwd());
+		const pwdResult = await this.reader.pwd();
+		if (pwdResult.isOk()) {
+			this.lastOpenedFiles.push(pwdResult.value);
+		}
 	}
 
-	async pwd() {
+	async pwd(): Promise<Result<SplitPathToMdFile, string>> {
 		return await this.reader.pwd();
 	}
 
-	getApp(): App {
-		return this.app;
+	async getOpenedTFile(): Promise<Result<TFile, string>> {
+		return await this.reader.getOpenedTFile();
 	}
 
-	async getMaybeOpenedTFile(): Promise<Maybe<TFile>> {
-		return await this.reader.getMaybeOpenedTFile();
-	}
-
-	async getMaybeContent(): Promise<Maybe<string>> {
-		return await this.reader.getMaybeContent();
-	}
-
-	async getContent(): Promise<string> {
+	async getContent(): Promise<Result<string, string>> {
 		return await this.reader.getContent();
-	}
-
-	// [TODO] Delete
-	async writeToOpenedFile(text: string): Promise<Maybe<string>> {
-		return { data: text, error: false };
 	}
 
 	async replaceAllContentInOpenedFile(
 		content: string,
-	): Promise<Maybe<string>> {
-		const editor = unwrapMaybeByThrowing(await getMaybeEditor(this.app));
-		editor.setValue(content);
+	): Promise<Result<string, string>> {
+		try {
+			const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+			if (!view?.file) {
+				return err(errorGetEditor());
+			}
 
-		return { data: content, error: false };
+			const editor = view.editor;
+			// biome-ignore lint/suspicious/noExplicitAny: CodeMirror API not fully typed
+			const cm = (editor as any).cm as {
+				scrollDOM: { scrollTop: number };
+				lineAtHeight: (height: number) => number;
+			};
+
+			// 1) Get top visible line index and content
+			const scrollTop = cm.scrollDOM.scrollTop;
+			const topLineIndex = Math.floor(cm.lineAtHeight(scrollTop));
+			const topLineContent = editor.getLine(topLineIndex) ?? "";
+
+			// 2) Apply write
+			editor.setValue(content);
+
+			// 3) Find the saved line content in new content
+			const newLines = content.split("\n");
+			let targetLineIndex = topLineIndex;
+
+			// Search for the line content, starting from original index
+			const foundIndex = newLines.findIndex(
+				(line, idx) => idx >= topLineIndex && line === topLineContent,
+			);
+			if (foundIndex !== -1) {
+				targetLineIndex = foundIndex;
+			} else {
+				// If not found from original index, search backwards
+				const foundIndexBackward = newLines
+					.slice(0, topLineIndex)
+					.map((line, idx) => ({ idx, line }))
+					.reverse()
+					.find(({ line }) => line === topLineContent)?.idx;
+				if (foundIndexBackward !== undefined) {
+					targetLineIndex = foundIndexBackward;
+				} else {
+					const foundIndexAnywhere = newLines.indexOf(topLineContent);
+					if (foundIndexAnywhere !== -1) {
+						targetLineIndex = foundIndexAnywhere;
+					}
+					// If not found at all, use original index (clamped to valid range)
+					else {
+						targetLineIndex = Math.min(
+							topLineIndex,
+							newLines.length - 1,
+						);
+					}
+				}
+			}
+
+			// 4) Scroll to found line or original index
+			editor.scrollIntoView(
+				{
+					from: { ch: 0, line: targetLineIndex },
+					to: { ch: 0, line: targetLineIndex },
+				},
+				true,
+			);
+
+			return ok(content);
+		} catch (error) {
+			return err(
+				errorGetEditor(
+					error instanceof Error ? error.message : String(error),
+				),
+			);
+		}
 	}
 
-	async isFileActive(prettyPath: PrettyPath): Promise<boolean> {
-		const pwd = await this.pwd();
+	async isFileActive(
+		splitPath: SplitPathToMdFile,
+	): Promise<Result<boolean, string>> {
+		const pwdResult = await this.pwd();
+		if (pwdResult.isErr()) {
+			return err(pwdResult.error);
+		}
+
+		const pwd = pwdResult.value;
 		// Check both pathParts and basename to ensure it's the same file
-		return (
-			pwd.pathParts.length === prettyPath.pathParts.length &&
+		const isActive =
+			pwd.pathParts.length === splitPath.pathParts.length &&
 			pwd.pathParts.every(
-				(part, index) => part === prettyPath.pathParts[index],
+				(part, index) => part === splitPath.pathParts[index],
 			) &&
-			pwd.basename === prettyPath.basename
-		);
+			pwd.basename === splitPath.basename;
+
+		return ok(isActive);
 	}
 
-	public async cd(file: TFile): Promise<Maybe<TFile>>;
-	public async cd(file: FullPathToMdFile): Promise<Maybe<TFile>>;
-	public async cd(file: PrettyPath): Promise<Maybe<TFile>>;
+	public async cd(file: TFile): Promise<Result<TFile, string>>;
 	public async cd(
-		file: TFile | FullPathToMdFile | PrettyPath,
-	): Promise<Maybe<TFile>> {
+		file: SplitPathToFile | SplitPathToMdFile,
+	): Promise<Result<TFile, string>>;
+	public async cd(
+		file: TFile | SplitPathToFile | SplitPathToMdFile,
+	): Promise<Result<TFile, string>> {
 		let tfile: TFile;
 		if (
 			typeof (file as TFile).path === "string" &&
@@ -88,35 +155,33 @@ export class LegacyOpenedFileService {
 		) {
 			tfile = file as TFile;
 		} else if (
-			typeof (file as FullPathToMdFile).basename === "string" &&
-			Array.isArray((file as FullPathToMdFile).pathParts)
+			typeof (file as SplitPathToFile | SplitPathToMdFile).basename ===
+				"string" &&
+			Array.isArray(
+				(file as SplitPathToFile | SplitPathToMdFile).pathParts,
+			)
 		) {
-			const full = fullPathToMdFileFromPrettyPath(file as PrettyPath);
-			const systemPath = systemPathFromFullPath(full);
+			const splitPath = file as SplitPathToFile | SplitPathToMdFile;
+			const systemPath = splitPathKey(splitPath);
 
 			const tfileMaybe = this.app.vault.getAbstractFileByPath(systemPath);
 			if (!tfileMaybe || !(tfileMaybe instanceof TFile)) {
-				const description = `No TFile found for path: ${systemPath}`;
-				logError({ description, location: "OpenedFileService" });
-				return { description, error: true };
+				return err(errorNoTFileFound(systemPath));
 			}
-			tfile = tfileMaybe as TFile;
+			tfile = tfileMaybe;
 		} else {
-			const description = "Invalid argument to OpenedFileService.cd";
-			logError({ description, location: "OpenedFileService" });
-			return { description, error: true };
+			return err(errorInvalidCdArgument());
 		}
 
 		try {
 			await this.app.workspace.getLeaf(true).openFile(tfile);
-			return { data: tfile, error: false };
+			return ok(tfile);
 		} catch (error) {
-			const description = `Failed to open file: ${error}`;
-			logError({
-				description,
-				location: "OpenedFileService",
-			});
-			return { description, error: true };
+			return err(
+				errorOpenFileFailed(
+					error instanceof Error ? error.message : String(error),
+				),
+			);
 		}
 	}
 }
