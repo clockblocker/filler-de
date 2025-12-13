@@ -1,5 +1,5 @@
 import { err, ok, type Result } from "neverthrow";
-import { type App, type Editor, MarkdownView, TFile } from "obsidian";
+import { type App, type Editor, MarkdownView, TFile, TFolder } from "obsidian";
 import {
 	errorFileStale,
 	errorGetEditor,
@@ -10,7 +10,9 @@ import {
 } from "../../errors";
 import { splitPathKey } from "../../impl/split-path";
 import type {
+	SplitPath,
 	SplitPathToFile,
+	SplitPathToFolder,
 	SplitPathToMdFile,
 } from "../../types/split-path";
 import type { Transform } from "../../types/vault-action";
@@ -256,5 +258,74 @@ export class OpenedFileService {
 				),
 			);
 		}
+	}
+
+	// Methods for Reader compatibility
+	async isInActiveView(splitPath: SplitPath): Promise<boolean> {
+		if (splitPath.type !== "MdFile") return false;
+		const result = await this.isFileActive(splitPath);
+		return result.isOk() && result.value;
+	}
+
+	async readContent(splitPath: SplitPathToMdFile): Promise<string> {
+		const contentResult = await this.getContent();
+		if (contentResult.isErr()) {
+			throw new Error(contentResult.error);
+		}
+		return contentResult.value;
+	}
+
+	async exists(splitPath: SplitPath): Promise<boolean> {
+		if (splitPath.type === "Folder") return false;
+		const isActive = await this.isInActiveView(splitPath);
+		if (isActive) return true;
+		const systemPath = splitPathKey(splitPath);
+		return this.app.vault.getAbstractFileByPath(systemPath) !== null;
+	}
+
+	async list(folder: SplitPathToFolder): Promise<SplitPath[]> {
+		const systemPath = splitPathKey(folder);
+		const tFolder = this.app.vault.getAbstractFileByPath(systemPath);
+		if (!(tFolder instanceof TFolder)) {
+			return [];
+		}
+		return tFolder.children.map((child) => {
+			if (child instanceof TFolder) {
+				return {
+					basename: child.name,
+					pathParts: child.path
+						.split("/")
+						.slice(0, -1)
+						.filter(Boolean),
+					type: "Folder" as const,
+				} as SplitPathToFolder;
+			}
+			const parts = child.path.split("/");
+			const basename = parts[parts.length - 1] ?? "";
+			const [name, ext] = basename.split(".");
+			return {
+				basename: name,
+				extension: ext ?? "",
+				pathParts: parts.slice(0, -1).filter(Boolean),
+				type: ext === "md" ? ("MdFile" as const) : ("File" as const),
+			} as SplitPathToFile | SplitPathToMdFile;
+		});
+	}
+
+	async getAbstractFile<SP extends SplitPath>(
+		splitPath: SP,
+	): Promise<SP["type"] extends "Folder" ? TFolder : TFile> {
+		const systemPath = splitPathKey(splitPath);
+		const file = this.app.vault.getAbstractFileByPath(systemPath);
+		if (!file) {
+			throw new Error(`File not found: ${systemPath}`);
+		}
+		if (splitPath.type === "Folder" && !(file instanceof TFolder)) {
+			throw new Error(`Expected folder but got file: ${systemPath}`);
+		}
+		if (splitPath.type !== "Folder" && !(file instanceof TFile)) {
+			throw new Error(`Expected file but got folder: ${systemPath}`);
+		}
+		return file as SP["type"] extends "Folder" ? TFolder : TFile;
 	}
 }

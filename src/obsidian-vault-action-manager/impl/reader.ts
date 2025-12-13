@@ -6,6 +6,7 @@ import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,
 } from "../types/split-path";
+import type { BackgroundFileService } from "./background-file-service";
 import { splitPathKey } from "./split-path";
 
 export class Reader {
@@ -38,7 +39,11 @@ export class Reader {
 	}
 
 	async pwd(): Promise<SplitPathToFile | SplitPathToMdFile> {
-		return this.opened.pwd();
+		const result = await this.opened.pwd();
+		if (result.isErr()) {
+			throw new Error(result.error);
+		}
+		return result.value;
 	}
 
 	async getAbstractFile<SP extends SplitPath>(

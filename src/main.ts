@@ -7,7 +7,7 @@ import {
 import { Librarian } from "./commanders/librarian/librarian";
 import {
 	splitPath as managerSplitPath,
-	// ObsidianVaultActionManagerImpl,
+	ObsidianVaultActionManagerImpl,
 	splitPath,
 	splitPathKey,
 } from "./obsidian-vault-action-manager";
@@ -20,7 +20,8 @@ import { TFileHelper } from "./obsidian-vault-action-manager/file-services/backg
 import { TFolderHelper } from "./obsidian-vault-action-manager/file-services/background/helpers/tfolder-helper";
 import { logError } from "./obsidian-vault-action-manager/helpers/issue-handlers";
 import { splitPathFromSystemPath } from "./obsidian-vault-action-manager/helpers/pathfinder";
-import type { Reader } from "./obsidian-vault-action-manager/impl/reader";
+import { BackgroundFileService } from "./obsidian-vault-action-manager/impl/background-file-service";
+import { Reader } from "./obsidian-vault-action-manager/impl/reader";
 import { AboveSelectionToolbarService } from "./services/obsidian-services/atomic-services/above-selection-toolbar-service";
 import { ApiService } from "./services/obsidian-services/atomic-services/api-service";
 import { BottomToolbarService } from "./services/obsidian-services/atomic-services/bottom-toolbar-service";
@@ -48,7 +49,7 @@ export default class TextEaterPlugin extends Plugin {
 	testingReader: Reader;
 	testingTFileHelper: TFileHelper;
 	testingTFolderHelper: TFolderHelper;
-	// vaultActionManager: ObsidianVaultActionManagerImpl;
+	vaultActionManager: ObsidianVaultActionManagerImpl;
 	backgroundFileService: LegacyBackgroundFileService;
 	selectionService: SelectionService;
 
@@ -69,6 +70,20 @@ export default class TextEaterPlugin extends Plugin {
 			// Kick off the deferred init; don't block onload.
 			void this.initWhenObsidianIsReady();
 			this.addSettingTab(new SettingsTab(this.app, this));
+			// Add testing command early so it exists, but callback waits for init
+			this.addCommand({
+				callback: async () => {
+					// Wait for plugin to be fully initialized
+					while (!this.initialized) {
+						await new Promise((resolve) =>
+							setTimeout(resolve, 100),
+						);
+					}
+					// Tests access APIs via: app.plugins.plugins["cbcr-text-eater-de"]?.getHelpersTestingApi?.()
+				},
+				id: "textfresser-testing-expose-opened-service",
+				name: "Testing: expose opened file service",
+			});
 		} catch (error) {
 			logError({
 				description: `Error during plugin initialization: ${error.message}`,
@@ -152,17 +167,9 @@ export default class TextEaterPlugin extends Plugin {
 			this.app,
 			this.openedFileReader,
 		);
-		// this.testingOpenedFileService = new OpenedFileService(this.app);
 		const testingOpenedFileReader = new OpenedFileReader(this.app);
 		this.testingOpenedFileServiceWithResult =
 			new OpenedFileServiceWithResult(this.app, testingOpenedFileReader);
-		// this.testingBackgroundFileService = new NewBackgroundFileService(
-		// 	this.app,
-		// );
-		// this.testingReader = new Reader(
-		// 	this.testingOpenedFileService,
-		// 	this.testingBackgroundFileService,
-		// );
 		this.testingTFileHelper = new TFileHelper({
 			fileManager: this.app.fileManager,
 			vault: this.app.vault,
@@ -171,6 +178,19 @@ export default class TextEaterPlugin extends Plugin {
 			fileManager: this.app.fileManager,
 			vault: this.app.vault,
 		});
+		const testingBackgroundFileService = new BackgroundFileService(
+			this.testingTFileHelper,
+			this.testingTFolderHelper,
+			this.app.vault,
+		);
+		const testingOpenedFileService = new OpenedFileService(
+			this.app,
+			testingOpenedFileReader,
+		);
+		this.testingReader = new Reader(
+			testingOpenedFileService,
+			testingBackgroundFileService,
+		);
 		this.vaultActionManager = new ObsidianVaultActionManagerImpl(this.app);
 		// this.setTestingGlobals();
 
@@ -478,28 +498,6 @@ export default class TextEaterPlugin extends Plugin {
 			id: "librarian-log-deep-ls",
 			name: "Librarian: log tree structure",
 		});
-
-		// this.addCommand({
-		// 	callback: () => {
-		// 		(
-		// 			window as unknown as {
-		// 				__textfresserTesting?: Record<string, unknown>;
-		// 			}
-		// 		).__textfresserTesting = {
-		// 			backgroundFileService: this.testingBackgroundFileService,
-		// 			managerSplitPath,
-		// 			openedFileService: this.testingOpenedFileService,
-		// 			reader: this.testingReader,
-		// 			splitPath,
-		// 			splitPathBackground: splitPathForBackground,
-		// 			splitPathKey,
-		// 			splitPathKeyBackground: splitPathKeyForBackground,
-		// 			vaultActionManager: this.vaultActionManager,
-		// 		};
-		// 	},
-		// 	id: "textfresser-testing-expose-opened-service",
-		// 	name: "Testing: expose opened file service",
-		// });
 	}
 
 	// private setTestingGlobals() {
@@ -524,15 +522,14 @@ export default class TextEaterPlugin extends Plugin {
 	// 	return this.testingOpenedFileService;
 	// }
 
-	// getOpenedFileServiceTestingApi() {
-	// 	return {
-	// 		openedFileService: this.testingOpenedFileService,
-	// 		openedFileServiceWithResult:
-	// 			this.testingOpenedFileServiceWithResult,
-	// 		splitPath,
-	// 		splitPathKey,
-	// 	};
-	// }
+	getOpenedFileServiceTestingApi() {
+		return {
+			openedFileServiceWithResult:
+				this.testingOpenedFileServiceWithResult,
+			splitPath,
+			splitPathKey,
+		};
+	}
 
 	// getBackgroundFileServiceTestingApi() {
 	// 	return {
@@ -550,12 +547,12 @@ export default class TextEaterPlugin extends Plugin {
 		};
 	}
 
-	// getVaultActionManagerTestingApi() {
-	// 	return {
-	// 		manager: this.vaultActionManager,
-	// 		splitPath: managerSplitPath,
-	// 	};
-	// }
+	getVaultActionManagerTestingApi() {
+		return {
+			manager: this.vaultActionManager,
+			splitPath: managerSplitPath,
+		};
+	}
 
 	getHelpersTestingApi() {
 		return {
