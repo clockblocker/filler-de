@@ -3,8 +3,8 @@ import {
 	type Maybe,
 	unwrapMaybeByThrowing,
 } from "../../../../../types/common-interface/maybe";
-import type { LegacyFullPathToFolder } from "../../../atomic-services/pathfinder";
-import { legacySystemPathFromFullPath } from "../../../atomic-services/pathfinder";
+import type { FullPathToFolder } from "../../../atomic-services/pathfinder";
+import { systemPathFromFullPath } from "../../../atomic-services/pathfinder";
 
 /**
  * Low-level folder operations.
@@ -21,15 +21,13 @@ export class LegacyTFolderHelper {
 		this.fileManager = fileManager;
 	}
 
-	async getFolder(fullPath: LegacyFullPathToFolder): Promise<TFolder> {
+	async getFolder(fullPath: FullPathToFolder): Promise<TFolder> {
 		const mbFolder = await this.getMaybeFolder(fullPath);
 		return unwrapMaybeByThrowing(mbFolder);
 	}
 
-	async getMaybeFolder(
-		fullPath: LegacyFullPathToFolder,
-	): Promise<Maybe<TFolder>> {
-		const systemPath = legacySystemPathFromFullPath(fullPath);
+	async getMaybeFolder(fullPath: FullPathToFolder): Promise<Maybe<TFolder>> {
+		const systemPath = systemPathFromFullPath(fullPath);
 		const tAbstractFile = this.vault.getAbstractFileByPath(systemPath);
 		if (!tAbstractFile) {
 			return {
@@ -55,13 +53,13 @@ export class LegacyTFolderHelper {
 	 * Create a single folder.
 	 * Assumes parent folder exists.
 	 */
-	async createFolder(fullPath: LegacyFullPathToFolder): Promise<TFolder> {
+	async createFolder(fullPath: FullPathToFolder): Promise<TFolder> {
 		const mbFolder = await this.getMaybeFolder(fullPath);
 		if (!mbFolder.error) {
 			return mbFolder.data; // Already exists
 		}
 
-		const systemPath = legacySystemPathFromFullPath(fullPath);
+		const systemPath = systemPathFromFullPath(fullPath);
 		try {
 			return await this.vault.createFolder(systemPath);
 		} catch (error) {
@@ -75,7 +73,7 @@ export class LegacyTFolderHelper {
 	/**
 	 * Trash a single folder
 	 */
-	async trashFolder(fullPath: LegacyFullPathToFolder): Promise<void> {
+	async trashFolder(fullPath: FullPathToFolder): Promise<void> {
 		const mbFolder = await this.getMaybeFolder(fullPath);
 		if (mbFolder.error) {
 			return; // Already gone
@@ -87,11 +85,11 @@ export class LegacyTFolderHelper {
 	 * Rename/move a folder.
 	 */
 	async renameFolder(
-		from: LegacyFullPathToFolder,
-		to: LegacyFullPathToFolder,
+		from: FullPathToFolder,
+		to: FullPathToFolder,
 	): Promise<void> {
 		const folder = await this.getFolder(from);
-		const toSystemPath = legacySystemPathFromFullPath(to);
+		const toSystemPath = systemPathFromFullPath(to);
 		await this.fileManager.renameFile(folder, toSystemPath);
 	}
 }

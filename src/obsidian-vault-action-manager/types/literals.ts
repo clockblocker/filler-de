@@ -32,3 +32,7 @@ export const MD_FILE = MdFileSchema.value;
 export const FolderSchema = z.literal("Folder");
 export type FOLDER = z.infer<typeof FolderSchema>;
 export const FOLDER = FolderSchema.value;
+
+export const MdSchema = z.literal("md");
+export type MD = z.infer<typeof MdSchema>;
+export const MD = MdSchema.value;

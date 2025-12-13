@@ -51,6 +51,7 @@ export class EventAdapter {
 		if (split.type === "Folder") return;
 		const from = splitPath(oldPath);
 		if (from.type === "Folder") return;
+
 		void handler({
 			from,
 			to: split,

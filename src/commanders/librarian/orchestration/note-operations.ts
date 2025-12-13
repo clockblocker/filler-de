@@ -1,6 +1,6 @@
 import { logWarning } from "../../../obsidian-vault-action-manager/helpers/issue-handlers";
 import { editOrAddMetaInfo } from "../../../services/dto-services/meta-info-manager/interface";
-import { fullPathFromSystemPath } from "../../../services/obsidian-services/atomic-services/pathfinder";
+import { legacyFullPathFromSystemPath } from "../../../services/obsidian-services/atomic-services/pathfinder";
 import {
 	type LegacyVaultAction,
 	LegacyVaultActionType,
@@ -99,7 +99,7 @@ export class NoteOperations {
 			return false;
 		}
 
-		const fullPath = fullPathFromSystemPath(currentFile.path);
+		const fullPath = legacyFullPathFromSystemPath(currentFile.path);
 		const rootCandidate = fullPath.pathParts[0];
 		const rootName =
 			rootCandidate && isRootName(rootCandidate)

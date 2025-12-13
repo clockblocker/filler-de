@@ -1,4 +1,4 @@
-import type { FullPath } from "../../../services/obsidian-services/atomic-services/pathfinder";
+import type { LegacyFullPath } from "../../../services/obsidian-services/atomic-services/pathfinder";
 import type { PrettyPath } from "../../../types/common-interface/dtos";
 import { isRootName, type RootName } from "../constants";
 import {
@@ -63,7 +63,7 @@ export function prettyPathToTreePath(prettyPath: PrettyPath): TreePath {
 	];
 }
 
-export function fullPathToTreePath(fullPath: FullPath): TreePath {
+export function fullPathToTreePath(fullPath: LegacyFullPath): TreePath {
 	const prettyPath: PrettyPath = {
 		basename: toNodeName(fullPath.basename),
 		pathParts: fullPath.pathParts,

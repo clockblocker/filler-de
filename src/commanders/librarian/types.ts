@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { LibraryNoteMetaInfo } from "../../services/dto-services/meta-info-manager/types";
-import type { FullPathToMdFile } from "../../services/obsidian-services/atomic-services/pathfinder";
+import type { LegacyFullPathToMdFile } from "../../services/obsidian-services/atomic-services/pathfinder";
 import type { TextStatus } from "../../types/common-interface/enums";
 import type { Prettify } from "../../types/helpers";
 import { NOTE, SECTION } from "../../types/literals";
@@ -35,5 +35,5 @@ export type NoteDto = {
 
 export type LibraryFile = {
 	metaInfo: LibraryNoteMetaInfo;
-	fullPath: FullPathToMdFile;
+	fullPath: LegacyFullPathToMdFile;
 };

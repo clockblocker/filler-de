@@ -3,9 +3,9 @@ import type { PrettyPath } from "../../../types/common-interface/dtos";
 import type { Prettify } from "../../../types/helpers";
 import { SLASH } from "../../../types/literals";
 
-export function fullPathToMdFileFromPrettyPath(
+export function legacyFullPathToMdFileFromPrettyPath(
 	prettyPath: PrettyPath,
-): FullPathToMdFile {
+): LegacyFullPathToMdFile {
 	return {
 		...prettyPath,
 		extension: "md",
@@ -13,19 +13,23 @@ export function fullPathToMdFileFromPrettyPath(
 	};
 }
 
-export function fullPathToFolderFromPrettyPath(
+export function legacyFullPathToFolderFromPrettyPath(
 	prettyPath: PrettyPath,
-): FullPathToFolder {
+): LegacyFullPathToFolder {
 	return {
 		...prettyPath,
 		type: "folder",
 	};
 }
 
-export function getFullPathForAbstractFile(file: TFile): FullPathToMdFile;
-export function getFullPathForAbstractFile(folder: TFolder): FullPathToFolder;
-export function getFullPathForAbstractFile<T extends FullPath>(
-	abstractFile: AbstractFile<T>,
+export function legacyGetFullPathForAbstractFile(
+	file: TFile,
+): LegacyFullPathToMdFile;
+export function legacyGetFullPathForAbstractFile(
+	folder: TFolder,
+): LegacyFullPathToFolder;
+export function legacyGetFullPathForAbstractFile<T extends LegacyFullPath>(
+	abstractFile: LegacyAbstractFile<T>,
 ): T {
 	const path = abstractFile.path;
 	const fullPath = path.split(SLASH).filter(Boolean);
@@ -47,17 +51,19 @@ export function getFullPathForAbstractFile<T extends FullPath>(
 	} as T;
 }
 
-export function systemPathFromFullPath(fullPath: FullPath): string {
+export function legacySystemPathFromFullPath(fullPath: LegacyFullPath): string {
 	const { pathParts, basename: title } = fullPath;
 	const extension = fullPath.type === "file" ? `.${fullPath.extension}` : "";
-	return joinPosix(
-		pathToFolderFromPathParts(pathParts),
-		safeFileName(title) + extension,
+	return legacyJoinPosix(
+		legacyPathToFolderFromPathParts(pathParts),
+		legacySafeFileName(title) + extension,
 	);
 }
 
 // SystemPath shall point to folder or MD file
-export function fullPathFromSystemPath(systemPath: string): FullPath {
+export function legacyFullPathFromSystemPath(
+	systemPath: string,
+): LegacyFullPath {
 	// TODO: replace manual string parsing with codec if/when available
 	const normalized = systemPath.replace(/^[\\/]+|[\\/]+$/g, "");
 	if (!normalized) {
@@ -96,15 +102,15 @@ export function fullPathFromSystemPath(systemPath: string): FullPath {
 	};
 }
 
-export function safeFileName(s: string): string {
+export function legacySafeFileName(s: string): string {
 	return s.replace(/[\\/]/g, " ").trim();
 }
 
-export function pathToFolderFromPathParts(pathParts: string[]): string {
-	return joinPosix(...pathParts);
+export function legacyPathToFolderFromPathParts(pathParts: string[]): string {
+	return legacyJoinPosix(...pathParts);
 }
 
-export function joinPosix(...parts: string[]): string {
+export function legacyJoinPosix(...parts: string[]): string {
 	const cleaned = parts
 		.filter(Boolean)
 		.map((p) => p.replace(/(^[\\/]+)|([\\/]+$)/g, "")) // trim leading/trailing slashes/backslashes
@@ -112,31 +118,33 @@ export function joinPosix(...parts: string[]): string {
 	return cleaned.join("/");
 }
 
-export type FullPathToFolder = Prettify<
+export type LegacyFullPathToFolder = Prettify<
 	PrettyPath & {
 		type: "folder";
 	}
 >;
 
-export type FullPathToMdFile = Prettify<
+export type LegacyFullPathToMdFile = Prettify<
 	PrettyPath & {
 		type: "file";
 		extension: "md";
 	}
 >;
 
-export type FullPath = FullPathToFolder | FullPathToMdFile;
+export type LegacyFullPath = LegacyFullPathToFolder | LegacyFullPathToMdFile;
 
-export type AbstractFile<T extends FullPath> = T extends { type: "file" }
+export type LegacyAbstractFile<T extends LegacyFullPath> = T extends {
+	type: "file";
+}
 	? TFile
 	: TFolder;
 
-export type FileWithContent = {
-	fullPath: FullPathToMdFile;
+export type LegacyFileWithContent = {
+	fullPath: LegacyFullPathToMdFile;
 	content?: string;
 };
 
-export type FileFromTo = {
-	from: FullPathToMdFile;
-	to: FullPathToMdFile;
+export type LegacyFileFromTo = {
+	from: LegacyFullPathToMdFile;
+	to: LegacyFullPathToMdFile;
 };

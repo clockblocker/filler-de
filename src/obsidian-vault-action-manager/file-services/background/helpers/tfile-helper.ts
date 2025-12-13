@@ -8,18 +8,18 @@ import {
 	unwrapMaybeByThrowing,
 } from "../../../../../types/common-interface/maybe";
 import type {
-	LegacyFileFromTo,
-	LegacyFileWithContent,
-	LegacyFullPathToMdFile,
+	FileFromTo,
+	FileWithContent,
+	FullPathToMdFile,
 } from "../../../atomic-services/pathfinder";
-import { legacySystemPathFromFullPath } from "../../../atomic-services/pathfinder";
+import { systemPathFromFullPath } from "../../../atomic-services/pathfinder";
 
 /**
  * Helper for TFile operations in the vault.
  *
  * INVARIANT: The create / move commands assume that the target folders already exist.
  */
-export class LegacyTFileHelper {
+export class TFileHelper {
 	private fileManager: FileManager;
 	private vault: Vault;
 
@@ -31,14 +31,12 @@ export class LegacyTFileHelper {
 		this.fileManager = fileManager;
 	}
 
-	async getFile(fullPath: LegacyFullPathToMdFile): Promise<TFile> {
+	async getFile(fullPath: FullPathToMdFile): Promise<TFile> {
 		const mbFile = await this.getMaybeFile(fullPath);
 		return unwrapMaybeByThrowing(mbFile);
 	}
 
-	async createFiles(
-		files: readonly LegacyFileWithContent[],
-	): Promise<TFile[]> {
+	async createFiles(files: readonly FileWithContent[]): Promise<TFile[]> {
 		const tFiles: TFile[] = [];
 		for (const file of files) {
 			tFiles.push(await this.createFile(file));
@@ -46,30 +44,28 @@ export class LegacyTFileHelper {
 		return tFiles;
 	}
 
-	async trashFiles(
-		fullPaths: readonly LegacyFullPathToMdFile[],
-	): Promise<void> {
+	async trashFiles(fullPaths: readonly FullPathToMdFile[]): Promise<void> {
 		for (const fullPath of fullPaths) {
 			await this.trashFile(fullPath);
 		}
 	}
 
-	async moveFiles(fromTos: readonly LegacyFileFromTo[]): Promise<void> {
+	async moveFiles(fromTos: readonly FileFromTo[]): Promise<void> {
 		for (const fromTo of fromTos) {
 			await this.moveFile(fromTo);
 		}
 	}
 
-	private async createFile(file: LegacyFileWithContent): Promise<TFile> {
+	private async createFile(file: FileWithContent): Promise<TFile> {
 		return await this.getOrCreateOneFile(file);
 	}
 
-	private async trashFile(fullPath: LegacyFullPathToMdFile): Promise<void> {
+	private async trashFile(fullPath: FullPathToMdFile): Promise<void> {
 		const file = await this.getFile(fullPath);
 		await this.fileManager.trashFile(file);
 	}
 
-	private async moveFile({ from, to }: LegacyFileFromTo): Promise<void> {
+	private async moveFile({ from, to }: FileFromTo): Promise<void> {
 		const mbFromFile = await this.getMaybeFile(from);
 		const mbToFile = await this.getMaybeFile(to);
 
@@ -78,7 +74,7 @@ export class LegacyTFileHelper {
 				unwrapMaybeByThrowing(
 					mbToFile,
 					"TFileHelper.moveFile",
-					`Both source \n(${legacySystemPathFromFullPath(from)}) \n and target \n (${legacySystemPathFromFullPath(to)}) \n files not found`,
+					`Both source \n(${systemPathFromFullPath(from)}) \n and target \n (${systemPathFromFullPath(to)}) \n files not found`,
 				);
 			}
 
@@ -96,7 +92,7 @@ export class LegacyTFileHelper {
 			}
 
 			logError({
-				description: `Target file (${legacySystemPathFromFullPath(to)}) exists and it's content differs from the source file (${legacySystemPathFromFullPath(from)})`,
+				description: `Target file (${systemPathFromFullPath(to)}) exists and it's content differs from the source file (${systemPathFromFullPath(from)})`,
 				location: "TFileHelper.moveFile",
 			});
 
@@ -105,14 +101,14 @@ export class LegacyTFileHelper {
 
 		await this.fileManager.renameFile(
 			mbFromFile.data,
-			legacySystemPathFromFullPath(to),
+			systemPathFromFullPath(to),
 		);
 	}
 
 	private async getMaybeFile(
-		fullPath: LegacyFullPathToMdFile,
+		fullPath: FullPathToMdFile,
 	): Promise<Maybe<TFile>> {
-		const systemPath = legacySystemPathFromFullPath(fullPath);
+		const systemPath = systemPathFromFullPath(fullPath);
 		const tAbstractFile = this.vault.getAbstractFileByPath(systemPath);
 		if (!tAbstractFile) {
 			return {
@@ -137,7 +133,7 @@ export class LegacyTFileHelper {
 	private async getOrCreateOneFile({
 		fullPath,
 		content,
-	}: LegacyFileWithContent): Promise<TFile> {
+	}: FileWithContent): Promise<TFile> {
 		const mbFile = await this.getMaybeFile(fullPath);
 
 		return mbFile.error
@@ -151,8 +147,8 @@ export class LegacyTFileHelper {
 	private async safelyCreateNewFile({
 		fullPath,
 		content,
-	}: LegacyFileWithContent): Promise<TFile> {
-		const systemPath = legacySystemPathFromFullPath(fullPath);
+	}: FileWithContent): Promise<TFile> {
+		const systemPath = systemPathFromFullPath(fullPath);
 		try {
 			return await this.vault.create(systemPath, content ?? "");
 		} catch (error) {

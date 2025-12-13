@@ -1,7 +1,7 @@
 import type { TAbstractFile } from "obsidian";
 import { TFile } from "obsidian";
 import { editOrAddMetaInfo } from "../../../services/dto-services/meta-info-manager/interface";
-import { fullPathFromSystemPath } from "../../../services/obsidian-services/atomic-services/pathfinder";
+import { legacyFullPathFromSystemPath } from "../../../services/obsidian-services/atomic-services/pathfinder";
 import {
 	type LegacyVaultAction,
 	LegacyVaultActionType,
@@ -55,7 +55,7 @@ export class VaultEventHandler {
 		if (!(file instanceof TFile)) return;
 		if (file.extension !== "md") return;
 
-		const fullPath = fullPathFromSystemPath(file.path);
+		const fullPath = legacyFullPathFromSystemPath(file.path);
 		const rootName = fullPath.pathParts[0];
 
 		if (!rootName || !isRootName(rootName)) return;
@@ -91,8 +91,8 @@ export class VaultEventHandler {
 		if (!(file instanceof TFile)) return;
 		if (file.extension !== "md") return;
 
-		const newFull = fullPathFromSystemPath(file.path);
-		const oldFull = fullPathFromSystemPath(oldPath);
+		const newFull = legacyFullPathFromSystemPath(file.path);
+		const oldFull = legacyFullPathFromSystemPath(oldPath);
 		const rootName = newFull.pathParts[0];
 
 		if (!rootName || !isRootName(rootName)) return;
@@ -267,7 +267,7 @@ export class VaultEventHandler {
 		if (!(file instanceof TFile)) return;
 		if (file.extension !== "md") return;
 
-		const fullPath = fullPathFromSystemPath(file.path);
+		const fullPath = legacyFullPathFromSystemPath(file.path);
 		const rootName = fullPath.pathParts[0];
 
 		if (!rootName || !isRootName(rootName)) return;

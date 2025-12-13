@@ -8,7 +8,7 @@ import {
 	type Maybe,
 	unwrapMaybeByThrowing,
 } from "../../../../types/common-interface/maybe";
-import { legacyGetFullPathForAbstractFile } from "../../atomic-services/pathfinder";
+import { getFullPathForAbstractFile } from "../../atomic-services/pathfinder";
 
 export class LegacyOpenedFileReader {
 	constructor(private app: App) {}
@@ -17,7 +17,7 @@ export class LegacyOpenedFileReader {
 		const activeView = unwrapMaybeByThrowing(
 			await this.getMaybeOpenedTFile(),
 		);
-		return legacyGetFullPathForAbstractFile(activeView);
+		return getSplitPathForAbstractFile(activeView);
 	}
 
 	async getContent(): Promise<string> {
@@ -57,7 +57,7 @@ export class LegacyOpenedFileReader {
 		return { data: parent, error: false };
 	}
 
-	// [TODO] Make it private
+	// [TODO] ? Make it private 
 	async getMaybeOpenedTFile(): Promise<Maybe<TFile>> {
 		try {
 			const activeView =

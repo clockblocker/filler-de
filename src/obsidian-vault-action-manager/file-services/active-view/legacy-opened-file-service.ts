@@ -7,14 +7,14 @@ import {
 	unwrapMaybeByThrowing,
 } from "../../../../types/common-interface/maybe";
 import {
-	type LegacyFullPathToMdFile,
-	legacyFullPathToMdFileFromPrettyPath,
-	legacySystemPathFromFullPath,
+	type FullPathToMdFile,
+	fullPathToMdFileFromPrettyPath,
+	systemPathFromFullPath,
 } from "../../atomic-services/pathfinder";
 import type { LegacyOpenedFileReader } from "./opened-file-reader";
 
 export class LegacyOpenedFileService {
-	private lastOpenedFiles: LegacyFullPathToMdFile[] = [];
+	private lastOpenedFiles: FullPathToMdFile[] = [];
 	private reader: LegacyOpenedFileReader;
 
 	constructor(
@@ -76,10 +76,10 @@ export class LegacyOpenedFileService {
 	}
 
 	public async cd(file: TFile): Promise<Maybe<TFile>>;
-	public async cd(file: LegacyFullPathToMdFile): Promise<Maybe<TFile>>;
+	public async cd(file: FullPathToMdFile): Promise<Maybe<TFile>>;
 	public async cd(file: PrettyPath): Promise<Maybe<TFile>>;
 	public async cd(
-		file: TFile | LegacyFullPathToMdFile | PrettyPath,
+		file: TFile | FullPathToMdFile | PrettyPath,
 	): Promise<Maybe<TFile>> {
 		let tfile: TFile;
 		if (
@@ -88,13 +88,11 @@ export class LegacyOpenedFileService {
 		) {
 			tfile = file as TFile;
 		} else if (
-			typeof (file as LegacyFullPathToMdFile).basename === "string" &&
-			Array.isArray((file as LegacyFullPathToMdFile).pathParts)
+			typeof (file as FullPathToMdFile).basename === "string" &&
+			Array.isArray((file as FullPathToMdFile).pathParts)
 		) {
-			const full = legacyFullPathToMdFileFromPrettyPath(
-				file as PrettyPath,
-			);
-			const systemPath = legacySystemPathFromFullPath(full);
+			const full = fullPathToMdFileFromPrettyPath(file as PrettyPath);
+			const systemPath = systemPathFromFullPath(full);
 
 			const tfileMaybe = this.app.vault.getAbstractFileByPath(systemPath);
 			if (!tfileMaybe || !(tfileMaybe instanceof TFile)) {

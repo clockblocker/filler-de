@@ -4,15 +4,15 @@ import {
 	unwrapMaybeByThrowing,
 } from "../../../../types/common-interface/maybe";
 import type {
-	LegacyAbstractFile,
-	LegacyFileFromTo,
-	LegacyFileWithContent,
-	LegacyFullPath,
-	LegacyFullPathToFolder,
-	LegacyFullPathToMdFile,
+	AbstractFile,
+	FileFromTo,
+	FileWithContent,
+	FullPath,
+	FullPathToFolder,
+	FullPathToMdFile,
 } from "../../atomic-services/pathfinder";
-import { legacySystemPathFromFullPath } from "../../atomic-services/pathfinder";
-import { LegacyTFileHelper } from "./helpers/tfile-helper";
+import { systemPathFromFullPath } from "../../atomic-services/pathfinder";
+import { TFileHelper } from "./helpers/tfile-helper";
 import { LegacyTFolderHelper } from "./helpers/tfolder-helper";
 
 /**
@@ -22,7 +22,7 @@ import { LegacyTFolderHelper } from "./helpers/tfolder-helper";
  */
 export class LegacyAbstractFileHelper {
 	private vault: Vault;
-	private tfileHelper: LegacyTFileHelper;
+	private tfileHelper: TFileHelper;
 	private tfolderHelper: LegacyTFolderHelper;
 
 	constructor({
@@ -33,51 +33,51 @@ export class LegacyAbstractFileHelper {
 		fileManager: FileManager;
 	}) {
 		this.vault = vault;
-		this.tfileHelper = new LegacyTFileHelper({ fileManager, vault });
+		this.tfileHelper = new TFileHelper({ fileManager, vault });
 		this.tfolderHelper = new LegacyTFolderHelper({ fileManager, vault });
 	}
 
 	// ─── File Operations ─────────────────────────────────────────────
 
-	async createFiles(files: readonly LegacyFileWithContent[]): Promise<void> {
+	async createFiles(files: readonly FileWithContent[]): Promise<void> {
 		await this.tfileHelper.createFiles(files);
 	}
 
-	async moveFiles(fromTos: readonly LegacyFileFromTo[]): Promise<void> {
+	async moveFiles(fromTos: readonly FileFromTo[]): Promise<void> {
 		await this.tfileHelper.moveFiles(fromTos);
 	}
 
-	async trashFiles(files: readonly LegacyFullPathToMdFile[]): Promise<void> {
+	async trashFiles(files: readonly FullPathToMdFile[]): Promise<void> {
 		await this.tfileHelper.trashFiles(files);
 	}
 
 	// ─── Folder Operations ───────────────────────────────────────────
 
-	async createFolder(fullPath: LegacyFullPathToFolder): Promise<TFolder> {
+	async createFolder(fullPath: FullPathToFolder): Promise<TFolder> {
 		return this.tfolderHelper.createFolder(fullPath);
 	}
 
-	async trashFolder(fullPath: LegacyFullPathToFolder): Promise<void> {
+	async trashFolder(fullPath: FullPathToFolder): Promise<void> {
 		return this.tfolderHelper.trashFolder(fullPath);
 	}
 
 	async renameFolder(
-		from: LegacyFullPathToFolder,
-		to: LegacyFullPathToFolder,
+		from: FullPathToFolder,
+		to: FullPathToFolder,
 	): Promise<void> {
 		return this.tfolderHelper.renameFolder(from, to);
 	}
 
 	// ─── Read Operations ─────────────────────────────────────────────
 
-	async getMdFile(fullPath: LegacyFullPathToMdFile): Promise<TFile> {
+	async getMdFile(fullPath: FullPathToMdFile): Promise<TFile> {
 		return unwrapMaybeByThrowing(await this.getMaybeAbstractFile(fullPath));
 	}
 
-	async getMaybeAbstractFile<T extends LegacyFullPath>(
+	async getMaybeAbstractFile<T extends FullPath>(
 		fullPath: T,
-	): Promise<Maybe<LegacyAbstractFile<T>>> {
-		const systemPath = legacySystemPathFromFullPath(fullPath);
+	): Promise<Maybe<AbstractFile<T>>> {
+		const systemPath = systemPathFromFullPath(fullPath);
 		const mbTabstractFile = this.vault.getAbstractFileByPath(systemPath);
 
 		if (!mbTabstractFile) {
@@ -91,7 +91,7 @@ export class LegacyAbstractFileHelper {
 			case "file":
 				if (mbTabstractFile instanceof TFile) {
 					return {
-						data: mbTabstractFile as LegacyAbstractFile<T>,
+						data: mbTabstractFile as AbstractFile<T>,
 						error: false,
 					};
 				}
@@ -99,7 +99,7 @@ export class LegacyAbstractFileHelper {
 			case "folder":
 				if (mbTabstractFile instanceof TFolder) {
 					return {
-						data: mbTabstractFile as LegacyAbstractFile<T>,
+						data: mbTabstractFile as AbstractFile<T>,
 						error: false,
 					};
 				}
@@ -114,9 +114,7 @@ export class LegacyAbstractFileHelper {
 		};
 	}
 
-	async deepListMdFiles(
-		folderFullPath: LegacyFullPathToFolder,
-	): Promise<TFile[]> {
+	async deepListMdFiles(folderFullPath: FullPathToFolder): Promise<TFile[]> {
 		const folder = unwrapMaybeByThrowing(
 			await this.getMaybeAbstractFile(folderFullPath),
 			"AbstractFileHelper.deepListMdFiles",

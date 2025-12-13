@@ -3,6 +3,7 @@
 	"dependencies": {
 		"@codemirror/view": "latest",
 		"@types/sbd": "latest",
+		"neverthrow": "^8.2.0",
 		"openai": "latest",
 		"sbd": "latest",
 		"ts-plugin-sort-import-suggestions": "^1.0.4",

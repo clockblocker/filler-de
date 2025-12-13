@@ -1,5 +1,5 @@
 import type { TAbstractFile, TFile } from "obsidian";
-import { fullPathFromSystemPath } from "../../services/obsidian-services/atomic-services/pathfinder";
+import { legacyFullPathFromSystemPath } from "../../services/obsidian-services/atomic-services/pathfinder";
 import type { LegacyVaultActionQueue } from "../../services/obsidian-services/file-services/vault-action-queue";
 import type { TexfresserObsidianServices } from "../../services/obsidian-services/interface";
 import type { PrettyPath } from "../../types/common-interface/dtos";
@@ -111,7 +111,7 @@ export class Librarian {
 	}
 
 	isInLibraryFolder(file: TFile): boolean {
-		const fullPath = fullPathFromSystemPath(file.path);
+		const fullPath = legacyFullPathFromSystemPath(file.path);
 		const rootName = fullPath.pathParts[0];
 		return !!rootName && isRootName(rootName);
 	}
