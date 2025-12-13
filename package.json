@@ -2,6 +2,7 @@
 	"author": "clockblocker",
 	"dependencies": {
 		"@codemirror/view": "latest",
+		"@types/mocha": "^10.0.10",
 		"@types/sbd": "latest",
 		"neverthrow": "^8.2.0",
 		"openai": "latest",

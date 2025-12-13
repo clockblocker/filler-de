@@ -27,7 +27,7 @@
 		// Best practices
 		"strictPropertyInitialization": false,
 		"target": "ESNext",
-		"types": ["obsidian", "bun-types"],
+		"types": ["obsidian", "bun-types", "mocha"],
 		"verbatimModuleSyntax": true
 	},
 	"plugins": [

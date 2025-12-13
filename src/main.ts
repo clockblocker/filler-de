@@ -9,7 +9,10 @@ import {
 	splitPath as managerSplitPath,
 	ObsidianVaultActionManagerImpl,
 } from "./obsidian-vault-action-manager";
+import { TFileHelper } from "./obsidian-vault-action-manager/file-services/background/helpers/tfile-helper";
+import { TFolderHelper } from "./obsidian-vault-action-manager/file-services/background/helpers/tfolder-helper";
 import { logError } from "./obsidian-vault-action-manager/helpers/issue-handlers";
+import { splitPathFromSystemPath } from "./obsidian-vault-action-manager/helpers/pathfinder";
 import {
 	BackgroundFileService as NewBackgroundFileService,
 	splitPath as splitPathForBackground,
@@ -47,6 +50,8 @@ export default class TextEaterPlugin extends Plugin {
 	testingOpenedFileService: OpenedFileService;
 	testingBackgroundFileService: NewBackgroundFileService;
 	testingReader: Reader;
+	testingTFileHelper: TFileHelper;
+	testingTFolderHelper: TFolderHelper;
 	vaultActionManager: ObsidianVaultActionManagerImpl;
 	backgroundFileService: LegacyBackgroundFileService;
 	selectionService: SelectionService;
@@ -159,6 +164,14 @@ export default class TextEaterPlugin extends Plugin {
 			this.testingOpenedFileService,
 			this.testingBackgroundFileService,
 		);
+		this.testingTFileHelper = new TFileHelper({
+			fileManager: this.app.fileManager,
+			vault: this.app.vault,
+		});
+		this.testingTFolderHelper = new TFolderHelper({
+			fileManager: this.app.fileManager,
+			vault: this.app.vault,
+		});
 		this.vaultActionManager = new ObsidianVaultActionManagerImpl(this.app);
 		this.setTestingGlobals();
 
@@ -540,6 +553,14 @@ export default class TextEaterPlugin extends Plugin {
 		return {
 			manager: this.vaultActionManager,
 			splitPath: managerSplitPath,
+		};
+	}
+
+	getHelpersTestingApi() {
+		return {
+			splitPath: splitPathFromSystemPath,
+			tfileHelper: this.testingTFileHelper,
+			tfolderHelper: this.testingTFolderHelper,
 		};
 	}
 
