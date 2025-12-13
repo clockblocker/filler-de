@@ -1,6 +1,10 @@
 import { err, ok, type Result } from "neverthrow";
 import { type FileManager, TFolder, type Vault } from "obsidian";
 import {
+	logError,
+	logWarning,
+} from "../../../../obsidian-vault-action-manager/helpers/issue-handlers";
+import {
 	findFirstAvailableIndexedPath,
 	systemPathToSplitPath,
 } from "../../../../obsidian-vault-action-manager/helpers/pathfinder";
@@ -35,7 +39,7 @@ export class TFolderHelper {
 		);
 	}
 
-	async getFolderResult(
+	private async getFolderResult(
 		splitPath: SplitPathToFolder,
 	): Promise<Result<TFolder, string>> {
 		const systemPath = systemPathToSplitPath.encode(splitPath);
@@ -85,19 +89,41 @@ export class TFolderHelper {
 	 * Assumes parent folder exists.
 	 */
 	async createFolder(splitPath: SplitPathToFolder): Promise<TFolder> {
+		const result = await this.createFolderResult(splitPath);
+		return result.match(
+			(folder) => folder,
+			(error) => {
+				throw new Error(error);
+			},
+		);
+	}
+
+	private async createFolderResult(
+		splitPath: SplitPathToFolder,
+	): Promise<Result<TFolder, string>> {
 		const folderResult = await this.getFolderResult(splitPath);
 		if (folderResult.isOk()) {
-			return folderResult.value; // Already exists
+			return ok(folderResult.value); // Already exists
 		}
 
 		const systemPath = systemPathToSplitPath.encode(splitPath);
 		try {
-			return await this.vault.createFolder(systemPath);
+			const createdFolder = await this.vault.createFolder(systemPath);
+			return ok(createdFolder);
 		} catch (error) {
 			if (error.message?.includes("already exists")) {
-				return this.getFolder(splitPath);
+				// Race condition: folder was created by another process
+				const existingResult = await this.getFolderResult(splitPath);
+				if (existingResult.isOk()) {
+					return ok(existingResult.value);
+				}
+				return err(
+					`Folder creation race condition: ${systemPath} was created but cannot be retrieved: ${existingResult.error}`,
+				);
 			}
-			throw error;
+			return err(
+				`Failed to create folder: ${systemPath}: ${error.message}`,
+			);
 		}
 	}
 
@@ -105,17 +131,38 @@ export class TFolderHelper {
 	 * Trash a single folder
 	 */
 	async trashFolder(splitPath: SplitPathToFolder): Promise<void> {
+		const result = await this.trashFolderResult(splitPath);
+		result.match(
+			() => {
+				// Folder successfully trashed
+			},
+			(error) => {
+				logError({
+					description: `Failed to trash folder: ${systemPathToSplitPath.encode(splitPath)}: ${error}`,
+					location: "TFolderHelper.trashFolder",
+				});
+				throw new Error(error);
+			},
+		);
+	}
+
+	private async trashFolderResult(
+		splitPath: SplitPathToFolder,
+	): Promise<Result<TFolder, string>> {
 		const folderResult = await this.getFolderResult(splitPath);
 		if (folderResult.isErr()) {
-			return; // Already gone
+			return err(
+				`Folder not found: ${systemPathToSplitPath.encode(splitPath)}`,
+			);
 		}
 		await this.fileManager.trashFile(folderResult.value);
+		return ok(folderResult.value);
 	}
 
 	/**
 	 * Rename/move a folder.
 	 */
-	private async renameFolder({
+	async renameFolder({
 		from,
 		to,
 		collisionStrategy = "rename",
@@ -130,8 +177,12 @@ export class TFolderHelper {
 				const fromPath = systemPathToSplitPath.encode(from);
 				const toPath = systemPathToSplitPath.encode(to);
 				const error = toResult.error;
+				logError({
+					description: `Both source \n(${fromPath}) \n and target \n (${toPath}) \n folders not found: ${error}`,
+					location: "TFolderHelper.renameFolder",
+				});
 				throw new Error(
-					`Both source (${fromPath}) and target (${toPath}) folders not found: ${error}`,
+					`Both source (${fromPath}) and target (${toPath}) folders not found`,
 				);
 			}
 			// FromFolder not found, but ToFolder found. Assume already moved.
@@ -146,6 +197,10 @@ export class TFolderHelper {
 		if (toResult.isOk()) {
 			// Target exists
 			if (collisionStrategy === "skip") {
+				logWarning({
+					description: `Target folder (${systemPathToSplitPath.encode(to)}) exists, skipping rename`,
+					location: "TFolderHelper.renameFolder",
+				});
 				return;
 			}
 

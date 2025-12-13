@@ -77,18 +77,35 @@ export class TFileHelper {
 		}
 	}
 
-	private async createMdFile(file: MdFileWithContentDto): Promise<TFile> {
-		return await this.getOrCreateOneMdFile(file);
+	async createMdFile(file: MdFileWithContentDto): Promise<TFile> {
+		const result = await this.createMdFileResult(file);
+		return result.match(
+			(file) => file,
+			(error) => {
+				throw new Error(error);
+			},
+		);
 	}
 
-	private async trashFile<SPF extends SplitPathToMdFile | SplitPathToFile>(
+	async trashFile<SPF extends SplitPathToMdFile | SplitPathToFile>(
 		splitPath: SPF,
 	): Promise<void> {
-		const file = await this.getFile(splitPath);
-		await this.fileManager.trashFile(file);
+		const result = await this.trashFileResult(splitPath);
+		result.match(
+			() => {
+				// File successfully trashed
+			},
+			(error) => {
+				logError({
+					description: `Failed to trash file: ${systemPathToSplitPath.encode(splitPath)}: ${error}`,
+					location: "TFileHelper.trashFile",
+				});
+				throw new Error(error);
+			},
+		);
 	}
 
-	private async renameFile<SPF extends SplitPathToMdFile | SplitPathToFile>({
+	async renameFile<SPF extends SplitPathToMdFile | SplitPathToFile>({
 		from,
 		to,
 		collisionStrategy = "rename",
@@ -105,7 +122,7 @@ export class TFileHelper {
 				const error = toResult.error;
 				logError({
 					description: `Both source \n(${fromPath}) \n and target \n (${toPath}) \n files not found: ${error}`,
-					location: "TFileHelper.moveFile",
+					location: "TFileHelper.renameFile",
 				});
 				throw new Error(
 					`Both source (${fromPath}) and target (${toPath}) files not found`,
@@ -136,7 +153,7 @@ export class TFileHelper {
 			if (collisionStrategy === "skip") {
 				logWarning({
 					description: `Target file (${systemPathToSplitPath.encode(to)}) exists with different content, skipping move`,
-					location: "TFileHelper.moveFile",
+					location: "TFileHelper.renameFile",
 				});
 				return;
 			}
@@ -165,9 +182,9 @@ export class TFileHelper {
 		);
 	}
 
-	async getFileResult<SPF extends SplitPathToMdFile | SplitPathToFile>(
-		splitPath: SPF,
-	): Promise<Result<TFile, string>> {
+	private async getFileResult<
+		SPF extends SplitPathToMdFile | SplitPathToFile,
+	>(splitPath: SPF): Promise<Result<TFile, string>> {
 		const systemPath = systemPathToSplitPath.encode(splitPath);
 		const tAbstractFile = this.vault.getAbstractFileByPath(systemPath);
 		if (!tAbstractFile) {
@@ -183,43 +200,50 @@ export class TFileHelper {
 		);
 	}
 
-	private async getOrCreateOneMdFile({
-		splitPath,
-		content,
-	}: MdFileWithContentDto): Promise<TFile> {
+	private async createMdFileResult(
+		file: MdFileWithContentDto,
+	): Promise<Result<TFile, string>> {
+		const { splitPath, content } = file;
 		const fileResult = await this.getFileResult(splitPath);
 
 		if (fileResult.isOk()) {
-			return fileResult.value;
+			return ok(fileResult.value); // Already exists
 		}
 
-		return await this.safelyCreateNewMdFile({
-			content,
-			splitPath,
-		});
-	}
-
-	private async safelyCreateNewMdFile({
-		splitPath,
-		content,
-	}: MdFileWithContentDto): Promise<TFile> {
 		const systemPath = systemPathToSplitPath.encode(splitPath);
 		try {
-			return await this.vault.create(systemPath, content ?? "");
+			const createdFile = await this.vault.create(
+				systemPath,
+				content ?? "",
+			);
+			return ok(createdFile);
 		} catch (error) {
-			logWarning({
-				description: `Failed to create file (${systemPath}): ${error.message}`,
-				location: "TFileHelper.createOneFile",
-			});
-
-			if (error.message.includes("already exists")) {
-				logWarning({
-					description: `Race condition detected: File (${systemPath}) already created by another process`,
-					location: "TFileHelper.createOneFile",
-				});
-				return this.getFile(splitPath);
+			if (error.message?.includes("already exists")) {
+				// Race condition: file was created by another process
+				const existingResult = await this.getFileResult(splitPath);
+				if (existingResult.isOk()) {
+					return ok(existingResult.value);
+				}
+				return err(
+					`File creation race condition: ${systemPath} was created but cannot be retrieved: ${existingResult.error}`,
+				);
 			}
-			throw error;
+			return err(
+				`Failed to create file: ${systemPath}: ${error.message}`,
+			);
 		}
+	}
+
+	private async trashFileResult<
+		SPF extends SplitPathToMdFile | SplitPathToFile,
+	>(splitPath: SPF): Promise<Result<TFile, string>> {
+		const fileResult = await this.getFileResult(splitPath);
+		if (fileResult.isErr()) {
+			return err(
+				`File not found: ${systemPathToSplitPath.encode(splitPath)}`,
+			);
+		}
+		await this.fileManager.trashFile(fileResult.value);
+		return ok(fileResult.value);
 	}
 }
