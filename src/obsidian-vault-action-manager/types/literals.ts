@@ -17,9 +17,9 @@ export const ProcessSchema = z.literal("Process");
 export type PROCESS = z.infer<typeof ProcessSchema>;
 export const PROCESS = ProcessSchema.value;
 
-export const RewriteSchema = z.literal("Rewrite");
-export type REWRITE = z.infer<typeof RewriteSchema>;
-export const REWRITE = RewriteSchema.value;
+export const ReplaceContentSchema = z.literal("ReplaceContent");
+export type REPLACE_CONTENT = z.infer<typeof ReplaceContentSchema>;
+export const REPLACE_CONTENT = ReplaceContentSchema.value;
 
 export const FileSchema = z.literal("File");
 export type FILE = z.infer<typeof FileSchema>;

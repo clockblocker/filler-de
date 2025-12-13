@@ -13,7 +13,7 @@ export const testReplaceAllContentHappyPath = async () => {
 			| undefined;
 		if (!api) throw new Error("testing api unavailable");
 
-		const { openedFileServiceWithResult, splitPath } = api;
+		const { openedFileServiceWithResult } = api;
 		if (!openedFileServiceWithResult) {
 			throw new Error("openedFileServiceWithResult not available");
 		}

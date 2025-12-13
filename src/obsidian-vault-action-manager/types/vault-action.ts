@@ -8,7 +8,7 @@ import {
 	MD_FILE,
 	PROCESS,
 	RENAME,
-	REWRITE,
+	REPLACE_CONTENT,
 	TRASH,
 } from "./literals";
 import type { CoreSplitPath, SplitPathToMdFile } from "./split-path";
@@ -18,7 +18,7 @@ const OperationSchema = z.enum([CREATE, RENAME, TRASH] as const);
 const TargetSchema = z.enum([FOLDER, FILE, MD_FILE] as const);
 const Target = TargetSchema.enum;
 
-const ContentOpsSchema = z.enum([PROCESS, REWRITE] as const);
+const ContentOpsSchema = z.enum([PROCESS, REPLACE_CONTENT] as const);
 
 export const VaultActionTypeSchema = z.enum([
 	...OperationSchema.options.flatMap((op) =>
@@ -39,7 +39,7 @@ type ProcessPayload = {
 	splitPath: SplitPathToMdFile;
 	transform: Transform;
 };
-type RewritePayload = { splitPath: CoreSplitPath; content: string };
+type ReplaceContentInPayload = { splitPath: CoreSplitPath; content: string };
 
 export type VaultAction =
 	| { type: typeof VaultActionType.CreateFolder; payload: CreatePayload }
@@ -52,7 +52,10 @@ export type VaultAction =
 	| { type: typeof VaultActionType.RenameMdFile; payload: RenamePayload }
 	| { type: typeof VaultActionType.TrashMdFile; payload: TrashPayload }
 	| { type: typeof VaultActionType.ProcessMdFile; payload: ProcessPayload }
-	| { type: typeof VaultActionType.RewriteMdFile; payload: RewritePayload };
+	| {
+			type: typeof VaultActionType.ReplaceContentMdFile;
+			payload: ReplaceContentInPayload;
+	  };
 
 export const weightForVaultActionType: Record<VaultActionType, number> = {
 	[VaultActionType.CreateFolder]: 0,
@@ -65,7 +68,7 @@ export const weightForVaultActionType: Record<VaultActionType, number> = {
 	[VaultActionType.RenameMdFile]: 7,
 	[VaultActionType.TrashMdFile]: 8,
 	[VaultActionType.ProcessMdFile]: 9,
-	[VaultActionType.RewriteMdFile]: 10,
+	[VaultActionType.ReplaceContentMdFile]: 10,
 } as const;
 
 export function getActionKey(action: VaultAction): string {
@@ -79,7 +82,7 @@ export function getActionKey(action: VaultAction): string {
 		case VaultActionType.CreateMdFile:
 		case VaultActionType.TrashMdFile:
 		case VaultActionType.ProcessMdFile:
-		case VaultActionType.RewriteMdFile:
+		case VaultActionType.ReplaceContentMdFile:
 			return `${type}:${coreSplitPathToKey(payload.splitPath)}`;
 
 		case VaultActionType.RenameFolder:
@@ -100,7 +103,7 @@ export function getActionTargetPath(action: VaultAction): string {
 		case VaultActionType.CreateMdFile:
 		case VaultActionType.TrashMdFile:
 		case VaultActionType.ProcessMdFile:
-		case VaultActionType.RewriteMdFile:
+		case VaultActionType.ReplaceContentMdFile:
 			return coreSplitPathToKey(payload.splitPath);
 
 		case VaultActionType.RenameFolder:
