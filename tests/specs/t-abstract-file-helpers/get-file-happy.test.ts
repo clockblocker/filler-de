@@ -9,24 +9,12 @@ export const testGetFileHappyPath = async () => {
 
 		const { tfileHelper, tfolderHelper, splitPath } = api;
 
-		const runTest = async (name: string, setup: () => Promise<{ filePath: string; expectedName: string; expectedPath: string }>) => {
-			const { filePath, expectedName, expectedPath } = await setup();
-			const fileSplitPath = splitPath(filePath);
-			const getResult = await tfileHelper.getFile(fileSplitPath) as unknown as Result<{ name: string; path: string }>;
+		const runTestCode = (globalThis as { __runTestCode?: string }).__runTestCode;
+		if (!runTestCode) {
+			throw new Error("runTest code not found - ensure beforeEach ran");
+		}
 
-			if (getResult.isErr()) {
-				return { error: getResult.error, name };
-			}
-
-			return {
-				expectedName,
-				expectedPath,
-				fileName: getResult.value?.name,
-				filePath: getResult.value?.path,
-				name,
-				success: true,
-			};
-		};
+		const runTest = new Function("tfileHelper", "splitPath", runTestCode + " return runTest;")(tfileHelper, splitPath);
 
 		const markdown = await runTest("markdown", async () => {
 			const fileSplitPath = splitPath("test.md");

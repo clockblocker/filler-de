@@ -18,6 +18,27 @@ describe("TFileHelper and TFolderHelper", () => {
 			await app.commands.executeCommandById(
 				"textfresser-testing-expose-opened-service",
 			);
+			// Store runTest helper code as string - can be serialized!
+			(globalThis as { __runTestCode?: string }).__runTestCode = `
+				const runTest = async (name, setup) => {
+					const { filePath, expectedName, expectedPath } = await setup();
+					const fileSplitPath = splitPath(filePath);
+					const getResult = await tfileHelper.getFile(fileSplitPath);
+					
+					if (getResult.isErr()) {
+						return { error: getResult.error, name };
+					}
+					
+					return {
+						expectedName,
+						expectedPath,
+						fileName: getResult.value?.name,
+						filePath: getResult.value?.path,
+						name,
+						success: true,
+					};
+				};
+			`;
 		});
 	});
 
