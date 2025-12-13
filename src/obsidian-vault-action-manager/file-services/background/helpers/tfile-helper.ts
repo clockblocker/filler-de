@@ -1,5 +1,5 @@
 import { err, ok, type Result } from "neverthrow";
-import { type FileManager, TFile, TFolder, type Vault } from "obsidian";
+import { type FileManager, TFile, type Vault } from "obsidian";
 import {
 	logError,
 	logWarning,
@@ -7,7 +7,6 @@ import {
 import type { MdFileWithContentDto } from "../../../../obsidian-vault-action-manager/helpers/pathfinder";
 import {
 	findFirstAvailableIndexedPath,
-	pathToFolderFromPathParts,
 	systemPathToSplitPath,
 } from "../../../../obsidian-vault-action-manager/helpers/pathfinder";
 import {
@@ -16,6 +15,7 @@ import {
 	type SplitPathToMdFile,
 	SplitPathType,
 } from "../../../../obsidian-vault-action-manager/types/split-path";
+import { type CollisionStrategy, getExistingBasenamesInFolder } from "./common";
 
 /**
  * Helper for TFile operations in the vault.
@@ -68,8 +68,8 @@ export class TFileHelper {
 		}
 	}
 
-	async moveFiles(
-		fromTos: readonly SplitPathFromTo<SplitPathToMdFile>[],
+	async moveFiles<SPF extends SplitPathToMdFile | SplitPathToFile>(
+		fromTos: readonly SplitPathFromTo<SPF>[],
 	): Promise<void> {
 		for (const fromTo of fromTos) {
 			await this.moveFile(fromTo);
@@ -90,7 +90,10 @@ export class TFileHelper {
 	private async moveFile<SPF extends SplitPathToMdFile | SplitPathToFile>({
 		from,
 		to,
-	}: SplitPathFromTo<SPF>): Promise<void> {
+		collisionStrategy = "rename",
+	}: SplitPathFromTo<SPF> & {
+		collisionStrategy?: CollisionStrategy;
+	}): Promise<void> {
 		const fromResult = await this.getFileResult(from);
 		const toResult = await this.getFileResult(to);
 
@@ -112,6 +115,11 @@ export class TFileHelper {
 			return;
 		}
 
+		// If source and target are the same file, no-op
+		if (toResult.isOk() && fromResult.value === toResult.value) {
+			return;
+		}
+
 		if (toResult.isOk()) {
 			if (to.type === SplitPathType.MdFile) {
 				const targetContent = await this.vault.read(toResult.value);
@@ -123,9 +131,20 @@ export class TFileHelper {
 				}
 			}
 
-			// Target exists with different content - find first available indexed name
-			const existingBasenames =
-				await this.getExistingBasenamesInFolder(to);
+			// Target exists with different content
+			if (collisionStrategy === "skip") {
+				logWarning({
+					description: `Target file (${systemPathToSplitPath.encode(to)}) exists with different content, skipping move`,
+					location: "TFileHelper.moveFile",
+				});
+				return;
+			}
+
+			// collisionStrategy === "rename" - find first available indexed name
+			const existingBasenames = await getExistingBasenamesInFolder(
+				to,
+				this.vault,
+			);
 
 			const indexedPath = await findFirstAvailableIndexedPath(
 				to,
@@ -201,27 +220,5 @@ export class TFileHelper {
 			}
 			throw error;
 		}
-	}
-
-	/**
-	 * Gets all existing basenames of .md files in the target folder.
-	 */
-	private async getExistingBasenamesInFolder<
-		SPF extends SplitPathToMdFile | SplitPathToFile,
-	>(target: SPF): Promise<Set<string>> {
-		const folderPath = pathToFolderFromPathParts(target.pathParts);
-		const targetFolder = this.vault.getAbstractFileByPath(folderPath);
-
-		const existingBasenames = new Set<string>();
-
-		if (targetFolder && targetFolder instanceof TFolder) {
-			for (const child of targetFolder.children) {
-				if (child instanceof TFile && child.extension === "md") {
-					existingBasenames.add(child.basename);
-				}
-			}
-		}
-
-		return existingBasenames;
 	}
 }
