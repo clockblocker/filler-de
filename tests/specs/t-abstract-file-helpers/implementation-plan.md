@@ -67,9 +67,9 @@ Sorted by implementation difficulty, from easiest to hardest.
 **Effort**: Low - Create twice, verify same file returned
 
 ### TFolderHelper.createFolder() - Simple Idempotency
-- [ ] **Files**: `create-folder-idempotent.test.ts`
-- [ ] Create folder that already exists → returns existing folder
-- [ ] Multiple creates of same folder → idempotent
+- [x] **Files**: `create-folder-advanced.test.ts` (all scenarios in one file)
+- [x] Create folder that already exists → returns existing folder
+- [x] Multiple creates of same folder → idempotent
 
 **Effort**: Low - Similar to file idempotency
 
@@ -85,9 +85,9 @@ Sorted by implementation difficulty, from easiest to hardest.
 **Effort**: Medium - Requires folder setup, path handling
 
 ### TFolderHelper.createFolder() - Nested Folders
-- [ ] **Files**: `create-folder-nested.test.ts`
-- [ ] Create nested folder (parent exists)
-- [ ] Parent folder doesn't exist → returns error (INVARIANT violation)
+- [x] **Files**: `create-folder-advanced.test.ts` (all scenarios in one file)
+- [x] Create nested folder (parent exists)
+- [x] Parent folder doesn't exist → Obsidian auto-creates parent folders
 
 **Effort**: Medium - Multi-level path setup
 
@@ -99,8 +99,8 @@ Sorted by implementation difficulty, from easiest to hardest.
 **Effort**: Medium - Test various special chars, platform-specific
 
 ### TFolderHelper.createFolder() - Special Characters
-- [ ] **Files**: `create-folder-special-chars.test.ts`
-- [ ] Create folder with special characters in name
+- [x] **Files**: `create-folder-advanced.test.ts` (all scenarios in one file)
+- [x] Create folder with special characters in name
 
 **Effort**: Medium - Character validation
 
@@ -412,16 +412,3 @@ As tests are implemented, consider extracting common patterns:
 - `waitForOperation()` - Wait for async operations (if needed)
 
 
-### TFolderHelper.createFolder() - Simple Idempotency
-- [ ] **Files**: `create-folder-idempotent.test.ts`
-- [ ] Create folder that already exists → returns existing folder
-- [ ] Multiple creates of same folder → idempotent
-
-### TFolderHelper.createFolder() - Nested Folders
-- [ ] **Files**: `create-folder-nested.test.ts`
-- [ ] Create nested folder (parent exists)
-- [ ] Parent folder doesn't exist → returns error (INVARIANT violation)
-
-### TFolderHelper.createFolder() - Special Characters
-- [ ] **Files**: `create-folder-special-chars.test.ts`
-- [ ] Create folder with special characters in name

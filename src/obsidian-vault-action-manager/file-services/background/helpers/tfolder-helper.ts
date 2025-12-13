@@ -53,7 +53,7 @@ export class TFolderHelper {
 
 	/**
 	 * Create a single folder.
-	 * Assumes parent folder exists.
+	 * Obsidian's vault.createFolder automatically creates parent folders if they don't exist.
 	 */
 	async createFolder(
 		splitPath: SplitPathToFolder,

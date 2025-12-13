@@ -51,3 +51,7 @@ export type Result<T> = {
 // const helper = new Function("deps...", helperCode + " return helperName;")(...deps);
 //
 // Example: runTest helper for getFile tests is stored in __runTestCode
+
+// GOLDEN SOURCE PRINCIPLE: Obsidian's actual behavior is always the authoritative source.
+// If code/docs/tests conflict with Obsidian's behavior, fix code/docs/tests to match Obsidian.
+// Never assume - always verify Obsidian's actual behavior through tests.

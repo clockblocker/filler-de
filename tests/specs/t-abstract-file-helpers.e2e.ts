@@ -7,6 +7,7 @@ import { testCreateMdFileHappyPath } from "./t-abstract-file-helpers/create-file
 import { testCreateMdFileIdempotent } from "./t-abstract-file-helpers/create-file-idempotent.test";
 import { testCreateMdFileRaceConditions } from "./t-abstract-file-helpers/create-file-race.test";
 import { testCreateFolder } from "./t-abstract-file-helpers/create-folder.test";
+import { testCreateFolderAdvanced } from "./t-abstract-file-helpers/create-folder-advanced.test";
 import { testGetFileErrors } from "./t-abstract-file-helpers/get-file-errors.test";
 import { testGetFileHappyPath } from "./t-abstract-file-helpers/get-file-happy.test";
 import { testGetFolder } from "./t-abstract-file-helpers/get-folder.test";
@@ -66,6 +67,10 @@ describe("TFileHelper and TFolderHelper", () => {
 	});
 
 	it("should create and get a folder", testCreateFolder);
+
+	describe("createFolder() - Advanced", () => {
+		it("should handle idempotency, nested folders, and special characters", testCreateFolderAdvanced);
+	});
 
 	it("should create and get a markdown file", testCreateFile);
 
