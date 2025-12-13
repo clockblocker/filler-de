@@ -9,7 +9,6 @@ import type {
 	SplitPathToFolder,
 } from "../../../../obsidian-vault-action-manager/types/split-path";
 import {
-	type CollisionStrategy,
 	errorBothSourceAndTargetNotFound,
 	errorCreateFailed,
 	errorCreationRaceCondition,
@@ -17,8 +16,8 @@ import {
 	errorRenameFailed,
 	errorRetrieveRenamed,
 	errorTypeMismatch,
-	getExistingBasenamesInFolder,
-} from "./common";
+} from "../../../errors";
+import { type CollisionStrategy, getExistingBasenamesInFolder } from "./common";
 
 /**
  * Low-level folder operations.

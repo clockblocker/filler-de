@@ -1,11 +1,5 @@
 import { err, ok, type Result } from "neverthrow";
 import { type App, type Editor, MarkdownView, TFile } from "obsidian";
-import { splitPathKey } from "../../impl/split-path";
-import type {
-	SplitPathToFile,
-	SplitPathToMdFile,
-} from "../../types/split-path";
-import type { Transform } from "../../types/vault-action";
 import {
 	errorFileStale,
 	errorGetEditor,
@@ -13,7 +7,13 @@ import {
 	errorNoTFileFound,
 	errorNotInSourceMode,
 	errorOpenFileFailed,
-} from "./common";
+} from "../../errors";
+import { splitPathKey } from "../../impl/split-path";
+import type {
+	SplitPathToFile,
+	SplitPathToMdFile,
+} from "../../types/split-path";
+import type { Transform } from "../../types/vault-action";
 import type { OpenedFileReader } from "./opened-file-reader";
 
 export class OpenedFileService {

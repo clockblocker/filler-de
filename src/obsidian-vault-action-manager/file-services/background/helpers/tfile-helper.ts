@@ -12,7 +12,6 @@ import {
 	SplitPathType,
 } from "../../../../obsidian-vault-action-manager/types/split-path";
 import {
-	type CollisionStrategy,
 	errorBothSourceAndTargetNotFound,
 	errorCreateFailed,
 	errorCreationRaceCondition,
@@ -21,8 +20,10 @@ import {
 	errorRetrieveRenamed,
 	errorTrashDuplicateFile,
 	errorTypeMismatch,
-	getExistingBasenamesInFolder,
-} from "./common";
+	errorWriteFailed,
+} from "../../../errors";
+import type { Transform } from "../../../types/vault-action";
+import { type CollisionStrategy, getExistingBasenamesInFolder } from "./common";
 
 /**
  * Helper for TFile operations in the vault.
@@ -224,6 +225,61 @@ export class TFileHelper {
 					systemPathToSplitPath.encode(from),
 					systemPathToSplitPath.encode(to),
 					error.message,
+				),
+			);
+		}
+	}
+
+	async replaceAllContent(
+		splitPath: SplitPathToMdFile,
+		content: string,
+	): Promise<Result<TFile, string>> {
+		const fileResult = await this.getFile(splitPath);
+		if (fileResult.isErr()) {
+			return err(fileResult.error);
+		}
+
+		try {
+			await this.vault.modify(fileResult.value, content);
+			return ok(fileResult.value);
+		} catch (error) {
+			return err(
+				errorWriteFailed(
+					"file",
+					systemPathToSplitPath.encode(splitPath),
+					error instanceof Error ? error.message : String(error),
+				),
+			);
+		}
+	}
+
+	async processContent({
+		splitPath,
+		transform,
+	}: {
+		splitPath: SplitPathToMdFile;
+		transform: Transform;
+	}): Promise<Result<TFile, string>> {
+		const fileResult = await this.getFile(splitPath);
+		if (fileResult.isErr()) {
+			return err(fileResult.error);
+		}
+
+		try {
+			const before = await this.vault.read(fileResult.value);
+			const after = await transform(before);
+
+			if (after !== before) {
+				await this.vault.modify(fileResult.value, after);
+			}
+
+			return ok(fileResult.value);
+		} catch (error) {
+			return err(
+				errorWriteFailed(
+					"file",
+					systemPathToSplitPath.encode(splitPath),
+					error instanceof Error ? error.message : String(error),
 				),
 			);
 		}
