@@ -40,7 +40,7 @@ export class LegacyAbstractFileHelper {
 	// ─── File Operations ─────────────────────────────────────────────
 
 	async createFiles(files: readonly FileWithContent[]): Promise<void> {
-		await this.tfileHelper.createFiles(files);
+		await this.tfileHelper.createMdFiles(files);
 	}
 
 	async moveFiles(fromTos: readonly FileFromTo[]): Promise<void> {

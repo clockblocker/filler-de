@@ -10,9 +10,11 @@ import {
 	pathToFolderFromPathParts,
 	systemPathToSplitPath,
 } from "../../../../obsidian-vault-action-manager/helpers/pathfinder";
-import type {
-	SplitPathFromTo,
-	SplitPathToMdFile,
+import {
+	type SplitPathFromTo,
+	type SplitPathToFile,
+	type SplitPathToMdFile,
+	SplitPathType,
 } from "../../../../obsidian-vault-action-manager/types/split-path";
 
 /**
@@ -32,7 +34,13 @@ export class TFileHelper {
 		this.fileManager = fileManager;
 	}
 
-	async getFile(splitPath: SplitPathToMdFile): Promise<TFile> {
+	async getMdFile(splitPath: SplitPathToMdFile): Promise<TFile> {
+		return await this.getFile(splitPath);
+	}
+
+	async getFile<SPF extends SplitPathToMdFile | SplitPathToFile>(
+		splitPath: SPF,
+	): Promise<TFile> {
 		const result = await this.getFileResult(splitPath);
 		return result.match(
 			(file) => file,
@@ -42,17 +50,19 @@ export class TFileHelper {
 		);
 	}
 
-	async createFiles(
+	async createMdFiles(
 		files: readonly MdFileWithContentDto[],
 	): Promise<TFile[]> {
 		const tFiles: TFile[] = [];
 		for (const file of files) {
-			tFiles.push(await this.createFile(file));
+			tFiles.push(await this.createMdFile(file));
 		}
 		return tFiles;
 	}
 
-	async trashFiles(splitPaths: readonly SplitPathToMdFile[]): Promise<void> {
+	async trashFiles(
+		splitPaths: readonly (SplitPathToMdFile | SplitPathToFile)[],
+	): Promise<void> {
 		for (const splitPath of splitPaths) {
 			await this.trashFile(splitPath);
 		}
@@ -66,19 +76,21 @@ export class TFileHelper {
 		}
 	}
 
-	private async createFile(file: MdFileWithContentDto): Promise<TFile> {
-		return await this.getOrCreateOneFile(file);
+	private async createMdFile(file: MdFileWithContentDto): Promise<TFile> {
+		return await this.getOrCreateOneMdFile(file);
 	}
 
-	private async trashFile(splitPath: SplitPathToMdFile): Promise<void> {
+	private async trashFile<SPF extends SplitPathToMdFile | SplitPathToFile>(
+		splitPath: SPF,
+	): Promise<void> {
 		const file = await this.getFile(splitPath);
 		await this.fileManager.trashFile(file);
 	}
 
-	private async moveFile({
+	private async moveFile<SPF extends SplitPathToMdFile | SplitPathToFile>({
 		from,
 		to,
-	}: SplitPathFromTo<SplitPathToMdFile>): Promise<void> {
+	}: SplitPathFromTo<SPF>): Promise<void> {
 		const fromResult = await this.getFileResult(from);
 		const toResult = await this.getFileResult(to);
 
@@ -101,21 +113,25 @@ export class TFileHelper {
 		}
 
 		if (toResult.isOk()) {
-			const targetContent = await this.vault.read(toResult.value);
-			const sourceContent = await this.vault.read(fromResult.value);
+			if (to.type === SplitPathType.MdFile) {
+				const targetContent = await this.vault.read(toResult.value);
+				const sourceContent = await this.vault.read(fromResult.value);
 
-			if (targetContent === sourceContent) {
-				await this.fileManager.trashFile(fromResult.value);
-				return;
+				if (targetContent === sourceContent) {
+					await this.fileManager.trashFile(fromResult.value);
+					return;
+				}
 			}
 
 			// Target exists with different content - find first available indexed name
 			const existingBasenames =
 				await this.getExistingBasenamesInFolder(to);
+
 			const indexedPath = await findFirstAvailableIndexedPath(
 				to,
 				existingBasenames,
 			);
+
 			await this.fileManager.renameFile(
 				fromResult.value,
 				systemPathToSplitPath.encode(indexedPath),
@@ -129,8 +145,8 @@ export class TFileHelper {
 		);
 	}
 
-	async getFileResult(
-		splitPath: SplitPathToMdFile,
+	async getFileResult<SPF extends SplitPathToMdFile | SplitPathToFile>(
+		splitPath: SPF,
 	): Promise<Result<TFile, string>> {
 		const systemPath = systemPathToSplitPath.encode(splitPath);
 		const tAbstractFile = this.vault.getAbstractFileByPath(systemPath);
@@ -147,7 +163,7 @@ export class TFileHelper {
 		);
 	}
 
-	private async getOrCreateOneFile({
+	private async getOrCreateOneMdFile({
 		splitPath,
 		content,
 	}: MdFileWithContentDto): Promise<TFile> {
@@ -157,13 +173,13 @@ export class TFileHelper {
 			return fileResult.value;
 		}
 
-		return await this.safelyCreateNewFile({
+		return await this.safelyCreateNewMdFile({
 			content,
 			splitPath,
 		});
 	}
 
-	private async safelyCreateNewFile({
+	private async safelyCreateNewMdFile({
 		splitPath,
 		content,
 	}: MdFileWithContentDto): Promise<TFile> {
@@ -190,9 +206,9 @@ export class TFileHelper {
 	/**
 	 * Gets all existing basenames of .md files in the target folder.
 	 */
-	private async getExistingBasenamesInFolder(
-		target: SplitPathToMdFile,
-	): Promise<Set<string>> {
+	private async getExistingBasenamesInFolder<
+		SPF extends SplitPathToMdFile | SplitPathToFile,
+	>(target: SPF): Promise<Set<string>> {
 		const folderPath = pathToFolderFromPathParts(target.pathParts);
 		const targetFolder = this.vault.getAbstractFileByPath(folderPath);
 
