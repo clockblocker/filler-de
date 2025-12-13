@@ -97,7 +97,7 @@ export class TFolderHelper {
 		collisionStrategy = "rename",
 	}: SplitPathFromTo<SplitPathToFolder> & {
 		collisionStrategy?: CollisionStrategy;
-	}): Promise<Result<void, string>> {
+	}): Promise<Result<TFolder, string>> {
 		const fromResult = await this.getFolder(from);
 		const toResult = await this.getFolder(to);
 
@@ -110,18 +110,18 @@ export class TFolderHelper {
 				);
 			}
 			// FromFolder not found, but ToFolder found. Assume already moved.
-			return ok(undefined);
+			return ok(toResult.value);
 		}
 
 		// If source and target are the same folder, no-op
 		if (toResult.isOk() && fromResult.value === toResult.value) {
-			return ok(undefined);
+			return ok(fromResult.value);
 		}
 
 		if (toResult.isOk()) {
 			// Target exists
 			if (collisionStrategy === "skip") {
-				return ok(undefined);
+				return ok(toResult.value);
 			}
 
 			// collisionStrategy === "rename" - find first available indexed name
@@ -140,7 +140,13 @@ export class TFolderHelper {
 					fromResult.value,
 					systemPathToSplitPath.encode(indexedPath),
 				);
-				return ok(undefined);
+				const renamedResult = await this.getFolder(indexedPath);
+				if (renamedResult.isErr()) {
+					return err(
+						`Failed to retrieve renamed folder: ${systemPathToSplitPath.encode(indexedPath)}: ${renamedResult.error}`,
+					);
+				}
+				return ok(renamedResult.value);
 			} catch (error) {
 				return err(
 					`Failed to rename folder: ${systemPathToSplitPath.encode(from)} to ${systemPathToSplitPath.encode(indexedPath)}: ${error.message}`,
@@ -153,7 +159,13 @@ export class TFolderHelper {
 				fromResult.value,
 				systemPathToSplitPath.encode(to),
 			);
-			return ok(undefined);
+			const renamedResult = await this.getFolder(to);
+			if (renamedResult.isErr()) {
+				return err(
+					`Failed to retrieve renamed folder: ${systemPathToSplitPath.encode(to)}: ${renamedResult.error}`,
+				);
+			}
+			return ok(renamedResult.value);
 		} catch (error) {
 			return err(
 				`Failed to rename folder: ${systemPathToSplitPath.encode(from)} to ${systemPathToSplitPath.encode(to)}: ${error.message}`,

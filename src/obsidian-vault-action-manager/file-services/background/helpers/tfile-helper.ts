@@ -1,9 +1,5 @@
 import { err, ok, type Result } from "neverthrow";
 import { type FileManager, TFile, type Vault } from "obsidian";
-import {
-	logError,
-	logWarning,
-} from "../../../../obsidian-vault-action-manager/helpers/issue-handlers";
 import type { MdFileWithContentDto } from "../../../../obsidian-vault-action-manager/helpers/pathfinder";
 import {
 	findFirstAvailableIndexedPath,
@@ -34,138 +30,9 @@ export class TFileHelper {
 		this.fileManager = fileManager;
 	}
 
-	async getMdFile(splitPath: SplitPathToMdFile): Promise<TFile> {
-		return await this.getFile(splitPath);
-	}
-
 	async getFile<SPF extends SplitPathToMdFile | SplitPathToFile>(
 		splitPath: SPF,
-	): Promise<TFile> {
-		const result = await this.getFileResult(splitPath);
-		return result.match(
-			(file) => file,
-			(error) => {
-				throw new Error(error);
-			},
-		);
-	}
-
-	async trashFiles(
-		splitPaths: readonly (SplitPathToMdFile | SplitPathToFile)[],
-	): Promise<void> {
-		for (const splitPath of splitPaths) {
-			await this.trashFile(splitPath);
-		}
-	}
-
-	async createMdFile(file: MdFileWithContentDto): Promise<TFile> {
-		const result = await this.createMdFileResult(file);
-		return result.match(
-			(file) => file,
-			(error) => {
-				throw new Error(error);
-			},
-		);
-	}
-
-	async trashFile<SPF extends SplitPathToMdFile | SplitPathToFile>(
-		splitPath: SPF,
-	): Promise<void> {
-		const result = await this.trashFileResult(splitPath);
-		result.match(
-			() => {
-				// File successfully trashed
-			},
-			(error) => {
-				logError({
-					description: `Failed to trash file: ${systemPathToSplitPath.encode(splitPath)}: ${error}`,
-					location: "TFileHelper.trashFile",
-				});
-				throw new Error(error);
-			},
-		);
-	}
-
-	async renameFile<SPF extends SplitPathToMdFile | SplitPathToFile>({
-		from,
-		to,
-		collisionStrategy = "rename",
-	}: SplitPathFromTo<SPF> & {
-		collisionStrategy?: CollisionStrategy;
-	}): Promise<void> {
-		const fromResult = await this.getFileResult(from);
-		const toResult = await this.getFileResult(to);
-
-		if (fromResult.isErr()) {
-			if (toResult.isErr()) {
-				const fromPath = systemPathToSplitPath.encode(from);
-				const toPath = systemPathToSplitPath.encode(to);
-				const error = toResult.error;
-				logError({
-					description: `Both source \n(${fromPath}) \n and target \n (${toPath}) \n files not found: ${error}`,
-					location: "TFileHelper.renameFile",
-				});
-				throw new Error(
-					`Both source (${fromPath}) and target (${toPath}) files not found`,
-				);
-			}
-
-			// FromFile not found, but ToFile found. Assume the file is already correctly moved.
-			return;
-		}
-
-		// If source and target are the same file, no-op
-		if (toResult.isOk() && fromResult.value === toResult.value) {
-			return;
-		}
-
-		if (toResult.isOk()) {
-			if (to.type === SplitPathType.MdFile) {
-				const targetContent = await this.vault.read(toResult.value);
-				const sourceContent = await this.vault.read(fromResult.value);
-
-				if (targetContent === sourceContent) {
-					await this.fileManager.trashFile(fromResult.value);
-					return;
-				}
-			}
-
-			// Target exists with different content
-			if (collisionStrategy === "skip") {
-				logWarning({
-					description: `Target file (${systemPathToSplitPath.encode(to)}) exists with different content, skipping move`,
-					location: "TFileHelper.renameFile",
-				});
-				return;
-			}
-
-			// collisionStrategy === "rename" - find first available indexed name
-			const existingBasenames = await getExistingBasenamesInFolder(
-				to,
-				this.vault,
-			);
-
-			const indexedPath = await findFirstAvailableIndexedPath(
-				to,
-				existingBasenames,
-			);
-
-			await this.fileManager.renameFile(
-				fromResult.value,
-				systemPathToSplitPath.encode(indexedPath),
-			);
-			return;
-		}
-
-		await this.fileManager.renameFile(
-			fromResult.value,
-			systemPathToSplitPath.encode(to),
-		);
-	}
-
-	private async getFileResult<
-		SPF extends SplitPathToMdFile | SplitPathToFile,
-	>(splitPath: SPF): Promise<Result<TFile, string>> {
+	): Promise<Result<TFile, string>> {
 		const systemPath = systemPathToSplitPath.encode(splitPath);
 		const tAbstractFile = this.vault.getAbstractFileByPath(systemPath);
 		if (!tAbstractFile) {
@@ -181,11 +48,11 @@ export class TFileHelper {
 		);
 	}
 
-	private async createMdFileResult(
+	async createMdFile(
 		file: MdFileWithContentDto,
 	): Promise<Result<TFile, string>> {
 		const { splitPath, content } = file;
-		const fileResult = await this.getFileResult(splitPath);
+		const fileResult = await this.getFile(splitPath);
 
 		if (fileResult.isOk()) {
 			return ok(fileResult.value); // Already exists
@@ -201,7 +68,7 @@ export class TFileHelper {
 		} catch (error) {
 			if (error.message?.includes("already exists")) {
 				// Race condition: file was created by another process
-				const existingResult = await this.getFileResult(splitPath);
+				const existingResult = await this.getFile(splitPath);
 				if (existingResult.isOk()) {
 					return ok(existingResult.value);
 				}
@@ -215,16 +82,113 @@ export class TFileHelper {
 		}
 	}
 
-	private async trashFileResult<
-		SPF extends SplitPathToMdFile | SplitPathToFile,
-	>(splitPath: SPF): Promise<Result<TFile, string>> {
-		const fileResult = await this.getFileResult(splitPath);
+	async trashFile<SPF extends SplitPathToMdFile | SplitPathToFile>(
+		splitPath: SPF,
+	): Promise<Result<void, string>> {
+		const fileResult = await this.getFile(splitPath);
 		if (fileResult.isErr()) {
-			return err(
-				`File not found: ${systemPathToSplitPath.encode(splitPath)}`,
-			);
+			// File already trashed
+			return ok(undefined);
 		}
 		await this.fileManager.trashFile(fileResult.value);
-		return ok(fileResult.value);
+		return ok(undefined);
+	}
+
+	async renameFile<SPF extends SplitPathToMdFile | SplitPathToFile>({
+		from,
+		to,
+		collisionStrategy = "rename",
+	}: SplitPathFromTo<SPF> & {
+		collisionStrategy?: CollisionStrategy;
+	}): Promise<Result<TFile, string>> {
+		const fromResult = await this.getFile(from);
+		const toResult = await this.getFile(to);
+
+		if (fromResult.isErr()) {
+			if (toResult.isErr()) {
+				const fromPath = systemPathToSplitPath.encode(from);
+				const toPath = systemPathToSplitPath.encode(to);
+				return err(
+					`Both source (${fromPath}) and target (${toPath}) files not found: ${toResult.error}`,
+				);
+			}
+			// FromFile not found, but ToFile found. Assume already moved.
+			return ok(toResult.value);
+		}
+
+		// If source and target are the same file, no-op
+		if (toResult.isOk() && fromResult.value === toResult.value) {
+			return ok(fromResult.value);
+		}
+
+		if (toResult.isOk()) {
+			if (to.type === SplitPathType.MdFile) {
+				const targetContent = await this.vault.read(toResult.value);
+				const sourceContent = await this.vault.read(fromResult.value);
+
+				if (targetContent === sourceContent) {
+					try {
+						await this.fileManager.trashFile(fromResult.value);
+						return ok(toResult.value);
+					} catch (error) {
+						return err(
+							`Failed to trash duplicate file: ${systemPathToSplitPath.encode(from)}: ${error.message}`,
+						);
+					}
+				}
+			}
+
+			// Target exists with different content
+			if (collisionStrategy === "skip") {
+				return ok(toResult.value);
+			}
+
+			// collisionStrategy === "rename" - find first available indexed name
+			const existingBasenames = await getExistingBasenamesInFolder(
+				to,
+				this.vault,
+			);
+
+			const indexedPath = await findFirstAvailableIndexedPath(
+				to,
+				existingBasenames,
+			);
+
+			try {
+				await this.fileManager.renameFile(
+					fromResult.value,
+					systemPathToSplitPath.encode(indexedPath),
+				);
+				const renamedResult = await this.getFile(indexedPath);
+				if (renamedResult.isErr()) {
+					return err(
+						`Failed to retrieve renamed file: ${systemPathToSplitPath.encode(indexedPath)}: ${renamedResult.error}`,
+					);
+				}
+				return ok(renamedResult.value);
+			} catch (error) {
+				return err(
+					`Failed to rename file: ${systemPathToSplitPath.encode(from)} to ${systemPathToSplitPath.encode(indexedPath)}: ${error.message}`,
+				);
+			}
+		}
+
+		try {
+			await this.fileManager.renameFile(
+				fromResult.value,
+				systemPathToSplitPath.encode(to),
+			);
+			const renamedResult = await this.getFile(to);
+			if (renamedResult.isErr()) {
+				return err(
+					`Failed to retrieve renamed file: ${systemPathToSplitPath.encode(to)}: ${renamedResult.error}`,
+				);
+			}
+			return ok(renamedResult.value);
+		} catch (error) {
+			return err(
+				`Failed to rename file: ${systemPathToSplitPath.encode(from)} to ${systemPathToSplitPath.encode(to)}: ${error.message}`,
+			);
+		}
 	}
 }
