@@ -113,20 +113,17 @@ tests/specs/opened-file-service/
 - **Effort**: Medium - Requires setting up error conditions
 
 #### `cd()` - Happy Path
-- **File**: `cd.test.ts`
-- **Scenarios**:
-  - Open file by TFile → returns `Result<TFile, string>`, file is active
-  - Open file by SplitPathToMdFile → file opened, returns Result
-  - Open file by SplitPathToFile → file opened, returns Result
-  - Open nested file → file opened correctly
+- [x] **File**: `cd.test.ts`
+- [x] Open file by TFile → returns `Result<TFile, string>`, file is active
+- [x] Open file by SplitPathToMdFile → file opened, returns Result
+- [x] Open nested file → file opened correctly
 - **Effort**: Hard - Requires file creation, opening, and verification
 
 #### `cd()` - Error Cases
-- **File**: `cd.test.ts`
-- **Scenarios**:
-  - File doesn't exist → returns `Result.isErr()` with error message
-  - Invalid argument type → returns `Result.isErr()` with error
-  - Path points to folder → returns error (if applicable)
+- [x] **File**: `cd.test.ts`
+- [x] File doesn't exist → returns `Result.isErr()` with error message
+- [x] Invalid argument type → returns `Result.isErr()` with error
+- [x] Path points to folder → returns error
 - **Effort**: Medium - Requires setting up error conditions
 
 ## Implementation Details
