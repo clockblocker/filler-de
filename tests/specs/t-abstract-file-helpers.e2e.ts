@@ -3,11 +3,7 @@ import { browser } from "@wdio/globals";
 import { obsidianPage } from "wdio-obsidian-service";
 import { testCreateFile } from "./t-abstract-file-helpers/create-file.test";
 import { testCreateFolder } from "./t-abstract-file-helpers/create-folder.test";
-import {
-	testGetFileInvalidPath,
-	testGetFileNotExists,
-	testGetFilePointsToFolder,
-} from "./t-abstract-file-helpers/get-file-errors.test";
+import { testGetFileErrors } from "./t-abstract-file-helpers/get-file-errors.test";
 import { testGetFileHappyPath } from "./t-abstract-file-helpers/get-file-happy.test";
 import { VAULT_PATH } from "./t-abstract-file-helpers/utils";
 
@@ -39,6 +35,27 @@ describe("TFileHelper and TFolderHelper", () => {
 					};
 				};
 			`;
+			// Store runErrorTest helper code as string - can be serialized!
+			(globalThis as { __runErrorTestCode?: string }).__runErrorTestCode = `
+				const runErrorTest = async (name, setup) => {
+					const setupResult = await setup();
+					const path = setupResult.path;
+					const expectedError = setupResult.expectedError;
+					
+					try {
+						const pathSplit = splitPath(path);
+						const getResult = await tfileHelper.getFile(pathSplit);
+						
+						if (getResult.isErr()) {
+							return { error: getResult.error, isErr: true, name };
+						}
+						
+						return { message: \`Expected error for \${name}\`, name, success: false };
+					} catch (error) {
+						return { error: String(error), expectedError, isErr: true, name };
+					}
+				};
+			`;
 		});
 	});
 
@@ -51,8 +68,6 @@ describe("TFileHelper and TFolderHelper", () => {
 	});
 
 	describe("getFile() - Error Cases", () => {
-		it("should return error when file doesn't exist", testGetFileNotExists);
-		it("should return error when path points to folder", testGetFilePointsToFolder);
-		it("should return error for invalid path", testGetFileInvalidPath);
+		it("should return errors (not exists, points to folder, invalid path)", testGetFileErrors);
 	});
 });

@@ -2,107 +2,64 @@
 import { browser, expect } from "@wdio/globals";
 import type { HelpersTestingApi, Result } from "./utils";
 
-export const testGetFileNotExists = async () => {
+export const testGetFileErrors = async () => {
 	try {
-		const result = await browser.executeObsidian(async ({ app }: any) => {
-			const api = app?.plugins?.plugins?.["cbcr-text-eater-de"]?.getHelpersTestingApi?.() as HelpersTestingApi | undefined;
-			if (!api) throw new Error("testing api unavailable");
-
-			const { tfileHelper, splitPath } = api;
-
-			const fileSplitPath = splitPath("nonexistent.md");
-			const getResult = await tfileHelper.getFile(fileSplitPath) as unknown as Result<{ name: string; path: string }>;
-
-			if (getResult.isErr()) {
-				return { error: getResult.error, isErr: true };
-			}
-
-			return { message: "Expected error", success: false };
-		});
-
-		// If we get here, check if result indicates error
-		if (result && typeof result === "object" && "isErr" in result && result.isErr) {
-			expect(result.isErr).toBe(true);
-			expect(result.error).toBeDefined();
-		} else {
-			throw new Error("Expected error but got success");
-		}
-	} catch (error) {
-		// Errors thrown by wdio-obsidian-service are expected for error cases
-		expect(error).toBeDefined();
-		expect(String(error)).toContain("Failed to get file");
-	}
-};
-
-export const testGetFilePointsToFolder = async () => {
-	try {
-		const result = await browser.executeObsidian(async ({ app }: any) => {
+		const results = await browser.executeObsidian(async ({ app }: any) => {
 			const api = app?.plugins?.plugins?.["cbcr-text-eater-de"]?.getHelpersTestingApi?.() as HelpersTestingApi | undefined;
 			if (!api) throw new Error("testing api unavailable");
 
 			const { tfileHelper, tfolderHelper, splitPath } = api;
 
-			// Create folder first
-			const folderSplitPath = splitPath("test-folder");
-			const folderResult = await tfolderHelper.createFolder(folderSplitPath) as unknown as Result<{ name: string; path: string }>;
-
-			if (folderResult.isErr()) {
-				return { error: folderResult.error };
+			// Get runErrorTest helper from globalThis
+			const runErrorTestCode = (globalThis as { __runErrorTestCode?: string }).__runErrorTestCode;
+			if (!runErrorTestCode) {
+				throw new Error("runErrorTest code not found - ensure beforeEach ran");
 			}
+			const runErrorTest = new Function("tfileHelper", "splitPath", runErrorTestCode + " return runErrorTest;")(tfileHelper, splitPath);
 
-			// Try to get folder as file (should error)
-			const getResult = await tfileHelper.getFile(folderSplitPath) as unknown as Result<{ name: string; path: string }>;
+			const notExists = await runErrorTest("notExists", async () => {
+				return { expectedError: "Failed to get file", path: "nonexistent.md" };
+			});
 
-			if (getResult.isErr()) {
-				return { error: getResult.error, isErr: true };
-			}
+			const pointsToFolder = await runErrorTest("pointsToFolder", async () => {
+				const folderSplitPath = splitPath("test-folder");
+				const folderResult = await tfolderHelper.createFolder(folderSplitPath) as unknown as Result<{ name: string; path: string }>;
 
-			return { message: "Expected error for folder path", success: false };
+				if (folderResult.isErr()) {
+					throw new Error(folderResult.error);
+				}
+
+				return { expectedError: "Expected file type missmatched", path: "test-folder" };
+			});
+
+			const invalidPath = await runErrorTest("invalidPath", async () => {
+				return { expectedError: "Failed to get file", path: "" };
+			});
+
+			return { invalidPath, notExists, pointsToFolder };
 		});
 
-		// If we get here, check if result indicates error
-		if (result && typeof result === "object" && "isErr" in result && result.isErr) {
-			expect(result.isErr).toBe(true);
-			expect(result.error).toBeDefined();
-		} else {
-			throw new Error("Expected error but got success");
+		// Assert on results
+		expect(results.notExists.isErr).toBe(true);
+		expect(results.notExists.error).toBeDefined();
+		if (results.notExists.expectedError) {
+			expect(String(results.notExists.error)).toContain(results.notExists.expectedError);
+		}
+
+		expect(results.pointsToFolder.isErr).toBe(true);
+		expect(results.pointsToFolder.error).toBeDefined();
+		if (results.pointsToFolder.expectedError) {
+			expect(String(results.pointsToFolder.error)).toContain(results.pointsToFolder.expectedError);
+		}
+
+		expect(results.invalidPath.isErr).toBe(true);
+		expect(results.invalidPath.error).toBeDefined();
+		if (results.invalidPath.expectedError) {
+			expect(String(results.invalidPath.error)).toContain(results.invalidPath.expectedError);
 		}
 	} catch (error) {
 		// Errors thrown by wdio-obsidian-service are expected for error cases
 		expect(error).toBeDefined();
-		expect(String(error)).toContain("Expected file type missmatched");
-	}
-};
-
-export const testGetFileInvalidPath = async () => {
-	try {
-		const result = await browser.executeObsidian(async ({ app }: any) => {
-			const api = app?.plugins?.plugins?.["cbcr-text-eater-de"]?.getHelpersTestingApi?.() as HelpersTestingApi | undefined;
-			if (!api) throw new Error("testing api unavailable");
-
-			const { tfileHelper, splitPath } = api;
-
-			// Try with empty path
-			const emptySplitPath = splitPath("");
-			const getResult = await tfileHelper.getFile(emptySplitPath) as unknown as Result<{ name: string; path: string }>;
-
-			if (getResult.isErr()) {
-				return { error: getResult.error, isErr: true };
-			}
-
-			return { message: "Expected error for empty path", success: false };
-		});
-
-		// If we get here, check if result indicates error
-		if (result && typeof result === "object" && "isErr" in result && result.isErr) {
-			expect(result.isErr).toBe(true);
-			expect(result.error).toBeDefined();
-		} else {
-			throw new Error("Expected error but got success");
-		}
-	} catch (error) {
-		// Errors thrown by wdio-obsidian-service are expected for error cases
-		expect(error).toBeDefined();
-		expect(String(error)).toContain("Failed to get file");
+		expect(String(error)).toMatch(/Failed to get file|Expected file type missmatched/);
 	}
 };
