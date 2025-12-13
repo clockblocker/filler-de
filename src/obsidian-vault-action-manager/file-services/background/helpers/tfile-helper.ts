@@ -50,30 +50,11 @@ export class TFileHelper {
 		);
 	}
 
-	async createMdFiles(
-		files: readonly MdFileWithContentDto[],
-	): Promise<TFile[]> {
-		const tFiles: TFile[] = [];
-		for (const file of files) {
-			tFiles.push(await this.createMdFile(file));
-		}
-		return tFiles;
-	}
-
 	async trashFiles(
 		splitPaths: readonly (SplitPathToMdFile | SplitPathToFile)[],
 	): Promise<void> {
 		for (const splitPath of splitPaths) {
 			await this.trashFile(splitPath);
-		}
-	}
-
-	async renameFiles<SPF extends SplitPathToMdFile | SplitPathToFile>(
-		fromTos: readonly SplitPathFromTo<SPF>[],
-		collisionStrategy?: CollisionStrategy,
-	): Promise<void> {
-		for (const fromTo of fromTos) {
-			await this.renameFile({ ...fromTo, collisionStrategy });
 		}
 	}
 
