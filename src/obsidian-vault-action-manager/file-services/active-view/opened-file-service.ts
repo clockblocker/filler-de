@@ -119,40 +119,4 @@ export class LegacyOpenedFileService {
 			return { description, error: true };
 		}
 	}
-
-	// private showLoadingOverlay(): void {
-	// 	if (document.getElementById("opened-file-service-loading-overlay")) {
-	// 		return;
-	// 	}
-	// 	const overlay = document.createElement("div");
-	// 	overlay.id = "opened-file-service-loading-overlay";
-
-	// 	document.body.appendChild(overlay);
-
-	// 	const loadingText = document.createElement("div");
-	// 	loadingText.innerText = "Loading...";
-	// 	loadingText.style.fontSize = "2rem";
-	// 	loadingText.style.color = "#fff";
-	// 	overlay.appendChild(loadingText);
-
-	// 	// overlay.style.position = 'fixed';
-	// 	// overlay.style.top = '0';
-	// 	// overlay.style.left = '0';
-	// 	// overlay.style.width = '100%';
-	// 	// overlay.style.height = '100%';
-	// 	// overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)'; // Semi-transparent black
-	// 	// overlay.style.display = 'flex';
-	// 	// overlay.style.justifyContent = 'center';
-	// 	// overlay.style.alignItems = 'center';
-	// 	// overlay.style.zIndex = '1000'; // Ensure it's on top
-	// }
-
-	// private hideLoadingOverlay(): void {
-	// 	const overlay = document.getElementById(
-	// 		"opened-file-service-loading-overlay",
-	// 	);
-	// 	if (overlay) {
-	// 		overlay.remove();
-	// 	}
-	// }
 }

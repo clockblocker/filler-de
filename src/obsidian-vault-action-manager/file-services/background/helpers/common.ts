@@ -113,3 +113,4 @@ export function errorTrashDuplicateFile(
 ): string {
 	return `Failed to trash duplicate file: ${path}: ${errorMessage}`;
 }
+

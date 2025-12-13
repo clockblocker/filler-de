@@ -240,3 +240,36 @@ export type PrettyFileDto = Prettify<
 	}
 >;
 export type PrettyFileFromTo = { from: PrettyFileDto; to: PrettyFileDto };
+
+// async deepListMdFiles(folderFullPath: FullPathToFolder): Promise<TFile[]> {
+// 	const folder = unwrapMaybeByThrowing(
+// 		await this.getMaybeAbstractFile(folderFullPath),
+// 		"AbstractFileHelper.deepListMdFiles",
+// 	);
+
+// 	const out: TFile[] = [];
+// 	const stack: TFolder[] = [folder];
+
+// 	while (stack.length > 0) {
+// 		const current = stack.pop();
+// 		if (!current) {
+// 			continue;
+// 		}
+
+// 		for (const child of current.children) {
+// 			if (child instanceof TFolder) {
+// 				stack.push(child);
+// 				continue;
+// 			}
+
+// 			if (
+// 				child instanceof TFile &&
+// 				child.extension.toLowerCase() === "md"
+// 			) {
+// 				out.push(child);
+// 			}
+// 		}
+// 	}
+
+// 	return out;
+// }

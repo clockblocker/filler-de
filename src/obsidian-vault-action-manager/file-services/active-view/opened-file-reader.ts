@@ -1,93 +1,70 @@
+import { err, ok, type Result } from "neverthrow";
 import { type App, MarkdownView, type TFile, type TFolder } from "obsidian";
-import { getMaybeEditor } from "../../../../obsidian-vault-action-manager/helpers/get-editor";
-import {
-	logError,
-	logWarning,
-} from "../../../../obsidian-vault-action-manager/helpers/issue-handlers";
-import {
-	type Maybe,
-	unwrapMaybeByThrowing,
-} from "../../../../types/common-interface/maybe";
-import { getFullPathForAbstractFile } from "../../atomic-services/pathfinder";
+import { getSplitPathForAbstractFile } from "../../helpers/pathfinder";
+import type { SplitPathToMdFile } from "../../types/split-path";
+import { errorGetEditor, errorNoActiveView, errorNoFileParent } from "./common";
 
-export class LegacyOpenedFileReader {
+export class OpenedFileReader {
 	constructor(private app: App) {}
 
-	async pwd() {
-		const activeView = unwrapMaybeByThrowing(
-			await this.getMaybeOpenedTFile(),
-		);
-		return getSplitPathForAbstractFile(activeView);
+	async pwd(): Promise<Result<SplitPathToMdFile, string>> {
+		const fileResult = await this.getOpenedTFile();
+		if (fileResult.isErr()) {
+			return err(fileResult.error);
+		}
+		return ok(getSplitPathForAbstractFile(fileResult.value));
 	}
 
-	async getContent(): Promise<string> {
-		return unwrapMaybeByThrowing(await this.getMaybeContent());
+	async getContent(): Promise<Result<string, string>> {
+		try {
+			const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+			if (!view?.file) {
+				return err(errorGetEditor());
+			}
+
+			const content = view.editor.getValue();
+			return ok(content ?? "");
+		} catch (error) {
+			return err(
+				errorGetEditor(
+					error instanceof Error ? error.message : String(error),
+				),
+			);
+		}
 	}
 
-	async getParent(): Promise<TFolder> {
-		return unwrapMaybeByThrowing(await this.getMaybeParent());
-	}
-
-	async getOpenedTFile(): Promise<TFile> {
-		return unwrapMaybeByThrowing(await this.getMaybeOpenedTFile());
-	}
-
-	async getMaybeContent(): Promise<Maybe<string>> {
-		const mbEditor = await getMaybeEditor(this.app);
-		if (mbEditor.error) {
-			return mbEditor;
+	async getParent(): Promise<Result<TFolder, string>> {
+		const fileResult = await this.getOpenedTFile();
+		if (fileResult.isErr()) {
+			return err(fileResult.error);
 		}
 
-		const content = mbEditor.data.getValue();
-		return { data: content ?? "", error: false };
-	}
-
-	async getMaybeParent(): Promise<Maybe<TFolder>> {
-		const file = await this.getOpenedTFile();
-
-		const parent = file.parent;
-
+		const parent = fileResult.value.parent;
 		if (!parent) {
-			return {
-				description: "Opened file does not have a parent",
-				error: true,
-			};
+			return err(errorNoFileParent());
 		}
 
-		return { data: parent, error: false };
+		return ok(parent);
 	}
 
-	// [TODO] ? Make it private
-	async getMaybeOpenedTFile(): Promise<Maybe<TFile>> {
+	async getOpenedTFile(): Promise<Result<TFile, string>> {
 		try {
 			const activeView =
 				this.app.workspace.getActiveViewOfType(MarkdownView);
 
 			if (!activeView) {
-				logWarning({
-					description: "File not open or not active",
-					location: "OpenedFileService",
-				});
-				return { error: true };
+				return err(errorNoActiveView());
 			}
 
 			const file = activeView.file;
 
 			if (!file) {
-				logWarning({
-					description: "File not open or not active",
-					location: "OpenedFileService",
-				});
-				return { error: true };
+				return err(errorNoActiveView());
 			}
 
-			return { data: file, error: false };
+			return ok(file);
 		} catch (error) {
-			logError({
-				description: `Failed to get maybe opened file: ${error}`,
-				location: "OpenedFileService",
-			});
-			return { error: true };
+			return err(error instanceof Error ? error.message : String(error));
 		}
 	}
 }

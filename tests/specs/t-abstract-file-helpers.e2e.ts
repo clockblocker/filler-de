@@ -21,7 +21,7 @@ describe("TFileHelper and TFolderHelper", () => {
 	beforeEach(async () => {
 		await obsidianPage.resetVault(VAULT_PATH);
 		await browser.executeObsidian(async ({ app }) => {
-			await app.commands.executeCommandById(
+			await (app as any).commands.executeCommandById(
 				"textfresser-testing-expose-opened-service",
 			);
 			// Store runTest helper code as string - can be serialized!

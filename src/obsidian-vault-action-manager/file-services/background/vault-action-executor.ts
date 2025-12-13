@@ -3,7 +3,7 @@ import {
 	logWarning,
 } from "../../../../obsidian-vault-action-manager/helpers/issue-handlers";
 import type { PrettyPath } from "../../../../types/common-interface/dtos";
-import type { LegacyOpenedFileService } from "../active-view/legacy-opened-file-service";
+import type { LegacyOpenedFileService } from "../active-view/opened-file-service";
 import type { LegacyBackgroundFileService } from "./background-file-service";
 import {
 	getActionTargetPath,
