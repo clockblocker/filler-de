@@ -115,10 +115,11 @@ This refactor aims to consolidate and modernize file/folder operations by:
 
 ### 🚧 In Progress
 
-- [ ] Integration with `ObsidianVaultActionManager` facade (partial)
+- [x] Integration with `ObsidianVaultActionManager` facade (partial)
+- [ ] ActionQueue implementation (call stack pattern)
+- [ ] SelfEventTracker implementation
+- [ ] EventAdapter integration with self-event filtering
 - [ ] Migration of `Librarian` to use new vault action manager
-- [ ] Event adapter implementation
-- [ ] Self-event tracking
 
 ### 📋 Pending
 
@@ -160,9 +161,12 @@ Librarian
 
 **Key Differences:**
 - No `BackgroundFileService` wrapper - Executor uses `TFileHelper`/`TFolderHelper` directly
-- Dispatcher returns `DispatchResult` with error tracking
+- Dispatcher returns `DispatchResult` with error tracking (errors returned, not thrown)
 - Executor ensures file existence before processing/writing
 - Collapse minimizes filesystem calls by combining operations
+- **Queue by default** - Call stack pattern: queue actions, execute immediately if idle
+- **Self-event filtering** - Only user-triggered events reach subscribers
+- **ActionQueue** - Max 10 batches, unlimited actions per batch, auto-continue
 
 ## Key Design Decisions
 

@@ -242,8 +242,10 @@ For each action, generate a key:
 ## Edge Cases
 
 1. **Rename chain:** `a.md → b.md` then `b.md → c.md`
-   - These are different keys (different `from` paths)
-   - Should collapse to single rename: `a.md → c.md` (future optimization)
+   - **Current behavior:** These are different keys (different `from` paths), so both kept
+   - **Future optimization:** Could collapse to single rename: `a.md → c.md`
+   - **Status:** Not implemented. Unit tests added to verify current behavior.
+   - **Note:** Self-event tracking handles this by tracking both `from` and `to` paths for each rename
 
 2. **Create + Trash:** Should collapse to no-op (drop both)
 

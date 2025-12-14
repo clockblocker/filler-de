@@ -90,8 +90,13 @@ callers still hit BackgroundFileService/OpenedFileService directly, defeating th
 - No guardrails: actions may span roots; include root in keys but do not block cross-root operations.
 
 ## Queue timing policy
-- Default: `dispatch` flushes immediately after collapse+sort; no built-in debounce.
-- Guidance: callers should batch before calling `dispatch` to avoid extra flushes; `collapseActions` still dedupes within each dispatch call.
+- **Call Stack + Event Queue Pattern**: Queue by default, but execute immediately if call stack is empty.
+- All `dispatch()` calls go to queue.
+- If nothing executing → execute immediately.
+- If executing → queue actions, execute when current batch completes.
+- When batch completes → check queue, execute next batch if available.
+- Max 10 batches (unlimited actions per batch).
+- Dispatcher handles collapse + sort when batch is executed.
 
 ## Path encoding
 - Implement our own split/encode logic (no legacy reuse) inside `split-path.ts`; all conversions flow through manager APIs.
@@ -102,18 +107,20 @@ callers still hit BackgroundFileService/OpenedFileService directly, defeating th
   - `action: VaultAction` - The action that failed
   - `error: string` - The error message
 - Continues executing remaining actions even if some fail (collects all errors).
-- No automatic re-dispatch; caller may choose to retry failed actions.
+- **Facade**: `dispatch()` returns `Promise<DispatchResult>` - errors returned to caller, not thrown.
+- No automatic re-dispatch; caller decides: retry, log, ignore, etc.
 
 ## Event adapter: self-event tracking and burst handling
-- Self-event options:
-  - Inject a `SelfEventTracker` to register actions we trigger and drop matching Obsidian events.
-  - Or tag actions with IDs and ignore events carrying those IDs (if Obsidian API allows metadata; likely not).
-  - Minimal: path-based ignore list with short TTL.
-- Burst handling options:
-  - Immediate emit to dispatcher (simplest; relies on collapseActions).
-  - Debounce per root/path (e.g., 50–200 ms) before emitting `VaultEvent` batch.
-  - Small buffer with max delay: collect events for N ms or until M events, then emit batch to dispatcher.
-- Desision: Inject `SelfEventTracker` and emit immediately (collapse handles dupes); add optional per-path debounce later only if needed.
+- **Self-event tracking**: Inject `SelfEventTracker` to register actions we dispatch.
+  - Track system paths (normalized) for ALL action types (folders, files, md files).
+  - For renames: track both `from` and `to` paths.
+  - Path-based matching: Obsidian events matched against tracked paths.
+  - TTL: 5s with pop-on-match (one-time use per path).
+  - **Goal**: Only user-triggered events reach subscribers. None of our dispatched actions emit events.
+- **Event emission**: Immediate emit to subscribers (no debouncing).
+  - User-triggered events → emit immediately.
+  - Self-events → filtered out before emission.
+  - Subscribers handle batching if needed.
 
 ## Proposed file structure
 - `src/obsidian-vault-action-manager/`
@@ -123,8 +130,10 @@ callers still hit BackgroundFileService/OpenedFileService directly, defeating th
     - `literals.ts`: op/entity literals
     - `vault-action.ts`: action types, weights, helpers (`getActionKey`, `getActionTargetPath`, `sortActions`)
   - `impl/`
-    - `facade.ts`: implements `ObsidianVaultActionManager` (composes reader + dispatcher)
-    - `event-adapter.ts`: Obsidian event → `VaultEvent`
+    - `facade.ts`: implements `ObsidianVaultActionManager` (composes reader + dispatcher + queue)
+    - `action-queue.ts`: **NEW** - Call stack + event queue pattern (queue by default, execute if idle)
+    - `self-event-tracker.ts`: **NEW** - Tracks dispatched actions, filters self-events
+    - `event-adapter.ts`: Obsidian event → `VaultEvent` (with self-event filtering)
     - `dispatcher.ts`: applies collapse + sort, executes via executor, returns `DispatchResult`
     - `collapse.ts`: `collapseActions` (coalesce per-path with merge rules)
     - `executor.ts`: maps `VaultAction` to `TFileHelper`/`TFolderHelper`/`OpenedFileService`, handles file existence
@@ -138,21 +147,42 @@ User Code
   ↓
 ObsidianVaultActionManager.dispatch(actions)
   ↓
-Dispatcher.dispatch(actions)
-  ├── collapseActions(actions) → removes duplicates, composes transforms
-  ├── sortActionsByWeight(collapsed) → orders by weight + path depth
-  └── for each action:
-      └── Executor.execute(action)
-          ├── Check if file exists (ProcessMdFile/ReplaceContentMdFile)
-          ├── Check if file is active (OpenedFileService.isFileActive)
-          └── Route to:
-              ├── OpenedFileService (if active) → preserves cursor/scroll
-              └── TFileHelper/TFolderHelper (if background) → direct vault ops
-          └── Return Result<void, string>
+ActionQueue.dispatch(actions)
+  ├── Add to queue (FIFO)
+  ├── If call stack empty → execute immediately
+  └── If call stack busy → queue, execute when current batch completes
+  ↓
+ActionQueue.executeNextBatch()
+  ├── Take batch from queue (unlimited actions)
+  ├── SelfEventTracker.register(batch) → track paths
+  └── Dispatcher.dispatch(batch)
+      ├── collapseActions(batch) → removes duplicates, composes transforms
+      ├── sortActionsByWeight(collapsed) → orders by weight + path depth
+      └── for each action:
+          └── Executor.execute(action)
+              ├── Check if file exists (ProcessMdFile/ReplaceContentMdFile)
+              ├── Check if file is active (OpenedFileService.isFileActive)
+              └── Route to:
+                  ├── OpenedFileService (if active) → preserves cursor/scroll
+                  └── TFileHelper/TFolderHelper (if background) → direct vault ops
+              └── Return Result<void, string>
   ↓
 DispatchResult = Result<void, DispatchError[]>
   ├── ok(undefined) if all succeeded
   └── err([{action, error}, ...]) if any failed
+  ↓
+When batch completes:
+  ├── Check queue for more actions
+  └── If more → execute next batch (recursive)
+  └── If empty → set isExecuting = false
+
+User Action (Obsidian)
+  ↓
+EventAdapter receives Obsidian event
+  ├── SelfEventTracker.shouldIgnore(path)? → YES → filter out
+  └── SelfEventTracker.shouldIgnore(path)? → NO → emit to subscribers
+  ↓
+VaultEvent → subscribers notified (only user-triggered events)
 ```
 
 ### Key Design Decisions

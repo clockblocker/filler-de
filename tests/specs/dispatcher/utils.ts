@@ -10,7 +10,7 @@ export const VAULT_PATH = "tests/simple";
 
 export type VaultActionManagerTestingApi = {
 	manager: {
-		dispatch: (actions: readonly unknown[]) => Promise<void>;
+		dispatch: (actions: readonly unknown[]) => Promise<DispatchResult>;
 		readContent: (splitPath: unknown) => Promise<string>;
 		exists: (splitPath: unknown) => Promise<boolean>;
 	};

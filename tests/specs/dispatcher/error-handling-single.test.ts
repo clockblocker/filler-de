@@ -29,39 +29,38 @@ export const testErrorHandlingSingle = async () => {
 		// We'll test with an invalid path instead
 		const invalidPath = splitPath(""); // Empty path should fail
 
-		let errorCaught = false;
-		let errorMessage = "";
-
-		try {
-			await manager.dispatch([
-				{
-					payload: {
-						content: "invalid",
-						splitPath: invalidPath,
-					},
-					type: "CreateMdFile",
+		// Dispatch returns result (not throws)
+		const dispatchResult = await manager.dispatch([
+			{
+				payload: {
+					content: "invalid",
+					splitPath: invalidPath,
 				},
-			]);
-		} catch (error) {
-			errorCaught = true;
-			errorMessage = error instanceof Error ? error.message : String(error);
-		}
+				type: "CreateMdFile",
+			},
+		]);
+
+		// Check if result contains errors
+		const hasError = dispatchResult.isErr();
+		const errorDetails = hasError ? dispatchResult.error : undefined;
 
 		// Verify first file still exists (execution continued)
 		const fileAExists = await manager.exists(fileASplitPath);
 
 		return {
-			errorCaught,
-			errorMessage,
+			errorDetails,
 			fileAExists,
+			hasError,
 			success: true,
 		};
 	});
 
 	expect(result.error).toBeUndefined();
 	expect(result.success).toBe(true);
-	// Error should be caught (dispatch throws on error)
-	expect(result.errorCaught).toBe(true);
-	// First file should still exist
+	// Error should be in result (dispatch returns errors, not throws)
+	expect(result.hasError).toBe(true);
+	expect(result.errorDetails).toBeDefined();
+	expect(result.errorDetails?.length).toBeGreaterThan(0);
+	// First file should still exist (execution continued despite error)
 	expect(result.fileAExists).toBe(true);
 };

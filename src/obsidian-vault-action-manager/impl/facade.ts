@@ -5,6 +5,7 @@ import { OpenedFileService as OpenedFileServiceImpl } from "../file-services/act
 import { TFileHelper } from "../file-services/background/helpers/tfile-helper";
 import { TFolderHelper } from "../file-services/background/helpers/tfolder-helper";
 import type {
+	DispatchResult,
 	ObsidianVaultActionManager,
 	Teardown,
 	VaultEventHandler,
@@ -32,6 +33,9 @@ export class ObsidianVaultActionManagerImpl
 	private readonly dispatcher: Dispatcher;
 	private readonly eventAdapter: EventAdapter;
 	private readonly subscribers = new Set<VaultEventHandler>();
+	// TODO: Add SelfEventTracker and ActionQueue when implementing queue integration
+	// private readonly selfEventTracker: SelfEventTracker;
+	// private readonly actionQueue: ActionQueue;
 
 	constructor(app: App) {
 		const openedFileReader = new OpenedFileReader(app);
@@ -75,13 +79,11 @@ export class ObsidianVaultActionManagerImpl
 		};
 	}
 
-	async dispatch(actions: readonly VaultAction[]): Promise<void> {
-		const result = await this.dispatcher.dispatch(actions);
-		if (result.isErr()) {
-			throw new Error(
-				`Dispatch failed: ${result.error.map((e) => e.error).join(", ")}`,
-			);
-		}
+	async dispatch(actions: readonly VaultAction[]): Promise<DispatchResult> {
+		// TODO: Register with self-event tracker before dispatch when implemented
+		// this.selfEventTracker.register(actions);
+		// Dispatch returns errors to caller (not throws)
+		return this.dispatcher.dispatch(actions);
 	}
 
 	readContent(splitPathArg: SplitPathToMdFile): Promise<string> {

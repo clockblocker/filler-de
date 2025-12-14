@@ -38,9 +38,11 @@ export type VaultEventHandler = (event: VaultEvent) => Promise<void>;
 
 export type Teardown = () => void;
 
+export type { DispatchError, DispatchResult } from "./impl/dispatcher";
+
 export interface ObsidianVaultActionManager {
 	subscribe(handler: VaultEventHandler): Teardown;
-	dispatch(actions: readonly VaultAction[]): Promise<void>;
+	dispatch(actions: readonly VaultAction[]): Promise<DispatchResult>;
 
 	// Read-only operations
 	readContent(splitPath: SplitPathToMdFile): Promise<string>;
@@ -61,6 +63,7 @@ export interface ObsidianVaultActionManager {
 }
 
 export { splitPathKey };
+export type { DispatchError, DispatchResult } from "./impl/dispatcher";
 
 export function splitPath(path: string): SplitPath;
 export function splitPath(file: TFile): SplitPathToFile | SplitPathToMdFile;
