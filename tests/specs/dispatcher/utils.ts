@@ -13,6 +13,7 @@ export type VaultActionManagerTestingApi = {
 		dispatch: (actions: readonly unknown[]) => Promise<DispatchResult>;
 		readContent: (splitPath: unknown) => Promise<string>;
 		exists: (splitPath: unknown) => Promise<boolean>;
+		subscribe: (handler: (event: unknown) => Promise<void>) => () => void;
 	};
 	splitPath: (input: string) => unknown;
 };

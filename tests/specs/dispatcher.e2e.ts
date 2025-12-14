@@ -11,8 +11,11 @@ import { testCollapseWriteProcess } from "./dispatcher/collapse-write-process.te
 import { testComplexScenario } from "./dispatcher/complex-scenario.test";
 import { testEmptyActions } from "./dispatcher/empty-actions.test";
 import { testErrorHandlingSingle } from "./dispatcher/error-handling-single.test";
+import { testQueueBehavior } from "./dispatcher/queue-behavior.test";
+import { testSelfEventFiltering } from "./dispatcher/self-event-filtering.test";
 import { testSingleActionHappyPath } from "./dispatcher/single-action-happy.test";
 import { testSortingWeightOrder } from "./dispatcher/sorting-weight-order.test";
+import { testUserEventEmission } from "./dispatcher/user-event-emission.test";
 import { VAULT_PATH } from "./dispatcher/utils";
 
 describe("Dispatcher", () => {
@@ -53,5 +56,17 @@ describe("Dispatcher", () => {
 
 	describe("Complex Scenarios", () => {
 		it("should handle collapse + sort + execute", testComplexScenario);
+	});
+
+	describe("Self-Event Filtering", () => {
+		it("should filter self-events from dispatched actions", testSelfEventFiltering);
+	});
+
+	describe("User Event Emission", () => {
+		it("should emit events for user-triggered file changes", testUserEventEmission);
+	});
+
+	describe("Queue Behavior", () => {
+		it("should batch and execute multiple dispatches", testQueueBehavior);
 	});
 });

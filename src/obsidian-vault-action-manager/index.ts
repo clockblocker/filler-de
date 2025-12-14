@@ -22,16 +22,16 @@ export type VaultEventType = z.infer<typeof VaultEventTypeSchema>;
 export type VaultEvent =
 	| {
 			type: typeof VaultEventType.FileCreated;
-			splitPath: SplitPathToFile;
+			splitPath: SplitPathToFile | SplitPathToMdFile;
 	  }
 	| {
 			type: typeof VaultEventType.FileRenamed;
-			from: SplitPathToFile;
-			to: SplitPathToFile;
+			from: SplitPathToFile | SplitPathToMdFile;
+			to: SplitPathToFile | SplitPathToMdFile;
 	  }
 	| {
 			type: typeof VaultEventType.FileTrashed;
-			splitPath: SplitPathToFile;
+			splitPath: SplitPathToFile | SplitPathToMdFile;
 	  };
 
 export type VaultEventHandler = (event: VaultEvent) => Promise<void>;

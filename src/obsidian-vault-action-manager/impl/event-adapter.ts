@@ -1,12 +1,17 @@
 import type { App, TAbstractFile } from "obsidian";
-import type { VaultEvent, VaultEventHandler } from "../index";
+import type { VaultEventHandler } from "../index";
 import { CREATE, FILE, RENAME, TRASH } from "../types/literals";
+import type { SplitPathToFile, SplitPathToMdFile } from "../types/split-path";
+import type { SelfEventTracker } from "./self-event-tracker";
 import { splitPath } from "./split-path";
 
 export class EventAdapter {
 	private listeners: Array<() => void> = [];
 
-	constructor(private readonly app: App) {}
+	constructor(
+		private readonly app: App,
+		private readonly selfEventTracker: SelfEventTracker,
+	) {}
 
 	start(handler: VaultEventHandler): void {
 		const onCreate = this.app.vault.on("create", (file) =>
@@ -34,10 +39,15 @@ export class EventAdapter {
 		file: TAbstractFile,
 		handler: VaultEventHandler,
 	): void {
+		// Filter self-events (actions we dispatched)
+		if (this.selfEventTracker.shouldIgnore(file.path)) {
+			return;
+		}
+
 		const split = splitPath(file);
 		if (split.type === "Folder") return;
 		void handler({
-			splitPath: split,
+			splitPath: split as SplitPathToFile | SplitPathToMdFile,
 			type: `${FILE}${CREATE}d` as const,
 		});
 	}
@@ -47,14 +57,20 @@ export class EventAdapter {
 		oldPath: string,
 		handler: VaultEventHandler,
 	): void {
+		// Filter self-events (actions we dispatched)
+		// Check new path (file.path) - old path already handled by tracking 'from' in self-event tracker
+		if (this.selfEventTracker.shouldIgnore(file.path)) {
+			return;
+		}
+
 		const split = splitPath(file);
 		if (split.type === "Folder") return;
 		const from = splitPath(oldPath);
 		if (from.type === "Folder") return;
 
 		void handler({
-			from,
-			to: split,
+			from: from as SplitPathToFile | SplitPathToMdFile,
+			to: split as SplitPathToFile | SplitPathToMdFile,
 			type: `${FILE}${RENAME}d` as const,
 		});
 	}
@@ -63,10 +79,15 @@ export class EventAdapter {
 		file: TAbstractFile,
 		handler: VaultEventHandler,
 	): void {
+		// Filter self-events (actions we dispatched)
+		if (this.selfEventTracker.shouldIgnore(file.path)) {
+			return;
+		}
+
 		const split = splitPath(file);
 		if (split.type === "Folder") return;
 		void handler({
-			splitPath: split,
+			splitPath: split as SplitPathToFile | SplitPathToMdFile,
 			type: `${FILE}${TRASH}ed` as const,
 		});
 	}

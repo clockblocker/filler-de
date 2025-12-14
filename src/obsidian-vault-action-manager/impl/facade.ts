@@ -17,11 +17,13 @@ import type {
 	SplitPathToMdFile,
 } from "../types/split-path";
 import type { VaultAction } from "../types/vault-action";
+import { ActionQueue } from "./action-queue";
 import { BackgroundFileService } from "./background-file-service";
 import { Dispatcher } from "./dispatcher";
 import { EventAdapter } from "./event-adapter";
 import { Executor } from "./executor";
 import { Reader } from "./reader";
+import { SelfEventTracker } from "./self-event-tracker";
 import { splitPath } from "./split-path";
 
 export class ObsidianVaultActionManagerImpl
@@ -31,11 +33,10 @@ export class ObsidianVaultActionManagerImpl
 	private readonly background: BackgroundFileService;
 	private readonly reader: Reader;
 	private readonly dispatcher: Dispatcher;
+	private readonly selfEventTracker: SelfEventTracker;
+	private readonly actionQueue: ActionQueue;
 	private readonly eventAdapter: EventAdapter;
 	private readonly subscribers = new Set<VaultEventHandler>();
-	// TODO: Add SelfEventTracker and ActionQueue when implementing queue integration
-	// private readonly selfEventTracker: SelfEventTracker;
-	// private readonly actionQueue: ActionQueue;
 
 	constructor(app: App) {
 		const openedFileReader = new OpenedFileReader(app);
@@ -61,7 +62,12 @@ export class ObsidianVaultActionManagerImpl
 		);
 		this.reader = new Reader(this.opened, this.background);
 		this.dispatcher = new Dispatcher(executor);
-		this.eventAdapter = new EventAdapter(app);
+		this.selfEventTracker = new SelfEventTracker();
+		this.actionQueue = new ActionQueue(
+			this.dispatcher,
+			this.selfEventTracker,
+		);
+		this.eventAdapter = new EventAdapter(app, this.selfEventTracker);
 	}
 
 	subscribe(handler: VaultEventHandler): Teardown {
@@ -80,10 +86,9 @@ export class ObsidianVaultActionManagerImpl
 	}
 
 	async dispatch(actions: readonly VaultAction[]): Promise<DispatchResult> {
-		// TODO: Register with self-event tracker before dispatch when implemented
-		// this.selfEventTracker.register(actions);
-		// Dispatch returns errors to caller (not throws)
-		return this.dispatcher.dispatch(actions);
+		// Route through ActionQueue (call stack pattern)
+		// ActionQueue handles self-event registration and execution
+		return this.actionQueue.dispatch(actions);
 	}
 
 	readContent(splitPathArg: SplitPathToMdFile): Promise<string> {
