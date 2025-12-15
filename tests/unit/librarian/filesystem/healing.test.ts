@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import {
 	healFileLegacy,
 	healFilesLegacy,
-} from "../../../../src/commanders/librarian/filesystem/healing";
+} from "../../../../src/commanders/librarian-legacy/filesystem/healing";
 import { LegacyVaultActionType } from "../../../../src/services/obsidian-services/file-services/background/background-vault-actions";
 
 describe("healFileLegacy", () => {

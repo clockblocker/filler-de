@@ -2,8 +2,8 @@ import { describe, expect, it } from "bun:test";
 import {
 	type NoteSnapshotLegacy,
 	noteDiffer,
-} from "../../../../src/commanders/librarian/diffing/note-differ";
-import type { TreePathLegacyLegacy } from "../../../../src/commanders/librarian/types";
+} from "../../../../src/commanders/librarian-legacy/diffing/note-differ";
+import type { TreePathLegacyLegacy } from "../../../../src/commanders/librarian-legacy/types";
 import { TextStatusLegacy } from "../../../../src/types/common-interface/enums";
 
 const differ = noteDiffer;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { CodexFormatter } from "../../../../src/commanders/librarian/codex/codex-formatter";
-import type { CodexContent } from "../../../../src/commanders/librarian/codex/types";
+import { CodexFormatter } from "../../../../src/commanders/librarian-legacy/codex/codex-formatter";
+import type { CodexContent } from "../../../../src/commanders/librarian-legacy/codex/types";
 import { TextStatusLegacy } from "../../../../src/types/common-interface/enums";
 
 describe("CodexFormatter", () => {

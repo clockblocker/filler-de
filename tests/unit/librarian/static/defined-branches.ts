@@ -1,4 +1,4 @@
-import type { NoteDtoLegacy } from '../../../../src/commanders/librarian/types';
+import type { NoteDtoLegacy } from '../../../../src/commanders/librarian-legacy/types';
 import { AVATAR_NOTES } from './batteries/avatar';
 
 type BranchName = 'Avatar';

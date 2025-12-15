@@ -3,7 +3,7 @@ import {
 	toNodeNameLegacy,
 	treePathToCodexBasename,
 	treePathToPageBasenameLegacy,
-} from '../../../../src/commanders/librarian/indexing/codecs';
+} from '../../../../src/commanders/librarian-legacy/indexing/codecs';
 import { DASH } from '../../../../src/types/literals';
 
 describe('toNodeNameLegacy', () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { LibrarianLegacy } from "../../../../src/commanders/librarian/librarian";
+import { LibrarianLegacy } from "../../../../src/commanders/librarian-legacy/librarian";
 import type { ReadablePrettyFile } from "../../../../src/services/obsidian-services/file-services/background/background-file-service";
 import {
 	type LegacyVaultAction,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { SelfEventTrackerLegacy } from "../../../../src/commanders/librarian/utils/self-event-tracker";
+import { SelfEventTrackerLegacy } from "../../../../src/commanders/librarian-legacy/utils/self-event-tracker";
 import {
 	type LegacyVaultAction,
 	LegacyVaultActionType,

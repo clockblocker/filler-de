@@ -3,9 +3,9 @@ import {
 	treePathToCodexBasename,
 	treePathToPageBasenameLegacy,
 	treePathToScrollBasename,
-} from "../../../../src/commanders/librarian/indexing/codecs";
-import { canonicalizePrettyPathLegacy } from "../../../../src/commanders/librarian/invariants/path-canonicalizer";
-import { prettyPathToTreePathLegacyLegacy, treePathToPrettyPathLegacy } from "../../../../src/commanders/librarian/utils/path-conversions";
+} from "../../../../src/commanders/librarian-legacy/indexing/codecs";
+import { canonicalizePrettyPathLegacy } from "../../../../src/commanders/librarian-legacy/invariants/path-canonicalizer";
+import { prettyPathToTreePathLegacyLegacy, treePathToPrettyPathLegacy } from "../../../../src/commanders/librarian-legacy/utils/path-conversions";
 
 describe("path-conversions", () => {
 	it("returns root codex for empty tree path", () => {

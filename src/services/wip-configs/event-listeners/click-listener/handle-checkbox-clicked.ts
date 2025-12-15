@@ -1,8 +1,8 @@
 import type { App } from "obsidian";
 import { MarkdownView } from "obsidian";
-import { treePathToPageBasenameLegacy } from "../../../../commanders/librarian/indexing/codecs";
-import type { LibrarianLegacy } from "../../../../commanders/librarian/librarian";
-import type { TreePathLegacyLegacy } from "../../../../commanders/librarian/types";
+import { treePathToPageBasenameLegacy } from "../../../../commanders/librarian-legacy/indexing/codecs";
+import type { LibrarianLegacy } from "../../../../commanders/librarian-legacy/librarian";
+import type { TreePathLegacyLegacy } from "../../../../commanders/librarian-legacy/types";
 
 /**
  * Handle checkbox click in Codex files.

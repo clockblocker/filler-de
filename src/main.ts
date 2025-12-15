@@ -4,7 +4,7 @@ import {
 	Plugin,
 	type WorkspaceLeaf,
 } from "obsidian";
-import { LibrarianLegacy } from "./commanders/librarian/librarian";
+import { LibrarianLegacy } from "./commanders/librarian-legacy/librarian";
 import {
 	splitPath as managerSplitPath,
 	ObsidianVaultActionManagerImpl,

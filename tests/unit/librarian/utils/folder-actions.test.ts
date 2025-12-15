@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { createFolderActionsForPathParts } from "../../../../src/commanders/librarian/utils/folder-actions";
+import { createFolderActionsForPathParts } from "../../../../src/commanders/librarian-legacy/utils/folder-actions";
 import {
 	type LegacyVaultAction,
 	LegacyVaultActionType,

@@ -1,4 +1,4 @@
-import type { LibrarianLegacy } from "../../../../commanders/librarian/librarian";
+import type { LibrarianLegacy } from "../../../../commanders/librarian-legacy/librarian";
 import type { TexfresserObsidianServices } from "../../../obsidian-services/interface";
 import { executeButtonAction } from "./execute-button-actions";
 import {

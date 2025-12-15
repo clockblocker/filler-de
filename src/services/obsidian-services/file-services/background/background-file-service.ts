@@ -1,6 +1,6 @@
 import type { FileManager, Vault } from "obsidian";
 import { TFile, TFolder } from "obsidian";
-import { LIBRARY_ROOTSLegacy } from "../../../../commanders/librarian/constants";
+import { LIBRARY_ROOTSLegacy } from "../../../../commanders/librarian-legacy/constants";
 import type { PrettyPathLegacy } from "../../../../types/common-interface/dtos";
 import { isReadonlyArray, type Prettify } from "../../../../types/helpers";
 import type { LegacyFullPathToFolder } from "../../atomic-services/pathfinder";

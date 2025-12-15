@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { readNoteDtoLegacy } from "../../../../src/commanders/librarian/filesystem/library-reader";
-import { treePathToCodexBasename, treePathToScrollBasename } from "../../../../src/commanders/librarian/indexing/codecs";
+import { readNoteDtoLegacy } from "../../../../src/commanders/librarian-legacy/filesystem/library-reader";
+import { treePathToCodexBasename, treePathToScrollBasename } from "../../../../src/commanders/librarian-legacy/indexing/codecs";
 import type { ReadablePrettyFile } from "../../../../src/services/obsidian-services/file-services/background/background-file-service";
 import type { TexfresserObsidianServices } from "../../../../src/services/obsidian-services/interface";
 

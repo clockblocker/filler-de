@@ -1,4 +1,4 @@
-import type { LibrarianLegacy } from "../../commanders/librarian/librarian";
+import type { LibrarianLegacy } from "../../commanders/librarian-legacy/librarian";
 import { testLibrary } from "./consts";
 
 export class LibrarianLegacyTester {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import type { NoteDtoLegacy, TreePathLegacyLegacy } from '../../../../src/commanders/librarian/types';
+import type { NoteDtoLegacy, TreePathLegacyLegacy } from '../../../../src/commanders/librarian-legacy/types';
 import { TextStatusLegacy } from '../../../../src/types/common-interface/enums';
 import { AVATAR_NOTES } from '../static/batteries/avatar';
 

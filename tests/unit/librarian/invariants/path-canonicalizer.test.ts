@@ -4,7 +4,7 @@ import {
 	computeCanonicalPath,
 	decodeBasenameLegacy,
 	isCanonical,
-} from "../../../../src/commanders/librarian/invariants/path-canonicalizer";
+} from "../../../../src/commanders/librarian-legacy/invariants/path-canonicalizer";
 
 describe("path-canonicalizer", () => {
 	const rootName: "Library" = "Library";

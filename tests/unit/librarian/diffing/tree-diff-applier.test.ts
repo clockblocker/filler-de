@@ -1,12 +1,12 @@
 import { describe, expect, it } from "bun:test";
-import type { NoteDiff } from "../../../../src/commanders/librarian/diffing/note-differ";
-import { mapDiffToActions } from "../../../../src/commanders/librarian/diffing/tree-diff-applier";
+import type { NoteDiff } from "../../../../src/commanders/librarian-legacy/diffing/note-differ";
+import { mapDiffToActions } from "../../../../src/commanders/librarian-legacy/diffing/tree-diff-applier";
 import {
 	treePathToCodexBasename,
 	treePathToPageBasenameLegacy,
 	treePathToScrollBasename,
-} from "../../../../src/commanders/librarian/indexing/codecs";
-import type { TreePathLegacyLegacy } from "../../../../src/commanders/librarian/types";
+} from "../../../../src/commanders/librarian-legacy/indexing/codecs";
+import type { TreePathLegacyLegacy } from "../../../../src/commanders/librarian-legacy/types";
 import {
 	type LegacyVaultAction,
 	LegacyVaultActionType,

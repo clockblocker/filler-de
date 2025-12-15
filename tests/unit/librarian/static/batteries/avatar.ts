@@ -1,4 +1,4 @@
-import { type NoteDtoLegacy } from '../../../../../src/commanders/librarian/types';
+import { type NoteDtoLegacy } from '../../../../../src/commanders/librarian-legacy/types';
 
 // New format: flat NoteDtoLegacy array (one entry per file)
 export const AVATAR_NOTES = [

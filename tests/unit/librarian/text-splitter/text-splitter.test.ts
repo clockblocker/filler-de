@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { pageNumberFromInt } from "../../../../src/commanders/librarian/indexing/codecs";
-import { splitTextIntoPages } from "../../../../src/commanders/librarian/text-splitter/text-splitter";
+import { pageNumberFromInt } from "../../../../src/commanders/librarian-legacy/indexing/codecs";
+import { splitTextIntoPages } from "../../../../src/commanders/librarian-legacy/text-splitter/text-splitter";
 
 describe("TextSplitter", () => {
 	describe("splitTextIntoPages", () => {
