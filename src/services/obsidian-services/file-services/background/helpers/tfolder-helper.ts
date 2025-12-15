@@ -1,7 +1,7 @@
 import { type FileManager, TFolder, type Vault } from "obsidian";
 import {
-	type Maybe,
-	unwrapMaybeByThrowing,
+	type MaybeLegacy,
+	unwrapMaybeLegacyByThrowing,
 } from "../../../../../types/common-interface/maybe";
 import type { LegacyFullPathToFolder } from "../../../atomic-services/pathfinder";
 import { legacySystemPathFromFullPath } from "../../../atomic-services/pathfinder";
@@ -22,13 +22,13 @@ export class LegacyTFolderHelper {
 	}
 
 	async getFolder(fullPath: LegacyFullPathToFolder): Promise<TFolder> {
-		const mbFolder = await this.getMaybeFolder(fullPath);
-		return unwrapMaybeByThrowing(mbFolder);
+		const mbFolder = await this.getMaybeLegacyFolder(fullPath);
+		return unwrapMaybeLegacyByThrowing(mbFolder);
 	}
 
-	async getMaybeFolder(
+	async getMaybeLegacyFolder(
 		fullPath: LegacyFullPathToFolder,
-	): Promise<Maybe<TFolder>> {
+	): Promise<MaybeLegacy<TFolder>> {
 		const systemPath = legacySystemPathFromFullPath(fullPath);
 		const tAbstractFile = this.vault.getAbstractFileByPath(systemPath);
 		if (!tAbstractFile) {
@@ -56,7 +56,7 @@ export class LegacyTFolderHelper {
 	 * Assumes parent folder exists.
 	 */
 	async createFolder(fullPath: LegacyFullPathToFolder): Promise<TFolder> {
-		const mbFolder = await this.getMaybeFolder(fullPath);
+		const mbFolder = await this.getMaybeLegacyFolder(fullPath);
 		if (!mbFolder.error) {
 			return mbFolder.data; // Already exists
 		}
@@ -76,7 +76,7 @@ export class LegacyTFolderHelper {
 	 * Trash a single folder
 	 */
 	async trashFolder(fullPath: LegacyFullPathToFolder): Promise<void> {
-		const mbFolder = await this.getMaybeFolder(fullPath);
+		const mbFolder = await this.getMaybeLegacyFolder(fullPath);
 		if (mbFolder.error) {
 			return; // Already gone
 		}

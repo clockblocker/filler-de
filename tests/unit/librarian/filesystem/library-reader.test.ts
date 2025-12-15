@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { readNoteDtos } from "../../../../src/commanders/librarian/filesystem/library-reader";
+import { readNoteDtoLegacy } from "../../../../src/commanders/librarian/filesystem/library-reader";
 import { treePathToCodexBasename, treePathToScrollBasename } from "../../../../src/commanders/librarian/indexing/codecs";
 import type { ReadablePrettyFile } from "../../../../src/services/obsidian-services/file-services/background/background-file-service";
 import type { TexfresserObsidianServices } from "../../../../src/services/obsidian-services/interface";
@@ -16,7 +16,7 @@ const mkReader = (
 
 type BgService = Pick<TexfresserObsidianServices["backgroundFileService"], "getReadersToAllMdFilesInFolder">;
 
-describe("readNoteDtos", () => {
+describe("readNoteDtoLegacy", () => {
 	it("filters untracked and codex files, keeps tracked notes", async () => {
 		const bgService: BgService = {
 			getReadersToAllMdFilesInFolder: async () => [
@@ -38,7 +38,7 @@ describe("readNoteDtos", () => {
 			],
 		};
 
-		const notes = await readNoteDtos(bgService, "Library");
+		const notes = await readNoteDtoLegacy(bgService, "Library");
 
 		expect(notes).toHaveLength(1);
 		expect(notes[0]?.path).toEqual(["Section", "Note"]);
@@ -58,7 +58,7 @@ describe("readNoteDtos", () => {
 			],
 		};
 
-		const notes = await readNoteDtos(bgService, "Library", ["A"]);
+		const notes = await readNoteDtoLegacy(bgService, "Library", ["A"]);
 
 		expect(notes).toHaveLength(1);
 		expect(notes[0]?.path).toEqual(["A", "One"]);

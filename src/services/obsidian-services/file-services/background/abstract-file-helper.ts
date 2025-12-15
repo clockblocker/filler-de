@@ -1,7 +1,7 @@
 import { type FileManager, TFile, TFolder, type Vault } from "obsidian";
 import {
-	type Maybe,
-	unwrapMaybeByThrowing,
+	type MaybeLegacy,
+	unwrapMaybeLegacyByThrowing,
 } from "../../../../types/common-interface/maybe";
 import type {
 	LegacyAbstractFile,
@@ -71,12 +71,14 @@ export class LegacyAbstractFileHelper {
 	// ─── Read Operations ─────────────────────────────────────────────
 
 	async getMdFile(fullPath: LegacyFullPathToMdFile): Promise<TFile> {
-		return unwrapMaybeByThrowing(await this.getMaybeAbstractFile(fullPath));
+		return unwrapMaybeLegacyByThrowing(
+			await this.getMaybeLegacyAbstractFile(fullPath),
+		);
 	}
 
-	async getMaybeAbstractFile<T extends LegacyFullPath>(
+	async getMaybeLegacyAbstractFile<T extends LegacyFullPath>(
 		fullPath: T,
-	): Promise<Maybe<LegacyAbstractFile<T>>> {
+	): Promise<MaybeLegacy<LegacyAbstractFile<T>>> {
 		const systemPath = legacySystemPathFromFullPath(fullPath);
 		const mbTabstractFile = this.vault.getAbstractFileByPath(systemPath);
 
@@ -117,8 +119,8 @@ export class LegacyAbstractFileHelper {
 	async deepListMdFiles(
 		folderFullPath: LegacyFullPathToFolder,
 	): Promise<TFile[]> {
-		const folder = unwrapMaybeByThrowing(
-			await this.getMaybeAbstractFile(folderFullPath),
+		const folder = unwrapMaybeLegacyByThrowing(
+			await this.getMaybeLegacyAbstractFile(folderFullPath),
 			"AbstractFileHelper.deepListMdFiles",
 		);
 

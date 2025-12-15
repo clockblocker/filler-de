@@ -1,37 +1,37 @@
-import { TextStatus } from "../../../types/common-interface/enums";
-import type { Maybe } from "../../../types/common-interface/maybe";
-import type { NodeName } from "../indexing/codecs";
+import { TextStatusLegacy } from "../../../types/common-interface/enums";
+import type { MaybeLegacy } from "../../../types/common-interface/maybe";
+import type { NodeNameLegacy } from "../indexing/codecs";
 import {
-	NodeType,
-	type NoteDto,
-	type NoteNode,
-	type SectionNode,
-	type TreePath,
+	NodeTypeLegacy,
+	type NoteDtoLegacy,
+	type NoteNodeLegacy,
+	type SectionNodeLegacy,
+	type TreePathLegacyLegacy,
 } from "../types";
 
-type TreeNode = SectionNode | NoteNode;
+type TreeNodeLegacy = SectionNodeLegacy | NoteNodeLegacy;
 
 /**
  * Snapshot for diffing trees
  */
-export type TreeSnapshot = {
-	notes: NoteDto[];
-	sectionPaths: TreePath[];
+export type TreeSnapshotLegacy = {
+	notes: NoteDtoLegacy[];
+	sectionPaths: TreePathLegacyLegacy[];
 };
 
 /**
- * LibraryTree - Simplified tree with 2 levels: Section → Note
+ * LibraryTreeLegacy - Simplified tree with 2 levels: Section → Note
  */
-export class LibraryTree {
-	root: SectionNode;
+export class LibraryTreeLegacy {
+	root: SectionNodeLegacy;
 
-	constructor(notes: NoteDto[], name: string) {
+	constructor(notes: NoteDtoLegacy[], name: string) {
 		this.root = {
 			children: [],
 			name,
 			parent: null,
-			status: TextStatus.NotStarted,
-			type: NodeType.Section,
+			status: TextStatusLegacy.NotStarted,
+			type: NodeTypeLegacy.Section,
 		};
 
 		this.addNotes(notes);
@@ -39,8 +39,8 @@ export class LibraryTree {
 
 	// ─── Public API ───────────────────────────────────────────────────
 
-	public getNotes(path: TreePath): NoteDto[] {
-		const mbNode = this.getMaybeNode({ path });
+	public getNotes(path: TreePathLegacyLegacy): NoteDtoLegacy[] {
+		const mbNode = this.getMaybeLegacyNode({ path });
 		if (mbNode.error) {
 			return [];
 		}
@@ -48,16 +48,16 @@ export class LibraryTree {
 		return this.collectNotesFromNode(mbNode.data);
 	}
 
-	public getAllNotes(): NoteDto[] {
+	public getAllNotes(): NoteDtoLegacy[] {
 		return this.getNotes([]);
 	}
 
-	public getAllSectionPaths(): TreePath[] {
-		const paths: TreePath[] = [];
+	public getAllSectionPaths(): TreePathLegacyLegacy[] {
+		const paths: TreePathLegacyLegacy[] = [];
 
-		const collectSections = (node: SectionNode): void => {
+		const collectSections = (node: SectionNodeLegacy): void => {
 			for (const child of node.children) {
-				if (child.type === NodeType.Section) {
+				if (child.type === NodeTypeLegacy.Section) {
 					paths.push(this.getPathFromNode(child));
 					collectSections(child);
 				}
@@ -68,14 +68,14 @@ export class LibraryTree {
 		return paths;
 	}
 
-	public snapshot(): TreeSnapshot {
+	public snapshot(): TreeSnapshotLegacy {
 		return {
 			notes: this.getAllNotes(),
 			sectionPaths: this.getAllSectionPaths(),
 		};
 	}
 
-	public addNotes(notes: NoteDto[]): void {
+	public addNotes(notes: NoteDtoLegacy[]): void {
 		for (const note of notes) {
 			this.addNote(note);
 		}
@@ -83,7 +83,7 @@ export class LibraryTree {
 		this.recomputeStatuses();
 	}
 
-	public deleteNotes(paths: TreePath[]): void {
+	public deleteNotes(paths: TreePathLegacyLegacy[]): void {
 		for (const path of paths) {
 			this.deleteNote(path);
 		}
@@ -95,10 +95,10 @@ export class LibraryTree {
 		path,
 		status,
 	}: {
-		path: TreePath;
+		path: TreePathLegacyLegacy;
 		status: "Done" | "NotStarted";
-	}): Maybe<TreeNode> {
-		const mbNode = this.getMaybeNode({ path });
+	}): MaybeLegacy<TreeNodeLegacy> {
+		const mbNode = this.getMaybeLegacyNode({ path });
 		if (mbNode.error) {
 			return mbNode;
 		}
@@ -115,8 +115,12 @@ export class LibraryTree {
 		return { data: node, error: false };
 	}
 
-	public getMaybeNode({ path }: { path: TreePath }): Maybe<TreeNode> {
-		let current: TreeNode = this.root;
+	public getMaybeLegacyNode({
+		path,
+	}: {
+		path: TreePathLegacyLegacy;
+	}): MaybeLegacy<TreeNodeLegacy> {
+		let current: TreeNodeLegacy = this.root;
 
 		for (const name of path) {
 			if (!name) {
@@ -126,7 +130,7 @@ export class LibraryTree {
 				};
 			}
 
-			if (current.type === NodeType.Note) {
+			if (current.type === NodeTypeLegacy.Note) {
 				return {
 					description: `Cannot traverse into Note node: ${current.name}`,
 					error: true,
@@ -147,13 +151,17 @@ export class LibraryTree {
 		return { data: current, error: false };
 	}
 
-	public getMaybeNote({ path }: { path: TreePath }): Maybe<NoteNode> {
-		const mbNode = this.getMaybeNode({ path });
+	public getMaybeLegacyNote({
+		path,
+	}: {
+		path: TreePathLegacyLegacy;
+	}): MaybeLegacy<NoteNodeLegacy> {
+		const mbNode = this.getMaybeLegacyNode({ path });
 		if (mbNode.error) {
 			return mbNode;
 		}
 
-		if (mbNode.data.type !== NodeType.Note) {
+		if (mbNode.data.type !== NodeTypeLegacy.Note) {
 			return {
 				description: `Node at ${path.join("/")} is not a Note`,
 				error: true,
@@ -163,13 +171,17 @@ export class LibraryTree {
 		return { data: mbNode.data, error: false };
 	}
 
-	public getMaybeSection({ path }: { path: TreePath }): Maybe<SectionNode> {
-		const mbNode = this.getMaybeNode({ path });
+	public getMaybeLegacySection({
+		path,
+	}: {
+		path: TreePathLegacyLegacy;
+	}): MaybeLegacy<SectionNodeLegacy> {
+		const mbNode = this.getMaybeLegacyNode({ path });
 		if (mbNode.error) {
 			return mbNode;
 		}
 
-		if (mbNode.data.type !== NodeType.Section) {
+		if (mbNode.data.type !== NodeTypeLegacy.Section) {
 			return {
 				description: `Node at ${path.join("/")} is not a Section`,
 				error: true,
@@ -179,14 +191,14 @@ export class LibraryTree {
 		return { data: mbNode.data, error: false };
 	}
 
-	public getNearestSection(path: TreePath): SectionNode {
-		const mbNode = this.getMaybeNode({ path });
+	public getNearestSection(path: TreePathLegacyLegacy): SectionNodeLegacy {
+		const mbNode = this.getMaybeLegacyNode({ path });
 		if (mbNode.error) {
 			return this.root;
 		}
 
 		const node = mbNode.data;
-		if (node.type === NodeType.Section) {
+		if (node.type === NodeTypeLegacy.Section) {
 			return node;
 		}
 
@@ -196,7 +208,7 @@ export class LibraryTree {
 
 	// ─── Private Methods ──────────────────────────────────────────────
 
-	private addNote(note: NoteDto): Maybe<NoteNode> {
+	private addNote(note: NoteDtoLegacy): MaybeLegacy<NoteNodeLegacy> {
 		const { path, status } = note;
 
 		if (path.length === 0) {
@@ -209,7 +221,7 @@ export class LibraryTree {
 		}
 
 		// Ensure parent sections exist
-		let parent: SectionNode = this.root;
+		let parent: SectionNodeLegacy = this.root;
 		for (const name of path.slice(0, -1)) {
 			const mbSection = this.getOrCreateSection(parent, name);
 			if (mbSection.error) {
@@ -221,7 +233,7 @@ export class LibraryTree {
 		// Check if note already exists
 		const existing = parent.children.find((c) => c.name === noteName);
 		if (existing) {
-			if (existing.type === NodeType.Note) {
+			if (existing.type === NodeTypeLegacy.Note) {
 				existing.status = status;
 				return { data: existing, error: false };
 			}
@@ -232,19 +244,19 @@ export class LibraryTree {
 		}
 
 		// Create note
-		const noteNode: NoteNode = {
+		const noteNode: NoteNodeLegacy = {
 			name: noteName,
 			parent,
 			status,
-			type: NodeType.Note,
+			type: NodeTypeLegacy.Note,
 		};
 
 		parent.children.push(noteNode);
 		return { data: noteNode, error: false };
 	}
 
-	private deleteNote(path: TreePath): void {
-		const mbNote = this.getMaybeNote({ path });
+	private deleteNote(path: TreePathLegacyLegacy): void {
+		const mbNote = this.getMaybeLegacyNote({ path });
 		if (mbNote.error) {
 			return;
 		}
@@ -263,7 +275,7 @@ export class LibraryTree {
 		this.cleanupEmptySections(parent);
 	}
 
-	private cleanupEmptySections(section: SectionNode): void {
+	private cleanupEmptySections(section: SectionNodeLegacy): void {
 		if (section === this.root) {
 			return;
 		}
@@ -278,13 +290,13 @@ export class LibraryTree {
 	}
 
 	private getOrCreateSection(
-		parent: SectionNode,
-		name: NodeName,
-	): Maybe<SectionNode> {
+		parent: SectionNodeLegacy,
+		name: NodeNameLegacy,
+	): MaybeLegacy<SectionNodeLegacy> {
 		const existing = parent.children.find((c) => c.name === name);
 
 		if (existing) {
-			if (existing.type === NodeType.Section) {
+			if (existing.type === NodeTypeLegacy.Section) {
 				return { data: existing, error: false };
 			}
 			return {
@@ -293,20 +305,20 @@ export class LibraryTree {
 			};
 		}
 
-		const section: SectionNode = {
+		const section: SectionNodeLegacy = {
 			children: [],
 			name,
 			parent,
-			status: TextStatus.NotStarted,
-			type: NodeType.Section,
+			status: TextStatusLegacy.NotStarted,
+			type: NodeTypeLegacy.Section,
 		};
 
 		parent.children.push(section);
 		return { data: section, error: false };
 	}
 
-	private collectNotesFromNode(node: TreeNode): NoteDto[] {
-		if (node.type === NodeType.Note) {
+	private collectNotesFromNode(node: TreeNodeLegacy): NoteDtoLegacy[] {
+		if (node.type === NodeTypeLegacy.Note) {
 			return [
 				{
 					path: this.getPathFromNode(node),
@@ -315,16 +327,16 @@ export class LibraryTree {
 			];
 		}
 
-		const notes: NoteDto[] = [];
+		const notes: NoteDtoLegacy[] = [];
 		for (const child of node.children) {
 			notes.push(...this.collectNotesFromNode(child));
 		}
 		return notes;
 	}
 
-	private getPathFromNode(node: TreeNode): TreePath {
-		const path: TreePath = [];
-		let current: TreeNode | null = node;
+	private getPathFromNode(node: TreeNodeLegacy): TreePathLegacyLegacy {
+		const path: TreePathLegacyLegacy = [];
+		let current: TreeNodeLegacy | null = node;
 
 		while (current && current !== this.root) {
 			path.unshift(current.name);
@@ -337,10 +349,10 @@ export class LibraryTree {
 	private initializeParents(): void {
 		this.root.parent = null;
 
-		const setParents = (node: SectionNode): void => {
+		const setParents = (node: SectionNodeLegacy): void => {
 			for (const child of node.children) {
 				child.parent = node;
-				if (child.type === NodeType.Section) {
+				if (child.type === NodeTypeLegacy.Section) {
 					setParents(child);
 				}
 			}
@@ -353,36 +365,39 @@ export class LibraryTree {
 		this.computeStatus(this.root);
 	}
 
-	private computeStatus(node: TreeNode): TextStatus {
-		if (node.type === NodeType.Note) {
+	private computeStatus(node: TreeNodeLegacy): TextStatusLegacy {
+		if (node.type === NodeTypeLegacy.Note) {
 			return node.status;
 		}
 
 		if (node.children.length === 0) {
-			node.status = TextStatus.NotStarted;
+			node.status = TextStatusLegacy.NotStarted;
 			return node.status;
 		}
 
 		const childStatuses = node.children.map((c) => this.computeStatus(c));
 
-		const allDone = childStatuses.every((s) => s === TextStatus.Done);
+		const allDone = childStatuses.every((s) => s === TextStatusLegacy.Done);
 		const allNotStarted = childStatuses.every(
-			(s) => s === TextStatus.NotStarted,
+			(s) => s === TextStatusLegacy.NotStarted,
 		);
 
 		node.status = allDone
-			? TextStatus.Done
+			? TextStatusLegacy.Done
 			: allNotStarted
-				? TextStatus.NotStarted
-				: TextStatus.InProgress;
+				? TextStatusLegacy.NotStarted
+				: TextStatusLegacy.InProgress;
 
 		return node.status;
 	}
 
-	private setStatusRecursively(node: TreeNode, status: TextStatus): void {
+	private setStatusRecursively(
+		node: TreeNodeLegacy,
+		status: TextStatusLegacy,
+	): void {
 		node.status = status;
 
-		if (node.type === NodeType.Section) {
+		if (node.type === NodeTypeLegacy.Section) {
 			for (const child of node.children) {
 				this.setStatusRecursively(child, status);
 			}

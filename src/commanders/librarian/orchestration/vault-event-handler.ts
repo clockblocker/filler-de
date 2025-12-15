@@ -1,52 +1,52 @@
 import type { TAbstractFile } from "obsidian";
 import { TFile } from "obsidian";
 import { editOrAddMetaInfo } from "../../../services/dto-services/meta-info-manager/interface";
-import { legacyFullPathFromSystemPath } from "../../../services/obsidian-services/atomic-services/pathfinder";
+import { fullPathFromSystemPathLegacy } from "../../../services/obsidian-services/atomic-services/pathfinder";
 import {
 	type LegacyVaultAction,
 	LegacyVaultActionType,
 } from "../../../services/obsidian-services/file-services/background/background-vault-actions";
 import type { TexfresserObsidianServices } from "../../../services/obsidian-services/interface";
-import type { PrettyPath } from "../../../types/common-interface/dtos";
-import { TextStatus } from "../../../types/common-interface/enums";
-import type { ActionDispatcher } from "../action-dispatcher";
+import type { PrettyPathLegacy } from "../../../types/common-interface/dtos";
+import { TextStatusLegacy } from "../../../types/common-interface/enums";
+import type { ActionDispatcherLegacy } from "../action-dispatcher";
 import {
-	isInUntracked,
-	isRootName,
-	LIBRARY_ROOTS,
-	type RootName,
+	isInUntrackedLegacy,
+	isRootNameLegacy,
+	LIBRARY_ROOTSLegacy,
+	type RootNameLegacy,
 } from "../constants";
-import { healFile } from "../filesystem/healing";
-import { toNodeName, treePathToScrollBasename } from "../indexing/codecs";
+import { healFileLegacy } from "../filesystem/healing";
+import { toNodeNameLegacy, treePathToScrollBasename } from "../indexing/codecs";
 import {
-	canonicalizePrettyPath,
+	canonicalizePrettyPathLegacy,
 	computeCanonicalPath,
-	decodeBasename,
+	decodeBasenameLegacy,
 } from "../invariants/path-canonicalizer";
-import type { LibrarianState } from "../librarian-state";
-import type { TreePath } from "../types";
+import type { LibrarianLegacyStateLegacy } from "../librarian-state";
+import type { TreePathLegacyLegacy } from "../types";
 import { createFolderActionsForPathParts } from "../utils/folder-actions";
-import type { SelfEventTracker } from "../utils/self-event-tracker";
-import type { FilesystemHealer } from "./filesystem-healer";
-import type { TreeReconciler } from "./tree-reconciler";
+import type { SelfEventTrackerLegacy } from "../utils/self-event-tracker";
+import type { FilesystemHealerLegacy } from "./filesystem-healer";
+import type { TreeReconcilerLegacy } from "./tree-reconciler";
 
 const RENAME_DEBOUNCE_MS = 100;
 
-export class VaultEventHandler {
-	private pendingRenameRoots = new Set<RootName>();
+export class VaultEventHandlerLegacy {
+	private pendingRenameRoots = new Set<RootNameLegacy>();
 	private renameDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 	constructor(
 		private readonly deps: {
-			dispatcher: ActionDispatcher;
-			filesystemHealer: FilesystemHealer;
-			treeReconciler: TreeReconciler;
-			state: LibrarianState;
-			selfEventTracker: SelfEventTracker;
+			dispatcher: ActionDispatcherLegacy;
+			filesystemHealer: FilesystemHealerLegacy;
+			treeReconciler: TreeReconcilerLegacy;
+			state: LibrarianLegacyStateLegacy;
+			selfEventTracker: SelfEventTrackerLegacy;
 			regenerateAllCodexes: () => Promise<void>;
-			generateUniquePrettyPath: (
-				prettyPath: PrettyPath,
-			) => Promise<PrettyPath>;
+			generateUniquePrettyPathLegacy: (
+				prettyPath: PrettyPathLegacy,
+			) => Promise<PrettyPathLegacy>;
 		} & Pick<TexfresserObsidianServices, "backgroundFileService">,
 	) {}
 
@@ -55,28 +55,31 @@ export class VaultEventHandler {
 		if (!(file instanceof TFile)) return;
 		if (file.extension !== "md") return;
 
-		const fullPath = legacyFullPathFromSystemPath(file.path);
+		const fullPath = fullPathFromSystemPathLegacy(file.path);
 		const rootName = fullPath.pathParts[0];
 
-		if (!rootName || !isRootName(rootName)) return;
-		if (isInUntracked(fullPath.pathParts)) return;
+		if (!rootName || !isRootNameLegacy(rootName)) return;
+		if (isInUntrackedLegacy(fullPath.pathParts)) return;
 
-		const prettyPath: PrettyPath = {
-			basename: toNodeName(fullPath.basename),
+		const prettyPath: PrettyPathLegacy = {
+			basename: toNodeNameLegacy(fullPath.basename),
 			pathParts: fullPath.pathParts,
 		};
 
-		const healResult = healFile(prettyPath, rootName);
+		const healResult = healFileLegacy(prettyPath, rootName);
 		if (healResult.actions.length > 0) {
 			this.deps.dispatcher.registerSelf(healResult.actions);
 			this.deps.dispatcher.pushMany(healResult.actions);
 			await this.deps.dispatcher.flushNow();
 		}
 
-		if (rootName !== LIBRARY_ROOTS[0]) return;
+		if (rootName !== LIBRARY_ROOTSLegacy[0]) return;
 		if (!this.deps.state.tree) return;
 
-		const canonical = canonicalizePrettyPath({ prettyPath, rootName });
+		const canonical = canonicalizePrettyPathLegacy({
+			prettyPath,
+			rootName,
+		});
 		if ("reason" in canonical) return;
 
 		const parentPath = canonical.treePath.slice(0, -1);
@@ -91,13 +94,13 @@ export class VaultEventHandler {
 		if (!(file instanceof TFile)) return;
 		if (file.extension !== "md") return;
 
-		const newFull = legacyFullPathFromSystemPath(file.path);
-		const oldFull = legacyFullPathFromSystemPath(oldPath);
+		const newFull = fullPathFromSystemPathLegacy(file.path);
+		const oldFull = fullPathFromSystemPathLegacy(oldPath);
 		const rootName = newFull.pathParts[0];
 
-		if (!rootName || !isRootName(rootName)) return;
-		if (isInUntracked(newFull.pathParts)) return;
-		if (rootName !== LIBRARY_ROOTS[0]) return;
+		if (!rootName || !isRootNameLegacy(rootName)) return;
+		if (isInUntrackedLegacy(newFull.pathParts)) return;
+		if (rootName !== LIBRARY_ROOTSLegacy[0]) return;
 		if (!this.deps.state.tree) return;
 
 		const pathPartsChanged = !arePathPartsEqual(
@@ -108,21 +111,21 @@ export class VaultEventHandler {
 
 		if (!basenameChanged && !pathPartsChanged) return;
 
-		const prettyPath: PrettyPath = {
-			basename: toNodeName(newFull.basename),
+		const prettyPath: PrettyPathLegacy = {
+			basename: toNodeNameLegacy(newFull.basename),
 			pathParts: newFull.pathParts,
 		};
-		const oldPrettyPath: PrettyPath = {
-			basename: toNodeName(oldFull.basename),
+		const oldPrettyPathLegacy: PrettyPathLegacy = {
+			basename: toNodeNameLegacy(oldFull.basename),
 			pathParts: oldFull.pathParts,
 		};
 
-		const decoded = decodeBasename(prettyPath.basename);
+		const decoded = decodeBasenameLegacy(prettyPath.basename);
 		const wasPage = decoded?.kind === "page";
 
 		if (decoded?.kind === "codex") {
 			const revertAction: LegacyVaultAction = {
-				payload: { from: prettyPath, to: oldPrettyPath },
+				payload: { from: prettyPath, to: oldPrettyPathLegacy },
 				type: LegacyVaultActionType.RenameFile,
 			};
 			this.deps.dispatcher.registerSelf([revertAction]);
@@ -134,40 +137,48 @@ export class VaultEventHandler {
 		if (pathPartsChanged) {
 			if (decoded?.kind === "page") {
 				const decodedParent = decoded.treePath.slice(0, -1);
-				const leafName = toNodeName(
+				const leafName = toNodeNameLegacy(
 					decodedParent[decodedParent.length - 1] ??
 						decodedParent[0] ??
 						"",
 				);
-				const targetTreePath: TreePath = [
+				const targetTreePathLegacyLegacy: TreePathLegacyLegacy = [
 					...newFull.pathParts.slice(1),
 					leafName,
 				];
-				const targetPrettyPath = {
-					basename: treePathToScrollBasename.encode(targetTreePath),
-					pathParts: [rootName, ...targetTreePath.slice(0, -1)],
+				const targetPrettyPathLegacy = {
+					basename: treePathToScrollBasename.encode(
+						targetTreePathLegacyLegacy,
+					),
+					pathParts: [
+						rootName,
+						...targetTreePathLegacyLegacy.slice(0, -1),
+					],
 				};
 
-				let finalPrettyPath = targetPrettyPath;
+				let finalPrettyPathLegacy = targetPrettyPathLegacy;
 				if (
 					await this.deps.backgroundFileService.exists(
-						finalPrettyPath,
+						finalPrettyPathLegacy,
 					)
 				) {
-					finalPrettyPath =
-						await this.deps.generateUniquePrettyPath(
-							finalPrettyPath,
+					finalPrettyPathLegacy =
+						await this.deps.generateUniquePrettyPathLegacy(
+							finalPrettyPathLegacy,
 						);
 				}
 
 				const seenFolders = new Set<string>();
 				const moveActions: LegacyVaultAction[] = [
 					...createFolderActionsForPathParts(
-						finalPrettyPath.pathParts,
+						finalPrettyPathLegacy.pathParts,
 						seenFolders,
 					),
 					{
-						payload: { from: prettyPath, to: finalPrettyPath },
+						payload: {
+							from: prettyPath,
+							to: finalPrettyPathLegacy,
+						},
 						type: LegacyVaultActionType.RenameFile,
 					},
 				];
@@ -181,7 +192,7 @@ export class VaultEventHandler {
 				return;
 			}
 
-			const healResult = healFile(prettyPath, rootName);
+			const healResult = healFileLegacy(prettyPath, rootName);
 			if (healResult.actions.length > 0) {
 				this.deps.dispatcher.registerSelf(healResult.actions);
 				this.deps.dispatcher.pushMany(healResult.actions);
@@ -194,7 +205,7 @@ export class VaultEventHandler {
 		}
 
 		if (!decoded) {
-			const healResult = healFile(prettyPath, rootName);
+			const healResult = healFileLegacy(prettyPath, rootName);
 			if (healResult.actions.length > 0) {
 				this.deps.dispatcher.registerSelf(healResult.actions);
 				this.deps.dispatcher.pushMany(healResult.actions);
@@ -215,27 +226,31 @@ export class VaultEventHandler {
 
 		const canonical = computeCanonicalPath({
 			authority: "basename",
-			currentPrettyPath: prettyPath,
+			currentPrettyPathLegacy: prettyPath,
 			decoded: effectiveDecoded,
 			folderPath: [],
 			rootName,
 		});
 
-		let targetPrettyPath = canonical.canonicalPrettyPath;
+		let targetPrettyPathLegacy = canonical.canonicalPrettyPathLegacy;
 
-		if (await this.deps.backgroundFileService.exists(targetPrettyPath)) {
-			targetPrettyPath =
-				await this.deps.generateUniquePrettyPath(targetPrettyPath);
+		if (
+			await this.deps.backgroundFileService.exists(targetPrettyPathLegacy)
+		) {
+			targetPrettyPathLegacy =
+				await this.deps.generateUniquePrettyPathLegacy(
+					targetPrettyPathLegacy,
+				);
 		}
 
 		const seenFolders = new Set<string>();
 		const moveActions: LegacyVaultAction[] = [
 			...createFolderActionsForPathParts(
-				targetPrettyPath.pathParts,
+				targetPrettyPathLegacy.pathParts,
 				seenFolders,
 			),
 			{
-				payload: { from: prettyPath, to: targetPrettyPath },
+				payload: { from: prettyPath, to: targetPrettyPathLegacy },
 				type: LegacyVaultActionType.RenameFile,
 			},
 		];
@@ -243,11 +258,11 @@ export class VaultEventHandler {
 		if (wasPage) {
 			moveActions.push({
 				payload: {
-					prettyPath: targetPrettyPath,
+					prettyPath: targetPrettyPathLegacy,
 					transform: (old) =>
 						editOrAddMetaInfo(old, {
 							fileType: "Scroll",
-							status: TextStatus.NotStarted,
+							status: TextStatusLegacy.NotStarted,
 						}),
 				},
 				type: LegacyVaultActionType.ProcessFile,
@@ -267,20 +282,23 @@ export class VaultEventHandler {
 		if (!(file instanceof TFile)) return;
 		if (file.extension !== "md") return;
 
-		const fullPath = legacyFullPathFromSystemPath(file.path);
+		const fullPath = fullPathFromSystemPathLegacy(file.path);
 		const rootName = fullPath.pathParts[0];
 
-		if (!rootName || !isRootName(rootName)) return;
-		if (isInUntracked(fullPath.pathParts)) return;
-		if (rootName !== LIBRARY_ROOTS[0]) return;
+		if (!rootName || !isRootNameLegacy(rootName)) return;
+		if (isInUntrackedLegacy(fullPath.pathParts)) return;
+		if (rootName !== LIBRARY_ROOTSLegacy[0]) return;
 		if (!this.deps.state.tree) return;
 
-		const prettyPath: PrettyPath = {
+		const prettyPath: PrettyPathLegacy = {
 			basename: fullPath.basename,
 			pathParts: fullPath.pathParts,
 		};
 
-		const canonical = canonicalizePrettyPath({ prettyPath, rootName });
+		const canonical = canonicalizePrettyPathLegacy({
+			prettyPath,
+			rootName,
+		});
 		if ("reason" in canonical) return;
 
 		const parentPath = canonical.treePath.slice(0, -1);

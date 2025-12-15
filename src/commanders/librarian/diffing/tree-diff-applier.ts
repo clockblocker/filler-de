@@ -4,33 +4,43 @@ import {
 	type LegacyVaultAction,
 	LegacyVaultActionType,
 } from "../../../services/obsidian-services/file-services/background/background-vault-actions";
-import type { PrettyPath } from "../../../types/common-interface/dtos";
+import type { PrettyPathLegacy } from "../../../types/common-interface/dtos";
 import { codexFormatter } from "../codex";
 import { createCodexGenerator } from "../codex/codex-generator";
-import type { RootName } from "../constants";
+import type { RootNameLegacy } from "../constants";
 import { treePathToCodexBasename } from "../indexing/codecs";
-import type { NoteDto, NoteNode, SectionNode, TreePath } from "../types";
-import { NodeType } from "../types";
-import { treePathToPrettyPath } from "../utils/path-conversions";
+import type {
+	NoteDtoLegacy,
+	NoteNodeLegacy,
+	SectionNodeLegacy,
+	TreePathLegacyLegacy,
+} from "../types";
+import { NodeTypeLegacy } from "../types";
+import { treePathToPrettyPathLegacy } from "../utils/path-conversions";
 import type { NoteDiff, NoteStatusChange } from "./note-differ";
 
 /**
  * Callback to get a node from the tree by path.
  */
-export type GetNodeFn = (path: TreePath) => SectionNode | NoteNode | undefined;
+export type GetNodeFn = (
+	path: TreePathLegacyLegacy,
+) => SectionNodeLegacy | NoteNodeLegacy | undefined;
 
 // ─── Module-Private Helpers ──────────────────────────────────────────────
 
-function isBookPage(notePath: TreePath): boolean {
+function isBookPage(notePath: TreePathLegacyLegacy): boolean {
 	const lastSegment = notePath[notePath.length - 1];
 	return !!lastSegment && /^\d{3}$/.test(lastSegment);
 }
 
-function getBookPath(pagePath: TreePath): TreePath {
+function getBookPath(pagePath: TreePathLegacyLegacy): TreePathLegacyLegacy {
 	return pagePath.slice(0, -1);
 }
 
-function addAncestorPaths(notePath: TreePath, paths: Set<string>): void {
+function addAncestorPaths(
+	notePath: TreePathLegacyLegacy,
+	paths: Set<string>,
+): void {
 	paths.add(""); // root
 	for (let i = 1; i < notePath.length; i++) {
 		paths.add(notePath.slice(0, i).join("/"));
@@ -38,8 +48,8 @@ function addAncestorPaths(notePath: TreePath, paths: Set<string>): void {
 }
 
 function createNoteAction(
-	note: NoteDto,
-	rootName: RootName,
+	note: NoteDtoLegacy,
+	rootName: RootNameLegacy,
 ): LegacyVaultAction {
 	const isPage = isBookPage(note.path);
 
@@ -57,16 +67,19 @@ function createNoteAction(
 	return {
 		payload: {
 			content: editOrAddMetaInfo("", metaInfo),
-			prettyPath: treePathToPrettyPath(note.path, rootName),
+			prettyPath: treePathToPrettyPathLegacy(note.path, rootName),
 		},
 		type: LegacyVaultActionType.UpdateOrCreateFile,
 	};
 }
 
-function trashNoteAction(note: NoteDto, rootName: RootName): LegacyVaultAction {
+function trashNoteAction(
+	note: NoteDtoLegacy,
+	rootName: RootNameLegacy,
+): LegacyVaultAction {
 	return {
 		payload: {
-			prettyPath: treePathToPrettyPath(note.path, rootName),
+			prettyPath: treePathToPrettyPathLegacy(note.path, rootName),
 		},
 		type: LegacyVaultActionType.TrashFile,
 	};
@@ -74,7 +87,7 @@ function trashNoteAction(note: NoteDto, rootName: RootName): LegacyVaultAction {
 
 function createStatusUpdateAction(
 	change: NoteStatusChange,
-	rootName: RootName,
+	rootName: RootNameLegacy,
 ): LegacyVaultAction {
 	const isPage = isBookPage(change.path);
 
@@ -91,7 +104,7 @@ function createStatusUpdateAction(
 
 	return {
 		payload: {
-			prettyPath: treePathToPrettyPath(change.path, rootName),
+			prettyPath: treePathToPrettyPathLegacy(change.path, rootName),
 			transform: (content: string) =>
 				editOrAddMetaInfo(content, metaInfo),
 		},
@@ -99,16 +112,19 @@ function createStatusUpdateAction(
 	};
 }
 
-function sectionPathToPrettyPath(
-	sectionPath: TreePath,
-	rootName: RootName,
-): PrettyPath {
+function sectionPathToPrettyPathLegacy(
+	sectionPath: TreePathLegacyLegacy,
+	rootName: RootNameLegacy,
+): PrettyPathLegacy {
 	const pathParts = [rootName, ...sectionPath.slice(0, -1)];
 	const basename = sectionPath[sectionPath.length - 1] ?? "";
 	return { basename, pathParts };
 }
 
-function codexPrettyPath(path: TreePath, rootName: RootName): PrettyPath {
+function codexPrettyPathLegacy(
+	path: TreePathLegacyLegacy,
+	rootName: RootNameLegacy,
+): PrettyPathLegacy {
 	if (path.length === 0) {
 		return {
 			basename: treePathToCodexBasename.encode([rootName]),
@@ -120,18 +136,21 @@ function codexPrettyPath(path: TreePath, rootName: RootName): PrettyPath {
 	return { basename, pathParts };
 }
 
-function generateCodexContent(path: TreePath, getNode?: GetNodeFn): string {
+function generateCodexContent(
+	path: TreePathLegacyLegacy,
+	getNode?: GetNodeFn,
+): string {
 	if (!getNode) {
 		return "";
 	}
 
 	const root = getNode([]);
-	if (!root || root.type !== NodeType.Section) {
+	if (!root || root.type !== NodeTypeLegacy.Section) {
 		return "";
 	}
 
 	const node = path.length === 0 ? root : getNode(path);
-	if (!node || node.type !== NodeType.Section) {
+	if (!node || node.type !== NodeTypeLegacy.Section) {
 		return "";
 	}
 
@@ -142,64 +161,64 @@ function generateCodexContent(path: TreePath, getNode?: GetNodeFn): string {
 }
 
 function createFolderAction(
-	sectionPath: TreePath,
-	rootName: RootName,
+	sectionPath: TreePathLegacyLegacy,
+	rootName: RootNameLegacy,
 ): LegacyVaultAction {
 	return {
 		payload: {
-			prettyPath: sectionPathToPrettyPath(sectionPath, rootName),
+			prettyPath: sectionPathToPrettyPathLegacy(sectionPath, rootName),
 		},
 		type: LegacyVaultActionType.UpdateOrCreateFolder,
 	};
 }
 
 function trashFolderAction(
-	sectionPath: TreePath,
-	rootName: RootName,
+	sectionPath: TreePathLegacyLegacy,
+	rootName: RootNameLegacy,
 ): LegacyVaultAction {
 	return {
 		payload: {
-			prettyPath: sectionPathToPrettyPath(sectionPath, rootName),
+			prettyPath: sectionPathToPrettyPathLegacy(sectionPath, rootName),
 		},
 		type: LegacyVaultActionType.TrashFolder,
 	};
 }
 
 function createCodexAction(
-	sectionPath: TreePath,
-	rootName: RootName,
+	sectionPath: TreePathLegacyLegacy,
+	rootName: RootNameLegacy,
 	getNode?: GetNodeFn,
 ): LegacyVaultAction {
 	return {
 		payload: {
 			content: generateCodexContent(sectionPath, getNode),
-			prettyPath: codexPrettyPath(sectionPath, rootName),
+			prettyPath: codexPrettyPathLegacy(sectionPath, rootName),
 		},
 		type: LegacyVaultActionType.UpdateOrCreateFile,
 	};
 }
 
 function updateCodexAction(
-	path: TreePath,
-	rootName: RootName,
+	path: TreePathLegacyLegacy,
+	rootName: RootNameLegacy,
 	getNode?: GetNodeFn,
 ): LegacyVaultAction {
 	return {
 		payload: {
 			content: generateCodexContent(path, getNode),
-			prettyPath: codexPrettyPath(path, rootName),
+			prettyPath: codexPrettyPathLegacy(path, rootName),
 		},
 		type: LegacyVaultActionType.UpdateOrCreateFile,
 	};
 }
 
 function trashCodexAction(
-	sectionPath: TreePath,
-	rootName: RootName,
+	sectionPath: TreePathLegacyLegacy,
+	rootName: RootNameLegacy,
 ): LegacyVaultAction {
 	return {
 		payload: {
-			prettyPath: codexPrettyPath(sectionPath, rootName),
+			prettyPath: codexPrettyPathLegacy(sectionPath, rootName),
 		},
 		type: LegacyVaultActionType.TrashFile,
 	};
@@ -218,7 +237,7 @@ function trashCodexAction(
  */
 export function mapDiffToActions(
 	diff: NoteDiff,
-	rootName: RootName,
+	rootName: RootNameLegacy,
 	getNode?: GetNodeFn,
 ): LegacyVaultAction[] {
 	const actions: LegacyVaultAction[] = [];
@@ -262,11 +281,12 @@ export function mapDiffToActions(
 	}
 
 	for (const pathKey of affectedBookPaths) {
-		const path = pathKey === "" ? [] : (pathKey.split("/") as TreePath);
+		const path =
+			pathKey === "" ? [] : (pathKey.split("/") as TreePathLegacyLegacy);
 
 		if (getNode) {
 			const node = getNode(path);
-			if (node && node.type === NodeType.Note) {
+			if (node && node.type === NodeTypeLegacy.Note) {
 				continue;
 			}
 		}
@@ -286,9 +306,9 @@ export function mapDiffToActions(
  * @param getNode - Callback to get tree nodes
  * @returns Array of vault actions to update codexes
  */
-export function regenerateCodexActions(
-	sectionPaths: TreePath[],
-	rootName: RootName,
+export function regenerateCodexActionsLegacy(
+	sectionPaths: TreePathLegacyLegacy[],
+	rootName: RootNameLegacy,
 	getNode: GetNodeFn,
 ): LegacyVaultAction[] {
 	const actions: LegacyVaultAction[] = [];

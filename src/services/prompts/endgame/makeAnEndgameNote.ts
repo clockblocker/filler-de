@@ -1,6 +1,6 @@
 // import TextEaterPlugin from 'main';
 // import { MarkdownView, TFile } from 'obsidian';
-// import { getMaybeExistingNotePath } from './grundform/formatters/link';
+// import { getMaybeLegacyExistingNotePath } from './grundform/formatters/link';
 // import { compareGrundforms } from './grundform/formatters/match';
 // import { mergeGrundforms } from './grundform/formatters/mergeGrungforms';
 // import {
@@ -26,7 +26,7 @@
 
 // 	const formattedLinks = await Promise.all(
 // 		mergedGrundforms.map(async (g) => {
-// 			const path = await getMaybeExistingNotePath(plugin, file, g.grundform);
+// 			const path = await getMaybeLegacyExistingNotePath(plugin, file, g.grundform);
 // 			return await formatGrundform(g, path);
 // 		})
 // 	);

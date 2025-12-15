@@ -7,7 +7,7 @@ import {
 	Wortart,
 } from "prompts/endgame/zod/types";
 
-export async function getMaybeExistingNotePath(
+export async function getMaybeLegacyExistingNotePath(
 	plugin: TextEaterPlugin,
 	file: TFile,
 	word: string,
@@ -103,7 +103,7 @@ export async function getPathsToGrundformNotes(
 	kerls: GrundformKerl[],
 ) {
 	const pathsPromises = kerls.map(async (g) => {
-		const maybeExisitingNotePath = await getMaybeExistingNotePath(
+		const maybeExisitingNotePath = await getMaybeLegacyExistingNotePath(
 			plugin,
 			file,
 			g.grundform,
@@ -125,7 +125,7 @@ export async function getPathsToNotes(
 	matchedKerls: (GrundformKerl & { match: Match })[],
 ) {
 	const pathsPromises = matchedKerls.map(async (g) => {
-		const maybeExisitingNotePath = await getMaybeExistingNotePath(
+		const maybeExisitingNotePath = await getMaybeLegacyExistingNotePath(
 			plugin,
 			file,
 			g.grundform,

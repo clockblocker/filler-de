@@ -1,4 +1,4 @@
-# Librarian Architecture
+# LibrarianLegacy Architecture
 
 3-layer pipeline for file events. Layers execute sequentially; each layer is pure/testable.
 
@@ -10,10 +10,10 @@ Obsidian Event → Layer 1 (Heal) → Layer 2 (Tree) → Layer 3 (Codex)
 
 **Purpose:** Enforce filename invariant. Fix basename/folder mismatches.
 
-**Functions:** `healFile()`, `healFiles()` in `filesystem/healing.ts`
+**Functions:** `healFileLegacy()`, `healFileLegacy()` in `filesystem/healing.ts`
 
-**Input:** `PrettyPath` + `RootName`  
-**Output:** `HealResult { actions, targetPath, quarantine }`
+**Input:** `PrettyPathLegacy` + `RootNameLegacy`  
+**Output:** `HealResultLegacy { actions, targetPath, quarantine }`
 
 Pure, sync, no tree access. Returns `VaultAction[]` — caller executes.
 
@@ -21,10 +21,10 @@ Pure, sync, no tree access. Returns `VaultAction[]` — caller executes.
 
 **Purpose:** In-memory state reflecting filesystem.
 
-**State:** `LibraryTree` (single root; nodes = notes/sections with status)
+**State:** `LibraryTreeLegacy` (single root; nodes = notes/sections with status)
 
 **Functions:**
-- `readNoteDtos()` — filesystem → `NoteDto[]`
+- `readNoteDtoLegacy()` — filesystem → `NoteDtoLegacy[]`
 - `tree.reconcile()` — apply notes to tree
 - `tree.snapshot()` → before/after for diffing
 
@@ -32,16 +32,16 @@ Pure, sync, no tree access. Returns `VaultAction[]` — caller executes.
 
 **Purpose:** Generate codex updates from tree changes.
 
-**Functions:** `mapDiffToActions()`, `regenerateCodexActions()` in `diffing/tree-diff-applier.ts`
+**Functions:** `mapDiffToActions()`, `regenerateCodexActionsLegacy()` in `diffing/tree-diff-applier.ts`
 
-**Input:** `NoteDiff` + `RootName`  
+**Input:** `NoteDiff` + `RootNameLegacy`  
 **Output:** `VaultAction[]` (create/update/trash codex files)
 
-## Orchestrator: Librarian
+## Orchestrator: LibrarianLegacy
 
 Holds state, routes events through layers.
 
-`Librarian` holds the tree, a `SelfEventTracker`, and an `ActionDispatcher`/queue.
+`LibrarianLegacy` holds the tree, a `SelfEventTrackerLegacy`, and an `ActionDispatcherLegacy`/queue.
 
 ### Event Flow: `onFileRenamed`
 
@@ -62,11 +62,11 @@ Holds state, routes events through layers.
 1. Detect: basename-only vs folder move
 2. If codex → revert
 3. If basename-only:
-   - decodeBasename() → treePath
+   - decodeBasenameLegacy() → treePath
    - computeCanonicalPath(authority: "basename") → target
    - Create folders + move file
 4. If folder move:
-   - healFile() → fix basename (folder authoritative)
+   - healFileLegacy() → fix basename (folder authoritative)
 5. Debounce (100ms): collect affected roots
 6. Flush:
    - healRootFilesystem() for each root
@@ -80,12 +80,12 @@ Debounce handles folder moves (N events → one pipeline run).
 
 | Component | State | Type |
 |-----------|-------|------|
-| `Librarian` | trees, tracker, queue | class |
-| `LibraryTree` | nodes, parent refs | class |
-| `SelfEventTracker` | pending keys | class |
+| `LibrarianLegacy` | trees, tracker, queue | class |
+| `LibraryTreeLegacy` | nodes, parent refs | class |
+| `SelfEventTrackerLegacy` | pending keys | class |
 | `VaultActionQueue` | pending actions | class |
-| `healFile` | none | pure fn |
-| `readNoteDtos` | none | pure fn |
+| `healFileLegacy` | none | pure fn |
+| `readNoteDtoLegacy` | none | pure fn |
 | `mapDiffToActions` | none | pure fn |
 
 ## Key Utilities
@@ -94,6 +94,6 @@ Debounce handles folder moves (N events → one pipeline run).
 |------|---------|
 | `utils/self-event-tracker.ts` | Prevent reacting to own events |
 | `utils/folder-actions.ts` | Generate mkdir actions for path |
-| `utils/path-conversions.ts` | `PrettyPath` ↔ `TreePath` ↔ `FullPath` |
+| `utils/path-conversions.ts` | `PrettyPathLegacy` ↔ `TreePathLegacyLegacy` ↔ `FullPath` |
 | `invariants/path-canonicalizer.ts` | Canonical path computation |
-| `indexing/codecs/` | Basename ↔ TreePath encoding |
+| `indexing/codecs/` | Basename ↔ TreePathLegacyLegacy encoding |

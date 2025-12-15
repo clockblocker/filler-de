@@ -1,47 +1,55 @@
 import { logWarning } from "../../../obsidian-vault-action-manager/helpers/issue-handlers";
 import { editOrAddMetaInfo } from "../../../services/dto-services/meta-info-manager/interface";
-import { legacyFullPathFromSystemPath } from "../../../services/obsidian-services/atomic-services/pathfinder";
+import { fullPathFromSystemPathLegacy } from "../../../services/obsidian-services/atomic-services/pathfinder";
 import {
 	type LegacyVaultAction,
 	LegacyVaultActionType,
 } from "../../../services/obsidian-services/file-services/background/background-vault-actions";
 import type { TexfresserObsidianServices } from "../../../services/obsidian-services/interface";
-import type { PrettyPath } from "../../../types/common-interface/dtos";
-import { TextStatus } from "../../../types/common-interface/enums";
-import type { ActionDispatcher } from "../action-dispatcher";
-import { isRootName, LIBRARY_ROOTS, type RootName } from "../constants";
-import { regenerateCodexActions } from "../diffing/tree-diff-applier";
+import type { PrettyPathLegacy } from "../../../types/common-interface/dtos";
+import { TextStatusLegacy } from "../../../types/common-interface/enums";
+import type { ActionDispatcherLegacy } from "../action-dispatcher";
+import {
+	isRootNameLegacy,
+	LIBRARY_ROOTSLegacy,
+	type RootNameLegacy,
+} from "../constants";
+import { regenerateCodexActionsLegacy } from "../diffing/tree-diff-applier";
 import {
 	pageNumberFromInt,
-	toNodeName,
+	toNodeNameLegacy,
 	treePathToCodexBasename,
-	treePathToPageBasename,
+	treePathToPageBasenameLegacy,
 	treePathToScrollBasename,
 } from "../indexing/codecs";
-import type { LibrarianState } from "../librarian-state";
-import type { LibraryTree } from "../library-tree/library-tree";
+import type { LibrarianLegacyStateLegacy } from "../librarian-state";
+import type { LibraryTreeLegacy } from "../library-tree/library-tree";
 import { splitTextIntoPages } from "../text-splitter/text-splitter";
-import type { NoteDto, SectionNode, TreePath } from "../types";
+import type {
+	NoteDtoLegacy,
+	SectionNodeLegacy,
+	TreePathLegacyLegacy,
+} from "../types";
 import { createFolderActionsForPathParts } from "../utils/folder-actions";
-import type { TreeReconciler } from "./tree-reconciler";
+import type { TreeReconcilerLegacy } from "./tree-reconciler";
 
-export class NoteOperations {
+export class NoteOperationsLegacy {
 	constructor(
 		private readonly deps: {
-			state: LibrarianState;
-			dispatcher: ActionDispatcher;
-			treeReconciler: TreeReconciler;
+			state: LibrarianLegacyStateLegacy;
+			dispatcher: ActionDispatcherLegacy;
+			treeReconciler: TreeReconcilerLegacy;
 			regenerateAllCodexes: () => Promise<void>;
-			generateUniquePrettyPath: (
-				prettyPath: PrettyPath,
-			) => Promise<PrettyPath>;
+			generateUniquePrettyPathLegacy: (
+				prettyPath: PrettyPathLegacy,
+			) => Promise<PrettyPathLegacy>;
 		} & Pick<
 			TexfresserObsidianServices,
 			"openedFileService" | "backgroundFileService"
 		>,
 	) {}
 
-	get tree(): LibraryTree | null {
+	get tree(): LibraryTreeLegacy | null {
 		return this.deps.state.tree;
 	}
 
@@ -52,10 +60,10 @@ export class NoteOperations {
 			await this.deps.treeReconciler.initTrees();
 		}
 
-		const treePathToPwd: TreePath = pwd.pathParts.slice(1);
+		const treePathToPwd: TreePathLegacyLegacy = pwd.pathParts.slice(1);
 		const rootCandidate = pwd.pathParts[0];
 		const rootName =
-			rootCandidate && isRootName(rootCandidate)
+			rootCandidate && isRootNameLegacy(rootCandidate)
 				? rootCandidate
 				: undefined;
 		const affectedTree = this.getAffectedTree(pwd);
@@ -68,13 +76,13 @@ export class NoteOperations {
 			nearestSection,
 			affectedTree,
 		);
-		const notePath: TreePath = [...sectionPath, newNoteName];
+		const notePath: TreePathLegacyLegacy = [...sectionPath, newNoteName];
 
 		await this.deps.treeReconciler.withDiff(
 			rootName,
 			(tree) =>
 				tree.addNotes([
-					{ path: notePath, status: TextStatus.NotStarted },
+					{ path: notePath, status: TextStatusLegacy.NotStarted },
 				]),
 			[sectionPath],
 		);
@@ -94,22 +102,22 @@ export class NoteOperations {
 		if (!currentFile) {
 			logWarning({
 				description: "No file is currently open.",
-				location: "Librarian.makeNoteAText",
+				location: "LibrarianLegacy.makeNoteAText",
 			});
 			return false;
 		}
 
-		const fullPath = legacyFullPathFromSystemPath(currentFile.path);
+		const fullPath = fullPathFromSystemPathLegacy(currentFile.path);
 		const rootCandidate = fullPath.pathParts[0];
 		const rootName =
-			rootCandidate && isRootName(rootCandidate)
+			rootCandidate && isRootNameLegacy(rootCandidate)
 				? rootCandidate
 				: undefined;
 
 		if (!rootName) {
 			logWarning({
 				description: `File must be in a Library folder. Found: ${rootName}`,
-				location: "Librarian.makeNoteAText",
+				location: "LibrarianLegacy.makeNoteAText",
 			});
 			return false;
 		}
@@ -117,30 +125,29 @@ export class NoteOperations {
 		if (!this.deps.state.tree) {
 			logWarning({
 				description: "Tree not initialized for this root.",
-				location: "Librarian.makeNoteAText",
+				location: "LibrarianLegacy.makeNoteAText",
 			});
 			return false;
 		}
 
-		const originalPrettyPath: PrettyPath = {
+		const originalPrettyPathLegacy: PrettyPathLegacy = {
 			basename: fullPath.basename,
 			pathParts: fullPath.pathParts,
 		};
-		const content =
-			await this.deps.backgroundFileService.readContent(
-				originalPrettyPath,
-			);
+		const content = await this.deps.backgroundFileService.readContent(
+			originalPrettyPathLegacy,
+		);
 
 		if (!content.trim()) {
 			logWarning({
 				description: "File is empty.",
-				location: "Librarian.makeNoteAText",
+				location: "LibrarianLegacy.makeNoteAText",
 			});
 			return false;
 		}
 
-		const rawTextName = toNodeName(fullPath.basename);
-		const sectionPath: TreePath = fullPath.pathParts.slice(1);
+		const rawTextName = toNodeNameLegacy(fullPath.basename);
+		const sectionPath: TreePathLegacyLegacy = fullPath.pathParts.slice(1);
 		const lastFolder = sectionPath[sectionPath.length - 1];
 		const textName =
 			lastFolder && rawTextName.endsWith(`-${lastFolder}`)
@@ -153,49 +160,59 @@ export class NoteOperations {
 		const { pages, isBook } = splitTextIntoPages(content, textName);
 
 		const seenFolders = new Set<string>();
-		let destinationPrettyPath: PrettyPath;
+		let destinationPrettyPathLegacy: PrettyPathLegacy;
 
 		if (!isBook) {
 			const unmarkedBasename = `Unmarked_${fullPath.basename}`;
-			let unmarkedPrettyPath: PrettyPath = {
+			let unmarkedPrettyPathLegacy: PrettyPathLegacy = {
 				basename: unmarkedBasename,
-				pathParts: originalPrettyPath.pathParts,
+				pathParts: originalPrettyPathLegacy.pathParts,
 			};
 			if (
-				await this.deps.backgroundFileService.exists(unmarkedPrettyPath)
+				await this.deps.backgroundFileService.exists(
+					unmarkedPrettyPathLegacy,
+				)
 			) {
-				unmarkedPrettyPath =
-					await this.deps.generateUniquePrettyPath(
-						unmarkedPrettyPath,
+				unmarkedPrettyPathLegacy =
+					await this.deps.generateUniquePrettyPathLegacy(
+						unmarkedPrettyPathLegacy,
 					);
 			}
 
 			const renameAction: LegacyVaultAction = {
-				payload: { from: originalPrettyPath, to: unmarkedPrettyPath },
+				payload: {
+					from: originalPrettyPathLegacy,
+					to: unmarkedPrettyPathLegacy,
+				},
 				type: LegacyVaultActionType.RenameFile,
 			};
 			this.deps.dispatcher.registerSelf([renameAction]);
 			this.deps.dispatcher.push(renameAction);
 			await this.deps.dispatcher.flushNow();
 
-			const scrollTreePath: TreePath = [...sectionPath, textName];
-			const scrollPrettyPath: PrettyPath = {
-				basename: treePathToScrollBasename.encode(scrollTreePath),
+			const scrollTreePathLegacyLegacy: TreePathLegacyLegacy = [
+				...sectionPath,
+				textName,
+			];
+			const scrollPrettyPathLegacy: PrettyPathLegacy = {
+				basename: treePathToScrollBasename.encode(
+					scrollTreePathLegacyLegacy,
+				),
 				pathParts: [rootName, ...sectionPath],
 			};
 
 			const createActions: LegacyVaultAction[] = [
 				...createFolderActionsForPathParts(
-					scrollPrettyPath.pathParts,
+					scrollPrettyPathLegacy.pathParts,
 					seenFolders,
 				),
 				{
 					payload: {
 						content: editOrAddMetaInfo(pages[0] ?? "", {
 							fileType: "Scroll",
-							status: TextStatus.NotStarted,
+							status: TextStatusLegacy.NotStarted,
 						}),
-						prettyPath: scrollPrettyPath,
+						prettyPath: scrollPrettyPathLegacy,
 					},
 					type: LegacyVaultActionType.UpdateOrCreateFile,
 				},
@@ -206,12 +223,15 @@ export class NoteOperations {
 			await this.deps.dispatcher.flushNow();
 
 			this.deps.state.tree?.addNotes([
-				{ path: scrollTreePath, status: TextStatus.NotStarted },
+				{
+					path: scrollTreePathLegacyLegacy,
+					status: TextStatusLegacy.NotStarted,
+				},
 			]);
 
 			await this.deps.regenerateAllCodexes();
 
-			destinationPrettyPath = scrollPrettyPath;
+			destinationPrettyPathLegacy = scrollPrettyPathLegacy;
 		} else {
 			const bookFolderPathParts = [rootName, ...sectionPath, textName];
 
@@ -223,21 +243,26 @@ export class NoteOperations {
 			];
 
 			const unmarkedBasename = `Unmarked-${fullPath.basename}`;
-			let unmarkedPrettyPath: PrettyPath = {
+			let unmarkedPrettyPathLegacy: PrettyPathLegacy = {
 				basename: unmarkedBasename,
 				pathParts: bookFolderPathParts,
 			};
 			if (
-				await this.deps.backgroundFileService.exists(unmarkedPrettyPath)
+				await this.deps.backgroundFileService.exists(
+					unmarkedPrettyPathLegacy,
+				)
 			) {
-				unmarkedPrettyPath =
-					await this.deps.generateUniquePrettyPath(
-						unmarkedPrettyPath,
+				unmarkedPrettyPathLegacy =
+					await this.deps.generateUniquePrettyPathLegacy(
+						unmarkedPrettyPathLegacy,
 					);
 			}
 
 			phase1Actions.push({
-				payload: { from: originalPrettyPath, to: unmarkedPrettyPath },
+				payload: {
+					from: originalPrettyPathLegacy,
+					to: unmarkedPrettyPathLegacy,
+				},
 				type: LegacyVaultActionType.RenameFile,
 			});
 
@@ -248,13 +273,15 @@ export class NoteOperations {
 			const phase2Actions: LegacyVaultAction[] = [];
 
 			for (let i = 0; i < pages.length; i++) {
-				const pageTreePath: TreePath = [
+				const pageTreePathLegacyLegacy: TreePathLegacyLegacy = [
 					...sectionPath,
 					textName,
 					pageNumberFromInt.encode(i),
 				];
-				const pagePrettyPath: PrettyPath = {
-					basename: treePathToPageBasename.encode(pageTreePath),
+				const pagePrettyPathLegacy: PrettyPathLegacy = {
+					basename: treePathToPageBasenameLegacy.encode(
+						pageTreePathLegacyLegacy,
+					),
 					pathParts: bookFolderPathParts,
 				};
 
@@ -263,9 +290,9 @@ export class NoteOperations {
 						content: editOrAddMetaInfo(pages[i] ?? "", {
 							fileType: "Page",
 							index: i,
-							status: TextStatus.NotStarted,
+							status: TextStatusLegacy.NotStarted,
 						}),
-						prettyPath: pagePrettyPath,
+						prettyPath: pagePrettyPathLegacy,
 					},
 					type: LegacyVaultActionType.UpdateOrCreateFile,
 				});
@@ -275,8 +302,11 @@ export class NoteOperations {
 			this.deps.dispatcher.pushMany(phase2Actions);
 			await this.deps.dispatcher.flushNow();
 
-			const bookSectionPath: TreePath = [...sectionPath, textName];
-			destinationPrettyPath = {
+			const bookSectionPath: TreePathLegacyLegacy = [
+				...sectionPath,
+				textName,
+			];
+			destinationPrettyPathLegacy = {
 				basename: treePathToCodexBasename.encode(bookSectionPath),
 				pathParts: bookFolderPathParts,
 			};
@@ -288,11 +318,11 @@ export class NoteOperations {
 
 			const tree = this.deps.state.tree;
 			if (tree) {
-				const getNode = (path: TreePath) => {
-					const mbNode = tree.getMaybeNode({ path });
+				const getNode = (path: TreePathLegacyLegacy) => {
+					const mbNode = tree.getMaybeLegacyNode({ path });
 					return mbNode.error ? undefined : mbNode.data;
 				};
-				const codexActions = regenerateCodexActions(
+				const codexActions = regenerateCodexActionsLegacy(
 					[bookSectionPath],
 					rootName,
 					getNode,
@@ -303,14 +333,14 @@ export class NoteOperations {
 			}
 		}
 
-		await this.deps.openedFileService.cd(destinationPrettyPath);
+		await this.deps.openedFileService.cd(destinationPrettyPathLegacy);
 
 		return true;
 	}
 
 	async setStatus(
-		rootName: RootName,
-		path: TreePath,
+		rootName: RootNameLegacy,
+		path: TreePathLegacyLegacy,
 		status: "Done" | "NotStarted",
 	): Promise<void> {
 		const parentPath = path.slice(0, -1);
@@ -324,12 +354,15 @@ export class NoteOperations {
 		await this.deps.dispatcher.flushNow();
 	}
 
-	async addNotes(rootName: RootName, notes: NoteDto[]): Promise<void> {
-		const parentPaths: TreePath[] = [
+	async addNotes(
+		rootName: RootNameLegacy,
+		notes: NoteDtoLegacy[],
+	): Promise<void> {
+		const parentPaths: TreePathLegacyLegacy[] = [
 			...new Set(notes.map((n) => n.path.slice(0, -1).join("/"))),
 		]
 			.map((p) => (p ? p.split("/") : []))
-			.filter((p): p is TreePath => p.length > 0);
+			.filter((p): p is TreePathLegacyLegacy => p.length > 0);
 
 		await this.deps.treeReconciler.withDiff(
 			rootName,
@@ -340,12 +373,15 @@ export class NoteOperations {
 		await this.deps.dispatcher.flushNow();
 	}
 
-	async deleteNotes(rootName: RootName, paths: TreePath[]): Promise<void> {
-		const parentPaths: TreePath[] = [
+	async deleteNotes(
+		rootName: RootNameLegacy,
+		paths: TreePathLegacyLegacy[],
+	): Promise<void> {
+		const parentPaths: TreePathLegacyLegacy[] = [
 			...new Set(paths.map((p) => p.slice(0, -1).join("/"))),
 		]
 			.map((p) => (p ? p.split("/") : []))
-			.filter((p): p is TreePath => p.length > 0);
+			.filter((p): p is TreePathLegacyLegacy => p.length > 0);
 
 		await this.deps.treeReconciler.withDiff(
 			rootName,
@@ -357,11 +393,11 @@ export class NoteOperations {
 	}
 
 	private getPathFromSection(
-		section: SectionNode,
-		tree: LibraryTree,
-	): TreePath {
+		section: SectionNodeLegacy,
+		tree: LibraryTreeLegacy,
+	): TreePathLegacyLegacy {
 		const path: string[] = [];
-		let current: SectionNode | null = section;
+		let current: SectionNodeLegacy | null = section;
 		while (current && tree.root !== current) {
 			path.unshift(current.name);
 			current = current.parent;
@@ -371,14 +407,14 @@ export class NoteOperations {
 
 	private getAffectedTree(fullPath: {
 		pathParts: string[];
-	}): LibraryTree | undefined {
+	}): LibraryTreeLegacy | undefined {
 		const rootCandidate = fullPath.pathParts[0];
 		const rootName =
-			rootCandidate && isRootName(rootCandidate)
+			rootCandidate && isRootNameLegacy(rootCandidate)
 				? rootCandidate
 				: undefined;
 		if (!rootName) return undefined;
-		return rootName === LIBRARY_ROOTS[0]
+		return rootName === LIBRARY_ROOTSLegacy[0]
 			? (this.deps.state.tree ?? undefined)
 			: undefined;
 	}

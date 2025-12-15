@@ -1,10 +1,10 @@
-import type { NoteDto } from '../../../../src/commanders/librarian/types';
+import type { NoteDtoLegacy } from '../../../../src/commanders/librarian/types';
 import { AVATAR_NOTES } from './batteries/avatar';
 
 type BranchName = 'Avatar';
 
-// New format: flat NoteDto array
-export const VALID_BRANCHES: Record<BranchName, { notes: NoteDto[] }> = {
+// New format: flat NoteDtoLegacy array
+export const VALID_BRANCHES: Record<BranchName, { notes: NoteDtoLegacy[] }> = {
 	Avatar: {
 		notes: AVATAR_NOTES,
 	},

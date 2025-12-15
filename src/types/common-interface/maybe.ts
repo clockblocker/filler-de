@@ -1,9 +1,9 @@
-export type Maybe<T> =
+export type MaybeLegacy<T> =
 	| { error: true; description?: string }
 	| { error: false; data: T };
 
-export function unwrapMaybeByThrowing<T>(
-	maybe: Maybe<T>,
+export function unwrapMaybeLegacyByThrowing<T>(
+	maybe: MaybeLegacy<T>,
 	whoCalled?: string,
 	additionalInfo?: string,
 ): T {

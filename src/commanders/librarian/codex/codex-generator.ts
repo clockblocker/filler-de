@@ -1,22 +1,22 @@
 import {
 	treePathToCodexBasename,
-	treePathToPageBasename,
+	treePathToPageBasenameLegacy,
 	treePathToScrollBasename,
 } from "../indexing/codecs";
 import {
-	NodeType,
-	type NoteNode,
-	type SectionNode,
-	type TreePath,
+	NodeTypeLegacy,
+	type NoteNodeLegacy,
+	type SectionNodeLegacy,
+	type TreePathLegacyLegacy,
 } from "../types";
 import type { BackLink, CodexContent, CodexItem } from "./types";
 
-type TreeNode = SectionNode | NoteNode;
+type TreeNodeLegacy = SectionNodeLegacy | NoteNodeLegacy;
 
 /**
  * Check if a note path represents a book page (numeric suffix like "000").
  */
-function isBookPage(notePath: TreePath): boolean {
+function isBookPage(notePath: TreePathLegacyLegacy): boolean {
 	const lastSegment = notePath[notePath.length - 1];
 	return !!lastSegment && /^\d{3}$/.test(lastSegment);
 }
@@ -24,9 +24,12 @@ function isBookPage(notePath: TreePath): boolean {
 /**
  * Get path from node by walking up to root.
  */
-function getPathFromNode(node: TreeNode, root: SectionNode): TreePath {
-	const path: TreePath = [];
-	let current: TreeNode | null = node;
+function getPathFromNode(
+	node: TreeNodeLegacy,
+	root: SectionNodeLegacy,
+): TreePathLegacyLegacy {
+	const path: TreePathLegacyLegacy = [];
+	let current: TreeNodeLegacy | null = node;
 
 	while (current && current !== root) {
 		path.unshift(current.name);
@@ -39,18 +42,18 @@ function getPathFromNode(node: TreeNode, root: SectionNode): TreePath {
 /**
  * Generates CodexContent from tree nodes.
  *
- * - SectionNode can contain Sections or Notes
+ * - SectionNodeLegacy can contain Sections or Notes
  * - Books are Sections containing Notes with numeric names (000, 001, etc.)
  * - Scrolls are Notes with non-numeric names
  */
 export class CodexGenerator {
-	private root: SectionNode;
+	private root: SectionNodeLegacy;
 
-	constructor(root: SectionNode) {
+	constructor(root: SectionNodeLegacy) {
 		this.root = root;
 	}
 
-	generateCodexForSection(node: SectionNode): CodexContent {
+	generateCodexForSection(node: SectionNodeLegacy): CodexContent {
 		return {
 			backLink: this.generateBackLink(node),
 			items: this.generateSectionItems(node),
@@ -60,12 +63,13 @@ export class CodexGenerator {
 	/**
 	 * Check if section is a "book" (all children are notes with numeric names).
 	 */
-	isBook(node: SectionNode): boolean {
+	isBook(node: SectionNodeLegacy): boolean {
 		if (node.children.length === 0) return false;
 
 		return node.children.every(
 			(child) =>
-				child.type === NodeType.Note && /^\d{3}$/.test(child.name),
+				child.type === NodeTypeLegacy.Note &&
+				/^\d{3}$/.test(child.name),
 		);
 	}
 
@@ -74,13 +78,13 @@ export class CodexGenerator {
 	 * All sections have codexes (including books).
 	 * Notes (scrolls/pages) don't have codexes.
 	 */
-	hasCodex(node: TreeNode): boolean {
-		return node.type === NodeType.Section;
+	hasCodex(node: TreeNodeLegacy): boolean {
+		return node.type === NodeTypeLegacy.Section;
 	}
 
 	// ─── Private Helpers ─────────────────────────────────────────────
 
-	private generateBackLink(node: SectionNode): BackLink {
+	private generateBackLink(node: SectionNodeLegacy): BackLink {
 		const parent = node.parent;
 
 		// Root has no back link
@@ -104,14 +108,14 @@ export class CodexGenerator {
 		};
 	}
 
-	private generateSectionItems(node: SectionNode): CodexItem[] {
+	private generateSectionItems(node: SectionNodeLegacy): CodexItem[] {
 		return node.children.map((child) => this.nodeToItem(child));
 	}
 
-	private nodeToItem(node: TreeNode): CodexItem {
+	private nodeToItem(node: TreeNodeLegacy): CodexItem {
 		const path = this.getPath(node);
 
-		if (node.type === NodeType.Note) {
+		if (node.type === NodeTypeLegacy.Note) {
 			// Note - determine if book page or scroll
 			const isPage = isBookPage(path);
 
@@ -120,7 +124,7 @@ export class CodexGenerator {
 				displayName: node.name.replace(/_/g, " "),
 				status: node.status,
 				target: isPage
-					? treePathToPageBasename.encode(path)
+					? treePathToPageBasenameLegacy.encode(path)
 					: treePathToScrollBasename.encode(path),
 			};
 		}
@@ -147,7 +151,7 @@ export class CodexGenerator {
 		};
 	}
 
-	private getPath(node: TreeNode): TreePath {
+	private getPath(node: TreeNodeLegacy): TreePathLegacyLegacy {
 		return getPathFromNode(node, this.root);
 	}
 }
@@ -155,6 +159,6 @@ export class CodexGenerator {
 /**
  * Create a CodexGenerator instance for a tree.
  */
-export function createCodexGenerator(root: SectionNode): CodexGenerator {
+export function createCodexGenerator(root: SectionNodeLegacy): CodexGenerator {
 	return new CodexGenerator(root);
 }

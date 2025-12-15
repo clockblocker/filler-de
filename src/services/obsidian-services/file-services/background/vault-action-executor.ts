@@ -2,9 +2,9 @@ import {
 	logError,
 	logWarning,
 } from "../../../../obsidian-vault-action-manager/helpers/issue-handlers";
-import type { PrettyPath } from "../../../../types/common-interface/dtos";
+import type { PrettyPathLegacy } from "../../../../types/common-interface/dtos";
 import type { LegacyOpenedFileService } from "../active-view/legacy-opened-file-service";
-import type { LegacyBackgroundFileService } from "./background-file-service";
+import type { LegacyBackgroundFileServiceLegacy } from "./background-file-service";
 import {
 	getActionTargetPath,
 	type LegacyVaultAction,
@@ -12,17 +12,17 @@ import {
 } from "./background-vault-actions";
 
 /**
- * Executes vault actions via BackgroundFileService or LegacyOpenedFileService.
+ * Executes vault actions via BackgroundFileServiceLegacy or LegacyOpenedFileService.
  * Routes to LegacyOpenedFileService if the target file is currently active.
  * Actions should already be sorted by weight before calling execute().
  */
 export class VaultActionExecutor {
 	constructor(
-		private fileService: LegacyBackgroundFileService,
+		private fileService: LegacyBackgroundFileServiceLegacy,
 		private openedFileService: LegacyOpenedFileService,
 	) {}
 
-	private async isActiveSafe(prettyPath: PrettyPath): Promise<boolean> {
+	private async isActiveSafe(prettyPath: PrettyPathLegacy): Promise<boolean> {
 		try {
 			return await this.openedFileService.isFileActive(prettyPath);
 		} catch (error) {
@@ -145,7 +145,7 @@ export class VaultActionExecutor {
 	}
 
 	private async processFile(
-		prettyPath: PrettyPath,
+		prettyPath: PrettyPathLegacy,
 		transform: (content: string) => string | Promise<string>,
 	): Promise<void> {
 		const isActive = await this.isActiveSafe(prettyPath);

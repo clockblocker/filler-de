@@ -1,14 +1,14 @@
 import { type App, TFile } from "obsidian";
-import { getMaybeEditor } from "../../../../obsidian-vault-action-manager/helpers/get-editor";
+import { getMaybeLegacyEditor } from "../../../../obsidian-vault-action-manager/helpers/get-editor";
 import { logError } from "../../../../obsidian-vault-action-manager/helpers/issue-handlers";
-import type { PrettyPath } from "../../../../types/common-interface/dtos";
+import type { PrettyPathLegacy } from "../../../../types/common-interface/dtos";
 import {
-	type Maybe,
-	unwrapMaybeByThrowing,
+	type MaybeLegacy,
+	unwrapMaybeLegacyByThrowing,
 } from "../../../../types/common-interface/maybe";
 import {
 	type LegacyFullPathToMdFile,
-	legacyFullPathToMdFileFromPrettyPath,
+	legacyFullPathToMdFileFromPrettyPathLegacy,
 	legacySystemPathFromFullPath,
 } from "../../atomic-services/pathfinder";
 import type { LegacyOpenedFileReader } from "./opened-file-reader";
@@ -37,12 +37,12 @@ export class LegacyOpenedFileService {
 		return this.app;
 	}
 
-	async getMaybeOpenedTFile(): Promise<Maybe<TFile>> {
-		return await this.reader.getMaybeOpenedTFile();
+	async getMaybeLegacyOpenedTFile(): Promise<MaybeLegacy<TFile>> {
+		return await this.reader.getMaybeLegacyOpenedTFile();
 	}
 
-	async getMaybeContent(): Promise<Maybe<string>> {
-		return await this.reader.getMaybeContent();
+	async getMaybeLegacyContent(): Promise<MaybeLegacy<string>> {
+		return await this.reader.getMaybeLegacyContent();
 	}
 
 	async getContent(): Promise<string> {
@@ -50,20 +50,22 @@ export class LegacyOpenedFileService {
 	}
 
 	// [TODO] Delete
-	async writeToOpenedFile(text: string): Promise<Maybe<string>> {
+	async writeToOpenedFile(text: string): Promise<MaybeLegacy<string>> {
 		return { data: text, error: false };
 	}
 
 	async replaceAllContentInOpenedFile(
 		content: string,
-	): Promise<Maybe<string>> {
-		const editor = unwrapMaybeByThrowing(await getMaybeEditor(this.app));
+	): Promise<MaybeLegacy<string>> {
+		const editor = unwrapMaybeLegacyByThrowing(
+			await getMaybeLegacyEditor(this.app),
+		);
 		editor.setValue(content);
 
 		return { data: content, error: false };
 	}
 
-	async isFileActive(prettyPath: PrettyPath): Promise<boolean> {
+	async isFileActive(prettyPath: PrettyPathLegacy): Promise<boolean> {
 		const pwd = await this.pwd();
 		// Check both pathParts and basename to ensure it's the same file
 		return (
@@ -75,12 +77,12 @@ export class LegacyOpenedFileService {
 		);
 	}
 
-	public async cd(file: TFile): Promise<Maybe<TFile>>;
-	public async cd(file: LegacyFullPathToMdFile): Promise<Maybe<TFile>>;
-	public async cd(file: PrettyPath): Promise<Maybe<TFile>>;
+	public async cd(file: TFile): Promise<MaybeLegacy<TFile>>;
+	public async cd(file: LegacyFullPathToMdFile): Promise<MaybeLegacy<TFile>>;
+	public async cd(file: PrettyPathLegacy): Promise<MaybeLegacy<TFile>>;
 	public async cd(
-		file: TFile | LegacyFullPathToMdFile | PrettyPath,
-	): Promise<Maybe<TFile>> {
+		file: TFile | LegacyFullPathToMdFile | PrettyPathLegacy,
+	): Promise<MaybeLegacy<TFile>> {
 		let tfile: TFile;
 		if (
 			typeof (file as TFile).path === "string" &&
@@ -91,18 +93,19 @@ export class LegacyOpenedFileService {
 			typeof (file as LegacyFullPathToMdFile).basename === "string" &&
 			Array.isArray((file as LegacyFullPathToMdFile).pathParts)
 		) {
-			const full = legacyFullPathToMdFileFromPrettyPath(
-				file as PrettyPath,
+			const full = legacyFullPathToMdFileFromPrettyPathLegacy(
+				file as PrettyPathLegacy,
 			);
 			const systemPath = legacySystemPathFromFullPath(full);
 
-			const tfileMaybe = this.app.vault.getAbstractFileByPath(systemPath);
-			if (!tfileMaybe || !(tfileMaybe instanceof TFile)) {
+			const tfileMaybeLegacy =
+				this.app.vault.getAbstractFileByPath(systemPath);
+			if (!tfileMaybeLegacy || !(tfileMaybeLegacy instanceof TFile)) {
 				const description = `No TFile found for path: ${systemPath}`;
 				logError({ description, location: "OpenedFileService" });
 				return { description, error: true };
 			}
-			tfile = tfileMaybe as TFile;
+			tfile = tfileMaybeLegacy as TFile;
 		} else {
 			const description = "Invalid argument to OpenedFileService.cd";
 			logError({ description, location: "OpenedFileService" });

@@ -4,8 +4,8 @@ import {
 	logWarning,
 } from "../../../../../obsidian-vault-action-manager/helpers/issue-handlers";
 import {
-	type Maybe,
-	unwrapMaybeByThrowing,
+	type MaybeLegacy,
+	unwrapMaybeLegacyByThrowing,
 } from "../../../../../types/common-interface/maybe";
 import type {
 	LegacyFileFromTo,
@@ -32,8 +32,8 @@ export class LegacyTFileHelper {
 	}
 
 	async getFile(fullPath: LegacyFullPathToMdFile): Promise<TFile> {
-		const mbFile = await this.getMaybeFile(fullPath);
-		return unwrapMaybeByThrowing(mbFile);
+		const mbFile = await this.getMaybeLegacyFile(fullPath);
+		return unwrapMaybeLegacyByThrowing(mbFile);
 	}
 
 	async createFiles(
@@ -70,12 +70,12 @@ export class LegacyTFileHelper {
 	}
 
 	private async moveFile({ from, to }: LegacyFileFromTo): Promise<void> {
-		const mbFromFile = await this.getMaybeFile(from);
-		const mbToFile = await this.getMaybeFile(to);
+		const mbFromFile = await this.getMaybeLegacyFile(from);
+		const mbToFile = await this.getMaybeLegacyFile(to);
 
 		if (mbFromFile.error) {
 			if (mbToFile.error) {
-				unwrapMaybeByThrowing(
+				unwrapMaybeLegacyByThrowing(
 					mbToFile,
 					"TFileHelper.moveFile",
 					`Both source \n(${legacySystemPathFromFullPath(from)}) \n and target \n (${legacySystemPathFromFullPath(to)}) \n files not found`,
@@ -109,9 +109,9 @@ export class LegacyTFileHelper {
 		);
 	}
 
-	private async getMaybeFile(
+	private async getMaybeLegacyFile(
 		fullPath: LegacyFullPathToMdFile,
-	): Promise<Maybe<TFile>> {
+	): Promise<MaybeLegacy<TFile>> {
 		const systemPath = legacySystemPathFromFullPath(fullPath);
 		const tAbstractFile = this.vault.getAbstractFileByPath(systemPath);
 		if (!tAbstractFile) {
@@ -138,7 +138,7 @@ export class LegacyTFileHelper {
 		fullPath,
 		content,
 	}: LegacyFileWithContent): Promise<TFile> {
-		const mbFile = await this.getMaybeFile(fullPath);
+		const mbFile = await this.getMaybeLegacyFile(fullPath);
 
 		return mbFile.error
 			? await this.safelyCreateNewFile({

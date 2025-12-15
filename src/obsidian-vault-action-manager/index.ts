@@ -35,12 +35,12 @@ export type VaultEvent =
 			splitPath: SplitPathToFile | SplitPathToMdFile;
 	  };
 
-export type VaultEventHandler = (event: VaultEvent) => Promise<void>;
+export type VaultEventHandlerLegacy = (event: VaultEvent) => Promise<void>;
 
 export type Teardown = () => void;
 
 export interface ObsidianVaultActionManager {
-	subscribe(handler: VaultEventHandler): Teardown;
+	subscribe(handler: VaultEventHandlerLegacy): Teardown;
 	dispatch(actions: readonly VaultAction[]): Promise<DispatchResult>;
 
 	// Read-only operations

@@ -15,7 +15,7 @@ const DEFAULT_FLUSH_DELAY_MS = 200;
  * - Debouncing: waits for activity to settle before flushing
  * - Sorting: executes actions in weight order (folders before files, etc.)
  */
-export class LegacyVaultActionQueue {
+export class VaultActionQueueLegacy {
 	private queue: Map<string, LegacyVaultAction> = new Map();
 	private flushTimeout: ReturnType<typeof setTimeout> | null = null;
 	private flushDelayMs: number;
@@ -129,4 +129,4 @@ export class LegacyVaultActionQueue {
 }
 
 // Legacy alias maintained during migration away from this queue impl.
-export const DeprecatedVaultActionQueue = LegacyVaultActionQueue;
+export const DeprecatedVaultActionQueue = VaultActionQueueLegacy;

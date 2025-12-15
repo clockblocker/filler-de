@@ -29,14 +29,14 @@ export class AboveSelectionToolbarService {
 		host.style.position ||= "relative";
 		host.appendChild(this.toolbarEl);
 
-		const showMaybe = () =>
+		const showMaybeLegacy = () =>
 			setTimeout(() => this.updateToolbarPosition(), 0);
 		const hide = () => this.hideToolbar();
 
-		host.addEventListener("mouseup", showMaybe);
-		host.addEventListener("keyup", showMaybe);
+		host.addEventListener("mouseup", showMaybeLegacy);
+		host.addEventListener("keyup", showMaybeLegacy);
 		cm.scrollDOM.addEventListener("scroll", hide, { passive: true });
-		cm.scrollDOM.addEventListener("scrollend", showMaybe, {
+		cm.scrollDOM.addEventListener("scrollend", showMaybeLegacy, {
 			passive: true,
 		});
 	}

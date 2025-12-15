@@ -21,7 +21,7 @@ legacy relies on dispatcher registering self to avoid feedback loops.
 no retry/backoff or partial failure strategy.
 
 - Missing read-only facade: 
-callers still hit BackgroundFileService/OpenedFileService directly, defeating the abstraction goal.
+callers still hit BackgroundFileServiceLegacy/OpenedFileService directly, defeating the abstraction goal.
 
 - Routing policy unresolved: when to use opened vs background; need robust detection of visible/active files.
 - No cross-root guards (current stance: allow cross-root actions, but keying must keep roots distinct).
@@ -30,7 +30,7 @@ callers still hit BackgroundFileService/OpenedFileService directly, defeating th
 1) Solidify types & helpers
    - Keep `split-path.ts` with literal discriminants; add `splitPathKey` reused by collapse/dedupe.
    - Ensure `VaultAction` helpers align with split-path types.
-   - Dispatcher/executor live entirely inside `obsidian-vault-action-manager` (no Librarian leakage).
+   - Dispatcher/executor live entirely inside `obsidian-vault-action-manager` (no LibrarianLegacy leakage).
 
 2) Collapse logic ✅
    - Implemented `collapseActions(actions: VaultAction[]): Promise<VaultAction[]>` using a per-path Map.
@@ -57,7 +57,7 @@ callers still hit BackgroundFileService/OpenedFileService directly, defeating th
    - No built-in debounce (callers should batch before calling).
 
 6) Executor (`impl/executor.ts`) ✅
-   - Maps `VaultAction` to file ops using `TFileHelper` and `TFolderHelper` directly (no BackgroundFileService).
+   - Maps `VaultAction` to file ops using `TFileHelper` and `TFolderHelper` directly (no BackgroundFileServiceLegacy).
    - Routes ProcessMdFile/ReplaceContentMdFile based on `OpenedFileService.isFileActive()`.
    - Ensures file exists before processing/writing (creates with empty content for ProcessMdFile, with target content for ReplaceContentMdFile).
    - Returns `Result<void, string>` for each action.
@@ -111,7 +111,7 @@ callers still hit BackgroundFileService/OpenedFileService directly, defeating th
 - No automatic re-dispatch; caller decides: retry, log, ignore, etc.
 
 ## Event adapter: self-event tracking and burst handling
-- **Self-event tracking**: Inject `SelfEventTracker` to register actions we dispatch.
+- **Self-event tracking**: Inject `SelfEventTrackerLegacy` to register actions we dispatch.
   - Track system paths (normalized) for ALL action types (folders, files, md files).
   - For renames: track both `from` and `to` paths.
   - Path-based matching: Obsidian events matched against tracked paths.
@@ -154,7 +154,7 @@ ActionQueue.dispatch(actions)
   ↓
 ActionQueue.executeNextBatch()
   ├── Take batch from queue (unlimited actions)
-  ├── SelfEventTracker.register(batch) → track paths
+  ├── SelfEventTrackerLegacy.register(batch) → track paths
   └── Dispatcher.dispatch(batch)
       ├── collapseActions(batch) → removes duplicates, composes transforms
       ├── sortActionsByWeight(collapsed) → orders by weight + path depth
@@ -179,15 +179,15 @@ When batch completes:
 User Action (Obsidian)
   ↓
 EventAdapter receives Obsidian event
-  ├── SelfEventTracker.shouldIgnore(path)? → YES → filter out
-  └── SelfEventTracker.shouldIgnore(path)? → NO → emit to subscribers
+  ├── SelfEventTrackerLegacy.shouldIgnore(path)? → YES → filter out
+  └── SelfEventTrackerLegacy.shouldIgnore(path)? → NO → emit to subscribers
   ↓
 VaultEvent → subscribers notified (only user-triggered events)
 ```
 
 ### Key Design Decisions
 
-1. **No BackgroundFileService**: Executor uses `TFileHelper`/`TFolderHelper` directly
+1. **No BackgroundFileServiceLegacy**: Executor uses `TFileHelper`/`TFolderHelper` directly
 2. **File Existence**: Executor ensures files exist before processing/writing
 3. **Error Collection**: Dispatcher collects all errors, doesn't stop on first failure
 4. **Collapse First**: Collapse happens before sorting to minimize operations
@@ -197,7 +197,7 @@ VaultEvent → subscribers notified (only user-triggered events)
 
 ✅ **Completed:**
 1) OpenedFileService + e2e
-2) TFileHelper + TFolderHelper (no BackgroundFileService wrapper needed)
+2) TFileHelper + TFolderHelper (no BackgroundFileServiceLegacy wrapper needed)
 3) Reader + e2e
 4) Collapse logic + unit tests (20 tests passing)
 5) Sorting + unit tests
@@ -212,7 +212,7 @@ VaultEvent → subscribers notified (only user-triggered events)
 ### Implementation Details
 
 **Executor (`impl/executor.ts`):**
-- Uses `TFileHelper` and `TFolderHelper` directly (no BackgroundFileService wrapper)
+- Uses `TFileHelper` and `TFolderHelper` directly (no BackgroundFileServiceLegacy wrapper)
 - Uses `OpenedFileService` for active files
 - Checks `isFileActive()` to route ProcessMdFile/ReplaceContentMdFile
 - Ensures file exists before processing/writing

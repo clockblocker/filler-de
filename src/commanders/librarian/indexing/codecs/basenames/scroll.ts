@@ -1,17 +1,19 @@
 import z from "zod/v4";
 import { DASH } from "../../../../../types/literals";
-import { NodeNameSchema } from "../guards";
+import { NodeNameLegacySchemaLegacy } from "../guards";
 
-export const ScrollBasenameSchema = z.templateLiteral([z.string().min(1)]);
+export const ScrollBasenameSchemaLegacy = z.templateLiteral([
+	z.string().min(1),
+]);
 
-export type ScrollBasename = z.infer<typeof ScrollBasenameSchema>;
+export type ScrollBasename = z.infer<typeof ScrollBasenameSchemaLegacy>;
 
 export const isScrollBasename = (s: string): s is ScrollBasename =>
-	ScrollBasenameSchema.safeParse(s).success;
+	ScrollBasenameSchemaLegacy.safeParse(s).success;
 
 export const treePathToScrollBasename = z.codec(
-	ScrollBasenameSchema,
-	z.array(NodeNameSchema).min(1),
+	ScrollBasenameSchemaLegacy,
+	z.array(NodeNameLegacySchemaLegacy).min(1),
 	{
 		decode: (name) => {
 			const treePath = name.split(DASH).toReversed();

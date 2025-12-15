@@ -1,12 +1,12 @@
 import { type App, MarkdownView, type TFile, type TFolder } from "obsidian";
-import { getMaybeEditor } from "../../../../obsidian-vault-action-manager/helpers/get-editor";
+import { getMaybeLegacyEditor } from "../../../../obsidian-vault-action-manager/helpers/get-editor";
 import {
 	logError,
 	logWarning,
 } from "../../../../obsidian-vault-action-manager/helpers/issue-handlers";
 import {
-	type Maybe,
-	unwrapMaybeByThrowing,
+	type MaybeLegacy,
+	unwrapMaybeLegacyByThrowing,
 } from "../../../../types/common-interface/maybe";
 import { legacyGetFullPathForAbstractFile } from "../../atomic-services/pathfinder";
 
@@ -14,26 +14,28 @@ export class LegacyOpenedFileReader {
 	constructor(private app: App) {}
 
 	async pwd() {
-		const activeView = unwrapMaybeByThrowing(
-			await this.getMaybeOpenedTFile(),
+		const activeView = unwrapMaybeLegacyByThrowing(
+			await this.getMaybeLegacyOpenedTFile(),
 		);
 		return legacyGetFullPathForAbstractFile(activeView);
 	}
 
 	async getContent(): Promise<string> {
-		return unwrapMaybeByThrowing(await this.getMaybeContent());
+		return unwrapMaybeLegacyByThrowing(await this.getMaybeLegacyContent());
 	}
 
 	async getParent(): Promise<TFolder> {
-		return unwrapMaybeByThrowing(await this.getMaybeParent());
+		return unwrapMaybeLegacyByThrowing(await this.getMaybeLegacyParent());
 	}
 
 	async getOpenedTFile(): Promise<TFile> {
-		return unwrapMaybeByThrowing(await this.getMaybeOpenedTFile());
+		return unwrapMaybeLegacyByThrowing(
+			await this.getMaybeLegacyOpenedTFile(),
+		);
 	}
 
-	async getMaybeContent(): Promise<Maybe<string>> {
-		const mbEditor = await getMaybeEditor(this.app);
+	async getMaybeLegacyContent(): Promise<MaybeLegacy<string>> {
+		const mbEditor = await getMaybeLegacyEditor(this.app);
 		if (mbEditor.error) {
 			return mbEditor;
 		}
@@ -42,7 +44,7 @@ export class LegacyOpenedFileReader {
 		return { data: content ?? "", error: false };
 	}
 
-	async getMaybeParent(): Promise<Maybe<TFolder>> {
+	async getMaybeLegacyParent(): Promise<MaybeLegacy<TFolder>> {
 		const file = await this.getOpenedTFile();
 
 		const parent = file.parent;
@@ -58,7 +60,7 @@ export class LegacyOpenedFileReader {
 	}
 
 	// [TODO] Make it private
-	async getMaybeOpenedTFile(): Promise<Maybe<TFile>> {
+	async getMaybeLegacyOpenedTFile(): Promise<MaybeLegacy<TFile>> {
 		try {
 			const activeView =
 				this.app.workspace.getActiveViewOfType(MarkdownView);

@@ -13,7 +13,7 @@ import { VaultActionType } from "../types/vault-action";
  *
  * TTL: 5s with pop-on-match (one-time use per path).
  */
-export class SelfEventTracker {
+export class SelfEventTrackerLegacy {
 	private readonly trackedPaths = new Map<string, NodeJS.Timeout>();
 	private readonly ttlMs = 5000; // 5 seconds
 

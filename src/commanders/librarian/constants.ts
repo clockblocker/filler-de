@@ -1,12 +1,12 @@
-export const LIBRARY_ROOTS = ["Library"] as const;
-export type RootName = (typeof LIBRARY_ROOTS)[number];
+export const LIBRARY_ROOTSLegacy = ["Library"] as const;
+export type RootNameLegacy = (typeof LIBRARY_ROOTSLegacy)[number];
 
 export const UNTRACKED_FOLDER_NAME = "Untracked";
 
-export function isRootName(name: string): name is RootName {
-	return LIBRARY_ROOTS.some((root) => root === name);
+export function isRootNameLegacy(name: string): name is RootNameLegacy {
+	return LIBRARY_ROOTSLegacy.some((root) => root === name);
 }
 
-export function isInUntracked(pathParts: readonly string[]): boolean {
+export function isInUntrackedLegacy(pathParts: readonly string[]): boolean {
 	return pathParts.length > 1 && pathParts[1] === UNTRACKED_FOLDER_NAME;
 }

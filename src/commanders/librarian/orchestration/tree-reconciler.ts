@@ -1,46 +1,46 @@
 import type { TexfresserObsidianServices } from "../../../services/obsidian-services/interface";
-import type { ActionDispatcher } from "../action-dispatcher";
-import { LIBRARY_ROOTS, type RootName } from "../constants";
-import { type NoteSnapshot, noteDiffer } from "../diffing/note-differ";
+import type { ActionDispatcherLegacy } from "../action-dispatcher";
+import { LIBRARY_ROOTSLegacy, type RootNameLegacy } from "../constants";
+import { type NoteSnapshotLegacy, noteDiffer } from "../diffing/note-differ";
 import { mapDiffToActions } from "../diffing/tree-diff-applier";
-import { readNoteDtos } from "../filesystem/library-reader";
-import type { LibrarianState } from "../librarian-state";
-import { LibraryTree } from "../library-tree/library-tree";
-import type { TreePath } from "../types";
-import type { FilesystemHealer } from "./filesystem-healer";
+import { readNoteDtoLegacy } from "../filesystem/library-reader";
+import type { LibrarianLegacyStateLegacy } from "../librarian-state";
+import { LibraryTreeLegacy } from "../library-tree/library-tree";
+import type { TreePathLegacyLegacy } from "../types";
+import type { FilesystemHealerLegacy } from "./filesystem-healer";
 
-export class TreeReconciler {
+export class TreeReconcilerLegacy {
 	constructor(
 		private readonly deps: {
-			state: LibrarianState;
-			dispatcher: ActionDispatcher;
-			filesystemHealer: FilesystemHealer;
+			state: LibrarianLegacyStateLegacy;
+			dispatcher: ActionDispatcherLegacy;
+			filesystemHealer: FilesystemHealerLegacy;
 		} & Pick<TexfresserObsidianServices, "backgroundFileService">,
 	) {}
 
-	get tree(): LibraryTree | null {
+	get tree(): LibraryTreeLegacy | null {
 		return this.deps.state.tree;
 	}
 
 	async initTrees(): Promise<void> {
-		const rootName = LIBRARY_ROOTS[0];
+		const rootName = LIBRARY_ROOTSLegacy[0];
 		await this.deps.filesystemHealer.healRootFilesystem(rootName);
-		const notes = await readNoteDtos(
+		const notes = await readNoteDtoLegacy(
 			this.deps.backgroundFileService,
 			rootName,
 		);
-		this.deps.state.tree = new LibraryTree(notes, rootName);
+		this.deps.state.tree = new LibraryTreeLegacy(notes, rootName);
 	}
 
 	async reconcileSubtree(
-		rootName: RootName,
-		subtreePath: TreePath = [],
+		rootName: RootNameLegacy,
+		subtreePath: TreePathLegacyLegacy = [],
 	): Promise<void> {
-		if (rootName !== LIBRARY_ROOTS[0]) return;
+		if (rootName !== LIBRARY_ROOTSLegacy[0]) return;
 		const tree = this.deps.state.tree;
 		if (!tree) return;
 
-		const filesystemNotes = await readNoteDtos(
+		const filesystemNotes = await readNoteDtoLegacy(
 			this.deps.backgroundFileService,
 			rootName,
 			subtreePath,
@@ -73,9 +73,9 @@ export class TreeReconciler {
 	}
 
 	async withDiff<T>(
-		rootName: RootName,
-		mutation: (tree: LibraryTree) => T,
-		affectedPaths: TreePath[],
+		rootName: RootNameLegacy,
+		mutation: (tree: LibraryTreeLegacy) => T,
+		affectedPaths: TreePathLegacyLegacy[],
 	): Promise<{ actions: ReturnType<typeof mapDiffToActions>; result: T }> {
 		if (!this.deps.state.skipReconciliation && affectedPaths.length > 0) {
 			for (const path of affectedPaths) {
@@ -87,10 +87,10 @@ export class TreeReconciler {
 	}
 
 	withDiffSync<T>(
-		rootName: RootName,
-		mutation: (tree: LibraryTree) => T,
+		rootName: RootNameLegacy,
+		mutation: (tree: LibraryTreeLegacy) => T,
 	): { actions: ReturnType<typeof mapDiffToActions>; result: T } {
-		if (rootName !== LIBRARY_ROOTS[0]) {
+		if (rootName !== LIBRARY_ROOTSLegacy[0]) {
 			throw new Error(`Tree not found for root: ${rootName}`);
 		}
 		const tree = this.deps.state.tree;
@@ -104,8 +104,8 @@ export class TreeReconciler {
 
 		const diff = noteDiffer.diff(before, after);
 
-		const getNode = (path: TreePath) => {
-			const mbNode = tree.getMaybeNode({ path });
+		const getNode = (path: TreePathLegacyLegacy) => {
+			const mbNode = tree.getMaybeLegacyNode({ path });
 			return mbNode.error ? undefined : mbNode.data;
 		};
 
@@ -118,8 +118,8 @@ export class TreeReconciler {
 		return { actions, result };
 	}
 
-	getSnapshot(rootName: RootName): NoteSnapshot | null {
-		if (rootName !== LIBRARY_ROOTS[0]) return null;
+	getSnapshot(rootName: RootNameLegacy): NoteSnapshotLegacy | null {
+		if (rootName !== LIBRARY_ROOTSLegacy[0]) return null;
 		const tree = this.deps.state.tree;
 		return tree ? tree.snapshot() : null;
 	}

@@ -1,25 +1,25 @@
 import type { FileManager, Vault } from "obsidian";
 import { TFile, TFolder } from "obsidian";
-import { LIBRARY_ROOTS } from "../../../../commanders/librarian/constants";
-import type { PrettyPath } from "../../../../types/common-interface/dtos";
+import { LIBRARY_ROOTSLegacy } from "../../../../commanders/librarian/constants";
+import type { PrettyPathLegacy } from "../../../../types/common-interface/dtos";
 import { isReadonlyArray, type Prettify } from "../../../../types/helpers";
 import type { LegacyFullPathToFolder } from "../../atomic-services/pathfinder";
 import {
-	legacyFullPathToFolderFromPrettyPath,
-	legacyFullPathToMdFileFromPrettyPath,
+	legacyFullPathToFolderFromPrettyPathLegacy,
+	legacyFullPathToMdFileFromPrettyPathLegacy,
 	legacyGetFullPathForAbstractFile,
 } from "../../atomic-services/pathfinder";
 import { LegacyAbstractFileHelper } from "./abstract-file-helper";
 
 /**
- * High-level file/folder service using PrettyPath.
+ * High-level file/folder service using PrettyPathLegacy.
  *
  * NOTE: Chain logic (create parent folders, cleanup empty folders)
  * is handled by mapDiffToActions + VaultActionQueue, NOT here.
  *
  * @see src/commanders/librarian/diffing/tree-diff-applier.ts
  */
-export class LegacyBackgroundFileService {
+export class LegacyBackgroundFileServiceLegacy {
 	private abstractFileService: LegacyAbstractFileHelper;
 	private vault: Vault;
 
@@ -36,34 +36,35 @@ export class LegacyBackgroundFileService {
 
 	// ─── File Operations ─────────────────────────────────────────────
 
-	async readContent(prettyPath: PrettyPath) {
+	async readContent(prettyPath: PrettyPathLegacy) {
 		const file = await this.abstractFileService.getMdFile(
-			legacyFullPathToMdFileFromPrettyPath(prettyPath),
+			legacyFullPathToMdFileFromPrettyPathLegacy(prettyPath),
 		);
 		return await this.vault.read(file);
 	}
 
-	async exists(prettyPath: PrettyPath): Promise<boolean> {
-		const maybeFile = await this.abstractFileService.getMaybeAbstractFile(
-			legacyFullPathToMdFileFromPrettyPath(prettyPath),
-		);
+	async exists(prettyPath: PrettyPathLegacy): Promise<boolean> {
+		const maybeFile =
+			await this.abstractFileService.getMaybeLegacyAbstractFile(
+				legacyFullPathToMdFileFromPrettyPathLegacy(prettyPath),
+			);
 		return !maybeFile.error;
 	}
 
-	async replaceContent(prettyPath: PrettyPath, content = "") {
+	async replaceContent(prettyPath: PrettyPathLegacy, content = "") {
 		const file = await this.abstractFileService.getMdFile(
-			legacyFullPathToMdFileFromPrettyPath(prettyPath),
+			legacyFullPathToMdFileFromPrettyPathLegacy(prettyPath),
 		);
 		await this.vault.modify(file, content);
 		return content;
 	}
 
 	logDeepLs(): void {
-		for (const rootName of LIBRARY_ROOTS) {
+		for (const rootName of LIBRARY_ROOTSLegacy) {
 			const folder = this.vault.getAbstractFileByPath(rootName);
 			if (!folder || !(folder instanceof TFolder)) {
 				console.log(
-					`[BackgroundFileService] Root not found: ${rootName}`,
+					`[BackgroundFileServiceLegacy] Root not found: ${rootName}`,
 				);
 				continue;
 			}
@@ -90,7 +91,7 @@ export class LegacyBackgroundFileService {
 
 			walkFolder(folder, "");
 			console.log(
-				`[BackgroundFileService] Deep LS for ${rootName}:\n${lines.join(
+				`[BackgroundFileServiceLegacy] Deep LS for ${rootName}:\n${lines.join(
 					"\n",
 				)}`,
 			);
@@ -101,10 +102,13 @@ export class LegacyBackgroundFileService {
 	 * Create file if it doesn't exist, or update content if it does.
 	 * Useful for codex files that may or may not exist.
 	 */
-	async createOrUpdate(prettyPath: PrettyPath, content = ""): Promise<void> {
-		const fullPath = legacyFullPathToMdFileFromPrettyPath(prettyPath);
+	async createOrUpdate(
+		prettyPath: PrettyPathLegacy,
+		content = "",
+	): Promise<void> {
+		const fullPath = legacyFullPathToMdFileFromPrettyPathLegacy(prettyPath);
 		const maybeFile =
-			await this.abstractFileService.getMaybeAbstractFile(fullPath);
+			await this.abstractFileService.getMaybeLegacyAbstractFile(fullPath);
 
 		if (maybeFile.error) {
 			// File doesn't exist - create it
@@ -123,7 +127,7 @@ export class LegacyBackgroundFileService {
 			return await this.abstractFileService.createFiles(
 				arg.map((file) => ({
 					...file,
-					fullPath: legacyFullPathToMdFileFromPrettyPath(file),
+					fullPath: legacyFullPathToMdFileFromPrettyPathLegacy(file),
 				})),
 			);
 		}
@@ -131,7 +135,7 @@ export class LegacyBackgroundFileService {
 		return await this.abstractFileService.createFiles([
 			{
 				content: arg.content,
-				fullPath: legacyFullPathToMdFileFromPrettyPath(arg),
+				fullPath: legacyFullPathToMdFileFromPrettyPathLegacy(arg),
 			},
 		]);
 	}
@@ -145,8 +149,8 @@ export class LegacyBackgroundFileService {
 		if (isReadonlyArray(arg)) {
 			return await this.abstractFileService.moveFiles(
 				arg.map(({ from, to }) => ({
-					from: legacyFullPathToMdFileFromPrettyPath(from),
-					to: legacyFullPathToMdFileFromPrettyPath(to),
+					from: legacyFullPathToMdFileFromPrettyPathLegacy(from),
+					to: legacyFullPathToMdFileFromPrettyPathLegacy(to),
 				})),
 			);
 		}
@@ -154,23 +158,27 @@ export class LegacyBackgroundFileService {
 		const { from, to } = arg;
 		return await this.abstractFileService.moveFiles([
 			{
-				from: legacyFullPathToMdFileFromPrettyPath(from),
-				to: legacyFullPathToMdFileFromPrettyPath(to),
+				from: legacyFullPathToMdFileFromPrettyPathLegacy(from),
+				to: legacyFullPathToMdFileFromPrettyPathLegacy(to),
 			},
 		]);
 	}
 
-	trash(file: PrettyPath): Promise<void>;
-	trash(files: readonly PrettyPath[]): Promise<void>;
-	async trash(arg: PrettyPath | readonly PrettyPath[]): Promise<void> {
+	trash(file: PrettyPathLegacy): Promise<void>;
+	trash(files: readonly PrettyPathLegacy[]): Promise<void>;
+	async trash(
+		arg: PrettyPathLegacy | readonly PrettyPathLegacy[],
+	): Promise<void> {
 		if (isReadonlyArray(arg)) {
 			return await this.abstractFileService.trashFiles(
-				arg.map((file) => legacyFullPathToMdFileFromPrettyPath(file)),
+				arg.map((file) =>
+					legacyFullPathToMdFileFromPrettyPathLegacy(file),
+				),
 			);
 		}
 
 		return await this.abstractFileService.trashFiles([
-			legacyFullPathToMdFileFromPrettyPath(arg),
+			legacyFullPathToMdFileFromPrettyPathLegacy(arg),
 		]);
 	}
 
@@ -188,22 +196,25 @@ export class LegacyBackgroundFileService {
 
 	// ─── Folder Operations ───────────────────────────────────────────
 
-	async createFolder(prettyPath: PrettyPath): Promise<TFolder> {
+	async createFolder(prettyPath: PrettyPathLegacy): Promise<TFolder> {
 		return this.abstractFileService.createFolder(
-			legacyFullPathToFolderFromPrettyPath(prettyPath),
+			legacyFullPathToFolderFromPrettyPathLegacy(prettyPath),
 		);
 	}
 
-	async trashFolder(prettyPath: PrettyPath): Promise<void> {
+	async trashFolder(prettyPath: PrettyPathLegacy): Promise<void> {
 		return this.abstractFileService.trashFolder(
-			legacyFullPathToFolderFromPrettyPath(prettyPath),
+			legacyFullPathToFolderFromPrettyPathLegacy(prettyPath),
 		);
 	}
 
-	async renameFolder(from: PrettyPath, to: PrettyPath): Promise<void> {
+	async renameFolder(
+		from: PrettyPathLegacy,
+		to: PrettyPathLegacy,
+	): Promise<void> {
 		return this.abstractFileService.renameFolder(
-			legacyFullPathToFolderFromPrettyPath(from),
-			legacyFullPathToFolderFromPrettyPath(to),
+			legacyFullPathToFolderFromPrettyPathLegacy(from),
+			legacyFullPathToFolderFromPrettyPathLegacy(to),
 		);
 	}
 
@@ -231,13 +242,13 @@ export class LegacyBackgroundFileService {
 }
 
 export type ReadablePrettyFile = Prettify<
-	PrettyPath & {
+	PrettyPathLegacy & {
 		readContent: () => Promise<string>;
 	}
 >;
 
 export type PrettyFileDto = Prettify<
-	PrettyPath & {
+	PrettyPathLegacy & {
 		content?: string;
 	}
 >;

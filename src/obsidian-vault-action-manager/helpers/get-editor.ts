@@ -1,10 +1,12 @@
 import { type App, type Editor, MarkdownView } from "obsidian";
 import {
-	type Maybe,
-	unwrapMaybeByThrowing,
+	type MaybeLegacy,
+	unwrapMaybeLegacyByThrowing,
 } from "../../types/common-interface/maybe";
 
-export async function getMaybeEditor(app: App): Promise<Maybe<Editor>> {
+export async function getMaybeLegacyEditor(
+	app: App,
+): Promise<MaybeLegacy<Editor>> {
 	try {
 		const view = app.workspace.getActiveViewOfType(MarkdownView);
 		if (view?.file) {
@@ -17,11 +19,11 @@ export async function getMaybeEditor(app: App): Promise<Maybe<Editor>> {
 }
 
 export async function getEditor(app: App): Promise<Editor> {
-	const mbEditor = await getMaybeEditor(app);
+	const mbEditor = await getMaybeLegacyEditor(app);
 	if (mbEditor.error) {
 		throw new Error(mbEditor.description ?? "No active editor");
 	}
 
-	const editor = unwrapMaybeByThrowing(mbEditor);
+	const editor = unwrapMaybeLegacyByThrowing(mbEditor);
 	return editor;
 }

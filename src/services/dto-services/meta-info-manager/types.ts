@@ -1,5 +1,5 @@
 import z from "zod/v4";
-import { TextStatusSchema } from "../../../types/common-interface/enums";
+import { TextStatusLegacySchema } from "../../../types/common-interface/enums";
 import {
 	CODEX,
 	ENTRY,
@@ -11,22 +11,22 @@ import {
 export const PageLibraryNoteMetaInfoSchema = z.object({
 	fileType: z.literal(PAGE),
 	index: z.int().min(0).max(999),
-	status: TextStatusSchema,
+	status: TextStatusLegacySchema,
 });
 
 export const ScrollLibraryNoteMetaInfoSchema = z.object({
 	fileType: z.literal(SCROLL),
-	status: TextStatusSchema,
+	status: TextStatusLegacySchema,
 });
 
 export const CodexLibraryNoteMetaInfoSchema = z.object({
 	fileType: z.literal(CODEX),
-	status: TextStatusSchema,
+	status: TextStatusLegacySchema,
 });
 
 export const UnknownNoteMetaInfoSchema = z.object({
 	fileType: UnknownSchema,
-	status: TextStatusSchema.optional(),
+	status: TextStatusLegacySchema.optional(),
 });
 
 export const LibraryNoteMetaInfoSchema = z.discriminatedUnion("fileType", [

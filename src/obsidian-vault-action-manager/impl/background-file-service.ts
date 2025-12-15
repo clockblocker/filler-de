@@ -9,7 +9,7 @@ import type {
 	SplitPathToMdFile,
 } from "../types/split-path";
 
-export class BackgroundFileService {
+export class BackgroundFileServiceLegacy {
 	constructor(
 		private readonly tfileHelper: TFileHelper,
 		private readonly tfolderHelper: TFolderHelper,

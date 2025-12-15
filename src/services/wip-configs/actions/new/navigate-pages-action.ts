@@ -2,7 +2,7 @@ import {
 	logError,
 	logWarning,
 } from "../../../../obsidian-vault-action-manager/helpers/issue-handlers";
-import { unwrapMaybeByThrowing } from "../../../../types/common-interface/maybe";
+import { unwrapMaybeLegacyByThrowing } from "../../../../types/common-interface/maybe";
 import type { TexfresserObsidianServices } from "../../../obsidian-services/interface";
 
 export async function navigatePageAction(
@@ -16,8 +16,8 @@ export async function navigatePageAction(
 		return;
 	}
 
-	const maybeFile = await openedFileService.getMaybeOpenedTFile();
-	const currentFile = unwrapMaybeByThrowing(maybeFile);
+	const maybeFile = await openedFileService.getMaybeLegacyOpenedTFile();
+	const currentFile = unwrapMaybeLegacyByThrowing(maybeFile);
 
 	// const textsManagerService = new VaultCurrator(openedFileService.getApp());
 

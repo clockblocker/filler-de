@@ -2,13 +2,13 @@ import {
 	type LegacyVaultAction,
 	LegacyVaultActionType,
 } from "../../../services/obsidian-services/file-services/background/background-vault-actions";
-import type { PrettyPath } from "../../../types/common-interface/dtos";
+import type { PrettyPathLegacy } from "../../../types/common-interface/dtos";
 
 function normalizeSystemPath(path: string): string {
 	return path.replace(/^[\\/]+|[\\/]+$/g, "");
 }
 
-function toSystemKey(prettyPath: PrettyPath): string {
+function toSystemKey(prettyPath: PrettyPathLegacy): string {
 	const segments = [...prettyPath.pathParts, `${prettyPath.basename}.md`];
 	return normalizeSystemPath(segments.join("/"));
 }
@@ -19,7 +19,7 @@ function toSystemKey(prettyPath: PrettyPath): string {
  *
  * Assumes events carry `file.path`-style strings (slash-separated).
  */
-export class SelfEventTracker {
+export class SelfEventTrackerLegacy {
 	private readonly keys = new Set<string>();
 
 	register(actions: LegacyVaultAction[]): void {

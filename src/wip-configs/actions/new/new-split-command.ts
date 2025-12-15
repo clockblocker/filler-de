@@ -5,7 +5,7 @@ import {
 } from "../../../services/dto-services/quote-manager/interface";
 import type { SelectionService } from "../../../services/obsidian-services/atomic-services/selection-service";
 import type { LegacyOpenedFileService } from "../../../services/obsidian-services/file-services/active-view/legacy-opened-file-service";
-import { unwrapMaybeByThrowing } from "../../../types/common-interface/maybe";
+import { unwrapMaybeLegacyByThrowing } from "../../../types/common-interface/maybe";
 
 export default async function wrapSentencesInQuoteAnchor({
 	selectionService,
@@ -20,8 +20,8 @@ export default async function wrapSentencesInQuoteAnchor({
 
 		const highestBlockNumber = findHighestBlockNumber(fileContent);
 
-		const nameOfTheOpenendFile = unwrapMaybeByThrowing(
-			await openedFileService.getMaybeOpenedTFile(),
+		const nameOfTheOpenendFile = unwrapMaybeLegacyByThrowing(
+			await openedFileService.getMaybeLegacyOpenedTFile(),
 		).name;
 
 		await selectionService.replaceSelection(

@@ -6,7 +6,7 @@ import {
 	sortActionsByWeight,
 } from "../../../src/services/obsidian-services/file-services/background/background-vault-actions";
 import type { VaultActionExecutor } from "../../../src/services/obsidian-services/file-services/background/vault-action-executor";
-import { LegacyVaultActionQueue } from "../../../src/services/obsidian-services/file-services/vault-action-queue";
+import { VaultActionQueueLegacy } from "../../../src/services/obsidian-services/file-services/vault-action-queue";
 
 // Mock executor that records actions
 function createMockExecutor() {
@@ -92,7 +92,7 @@ describe("VaultActionQueue", () => {
 	describe("push and deduplication", () => {
 		it("should add action to queue", () => {
 			const { executor } = createMockExecutor();
-			const queue = new LegacyVaultActionQueue(executor, { flushDelayMs: 1000 });
+			const queue = new VaultActionQueueLegacy(executor, { flushDelayMs: 1000 });
 
 			queue.push({
 				payload: { prettyPath: { basename: "test", pathParts: ["Library"] } },
@@ -104,7 +104,7 @@ describe("VaultActionQueue", () => {
 
 		it("should dedupe actions with same key (last wins)", () => {
 			const { executor } = createMockExecutor();
-			const queue = new LegacyVaultActionQueue(executor, { flushDelayMs: 1000 });
+			const queue = new VaultActionQueueLegacy(executor, { flushDelayMs: 1000 });
 
 			queue.push({
 				payload: { content: "v1", prettyPath: { basename: "test", pathParts: ["Library"] } },
@@ -127,7 +127,7 @@ describe("VaultActionQueue", () => {
 
 		it("should not dedupe actions with different keys", () => {
 			const { executor } = createMockExecutor();
-			const queue = new LegacyVaultActionQueue(executor, { flushDelayMs: 1000 });
+			const queue = new VaultActionQueueLegacy(executor, { flushDelayMs: 1000 });
 
 			queue.push({
 				payload: { content: "a", prettyPath: { basename: "file1", pathParts: ["Library"] } },
@@ -146,7 +146,7 @@ describe("VaultActionQueue", () => {
 	describe("pushMany", () => {
 		it("should add multiple actions", () => {
 			const { executor } = createMockExecutor();
-			const queue = new LegacyVaultActionQueue(executor, { flushDelayMs: 1000 });
+			const queue = new VaultActionQueueLegacy(executor, { flushDelayMs: 1000 });
 
 			queue.pushMany([
 				{ payload: { prettyPath: { basename: "a", pathParts: [] } }, type: LegacyVaultActionType.UpdateOrCreateFile },
@@ -161,7 +161,7 @@ describe("VaultActionQueue", () => {
 	describe("flushNow", () => {
 		it("should execute all queued actions immediately", async () => {
 			const { executor, executedActions } = createMockExecutor();
-			const queue = new LegacyVaultActionQueue(executor, { flushDelayMs: 1000 });
+			const queue = new VaultActionQueueLegacy(executor, { flushDelayMs: 1000 });
 
 			queue.push({
 				payload: { prettyPath: { basename: "test", pathParts: [] } },
@@ -177,7 +177,7 @@ describe("VaultActionQueue", () => {
 
 		it("should sort actions by weight before executing", async () => {
 			const { executor, executedActions } = createMockExecutor();
-			const queue = new LegacyVaultActionQueue(executor, { flushDelayMs: 1000 });
+			const queue = new VaultActionQueueLegacy(executor, { flushDelayMs: 1000 });
 
 			queue.pushMany([
 				{ payload: { content: "", prettyPath: { basename: "a", pathParts: [] } }, type: LegacyVaultActionType.WriteFile },
@@ -196,7 +196,7 @@ describe("VaultActionQueue", () => {
 
 		it("should not execute if queue is empty", async () => {
 			const { executor, executedActions } = createMockExecutor();
-			const queue = new LegacyVaultActionQueue(executor, { flushDelayMs: 1000 });
+			const queue = new VaultActionQueueLegacy(executor, { flushDelayMs: 1000 });
 
 			await queue.flushNow();
 
@@ -207,7 +207,7 @@ describe("VaultActionQueue", () => {
 	describe("clear", () => {
 		it("should remove all actions without executing", async () => {
 			const { executor, executedActions } = createMockExecutor();
-			const queue = new LegacyVaultActionQueue(executor, { flushDelayMs: 1000 });
+			const queue = new VaultActionQueueLegacy(executor, { flushDelayMs: 1000 });
 
 			queue.push({
 				payload: { prettyPath: { basename: "test", pathParts: [] } },
@@ -227,7 +227,7 @@ describe("VaultActionQueue", () => {
 	describe("debouncing", () => {
 		it("should debounce flush with configured delay", async () => {
 			const { executor, executedActions } = createMockExecutor();
-			const queue = new LegacyVaultActionQueue(executor, { flushDelayMs: 50 });
+			const queue = new VaultActionQueueLegacy(executor, { flushDelayMs: 50 });
 
 			queue.push({
 				payload: { prettyPath: { basename: "test", pathParts: [] } },
@@ -245,7 +245,7 @@ describe("VaultActionQueue", () => {
 
 		it("should reset debounce timer on new push", async () => {
 			const { executor, executedActions } = createMockExecutor();
-			const queue = new LegacyVaultActionQueue(executor, { flushDelayMs: 50 });
+			const queue = new VaultActionQueueLegacy(executor, { flushDelayMs: 50 });
 
 			queue.push({
 				payload: { prettyPath: { basename: "a", pathParts: [] } },

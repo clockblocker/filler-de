@@ -1,8 +1,8 @@
 import type { App } from "obsidian";
 import { MarkdownView } from "obsidian";
-import { treePathToPageBasename } from "../../../../commanders/librarian/indexing/codecs";
-import type { Librarian } from "../../../../commanders/librarian/librarian";
-import type { TreePath } from "../../../../commanders/librarian/types";
+import { treePathToPageBasenameLegacy } from "../../../../commanders/librarian/indexing/codecs";
+import type { LibrarianLegacy } from "../../../../commanders/librarian/librarian";
+import type { TreePathLegacyLegacy } from "../../../../commanders/librarian/types";
 
 /**
  * Handle checkbox click in Codex files.
@@ -14,7 +14,7 @@ export function handleCheckboxClicked({
 	app,
 }: {
 	checkbox: HTMLInputElement;
-	librarian: Librarian;
+	librarian: LibrarianLegacy;
 	app: App;
 }): boolean {
 	// Find the line container (works in both Live Preview and Reading view)
@@ -36,7 +36,7 @@ export function handleCheckboxClicked({
 		return false;
 	}
 
-	// Parse the link target to TreePath
+	// Parse the link target to TreePathLegacyLegacy
 	// Could be: "Library/Section/Text" or "__Text-Section" (Codex filename)
 	const { rootName, treePath } = parseCodexLinkTarget(href);
 	if (!rootName || treePath.length === 0) {
@@ -97,7 +97,7 @@ export function isTaskCheckbox(
  */
 function parseCodexLinkTarget(href: string): {
 	rootName: string | null;
-	treePath: TreePath;
+	treePath: TreePathLegacyLegacy;
 } {
 	// Remove leading underscores if present
 	const cleanHref = href.replace(/^_+/, "");
@@ -109,12 +109,15 @@ function parseCodexLinkTarget(href: string): {
 
 		// Must be in Library folder
 		if (rootName !== "Library") {
-			return { rootName: null, treePath: [] as unknown as TreePath };
+			return {
+				rootName: null,
+				treePath: [] as unknown as TreePathLegacyLegacy,
+			};
 		}
 
 		return {
 			rootName,
-			treePath: pathParts.slice(1) as TreePath,
+			treePath: pathParts.slice(1) as TreePathLegacyLegacy,
 		};
 	}
 
@@ -122,7 +125,7 @@ function parseCodexLinkTarget(href: string): {
 	// After refactor: pages stored in parent/000-TextName-Parent.md (no Page subfolder)
 	// Use the decoder to properly parse it
 	try {
-		const decodedPath = treePathToPageBasename.decode(cleanHref);
+		const decodedPath = treePathToPageBasenameLegacy.decode(cleanHref);
 		// decodedPath format: [...textPath, pageNumber]
 		// e.g., "002-Mann_gegen_mann-Rammstein-Songs" → ["Songs", "Rammstein", "Mann_gegen_mann", "002"]
 		return {
@@ -139,7 +142,7 @@ function parseCodexLinkTarget(href: string): {
 	const parts = cleanHref.split("-");
 	return {
 		rootName: "Library", // Codex files are always in Library
-		treePath: parts.toReversed() as TreePath,
+		treePath: parts.toReversed() as TreePathLegacyLegacy,
 	};
 }
 

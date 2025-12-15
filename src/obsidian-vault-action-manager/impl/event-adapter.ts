@@ -1,8 +1,8 @@
 import type { App, TAbstractFile } from "obsidian";
-import type { VaultEventHandler } from "../index";
+import type { VaultEventHandlerLegacy } from "../index";
 import { CREATE, FILE, RENAME, TRASH } from "../types/literals";
 import type { SplitPathToFile, SplitPathToMdFile } from "../types/split-path";
-import type { SelfEventTracker } from "./self-event-tracker";
+import type { SelfEventTrackerLegacy } from "./self-event-tracker";
 import { splitPath } from "./split-path";
 
 export class EventAdapter {
@@ -10,10 +10,10 @@ export class EventAdapter {
 
 	constructor(
 		private readonly app: App,
-		private readonly selfEventTracker: SelfEventTracker,
+		private readonly selfEventTracker: SelfEventTrackerLegacy,
 	) {}
 
-	start(handler: VaultEventHandler): void {
+	start(handler: VaultEventHandlerLegacy): void {
 		const onCreate = this.app.vault.on("create", (file) =>
 			this.emitFileCreated(file, handler),
 		);
@@ -37,7 +37,7 @@ export class EventAdapter {
 
 	private emitFileCreated(
 		file: TAbstractFile,
-		handler: VaultEventHandler,
+		handler: VaultEventHandlerLegacy,
 	): void {
 		// Filter self-events (actions we dispatched)
 		if (this.selfEventTracker.shouldIgnore(file.path)) {
@@ -55,7 +55,7 @@ export class EventAdapter {
 	private emitFileRenamed(
 		file: TAbstractFile,
 		oldPath: string,
-		handler: VaultEventHandler,
+		handler: VaultEventHandlerLegacy,
 	): void {
 		// Filter self-events (actions we dispatched)
 		// Check new path (file.path) - old path already handled by tracking 'from' in self-event tracker
@@ -77,7 +77,7 @@ export class EventAdapter {
 
 	private emitFileTrashed(
 		file: TAbstractFile,
-		handler: VaultEventHandler,
+		handler: VaultEventHandlerLegacy,
 	): void {
 		// Filter self-events (actions we dispatched)
 		if (this.selfEventTracker.shouldIgnore(file.path)) {

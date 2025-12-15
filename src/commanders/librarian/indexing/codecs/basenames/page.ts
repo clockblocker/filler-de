@@ -1,37 +1,39 @@
 import z from "zod/v4";
 import { logError } from "../../../../../obsidian-vault-action-manager/helpers/issue-handlers";
 import { DASH } from "../../../../../types/literals";
-import { NodeNameSchema } from "../guards";
+import { NodeNameLegacySchemaLegacy } from "../guards";
 import {
-	intFromPageNumberString,
-	PageNumberSchema,
+	intFromPageNumberStringLegacy,
+	PageNumberSchemaLegacy,
 	pageNumberFromInt,
 } from "../primitives";
 
-export const PageBasenameSchema = z.templateLiteral([
-	PageNumberSchema,
+export const PageBasenameLegacySchemaLegacy = z.templateLiteral([
+	PageNumberSchemaLegacy,
 	DASH,
 	z.string().min(1),
 ]);
 
-export type PageBasename = z.infer<typeof PageBasenameSchema>;
+export type PageBasenameLegacy = z.infer<typeof PageBasenameLegacySchemaLegacy>;
 
-export const isPageBasename = (s: string): s is PageBasename =>
-	PageBasenameSchema.safeParse(s).success;
+export const isPageBasenameLegacy = (s: string): s is PageBasenameLegacy =>
+	PageBasenameLegacySchemaLegacy.safeParse(s).success;
 
-export const treePathToPageBasename = z.codec(
-	PageBasenameSchema,
-	z.array(NodeNameSchema).min(2),
+export const treePathToPageBasenameLegacy = z.codec(
+	PageBasenameLegacySchemaLegacy,
+	z.array(NodeNameLegacySchemaLegacy).min(2),
 	{
 		decode: (name) => {
 			const [num, ...path] = name.split(DASH);
 			if (!num) {
 				logError({
 					description: "num is undefined",
-					location: "treePathToPageBasename.decode",
+					location: "treePathToPageBasenameLegacy.decode",
 				});
 			}
-			const decodedNum = intFromPageNumberString.decode(Number(num));
+			const decodedNum = intFromPageNumberStringLegacy.decode(
+				Number(num),
+			);
 			return [...path.toReversed(), decodedNum];
 		},
 		encode: (path) => {
@@ -40,13 +42,13 @@ export const treePathToPageBasename = z.codec(
 			if (!mbNum) {
 				logError({
 					description: "mbNum is undefined",
-					location: "treePathToPageBasename.encode",
+					location: "treePathToPageBasenameLegacy.encode",
 				});
 			}
 			const paddedNumRepr = pageNumberFromInt.encode(
-				intFromPageNumberString.encode(String(mbNum)),
+				intFromPageNumberStringLegacy.encode(String(mbNum)),
 			);
-			return `${paddedNumRepr}${DASH}${pathCopy.toReversed().join(DASH)}` as PageBasename;
+			return `${paddedNumRepr}${DASH}${pathCopy.toReversed().join(DASH)}` as PageBasenameLegacy;
 		},
 	},
 );

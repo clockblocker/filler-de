@@ -1,4 +1,4 @@
-import { TextStatus } from "../../../types/common-interface/enums";
+import { TextStatusLegacy } from "../../../types/common-interface/enums";
 import {
 	BACK_ARROW,
 	DONE_CHECKBOX,
@@ -7,7 +7,7 @@ import {
 	SPACE_F,
 	TAB,
 } from "../../../types/literals";
-import { PageBasenameSchema } from "../indexing/codecs";
+import { PageBasenameLegacySchemaLegacy } from "../indexing/codecs";
 import type { BackLink, CodexContent, CodexItem } from "./types";
 
 export class CodexFormatter {
@@ -40,7 +40,7 @@ export class CodexFormatter {
 		for (const item of items) {
 			const checkbox = this.statusToCheckbox(item.status);
 			const link = `[[${item.target}|${item.displayName}]]`;
-			if (PageBasenameSchema.safeParse(item.target).success) {
+			if (PageBasenameLegacySchemaLegacy.safeParse(item.target).success) {
 				if (depth > 1) {
 					continue;
 				}
@@ -56,8 +56,8 @@ export class CodexFormatter {
 		return lines;
 	}
 
-	private statusToCheckbox(status: TextStatus): string {
-		return status === TextStatus.Done
+	private statusToCheckbox(status: TextStatusLegacy): string {
+		return status === TextStatusLegacy.Done
 			? DONE_CHECKBOX
 			: NOT_STARTED_CHECKBOX;
 	}

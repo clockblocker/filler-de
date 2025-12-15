@@ -1,7 +1,7 @@
 import z from "zod/v4";
 import { SPACE_LIKE_CHARS, UNDERSCORE } from "../../../../types/literals";
 
-export const toNodeName = (s: string) => {
+export const toNodeNameLegacy = (s: string) => {
 	const result = SPACE_LIKE_CHARS.reduce(
 		(s, ch) => s.replaceAll(ch, UNDERSCORE),
 		s,
@@ -15,10 +15,14 @@ export const toNodeName = (s: string) => {
 		.replaceAll(":", "");
 };
 
-export const NodeNameSchema = z.string().min(1);
+export const NodeNameLegacySchemaLegacy = z.string().min(1);
 
-export type NodeName = z.infer<typeof NodeNameSchema>;
+export type NodeNameLegacy = z.infer<typeof NodeNameLegacySchemaLegacy>;
 
-export const TreePathSchema = z.array(NodeNameSchema);
+export const TreePathLegacyLegacySchemaLegacy = z.array(
+	NodeNameLegacySchemaLegacy,
+);
 
-export type TreePath = z.infer<typeof TreePathSchema>;
+export type TreePathLegacyLegacy = z.infer<
+	typeof TreePathLegacyLegacySchemaLegacy
+>;

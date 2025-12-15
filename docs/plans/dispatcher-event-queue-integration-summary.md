@@ -15,7 +15,7 @@ Successfully integrated `Dispatcher` with event emission and queueing to:
 
 ### Components Created
 
-1. **SelfEventTracker** (`impl/self-event-tracker.ts`)
+1. **SelfEventTrackerLegacy** (`impl/self-event-tracker.ts`)
    - Tracks paths of dispatched actions
    - TTL: 5s with pop-on-match (one-time use per path)
    - Tracks all action types (folders, files, md files)
@@ -32,7 +32,7 @@ Successfully integrated `Dispatcher` with event emission and queueing to:
    - Only user-triggered events reach subscribers
 
 4. **Facade Updates** (`impl/facade.ts`)
-   - Integrates SelfEventTracker and ActionQueue
+   - Integrates SelfEventTrackerLegacy and ActionQueue
    - Routes `dispatch()` through ActionQueue
 
 ### Testing
@@ -84,7 +84,7 @@ ActionQueue.dispatch(actions)
   ↓
 ActionQueue.executeNextBatch()
   ├── Take batch from queue
-  ├── SelfEventTracker.register(batch) → track paths
+  ├── SelfEventTrackerLegacy.register(batch) → track paths
   └── Dispatcher.dispatch(batch)
       ├── collapseActions(batch)
       ├── sortActionsByWeight(collapsed)
@@ -99,16 +99,16 @@ When batch completes:
 User Action (Obsidian)
   ↓
 EventAdapter receives Obsidian event
-  ├── SelfEventTracker.shouldIgnore(path)? → YES → filter out
-  └── SelfEventTracker.shouldIgnore(path)? → NO → emit to subscribers
+  ├── SelfEventTrackerLegacy.shouldIgnore(path)? → YES → filter out
+  └── SelfEventTrackerLegacy.shouldIgnore(path)? → NO → emit to subscribers
   ↓
 VaultEvent → subscribers notified (only user-triggered events)
 ```
 
 ## Next Steps (Optional)
 
-- [ ] Unit tests for SelfEventTracker and ActionQueue (covered by E2E tests)
-- [ ] Migrate `Librarian` to use new vault action manager
+- [ ] Unit tests for SelfEventTrackerLegacy and ActionQueue (covered by E2E tests)
+- [ ] Migrate `LibrarianLegacy` to use new vault action manager
 - [ ] Remove legacy queue when migration complete
 
 ## References

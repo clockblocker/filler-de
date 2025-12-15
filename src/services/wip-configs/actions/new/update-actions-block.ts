@@ -1,14 +1,14 @@
 import { Editor, MarkdownView, Notice, TFile } from "obsidian";
 import type TextEaterPluginStripped from "../../../../main-stripped";
-import { unwrapMaybeByThrowing } from "../../../../types/common-interface/maybe";
+import { unwrapMaybeLegacyByThrowing } from "../../../../types/common-interface/maybe";
 import { LONG_DASH } from "../../../../types/literals";
 
 export default async function updateActionsBlock(
 	plugin: TextEaterPluginStripped,
 ) {
 	try {
-		// const file = unwrapMaybe(
-		// 	await plugin.openedFileService.getMaybeOpenedTFile()
+		// const file = unwrapMaybeLegacy(
+		// 	await plugin.openedFileService.getMaybeLegacyOpenedTFile()
 		// );
 
 		const prefixBlock = "\n";
@@ -22,8 +22,8 @@ export default async function updateActionsBlock(
 
 		const blocks = [prefixBlock, buttonsBlock, postfixBlock];
 
-		const fileContent = unwrapMaybeByThrowing(
-			await plugin.openedFileService.getMaybeContent(),
+		const fileContent = unwrapMaybeLegacyByThrowing(
+			await plugin.openedFileService.getMaybeLegacyContent(),
 		);
 
 		if (fileContent.trim() === "") {

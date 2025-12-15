@@ -36,12 +36,12 @@ Integrate `Dispatcher` with event emission and queueing to:
    - Returns `DispatchResult` with errors
    - **No queueing/debouncing** - executes immediately
 
-3. **LegacyVaultActionQueue** (`file-services/vault-action-queue.ts`)
+3. **VaultActionQueueLegacy** (`file-services/vault-action-queue.ts`)
    - Features: debouncing (200ms default), deduplication, sorting
    - Uses `getActionKey()` for deduplication
    - Executes via `VaultActionExecutor`
 
-4. **SelfEventTracker** (`commanders/librarian/utils/self-event-tracker.ts`)
+4. **SelfEventTrackerLegacy** (`commanders/librarian/utils/self-event-tracker.ts`)
    - Tracks actions we dispatch (by path)
    - Filters matching Obsidian events
    - Uses `pop(path)` to check and remove
@@ -85,7 +85,7 @@ We want: **Only user-triggered events** should reach subscribers.
 
 ### 1. Self-Event Tracking
 
-Create `SelfEventTracker` for new system:
+Create `SelfEventTrackerLegacy` for new system:
 
 ```typescript
 // impl/self-event-tracker.ts
@@ -93,7 +93,7 @@ import { systemPathToSplitPath } from "../helpers/pathfinder";
 import type { VaultAction } from "../types/vault-action";
 import { VaultActionType } from "../types/vault-action";
 
-export class SelfEventTracker {
+export class SelfEventTrackerLegacy {
   private readonly paths = new Set<string>(); // System paths (normalized)
   private readonly ttl = 5000; // 5s TTL
   private readonly cleanupTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -188,10 +188,10 @@ Modify `EventAdapter` to check self-event tracker:
 export class EventAdapter {
   constructor(
     private readonly app: App,
-    private readonly selfEventTracker: SelfEventTracker, // NEW
+    private readonly selfEventTracker: SelfEventTrackerLegacy, // NEW
   ) {}
   
-  start(handler: VaultEventHandler): void {
+  start(handler: VaultEventHandlerLegacy): void {
     const onCreate = this.app.vault.on("create", (file) => {
       if (this.selfEventTracker.shouldIgnore(file.path)) return; // Filter self-events
       this.emitFileCreated(file, handler);
@@ -231,7 +231,7 @@ export class ActionQueue {
   
   constructor(
     private readonly dispatcher: Dispatcher,
-    private readonly selfEventTracker: SelfEventTracker,
+    private readonly selfEventTracker: SelfEventTrackerLegacy,
   ) {}
   
   async dispatch(actions: readonly VaultAction[]): Promise<DispatchResult> {
@@ -303,14 +303,14 @@ Update `ObsidianVaultActionManagerImpl`:
 ```typescript
 // impl/facade.ts
 export class ObsidianVaultActionManagerImpl {
-  private readonly selfEventTracker: SelfEventTracker;
+  private readonly selfEventTracker: SelfEventTrackerLegacy;
   private readonly actionQueue: ActionQueue;
   private readonly eventAdapter: EventAdapter;
   
   constructor(app: App) {
     // ... existing setup ...
     
-    this.selfEventTracker = new SelfEventTracker();
+    this.selfEventTracker = new SelfEventTrackerLegacy();
     this.actionQueue = new ActionQueue(
       this.dispatcher,
       this.selfEventTracker,
@@ -487,7 +487,7 @@ System Action (Plugin)
   ↓
 manager.dispatch(actions)
   ↓
-SelfEventTracker.register(actions) → track paths/keys
+SelfEventTrackerLegacy.register(actions) → track paths/keys
   ↓
 ActionQueue.push(actions) → deduplicate, debounce
   ↓
@@ -512,7 +512,7 @@ Event filtered out → subscribers NOT notified ✅
 ```typescript
 // Existing API unchanged
 interface ObsidianVaultActionManager {
-  subscribe(handler: VaultEventHandler): Teardown;
+  subscribe(handler: VaultEventHandlerLegacy): Teardown;
   dispatch(actions: readonly VaultAction[]): Promise<void>;
   // ... read-only ops ...
 }
@@ -590,7 +590,7 @@ interface ObsidianVaultActionManager {
 - E2E tests verify actual behavior
 - Test: dispatch action → verify no event emitted to subscribers
 - Test: external file change → verify event emitted to subscribers
-- Unit tests for SelfEventTracker path matching logic
+- Unit tests for SelfEventTrackerLegacy path matching logic
 
 ### Q7: Should queue support priority/weight-based ordering?
 
@@ -645,7 +645,7 @@ interface ObsidianVaultActionManager {
 
 ### Phase 2: Core Components ✅
 
-2. **Create SelfEventTracker** ✅
+2. **Create SelfEventTrackerLegacy** ✅
    - ✅ Implemented `register(actions)` - extracts system paths from all action types
    - ✅ Tracks both `from` and `to` for renames
    - ✅ Tracks all action types (folders, files, md files)
@@ -659,18 +659,18 @@ interface ObsidianVaultActionManager {
    - ✅ Max 10 batches, unlimited actions per batch
    - ✅ Executes immediately if call stack empty
    - ✅ Auto-continues when batch completes (checks queue for more)
-   - ✅ Registers with SelfEventTracker before each batch
+   - ✅ Registers with SelfEventTrackerLegacy before each batch
    - **File:** `src/obsidian-vault-action-manager/impl/action-queue.ts`
 
 4. **Update EventAdapter** ✅
-   - ✅ Injected SelfEventTracker
+   - ✅ Injected SelfEventTrackerLegacy
    - ✅ Checks `shouldIgnore()` before emitting events
    - ✅ Filters all event types (create, rename, delete)
    - ✅ Only user-triggered events reach subscribers
    - **File:** `src/obsidian-vault-action-manager/impl/event-adapter.ts`
 
 5. **Update Facade** ✅
-   - ✅ Creates SelfEventTracker instance
+   - ✅ Creates SelfEventTrackerLegacy instance
    - ✅ Creates ActionQueue instance
    - ✅ `dispatch()` returns `DispatchResult` (not throws)
    - ✅ Routes through ActionQueue (call stack pattern)
@@ -690,7 +690,7 @@ interface ObsidianVaultActionManager {
    - **Status:** All 15 dispatcher E2E tests passing
 
 8. **Unit Tests** (Optional)
-   - SelfEventTracker path matching - covered by E2E tests
+   - SelfEventTrackerLegacy path matching - covered by E2E tests
    - ActionQueue call stack behavior - covered by E2E tests
    - Rename chain collapse - `tests/unit/obsidian-vault-action-manager/collapse-rename-chain.test.ts` ✅
 
@@ -754,7 +754,7 @@ interface ObsidianVaultActionManager {
 
 ### Testing Strategy
 
-- **Unit tests:** SelfEventTracker path matching logic
+- **Unit tests:** SelfEventTrackerLegacy path matching logic
 - **Unit tests:** ActionQueue call stack behavior (queue + execution state)
 - **Unit tests:** Rename chain collapse (verify current behavior, document)
 - **E2E tests:** Self-event filtering (dispatch action, verify no event emitted)

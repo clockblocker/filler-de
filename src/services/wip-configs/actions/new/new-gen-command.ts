@@ -1,5 +1,5 @@
 import { Notice } from "obsidian";
-import { unwrapMaybeByThrowing } from "../../../../types/common-interface/maybe";
+import { unwrapMaybeLegacyByThrowing } from "../../../../types/common-interface/maybe";
 import { LONG_DASH } from "../../../../types/literals";
 import type { TexfresserObsidianServices } from "../../../obsidian-services/interface";
 
@@ -7,8 +7,8 @@ export default async function newGenCommand(
 	services: TexfresserObsidianServices,
 ) {
 	try {
-		const file = unwrapMaybeByThrowing(
-			await services.openedFileService.getMaybeOpenedTFile(),
+		const file = unwrapMaybeLegacyByThrowing(
+			await services.openedFileService.getMaybeLegacyOpenedTFile(),
 		);
 
 		const word = file.name;
@@ -45,8 +45,8 @@ export default async function newGenCommand(
 
 		const blocks = [buttonsBlock];
 
-		const fileContent = unwrapMaybeByThrowing(
-			await services.openedFileService.getMaybeContent(),
+		const fileContent = unwrapMaybeLegacyByThrowing(
+			await services.openedFileService.getMaybeLegacyContent(),
 		);
 
 		// const exisingBlocks = services.blockManager.extractAllBlocks(fileContent);

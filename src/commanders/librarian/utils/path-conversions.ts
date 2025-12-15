@@ -1,23 +1,23 @@
 import type { LegacyFullPath } from "../../../services/obsidian-services/atomic-services/pathfinder";
-import type { PrettyPath } from "../../../types/common-interface/dtos";
-import { isRootName, type RootName } from "../constants";
+import type { PrettyPathLegacy } from "../../../types/common-interface/dtos";
+import { isRootNameLegacy, type RootNameLegacy } from "../constants";
 import {
-	toNodeName,
+	toNodeNameLegacy,
 	treePathToCodexBasename,
-	treePathToPageBasename,
+	treePathToPageBasenameLegacy,
 	treePathToScrollBasename,
 } from "../indexing/codecs";
-import { canonicalizePrettyPath } from "../invariants/path-canonicalizer";
-import type { TreePath } from "../types";
+import { canonicalizePrettyPathLegacy } from "../invariants/path-canonicalizer";
+import type { TreePathLegacyLegacy } from "../types";
 
 function isBookPage(segment: string | undefined): boolean {
 	return !!segment && /^\d{3}$/.test(segment);
 }
 
-export function treePathToPrettyPath(
-	treePath: TreePath,
-	rootName: RootName,
-): PrettyPath {
+export function treePathToPrettyPathLegacy(
+	treePath: TreePathLegacyLegacy,
+	rootName: RootNameLegacy,
+): PrettyPathLegacy {
 	if (treePath.length === 0) {
 		return {
 			basename: treePathToCodexBasename.encode([rootName]),
@@ -31,7 +31,7 @@ export function treePathToPrettyPath(
 
 	if (isBookPage(leaf)) {
 		return {
-			basename: treePathToPageBasename.encode(treePath),
+			basename: treePathToPageBasenameLegacy.encode(treePath),
 			pathParts,
 		};
 	}
@@ -42,15 +42,20 @@ export function treePathToPrettyPath(
 	};
 }
 
-export function prettyPathToTreePath(prettyPath: PrettyPath): TreePath {
+export function prettyPathToTreePathLegacyLegacy(
+	prettyPath: PrettyPathLegacy,
+): TreePathLegacyLegacy {
 	const rootName = prettyPath.pathParts[0];
 
-	if (rootName && isRootName(rootName)) {
-		const canonical = canonicalizePrettyPath({ prettyPath, rootName });
+	if (rootName && isRootNameLegacy(rootName)) {
+		const canonical = canonicalizePrettyPathLegacy({
+			prettyPath,
+			rootName,
+		});
 		if ("reason" in canonical) {
 			const sanitized = [
 				...prettyPath.pathParts.slice(1),
-				toNodeName(prettyPath.basename),
+				toNodeNameLegacy(prettyPath.basename),
 			];
 			return sanitized;
 		}
@@ -58,16 +63,20 @@ export function prettyPathToTreePath(prettyPath: PrettyPath): TreePath {
 	}
 
 	return [
-		...prettyPath.pathParts.slice(1).map((segment) => toNodeName(segment)),
-		toNodeName(prettyPath.basename),
+		...prettyPath.pathParts
+			.slice(1)
+			.map((segment) => toNodeNameLegacy(segment)),
+		toNodeNameLegacy(prettyPath.basename),
 	];
 }
 
-export function fullPathToTreePath(fullPath: LegacyFullPath): TreePath {
-	const prettyPath: PrettyPath = {
-		basename: toNodeName(fullPath.basename),
+export function fullPathToTreePathLegacyLegacy(
+	fullPath: LegacyFullPath,
+): TreePathLegacyLegacy {
+	const prettyPath: PrettyPathLegacy = {
+		basename: toNodeNameLegacy(fullPath.basename),
 		pathParts: fullPath.pathParts,
 	};
 
-	return prettyPathToTreePath(prettyPath);
+	return prettyPathToTreePathLegacyLegacy(prettyPath);
 }

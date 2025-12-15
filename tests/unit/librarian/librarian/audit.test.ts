@@ -1,12 +1,12 @@
 import { describe, expect, it } from "bun:test";
-import { Librarian } from "../../../../src/commanders/librarian/librarian";
+import { LibrarianLegacy } from "../../../../src/commanders/librarian/librarian";
 import type { ReadablePrettyFile } from "../../../../src/services/obsidian-services/file-services/background/background-file-service";
 import {
 	type LegacyVaultAction,
 	LegacyVaultActionType,
 } from "../../../../src/services/obsidian-services/file-services/background/background-vault-actions";
 import type { VaultActionExecutor } from "../../../../src/services/obsidian-services/file-services/background/vault-action-executor";
-import { LegacyVaultActionQueue } from "../../../../src/services/obsidian-services/file-services/vault-action-queue";
+import { VaultActionQueueLegacy } from "../../../../src/services/obsidian-services/file-services/vault-action-queue";
 import type { TexfresserObsidianServices } from "../../../../src/services/obsidian-services/interface";
 
 function createQueueRecorder() {
@@ -19,11 +19,11 @@ function createQueueRecorder() {
 
 	return {
 		executedActions,
-		queue: new LegacyVaultActionQueue(executor as VaultActionExecutor, { flushDelayMs: 0 }),
+		queue: new VaultActionQueueLegacy(executor as VaultActionExecutor, { flushDelayMs: 0 }),
 	};
 }
 
-describe("Librarian audit", () => {
+describe("LibrarianLegacy audit", () => {
 	it("enqueues folder creation and renames to canonical paths", async () => {
 		const readers: ReadablePrettyFile[] = [
 			{
@@ -50,7 +50,7 @@ describe("Librarian audit", () => {
 		const openedFileService =
 			{} as TexfresserObsidianServices["openedFileService"];
 
-		const librarian = new Librarian({
+		const librarian = new LibrarianLegacy({
 			actionQueue: queue,
 			backgroundFileService,
 			openedFileService,

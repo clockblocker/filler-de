@@ -1,17 +1,21 @@
-import { TextStatus } from "../../../types/common-interface/enums";
+import { TextStatusLegacy } from "../../../types/common-interface/enums";
 import { pageNumberFromInt } from "../indexing/codecs";
-import { getTreePathFromLibraryFile } from "../indexing/libraryFileAdapters";
-import type { LibraryFile, NoteDto, TreePath } from "../types";
+import { getTreePathLegacyLegacyFromLibraryFileLegacy } from "../indexing/libraryFileAdapters";
+import type {
+	LibraryFileLegacy,
+	NoteDtoLegacy,
+	TreePathLegacyLegacy,
+} from "../types";
 
 /**
- * Convert LibraryFiles to NoteDtos).
- * Each file becomes one NoteDto - no grouping by text.
+ * Convert LibraryFileLegacy to NoteDtoLegacy).
+ * Each file becomes one NoteDtoLegacy - no grouping by text.
  */
-export function noteDtosFromLibraryFiles(
-	libraryFiles: LibraryFile[],
-	subtreePath: TreePath = [],
-): NoteDto[] {
-	const noteDtos: NoteDto[] = [];
+export function noteDtosFromLibraryFileLegacy(
+	libraryFiles: LibraryFileLegacy[],
+	subtreePath: TreePathLegacyLegacy = [],
+): NoteDtoLegacy[] {
+	const noteDtos: NoteDtoLegacy[] = [];
 
 	for (const libraryFile of libraryFiles) {
 		// Skip Codex files - they're organizational nodes, not notes
@@ -19,7 +23,8 @@ export function noteDtosFromLibraryFiles(
 			continue;
 		}
 
-		const treePath = getTreePathFromLibraryFile(libraryFile);
+		const treePath =
+			getTreePathLegacyLegacyFromLibraryFileLegacy(libraryFile);
 
 		// Filter: only include files under subtreePath
 		if (subtreePath.length > 0) {
@@ -34,7 +39,7 @@ export function noteDtosFromLibraryFiles(
 		// Build the note path
 		// For Pages: path includes the page index (e.g., ["Section", "Book", "000"])
 		// For Scrolls: path is just the tree path (e.g., ["Section", "Scroll"])
-		let notePath: TreePath;
+		let notePath: TreePathLegacyLegacy;
 
 		if (
 			libraryFile.metaInfo.fileType === "Page" &&
@@ -51,7 +56,8 @@ export function noteDtosFromLibraryFiles(
 			notePath = treePath;
 		}
 
-		const status = libraryFile.metaInfo.status ?? TextStatus.NotStarted;
+		const status =
+			libraryFile.metaInfo.status ?? TextStatusLegacy.NotStarted;
 
 		noteDtos.push({
 			path: notePath,

@@ -1,11 +1,11 @@
 import { describe, expect, it } from "bun:test";
 import {
-	healFile,
-	healFiles,
+	healFileLegacy,
+	healFilesLegacy,
 } from "../../../../src/commanders/librarian/filesystem/healing";
 import { LegacyVaultActionType } from "../../../../src/services/obsidian-services/file-services/background/background-vault-actions";
 
-describe("healFile", () => {
+describe("healFileLegacy", () => {
 	const rootName: "Library" = "Library";
 
 	it("returns no actions for canonical file", () => {
@@ -14,7 +14,7 @@ describe("healFile", () => {
 			pathParts: [rootName, "Section"],
 		};
 
-		const result = healFile(prettyPath, rootName);
+		const result = healFileLegacy(prettyPath, rootName);
 
 		expect(result.actions).toHaveLength(0);
 		expect(result.quarantined).toBe(false);
@@ -27,7 +27,7 @@ describe("healFile", () => {
 			pathParts: [rootName, "Section"],
 		};
 
-		const result = healFile(prettyPath, rootName);
+		const result = healFileLegacy(prettyPath, rootName);
 
 		expect(result.quarantined).toBe(false);
 		expect(result.targetPath.basename).toBe("Note-Section");
@@ -41,7 +41,7 @@ describe("healFile", () => {
 		expect(renameAction?.payload.to.basename).toBe("Note-Section");
 	});
 
-	// Note: ScrollBasenameSchema accepts any non-empty string,
+	// Note: ScrollBasenameSchemaLegacy accepts any non-empty string,
 	// so in practice nothing gets quarantined. This test documents that.
 	it("treats any non-empty string as valid scroll basename", () => {
 		const prettyPath = {
@@ -49,7 +49,7 @@ describe("healFile", () => {
 			pathParts: [rootName, "Section"],
 		};
 
-		const result = healFile(prettyPath, rootName);
+		const result = healFileLegacy(prettyPath, rootName);
 
 		// Not quarantined — decoded as scroll
 		expect(result.quarantined).toBe(false);
@@ -66,7 +66,7 @@ describe("healFile", () => {
 			pathParts: [rootName, "Section"],
 		};
 
-		const result = healFile(prettyPath, rootName);
+		const result = healFileLegacy(prettyPath, rootName);
 
 		// Folder actions are created for all folders in target path
 		const folderActions = result.actions.filter(
@@ -84,7 +84,7 @@ describe("healFile", () => {
 			pathParts: [rootName, "Section"],
 		};
 
-		const result = healFile(prettyPath, rootName, seen);
+		const result = healFileLegacy(prettyPath, rootName, seen);
 
 		const folderActions = result.actions.filter(
 			(a) => a.type === LegacyVaultActionType.UpdateOrCreateFolder,
@@ -99,14 +99,14 @@ describe("healFile", () => {
 			pathParts: [rootName, "Section"],
 		};
 
-		const result = healFile(prettyPath, rootName);
+		const result = healFileLegacy(prettyPath, rootName);
 
 		// Should be considered canonical (case-insensitive match)
 		expect(result.actions).toHaveLength(0);
 	});
 });
 
-describe("healFiles", () => {
+describe("healFileLegacy", () => {
 	const rootName: "Library" = "Library";
 
 	it("heals multiple files", () => {
@@ -115,7 +115,7 @@ describe("healFiles", () => {
 			{ basename: "Note2", pathParts: [rootName, "Section"] },
 		];
 
-		const actions = healFiles(files, rootName);
+		const actions = healFilesLegacy(files, rootName);
 
 		const renameActions = actions.filter(
 			(a) => a.type === LegacyVaultActionType.RenameFile,
@@ -129,7 +129,7 @@ describe("healFiles", () => {
 			{ basename: "Note2", pathParts: [rootName, "Section"] },
 		];
 
-		const actions = healFiles(files, rootName);
+		const actions = healFilesLegacy(files, rootName);
 
 		const folderActions = actions.filter(
 			(a) => a.type === LegacyVaultActionType.UpdateOrCreateFolder,
@@ -147,7 +147,7 @@ describe("healFiles", () => {
 			{ basename: "Note2-Section", pathParts: [rootName, "Section"] },
 		];
 
-		const actions = healFiles(files, rootName);
+		const actions = healFilesLegacy(files, rootName);
 
 		expect(actions).toHaveLength(0);
 	});

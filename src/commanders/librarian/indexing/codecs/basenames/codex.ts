@@ -1,21 +1,21 @@
 import z from "zod/v4";
 import { DASH, UnderscoreSchema } from "../../../../../types/literals";
-import { NodeNameSchema } from "../guards";
+import { NodeNameLegacySchemaLegacy } from "../guards";
 
-export const CodexBaseameSchema = z.templateLiteral([
+export const CodexBaseameSchemaLegacy = z.templateLiteral([
 	UnderscoreSchema,
 	UnderscoreSchema,
 	z.string().min(1),
 ]);
 
-export type CodexBaseame = z.infer<typeof CodexBaseameSchema>;
+export type CodexBaseame = z.infer<typeof CodexBaseameSchemaLegacy>;
 
-export const isCodexBasename = (s: string): s is CodexBaseame =>
-	CodexBaseameSchema.safeParse(s).success;
+export const isCodexBasenameLegacy = (s: string): s is CodexBaseame =>
+	CodexBaseameSchemaLegacy.safeParse(s).success;
 
 export const treePathToCodexBasename = z.codec(
-	CodexBaseameSchema,
-	z.array(NodeNameSchema).min(1),
+	CodexBaseameSchemaLegacy,
+	z.array(NodeNameLegacySchemaLegacy).min(1),
 	{
 		decode: (s) => s.slice(2).split(DASH).toReversed(),
 		encode: (path) => `__${path.toReversed().join(DASH)}` as CodexBaseame,

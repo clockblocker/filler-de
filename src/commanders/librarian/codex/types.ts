@@ -1,4 +1,4 @@
-import type { TextStatus } from "../../../types/common-interface/enums";
+import type { TextStatusLegacy } from "../../../types/common-interface/enums";
 
 /**
  * Back link to parent Codex.
@@ -24,7 +24,7 @@ export type CodexItem = {
 	/** Display name shown in link */
 	displayName: string;
 	/** Status determines checkbox state */
-	status: TextStatus;
+	status: TextStatusLegacy;
 	/** Nested children */
 	children: CodexItem[];
 };

@@ -1,73 +1,79 @@
 import type { TAbstractFile, TFile } from "obsidian";
-import { legacyFullPathFromSystemPath } from "../../services/obsidian-services/atomic-services/pathfinder";
-import type { LegacyVaultActionQueue } from "../../services/obsidian-services/file-services/vault-action-queue";
+import { fullPathFromSystemPathLegacy } from "../../services/obsidian-services/atomic-services/pathfinder";
+import type { VaultActionQueueLegacy } from "../../services/obsidian-services/file-services/vault-action-queue";
 import type { TexfresserObsidianServices } from "../../services/obsidian-services/interface";
-import type { PrettyPath } from "../../types/common-interface/dtos";
-import { ActionDispatcher } from "./action-dispatcher";
-import { isRootName, LIBRARY_ROOTS, type RootName } from "./constants";
-import type { NoteSnapshot } from "./diffing/note-differ";
-import { regenerateCodexActions } from "./diffing/tree-diff-applier";
-import { LibrarianState } from "./librarian-state";
-import type { LibraryTree } from "./library-tree/library-tree";
-import { FilesystemHealer } from "./orchestration/filesystem-healer";
-import { NoteOperations } from "./orchestration/note-operations";
-import { TreeReconciler } from "./orchestration/tree-reconciler";
-import { VaultEventHandler } from "./orchestration/vault-event-handler";
-import type { NoteDto, TreePath } from "./types";
-import { SelfEventTracker } from "./utils/self-event-tracker";
+import type { PrettyPathLegacy } from "../../types/common-interface/dtos";
+import { ActionDispatcherLegacy } from "./action-dispatcher";
+import {
+	isRootNameLegacy,
+	LIBRARY_ROOTSLegacy,
+	type RootNameLegacy,
+} from "./constants";
+import type { NoteSnapshotLegacy } from "./diffing/note-differ";
+import { regenerateCodexActionsLegacy } from "./diffing/tree-diff-applier";
+import { LibrarianLegacyStateLegacy } from "./librarian-state";
+import type { LibraryTreeLegacy } from "./library-tree/library-tree";
+import { FilesystemHealerLegacy } from "./orchestration/filesystem-healer";
+import { NoteOperationsLegacy } from "./orchestration/note-operations";
+import { TreeReconcilerLegacy } from "./orchestration/tree-reconciler";
+import { VaultEventHandlerLegacy } from "./orchestration/vault-event-handler";
+import type { NoteDtoLegacy, TreePathLegacyLegacy } from "./types";
+import { SelfEventTrackerLegacy } from "./utils/self-event-tracker";
 
-export class Librarian {
+export class LibrarianLegacy {
 	backgroundFileService: TexfresserObsidianServices["backgroundFileService"];
 	openedFileService: TexfresserObsidianServices["openedFileService"];
-	tree: LibraryTree | null;
+	tree: LibraryTreeLegacy | null;
 
-	private dispatcher: ActionDispatcher;
-	private state: LibrarianState;
-	private selfEventTracker = new SelfEventTracker();
-	private filesystemHealer: FilesystemHealer;
-	private treeReconciler: TreeReconciler;
-	private noteOperations: NoteOperations;
-	private eventHandler: VaultEventHandler;
+	private dispatcher: ActionDispatcherLegacy;
+	private state: LibrarianLegacyStateLegacy;
+	private selfEventTracker = new SelfEventTrackerLegacy();
+	private filesystemHealer: FilesystemHealerLegacy;
+	private treeReconciler: TreeReconcilerLegacy;
+	private noteOperations: NoteOperationsLegacy;
+	private eventHandler: VaultEventHandlerLegacy;
 
 	constructor({
 		backgroundFileService,
 		openedFileService,
 		actionQueue,
-	}: { actionQueue: LegacyVaultActionQueue } & Pick<
+	}: { actionQueue: VaultActionQueueLegacy } & Pick<
 		TexfresserObsidianServices,
 		"backgroundFileService" | "openedFileService"
 	>) {
 		this.backgroundFileService = backgroundFileService;
 		this.openedFileService = openedFileService;
-		this.state = new LibrarianState();
-		this.dispatcher = new ActionDispatcher(
+		this.state = new LibrarianLegacyStateLegacy();
+		this.dispatcher = new ActionDispatcherLegacy(
 			actionQueue,
 			this.selfEventTracker,
 		);
-		this.filesystemHealer = new FilesystemHealer({
+		this.filesystemHealer = new FilesystemHealerLegacy({
 			backgroundFileService,
 			dispatcher: this.dispatcher,
 		});
-		this.treeReconciler = new TreeReconciler({
+		this.treeReconciler = new TreeReconcilerLegacy({
 			backgroundFileService,
 			dispatcher: this.dispatcher,
 			filesystemHealer: this.filesystemHealer,
 			state: this.state,
 		});
-		this.noteOperations = new NoteOperations({
+		this.noteOperations = new NoteOperationsLegacy({
 			backgroundFileService,
 			dispatcher: this.dispatcher,
-			generateUniquePrettyPath: (p) => this.generateUniquePrettyPath(p),
+			generateUniquePrettyPathLegacy: (p) =>
+				this.generateUniquePrettyPathLegacy(p),
 			openedFileService,
 			regenerateAllCodexes: () => this.regenerateAllCodexes(),
 			state: this.state,
 			treeReconciler: this.treeReconciler,
 		});
-		this.eventHandler = new VaultEventHandler({
+		this.eventHandler = new VaultEventHandlerLegacy({
 			backgroundFileService,
 			dispatcher: this.dispatcher,
 			filesystemHealer: this.filesystemHealer,
-			generateUniquePrettyPath: (p) => this.generateUniquePrettyPath(p),
+			generateUniquePrettyPathLegacy: (p) =>
+				this.generateUniquePrettyPathLegacy(p),
 			regenerateAllCodexes: () => this.regenerateAllCodexes(),
 			selfEventTracker: this.selfEventTracker,
 			state: this.state,
@@ -111,42 +117,48 @@ export class Librarian {
 	}
 
 	isInLibraryFolder(file: TFile): boolean {
-		const fullPath = legacyFullPathFromSystemPath(file.path);
+		const fullPath = fullPathFromSystemPathLegacy(file.path);
 		const rootName = fullPath.pathParts[0];
-		return !!rootName && isRootName(rootName);
+		return !!rootName && isRootNameLegacy(rootName);
 	}
 
 	async setStatus(
-		rootName: RootName,
-		path: TreePath,
+		rootName: RootNameLegacy,
+		path: TreePathLegacyLegacy,
 		status: "Done" | "NotStarted",
 	): Promise<void> {
 		await this.noteOperations.setStatus(rootName, path, status);
 	}
 
-	async addNotes(rootName: RootName, notes: NoteDto[]): Promise<void> {
+	async addNotes(
+		rootName: RootNameLegacy,
+		notes: NoteDtoLegacy[],
+	): Promise<void> {
 		await this.noteOperations.addNotes(rootName, notes);
 	}
 
-	async deleteNotes(rootName: RootName, paths: TreePath[]): Promise<void> {
+	async deleteNotes(
+		rootName: RootNameLegacy,
+		paths: TreePathLegacyLegacy[],
+	): Promise<void> {
 		await this.noteOperations.deleteNotes(rootName, paths);
 	}
 
-	getSnapshot(rootName: RootName): NoteSnapshot | null {
+	getSnapshot(rootName: RootNameLegacy): NoteSnapshotLegacy | null {
 		return this.treeReconciler.getSnapshot(rootName);
 	}
 
 	async regenerateAllCodexes(): Promise<void> {
-		const rootName = LIBRARY_ROOTS[0];
+		const rootName = LIBRARY_ROOTSLegacy[0];
 		const tree = this.tree;
 		if (rootName && tree) {
-			const getNode = (path: TreePath) => {
-				const mbNode = tree.getMaybeNode({ path });
+			const getNode = (path: TreePathLegacyLegacy) => {
+				const mbNode = tree.getMaybeLegacyNode({ path });
 				return mbNode.error ? undefined : mbNode.data;
 			};
 
 			const sectionPaths = tree.getAllSectionPaths();
-			const actions = regenerateCodexActions(
+			const actions = regenerateCodexActionsLegacy(
 				sectionPaths,
 				rootName,
 				getNode,
@@ -162,9 +174,9 @@ export class Librarian {
 
 	// ─── Private Helpers ──────────────────────────────────────────────
 
-	private async generateUniquePrettyPath(
-		prettyPath: PrettyPath,
-	): Promise<PrettyPath> {
+	private async generateUniquePrettyPathLegacy(
+		prettyPath: PrettyPathLegacy,
+	): Promise<PrettyPathLegacy> {
 		let candidate = prettyPath;
 		let counter = 1;
 

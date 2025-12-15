@@ -1,26 +1,26 @@
 import { describe, expect, it } from "bun:test";
 import {
-	type NoteSnapshot,
+	type NoteSnapshotLegacy,
 	noteDiffer,
 } from "../../../../src/commanders/librarian/diffing/note-differ";
-import type { TreePath } from "../../../../src/commanders/librarian/types";
-import { TextStatus } from "../../../../src/types/common-interface/enums";
+import type { TreePathLegacyLegacy } from "../../../../src/commanders/librarian/types";
+import { TextStatusLegacy } from "../../../../src/types/common-interface/enums";
 
 const differ = noteDiffer;
 
 describe("NoteDiffer", () => {
 	describe("diff - notes", () => {
 		it("should detect added note", () => {
-			const before: NoteSnapshot = {
+			const before: NoteSnapshotLegacy = {
 				notes: [],
 				sectionPaths: [],
 			};
 
-			const after: NoteSnapshot = {
+			const after: NoteSnapshotLegacy = {
 				notes: [
 					{
-						path: ["Section", "NewNote"] as TreePath,
-						status: TextStatus.NotStarted,
+						path: ["Section", "NewNote"] as TreePathLegacyLegacy,
+						status: TextStatusLegacy.NotStarted,
 					},
 				],
 				sectionPaths: [],
@@ -34,17 +34,17 @@ describe("NoteDiffer", () => {
 		});
 
 		it("should detect removed note", () => {
-			const before: NoteSnapshot = {
+			const before: NoteSnapshotLegacy = {
 				notes: [
 					{
-						path: ["Section", "OldNote"] as TreePath,
-						status: TextStatus.Done,
+						path: ["Section", "OldNote"] as TreePathLegacyLegacy,
+						status: TextStatusLegacy.Done,
 					},
 				],
 				sectionPaths: [],
 			};
 
-			const after: NoteSnapshot = {
+			const after: NoteSnapshotLegacy = {
 				notes: [],
 				sectionPaths: [],
 			};
@@ -57,18 +57,18 @@ describe("NoteDiffer", () => {
 		});
 
 		it("should detect multiple added and removed notes", () => {
-			const before: NoteSnapshot = {
+			const before: NoteSnapshotLegacy = {
 				notes: [
-					{ path: ["A", "Note1"] as TreePath, status: TextStatus.Done },
-					{ path: ["A", "Note2"] as TreePath, status: TextStatus.Done },
+					{ path: ["A", "Note1"] as TreePathLegacyLegacy, status: TextStatusLegacy.Done },
+					{ path: ["A", "Note2"] as TreePathLegacyLegacy, status: TextStatusLegacy.Done },
 				],
 				sectionPaths: [],
 			};
 
-			const after: NoteSnapshot = {
+			const after: NoteSnapshotLegacy = {
 				notes: [
-					{ path: ["A", "Note2"] as TreePath, status: TextStatus.Done },
-					{ path: ["A", "Note3"] as TreePath, status: TextStatus.NotStarted },
+					{ path: ["A", "Note2"] as TreePathLegacyLegacy, status: TextStatusLegacy.Done },
+					{ path: ["A", "Note3"] as TreePathLegacyLegacy, status: TextStatusLegacy.NotStarted },
 				],
 				sectionPaths: [],
 			};
@@ -84,21 +84,21 @@ describe("NoteDiffer", () => {
 
 	describe("diff - status changes", () => {
 		it("should detect note status change", () => {
-			const before: NoteSnapshot = {
+			const before: NoteSnapshotLegacy = {
 				notes: [
 					{
-						path: ["Section", "Note"] as TreePath,
-						status: TextStatus.NotStarted,
+						path: ["Section", "Note"] as TreePathLegacyLegacy,
+						status: TextStatusLegacy.NotStarted,
 					},
 				],
 				sectionPaths: [],
 			};
 
-			const after: NoteSnapshot = {
+			const after: NoteSnapshotLegacy = {
 				notes: [
 					{
-						path: ["Section", "Note"] as TreePath,
-						status: TextStatus.Done,
+						path: ["Section", "Note"] as TreePathLegacyLegacy,
+						status: TextStatusLegacy.Done,
 					},
 				],
 				sectionPaths: [],
@@ -108,23 +108,23 @@ describe("NoteDiffer", () => {
 
 			expect(diff.statusChanges.length).toBe(1);
 			expect(diff.statusChanges[0]?.path).toEqual(["Section", "Note"]);
-			expect(diff.statusChanges[0]?.oldStatus).toBe(TextStatus.NotStarted);
-			expect(diff.statusChanges[0]?.newStatus).toBe(TextStatus.Done);
+			expect(diff.statusChanges[0]?.oldStatus).toBe(TextStatusLegacy.NotStarted);
+			expect(diff.statusChanges[0]?.newStatus).toBe(TextStatusLegacy.Done);
 		});
 
 		it("should detect multiple status changes", () => {
-			const before: NoteSnapshot = {
+			const before: NoteSnapshotLegacy = {
 				notes: [
-					{ path: ["Book", "000"] as TreePath, status: TextStatus.NotStarted },
-					{ path: ["Book", "001"] as TreePath, status: TextStatus.NotStarted },
+					{ path: ["Book", "000"] as TreePathLegacyLegacy, status: TextStatusLegacy.NotStarted },
+					{ path: ["Book", "001"] as TreePathLegacyLegacy, status: TextStatusLegacy.NotStarted },
 				],
 				sectionPaths: [],
 			};
 
-			const after: NoteSnapshot = {
+			const after: NoteSnapshotLegacy = {
 				notes: [
-					{ path: ["Book", "000"] as TreePath, status: TextStatus.Done },
-					{ path: ["Book", "001"] as TreePath, status: TextStatus.Done },
+					{ path: ["Book", "000"] as TreePathLegacyLegacy, status: TextStatusLegacy.Done },
+					{ path: ["Book", "001"] as TreePathLegacyLegacy, status: TextStatusLegacy.Done },
 				],
 				sectionPaths: [],
 			};
@@ -135,16 +135,16 @@ describe("NoteDiffer", () => {
 		});
 
 		it("should not report status change if status unchanged", () => {
-			const before: NoteSnapshot = {
+			const before: NoteSnapshotLegacy = {
 				notes: [
-					{ path: ["Section", "Note"] as TreePath, status: TextStatus.Done },
+					{ path: ["Section", "Note"] as TreePathLegacyLegacy, status: TextStatusLegacy.Done },
 				],
 				sectionPaths: [],
 			};
 
-			const after: NoteSnapshot = {
+			const after: NoteSnapshotLegacy = {
 				notes: [
-					{ path: ["Section", "Note"] as TreePath, status: TextStatus.Done },
+					{ path: ["Section", "Note"] as TreePathLegacyLegacy, status: TextStatusLegacy.Done },
 				],
 				sectionPaths: [],
 			};
@@ -157,14 +157,14 @@ describe("NoteDiffer", () => {
 
 	describe("diff - sections", () => {
 		it("should detect added section", () => {
-			const before: NoteSnapshot = {
+			const before: NoteSnapshotLegacy = {
 				notes: [],
 				sectionPaths: [],
 			};
 
-			const after: NoteSnapshot = {
+			const after: NoteSnapshotLegacy = {
 				notes: [],
-				sectionPaths: [["NewSection"] as TreePath],
+				sectionPaths: [["NewSection"] as TreePathLegacyLegacy],
 			};
 
 			const diff = differ.diff(before, after);
@@ -174,12 +174,12 @@ describe("NoteDiffer", () => {
 		});
 
 		it("should detect removed section", () => {
-			const before: NoteSnapshot = {
+			const before: NoteSnapshotLegacy = {
 				notes: [],
-				sectionPaths: [["OldSection"] as TreePath],
+				sectionPaths: [["OldSection"] as TreePathLegacyLegacy],
 			};
 
-			const after: NoteSnapshot = {
+			const after: NoteSnapshotLegacy = {
 				notes: [],
 				sectionPaths: [],
 			};
@@ -193,11 +193,11 @@ describe("NoteDiffer", () => {
 
 	describe("diff - empty cases", () => {
 		it("should return empty diff for identical snapshots", () => {
-			const snapshot: NoteSnapshot = {
+			const snapshot: NoteSnapshotLegacy = {
 				notes: [
-					{ path: ["A", "Note"] as TreePath, status: TextStatus.Done },
+					{ path: ["A", "Note"] as TreePathLegacyLegacy, status: TextStatusLegacy.Done },
 				],
-				sectionPaths: [["A"] as TreePath],
+				sectionPaths: [["A"] as TreePathLegacyLegacy],
 			};
 
 			const diff = differ.diff(snapshot, snapshot);
@@ -210,18 +210,18 @@ describe("NoteDiffer", () => {
 		});
 	});
 
-	describe("NoteDto status change", () => {
-		it("NoteDto status change is direct", () => {
-			const before: NoteSnapshot = {
+	describe("NoteDtoLegacy status change", () => {
+		it("NoteDtoLegacy status change is direct", () => {
+			const before: NoteSnapshotLegacy = {
 				notes: [
-					{ path: ["Section", "Book", "000"] as TreePath, status: TextStatus.NotStarted },
+					{ path: ["Section", "Book", "000"] as TreePathLegacyLegacy, status: TextStatusLegacy.NotStarted },
 				],
 				sectionPaths: [],
 			};
 
-			const after: NoteSnapshot = {
+			const after: NoteSnapshotLegacy = {
 				notes: [
-					{ path: ["Section", "Book", "000"] as TreePath, status: TextStatus.Done },
+					{ path: ["Section", "Book", "000"] as TreePathLegacyLegacy, status: TextStatusLegacy.Done },
 				],
 				sectionPaths: [],
 			};
@@ -233,16 +233,16 @@ describe("NoteDiffer", () => {
 		});
 
 		it("scroll status change has same path structure as note", () => {
-			const before: NoteSnapshot = {
+			const before: NoteSnapshotLegacy = {
 				notes: [
-					{ path: ["Section", "Scroll"] as TreePath, status: TextStatus.NotStarted },
+					{ path: ["Section", "Scroll"] as TreePathLegacyLegacy, status: TextStatusLegacy.NotStarted },
 				],
 				sectionPaths: [],
 			};
 
-			const after: NoteSnapshot = {
+			const after: NoteSnapshotLegacy = {
 				notes: [
-					{ path: ["Section", "Scroll"] as TreePath, status: TextStatus.Done },
+					{ path: ["Section", "Scroll"] as TreePathLegacyLegacy, status: TextStatusLegacy.Done },
 				],
 				sectionPaths: [],
 			};

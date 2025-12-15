@@ -1,9 +1,9 @@
-import type { LibraryTree } from "./library-tree/library-tree";
+import type { LibraryTreeLegacy } from "./library-tree/library-tree";
 
 /**
- * Small holder for mutable Librarian state.
+ * Small holder for mutable LibrarianLegacy state.
  */
-export class LibrarianState {
-	tree: LibraryTree | null = null;
+export class LibrarianLegacyStateLegacy {
+	tree: LibraryTreeLegacy | null = null;
 	skipReconciliation = false;
 }

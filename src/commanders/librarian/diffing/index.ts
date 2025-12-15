@@ -1,6 +1,10 @@
-export { type NoteDiff, type NoteSnapshot, noteDiffer } from "./note-differ";
+export {
+	type NoteDiff,
+	type NoteSnapshotLegacy,
+	noteDiffer,
+} from "./note-differ";
 export {
 	type GetNodeFn,
 	mapDiffToActions,
-	regenerateCodexActions,
+	regenerateCodexActionsLegacy,
 } from "./tree-diff-applier";

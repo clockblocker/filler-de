@@ -56,7 +56,7 @@
 
 ## Implementation Steps
 
-### Phase 1: SelfEventTracker
+### Phase 1: SelfEventTrackerLegacy
 
 **File:** `src/obsidian-vault-action-manager/impl/self-event-tracker.ts`
 
@@ -68,7 +68,7 @@
 
 **API:**
 ```typescript
-export class SelfEventTracker {
+export class SelfEventTrackerLegacy {
   register(actions: readonly VaultAction[]): void;
   shouldIgnore(path: string): boolean; // Normalized system path
 }
@@ -95,14 +95,14 @@ export class SelfEventTracker {
 3. Max 10 batches (not actions)
 4. Execute immediately if call stack empty
 5. Auto-continue when batch completes (check queue for more)
-6. Register with SelfEventTracker before each batch
+6. Register with SelfEventTrackerLegacy before each batch
 
 **API:**
 ```typescript
 export class ActionQueue {
   constructor(
     private readonly dispatcher: Dispatcher,
-    private readonly selfEventTracker: SelfEventTracker,
+    private readonly selfEventTracker: SelfEventTrackerLegacy,
   );
   
   async dispatch(actions: readonly VaultAction[]): Promise<DispatchResult>;
@@ -133,7 +133,7 @@ export class ActionQueue {
 **File:** `src/obsidian-vault-action-manager/impl/event-adapter.ts`
 
 **Changes:**
-1. Inject `SelfEventTracker` in constructor
+1. Inject `SelfEventTrackerLegacy` in constructor
 2. Before emitting events, check `shouldIgnore(file.path)`
 3. Only emit if NOT ignored (user-triggered events)
 
@@ -142,7 +142,7 @@ export class ActionQueue {
 export class EventAdapter {
   constructor(
     private readonly app: App,
-    private readonly selfEventTracker: SelfEventTracker,
+    private readonly selfEventTracker: SelfEventTrackerLegacy,
   ) { ... }
   
   private emitFileCreated(file: TFile): void {
@@ -165,7 +165,7 @@ export class EventAdapter {
 **File:** `src/obsidian-vault-action-manager/impl/facade.ts`
 
 **Changes:**
-1. Create `SelfEventTracker` instance
+1. Create `SelfEventTrackerLegacy` instance
 2. Create `ActionQueue` instance (inject dispatcher + selfEventTracker)
 3. Update `dispatch()` to route through `ActionQueue`
 4. Remove TODO comment
@@ -173,12 +173,12 @@ export class EventAdapter {
 **Implementation:**
 ```typescript
 export class ObsidianVaultActionManagerImpl {
-  private readonly selfEventTracker: SelfEventTracker;
+  private readonly selfEventTracker: SelfEventTrackerLegacy;
   private readonly actionQueue: ActionQueue;
   
   constructor(app: App) {
     // ... existing setup ...
-    this.selfEventTracker = new SelfEventTracker();
+    this.selfEventTracker = new SelfEventTrackerLegacy();
     this.actionQueue = new ActionQueue(this.dispatcher, this.selfEventTracker);
     this.eventAdapter = new EventAdapter(app, this.selfEventTracker);
   }
@@ -224,7 +224,7 @@ export class ObsidianVaultActionManagerImpl {
 
 ## Success Criteria
 
-1. ✅ SelfEventTracker tracks all action paths correctly
+1. ✅ SelfEventTrackerLegacy tracks all action paths correctly
 2. ✅ ActionQueue implements call stack pattern correctly
 3. ✅ EventAdapter filters self-events
 4. ✅ Facade routes through ActionQueue

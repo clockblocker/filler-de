@@ -1,31 +1,31 @@
 import { describe, expect, it } from "bun:test";
-import { SelfEventTracker } from "../../../../src/commanders/librarian/utils/self-event-tracker";
+import { SelfEventTrackerLegacy } from "../../../../src/commanders/librarian/utils/self-event-tracker";
 import {
 	type LegacyVaultAction,
 	LegacyVaultActionType,
 } from "../../../../src/services/obsidian-services/file-services/background/background-vault-actions";
-import type { PrettyPath } from "../../../../src/types/common-interface/dtos";
+import type { PrettyPathLegacy } from "../../../../src/types/common-interface/dtos";
 
-const pp = (path: string): PrettyPath => {
+const pp = (path: string): PrettyPathLegacy => {
 	const parts = path.split("/").filter(Boolean);
 	const basenameWithExt = parts.pop() ?? "";
 	const basename = basenameWithExt.replace(/\.md$/, "");
 	return { basename, pathParts: parts };
 };
 
-const rename = (from: PrettyPath, to: PrettyPath): LegacyVaultAction => ({
+const rename = (from: PrettyPathLegacy, to: PrettyPathLegacy): LegacyVaultAction => ({
 	payload: { from, to },
 	type: LegacyVaultActionType.RenameFile,
 });
 
-const write = (prettyPath: PrettyPath): LegacyVaultAction => ({
+const write = (prettyPath: PrettyPathLegacy): LegacyVaultAction => ({
 	payload: { content: "", prettyPath },
 	type: LegacyVaultActionType.UpdateOrCreateFile,
 });
 
-describe("SelfEventTracker", () => {
+describe("SelfEventTrackerLegacy", () => {
 	it("pops registered rename keys once", () => {
-		const tracker = new SelfEventTracker();
+		const tracker = new SelfEventTrackerLegacy();
 		tracker.register([rename(pp("a/b.md"), pp("c/d.md"))]);
 
 		expect(tracker.pop("a/b.md")).toBe(true);
@@ -34,7 +34,7 @@ describe("SelfEventTracker", () => {
 	});
 
 	it("tracks write/process/trash keys", () => {
-		const tracker = new SelfEventTracker();
+		const tracker = new SelfEventTrackerLegacy();
 		tracker.register([
 			write(pp("x/y.md")),
 			{ payload: { prettyPath: pp("z.md") }, type: LegacyVaultActionType.TrashFile },
@@ -50,7 +50,7 @@ describe("SelfEventTracker", () => {
 	});
 
 	it("normalizes slashes on pop", () => {
-		const tracker = new SelfEventTracker();
+		const tracker = new SelfEventTrackerLegacy();
 		tracker.register([write(pp("root/file.md"))]);
 
 		expect(tracker.pop("/root/file.md")).toBe(true);

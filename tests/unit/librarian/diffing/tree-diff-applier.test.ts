@@ -3,21 +3,21 @@ import type { NoteDiff } from "../../../../src/commanders/librarian/diffing/note
 import { mapDiffToActions } from "../../../../src/commanders/librarian/diffing/tree-diff-applier";
 import {
 	treePathToCodexBasename,
-	treePathToPageBasename,
+	treePathToPageBasenameLegacy,
 	treePathToScrollBasename,
 } from "../../../../src/commanders/librarian/indexing/codecs";
-import type { TreePath } from "../../../../src/commanders/librarian/types";
+import type { TreePathLegacyLegacy } from "../../../../src/commanders/librarian/types";
 import {
 	type LegacyVaultAction,
 	LegacyVaultActionType,
 } from "../../../../src/services/obsidian-services/file-services/background/background-vault-actions";
-import type { PrettyPath } from "../../../../src/types/common-interface/dtos";
-import { TextStatus } from "../../../../src/types/common-interface/enums";
+import type { PrettyPathLegacy } from "../../../../src/types/common-interface/dtos";
+import { TextStatusLegacy } from "../../../../src/types/common-interface/enums";
 
-type ActionWithPrettyPath = LegacyVaultAction & {
-	payload: { prettyPath: PrettyPath };
+type ActionWithPrettyPathLegacy = LegacyVaultAction & {
+	payload: { prettyPath: PrettyPathLegacy };
 };
-const hasPrettyPath = (a: LegacyVaultAction): a is ActionWithPrettyPath =>
+const hasPrettyPathLegacy = (a: LegacyVaultAction): a is ActionWithPrettyPathLegacy =>
 	"prettyPath" in a.payload;
 
 const ROOT_NAME = "Library";
@@ -36,14 +36,14 @@ describe("mapDiffToActions", () => {
 			const diff: NoteDiff = {
 				...emptyDiff,
 				addedNotes: [
-					{ path: ["Section", "Scroll"] as TreePath, status: TextStatus.NotStarted },
+					{ path: ["Section", "Scroll"] as TreePathLegacyLegacy, status: TextStatusLegacy.NotStarted },
 				],
 			};
 
 			const actions = mapDiffToActions(diff, ROOT_NAME);
 
 			const fileAction = actions
-				.filter(hasPrettyPath)
+				.filter(hasPrettyPathLegacy)
 				.find(
 					(a) =>
 						a.type === LegacyVaultActionType.UpdateOrCreateFile &&
@@ -59,19 +59,19 @@ describe("mapDiffToActions", () => {
 			const diff: NoteDiff = {
 				...emptyDiff,
 				addedNotes: [
-					{ path: ["Section", "Book", "000"] as TreePath, status: TextStatus.Done },
+					{ path: ["Section", "Book", "000"] as TreePathLegacyLegacy, status: TextStatusLegacy.Done },
 				],
 			};
 
 			const actions = mapDiffToActions(diff, ROOT_NAME);
 
 			const fileAction = actions
-				.filter(hasPrettyPath)
+				.filter(hasPrettyPathLegacy)
 				.find(
 					(a) =>
 						a.type === LegacyVaultActionType.UpdateOrCreateFile &&
 						a.payload.prettyPath.basename ===
-							treePathToPageBasename.encode(["Section", "Book", "000"]),
+							treePathToPageBasenameLegacy.encode(["Section", "Book", "000"]),
 				);
 
 			expect(fileAction).toBeDefined();
@@ -86,7 +86,7 @@ describe("mapDiffToActions", () => {
 			const diff: NoteDiff = {
 				...emptyDiff,
 				addedNotes: [
-					{ path: ["Scroll"] as TreePath, status: TextStatus.Done },
+					{ path: ["Scroll"] as TreePathLegacyLegacy, status: TextStatusLegacy.Done },
 				],
 			};
 
@@ -103,7 +103,7 @@ describe("mapDiffToActions", () => {
 			const diff: NoteDiff = {
 				...emptyDiff,
 				addedNotes: [
-					{ path: ["Book", "042"] as TreePath, status: TextStatus.NotStarted },
+					{ path: ["Book", "042"] as TreePathLegacyLegacy, status: TextStatusLegacy.NotStarted },
 				],
 			};
 
@@ -122,14 +122,14 @@ describe("mapDiffToActions", () => {
 			const diff: NoteDiff = {
 				...emptyDiff,
 				removedNotes: [
-					{ path: ["Section", "Scroll"] as TreePath, status: TextStatus.Done },
+					{ path: ["Section", "Scroll"] as TreePathLegacyLegacy, status: TextStatusLegacy.Done },
 				],
 			};
 
 			const actions = mapDiffToActions(diff, ROOT_NAME);
 
 			const trashAction = actions
-				.filter(hasPrettyPath)
+				.filter(hasPrettyPathLegacy)
 				.find(
 					(a) =>
 						a.type === LegacyVaultActionType.TrashFile &&
@@ -144,19 +144,19 @@ describe("mapDiffToActions", () => {
 			const diff: NoteDiff = {
 				...emptyDiff,
 				removedNotes: [
-					{ path: ["Book", "001"] as TreePath, status: TextStatus.Done },
+					{ path: ["Book", "001"] as TreePathLegacyLegacy, status: TextStatusLegacy.Done },
 				],
 			};
 
 			const actions = mapDiffToActions(diff, ROOT_NAME);
 
 			const trashAction = actions
-				.filter(hasPrettyPath)
+				.filter(hasPrettyPathLegacy)
 				.find(
 					(a) =>
 						a.type === LegacyVaultActionType.TrashFile &&
 						a.payload.prettyPath.basename ===
-							treePathToPageBasename.encode(["Book", "001"]),
+							treePathToPageBasenameLegacy.encode(["Book", "001"]),
 				);
 
 			expect(trashAction).toBeDefined();
@@ -169,9 +169,9 @@ describe("mapDiffToActions", () => {
 				...emptyDiff,
 				statusChanges: [
 					{
-						newStatus: TextStatus.Done,
-						oldStatus: TextStatus.NotStarted,
-						path: ["Section", "Scroll"] as TreePath,
+						newStatus: TextStatusLegacy.Done,
+						oldStatus: TextStatusLegacy.NotStarted,
+						path: ["Section", "Scroll"] as TreePathLegacyLegacy,
 					},
 				],
 			};
@@ -179,7 +179,7 @@ describe("mapDiffToActions", () => {
 			const actions = mapDiffToActions(diff, ROOT_NAME);
 
 			const processAction = actions
-				.filter(hasPrettyPath)
+				.filter(hasPrettyPathLegacy)
 				.find(
 					(a) =>
 						a.type === LegacyVaultActionType.ProcessFile &&
@@ -196,9 +196,9 @@ describe("mapDiffToActions", () => {
 				...emptyDiff,
 				statusChanges: [
 					{
-						newStatus: TextStatus.Done,
-						oldStatus: TextStatus.NotStarted,
-						path: ["Book", "000"] as TreePath,
+						newStatus: TextStatusLegacy.Done,
+						oldStatus: TextStatusLegacy.NotStarted,
+						path: ["Book", "000"] as TreePathLegacyLegacy,
 					},
 				],
 			};
@@ -206,12 +206,12 @@ describe("mapDiffToActions", () => {
 			const actions = mapDiffToActions(diff, ROOT_NAME);
 
 			const processAction = actions
-				.filter(hasPrettyPath)
+				.filter(hasPrettyPathLegacy)
 				.find((a) => a.type === LegacyVaultActionType.ProcessFile);
 
 			expect(processAction).toBeDefined();
 			expect(processAction?.payload.prettyPath.basename).toBe(
-				treePathToPageBasename.encode(["Book", "000"]),
+				treePathToPageBasenameLegacy.encode(["Book", "000"]),
 			);
 		});
 	});
@@ -220,13 +220,13 @@ describe("mapDiffToActions", () => {
 		it("should create folder for added section", () => {
 			const diff: NoteDiff = {
 				...emptyDiff,
-				addedSections: [["NewSection"] as TreePath],
+				addedSections: [["NewSection"] as TreePathLegacyLegacy],
 			};
 
 			const actions = mapDiffToActions(diff, ROOT_NAME);
 
 			const folderAction = actions
-				.filter(hasPrettyPath)
+				.filter(hasPrettyPathLegacy)
 				.find(
 					(a) =>
 						a.type === LegacyVaultActionType.UpdateOrCreateFolder &&
@@ -240,13 +240,13 @@ describe("mapDiffToActions", () => {
 		it("should create codex for added section", () => {
 			const diff: NoteDiff = {
 				...emptyDiff,
-				addedSections: [["NewSection"] as TreePath],
+				addedSections: [["NewSection"] as TreePathLegacyLegacy],
 			};
 
 			const actions = mapDiffToActions(diff, ROOT_NAME);
 
 			const codexAction = actions
-				.filter(hasPrettyPath)
+				.filter(hasPrettyPathLegacy)
 				.find(
 					(a) =>
 						a.type === LegacyVaultActionType.UpdateOrCreateFile &&
@@ -264,12 +264,12 @@ describe("mapDiffToActions", () => {
 		it("should trash codex then folder for removed section", () => {
 			const diff: NoteDiff = {
 				...emptyDiff,
-				removedSections: [["OldSection"] as TreePath],
+				removedSections: [["OldSection"] as TreePathLegacyLegacy],
 			};
 
 			const actions = mapDiffToActions(diff, ROOT_NAME);
 
-			const actionsWithPath = actions.filter(hasPrettyPath);
+			const actionsWithPath = actions.filter(hasPrettyPathLegacy);
 			const codexTrash = actionsWithPath.findIndex(
 				(a) =>
 					a.type === LegacyVaultActionType.TrashFile &&
@@ -290,16 +290,16 @@ describe("mapDiffToActions", () => {
 			const diff: NoteDiff = {
 				...emptyDiff,
 				removedSections: [
-					["A"] as TreePath,
-					["A", "B"] as TreePath,
-					["A", "B", "C"] as TreePath,
+					["A"] as TreePathLegacyLegacy,
+					["A", "B"] as TreePathLegacyLegacy,
+					["A", "B", "C"] as TreePathLegacyLegacy,
 				],
 			};
 
 			const actions = mapDiffToActions(diff, ROOT_NAME);
 
 			const folderActions = actions
-				.filter(hasPrettyPath)
+				.filter(hasPrettyPathLegacy)
 				.filter((a) => a.type === LegacyVaultActionType.TrashFolder);
 
 			const cIdx = folderActions.findIndex(
@@ -322,14 +322,14 @@ describe("mapDiffToActions", () => {
 			const diff: NoteDiff = {
 				...emptyDiff,
 				addedNotes: [
-					{ path: ["Section", "Note"] as TreePath, status: TextStatus.Done },
+					{ path: ["Section", "Note"] as TreePathLegacyLegacy, status: TextStatusLegacy.Done },
 				],
 			};
 
 			const actions = mapDiffToActions(diff, ROOT_NAME);
 
 			const rootCodex = actions
-				.filter(hasPrettyPath)
+				.filter(hasPrettyPathLegacy)
 				.find(
 					(a) =>
 						a.type === LegacyVaultActionType.UpdateOrCreateFile &&
@@ -345,9 +345,9 @@ describe("mapDiffToActions", () => {
 				...emptyDiff,
 				statusChanges: [
 					{
-						newStatus: TextStatus.Done,
-						oldStatus: TextStatus.NotStarted,
-						path: ["A", "B", "Note"] as TreePath,
+						newStatus: TextStatusLegacy.Done,
+						oldStatus: TextStatusLegacy.NotStarted,
+						path: ["A", "B", "Note"] as TreePathLegacyLegacy,
 					},
 				],
 			};
@@ -355,7 +355,7 @@ describe("mapDiffToActions", () => {
 			const actions = mapDiffToActions(diff, ROOT_NAME);
 
 			const codexUpdates = actions
-				.filter(hasPrettyPath)
+				.filter(hasPrettyPathLegacy)
 				.filter(
 					(a) =>
 						a.type === LegacyVaultActionType.UpdateOrCreateFile &&
@@ -373,9 +373,9 @@ describe("mapDiffToActions", () => {
 				...emptyDiff,
 				statusChanges: [
 					{
-						newStatus: TextStatus.Done,
-						oldStatus: TextStatus.NotStarted,
-						path: ["Section", "Book", "000"] as TreePath,
+						newStatus: TextStatusLegacy.Done,
+						oldStatus: TextStatusLegacy.NotStarted,
+						path: ["Section", "Book", "000"] as TreePathLegacyLegacy,
 					},
 				],
 			};
@@ -383,7 +383,7 @@ describe("mapDiffToActions", () => {
 			const actions = mapDiffToActions(diff, ROOT_NAME);
 
 			const bookCodex = actions
-				.filter(hasPrettyPath)
+				.filter(hasPrettyPathLegacy)
 				.find(
 					(a) =>
 						a.type === LegacyVaultActionType.UpdateOrCreateFile &&

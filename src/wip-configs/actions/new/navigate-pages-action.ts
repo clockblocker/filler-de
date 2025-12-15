@@ -3,7 +3,7 @@ import {
 	logWarning,
 } from "../../../obsidian-vault-action-manager/helpers/issue-handlers";
 import type { TexfresserObsidianServices } from "../../../services/obsidian-services/interface";
-import { unwrapMaybeByThrowing } from "../../../types/common-interface/maybe";
+import { unwrapMaybeLegacyByThrowing } from "../../../types/common-interface/maybe";
 
 export async function navigatePageAction(
 	services: Partial<TexfresserObsidianServices>,
@@ -16,8 +16,8 @@ export async function navigatePageAction(
 		return;
 	}
 
-	const maybeFile = await openedFileService.getMaybeOpenedTFile();
-	const currentFile = unwrapMaybeByThrowing(maybeFile);
+	const maybeFile = await openedFileService.getMaybeLegacyOpenedTFile();
+	const currentFile = unwrapMaybeLegacyByThrowing(maybeFile);
 
 	// const textsManagerService = new VaultCurrator(openedFileService.getApp());
 

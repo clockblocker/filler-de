@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { PrettyPath } from "../../../../types/common-interface/dtos";
+import type { PrettyPathLegacy } from "../../../../types/common-interface/dtos";
 
 const UPDATE_OR_CREATE = "UpdateOrCreate" as const;
 const TRASH = "Trash" as const;
@@ -42,38 +42,38 @@ export type LegacyVaultActionType = z.infer<typeof LegacyVaultActionTypeSchema>;
 export type LegacyVaultAction =
 	| {
 			type: typeof LegacyVaultActionType.UpdateOrCreateFolder;
-			payload: { prettyPath: PrettyPath };
+			payload: { prettyPath: PrettyPathLegacy };
 	  }
 	| {
 			type: typeof LegacyVaultActionType.RenameFolder;
-			payload: { from: PrettyPath; to: PrettyPath };
+			payload: { from: PrettyPathLegacy; to: PrettyPathLegacy };
 	  }
 	| {
 			type: typeof LegacyVaultActionType.TrashFolder;
-			payload: { prettyPath: PrettyPath };
+			payload: { prettyPath: PrettyPathLegacy };
 	  }
 	| {
 			type: typeof LegacyVaultActionType.UpdateOrCreateFile;
-			payload: { prettyPath: PrettyPath; content?: string };
+			payload: { prettyPath: PrettyPathLegacy; content?: string };
 	  }
 	| {
 			type: typeof LegacyVaultActionType.RenameFile;
-			payload: { from: PrettyPath; to: PrettyPath };
+			payload: { from: PrettyPathLegacy; to: PrettyPathLegacy };
 	  }
 	| {
 			type: typeof LegacyVaultActionType.TrashFile;
-			payload: { prettyPath: PrettyPath };
+			payload: { prettyPath: PrettyPathLegacy };
 	  }
 	| {
 			type: typeof LegacyVaultActionType.ProcessFile;
 			payload: {
-				prettyPath: PrettyPath;
+				prettyPath: PrettyPathLegacy;
 				transform: (content: string) => string | Promise<string>;
 			};
 	  }
 	| {
 			type: typeof LegacyVaultActionType.WriteFile;
-			payload: { prettyPath: PrettyPath; content: string };
+			payload: { prettyPath: PrettyPathLegacy; content: string };
 	  };
 
 // Execution order weights (lower = execute first)
@@ -141,7 +141,7 @@ export function getActionTargetPath(action: LegacyVaultAction): string {
 	}
 }
 
-function prettyPathToKey(prettyPath: PrettyPath): string {
+function prettyPathToKey(prettyPath: PrettyPathLegacy): string {
 	return [...prettyPath.pathParts, prettyPath.basename].join("/");
 }
 

@@ -1,4 +1,4 @@
-import type { Librarian } from "../../../../commanders/librarian/librarian";
+import type { LibrarianLegacy } from "../../../../commanders/librarian/librarian";
 import type { TexfresserObsidianServices } from "../../../obsidian-services/interface";
 import { executeButtonAction } from "./execute-button-actions";
 import {
@@ -8,7 +8,7 @@ import {
 import { handleLinkElementClicked } from "./handle-link-element-clicked";
 
 type ClickListenerServices = TexfresserObsidianServices & {
-	librarian: Librarian;
+	librarian: LibrarianLegacy;
 };
 
 export const makeClickListener =

@@ -4,7 +4,7 @@ import {
 	editOrAddMetaInfo,
 	extractMetaInfo,
 } from '../../../src/services/dto-services/meta-info-manager/interface';
-import { TextStatus } from '../../../src/types/common-interface/enums';
+import { TextStatusLegacy } from '../../../src/types/common-interface/enums';
 import { PAGE } from '../../../src/types/literals';
 
 describe('meta-info manager', () => {
@@ -13,7 +13,7 @@ describe('meta-info manager', () => {
 			const input = `Hello\n<section id={textfresser_meta_keep_me_invisible}>\n{"fileType":"Page", "index":11, "status":"NotStarted"}\n</section>\nWorld`;
 			const result = extractMetaInfo(input);
 
-			expect(result).toEqual({ fileType: PAGE, index: 11, status: TextStatus.NotStarted });
+			expect(result).toEqual({ fileType: PAGE, index: 11, status: TextStatusLegacy.NotStarted });
 		});
 
 		it('returns null when no meta section is present', () => {
@@ -26,7 +26,7 @@ describe('meta-info manager', () => {
 	describe('editOrAddMetaInfo', () => {
 		it('replaces existing meta section content', () => {
 			const original = `Start\n<section id={textfresser_meta_keep_me_invisible}>\n{"fileType":"Page", "index":5, "status":"NotStarted"}\n</section>\nEnd`;
-			const updated = editOrAddMetaInfo(original, { fileType: PAGE, index: 10, status: TextStatus.NotStarted });
+			const updated = editOrAddMetaInfo(original, { fileType: PAGE, index: 10, status: TextStatusLegacy.NotStarted });
 
 			// Expect the meta block to be replaced (not duplicated) and updated
 			expect(updated).toContain(
@@ -40,12 +40,12 @@ describe('meta-info manager', () => {
 			expect(metaJson).toEqual({ fileType: "Page", index: 10, status: "NotStarted" });
 
 			const afterExtract = extractMetaInfo(updated);
-			expect(afterExtract).toEqual({ fileType: PAGE, index: 10, status: TextStatus.NotStarted });
+			expect(afterExtract).toEqual({ fileType: PAGE, index: 10, status: TextStatusLegacy.NotStarted });
 		});
 
 		it('appends a new meta section when none exists', () => {
 			const original = 'Just some content';
-			const updated = editOrAddMetaInfo(original, { fileType: PAGE, index: 0, status: TextStatus.NotStarted });
+			const updated = editOrAddMetaInfo(original, { fileType: PAGE, index: 0, status: TextStatusLegacy.NotStarted });
 
 			// Should append a line break then the section
 			expect(updated.startsWith(original)).toBe(true);
@@ -60,7 +60,7 @@ describe('meta-info manager', () => {
 			expect(metaJson).toEqual({ fileType: "Page", index: 0, status: "NotStarted" });
 
 			const afterExtract = extractMetaInfo(updated);
-			expect(afterExtract).toEqual({ fileType: PAGE, index: 0, status: TextStatus.NotStarted });
+			expect(afterExtract).toEqual({ fileType: PAGE, index: 0, status: TextStatusLegacy.NotStarted });
 		});
 
 		it('handles missing index in existing meta section', () => {
@@ -71,9 +71,9 @@ describe('meta-info manager', () => {
 			expect(extractedBefore).toBeNull();
 
 			// editOrAddMetaInfo should still work - it replaces the section with new meta
-			const updated = editOrAddMetaInfo(original, { fileType: PAGE, index: 42, status: TextStatus.NotStarted });
+			const updated = editOrAddMetaInfo(original, { fileType: PAGE, index: 42, status: TextStatusLegacy.NotStarted });
 			const afterExtract = extractMetaInfo(updated);
-			expect(afterExtract).toEqual({ fileType: PAGE, index: 42, status: TextStatus.NotStarted });
+			expect(afterExtract).toEqual({ fileType: PAGE, index: 42, status: TextStatusLegacy.NotStarted });
 		});
 
 		it('handles index > 999 by failing validation', () => {
@@ -88,14 +88,14 @@ describe('meta-info manager', () => {
 			const input = `Hello\n<section id={textfresser_meta_keep_me_invisible}>\n{"fileType":"Page", "index":999, "status":"NotStarted"}\n</section>\nWorld`;
 			const result = extractMetaInfo(input);
 			
-			expect(result).toEqual({ fileType: PAGE, index: 999, status: TextStatus.NotStarted });
+			expect(result).toEqual({ fileType: PAGE, index: 999, status: TextStatusLegacy.NotStarted });
 		});
 
 		it('handles index at minimum boundary (0)', () => {
 			const input = `Hello\n<section id={textfresser_meta_keep_me_invisible}>\n{"fileType":"Page", "index":0, "status":"NotStarted"}\n</section>\nWorld`;
 			const result = extractMetaInfo(input);
 			
-			expect(result).toEqual({ fileType: PAGE, index: 0, status: TextStatus.NotStarted });
+			expect(result).toEqual({ fileType: PAGE, index: 0, status: TextStatusLegacy.NotStarted });
 		});
 
 		it('handles negative index by failing validation', () => {

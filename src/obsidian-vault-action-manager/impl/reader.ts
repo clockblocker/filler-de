@@ -6,13 +6,13 @@ import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,
 } from "../types/split-path";
-import type { BackgroundFileService } from "./background-file-service";
+import type { BackgroundFileServiceLegacy } from "./background-file-service";
 import { splitPathKey } from "./split-path";
 
 export class Reader {
 	constructor(
 		private readonly opened: OpenedFileService,
-		private readonly background: BackgroundFileService,
+		private readonly background: BackgroundFileServiceLegacy,
 	) {}
 
 	async readContent(target: SplitPathToMdFile): Promise<string> {

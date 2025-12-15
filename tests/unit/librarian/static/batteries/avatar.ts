@@ -1,6 +1,6 @@
-import { type NoteDto } from '../../../../../src/commanders/librarian/types';
+import { type NoteDtoLegacy } from '../../../../../src/commanders/librarian/types';
 
-// New format: flat NoteDto array (one entry per file)
+// New format: flat NoteDtoLegacy array (one entry per file)
 export const AVATAR_NOTES = [
 	// Season 1, Episode 1 (scroll - single note)
 	{
@@ -30,4 +30,4 @@ export const AVATAR_NOTES = [
 		path: ['Intro'] as const,
 		status: 'NotStarted',
 	},
-] as const satisfies NoteDto[];
+] as const satisfies NoteDtoLegacy[];

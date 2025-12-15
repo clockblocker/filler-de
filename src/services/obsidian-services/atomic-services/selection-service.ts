@@ -1,11 +1,11 @@
 import type { App } from "obsidian";
 import { getEditor } from "../../../obsidian-vault-action-manager/helpers/get-editor";
-import type { Maybe } from "../../../types/common-interface/maybe";
+import type { MaybeLegacy } from "../../../types/common-interface/maybe";
 
 export class SelectionService {
 	constructor(private app: App) {}
 
-	public async getMaybeSelection(): Promise<Maybe<string>> {
+	public async getMaybeLegacySelection(): Promise<MaybeLegacy<string>> {
 		try {
 			const editor = await getEditor(this.app);
 			return { data: editor.getSelection(), error: false };
@@ -18,14 +18,14 @@ export class SelectionService {
 	}
 
 	public async getSelection(): Promise<string> {
-		const maybeSel = await this.getMaybeSelection();
+		const maybeSel = await this.getMaybeLegacySelection();
 		if (maybeSel.error) {
 			throw new Error(maybeSel.description ?? "No selection");
 		}
 		return maybeSel.data;
 	}
 
-	public async appendBelow(text: string): Promise<Maybe<void>> {
+	public async appendBelow(text: string): Promise<MaybeLegacy<void>> {
 		try {
 			const editor = await getEditor(this.app);
 

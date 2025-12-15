@@ -9,8 +9,8 @@
 This refactor aims to consolidate and modernize file/folder operations by:
 1. Removing primitive file services (`OpenedFileReader`, `BackgroundFileReader`, legacy `queue`)
 2. Migrating to a separated `vault-actions manager`
-3. Transitioning from `PrettyPath` to `SplitPath` types
-4. Replacing custom `Maybe<T>` with `neverthrow.Result<T, E>`
+3. Transitioning from `PrettyPathLegacy` to `SplitPath` types
+4. Replacing custom `MaybeLegacy<T>` with `neverthrow.Result<T, E>`
 5. Standardizing error handling and API patterns
 
 ## Goals
@@ -23,12 +23,12 @@ This refactor aims to consolidate and modernize file/folder operations by:
    - Queue-based execution with proper event tracking
 
 2. **Type Safety**
-   - Migrate from `PrettyPath` → `SplitPath` (typed: `SplitPathToMdFile`, `SplitPathToFile`, `SplitPathToFolder`)
+   - Migrate from `PrettyPathLegacy` → `SplitPath` (typed: `SplitPathToMdFile`, `SplitPathToFile`, `SplitPathToFolder`)
    - Use Zod codecs for bidirectional path conversions
    - Eliminate `as`/`any` usage (except documented Obsidian API cases)
 
 3. **Functional Error Handling**
-   - Replace custom `Maybe<T>` with `neverthrow.Result<T, E>`
+   - Replace custom `MaybeLegacy<T>` with `neverthrow.Result<T, E>`
    - All helper methods return `Result` directly (no throwing wrappers)
    - Errors handled at dispatch layer, not in helpers
 
@@ -48,7 +48,7 @@ This refactor aims to consolidate and modernize file/folder operations by:
 - [x] Added unit tests for `systemPathToSplitPath` codec
 
 #### TFileHelper Refactor
-- [x] Migrated from `Maybe<T>` to `neverthrow.Result<T, string>`
+- [x] Migrated from `MaybeLegacy<T>` to `neverthrow.Result<T, string>`
 - [x] All methods return `Result` directly:
   - `getFile()` → `Result<TFile, string>`
   - `createMdFile()` → `Result<TFile, string>`
@@ -61,7 +61,7 @@ This refactor aims to consolidate and modernize file/folder operations by:
 - [x] Added content comparison for duplicate detection
 
 #### TFolderHelper Refactor
-- [x] Migrated from `Maybe<T>` to `neverthrow.Result<T, string>`
+- [x] Migrated from `MaybeLegacy<T>` to `neverthrow.Result<T, string>`
 - [x] All methods return `Result` directly:
   - `getFolder()` → `Result<TFolder, string>`
   - `createFolder()` → `Result<TFolder, string>`
@@ -115,20 +115,20 @@ This refactor aims to consolidate and modernize file/folder operations by:
 
 ### 🚧 In Progress
 
-- [ ] Migration of `Librarian` to use new vault action manager
+- [ ] Migration of `LibrarianLegacy` to use new vault action manager
 
 ### ✅ Recently Completed
 
 - [x] Integration with `ObsidianVaultActionManager` facade
 - [x] ActionQueue implementation (call stack pattern)
-- [x] SelfEventTracker implementation
+- [x] SelfEventTrackerLegacy implementation
 - [x] EventAdapter integration with self-event filtering
 - [x] E2E tests for self-event filtering and queue behavior
 
 ### 📋 Pending
 
-- [ ] Remove legacy `LegacyVaultActionQueue`
-- [ ] Migration of `ActionDispatcher` to new system
+- [ ] Remove legacy `VaultActionQueueLegacy`
+- [ ] Migration of `ActionDispatcherLegacy` to new system
 - [ ] Remove legacy file service implementations
 - [ ] Update all call sites to use new API
 - [ ] Comprehensive integration testing
@@ -138,17 +138,17 @@ This refactor aims to consolidate and modernize file/folder operations by:
 ### Before
 
 ```
-Librarian
-  ├── LegacyVaultActionQueue
-  ├── OpenedFileReader (Maybe<T>)
-  ├── BackgroundFileReader (Maybe<T>)
-  └── ActionDispatcher
+LibrarianLegacy
+  ├── VaultActionQueueLegacy
+  ├── OpenedFileReader (MaybeLegacy<T>)
+  ├── BackgroundFileReader (MaybeLegacy<T>)
+  └── ActionDispatcherLegacy
 ```
 
 ### After (Current Implementation)
 
 ```
-Librarian
+LibrarianLegacy
   └── ObsidianVaultActionManager (Facade)
       ├── Reader (Result<T, E>)
       │   ├── OpenedFileService
@@ -164,7 +164,7 @@ Librarian
 ```
 
 **Key Differences:**
-- No `BackgroundFileService` wrapper - Executor uses `TFileHelper`/`TFolderHelper` directly
+- No `BackgroundFileServiceLegacy` wrapper - Executor uses `TFileHelper`/`TFolderHelper` directly
 - Dispatcher returns `DispatchResult` with error tracking (errors returned, not thrown)
 - Executor ensures file existence before processing/writing
 - Collapse minimizes filesystem calls by combining operations
@@ -286,18 +286,18 @@ result.match(
 - [ ] e2e tests for `TFileHelper` methods
 - [ ] e2e tests for `TFolderHelper` methods
 - [ ] Integration tests for vault action manager
-- [ ] End-to-end tests for Librarian integration
+- [ ] End-to-end tests for LibrarianLegacy integration
 
 ## Breaking Changes
 
 1. **Helper Methods:** All methods now return `Result` instead of throwing
 2. **Batch Operations:** Removed from helpers (use dispatch layer)
 3. **Error Handling:** Must handle `Result` types explicitly
-4. **Path Types:** `PrettyPath` → `SplitPath` (typed variants)
+4. **Path Types:** `PrettyPathLegacy` → `SplitPath` (typed variants)
 
 ## References
 
 - [Obsidian Vault Action Manager Spec](./obsidian-vault-action-manager-spec.md)
 - [Obsidian Vault Action Manager Stages](./obsidian-vault-action-manager-stages.md)
-- [Maybe vs Neverthrow Tradeoffs](../analysis/maybe-vs-neverthrow-tradeoffs.md)
-- [Librarian Architecture](../librarian/architecture.md)
+- [MaybeLegacy vs Neverthrow Tradeoffs](../analysis/maybe-vs-neverthrow-tradeoffs.md)
+- [LibrarianLegacy Architecture](../librarian/architecture.md)

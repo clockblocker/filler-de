@@ -16,8 +16,8 @@ export const LibraryMdFileSubTypeSchema = z.enum([
 	SCROLL,
 	UNKNOWN,
 ]);
-export const LibraryFileType = LibraryMdFileSubTypeSchema.enum;
-export type LibraryFileType = z.infer<typeof LibraryMdFileSubTypeSchema>;
+export const LibraryFileLegacyType = LibraryMdFileSubTypeSchema.enum;
+export type LibraryFileLegacyType = z.infer<typeof LibraryMdFileSubTypeSchema>;
 
 export const MdFileSubTypeSchema = z.enum([
 	ENTRY,
@@ -28,6 +28,6 @@ export const FileType = MdFileSubTypeSchema.enum;
 export type FileType = z.infer<typeof MdFileSubTypeSchema>;
 export const ALL_FILE_TYPES = MdFileSubTypeSchema.options;
 
-export const TextStatusSchema = z.enum([DONE, NOT_STARTED, IN_PROGRESS]);
-export type TextStatus = z.infer<typeof TextStatusSchema>;
-export const TextStatus = TextStatusSchema.enum;
+export const TextStatusLegacySchema = z.enum([DONE, NOT_STARTED, IN_PROGRESS]);
+export type TextStatusLegacy = z.infer<typeof TextStatusLegacySchema>;
+export const TextStatusLegacy = TextStatusLegacySchema.enum;

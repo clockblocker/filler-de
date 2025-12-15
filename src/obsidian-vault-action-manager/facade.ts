@@ -5,18 +5,18 @@ import { OpenedFileService as OpenedFileServiceImpl } from "./file-services/acti
 import { TFileHelper } from "./file-services/background/helpers/tfile-helper";
 import { TFolderHelper } from "./file-services/background/helpers/tfolder-helper";
 import { ActionQueue } from "./impl/action-queue";
-import { BackgroundFileService } from "./impl/background-file-service";
+import { BackgroundFileServiceLegacy } from "./impl/background-file-service";
 import { Dispatcher } from "./impl/dispatcher";
 import { EventAdapter } from "./impl/event-adapter";
 import { Executor } from "./impl/executor";
 import { Reader } from "./impl/reader";
-import { SelfEventTracker } from "./impl/self-event-tracker";
+import { SelfEventTrackerLegacy } from "./impl/self-event-tracker";
 import { splitPath } from "./impl/split-path";
 import type {
 	DispatchResult,
 	ObsidianVaultActionManager,
 	Teardown,
-	VaultEventHandler,
+	VaultEventHandlerLegacy,
 } from "./index";
 import type {
 	SplitPath,
@@ -30,13 +30,13 @@ export class ObsidianVaultActionManagerImpl
 	implements ObsidianVaultActionManager
 {
 	private readonly opened: OpenedFileService;
-	private readonly background: BackgroundFileService;
+	private readonly background: BackgroundFileServiceLegacy;
 	private readonly reader: Reader;
 	private readonly dispatcher: Dispatcher;
-	private readonly selfEventTracker: SelfEventTracker;
+	private readonly selfEventTracker: SelfEventTrackerLegacy;
 	private readonly actionQueue: ActionQueue;
 	private readonly eventAdapter: EventAdapter;
-	private readonly subscribers = new Set<VaultEventHandler>();
+	private readonly subscribers = new Set<VaultEventHandlerLegacy>();
 
 	constructor(app: App) {
 		const openedFileReader = new OpenedFileReader(app);
@@ -49,7 +49,7 @@ export class ObsidianVaultActionManagerImpl
 			fileManager: app.fileManager,
 			vault: app.vault,
 		});
-		this.background = new BackgroundFileService(
+		this.background = new BackgroundFileServiceLegacy(
 			tfileHelper,
 			tfolderHelper,
 			app.vault,
@@ -62,7 +62,7 @@ export class ObsidianVaultActionManagerImpl
 		);
 		this.reader = new Reader(this.opened, this.background);
 		this.dispatcher = new Dispatcher(executor);
-		this.selfEventTracker = new SelfEventTracker();
+		this.selfEventTracker = new SelfEventTrackerLegacy();
 		this.actionQueue = new ActionQueue(
 			this.dispatcher,
 			this.selfEventTracker,
@@ -70,7 +70,7 @@ export class ObsidianVaultActionManagerImpl
 		this.eventAdapter = new EventAdapter(app, this.selfEventTracker);
 	}
 
-	subscribe(handler: VaultEventHandler): Teardown {
+	subscribe(handler: VaultEventHandlerLegacy): Teardown {
 		this.subscribers.add(handler);
 		if (this.subscribers.size === 1) {
 			this.eventAdapter.start(async (event) => {

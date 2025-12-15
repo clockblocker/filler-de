@@ -1,39 +1,39 @@
 import { describe, expect, it } from 'bun:test';
-import type { NoteDto, TreePath } from '../../../../src/commanders/librarian/types';
-import { TextStatus } from '../../../../src/types/common-interface/enums';
+import type { NoteDtoLegacy, TreePathLegacyLegacy } from '../../../../src/commanders/librarian/types';
+import { TextStatusLegacy } from '../../../../src/types/common-interface/enums';
 import { AVATAR_NOTES } from '../static/batteries/avatar';
 
 /**
- * Tests for NoteDto format
+ * Tests for NoteDtoLegacy format
  * 
- * NoteDto is a flat structure where each file = one DTO:
- * - Scroll: single NoteDto with path = [...sectionPath, scrollName]
- * - Book: multiple NoteDtos with path = [...sectionPath, bookName, pageIndex]
+ * NoteDtoLegacy is a flat structure where each file = one DTO:
+ * - Scroll: single NoteDtoLegacy with path = [...sectionPath, scrollName]
+ * - Book: multiple NoteDtoLegacy with path = [...sectionPath, bookName, pageIndex]
  */
-describe('NoteDto format', () => {
+describe('NoteDtoLegacy format', () => {
 	describe('Structure validation', () => {
 		it('should have path and status fields', () => {
-			const note: NoteDto = {
-				path: ['Section', 'Note'] as TreePath,
-				status: TextStatus.NotStarted,
+			const note: NoteDtoLegacy = {
+				path: ['Section', 'Note'] as TreePathLegacyLegacy,
+				status: TextStatusLegacy.NotStarted,
 			};
 
 			expect(note.path).toEqual(['Section', 'Note']);
-			expect(note.status).toBe(TextStatus.NotStarted);
+			expect(note.status).toBe(TextStatusLegacy.NotStarted);
 		});
 
-		it('should support all TextStatus values', () => {
-			const notStarted: NoteDto = {
-				path: ['A'] as TreePath,
-				status: TextStatus.NotStarted,
+		it('should support all TextStatusLegacy values', () => {
+			const notStarted: NoteDtoLegacy = {
+				path: ['A'] as TreePathLegacyLegacy,
+				status: TextStatusLegacy.NotStarted,
 			};
-			const done: NoteDto = {
-				path: ['B'] as TreePath,
-				status: TextStatus.Done,
+			const done: NoteDtoLegacy = {
+				path: ['B'] as TreePathLegacyLegacy,
+				status: TextStatusLegacy.Done,
 			};
-			const inProgress: NoteDto = {
-				path: ['C'] as TreePath,
-				status: TextStatus.InProgress,
+			const inProgress: NoteDtoLegacy = {
+				path: ['C'] as TreePathLegacyLegacy,
+				status: TextStatusLegacy.InProgress,
 			};
 
 			expect(notStarted.status).toBe('NotStarted');
@@ -43,22 +43,22 @@ describe('NoteDto format', () => {
 	});
 
 	describe('Scroll representation', () => {
-		it('scroll = single NoteDto at section level', () => {
-			// A scroll "Intro" at root = NoteDto with path ['Intro']
-			const scroll: NoteDto = {
-				path: ['Intro'] as TreePath,
-				status: TextStatus.NotStarted,
+		it('scroll = single NoteDtoLegacy at section level', () => {
+			// A scroll "Intro" at root = NoteDtoLegacy with path ['Intro']
+			const scroll: NoteDtoLegacy = {
+				path: ['Intro'] as TreePathLegacyLegacy,
+				status: TextStatusLegacy.NotStarted,
 			};
 
 			expect(scroll.path.length).toBe(1);
 			expect(scroll.path[0]).toBe('Intro');
 		});
 
-		it('scroll in section = NoteDto with section path', () => {
+		it('scroll in section = NoteDtoLegacy with section path', () => {
 			// A scroll "Episode_1" in section ["Avatar", "Season_1"]
-			const scroll: NoteDto = {
-				path: ['Avatar', 'Season_1', 'Episode_1'] as TreePath,
-				status: TextStatus.Done,
+			const scroll: NoteDtoLegacy = {
+				path: ['Avatar', 'Season_1', 'Episode_1'] as TreePathLegacyLegacy,
+				status: TextStatusLegacy.Done,
 			};
 
 			expect(scroll.path).toEqual(['Avatar', 'Season_1', 'Episode_1']);
@@ -66,16 +66,16 @@ describe('NoteDto format', () => {
 	});
 
 	describe('Book representation', () => {
-		it('book = multiple NoteDtos under section path', () => {
+		it('book = multiple NoteDtoLegacy under section path', () => {
 			// A book "Episode_2" with 2 pages in section ["Avatar", "Season_1"]
 			// Book becomes a section containing notes
-			const page0: NoteDto = {
-				path: ['Avatar', 'Season_1', 'Episode_2', '000'] as TreePath,
-				status: TextStatus.Done,
+			const page0: NoteDtoLegacy = {
+				path: ['Avatar', 'Season_1', 'Episode_2', '000'] as TreePathLegacyLegacy,
+				status: TextStatusLegacy.Done,
 			};
-			const page1: NoteDto = {
-				path: ['Avatar', 'Season_1', 'Episode_2', '001'] as TreePath,
-				status: TextStatus.NotStarted,
+			const page1: NoteDtoLegacy = {
+				path: ['Avatar', 'Season_1', 'Episode_2', '001'] as TreePathLegacyLegacy,
+				status: TextStatusLegacy.NotStarted,
 			};
 
 			// Both pages share the same prefix (book path)
@@ -89,14 +89,14 @@ describe('NoteDto format', () => {
 		});
 
 		it('book pages have independent statuses', () => {
-			const pages: NoteDto[] = [
-				{ path: ['Book', '000'] as TreePath, status: TextStatus.Done },
-				{ path: ['Book', '001'] as TreePath, status: TextStatus.NotStarted },
-				{ path: ['Book', '002'] as TreePath, status: TextStatus.Done },
+			const pages: NoteDtoLegacy[] = [
+				{ path: ['Book', '000'] as TreePathLegacyLegacy, status: TextStatusLegacy.Done },
+				{ path: ['Book', '001'] as TreePathLegacyLegacy, status: TextStatusLegacy.NotStarted },
+				{ path: ['Book', '002'] as TreePathLegacyLegacy, status: TextStatusLegacy.Done },
 			];
 
-			const doneCount = pages.filter(p => p.status === TextStatus.Done).length;
-			const notStartedCount = pages.filter(p => p.status === TextStatus.NotStarted).length;
+			const doneCount = pages.filter(p => p.status === TextStatusLegacy.Done).length;
+			const notStartedCount = pages.filter(p => p.status === TextStatusLegacy.NotStarted).length;
 
 			expect(doneCount).toBe(2);
 			expect(notStartedCount).toBe(1);
@@ -111,7 +111,7 @@ describe('NoteDto format', () => {
 			// - Episode_1 (scroll) in Season_2
 			// - Episode_2 (scroll) in Season_2
 			// - Intro (scroll) at root
-			// Total: 6 NoteDtos
+			// Total: 6 NoteDtoLegacy
 			expect(AVATAR_NOTES.length).toBe(6);
 		});
 
@@ -146,15 +146,15 @@ describe('NoteDto format', () => {
 	});
 
 	describe('Conversion helpers (future)', () => {
-		it('can group NoteDtos by parent path (book detection)', () => {
-			const notes: NoteDto[] = [
-				{ path: ['Section', 'Scroll'] as TreePath, status: TextStatus.Done },
-				{ path: ['Section', 'Book', '000'] as TreePath, status: TextStatus.Done },
-				{ path: ['Section', 'Book', '001'] as TreePath, status: TextStatus.NotStarted },
+		it('can group NoteDtoLegacy by parent path (book detection)', () => {
+			const notes: NoteDtoLegacy[] = [
+				{ path: ['Section', 'Scroll'] as TreePathLegacyLegacy, status: TextStatusLegacy.Done },
+				{ path: ['Section', 'Book', '000'] as TreePathLegacyLegacy, status: TextStatusLegacy.Done },
+				{ path: ['Section', 'Book', '001'] as TreePathLegacyLegacy, status: TextStatusLegacy.NotStarted },
 			];
 
 			// Group by parent path
-			const groups = new Map<string, NoteDto[]>();
+			const groups = new Map<string, NoteDtoLegacy[]>();
 			for (const note of notes) {
 				const parentKey = note.path.slice(0, -1).join('/');
 				const existing = groups.get(parentKey) ?? [];
@@ -168,14 +168,14 @@ describe('NoteDto format', () => {
 		});
 
 		it('can detect scroll vs book by sibling count', () => {
-			const notes: NoteDto[] = [
-				{ path: ['Scroll'] as TreePath, status: TextStatus.Done },
-				{ path: ['Book', '000'] as TreePath, status: TextStatus.Done },
-				{ path: ['Book', '001'] as TreePath, status: TextStatus.Done },
+			const notes: NoteDtoLegacy[] = [
+				{ path: ['Scroll'] as TreePathLegacyLegacy, status: TextStatusLegacy.Done },
+				{ path: ['Book', '000'] as TreePathLegacyLegacy, status: TextStatusLegacy.Done },
+				{ path: ['Book', '001'] as TreePathLegacyLegacy, status: TextStatusLegacy.Done },
 			];
 
 			// Group by parent
-			const groups = new Map<string, NoteDto[]>();
+			const groups = new Map<string, NoteDtoLegacy[]>();
 			for (const note of notes) {
 				const parentKey = note.path.slice(0, -1).join('/') || '__root__';
 				const existing = groups.get(parentKey) ?? [];

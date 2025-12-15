@@ -1,31 +1,31 @@
-import type { TextStatus } from "../../../types/common-interface/enums";
-import type { NoteDto, TreePath } from "../types";
+import type { TextStatusLegacy } from "../../../types/common-interface/enums";
+import type { NoteDtoLegacy, TreePathLegacyLegacy } from "../types";
 
 /**
  * Snapshot of tree state for diffing.
  */
-export type NoteSnapshot = {
-	notes: NoteDto[];
-	sectionPaths: TreePath[];
+export type NoteSnapshotLegacy = {
+	notes: NoteDtoLegacy[];
+	sectionPaths: TreePathLegacyLegacy[];
 };
 
 /**
  * Status change for a single note.
  */
 export type NoteStatusChange = {
-	newStatus: TextStatus;
-	oldStatus: TextStatus;
-	path: TreePath;
+	newStatus: TextStatusLegacy;
+	oldStatus: TextStatusLegacy;
+	path: TreePathLegacyLegacy;
 };
 
 /**
- * Diff between two NoteSnapshots.
+ * Diff between two NoteSnapshotLegacy.
  */
 export type NoteDiff = {
-	addedNotes: NoteDto[];
-	addedSections: TreePath[];
-	removedNotes: NoteDto[];
-	removedSections: TreePath[];
+	addedNotes: NoteDtoLegacy[];
+	addedSections: TreePathLegacyLegacy[];
+	removedNotes: NoteDtoLegacy[];
+	removedSections: TreePathLegacyLegacy[];
 	statusChanges: NoteStatusChange[];
 };
 
@@ -54,7 +54,7 @@ export function isNoteDiffEmpty(diff: NoteDiff): boolean {
 }
 
 export class NoteDiffer {
-	diff(before: NoteSnapshot, after: NoteSnapshot): NoteDiff {
+	diff(before: NoteSnapshotLegacy, after: NoteSnapshotLegacy): NoteDiff {
 		const beforeNoteKeys = new Set(
 			before.notes.map((n) => n.path.join("/")),
 		);

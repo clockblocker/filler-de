@@ -7,22 +7,22 @@ import {
 	LegacyVaultActionType,
 } from "../../../services/obsidian-services/file-services/background/background-vault-actions";
 import type { TexfresserObsidianServices } from "../../../services/obsidian-services/interface";
-import type { PrettyPath } from "../../../types/common-interface/dtos";
-import { TextStatus } from "../../../types/common-interface/enums";
-import type { ActionDispatcher } from "../action-dispatcher";
-import { isInUntracked, type RootName } from "../constants";
-import { healFile } from "../filesystem/healing";
-import { canonicalizePrettyPath } from "../invariants/path-canonicalizer";
+import type { PrettyPathLegacy } from "../../../types/common-interface/dtos";
+import { TextStatusLegacy } from "../../../types/common-interface/enums";
+import type { ActionDispatcherLegacy } from "../action-dispatcher";
+import { isInUntrackedLegacy, type RootNameLegacy } from "../constants";
+import { healFileLegacy } from "../filesystem/healing";
+import { canonicalizePrettyPathLegacy } from "../invariants/path-canonicalizer";
 
-export class FilesystemHealer {
+export class FilesystemHealerLegacy {
 	constructor(
 		private readonly deps: Pick<
 			TexfresserObsidianServices,
 			"backgroundFileService"
-		> & { dispatcher: ActionDispatcher },
+		> & { dispatcher: ActionDispatcherLegacy },
 	) {}
 
-	async healRootFilesystem(rootName: RootName): Promise<void> {
+	async healRootFilesystem(rootName: RootNameLegacy): Promise<void> {
 		const fileReaders =
 			await this.deps.backgroundFileService.getReadersToAllMdFilesInFolder(
 				{
@@ -37,12 +37,16 @@ export class FilesystemHealer {
 
 		// Layer 1: Heal file paths
 		for (const reader of fileReaders) {
-			const prettyPath: PrettyPath = {
+			const prettyPath: PrettyPathLegacy = {
 				basename: reader.basename,
 				pathParts: reader.pathParts,
 			};
-			if (isInUntracked(prettyPath.pathParts)) continue;
-			const healResult = healFile(prettyPath, rootName, seenFolders);
+			if (isInUntrackedLegacy(prettyPath.pathParts)) continue;
+			const healResult = healFileLegacy(
+				prettyPath,
+				rootName,
+				seenFolders,
+			);
 			actions.push(...healResult.actions);
 		}
 
@@ -65,19 +69,24 @@ export class FilesystemHealer {
 	}
 
 	private async initializeMetaInfo(
-		fileReaders: Array<PrettyPath & { readContent: () => Promise<string> }>,
-		rootName: RootName,
+		fileReaders: Array<
+			PrettyPathLegacy & { readContent: () => Promise<string> }
+		>,
+		rootName: RootNameLegacy,
 	): Promise<LegacyVaultAction[]> {
 		const actions: LegacyVaultAction[] = [];
 
 		for (const reader of fileReaders) {
-			const prettyPath: PrettyPath = {
+			const prettyPath: PrettyPathLegacy = {
 				basename: reader.basename,
 				pathParts: reader.pathParts,
 			};
-			if (isInUntracked(prettyPath.pathParts)) continue;
+			if (isInUntrackedLegacy(prettyPath.pathParts)) continue;
 
-			const canonical = canonicalizePrettyPath({ prettyPath, rootName });
+			const canonical = canonicalizePrettyPathLegacy({
+				prettyPath,
+				rootName,
+			});
 			if ("reason" in canonical) continue;
 
 			const kind = canonical.kind;
@@ -93,7 +102,7 @@ export class FilesystemHealer {
 							transform: (old) =>
 								editOrAddMetaInfo(old, {
 									fileType: "Scroll",
-									status: TextStatus.NotStarted,
+									status: TextStatusLegacy.NotStarted,
 								}),
 						},
 						type: LegacyVaultActionType.ProcessFile,
@@ -110,7 +119,7 @@ export class FilesystemHealer {
 								editOrAddMetaInfo(old, {
 									fileType: "Page",
 									index: Number.isFinite(idx) ? idx : 0,
-									status: TextStatus.NotStarted,
+									status: TextStatusLegacy.NotStarted,
 								}),
 						},
 						type: LegacyVaultActionType.ProcessFile,
@@ -123,7 +132,8 @@ export class FilesystemHealer {
 						transform: (old) =>
 							editOrAddMetaInfo(old, {
 								fileType: "Scroll",
-								status: meta.status ?? TextStatus.NotStarted,
+								status:
+									meta.status ?? TextStatusLegacy.NotStarted,
 							}),
 					},
 					type: LegacyVaultActionType.ProcessFile,
@@ -135,28 +145,35 @@ export class FilesystemHealer {
 	}
 
 	private cleanupOrphanFolders(
-		fileReaders: Array<PrettyPath>,
-		rootName: RootName,
+		fileReaders: Array<PrettyPathLegacy>,
+		rootName: RootNameLegacy,
 	): LegacyVaultAction[] {
 		// Build folder contents map
 		const folderContents = new Map<
 			string,
-			{ hasCodex: boolean; hasNote: boolean; codexPaths: PrettyPath[] }
+			{
+				hasCodex: boolean;
+				hasNote: boolean;
+				codexPaths: PrettyPathLegacy[];
+			}
 		>();
 
 		for (const reader of fileReaders) {
-			const prettyPath: PrettyPath = {
+			const prettyPath: PrettyPathLegacy = {
 				basename: reader.basename,
 				pathParts: reader.pathParts,
 			};
 
-			if (isInUntracked(prettyPath.pathParts)) continue;
+			if (isInUntrackedLegacy(prettyPath.pathParts)) continue;
 
-			const canonical = canonicalizePrettyPath({ prettyPath, rootName });
+			const canonical = canonicalizePrettyPathLegacy({
+				prettyPath,
+				rootName,
+			});
 			const targetPath =
 				"reason" in canonical
 					? canonical.destination
-					: canonical.canonicalPrettyPath;
+					: canonical.canonicalPrettyPathLegacy;
 
 			const folderKey = targetPath.pathParts.join("/");
 			const entry = folderContents.get(folderKey) ?? {
@@ -200,7 +217,7 @@ export class FilesystemHealer {
 
 			const parts = folderKey.split("/").filter(Boolean);
 			if (parts.length === 0) continue;
-			if (isInUntracked(parts)) continue;
+			if (isInUntrackedLegacy(parts)) continue;
 
 			const basename = parts[parts.length - 1] ?? "";
 			const pathParts = parts.slice(0, -1);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { CodexFormatter } from "../../../../src/commanders/librarian/codex/codex-formatter";
 import type { CodexContent } from "../../../../src/commanders/librarian/codex/types";
-import { TextStatus } from "../../../../src/types/common-interface/enums";
+import { TextStatusLegacy } from "../../../../src/types/common-interface/enums";
 
 describe("CodexFormatter", () => {
 	const formatter = new CodexFormatter();
@@ -41,12 +41,12 @@ describe("CodexFormatter", () => {
 							{
 								children: [],
 								displayName: "Episode 1",
-								status: TextStatus.Done,
+								status: TextStatusLegacy.Done,
 								target: "__Episode_1-Season_1",
 							},
 						],
 						displayName: "Season 1",
-						status: TextStatus.NotStarted,
+						status: TextStatusLegacy.NotStarted,
 						target: "__Season_1-Avatar",
 					},
 				],
@@ -65,7 +65,7 @@ describe("CodexFormatter", () => {
 					{
 						children: [],
 						displayName: "Done Item",
-						status: TextStatus.Done,
+						status: TextStatusLegacy.Done,
 						target: "target",
 					},
 				],
@@ -83,7 +83,7 @@ describe("CodexFormatter", () => {
 					{
 						children: [],
 						displayName: "Not Started",
-						status: TextStatus.NotStarted,
+						status: TextStatusLegacy.NotStarted,
 						target: "target",
 					},
 				],
@@ -101,7 +101,7 @@ describe("CodexFormatter", () => {
 					{
 						children: [],
 						displayName: "In Progress",
-						status: TextStatus.InProgress,
+						status: TextStatusLegacy.InProgress,
 						target: "target",
 					},
 				],
@@ -124,13 +124,13 @@ describe("CodexFormatter", () => {
 					{
 						children: [],
 						displayName: "000",
-						status: TextStatus.Done,
+						status: TextStatusLegacy.Done,
 						target: "000-Page-Episode_1-Season_1-Avatar",
 					},
 					{
 						children: [],
 						displayName: "001",
-						status: TextStatus.NotStarted,
+						status: TextStatusLegacy.NotStarted,
 						target: "001-Page-Episode_1-Season_1-Avatar",
 					},
 				],
@@ -158,17 +158,17 @@ describe("CodexFormatter", () => {
 									{
 										children: [],
 										displayName: "Episode 1",
-										status: TextStatus.Done,
+										status: TextStatusLegacy.Done,
 										target: "__Episode_1-Season_1-Avatar",
 									},
 								],
 								displayName: "Season 1",
-								status: TextStatus.Done,
+								status: TextStatusLegacy.Done,
 								target: "__Season_1-Avatar",
 							},
 						],
 						displayName: "Avatar",
-						status: TextStatus.Done,
+						status: TextStatusLegacy.Done,
 						target: "__Avatar",
 					},
 				],

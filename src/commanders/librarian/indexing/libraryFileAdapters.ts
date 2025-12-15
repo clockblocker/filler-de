@@ -1,39 +1,42 @@
 import { extractMetaInfo } from "../../../services/dto-services/meta-info-manager/interface";
 import type { MetaInfo } from "../../../services/dto-services/meta-info-manager/types";
 import type { ReadablePrettyFile } from "../../../services/obsidian-services/file-services/background/background-file-service";
-import { TextStatus } from "../../../types/common-interface/enums";
-import type { LibraryFile, TreePath } from "../types";
+import { TextStatusLegacy } from "../../../types/common-interface/enums";
+import type { LibraryFileLegacy, TreePathLegacyLegacy } from "../types";
 import {
-	CodexBaseameSchema,
-	PageBasenameSchema,
-	ScrollBasenameSchema,
+	CodexBaseameSchemaLegacy,
+	PageBasenameLegacySchemaLegacy,
+	ScrollBasenameSchemaLegacy,
 	treePathToCodexBasename,
-	treePathToPageBasename,
+	treePathToPageBasenameLegacy,
 	treePathToScrollBasename,
 } from "./codecs";
 
-export function getTreePathFromLibraryFile(libraryFile: LibraryFile): TreePath {
+export function getTreePathLegacyLegacyFromLibraryFileLegacy(
+	libraryFile: LibraryFileLegacy,
+): TreePathLegacyLegacy {
 	const { metaInfo, fullPath } = libraryFile;
 	const { basename } = fullPath;
 
 	switch (metaInfo.fileType) {
 		case "Scroll": {
-			const parsedBasename = ScrollBasenameSchema.parse(basename);
+			const parsedBasename = ScrollBasenameSchemaLegacy.parse(basename);
 			return treePathToScrollBasename.decode(parsedBasename);
 		}
 		case "Page": {
-			const parsedBasename = PageBasenameSchema.parse(basename);
-			return treePathToPageBasename.decode(parsedBasename);
+			const parsedBasename =
+				PageBasenameLegacySchemaLegacy.parse(basename);
+			return treePathToPageBasenameLegacy.decode(parsedBasename);
 		}
 		case "Codex": {
-			const parsedBasename = CodexBaseameSchema.parse(basename);
+			const parsedBasename = CodexBaseameSchemaLegacy.parse(basename);
 			return treePathToCodexBasename.decode(parsedBasename);
 		}
 		case "Unknown": {
 			return [
 				...fullPath.pathParts,
 				basename.replace(/\.md$/, ""),
-			] as TreePath;
+			] as TreePathLegacyLegacy;
 		}
 	}
 }
@@ -44,19 +47,21 @@ export function getTreePathFromLibraryFile(libraryFile: LibraryFile): TreePath {
 function inferMetaInfo({
 	basename,
 }: Pick<ReadablePrettyFile, "basename" | "pathParts">): MetaInfo | null {
-	const codexResult = CodexBaseameSchema.safeParse(basename);
+	const codexResult = CodexBaseameSchemaLegacy.safeParse(basename);
 	if (codexResult.success) {
 		return {
 			fileType: "Codex",
-			status: TextStatus.NotStarted,
+			status: TextStatusLegacy.NotStarted,
 		};
 	}
 
-	const pageResult = PageBasenameSchema.safeParse(basename);
+	const pageResult = PageBasenameLegacySchemaLegacy.safeParse(basename);
 
 	if (pageResult.success) {
 		try {
-			const decoded = treePathToPageBasename.decode(pageResult.data);
+			const decoded = treePathToPageBasenameLegacy.decode(
+				pageResult.data,
+			);
 			const pageNum = decoded[0];
 			if (pageNum) {
 				const index = Number(pageNum);
@@ -64,7 +69,7 @@ function inferMetaInfo({
 					return {
 						fileType: "Page",
 						index,
-						status: TextStatus.NotStarted,
+						status: TextStatusLegacy.NotStarted,
 					};
 				}
 			}
@@ -73,20 +78,20 @@ function inferMetaInfo({
 		}
 	}
 
-	const scrollResult = ScrollBasenameSchema.safeParse(basename);
+	const scrollResult = ScrollBasenameSchemaLegacy.safeParse(basename);
 	if (scrollResult.success) {
 		return {
 			fileType: "Scroll",
-			status: TextStatus.NotStarted,
+			status: TextStatusLegacy.NotStarted,
 		};
 	}
 
 	return null;
 }
 
-export async function prettyFileWithReaderToLibraryFile(
+export async function prettyFileWithReaderToLibraryFileLegacy(
 	fileReader: ReadablePrettyFile,
-): Promise<LibraryFile | null> {
+): Promise<LibraryFileLegacy | null> {
 	const content = await fileReader.readContent();
 	let metaInfo = extractMetaInfo(content);
 
@@ -138,14 +143,14 @@ export async function prettyFileWithReaderToLibraryFile(
 	return null;
 }
 
-export async function prettyFilesWithReaderToLibraryFiles(
+export async function prettyFilesWithReaderToLibraryFileLegacy(
 	fileReaders: readonly ReadablePrettyFile[],
-): Promise<LibraryFile[]> {
+): Promise<LibraryFileLegacy[]> {
 	const libraryFiles = await Promise.all(
-		fileReaders.map(prettyFileWithReaderToLibraryFile),
+		fileReaders.map(prettyFileWithReaderToLibraryFileLegacy),
 	);
 
 	return libraryFiles.filter(
-		(libraryFile): libraryFile is LibraryFile => libraryFile !== null,
+		(libraryFile): libraryFile is LibraryFileLegacy => libraryFile !== null,
 	);
 }

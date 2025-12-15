@@ -5,7 +5,7 @@
 - Keep pwd/isInActiveView/list/exists/readContent; reuse splitPath helpers.
 - E2E: wdio-obsidian drives open/close/rename; assert reads and state.
 
-### 2) BackgroundFileService + e2e
+### 2) BackgroundFileServiceLegacy + e2e
 - Headless file ops backing `dispatch`: create/rename/trash/write/process using SplitPath/CoreSplitPath.
 - Provide list/exists/readContent helpers used by facade, matching index.ts shapes.
 - Maintain recent cache for perf; respect 500-cap queue/backpressure.

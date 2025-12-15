@@ -239,11 +239,12 @@ export class OpenedFileService {
 			const splitPath = file as SplitPathToFile | SplitPathToMdFile;
 			const systemPath = splitPathKey(splitPath);
 
-			const tfileMaybe = this.app.vault.getAbstractFileByPath(systemPath);
-			if (!tfileMaybe || !(tfileMaybe instanceof TFile)) {
+			const tfileMaybeLegacy =
+				this.app.vault.getAbstractFileByPath(systemPath);
+			if (!tfileMaybeLegacy || !(tfileMaybeLegacy instanceof TFile)) {
 				return err(errorNoTFileFound(systemPath));
 			}
-			tfile = tfileMaybe;
+			tfile = tfileMaybeLegacy;
 		} else {
 			return err(errorInvalidCdArgument());
 		}

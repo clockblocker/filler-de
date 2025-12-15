@@ -1,10 +1,10 @@
 import { type TFile, TFolder } from "obsidian";
-import type { PrettyPath } from "../../../types/common-interface/dtos";
+import type { PrettyPathLegacy } from "../../../types/common-interface/dtos";
 import type { Prettify } from "../../../types/helpers";
 import { SLASH } from "../../../types/literals";
 
-export function legacyFullPathToMdFileFromPrettyPath(
-	prettyPath: PrettyPath,
+export function legacyFullPathToMdFileFromPrettyPathLegacy(
+	prettyPath: PrettyPathLegacy,
 ): LegacyFullPathToMdFile {
 	return {
 		...prettyPath,
@@ -13,8 +13,8 @@ export function legacyFullPathToMdFileFromPrettyPath(
 	};
 }
 
-export function legacyFullPathToFolderFromPrettyPath(
-	prettyPath: PrettyPath,
+export function legacyFullPathToFolderFromPrettyPathLegacy(
+	prettyPath: PrettyPathLegacy,
 ): LegacyFullPathToFolder {
 	return {
 		...prettyPath,
@@ -61,7 +61,7 @@ export function legacySystemPathFromFullPath(fullPath: LegacyFullPath): string {
 }
 
 // SystemPath shall point to folder or MD file
-export function legacyFullPathFromSystemPath(
+export function fullPathFromSystemPathLegacy(
 	systemPath: string,
 ): LegacyFullPath {
 	// TODO: replace manual string parsing with codec if/when available
@@ -119,13 +119,13 @@ export function legacyJoinPosix(...parts: string[]): string {
 }
 
 export type LegacyFullPathToFolder = Prettify<
-	PrettyPath & {
+	PrettyPathLegacy & {
 		type: "folder";
 	}
 >;
 
 export type LegacyFullPathToMdFile = Prettify<
-	PrettyPath & {
+	PrettyPathLegacy & {
 		type: "file";
 		extension: "md";
 	}

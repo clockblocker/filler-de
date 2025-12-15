@@ -1,40 +1,42 @@
-import type { PrettyPath } from "../../../types/common-interface/dtos";
-import type { RootName } from "../constants";
+import type { PrettyPathLegacy } from "../../../types/common-interface/dtos";
+import type { RootNameLegacy } from "../constants";
 import { UNTRACKED_FOLDER_NAME } from "../constants";
 import {
-	CodexBaseameSchema,
-	PageBasenameSchema,
-	ScrollBasenameSchema,
-	toNodeName,
+	CodexBaseameSchemaLegacy,
+	PageBasenameLegacySchemaLegacy,
+	ScrollBasenameSchemaLegacy,
+	toNodeNameLegacy,
 	treePathToCodexBasename,
-	treePathToPageBasename,
+	treePathToPageBasenameLegacy,
 	treePathToScrollBasename,
 } from "../indexing/codecs";
 
-import type { TreePath } from "../types";
+import type { TreePathLegacyLegacy } from "../types";
 
-export type CanonicalFileKind = "scroll" | "page" | "codex";
+export type CanonicalFileKindLegacy = "scroll" | "page" | "codex";
 
-export type CanonicalizedFile = {
-	canonicalPrettyPath: PrettyPath;
-	currentPrettyPath: PrettyPath;
-	kind: CanonicalFileKind;
-	treePath: TreePath;
+export type CanonicalizedFileLegacy = {
+	canonicalPrettyPathLegacy: PrettyPathLegacy;
+	currentPrettyPathLegacy: PrettyPathLegacy;
+	kind: CanonicalFileKindLegacy;
+	treePath: TreePathLegacyLegacy;
 };
 
-export type QuarantinedFile = {
-	currentPrettyPath: PrettyPath;
-	destination: PrettyPath;
+export type QuarantinedFileLegacy = {
+	currentPrettyPathLegacy: PrettyPathLegacy;
+	destination: PrettyPathLegacy;
 	reason: "undecodable";
 };
 
-export type DecodedBasename = {
-	kind: CanonicalFileKind;
-	treePath: TreePath;
+export type DecodedBasenameLegacy = {
+	kind: CanonicalFileKindLegacy;
+	treePath: TreePathLegacyLegacy;
 };
 
-export function decodeBasename(basename: string): DecodedBasename | null {
-	const codexResult = CodexBaseameSchema.safeParse(basename);
+export function decodeBasenameLegacy(
+	basename: string,
+): DecodedBasenameLegacy | null {
+	const codexResult = CodexBaseameSchemaLegacy.safeParse(basename);
 	if (codexResult.success) {
 		return {
 			kind: "codex",
@@ -42,15 +44,15 @@ export function decodeBasename(basename: string): DecodedBasename | null {
 		};
 	}
 
-	const pageResult = PageBasenameSchema.safeParse(basename);
+	const pageResult = PageBasenameLegacySchemaLegacy.safeParse(basename);
 	if (pageResult.success) {
 		return {
 			kind: "page",
-			treePath: treePathToPageBasename.decode(pageResult.data),
+			treePath: treePathToPageBasenameLegacy.decode(pageResult.data),
 		};
 	}
 
-	const scrollResult = ScrollBasenameSchema.safeParse(basename);
+	const scrollResult = ScrollBasenameSchemaLegacy.safeParse(basename);
 	if (scrollResult.success) {
 		return {
 			kind: "scroll",
@@ -62,7 +64,7 @@ export function decodeBasename(basename: string): DecodedBasename | null {
 }
 
 function sanitizeSegments(segments: readonly string[]): string[] {
-	return segments.map((segment) => toNodeName(segment));
+	return segments.map((segment) => toNodeNameLegacy(segment));
 }
 
 function stripRedundantSuffix(path: string[]): string[] {
@@ -91,9 +93,9 @@ function quarantinePath({
 	prettyPath,
 	rootName,
 }: {
-	prettyPath: PrettyPath;
-	rootName: RootName;
-}): PrettyPath {
+	prettyPath: PrettyPathLegacy;
+	rootName: RootNameLegacy;
+}): PrettyPathLegacy {
 	const folderPath = prettyPath.pathParts.slice(1);
 
 	return {
@@ -109,14 +111,14 @@ export function computeCanonicalPath({
 	decoded,
 	folderPath,
 	rootName,
-	currentPrettyPath,
+	currentPrettyPathLegacy,
 }: {
 	authority: Authority;
-	decoded: DecodedBasename;
+	decoded: DecodedBasenameLegacy;
 	folderPath: string[];
-	rootName: RootName;
-	currentPrettyPath: PrettyPath;
-}): CanonicalizedFile {
+	rootName: RootNameLegacy;
+	currentPrettyPathLegacy: PrettyPathLegacy;
+}): CanonicalizedFileLegacy {
 	const sanitizedFolderPath = sanitizeSegments(folderPath);
 	const decodedPath = sanitizeSegments(decoded.treePath);
 
@@ -139,7 +141,7 @@ export function computeCanonicalPath({
 						? []
 						: decodedPath;
 
-		const canonicalPrettyPath: PrettyPath = {
+		const canonicalPrettyPathLegacy: PrettyPathLegacy = {
 			basename:
 				sectionPath.length === 0
 					? treePathToCodexBasename.encode([rootName])
@@ -147,12 +149,12 @@ export function computeCanonicalPath({
 			pathParts: [rootName, ...sectionPath],
 		};
 
-		const treePath: TreePath =
+		const treePath: TreePathLegacyLegacy =
 			sectionPath.length === 0 ? [rootName] : sectionPath;
 
 		return {
-			canonicalPrettyPath,
-			currentPrettyPath,
+			canonicalPrettyPathLegacy,
+			currentPrettyPathLegacy,
 			kind: decoded.kind,
 			treePath,
 		};
@@ -172,23 +174,23 @@ export function computeCanonicalPath({
 					)
 				: stripRedundantSuffix(decodedParent);
 
-		const treePath: TreePath = [...parentPath, pageNumber];
+		const treePath: TreePathLegacyLegacy = [...parentPath, pageNumber];
 
-		const canonicalPrettyPath: PrettyPath = {
-			basename: treePathToPageBasename.encode(treePath),
+		const canonicalPrettyPathLegacy: PrettyPathLegacy = {
+			basename: treePathToPageBasenameLegacy.encode(treePath),
 			pathParts: [rootName, ...parentPath],
 		};
 
 		return {
-			canonicalPrettyPath,
-			currentPrettyPath,
+			canonicalPrettyPathLegacy,
+			currentPrettyPathLegacy,
 			kind: decoded.kind,
 			treePath,
 		};
 	}
 
 	const decodedParent = decodedPath.slice(0, -1);
-	const name = toNodeName(decodedPath[decodedPath.length - 1] ?? "");
+	const name = toNodeNameLegacy(decodedPath[decodedPath.length - 1] ?? "");
 	const parentPath =
 		authority === "folder"
 			? stripRedundantSuffix(
@@ -199,33 +201,33 @@ export function computeCanonicalPath({
 				)
 			: stripRedundantSuffix(decodedParent);
 
-	const treePath: TreePath = [...parentPath, name];
+	const treePath: TreePathLegacyLegacy = [...parentPath, name];
 
-	const canonicalPrettyPath: PrettyPath = {
+	const canonicalPrettyPathLegacy: PrettyPathLegacy = {
 		basename: treePathToScrollBasename.encode(treePath),
 		pathParts: [rootName, ...parentPath],
 	};
 
 	return {
-		canonicalPrettyPath,
-		currentPrettyPath,
+		canonicalPrettyPathLegacy,
+		currentPrettyPathLegacy,
 		kind: decoded.kind,
 		treePath,
 	};
 }
 
-export function canonicalizePrettyPath({
+export function canonicalizePrettyPathLegacy({
 	rootName,
 	prettyPath,
 }: {
-	rootName: RootName;
-	prettyPath: PrettyPath;
-}): CanonicalizedFile | QuarantinedFile {
-	const decoded = decodeBasename(prettyPath.basename);
+	rootName: RootNameLegacy;
+	prettyPath: PrettyPathLegacy;
+}): CanonicalizedFileLegacy | QuarantinedFileLegacy {
+	const decoded = decodeBasenameLegacy(prettyPath.basename);
 
 	if (!decoded) {
 		return {
-			currentPrettyPath: prettyPath,
+			currentPrettyPathLegacy: prettyPath,
 			destination: quarantinePath({ prettyPath, rootName }),
 			reason: "undecodable",
 		};
@@ -233,7 +235,7 @@ export function canonicalizePrettyPath({
 
 	return computeCanonicalPath({
 		authority: "folder",
-		currentPrettyPath: prettyPath,
+		currentPrettyPathLegacy: prettyPath,
 		decoded,
 		folderPath: prettyPath.pathParts.slice(1),
 		rootName,
@@ -241,8 +243,8 @@ export function canonicalizePrettyPath({
 }
 
 export function isCanonical(
-	prettyPath: PrettyPath,
-	canonical: PrettyPath,
+	prettyPath: PrettyPathLegacy,
+	canonical: PrettyPathLegacy,
 ): boolean {
 	// Case-insensitive compare to avoid unnecessary renames on macOS
 	return (

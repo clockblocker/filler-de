@@ -1,13 +1,16 @@
 import z from "zod/v4";
-import { type PageBasename, PageBasenameSchema } from "./page";
-import { type ScrollBasename, ScrollBasenameSchema } from "./scroll";
+import {
+	type PageBasenameLegacy,
+	PageBasenameLegacySchemaLegacy,
+} from "./page";
+import { type ScrollBasename, ScrollBasenameSchemaLegacy } from "./scroll";
 
-export const NoteBasenameSchema = z.union([
-	PageBasenameSchema,
-	ScrollBasenameSchema,
+export const NoteBasenameLegacySchemaLegacy = z.union([
+	PageBasenameLegacySchemaLegacy,
+	ScrollBasenameSchemaLegacy,
 ]);
 
-export type NoteBasename = PageBasename | ScrollBasename;
+export type NoteBasenameLegacy = PageBasenameLegacy | ScrollBasename;
 
-export const isNoteBasename = (s: string): s is NoteBasename =>
-	NoteBasenameSchema.safeParse(s).success;
+export const isNoteBasenameLegacy = (s: string): s is NoteBasenameLegacy =>
+	NoteBasenameLegacySchemaLegacy.safeParse(s).success;
