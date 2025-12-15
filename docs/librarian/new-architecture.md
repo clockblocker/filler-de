@@ -1,67 +1,72 @@
 # LibrarianLegacy Architecture
 
-3-layer pipeline for file events. Layers execute sequentially; each layer is pure/testable.
-
-```
-User-triggered Obsidian Event → Vault Action Manager -> Layer 1 (Heal) → Layer 2 (Tree Reconciliation) → Layer 3 (Codex regeneration)
-```
-
-The goal of the LibrarianLegacy is to watch over the "Library" folder and:
-1) keep filenames in sync with their paths. For example:
-- Library/parent/child/NoteBaseName-child-parent.md
-- Library/doc/paper/Pekar/2025/The recency and geographical origins of the bat viruses ancestral to SARS_CoV and SARS_CoV_2-2025-Pekar-paper-doc.pdf
-2) assist in navigation via genetaring and updating:
+Goal. To watch over the specified "Library" folder and:
+1) Keep filenames in sync with their paths. 
+2) Assist in navigation via genetaring and updating:
 - metadata on md notes
 - the codexes of the filesystem
 
-## Layer 1: Filesystem Healing
 
-**Purpose:** Enforce filename invariant. Fix basename/folder mismatches.
-Litens to the user triggered events from Vault Action Manager.
-Only cares about naming. Does not know or care about metadata / codexes.
+The core part of the sysytem are:
 
-1) If user creates a NEW file (Library/parent/filename.md), returns an Rename event to Library/parent/filename-parent.md
-2) If user creates a NEW file (Library/parent/filename.md), returns an Rename event to Library/parent/filename-parent.md
+1) Vault Action Manager. Emits End-User-Triggered events. Accepts batches of Vault Actions and executes them. Does not emit anything for system-triggered events. Not a part of the Librarian directly. To be treated as external library.
+Vault Action Manager acepts VaultActions
 
-Pure, sync, no tree access. Returns `VaultAction[]` — caller executes.
+2) LibraryTree. The shadow of existing file system. Consists of:
+- ScrollNodes (a shadows of markdown Tfiles)
+{ coreName: string, pathToParent: string[], tRef: TFile, nodeType: "Scroll", status: "Done" | "NotStarted" }
+- FileNodes (a shadows of non-markdown Tfiles)
+{ coreName: string, pathToParent: string[], tRef: TFile, nodeType: "File", status: "Unknown" }
+- SectionNodes (a shadows of Tfolder)
+{ coreName: string, pathToParent: string[], tRef: TFolder, nodeType: "Section", status: "Done" | "NotStarted", children: (ScrollNode | FileNode)[]}
 
-## Layer 2: Tree Reconciliation
+LibraryTree is itialized with an array of TreeLeafDtos: 
+((ScrollNode | FileNode) & Pick<SplitPath, "pathParts">)[]
 
-**Purpose:** In-memory state reflecting filesystem.
+LibraryTree acepts TreeActions
+- CreateNode
+- DeleteNode
+- ChangeNodeName:
+    - updates coreName
+    - updates the pathToParent of all it's children reqursively
+- ChangeNodeStatus (for ScrollNodes and SectionNodes only): 
+    - change in status of a SectionNode, changes all it's children's statuses recursively;
+    - change in status of a ScrollNode, changes it's status
+    - after the change of the target node is done, it's parent checks statuses of children. 
+        - if none of the children are "NotStarted", it set's own status to "Done"
+        - if one of the children is "NotStarted", it set's own status to "NotStarted"
+        - if the new status has changed, trigger the same logic for it's parent
 
-**State:** `LibraryTreeLegacy` (single root; nodes = notes/sections with status)
+LibraryTree can serialize itself to TreeLeafDtos (for copy creation)
+LibraryTree supports getNodeByCoreNameChain(chain: string[])
 
-**Functions:**
-- `readNoteDtoLegacy()` — filesystem → `NoteDtoLegacy[]`
-- `tree.reconcile()` — apply notes to tree
-- `tree.snapshot()` → before/after for diffing
+3) reconcilaltion
+- translate the Emited by Vault Action Manager End-User-Triggered events to TreeActions
+- clone the existing tree
+- apply the TreeActions to the copy
+- actions = diff(existingTree, newTree): VaultAction[] // handles both files and ccodexes 
+- VaultActionManager.dispath(actions)
 
-## Layer 3: Diff → Codex Actions
 
-**Purpose:** Generate codex updates from tree changes.
+Layered pipeline for file events. Layers execute sequentially; each layer is pure/testable.
 
-**Functions:** `mapDiffToActions()`, `regenerateCodexActionsLegacy()` in `diffing/tree-diff-applier.ts`
+```
+Obsidian Event is triggered
+    → Vault Action Manager confirms it is User-triggered and emits the event
+    → Librarian recieves the event and:
+        → Converts the 
+        → Copy existing tree. Apply TreeActions to heal Quaranteened NOdes
+        → Tree Reconciliation. Find diff between Old Healthy Tree and New Healthy Tree.
+        → Dispatch Actions to Vault Actions Manager with fixes to impacted files and codexes.
+```
 
-**Input:** `NoteDiff` + `RootNameLegacy`  
-**Output:** `VaultAction[]` (create/update/trash codex files)
 
-## Orchestrator: LibrarianLegacy
 
-Holds state, routes events through layers.
 
-`LibrarianLegacy` holds the tree, a `SelfEventTrackerLegacy`, and an `ActionDispatcherLegacy`/queue.
+Example of "filenames in sync with their paths". 
+Given settings { LibrarianRoot: "Library", suffixDelimeter: "-" }:
+- "Library/parent/child/NoteBaseName-child-parent.md"; 
+{ pathParts: ["Library", "parent", "child"], extension: "md", splitBasename: {coreName: "NoteBaseName", splitSuffix: ["child", "parent"] }}
+- "Library/doc/paper/Pekar/2025/The recency and geographical origins of the bat viruses ancestral to SARS_CoV and SARS_CoV_2-2025-Pekar-paper-doc.pdf"
+{ pathParts: ["Library", "doc", "paper", "Pekar", "2025"], extension: "md", splitBasename: {coreName: "The recency and geographical origins of the bat viruses ancestral to SARS_CoV and SARS_CoV_2", splitSuffix: ["2025", "Pekar", "paper", "doc"] }}
 
-### Event Flow: `onFileRenamed`
-
-**Authority selection:** depends on what user changed.
-
-| User changes | Authority | Result |
-|--------------|-----------|--------|
-| basename only | basename | Move file to decoded path |
-| folder (pathParts) | folder | Rename basename to match |
-| both | folder | Folder wins |
-
-**Special cases:**
-- Codex rename → revert immediately (auto-generated)
-- Page rename → convert to scroll (strip page number)
-- Conflict at target → unique suffix (`_1`, `_2`)

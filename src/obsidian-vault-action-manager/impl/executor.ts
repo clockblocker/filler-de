@@ -5,7 +5,7 @@ import type { TFileHelper } from "../file-services/background/helpers/tfile-help
 import type { TFolderHelper } from "../file-services/background/helpers/tfolder-helper";
 import type { MdFileWithContentDto } from "../helpers/pathfinder";
 import { systemPathToSplitPath } from "../helpers/pathfinder";
-import type { SplitPathToMdFile } from "../types/split-path";
+import type { SplitPathToFolder, SplitPathToMdFile } from "../types/split-path";
 import type { VaultAction } from "../types/vault-action";
 import { VaultActionType } from "../types/vault-action";
 
@@ -55,6 +55,41 @@ export class Executor {
 				}
 			}
 			case VaultActionType.CreateMdFile: {
+				// Ensure parent folders exist before creating file
+				// (helpers assume folders exist, so we create them here as tracked actions)
+				const { splitPath } = action.payload;
+				if (splitPath.pathParts.length > 0) {
+					// Create parent folders recursively
+					for (let i = 1; i <= splitPath.pathParts.length; i++) {
+						const parentPathParts = splitPath.pathParts.slice(0, i);
+						const parentFolderPath: SplitPathToFolder = {
+							basename: parentPathParts[i - 1] ?? "",
+							pathParts: parentPathParts.slice(0, -1),
+							type: "Folder",
+						};
+						const parentSystemPath =
+							systemPathToSplitPath.encode(parentFolderPath);
+						const parentExists =
+							this.vault.getAbstractFileByPath(parentSystemPath);
+						if (!parentExists) {
+							try {
+								await this.vault.createFolder(parentSystemPath);
+							} catch (error) {
+								// Ignore "already exists" - race condition
+								if (
+									!error.message?.includes("already exists")
+								) {
+									return err(
+										error instanceof Error
+											? error.message
+											: String(error),
+									);
+								}
+							}
+						}
+					}
+				}
+
 				const dto: MdFileWithContentDto = {
 					content: action.payload.content,
 					splitPath: action.payload.splitPath,
@@ -106,6 +141,47 @@ export class Executor {
 					action.payload.splitPath,
 				);
 				if (fileResult.isErr()) {
+					// Ensure parent folders exist before creating file
+					const { splitPath } = action.payload;
+					if (splitPath.pathParts.length > 0) {
+						for (let i = 1; i <= splitPath.pathParts.length; i++) {
+							const parentPathParts = splitPath.pathParts.slice(
+								0,
+								i,
+							);
+							const parentFolderPath: SplitPathToFolder = {
+								basename: parentPathParts[i - 1] ?? "",
+								pathParts: parentPathParts.slice(0, -1),
+								type: "Folder",
+							};
+							const parentSystemPath =
+								systemPathToSplitPath.encode(parentFolderPath);
+							const parentExists =
+								this.vault.getAbstractFileByPath(
+									parentSystemPath,
+								);
+							if (!parentExists) {
+								try {
+									await this.vault.createFolder(
+										parentSystemPath,
+									);
+								} catch (error) {
+									if (
+										!error.message?.includes(
+											"already exists",
+										)
+									) {
+										return err(
+											error instanceof Error
+												? error.message
+												: String(error),
+										);
+									}
+								}
+							}
+						}
+					}
+
 					// File doesn't exist - create it with the content directly
 					const dto: MdFileWithContentDto = {
 						content: action.payload.content,
@@ -150,8 +226,36 @@ export class Executor {
 			return ok(undefined);
 		}
 
+		// Ensure parent folders exist before creating file
+		if (splitPath.pathParts.length > 0) {
+			for (let i = 1; i <= splitPath.pathParts.length; i++) {
+				const parentPathParts = splitPath.pathParts.slice(0, i);
+				const parentFolderPath: SplitPathToFolder = {
+					basename: parentPathParts[i - 1] ?? "",
+					pathParts: parentPathParts.slice(0, -1),
+					type: "Folder",
+				};
+				const parentSystemPath =
+					systemPathToSplitPath.encode(parentFolderPath);
+				const parentExists =
+					this.vault.getAbstractFileByPath(parentSystemPath);
+				if (!parentExists) {
+					try {
+						await this.vault.createFolder(parentSystemPath);
+					} catch (error) {
+						if (!error.message?.includes("already exists")) {
+							return err(
+								error instanceof Error
+									? error.message
+									: String(error),
+							);
+						}
+					}
+				}
+			}
+		}
+
 		// File doesn't exist - create it with empty content
-		// vault.create automatically creates parent folders
 		const dto: MdFileWithContentDto = {
 			content: "",
 			splitPath,

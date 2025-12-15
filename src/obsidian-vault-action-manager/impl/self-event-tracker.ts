@@ -1,4 +1,8 @@
-import { systemPathToSplitPath } from "../helpers/pathfinder";
+import {
+	pathToFolderFromPathParts,
+	systemPathToSplitPath,
+} from "../helpers/pathfinder";
+import type { SplitPath } from "../types/split-path";
 import type { VaultAction } from "../types/vault-action";
 import { VaultActionType } from "../types/vault-action";
 
@@ -50,7 +54,9 @@ export class SelfEventTrackerLegacy {
 
 	/**
 	 * Extract system paths from an action.
-	 * For renames: returns both `from` and `to` paths.
+	 * For create operations: returns target path + all parent folder paths
+	 *   (Obsidian auto-creates parent folders, so we must track them).
+	 * For renames: returns both `from` and `to` paths + their parent folders.
 	 * For others: returns target path.
 	 */
 	private extractPaths(action: VaultAction): string[] {
@@ -58,24 +64,56 @@ export class SelfEventTrackerLegacy {
 
 		switch (type) {
 			case VaultActionType.CreateFolder:
-			case VaultActionType.TrashFolder:
 			case VaultActionType.CreateFile:
-			case VaultActionType.TrashFile:
 			case VaultActionType.CreateMdFile:
-			case VaultActionType.TrashMdFile:
 			case VaultActionType.ProcessMdFile:
 			case VaultActionType.ReplaceContentMdFile:
+				// Track target path + all parent folder paths
+				// (Obsidian auto-creates parent folders for create operations)
+				return this.extractPathsWithParents(payload.splitPath);
+
+			case VaultActionType.TrashFolder:
+			case VaultActionType.TrashFile:
+			case VaultActionType.TrashMdFile:
+				// Trash operations don't create parent folders, only track target
 				return [systemPathToSplitPath.encode(payload.splitPath)];
 
 			case VaultActionType.RenameFolder:
 			case VaultActionType.RenameFile:
 			case VaultActionType.RenameMdFile:
-				// Track both from and to for renames
+				// Track both from and to paths + their parent folders
+				// (rename to new location may create parent folders)
 				return [
-					systemPathToSplitPath.encode(payload.from),
-					systemPathToSplitPath.encode(payload.to),
+					...this.extractPathsWithParents(payload.from),
+					...this.extractPathsWithParents(payload.to),
 				];
 		}
+	}
+
+	/**
+	 * Extract target path + all parent folder paths.
+	 * Obsidian's vault.create() and vault.createFolder() automatically create
+	 * parent folders, which emit events we must filter.
+	 */
+	private extractPathsWithParents(splitPath: SplitPath): string[] {
+		const paths: string[] = [];
+
+		// Extract all parent folder paths FIRST (Obsidian creates them before the target)
+		// For pathParts ["a", "b", "c"], generate: "a", "a/b", "a/b/c"
+		const { pathParts } = splitPath;
+		for (let i = 1; i <= pathParts.length; i++) {
+			const parentPathParts = pathParts.slice(0, i);
+			const parentPath = pathToFolderFromPathParts(parentPathParts);
+			if (parentPath) {
+				paths.push(parentPath);
+			}
+		}
+
+		// Then add the target path (file or folder being created)
+		const targetPath = systemPathToSplitPath.encode(splitPath);
+		paths.push(targetPath);
+
+		return paths;
 	}
 
 	/**

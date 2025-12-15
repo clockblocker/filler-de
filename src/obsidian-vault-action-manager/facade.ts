@@ -61,12 +61,9 @@ export class ObsidianVaultActionManagerImpl
 			app.vault,
 		);
 		this.reader = new Reader(this.opened, this.background);
-		this.dispatcher = new Dispatcher(executor);
 		this.selfEventTracker = new SelfEventTrackerLegacy();
-		this.actionQueue = new ActionQueue(
-			this.dispatcher,
-			this.selfEventTracker,
-		);
+		this.dispatcher = new Dispatcher(executor, this.selfEventTracker);
+		this.actionQueue = new ActionQueue(this.dispatcher);
 		this.eventAdapter = new EventAdapter(app, this.selfEventTracker);
 	}
 

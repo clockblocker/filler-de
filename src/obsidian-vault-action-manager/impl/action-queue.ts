@@ -20,10 +20,7 @@ export class ActionQueue {
 	private batchCount = 0;
 	private readonly maxBatches = 10;
 
-	constructor(
-		private readonly dispatcher: Dispatcher,
-		private readonly selfEventTracker: SelfEventTrackerLegacy,
-	) {}
+	constructor(private readonly dispatcher: Dispatcher) {}
 
 	/**
 	 * Dispatch actions to queue.
@@ -68,10 +65,9 @@ export class ActionQueue {
 		const batch = [...this.queue];
 		this.queue = [];
 
-		// Register with self-event tracker BEFORE dispatch
-		this.selfEventTracker.register(batch);
-
-		// Dispatch: collapse + sort + execute (handled by Dispatcher)
+		// Dispatch: collapse + sort + register paths + execute (handled by Dispatcher)
+		// Path registration happens INSIDE Dispatcher after collapse
+		// to ensure we track paths from the ACTUAL actions that will execute
 		const result = await this.dispatcher.dispatch(batch);
 
 		this.batchCount--;

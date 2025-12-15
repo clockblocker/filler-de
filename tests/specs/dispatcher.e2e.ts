@@ -11,6 +11,15 @@ import { testCollapseWriteProcess } from "./dispatcher/collapse-write-process.te
 import { testComplexScenario } from "./dispatcher/complex-scenario.test";
 import { testEmptyActions } from "./dispatcher/empty-actions.test";
 import { testErrorHandlingSingle } from "./dispatcher/error-handling-single.test";
+import {
+	testCreateFileWithMissingParentFolders,
+	testCreateFolderWithMissingParents,
+	testMultipleNestedOperations,
+	testProcessMdFileWithEnsureFileExists,
+	testProcessMdFileWithMissingParentFolders,
+	testReplaceContentMdFileWithEnsureFileExists,
+	testReplaceContentMdFileWithMissingParentFolders,
+} from "./dispatcher/helper-events-no-leak.test";
 import { testQueueBehavior } from "./dispatcher/queue-behavior.test";
 import { testSelfEventFiltering } from "./dispatcher/self-event-filtering.test";
 import { testSingleActionHappyPath } from "./dispatcher/single-action-happy.test";
@@ -68,5 +77,36 @@ describe("Dispatcher", () => {
 
 	describe("Queue Behavior", () => {
 		it("should batch and execute multiple dispatches", testQueueBehavior);
+	});
+
+	describe("Helper Events - No Leak", () => {
+		it(
+			"should not emit events when creating file with missing parent folders",
+			testCreateFileWithMissingParentFolders,
+		);
+		it(
+			"should not emit events when creating folder with missing parents",
+			testCreateFolderWithMissingParents,
+		);
+		it(
+			"should not emit events when ProcessMdFile ensures file exists",
+			testProcessMdFileWithEnsureFileExists,
+		);
+		it(
+			"should not emit events when ProcessMdFile creates file in missing folders",
+			testProcessMdFileWithMissingParentFolders,
+		);
+		it(
+			"should not emit events when ReplaceContentMdFile ensures file exists",
+			testReplaceContentMdFileWithEnsureFileExists,
+		);
+		it(
+			"should not emit events when ReplaceContentMdFile creates file in missing folders",
+			testReplaceContentMdFileWithMissingParentFolders,
+		);
+		it(
+			"should not emit events for multiple nested operations",
+			testMultipleNestedOperations,
+		);
 	});
 });

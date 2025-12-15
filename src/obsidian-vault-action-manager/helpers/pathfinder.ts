@@ -109,9 +109,15 @@ export const systemPathToSplitPath = z.codec(z.string(), SplitPathSchema, {
 			splitPath.type === SplitPathType.File
 				? `.${splitPath.extension}`
 				: "";
+		// Strip extension from basename if it already includes it
+		// (splitPathFromString sets basename to include extension, but we add it again)
+		const basenameWithoutExt =
+			extension && title.endsWith(extension)
+				? title.slice(0, -extension.length)
+				: title;
 		return joinPosix(
 			pathToFolderFromPathParts(pathParts),
-			safeFileName(title) + extension,
+			safeFileName(basenameWithoutExt) + extension,
 		);
 	},
 });
