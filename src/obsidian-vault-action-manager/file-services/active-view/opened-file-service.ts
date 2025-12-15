@@ -267,7 +267,7 @@ export class OpenedFileService {
 		return result.isOk() && result.value;
 	}
 
-	async readContent(splitPath: SplitPathToMdFile): Promise<string> {
+	async readContent(__splitPath: SplitPathToMdFile): Promise<string> {
 		const contentResult = await this.getContent();
 		if (contentResult.isErr()) {
 			throw new Error(contentResult.error);

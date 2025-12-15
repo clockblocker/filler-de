@@ -1,30 +1,30 @@
 import type { App, TAbstractFile, TFile, TFolder } from "obsidian";
-import { OpenedFileReader } from "../file-services/active-view/opened-file-reader";
-import type { OpenedFileService } from "../file-services/active-view/opened-file-service";
-import { OpenedFileService as OpenedFileServiceImpl } from "../file-services/active-view/opened-file-service";
-import { TFileHelper } from "../file-services/background/helpers/tfile-helper";
-import { TFolderHelper } from "../file-services/background/helpers/tfolder-helper";
+import { OpenedFileReader } from "./file-services/active-view/opened-file-reader";
+import type { OpenedFileService } from "./file-services/active-view/opened-file-service";
+import { OpenedFileService as OpenedFileServiceImpl } from "./file-services/active-view/opened-file-service";
+import { TFileHelper } from "./file-services/background/helpers/tfile-helper";
+import { TFolderHelper } from "./file-services/background/helpers/tfolder-helper";
+import { ActionQueue } from "./impl/action-queue";
+import { BackgroundFileService } from "./impl/background-file-service";
+import { Dispatcher } from "./impl/dispatcher";
+import { EventAdapter } from "./impl/event-adapter";
+import { Executor } from "./impl/executor";
+import { Reader } from "./impl/reader";
+import { SelfEventTracker } from "./impl/self-event-tracker";
+import { splitPath } from "./impl/split-path";
 import type {
 	DispatchResult,
 	ObsidianVaultActionManager,
 	Teardown,
 	VaultEventHandler,
-} from "../index";
+} from "./index";
 import type {
 	SplitPath,
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
-} from "../types/split-path";
-import type { VaultAction } from "../types/vault-action";
-import { ActionQueue } from "./action-queue";
-import { BackgroundFileService } from "./background-file-service";
-import { Dispatcher } from "./dispatcher";
-import { EventAdapter } from "./event-adapter";
-import { Executor } from "./executor";
-import { Reader } from "./reader";
-import { SelfEventTracker } from "./self-event-tracker";
-import { splitPath } from "./split-path";
+} from "./types/split-path";
+import type { VaultAction } from "./types/vault-action";
 
 export class ObsidianVaultActionManagerImpl
 	implements ObsidianVaultActionManager

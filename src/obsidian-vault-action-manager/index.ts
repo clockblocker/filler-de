@@ -1,5 +1,6 @@
 import type { TAbstractFile, TFile, TFolder } from "obsidian";
 import { z } from "zod";
+import type { DispatchResult } from "./impl/dispatcher";
 import { splitPath as buildSplitPath, splitPathKey } from "./impl/split-path";
 import { CREATE, FILE, RENAME, TRASH } from "./types/literals";
 import type {
@@ -37,8 +38,6 @@ export type VaultEvent =
 export type VaultEventHandler = (event: VaultEvent) => Promise<void>;
 
 export type Teardown = () => void;
-
-export type { DispatchError, DispatchResult } from "./impl/dispatcher";
 
 export interface ObsidianVaultActionManager {
 	subscribe(handler: VaultEventHandler): Teardown;
@@ -78,4 +77,4 @@ export function splitPath(
 	return buildSplitPath(input);
 }
 
-export { ObsidianVaultActionManagerImpl } from "./impl/facade";
+export { ObsidianVaultActionManagerImpl } from "./facade";

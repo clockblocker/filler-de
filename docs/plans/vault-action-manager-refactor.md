@@ -115,11 +115,15 @@ This refactor aims to consolidate and modernize file/folder operations by:
 
 ### 🚧 In Progress
 
-- [x] Integration with `ObsidianVaultActionManager` facade (partial)
-- [ ] ActionQueue implementation (call stack pattern)
-- [ ] SelfEventTracker implementation
-- [ ] EventAdapter integration with self-event filtering
 - [ ] Migration of `Librarian` to use new vault action manager
+
+### ✅ Recently Completed
+
+- [x] Integration with `ObsidianVaultActionManager` facade
+- [x] ActionQueue implementation (call stack pattern)
+- [x] SelfEventTracker implementation
+- [x] EventAdapter integration with self-event filtering
+- [x] E2E tests for self-event filtering and queue behavior
 
 ### 📋 Pending
 
