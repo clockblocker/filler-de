@@ -1,3 +1,4 @@
+export { Librarian } from "./librarian";
 export { LibraryTree } from "./library-tree";
 export type {
 	CoreName,
@@ -15,4 +16,5 @@ export type {
 	TreeNodeStatus,
 	TreeNodeType,
 } from "./types/tree-node";
+export { createTestTreeActions } from "./utils/create-test-tree-actions";
 export { findCommonAncestor } from "./utils/find-common-ancestor";

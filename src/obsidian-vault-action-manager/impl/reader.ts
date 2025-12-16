@@ -1,10 +1,14 @@
-import type { TFile, TFolder } from "obsidian";
+import type { TAbstractFile, TFile, TFolder } from "obsidian";
 import type { OpenedFileService } from "../file-services/active-view/opened-file-service";
 import type {
 	SplitPath,
 	SplitPathToFile,
+	SplitPathToFileWithTRef,
 	SplitPathToFolder,
+	SplitPathToFolderWithTRef,
 	SplitPathToMdFile,
+	SplitPathToMdFileWithTRef,
+	SplitPathWithTRef,
 } from "../types/split-path";
 import type { BackgroundFileServiceLegacy } from "./background-file-service";
 import { splitPathKey } from "./split-path";
@@ -38,8 +42,8 @@ export class Reader {
 		return Array.from(dedup.values());
 	}
 
-	async listAll(folder: SplitPathToFolder): Promise<SplitPath[]> {
-		const all: SplitPath[] = [];
+	async listAll(folder: SplitPathToFolder): Promise<SplitPathWithTRef[]> {
+		const all: SplitPathWithTRef[] = [];
 		const stack: SplitPathToFolder[] = [folder];
 
 		while (stack.length > 0) {
@@ -48,9 +52,24 @@ export class Reader {
 
 			const children = await this.list(current);
 			for (const child of children) {
-				all.push(child);
+				const tRef = await this.getAbstractFile(child);
+
 				if (child.type === "Folder") {
+					all.push({
+						...child,
+						tRef: tRef as TFolder,
+					} as SplitPathToFolderWithTRef);
 					stack.push(child);
+				} else if (child.type === "MdFile") {
+					all.push({
+						...child,
+						tRef: tRef as TFile,
+					} as SplitPathToMdFileWithTRef);
+				} else {
+					all.push({
+						...child,
+						tRef: tRef as TFile,
+					} as SplitPathToFileWithTRef);
 				}
 			}
 		}
@@ -80,7 +99,7 @@ export type ReaderApi = {
 	readContent: (p: SplitPathToMdFile) => Promise<string>;
 	exists: (p: SplitPath) => Promise<boolean>;
 	list: (p: SplitPathToFolder) => Promise<SplitPath[]>;
-	listAll: (p: SplitPathToFolder) => Promise<SplitPath[]>;
+	listAll: (p: SplitPathToFolder) => Promise<SplitPathWithTRef[]>;
 	pwd: () => Promise<SplitPathToFile | SplitPathToMdFile>;
 	getAbstractFile: <SP extends SplitPath>(
 		p: SP,

@@ -1,3 +1,4 @@
+import type { TFile, TFolder } from "obsidian";
 import { z } from "zod";
 import { FILE, FOLDER, MD_FILE, MdSchema } from "./literals";
 
@@ -35,7 +36,15 @@ export type CoreSplitPath = z.infer<typeof CoreSplitPathSchema>;
 export type SplitPathToFolder = z.infer<typeof SplitPathToFolderSchema>;
 export type SplitPathToFile = z.infer<typeof SplitPathToFileSchema>;
 export type SplitPathToMdFile = z.infer<typeof SplitPathToMdFileSchema>;
-
 export type SplitPath = z.infer<typeof SplitPathSchema>;
 
 export type SplitPathFromTo<T extends SplitPath> = { from: T; to: T };
+
+export type SplitPathToFolderWithTRef = SplitPathToFolder & { tRef: TFolder };
+export type SplitPathToFileWithTRef = SplitPathToFile & { tRef: TFile };
+export type SplitPathToMdFileWithTRef = SplitPathToMdFile & { tRef: TFile };
+
+export type SplitPathWithTRef =
+	| SplitPathToFolderWithTRef
+	| SplitPathToFileWithTRef
+	| SplitPathToMdFileWithTRef;
