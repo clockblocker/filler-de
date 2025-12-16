@@ -14,16 +14,19 @@ Vault Action Manager acepts VaultActions
 
 2) LibraryTree. The shadow of existing file system. Consists of:
 - ScrollNodes (a shadows of markdown Tfiles)
-{ coreName: CoreName, coreNameChainToParent: CoreNameChainFromRoot, tRef: TFile, nodeType: "Scroll", status: "Done" | "NotStarted" }
+{ coreName: CoreName, coreNameChainToParent: CoreNameChainFromRoot, tRef: TFile, type: "Scroll", status: "Done" | "NotStarted" }
 - FileNodes (a shadows of non-markdown Tfiles)
-{ coreName: CoreName, coreNameChainToParent: CoreNameChainFromRoot, tRef: TFile, nodeType: "File", status: "Unknown" }
+{ coreName: CoreName, coreNameChainToParent: CoreNameChainFromRoot, tRef: TFile, type: "File", status: "Unknown" }
 - SectionNodes (a shadows of Tfolder)
-{ coreName: CoreName, coreNameChainToParent: CoreNameChainFromRoot, tRef: TFolder, nodeType: "Section", status: "Done" | "NotStarted", children: (ScrollNode | FileNode | SectionNode)[]}
+{ coreName: CoreName, coreNameChainToParent: CoreNameChainFromRoot, type: "Section", status: "Done" | "NotStarted", children: (ScrollNode | FileNode | SectionNode)[]}
 
-LibraryTree is itialized with an array of TreeLeafDtos: 
-((ScrollNode | FileNode) & Pick<SplitPath, "pathParts">)[]
+LibraryTree is initialized with:
+- an array of TreeLeafDtos: ((ScrollNode | FileNode) & Pick<SplitPath, "pathParts">)[]
+- rootFolder: TFolder (the Library folder)
 
-LibraryTree has applyApplyTreeAction method. TreeAction hase types:
+TreeLeafDto.pathParts contains the full path from vault root to the file's parent folder. The tree automatically strips the root folder name (the first element matching the Library root folder name) from pathParts when constructing the tree, so sections are created correctly relative to the root.
+
+LibraryTree has applyTreeAction method. TreeAction has types:
 - CreateNode
 - DeleteNode
 - ChangeNodeName:
@@ -36,7 +39,7 @@ LibraryTree has applyApplyTreeAction method. TreeAction hase types:
         - if none of the children are "NotStarted", it set's own status to "Done"
         - if one of the children is "NotStarted", it set's own status to "NotStarted"
         - if the new status has changed, trigger the same logic for it's parent
-applyApplyTreeAction modifies the tree and retunes coreNameChain to the closest to root impacted node.
+applyTreeAction modifies the tree and returns coreNameChain to the closest to root impacted node.
 
 there is a util findCommonAncestor(coreNameChains: CoreNameChainFromRoot[])
 
