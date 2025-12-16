@@ -4,6 +4,7 @@ import {
 	Plugin,
 	type WorkspaceLeaf,
 } from "obsidian";
+import { Librarian } from "./commanders/librarian";
 import { LibrarianLegacy } from "./commanders/librarian-legacy/librarian";
 import {
 	splitPath as managerSplitPath,
@@ -62,6 +63,7 @@ export default class TextEaterPlugin extends Plugin {
 
 	// Commanders
 	librarian: LibrarianLegacy;
+	testingLibrarian: Librarian;
 
 	private initialized = false;
 
@@ -157,6 +159,7 @@ export default class TextEaterPlugin extends Plugin {
 	}
 
 	async loadPlugin() {
+		console.log("[main] loadPlugin started");
 		await this.loadSettings();
 		await this.addCommands();
 
@@ -193,6 +196,7 @@ export default class TextEaterPlugin extends Plugin {
 			testingBackgroundFileServiceLegacy,
 		);
 		this.vaultActionManager = new ObsidianVaultActionManagerImpl(this.app);
+		console.log("[main] vaultActionManager created");
 		// this.setTestingGlobals();
 
 		this.backgroundFileService = new LegacyBackgroundFileServiceLegacy({
@@ -220,6 +224,25 @@ export default class TextEaterPlugin extends Plugin {
 			openedFileService: this.legacyOpenedFileService,
 		});
 		await this.librarian.initTrees();
+		console.log("[main] Initializing testingLibrarian...");
+		try {
+			this.testingLibrarian = new Librarian(
+				// TypeScript inference issue: ObsidianVaultActionManagerImpl.listAll() correctly returns SplitPathWithTRef[],
+				// but TypeScript infers it as SplitPath[] due to interface/implementation type mismatch.
+				// The implementation is correct, this is a type system limitation.
+				this.vaultActionManager as any,
+				"Library",
+				"-",
+			);
+			console.log(
+				"[main] testingLibrarian initialized:",
+				!!this.testingLibrarian,
+			);
+		} catch (error) {
+			console.error("[main] ERROR initializing testingLibrarian:", error);
+			throw error;
+		}
+		console.log("[main] loadPlugin completed");
 		console.log(
 			"[main] LibrarianLegacy and trees initialized:",
 			this.librarian,
@@ -556,6 +579,24 @@ export default class TextEaterPlugin extends Plugin {
 	getVaultActionManagerTestingApi() {
 		return {
 			manager: this.vaultActionManager,
+			splitPath: managerSplitPath,
+		};
+	}
+
+	async getLibrarianTestingApi() {
+		// Wait for plugin to be fully initialized
+		let attempts = 0;
+		while (!this.testingLibrarian && attempts < 50) {
+			await new Promise((resolve) => setTimeout(resolve, 100));
+			attempts++;
+		}
+		if (!this.testingLibrarian) {
+			throw new Error(
+				`testingLibrarian not initialized after ${attempts} attempts. initialized: ${this.initialized}`,
+			);
+		}
+		return {
+			librarian: this.testingLibrarian,
 			splitPath: managerSplitPath,
 		};
 	}

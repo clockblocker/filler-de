@@ -1,5 +1,4 @@
-import type { VaultAction } from "../../../../obsidian-vault-action-manager/types/vault-action";
-import { VaultActionType } from "../../../../obsidian-vault-action-manager/types/vault-action";
+import  { type VaultAction, VaultActionType } from "../../../src/obsidian-vault-action-manager/types/vault-action";
 
 /**
  * Create vault actions to build test tree structure:
