@@ -28,3 +28,24 @@ export const StatusSchema = z.enum([
 ]);
 export type Status = z.infer<typeof StatusSchema>;
 export const Status = StatusSchema.enum;
+
+export const CREATE_NODE_ACTION = "CreateNode" as const;
+export type CREATE_NODE_ACTION = "CreateNode";
+
+export const DELETE_NODE_ACTION = "DeleteNode" as const;
+export type DELETE_NODE_ACTION = "DeleteNode";
+
+export const CHANGE_NODE_NAME_ACTION = "ChangeNodeName" as const;
+export type CHANGE_NODE_NAME_ACTION = "ChangeNodeName";
+
+export const CHANGE_NODE_STATUS_ACTION = "ChangeNodeStatus" as const;
+export type CHANGE_NODE_STATUS_ACTION = "ChangeNodeStatus";
+
+const TreeActionTypeSchema = z.enum([
+	CREATE_NODE_ACTION,
+	DELETE_NODE_ACTION,
+	CHANGE_NODE_NAME_ACTION,
+	CHANGE_NODE_STATUS_ACTION,
+]);
+export type TreeActionType = z.infer<typeof TreeActionTypeSchema>;
+export const TreeActionType = TreeActionTypeSchema.enum;

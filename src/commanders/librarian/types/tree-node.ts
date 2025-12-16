@@ -32,7 +32,7 @@ export type CoreName = string;
 
 export type ScrollNode = {
 	coreName: CoreName;
-	nodeType: typeof TreeNodeType.Scroll;
+	type: typeof TreeNodeType.Scroll;
 	coreNameChainToParent: CoreName[];
 	status: typeof TreeNodeStatus.Done | typeof TreeNodeStatus.NotStarted;
 	tRef: TFile;
@@ -40,7 +40,7 @@ export type ScrollNode = {
 
 export type FileNode = {
 	coreName: CoreName;
-	nodeType: typeof TreeNodeType.File;
+	type: typeof TreeNodeType.File;
 	coreNameChainToParent: CoreName[];
 	status: typeof TreeNodeStatus.Unknown;
 	tRef: TFile;
@@ -51,8 +51,7 @@ export type LeafNode = ScrollNode | FileNode;
 export type SectionNode = {
 	coreName: CoreName;
 	coreNameChainToParent: CoreName[];
-	tRef: TFolder;
-	nodeType: typeof TreeNodeType.Section;
+	type: typeof TreeNodeType.Section;
 	status: typeof TreeNodeStatus.Done | typeof TreeNodeStatus.NotStarted;
 	children: TreeNode[];
 };

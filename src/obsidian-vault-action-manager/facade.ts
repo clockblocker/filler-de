@@ -104,6 +104,10 @@ export class ObsidianVaultActionManagerImpl
 		return this.reader.list(splitPathArg);
 	}
 
+	listAll(splitPathArg: SplitPathToFolder): Promise<SplitPath[]> {
+		return this.reader.listAll(splitPathArg);
+	}
+
 	pwd(): Promise<SplitPathToFile | SplitPathToMdFile> {
 		return this.reader.pwd();
 	}

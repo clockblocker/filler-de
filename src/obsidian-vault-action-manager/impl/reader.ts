@@ -38,6 +38,26 @@ export class Reader {
 		return Array.from(dedup.values());
 	}
 
+	async listAll(folder: SplitPathToFolder): Promise<SplitPath[]> {
+		const all: SplitPath[] = [];
+		const stack: SplitPathToFolder[] = [folder];
+
+		while (stack.length > 0) {
+			const current = stack.pop();
+			if (!current) continue;
+
+			const children = await this.list(current);
+			for (const child of children) {
+				all.push(child);
+				if (child.type === "Folder") {
+					stack.push(child);
+				}
+			}
+		}
+
+		return all;
+	}
+
 	async pwd(): Promise<SplitPathToFile | SplitPathToMdFile> {
 		const result = await this.opened.pwd();
 		if (result.isErr()) {
@@ -60,6 +80,7 @@ export type ReaderApi = {
 	readContent: (p: SplitPathToMdFile) => Promise<string>;
 	exists: (p: SplitPath) => Promise<boolean>;
 	list: (p: SplitPathToFolder) => Promise<SplitPath[]>;
+	listAll: (p: SplitPathToFolder) => Promise<SplitPath[]>;
 	pwd: () => Promise<SplitPathToFile | SplitPathToMdFile>;
 	getAbstractFile: <SP extends SplitPath>(
 		p: SP,
