@@ -4,5 +4,3 @@ export type SplitSuffix = CoreName[]; // ["child", "parent"]
 export type CoreNameChainFromRoot = CoreName[]; // ["parent", "child"]
 
 export type SplitBasename = { coreName: CoreName; splitSuffix: SplitSuffix };
-
-

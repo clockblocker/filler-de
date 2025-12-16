@@ -20,8 +20,10 @@ import {
 export class LibraryTree {
 	private root: SectionNode;
 	private nodeMap: Map<string, TreeNode> = new Map();
+	private readonly rootFolderName: string;
 
 	constructor(leafDtos: TreeLeafDto[], rootFolder: TFolder) {
+		this.rootFolderName = rootFolder.name;
 		this.root = this.createRootSection(rootFolder);
 		this.buildTreeFromLeaves(leafDtos);
 	}
@@ -39,7 +41,13 @@ export class LibraryTree {
 	private buildTreeFromLeaves(leafDtos: TreeLeafDto[]): void {
 		for (const leafDto of leafDtos) {
 			const { pathParts, ...leafNode } = leafDto;
-			const coreNameChainToParent = pathParts.slice(0, -1);
+			// pathParts contains full path from vault root.
+			// Strip the root folder name if it's the first element.
+			const pathRelativeToRoot =
+				pathParts[0] === this.rootFolderName
+					? pathParts.slice(1)
+					: pathParts;
+			const coreNameChainToParent = pathRelativeToRoot.slice(0, -1);
 
 			const node: LeafNode = {
 				...leafNode,
