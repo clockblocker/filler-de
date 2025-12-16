@@ -4,19 +4,6 @@
 
 E2E tests for `LibraryTree` and `Librarian` using WebdriverIO + Mocha, following the pattern established in `t-abstract-file-helpers` tests.
 
-## Test Structure
-
-### File Organization
-```
-tests/specs/library-tree/
-├── library-tree.e2e.ts              # Main test suite
-├── read-tree-from-vault.test.ts     # Librarian.readTreeFromVault() tests
-├── tree-actions.test.ts             # applyTreeAction() tests
-├── tree-serialization.test.ts       # serializeToTreeLeafDtos() tests
-├── tree-navigation.test.ts          # getNode() tests
-└── tree-status-propagation.test.ts # Status propagation tests
-```
-
 ## Test Categories by Difficulty
 
 ### Level 1: Easy Tests (Basic Happy Path)
