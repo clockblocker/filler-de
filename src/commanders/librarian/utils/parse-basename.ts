@@ -12,17 +12,8 @@ export function parseBasename(
 	basename: string,
 	suffixDelimiter = "-",
 ): SplitBasename {
-	// Handle page numbers: "000_coreName-suffix" -> "coreName-suffix"
-	const pageNumberMatch = basename.match(/^(\d{3})_(.+)$/);
-	const basenameWithoutPage = pageNumberMatch ? pageNumberMatch[2] : basename;
-
-	const parts = basenameWithoutPage.split(suffixDelimiter);
-	if (parts.length === 1) {
-		return { coreName: parts[0], splitSuffix: [] };
-	}
-
-	const coreName = parts[0];
-	const splitSuffix = parts.slice(1);
+	const parts = basename.split(suffixDelimiter);
+	const [coreName = "", ...splitSuffix] = parts;
 
 	return { coreName, splitSuffix };
 }

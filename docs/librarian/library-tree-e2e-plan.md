@@ -28,10 +28,10 @@ E2E tests for `LibraryTree` and `Librarian` using WebdriverIO + Mocha, following
 - [ ] Get non-existent node → returns null
 - **Effort**: Low - Direct API calls, simple assertions
 
-#### `LibraryTree.serializeToTreeLeafDtos()` - Happy Path
+#### `LibraryTree.serializeToLeaves()` - Happy Path
 - [ ] **File**: `tree-serialization.test.ts`
-- [ ] Serialize tree → returns all leaf nodes
-- [ ] Verify `pathParts` are correct (full path from root)
+- [ ] Serialize tree → returns all leaf nodes as TreeLeaf[]
+- [ ] Verify `coreNameChainToParent` are correct
 - [ ] Verify all files included, no sections
 - [ ] Round-trip: create tree → serialize → create new tree → verify identical
 - **Effort**: Low - Direct API calls, verify structure

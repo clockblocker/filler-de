@@ -1,34 +1,34 @@
 import type {
 	SplitPathToFileWithTRef,
 	SplitPathToMdFileWithTRef,
-} from "../../../../obsidian-vault-action-manager/types/split-path";
-import type { TreeLeafDto } from "../types/tree-leaf-dto";
+} from "../../../obsidian-vault-action-manager/types/split-path";
+import type { TreeLeaf } from "../types/tree-leaf";
 import { TreeNodeStatus, TreeNodeType } from "../types/tree-node";
 import { parseBasename } from "./parse-basename";
 
 /**
- * Convert SplitPathWithTRef (file) to TreeLeafDto.
- * Parses basename to extract coreName and determines node type.
+ * Codec: SplitPath + tRef → TreeLeaf
+ * Converts filesystem representation to tree representation.
  *
- * Note: coreNameChainToParent will be recalculated by LibraryTree from pathParts,
- * but we set it here to satisfy the type. The tree will override it.
+ * @param rootFolderName - The library root folder name to strip from pathParts
+ * @param suffixDelimiter - Delimiter for parsing basename suffix
  */
-export function splitPathToLeafDto(
+export function splitPathToLeaf(
 	splitPathWithTRef: SplitPathToFileWithTRef | SplitPathToMdFileWithTRef,
+	rootFolderName = "Library",
 	suffixDelimiter = "-",
-): TreeLeafDto {
+): TreeLeaf {
 	const { basename, pathParts, type } = splitPathWithTRef;
 	const { coreName } = parseBasename(basename, suffixDelimiter);
 
-	// coreNameChainToParent will be recalculated by LibraryTree from pathParts
-	// This is just a placeholder to satisfy the type
-	const coreNameChainToParent: string[] = [];
+	// Convert pathParts to coreNameChainToParent by stripping root folder
+	const coreNameChainToParent =
+		pathParts[0] === rootFolderName ? pathParts.slice(1) : pathParts;
 
 	if (type === "MdFile") {
 		return {
 			coreName,
 			coreNameChainToParent,
-			pathParts,
 			status: TreeNodeStatus.NotStarted,
 			tRef: splitPathWithTRef.tRef,
 			type: TreeNodeType.Scroll,
@@ -38,7 +38,6 @@ export function splitPathToLeafDto(
 	return {
 		coreName,
 		coreNameChainToParent,
-		pathParts,
 		status: TreeNodeStatus.Unknown,
 		tRef: splitPathWithTRef.tRef,
 		type: TreeNodeType.File,

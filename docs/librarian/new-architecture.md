@@ -21,10 +21,9 @@ Vault Action Manager acepts VaultActions
 { coreName: CoreName, coreNameChainToParent: CoreNameChainFromRoot, type: "Section", status: "Done" | "NotStarted", children: (ScrollNode | FileNode | SectionNode)[]}
 
 LibraryTree is initialized with:
-- an array of TreeLeafDtos: ((ScrollNode | FileNode) & Pick<SplitPath, "pathParts">)[]
+- an array of TreeLeaf: (ScrollNode | FileNode)[]
+  each leaf has coreNameChainToParent already set
 - rootFolder: TFolder (the Library folder)
-
-TreeLeafDto.pathParts contains the full path from vault root to the file's parent folder. The tree automatically strips the root folder name (the first element matching the Library root folder name) from pathParts when constructing the tree, so sections are created correctly relative to the root.
 
 LibraryTree has applyTreeAction method. TreeAction has types:
 - CreateNode
@@ -43,7 +42,7 @@ applyTreeAction modifies the tree and returns coreNameChain to the closest to ro
 
 there is a util findCommonAncestor(coreNameChains: CoreNameChainFromRoot[])
 
-LibraryTree can serialize itself to TreeLeafDtos (for copy creation)
+LibraryTree can serialize itself to TreeLeaf[] (for copy creation)
 LibraryTree supports getNode(coreNameChain: CoreNameChainFromRoot)
 
 3) reconcilaltion

@@ -8,7 +8,7 @@ import type {
 	DeleteNodeAction,
 	TreeAction,
 } from "./types/tree-action";
-import type { TreeLeafDto } from "./types/tree-leaf-dto";
+import type { TreeLeaf } from "./types/tree-leaf";
 import {
 	type LeafNode,
 	type SectionNode,
@@ -22,10 +22,10 @@ export class LibraryTree {
 	private nodeMap: Map<string, TreeNode> = new Map();
 	private readonly rootFolderName: string;
 
-	constructor(leafDtos: TreeLeafDto[], rootFolder: TFolder) {
+	constructor(leaves: TreeLeaf[], rootFolder: TFolder) {
 		this.rootFolderName = rootFolder.name;
 		this.root = this.createRootSection(rootFolder);
-		this.buildTreeFromLeaves(leafDtos);
+		this.buildTreeFromLeaves(leaves);
 	}
 
 	private createRootSection(_rootFolder: TFolder): SectionNode {
@@ -38,24 +38,10 @@ export class LibraryTree {
 		};
 	}
 
-	private buildTreeFromLeaves(leafDtos: TreeLeafDto[]): void {
-		for (const leafDto of leafDtos) {
-			const { pathParts, ...leafNode } = leafDto;
-			// pathParts contains full path from vault root.
-			// Strip the root folder name if it's the first element.
-			const pathRelativeToRoot =
-				pathParts[0] === this.rootFolderName
-					? pathParts.slice(1)
-					: pathParts;
-			const coreNameChainToParent = pathRelativeToRoot.slice(0, -1);
-
-			const node: LeafNode = {
-				...leafNode,
-				coreNameChainToParent,
-			};
-
-			this.ensureSectionPath(coreNameChainToParent);
-			this.addNodeToTree(node, coreNameChainToParent);
+	private buildTreeFromLeaves(leaves: TreeLeaf[]): void {
+		for (const leaf of leaves) {
+			this.ensureSectionPath(leaf.coreNameChainToParent);
+			this.addNodeToTree(leaf, leaf.coreNameChainToParent);
 		}
 	}
 
@@ -367,20 +353,16 @@ export class LibraryTree {
 		}
 	}
 
-	serializeToTreeLeafDtos(): TreeLeafDto[] {
-		const leafDtos: TreeLeafDto[] = [];
-		this.collectLeaves(this.root, [], leafDtos);
-		return leafDtos;
+	serializeToLeaves(): TreeLeaf[] {
+		const result: TreeLeaf[] = [];
+		this.collectLeaves(this.root, result);
+		return result;
 	}
 
-	private collectLeaves(
-		node: TreeNode,
-		pathParts: string[],
-		leafDtos: TreeLeafDto[],
-	): void {
+	private collectLeaves(node: TreeNode, result: TreeLeaf[]): void {
 		if (node === this.root) {
 			for (const child of (node as SectionNode).children) {
-				this.collectLeaves(child, [], leafDtos);
+				this.collectLeaves(child, result);
 			}
 			return;
 		}
@@ -389,16 +371,11 @@ export class LibraryTree {
 			node.type === TreeNodeType.Scroll ||
 			node.type === TreeNodeType.File
 		) {
-			const leafNode = node as LeafNode;
-			leafDtos.push({
-				...leafNode,
-				pathParts: [...pathParts, leafNode.coreName],
-			});
+			result.push(node as LeafNode);
 		} else if (node.type === TreeNodeType.Section) {
 			const sectionNode = node as SectionNode;
-			const currentPath = [...pathParts, sectionNode.coreName];
 			for (const child of sectionNode.children) {
-				this.collectLeaves(child, currentPath, leafDtos);
+				this.collectLeaves(child, result);
 			}
 		}
 	}

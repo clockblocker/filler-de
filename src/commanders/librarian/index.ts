@@ -6,7 +6,7 @@ export type {
 	SplitBasename,
 } from "./types/split-basename";
 export type { TreeAction } from "./types/tree-action";
-export type { TreeLeafDto } from "./types/tree-leaf-dto";
+export type { TreeLeaf } from "./types/tree-leaf";
 export type {
 	FileNode,
 	LeafNode,

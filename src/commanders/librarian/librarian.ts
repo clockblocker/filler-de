@@ -5,8 +5,8 @@ import type {
 	SplitPathToMdFileWithTRef,
 } from "../../obsidian-vault-action-manager/types/split-path";
 import { LibraryTree } from "./library-tree";
-import type { TreeLeafDto } from "./types/tree-leaf-dto";
-import { splitPathToLeafDto } from "./utils/split-path-to-leaf-dto";
+import type { TreeLeaf } from "./types/tree-leaf";
+import { splitPathToLeaf } from "./utils/split-path-to-leaf";
 
 export class Librarian {
 	constructor(
@@ -43,10 +43,10 @@ export class Librarian {
 				entry.type === "File" || entry.type === "MdFile",
 		);
 
-		const leafDtos: TreeLeafDto[] = fileEntries.map((entry) =>
-			splitPathToLeafDto(entry, this.suffixDelimiter),
+		const leaves: TreeLeaf[] = fileEntries.map((entry) =>
+			splitPathToLeaf(entry, this.libraryRoot, this.suffixDelimiter),
 		);
 
-		return new LibraryTree(leafDtos, rootFolder);
+		return new LibraryTree(leaves, rootFolder);
 	}
 }

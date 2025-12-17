@@ -63,7 +63,6 @@ export default class TextEaterPlugin extends Plugin {
 
 	// Commanders
 	librarian: LibrarianLegacy;
-	testingLibrarian: Librarian;
 
 	private initialized = false;
 
@@ -197,6 +196,7 @@ export default class TextEaterPlugin extends Plugin {
 		);
 		this.vaultActionManager = new ObsidianVaultActionManagerImpl(this.app);
 		console.log("[main] vaultActionManager created");
+
 		// this.setTestingGlobals();
 
 		this.backgroundFileService = new LegacyBackgroundFileServiceLegacy({
@@ -224,24 +224,6 @@ export default class TextEaterPlugin extends Plugin {
 			openedFileService: this.legacyOpenedFileService,
 		});
 		await this.librarian.initTrees();
-		console.log("[main] Initializing testingLibrarian...");
-		try {
-			this.testingLibrarian = new Librarian(
-				// TypeScript inference issue: ObsidianVaultActionManagerImpl.listAll() correctly returns SplitPathWithTRef[],
-				// but TypeScript infers it as SplitPath[] due to interface/implementation type mismatch.
-				// The implementation is correct, this is a type system limitation.
-				this.vaultActionManager as any,
-				"Library",
-				"-",
-			);
-			console.log(
-				"[main] testingLibrarian initialized:",
-				!!this.testingLibrarian,
-			);
-		} catch (error) {
-			console.error("[main] ERROR initializing testingLibrarian:", error);
-			throw error;
-		}
 		console.log("[main] loadPlugin completed");
 		console.log(
 			"[main] LibrarianLegacy and trees initialized:",
@@ -583,20 +565,20 @@ export default class TextEaterPlugin extends Plugin {
 		};
 	}
 
-	async getLibrarianTestingApi() {
-		// Wait for plugin to be fully initialized
-		let attempts = 0;
-		while (!this.testingLibrarian && attempts < 50) {
-			await new Promise((resolve) => setTimeout(resolve, 100));
-			attempts++;
-		}
-		if (!this.testingLibrarian) {
-			throw new Error(
-				`testingLibrarian not initialized after ${attempts} attempts. initialized: ${this.initialized}`,
-			);
-		}
+	getLibrarianClass() {
+		// Return Librarian class constructor for tests to instantiate
+		return Librarian;
+	}
+
+	getLibrarianTestingApi() {
+		// Return instance directly like vaultActionManager
+		// Create on-demand to avoid storing reference
 		return {
-			librarian: this.testingLibrarian,
+			librarian: new Librarian(
+				this.vaultActionManager as any,
+				"Library",
+				"-",
+			),
 			splitPath: managerSplitPath,
 		};
 	}
