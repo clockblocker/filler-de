@@ -5,7 +5,6 @@ import type {
 } from "../../../obsidian-vault-action-manager/types/split-path";
 import type { MetaInfo } from "../../../services/dto-services/meta-info-manager/types";
 import type { TreeLeaf } from "../types/tree-leaf";
-import type { ScrollNode } from "../types/tree-node";
 import { TreeNodeStatus, TreeNodeType } from "../types/tree-node";
 import { parseBasename } from "./parse-basename";
 

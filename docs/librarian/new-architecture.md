@@ -25,6 +25,19 @@ LibraryTree is initialized with:
   each leaf has coreNameChainToParent already set
 - rootFolder: TFolder (the Library folder)
 
+On initialization, LibraryTree:
+1. Builds the tree structure from leaves (creating SectionNodes as needed)
+2. Runs DFS to calculate section statuses: a section is "Done" iff all children are Done/Unknown
+
+TreeLeaf creation uses codec `splitPathToLeaf(splitPathWithTRef, rootFolderName, suffixDelimiter)`:
+- Converts SplitPath + TFile → TreeLeaf
+- Derives coreNameChainToParent from pathParts (strips root folder)
+- Initial status: NotStarted (for ScrollNode), Unknown (for FileNode)
+
+Status injection uses `withStatusFromMeta(leaf, readContent, extractMetaInfo)`:
+- Reads file content via provided function
+- Extracts MetaInfo and applies status to ScrollNode
+
 LibraryTree has applyTreeAction method. TreeAction has types:
 - CreateNode
 - DeleteNode
