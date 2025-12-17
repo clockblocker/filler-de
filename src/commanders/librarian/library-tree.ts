@@ -43,6 +43,31 @@ export class LibraryTree {
 			this.ensureSectionPath(leaf.coreNameChainToParent);
 			this.addNodeToTree(leaf, leaf.coreNameChainToParent);
 		}
+		this.recalculateSectionStatuses(this.root);
+	}
+
+	/**
+	 * DFS to recalculate section statuses based on children.
+	 * Section is Done if all Scroll/Section children are Done, else NotStarted.
+	 * FileNodes (Unknown status) are ignored.
+	 */
+	private recalculateSectionStatuses(section: SectionNode): void {
+		for (const child of section.children) {
+			if (child.type === TreeNodeType.Section) {
+				this.recalculateSectionStatuses(child);
+			}
+		}
+
+		const hasNotStarted = section.children.some(
+			(child) =>
+				(child.type === TreeNodeType.Scroll ||
+					child.type === TreeNodeType.Section) &&
+				child.status === TreeNodeStatus.NotStarted,
+		);
+
+		section.status = hasNotStarted
+			? TreeNodeStatus.NotStarted
+			: TreeNodeStatus.Done;
 	}
 
 	private ensureSectionPath(coreNameChain: CoreNameChainFromRoot): void {
