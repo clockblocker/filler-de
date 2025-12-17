@@ -1,5 +1,21 @@
+// Healing exports
+export {
+	type DragInResult,
+	detectRenameMode,
+	type EventMode,
+	handleDragIn,
+	healOnInit,
+	type InitHealResult,
+	type RenameIntent,
+	resolveRuntimeIntent,
+} from "./healing";
 export { Librarian } from "./librarian";
 export { LibraryTree } from "./library-tree";
+export {
+	DragInSubtype,
+	HealingMode,
+	RuntimeSubtype,
+} from "./types/literals";
 export type {
 	CoreName,
 	CoreNameChainFromRoot,

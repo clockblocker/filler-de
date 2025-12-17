@@ -5,7 +5,8 @@ import {
 	type WorkspaceLeaf,
 } from "obsidian";
 import { Librarian, LibraryTree } from "./commanders/librarian";
-import { LibrarianLegacy } from "./commanders/librarian-legacy/librarian";
+// LibrarianLegacy unplugged - using new Librarian for healing
+// import { LibrarianLegacy } from "./commanders/librarian-legacy/librarian";
 import {
 	splitPath as managerSplitPath,
 	ObsidianVaultActionManagerImpl,
@@ -63,7 +64,8 @@ export default class TextEaterPlugin extends Plugin {
 	vaultActionExecutor: VaultActionExecutor;
 
 	// Commanders
-	librarian: LibrarianLegacy;
+	librarian: Librarian | null = null;
+	// librarianLegacy: LibrarianLegacy; // Unplugged
 
 	private initialized = false;
 
@@ -219,34 +221,43 @@ export default class TextEaterPlugin extends Plugin {
 
 		this.selectionService = new SelectionService(this.app);
 
-		this.librarian = new LibrarianLegacy({
-			actionQueue: this.vaultActionQueue,
-			backgroundFileService: this.backgroundFileService,
-			openedFileService: this.legacyOpenedFileService,
-		});
-		await this.librarian.initTrees();
+		// New Librarian (healing modes)
+		this.librarian = new Librarian(
+			this.vaultActionManager,
+			"Library",
+			"-",
+		);
+		const healResult = await this.librarian.init();
 		console.log("[main] loadPlugin completed");
 		console.log(
-			"[main] LibrarianLegacy and trees initialized:",
-			this.librarian,
+			"[main] Librarian initialized, healed:",
+			healResult.renameActions.length,
+			"files",
 		);
 
 		// Start listening to vault events after trees are ready
 		this.registerEvent(
-			this.app.vault.on("create", (file) => {
-				void this.librarian.onFileCreated(file);
-			}),
-		);
-		this.registerEvent(
 			this.app.vault.on("rename", (file, oldPath) => {
-				void this.librarian.onFileRenamed(file, oldPath);
+				if (this.librarian) {
+					void this.librarian.handleRename(
+						oldPath,
+						file.path,
+						"children" in file, // isFolder
+					);
+				}
 			}),
 		);
-		this.registerEvent(
-			this.app.vault.on("delete", (file) => {
-				void this.librarian.onFileDeleted(file);
-			}),
-		);
+		// TODO: Handle create/delete events when tree is fully integrated
+		// this.registerEvent(
+		// 	this.app.vault.on("create", (file) => {
+		// 		void this.librarian.onFileCreated(file);
+		// 	}),
+		// );
+		// this.registerEvent(
+		// 	this.app.vault.on("delete", (file) => {
+		// 		void this.librarian.onFileDeleted(file);
+		// 	}),
+		// );
 
 		// this.registerDomEvent(document, "click", makeClickListener(this));
 
