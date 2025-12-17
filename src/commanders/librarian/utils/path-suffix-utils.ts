@@ -98,3 +98,32 @@ export function folderNameNeedsSanitization(
 ): boolean {
 	return name.includes(suffixDelimiter);
 }
+
+/**
+ * Check if any path part contains the suffix delimiter.
+ *
+ * @example
+ * pathPartsHaveSuffix(["Library", "X-Y", "Z"], "-") // true
+ * pathPartsHaveSuffix(["Library", "X", "Y"], "-") // false
+ */
+export function pathPartsHaveSuffix(
+	pathParts: string[],
+	suffixDelimiter = "-",
+): boolean {
+	return pathParts.some((part) => part.includes(suffixDelimiter));
+}
+
+/**
+ * Expand path parts by splitting any suffixed segments.
+ * e.g. ["Library", "X-Y"] → ["Library", "X", "Y"]
+ *
+ * @example
+ * expandSuffixedPath(["Library", "X-Y"], "-") // ["Library", "X", "Y"]
+ * expandSuffixedPath(["A", "B-C-D"], "-") // ["A", "B", "C", "D"]
+ */
+export function expandSuffixedPath(
+	pathParts: string[],
+	suffixDelimiter = "-",
+): string[] {
+	return pathParts.flatMap((part) => part.split(suffixDelimiter));
+}

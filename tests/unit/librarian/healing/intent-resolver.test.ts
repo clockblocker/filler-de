@@ -179,4 +179,64 @@ describe("resolveRuntimeIntent", () => {
 			expect(result).toBeNull();
 		});
 	});
+
+	describe("PathOnly with suffixed folder (folder rename)", () => {
+		it("expands suffixed folder and moves file", () => {
+			// Folder renamed: Library/X → Library/X-Y
+			// File event: Library/X/note-X.md → Library/X-Y/note-X.md
+			// Expected: move to Library/X/Y/note-X-Y.md
+			const oldPath = mdFile(["Library", "X"], "note-X");
+			const newPath = mdFile(["Library", "X-Y"], "note-X");
+
+			const result = resolveRuntimeIntent(
+				oldPath,
+				newPath,
+				RuntimeSubtype.PathOnly,
+				LIBRARY_ROOT,
+				DELIMITER,
+			);
+
+			expect(result).not.toBeNull();
+			expect(result?.to.pathParts).toEqual(["Library", "X", "Y"]);
+			expect(result?.to.basename).toBe("note-Y-X");
+		});
+
+		it("handles nested suffixed folders", () => {
+			// Library/A/B/note-B-A.md → Library/A/B-C/note-B-A.md
+			// Expected: Library/A/B/C/note-C-B-A.md
+			const oldPath = mdFile(["Library", "A", "B"], "note-B-A");
+			const newPath = mdFile(["Library", "A", "B-C"], "note-B-A");
+
+			const result = resolveRuntimeIntent(
+				oldPath,
+				newPath,
+				RuntimeSubtype.PathOnly,
+				LIBRARY_ROOT,
+				DELIMITER,
+			);
+
+			expect(result).not.toBeNull();
+			expect(result?.to.pathParts).toEqual(["Library", "A", "B", "C"]);
+			expect(result?.to.basename).toBe("note-C-B-A");
+		});
+
+		it("handles multiple dashes in folder name", () => {
+			// Library/X/note-X.md → Library/X-Y-Z/note-X.md
+			// Expected: Library/X/Y/Z/note-Z-Y-X.md
+			const oldPath = mdFile(["Library", "X"], "note-X");
+			const newPath = mdFile(["Library", "X-Y-Z"], "note-X");
+
+			const result = resolveRuntimeIntent(
+				oldPath,
+				newPath,
+				RuntimeSubtype.PathOnly,
+				LIBRARY_ROOT,
+				DELIMITER,
+			);
+
+			expect(result).not.toBeNull();
+			expect(result?.to.pathParts).toEqual(["Library", "X", "Y", "Z"]);
+			expect(result?.to.basename).toBe("note-Z-Y-X");
+		});
+	});
 });

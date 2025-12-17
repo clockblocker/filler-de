@@ -23,7 +23,7 @@ import { LibraryTree } from "./library-tree";
 import {
 	type DragInSubtype,
 	HealingMode,
-	type RuntimeSubtype,
+	RuntimeSubtype,
 } from "./types/literals";
 import {
 	splitPathToLeaf,
@@ -87,7 +87,12 @@ export class Librarian {
 			return [];
 		}
 
-		const actions = this.resolveActions(mode, oldPath, newPath, isFolder);
+		const actions = await this.resolveActions(
+			mode,
+			oldPath,
+			newPath,
+			isFolder,
+		);
 
 		if (actions.length > 0) {
 			await this.vaultActionManager.dispatch(actions);
@@ -101,12 +106,12 @@ export class Librarian {
 	/**
 	 * Resolve actions based on detected mode.
 	 */
-	private resolveActions(
+	private async resolveActions(
 		mode: EventMode,
 		oldPath: string,
 		newPath: string,
 		isFolder: boolean,
-	): VaultAction[] {
+	): Promise<VaultAction[]> {
 		switch (mode.mode) {
 			case HealingMode.Runtime:
 				return this.resolveRuntimeActions(
@@ -128,23 +133,24 @@ export class Librarian {
 	/**
 	 * Resolve Mode 1 (Runtime) actions.
 	 */
-	private resolveRuntimeActions(
+	private async resolveRuntimeActions(
 		oldPath: string,
 		newPath: string,
 		subtype: RuntimeSubtype,
 		isFolder: boolean,
-	): VaultAction[] {
-		if (isFolder) {
-			// Folder renames: all children need suffix updates
-			// This is complex - for now, trigger full subtree heal
-			// TODO: Implement folder rename handling
-			return [];
-		}
-
+	): Promise<VaultAction[]> {
 		const oldSplitPath = this.vaultActionManager.splitPath(oldPath);
 		const newSplitPath = this.vaultActionManager.splitPath(newPath);
 
-		if (oldSplitPath.type === "Folder" || newSplitPath.type === "Folder") {
+		// Folder renames: handled via handleFolderRename
+		if (
+			isFolder ||
+			oldSplitPath.type === "Folder" ||
+			newSplitPath.type === "Folder"
+		) {
+			if (newSplitPath.type === "Folder") {
+				return this.handleFolderRename(newSplitPath);
+			}
 			return [];
 		}
 
@@ -161,6 +167,42 @@ export class Librarian {
 		}
 
 		return this.intentToActions(intent);
+	}
+
+	/**
+	 * Handle folder rename: list all files in folder and heal each.
+	 * Obsidian does NOT emit file events for children when folder is renamed.
+	 * Returns the generated actions (dispatch handled by caller).
+	 */
+	private async handleFolderRename(
+		folderPath: SplitPathToFolder,
+	): Promise<VaultAction[]> {
+		const allEntries = await this.vaultActionManager.listAll(folderPath);
+		const fileEntries = allEntries.filter(
+			(
+				entry,
+			): entry is SplitPathToFileWithTRef | SplitPathToMdFileWithTRef =>
+				entry.type === "File" || entry.type === "MdFile",
+		);
+
+		const actions: VaultAction[] = [];
+
+		for (const entry of fileEntries) {
+			// For each file, compute expected suffix from its current path
+			const intent = resolveRuntimeIntent(
+				entry, // "from" - same as current path (we don't know old path)
+				entry, // "to" - current path
+				RuntimeSubtype.PathOnly, // Path changed, fix suffix
+				this.libraryRoot,
+				this.suffixDelimiter,
+			);
+
+			if (intent) {
+				actions.push(...this.intentToActions(intent));
+			}
+		}
+
+		return actions;
 	}
 
 	/**

@@ -10,6 +10,7 @@ import {
 	testInitHealingNoOpForCorrectFiles,
 } from "./librarian-healing/init-healing.test";
 import {
+	testRuntimeFolderRename,
 	testRuntimeNoOpWhenCorrect,
 	testRuntimePathOnly,
 } from "./librarian-healing/runtime-healing.test";
@@ -30,6 +31,7 @@ describe("Librarian Healing", () => {
 		// it("BasenameOnly: should move file to suffix location", testRuntimeBasenameOnly);
 		it("PathOnly: should fix suffix to match new path", testRuntimePathOnly);
 		it("PathOnly: generates action when suffix needs fix", testRuntimeNoOpWhenCorrect);
+		it("Folder rename: should heal all children suffixes", testRuntimeFolderRename);
 	});
 
 	describe("Mode 2: Init Healing", () => {

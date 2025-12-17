@@ -272,6 +272,7 @@ Tree mutation → tree.snapshot() before/after → noteDiffer.diff() → mapDiff
 |------|------|--------|
 | Mode 1: Runtime | PathOnly: fix suffix to match new path | ✅ |
 | Mode 1: Runtime | PathOnly: generates action when suffix needs fix | ✅ |
+| Mode 1: Runtime | Folder rename: heal all children | ✅ |
 | Mode 1: Runtime | BasenameOnly: move to suffix location | ⏳ TODO |
 | Mode 2: Init | Heal files with wrong suffixes | ✅ |
 | Mode 2: Init | No-op for correct files | ✅ |
@@ -281,11 +282,41 @@ Tree mutation → tree.snapshot() before/after → noteDiffer.diff() → mapDiff
 
 ## Next Steps
 
-### 1. Folder Rename Support
+### 1. Folder Rename Support ✅
 
-Currently folder renames are not handled. Spec:
-- User renames `Library/A` → `Library/X`: heal all children's suffixes to reflect new path
-- Folder drag-in: sanitize folder name + heal contents
+**Status: Completed**
+
+**Key insight**: Obsidian does NOT emit file events for children when a folder is renamed.
+We must listen for folder rename events and explicitly heal all children.
+
+**Implementation:**
+
+1. `path-suffix-utils.ts`: Added `expandSuffixedPath()`, `pathPartsHaveSuffix()`
+   ```typescript
+   expandSuffixedPath(["Library", "X-Y"], "-") → ["Library", "X", "Y"]
+   pathPartsHaveSuffix(["Library", "X-Y"], "-") → true
+   ```
+
+2. `intent-resolver.ts`: Extended `PathOnly` case
+   - Check if any path segment contains delimiter
+   - If yes: expand path → compute new target location + suffix
+   - Generate move action (folder creation handled by VaultActionManager)
+
+3. `librarian.ts`: Added `handleFolderRename()` method
+   - Lists all files in renamed folder
+   - Applies `PathOnly` healing to each file
+   - Dispatches all rename actions
+
+4. `main.ts`: Re-enabled folder events, passes `isFolder=true` to Librarian
+
+**Test cases (unit tests added):**
+| Input | Output |
+|-------|--------|
+| `X/note-X.md` → `Y/note-X.md` | `Y/note-Y.md` |
+| `X/note-X.md` → `X-Y/note-X.md` | `X/Y/note-X-Y.md` |
+| `A/B/note-B-A.md` → `A/B-C/note-B-A.md` | `A/B/C/note-C-B-A.md` |
+
+**Folder drag-in**: Unchanged - sanitize folder name + Mode-2 style healing (no move intent)
 
 ### 2. Complete E2E Coverage
 

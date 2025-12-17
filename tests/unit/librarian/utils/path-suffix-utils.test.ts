@@ -4,7 +4,9 @@ import {
 	buildCanonicalBasename,
 	computePathFromSuffix,
 	computeSuffixFromPath,
+	expandSuffixedPath,
 	folderNameNeedsSanitization,
+	pathPartsHaveSuffix,
 	sanitizeFolderName,
 	suffixMatchesPath,
 } from "../../../../src/commanders/librarian/utils/path-suffix-utils";
@@ -126,5 +128,58 @@ describe("folderNameNeedsSanitization", () => {
 
 	it("returns false for underscore with dash delimiter", () => {
 		expect(folderNameNeedsSanitization("my_folder", "-")).toBe(false);
+	});
+});
+
+describe("pathPartsHaveSuffix", () => {
+	it("returns true when any part contains delimiter", () => {
+		expect(pathPartsHaveSuffix(["Library", "X-Y", "Z"], "-")).toBe(true);
+	});
+
+	it("returns false when no part contains delimiter", () => {
+		expect(pathPartsHaveSuffix(["Library", "X", "Y"], "-")).toBe(false);
+	});
+
+	it("detects suffix in first part", () => {
+		expect(pathPartsHaveSuffix(["Lib-rary", "X"], "-")).toBe(true);
+	});
+
+	it("handles empty array", () => {
+		expect(pathPartsHaveSuffix([], "-")).toBe(false);
+	});
+});
+
+describe("expandSuffixedPath", () => {
+	it("expands suffixed folder into parts", () => {
+		expect(expandSuffixedPath(["Library", "X-Y"], "-")).toEqual([
+			"Library",
+			"X",
+			"Y",
+		]);
+	});
+
+	it("expands multiple dashes in one part", () => {
+		expect(expandSuffixedPath(["A", "B-C-D"], "-")).toEqual([
+			"A",
+			"B",
+			"C",
+			"D",
+		]);
+	});
+
+	it("leaves clean path unchanged", () => {
+		expect(expandSuffixedPath(["Library", "X", "Y"], "-")).toEqual([
+			"Library",
+			"X",
+			"Y",
+		]);
+	});
+
+	it("handles empty array", () => {
+		expect(expandSuffixedPath([], "-")).toEqual([]);
+	});
+
+	it("works with custom delimiter", () => {
+		expect(expandSuffixedPath(["A.B", "C"], ".")).toEqual(["A", "B", "C"]);
 	});
 });

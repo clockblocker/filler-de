@@ -232,6 +232,8 @@ export default class TextEaterPlugin extends Plugin {
 		);
 
 		// Start listening to vault events after trees are ready
+		// Folder renames: Obsidian does NOT emit file events for children,
+		// so we must handle folder renames explicitly and heal all children
 		this.registerEvent(
 			this.app.vault.on("rename", (file, oldPath) => {
 				if (this.librarian) {

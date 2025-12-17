@@ -9,6 +9,8 @@ import {
 	buildBasename,
 	computePathFromSuffix,
 	computeSuffixFromPath,
+	expandSuffixedPath,
+	pathPartsHaveSuffix,
 } from "../utils/path-suffix-utils";
 
 /**
@@ -92,6 +94,32 @@ export function resolveRuntimeIntent(
 
 		case RuntimeSubtype.PathOnly: {
 			// User moved file → fix suffix to match new path
+			// Check if path contains suffixed folder (e.g., "X-Y")
+			if (pathPartsHaveSuffix(relativePathParts, suffixDelimiter)) {
+				// Expand suffixed path: ["X-Y"] → ["X", "Y"]
+				const expandedRelative = expandSuffixedPath(
+					relativePathParts,
+					suffixDelimiter,
+				);
+				const expandedFull = [libraryRoot, ...expandedRelative];
+				const expectedSuffix = computeSuffixFromPath(expandedRelative);
+
+				const newBasename = buildBasename(
+					newInfo.parsed.coreName,
+					expectedSuffix,
+					suffixDelimiter,
+				);
+
+				const targetPath: SplitPathToFile | SplitPathToMdFile = {
+					...newPath,
+					basename: newBasename,
+					pathParts: expandedFull,
+				};
+
+				return { from: newPath, to: targetPath };
+			}
+
+			// Standard case: no suffixed folders
 			const expectedSuffix = computeSuffixFromPath(relativePathParts);
 
 			// If suffix already matches, no action needed
