@@ -244,11 +244,74 @@ Tree mutation → tree.snapshot() before/after → noteDiffer.diff() → mapDiff
 
 **Key consideration:** Codex regeneration should be batched/debounced (multiple rapid changes → single codex update).
 
-## TODOs
+## Implementation Status
 
-- [ ] Create mode-detector.ts - classify vault events into Mode 1/2/3
-- [ ] Create path-suffix-utils.ts - pure functions for path<->suffix conversion
-- [ ] Create intent-resolver.ts - Mode 1 logic (basename-only, path-only, both)
-- [ ] Create init-healer.ts - Mode 2 suffix-only healing + empty folder deletion
-- [ ] Create drag-handler.ts - Mode 3 file/folder drag-in handling
-- [ ] Create librarian.ts orchestrator - wire modes to tree and VaultActionManager
+### Completed ✅
+
+- [x] `types/literals.ts` - Zod enums: `HealingMode`, `RuntimeSubtype`, `DragInSubtype`
+- [x] `utils/path-suffix-utils.ts` - Pure functions: `computeSuffixFromPath`, `computePathFromSuffix`, `buildBasename`, `suffixMatchesPath`, `sanitizeFolderName`
+- [x] `healing/mode-detector.ts` - `detectRenameMode()`, `createInitMode()`
+- [x] `healing/intent-resolver.ts` - `resolveRuntimeIntent()` handles BasenameOnly, PathOnly, Both
+- [x] `healing/init-healer.ts` - `healOnInit()`, `leafNeedsHealing()`, `getExpectedBasename()`
+- [x] `healing/drag-handler.ts` - `handleFileDragIn()`, `handleFolderDragIn()`, `handleDragIn()`
+- [x] `healing/index.ts` - Public exports for healing module
+- [x] `librarian.ts` - Orchestrator: `init()`, `handleRename()`, integrates with VaultActionManager
+- [x] `main.ts` - Unplugged `LibrarianLegacy`, wired new `Librarian`
+
+### Unit Tests ✅
+
+- `path-suffix-utils.test.ts`
+- `mode-detector.test.ts`
+- `intent-resolver.test.ts`
+- `init-healer.test.ts`
+- `drag-handler.test.ts`
+
+### E2E Tests ✅
+
+| Mode | Test | Status |
+|------|------|--------|
+| Mode 1: Runtime | PathOnly: fix suffix to match new path | ✅ |
+| Mode 1: Runtime | PathOnly: generates action when suffix needs fix | ✅ |
+| Mode 1: Runtime | BasenameOnly: move to suffix location | ⏳ TODO |
+| Mode 2: Init | Heal files with wrong suffixes | ✅ |
+| Mode 2: Init | No-op for correct files | ✅ |
+| Mode 3: DragIn | File without suffix stays at drop | ✅ |
+| Mode 3: DragIn | Move out of library ignored | ✅ |
+| Mode 3: DragIn | File drag with folder creation | ⏳ TODO |
+
+## Next Steps
+
+### 1. Folder Rename Support
+
+Currently folder renames are not handled. Spec:
+- User renames `Library/A` → `Library/X`: heal all children's suffixes to reflect new path
+- Folder drag-in: sanitize folder name + heal contents
+
+### 2. Complete E2E Coverage
+
+The TODO e2e tests require folder creation logic to work properly in test vault:
+- **BasenameOnly**: User renames `note-A.md` → `note-B-A.md` → file moves to `Library/A/B/note-B-A.md`
+- **DragIn with suffix**: File dropped at `Library/note-B-A.md` → moves to `Library/A/B/note-B-A.md`
+
+Issue: Folder creation conflicts with existing files in test vault state.
+
+
+### 3. Create/Delete Handling
+
+Runtime mode only handles renames. Add:
+- **Create**: If file created inside library with suffix, check if suffix matches path
+- **Delete**: Clean up empty parent folders
+
+### 4. Codex Integration
+
+After healing completes:
+1. Update LibraryTree
+2. Diff tree before/after
+3. Generate codex update actions
+4. Dispatch to VaultActionManager
+
+### 5. Empty Folder Cleanup
+
+`init-healer` returns `deleteActions` but currently always empty. Implement:
+- Detect folders with no files (or only codex)
+- Generate delete actions for empty folders

@@ -75,4 +75,7 @@ Given settings { LibrarianRoot: "Library", suffixDelimeter: "-" }:
 - "Library/doc/paper/Pekar/2025/The recency and geographical origins of the bat viruses ancestral to SARS_CoV and SARS_CoV_2-2025-Pekar-paper-doc.pdf"
 { pathParts: ["Library", "doc", "paper", "Pekar", "2025"], extension: "md", splitBasename: {coreName: "The recency and geographical origins of the bat viruses ancestral to SARS_CoV and SARS_CoV_2", splitSuffix: ["2025", "Pekar", "paper", "doc"] }}
 
+---
+
+See also: [Healing Modes Implementation](../plans/librarian-healing-modes.md) - how filename/path mismatches are detected and resolved.
 
