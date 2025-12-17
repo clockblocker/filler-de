@@ -4,7 +4,7 @@ import {
 	Plugin,
 	type WorkspaceLeaf,
 } from "obsidian";
-import { Librarian } from "./commanders/librarian";
+import { Librarian, LibraryTree } from "./commanders/librarian";
 import { LibrarianLegacy } from "./commanders/librarian-legacy/librarian";
 import {
 	splitPath as managerSplitPath,
@@ -567,8 +567,11 @@ export default class TextEaterPlugin extends Plugin {
 	}
 
 	getLibrarianClass() {
-		// Return Librarian class constructor for tests to instantiate
 		return Librarian;
+	}
+
+	getLibraryTreeClass() {
+		return LibraryTree;
 	}
 
 	getExtractMetaInfo() {

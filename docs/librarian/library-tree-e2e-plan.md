@@ -2,175 +2,164 @@
 
 ## Overview
 
-E2E tests for `LibraryTree` and `Librarian` using WebdriverIO + Mocha, following the pattern established in `t-abstract-file-helpers` tests.
+E2E tests for `LibraryTree` and `Librarian` using WebdriverIO + Mocha.
+
+Key concepts:
+- `TreeLeaf = ScrollNode | FileNode` - leaf nodes with `coreNameChainToParent` set
+- `SectionNode` - folder representation with children
+- Status: `Done | NotStarted` for Scrolls/Sections, `Unknown` for Files
+- Status propagation: sections derive status from children (Done if all children Done)
 
 ## Test Categories by Difficulty
 
 ### Level 1: Easy Tests (Basic Happy Path)
 
-#### `Librarian.readTreeFromVault()` - Happy Path
-- [ ] **File**: `read-tree-from-vault.test.ts`
-- [ ] Create test structure using `createTestTreeActions()`
-- [ ] Read tree from vault
-- [ ] Verify tree structure matches expected:
+#### `Librarian.readTreeFromVault()` - Happy Path ✅
+- [x] **File**: `read-tree-from-vault.test.ts`
+- [x] Create test structure with metadata (status in file content)
+- [x] Read tree from vault
+- [x] Verify:
   - Root section exists
   - All sections created (Avarar, S1, S2, E1)
-  - All files present (E1-S1-Avarar.md, E2-S1-Avarar.md, etc.)
-  - Correct `coreName` extracted from basenames
+  - All ScrollNodes present with correct `coreName`
   - Correct `coreNameChainToParent` for all nodes
-- **Effort**: Low - Use existing `createTestTreeActions()`, verify structure
+  - Scroll statuses read from metadata
+  - Section statuses derived from children
 
-#### `LibraryTree.getNode()` - Happy Path
-- [ ] **File**: `tree-navigation.test.ts`
-- [ ] Get root node (empty chain) → returns root SectionNode
-- [ ] Get section node by chain → returns correct SectionNode
-- [ ] Get file node by chain → returns correct FileNode/ScrollNode
-- [ ] Get non-existent node → returns null
-- **Effort**: Low - Direct API calls, simple assertions
+#### `LibraryTree.getNode()` - Happy Path ✅
+- [x] **File**: `tree-navigation.test.ts`
+- [x] Get root node (empty chain) → returns root SectionNode
+- [x] Get section node by chain → returns correct SectionNode
+- [x] Get scroll node by chain → returns correct ScrollNode
+- [x] Get non-existent node → returns null
 
 #### `LibraryTree.serializeToLeaves()` - Happy Path
 - [ ] **File**: `tree-serialization.test.ts`
-- [ ] Serialize tree → returns all leaf nodes as TreeLeaf[]
-- [ ] Verify `coreNameChainToParent` are correct
-- [ ] Verify all files included, no sections
+- [ ] Serialize tree → returns all leaf nodes as `TreeLeaf[]`
+- [ ] Verify `coreNameChainToParent` correct on each leaf
+- [ ] Verify all ScrollNodes/FileNodes included, no SectionNodes
 - [ ] Round-trip: create tree → serialize → create new tree → verify identical
-- **Effort**: Low - Direct API calls, verify structure
 
 ### Level 2: Medium Tests (Tree Actions)
 
 #### `LibraryTree.applyTreeAction()` - CreateNode
 - [ ] **File**: `tree-actions.test.ts`
-- [ ] Create ScrollNode → node appears in tree
-- [ ] Create FileNode → node appears in tree
-- [ ] Create SectionNode → node appears with empty children
-- [ ] Create node with parent → parent's children includes new node
+- [ ] Create ScrollNode → node appears in tree with correct status
+- [ ] Create FileNode → node appears with `Unknown` status
+- [ ] Create SectionNode → node appears with empty children, `NotStarted` status
+- [ ] Create node → parent's children updated
 - [ ] Create duplicate node → returns existing chain (idempotent)
-- **Effort**: Medium - Need to verify tree structure after each action
 
 #### `LibraryTree.applyTreeAction()` - DeleteNode
 - [ ] **File**: `tree-actions.test.ts`
 - [ ] Delete leaf node → removed from parent's children
-- [ ] Delete section node → removes entire subtree
+- [ ] Delete section node → removes entire subtree from nodeMap
 - [ ] Delete non-existent node → returns chain (no-op)
-- [ ] Delete node → parent's children updated
-- **Effort**: Medium - Verify tree structure and parent relationships
 
 #### `LibraryTree.applyTreeAction()` - ChangeNodeName
 - [ ] **File**: `tree-actions.test.ts`
-- [ ] Rename leaf node → `coreName` updated
-- [ ] Rename section node → `coreName` updated
+- [ ] Rename leaf node → `coreName` updated, `getNode()` works with new name
 - [ ] Rename section → all children's `coreNameChainToParent` updated recursively
 - [ ] Rename to existing name → throws error
-- [ ] Verify `getNode()` works with new name
-- **Effort**: Medium - Need to verify recursive updates
 
 #### `LibraryTree.applyTreeAction()` - ChangeNodeStatus
 - [ ] **File**: `tree-status-propagation.test.ts`
 - [ ] Change ScrollNode status → only that node updated
 - [ ] Change SectionNode status → all descendants updated recursively
-- [ ] Change child to "Done" → parent checks children, updates if all done
-- [ ] Change child to "NotStarted" → parent updates to "NotStarted"
-- [ ] Change status propagates up to root
-- [ ] Change FileNode status → no-op (returns early)
-- **Effort**: Medium - Complex recursive logic to verify
+- [ ] After change, parent recalculates: Done if all children Done, else NotStarted
+- [ ] Status propagates up to root
+- [ ] Change FileNode status → no-op (FileNode has Unknown, can't change)
 
 ### Level 3: Hard Tests (Complex Scenarios)
 
 #### Status Propagation - Complex Tree
 - [ ] **File**: `tree-status-propagation.test.ts`
-- [ ] Multi-level tree with mixed statuses
-- [ ] Change deep child → verify propagation up entire chain
-- [ ] Change parent → verify propagation down entire subtree
-- [ ] Multiple status changes in sequence → verify final state correct
-- **Effort**: Hard - Complex state verification
+- [ ] Tree with mixed statuses at different levels
+- [ ] Change deep child to Done → verify propagation up entire chain
+- [ ] Change parent to NotStarted → verify all descendants NotStarted
+- [ ] Multiple status changes in sequence → verify final state
 
-#### Tree Building from Real Vault
+#### Tree Building with Metadata
 - [ ] **File**: `read-tree-from-vault.test.ts`
-- [ ] Create complex structure via vault actions
-- [ ] Read tree from vault
-- [ ] Verify tree matches actual vault structure
-- [ ] Test with files that have complex basenames (long names, special chars)
-- [ ] Test with nested folder structure (5+ levels)
-- **Effort**: Hard - Need to verify against actual vault state
+- [ ] Files with different metadata statuses
+- [ ] Files without metadata → default NotStarted
+- [ ] Mixed Done/NotStarted → correct section status derivation
 
-#### Round-trip: Actions → Tree → Serialize → Rebuild
-- [ ] **File**: `tree-serialization.test.ts`
-- [ ] Apply multiple tree actions
-- [ ] Serialize to DTOs
-- [ ] Create new tree from DTOs
-- [ ] Verify trees are identical (structure, statuses, names)
-- [ ] Test with various action sequences
-- **Effort**: Hard - Complex state comparison
+### Level 4: Integration Tests
 
-### Level 4: Very Hard Tests (Edge Cases & Integration)
-
-#### Concurrent Tree Modifications
-- [ ] **File**: `tree-actions.test.ts`
-- [ ] Apply multiple actions in sequence
-- [ ] Verify each action returns correct impacted node
-- [ ] Verify final tree state is correct
-- [ ] Test action ordering (create before delete, etc.)
-- **Effort**: Very Hard - Complex state management
-
-#### Integration with VaultActionManager
-- [ ] **File**: `read-tree-from-vault.test.ts`
-- [ ] Create structure via VaultActionManager
-- [ ] Read tree from vault
-- [ ] Apply tree actions
-- [ ] Verify vault state matches tree state
-- [ ] Test with actual file renames, moves, etc.
-- **Effort**: Very Hard - Full integration testing
+#### Full Reconciliation Flow
+- [ ] **File**: `tree-reconciliation.test.ts`
+- [ ] Clone tree → apply TreeActions → diff → get VaultActions
+- [ ] Verify VaultActions would sync vault to new tree state
 
 ## Test Data
 
 ### Standard Test Structure
 ```
-Library
-- Avarar
-  - S1
-    - E1-S1-Avarar.md
-    - E2-S1-Avarar.md
-  - S2
-    - E1
-      - 000_E1-E1-S2-Avarar.md
-      - 001_E1-E1-S2-Avarar.md
-    - E2-S1-Avarar.md
+Library/
+├── Avarar/
+│   ├── S1/
+│   │   ├── E1-S1-Avarar.md (status: Done)
+│   │   └── E2-S1-Avarar.md (status: NotStarted)
+│   └── S2/
+│       ├── E1/
+│       │   ├── 000_E1-E1-S2-Avarar.md (status: Done)
+│       │   └── 001_E1-E1-S2-Avarar.md (status: Done)
+│       └── E2-S1-Avarar.md (status: Done)
 ```
 
-### Test Helpers Needed
+Expected section statuses:
+- `E1` (section): Done (all children Done)
+- `S2`: Done (all children Done)
+- `S1`: NotStarted (has NotStarted child)
+- `Avarar`: NotStarted (S1 is NotStarted)
+- Root: NotStarted
 
-1. **`setupTestTree()`**: Creates test structure using `createTestTreeActions()`
-2. **`verifyTreeStructure()`**: Asserts tree matches expected structure
-3. **`getNodeByPath()`**: Helper to get node by human-readable path
-4. **`assertNodeProperties()`**: Verify node has correct properties
+### Metadata Format
+```
+<section id={textfresser_meta_keep_me_invisible}>
+{"fileType":"Scroll","status":"Done"}
+</section>
+```
+
+### Test Setup Pattern
+```typescript
+// Create files with metadata
+const files = [
+  { path: "Library/folder/Note-folder.md", status: "Done" },
+  // ...
+];
+const createActions = files.map(({ path }) => ({
+  type: "CreateMdFile",
+  payload: { content: "", splitPath: vaultSplitPath(path) },
+}));
+await manager.dispatch(createActions);
+
+// Write metadata
+const writeActions = files.map(({ path, status }) => ({
+  type: "ReplaceContentMdFile", 
+  payload: { content: makeMeta(status), splitPath: vaultSplitPath(path) },
+}));
+await manager.dispatch(writeActions);
+
+// Read tree
+const tree = await librarian.readTreeFromVault();
+```
 
 ## Implementation Order
 
-1. **Phase 1**: Basic tree reading and navigation
-   - `readTreeFromVault()` happy path
+1. **Phase 1** ✅: Basic tree reading and navigation
+   - `readTreeFromVault()` with metadata extraction
    - `getNode()` tests
-   - `serializeToTreeLeafDtos()` basic tests
+   
+2. **Phase 2**: Serialization and tree actions
+   - `serializeToLeaves()` tests
+   - CreateNode, DeleteNode, ChangeNodeName tests
 
-2. **Phase 2**: Tree actions
-   - CreateNode tests
-   - DeleteNode tests
-   - ChangeNodeName tests
-   - ChangeNodeStatus basic tests
-
-3. **Phase 3**: Complex scenarios
-   - Status propagation complex tests
-   - Round-trip serialization
-   - Complex tree structures
+3. **Phase 3**: Status propagation
+   - ChangeNodeStatus tests
+   - Complex propagation scenarios
 
 4. **Phase 4**: Integration
-   - Full integration with VaultActionManager
-   - Real vault state verification
+   - Reconciliation flow
    - Edge cases
-
-## Notes
-
-- Use `createTestTreeActions()` for consistent test setup
-- Verify `coreNameChainToParent` is always correct after actions
-- Test that `applyTreeAction()` returns correct impacted node
-- Ensure status propagation works correctly up and down tree
-- Test that serialization preserves all tree state
