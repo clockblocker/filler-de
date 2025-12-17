@@ -29,11 +29,12 @@ import { AboveSelectionToolbarService } from "./services/obsidian-services/atomi
 import { ApiService } from "./services/obsidian-services/atomic-services/api-service";
 import { BottomToolbarService } from "./services/obsidian-services/atomic-services/bottom-toolbar-service";
 import { SelectionService } from "./services/obsidian-services/atomic-services/selection-service";
-import { LegacyOpenedFileService } from "./services/obsidian-services/file-services/active-view/legacy-opened-file-service";
-import { LegacyOpenedFileReader } from "./services/obsidian-services/file-services/active-view/opened-file-reader";
-import { LegacyBackgroundFileServiceLegacy } from "./services/obsidian-services/file-services/background/background-file-service";
-import { VaultActionExecutor } from "./services/obsidian-services/file-services/background/vault-action-executor";
-import { VaultActionQueueLegacy } from "./services/obsidian-services/file-services/vault-action-queue";
+// Legacy services - unplugged
+// import { LegacyOpenedFileService } from "./services/obsidian-services/file-services/active-view/legacy-opened-file-service";
+// import { LegacyOpenedFileReader } from "./services/obsidian-services/file-services/active-view/opened-file-reader";
+// import { LegacyBackgroundFileServiceLegacy } from "./services/obsidian-services/file-services/background/background-file-service";
+// import { VaultActionExecutor } from "./services/obsidian-services/file-services/background/vault-action-executor";
+// import { VaultActionQueueLegacy } from "./services/obsidian-services/file-services/vault-action-queue";
 import { ACTION_CONFIGS } from "./services/wip-configs/actions/actions-config";
 // import newGenCommand from "./services/wip-configs/actions/new/new-gen-command";
 // import { VaultCurrator } from './obsidian-related/obsidian-services/managers/vault-currator';
@@ -46,22 +47,21 @@ import { DEFAULT_SETTINGS, type TextEaterSettings } from "./types";
 export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;
 	apiService: ApiService;
-	openedFileReader: LegacyOpenedFileReader;
-	legacyOpenedFileService: LegacyOpenedFileService;
+	// Legacy services - unplugged
+	// openedFileReader: LegacyOpenedFileReader;
+	// legacyOpenedFileService: LegacyOpenedFileService;
+	// backgroundFileService: LegacyBackgroundFileServiceLegacy;
+	// vaultActionQueue: VaultActionQueueLegacy;
+	// vaultActionExecutor: VaultActionExecutor;
 	testingOpenedFileServiceWithResult: OpenedFileServiceWithResult;
 	testingReader: Reader;
 	testingTFileHelper: TFileHelper;
 	testingTFolderHelper: TFolderHelper;
 	vaultActionManager: ObsidianVaultActionManagerImpl;
-	backgroundFileService: LegacyBackgroundFileServiceLegacy;
 	selectionService: SelectionService;
 
 	selectionToolbarService: AboveSelectionToolbarService;
 	bottomToolbarService: BottomToolbarService;
-
-	// File management
-	vaultActionQueue: VaultActionQueueLegacy;
-	vaultActionExecutor: VaultActionExecutor;
 
 	// Commanders
 	librarian: Librarian | null = null;
@@ -166,12 +166,25 @@ export default class TextEaterPlugin extends Plugin {
 		await this.addCommands();
 
 		this.apiService = new ApiService(this.settings);
-		this.openedFileReader = new LegacyOpenedFileReader(this.app);
 
-		this.legacyOpenedFileService = new LegacyOpenedFileService(
-			this.app,
-			this.openedFileReader,
-		);
+		// Legacy services - unplugged
+		// this.openedFileReader = new LegacyOpenedFileReader(this.app);
+		// this.legacyOpenedFileService = new LegacyOpenedFileService(
+		// 	this.app,
+		// 	this.openedFileReader,
+		// );
+		// this.backgroundFileService = new LegacyBackgroundFileServiceLegacy({
+		// 	fileManager: this.app.fileManager,
+		// 	vault: this.app.vault,
+		// });
+		// this.vaultActionExecutor = new VaultActionExecutor(
+		// 	this.backgroundFileService,
+		// 	this.legacyOpenedFileService,
+		// );
+		// this.vaultActionQueue = new VaultActionQueueLegacy(
+		// 	this.vaultActionExecutor,
+		// );
+
 		const testingOpenedFileReader = new OpenedFileReader(this.app);
 		this.testingOpenedFileServiceWithResult =
 			new OpenedFileServiceWithResult(this.app, testingOpenedFileReader);
@@ -200,21 +213,6 @@ export default class TextEaterPlugin extends Plugin {
 		this.vaultActionManager = new ObsidianVaultActionManagerImpl(this.app);
 		console.log("[main] vaultActionManager created");
 
-		// this.setTestingGlobals();
-
-		this.backgroundFileService = new LegacyBackgroundFileServiceLegacy({
-			fileManager: this.app.fileManager,
-			vault: this.app.vault,
-		});
-
-		this.vaultActionExecutor = new VaultActionExecutor(
-			this.backgroundFileService,
-			this.legacyOpenedFileService,
-		);
-		this.vaultActionQueue = new VaultActionQueueLegacy(
-			this.vaultActionExecutor,
-		);
-
 		this.selectionToolbarService = new AboveSelectionToolbarService(
 			this.app,
 		);
@@ -236,12 +234,28 @@ export default class TextEaterPlugin extends Plugin {
 		// so we must handle folder renames explicitly and heal all children
 		this.registerEvent(
 			this.app.vault.on("rename", (file, oldPath) => {
+				console.log(
+					"[main] rename event:",
+					oldPath,
+					"→",
+					file.path,
+					"isFolder:",
+					"children" in file,
+				);
 				if (this.librarian) {
-					void this.librarian.handleRename(
-						oldPath,
-						file.path,
-						"children" in file, // isFolder
-					);
+					void this.librarian
+						.handleRename(
+							oldPath,
+							file.path,
+							"children" in file, // isFolder
+						)
+						.then((actions) => {
+							console.log(
+								"[main] handleRename result:",
+								actions.length,
+								"actions",
+							);
+						});
 				}
 			}),
 		);
@@ -513,13 +527,14 @@ export default class TextEaterPlugin extends Plugin {
 			name: "new-gen-command",
 		});
 
-		this.addCommand({
-			callback: () => {
-				this.backgroundFileService.logDeepLs();
-			},
-			id: "librarian-log-deep-ls",
-			name: "LibrarianLegacy: log tree structure",
-		});
+		// Legacy command - unplugged
+		// this.addCommand({
+		// 	callback: () => {
+		// 		this.backgroundFileService.logDeepLs();
+		// 	},
+		// 	id: "librarian-log-deep-ls",
+		// 	name: "LibrarianLegacy: log tree structure",
+		// });
 	}
 
 	// private setTestingGlobals() {

@@ -32,6 +32,8 @@ import {
 
 export class Librarian {
 	private tree: LibraryTree | null = null;
+	/** Track paths we're currently processing to avoid self-event loops */
+	private processingPaths = new Set<string>();
 
 	constructor(
 		private readonly vaultActionManager: ObsidianVaultActionManager,
@@ -44,7 +46,14 @@ export class Librarian {
 	 * Mode 2: Path is king, suffix-only renames.
 	 */
 	async init(): Promise<InitHealResult> {
-		this.tree = await this.readTreeFromVault();
+		try {
+			this.tree = await this.readTreeFromVault();
+		} catch (error) {
+			console.error("[Librarian] Failed to read tree from vault:", error);
+			// Return empty result if tree can't be read
+			return { deleteActions: [], renameActions: [] };
+		}
+
 		const leaves = this.tree.serializeToLeaves();
 
 		const healResult = healOnInit(
@@ -56,7 +65,14 @@ export class Librarian {
 		if (healResult.renameActions.length > 0) {
 			await this.vaultActionManager.dispatch(healResult.renameActions);
 			// Re-read tree after healing
-			this.tree = await this.readTreeFromVault();
+			try {
+				this.tree = await this.readTreeFromVault();
+			} catch (error) {
+				console.error(
+					"[Librarian] Failed to re-read tree after healing:",
+					error,
+				);
+			}
 		}
 
 		return healResult;
@@ -78,12 +94,37 @@ export class Librarian {
 		newPath: string,
 		isFolder: boolean,
 	): Promise<VaultAction[]> {
+		// Skip if this is a self-triggered event (from our own dispatch)
+		if (
+			this.processingPaths.has(oldPath) ||
+			this.processingPaths.has(newPath)
+		) {
+			console.log(
+				"[Librarian] skipping self-event:",
+				oldPath,
+				"→",
+				newPath,
+			);
+			return [];
+		}
+
+		console.log(
+			"[Librarian] handleRename:",
+			oldPath,
+			"→",
+			newPath,
+			"isFolder:",
+			isFolder,
+		);
+
 		const mode = detectRenameMode(
 			{ isFolder, newPath, oldPath },
 			this.libraryRoot,
 		);
+		console.log("[Librarian] detected mode:", mode);
 
 		if (!mode) {
+			console.log("[Librarian] no mode detected, skipping");
 			return [];
 		}
 
@@ -93,11 +134,42 @@ export class Librarian {
 			newPath,
 			isFolder,
 		);
+		console.log("[Librarian] resolved actions:", actions.length, actions);
 
 		if (actions.length > 0) {
-			await this.vaultActionManager.dispatch(actions);
-			// Refresh tree after changes
-			this.tree = await this.readTreeFromVault();
+			// Track paths we're about to modify to filter self-events
+			for (const action of actions) {
+				if ("from" in action.payload && "to" in action.payload) {
+					const fromPath = [
+						...action.payload.from.pathParts,
+						action.payload.from.basename,
+					].join("/");
+					const toPath = [
+						...action.payload.to.pathParts,
+						action.payload.to.basename,
+					].join("/");
+					this.processingPaths.add(fromPath);
+					this.processingPaths.add(toPath);
+					// Also add with extension for md files
+					if (action.payload.from.type === "MdFile") {
+						this.processingPaths.add(fromPath + ".md");
+						this.processingPaths.add(toPath + ".md");
+					}
+				}
+			}
+
+			console.log("[Librarian] dispatching actions...");
+			try {
+				await this.vaultActionManager.dispatch(actions);
+				// Refresh tree after changes
+				this.tree = await this.readTreeFromVault();
+				console.log("[Librarian] dispatch complete, tree refreshed");
+			} finally {
+				// Clear tracked paths after a delay to allow events to settle
+				setTimeout(() => {
+					this.processingPaths.clear();
+				}, 500);
+			}
 		}
 
 		return actions;
@@ -139,8 +211,17 @@ export class Librarian {
 		subtype: RuntimeSubtype,
 		isFolder: boolean,
 	): Promise<VaultAction[]> {
+		console.log("[Librarian] resolveRuntimeActions input:", {
+			newPath,
+			oldPath,
+			subtype,
+		});
 		const oldSplitPath = this.vaultActionManager.splitPath(oldPath);
 		const newSplitPath = this.vaultActionManager.splitPath(newPath);
+		console.log("[Librarian] splitPath results:", {
+			newSplitPath,
+			oldSplitPath,
+		});
 
 		// Folder renames: handled via handleFolderRename
 		if (

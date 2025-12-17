@@ -52,24 +52,33 @@ export class Reader {
 
 			const children = await this.list(current);
 			for (const child of children) {
-				const tRef = await this.getAbstractFile(child);
+				try {
+					const tRef = await this.getAbstractFile(child);
 
-				if (child.type === "Folder") {
-					all.push({
-						...child,
-						tRef: tRef as TFolder,
-					} as SplitPathToFolderWithTRef);
-					stack.push(child);
-				} else if (child.type === "MdFile") {
-					all.push({
-						...child,
-						tRef: tRef as TFile,
-					} as SplitPathToMdFileWithTRef);
-				} else {
-					all.push({
-						...child,
-						tRef: tRef as TFile,
-					} as SplitPathToFileWithTRef);
+					if (child.type === "Folder") {
+						all.push({
+							...child,
+							tRef: tRef as TFolder,
+						} as SplitPathToFolderWithTRef);
+						stack.push(child);
+					} else if (child.type === "MdFile") {
+						all.push({
+							...child,
+							tRef: tRef as TFile,
+						} as SplitPathToMdFileWithTRef);
+					} else {
+						all.push({
+							...child,
+							tRef: tRef as TFile,
+						} as SplitPathToFileWithTRef);
+					}
+				} catch (error) {
+					// Skip files that can't be resolved (stale refs, deleted files)
+					console.warn(
+						"[Reader] Skipping unresolvable path:",
+						child,
+						error,
+					);
 				}
 			}
 		}

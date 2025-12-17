@@ -69,6 +69,42 @@ describe("resolveRuntimeIntent", () => {
 			expect(result).not.toBeNull();
 			expect(result?.to.pathParts).toEqual(["Library", "A", "B", "C"]);
 		});
+
+		it("adds suffix when user renames to name without suffix", () => {
+			// User renamed Library/A/B/Untitled.md to Library/A/B/Note.md (no suffix)
+			// Should add suffix to match location: Note-B-A.md
+			const oldPath = mdFile(["Library", "A", "B"], "Untitled");
+			const newPath = mdFile(["Library", "A", "B"], "Note");
+
+			const result = resolveRuntimeIntent(
+				oldPath,
+				newPath,
+				RuntimeSubtype.BasenameOnly,
+				LIBRARY_ROOT,
+				DELIMITER,
+			);
+
+			expect(result).not.toBeNull();
+			expect(result?.to.pathParts).toEqual(["Library", "A", "B"]); // stays in same folder
+			expect(result?.to.basename).toBe("Note-B-A"); // suffix added
+		});
+
+		it("returns null when at root and renamed without suffix", () => {
+			// User renamed Library/Untitled.md to Library/Note.md (no suffix)
+			// At root, no suffix needed - no action
+			const oldPath = mdFile(["Library"], "Untitled");
+			const newPath = mdFile(["Library"], "Note");
+
+			const result = resolveRuntimeIntent(
+				oldPath,
+				newPath,
+				RuntimeSubtype.BasenameOnly,
+				LIBRARY_ROOT,
+				DELIMITER,
+			);
+
+			expect(result).toBeNull();
+		});
 	});
 
 	describe("PathOnly - user moved file", () => {

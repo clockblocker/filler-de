@@ -35,10 +35,13 @@ function extractFileInfo(
 	path: SplitPathToFile | SplitPathToMdFile,
 	suffixDelimiter: string,
 ): FileInfo {
+	console.log("[extractFileInfo] input path:", path);
+	const parsed = parseBasename(path.basename, suffixDelimiter);
+	console.log("[extractFileInfo] parsed:", parsed);
 	return {
 		basename: path.basename,
 		extension: path.extension,
-		parsed: parseBasename(path.basename, suffixDelimiter),
+		parsed,
 		pathParts: path.pathParts,
 	};
 }
@@ -71,7 +74,29 @@ export function resolveRuntimeIntent(
 
 	switch (subtype) {
 		case RuntimeSubtype.BasenameOnly: {
-			// User changed basename → interpret as move request
+			// User changed basename → interpret as move request only if suffix changed
+			// If no suffix in new name, user just renamed the file (no move intent)
+			if (newInfo.parsed.splitSuffix.length === 0) {
+				// No suffix = user just renamed coreName, no move needed
+				// But we should add the correct suffix to match current path
+				const expectedSuffix = computeSuffixFromPath(relativePathParts);
+				if (expectedSuffix.length === 0) {
+					// At root, no suffix needed
+					return null;
+				}
+				// Need to add suffix to match current location
+				const newBasename = buildBasename(
+					newInfo.parsed.coreName,
+					expectedSuffix,
+					suffixDelimiter,
+				);
+				const targetPath: SplitPathToFile | SplitPathToMdFile = {
+					...newPath,
+					basename: newBasename,
+				};
+				return { from: newPath, to: targetPath };
+			}
+
 			// Compute target path from new suffix
 			const targetPathParts = computePathFromSuffix(
 				newInfo.parsed.splitSuffix,
