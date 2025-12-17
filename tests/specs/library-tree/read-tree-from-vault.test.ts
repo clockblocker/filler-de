@@ -146,11 +146,10 @@ export const testReadTreeFromVault = async () => {
 		
 		// Debug: serialize tree to see what files were actually read
 		const serialized = tree.serializeToLeaves() as any[];
-		const filePaths = serialized.map((dto: any) => ({
-			coreName: dto.coreName,
-			coreNameChainToParent: dto.coreNameChainToParent,
-			pathParts: dto.pathParts,
-			tRefPath: dto.tRef?.path,
+		const filePaths = serialized.map((leaf: any) => ({
+			coreName: leaf.coreName,
+			coreNameChainToParent: leaf.coreNameChainToParent,
+			tRefPath: leaf.tRef?.path,
 		}));
 		
 		// Verify structure by calling getNode and returning serializable node data
@@ -198,10 +197,10 @@ export const testReadTreeFromVault = async () => {
 
 	expect(result.success).toBe(true);
 	
-	// Debug output
-	if (result.debug) {
-		console.log("Debug info:", JSON.stringify(result.debug, null, 2));
-	}
+	// // Debug output
+	// if (result.debug) {
+	// 	console.log("Debug info:", JSON.stringify(result.debug, null, 2));
+	// }
 	
 	// Verify structure from serialized data
 	expect(result.root).not.toBeNull();
