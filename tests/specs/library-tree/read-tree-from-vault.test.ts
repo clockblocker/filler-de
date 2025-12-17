@@ -94,51 +94,56 @@ export const testReadTreeFromVault = async () => {
 			"-",
 		);
 
-		// Create test structure - define inline since functions can't be imported
-		const actions = [
-			{
-				payload: {
-					content: "",
-					splitPath: vaultSplitPath("Library/Avarar/S1/E1-S1-Avarar.md"),
-				},
-				type: "CreateMdFile",
-			},
-			{
-				payload: {
-					content: "",
-					splitPath: vaultSplitPath("Library/Avarar/S1/E2-S1-Avarar.md"),
-				},
-				type: "CreateMdFile",
-			},
-			{
-				payload: {
-					content: "",
-					splitPath: vaultSplitPath("Library/Avarar/S2/E1/000_E1-E1-S2-Avarar.md"),
-				},
-				type: "CreateMdFile",
-			},
-			{
-				payload: {
-					content: "",
-					splitPath: vaultSplitPath("Library/Avarar/S2/E1/001_E1-E1-S2-Avarar.md"),
-				},
-				type: "CreateMdFile",
-			},
-			{
-				payload: {
-					content: "",
-					splitPath: vaultSplitPath("Library/Avarar/S2/E2-S1-Avarar.md"),
-				},
-				type: "CreateMdFile",
-			},
+		// Helper to create meta section with status
+		const makeMeta = (status: "Done" | "NotStarted") =>
+			`<section id={textfresser_meta_keep_me_invisible}>\n{"fileType":"Scroll","status":"${status}"}\n</section>\n`;
+
+		// File paths for test structure
+		const files = [
+			{ path: "Library/Avarar/S1/E1-S1-Avarar.md", status: "Done" as const },
+			{ path: "Library/Avarar/S1/E2-S1-Avarar.md", status: "NotStarted" as const },
+			{ path: "Library/Avarar/S2/E1/000_E1-E1-S2-Avarar.md", status: "Done" as const },
+			{ path: "Library/Avarar/S2/E1/001_E1-E1-S2-Avarar.md", status: "Done" as const },
+			{ path: "Library/Avarar/S2/E2-S1-Avarar.md", status: "Done" as const },
 		];
-		await manager.dispatch(actions);
+
+		// First create files (may already exist)
+		const createActions = files.map(({ path }) => ({
+			payload: {
+				content: "",
+				splitPath: vaultSplitPath(path),
+			},
+			type: "CreateMdFile",
+		}));
+		await manager.dispatch(createActions);
+
+		// Then write metadata content to ensure correct status
+		const writeActions = files.map(({ path, status }) => ({
+			payload: {
+				content: makeMeta(status),
+				splitPath: vaultSplitPath(path),
+			},
+			type: "ReplaceContentMdFile",
+		}));
+		await manager.dispatch(writeActions);
 		
-		// Debug: verify files were created correctly
+		// Small delay to ensure cache is updated
+		await new Promise(resolve => setTimeout(resolve, 100));
+		
+		// Debug: verify files were created correctly with content
 		const e1S1Path = vaultSplitPath("Library/Avarar/S1/E1-S1-Avarar.md");
 		const e1S1Exists = await manager.exists(e1S1Path);
 		const e1S1Content = e1S1Exists ? await manager.readContent(e1S1Path) : null;
+		const expectedMeta = makeMeta("Done");
 
+		// Test withStatusFromMeta directly to debug
+		const testPath = vaultSplitPath("Library/Avarar/S1/E1-S1-Avarar.md");
+		const testContent = await manager.readContent(testPath);
+		
+		// Get extractMetaInfo from plugin
+		const extractMetaInfoFn = plugin.getExtractMetaInfo?.();
+		const testMeta = extractMetaInfoFn ? extractMetaInfoFn(testContent) : null;
+		
 		// Read tree from vault and verify structure in Obsidian context
 		// Don't return tree directly - it has circular references
 		// Instead, call getNode methods and return serializable data
@@ -149,6 +154,7 @@ export const testReadTreeFromVault = async () => {
 		const filePaths = serialized.map((leaf: any) => ({
 			coreName: leaf.coreName,
 			coreNameChainToParent: leaf.coreNameChainToParent,
+			status: leaf.status,
 			tRefPath: leaf.tRef?.path,
 		}));
 		
@@ -170,37 +176,40 @@ export const testReadTreeFromVault = async () => {
 
 		// Return serializable verification data
 		return {
-			avarar: avarar ? { coreName: avarar.coreName, coreNameChainToParent: avarar.coreNameChainToParent, type: avarar.type } : null,
+			avarar: avarar ? { coreName: avarar.coreName, coreNameChainToParent: avarar.coreNameChainToParent, status: avarar.status, type: avarar.type } : null,
 			debug: {
 				avararChildren: avararChildren,
 				avararExists: avarar !== null,
 				e1S1Content: e1S1Content,
 				e1S1Exists: e1S1Exists,
+				expectedMeta: expectedMeta,
 				filePaths: filePaths,
 				hasGetNode: typeof tree.getNode === "function",
 				rootExists: root !== null,
 				s1Exists: s1 !== null,
+				testContent: testContent,
+				testMeta: testMeta,
 				treeType: typeof tree,
 			},
-			e1: e1 ? { coreName: e1.coreName, coreNameChainToParent: e1.coreNameChainToParent, type: e1.type } : null,
-			e1S1Avarar: e1S1Avarar ? { coreName: e1S1Avarar.coreName, coreNameChainToParent: e1S1Avarar.coreNameChainToParent, type: e1S1Avarar.type } : null,
-			e2S1Avarar: e2S1Avarar ? { coreName: e2S1Avarar.coreName, coreNameChainToParent: e2S1Avarar.coreNameChainToParent, type: e2S1Avarar.type } : null,
-			e2S2Avarar: e2S2Avarar ? { coreName: e2S2Avarar.coreName, coreNameChainToParent: e2S2Avarar.coreNameChainToParent, type: e2S2Avarar.type } : null,
-			file000: file000 ? { coreName: file000.coreName, coreNameChainToParent: file000.coreNameChainToParent, type: file000.type } : null,
-			file001: file001 ? { coreName: file001.coreName, coreNameChainToParent: file001.coreNameChainToParent, type: file001.type } : null,
-			root: root ? { coreName: root.coreName, coreNameChainToParent: root.coreNameChainToParent, type: root.type } : null,
-			s1: s1 ? { coreName: s1.coreName, coreNameChainToParent: s1.coreNameChainToParent, type: s1.type } : null,
-			s2: s2 ? { coreName: s2.coreName, coreNameChainToParent: s2.coreNameChainToParent, type: s2.type } : null,
+			e1: e1 ? { coreName: e1.coreName, coreNameChainToParent: e1.coreNameChainToParent, status: e1.status, type: e1.type } : null,
+			e1S1Avarar: e1S1Avarar ? { coreName: e1S1Avarar.coreName, coreNameChainToParent: e1S1Avarar.coreNameChainToParent, status: e1S1Avarar.status, type: e1S1Avarar.type } : null,
+			e2S1Avarar: e2S1Avarar ? { coreName: e2S1Avarar.coreName, coreNameChainToParent: e2S1Avarar.coreNameChainToParent, status: e2S1Avarar.status, type: e2S1Avarar.type } : null,
+			e2S2Avarar: e2S2Avarar ? { coreName: e2S2Avarar.coreName, coreNameChainToParent: e2S2Avarar.coreNameChainToParent, status: e2S2Avarar.status, type: e2S2Avarar.type } : null,
+			file000: file000 ? { coreName: file000.coreName, coreNameChainToParent: file000.coreNameChainToParent, status: file000.status, type: file000.type } : null,
+			file001: file001 ? { coreName: file001.coreName, coreNameChainToParent: file001.coreNameChainToParent, status: file001.status, type: file001.type } : null,
+			root: root ? { coreName: root.coreName, coreNameChainToParent: root.coreNameChainToParent, status: root.status, type: root.type } : null,
+			s1: s1 ? { coreName: s1.coreName, coreNameChainToParent: s1.coreNameChainToParent, status: s1.status, type: s1.type } : null,
+			s2: s2 ? { coreName: s2.coreName, coreNameChainToParent: s2.coreNameChainToParent, status: s2.status, type: s2.type } : null,
 			success: true,
 		};
 	});
 
 	expect(result.success).toBe(true);
 	
-	// // Debug output
-	// if (result.debug) {
-	// 	console.log("Debug info:", JSON.stringify(result.debug, null, 2));
-	// }
+	// Debug output
+	if (result.debug) {
+		console.log("Debug info:", JSON.stringify(result.debug, null, 2));
+	}
 	
 	// Verify structure from serialized data
 	expect(result.root).not.toBeNull();
@@ -228,28 +237,46 @@ export const testReadTreeFromVault = async () => {
 	expect(result.e1?.coreName).toBe("E1");
 	expect(result.e1?.coreNameChainToParent).toEqual(["Avarar", "S2"]);
 	
+	// Scroll statuses from metadata
 	expect(result.e1S1Avarar).not.toBeNull();
 	expect(result.e1S1Avarar?.type).toBe("Scroll");
 	expect(result.e1S1Avarar?.coreName).toBe("E1");
 	expect(result.e1S1Avarar?.coreNameChainToParent).toEqual(["Avarar", "S1"]);
+	expect(result.e1S1Avarar?.status).toBe("Done");
 	
 	expect(result.e2S1Avarar).not.toBeNull();
 	expect(result.e2S1Avarar?.type).toBe("Scroll");
 	expect(result.e2S1Avarar?.coreName).toBe("E2");
 	expect(result.e2S1Avarar?.coreNameChainToParent).toEqual(["Avarar", "S1"]);
+	expect(result.e2S1Avarar?.status).toBe("NotStarted");
 	
 	expect(result.file000).not.toBeNull();
 	expect(result.file000?.type).toBe("Scroll");
 	expect(result.file000?.coreName).toBe("000_E1");
 	expect(result.file000?.coreNameChainToParent).toEqual(["Avarar", "S2", "E1"]);
+	expect(result.file000?.status).toBe("Done");
 	
 	expect(result.file001).not.toBeNull();
 	expect(result.file001?.type).toBe("Scroll");
 	expect(result.file001?.coreName).toBe("001_E1");
 	expect(result.file001?.coreNameChainToParent).toEqual(["Avarar", "S2", "E1"]);
+	expect(result.file001?.status).toBe("Done");
 	
 	expect(result.e2S2Avarar).not.toBeNull();
 	expect(result.e2S2Avarar?.type).toBe("Scroll");
 	expect(result.e2S2Avarar?.coreName).toBe("E2");
 	expect(result.e2S2Avarar?.coreNameChainToParent).toEqual(["Avarar", "S2"]);
+	expect(result.e2S2Avarar?.status).toBe("Done");
+
+	// Section statuses derived from children
+	// S1: has NotStarted child (E2) → NotStarted
+	expect(result.s1?.status).toBe("NotStarted");
+	// S2: all children Done → Done
+	expect(result.s2?.status).toBe("Done");
+	// E1 (section): all children Done → Done
+	expect(result.e1?.status).toBe("Done");
+	// Avarar: has NotStarted child (S1) → NotStarted
+	expect(result.avarar?.status).toBe("NotStarted");
+	// Root: has NotStarted child → NotStarted
+	expect(result.root?.status).toBe("NotStarted");
 };

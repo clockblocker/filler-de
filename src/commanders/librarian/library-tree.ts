@@ -1,4 +1,4 @@
-import type { TFile, TFolder } from "obsidian";
+import type { TFolder } from "obsidian";
 import { TreeActionType } from "./types/literals";
 import type { CoreName, CoreNameChainFromRoot } from "./types/split-basename";
 import type {

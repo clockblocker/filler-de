@@ -4,9 +4,12 @@ import type {
 	SplitPathToFileWithTRef,
 	SplitPathToMdFileWithTRef,
 } from "../../obsidian-vault-action-manager/types/split-path";
+import { extractMetaInfo } from "../../services/dto-services/meta-info-manager/interface";
 import { LibraryTree } from "./library-tree";
-import type { TreeLeaf } from "./types/tree-leaf";
-import { splitPathToLeaf } from "./utils/split-path-to-leaf";
+import {
+	splitPathToLeaf,
+	withStatusFromMeta,
+} from "./utils/split-path-to-leaf";
 
 export class Librarian {
 	constructor(
@@ -43,8 +46,22 @@ export class Librarian {
 				entry.type === "File" || entry.type === "MdFile",
 		);
 
-		const leaves: TreeLeaf[] = fileEntries.map((entry) =>
+		const leavesWithoutStatus = fileEntries.map((entry) =>
 			splitPathToLeaf(entry, this.libraryRoot, this.suffixDelimiter),
+		);
+
+		const readContent = (tRef: import("obsidian").TFile) => {
+			const sp = this.vaultActionManager.splitPath(tRef);
+			if (sp.type !== "MdFile") {
+				return Promise.resolve("");
+			}
+			return this.vaultActionManager.readContent(sp);
+		};
+
+		const leaves = await Promise.all(
+			leavesWithoutStatus.map((leaf) =>
+				withStatusFromMeta(leaf, readContent, extractMetaInfo),
+			),
 		);
 
 		return new LibraryTree(leaves, rootFolder);

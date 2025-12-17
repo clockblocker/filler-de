@@ -1,8 +1,11 @@
+import type { TFile } from "obsidian";
 import type {
 	SplitPathToFileWithTRef,
 	SplitPathToMdFileWithTRef,
 } from "../../../obsidian-vault-action-manager/types/split-path";
+import type { MetaInfo } from "../../../services/dto-services/meta-info-manager/types";
 import type { TreeLeaf } from "../types/tree-leaf";
+import type { ScrollNode } from "../types/tree-node";
 import { TreeNodeStatus, TreeNodeType } from "../types/tree-node";
 import { parseBasename } from "./parse-basename";
 
@@ -42,4 +45,32 @@ export function splitPathToLeaf(
 		tRef: splitPathWithTRef.tRef,
 		type: TreeNodeType.File,
 	};
+}
+
+/**
+ * Reads file content, extracts MetaInfo, and injects status into ScrollNode.
+ * FileNodes are returned unchanged.
+ */
+export async function withStatusFromMeta(
+	leaf: TreeLeaf,
+	readContent: (tRef: TFile) => Promise<string>,
+	extractMetaInfo: (content: string) => MetaInfo | null,
+): Promise<TreeLeaf> {
+	if (leaf.type !== TreeNodeType.Scroll) {
+		return leaf;
+	}
+
+	const content = await readContent(leaf.tRef);
+	const meta = extractMetaInfo(content);
+
+	if (!meta || !("status" in meta)) {
+		return leaf;
+	}
+
+	const status =
+		meta.status === "Done"
+			? TreeNodeStatus.Done
+			: TreeNodeStatus.NotStarted;
+
+	return { ...leaf, status };
 }

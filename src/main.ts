@@ -23,6 +23,7 @@ import { logError } from "./obsidian-vault-action-manager/helpers/issue-handlers
 import { splitPathFromSystemPath } from "./obsidian-vault-action-manager/helpers/pathfinder";
 import { BackgroundFileServiceLegacy } from "./obsidian-vault-action-manager/impl/background-file-service";
 import { Reader } from "./obsidian-vault-action-manager/impl/reader";
+import { extractMetaInfo } from "./services/dto-services/meta-info-manager/interface";
 import { AboveSelectionToolbarService } from "./services/obsidian-services/atomic-services/above-selection-toolbar-service";
 import { ApiService } from "./services/obsidian-services/atomic-services/api-service";
 import { BottomToolbarService } from "./services/obsidian-services/atomic-services/bottom-toolbar-service";
@@ -568,6 +569,10 @@ export default class TextEaterPlugin extends Plugin {
 	getLibrarianClass() {
 		// Return Librarian class constructor for tests to instantiate
 		return Librarian;
+	}
+
+	getExtractMetaInfo() {
+		return extractMetaInfo;
 	}
 
 	getLibrarianTestingApi() {
