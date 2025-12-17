@@ -38,9 +38,9 @@ import { ACTION_CONFIGS } from "./services/wip-configs/actions/actions-config";
 // import newGenCommand from "./services/wip-configs/actions/new/new-gen-command";
 // import { VaultCurrator } from './obsidian-related/obsidian-services/managers/vault-currator';
 import addBacklinksToCurrentFile from "./services/wip-configs/actions/old/addBacklinksToCurrentFile";
-import { makeClickListener } from "./services/wip-configs/event-listeners/click-listener/click-listener";
+// import { makeClickListener } from "./services/wip-configs/event-listeners/click-listener/click-listener";
 import { SettingsTab } from "./settings";
-import { LibrarianLegacyTester } from "./testers/librarian/librarian-tester";
+// import { LibrarianLegacyTester } from "./testers/librarian/librarian-tester";
 import { DEFAULT_SETTINGS, type TextEaterSettings } from "./types";
 
 export default class TextEaterPlugin extends Plugin {
@@ -222,11 +222,7 @@ export default class TextEaterPlugin extends Plugin {
 		this.selectionService = new SelectionService(this.app);
 
 		// New Librarian (healing modes)
-		this.librarian = new Librarian(
-			this.vaultActionManager,
-			"Library",
-			"-",
-		);
+		this.librarian = new Librarian(this.vaultActionManager, "Library", "-");
 		const healResult = await this.librarian.init();
 		console.log("[main] loadPlugin completed");
 		console.log(
@@ -390,46 +386,47 @@ export default class TextEaterPlugin extends Plugin {
 			name: "Generate a dictionary entry for the word in the title of the file",
 		});
 
-		this.addCommand({
-			editorCheckCallback: () => {
-				const librarianTester = new LibrarianLegacyTester(
-					this.librarian,
-				);
-				librarianTester.createAvatar();
-			},
-			id: "get-infinitive-and-emoji",
-			name: "Get infinitive/normal form and emoji for current word",
-		});
+		// TODO: Re-enable when LibrarianLegacy methods are ported to new Librarian
+		// this.addCommand({
+		// 	editorCheckCallback: () => {
+		// 		const librarianTester = new LibrarianLegacyTester(
+		// 			this.librarian,
+		// 		);
+		// 		librarianTester.createAvatar();
+		// 	},
+		// 	id: "get-infinitive-and-emoji",
+		// 	name: "Get infinitive/normal form and emoji for current word",
+		// });
 
-		this.addCommand({
-			editorCheckCallback: () => {
-				this.librarian.createNewNoteInCurrentFolder();
-			},
-			id: "create-new-text-in-the-current-folder-and-open-it",
-			name: "Create new text in the current folder and open it",
-		});
+		// this.addCommand({
+		// 	editorCheckCallback: () => {
+		// 		this.librarian.createNewNoteInCurrentFolder();
+		// 	},
+		// 	id: "create-new-text-in-the-current-folder-and-open-it",
+		// 	name: "Create new text in the current folder and open it",
+		// });
 
-		this.addCommand({
-			editorCheckCallback: (
-				checking: boolean,
-				_editor: Editor,
-				view: MarkdownView,
-			) => {
-				// Only show if file is in a Library folder
-				if (
-					!view.file ||
-					!this.librarian.isInLibraryFolder(view.file)
-				) {
-					return false;
-				}
-				if (!checking) {
-					this.librarian.makeNoteAText();
-				}
-				return true;
-			},
-			id: "make-note-a-text",
-			name: "Make this note a text",
-		});
+		// this.addCommand({
+		// 	editorCheckCallback: (
+		// 		checking: boolean,
+		// 		_editor: Editor,
+		// 		view: MarkdownView,
+		// 	) => {
+		// 		// Only show if file is in a Library folder
+		// 		if (
+		// 			!view.file ||
+		// 			!this.librarian.isInLibraryFolder(view.file)
+		// 		) {
+		// 			return false;
+		// 		}
+		// 		if (!checking) {
+		// 			this.librarian.makeNoteAText();
+		// 		}
+		// 		return true;
+		// 	},
+		// 	id: "make-note-a-text",
+		// 	name: "Make this note a text",
+		// });
 
 		this.addCommand({
 			editorCheckCallback: (
