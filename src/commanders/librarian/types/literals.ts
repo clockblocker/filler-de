@@ -9,9 +9,6 @@ export type FILE_NODE_TYPE = "File";
 export const SECTION_NODE_TYPE = "Section" as const;
 export type SECTION_NODE_TYPE = "Section";
 
-export const CODEX_NODE_TYPE = "Codex" as const;
-export type CODEX_NODE_TYPE = "Codex";
-
 /** Codex filename prefix */
 export const CODEX_PREFIX = "__" as const;
 export type CODEX_PREFIX = "__";

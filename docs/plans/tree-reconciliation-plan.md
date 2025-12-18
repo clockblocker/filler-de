@@ -161,43 +161,43 @@ function regenerateCodex(sectionChain: CoreNameChainFromRoot): VaultAction | nul
 
 ## 7. Implementation Phases
 
-### Phase 1: MoveNode TreeAction
-- [ ] Add `MoveNode` to `TreeActionType` enum
-- [ ] Implement `moveNode()` in LibraryTree
-- [ ] Return `[oldParentChain, newParentChain]`
-- [ ] Unit tests
+### Phase 1: MoveNode TreeAction ✅
+- [x] Add `MoveNode` to `TreeActionType` enum
+- [x] Implement `moveNode()` in LibraryTree
+- [x] Return `[oldParentChain, newParentChain]`
+- [x] Unit tests
 
-### Phase 2: VaultAction → TreeAction Translator
-- [ ] Create `translateVaultAction(action: VaultAction): TreeAction`
-- [ ] Handle all VaultAction types
-- [ ] Detect rename vs move by comparing pathParts
-- [ ] Unit tests
+### Phase 2: VaultAction → TreeAction Translator ✅
+- [x] Create `translateVaultAction(action: VaultAction): TreeAction`
+- [x] Handle all VaultAction types
+- [x] Detect rename vs move by comparing pathParts
+- [x] Unit tests
 
-### Phase 3: CodexFileNode
-- [ ] Add `Codex` to `TreeNodeType` enum
-- [ ] Update tree building to recognize `__*.md` files
-- [ ] Skip codex files in healing (they're system-managed)
-- [ ] Unit tests
+### Phase 3: CodexFileNode ✅
+- [x] Add `Codex` to `TreeNodeType` enum
+- [x] Update tree building to recognize `__*.md` files
+- [x] Skip codex files in healing (they're system-managed)
+- [x] Unit tests
 
-### Phase 4: Codex Content Generator
-- [ ] `generateCodexContent(section, maxDepth)` pure function
-- [ ] Collect scrolls: own + grandchild
-- [ ] Collect sections: up to 4 levels
-- [ ] Format as markdown with wikilinks
-- [ ] Unit tests
+### Phase 4: Codex Content Generator ✅
+- [x] `generateCodexContent(section, maxDepth)` pure function
+- [x] Collect scrolls: own + grandchild
+- [x] Collect sections: up to 4 levels
+- [x] Format as markdown with wikilinks
+- [x] Unit tests
 
-### Phase 5: Impacted Chain Expansion
-- [ ] `expandToAncestors(chains)` utility
-- [ ] `dedupeChains(chains)` utility
-- [ ] Unit tests
+### Phase 5: Impacted Chain Expansion ✅
+- [x] `expandToAncestors(chains)` utility
+- [x] `dedupeChains(chains)` utility
+- [x] Unit tests
 
-### Phase 6: Integration in Librarian
-- [ ] After healing dispatch: translate actions → TreeActions
-- [ ] Apply TreeActions, collect impacted chains
-- [ ] Expand to ancestors
-- [ ] Regenerate codexes for impacted sections
-- [ ] Dispatch codex actions
-- [ ] Apply codex TreeActions to tree
+### Phase 6: Integration in Librarian ✅
+- [x] After healing dispatch: translate actions → TreeActions
+- [x] Apply TreeActions, collect impacted chains
+- [x] Expand to ancestors
+- [x] Regenerate codexes for impacted sections
+- [x] Dispatch codex actions
+- [x] Apply codex TreeActions to tree
 
 ### Phase 7: E2E Tests
 - [ ] Create file → codex updated

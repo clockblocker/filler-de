@@ -22,26 +22,26 @@ describe("impacted-chains", () => {
 	});
 
 	describe("expandToAncestors", () => {
-		it("expands chain to all ancestors", () => {
+		it("expands chain to all ancestors including root", () => {
 			const result = expandToAncestors(["A", "B", "C"]);
-			expect(result).toEqual([["A"], ["A", "B"], ["A", "B", "C"]]);
+			expect(result).toEqual([[], ["A"], ["A", "B"], ["A", "B", "C"]]);
 		});
 
-		it("handles empty chain", () => {
+		it("handles empty chain (returns root only)", () => {
 			const result = expandToAncestors([]);
-			expect(result).toEqual([]);
+			expect(result).toEqual([[]]);
 		});
 
 		it("handles single element", () => {
 			const result = expandToAncestors(["A"]);
-			expect(result).toEqual([["A"]]);
+			expect(result).toEqual([[], ["A"]]);
 		});
 	});
 
 	describe("expandAllToAncestors", () => {
 		it("expands multiple chains", () => {
 			const result = expandAllToAncestors([["A", "B"], ["C"]]);
-			expect(result).toEqual([["A"], ["A", "B"], ["C"]]);
+			expect(result).toEqual([[], ["A"], ["A", "B"], [], ["C"]]);
 		});
 	});
 
@@ -63,14 +63,15 @@ describe("impacted-chains", () => {
 	});
 
 	describe("collectImpactedSections", () => {
-		it("collects and expands from single action", () => {
+		it("collects and expands from single action (including root)", () => {
 			const result = collectImpactedSections([["A", "B"]]);
-			expect(result).toEqual([["A"], ["A", "B"]]);
+			expect(result).toEqual([[], ["A"], ["A", "B"]]);
 		});
 
 		it("collects from MoveNode (tuple result)", () => {
 			const result = collectImpactedSections([[["A"], ["B", "C"]]]);
-			expect(result).toEqual([["A"], ["B"], ["B", "C"]]);
+			// Root [] appears twice, gets deduped
+			expect(result).toEqual([[], ["A"], ["B"], ["B", "C"]]);
 		});
 
 		it("dedupes across multiple actions", () => {
@@ -78,8 +79,8 @@ describe("impacted-chains", () => {
 				["A", "B"],
 				["A", "C"],
 			]);
-			// A appears in both expansions, should be deduped
-			expect(result).toEqual([["A"], ["A", "B"], ["A", "C"]]);
+			// Root and A appear in both expansions, should be deduped
+			expect(result).toEqual([[], ["A"], ["A", "B"], ["A", "C"]]);
 		});
 	});
 

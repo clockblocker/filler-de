@@ -22,13 +22,13 @@ export function flattenActionResult(
 }
 
 /**
- * Expand chains to include all ancestors.
- * ["A", "B", "C"] → [["A"], ["A", "B"], ["A", "B", "C"]]
+ * Expand chains to include all ancestors (including root).
+ * ["A", "B", "C"] → [[], ["A"], ["A", "B"], ["A", "B", "C"]]
  */
 export function expandToAncestors(
 	chain: CoreNameChainFromRoot,
 ): CoreNameChainFromRoot[] {
-	const result: CoreNameChainFromRoot[] = [];
+	const result: CoreNameChainFromRoot[] = [[]]; // Start with root
 
 	for (let i = 1; i <= chain.length; i++) {
 		result.push(chain.slice(0, i));

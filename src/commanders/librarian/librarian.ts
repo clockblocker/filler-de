@@ -1,5 +1,7 @@
+import type { TFile } from "obsidian";
 import { TFolder } from "obsidian";
 import type { ObsidianVaultActionManager } from "../../obsidian-vault-action-manager";
+import { splitPathKey } from "../../obsidian-vault-action-manager/impl/split-path";
 import type {
 	SplitPathToFile,
 	SplitPathToFileWithTRef,
@@ -9,6 +11,7 @@ import type {
 } from "../../obsidian-vault-action-manager/types/split-path";
 import type { VaultAction } from "../../obsidian-vault-action-manager/types/vault-action";
 import { extractMetaInfo } from "../../services/dto-services/meta-info-manager/interface";
+import { collectImpactedSections, generateCodexContent } from "./codex";
 import {
 	type DragInResult,
 	detectRenameMode,
@@ -20,11 +23,16 @@ import {
 	resolveRuntimeIntent,
 } from "./healing";
 import { LibraryTree } from "./library-tree";
+import { translateVaultAction } from "./reconciliation";
 import {
 	type DragInSubtype,
 	HealingMode,
 	RuntimeSubtype,
 } from "./types/literals";
+import type { CoreNameChainFromRoot } from "./types/split-basename";
+import type { TreeAction } from "./types/tree-action";
+import { type SectionNode, TreeNodeType } from "./types/tree-node";
+import { buildCodexBasename, isCodexBasename } from "./utils/codex-utils";
 import {
 	splitPathToLeaf,
 	withStatusFromMeta,
@@ -64,18 +72,71 @@ export class Librarian {
 
 		if (healResult.renameActions.length > 0) {
 			await this.vaultActionManager.dispatch(healResult.renameActions);
-			// Re-read tree after healing
-			try {
-				this.tree = await this.readTreeFromVault();
-			} catch (error) {
-				console.error(
-					"[Librarian] Failed to re-read tree after healing:",
-					error,
-				);
-			}
+
+			// Apply to tree and collect impacted chains
+			const impactedChains = this.applyActionsToTree(
+				healResult.renameActions,
+			);
+			console.log("[Librarian] init impacted chains:", impactedChains);
+
+			// Regenerate codexes for impacted sections
+			await this.regenerateCodexes(impactedChains);
+		} else {
+			// No healing needed, but still regenerate all codexes
+			await this.regenerateAllCodexes();
 		}
 
 		return healResult;
+	}
+
+	/**
+	 * Regenerate codexes for ALL sections in tree.
+	 * Used on init when no healing needed.
+	 */
+	private async regenerateAllCodexes(): Promise<void> {
+		if (!this.tree) {
+			return;
+		}
+
+		// Collect all section chains
+		const allSectionChains = this.collectAllSectionChains();
+		console.log(
+			"[Librarian] regenerating all codexes:",
+			allSectionChains.length,
+		);
+
+		await this.regenerateCodexes(allSectionChains);
+	}
+
+	/**
+	 * Collect chains for all sections in tree (including root).
+	 */
+	private collectAllSectionChains(): CoreNameChainFromRoot[] {
+		if (!this.tree) {
+			return [];
+		}
+
+		const chains: CoreNameChainFromRoot[] = [[]]; // Start with root
+
+		const collectRecursive = (
+			node: SectionNode,
+			currentChain: CoreNameChainFromRoot,
+		) => {
+			for (const child of node.children) {
+				if (child.type === TreeNodeType.Section) {
+					const childChain = [...currentChain, child.coreName];
+					chains.push(childChain);
+					collectRecursive(child as SectionNode, childChain);
+				}
+			}
+		};
+
+		const root = this.tree.getNode([]);
+		if (root && root.type === TreeNodeType.Section) {
+			collectRecursive(root as SectionNode, []);
+		}
+
+		return chains;
 	}
 
 	/**
@@ -161,18 +222,56 @@ export class Librarian {
 			console.log("[Librarian] dispatching actions...");
 			try {
 				await this.vaultActionManager.dispatch(actions);
-				// Refresh tree after changes
-				this.tree = await this.readTreeFromVault();
-				console.log("[Librarian] dispatch complete, tree refreshed");
+
+				// Apply to tree and collect impacted chains
+				const impactedChains = this.applyActionsToTree(actions);
+				console.log("[Librarian] impacted chains:", impactedChains);
+
+				// Regenerate codexes for impacted sections
+				await this.regenerateCodexes(impactedChains);
+
+				console.log("[Librarian] dispatch complete");
 			} finally {
 				// Clear tracked paths after a delay to allow events to settle
 				setTimeout(() => {
 					this.processingPaths.clear();
 				}, 500);
 			}
+		} else {
+			// No healing needed, but still update tree and codexes for user's rename
+			await this.updateTreeAndCodexesForRename(oldPath, newPath);
 		}
 
 		return actions;
+	}
+
+	/**
+	 * Update tree and regenerate codexes for a user rename that needs no healing.
+	 */
+	private async updateTreeAndCodexesForRename(
+		oldPath: string,
+		newPath: string,
+	): Promise<void> {
+		// Re-read tree to get latest state
+		this.tree = await this.readTreeFromVault();
+
+		// Compute impacted chain from new file location
+		const newSplitPath = this.vaultActionManager.splitPath(newPath);
+		if (newSplitPath.type === "Folder") {
+			return;
+		}
+
+		// Parent chain (without library root)
+		const parentChain = newSplitPath.pathParts.slice(1);
+		console.log(
+			"[Librarian] rename (no healing) impacted chain:",
+			parentChain,
+		);
+
+		// Expand to ancestors and regenerate codexes
+		const { expandToAncestors } = await import("./codex/impacted-chains");
+		const impactedChains = expandToAncestors(parentChain);
+		await this.regenerateCodexes(impactedChains);
 	}
 
 	/**
@@ -190,6 +289,21 @@ export class Librarian {
 
 		// Ignore files outside library
 		if (!path.startsWith(this.libraryRoot + "/")) {
+			return [];
+		}
+
+		// Skip codex files - they're generated, not source data
+		const basename = path.split("/").pop() ?? "";
+		const basenameWithoutExt = basename.includes(".")
+			? basename.slice(0, basename.lastIndexOf("."))
+			: basename;
+		console.log("[Librarian] handleCreate check:", {
+			basename,
+			basenameWithoutExt,
+			isCodex: isCodexBasename(basenameWithoutExt),
+		});
+		if (isCodexBasename(basenameWithoutExt)) {
+			console.log("[Librarian] skipping codex file:", path);
 			return [];
 		}
 
@@ -279,7 +393,21 @@ export class Librarian {
 
 		try {
 			await this.vaultActionManager.dispatch([action]);
+
+			// Re-read tree to include the new file
 			this.tree = await this.readTreeFromVault();
+
+			// Compute impacted chain from new file location
+			// The new file is at: pathParts (without root) + newBasename
+			const impactedChain = relativePathParts; // parent chain
+			console.log("[Librarian] create impacted chain:", impactedChain);
+
+			// Expand to ancestors and regenerate codexes
+			const { expandToAncestors } = await import(
+				"./codex/impacted-chains"
+			);
+			const impactedChains = expandToAncestors(impactedChain);
+			await this.regenerateCodexes(impactedChains);
 		} finally {
 			setTimeout(() => {
 				this.processingPaths.clear();
@@ -474,7 +602,9 @@ export class Librarian {
 			(
 				entry,
 			): entry is SplitPathToFileWithTRef | SplitPathToMdFileWithTRef =>
-				entry.type === "File" || entry.type === "MdFile",
+				(entry.type === "File" || entry.type === "MdFile") &&
+				// Skip codex files - they're generated, not source data
+				!isCodexBasename(entry.basename),
 		);
 
 		const leavesWithoutStatus = fileEntries.map((entry) =>
@@ -496,5 +626,154 @@ export class Librarian {
 		);
 
 		return new LibraryTree(leaves, rootFolder);
+	}
+
+	// ────────────────────────────────────────────────────────────────────────────
+	// Phase 6: Tree Reconciliation & Codex Integration
+	// ────────────────────────────────────────────────────────────────────────────
+
+	/**
+	 * Apply VaultActions to tree and collect impacted chains.
+	 * Translates VaultActions to TreeActions, applies them, returns impacted sections.
+	 */
+	private applyActionsToTree(
+		actions: VaultAction[],
+	): CoreNameChainFromRoot[] {
+		if (!this.tree) {
+			return [];
+		}
+
+		const actionResults: Array<
+			| CoreNameChainFromRoot
+			| [CoreNameChainFromRoot, CoreNameChainFromRoot]
+		> = [];
+
+		for (const action of actions) {
+			const treeAction = translateVaultAction(action, {
+				getTRef: (path) => this.getTRefForPath(path),
+				libraryRoot: this.libraryRoot,
+			});
+
+			if (treeAction) {
+				const result = this.tree.applyTreeAction(treeAction);
+				actionResults.push(result);
+			}
+		}
+
+		return collectImpactedSections(actionResults);
+	}
+
+	/**
+	 * Get TFile ref for a path via vaultActionManager.
+	 */
+	private getTRefForPath(path: string): TFile | null {
+		try {
+			const splitPath = this.vaultActionManager.splitPath(path);
+			if (splitPath.type === "Folder") {
+				return null;
+			}
+			// getAbstractFile is async, but we need sync access
+			// Use Obsidian's vault.getAbstractFileByPath directly
+			const app = (
+				this.vaultActionManager as unknown as {
+					app: {
+						vault: {
+							getAbstractFileByPath: (p: string) => unknown;
+						};
+					};
+				}
+			).app;
+			const file = app?.vault?.getAbstractFileByPath?.(path);
+			return file instanceof TFolder ? null : (file as TFile | null);
+		} catch {
+			return null;
+		}
+	}
+
+	/**
+	 * Regenerate codexes for impacted sections and dispatch.
+	 * Codexes are NOT added to tree - they're generated outputs, not source data.
+	 */
+	private async regenerateCodexes(
+		impactedChains: CoreNameChainFromRoot[],
+	): Promise<void> {
+		if (!this.tree || impactedChains.length === 0) {
+			return;
+		}
+
+		try {
+			const codexActions = this.buildCodexVaultActions(impactedChains);
+
+			if (codexActions.length > 0) {
+				console.log(
+					"[Librarian] regenerating codexes:",
+					codexActions.length,
+				);
+				await this.vaultActionManager.dispatch(codexActions);
+			}
+		} catch (error) {
+			console.error("[Librarian] codex regeneration failed:", error);
+			// Don't throw - codex failure shouldn't break main healing flow
+		}
+	}
+
+	/**
+	 * Build VaultActions to create/update codex files for impacted sections.
+	 */
+	private buildCodexVaultActions(
+		impactedChains: CoreNameChainFromRoot[],
+	): VaultAction[] {
+		if (!this.tree) {
+			return [];
+		}
+
+		const actions: VaultAction[] = [];
+
+		for (const chain of impactedChains) {
+			const node = this.tree.getNode(chain);
+			if (!node || node.type !== TreeNodeType.Section) {
+				continue;
+			}
+
+			const section = node as SectionNode;
+			const content = generateCodexContent(section, {
+				suffixDelimiter: this.suffixDelimiter,
+			});
+
+			// Build codex basename with suffix (same pattern as regular files)
+			// Root: __Library (no suffix, use libraryRoot name)
+			// Nested: __Salad-Recipe (suffix = parent chain reversed)
+			const sectionName =
+				chain.length === 0 ? this.libraryRoot : section.coreName;
+			const coreCodexName = buildCodexBasename(sectionName);
+			const suffix =
+				chain.length > 0
+					? chain
+							.slice(0, -1) // Parent chain (exclude self)
+							.reverse()
+							.join(this.suffixDelimiter)
+					: "";
+			const codexBasename = suffix
+				? `${coreCodexName}${this.suffixDelimiter}${suffix}`
+				: coreCodexName;
+
+			// Codex path: inside the section folder
+			const pathParts = [this.libraryRoot, ...chain];
+			const codexSplitPath: SplitPathToMdFile = {
+				basename: codexBasename,
+				extension: "md",
+				pathParts,
+				type: "MdFile",
+			};
+
+			// Always use ReplaceContentMdFile - it creates if not exists
+			// This avoids triggering handleCreate which would add suffixes
+			actions.push({
+				payload: { content, splitPath: codexSplitPath },
+				type: "ReplaceContentMdFile",
+			});
+		}
+
+		return actions;
 	}
 }

@@ -39,7 +39,7 @@ describe("generateCodexContent", () => {
 	});
 
 	describe("scroll children", () => {
-		it("renders scroll with checkbox", () => {
+		it("renders scroll with checkbox and full basename", () => {
 			const section = createSection("A", [], [
 				{
 					coreName: "Note",
@@ -52,7 +52,8 @@ describe("generateCodexContent", () => {
 
 			const content = generateCodexContent(section);
 
-			expect(content).toContain("- [ ] [[Note|Note]]");
+			// Link target has suffix, display is just coreName
+			expect(content).toContain("- [ ] [[Note-A|Note]]");
 		});
 
 		it("renders done scroll with checked checkbox", () => {
@@ -68,7 +69,7 @@ describe("generateCodexContent", () => {
 
 			const content = generateCodexContent(section);
 
-			expect(content).toContain("- [x] [[DoneNote|DoneNote]]");
+			expect(content).toContain("- [x] [[DoneNote-A|DoneNote]]");
 		});
 	});
 
@@ -86,20 +87,21 @@ describe("generateCodexContent", () => {
 
 			const content = generateCodexContent(section);
 
-			expect(content).toContain("- [[Document|Document]]");
+			expect(content).toContain("- [[Document-A|Document]]");
 			expect(content).not.toContain("[ ]");
 			expect(content).not.toContain("[x]");
 		});
 	});
 
 	describe("section children", () => {
-		it("renders section with link to its codex", () => {
+		it("renders section with link to its codex (suffixed)", () => {
 			const childSection = createSection("B", ["A"]);
 			const section = createSection("A", [], [childSection]);
 
 			const content = generateCodexContent(section);
 
-			expect(content).toContain("- [ ] [[__B|B]]");
+			// Codex link: __B-A (codex for B, inside A)
+			expect(content).toContain("- [ ] [[__B-A|B]]");
 		});
 
 		it("renders nested scrolls under section", () => {
@@ -116,10 +118,10 @@ describe("generateCodexContent", () => {
 
 			const content = generateCodexContent(section);
 
-			// Section B at depth 0
-			expect(content).toContain("- [ ] [[__B|B]]");
-			// NestedNote at depth 1 (indented)
-			expect(content).toContain("\t- [ ] [[NestedNote|NestedNote]]");
+			// Section B at depth 0: __B-A
+			expect(content).toContain("- [ ] [[__B-A|B]]");
+			// NestedNote at depth 1: NestedNote-B-A
+			expect(content).toContain("\t- [ ] [[NestedNote-B-A|NestedNote]]");
 		});
 	});
 
@@ -143,39 +145,16 @@ describe("generateCodexContent", () => {
 			// With maxDepth=2, should show B, C, but D should just be a link
 			const content = generateCodexContent(section, { maxSectionDepth: 2 });
 
-			// B at depth 0
-			expect(content).toContain("- [ ] [[__B|B]]");
-			// C at depth 1
-			expect(content).toContain("\t- [ ] [[__C|C]]");
-			// D at depth 2 (just link, no children)
-			expect(content).toContain("\t\t- [ ] [[__D|D]]");
+			// B at depth 0: __B-A
+			expect(content).toContain("- [ ] [[__B-A|B]]");
+			// C at depth 1: __C-B-A
+			expect(content).toContain("\t- [ ] [[__C-B-A|C]]");
+			// D at depth 2: __D-C-B-A
+			expect(content).toContain("\t\t- [ ] [[__D-C-B-A|D]]");
 			// E should NOT appear (beyond max depth)
 			expect(content).not.toContain("__E");
 		});
 	});
 
-	describe("codex children", () => {
-		it("skips codex files in listing", () => {
-			const section = createSection("A", [], [
-				{
-					coreName: "__A",
-					coreNameChainToParent: ["A"],
-					tRef: fakeTFile,
-					type: TreeNodeType.Codex,
-				},
-				{
-					coreName: "Note",
-					coreNameChainToParent: ["A"],
-					status: TreeNodeStatus.NotStarted,
-					tRef: fakeTFile,
-					type: TreeNodeType.Scroll,
-				},
-			]);
-
-			const content = generateCodexContent(section);
-
-			expect(content).not.toContain("[[__A|__A]]");
-			expect(content).toContain("[[Note|Note]]");
-		});
-	});
 });
+// Note: Codex files are no longer stored in tree, so no need to test skipping them
