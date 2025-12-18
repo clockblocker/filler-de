@@ -1,3 +1,9 @@
+// Click handler
+export {
+	handleCodexCheckboxClick,
+	isTaskCheckbox,
+	parseCodexLinkTarget,
+} from "./click-handler";
 // Healing exports
 export {
 	type DragInResult,

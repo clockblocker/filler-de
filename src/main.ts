@@ -8,6 +8,10 @@ import { Librarian, LibraryTree } from "./commanders/librarian";
 // LibrarianLegacy unplugged - using new Librarian for healing
 // import { LibrarianLegacy } from "./commanders/librarian-legacy/librarian";
 import {
+	handleCodexCheckboxClick,
+	isTaskCheckbox,
+} from "./commanders/librarian/click-handler";
+import {
 	splitPath as managerSplitPath,
 	ObsidianVaultActionManagerImpl,
 	splitPath,
@@ -290,7 +294,22 @@ export default class TextEaterPlugin extends Plugin {
 		// 	}),
 		// );
 
-		// this.registerDomEvent(document, "click", makeClickListener(this));
+		// Codex checkbox click listener
+		this.registerDomEvent(document, "click", (evt: MouseEvent) => {
+			const target = evt.target as HTMLElement;
+			if (isTaskCheckbox(target) && this.librarian) {
+				const handled = handleCodexCheckboxClick({
+					app: this.app,
+					checkbox: target,
+					librarian: this.librarian,
+					suffixDelimiter: "-",
+				});
+				if (handled) {
+					evt.preventDefault();
+					evt.stopPropagation();
+				}
+			}
+		});
 
 		this.bottomToolbarService = new BottomToolbarService(this.app);
 		this.bottomToolbarService.init();

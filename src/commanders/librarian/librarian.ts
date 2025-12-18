@@ -28,10 +28,15 @@ import {
 	type DragInSubtype,
 	HealingMode,
 	RuntimeSubtype,
+	TreeActionType,
 } from "./types/literals";
 import type { CoreNameChainFromRoot } from "./types/split-basename";
 import type { TreeAction } from "./types/tree-action";
-import { type SectionNode, TreeNodeType } from "./types/tree-node";
+import {
+	type SectionNode,
+	TreeNodeStatus,
+	TreeNodeType,
+} from "./types/tree-node";
 import { buildCodexBasename, isCodexBasename } from "./utils/codex-utils";
 import {
 	splitPathToLeaf,
@@ -144,6 +149,40 @@ export class Librarian {
 	 */
 	getTree(): LibraryTree | null {
 		return this.tree;
+	}
+
+	/**
+	 * Set status for a node (scroll or section).
+	 * Updates tree and regenerates impacted codexes.
+	 */
+	async setStatus(
+		coreNameChain: CoreNameChainFromRoot,
+		status: "Done" | "NotStarted",
+	): Promise<void> {
+		if (!this.tree) {
+			console.warn("[Librarian] setStatus called before init");
+			return;
+		}
+
+		const newStatus =
+			status === "Done" ? TreeNodeStatus.Done : TreeNodeStatus.NotStarted;
+
+		const impactedChain = this.tree.applyTreeAction({
+			payload: { coreNameChain, newStatus },
+			type: TreeActionType.ChangeNodeStatus,
+		});
+
+		// Expand to ancestors for codex regeneration
+		const { expandToAncestors, dedupeChains } = await import(
+			"./codex/impacted-chains"
+		);
+
+		// impactedChain is the parent chain (CoreNameChainFromRoot)
+		// ChangeNodeStatus always returns single chain, never tuple
+		const baseChain = impactedChain as CoreNameChainFromRoot;
+		const impactedSections = dedupeChains(expandToAncestors(baseChain));
+
+		await this.regenerateCodexes(impactedSections);
 	}
 
 	/**
