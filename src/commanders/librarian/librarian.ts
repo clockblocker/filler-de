@@ -176,6 +176,120 @@ export class Librarian {
 	}
 
 	/**
+	 * Handle file creation event.
+	 * Adds correct suffix to match the file's location.
+	 */
+	async handleCreate(
+		path: string,
+		isFolder: boolean,
+	): Promise<VaultAction[]> {
+		// Ignore folders - we only heal files
+		if (isFolder) {
+			return [];
+		}
+
+		// Ignore files outside library
+		if (!path.startsWith(this.libraryRoot + "/")) {
+			return [];
+		}
+
+		// Skip if we're already processing this path
+		if (this.processingPaths.has(path)) {
+			console.log("[Librarian] skipping self-event create:", path);
+			return [];
+		}
+
+		console.log("[Librarian] handleCreate:", path);
+
+		const splitPath = this.vaultActionManager.splitPath(path);
+
+		// Only handle files, not folders
+		if (splitPath.type === "Folder") {
+			return [];
+		}
+
+		// Compute relative path (without library root)
+		const relativePathParts = splitPath.pathParts.slice(1); // Remove library root
+
+		// If at root, no suffix needed
+		if (relativePathParts.length === 0) {
+			console.log("[Librarian] file at root, no suffix needed");
+			return [];
+		}
+
+		// Parse current basename to get coreName
+		const { parseBasename } = await import("./utils/parse-basename");
+		const { buildBasename, computeSuffixFromPath } = await import(
+			"./utils/path-suffix-utils"
+		);
+
+		const parsed = parseBasename(splitPath.basename, this.suffixDelimiter);
+		const expectedSuffix = computeSuffixFromPath(relativePathParts);
+
+		// Check if suffix already correct
+		const suffixMatches =
+			parsed.splitSuffix.length === expectedSuffix.length &&
+			parsed.splitSuffix.every((s, i) => s === expectedSuffix[i]);
+
+		if (suffixMatches) {
+			console.log("[Librarian] suffix already correct");
+			return [];
+		}
+
+		// Build correct basename with suffix
+		const newBasename = buildBasename(
+			parsed.coreName,
+			expectedSuffix,
+			this.suffixDelimiter,
+		);
+
+		// Track paths before dispatch
+		const fromPathStr = [...splitPath.pathParts, splitPath.basename].join(
+			"/",
+		);
+		const toPathStr = [...splitPath.pathParts, newBasename].join("/");
+		this.processingPaths.add(fromPathStr);
+		this.processingPaths.add(toPathStr);
+
+		// Build action based on file type
+		let action: VaultAction;
+		if (splitPath.type === "MdFile") {
+			const mdPath = splitPath as SplitPathToMdFile;
+			action = {
+				payload: {
+					from: mdPath,
+					to: { ...mdPath, basename: newBasename },
+				},
+				type: "RenameMdFile",
+			};
+			this.processingPaths.add(fromPathStr + ".md");
+			this.processingPaths.add(toPathStr + ".md");
+		} else {
+			const filePath = splitPath as SplitPathToFile;
+			action = {
+				payload: {
+					from: filePath,
+					to: { ...filePath, basename: newBasename },
+				},
+				type: "RenameFile",
+			};
+		}
+
+		console.log("[Librarian] create action:", action);
+
+		try {
+			await this.vaultActionManager.dispatch([action]);
+			this.tree = await this.readTreeFromVault();
+		} finally {
+			setTimeout(() => {
+				this.processingPaths.clear();
+			}, 500);
+		}
+
+		return [action];
+	}
+
+	/**
 	 * Resolve actions based on detected mode.
 	 */
 	private async resolveActions(

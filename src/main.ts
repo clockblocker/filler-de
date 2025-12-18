@@ -259,12 +259,31 @@ export default class TextEaterPlugin extends Plugin {
 				}
 			}),
 		);
-		// TODO: Handle create/delete events when tree is fully integrated
-		// this.registerEvent(
-		// 	this.app.vault.on("create", (file) => {
-		// 		void this.librarian.onFileCreated(file);
-		// 	}),
-		// );
+
+		// Handle create events - add suffix to match location
+		this.registerEvent(
+			this.app.vault.on("create", (file) => {
+				console.log(
+					"[main] create event:",
+					file.path,
+					"isFolder:",
+					"children" in file,
+				);
+				if (this.librarian) {
+					void this.librarian
+						.handleCreate(file.path, "children" in file)
+						.then((actions) => {
+							console.log(
+								"[main] handleCreate result:",
+								actions.length,
+								"actions",
+							);
+						});
+				}
+			}),
+		);
+
+		// TODO: Handle delete events when tree is fully integrated
 		// this.registerEvent(
 		// 	this.app.vault.on("delete", (file) => {
 		// 		void this.librarian.onFileDeleted(file);
