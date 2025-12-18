@@ -18,7 +18,7 @@ import type {
  *     - E1
  *       - 000_E1-E1-S2-Avarar.md
  *       - 001_E1-E1-S2-Avarar.md
- *     - E2-S1-Avarar.md
+ *     - E2-S2-Avarar.md
  */
 export function createTestTreeActions(
 	splitPath: (input: string) => unknown,
@@ -58,7 +58,7 @@ export function createTestTreeActions(
 		{
 			payload: {
 				content: "",
-				splitPath: splitPath("Library/Avarar/S2/E2-S1-Avarar.md"),
+				splitPath: splitPath("Library/Avarar/S2/E2-S2-Avarar.md"),
 			},
 			type: "CreateMdFile",
 		},
@@ -104,7 +104,7 @@ export const testReadTreeFromVault = async () => {
 			{ path: "Library/Avarar/S1/E2-S1-Avarar.md", status: "NotStarted" as const },
 			{ path: "Library/Avarar/S2/E1/000_E1-E1-S2-Avarar.md", status: "Done" as const },
 			{ path: "Library/Avarar/S2/E1/001_E1-E1-S2-Avarar.md", status: "Done" as const },
-			{ path: "Library/Avarar/S2/E2-S1-Avarar.md", status: "Done" as const },
+			{ path: "Library/Avarar/S2/E2-S2-Avarar.md", status: "Done" as const },
 		];
 
 		// First create files (may already exist)

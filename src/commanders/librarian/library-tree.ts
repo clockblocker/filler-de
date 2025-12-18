@@ -6,6 +6,7 @@ import type {
 	ChangeNodeStatusAction,
 	CreateNodeAction,
 	DeleteNodeAction,
+	MoveNodeAction,
 	TreeAction,
 } from "./types/tree-action";
 import type { TreeLeaf } from "./types/tree-leaf";
@@ -140,7 +141,14 @@ export class LibraryTree {
 		return this.nodeMap.get(this.getNodeKey(coreNameChain)) ?? null;
 	}
 
-	applyTreeAction(action: TreeAction): CoreNameChainFromRoot {
+	/**
+	 * Apply a tree action and return impacted chain(s).
+	 * MoveNode returns [oldParentChain, newParentChain].
+	 * Other actions return single chain.
+	 */
+	applyTreeAction(
+		action: TreeAction,
+	): CoreNameChainFromRoot | [CoreNameChainFromRoot, CoreNameChainFromRoot] {
 		switch (action.type) {
 			case TreeActionType.CreateNode:
 				return this.createNode(action);
@@ -150,6 +158,8 @@ export class LibraryTree {
 				return this.changeNodeName(action);
 			case TreeActionType.ChangeNodeStatus:
 				return this.changeNodeStatus(action);
+			case TreeActionType.MoveNode:
+				return this.moveNode(action);
 		}
 	}
 
@@ -329,6 +339,63 @@ export class LibraryTree {
 		}
 
 		return parentChain.length > 0 ? parentChain : coreNameChain;
+	}
+
+	/**
+	 * Move node to new parent.
+	 * Returns [oldParentChain, newParentChain].
+	 */
+	private moveNode(
+		action: MoveNodeAction,
+	): [CoreNameChainFromRoot, CoreNameChainFromRoot] {
+		const { coreNameChain, newCoreNameChainToParent } = action.payload;
+		const node = this.getNodeInternal(coreNameChain);
+		if (!node) {
+			return [coreNameChain, newCoreNameChainToParent];
+		}
+
+		const oldParentChain = node.coreNameChainToParent;
+		const newFullChain = [...newCoreNameChainToParent, node.coreName];
+
+		// Check if target already exists
+		if (this.getNodeInternal(newFullChain)) {
+			throw new Error(`Node already exists: ${newFullChain.join("/")}`);
+		}
+
+		// Ensure new parent path exists
+		this.ensureSectionPath(newCoreNameChainToParent);
+
+		// Remove from old parent
+		const oldParent = this.getParentOrThrow(oldParentChain);
+		const oldIndex = oldParent.children.findIndex(
+			(child) => child.coreName === node.coreName,
+		);
+		if (oldIndex !== -1) {
+			oldParent.children.splice(oldIndex, 1);
+		}
+
+		// Update node's parent chain
+		const oldKey = this.getNodeKey(coreNameChain);
+		this.nodeMap.delete(oldKey);
+
+		node.coreNameChainToParent = newCoreNameChainToParent;
+		const newKey = this.getNodeKey(newFullChain);
+		this.nodeMap.set(newKey, node);
+
+		// Add to new parent
+		const newParent = this.getParentOrThrow(newCoreNameChainToParent);
+		newParent.children.push(node);
+
+		// If section, update all children's chains recursively
+		if (node.type === TreeNodeType.Section) {
+			this.updateChildrenChains(coreNameChain, newFullChain, node);
+		}
+
+		// Recalculate statuses for both old and new parents
+		this.recalculateSectionStatuses(oldParent);
+		this.recalculateSectionStatuses(newParent);
+
+		return [oldParentChain, newCoreNameChainToParent];
 	}
 
 	private updateDescendantsStatus(

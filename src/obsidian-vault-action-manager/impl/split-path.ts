@@ -11,7 +11,13 @@ import type {
 const MD_EXTENSION = "md";
 
 export function splitPathKey(splitPath: CoreSplitPath): string {
-	return [...splitPath.pathParts, splitPath.basename].join("/");
+	// Include extension if present (for files, not folders)
+	const ext =
+		"extension" in splitPath
+			? (splitPath as { extension: string }).extension
+			: "";
+	const filename = ext ? `${splitPath.basename}.${ext}` : splitPath.basename;
+	return [...splitPath.pathParts, filename].join("/");
 }
 
 export function splitPath(path: string): SplitPath;

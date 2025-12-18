@@ -9,6 +9,13 @@ export type FILE_NODE_TYPE = "File";
 export const SECTION_NODE_TYPE = "Section" as const;
 export type SECTION_NODE_TYPE = "Section";
 
+export const CODEX_NODE_TYPE = "Codex" as const;
+export type CODEX_NODE_TYPE = "Codex";
+
+/** Codex filename prefix */
+export const CODEX_PREFIX = "__" as const;
+export type CODEX_PREFIX = "__";
+
 export const DoneStatusSchema = z.literal("Done");
 export type DONE_STATUS = z.infer<typeof DoneStatusSchema>;
 export const DONE_STATUS = DoneStatusSchema.value;
@@ -41,11 +48,15 @@ export type CHANGE_NODE_NAME_ACTION = "ChangeNodeName";
 export const CHANGE_NODE_STATUS_ACTION = "ChangeNodeStatus" as const;
 export type CHANGE_NODE_STATUS_ACTION = "ChangeNodeStatus";
 
+export const MOVE_NODE_ACTION = "MoveNode" as const;
+export type MOVE_NODE_ACTION = "MoveNode";
+
 const TreeActionTypeSchema = z.enum([
 	CREATE_NODE_ACTION,
 	DELETE_NODE_ACTION,
 	CHANGE_NODE_NAME_ACTION,
 	CHANGE_NODE_STATUS_ACTION,
+	MOVE_NODE_ACTION,
 ]);
 export type TreeActionType = z.infer<typeof TreeActionTypeSchema>;
 export const TreeActionType = TreeActionTypeSchema.enum;

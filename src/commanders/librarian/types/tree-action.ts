@@ -63,8 +63,17 @@ export type ChangeNodeStatusAction = {
 	};
 };
 
+export type MoveNodeAction = {
+	type: typeof TreeActionType.MoveNode;
+	payload: {
+		coreNameChain: CoreNameChainFromRoot;
+		newCoreNameChainToParent: CoreNameChainFromRoot;
+	};
+};
+
 export type TreeAction =
 	| CreateNodeAction
 	| DeleteNodeAction
 	| ChangeNodeNameAction
-	| ChangeNodeStatusAction;
+	| ChangeNodeStatusAction
+	| MoveNodeAction;

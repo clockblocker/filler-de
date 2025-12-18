@@ -1,3 +1,3 @@
-import type { FileNode, ScrollNode } from "./tree-node";
+import type { CodexNode, FileNode, ScrollNode } from "./tree-node";
 
-export type TreeLeaf = ScrollNode | FileNode;
+export type TreeLeaf = ScrollNode | FileNode | CodexNode;

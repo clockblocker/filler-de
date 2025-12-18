@@ -48,5 +48,6 @@ export const testUserEventEmission = async () => {
 	// Event should be received (user-triggered, not filtered)
 	expect(result.eventsReceived).toHaveLength(1);
 	expect(result.eventsReceived[0]?.type).toBe("FileCreated");
-	expect(result.eventsReceived[0]?.path).toBe("user-event-test.md");
+	// basename now correctly excludes extension
+	expect(result.eventsReceived[0]?.path).toBe("user-event-test");
 };

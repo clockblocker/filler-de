@@ -10,7 +10,7 @@ describe("obsidian-vault-action-manager splitPath helpers", () => {
 		const split = splitPath("root/notes/file.md");
 
 		expect(split).toEqual({
-			basename: "file.md",
+			basename: "file",
 			extension: "md",
 			pathParts: ["root", "notes"],
 			type: "MdFile",
@@ -22,7 +22,7 @@ describe("obsidian-vault-action-manager splitPath helpers", () => {
 		const split = splitPath("root/assets/image.png");
 
 		expect(split).toEqual({
-			basename: "image.png",
+			basename: "image",
 			extension: "png",
 			pathParts: ["root", "assets"],
 			type: "File",
@@ -49,7 +49,7 @@ describe("obsidian-vault-action-manager splitPath helpers", () => {
 		const split = splitPath(file);
 
 		expect(split).toEqual({
-			basename: "file.md",
+			basename: "file",
 			extension: "md",
 			pathParts: ["root", "notes"],
 			type: "MdFile",

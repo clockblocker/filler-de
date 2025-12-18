@@ -2,6 +2,7 @@ import type { TFile, TFolder } from "obsidian";
 import z from "zod";
 import type { Prettify } from "../../../types/helpers";
 import {
+	CODEX_NODE_TYPE,
 	DONE_STATUS,
 	FILE_NODE_TYPE,
 	NOT_STARTED_STATUS,
@@ -20,6 +21,7 @@ export type TreeNodeStatus = z.infer<typeof TreeNodeStatusSchema>;
 export const TreeNodeStatus = TreeNodeStatusSchema.enum;
 
 const TreeNodeTypeSchema = z.enum([
+	CODEX_NODE_TYPE,
 	FILE_NODE_TYPE,
 	SCROLL_NODE_TYPE,
 	SECTION_NODE_TYPE,
@@ -46,7 +48,18 @@ export type FileNode = {
 	tRef: TFile;
 };
 
-export type LeafNode = ScrollNode | FileNode;
+/**
+ * Codex file node (__SectionName.md).
+ * Auto-generated index file for a section.
+ */
+export type CodexNode = {
+	coreName: CoreName;
+	type: typeof TreeNodeType.Codex;
+	coreNameChainToParent: CoreName[];
+	tRef: TFile;
+};
+
+export type LeafNode = ScrollNode | FileNode | CodexNode;
 
 export type SectionNode = {
 	coreName: CoreName;
@@ -57,8 +70,8 @@ export type SectionNode = {
 };
 
 export type TreeNode = Prettify<
-	(ScrollNode | FileNode | SectionNode) & {
-		status: TreeNodeStatus;
+	(ScrollNode | FileNode | CodexNode | SectionNode) & {
+		status?: TreeNodeStatus;
 		type: TreeNodeType;
 	}
 >;
