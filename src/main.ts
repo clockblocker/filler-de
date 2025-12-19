@@ -287,12 +287,23 @@ export default class TextEaterPlugin extends Plugin {
 			}),
 		);
 
-		// TODO: Handle delete events when tree is fully integrated
-		// this.registerEvent(
-		// 	this.app.vault.on("delete", (file) => {
-		// 		void this.librarian.onFileDeleted(file);
-		// 	}),
-		// );
+		// Handle delete events
+		this.registerEvent(
+			this.app.vault.on("delete", (file) => {
+				console.log(
+					"[main] delete event:",
+					file.path,
+					"isFolder:",
+					"children" in file,
+				);
+				if (this.librarian) {
+					void this.librarian.handleDelete(
+						file.path,
+						"children" in file,
+					);
+				}
+			}),
+		);
 
 		// Codex checkbox click listener
 		this.registerDomEvent(document, "click", (evt: MouseEvent) => {

@@ -186,6 +186,93 @@ export class Librarian {
 	}
 
 	/**
+	 * Handle delete event from vault.
+	 * Removes node from tree and regenerates impacted codexes.
+	 */
+	async handleDelete(path: string, isFolder: boolean): Promise<void> {
+		// Skip self-triggered events
+		if (this.processingPaths.has(path)) {
+			console.log("[Librarian] skipping self-event delete:", path);
+			return;
+		}
+
+		// Ignore files outside library
+		if (!path.startsWith(this.libraryRoot + "/")) {
+			return;
+		}
+
+		// Skip codex files
+		const basename = path.split("/").pop() ?? "";
+		const basenameWithoutExt = basename.includes(".")
+			? basename.slice(0, basename.lastIndexOf("."))
+			: basename;
+		if (isCodexBasename(basenameWithoutExt)) {
+			return;
+		}
+
+		if (!this.tree) {
+			return;
+		}
+
+		console.log("[Librarian] handleDelete:", path, "isFolder:", isFolder);
+
+		// Parse path to get coreNameChain
+		// Use isFolder param instead of splitPath.type (deleted item may not exist)
+		const pathParts = path.split("/");
+		const libraryRootIndex = pathParts.indexOf(this.libraryRoot);
+		if (libraryRootIndex === -1) {
+			console.log("[Librarian] handleDelete: library root not found");
+			return;
+		}
+
+		// Chain = parts after library root
+		const partsAfterRoot = pathParts.slice(libraryRootIndex + 1);
+
+		let coreNameChain: CoreNameChainFromRoot;
+
+		if (isFolder) {
+			// Folder delete: chain is just the folder path (no basename parsing)
+			coreNameChain = partsAfterRoot;
+		} else {
+			// File delete: last part is filename, parse to get coreName
+			const { parseBasename } = await import("./utils/parse-basename");
+			const filename = partsAfterRoot.pop() ?? "";
+			// Remove extension
+			const basenameWithoutExt = filename.includes(".")
+				? filename.slice(0, filename.lastIndexOf("."))
+				: filename;
+			const parsed = parseBasename(
+				basenameWithoutExt,
+				this.suffixDelimiter,
+			);
+			coreNameChain = [...partsAfterRoot, parsed.coreName];
+		}
+
+		console.log("[Librarian] handleDelete coreNameChain:", coreNameChain);
+
+		const impactedChain = this.tree.applyTreeAction({
+			payload: { coreNameChain },
+			type: TreeActionType.DeleteNode,
+		});
+
+		console.log("[Librarian] handleDelete impactedChain:", impactedChain);
+
+		const { expandToAncestors, dedupeChains } = await import(
+			"./codex/impacted-chains"
+		);
+		const impactedSections = dedupeChains(
+			expandToAncestors(impactedChain as CoreNameChainFromRoot),
+		);
+
+		console.log(
+			"[Librarian] handleDelete impactedSections:",
+			impactedSections,
+		);
+
+		await this.regenerateCodexes(impactedSections);
+	}
+
+	/**
 	 * Handle a rename event from vault.
 	 * Detects mode and generates appropriate healing actions.
 	 */
