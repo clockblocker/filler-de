@@ -38,6 +38,7 @@ export class ObsidianVaultActionManagerImpl
 	private readonly actionQueue: ActionQueue;
 	private readonly eventAdapter: EventAdapter;
 	private readonly subscribers = new Set<VaultEventHandlerLegacy>();
+	private isListening = false;
 
 	constructor(app: App) {
 		const openedFileReader = new OpenedFileReader(app);
@@ -68,18 +69,27 @@ export class ObsidianVaultActionManagerImpl
 		this.eventAdapter = new EventAdapter(app, this.selfEventTracker);
 	}
 
+	startListening(): void {
+		if (this.isListening) return;
+		this.isListening = true;
+		this.eventAdapter.start(async (event) => {
+			for (const h of this.subscribers) {
+				await h(event);
+			}
+		});
+	}
+
 	subscribe(handler: VaultEventHandlerLegacy): Teardown {
 		this.subscribers.add(handler);
-		if (this.subscribers.size === 1) {
-			this.eventAdapter.start(async (event) => {
-				for (const h of this.subscribers) {
-					await h(event);
-				}
-			});
+		if (!this.isListening) {
+			this.startListening();
 		}
 		return () => {
 			this.subscribers.delete(handler);
-			if (this.subscribers.size === 0) this.eventAdapter.stop();
+			if (this.subscribers.size === 0) {
+				this.eventAdapter.stop();
+				this.isListening = false;
+			}
 		};
 	}
 

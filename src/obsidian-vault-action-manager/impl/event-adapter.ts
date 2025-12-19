@@ -1,7 +1,11 @@
 import type { App, TAbstractFile } from "obsidian";
 import type { VaultEventHandlerLegacy } from "../index";
-import { CREATE, FILE, RENAME, TRASH } from "../types/literals";
-import type { SplitPathToFile, SplitPathToMdFile } from "../types/split-path";
+import { CREATE, FILE, FOLDER, RENAME, TRASH } from "../types/literals";
+import type {
+	SplitPathToFile,
+	SplitPathToFolder,
+	SplitPathToMdFile,
+} from "../types/split-path";
 import type { SelfEventTrackerLegacy } from "./self-event-tracker";
 import { splitPath } from "./split-path";
 
@@ -45,11 +49,17 @@ export class EventAdapter {
 		}
 
 		const split = splitPath(file);
-		if (split.type === "Folder") return;
-		void handler({
-			splitPath: split as SplitPathToFile | SplitPathToMdFile,
-			type: `${FILE}${CREATE}d` as const,
-		});
+		if (split.type === "Folder") {
+			void handler({
+				splitPath: split as SplitPathToFolder,
+				type: `${FOLDER}${CREATE}d` as const,
+			});
+		} else {
+			void handler({
+				splitPath: split as SplitPathToFile | SplitPathToMdFile,
+				type: `${FILE}${CREATE}d` as const,
+			});
+		}
 	}
 
 	private emitFileRenamed(
@@ -64,15 +74,22 @@ export class EventAdapter {
 		}
 
 		const split = splitPath(file);
-		if (split.type === "Folder") return;
 		const from = splitPath(oldPath);
-		if (from.type === "Folder") return;
 
-		void handler({
-			from: from as SplitPathToFile | SplitPathToMdFile,
-			to: split as SplitPathToFile | SplitPathToMdFile,
-			type: `${FILE}${RENAME}d` as const,
-		});
+		if (split.type === "Folder" && from.type === "Folder") {
+			void handler({
+				from: from as SplitPathToFolder,
+				to: split as SplitPathToFolder,
+				type: `${FOLDER}${RENAME}d` as const,
+			});
+		} else if (split.type !== "Folder" && from.type !== "Folder") {
+			void handler({
+				from: from as SplitPathToFile | SplitPathToMdFile,
+				to: split as SplitPathToFile | SplitPathToMdFile,
+				type: `${FILE}${RENAME}d` as const,
+			});
+		}
+		// Mixed folder/file renames are invalid, skip
 	}
 
 	private emitFileTrashed(
@@ -85,10 +102,16 @@ export class EventAdapter {
 		}
 
 		const split = splitPath(file);
-		if (split.type === "Folder") return;
-		void handler({
-			splitPath: split as SplitPathToFile | SplitPathToMdFile,
-			type: `${FILE}${TRASH}ed` as const,
-		});
+		if (split.type === "Folder") {
+			void handler({
+				splitPath: split as SplitPathToFolder,
+				type: `${FOLDER}${TRASH}ed` as const,
+			});
+		} else {
+			void handler({
+				splitPath: split as SplitPathToFile | SplitPathToMdFile,
+				type: `${FILE}${TRASH}ed` as const,
+			});
+		}
 	}
 }

@@ -2,7 +2,7 @@ import type { TAbstractFile, TFile, TFolder } from "obsidian";
 import { z } from "zod";
 import type { DispatchResult } from "./impl/dispatcher";
 import { splitPath as buildSplitPath, splitPathKey } from "./impl/split-path";
-import { CREATE, FILE, RENAME, TRASH } from "./types/literals";
+import { CREATE, FILE, FOLDER, RENAME, TRASH } from "./types/literals";
 import type {
 	SplitPath,
 	SplitPathToFile,
@@ -16,6 +16,9 @@ export const VaultEventTypeSchema = z.enum([
 	`${FILE}${CREATE}d`,
 	`${FILE}${RENAME}d`,
 	`${FILE}${TRASH}ed`,
+	`${FOLDER}${CREATE}d`,
+	`${FOLDER}${RENAME}d`,
+	`${FOLDER}${TRASH}ed`,
 ] as const);
 
 export const VaultEventType = VaultEventTypeSchema.enum;
@@ -34,6 +37,19 @@ export type VaultEvent =
 	| {
 			type: typeof VaultEventType.FileTrashed;
 			splitPath: SplitPathToFile | SplitPathToMdFile;
+	  }
+	| {
+			type: typeof VaultEventType.FolderCreated;
+			splitPath: SplitPathToFolder;
+	  }
+	| {
+			type: typeof VaultEventType.FolderRenamed;
+			from: SplitPathToFolder;
+			to: SplitPathToFolder;
+	  }
+	| {
+			type: typeof VaultEventType.FolderTrashed;
+			splitPath: SplitPathToFolder;
 	  };
 
 export type VaultEventHandlerLegacy = (event: VaultEvent) => Promise<void>;
@@ -41,6 +57,7 @@ export type VaultEventHandlerLegacy = (event: VaultEvent) => Promise<void>;
 export type Teardown = () => void;
 
 export interface ObsidianVaultActionManager {
+	startListening(): void;
 	subscribe(handler: VaultEventHandlerLegacy): Teardown;
 	dispatch(actions: readonly VaultAction[]): Promise<DispatchResult>;
 

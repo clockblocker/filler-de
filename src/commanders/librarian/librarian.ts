@@ -1,6 +1,10 @@
 import type { TFile } from "obsidian";
 import { TFolder } from "obsidian";
-import type { ObsidianVaultActionManager } from "../../obsidian-vault-action-manager";
+import type {
+	ObsidianVaultActionManager,
+	VaultEvent,
+} from "../../obsidian-vault-action-manager";
+import { systemPathFromSplitPath } from "../../obsidian-vault-action-manager/helpers/pathfinder";
 import { splitPathKey } from "../../obsidian-vault-action-manager/impl/split-path";
 import type {
 	SplitPathToFile,
@@ -47,6 +51,7 @@ export class Librarian {
 	private tree: LibraryTree | null = null;
 	/** Track paths we're currently processing to avoid self-event loops */
 	private processingPaths = new Set<string>();
+	private eventTeardown: (() => void) | null = null;
 
 	constructor(
 		private readonly vaultActionManager: ObsidianVaultActionManager,
@@ -91,7 +96,51 @@ export class Librarian {
 			await this.regenerateAllCodexes();
 		}
 
+		// Subscribe to vault events after initialization
+		this.subscribeToVaultEvents();
+
 		return healResult;
+	}
+
+	/**
+	 * Subscribe to file system events from VaultActionManager.
+	 * Converts VaultEvent to librarian handler calls.
+	 */
+	private subscribeToVaultEvents(): void {
+		this.eventTeardown = this.vaultActionManager.subscribe(
+			async (event: VaultEvent) => {
+				if (event.type === "FileRenamed") {
+					const oldPath = systemPathFromSplitPath(event.from);
+					const newPath = systemPathFromSplitPath(event.to);
+					await this.handleRename(oldPath, newPath, false);
+				} else if (event.type === "FolderRenamed") {
+					const oldPath = systemPathFromSplitPath(event.from);
+					const newPath = systemPathFromSplitPath(event.to);
+					await this.handleRename(oldPath, newPath, true);
+				} else if (event.type === "FileCreated") {
+					const path = systemPathFromSplitPath(event.splitPath);
+					await this.handleCreate(path, false);
+				} else if (event.type === "FolderCreated") {
+					// Folders don't need healing, skip
+				} else if (event.type === "FileTrashed") {
+					const path = systemPathFromSplitPath(event.splitPath);
+					await this.handleDelete(path, false);
+				} else if (event.type === "FolderTrashed") {
+					const path = systemPathFromSplitPath(event.splitPath);
+					await this.handleDelete(path, true);
+				}
+			},
+		);
+	}
+
+	/**
+	 * Cleanup: unsubscribe from vault events.
+	 */
+	unsubscribeFromVaultEvents(): void {
+		if (this.eventTeardown) {
+			this.eventTeardown();
+			this.eventTeardown = null;
+		}
 	}
 
 	/**

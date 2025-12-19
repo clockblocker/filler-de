@@ -51,12 +51,6 @@ import { DEFAULT_SETTINGS, type TextEaterSettings } from "./types";
 export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;
 	apiService: ApiService;
-	// Legacy services - unplugged
-	// openedFileReader: LegacyOpenedFileReader;
-	// legacyOpenedFileService: LegacyOpenedFileService;
-	// backgroundFileService: LegacyBackgroundFileServiceLegacy;
-	// vaultActionQueue: VaultActionQueueLegacy;
-	// vaultActionExecutor: VaultActionExecutor;
 	testingOpenedFileServiceWithResult: OpenedFileServiceWithResult;
 	testingReader: Reader;
 	testingTFileHelper: TFileHelper;
@@ -233,77 +227,10 @@ export default class TextEaterPlugin extends Plugin {
 			"files",
 		);
 
-		// Start listening to vault events after trees are ready
-		// Folder renames: Obsidian does NOT emit file events for children,
-		// so we must handle folder renames explicitly and heal all children
-		this.registerEvent(
-			this.app.vault.on("rename", (file, oldPath) => {
-				console.log(
-					"[main] rename event:",
-					oldPath,
-					"→",
-					file.path,
-					"isFolder:",
-					"children" in file,
-				);
-				if (this.librarian) {
-					void this.librarian
-						.handleRename(
-							oldPath,
-							file.path,
-							"children" in file, // isFolder
-						)
-						.then((actions) => {
-							console.log(
-								"[main] handleRename result:",
-								actions.length,
-								"actions",
-							);
-						});
-				}
-			}),
-		);
-
-		// Handle create events - add suffix to match location
-		this.registerEvent(
-			this.app.vault.on("create", (file) => {
-				console.log(
-					"[main] create event:",
-					file.path,
-					"isFolder:",
-					"children" in file,
-				);
-				if (this.librarian) {
-					void this.librarian
-						.handleCreate(file.path, "children" in file)
-						.then((actions) => {
-							console.log(
-								"[main] handleCreate result:",
-								actions.length,
-								"actions",
-							);
-						});
-				}
-			}),
-		);
-
-		// Handle delete events
-		this.registerEvent(
-			this.app.vault.on("delete", (file) => {
-				console.log(
-					"[main] delete event:",
-					file.path,
-					"isFolder:",
-					"children" in file,
-				);
-				if (this.librarian) {
-					void this.librarian.handleDelete(
-						file.path,
-						"children" in file,
-					);
-				}
-			}),
-		);
+		// Start listening to file system events
+		// VaultActionManager will convert events to VaultEvent, filter self-events,
+		// and notify subscribers (e.g., Librarian)
+		this.vaultActionManager.startListening();
 
 		// Codex checkbox click listener
 		this.registerDomEvent(document, "click", (evt: MouseEvent) => {
