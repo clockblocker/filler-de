@@ -5,7 +5,6 @@ import type {
 	VaultEvent,
 } from "../../obsidian-vault-action-manager";
 import { systemPathFromSplitPath } from "../../obsidian-vault-action-manager/helpers/pathfinder";
-import { splitPathKey } from "../../obsidian-vault-action-manager/impl/split-path";
 import type {
 	SplitPathToFile,
 	SplitPathToFileWithTRef,
@@ -35,7 +34,6 @@ import {
 	TreeActionType,
 } from "./types/literals";
 import type { CoreNameChainFromRoot } from "./types/split-basename";
-import type { TreeAction } from "./types/tree-action";
 import {
 	type SectionNode,
 	TreeNodeStatus,
@@ -380,10 +378,12 @@ export class Librarian {
 						...action.payload.from.pathParts,
 						action.payload.from.basename,
 					].join("/");
+
 					const toPath = [
 						...action.payload.to.pathParts,
 						action.payload.to.basename,
 					].join("/");
+
 					this.processingPaths.add(fromPath);
 					this.processingPaths.add(toPath);
 					// Also add with extension for md files
@@ -551,8 +551,8 @@ export class Librarian {
 				},
 				type: "RenameMdFile",
 			};
-			this.processingPaths.add(fromPathStr + ".md");
-			this.processingPaths.add(toPathStr + ".md");
+			this.processingPaths.add(`${fromPathStr}.md`);
+			this.processingPaths.add(`${toPathStr}.md`);
 		} else {
 			const filePath = splitPath as SplitPathToFile;
 			action = {
@@ -912,6 +912,7 @@ export class Librarian {
 
 			const section = node as SectionNode;
 			const content = generateCodexContent(section, {
+				libraryRoot: this.libraryRoot,
 				suffixDelimiter: this.suffixDelimiter,
 			});
 

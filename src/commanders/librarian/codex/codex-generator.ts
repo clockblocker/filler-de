@@ -24,6 +24,8 @@ export type CodexGeneratorOptions = {
 	maxSectionDepth?: number;
 	/** Suffix delimiter (default: "-") */
 	suffixDelimiter?: string;
+	/** Library root name (for generating root codex backlinks) */
+	libraryRoot?: string;
 };
 
 /**
@@ -43,7 +45,12 @@ export function generateCodexContent(
 	const lines: string[] = [];
 
 	// Backlink to parent codex
-	const backlink = generateBacklink(section.coreNameChainToParent, delimiter);
+	const backlink = generateBacklink(
+		section.coreNameChainToParent,
+		section.coreName,
+		delimiter,
+		options.libraryRoot,
+	);
 	if (backlink) {
 		lines.push(backlink);
 	}
@@ -59,18 +66,39 @@ export function generateCodexContent(
 
 /**
  * Generate backlink to parent section's codex.
- * Returns null for root-level sections.
+ * Returns null for root section only.
+ * First-level sections (with empty chain) link to root codex.
  */
 function generateBacklink(
 	coreNameChainToParent: CoreNameChainFromRoot,
+	sectionCoreName: string,
 	delimiter: string,
+	libraryRoot?: string,
 ): string | null {
-	if (coreNameChainToParent.length === 0) {
+	// Root section has empty coreName and empty chain - no backlink
+	if (coreNameChainToParent.length === 0 && sectionCoreName === "") {
 		return null;
 	}
 
+	// First-level section (empty chain but has coreName) - link to root codex
+	if (coreNameChainToParent.length === 0) {
+		if (!libraryRoot) {
+			return null;
+		}
+		const rootCodexName = buildCodexBasename(libraryRoot);
+		return `[[${rootCodexName}|${BACK_ARROW} ${libraryRoot}]]`;
+	}
+
+	// Nested section - link to parent section's codex
 	// Parent is the last element in the chain
-	const parentName = coreNameChainToParent[coreNameChainToParent.length - 1]!;
+	const lastIndex = coreNameChainToParent.length - 1;
+	if (lastIndex < 0) {
+		return null;
+	}
+	const parentName = coreNameChainToParent[lastIndex];
+	if (!parentName) {
+		return null;
+	}
 	const parentCodexCoreName = buildCodexBasename(parentName);
 	// Parent's chain is everything except the last element
 	const parentChainToParent = coreNameChainToParent.slice(0, -1);
