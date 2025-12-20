@@ -55,7 +55,6 @@ import {
 export class Librarian {
 	private tree: LibraryTree | null = null;
 	/** Track paths we're currently processing to avoid self-event loops */
-	private processingPaths = new Set<string>();
 	private eventTeardown: (() => void) | null = null;
 
 	constructor(
@@ -316,9 +315,6 @@ export class Librarian {
 	 */
 	async handleDelete(path: string, isFolder: boolean): Promise<void> {
 		// Skip self-triggered events
-		if (this.processingPaths.has(path)) {
-			return;
-		}
 
 		// Ignore files outside library
 		if (!path.startsWith(`${this.libraryRoot}/`)) {
@@ -396,12 +392,6 @@ export class Librarian {
 		isFolder: boolean,
 	): Promise<VaultAction[]> {
 		// Skip if this is a self-triggered event (from our own dispatch)
-		if (
-			this.processingPaths.has(oldPath) ||
-			this.processingPaths.has(newPath)
-		) {
-			return [];
-		}
 
 		const mode = detectRenameMode(
 			{ isFolder, newPath, oldPath },
@@ -420,38 +410,11 @@ export class Librarian {
 		);
 
 		if (actions.length > 0) {
-			// Track paths we're about to modify to filter self-events
-			for (const action of actions) {
-				if ("from" in action.payload && "to" in action.payload) {
-					const fromPath = [
-						...action.payload.from.pathParts,
-						action.payload.from.basename,
-					].join("/");
-
-					const toPath = [
-						...action.payload.to.pathParts,
-						action.payload.to.basename,
-					].join("/");
-
-					this.processingPaths.add(fromPath);
-					this.processingPaths.add(toPath);
-					// Also add with extension for md files
-					if (action.payload.from.type === SplitPathType.MdFile) {
-						this.processingPaths.add(`${fromPath}.md`);
-						this.processingPaths.add(`${toPath}.md`);
-					}
-				}
-			}
-
 			try {
 				await this.vaultActionManager.dispatch(actions);
 				const impactedChains = this.applyActionsToTree(actions);
 				await this.regenerateCodexes(impactedChains);
 			} finally {
-				// Clear tracked paths after a delay to allow events to settle
-				setTimeout(() => {
-					this.processingPaths.clear();
-				}, 500);
 			}
 		} else {
 			// No healing needed, but still update tree and codexes for user's rename
@@ -513,11 +476,6 @@ export class Librarian {
 			return [];
 		}
 
-		// Skip if we're already processing this path
-		if (this.processingPaths.has(path)) {
-			return [];
-		}
-
 		const splitPath = this.vaultActionManager.splitPath(path);
 
 		// Only handle files, not folders
@@ -559,14 +517,6 @@ export class Librarian {
 			this.suffixDelimiter,
 		);
 
-		// Track paths before dispatch
-		const fromPathStr = [...splitPath.pathParts, splitPath.basename].join(
-			"/",
-		);
-		const toPathStr = [...splitPath.pathParts, newBasename].join("/");
-		this.processingPaths.add(fromPathStr);
-		this.processingPaths.add(toPathStr);
-
 		// Build action based on file type
 		let action: VaultAction;
 		if (splitPath.type === SplitPathType.MdFile) {
@@ -578,8 +528,6 @@ export class Librarian {
 				},
 				type: VaultActionType.RenameMdFile,
 			};
-			this.processingPaths.add(`${fromPathStr}.md`);
-			this.processingPaths.add(`${toPathStr}.md`);
 		} else {
 			const filePath = splitPath as SplitPathToFile;
 			action = {
@@ -608,9 +556,6 @@ export class Librarian {
 			const impactedChains = expandToAncestors(impactedChain);
 			await this.regenerateCodexes(impactedChains);
 		} finally {
-			setTimeout(() => {
-				this.processingPaths.clear();
-			}, 500);
 		}
 
 		return [action];
