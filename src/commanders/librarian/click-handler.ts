@@ -23,7 +23,7 @@ export async function handleCodexCheckboxClick({
 	suffixDelimiter: string;
 }): Promise<boolean> {
 	const pwd = await vaultActionManager.pwd();
-	if (pwd.basename.startsWith(CODEX_PREFIX)) {
+	if (!pwd.basename.startsWith(CODEX_PREFIX)) {
 		return false;
 	}
 

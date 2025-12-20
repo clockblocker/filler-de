@@ -13,7 +13,10 @@ import type {
 	SplitPathToMdFileWithTRef,
 } from "../../obsidian-vault-action-manager/types/split-path";
 import type { VaultAction } from "../../obsidian-vault-action-manager/types/vault-action";
-import { extractMetaInfo } from "../../services/dto-services/meta-info-manager/interface";
+import {
+	editOrAddMetaInfo,
+	extractMetaInfo,
+} from "../../services/dto-services/meta-info-manager/interface";
 import { collectImpactedSections, generateCodexContent } from "./codex";
 import {
 	type DragInResult,
@@ -200,7 +203,7 @@ export class Librarian {
 
 	/**
 	 * Set status for a node (scroll or section).
-	 * Updates tree and regenerates impacted codexes.
+	 * Updates tree, writes metadata to file (for Scroll nodes), and regenerates impacted codexes.
 	 */
 	async setStatus(
 		coreNameChain: CoreNameChainFromRoot,
@@ -214,10 +217,34 @@ export class Librarian {
 		const newStatus =
 			status === "Done" ? TreeNodeStatus.Done : TreeNodeStatus.NotStarted;
 
+		// Get node before updating (to access tRef for Scroll nodes)
+		const node = this.tree.getNode(coreNameChain);
+
 		const impactedChain = this.tree.applyTreeAction({
 			payload: { coreNameChain, newStatus },
 			type: TreeActionType.ChangeNodeStatus,
 		});
+
+		// Write metadata to file if this is a Scroll node
+		if (node?.type === TreeNodeType.Scroll) {
+			try {
+				await this.writeStatusToMetadata(node.tRef, status);
+				console.log(
+					"[Librarian] setStatus: metadata written for",
+					node.tRef.path,
+				);
+			} catch (error) {
+				console.error(
+					"[Librarian] setStatus: failed to write metadata:",
+					error,
+				);
+			}
+		} else {
+			console.log(
+				"[Librarian] setStatus: node is not a Scroll, skipping metadata write",
+				node?.type,
+			);
+		}
 
 		// Expand to ancestors for codex regeneration
 		const { expandToAncestors, dedupeChains } = await import(
@@ -230,6 +257,83 @@ export class Librarian {
 		const impactedSections = dedupeChains(expandToAncestors(baseChain));
 
 		await this.regenerateCodexes(impactedSections);
+	}
+
+	/**
+	 * Write status to metadata in file.
+	 */
+	private async writeStatusToMetadata(
+		tFile: TFile,
+		status: "Done" | "NotStarted",
+	): Promise<void> {
+		console.log(
+			"[Librarian] writeStatusToMetadata:",
+			tFile.path,
+			"status:",
+			status,
+		);
+
+		const splitPath = this.vaultActionManager.splitPath(tFile);
+		if (splitPath.type !== "MdFile") {
+			console.log(
+				"[Librarian] writeStatusToMetadata: not an MdFile, skipping",
+				splitPath.type,
+			);
+			return;
+		}
+
+		const currentContent =
+			await this.vaultActionManager.readContent(splitPath);
+		const currentMeta = extractMetaInfo(currentContent);
+
+		console.log(
+			"[Librarian] writeStatusToMetadata: currentMeta:",
+			currentMeta,
+		);
+
+		// Determine fileType from existing metadata or default to Scroll
+		const fileType = currentMeta?.fileType ?? "Scroll";
+
+		// Only update Scroll files (not Pages or other types)
+		if (fileType !== "Scroll") {
+			console.log(
+				"[Librarian] writeStatusToMetadata: fileType is not Scroll, skipping",
+				fileType,
+			);
+			return;
+		}
+
+		const newMeta = {
+			fileType: "Scroll" as const,
+			status:
+				status === "Done" ? ("Done" as const) : ("NotStarted" as const),
+		};
+
+		const updatedContent = editOrAddMetaInfo(currentContent, newMeta);
+
+		console.log(
+			"[Librarian] writeStatusToMetadata: dispatching ReplaceContentMdFile",
+		);
+
+		const result = await this.vaultActionManager.dispatch([
+			{
+				payload: { content: updatedContent, splitPath },
+				type: "ReplaceContentMdFile",
+			},
+		]);
+
+		if (result.isErr()) {
+			const errors = result.error;
+			console.error(
+				"[Librarian] writeStatusToMetadata: dispatch errors:",
+				errors,
+			);
+			throw new Error(
+				`Failed to write metadata: ${errors.map((e) => e.error).join(", ")}`,
+			);
+		}
+
+		console.log("[Librarian] writeStatusToMetadata: success");
 	}
 
 	/**
@@ -911,10 +1015,22 @@ export class Librarian {
 			}
 
 			const section = node as SectionNode;
+			console.log(
+				"[Librarian] buildCodexVaultActions: generating codex for chain:",
+				chain,
+				"libraryRoot:",
+				this.libraryRoot,
+			);
 			const content = generateCodexContent(section, {
 				libraryRoot: this.libraryRoot,
 				suffixDelimiter: this.suffixDelimiter,
 			});
+			console.log(
+				"[Librarian] buildCodexVaultActions: generated content length:",
+				content.length,
+				"has backlink:",
+				content.includes("←"),
+			);
 
 			// Build codex basename with suffix (same pattern as regular files)
 			// Root: __Library (no suffix, use libraryRoot name)
