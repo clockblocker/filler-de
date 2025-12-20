@@ -5,14 +5,18 @@ import type {
 	VaultEvent,
 } from "../../obsidian-vault-action-manager";
 import { systemPathFromSplitPath } from "../../obsidian-vault-action-manager/helpers/pathfinder";
-import type {
-	SplitPathToFile,
-	SplitPathToFileWithTRef,
-	SplitPathToFolder,
-	SplitPathToMdFile,
-	SplitPathToMdFileWithTRef,
+import {
+	type SplitPathToFile,
+	type SplitPathToFileWithTRef,
+	type SplitPathToFolder,
+	type SplitPathToMdFile,
+	type SplitPathToMdFileWithTRef,
+	SplitPathType,
 } from "../../obsidian-vault-action-manager/types/split-path";
-import type { VaultAction } from "../../obsidian-vault-action-manager/types/vault-action";
+import {
+	type VaultAction,
+	VaultActionType,
+} from "../../obsidian-vault-action-manager/types/vault-action";
 import {
 	editOrAddMetaInfo,
 	extractMetaInfo,
@@ -110,6 +114,7 @@ export class Librarian {
 	private subscribeToVaultEvents(): void {
 		this.eventTeardown = this.vaultActionManager.subscribe(
 			async (event: VaultEvent) => {
+				console.log("event", event);
 				if (event.type === "FileRenamed") {
 					const oldPath = systemPathFromSplitPath(event.from);
 					const newPath = systemPathFromSplitPath(event.to);
@@ -181,14 +186,14 @@ export class Librarian {
 				if (child.type === TreeNodeType.Section) {
 					const childChain = [...currentChain, child.coreName];
 					chains.push(childChain);
-					collectRecursive(child as SectionNode, childChain);
+					collectRecursive(child, childChain);
 				}
 			}
 		};
 
 		const root = this.tree.getNode([]);
 		if (root && root.type === TreeNodeType.Section) {
-			collectRecursive(root as SectionNode, []);
+			collectRecursive(root, []);
 		}
 
 		return chains;
@@ -207,7 +212,7 @@ export class Librarian {
 	 */
 	async setStatus(
 		coreNameChain: CoreNameChainFromRoot,
-		status: "Done" | "NotStarted",
+		status: TreeNodeStatus,
 	): Promise<void> {
 		if (!this.tree) {
 			console.warn("[Librarian] setStatus called before init");
@@ -215,7 +220,9 @@ export class Librarian {
 		}
 
 		const newStatus =
-			status === "Done" ? TreeNodeStatus.Done : TreeNodeStatus.NotStarted;
+			status === TreeNodeStatus.Done
+				? TreeNodeStatus.Done
+				: TreeNodeStatus.NotStarted;
 
 		// Get node before updating (to access tRef for Scroll nodes)
 		const node = this.tree.getNode(coreNameChain);
@@ -264,7 +271,7 @@ export class Librarian {
 	 */
 	private async writeStatusToMetadata(
 		tFile: TFile,
-		status: "Done" | "NotStarted",
+		status: TreeNodeStatus,
 	): Promise<void> {
 		console.log(
 			"[Librarian] writeStatusToMetadata:",
@@ -274,7 +281,7 @@ export class Librarian {
 		);
 
 		const splitPath = this.vaultActionManager.splitPath(tFile);
-		if (splitPath.type !== "MdFile") {
+		if (splitPath.type !== SplitPathType.MdFile) {
 			console.log(
 				"[Librarian] writeStatusToMetadata: not an MdFile, skipping",
 				splitPath.type,
@@ -284,6 +291,7 @@ export class Librarian {
 
 		const currentContent =
 			await this.vaultActionManager.readContent(splitPath);
+
 		const currentMeta = extractMetaInfo(currentContent);
 
 		console.log(
@@ -306,7 +314,9 @@ export class Librarian {
 		const newMeta = {
 			fileType: "Scroll" as const,
 			status:
-				status === "Done" ? ("Done" as const) : ("NotStarted" as const),
+				status === TreeNodeStatus.Done
+					? TreeNodeStatus.Done
+					: TreeNodeStatus.NotStarted,
 		};
 
 		const updatedContent = editOrAddMetaInfo(currentContent, newMeta);
@@ -348,7 +358,7 @@ export class Librarian {
 		}
 
 		// Ignore files outside library
-		if (!path.startsWith(this.libraryRoot + "/")) {
+		if (!path.startsWith(`${this.libraryRoot}/`)) {
 			return;
 		}
 
@@ -388,10 +398,11 @@ export class Librarian {
 			// File delete: last part is filename, parse to get coreName
 			const { parseBasename } = await import("./utils/parse-basename");
 			const filename = partsAfterRoot.pop() ?? "";
-			// Remove extension
+
 			const basenameWithoutExt = filename.includes(".")
 				? filename.slice(0, filename.lastIndexOf("."))
 				: filename;
+
 			const parsed = parseBasename(
 				basenameWithoutExt,
 				this.suffixDelimiter,
@@ -491,9 +502,9 @@ export class Librarian {
 					this.processingPaths.add(fromPath);
 					this.processingPaths.add(toPath);
 					// Also add with extension for md files
-					if (action.payload.from.type === "MdFile") {
-						this.processingPaths.add(fromPath + ".md");
-						this.processingPaths.add(toPath + ".md");
+					if (action.payload.from.type === SplitPathType.MdFile) {
+						this.processingPaths.add(`${fromPath}.md`);
+						this.processingPaths.add(`${toPath}.md`);
 					}
 				}
 			}
@@ -536,7 +547,7 @@ export class Librarian {
 
 		// Compute impacted chain from new file location
 		const newSplitPath = this.vaultActionManager.splitPath(newPath);
-		if (newSplitPath.type === "Folder") {
+		if (newSplitPath.type === SplitPathType.Folder) {
 			return;
 		}
 
@@ -567,7 +578,7 @@ export class Librarian {
 		}
 
 		// Ignore files outside library
-		if (!path.startsWith(this.libraryRoot + "/")) {
+		if (!path.startsWith(`${this.libraryRoot}/`)) {
 			return [];
 		}
 
@@ -597,7 +608,7 @@ export class Librarian {
 		const splitPath = this.vaultActionManager.splitPath(path);
 
 		// Only handle files, not folders
-		if (splitPath.type === "Folder") {
+		if (splitPath.type === SplitPathType.Folder) {
 			return [];
 		}
 
@@ -646,14 +657,14 @@ export class Librarian {
 
 		// Build action based on file type
 		let action: VaultAction;
-		if (splitPath.type === "MdFile") {
-			const mdPath = splitPath as SplitPathToMdFile;
+		if (splitPath.type === SplitPathType.MdFile) {
+			const mdPath = splitPath;
 			action = {
 				payload: {
 					from: mdPath,
 					to: { ...mdPath, basename: newBasename },
 				},
-				type: "RenameMdFile",
+				type: VaultActionType.RenameMdFile,
 			};
 			this.processingPaths.add(`${fromPathStr}.md`);
 			this.processingPaths.add(`${toPathStr}.md`);
@@ -664,7 +675,7 @@ export class Librarian {
 					from: filePath,
 					to: { ...filePath, basename: newBasename },
 				},
-				type: "RenameFile",
+				type: VaultActionType.RenameFile,
 			};
 		}
 
@@ -747,10 +758,10 @@ export class Librarian {
 		// Folder renames: handled via handleFolderRename
 		if (
 			isFolder ||
-			oldSplitPath.type === "Folder" ||
-			newSplitPath.type === "Folder"
+			oldSplitPath.type === SplitPathType.Folder ||
+			newSplitPath.type === SplitPathType.Folder
 		) {
-			if (newSplitPath.type === "Folder") {
+			if (newSplitPath.type === SplitPathType.Folder) {
 				return this.handleFolderRename(newSplitPath);
 			}
 			return [];
@@ -784,7 +795,8 @@ export class Librarian {
 			(
 				entry,
 			): entry is SplitPathToFileWithTRef | SplitPathToMdFileWithTRef =>
-				entry.type === "File" || entry.type === "MdFile",
+				entry.type === SplitPathType.File ||
+				entry.type === SplitPathType.MdFile,
 		);
 
 		const actions: VaultAction[] = [];
@@ -833,14 +845,14 @@ export class Librarian {
 	 * Convert RenameIntent to VaultActions.
 	 */
 	private intentToActions(intent: RenameIntent): VaultAction[] {
-		if (intent.from.type === "MdFile") {
+		if (intent.from.type === SplitPathType.MdFile) {
 			return [
 				{
 					payload: {
 						from: intent.from as SplitPathToMdFile,
 						to: intent.to as SplitPathToMdFile,
 					},
-					type: "RenameMdFile" as const,
+					type: VaultActionType.RenameMdFile,
 				},
 			];
 		}
@@ -851,7 +863,7 @@ export class Librarian {
 					from: intent.from as SplitPathToFile,
 					to: intent.to as SplitPathToFile,
 				},
-				type: "RenameFile" as const,
+				type: VaultActionType.RenameFile,
 			},
 		];
 	}
@@ -864,7 +876,7 @@ export class Librarian {
 		const rootSplitPath = this.vaultActionManager.splitPath(
 			this.libraryRoot,
 		);
-		if (rootSplitPath.type !== "Folder") {
+		if (rootSplitPath.type !== SplitPathType.Folder) {
 			throw new Error(
 				`Library root is not a folder: ${this.libraryRoot}`,
 			);
@@ -881,7 +893,8 @@ export class Librarian {
 			(
 				entry,
 			): entry is SplitPathToFileWithTRef | SplitPathToMdFileWithTRef =>
-				(entry.type === "File" || entry.type === "MdFile") &&
+				(entry.type === SplitPathType.File ||
+					entry.type === SplitPathType.MdFile) &&
 				// Skip codex files - they're generated, not source data
 				!isCodexBasename(entry.basename),
 		);
@@ -892,7 +905,7 @@ export class Librarian {
 
 		const readContent = (tRef: import("obsidian").TFile) => {
 			const sp = this.vaultActionManager.splitPath(tRef);
-			if (sp.type !== "MdFile") {
+			if (sp.type !== SplitPathType.MdFile) {
 				return Promise.resolve("");
 			}
 			return this.vaultActionManager.readContent(sp);
@@ -948,7 +961,7 @@ export class Librarian {
 	private getTRefForPath(path: string): TFile | null {
 		try {
 			const splitPath = this.vaultActionManager.splitPath(path);
-			if (splitPath.type === "Folder") {
+			if (splitPath.type === SplitPathType.Folder) {
 				return null;
 			}
 			// getAbstractFile is async, but we need sync access
@@ -1055,7 +1068,7 @@ export class Librarian {
 				basename: codexBasename,
 				extension: "md",
 				pathParts,
-				type: "MdFile",
+				type: SplitPathType.MdFile,
 			};
 
 			// Always use ReplaceContentMdFile - it creates if not exists
