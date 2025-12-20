@@ -98,11 +98,11 @@ export function collectImpactedSections(
 export function findCommonAncestor(
 	chains: CoreNameChainFromRoot[],
 ): CoreNameChainFromRoot {
-	if (chains.length === 0) {
+	const first = chains[0];
+
+	if (!first) {
 		return [];
 	}
-
-	const first = chains[0]!;
 
 	if (chains.length === 1) {
 		return first;

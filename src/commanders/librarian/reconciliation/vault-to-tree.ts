@@ -10,10 +10,7 @@
 
 import type { TFile } from "obsidian";
 import type { SplitPath } from "../../../obsidian-vault-action-manager/types/split-path";
-import type {
-	VaultAction,
-	VaultActionType,
-} from "../../../obsidian-vault-action-manager/types/vault-action";
+import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
 import { TreeActionType } from "../types/literals";
 import type { CoreNameChainFromRoot } from "../types/split-basename";
 import type { TreeAction } from "../types/tree-action";

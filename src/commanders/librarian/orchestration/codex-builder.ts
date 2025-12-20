@@ -1,7 +1,4 @@
-import type {
-	SplitPathToFile,
-	SplitPathToMdFile,
-} from "../../../obsidian-vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "../../../obsidian-vault-action-manager/types/split-path";
 import { SplitPathType } from "../../../obsidian-vault-action-manager/types/split-path";
 import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
 import { VaultActionType } from "../../../obsidian-vault-action-manager/types/vault-action";
@@ -76,4 +73,3 @@ export function buildCodexVaultActions(
 
 	return actions;
 }
-

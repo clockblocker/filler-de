@@ -2,11 +2,13 @@ import type { TFile } from "obsidian";
 import type { SplitPath } from "../../../obsidian-vault-action-manager/types/split-path";
 import { SplitPathType } from "../../../obsidian-vault-action-manager/types/split-path";
 import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
-import { TreeNodeStatus } from "../types/tree-node";
+import type { TreeNodeStatus } from "../types/tree-node";
 import { buildWriteStatusAction } from "./metadata-writer";
 
 export type MetadataServiceContext = {
-	dispatch: (actions: VaultAction[]) => Promise<{ isErr: () => boolean; error?: Array<{ error: string }> }>;
+	dispatch: (
+		actions: VaultAction[],
+	) => Promise<{ isErr: () => boolean; error?: Array<{ error: string }> }>;
 	readContent: (splitPath: SplitPath) => Promise<string>;
 	splitPath: (tFile: TFile) => SplitPath;
 };
@@ -48,4 +50,3 @@ export async function writeStatusToMetadata(
 
 	console.log("[Librarian] writeStatusToMetadata: success");
 }
-

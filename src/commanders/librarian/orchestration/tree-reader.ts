@@ -15,17 +15,6 @@ import {
 	withStatusFromMeta,
 } from "../utils/split-path-to-leaf";
 
-export type TreeReaderContext = {
-	splitPath: (path: string) => SplitPathToFolder | SplitPathToFile | SplitPathToMdFile;
-	getAbstractFile: (splitPath: SplitPathToFolder) => Promise<TFolder | null>;
-	listAll: (
-		splitPath: SplitPathToFolder,
-	) => Promise<
-		Array<SplitPathToFileWithTRef | SplitPathToMdFileWithTRef | SplitPathToFolder>
-	>;
-	readContent: (splitPath: SplitPathToMdFile) => Promise<string>;
-};
-
 /**
  * Read tree from existing vault.
  * Lists all files in the library root and builds a LibraryTree.
@@ -47,9 +36,7 @@ export async function readTreeFromVault(
 
 	const allEntries = await context.listAll(rootSplitPath);
 	const fileEntries = allEntries.filter(
-		(
-			entry,
-		): entry is SplitPathToFileWithTRef | SplitPathToMdFileWithTRef =>
+		(entry): entry is SplitPathToFileWithTRef | SplitPathToMdFileWithTRef =>
 			(entry.type === SplitPathType.File ||
 				entry.type === SplitPathType.MdFile) &&
 			// Skip codex files - they're generated, not source data
@@ -77,3 +64,19 @@ export async function readTreeFromVault(
 	return new LibraryTree(leaves, rootFolder);
 }
 
+export type TreeReaderContext = {
+	splitPath: (
+		path: string,
+	) => SplitPathToFolder | SplitPathToFile | SplitPathToMdFile;
+	getAbstractFile: (splitPath: SplitPathToFolder) => Promise<TFolder | null>;
+	listAll: (
+		splitPath: SplitPathToFolder,
+	) => Promise<
+		Array<
+			| SplitPathToFileWithTRef
+			| SplitPathToMdFileWithTRef
+			| SplitPathToFolder
+		>
+	>;
+	readContent: (splitPath: SplitPathToMdFile) => Promise<string>;
+};

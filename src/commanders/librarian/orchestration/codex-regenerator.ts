@@ -1,12 +1,13 @@
 import type { LibraryTree } from "../library-tree";
 import type { CoreNameChainFromRoot } from "../types/split-basename";
 import type { SectionNode } from "../types/tree-node";
-import { TreeNodeType } from "../types/tree-node";
 import { buildCodexVaultActions } from "./codex-builder";
 import { collectAllSectionChains } from "./tree-utils";
 
 export type CodexRegeneratorContext = {
-	dispatch: (actions: import("../../../obsidian-vault-action-manager/types/vault-action").VaultAction[]) => Promise<unknown>;
+	dispatch: (
+		actions: import("../../../obsidian-vault-action-manager/types/vault-action").VaultAction[],
+	) => Promise<unknown>;
 	getNode: (chain: CoreNameChainFromRoot) => SectionNode | null;
 	libraryRoot: string;
 	suffixDelimiter: string;
@@ -53,4 +54,3 @@ export async function regenerateAllCodexes(
 	const allSectionChains = collectAllSectionChains(tree);
 	await regenerateCodexes(allSectionChains, context);
 }
-
