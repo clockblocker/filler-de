@@ -5,8 +5,6 @@ import {
 	type WorkspaceLeaf,
 } from "obsidian";
 import { Librarian, LibraryTree } from "./commanders/librarian";
-// LibrarianLegacy unplugged - using new Librarian for healing
-// import { LibrarianLegacy } from "./commanders/librarian-legacy/librarian";
 import {
 	handleCodexCheckboxClick,
 	isTaskCheckbox,
@@ -33,19 +31,9 @@ import { AboveSelectionToolbarService } from "./services/obsidian-services/atomi
 import { ApiService } from "./services/obsidian-services/atomic-services/api-service";
 import { BottomToolbarService } from "./services/obsidian-services/atomic-services/bottom-toolbar-service";
 import { SelectionService } from "./services/obsidian-services/atomic-services/selection-service";
-// Legacy services - unplugged
-// import { LegacyOpenedFileService } from "./services/obsidian-services/file-services/active-view/legacy-opened-file-service";
-// import { LegacyOpenedFileReader } from "./services/obsidian-services/file-services/active-view/opened-file-reader";
-// import { LegacyBackgroundFileServiceLegacy } from "./services/obsidian-services/file-services/background/background-file-service";
-// import { VaultActionExecutor } from "./services/obsidian-services/file-services/background/vault-action-executor";
-// import { VaultActionQueueLegacy } from "./services/obsidian-services/file-services/vault-action-queue";
 import { ACTION_CONFIGS } from "./services/wip-configs/actions/actions-config";
-// import newGenCommand from "./services/wip-configs/actions/new/new-gen-command";
-// import { VaultCurrator } from './obsidian-related/obsidian-services/managers/vault-currator';
 import addBacklinksToCurrentFile from "./services/wip-configs/actions/old/addBacklinksToCurrentFile";
-// import { makeClickListener } from "./services/wip-configs/event-listeners/click-listener/click-listener";
 import { SettingsTab } from "./settings";
-// import { LibrarianLegacyTester } from "./testers/librarian/librarian-tester";
 import { DEFAULT_SETTINGS, type TextEaterSettings } from "./types";
 
 export default class TextEaterPlugin extends Plugin {
@@ -233,15 +221,17 @@ export default class TextEaterPlugin extends Plugin {
 		this.vaultActionManager.startListening();
 
 		// Codex checkbox click listener
-		this.registerDomEvent(document, "click", (evt: MouseEvent) => {
+		this.registerDomEvent(document, "click", async (evt: MouseEvent) => {
 			const target = evt.target as HTMLElement;
 			if (isTaskCheckbox(target) && this.librarian) {
-				const handled = handleCodexCheckboxClick({
+				const handled = await handleCodexCheckboxClick({
 					app: this.app,
 					checkbox: target,
 					librarian: this.librarian,
 					suffixDelimiter: "-",
+					vaultActionManager: this.vaultActionManager,
 				});
+
 				if (handled) {
 					evt.preventDefault();
 					evt.stopPropagation();

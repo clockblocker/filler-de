@@ -1,5 +1,6 @@
 import type { App } from "obsidian";
 import { MarkdownView } from "obsidian";
+import type { ObsidianVaultActionManager } from "../../obsidian-vault-action-manager";
 import type { Librarian } from "./librarian";
 import { CODEX_PREFIX } from "./types/literals";
 import type { CoreNameChainFromRoot } from "./types/split-basename";
@@ -8,17 +9,24 @@ import type { CoreNameChainFromRoot } from "./types/split-basename";
  * Handle codex checkbox click.
  * Parses link target, converts to coreNameChain, calls setStatus.
  */
-export function handleCodexCheckboxClick({
+export async function handleCodexCheckboxClick({
 	checkbox,
+	vaultActionManager,
 	librarian,
 	app,
 	suffixDelimiter,
 }: {
 	checkbox: HTMLInputElement;
+	vaultActionManager: ObsidianVaultActionManager;
 	librarian: Librarian;
 	app: App;
 	suffixDelimiter: string;
-}): boolean {
+}): Promise<boolean> {
+	const pwd = await vaultActionManager.pwd();
+	if (pwd.basename.startsWith(CODEX_PREFIX)) {
+		return false;
+	}
+
 	const lineContainer =
 		checkbox.closest(".cm-line") ?? // Live Preview
 		checkbox.closest("li") ?? // Reading view
