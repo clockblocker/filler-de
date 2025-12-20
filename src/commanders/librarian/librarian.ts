@@ -4,53 +4,32 @@ import type {
 	ObsidianVaultActionManager,
 	VaultEvent,
 } from "../../obsidian-vault-action-manager";
-import { systemPathFromSplitPath } from "../../obsidian-vault-action-manager/helpers/pathfinder";
+import { SplitPathType } from "../../obsidian-vault-action-manager/types/split-path";
+import type { VaultAction } from "../../obsidian-vault-action-manager/types/vault-action";
+import { collectImpactedSections } from "./codex";
+import { detectRenameMode, healOnInit, type InitHealResult } from "./healing";
+import type { LibraryTree } from "./library-tree";
 import {
-	type SplitPathToFile,
-	type SplitPathToFileWithTRef,
-	type SplitPathToFolder,
-	type SplitPathToMdFile,
-	type SplitPathToMdFileWithTRef,
-	SplitPathType,
-} from "../../obsidian-vault-action-manager/types/split-path";
-import {
-	type VaultAction,
-	VaultActionType,
-} from "../../obsidian-vault-action-manager/types/vault-action";
-import {
-	editOrAddMetaInfo,
-	extractMetaInfo,
-} from "../../services/dto-services/meta-info-manager/interface";
-import { collectImpactedSections, generateCodexContent } from "./codex";
-import {
-	type DragInResult,
-	detectRenameMode,
-	type EventMode,
-	handleDragIn,
-	healOnInit,
-	type InitHealResult,
-	type RenameIntent,
-	resolveRuntimeIntent,
-} from "./healing";
-import { LibraryTree } from "./library-tree";
+	buildCodexVaultActions,
+	buildWriteStatusAction,
+	collectAllSectionChains,
+	computeCreateAction,
+	extractBasenameWithoutExt,
+	parseDeletePathToChain,
+	parseEventToHandler,
+	readTreeFromVault,
+	resolveActions,
+	shouldIgnorePath,
+} from "./orchestration";
 import { translateVaultAction } from "./reconciliation";
-import {
-	type DragInSubtype,
-	HealingMode,
-	RuntimeSubtype,
-	TreeActionType,
-} from "./types/literals";
+import { TreeActionType } from "./types/literals";
 import type { CoreNameChainFromRoot } from "./types/split-basename";
 import {
 	type SectionNode,
 	TreeNodeStatus,
 	TreeNodeType,
 } from "./types/tree-node";
-import { buildCodexBasename, isCodexBasename } from "./utils/codex-utils";
-import {
-	splitPathToLeaf,
-	withStatusFromMeta,
-} from "./utils/split-path-to-leaf";
+import { isCodexBasename } from "./utils/codex-utils";
 
 export class Librarian {
 	private tree: LibraryTree | null = null;
@@ -114,25 +93,34 @@ export class Librarian {
 		this.eventTeardown = this.vaultActionManager.subscribe(
 			async (event: VaultEvent) => {
 				console.log("event", event);
-				if (event.type === "FileRenamed") {
-					const oldPath = systemPathFromSplitPath(event.from);
-					const newPath = systemPathFromSplitPath(event.to);
-					await this.handleRename(oldPath, newPath, false);
-				} else if (event.type === "FolderRenamed") {
-					const oldPath = systemPathFromSplitPath(event.from);
-					const newPath = systemPathFromSplitPath(event.to);
-					await this.handleRename(oldPath, newPath, true);
-				} else if (event.type === "FileCreated") {
-					const path = systemPathFromSplitPath(event.splitPath);
-					await this.handleCreate(path, false);
-				} else if (event.type === "FolderCreated") {
+				const handlerInfo = parseEventToHandler(
+					event,
+					this.libraryRoot,
+				);
+				if (!handlerInfo) {
+					return;
+				}
+
+				if (
+					handlerInfo.type === "rename" &&
+					handlerInfo.oldPath &&
+					handlerInfo.newPath
+				) {
+					await this.handleRename(
+						handlerInfo.oldPath,
+						handlerInfo.newPath,
+						handlerInfo.isFolder,
+					);
+				} else if (handlerInfo.type === "create") {
+					if (!handlerInfo.isFolder) {
+						await this.handleCreate(handlerInfo.path, false);
+					}
 					// Folders don't need healing, skip
-				} else if (event.type === "FileTrashed") {
-					const path = systemPathFromSplitPath(event.splitPath);
-					await this.handleDelete(path, false);
-				} else if (event.type === "FolderTrashed") {
-					const path = systemPathFromSplitPath(event.splitPath);
-					await this.handleDelete(path, true);
+				} else if (handlerInfo.type === "delete") {
+					await this.handleDelete(
+						handlerInfo.path,
+						handlerInfo.isFolder,
+					);
 				}
 			},
 		);
@@ -158,40 +146,9 @@ export class Librarian {
 		}
 
 		// Collect all section chains
-		const allSectionChains = this.collectAllSectionChains();
+		const allSectionChains = collectAllSectionChains(this.tree);
 
 		await this.regenerateCodexes(allSectionChains);
-	}
-
-	/**
-	 * Collect chains for all sections in tree (including root).
-	 */
-	private collectAllSectionChains(): CoreNameChainFromRoot[] {
-		if (!this.tree) {
-			return [];
-		}
-
-		const chains: CoreNameChainFromRoot[] = [[]]; // Start with root
-
-		const collectRecursive = (
-			node: SectionNode,
-			currentChain: CoreNameChainFromRoot,
-		) => {
-			for (const child of node.children) {
-				if (child.type === TreeNodeType.Section) {
-					const childChain = [...currentChain, child.coreName];
-					chains.push(childChain);
-					collectRecursive(child, childChain);
-				}
-			}
-		};
-
-		const root = this.tree.getNode([]);
-		if (root && root.type === TreeNodeType.Section) {
-			collectRecursive(root, []);
-		}
-
-		return chains;
 	}
 
 	/**
@@ -268,32 +225,17 @@ export class Librarian {
 		const currentContent =
 			await this.vaultActionManager.readContent(splitPath);
 
-		const currentMeta = extractMetaInfo(currentContent);
+		const action = buildWriteStatusAction(
+			currentContent,
+			splitPath,
+			status,
+		);
 
-		// Determine fileType from existing metadata or default to Scroll
-		const fileType = currentMeta?.fileType ?? "Scroll";
-
-		// Only update Scroll files (not Pages or other types)
-		if (fileType !== "Scroll") {
+		if (!action) {
 			return;
 		}
 
-		const newMeta = {
-			fileType: "Scroll" as const,
-			status:
-				status === TreeNodeStatus.Done
-					? TreeNodeStatus.Done
-					: TreeNodeStatus.NotStarted,
-		};
-
-		const updatedContent = editOrAddMetaInfo(currentContent, newMeta);
-
-		const result = await this.vaultActionManager.dispatch([
-			{
-				payload: { content: updatedContent, splitPath },
-				type: VaultActionType.ReplaceContentMdFile,
-			},
-		]);
+		const result = await this.vaultActionManager.dispatch([action]);
 
 		if (result.isErr()) {
 			const errors = result.error;
@@ -314,20 +256,16 @@ export class Librarian {
 	 * Removes node from tree and regenerates impacted codexes.
 	 */
 	async handleDelete(path: string, isFolder: boolean): Promise<void> {
-		// Skip self-triggered events
-
-		// Ignore files outside library
-		if (!path.startsWith(`${this.libraryRoot}/`)) {
-			return;
-		}
-
 		// Skip codex files
-		const basename = path.split("/").pop() ?? "";
-		const basenameWithoutExt = basename.includes(".")
-			? basename.slice(0, basename.lastIndexOf("."))
-			: basename;
-
-		if (isCodexBasename(basenameWithoutExt)) {
+		const basenameWithoutExt = extractBasenameWithoutExt(path);
+		if (
+			shouldIgnorePath(
+				path,
+				basenameWithoutExt,
+				this.libraryRoot,
+				isCodexBasename,
+			)
+		) {
 			return;
 		}
 
@@ -336,35 +274,15 @@ export class Librarian {
 		}
 
 		// Parse path to get coreNameChain
-		// Use isFolder param instead of splitPath.type (deleted item may not exist)
-		const pathParts = path.split("/");
-		const libraryRootIndex = pathParts.indexOf(this.libraryRoot);
-		if (libraryRootIndex === -1) {
+		const coreNameChain = parseDeletePathToChain(
+			path,
+			isFolder,
+			this.libraryRoot,
+			this.suffixDelimiter,
+		);
+
+		if (!coreNameChain) {
 			return;
-		}
-
-		// Chain = parts after library root
-		const partsAfterRoot = pathParts.slice(libraryRootIndex + 1);
-
-		let coreNameChain: CoreNameChainFromRoot;
-
-		if (isFolder) {
-			// Folder delete: chain is just the folder path (no basename parsing)
-			coreNameChain = partsAfterRoot;
-		} else {
-			// File delete: last part is filename, parse to get coreName
-			const { parseBasename } = await import("./utils/parse-basename");
-			const filename = partsAfterRoot.pop() ?? "";
-
-			const basenameWithoutExt = filename.includes(".")
-				? filename.slice(0, filename.lastIndexOf("."))
-				: filename;
-
-			const parsed = parseBasename(
-				basenameWithoutExt,
-				this.suffixDelimiter,
-			);
-			coreNameChain = [...partsAfterRoot, parsed.coreName];
 		}
 
 		const impactedChain = this.tree.applyTreeAction({
@@ -391,8 +309,6 @@ export class Librarian {
 		newPath: string,
 		isFolder: boolean,
 	): Promise<VaultAction[]> {
-		// Skip if this is a self-triggered event (from our own dispatch)
-
 		const mode = detectRenameMode(
 			{ isFolder, newPath, oldPath },
 			this.libraryRoot,
@@ -402,33 +318,50 @@ export class Librarian {
 			return [];
 		}
 
-		const actions = await this.resolveActions(
-			mode,
+		// Init mode is handled separately, skip here
+		if (mode.mode === "Init") {
+			return [];
+		}
+
+		const actions = await resolveActions(
+			mode as
+				| {
+						mode: "Runtime";
+						subtype: "BasenameOnly" | "PathOnly" | "Both";
+				  }
+				| { mode: "DragIn"; subtype: "File" | "Folder" },
 			oldPath,
 			newPath,
 			isFolder,
+			{
+				listAll: (sp) => this.vaultActionManager.listAll(sp),
+				splitPath: (p) => this.vaultActionManager.splitPath(p),
+			},
+			this.libraryRoot,
+			this.suffixDelimiter,
 		);
 
-		if (actions.length > 0) {
+		const actionArray = Array.isArray(actions) ? actions : await actions;
+
+		if (actionArray.length > 0) {
 			try {
-				await this.vaultActionManager.dispatch(actions);
-				const impactedChains = this.applyActionsToTree(actions);
+				await this.vaultActionManager.dispatch(actionArray);
+				const impactedChains = this.applyActionsToTree(actionArray);
 				await this.regenerateCodexes(impactedChains);
 			} finally {
 			}
 		} else {
 			// No healing needed, but still update tree and codexes for user's rename
-			await this.updateTreeAndCodexesForRename(oldPath, newPath);
+			await this.updateTreeAndCodexesForRename(newPath);
 		}
 
-		return actions;
+		return actionArray;
 	}
 
 	/**
 	 * Update tree and regenerate codexes for a user rename that needs no healing.
 	 */
 	private async updateTreeAndCodexesForRename(
-		oldPath: string,
 		newPath: string,
 	): Promise<void> {
 		// Re-read tree to get latest state
@@ -466,12 +399,7 @@ export class Librarian {
 		}
 
 		// Skip codex files - they're generated, not source data
-		const basename = path.split("/").pop() ?? "";
-		const basenameWithoutExt = basename.includes(".")
-			? basename.slice(0, basename.lastIndexOf("."))
-			: basename;
-
-		// Skipping codex file
+		const basenameWithoutExt = extractBasenameWithoutExt(path);
 		if (isCodexBasename(basenameWithoutExt)) {
 			return [];
 		}
@@ -483,60 +411,14 @@ export class Librarian {
 			return [];
 		}
 
-		// Compute relative path (without library root)
-		const relativePathParts = splitPath.pathParts.slice(1); // Remove library root
-
-		// If at root, no suffix needed
-		if (relativePathParts.length === 0) {
-			return [];
-		}
-
-		// Parse current basename to get coreName
-		const { parseBasename } = await import("./utils/parse-basename");
-		const { buildBasename, computeSuffixFromPath } = await import(
-			"./utils/path-suffix-utils"
-		);
-
-		const parsed = parseBasename(splitPath.basename, this.suffixDelimiter);
-		const expectedSuffix = computeSuffixFromPath(relativePathParts);
-
-		// Check if suffix already correct
-		const suffixMatches =
-			parsed.splitSuffix.length === expectedSuffix.length &&
-			parsed.splitSuffix.every((s, i) => s === expectedSuffix[i]);
-
-		if (suffixMatches) {
-			console.log("[Librarian] suffix already correct");
-			return [];
-		}
-
-		// Build correct basename with suffix
-		const newBasename = buildBasename(
-			parsed.coreName,
-			expectedSuffix,
+		const { action, parentChain } = computeCreateAction(
+			splitPath,
+			this.libraryRoot,
 			this.suffixDelimiter,
 		);
 
-		// Build action based on file type
-		let action: VaultAction;
-		if (splitPath.type === SplitPathType.MdFile) {
-			const mdPath = splitPath;
-			action = {
-				payload: {
-					from: mdPath,
-					to: { ...mdPath, basename: newBasename },
-				},
-				type: VaultActionType.RenameMdFile,
-			};
-		} else {
-			const filePath = splitPath as SplitPathToFile;
-			action = {
-				payload: {
-					from: filePath,
-					to: { ...filePath, basename: newBasename },
-				},
-				type: VaultActionType.RenameFile,
-			};
+		if (!action) {
+			return [];
 		}
 
 		try {
@@ -545,15 +427,11 @@ export class Librarian {
 			// Re-read tree to include the new file
 			this.tree = await this.readTreeFromVault();
 
-			// Compute impacted chain from new file location
-			// The new file is at: pathParts (without root) + newBasename
-			const impactedChain = relativePathParts; // parent chain
-
 			// Expand to ancestors and regenerate codexes
 			const { expandToAncestors } = await import(
 				"./codex/impacted-chains"
 			);
-			const impactedChains = expandToAncestors(impactedChain);
+			const impactedChains = expandToAncestors(parentChain);
 			await this.regenerateCodexes(impactedChains);
 		} finally {
 		}
@@ -562,204 +440,17 @@ export class Librarian {
 	}
 
 	/**
-	 * Resolve actions based on detected mode.
-	 */
-	private async resolveActions(
-		mode: EventMode,
-		oldPath: string,
-		newPath: string,
-		isFolder: boolean,
-	): Promise<VaultAction[]> {
-		switch (mode.mode) {
-			case HealingMode.Runtime:
-				return this.resolveRuntimeActions(
-					oldPath,
-					newPath,
-					mode.subtype,
-					isFolder,
-				);
-
-			case HealingMode.DragIn:
-				return this.resolveDragInActions(newPath, mode.subtype);
-
-			case HealingMode.Init:
-				// Init is handled separately via init()
-				return [];
-		}
-	}
-
-	/**
-	 * Resolve Mode 1 (Runtime) actions.
-	 */
-	private async resolveRuntimeActions(
-		oldPath: string,
-		newPath: string,
-		subtype: RuntimeSubtype,
-		isFolder: boolean,
-	): Promise<VaultAction[]> {
-		const oldSplitPath = this.vaultActionManager.splitPath(oldPath);
-		const newSplitPath = this.vaultActionManager.splitPath(newPath);
-
-		// Folder renames: handled via handleFolderRename
-		if (
-			isFolder ||
-			oldSplitPath.type === SplitPathType.Folder ||
-			newSplitPath.type === SplitPathType.Folder
-		) {
-			if (newSplitPath.type === SplitPathType.Folder) {
-				return this.handleFolderRename(newSplitPath);
-			}
-			return [];
-		}
-
-		const intent = resolveRuntimeIntent(
-			oldSplitPath as SplitPathToFile | SplitPathToMdFile,
-			newSplitPath as SplitPathToFile | SplitPathToMdFile,
-			subtype,
-			this.libraryRoot,
-			this.suffixDelimiter,
-		);
-
-		if (!intent) {
-			return [];
-		}
-
-		return this.intentToActions(intent);
-	}
-
-	/**
-	 * Handle folder rename: list all files in folder and heal each.
-	 * Obsidian does NOT emit file events for children when folder is renamed.
-	 * Returns the generated actions (dispatch handled by caller).
-	 */
-	private async handleFolderRename(
-		folderPath: SplitPathToFolder,
-	): Promise<VaultAction[]> {
-		const allEntries = await this.vaultActionManager.listAll(folderPath);
-		const fileEntries = allEntries.filter(
-			(
-				entry,
-			): entry is SplitPathToFileWithTRef | SplitPathToMdFileWithTRef =>
-				entry.type === SplitPathType.File ||
-				entry.type === SplitPathType.MdFile,
-		);
-
-		const actions: VaultAction[] = [];
-
-		for (const entry of fileEntries) {
-			// For each file, compute expected suffix from its current path
-			const intent = resolveRuntimeIntent(
-				entry, // "from" - same as current path (we don't know old path)
-				entry, // "to" - current path
-				RuntimeSubtype.PathOnly, // Path changed, fix suffix
-				this.libraryRoot,
-				this.suffixDelimiter,
-			);
-
-			if (intent) {
-				actions.push(...this.intentToActions(intent));
-			}
-		}
-
-		return actions;
-	}
-
-	/**
-	 * Resolve Mode 3 (DragIn) actions.
-	 */
-	private resolveDragInActions(
-		newPath: string,
-		subtype: DragInSubtype,
-	): VaultAction[] {
-		const splitPath = this.vaultActionManager.splitPath(newPath);
-
-		const result: DragInResult = handleDragIn(
-			subtype,
-			splitPath,
-			this.libraryRoot,
-			this.suffixDelimiter,
-		);
-
-		return result.actions;
-	}
-
-	/**
-	 * Convert RenameIntent to VaultActions.
-	 */
-	private intentToActions(intent: RenameIntent): VaultAction[] {
-		if (intent.from.type === SplitPathType.MdFile) {
-			return [
-				{
-					payload: {
-						from: intent.from as SplitPathToMdFile,
-						to: intent.to as SplitPathToMdFile,
-					},
-					type: VaultActionType.RenameMdFile,
-				},
-			];
-		}
-
-		return [
-			{
-				payload: {
-					from: intent.from as SplitPathToFile,
-					to: intent.to as SplitPathToFile,
-				},
-				type: VaultActionType.RenameFile,
-			},
-		];
-	}
-
-	/**
 	 * Read tree from existing vault.
 	 * Lists all files in the library root and builds a LibraryTree.
 	 */
 	async readTreeFromVault(): Promise<LibraryTree> {
-		const rootSplitPath = this.vaultActionManager.splitPath(
-			this.libraryRoot,
-		);
-		if (rootSplitPath.type !== SplitPathType.Folder) {
-			throw new Error(
-				`Library root is not a folder: ${this.libraryRoot}`,
-			);
-		}
-
-		const rootFolder =
-			await this.vaultActionManager.getAbstractFile(rootSplitPath);
-		if (!(rootFolder instanceof TFolder)) {
-			throw new Error(`Library root not found: ${this.libraryRoot}`);
-		}
-
-		const allEntries = await this.vaultActionManager.listAll(rootSplitPath);
-		const fileEntries = allEntries.filter(
-			(
-				entry,
-			): entry is SplitPathToFileWithTRef | SplitPathToMdFileWithTRef =>
-				(entry.type === SplitPathType.File ||
-					entry.type === SplitPathType.MdFile) &&
-				// Skip codex files - they're generated, not source data
-				!isCodexBasename(entry.basename),
-		);
-
-		const leavesWithoutStatus = fileEntries.map((entry) =>
-			splitPathToLeaf(entry, this.libraryRoot, this.suffixDelimiter),
-		);
-
-		const readContent = (tRef: import("obsidian").TFile) => {
-			const sp = this.vaultActionManager.splitPath(tRef);
-			if (sp.type !== SplitPathType.MdFile) {
-				return Promise.resolve("");
-			}
-			return this.vaultActionManager.readContent(sp);
-		};
-
-		const leaves = await Promise.all(
-			leavesWithoutStatus.map((leaf) =>
-				withStatusFromMeta(leaf, readContent, extractMetaInfo),
-			),
-		);
-
-		return new LibraryTree(leaves, rootFolder);
+		return readTreeFromVault(this.libraryRoot, this.suffixDelimiter, {
+			getAbstractFile: (sp) =>
+				this.vaultActionManager.getAbstractFile(sp),
+			listAll: (sp) => this.vaultActionManager.listAll(sp),
+			readContent: (sp) => this.vaultActionManager.readContent(sp),
+			splitPath: (p) => this.vaultActionManager.splitPath(p),
+		});
 	}
 
 	// ────────────────────────────────────────────────────────────────────────────
@@ -857,55 +548,20 @@ export class Librarian {
 			return [];
 		}
 
-		const actions: VaultAction[] = [];
-
-		for (const chain of impactedChains) {
-			const node = this.tree.getNode(chain);
-			if (!node || node.type !== TreeNodeType.Section) {
-				continue;
-			}
-
-			const section = node as SectionNode;
-
-			const content = generateCodexContent(section, {
+		const tree = this.tree;
+		return buildCodexVaultActions(
+			impactedChains,
+			(chain) => {
+				if (!tree) return null;
+				const node = tree.getNode(chain);
+				return node?.type === TreeNodeType.Section
+					? (node as SectionNode)
+					: null;
+			},
+			{
 				libraryRoot: this.libraryRoot,
 				suffixDelimiter: this.suffixDelimiter,
-			});
-
-			// Build codex basename with suffix (same pattern as regular files)
-			// Root: __Library (no suffix, use libraryRoot name)
-			// Nested: __Salad-Recipe (suffix = parent chain reversed)
-			const sectionName =
-				chain.length === 0 ? this.libraryRoot : section.coreName;
-			const coreCodexName = buildCodexBasename(sectionName);
-			const suffix =
-				chain.length > 0
-					? chain
-							.slice(0, -1) // Parent chain (exclude self)
-							.reverse()
-							.join(this.suffixDelimiter)
-					: "";
-			const codexBasename = suffix
-				? `${coreCodexName}${this.suffixDelimiter}${suffix}`
-				: coreCodexName;
-
-			// Codex path: inside the section folder
-			const pathParts = [this.libraryRoot, ...chain];
-			const codexSplitPath: SplitPathToMdFile = {
-				basename: codexBasename,
-				extension: "md",
-				pathParts,
-				type: SplitPathType.MdFile,
-			};
-
-			// Always use ReplaceContentMdFile - it creates if not exists
-			// This avoids triggering handleCreate which would add suffixes
-			actions.push({
-				payload: { content, splitPath: codexSplitPath },
-				type: "ReplaceContentMdFile",
-			});
-		}
-
-		return actions;
+			},
+		);
 	}
 }
