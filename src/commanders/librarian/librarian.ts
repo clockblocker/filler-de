@@ -160,10 +160,6 @@ export class Librarian {
 
 		// Collect all section chains
 		const allSectionChains = this.collectAllSectionChains();
-		console.log(
-			"[Librarian] regenerating all codexes:",
-			allSectionChains.length,
-		);
 
 		await this.regenerateCodexes(allSectionChains);
 	}
@@ -236,10 +232,6 @@ export class Librarian {
 		if (node?.type === TreeNodeType.Scroll) {
 			try {
 				await this.writeStatusToMetadata(node.tRef, status);
-				console.log(
-					"[Librarian] setStatus: metadata written for",
-					node.tRef.path,
-				);
 			} catch (error) {
 				console.error(
 					"[Librarian] setStatus: failed to write metadata:",
@@ -247,10 +239,6 @@ export class Librarian {
 				);
 			}
 		} else {
-			console.log(
-				"[Librarian] setStatus: node is not a Scroll, skipping metadata write",
-				node?.type,
-			);
 		}
 
 		// Expand to ancestors for codex regeneration
@@ -273,19 +261,8 @@ export class Librarian {
 		tFile: TFile,
 		status: TreeNodeStatus,
 	): Promise<void> {
-		console.log(
-			"[Librarian] writeStatusToMetadata:",
-			tFile.path,
-			"status:",
-			status,
-		);
-
 		const splitPath = this.vaultActionManager.splitPath(tFile);
 		if (splitPath.type !== SplitPathType.MdFile) {
-			console.log(
-				"[Librarian] writeStatusToMetadata: not an MdFile, skipping",
-				splitPath.type,
-			);
 			return;
 		}
 
@@ -294,20 +271,11 @@ export class Librarian {
 
 		const currentMeta = extractMetaInfo(currentContent);
 
-		console.log(
-			"[Librarian] writeStatusToMetadata: currentMeta:",
-			currentMeta,
-		);
-
 		// Determine fileType from existing metadata or default to Scroll
 		const fileType = currentMeta?.fileType ?? "Scroll";
 
 		// Only update Scroll files (not Pages or other types)
 		if (fileType !== "Scroll") {
-			console.log(
-				"[Librarian] writeStatusToMetadata: fileType is not Scroll, skipping",
-				fileType,
-			);
 			return;
 		}
 
@@ -321,14 +289,10 @@ export class Librarian {
 
 		const updatedContent = editOrAddMetaInfo(currentContent, newMeta);
 
-		console.log(
-			"[Librarian] writeStatusToMetadata: dispatching ReplaceContentMdFile",
-		);
-
 		const result = await this.vaultActionManager.dispatch([
 			{
 				payload: { content: updatedContent, splitPath },
-				type: "ReplaceContentMdFile",
+				type: VaultActionType.ReplaceContentMdFile,
 			},
 		]);
 
@@ -353,7 +317,6 @@ export class Librarian {
 	async handleDelete(path: string, isFolder: boolean): Promise<void> {
 		// Skip self-triggered events
 		if (this.processingPaths.has(path)) {
-			console.log("[Librarian] skipping self-event delete:", path);
 			return;
 		}
 
@@ -367,6 +330,7 @@ export class Librarian {
 		const basenameWithoutExt = basename.includes(".")
 			? basename.slice(0, basename.lastIndexOf("."))
 			: basename;
+
 		if (isCodexBasename(basenameWithoutExt)) {
 			return;
 		}
@@ -375,14 +339,11 @@ export class Librarian {
 			return;
 		}
 
-		console.log("[Librarian] handleDelete:", path, "isFolder:", isFolder);
-
 		// Parse path to get coreNameChain
 		// Use isFolder param instead of splitPath.type (deleted item may not exist)
 		const pathParts = path.split("/");
 		const libraryRootIndex = pathParts.indexOf(this.libraryRoot);
 		if (libraryRootIndex === -1) {
-			console.log("[Librarian] handleDelete: library root not found");
 			return;
 		}
 
@@ -410,25 +371,16 @@ export class Librarian {
 			coreNameChain = [...partsAfterRoot, parsed.coreName];
 		}
 
-		console.log("[Librarian] handleDelete coreNameChain:", coreNameChain);
-
 		const impactedChain = this.tree.applyTreeAction({
 			payload: { coreNameChain },
 			type: TreeActionType.DeleteNode,
 		});
-
-		console.log("[Librarian] handleDelete impactedChain:", impactedChain);
 
 		const { expandToAncestors, dedupeChains } = await import(
 			"./codex/impacted-chains"
 		);
 		const impactedSections = dedupeChains(
 			expandToAncestors(impactedChain as CoreNameChainFromRoot),
-		);
-
-		console.log(
-			"[Librarian] handleDelete impactedSections:",
-			impactedSections,
 		);
 
 		await this.regenerateCodexes(impactedSections);
@@ -448,32 +400,15 @@ export class Librarian {
 			this.processingPaths.has(oldPath) ||
 			this.processingPaths.has(newPath)
 		) {
-			console.log(
-				"[Librarian] skipping self-event:",
-				oldPath,
-				"→",
-				newPath,
-			);
 			return [];
 		}
-
-		console.log(
-			"[Librarian] handleRename:",
-			oldPath,
-			"→",
-			newPath,
-			"isFolder:",
-			isFolder,
-		);
 
 		const mode = detectRenameMode(
 			{ isFolder, newPath, oldPath },
 			this.libraryRoot,
 		);
-		console.log("[Librarian] detected mode:", mode);
 
 		if (!mode) {
-			console.log("[Librarian] no mode detected, skipping");
 			return [];
 		}
 
@@ -483,7 +418,6 @@ export class Librarian {
 			newPath,
 			isFolder,
 		);
-		console.log("[Librarian] resolved actions:", actions.length, actions);
 
 		if (actions.length > 0) {
 			// Track paths we're about to modify to filter self-events
@@ -509,18 +443,10 @@ export class Librarian {
 				}
 			}
 
-			console.log("[Librarian] dispatching actions...");
 			try {
 				await this.vaultActionManager.dispatch(actions);
-
-				// Apply to tree and collect impacted chains
 				const impactedChains = this.applyActionsToTree(actions);
-				console.log("[Librarian] impacted chains:", impactedChains);
-
-				// Regenerate codexes for impacted sections
 				await this.regenerateCodexes(impactedChains);
-
-				console.log("[Librarian] dispatch complete");
 			} finally {
 				// Clear tracked paths after a delay to allow events to settle
 				setTimeout(() => {
@@ -551,14 +477,8 @@ export class Librarian {
 			return;
 		}
 
-		// Parent chain (without library root)
 		const parentChain = newSplitPath.pathParts.slice(1);
-		console.log(
-			"[Librarian] rename (no healing) impacted chain:",
-			parentChain,
-		);
 
-		// Expand to ancestors and regenerate codexes
 		const { expandToAncestors } = await import("./codex/impacted-chains");
 		const impactedChains = expandToAncestors(parentChain);
 		await this.regenerateCodexes(impactedChains);
@@ -587,23 +507,16 @@ export class Librarian {
 		const basenameWithoutExt = basename.includes(".")
 			? basename.slice(0, basename.lastIndexOf("."))
 			: basename;
-		console.log("[Librarian] handleCreate check:", {
-			basename,
-			basenameWithoutExt,
-			isCodex: isCodexBasename(basenameWithoutExt),
-		});
+
+		// Skipping codex file
 		if (isCodexBasename(basenameWithoutExt)) {
-			console.log("[Librarian] skipping codex file:", path);
 			return [];
 		}
 
 		// Skip if we're already processing this path
 		if (this.processingPaths.has(path)) {
-			console.log("[Librarian] skipping self-event create:", path);
 			return [];
 		}
-
-		console.log("[Librarian] handleCreate:", path);
 
 		const splitPath = this.vaultActionManager.splitPath(path);
 
@@ -617,7 +530,6 @@ export class Librarian {
 
 		// If at root, no suffix needed
 		if (relativePathParts.length === 0) {
-			console.log("[Librarian] file at root, no suffix needed");
 			return [];
 		}
 
@@ -679,8 +591,6 @@ export class Librarian {
 			};
 		}
 
-		console.log("[Librarian] create action:", action);
-
 		try {
 			await this.vaultActionManager.dispatch([action]);
 
@@ -690,7 +600,6 @@ export class Librarian {
 			// Compute impacted chain from new file location
 			// The new file is at: pathParts (without root) + newBasename
 			const impactedChain = relativePathParts; // parent chain
-			console.log("[Librarian] create impacted chain:", impactedChain);
 
 			// Expand to ancestors and regenerate codexes
 			const { expandToAncestors } = await import(
@@ -743,17 +652,8 @@ export class Librarian {
 		subtype: RuntimeSubtype,
 		isFolder: boolean,
 	): Promise<VaultAction[]> {
-		console.log("[Librarian] resolveRuntimeActions input:", {
-			newPath,
-			oldPath,
-			subtype,
-		});
 		const oldSplitPath = this.vaultActionManager.splitPath(oldPath);
 		const newSplitPath = this.vaultActionManager.splitPath(newPath);
-		console.log("[Librarian] splitPath results:", {
-			newSplitPath,
-			oldSplitPath,
-		});
 
 		// Folder renames: handled via handleFolderRename
 		if (
@@ -830,10 +730,7 @@ export class Librarian {
 
 		const result: DragInResult = handleDragIn(
 			subtype,
-			splitPath as
-				| SplitPathToFile
-				| SplitPathToMdFile
-				| SplitPathToFolder,
+			splitPath,
 			this.libraryRoot,
 			this.suffixDelimiter,
 		);
@@ -997,10 +894,6 @@ export class Librarian {
 			const codexActions = this.buildCodexVaultActions(impactedChains);
 
 			if (codexActions.length > 0) {
-				console.log(
-					"[Librarian] regenerating codexes:",
-					codexActions.length,
-				);
 				await this.vaultActionManager.dispatch(codexActions);
 			}
 		} catch (error) {
@@ -1028,22 +921,11 @@ export class Librarian {
 			}
 
 			const section = node as SectionNode;
-			console.log(
-				"[Librarian] buildCodexVaultActions: generating codex for chain:",
-				chain,
-				"libraryRoot:",
-				this.libraryRoot,
-			);
+
 			const content = generateCodexContent(section, {
 				libraryRoot: this.libraryRoot,
 				suffixDelimiter: this.suffixDelimiter,
 			});
-			console.log(
-				"[Librarian] buildCodexVaultActions: generated content length:",
-				content.length,
-				"has backlink:",
-				content.includes("←"),
-			);
 
 			// Build codex basename with suffix (same pattern as regular files)
 			// Root: __Library (no suffix, use libraryRoot name)
