@@ -1,7 +1,7 @@
-import { log } from "../../../utils/logger";
 import type { SplitPath } from "../../../obsidian-vault-action-manager/types/split-path";
 import { SplitPathType } from "../../../obsidian-vault-action-manager/types/split-path";
 import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
+import { logger } from "../../../utils/logger";
 import type { TreeNodeStatus } from "../types/tree-node";
 import { buildWriteStatusAction } from "./metadata-writer";
 
@@ -40,7 +40,7 @@ export async function writeStatusToMetadata(
 
 	if (result.isErr()) {
 		const errors = result.error;
-		log.error(
+		logger.error(
 			"[Librarian] writeStatusToMetadata: dispatch errors:",
 			JSON.stringify(errors),
 		);
@@ -49,5 +49,5 @@ export async function writeStatusToMetadata(
 		);
 	}
 
-	log.debug("[Librarian] writeStatusToMetadata: success");
+	logger.debug("[Librarian] writeStatusToMetadata: success");
 }

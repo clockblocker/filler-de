@@ -3,6 +3,7 @@ import { MarkdownView } from "obsidian";
 import { treePathToPageBasenameLegacy } from "../../../../commanders/librarian-legacy/indexing/codecs";
 import type { LibrarianLegacy } from "../../../../commanders/librarian-legacy/librarian";
 import type { TreePathLegacyLegacy } from "../../../../commanders/librarian-legacy/types";
+import { logger } from "../../../../utils/logger";
 
 /**
  * Handle checkbox click in Codex files.
@@ -40,7 +41,7 @@ export function handleCheckboxClicked({
 	// Could be: "Library/Section/Text" or "__Text-Section" (Codex filename)
 	const { rootName, treePath } = parseCodexLinkTarget(href);
 	if (!rootName || treePath.length === 0) {
-		console.log(
+		logger.error(
 			"[handleCheckboxClicked] Failed to parse link target:",
 			href,
 		);
@@ -51,7 +52,7 @@ export function handleCheckboxClicked({
 	// Note: checkbox.checked is the NEW state after click
 	const newStatus = checkbox.checked ? "Done" : "NotStarted";
 
-	console.log("[handleCheckboxClicked] Setting status:", {
+	logger.debug("[handleCheckboxClicked] Setting status:", {
 		href,
 		newStatus,
 		rootName,
@@ -63,7 +64,7 @@ export function handleCheckboxClicked({
 	librarian
 		.setStatus(rootName as "Library", treePath, newStatus)
 		.catch((error) => {
-			console.error(
+			logger.error(
 				"[handleCheckboxClicked] Failed to set status:",
 				error,
 			);

@@ -1,4 +1,4 @@
-import { log } from "../../../utils/logger";
+import { logger } from "../../../utils/logger";
 import type { LibraryTree } from "../library-tree";
 import type { CoreNameChainFromRoot } from "../types/split-basename";
 import type { SectionNode } from "../types/tree-node";
@@ -34,7 +34,7 @@ export async function regenerateCodexes(
 			await context.dispatch(codexActions);
 		}
 	} catch (error) {
-		log.error(
+		logger.error(
 			"[Librarian] codex regeneration failed:",
 			error instanceof Error ? error.message : String(error),
 		);

@@ -4,7 +4,7 @@ import type {
 	SplitPathToFile,
 	SplitPathToMdFile,
 } from "../../../obsidian-vault-action-manager/types/split-path";
-import { log } from "../../../utils/logger";
+import { logger } from "../../../utils/logger";
 import { RuntimeSubtype } from "../types/literals";
 import type { SplitBasename } from "../types/split-basename";
 import { parseBasename } from "../utils/parse-basename";
@@ -35,12 +35,12 @@ type FileInfo = {
 };
 
 function extractFileInfo(path: SplitPathToFile | SplitPathToMdFile): FileInfo {
-	log.debug(
+	logger.debug(
 		"[extractFileInfo] input path:",
 		systemPathFromSplitPath(path),
 	);
 	const parsed = parseBasename(path.basename);
-	log.debug("[extractFileInfo] parsed:", JSON.stringify(parsed));
+	logger.debug("[extractFileInfo] parsed:", JSON.stringify(parsed));
 	return {
 		basename: path.basename,
 		extension: path.extension,

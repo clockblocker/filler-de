@@ -2,7 +2,7 @@ import type { App } from "obsidian";
 import { MarkdownView } from "obsidian";
 import { getParsedUserSettings } from "../../global-state/global-state";
 import type { ObsidianVaultActionManager } from "../../obsidian-vault-action-manager";
-import { log } from "../../utils/logger";
+import { logger } from "../../utils/logger";
 import type { Librarian } from "./librarian";
 import { CODEX_PREFIX } from "./types/literals";
 import type { CoreNameChainFromRoot } from "./types/split-basename";
@@ -48,14 +48,14 @@ export async function handleCodexCheckboxClick({
 	// Parse to coreNameChain
 	const coreNameChain = parseCodexLinkTarget(href);
 	if (!coreNameChain || coreNameChain.length === 0) {
-		log.debug("[handleCodexCheckboxClick] Failed to parse:", href);
+		logger.debug("[handleCodexCheckboxClick] Failed to parse:", href);
 		return false;
 	}
 
 	// Determine new status (checkbox.checked is NEW state after click)
 	const newStatus = checkbox.checked ? "Done" : "NotStarted";
 
-	log.debug(
+	logger.debug(
 		"[handleCodexCheckboxClick]",
 		JSON.stringify({
 			coreNameChain,
@@ -66,7 +66,7 @@ export async function handleCodexCheckboxClick({
 
 	// Fire-and-forget async
 	librarian.setStatus(coreNameChain, newStatus).catch((error) => {
-		log.error(
+		logger.error(
 			"[handleCodexCheckboxClick] setStatus failed:",
 			error instanceof Error ? error.message : String(error),
 		);

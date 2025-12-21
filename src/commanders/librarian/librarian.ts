@@ -4,7 +4,7 @@ import type {
 	VaultEvent,
 } from "../../obsidian-vault-action-manager";
 import type { VaultAction } from "../../obsidian-vault-action-manager/types/vault-action";
-import { log } from "../../utils/logger";
+import { logger } from "../../utils/logger";
 import {
 	dedupeChains,
 	expandAllToAncestors,
@@ -56,7 +56,7 @@ export class Librarian {
 					rootSplitPath,
 				);
 		} catch (error) {
-			log.error(
+			logger.error(
 				"[Librarian] Failed to list files from vault:",
 				error instanceof Error ? error.message : String(error),
 			);
@@ -68,12 +68,12 @@ export class Librarian {
 				files: allFiles,
 				splitPathToLibraryRoot: rootSplitPath,
 			});
-			log.info(
+			logger.info(
 				"[Librarian] Tree initialized successfully, leaves:",
 				String(this.tree.serializeToLeaves().length),
 			);
 		} catch (error) {
-			log.error(
+			logger.error(
 				"[Librarian] Failed to read tree from vault:",
 				error instanceof Error ? error.message : String(error),
 			);
@@ -83,7 +83,7 @@ export class Librarian {
 		}
 
 		if (!this.tree) {
-			log.error("[Librarian] Tree is null after readTreeFromVault");
+			logger.error("[Librarian] Tree is null after readTreeFromVault");
 			return { deleteActions: [], renameActions: [] };
 		}
 
@@ -103,7 +103,7 @@ export class Librarian {
 						tree: this.tree,
 					},
 				);
-				log.debug(
+				logger.debug(
 					"[Librarian] init impacted chains:",
 					JSON.stringify(impactedChains),
 				);
@@ -136,7 +136,7 @@ export class Librarian {
 	private subscribeToVaultEvents(): void {
 		this.eventTeardown = this.vaultActionManager.subscribe(
 			async (event: VaultEvent) => {
-				log.debug("event", JSON.stringify({ type: event.type }));
+				logger.debug("event", JSON.stringify({ type: event.type }));
 				const handlerInfo = parseEventToHandler(event);
 				if (!handlerInfo) {
 					return;
@@ -192,25 +192,25 @@ export class Librarian {
 			dispatch: (actions) => this.vaultActionManager.dispatch(actions),
 			getNode: (chain) => {
 				if (!this.tree) {
-					log.debug("[getCodexContext] tree is null");
+					logger.debug("[getCodexContext] tree is null");
 					return null;
 				}
 				const node = this.tree.getNode(chain);
-				log.debug(
+				logger.debug(
 					"[getCodexContext] chain:",
 					JSON.stringify(chain),
 					"node:",
 					node?.type ?? "null",
 				);
 				if (!node) {
-					log.debug(
+					logger.debug(
 						"[getCodexContext] node is null for chain:",
 						JSON.stringify(chain),
 					);
 					return null;
 				}
 				if (node.type !== TreeNodeType.Section) {
-					log.debug(
+					logger.debug(
 						"[getCodexContext] node is not Section:",
 						node.type,
 					);
@@ -293,19 +293,19 @@ export class Librarian {
 		status: TreeNodeStatus,
 	): Promise<void> {
 		if (!this.tree) {
-			log.warn(
+			logger.warn(
 				"[Librarian] setStatus called before init, attempting to reinitialize...",
 			);
 			try {
 				await this.init();
 				if (!this.tree) {
-					log.error(
+					logger.error(
 						"[Librarian] Failed to initialize tree in setStatus",
 					);
 					return;
 				}
 			} catch (error) {
-				log.error(
+				logger.error(
 					"[Librarian] Error reinitializing tree in setStatus:",
 					error instanceof Error ? error.message : String(error),
 				);
@@ -344,7 +344,7 @@ export class Librarian {
 					splitPath: (p) => this.vaultActionManager.splitPath(p),
 				});
 			} catch (error) {
-				log.error(
+				logger.error(
 					"[Librarian] setStatus: failed to write metadata:",
 					error instanceof Error ? error.message : String(error),
 				);
@@ -356,8 +356,8 @@ export class Librarian {
 		const chains = flattenActionResult(impactedChain);
 		const impactedSections = dedupeChains(expandAllToAncestors(chains));
 
-		log.debug("[Librarian] setStatus: chains:", JSON.stringify(chains));
-		log.debug(
+		logger.debug("[Librarian] setStatus: chains:", JSON.stringify(chains));
+		logger.debug(
 			"[Librarian] setStatus: impactedSections:",
 			JSON.stringify(impactedSections),
 		);

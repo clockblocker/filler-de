@@ -161,20 +161,10 @@ export class Executor {
 				const systemPath = systemPathToSplitPath.encode(
 					action.payload.splitPath,
 				);
-				console.log(
-					"[Executor] ReplaceContentMdFile:",
-					systemPath,
-					"content length:",
-					action.payload.content.length,
-				);
 				const fileResult = await this.tfileHelper.getFile(
 					action.payload.splitPath,
 				);
 				if (fileResult.isErr()) {
-					console.log(
-						"[Executor] File doesn't exist, creating:",
-						systemPath,
-					);
 					// Ensure parent folders exist before creating file
 					const { splitPath } = action.payload;
 					if (splitPath.pathParts.length > 0) {
@@ -223,35 +213,22 @@ export class Executor {
 					};
 					const createResult =
 						await this.tfileHelper.createMdFile(dto);
-					console.log(
-						"[Executor] Create result:",
-						createResult.isOk() ? "OK" : createResult.error,
-					);
 					return createResult.map(() => undefined);
 				}
 
 				const isActive = await this.checkFileActive(
 					action.payload.splitPath,
 				);
-				console.log("[Executor] File exists, isActive:", isActive);
 				if (isActive) {
 					const result =
 						await this.opened.replaceAllContentInOpenedFile(
 							action.payload.content,
 						);
-					console.log(
-						"[Executor] Replace in opened file result:",
-						result.isOk() ? "OK" : result.error,
-					);
 					return result;
 				}
 				const result = await this.tfileHelper.replaceAllContent(
 					action.payload.splitPath,
 					action.payload.content,
-				);
-				console.log(
-					"[Executor] ReplaceAllContent result:",
-					result.isOk() ? "OK" : result.error,
 				);
 				return result;
 			}

@@ -27,7 +27,7 @@ const formatMessage = (message: string, ...args: unknown[]): string => {
 	return `${message} ${stringifiedArgs.join(" ")}`;
 };
 
-const logger = winston.createLogger({
+const winstonLogger = winston.createLogger({
 	format: winston.format.combine(
 		winston.format.errors({ stack: true }),
 		winston.format.printf(({ level, message, timestamp, stack }) => {
@@ -48,17 +48,17 @@ const logger = winston.createLogger({
 	],
 });
 
-export const log = {
+export const logger = {
 	debug: (message: string, ...args: unknown[]): void => {
-		logger.debug(formatMessage(message, ...args));
+		winstonLogger.debug(formatMessage(message, ...args));
 	},
 	error: (message: string, ...args: unknown[]): void => {
-		logger.error(formatMessage(message, ...args));
+		winstonLogger.error(formatMessage(message, ...args));
 	},
 	info: (message: string, ...args: unknown[]): void => {
-		logger.info(formatMessage(message, ...args));
+		winstonLogger.info(formatMessage(message, ...args));
 	},
 	warn: (message: string, ...args: unknown[]): void => {
-		logger.warn(formatMessage(message, ...args));
+		winstonLogger.warn(formatMessage(message, ...args));
 	},
 };
