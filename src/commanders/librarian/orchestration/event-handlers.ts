@@ -12,6 +12,7 @@ import {
 } from "../codex/impacted-chains";
 import { detectRenameMode } from "../healing";
 import type { LibraryTree } from "../library-tree";
+import { translateVaultAction } from "../reconciliation/vault-to-tree";
 import { TreeActionType } from "../types/literals";
 import type { CoreNameChainFromRoot } from "../types/split-basename";
 import { isCodexBasename } from "../utils/codex-utils";
@@ -25,7 +26,6 @@ import {
 	extractBasenameWithoutExt,
 	parseDeletePathToChain,
 } from "./path-parsers";
-import { applyActionsToTree, type TreeApplierContext } from "./tree-applier";
 
 export type EventHandlerContext = {
 	dispatch: (actions: VaultAction[]) => Promise<unknown>;
@@ -172,9 +172,72 @@ export async function handleRename(
 ): Promise<VaultAction[]> {
 	const settings = getParsedUserSettings();
 	const libraryRoot = settings.splitPathToLibraryRoot.basename;
+
+	// If a codex file is being renamed, delete it instead (codexes are auto-generated)
+	if (!isFolder) {
+		const oldBasenameWithoutExt = extractBasenameWithoutExt(oldPath);
+		if (isCodexBasename(oldBasenameWithoutExt)) {
+			// Delete the old codex file - regeneration will create new one with correct name
+			const oldSplitPath = context.splitPath(oldPath);
+			if (oldSplitPath.type === SplitPathType.MdFile) {
+				await context.dispatch([
+					{
+						payload: { splitPath: oldSplitPath },
+						type: "TrashMdFile",
+					},
+				]);
+			}
+			// Don't process the rename further - codex will be regenerated
+			return [];
+		}
+	}
+
 	const mode = detectRenameMode({ isFolder, newPath, oldPath }, libraryRoot);
 
+	// Handle file moved OUT of library
 	if (!mode) {
+		const oldInside = oldPath.startsWith(`${libraryRoot}/`) || oldPath === libraryRoot;
+		const newInside = newPath.startsWith(`${libraryRoot}/`) || newPath === libraryRoot;
+		
+		// File moved out of library - delete from tree and regenerate codexes
+		if (oldInside && !newInside) {
+			if (!context.tree) {
+				return [];
+			}
+			
+			// Parse old path to get coreNameChain
+			const coreNameChain = parseDeletePathToChain(oldPath, isFolder);
+			if (!coreNameChain) {
+				return [];
+			}
+			
+			// Delete node from tree
+			const impactedChain = context.tree.applyTreeAction({
+				payload: { coreNameChain },
+				type: TreeActionType.DeleteNode,
+			});
+			
+			// Re-read tree from vault to ensure it matches filesystem state
+			const newTree = await context.readTree();
+			context.setTree(newTree);
+			
+			if (newTree) {
+				// Compute impacted sections
+				const chains = flattenActionResult(impactedChain);
+				const impactedSections = dedupeChains(expandAllToAncestors(chains));
+				
+				await regenerateCodexes(impactedSections, {
+					dispatch: context.dispatch,
+					getNode: context.getNode,
+					listAllFilesWithMdReaders: context.listAllFilesWithMdReaders,
+					splitPath: context.splitPath,
+				});
+			}
+			
+			return [];
+		}
+		
+		// Both paths outside library - not our concern
 		return [];
 	}
 
@@ -204,13 +267,20 @@ export async function handleRename(
 	if (actionArray.length > 0) {
 		try {
 			await context.dispatch(actionArray);
-			if (context.tree) {
-				const impactedChains = applyActionsToTree(actionArray, {
-					tree: context.tree,
-				});
+
+			// Re-read tree from vault to ensure it matches filesystem state
+			const newTree = await context.readTree();
+			context.setTree(newTree);
+
+			if (newTree) {
+				// Compute impacted chains from actions (extract parent chains from paths)
+				const impactedChains =
+					computeImpactedChainsFromActions(actionArray);
 				await regenerateCodexes(impactedChains, {
 					dispatch: context.dispatch,
 					getNode: context.getNode,
+					listAllFilesWithMdReaders: context.listAllFilesWithMdReaders,
+					splitPath: context.splitPath,
 				});
 			}
 		} finally {
@@ -221,6 +291,43 @@ export async function handleRename(
 	}
 
 	return actionArray;
+}
+
+/**
+ * Compute impacted section chains from vault actions without applying them to tree.
+ * Extracts parent chains from action paths.
+ */
+function computeImpactedChainsFromActions(
+	actions: VaultAction[],
+): CoreNameChainFromRoot[] {
+	const chains: CoreNameChainFromRoot[] = [];
+
+	for (const action of actions) {
+		const treeAction = translateVaultAction(action);
+		if (!treeAction) continue;
+
+		if (treeAction.type === TreeActionType.MoveNode) {
+			// MoveNode: both old and new parent chains are impacted
+			const oldParent = treeAction.payload.coreNameChain.slice(0, -1);
+			const newParent = treeAction.payload.newCoreNameChainToParent;
+			chains.push(oldParent, newParent);
+		} else if (treeAction.type === TreeActionType.ChangeNodeName) {
+			// ChangeNodeName: parent chain is impacted
+			const parent = treeAction.payload.coreNameChain.slice(0, -1);
+			chains.push(parent);
+		} else if (treeAction.type === TreeActionType.CreateNode) {
+			// CreateNode: parent chain is impacted
+			chains.push(treeAction.payload.coreNameChainToParent);
+		} else if (treeAction.type === TreeActionType.DeleteNode) {
+			// DeleteNode: parent chain is impacted
+			const parent = treeAction.payload.coreNameChain.slice(0, -1);
+			chains.push(parent);
+		}
+	}
+
+	// Expand to ancestors and dedupe
+	const expanded = expandAllToAncestors(chains);
+	return dedupeChains(expanded);
 }
 
 /**
@@ -246,6 +353,8 @@ async function updateTreeAndCodexesForRename(
 	await regenerateCodexes(impactedChains, {
 		dispatch: context.dispatch,
 		getNode: context.getNode,
+		listAllFilesWithMdReaders: context.listAllFilesWithMdReaders,
+		splitPath: context.splitPath,
 	});
 }
 

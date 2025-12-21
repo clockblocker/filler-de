@@ -4,6 +4,7 @@
  */
 
 import { getParsedUserSettings } from "../../../global-state/global-state";
+import { logger } from "../../../utils/logger";
 import {
 	BACK_ARROW,
 	DONE_CHECKBOX,
@@ -39,6 +40,20 @@ export function generateCodexContent(
 	const maxDepth = settings.maxSectionDepth;
 	const delimiter = settings.suffixDelimiter;
 	const lines: string[] = [];
+
+	logger.info(
+		"[generateCodexContent] section:",
+		JSON.stringify({
+			coreName: section.coreName,
+			coreNameChainToParent: section.coreNameChainToParent,
+			childrenCount: section.children.length,
+			children: section.children.map((c) => ({
+				type: c.type,
+				coreName: c.coreName,
+				coreNameChainToParent: c.coreNameChainToParent,
+			})),
+		}),
+	);
 
 	// Backlink to parent codex
 	const backlink = generateBacklink(

@@ -84,12 +84,18 @@ export function collectImpactedSections(
 	// Flatten all results
 	const allChains: CoreNameChainFromRoot[] = [];
 	for (const result of actionResults) {
-		allChains.push(...flattenActionResult(result));
+		const flattened = flattenActionResult(result);
+		allChains.push(...flattened);
 	}
 
 	// Expand to ancestors and dedupe
 	const expanded = expandAllToAncestors(allChains);
-	return dedupeChains(expanded);
+	const deduped = dedupeChains(expanded);
+	
+	// Note: We don't filter out non-section chains here because we don't have tree access.
+	// Filtering happens in regenerateCodexes using getNode.
+	
+	return deduped;
 }
 
 /**

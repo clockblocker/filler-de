@@ -1,4 +1,5 @@
 import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
+import { logger } from "../../../utils/logger";
 import { collectImpactedSections } from "../codex";
 import type { LibraryTree } from "../library-tree";
 import { translateVaultAction } from "../reconciliation";
@@ -26,13 +27,24 @@ export function applyActionsToTree(
 
 		if (treeAction) {
 			const result = context.tree.applyTreeAction(treeAction);
+			logger.info(
+				"[applyActionsToTree] treeAction:",
+				JSON.stringify({ type: treeAction.type }),
+				"result:",
+				JSON.stringify(result),
+			);
 			actionResults.push(result);
 		}
 	}
 
 	// Note: tRef removed - TFile references become stale when files are renamed/moved
 
-	return collectImpactedSections(actionResults);
+	const impacted = collectImpactedSections(actionResults);
+	logger.info(
+		"[applyActionsToTree] collected impacted sections:",
+		JSON.stringify(impacted),
+	);
+	return impacted;
 }
 
 // Note: getTRefForPath removed - tRefs are no longer stored in tree nodes

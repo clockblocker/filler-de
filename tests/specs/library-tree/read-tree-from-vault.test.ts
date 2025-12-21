@@ -6,6 +6,7 @@ import type {
 	LibraryTreeApi,
 	TreeNodeApi,
 } from "./utils";
+import { logger } from "../../../src/utils/logger";
 
 /**
  * Creates vault actions for the standard test tree structure:
@@ -208,7 +209,7 @@ export const testReadTreeFromVault = async () => {
 	
 	// Debug output
 	if (result.debug) {
-		console.log("Debug info:", JSON.stringify(result.debug, null, 2));
+		logger.debug("Debug info:", JSON.stringify(result.debug, null, 2));
 	}
 	
 	// Verify structure from serialized data

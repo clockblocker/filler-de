@@ -148,7 +148,32 @@ function deleteNodeAction(splitPath: SplitPath): TreeAction {
 }
 
 function translateRename(from: SplitPath, to: SplitPath): TreeAction {
-	// Try to find node at fromChain first
+	const settings = getParsedUserSettings();
+	const libraryRoot = settings.splitPathToLibraryRoot.basename;
+	
+	// Check if from path is inside library
+	const fromInsideLibrary = from.pathParts[0] === libraryRoot || 
+		from.pathParts.some((part, i) => part === libraryRoot && i > 0);
+	const toInsideLibrary = to.pathParts[0] === libraryRoot || 
+		to.pathParts.some((part, i) => part === libraryRoot && i > 0);
+	
+	// If from is outside library but to is inside, treat as CreateNode
+	if (!fromInsideLibrary && toInsideLibrary) {
+		if (to.type === "MdFile") {
+			return createScrollAction(to);
+		} else if (to.type === "File") {
+			return createFileAction(to);
+		}
+		// Folder - should be handled by CreateFolder action
+		return createSectionAction(to);
+	}
+	
+	// If from is inside library but to is outside, treat as DeleteNode
+	if (fromInsideLibrary && !toInsideLibrary) {
+		return deleteNodeAction(from);
+	}
+	
+	// Both inside library - normal rename/move
 	const fromChain = toCoreNameChain(from);
 
 	if (sameParent(from, to)) {

@@ -311,7 +311,7 @@ export const testRuntimeFolderRename = async () => {
 		};
 	});
 
-	console.log("Folder rename test result:", JSON.stringify(result, null, 2));
+	logger.debug("Folder rename test result:", JSON.stringify(result, null, 2));
 
 	expect(result.success).toBe(true);
 	

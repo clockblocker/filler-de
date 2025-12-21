@@ -36,6 +36,7 @@ import { ACTION_CONFIGS } from "./services/wip-configs/actions/actions-config";
 import addBacklinksToCurrentFile from "./services/wip-configs/actions/old/addBacklinksToCurrentFile";
 import { SettingsTab } from "./settings";
 import { DEFAULT_SETTINGS, type TextEaterSettings } from "./types";
+import { logger } from "./utils/logger";
 
 export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;
@@ -211,6 +212,20 @@ export default class TextEaterPlugin extends Plugin {
 		// VaultActionManager will convert events to VaultEvent, filter self-events,
 		// and notify subscribers (e.g., Librarian)
 		this.vaultActionManager.startListening();
+
+		// Initialize librarian: read tree, heal mismatches, regenerate codexes
+		if (this.librarian) {
+			logger.info("[TextEaterPlugin] Initializing librarian...");
+			try {
+				await this.librarian.init();
+				logger.info("[TextEaterPlugin] Librarian initialized successfully");
+			} catch (error) {
+				logger.error(
+					"[TextEaterPlugin] Failed to initialize librarian:",
+					error instanceof Error ? error.message : String(error),
+				);
+			}
+		}
 
 		// Codex checkbox click listener
 		this.registerDomEvent(document, "click", async (evt: MouseEvent) => {

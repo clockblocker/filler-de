@@ -1,3 +1,4 @@
+import { logger } from "../../../../utils/logger";
 import type { TexfresserObsidianServices } from "../../../services/obsidian-services/obsidian-services/interface";
 import { ACTION_CONFIGS } from "../../actions/actions-config";
 import { type UserAction, UserActionSchema } from "../../actions/types";
@@ -19,9 +20,9 @@ export const executeButtonAction = ({
 		try {
 			cfg.execute(services);
 		} catch (err) {
-			console.error("Failed to execute action", action, err);
+			logger.error("Failed to execute action", action, err);
 		}
 	} else {
-		console.log("[executeButtonAction] Invalid action ID", actionId);
+		logger.error("[executeButtonAction] Invalid action ID", actionId);
 	}
 };

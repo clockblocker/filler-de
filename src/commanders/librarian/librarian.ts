@@ -13,7 +13,6 @@ import {
 import { healOnInit, type InitHealResult } from "./healing";
 import type { LibraryTree } from "./library-tree";
 import {
-	applyActionsToTree,
 	type CodexRegeneratorContext,
 	type EventHandlerContext,
 	handleCreate,
@@ -94,28 +93,32 @@ export class Librarian {
 
 		if (healResult.renameActions.length > 0) {
 			await this.vaultActionManager.dispatch(healResult.renameActions);
+		}
 
-			// Apply to tree and collect impacted chains
-			if (this.tree) {
-				const impactedChains = applyActionsToTree(
-					healResult.renameActions,
-					{
-						tree: this.tree,
-					},
-				);
-				logger.debug(
-					"[Librarian] init impacted chains:",
-					JSON.stringify(impactedChains),
-				);
+		// Re-read tree from vault to ensure it's up-to-date (after healing or if no healing)
+		this.tree = await this.readTreeFromVault();
 
-				// Regenerate codexes for impacted sections
-				await regenerateCodexes(impactedChains, this.getCodexContext());
+		// Log tree structure for debugging
+		if (this.tree) {
+			const root = this.tree.getNode([]);
+			if (root && root.type === TreeNodeType.Section) {
+				logger.info(
+					"[Librarian] init - root section children:",
+					JSON.stringify(
+						root.children.map((c) => ({
+							coreName: c.coreName,
+							coreNameChainToParent: c.coreNameChainToParent,
+							type: c.type,
+						})),
+					),
+				);
 			}
-		} else {
-			// No healing needed, but still regenerate all codexes
-			if (this.tree) {
-				await regenerateAllCodexes(this.tree, this.getCodexContext());
-			}
+		}
+
+		// Regenerate all codexes with up-to-date tree
+		if (this.tree) {
+			logger.info("[Librarian] init - regenerating all codexes");
+			await regenerateAllCodexes(this.tree, this.getCodexContext());
 		}
 
 		// Subscribe to vault events after initialization
@@ -192,25 +195,38 @@ export class Librarian {
 			dispatch: (actions) => this.vaultActionManager.dispatch(actions),
 			getNode: (chain) => {
 				if (!this.tree) {
-					logger.debug("[getCodexContext] tree is null");
+					logger.warn("[getCodexContext] tree is null");
 					return null;
 				}
 				const node = this.tree.getNode(chain);
-				logger.debug(
+				logger.info(
 					"[getCodexContext] chain:",
 					JSON.stringify(chain),
 					"node:",
-					node?.type ?? "null",
+					JSON.stringify(
+						node
+							? {
+									childrenCount:
+										node.type === TreeNodeType.Section
+											? node.children.length
+											: 0,
+									coreName: node.coreName,
+									coreNameChainToParent:
+										node.coreNameChainToParent,
+									type: node.type,
+								}
+							: null,
+					),
 				);
 				if (!node) {
-					logger.debug(
+					logger.warn(
 						"[getCodexContext] node is null for chain:",
 						JSON.stringify(chain),
 					);
 					return null;
 				}
 				if (node.type !== TreeNodeType.Section) {
-					logger.debug(
+					logger.warn(
 						"[getCodexContext] node is not Section:",
 						node.type,
 					);
@@ -218,6 +234,9 @@ export class Librarian {
 				}
 				return node;
 			},
+			listAllFilesWithMdReaders: (sp) =>
+				this.vaultActionManager.listAllFilesWithMdReaders(sp),
+			splitPath: (p) => this.vaultActionManager.splitPath(p),
 		};
 	}
 
