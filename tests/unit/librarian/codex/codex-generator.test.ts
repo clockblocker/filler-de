@@ -1,7 +1,36 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { generateCodexContent } from "../../../../src/commanders/librarian/codex/codex-generator";
 import type { SectionNode } from "../../../../src/commanders/librarian/types/tree-node";
 import { TreeNodeStatus, TreeNodeType } from "../../../../src/commanders/librarian/types/tree-node";
+import * as globalState from "../../../../src/global-state/global-state";
+import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
+import { SplitPathType } from "../../../../src/obsidian-vault-action-manager/types/split-path";
+
+// Default settings for tests
+const defaultSettings: ParsedUserSettings = {
+	apiProvider: "google",
+	googleApiKey: "",
+	maxSectionDepth: 4,
+	splitPathToLibraryRoot: {
+		basename: "Library",
+		pathParts: [],
+		type: SplitPathType.Folder,
+	},
+	suffixDelimiter: "-",
+};
+
+// Shared mocking setup for all tests
+let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
+
+beforeEach(() => {
+	getParsedUserSettingsSpy = spyOn(globalState, "getParsedUserSettings").mockReturnValue({
+		...defaultSettings,
+	});
+});
+
+afterEach(() => {
+	getParsedUserSettingsSpy.mockRestore();
+});
 
 function createSection(
 	coreName: string,
@@ -140,7 +169,11 @@ describe("generateCodexContent", () => {
 			const section = createSection("A", [], [sectionB]);
 
 			// With maxDepth=2, should show B, C, but D should just be a link
-			const content = generateCodexContent(section, { maxSectionDepth: 2 });
+			getParsedUserSettingsSpy.mockReturnValue({
+				...defaultSettings,
+				maxSectionDepth: 2,
+			});
+			const content = generateCodexContent(section);
 
 			// B at depth 0: __B-A
 			expect(content).toContain("- [ ] [[__B-A|B]]");

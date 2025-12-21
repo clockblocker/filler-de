@@ -1,10 +1,39 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { TreeNodeStatus, TreeNodeType } from "../../../../src/commanders/librarian/types/tree-node";
 import { splitPathToLeaf } from "../../../../src/commanders/librarian/utils/split-path-to-leaf";
 import type {
 	SplitPathToFile,
 	SplitPathToMdFile,
 } from "../../../../src/obsidian-vault-action-manager/types/split-path";
+import * as globalState from "../../../../src/global-state/global-state";
+import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
+import { SplitPathType } from "../../../../src/obsidian-vault-action-manager/types/split-path";
+
+// Default settings for tests
+const defaultSettings: ParsedUserSettings = {
+	apiProvider: "google",
+	googleApiKey: "",
+	maxSectionDepth: 4,
+	splitPathToLibraryRoot: {
+		basename: "Library",
+		pathParts: [],
+		type: SplitPathType.Folder,
+	},
+	suffixDelimiter: "-",
+};
+
+// Shared mocking setup for all tests
+let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
+
+beforeEach(() => {
+	getParsedUserSettingsSpy = spyOn(globalState, "getParsedUserSettings").mockReturnValue({
+		...defaultSettings,
+	});
+});
+
+afterEach(() => {
+	getParsedUserSettingsSpy.mockRestore();
+});
 
 describe("splitPathToLeaf", () => {
 	describe("MdFile → ScrollNode", () => {
@@ -16,7 +45,7 @@ describe("splitPathToLeaf", () => {
 				type: "MdFile",
 			};
 
-			const result = splitPathToLeaf(input, "Library", "-");
+			const result = splitPathToLeaf(input);
 
 			expect(result).toEqual({
 				coreName: "Note",
@@ -35,7 +64,7 @@ describe("splitPathToLeaf", () => {
 				type: "MdFile",
 			};
 
-			const result = splitPathToLeaf(input, "Library", "-");
+			const result = splitPathToLeaf(input);
 
 			expect(result.coreNameChainToParent).toEqual(["Avarar", "S1"]);
 		});
@@ -48,7 +77,7 @@ describe("splitPathToLeaf", () => {
 				type: "MdFile",
 			};
 
-			const result = splitPathToLeaf(input, "Library", "-");
+			const result = splitPathToLeaf(input);
 
 			expect(result.coreNameChainToParent).toEqual([]);
 			expect(result.coreName).toBe("RootNote");
@@ -62,7 +91,7 @@ describe("splitPathToLeaf", () => {
 				type: "MdFile",
 			};
 
-			const result = splitPathToLeaf(input, "Library", "-");
+			const result = splitPathToLeaf(input);
 
 			expect(result.coreNameChainToParent).toEqual(["Other", "folder"]);
 		});
@@ -77,7 +106,7 @@ describe("splitPathToLeaf", () => {
 				type: "File",
 			};
 
-			const result = splitPathToLeaf(input, "Library", "-");
+			const result = splitPathToLeaf(input);
 
 			expect(result).toEqual({
 				coreName: "document",
@@ -98,7 +127,7 @@ describe("splitPathToLeaf", () => {
 				type: "MdFile",
 			};
 
-			const result = splitPathToLeaf(input, "Library", "-");
+			const result = splitPathToLeaf(input);
 
 			expect(result.coreName).toBe("The_Title");
 		});
@@ -111,12 +140,16 @@ describe("splitPathToLeaf", () => {
 				type: "MdFile",
 			};
 
-			const result = splitPathToLeaf(input, "Library", "-");
+			const result = splitPathToLeaf(input);
 
 			expect(result.coreName).toBe("SimpleNote");
 		});
 
 		it("respects custom delimiter", () => {
+			getParsedUserSettingsSpy.mockReturnValue({
+				...defaultSettings,
+				suffixDelimiter: "_",
+			});
 			const input: SplitPathToMdFile = {
 				basename: "Note_suffix1_suffix2",
 				extension: "md",
@@ -124,7 +157,7 @@ describe("splitPathToLeaf", () => {
 				type: "MdFile",
 			};
 
-			const result = splitPathToLeaf(input, "Library", "_");
+			const result = splitPathToLeaf(input);
 
 			expect(result.coreName).toBe("Note");
 		});

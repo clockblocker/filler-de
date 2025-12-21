@@ -1,10 +1,36 @@
-import { describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { resolveRuntimeIntent } from "../../../../src/commanders/librarian/healing/intent-resolver";
 import { RuntimeSubtype } from "../../../../src/commanders/librarian/types/literals";
 import type { SplitPathToMdFile } from "../../../../src/obsidian-vault-action-manager/types/split-path";
+import * as globalState from "../../../../src/global-state/global-state";
+import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
+import { SplitPathType } from "../../../../src/obsidian-vault-action-manager/types/split-path";
 
-const LIBRARY_ROOT = "Library";
-const DELIMITER = "-";
+// Default settings for tests
+const defaultSettings: ParsedUserSettings = {
+	apiProvider: "google",
+	googleApiKey: "",
+	maxSectionDepth: 4,
+	splitPathToLibraryRoot: {
+		basename: "Library",
+		pathParts: [],
+		type: SplitPathType.Folder,
+	},
+	suffixDelimiter: "-",
+};
+
+// Shared mocking setup for all tests
+let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
+
+beforeEach(() => {
+	getParsedUserSettingsSpy = spyOn(globalState, "getParsedUserSettings").mockReturnValue({
+		...defaultSettings,
+	});
+});
+
+afterEach(() => {
+	getParsedUserSettingsSpy.mockRestore();
+});
 
 function mdFile(pathParts: string[], basename: string): SplitPathToMdFile {
 	return {
@@ -27,8 +53,6 @@ describe("resolveRuntimeIntent", () => {
 				oldPath,
 				newPath,
 				RuntimeSubtype.BasenameOnly,
-				LIBRARY_ROOT,
-				DELIMITER,
 			);
 
 			expect(result).not.toBeNull();
@@ -45,8 +69,6 @@ describe("resolveRuntimeIntent", () => {
 				oldPath,
 				newPath,
 				RuntimeSubtype.BasenameOnly,
-				LIBRARY_ROOT,
-				DELIMITER,
 			);
 
 			expect(result).toBeNull();
@@ -62,8 +84,6 @@ describe("resolveRuntimeIntent", () => {
 				oldPath,
 				newPath,
 				RuntimeSubtype.BasenameOnly,
-				LIBRARY_ROOT,
-				DELIMITER,
 			);
 
 			expect(result).not.toBeNull();
@@ -80,8 +100,6 @@ describe("resolveRuntimeIntent", () => {
 				oldPath,
 				newPath,
 				RuntimeSubtype.BasenameOnly,
-				LIBRARY_ROOT,
-				DELIMITER,
 			);
 
 			expect(result).not.toBeNull();
@@ -99,8 +117,6 @@ describe("resolveRuntimeIntent", () => {
 				oldPath,
 				newPath,
 				RuntimeSubtype.BasenameOnly,
-				LIBRARY_ROOT,
-				DELIMITER,
 			);
 
 			expect(result).toBeNull();
@@ -118,8 +134,6 @@ describe("resolveRuntimeIntent", () => {
 				oldPath,
 				newPath,
 				RuntimeSubtype.PathOnly,
-				LIBRARY_ROOT,
-				DELIMITER,
 			);
 
 			expect(result).not.toBeNull();
@@ -136,8 +150,6 @@ describe("resolveRuntimeIntent", () => {
 				oldPath,
 				newPath,
 				RuntimeSubtype.PathOnly,
-				LIBRARY_ROOT,
-				DELIMITER,
 			);
 
 			expect(result).toBeNull();
@@ -153,8 +165,6 @@ describe("resolveRuntimeIntent", () => {
 				oldPath,
 				newPath,
 				RuntimeSubtype.PathOnly,
-				LIBRARY_ROOT,
-				DELIMITER,
 			);
 
 			expect(result).not.toBeNull();
@@ -171,8 +181,6 @@ describe("resolveRuntimeIntent", () => {
 				oldPath,
 				newPath,
 				RuntimeSubtype.PathOnly,
-				LIBRARY_ROOT,
-				DELIMITER,
 			);
 
 			expect(result).not.toBeNull();
@@ -191,8 +199,6 @@ describe("resolveRuntimeIntent", () => {
 				oldPath,
 				newPath,
 				RuntimeSubtype.Both,
-				LIBRARY_ROOT,
-				DELIMITER,
 			);
 
 			expect(result).not.toBeNull();
@@ -208,8 +214,6 @@ describe("resolveRuntimeIntent", () => {
 				oldPath,
 				newPath,
 				RuntimeSubtype.Both,
-				LIBRARY_ROOT,
-				DELIMITER,
 			);
 
 			expect(result).toBeNull();
@@ -228,8 +232,6 @@ describe("resolveRuntimeIntent", () => {
 				oldPath,
 				newPath,
 				RuntimeSubtype.PathOnly,
-				LIBRARY_ROOT,
-				DELIMITER,
 			);
 
 			expect(result).not.toBeNull();
@@ -247,8 +249,6 @@ describe("resolveRuntimeIntent", () => {
 				oldPath,
 				newPath,
 				RuntimeSubtype.PathOnly,
-				LIBRARY_ROOT,
-				DELIMITER,
 			);
 
 			expect(result).not.toBeNull();
@@ -266,8 +266,6 @@ describe("resolveRuntimeIntent", () => {
 				oldPath,
 				newPath,
 				RuntimeSubtype.PathOnly,
-				LIBRARY_ROOT,
-				DELIMITER,
 			);
 
 			expect(result).not.toBeNull();

@@ -1,16 +1,37 @@
-import { describe, expect, it } from "vitest";
-import {
-	type TranslationContext,
-	translateVaultAction,
-} from "../../../../src/commanders/librarian/reconciliation/vault-to-tree";
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { translateVaultAction } from "../../../../src/commanders/librarian/reconciliation/vault-to-tree";
 import { TreeActionType } from "../../../../src/commanders/librarian/types/literals";
 import { TreeNodeStatus, TreeNodeType } from "../../../../src/commanders/librarian/types/tree-node";
 import type { VaultAction } from "../../../../src/obsidian-vault-action-manager/types/vault-action";
+import * as globalState from "../../../../src/global-state/global-state";
+import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
+import { SplitPathType } from "../../../../src/obsidian-vault-action-manager/types/split-path";
 
-const defaultContext: TranslationContext = {
-	libraryRoot: "Library",
+// Default settings for tests
+const defaultSettings: ParsedUserSettings = {
+	apiProvider: "google",
+	googleApiKey: "",
+	maxSectionDepth: 4,
+	splitPathToLibraryRoot: {
+		basename: "Library",
+		pathParts: [],
+		type: SplitPathType.Folder,
+	},
 	suffixDelimiter: "-",
 };
+
+// Shared mocking setup for all tests
+let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
+
+beforeEach(() => {
+	getParsedUserSettingsSpy = spyOn(globalState, "getParsedUserSettings").mockReturnValue({
+		...defaultSettings,
+	});
+});
+
+afterEach(() => {
+	getParsedUserSettingsSpy.mockRestore();
+});
 
 describe("translateVaultAction", () => {
 	describe("CreateFolder → CreateNode(Section)", () => {
@@ -26,7 +47,7 @@ describe("translateVaultAction", () => {
 				type: "CreateFolder",
 			};
 
-			const result = translateVaultAction(action, defaultContext);
+			const result = translateVaultAction(action);
 
 			expect(result).toEqual({
 				payload: {
@@ -51,7 +72,7 @@ describe("translateVaultAction", () => {
 				type: "CreateFolder",
 			};
 
-			const result = translateVaultAction(action, defaultContext);
+			const result = translateVaultAction(action);
 
 			expect(result?.payload).toMatchObject({
 				coreName: "TopLevel",
@@ -74,7 +95,7 @@ describe("translateVaultAction", () => {
 				type: "CreateMdFile",
 			};
 
-			const result = translateVaultAction(action, defaultContext);
+			const result = translateVaultAction(action);
 
 			expect(result).toEqual({
 				payload: {
@@ -103,7 +124,7 @@ describe("translateVaultAction", () => {
 				type: "CreateFile",
 			};
 
-			const result = translateVaultAction(action, defaultContext);
+			const result = translateVaultAction(action);
 
 			expect(result).toEqual({
 				payload: {
@@ -131,7 +152,7 @@ describe("translateVaultAction", () => {
 				type: "TrashFolder",
 			};
 
-			const result = translateVaultAction(action, defaultContext);
+			const result = translateVaultAction(action);
 
 			expect(result).toEqual({
 				payload: {
@@ -154,7 +175,7 @@ describe("translateVaultAction", () => {
 				type: "TrashMdFile",
 			};
 
-			const result = translateVaultAction(action, defaultContext);
+			const result = translateVaultAction(action);
 
 			expect(result).toEqual({
 				payload: {
@@ -185,7 +206,7 @@ describe("translateVaultAction", () => {
 				type: "RenameMdFile",
 			};
 
-			const result = translateVaultAction(action, defaultContext);
+			const result = translateVaultAction(action);
 
 			expect(result).toEqual({
 				payload: {
@@ -213,7 +234,7 @@ describe("translateVaultAction", () => {
 				type: "RenameFolder",
 			};
 
-			const result = translateVaultAction(action, defaultContext);
+			const result = translateVaultAction(action);
 
 			expect(result).toEqual({
 				payload: {
@@ -245,7 +266,7 @@ describe("translateVaultAction", () => {
 				type: "RenameMdFile",
 			};
 
-			const result = translateVaultAction(action, defaultContext);
+			const result = translateVaultAction(action);
 
 			expect(result).toEqual({
 				payload: {
@@ -273,7 +294,7 @@ describe("translateVaultAction", () => {
 				type: "RenameFolder",
 			};
 
-			const result = translateVaultAction(action, defaultContext);
+			const result = translateVaultAction(action);
 
 			expect(result).toEqual({
 				payload: {
@@ -300,7 +321,7 @@ describe("translateVaultAction", () => {
 				type: "ProcessMdFile",
 			};
 
-			const result = translateVaultAction(action, defaultContext);
+			const result = translateVaultAction(action);
 
 			expect(result).toBeNull();
 		});
@@ -319,7 +340,7 @@ describe("translateVaultAction", () => {
 				type: "ReplaceContentMdFile",
 			};
 
-			const result = translateVaultAction(action, defaultContext);
+			const result = translateVaultAction(action);
 
 			expect(result).toBeNull();
 		});

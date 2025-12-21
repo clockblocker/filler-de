@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import {
 	buildBasename,
 	buildCanonicalBasename,
@@ -10,6 +10,35 @@ import {
 	sanitizeFolderName,
 	suffixMatchesPath,
 } from "../../../../src/commanders/librarian/utils/path-suffix-utils";
+import * as globalState from "../../../../src/global-state/global-state";
+import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
+import { SplitPathType } from "../../../../src/obsidian-vault-action-manager/types/split-path";
+
+// Default settings for tests
+const defaultSettings: ParsedUserSettings = {
+	apiProvider: "google",
+	googleApiKey: "",
+	maxSectionDepth: 4,
+	splitPathToLibraryRoot: {
+		basename: "Library",
+		pathParts: [],
+		type: SplitPathType.Folder,
+	},
+	suffixDelimiter: "-",
+};
+
+// Shared mocking setup for all tests
+let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
+
+beforeEach(() => {
+	getParsedUserSettingsSpy = spyOn(globalState, "getParsedUserSettings").mockReturnValue({
+		...defaultSettings,
+	});
+});
+
+afterEach(() => {
+	getParsedUserSettingsSpy.mockRestore();
+});
 
 describe("computeSuffixFromPath", () => {
 	it("reverses path to suffix", () => {
@@ -63,7 +92,11 @@ describe("buildBasename", () => {
 	});
 
 	it("uses custom delimiter", () => {
-		expect(buildBasename("Note", ["a", "b"], "_")).toBe("Note_a_b");
+		getParsedUserSettingsSpy.mockReturnValue({
+			...defaultSettings,
+			suffixDelimiter: "_",
+		});
+		expect(buildBasename("Note", ["a", "b"])).toBe("Note_a_b");
 	});
 });
 
@@ -113,7 +146,11 @@ describe("sanitizeFolderName", () => {
 	});
 
 	it("works with custom delimiter", () => {
-		expect(sanitizeFolderName("my.folder.name", ".")).toBe("my_folder_name");
+		getParsedUserSettingsSpy.mockReturnValue({
+			...defaultSettings,
+			suffixDelimiter: ".",
+		});
+		expect(sanitizeFolderName("my.folder.name")).toBe("my_folder_name");
 	});
 });
 
@@ -180,6 +217,10 @@ describe("expandSuffixedPath", () => {
 	});
 
 	it("works with custom delimiter", () => {
-		expect(expandSuffixedPath(["A.B", "C"], ".")).toEqual(["A", "B", "C"]);
+		getParsedUserSettingsSpy.mockReturnValue({
+			...defaultSettings,
+			suffixDelimiter: ".",
+		});
+		expect(expandSuffixedPath(["A.B", "C"])).toEqual(["A", "B", "C"]);
 	});
 });

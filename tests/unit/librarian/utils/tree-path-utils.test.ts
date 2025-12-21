@@ -13,6 +13,7 @@ import { SplitPathType } from "../../../../src/obsidian-vault-action-manager/typ
 const defaultSettings: ParsedUserSettings = {
 	apiProvider: "google",
 	googleApiKey: "",
+	maxSectionDepth: 4,
 	splitPathToLibraryRoot: {
 		basename: "Library",
 		pathParts: [],
@@ -21,18 +22,20 @@ const defaultSettings: ParsedUserSettings = {
 	suffixDelimiter: "-",
 };
 
+// Shared mocking setup for all tests
+let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
+
+beforeEach(() => {
+	getParsedUserSettingsSpy = spyOn(globalState, "getParsedUserSettings").mockReturnValue({
+		...defaultSettings,
+	});
+});
+
+afterEach(() => {
+	getParsedUserSettingsSpy.mockRestore();
+});
+
 describe("buildCanonicalPathFromTree", () => {
-	let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
-
-	beforeEach(() => {
-		getParsedUserSettingsSpy = spyOn(globalState, "getParsedUserSettings").mockReturnValue({
-			...defaultSettings,
-		});
-	});
-
-	afterEach(() => {
-		getParsedUserSettingsSpy.mockRestore();
-	});
 
 	it("builds canonical path for root-level file", () => {
 		const leaf: TreeLeaf = {
@@ -64,11 +67,7 @@ describe("buildCanonicalPathFromTree", () => {
 
 	it("uses custom suffix delimiter", () => {
 		getParsedUserSettingsSpy.mockReturnValue({
-			splitPathToLibraryRoot: {
-				basename: "Library",
-				pathParts: [],
-				type: SplitPathType.Folder,
-			},
+			...defaultSettings,
 			suffixDelimiter: "_",
 		});
 
@@ -87,12 +86,12 @@ describe("buildCanonicalPathFromTree", () => {
 
 	it("handles library root with path parts", () => {
 		getParsedUserSettingsSpy.mockReturnValue({
+			...defaultSettings,
 			splitPathToLibraryRoot: {
 				basename: "child",
 				pathParts: ["parent"],
 				type: SplitPathType.Folder,
 			},
-			suffixDelimiter: "-",
 		});
 
 		const leaf: TreeLeaf = {
@@ -110,17 +109,6 @@ describe("buildCanonicalPathFromTree", () => {
 });
 
 describe("buildCanonicalBasenameFromTree", () => {
-	let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
-
-	beforeEach(() => {
-		getParsedUserSettingsSpy = spyOn(globalState, "getParsedUserSettings").mockReturnValue({
-			...defaultSettings,
-		});
-	});
-
-	afterEach(() => {
-		getParsedUserSettingsSpy.mockRestore();
-	});
 
 	it("builds canonical basename for root-level file", () => {
 		const leaf: TreeLeaf = {
@@ -152,11 +140,7 @@ describe("buildCanonicalBasenameFromTree", () => {
 
 	it("uses custom suffix delimiter", () => {
 		getParsedUserSettingsSpy.mockReturnValue({
-			splitPathToLibraryRoot: {
-				basename: "Library",
-				pathParts: [],
-				type: SplitPathType.Folder,
-			},
+			...defaultSettings,
 			suffixDelimiter: "_",
 		});
 

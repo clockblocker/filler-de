@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import {
 	handleDragIn,
 	handleFileDragIn,
@@ -11,9 +11,35 @@ import type {
 	SplitPathToMdFile,
 } from "../../../../src/obsidian-vault-action-manager/types/split-path";
 import { VaultActionType } from "../../../../src/obsidian-vault-action-manager/types/vault-action";
+import * as globalState from "../../../../src/global-state/global-state";
+import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
+import { SplitPathType } from "../../../../src/obsidian-vault-action-manager/types/split-path";
 
-const LIBRARY_ROOT = "Library";
-const DELIMITER = "-";
+// Default settings for tests
+const defaultSettings: ParsedUserSettings = {
+	apiProvider: "google",
+	googleApiKey: "",
+	maxSectionDepth: 4,
+	splitPathToLibraryRoot: {
+		basename: "Library",
+		pathParts: [],
+		type: SplitPathType.Folder,
+	},
+	suffixDelimiter: "-",
+};
+
+// Shared mocking setup for all tests
+let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
+
+beforeEach(() => {
+	getParsedUserSettingsSpy = spyOn(globalState, "getParsedUserSettings").mockReturnValue({
+		...defaultSettings,
+	});
+});
+
+afterEach(() => {
+	getParsedUserSettingsSpy.mockRestore();
+});
 
 function mdFile(pathParts: string[], basename: string): SplitPathToMdFile {
 	return {
@@ -47,7 +73,7 @@ describe("handleFileDragIn", () => {
 		// Should move to Library/A/B/
 		const newPath = mdFile(["Library"], "note-B-A");
 
-		const result = handleFileDragIn(newPath, LIBRARY_ROOT, DELIMITER);
+		const result = handleFileDragIn(newPath);
 
 		expect(result.actions.length).toBeGreaterThan(0);
 		
@@ -64,7 +90,7 @@ describe("handleFileDragIn", () => {
 	it("creates necessary folders", () => {
 		const newPath = mdFile(["Library"], "note-C-B-A");
 
-		const result = handleFileDragIn(newPath, LIBRARY_ROOT, DELIMITER);
+		const result = handleFileDragIn(newPath);
 
 		const createFolderActions = result.actions.filter(
 			(a) => a.type === VaultActionType.CreateFolder,
@@ -78,7 +104,7 @@ describe("handleFileDragIn", () => {
 		// File dropped exactly where suffix says it should be
 		const newPath = mdFile(["Library", "A", "B"], "note-B-A");
 
-		const result = handleFileDragIn(newPath, LIBRARY_ROOT, DELIMITER);
+		const result = handleFileDragIn(newPath);
 
 		expect(result.actions).toHaveLength(0);
 	});
@@ -87,7 +113,7 @@ describe("handleFileDragIn", () => {
 		// note.md with no suffix stays at root
 		const newPath = mdFile(["Library"], "note");
 
-		const result = handleFileDragIn(newPath, LIBRARY_ROOT, DELIMITER);
+		const result = handleFileDragIn(newPath);
 
 		expect(result.actions).toHaveLength(0);
 	});
@@ -95,7 +121,7 @@ describe("handleFileDragIn", () => {
 	it("handles non-md files", () => {
 		const newPath = file(["Library"], "image-B-A", "png");
 
-		const result = handleFileDragIn(newPath, LIBRARY_ROOT, DELIMITER);
+		const result = handleFileDragIn(newPath);
 
 		const renameAction = result.actions.find(
 			(a) => a.type === VaultActionType.RenameFile,
@@ -108,7 +134,7 @@ describe("handleFolderDragIn", () => {
 	it("sanitizes folder name containing delimiter", () => {
 		const newPath = folder(["Library"], "my-folder");
 
-		const result = handleFolderDragIn(newPath, LIBRARY_ROOT, DELIMITER);
+		const result = handleFolderDragIn(newPath, "Library");
 
 		expect(result.sanitized).toBe(true);
 		expect(result.actions).toHaveLength(1);
@@ -122,7 +148,7 @@ describe("handleFolderDragIn", () => {
 	it("returns empty when folder name is clean", () => {
 		const newPath = folder(["Library"], "myfolder");
 
-		const result = handleFolderDragIn(newPath, LIBRARY_ROOT, DELIMITER);
+		const result = handleFolderDragIn(newPath, "Library");
 
 		expect(result.sanitized).toBe(false);
 		expect(result.actions).toHaveLength(0);
@@ -131,7 +157,7 @@ describe("handleFolderDragIn", () => {
 	it("handles deeply nested folder", () => {
 		const newPath = folder(["Library", "A", "B"], "bad-name");
 
-		const result = handleFolderDragIn(newPath, LIBRARY_ROOT, DELIMITER);
+		const result = handleFolderDragIn(newPath, "Library");
 
 		expect(result.sanitized).toBe(true);
 		
@@ -147,12 +173,7 @@ describe("handleDragIn", () => {
 	it("delegates to file handler for File subtype", () => {
 		const newPath = mdFile(["Library"], "note-A");
 
-		const result = handleDragIn(
-			DragInSubtype.File,
-			newPath,
-			LIBRARY_ROOT,
-			DELIMITER,
-		);
+		const result = handleDragIn(DragInSubtype.File, newPath);
 
 		// Should have rename action to move to A/
 		const renameAction = result.actions.find(
@@ -164,12 +185,7 @@ describe("handleDragIn", () => {
 	it("delegates to folder handler for Folder subtype", () => {
 		const newPath = folder(["Library"], "bad-name");
 
-		const result = handleDragIn(
-			DragInSubtype.Folder,
-			newPath,
-			LIBRARY_ROOT,
-			DELIMITER,
-		);
+		const result = handleDragIn(DragInSubtype.Folder, newPath);
 
 		expect(result.sanitized).toBe(true);
 	});
