@@ -149,19 +149,6 @@ export class LibraryTree {
 	applyTreeAction(
 		action: TreeAction,
 	): CoreNameChainFromRoot | [CoreNameChainFromRoot, CoreNameChainFromRoot] {
-		const payloadStr =
-			"coreNameChain" in action.payload
-				? `chain=${(action.payload.coreNameChain as CoreNameChainFromRoot).join("/")}`
-				: "newCoreName" in action.payload
-					? `newCoreName=${action.payload.newCoreName}`
-					: "newCoreNameChainToParent" in action.payload
-						? `newParent=${(action.payload.newCoreNameChainToParent as CoreNameChainFromRoot).join("/")}`
-						: "newStatus" in action.payload
-							? `newStatus=${action.payload.newStatus}`
-							: "";
-		console.log(
-			`[TreeStalenessTest] applyTreeAction: type=${action.type} ${payloadStr}`,
-		);
 		switch (action.type) {
 			case TreeActionType.CreateNode:
 				return this.createNode(action);
@@ -193,16 +180,16 @@ export class LibraryTree {
 			newNode = {
 				coreName,
 				coreNameChainToParent,
-				status: action.payload.status,
 				extension: action.payload.extension,
+				status: action.payload.status,
 				type: TreeNodeType.Scroll,
 			};
 		} else if (nodeType === TreeNodeType.File) {
 			newNode = {
 				coreName,
 				coreNameChainToParent,
-				status: TreeNodeStatus.Unknown,
 				extension: action.payload.extension,
+				status: TreeNodeStatus.Unknown,
 				type: TreeNodeType.File,
 			};
 		} else {
@@ -268,26 +255,10 @@ export class LibraryTree {
 		action: ChangeNodeNameAction,
 	): CoreNameChainFromRoot {
 		const { coreNameChain, newCoreName } = action.payload;
-		console.log(
-			`[TreeStalenessTest] changeNodeName: called chain=${coreNameChain.join("/")} newCoreName=${newCoreName}`,
-		);
 		const node = this.getNodeInternal(coreNameChain);
 		if (!node) {
-			console.log(
-				`[TreeStalenessTest] changeNodeName: node not found for chain=${coreNameChain.join("/")}`,
-			);
-			// Debug: list all nodes in tree
-			const allLeaves = this.serializeToLeaves();
-			console.log(
-				`[TreeStalenessTest] changeNodeName: available nodes in tree: ${allLeaves.map((l) => `chain=${[...l.coreNameChainToParent, l.coreName].join("/")} coreName=${l.coreName}`).join(", ")}`,
-			);
 			return coreNameChain;
 		}
-		console.log(
-			`[TreeStalenessTest] changeNodeName: node found type=${node.type} coreName=${node.coreName}`,
-		);
-
-		// Note: tRef removed - TFile references become stale when files are renamed/moved
 
 		const oldParentChain = node.coreNameChainToParent;
 		const newFullChain = [...oldParentChain, newCoreName];

@@ -22,42 +22,15 @@ export function applyActionsToTree(
 		CoreNameChainFromRoot | [CoreNameChainFromRoot, CoreNameChainFromRoot]
 	> = [];
 
-	const typesStr = actions.map((a) => String(a.type)).join(", ");
-	console.log(
-		`[TreeStalenessTest] applyActionsToTree: count=${String(actions.length)} types=[${typesStr}]`,
-	);
-
-	// Note: tRef removed - TFile references become stale when files are renamed/moved
-
 	for (const action of actions) {
 		const treeAction = translateVaultAction(action, {
 			libraryRoot: context.libraryRoot,
 			suffixDelimiter: context.suffixDelimiter,
 		});
 
-		const vaultActionType = String(action.type);
-		const treeActionType = treeAction ? String(treeAction.type) : "null";
-		console.log(
-			`[TreeStalenessTest] translateVaultAction: vaultAction=${vaultActionType} → treeAction=${treeActionType}`,
-		);
-
 		if (treeAction) {
-			console.log(
-				`[TreeStalenessTest] calling applyTreeAction: type=${treeAction.type}`,
-			);
 			const result = context.tree.applyTreeAction(treeAction);
-			const resultStr =
-				typeof result === "string"
-					? result
-					: `[${result[0]}, ${result[1]}]`;
-			console.log(
-				`[TreeStalenessTest] applyTreeAction returned: ${resultStr}`,
-			);
 			actionResults.push(result);
-		} else {
-			console.log(
-				"[TreeStalenessTest] treeAction is null, skipping applyTreeAction",
-			);
 		}
 	}
 

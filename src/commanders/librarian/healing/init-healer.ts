@@ -37,18 +37,18 @@ type LeafHealInfo = {
  * Analyze a leaf to determine if it needs healing.
  * Note: currentBasename is resolved on-demand - tRef removed due to staleness.
  */
-function analyzeLeaf(
+async function analyzeLeaf(
 	leaf: TreeLeaf,
 	libraryRoot: string,
 	suffixDelimiter: string,
-	getCurrentBasename: (path: string) => string | null,
-): LeafHealInfo {
+	getCurrentBasename: (path: string) => Promise<string | null>,
+): Promise<LeafHealInfo> {
 	// Reconstruct expected path from tree structure
 	const coreNameChain = [...leaf.coreNameChainToParent, leaf.coreName];
 	const expectedPath = `${libraryRoot}/${coreNameChain.join("/")}.${leaf.extension}`;
-	
+
 	// Get current basename from vault (tRef removed - resolve on-demand)
-	const currentBasename = getCurrentBasename(expectedPath);
+	const currentBasename = await getCurrentBasename(expectedPath);
 	if (!currentBasename) {
 		// File doesn't exist at expected path - skip healing
 		return {
@@ -58,15 +58,14 @@ function analyzeLeaf(
 			needsRename: false,
 		};
 	}
-	
-	console.log(
-		`[TreeStalenessTest] analyzeLeaf: coreName=${leaf.coreName} chain=${leaf.coreNameChainToParent.join("/")} currentBasename=${currentBasename} ext=${leaf.extension}`,
-	);
-	
+
 	const parsed = parseBasename(currentBasename, suffixDelimiter);
 
 	// Path relative to library root
-	const needsRename = !suffixMatchesPath(parsed.splitSuffix, leaf.coreNameChainToParent);
+	const needsRename = !suffixMatchesPath(
+		parsed.splitSuffix,
+		leaf.coreNameChainToParent,
+	);
 
 	const expectedBasename = needsRename
 		? buildBasename(
@@ -150,16 +149,22 @@ function createRenameAction(
  * @param getCurrentBasename - Function to get current basename from path (tRef removed - resolve on-demand)
  * @returns Rename and delete actions
  */
-export function healOnInit(
+export async function healOnInit(
 	leaves: TreeLeaf[],
 	libraryRoot: string,
 	suffixDelimiter = "-",
-	getCurrentBasename: (path: string) => string | null = () => null,
-): InitHealResult {
+	getCurrentBasename: (path: string) => Promise<string | null> = async () =>
+		null,
+): Promise<InitHealResult> {
 	const renameActions: VaultAction[] = [];
 
 	for (const leaf of leaves) {
-		const info = analyzeLeaf(leaf, libraryRoot, suffixDelimiter, getCurrentBasename);
+		const info = await analyzeLeaf(
+			leaf,
+			libraryRoot,
+			suffixDelimiter,
+			getCurrentBasename,
+		);
 
 		if (info.needsRename) {
 			renameActions.push(createRenameAction(info, libraryRoot));
@@ -178,13 +183,18 @@ export function healOnInit(
  * Useful for individual file checks.
  * Note: requires getCurrentBasename function to resolve current basename (tRef removed).
  */
-export function leafNeedsHealing(
+export async function leafNeedsHealing(
 	leaf: TreeLeaf,
 	libraryRoot: string,
 	suffixDelimiter: string,
-	getCurrentBasename: (path: string) => string | null,
-): boolean {
-	const info = analyzeLeaf(leaf, libraryRoot, suffixDelimiter, getCurrentBasename);
+	getCurrentBasename: (path: string) => Promise<string | null>,
+): Promise<boolean> {
+	const info = await analyzeLeaf(
+		leaf,
+		libraryRoot,
+		suffixDelimiter,
+		getCurrentBasename,
+	);
 	return info.needsRename;
 }
 

@@ -73,18 +73,6 @@ export async function readTreeFromVault(
 		),
 	);
 
-	// Log tree creation
-	console.log(
-		`[TreeStalenessTest] readTreeFromVault: root=${libraryRoot} leavesCount=${leaves.length}`,
-	);
-	for (const leaf of leaves) {
-		const chain = [...leaf.coreNameChainToParent, leaf.coreName];
-		const expectedPath = `${libraryRoot}/${chain.join("/")}.${leaf.extension}`;
-		console.log(
-			`[TreeStalenessTest]   leaf: coreName=${leaf.coreName} chain=${leaf.coreNameChainToParent.join("/")} expectedPath=${expectedPath}`,
-		);
-	}
-
 	return new LibraryTree(leaves, rootFolder);
 }
 

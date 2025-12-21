@@ -94,10 +94,10 @@ function toCoreNameChain(
 	// Skip library root
 	const startIndex = parts[0] === libraryRoot ? 1 : 0;
 	const pathParts = parts.slice(startIndex);
-	
+
 	// Parse basename to get coreName (not full basename with suffix)
 	const { coreName } = parseBasename(splitPath.basename, suffixDelimiter);
-	
+
 	return [...pathParts, coreName];
 }
 
@@ -146,9 +146,9 @@ function createFileAction(
 				splitPath,
 				context.libraryRoot,
 			),
+			extension,
 			nodeType: TreeNodeType.File,
 			status: TreeNodeStatus.Unknown,
-			extension,
 		},
 		type: TreeActionType.CreateNode,
 	};
@@ -168,9 +168,9 @@ function createScrollAction(
 				splitPath,
 				context.libraryRoot,
 			),
+			extension: "md",
 			nodeType: TreeNodeType.Scroll,
 			status: context.defaultScrollStatus ?? TreeNodeStatus.NotStarted,
-			extension: "md",
 		},
 		type: TreeActionType.CreateNode,
 	};
@@ -194,16 +194,12 @@ function translateRename(
 	context: TranslationContext,
 ): TreeAction {
 	const suffixDelimiter = context.suffixDelimiter ?? "-";
-	
-	const fromPath = `${from.pathParts.join("/")}/${from.basename}`;
-	const toPath = `${to.pathParts.join("/")}/${to.basename}`;
-	const sameParentResult = sameParent(from, to);
-	
+
 	// Try to find node at fromChain first
-	const fromChain = toCoreNameChain(from, context.libraryRoot, suffixDelimiter);
-	
-	console.log(
-		`[TreeStalenessTest] translateRename: fromPath=${fromPath} toPath=${toPath} fromChain=${fromChain.join("/")} sameParent=${sameParentResult}`,
+	const fromChain = toCoreNameChain(
+		from,
+		context.libraryRoot,
+		suffixDelimiter,
 	);
 
 	if (sameParent(from, to)) {
@@ -220,9 +216,6 @@ function translateRename(
 			},
 			type: TreeActionType.ChangeNodeName,
 		};
-		console.log(
-			`[TreeStalenessTest] translateRename → ChangeNodeName: chain=${fromChain.join("/")} newCoreName=${newCoreName}`,
-		);
 		return action;
 	}
 
@@ -235,16 +228,5 @@ function translateRename(
 		},
 		type: TreeActionType.MoveNode,
 	};
-	console.log(
-		`[TreeStalenessTest] translateRename → MoveNode: chain=${fromChain.join("/")} newParent=${newParentChain.join("/")}`,
-	);
 	return action;
-}
-
-function splitPathToString(splitPath: SplitPath): string {
-	const parts = [...splitPath.pathParts, splitPath.basename];
-	if ("extension" in splitPath && splitPath.extension) {
-		return parts.join("/") + "." + splitPath.extension;
-	}
-	return parts.join("/");
 }

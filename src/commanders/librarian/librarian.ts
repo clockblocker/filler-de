@@ -2,6 +2,7 @@ import type {
 	ObsidianVaultActionManager,
 	VaultEvent,
 } from "../../obsidian-vault-action-manager";
+import type { VaultAction } from "../../obsidian-vault-action-manager/types/vault-action";
 import { dedupeChains, expandToAncestors } from "./codex/impacted-chains";
 import { healOnInit, type InitHealResult } from "./healing";
 import type { LibraryTree } from "./library-tree";
@@ -21,6 +22,7 @@ import {
 import { TreeActionType } from "./types/literals";
 import type { CoreNameChainFromRoot } from "./types/split-basename";
 import { TreeNodeStatus, TreeNodeType } from "./types/tree-node";
+import { parseBasename } from "./utils/parse-basename";
 import { buildCanonicalBasename } from "./utils/path-suffix-utils";
 
 export class Librarian {
@@ -60,7 +62,11 @@ export class Librarian {
 		const leaves = this.tree.serializeToLeaves();
 
 		// Get current basename from path (tRef removed - resolve on-demand)
-		const getCurrentBasename = (path: string): string | null => {
+		// Searches parent directory if file not found at expected path (file may have suffix)
+		const getCurrentBasename = async (
+			path: string,
+		): Promise<string | null> => {
+			// Try expected path first
 			const file = (
 				this.vaultActionManager as unknown as {
 					app?: {
@@ -78,10 +84,63 @@ export class Librarian {
 			) {
 				return (file as { basename: string }).basename;
 			}
+
+			// File not found at expected path - search parent directory
+			// Extract parent path and coreName from expected path
+			const pathParts = path.split("/");
+			const filename = pathParts.pop() ?? "";
+			const extension = filename.includes(".")
+				? filename.slice(filename.lastIndexOf(".") + 1)
+				: "";
+			const parentPath = pathParts.join("/");
+
+			// Find leaf that matches this path structure
+			const matchingLeaf = leaves.find((leaf) => {
+				const chain = [...leaf.coreNameChainToParent, leaf.coreName];
+				const expectedPathForLeaf = `${this.libraryRoot}/${chain.join("/")}.${leaf.extension}`;
+				return expectedPathForLeaf === path;
+			});
+
+			if (!matchingLeaf) {
+				return null;
+			}
+
+			// Search parent directory for files matching coreName
+			const parentSplitPath =
+				this.vaultActionManager.splitPath(parentPath);
+			if (parentSplitPath.type !== "Folder") {
+				return null;
+			}
+
+			try {
+				const entries =
+					await this.vaultActionManager.listAll(parentSplitPath);
+				for (const entry of entries) {
+					if (
+						(entry.type === "File" || entry.type === "MdFile") &&
+						(entry.type === "MdFile"
+							? extension === "md"
+							: "extension" in entry &&
+								entry.extension === extension)
+					) {
+						// Parse basename to check if coreName matches
+						const { coreName: parsedCoreName } = parseBasename(
+							entry.basename,
+							this.suffixDelimiter,
+						);
+						if (parsedCoreName === matchingLeaf.coreName) {
+							return entry.basename;
+						}
+					}
+				}
+			} catch (error) {
+				console.error("[Librarian] getCurrentBasename error:", error);
+			}
+
 			return null;
 		};
 
-		const healResult = healOnInit(
+		const healResult = await healOnInit(
 			leaves,
 			this.libraryRoot,
 			this.suffixDelimiter,
@@ -232,6 +291,40 @@ export class Librarian {
 	}
 
 	/**
+	 * Test helper: Handle rename event.
+	 * Exposed for e2e tests.
+	 */
+	async handleRename(
+		oldPath: string,
+		newPath: string,
+		isFolder: boolean,
+	): Promise<VaultAction[]> {
+		const eventContext = this.getEventHandlerContext();
+		return handleRename(oldPath, newPath, isFolder, eventContext);
+	}
+
+	/**
+	 * Test helper: Handle create event.
+	 * Exposed for e2e tests.
+	 */
+	async handleCreate(
+		path: string,
+		isFolder: boolean,
+	): Promise<VaultAction[]> {
+		const eventContext = this.getEventHandlerContext();
+		return handleCreate(path, isFolder, eventContext);
+	}
+
+	/**
+	 * Test helper: Handle delete event.
+	 * Exposed for e2e tests.
+	 */
+	async handleDelete(path: string, isFolder: boolean): Promise<void> {
+		const eventContext = this.getEventHandlerContext();
+		return handleDelete(path, isFolder, eventContext);
+	}
+
+	/**
 	 * Set status for a node (scroll or section).
 	 * Updates tree, writes metadata to file (for Scroll nodes), and regenerates impacted codexes.
 	 */
@@ -287,10 +380,6 @@ export class Librarian {
 					? `${node.coreNameChainToParent.join("/")}/`
 					: "";
 			const path = `${this.libraryRoot}/${pathChain}${canonicalBasename}.${node.extension}`;
-
-			console.log(
-				`[TreeStalenessTest] writeStatusToMetadata: chain=${coreNameChain.join("/")} status=${status} canonicalBasename=${canonicalBasename} path=${path}`,
-			);
 
 			try {
 				await writeStatusToMetadata(path, status, {
