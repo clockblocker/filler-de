@@ -97,24 +97,18 @@ function buildCanonicalBasename(
 
 ## Current Issues
 
-### Issue: `setStatus()` reconstructs path incorrectly
-**Location:** `librarian.ts:264`
-**Problem:** Reconstructs path as `Library/Songs/Rammstien/Sonne.md` (no suffix)
-**Should be:** Reconstruct canonical basename first, then build path
+### ✅ Fixed: `setStatus()` reconstructs path incorrectly
+**Location:** `librarian.ts:270-280`
+**Status:** Fixed - Now uses `buildCanonicalBasename()` to reconstruct proper basename with suffix
 
-**Fix:**
-```typescript
-// Current (WRONG):
-const path = `${this.libraryRoot}/${fullChain.join("/")}.${node.extension}`;
+### Note: File Move + Suffix Healing Order
+**Location:** `action-resolver.ts`, `intent-resolver.ts`
+**Behavior:** When a file is moved AND needs suffix healing:
+1. System generates rename action from `newPath` (after move) to `targetPath` (with corrected suffix)
+2. `translateRename` may log "node not found" because it looks for node at new location
+3. System recovers gracefully - actions are applied correctly
 
-// Should be:
-const canonicalBasename = buildCanonicalBasename(
-  node.coreName,
-  node.coreNameChainToParent,
-  this.suffixDelimiter
-);
-const path = `${this.libraryRoot}/${node.coreNameChainToParent.join("/")}/${canonicalBasename}.${node.extension}`;
-```
+**This is expected behavior** - the warning is harmless. The system correctly handles the sequence of move + suffix fix.
 
 ## Helper Functions
 

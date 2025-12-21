@@ -1,5 +1,4 @@
 import { describe, expect, it } from "bun:test";
-import type { TFile } from "obsidian";
 import {
 	getExpectedBasename,
 	healOnInit,
@@ -8,31 +7,21 @@ import {
 import type { TreeLeaf } from "../../../../src/commanders/librarian/types/tree-leaf";
 import { TreeNodeStatus, TreeNodeType } from "../../../../src/commanders/librarian/types/tree-node";
 import { VaultActionType } from "../../../../src/obsidian-vault-action-manager/types/vault-action";
+import { buildCanonicalBasename } from "../../../../src/commanders/librarian/utils/path-suffix-utils";
 
 const LIBRARY_ROOT = "Library";
 const DELIMITER = "-";
-
-function mockTFile(basename: string, extension: string, path: string): TFile {
-	return {
-		basename,
-		extension,
-		name: `${basename}.${extension}`,
-		path,
-		// Other TFile properties not needed for tests
-	} as TFile;
-}
 
 function scrollLeaf(
 	coreName: string,
 	coreNameChainToParent: string[],
 	currentBasename: string,
 ): TreeLeaf {
-	const path = [LIBRARY_ROOT, ...coreNameChainToParent, `${currentBasename}.md`].join("/");
 	return {
 		coreName,
 		coreNameChainToParent,
 		status: TreeNodeStatus.NotStarted,
-		tRef: mockTFile(currentBasename, "md", path),
+		extension: "md",
 		type: TreeNodeType.Scroll,
 	};
 }
@@ -43,14 +32,32 @@ function fileLeaf(
 	currentBasename: string,
 	extension: string,
 ): TreeLeaf {
-	const path = [LIBRARY_ROOT, ...coreNameChainToParent, `${currentBasename}.${extension}`].join("/");
 	return {
 		coreName,
 		coreNameChainToParent,
 		status: TreeNodeStatus.Unknown,
-		tRef: mockTFile(currentBasename, extension, path),
+		extension,
 		type: TreeNodeType.File,
 	};
+}
+
+/**
+ * Create getCurrentBasename function for tests.
+ * Maps paths to basenames based on leaf structure and currentBasename.
+ */
+function createGetCurrentBasename(
+	leaves: Array<{ leaf: TreeLeaf; currentBasename: string }>,
+	libraryRoot: string,
+): (path: string) => string | null {
+	const pathToBasename = new Map<string, string>();
+	for (const { leaf, currentBasename } of leaves) {
+		const chain = [...leaf.coreNameChainToParent, leaf.coreName];
+		const path = chain.length > 0
+			? `${libraryRoot}/${chain.join("/")}.${leaf.extension}`
+			: `${libraryRoot}/${leaf.coreName}.${leaf.extension}`;
+		pathToBasename.set(path, currentBasename);
+	}
+	return (path: string) => pathToBasename.get(path) ?? null;
 }
 
 describe("healOnInit", () => {
@@ -60,7 +67,13 @@ describe("healOnInit", () => {
 			scrollLeaf("Doc", ["X"], "Doc-X"),
 		];
 
-		const result = healOnInit(leaves, LIBRARY_ROOT, DELIMITER);
+		const leavesWithBasenames = [
+			{ leaf: leaves[0], currentBasename: "Note-B-A" },
+			{ leaf: leaves[1], currentBasename: "Doc-X" },
+		];
+		const getCurrentBasename = createGetCurrentBasename(leavesWithBasenames, LIBRARY_ROOT);
+
+		const result = healOnInit(leaves, LIBRARY_ROOT, DELIMITER, getCurrentBasename);
 
 		expect(result.renameActions).toHaveLength(0);
 	});
@@ -70,7 +83,12 @@ describe("healOnInit", () => {
 			scrollLeaf("Note", ["A", "B"], "Note-X-Y"), // Wrong suffix
 		];
 
-		const result = healOnInit(leaves, LIBRARY_ROOT, DELIMITER);
+		const leavesWithBasenames = [
+			{ leaf: leaves[0], currentBasename: "Note-X-Y" },
+		];
+		const getCurrentBasename = createGetCurrentBasename(leavesWithBasenames, LIBRARY_ROOT);
+
+		const result = healOnInit(leaves, LIBRARY_ROOT, DELIMITER, getCurrentBasename);
 
 		expect(result.renameActions).toHaveLength(1);
 		const action = result.renameActions[0];
@@ -89,7 +107,14 @@ describe("healOnInit", () => {
 			scrollLeaf("Note3", ["C", "D"], "Note3"), // Missing suffix
 		];
 
-		const result = healOnInit(leaves, LIBRARY_ROOT, DELIMITER);
+		const leavesWithBasenames = [
+			{ leaf: leaves[0], currentBasename: "Note1-Wrong" },
+			{ leaf: leaves[1], currentBasename: "Note2-B" },
+			{ leaf: leaves[2], currentBasename: "Note3" },
+		];
+		const getCurrentBasename = createGetCurrentBasename(leavesWithBasenames, LIBRARY_ROOT);
+
+		const result = healOnInit(leaves, LIBRARY_ROOT, DELIMITER, getCurrentBasename);
 
 		expect(result.renameActions).toHaveLength(2);
 	});
@@ -99,7 +124,12 @@ describe("healOnInit", () => {
 			fileLeaf("image", ["A", "B"], "image-wrong", "png"),
 		];
 
-		const result = healOnInit(leaves, LIBRARY_ROOT, DELIMITER);
+		const leavesWithBasenames = [
+			{ leaf: leaves[0], currentBasename: "image-wrong" },
+		];
+		const getCurrentBasename = createGetCurrentBasename(leavesWithBasenames, LIBRARY_ROOT);
+
+		const result = healOnInit(leaves, LIBRARY_ROOT, DELIMITER, getCurrentBasename);
 
 		expect(result.renameActions).toHaveLength(1);
 		const action = result.renameActions[0];
@@ -115,7 +145,12 @@ describe("healOnInit", () => {
 			scrollLeaf("MyNote", ["A", "B", "C"], "MyNote-X"),
 		];
 
-		const result = healOnInit(leaves, LIBRARY_ROOT, DELIMITER);
+		const leavesWithBasenames = [
+			{ leaf: leaves[0], currentBasename: "MyNote-X" },
+		];
+		const getCurrentBasename = createGetCurrentBasename(leavesWithBasenames, LIBRARY_ROOT);
+
+		const result = healOnInit(leaves, LIBRARY_ROOT, DELIMITER, getCurrentBasename);
 
 		expect(result.renameActions).toHaveLength(1);
 		const action = result.renameActions[0];
@@ -130,7 +165,12 @@ describe("healOnInit", () => {
 			scrollLeaf("RootNote", [], "RootNote-ExtraSuffix"),
 		];
 
-		const result = healOnInit(leaves, LIBRARY_ROOT, DELIMITER);
+		const leavesWithBasenames = [
+			{ leaf: leaves[0], currentBasename: "RootNote-ExtraSuffix" },
+		];
+		const getCurrentBasename = createGetCurrentBasename(leavesWithBasenames, LIBRARY_ROOT);
+
+		const result = healOnInit(leaves, LIBRARY_ROOT, DELIMITER, getCurrentBasename);
 
 		expect(result.renameActions).toHaveLength(1);
 		const action = result.renameActions[0];
@@ -144,22 +184,38 @@ describe("healOnInit", () => {
 describe("leafNeedsHealing", () => {
 	it("returns false when suffix matches path", () => {
 		const leaf = scrollLeaf("Note", ["A", "B"], "Note-B-A");
-		expect(leafNeedsHealing(leaf, LIBRARY_ROOT, DELIMITER)).toBe(false);
+		const getCurrentBasename = createGetCurrentBasename(
+			[{ leaf, currentBasename: "Note-B-A" }],
+			LIBRARY_ROOT,
+		);
+		expect(leafNeedsHealing(leaf, LIBRARY_ROOT, DELIMITER, getCurrentBasename)).toBe(false);
 	});
 
 	it("returns true when suffix mismatches path", () => {
 		const leaf = scrollLeaf("Note", ["A", "B"], "Note-X-Y");
-		expect(leafNeedsHealing(leaf, LIBRARY_ROOT, DELIMITER)).toBe(true);
+		const getCurrentBasename = createGetCurrentBasename(
+			[{ leaf, currentBasename: "Note-X-Y" }],
+			LIBRARY_ROOT,
+		);
+		expect(leafNeedsHealing(leaf, LIBRARY_ROOT, DELIMITER, getCurrentBasename)).toBe(true);
 	});
 
 	it("returns true when suffix is missing", () => {
 		const leaf = scrollLeaf("Note", ["A"], "Note");
-		expect(leafNeedsHealing(leaf, LIBRARY_ROOT, DELIMITER)).toBe(true);
+		const getCurrentBasename = createGetCurrentBasename(
+			[{ leaf, currentBasename: "Note" }],
+			LIBRARY_ROOT,
+		);
+		expect(leafNeedsHealing(leaf, LIBRARY_ROOT, DELIMITER, getCurrentBasename)).toBe(true);
 	});
 
 	it("returns false for root-level file without suffix", () => {
 		const leaf = scrollLeaf("Note", [], "Note");
-		expect(leafNeedsHealing(leaf, LIBRARY_ROOT, DELIMITER)).toBe(false);
+		const getCurrentBasename = createGetCurrentBasename(
+			[{ leaf, currentBasename: "Note" }],
+			LIBRARY_ROOT,
+		);
+		expect(leafNeedsHealing(leaf, LIBRARY_ROOT, DELIMITER, getCurrentBasename)).toBe(false);
 	});
 });
 

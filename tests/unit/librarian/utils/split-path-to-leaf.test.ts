@@ -26,7 +26,7 @@ describe("splitPathToLeaf", () => {
 				coreName: "Note",
 				coreNameChainToParent: ["parent", "child"],
 				status: TreeNodeStatus.NotStarted,
-				tRef: fakeTFile,
+				extension: "md",
 				type: TreeNodeType.Scroll,
 			});
 		});
@@ -91,7 +91,7 @@ describe("splitPathToLeaf", () => {
 				coreName: "document",
 				coreNameChainToParent: ["doc", "Pekar", "2025"],
 				status: TreeNodeStatus.Unknown,
-				tRef: fakeTFile,
+				extension: "pdf",
 				type: TreeNodeType.File,
 			});
 		});

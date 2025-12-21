@@ -1,4 +1,3 @@
-import type { TFile } from "obsidian";
 import { describe, expect, it } from "vitest";
 import {
 	type TranslationContext,
@@ -8,10 +7,9 @@ import { TreeActionType } from "../../../../src/commanders/librarian/types/liter
 import { TreeNodeStatus, TreeNodeType } from "../../../../src/commanders/librarian/types/tree-node";
 import type { VaultAction } from "../../../../src/obsidian-vault-action-manager/types/vault-action";
 
-const fakeTFile = { path: "test" } as TFile;
 const defaultContext: TranslationContext = {
-	getTRef: () => fakeTFile,
 	libraryRoot: "Library",
+	suffixDelimiter: "-",
 };
 
 describe("translateVaultAction", () => {
@@ -84,31 +82,10 @@ describe("translateVaultAction", () => {
 					coreNameChainToParent: ["A", "B"],
 					nodeType: TreeNodeType.Scroll,
 					status: TreeNodeStatus.NotStarted,
-					tRef: fakeTFile,
+					extension: "md",
 				},
 				type: TreeActionType.CreateNode,
 			});
-		});
-
-		it("returns null if no TRef available", () => {
-			const action: VaultAction = {
-				payload: {
-					splitPath: {
-						basename: "Note",
-						extension: "md",
-						pathParts: ["Library"],
-						type: "MdFile",
-					},
-				},
-				type: "CreateMdFile",
-			};
-
-			const result = translateVaultAction(action, {
-				...defaultContext,
-				getTRef: () => null,
-			});
-
-			expect(result).toBeNull();
 		});
 	});
 
@@ -134,7 +111,7 @@ describe("translateVaultAction", () => {
 					coreNameChainToParent: ["A"],
 					nodeType: TreeNodeType.File,
 					status: TreeNodeStatus.Unknown,
-					tRef: fakeTFile,
+					extension: "pdf",
 				},
 				type: TreeActionType.CreateNode,
 			});
