@@ -31,11 +31,7 @@ if (Array.isArray(result) && result.length === 2 &&
 return [result as CoreNameChainFromRoot];
 ```
 
-### 2. Unsafe Type Casting in `getCurrentBasename`
-
-**Location:** `src/commanders/librarian/librarian.ts:66-86`
-
-**Problem:**
+**Previous Problem:**
 Deep unsafe type casting to access Obsidian API:
 ```typescript
 const file = (
@@ -45,27 +41,28 @@ const file = (
 ).app?.vault?.getAbstractFileByPath?.(path);
 ```
 
-**Issue:** Multiple levels of unsafe casting (`as unknown as ...`) violates type safety principles. This is accessing undocumented Obsidian API.
-
-**Suggestion:** 
-- Extract to helper function with proper documentation
-- Add comment explaining why casting is necessary (undocumented API)
-- Consider adding runtime type guards
+**Resolution:**
+- `getCurrentBasename` function completely removed
+- File resolution now handled by `ObsidianVaultActionManager.listAllFilesWithMdReaders()`
+- Type-safe `SplitPathWithReader` API replaces unsafe casting
+- No tRefs exposed outside manager
 
 ## Logic Duplications
 
-### 3. Path Reconstruction Logic Duplicated
+### 3. Path Reconstruction Logic Duplicated - 🔄 PARTIALLY ADDRESSED
 
-**Locations:**
-- `librarian.ts:100` - Reconstructs path for matching in `getCurrentBasename`
-- `librarian.ts:372-382` - Reconstructs path in `setStatus`
-- `init-healer.ts:47-48` - Reconstructs expected path in `analyzeLeaf`
+**Status:** 🔄 **PARTIALLY ADDRESSED** - Reduced from 3+ locations to 1
 
-**Pattern:**
+**Current Locations:**
+- `librarian.ts:326-336` - Reconstructs path in `setStatus` (still present)
+
+**Remaining Pattern:**
 ```typescript
-// Pattern repeated 3+ times:
-const coreNameChain = [...leaf.coreNameChainToParent, leaf.coreName];
-const expectedPath = `${libraryRoot}/${coreNameChain.join("/")}.${leaf.extension}`;
+// Still in setStatus:
+const pathChain = node.coreNameChainToParent.length > 0
+  ? `${node.coreNameChainToParent.join("/")}/`
+  : "";
+const path = `${this.libraryRoot}/${pathChain}${canonicalBasename}.${node.extension}`;
 ```
 
 **Suggestion:** Extract to utility function:
@@ -96,71 +93,54 @@ export function buildCanonicalPathFromTree(
 }
 ```
 
-### 4. Basename Extraction Duplicated
+### 4. Basename Extraction Duplicated - 🔄 PARTIALLY ADDRESSED
 
-**Locations:**
+**Status:** 🔄 **PARTIALLY ADDRESSED** - Reduced (one instance removed)
+
+**Current State:**
 - `path-parsers.ts:40-45` - `extractBasenameWithoutExt` utility exists
-- `librarian.ts:91-94` - Inline extraction in `getCurrentBasename`
+- `init-healer.ts` - Now uses `parseBasename` utility (good)
 
-**Pattern:**
-```typescript
-// Duplicated logic:
-const filename = pathParts.pop() ?? "";
-const extension = filename.includes(".")
-	? filename.slice(filename.lastIndexOf(".") + 1)
-	: "";
-```
+**Remaining:**
+- May still exist in other locations - needs audit
 
-**Suggestion:** Use existing `extractBasenameWithoutExt` from `path-parsers.ts` consistently.
+**Suggestion:** Use existing utilities (`extractBasenameWithoutExt`, `parseBasename`) consistently.
 
 ## Complexity Issues
 
-### 5. Overly Complex `getCurrentBasename` Function
+### 5. Overly Complex `getCurrentBasename` Function - ✅ RESOLVED
 
-**Location:** `src/commanders/librarian/librarian.ts:66-141`
+**Status:** ✅ **RESOLVED** - Function completely removed
 
-**Problem:** 75+ lines with complex fallback logic:
+**Previous Problem:** 75+ lines with complex fallback logic:
 1. Try expected path first
 2. If not found, search parent directory
 3. Match by coreName
 4. Multiple error paths
 
-**Issues:**
-- Hard to test
-- Hard to understand
-- Mixes concerns (path resolution + file lookup)
+**Resolution:**
+- Function completely removed
+- Logic replaced with simple file matching in `healOnInit`
+- Uses pre-fetched `SplitPathWithReader[]` from manager
+- Single responsibility: match files to leaves
+- Synchronous matching logic (no async fallback needed)
 
-**Suggestion:** Extract to separate module:
-```typescript
-// utils/file-resolver.ts
-export class FileResolver {
-	constructor(
-		private vaultActionManager: ObsidianVaultActionManager,
-		private libraryRoot: string,
-		private suffixDelimiter: string,
-	) {}
+### 6. Path Reconstruction Without Suffix - ✅ RESOLVED
 
-	async getCurrentBasename(
-		expectedPath: string,
-		leaves: TreeLeaf[],
-	): Promise<string | null> {
-		// ... extracted logic
-	}
-}
-```
+**Status:** ✅ **RESOLVED** - No longer reconstructs paths
 
-### 6. Path Reconstruction Without Suffix
+**Location:** ~~`init-healer.ts:47-48`~~ (changed)
 
-**Location:** `init-healer.ts:47-48`
-
-**Issue:** 
+**Previous Issue:** 
 ```typescript
 const expectedPath = `${libraryRoot}/${coreNameChain.join("/")}.${leaf.extension}`;
 ```
 
-This builds path without suffix, but actual file may have suffix in basename. The mismatch is intentional (Mode 2: "Path is king"), but could be clearer.
-
-**Note:** This is by design - we're checking if the file's actual basename (with suffix) matches what it should be based on its path. The expected path here is just for lookup, not the canonical path.
+**Resolution:**
+- `init-healer.ts` now uses `SplitPathWithReader` directly
+- No path reconstruction needed - files come with full `SplitPath` info
+- Matching done by comparing `coreName` + parent path from `SplitPath`
+- Clearer intent: match actual files to expected tree structure
 
 ## Code Quality Issues
 
@@ -212,15 +192,6 @@ The current check `Array.isArray(result[0])` will:
 
 This seems like a bug, but need to verify intent.
 
-### 11. `getCurrentBasename` Fallback Logic Necessity
-
-**Question:** Is the parent directory search (lines 88-139) actually needed?
-
-The fallback searches parent directory when file not found at expected path. This suggests files might be at wrong location. Is this:
-- A workaround for healing in progress?
-- Handling edge cases?
-- Can be simplified?
-
 ### 12. Path Reconstruction Consistency
 
 **Question:** Should all path reconstruction use `buildCanonicalBasename` + path building?
@@ -246,21 +217,6 @@ Benefits:
 - Easier to test
 - Consistent behavior
 
-### 14. Add Type Guards for Obsidian API
-
-Instead of deep casting, create type guards:
-```typescript
-function hasVaultAccess(
-	manager: ObsidianVaultActionManager,
-): manager is ObsidianVaultActionManager & {
-	app: { vault: { getAbstractFileByPath: (p: string) => unknown } };
-} {
-	// Runtime check
-	return 'app' in manager && 
-		typeof (manager as any).app?.vault?.getAbstractFileByPath === 'function';
-}
-```
-
 ### 15. Structured Error Handling
 
 Consider Result type pattern for operations that can fail:
@@ -272,17 +228,6 @@ async function getCurrentBasename(...): Promise<Result<string, Error>> {
 }
 ```
 
-### 16. Extract File Resolution Logic
-
-Move `getCurrentBasename` from `librarian.ts` to separate module:
-- `utils/file-resolver.ts` or
-- `orchestration/file-resolver.ts`
-
-Benefits:
-- Testable in isolation
-- Reusable
-- Clearer separation of concerns
-
 ## Priority Recommendations
 
 ### High Priority
@@ -291,14 +236,34 @@ Benefits:
 3. **Remove or gate debug console.logs** - Clean up production code
 
 ### Medium Priority
-4. **Extract `getCurrentBasename` to separate module** - Improves testability
-5. **Standardize path reconstruction** - Use utilities consistently
-6. **Add type guards for Obsidian API** - Improve type safety
+5. **Standardize path reconstruction** - Use utilities consistently (Issue #13)
 
 ### Low Priority
 7. **Remove empty finally blocks** - Code cleanup
 8. **Consider structured error handling** - Future improvement
 9. **Document complex fallback logic** - Improve maintainability
+
+## Refactor Impact Summary
+
+### ✅ Resolved Issues (from `getCurrentBasename` refactor)
+- **Issue #2:** Unsafe type casting - Function removed, no casting needed
+- **Issue #5:** Complex `getCurrentBasename` function - Removed, replaced with simple matching
+- **Issue #6:** Path reconstruction without suffix - No longer needed
+- **Issue #11:** Fallback logic necessity - Removed, all files pre-fetched
+- **Issue #14:** Type guards for Obsidian API - No longer needed
+- **Issue #16:** Extract file resolution logic - Moved to manager
+
+### 🔄 Partially Addressed
+- **Issue #3:** Path reconstruction duplication - Reduced from 3+ to 1 location (`setStatus`)
+- **Issue #4:** Basename extraction duplication - Reduced (one instance removed)
+
+### 🆕 Architecture Improvements
+- **Separation of Concerns:** Librarian only knows `VaultActions`, `TreeActions`, `SplitPath`
+- **No Stale tRefs:** `SplitPathWithReader` replaces `SplitPathWithTRef`
+- **Simplified Tree Reading:** Pure function `readTreeFromSplitFilesWithReaders()`
+- **Simplified Healing:** Synchronous matching with pre-fetched files
+
+See `refactor-impact-analysis.md` for detailed analysis.
 
 ## Notes
 
