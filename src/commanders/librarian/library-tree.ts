@@ -1,4 +1,3 @@
-import type { TFolder } from "obsidian";
 import { TreeActionType } from "./types/literals";
 import type { CoreName, CoreNameChainFromRoot } from "./types/split-basename";
 import type {
@@ -23,13 +22,13 @@ export class LibraryTree {
 	private nodeMap: Map<string, TreeNode> = new Map();
 	private readonly rootFolderName: string;
 
-	constructor(leaves: TreeLeaf[], rootFolder: TFolder) {
-		this.rootFolderName = rootFolder.name;
-		this.root = this.createRootSection(rootFolder);
+	constructor(leaves: TreeLeaf[], rootFolderName: string) {
+		this.rootFolderName = rootFolderName;
+		this.root = this.createRootSection();
 		this.buildTreeFromLeaves(leaves);
 	}
 
-	private createRootSection(_rootFolder: TFolder): SectionNode {
+	private createRootSection(): SectionNode {
 		return {
 			children: [],
 			coreName: "",

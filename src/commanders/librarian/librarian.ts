@@ -14,7 +14,7 @@ import {
 	handleDelete,
 	handleRename,
 	parseEventToHandler,
-	readTreeFromVault,
+	readTreeFromSplitFilesWithReaders,
 	regenerateAllCodexes,
 	regenerateCodexes,
 	writeStatusToMetadata,
@@ -69,7 +69,11 @@ export class Librarian {
 		}
 
 		try {
-			this.tree = await this.readTreeFromVault();
+			this.tree = await readTreeFromSplitFilesWithReaders({
+				files: allFiles,
+				splitPathToLibraryRoot: rootSplitPath,
+				suffixDelimiter: this.suffixDelimiter,
+			});
 			console.log(
 				"[Librarian] Tree initialized successfully, leaves:",
 				this.tree.serializeToLeaves().length,
@@ -365,12 +369,24 @@ export class Librarian {
 	 * Lists all files in the library root and builds a LibraryTree.
 	 */
 	async readTreeFromVault(): Promise<LibraryTree> {
-		return readTreeFromVault(this.libraryRoot, this.suffixDelimiter, {
-			getAbstractFile: (sp) =>
-				this.vaultActionManager.getAbstractFile(sp),
-			listAllFilesWithMdReaders: (sp) =>
-				this.vaultActionManager.listAllFilesWithMdReaders(sp),
-			splitPath: (p) => this.vaultActionManager.splitPath(p),
+		const rootSplitPath = this.vaultActionManager.splitPath(
+			this.libraryRoot,
+		);
+		if (rootSplitPath.type !== "Folder") {
+			throw new Error(
+				`Library root is not a folder: ${this.libraryRoot}`,
+			);
+		}
+
+		const files =
+			await this.vaultActionManager.listAllFilesWithMdReaders(
+				rootSplitPath,
+			);
+
+		return readTreeFromSplitFilesWithReaders({
+			files,
+			splitPathToLibraryRoot: rootSplitPath,
+			suffixDelimiter: this.suffixDelimiter,
 		});
 	}
 

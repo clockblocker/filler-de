@@ -1,4 +1,3 @@
-import type { TFolder } from "obsidian";
 import z from "zod";
 import type { Prettify } from "../../../types/helpers";
 import {

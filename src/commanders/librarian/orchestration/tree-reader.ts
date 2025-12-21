@@ -1,8 +1,5 @@
-import type { TFolder } from "obsidian";
 import type {
-	SplitPathToFile,
 	SplitPathToFolder,
-	SplitPathToMdFile,
 	SplitPathWithReader,
 } from "../../../obsidian-vault-action-manager/types/split-path";
 import { SplitPathType } from "../../../obsidian-vault-action-manager/types/split-path";
@@ -13,38 +10,40 @@ import { isCodexBasename } from "../utils/codex-utils";
 import { splitPathToLeaf } from "../utils/split-path-to-leaf";
 
 /**
- * Read tree from existing vault.
- * Lists all files in the library root and builds a LibraryTree.
+ * Read tree from split files with readers.
+ * Builds a LibraryTree from provided files.
  */
-export async function readTreeFromVault(
-	libraryRoot: string,
-	suffixDelimiter: string,
-	context: TreeReaderContext,
-): Promise<LibraryTree> {
-	const rootSplitPath = context.splitPath(libraryRoot);
-	if (rootSplitPath.type !== SplitPathType.Folder) {
-		throw new Error(`Library root is not a folder: ${libraryRoot}`);
+export async function readTreeFromSplitFilesWithReaders({
+	splitPathToLibraryRoot,
+	files,
+	suffixDelimiter,
+}: {
+	splitPathToLibraryRoot: SplitPathToFolder;
+	files: SplitPathWithReader[];
+	suffixDelimiter: string;
+}): Promise<LibraryTree> {
+	if (splitPathToLibraryRoot.type !== SplitPathType.Folder) {
+		throw new Error(
+			`Library root is not a folder: ${splitPathToLibraryRoot.basename}`,
+		);
 	}
 
-	const rootFolder = await context.getAbstractFile(rootSplitPath);
-	if (!rootFolder) {
-		throw new Error(`Library root not found: ${libraryRoot}`);
-	}
-
-	// Get all files with readers (single call)
-	const allEntries = await context.listAllFilesWithMdReaders(rootSplitPath);
-	const fileEntries = allEntries.filter(
+	// Filter out codex files (generated, not source data)
+	const fileEntries = files.filter(
 		(entry): entry is SplitPathWithReader =>
 			(entry.type === SplitPathType.File ||
 				entry.type === SplitPathType.MdFile) &&
-			// Skip codex files - they're generated, not source data
 			!isCodexBasename(entry.basename),
 	);
 
 	// Create leaves and read content using read() from SplitPathWithReader
 	const leaves = await Promise.all(
 		fileEntries.map(async (entry) => {
-			const leaf = splitPathToLeaf(entry, libraryRoot, suffixDelimiter);
+			const leaf = splitPathToLeaf(
+				entry,
+				splitPathToLibraryRoot.basename,
+				suffixDelimiter,
+			);
 
 			// Read content if md file (has read function)
 			if (entry.type === SplitPathType.MdFile && "read" in entry) {
@@ -62,15 +61,5 @@ export async function readTreeFromVault(
 		}),
 	);
 
-	return new LibraryTree(leaves, rootFolder);
+	return new LibraryTree(leaves, splitPathToLibraryRoot.basename);
 }
-
-export type TreeReaderContext = {
-	splitPath: (
-		path: string,
-	) => SplitPathToFolder | SplitPathToFile | SplitPathToMdFile;
-	getAbstractFile: (splitPath: SplitPathToFolder) => Promise<TFolder | null>;
-	listAllFilesWithMdReaders: (
-		splitPath: SplitPathToFolder,
-	) => Promise<SplitPathWithReader[]>;
-};
