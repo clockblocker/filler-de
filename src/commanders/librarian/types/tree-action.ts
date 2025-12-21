@@ -1,10 +1,14 @@
-import type { TFile } from "obsidian";
 import { TreeActionType } from "./literals";
 import type { CoreName, CoreNameChainFromRoot } from "./split-basename";
 import type { TreeNodeStatus, TreeNodeType } from "./tree-node";
 
 export { TreeActionType };
 
+/**
+ * CreateNodeAction for Scroll or File nodes.
+ * Note: tRef is NOT stored - TFile references become stale when files are renamed/moved.
+ * TFile references are resolved on-demand when file I/O is needed.
+ */
 export type CreateNodeAction =
 	| {
 			type: typeof TreeActionType.CreateNode;
@@ -15,7 +19,7 @@ export type CreateNodeAction =
 				status:
 					| typeof TreeNodeStatus.Done
 					| typeof TreeNodeStatus.NotStarted;
-				tRef: TFile;
+				extension: "md";
 			};
 	  }
 	| {
@@ -25,7 +29,7 @@ export type CreateNodeAction =
 				coreNameChainToParent: CoreNameChainFromRoot;
 				nodeType: typeof TreeNodeType.File;
 				status: typeof TreeNodeStatus.Unknown;
-				tRef: TFile;
+				extension: string;
 			};
 	  }
 	| {

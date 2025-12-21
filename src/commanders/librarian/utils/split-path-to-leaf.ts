@@ -1,6 +1,7 @@
-import type { TFile } from "obsidian";
 import type {
+	SplitPathToFile,
 	SplitPathToFileWithTRef,
+	SplitPathToMdFile,
 	SplitPathToMdFileWithTRef,
 } from "../../../obsidian-vault-action-manager/types/split-path";
 import type { MetaInfo } from "../../../services/dto-services/meta-info-manager/types";
@@ -9,18 +10,24 @@ import { TreeNodeStatus, TreeNodeType } from "../types/tree-node";
 import { parseBasename } from "./parse-basename";
 
 /**
- * Codec: SplitPath + tRef → TreeLeaf
+ * Codec: SplitPath → TreeLeaf
  * Converts filesystem representation to tree representation.
+ * Note: tRef is NOT stored - TFile references become stale when files are renamed/moved.
  *
+ * @param splitPath - SplitPath (with or without tRef, we don't use it)
  * @param rootFolderName - The library root folder name to strip from pathParts
  * @param suffixDelimiter - Delimiter for parsing basename suffix
  */
 export function splitPathToLeaf(
-	splitPathWithTRef: SplitPathToFileWithTRef | SplitPathToMdFileWithTRef,
+	splitPath:
+		| SplitPathToFile
+		| SplitPathToMdFile
+		| SplitPathToFileWithTRef
+		| SplitPathToMdFileWithTRef,
 	rootFolderName = "Library",
 	suffixDelimiter = "-",
 ): TreeLeaf {
-	const { basename, pathParts, type } = splitPathWithTRef;
+	const { basename, pathParts, type } = splitPath;
 	const { coreName } = parseBasename(basename, suffixDelimiter);
 
 	// Convert pathParts to coreNameChainToParent by stripping root folder
@@ -31,17 +38,19 @@ export function splitPathToLeaf(
 		return {
 			coreName,
 			coreNameChainToParent,
+			extension: "md",
 			status: TreeNodeStatus.NotStarted,
-			tRef: splitPathWithTRef.tRef,
 			type: TreeNodeType.Scroll,
 		};
 	}
 
+	// Extract extension from splitPath
+	const extension = "extension" in splitPath ? splitPath.extension : "";
 	return {
 		coreName,
 		coreNameChainToParent,
+		extension,
 		status: TreeNodeStatus.Unknown,
-		tRef: splitPathWithTRef.tRef,
 		type: TreeNodeType.File,
 	};
 }
@@ -49,17 +58,20 @@ export function splitPathToLeaf(
 /**
  * Reads file content, extracts MetaInfo, and injects status into ScrollNode.
  * FileNodes are returned unchanged.
+ * Note: Uses original file path (with suffix) - not reconstructed from tree structure.
  */
 export async function withStatusFromMeta(
 	leaf: TreeLeaf,
-	readContent: (tRef: TFile) => Promise<string>,
+	originalPath: string,
+	readContent: (path: string) => Promise<string>,
 	extractMetaInfo: (content: string) => MetaInfo | null,
 ): Promise<TreeLeaf> {
 	if (leaf.type !== TreeNodeType.Scroll) {
 		return leaf;
 	}
 
-	const content = await readContent(leaf.tRef);
+	// Use original path (includes suffix in basename) - don't reconstruct from tree
+	const content = await readContent(originalPath);
 	const meta = extractMetaInfo(content);
 
 	if (!meta || !("status" in meta)) {

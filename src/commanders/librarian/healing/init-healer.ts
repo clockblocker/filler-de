@@ -35,25 +35,43 @@ type LeafHealInfo = {
 
 /**
  * Analyze a leaf to determine if it needs healing.
+ * Note: currentBasename is resolved on-demand - tRef removed due to staleness.
  */
 function analyzeLeaf(
 	leaf: TreeLeaf,
-	_libraryRoot: string,
+	libraryRoot: string,
 	suffixDelimiter: string,
+	getCurrentBasename: (path: string) => string | null,
 ): LeafHealInfo {
-	// libraryRoot kept for potential future use
-	const currentBasename = leaf.tRef.basename;
+	// Reconstruct expected path from tree structure
+	const coreNameChain = [...leaf.coreNameChainToParent, leaf.coreName];
+	const expectedPath = `${libraryRoot}/${coreNameChain.join("/")}.${leaf.extension}`;
+	
+	// Get current basename from vault (tRef removed - resolve on-demand)
+	const currentBasename = getCurrentBasename(expectedPath);
+	if (!currentBasename) {
+		// File doesn't exist at expected path - skip healing
+		return {
+			currentBasename: "",
+			expectedBasename: "",
+			leaf,
+			needsRename: false,
+		};
+	}
+	
+	console.log(
+		`[TreeStalenessTest] analyzeLeaf: coreName=${leaf.coreName} chain=${leaf.coreNameChainToParent.join("/")} currentBasename=${currentBasename} ext=${leaf.extension}`,
+	);
+	
 	const parsed = parseBasename(currentBasename, suffixDelimiter);
 
 	// Path relative to library root
-	const coreNameChain = leaf.coreNameChainToParent;
-
-	const needsRename = !suffixMatchesPath(parsed.splitSuffix, coreNameChain);
+	const needsRename = !suffixMatchesPath(parsed.splitSuffix, leaf.coreNameChainToParent);
 
 	const expectedBasename = needsRename
 		? buildBasename(
 				parsed.coreName,
-				computeSuffixFromPath(coreNameChain),
+				computeSuffixFromPath(leaf.coreNameChainToParent),
 				suffixDelimiter,
 			)
 		: currentBasename;
@@ -75,7 +93,6 @@ function leafToSplitPath(
 	libraryRoot: string,
 ): SplitPathToFile | SplitPathToMdFile {
 	const pathParts = [libraryRoot, ...leaf.coreNameChainToParent];
-	const extension = leaf.tRef.extension;
 
 	if (leaf.type === TreeNodeType.Scroll) {
 		return {
@@ -88,7 +105,7 @@ function leafToSplitPath(
 
 	return {
 		basename,
-		extension,
+		extension: leaf.extension,
 		pathParts,
 		type: "File",
 	};
@@ -130,17 +147,19 @@ function createRenameAction(
  * @param leaves - Tree leaves to heal
  * @param libraryRoot - Library root folder name
  * @param suffixDelimiter - Delimiter for suffix parsing
+ * @param getCurrentBasename - Function to get current basename from path (tRef removed - resolve on-demand)
  * @returns Rename and delete actions
  */
 export function healOnInit(
 	leaves: TreeLeaf[],
 	libraryRoot: string,
 	suffixDelimiter = "-",
+	getCurrentBasename: (path: string) => string | null = () => null,
 ): InitHealResult {
 	const renameActions: VaultAction[] = [];
 
 	for (const leaf of leaves) {
-		const info = analyzeLeaf(leaf, libraryRoot, suffixDelimiter);
+		const info = analyzeLeaf(leaf, libraryRoot, suffixDelimiter, getCurrentBasename);
 
 		if (info.needsRename) {
 			renameActions.push(createRenameAction(info, libraryRoot));
@@ -157,29 +176,29 @@ export function healOnInit(
 /**
  * Check if a single leaf needs healing.
  * Useful for individual file checks.
+ * Note: requires getCurrentBasename function to resolve current basename (tRef removed).
  */
 export function leafNeedsHealing(
 	leaf: TreeLeaf,
 	libraryRoot: string,
-	suffixDelimiter = "-",
+	suffixDelimiter: string,
+	getCurrentBasename: (path: string) => string | null,
 ): boolean {
-	const info = analyzeLeaf(leaf, libraryRoot, suffixDelimiter);
+	const info = analyzeLeaf(leaf, libraryRoot, suffixDelimiter, getCurrentBasename);
 	return info.needsRename;
 }
 
 /**
  * Get the expected basename for a leaf.
+ * Note: tRef removed - computes expected basename from tree structure only.
  */
 export function getExpectedBasename(
 	leaf: TreeLeaf,
 	suffixDelimiter = "-",
 ): string {
-	const currentBasename = leaf.tRef.basename;
-	const parsed = parseBasename(currentBasename, suffixDelimiter);
 	const coreNameChain = leaf.coreNameChainToParent;
-
 	return buildBasename(
-		parsed.coreName,
+		leaf.coreName,
 		computeSuffixFromPath(coreNameChain),
 		suffixDelimiter,
 	);

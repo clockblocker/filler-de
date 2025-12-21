@@ -111,7 +111,10 @@ export function findCommonAncestor(
 	let commonLength = first.length;
 
 	for (let i = 1; i < chains.length; i++) {
-		const other = chains[i]!;
+		const other = chains[i];
+		if (!other) {
+			throw new Error(`Chain ${i} is undefined`);
+		}
 		let j = 0;
 		while (j < commonLength && j < other.length && first[j] === other[j]) {
 			j++;

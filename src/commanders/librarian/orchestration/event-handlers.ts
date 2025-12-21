@@ -20,7 +20,6 @@ import {
 } from "./path-parsers";
 import {
 	applyActionsToTree,
-	getTRefForPath,
 	type TreeApplierContext,
 } from "./tree-applier";
 import { readTreeFromVault, type TreeReaderContext } from "./tree-reader";
@@ -34,7 +33,7 @@ export type EventHandlerContext = {
 	suffixDelimiter: string;
 	tree: LibraryTree | null;
 } & Pick<CodexRegeneratorContext, "getNode"> &
-	Pick<TreeApplierContext, "getTRef"> &
+	Pick<TreeApplierContext, "suffixDelimiter"> &
 	Pick<TreeReaderContext, "listAll">;
 
 /**
@@ -213,13 +212,17 @@ export async function handleRename(
 
 	const actionArray = Array.isArray(actions) ? actions : await actions;
 
+	console.log(
+		`[TreeStalenessTest] handleRename: oldPath=${oldPath} newPath=${newPath} isFolder=${isFolder} actionsCount=${actionArray.length} types=[${actionArray.map((a) => a.type).join(", ")}]`,
+	);
+
 	if (actionArray.length > 0) {
 		try {
 			await context.dispatch(actionArray);
 			if (context.tree) {
 				const impactedChains = applyActionsToTree(actionArray, {
-					getTRef: context.getTRef,
 					libraryRoot: context.libraryRoot,
+					suffixDelimiter: context.suffixDelimiter,
 					tree: context.tree,
 				});
 				await regenerateCodexes(impactedChains, {
@@ -232,7 +235,11 @@ export async function handleRename(
 		} finally {
 		}
 	} else {
+		console.log(
+			`[TreeStalenessTest] handleRename: No healing actions, re-reading tree oldPath=${oldPath} newPath=${newPath}`,
+		);
 		// No healing needed, but still update tree and codexes for user's rename
+		// TODO: Should apply tree actions here instead of re-reading tree
 		await updateTreeAndCodexesForRename(newPath, context);
 	}
 

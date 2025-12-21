@@ -14,11 +14,13 @@ Vault Action Manager acepts VaultActions
 
 2) LibraryTree. The shadow of existing file system. Consists of:
 - ScrollNodes (a shadows of markdown Tfiles)
-{ coreName: CoreName, coreNameChainToParent: CoreNameChainFromRoot, tRef: TFile, type: "Scroll", status: "Done" | "NotStarted" }
+{ coreName: CoreName, coreNameChainToParent: CoreNameChainFromRoot, extension: "md", type: "Scroll", status: "Done" | "NotStarted" }
 - FileNodes (a shadows of non-markdown Tfiles)
-{ coreName: CoreName, coreNameChainToParent: CoreNameChainFromRoot, tRef: TFile, type: "File", status: "Unknown" }
+{ coreName: CoreName, coreNameChainToParent: CoreNameChainFromRoot, extension: string, type: "File", status: "Unknown" }
 - SectionNodes (a shadows of Tfolder)
 { coreName: CoreName, coreNameChainToParent: CoreNameChainFromRoot, type: "Section", status: "Done" | "NotStarted", children: (ScrollNode | FileNode | SectionNode)[]}
+
+**Note on TFile references**: TFile references (tRef) are NOT stored in tree nodes because they become stale when files are renamed/moved. Obsidian does not automatically update TFile.path when files are renamed/moved, so storing tRefs in the tree would lead to stale references pointing to old paths. Instead, TFile references are resolved on-demand when file I/O is needed by reconstructing the path from tree structure (coreNameChainToParent + coreName + extension) and looking it up in the vault.
 
 LibraryTree is initialized with:
 - an array of TreeLeaf: (ScrollNode | FileNode)[]

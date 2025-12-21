@@ -1,4 +1,3 @@
-import type { TFile } from "obsidian";
 import type { SplitPath } from "../../../obsidian-vault-action-manager/types/split-path";
 import { SplitPathType } from "../../../obsidian-vault-action-manager/types/split-path";
 import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
@@ -10,19 +9,20 @@ export type MetadataServiceContext = {
 		actions: VaultAction[],
 	) => Promise<{ isErr: () => boolean; error?: Array<{ error: string }> }>;
 	readContent: (splitPath: SplitPath) => Promise<string>;
-	splitPath: (tFile: TFile) => SplitPath;
+	splitPath: (path: string) => SplitPath;
 };
 
 /**
  * Write status to metadata in file.
  * Pure function that takes context.
+ * Note: tRef removed - path is resolved from tree structure (tRef becomes stale).
  */
 export async function writeStatusToMetadata(
-	tFile: TFile,
+	path: string,
 	status: TreeNodeStatus,
 	context: MetadataServiceContext,
 ): Promise<void> {
-	const splitPath = context.splitPath(tFile);
+	const splitPath = context.splitPath(path);
 	if (splitPath.type !== SplitPathType.MdFile) {
 		return;
 	}

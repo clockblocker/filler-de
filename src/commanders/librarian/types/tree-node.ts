@@ -1,4 +1,4 @@
-import type { TFile, TFolder } from "obsidian";
+import type { TFolder } from "obsidian";
 import z from "zod";
 import type { Prettify } from "../../../types/helpers";
 import {
@@ -30,20 +30,30 @@ export const TreeNodeType = TreeNodeTypeSchema.enum;
 
 export type CoreName = string;
 
+/**
+ * ScrollNode represents a markdown file in the tree.
+ * Note: TFile references are NOT stored because they become stale when files are renamed/moved.
+ * Obsidian does not automatically update TFile.path, so tRefs are resolved on-demand when needed.
+ */
 export type ScrollNode = {
 	coreName: CoreName;
 	type: typeof TreeNodeType.Scroll;
 	coreNameChainToParent: CoreName[];
 	status: typeof TreeNodeStatus.Done | typeof TreeNodeStatus.NotStarted;
-	tRef: TFile;
+	extension: "md";
 };
 
+/**
+ * FileNode represents a non-markdown file in the tree.
+ * Note: TFile references are NOT stored because they become stale when files are renamed/moved.
+ * Obsidian does not automatically update TFile.path, so tRefs are resolved on-demand when needed.
+ */
 export type FileNode = {
 	coreName: CoreName;
 	type: typeof TreeNodeType.File;
 	coreNameChainToParent: CoreName[];
 	status: typeof TreeNodeStatus.Unknown;
-	tRef: TFile;
+	extension: string;
 };
 
 export type LeafNode = ScrollNode | FileNode;

@@ -8,27 +8,27 @@
  * - Rename* (diff folder) → MoveNode
  */
 
-import type { TFile } from "obsidian";
 import type { SplitPath } from "../../../obsidian-vault-action-manager/types/split-path";
 import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
 import { TreeActionType } from "../types/literals";
 import type { CoreNameChainFromRoot } from "../types/split-basename";
 import type { TreeAction } from "../types/tree-action";
 import { TreeNodeStatus, TreeNodeType } from "../types/tree-node";
+import { parseBasename } from "../utils/parse-basename";
 
 /**
  * Context needed for translation.
- * TFile refs are needed for CreateNode actions.
+ * Note: tRef removed - TFile references become stale when files are renamed/moved.
  */
 export type TranslationContext = {
 	/** Library root folder name (e.g., "Library") */
 	libraryRoot: string;
-	/** Get TFile ref for a path (needed for CreateNode) */
-	getTRef?: (path: string) => TFile | null;
 	/** Initial status for new scroll nodes */
 	defaultScrollStatus?:
 		| typeof TreeNodeStatus.Done
 		| typeof TreeNodeStatus.NotStarted;
+	/** Suffix delimiter for parsing basenames (default: "-") */
+	suffixDelimiter?: string;
 };
 
 /**
@@ -83,15 +83,22 @@ function sameParent(from: SplitPath, to: SplitPath): boolean {
 
 /**
  * Extract coreNameChain from SplitPath (relative to library root).
+ * Parses basename to extract coreName (not full basename).
  */
 function toCoreNameChain(
 	splitPath: SplitPath,
 	libraryRoot: string,
+	suffixDelimiter = "-",
 ): CoreNameChainFromRoot {
 	const parts = splitPath.pathParts;
 	// Skip library root
 	const startIndex = parts[0] === libraryRoot ? 1 : 0;
-	return [...parts.slice(startIndex), splitPath.basename];
+	const pathParts = parts.slice(startIndex);
+	
+	// Parse basename to get coreName (not full basename with suffix)
+	const { coreName } = parseBasename(splitPath.basename, suffixDelimiter);
+	
+	return [...pathParts, coreName];
 }
 
 /**
@@ -128,22 +135,20 @@ function createFileAction(
 	splitPath: SplitPath,
 	context: TranslationContext,
 ): TreeAction | null {
-	const tRef = context.getTRef?.(splitPathToString(splitPath));
-	if (!tRef) {
-		// Can't create FileNode without TRef
-		return null;
-	}
+	const suffixDelimiter = context.suffixDelimiter ?? "-";
+	const { coreName } = parseBasename(splitPath.basename, suffixDelimiter);
+	const extension = "extension" in splitPath ? splitPath.extension : "";
 
 	return {
 		payload: {
-			coreName: splitPath.basename,
+			coreName,
 			coreNameChainToParent: toParentChain(
 				splitPath,
 				context.libraryRoot,
 			),
 			nodeType: TreeNodeType.File,
 			status: TreeNodeStatus.Unknown,
-			tRef,
+			extension,
 		},
 		type: TreeActionType.CreateNode,
 	};
@@ -153,22 +158,19 @@ function createScrollAction(
 	splitPath: SplitPath,
 	context: TranslationContext,
 ): TreeAction | null {
-	const tRef = context.getTRef?.(splitPathToString(splitPath));
-	if (!tRef) {
-		// Can't create ScrollNode without TRef
-		return null;
-	}
+	const suffixDelimiter = context.suffixDelimiter ?? "-";
+	const { coreName } = parseBasename(splitPath.basename, suffixDelimiter);
 
 	return {
 		payload: {
-			coreName: splitPath.basename,
+			coreName,
 			coreNameChainToParent: toParentChain(
 				splitPath,
 				context.libraryRoot,
 			),
 			nodeType: TreeNodeType.Scroll,
 			status: context.defaultScrollStatus ?? TreeNodeStatus.NotStarted,
-			tRef,
+			extension: "md",
 		},
 		type: TreeActionType.CreateNode,
 	};
@@ -191,27 +193,52 @@ function translateRename(
 	to: SplitPath,
 	context: TranslationContext,
 ): TreeAction {
-	const fromChain = toCoreNameChain(from, context.libraryRoot);
+	const suffixDelimiter = context.suffixDelimiter ?? "-";
+	
+	const fromPath = `${from.pathParts.join("/")}/${from.basename}`;
+	const toPath = `${to.pathParts.join("/")}/${to.basename}`;
+	const sameParentResult = sameParent(from, to);
+	
+	// Try to find node at fromChain first
+	const fromChain = toCoreNameChain(from, context.libraryRoot, suffixDelimiter);
+	
+	console.log(
+		`[TreeStalenessTest] translateRename: fromPath=${fromPath} toPath=${toPath} fromChain=${fromChain.join("/")} sameParent=${sameParentResult}`,
+	);
 
 	if (sameParent(from, to)) {
 		// Same folder → ChangeNodeName
-		return {
+		// Parse to.basename to get coreName (not full basename)
+		const { coreName: newCoreName } = parseBasename(
+			to.basename,
+			suffixDelimiter,
+		);
+		const action = {
 			payload: {
 				coreNameChain: fromChain,
-				newCoreName: to.basename,
+				newCoreName,
 			},
 			type: TreeActionType.ChangeNodeName,
 		};
+		console.log(
+			`[TreeStalenessTest] translateRename → ChangeNodeName: chain=${fromChain.join("/")} newCoreName=${newCoreName}`,
+		);
+		return action;
 	}
 
 	// Different folder → MoveNode
-	return {
+	const newParentChain = toParentChain(to, context.libraryRoot);
+	const action = {
 		payload: {
 			coreNameChain: fromChain,
-			newCoreNameChainToParent: toParentChain(to, context.libraryRoot),
+			newCoreNameChainToParent: newParentChain,
 		},
 		type: TreeActionType.MoveNode,
 	};
+	console.log(
+		`[TreeStalenessTest] translateRename → MoveNode: chain=${fromChain.join("/")} newParent=${newParentChain.join("/")}`,
+	);
+	return action;
 }
 
 function splitPathToString(splitPath: SplitPath): string {

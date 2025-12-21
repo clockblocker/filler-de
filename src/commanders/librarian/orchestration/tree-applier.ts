@@ -1,7 +1,3 @@
-import type { TFile } from "obsidian";
-import { TFolder } from "obsidian";
-import type { SplitPath } from "../../../obsidian-vault-action-manager/types/split-path";
-import { SplitPathType } from "../../../obsidian-vault-action-manager/types/split-path";
 import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
 import { collectImpactedSections } from "../codex";
 import type { LibraryTree } from "../library-tree";
@@ -9,8 +5,8 @@ import { translateVaultAction } from "../reconciliation";
 import type { CoreNameChainFromRoot } from "../types/split-basename";
 
 export type TreeApplierContext = {
-	getTRef: (path: string) => TFile | null;
 	libraryRoot: string;
+	suffixDelimiter?: string;
 	tree: LibraryTree;
 };
 
@@ -23,53 +19,51 @@ export function applyActionsToTree(
 	context: TreeApplierContext,
 ): CoreNameChainFromRoot[] {
 	const actionResults: Array<
-		| CoreNameChainFromRoot
-		| [CoreNameChainFromRoot, CoreNameChainFromRoot]
+		CoreNameChainFromRoot | [CoreNameChainFromRoot, CoreNameChainFromRoot]
 	> = [];
+
+	const typesStr = actions.map((a) => String(a.type)).join(", ");
+	console.log(
+		`[TreeStalenessTest] applyActionsToTree: count=${String(actions.length)} types=[${typesStr}]`,
+	);
+
+	// Note: tRef removed - TFile references become stale when files are renamed/moved
 
 	for (const action of actions) {
 		const treeAction = translateVaultAction(action, {
-			getTRef: context.getTRef,
 			libraryRoot: context.libraryRoot,
+			suffixDelimiter: context.suffixDelimiter,
 		});
 
+		const vaultActionType = String(action.type);
+		const treeActionType = treeAction ? String(treeAction.type) : "null";
+		console.log(
+			`[TreeStalenessTest] translateVaultAction: vaultAction=${vaultActionType} → treeAction=${treeActionType}`,
+		);
+
 		if (treeAction) {
+			console.log(
+				`[TreeStalenessTest] calling applyTreeAction: type=${treeAction.type}`,
+			);
 			const result = context.tree.applyTreeAction(treeAction);
+			const resultStr =
+				typeof result === "string"
+					? result
+					: `[${result[0]}, ${result[1]}]`;
+			console.log(
+				`[TreeStalenessTest] applyTreeAction returned: ${resultStr}`,
+			);
 			actionResults.push(result);
+		} else {
+			console.log(
+				"[TreeStalenessTest] treeAction is null, skipping applyTreeAction",
+			);
 		}
 	}
+
+	// Note: tRef removed - TFile references become stale when files are renamed/moved
 
 	return collectImpactedSections(actionResults);
 }
 
-/**
- * Get TFile ref for a path via vaultActionManager.
- * Pure function that takes context.
- */
-export function getTRefForPath(
-	path: string,
-	splitPath: (path: string) => SplitPath,
-	getApp: () => {
-		vault: {
-			getAbstractFileByPath: (p: string) => unknown;
-		};
-	} | null,
-): TFile | null {
-	try {
-		const sp = splitPath(path);
-		if (sp.type === SplitPathType.Folder) {
-			return null;
-		}
-		// getAbstractFile is async, but we need sync access
-		// Use Obsidian's vault.getAbstractFileByPath directly
-		const app = getApp();
-		if (!app) {
-			return null;
-		}
-		const file = app.vault?.getAbstractFileByPath?.(path);
-		return file instanceof TFolder ? null : (file as TFile | null);
-	} catch {
-		return null;
-	}
-}
-
+// Note: getTRefForPath removed - tRefs are no longer stored in tree nodes

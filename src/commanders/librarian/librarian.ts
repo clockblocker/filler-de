@@ -9,7 +9,6 @@ import {
 	applyActionsToTree,
 	type CodexRegeneratorContext,
 	type EventHandlerContext,
-	getTRefForPath,
 	handleCreate,
 	handleDelete,
 	handleRename,
@@ -22,6 +21,7 @@ import {
 import { TreeActionType } from "./types/literals";
 import type { CoreNameChainFromRoot } from "./types/split-basename";
 import { TreeNodeStatus, TreeNodeType } from "./types/tree-node";
+import { buildCanonicalBasename } from "./utils/path-suffix-utils";
 
 export class Librarian {
 	private tree: LibraryTree | null = null;
@@ -41,18 +41,51 @@ export class Librarian {
 	async init(): Promise<InitHealResult> {
 		try {
 			this.tree = await this.readTreeFromVault();
+			console.log(
+				"[Librarian] Tree initialized successfully, leaves:",
+				this.tree.serializeToLeaves().length,
+			);
 		} catch (error) {
 			console.error("[Librarian] Failed to read tree from vault:", error);
+			this.tree = null;
 			// Return empty result if tree can't be read
+			return { deleteActions: [], renameActions: [] };
+		}
+
+		if (!this.tree) {
+			console.error("[Librarian] Tree is null after readTreeFromVault");
 			return { deleteActions: [], renameActions: [] };
 		}
 
 		const leaves = this.tree.serializeToLeaves();
 
+		// Get current basename from path (tRef removed - resolve on-demand)
+		const getCurrentBasename = (path: string): string | null => {
+			const file = (
+				this.vaultActionManager as unknown as {
+					app?: {
+						vault?: {
+							getAbstractFileByPath?: (p: string) => unknown;
+						};
+					};
+				}
+			).app?.vault?.getAbstractFileByPath?.(path);
+			if (
+				file &&
+				typeof file === "object" &&
+				file !== null &&
+				"basename" in file
+			) {
+				return (file as { basename: string }).basename;
+			}
+			return null;
+		};
+
 		const healResult = healOnInit(
 			leaves,
 			this.libraryRoot,
 			this.suffixDelimiter,
+			getCurrentBasename,
 		);
 
 		if (healResult.renameActions.length > 0) {
@@ -63,8 +96,8 @@ export class Librarian {
 				const impactedChains = applyActionsToTree(
 					healResult.renameActions,
 					{
-						getTRef: (p) => this.getTRefForPath(p),
 						libraryRoot: this.libraryRoot,
+						suffixDelimiter: this.suffixDelimiter,
 						tree: this.tree,
 					},
 				);
@@ -88,6 +121,11 @@ export class Librarian {
 
 		return healResult;
 	}
+
+	/**
+	 * Note: testTRefStaleness removed - tRefs are no longer stored in tree nodes.
+	 * TFile references become stale when files are renamed/moved, so they're resolved on-demand.
+	 */
 
 	/**
 	 * Subscribe to file system events from VaultActionManager.
@@ -174,7 +212,6 @@ export class Librarian {
 				const node = this.tree.getNode(chain);
 				return node?.type === TreeNodeType.Section ? node : null;
 			},
-			getTRef: (p) => this.getTRefForPath(p),
 			libraryRoot: this.libraryRoot,
 			listAll: (sp) => this.vaultActionManager.listAll(sp),
 			readTree: () => this.readTreeFromVault(),
@@ -203,8 +240,24 @@ export class Librarian {
 		status: TreeNodeStatus,
 	): Promise<void> {
 		if (!this.tree) {
-			console.warn("[Librarian] setStatus called before init");
-			return;
+			console.warn(
+				"[Librarian] setStatus called before init, attempting to reinitialize...",
+			);
+			try {
+				await this.init();
+				if (!this.tree) {
+					console.error(
+						"[Librarian] Failed to initialize tree in setStatus",
+					);
+					return;
+				}
+			} catch (error) {
+				console.error(
+					"[Librarian] Error reinitializing tree in setStatus:",
+					error,
+				);
+				return;
+			}
 		}
 
 		const newStatus =
@@ -222,8 +275,25 @@ export class Librarian {
 
 		// Write metadata to file if this is a Scroll node
 		if (node?.type === TreeNodeType.Scroll) {
+			// Reconstruct canonical basename from tree structure (suffix = reversed path chain)
+			const canonicalBasename = buildCanonicalBasename(
+				node.coreName,
+				node.coreNameChainToParent,
+				this.suffixDelimiter,
+			);
+			// Build full path: libraryRoot + pathChain + canonicalBasename + extension
+			const pathChain =
+				node.coreNameChainToParent.length > 0
+					? `${node.coreNameChainToParent.join("/")}/`
+					: "";
+			const path = `${this.libraryRoot}/${pathChain}${canonicalBasename}.${node.extension}`;
+
+			console.log(
+				`[TreeStalenessTest] writeStatusToMetadata: chain=${coreNameChain.join("/")} status=${status} canonicalBasename=${canonicalBasename} path=${path}`,
+			);
+
 			try {
-				await writeStatusToMetadata(node.tRef, status, {
+				await writeStatusToMetadata(path, status, {
 					dispatch: (actions) =>
 						this.vaultActionManager.dispatch(actions),
 					readContent: (sp) => {
@@ -232,8 +302,7 @@ export class Librarian {
 						}
 						return Promise.resolve("");
 					},
-					splitPath: (tFile) =>
-						this.vaultActionManager.splitPath(tFile),
+					splitPath: (p) => this.vaultActionManager.splitPath(p),
 				});
 			} catch (error) {
 				console.error(
@@ -266,33 +335,5 @@ export class Librarian {
 		});
 	}
 
-	/**
-	 * Get TFile ref for a path via vaultActionManager.
-	 */
-	private getTRefForPath(path: string): import("obsidian").TFile | null {
-		return getTRefForPath(
-			path,
-			(p) => this.vaultActionManager.splitPath(p),
-			() => {
-				const app = (
-					this.vaultActionManager as unknown as {
-						app?: {
-							vault?: {
-								getAbstractFileByPath?: (p: string) => unknown;
-							};
-						};
-					}
-				).app;
-				if (app?.vault?.getAbstractFileByPath) {
-					return {
-						vault: {
-							getAbstractFileByPath:
-								app.vault.getAbstractFileByPath,
-						},
-					};
-				}
-				return null;
-			},
-		);
-	}
+	// Note: getTRefForPath removed - tRefs are no longer stored in tree nodes
 }

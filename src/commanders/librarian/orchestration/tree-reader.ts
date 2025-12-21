@@ -1,4 +1,5 @@
 import type { TFolder } from "obsidian";
+import { systemPathFromSplitPath } from "../../../obsidian-vault-action-manager/helpers/pathfinder";
 import type {
 	SplitPathToFile,
 	SplitPathToFileWithTRef,
@@ -43,12 +44,18 @@ export async function readTreeFromVault(
 			!isCodexBasename(entry.basename),
 	);
 
-	const leavesWithoutStatus = fileEntries.map((entry) =>
-		splitPathToLeaf(entry, libraryRoot, suffixDelimiter),
-	);
+	// Create leaves and preserve original paths for reading content
+	const leavesWithPaths = fileEntries.map((entry) => {
+		const leaf = splitPathToLeaf(entry, libraryRoot, suffixDelimiter);
+		// Build original path from splitPath (includes suffix in basename)
+		// Use systemPathFromSplitPath to correctly construct the path
+		const originalPath = systemPathFromSplitPath(entry);
+		return { leaf, originalPath };
+	});
 
-	const readContent = (tRef: import("obsidian").TFile) => {
-		const sp = context.splitPath(tRef.path);
+	// Read content using original paths (not reconstructed from tree)
+	const readContent = (path: string) => {
+		const sp = context.splitPath(path);
 		if (sp.type !== SplitPathType.MdFile) {
 			return Promise.resolve("");
 		}
@@ -56,10 +63,27 @@ export async function readTreeFromVault(
 	};
 
 	const leaves = await Promise.all(
-		leavesWithoutStatus.map((leaf) =>
-			withStatusFromMeta(leaf, readContent, extractMetaInfo),
+		leavesWithPaths.map(({ leaf, originalPath }) =>
+			withStatusFromMeta(
+				leaf,
+				originalPath,
+				readContent,
+				extractMetaInfo,
+			),
 		),
 	);
+
+	// Log tree creation
+	console.log(
+		`[TreeStalenessTest] readTreeFromVault: root=${libraryRoot} leavesCount=${leaves.length}`,
+	);
+	for (const leaf of leaves) {
+		const chain = [...leaf.coreNameChainToParent, leaf.coreName];
+		const expectedPath = `${libraryRoot}/${chain.join("/")}.${leaf.extension}`;
+		console.log(
+			`[TreeStalenessTest]   leaf: coreName=${leaf.coreName} chain=${leaf.coreNameChainToParent.join("/")} expectedPath=${expectedPath}`,
+		);
+	}
 
 	return new LibraryTree(leaves, rootFolder);
 }
