@@ -26,57 +26,12 @@ export class Dispatcher {
 			return ok(undefined);
 		}
 
-		console.log("[Dispatcher] dispatch: input actions:", actions.length);
-		console.log(
-			"[Dispatcher] dispatch: input action types:",
-			actions.map((a) => a.type),
-		);
-
 		// Ensure all destinations exist: add CreateFolder/CreateMdFile actions
 		const withEnsured = this.ensureAllDestinationsExist(actions);
-		console.log(
-			"[Dispatcher] dispatch: after ensureAllDestinationsExist:",
-			withEnsured.length,
-		);
-		console.log(
-			"[Dispatcher] dispatch: after ensureAllDestinationsExist types:",
-			withEnsured.map((a) => a.type),
-		);
 
 		const collapsed = await collapseActions(withEnsured);
-		console.log(
-			"[Dispatcher] dispatch: after collapseActions:",
-			collapsed.length,
-		);
-		console.log(
-			"[Dispatcher] dispatch: after collapseActions types:",
-			collapsed.map((a) => a.type),
-		);
-		console.log(
-			"[Dispatcher] dispatch: after collapseActions details:",
-			collapsed.map((a) => {
-				if ("splitPath" in a.payload) {
-					return {
-						path: makeSystemPathForSplitPath(a.payload.splitPath),
-						type: a.type,
-					};
-				}
-				if ("from" in a.payload && "to" in a.payload) {
-					return {
-						from: makeSystemPathForSplitPath(a.payload.from),
-						to: makeSystemPathForSplitPath(a.payload.to),
-						type: a.type,
-					};
-				}
-				return { path: "N/A", type: a.type };
-			}),
-		);
 
 		const sorted = sortActionsByWeight(collapsed);
-		console.log(
-			"[Dispatcher] dispatch: after sortActionsByWeight:",
-			sorted.length,
-		);
 
 		// Register paths from COLLAPSED actions (the ones that will actually execute)
 		// This ensures we track paths from the final actions, not the original batch
@@ -84,43 +39,13 @@ export class Dispatcher {
 
 		const errors: DispatchError[] = [];
 
-		console.log(
-			"[Dispatcher] dispatch: executing",
-			sorted.length,
-			"actions",
-		);
 		for (const action of sorted) {
-			let systemPath = "N/A";
-			if ("splitPath" in action.payload) {
-				systemPath = makeSystemPathForSplitPath(
-					action.payload.splitPath,
-				);
-			} else if ("from" in action.payload && "to" in action.payload) {
-				systemPath = `${makeSystemPathForSplitPath(action.payload.from)} -> ${makeSystemPathForSplitPath(action.payload.to)}`;
-			}
-			console.log(
-				"[Dispatcher] dispatch: executing action:",
-				action.type,
-				systemPath,
-			);
 			const result = await this.executor.execute(action);
 			if (result.isErr()) {
-				console.error(
-					"[Dispatcher] dispatch: action failed:",
-					action.type,
-					systemPath,
-					result.error,
-				);
 				errors.push({
 					action,
 					error: result.error,
 				});
-			} else {
-				console.log(
-					"[Dispatcher] dispatch: action succeeded:",
-					action.type,
-					systemPath,
-				);
 			}
 		}
 

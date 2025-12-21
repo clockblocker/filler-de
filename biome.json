@@ -47,7 +47,7 @@
 				"useSingleVarDeclarator": "error"
 			},
 			"suspicious": {
-				"noConsole": { "level": "off", "options": { "allow": ["log"] } }
+				"noConsole": "error"
 			}
 		}
 	}

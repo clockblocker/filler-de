@@ -4,6 +4,7 @@ import type { SplitPathToMdFile } from "../../../obsidian-vault-action-manager/t
 import { SplitPathType } from "../../../obsidian-vault-action-manager/types/split-path";
 import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
 import { VaultActionType } from "../../../obsidian-vault-action-manager/types/vault-action";
+import { log } from "../../../utils/logger";
 import { generateCodexContent } from "../codex";
 import type { CoreNameChainFromRoot } from "../types/split-basename";
 import type { SectionNode } from "../types/tree-node";
@@ -27,15 +28,18 @@ export function buildCodexVaultActions(
 	for (const chain of impactedChains) {
 		const node = getNode(chain);
 		if (!node) {
-			console.log("[buildCodexVaultActions] no node for chain:", chain);
+			log.debug(
+				"[buildCodexVaultActions] no node for chain:",
+				JSON.stringify(chain),
+			);
 			continue;
 		}
 		if (node.type !== TreeNodeType.Section) {
-			console.log(
+			log.debug(
 				"[buildCodexVaultActions] node is not Section:",
 				node.type,
 				"chain:",
-				chain,
+				JSON.stringify(chain),
 			);
 			continue;
 		}
@@ -84,12 +88,15 @@ export function buildCodexVaultActions(
 			payload: { content, splitPath: codexSplitPath },
 			type: VaultActionType.ReplaceContentMdFile,
 		};
-		console.log("[buildCodexVaultActions] creating action for:", {
-			chain,
-			codexBasename,
-			codexPath: makeSystemPathForSplitPath(codexSplitPath),
-			contentLength: content.length,
-		});
+		log.debug(
+			"[buildCodexVaultActions] creating action for:",
+			JSON.stringify({
+				chain,
+				codexBasename,
+				codexPath: makeSystemPathForSplitPath(codexSplitPath),
+				contentLength: content.length,
+			}),
+		);
 		actions.push(action);
 	}
 

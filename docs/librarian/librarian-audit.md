@@ -252,7 +252,7 @@ context.setTree(newTree);
 ### 7. **Logging framework**
 **Issue**: Console.log statements everywhere.
 **Fix**: 
-- Use structured logging (e.g., `pino`, `winston`)
+- Use structured logging (`winston`)
 - Add log levels (debug, info, warn, error)
 - Remove debug logs from production code
 

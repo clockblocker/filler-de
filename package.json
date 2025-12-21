@@ -9,6 +9,7 @@
 		"sbd": "latest",
 		"ts-plugin-sort-import-suggestions": "^1.0.4",
 		"typescript-eslint": "latest",
+		"winston": "latest",
 		"zod": "latest"
 	},
 	"description": "Go trough the german texts, building your own dictionary from your personal contexts",
@@ -18,6 +19,7 @@
 		"@types/codemirror": "latest",
 		"@types/node": "^18.19.130",
 		"@types/tern": "latest",
+		"@types/winston": "latest",
 		"@typescript-eslint/eslint-plugin": "latest",
 		"@typescript-eslint/parser": "latest",
 		"@wdio/appium-service": "^9.20.0",

@@ -1,3 +1,4 @@
+import { log } from "../../../utils/logger";
 import type { SplitPath } from "../../../obsidian-vault-action-manager/types/split-path";
 import { SplitPathType } from "../../../obsidian-vault-action-manager/types/split-path";
 import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
@@ -39,14 +40,14 @@ export async function writeStatusToMetadata(
 
 	if (result.isErr()) {
 		const errors = result.error;
-		console.error(
+		log.error(
 			"[Librarian] writeStatusToMetadata: dispatch errors:",
-			errors,
+			JSON.stringify(errors),
 		);
 		throw new Error(
 			`Failed to write metadata: ${errors?.map((e) => e.error).join(", ") ?? "unknown error"}`,
 		);
 	}
 
-	console.log("[Librarian] writeStatusToMetadata: success");
+	log.debug("[Librarian] writeStatusToMetadata: success");
 }
