@@ -159,7 +159,7 @@ export type OpenedFileServiceTestingApi = {
     cd: (file: unknown) => Promise<unknown>; // Result<TFile, string>
   };
   splitPath: (input: string) => unknown; // SplitPath
-  splitPathKey: (splitPath: unknown) => string;
+  makeSystemPathForSplitPath: (splitPath: unknown) => string;
 };
 ```
 

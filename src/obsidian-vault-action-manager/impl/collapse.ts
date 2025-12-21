@@ -1,6 +1,6 @@
 import type { VaultAction } from "../types/vault-action";
 import { VaultActionType } from "../types/vault-action";
-import { splitPathKey } from "./split-path";
+import { makeSystemPathForSplitPath } from "./split-path";
 
 export async function collapseActions(
 	actions: readonly VaultAction[],
@@ -119,7 +119,7 @@ function getPathKey(action: VaultAction): string {
 		case VaultActionType.RenameFolder:
 		case VaultActionType.RenameFile:
 		case VaultActionType.RenameMdFile:
-			return splitPathKey(action.payload.from);
+			return makeSystemPathForSplitPath(action.payload.from);
 		case VaultActionType.CreateFolder:
 		case VaultActionType.TrashFolder:
 		case VaultActionType.CreateFile:
@@ -128,7 +128,7 @@ function getPathKey(action: VaultAction): string {
 		case VaultActionType.TrashMdFile:
 		case VaultActionType.ProcessMdFile:
 		case VaultActionType.ReplaceContentMdFile:
-			return splitPathKey(action.payload.splitPath);
+			return makeSystemPathForSplitPath(action.payload.splitPath);
 	}
 }
 
@@ -195,8 +195,10 @@ function sameRenameTarget(a: VaultAction, b: VaultAction): boolean {
 		b.type === VaultActionType.RenameFolder
 	) {
 		return (
-			splitPathKey(a.payload.from) === splitPathKey(b.payload.from) &&
-			splitPathKey(a.payload.to) === splitPathKey(b.payload.to)
+			makeSystemPathForSplitPath(a.payload.from) ===
+				makeSystemPathForSplitPath(b.payload.from) &&
+			makeSystemPathForSplitPath(a.payload.to) ===
+				makeSystemPathForSplitPath(b.payload.to)
 		);
 	}
 	if (
@@ -204,8 +206,10 @@ function sameRenameTarget(a: VaultAction, b: VaultAction): boolean {
 		b.type === VaultActionType.RenameFile
 	) {
 		return (
-			splitPathKey(a.payload.from) === splitPathKey(b.payload.from) &&
-			splitPathKey(a.payload.to) === splitPathKey(b.payload.to)
+			makeSystemPathForSplitPath(a.payload.from) ===
+				makeSystemPathForSplitPath(b.payload.from) &&
+			makeSystemPathForSplitPath(a.payload.to) ===
+				makeSystemPathForSplitPath(b.payload.to)
 		);
 	}
 	if (
@@ -213,8 +217,10 @@ function sameRenameTarget(a: VaultAction, b: VaultAction): boolean {
 		b.type === VaultActionType.RenameMdFile
 	) {
 		return (
-			splitPathKey(a.payload.from) === splitPathKey(b.payload.from) &&
-			splitPathKey(a.payload.to) === splitPathKey(b.payload.to)
+			makeSystemPathForSplitPath(a.payload.from) ===
+				makeSystemPathForSplitPath(b.payload.from) &&
+			makeSystemPathForSplitPath(a.payload.to) ===
+				makeSystemPathForSplitPath(b.payload.to)
 		);
 	}
 	return false;

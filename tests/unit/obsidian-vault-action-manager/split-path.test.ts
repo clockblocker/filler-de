@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
 import { TFile, TFolder } from "obsidian";
 import {
+	makeSystemPathForSplitPath,
 	splitPath,
-	splitPathKey,
 } from "../../../src/obsidian-vault-action-manager";
 
 describe("obsidian-vault-action-manager splitPath helpers", () => {
@@ -15,7 +15,7 @@ describe("obsidian-vault-action-manager splitPath helpers", () => {
 			pathParts: ["root", "notes"],
 			type: "MdFile",
 		});
-		expect(splitPathKey(split)).toBe("root/notes/file.md");
+		expect(makeSystemPathForSplitPath(split)).toBe("root/notes/file.md");
 	});
 
 	it("splits non-md file paths from strings", () => {
@@ -27,7 +27,7 @@ describe("obsidian-vault-action-manager splitPath helpers", () => {
 			pathParts: ["root", "assets"],
 			type: "File",
 		});
-		expect(splitPathKey(split)).toBe("root/assets/image.png");
+		expect(makeSystemPathForSplitPath(split)).toBe("root/assets/image.png");
 	});
 
 	it("splits folder paths from strings without extension", () => {
@@ -38,7 +38,7 @@ describe("obsidian-vault-action-manager splitPath helpers", () => {
 			pathParts: ["root", "library"],
 			type: "Folder",
 		});
-		expect(splitPathKey(split)).toBe("root/library/Section");
+		expect(makeSystemPathForSplitPath(split)).toBe("root/library/Section");
 	});
 
 	it("splits TFile instances", () => {

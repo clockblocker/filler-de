@@ -16,7 +16,7 @@ export const VAULT_PATH = "tests/simple";
 // - isFileActive(splitPath: SplitPathToMdFile): Promise<Result<boolean, string>>
 // - cd(file: TFile | SplitPathToFile | SplitPathToMdFile): Promise<Result<TFile, string>>
 // - splitPath(input: string): SplitPath
-// - splitPathKey(splitPath: CoreSplitPath): string
+// - makeSystemPathForSplitPath(splitPath: SplitPath | CommonSplitPath): string
 export type OpenedFileServiceTestingApi = {
 	openedFileService: {
 		pwd: () => Promise<unknown>;
@@ -39,7 +39,7 @@ export type OpenedFileServiceTestingApi = {
 		cd: (file: unknown) => Promise<unknown>;
 	};
 	splitPath: (input: string) => unknown;
-	splitPathKey: (splitPath: unknown) => string;
+	makeSystemPathForSplitPath: (splitPath: unknown) => string;
 };
 
 export type Result<T> = {

@@ -11,10 +11,10 @@ import {
 } from "./commanders/librarian/click-handler";
 import { clearState, initializeState } from "./global-state/global-state";
 import {
+	makeSystemPathForSplitPath,
 	splitPath as managerSplitPath,
 	ObsidianVaultActionManagerImpl,
 	splitPath,
-	splitPathKey,
 } from "./obsidian-vault-action-manager";
 import { OpenedFileReader } from "./obsidian-vault-action-manager/file-services/active-view/opened-file-reader";
 import {
@@ -532,10 +532,10 @@ export default class TextEaterPlugin extends Plugin {
 
 	getOpenedFileServiceTestingApi() {
 		return {
+			makeSystemPathForSplitPath,
 			openedFileServiceWithResult:
 				this.testingOpenedFileServiceWithResult,
 			splitPath,
-			splitPathKey,
 		};
 	}
 
@@ -549,9 +549,9 @@ export default class TextEaterPlugin extends Plugin {
 
 	getReaderTestingApi() {
 		return {
+			makeSystemPathForSplitPath,
 			reader: this.testingReader,
 			splitPath,
-			splitPathKey,
 		};
 	}
 

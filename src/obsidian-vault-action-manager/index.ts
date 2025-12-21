@@ -1,7 +1,10 @@
 import type { TAbstractFile, TFile, TFolder } from "obsidian";
 import { z } from "zod";
 import type { DispatchResult } from "./impl/dispatcher";
-import { splitPath as buildSplitPath, splitPathKey } from "./impl/split-path";
+import {
+	splitPath as buildSplitPath,
+	makeSystemPathForSplitPath,
+} from "./impl/split-path";
 import { CREATE, FILE, FOLDER, RENAME, TRASH } from "./types/literals";
 import type {
 	SplitPath,
@@ -82,7 +85,7 @@ export interface ObsidianVaultActionManager {
 	splitPath(tAbstractFile: TAbstractFile): SplitPath;
 }
 
-export { splitPathKey };
+export { makeSystemPathForSplitPath };
 export type { DispatchError, DispatchResult } from "./impl/dispatcher";
 
 export function splitPath(path: string): SplitPath;

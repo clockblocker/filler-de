@@ -12,7 +12,7 @@ import type {
 	SplitPathWithTRef,
 } from "../types/split-path";
 import type { BackgroundFileServiceLegacy } from "./background-file-service";
-import { splitPathKey } from "./split-path";
+import { makeSystemPathForSplitPath } from "./split-path";
 
 export class Reader {
 	constructor(
@@ -38,7 +38,7 @@ export class Reader {
 
 		const dedup = new Map<string, SplitPath>();
 		for (const entry of [...fromBg, ...fromOpened]) {
-			dedup.set(splitPathKey(entry), entry);
+			dedup.set(makeSystemPathForSplitPath(entry), entry);
 		}
 		return Array.from(dedup.values());
 	}

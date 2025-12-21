@@ -8,7 +8,7 @@ import {
 	errorNotInSourceMode,
 	errorOpenFileFailed,
 } from "../../errors";
-import { splitPathKey } from "../../impl/split-path";
+import { makeSystemPathForSplitPath } from "../../impl/split-path";
 import type {
 	SplitPath,
 	SplitPathToFile,
@@ -237,7 +237,7 @@ export class OpenedFileService {
 			)
 		) {
 			const splitPath = file as SplitPathToFile | SplitPathToMdFile;
-			const systemPath = splitPathKey(splitPath);
+			const systemPath = makeSystemPathForSplitPath(splitPath);
 
 			const tfileMaybeLegacy =
 				this.app.vault.getAbstractFileByPath(systemPath);
@@ -280,12 +280,12 @@ export class OpenedFileService {
 		if (splitPath.type === "Folder") return false;
 		const isActive = await this.isInActiveView(splitPath);
 		if (isActive) return true;
-		const systemPath = splitPathKey(splitPath);
+		const systemPath = makeSystemPathForSplitPath(splitPath);
 		return this.app.vault.getAbstractFileByPath(systemPath) !== null;
 	}
 
 	async list(folder: SplitPathToFolder): Promise<SplitPath[]> {
-		const systemPath = splitPathKey(folder);
+		const systemPath = makeSystemPathForSplitPath(folder);
 		const tFolder = this.app.vault.getAbstractFileByPath(systemPath);
 		if (!(tFolder instanceof TFolder)) {
 			return [];
@@ -316,7 +316,7 @@ export class OpenedFileService {
 	async getAbstractFile<SP extends SplitPath>(
 		splitPath: SP,
 	): Promise<SP["type"] extends "Folder" ? TFolder : TFile> {
-		const systemPath = splitPathKey(splitPath);
+		const systemPath = makeSystemPathForSplitPath(splitPath);
 		const file = this.app.vault.getAbstractFileByPath(systemPath);
 		if (!file) {
 			throw new Error(`File not found: ${systemPath}`);

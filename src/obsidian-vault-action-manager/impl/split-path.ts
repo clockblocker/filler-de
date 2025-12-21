@@ -11,14 +11,6 @@ import type {
 const MD_EXTENSION = "md";
 
 /**
- * @deprecated Use makeSystemPathForSplitPath instead.
- * Kept for backward compatibility.
- */
-export function splitPathKey(splitPath: CommonSplitPath): string {
-	return makeSystemPathForSplitPath(splitPath as SplitPath);
-}
-
-/**
  * Build system path from SplitPath.
  * For files: pathParts/basename.extension
  * For folders: pathParts/basename
