@@ -1,11 +1,4 @@
-import {
-	type Editor,
-	type MetadataCache,
-	Notice,
-	TFile,
-	type Vault,
-} from "obsidian";
-import type { Backlink } from "../../../prompts/endgame/zod/types";
+import { type Editor, Notice, TFile, type Vault } from "obsidian";
 
 export async function addLinksToRelatedToBlock(
 	vault: Vault,
@@ -96,9 +89,7 @@ export async function addTagsToTagBlock(
 export default async function populateBacklinks(
 	vault: Vault,
 	filePath: string,
-	metadataCache: MetadataCache,
 	editor: Editor,
-	backlinks: Backlink[],
 ) {
 	try {
 		const file = vault.getAbstractFileByPath(filePath);

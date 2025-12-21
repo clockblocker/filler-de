@@ -4,7 +4,12 @@ import { systemPathFromSplitPath } from "../../../obsidian-vault-action-manager/
 import type { SplitPath } from "../../../obsidian-vault-action-manager/types/split-path";
 import { SplitPathType } from "../../../obsidian-vault-action-manager/types/split-path";
 import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
-import { dedupeChains, expandToAncestors } from "../codex/impacted-chains";
+import {
+	dedupeChains,
+	expandAllToAncestors,
+	expandToAncestors,
+	flattenActionResult,
+} from "../codex/impacted-chains";
 import { detectRenameMode } from "../healing";
 import type { LibraryTree } from "../library-tree";
 import { TreeActionType } from "../types/literals";
@@ -40,9 +45,7 @@ export type EventHandlerContext = {
  * Pure function that converts events to handler parameters.
  * Reads libraryRoot from global settings.
  */
-export function parseEventToHandler(
-	event: VaultEvent,
-): {
+export function parseEventToHandler(event: VaultEvent): {
 	type: "rename" | "create" | "delete";
 	oldPath?: string;
 	newPath?: string;
@@ -147,9 +150,9 @@ export async function handleDelete(
 		type: TreeActionType.DeleteNode,
 	});
 
-	const impactedSections = dedupeChains(
-		expandToAncestors(impactedChain as CoreNameChainFromRoot),
-	);
+	// DeleteNode always returns single chain, but use flattenActionResult for type safety
+	const chains = flattenActionResult(impactedChain);
+	const impactedSections = dedupeChains(expandAllToAncestors(chains));
 
 	await regenerateCodexes(impactedSections, {
 		dispatch: context.dispatch,

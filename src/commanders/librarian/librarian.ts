@@ -4,7 +4,11 @@ import type {
 	VaultEvent,
 } from "../../obsidian-vault-action-manager";
 import type { VaultAction } from "../../obsidian-vault-action-manager/types/vault-action";
-import { dedupeChains, expandToAncestors } from "./codex/impacted-chains";
+import {
+	dedupeChains,
+	expandAllToAncestors,
+	flattenActionResult,
+} from "./codex/impacted-chains";
 import { healOnInit, type InitHealResult } from "./healing";
 import type { LibraryTree } from "./library-tree";
 import {
@@ -344,12 +348,11 @@ export class Librarian {
 		}
 
 		// Expand to ancestors for codex regeneration
-		// impactedChain is the parent chain (CoreNameChainFromRoot)
-		// ChangeNodeStatus always returns single chain, never tuple
-		const baseChain = impactedChain as CoreNameChainFromRoot;
-		const impactedSections = dedupeChains(expandToAncestors(baseChain));
+		// ChangeNodeStatus always returns single chain, but use flattenActionResult for type safety
+		const chains = flattenActionResult(impactedChain);
+		const impactedSections = dedupeChains(expandAllToAncestors(chains));
 
-		console.log("[Librarian] setStatus: baseChain:", baseChain);
+		console.log("[Librarian] setStatus: chains:", chains);
 		console.log(
 			"[Librarian] setStatus: impactedSections:",
 			impactedSections,

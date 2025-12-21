@@ -8,7 +8,6 @@ import {
 import {
 	type SplitPathFromTo,
 	type SplitPathToFile,
-	type SplitPathToFolder,
 	type SplitPathToMdFile,
 	SplitPathType,
 } from "../../../../obsidian-vault-action-manager/types/split-path";
