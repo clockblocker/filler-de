@@ -148,7 +148,6 @@ export default class TextEaterPlugin extends Plugin {
 	}
 
 	async loadPlugin() {
-		console.log("[main] loadPlugin started");
 		await this.loadSettings();
 		await this.addCommands();
 
@@ -198,7 +197,6 @@ export default class TextEaterPlugin extends Plugin {
 			testingBackgroundFileServiceLegacy,
 		);
 		this.vaultActionManager = new ObsidianVaultActionManagerImpl(this.app);
-		console.log("[main] vaultActionManager created");
 
 		this.selectionToolbarService = new AboveSelectionToolbarService(
 			this.app,
@@ -208,13 +206,6 @@ export default class TextEaterPlugin extends Plugin {
 
 		// New Librarian (healing modes)
 		this.librarian = new Librarian(this.vaultActionManager);
-		const healResult = await this.librarian.init();
-		console.log("[main] loadPlugin completed");
-		console.log(
-			"[main] Librarian initialized, healed:",
-			healResult.renameActions.length,
-			"files",
-		);
 
 		// Start listening to file system events
 		// VaultActionManager will convert events to VaultEvent, filter self-events,
