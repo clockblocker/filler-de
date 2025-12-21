@@ -19,7 +19,7 @@ import {
 	parseDeletePathToChain,
 } from "./path-parsers";
 import { applyActionsToTree, type TreeApplierContext } from "./tree-applier";
-import { readTreeFromVault, type TreeReaderContext } from "./tree-reader";
+import type { TreeReaderContext } from "./tree-reader";
 
 export type EventHandlerContext = {
 	dispatch: (actions: VaultAction[]) => Promise<unknown>;
@@ -29,9 +29,13 @@ export type EventHandlerContext = {
 	splitPath: (path: string) => ReturnType<TreeReaderContext["splitPath"]>;
 	suffixDelimiter: string;
 	tree: LibraryTree | null;
+	listAllFilesWithMdReaders: (
+		splitPath: import("../../../obsidian-vault-action-manager/types/split-path").SplitPathToFolder,
+	) => Promise<
+		import("../../../obsidian-vault-action-manager/types/split-path").SplitPathWithReader[]
+	>;
 } & Pick<CodexRegeneratorContext, "getNode"> &
-	Pick<TreeApplierContext, "suffixDelimiter"> &
-	Pick<TreeReaderContext, "listAll">;
+	Pick<TreeApplierContext, "suffixDelimiter">;
 
 /**
  * Extract handler info from VaultEvent.
@@ -200,7 +204,7 @@ export async function handleRename(
 		newPath,
 		isFolder,
 		{
-			listAll: context.listAll,
+			listAllFilesWithMdReaders: context.listAllFilesWithMdReaders,
 			splitPath: context.splitPath,
 		},
 		context.libraryRoot,

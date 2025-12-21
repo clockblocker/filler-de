@@ -1,9 +1,8 @@
 import type {
 	SplitPathToFile,
-	SplitPathToFileWithTRef,
 	SplitPathToFolder,
 	SplitPathToMdFile,
-	SplitPathToMdFileWithTRef,
+	SplitPathWithReader,
 } from "../../../obsidian-vault-action-manager/types/split-path";
 import { SplitPathType } from "../../../obsidian-vault-action-manager/types/split-path";
 import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
@@ -24,15 +23,9 @@ export type ActionResolverContext = {
 	splitPath: (
 		path: string,
 	) => SplitPathToFile | SplitPathToMdFile | SplitPathToFolder;
-	listAll: (
+	listAllFilesWithMdReaders: (
 		splitPath: SplitPathToFolder,
-	) => Promise<
-		Array<
-			| SplitPathToFileWithTRef
-			| SplitPathToMdFileWithTRef
-			| SplitPathToFolder
-		>
-	>;
+	) => Promise<SplitPathWithReader[]>;
 };
 
 /**
@@ -96,9 +89,9 @@ export async function resolveFolderRenameActions(
 	libraryRoot: string,
 	suffixDelimiter: string,
 ): Promise<VaultAction[]> {
-	const allEntries = await context.listAll(folderPath);
+	const allEntries = await context.listAllFilesWithMdReaders(folderPath);
 	const fileEntries = allEntries.filter(
-		(entry): entry is SplitPathToFileWithTRef | SplitPathToMdFileWithTRef =>
+		(entry): entry is SplitPathWithReader =>
 			entry.type === SplitPathType.File ||
 			entry.type === SplitPathType.MdFile,
 	);

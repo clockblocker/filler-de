@@ -1,6 +1,7 @@
 import type {
 	SplitPathToFile,
 	SplitPathToMdFile,
+	SplitPathWithReader,
 } from "../../../obsidian-vault-action-manager/types/split-path";
 import {
 	type VaultAction,
@@ -34,23 +35,62 @@ type LeafHealInfo = {
 };
 
 /**
- * Analyze a leaf to determine if it needs healing.
- * Note: currentBasename is resolved on-demand - tRef removed due to staleness.
+ * Match actual file to leaf by comparing coreName and path.
  */
-async function analyzeLeaf(
+function findMatchingFile(
 	leaf: TreeLeaf,
-	libraryRoot: string,
+	actualFiles: SplitPathWithReader[],
 	suffixDelimiter: string,
-	getCurrentBasename: (path: string) => Promise<string | null>,
-): Promise<LeafHealInfo> {
-	// Reconstruct expected path from tree structure
-	const coreNameChain = [...leaf.coreNameChainToParent, leaf.coreName];
-	const expectedPath = `${libraryRoot}/${coreNameChain.join("/")}.${leaf.extension}`;
+): SplitPathWithReader | null {
+	// Expected path (parent chain only, not including coreName)
+	const expectedParentPath = leaf.coreNameChainToParent.join("/");
 
-	// Get current basename from vault (tRef removed - resolve on-demand)
-	const currentBasename = await getCurrentBasename(expectedPath);
-	if (!currentBasename) {
-		// File doesn't exist at expected path - skip healing
+	for (const file of actualFiles) {
+		// Skip folders
+		if (file.type !== "File" && file.type !== "MdFile") {
+			continue;
+		}
+
+		// Check extension matches
+		if (
+			(file.type === "MdFile" && leaf.extension !== "md") ||
+			(file.type === "File" &&
+				"extension" in file &&
+				file.extension !== leaf.extension)
+		) {
+			continue;
+		}
+
+		// Parse basename to get coreName
+		const { coreName } = parseBasename(file.basename, suffixDelimiter);
+		if (coreName !== leaf.coreName) {
+			continue;
+		}
+
+		// Build path key from file pathParts (skip library root)
+		// pathParts is [libraryRoot, ...parentChain], so slice(1) gives parentChain
+		const fileParentPath = file.pathParts.slice(1).join("/");
+
+		// Match if parent path matches (file might be at expected location or wrong location)
+		// We match by coreName and parent path, then check if suffix needs fixing
+		if (fileParentPath === expectedParentPath) {
+			return file;
+		}
+	}
+
+	return null;
+}
+
+/**
+ * Analyze a leaf against actual file to determine if it needs healing.
+ */
+function analyzeLeaf(
+	leaf: TreeLeaf,
+	actualFile: SplitPathWithReader | null,
+	suffixDelimiter: string,
+): LeafHealInfo {
+	if (!actualFile) {
+		// File not found - skip healing
 		return {
 			currentBasename: "",
 			expectedBasename: "",
@@ -59,6 +99,7 @@ async function analyzeLeaf(
 		};
 	}
 
+	const currentBasename = actualFile.basename;
 	const parsed = parseBasename(currentBasename, suffixDelimiter);
 
 	// Path relative to library root
@@ -144,27 +185,22 @@ function createRenameAction(
  * Mode 2: Path is king, suffix-only renames, never move.
  *
  * @param leaves - Tree leaves to heal
+ * @param actualFiles - Actual files from manager (with readers)
  * @param libraryRoot - Library root folder name
  * @param suffixDelimiter - Delimiter for suffix parsing
- * @param getCurrentBasename - Function to get current basename from path (tRef removed - resolve on-demand)
  * @returns Rename and delete actions
  */
 export async function healOnInit(
 	leaves: TreeLeaf[],
+	actualFiles: SplitPathWithReader[],
 	libraryRoot: string,
 	suffixDelimiter = "-",
-	getCurrentBasename: (path: string) => Promise<string | null> = async () =>
-		null,
 ): Promise<InitHealResult> {
 	const renameActions: VaultAction[] = [];
 
 	for (const leaf of leaves) {
-		const info = await analyzeLeaf(
-			leaf,
-			libraryRoot,
-			suffixDelimiter,
-			getCurrentBasename,
-		);
+		const actualFile = findMatchingFile(leaf, actualFiles, suffixDelimiter);
+		const info = analyzeLeaf(leaf, actualFile, suffixDelimiter);
 
 		if (info.needsRename) {
 			renameActions.push(createRenameAction(info, libraryRoot));
@@ -181,20 +217,14 @@ export async function healOnInit(
 /**
  * Check if a single leaf needs healing.
  * Useful for individual file checks.
- * Note: requires getCurrentBasename function to resolve current basename (tRef removed).
  */
-export async function leafNeedsHealing(
+export function leafNeedsHealing(
 	leaf: TreeLeaf,
-	libraryRoot: string,
+	actualFiles: SplitPathWithReader[],
 	suffixDelimiter: string,
-	getCurrentBasename: (path: string) => Promise<string | null>,
-): Promise<boolean> {
-	const info = await analyzeLeaf(
-		leaf,
-		libraryRoot,
-		suffixDelimiter,
-		getCurrentBasename,
-	);
+): boolean {
+	const actualFile = findMatchingFile(leaf, actualFiles, suffixDelimiter);
+	const info = analyzeLeaf(leaf, actualFile, suffixDelimiter);
 	return info.needsRename;
 }
 

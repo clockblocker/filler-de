@@ -1,4 +1,4 @@
-import type { TAbstractFile, TFile, TFolder } from "obsidian";
+import type { TFile, TFolder } from "obsidian";
 import type { OpenedFileService } from "../file-services/active-view/opened-file-service";
 import type {
 	SplitPath,
@@ -8,6 +8,7 @@ import type {
 	SplitPathToFolderWithTRef,
 	SplitPathToMdFile,
 	SplitPathToMdFileWithTRef,
+	SplitPathWithReader,
 	SplitPathWithTRef,
 } from "../types/split-path";
 import type { BackgroundFileServiceLegacy } from "./background-file-service";
@@ -58,18 +59,18 @@ export class Reader {
 					if (child.type === "Folder") {
 						all.push({
 							...child,
-							tRef: tRef as TFolder,
+							tRef: tRef as unknown as TFolder,
 						} as SplitPathToFolderWithTRef);
 						stack.push(child);
 					} else if (child.type === "MdFile") {
 						all.push({
 							...child,
-							tRef: tRef as TFile,
+							tRef: tRef as unknown as TFile,
 						} as SplitPathToMdFileWithTRef);
 					} else {
 						all.push({
 							...child,
-							tRef: tRef as TFile,
+							tRef: tRef as unknown as TFile,
 						} as SplitPathToFileWithTRef);
 					}
 				} catch (error) {
@@ -101,6 +102,36 @@ export class Reader {
 			return this.opened.getAbstractFile(target);
 		}
 		return this.background.getAbstractFile(target);
+	}
+
+	async listAllFilesWithMdReaders(
+		folder: SplitPathToFolder,
+	): Promise<SplitPathWithReader[]> {
+		const all: SplitPathWithReader[] = [];
+		const stack: SplitPathToFolder[] = [folder];
+
+		while (stack.length > 0) {
+			const current = stack.pop();
+			if (!current) continue;
+
+			const children = await this.list(current);
+			for (const child of children) {
+				if (child.type === "Folder") {
+					stack.push(child);
+				} else if (child.type === "MdFile") {
+					// Attach read function (no tRef needed)
+					all.push({
+						...child,
+						read: () => this.readContent(child),
+					});
+				} else {
+					// File - no reader needed
+					all.push(child);
+				}
+			}
+		}
+
+		return all;
 	}
 }
 

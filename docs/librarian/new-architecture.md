@@ -10,7 +10,10 @@ Goal. To watch over the specified "Library" folder and:
 The core part of the sysytem are:
 
 1) Vault Action Manager. Emits End-User-Triggered events. Accepts batches of Vault Actions and executes them. Does not emit anything for system-triggered events. Not a part of the Librarian directly. To be treated as external library.
-Vault Action Manager acepts VaultActions
+- Vault Action Manager accepts VaultActions
+- Provides `listAllFilesWithMdReaders(folder: SplitPathToFolder): Promise<SplitPathWithReader[]>` for file listing
+- `SplitPathWithReader` includes `read(): Promise<string>` for markdown files (no tRef exposure)
+- TFile references (tRef) are internal to the manager and should never leave it
 
 2) LibraryTree. The shadow of existing file system. Consists of:
 - ScrollNodes (a shadows of markdown Tfiles)
@@ -20,7 +23,7 @@ Vault Action Manager acepts VaultActions
 - SectionNodes (a shadows of Tfolder)
 { coreName: CoreName, coreNameChainToParent: CoreNameChainFromRoot, type: "Section", status: "Done" | "NotStarted", children: (ScrollNode | FileNode | SectionNode)[]}
 
-**Note on TFile references**: TFile references (tRef) are NOT stored in tree nodes because they become stale when files are renamed/moved. Obsidian does not automatically update TFile.path when files are renamed/moved, so storing tRefs in the tree would lead to stale references pointing to old paths. Instead, TFile references are resolved on-demand when file I/O is needed by reconstructing the path from tree structure (coreNameChainToParent + coreName + extension) and looking it up in the vault.
+**Note on TFile references**: TFile references (tRef) are NOT stored in tree nodes because they become stale when files are renamed/moved. Obsidian does not automatically update TFile.path when files are renamed/moved, so storing tRefs in the tree would lead to stale references pointing to old paths. TFile references are now internal to the `ObsidianVaultActionManager` and should never leave it. External code (like Librarian) uses `SplitPathWithReader` instead, which provides a `read()` function for markdown files without exposing tRefs.
 
 LibraryTree is initialized with:
 - an array of TreeLeaf: (ScrollNode | FileNode)[]
@@ -31,14 +34,21 @@ On initialization, LibraryTree:
 1. Builds the tree structure from leaves (creating SectionNodes as needed)
 2. Runs DFS to calculate section statuses: a section is "Done" iff all children are Done/Unknown
 
-TreeLeaf creation uses codec `splitPathToLeaf(splitPathWithTRef, rootFolderName, suffixDelimiter)`:
-- Converts SplitPath + TFile → TreeLeaf
+Tree initialization flow (`readTreeFromVault`):
+1. Calls `listAllFilesWithMdReaders(rootFolder)` to get all files with readers
+2. Filters out codex files (generated files)
+3. Converts each `SplitPathWithReader` to TreeLeaf using `splitPathToLeaf()`
+4. For markdown files, reads content via `entry.read()` and extracts status from MetaInfo
+5. Builds LibraryTree from the leaves
+
+TreeLeaf creation uses codec `splitPathToLeaf(splitPath, rootFolderName, suffixDelimiter)`:
+- Converts `SplitPathToFile | SplitPathToMdFile` → TreeLeaf (no tRef needed)
 - Derives coreNameChainToParent from pathParts (strips root folder)
 - Initial status: NotStarted (for ScrollNode), Unknown (for FileNode)
 
-Status injection uses `withStatusFromMeta(leaf, readContent, extractMetaInfo)`:
-- Reads file content via provided function
-- Extracts MetaInfo and applies status to ScrollNode
+Status injection happens during tree initialization:
+- Uses `SplitPathWithReader` from `listAllFilesWithMdReaders()` which provides `read()` for md files
+- Reads content via `entry.read()` and extracts MetaInfo to apply status to ScrollNode
 
 LibraryTree has applyTreeAction method. TreeAction has types:
 - CreateNode

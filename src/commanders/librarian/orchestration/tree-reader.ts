@@ -1,20 +1,16 @@
 import type { TFolder } from "obsidian";
-import { systemPathFromSplitPath } from "../../../obsidian-vault-action-manager/helpers/pathfinder";
 import type {
 	SplitPathToFile,
-	SplitPathToFileWithTRef,
 	SplitPathToFolder,
 	SplitPathToMdFile,
-	SplitPathToMdFileWithTRef,
+	SplitPathWithReader,
 } from "../../../obsidian-vault-action-manager/types/split-path";
 import { SplitPathType } from "../../../obsidian-vault-action-manager/types/split-path";
 import { extractMetaInfo } from "../../../services/dto-services/meta-info-manager/interface";
 import { LibraryTree } from "../library-tree";
+import { TreeNodeStatus } from "../types/tree-node";
 import { isCodexBasename } from "../utils/codex-utils";
-import {
-	splitPathToLeaf,
-	withStatusFromMeta,
-} from "../utils/split-path-to-leaf";
+import { splitPathToLeaf } from "../utils/split-path-to-leaf";
 
 /**
  * Read tree from existing vault.
@@ -35,42 +31,35 @@ export async function readTreeFromVault(
 		throw new Error(`Library root not found: ${libraryRoot}`);
 	}
 
-	const allEntries = await context.listAll(rootSplitPath);
+	// Get all files with readers (single call)
+	const allEntries = await context.listAllFilesWithMdReaders(rootSplitPath);
 	const fileEntries = allEntries.filter(
-		(entry): entry is SplitPathToFileWithTRef | SplitPathToMdFileWithTRef =>
+		(entry): entry is SplitPathWithReader =>
 			(entry.type === SplitPathType.File ||
 				entry.type === SplitPathType.MdFile) &&
 			// Skip codex files - they're generated, not source data
 			!isCodexBasename(entry.basename),
 	);
 
-	// Create leaves and preserve original paths for reading content
-	const leavesWithPaths = fileEntries.map((entry) => {
-		const leaf = splitPathToLeaf(entry, libraryRoot, suffixDelimiter);
-		// Build original path from splitPath (includes suffix in basename)
-		// Use systemPathFromSplitPath to correctly construct the path
-		const originalPath = systemPathFromSplitPath(entry);
-		return { leaf, originalPath };
-	});
-
-	// Read content using original paths (not reconstructed from tree)
-	const readContent = (path: string) => {
-		const sp = context.splitPath(path);
-		if (sp.type !== SplitPathType.MdFile) {
-			return Promise.resolve("");
-		}
-		return context.readContent(sp);
-	};
-
+	// Create leaves and read content using read() from SplitPathWithReader
 	const leaves = await Promise.all(
-		leavesWithPaths.map(({ leaf, originalPath }) =>
-			withStatusFromMeta(
-				leaf,
-				originalPath,
-				readContent,
-				extractMetaInfo,
-			),
-		),
+		fileEntries.map(async (entry) => {
+			const leaf = splitPathToLeaf(entry, libraryRoot, suffixDelimiter);
+
+			// Read content if md file (has read function)
+			if (entry.type === SplitPathType.MdFile && "read" in entry) {
+				const content = await entry.read();
+				const meta = extractMetaInfo(content);
+				if (meta && "status" in meta) {
+					leaf.status =
+						meta.status === "Done"
+							? TreeNodeStatus.Done
+							: TreeNodeStatus.NotStarted;
+				}
+			}
+
+			return leaf;
+		}),
 	);
 
 	return new LibraryTree(leaves, rootFolder);
@@ -81,14 +70,7 @@ export type TreeReaderContext = {
 		path: string,
 	) => SplitPathToFolder | SplitPathToFile | SplitPathToMdFile;
 	getAbstractFile: (splitPath: SplitPathToFolder) => Promise<TFolder | null>;
-	listAll: (
+	listAllFilesWithMdReaders: (
 		splitPath: SplitPathToFolder,
-	) => Promise<
-		Array<
-			| SplitPathToFileWithTRef
-			| SplitPathToMdFileWithTRef
-			| SplitPathToFolder
-		>
-	>;
-	readContent: (splitPath: SplitPathToMdFile) => Promise<string>;
+	) => Promise<SplitPathWithReader[]>;
 };

@@ -23,7 +23,7 @@ import type {
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
-	SplitPathWithTRef,
+	SplitPathWithReader,
 } from "./types/split-path";
 import type { VaultAction } from "./types/vault-action";
 
@@ -115,10 +115,10 @@ export class ObsidianVaultActionManagerImpl
 		return this.reader.list(splitPathArg);
 	}
 
-	async listAll(
+	listAllFilesWithMdReaders(
 		splitPathArg: SplitPathToFolder,
-	): Promise<SplitPathWithTRef[]> {
-		return await this.reader.listAll(splitPathArg);
+	): Promise<SplitPathWithReader[]> {
+		return this.reader.listAllFilesWithMdReaders(splitPathArg);
 	}
 
 	pwd(): Promise<SplitPathToFile | SplitPathToMdFile> {

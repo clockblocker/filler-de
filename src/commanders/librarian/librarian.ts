@@ -22,7 +22,6 @@ import {
 import { TreeActionType } from "./types/literals";
 import type { CoreNameChainFromRoot } from "./types/split-basename";
 import { TreeNodeStatus, TreeNodeType } from "./types/tree-node";
-import { parseBasename } from "./utils/parse-basename";
 import { buildCanonicalBasename } from "./utils/path-suffix-utils";
 
 export class Librarian {
@@ -41,6 +40,34 @@ export class Librarian {
 	 * Mode 2: Path is king, suffix-only renames.
 	 */
 	async init(): Promise<InitHealResult> {
+		// Get all files with readers (single call)
+		const rootSplitPath = this.vaultActionManager.splitPath(
+			this.libraryRoot,
+		);
+		if (rootSplitPath.type !== "Folder") {
+			console.error(
+				"[Librarian] Library root is not a folder:",
+				this.libraryRoot,
+			);
+			return { deleteActions: [], renameActions: [] };
+		}
+
+		let allFiles: Awaited<
+			ReturnType<typeof this.vaultActionManager.listAllFilesWithMdReaders>
+		>;
+		try {
+			allFiles =
+				await this.vaultActionManager.listAllFilesWithMdReaders(
+					rootSplitPath,
+				);
+		} catch (error) {
+			console.error(
+				"[Librarian] Failed to list files from vault:",
+				error,
+			);
+			return { deleteActions: [], renameActions: [] };
+		}
+
 		try {
 			this.tree = await this.readTreeFromVault();
 			console.log(
@@ -61,90 +88,12 @@ export class Librarian {
 
 		const leaves = this.tree.serializeToLeaves();
 
-		// Get current basename from path (tRef removed - resolve on-demand)
-		// Searches parent directory if file not found at expected path (file may have suffix)
-		const getCurrentBasename = async (
-			path: string,
-		): Promise<string | null> => {
-			// Try expected path first
-			const file = (
-				this.vaultActionManager as unknown as {
-					app?: {
-						vault?: {
-							getAbstractFileByPath?: (p: string) => unknown;
-						};
-					};
-				}
-			).app?.vault?.getAbstractFileByPath?.(path);
-			if (
-				file &&
-				typeof file === "object" &&
-				file !== null &&
-				"basename" in file
-			) {
-				return (file as { basename: string }).basename;
-			}
-
-			// File not found at expected path - search parent directory
-			// Extract parent path and coreName from expected path
-			const pathParts = path.split("/");
-			const filename = pathParts.pop() ?? "";
-			const extension = filename.includes(".")
-				? filename.slice(filename.lastIndexOf(".") + 1)
-				: "";
-			const parentPath = pathParts.join("/");
-
-			// Find leaf that matches this path structure
-			const matchingLeaf = leaves.find((leaf) => {
-				const chain = [...leaf.coreNameChainToParent, leaf.coreName];
-				const expectedPathForLeaf = `${this.libraryRoot}/${chain.join("/")}.${leaf.extension}`;
-				return expectedPathForLeaf === path;
-			});
-
-			if (!matchingLeaf) {
-				return null;
-			}
-
-			// Search parent directory for files matching coreName
-			const parentSplitPath =
-				this.vaultActionManager.splitPath(parentPath);
-			if (parentSplitPath.type !== "Folder") {
-				return null;
-			}
-
-			try {
-				const entries =
-					await this.vaultActionManager.listAll(parentSplitPath);
-				for (const entry of entries) {
-					if (
-						(entry.type === "File" || entry.type === "MdFile") &&
-						(entry.type === "MdFile"
-							? extension === "md"
-							: "extension" in entry &&
-								entry.extension === extension)
-					) {
-						// Parse basename to check if coreName matches
-						const { coreName: parsedCoreName } = parseBasename(
-							entry.basename,
-							this.suffixDelimiter,
-						);
-						if (parsedCoreName === matchingLeaf.coreName) {
-							return entry.basename;
-						}
-					}
-				}
-			} catch (error) {
-				console.error("[Librarian] getCurrentBasename error:", error);
-			}
-
-			return null;
-		};
-
+		// Heal using actual files from manager
 		const healResult = await healOnInit(
 			leaves,
+			allFiles,
 			this.libraryRoot,
 			this.suffixDelimiter,
-			getCurrentBasename,
 		);
 
 		if (healResult.renameActions.length > 0) {
@@ -272,7 +221,8 @@ export class Librarian {
 				return node?.type === TreeNodeType.Section ? node : null;
 			},
 			libraryRoot: this.libraryRoot,
-			listAll: (sp) => this.vaultActionManager.listAll(sp),
+			listAllFilesWithMdReaders: (sp) =>
+				this.vaultActionManager.listAllFilesWithMdReaders(sp),
 			readTree: () => this.readTreeFromVault(),
 			setTree: (tree) => {
 				this.tree = tree;
@@ -418,8 +368,8 @@ export class Librarian {
 		return readTreeFromVault(this.libraryRoot, this.suffixDelimiter, {
 			getAbstractFile: (sp) =>
 				this.vaultActionManager.getAbstractFile(sp),
-			listAll: (sp) => this.vaultActionManager.listAll(sp),
-			readContent: (sp) => this.vaultActionManager.readContent(sp),
+			listAllFilesWithMdReaders: (sp) =>
+				this.vaultActionManager.listAllFilesWithMdReaders(sp),
 			splitPath: (p) => this.vaultActionManager.splitPath(p),
 		});
 	}

@@ -1,3 +1,4 @@
+import { systemPathFromSplitPath } from "../../../obsidian-vault-action-manager/helpers/pathfinder";
 import type {
 	SplitPathToFile,
 	SplitPathToMdFile,
@@ -35,7 +36,7 @@ function extractFileInfo(
 	path: SplitPathToFile | SplitPathToMdFile,
 	suffixDelimiter: string,
 ): FileInfo {
-	console.log("[extractFileInfo] input path:", path);
+	console.log("[extractFileInfo] input path:", systemPathFromSplitPath(path));
 	const parsed = parseBasename(path.basename, suffixDelimiter);
 	console.log("[extractFileInfo] parsed:", parsed);
 	return {

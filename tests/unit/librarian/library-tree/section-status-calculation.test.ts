@@ -1,4 +1,4 @@
-import type { TFile, TFolder } from "obsidian";
+import type { TFolder } from "obsidian";
 import { describe, expect, it } from "vitest";
 import { LibraryTree } from "../../../../src/commanders/librarian/library-tree";
 import type { TreeLeaf } from "../../../../src/commanders/librarian/types/tree-leaf";
@@ -8,7 +8,6 @@ import {
 	TreeNodeType,
 } from "../../../../src/commanders/librarian/types/tree-node";
 
-const fakeTFile = null as unknown as TFile;
 const fakeRootFolder = { name: "Library" } as unknown as TFolder;
 
 const createScrollLeaf = (
@@ -19,7 +18,7 @@ const createScrollLeaf = (
 	coreName,
 	coreNameChainToParent,
 	status,
-	tRef: fakeTFile,
+	extension: "md",
 	type: TreeNodeType.Scroll,
 });
 
@@ -98,7 +97,7 @@ describe("LibraryTree section status calculation", () => {
 					coreName: "doc",
 					coreNameChainToParent: ["folder"],
 					status: TreeNodeStatus.Unknown,
-					tRef: fakeTFile,
+					extension: "pdf",
 					type: TreeNodeType.File,
 				},
 			];

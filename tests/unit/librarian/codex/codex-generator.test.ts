@@ -1,10 +1,7 @@
-import type { TFile } from "obsidian";
 import { describe, expect, it } from "vitest";
 import { generateCodexContent } from "../../../../src/commanders/librarian/codex/codex-generator";
 import type { SectionNode } from "../../../../src/commanders/librarian/types/tree-node";
 import { TreeNodeStatus, TreeNodeType } from "../../../../src/commanders/librarian/types/tree-node";
-
-const fakeTFile = null as unknown as TFile;
 
 function createSection(
 	coreName: string,
@@ -44,8 +41,8 @@ describe("generateCodexContent", () => {
 				{
 					coreName: "Note",
 					coreNameChainToParent: ["A"],
+					extension: "md",
 					status: TreeNodeStatus.NotStarted,
-					tRef: fakeTFile,
 					type: TreeNodeType.Scroll,
 				},
 			]);
@@ -61,8 +58,8 @@ describe("generateCodexContent", () => {
 				{
 					coreName: "DoneNote",
 					coreNameChainToParent: ["A"],
+					extension: "md",
 					status: TreeNodeStatus.Done,
-					tRef: fakeTFile,
 					type: TreeNodeType.Scroll,
 				},
 			]);
@@ -79,8 +76,8 @@ describe("generateCodexContent", () => {
 				{
 					coreName: "Document",
 					coreNameChainToParent: ["A"],
+					extension: "pdf",
 					status: TreeNodeStatus.Unknown,
-					tRef: fakeTFile,
 					type: TreeNodeType.File,
 				},
 			]);
@@ -109,8 +106,8 @@ describe("generateCodexContent", () => {
 				{
 					coreName: "NestedNote",
 					coreNameChainToParent: ["A", "B"],
+					extension: "md",
 					status: TreeNodeStatus.NotStarted,
-					tRef: fakeTFile,
 					type: TreeNodeType.Scroll,
 				},
 			]);
@@ -132,8 +129,8 @@ describe("generateCodexContent", () => {
 				{
 					coreName: "DeepNote",
 					coreNameChainToParent: ["A", "B", "C", "D", "E"],
+					extension: "md",
 					status: TreeNodeStatus.NotStarted,
-					tRef: fakeTFile,
 					type: TreeNodeType.Scroll,
 				},
 			]);

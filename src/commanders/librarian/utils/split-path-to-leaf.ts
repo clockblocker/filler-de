@@ -1,8 +1,6 @@
 import type {
 	SplitPathToFile,
-	SplitPathToFileWithTRef,
 	SplitPathToMdFile,
-	SplitPathToMdFileWithTRef,
 } from "../../../obsidian-vault-action-manager/types/split-path";
 import type { MetaInfo } from "../../../services/dto-services/meta-info-manager/types";
 import type { TreeLeaf } from "../types/tree-leaf";
@@ -19,11 +17,7 @@ import { parseBasename } from "./parse-basename";
  * @param suffixDelimiter - Delimiter for parsing basename suffix
  */
 export function splitPathToLeaf(
-	splitPath:
-		| SplitPathToFile
-		| SplitPathToMdFile
-		| SplitPathToFileWithTRef
-		| SplitPathToMdFileWithTRef,
+	splitPath: SplitPathToFile | SplitPathToMdFile,
 	rootFolderName = "Library",
 	suffixDelimiter = "-",
 ): TreeLeaf {

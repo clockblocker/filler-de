@@ -40,10 +40,26 @@ export type SplitPath = z.infer<typeof SplitPathSchema>;
 
 export type SplitPathFromTo<T extends SplitPath> = { from: T; to: T };
 
+export type SplitPathToMdFileWithReader = SplitPathToMdFile & {
+	read: () => Promise<string>;
+};
+
+export type SplitPathWithReader = SplitPathToMdFileWithReader | SplitPathToFile;
+
+/**
+ * @internal
+ * tRef types are internal to the manager - tRefs become stale and should not leave the manager.
+ * Use SplitPathWithReader instead for external code.
+ * These are exported only for internal manager use (reader.ts, facade.ts).
+ */
 export type SplitPathToFolderWithTRef = SplitPathToFolder & { tRef: TFolder };
 export type SplitPathToFileWithTRef = SplitPathToFile & { tRef: TFile };
 export type SplitPathToMdFileWithTRef = SplitPathToMdFile & { tRef: TFile };
 
+/**
+ * @internal
+ * Internal type for manager use only. External code should use SplitPathWithReader.
+ */
 export type SplitPathWithTRef =
 	| SplitPathToFolderWithTRef
 	| SplitPathToFileWithTRef

@@ -8,7 +8,7 @@ import type {
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
-	SplitPathWithTRef,
+	SplitPathWithReader,
 } from "./types/split-path";
 import type { VaultAction } from "./types/vault-action";
 
@@ -66,7 +66,9 @@ export interface ObsidianVaultActionManager {
 	exists(splitPath: SplitPath): Promise<boolean>;
 	isInActiveView(splitPath: SplitPath): Promise<boolean>;
 	list(splitPath: SplitPathToFolder): Promise<SplitPath[]>;
-	listAll(splitPath: SplitPathToFolder): Promise<SplitPathWithTRef[]>;
+	listAllFilesWithMdReaders(
+		splitPath: SplitPathToFolder,
+	): Promise<SplitPathWithReader[]>;
 	pwd(): Promise<SplitPathToFile | SplitPathToMdFile>;
 
 	getAbstractFile<SP extends SplitPath>(
