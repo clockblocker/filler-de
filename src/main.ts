@@ -9,6 +9,7 @@ import {
 	handleCodexCheckboxClick,
 	isTaskCheckbox,
 } from "./commanders/librarian/click-handler";
+import { clearState, initializeState } from "./global-state/global-state";
 import {
 	splitPath as managerSplitPath,
 	ObsidianVaultActionManagerImpl,
@@ -34,23 +35,7 @@ import { SelectionService } from "./services/obsidian-services/atomic-services/s
 import { ACTION_CONFIGS } from "./services/wip-configs/actions/actions-config";
 import addBacklinksToCurrentFile from "./services/wip-configs/actions/old/addBacklinksToCurrentFile";
 import { SettingsTab } from "./settings";
-import {
-	DEFAULT_SETTINGS,
-	parseSettings,
-	type TextEaterSettings,
-	type UserSettings,
-} from "./types";
-
-// Global plugin settings for readSettings()
-let globalPluginSettings: TextEaterSettings | null = null;
-
-/**
- * Global function to read plugin settings.
- * Returns default settings if plugin not initialized.
- */
-export function readSettings(): UserSettings {
-	return parseSettings(globalPluginSettings ?? DEFAULT_SETTINGS);
-}
+import { DEFAULT_SETTINGS, type TextEaterSettings } from "./types";
 
 export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;
@@ -326,8 +311,8 @@ export default class TextEaterPlugin extends Plugin {
 	override onunload() {
 		if (this.bottomToolbarService) this.bottomToolbarService.detach();
 		if (this.selectionToolbarService) this.selectionToolbarService.detach();
-		// Clear global settings
-		globalPluginSettings = null;
+		// Clear global state
+		clearState();
 	}
 
 	private async loadSettings() {
@@ -336,8 +321,8 @@ export default class TextEaterPlugin extends Plugin {
 			DEFAULT_SETTINGS,
 			await this.loadData(),
 		);
-		// Set global settings for readSettings()
-		globalPluginSettings = this.settings;
+		// Initialize global state with parsed settings
+		initializeState(this.settings);
 	}
 
 	private async addCommands() {

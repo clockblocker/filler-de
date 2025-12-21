@@ -208,9 +208,9 @@ Should we standardize on a single approach?
 ### 13. Extract Path Utilities Module
 
 Create `utils/tree-path-utils.ts` with:
-- `buildPathFromTree(leaf, libraryRoot)` - Basic path (no suffix)
-- `buildCanonicalPathFromTree(leaf, libraryRoot, suffixDelimiter)` - Full canonical path
-- `buildCanonicalBasenameFromTree(leaf, suffixDelimiter)` - Just basename
+- `buildPathFromTree(leaf)` - Basic path (no suffix)
+- `buildCanonicalPathFromTree(leaf)` - Full canonical path
+- `buildCanonicalBasenameFromTree(leaf)` - Just basename
 
 Benefits:
 - Single source of truth
