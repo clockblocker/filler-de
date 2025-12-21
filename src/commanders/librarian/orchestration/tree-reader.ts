@@ -12,15 +12,14 @@ import { splitPathToLeaf } from "../utils/split-path-to-leaf";
 /**
  * Read tree from split files with readers.
  * Builds a LibraryTree from provided files.
+ * Reads libraryRoot and suffixDelimiter from global settings.
  */
 export async function readTreeFromSplitFilesWithReaders({
 	splitPathToLibraryRoot,
 	files,
-	suffixDelimiter,
 }: {
 	splitPathToLibraryRoot: SplitPathToFolder;
 	files: SplitPathWithReader[];
-	suffixDelimiter: string;
 }): Promise<LibraryTree> {
 	if (splitPathToLibraryRoot.type !== SplitPathType.Folder) {
 		throw new Error(
@@ -39,11 +38,7 @@ export async function readTreeFromSplitFilesWithReaders({
 	// Create leaves and read content using read() from SplitPathWithReader
 	const leaves = await Promise.all(
 		fileEntries.map(async (entry) => {
-			const leaf = splitPathToLeaf(
-				entry,
-				splitPathToLibraryRoot.basename,
-				suffixDelimiter,
-			);
+			const leaf = splitPathToLeaf(entry);
 
 			// Read content if md file (has read function)
 			if (entry.type === SplitPathType.MdFile && "read" in entry) {
@@ -61,5 +56,5 @@ export async function readTreeFromSplitFilesWithReaders({
 		}),
 	);
 
-	return new LibraryTree(leaves, splitPathToLibraryRoot.basename);
+	return new LibraryTree(leaves);
 }

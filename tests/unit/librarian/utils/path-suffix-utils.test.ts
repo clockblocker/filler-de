@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import {
 	buildBasename,
 	buildCanonicalBasename,
-	computePathFromSuffix,
+	computePathPartsFromSuffix,
 	computeSuffixFromPath,
 	expandSuffixedPath,
 	folderNameNeedsSanitization,
@@ -37,9 +37,9 @@ describe("computeSuffixFromPath", () => {
 	});
 });
 
-describe("computePathFromSuffix", () => {
+describe("computePathPartsFromSuffix", () => {
 	it("reverses suffix to path", () => {
-		expect(computePathFromSuffix(["child", "parent"])).toEqual([
+		expect(computePathPartsFromSuffix(["child", "parent"])).toEqual([
 			"parent",
 			"child",
 		]);
@@ -47,7 +47,7 @@ describe("computePathFromSuffix", () => {
 
 	it("is inverse of computeSuffixFromPath", () => {
 		const path = ["a", "b", "c"];
-		expect(computePathFromSuffix(computeSuffixFromPath(path))).toEqual(path);
+		expect(computePathPartsFromSuffix(computeSuffixFromPath(path))).toEqual(path);
 	});
 });
 

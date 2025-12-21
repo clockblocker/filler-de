@@ -207,7 +207,7 @@ export default class TextEaterPlugin extends Plugin {
 		this.selectionService = new SelectionService(this.app);
 
 		// New Librarian (healing modes)
-		this.librarian = new Librarian(this.vaultActionManager, "Library", "-");
+		this.librarian = new Librarian(this.vaultActionManager);
 		const healResult = await this.librarian.init();
 		console.log("[main] loadPlugin completed");
 		console.log(
@@ -229,7 +229,6 @@ export default class TextEaterPlugin extends Plugin {
 					app: this.app,
 					checkbox: target,
 					librarian: this.librarian,
-					suffixDelimiter: "-",
 					vaultActionManager: this.vaultActionManager,
 				});
 
@@ -578,11 +577,7 @@ export default class TextEaterPlugin extends Plugin {
 		// Return instance directly like vaultActionManager
 		// Create on-demand to avoid storing reference
 		return {
-			librarian: new Librarian(
-				this.vaultActionManager as any,
-				"Library",
-				"-",
-			),
+			librarian: new Librarian(this.vaultActionManager as any),
 			splitPath: managerSplitPath,
 		};
 	}

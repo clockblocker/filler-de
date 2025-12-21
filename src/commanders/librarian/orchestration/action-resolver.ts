@@ -8,7 +8,6 @@ import { SplitPathType } from "../../../obsidian-vault-action-manager/types/spli
 import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
 import { VaultActionType } from "../../../obsidian-vault-action-manager/types/vault-action";
 import {
-	type DragInResult,
 	handleDragIn,
 	type RenameIntent,
 	resolveRuntimeIntent,
@@ -58,7 +57,7 @@ export function intentToActions(intent: RenameIntent): VaultAction[] {
 
 /**
  * Resolve Mode 3 (DragIn) actions.
- * Pure function.
+ * Pure function. Reads libraryRoot from global settings.
  */
 export function resolveDragInActions(
 	newPath: string,
@@ -66,28 +65,20 @@ export function resolveDragInActions(
 	splitPath: (
 		path: string,
 	) => SplitPathToFile | SplitPathToMdFile | SplitPathToFolder,
-	libraryRoot: string,
-	suffixDelimiter: string,
 ): VaultAction[] {
 	const path = splitPath(newPath);
-	const result: DragInResult = handleDragIn(
-		subtype,
-		path,
-		libraryRoot,
-		suffixDelimiter,
-	);
+	const result = handleDragIn(subtype, path);
 	return result.actions;
 }
 
 /**
  * Resolve Mode 1 (Runtime) actions for folder rename.
  * Returns actions to heal all files in folder.
+ * Reads libraryRoot and suffixDelimiter from global settings.
  */
 export async function resolveFolderRenameActions(
 	folderPath: SplitPathToFolder,
 	context: ActionResolverContext,
-	libraryRoot: string,
-	suffixDelimiter: string,
 ): Promise<VaultAction[]> {
 	const allEntries = await context.listAllFilesWithMdReaders(folderPath);
 	const fileEntries = allEntries.filter(
@@ -104,8 +95,6 @@ export async function resolveFolderRenameActions(
 			entry, // "from" - same as current path (we don't know old path)
 			entry, // "to" - current path
 			RuntimeSubtype.PathOnly, // Path changed, fix suffix
-			libraryRoot,
-			suffixDelimiter,
 		);
 
 		if (intent) {
@@ -118,7 +107,7 @@ export async function resolveFolderRenameActions(
 
 /**
  * Resolve Mode 1 (Runtime) actions for file rename.
- * Pure function.
+ * Pure function. Reads libraryRoot and suffixDelimiter from global settings.
  */
 export function resolveRuntimeActions(
 	oldPath: string,
@@ -126,8 +115,6 @@ export function resolveRuntimeActions(
 	subtype: RuntimeSubtype,
 	isFolder: boolean,
 	context: ActionResolverContext,
-	libraryRoot: string,
-	suffixDelimiter: string,
 ): VaultAction[] | Promise<VaultAction[]> {
 	const oldSplitPath = context.splitPath(oldPath);
 	const newSplitPath = context.splitPath(newPath);
@@ -139,12 +126,7 @@ export function resolveRuntimeActions(
 		newSplitPath.type === SplitPathType.Folder
 	) {
 		if (newSplitPath.type === SplitPathType.Folder) {
-			return resolveFolderRenameActions(
-				newSplitPath,
-				context,
-				libraryRoot,
-				suffixDelimiter,
-			);
+			return resolveFolderRenameActions(newSplitPath, context);
 		}
 		return [];
 	}
@@ -153,8 +135,6 @@ export function resolveRuntimeActions(
 		oldSplitPath as SplitPathToFile | SplitPathToMdFile,
 		newSplitPath as SplitPathToFile | SplitPathToMdFile,
 		subtype,
-		libraryRoot,
-		suffixDelimiter,
 	);
 
 	if (!intent) {
@@ -166,6 +146,7 @@ export function resolveRuntimeActions(
 
 /**
  * Resolve actions based on detected mode.
+ * Reads libraryRoot and suffixDelimiter from global settings.
  */
 export function resolveActions(
 	mode: { mode: HealingMode; subtype: RuntimeSubtype | DragInSubtype },
@@ -173,8 +154,6 @@ export function resolveActions(
 	newPath: string,
 	isFolder: boolean,
 	context: ActionResolverContext,
-	libraryRoot: string,
-	suffixDelimiter: string,
 ): VaultAction[] | Promise<VaultAction[]> {
 	switch (mode.mode) {
 		case HealingMode.Runtime:
@@ -184,8 +163,6 @@ export function resolveActions(
 				mode.subtype as RuntimeSubtype,
 				isFolder,
 				context,
-				libraryRoot,
-				suffixDelimiter,
 			);
 
 		case HealingMode.DragIn:
@@ -193,8 +170,6 @@ export function resolveActions(
 				newPath,
 				mode.subtype as DragInSubtype,
 				context.splitPath,
-				libraryRoot,
-				suffixDelimiter,
 			);
 
 		case HealingMode.Init:

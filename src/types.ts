@@ -3,12 +3,13 @@ export type TextEaterSettings = {
 	apiProvider: "google";
 	libraryRoot: string;
 	suffixDelimiter: string;
+	maxSectionDepth: number;
 };
 
 export const DEFAULT_SETTINGS: TextEaterSettings = {
 	apiProvider: "google",
 	googleApiKey: "",
 	libraryRoot: "Library",
+	maxSectionDepth: 4,
 	suffixDelimiter: "-",
 };
-

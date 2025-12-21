@@ -1,13 +1,13 @@
-# LibrarianLegacy Architecture
+# Librarian Architecture
 
 Goal. To watch over the specified "Library" folder and:
 1) Keep filenames in sync with their paths. 
-2) Assist in navigation via genetaring and updating:
+2) Assist in navigation via generating and updating:
 - metadata on md notes
 - (later) the codexes of the filesystem
 
 
-The core part of the sysytem are:
+The core parts of the system are:
 
 1) Vault Action Manager. Emits End-User-Triggered events. Accepts batches of Vault Actions and executes them. Does not emit anything for system-triggered events. Not a part of the Librarian directly. To be treated as external library.
 - Vault Action Manager accepts VaultActions
@@ -28,22 +28,24 @@ The core part of the sysytem are:
 LibraryTree is initialized with:
 - an array of TreeLeaf: (ScrollNode | FileNode)[]
   each leaf has coreNameChainToParent already set
-- rootFolder: TFolder (the Library folder)
+- No rootFolder parameter needed - library root read from global settings
 
 On initialization, LibraryTree:
 1. Builds the tree structure from leaves (creating SectionNodes as needed)
 2. Runs DFS to calculate section statuses: a section is "Done" iff all children are Done/Unknown
 
 Tree initialization flow (`readTreeFromVault`):
-1. Calls `listAllFilesWithMdReaders(rootFolder)` to get all files with readers
-2. Filters out codex files (generated files)
-3. Converts each `SplitPathWithReader` to TreeLeaf using `splitPathToLeaf()`
-4. For markdown files, reads content via `entry.read()` and extracts status from MetaInfo
-5. Builds LibraryTree from the leaves
+1. Reads `splitPathToLibraryRoot` from `getParsedUserSettings()`
+2. Calls `listAllFilesWithMdReaders(splitPathToLibraryRoot)` to get all files with readers
+3. Filters out codex files (generated files)
+4. Converts each `SplitPathWithReader` to TreeLeaf using `splitPathToLeaf()` (reads settings internally)
+5. For markdown files, reads content via `entry.read()` and extracts status from MetaInfo
+6. Builds LibraryTree from the leaves
 
-TreeLeaf creation uses codec `splitPathToLeaf(splitPath, rootFolderName, suffixDelimiter)`:
+TreeLeaf creation uses codec `splitPathToLeaf(splitPath)`:
 - Converts `SplitPathToFile | SplitPathToMdFile` → TreeLeaf (no tRef needed)
 - Derives coreNameChainToParent from pathParts (strips root folder)
+- Reads `libraryRoot` and `suffixDelimiter` from `getParsedUserSettings()` globally
 - Initial status: NotStarted (for ScrollNode), Unknown (for FileNode)
 
 Status injection happens during tree initialization:
@@ -70,22 +72,35 @@ there is a util findCommonAncestor(coreNameChains: CoreNameChainFromRoot[])
 LibraryTree can serialize itself to TreeLeaf[] (for copy creation)
 LibraryTree supports getNode(coreNameChain: CoreNameChainFromRoot)
 
-3) reconcilaltion
-- clone the existing tree
-- translate the Emited by Vault Action Manager End-User-Triggered events to TreeActions
-- apply the TreeActions to the copy
-- reconcilaltionActions = diffSubtree(existingTree, newTree, closestToRootImpactedNode): VaultAction[]
-- VaultActionManager.dispath(reconcilaltionActions)
+3) Reconciliation
+- Clone the existing tree
+- Translate the emitted by Vault Action Manager End-User-Triggered events to TreeActions
+  - `translateVaultAction(action)` - reads settings from global state, no context needed
+- Apply the TreeActions to the copy
+  - `applyActionsToTree(actions, { tree })` - simplified context, no settings needed
+- ReconciliationActions = diffSubtree(existingTree, newTree, closestToRootImpactedNode): VaultAction[]
+- VaultActionManager.dispatch(reconciliationActions)
+
+**Settings Management:**
+- All utilities read `libraryRoot` and `suffixDelimiter` from `getParsedUserSettings()` globally
+- No parameter drilling - settings accessed where needed via global state
+- `Librarian` constructor no longer takes settings parameters
+- Context types (`TreeApplierContext`, `EventHandlerContext`) simplified - no settings fields
 
 
 ---
 
 Example of "filenames in sync with their paths". 
-Given settings { LibrarianRoot: "Library", suffixDelimeter: "-" }:
+Given settings (read from `getParsedUserSettings()`): `{ libraryRoot: "Library", suffixDelimiter: "-" }`:
 - "Library/parent/child/NoteBaseName-child-parent.md"; 
 { pathParts: ["Library", "parent", "child"], extension: "md", splitBasename: {coreName: "NoteBaseName", splitSuffix: ["child", "parent"] }} 
 - "Library/doc/paper/Pekar/2025/The recency and geographical origins of the bat viruses ancestral to SARS_CoV and SARS_CoV_2-2025-Pekar-paper-doc.pdf"
-{ pathParts: ["Library", "doc", "paper", "Pekar", "2025"], extension: "md", splitBasename: {coreName: "The recency and geographical origins of the bat viruses ancestral to SARS_CoV and SARS_CoV_2", splitSuffix: ["2025", "Pekar", "paper", "doc"] }}
+{ pathParts: ["Library", "doc", "paper", "Pekar", "2025"], extension: "pdf", splitBasename: {coreName: "The recency and geographical origins of the bat viruses ancestral to SARS_CoV and SARS_CoV_2", splitSuffix: ["2025", "Pekar", "paper", "doc"] }}
+
+**Settings Access Pattern:**
+- All filename utilities (`parseBasename`, `splitPathToLeaf`, `buildBasename`, etc.) read settings from `getParsedUserSettings()`
+- No need to pass `libraryRoot` or `suffixDelimiter` as function parameters
+- Settings are stored in global state and accessed where needed
 
 ---
 

@@ -1,5 +1,6 @@
 import type { App } from "obsidian";
 import { MarkdownView } from "obsidian";
+import { getParsedUserSettings } from "../../global-state/global-state";
 import type { ObsidianVaultActionManager } from "../../obsidian-vault-action-manager";
 import type { Librarian } from "./librarian";
 import { CODEX_PREFIX } from "./types/literals";
@@ -14,13 +15,11 @@ export async function handleCodexCheckboxClick({
 	vaultActionManager,
 	librarian,
 	app,
-	suffixDelimiter,
 }: {
 	checkbox: HTMLInputElement;
 	vaultActionManager: ObsidianVaultActionManager;
 	librarian: Librarian;
 	app: App;
-	suffixDelimiter: string;
 }): Promise<boolean> {
 	const pwd = await vaultActionManager.pwd();
 	if (!pwd.basename.startsWith(CODEX_PREFIX)) {
@@ -46,7 +45,7 @@ export async function handleCodexCheckboxClick({
 	}
 
 	// Parse to coreNameChain
-	const coreNameChain = parseCodexLinkTarget(href, suffixDelimiter);
+	const coreNameChain = parseCodexLinkTarget(href);
 	if (!coreNameChain || coreNameChain.length === 0) {
 		console.log("[handleCodexCheckboxClick] Failed to parse:", href);
 		return false;
@@ -84,15 +83,15 @@ export function isTaskCheckbox(
 
 /**
  * Parse codex link target to CoreNameChainFromRoot.
+ * Reads suffixDelimiter from global settings.
  *
- * New format uses suffixDelimiter (default "-"):
+ * New format uses suffixDelimiter:
  * - Codex links: "Aschenputtel-Fairy_Tales" → ["Fairy_Tales", "Aschenputtel"]
  * - With prefix: "__Fairy_Tales" → ["Fairy_Tales"] (section codex)
  * - Scroll links: "NoteName-Parent-GrandParent" → ["GrandParent", "Parent", "NoteName"]
  */
 export function parseCodexLinkTarget(
 	href: string,
-	suffixDelimiter: string,
 ): CoreNameChainFromRoot | null {
 	// Strip codex prefix if present
 	const cleanHref = href.startsWith(CODEX_PREFIX)
@@ -104,6 +103,7 @@ export function parseCodexLinkTarget(
 	}
 
 	// Split by delimiter and reverse (suffix is parent chain reversed)
+	const suffixDelimiter = getParsedUserSettings().suffixDelimiter;
 	const parts = cleanHref.split(suffixDelimiter);
 	return parts.toReversed();
 }

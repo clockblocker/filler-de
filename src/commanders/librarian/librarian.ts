@@ -1,3 +1,4 @@
+import { getParsedUserSettings } from "../../global-state/global-state";
 import type {
 	ObsidianVaultActionManager,
 	VaultEvent,
@@ -22,7 +23,7 @@ import {
 import { TreeActionType } from "./types/literals";
 import type { CoreNameChainFromRoot } from "./types/split-basename";
 import { TreeNodeStatus, TreeNodeType } from "./types/tree-node";
-import { buildCanonicalPathFromTree } from "./utils/tree-path-utils";
+import { buildCanonicalPathForLeaf } from "./utils/tree-path-utils";
 
 export class Librarian {
 	private tree: LibraryTree | null = null;
@@ -31,8 +32,6 @@ export class Librarian {
 
 	constructor(
 		private readonly vaultActionManager: ObsidianVaultActionManager,
-		private readonly libraryRoot: string,
-		private readonly suffixDelimiter: string = "-",
 	) {}
 
 	/**
@@ -40,17 +39,8 @@ export class Librarian {
 	 * Mode 2: Path is king, suffix-only renames.
 	 */
 	async init(): Promise<InitHealResult> {
-		// Get all files with readers (single call)
-		const rootSplitPath = this.vaultActionManager.splitPath(
-			this.libraryRoot,
-		);
-		if (rootSplitPath.type !== "Folder") {
-			console.error(
-				"[Librarian] Library root is not a folder:",
-				this.libraryRoot,
-			);
-			return { deleteActions: [], renameActions: [] };
-		}
+		const settings = getParsedUserSettings();
+		const rootSplitPath = settings.splitPathToLibraryRoot;
 
 		let allFiles: Awaited<
 			ReturnType<typeof this.vaultActionManager.listAllFilesWithMdReaders>
@@ -72,7 +62,6 @@ export class Librarian {
 			this.tree = await readTreeFromSplitFilesWithReaders({
 				files: allFiles,
 				splitPathToLibraryRoot: rootSplitPath,
-				suffixDelimiter: this.suffixDelimiter,
 			});
 			console.log(
 				"[Librarian] Tree initialized successfully, leaves:",
@@ -93,12 +82,7 @@ export class Librarian {
 		const leaves = this.tree.serializeToLeaves();
 
 		// Heal using actual files from manager
-		const healResult = await healOnInit(
-			leaves,
-			allFiles,
-			this.libraryRoot,
-			this.suffixDelimiter,
-		);
+		const healResult = await healOnInit(leaves, allFiles);
 
 		if (healResult.renameActions.length > 0) {
 			await this.vaultActionManager.dispatch(healResult.renameActions);
@@ -108,8 +92,6 @@ export class Librarian {
 				const impactedChains = applyActionsToTree(
 					healResult.renameActions,
 					{
-						libraryRoot: this.libraryRoot,
-						suffixDelimiter: this.suffixDelimiter,
 						tree: this.tree,
 					},
 				);
@@ -147,10 +129,7 @@ export class Librarian {
 		this.eventTeardown = this.vaultActionManager.subscribe(
 			async (event: VaultEvent) => {
 				console.log("event", event);
-				const handlerInfo = parseEventToHandler(
-					event,
-					this.libraryRoot,
-				);
+				const handlerInfo = parseEventToHandler(event);
 				if (!handlerInfo) {
 					return;
 				}
@@ -245,7 +224,6 @@ export class Librarian {
 				const node = this.tree.getNode(chain);
 				return node?.type === TreeNodeType.Section ? node : null;
 			},
-			libraryRoot: this.libraryRoot,
 			listAllFilesWithMdReaders: (sp) =>
 				this.vaultActionManager.listAllFilesWithMdReaders(sp),
 			readTree: () => this.readTreeFromVault(),
@@ -253,7 +231,6 @@ export class Librarian {
 				this.tree = tree;
 			},
 			splitPath: (p) => this.vaultActionManager.splitPath(p),
-			suffixDelimiter: this.suffixDelimiter,
 			tree: this.tree,
 		};
 	}
@@ -344,7 +321,7 @@ export class Librarian {
 		// Write metadata to file if this is a Scroll node
 		if (node?.type === TreeNodeType.Scroll) {
 			// Build canonical path from tree structure
-			const path = buildCanonicalPathFromTree(node);
+			const path = buildCanonicalPathForLeaf(node);
 
 			try {
 				await writeStatusToMetadata(path, status, {
@@ -386,13 +363,11 @@ export class Librarian {
 	 * Lists all files in the library root and builds a LibraryTree.
 	 */
 	async readTreeFromVault(): Promise<LibraryTree> {
-		const rootSplitPath = this.vaultActionManager.splitPath(
-			this.libraryRoot,
-		);
+		const settings = getParsedUserSettings();
+		const libraryRoot = settings.splitPathToLibraryRoot.basename;
+		const rootSplitPath = this.vaultActionManager.splitPath(libraryRoot);
 		if (rootSplitPath.type !== "Folder") {
-			throw new Error(
-				`Library root is not a folder: ${this.libraryRoot}`,
-			);
+			throw new Error(`Library root is not a folder: ${libraryRoot}`);
 		}
 
 		const files =
@@ -403,7 +378,6 @@ export class Librarian {
 		return readTreeFromSplitFilesWithReaders({
 			files,
 			splitPathToLibraryRoot: rootSplitPath,
-			suffixDelimiter: this.suffixDelimiter,
 		});
 	}
 

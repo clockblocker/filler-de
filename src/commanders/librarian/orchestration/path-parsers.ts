@@ -1,16 +1,18 @@
+import { getParsedUserSettings } from "../../../global-state/global-state";
 import type { CoreNameChainFromRoot } from "../types/split-basename";
 import { parseBasename } from "../utils/parse-basename";
 
 /**
  * Extract coreNameChain from delete path.
  * Pure function for parsing delete events.
+ * Reads libraryRoot and suffixDelimiter from global settings.
  */
 export function parseDeletePathToChain(
 	path: string,
 	isFolder: boolean,
-	libraryRoot: string,
-	suffixDelimiter: string,
 ): CoreNameChainFromRoot | null {
+	const settings = getParsedUserSettings();
+	const libraryRoot = settings.splitPathToLibraryRoot.basename;
 	const pathParts = path.split("/");
 	const libraryRootIndex = pathParts.indexOf(libraryRoot);
 	if (libraryRootIndex === -1) {
@@ -30,7 +32,7 @@ export function parseDeletePathToChain(
 		? filename.slice(0, filename.lastIndexOf("."))
 		: filename;
 
-	const parsed = parseBasename(basenameWithoutExt, suffixDelimiter);
+	const parsed = parseBasename(basenameWithoutExt);
 	return [...partsAfterRoot.slice(0, -1), parsed.coreName];
 }
 
@@ -43,4 +45,3 @@ export function extractBasenameWithoutExt(path: string): string {
 		? basename.slice(0, basename.lastIndexOf("."))
 		: basename;
 }
-

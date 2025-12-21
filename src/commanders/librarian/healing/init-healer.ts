@@ -1,3 +1,4 @@
+import { getParsedUserSettings } from "../../../global-state/global-state";
 import type {
 	SplitPathToFile,
 	SplitPathToMdFile,
@@ -10,12 +11,12 @@ import {
 import type { TreeLeaf } from "../types/tree-leaf";
 import { TreeNodeType } from "../types/tree-node";
 import { parseBasename } from "../utils/parse-basename";
-import { joinPathParts } from "../utils/tree-path-utils";
 import {
 	buildBasename,
 	computeSuffixFromPath,
 	suffixMatchesPath,
 } from "../utils/path-suffix-utils";
+import { joinPathParts } from "../utils/tree-path-utils";
 
 /**
  * Result of init healing.
@@ -41,7 +42,6 @@ type LeafHealInfo = {
 function findMatchingFile(
 	leaf: TreeLeaf,
 	actualFiles: SplitPathWithReader[],
-	suffixDelimiter: string,
 ): SplitPathWithReader | null {
 	// Expected path (parent chain only, not including coreName)
 	const expectedParentPath = joinPathParts(leaf.coreNameChainToParent);
@@ -63,7 +63,7 @@ function findMatchingFile(
 		}
 
 		// Parse basename to get coreName
-		const { coreName } = parseBasename(file.basename, suffixDelimiter);
+		const { coreName } = parseBasename(file.basename);
 		if (coreName !== leaf.coreName) {
 			continue;
 		}
@@ -88,7 +88,6 @@ function findMatchingFile(
 function analyzeLeaf(
 	leaf: TreeLeaf,
 	actualFile: SplitPathWithReader | null,
-	suffixDelimiter: string,
 ): LeafHealInfo {
 	if (!actualFile) {
 		// File not found - skip healing
@@ -101,7 +100,7 @@ function analyzeLeaf(
 	}
 
 	const currentBasename = actualFile.basename;
-	const parsed = parseBasename(currentBasename, suffixDelimiter);
+	const parsed = parseBasename(currentBasename);
 
 	// Path relative to library root
 	const needsRename = !suffixMatchesPath(
@@ -113,7 +112,6 @@ function analyzeLeaf(
 		? buildBasename(
 				parsed.coreName,
 				computeSuffixFromPath(leaf.coreNameChainToParent),
-				suffixDelimiter,
 			)
 		: currentBasename;
 
@@ -127,12 +125,14 @@ function analyzeLeaf(
 
 /**
  * Build SplitPath for a leaf.
+ * Reads libraryRoot from global settings.
  */
 function leafToSplitPath(
 	leaf: TreeLeaf,
 	basename: string,
-	libraryRoot: string,
 ): SplitPathToFile | SplitPathToMdFile {
+	const settings = getParsedUserSettings();
+	const libraryRoot = settings.splitPathToLibraryRoot.basename;
 	const pathParts = [libraryRoot, ...leaf.coreNameChainToParent];
 
 	if (leaf.type === TreeNodeType.Scroll) {
@@ -154,13 +154,11 @@ function leafToSplitPath(
 
 /**
  * Generate rename action for a leaf.
+ * Reads libraryRoot from global settings.
  */
-function createRenameAction(
-	info: LeafHealInfo,
-	libraryRoot: string,
-): VaultAction {
-	const from = leafToSplitPath(info.leaf, info.currentBasename, libraryRoot);
-	const to = leafToSplitPath(info.leaf, info.expectedBasename, libraryRoot);
+function createRenameAction(info: LeafHealInfo): VaultAction {
+	const from = leafToSplitPath(info.leaf, info.currentBasename);
+	const to = leafToSplitPath(info.leaf, info.expectedBasename);
 
 	if (info.leaf.type === TreeNodeType.Scroll) {
 		return {
@@ -184,27 +182,24 @@ function createRenameAction(
 /**
  * Heal leaves on init: fix suffixes to match paths.
  * Mode 2: Path is king, suffix-only renames, never move.
+ * Reads libraryRoot and suffixDelimiter from global settings.
  *
  * @param leaves - Tree leaves to heal
  * @param actualFiles - Actual files from manager (with readers)
- * @param libraryRoot - Library root folder name
- * @param suffixDelimiter - Delimiter for suffix parsing
  * @returns Rename and delete actions
  */
 export async function healOnInit(
 	leaves: TreeLeaf[],
 	actualFiles: SplitPathWithReader[],
-	libraryRoot: string,
-	suffixDelimiter = "-",
 ): Promise<InitHealResult> {
 	const renameActions: VaultAction[] = [];
 
 	for (const leaf of leaves) {
-		const actualFile = findMatchingFile(leaf, actualFiles, suffixDelimiter);
-		const info = analyzeLeaf(leaf, actualFile, suffixDelimiter);
+		const actualFile = findMatchingFile(leaf, actualFiles);
+		const info = analyzeLeaf(leaf, actualFile);
 
 		if (info.needsRename) {
-			renameActions.push(createRenameAction(info, libraryRoot));
+			renameActions.push(createRenameAction(info));
 		}
 	}
 
@@ -218,29 +213,23 @@ export async function healOnInit(
 /**
  * Check if a single leaf needs healing.
  * Useful for individual file checks.
+ * Reads suffixDelimiter from global settings.
  */
 export function leafNeedsHealing(
 	leaf: TreeLeaf,
 	actualFiles: SplitPathWithReader[],
-	suffixDelimiter: string,
 ): boolean {
-	const actualFile = findMatchingFile(leaf, actualFiles, suffixDelimiter);
-	const info = analyzeLeaf(leaf, actualFile, suffixDelimiter);
+	const actualFile = findMatchingFile(leaf, actualFiles);
+	const info = analyzeLeaf(leaf, actualFile);
 	return info.needsRename;
 }
 
 /**
  * Get the expected basename for a leaf.
+ * Reads suffixDelimiter from global settings.
  * Note: tRef removed - computes expected basename from tree structure only.
  */
-export function getExpectedBasename(
-	leaf: TreeLeaf,
-	suffixDelimiter = "-",
-): string {
+export function getExpectedBasename(leaf: TreeLeaf): string {
 	const coreNameChain = leaf.coreNameChainToParent;
-	return buildBasename(
-		leaf.coreName,
-		computeSuffixFromPath(coreNameChain),
-		suffixDelimiter,
-	);
+	return buildBasename(leaf.coreName, computeSuffixFromPath(coreNameChain));
 }

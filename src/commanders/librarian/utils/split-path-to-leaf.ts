@@ -1,3 +1,4 @@
+import { getParsedUserSettings } from "../../../global-state/global-state";
 import type {
 	SplitPathToFile,
 	SplitPathToMdFile,
@@ -10,19 +11,18 @@ import { parseBasename } from "./parse-basename";
 /**
  * Codec: SplitPath → TreeLeaf
  * Converts filesystem representation to tree representation.
+ * Reads libraryRoot and suffixDelimiter from global settings.
  * Note: tRef is NOT stored - TFile references become stale when files are renamed/moved.
  *
  * @param splitPath - SplitPath (with or without tRef, we don't use it)
- * @param rootFolderName - The library root folder name to strip from pathParts
- * @param suffixDelimiter - Delimiter for parsing basename suffix
  */
 export function splitPathToLeaf(
 	splitPath: SplitPathToFile | SplitPathToMdFile,
-	rootFolderName = "Library",
-	suffixDelimiter = "-",
 ): TreeLeaf {
+	const settings = getParsedUserSettings();
+	const rootFolderName = settings.splitPathToLibraryRoot.basename;
 	const { basename, pathParts, type } = splitPath;
-	const { coreName } = parseBasename(basename, suffixDelimiter);
+	const { coreName } = parseBasename(basename);
 
 	// Convert pathParts to coreNameChainToParent by stripping root folder
 	const coreNameChainToParent =

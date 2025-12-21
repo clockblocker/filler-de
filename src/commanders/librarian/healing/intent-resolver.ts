@@ -1,3 +1,4 @@
+import { getParsedUserSettings } from "../../../global-state/global-state";
 import { systemPathFromSplitPath } from "../../../obsidian-vault-action-manager/helpers/pathfinder";
 import type {
 	SplitPathToFile,
@@ -8,7 +9,7 @@ import type { SplitBasename } from "../types/split-basename";
 import { parseBasename } from "../utils/parse-basename";
 import {
 	buildBasename,
-	computePathFromSuffix,
+	computePathPartsFromSuffix,
 	computeSuffixFromPath,
 	expandSuffixedPath,
 	pathPartsHaveSuffix,
@@ -32,12 +33,9 @@ type FileInfo = {
 	parsed: SplitBasename;
 };
 
-function extractFileInfo(
-	path: SplitPathToFile | SplitPathToMdFile,
-	suffixDelimiter: string,
-): FileInfo {
+function extractFileInfo(path: SplitPathToFile | SplitPathToMdFile): FileInfo {
 	console.log("[extractFileInfo] input path:", systemPathFromSplitPath(path));
-	const parsed = parseBasename(path.basename, suffixDelimiter);
+	const parsed = parseBasename(path.basename);
 	console.log("[extractFileInfo] parsed:", parsed);
 	return {
 		basename: path.basename,
@@ -49,6 +47,7 @@ function extractFileInfo(
 
 /**
  * Resolve rename intent for Runtime mode.
+ * Reads libraryRoot and suffixDelimiter from global settings.
  *
  * Rules:
  * - BasenameOnly: User wants to move → compute target path from new suffix
@@ -61,11 +60,11 @@ export function resolveRuntimeIntent(
 	_oldPath: SplitPathToFile | SplitPathToMdFile,
 	newPath: SplitPathToFile | SplitPathToMdFile,
 	subtype: RuntimeSubtype,
-	libraryRoot: string,
-	suffixDelimiter = "-",
 ): RenameIntent | null {
+	const settings = getParsedUserSettings();
+	const libraryRoot = settings.splitPathToLibraryRoot.basename;
 	// oldPath kept for potential future use (e.g., conflict detection)
-	const newInfo = extractFileInfo(newPath, suffixDelimiter);
+	const newInfo = extractFileInfo(newPath);
 
 	// Path relative to library root (strip root from pathParts)
 	const relativePathParts = getRelativePathParts(
@@ -89,7 +88,6 @@ export function resolveRuntimeIntent(
 				const newBasename = buildBasename(
 					newInfo.parsed.coreName,
 					expectedSuffix,
-					suffixDelimiter,
 				);
 				const targetPath: SplitPathToFile | SplitPathToMdFile = {
 					...newPath,
@@ -99,7 +97,7 @@ export function resolveRuntimeIntent(
 			}
 
 			// Compute target path from new suffix
-			const targetPathParts = computePathFromSuffix(
+			const targetPathParts = computePathPartsFromSuffix(
 				newInfo.parsed.splitSuffix,
 			);
 			const fullTargetPathParts = [libraryRoot, ...targetPathParts];
@@ -121,19 +119,15 @@ export function resolveRuntimeIntent(
 		case RuntimeSubtype.PathOnly: {
 			// User moved file → fix suffix to match new path
 			// Check if path contains suffixed folder (e.g., "X-Y")
-			if (pathPartsHaveSuffix(relativePathParts, suffixDelimiter)) {
+			if (pathPartsHaveSuffix(relativePathParts)) {
 				// Expand suffixed path: ["X-Y"] → ["X", "Y"]
-				const expandedRelative = expandSuffixedPath(
-					relativePathParts,
-					suffixDelimiter,
-				);
+				const expandedRelative = expandSuffixedPath(relativePathParts);
 				const expandedFull = [libraryRoot, ...expandedRelative];
 				const expectedSuffix = computeSuffixFromPath(expandedRelative);
 
 				const newBasename = buildBasename(
 					newInfo.parsed.coreName,
 					expectedSuffix,
-					suffixDelimiter,
 				);
 
 				const targetPath: SplitPathToFile | SplitPathToMdFile = {
@@ -157,7 +151,6 @@ export function resolveRuntimeIntent(
 			const newBasename = buildBasename(
 				newInfo.parsed.coreName,
 				expectedSuffix,
-				suffixDelimiter,
 			);
 
 			const targetPath: SplitPathToFile | SplitPathToMdFile = {
@@ -181,7 +174,6 @@ export function resolveRuntimeIntent(
 			const newBasename = buildBasename(
 				newInfo.parsed.coreName,
 				expectedSuffix,
-				suffixDelimiter,
 			);
 
 			const targetPath: SplitPathToFile | SplitPathToMdFile = {

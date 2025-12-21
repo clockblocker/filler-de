@@ -49,49 +49,18 @@ const file = (
 
 ## Logic Duplications
 
-### 3. Path Reconstruction Logic Duplicated - 🔄 PARTIALLY ADDRESSED
+### 3. Path Reconstruction Logic Duplicated - ✅ RESOLVED
 
-**Status:** 🔄 **PARTIALLY ADDRESSED** - Reduced from 3+ locations to 1
+**Status:** ✅ **RESOLVED** - All path reconstruction now uses `buildCanonicalPathForLeaf` from `tree-path-utils.ts`
 
-**Current Locations:**
-- `librarian.ts:326-336` - Reconstructs path in `setStatus` (still present)
+**Current State:**
+- `tree-path-utils.ts` - Centralized path building utilities:
+  - `buildCanonicalPathForLeaf(leaf)` - Full canonical path
+  - `buildCanonicalBasenameForLeaf(leaf)` - Just basename
+  - `joinPathParts(parts)` - Path joining utility
+- All path reconstruction now uses these utilities
+- Settings (`libraryRoot`, `suffixDelimiter`) read from `getParsedUserSettings()` globally
 
-**Remaining Pattern:**
-```typescript
-// Still in setStatus:
-const pathChain = node.coreNameChainToParent.length > 0
-  ? `${node.coreNameChainToParent.join("/")}/`
-  : "";
-const path = `${this.libraryRoot}/${pathChain}${canonicalBasename}.${node.extension}`;
-```
-
-**Suggestion:** Extract to utility function:
-```typescript
-// utils/tree-path-utils.ts
-export function buildPathFromTree(
-	leaf: TreeLeaf,
-	libraryRoot: string,
-): string {
-	const coreNameChain = [...leaf.coreNameChainToParent, leaf.coreName];
-	return `${libraryRoot}/${coreNameChain.join("/")}.${leaf.extension}`;
-}
-
-export function buildCanonicalPathFromTree(
-	leaf: TreeLeaf,
-	libraryRoot: string,
-	suffixDelimiter: string,
-): string {
-	const canonicalBasename = buildCanonicalBasename(
-		leaf.coreName,
-		leaf.coreNameChainToParent,
-		suffixDelimiter,
-	);
-	const pathChain = leaf.coreNameChainToParent.length > 0
-		? `${leaf.coreNameChainToParent.join("/")}/`
-		: "";
-	return `${libraryRoot}/${pathChain}${canonicalBasename}.${leaf.extension}`;
-}
-```
 
 ### 4. Basename Extraction Duplicated - 🔄 PARTIALLY ADDRESSED
 
@@ -169,16 +138,24 @@ Should we standardize on a single approach?
 
 ## Refactoring Suggestions
 
-### 13. Extract Path Utilities Module
+### 13. Extract Path Utilities Module - ✅ COMPLETED
 
-Create `utils/tree-path-utils.ts` with:
-- `buildCanonicalPathFromTree(leaf)` - Full canonical path
-- `buildCanonicalBasenameFromTree(leaf)` - Just basename
+**Status:** ✅ **COMPLETED**
+
+Created `utils/tree-path-utils.ts` with:
+- `buildCanonicalPathForLeaf(leaf)` - Full canonical path
+- `buildCanonicalBasenameForLeaf(leaf)` - Just basename
+- `joinPathParts(parts)` - Path joining utility
+
+**Additional Improvements:**
+- All utilities read `libraryRoot` and `suffixDelimiter` from `getParsedUserSettings()` globally
+- No need to pass settings as parameters
+- Consistent behavior across all path operations
 
 Benefits:
-- Single source of truth
-- Easier to test
-- Consistent behavior
+- Single source of truth ✅
+- Easier to test ✅
+- Consistent behavior ✅
 
 ### 15. Structured Error Handling
 
@@ -217,14 +194,20 @@ async function getCurrentBasename(...): Promise<Result<string, Error>> {
 - **Issue #16:** Extract file resolution logic - Moved to manager
 
 ### 🔄 Partially Addressed
-- **Issue #3:** Path reconstruction duplication - Reduced from 3+ to 1 location (`setStatus`)
 - **Issue #4:** Basename extraction duplication - Reduced (one instance removed)
+
+### ✅ Fully Resolved
+- **Issue #3:** Path reconstruction duplication - ✅ All path building now uses `tree-path-utils.ts`
+- **Issue #13:** Extract path utilities module - ✅ Created with centralized utilities
 
 ### 🆕 Architecture Improvements
 - **Separation of Concerns:** Librarian only knows `VaultActions`, `TreeActions`, `SplitPath`
 - **No Stale tRefs:** `SplitPathWithReader` replaces `SplitPathWithTRef`
 - **Simplified Tree Reading:** Pure function `readTreeFromSplitFilesWithReaders()`
 - **Simplified Healing:** Synchronous matching with pre-fetched files
+- **Global Settings Access:** All utilities read `libraryRoot` and `suffixDelimiter` from `getParsedUserSettings()` - no parameter drilling
+- **Simplified Context Types:** `TranslationContext` removed, `TreeApplierContext` and `EventHandlerContext` no longer carry settings
+- **Simplified Constructor:** `Librarian` constructor no longer takes `libraryRoot` and `suffixDelimiter` parameters
 
 See `refactor-impact-analysis.md` for detailed analysis.
 

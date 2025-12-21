@@ -5,14 +5,13 @@ import { translateVaultAction } from "../reconciliation";
 import type { CoreNameChainFromRoot } from "../types/split-basename";
 
 export type TreeApplierContext = {
-	libraryRoot: string;
-	suffixDelimiter?: string;
 	tree: LibraryTree;
 };
 
 /**
  * Apply VaultActions to tree and collect impacted chains.
  * Pure function that takes tree and actions, returns impacted chains.
+ * Reads libraryRoot and suffixDelimiter from global settings.
  */
 export function applyActionsToTree(
 	actions: VaultAction[],
@@ -23,10 +22,7 @@ export function applyActionsToTree(
 	> = [];
 
 	for (const action of actions) {
-		const treeAction = translateVaultAction(action, {
-			libraryRoot: context.libraryRoot,
-			suffixDelimiter: context.suffixDelimiter,
-		});
+		const treeAction = translateVaultAction(action, {});
 
 		if (treeAction) {
 			const result = context.tree.applyTreeAction(treeAction);

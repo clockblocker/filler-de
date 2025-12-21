@@ -181,7 +181,7 @@ function handleDragIn(
 
 Extend `src/commanders/librarian/utils/`:
 
-- `computePathFromSuffix(suffix: string[], rootFolder: string): string[]`
+- `computePathPartsFromSuffix(suffix: string[], rootFolder: string): string[]`
 - `computeSuffixFromPath(pathParts: string[], rootFolder: string): string[]`
 - `sanitizeFolderName(name: string, delimiter: string): string`
 
@@ -249,7 +249,7 @@ Tree mutation → tree.snapshot() before/after → noteDiffer.diff() → mapDiff
 ### Completed ✅
 
 - [x] `types/literals.ts` - Zod enums: `HealingMode`, `RuntimeSubtype`, `DragInSubtype`
-- [x] `utils/path-suffix-utils.ts` - Pure functions: `computeSuffixFromPath`, `computePathFromSuffix`, `buildBasename`, `suffixMatchesPath`, `sanitizeFolderName`
+- [x] `utils/path-suffix-utils.ts` - Pure functions: `computeSuffixFromPath`, `computePathPartsFromSuffix`, `buildBasename`, `suffixMatchesPath`, `sanitizeFolderName`
 - [x] `healing/mode-detector.ts` - `detectRenameMode()`, `createInitMode()`
 - [x] `healing/intent-resolver.ts` - `resolveRuntimeIntent()` handles BasenameOnly, PathOnly, Both
 - [x] `healing/init-healer.ts` - `healOnInit()`, `leafNeedsHealing()`, `getExpectedBasename()`

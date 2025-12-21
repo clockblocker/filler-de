@@ -44,7 +44,6 @@ export function buildCodexVaultActions(
 
 		const content = generateCodexContent(section, {
 			libraryRoot: libraryRootPath,
-			suffixDelimiter: settings.suffixDelimiter,
 		});
 
 		// Build codex basename with suffix (same pattern as regular files)

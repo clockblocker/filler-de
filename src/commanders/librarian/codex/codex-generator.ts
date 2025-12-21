@@ -3,6 +3,7 @@
  * Generates markdown content for a section's codex file.
  */
 
+import { getParsedUserSettings } from "../../../global-state/global-state";
 import {
 	BACK_ARROW,
 	DONE_CHECKBOX,
@@ -16,20 +17,14 @@ import type { SectionNode, TreeNode } from "../types/tree-node";
 import { TreeNodeStatus, TreeNodeType } from "../types/tree-node";
 import { buildCodexBasename } from "../utils/codex-utils";
 
-/** Max depth for nested sections in codex */
-const MAX_SECTION_DEPTH = 4;
-
 export type CodexGeneratorOptions = {
-	/** Max depth for nested sections (default: 4) */
-	maxSectionDepth?: number;
-	/** Suffix delimiter (default: "-") */
-	suffixDelimiter?: string;
 	/** Library root name (for generating root codex backlinks) */
 	libraryRoot?: string;
 };
 
 /**
  * Generate codex content for a section.
+ * Reads suffixDelimiter and maxSectionDepth from global settings.
  *
  * Structure:
  * - Backlink to parent (if not root)
@@ -40,8 +35,9 @@ export function generateCodexContent(
 	section: SectionNode,
 	options: CodexGeneratorOptions = {},
 ): string {
-	const maxDepth = options.maxSectionDepth ?? MAX_SECTION_DEPTH;
-	const delimiter = options.suffixDelimiter ?? "-";
+	const settings = getParsedUserSettings();
+	const maxDepth = settings.maxSectionDepth;
+	const delimiter = settings.suffixDelimiter;
 	const lines: string[] = [];
 
 	// Backlink to parent codex

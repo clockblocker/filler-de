@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import type { TreeLeaf } from "../../../../src/commanders/librarian/types/tree-leaf";
 import { TreeNodeStatus, TreeNodeType } from "../../../../src/commanders/librarian/types/tree-node";
 import {
-	buildCanonicalBasenameFromTree,
-	buildCanonicalPathFromTree,
-	,
+	buildCanonicalBasenameForLeaf,
+	buildCanonicalPathForLeaf,
 } from "../../../../src/commanders/librarian/utils/tree-path-utils";
 import * as globalState from "../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
@@ -11,6 +11,8 @@ import { SplitPathType } from "../../../../src/obsidian-vault-action-manager/typ
 
 // Default settings for tests
 const defaultSettings: ParsedUserSettings = {
+	apiProvider: "google",
+	googleApiKey: "",
 	splitPathToLibraryRoot: {
 		basename: "Library",
 		pathParts: [],
@@ -33,7 +35,7 @@ describe("buildCanonicalPathFromTree", () => {
 	});
 
 	it("builds canonical path for root-level file", () => {
-		const leaf = {
+		const leaf: TreeLeaf = {
 			coreName: "Note",
 			coreNameChainToParent: [],
 			extension: "md",
@@ -41,13 +43,13 @@ describe("buildCanonicalPathFromTree", () => {
 			type: TreeNodeType.Scroll,
 		};
 
-		const result = buildCanonicalPathFromTree(leaf);
+		const result = buildCanonicalPathForLeaf(leaf);
 
 		expect(result).toBe("Library/Note.md");
 	});
 
 	it("builds canonical path with suffix in basename", () => {
-		const leaf = {
+		const leaf: TreeLeaf = {
 			coreName: "Note",
 			coreNameChainToParent: ["A", "B"],
 			extension: "md",
@@ -55,7 +57,7 @@ describe("buildCanonicalPathFromTree", () => {
 			type: TreeNodeType.Scroll,
 		};
 
-		const result = buildCanonicalPathFromTree(leaf);
+		const result = buildCanonicalPathForLeaf(leaf);
 
 		expect(result).toBe("Library/A/B/Note-B-A.md");
 	});
@@ -70,7 +72,7 @@ describe("buildCanonicalPathFromTree", () => {
 			suffixDelimiter: "_",
 		});
 
-		const leaf = {
+		const leaf: TreeLeaf = {
 			coreName: "Note",
 			coreNameChainToParent: ["A", "B"],
 			extension: "md",
@@ -78,7 +80,7 @@ describe("buildCanonicalPathFromTree", () => {
 			type: TreeNodeType.Scroll,
 		};
 
-		const result = buildCanonicalPathFromTree(leaf);
+		const result = buildCanonicalPathForLeaf(leaf);
 
 		expect(result).toBe("Library/A/B/Note_B_A.md");
 	});
@@ -93,7 +95,7 @@ describe("buildCanonicalPathFromTree", () => {
 			suffixDelimiter: "-",
 		});
 
-		const leaf = {
+		const leaf: TreeLeaf = {
 			coreName: "Note",
 			coreNameChainToParent: ["A"],
 			extension: "md",
@@ -101,7 +103,7 @@ describe("buildCanonicalPathFromTree", () => {
 			type: TreeNodeType.Scroll,
 		};
 
-		const result = buildCanonicalPathFromTree(leaf);
+		const result = buildCanonicalPathForLeaf(leaf);
 
 		expect(result).toBe("parent/child/A/Note-A.md");
 	});
@@ -121,7 +123,7 @@ describe("buildCanonicalBasenameFromTree", () => {
 	});
 
 	it("builds canonical basename for root-level file", () => {
-		const leaf = {
+		const leaf: TreeLeaf = {
 			coreName: "Note",
 			coreNameChainToParent: [],
 			extension: "md",
@@ -129,13 +131,13 @@ describe("buildCanonicalBasenameFromTree", () => {
 			type: TreeNodeType.Scroll,
 		};
 
-		const result = buildCanonicalBasenameFromTree(leaf);
+		const result = buildCanonicalBasenameForLeaf(leaf);
 
 		expect(result).toBe("Note");
 	});
 
 	it("builds canonical basename with reversed path as suffix", () => {
-		const leaf = {
+		const leaf: TreeLeaf = {
 			coreName: "Note",
 			coreNameChainToParent: ["A", "B"],
 			extension: "md",
@@ -143,7 +145,7 @@ describe("buildCanonicalBasenameFromTree", () => {
 			type: TreeNodeType.Scroll,
 		};
 
-		const result = buildCanonicalBasenameFromTree(leaf);
+		const result = buildCanonicalBasenameForLeaf(leaf);
 
 		expect(result).toBe("Note-B-A");
 	});
@@ -158,7 +160,7 @@ describe("buildCanonicalBasenameFromTree", () => {
 			suffixDelimiter: "_",
 		});
 
-		const leaf = {
+		const leaf: TreeLeaf = {
 			coreName: "Note",
 			coreNameChainToParent: ["A", "B"],
 			extension: "md",
@@ -166,13 +168,13 @@ describe("buildCanonicalBasenameFromTree", () => {
 			type: TreeNodeType.Scroll,
 		};
 
-		const result = buildCanonicalBasenameFromTree(leaf);
+		const result = buildCanonicalBasenameForLeaf(leaf);
 
 		expect(result).toBe("Note_B_A");
 	});
 
 	it("handles single parent folder", () => {
-		const leaf = {
+		const leaf: TreeLeaf = {
 			coreName: "Note",
 			coreNameChainToParent: ["Parent"],
 			extension: "md",
@@ -180,7 +182,7 @@ describe("buildCanonicalBasenameFromTree", () => {
 			type: TreeNodeType.Scroll,
 		};
 
-		const result = buildCanonicalBasenameFromTree(leaf);
+		const result = buildCanonicalBasenameForLeaf(leaf);
 
 		expect(result).toBe("Note-Parent");
 	});

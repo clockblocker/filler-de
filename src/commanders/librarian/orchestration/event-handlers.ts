@@ -1,5 +1,7 @@
+import { getParsedUserSettings } from "../../../global-state/global-state";
 import type { VaultEvent } from "../../../obsidian-vault-action-manager";
 import { systemPathFromSplitPath } from "../../../obsidian-vault-action-manager/helpers/pathfinder";
+import type { SplitPath } from "../../../obsidian-vault-action-manager/types/split-path";
 import { SplitPathType } from "../../../obsidian-vault-action-manager/types/split-path";
 import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
 import { dedupeChains, expandToAncestors } from "../codex/impacted-chains";
@@ -19,31 +21,27 @@ import {
 	parseDeletePathToChain,
 } from "./path-parsers";
 import { applyActionsToTree, type TreeApplierContext } from "./tree-applier";
-import type { TreeReaderContext } from "./tree-reader";
 
 export type EventHandlerContext = {
 	dispatch: (actions: VaultAction[]) => Promise<unknown>;
-	libraryRoot: string;
 	readTree: () => Promise<LibraryTree>;
 	setTree: (tree: LibraryTree) => void;
-	splitPath: (path: string) => ReturnType<TreeReaderContext["splitPath"]>;
-	suffixDelimiter: string;
+	splitPath: (path: string) => SplitPath;
 	tree: LibraryTree | null;
 	listAllFilesWithMdReaders: (
 		splitPath: import("../../../obsidian-vault-action-manager/types/split-path").SplitPathToFolder,
 	) => Promise<
 		import("../../../obsidian-vault-action-manager/types/split-path").SplitPathWithReader[]
 	>;
-} & Pick<CodexRegeneratorContext, "getNode"> &
-	Pick<TreeApplierContext, "suffixDelimiter">;
+} & Pick<CodexRegeneratorContext, "getNode">;
 
 /**
  * Extract handler info from VaultEvent.
  * Pure function that converts events to handler parameters.
+ * Reads libraryRoot from global settings.
  */
 export function parseEventToHandler(
 	event: VaultEvent,
-	libraryRoot: string,
 ): {
 	type: "rename" | "create" | "delete";
 	oldPath?: string;
@@ -51,6 +49,8 @@ export function parseEventToHandler(
 	path: string;
 	isFolder: boolean;
 } | null {
+	const settings = getParsedUserSettings();
+	const libraryRoot = settings.splitPathToLibraryRoot.basename;
 	if (event.type === "FileRenamed" || event.type === "FolderRenamed") {
 		const oldPath = systemPathFromSplitPath(event.from);
 		const newPath = systemPathFromSplitPath(event.to);
@@ -101,13 +101,15 @@ export function parseEventToHandler(
 
 /**
  * Check if path should be ignored (outside library or codex file).
+ * Reads libraryRoot from global settings.
  */
 export function shouldIgnorePath(
 	path: string,
 	basenameWithoutExt: string,
-	libraryRoot: string,
 	isCodexBasename: (basename: string) => boolean,
 ): boolean {
+	const settings = getParsedUserSettings();
+	const libraryRoot = settings.splitPathToLibraryRoot.basename;
 	if (!path.startsWith(`${libraryRoot}/`)) {
 		return true;
 	}
@@ -125,14 +127,7 @@ export async function handleDelete(
 ): Promise<void> {
 	// Skip codex files
 	const basenameWithoutExt = extractBasenameWithoutExt(path);
-	if (
-		shouldIgnorePath(
-			path,
-			basenameWithoutExt,
-			context.libraryRoot,
-			isCodexBasename,
-		)
-	) {
+	if (shouldIgnorePath(path, basenameWithoutExt, isCodexBasename)) {
 		return;
 	}
 
@@ -141,12 +136,7 @@ export async function handleDelete(
 	}
 
 	// Parse path to get coreNameChain
-	const coreNameChain = parseDeletePathToChain(
-		path,
-		isFolder,
-		context.libraryRoot,
-		context.suffixDelimiter,
-	);
+	const coreNameChain = parseDeletePathToChain(path, isFolder);
 
 	if (!coreNameChain) {
 		return;
@@ -164,8 +154,6 @@ export async function handleDelete(
 	await regenerateCodexes(impactedSections, {
 		dispatch: context.dispatch,
 		getNode: context.getNode,
-		libraryRoot: context.libraryRoot,
-		suffixDelimiter: context.suffixDelimiter,
 	});
 }
 
@@ -179,10 +167,9 @@ export async function handleRename(
 	isFolder: boolean,
 	context: EventHandlerContext,
 ): Promise<VaultAction[]> {
-	const mode = detectRenameMode(
-		{ isFolder, newPath, oldPath },
-		context.libraryRoot,
-	);
+	const settings = getParsedUserSettings();
+	const libraryRoot = settings.splitPathToLibraryRoot.basename;
+	const mode = detectRenameMode({ isFolder, newPath, oldPath }, libraryRoot);
 
 	if (!mode) {
 		return [];
@@ -207,8 +194,6 @@ export async function handleRename(
 			listAllFilesWithMdReaders: context.listAllFilesWithMdReaders,
 			splitPath: context.splitPath,
 		},
-		context.libraryRoot,
-		context.suffixDelimiter,
 	);
 
 	const actionArray = Array.isArray(actions) ? actions : await actions;
@@ -218,15 +203,11 @@ export async function handleRename(
 			await context.dispatch(actionArray);
 			if (context.tree) {
 				const impactedChains = applyActionsToTree(actionArray, {
-					libraryRoot: context.libraryRoot,
-					suffixDelimiter: context.suffixDelimiter,
 					tree: context.tree,
 				});
 				await regenerateCodexes(impactedChains, {
 					dispatch: context.dispatch,
 					getNode: context.getNode,
-					libraryRoot: context.libraryRoot,
-					suffixDelimiter: context.suffixDelimiter,
 				});
 			}
 		} finally {
@@ -262,8 +243,6 @@ async function updateTreeAndCodexesForRename(
 	await regenerateCodexes(impactedChains, {
 		dispatch: context.dispatch,
 		getNode: context.getNode,
-		libraryRoot: context.libraryRoot,
-		suffixDelimiter: context.suffixDelimiter,
 	});
 }
 
@@ -281,8 +260,10 @@ export async function handleCreate(
 		return [];
 	}
 
+	const settings = getParsedUserSettings();
+	const libraryRoot = settings.splitPathToLibraryRoot.basename;
 	// Ignore files outside library
-	if (!path.startsWith(`${context.libraryRoot}/`)) {
+	if (!path.startsWith(`${libraryRoot}/`)) {
 		return [];
 	}
 
@@ -299,11 +280,7 @@ export async function handleCreate(
 		return [];
 	}
 
-	const { action, parentChain } = computeCreateAction(
-		splitPath,
-		context.libraryRoot,
-		context.suffixDelimiter,
-	);
+	const { action, parentChain } = computeCreateAction(splitPath);
 
 	if (!action) {
 		return [];
@@ -321,8 +298,6 @@ export async function handleCreate(
 		await regenerateCodexes(impactedChains, {
 			dispatch: context.dispatch,
 			getNode: context.getNode,
-			libraryRoot: context.libraryRoot,
-			suffixDelimiter: context.suffixDelimiter,
 		});
 	} finally {
 	}

@@ -52,4 +52,3 @@ export function buildWriteStatusAction(
 		type: VaultActionType.ReplaceContentMdFile,
 	};
 }
-

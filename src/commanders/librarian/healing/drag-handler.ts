@@ -1,3 +1,4 @@
+import { getParsedUserSettings } from "../../../global-state/global-state";
 import type {
 	SplitPathToFile,
 	SplitPathToFolder,
@@ -10,7 +11,7 @@ import {
 import { DragInSubtype } from "../types/literals";
 import { parseBasename } from "../utils/parse-basename";
 import {
-	computePathFromSuffix,
+	computePathPartsFromSuffix,
 	folderNameNeedsSanitization,
 	sanitizeFolderName,
 } from "../utils/path-suffix-utils";
@@ -28,21 +29,20 @@ export type DragInResult = {
 /**
  * Handle file drag-in from outside library.
  * Mode 3 (File): Suffix wins → move to suffix location.
+ * Reads libraryRoot from global settings.
  *
  * @param newPath - The path where file was dropped (inside library)
- * @param libraryRoot - Library root folder name
- * @param suffixDelimiter - Delimiter for suffix parsing
  * @returns Actions to move file to correct location
  */
 export function handleFileDragIn(
 	newPath: SplitPathToFile | SplitPathToMdFile,
-	libraryRoot: string,
-	suffixDelimiter = "-",
 ): DragInResult {
-	const parsed = parseBasename(newPath.basename, suffixDelimiter);
+	const settings = getParsedUserSettings();
+	const libraryRoot = settings.splitPathToLibraryRoot.basename;
+	const parsed = parseBasename(newPath.basename);
 
 	// Compute target path from suffix
-	const targetPathParts = computePathFromSuffix(parsed.splitSuffix);
+	const targetPathParts = computePathPartsFromSuffix(parsed.splitSuffix);
 	const fullTargetPathParts = [libraryRoot, ...targetPathParts];
 
 	// Check if already in correct location
@@ -112,23 +112,18 @@ export function handleFileDragIn(
  *
  * @param newPath - The folder path where it was dropped (inside library)
  * @param libraryRoot - Library root folder name
- * @param suffixDelimiter - Delimiter that needs escaping in folder names
  * @returns Actions to sanitize folder name (if needed)
  */
 export function handleFolderDragIn(
 	newPath: SplitPathToFolder,
 	_libraryRoot: string,
-	suffixDelimiter = "-",
 ): DragInResult {
 	// libraryRoot kept for potential future use (nested folder checks)
-	if (!folderNameNeedsSanitization(newPath.basename, suffixDelimiter)) {
+	if (!folderNameNeedsSanitization(newPath.basename)) {
 		return { actions: [], sanitized: false };
 	}
 
-	const sanitizedBasename = sanitizeFolderName(
-		newPath.basename,
-		suffixDelimiter,
-	);
+	const sanitizedBasename = sanitizeFolderName(newPath.basename);
 
 	const targetPath: SplitPathToFolder = {
 		...newPath,
@@ -150,26 +145,19 @@ export function handleFolderDragIn(
 
 /**
  * Handle drag-in based on subtype.
+ * Reads libraryRoot from global settings.
  */
 export function handleDragIn(
 	subtype: DragInSubtype,
 	newPath: SplitPathToFile | SplitPathToMdFile | SplitPathToFolder,
-	libraryRoot: string,
-	suffixDelimiter = "-",
 ): DragInResult {
 	if (subtype === DragInSubtype.File) {
-		return handleFileDragIn(
-			newPath as SplitPathToFile | SplitPathToMdFile,
-			libraryRoot,
-			suffixDelimiter,
-		);
+		return handleFileDragIn(newPath as SplitPathToFile | SplitPathToMdFile);
 	}
 
-	return handleFolderDragIn(
-		newPath as SplitPathToFolder,
-		libraryRoot,
-		suffixDelimiter,
-	);
+	const settings = getParsedUserSettings();
+	const libraryRoot = settings.splitPathToLibraryRoot.basename;
+	return handleFolderDragIn(newPath as SplitPathToFolder, libraryRoot);
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

@@ -1,6 +1,5 @@
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import { makeSystemPathForSplitPath } from "../../../obsidian-vault-action-manager/impl/split-path";
-import type { CoreNameChainFromRoot } from "../types/split-basename";
 import type { TreeLeaf } from "../types/tree-leaf";
 import { buildCanonicalBasename } from "./path-suffix-utils";
 
@@ -24,7 +23,7 @@ export function joinPathParts(parts: string[]): string {
  * buildCanonicalPathFromTree({ coreName: "Note", coreNameChainToParent: ["A", "B"], extension: "md" })
  * // "Library/A/B/Note-B-A.md"
  */
-export function buildCanonicalPathFromTree(leaf: TreeLeaf): string {
+export function buildCanonicalPathForLeaf(leaf: TreeLeaf): string {
 	const settings = getParsedUserSettings();
 	const libraryRootPath = makeSystemPathForSplitPath(
 		settings.splitPathToLibraryRoot,
@@ -33,7 +32,6 @@ export function buildCanonicalPathFromTree(leaf: TreeLeaf): string {
 	const canonicalBasename = buildCanonicalBasename(
 		leaf.coreName,
 		leaf.coreNameChainToParent,
-		settings.suffixDelimiter,
 	);
 
 	const pathChain =
@@ -50,11 +48,6 @@ export function buildCanonicalPathFromTree(leaf: TreeLeaf): string {
  * buildCanonicalBasenameFromTree({ coreName: "Note", coreNameChainToParent: ["A", "B"] })
  * // "Note-B-A"
  */
-export function buildCanonicalBasenameFromTree(leaf: TreeLeaf): string {
-	const settings = getParsedUserSettings();
-	return buildCanonicalBasename(
-		leaf.coreName,
-		leaf.coreNameChainToParent,
-		settings.suffixDelimiter,
-	);
+export function buildCanonicalBasenameForLeaf(leaf: TreeLeaf): string {
+	return buildCanonicalBasename(leaf.coreName, leaf.coreNameChainToParent);
 }

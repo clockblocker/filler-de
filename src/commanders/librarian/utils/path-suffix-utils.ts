@@ -1,3 +1,4 @@
+import { getParsedUserSettings } from "../../../global-state/global-state";
 import type {
 	CoreName,
 	CoreNameChainFromRoot,
@@ -22,9 +23,9 @@ export function computeSuffixFromPath(
  * Suffix is reversed to form path parts (root-to-child order).
  *
  * @example
- * computePathFromSuffix(["child", "parent"]) // ["parent", "child"]
+ * computePathPartsFromSuffix(["child", "parent"]) // ["parent", "child"]
  */
-export function computePathFromSuffix(
+export function computePathPartsFromSuffix(
 	splitSuffix: SplitSuffix,
 ): CoreNameChainFromRoot {
 	return [...splitSuffix].reverse();
@@ -32,34 +33,35 @@ export function computePathFromSuffix(
 
 /**
  * Build full basename from coreName and suffix.
+ * Reads suffixDelimiter from global settings.
  *
  * @example
- * buildBasename("Note", ["child", "parent"], "-") // "Note-child-parent"
+ * buildBasename("Note", ["child", "parent"]) // "Note-child-parent"
  */
 export function buildBasename(
 	coreName: CoreName,
 	splitSuffix: SplitSuffix,
-	suffixDelimiter = "-",
 ): string {
 	if (splitSuffix.length === 0) {
 		return coreName;
 	}
+	const suffixDelimiter = getParsedUserSettings().suffixDelimiter;
 	return [coreName, ...splitSuffix].join(suffixDelimiter);
 }
 
 /**
  * Build canonical basename for a file at given path.
+ * Reads suffixDelimiter from global settings.
  *
  * @example
- * buildCanonicalBasename("Note", ["parent", "child"], "-") // "Note-child-parent"
+ * buildCanonicalBasename("Note", ["parent", "child"]) // "Note-child-parent"
  */
 export function buildCanonicalBasename(
 	coreName: CoreName,
 	coreNameChain: CoreNameChainFromRoot,
-	suffixDelimiter = "-",
 ): string {
 	const suffix = computeSuffixFromPath(coreNameChain);
-	return buildBasename(coreName, suffix, suffixDelimiter);
+	return buildBasename(coreName, suffix);
 }
 
 /**
@@ -78,52 +80,48 @@ export function suffixMatchesPath(
 
 /**
  * Sanitize folder name by replacing delimiter with underscore.
+ * Reads suffixDelimiter from global settings.
  *
  * @example
- * sanitizeFolderName("my-folder", "-") // "my_folder"
+ * sanitizeFolderName("my-folder") // "my_folder"
  */
-export function sanitizeFolderName(
-	name: string,
-	suffixDelimiter = "-",
-): string {
+export function sanitizeFolderName(name: string): string {
+	const suffixDelimiter = getParsedUserSettings().suffixDelimiter;
 	return name.split(suffixDelimiter).join("_");
 }
 
 /**
  * Check if folder name contains the delimiter (needs sanitization).
+ * Reads suffixDelimiter from global settings.
  */
-export function folderNameNeedsSanitization(
-	name: string,
-	suffixDelimiter = "-",
-): boolean {
+export function folderNameNeedsSanitization(name: string): boolean {
+	const suffixDelimiter = getParsedUserSettings().suffixDelimiter;
 	return name.includes(suffixDelimiter);
 }
 
 /**
  * Check if any path part contains the suffix delimiter.
+ * Reads suffixDelimiter from global settings.
  *
  * @example
- * pathPartsHaveSuffix(["Library", "X-Y", "Z"], "-") // true
- * pathPartsHaveSuffix(["Library", "X", "Y"], "-") // false
+ * pathPartsHaveSuffix(["Library", "X-Y", "Z"]) // true
+ * pathPartsHaveSuffix(["Library", "X", "Y"]) // false
  */
-export function pathPartsHaveSuffix(
-	pathParts: string[],
-	suffixDelimiter = "-",
-): boolean {
+export function pathPartsHaveSuffix(pathParts: string[]): boolean {
+	const suffixDelimiter = getParsedUserSettings().suffixDelimiter;
 	return pathParts.some((part) => part.includes(suffixDelimiter));
 }
 
 /**
  * Expand path parts by splitting any suffixed segments.
+ * Reads suffixDelimiter from global settings.
  * e.g. ["Library", "X-Y"] → ["Library", "X", "Y"]
  *
  * @example
- * expandSuffixedPath(["Library", "X-Y"], "-") // ["Library", "X", "Y"]
- * expandSuffixedPath(["A", "B-C-D"], "-") // ["A", "B", "C", "D"]
+ * expandSuffixedPath(["Library", "X-Y"]) // ["Library", "X", "Y"]
+ * expandSuffixedPath(["A", "B-C-D"]) // ["A", "B", "C", "D"]
  */
-export function expandSuffixedPath(
-	pathParts: string[],
-	suffixDelimiter = "-",
-): string[] {
+export function expandSuffixedPath(pathParts: string[]): string[] {
+	const suffixDelimiter = getParsedUserSettings().suffixDelimiter;
 	return pathParts.flatMap((part) => part.split(suffixDelimiter));
 }
