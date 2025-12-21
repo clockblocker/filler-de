@@ -106,42 +106,6 @@ export function buildCanonicalPathFromTree(
 
 **Suggestion:** Use existing utilities (`extractBasenameWithoutExt`, `parseBasename`) consistently.
 
-## Complexity Issues
-
-### 5. Overly Complex `getCurrentBasename` Function - ✅ RESOLVED
-
-**Status:** ✅ **RESOLVED** - Function completely removed
-
-**Previous Problem:** 75+ lines with complex fallback logic:
-1. Try expected path first
-2. If not found, search parent directory
-3. Match by coreName
-4. Multiple error paths
-
-**Resolution:**
-- Function completely removed
-- Logic replaced with simple file matching in `healOnInit`
-- Uses pre-fetched `SplitPathWithReader[]` from manager
-- Single responsibility: match files to leaves
-- Synchronous matching logic (no async fallback needed)
-
-### 6. Path Reconstruction Without Suffix - ✅ RESOLVED
-
-**Status:** ✅ **RESOLVED** - No longer reconstructs paths
-
-**Location:** ~~`init-healer.ts:47-48`~~ (changed)
-
-**Previous Issue:** 
-```typescript
-const expectedPath = `${libraryRoot}/${coreNameChain.join("/")}.${leaf.extension}`;
-```
-
-**Resolution:**
-- `init-healer.ts` now uses `SplitPathWithReader` directly
-- No path reconstruction needed - files come with full `SplitPath` info
-- Matching done by comparing `coreName` + parent path from `SplitPath`
-- Clearer intent: match actual files to expected tree structure
-
 ## Code Quality Issues
 
 ### 7. Debug Console.log Statements Left In

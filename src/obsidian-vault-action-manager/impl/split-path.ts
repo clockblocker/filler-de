@@ -1,7 +1,7 @@
 import type { TAbstractFile } from "obsidian";
 import { TFile, TFolder } from "obsidian";
 import type {
-	CoreSplitPath,
+	CommonSplitPath,
 	SplitPath,
 	SplitPathToFile,
 	SplitPathToFolder,
@@ -10,14 +10,48 @@ import type {
 
 const MD_EXTENSION = "md";
 
-export function splitPathKey(splitPath: CoreSplitPath): string {
-	// Include extension if present (for files, not folders)
+/**
+ * @deprecated Use makeSystemPathForSplitPath instead.
+ * Kept for backward compatibility.
+ */
+export function splitPathKey(splitPath: CommonSplitPath): string {
+	return makeSystemPathForSplitPath(splitPath as SplitPath);
+}
+
+/**
+ * Build system path from SplitPath.
+ * For files: pathParts/basename.extension
+ * For folders: pathParts/basename
+ *
+ * @example
+ * makeSystemPathForSplitPath({ pathParts: ["root", "notes"], basename: "file", extension: "md", type: "MdFile" })
+ * // "root/notes/file.md"
+ * @example
+ * makeSystemPathForSplitPath({ pathParts: ["root"], basename: "folder", type: "Folder" })
+ * // "root/folder"
+ */
+/**
+ * Build system path from SplitPath or CommonSplitPath.
+ * For files: pathParts/basename.extension
+ * For folders: pathParts/basename
+ *
+ * @example
+ * makeSystemPathForSplitPath({ pathParts: ["root", "notes"], basename: "file", extension: "md", type: "MdFile" })
+ * // "root/notes/file.md"
+ * @example
+ * makeSystemPathForSplitPath({ pathParts: ["root"], basename: "folder", type: "Folder" })
+ * // "root/folder"
+ */
+export function makeSystemPathForSplitPath(
+	splitPath: SplitPath | CommonSplitPath,
+): string {
 	const ext =
 		"extension" in splitPath
 			? (splitPath as { extension: string }).extension
 			: "";
+
 	const filename = ext ? `${splitPath.basename}.${ext}` : splitPath.basename;
-	return [...splitPath.pathParts, filename].join("/");
+	return [...splitPath.pathParts, filename].filter(Boolean).join("/");
 }
 
 export function splitPath(path: string): SplitPath;

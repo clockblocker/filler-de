@@ -1,4 +1,5 @@
-import { getState } from "../../../global-state/global-state";
+import { getParsedUserSettings } from "../../../global-state/global-state";
+import { makeSystemPathForSplitPath } from "../../../obsidian-vault-action-manager/impl/split-path";
 import type { TreeLeaf } from "../types/tree-leaf";
 import { buildCanonicalBasename } from "./path-suffix-utils";
 
@@ -16,16 +17,16 @@ import { buildCanonicalBasename } from "./path-suffix-utils";
  * // "parent/child/A/B/Note.md"
  */
 export function buildPathFromTree(leaf: TreeLeaf): string {
-	const state = getState();
-	const settings = state.parsedUserSettings;
-	const libraryRootPath =
-		settings.splitPathToLibraryRoot.pathParts.length > 0
-			? `${settings.splitPathToLibraryRoot.pathParts.join("/")}/${settings.splitPathToLibraryRoot.basename}`
-			: settings.splitPathToLibraryRoot.basename;
+	const settings = getParsedUserSettings();
+	const libraryRootPath = makeSystemPathForSplitPath(
+		settings.splitPathToLibraryRoot,
+	);
+
 	const pathChain =
 		leaf.coreNameChainToParent.length > 0
 			? `${leaf.coreNameChainToParent.join("/")}/`
 			: "";
+
 	return `${libraryRootPath}/${pathChain}${leaf.coreName}.${leaf.extension}`;
 }
 
@@ -38,17 +39,17 @@ export function buildPathFromTree(leaf: TreeLeaf): string {
  * // "Library/A/B/Note-B-A.md"
  */
 export function buildCanonicalPathFromTree(leaf: TreeLeaf): string {
-	const state = getState();
-	const settings = state.parsedUserSettings;
-	const libraryRootPath =
-		settings.splitPathToLibraryRoot.pathParts.length > 0
-			? `${settings.splitPathToLibraryRoot.pathParts.join("/")}/${settings.splitPathToLibraryRoot.basename}`
-			: settings.splitPathToLibraryRoot.basename;
+	const settings = getParsedUserSettings();
+	const libraryRootPath = makeSystemPathForSplitPath(
+		settings.splitPathToLibraryRoot,
+	);
+
 	const canonicalBasename = buildCanonicalBasename(
 		leaf.coreName,
 		leaf.coreNameChainToParent,
 		settings.suffixDelimiter,
 	);
+
 	const pathChain =
 		leaf.coreNameChainToParent.length > 0
 			? `${leaf.coreNameChainToParent.join("/")}/`
@@ -64,8 +65,7 @@ export function buildCanonicalPathFromTree(leaf: TreeLeaf): string {
  * // "Note-B-A"
  */
 export function buildCanonicalBasenameFromTree(leaf: TreeLeaf): string {
-	const state = getState();
-	const settings = state.parsedUserSettings;
+	const settings = getParsedUserSettings();
 	return buildCanonicalBasename(
 		leaf.coreName,
 		leaf.coreNameChainToParent,

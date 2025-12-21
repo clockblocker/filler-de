@@ -31,7 +31,7 @@ export const SplitPathSchema = z.discriminatedUnion("type", [
 	SplitPathToMdFileSchema,
 ]);
 
-export type CoreSplitPath = z.infer<typeof CoreSplitPathSchema>;
+export type CommonSplitPath = z.infer<typeof CoreSplitPathSchema>;
 
 export type SplitPathToFolder = z.infer<typeof SplitPathToFolderSchema>;
 export type SplitPathToFile = z.infer<typeof SplitPathToFileSchema>;

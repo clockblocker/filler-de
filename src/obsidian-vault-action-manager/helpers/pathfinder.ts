@@ -2,7 +2,7 @@ import { type TFile, TFolder } from "obsidian";
 import z from "zod/v4";
 import { MD } from "../types/literals";
 import {
-	type CoreSplitPath,
+	type CommonSplitPath,
 	type SplitPath,
 	SplitPathSchema,
 	type SplitPathToFolder,
@@ -11,7 +11,7 @@ import {
 } from "../types/split-path";
 
 export function splitPathToMdFileFromCore(
-	core: CoreSplitPath,
+	core: CommonSplitPath,
 ): SplitPathToMdFile {
 	return {
 		...core,
@@ -21,7 +21,7 @@ export function splitPathToMdFileFromCore(
 }
 
 export function splitPathToFolderFromCore(
-	core: CoreSplitPath,
+	core: CommonSplitPath,
 ): SplitPathToFolder {
 	return {
 		...core,

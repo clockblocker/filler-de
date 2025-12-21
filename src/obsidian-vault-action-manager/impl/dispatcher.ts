@@ -6,7 +6,7 @@ import { sortActionsByWeight, VaultActionType } from "../types/vault-action";
 import { collapseActions } from "./collapse";
 import type { Executor } from "./executor";
 import type { SelfEventTrackerLegacy } from "./self-event-tracker";
-import { splitPath } from "./split-path";
+import { makeSystemPathForSplitPath, splitPath } from "./split-path";
 
 export type DispatchResult = Result<void, DispatchError[]>;
 
@@ -91,7 +91,7 @@ export class Dispatcher {
 						action.type === VaultActionType.ReplaceContentMdFile
 					) {
 						// splitPath is guaranteed to be SplitPathToMdFile for these actions
-						const fileKey = this.splitPathToKey(
+						const fileKey = makeSystemPathForSplitPath(
 							splitPath as SplitPathToMdFile,
 						);
 						fileKeys.add(fileKey);
@@ -147,15 +147,6 @@ export class Dispatcher {
 		}
 
 		return result;
-	}
-
-	/**
-	 * Convert a SplitPath to a unique key string for deduplication.
-	 */
-	private splitPathToKey(splitPath: SplitPathToMdFile): string {
-		return [...splitPath.pathParts, splitPath.basename, splitPath.extension]
-			.filter(Boolean)
-			.join("/");
 	}
 
 	/**
