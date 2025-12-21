@@ -1,33 +1,19 @@
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import { makeSystemPathForSplitPath } from "../../../obsidian-vault-action-manager/impl/split-path";
+import type { CoreNameChainFromRoot } from "../types/split-basename";
 import type { TreeLeaf } from "../types/tree-leaf";
 import { buildCanonicalBasename } from "./path-suffix-utils";
 
 /**
- * Build basic path from tree leaf (no suffix in basename).
- * Path format: libraryRoot/pathChain/coreName.extension
+ * Join path parts with "/".
+ * Filters out empty strings.
  *
  * @example
- * given settings: { splitPathToLibraryRoot: { basename: "Library", pathParts: [], type: "Folder" } }
- * buildPathFromTree({ coreName: "Note", coreNameChainToParent: ["A", "B"], extension: "md" })
- * // "Library/A/B/Note.md"
- * @example
- * given settings: { splitPathToLibraryRoot: { basename: "child", pathParts: ["parent"], type: "Folder" } }
- * buildPathFromTree({ coreName: "Note", coreNameChainToParent: ["A", "B"], extension: "md" })
- * // "parent/child/A/B/Note.md"
+ * joinPathParts(["a", "b", "c"]) // "a/b/c"
+ * joinPathParts(["a", "", "c"]) // "a/c"
  */
-export function buildPathFromTree(leaf: TreeLeaf): string {
-	const settings = getParsedUserSettings();
-	const libraryRootPath = makeSystemPathForSplitPath(
-		settings.splitPathToLibraryRoot,
-	);
-
-	const pathChain =
-		leaf.coreNameChainToParent.length > 0
-			? `${leaf.coreNameChainToParent.join("/")}/`
-			: "";
-
-	return `${libraryRootPath}/${pathChain}${leaf.coreName}.${leaf.extension}`;
+export function joinPathParts(parts: string[]): string {
+	return parts.filter(Boolean).join("/");
 }
 
 /**
@@ -52,7 +38,7 @@ export function buildCanonicalPathFromTree(leaf: TreeLeaf): string {
 
 	const pathChain =
 		leaf.coreNameChainToParent.length > 0
-			? `${leaf.coreNameChainToParent.join("/")}/`
+			? `${joinPathParts(leaf.coreNameChainToParent)}/`
 			: "";
 	return `${libraryRootPath}/${pathChain}${canonicalBasename}.${leaf.extension}`;
 }

@@ -22,7 +22,7 @@ import {
 import { TreeActionType } from "./types/literals";
 import type { CoreNameChainFromRoot } from "./types/split-basename";
 import { TreeNodeStatus, TreeNodeType } from "./types/tree-node";
-import { buildCanonicalBasename } from "./utils/path-suffix-utils";
+import { buildCanonicalPathFromTree } from "./utils/tree-path-utils";
 
 export class Librarian {
 	private tree: LibraryTree | null = null;
@@ -204,12 +204,33 @@ export class Librarian {
 		return {
 			dispatch: (actions) => this.vaultActionManager.dispatch(actions),
 			getNode: (chain) => {
-				if (!this.tree) return null;
+				if (!this.tree) {
+					console.log("[getCodexContext] tree is null");
+					return null;
+				}
 				const node = this.tree.getNode(chain);
-				return node?.type === TreeNodeType.Section ? node : null;
+				console.log(
+					"[getCodexContext] chain:",
+					chain,
+					"node:",
+					node?.type,
+				);
+				if (!node) {
+					console.log(
+						"[getCodexContext] node is null for chain:",
+						chain,
+					);
+					return null;
+				}
+				if (node.type !== TreeNodeType.Section) {
+					console.log(
+						"[getCodexContext] node is not Section:",
+						node.type,
+					);
+					return null;
+				}
+				return node;
 			},
-			libraryRoot: this.libraryRoot,
-			suffixDelimiter: this.suffixDelimiter,
 		};
 	}
 
@@ -322,18 +343,8 @@ export class Librarian {
 
 		// Write metadata to file if this is a Scroll node
 		if (node?.type === TreeNodeType.Scroll) {
-			// Reconstruct canonical basename from tree structure (suffix = reversed path chain)
-			const canonicalBasename = buildCanonicalBasename(
-				node.coreName,
-				node.coreNameChainToParent,
-				this.suffixDelimiter,
-			);
-			// Build full path: libraryRoot + pathChain + canonicalBasename + extension
-			const pathChain =
-				node.coreNameChainToParent.length > 0
-					? `${node.coreNameChainToParent.join("/")}/`
-					: "";
-			const path = `${this.libraryRoot}/${pathChain}${canonicalBasename}.${node.extension}`;
+			// Build canonical path from tree structure
+			const path = buildCanonicalPathFromTree(node);
 
 			try {
 				await writeStatusToMetadata(path, status, {
@@ -360,6 +371,12 @@ export class Librarian {
 		// ChangeNodeStatus always returns single chain, never tuple
 		const baseChain = impactedChain as CoreNameChainFromRoot;
 		const impactedSections = dedupeChains(expandToAncestors(baseChain));
+
+		console.log("[Librarian] setStatus: baseChain:", baseChain);
+		console.log(
+			"[Librarian] setStatus: impactedSections:",
+			impactedSections,
+		);
 
 		await regenerateCodexes(impactedSections, this.getCodexContext());
 	}

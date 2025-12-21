@@ -16,14 +16,13 @@ import {
 	TreeNodeStatus,
 	TreeNodeType,
 } from "./types/tree-node";
+import { joinPathParts } from "./utils/tree-path-utils";
 
 export class LibraryTree {
 	private root: SectionNode;
 	private nodeMap: Map<string, TreeNode> = new Map();
-	private readonly rootFolderName: string;
 
-	constructor(leaves: TreeLeaf[], rootFolderName: string) {
-		this.rootFolderName = rootFolderName;
+	constructor(leaves: TreeLeaf[]) {
 		this.root = this.createRootSection();
 		this.buildTreeFromLeaves(leaves);
 	}
@@ -87,7 +86,7 @@ export class LibraryTree {
 					type: TreeNodeType.Section,
 				};
 				current.children.push(sectionNode);
-				this.nodeMap.set(this.getNodeKey(path), sectionNode);
+				this.nodeMap.set(joinPathParts(path), sectionNode);
 				current = sectionNode;
 			} else if (existing.type === TreeNodeType.Section) {
 				current = existing as SectionNode;
@@ -102,11 +101,7 @@ export class LibraryTree {
 		const parent = this.getParentOrThrow(coreNameChainToParent);
 		parent.children.push(node);
 		const fullChain = [...coreNameChainToParent, node.coreName];
-		this.nodeMap.set(this.getNodeKey(fullChain), node);
-	}
-
-	private getNodeKey(coreNameChain: CoreNameChainFromRoot): string {
-		return coreNameChain.join("/");
+		this.nodeMap.set(joinPathParts(fullChain), node);
 	}
 
 	getNode(coreNameChain: CoreNameChainFromRoot): TreeNode | null {
@@ -126,7 +121,9 @@ export class LibraryTree {
 	): SectionNode {
 		const parent = this.getParent(coreNameChain);
 		if (!parent) {
-			throw new Error(`Parent not found: ${coreNameChain.join("/")}`);
+			throw new Error(
+				`Parent not found: ${joinPathParts(coreNameChain)}`,
+			);
 		}
 		return parent;
 	}
@@ -137,7 +134,7 @@ export class LibraryTree {
 		if (coreNameChain.length === 0) {
 			return this.root;
 		}
-		return this.nodeMap.get(this.getNodeKey(coreNameChain)) ?? null;
+		return this.nodeMap.get(joinPathParts(coreNameChain)) ?? null;
 	}
 
 	/**
@@ -203,7 +200,7 @@ export class LibraryTree {
 
 		const parent = this.getParentOrThrow(coreNameChainToParent);
 		parent.children.push(newNode);
-		this.nodeMap.set(this.getNodeKey(fullChain), newNode);
+		this.nodeMap.set(joinPathParts(fullChain), newNode);
 
 		return fullChain;
 	}
@@ -225,7 +222,7 @@ export class LibraryTree {
 		}
 
 		parent.children.splice(index, 1);
-		this.nodeMap.delete(this.getNodeKey(coreNameChain));
+		this.nodeMap.delete(joinPathParts(coreNameChain));
 
 		if (node.type === TreeNodeType.Section) {
 			this.deleteSubtree(coreNameChain);
@@ -243,7 +240,7 @@ export class LibraryTree {
 		const sectionNode = node as SectionNode;
 		for (const child of sectionNode.children) {
 			const childChain = [...rootChain, child.coreName];
-			this.nodeMap.delete(this.getNodeKey(childChain));
+			this.nodeMap.delete(joinPathParts(childChain));
 			if (child.type === TreeNodeType.Section) {
 				this.deleteSubtree(childChain);
 			}
@@ -263,7 +260,9 @@ export class LibraryTree {
 		const newFullChain = [...oldParentChain, newCoreName];
 
 		if (this.getNodeInternal(newFullChain)) {
-			throw new Error(`Node already exists: ${newFullChain.join("/")}`);
+			throw new Error(
+				`Node already exists: ${joinPathParts(newFullChain)}`,
+			);
 		}
 
 		const parent = this.getParentOrThrow(oldParentChain);
@@ -274,11 +273,11 @@ export class LibraryTree {
 			return coreNameChain;
 		}
 
-		const oldKey = this.getNodeKey(coreNameChain);
+		const oldKey = joinPathParts(coreNameChain);
 		this.nodeMap.delete(oldKey);
 
 		node.coreName = newCoreName;
-		const newKey = this.getNodeKey(newFullChain);
+		const newKey = joinPathParts(newFullChain);
 		this.nodeMap.set(newKey, node);
 
 		// Note: tRef removed - TFile references become stale when files are renamed/moved
@@ -299,11 +298,11 @@ export class LibraryTree {
 			const oldChildChain = [...oldParentChain, child.coreName];
 			const newChildChain = [...newParentChain, child.coreName];
 
-			const oldKey = this.getNodeKey(oldChildChain);
+			const oldKey = joinPathParts(oldChildChain);
 			this.nodeMap.delete(oldKey);
 
 			child.coreNameChainToParent = newParentChain;
-			const newKey = this.getNodeKey(newChildChain);
+			const newKey = joinPathParts(newChildChain);
 			this.nodeMap.set(newKey, child);
 
 			if (child.type === TreeNodeType.Section) {
@@ -362,7 +361,9 @@ export class LibraryTree {
 
 		// Check if target already exists
 		if (this.getNodeInternal(newFullChain)) {
-			throw new Error(`Node already exists: ${newFullChain.join("/")}`);
+			throw new Error(
+				`Node already exists: ${joinPathParts(newFullChain)}`,
+			);
 		}
 
 		// Ensure new parent path exists
@@ -378,11 +379,11 @@ export class LibraryTree {
 		}
 
 		// Update node's parent chain
-		const oldKey = this.getNodeKey(coreNameChain);
+		const oldKey = joinPathParts(coreNameChain);
 		this.nodeMap.delete(oldKey);
 
 		node.coreNameChainToParent = newCoreNameChainToParent;
-		const newKey = this.getNodeKey(newFullChain);
+		const newKey = joinPathParts(newFullChain);
 		this.nodeMap.set(newKey, node);
 
 		// Add to new parent

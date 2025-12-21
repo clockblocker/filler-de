@@ -10,6 +10,7 @@ import {
 import type { TreeLeaf } from "../types/tree-leaf";
 import { TreeNodeType } from "../types/tree-node";
 import { parseBasename } from "../utils/parse-basename";
+import { joinPathParts } from "../utils/tree-path-utils";
 import {
 	buildBasename,
 	computeSuffixFromPath,
@@ -43,7 +44,7 @@ function findMatchingFile(
 	suffixDelimiter: string,
 ): SplitPathWithReader | null {
 	// Expected path (parent chain only, not including coreName)
-	const expectedParentPath = leaf.coreNameChainToParent.join("/");
+	const expectedParentPath = joinPathParts(leaf.coreNameChainToParent);
 
 	for (const file of actualFiles) {
 		// Skip folders
@@ -69,7 +70,7 @@ function findMatchingFile(
 
 		// Build path key from file pathParts (skip library root)
 		// pathParts is [libraryRoot, ...parentChain], so slice(1) gives parentChain
-		const fileParentPath = file.pathParts.slice(1).join("/");
+		const fileParentPath = joinPathParts(file.pathParts.slice(1));
 
 		// Match if parent path matches (file might be at expected location or wrong location)
 		// We match by coreName and parent path, then check if suffix needs fixing

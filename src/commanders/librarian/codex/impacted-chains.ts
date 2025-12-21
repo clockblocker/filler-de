@@ -3,6 +3,7 @@
  */
 
 import type { CoreNameChainFromRoot } from "../types/split-basename";
+import { joinPathParts } from "../utils/tree-path-utils";
 
 /**
  * Flatten result from applyTreeAction into array of chains.
@@ -62,7 +63,7 @@ export function dedupeChains(
 	const result: CoreNameChainFromRoot[] = [];
 
 	for (const chain of chains) {
-		const key = chain.join("/");
+		const key = joinPathParts(chain);
 		if (!seen.has(key)) {
 			seen.add(key);
 			result.push(chain);

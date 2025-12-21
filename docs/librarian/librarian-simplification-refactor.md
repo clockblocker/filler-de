@@ -172,7 +172,6 @@ Should we standardize on a single approach?
 ### 13. Extract Path Utilities Module
 
 Create `utils/tree-path-utils.ts` with:
-- `buildPathFromTree(leaf)` - Basic path (no suffix)
 - `buildCanonicalPathFromTree(leaf)` - Full canonical path
 - `buildCanonicalBasenameFromTree(leaf)` - Just basename
 

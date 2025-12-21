@@ -1,3 +1,5 @@
+import { getParsedUserSettings } from "../../../global-state/global-state";
+import { makeSystemPathForSplitPath } from "../../../obsidian-vault-action-manager/impl/split-path";
 import type { LibraryTree } from "../library-tree";
 import type { CoreNameChainFromRoot } from "../types/split-basename";
 import type { SectionNode } from "../types/tree-node";
@@ -9,8 +11,6 @@ export type CodexRegeneratorContext = {
 		actions: import("../../../obsidian-vault-action-manager/types/vault-action").VaultAction[],
 	) => Promise<unknown>;
 	getNode: (chain: CoreNameChainFromRoot) => SectionNode | null;
-	libraryRoot: string;
-	suffixDelimiter: string;
 };
 
 /**
@@ -22,21 +22,29 @@ export async function regenerateCodexes(
 	context: CodexRegeneratorContext,
 ): Promise<void> {
 	if (impactedChains.length === 0) {
+		console.log("[Librarian] regenerateCodexes: no impacted chains");
 		return;
 	}
+
+	console.log("[Librarian] regenerateCodexes: impacted chains:", impactedChains);
 
 	try {
 		const codexActions = buildCodexVaultActions(
 			impactedChains,
 			context.getNode,
-			{
-				libraryRoot: context.libraryRoot,
-				suffixDelimiter: context.suffixDelimiter,
-			},
 		);
 
+		console.log("[Librarian] regenerateCodexes: codexActions:", codexActions.length);
+		console.log("[Librarian] regenerateCodexes: codexActions details:", codexActions.map(a => ({
+			type: a.type,
+			path: a.payload.splitPath ? makeSystemPathForSplitPath(a.payload.splitPath) : 'N/A',
+		})));
+
 		if (codexActions.length > 0) {
-			await context.dispatch(codexActions);
+			const result = await context.dispatch(codexActions);
+			console.log("[Librarian] regenerateCodexes: dispatch result:", result);
+		} else {
+			console.log("[Librarian] regenerateCodexes: no actions to dispatch");
 		}
 	} catch (error) {
 		console.error("[Librarian] codex regeneration failed:", error);

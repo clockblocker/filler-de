@@ -1,3 +1,5 @@
+import { getParsedUserSettings } from "../../../global-state/global-state";
+import { makeSystemPathForSplitPath } from "../../../obsidian-vault-action-manager/impl/split-path";
 import type { SplitPathToMdFile } from "../../../obsidian-vault-action-manager/types/split-path";
 import { SplitPathType } from "../../../obsidian-vault-action-manager/types/split-path";
 import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
@@ -8,11 +10,6 @@ import type { SectionNode } from "../types/tree-node";
 import { TreeNodeType } from "../types/tree-node";
 import { buildCodexBasename } from "../utils/codex-utils";
 
-export type CodexBuilderContext = {
-	libraryRoot: string;
-	suffixDelimiter: string;
-};
-
 /**
  * Build VaultActions to create/update codex files for impacted sections.
  * Pure function that takes tree node and returns actions.
@@ -20,42 +17,61 @@ export type CodexBuilderContext = {
 export function buildCodexVaultActions(
 	impactedChains: CoreNameChainFromRoot[],
 	getNode: (chain: CoreNameChainFromRoot) => SectionNode | null,
-	context: CodexBuilderContext,
 ): VaultAction[] {
+	const settings = getParsedUserSettings();
+	const libraryRootPath = makeSystemPathForSplitPath(
+		settings.splitPathToLibraryRoot,
+	);
 	const actions: VaultAction[] = [];
 
 	for (const chain of impactedChains) {
 		const node = getNode(chain);
-		if (!node || node.type !== TreeNodeType.Section) {
+		if (!node) {
+			console.log("[buildCodexVaultActions] no node for chain:", chain);
+			continue;
+		}
+		if (node.type !== TreeNodeType.Section) {
+			console.log(
+				"[buildCodexVaultActions] node is not Section:",
+				node.type,
+				"chain:",
+				chain,
+			);
 			continue;
 		}
 
 		const section = node as SectionNode;
 
 		const content = generateCodexContent(section, {
-			libraryRoot: context.libraryRoot,
-			suffixDelimiter: context.suffixDelimiter,
+			libraryRoot: libraryRootPath,
+			suffixDelimiter: settings.suffixDelimiter,
 		});
 
 		// Build codex basename with suffix (same pattern as regular files)
 		// Root: __Library (no suffix, use libraryRoot name)
 		// Nested: __Salad-Recipe (suffix = parent chain reversed)
 		const sectionName =
-			chain.length === 0 ? context.libraryRoot : section.coreName;
+			chain.length === 0
+				? settings.splitPathToLibraryRoot.basename
+				: section.coreName;
 		const coreCodexName = buildCodexBasename(sectionName);
 		const suffix =
 			chain.length > 0
 				? chain
 						.slice(0, -1) // Parent chain (exclude self)
 						.reverse()
-						.join(context.suffixDelimiter)
+						.join(settings.suffixDelimiter)
 				: "";
 		const codexBasename = suffix
-			? `${coreCodexName}${context.suffixDelimiter}${suffix}`
+			? `${coreCodexName}${settings.suffixDelimiter}${suffix}`
 			: coreCodexName;
 
 		// Codex path: inside the section folder
-		const pathParts = [context.libraryRoot, ...chain];
+		const pathParts = [
+			...settings.splitPathToLibraryRoot.pathParts,
+			settings.splitPathToLibraryRoot.basename,
+			...chain,
+		];
 		const codexSplitPath: SplitPathToMdFile = {
 			basename: codexBasename,
 			extension: "md",
@@ -65,10 +81,17 @@ export function buildCodexVaultActions(
 
 		// Always use ReplaceContentMdFile - it creates if not exists
 		// This avoids triggering handleCreate which would add suffixes
-		actions.push({
+		const action = {
 			payload: { content, splitPath: codexSplitPath },
 			type: VaultActionType.ReplaceContentMdFile,
+		};
+		console.log("[buildCodexVaultActions] creating action for:", {
+			chain,
+			codexBasename,
+			codexPath: makeSystemPathForSplitPath(codexSplitPath),
+			contentLength: content.length,
 		});
+		actions.push(action);
 	}
 
 	return actions;

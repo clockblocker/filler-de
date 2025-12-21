@@ -90,6 +90,27 @@ export class Executor {
 					}
 				}
 
+				// Check if file already exists
+				const fileResult = await this.tfileHelper.getFile(splitPath);
+				if (fileResult.isOk()) {
+					// File exists - update content instead of just returning
+					// This handles the case where ReplaceContentMdFile was collapsed into CreateMdFile
+					const isActive = await this.checkFileActive(splitPath);
+					if (isActive) {
+						const result =
+							await this.opened.replaceAllContentInOpenedFile(
+								action.payload.content,
+							);
+						return result.map(() => fileResult.value);
+					}
+					const result = await this.tfileHelper.replaceAllContent(
+						splitPath,
+						action.payload.content,
+					);
+					return result;
+				}
+
+				// File doesn't exist - create it
 				const dto: MdFileWithContentDto = {
 					content: action.payload.content,
 					splitPath: action.payload.splitPath,
@@ -137,10 +158,23 @@ export class Executor {
 				return result;
 			}
 			case VaultActionType.ReplaceContentMdFile: {
+				const systemPath = systemPathToSplitPath.encode(
+					action.payload.splitPath,
+				);
+				console.log(
+					"[Executor] ReplaceContentMdFile:",
+					systemPath,
+					"content length:",
+					action.payload.content.length,
+				);
 				const fileResult = await this.tfileHelper.getFile(
 					action.payload.splitPath,
 				);
 				if (fileResult.isErr()) {
+					console.log(
+						"[Executor] File doesn't exist, creating:",
+						systemPath,
+					);
 					// Ensure parent folders exist before creating file
 					const { splitPath } = action.payload;
 					if (splitPath.pathParts.length > 0) {
@@ -189,22 +223,35 @@ export class Executor {
 					};
 					const createResult =
 						await this.tfileHelper.createMdFile(dto);
+					console.log(
+						"[Executor] Create result:",
+						createResult.isOk() ? "OK" : createResult.error,
+					);
 					return createResult.map(() => undefined);
 				}
 
 				const isActive = await this.checkFileActive(
 					action.payload.splitPath,
 				);
+				console.log("[Executor] File exists, isActive:", isActive);
 				if (isActive) {
 					const result =
 						await this.opened.replaceAllContentInOpenedFile(
 							action.payload.content,
 						);
+					console.log(
+						"[Executor] Replace in opened file result:",
+						result.isOk() ? "OK" : result.error,
+					);
 					return result;
 				}
 				const result = await this.tfileHelper.replaceAllContent(
 					action.payload.splitPath,
 					action.payload.content,
+				);
+				console.log(
+					"[Executor] ReplaceAllContent result:",
+					result.isOk() ? "OK" : result.error,
 				);
 				return result;
 			}
