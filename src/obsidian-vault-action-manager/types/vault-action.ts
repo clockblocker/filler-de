@@ -55,7 +55,7 @@ type RenameFilePayload = SplitPathFromTo<SplitPathToFile>;
 type TrashFilePayload = { splitPath: SplitPathToFile };
 
 // MdFile payloads
-type CreateMdFilePayload = {
+type UpsertMdFilePayload = {
 	splitPath: SplitPathToMdFile;
 	content?: string;
 };
@@ -84,8 +84,8 @@ export type VaultAction =
 	| { type: typeof VaultActionType.RenameFile; payload: RenameFilePayload }
 	| { type: typeof VaultActionType.TrashFile; payload: TrashFilePayload }
 	| {
-			type: typeof VaultActionType.CreateMdFile;
-			payload: CreateMdFilePayload;
+			type: typeof VaultActionType.UpsertMdFile;
+			payload: UpsertMdFilePayload;
 	  }
 	| {
 			type: typeof VaultActionType.RenameMdFile;
@@ -108,7 +108,7 @@ export const weightForVaultActionType: Record<VaultActionType, number> = {
 	[VaultActionType.CreateFile]: 3,
 	[VaultActionType.RenameFile]: 4,
 	[VaultActionType.TrashFile]: 5,
-	[VaultActionType.CreateMdFile]: 6,
+	[VaultActionType.UpsertMdFile]: 6,
 	[VaultActionType.RenameMdFile]: 7,
 	[VaultActionType.TrashMdFile]: 8,
 	[VaultActionType.ProcessMdFile]: 9,
@@ -123,7 +123,7 @@ export function getActionKey(action: VaultAction): string {
 		case VaultActionType.TrashFolder:
 		case VaultActionType.CreateFile:
 		case VaultActionType.TrashFile:
-		case VaultActionType.CreateMdFile:
+		case VaultActionType.UpsertMdFile:
 		case VaultActionType.TrashMdFile:
 		case VaultActionType.ProcessMdFile:
 		case VaultActionType.ReplaceContentMdFile:
@@ -144,7 +144,7 @@ export function getActionTargetPath(action: VaultAction): string {
 		case VaultActionType.TrashFolder:
 		case VaultActionType.CreateFile:
 		case VaultActionType.TrashFile:
-		case VaultActionType.CreateMdFile:
+		case VaultActionType.UpsertMdFile:
 		case VaultActionType.TrashMdFile:
 		case VaultActionType.ProcessMdFile:
 		case VaultActionType.ReplaceContentMdFile:
@@ -167,7 +167,7 @@ export function sortActionsByWeight(actions: VaultAction[]): VaultAction[] {
 				return action.payload.to.pathParts.length;
 			case VaultActionType.CreateFile:
 			case VaultActionType.TrashFile:
-			case VaultActionType.CreateMdFile:
+			case VaultActionType.UpsertMdFile:
 			case VaultActionType.TrashMdFile:
 			case VaultActionType.ProcessMdFile:
 			case VaultActionType.ReplaceContentMdFile:
@@ -180,7 +180,7 @@ export function sortActionsByWeight(actions: VaultAction[]): VaultAction[] {
 
 	const getFileKey = (action: VaultAction): string | null => {
 		switch (action.type) {
-			case VaultActionType.CreateMdFile:
+			case VaultActionType.UpsertMdFile:
 			case VaultActionType.ProcessMdFile:
 			case VaultActionType.ReplaceContentMdFile:
 				return coreSplitPathToKey(action.payload.splitPath);
@@ -210,15 +210,15 @@ export function sortActionsByWeight(actions: VaultAction[]): VaultAction[] {
 				return depthDiff;
 			}
 
-			// For same file, ensure CreateMdFile comes before ProcessMdFile/ReplaceContentMdFile
+			// For same file, ensure UpsertMdFile comes before ProcessMdFile/ReplaceContentMdFile
 			const aKey = getFileKey(a);
 			const bKey = getFileKey(b);
 			if (aKey && bKey && aKey === bKey) {
-				// Same file - prioritize CreateMdFile
-				if (a.type === VaultActionType.CreateMdFile) {
+				// Same file - prioritize UpsertMdFile
+				if (a.type === VaultActionType.UpsertMdFile) {
 					return -1; // a comes first
 				}
-				if (b.type === VaultActionType.CreateMdFile) {
+				if (b.type === VaultActionType.UpsertMdFile) {
 					return 1; // b comes first
 				}
 			}

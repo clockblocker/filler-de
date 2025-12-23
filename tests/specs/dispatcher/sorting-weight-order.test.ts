@@ -43,7 +43,7 @@ export const testSortingWeightOrder = async () => {
 					content: "test",
 					splitPath: splitPath("z.md"),
 				},
-				type: "CreateMdFile",
+				type: "UpsertMdFile",
 			},
 		]);
 

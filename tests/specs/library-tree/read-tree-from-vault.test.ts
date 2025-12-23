@@ -1,12 +1,12 @@
 /// <reference types="@wdio/globals/types" />
 import { browser, expect } from "@wdio/globals";
+import { logger } from "../../../src/utils/logger";
 import type { VaultActionManagerTestingApi } from "../dispatcher/utils";
 import type {
 	LibrarianTestingApi,
 	LibraryTreeApi,
 	TreeNodeApi,
 } from "./utils";
-import { logger } from "../../../src/utils/logger";
 
 /**
  * Creates vault actions for the standard test tree structure:
@@ -31,14 +31,14 @@ export function createTestTreeActions(
 				content: "",
 				splitPath: splitPath("Library/Avarar/S1/E1-S1-Avarar.md"),
 			},
-			type: "CreateMdFile",
+			type: "UpsertMdFile",
 		},
 		{
 			payload: {
 				content: "",
 				splitPath: splitPath("Library/Avarar/S1/E2-S1-Avarar.md"),
 			},
-			type: "CreateMdFile",
+			type: "UpsertMdFile",
 		},
 		// Files in Library/Avarar/S2/E1
 		{
@@ -46,14 +46,14 @@ export function createTestTreeActions(
 				content: "",
 				splitPath: splitPath("Library/Avarar/S2/E1/000_E1-E1-S2-Avarar.md"),
 			},
-			type: "CreateMdFile",
+			type: "UpsertMdFile",
 		},
 		{
 			payload: {
 				content: "",
 				splitPath: splitPath("Library/Avarar/S2/E1/001_E1-E1-S2-Avarar.md"),
 			},
-			type: "CreateMdFile",
+			type: "UpsertMdFile",
 		},
 		// File in Library/Avarar/S2
 		{
@@ -61,7 +61,7 @@ export function createTestTreeActions(
 				content: "",
 				splitPath: splitPath("Library/Avarar/S2/E2-S2-Avarar.md"),
 			},
-			type: "CreateMdFile",
+			type: "UpsertMdFile",
 		},
 	];
 }
@@ -114,7 +114,7 @@ export const testReadTreeFromVault = async () => {
 				content: "",
 				splitPath: vaultSplitPath(path),
 			},
-			type: "CreateMdFile",
+			type: "UpsertMdFile",
 		}));
 		await manager.dispatch(createActions);
 

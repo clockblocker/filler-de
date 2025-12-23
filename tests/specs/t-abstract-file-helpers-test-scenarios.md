@@ -17,7 +17,7 @@ Critical low-level file system operations. These are "shit-hits-the-fan" endpoin
 - ❌ Path is empty/invalid → returns error
 - ❌ Path with special characters → handles correctly
 
-### createMdFile()
+### upsertMdFile()
 
 #### Happy Path
 - ✅ Create new markdown file with content

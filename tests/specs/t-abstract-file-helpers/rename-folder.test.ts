@@ -340,12 +340,12 @@ export const testRenameFolder = async () => {
 
 		const file1InSourceSplitPath = splitPath("with-files-source/file1.md");
 		const file2InSourceSplitPath = splitPath("with-files-source/file2.md");
-		const createFile1Result = await tfileHelper.createMdFile({
+		const createFile1Result = await tfileHelper.upsertMdFile({
 			content: "# File 1",
 			splitPath: file1InSourceSplitPath,
 		}) as unknown as Result<{ name: string; path: string }>;
 
-		const createFile2Result = await tfileHelper.createMdFile({
+		const createFile2Result = await tfileHelper.upsertMdFile({
 			content: "# File 2",
 			splitPath: file2InSourceSplitPath,
 		}) as unknown as Result<{ name: string; path: string }>;
@@ -404,7 +404,7 @@ export const testRenameFolder = async () => {
 		}
 
 		const nestedFileInSourceSplitPath = splitPath("with-nested-source/nested-folder/nested-file.md");
-		const createNestedFileResult = await tfileHelper.createMdFile({
+		const createNestedFileResult = await tfileHelper.upsertMdFile({
 			content: "# Nested file",
 			splitPath: nestedFileInSourceSplitPath,
 		}) as unknown as Result<{ name: string; path: string }>;

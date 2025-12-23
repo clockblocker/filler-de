@@ -18,7 +18,7 @@ export const testGetFileHappyPath = async () => {
 
 		const markdown = await runTest("markdown", async () => {
 			const fileSplitPath = splitPath("test.md");
-			const createResult = await tfileHelper.createMdFile({
+			const createResult = await tfileHelper.upsertMdFile({
 				content: "# Test",
 				splitPath: fileSplitPath,
 			}) as unknown as Result<{ name: string; path: string }>;
@@ -45,7 +45,7 @@ export const testGetFileHappyPath = async () => {
 			}
 
 			const fileSplitPath = splitPath("nested/folder/file.md");
-			const createResult = await tfileHelper.createMdFile({
+			const createResult = await tfileHelper.upsertMdFile({
 				content: "# Nested",
 				splitPath: fileSplitPath,
 			}) as unknown as Result<{ name: string; path: string }>;

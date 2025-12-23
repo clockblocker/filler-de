@@ -37,7 +37,7 @@ export const testSerializeToLeaves = async () => {
 
 		const createActions = files.map(({ path }) => ({
 			payload: { content: "", splitPath: vaultSplitPath(path) },
-			type: "CreateMdFile",
+			type: "UpsertMdFile",
 		}));
 		await manager.dispatch(createActions);
 
@@ -128,7 +128,7 @@ export const testSerializeRoundTrip = async () => {
 
 		const createActions = files.map(({ path }) => ({
 			payload: { content: "", splitPath: vaultSplitPath(path) },
-			type: "CreateMdFile",
+			type: "UpsertMdFile",
 		}));
 		await manager.dispatch(createActions);
 

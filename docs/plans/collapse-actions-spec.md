@@ -152,27 +152,27 @@ Minimize filesystem calls by collapsing multiple operations on the same file int
 
 ---
 
-### 5. CreateMdFile + Other Operations
+### 5. UpsertMdFile + Other Operations
 
 **Behavior:** Create can be combined with initial content operations.
 
 **Rules:**
-- `CreateMdFile` + `ReplaceContentMdFile` → Merge into `CreateMdFile` with final content
-- `CreateMdFile` + `ProcessMdFile` → Not applicable (can't process non-existent file)
-- `CreateMdFile` + `TrashMdFile` → Drop create (trash wins)
-- `CreateMdFile` + `RenameMdFile` → Keep both (create first, then rename)
+- `UpsertMdFile` + `ReplaceContentMdFile` → Merge into `UpsertMdFile` with final content
+- `UpsertMdFile` + `ProcessMdFile` → Not applicable (can't process non-existent file)
+- `UpsertMdFile` + `TrashMdFile` → Drop create (trash wins)
+- `UpsertMdFile` + `RenameMdFile` → Keep both (create first, then rename)
 
 **Example:**
 ```typescript
 // Input:
 [
-  { type: CreateMdFile, payload: { splitPath: "a.md", content: "initial" } },
+  { type: UpsertMdFile, payload: { splitPath: "a.md", content: "initial" } },
   { type: ReplaceContentMdFile, payload: { splitPath: "a.md", content: "final" } }
 ]
 
 // Output:
 [
-  { type: CreateMdFile, payload: { splitPath: "a.md", content: "final" } }
+  { type: UpsertMdFile, payload: { splitPath: "a.md", content: "final" } }
 ]
 ```
 
@@ -187,7 +187,7 @@ Minimize filesystem calls by collapsing multiple operations on the same file int
 **Rules:**
 - `TrashMdFile` + any operation → Keep `TrashMdFile` only
 - Trash is terminal: no point in processing/writing/renaming a trashed file
-- Exception: `CreateMdFile` + `TrashMdFile` → Drop both (create then trash = no-op)
+- Exception: `UpsertMdFile` + `TrashMdFile` → Drop both (create then trash = no-op)
 
 **Example:**
 ```typescript

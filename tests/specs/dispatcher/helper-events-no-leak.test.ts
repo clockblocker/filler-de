@@ -37,7 +37,7 @@ export const testCreateFileWithMissingParentFolders = async () => {
 					content: "# Test",
 					splitPath: fileSplitPath,
 				},
-				type: "CreateMdFile",
+				type: "UpsertMdFile",
 			},
 		]);
 
@@ -392,14 +392,14 @@ export const testMultipleNestedOperations = async () => {
 					content: "# File 1",
 					splitPath: splitPath("multi/a/b/file1.md"),
 				},
-				type: "CreateMdFile",
+				type: "UpsertMdFile",
 			},
 			{
 				payload: {
 					content: "# File 2",
 					splitPath: splitPath("multi/c/d/file2.md"),
 				},
-				type: "CreateMdFile",
+				type: "UpsertMdFile",
 			},
 			{
 				payload: {

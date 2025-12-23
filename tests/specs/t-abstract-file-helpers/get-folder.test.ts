@@ -72,7 +72,7 @@ export const testGetFolder = async () => {
 
 			// Error Cases: Path points to file (type mismatch)
 			const fileSplitPath = splitPath("test-file.md");
-			const fileCreateResult = await tfileHelper.createMdFile({
+			const fileCreateResult = await tfileHelper.upsertMdFile({
 				content: "# Test",
 				splitPath: fileSplitPath,
 			}) as unknown as Result<{ name: string; path: string }>;

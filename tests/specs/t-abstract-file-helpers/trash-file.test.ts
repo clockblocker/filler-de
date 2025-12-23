@@ -11,7 +11,7 @@ export const testTrashFile = async () => {
 
 		// Happy Path: Trash existing file
 		const fileSplitPath1 = splitPath("trash-me.md");
-		const createResult1 = await tfileHelper.createMdFile({
+		const createResult1 = await tfileHelper.upsertMdFile({
 			content: "# Trash me",
 			splitPath: fileSplitPath1,
 		}) as unknown as Result<{ name: string; path: string }>;
@@ -38,7 +38,7 @@ export const testTrashFile = async () => {
 		}
 
 		const nestedFileSplitPath = splitPath("nested/trash/file.md");
-		const createResult2 = await tfileHelper.createMdFile({
+		const createResult2 = await tfileHelper.upsertMdFile({
 			content: "# Nested trash",
 			splitPath: nestedFileSplitPath,
 		}) as unknown as Result<{ name: string; path: string }>;
@@ -66,7 +66,7 @@ export const testTrashFile = async () => {
 
 		// Idempotency: Trash already-trashed file (trash same file twice)
 		const fileSplitPath2 = splitPath("double-trash.md");
-		const createResult3 = await tfileHelper.createMdFile({
+		const createResult3 = await tfileHelper.upsertMdFile({
 			content: "# Double trash",
 			splitPath: fileSplitPath2,
 		}) as unknown as Result<{ name: string; path: string }>;

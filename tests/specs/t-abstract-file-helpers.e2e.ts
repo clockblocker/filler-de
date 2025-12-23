@@ -2,10 +2,10 @@
 import { browser } from "@wdio/globals";
 import { obsidianPage } from "wdio-obsidian-service";
 import { testCreateFile } from "./t-abstract-file-helpers/create-file.test";
-import { testCreateMdFileErrors } from "./t-abstract-file-helpers/create-file-errors.test";
-import { testCreateMdFileHappyPath } from "./t-abstract-file-helpers/create-file-happy.test";
-import { testCreateMdFileIdempotent } from "./t-abstract-file-helpers/create-file-idempotent.test";
-import { testCreateMdFileRaceConditions } from "./t-abstract-file-helpers/create-file-race.test";
+import { testUpsertMdFileErrors } from "./t-abstract-file-helpers/create-file-errors.test";
+import { testUpsertMdFileHappyPath } from "./t-abstract-file-helpers/create-file-happy.test";
+import { testUpsertMdFileIdempotent } from "./t-abstract-file-helpers/create-file-idempotent.test";
+import { testUpsertMdFileRaceConditions } from "./t-abstract-file-helpers/create-file-race.test";
 import { testCreateFolder } from "./t-abstract-file-helpers/create-folder.test";
 import { testCreateFolderAdvanced } from "./t-abstract-file-helpers/create-folder-advanced.test";
 import { testGetFileErrors } from "./t-abstract-file-helpers/get-file-errors.test";
@@ -77,20 +77,20 @@ describe("TFileHelper and TFolderHelper", () => {
 
 	it("should create and get a markdown file", testCreateFile);
 
-	describe("createMdFile() - Happy Path", () => {
-		it("should create files (with content, empty content, nested)", testCreateMdFileHappyPath);
+	describe("upsertMdFile() - Happy Path", () => {
+		it("should create files (with content, empty content, nested)", testUpsertMdFileHappyPath);
 	});
 
-	describe("createMdFile() - Idempotency", () => {
-		it("should be idempotent (already exists, multiple times)", testCreateMdFileIdempotent);
+	describe("upsertMdFile() - Idempotency", () => {
+		it("should be idempotent (already exists, multiple times)", testUpsertMdFileIdempotent);
 	});
 
-	describe("createMdFile() - Race Conditions", () => {
-		it("should handle race conditions (concurrent creates, external creation)", testCreateMdFileRaceConditions);
+	describe("upsertMdFile() - Race Conditions", () => {
+		it("should handle race conditions (concurrent creates, external creation)", testUpsertMdFileRaceConditions);
 	});
 
-	describe("createMdFile() - Error Cases", () => {
-		it("should return errors (parent not exists, invalid path)", testCreateMdFileErrors);
+	describe("upsertMdFile() - Error Cases", () => {
+		it("should return errors (parent not exists, invalid path)", testUpsertMdFileErrors);
 	});
 
 	describe("getFile() - Happy Path", () => {

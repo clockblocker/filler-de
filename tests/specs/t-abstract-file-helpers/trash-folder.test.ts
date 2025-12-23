@@ -54,7 +54,7 @@ export const testTrashFolder = async () => {
 		// Note: trashFolder calls getFolder internally, which returns error for files
 		// But trashFolder treats getFolder errors as "already trashed" and returns ok
 		const fileSplitPath = splitPath("error-file.md");
-		const fileCreateResult = await tfileHelper.createMdFile({
+		const fileCreateResult = await tfileHelper.upsertMdFile({
 			content: "# Error file",
 			splitPath: fileSplitPath,
 		}) as unknown as Result<{ name: string; path: string }>;
@@ -83,12 +83,12 @@ export const testTrashFolder = async () => {
 
 		const file1SplitPath = splitPath("folder-with-files/file1.md");
 		const file2SplitPath = splitPath("folder-with-files/file2.md");
-		const createFile1Result = await tfileHelper.createMdFile({
+		const createFile1Result = await tfileHelper.upsertMdFile({
 			content: "# File 1",
 			splitPath: file1SplitPath,
 		}) as unknown as Result<{ name: string; path: string }>;
 
-		const createFile2Result = await tfileHelper.createMdFile({
+		const createFile2Result = await tfileHelper.upsertMdFile({
 			content: "# File 2",
 			splitPath: file2SplitPath,
 		}) as unknown as Result<{ name: string; path: string }>;
@@ -128,7 +128,7 @@ export const testTrashFolder = async () => {
 		}
 
 		const nestedFileSplitPath = splitPath("parent-with-nested/nested-folder/nested-file.md");
-		const createNestedFileResult = await tfileHelper.createMdFile({
+		const createNestedFileResult = await tfileHelper.upsertMdFile({
 			content: "# Nested file",
 			splitPath: nestedFileSplitPath,
 		}) as unknown as Result<{ name: string; path: string }>;

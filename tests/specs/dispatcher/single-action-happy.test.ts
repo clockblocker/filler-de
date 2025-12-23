@@ -12,14 +12,14 @@ export const testSingleActionHappyPath = async () => {
 
 		const { manager, splitPath } = api;
 
-		// Create a single CreateMdFile action
+		// Create a single UpsertMdFile action
 		const fileSplitPath = splitPath("dispatcher-test.md");
 		const action = {
 			payload: {
 				content: "# Dispatcher Test",
 				splitPath: fileSplitPath,
 			},
-			type: "CreateMdFile",
+			type: "UpsertMdFile",
 		};
 
 		// Dispatch the action

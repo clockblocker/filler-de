@@ -266,11 +266,11 @@ describe("collapseActions", () => {
 		});
 	});
 
-	describe("CreateMdFile + other operations", () => {
+	describe("UpsertMdFile + other operations", () => {
 		it("merges create with write into create with final content", async () => {
 			const create = {
 				payload: { content: "initial", splitPath: mdFile("a.md") },
-				type: VaultActionType.CreateMdFile,
+				type: VaultActionType.UpsertMdFile,
 			} as const;
 			const write = {
 				payload: { content: "final", splitPath: mdFile("a.md") },
@@ -279,14 +279,14 @@ describe("collapseActions", () => {
 
 			const collapsed = await collapseActions([create, write]);
 			expect(collapsed).toHaveLength(1);
-			expect(collapsed[0].type).toBe(VaultActionType.CreateMdFile);
+			expect(collapsed[0].type).toBe(VaultActionType.UpsertMdFile);
 			expect((collapsed[0] as typeof create).payload.content).toBe("final");
 		});
 
 		it("trash wins over create", async () => {
 			const create = {
 				payload: { splitPath: mdFile("a.md") },
-				type: VaultActionType.CreateMdFile,
+				type: VaultActionType.UpsertMdFile,
 			} as const;
 			const trash = {
 				payload: { splitPath: mdFile("a.md") },

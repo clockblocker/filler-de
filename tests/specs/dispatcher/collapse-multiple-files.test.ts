@@ -22,14 +22,14 @@ export const testCollapseMultipleFiles = async () => {
 					content: "a",
 					splitPath: fileASplitPath,
 				},
-				type: "CreateMdFile",
+				type: "UpsertMdFile",
 			},
 			{
 				payload: {
 					content: "b",
 					splitPath: fileBSplitPath,
 				},
-				type: "CreateMdFile",
+				type: "UpsertMdFile",
 			},
 		]);
 

@@ -3,24 +3,24 @@ import { expect } from "@wdio/globals";
 import { getVaultActionManagerTestingApi } from "./utils";
 
 describe("Topological Sort Integration", () => {
-	it("should sort ProcessMdFile after CreateMdFile when feature flag enabled", async () => {
+	it("should sort ProcessMdFile after UpsertMdFile when feature flag enabled", async () => {
 		const { manager, splitPath } = getVaultActionManagerTestingApi();
 
 		// Create actions in wrong order (process before create)
 		const actions = [
 			{
-				type: "ProcessMdFile",
 				payload: {
 					splitPath: splitPath("test.md") as unknown,
 					transform: (content: string) => content + "\nprocessed",
 				},
+				type: "ProcessMdFile",
 			},
 			{
-				type: "CreateMdFile",
 				payload: {
-					splitPath: splitPath("test.md") as unknown,
 					content: "initial",
+					splitPath: splitPath("test.md") as unknown,
 				},
+				type: "UpsertMdFile",
 			},
 		] as unknown[];
 
@@ -39,16 +39,16 @@ describe("Topological Sort Integration", () => {
 		// Create actions in wrong order (child before parent)
 		const actions = [
 			{
-				type: "CreateFolder",
 				payload: {
 					splitPath: splitPath("parent/child") as unknown,
 				},
+				type: "CreateFolder",
 			},
 			{
-				type: "CreateFolder",
 				payload: {
 					splitPath: splitPath("parent") as unknown,
 				},
+				type: "CreateFolder",
 			},
 		] as unknown[];
 
@@ -66,23 +66,23 @@ describe("Topological Sort Integration", () => {
 		expect(childExists).toBe(true);
 	});
 
-	it("should sort CreateMdFile before ProcessMdFile for nested files", async () => {
+	it("should sort UpsertMdFile before ProcessMdFile for nested files", async () => {
 		const { manager, splitPath } = getVaultActionManagerTestingApi();
 
 		const actions = [
 			{
-				type: "ProcessMdFile",
 				payload: {
 					splitPath: splitPath("folder/file.md") as unknown,
 					transform: (content: string) => content + "\nprocessed",
 				},
+				type: "ProcessMdFile",
 			},
 			{
-				type: "CreateMdFile",
 				payload: {
-					splitPath: splitPath("folder/file.md") as unknown,
 					content: "initial",
+					splitPath: splitPath("folder/file.md") as unknown,
 				},
+				type: "UpsertMdFile",
 			},
 		] as unknown[];
 

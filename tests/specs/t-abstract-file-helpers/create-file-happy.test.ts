@@ -2,7 +2,7 @@
 import { browser, expect } from "@wdio/globals";
 import type { HelpersTestingApi, Result } from "./utils";
 
-export const testCreateMdFileHappyPath = async () => {
+export const testUpsertMdFileHappyPath = async () => {
 	const results = await browser.executeObsidian(async ({ app }: any) => {
 		const api = app?.plugins?.plugins?.["cbcr-text-eater-de"]?.getHelpersTestingApi?.() as HelpersTestingApi | undefined;
 		if (!api) throw new Error("testing api unavailable");
@@ -12,7 +12,7 @@ export const testCreateMdFileHappyPath = async () => {
 		const runCreateTest = async (name: string, setup: () => Promise<{ filePath: string; content: string; expectedName: string; expectedPath: string }>) => {
 			const { filePath, content, expectedName, expectedPath } = await setup();
 			const fileSplitPath = splitPath(filePath);
-			const createResult = await tfileHelper.createMdFile({
+			const createResult = await tfileHelper.upsertMdFile({
 				content,
 				splitPath: fileSplitPath,
 			}) as unknown as Result<{ name: string; path: string }>;
@@ -77,7 +77,7 @@ export const testCreateMdFileHappyPath = async () => {
 
 		// Special Characters: Path with valid special characters → handles correctly
 		const validSpecialCharsSplitPath = splitPath("file-with-dashes_and-underscores.md");
-		const validSpecialCharsResult = await tfileHelper.createMdFile({
+		const validSpecialCharsResult = await tfileHelper.upsertMdFile({
 			content: "# Valid special chars",
 			splitPath: validSpecialCharsSplitPath,
 		}) as unknown as Result<{ name: string; path: string }>;
@@ -101,7 +101,7 @@ export const testCreateMdFileHappyPath = async () => {
 
 		// Special Characters: Path with spaces (common special case)
 		const spacesSplitPath = splitPath("file with spaces.md");
-		const spacesResult = await tfileHelper.createMdFile({
+		const spacesResult = await tfileHelper.upsertMdFile({
 			content: "# File with spaces",
 			splitPath: spacesSplitPath,
 		}) as unknown as Result<{ name: string; path: string }>;
@@ -126,7 +126,7 @@ export const testCreateMdFileHappyPath = async () => {
 		// Special Characters: Test various special characters
 		// Obsidian's behavior is the golden source - some chars may be allowed, others may error
 		const specialCharsSplitPath = splitPath("file-with-!@#$%.md");
-		const specialCharsResult = await tfileHelper.createMdFile({
+		const specialCharsResult = await tfileHelper.upsertMdFile({
 			content: "# Special chars",
 			splitPath: specialCharsSplitPath,
 		}) as unknown as Result<{ name: string; path: string }>;

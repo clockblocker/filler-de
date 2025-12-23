@@ -2,7 +2,7 @@
 import { browser, expect } from "@wdio/globals";
 import type { HelpersTestingApi, Result } from "./utils";
 
-export const testCreateMdFileIdempotent = async () => {
+export const testUpsertMdFileIdempotent = async () => {
 	const results = await browser.executeObsidian(async ({ app }: any) => {
 		const api = app?.plugins?.plugins?.["cbcr-text-eater-de"]?.getHelpersTestingApi?.() as HelpersTestingApi | undefined;
 		if (!api) throw new Error("testing api unavailable");
@@ -14,7 +14,7 @@ export const testCreateMdFileIdempotent = async () => {
 			const fileSplitPath = splitPath(filePath);
 
 			// First create
-			const createResult1 = await tfileHelper.createMdFile({
+			const createResult1 = await tfileHelper.upsertMdFile({
 				content,
 				splitPath: fileSplitPath,
 			}) as unknown as Result<{ name: string; path: string }>;
@@ -27,7 +27,7 @@ export const testCreateMdFileIdempotent = async () => {
 			const firstContent = await app.vault.read(createResult1.value as any);
 
 			// Second create (should return existing)
-			const createResult2 = await tfileHelper.createMdFile({
+			const createResult2 = await tfileHelper.upsertMdFile({
 				content: content + " modified",
 				splitPath: fileSplitPath,
 			}) as unknown as Result<{ name: string; path: string }>;
@@ -67,17 +67,17 @@ export const testCreateMdFileIdempotent = async () => {
 
 		// Test creating same file 3 times
 		const fileSplitPath = splitPath("multi-create.md");
-		const create1 = await tfileHelper.createMdFile({
+		const create1 = await tfileHelper.upsertMdFile({
 			content: "# First",
 			splitPath: fileSplitPath,
 		}) as unknown as Result<{ name: string; path: string }>;
 
-		const create2 = await tfileHelper.createMdFile({
+		const create2 = await tfileHelper.upsertMdFile({
 			content: "# Second",
 			splitPath: fileSplitPath,
 		}) as unknown as Result<{ name: string; path: string }>;
 
-		const create3 = await tfileHelper.createMdFile({
+		const create3 = await tfileHelper.upsertMdFile({
 			content: "# Third",
 			splitPath: fileSplitPath,
 		}) as unknown as Result<{ name: string; path: string }>;

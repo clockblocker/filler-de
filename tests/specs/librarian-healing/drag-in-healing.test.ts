@@ -38,7 +38,7 @@ export const testDragInFileMoveToSuffix = async () => {
 		await manager.dispatch([
 			{
 				payload: { content: "", splitPath: splitPath(outsidePath) },
-				type: "CreateMdFile",
+				type: "UpsertMdFile",
 			},
 		]);
 		await new Promise((resolve) => setTimeout(resolve, 100));
@@ -122,7 +122,7 @@ export const testDragInFileNoSuffixStaysAtRoot = async () => {
 		await manager.dispatch([
 			{
 				payload: { content: "", splitPath: splitPath(outsidePath) },
-				type: "CreateMdFile",
+				type: "UpsertMdFile",
 			},
 		]);
 		await new Promise((resolve) => setTimeout(resolve, 100));
@@ -188,7 +188,7 @@ export const testMoveOutOfLibraryIgnored = async () => {
 		await manager.dispatch([
 			{
 				payload: { content: "", splitPath: splitPath(insidePath) },
-				type: "CreateMdFile",
+				type: "UpsertMdFile",
 			},
 		]);
 		await new Promise((resolve) => setTimeout(resolve, 100));

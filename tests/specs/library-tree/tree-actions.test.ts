@@ -28,7 +28,7 @@ export const testCreateNodeAction = async () => {
 		await manager.dispatch([
 			{
 				payload: { content: "", splitPath: vaultSplitPath("Library/A/Note1-A.md") },
-				type: "CreateMdFile",
+				type: "UpsertMdFile",
 			},
 		]);
 		await manager.dispatch([
@@ -95,11 +95,11 @@ export const testDeleteNodeAction = async () => {
 		await manager.dispatch([
 			{
 				payload: { content: "", splitPath: vaultSplitPath("Library/B/Note1-B.md") },
-				type: "CreateMdFile",
+				type: "UpsertMdFile",
 			},
 			{
 				payload: { content: "", splitPath: vaultSplitPath("Library/B/Note2-B.md") },
-				type: "CreateMdFile",
+				type: "UpsertMdFile",
 			},
 		]);
 		await manager.dispatch([
@@ -171,7 +171,7 @@ export const testChangeNodeNameAction = async () => {
 		await manager.dispatch([
 			{
 				payload: { content: "", splitPath: vaultSplitPath("Library/C/OldName-C.md") },
-				type: "CreateMdFile",
+				type: "UpsertMdFile",
 			},
 		]);
 		await manager.dispatch([
@@ -241,7 +241,7 @@ export const testChangeNodeStatusAction = async () => {
 		await manager.dispatch([
 			{
 				payload: { content: "", splitPath: vaultSplitPath("Library/D/Note-D.md") },
-				type: "CreateMdFile",
+				type: "UpsertMdFile",
 			},
 		]);
 		await manager.dispatch([

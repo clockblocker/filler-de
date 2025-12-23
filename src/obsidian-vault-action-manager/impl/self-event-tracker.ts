@@ -65,7 +65,7 @@ export class SelfEventTrackerLegacy {
 		switch (type) {
 			case VaultActionType.CreateFolder:
 			case VaultActionType.CreateFile:
-			case VaultActionType.CreateMdFile:
+			case VaultActionType.UpsertMdFile:
 			case VaultActionType.ProcessMdFile:
 			case VaultActionType.ReplaceContentMdFile:
 				// Track target path + all parent folder paths

@@ -6,7 +6,7 @@
 
 ### File Creation
 
-- **Creating existing file:** Obsidian's `vault.create()` behavior when file already exists may vary. Our implementation handles this via `TFileHelper.createMdFile()` which returns an error if file exists.
+- **Creating existing file:** Obsidian's `vault.create()` behavior when file already exists may vary. Our implementation handles this via `TFileHelper.upsertMdFile()` which returns an error if file exists.
 - **Empty path:** Creating a file with empty path (`""`) will fail, but the exact error message may vary.
 
 ### File Trashing

@@ -27,7 +27,7 @@ The dispatcher enforces this invariant in `ensureAllRequirementsMet()`:
 1. **File/Folder Existence**:
    - `ProcessMdFile`/`ReplaceContentMdFile`: File + folder chain exist (added if needed)
    - `RenameFile`/`RenameFolder`: Destination parent folders exist (added if needed)
-   - `CreateFolder`/`CreateMdFile`: Only added if they don't already exist
+   - `CreateFolder`/`UpsertMdFile`: Only added if they don't already exist
 
 2. **Delete Actions**:
    - `TrashFile`/`TrashFolder`: Only execute if target exists (filtered out if not)
@@ -99,7 +99,7 @@ import { makeSystemPathForSplitPath } from "./split-path";
  * Build dependency graph from actions.
  * 
  * Rules:
- * - ProcessMdFile/ReplaceContentMdFile depends on CreateMdFile for same file
+ * - ProcessMdFile/ReplaceContentMdFile depends on UpsertMdFile for same file
  * - Rename actions depend on CreateFolder for destination parent folders
  * - Trash actions have no dependencies
  * - CreateFolder depends on parent CreateFolder actions
@@ -112,8 +112,8 @@ export function buildDependencyGraph(actions: VaultAction[]): DependencyGraph {
 **Dependency Rules**:
 
 1. **File content operations**:
-   - `ProcessMdFile` → depends on `CreateMdFile` (same file)
-   - `ReplaceContentMdFile` → depends on `CreateMdFile` (same file)
+   - `ProcessMdFile` → depends on `UpsertMdFile` (same file)
+   - `ReplaceContentMdFile` → depends on `UpsertMdFile` (same file)
 
 2. **Folder operations**:
    - `CreateFolder` → depends on parent `CreateFolder` actions
@@ -124,7 +124,7 @@ export function buildDependencyGraph(actions: VaultAction[]): DependencyGraph {
 
 4. **No dependencies**:
    - `TrashFolder`, `TrashFile`, `TrashMdFile`
-   - `CreateFile`, `CreateMdFile` (only folder dependencies)
+   - `CreateFile`, `UpsertMdFile` (only folder dependencies)
 
 **Tasks**:
 - [ ] Implement `buildDependencyGraph()`
@@ -223,10 +223,10 @@ Enhance to mark system-generated actions:
 ```typescript
 type SystemGeneratedMarker = { _systemGenerated?: true };
 
-// When adding CreateMdFile/CreateFolder, mark as system-generated
+// When adding UpsertMdFile/CreateFolder, mark as system-generated
 result.push({
   payload: { content: "", splitPath: fileSplitPath },
-  type: VaultActionType.CreateMdFile,
+  type: VaultActionType.UpsertMdFile,
   _systemGenerated: true, // Optional marker
 } as VaultAction & SystemGeneratedMarker);
 ```
@@ -262,15 +262,15 @@ export async function collapseActions(
 **Key Insight**: Collapse can merge actions, but dependencies must be preserved.
 
 **Example**:
-- `CreateMdFile("initial")` + `ProcessMdFile("+A")` → `ProcessMdFile` (reads from disk)
+- `UpsertMdFile("initial")` + `ProcessMdFile("+A")` → `ProcessMdFile` (reads from disk)
 - Dependency: `ProcessMdFile` depends on file existing
 - After collapse: Still need to ensure file exists before processing
 
 **Tasks**:
-- [ ] Add optional `graph` parameter to `collapseActions()`
-- [ ] After collapse, rebuild dependency graph
-- [ ] Add tests: collapse preserves dependencies
-- [ ] Handle edge case: collapse removes dependency (shouldn't happen)
+- [x] Re-ensure requirements after collapse (simpler than graph parameter)
+- [x] After collapse, re-run `ensureAllRequirementsMet` to restore missing UpsertMdFile
+- [x] Add tests: collapse preserves dependencies
+- [x] Handle edge case: collapse removes UpsertMdFile needed for ProcessMdFile (re-ensured)
 
 ---
 
@@ -280,23 +280,30 @@ export async function collapseActions(
 
 **File**: `tests/unit/dependency-detector.test.ts` (new)
 
-- [ ] Test each dependency rule
-- [ ] Test complex scenarios (multiple files, nested folders)
-- [ ] Test edge cases (root folder, same action twice)
+- [x] Test each dependency rule
+- [x] Test complex scenarios (multiple files, nested folders)
+- [x] Test edge cases (root folder, same action twice)
 
 **File**: `tests/unit/topological-sort.test.ts` (new)
 
-- [ ] Test simple linear dependencies
-- [ ] Test parallel actions (no dependencies)
-- [ ] Test complex graph (multiple levels)
-- [ ] Test cycle detection
-- [ ] Test tie-breaking (path depth only)
+- [x] Test simple linear dependencies
+- [x] Test parallel actions (no dependencies)
+- [x] Test complex graph (multiple levels)
+- [x] Test cycle detection
+- [x] Test tie-breaking (path depth only)
+
+**File**: `tests/unit/collapse-dependency.test.ts` (new)
+
+- [x] Test UpsertMdFile + ProcessMdFile collapse preserves dependency needs
+- [x] Test folder dependencies preserved after collapse
+- [x] Test UpsertMdFile + ReplaceContentMdFile collapse
+- [x] Test multiple ProcessMdFile collapse
 
 ### 4.2 Integration Tests
 
 **File**: `tests/specs/dispatcher/dependency-sorting.e2e.ts` (new)
 
-- [ ] Test ProcessMdFile after CreateMdFile
+- [ ] Test ProcessMdFile after UpsertMdFile
 - [ ] Test RenameFolder after CreateFolder
 - [ ] Test complex batch with mixed dependencies
 - [ ] Compare results: topological vs weight-based (should match for simple cases)

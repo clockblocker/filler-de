@@ -40,35 +40,35 @@ export const testGetNodeHappyPath = async () => {
 					content: "",
 					splitPath: vaultSplitPath("Library/Avarar/S1/E1-S1-Avarar.md"),
 				},
-				type: "CreateMdFile",
+				type: "UpsertMdFile",
 			},
 			{
 				payload: {
 					content: "",
 					splitPath: vaultSplitPath("Library/Avarar/S1/E2-S1-Avarar.md"),
 				},
-				type: "CreateMdFile",
+				type: "UpsertMdFile",
 			},
 			{
 				payload: {
 					content: "",
 					splitPath: vaultSplitPath("Library/Avarar/S2/E1/000_E1-E1-S2-Avarar.md"),
 				},
-				type: "CreateMdFile",
+				type: "UpsertMdFile",
 			},
 			{
 				payload: {
 					content: "",
 					splitPath: vaultSplitPath("Library/Avarar/S2/E1/001_E1-E1-S2-Avarar.md"),
 				},
-				type: "CreateMdFile",
+				type: "UpsertMdFile",
 			},
 			{
 				payload: {
 					content: "",
 					splitPath: vaultSplitPath("Library/Avarar/S2/E2-S1-Avarar.md"),
 				},
-				type: "CreateMdFile",
+				type: "UpsertMdFile",
 			},
 		];
 		await manager.dispatch(actions);

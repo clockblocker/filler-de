@@ -47,7 +47,7 @@ export const testInitHealing = async () => {
 			await manager.dispatch([
 				{
 					payload: { content: "", splitPath: sp },
-					type: "CreateMdFile",
+					type: "UpsertMdFile",
 				},
 			]);
 		}
@@ -130,7 +130,7 @@ export const testInitHealingNoOpForCorrectFiles = async () => {
 			await manager.dispatch([
 				{
 					payload: { content: "", splitPath: sp },
-					type: "CreateMdFile",
+					type: "UpsertMdFile",
 				},
 			]);
 		}

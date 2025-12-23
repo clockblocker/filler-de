@@ -27,7 +27,7 @@ export const testComplexScenario = async () => {
 					content: "start",
 					splitPath: fileASplitPath,
 				},
-				type: "CreateMdFile",
+				type: "UpsertMdFile",
 			},
 		]);
 

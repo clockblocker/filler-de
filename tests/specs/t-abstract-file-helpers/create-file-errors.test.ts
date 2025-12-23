@@ -2,7 +2,7 @@
 import { browser, expect } from "@wdio/globals";
 import type { HelpersTestingApi, Result } from "./utils";
 
-export const testCreateMdFileErrors = async () => {
+export const testUpsertMdFileErrors = async () => {
 	try {
 		const results = await browser.executeObsidian(async ({ app }: any) => {
 			const api = app?.plugins?.plugins?.["cbcr-text-eater-de"]?.getHelpersTestingApi?.() as HelpersTestingApi | undefined;
@@ -25,7 +25,7 @@ export const testCreateMdFileErrors = async () => {
 
 				try {
 					const fileSplitPath = splitPath(filePath);
-					const createResult = await tfileHelper.createMdFile({
+					const createResult = await tfileHelper.upsertMdFile({
 						content,
 						splitPath: fileSplitPath,
 					}) as unknown as Result<{ name: string; path: string }>;

@@ -29,7 +29,7 @@ export const testSelfEventFiltering = async () => {
 					content: "# Self Event Test",
 					splitPath: fileSplitPath,
 				},
-				type: "CreateMdFile",
+				type: "UpsertMdFile",
 			},
 		]);
 

@@ -32,15 +32,15 @@ export async function collapseActions(
 		}
 
 		// ReplaceContentMdFile: latest wins; replaces prior write/process
-		// Special case: if existing is CreateMdFile, merge into CreateMdFile
+		// Special case: if existing is UpsertMdFile, merge into UpsertMdFile
 		if (isReplaceContent(action)) {
-			if (existing && isCreateMdFile(existing)) {
+			if (existing && isUpsertMdFile(existing)) {
 				byPath.set(key, {
 					payload: {
 						content: action.payload.content,
 						splitPath: existing.payload.splitPath,
 					},
-					type: VaultActionType.CreateMdFile,
+					type: VaultActionType.UpsertMdFile,
 				});
 				continue;
 			}
@@ -80,7 +80,7 @@ export async function collapseActions(
 					});
 					continue;
 				}
-				if (isCreateMdFile(existing)) {
+				if (isUpsertMdFile(existing)) {
 					// Process on create - keep process (will read from disk)
 					byPath.set(key, action);
 					continue;
@@ -90,8 +90,8 @@ export async function collapseActions(
 			continue;
 		}
 
-		// CreateMdFile + ReplaceContentMdFile merge
-		if (isCreateMdFile(action)) {
+		// UpsertMdFile + ReplaceContentMdFile merge
+		if (isUpsertMdFile(action)) {
 			if (existing && isReplaceContent(existing)) {
 				// Merge: create with final content
 				byPath.set(key, {
@@ -99,7 +99,7 @@ export async function collapseActions(
 						content: existing.payload.content,
 						splitPath: action.payload.splitPath,
 					},
-					type: VaultActionType.CreateMdFile,
+					type: VaultActionType.UpsertMdFile,
 				});
 				continue;
 			}
@@ -124,7 +124,7 @@ function getPathKey(action: VaultAction): string {
 		case VaultActionType.TrashFolder:
 		case VaultActionType.CreateFile:
 		case VaultActionType.TrashFile:
-		case VaultActionType.CreateMdFile:
+		case VaultActionType.UpsertMdFile:
 		case VaultActionType.TrashMdFile:
 		case VaultActionType.ProcessMdFile:
 		case VaultActionType.ReplaceContentMdFile:
@@ -180,13 +180,13 @@ function isProcess(
 	return action.type === VaultActionType.ProcessMdFile;
 }
 
-function isCreateMdFile(
+function isUpsertMdFile(
 	action: VaultAction,
 ): action is Extract<
 	VaultAction,
-	{ type: typeof VaultActionType.CreateMdFile }
+	{ type: typeof VaultActionType.UpsertMdFile }
 > {
-	return action.type === VaultActionType.CreateMdFile;
+	return action.type === VaultActionType.UpsertMdFile;
 }
 
 function sameRenameTarget(a: VaultAction, b: VaultAction): boolean {

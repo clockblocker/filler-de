@@ -13,7 +13,7 @@ export const testCreateFile = async () => {
 
 		const fileSplitPath = splitPath("test-file.md");
 		
-		const createResult = await tfileHelper.createMdFile({
+		const createResult = await tfileHelper.upsertMdFile({
 			content: "# Test Content",
 			splitPath: fileSplitPath,
 		}) as unknown as Result<{ name: string; path: string }>;

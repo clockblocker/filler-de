@@ -27,7 +27,7 @@ export const testRuntimeBasenameOnly = async () => {
 		await manager.dispatch([
 			{
 				payload: { content: "", splitPath: splitPath(initialPath) },
-				type: "CreateMdFile",
+				type: "UpsertMdFile",
 			},
 		]);
 		await new Promise((resolve) => setTimeout(resolve, 100));
@@ -116,7 +116,7 @@ export const testRuntimePathOnly = async () => {
 		await manager.dispatch([
 			{
 				payload: { content: "", splitPath: splitPath(initialPath) },
-				type: "CreateMdFile",
+				type: "UpsertMdFile",
 			},
 		]);
 		await new Promise((resolve) => setTimeout(resolve, 100));
@@ -192,7 +192,7 @@ export const testRuntimeNoOpWhenCorrect = async () => {
 		await manager.dispatch([
 			{
 				payload: { content: "", splitPath: splitPath(initialPath) },
-				type: "CreateMdFile",
+				type: "UpsertMdFile",
 			},
 		]);
 		await new Promise((resolve) => setTimeout(resolve, 100));
@@ -263,11 +263,11 @@ export const testRuntimeFolderRename = async () => {
 		await manager.dispatch([
 			{
 				payload: { content: "", splitPath: splitPath("Library/A/note1-A.md") },
-				type: "CreateMdFile",
+				type: "UpsertMdFile",
 			},
 			{
 				payload: { content: "", splitPath: splitPath("Library/A/note2-A.md") },
-				type: "CreateMdFile",
+				type: "UpsertMdFile",
 			},
 		]);
 		await new Promise((resolve) => setTimeout(resolve, 100));

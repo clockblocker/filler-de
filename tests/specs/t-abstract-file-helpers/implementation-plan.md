@@ -45,7 +45,7 @@ Sorted by implementation difficulty, from easiest to hardest.
 
 **Effort**: Low - Error condition testing
 
-### TFileHelper.createMdFile() - Basic Happy Path
+### TFileHelper.upsertMdFile() - Basic Happy Path
 - [x] **Files**: `create-file.test.ts`, `create-file-happy.test.ts`
 - [x] Create new markdown file with content
 - [x] Create new markdown file with empty content
@@ -59,7 +59,7 @@ Sorted by implementation difficulty, from easiest to hardest.
 
 **Effort**: Low - Already implemented
 
-### TFileHelper.createMdFile() - Simple Idempotency
+### TFileHelper.upsertMdFile() - Simple Idempotency
 - [x] **Files**: `create-file-idempotent.test.ts`
 - [x] Create file that already exists → returns existing file (no error)
 - [x] Create file with same path multiple times → idempotent
@@ -77,7 +77,7 @@ Sorted by implementation difficulty, from easiest to hardest.
 
 ## Level 2: Medium Tests
 
-### TFileHelper.createMdFile() - Nested Folders
+### TFileHelper.upsertMdFile() - Nested Folders
 - [x] **Files**: `create-file-happy.test.ts` (nested covered), `create-file-errors.test.ts` (parent error)
 - [x] Create file in nested folder (parent exists)
 - [x] Parent folder doesn't exist → returns error
@@ -91,7 +91,7 @@ Sorted by implementation difficulty, from easiest to hardest.
 
 **Effort**: Medium - Multi-level path setup
 
-### TFileHelper.createMdFile() - Special Characters
+### TFileHelper.upsertMdFile() - Special Characters
 - [x] **Files**: `create-file-happy.test.ts` (all scenarios in one file)
 - [x] Path with special characters → handles correctly (Obsidian's behavior is golden source)
 - [x] Invalid path characters → Obsidian may allow or reject (test verifies actual behavior)
@@ -272,7 +272,7 @@ Sorted by implementation difficulty, from easiest to hardest.
 
 **Effort**: Hard - Complex path structures, edge cases
 
-### TFileHelper.createMdFile() - Race Conditions
+### TFileHelper.upsertMdFile() - Race Conditions
 - [x] **Files**: `create-file-race.test.ts`
 - [x] File created between check and create → handles gracefully
 - [x] Multiple concurrent creates → one succeeds, others get existing

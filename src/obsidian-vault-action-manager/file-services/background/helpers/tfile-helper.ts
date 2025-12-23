@@ -58,7 +58,7 @@ export class TFileHelper {
 		return err(errorTypeMismatch("file", systemPath));
 	}
 
-	async createMdFile(
+	async upsertMdFile(
 		file: MdFileWithContentDto,
 	): Promise<Result<TFile, string>> {
 		const { splitPath, content } = file;

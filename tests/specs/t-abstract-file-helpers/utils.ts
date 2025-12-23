@@ -10,7 +10,7 @@ export const VAULT_PATH = "tests/simple";
 //
 // Actual types (for reference):
 // - getFile(splitPath: SplitPathToMdFile | SplitPathToFile): Promise<Result<TFile, string>>
-// - createMdFile(file: MdFileWithContentDto): Promise<Result<TFile, string>>
+// - upsertMdFile(file: MdFileWithContentDto): Promise<Result<TFile, string>>
 // - renameFile({from, to, collisionStrategy?}): Promise<Result<TFile, string>>
 // - getFolder(splitPath: SplitPathToFolder): Promise<Result<TFolder, string>>
 // - createFolder(splitPath: SplitPathToFolder): Promise<Result<TFolder, string>>
@@ -19,7 +19,7 @@ export const VAULT_PATH = "tests/simple";
 export type HelpersTestingApi = {
 	tfileHelper: {
 		getFile: (p: unknown) => Promise<unknown>;
-		createMdFile: (p: unknown) => Promise<unknown>;
+		upsertMdFile: (p: unknown) => Promise<unknown>;
 		renameFile: (p: unknown) => Promise<unknown>;
 		trashFile: (p: unknown) => Promise<unknown>;
 	};

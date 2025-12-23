@@ -2,7 +2,7 @@
 import { browser, expect } from "@wdio/globals";
 import type { HelpersTestingApi, Result } from "./utils";
 
-export const testCreateMdFileRaceConditions = async () => {
+export const testUpsertMdFileRaceConditions = async () => {
 	const results = await browser.executeObsidian(async ({ app }: any) => {
 		const api = app?.plugins?.plugins?.["cbcr-text-eater-de"]?.getHelpersTestingApi?.() as HelpersTestingApi | undefined;
 		if (!api) throw new Error("testing api unavailable");
@@ -14,15 +14,15 @@ export const testCreateMdFileRaceConditions = async () => {
 		
 		// Create file 3 times concurrently
 		const [create1, create2, create3] = await Promise.all([
-			tfileHelper.createMdFile({
+			tfileHelper.upsertMdFile({
 				content: "# First",
 				splitPath: fileSplitPath,
 			}) as unknown as Promise<Result<{ name: string; path: string }>>,
-			tfileHelper.createMdFile({
+			tfileHelper.upsertMdFile({
 				content: "# Second",
 				splitPath: fileSplitPath,
 			}) as unknown as Promise<Result<{ name: string; path: string }>>,
-			tfileHelper.createMdFile({
+			tfileHelper.upsertMdFile({
 				content: "# Third",
 				splitPath: fileSplitPath,
 			}) as unknown as Promise<Result<{ name: string; path: string }>>,
@@ -44,7 +44,7 @@ export const testCreateMdFileRaceConditions = async () => {
 		await app.vault.create("external-race.md", "# External");
 		
 		// Now try to create via helper (should return existing)
-		const createAfterExternal = await tfileHelper.createMdFile({
+		const createAfterExternal = await tfileHelper.upsertMdFile({
 			content: "# Should not overwrite",
 			splitPath: externalFileSplitPath,
 		}) as unknown as Result<{ name: string; path: string }>;

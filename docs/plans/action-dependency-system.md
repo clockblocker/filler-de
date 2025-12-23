@@ -4,7 +4,7 @@
 
 Current issues:
 1. **Implicit dependencies**: Actions depend on each other (e.g., ProcessMdFile needs file to exist) but dependencies aren't explicit
-2. **ensureAllDestinationsExist conflicts**: Adds empty CreateMdFile actions that can overwrite user content
+2. **ensureAllDestinationsExist conflicts**: Adds empty UpsertMdFile actions that can overwrite user content
 3. **Sorting limitations**: Weight-based sorting doesn't handle same-file dependencies within weight groups
 4. **Collapse edge cases**: Empty content vs. user content conflicts
 
@@ -23,7 +23,7 @@ type ActionDependency = {
 
 function buildDependencyGraph(actions: VaultAction[]): ActionDependency[] {
   // Rules:
-  // - ProcessMdFile/ReplaceContentMdFile depends on CreateMdFile for same file
+  // - ProcessMdFile/ReplaceContentMdFile depends on UpsertMdFile for same file
   // - Rename actions depend on CreateFolder for destination parents
   // - Trash actions have no dependencies
 }
@@ -31,7 +31,7 @@ function buildDependencyGraph(actions: VaultAction[]): ActionDependency[] {
 
 ### Phase 2: Smart ensureAllDestinationsExist
 
-Instead of blindly adding CreateMdFile(""), use dependency analysis:
+Instead of blindly adding UpsertMdFile(""), use dependency analysis:
 
 ```typescript
 private ensureAllDestinationsExist(actions: VaultAction[]): VaultAction[] {
@@ -64,8 +64,8 @@ async function collapseActions(
   dependencies: ActionDependency[]
 ): Promise<VaultAction[]> {
   // When collapsing, preserve dependency relationships
-  // E.g., if CreateMdFile("initial") + ProcessMdFile collapse,
-  // ensure CreateMdFile executes first
+  // E.g., if UpsertMdFile("initial") + ProcessMdFile collapse,
+  // ensure UpsertMdFile executes first
 }
 ```
 

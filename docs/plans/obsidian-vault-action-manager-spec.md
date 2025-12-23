@@ -36,9 +36,9 @@ callers still hit BackgroundFileServiceLegacy/OpenedFileService directly, defeat
    - Implemented `collapseActions(actions: VaultAction[]): Promise<VaultAction[]>` using a per-path Map.
    - **Trash terminality**: Trash wins over all other operations.
    - **Rename**: Drop duplicates with same from→to; latest wins otherwise.
-   - **ReplaceContentMdFile**: Latest wins; replaces prior write/process. Merges with CreateMdFile.
+   - **ReplaceContentMdFile**: Latest wins; replaces prior write/process. Merges with UpsertMdFile.
    - **ProcessMdFile**: Composes transforms when stacking; applies to ReplaceContentMdFile content if process comes after write.
-   - **CreateMdFile + ReplaceContentMdFile**: Merges into CreateMdFile with final content.
+   - **UpsertMdFile + ReplaceContentMdFile**: Merges into UpsertMdFile with final content.
    - **Different types on same key**: Trash > Rename > ReplaceContent > Process > Create (newest wins within same type).
    - Comprehensive unit tests covering all scenarios (20 tests passing).
 

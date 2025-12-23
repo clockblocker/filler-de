@@ -25,7 +25,7 @@ export const testQueueBehavior = async () => {
 					content: "File 1",
 					splitPath: file1Path,
 				},
-				type: "CreateMdFile",
+				type: "UpsertMdFile",
 			},
 		]);
 
@@ -35,7 +35,7 @@ export const testQueueBehavior = async () => {
 					content: "File 2",
 					splitPath: file2Path,
 				},
-				type: "CreateMdFile",
+				type: "UpsertMdFile",
 			},
 		]);
 
@@ -45,7 +45,7 @@ export const testQueueBehavior = async () => {
 					content: "File 3",
 					splitPath: file3Path,
 				},
-				type: "CreateMdFile",
+				type: "UpsertMdFile",
 			},
 		]);
 

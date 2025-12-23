@@ -54,7 +54,7 @@ export class Executor {
 					);
 				}
 			}
-			case VaultActionType.CreateMdFile: {
+			case VaultActionType.UpsertMdFile: {
 				// INVARIANT: Parent folders exist (ensured by dispatcher)
 				const { splitPath } = action.payload;
 
@@ -62,7 +62,7 @@ export class Executor {
 				const fileResult = await this.tfileHelper.getFile(splitPath);
 				if (fileResult.isOk()) {
 					// File exists - update content instead of just returning
-					// This handles the case where ReplaceContentMdFile was collapsed into CreateMdFile
+					// This handles the case where ReplaceContentMdFile was collapsed into UpsertMdFile
 					const isActive = await this.checkFileActive(splitPath);
 					if (isActive) {
 						const result =
@@ -84,7 +84,7 @@ export class Executor {
 					content: action.payload.content ?? "",
 					splitPath: action.payload.splitPath,
 				};
-				const result = await this.tfileHelper.createMdFile(dto);
+				const result = await this.tfileHelper.upsertMdFile(dto);
 				return result;
 			}
 			case VaultActionType.RenameFile:

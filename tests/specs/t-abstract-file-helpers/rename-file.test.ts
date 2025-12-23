@@ -11,7 +11,7 @@ export const testRenameFile = async () => {
 
 		// Basic Happy Path: Rename file to new name (target doesn't exist)
 		const sourceFileSplitPath = splitPath("source-file.md");
-		const createSourceResult = await tfileHelper.createMdFile({
+		const createSourceResult = await tfileHelper.upsertMdFile({
 			content: "# Source content",
 			splitPath: sourceFileSplitPath,
 		}) as unknown as Result<{ name: string; path: string }>;
@@ -44,7 +44,7 @@ export const testRenameFile = async () => {
 
 		// Basic Happy Path: Rename file to same name (no-op, returns existing)
 		const sameNameFileSplitPath = splitPath("same-name.md");
-		const createSameNameResult = await tfileHelper.createMdFile({
+		const createSameNameResult = await tfileHelper.upsertMdFile({
 			content: "# Same name",
 			splitPath: sameNameFileSplitPath,
 		}) as unknown as Result<{ name: string; path: string }>;
@@ -80,7 +80,7 @@ export const testRenameFile = async () => {
 		}
 
 		const moveSourceSplitPath = splitPath("move-source.md");
-		const createMoveSourceResult = await tfileHelper.createMdFile({
+		const createMoveSourceResult = await tfileHelper.upsertMdFile({
 			content: "# Move me",
 			splitPath: moveSourceSplitPath,
 		}) as unknown as Result<{ name: string; path: string }>;
@@ -112,7 +112,7 @@ export const testRenameFile = async () => {
 
 		// Move Across Folders: Rename to path with special characters → handles correctly
 		const specialCharsSourceSplitPath = splitPath("special-source.md");
-		const createSpecialSourceResult = await tfileHelper.createMdFile({
+		const createSpecialSourceResult = await tfileHelper.upsertMdFile({
 			content: "# Special source",
 			splitPath: specialCharsSourceSplitPath,
 		}) as unknown as Result<{ name: string; path: string }>;
@@ -150,7 +150,7 @@ export const testRenameFile = async () => {
 
 		// Collision Strategy "skip": Target exists → returns target file, source unchanged
 		const skipSourceSplitPath = splitPath("skip-source.md");
-		const createSkipSourceResult = await tfileHelper.createMdFile({
+		const createSkipSourceResult = await tfileHelper.upsertMdFile({
 			content: "# Skip source",
 			splitPath: skipSourceSplitPath,
 		}) as unknown as Result<{ name: string; path: string }>;
@@ -160,7 +160,7 @@ export const testRenameFile = async () => {
 		}
 
 		const skipTargetSplitPath = splitPath("skip-target.md");
-		const createSkipTargetResult = await tfileHelper.createMdFile({
+		const createSkipTargetResult = await tfileHelper.upsertMdFile({
 			content: "# Skip target",
 			splitPath: skipTargetSplitPath,
 		}) as unknown as Result<{ name: string; path: string }>;
@@ -196,7 +196,7 @@ export const testRenameFile = async () => {
 
 		// Collision Strategy "skip": Target exists with different content → returns target, source unchanged
 		const skipDiffSourceSplitPath = splitPath("skip-diff-source.md");
-		const createSkipDiffSourceResult = await tfileHelper.createMdFile({
+		const createSkipDiffSourceResult = await tfileHelper.upsertMdFile({
 			content: "# Different source",
 			splitPath: skipDiffSourceSplitPath,
 		}) as unknown as Result<{ name: string; path: string }>;
@@ -206,7 +206,7 @@ export const testRenameFile = async () => {
 		}
 
 		const skipDiffTargetSplitPath = splitPath("skip-diff-target.md");
-		const createSkipDiffTargetResult = await tfileHelper.createMdFile({
+		const createSkipDiffTargetResult = await tfileHelper.upsertMdFile({
 			content: "# Different target",
 			splitPath: skipDiffTargetSplitPath,
 		}) as unknown as Result<{ name: string; path: string }>;
@@ -242,7 +242,7 @@ export const testRenameFile = async () => {
 
 		// Idempotency: Source doesn't exist, target exists → returns target (assumes already moved)
 		const idempotentTargetSplitPath = splitPath("idempotent-target.md");
-		const createIdempotentTargetResult = await tfileHelper.createMdFile({
+		const createIdempotentTargetResult = await tfileHelper.upsertMdFile({
 			content: "# Idempotent target",
 			splitPath: idempotentTargetSplitPath,
 		}) as unknown as Result<{ name: string; path: string }>;
@@ -267,7 +267,7 @@ export const testRenameFile = async () => {
 		// Idempotency: Source and target are same file object → no-op, returns file
 		// (Already tested in happyPath2, but verifying explicitly)
 		const sameFileSplitPath = splitPath("same-file.md");
-		const createSameFileResult = await tfileHelper.createMdFile({
+		const createSameFileResult = await tfileHelper.upsertMdFile({
 			content: "# Same file",
 			splitPath: sameFileSplitPath,
 		}) as unknown as Result<{ name: string; path: string }>;
@@ -303,7 +303,7 @@ export const testRenameFile = async () => {
 
 		// Collision Strategy "rename" (Indexing): Target exists with different content → renames to `1_filename.md`
 		const collisionSourceSplitPath = splitPath("collision-source.md");
-		const createCollisionSourceResult = await tfileHelper.createMdFile({
+		const createCollisionSourceResult = await tfileHelper.upsertMdFile({
 			content: "# Source content",
 			splitPath: collisionSourceSplitPath,
 		}) as unknown as Result<{ name: string; path: string }>;
@@ -313,7 +313,7 @@ export const testRenameFile = async () => {
 		}
 
 		const collisionTargetSplitPath = splitPath("collision-target.md");
-		const createCollisionTargetResult = await tfileHelper.createMdFile({
+		const createCollisionTargetResult = await tfileHelper.upsertMdFile({
 			content: "# Target content (different)",
 			splitPath: collisionTargetSplitPath,
 		}) as unknown as Result<{ name: string; path: string }>;
@@ -355,7 +355,7 @@ export const testRenameFile = async () => {
 
 		// Collision Strategy "rename": Target exists, `1_filename.md` also exists → renames to `2_filename.md`
 		const collision2SourceSplitPath = splitPath("collision2-source.md");
-		const createCollision2SourceResult = await tfileHelper.createMdFile({
+		const createCollision2SourceResult = await tfileHelper.upsertMdFile({
 			content: "# Source 2",
 			splitPath: collision2SourceSplitPath,
 		}) as unknown as Result<{ name: string; path: string }>;
@@ -365,7 +365,7 @@ export const testRenameFile = async () => {
 		}
 
 		const collision2TargetSplitPath = splitPath("collision2-target.md");
-		const createCollision2TargetResult = await tfileHelper.createMdFile({
+		const createCollision2TargetResult = await tfileHelper.upsertMdFile({
 			content: "# Target 2",
 			splitPath: collision2TargetSplitPath,
 		}) as unknown as Result<{ name: string; path: string }>;
@@ -376,7 +376,7 @@ export const testRenameFile = async () => {
 
 		// Create 1_collision2-target.md to force indexing to 2
 		const collision2Indexed1SplitPath = splitPath("1_collision2-target.md");
-		const createCollision2Indexed1Result = await tfileHelper.createMdFile({
+		const createCollision2Indexed1Result = await tfileHelper.upsertMdFile({
 			content: "# Indexed 1",
 			splitPath: collision2Indexed1SplitPath,
 		}) as unknown as Result<{ name: string; path: string }>;
@@ -414,7 +414,7 @@ export const testRenameFile = async () => {
 		// Duplicate Detection: Target exists with same content → trashes source, returns target
 		const duplicateSourceSplitPath = splitPath("duplicate-source.md");
 		const duplicateContent = "# Same content";
-		const createDuplicateSourceResult = await tfileHelper.createMdFile({
+		const createDuplicateSourceResult = await tfileHelper.upsertMdFile({
 			content: duplicateContent,
 			splitPath: duplicateSourceSplitPath,
 		}) as unknown as Result<{ name: string; path: string }>;
@@ -424,7 +424,7 @@ export const testRenameFile = async () => {
 		}
 
 		const duplicateTargetSplitPath = splitPath("duplicate-target.md");
-		const createDuplicateTargetResult = await tfileHelper.createMdFile({
+		const createDuplicateTargetResult = await tfileHelper.upsertMdFile({
 			content: duplicateContent,
 			splitPath: duplicateTargetSplitPath,
 		}) as unknown as Result<{ name: string; path: string }>;

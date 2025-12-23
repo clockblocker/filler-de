@@ -2,10 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { translateVaultAction } from "../../../../src/commanders/librarian/reconciliation/vault-to-tree";
 import { TreeActionType } from "../../../../src/commanders/librarian/types/literals";
 import { TreeNodeStatus, TreeNodeType } from "../../../../src/commanders/librarian/types/tree-node";
-import type { VaultAction } from "../../../../src/obsidian-vault-action-manager/types/vault-action";
 import * as globalState from "../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
 import { SplitPathType } from "../../../../src/obsidian-vault-action-manager/types/split-path";
+import type { VaultAction } from "../../../../src/obsidian-vault-action-manager/types/vault-action";
 
 // Default settings for tests
 const defaultSettings: ParsedUserSettings = {
@@ -81,7 +81,7 @@ describe("translateVaultAction", () => {
 		});
 	});
 
-	describe("CreateMdFile → CreateNode(Scroll)", () => {
+	describe("UpsertMdFile → CreateNode(Scroll)", () => {
 		it("creates scroll at correct path", () => {
 			const action: VaultAction = {
 				payload: {
@@ -92,7 +92,7 @@ describe("translateVaultAction", () => {
 						type: "MdFile",
 					},
 				},
-				type: "CreateMdFile",
+				type: "UpsertMdFile",
 			};
 
 			const result = translateVaultAction(action);
@@ -101,9 +101,9 @@ describe("translateVaultAction", () => {
 				payload: {
 					coreName: "Note",
 					coreNameChainToParent: ["A", "B"],
+					extension: "md",
 					nodeType: TreeNodeType.Scroll,
 					status: TreeNodeStatus.NotStarted,
-					extension: "md",
 				},
 				type: TreeActionType.CreateNode,
 			});
@@ -130,9 +130,9 @@ describe("translateVaultAction", () => {
 				payload: {
 					coreName: "doc",
 					coreNameChainToParent: ["A"],
+					extension: "pdf",
 					nodeType: TreeNodeType.File,
 					status: TreeNodeStatus.Unknown,
-					extension: "pdf",
 				},
 				type: TreeActionType.CreateNode,
 			});

@@ -20,7 +20,7 @@ export const testCollapseProcessComposition = async () => {
 					content: "initial",
 					splitPath: fileSplitPath,
 				},
-				type: "CreateMdFile",
+				type: "UpsertMdFile",
 			},
 		]);
 

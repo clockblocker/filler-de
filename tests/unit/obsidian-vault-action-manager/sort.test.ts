@@ -124,11 +124,11 @@ describe("sortActionsByWeight", () => {
 	it("sorts mdFile operations by path depth", () => {
 		const deep: VaultAction = {
 			payload: { splitPath: mdFile("deep.md", ["a", "b", "c"]) },
-			type: VaultActionType.CreateMdFile,
+			type: VaultActionType.UpsertMdFile,
 		};
 		const shallow: VaultAction = {
 			payload: { splitPath: mdFile("shallow.md", ["a"]) },
-			type: VaultActionType.CreateMdFile,
+			type: VaultActionType.UpsertMdFile,
 		};
 
 		const sorted = sortActionsByWeight([deep, shallow]);
@@ -224,7 +224,7 @@ describe("sortActionsByWeight", () => {
 		const actions: VaultAction[] = [
 			{
 				payload: { splitPath: mdFile("deep.md", ["a", "b", "c"]) },
-				type: VaultActionType.CreateMdFile,
+				type: VaultActionType.UpsertMdFile,
 			},
 			{
 				payload: { splitPath: folder("deep-folder", ["x", "y", "z"]) },
@@ -253,7 +253,7 @@ describe("sortActionsByWeight", () => {
 		expect(sorted[1].type).toBe(VaultActionType.CreateFolder);
 		expect((sorted[1] as typeof actions[1]).payload.splitPath.basename).toBe("deep-folder");
 		expect(sorted[2].type).toBe(VaultActionType.CreateFile);
-		expect(sorted[3].type).toBe(VaultActionType.CreateMdFile);
+		expect(sorted[3].type).toBe(VaultActionType.UpsertMdFile);
 		expect(sorted[4].type).toBe(VaultActionType.ProcessMdFile);
 	});
 
@@ -293,7 +293,7 @@ describe("sortActionsByWeight", () => {
 			{ payload: { splitPath: file("x.txt", "txt") }, type: VaultActionType.TrashFile },
 			{ payload: { from: mdFile("w.md"), to: mdFile("w1.md") }, type: VaultActionType.RenameMdFile },
 			{ payload: { from: file("v.txt", "txt"), to: file("v1.txt", "txt") }, type: VaultActionType.RenameFile },
-			{ payload: { splitPath: mdFile("u.md") }, type: VaultActionType.CreateMdFile },
+			{ payload: { splitPath: mdFile("u.md") }, type: VaultActionType.UpsertMdFile },
 			{ payload: { splitPath: file("t.txt", "txt") }, type: VaultActionType.CreateFile },
 			{ payload: { splitPath: folder("s") }, type: VaultActionType.TrashFolder },
 			{ payload: { from: folder("r"), to: folder("r1") }, type: VaultActionType.RenameFolder },
@@ -308,7 +308,7 @@ describe("sortActionsByWeight", () => {
 		expect(sorted[3].type).toBe(VaultActionType.CreateFile);
 		expect(sorted[4].type).toBe(VaultActionType.RenameFile);
 		expect(sorted[5].type).toBe(VaultActionType.TrashFile);
-		expect(sorted[6].type).toBe(VaultActionType.CreateMdFile);
+		expect(sorted[6].type).toBe(VaultActionType.UpsertMdFile);
 		expect(sorted[7].type).toBe(VaultActionType.RenameMdFile);
 		expect(sorted[8].type).toBe(VaultActionType.TrashMdFile);
 		expect(sorted[9].type).toBe(VaultActionType.ProcessMdFile);

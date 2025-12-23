@@ -20,7 +20,7 @@ export const testErrorHandlingSingle = async () => {
 					content: "a",
 					splitPath: fileASplitPath,
 				},
-				type: "CreateMdFile",
+				type: "UpsertMdFile",
 			},
 		]);
 
@@ -36,7 +36,7 @@ export const testErrorHandlingSingle = async () => {
 					content: "invalid",
 					splitPath: invalidPath,
 				},
-				type: "CreateMdFile",
+				type: "UpsertMdFile",
 			},
 		]);
 

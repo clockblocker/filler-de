@@ -20,7 +20,7 @@ export const testCollapseTrashTerminality = async () => {
 					content: "content",
 					splitPath: fileSplitPath,
 				},
-				type: "CreateMdFile",
+				type: "UpsertMdFile",
 			},
 		]);
 

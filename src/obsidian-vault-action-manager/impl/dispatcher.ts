@@ -57,16 +57,19 @@ export class Dispatcher {
 
 		const collapsed = await collapseActions(withEnsured);
 
+		// Re-ensure requirements after collapse (collapse may have removed UpsertMdFile needed for ProcessMdFile)
+		const withReEnsured = await this.ensureAllRequirementsMet(collapsed);
+
 		// Sort by dependencies (topological) or by weight (legacy)
 		let sorted: VaultAction[];
 		if (this.useTopologicalSort) {
-			const graph = buildDependencyGraph(collapsed);
-			sorted = topologicalSort(collapsed, graph);
+			const graph = buildDependencyGraph(withReEnsured);
+			sorted = topologicalSort(withReEnsured, graph);
 		} else {
-			sorted = sortActionsByWeight(collapsed);
+			sorted = sortActionsByWeight(withReEnsured);
 		}
 
-		// Register paths from COLLAPSED actions (the ones that will actually execute)
+		// Register paths from SORTED actions (the ones that will actually execute)
 		// This ensures we track paths from the final actions, not the original batch
 		this.selfEventTracker.register(sorted);
 
@@ -92,7 +95,7 @@ export class Dispatcher {
 	/**
 	 * Ensure all requirements are met before execution:
 	 * - Filter out delete actions if target doesn't exist
-	 * - Add CreateFolder/CreateMdFile actions for required destinations
+	 * - Add CreateFolder/UpsertMdFile actions for required destinations
 	 *
 	 * INVARIANT: After this, executor can assume all requirements are met.
 	 */
@@ -127,7 +130,7 @@ export class Dispatcher {
 				// Actions with splitPath: extract parent folders
 				case VaultActionType.CreateFolder:
 				case VaultActionType.CreateFile:
-				case VaultActionType.CreateMdFile:
+				case VaultActionType.UpsertMdFile:
 				case VaultActionType.ProcessMdFile:
 				case VaultActionType.ReplaceContentMdFile: {
 					const { splitPath } = action.payload;
@@ -191,7 +194,7 @@ export class Dispatcher {
 			}
 		}
 
-		// Add CreateMdFile actions for required files (only if they don't exist)
+		// Add UpsertMdFile actions for required files (only if they don't exist)
 		for (const fileKey of fileKeys) {
 			const fileSplitPath = this.keyToSplitPathToMdFile(fileKey);
 			if (!fileSplitPath) {
@@ -204,10 +207,10 @@ export class Dispatcher {
 				continue; // File exists, no need to create
 			}
 
-			// Check if CreateMdFile already exists in the batch
+			// Check if UpsertMdFile already exists in the batch
 			const alreadyHasCreate = result.some(
 				(action) =>
-					action.type === VaultActionType.CreateMdFile &&
+					action.type === VaultActionType.UpsertMdFile &&
 					makeSystemPathForSplitPath(action.payload.splitPath) ===
 						fileKey,
 			);
@@ -215,7 +218,7 @@ export class Dispatcher {
 			if (!alreadyHasCreate) {
 				result.push({
 					payload: { content: "", splitPath: fileSplitPath },
-					type: VaultActionType.CreateMdFile,
+					type: VaultActionType.UpsertMdFile,
 				});
 			}
 		}
