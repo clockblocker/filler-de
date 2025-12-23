@@ -1,7 +1,6 @@
 import * as path from "path"
 import { env } from "process";
 import { parseObsidianVersions } from "wdio-obsidian-service";
-import { logger } from "./src/utils/logger";
 
 // wdio-obsidian-service will download Obsidian versions into this directory
 const cacheDir = path.resolve(".obsidian-cache");
@@ -13,7 +12,7 @@ const mobileVersions = await parseObsidianVersions(stableVersions, { cacheDir })
 if (env.CI) {
     // Print the resolved Obsidian versions to use as the workflow cache key
     // (see .github/workflows/test.yaml)
-    logger.debug("obsidian-cache-key:", JSON.stringify([desktopVersions, mobileVersions]));
+    console.log("obsidian-cache-key:", JSON.stringify([desktopVersions, mobileVersions]));
 }
 
 export const config: WebdriverIO.Config = {

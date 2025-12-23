@@ -137,9 +137,21 @@ export class Dispatcher {
 		}
 
 		// Create CreateMdFile actions for distinct files
+		// Only add if no CreateMdFile action already exists for that file
 		for (const fileKey of fileKeys) {
 			const fileSplitPath = this.keyToSplitPathToMdFile(fileKey);
-			if (fileSplitPath) {
+			if (!fileSplitPath) {
+				continue;
+			}
+
+			// Check if CreateMdFile already exists in the batch
+			const alreadyHasCreate = actions.some(
+				(action) =>
+					action.type === VaultActionType.CreateMdFile &&
+					makeSystemPathForSplitPath(action.payload.splitPath) === fileKey,
+			);
+
+			if (!alreadyHasCreate) {
 				result.push({
 					payload: { content: "", splitPath: fileSplitPath },
 					type: VaultActionType.CreateMdFile,

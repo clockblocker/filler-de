@@ -307,10 +307,15 @@ function computeImpactedChainsFromActions(
 		if (!treeAction) continue;
 
 		if (treeAction.type === TreeActionType.MoveNode) {
-			// MoveNode: both old and new parent chains are impacted
+			// MoveNode: old parent, new parent, and moved node itself are impacted
 			const oldParent = treeAction.payload.coreNameChain.slice(0, -1);
 			const newParent = treeAction.payload.newCoreNameChainToParent;
-			chains.push(oldParent, newParent);
+			// Compute new chain for moved node: [newParent..., coreName]
+			const coreName = treeAction.payload.coreNameChain[
+				treeAction.payload.coreNameChain.length - 1
+			];
+			const movedNodeChain = [...newParent, coreName];
+			chains.push(oldParent, newParent, movedNodeChain);
 		} else if (treeAction.type === TreeActionType.ChangeNodeName) {
 			// ChangeNodeName: parent chain is impacted
 			const parent = treeAction.payload.coreNameChain.slice(0, -1);

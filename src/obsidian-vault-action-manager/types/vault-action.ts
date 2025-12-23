@@ -178,6 +178,17 @@ export function sortActionsByWeight(actions: VaultAction[]): VaultAction[] {
 		}
 	};
 
+	const getFileKey = (action: VaultAction): string | null => {
+		switch (action.type) {
+			case VaultActionType.CreateMdFile:
+			case VaultActionType.ProcessMdFile:
+			case VaultActionType.ReplaceContentMdFile:
+				return coreSplitPathToKey(action.payload.splitPath);
+			default:
+				return null;
+		}
+	};
+
 	// Group by weight
 	const byWeight = new Map<number, VaultAction[]>();
 	for (const action of actions) {
@@ -187,12 +198,33 @@ export function sortActionsByWeight(actions: VaultAction[]): VaultAction[] {
 		byWeight.set(weight, group);
 	}
 
-	// Sort groups by weight, then sort each group by path depth
+	// Sort groups by weight, then sort each group
 	const sorted: VaultAction[] = [];
 	const sortedWeights = Array.from(byWeight.keys()).sort((a, b) => a - b);
 	for (const weight of sortedWeights) {
 		const group = byWeight.get(weight) ?? [];
-		const sortedGroup = group.sort((a, b) => pathDepth(a) - pathDepth(b));
+		const sortedGroup = group.sort((a, b) => {
+			// First sort by path depth
+			const depthDiff = pathDepth(a) - pathDepth(b);
+			if (depthDiff !== 0) {
+				return depthDiff;
+			}
+
+			// For same file, ensure CreateMdFile comes before ProcessMdFile/ReplaceContentMdFile
+			const aKey = getFileKey(a);
+			const bKey = getFileKey(b);
+			if (aKey && bKey && aKey === bKey) {
+				// Same file - prioritize CreateMdFile
+				if (a.type === VaultActionType.CreateMdFile) {
+					return -1; // a comes first
+				}
+				if (b.type === VaultActionType.CreateMdFile) {
+					return 1; // b comes first
+				}
+			}
+
+			return 0; // Keep original order for same depth, different files
+		});
 		sorted.push(...sortedGroup);
 	}
 
