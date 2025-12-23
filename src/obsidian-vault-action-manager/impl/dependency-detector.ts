@@ -1,4 +1,5 @@
 import type { ActionDependency, DependencyGraph } from "../types/dependency";
+import type { SplitPathToFolder } from "../types/split-path";
 import type { VaultAction } from "../types/vault-action";
 import {
 	coreSplitPathToKey,
@@ -129,21 +130,31 @@ function findDependenciesForAction(
  * Find CreateFolder actions for all parent folders of the given path.
  */
 function findParentFolderDependencies(
-	splitPath: { pathParts: string[] },
+	splitPath: { pathParts: string[]; basename: string },
 	allActions: VaultAction[],
 ): VaultAction[] {
 	const dependencies: VaultAction[] = [];
 
 	// Build parent folder paths (excluding root)
+	// For pathParts = ["parent", "child"], we need:
+	// - parent at index 0: { basename: "parent", pathParts: [] }
+	// - parent at index 1: { basename: "child", pathParts: ["parent"] }
 	for (let i = 1; i <= splitPath.pathParts.length; i++) {
-		const parentPathParts = splitPath.pathParts.slice(0, i);
-		const parentKey = parentPathParts.join("/");
+		const parentPathParts = splitPath.pathParts.slice(0, i - 1);
+		const parentBasename = splitPath.pathParts[i - 1];
+		if (!parentBasename) continue;
+
+		const parentKey = coreSplitPathToKey({
+			basename: parentBasename,
+			pathParts: parentPathParts,
+			type: "Folder",
+		} as SplitPathToFolder);
 
 		// Find CreateFolder action for this parent
 		const createFolder = allActions.find(
 			(a) =>
 				a.type === VaultActionType.CreateFolder &&
-				a.payload.splitPath.pathParts.join("/") === parentKey,
+				coreSplitPathToKey(a.payload.splitPath) === parentKey,
 		);
 
 		if (createFolder) {

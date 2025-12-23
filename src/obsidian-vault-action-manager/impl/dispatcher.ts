@@ -1,6 +1,10 @@
 import { err, ok, type Result } from "neverthrow";
 import { pathToFolderFromPathParts } from "../helpers/pathfinder";
-import type { SplitPath, SplitPathToFolder, SplitPathToMdFile } from "../types/split-path";
+import type {
+	SplitPath,
+	SplitPathToFolder,
+	SplitPathToMdFile,
+} from "../types/split-path";
 import type { VaultAction } from "../types/vault-action";
 import { sortActionsByWeight, VaultActionType } from "../types/vault-action";
 import { collapseActions } from "./collapse";
@@ -89,7 +93,7 @@ export class Dispatcher {
 	 * Ensure all requirements are met before execution:
 	 * - Filter out delete actions if target doesn't exist
 	 * - Add CreateFolder/CreateMdFile actions for required destinations
-	 * 
+	 *
 	 * INVARIANT: After this, executor can assume all requirements are met.
 	 */
 	private async ensureAllRequirementsMet(
