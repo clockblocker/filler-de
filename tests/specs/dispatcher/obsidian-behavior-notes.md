@@ -25,6 +25,22 @@
 - **Write + Process:** When write comes before process, the process is correctly applied to the write content.
 - **Process + Write:** When write comes after process, the process is correctly discarded.
 
+### Folder Rename Events
+
+- **Folder rename fires first:** When a user renames/moves a folder, Obsidian fires ONE `rename` event for the folder itself.
+- **Files inside fire separate events:** After the folder rename event, Obsidian fires SEPARATE `rename` events for EACH file inside the folder.
+- **File paths are already updated:** The file rename events have paths that already reflect the new folder location (Obsidian updates paths before emitting events).
+- **Implication for dependencies:** File rename actions do NOT need to depend on folder rename actions - the paths are already correct. They only need to depend on destination parent `CreateFolder` actions.
+
+**Example:**
+```
+User renames: Library/foo → Library/bar/foo
+Obsidian fires:
+1. FolderRenamed: Library/foo → Library/bar/foo
+2. FileRenamed: Library/foo/file1.md → Library/bar/foo/file1.md
+3. FileRenamed: Library/foo/file2.md → Library/bar/foo/file2.md
+```
+
 ### Sorting
 
 - **Weight ordering:** Actions are correctly sorted by weight (CreateFolder < CreateFile < ProcessMdFile).

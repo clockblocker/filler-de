@@ -1,11 +1,11 @@
-import { err, ok, type Result } from "neverthrow";
+import { err, ok } from "neverthrow";
 import type { Vault } from "obsidian";
 import type { OpenedFileService } from "../file-services/active-view/opened-file-service";
 import type { TFileHelper } from "../file-services/background/helpers/tfile-helper";
 import type { TFolderHelper } from "../file-services/background/helpers/tfolder-helper";
 import type { MdFileWithContentDto } from "../helpers/pathfinder";
 import { systemPathToSplitPath } from "../helpers/pathfinder";
-import type { SplitPathToFolder, SplitPathToMdFile } from "../types/split-path";
+import type { SplitPathToMdFile } from "../types/split-path";
 import type { VaultAction } from "../types/vault-action";
 import { VaultActionType } from "../types/vault-action";
 
@@ -55,40 +55,8 @@ export class Executor {
 				}
 			}
 			case VaultActionType.CreateMdFile: {
-				// Ensure parent folders exist before creating file
-				// (helpers assume folders exist, so we create them here as tracked actions)
+				// INVARIANT: Parent folders exist (ensured by dispatcher)
 				const { splitPath } = action.payload;
-				if (splitPath.pathParts.length > 0) {
-					// Create parent folders recursively
-					for (let i = 1; i <= splitPath.pathParts.length; i++) {
-						const parentPathParts = splitPath.pathParts.slice(0, i);
-						const parentFolderPath: SplitPathToFolder = {
-							basename: parentPathParts[i - 1] ?? "",
-							pathParts: parentPathParts.slice(0, -1),
-							type: "Folder",
-						};
-						const parentSystemPath =
-							systemPathToSplitPath.encode(parentFolderPath);
-						const parentExists =
-							this.vault.getAbstractFileByPath(parentSystemPath);
-						if (!parentExists) {
-							try {
-								await this.vault.createFolder(parentSystemPath);
-							} catch (error) {
-								// Ignore "already exists" - race condition
-								if (
-									!error.message?.includes("already exists")
-								) {
-									return err(
-										error instanceof Error
-											? error.message
-											: String(error),
-									);
-								}
-							}
-						}
-					}
-				}
 
 				// Check if file already exists
 				const fileResult = await this.tfileHelper.getFile(splitPath);
@@ -99,20 +67,21 @@ export class Executor {
 					if (isActive) {
 						const result =
 							await this.opened.replaceAllContentInOpenedFile(
-								action.payload.content,
+								action.payload.content ?? "",
 							);
 						return result.map(() => fileResult.value);
 					}
 					const result = await this.tfileHelper.replaceAllContent(
 						splitPath,
-						action.payload.content,
+						action.payload.content ?? "",
 					);
 					return result;
 				}
 
 				// File doesn't exist - create it
+				// INVARIANT: File should exist (ensured by dispatcher), but handle gracefully
 				const dto: MdFileWithContentDto = {
-					content: action.payload.content,
+					content: action.payload.content ?? "",
 					splitPath: action.payload.splitPath,
 				};
 				const result = await this.tfileHelper.createMdFile(dto);
@@ -134,13 +103,7 @@ export class Executor {
 				return result;
 			}
 			case VaultActionType.ProcessMdFile: {
-				const ensureResult = await this.ensureFileExists(
-					action.payload.splitPath,
-				);
-				if (ensureResult.isErr()) {
-					return ensureResult;
-				}
-
+				// INVARIANT: File exists (ensured by dispatcher)
 				const isActive = await this.checkFileActive(
 					action.payload.splitPath,
 				);
@@ -158,62 +121,13 @@ export class Executor {
 				return result;
 			}
 			case VaultActionType.ReplaceContentMdFile: {
-				const systemPath = systemPathToSplitPath.encode(
-					action.payload.splitPath,
-				);
+				// INVARIANT: File exists (ensured by dispatcher)
 				const fileResult = await this.tfileHelper.getFile(
 					action.payload.splitPath,
 				);
 				if (fileResult.isErr()) {
-					// Ensure parent folders exist before creating file
-					const { splitPath } = action.payload;
-					if (splitPath.pathParts.length > 0) {
-						for (let i = 1; i <= splitPath.pathParts.length; i++) {
-							const parentPathParts = splitPath.pathParts.slice(
-								0,
-								i,
-							);
-							const parentFolderPath: SplitPathToFolder = {
-								basename: parentPathParts[i - 1] ?? "",
-								pathParts: parentPathParts.slice(0, -1),
-								type: "Folder",
-							};
-							const parentSystemPath =
-								systemPathToSplitPath.encode(parentFolderPath);
-							const parentExists =
-								this.vault.getAbstractFileByPath(
-									parentSystemPath,
-								);
-							if (!parentExists) {
-								try {
-									await this.vault.createFolder(
-										parentSystemPath,
-									);
-								} catch (error) {
-									if (
-										!error.message?.includes(
-											"already exists",
-										)
-									) {
-										return err(
-											error instanceof Error
-												? error.message
-												: String(error),
-										);
-									}
-								}
-							}
-						}
-					}
-
-					// File doesn't exist - create it with the content directly
-					const dto: MdFileWithContentDto = {
-						content: action.payload.content,
-						splitPath: action.payload.splitPath,
-					};
-					const createResult =
-						await this.tfileHelper.createMdFile(dto);
-					return createResult.map(() => undefined);
+					// File should exist (ensured by dispatcher), but handle gracefully
+					return err(`File not found: ${fileResult.error}`);
 				}
 
 				const isActive = await this.checkFileActive(
@@ -240,51 +154,5 @@ export class Executor {
 	): Promise<boolean> {
 		const result = await this.opened.isFileActive(splitPath);
 		return result.isOk() && result.value;
-	}
-
-	private async ensureFileExists(
-		splitPath: SplitPathToMdFile,
-	): Promise<Result<void, string>> {
-		const fileResult = await this.tfileHelper.getFile(splitPath);
-		if (fileResult.isOk()) {
-			return ok(undefined);
-		}
-
-		// Ensure parent folders exist before creating file
-		if (splitPath.pathParts.length > 0) {
-			for (let i = 1; i <= splitPath.pathParts.length; i++) {
-				const parentPathParts = splitPath.pathParts.slice(0, i);
-				const parentFolderPath: SplitPathToFolder = {
-					basename: parentPathParts[i - 1] ?? "",
-					pathParts: parentPathParts.slice(0, -1),
-					type: "Folder",
-				};
-				const parentSystemPath =
-					systemPathToSplitPath.encode(parentFolderPath);
-				const parentExists =
-					this.vault.getAbstractFileByPath(parentSystemPath);
-				if (!parentExists) {
-					try {
-						await this.vault.createFolder(parentSystemPath);
-					} catch (error) {
-						if (!error.message?.includes("already exists")) {
-							return err(
-								error instanceof Error
-									? error.message
-									: String(error),
-							);
-						}
-					}
-				}
-			}
-		}
-
-		// File doesn't exist - create it with empty content
-		const dto: MdFileWithContentDto = {
-			content: "",
-			splitPath,
-		};
-		const createResult = await this.tfileHelper.createMdFile(dto);
-		return createResult.map(() => undefined);
 	}
 }

@@ -15,6 +15,14 @@ The core parts of the system are:
 - `SplitPathWithReader` includes `read(): Promise<string>` for markdown files (no tRef exposure)
 - TFile references (tRef) are internal to the manager and should never leave it
 
+**Invariant: Executor Requirements**
+- **Critical Invariant**: When actions are passed to executor, all requirements are met.
+- Dispatcher enforces this in `ensureAllRequirementsMet()`:
+  - Files/folders that need to exist are created (only if they don't already exist)
+  - Delete actions are filtered out if target doesn't exist
+  - Executor assumes all requirements are met (no existence checks)
+- This ensures no redundant operations and clear separation: dispatcher = requirements, executor = execution
+
 2) LibraryTree. The shadow of existing file system. Consists of:
 - ScrollNodes (a shadows of markdown Tfiles)
 { coreName: CoreName, coreNameChainToParent: CoreNameChainFromRoot, extension: "md", type: "Scroll", status: "Done" | "NotStarted" }

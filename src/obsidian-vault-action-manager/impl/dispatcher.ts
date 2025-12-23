@@ -1,12 +1,14 @@
 import { err, ok, type Result } from "neverthrow";
 import { pathToFolderFromPathParts } from "../helpers/pathfinder";
-import type { SplitPathToFolder, SplitPathToMdFile } from "../types/split-path";
+import type { SplitPath, SplitPathToFolder, SplitPathToMdFile } from "../types/split-path";
 import type { VaultAction } from "../types/vault-action";
 import { sortActionsByWeight, VaultActionType } from "../types/vault-action";
 import { collapseActions } from "./collapse";
+import { buildDependencyGraph } from "./dependency-detector";
 import type { Executor } from "./executor";
 import type { SelfEventTrackerLegacy } from "./self-event-tracker";
 import { makeSystemPathForSplitPath, splitPath } from "./split-path";
+import { topologicalSort } from "./topological-sort";
 
 export type DispatchResult = Result<void, DispatchError[]>;
 
@@ -15,10 +17,30 @@ export type DispatchError = {
 	error: string;
 };
 
+/**
+ * Service to check if files/folders exist.
+ */
+export type ExistenceChecker = {
+	exists(splitPath: SplitPath): Promise<boolean>;
+};
+
 export class Dispatcher {
+	/**
+	 * Feature flag: use topological sort instead of weight-based sort.
+	 * When enabled, actions are sorted by explicit dependencies.
+	 * When disabled, uses weight-based sort (backward compatibility).
+	 */
+	private useTopologicalSort = false;
+
+	/**
+	 * INVARIANT: When actions are passed to executor, all requirements are met:
+	 * - Files/folders that need to exist have been created
+	 * - Delete actions only execute if target exists
+	 */
 	constructor(
 		private readonly executor: Executor,
 		private readonly selfEventTracker: SelfEventTrackerLegacy,
+		private readonly existenceChecker: ExistenceChecker,
 	) {}
 
 	async dispatch(actions: readonly VaultAction[]): Promise<DispatchResult> {
@@ -26,12 +48,19 @@ export class Dispatcher {
 			return ok(undefined);
 		}
 
-		// Ensure all destinations exist: add CreateFolder/CreateMdFile actions
-		const withEnsured = this.ensureAllDestinationsExist(actions);
+		// Ensure all requirements are met: check existence, filter invalid deletes, add missing creates
+		const withEnsured = await this.ensureAllRequirementsMet(actions);
 
 		const collapsed = await collapseActions(withEnsured);
 
-		const sorted = sortActionsByWeight(collapsed);
+		// Sort by dependencies (topological) or by weight (legacy)
+		let sorted: VaultAction[];
+		if (this.useTopologicalSort) {
+			const graph = buildDependencyGraph(collapsed);
+			sorted = topologicalSort(collapsed, graph);
+		} else {
+			sorted = sortActionsByWeight(collapsed);
+		}
 
 		// Register paths from COLLAPSED actions (the ones that will actually execute)
 		// This ensures we track paths from the final actions, not the original batch
@@ -57,20 +86,41 @@ export class Dispatcher {
 	}
 
 	/**
-	 * Extract all destination folders and files from actions,
-	 * and add CreateFolder/CreateMdFile actions to ensure they exist.
+	 * Ensure all requirements are met before execution:
+	 * - Filter out delete actions if target doesn't exist
+	 * - Add CreateFolder/CreateMdFile actions for required destinations
+	 * 
+	 * INVARIANT: After this, executor can assume all requirements are met.
 	 */
-	private ensureAllDestinationsExist(
+	private async ensureAllRequirementsMet(
 		actions: readonly VaultAction[],
-	): VaultAction[] {
+	): Promise<VaultAction[]> {
 		const folderKeys = new Set<string>();
 		const fileKeys = new Set<string>();
-		const result: VaultAction[] = [...actions];
+		const result: VaultAction[] = [];
 
-		// Extract destination folders and files
+		// Process actions: filter invalid deletes, collect requirements
 		for (const action of actions) {
+			// Filter out delete actions if target doesn't exist
+			if (
+				action.type === VaultActionType.TrashFolder ||
+				action.type === VaultActionType.TrashFile ||
+				action.type === VaultActionType.TrashMdFile
+			) {
+				const exists = await this.existenceChecker.exists(
+					action.payload.splitPath,
+				);
+				if (!exists) {
+					// Target doesn't exist - skip delete action
+					continue;
+				}
+				result.push(action);
+				continue;
+			}
+
+			// Non-delete actions: collect requirements
 			switch (action.type) {
-				// Non-delete actions with splitPath: extract parent folders
+				// Actions with splitPath: extract parent folders
 				case VaultActionType.CreateFolder:
 				case VaultActionType.CreateFile:
 				case VaultActionType.CreateMdFile:
@@ -86,17 +136,17 @@ export class Dispatcher {
 							folderKeys.add(parentPath);
 						}
 					}
-					// For ProcessMdFile and ReplaceContentMdFile, also ensure the file exists
+					// For ProcessMdFile and ReplaceContentMdFile, ensure the file exists
 					if (
 						action.type === VaultActionType.ProcessMdFile ||
 						action.type === VaultActionType.ReplaceContentMdFile
 					) {
-						// splitPath is guaranteed to be SplitPathToMdFile for these actions
 						const fileKey = makeSystemPathForSplitPath(
 							splitPath as SplitPathToMdFile,
 						);
 						fileKeys.add(fileKey);
 					}
+					result.push(action);
 					break;
 				}
 
@@ -114,21 +164,22 @@ export class Dispatcher {
 							folderKeys.add(parentPath);
 						}
 					}
+					result.push(action);
 					break;
 				}
-
-				// Trash actions: no destinations to ensure
-				case VaultActionType.TrashFolder:
-				case VaultActionType.TrashFile:
-				case VaultActionType.TrashMdFile:
-					break;
 			}
 		}
 
-		// Create CreateFolder actions for distinct folders
+		// Add CreateFolder actions for required folders (only if they don't exist)
 		for (const folderPath of folderKeys) {
 			const folderSplitPath = this.pathToSplitPathToFolder(folderPath);
-			if (folderSplitPath) {
+			if (!folderSplitPath) {
+				continue;
+			}
+
+			// Check if folder already exists
+			const exists = await this.existenceChecker.exists(folderSplitPath);
+			if (!exists) {
 				result.push({
 					payload: { splitPath: folderSplitPath },
 					type: VaultActionType.CreateFolder,
@@ -136,19 +187,25 @@ export class Dispatcher {
 			}
 		}
 
-		// Create CreateMdFile actions for distinct files
-		// Only add if no CreateMdFile action already exists for that file
+		// Add CreateMdFile actions for required files (only if they don't exist)
 		for (const fileKey of fileKeys) {
 			const fileSplitPath = this.keyToSplitPathToMdFile(fileKey);
 			if (!fileSplitPath) {
 				continue;
 			}
 
+			// Check if file already exists
+			const exists = await this.existenceChecker.exists(fileSplitPath);
+			if (exists) {
+				continue; // File exists, no need to create
+			}
+
 			// Check if CreateMdFile already exists in the batch
-			const alreadyHasCreate = actions.some(
+			const alreadyHasCreate = result.some(
 				(action) =>
 					action.type === VaultActionType.CreateMdFile &&
-					makeSystemPathForSplitPath(action.payload.splitPath) === fileKey,
+					makeSystemPathForSplitPath(action.payload.splitPath) ===
+						fileKey,
 			);
 
 			if (!alreadyHasCreate) {

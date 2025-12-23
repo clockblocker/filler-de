@@ -13,10 +13,34 @@ Replace weight-based sorting with explicit dependency graph + topological sort f
 
 ## Target State
 
-- **Dispatcher flow**: `ensureAllDestinationsExist` → `collapseActions` → `buildDependencyGraph` → `topologicalSort` → `execute`
+- **Dispatcher flow**: `ensureAllRequirementsMet` → `collapseActions` → `buildDependencyGraph` → `topologicalSort` → `execute`
 - **Sorting**: Topological sort (Kahn's algorithm) respecting explicit dependencies
 - **Dependencies**: Explicit graph, computed from action types and paths
 - **Benefits**: Guaranteed ordering, no conflicts, easier debugging
+
+## Invariant: Executor Requirements
+
+**Critical Invariant**: When actions are passed to executor, all requirements are met.
+
+The dispatcher enforces this invariant in `ensureAllRequirementsMet()`:
+
+1. **File/Folder Existence**:
+   - `ProcessMdFile`/`ReplaceContentMdFile`: File + folder chain exist (added if needed)
+   - `RenameFile`/`RenameFolder`: Destination parent folders exist (added if needed)
+   - `CreateFolder`/`CreateMdFile`: Only added if they don't already exist
+
+2. **Delete Actions**:
+   - `TrashFile`/`TrashFolder`: Only execute if target exists (filtered out if not)
+
+3. **Executor Simplification**:
+   - Executor assumes all requirements are met
+   - No existence checks in executor (removed `ensureFileExists()`)
+   - Executor focuses solely on executing actions
+
+This invariant ensures:
+- No redundant operations (don't create what already exists)
+- No invalid operations (don't delete what doesn't exist)
+- Clear separation of concerns (dispatcher = requirements, executor = execution)
 
 ---
 
@@ -118,14 +142,12 @@ export function buildDependencyGraph(actions: VaultAction[]): DependencyGraph {
 ```typescript
 import type { VaultAction } from "../types/vault-action";
 import type { DependencyGraph } from "../types/dependency";
-import { weightForVaultActionType } from "../types/vault-action";
 
 /**
  * Topological sort using Kahn's algorithm.
  * 
- * Within each level, sort by:
- * 1. Weight (for backward compatibility during migration)
- * 2. Path depth (shallow first)
+ * Within each dependency level, sort by path depth (shallow first).
+ * This ensures parent folders are created before children when there are no explicit dependencies.
  * 
  * Returns sorted actions respecting dependencies.
  */
@@ -141,16 +163,18 @@ export function topologicalSort(
 1. Build in-degree map (how many dependencies each action has)
 2. Start with actions that have 0 dependencies
 3. Process level by level:
-   - Sort level by weight + path depth
+   - Sort level by path depth (shallow first) - no weights needed
    - Remove processed actions from graph
    - Add newly available actions (dependencies satisfied)
 4. Repeat until all actions processed
 5. Detect cycles (shouldn't happen for file ops, but safety check)
 
+**Tie-breaking**: Path depth only (no weights). Dependencies handle all required ordering.
+
 **Tasks**:
-- [ ] Implement Kahn's algorithm
-- [ ] Add tie-breaking: weight → path depth
-- [ ] Add cycle detection (throw error if found)
+- [x] Implement Kahn's algorithm
+- [x] Add tie-breaking: path depth only (weights removed)
+- [x] Add cycle detection (throw error if found)
 - [ ] Add unit tests (simple cases, complex cases, cycles)
 - [ ] Performance test (1000+ actions)
 
@@ -266,7 +290,7 @@ export async function collapseActions(
 - [ ] Test parallel actions (no dependencies)
 - [ ] Test complex graph (multiple levels)
 - [ ] Test cycle detection
-- [ ] Test tie-breaking (weight + path depth)
+- [ ] Test tie-breaking (path depth only)
 
 ### 4.2 Integration Tests
 
@@ -329,7 +353,7 @@ private useTopologicalSort = true; // Always on
 
 - [ ] Mark `sortActionsByWeight()` as deprecated
 - [ ] Remove after migration complete
-- [ ] Keep `weightForVaultActionType` for tie-breaking in topological sort
+- [ ] Remove `weightForVaultActionType` (no longer needed - topological sort uses path depth only)
 
 ### 6.2 Documentation
 
@@ -347,15 +371,15 @@ private useTopologicalSort = true; // Always on
 - [ ] Rollback plan documented
 
 ### Phase 1: Infrastructure
-- [ ] Dependency types created
-- [ ] Dependency detector implemented
-- [ ] Topological sort implemented
+- [x] Dependency types created
+- [x] Dependency detector implemented
+- [x] Topological sort implemented (path depth tie-breaking, no weights)
 - [ ] Unit tests passing
 
 ### Phase 2: Integration
-- [ ] Feature flag added
-- [ ] Dispatcher updated
-- [ ] ensureAllDestinationsExist enhanced
+- [x] Feature flag added
+- [x] Dispatcher updated
+- [ ] ensureAllDestinationsExist enhanced (optional - can skip for now)
 - [ ] Integration tests passing
 
 ### Phase 3: Collapse
@@ -368,8 +392,6 @@ private useTopologicalSort = true; // Always on
 - [ ] Performance acceptable
 
 ### Phase 5: Rollout
-- [ ] Enabled for specific scenarios
-- [ ] Monitored in production
 - [ ] Full enablement
 
 ### Phase 6: Cleanup
@@ -406,7 +428,7 @@ private useTopologicalSort = true; // Always on
    - Answer: Rebuild graph after collapse, dependencies should still be valid
 
 3. **Weight preservation**: Keep weights for tie-breaking?
-   - Answer: Yes, use weight + path depth within same dependency level
+   - Answer: **No** - removed weights entirely. Dependencies handle ordering, path depth is sufficient for tie-breaking within same dependency level
 
 4. **Error handling**: What if cycle detected?
    - Answer: Throw error with cycle details (shouldn't happen for file ops)

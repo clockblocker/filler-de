@@ -231,7 +231,7 @@ export function sortActionsByWeight(actions: VaultAction[]): VaultAction[] {
 	return sorted;
 }
 
-function coreSplitPathToKey(splitPath: SplitPath): string {
+export function coreSplitPathToKey(splitPath: SplitPath): string {
 	return [
 		...splitPath.pathParts,
 		splitPath.basename,
