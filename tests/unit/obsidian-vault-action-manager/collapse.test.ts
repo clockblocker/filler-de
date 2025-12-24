@@ -297,6 +297,73 @@ describe("collapseActions", () => {
 			expect(collapsed).toHaveLength(1);
 			expect(collapsed[0]).toEqual(trash);
 		});
+
+		it("collapses UpsertMdFile(null) + UpsertMdFile(content) to UpsertMdFile(content)", async () => {
+			const ensureExist = {
+				payload: { content: null, splitPath: mdFile("a.md") },
+				type: VaultActionType.UpsertMdFile,
+			} as const;
+			const create = {
+				payload: { content: "content", splitPath: mdFile("a.md") },
+				type: VaultActionType.UpsertMdFile,
+			} as const;
+
+			const collapsed = await collapseActions([ensureExist, create]);
+			expect(collapsed).toHaveLength(1);
+			expect(collapsed[0].type).toBe(VaultActionType.UpsertMdFile);
+			expect((collapsed[0] as typeof create).payload.content).toBe("content");
+		});
+
+		it("collapses UpsertMdFile(content) + UpsertMdFile(null) to UpsertMdFile(content)", async () => {
+			const create = {
+				payload: { content: "content", splitPath: mdFile("a.md") },
+				type: VaultActionType.UpsertMdFile,
+			} as const;
+			const ensureExist = {
+				payload: { content: null, splitPath: mdFile("a.md") },
+				type: VaultActionType.UpsertMdFile,
+			} as const;
+
+			const collapsed = await collapseActions([create, ensureExist]);
+			expect(collapsed).toHaveLength(1);
+			expect(collapsed[0].type).toBe(VaultActionType.UpsertMdFile);
+			expect((collapsed[0] as typeof create).payload.content).toBe("content");
+		});
+
+		it("merges UpsertMdFile(null) + ReplaceContentMdFile into UpsertMdFile with content", async () => {
+			const ensureExist = {
+				payload: { content: null, splitPath: mdFile("a.md") },
+				type: VaultActionType.UpsertMdFile,
+			} as const;
+			const write = {
+				payload: { content: "final", splitPath: mdFile("a.md") },
+				type: VaultActionType.ReplaceContentMdFile,
+			} as const;
+
+			const collapsed = await collapseActions([ensureExist, write]);
+			expect(collapsed).toHaveLength(1);
+			expect(collapsed[0].type).toBe(VaultActionType.UpsertMdFile);
+			expect((collapsed[0] as typeof ensureExist).payload.content).toBe("final");
+		});
+
+		it("keeps both UpsertMdFile(null) + ProcessMdFile (ProcessMdFile needs file to exist)", async () => {
+			const ensureExist = {
+				payload: { content: null, splitPath: mdFile("a.md") },
+				type: VaultActionType.UpsertMdFile,
+			} as const;
+			const process = {
+				payload: {
+					splitPath: mdFile("a.md"),
+					transform: (c: string) => c,
+				},
+				type: VaultActionType.ProcessMdFile,
+			} as const;
+
+			const collapsed = await collapseActions([ensureExist, process]);
+			expect(collapsed).toHaveLength(1);
+			// ProcessMdFile is kept, UpsertMdFile(null) is kept via dependency graph
+			expect(collapsed[0].type).toBe(VaultActionType.ProcessMdFile);
+		});
 	});
 
 	describe("TrashMdFile terminality", () => {

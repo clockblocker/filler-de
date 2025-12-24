@@ -225,5 +225,49 @@ describe("topologicalSort", () => {
 		expect(sorted[0]).toBe(destFolder);
 		expect(sorted[1]).toBe(rename);
 	});
+
+	it("should sort UpsertMdFile(null) before ProcessMdFile (EnsureExist)", () => {
+		const ensureExist: VaultAction = {
+			payload: { content: null, splitPath: mdFile("file") },
+			type: VaultActionType.UpsertMdFile,
+		};
+		const process: VaultAction = {
+			payload: {
+				splitPath: mdFile("file"),
+				transform: async (c) => c,
+			},
+			type: VaultActionType.ProcessMdFile,
+		};
+
+		const graph = buildDependencyGraph([ensureExist, process]);
+		const sorted = topologicalSort([ensureExist, process], graph);
+
+		expect(sorted).toHaveLength(2);
+		expect(sorted[0]).toBe(ensureExist);
+		expect(sorted[1]).toBe(process);
+	});
+
+	it("should sort EnsureExist folders recursively (parent before child)", () => {
+		const root: VaultAction = {
+			payload: { splitPath: folder("root") },
+			type: VaultActionType.CreateFolder,
+		};
+		const parent: VaultAction = {
+			payload: { splitPath: folder("parent", ["root"]) },
+			type: VaultActionType.CreateFolder,
+		};
+		const child: VaultAction = {
+			payload: { splitPath: folder("child", ["root", "parent"]) },
+			type: VaultActionType.CreateFolder,
+		};
+
+		const graph = buildDependencyGraph([root, parent, child]);
+		const sorted = topologicalSort([root, parent, child], graph);
+
+		expect(sorted).toHaveLength(3);
+		expect(sorted[0]).toBe(root);
+		expect(sorted.indexOf(parent)).toBeGreaterThan(sorted.indexOf(root));
+		expect(sorted.indexOf(child)).toBeGreaterThan(sorted.indexOf(parent));
+	});
 });
 

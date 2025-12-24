@@ -245,5 +245,59 @@ describe("buildDependencyGraph", () => {
 		expect(processDeps?.dependsOn).toContain(rootFolder);
 		expect(processDeps?.dependsOn).toContain(subFolder);
 	});
+
+	it("should detect ProcessMdFile depends on UpsertMdFile with null content (EnsureExist)", () => {
+		const ensureExist: VaultAction = {
+			payload: { content: null, splitPath: mdFile("file") },
+			type: VaultActionType.UpsertMdFile,
+		};
+		const process: VaultAction = {
+			payload: {
+				splitPath: mdFile("file"),
+				transform: async (c) => c,
+			},
+			type: VaultActionType.ProcessMdFile,
+		};
+
+		const graph = buildDependencyGraph([ensureExist, process]);
+
+		const processKey = getActionKey(process);
+		const processDeps = graph.get(processKey);
+		expect(processDeps?.dependsOn).toContain(ensureExist);
+	});
+
+	it("should detect ReplaceContentMdFile depends on UpsertMdFile with null content (EnsureExist)", () => {
+		const ensureExist: VaultAction = {
+			payload: { content: null, splitPath: mdFile("file") },
+			type: VaultActionType.UpsertMdFile,
+		};
+		const replace: VaultAction = {
+			payload: { content: "new", splitPath: mdFile("file") },
+			type: VaultActionType.ReplaceContentMdFile,
+		};
+
+		const graph = buildDependencyGraph([ensureExist, replace]);
+
+		const replaceKey = getActionKey(replace);
+		const replaceDeps = graph.get(replaceKey);
+		expect(replaceDeps?.dependsOn).toContain(ensureExist);
+	});
+
+	it("should detect UpsertMdFile with null content depends on parent folders", () => {
+		const parent: VaultAction = {
+			payload: { splitPath: folder("parent") },
+			type: VaultActionType.CreateFolder,
+		};
+		const ensureExist: VaultAction = {
+			payload: { content: null, splitPath: mdFile("file", ["parent"]) },
+			type: VaultActionType.UpsertMdFile,
+		};
+
+		const graph = buildDependencyGraph([parent, ensureExist]);
+
+		const ensureKey = getActionKey(ensureExist);
+		const ensureDeps = graph.get(ensureKey);
+		expect(ensureDeps?.dependsOn).toContain(parent);
+	});
 });
 

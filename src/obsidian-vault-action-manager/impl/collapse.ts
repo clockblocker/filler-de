@@ -92,16 +92,33 @@ export async function collapseActions(
 
 		// UpsertMdFile + ReplaceContentMdFile merge
 		if (isUpsertMdFile(action)) {
-			if (existing && isReplaceContent(existing)) {
-				// Merge: create with final content
-				byPath.set(key, {
-					payload: {
-						content: existing.payload.content,
-						splitPath: action.payload.splitPath,
-					},
-					type: VaultActionType.UpsertMdFile,
-				});
-				continue;
+			if (existing) {
+				if (existing.type === VaultActionType.UpsertMdFile) {
+					// Both UpsertMdFile - collapse based on content
+					if (action.payload.content === null) {
+						// Action is EnsureExist, existing is actual create - keep existing
+						continue;
+					}
+					if (existing.payload.content === null) {
+						// Existing is EnsureExist, action is actual create - replace with action
+						byPath.set(key, action);
+						continue;
+					}
+					// Both have content - latest wins
+					byPath.set(key, action);
+					continue;
+				}
+				if (isReplaceContent(existing)) {
+					// Merge: create with final content
+					byPath.set(key, {
+						payload: {
+							content: existing.payload.content,
+							splitPath: action.payload.splitPath,
+						},
+						type: VaultActionType.UpsertMdFile,
+					});
+					continue;
+				}
 			}
 			byPath.set(key, action);
 			continue;

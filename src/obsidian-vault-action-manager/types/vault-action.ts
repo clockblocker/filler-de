@@ -57,7 +57,11 @@ type TrashFilePayload = { splitPath: SplitPathToFile };
 // MdFile payloads
 type UpsertMdFilePayload = {
 	splitPath: SplitPathToMdFile;
-	content?: string;
+	/**
+	 * Content to write. If null, ensures file exists without overwriting existing content.
+	 * If undefined, creates with empty content.
+	 */
+	content?: string | null;
 };
 type RenameMdFilePayload = SplitPathFromTo<SplitPathToMdFile>;
 type TrashMdFilePayload = { splitPath: SplitPathToMdFile };

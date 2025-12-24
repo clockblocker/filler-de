@@ -1,5 +1,6 @@
 import { err, ok } from "neverthrow";
 import type { Vault } from "obsidian";
+import { logger } from "../../utils/logger";
 import type { OpenedFileService } from "../file-services/active-view/opened-file-service";
 import type { TFileHelper } from "../file-services/background/helpers/tfile-helper";
 import type { TFolderHelper } from "../file-services/background/helpers/tfolder-helper";
@@ -8,6 +9,7 @@ import { systemPathToSplitPath } from "../helpers/pathfinder";
 import type { SplitPathToMdFile } from "../types/split-path";
 import type { VaultAction } from "../types/vault-action";
 import { VaultActionType } from "../types/vault-action";
+import { makeSystemPathForSplitPath } from "./split-path";
 
 export class Executor {
 	constructor(
@@ -56,32 +58,53 @@ export class Executor {
 			}
 			case VaultActionType.UpsertMdFile: {
 				// INVARIANT: Parent folders exist (ensured by dispatcher)
-				const { splitPath } = action.payload;
+				const { splitPath, content } = action.payload;
+				const path = makeSystemPathForSplitPath(splitPath);
 
 				// Check if file already exists
 				const fileResult = await this.tfileHelper.getFile(splitPath);
 				if (fileResult.isOk()) {
-					// File exists - update content instead of just returning
+					// File exists
+					if (content === null) {
+						// EnsureExist: don't overwrite existing content
+						logger.debug(
+							"[Executor.UpsertMdFile] File exists, skipping (EnsureExist)",
+							{ path },
+						);
+						return ok(fileResult.value);
+					}
+					// File exists - update content
 					// This handles the case where ReplaceContentMdFile was collapsed into UpsertMdFile
+					logger.debug(
+						"[Executor.UpsertMdFile] File exists, updating",
+						{ path },
+					);
 					const isActive = await this.checkFileActive(splitPath);
 					if (isActive) {
 						const result =
 							await this.opened.replaceAllContentInOpenedFile(
-								action.payload.content ?? "",
+								content ?? "",
 							);
 						return result.map(() => fileResult.value);
 					}
 					const result = await this.tfileHelper.replaceAllContent(
 						splitPath,
-						action.payload.content ?? "",
+						content ?? "",
 					);
 					return result;
 				}
 
 				// File doesn't exist - create it
+				logger.debug(
+					"[Executor.UpsertMdFile] File doesn't exist, creating",
+					{
+						contentLength: (content ?? "").length,
+						path,
+					},
+				);
 				// INVARIANT: File should exist (ensured by dispatcher), but handle gracefully
 				const dto: MdFileWithContentDto = {
-					content: action.payload.content ?? "",
+					content: content ?? "",
 					splitPath: action.payload.splitPath,
 				};
 				const result = await this.tfileHelper.upsertMdFile(dto);
