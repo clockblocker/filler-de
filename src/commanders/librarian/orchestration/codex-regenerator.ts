@@ -22,7 +22,9 @@ export type CodexRegeneratorContext = {
 	) => Promise<
 		import("../../../obsidian-vault-action-manager/types/split-path").SplitPathWithReader[]
 	>;
-	splitPath?: (path: string) => import("../../../obsidian-vault-action-manager/types/split-path").SplitPath;
+	splitPath?: (
+		path: string,
+	) => import("../../../obsidian-vault-action-manager/types/split-path").SplitPath;
 };
 
 /**
@@ -33,12 +35,7 @@ export async function regenerateCodexes(
 	impactedChains: CoreNameChainFromRoot[],
 	context: CodexRegeneratorContext,
 ): Promise<void> {
-	logger.info(
-		"[regenerateCodexes] impactedChains:",
-		JSON.stringify(impactedChains),
-	);
 	if (impactedChains.length === 0) {
-		logger.info("[regenerateCodexes] no chains to regenerate");
 		return;
 	}
 
@@ -48,13 +45,7 @@ export async function regenerateCodexes(
 		return node !== null; // getNode returns null for non-sections
 	});
 
-	logger.info(
-		"[regenerateCodexes] filtered to section chains:",
-		JSON.stringify(sectionChains),
-	);
-
 	if (sectionChains.length === 0) {
-		logger.info("[regenerateCodexes] no section chains to regenerate");
 		return;
 	}
 
@@ -64,37 +55,12 @@ export async function regenerateCodexes(
 			context.getNode,
 		);
 
-		logger.info(
-			"[regenerateCodexes] created actions:",
-			String(codexActions.length),
-			"actions",
-		);
-
 		if (codexActions.length > 0) {
-			logger.info(
-				"[regenerateCodexes] dispatching actions:",
-				JSON.stringify(
-					codexActions.map((a) => ({
-						type: a.type,
-						pathParts: a.payload.splitPath.pathParts,
-						basename: a.payload.splitPath.basename,
-						contentLength: a.payload.content.length,
-					})),
-				),
-			);
 			await context.dispatch(codexActions);
-			logger.info("[regenerateCodexes] actions dispatched");
-		} else {
-			logger.info("[regenerateCodexes] no actions to dispatch");
 		}
 
 		// Cleanup orphaned codex files (e.g., from folder renames)
 		if (context.listAllFilesWithMdReaders && context.splitPath) {
-			logger.info(
-				"[regenerateCodexes] starting cleanup for",
-				String(sectionChains.length),
-				"sections",
-			);
 			await cleanupOrphanedCodexes(sectionChains, context);
 		} else {
 			logger.warn(
@@ -129,17 +95,15 @@ async function cleanupOrphanedCodexes(
 	const allFiles = await context.listAllFilesWithMdReaders(
 		settings.splitPathToLibraryRoot,
 	);
-	logger.info(
-		"[cleanupOrphanedCodexes] scanning",
-		String(allFiles.length),
-		"files in library",
-	);
 
 	// Extract section chain from pathParts (remove library root)
 	const libraryRootBasename = settings.splitPathToLibraryRoot.basename;
 
 	for (const file of allFiles) {
-		if (file.type !== SplitPathType.MdFile || !isCodexBasename(file.basename)) {
+		if (
+			file.type !== SplitPathType.MdFile ||
+			!isCodexBasename(file.basename)
+		) {
 			continue;
 		}
 
@@ -148,6 +112,7 @@ async function cleanupOrphanedCodexes(
 		const rootIndex = file.pathParts.findIndex(
 			(part) => part === libraryRootBasename,
 		);
+
 		if (rootIndex === -1) {
 			logger.warn(
 				"[cleanupOrphanedCodexes] codex file outside library root:",
@@ -165,13 +130,6 @@ async function cleanupOrphanedCodexes(
 		// Get section node
 		const node = context.getNode(sectionChain);
 		if (!node || node.type !== TreeNodeType.Section) {
-			logger.info(
-				"[cleanupOrphanedCodexes] codex in non-existent section, deleting:",
-				JSON.stringify({
-					sectionChain,
-					basename: file.basename,
-				}),
-			);
 			deleteActions.push({
 				payload: { splitPath: file },
 				type: VaultActionType.TrashMdFile,
@@ -199,14 +157,6 @@ async function cleanupOrphanedCodexes(
 
 		// Check if codex name matches expected
 		if (file.basename !== expectedCodexBasename) {
-			logger.info(
-				"[cleanupOrphanedCodexes] deleting orphaned codex:",
-				JSON.stringify({
-					sectionChain,
-					expected: expectedCodexBasename,
-					actual: file.basename,
-				}),
-			);
 			deleteActions.push({
 				payload: { splitPath: file },
 				type: VaultActionType.TrashMdFile,
@@ -215,14 +165,7 @@ async function cleanupOrphanedCodexes(
 	}
 
 	if (deleteActions.length > 0) {
-		logger.info(
-			"[cleanupOrphanedCodexes] deleting",
-			String(deleteActions.length),
-			"orphaned codex files",
-		);
 		await context.dispatch(deleteActions);
-	} else {
-		logger.info("[cleanupOrphanedCodexes] no orphaned codexes found");
 	}
 }
 
@@ -234,9 +177,5 @@ export async function regenerateAllCodexes(
 	context: CodexRegeneratorContext,
 ): Promise<void> {
 	const allSectionChains = collectAllSectionChains(tree);
-	logger.info(
-		"[regenerateAllCodexes] collected section chains:",
-		JSON.stringify(allSectionChains),
-	);
 	await regenerateCodexes(allSectionChains, context);
 }

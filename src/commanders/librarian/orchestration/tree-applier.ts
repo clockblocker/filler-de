@@ -27,12 +27,6 @@ export function applyActionsToTree(
 
 		if (treeAction) {
 			const result = context.tree.applyTreeAction(treeAction);
-			logger.info(
-				"[applyActionsToTree] treeAction:",
-				JSON.stringify({ type: treeAction.type }),
-				"result:",
-				JSON.stringify(result),
-			);
 			actionResults.push(result);
 		}
 	}
@@ -40,10 +34,6 @@ export function applyActionsToTree(
 	// Note: tRef removed - TFile references become stale when files are renamed/moved
 
 	const impacted = collectImpactedSections(actionResults);
-	logger.info(
-		"[applyActionsToTree] collected impacted sections:",
-		JSON.stringify(impacted),
-	);
 	return impacted;
 }
 

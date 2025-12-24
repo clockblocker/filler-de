@@ -67,10 +67,6 @@ export class Librarian {
 				files: allFiles,
 				splitPathToLibraryRoot: rootSplitPath,
 			});
-			logger.info(
-				"[Librarian] Tree initialized successfully, leaves:",
-				String(this.tree.serializeToLeaves().length),
-			);
 		} catch (error) {
 			logger.error(
 				"[Librarian] Failed to read tree from vault:",
@@ -98,26 +94,8 @@ export class Librarian {
 		// Re-read tree from vault to ensure it's up-to-date (after healing or if no healing)
 		this.tree = await this.readTreeFromVault();
 
-		// Log tree structure for debugging
-		if (this.tree) {
-			const root = this.tree.getNode([]);
-			if (root && root.type === TreeNodeType.Section) {
-				logger.info(
-					"[Librarian] init - root section children:",
-					JSON.stringify(
-						root.children.map((c) => ({
-							coreName: c.coreName,
-							coreNameChainToParent: c.coreNameChainToParent,
-							type: c.type,
-						})),
-					),
-				);
-			}
-		}
-
 		// Regenerate all codexes with up-to-date tree
 		if (this.tree) {
-			logger.info("[Librarian] init - regenerating all codexes");
 			await regenerateAllCodexes(this.tree, this.getCodexContext());
 		}
 
@@ -199,25 +177,6 @@ export class Librarian {
 					return null;
 				}
 				const node = this.tree.getNode(chain);
-				logger.info(
-					"[getCodexContext] chain:",
-					JSON.stringify(chain),
-					"node:",
-					JSON.stringify(
-						node
-							? {
-									childrenCount:
-										node.type === TreeNodeType.Section
-											? node.children.length
-											: 0,
-									coreName: node.coreName,
-									coreNameChainToParent:
-										node.coreNameChainToParent,
-									type: node.type,
-								}
-							: null,
-					),
-				);
 				if (!node) {
 					logger.warn(
 						"[getCodexContext] node is null for chain:",

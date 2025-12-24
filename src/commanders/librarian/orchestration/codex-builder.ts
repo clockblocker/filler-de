@@ -26,16 +26,8 @@ export function buildCodexVaultActions(
 	const actions: VaultAction[] = [];
 
 	for (const chain of impactedChains) {
-		logger.info(
-			"[buildCodexVaultActions] processing chain:",
-			JSON.stringify(chain),
-		);
 		const node = getNode(chain);
 		if (!node) {
-			logger.warn(
-				"[buildCodexVaultActions] no node for chain:",
-				JSON.stringify(chain),
-			);
 			continue;
 		}
 		if (node.type !== TreeNodeType.Section) {
@@ -49,15 +41,6 @@ export function buildCodexVaultActions(
 		}
 
 		const section = node as SectionNode;
-		logger.info(
-			"[buildCodexVaultActions] generating codex for section:",
-			JSON.stringify({
-				chain,
-				coreName: section.coreName,
-				coreNameChainToParent: section.coreNameChainToParent,
-				childrenCount: section.children.length,
-			}),
-		);
 
 		const content = generateCodexContent(section, {
 			libraryRoot: libraryRootPath,

@@ -215,10 +215,8 @@ export default class TextEaterPlugin extends Plugin {
 
 		// Initialize librarian: read tree, heal mismatches, regenerate codexes
 		if (this.librarian) {
-			logger.info("[TextEaterPlugin] Initializing librarian...");
 			try {
 				await this.librarian.init();
-				logger.info("[TextEaterPlugin] Librarian initialized successfully");
 			} catch (error) {
 				logger.error(
 					"[TextEaterPlugin] Failed to initialize librarian:",
