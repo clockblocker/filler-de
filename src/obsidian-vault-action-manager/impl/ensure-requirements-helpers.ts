@@ -1,9 +1,5 @@
 import { pathToFolderFromPathParts } from "../helpers/pathfinder";
-import type {
-	SplitPath,
-	SplitPathToFolder,
-	SplitPathToMdFile,
-} from "../types/split-path";
+import type { SplitPathToFolder, SplitPathToMdFile } from "../types/split-path";
 import type { VaultAction } from "../types/vault-action";
 import { VaultActionType } from "../types/vault-action";
 import type { ExistenceChecker } from "./dispatcher";

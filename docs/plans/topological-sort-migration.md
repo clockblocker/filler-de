@@ -1,431 +1,351 @@
 # Topological Sort Migration Plan
 
 ## Goal
+Complete migration from weight-based action sorting to topological sort. Remove all weight-based logic entirely.
 
-Replace weight-based sorting with explicit dependency graph + topological sort for guaranteed correct execution order.
+## Current State Analysis
 
-## Current State
+### Architecture Assessment
 
-- **Dispatcher flow**: `ensureAllDestinationsExist` → `collapseActions` → `sortActionsByWeight` → `execute`
-- **Sorting**: Weight-based (0-10) + path depth + same-file heuristics
-- **Dependencies**: Implicit, handled by weights and heuristics
-- **Issues**: Same-file dependencies not guaranteed, system-generated actions can conflict
+#### ✅ **Is architecture clear?**
 
-## Target State
+**YES** - Architecture is well-defined:
 
-- **Dispatcher flow**: `ensureAllRequirementsMet` → `collapseActions` → `buildDependencyGraph` → `topologicalSort` → `execute`
-- **Sorting**: Topological sort (Kahn's algorithm) respecting explicit dependencies
-- **Dependencies**: Explicit graph, computed from action types and paths
-- **Benefits**: Guaranteed ordering, no conflicts, easier debugging
+1. **Dependency Graph System** (`dependency-detector.ts`):
+   - `buildDependencyGraph()` builds explicit dependency relationships
+   - Rules are clear:
+     - `ProcessMdFile` depends on `UpsertMdFile` for same file
+     - Rename actions depend on `CreateFolder` for destination parents
+     - `CreateFolder`/`UpsertMdFile`/`CreateFile` depend on parent folders
+     - Trash actions have no dependencies
 
-## Invariant: Executor Requirements
+2. **Topological Sort** (`topological-sort.ts`):
+   - Kahn's algorithm implementation
+   - Path depth tie-breaking within same dependency level
+   - Cycle detection
 
-**Critical Invariant**: When actions are passed to executor, all requirements are met.
+3. **Dispatcher** (`dispatcher.ts`):
+   - Feature flag `useTopologicalSort = false` (currently disabled)
+   - Dual-path: weight-based (legacy) vs topological (new)
 
-The dispatcher enforces this invariant in `ensureAllRequirementsMet()`:
+4. **Integration Points**:
+   - `ensureDestinationsExist()` adds EnsureExist actions
+   - `collapseActions()` deduplicates actions
+   - `topologicalSort()` respects dependencies
 
-1. **File/Folder Existence**:
-   - `ProcessMdFile`/`UpsertMdFile`: File + folder chain exist (added if needed)
-   - `RenameFile`/`RenameFolder`: Destination parent folders exist (added if needed)
-   - `CreateFolder`/`UpsertMdFile`: Only added if they don't already exist
+#### ⚠️ **Are there missing logic pieces?**
 
-2. **Delete Actions**:
-   - `TrashFile`/`TrashFolder`: Only execute if target exists (filtered out if not)
+**YES** - Gaps identified:
 
-3. **Executor Simplification**:
-   - Executor assumes all requirements are met
-   - No existence checks in executor (removed `ensureFileExists()`)
-   - Executor focuses solely on executing actions
+1. **Missing Dependencies**:
+   - ❌ **Rename dependencies**: `ensureDestinationsExist` should update dependencies when adding CreateFolder actions for rename destination parents. Currently not handled - **NEEDS FIX**
+   - ✅ **Trash after Create**: Collapse handles this - no dependency needed
+   - ✅ **ProcessMdFile → UpsertMdFile**: Already handled
+   - ✅ **Parent folder dependencies**: Already handled (but may need verification after rename fix)
 
-This invariant ensures:
-- No redundant operations (don't create what already exists)
-- No invalid operations (don't delete what doesn't exist)
-- Clear separation of concerns (dispatcher = requirements, executor = execution)
+2. **Weight-based Logic Still Present**:
+   - `weightForVaultActionType` map in `vault-action.ts`
+   - `sortActionsByWeight()` function with complex tie-breaking
+   - Special case: "UpsertMdFile before ProcessMdFile" handled in weight sort but should be in dependency graph (already is)
 
----
+3. **Tie-breaking Logic**:
+   - Weight sort: path depth + same-file priority (UpsertMdFile before ProcessMdFile)
+   - Top sort: path depth only (within dependency level)
+   - ✅ **No weight needed**: Dependency graph ensures UpsertMdFile → ProcessMdFile, path depth handles rest
 
-## Phase 1: Core Infrastructure (No Breaking Changes)
+4. **Test Coverage**:
+   - ✅ Topological sort has tests
+   - ✅ Weight-based sort has extensive tests
+   - ✅ **Use existing e2e tests**: After migration, run e2e tests to verify everything works
 
-### 1.1 Create Dependency Types
+#### ✅ **Does existing top-sort stuff fit together?**
 
-**File**: `src/obsidian-vault-action-manager/types/dependency.ts` (new)
+**YES** - Components fit well:
 
-```typescript
-import type { VaultAction } from "./vault-action";
+1. **Dependency Graph → Topological Sort**: ✅
+   - Graph provides `dependsOn` and `requiredBy`
+   - Top sort uses graph correctly
 
-/**
- * Dependency relationship between two actions.
- */
-export type ActionDependency = {
-  /** Action that depends on others */
-  action: VaultAction;
-  /** Actions that must execute before this one */
-  dependsOn: VaultAction[];
-  /** Actions that require this one (inverse of dependsOn) */
-  requiredBy: VaultAction[];
-};
+2. **EnsureExist → Dependencies**: ✅
+   - `ensureDestinationsExist()` adds `CreateFolder`/`UpsertMdFile` actions
+   - Dependency detector finds parent folder dependencies
+   - Top sort orders them correctly
 
-/**
- * Dependency graph: map from action key to dependency info.
- */
-export type DependencyGraph = Map<string, ActionDependency>;
+3. **Collapse → Dependencies**: ✅
+   - Collapse happens BEFORE dependency graph building
+   - Collapsed actions have correct dependencies
+   - No conflicts
 
-/**
- * Action key for dependency tracking.
- * Uses same key format as getActionKey() for consistency.
- */
-export type ActionKey = string;
-```
+4. **Path Depth Tie-breaking**: ✅
+   - Top sort uses path depth within same dependency level
+   - Matches weight-based behavior for independent actions
 
-**Tasks**:
-- [ ] Create file with types
-- [ ] Export from `types/index.ts`
-- [ ] Add JSDoc comments
+## Migration Plan
 
----
+### Phase 1: Enable Topological Sort (Testing)
 
-### 1.2 Create Dependency Detection
-
-**File**: `src/obsidian-vault-action-manager/impl/dependency-detector.ts` (new)
-
-```typescript
-import type { VaultAction } from "../types/vault-action";
-import { VaultActionType } from "../types/vault-action";
-import type { DependencyGraph } from "../types/dependency";
-import { getActionKey, coreSplitPathToKey } from "../types/vault-action";
-import { makeSystemPathForSplitPath } from "./split-path";
-
-/**
- * Build dependency graph from actions.
- * 
- * Rules:
- * - ProcessMdFile/UpsertMdFile depends on UpsertMdFile for same file
- * - Rename actions depend on CreateFolder for destination parent folders
- * - Trash actions have no dependencies
- * - CreateFolder depends on parent CreateFolder actions
- */
-export function buildDependencyGraph(actions: VaultAction[]): DependencyGraph {
-  // Implementation: analyze each action, find dependencies
-}
-```
-
-**Dependency Rules**:
-
-1. **File content operations**:
-   - `ProcessMdFile` → depends on `UpsertMdFile` (same file)
-   - `UpsertMdFile` → depends on `UpsertMdFile` (same file)
-
-2. **Folder operations**:
-   - `CreateFolder` → depends on parent `CreateFolder` actions
-   - `RenameFolder` → depends on destination parent `CreateFolder` actions
-
-3. **File operations**:
-   - `RenameFile/RenameMdFile` → depends on destination parent `CreateFolder` actions
-
-4. **No dependencies**:
-   - `TrashFolder`, `TrashFile`, `TrashMdFile`
-   - `CreateFile`, `UpsertMdFile` (only folder dependencies)
+**Goal**: Verify topological sort works correctly in production
 
 **Tasks**:
-- [ ] Implement `buildDependencyGraph()`
-- [ ] Add helper: `findDependenciesForAction(action, allActions)`
-- [ ] Add helper: `getParentFolderKeys(splitPath)`
-- [ ] Add unit tests for each dependency rule
-- [ ] Handle edge cases (root folder, same action twice)
+1. Enable `useTopologicalSort = true` in `Dispatcher`
+2. Run existing test suite
+3. Add integration tests comparing weight vs topological results
+4. Monitor for regressions
+
+**Files**:
+- `src/obsidian-vault-action-manager/impl/dispatcher.ts` (line 40)
+
+**Validation**:
+- All existing tests pass
+- Integration tests show equivalent ordering (where applicable)
+- No production issues
+
+**Rollback Plan**: Set `useTopologicalSort = false` if issues found
 
 ---
 
-### 1.3 Create Topological Sort
+### Phase 2: Remove Weight-Based Code
 
-**File**: `src/obsidian-vault-action-manager/impl/topological-sort.ts` (new)
-
-```typescript
-import type { VaultAction } from "../types/vault-action";
-import type { DependencyGraph } from "../types/dependency";
-
-/**
- * Topological sort using Kahn's algorithm.
- * 
- * Within each dependency level, sort by path depth (shallow first).
- * This ensures parent folders are created before children when there are no explicit dependencies.
- * 
- * Returns sorted actions respecting dependencies.
- */
-export function topologicalSort(
-  actions: VaultAction[],
-  graph: DependencyGraph
-): VaultAction[] {
-  // Kahn's algorithm implementation
-}
-```
-
-**Algorithm**:
-1. Build in-degree map (how many dependencies each action has)
-2. Start with actions that have 0 dependencies
-3. Process level by level:
-   - Sort level by path depth (shallow first) - no weights needed
-   - Remove processed actions from graph
-   - Add newly available actions (dependencies satisfied)
-4. Repeat until all actions processed
-5. Detect cycles (shouldn't happen for file ops, but safety check)
-
-**Tie-breaking**: Path depth only (no weights). Dependencies handle all required ordering.
+**Goal**: Delete all weight-based logic
 
 **Tasks**:
-- [x] Implement Kahn's algorithm
-- [x] Add tie-breaking: path depth only (weights removed)
-- [x] Add cycle detection (throw error if found)
-- [ ] Add unit tests (simple cases, complex cases, cycles)
-- [ ] Performance test (1000+ actions)
+
+#### 2.1 Remove from `vault-action.ts`
+- Delete `weightForVaultActionType` constant (lines 100-111)
+- Delete `sortActionsByWeight()` function (lines 153-223)
+- Remove weight-related imports if any
+
+**Files**:
+- `src/obsidian-vault-action-manager/types/vault-action.ts`
+
+**Dependencies**: None (top sort already working)
+
+#### 2.2 Remove from `dispatcher.ts`
+- Remove `sortActionsByWeight` import
+- Remove feature flag `useTopologicalSort`
+- Remove conditional logic (lines 62-69)
+- Always use topological sort
+
+**Files**:
+- `src/obsidian-vault-action-manager/impl/dispatcher.ts`
+
+**Dependencies**: Phase 1 complete
+
+#### 2.3 Update Tests
+- Delete or migrate `sort.test.ts` tests
+- Keep topological sort tests
+- Add tests for edge cases that weight sort handled
+
+**Files**:
+- `tests/unit/obsidian-vault-action-manager/sort.test.ts` (delete or migrate)
+- `tests/unit/vault-actions/vault-action-queue.test.ts` (update if uses weight sort)
+
+**Dependencies**: Phase 2.1, 2.2 complete
 
 ---
 
-## Phase 2: Integration (Feature Flag)
+### Phase 3: Fix Rename Dependencies
 
-### 2.1 Add Feature Flag
-
-**File**: `src/obsidian-vault-action-manager/impl/dispatcher.ts`
+**Goal**: Ensure `ensureDestinationsExist` properly handles dependencies for rename actions
 
 **Tasks**:
-- [ ] Add feature flag (private field)
-- [ ] Add conditional logic in `dispatch()`
-- [ ] Import new functions
-- [ ] Keep old path as fallback
+
+#### 3.1 Investigate Current Behavior
+- Review `getDestinationsToCheck` - does it recursively check parent folders of rename destination parents?
+- Review `ensureDestinationsExist` - when it adds CreateFolder for rename destination, does it also add parent folders?
+- Review `buildDependencyGraph` - are newly added CreateFolder actions getting their parent dependencies?
+
+**Files**:
+- `src/obsidian-vault-action-manager/impl/ensure-requirements-helpers.ts`
+- `src/obsidian-vault-action-manager/impl/dependency-detector.ts`
+
+#### 3.2 Fix Rename Dependencies
+- Ensure `getDestinationsToCheck` recursively finds all parent folders needed for rename destinations
+- Verify `ensureDestinationsExist` adds all necessary parent CreateFolder actions
+- Verify `buildDependencyGraph` correctly sets dependencies for newly added actions
+- Add tests for rename with nested destination paths
+
+**Files**:
+- `src/obsidian-vault-action-manager/impl/ensure-requirements-helpers.ts`
+- `src/obsidian-vault-action-manager/impl/dependency-detector.ts`
+- `tests/unit/obsidian-vault-action-manager/ensure-requirements-helpers.test.ts`
+
+**Dependencies**: Phase 2 complete
 
 ---
 
-### 2.2 Update ensureAllDestinationsExist
+### Phase 4: Verify Dependency Coverage
+
+**Goal**: Ensure all implicit weight-based ordering is captured in dependencies
 
 **Tasks**:
-- [ ] Add optional marker to system-generated actions
-- [ ] Update dependency detection to handle markers
-- [ ] Ensure system-generated actions have lower priority in tie-breaking
+
+#### 4.1 Review Weight-Based Ordering Rules
+From `sortActionsByWeight()`:
+1. ✅ Folders before files before content ops → **Handled by dependencies**
+2. ✅ Path depth (shallow first) → **Handled by top sort tie-breaking**
+3. ✅ UpsertMdFile before ProcessMdFile (same file) → **Handled by dependency graph**
+
+#### 4.2 Verify No Missing Dependencies
+- **Rename ordering**: Weight sort had RenameFolder(1) < RenameFile(4) < RenameMdFile(7)
+  - ✅ **Decision**: No dependency needed - path depth tie-breaking sufficient
+
+- **Trash ordering**: Weight sort had TrashFolder(2) < TrashFile(5) < TrashMdFile(8)
+  - ✅ **Decision**: No dependency needed - path depth tie-breaking sufficient
+
+#### 4.3 Run E2E Tests
+- Use existing e2e tests to verify migration success
+- All e2e tests should pass with topological sort
+- No regressions in action ordering
+
+**Files**:
+- All e2e test files in `tests/specs/`
+
+**Dependencies**: Phase 3 complete
 
 ---
 
-## Phase 3: Collapse Integration
+### Phase 5: Cleanup and Documentation
 
-### 3.1 Make Collapse Dependency-Aware
-
-**File**: `src/obsidian-vault-action-manager/impl/collapse.ts`
-
-When collapsing, preserve dependency relationships:
-
-```typescript
-export async function collapseActions(
-  actions: readonly VaultAction[],
-  graph?: DependencyGraph // Optional: if provided, preserve dependencies
-): Promise<VaultAction[]> {
-  // Current collapse logic...
-  
-  // After collapse, if graph provided:
-  // - Rebuild graph for collapsed actions
-  // - Ensure dependencies still valid
-}
-```
-
-**Key Insight**: Collapse can merge actions, but dependencies must be preserved.
-
-**Example**:
-- `UpsertMdFile("initial")` + `ProcessMdFile("+A")` → `ProcessMdFile` (reads from disk)
-- Dependency: `ProcessMdFile` depends on file existing
-- After collapse: Still need to ensure file exists before processing
+**Goal**: Final cleanup and documentation
 
 **Tasks**:
-- [x] Re-ensure requirements after collapse (simpler than graph parameter)
-- [x] After collapse, re-run `ensureAllRequirementsMet` to restore missing UpsertMdFile
-- [x] Add tests: collapse preserves dependencies
-- [x] Handle edge case: collapse removes UpsertMdFile needed for ProcessMdFile (re-ensured)
+
+#### 4.1 Remove Dead Code
+- Search for any remaining weight references
+- Remove unused imports
+- Clean up comments mentioning weights
+
+**Files**: All files in `obsidian-vault-action-manager/`
+
+#### 4.2 Update Documentation
+- Update `action-dependency-system.md` to reflect completion
+- Update `ensure-exist-actions.md` if needed
+- Add migration notes if relevant
+
+**Files**:
+- `docs/plans/action-dependency-system.md`
+- `docs/plans/ensure-exist-actions.md`
+
+#### 4.3 Code Review
+- Review dependency rules for completeness
+- Verify no performance regressions
+- Ensure error messages are clear
+
+**Dependencies**: All phases complete
 
 ---
 
-## Phase 4: Testing & Validation
+## Risk Assessment
 
-### 4.1 Unit Tests
+### Low Risk ✅
+- Topological sort already implemented and tested
+- Dependency graph logic is sound
+- Path depth tie-breaking matches weight behavior
 
-**File**: `tests/unit/dependency-detector.test.ts` (new)
+### Medium Risk ⚠️
+- **Test coverage**: Need integration tests comparing both systems
+- **Edge cases**: Some weight-based tie-breaking might have subtle differences
+- **Performance**: Top sort might be slightly slower (should measure)
 
-- [x] Test each dependency rule
-- [x] Test complex scenarios (multiple files, nested folders)
-- [x] Test edge cases (root folder, same action twice)
-
-**File**: `tests/unit/topological-sort.test.ts` (new)
-
-- [x] Test simple linear dependencies
-- [x] Test parallel actions (no dependencies)
-- [x] Test complex graph (multiple levels)
-- [x] Test cycle detection
-- [x] Test tie-breaking (path depth only)
-
-**File**: `tests/unit/collapse-dependency.test.ts` (new)
-
-- [x] Test UpsertMdFile + ProcessMdFile collapse preserves dependency needs
-- [x] Test folder dependencies preserved after collapse
-- [x] Test UpsertMdFile + UpsertMdFile collapse
-- [x] Test multiple ProcessMdFile collapse
-
-### 4.2 Integration Tests
-
-**File**: `tests/specs/dispatcher/dependency-sorting.e2e.ts` (new)
-
-- [ ] Test ProcessMdFile after UpsertMdFile
-- [ ] Test RenameFolder after CreateFolder
-- [ ] Test complex batch with mixed dependencies
-- [ ] Compare results: topological vs weight-based (should match for simple cases)
-
-### 4.3 Regression Tests
-
-- [ ] Run all existing e2e tests with feature flag ON
-- [ ] Verify no behavior changes (except ordering improvements)
-- [ ] Fix any issues found
+### Mitigation
+1. Enable feature flag first (Phase 1) - easy rollback
+2. Comprehensive integration tests
+3. Monitor production metrics
+4. Keep weight code until confident (Phase 2)
 
 ---
 
-## Phase 5: Gradual Rollout
+## Additional Considerations
 
-### 5.1 Enable for Specific Scenarios
+### Performance
+- **Top sort complexity**: O(V + E) where V = actions, E = dependencies
+- **Weight sort complexity**: O(V log V) for grouping + sorting
+- **Expected impact**: Top sort should be similar or faster for typical batch sizes (< 100 actions)
+- **Action**: Monitor performance after migration
 
-Start with low-risk scenarios:
+### Error Handling
+- **Cycle detection**: Top sort throws error if cycle detected
+- **Weight sort**: No cycle detection (assumes no cycles)
+- **Action**: Verify cycle detection works correctly (shouldn't happen for file ops)
 
-```typescript
-// Enable for ProcessMdFile/UpsertMdFile batches
-if (actions.some(a => 
-  a.type === VaultActionType.ProcessMdFile || 
-  a.type === VaultActionType.UpsertMdFile
-)) {
-  this.useTopologicalSort = true;
-}
-```
+### Edge Cases
+- **Empty batches**: Both handle correctly
+- **Single action**: Both handle correctly
+- **Independent actions**: Top sort uses path depth (same as weight)
+- **Same-file actions**: Top sort uses dependencies (better than weight)
 
-**Tasks**:
-- [ ] Add conditional enable logic
-- [ ] Monitor for issues
-- [ ] Gradually expand to all scenarios
-
-### 5.2 Full Enablement
-
-Once validated:
-
-```typescript
-private useTopologicalSort = true; // Always on
-```
-
-**Tasks**:
-- [ ] Remove feature flag
-- [ ] Remove fallback to `sortActionsByWeight`
-- [ ] Update documentation
-
----
-
-## Phase 6: Cleanup
-
-### 6.1 Remove Weight-Based Sorting
-
-**File**: `src/obsidian-vault-action-manager/types/vault-action.ts`
-
-- [ ] Mark `sortActionsByWeight()` as deprecated
-- [ ] Remove after migration complete
-- [ ] Remove `weightForVaultActionType` (no longer needed - topological sort uses path depth only)
-
-### 6.2 Documentation
-
-- [ ] Update architecture docs
-- [ ] Add dependency graph visualization (optional)
-- [ ] Document dependency rules
-
----
-
-## Migration Checklist
-
-### Pre-Migration
-- [ ] All existing tests passing
-- [ ] Feature flag infrastructure ready
-- [ ] Rollback plan documented
-
-### Phase 1: Infrastructure
-- [x] Dependency types created
-- [x] Dependency detector implemented
-- [x] Topological sort implemented (path depth tie-breaking, no weights)
-- [ ] Unit tests passing
-
-### Phase 2: Integration
-- [x] Feature flag added
-- [x] Dispatcher updated
-- [ ] ensureAllDestinationsExist enhanced (optional - can skip for now)
-- [ ] Integration tests passing
-
-### Phase 3: Collapse
-- [ ] Collapse made dependency-aware
-- [ ] Tests for collapse + dependencies
-
-### Phase 4: Testing
-- [ ] All unit tests passing
-- [ ] All e2e tests passing
-- [ ] Performance acceptable
-
-### Phase 5: Rollout
-- [ ] Full enablement
-
-### Phase 6: Cleanup
-- [ ] Old code removed
-- [ ] Documentation updated
-
----
-
-## Risk Mitigation
-
-1. **Feature Flag**: Easy rollback if issues found
-2. **Gradual Rollout**: Start with low-risk scenarios
-3. **Comprehensive Testing**: Unit + integration + e2e
-4. **Backward Compatibility**: Keep weight-based as fallback initially
-5. **Monitoring**: Log when topological sort used, compare results
-
----
-
-## Performance Considerations
-
-- **Topological Sort**: O(V + E) where V = actions, E = dependencies
-- **Typical batch**: < 100 actions, < 200 dependencies → < 1ms
-- **Worst case**: 1000 actions → ~10ms (acceptable)
-- **Cache**: Dependency graph can be cached if needed
-
----
-
-## Questions to Resolve
-
-1. **System-generated actions**: Should they have special handling in dependencies?
-   - Answer: Yes, mark them, give lower priority in tie-breaking
-
-2. **Collapse + Dependencies**: How to handle when collapse merges actions?
-   - Answer: Rebuild graph after collapse, dependencies should still be valid
-
-3. **Weight preservation**: Keep weights for tie-breaking?
-   - Answer: **No** - removed weights entirely. Dependencies handle ordering, path depth is sufficient for tie-breaking within same dependency level
-
-4. **Error handling**: What if cycle detected?
-   - Answer: Throw error with cycle details (shouldn't happen for file ops)
-
----
-
-## Timeline Estimate
-
-- **Phase 1**: 2-3 days (infrastructure)
-- **Phase 2**: 1-2 days (integration)
-- **Phase 3**: 1 day (collapse)
-- **Phase 4**: 2-3 days (testing)
-- **Phase 5**: 1 week (gradual rollout)
-- **Phase 6**: 1 day (cleanup)
-
-**Total**: ~2-3 weeks
+### Backward Compatibility
+- **No API changes**: Dispatcher interface unchanged
+- **Internal only**: Migration is internal refactor
+- **Action**: No breaking changes expected
 
 ---
 
 ## Success Criteria
 
-1. ✅ All existing tests pass
-2. ✅ Topological sort correctly orders actions
-3. ✅ No performance regression
-4. ✅ Dependency graph correctly identifies all dependencies
-5. ✅ System-generated actions don't conflict with user actions
-6. ✅ Easy to debug (can visualize dependency graph)
+1. ✅ Topological sort enabled and working in production
+2. ✅ All weight-based code removed
+3. ✅ All tests passing
+4. ✅ No regressions in action ordering
+5. ✅ Documentation updated
+6. ✅ Code review complete
+
+---
+
+## Timeline Estimate
+
+- **Phase 1**: 1-2 days (enable flag, test, monitor)
+- **Phase 2**: 1 day (remove code)
+- **Phase 3**: 1-2 days (fix rename dependencies, test)
+- **Phase 4**: 0.5 day (verify dependencies, run e2e)
+- **Phase 5**: 0.5 day (cleanup)
+
+**Total**: ~4-5 days
+
+---
+
+## Other Questions & Considerations
+
+### Q1: What if dependency graph is incomplete?
+**Risk**: Missing dependencies could cause execution order issues
+**Mitigation**: 
+- Phase 3 explicitly fixes rename dependencies
+- E2E tests will catch any ordering issues
+- Top sort will error on cycles (safety net)
+
+### Q2: What about actions added during collapse?
+**Current**: Collapse happens before dependency graph building
+**Status**: ✅ Safe - collapsed actions included in graph
+
+### Q3: What about actions added during ensureDestinationsExist?
+**Current**: Actions added, then dependency graph built
+**Status**: ⚠️ Needs verification in Phase 3 - ensure newly added actions get correct dependencies
+
+### Q4: Performance impact?
+**Consideration**: Top sort might be slower for very large batches
+**Action**: Monitor performance, optimize if needed (unlikely to be issue)
+
+### Q5: Debugging dependency issues?
+**Consideration**: Harder to debug dependency graph than weight-based ordering
+**Mitigation**: 
+- Clear error messages on cycle detection
+- Can log dependency graph for debugging
+- Tests document expected dependencies
+
+### Q6: What if we need to add new action types?
+**Consideration**: Need to update dependency detector
+**Status**: ✅ Clear process - add to `findDependenciesForAction` switch statement
+
+### Q7: Should we add dependency visualization?
+**Consideration**: Could help with debugging
+**Decision**: Not needed for migration, but could be useful future enhancement
+
+## Notes
+
+- Legacy weight-based system in `background-vault-actions.ts` is separate and not affected
+- Topological sort already handles all critical dependencies (except rename - Phase 3 fix)
+- Path depth tie-breaking preserves weight-based behavior for independent actions
+- No breaking changes expected - ordering should be equivalent or better
+- E2E tests provide final validation
 

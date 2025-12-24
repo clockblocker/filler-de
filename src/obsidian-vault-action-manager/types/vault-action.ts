@@ -97,19 +97,6 @@ export type VaultAction =
 			payload: ProcessMdFilePayload;
 	  };
 
-export const weightForVaultActionType: Record<VaultActionType, number> = {
-	[VaultActionType.CreateFolder]: 0,
-	[VaultActionType.RenameFolder]: 1,
-	[VaultActionType.TrashFolder]: 2,
-	[VaultActionType.CreateFile]: 3,
-	[VaultActionType.RenameFile]: 4,
-	[VaultActionType.TrashFile]: 5,
-	[VaultActionType.UpsertMdFile]: 6,
-	[VaultActionType.RenameMdFile]: 7,
-	[VaultActionType.TrashMdFile]: 8,
-	[VaultActionType.ProcessMdFile]: 9,
-} as const;
-
 export function getActionKey(action: VaultAction): string {
 	const { type, payload } = action;
 
@@ -148,78 +135,6 @@ export function getActionTargetPath(action: VaultAction): string {
 		case VaultActionType.RenameMdFile:
 			return `${coreSplitPathToKey(payload.from)} → ${coreSplitPathToKey(payload.to)}`;
 	}
-}
-
-export function sortActionsByWeight(actions: VaultAction[]): VaultAction[] {
-	const pathDepth = (action: VaultAction): number => {
-		switch (action.type) {
-			case VaultActionType.CreateFolder:
-			case VaultActionType.TrashFolder:
-				return action.payload.splitPath.pathParts.length;
-			case VaultActionType.RenameFolder:
-				return action.payload.to.pathParts.length;
-			case VaultActionType.CreateFile:
-			case VaultActionType.TrashFile:
-			case VaultActionType.UpsertMdFile:
-			case VaultActionType.TrashMdFile:
-			case VaultActionType.ProcessMdFile:
-				return action.payload.splitPath.pathParts.length;
-			case VaultActionType.RenameFile:
-			case VaultActionType.RenameMdFile:
-				return action.payload.to.pathParts.length;
-		}
-	};
-
-	const getFileKey = (action: VaultAction): string | null => {
-		switch (action.type) {
-			case VaultActionType.UpsertMdFile:
-			case VaultActionType.ProcessMdFile:
-				return coreSplitPathToKey(action.payload.splitPath);
-			default:
-				return null;
-		}
-	};
-
-	// Group by weight
-	const byWeight = new Map<number, VaultAction[]>();
-	for (const action of actions) {
-		const weight = weightForVaultActionType[action.type];
-		const group = byWeight.get(weight) ?? [];
-		group.push(action);
-		byWeight.set(weight, group);
-	}
-
-	// Sort groups by weight, then sort each group
-	const sorted: VaultAction[] = [];
-	const sortedWeights = Array.from(byWeight.keys()).sort((a, b) => a - b);
-	for (const weight of sortedWeights) {
-		const group = byWeight.get(weight) ?? [];
-		const sortedGroup = group.sort((a, b) => {
-			// First sort by path depth
-			const depthDiff = pathDepth(a) - pathDepth(b);
-			if (depthDiff !== 0) {
-				return depthDiff;
-			}
-
-			// For same file, ensure UpsertMdFile comes before ProcessMdFile
-			const aKey = getFileKey(a);
-			const bKey = getFileKey(b);
-			if (aKey && bKey && aKey === bKey) {
-				// Same file - prioritize UpsertMdFile
-				if (a.type === VaultActionType.UpsertMdFile) {
-					return -1; // a comes first
-				}
-				if (b.type === VaultActionType.UpsertMdFile) {
-					return 1; // b comes first
-				}
-			}
-
-			return 0; // Keep original order for same depth, different files
-		});
-		sorted.push(...sortedGroup);
-	}
-
-	return sorted;
 }
 
 export function coreSplitPathToKey(splitPath: SplitPath): string {

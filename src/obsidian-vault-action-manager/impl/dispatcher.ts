@@ -5,7 +5,7 @@ import type {
 	SplitPathToMdFile,
 } from "../types/split-path";
 import type { VaultAction } from "../types/vault-action";
-import { sortActionsByWeight, VaultActionType } from "../types/vault-action";
+import { VaultActionType } from "../types/vault-action";
 import { collapseActions } from "./collapse";
 import { buildDependencyGraph } from "./dependency-detector";
 import {
@@ -14,7 +14,7 @@ import {
 } from "./ensure-requirements-helpers";
 import type { Executor } from "./executor";
 import type { SelfEventTrackerLegacy } from "./self-event-tracker";
-import { makeSystemPathForSplitPath, splitPath } from "./split-path";
+import { splitPath } from "./split-path";
 import { topologicalSort } from "./topological-sort";
 
 export type DispatchResult = Result<void, DispatchError[]>;
@@ -32,13 +32,6 @@ export type ExistenceChecker = {
 };
 
 export class Dispatcher {
-	/**
-	 * Feature flag: use topological sort instead of weight-based sort.
-	 * When enabled, actions are sorted by explicit dependencies.
-	 * When disabled, uses weight-based sort (backward compatibility).
-	 */
-	private useTopologicalSort = false;
-
 	/**
 	 * INVARIANT: When actions are passed to executor, all requirements are met:
 	 * - Files/folders that need to exist have been created
@@ -59,14 +52,12 @@ export class Dispatcher {
 		const withEnsured = await this.ensureAllRequirementsMet(actions);
 		const collapsed = await collapseActions(withEnsured);
 
-		// Sort by dependencies (topological) or by weight (legacy)
-		let sorted: VaultAction[];
-		if (this.useTopologicalSort) {
-			const graph = buildDependencyGraph(collapsed);
-			sorted = topologicalSort(collapsed, graph);
-		} else {
-			sorted = sortActionsByWeight(collapsed);
-		}
+		// Sort by dependencies using topological sort
+		// Note: Dependency graph is built AFTER ensureDestinationsExist, so newly added
+		// CreateFolder actions (e.g., for rename destination parents) are included
+		// and their parent folder dependencies are correctly set.
+		const graph = buildDependencyGraph(collapsed);
+		const sorted = topologicalSort(collapsed, graph);
 
 		// Register paths from SORTED actions (the ones that will actually execute)
 		// This ensures we track paths from the final actions, not the original batch
