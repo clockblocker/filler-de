@@ -87,15 +87,15 @@ describe("collapseActions", () => {
 		});
 	});
 
-	describe("ReplaceContentMdFile precedence", () => {
+	describe("UpsertMdFile precedence", () => {
 		it("latest write wins over prior write", async () => {
 			const firstWrite = {
 				payload: { content: "first", splitPath: mdFile("a.md") },
-				type: VaultActionType.ReplaceContentMdFile,
+				type: VaultActionType.UpsertMdFile,
 			} as const;
 			const latestWrite = {
 				payload: { content: "second", splitPath: mdFile("a.md") },
-				type: VaultActionType.ReplaceContentMdFile,
+				type: VaultActionType.UpsertMdFile,
 			} as const;
 
 			const collapsed = await collapseActions([firstWrite, latestWrite]);
@@ -113,7 +113,7 @@ describe("collapseActions", () => {
 			} as const;
 			const write = {
 				payload: { content: "final", splitPath: mdFile("a.md") },
-				type: VaultActionType.ReplaceContentMdFile,
+				type: VaultActionType.UpsertMdFile,
 			} as const;
 
 			const collapsed = await collapseActions([process, write]);
@@ -122,11 +122,11 @@ describe("collapseActions", () => {
 		});
 	});
 
-	describe("ProcessMdFile + ReplaceContentMdFile interactions", () => {
+	describe("ProcessMdFile + UpsertMdFile interactions", () => {
 		it("applies process after write into final write content", async () => {
 			const write = {
 				payload: { content: "hello", splitPath: mdFile("a.md") },
-				type: VaultActionType.ReplaceContentMdFile,
+				type: VaultActionType.UpsertMdFile,
 			} as const;
 			const process = {
 				payload: {
@@ -137,14 +137,14 @@ describe("collapseActions", () => {
 			} as const;
 
 			const [single] = await collapseActions([write, process]);
-			expect(single.type).toBe(VaultActionType.ReplaceContentMdFile);
+			expect(single.type).toBe(VaultActionType.UpsertMdFile);
 			expect((single as typeof write).payload.content).toBe("HELLO");
 		});
 
 		it("applies process after write with async transform", async () => {
 			const write = {
 				payload: { content: "hello", splitPath: mdFile("a.md") },
-				type: VaultActionType.ReplaceContentMdFile,
+				type: VaultActionType.UpsertMdFile,
 			} as const;
 			const process = {
 				payload: {
@@ -155,7 +155,7 @@ describe("collapseActions", () => {
 			} as const;
 
 			const [single] = await collapseActions([write, process]);
-			expect(single.type).toBe(VaultActionType.ReplaceContentMdFile);
+			expect(single.type).toBe(VaultActionType.UpsertMdFile);
 			expect((single as typeof write).payload.content).toBe("HELLO");
 		});
 
@@ -169,7 +169,7 @@ describe("collapseActions", () => {
 			} as const;
 			const write = {
 				payload: { content: "final", splitPath: mdFile("a.md") },
-				type: VaultActionType.ReplaceContentMdFile,
+				type: VaultActionType.UpsertMdFile,
 			} as const;
 
 			const collapsed = await collapseActions([process, write]);
@@ -194,7 +194,7 @@ describe("collapseActions", () => {
 			} as const;
 			const write = {
 				payload: { content: "final", splitPath: mdFile("a.md") },
-				type: VaultActionType.ReplaceContentMdFile,
+				type: VaultActionType.UpsertMdFile,
 			} as const;
 
 			const collapsed = await collapseActions([p1, p2, write]);
@@ -205,7 +205,7 @@ describe("collapseActions", () => {
 		it("applies process to write when process comes after", async () => {
 			const write = {
 				payload: { content: "hello", splitPath: mdFile("a.md") },
-				type: VaultActionType.ReplaceContentMdFile,
+				type: VaultActionType.UpsertMdFile,
 			} as const;
 			const p1 = {
 				payload: {
@@ -223,7 +223,7 @@ describe("collapseActions", () => {
 			} as const;
 
 			const [single] = await collapseActions([write, p1, p2]);
-			expect(single.type).toBe(VaultActionType.ReplaceContentMdFile);
+			expect(single.type).toBe(VaultActionType.UpsertMdFile);
 			expect((single as typeof write).payload.content).toBe("HELLO!");
 		});
 	});
@@ -274,7 +274,7 @@ describe("collapseActions", () => {
 			} as const;
 			const write = {
 				payload: { content: "final", splitPath: mdFile("a.md") },
-				type: VaultActionType.ReplaceContentMdFile,
+				type: VaultActionType.UpsertMdFile,
 			} as const;
 
 			const collapsed = await collapseActions([create, write]);
@@ -330,14 +330,14 @@ describe("collapseActions", () => {
 			expect((collapsed[0] as typeof create).payload.content).toBe("content");
 		});
 
-		it("merges UpsertMdFile(null) + ReplaceContentMdFile into UpsertMdFile with content", async () => {
+		it("merges UpsertMdFile(null) + UpsertMdFile into UpsertMdFile with content", async () => {
 			const ensureExist = {
 				payload: { content: null, splitPath: mdFile("a.md") },
 				type: VaultActionType.UpsertMdFile,
 			} as const;
 			const write = {
 				payload: { content: "final", splitPath: mdFile("a.md") },
-				type: VaultActionType.ReplaceContentMdFile,
+				type: VaultActionType.UpsertMdFile,
 			} as const;
 
 			const collapsed = await collapseActions([ensureExist, write]);
@@ -388,7 +388,7 @@ describe("collapseActions", () => {
 		it("trash wins over write", async () => {
 			const write = {
 				payload: { content: "content", splitPath: mdFile("a.md") },
-				type: VaultActionType.ReplaceContentMdFile,
+				type: VaultActionType.UpsertMdFile,
 			} as const;
 			const trash = {
 				payload: { splitPath: mdFile("a.md") },
@@ -410,7 +410,7 @@ describe("collapseActions", () => {
 			} as const;
 			const write = {
 				payload: { content: "content", splitPath: mdFile("a.md") },
-				type: VaultActionType.ReplaceContentMdFile,
+				type: VaultActionType.UpsertMdFile,
 			} as const;
 			const trash = {
 				payload: { splitPath: mdFile("a.md") },
@@ -427,7 +427,7 @@ describe("collapseActions", () => {
 		it("handles write -> process -> write correctly", async () => {
 			const w1 = {
 				payload: { content: "first", splitPath: mdFile("a.md") },
-				type: VaultActionType.ReplaceContentMdFile,
+				type: VaultActionType.UpsertMdFile,
 			} as const;
 			const process = {
 				payload: {
@@ -438,7 +438,7 @@ describe("collapseActions", () => {
 			} as const;
 			const w2 = {
 				payload: { content: "second", splitPath: mdFile("a.md") },
-				type: VaultActionType.ReplaceContentMdFile,
+				type: VaultActionType.UpsertMdFile,
 			} as const;
 
 			const collapsed = await collapseActions([w1, process, w2]);
@@ -463,7 +463,7 @@ describe("collapseActions", () => {
 			} as const;
 			const write = {
 				payload: { content: "final", splitPath: mdFile("a.md") },
-				type: VaultActionType.ReplaceContentMdFile,
+				type: VaultActionType.UpsertMdFile,
 			} as const;
 
 			const collapsed = await collapseActions([p1, p2, write]);

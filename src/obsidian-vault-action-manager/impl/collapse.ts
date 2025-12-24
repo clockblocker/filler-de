@@ -31,38 +31,12 @@ export async function collapseActions(
 			continue;
 		}
 
-		// ReplaceContentMdFile: latest wins; replaces prior write/process
-		// Special case: if existing is UpsertMdFile, merge into UpsertMdFile
-		if (isReplaceContent(action)) {
-			if (existing && isUpsertMdFile(existing)) {
-				byPath.set(key, {
-					payload: {
-						content: action.payload.content,
-						splitPath: existing.payload.splitPath,
-					},
-					type: VaultActionType.UpsertMdFile,
-				});
-				continue;
-			}
-			byPath.set(key, action);
-			continue;
-		}
-
 		// ProcessMdFile rules
 		if (isProcess(action)) {
 			if (existing) {
-				if (isReplaceContent(existing)) {
-					// Apply transform to write content, convert to write
-					const transformed = await action.payload.transform(
-						existing.payload.content,
-					);
-					byPath.set(key, {
-						payload: {
-							content: transformed,
-							splitPath: existing.payload.splitPath,
-						},
-						type: VaultActionType.ReplaceContentMdFile,
-					});
+				if (isUpsertMdFile(existing)) {
+					// Process on create - keep process (will read from disk)
+					byPath.set(key, action);
 					continue;
 				}
 				if (isProcess(existing)) {
@@ -80,43 +54,27 @@ export async function collapseActions(
 					});
 					continue;
 				}
-				if (isUpsertMdFile(existing)) {
-					// Process on create - keep process (will read from disk)
-					byPath.set(key, action);
-					continue;
-				}
 			}
 			byPath.set(key, action);
 			continue;
 		}
 
-		// UpsertMdFile + ReplaceContentMdFile merge
+		// UpsertMdFile rules
 		if (isUpsertMdFile(action)) {
 			if (existing) {
 				if (existing.type === VaultActionType.UpsertMdFile) {
 					// Both UpsertMdFile - collapse based on content
-					if (action.payload.content === null) {
+					if (action.payload.content === null || action.payload.content === undefined) {
 						// Action is EnsureExist, existing is actual create - keep existing
 						continue;
 					}
-					if (existing.payload.content === null) {
+					if (existing.payload.content === null || existing.payload.content === undefined) {
 						// Existing is EnsureExist, action is actual create - replace with action
 						byPath.set(key, action);
 						continue;
 					}
 					// Both have content - latest wins
 					byPath.set(key, action);
-					continue;
-				}
-				if (isReplaceContent(existing)) {
-					// Merge: create with final content
-					byPath.set(key, {
-						payload: {
-							content: existing.payload.content,
-							splitPath: action.payload.splitPath,
-						},
-						type: VaultActionType.UpsertMdFile,
-					});
 					continue;
 				}
 			}
@@ -144,7 +102,6 @@ function getPathKey(action: VaultAction): string {
 		case VaultActionType.UpsertMdFile:
 		case VaultActionType.TrashMdFile:
 		case VaultActionType.ProcessMdFile:
-		case VaultActionType.ReplaceContentMdFile:
 			return makeSystemPathForSplitPath(action.payload.splitPath);
 	}
 }
@@ -177,15 +134,6 @@ function isRename(
 		action.type === VaultActionType.RenameFile ||
 		action.type === VaultActionType.RenameMdFile
 	);
-}
-
-function isReplaceContent(
-	action: VaultAction,
-): action is Extract<
-	VaultAction,
-	{ type: typeof VaultActionType.ReplaceContentMdFile }
-> {
-	return action.type === VaultActionType.ReplaceContentMdFile;
 }
 
 function isProcess(

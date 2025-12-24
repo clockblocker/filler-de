@@ -38,7 +38,7 @@ export const testCollapseTrashTerminality = async () => {
 					content: "new content",
 					splitPath: fileSplitPath,
 				},
-				type: "ReplaceContentMdFile",
+				type: "UpsertMdFile",
 			},
 			{
 				payload: {

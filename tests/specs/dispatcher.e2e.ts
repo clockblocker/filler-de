@@ -17,8 +17,8 @@ import {
 	testMultipleNestedOperations,
 	testProcessMdFileWithEnsureFileExists,
 	testProcessMdFileWithMissingParentFolders,
-	testReplaceContentMdFileWithEnsureFileExists,
-	testReplaceContentMdFileWithMissingParentFolders,
+	testUpsertMdFileWithEnsureFileExists,
+	testUpsertMdFileWithMissingParentFolders,
 } from "./dispatcher/helper-events-no-leak.test";
 import { testQueueBehavior } from "./dispatcher/queue-behavior.test";
 import { testSelfEventFiltering } from "./dispatcher/self-event-filtering.test";
@@ -97,12 +97,12 @@ describe("Dispatcher", () => {
 			testProcessMdFileWithMissingParentFolders,
 		);
 		it(
-			"should not emit events when ReplaceContentMdFile ensures file exists",
-			testReplaceContentMdFileWithEnsureFileExists,
+			"should not emit events when UpsertMdFile ensures file exists",
+			testUpsertMdFileWithEnsureFileExists,
 		);
 		it(
-			"should not emit events when ReplaceContentMdFile creates file in missing folders",
-			testReplaceContentMdFileWithMissingParentFolders,
+			"should not emit events when UpsertMdFile creates file in missing folders",
+			testUpsertMdFileWithMissingParentFolders,
 		);
 		it(
 			"should not emit events for multiple nested operations",

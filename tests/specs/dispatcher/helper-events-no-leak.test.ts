@@ -241,7 +241,7 @@ export const testProcessMdFileWithMissingParentFolders = async () => {
 	expect(result.eventsReceived).toHaveLength(0);
 };
 
-export const testReplaceContentMdFileWithEnsureFileExists = async () => {
+export const testUpsertMdFileWithEnsureFileExists = async () => {
 	const result = await browser.executeObsidian(async ({ app }: any) => {
 		const api = app?.plugins?.plugins?.["cbcr-text-eater-de"]
 			?.getVaultActionManagerTestingApi?.() as
@@ -260,7 +260,7 @@ export const testReplaceContentMdFileWithEnsureFileExists = async () => {
 			});
 		});
 
-		// Dispatch ReplaceContentMdFile on non-existent file
+		// Dispatch UpsertMdFile on non-existent file
 		// Executor creates the file directly with content
 		// This file creation should NOT emit events
 		const fileSplitPath = splitPath("replace-helper-test.md");
@@ -270,7 +270,7 @@ export const testReplaceContentMdFileWithEnsureFileExists = async () => {
 					content: "# Replaced Content",
 					splitPath: fileSplitPath,
 				},
-				type: "ReplaceContentMdFile",
+				type: "UpsertMdFile",
 			},
 		]);
 
@@ -300,7 +300,7 @@ export const testReplaceContentMdFileWithEnsureFileExists = async () => {
 	expect(result.eventsReceived).toHaveLength(0);
 };
 
-export const testReplaceContentMdFileWithMissingParentFolders = async () => {
+export const testUpsertMdFileWithMissingParentFolders = async () => {
 	const result = await browser.executeObsidian(async ({ app }: any) => {
 		const api = app?.plugins?.plugins?.["cbcr-text-eater-de"]
 			?.getVaultActionManagerTestingApi?.() as
@@ -319,7 +319,7 @@ export const testReplaceContentMdFileWithMissingParentFolders = async () => {
 			});
 		});
 
-		// Dispatch ReplaceContentMdFile on non-existent file in non-existent folder
+		// Dispatch UpsertMdFile on non-existent file in non-existent folder
 		// Executor creates file, which creates parent folders
 		// All these helper creations should NOT emit events
 		const fileSplitPath = splitPath("m/n/o/replace-nested.md");
@@ -329,7 +329,7 @@ export const testReplaceContentMdFileWithMissingParentFolders = async () => {
 					content: "# Nested Replaced",
 					splitPath: fileSplitPath,
 				},
-				type: "ReplaceContentMdFile",
+				type: "UpsertMdFile",
 			},
 		]);
 

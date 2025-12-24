@@ -21,7 +21,7 @@
 
 ### Write Operations
 
-- **Write precedence:** Latest `ReplaceContentMdFile` correctly wins over prior writes.
+- **Write precedence:** Latest `UpsertMdFile` correctly wins over prior writes.
 - **Write + Process:** When write comes before process, the process is correctly applied to the write content.
 - **Process + Write:** When write comes after process, the process is correctly discarded.
 

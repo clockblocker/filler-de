@@ -8,8 +8,8 @@ import {
 	MD_FILE,
 	PROCESS,
 	RENAME,
-	REPLACE_CONTENT,
 	TRASH,
+	UPSERT,
 } from "./literals";
 import type {
 	SplitPath,
@@ -19,18 +19,18 @@ import type {
 	SplitPathToMdFile,
 } from "./split-path";
 
-const OperationSchema = z.enum([CREATE, RENAME, TRASH] as const);
+// Operations allowed per target
+const FolderOps = z.enum([CREATE, RENAME, TRASH] as const);
+const FileOps = z.enum([CREATE, RENAME, TRASH] as const);
+const MdFileOps = z.enum([UPSERT, PROCESS, RENAME, TRASH] as const);
 
 const TargetSchema = z.enum([FOLDER, FILE, MD_FILE] as const);
 const Target = TargetSchema.enum;
 
-const ContentOpsSchema = z.enum([PROCESS, REPLACE_CONTENT] as const);
-
 export const VaultActionTypeSchema = z.enum([
-	...OperationSchema.options.flatMap((op) =>
-		TargetSchema.options.map((target) => `${op}${target}` as const),
-	),
-	...ContentOpsSchema.options.map((op) => `${op}${Target.MdFile}` as const),
+	...FolderOps.options.map((op) => `${op}${Target.Folder}` as const),
+	...FileOps.options.map((op) => `${op}${Target.File}` as const),
+	...MdFileOps.options.map((op) => `${op}${Target.MdFile}` as const),
 ] as const);
 
 export const VaultActionType = VaultActionTypeSchema.enum;
@@ -58,8 +58,8 @@ type TrashFilePayload = { splitPath: SplitPathToFile };
 type UpsertMdFilePayload = {
 	splitPath: SplitPathToMdFile;
 	/**
-	 * Content to write. If null, ensures file exists without overwriting existing content.
-	 * If undefined, creates with empty content.
+	 * Content to write. If null or undefined, ensures file exists without overwriting existing content.
+	 * If empty string, creates with empty content.
 	 */
 	content?: string | null;
 };
@@ -68,10 +68,6 @@ type TrashMdFilePayload = { splitPath: SplitPathToMdFile };
 type ProcessMdFilePayload = {
 	splitPath: SplitPathToMdFile;
 	transform: Transform;
-};
-type ReplaceContentMdFilePayload = {
-	splitPath: SplitPathToMdFile;
-	content: string;
 };
 
 export type VaultAction =
@@ -99,10 +95,6 @@ export type VaultAction =
 	| {
 			type: typeof VaultActionType.ProcessMdFile;
 			payload: ProcessMdFilePayload;
-	  }
-	| {
-			type: typeof VaultActionType.ReplaceContentMdFile;
-			payload: ReplaceContentMdFilePayload;
 	  };
 
 export const weightForVaultActionType: Record<VaultActionType, number> = {
@@ -116,7 +108,6 @@ export const weightForVaultActionType: Record<VaultActionType, number> = {
 	[VaultActionType.RenameMdFile]: 7,
 	[VaultActionType.TrashMdFile]: 8,
 	[VaultActionType.ProcessMdFile]: 9,
-	[VaultActionType.ReplaceContentMdFile]: 10,
 } as const;
 
 export function getActionKey(action: VaultAction): string {
@@ -130,7 +121,6 @@ export function getActionKey(action: VaultAction): string {
 		case VaultActionType.UpsertMdFile:
 		case VaultActionType.TrashMdFile:
 		case VaultActionType.ProcessMdFile:
-		case VaultActionType.ReplaceContentMdFile:
 			return `${type}:${coreSplitPathToKey(payload.splitPath)}`;
 
 		case VaultActionType.RenameFolder:
@@ -151,7 +141,6 @@ export function getActionTargetPath(action: VaultAction): string {
 		case VaultActionType.UpsertMdFile:
 		case VaultActionType.TrashMdFile:
 		case VaultActionType.ProcessMdFile:
-		case VaultActionType.ReplaceContentMdFile:
 			return coreSplitPathToKey(payload.splitPath);
 
 		case VaultActionType.RenameFolder:
@@ -174,7 +163,6 @@ export function sortActionsByWeight(actions: VaultAction[]): VaultAction[] {
 			case VaultActionType.UpsertMdFile:
 			case VaultActionType.TrashMdFile:
 			case VaultActionType.ProcessMdFile:
-			case VaultActionType.ReplaceContentMdFile:
 				return action.payload.splitPath.pathParts.length;
 			case VaultActionType.RenameFile:
 			case VaultActionType.RenameMdFile:
@@ -186,7 +174,6 @@ export function sortActionsByWeight(actions: VaultAction[]): VaultAction[] {
 		switch (action.type) {
 			case VaultActionType.UpsertMdFile:
 			case VaultActionType.ProcessMdFile:
-			case VaultActionType.ReplaceContentMdFile:
 				return coreSplitPathToKey(action.payload.splitPath);
 			default:
 				return null;
@@ -214,7 +201,7 @@ export function sortActionsByWeight(actions: VaultAction[]): VaultAction[] {
 				return depthDiff;
 			}
 
-			// For same file, ensure UpsertMdFile comes before ProcessMdFile/ReplaceContentMdFile
+			// For same file, ensure UpsertMdFile comes before ProcessMdFile
 			const aKey = getFileKey(a);
 			const bKey = getFileKey(b);
 			if (aKey && bKey && aKey === bKey) {

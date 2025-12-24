@@ -60,7 +60,7 @@ export const testComplexScenario = async () => {
 					content: "content",
 					splitPath: fileBSplitPath,
 				},
-				type: "ReplaceContentMdFile",
+				type: "UpsertMdFile",
 			},
 		];
 

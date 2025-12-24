@@ -67,7 +67,6 @@ export class SelfEventTrackerLegacy {
 			case VaultActionType.CreateFile:
 			case VaultActionType.UpsertMdFile:
 			case VaultActionType.ProcessMdFile:
-			case VaultActionType.ReplaceContentMdFile:
 				// Track target path + all parent folder paths
 				// (Obsidian auto-creates parent folders for create operations)
 				return this.extractPathsWithParents(payload.splitPath);

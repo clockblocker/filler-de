@@ -326,7 +326,7 @@ describe("translateVaultAction", () => {
 			expect(result).toBeNull();
 		});
 
-		it("ReplaceContentMdFile returns null", () => {
+		it("UpsertMdFile returns null", () => {
 			const action: VaultAction = {
 				payload: {
 					content: "new content",
@@ -337,7 +337,7 @@ describe("translateVaultAction", () => {
 						type: "MdFile",
 					},
 				},
-				type: "ReplaceContentMdFile",
+				type: "UpsertMdFile",
 			};
 
 			const result = translateVaultAction(action);

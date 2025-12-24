@@ -12,7 +12,7 @@ export const testCollapseWritePrecedence = async () => {
 
 		const { manager, splitPath } = api;
 
-		// Create multiple ReplaceContentMdFile actions on same file
+		// Create multiple UpsertMdFile actions on same file
 		const fileSplitPath = splitPath("collapse-test.md");
 		const actions = [
 			{
@@ -20,14 +20,14 @@ export const testCollapseWritePrecedence = async () => {
 					content: "first",
 					splitPath: fileSplitPath,
 				},
-				type: "ReplaceContentMdFile",
+				type: "UpsertMdFile",
 			},
 			{
 				payload: {
 					content: "second",
 					splitPath: fileSplitPath,
 				},
-				type: "ReplaceContentMdFile",
+				type: "UpsertMdFile",
 			},
 		];
 

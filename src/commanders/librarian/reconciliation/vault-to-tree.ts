@@ -49,7 +49,7 @@ export function translateVaultAction(action: VaultAction): TreeAction | null {
 
 		// Content operations don't affect tree structure
 		case "ProcessMdFile":
-		case "ReplaceContentMdFile":
+		case "UpsertMdFile":
 			return null;
 	}
 }

@@ -1,4 +1,5 @@
 import type { TFile, TFolder } from "obsidian";
+import { logger } from "../../utils/logger";
 import type { OpenedFileService } from "../file-services/active-view/opened-file-service";
 import type {
 	SplitPath,
@@ -75,7 +76,7 @@ export class Reader {
 					}
 				} catch (error) {
 					// Skip files that can't be resolved (stale refs, deleted files)
-					console.warn(
+					logger.warn(
 						"[Reader] Skipping unresolvable path:",
 						child,
 						error,

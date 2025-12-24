@@ -49,6 +49,6 @@ export function buildWriteStatusAction(
 
 	return {
 		payload: { content: updatedContent, splitPath },
-		type: VaultActionType.ReplaceContentMdFile,
+		type: VaultActionType.UpsertMdFile,
 	};
 }

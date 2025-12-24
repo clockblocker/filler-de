@@ -205,14 +205,14 @@ describe("sortActionsByWeight", () => {
 				content: "content",
 				splitPath: mdFile("deep.md", ["a", "b", "c"]),
 			},
-			type: VaultActionType.ReplaceContentMdFile,
+			type: VaultActionType.UpsertMdFile,
 		};
 		const shallow: VaultAction = {
 			payload: {
 				content: "content",
 				splitPath: mdFile("shallow.md", ["a"]),
 			},
-			type: VaultActionType.ReplaceContentMdFile,
+			type: VaultActionType.UpsertMdFile,
 		};
 
 		const sorted = sortActionsByWeight([deep, shallow]);
@@ -289,7 +289,7 @@ describe("sortActionsByWeight", () => {
 	it("sorts all action types in correct weight order", () => {
 		const actions: VaultAction[] = [
 			{ payload: { splitPath: mdFile("z.md") }, type: VaultActionType.TrashMdFile },
-			{ payload: { content: "c", splitPath: mdFile("y.md") }, type: VaultActionType.ReplaceContentMdFile },
+			{ payload: { content: "c", splitPath: mdFile("y.md") }, type: VaultActionType.UpsertMdFile },
 			{ payload: { splitPath: file("x.txt", "txt") }, type: VaultActionType.TrashFile },
 			{ payload: { from: mdFile("w.md"), to: mdFile("w1.md") }, type: VaultActionType.RenameMdFile },
 			{ payload: { from: file("v.txt", "txt"), to: file("v1.txt", "txt") }, type: VaultActionType.RenameFile },
@@ -312,6 +312,6 @@ describe("sortActionsByWeight", () => {
 		expect(sorted[7].type).toBe(VaultActionType.RenameMdFile);
 		expect(sorted[8].type).toBe(VaultActionType.TrashMdFile);
 		expect(sorted[9].type).toBe(VaultActionType.ProcessMdFile);
-		expect(sorted[10].type).toBe(VaultActionType.ReplaceContentMdFile);
+		expect(sorted[10].type).toBe(VaultActionType.UpsertMdFile);
 	});
 });

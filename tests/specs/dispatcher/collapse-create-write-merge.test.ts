@@ -27,7 +27,7 @@ export const testCollapseCreateWriteMerge = async () => {
 					content: "final",
 					splitPath: fileSplitPath,
 				},
-				type: "ReplaceContentMdFile",
+				type: "UpsertMdFile",
 			},
 		];
 

@@ -111,7 +111,7 @@ describe("EnsureExist Integration", () => {
 		};
 		const replace: VaultAction = {
 			payload: { content: "new", splitPath: mdFile("file") },
-			type: VaultActionType.ReplaceContentMdFile,
+			type: VaultActionType.UpsertMdFile,
 		};
 
 		const graph = buildDependencyGraph([ensureExist, process, replace]);

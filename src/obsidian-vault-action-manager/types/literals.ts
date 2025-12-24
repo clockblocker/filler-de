@@ -13,13 +13,13 @@ export const TrashSchema = z.literal("Trash");
 export type TRASH = z.infer<typeof TrashSchema>;
 export const TRASH = TrashSchema.value;
 
+export const UpsertSchema = z.literal("Upsert");
+export type UPSERT = z.infer<typeof UpsertSchema>;
+export const UPSERT = UpsertSchema.value;
+
 export const ProcessSchema = z.literal("Process");
 export type PROCESS = z.infer<typeof ProcessSchema>;
 export const PROCESS = ProcessSchema.value;
-
-export const ReplaceContentSchema = z.literal("ReplaceContent");
-export type REPLACE_CONTENT = z.infer<typeof ReplaceContentSchema>;
-export const REPLACE_CONTENT = ReplaceContentSchema.value;
 
 export const FileSchema = z.literal("File");
 export type FILE = z.infer<typeof FileSchema>;

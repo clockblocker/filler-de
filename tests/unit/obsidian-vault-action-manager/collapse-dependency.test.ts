@@ -77,14 +77,14 @@ describe("Collapse + Dependencies", () => {
 		expect(childDeps?.dependsOn).toContain(parent);
 	});
 
-	it("should handle UpsertMdFile + ReplaceContentMdFile collapse (keeps UpsertMdFile)", async () => {
+	it("should handle UpsertMdFile + UpsertMdFile collapse (keeps UpsertMdFile)", async () => {
 		const create: VaultAction = {
 			payload: { content: "", splitPath: mdFile("file") },
 			type: VaultActionType.UpsertMdFile,
 		};
 		const replace: VaultAction = {
 			payload: { content: "final", splitPath: mdFile("file") },
-			type: VaultActionType.ReplaceContentMdFile,
+			type: VaultActionType.UpsertMdFile,
 		};
 
 		const collapsed = await collapseActions([create, replace]);

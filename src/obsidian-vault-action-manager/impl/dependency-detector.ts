@@ -11,7 +11,7 @@ import {
  * Build dependency graph from actions.
  *
  * Rules:
- * - ProcessMdFile/ReplaceContentMdFile depends on UpsertMdFile for same file
+ * - ProcessMdFile depends on UpsertMdFile for same file
  * - Rename actions depend on CreateFolder for destination parent folders
  * - CreateFolder depends on parent CreateFolder actions
  * - Trash actions have no dependencies
@@ -61,8 +61,7 @@ function findDependenciesForAction(
 	const dependencies: VaultAction[] = [];
 
 	switch (action.type) {
-		case VaultActionType.ProcessMdFile:
-		case VaultActionType.ReplaceContentMdFile: {
+		case VaultActionType.ProcessMdFile: {
 			// Depends on UpsertMdFile for same file
 			const fileKey = coreSplitPathToKey(action.payload.splitPath);
 			const createAction = allActions.find(

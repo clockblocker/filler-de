@@ -78,11 +78,11 @@ export function buildCodexVaultActions(
 			type: SplitPathType.MdFile,
 		};
 
-		// Always use ReplaceContentMdFile - it creates if not exists
+		// Always use UpsertMdFile - it creates if not exists
 		// This avoids triggering handleCreate which would add suffixes
 		const action = {
 			payload: { content, splitPath: codexSplitPath },
-			type: VaultActionType.ReplaceContentMdFile,
+			type: VaultActionType.UpsertMdFile,
 		};
 		logger.debug(
 			"[buildCodexVaultActions] creating action for:",

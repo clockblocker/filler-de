@@ -69,12 +69,12 @@ Add "EnsureExist" behavior using existing action types (`CreateFolder` and `Upse
 **Changes**:
 1. `CreateFolder` (used as EnsureExist) depends on parent `CreateFolder` actions
 2. `UpsertMdFile` with `content === null` (used as EnsureExist) depends on parent `CreateFolder` actions
-3. Mutator actions (`ProcessMdFile`, `ReplaceContentMdFile`) depend on `UpsertMdFile` (with any content, including null) for same file
+3. Mutator actions (`ProcessMdFile`, `UpsertMdFile`) depend on `UpsertMdFile` (with any content, including null) for same file
 4. Rename actions depend on destination parent `CreateFolder` actions
 
 **Implementation**: Dependency graph already handled EnsureExist correctly - no changes needed. Added tests to verify:
 - ProcessMdFile depends on UpsertMdFile with null content
-- ReplaceContentMdFile depends on UpsertMdFile with null content
+- UpsertMdFile depends on UpsertMdFile with null content
 - UpsertMdFile with null content depends on parent folders
 
 **Status**: ✅ Complete
@@ -89,7 +89,7 @@ Add "EnsureExist" behavior using existing action types (`CreateFolder` and `Upse
 1. `CreateFolder` (EnsureExist) + `CreateFolder` (actual create) → `CreateFolder` (actual create) - already handled (idempotent)
 2. `UpsertMdFile(null)` (EnsureExist) + `UpsertMdFile(content)` (actual create) → `UpsertMdFile(content)` (actual create)
 3. `UpsertMdFile(null)` (EnsureExist) + `ProcessMdFile` → keep both (ProcessMdFile needs file to exist) - already handled
-4. `UpsertMdFile(null)` (EnsureExist) + `ReplaceContentMdFile` → `UpsertMdFile(content)` (merge) - already handled
+4. `UpsertMdFile(null)` (EnsureExist) + `UpsertMdFile` → `UpsertMdFile(content)` (merge) - already handled
 
 **Implementation**: Updated collapse logic to handle `UpsertMdFile(null)` + `UpsertMdFile(content)` collapsing. Added tests for all scenarios.
 

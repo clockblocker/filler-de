@@ -124,7 +124,7 @@ export const testReadTreeFromVault = async () => {
 				content: makeMeta(status),
 				splitPath: vaultSplitPath(path),
 			},
-			type: "ReplaceContentMdFile",
+			type: "UpsertMdFile",
 		}));
 		await manager.dispatch(writeActions);
 		

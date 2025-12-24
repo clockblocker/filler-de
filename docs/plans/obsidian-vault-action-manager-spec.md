@@ -36,9 +36,9 @@ callers still hit BackgroundFileServiceLegacy/OpenedFileService directly, defeat
    - Implemented `collapseActions(actions: VaultAction[]): Promise<VaultAction[]>` using a per-path Map.
    - **Trash terminality**: Trash wins over all other operations.
    - **Rename**: Drop duplicates with same from→to; latest wins otherwise.
-   - **ReplaceContentMdFile**: Latest wins; replaces prior write/process. Merges with UpsertMdFile.
-   - **ProcessMdFile**: Composes transforms when stacking; applies to ReplaceContentMdFile content if process comes after write.
-   - **UpsertMdFile + ReplaceContentMdFile**: Merges into UpsertMdFile with final content.
+   - **UpsertMdFile**: Latest wins; replaces prior write/process. Merges with UpsertMdFile.
+   - **ProcessMdFile**: Composes transforms when stacking; applies to UpsertMdFile content if process comes after write.
+   - **UpsertMdFile + UpsertMdFile**: Merges into UpsertMdFile with final content.
    - **Different types on same key**: Trash > Rename > ReplaceContent > Process > Create (newest wins within same type).
    - Comprehensive unit tests covering all scenarios (20 tests passing).
 
@@ -58,8 +58,8 @@ callers still hit BackgroundFileServiceLegacy/OpenedFileService directly, defeat
 
 6) Executor (`impl/executor.ts`) ✅
    - Maps `VaultAction` to file ops using `TFileHelper` and `TFolderHelper` directly (no BackgroundFileServiceLegacy).
-   - Routes ProcessMdFile/ReplaceContentMdFile based on `OpenedFileService.isFileActive()`.
-   - Ensures file exists before processing/writing (creates with empty content for ProcessMdFile, with target content for ReplaceContentMdFile).
+   - Routes ProcessMdFile/UpsertMdFile based on `OpenedFileService.isFileActive()`.
+   - Ensures file exists before processing/writing (creates with empty content for ProcessMdFile, with target content for UpsertMdFile).
    - Returns `Result<void, string>` for each action.
    - Handles both opened (active view) and background operations.
 
@@ -80,10 +80,10 @@ callers still hit BackgroundFileServiceLegacy/OpenedFileService directly, defeat
 ## Routing policy (opened vs background)
 - **Rule**: If a file is active (in active view), use `OpenedFileService` to preserve cursor/scroll/dirty state; otherwise use `TFileHelper`/`TFolderHelper` (background).
 - **Detection**: `OpenedFileService.isFileActive(splitPath)` returns `Result<boolean, string>`.
-- **Executor responsibility**: Checks `isFileActive()` for ProcessMdFile and ReplaceContentMdFile, routes accordingly.
+- **Executor responsibility**: Checks `isFileActive()` for ProcessMdFile and UpsertMdFile, routes accordingly.
 - **File existence**: Executor ensures file exists before processing/writing:
   - ProcessMdFile: Creates with empty content if missing
-  - ReplaceContentMdFile: Creates with target content if missing (optimized)
+  - UpsertMdFile: Creates with target content if missing (optimized)
 - **Parent folders**: `vault.create()` automatically creates parent folders (Obsidian API).
 
 ## Cross-root stance
@@ -160,7 +160,7 @@ ActionQueue.executeNextBatch()
       ├── sortActionsByWeight(collapsed) → orders by weight + path depth
       └── for each action:
           └── Executor.execute(action)
-              ├── Check if file exists (ProcessMdFile/ReplaceContentMdFile)
+              ├── Check if file exists (ProcessMdFile/UpsertMdFile)
               ├── Check if file is active (OpenedFileService.isFileActive)
               └── Route to:
                   ├── OpenedFileService (if active) → preserves cursor/scroll
@@ -214,7 +214,7 @@ VaultEvent → subscribers notified (only user-triggered events)
 **Executor (`impl/executor.ts`):**
 - Uses `TFileHelper` and `TFolderHelper` directly (no BackgroundFileServiceLegacy wrapper)
 - Uses `OpenedFileService` for active files
-- Checks `isFileActive()` to route ProcessMdFile/ReplaceContentMdFile
+- Checks `isFileActive()` to route ProcessMdFile/UpsertMdFile
 - Ensures file exists before processing/writing
 - Returns `Result<void, string>` per action
 
@@ -227,5 +227,5 @@ VaultEvent → subscribers notified (only user-triggered events)
 
 **Collapse (`impl/collapse.ts`):**
 - Comprehensive collapse rules (see [collapse-actions-spec.md](./collapse-actions-spec.md))
-- Handles ProcessMdFile composition, ReplaceContentMdFile precedence, Trash terminality
+- Handles ProcessMdFile composition, UpsertMdFile precedence, Trash terminality
 - All 20 unit tests passing

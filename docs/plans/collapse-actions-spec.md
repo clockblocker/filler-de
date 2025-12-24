@@ -37,27 +37,27 @@ Minimize filesystem calls by collapsing multiple operations on the same file int
 
 ---
 
-### 2. ReplaceContentMdFile (Write Operations)
+### 2. UpsertMdFile (Write Operations)
 
 **Behavior:** Latest write wins; replaces all prior operations on the same file.
 
 **Rules:**
-- `ReplaceContentMdFile` + `ReplaceContentMdFile` → Keep latest
-- `ReplaceContentMdFile` + `ProcessMdFile` → Keep `ReplaceContentMdFile` (write wins)
-- `ProcessMdFile` + `ReplaceContentMdFile` → Apply process to write content, then replace with final write
+- `UpsertMdFile` + `UpsertMdFile` → Keep latest
+- `UpsertMdFile` + `ProcessMdFile` → Keep `UpsertMdFile` (write wins)
+- `ProcessMdFile` + `UpsertMdFile` → Apply process to write content, then replace with final write
   - Special case: If process comes after write, apply transform to write content and convert to write
 
 **Example:**
 ```typescript
 // Input:
 [
-  { type: ReplaceContentMdFile, payload: { splitPath: "a.md", content: "old" } },
-  { type: ReplaceContentMdFile, payload: { splitPath: "a.md", content: "new" } }
+  { type: UpsertMdFile, payload: { splitPath: "a.md", content: "old" } },
+  { type: UpsertMdFile, payload: { splitPath: "a.md", content: "new" } }
 ]
 
 // Output:
 [
-  { type: ReplaceContentMdFile, payload: { splitPath: "a.md", content: "new" } }
+  { type: UpsertMdFile, payload: { splitPath: "a.md", content: "new" } }
 ]
 ```
 
@@ -65,7 +65,7 @@ Minimize filesystem calls by collapsing multiple operations on the same file int
 
 ---
 
-### 3. ProcessMdFile + ReplaceContentMdFile Interactions
+### 3. ProcessMdFile + UpsertMdFile Interactions
 
 **Behavior:** When both operations exist, determine final content without reading from disk.
 
@@ -75,17 +75,17 @@ Minimize filesystem calls by collapsing multiple operations on the same file int
 ```typescript
 // Input:
 [
-  { type: ReplaceContentMdFile, payload: { splitPath: "a.md", content: "hello" } },
+  { type: UpsertMdFile, payload: { splitPath: "a.md", content: "hello" } },
   { type: ProcessMdFile, payload: { splitPath: "a.md", transform: (c) => c.toUpperCase() } }
 ]
 
 // Output:
 [
-  { type: ReplaceContentMdFile, payload: { splitPath: "a.md", content: "HELLO" } }
+  { type: UpsertMdFile, payload: { splitPath: "a.md", content: "HELLO" } }
 ]
 ```
 - Apply transform to write content immediately
-- Convert to single `ReplaceContentMdFile` with transformed content
+- Convert to single `UpsertMdFile` with transformed content
 - **FS Calls Saved:** 1 read + 1 write (no need to read from disk, no need for process step)
 
 #### Case B: Process → Write
@@ -93,12 +93,12 @@ Minimize filesystem calls by collapsing multiple operations on the same file int
 // Input:
 [
   { type: ProcessMdFile, payload: { splitPath: "a.md", transform: (c) => c + "!" } },
-  { type: ReplaceContentMdFile, payload: { splitPath: "a.md", content: "new" } }
+  { type: UpsertMdFile, payload: { splitPath: "a.md", content: "new" } }
 ]
 
 // Output:
 [
-  { type: ReplaceContentMdFile, payload: { splitPath: "a.md", content: "new" } }
+  { type: UpsertMdFile, payload: { splitPath: "a.md", content: "new" } }
 ]
 ```
 - Write replaces process entirely (write is final state)
@@ -110,12 +110,12 @@ Minimize filesystem calls by collapsing multiple operations on the same file int
 [
   { type: ProcessMdFile, payload: { splitPath: "a.md", transform: (c) => c + "A" } },
   { type: ProcessMdFile, payload: { splitPath: "a.md", transform: (c) => c + "B" } },
-  { type: ReplaceContentMdFile, payload: { splitPath: "a.md", content: "final" } }
+  { type: UpsertMdFile, payload: { splitPath: "a.md", content: "final" } }
 ]
 
 // Output:
 [
-  { type: ReplaceContentMdFile, payload: { splitPath: "a.md", content: "final" } }
+  { type: UpsertMdFile, payload: { splitPath: "a.md", content: "final" } }
 ]
 ```
 - All processes discarded, final write wins
@@ -157,7 +157,7 @@ Minimize filesystem calls by collapsing multiple operations on the same file int
 **Behavior:** Create can be combined with initial content operations.
 
 **Rules:**
-- `UpsertMdFile` + `ReplaceContentMdFile` → Merge into `UpsertMdFile` with final content
+- `UpsertMdFile` + `UpsertMdFile` → Merge into `UpsertMdFile` with final content
 - `UpsertMdFile` + `ProcessMdFile` → Not applicable (can't process non-existent file)
 - `UpsertMdFile` + `TrashMdFile` → Drop create (trash wins)
 - `UpsertMdFile` + `RenameMdFile` → Keep both (create first, then rename)
@@ -167,7 +167,7 @@ Minimize filesystem calls by collapsing multiple operations on the same file int
 // Input:
 [
   { type: UpsertMdFile, payload: { splitPath: "a.md", content: "initial" } },
-  { type: ReplaceContentMdFile, payload: { splitPath: "a.md", content: "final" } }
+  { type: UpsertMdFile, payload: { splitPath: "a.md", content: "final" } }
 ]
 
 // Output:

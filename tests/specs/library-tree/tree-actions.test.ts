@@ -34,7 +34,7 @@ export const testCreateNodeAction = async () => {
 		await manager.dispatch([
 			{
 				payload: { content: makeMeta("Done"), splitPath: vaultSplitPath("Library/A/Note1-A.md") },
-				type: "ReplaceContentMdFile",
+				type: "UpsertMdFile",
 			},
 		]);
 
@@ -105,11 +105,11 @@ export const testDeleteNodeAction = async () => {
 		await manager.dispatch([
 			{
 				payload: { content: makeMeta("Done"), splitPath: vaultSplitPath("Library/B/Note1-B.md") },
-				type: "ReplaceContentMdFile",
+				type: "UpsertMdFile",
 			},
 			{
 				payload: { content: makeMeta("NotStarted"), splitPath: vaultSplitPath("Library/B/Note2-B.md") },
-				type: "ReplaceContentMdFile",
+				type: "UpsertMdFile",
 			},
 		]);
 
@@ -177,7 +177,7 @@ export const testChangeNodeNameAction = async () => {
 		await manager.dispatch([
 			{
 				payload: { content: makeMeta("Done"), splitPath: vaultSplitPath("Library/C/OldName-C.md") },
-				type: "ReplaceContentMdFile",
+				type: "UpsertMdFile",
 			},
 		]);
 
@@ -247,7 +247,7 @@ export const testChangeNodeStatusAction = async () => {
 		await manager.dispatch([
 			{
 				payload: { content: makeMeta("NotStarted"), splitPath: vaultSplitPath("Library/D/Note-D.md") },
-				type: "ReplaceContentMdFile",
+				type: "UpsertMdFile",
 			},
 		]);
 

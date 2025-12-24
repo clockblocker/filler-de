@@ -25,7 +25,7 @@ Replace weight-based sorting with explicit dependency graph + topological sort f
 The dispatcher enforces this invariant in `ensureAllRequirementsMet()`:
 
 1. **File/Folder Existence**:
-   - `ProcessMdFile`/`ReplaceContentMdFile`: File + folder chain exist (added if needed)
+   - `ProcessMdFile`/`UpsertMdFile`: File + folder chain exist (added if needed)
    - `RenameFile`/`RenameFolder`: Destination parent folders exist (added if needed)
    - `CreateFolder`/`UpsertMdFile`: Only added if they don't already exist
 
@@ -99,7 +99,7 @@ import { makeSystemPathForSplitPath } from "./split-path";
  * Build dependency graph from actions.
  * 
  * Rules:
- * - ProcessMdFile/ReplaceContentMdFile depends on UpsertMdFile for same file
+ * - ProcessMdFile/UpsertMdFile depends on UpsertMdFile for same file
  * - Rename actions depend on CreateFolder for destination parent folders
  * - Trash actions have no dependencies
  * - CreateFolder depends on parent CreateFolder actions
@@ -113,7 +113,7 @@ export function buildDependencyGraph(actions: VaultAction[]): DependencyGraph {
 
 1. **File content operations**:
    - `ProcessMdFile` → depends on `UpsertMdFile` (same file)
-   - `ReplaceContentMdFile` → depends on `UpsertMdFile` (same file)
+   - `UpsertMdFile` → depends on `UpsertMdFile` (same file)
 
 2. **Folder operations**:
    - `CreateFolder` → depends on parent `CreateFolder` actions
@@ -186,26 +186,6 @@ export function topologicalSort(
 
 **File**: `src/obsidian-vault-action-manager/impl/dispatcher.ts`
 
-```typescript
-private useTopologicalSort = false; // Feature flag
-
-async dispatch(actions: readonly VaultAction[]): Promise<DispatchResult> {
-  // ... existing code ...
-  
-  const collapsed = await collapseActions(withEnsured);
-  
-  let sorted: VaultAction[];
-  if (this.useTopologicalSort) {
-    const graph = buildDependencyGraph(collapsed);
-    sorted = topologicalSort(collapsed, graph);
-  } else {
-    sorted = sortActionsByWeight(collapsed); // Fallback
-  }
-  
-  // ... rest of code ...
-}
-```
-
 **Tasks**:
 - [ ] Add feature flag (private field)
 - [ ] Add conditional logic in `dispatch()`
@@ -215,21 +195,6 @@ async dispatch(actions: readonly VaultAction[]): Promise<DispatchResult> {
 ---
 
 ### 2.2 Update ensureAllDestinationsExist
-
-**File**: `src/obsidian-vault-action-manager/impl/dispatcher.ts`
-
-Enhance to mark system-generated actions:
-
-```typescript
-type SystemGeneratedMarker = { _systemGenerated?: true };
-
-// When adding UpsertMdFile/CreateFolder, mark as system-generated
-result.push({
-  payload: { content: "", splitPath: fileSplitPath },
-  type: VaultActionType.UpsertMdFile,
-  _systemGenerated: true, // Optional marker
-} as VaultAction & SystemGeneratedMarker);
-```
 
 **Tasks**:
 - [ ] Add optional marker to system-generated actions
@@ -296,7 +261,7 @@ export async function collapseActions(
 
 - [x] Test UpsertMdFile + ProcessMdFile collapse preserves dependency needs
 - [x] Test folder dependencies preserved after collapse
-- [x] Test UpsertMdFile + ReplaceContentMdFile collapse
+- [x] Test UpsertMdFile + UpsertMdFile collapse
 - [x] Test multiple ProcessMdFile collapse
 
 ### 4.2 Integration Tests
@@ -323,10 +288,10 @@ export async function collapseActions(
 Start with low-risk scenarios:
 
 ```typescript
-// Enable for ProcessMdFile/ReplaceContentMdFile batches
+// Enable for ProcessMdFile/UpsertMdFile batches
 if (actions.some(a => 
   a.type === VaultActionType.ProcessMdFile || 
-  a.type === VaultActionType.ReplaceContentMdFile
+  a.type === VaultActionType.UpsertMdFile
 )) {
   this.useTopologicalSort = true;
 }

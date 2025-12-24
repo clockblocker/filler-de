@@ -53,8 +53,7 @@ export function collectRequirements(actions: readonly VaultAction[]): {
 			case VaultActionType.CreateFolder:
 			case VaultActionType.CreateFile:
 			case VaultActionType.UpsertMdFile:
-			case VaultActionType.ProcessMdFile:
-			case VaultActionType.ReplaceContentMdFile: {
+			case VaultActionType.ProcessMdFile: {
 				const { splitPath } = action.payload;
 				// Extract all parent folders from pathParts
 				for (let i = 1; i <= splitPath.pathParts.length; i++) {
@@ -65,11 +64,8 @@ export function collectRequirements(actions: readonly VaultAction[]): {
 						folderKeys.add(parentPath);
 					}
 				}
-				// For ProcessMdFile and ReplaceContentMdFile, ensure the file exists
-				if (
-					action.type === VaultActionType.ProcessMdFile ||
-					action.type === VaultActionType.ReplaceContentMdFile
-				) {
+				// For ProcessMdFile, ensure the file exists
+				if (action.type === VaultActionType.ProcessMdFile) {
 					const fileKey = makeSystemPathForSplitPath(
 						splitPath as SplitPathToMdFile,
 					);
@@ -217,14 +213,12 @@ export function hasActionForKey(
 		);
 	}
 
-	// For files, check UpsertMdFile, ProcessMdFile, and ReplaceContentMdFile
+	// For files, check UpsertMdFile and ProcessMdFile
 	return actions.some(
 		(a) =>
 			(a.type === VaultActionType.UpsertMdFile &&
 				makeSystemPathForSplitPath(a.payload.splitPath) === key) ||
 			(a.type === VaultActionType.ProcessMdFile &&
-				makeSystemPathForSplitPath(a.payload.splitPath) === key) ||
-			(a.type === VaultActionType.ReplaceContentMdFile &&
 				makeSystemPathForSplitPath(a.payload.splitPath) === key),
 	);
 }

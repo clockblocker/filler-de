@@ -65,7 +65,7 @@ export class Executor {
 				const fileResult = await this.tfileHelper.getFile(splitPath);
 				if (fileResult.isOk()) {
 					// File exists
-					if (content === null) {
+					if (content === null || content === undefined) {
 						// EnsureExist: don't overwrite existing content
 						logger.debug(
 							"[Executor.UpsertMdFile] File exists, skipping (EnsureExist)",
@@ -74,7 +74,6 @@ export class Executor {
 						return ok(fileResult.value);
 					}
 					// File exists - update content
-					// This handles the case where ReplaceContentMdFile was collapsed into UpsertMdFile
 					logger.debug(
 						"[Executor.UpsertMdFile] File exists, updating",
 						{ path },
@@ -83,28 +82,30 @@ export class Executor {
 					if (isActive) {
 						const result =
 							await this.opened.replaceAllContentInOpenedFile(
-								content ?? "",
+								content,
 							);
 						return result.map(() => fileResult.value);
 					}
 					const result = await this.tfileHelper.replaceAllContent(
 						splitPath,
-						content ?? "",
+						content,
 					);
 					return result;
 				}
 
 				// File doesn't exist - create it
+				const createContent =
+					content === null || content === undefined ? "" : content;
 				logger.debug(
 					"[Executor.UpsertMdFile] File doesn't exist, creating",
 					{
-						contentLength: (content ?? "").length,
+						contentLength: createContent.length,
 						path,
 					},
 				);
 				// INVARIANT: File should exist (ensured by dispatcher), but handle gracefully
 				const dto: MdFileWithContentDto = {
-					content: content ?? "",
+					content: createContent,
 					splitPath: action.payload.splitPath,
 				};
 				const result = await this.tfileHelper.upsertMdFile(dto);
@@ -141,32 +142,6 @@ export class Executor {
 					splitPath: action.payload.splitPath,
 					transform: action.payload.transform,
 				});
-				return result;
-			}
-			case VaultActionType.ReplaceContentMdFile: {
-				// INVARIANT: File exists (ensured by dispatcher)
-				const fileResult = await this.tfileHelper.getFile(
-					action.payload.splitPath,
-				);
-				if (fileResult.isErr()) {
-					// File should exist (ensured by dispatcher), but handle gracefully
-					return err(`File not found: ${fileResult.error}`);
-				}
-
-				const isActive = await this.checkFileActive(
-					action.payload.splitPath,
-				);
-				if (isActive) {
-					const result =
-						await this.opened.replaceAllContentInOpenedFile(
-							action.payload.content,
-						);
-					return result;
-				}
-				const result = await this.tfileHelper.replaceAllContent(
-					action.payload.splitPath,
-					action.payload.content,
-				);
 				return result;
 			}
 		}

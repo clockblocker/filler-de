@@ -23,7 +23,7 @@ type ActionDependency = {
 
 function buildDependencyGraph(actions: VaultAction[]): ActionDependency[] {
   // Rules:
-  // - ProcessMdFile/ReplaceContentMdFile depends on UpsertMdFile for same file
+  // - ProcessMdFile/UpsertMdFile depends on UpsertMdFile for same file
   // - Rename actions depend on CreateFolder for destination parents
   // - Trash actions have no dependencies
 }

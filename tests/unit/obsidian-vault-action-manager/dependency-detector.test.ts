@@ -76,14 +76,14 @@ describe("buildDependencyGraph", () => {
 		expect(createDeps?.requiredBy).toContain(process);
 	});
 
-	it("should detect ReplaceContentMdFile depends on UpsertMdFile for same file", () => {
+	it("should detect UpsertMdFile depends on UpsertMdFile for same file", () => {
 		const create: VaultAction = {
 			payload: { content: "", splitPath: mdFile("file") },
 			type: VaultActionType.UpsertMdFile,
 		};
 		const replace: VaultAction = {
 			payload: { content: "new", splitPath: mdFile("file") },
-			type: VaultActionType.ReplaceContentMdFile,
+			type: VaultActionType.UpsertMdFile,
 		};
 
 		const graph = buildDependencyGraph([create, replace]);
@@ -266,14 +266,14 @@ describe("buildDependencyGraph", () => {
 		expect(processDeps?.dependsOn).toContain(ensureExist);
 	});
 
-	it("should detect ReplaceContentMdFile depends on UpsertMdFile with null content (EnsureExist)", () => {
+	it("should detect UpsertMdFile depends on UpsertMdFile with null content (EnsureExist)", () => {
 		const ensureExist: VaultAction = {
 			payload: { content: null, splitPath: mdFile("file") },
 			type: VaultActionType.UpsertMdFile,
 		};
 		const replace: VaultAction = {
 			payload: { content: "new", splitPath: mdFile("file") },
-			type: VaultActionType.ReplaceContentMdFile,
+			type: VaultActionType.UpsertMdFile,
 		};
 
 		const graph = buildDependencyGraph([ensureExist, replace]);
