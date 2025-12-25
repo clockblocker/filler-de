@@ -16,19 +16,6 @@ import { parseBasename } from "./parse-basename";
  *   - TreeNode Scroll/File: codex for parent section
  *   - SplitPath Folder: codex for that folder (section)
  *   - SplitPath File: codex for parent section
- *
- * @example
- * // Section node: codex for that section
- * buildCodexBasename(sectionNode) // "__Section-Parent"
- *
- * // File node: codex for parent section
- * buildCodexBasename(fileNode) // "__Parent"
- *
- * // Folder SplitPath: codex for that folder
- * buildCodexBasename(folderSplitPath) // "__Folder"
- *
- * // File SplitPath: codex for parent section
- * buildCodexBasename(fileSplitPath) // "__Parent"
  */
 export function buildCodexBasename(input: TreeNode | SplitPath): string {
 	if ("type" in input && "coreName" in input) {
