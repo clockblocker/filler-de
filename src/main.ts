@@ -154,24 +154,6 @@ export default class TextEaterPlugin extends Plugin {
 
 		this.apiService = new ApiService(this.settings);
 
-		// Legacy services - unplugged
-		// this.openedFileReader = new LegacyOpenedFileReader(this.app);
-		// this.legacyOpenedFileService = new LegacyOpenedFileService(
-		// 	this.app,
-		// 	this.openedFileReader,
-		// );
-		// this.backgroundFileService = new LegacyBackgroundFileServiceLegacy({
-		// 	fileManager: this.app.fileManager,
-		// 	vault: this.app.vault,
-		// });
-		// this.vaultActionExecutor = new VaultActionExecutor(
-		// 	this.backgroundFileService,
-		// 	this.legacyOpenedFileService,
-		// );
-		// this.vaultActionQueue = new VaultActionQueueLegacy(
-		// 	this.vaultActionExecutor,
-		// );
-
 		const testingOpenedFileReader = new OpenedFileReader(this.app);
 		this.testingOpenedFileServiceWithResult =
 			new OpenedFileServiceWithResult(this.app, testingOpenedFileReader);
