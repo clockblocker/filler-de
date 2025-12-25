@@ -1,5 +1,4 @@
 import { getParsedUserSettings } from "../../../global-state/global-state";
-import type { SplitPathToFolder } from "../../../obsidian-vault-action-manager/types/split-path";
 import { SplitPathType } from "../../../obsidian-vault-action-manager/types/split-path";
 import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
 import { VaultActionType } from "../../../obsidian-vault-action-manager/types/vault-action";
@@ -8,7 +7,10 @@ import type { LibraryTree } from "../library-tree";
 import type { CoreNameChainFromRoot } from "../types/split-basename";
 import type { SectionNode } from "../types/tree-node";
 import { TreeNodeType } from "../types/tree-node";
-import { buildCodexBasename, isCodexBasename } from "../utils/codex-utils";
+import {
+	buildCodexBasename,
+	isBasenamePrefixedAsCodex,
+} from "../utils/codex-utils";
 import { buildCodexVaultActions } from "./codex-builder";
 import { collectAllSectionChains } from "./tree-utils";
 
@@ -102,7 +104,7 @@ async function cleanupOrphanedCodexes(
 	for (const file of allFiles) {
 		if (
 			file.type !== SplitPathType.MdFile ||
-			!isCodexBasename(file.basename)
+			!isBasenamePrefixedAsCodex(file.basename)
 		) {
 			continue;
 		}
@@ -139,21 +141,7 @@ async function cleanupOrphanedCodexes(
 
 		// Build expected codex basename (same logic as buildCodexVaultActions)
 		const section = node as SectionNode;
-		const sectionName =
-			sectionChain.length === 0
-				? settings.splitPathToLibraryRoot.basename
-				: section.coreName;
-		const coreCodexName = buildCodexBasename(sectionName);
-		const suffix =
-			sectionChain.length > 0
-				? sectionChain
-						.slice(0, -1) // Parent chain (exclude self)
-						.reverse()
-						.join(settings.suffixDelimiter)
-				: "";
-		const expectedCodexBasename = suffix
-			? `${coreCodexName}${settings.suffixDelimiter}${suffix}`
-			: coreCodexName;
+		const expectedCodexBasename = buildCodexBasename(section);
 
 		// Check if codex name matches expected
 		if (file.basename !== expectedCodexBasename) {

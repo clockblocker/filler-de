@@ -49,21 +49,7 @@ export function buildCodexVaultActions(
 		// Build codex basename with suffix (same pattern as regular files)
 		// Root: __Library (no suffix, use libraryRoot name)
 		// Nested: __Salad-Recipe (suffix = parent chain reversed)
-		const sectionName =
-			chain.length === 0
-				? settings.splitPathToLibraryRoot.basename
-				: section.coreName;
-		const coreCodexName = buildCodexBasename(sectionName);
-		const suffix =
-			chain.length > 0
-				? chain
-						.slice(0, -1) // Parent chain (exclude self)
-						.reverse()
-						.join(settings.suffixDelimiter)
-				: "";
-		const codexBasename = suffix
-			? `${coreCodexName}${settings.suffixDelimiter}${suffix}`
-			: coreCodexName;
+		const codexBasename = buildCodexBasename(section);
 
 		// Codex path: inside the section folder
 		const pathParts = [

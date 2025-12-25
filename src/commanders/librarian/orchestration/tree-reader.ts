@@ -6,7 +6,7 @@ import { SplitPathType } from "../../../obsidian-vault-action-manager/types/spli
 import { extractMetaInfo } from "../../../services/dto-services/meta-info-manager/interface";
 import { LibraryTree } from "../library-tree";
 import { TreeNodeStatus } from "../types/tree-node";
-import { isCodexBasename } from "../utils/codex-utils";
+import { isBasenamePrefixedAsCodex } from "../utils/codex-utils";
 import { splitPathToLeaf } from "../utils/split-path-to-leaf";
 
 /**
@@ -32,7 +32,7 @@ export async function readTreeFromSplitFilesWithReaders({
 		(entry): entry is SplitPathWithReader =>
 			(entry.type === SplitPathType.File ||
 				entry.type === SplitPathType.MdFile) &&
-			!isCodexBasename(entry.basename),
+			!isBasenamePrefixedAsCodex(entry.basename),
 	);
 
 	// Create leaves and read content using read() from SplitPathWithReader

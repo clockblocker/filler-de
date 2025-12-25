@@ -15,7 +15,7 @@ import type { LibraryTree } from "../library-tree";
 import { translateVaultAction } from "../reconciliation/vault-to-tree";
 import { TreeActionType } from "../types/literals";
 import type { CoreNameChainFromRoot } from "../types/split-basename";
-import { isCodexBasename } from "../utils/codex-utils";
+import { isBasenamePrefixedAsCodex } from "../utils/codex-utils";
 import { resolveActions } from "./action-resolver";
 import {
 	type CodexRegeneratorContext,
@@ -32,7 +32,7 @@ export type EventHandlerContext = {
 	readTree: () => Promise<LibraryTree>;
 	setTree: (tree: LibraryTree) => void;
 	splitPath: (path: string) => SplitPath;
-	tree: LibraryTree | null;
+	tree: LibraryTree;
 	listAllFilesWithMdReaders: (
 		splitPath: import("../../../obsidian-vault-action-manager/types/split-path").SplitPathToFolder,
 	) => Promise<
@@ -130,7 +130,7 @@ export async function handleDelete(
 ): Promise<void> {
 	// Skip codex files
 	const basenameWithoutExt = extractBasenameWithoutExt(path);
-	if (shouldIgnorePath(path, basenameWithoutExt, isCodexBasename)) {
+	if (shouldIgnorePath(path, basenameWithoutExt, isBasenamePrefixedAsCodex)) {
 		return;
 	}
 
@@ -176,7 +176,7 @@ export async function handleRename(
 	// If a codex file is being renamed, delete it instead (codexes are auto-generated)
 	if (!isFolder) {
 		const oldBasenameWithoutExt = extractBasenameWithoutExt(oldPath);
-		if (isCodexBasename(oldBasenameWithoutExt)) {
+		if (isBasenamePrefixedAsCodex(oldBasenameWithoutExt)) {
 			// Delete the old codex file - regeneration will create new one with correct name
 			const oldSplitPath = context.splitPath(oldPath);
 			if (oldSplitPath.type === SplitPathType.MdFile) {
@@ -196,47 +196,52 @@ export async function handleRename(
 
 	// Handle file moved OUT of library
 	if (!mode) {
-		const oldInside = oldPath.startsWith(`${libraryRoot}/`) || oldPath === libraryRoot;
-		const newInside = newPath.startsWith(`${libraryRoot}/`) || newPath === libraryRoot;
-		
+		const oldInside =
+			oldPath.startsWith(`${libraryRoot}/`) || oldPath === libraryRoot;
+		const newInside =
+			newPath.startsWith(`${libraryRoot}/`) || newPath === libraryRoot;
+
 		// File moved out of library - delete from tree and regenerate codexes
 		if (oldInside && !newInside) {
 			if (!context.tree) {
 				return [];
 			}
-			
+
 			// Parse old path to get coreNameChain
 			const coreNameChain = parseDeletePathToChain(oldPath, isFolder);
 			if (!coreNameChain) {
 				return [];
 			}
-			
+
 			// Delete node from tree
 			const impactedChain = context.tree.applyTreeAction({
 				payload: { coreNameChain },
 				type: TreeActionType.DeleteNode,
 			});
-			
+
 			// Re-read tree from vault to ensure it matches filesystem state
 			const newTree = await context.readTree();
 			context.setTree(newTree);
-			
+
 			if (newTree) {
 				// Compute impacted sections
 				const chains = flattenActionResult(impactedChain);
-				const impactedSections = dedupeChains(expandAllToAncestors(chains));
-				
+				const impactedSections = dedupeChains(
+					expandAllToAncestors(chains),
+				);
+
 				await regenerateCodexes(impactedSections, {
 					dispatch: context.dispatch,
 					getNode: context.getNode,
-					listAllFilesWithMdReaders: context.listAllFilesWithMdReaders,
+					listAllFilesWithMdReaders:
+						context.listAllFilesWithMdReaders,
 					splitPath: context.splitPath,
 				});
 			}
-			
+
 			return [];
 		}
-		
+
 		// Both paths outside library - not our concern
 		return [];
 	}
@@ -279,7 +284,8 @@ export async function handleRename(
 				await regenerateCodexes(impactedChains, {
 					dispatch: context.dispatch,
 					getNode: context.getNode,
-					listAllFilesWithMdReaders: context.listAllFilesWithMdReaders,
+					listAllFilesWithMdReaders:
+						context.listAllFilesWithMdReaders,
 					splitPath: context.splitPath,
 				});
 			}
@@ -311,10 +317,15 @@ function computeImpactedChainsFromActions(
 			const oldParent = treeAction.payload.coreNameChain.slice(0, -1);
 			const newParent = treeAction.payload.newCoreNameChainToParent;
 			// Compute new chain for moved node: [newParent..., coreName]
-			const coreName = treeAction.payload.coreNameChain[
-				treeAction.payload.coreNameChain.length - 1
-			];
-			const movedNodeChain = [...newParent, coreName];
+			const coreName =
+				treeAction.payload.coreNameChain[
+					treeAction.payload.coreNameChain.length - 1
+				];
+
+			const movedNodeChain = [...newParent, coreName].filter(
+				Boolean,
+			) as CoreNameChainFromRoot;
+
 			chains.push(oldParent, newParent, movedNodeChain);
 		} else if (treeAction.type === TreeActionType.ChangeNodeName) {
 			// ChangeNodeName: parent chain is impacted
@@ -386,7 +397,7 @@ export async function handleCreate(
 
 	// Skip codex files - they're generated, not source data
 	const basenameWithoutExt = extractBasenameWithoutExt(path);
-	if (isCodexBasename(basenameWithoutExt)) {
+	if (isBasenamePrefixedAsCodex(basenameWithoutExt)) {
 		return [];
 	}
 
