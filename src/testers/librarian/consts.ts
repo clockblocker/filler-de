@@ -1,4 +1,4 @@
-import type { PrettyFileDto } from "../../services/obsidian-services/file-services/background/background-file-service";
+import type { PrettyFileDto } from "../../types/common-interface/dtos";
 
 const libraryCodex = {
 	basename: "__Library",

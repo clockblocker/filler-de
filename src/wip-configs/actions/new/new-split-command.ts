@@ -1,28 +1,33 @@
 import { Notice } from "obsidian";
+import type { OpenedFileService } from "../../../../obsidian-vault-action-manager/file-services/active-view/opened-file-service";
 import {
 	formatQuotedLines,
 	segmentInQuotedLines,
 } from "../../../services/dto-services/quote-manager/interface";
 import type { SelectionService } from "../../../services/obsidian-services/atomic-services/selection-service";
-import type { LegacyOpenedFileService } from "../../../services/obsidian-services/file-services/active-view/legacy-opened-file-service";
-import { unwrapMaybeLegacyByThrowing } from "../../../types/common-interface/maybe";
 
 export default async function wrapSentencesInQuoteAnchor({
 	selectionService,
 	openedFileService,
 }: {
 	selectionService: SelectionService;
-	openedFileService: LegacyOpenedFileService;
+	openedFileService: OpenedFileService;
 }) {
 	try {
 		const selection = await selectionService.getSelection();
-		const fileContent = await openedFileService.getContent();
+		const contentResult = await openedFileService.getContent();
+		if (contentResult.isErr()) {
+			throw new Error(contentResult.error);
+		}
+		const fileContent = contentResult.value;
 
 		const highestBlockNumber = findHighestBlockNumber(fileContent);
 
-		const nameOfTheOpenendFile = unwrapMaybeLegacyByThrowing(
-			await openedFileService.getMaybeLegacyOpenedTFile(),
-		).name;
+		const tFileResult = await openedFileService.getOpenedTFile();
+		if (tFileResult.isErr()) {
+			throw new Error(tFileResult.error);
+		}
+		const nameOfTheOpenendFile = tFileResult.value.name;
 
 		await selectionService.replaceSelection(
 			formatQuotedLines(

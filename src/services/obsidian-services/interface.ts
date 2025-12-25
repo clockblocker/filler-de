@@ -2,13 +2,9 @@ import type { AboveSelectionToolbarService } from "./atomic-services/above-selec
 import type { ApiService } from "./atomic-services/api-service";
 import type { BottomToolbarService } from "./atomic-services/bottom-toolbar-service";
 import type { SelectionService } from "./atomic-services/selection-service";
-import type { LegacyOpenedFileService } from "./file-services/active-view/legacy-opened-file-service";
-import type { LegacyBackgroundFileServiceLegacy } from "./file-services/background/background-file-service";
 
 export type TexfresserObsidianServices = {
 	apiService: ApiService;
-	openedFileService: LegacyOpenedFileService;
-	backgroundFileService: LegacyBackgroundFileServiceLegacy;
 	selectionService: SelectionService;
 
 	selectionToolbarService: AboveSelectionToolbarService;

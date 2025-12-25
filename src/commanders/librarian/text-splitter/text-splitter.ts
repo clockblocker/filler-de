@@ -1,8 +1,8 @@
 import {
 	formatQuotedLines,
 	segmentInQuotedLines,
-} from "../../services/dto-services/quote-manager/interface";
-import type { LinkedQuote } from "../../services/dto-services/quote-manager/types";
+} from "../../../services/dto-services/quote-manager/interface";
+import type { LinkedQuote } from "../../../services/dto-services/quote-manager/types";
 
 const DEFAULT_MAX_BLOCKS_PER_PAGE = 15;
 
