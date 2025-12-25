@@ -2,7 +2,7 @@ import type { TFolder } from "obsidian";
 import { describe, expect, it } from "vitest";
 import { LibraryTree } from "../../../../src/commanders/librarian/library-tree";
 import { TreeActionType } from "../../../../src/commanders/librarian/types/literals";
-import type { TreeLeaf } from "../../../../src/commanders/librarian/types/tree-leaf";
+import type { TreeLeaf } from "../../../../src/commanders/librarian/types/tree-node";
 import {
 	type SectionNode,
 	TreeNodeStatus,
@@ -20,8 +20,8 @@ const createScrollLeaf = (
 ): TreeLeaf => ({
 	coreName,
 	coreNameChainToParent,
-	status,
 	extension: "md",
+	status,
 	type: TreeNodeType.Scroll,
 });
 

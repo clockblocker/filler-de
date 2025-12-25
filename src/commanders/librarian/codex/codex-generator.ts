@@ -12,11 +12,10 @@ import {
 	SPACE_F,
 	TAB,
 } from "../../../types/literals";
-import { logger } from "../../../utils/logger";
 import type { CoreNameChainFromRoot } from "../types/split-basename";
 import type { SectionNode, TreeNode } from "../types/tree-node";
 import { TreeNodeStatus, TreeNodeType } from "../types/tree-node";
-import { addCodexPrefix } from "../utils/codex-utils";
+import { addCodexPrefixDeprecated } from "../utils/codex-utils";
 
 export type CodexGeneratorOptions = {
 	/** Library root name (for generating root codex backlinks) */
@@ -82,7 +81,7 @@ function generateBacklink(
 		if (!libraryRoot) {
 			return null;
 		}
-		const rootCodexName = addCodexPrefix(libraryRoot);
+		const rootCodexName = addCodexPrefixDeprecated(libraryRoot);
 		return `[[${rootCodexName}|${BACK_ARROW} ${libraryRoot}]]`;
 	}
 
@@ -96,7 +95,7 @@ function generateBacklink(
 	if (!parentName) {
 		return null;
 	}
-	const parentCodexCoreName = addCodexPrefix(parentName);
+	const parentCodexCoreName = addCodexPrefixDeprecated(parentName);
 	// Parent's chain is everything except the last element
 	const parentChainToParent = coreNameChainToParent.slice(0, -1);
 	const parentCodexFullBasename = buildFullBasename(
@@ -164,7 +163,7 @@ function generateItems(
 
 			case TreeNodeType.Section: {
 				// Build codex link with suffix
-				const codexCoreName = addCodexPrefix(child.coreName);
+				const codexCoreName = addCodexPrefixDeprecated(child.coreName);
 				const codexFullBasename = buildFullBasename(
 					codexCoreName,
 					child.coreNameChainToParent,

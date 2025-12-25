@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import {
-	buildBasename,
-	buildCanonicalBasename,
-	computePathPartsFromSuffix,
-	computeSuffixFromPath,
-	expandSuffixedPath,
-	folderNameNeedsSanitization,
-	pathPartsHaveSuffix,
-	sanitizeFolderName,
-	suffixMatchesPath,
+	buildBasenameDepreacated,
+	buildCanonicalBasenameDeprecated,
+	computePathPartsFromSuffixDepreacated,
+	computeSuffixFromPathDepreacated,
+	expandSuffixedPathDepreacated,
+	folderNameNeedsSanitizationDepreacated,
+	pathPartsHaveSuffixDepreacated,
+	sanitizeFolderNameDepreacated,
+	suffixMatchesPathDepreacated,
 } from "../../../../src/commanders/librarian/utils/path-suffix-utils";
 import * as globalState from "../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
@@ -42,22 +42,22 @@ afterEach(() => {
 
 describe("computeSuffixFromPath", () => {
 	it("reverses path to suffix", () => {
-		expect(computeSuffixFromPath(["parent", "child"])).toEqual([
+		expect(computeSuffixFromPathDepreacated(["parent", "child"])).toEqual([
 			"child",
 			"parent",
 		]);
 	});
 
 	it("handles single element", () => {
-		expect(computeSuffixFromPath(["root"])).toEqual(["root"]);
+		expect(computeSuffixFromPathDepreacated(["root"])).toEqual(["root"]);
 	});
 
 	it("handles empty array", () => {
-		expect(computeSuffixFromPath([])).toEqual([]);
+		expect(computeSuffixFromPathDepreacated([])).toEqual([]);
 	});
 
 	it("handles deep nesting", () => {
-		expect(computeSuffixFromPath(["a", "b", "c", "d"])).toEqual([
+		expect(computeSuffixFromPathDepreacated(["a", "b", "c", "d"])).toEqual([
 			"d",
 			"c",
 			"b",
@@ -68,7 +68,7 @@ describe("computeSuffixFromPath", () => {
 
 describe("computePathPartsFromSuffix", () => {
 	it("reverses suffix to path", () => {
-		expect(computePathPartsFromSuffix(["child", "parent"])).toEqual([
+		expect(computePathPartsFromSuffixDepreacated(["child", "parent"])).toEqual([
 			"parent",
 			"child",
 		]);
@@ -76,19 +76,19 @@ describe("computePathPartsFromSuffix", () => {
 
 	it("is inverse of computeSuffixFromPath", () => {
 		const path = ["a", "b", "c"];
-		expect(computePathPartsFromSuffix(computeSuffixFromPath(path))).toEqual(path);
+		expect(computePathPartsFromSuffixDepreacated(computeSuffixFromPathDepreacated(path))).toEqual(path);
 	});
 });
 
 describe("buildBasename", () => {
 	it("joins coreName and suffix with delimiter", () => {
-		expect(buildBasename("Note", ["child", "parent"], "-")).toBe(
+		expect(buildBasenameDepreacated("Note", ["child", "parent"], "-")).toBe(
 			"Note-child-parent",
 		);
 	});
 
 	it("returns coreName when suffix is empty", () => {
-		expect(buildBasename("Note", [], "-")).toBe("Note");
+		expect(buildBasenameDepreacated("Note", [], "-")).toBe("Note");
 	});
 
 	it("uses custom delimiter", () => {
@@ -96,53 +96,53 @@ describe("buildBasename", () => {
 			...defaultSettings,
 			suffixDelimiter: "_",
 		});
-		expect(buildBasename("Note", ["a", "b"])).toBe("Note_a_b");
+		expect(buildBasenameDepreacated("Note", ["a", "b"])).toBe("Note_a_b");
 	});
 });
 
 describe("buildCanonicalBasename", () => {
 	it("builds basename with reversed path as suffix", () => {
-		expect(buildCanonicalBasename("Note", ["parent", "child"], "-")).toBe(
+		expect(buildCanonicalBasenameDeprecated("Note", ["parent", "child"], "-")).toBe(
 			"Note-child-parent",
 		);
 	});
 
 	it("handles root-level file (empty path)", () => {
-		expect(buildCanonicalBasename("Note", [], "-")).toBe("Note");
+		expect(buildCanonicalBasenameDeprecated("Note", [], "-")).toBe("Note");
 	});
 });
 
 describe("suffixMatchesPath", () => {
 	it("returns true when suffix matches reversed path", () => {
-		expect(suffixMatchesPath(["child", "parent"], ["parent", "child"])).toBe(
+		expect(suffixMatchesPathDepreacated(["child", "parent"], ["parent", "child"])).toBe(
 			true,
 		);
 	});
 
 	it("returns false when lengths differ", () => {
-		expect(suffixMatchesPath(["a"], ["a", "b"])).toBe(false);
+		expect(suffixMatchesPathDepreacated(["a"], ["a", "b"])).toBe(false);
 	});
 
 	it("returns false when content differs", () => {
-		expect(suffixMatchesPath(["x", "y"], ["a", "b"])).toBe(false);
+		expect(suffixMatchesPathDepreacated(["x", "y"], ["a", "b"])).toBe(false);
 	});
 
 	it("handles empty arrays", () => {
-		expect(suffixMatchesPath([], [])).toBe(true);
+		expect(suffixMatchesPathDepreacated([], [])).toBe(true);
 	});
 });
 
 describe("sanitizeFolderName", () => {
 	it("replaces delimiter with underscore", () => {
-		expect(sanitizeFolderName("my-folder", "-")).toBe("my_folder");
+		expect(sanitizeFolderNameDepreacated("my-folder", "-")).toBe("my_folder");
 	});
 
 	it("handles multiple delimiters", () => {
-		expect(sanitizeFolderName("a-b-c", "-")).toBe("a_b_c");
+		expect(sanitizeFolderNameDepreacated("a-b-c", "-")).toBe("a_b_c");
 	});
 
 	it("returns unchanged if no delimiter", () => {
-		expect(sanitizeFolderName("folder", "-")).toBe("folder");
+		expect(sanitizeFolderNameDepreacated("folder", "-")).toBe("folder");
 	});
 
 	it("works with custom delimiter", () => {
@@ -150,45 +150,45 @@ describe("sanitizeFolderName", () => {
 			...defaultSettings,
 			suffixDelimiter: ".",
 		});
-		expect(sanitizeFolderName("my.folder.name")).toBe("my_folder_name");
+		expect(sanitizeFolderNameDepreacated("my.folder.name")).toBe("my_folder_name");
 	});
 });
 
 describe("folderNameNeedsSanitization", () => {
 	it("returns true when name contains delimiter", () => {
-		expect(folderNameNeedsSanitization("my-folder", "-")).toBe(true);
+		expect(folderNameNeedsSanitizationDepreacated("my-folder", "-")).toBe(true);
 	});
 
 	it("returns false when name is clean", () => {
-		expect(folderNameNeedsSanitization("myfolder", "-")).toBe(false);
+		expect(folderNameNeedsSanitizationDepreacated("myfolder", "-")).toBe(false);
 	});
 
 	it("returns false for underscore with dash delimiter", () => {
-		expect(folderNameNeedsSanitization("my_folder", "-")).toBe(false);
+		expect(folderNameNeedsSanitizationDepreacated("my_folder", "-")).toBe(false);
 	});
 });
 
 describe("pathPartsHaveSuffix", () => {
 	it("returns true when any part contains delimiter", () => {
-		expect(pathPartsHaveSuffix(["Library", "X-Y", "Z"], "-")).toBe(true);
+		expect(pathPartsHaveSuffixDepreacated(["Library", "X-Y", "Z"], "-")).toBe(true);
 	});
 
 	it("returns false when no part contains delimiter", () => {
-		expect(pathPartsHaveSuffix(["Library", "X", "Y"], "-")).toBe(false);
+		expect(pathPartsHaveSuffixDepreacated(["Library", "X", "Y"], "-")).toBe(false);
 	});
 
 	it("detects suffix in first part", () => {
-		expect(pathPartsHaveSuffix(["Lib-rary", "X"], "-")).toBe(true);
+		expect(pathPartsHaveSuffixDepreacated(["Lib-rary", "X"], "-")).toBe(true);
 	});
 
 	it("handles empty array", () => {
-		expect(pathPartsHaveSuffix([], "-")).toBe(false);
+		expect(pathPartsHaveSuffixDepreacated([], "-")).toBe(false);
 	});
 });
 
 describe("expandSuffixedPath", () => {
 	it("expands suffixed folder into parts", () => {
-		expect(expandSuffixedPath(["Library", "X-Y"], "-")).toEqual([
+		expect(expandSuffixedPathDepreacated(["Library", "X-Y"], "-")).toEqual([
 			"Library",
 			"X",
 			"Y",
@@ -196,7 +196,7 @@ describe("expandSuffixedPath", () => {
 	});
 
 	it("expands multiple dashes in one part", () => {
-		expect(expandSuffixedPath(["A", "B-C-D"], "-")).toEqual([
+		expect(expandSuffixedPathDepreacated(["A", "B-C-D"], "-")).toEqual([
 			"A",
 			"B",
 			"C",
@@ -205,7 +205,7 @@ describe("expandSuffixedPath", () => {
 	});
 
 	it("leaves clean path unchanged", () => {
-		expect(expandSuffixedPath(["Library", "X", "Y"], "-")).toEqual([
+		expect(expandSuffixedPathDepreacated(["Library", "X", "Y"], "-")).toEqual([
 			"Library",
 			"X",
 			"Y",
@@ -213,7 +213,7 @@ describe("expandSuffixedPath", () => {
 	});
 
 	it("handles empty array", () => {
-		expect(expandSuffixedPath([], "-")).toEqual([]);
+		expect(expandSuffixedPathDepreacated([], "-")).toEqual([]);
 	});
 
 	it("works with custom delimiter", () => {
@@ -221,6 +221,6 @@ describe("expandSuffixedPath", () => {
 			...defaultSettings,
 			suffixDelimiter: ".",
 		});
-		expect(expandSuffixedPath(["A.B", "C"])).toEqual(["A", "B", "C"]);
+		expect(expandSuffixedPathDepreacated(["A.B", "C"])).toEqual(["A", "B", "C"]);
 	});
 });

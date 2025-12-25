@@ -5,10 +5,10 @@ import type {
 import { SplitPathType } from "../../../obsidian-vault-action-manager/types/split-path";
 import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
 import { VaultActionType } from "../../../obsidian-vault-action-manager/types/vault-action";
-import { parseBasename } from "../utils/parse-basename";
+import { parseBasenameDeprecated } from "../utils/parse-basename";
 import {
-	buildBasename,
-	computeSuffixFromPath,
+	buildBasenameDepreacated,
+	computeSuffixFromPathDepreacated,
 } from "../utils/path-suffix-utils";
 
 export type CreateActionResult = {
@@ -30,8 +30,8 @@ export function computeCreateAction(
 		return { action: null, parentChain: [] };
 	}
 
-	const parsed = parseBasename(splitPath.basename);
-	const expectedSuffix = computeSuffixFromPath(relativePathParts);
+	const parsed = parseBasenameDeprecated(splitPath.basename);
+	const expectedSuffix = computeSuffixFromPathDepreacated(relativePathParts);
 
 	const suffixMatches =
 		parsed.splitSuffix.length === expectedSuffix.length &&
@@ -41,7 +41,10 @@ export function computeCreateAction(
 		return { action: null, parentChain: relativePathParts };
 	}
 
-	const newBasename = buildBasename(parsed.coreName, expectedSuffix);
+	const newBasename = buildBasenameDepreacated(
+		parsed.coreName,
+		expectedSuffix,
+	);
 
 	let action: VaultAction;
 	if (splitPath.type === SplitPathType.MdFile) {

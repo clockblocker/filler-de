@@ -1,6 +1,6 @@
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import type { CoreNameChainFromRoot } from "../types/split-basename";
-import { parseBasename } from "../utils/parse-basename";
+import { parseBasenameDeprecated } from "../utils/parse-basename";
 
 /**
  * Extract coreNameChain from delete path.
@@ -32,7 +32,7 @@ export function parseDeletePathToChain(
 		? filename.slice(0, filename.lastIndexOf("."))
 		: filename;
 
-	const parsed = parseBasename(basenameWithoutExt);
+	const parsed = parseBasenameDeprecated(basenameWithoutExt);
 	return [...partsAfterRoot.slice(0, -1), parsed.coreName];
 }
 

@@ -25,15 +25,15 @@ export {
 export type {
 	CoreName,
 	CoreNameChainFromRoot,
-	SplitBasename,
+	ParsedBasename,
 } from "./types/split-basename";
 export type { TreeAction } from "./types/tree-action";
-export type { TreeLeaf } from "./types/tree-leaf";
 export type {
 	FileNode,
 	LeafNode,
 	ScrollNode,
 	SectionNode,
+	TreeLeaf,
 	TreeNode,
 	TreeNodeStatus,
 	TreeNodeType,

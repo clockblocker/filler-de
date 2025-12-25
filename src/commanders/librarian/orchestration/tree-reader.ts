@@ -6,8 +6,8 @@ import { SplitPathType } from "../../../obsidian-vault-action-manager/types/spli
 import { extractMetaInfo } from "../../../services/dto-services/meta-info-manager/interface";
 import { LibraryTree } from "../library-tree";
 import { TreeNodeStatus } from "../types/tree-node";
-import { isBasenamePrefixedAsCodex } from "../utils/codex-utils";
-import { splitPathToLeaf } from "../utils/split-path-to-leaf";
+import { isBasenamePrefixedAsCodexDeprecated } from "../utils/codex-utils";
+import { splitPathToLeafDeprecated } from "../utils/split-path-to-leaf";
 
 /**
  * Read tree from split files with readers.
@@ -32,13 +32,13 @@ export async function readTreeFromSplitFilesWithReaders({
 		(entry): entry is SplitPathWithReader =>
 			(entry.type === SplitPathType.File ||
 				entry.type === SplitPathType.MdFile) &&
-			!isBasenamePrefixedAsCodex(entry.basename),
+			!isBasenamePrefixedAsCodexDeprecated(entry.basename),
 	);
 
 	// Create leaves and read content using read() from SplitPathWithReader
 	const leaves = await Promise.all(
 		fileEntries.map(async (entry) => {
-			const leaf = splitPathToLeaf(entry);
+			const leaf = splitPathToLeafDeprecated(entry);
 
 			// Read content if md file (has read function)
 			if (entry.type === SplitPathType.MdFile && "read" in entry) {

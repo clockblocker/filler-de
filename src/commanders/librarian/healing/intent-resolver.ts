@@ -6,14 +6,14 @@ import type {
 } from "../../../obsidian-vault-action-manager/types/split-path";
 import { logger } from "../../../utils/logger";
 import { RuntimeSubtype } from "../types/literals";
-import type { SplitBasename } from "../types/split-basename";
-import { parseBasename } from "../utils/parse-basename";
+import type { ParsedBasename } from "../types/split-basename";
+import { parseBasenameDeprecated } from "../utils/parse-basename";
 import {
-	buildBasename,
-	computePathPartsFromSuffix,
-	computeSuffixFromPath,
-	expandSuffixedPath,
-	pathPartsHaveSuffix,
+	buildBasenameDepreacated,
+	computePathPartsFromSuffixDepreacated,
+	computeSuffixFromPathDepreacated,
+	expandSuffixedPathDepreacated,
+	pathPartsHaveSuffixDepreacated,
 } from "../utils/path-suffix-utils";
 
 /**
@@ -31,7 +31,7 @@ type FileInfo = {
 	pathParts: string[];
 	basename: string;
 	extension: string;
-	parsed: SplitBasename;
+	parsed: ParsedBasename;
 };
 
 function extractFileInfo(path: SplitPathToFile | SplitPathToMdFile): FileInfo {
@@ -39,7 +39,7 @@ function extractFileInfo(path: SplitPathToFile | SplitPathToMdFile): FileInfo {
 		"[extractFileInfo] input path:",
 		systemPathFromSplitPath(path),
 	);
-	const parsed = parseBasename(path.basename);
+	const parsed = parseBasenameDeprecated(path.basename);
 	logger.debug("[extractFileInfo] parsed:", JSON.stringify(parsed));
 	return {
 		basename: path.basename,
@@ -83,13 +83,14 @@ export function resolveRuntimeIntent(
 			if (newInfo.parsed.splitSuffix.length === 0) {
 				// No suffix = user just renamed coreName, no move needed
 				// But we should add the correct suffix to match current path
-				const expectedSuffix = computeSuffixFromPath(relativePathParts);
+				const expectedSuffix =
+					computeSuffixFromPathDepreacated(relativePathParts);
 				if (expectedSuffix.length === 0) {
 					// At root, no suffix needed
 					return null;
 				}
 				// Need to add suffix to match current location
-				const newBasename = buildBasename(
+				const newBasename = buildBasenameDepreacated(
 					newInfo.parsed.coreName,
 					expectedSuffix,
 				);
@@ -101,7 +102,7 @@ export function resolveRuntimeIntent(
 			}
 
 			// Compute target path from new suffix
-			const targetPathParts = computePathPartsFromSuffix(
+			const targetPathParts = computePathPartsFromSuffixDepreacated(
 				newInfo.parsed.splitSuffix,
 			);
 			const fullTargetPathParts = [libraryRoot, ...targetPathParts];
@@ -123,13 +124,15 @@ export function resolveRuntimeIntent(
 		case RuntimeSubtype.PathOnly: {
 			// User moved file → fix suffix to match new path
 			// Check if path contains suffixed folder (e.g., "X-Y")
-			if (pathPartsHaveSuffix(relativePathParts)) {
+			if (pathPartsHaveSuffixDepreacated(relativePathParts)) {
 				// Expand suffixed path: ["X-Y"] → ["X", "Y"]
-				const expandedRelative = expandSuffixedPath(relativePathParts);
+				const expandedRelative =
+					expandSuffixedPathDepreacated(relativePathParts);
 				const expandedFull = [libraryRoot, ...expandedRelative];
-				const expectedSuffix = computeSuffixFromPath(expandedRelative);
+				const expectedSuffix =
+					computeSuffixFromPathDepreacated(expandedRelative);
 
-				const newBasename = buildBasename(
+				const newBasename = buildBasenameDepreacated(
 					newInfo.parsed.coreName,
 					expectedSuffix,
 				);
@@ -144,7 +147,8 @@ export function resolveRuntimeIntent(
 			}
 
 			// Standard case: no suffixed folders
-			const expectedSuffix = computeSuffixFromPath(relativePathParts);
+			const expectedSuffix =
+				computeSuffixFromPathDepreacated(relativePathParts);
 
 			// If suffix already matches, no action needed
 			if (suffixEquals(newInfo.parsed.splitSuffix, expectedSuffix)) {
@@ -152,7 +156,7 @@ export function resolveRuntimeIntent(
 			}
 
 			// Need to rename file (same folder, new suffix)
-			const newBasename = buildBasename(
+			const newBasename = buildBasenameDepreacated(
 				newInfo.parsed.coreName,
 				expectedSuffix,
 			);
@@ -167,7 +171,8 @@ export function resolveRuntimeIntent(
 
 		case RuntimeSubtype.Both: {
 			// Both changed → path wins, fix suffix
-			const expectedSuffix = computeSuffixFromPath(relativePathParts);
+			const expectedSuffix =
+				computeSuffixFromPathDepreacated(relativePathParts);
 
 			// If suffix already matches, no action needed
 			if (suffixEquals(newInfo.parsed.splitSuffix, expectedSuffix)) {
@@ -175,7 +180,7 @@ export function resolveRuntimeIntent(
 			}
 
 			// Need to rename file (same folder, new suffix)
-			const newBasename = buildBasename(
+			const newBasename = buildBasenameDepreacated(
 				newInfo.parsed.coreName,
 				expectedSuffix,
 			);

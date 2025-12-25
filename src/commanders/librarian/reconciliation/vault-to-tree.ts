@@ -15,7 +15,7 @@ import { TreeActionType } from "../types/literals";
 import type { CoreNameChainFromRoot } from "../types/split-basename";
 import type { TreeAction } from "../types/tree-action";
 import { TreeNodeStatus, TreeNodeType } from "../types/tree-node";
-import { parseBasename } from "../utils/parse-basename";
+import { parseBasenameDeprecated } from "../utils/parse-basename";
 
 /**
  * Translate a VaultAction to TreeAction(s).
@@ -85,7 +85,7 @@ function toCoreNameChain(splitPath: SplitPath): CoreNameChainFromRoot {
 	const pathParts = parts.slice(startIndex);
 
 	// Parse basename to get coreName (not full basename with suffix)
-	const { coreName } = parseBasename(splitPath.basename);
+	const { coreName } = parseBasenameDeprecated(splitPath.basename);
 
 	return [...pathParts, coreName];
 }
@@ -115,7 +115,7 @@ function createSectionAction(splitPath: SplitPath): TreeAction {
 }
 
 function createFileAction(splitPath: SplitPath): TreeAction | null {
-	const { coreName } = parseBasename(splitPath.basename);
+	const { coreName } = parseBasenameDeprecated(splitPath.basename);
 	const extension = "extension" in splitPath ? splitPath.extension : "";
 
 	return {
@@ -131,7 +131,7 @@ function createFileAction(splitPath: SplitPath): TreeAction | null {
 }
 
 function createScrollAction(splitPath: SplitPath): TreeAction | null {
-	const { coreName } = parseBasename(splitPath.basename);
+	const { coreName } = parseBasenameDeprecated(splitPath.basename);
 
 	return {
 		payload: {
@@ -189,7 +189,7 @@ function translateRename(from: SplitPath, to: SplitPath): TreeAction {
 	if (sameParent(from, to)) {
 		// Same folder → ChangeNodeName
 		// Parse to.basename to get coreName (not full basename)
-		const { coreName: newCoreName } = parseBasename(to.basename);
+		const { coreName: newCoreName } = parseBasenameDeprecated(to.basename);
 		const action = {
 			payload: {
 				coreNameChain: fromChain,

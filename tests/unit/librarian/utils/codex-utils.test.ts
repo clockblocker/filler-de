@@ -3,9 +3,11 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { TreeNode } from "../../../../src/commanders/librarian/types/tree-node";
 import { TreeNodeStatus, TreeNodeType } from "../../../../src/commanders/librarian/types/tree-node";
 import {
-	addCodexPrefix,
+	addCodexPrefixDeprecated,
 	buildCodexBasename,
-	isBasenamePrefixedAsCodex,
+	isBasenamePrefixedAsCodexDeprecated,
+	tryExtractingCoreNameChainToSection,
+	tryExtractingSplitPathToFolder,
 } from "../../../../src/commanders/librarian/utils/codex-utils";
 import * as globalState from "../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
@@ -41,22 +43,22 @@ describe("codex-utils", () => {
 
 	describe("isCodexBasename", () => {
 		it("returns true for codex basename", () => {
-			expect(isBasenamePrefixedAsCodex("__Library")).toBe(true);
-			expect(isBasenamePrefixedAsCodex("__A")).toBe(true);
-			expect(isBasenamePrefixedAsCodex("__Section")).toBe(true);
+			expect(isBasenamePrefixedAsCodexDeprecated("__Library")).toBe(true);
+			expect(isBasenamePrefixedAsCodexDeprecated("__A")).toBe(true);
+			expect(isBasenamePrefixedAsCodexDeprecated("__Section")).toBe(true);
 		});
 
 		it("returns false for non-codex basename", () => {
-			expect(isBasenamePrefixedAsCodex("Note")).toBe(false);
-			expect(isBasenamePrefixedAsCodex("_Note")).toBe(false); // single underscore
-			expect(isBasenamePrefixedAsCodex("My__File")).toBe(false); // __ not at start
+			expect(isBasenamePrefixedAsCodexDeprecated("Note")).toBe(false);
+			expect(isBasenamePrefixedAsCodexDeprecated("_Note")).toBe(false); // single underscore
+			expect(isBasenamePrefixedAsCodexDeprecated("My__File")).toBe(false); // __ not at start
 		});
 	});
 
 	describe("withCodexPrefix", () => {
 		it("adds __ prefix", () => {
-			expect(addCodexPrefix("Library")).toBe("__Library");
-			expect(addCodexPrefix("A")).toBe("__A");
+			expect(addCodexPrefixDeprecated("Library")).toBe("__Library");
+			expect(addCodexPrefixDeprecated("A")).toBe("__A");
 		});
 	});
 
@@ -190,6 +192,100 @@ describe("codex-utils", () => {
 				};
 				expect(buildCodexBasename(section)).toBe("__Child_Parent");
 			});
+		});
+	});
+
+	describe("tryExtractingCoreNameChainToSection", () => {
+		it("returns empty array for root codex", () => {
+			const result = tryExtractingCoreNameChainToSection("__Library");
+			expect(result.isOk()).toBe(true);
+			if (result.isOk()) {
+				expect(result.value).toEqual([]);
+			}
+		});
+
+		it("returns chain for nested codex with single parent", () => {
+			const result = tryExtractingCoreNameChainToSection("__Child-Parent");
+			expect(result.isOk()).toBe(true);
+			if (result.isOk()) {
+				expect(result.value).toEqual(["Parent", "Child"]);
+			}
+		});
+
+		it("returns chain for nested codex with multiple parents", () => {
+			const result = tryExtractingCoreNameChainToSection("__Grandchild-Child-Parent");
+			expect(result.isOk()).toBe(true);
+			if (result.isOk()) {
+				expect(result.value).toEqual(["Parent", "Child", "Grandchild"]);
+			}
+		});
+
+		it("returns error for non-codex basename", () => {
+			const result = tryExtractingCoreNameChainToSection("Note");
+			expect(result.isErr()).toBe(true);
+			if (result.isErr()) {
+				expect(result.error).toContain('Invalid codex basename: "Note"');
+				expect(result.error).toContain('must start with "__"');
+			}
+		});
+
+		it("handles different delimiters", () => {
+			getParsedUserSettingsSpy.mockReturnValue({
+				...defaultSettings,
+				suffixDelimiter: "_",
+			});
+			const result = tryExtractingCoreNameChainToSection("__Child_Parent");
+			expect(result.isOk()).toBe(true);
+			if (result.isOk()) {
+				expect(result.value).toEqual(["Parent", "Child"]);
+			}
+		});
+	});
+
+	describe("tryExtractingSplitPathToFolder", () => {
+		it("builds SplitPath for root folder", () => {
+			const result = tryExtractingSplitPathToFolder("__Library");
+			expect(result.isOk()).toBe(true);
+			if (result.isOk()) {
+				expect(result.value).toEqual({
+					basename: "Library",
+					pathParts: ["Library"],
+					type: SplitPathType.Folder,
+				});
+			}
+		});
+
+		it("builds SplitPath for nested folder", () => {
+			const result = tryExtractingSplitPathToFolder("__Child-Parent");
+			expect(result.isOk()).toBe(true);
+			if (result.isOk()) {
+				expect(result.value).toEqual({
+					basename: "Child",
+					pathParts: ["Library", "Parent", "Child"],
+					type: SplitPathType.Folder,
+				});
+			}
+		});
+
+		it("builds SplitPath for deeply nested folder", () => {
+			const result = tryExtractingSplitPathToFolder("__Grandchild-Child-Parent");
+			expect(result.isOk()).toBe(true);
+			if (result.isOk()) {
+				expect(result.value).toEqual({
+					basename: "Grandchild",
+					pathParts: ["Library", "Parent", "Child", "Grandchild"],
+					type: SplitPathType.Folder,
+				});
+			}
+		});
+
+		it("returns error for non-codex basename", () => {
+			const result = tryExtractingSplitPathToFolder("Note");
+			expect(result.isErr()).toBe(true);
+			if (result.isErr()) {
+				expect(result.error).toContain('Invalid codex basename: "Note"');
+				expect(result.error).toContain('must start with "__"');
+			}
 		});
 	});
 });

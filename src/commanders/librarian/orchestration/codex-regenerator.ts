@@ -8,8 +8,8 @@ import type { CoreNameChainFromRoot } from "../types/split-basename";
 import type { SectionNode } from "../types/tree-node";
 import { TreeNodeType } from "../types/tree-node";
 import {
-	buildCodexBasename,
-	isBasenamePrefixedAsCodex,
+	addCodexPrefixDeprecated,
+	isBasenamePrefixedAsCodexDeprecated,
 } from "../utils/codex-utils";
 import { buildCodexVaultActions } from "./codex-builder";
 import { collectAllSectionChains } from "./tree-utils";
@@ -104,7 +104,7 @@ async function cleanupOrphanedCodexes(
 	for (const file of allFiles) {
 		if (
 			file.type !== SplitPathType.MdFile ||
-			!isBasenamePrefixedAsCodex(file.basename)
+			!isBasenamePrefixedAsCodexDeprecated(file.basename)
 		) {
 			continue;
 		}
@@ -141,7 +141,7 @@ async function cleanupOrphanedCodexes(
 
 		// Build expected codex basename (same logic as buildCodexVaultActions)
 		const section = node as SectionNode;
-		const expectedCodexBasename = buildCodexBasename(section);
+		const expectedCodexBasename = addCodexPrefixDeprecated(section);
 
 		// Check if codex name matches expected
 		if (file.basename !== expectedCodexBasename) {

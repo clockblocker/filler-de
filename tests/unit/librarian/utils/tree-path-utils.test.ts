@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import type { TreeLeaf } from "../../../../src/commanders/librarian/types/tree-leaf";
+import type { TreeLeaf } from "../../../../src/commanders/librarian/types/tree-node";
 import { TreeNodeStatus, TreeNodeType } from "../../../../src/commanders/librarian/types/tree-node";
 import {
-	buildCanonicalBasenameForLeaf,
-	buildCanonicalPathForLeaf,
+	buildCanonicalBasenameForLeafDeprecated,
+	buildCanonicalPathForLeafDeprecated,
 } from "../../../../src/commanders/librarian/utils/tree-path-utils";
 import * as globalState from "../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
@@ -46,7 +46,7 @@ describe("buildCanonicalPathFromTree", () => {
 			type: TreeNodeType.Scroll,
 		};
 
-		const result = buildCanonicalPathForLeaf(leaf);
+		const result = buildCanonicalPathForLeafDeprecated(leaf);
 
 		expect(result).toBe("Library/Note.md");
 	});
@@ -60,7 +60,7 @@ describe("buildCanonicalPathFromTree", () => {
 			type: TreeNodeType.Scroll,
 		};
 
-		const result = buildCanonicalPathForLeaf(leaf);
+		const result = buildCanonicalPathForLeafDeprecated(leaf);
 
 		expect(result).toBe("Library/A/B/Note-B-A.md");
 	});
@@ -79,7 +79,7 @@ describe("buildCanonicalPathFromTree", () => {
 			type: TreeNodeType.Scroll,
 		};
 
-		const result = buildCanonicalPathForLeaf(leaf);
+		const result = buildCanonicalPathForLeafDeprecated(leaf);
 
 		expect(result).toBe("Library/A/B/Note_B_A.md");
 	});
@@ -102,7 +102,7 @@ describe("buildCanonicalPathFromTree", () => {
 			type: TreeNodeType.Scroll,
 		};
 
-		const result = buildCanonicalPathForLeaf(leaf);
+		const result = buildCanonicalPathForLeafDeprecated(leaf);
 
 		expect(result).toBe("parent/child/A/Note-A.md");
 	});
@@ -119,7 +119,7 @@ describe("buildCanonicalBasenameFromTree", () => {
 			type: TreeNodeType.Scroll,
 		};
 
-		const result = buildCanonicalBasenameForLeaf(leaf);
+		const result = buildCanonicalBasenameForLeafDeprecated(leaf);
 
 		expect(result).toBe("Note");
 	});
@@ -133,7 +133,7 @@ describe("buildCanonicalBasenameFromTree", () => {
 			type: TreeNodeType.Scroll,
 		};
 
-		const result = buildCanonicalBasenameForLeaf(leaf);
+		const result = buildCanonicalBasenameForLeafDeprecated(leaf);
 
 		expect(result).toBe("Note-B-A");
 	});
@@ -152,7 +152,7 @@ describe("buildCanonicalBasenameFromTree", () => {
 			type: TreeNodeType.Scroll,
 		};
 
-		const result = buildCanonicalBasenameForLeaf(leaf);
+		const result = buildCanonicalBasenameForLeafDeprecated(leaf);
 
 		expect(result).toBe("Note_B_A");
 	});
@@ -166,7 +166,7 @@ describe("buildCanonicalBasenameFromTree", () => {
 			type: TreeNodeType.Scroll,
 		};
 
-		const result = buildCanonicalBasenameForLeaf(leaf);
+		const result = buildCanonicalBasenameForLeafDeprecated(leaf);
 
 		expect(result).toBe("Note-Parent");
 	});

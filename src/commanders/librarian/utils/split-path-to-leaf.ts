@@ -4,25 +4,18 @@ import type {
 	SplitPathToMdFile,
 } from "../../../obsidian-vault-action-manager/types/split-path";
 import type { MetaInfo } from "../../../services/dto-services/meta-info-manager/types";
-import type { TreeLeaf } from "../types/tree-leaf";
+import type { TreeLeaf } from "../types/tree-node";
 import { TreeNodeStatus, TreeNodeType } from "../types/tree-node";
-import { parseBasename } from "./parse-basename";
+import { parseBasenameDeprecated } from "./parse-basename";
 
-/**
- * Codec: SplitPath → TreeLeaf
- * Converts filesystem representation to tree representation.
- * Reads libraryRoot and suffixDelimiter from global settings.
- * Note: tRef is NOT stored - TFile references become stale when files are renamed/moved.
- *
- * @param splitPath - SplitPath (with or without tRef, we don't use it)
- */
-export function splitPathToLeaf(
+/** @deprecated */
+export function splitPathToLeafDeprecated(
 	splitPath: SplitPathToFile | SplitPathToMdFile,
 ): TreeLeaf {
 	const settings = getParsedUserSettings();
 	const rootFolderName = settings.splitPathToLibraryRoot.basename;
 	const { basename, pathParts, type } = splitPath;
-	const { coreName } = parseBasename(basename);
+	const { coreName } = parseBasenameDeprecated(basename);
 
 	// Convert pathParts to coreNameChainToParent by stripping root folder
 	const coreNameChainToParent =
@@ -49,12 +42,8 @@ export function splitPathToLeaf(
 	};
 }
 
-/**
- * Reads file content, extracts MetaInfo, and injects status into ScrollNode.
- * FileNodes are returned unchanged.
- * Note: Uses original file path (with suffix) - not reconstructed from tree structure.
- */
-export async function withStatusFromMeta(
+/** @deprecated */
+export async function withStatusFromMetaDeprecated(
 	leaf: TreeLeaf,
 	originalPath: string,
 	readContent: (path: string) => Promise<string>,

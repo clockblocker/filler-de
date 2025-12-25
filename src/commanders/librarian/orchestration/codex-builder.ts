@@ -9,7 +9,7 @@ import { generateCodexContent } from "../codex";
 import type { CoreNameChainFromRoot } from "../types/split-basename";
 import type { SectionNode } from "../types/tree-node";
 import { TreeNodeType } from "../types/tree-node";
-import { buildCodexBasename } from "../utils/codex-utils";
+import { addCodexPrefixDeprecated } from "../utils/codex-utils";
 
 /**
  * Build VaultActions to create/update codex files for impacted sections.
@@ -49,7 +49,7 @@ export function buildCodexVaultActions(
 		// Build codex basename with suffix (same pattern as regular files)
 		// Root: __Library (no suffix, use libraryRoot name)
 		// Nested: __Salad-Recipe (suffix = parent chain reversed)
-		const codexBasename = buildCodexBasename(section);
+		const codexBasename = addCodexPrefixDeprecated(section);
 
 		// Codex path: inside the section folder
 		const pathParts = [

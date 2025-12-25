@@ -38,7 +38,7 @@ export type ScrollNode = {
 	coreName: CoreName;
 	type: typeof TreeNodeType.Scroll;
 	coreNameChainToParent: CoreName[];
-	status: typeof TreeNodeStatus.Done | typeof TreeNodeStatus.NotStarted;
+	status: TreeNodeStatus;
 	extension: "md";
 };
 
@@ -61,7 +61,7 @@ export type SectionNode = {
 	coreName: CoreName;
 	coreNameChainToParent: CoreName[];
 	type: typeof TreeNodeType.Section;
-	status: typeof TreeNodeStatus.Done | typeof TreeNodeStatus.NotStarted;
+	status: TreeNodeStatus;
 	children: TreeNode[];
 };
 
@@ -71,3 +71,5 @@ export type TreeNode = Prettify<
 		type: TreeNodeType;
 	}
 >;
+
+export type TreeLeaf = ScrollNode | FileNode;

@@ -9,11 +9,11 @@ import {
 	VaultActionType,
 } from "../../../obsidian-vault-action-manager/types/vault-action";
 import { DragInSubtype } from "../types/literals";
-import { parseBasename } from "../utils/parse-basename";
+import { parseBasenameDeprecated } from "../utils/parse-basename";
 import {
-	computePathPartsFromSuffix,
-	folderNameNeedsSanitization,
-	sanitizeFolderName,
+	computePathPartsFromSuffixDepreacated,
+	folderNameNeedsSanitizationDepreacated,
+	sanitizeFolderNameDepreacated,
 } from "../utils/path-suffix-utils";
 
 /**
@@ -39,10 +39,12 @@ export function handleFileDragIn(
 ): DragInResult {
 	const settings = getParsedUserSettings();
 	const libraryRoot = settings.splitPathToLibraryRoot.basename;
-	const parsed = parseBasename(newPath.basename);
+	const parsed = parseBasenameDeprecated(newPath.basename);
 
 	// Compute target path from suffix
-	const targetPathParts = computePathPartsFromSuffix(parsed.splitSuffix);
+	const targetPathParts = computePathPartsFromSuffixDepreacated(
+		parsed.splitSuffix,
+	);
 	const fullTargetPathParts = [libraryRoot, ...targetPathParts];
 
 	// Check if already in correct location
@@ -119,11 +121,11 @@ export function handleFolderDragIn(
 	_libraryRoot: string,
 ): DragInResult {
 	// libraryRoot kept for potential future use (nested folder checks)
-	if (!folderNameNeedsSanitization(newPath.basename)) {
+	if (!folderNameNeedsSanitizationDepreacated(newPath.basename)) {
 		return { actions: [], sanitized: false };
 	}
 
-	const sanitizedBasename = sanitizeFolderName(newPath.basename);
+	const sanitizedBasename = sanitizeFolderNameDepreacated(newPath.basename);
 
 	const targetPath: SplitPathToFolder = {
 		...newPath,

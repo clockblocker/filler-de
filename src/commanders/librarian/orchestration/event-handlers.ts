@@ -12,10 +12,10 @@ import {
 } from "../codex/impacted-chains";
 import { detectRenameMode } from "../healing";
 import type { LibraryTree } from "../library-tree";
+import { isBasenamePrefixedAsCodex } from "../naming/start";
 import { translateVaultAction } from "../reconciliation/vault-to-tree";
 import { TreeActionType } from "../types/literals";
 import type { CoreNameChainFromRoot } from "../types/split-basename";
-import { isBasenamePrefixedAsCodex } from "../utils/codex-utils";
 import { resolveActions } from "./action-resolver";
 import {
 	type CodexRegeneratorContext,

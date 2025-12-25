@@ -4,7 +4,7 @@ import {
 	healOnInit,
 	leafNeedsHealing,
 } from "../../../../src/commanders/librarian/healing/init-healer";
-import type { TreeLeaf } from "../../../../src/commanders/librarian/types/tree-leaf";
+import type { TreeLeaf } from "../../../../src/commanders/librarian/types/tree-node";
 import { TreeNodeStatus, TreeNodeType } from "../../../../src/commanders/librarian/types/tree-node";
 import * as globalState from "../../../../src/global-state/global-state";
 import { getParsedUserSettings } from "../../../../src/global-state/global-state";

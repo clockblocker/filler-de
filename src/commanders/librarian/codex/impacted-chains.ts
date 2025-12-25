@@ -3,7 +3,7 @@
  */
 
 import type { CoreNameChainFromRoot } from "../types/split-basename";
-import { joinPathParts } from "../utils/tree-path-utils";
+import { joinPathPartsDeprecated } from "../utils/tree-path-utils";
 
 /**
  * Flatten result from applyTreeAction into array of chains.
@@ -63,7 +63,7 @@ export function dedupeChains(
 	const result: CoreNameChainFromRoot[] = [];
 
 	for (const chain of chains) {
-		const key = joinPathParts(chain);
+		const key = joinPathPartsDeprecated(chain);
 		if (!seen.has(key)) {
 			seen.add(key);
 			result.push(chain);
@@ -91,10 +91,10 @@ export function collectImpactedSections(
 	// Expand to ancestors and dedupe
 	const expanded = expandAllToAncestors(allChains);
 	const deduped = dedupeChains(expanded);
-	
+
 	// Note: We don't filter out non-section chains here because we don't have tree access.
 	// Filtering happens in regenerateCodexes using getNode.
-	
+
 	return deduped;
 }
 

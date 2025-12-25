@@ -8,15 +8,15 @@ import {
 	type VaultAction,
 	VaultActionType,
 } from "../../../obsidian-vault-action-manager/types/vault-action";
-import type { TreeLeaf } from "../types/tree-leaf";
+import type { TreeLeaf } from "../types/tree-node";
 import { TreeNodeType } from "../types/tree-node";
-import { parseBasename } from "../utils/parse-basename";
+import { parseBasenameDeprecated } from "../utils/parse-basename";
 import {
-	buildBasename,
-	computeSuffixFromPath,
-	suffixMatchesPath,
+	buildBasenameDepreacated,
+	computeSuffixFromPathDepreacated,
+	suffixMatchesPathDepreacated,
 } from "../utils/path-suffix-utils";
-import { joinPathParts } from "../utils/tree-path-utils";
+import { joinPathPartsDeprecated } from "../utils/tree-path-utils";
 
 /**
  * Result of init healing.
@@ -44,7 +44,9 @@ function findMatchingFile(
 	actualFiles: SplitPathWithReader[],
 ): SplitPathWithReader | null {
 	// Expected path (parent chain only, not including coreName)
-	const expectedParentPath = joinPathParts(leaf.coreNameChainToParent);
+	const expectedParentPath = joinPathPartsDeprecated(
+		leaf.coreNameChainToParent,
+	);
 
 	for (const file of actualFiles) {
 		// Skip folders
@@ -63,14 +65,14 @@ function findMatchingFile(
 		}
 
 		// Parse basename to get coreName
-		const { coreName } = parseBasename(file.basename);
+		const { coreName } = parseBasenameDeprecated(file.basename);
 		if (coreName !== leaf.coreName) {
 			continue;
 		}
 
 		// Build path key from file pathParts (skip library root)
 		// pathParts is [libraryRoot, ...parentChain], so slice(1) gives parentChain
-		const fileParentPath = joinPathParts(file.pathParts.slice(1));
+		const fileParentPath = joinPathPartsDeprecated(file.pathParts.slice(1));
 
 		// Match if parent path matches (file might be at expected location or wrong location)
 		// We match by coreName and parent path, then check if suffix needs fixing
@@ -100,18 +102,18 @@ function analyzeLeaf(
 	}
 
 	const currentBasename = actualFile.basename;
-	const parsed = parseBasename(currentBasename);
+	const parsed = parseBasenameDeprecated(currentBasename);
 
 	// Path relative to library root
-	const needsRename = !suffixMatchesPath(
+	const needsRename = !suffixMatchesPathDepreacated(
 		parsed.splitSuffix,
 		leaf.coreNameChainToParent,
 	);
 
 	const expectedBasename = needsRename
-		? buildBasename(
+		? buildBasenameDepreacated(
 				parsed.coreName,
-				computeSuffixFromPath(leaf.coreNameChainToParent),
+				computeSuffixFromPathDepreacated(leaf.coreNameChainToParent),
 			)
 		: currentBasename;
 
@@ -231,5 +233,8 @@ export function leafNeedsHealing(
  */
 export function getExpectedBasename(leaf: TreeLeaf): string {
 	const coreNameChain = leaf.coreNameChainToParent;
-	return buildBasename(leaf.coreName, computeSuffixFromPath(coreNameChain));
+	return buildBasenameDepreacated(
+		leaf.coreName,
+		computeSuffixFromPathDepreacated(coreNameChain),
+	);
 }

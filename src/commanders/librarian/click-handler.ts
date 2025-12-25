@@ -4,7 +4,7 @@ import { getParsedUserSettings } from "../../global-state/global-state";
 import type { ObsidianVaultActionManager } from "../../obsidian-vault-action-manager";
 import { logger } from "../../utils/logger";
 import type { Librarian } from "./librarian";
-import { CODEX_PREFIX } from "./types/literals";
+import { CODEX_CORE_NAME } from "./types/literals";
 import type { CoreNameChainFromRoot } from "./types/split-basename";
 
 /**
@@ -23,7 +23,7 @@ export async function handleCodexCheckboxClick({
 	app: App;
 }): Promise<boolean> {
 	const pwd = await vaultActionManager.pwd();
-	if (!pwd.basename.startsWith(CODEX_PREFIX)) {
+	if (!pwd.basename.startsWith(CODEX_CORE_NAME)) {
 		return false;
 	}
 
@@ -101,8 +101,8 @@ export function parseCodexLinkTarget(
 	href: string,
 ): CoreNameChainFromRoot | null {
 	// Strip codex prefix if present
-	const cleanHref = href.startsWith(CODEX_PREFIX)
-		? href.slice(CODEX_PREFIX.length)
+	const cleanHref = href.startsWith(CODEX_CORE_NAME)
+		? href.slice(CODEX_CORE_NAME.length)
 		: href;
 
 	if (!cleanHref) {

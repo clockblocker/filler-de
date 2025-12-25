@@ -27,7 +27,7 @@ import {
 import { TreeActionType } from "./types/literals";
 import type { CoreNameChainFromRoot } from "./types/split-basename";
 import { TreeNodeStatus, TreeNodeType } from "./types/tree-node";
-import { buildCanonicalPathForLeaf } from "./utils/tree-path-utils";
+import { buildCanonicalPathForLeafDeprecated } from "./utils/tree-path-utils";
 
 export class Librarian {
 	private tree: LibraryTree;
@@ -258,7 +258,7 @@ export class Librarian {
 		// Write metadata to file if this is a Scroll node
 		if (node?.type === TreeNodeType.Scroll) {
 			// Build canonical path from tree structure
-			const path = buildCanonicalPathForLeaf(node);
+			const path = buildCanonicalPathForLeafDeprecated(node);
 
 			try {
 				await writeStatusToMetadata(path, status, {

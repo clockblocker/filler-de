@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { TreeNodeStatus, TreeNodeType } from "../../../../src/commanders/librarian/types/tree-node";
-import { splitPathToLeaf } from "../../../../src/commanders/librarian/utils/split-path-to-leaf";
+import { splitPathToLeafDeprecated } from "../../../../src/commanders/librarian/utils/split-path-to-leaf";
 import * as globalState from "../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
 import type {
@@ -45,7 +45,7 @@ describe("splitPathToLeaf", () => {
 				type: "MdFile",
 			};
 
-			const result = splitPathToLeaf(input);
+			const result = splitPathToLeafDeprecated(input);
 
 			expect(result).toEqual({
 				coreName: "Note",
@@ -64,7 +64,7 @@ describe("splitPathToLeaf", () => {
 				type: "MdFile",
 			};
 
-			const result = splitPathToLeaf(input);
+			const result = splitPathToLeafDeprecated(input);
 
 			expect(result.coreNameChainToParent).toEqual(["Avarar", "S1"]);
 		});
@@ -77,7 +77,7 @@ describe("splitPathToLeaf", () => {
 				type: "MdFile",
 			};
 
-			const result = splitPathToLeaf(input);
+			const result = splitPathToLeafDeprecated(input);
 
 			expect(result.coreNameChainToParent).toEqual([]);
 			expect(result.coreName).toBe("RootNote");
@@ -91,7 +91,7 @@ describe("splitPathToLeaf", () => {
 				type: "MdFile",
 			};
 
-			const result = splitPathToLeaf(input);
+			const result = splitPathToLeafDeprecated(input);
 
 			expect(result.coreNameChainToParent).toEqual(["Other", "folder"]);
 		});
@@ -106,7 +106,7 @@ describe("splitPathToLeaf", () => {
 				type: "File",
 			};
 
-			const result = splitPathToLeaf(input);
+			const result = splitPathToLeafDeprecated(input);
 
 			expect(result).toEqual({
 				coreName: "document",
@@ -127,7 +127,7 @@ describe("splitPathToLeaf", () => {
 				type: "MdFile",
 			};
 
-			const result = splitPathToLeaf(input);
+			const result = splitPathToLeafDeprecated(input);
 
 			expect(result.coreName).toBe("The_Title");
 		});
@@ -140,7 +140,7 @@ describe("splitPathToLeaf", () => {
 				type: "MdFile",
 			};
 
-			const result = splitPathToLeaf(input);
+			const result = splitPathToLeafDeprecated(input);
 
 			expect(result.coreName).toBe("SimpleNote");
 		});
@@ -157,7 +157,7 @@ describe("splitPathToLeaf", () => {
 				type: "MdFile",
 			};
 
-			const result = splitPathToLeaf(input);
+			const result = splitPathToLeafDeprecated(input);
 
 			expect(result.coreName).toBe("Note");
 		});
