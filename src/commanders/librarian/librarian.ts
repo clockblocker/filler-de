@@ -30,7 +30,7 @@ import { TreeNodeStatus, TreeNodeType } from "./types/tree-node";
 import { buildCanonicalPathForLeaf } from "./utils/tree-path-utils";
 
 export class Librarian {
-	private tree: LibraryTree | null = null;
+	private tree: LibraryTree;
 	/** Track paths we're currently processing to avoid self-event loops */
 	private eventTeardown: (() => void) | null = null;
 
@@ -72,13 +72,7 @@ export class Librarian {
 				"[Librarian] Failed to read tree from vault:",
 				error instanceof Error ? error.message : String(error),
 			);
-			this.tree = null;
 			// Return empty result if tree can't be read
-			return { deleteActions: [], renameActions: [] };
-		}
-
-		if (!this.tree) {
-			logger.error("[Librarian] Tree is null after readTreeFromVault");
 			return { deleteActions: [], renameActions: [] };
 		}
 
@@ -95,9 +89,7 @@ export class Librarian {
 		this.tree = await this.readTreeFromVault();
 
 		// Regenerate all codexes with up-to-date tree
-		if (this.tree) {
-			await regenerateAllCodexes(this.tree, this.getCodexContext());
-		}
+		await regenerateAllCodexes(this.tree, this.getCodexContext());
 
 		// Subscribe to vault events after initialization
 		this.subscribeToVaultEvents();
@@ -172,25 +164,7 @@ export class Librarian {
 		return {
 			dispatch: (actions) => this.vaultActionManager.dispatch(actions),
 			getNode: (chain) => {
-				if (!this.tree) {
-					logger.warn("[getCodexContext] tree is null");
-					return null;
-				}
-				const node = this.tree.getNode(chain);
-				if (!node) {
-					logger.warn(
-						"[getCodexContext] node is null for chain:",
-						JSON.stringify(chain),
-					);
-					return null;
-				}
-				if (node.type !== TreeNodeType.Section) {
-					logger.warn(
-						"[getCodexContext] node is not Section:",
-						node.type,
-					);
-					return null;
-				}
+				const node = this.tree.getSectionNode(chain);
 				return node;
 			},
 			listAllFilesWithMdReaders: (sp) =>
@@ -206,9 +180,7 @@ export class Librarian {
 		return {
 			dispatch: (actions) => this.vaultActionManager.dispatch(actions),
 			getNode: (chain) => {
-				if (!this.tree) return null;
-				const node = this.tree.getNode(chain);
-				return node?.type === TreeNodeType.Section ? node : null;
+				return this.tree.getSectionNode(chain);
 			},
 			listAllFilesWithMdReaders: (sp) =>
 				this.vaultActionManager.listAllFilesWithMdReaders(sp),
@@ -270,27 +242,6 @@ export class Librarian {
 		coreNameChain: CoreNameChainFromRoot,
 		status: TreeNodeStatus,
 	): Promise<void> {
-		if (!this.tree) {
-			logger.warn(
-				"[Librarian] setStatus called before init, attempting to reinitialize...",
-			);
-			try {
-				await this.init();
-				if (!this.tree) {
-					logger.error(
-						"[Librarian] Failed to initialize tree in setStatus",
-					);
-					return;
-				}
-			} catch (error) {
-				logger.error(
-					"[Librarian] Error reinitializing tree in setStatus:",
-					error instanceof Error ? error.message : String(error),
-				);
-				return;
-			}
-		}
-
 		const newStatus =
 			status === TreeNodeStatus.Done
 				? TreeNodeStatus.Done

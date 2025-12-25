@@ -108,6 +108,14 @@ export class LibraryTree {
 		return this.getNodeInternal(coreNameChain);
 	}
 
+	getSectionNode(coreNameChain: CoreNameChainFromRoot): SectionNode | null {
+		const node = this.getNodeInternal(coreNameChain);
+		if (!node || node.type !== TreeNodeType.Section) {
+			return null;
+		}
+		return node;
+	}
+
 	getParent(coreNameChain: CoreNameChainFromRoot): SectionNode | null {
 		const node = this.getNodeInternal(coreNameChain);
 		if (!node || node.type !== TreeNodeType.Section) {
