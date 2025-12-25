@@ -8,6 +8,7 @@ import {
 import type { TexfresserObsidianServices } from "../../../services/obsidian-services/interface";
 import type { PrettyPathLegacy } from "../../../types/common-interface/dtos";
 import { TextStatusLegacy } from "../../../types/common-interface/enums";
+import { splitTextIntoPages } from "../../text-splitter/text-splitter";
 import type { ActionDispatcherLegacy } from "../action-dispatcher";
 import {
 	isRootNameLegacy,
@@ -24,7 +25,6 @@ import {
 } from "../indexing/codecs";
 import type { LibrarianLegacyStateLegacy } from "../librarian-state";
 import type { LibraryTreeLegacy } from "../library-tree/library-tree";
-import { splitTextIntoPages } from "../text-splitter/text-splitter";
 import type {
 	NoteDtoLegacy,
 	SectionNodeLegacy,
