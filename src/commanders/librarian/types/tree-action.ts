@@ -1,5 +1,8 @@
+import type {
+	CoreName,
+	CoreNameChainFromRoot,
+} from "../naming/parsed-basename";
 import { TreeActionType } from "./literals";
-import type { CoreName, CoreNameChainFromRoot } from "./split-basename";
 import type { TreeNodeStatus, TreeNodeType } from "./tree-node";
 
 export { TreeActionType };
