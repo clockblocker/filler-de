@@ -97,7 +97,7 @@ describe("EnsureExist Integration", () => {
 		}
 	});
 
-	it("should sort EnsureExist before mutator actions", () => {
+	it("should sort EnsureExist before mutator actions", async () => {
 		const ensureExist: VaultAction = {
 			payload: { content: null, splitPath: mdFile("file") },
 			type: VaultActionType.UpsertMdFile,
@@ -114,14 +114,21 @@ describe("EnsureExist Integration", () => {
 			type: VaultActionType.UpsertMdFile,
 		};
 
-		const graph = buildDependencyGraph([ensureExist, process, replace]);
-		const sorted = topologicalSort([ensureExist, process, replace], graph);
+		// Collapse first: UpsertMdFile(null) + ProcessMdFile → both kept,
+		// then UpsertMdFile(content) replaces UpsertMdFile(null) and removes ProcessMdFile
+		const collapsed = await collapseActions([ensureExist, process, replace]);
+		// After collapse: only UpsertMdFile(content) remains
+		expect(collapsed).toHaveLength(1);
+		expect(collapsed[0].type).toBe(VaultActionType.UpsertMdFile);
+		expect((collapsed[0] as typeof replace).payload.content).toBe("new");
 
-		// EnsureExist should come first
-		expect(sorted[0]).toBe(ensureExist);
-		// Process and Replace should come after (order between them doesn't matter)
-		expect(sorted.indexOf(process)).toBeGreaterThan(0);
-		expect(sorted.indexOf(replace)).toBeGreaterThan(0);
+		// Build dependency graph on collapsed actions
+		const graph = buildDependencyGraph(collapsed);
+		const sorted = topologicalSort(collapsed, graph);
+
+		// After collapse, only UpsertMdFile(content) remains
+		expect(sorted).toHaveLength(1);
+		expect(sorted[0].type).toBe(VaultActionType.UpsertMdFile);
 	});
 
 	it("should handle complex scenario: EnsureExist + Create + Process", async () => {

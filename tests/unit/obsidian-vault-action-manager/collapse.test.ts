@@ -360,9 +360,12 @@ describe("collapseActions", () => {
 			} as const;
 
 			const collapsed = await collapseActions([ensureExist, process]);
-			expect(collapsed).toHaveLength(1);
-			// ProcessMdFile is kept, UpsertMdFile(null) is kept via dependency graph
-			expect(collapsed[0].type).toBe(VaultActionType.ProcessMdFile);
+			expect(collapsed).toHaveLength(2);
+			// Both actions are kept - UpsertMdFile(null) to create file, ProcessMdFile to process it
+			// Dependency graph ensures UpsertMdFile executes before ProcessMdFile
+			const types = collapsed.map((a) => a.type);
+			expect(types).toContain(VaultActionType.UpsertMdFile);
+			expect(types).toContain(VaultActionType.ProcessMdFile);
 		});
 	});
 

@@ -32,9 +32,6 @@ export function translateVaultAction(action: VaultAction): TreeAction | null {
 		case "CreateFile":
 			return createFileAction(payload.splitPath);
 
-		case "UpsertMdFile":
-			return createScrollAction(payload.splitPath);
-
 		// Trash actions
 		case "TrashFolder":
 		case "TrashFile":
@@ -49,8 +46,18 @@ export function translateVaultAction(action: VaultAction): TreeAction | null {
 
 		// Content operations don't affect tree structure
 		case "ProcessMdFile":
-		case "UpsertMdFile":
 			return null;
+
+		case "UpsertMdFile":
+			// UpsertMdFile can create new files or update content
+			// If content is provided (not null/undefined), it's a content update → return null
+			// If content is null/undefined, it's ensuring file exists (might create) → return createScrollAction
+			if (payload.content !== null && payload.content !== undefined) {
+				// Content update - doesn't affect tree structure
+				return null;
+			}
+			// Ensure file exists (might create new file) - affects tree structure
+			return createScrollAction(payload.splitPath);
 	}
 }
 

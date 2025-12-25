@@ -76,7 +76,7 @@ describe("buildDependencyGraph", () => {
 		expect(createDeps?.requiredBy).toContain(process);
 	});
 
-	it("should detect UpsertMdFile depends on UpsertMdFile for same file", () => {
+	it("should not create dependency between UpsertMdFile actions for same file (they collapse)", () => {
 		const create: VaultAction = {
 			payload: { content: "", splitPath: mdFile("file") },
 			type: VaultActionType.UpsertMdFile,
@@ -90,7 +90,9 @@ describe("buildDependencyGraph", () => {
 
 		const replaceKey = getActionKey(replace);
 		const replaceDeps = graph.get(replaceKey);
-		expect(replaceDeps?.dependsOn).toContain(create);
+		// UpsertMdFile actions for same file should collapse, not create dependencies
+		// They only depend on parent folders
+		expect(replaceDeps?.dependsOn).not.toContain(create);
 	});
 
 	it("should detect CreateFolder depends on parent CreateFolder", () => {
@@ -266,7 +268,7 @@ describe("buildDependencyGraph", () => {
 		expect(processDeps?.dependsOn).toContain(ensureExist);
 	});
 
-	it("should detect UpsertMdFile depends on UpsertMdFile with null content (EnsureExist)", () => {
+	it("should not create dependency between UpsertMdFile(null) and UpsertMdFile(content) (they collapse)", () => {
 		const ensureExist: VaultAction = {
 			payload: { content: null, splitPath: mdFile("file") },
 			type: VaultActionType.UpsertMdFile,
@@ -280,7 +282,9 @@ describe("buildDependencyGraph", () => {
 
 		const replaceKey = getActionKey(replace);
 		const replaceDeps = graph.get(replaceKey);
-		expect(replaceDeps?.dependsOn).toContain(ensureExist);
+		// UpsertMdFile actions for same file should collapse, not create dependencies
+		// They only depend on parent folders
+		expect(replaceDeps?.dependsOn).not.toContain(ensureExist);
 	});
 
 	it("should detect UpsertMdFile with null content depends on parent folders", () => {

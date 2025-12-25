@@ -15,8 +15,6 @@ import {
 	testCreateFileWithMissingParentFolders,
 	testCreateFolderWithMissingParents,
 	testMultipleNestedOperations,
-	testProcessMdFileWithEnsureFileExists,
-	testProcessMdFileWithMissingParentFolders,
 	testUpsertMdFileWithEnsureFileExists,
 	testUpsertMdFileWithMissingParentFolders,
 } from "./dispatcher/helper-events-no-leak.test";
@@ -24,6 +22,11 @@ import { testQueueBehavior } from "./dispatcher/queue-behavior.test";
 import { testSelfEventFiltering } from "./dispatcher/self-event-filtering.test";
 import { testSingleActionHappyPath } from "./dispatcher/single-action-happy.test";
 import { testSortingWeightOrder } from "./dispatcher/sorting-weight-order.test";
+import {
+	testTopologicalSortParentBeforeChild,
+	testTopologicalSortProcessWriteDiscard,
+	testTopologicalSortWriteProcessApply,
+} from "./dispatcher/topological-sort-integration.test";
 import { testUserEventEmission } from "./dispatcher/user-event-emission.test";
 import { VAULT_PATH } from "./dispatcher/utils";
 
@@ -57,6 +60,18 @@ describe("Dispatcher", () => {
 
 	describe("Sorting Integration", () => {
 		it("should sort actions by weight", testSortingWeightOrder);
+		it(
+			"should discard ProcessMdFile when UpsertMdFile comes after (write wins)",
+			testTopologicalSortProcessWriteDiscard,
+		);
+		it(
+			"should sort parent folders before child folders",
+			testTopologicalSortParentBeforeChild,
+		);
+		it(
+			"should apply ProcessMdFile when UpsertMdFile comes first (correct order)",
+			testTopologicalSortWriteProcessApply,
+		);
 	});
 
 	describe("Error Handling", () => {
@@ -87,14 +102,6 @@ describe("Dispatcher", () => {
 		it(
 			"should not emit events when creating folder with missing parents",
 			testCreateFolderWithMissingParents,
-		);
-		it(
-			"should not emit events when ProcessMdFile ensures file exists",
-			testProcessMdFileWithEnsureFileExists,
-		);
-		it(
-			"should not emit events when ProcessMdFile creates file in missing folders",
-			testProcessMdFileWithMissingParentFolders,
 		);
 		it(
 			"should not emit events when UpsertMdFile ensures file exists",

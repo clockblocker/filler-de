@@ -6,6 +6,9 @@ export async function collapseActions(
 	actions: readonly VaultAction[],
 ): Promise<VaultAction[]> {
 	const byPath = new Map<string, VaultAction>();
+	// Track actions that need to be kept even when they share a key with another action
+	// Used for cases like UpsertMdFile(null) + ProcessMdFile where both are needed
+	const additionalActions = new Set<VaultAction>();
 
 	for (const action of actions) {
 		const key = getPathKey(action);
@@ -35,8 +38,25 @@ export async function collapseActions(
 		if (isProcess(action)) {
 			if (existing) {
 				if (isUpsertMdFile(existing)) {
-					// Process on create - keep process (will read from disk)
-					byPath.set(key, action);
+					// UpsertMdFile + ProcessMdFile
+					const upsertContent = existing.payload.content;
+					if (upsertContent === null || upsertContent === undefined) {
+						// EnsureExist + ProcessMdFile: keep both (file needs to be created first)
+						// Don't collapse - both actions needed, dependency graph ensures correct order
+						byPath.set(key, existing); // Keep UpsertMdFile in map
+						additionalActions.add(action); // Keep ProcessMdFile as additional action
+						continue;
+					}
+					// UpsertMdFile(content) + ProcessMdFile: apply transform to content, convert to UpsertMdFile
+					const transformed =
+						await action.payload.transform(upsertContent);
+					byPath.set(key, {
+						...existing,
+						payload: {
+							...existing.payload,
+							content: transformed,
+						},
+					});
 					continue;
 				}
 				if (isProcess(existing)) {
@@ -64,16 +84,55 @@ export async function collapseActions(
 			if (existing) {
 				if (existing.type === VaultActionType.UpsertMdFile) {
 					// Both UpsertMdFile - collapse based on content
-					if (action.payload.content === null || action.payload.content === undefined) {
+					if (
+						action.payload.content === null ||
+						action.payload.content === undefined
+					) {
 						// Action is EnsureExist, existing is actual create - keep existing
 						continue;
 					}
-					if (existing.payload.content === null || existing.payload.content === undefined) {
+					if (
+						existing.payload.content === null ||
+						existing.payload.content === undefined
+					) {
 						// Existing is EnsureExist, action is actual create - replace with action
+						// Also remove ProcessMdFile from additionalActions if it exists for this key
+						for (const additional of additionalActions) {
+							if (
+								isProcess(additional) &&
+								getPathKey(additional) === key
+							) {
+								additionalActions.delete(additional);
+								break;
+							}
+						}
 						byPath.set(key, action);
 						continue;
 					}
 					// Both have content - latest wins
+					byPath.set(key, action);
+					continue;
+				}
+				if (isProcess(existing)) {
+					// ProcessMdFile + UpsertMdFile
+					const upsertContent = action.payload.content;
+					if (upsertContent === null || upsertContent === undefined) {
+						// ProcessMdFile + UpsertMdFile(null): keep both (ProcessMdFile needs file, UpsertMdFile(null) ensures it)
+						byPath.set(key, action); // Keep UpsertMdFile(null) in map
+						additionalActions.add(existing); // Keep ProcessMdFile as additional action
+						continue;
+					}
+					// ProcessMdFile + UpsertMdFile(content): write wins, discard process, keep UpsertMdFile as-is
+					// Also remove ProcessMdFile from additionalActions if it exists for this key
+					for (const additional of additionalActions) {
+						if (
+							isProcess(additional) &&
+							getPathKey(additional) === key
+						) {
+							additionalActions.delete(additional);
+							break;
+						}
+					}
 					byPath.set(key, action);
 					continue;
 				}
@@ -86,7 +145,13 @@ export async function collapseActions(
 		byPath.set(key, action);
 	}
 
-	return Array.from(byPath.values());
+	// Combine actions from map and additional actions
+	const result = Array.from(byPath.values());
+	// Add additional actions (e.g., ProcessMdFile when UpsertMdFile(null) is also kept)
+	for (const additional of additionalActions) {
+		result.push(additional);
+	}
+	return result;
 }
 
 function getPathKey(action: VaultAction): string {

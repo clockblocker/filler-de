@@ -45,17 +45,20 @@ describe("Collapse + Dependencies", () => {
 			type: VaultActionType.ProcessMdFile,
 		};
 
-		// Collapse: UpsertMdFile + ProcessMdFile → ProcessMdFile (UpsertMdFile removed)
+		// Collapse: UpsertMdFile + ProcessMdFile → UpsertMdFile with transformed content
 		const collapsed = await collapseActions([create, process]);
 		expect(collapsed).toHaveLength(1);
-		expect(collapsed[0].type).toBe(VaultActionType.ProcessMdFile);
+		expect(collapsed[0].type).toBe(VaultActionType.UpsertMdFile);
+		expect(
+			(collapsed[0] as typeof create).payload.content,
+		).toBe("initial\nprocessed");
 
-		// After collapse, ProcessMdFile has no UpsertMdFile dependency
+		// After collapse, UpsertMdFile has no file dependencies (just parent folders if any)
 		// This is expected - dispatcher will re-ensure requirements
 		const graph = buildDependencyGraph(collapsed);
-		const processKey = getActionKey(process);
-		const processDeps = graph.get(processKey);
-		expect(processDeps?.dependsOn).toHaveLength(0); // No UpsertMdFile in collapsed actions
+		const collapsedKey = getActionKey(collapsed[0]);
+		const collapsedDeps = graph.get(collapsedKey);
+		expect(collapsedDeps?.dependsOn).toHaveLength(0); // No file dependencies, only parent folders if any
 	});
 
 	it("should preserve folder dependencies after collapse", async () => {
@@ -123,6 +126,34 @@ describe("Collapse + Dependencies", () => {
 		const processKey = getActionKey(process1);
 		const processDeps = graph.get(processKey);
 		expect(processDeps?.dependsOn).toHaveLength(0); // No UpsertMdFile in collapsed actions
+	});
+
+	it("should preserve dependency when ProcessMdFile comes first and UpsertMdFile(null) comes after", async () => {
+		// This simulates the order from ensureDestinationsExist: ProcessMdFile first, UpsertMdFile(null) added after
+		const process: VaultAction = {
+			payload: {
+				splitPath: mdFile("file"),
+				transform: async (c) => c + "\nprocessed",
+			},
+			type: VaultActionType.ProcessMdFile,
+		};
+		const upsert: VaultAction = {
+			payload: { content: null, splitPath: mdFile("file") },
+			type: VaultActionType.UpsertMdFile,
+		};
+
+		// Collapse: ProcessMdFile first, UpsertMdFile(null) after
+		const collapsed = await collapseActions([process, upsert]);
+		expect(collapsed).toHaveLength(2);
+		expect(collapsed.some(a => a.type === VaultActionType.UpsertMdFile)).toBe(true);
+		expect(collapsed.some(a => a.type === VaultActionType.ProcessMdFile)).toBe(true);
+
+		// Dependency graph should find ProcessMdFile depends on UpsertMdFile
+		const graph = buildDependencyGraph(collapsed);
+		const processKey = getActionKey(process);
+		const processDeps = graph.get(processKey);
+		expect(processDeps?.dependsOn).toHaveLength(1);
+		expect(processDeps?.dependsOn[0]?.type).toBe(VaultActionType.UpsertMdFile);
 	});
 });
 

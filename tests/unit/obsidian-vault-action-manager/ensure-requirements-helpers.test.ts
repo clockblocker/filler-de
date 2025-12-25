@@ -562,7 +562,9 @@ describe("ensureDestinationsExist", () => {
 		expect(result.length).toBe(1);
 		expect(result[0]?.type).toBe(VaultActionType.UpsertMdFile);
 		if (result[0]?.type === VaultActionType.UpsertMdFile) {
-			expect(result[0].payload.content).toBe(""); // Empty content for create
+			// Use content: null (EnsureExist) so collapse can keep both actions if ProcessMdFile is present
+			// File will be created with empty content if it doesn't exist
+			expect(result[0].payload.content).toBe(null);
 		}
 	});
 });

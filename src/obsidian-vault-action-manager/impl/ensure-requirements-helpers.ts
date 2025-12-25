@@ -398,8 +398,10 @@ export async function ensureDestinationsExist(
 
 		// Check if UpsertMdFile already exists in the batch
 		if (!hasActionForKey(existingActions, fileKey, "file")) {
+			// Use content: null (EnsureExist) so collapse keeps both ProcessMdFile + UpsertMdFile(null)
+			// Dependency graph ensures UpsertMdFile executes first, then ProcessMdFile processes it
 			actionsToAdd.push({
-				payload: { content: "", splitPath: fileSplitPath },
+				payload: { content: null, splitPath: fileSplitPath },
 				type: VaultActionType.UpsertMdFile,
 			});
 		}

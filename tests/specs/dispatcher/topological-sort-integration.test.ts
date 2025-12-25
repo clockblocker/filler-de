@@ -1,99 +1,145 @@
 /// <reference types="@wdio/globals/types" />
-import { expect } from "@wdio/globals";
-import { getVaultActionManagerTestingApi } from "./utils";
+import { browser, expect } from "@wdio/globals";
+import type { VaultActionManagerTestingApi } from "./utils";
 
-describe("Topological Sort Integration", () => {
-	it("should sort ProcessMdFile after UpsertMdFile when feature flag enabled", async () => {
-		const { manager, splitPath } = getVaultActionManagerTestingApi();
+export const testTopologicalSortProcessWriteDiscard = async () => {
+		const result = await browser.executeObsidian(async ({ app }: any) => {
+			const api = app?.plugins?.plugins?.["cbcr-text-eater-de"]
+				?.getVaultActionManagerTestingApi?.() as
+				| VaultActionManagerTestingApi
+				| undefined;
+			if (!api) throw new Error("testing api unavailable");
 
-		// Create actions in wrong order (process before create)
-		const actions = [
-			{
-				payload: {
-					splitPath: splitPath("test.md") as unknown,
-					transform: (content: string) => content + "\nprocessed",
+			const { manager, splitPath } = api;
+
+			// Create actions in wrong order (process before write)
+			// ProcessMdFile should be discarded because write comes after
+			const actions = [
+				{
+					payload: {
+						splitPath: splitPath("test.md"),
+						transform: (content: string) => content + "\nprocessed",
+					},
+					type: "ProcessMdFile",
 				},
-				type: "ProcessMdFile",
-			},
-			{
-				payload: {
-					content: "initial",
-					splitPath: splitPath("test.md") as unknown,
+				{
+					payload: {
+						content: "initial",
+						splitPath: splitPath("test.md"),
+					},
+					type: "UpsertMdFile",
 				},
-				type: "UpsertMdFile",
-			},
-		] as unknown[];
+			];
 
-		const result = await manager.dispatch(actions);
-		expect(result.isOk()).toBe(true);
+			await manager.dispatch(actions);
 
-		// File should exist with processed content
-		const content = await manager.readContent(splitPath("test.md") as unknown);
-		expect(content).toContain("initial");
-		expect(content).toContain("processed");
-	});
+			// File should exist with just the write content (process discarded)
+			const content = await manager.readContent(splitPath("test.md"));
 
-	it("should sort parent folders before child folders", async () => {
-		const { manager, splitPath } = getVaultActionManagerTestingApi();
+			return {
+				content,
+				success: true,
+			};
+		});
 
-		// Create actions in wrong order (child before parent)
-		const actions = [
-			{
-				payload: {
-					splitPath: splitPath("parent/child") as unknown,
+	expect((result as any).error).toBeUndefined();
+	expect(result.success).toBe(true);
+	expect(result.content).toBe("initial");
+	// Process should be discarded, so "processed" should NOT be in content
+	expect(result.content).not.toContain("processed");
+};
+
+export const testTopologicalSortParentBeforeChild = async () => {
+		const result = await browser.executeObsidian(async ({ app }: any) => {
+			const api = app?.plugins?.plugins?.["cbcr-text-eater-de"]
+				?.getVaultActionManagerTestingApi?.() as
+				| VaultActionManagerTestingApi
+				| undefined;
+			if (!api) throw new Error("testing api unavailable");
+
+			const { manager, splitPath } = api;
+
+			// Create actions in wrong order (child before parent)
+			const actions = [
+				{
+					payload: {
+						splitPath: splitPath("parent/child"),
+					},
+					type: "CreateFolder",
 				},
-				type: "CreateFolder",
-			},
-			{
-				payload: {
-					splitPath: splitPath("parent") as unknown,
+				{
+					payload: {
+						splitPath: splitPath("parent"),
+					},
+					type: "CreateFolder",
 				},
-				type: "CreateFolder",
-			},
-		] as unknown[];
+			];
 
-		const result = await manager.dispatch(actions);
-		expect(result.isOk()).toBe(true);
+			await manager.dispatch(actions);
 
-		// Both folders should exist
-		const parentExists = await manager.exists(
-			splitPath("parent") as unknown,
-		);
-		const childExists = await manager.exists(
-			splitPath("parent/child") as unknown,
-		);
-		expect(parentExists).toBe(true);
-		expect(childExists).toBe(true);
-	});
+			// Both folders should exist
+			const parentExists = await manager.exists(splitPath("parent"));
+			const childExists = await manager.exists(
+				splitPath("parent/child"),
+			);
 
-	it("should sort UpsertMdFile before ProcessMdFile for nested files", async () => {
-		const { manager, splitPath } = getVaultActionManagerTestingApi();
+			return {
+				childExists,
+				parentExists,
+				success: true,
+			};
+		});
 
-		const actions = [
-			{
-				payload: {
-					splitPath: splitPath("folder/file.md") as unknown,
-					transform: (content: string) => content + "\nprocessed",
+	expect((result as any).error).toBeUndefined();
+	expect(result.success).toBe(true);
+	expect(result.parentExists).toBe(true);
+	expect(result.childExists).toBe(true);
+};
+
+export const testTopologicalSortWriteProcessApply = async () => {
+		const result = await browser.executeObsidian(async ({ app }: any) => {
+			const api = app?.plugins?.plugins?.["cbcr-text-eater-de"]
+				?.getVaultActionManagerTestingApi?.() as
+				| VaultActionManagerTestingApi
+				| undefined;
+			if (!api) throw new Error("testing api unavailable");
+
+			const { manager, splitPath } = api;
+
+			// Create actions in correct order (write before process)
+			// ProcessMdFile should be applied to the write content
+			const actions = [
+				{
+					payload: {
+						content: "initial",
+						splitPath: splitPath("folder/file.md"),
+					},
+					type: "UpsertMdFile",
 				},
-				type: "ProcessMdFile",
-			},
-			{
-				payload: {
-					content: "initial",
-					splitPath: splitPath("folder/file.md") as unknown,
+				{
+					payload: {
+						splitPath: splitPath("folder/file.md"),
+						transform: (content: string) => content + "\nprocessed",
+					},
+					type: "ProcessMdFile",
 				},
-				type: "UpsertMdFile",
-			},
-		] as unknown[];
+			];
 
-		const result = await manager.dispatch(actions);
-		expect(result.isOk()).toBe(true);
+			await manager.dispatch(actions);
 
-		const content = await manager.readContent(
-			splitPath("folder/file.md") as unknown,
-		);
-		expect(content).toContain("initial");
-		expect(content).toContain("processed");
-	});
-});
+			const content = await manager.readContent(
+				splitPath("folder/file.md"),
+			);
+
+			return {
+				content,
+				success: true,
+			};
+		});
+
+	expect((result as any).error).toBeUndefined();
+	expect(result.success).toBe(true);
+	expect(result.content).toContain("initial");
+	expect(result.content).toContain("processed");
+};
 
