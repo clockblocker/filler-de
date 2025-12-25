@@ -1,7 +1,6 @@
 import { ok } from "neverthrow";
 import type { VaultAction } from "../types/vault-action";
 import type { Dispatcher, DispatchResult } from "./dispatcher";
-import type { SelfEventTrackerLegacy } from "./self-event-tracker";
 
 /**
  * ActionQueue implements call stack + event queue pattern.

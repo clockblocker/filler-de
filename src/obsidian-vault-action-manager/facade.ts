@@ -15,7 +15,7 @@ import type {
 	DispatchResult,
 	ObsidianVaultActionManager,
 	Teardown,
-	VaultEventHandlerLegacy,
+	VaultEventHandler,
 } from "./index";
 import type {
 	SplitPath,
@@ -35,7 +35,7 @@ export class ObsidianVaultActionManagerImpl
 	private readonly selfEventTracker: SelfEventTrackerLegacy;
 	private readonly actionQueue: ActionQueue;
 	private readonly eventAdapter: EventAdapter;
-	private readonly subscribers = new Set<VaultEventHandlerLegacy>();
+	private readonly subscribers = new Set<VaultEventHandler>();
 	private isListening = false;
 
 	constructor(app: App) {
@@ -55,7 +55,12 @@ export class ObsidianVaultActionManagerImpl
 			this.opened,
 			app.vault,
 		);
-		this.reader = new Reader(this.opened, tfileHelper, tfolderHelper, app.vault);
+		this.reader = new Reader(
+			this.opened,
+			tfileHelper,
+			tfolderHelper,
+			app.vault,
+		);
 		this.selfEventTracker = new SelfEventTrackerLegacy();
 		const existenceChecker: ExistenceChecker = {
 			exists: async (splitPath) => {
@@ -80,13 +85,13 @@ export class ObsidianVaultActionManagerImpl
 		if (this.isListening) return;
 		this.isListening = true;
 		this.eventAdapter.start(async (event) => {
-			for (const h of this.subscribers) {
-				await h(event);
+			for (const handel of this.subscribers) {
+				await handel(event);
 			}
 		});
 	}
 
-	subscribe(handler: VaultEventHandlerLegacy): Teardown {
+	subscribe(handler: VaultEventHandler): Teardown {
 		this.subscribers.add(handler);
 		if (!this.isListening) {
 			this.startListening();
