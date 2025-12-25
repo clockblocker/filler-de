@@ -1,5 +1,5 @@
 import { getParsedUserSettings } from "../../../global-state/global-state";
-import type { CoreNameChainFromRoot } from "../types/split-basename";
+import type { CoreNameChainFromRoot } from "../naming/parsed-basename";
 import { parseBasenameDeprecated } from "../utils/parse-basename";
 
 /**

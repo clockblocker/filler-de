@@ -1,8 +1,8 @@
 import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
 import { collectImpactedSections } from "../codex";
 import type { LibraryTree } from "../library-tree";
+import type { CoreNameChainFromRoot } from "../naming/parsed-basename";
 import { translateVaultAction } from "../reconciliation";
-import type { CoreNameChainFromRoot } from "../types/split-basename";
 
 export type TreeApplierContext = {
 	tree: LibraryTree;

@@ -17,16 +17,16 @@ export {
 } from "./healing";
 export { Librarian } from "./librarian";
 export { LibraryTree } from "./library-tree";
+export type {
+	CoreName,
+	CoreNameChainFromRoot,
+	ParsedBasename,
+} from "./naming/parsed-basename";
 export {
 	DragInSubtype,
 	HealingMode,
 	RuntimeSubtype,
 } from "./types/literals";
-export type {
-	CoreName,
-	CoreNameChainFromRoot,
-	ParsedBasename,
-} from "./types/split-basename";
 export type { TreeAction } from "./types/tree-action";
 export type {
 	FileNode,

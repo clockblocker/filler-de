@@ -3,7 +3,7 @@ import type {
 	CoreName,
 	CoreNameChainFromRoot,
 	SplitSuffix,
-} from "../types/split-basename";
+} from "../naming/parsed-basename";
 
 /** @deprecated */
 export function computeSuffixFromPathDepreacated(

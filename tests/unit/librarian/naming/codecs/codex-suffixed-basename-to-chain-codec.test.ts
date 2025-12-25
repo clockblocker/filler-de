@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { suffixedBasenameForСodexToParentSectionChainCodec } from "../../../../../src/commanders/librarian/naming/codecs/codex-suffixed-basename-to-chain-codec";
+import { suffixedBasenameForСodexToParentSectionChainCodec } from "../../../../../src/commanders/librarian/naming/codecs/suffixed-basename-for-codex-to-chain-codec";
 import { CODEX_CORE_NAME } from "../../../../../src/commanders/librarian/types/literals";
 import * as globalState from "../../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../../src/global-state/parsed-settings";

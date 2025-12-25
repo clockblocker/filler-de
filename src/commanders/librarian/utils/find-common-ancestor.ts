@@ -1,4 +1,4 @@
-import type { CoreNameChainFromRoot } from "../types/split-basename";
+import type { CoreNameChainFromRoot } from "../naming/parsed-basename";
 
 export function findCommonAncestor(
 	coreNameChains: CoreNameChainFromRoot[],

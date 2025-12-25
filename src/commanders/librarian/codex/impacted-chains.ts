@@ -2,7 +2,7 @@
  * Utilities for collecting and expanding impacted chains.
  */
 
-import type { CoreNameChainFromRoot } from "../types/split-basename";
+import type { CoreNameChainFromRoot } from "../naming/parsed-basename";
 import { joinPathPartsDeprecated } from "../utils/tree-path-utils";
 
 /**

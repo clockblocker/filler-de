@@ -4,8 +4,8 @@ import { getParsedUserSettings } from "../../global-state/global-state";
 import type { ObsidianVaultActionManager } from "../../obsidian-vault-action-manager";
 import { logger } from "../../utils/logger";
 import type { Librarian } from "./librarian";
+import type { CoreNameChainFromRoot } from "./naming/parsed-basename";
 import { CODEX_CORE_NAME } from "./types/literals";
-import type { CoreNameChainFromRoot } from "./types/split-basename";
 
 /**
  * Handle codex checkbox click.

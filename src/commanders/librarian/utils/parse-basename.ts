@@ -1,5 +1,5 @@
 import { getParsedUserSettings } from "../../../global-state/global-state";
-import type { ParsedBasename } from "../types/split-basename";
+import type { ParsedBasename } from "../naming/parsed-basename";
 
 /** @deprecated */
 export function parseBasenameDeprecated(basename: string): ParsedBasename {

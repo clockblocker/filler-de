@@ -6,7 +6,7 @@ import type { VaultAction } from "../../../obsidian-vault-action-manager/types/v
 import { VaultActionType } from "../../../obsidian-vault-action-manager/types/vault-action";
 import { logger } from "../../../utils/logger";
 import { generateCodexContent } from "../codex";
-import type { CoreNameChainFromRoot } from "../types/split-basename";
+import type { CoreNameChainFromRoot } from "../naming/parsed-basename";
 import type { SectionNode } from "../types/tree-node";
 import { TreeNodeType } from "../types/tree-node";
 import { addCodexPrefixDeprecated } from "../utils/codex-utils";

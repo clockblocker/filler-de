@@ -3,7 +3,7 @@ import { getParsedUserSettings } from "../../../../global-state/global-state";
 import {
 	type CoreNameChainFromRoot,
 	CoreNameChainFromRootSchema,
-} from "../../types/split-basename";
+} from "../parsed-basename";
 
 /**
  * Zod codec from section basename (without prefix) to CoreNameChainFromRoot.

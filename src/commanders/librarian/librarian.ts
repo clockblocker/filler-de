@@ -12,6 +12,7 @@ import {
 } from "./codex/impacted-chains";
 import { healOnInit, type InitHealResult } from "./healing";
 import type { LibraryTree } from "./library-tree";
+import type { CoreNameChainFromRoot } from "./naming/parsed-basename";
 import {
 	type CodexRegeneratorContext,
 	type EventHandlerContext,
@@ -25,7 +26,6 @@ import {
 	writeStatusToMetadata,
 } from "./orchestration";
 import { TreeActionType } from "./types/literals";
-import type { CoreNameChainFromRoot } from "./types/split-basename";
 import { TreeNodeStatus, TreeNodeType } from "./types/tree-node";
 import { buildCanonicalPathForLeafDeprecated } from "./utils/tree-path-utils";
 

@@ -77,6 +77,7 @@ export const treeNodeToSuffixedSplitPathCodec = z.codec(
 				const coreName = basename;
 				const startIndex = pathParts[0] === libraryRoot ? 1 : 0;
 				const coreNameChainToParent = pathParts.slice(startIndex);
+
 				return {
 					children: [],
 					coreName,

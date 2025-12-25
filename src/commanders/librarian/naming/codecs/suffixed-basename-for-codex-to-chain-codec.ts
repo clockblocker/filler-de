@@ -1,6 +1,6 @@
 import z from "zod";
 import { CODEX_CORE_NAME } from "../../types/literals";
-import { CoreNameChainFromRootSchema } from "../../types/split-basename";
+import { CoreNameChainFromRootSchema } from "../parsed-basename";
 import { suffixedBasenameToChainCodec } from "./suffixed-basename-to-chain-codec";
 
 /**

@@ -12,10 +12,10 @@ import {
 } from "../codex/impacted-chains";
 import { detectRenameMode } from "../healing";
 import type { LibraryTree } from "../library-tree";
-import { isBasenamePrefixedAsCodex } from "../naming/start";
+import type { CoreNameChainFromRoot } from "../naming/parsed-basename";
 import { translateVaultAction } from "../reconciliation/vault-to-tree";
 import { TreeActionType } from "../types/literals";
-import type { CoreNameChainFromRoot } from "../types/split-basename";
+import { isBasenamePrefixedAsCodexDeprecated } from "../utils/codex-utils";
 import { resolveActions } from "./action-resolver";
 import {
 	type CodexRegeneratorContext,
@@ -130,7 +130,13 @@ export async function handleDelete(
 ): Promise<void> {
 	// Skip codex files
 	const basenameWithoutExt = extractBasenameWithoutExt(path);
-	if (shouldIgnorePath(path, basenameWithoutExt, isBasenamePrefixedAsCodex)) {
+	if (
+		shouldIgnorePath(
+			path,
+			basenameWithoutExt,
+			isBasenamePrefixedAsCodexDeprecated,
+		)
+	) {
 		return;
 	}
 
@@ -176,7 +182,7 @@ export async function handleRename(
 	// If a codex file is being renamed, delete it instead (codexes are auto-generated)
 	if (!isFolder) {
 		const oldBasenameWithoutExt = extractBasenameWithoutExt(oldPath);
-		if (isBasenamePrefixedAsCodex(oldBasenameWithoutExt)) {
+		if (isBasenamePrefixedAsCodexDeprecated(oldBasenameWithoutExt)) {
 			// Delete the old codex file - regeneration will create new one with correct name
 			const oldSplitPath = context.splitPath(oldPath);
 			if (oldSplitPath.type === SplitPathType.MdFile) {
@@ -397,7 +403,7 @@ export async function handleCreate(
 
 	// Skip codex files - they're generated, not source data
 	const basenameWithoutExt = extractBasenameWithoutExt(path);
-	if (isBasenamePrefixedAsCodex(basenameWithoutExt)) {
+	if (isBasenamePrefixedAsCodexDeprecated(basenameWithoutExt)) {
 		return [];
 	}
 
