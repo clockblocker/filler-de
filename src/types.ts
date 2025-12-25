@@ -10,6 +10,6 @@ export const DEFAULT_SETTINGS: TextEaterSettings = {
 	apiProvider: "google",
 	googleApiKey: "",
 	libraryRoot: "Library",
-	maxSectionDepth: 4,
+	maxSectionDepth: 6,
 	suffixDelimiter: "-",
 };

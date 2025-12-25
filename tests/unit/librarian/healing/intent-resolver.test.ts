@@ -1,16 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { resolveRuntimeIntent } from "../../../../src/commanders/librarian/healing/intent-resolver";
 import { RuntimeSubtype } from "../../../../src/commanders/librarian/types/literals";
-import type { SplitPathToMdFile } from "../../../../src/obsidian-vault-action-manager/types/split-path";
 import * as globalState from "../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
+import type { SplitPathToMdFile } from "../../../../src/obsidian-vault-action-manager/types/split-path";
 import { SplitPathType } from "../../../../src/obsidian-vault-action-manager/types/split-path";
 
 // Default settings for tests
 const defaultSettings: ParsedUserSettings = {
 	apiProvider: "google",
 	googleApiKey: "",
-	maxSectionDepth: 4,
+	maxSectionDepth: 6,
 	splitPathToLibraryRoot: {
 		basename: "Library",
 		pathParts: [],

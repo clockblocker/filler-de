@@ -1,6 +1,9 @@
-import type { TFile, TFolder } from "obsidian";
+import { type TFile, TFolder, type Vault } from "obsidian";
 import { logger } from "../../utils/logger";
 import type { OpenedFileService } from "../file-services/active-view/opened-file-service";
+import type { TFileHelper } from "../file-services/background/helpers/tfile-helper";
+import type { TFolderHelper } from "../file-services/background/helpers/tfolder-helper";
+import { systemPathToSplitPath } from "../helpers/pathfinder";
 import type {
 	SplitPath,
 	SplitPathToFile,
@@ -12,29 +15,51 @@ import type {
 	SplitPathWithReader,
 	SplitPathWithTRef,
 } from "../types/split-path";
-import type { BackgroundFileServiceLegacy } from "./background-file-service";
 import { makeSystemPathForSplitPath } from "./split-path";
 
 export class Reader {
 	constructor(
 		private readonly opened: OpenedFileService,
-		private readonly background: BackgroundFileServiceLegacy,
+		private readonly tfileHelper: TFileHelper,
+		private readonly tfolderHelper: TFolderHelper,
+		private readonly vault: Vault,
 	) {}
 
 	async readContent(target: SplitPathToMdFile): Promise<string> {
 		if (await this.opened.isInActiveView(target)) {
 			return this.opened.readContent(target);
 		}
-		return this.background.readContent(target);
+		const fileResult = await this.tfileHelper.getFile(target);
+		if (fileResult.isErr()) {
+			throw new Error(`File not found: ${fileResult.error}`);
+		}
+		return this.vault.read(fileResult.value);
 	}
 
 	async exists(target: SplitPath): Promise<boolean> {
 		if (await this.opened.exists(target)) return true;
-		return this.background.exists(target);
+		if (target.type === "Folder") {
+			const result = await this.tfolderHelper.getFolder(target);
+			return result.isOk();
+		}
+		const result = await this.tfileHelper.getFile(target);
+		return result.isOk();
 	}
 
 	async list(folder: SplitPathToFolder): Promise<SplitPath[]> {
-		const fromBg = await this.background.list(folder);
+		const folderResult = await this.tfolderHelper.getFolder(folder);
+		const fromBg: SplitPath[] = folderResult.isOk()
+			? folderResult.value.children.map((child) => {
+					if (child instanceof TFolder) {
+						return systemPathToSplitPath.decode(
+							child.path,
+						) as SplitPathToFolder;
+					}
+					return systemPathToSplitPath.decode(
+						child.path,
+					) as SplitPathToFile;
+				})
+			: [];
 		const fromOpened = await this.opened.list(folder);
 
 		const dedup = new Map<string, SplitPath>();
@@ -102,7 +127,20 @@ export class Reader {
 		if (await this.opened.exists(target)) {
 			return this.opened.getAbstractFile(target);
 		}
-		return this.background.getAbstractFile(target);
+		if (target.type === "Folder") {
+			const result = await this.tfolderHelper.getFolder(target);
+			if (result.isErr()) {
+				throw new Error(`Folder not found: ${result.error}`);
+			}
+			return result.value as SP["type"] extends "Folder"
+				? TFolder
+				: TFile;
+		}
+		const result = await this.tfileHelper.getFile(target);
+		if (result.isErr()) {
+			throw new Error(`File not found: ${result.error}`);
+		}
+		return result.value as SP["type"] extends "Folder" ? TFolder : TFile;
 	}
 
 	async listAllFilesWithMdReaders(

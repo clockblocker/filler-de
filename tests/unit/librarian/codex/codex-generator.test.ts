@@ -10,7 +10,7 @@ import { SplitPathType } from "../../../../src/obsidian-vault-action-manager/typ
 const defaultSettings: ParsedUserSettings = {
 	apiProvider: "google",
 	googleApiKey: "",
-	maxSectionDepth: 4,
+	maxSectionDepth: 6,
 	splitPathToLibraryRoot: {
 		basename: "Library",
 		pathParts: [],

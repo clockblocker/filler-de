@@ -1,19 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { TreeNodeStatus, TreeNodeType } from "../../../../src/commanders/librarian/types/tree-node";
 import { splitPathToLeaf } from "../../../../src/commanders/librarian/utils/split-path-to-leaf";
+import * as globalState from "../../../../src/global-state/global-state";
+import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
 import type {
 	SplitPathToFile,
 	SplitPathToMdFile,
 } from "../../../../src/obsidian-vault-action-manager/types/split-path";
-import * as globalState from "../../../../src/global-state/global-state";
-import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
 import { SplitPathType } from "../../../../src/obsidian-vault-action-manager/types/split-path";
 
 // Default settings for tests
 const defaultSettings: ParsedUserSettings = {
 	apiProvider: "google",
 	googleApiKey: "",
-	maxSectionDepth: 4,
+	maxSectionDepth: 6,
 	splitPathToLibraryRoot: {
 		basename: "Library",
 		pathParts: [],

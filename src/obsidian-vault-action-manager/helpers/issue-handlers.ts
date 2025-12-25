@@ -1,3 +1,5 @@
+import { logger } from "../../utils/logger";
+
 // Notice is optional - may not be available in test environment
 let Notice: (new (message: string) => unknown) | null = null;
 try {
@@ -40,8 +42,8 @@ function handleIssue({
 
 	if (withLogs) {
 		issueType === "error"
-			? console.error(errorMessage)
-			: console.warn(errorMessage);
+			? logger.error(errorMessage)
+			: logger.warn(errorMessage);
 	}
 }
 

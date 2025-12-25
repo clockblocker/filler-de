@@ -5,21 +5,21 @@ import {
 	handleFolderDragIn,
 } from "../../../../src/commanders/librarian/healing/drag-handler";
 import { DragInSubtype } from "../../../../src/commanders/librarian/types/literals";
+import * as globalState from "../../../../src/global-state/global-state";
+import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
 import type {
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
 } from "../../../../src/obsidian-vault-action-manager/types/split-path";
-import { VaultActionType } from "../../../../src/obsidian-vault-action-manager/types/vault-action";
-import * as globalState from "../../../../src/global-state/global-state";
-import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
 import { SplitPathType } from "../../../../src/obsidian-vault-action-manager/types/split-path";
+import { VaultActionType } from "../../../../src/obsidian-vault-action-manager/types/vault-action";
 
 // Default settings for tests
 const defaultSettings: ParsedUserSettings = {
 	apiProvider: "google",
 	googleApiKey: "",
-	maxSectionDepth: 4,
+	maxSectionDepth: 6,
 	splitPathToLibraryRoot: {
 		basename: "Library",
 		pathParts: [],

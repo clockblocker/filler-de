@@ -25,7 +25,6 @@ import { TFileHelper } from "./obsidian-vault-action-manager/file-services/backg
 import { TFolderHelper } from "./obsidian-vault-action-manager/file-services/background/helpers/tfolder-helper";
 import { logError } from "./obsidian-vault-action-manager/helpers/issue-handlers";
 import { splitPathFromSystemPath } from "./obsidian-vault-action-manager/helpers/pathfinder";
-import { BackgroundFileServiceLegacy } from "./obsidian-vault-action-manager/impl/background-file-service";
 import { Reader } from "./obsidian-vault-action-manager/impl/reader";
 import { extractMetaInfo } from "./services/dto-services/meta-info-manager/interface";
 import { AboveSelectionToolbarService } from "./services/obsidian-services/atomic-services/above-selection-toolbar-service";
@@ -165,19 +164,15 @@ export default class TextEaterPlugin extends Plugin {
 			fileManager: this.app.fileManager,
 			vault: this.app.vault,
 		});
-		const testingBackgroundFileServiceLegacy =
-			new BackgroundFileServiceLegacy(
-				this.testingTFileHelper,
-				this.testingTFolderHelper,
-				this.app.vault,
-			);
 		const testingOpenedFileService = new OpenedFileService(
 			this.app,
 			testingOpenedFileReader,
 		);
 		this.testingReader = new Reader(
 			testingOpenedFileService,
-			testingBackgroundFileServiceLegacy,
+			this.testingTFileHelper,
+			this.testingTFolderHelper,
+			this.app.vault,
 		);
 		this.vaultActionManager = new ObsidianVaultActionManagerImpl(this.app);
 

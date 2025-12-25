@@ -5,8 +5,7 @@ import { OpenedFileService as OpenedFileServiceImpl } from "./file-services/acti
 import { TFileHelper } from "./file-services/background/helpers/tfile-helper";
 import { TFolderHelper } from "./file-services/background/helpers/tfolder-helper";
 import { ActionQueue } from "./impl/action-queue";
-import { BackgroundFileServiceLegacy } from "./impl/background-file-service";
-import { Dispatcher } from "./impl/dispatcher";
+import { Dispatcher, type ExistenceChecker } from "./impl/dispatcher";
 import { EventAdapter } from "./impl/event-adapter";
 import { Executor } from "./impl/executor";
 import { Reader } from "./impl/reader";
@@ -31,7 +30,6 @@ export class ObsidianVaultActionManagerImpl
 	implements ObsidianVaultActionManager
 {
 	private readonly opened: OpenedFileService;
-	private readonly background: BackgroundFileServiceLegacy;
 	private readonly reader: Reader;
 	private readonly dispatcher: Dispatcher;
 	private readonly selfEventTracker: SelfEventTrackerLegacy;
@@ -51,23 +49,28 @@ export class ObsidianVaultActionManagerImpl
 			fileManager: app.fileManager,
 			vault: app.vault,
 		});
-		this.background = new BackgroundFileServiceLegacy(
-			tfileHelper,
-			tfolderHelper,
-			app.vault,
-		);
 		const executor = new Executor(
 			tfileHelper,
 			tfolderHelper,
 			this.opened,
 			app.vault,
 		);
-		this.reader = new Reader(this.opened, this.background);
+		this.reader = new Reader(this.opened, tfileHelper, tfolderHelper, app.vault);
 		this.selfEventTracker = new SelfEventTrackerLegacy();
+		const existenceChecker: ExistenceChecker = {
+			exists: async (splitPath) => {
+				if (splitPath.type === "Folder") {
+					const result = await tfolderHelper.getFolder(splitPath);
+					return result.isOk();
+				}
+				const result = await tfileHelper.getFile(splitPath);
+				return result.isOk();
+			},
+		};
 		this.dispatcher = new Dispatcher(
 			executor,
 			this.selfEventTracker,
-			this.background, // Existence checker
+			existenceChecker,
 		);
 		this.actionQueue = new ActionQueue(this.dispatcher);
 		this.eventAdapter = new EventAdapter(app, this.selfEventTracker);
