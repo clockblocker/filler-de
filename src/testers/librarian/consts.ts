@@ -1,30 +1,28 @@
-import type { PrettyFileDto } from "../../types/common-interface/dtos";
-
 const libraryCodex = {
 	basename: "__Library",
 	pathParts: ["Library"],
-} as const satisfies PrettyFileDto;
+} as const;
 
 const avatarCodex = {
 	basename: "__Avatar",
 	pathParts: ["Library", "Avatar"],
-} as const satisfies PrettyFileDto;
+} as const;
 
 const avatarSeason1Codex = {
 	basename: "__Season_1-Avatar",
 	pathParts: ["Library", "Avatar", "Season_1"],
-} as const satisfies PrettyFileDto;
+} as const;
 
 // E2
 const avatarSeason1Episode1Codex = {
 	basename: "__Episode_1-Season_1-Avatar",
 	pathParts: ["Library", "Avatar", "Season_1", "Episode_1"],
-} as const satisfies PrettyFileDto;
+} as const;
 
 const avatarSeason1Episode1Page000 = {
 	basename: "000-Page-Episode_1-Season_1-Avatar",
 	pathParts: ["Library", "Avatar", "Season_1", "Episode_1", "Page"],
-} as const satisfies PrettyFileDto;
+} as const;
 
 const avatarSeason1Episode1Page001 = {
 	basename: "001-Page-Episode_1-Season_1-Avatar",
@@ -35,12 +33,12 @@ const avatarSeason1Episode1Page001 = {
 const avatarSeason1Episode2Codex = {
 	basename: "__Episode_2-Season_1-Avatar",
 	pathParts: ["Library", "Avatar", "Season_1", "Episode_2"],
-} as const satisfies PrettyFileDto;
+} as const;
 
 const avatarSeason1Episode2Page000 = {
 	basename: "000-Page-Episode_2-Season_1-Avatar",
 	pathParts: ["Library", "Avatar", "Season_1", "Episode_2", "Page"],
-} as const satisfies PrettyFileDto;
+} as const;
 
 const avatarSeason1Episode2Page001 = {
 	basename: "001-Page-Episode_2-Season_1-Avatar",

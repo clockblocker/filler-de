@@ -1,4 +1,3 @@
-import type { PathParts } from "../../../types/common-interface/dtos";
 import { FileType } from "../../../types/common-interface/enums";
 import type { MetaInfo } from "../../dto-services/meta-info-manager/types";
 import {
@@ -18,7 +17,7 @@ export const getBottomActionConfigs = ({
 }: {
 	metaInfo: MetaInfo | null;
 	fileName: string;
-	pathParts: PathParts;
+	pathParts: string[];
 }): AnyActionConfig[] => {
 	const actions = getAllBottomActions().filter((action) =>
 		OPTIONAL_BOTTOM_ACTIONS.includes(action),
@@ -43,7 +42,7 @@ export const getAboveSelectionActionConfigs = ({
 }: {
 	metaInfo: MetaInfo | null;
 	fileName: string;
-	pathParts: PathParts;
+	pathParts: string[];
 	sectionText: string;
 }): AnyActionConfig[] => {
 	const actions = getAllAboveSelectionActions();

@@ -1,5 +1,4 @@
 import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
-import { logger } from "../../../utils/logger";
 import { collectImpactedSections } from "../codex";
 import type { LibraryTree } from "../library-tree";
 import { translateVaultAction } from "../reconciliation";
