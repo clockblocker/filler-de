@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { treeNodeToSuffixedSplitPathCodec } from "../../../../../src/commanders/librarian/naming/codecs/tree-node-to-split-path-codec";
+import { treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse } from "../../../../../src/commanders/librarian/naming/deprecated-codexes/tree-node-to-split-path-codec";
 import { TreeNodeStatus, TreeNodeType } from "../../../../../src/commanders/librarian/types/tree-node";
 import * as globalState from "../../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../../src/global-state/parsed-settings";
@@ -40,7 +40,7 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Section,
 				};
-				const result = treeNodeToSuffixedSplitPathCodec.decode(node);
+				const result = treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.decode(node);
 				expect(result).toEqual({
 					basename: "Library",
 					pathParts: [],
@@ -56,7 +56,7 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Section,
 				};
-				const result = treeNodeToSuffixedSplitPathCodec.decode(node);
+				const result = treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.decode(node);
 				expect(result).toEqual({
 					basename: "Child",
 					pathParts: ["Library", "Parent"],
@@ -72,7 +72,7 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Section,
 				};
-				const result = treeNodeToSuffixedSplitPathCodec.decode(node);
+				const result = treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.decode(node);
 				expect(result).toEqual({
 					basename: "Deep",
 					pathParts: ["Library", "Parent", "Child"],
@@ -90,7 +90,7 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Scroll,
 				};
-				const result = treeNodeToSuffixedSplitPathCodec.decode(node);
+				const result = treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.decode(node);
 				expect(result).toEqual({
 					basename: "Note",
 					extension: "md",
@@ -107,7 +107,7 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Scroll,
 				};
-				const result = treeNodeToSuffixedSplitPathCodec.decode(node);
+				const result = treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.decode(node);
 				expect(result).toEqual({
 					basename: "Note-Parent",
 					extension: "md",
@@ -124,7 +124,7 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Scroll,
 				};
-				const result = treeNodeToSuffixedSplitPathCodec.decode(node);
+				const result = treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.decode(node);
 				expect(result).toEqual({
 					basename: "Note-Child-Parent",
 					extension: "md",
@@ -143,7 +143,7 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 					status: TreeNodeStatus.Unknown,
 					type: TreeNodeType.File,
 				};
-				const result = treeNodeToSuffixedSplitPathCodec.decode(node);
+				const result = treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.decode(node);
 				expect(result).toEqual({
 					basename: "Image",
 					extension: "png",
@@ -160,7 +160,7 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 					status: TreeNodeStatus.Unknown,
 					type: TreeNodeType.File,
 				};
-				const result = treeNodeToSuffixedSplitPathCodec.decode(node);
+				const result = treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.decode(node);
 				expect(result).toEqual({
 					basename: "Image-Parent",
 					extension: "png",
@@ -179,7 +179,7 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 					pathParts: [],
 					type: SplitPathType.Folder,
 				};
-				const result = treeNodeToSuffixedSplitPathCodec.encode(splitPath);
+				const result = treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.encode(splitPath);
 				expect(result).toEqual({
 					children: [],
 					nodeName: "Library",
@@ -195,7 +195,7 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 					pathParts: ["Library", "Parent"],
 					type: SplitPathType.Folder,
 				};
-				const result = treeNodeToSuffixedSplitPathCodec.encode(splitPath);
+				const result = treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.encode(splitPath);
 				expect(result).toEqual({
 					children: [],
 					nodeName: "Child",
@@ -211,7 +211,7 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 					pathParts: ["Library", "Parent", "Child"],
 					type: SplitPathType.Folder,
 				};
-				const result = treeNodeToSuffixedSplitPathCodec.encode(splitPath);
+				const result = treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.encode(splitPath);
 				expect(result).toEqual({
 					children: [],
 					nodeName: "Deep",
@@ -230,7 +230,7 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 					pathParts: ["Library"],
 					type: SplitPathType.MdFile,
 				};
-				const result = treeNodeToSuffixedSplitPathCodec.encode(splitPath);
+				const result = treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.encode(splitPath);
 				expect(result).toEqual({
 					extension: "md",
 					nodeName: "Note",
@@ -247,7 +247,7 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 					pathParts: ["Library", "Parent"],
 					type: SplitPathType.MdFile,
 				};
-				const result = treeNodeToSuffixedSplitPathCodec.encode(splitPath);
+				const result = treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.encode(splitPath);
 				expect(result).toEqual({
 					extension: "md",
 					nodeName: "Note",
@@ -264,7 +264,7 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 					pathParts: ["Library", "Parent", "Child"],
 					type: SplitPathType.MdFile,
 				};
-				const result = treeNodeToSuffixedSplitPathCodec.encode(splitPath);
+				const result = treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.encode(splitPath);
 				expect(result).toEqual({
 					extension: "md",
 					nodeName: "Note",
@@ -283,7 +283,7 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 					pathParts: ["Library"],
 					type: SplitPathType.File,
 				};
-				const result = treeNodeToSuffixedSplitPathCodec.encode(splitPath);
+				const result = treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.encode(splitPath);
 				expect(result).toEqual({
 					extension: "png",
 					nodeName: "Image",
@@ -300,7 +300,7 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 					pathParts: ["Library", "Parent"],
 					type: SplitPathType.File,
 				};
-				const result = treeNodeToSuffixedSplitPathCodec.encode(splitPath);
+				const result = treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.encode(splitPath);
 				expect(result).toEqual({
 					extension: "png",
 					nodeName: "Image",
@@ -321,8 +321,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				status: TreeNodeStatus.NotStarted,
 				type: TreeNodeType.Section,
 			};
-			const result = treeNodeToSuffixedSplitPathCodec.encode(
-				treeNodeToSuffixedSplitPathCodec.decode(node),
+			const result = treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.encode(
+				treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.decode(node),
 			);
 			expect(result).toMatchObject({
 				nodeName: node.nodeName,
@@ -339,8 +339,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				status: TreeNodeStatus.NotStarted,
 				type: TreeNodeType.Section,
 			};
-			const result = treeNodeToSuffixedSplitPathCodec.encode(
-				treeNodeToSuffixedSplitPathCodec.decode(node),
+			const result = treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.encode(
+				treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.decode(node),
 			);
 			expect(result).toMatchObject({
 				nodeName: node.nodeName,
@@ -357,8 +357,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				status: TreeNodeStatus.NotStarted,
 				type: TreeNodeType.Scroll,
 			};
-			const result = treeNodeToSuffixedSplitPathCodec.encode(
-				treeNodeToSuffixedSplitPathCodec.decode(node),
+			const result = treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.encode(
+				treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.decode(node),
 			);
 			expect(result).toMatchObject({
 				nodeName: node.nodeName,
@@ -375,8 +375,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				status: TreeNodeStatus.NotStarted,
 				type: TreeNodeType.Scroll,
 			};
-			const result = treeNodeToSuffixedSplitPathCodec.encode(
-				treeNodeToSuffixedSplitPathCodec.decode(node),
+			const result = treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.encode(
+				treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.decode(node),
 			);
 			expect(result).toMatchObject({
 				nodeName: node.nodeName,
@@ -393,8 +393,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				status: TreeNodeStatus.Unknown,
 				type: TreeNodeType.File,
 			};
-			const result = treeNodeToSuffixedSplitPathCodec.encode(
-				treeNodeToSuffixedSplitPathCodec.decode(node),
+			const result = treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.encode(
+				treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.decode(node),
 			);
 			expect(result).toMatchObject({
 				nodeName: node.nodeName,

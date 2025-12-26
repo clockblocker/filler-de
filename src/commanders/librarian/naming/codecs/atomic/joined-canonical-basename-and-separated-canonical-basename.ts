@@ -1,17 +1,14 @@
-/** biome-ignore-all lint/suspicious/noExplicitAny: JoinedCanonicalBasenameSchema is a bit fucked up */
 import z from "zod";
+import type { SeparatedCanonicalBasename } from "../../..";
 import {
 	type JoinedCanonicalBasename,
 	JoinedCanonicalBasenameSchema,
-} from "../types/canonical/joined-canonical";
-import {
-	type SeparatedCanonicalBasename,
-	SeparatedCanonicalBasenameSchema,
-} from "../types/canonical/separated-canonical";
+} from "../../types/canonical/joined-canonical";
+import { SeparatedCanonicalBasenameSchema } from "../../types/canonical/separated-canonical";
 import {
 	joinSeparatedCanonicalBasename,
 	separateJoinedCanonicalBasename,
-} from "../types/transformers";
+} from "../../types/transformers";
 
 /**
  * Zod codec from JoinedCanonicalBasename to SeparatedCanonicalBasename.
@@ -45,5 +42,5 @@ export const makeJoinedCanonicalBasenameFromSeparatedCanonicalBasename = (
 ): JoinedCanonicalBasename => {
 	return joinedCanonicalBasenameToSeparatedCanonicalBasenameCodec.encode(
 		separated,
-	) as any;
+	);
 };

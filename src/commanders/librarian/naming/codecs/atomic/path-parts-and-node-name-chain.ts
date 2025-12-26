@@ -1,11 +1,11 @@
 import z from "zod";
-import { getParsedUserSettings } from "../../../../global-state/global-state";
+import { getParsedUserSettings } from "../../../../../global-state/global-state";
 import {
 	PathPartsSchema,
 	type SplitPath,
-} from "../../../../obsidian-vault-action-manager/types/split-path";
-import type { NodeNameChain } from "../..";
-import { NodeNameChainSchema } from "../types/node-name";
+} from "../../../../../obsidian-vault-action-manager/types/split-path";
+import type { NodeNameChain } from "../../..";
+import { NodeNameChainSchema } from "../../types/node-name";
 
 /**
  * Zod codec from PathParts to NodeNameChain.

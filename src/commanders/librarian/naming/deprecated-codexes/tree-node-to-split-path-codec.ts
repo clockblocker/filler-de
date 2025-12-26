@@ -17,7 +17,7 @@ import { canonicalBasenameToChainCodec } from "./suffixed-basename-to-chain-code
  * Converts tree representation to filesystem representation.
  * Reads settings internally.
  */
-export const treeNodeToSuffixedSplitPathCodec = z.codec(
+export const treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse = z.codec(
 	z.custom<TreeNode>(),
 	SplitPathSchema,
 	{

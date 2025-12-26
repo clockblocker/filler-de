@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { canonicalBasenameToChainCodec } from "../../../../../src/commanders/librarian/naming/codecs/suffixed-basename-to-chain-codec";
+import { canonicalBasenameToChainCodec } from "../../../../../src/commanders/librarian/naming/deprecated-codexes/suffixed-basename-to-chain-codec";
 import * as globalState from "../../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../../src/global-state/parsed-settings";
 import { SplitPathType } from "../../../../../src/obsidian-vault-action-manager/types/split-path";

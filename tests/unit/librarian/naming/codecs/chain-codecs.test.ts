@@ -1,18 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import {
-	makeJoinedCanonicalBasenameFromSeparatedCanonicalBasename,
-	makeSeparatedCanonicalBasenameFromJoinedCanonicalBasename,
-} from "../../../../../src/commanders/librarian/naming/atomic/joined-canonical-basename-and-separated-canonical-basename";
-import {
-	makeNodeNameChainFromPathParts,
-	makePathPartsFromNodeNameChain,
-} from "../../../../../src/commanders/librarian/naming/atomic/path-parts-and-node-name-chain";
-import {
-	makeNodeNameChainFromSeparatedCanonicalBasename,
-	makeSeparatedCanonicalBasenameFromNodeNameChain,
-} from "../../../../../src/commanders/librarian/naming/atomic/separated-canonical-basename-and-node-name-chain";
+import  { makeJoinedCanonicalBasenameFromSeparatedCanonicalBasename, makeSeparatedCanonicalBasenameFromJoinedCanonicalBasename } from "../../../../../src/commanders/librarian/naming/codecs/atomic/joined-canonical-basename-and-separated-canonical-basename";
+import  { makeNodeNameChainFromPathParts, makePathPartsFromNodeNameChain } from "../../../../../src/commanders/librarian/naming/codecs/atomic/path-parts-and-node-name-chain";
+import  { makeNodeNameChainFromSeparatedCanonicalBasename, makeSeparatedCanonicalBasenameFromNodeNameChain } from "../../../../../src/commanders/librarian/naming/codecs/atomic/separated-canonical-basename-and-node-name-chain";
 import * as globalState from "../../../../../src/global-state/global-state";
-import type { ParsedUserSettings } from "../../../../../src/global-state/parsed-settings";
+import  { ParsedUserSettings } from "../../../../../src/global-state/parsed-settings";
 import { SplitPathType } from "../../../../../src/obsidian-vault-action-manager/types/split-path";
 
 const defaultSettings: ParsedUserSettings = {

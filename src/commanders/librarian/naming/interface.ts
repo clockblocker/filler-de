@@ -5,8 +5,8 @@ import {
 	SplitPathType,
 } from "../../../obsidian-vault-action-manager/types/split-path";
 import type { SectionNode } from "../types/tree-node";
-import { codexBasenameToSectionChainCodec } from "./codecs/suffixed-basename-for-codex-to-chain-codec";
-import { treeNodeToSuffixedSplitPathCodec } from "./codecs/tree-node-to-split-path-codec";
+import { codexBasenameToSectionChainCodec } from "./deprecated-codexes/suffixed-basename-for-codex-to-chain-codec";
+import { treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse } from "./deprecated-codexes/tree-node-to-split-path-codec";
 import type { NodeNameChain } from "./types/node-name";
 
 /**
@@ -43,9 +43,10 @@ export function buildCodexBasename(
 		| Pick<SectionNode, "nodeName" | "nodeNameChainToParent">,
 ): string {
 	if ("pathParts" in splitPathToFolderOrSection) {
-		const sectionNode = treeNodeToSuffixedSplitPathCodec.encode(
-			splitPathToFolderOrSection,
-		);
+		const sectionNode =
+			treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.encode(
+				splitPathToFolderOrSection,
+			);
 		const fullChain = [
 			...sectionNode.nodeNameChainToParent,
 			sectionNode.nodeName,

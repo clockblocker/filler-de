@@ -1,10 +1,7 @@
 import z from "zod";
-import type { NodeNameChain } from "../..";
-import {
-	type SeparatedCanonicalBasename,
-	SeparatedCanonicalBasenameSchema,
-} from "../types/canonical/separated-canonical";
-import { NodeNameChainSchema } from "../types/node-name";
+import type { NodeNameChain, SeparatedCanonicalBasename } from "../../..";
+import { SeparatedCanonicalBasenameSchema } from "../../types/canonical/separated-canonical";
+import { NodeNameChainSchema } from "../../types/node-name";
 
 /**
  * Zod codec from SeparatedCanonicalBasename to NodeNameChain.
