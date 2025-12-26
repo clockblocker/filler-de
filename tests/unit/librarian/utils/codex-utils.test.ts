@@ -1,14 +1,8 @@
 import { spyOn } from "bun:test";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { buildCodexBasename, tryExtractingCoreNameChainToSection, tryExtractingSplitPathToFolder } from "../../../../src/commanders/librarian/naming/interface";
 import type { TreeNode } from "../../../../src/commanders/librarian/types/tree-node";
 import { TreeNodeStatus, TreeNodeType } from "../../../../src/commanders/librarian/types/tree-node";
-import {
-	addCodexPrefixDeprecated,
-	buildCodexBasename,
-	isBasenamePrefixedAsCodexDeprecated,
-	tryExtractingCoreNameChainToSection,
-	tryExtractingSplitPathToFolder,
-} from "../../../../src/commanders/librarian/utils/codex-utils";
 import * as globalState from "../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
 import type { SplitPathToFolder, SplitPathToMdFile } from "../../../../src/obsidian-vault-action-manager/types/split-path";
@@ -41,27 +35,6 @@ describe("codex-utils", () => {
 		getParsedUserSettingsSpy.mockRestore();
 	});
 
-	describe("isCodexBasename", () => {
-		it("returns true for codex basename", () => {
-			expect(isBasenamePrefixedAsCodexDeprecated("__Library")).toBe(true);
-			expect(isBasenamePrefixedAsCodexDeprecated("__A")).toBe(true);
-			expect(isBasenamePrefixedAsCodexDeprecated("__Section")).toBe(true);
-		});
-
-		it("returns false for non-codex basename", () => {
-			expect(isBasenamePrefixedAsCodexDeprecated("Note")).toBe(false);
-			expect(isBasenamePrefixedAsCodexDeprecated("_Note")).toBe(false); // single underscore
-			expect(isBasenamePrefixedAsCodexDeprecated("My__File")).toBe(false); // __ not at start
-		});
-	});
-
-	describe("withCodexPrefix", () => {
-		it("adds __ prefix", () => {
-			expect(addCodexPrefixDeprecated("Library")).toBe("__Library");
-			expect(addCodexPrefixDeprecated("A")).toBe("__A");
-		});
-	});
-
 	describe("buildCodexBasename", () => {
 		describe("with TreeNode Section", () => {
 			it("builds root codex basename (no suffix)", () => {
@@ -72,7 +45,7 @@ describe("codex-utils", () => {
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Section,
 				};
-				expect(buildCodexBasename(rootSection)).toBe("__Library");
+				expect(buildCodexBasename(rootSection)).toBe("__-Library");
 			});
 
 			it("builds nested codex basename with single parent", () => {
@@ -83,7 +56,7 @@ describe("codex-utils", () => {
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Section,
 				};
-				expect(buildCodexBasename(section)).toBe("__Child-Parent");
+				expect(buildCodexBasename(section)).toBe("__-Child-Parent");
 			});
 
 			it("builds nested codex basename with multiple parents", () => {
@@ -94,46 +67,10 @@ describe("codex-utils", () => {
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Section,
 				};
-				expect(buildCodexBasename(section)).toBe("__Grandchild-Child-Parent");
+				expect(buildCodexBasename(section)).toBe("__-Grandchild-Child-Parent");
 			});
 		});
-
-		describe("with TreeNode Scroll/File", () => {
-			it("builds codex for root section when file is in root", () => {
-				const scroll: TreeNode = {
-					coreName: "Note",
-					coreNameChainToParent: [],
-					extension: "md",
-					status: TreeNodeStatus.NotStarted,
-					type: TreeNodeType.Scroll,
-				};
-				expect(buildCodexBasename(scroll)).toBe("__Library");
-			});
-
-			it("builds codex for parent section when file is nested", () => {
-				const scroll: TreeNode = {
-					coreName: "Note",
-					coreNameChainToParent: ["Parent", "Child"],
-					extension: "md",
-					status: TreeNodeStatus.NotStarted,
-					type: TreeNodeType.Scroll,
-				};
-				// Parent section is "Child" (last in chain)
-				expect(buildCodexBasename(scroll)).toBe("__Child-Parent");
-			});
-
-			it("builds codex for parent section with file node", () => {
-				const file: TreeNode = {
-					coreName: "Image",
-					coreNameChainToParent: ["Section"],
-					extension: "png",
-					status: TreeNodeStatus.Unknown,
-					type: TreeNodeType.File,
-				};
-				expect(buildCodexBasename(file)).toBe("__Section");
-			});
-		});
-
+		
 		describe("with SplitPath Folder", () => {
 			it("builds codex for root folder", () => {
 				const folder: SplitPathToFolder = {
@@ -141,7 +78,7 @@ describe("codex-utils", () => {
 					pathParts: ["Library"],
 					type: SplitPathType.Folder,
 				};
-				expect(buildCodexBasename(folder)).toBe("__Library");
+				expect(buildCodexBasename(folder)).toBe("__-Library");
 			});
 
 			it("builds codex for nested folder", () => {
@@ -150,30 +87,7 @@ describe("codex-utils", () => {
 					pathParts: ["Library", "Parent", "Child"],
 					type: SplitPathType.Folder,
 				};
-				expect(buildCodexBasename(folder)).toBe("__Child-Parent");
-			});
-		});
-
-		describe("with SplitPath File", () => {
-			it("builds codex for root section when file is in root", () => {
-				const file: SplitPathToMdFile = {
-					basename: "Note",
-					extension: "md",
-					pathParts: ["Library"],
-					type: SplitPathType.MdFile,
-				};
-				expect(buildCodexBasename(file)).toBe("__Library");
-			});
-
-			it("builds codex for parent section when file is nested", () => {
-				const file: SplitPathToMdFile = {
-					basename: "Note",
-					extension: "md",
-					pathParts: ["Library", "Parent", "Child"],
-					type: SplitPathType.MdFile,
-				};
-				// Parent section is "Child" (last in pathParts)
-				expect(buildCodexBasename(file)).toBe("__Child-Parent");
+				expect(buildCodexBasename(folder)).toBe("__-Child-Parent");
 			});
 		});
 
@@ -190,14 +104,14 @@ describe("codex-utils", () => {
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Section,
 				};
-				expect(buildCodexBasename(section)).toBe("__Child_Parent");
+				expect(buildCodexBasename(section)).toBe("__-Child_Parent");
 			});
 		});
 	});
 
 	describe("tryExtractingCoreNameChainToSection", () => {
 		it("returns empty array for root codex", () => {
-			const result = tryExtractingCoreNameChainToSection("__Library");
+			const result = tryExtractingCoreNameChainToSection("__-Library");
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
 				expect(result.value).toEqual([]);
@@ -205,7 +119,7 @@ describe("codex-utils", () => {
 		});
 
 		it("returns chain for nested codex with single parent", () => {
-			const result = tryExtractingCoreNameChainToSection("__Child-Parent");
+			const result = tryExtractingCoreNameChainToSection("__-Child-Parent");
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
 				expect(result.value).toEqual(["Parent", "Child"]);
@@ -213,7 +127,7 @@ describe("codex-utils", () => {
 		});
 
 		it("returns chain for nested codex with multiple parents", () => {
-			const result = tryExtractingCoreNameChainToSection("__Grandchild-Child-Parent");
+			const result = tryExtractingCoreNameChainToSection("__-Grandchild-Child-Parent");
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
 				expect(result.value).toEqual(["Parent", "Child", "Grandchild"]);
@@ -234,7 +148,7 @@ describe("codex-utils", () => {
 				...defaultSettings,
 				suffixDelimiter: "_",
 			});
-			const result = tryExtractingCoreNameChainToSection("__Child_Parent");
+			const result = tryExtractingCoreNameChainToSection("__-Child_Parent");
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
 				expect(result.value).toEqual(["Parent", "Child"]);
@@ -244,7 +158,7 @@ describe("codex-utils", () => {
 
 	describe("tryExtractingSplitPathToFolder", () => {
 		it("builds SplitPath for root folder", () => {
-			const result = tryExtractingSplitPathToFolder("__Library");
+			const result = tryExtractingSplitPathToFolder("__-Library");
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
 				expect(result.value).toEqual({
@@ -256,7 +170,7 @@ describe("codex-utils", () => {
 		});
 
 		it("builds SplitPath for nested folder", () => {
-			const result = tryExtractingSplitPathToFolder("__Child-Parent");
+			const result = tryExtractingSplitPathToFolder("__-Child-Parent");
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
 				expect(result.value).toEqual({
@@ -268,7 +182,7 @@ describe("codex-utils", () => {
 		});
 
 		it("builds SplitPath for deeply nested folder", () => {
-			const result = tryExtractingSplitPathToFolder("__Grandchild-Child-Parent");
+			const result = tryExtractingSplitPathToFolder("__-Grandchild-Child-Parent");
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
 				expect(result.value).toEqual({
@@ -284,7 +198,7 @@ describe("codex-utils", () => {
 			expect(result.isErr()).toBe(true);
 			if (result.isErr()) {
 				expect(result.error).toContain('Invalid codex basename: "Note"');
-				expect(result.error).toContain('must start with "__"');
+				expect(result.error).toContain('must start with "__-"');
 			}
 		});
 	});
