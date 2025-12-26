@@ -173,7 +173,7 @@ describe("resolveRuntimeIntent", () => {
 
 		it("handles move to root", () => {
 			// Library/A/B/note-B-A.md moved to Library/note-B-A.md
-			// Need suffix (empty) → just coreName
+			// Need suffix (empty) → just nodeName
 			const oldPath = mdFile(["Library", "A", "B"], "note-B-A");
 			const newPath = mdFile(["Library"], "note-B-A");
 

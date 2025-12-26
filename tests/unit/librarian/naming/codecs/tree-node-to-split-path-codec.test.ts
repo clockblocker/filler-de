@@ -35,8 +35,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 			it("decodes root section", () => {
 				const node = {
 					children: [],
-					coreName: "Library",
-					coreNameChainToParent: [],
+					nodeName: "Library",
+					nodeNameChainToParent: [],
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Section,
 				};
@@ -51,8 +51,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 			it("decodes nested section", () => {
 				const node = {
 					children: [],
-					coreName: "Child",
-					coreNameChainToParent: ["Parent"],
+					nodeName: "Child",
+					nodeNameChainToParent: ["Parent"],
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Section,
 				};
@@ -67,8 +67,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 			it("decodes deeply nested section", () => {
 				const node = {
 					children: [],
-					coreName: "Deep",
-					coreNameChainToParent: ["Parent", "Child"],
+					nodeName: "Deep",
+					nodeNameChainToParent: ["Parent", "Child"],
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Section,
 				};
@@ -84,9 +84,9 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 		describe("Scroll", () => {
 			it("decodes root-level scroll", () => {
 				const node = {
-					coreName: "Note",
-					coreNameChainToParent: [],
 					extension: "md",
+					nodeName: "Note",
+					nodeNameChainToParent: [],
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Scroll,
 				};
@@ -101,9 +101,9 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 
 			it("decodes nested scroll", () => {
 				const node = {
-					coreName: "Note",
-					coreNameChainToParent: ["Parent"],
 					extension: "md",
+					nodeName: "Note",
+					nodeNameChainToParent: ["Parent"],
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Scroll,
 				};
@@ -118,9 +118,9 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 
 			it("decodes deeply nested scroll", () => {
 				const node = {
-					coreName: "Note",
-					coreNameChainToParent: ["Parent", "Child"],
 					extension: "md",
+					nodeName: "Note",
+					nodeNameChainToParent: ["Parent", "Child"],
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Scroll,
 				};
@@ -137,9 +137,9 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 		describe("File", () => {
 			it("decodes root-level file", () => {
 				const node = {
-					coreName: "Image",
-					coreNameChainToParent: [],
 					extension: "png",
+					nodeName: "Image",
+					nodeNameChainToParent: [],
 					status: TreeNodeStatus.Unknown,
 					type: TreeNodeType.File,
 				};
@@ -154,9 +154,9 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 
 			it("decodes nested file", () => {
 				const node = {
-					coreName: "Image",
-					coreNameChainToParent: ["Parent"],
 					extension: "png",
+					nodeName: "Image",
+					nodeNameChainToParent: ["Parent"],
 					status: TreeNodeStatus.Unknown,
 					type: TreeNodeType.File,
 				};
@@ -182,8 +182,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				const result = treeNodeToSuffixedSplitPathCodec.encode(splitPath);
 				expect(result).toEqual({
 					children: [],
-					coreName: "Library",
-					coreNameChainToParent: [],
+					nodeName: "Library",
+					nodeNameChainToParent: [],
 					status: TreeNodeStatus.Unknown,
 					type: TreeNodeType.Section,
 				});
@@ -198,8 +198,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				const result = treeNodeToSuffixedSplitPathCodec.encode(splitPath);
 				expect(result).toEqual({
 					children: [],
-					coreName: "Child",
-					coreNameChainToParent: ["Parent"],
+					nodeName: "Child",
+					nodeNameChainToParent: ["Parent"],
 					status: TreeNodeStatus.Unknown,
 					type: TreeNodeType.Section,
 				});
@@ -214,8 +214,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				const result = treeNodeToSuffixedSplitPathCodec.encode(splitPath);
 				expect(result).toEqual({
 					children: [],
-					coreName: "Deep",
-					coreNameChainToParent: ["Parent", "Child"],
+					nodeName: "Deep",
+					nodeNameChainToParent: ["Parent", "Child"],
 					status: TreeNodeStatus.Unknown,
 					type: TreeNodeType.Section,
 				});
@@ -232,9 +232,9 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				};
 				const result = treeNodeToSuffixedSplitPathCodec.encode(splitPath);
 				expect(result).toEqual({
-					coreName: "Note",
-					coreNameChainToParent: [],
 					extension: "md",
+					nodeName: "Note",
+					nodeNameChainToParent: [],
 					status: TreeNodeStatus.Unknown,
 					type: TreeNodeType.Scroll,
 				});
@@ -249,9 +249,9 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				};
 				const result = treeNodeToSuffixedSplitPathCodec.encode(splitPath);
 				expect(result).toEqual({
-					coreName: "Note",
-					coreNameChainToParent: ["Parent"],
 					extension: "md",
+					nodeName: "Note",
+					nodeNameChainToParent: ["Parent"],
 					status: TreeNodeStatus.Unknown,
 					type: TreeNodeType.Scroll,
 				});
@@ -266,9 +266,9 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				};
 				const result = treeNodeToSuffixedSplitPathCodec.encode(splitPath);
 				expect(result).toEqual({
-					coreName: "Note",
-					coreNameChainToParent: ["Parent", "Child"],
 					extension: "md",
+					nodeName: "Note",
+					nodeNameChainToParent: ["Parent", "Child"],
 					status: TreeNodeStatus.Unknown,
 					type: TreeNodeType.Scroll,
 				});
@@ -285,9 +285,9 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				};
 				const result = treeNodeToSuffixedSplitPathCodec.encode(splitPath);
 				expect(result).toEqual({
-					coreName: "Image",
-					coreNameChainToParent: [],
 					extension: "png",
+					nodeName: "Image",
+					nodeNameChainToParent: [],
 					status: TreeNodeStatus.Unknown,
 					type: TreeNodeType.File,
 				});
@@ -302,9 +302,9 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				};
 				const result = treeNodeToSuffixedSplitPathCodec.encode(splitPath);
 				expect(result).toEqual({
-					coreName: "Image",
-					coreNameChainToParent: ["Parent"],
 					extension: "png",
+					nodeName: "Image",
+					nodeNameChainToParent: ["Parent"],
 					status: TreeNodeStatus.Unknown,
 					type: TreeNodeType.File,
 				});
@@ -316,8 +316,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 		it("roundtrips root section", () => {
 			const node = {
 				children: [],
-				coreName: "Library",
-				coreNameChainToParent: [],
+				nodeName: "Library",
+				nodeNameChainToParent: [],
 				status: TreeNodeStatus.NotStarted,
 				type: TreeNodeType.Section,
 			};
@@ -325,8 +325,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				treeNodeToSuffixedSplitPathCodec.decode(node),
 			);
 			expect(result).toMatchObject({
-				coreName: node.coreName,
-				coreNameChainToParent: node.coreNameChainToParent,
+				nodeName: node.nodeName,
+				nodeNameChainToParent: node.nodeNameChainToParent,
 				type: node.type,
 			});
 		});
@@ -334,8 +334,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 		it("roundtrips nested section", () => {
 			const node = {
 				children: [],
-				coreName: "Child",
-				coreNameChainToParent: ["Parent"],
+				nodeName: "Child",
+				nodeNameChainToParent: ["Parent"],
 				status: TreeNodeStatus.NotStarted,
 				type: TreeNodeType.Section,
 			};
@@ -343,17 +343,17 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				treeNodeToSuffixedSplitPathCodec.decode(node),
 			);
 			expect(result).toMatchObject({
-				coreName: node.coreName,
-				coreNameChainToParent: node.coreNameChainToParent,
+				nodeName: node.nodeName,
+				nodeNameChainToParent: node.nodeNameChainToParent,
 				type: node.type,
 			});
 		});
 
 		it("roundtrips root-level scroll", () => {
 			const node = {
-				coreName: "Note",
-				coreNameChainToParent: [],
 				extension: "md",
+				nodeName: "Note",
+				nodeNameChainToParent: [],
 				status: TreeNodeStatus.NotStarted,
 				type: TreeNodeType.Scroll,
 			};
@@ -361,17 +361,17 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				treeNodeToSuffixedSplitPathCodec.decode(node),
 			);
 			expect(result).toMatchObject({
-				coreName: node.coreName,
-				coreNameChainToParent: node.coreNameChainToParent,
+				nodeName: node.nodeName,
+				nodeNameChainToParent: node.nodeNameChainToParent,
 				type: node.type,
 			});
 		});
 
 		it("roundtrips nested scroll", () => {
 			const node = {
-				coreName: "Note",
-				coreNameChainToParent: ["Parent", "Child"],
 				extension: "md",
+				nodeName: "Note",
+				nodeNameChainToParent: ["Parent", "Child"],
 				status: TreeNodeStatus.NotStarted,
 				type: TreeNodeType.Scroll,
 			};
@@ -379,17 +379,17 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				treeNodeToSuffixedSplitPathCodec.decode(node),
 			);
 			expect(result).toMatchObject({
-				coreName: node.coreName,
-				coreNameChainToParent: node.coreNameChainToParent,
+				nodeName: node.nodeName,
+				nodeNameChainToParent: node.nodeNameChainToParent,
 				type: node.type,
 			});
 		});
 
 		it("roundtrips nested file", () => {
 			const node = {
-				coreName: "Image",
-				coreNameChainToParent: ["Parent"],
 				extension: "png",
+				nodeName: "Image",
+				nodeNameChainToParent: ["Parent"],
 				status: TreeNodeStatus.Unknown,
 				type: TreeNodeType.File,
 			};
@@ -397,8 +397,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				treeNodeToSuffixedSplitPathCodec.decode(node),
 			);
 			expect(result).toMatchObject({
-				coreName: node.coreName,
-				coreNameChainToParent: node.coreNameChainToParent,
+				nodeName: node.nodeName,
+				nodeNameChainToParent: node.nodeNameChainToParent,
 				type: node.type,
 			});
 		});

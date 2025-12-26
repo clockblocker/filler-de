@@ -105,7 +105,7 @@ describe("suffixedBasenameToChainCodec", () => {
 			);
 		});
 
-		it("encodes file chain with coreName", () => {
+		it("encodes file chain with nodeName", () => {
 			expect(suffixedBasenameToChainCodec.encode(["Parent", "Child", "Note"])).toBe(
 				"Note-Child-Parent",
 			);

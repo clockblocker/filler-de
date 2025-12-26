@@ -6,7 +6,11 @@ import type { VaultAction } from "../../../obsidian-vault-action-manager/types/v
 import { VaultActionType } from "../../../obsidian-vault-action-manager/types/vault-action";
 import { logger } from "../../../utils/logger";
 import { generateCodexContent } from "../codex";
-import type { CoreNameChainFromRoot } from "../naming/parsed-basename";
+import {
+	buildCodexBasename,
+	tryExtractingSplitPathToFolder,
+} from "../naming/interface";
+import type { NodeNameChain } from "../naming/parsed-basename";
 import type { SectionNode } from "../types/tree-node";
 import { TreeNodeType } from "../types/tree-node";
 import { addCodexPrefixDeprecated } from "../utils/codex-utils";
@@ -16,8 +20,8 @@ import { addCodexPrefixDeprecated } from "../utils/codex-utils";
  * Pure function that takes tree node and returns actions.
  */
 export function buildCodexVaultActions(
-	impactedChains: CoreNameChainFromRoot[],
-	getNode: (chain: CoreNameChainFromRoot) => SectionNode | null,
+	impactedChains: NodeNameChain[],
+	getNode: (chain: NodeNameChain) => SectionNode | null,
 ): VaultAction[] {
 	const settings = getParsedUserSettings();
 	const libraryRootPath = makeSystemPathForSplitPath(
@@ -40,7 +44,7 @@ export function buildCodexVaultActions(
 			continue;
 		}
 
-		const section = node as SectionNode;
+		const section = node;
 
 		const content = generateCodexContent(section, {
 			libraryRoot: libraryRootPath,
@@ -49,36 +53,31 @@ export function buildCodexVaultActions(
 		// Build codex basename with suffix (same pattern as regular files)
 		// Root: __Library (no suffix, use libraryRoot name)
 		// Nested: __Salad-Recipe (suffix = parent chain reversed)
-		const codexBasename = addCodexPrefixDeprecated(section);
+		const codexBasename = buildCodexBasename(section);
 
 		// Codex path: inside the section folder
-		const pathParts = [
-			...settings.splitPathToLibraryRoot.pathParts,
-			settings.splitPathToLibraryRoot.basename,
-			...chain,
-		];
-		const codexSplitPath: SplitPathToMdFile = {
-			basename: codexBasename,
-			extension: "md",
-			pathParts,
-			type: SplitPathType.MdFile,
-		};
+		const codexSplitPathResult =
+			tryExtractingSplitPathToFolder(codexBasename);
+
+		if (codexSplitPathResult.isErr()) {
+			logger.warn(
+				"[buildCodexVaultActions] failed to extract codex split path:",
+				codexSplitPathResult.error,
+			);
+			continue;
+		}
+		const codexSplitPath = codexSplitPathResult.value;
 
 		// Always use UpsertMdFile - it creates if not exists
 		// This avoids triggering handleCreate which would add suffixes
 		const action = {
-			payload: { content, splitPath: codexSplitPath },
+			payload: {
+				content,
+				splitPath: { ...codexSplitPath, extension: "md" },
+			},
 			type: VaultActionType.UpsertMdFile,
 		};
-		logger.debug(
-			"[buildCodexVaultActions] creating action for:",
-			JSON.stringify({
-				chain,
-				codexBasename,
-				codexPath: makeSystemPathForSplitPath(codexSplitPath),
-				contentLength: content.length,
-			}),
-		);
+
 		actions.push(action);
 	}
 

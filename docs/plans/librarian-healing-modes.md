@@ -83,7 +83,7 @@ outside/stuff/note_X-Y.md → Library/stuff/note_X-Y.md (user drag folder)
 - **Tree role**: Status tracking + codex generation only
 - **Rename routing**: Pure functions, no tree dependency
 - **`tRef`**: Keep for file identity and content access (Obsidian maintains refs across renames)
-- **`coreNameChainToParent`**: Keep for immutable/React-style updates
+- **`nodeNameChainToParent`**: Keep for immutable/React-style updates
 
 ## Implementation
 
@@ -158,7 +158,7 @@ function healOnInit(
 ```
 
 For each leaf:
-- Compute desired suffix from `coreNameChainToParent`
+- Compute desired suffix from `nodeNameChainToParent`
 - If `tRef.basename` suffix doesn't match → generate rename action (same folder)
 - Collect empty folders → generate delete actions
 

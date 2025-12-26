@@ -37,15 +37,15 @@ type LeafHealInfo = {
 };
 
 /**
- * Match actual file to leaf by comparing coreName and path.
+ * Match actual file to leaf by comparing nodeName and path.
  */
 function findMatchingFile(
 	leaf: TreeLeaf,
 	actualFiles: SplitPathWithReader[],
 ): SplitPathWithReader | null {
-	// Expected path (parent chain only, not including coreName)
+	// Expected path (parent chain only, not including nodeName)
 	const expectedParentPath = joinPathPartsDeprecated(
-		leaf.coreNameChainToParent,
+		leaf.nodeNameChainToParent,
 	);
 
 	for (const file of actualFiles) {
@@ -64,9 +64,9 @@ function findMatchingFile(
 			continue;
 		}
 
-		// Parse basename to get coreName
-		const { coreName } = parseBasenameDeprecated(file.basename);
-		if (coreName !== leaf.coreName) {
+		// Parse basename to get nodeName
+		const { nodeName } = parseBasenameDeprecated(file.basename);
+		if (nodeName !== leaf.nodeName) {
 			continue;
 		}
 
@@ -75,7 +75,7 @@ function findMatchingFile(
 		const fileParentPath = joinPathPartsDeprecated(file.pathParts.slice(1));
 
 		// Match if parent path matches (file might be at expected location or wrong location)
-		// We match by coreName and parent path, then check if suffix needs fixing
+		// We match by nodeName and parent path, then check if suffix needs fixing
 		if (fileParentPath === expectedParentPath) {
 			return file;
 		}
@@ -107,13 +107,13 @@ function analyzeLeaf(
 	// Path relative to library root
 	const needsRename = !suffixMatchesPathDepreacated(
 		parsed.splitSuffix,
-		leaf.coreNameChainToParent,
+		leaf.nodeNameChainToParent,
 	);
 
 	const expectedBasename = needsRename
 		? buildBasenameDepreacated(
-				parsed.coreName,
-				computeSuffixFromPathDepreacated(leaf.coreNameChainToParent),
+				parsed.nodeName,
+				computeSuffixFromPathDepreacated(leaf.nodeNameChainToParent),
 			)
 		: currentBasename;
 
@@ -135,7 +135,7 @@ function leafToSplitPath(
 ): SplitPathToFile | SplitPathToMdFile {
 	const settings = getParsedUserSettings();
 	const libraryRoot = settings.splitPathToLibraryRoot.basename;
-	const pathParts = [libraryRoot, ...leaf.coreNameChainToParent];
+	const pathParts = [libraryRoot, ...leaf.nodeNameChainToParent];
 
 	if (leaf.type === TreeNodeType.Scroll) {
 		return {
@@ -232,9 +232,9 @@ export function leafNeedsHealing(
  * Note: tRef removed - computes expected basename from tree structure only.
  */
 export function getExpectedBasename(leaf: TreeLeaf): string {
-	const coreNameChain = leaf.coreNameChainToParent;
+	const nodeNameChain = leaf.nodeNameChainToParent;
 	return buildBasenameDepreacated(
-		leaf.coreName,
-		computeSuffixFromPathDepreacated(coreNameChain),
+		leaf.nodeName,
+		computeSuffixFromPathDepreacated(nodeNameChain),
 	);
 }

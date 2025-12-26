@@ -26,29 +26,29 @@ export const treeNodeToSuffixedSplitPathCodec = z.codec(
 			const libraryRoot = settings.splitPathToLibraryRoot.basename;
 
 			if (node.type === TreeNodeType.Section) {
-				// Section: folder basename is coreName (no suffix)
+				// Section: folder basename is nodeName (no suffix)
 				// pathParts is parent path, doesn't include the section itself
 				// For root section (empty parent chain), pathParts is empty
 				const pathParts =
-					node.coreNameChainToParent.length === 0
+					node.nodeNameChainToParent.length === 0
 						? []
-						: [libraryRoot, ...node.coreNameChainToParent];
+						: [libraryRoot, ...node.nodeNameChainToParent];
 
 				return {
-					basename: node.coreName,
+					basename: node.nodeName,
 					pathParts,
 					type: SplitPathType.Folder,
 				};
 			}
 
 			// Scroll/File: build basename with suffix
-			// Chain should be from root to leaf: [...parentChain, coreName]
+			// Chain should be from root to leaf: [...parentChain, nodeName]
 			const basename = suffixedBasenameToChainCodec.encode([
-				...node.coreNameChainToParent,
-				node.coreName,
+				...node.nodeNameChainToParent,
+				node.nodeName,
 			]);
 
-			const pathParts = [libraryRoot, ...node.coreNameChainToParent];
+			const pathParts = [libraryRoot, ...node.nodeNameChainToParent];
 
 			if (node.type === TreeNodeType.Scroll) {
 				return {
@@ -72,44 +72,44 @@ export const treeNodeToSuffixedSplitPathCodec = z.codec(
 			const libraryRoot = settings.splitPathToLibraryRoot.basename;
 
 			if (rest.type === SplitPathType.Folder) {
-				// For sections, basename is the coreName (no suffix)
+				// For sections, basename is the nodeName (no suffix)
 				// pathParts is parent path, doesn't include the section itself
-				const coreName = basename;
+				const nodeName = basename;
 				const startIndex = pathParts[0] === libraryRoot ? 1 : 0;
-				const coreNameChainToParent = pathParts.slice(startIndex);
+				const nodeNameChainToParent = pathParts.slice(startIndex);
 
 				return {
 					children: [],
-					coreName,
-					coreNameChainToParent,
+					nodeName,
+					nodeNameChainToParent,
 					status: TreeNodeStatus.Unknown,
 					type: TreeNodeType.Section,
 				};
 			}
 
-			// For files, decode basename to get coreName and parent chain
+			// For files, decode basename to get nodeName and parent chain
 			const fullChain = suffixedBasenameToChainCodec.decode(basename);
-			const coreName = fullChain[fullChain.length - 1] ?? "";
+			const nodeName = fullChain[fullChain.length - 1] ?? "";
 			const startIndex = pathParts[0] === libraryRoot ? 1 : 0;
 			const pathPartsAfterRoot = pathParts.slice(startIndex);
 
 			// For files, pathParts doesn't include the file name
-			const coreNameChainToParent = pathPartsAfterRoot;
+			const nodeNameChainToParent = pathPartsAfterRoot;
 
 			if (rest.type === SplitPathType.MdFile) {
 				return {
-					coreName,
-					coreNameChainToParent,
 					extension: "md",
+					nodeName,
+					nodeNameChainToParent,
 					status: TreeNodeStatus.Unknown,
 					type: TreeNodeType.Scroll,
 				};
 			}
 
 			return {
-				coreName,
-				coreNameChainToParent,
 				extension: rest.extension,
+				nodeName,
+				nodeNameChainToParent,
 				status: TreeNodeStatus.Unknown,
 				type: TreeNodeType.File,
 			};

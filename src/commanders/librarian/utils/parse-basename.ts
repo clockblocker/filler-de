@@ -5,7 +5,7 @@ import type { ParsedBasename } from "../naming/parsed-basename";
 export function parseBasenameDeprecated(basename: string): ParsedBasename {
 	const suffixDelimiter = getParsedUserSettings().suffixDelimiter;
 	const parts = basename.split(suffixDelimiter);
-	const [coreName = "", ...splitSuffix] = parts;
+	const [nodeName = "", ...splitSuffix] = parts;
 
-	return { coreName, splitSuffix };
+	return { nodeName, splitSuffix };
 }

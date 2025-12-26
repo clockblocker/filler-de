@@ -42,7 +42,7 @@ export function computeCreateAction(
 	}
 
 	const newBasename = buildBasenameDepreacated(
-		parsed.coreName,
+		parsed.nodeName,
 		expectedSuffix,
 	);
 

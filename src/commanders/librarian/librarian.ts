@@ -12,7 +12,7 @@ import {
 } from "./codex/impacted-chains";
 import { healOnInit, type InitHealResult } from "./healing";
 import type { LibraryTree } from "./library-tree";
-import type { CoreNameChainFromRoot } from "./naming/parsed-basename";
+import type { NodeNameChain } from "./naming/parsed-basename";
 import {
 	type CodexRegeneratorContext,
 	type EventHandlerContext,
@@ -239,7 +239,7 @@ export class Librarian {
 	 * Updates tree, writes metadata to file (for Scroll nodes), and regenerates impacted codexes.
 	 */
 	async setStatus(
-		coreNameChain: CoreNameChainFromRoot,
+		nodeNameChain: NodeNameChain,
 		status: TreeNodeStatus,
 	): Promise<void> {
 		const newStatus =
@@ -248,10 +248,10 @@ export class Librarian {
 				: TreeNodeStatus.NotStarted;
 
 		// Get node before updating (to access tRef for Scroll nodes)
-		const node = this.tree.getNode(coreNameChain);
+		const node = this.tree.getNode(nodeNameChain);
 
 		const impactedChain = this.tree.applyTreeAction({
-			payload: { coreNameChain, newStatus },
+			payload: { newStatus, nodeNameChain },
 			type: TreeActionType.ChangeNodeStatus,
 		});
 

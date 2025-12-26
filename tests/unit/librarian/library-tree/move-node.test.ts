@@ -12,15 +12,15 @@ import {
 const fakeRootFolder = { name: "Library" } as unknown as TFolder;
 
 const createScrollLeaf = (
-	coreName: string,
-	coreNameChainToParent: string[],
+	nodeName: string,
+	nodeNameChainToParent: string[],
 	status:
 		| typeof TreeNodeStatus.Done
 		| typeof TreeNodeStatus.NotStarted = TreeNodeStatus.NotStarted,
 ): TreeLeaf => ({
-	coreName,
-	coreNameChainToParent,
 	extension: "md",
+	nodeName,
+	nodeNameChainToParent,
 	status,
 	type: TreeNodeType.Scroll,
 });
@@ -37,8 +37,8 @@ describe("LibraryTree MoveNode", () => {
 			// Move Note from A to B
 			tree.applyTreeAction({
 				payload: {
-					coreNameChain: ["A", "Note"],
-					newCoreNameChainToParent: ["B"],
+					newNodeNameChainToParent: ["B"],
+					nodeNameChain: ["A", "Note"],
 				},
 				type: TreeActionType.MoveNode,
 			});
@@ -46,8 +46,8 @@ describe("LibraryTree MoveNode", () => {
 			// Node should exist at new location
 			const movedNode = tree.getNode(["B", "Note"]);
 			expect(movedNode).not.toBeNull();
-			expect(movedNode?.coreName).toBe("Note");
-			expect(movedNode?.coreNameChainToParent).toEqual(["B"]);
+			expect(movedNode?.nodeName).toBe("Note");
+			expect(movedNode?.nodeNameChainToParent).toEqual(["B"]);
 
 			// Node should not exist at old location
 			const oldNode = tree.getNode(["A", "Note"]);
@@ -63,8 +63,8 @@ describe("LibraryTree MoveNode", () => {
 
 			const result = tree.applyTreeAction({
 				payload: {
-					coreNameChain: ["A", "Note"],
-					newCoreNameChainToParent: ["B"],
+					newNodeNameChainToParent: ["B"],
+					nodeNameChain: ["A", "Note"],
 				},
 				type: TreeActionType.MoveNode,
 			});
@@ -81,8 +81,8 @@ describe("LibraryTree MoveNode", () => {
 			// Move to non-existent path B/C
 			tree.applyTreeAction({
 				payload: {
-					coreNameChain: ["A", "Note"],
-					newCoreNameChainToParent: ["B", "C"],
+					newNodeNameChainToParent: ["B", "C"],
+					nodeNameChain: ["A", "Note"],
 				},
 				type: TreeActionType.MoveNode,
 			});
@@ -98,7 +98,7 @@ describe("LibraryTree MoveNode", () => {
 	});
 
 	describe("updates section children chains", () => {
-		it("updates children coreNameChainToParent recursively", () => {
+		it("updates children nodeNameChainToParent recursively", () => {
 			const leaves: TreeLeaf[] = [
 				createScrollLeaf("Note1", ["A", "B"]),
 				createScrollLeaf("Note2", ["A", "B"]),
@@ -109,8 +109,8 @@ describe("LibraryTree MoveNode", () => {
 			// Move section B from A to C
 			tree.applyTreeAction({
 				payload: {
-					coreNameChain: ["A", "B"],
-					newCoreNameChainToParent: ["C"],
+					newNodeNameChainToParent: ["C"],
+					nodeNameChain: ["A", "B"],
 				},
 				type: TreeActionType.MoveNode,
 			});
@@ -118,16 +118,16 @@ describe("LibraryTree MoveNode", () => {
 			// Section B should be under C now
 			const sectionB = tree.getNode(["C", "B"]) as SectionNode;
 			expect(sectionB).not.toBeNull();
-			expect(sectionB.coreNameChainToParent).toEqual(["C"]);
+			expect(sectionB.nodeNameChainToParent).toEqual(["C"]);
 
 			// Children should have updated chains
 			const note1 = tree.getNode(["C", "B", "Note1"]);
 			expect(note1).not.toBeNull();
-			expect(note1?.coreNameChainToParent).toEqual(["C", "B"]);
+			expect(note1?.nodeNameChainToParent).toEqual(["C", "B"]);
 
 			const note2 = tree.getNode(["C", "B", "Note2"]);
 			expect(note2).not.toBeNull();
-			expect(note2?.coreNameChainToParent).toEqual(["C", "B"]);
+			expect(note2?.nodeNameChainToParent).toEqual(["C", "B"]);
 		});
 	});
 
@@ -148,8 +148,8 @@ describe("LibraryTree MoveNode", () => {
 			// Move NotStarted note to B
 			tree.applyTreeAction({
 				payload: {
-					coreNameChain: ["A", "NotStartedNote"],
-					newCoreNameChainToParent: ["B"],
+					newNodeNameChainToParent: ["B"],
+					nodeNameChain: ["A", "NotStartedNote"],
 				},
 				type: TreeActionType.MoveNode,
 			});
@@ -174,8 +174,8 @@ describe("LibraryTree MoveNode", () => {
 			// Move NotStarted note to B
 			tree.applyTreeAction({
 				payload: {
-					coreNameChain: ["A", "NotStartedNote"],
-					newCoreNameChainToParent: ["B"],
+					newNodeNameChainToParent: ["B"],
+					nodeNameChain: ["A", "NotStartedNote"],
 				},
 				type: TreeActionType.MoveNode,
 			});
@@ -197,8 +197,8 @@ describe("LibraryTree MoveNode", () => {
 			expect(() =>
 				tree.applyTreeAction({
 					payload: {
-						coreNameChain: ["A", "Note"],
-						newCoreNameChainToParent: ["B"],
+						newNodeNameChainToParent: ["B"],
+						nodeNameChain: ["A", "Note"],
 					},
 					type: TreeActionType.MoveNode,
 				}),
@@ -211,8 +211,8 @@ describe("LibraryTree MoveNode", () => {
 
 			const result = tree.applyTreeAction({
 				payload: {
-					coreNameChain: ["X", "NonExistent"],
-					newCoreNameChainToParent: ["B"],
+					newNodeNameChainToParent: ["B"],
+					nodeNameChain: ["X", "NonExistent"],
 				},
 				type: TreeActionType.MoveNode,
 			});

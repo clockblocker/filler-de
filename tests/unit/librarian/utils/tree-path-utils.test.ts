@@ -39,9 +39,9 @@ describe("buildCanonicalPathFromTree", () => {
 
 	it("builds canonical path for root-level file", () => {
 		const leaf: TreeLeaf = {
-			coreName: "Note",
-			coreNameChainToParent: [],
 			extension: "md",
+			nodeName: "Note",
+			nodeNameChainToParent: [],
 			status: TreeNodeStatus.NotStarted,
 			type: TreeNodeType.Scroll,
 		};
@@ -53,9 +53,9 @@ describe("buildCanonicalPathFromTree", () => {
 
 	it("builds canonical path with suffix in basename", () => {
 		const leaf: TreeLeaf = {
-			coreName: "Note",
-			coreNameChainToParent: ["A", "B"],
 			extension: "md",
+			nodeName: "Note",
+			nodeNameChainToParent: ["A", "B"],
 			status: TreeNodeStatus.NotStarted,
 			type: TreeNodeType.Scroll,
 		};
@@ -72,9 +72,9 @@ describe("buildCanonicalPathFromTree", () => {
 		});
 
 		const leaf: TreeLeaf = {
-			coreName: "Note",
-			coreNameChainToParent: ["A", "B"],
 			extension: "md",
+			nodeName: "Note",
+			nodeNameChainToParent: ["A", "B"],
 			status: TreeNodeStatus.NotStarted,
 			type: TreeNodeType.Scroll,
 		};
@@ -95,9 +95,9 @@ describe("buildCanonicalPathFromTree", () => {
 		});
 
 		const leaf: TreeLeaf = {
-			coreName: "Note",
-			coreNameChainToParent: ["A"],
 			extension: "md",
+			nodeName: "Note",
+			nodeNameChainToParent: ["A"],
 			status: TreeNodeStatus.NotStarted,
 			type: TreeNodeType.Scroll,
 		};
@@ -112,9 +112,9 @@ describe("buildCanonicalBasenameFromTree", () => {
 
 	it("builds canonical basename for root-level file", () => {
 		const leaf: TreeLeaf = {
-			coreName: "Note",
-			coreNameChainToParent: [],
 			extension: "md",
+			nodeName: "Note",
+			nodeNameChainToParent: [],
 			status: TreeNodeStatus.NotStarted,
 			type: TreeNodeType.Scroll,
 		};
@@ -126,9 +126,9 @@ describe("buildCanonicalBasenameFromTree", () => {
 
 	it("builds canonical basename with reversed path as suffix", () => {
 		const leaf: TreeLeaf = {
-			coreName: "Note",
-			coreNameChainToParent: ["A", "B"],
 			extension: "md",
+			nodeName: "Note",
+			nodeNameChainToParent: ["A", "B"],
 			status: TreeNodeStatus.NotStarted,
 			type: TreeNodeType.Scroll,
 		};
@@ -145,9 +145,9 @@ describe("buildCanonicalBasenameFromTree", () => {
 		});
 
 		const leaf: TreeLeaf = {
-			coreName: "Note",
-			coreNameChainToParent: ["A", "B"],
 			extension: "md",
+			nodeName: "Note",
+			nodeNameChainToParent: ["A", "B"],
 			status: TreeNodeStatus.NotStarted,
 			type: TreeNodeType.Scroll,
 		};
@@ -159,9 +159,9 @@ describe("buildCanonicalBasenameFromTree", () => {
 
 	it("handles single parent folder", () => {
 		const leaf: TreeLeaf = {
-			coreName: "Note",
-			coreNameChainToParent: ["Parent"],
 			extension: "md",
+			nodeName: "Note",
+			nodeNameChainToParent: ["Parent"],
 			status: TreeNodeStatus.NotStarted,
 			type: TreeNodeType.Scroll,
 		};

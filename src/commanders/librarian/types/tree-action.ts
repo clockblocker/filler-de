@@ -1,7 +1,4 @@
-import type {
-	CoreName,
-	CoreNameChainFromRoot,
-} from "../naming/parsed-basename";
+import type { NodeName, NodeNameChain } from "../naming/parsed-basename";
 import { TreeActionType } from "./literals";
 import type { TreeNodeStatus, TreeNodeType } from "./tree-node";
 
@@ -16,8 +13,8 @@ export type CreateNodeAction =
 	| {
 			type: typeof TreeActionType.CreateNode;
 			payload: {
-				coreName: CoreName;
-				coreNameChainToParent: CoreNameChainFromRoot;
+				nodeName: NodeName;
+				nodeNameChainToParent: NodeNameChain;
 				nodeType: typeof TreeNodeType.Scroll;
 				status:
 					| typeof TreeNodeStatus.Done
@@ -28,8 +25,8 @@ export type CreateNodeAction =
 	| {
 			type: typeof TreeActionType.CreateNode;
 			payload: {
-				coreName: CoreName;
-				coreNameChainToParent: CoreNameChainFromRoot;
+				nodeName: NodeName;
+				nodeNameChainToParent: NodeNameChain;
 				nodeType: typeof TreeNodeType.File;
 				status: typeof TreeNodeStatus.Unknown;
 				extension: string;
@@ -38,8 +35,8 @@ export type CreateNodeAction =
 	| {
 			type: typeof TreeActionType.CreateNode;
 			payload: {
-				coreName: CoreName;
-				coreNameChainToParent: CoreNameChainFromRoot;
+				nodeName: NodeName;
+				nodeNameChainToParent: NodeNameChain;
 				nodeType: typeof TreeNodeType.Section;
 				status:
 					| typeof TreeNodeStatus.Done
@@ -50,22 +47,22 @@ export type CreateNodeAction =
 export type DeleteNodeAction = {
 	type: typeof TreeActionType.DeleteNode;
 	payload: {
-		coreNameChain: CoreNameChainFromRoot;
+		nodeNameChain: NodeNameChain;
 	};
 };
 
 export type ChangeNodeNameAction = {
 	type: typeof TreeActionType.ChangeNodeName;
 	payload: {
-		coreNameChain: CoreNameChainFromRoot;
-		newCoreName: CoreName;
+		nodeNameChain: NodeNameChain;
+		newNodeName: NodeName;
 	};
 };
 
 export type ChangeNodeStatusAction = {
 	type: typeof TreeActionType.ChangeNodeStatus;
 	payload: {
-		coreNameChain: CoreNameChainFromRoot;
+		nodeNameChain: NodeNameChain;
 		newStatus: TreeNodeStatus;
 	};
 };
@@ -73,8 +70,8 @@ export type ChangeNodeStatusAction = {
 export type MoveNodeAction = {
 	type: typeof TreeActionType.MoveNode;
 	payload: {
-		coreNameChain: CoreNameChainFromRoot;
-		newCoreNameChainToParent: CoreNameChainFromRoot;
+		nodeNameChain: NodeNameChain;
+		newNodeNameChainToParent: NodeNameChain;
 	};
 };
 

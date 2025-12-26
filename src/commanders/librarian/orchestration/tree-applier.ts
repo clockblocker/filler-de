@@ -1,7 +1,7 @@
 import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
 import { collectImpactedSections } from "../codex";
 import type { LibraryTree } from "../library-tree";
-import type { CoreNameChainFromRoot } from "../naming/parsed-basename";
+import type { NodeNameChain } from "../naming/parsed-basename";
 import { translateVaultAction } from "../reconciliation";
 
 export type TreeApplierContext = {
@@ -16,10 +16,9 @@ export type TreeApplierContext = {
 export function applyActionsToTree(
 	actions: VaultAction[],
 	context: TreeApplierContext,
-): CoreNameChainFromRoot[] {
-	const actionResults: Array<
-		CoreNameChainFromRoot | [CoreNameChainFromRoot, CoreNameChainFromRoot]
-	> = [];
+): NodeNameChain[] {
+	const actionResults: Array<NodeNameChain | [NodeNameChain, NodeNameChain]> =
+		[];
 
 	for (const action of actions) {
 		const treeAction = translateVaultAction(action, {});

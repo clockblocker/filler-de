@@ -55,8 +55,8 @@ export const testSerializeToLeaves = async () => {
 		return {
 			leafCount: serialized.length,
 			leaves: serialized.map((leaf: any) => ({
-				coreName: leaf.coreName,
-				coreNameChainToParent: leaf.coreNameChainToParent,
+				nodeName: leaf.nodeName,
+				nodeNameChainToParent: leaf.nodeNameChainToParent,
 				status: leaf.status,
 				type: leaf.type,
 			})),
@@ -68,24 +68,24 @@ export const testSerializeToLeaves = async () => {
 	expect(result.leafCount).toBe(3);
 
 	// Verify all leaves are present
-	const note1 = result.leaves.find((l: any) => l.coreName === "Note1");
-	const note2 = result.leaves.find((l: any) => l.coreName === "Note2");
-	const note3 = result.leaves.find((l: any) => l.coreName === "Note3");
+	const note1 = result.leaves.find((l: any) => l.nodeName === "Note1");
+	const note2 = result.leaves.find((l: any) => l.nodeName === "Note2");
+	const note3 = result.leaves.find((l: any) => l.nodeName === "Note3");
 
 	expect(note1).toBeDefined();
 	expect(note1?.type).toBe("Scroll");
 	expect(note1?.status).toBe("Done");
-	expect(note1?.coreNameChainToParent).toEqual(["A"]);
+	expect(note1?.nodeNameChainToParent).toEqual(["A"]);
 
 	expect(note2).toBeDefined();
 	expect(note2?.type).toBe("Scroll");
 	expect(note2?.status).toBe("NotStarted");
-	expect(note2?.coreNameChainToParent).toEqual(["A"]);
+	expect(note2?.nodeNameChainToParent).toEqual(["A"]);
 
 	expect(note3).toBeDefined();
 	expect(note3?.type).toBe("Scroll");
 	expect(note3?.status).toBe("Done");
-	expect(note3?.coreNameChainToParent).toEqual(["B"]);
+	expect(note3?.nodeNameChainToParent).toEqual(["B"]);
 
 	// Verify no sections in serialized output
 	const sections = result.leaves.filter((l: any) => l.type === "Section");
@@ -160,12 +160,12 @@ export const testSerializeRoundTrip = async () => {
 		const sectionX2 = tree2.getNode(["X"]) as TreeNodeApi | null;
 
 		return {
-			deep1: deep1 ? { coreName: deep1.coreName, status: deep1.status } : null,
-			deep2: deep2 ? { coreName: deep2.coreName, status: deep2.status } : null,
-			sectionX1: sectionX1 ? { coreName: sectionX1.coreName, status: sectionX1.status } : null,
-			sectionX2: sectionX2 ? { coreName: sectionX2.coreName, status: sectionX2.status } : null,
-			shallow1: shallow1 ? { coreName: shallow1.coreName, status: shallow1.status } : null,
-			shallow2: shallow2 ? { coreName: shallow2.coreName, status: shallow2.status } : null,
+			deep1: deep1 ? { nodeName: deep1.nodeName, status: deep1.status } : null,
+			deep2: deep2 ? { nodeName: deep2.nodeName, status: deep2.status } : null,
+			sectionX1: sectionX1 ? { nodeName: sectionX1.nodeName, status: sectionX1.status } : null,
+			sectionX2: sectionX2 ? { nodeName: sectionX2.nodeName, status: sectionX2.status } : null,
+			shallow1: shallow1 ? { nodeName: shallow1.nodeName, status: shallow1.status } : null,
+			shallow2: shallow2 ? { nodeName: shallow2.nodeName, status: shallow2.status } : null,
 			success: true,
 		};
 	});

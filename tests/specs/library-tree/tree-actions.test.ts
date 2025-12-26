@@ -45,8 +45,8 @@ export const testCreateNodeAction = async () => {
 		// Create a new section node
 		tree.applyTreeAction({
 			payload: {
-				coreName: "NewSection",
-				coreNameChainToParent: ["A"],
+				nodeName: "NewSection",
+				nodeNameChainToParent: ["A"],
 				nodeType: "Section",
 				status: "NotStarted",
 			},
@@ -123,7 +123,7 @@ export const testDeleteNodeAction = async () => {
 
 		// Delete Note1
 		tree.applyTreeAction({
-			payload: { coreNameChain: ["B", "Note1"] },
+			payload: { nodeNameChain: ["B", "Note1"] },
 			type: "DeleteNode",
 		});
 
@@ -190,8 +190,8 @@ export const testChangeNodeNameAction = async () => {
 		// Rename node
 		tree.applyTreeAction({
 			payload: {
-				coreNameChain: ["C", "OldName"],
-				newCoreName: "NewName",
+				newNodeName: "NewName",
+				nodeNameChain: ["C", "OldName"],
 			},
 			type: "ChangeNodeName",
 		});
@@ -200,8 +200,8 @@ export const testChangeNodeNameAction = async () => {
 		const newNameNode = tree.getNode(["C", "NewName"]) as TreeNodeApi | null;
 
 		return {
-			newNameCoreName: newNameNode?.coreName,
 			newNameExists: newNameNode !== null,
+			newNameNodeName: newNameNode?.nodeName,
 			newNameStatus: newNameNode?.status,
 			oldNameExists: oldNameNode !== null,
 			oldNodeExistedBefore: oldNode !== null,
@@ -213,7 +213,7 @@ export const testChangeNodeNameAction = async () => {
 	expect(result.oldNodeExistedBefore).toBe(true);
 	expect(result.oldNameExists).toBe(false);
 	expect(result.newNameExists).toBe(true);
-	expect(result.newNameCoreName).toBe("NewName");
+	expect(result.newNameNodeName).toBe("NewName");
 	expect(result.newNameStatus).toBe("Done");
 };
 
@@ -261,8 +261,8 @@ export const testChangeNodeStatusAction = async () => {
 		// Change status
 		tree.applyTreeAction({
 			payload: {
-				coreNameChain: ["D", "Note"],
 				newStatus: "Done",
+				nodeNameChain: ["D", "Note"],
 			},
 			type: "ChangeNodeStatus",
 		});

@@ -2,12 +2,13 @@ import { err, ok, type Result } from "neverthrow";
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import {
 	type SplitPathToFolder,
+	type SplitPathToMdFile,
 	SplitPathType,
 } from "../../../obsidian-vault-action-manager/types/split-path";
 import type { SectionNode } from "../types/tree-node";
 import { codexBasenameToSectionChainCodec } from "./codecs/suffixed-basename-for-codex-to-chain-codec";
 import { treeNodeToSuffixedSplitPathCodec } from "./codecs/tree-node-to-split-path-codec";
-import type { CoreNameChainFromRoot } from "./parsed-basename";
+import type { NodeNameChain } from "./parsed-basename";
 
 /**
  * Build codex basename from section folder path.
@@ -35,27 +36,54 @@ export function buildCodexBasename(
  * buildCodexBasename(["Parent"]) // "__-Child-Parent"
  */
 export function buildCodexBasename(
-	section: Pick<SectionNode, "coreName" | "coreNameChainToParent">,
+	section: Pick<SectionNode, "nodeName" | "nodeNameChainToParent">,
 ): string;
 export function buildCodexBasename(
 	splitPathToFolderOrSection:
 		| SplitPathToFolder
-		| Pick<SectionNode, "coreName" | "coreNameChainToParent">,
+		| Pick<SectionNode, "nodeName" | "nodeNameChainToParent">,
 ): string {
 	if ("pathParts" in splitPathToFolderOrSection) {
 		const sectionNode = treeNodeToSuffixedSplitPathCodec.encode(
 			splitPathToFolderOrSection,
 		);
 		const fullChain = [
-			...sectionNode.coreNameChainToParent,
-			sectionNode.coreName,
+			...sectionNode.nodeNameChainToParent,
+			sectionNode.nodeName,
 		];
 		return codexBasenameToSectionChainCodec.encode(fullChain);
 	}
 
-	const { coreName, coreNameChainToParent } = splitPathToFolderOrSection;
-	const fullChain = [...coreNameChainToParent, coreName];
+	const { nodeName, nodeNameChainToParent } = splitPathToFolderOrSection;
+	const fullChain = [...nodeNameChainToParent, nodeName];
 	return codexBasenameToSectionChainCodec.encode(fullChain);
+}
+
+export function tryBuildingSplitpathToCodex(
+	suffixedBasenameForCodex: string,
+): Result<SplitPathToMdFile, string> {
+	const sectionChainResult = tryExtractingNodeNameChainToSection(
+		suffixedBasenameForCodex,
+	);
+
+	if (sectionChainResult.isErr()) {
+		return err(sectionChainResult.error);
+	}
+
+	const sectionChain = sectionChainResult.value;
+
+	const pathParts = [libraryRoot, ...sectionChain.slice(0, -1)];
+	const basename = sectionChain[sectionChain.length - 1] ?? libraryRoot;
+	if (!basename) {
+		return err("Failed to build codex basename");
+	}
+
+	return ok({
+		basename,
+		extension: "md",
+		pathParts: [libraryRoot, ...sectionChain.slice(0, -1)],
+		type: SplitPathType.MdFile,
+	});
 }
 
 /**
@@ -66,13 +94,13 @@ export function buildCodexBasename(
  * @returns Result with core name chain from root to section (e.g., [] or ["Parent", "Child"])
  *
  * @example
- * tryExtractingCoreNameChainToSection("__-Library") // ok([])
- * tryExtractingCoreNameChainToSection("__-Child-Parent") // ok(["Parent", "Child"])
- * tryExtractingCoreNameChainToSection("Note") // err("Invalid codex basename: ...")
+ * tryExtractingNodeNameChainToSection("__-Library") // ok([])
+ * tryExtractingNodeNameChainToSection("__-Child-Parent") // ok(["Parent", "Child"])
+ * tryExtractingNodeNameChainToSection("Note") // err("Invalid codex basename: ...")
  */
-export function tryExtractingCoreNameChainToSection(
+export function tryExtractingNodeNameChainToSection(
 	suffixedBasename: string,
-): Result<CoreNameChainFromRoot, string> {
+): Result<NodeNameChain, string> {
 	const parseResult =
 		codexBasenameToSectionChainCodec.safeParse(suffixedBasename);
 
@@ -103,7 +131,7 @@ export function tryExtractingCoreNameChainToSection(
 export function tryExtractingSplitPathToFolder(
 	suffixedBasenameForСodex: string,
 ): Result<SplitPathToFolder, string> {
-	const sectionChainResult = tryExtractingCoreNameChainToSection(
+	const sectionChainResult = tryExtractingNodeNameChainToSection(
 		suffixedBasenameForСodex,
 	);
 	if (sectionChainResult.isErr()) {

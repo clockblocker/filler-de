@@ -37,7 +37,7 @@ afterEach(() => {
 
 describe("splitPathToLeaf", () => {
 	describe("MdFile → ScrollNode", () => {
-		it("converts MdFile to ScrollNode with correct coreNameChainToParent", () => {
+		it("converts MdFile to ScrollNode with correct nodeNameChainToParent", () => {
 			const input: SplitPathToMdFile = {
 				basename: "Note-child-parent",
 				extension: "md",
@@ -48,9 +48,9 @@ describe("splitPathToLeaf", () => {
 			const result = splitPathToLeafDeprecated(input);
 
 			expect(result).toEqual({
-				coreName: "Note",
-				coreNameChainToParent: ["parent", "child"],
 				extension: "md",
+				nodeName: "Note",
+				nodeNameChainToParent: ["parent", "child"],
 				status: TreeNodeStatus.NotStarted,
 				type: TreeNodeType.Scroll,
 			});
@@ -66,7 +66,7 @@ describe("splitPathToLeaf", () => {
 
 			const result = splitPathToLeafDeprecated(input);
 
-			expect(result.coreNameChainToParent).toEqual(["Avarar", "S1"]);
+			expect(result.nodeNameChainToParent).toEqual(["Avarar", "S1"]);
 		});
 
 		it("handles root-level file (no parent folders)", () => {
@@ -79,8 +79,8 @@ describe("splitPathToLeaf", () => {
 
 			const result = splitPathToLeafDeprecated(input);
 
-			expect(result.coreNameChainToParent).toEqual([]);
-			expect(result.coreName).toBe("RootNote");
+			expect(result.nodeNameChainToParent).toEqual([]);
+			expect(result.nodeName).toBe("RootNote");
 		});
 
 		it("keeps pathParts if root folder name doesn't match", () => {
@@ -93,7 +93,7 @@ describe("splitPathToLeaf", () => {
 
 			const result = splitPathToLeafDeprecated(input);
 
-			expect(result.coreNameChainToParent).toEqual(["Other", "folder"]);
+			expect(result.nodeNameChainToParent).toEqual(["Other", "folder"]);
 		});
 	});
 
@@ -109,9 +109,9 @@ describe("splitPathToLeaf", () => {
 			const result = splitPathToLeafDeprecated(input);
 
 			expect(result).toEqual({
-				coreName: "document",
-				coreNameChainToParent: ["doc", "Pekar", "2025"],
 				extension: "pdf",
+				nodeName: "document",
+				nodeNameChainToParent: ["doc", "Pekar", "2025"],
 				status: TreeNodeStatus.Unknown,
 				type: TreeNodeType.File,
 			});
@@ -119,7 +119,7 @@ describe("splitPathToLeaf", () => {
 	});
 
 	describe("basename parsing", () => {
-		it("extracts coreName before first delimiter", () => {
+		it("extracts nodeName before first delimiter", () => {
 			const input: SplitPathToMdFile = {
 				basename: "The_Title-folder1-folder2",
 				extension: "md",
@@ -129,7 +129,7 @@ describe("splitPathToLeaf", () => {
 
 			const result = splitPathToLeafDeprecated(input);
 
-			expect(result.coreName).toBe("The_Title");
+			expect(result.nodeName).toBe("The_Title");
 		});
 
 		it("uses full basename when no delimiter", () => {
@@ -142,7 +142,7 @@ describe("splitPathToLeaf", () => {
 
 			const result = splitPathToLeafDeprecated(input);
 
-			expect(result.coreName).toBe("SimpleNote");
+			expect(result.nodeName).toBe("SimpleNote");
 		});
 
 		it("respects custom delimiter", () => {
@@ -159,7 +159,7 @@ describe("splitPathToLeaf", () => {
 
 			const result = splitPathToLeafDeprecated(input);
 
-			expect(result.coreName).toBe("Note");
+			expect(result.nodeName).toBe("Note");
 		});
 	});
 });

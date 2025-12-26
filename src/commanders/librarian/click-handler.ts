@@ -4,12 +4,12 @@ import { getParsedUserSettings } from "../../global-state/global-state";
 import type { ObsidianVaultActionManager } from "../../obsidian-vault-action-manager";
 import { logger } from "../../utils/logger";
 import type { Librarian } from "./librarian";
-import type { CoreNameChainFromRoot } from "./naming/parsed-basename";
+import type { NodeNameChain } from "./naming/parsed-basename";
 import { CODEX_CORE_NAME } from "./types/literals";
 
 /**
  * Handle codex checkbox click.
- * Parses link target, converts to coreNameChain, calls setStatus.
+ * Parses link target, converts to nodeNameChain, calls setStatus.
  */
 export async function handleCodexCheckboxClick({
 	checkbox,
@@ -45,9 +45,9 @@ export async function handleCodexCheckboxClick({
 		return false;
 	}
 
-	// Parse to coreNameChain
-	const coreNameChain = parseCodexLinkTarget(href);
-	if (!coreNameChain || coreNameChain.length === 0) {
+	// Parse to nodeNameChain
+	const nodeNameChain = parseCodexLinkTarget(href);
+	if (!nodeNameChain || nodeNameChain.length === 0) {
 		logger.debug("[handleCodexCheckboxClick] Failed to parse:", href);
 		return false;
 	}
@@ -58,14 +58,14 @@ export async function handleCodexCheckboxClick({
 	logger.debug(
 		"[handleCodexCheckboxClick]",
 		JSON.stringify({
-			coreNameChain,
 			href,
 			newStatus,
+			nodeNameChain,
 		}),
 	);
 
 	// Fire-and-forget async
-	librarian.setStatus(coreNameChain, newStatus).catch((error) => {
+	librarian.setStatus(nodeNameChain, newStatus).catch((error) => {
 		logger.error(
 			"[handleCodexCheckboxClick] setStatus failed:",
 			error instanceof Error ? error.message : String(error),
@@ -89,7 +89,7 @@ export function isTaskCheckbox(
 }
 
 /**
- * Parse codex link target to CoreNameChainFromRoot.
+ * Parse codex link target to NodeNameChain.
  * Reads suffixDelimiter from global settings.
  *
  * New format uses suffixDelimiter:
@@ -97,9 +97,7 @@ export function isTaskCheckbox(
  * - With prefix: "__Fairy_Tales" → ["Fairy_Tales"] (section codex)
  * - Scroll links: "NoteName-Parent-GrandParent" → ["GrandParent", "Parent", "NoteName"]
  */
-export function parseCodexLinkTarget(
-	href: string,
-): CoreNameChainFromRoot | null {
+export function parseCodexLinkTarget(href: string): NodeNameChain | null {
 	// Strip codex prefix if present
 	const cleanHref = href.startsWith(CODEX_CORE_NAME)
 		? href.slice(CODEX_CORE_NAME.length)

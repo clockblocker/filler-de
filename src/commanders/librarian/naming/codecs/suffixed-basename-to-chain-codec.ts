@@ -1,20 +1,17 @@
 import z from "zod";
 import { getParsedUserSettings } from "../../../../global-state/global-state";
-import {
-	type CoreNameChainFromRoot,
-	CoreNameChainFromRootSchema,
-} from "../parsed-basename";
+import { type NodeNameChain, NodeNameChainSchema } from "../parsed-basename";
 
 /**
- * Zod codec from section basename (without prefix) to CoreNameChainFromRoot.
+ * Zod codec from section basename (without prefix) to NodeNameChain.
  * Decodes section basename (e.g., "Library" or "Child-Parent") to section chain.
  * Reads settings internally.
  */
 export const suffixedBasenameToChainCodec = z.codec(
 	z.string(),
-	CoreNameChainFromRootSchema,
+	NodeNameChainSchema,
 	{
-		decode: (cleanBasename: string): CoreNameChainFromRoot => {
+		decode: (cleanBasename: string): NodeNameChain => {
 			const settings = getParsedUserSettings();
 			const libraryRoot = settings.splitPathToLibraryRoot.basename;
 
@@ -25,7 +22,7 @@ export const suffixedBasenameToChainCodec = z.codec(
 			const parts = cleanBasename.split(settings.suffixDelimiter);
 			return parts.toReversed();
 		},
-		encode: (chain: CoreNameChainFromRoot): string => {
+		encode: (chain: NodeNameChain): string => {
 			const settings = getParsedUserSettings();
 			const libraryRoot = settings.splitPathToLibraryRoot.basename;
 
@@ -33,8 +30,8 @@ export const suffixedBasenameToChainCodec = z.codec(
 				return libraryRoot;
 			}
 
-			const sectionCoreName = chain[chain.length - 1];
-			if (!sectionCoreName) {
+			const sectionNodeName = chain[chain.length - 1];
+			if (!sectionNodeName) {
 				// Fallback (should not happen, but type-safe)
 				return libraryRoot;
 			}
@@ -48,8 +45,8 @@ export const suffixedBasenameToChainCodec = z.codec(
 					: "";
 
 			return suffix
-				? `${sectionCoreName}${settings.suffixDelimiter}${suffix}`
-				: sectionCoreName;
+				? `${sectionNodeName}${settings.suffixDelimiter}${suffix}`
+				: sectionNodeName;
 		},
 	},
 );

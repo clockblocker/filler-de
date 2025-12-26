@@ -33,15 +33,15 @@ afterEach(() => {
 });
 
 function createSection(
-	coreName: string,
-	coreNameChainToParent: string[],
+	nodeName: string,
+	nodeNameChainToParent: string[],
 	children: SectionNode["children"] = [],
 	status: typeof TreeNodeStatus.Done | typeof TreeNodeStatus.NotStarted = TreeNodeStatus.NotStarted,
 ): SectionNode {
 	return {
 		children,
-		coreName,
-		coreNameChainToParent,
+		nodeName,
+		nodeNameChainToParent,
 		status,
 		type: TreeNodeType.Section,
 	};
@@ -68,9 +68,9 @@ describe("generateCodexContent", () => {
 		it("renders scroll with checkbox and full basename", () => {
 			const section = createSection("A", [], [
 				{
-					coreName: "Note",
-					coreNameChainToParent: ["A"],
 					extension: "md",
+					nodeName: "Note",
+					nodeNameChainToParent: ["A"],
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Scroll,
 				},
@@ -78,16 +78,16 @@ describe("generateCodexContent", () => {
 
 			const content = generateCodexContent(section);
 
-			// Link target has suffix, display is just coreName
+			// Link target has suffix, display is just nodeName
 			expect(content).toContain("- [ ] [[Note-A|Note]]");
 		});
 
 		it("renders done scroll with checked checkbox", () => {
 			const section = createSection("A", [], [
 				{
-					coreName: "DoneNote",
-					coreNameChainToParent: ["A"],
 					extension: "md",
+					nodeName: "DoneNote",
+					nodeNameChainToParent: ["A"],
 					status: TreeNodeStatus.Done,
 					type: TreeNodeType.Scroll,
 				},
@@ -103,9 +103,9 @@ describe("generateCodexContent", () => {
 		it("renders file without checkbox", () => {
 			const section = createSection("A", [], [
 				{
-					coreName: "Document",
-					coreNameChainToParent: ["A"],
 					extension: "pdf",
+					nodeName: "Document",
+					nodeNameChainToParent: ["A"],
 					status: TreeNodeStatus.Unknown,
 					type: TreeNodeType.File,
 				},
@@ -133,9 +133,9 @@ describe("generateCodexContent", () => {
 		it("renders nested scrolls under section", () => {
 			const childSection = createSection("B", ["A"], [
 				{
-					coreName: "NestedNote",
-					coreNameChainToParent: ["A", "B"],
 					extension: "md",
+					nodeName: "NestedNote",
+					nodeNameChainToParent: ["A", "B"],
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Scroll,
 				},
@@ -156,9 +156,9 @@ describe("generateCodexContent", () => {
 			// Create deep nesting: A > B > C > D > E
 			const sectionE = createSection("E", ["A", "B", "C", "D"], [
 				{
-					coreName: "DeepNote",
-					coreNameChainToParent: ["A", "B", "C", "D", "E"],
 					extension: "md",
+					nodeName: "DeepNote",
+					nodeNameChainToParent: ["A", "B", "C", "D", "E"],
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Scroll,
 				},

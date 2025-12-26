@@ -81,13 +81,13 @@ describe("computePathPartsFromSuffix", () => {
 });
 
 describe("buildBasename", () => {
-	it("joins coreName and suffix with delimiter", () => {
+	it("joins nodeName and suffix with delimiter", () => {
 		expect(buildBasenameDepreacated("Note", ["child", "parent"], "-")).toBe(
 			"Note-child-parent",
 		);
 	});
 
-	it("returns coreName when suffix is empty", () => {
+	it("returns nodeName when suffix is empty", () => {
 		expect(buildBasenameDepreacated("Note", [], "-")).toBe("Note");
 	});
 

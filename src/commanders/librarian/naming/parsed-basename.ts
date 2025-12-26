@@ -9,38 +9,38 @@ import z from "zod";
  * // For path "Library/parent/child/__-child-parent.md":
  * "__"
  */
-export const CoreNameSchema = z.string();
+export const NodeNameSchema = z.string();
 
 /**
  * @example
  * // For path "Library/parent/child/NoteName-child-parent.md":
  * ["child", "parent"]
  */
-export const SplitSuffixSchema = z.array(CoreNameSchema);
+export const SplitSuffixSchema = z.array(NodeNameSchema);
 
 /**
  * @example
  * // For path "Library/parent/child/NoteName-child-parent.md":
  * ["parent", "child"]
  */
-export const CoreNameChainFromRootSchema = z.array(CoreNameSchema);
+export const NodeNameChainSchema = z.array(NodeNameSchema);
 
 /**
  * @example
  * // For path "Library/parent/child/NoteName-child-parent.md":
- * { coreName: "NoteName", splitSuffix: ["child", "parent"] }
+ * { nodeName: "NoteName", splitSuffix: ["child", "parent"] }
  *
  * @example
  * // For path "Library/parent/child/__-child-parent.md":
- * { coreName: "__", splitSuffix: ["child", "parent"] }
+ * { nodeName: "__", splitSuffix: ["child", "parent"] }
  *
  */
 export const ParsedBasenameSchema = z.object({
-	coreName: CoreNameSchema,
+	nodeName: NodeNameSchema,
 	splitSuffix: SplitSuffixSchema,
 });
 
-export type CoreName = z.infer<typeof CoreNameSchema>;
+export type NodeName = z.infer<typeof NodeNameSchema>;
 export type SplitSuffix = z.infer<typeof SplitSuffixSchema>;
-export type CoreNameChainFromRoot = z.infer<typeof CoreNameChainFromRootSchema>;
+export type NodeNameChain = z.infer<typeof NodeNameChainSchema>;
 export type ParsedBasename = z.infer<typeof ParsedBasenameSchema>;

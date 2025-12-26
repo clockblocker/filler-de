@@ -17,7 +17,7 @@ Codex files follow the same suffix pattern as regular files:
 - Root codex: `__Library` (no suffix)
 - Nested codex: `__Child-Parent` (suffix = parent chain reversed)
 
-Section names should be the **coreName** only, without suffix.
+Section names should be the **nodeName** only, without suffix.
 
 ## Impact Analysis
 
@@ -47,9 +47,9 @@ If this function is used in the future, it would break:
 
 The codebase already has correct patterns:
 
-1. **`parseBasename()`** - Correctly extracts `coreName` from basenames with suffixes:
+1. **`parseBasename()`** - Correctly extracts `nodeName` from basenames with suffixes:
    ```typescript
-   parseBasename("__Child-Parent") // { coreName: "__Child", splitSuffix: ["Parent"] }
+   parseBasename("__Child-Parent") // { nodeName: "__Child", splitSuffix: ["Parent"] }
    ```
 
 2. **`parseCodexLinkTarget()`** - Correctly handles codex links:
@@ -65,16 +65,16 @@ The codebase already has correct patterns:
 ## Questions
 
 1. **Should `getCodexSectionName()` be fixed or deprecated?**
-   - If fixed: Should use `parseBasename()` to extract coreName, then strip `__` prefix
+   - If fixed: Should use `parseBasename()` to extract nodeName, then strip `__` prefix
    - If deprecated: Remove from codebase and tests
 
 2. **What is the correct implementation?**
-   - Option A: Strip prefix, then parse suffix to get coreName
+   - Option A: Strip prefix, then parse suffix to get nodeName
      ```typescript
      getCodexSectionName("__Child-Parent") // "Child"
      ```
    - Option B: Return full name without prefix (current behavior, but wrong)
-   - Option C: Return parsed coreName without prefix
+   - Option C: Return parsed nodeName without prefix
      ```typescript
      getCodexSectionName("__Child-Parent") // "Child" (strips __, then parses)
      ```
@@ -94,10 +94,10 @@ export function getCodexSectionName(codexBasename: string): string {
 	// Strip prefix first
 	const withoutPrefix = codexBasename.slice(CODEX_PREFIX.length);
 	
-	// Parse to extract coreName (handles suffixes correctly)
-	const { coreName } = parseBasename(withoutPrefix);
+	// Parse to extract nodeName (handles suffixes correctly)
+	const { nodeName } = parseBasename(withoutPrefix);
 	
-	return coreName;
+	return nodeName;
 }
 ```
 

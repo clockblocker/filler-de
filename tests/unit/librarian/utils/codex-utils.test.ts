@@ -1,11 +1,11 @@
 import { spyOn } from "bun:test";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { buildCodexBasename, tryExtractingCoreNameChainToSection, tryExtractingSplitPathToFolder } from "../../../../src/commanders/librarian/naming/interface";
+import { buildCodexBasename, tryExtractingNodeNameChainToSection, tryExtractingSplitPathToFolder } from "../../../../src/commanders/librarian/naming/interface";
 import type { TreeNode } from "../../../../src/commanders/librarian/types/tree-node";
 import { TreeNodeStatus, TreeNodeType } from "../../../../src/commanders/librarian/types/tree-node";
 import * as globalState from "../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
-import type { SplitPathToFolder, SplitPathToMdFile } from "../../../../src/obsidian-vault-action-manager/types/split-path";
+import type { SplitPathToFolder } from "../../../../src/obsidian-vault-action-manager/types/split-path";
 import { SplitPathType } from "../../../../src/obsidian-vault-action-manager/types/split-path";
 
 // Default settings for tests
@@ -40,8 +40,8 @@ describe("codex-utils", () => {
 			it("builds root codex basename (no suffix)", () => {
 				const rootSection: TreeNode = {
 					children: [],
-					coreName: "Library",
-					coreNameChainToParent: [],
+					nodeName: "Library",
+					nodeNameChainToParent: [],
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Section,
 				};
@@ -51,8 +51,8 @@ describe("codex-utils", () => {
 			it("builds nested codex basename with single parent", () => {
 				const section: TreeNode = {
 					children: [],
-					coreName: "Child",
-					coreNameChainToParent: ["Parent"],
+					nodeName: "Child",
+					nodeNameChainToParent: ["Parent"],
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Section,
 				};
@@ -62,8 +62,8 @@ describe("codex-utils", () => {
 			it("builds nested codex basename with multiple parents", () => {
 				const section: TreeNode = {
 					children: [],
-					coreName: "Grandchild",
-					coreNameChainToParent: ["Parent", "Child"],
+					nodeName: "Grandchild",
+					nodeNameChainToParent: ["Parent", "Child"],
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Section,
 				};
@@ -99,8 +99,8 @@ describe("codex-utils", () => {
 				});
 				const section: TreeNode = {
 					children: [],
-					coreName: "Child",
-					coreNameChainToParent: ["Parent"],
+					nodeName: "Child",
+					nodeNameChainToParent: ["Parent"],
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Section,
 				};
@@ -109,9 +109,9 @@ describe("codex-utils", () => {
 		});
 	});
 
-	describe("tryExtractingCoreNameChainToSection", () => {
+	describe("tryExtractingNodeNameChainToSection", () => {
 		it("returns empty array for root codex", () => {
-			const result = tryExtractingCoreNameChainToSection("__-Library");
+			const result = tryExtractingNodeNameChainToSection("__-Library");
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
 				expect(result.value).toEqual([]);
@@ -119,7 +119,7 @@ describe("codex-utils", () => {
 		});
 
 		it("returns chain for nested codex with single parent", () => {
-			const result = tryExtractingCoreNameChainToSection("__-Child-Parent");
+			const result = tryExtractingNodeNameChainToSection("__-Child-Parent");
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
 				expect(result.value).toEqual(["Parent", "Child"]);
@@ -127,7 +127,7 @@ describe("codex-utils", () => {
 		});
 
 		it("returns chain for nested codex with multiple parents", () => {
-			const result = tryExtractingCoreNameChainToSection("__-Grandchild-Child-Parent");
+			const result = tryExtractingNodeNameChainToSection("__-Grandchild-Child-Parent");
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
 				expect(result.value).toEqual(["Parent", "Child", "Grandchild"]);
@@ -135,7 +135,7 @@ describe("codex-utils", () => {
 		});
 
 		it("returns error for non-codex basename", () => {
-			const result = tryExtractingCoreNameChainToSection("Note");
+			const result = tryExtractingNodeNameChainToSection("Note");
 			expect(result.isErr()).toBe(true);
 			if (result.isErr()) {
 				expect(result.error).toContain('Invalid codex basename: "Note"');
@@ -148,7 +148,7 @@ describe("codex-utils", () => {
 				...defaultSettings,
 				suffixDelimiter: ";;",
 			});
-			const result = tryExtractingCoreNameChainToSection("__;;Child;;Parent");
+			const result = tryExtractingNodeNameChainToSection("__;;Child;;Parent");
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
 				expect(result.value).toEqual(["Parent", "Child"]);

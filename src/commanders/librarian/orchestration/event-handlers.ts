@@ -12,7 +12,7 @@ import {
 } from "../codex/impacted-chains";
 import { detectRenameMode } from "../healing";
 import type { LibraryTree } from "../library-tree";
-import type { CoreNameChainFromRoot } from "../naming/parsed-basename";
+import type { NodeNameChain } from "../naming/parsed-basename";
 import { translateVaultAction } from "../reconciliation/vault-to-tree";
 import { TreeActionType } from "../types/literals";
 import { isBasenamePrefixedAsCodexDeprecated } from "../utils/codex-utils";
@@ -144,15 +144,15 @@ export async function handleDelete(
 		return;
 	}
 
-	// Parse path to get coreNameChain
-	const coreNameChain = parseDeletePathToChain(path, isFolder);
+	// Parse path to get nodeNameChain
+	const nodeNameChain = parseDeletePathToChain(path, isFolder);
 
-	if (!coreNameChain) {
+	if (!nodeNameChain) {
 		return;
 	}
 
 	const impactedChain = context.tree.applyTreeAction({
-		payload: { coreNameChain },
+		payload: { nodeNameChain },
 		type: TreeActionType.DeleteNode,
 	});
 
@@ -213,15 +213,15 @@ export async function handleRename(
 				return [];
 			}
 
-			// Parse old path to get coreNameChain
-			const coreNameChain = parseDeletePathToChain(oldPath, isFolder);
-			if (!coreNameChain) {
+			// Parse old path to get nodeNameChain
+			const nodeNameChain = parseDeletePathToChain(oldPath, isFolder);
+			if (!nodeNameChain) {
 				return [];
 			}
 
 			// Delete node from tree
 			const impactedChain = context.tree.applyTreeAction({
-				payload: { coreNameChain },
+				payload: { nodeNameChain },
 				type: TreeActionType.DeleteNode,
 			});
 
@@ -311,8 +311,8 @@ export async function handleRename(
  */
 function computeImpactedChainsFromActions(
 	actions: VaultAction[],
-): CoreNameChainFromRoot[] {
-	const chains: CoreNameChainFromRoot[] = [];
+): NodeNameChain[] {
+	const chains: NodeNameChain[] = [];
 
 	for (const action of actions) {
 		const treeAction = translateVaultAction(action);
@@ -320,29 +320,29 @@ function computeImpactedChainsFromActions(
 
 		if (treeAction.type === TreeActionType.MoveNode) {
 			// MoveNode: old parent, new parent, and moved node itself are impacted
-			const oldParent = treeAction.payload.coreNameChain.slice(0, -1);
-			const newParent = treeAction.payload.newCoreNameChainToParent;
-			// Compute new chain for moved node: [newParent..., coreName]
-			const coreName =
-				treeAction.payload.coreNameChain[
-					treeAction.payload.coreNameChain.length - 1
+			const oldParent = treeAction.payload.nodeNameChain.slice(0, -1);
+			const newParent = treeAction.payload.newNodeNameChainToParent;
+			// Compute new chain for moved node: [newParent..., nodeName]
+			const nodeName =
+				treeAction.payload.nodeNameChain[
+					treeAction.payload.nodeNameChain.length - 1
 				];
 
-			const movedNodeChain = [...newParent, coreName].filter(
+			const movedNodeChain = [...newParent, nodeName].filter(
 				Boolean,
-			) as CoreNameChainFromRoot;
+			) as NodeNameChain;
 
 			chains.push(oldParent, newParent, movedNodeChain);
 		} else if (treeAction.type === TreeActionType.ChangeNodeName) {
 			// ChangeNodeName: parent chain is impacted
-			const parent = treeAction.payload.coreNameChain.slice(0, -1);
+			const parent = treeAction.payload.nodeNameChain.slice(0, -1);
 			chains.push(parent);
 		} else if (treeAction.type === TreeActionType.CreateNode) {
 			// CreateNode: parent chain is impacted
-			chains.push(treeAction.payload.coreNameChainToParent);
+			chains.push(treeAction.payload.nodeNameChainToParent);
 		} else if (treeAction.type === TreeActionType.DeleteNode) {
 			// DeleteNode: parent chain is impacted
-			const parent = treeAction.payload.coreNameChain.slice(0, -1);
+			const parent = treeAction.payload.nodeNameChain.slice(0, -1);
 			chains.push(parent);
 		}
 	}

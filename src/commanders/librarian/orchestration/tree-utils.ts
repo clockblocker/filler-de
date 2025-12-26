@@ -1,5 +1,5 @@
 import type { LibraryTree } from "../library-tree";
-import type { CoreNameChainFromRoot } from "../naming/parsed-basename";
+import type { NodeNameChain } from "../naming/parsed-basename";
 import type { SectionNode } from "../types/tree-node";
 import { TreeNodeType } from "../types/tree-node";
 
@@ -7,18 +7,16 @@ import { TreeNodeType } from "../types/tree-node";
  * Collect chains for all sections in tree (including root).
  * Pure function that takes tree and returns all section chains.
  */
-export function collectAllSectionChains(
-	tree: LibraryTree,
-): CoreNameChainFromRoot[] {
-	const chains: CoreNameChainFromRoot[] = [[]]; // Start with root
+export function collectAllSectionChains(tree: LibraryTree): NodeNameChain[] {
+	const chains: NodeNameChain[] = [[]]; // Start with root
 
 	const collectRecursive = (
 		node: SectionNode,
-		currentChain: CoreNameChainFromRoot,
+		currentChain: NodeNameChain,
 	) => {
 		for (const child of node.children) {
 			if (child.type === TreeNodeType.Section) {
-				const childChain = [...currentChain, child.coreName];
+				const childChain = [...currentChain, child.nodeName];
 				chains.push(childChain);
 				collectRecursive(child, childChain);
 			}

@@ -1,4 +1,4 @@
-import type { CoreName, CoreNameChainFromRoot } from "./naming/parsed-basename";
+import type { NodeName, NodeNameChain } from "./naming/parsed-basename";
 import { TreeActionType } from "./types/literals";
 import type {
 	ChangeNodeNameAction,
@@ -30,8 +30,8 @@ export class LibraryTree {
 	private createRootSection(): SectionNode {
 		return {
 			children: [],
-			coreName: "",
-			coreNameChainToParent: [],
+			nodeName: "",
+			nodeNameChainToParent: [],
 			status: TreeNodeStatus.NotStarted,
 			type: TreeNodeType.Section,
 		};
@@ -39,8 +39,8 @@ export class LibraryTree {
 
 	private buildTreeFromLeaves(leaves: TreeLeaf[]): void {
 		for (const leaf of leaves) {
-			this.ensureSectionPath(leaf.coreNameChainToParent);
-			this.addNodeToTree(leaf, leaf.coreNameChainToParent);
+			this.ensureSectionPath(leaf.nodeNameChainToParent);
+			this.addNodeToTree(leaf, leaf.nodeNameChainToParent);
 		}
 		this.recalculateSectionStatuses(this.root);
 	}
@@ -69,19 +69,19 @@ export class LibraryTree {
 			: TreeNodeStatus.Done;
 	}
 
-	private ensureSectionPath(coreNameChain: CoreNameChainFromRoot): void {
+	private ensureSectionPath(nodeNameChain: NodeNameChain): void {
 		let current = this.root;
-		const path: CoreName[] = [];
+		const path: NodeName[] = [];
 
-		for (const segment of coreNameChain) {
+		for (const segment of nodeNameChain) {
 			path.push(segment);
 			const existing = this.getNodeInternal(path);
 
 			if (!existing) {
 				const sectionNode: SectionNode = {
 					children: [],
-					coreName: segment,
-					coreNameChainToParent: [...path.slice(0, -1)],
+					nodeName: segment,
+					nodeNameChainToParent: [...path.slice(0, -1)],
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Section,
 				};
@@ -96,53 +96,49 @@ export class LibraryTree {
 
 	private addNodeToTree(
 		node: LeafNode,
-		coreNameChainToParent: CoreNameChainFromRoot,
+		nodeNameChainToParent: NodeNameChain,
 	): void {
-		const parent = this.getParentOrThrow(coreNameChainToParent);
+		const parent = this.getParentOrThrow(nodeNameChainToParent);
 		parent.children.push(node);
-		const fullChain = [...coreNameChainToParent, node.coreName];
+		const fullChain = [...nodeNameChainToParent, node.nodeName];
 		this.nodeMap.set(joinPathPartsDeprecated(fullChain), node);
 	}
 
-	getNode(coreNameChain: CoreNameChainFromRoot): TreeNode | null {
-		return this.getNodeInternal(coreNameChain);
+	getNode(nodeNameChain: NodeNameChain): TreeNode | null {
+		return this.getNodeInternal(nodeNameChain);
 	}
 
-	getSectionNode(coreNameChain: CoreNameChainFromRoot): SectionNode | null {
-		const node = this.getNodeInternal(coreNameChain);
+	getSectionNode(nodeNameChain: NodeNameChain): SectionNode | null {
+		const node = this.getNodeInternal(nodeNameChain);
 		if (!node || node.type !== TreeNodeType.Section) {
 			return null;
 		}
 		return node;
 	}
 
-	getParent(coreNameChain: CoreNameChainFromRoot): SectionNode | null {
-		const node = this.getNodeInternal(coreNameChain);
+	getParent(nodeNameChain: NodeNameChain): SectionNode | null {
+		const node = this.getNodeInternal(nodeNameChain);
 		if (!node || node.type !== TreeNodeType.Section) {
 			return null;
 		}
 		return node;
 	}
 
-	private getParentOrThrow(
-		coreNameChain: CoreNameChainFromRoot,
-	): SectionNode {
-		const parent = this.getParent(coreNameChain);
+	private getParentOrThrow(nodeNameChain: NodeNameChain): SectionNode {
+		const parent = this.getParent(nodeNameChain);
 		if (!parent) {
 			throw new Error(
-				`Parent not found: ${joinPathPartsDeprecated(coreNameChain)}`,
+				`Parent not found: ${joinPathPartsDeprecated(nodeNameChain)}`,
 			);
 		}
 		return parent;
 	}
 
-	private getNodeInternal(
-		coreNameChain: CoreNameChainFromRoot,
-	): TreeNode | null {
-		if (coreNameChain.length === 0) {
+	private getNodeInternal(nodeNameChain: NodeNameChain): TreeNode | null {
+		if (nodeNameChain.length === 0) {
 			return this.root;
 		}
-		return this.nodeMap.get(joinPathPartsDeprecated(coreNameChain)) ?? null;
+		return this.nodeMap.get(joinPathPartsDeprecated(nodeNameChain)) ?? null;
 	}
 
 	/**
@@ -152,7 +148,7 @@ export class LibraryTree {
 	 */
 	applyTreeAction(
 		action: TreeAction,
-	): CoreNameChainFromRoot | [CoreNameChainFromRoot, CoreNameChainFromRoot] {
+	): NodeNameChain | [NodeNameChain, NodeNameChain] {
 		switch (action.type) {
 			case TreeActionType.CreateNode:
 				return this.createNode(action);
@@ -167,12 +163,12 @@ export class LibraryTree {
 		}
 	}
 
-	private createNode(action: CreateNodeAction): CoreNameChainFromRoot {
-		const { coreName, coreNameChainToParent, nodeType } = action.payload;
+	private createNode(action: CreateNodeAction): NodeNameChain {
+		const { nodeName, nodeNameChainToParent, nodeType } = action.payload;
 
-		this.ensureSectionPath(coreNameChainToParent);
+		this.ensureSectionPath(nodeNameChainToParent);
 
-		const fullChain = [...coreNameChainToParent, coreName];
+		const fullChain = [...nodeNameChainToParent, nodeName];
 		const existing = this.getNodeInternal(fullChain);
 		if (existing) {
 			return fullChain;
@@ -182,64 +178,64 @@ export class LibraryTree {
 
 		if (nodeType === TreeNodeType.Scroll) {
 			newNode = {
-				coreName,
-				coreNameChainToParent,
 				extension: action.payload.extension,
+				nodeName,
+				nodeNameChainToParent,
 				status: action.payload.status,
 				type: TreeNodeType.Scroll,
 			};
 		} else if (nodeType === TreeNodeType.File) {
 			newNode = {
-				coreName,
-				coreNameChainToParent,
 				extension: action.payload.extension,
+				nodeName,
+				nodeNameChainToParent,
 				status: TreeNodeStatus.Unknown,
 				type: TreeNodeType.File,
 			};
 		} else {
 			newNode = {
 				children: [],
-				coreName,
-				coreNameChainToParent,
+				nodeName,
+				nodeNameChainToParent,
 				status: action.payload.status,
 				type: TreeNodeType.Section,
 			};
 		}
 
-		const parent = this.getParentOrThrow(coreNameChainToParent);
+		const parent = this.getParentOrThrow(nodeNameChainToParent);
 		parent.children.push(newNode);
 		this.nodeMap.set(joinPathPartsDeprecated(fullChain), newNode);
 
 		return fullChain;
 	}
 
-	private deleteNode(action: DeleteNodeAction): CoreNameChainFromRoot {
-		const { coreNameChain } = action.payload;
-		const node = this.getNodeInternal(coreNameChain);
+	private deleteNode(action: DeleteNodeAction): NodeNameChain {
+		const { nodeNameChain } = action.payload;
+		const node = this.getNodeInternal(nodeNameChain);
 		if (!node) {
-			return coreNameChain;
+			return nodeNameChain;
 		}
 
-		const parentChain = node.coreNameChainToParent;
+		const parentChain = node.nodeNameChainToParent;
 		const parent = this.getParentOrThrow(parentChain);
 		const index = parent.children.findIndex(
-			(child) => child.coreName === node.coreName,
+			(child) => child.nodeName === node.nodeName,
 		);
 		if (index === -1) {
-			return coreNameChain;
+			return nodeNameChain;
 		}
 
 		parent.children.splice(index, 1);
-		this.nodeMap.delete(joinPathPartsDeprecated(coreNameChain));
+		this.nodeMap.delete(joinPathPartsDeprecated(nodeNameChain));
 
 		if (node.type === TreeNodeType.Section) {
-			this.deleteSubtree(coreNameChain);
+			this.deleteSubtree(nodeNameChain);
 		}
 
 		return parentChain;
 	}
 
-	private deleteSubtree(rootChain: CoreNameChainFromRoot): void {
+	private deleteSubtree(rootChain: NodeNameChain): void {
 		const node = this.getNodeInternal(rootChain);
 		if (!node || node.type !== TreeNodeType.Section) {
 			return;
@@ -247,7 +243,7 @@ export class LibraryTree {
 
 		const sectionNode = node as SectionNode;
 		for (const child of sectionNode.children) {
-			const childChain = [...rootChain, child.coreName];
+			const childChain = [...rootChain, child.nodeName];
 			this.nodeMap.delete(joinPathPartsDeprecated(childChain));
 			if (child.type === TreeNodeType.Section) {
 				this.deleteSubtree(childChain);
@@ -255,17 +251,15 @@ export class LibraryTree {
 		}
 	}
 
-	private changeNodeName(
-		action: ChangeNodeNameAction,
-	): CoreNameChainFromRoot {
-		const { coreNameChain, newCoreName } = action.payload;
-		const node = this.getNodeInternal(coreNameChain);
+	private changeNodeName(action: ChangeNodeNameAction): NodeNameChain {
+		const { nodeNameChain, newNodeName } = action.payload;
+		const node = this.getNodeInternal(nodeNameChain);
 		if (!node) {
-			return coreNameChain;
+			return nodeNameChain;
 		}
 
-		const oldParentChain = node.coreNameChainToParent;
-		const newFullChain = [...oldParentChain, newCoreName];
+		const oldParentChain = node.nodeNameChainToParent;
+		const newFullChain = [...oldParentChain, newNodeName];
 
 		if (this.getNodeInternal(newFullChain)) {
 			throw new Error(
@@ -275,41 +269,41 @@ export class LibraryTree {
 
 		const parent = this.getParentOrThrow(oldParentChain);
 		const index = parent.children.findIndex(
-			(child) => child.coreName === node.coreName,
+			(child) => child.nodeName === node.nodeName,
 		);
 		if (index === -1) {
-			return coreNameChain;
+			return nodeNameChain;
 		}
 
-		const oldKey = joinPathPartsDeprecated(coreNameChain);
+		const oldKey = joinPathPartsDeprecated(nodeNameChain);
 		this.nodeMap.delete(oldKey);
 
-		node.coreName = newCoreName;
+		node.nodeName = newNodeName;
 		const newKey = joinPathPartsDeprecated(newFullChain);
 		this.nodeMap.set(newKey, node);
 
 		// Note: tRef removed - TFile references become stale when files are renamed/moved
 
 		if (node.type === TreeNodeType.Section) {
-			this.updateChildrenChains(coreNameChain, newFullChain, node);
+			this.updateChildrenChains(nodeNameChain, newFullChain, node);
 		}
 
 		return oldParentChain;
 	}
 
 	private updateChildrenChains(
-		oldParentChain: CoreNameChainFromRoot,
-		newParentChain: CoreNameChainFromRoot,
+		oldParentChain: NodeNameChain,
+		newParentChain: NodeNameChain,
 		sectionNode: SectionNode,
 	): void {
 		for (const child of sectionNode.children) {
-			const oldChildChain = [...oldParentChain, child.coreName];
-			const newChildChain = [...newParentChain, child.coreName];
+			const oldChildChain = [...oldParentChain, child.nodeName];
+			const newChildChain = [...newParentChain, child.nodeName];
 
 			const oldKey = joinPathPartsDeprecated(oldChildChain);
 			this.nodeMap.delete(oldKey);
 
-			child.coreNameChainToParent = newParentChain;
+			child.nodeNameChainToParent = newParentChain;
 			const newKey = joinPathPartsDeprecated(newChildChain);
 			this.nodeMap.set(newKey, child);
 
@@ -319,20 +313,18 @@ export class LibraryTree {
 		}
 	}
 
-	private changeNodeStatus(
-		action: ChangeNodeStatusAction,
-	): CoreNameChainFromRoot {
-		const { coreNameChain, newStatus } = action.payload;
-		const node = this.getNodeInternal(coreNameChain);
+	private changeNodeStatus(action: ChangeNodeStatusAction): NodeNameChain {
+		const { nodeNameChain, newStatus } = action.payload;
+		const node = this.getNodeInternal(nodeNameChain);
 		if (!node) {
-			return coreNameChain;
+			return nodeNameChain;
 		}
 
 		if (
 			node.type === TreeNodeType.File ||
 			newStatus === TreeNodeStatus.Unknown
 		) {
-			return coreNameChain;
+			return nodeNameChain;
 		}
 
 		node.status = newStatus;
@@ -341,31 +333,29 @@ export class LibraryTree {
 			this.updateDescendantsStatus(node, newStatus);
 		}
 
-		const parentChain = node.coreNameChainToParent;
+		const parentChain = node.nodeNameChainToParent;
 		if (parentChain.length > 0) {
 			this.updateParentStatus(parentChain);
 		}
 
-		return parentChain.length > 0 ? parentChain : coreNameChain;
+		return parentChain.length > 0 ? parentChain : nodeNameChain;
 	}
 
 	/**
 	 * Move node to new parent.
 	 * Returns [oldParentChain, newParentChain].
 	 */
-	private moveNode(
-		action: MoveNodeAction,
-	): [CoreNameChainFromRoot, CoreNameChainFromRoot] {
-		const { coreNameChain, newCoreNameChainToParent } = action.payload;
-		const node = this.getNodeInternal(coreNameChain);
+	private moveNode(action: MoveNodeAction): [NodeNameChain, NodeNameChain] {
+		const { nodeNameChain, newNodeNameChainToParent } = action.payload;
+		const node = this.getNodeInternal(nodeNameChain);
 		if (!node) {
-			return [coreNameChain, newCoreNameChainToParent];
+			return [nodeNameChain, newNodeNameChainToParent];
 		}
 
 		// Note: tRef removed - TFile references become stale when files are renamed/moved
 
-		const oldParentChain = node.coreNameChainToParent;
-		const newFullChain = [...newCoreNameChainToParent, node.coreName];
+		const oldParentChain = node.nodeNameChainToParent;
+		const newFullChain = [...newNodeNameChainToParent, node.nodeName];
 
 		// Check if target already exists
 		if (this.getNodeInternal(newFullChain)) {
@@ -375,41 +365,41 @@ export class LibraryTree {
 		}
 
 		// Ensure new parent path exists
-		this.ensureSectionPath(newCoreNameChainToParent);
+		this.ensureSectionPath(newNodeNameChainToParent);
 
 		// Remove from old parent
 		const oldParent = this.getParentOrThrow(oldParentChain);
 		const oldIndex = oldParent.children.findIndex(
-			(child) => child.coreName === node.coreName,
+			(child) => child.nodeName === node.nodeName,
 		);
 		if (oldIndex !== -1) {
 			oldParent.children.splice(oldIndex, 1);
 		}
 
 		// Update node's parent chain
-		const oldKey = joinPathPartsDeprecated(coreNameChain);
+		const oldKey = joinPathPartsDeprecated(nodeNameChain);
 		this.nodeMap.delete(oldKey);
 
-		node.coreNameChainToParent = newCoreNameChainToParent;
+		node.nodeNameChainToParent = newNodeNameChainToParent;
 		const newKey = joinPathPartsDeprecated(newFullChain);
 		this.nodeMap.set(newKey, node);
 
 		// Add to new parent
-		const newParent = this.getParentOrThrow(newCoreNameChainToParent);
+		const newParent = this.getParentOrThrow(newNodeNameChainToParent);
 		newParent.children.push(node);
 
 		// Note: tRef removed - TFile references become stale when files are renamed/moved
 
 		// If section, update all children's chains recursively
 		if (node.type === TreeNodeType.Section) {
-			this.updateChildrenChains(coreNameChain, newFullChain, node);
+			this.updateChildrenChains(nodeNameChain, newFullChain, node);
 		}
 
 		// Recalculate statuses for both old and new parents
 		this.recalculateSectionStatuses(oldParent);
 		this.recalculateSectionStatuses(newParent);
 
-		return [oldParentChain, newCoreNameChainToParent];
+		return [oldParentChain, newNodeNameChainToParent];
 	}
 
 	private updateDescendantsStatus(
@@ -431,7 +421,7 @@ export class LibraryTree {
 		}
 	}
 
-	private updateParentStatus(parentChain: CoreNameChainFromRoot): void {
+	private updateParentStatus(parentChain: NodeNameChain): void {
 		const parent = this.getParent(parentChain);
 		if (!parent) {
 			return;
@@ -452,7 +442,7 @@ export class LibraryTree {
 
 		if (newStatus !== oldStatus) {
 			parent.status = newStatus;
-			const grandParentChain = parent.coreNameChainToParent;
+			const grandParentChain = parent.nodeNameChainToParent;
 			if (grandParentChain.length > 0) {
 				this.updateParentStatus(grandParentChain);
 			}

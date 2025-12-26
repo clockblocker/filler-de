@@ -27,7 +27,7 @@ const TreeNodeTypeSchema = z.enum([
 export type TreeNodeType = z.infer<typeof TreeNodeTypeSchema>;
 export const TreeNodeType = TreeNodeTypeSchema.enum;
 
-export type CoreName = string;
+export type NodeName = string;
 
 /**
  * ScrollNode represents a markdown file in the tree.
@@ -35,9 +35,9 @@ export type CoreName = string;
  * Obsidian does not automatically update TFile.path, so tRefs are resolved on-demand when needed.
  */
 export type ScrollNode = {
-	coreName: CoreName;
+	nodeName: NodeName;
 	type: typeof TreeNodeType.Scroll;
-	coreNameChainToParent: CoreName[];
+	nodeNameChainToParent: NodeName[];
 	status: TreeNodeStatus;
 	extension: "md";
 };
@@ -48,9 +48,9 @@ export type ScrollNode = {
  * Obsidian does not automatically update TFile.path, so tRefs are resolved on-demand when needed.
  */
 export type FileNode = {
-	coreName: CoreName;
+	nodeName: NodeName;
 	type: typeof TreeNodeType.File;
-	coreNameChainToParent: CoreName[];
+	nodeNameChainToParent: NodeName[];
 	status: typeof TreeNodeStatus.Unknown;
 	extension: string;
 };
@@ -58,8 +58,8 @@ export type FileNode = {
 export type LeafNode = ScrollNode | FileNode;
 
 export type SectionNode = {
-	coreName: CoreName;
-	coreNameChainToParent: CoreName[];
+	nodeName: NodeName;
+	nodeNameChainToParent: NodeName[];
 	type: typeof TreeNodeType.Section;
 	status: TreeNodeStatus;
 	children: TreeNode[];

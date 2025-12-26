@@ -4,9 +4,9 @@
 
 **Codex naming format change:**
 - **Old:** `__CodexName-parent.md` (prefix pattern)
-- **New:** `__-CodexName-parent.md` (`__` is now the CoreName)
+- **New:** `__-CodexName-parent.md` (`__` is now the NodeName)
 
-The `__` is now part of the coreName, not a prefix. Codexes follow the same suffix pattern as regular files.
+The `__` is now part of the nodeName, not a prefix. Codexes follow the same suffix pattern as regular files.
 
 ## Current State
 
@@ -93,31 +93,31 @@ Move naming-related code from `utils/...` to `naming/...` and make it pure/decom
 1. **`naming/codecs/basename-to-parsed-codec.ts`**
    - Replace `parseBasenameDeprecated()`
    - Input: basename string
-   - Output: `ParsedBasename` (coreName + splitSuffix)
+   - Output: `ParsedBasename` (nodeName + splitSuffix)
 
 2. **`naming/codecs/chain-to-suffixed-basename-codec.ts`**
    - Replace `buildBasenameDepreacated()` / `buildCanonicalBasenameDeprecated()`
-   - Input: `CoreNameChainFromRoot`
+   - Input: `NodeNameChain`
    - Output: suffixed basename string
    - Uses `suffixedBasenameToChainCodec.encode()`
 
 3. **`naming/codecs/suffix-to-chain-codec.ts`**
    - Replace `computePathPartsFromSuffixDepreacated()`
    - Input: `SplitSuffix`
-   - Output: `CoreNameChainFromRoot`
+   - Output: `NodeNameChain`
    - Simple reverse operation
 
 4. **`naming/codecs/chain-to-suffix-codec.ts`**
    - Replace `computeSuffixFromPathDepreacated()`
-   - Input: `CoreNameChainFromRoot`
+   - Input: `NodeNameChain`
    - Output: `SplitSuffix`
    - Simple reverse operation
 
 5. **`naming/codecs/codex-basename-builder-codec.ts`**
    - Replace `addCodexPrefixDeprecated()` (fix type mismatch)
-   - Input: `SectionNode` or `CoreNameChainFromRoot`
+   - Input: `SectionNode` or `NodeNameChain`
    - Output: codex basename string
-   - Uses `suffixedBasenameToChainCodec` with `CODEX_CORE_NAME` as coreName
+   - Uses `suffixedBasenameToChainCodec` with `CODEX_CORE_NAME` as nodeName
 
 6. **`naming/codecs/codex-basename-validator-codec.ts`**
    - Replace `isBasenamePrefixedAsCodexDeprecated()`
@@ -147,9 +147,9 @@ Replace deprecated function calls with new codecs:
    - Comments say: "Root: __Library (no suffix), Nested: __Salad-Recipe (suffix = parent chain reversed)"
    - **Actual behavior:** Function doesn't match comments - missing suffix building logic
    - **New format should be:**
-     - Root: `__-Library` (coreName=`__`, suffix=`Library` from libraryRoot)
-     - Nested: `__-Child-Parent` (coreName=`__`, suffix=`Child-Parent` from section chain)
-   - **Solution:** Use `suffixedBasenameToChainCodec.encode([...section.coreNameChainToParent, CODEX_CORE_NAME])`
+     - Root: `__-Library` (nodeName=`__`, suffix=`Library` from libraryRoot)
+     - Nested: `__-Child-Parent` (nodeName=`__`, suffix=`Child-Parent` from section chain)
+   - **Solution:** Use `suffixedBasenameToChainCodec.encode([...section.nodeNameChainToParent, CODEX_CORE_NAME])`
    - **Question:** Should we fix the current bug first, or implement new format directly?
 
 2. **Backward Compatibility**
@@ -167,7 +167,7 @@ Replace deprecated function calls with new codecs:
 
 5. **Type Safety for `addCodexPrefixDeprecated`**
    - Currently accepts `string` but called with `SectionNode` in 2 places
-   - Question: Should the new codec accept `SectionNode | CoreNameChainFromRoot | string`?
+   - Question: Should the new codec accept `SectionNode | NodeNameChain | string`?
 
 6. **Migration Order**
    - Should we migrate all codecs first, then update call sites?

@@ -2,9 +2,24 @@ import type { TFile, TFolder } from "obsidian";
 import { z } from "zod";
 import { FILE, FOLDER, MD_FILE, MdSchema } from "./literals";
 
+/**
+ * @example
+ * // for file "Library/parent/child/NoteName-child-parent.md"
+ * ["Library", "parent", "child"]
+ */
+export const PathPartsSchema = z.array(z.string());
+
+/**
+ * @example
+ * // for file "Library/parent/child/NoteName-child-parent.md"
+ * {
+ *   basename: "NoteName",
+ *   pathParts: ["Library", "parent", "child"],
+ * }
+ */
 export const CoreSplitPathSchema = z.object({
 	basename: z.string(),
-	pathParts: z.array(z.string()),
+	pathParts: PathPartsSchema,
 });
 
 const SplitPathTypeSchema = z.enum([FOLDER, FILE, MD_FILE]);

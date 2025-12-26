@@ -81,7 +81,7 @@ export function resolveRuntimeIntent(
 			// User changed basename → interpret as move request only if suffix changed
 			// If no suffix in new name, user just renamed the file (no move intent)
 			if (newInfo.parsed.splitSuffix.length === 0) {
-				// No suffix = user just renamed coreName, no move needed
+				// No suffix = user just renamed nodeName, no move needed
 				// But we should add the correct suffix to match current path
 				const expectedSuffix =
 					computeSuffixFromPathDepreacated(relativePathParts);
@@ -91,7 +91,7 @@ export function resolveRuntimeIntent(
 				}
 				// Need to add suffix to match current location
 				const newBasename = buildBasenameDepreacated(
-					newInfo.parsed.coreName,
+					newInfo.parsed.nodeName,
 					expectedSuffix,
 				);
 				const targetPath: SplitPathToFile | SplitPathToMdFile = {
@@ -133,7 +133,7 @@ export function resolveRuntimeIntent(
 					computeSuffixFromPathDepreacated(expandedRelative);
 
 				const newBasename = buildBasenameDepreacated(
-					newInfo.parsed.coreName,
+					newInfo.parsed.nodeName,
 					expectedSuffix,
 				);
 
@@ -157,7 +157,7 @@ export function resolveRuntimeIntent(
 
 			// Need to rename file (same folder, new suffix)
 			const newBasename = buildBasenameDepreacated(
-				newInfo.parsed.coreName,
+				newInfo.parsed.nodeName,
 				expectedSuffix,
 			);
 
@@ -181,7 +181,7 @@ export function resolveRuntimeIntent(
 
 			// Need to rename file (same folder, new suffix)
 			const newBasename = buildBasenameDepreacated(
-				newInfo.parsed.coreName,
+				newInfo.parsed.nodeName,
 				expectedSuffix,
 			);
 

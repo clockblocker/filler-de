@@ -25,17 +25,17 @@ The core parts of the system are:
 
 2) LibraryTree. The shadow of existing file system. Consists of:
 - ScrollNodes (a shadows of markdown Tfiles)
-{ coreName: CoreName, coreNameChainToParent: CoreNameChainFromRoot, extension: "md", type: "Scroll", status: "Done" | "NotStarted" }
+{ nodeName: NodeName, nodeNameChainToParent: NodeNameChain, extension: "md", type: "Scroll", status: "Done" | "NotStarted" }
 - FileNodes (a shadows of non-markdown Tfiles)
-{ coreName: CoreName, coreNameChainToParent: CoreNameChainFromRoot, extension: string, type: "File", status: "Unknown" }
+{ nodeName: NodeName, nodeNameChainToParent: NodeNameChain, extension: string, type: "File", status: "Unknown" }
 - SectionNodes (a shadows of Tfolder)
-{ coreName: CoreName, coreNameChainToParent: CoreNameChainFromRoot, type: "Section", status: "Done" | "NotStarted", children: (ScrollNode | FileNode | SectionNode)[]}
+{ nodeName: NodeName, nodeNameChainToParent: NodeNameChain, type: "Section", status: "Done" | "NotStarted", children: (ScrollNode | FileNode | SectionNode)[]}
 
 **Note on TFile references**: TFile references (tRef) are NOT stored in tree nodes because they become stale when files are renamed/moved. Obsidian does not automatically update TFile.path when files are renamed/moved, so storing tRefs in the tree would lead to stale references pointing to old paths. TFile references are now internal to the `ObsidianVaultActionManager` and should never leave it. External code (like Librarian) uses `SplitPathWithReader` instead, which provides a `read()` function for markdown files without exposing tRefs.
 
 LibraryTree is initialized with:
 - an array of TreeLeaf: (ScrollNode | FileNode)[]
-  each leaf has coreNameChainToParent already set
+  each leaf has nodeNameChainToParent already set
 - No rootFolder parameter needed - library root read from global settings
 
 On initialization, LibraryTree:
@@ -52,7 +52,7 @@ Tree initialization flow (`readTreeFromVault`):
 
 TreeLeaf creation uses codec `splitPathToLeaf(splitPath)`:
 - Converts `SplitPathToFile | SplitPathToMdFile` → TreeLeaf (no tRef needed)
-- Derives coreNameChainToParent from pathParts (strips root folder)
+- Derives nodeNameChainToParent from pathParts (strips root folder)
 - Reads `libraryRoot` and `suffixDelimiter` from `getParsedUserSettings()` globally
 - Initial status: NotStarted (for ScrollNode), Unknown (for FileNode)
 
@@ -64,8 +64,8 @@ LibraryTree has applyTreeAction method. TreeAction has types:
 - CreateNode
 - DeleteNode
 - ChangeNodeName:
-    - updates coreName
-    - updates the coreNameChainToParent of all it's children reqursively
+    - updates nodeName
+    - updates the nodeNameChainToParent of all it's children reqursively
 - ChangeNodeStatus (for ScrollNodes and SectionNodes only): 
     - change in status of a SectionNode, changes all it's children's statuses recursively;
     - change in status of a ScrollNode, changes it's status
@@ -73,12 +73,12 @@ LibraryTree has applyTreeAction method. TreeAction has types:
         - if none of the children are "NotStarted", it set's own status to "Done"
         - if one of the children is "NotStarted", it set's own status to "NotStarted"
         - if the new status has changed, trigger the same logic for it's parent
-applyTreeAction modifies the tree and returns coreNameChain to the closest to root impacted node.
+applyTreeAction modifies the tree and returns nodeNameChain to the closest to root impacted node.
 
-there is a util findCommonAncestor(coreNameChains: CoreNameChainFromRoot[])
+there is a util findCommonAncestor(nodeNameChains: NodeNameChain[])
 
 LibraryTree can serialize itself to TreeLeaf[] (for copy creation)
-LibraryTree supports getNode(coreNameChain: CoreNameChainFromRoot)
+LibraryTree supports getNode(nodeNameChain: NodeNameChain)
 
 3) Reconciliation
 - Clone the existing tree
@@ -101,9 +101,9 @@ LibraryTree supports getNode(coreNameChain: CoreNameChainFromRoot)
 Example of "filenames in sync with their paths". 
 Given settings (read from `getParsedUserSettings()`): `{ libraryRoot: "Library", suffixDelimiter: "-" }`:
 - "Library/parent/child/NoteBaseName-child-parent.md"; 
-{ pathParts: ["Library", "parent", "child"], extension: "md", parsedBasename: {coreName: "NoteBaseName", splitSuffix: ["child", "parent"] }} 
+{ pathParts: ["Library", "parent", "child"], extension: "md", parsedBasename: {nodeName: "NoteBaseName", splitSuffix: ["child", "parent"] }} 
 - "Library/doc/paper/Pekar/2025/The recency and geographical origins of the bat viruses ancestral to SARS_CoV and SARS_CoV_2-2025-Pekar-paper-doc.pdf"
-{ pathParts: ["Library", "doc", "paper", "Pekar", "2025"], extension: "pdf", parsedBasename: {coreName: "The recency and geographical origins of the bat viruses ancestral to SARS_CoV and SARS_CoV_2", splitSuffix: ["2025", "Pekar", "paper", "doc"] }}
+{ pathParts: ["Library", "doc", "paper", "Pekar", "2025"], extension: "pdf", parsedBasename: {nodeName: "The recency and geographical origins of the bat viruses ancestral to SARS_CoV and SARS_CoV_2", splitSuffix: ["2025", "Pekar", "paper", "doc"] }}
 
 **Settings Access Pattern:**
 - All filename utilities (`parseBasename`, `splitPathToLeaf`, `buildBasename`, etc.) read settings from `getParsedUserSettings()`

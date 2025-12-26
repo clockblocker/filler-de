@@ -40,29 +40,29 @@ afterEach(() => {
 });
 
 function scrollLeaf(
-	coreName: string,
-	coreNameChainToParent: string[],
+	nodeName: string,
+	nodeNameChainToParent: string[],
 	currentBasename: string,
 ): TreeLeaf {
 	return {
-		coreName,
-		coreNameChainToParent,
 		extension: "md",
+		nodeName,
+		nodeNameChainToParent,
 		status: TreeNodeStatus.NotStarted,
 		type: TreeNodeType.Scroll,
 	};
 }
 
 function fileLeaf(
-	coreName: string,
-	coreNameChainToParent: string[],
+	nodeName: string,
+	nodeNameChainToParent: string[],
 	currentBasename: string,
 	extension: string,
 ): TreeLeaf {
 	return {
-		coreName,
-		coreNameChainToParent,
 		extension,
+		nodeName,
+		nodeNameChainToParent,
 		status: TreeNodeStatus.Unknown,
 		type: TreeNodeType.File,
 	};
@@ -80,7 +80,7 @@ function createActualFiles(
 	const libraryRoot = settings.splitPathToLibraryRoot.basename;
 	const actualFiles: SplitPathWithReader[] = [];
 	for (const { leaf, currentBasename } of leaves) {
-		const pathParts = [libraryRoot, ...leaf.coreNameChainToParent];
+		const pathParts = [libraryRoot, ...leaf.nodeNameChainToParent];
 		if (leaf.type === TreeNodeType.Scroll) {
 			actualFiles.push({
 				basename: currentBasename,
@@ -181,7 +181,7 @@ describe("healOnInit", () => {
 		}
 	});
 
-	it("preserves coreName when fixing suffix", async () => {
+	it("preserves nodeName when fixing suffix", async () => {
 		const leaves: TreeLeaf[] = [
 			scrollLeaf("MyNote", ["A", "B", "C"], "MyNote-X"),
 		];
@@ -254,7 +254,7 @@ describe("getExpectedBasename", () => {
 		expect(getExpectedBasename(leaf)).toBe("Note-C-B-A");
 	});
 
-	it("returns coreName only for root level", () => {
+	it("returns nodeName only for root level", () => {
 		const leaf = scrollLeaf("Note", [], "Note-extra");
 		expect(getExpectedBasename(leaf)).toBe("Note");
 	});

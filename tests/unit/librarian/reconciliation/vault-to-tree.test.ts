@@ -51,8 +51,8 @@ describe("translateVaultAction", () => {
 
 			expect(result).toEqual({
 				payload: {
-					coreName: "MyFolder",
-					coreNameChainToParent: ["Parent"],
+					nodeName: "MyFolder",
+					nodeNameChainToParent: ["Parent"],
 					nodeType: TreeNodeType.Section,
 					status: TreeNodeStatus.NotStarted,
 				},
@@ -75,8 +75,8 @@ describe("translateVaultAction", () => {
 			const result = translateVaultAction(action);
 
 			expect(result?.payload).toMatchObject({
-				coreName: "TopLevel",
-				coreNameChainToParent: [],
+				nodeName: "TopLevel",
+				nodeNameChainToParent: [],
 			});
 		});
 	});
@@ -99,9 +99,9 @@ describe("translateVaultAction", () => {
 
 			expect(result).toEqual({
 				payload: {
-					coreName: "Note",
-					coreNameChainToParent: ["A", "B"],
 					extension: "md",
+					nodeName: "Note",
+					nodeNameChainToParent: ["A", "B"],
 					nodeType: TreeNodeType.Scroll,
 					status: TreeNodeStatus.NotStarted,
 				},
@@ -128,9 +128,9 @@ describe("translateVaultAction", () => {
 
 			expect(result).toEqual({
 				payload: {
-					coreName: "doc",
-					coreNameChainToParent: ["A"],
 					extension: "pdf",
+					nodeName: "doc",
+					nodeNameChainToParent: ["A"],
 					nodeType: TreeNodeType.File,
 					status: TreeNodeStatus.Unknown,
 				},
@@ -156,7 +156,7 @@ describe("translateVaultAction", () => {
 
 			expect(result).toEqual({
 				payload: {
-					coreNameChain: ["Parent", "ToDelete"],
+					nodeNameChain: ["Parent", "ToDelete"],
 				},
 				type: TreeActionType.DeleteNode,
 			});
@@ -179,7 +179,7 @@ describe("translateVaultAction", () => {
 
 			expect(result).toEqual({
 				payload: {
-					coreNameChain: ["A", "Note"],
+					nodeNameChain: ["A", "Note"],
 				},
 				type: TreeActionType.DeleteNode,
 			});
@@ -210,8 +210,8 @@ describe("translateVaultAction", () => {
 
 			expect(result).toEqual({
 				payload: {
-					coreNameChain: ["A", "OldName"],
-					newCoreName: "NewName",
+					newNodeName: "NewName",
+					nodeNameChain: ["A", "OldName"],
 				},
 				type: TreeActionType.ChangeNodeName,
 			});
@@ -238,8 +238,8 @@ describe("translateVaultAction", () => {
 
 			expect(result).toEqual({
 				payload: {
-					coreNameChain: ["Parent", "OldFolder"],
-					newCoreName: "NewFolder",
+					newNodeName: "NewFolder",
+					nodeNameChain: ["Parent", "OldFolder"],
 				},
 				type: TreeActionType.ChangeNodeName,
 			});
@@ -270,8 +270,8 @@ describe("translateVaultAction", () => {
 
 			expect(result).toEqual({
 				payload: {
-					coreNameChain: ["A", "Note"],
-					newCoreNameChainToParent: ["B", "C"],
+					newNodeNameChainToParent: ["B", "C"],
+					nodeNameChain: ["A", "Note"],
 				},
 				type: TreeActionType.MoveNode,
 			});
@@ -298,8 +298,8 @@ describe("translateVaultAction", () => {
 
 			expect(result).toEqual({
 				payload: {
-					coreNameChain: ["A", "Folder"],
-					newCoreNameChainToParent: ["B"],
+					newNodeNameChainToParent: ["B"],
+					nodeNameChain: ["A", "Folder"],
 				},
 				type: TreeActionType.MoveNode,
 			});

@@ -4,7 +4,7 @@ import type { VaultAction } from "../../../obsidian-vault-action-manager/types/v
 import { VaultActionType } from "../../../obsidian-vault-action-manager/types/vault-action";
 import { logger } from "../../../utils/logger";
 import type { LibraryTree } from "../library-tree";
-import type { CoreNameChainFromRoot } from "../naming/parsed-basename";
+import type { NodeNameChain } from "../naming/parsed-basename";
 import type { SectionNode } from "../types/tree-node";
 import { TreeNodeType } from "../types/tree-node";
 import {
@@ -18,7 +18,7 @@ export type CodexRegeneratorContext = {
 	dispatch: (
 		actions: import("../../../obsidian-vault-action-manager/types/vault-action").VaultAction[],
 	) => Promise<unknown>;
-	getNode: (chain: CoreNameChainFromRoot) => SectionNode | null;
+	getNode: (chain: NodeNameChain) => SectionNode | null;
 	listAllFilesWithMdReaders?: (
 		splitPath: import("../../../obsidian-vault-action-manager/types/split-path").SplitPathToFolder,
 	) => Promise<
@@ -34,7 +34,7 @@ export type CodexRegeneratorContext = {
  * Pure function that takes tree and context.
  */
 export async function regenerateCodexes(
-	impactedChains: CoreNameChainFromRoot[],
+	impactedChains: NodeNameChain[],
 	context: CodexRegeneratorContext,
 ): Promise<void> {
 	if (impactedChains.length === 0) {
@@ -83,7 +83,7 @@ export async function regenerateCodexes(
  * Scans all files recursively and deletes any `__` files that aren't valid codexes.
  */
 async function cleanupOrphanedCodexes(
-	_sectionChains: CoreNameChainFromRoot[],
+	_sectionChains: NodeNameChain[],
 	context: CodexRegeneratorContext,
 ): Promise<void> {
 	if (!context.listAllFilesWithMdReaders || !context.splitPath) {
@@ -125,9 +125,7 @@ async function cleanupOrphanedCodexes(
 
 		// Section chain is everything after library root
 		// Codex file is IN the section folder, so section chain = pathParts after root
-		const sectionChain: CoreNameChainFromRoot = file.pathParts.slice(
-			rootIndex + 1,
-		);
+		const sectionChain: NodeNameChain = file.pathParts.slice(rootIndex + 1);
 
 		// Get section node
 		const node = context.getNode(sectionChain);

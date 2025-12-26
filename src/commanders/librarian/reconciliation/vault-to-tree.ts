@@ -11,7 +11,7 @@
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import type { SplitPath } from "../../../obsidian-vault-action-manager/types/split-path";
 import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
-import type { CoreNameChainFromRoot } from "../naming/parsed-basename";
+import type { NodeNameChain } from "../naming/parsed-basename";
 import { TreeActionType } from "../types/literals";
 import type { TreeAction } from "../types/tree-action";
 import { TreeNodeStatus, TreeNodeType } from "../types/tree-node";
@@ -72,11 +72,11 @@ function sameParent(from: SplitPath, to: SplitPath): boolean {
 }
 
 /**
- * Extract coreNameChain from SplitPath (relative to library root).
- * Parses basename to extract coreName (not full basename).
+ * Extract nodeNameChain from SplitPath (relative to library root).
+ * Parses basename to extract nodeName (not full basename).
  * Reads libraryRoot and suffixDelimiter from global settings.
  */
-function toCoreNameChain(splitPath: SplitPath): CoreNameChainFromRoot {
+function toNodeNameChain(splitPath: SplitPath): NodeNameChain {
 	const settings = getParsedUserSettings();
 	const libraryRoot = settings.splitPathToLibraryRoot.basename;
 	const parts = splitPath.pathParts;
@@ -84,17 +84,17 @@ function toCoreNameChain(splitPath: SplitPath): CoreNameChainFromRoot {
 	const startIndex = parts[0] === libraryRoot ? 1 : 0;
 	const pathParts = parts.slice(startIndex);
 
-	// Parse basename to get coreName (not full basename with suffix)
-	const { coreName } = parseBasenameDeprecated(splitPath.basename);
+	// Parse basename to get nodeName (not full basename with suffix)
+	const { nodeName } = parseBasenameDeprecated(splitPath.basename);
 
-	return [...pathParts, coreName];
+	return [...pathParts, nodeName];
 }
 
 /**
  * Extract parent chain from SplitPath (relative to library root).
  * Reads libraryRoot from global settings.
  */
-function toParentChain(splitPath: SplitPath): CoreNameChainFromRoot {
+function toParentChain(splitPath: SplitPath): NodeNameChain {
 	const settings = getParsedUserSettings();
 	const libraryRoot = settings.splitPathToLibraryRoot.basename;
 	const parts = splitPath.pathParts;
@@ -105,8 +105,8 @@ function toParentChain(splitPath: SplitPath): CoreNameChainFromRoot {
 function createSectionAction(splitPath: SplitPath): TreeAction {
 	return {
 		payload: {
-			coreName: splitPath.basename,
-			coreNameChainToParent: toParentChain(splitPath),
+			nodeName: splitPath.basename,
+			nodeNameChainToParent: toParentChain(splitPath),
 			nodeType: TreeNodeType.Section,
 			status: TreeNodeStatus.NotStarted,
 		},
@@ -115,14 +115,14 @@ function createSectionAction(splitPath: SplitPath): TreeAction {
 }
 
 function createFileAction(splitPath: SplitPath): TreeAction | null {
-	const { coreName } = parseBasenameDeprecated(splitPath.basename);
+	const { nodeName } = parseBasenameDeprecated(splitPath.basename);
 	const extension = "extension" in splitPath ? splitPath.extension : "";
 
 	return {
 		payload: {
-			coreName,
-			coreNameChainToParent: toParentChain(splitPath),
 			extension,
+			nodeName,
+			nodeNameChainToParent: toParentChain(splitPath),
 			nodeType: TreeNodeType.File,
 			status: TreeNodeStatus.Unknown,
 		},
@@ -131,13 +131,13 @@ function createFileAction(splitPath: SplitPath): TreeAction | null {
 }
 
 function createScrollAction(splitPath: SplitPath): TreeAction | null {
-	const { coreName } = parseBasenameDeprecated(splitPath.basename);
+	const { nodeName } = parseBasenameDeprecated(splitPath.basename);
 
 	return {
 		payload: {
-			coreName,
-			coreNameChainToParent: toParentChain(splitPath),
 			extension: "md",
+			nodeName,
+			nodeNameChainToParent: toParentChain(splitPath),
 			nodeType: TreeNodeType.Scroll,
 			status: TreeNodeStatus.NotStarted,
 		},
@@ -148,7 +148,7 @@ function createScrollAction(splitPath: SplitPath): TreeAction | null {
 function deleteNodeAction(splitPath: SplitPath): TreeAction {
 	return {
 		payload: {
-			coreNameChain: toCoreNameChain(splitPath),
+			nodeNameChain: toNodeNameChain(splitPath),
 		},
 		type: TreeActionType.DeleteNode,
 	};
@@ -184,16 +184,16 @@ function translateRename(from: SplitPath, to: SplitPath): TreeAction {
 	}
 
 	// Both inside library - normal rename/move
-	const fromChain = toCoreNameChain(from);
+	const fromChain = toNodeNameChain(from);
 
 	if (sameParent(from, to)) {
 		// Same folder → ChangeNodeName
-		// Parse to.basename to get coreName (not full basename)
-		const { coreName: newCoreName } = parseBasenameDeprecated(to.basename);
+		// Parse to.basename to get nodeName (not full basename)
+		const { nodeName: newNodeName } = parseBasenameDeprecated(to.basename);
 		const action = {
 			payload: {
-				coreNameChain: fromChain,
-				newCoreName,
+				newNodeName,
+				nodeNameChain: fromChain,
 			},
 			type: TreeActionType.ChangeNodeName,
 		};
@@ -204,8 +204,8 @@ function translateRename(from: SplitPath, to: SplitPath): TreeAction {
 	const newParentChain = toParentChain(to);
 	const action = {
 		payload: {
-			coreNameChain: fromChain,
-			newCoreNameChainToParent: newParentChain,
+			newNodeNameChainToParent: newParentChain,
+			nodeNameChain: fromChain,
 		},
 		type: TreeActionType.MoveNode,
 	};

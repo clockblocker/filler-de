@@ -15,17 +15,17 @@ export function splitPathToLeafDeprecated(
 	const settings = getParsedUserSettings();
 	const rootFolderName = settings.splitPathToLibraryRoot.basename;
 	const { basename, pathParts, type } = splitPath;
-	const { coreName } = parseBasenameDeprecated(basename);
+	const { nodeName } = parseBasenameDeprecated(basename);
 
-	// Convert pathParts to coreNameChainToParent by stripping root folder
-	const coreNameChainToParent =
+	// Convert pathParts to nodeNameChainToParent by stripping root folder
+	const nodeNameChainToParent =
 		pathParts[0] === rootFolderName ? pathParts.slice(1) : pathParts;
 
 	if (type === "MdFile") {
 		return {
-			coreName,
-			coreNameChainToParent,
 			extension: "md",
+			nodeName,
+			nodeNameChainToParent,
 			status: TreeNodeStatus.NotStarted,
 			type: TreeNodeType.Scroll,
 		};
@@ -34,9 +34,9 @@ export function splitPathToLeafDeprecated(
 	// Extract extension from splitPath
 	const extension = "extension" in splitPath ? splitPath.extension : "";
 	return {
-		coreName,
-		coreNameChainToParent,
 		extension,
+		nodeName,
+		nodeNameChainToParent,
 		status: TreeNodeStatus.Unknown,
 		type: TreeNodeType.File,
 	};

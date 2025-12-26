@@ -153,8 +153,8 @@ export const testReadTreeFromVault = async () => {
 		// Debug: serialize tree to see what files were actually read
 		const serialized = tree.serializeToLeaves() as any[];
 		const filePaths = serialized.map((leaf: any) => ({
-			coreName: leaf.coreName,
-			coreNameChainToParent: leaf.coreNameChainToParent,
+			nodeName: leaf.nodeName,
+			nodeNameChainToParent: leaf.nodeNameChainToParent,
 			status: leaf.status,
 			tRefPath: leaf.tRef?.path,
 		}));
@@ -164,7 +164,7 @@ export const testReadTreeFromVault = async () => {
 		const avarar = tree.getNode(["Avarar"]) as TreeNodeApi | null;
 		
 		// Debug: check what children avarar has
-		const avararChildren = avarar?.children?.map(c => c.coreName) || [];
+		const avararChildren = avarar?.children?.map(c => c.nodeName) || [];
 		
 		const s1 = tree.getNode(["Avarar", "S1"]) as TreeNodeApi | null;
 		const s2 = tree.getNode(["Avarar", "S2"]) as TreeNodeApi | null;
@@ -177,7 +177,7 @@ export const testReadTreeFromVault = async () => {
 
 		// Return serializable verification data
 		return {
-			avarar: avarar ? { coreName: avarar.coreName, coreNameChainToParent: avarar.coreNameChainToParent, status: avarar.status, type: avarar.type } : null,
+			avarar: avarar ? { nodeName: avarar.nodeName, nodeNameChainToParent: avarar.nodeNameChainToParent, status: avarar.status, type: avarar.type } : null,
 			debug: {
 				avararChildren: avararChildren,
 				avararExists: avarar !== null,
@@ -192,15 +192,15 @@ export const testReadTreeFromVault = async () => {
 				testMeta: testMeta,
 				treeType: typeof tree,
 			},
-			e1: e1 ? { coreName: e1.coreName, coreNameChainToParent: e1.coreNameChainToParent, status: e1.status, type: e1.type } : null,
-			e1S1Avarar: e1S1Avarar ? { coreName: e1S1Avarar.coreName, coreNameChainToParent: e1S1Avarar.coreNameChainToParent, status: e1S1Avarar.status, type: e1S1Avarar.type } : null,
-			e2S1Avarar: e2S1Avarar ? { coreName: e2S1Avarar.coreName, coreNameChainToParent: e2S1Avarar.coreNameChainToParent, status: e2S1Avarar.status, type: e2S1Avarar.type } : null,
-			e2S2Avarar: e2S2Avarar ? { coreName: e2S2Avarar.coreName, coreNameChainToParent: e2S2Avarar.coreNameChainToParent, status: e2S2Avarar.status, type: e2S2Avarar.type } : null,
-			file000: file000 ? { coreName: file000.coreName, coreNameChainToParent: file000.coreNameChainToParent, status: file000.status, type: file000.type } : null,
-			file001: file001 ? { coreName: file001.coreName, coreNameChainToParent: file001.coreNameChainToParent, status: file001.status, type: file001.type } : null,
-			root: root ? { coreName: root.coreName, coreNameChainToParent: root.coreNameChainToParent, status: root.status, type: root.type } : null,
-			s1: s1 ? { coreName: s1.coreName, coreNameChainToParent: s1.coreNameChainToParent, status: s1.status, type: s1.type } : null,
-			s2: s2 ? { coreName: s2.coreName, coreNameChainToParent: s2.coreNameChainToParent, status: s2.status, type: s2.type } : null,
+			e1: e1 ? { nodeName: e1.nodeName, nodeNameChainToParent: e1.nodeNameChainToParent, status: e1.status, type: e1.type } : null,
+			e1S1Avarar: e1S1Avarar ? { nodeName: e1S1Avarar.nodeName, nodeNameChainToParent: e1S1Avarar.nodeNameChainToParent, status: e1S1Avarar.status, type: e1S1Avarar.type } : null,
+			e2S1Avarar: e2S1Avarar ? { nodeName: e2S1Avarar.nodeName, nodeNameChainToParent: e2S1Avarar.nodeNameChainToParent, status: e2S1Avarar.status, type: e2S1Avarar.type } : null,
+			e2S2Avarar: e2S2Avarar ? { nodeName: e2S2Avarar.nodeName, nodeNameChainToParent: e2S2Avarar.nodeNameChainToParent, status: e2S2Avarar.status, type: e2S2Avarar.type } : null,
+			file000: file000 ? { nodeName: file000.nodeName, nodeNameChainToParent: file000.nodeNameChainToParent, status: file000.status, type: file000.type } : null,
+			file001: file001 ? { nodeName: file001.nodeName, nodeNameChainToParent: file001.nodeNameChainToParent, status: file001.status, type: file001.type } : null,
+			root: root ? { nodeName: root.nodeName, nodeNameChainToParent: root.nodeNameChainToParent, status: root.status, type: root.type } : null,
+			s1: s1 ? { nodeName: s1.nodeName, nodeNameChainToParent: s1.nodeNameChainToParent, status: s1.status, type: s1.type } : null,
+			s2: s2 ? { nodeName: s2.nodeName, nodeNameChainToParent: s2.nodeNameChainToParent, status: s2.status, type: s2.type } : null,
 			success: true,
 		};
 	});
@@ -215,58 +215,58 @@ export const testReadTreeFromVault = async () => {
 	// Verify structure from serialized data
 	expect(result.root).not.toBeNull();
 	expect(result.root?.type).toBe("Section");
-	expect(result.root?.coreName).toBe("");
-	expect(result.root?.coreNameChainToParent).toEqual([]);
+	expect(result.root?.nodeName).toBe("");
+	expect(result.root?.nodeNameChainToParent).toEqual([]);
 	
 	expect(result.avarar).not.toBeNull();
 	expect(result.avarar?.type).toBe("Section");
-	expect(result.avarar?.coreName).toBe("Avarar");
-	expect(result.avarar?.coreNameChainToParent).toEqual([]);
+	expect(result.avarar?.nodeName).toBe("Avarar");
+	expect(result.avarar?.nodeNameChainToParent).toEqual([]);
 	
 	expect(result.s1).not.toBeNull();
 	expect(result.s1?.type).toBe("Section");
-	expect(result.s1?.coreName).toBe("S1");
-	expect(result.s1?.coreNameChainToParent).toEqual(["Avarar"]);
+	expect(result.s1?.nodeName).toBe("S1");
+	expect(result.s1?.nodeNameChainToParent).toEqual(["Avarar"]);
 	
 	expect(result.s2).not.toBeNull();
 	expect(result.s2?.type).toBe("Section");
-	expect(result.s2?.coreName).toBe("S2");
-	expect(result.s2?.coreNameChainToParent).toEqual(["Avarar"]);
+	expect(result.s2?.nodeName).toBe("S2");
+	expect(result.s2?.nodeNameChainToParent).toEqual(["Avarar"]);
 	
 	expect(result.e1).not.toBeNull();
 	expect(result.e1?.type).toBe("Section");
-	expect(result.e1?.coreName).toBe("E1");
-	expect(result.e1?.coreNameChainToParent).toEqual(["Avarar", "S2"]);
+	expect(result.e1?.nodeName).toBe("E1");
+	expect(result.e1?.nodeNameChainToParent).toEqual(["Avarar", "S2"]);
 	
 	// Scroll statuses from metadata
 	expect(result.e1S1Avarar).not.toBeNull();
 	expect(result.e1S1Avarar?.type).toBe("Scroll");
-	expect(result.e1S1Avarar?.coreName).toBe("E1");
-	expect(result.e1S1Avarar?.coreNameChainToParent).toEqual(["Avarar", "S1"]);
+	expect(result.e1S1Avarar?.nodeName).toBe("E1");
+	expect(result.e1S1Avarar?.nodeNameChainToParent).toEqual(["Avarar", "S1"]);
 	expect(result.e1S1Avarar?.status).toBe("Done");
 	
 	expect(result.e2S1Avarar).not.toBeNull();
 	expect(result.e2S1Avarar?.type).toBe("Scroll");
-	expect(result.e2S1Avarar?.coreName).toBe("E2");
-	expect(result.e2S1Avarar?.coreNameChainToParent).toEqual(["Avarar", "S1"]);
+	expect(result.e2S1Avarar?.nodeName).toBe("E2");
+	expect(result.e2S1Avarar?.nodeNameChainToParent).toEqual(["Avarar", "S1"]);
 	expect(result.e2S1Avarar?.status).toBe("NotStarted");
 	
 	expect(result.file000).not.toBeNull();
 	expect(result.file000?.type).toBe("Scroll");
-	expect(result.file000?.coreName).toBe("000_E1");
-	expect(result.file000?.coreNameChainToParent).toEqual(["Avarar", "S2", "E1"]);
+	expect(result.file000?.nodeName).toBe("000_E1");
+	expect(result.file000?.nodeNameChainToParent).toEqual(["Avarar", "S2", "E1"]);
 	expect(result.file000?.status).toBe("Done");
 	
 	expect(result.file001).not.toBeNull();
 	expect(result.file001?.type).toBe("Scroll");
-	expect(result.file001?.coreName).toBe("001_E1");
-	expect(result.file001?.coreNameChainToParent).toEqual(["Avarar", "S2", "E1"]);
+	expect(result.file001?.nodeName).toBe("001_E1");
+	expect(result.file001?.nodeNameChainToParent).toEqual(["Avarar", "S2", "E1"]);
 	expect(result.file001?.status).toBe("Done");
 	
 	expect(result.e2S2Avarar).not.toBeNull();
 	expect(result.e2S2Avarar?.type).toBe("Scroll");
-	expect(result.e2S2Avarar?.coreName).toBe("E2");
-	expect(result.e2S2Avarar?.coreNameChainToParent).toEqual(["Avarar", "S2"]);
+	expect(result.e2S2Avarar?.nodeName).toBe("E2");
+	expect(result.e2S2Avarar?.nodeNameChainToParent).toEqual(["Avarar", "S2"]);
 	expect(result.e2S2Avarar?.status).toBe("Done");
 
 	// Section statuses derived from children

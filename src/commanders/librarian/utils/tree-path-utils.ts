@@ -16,13 +16,13 @@ export function buildCanonicalPathForLeafDeprecated(leaf: TreeLeaf): string {
 	);
 
 	const canonicalBasename = buildCanonicalBasenameDeprecated(
-		leaf.coreName,
-		leaf.coreNameChainToParent,
+		leaf.nodeName,
+		leaf.nodeNameChainToParent,
 	);
 
 	const pathChain =
-		leaf.coreNameChainToParent.length > 0
-			? `${joinPathPartsDeprecated(leaf.coreNameChainToParent)}/`
+		leaf.nodeNameChainToParent.length > 0
+			? `${joinPathPartsDeprecated(leaf.nodeNameChainToParent)}/`
 			: "";
 	return `${libraryRootPath}/${pathChain}${canonicalBasename}.${leaf.extension}`;
 }
@@ -32,7 +32,7 @@ export function buildCanonicalBasenameForLeafDeprecated(
 	leaf: TreeLeaf,
 ): string {
 	return buildCanonicalBasenameDeprecated(
-		leaf.coreName,
-		leaf.coreNameChainToParent,
+		leaf.nodeName,
+		leaf.nodeNameChainToParent,
 	);
 }

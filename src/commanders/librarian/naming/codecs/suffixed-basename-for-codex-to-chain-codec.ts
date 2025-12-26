@@ -1,10 +1,7 @@
 import z from "zod";
 import { getParsedUserSettings } from "../../../../global-state/global-state";
 import { CODEX_CORE_NAME } from "../../types/literals";
-import {
-	type CoreNameChainFromRoot,
-	CoreNameChainFromRootSchema,
-} from "../parsed-basename";
+import { type NodeNameChain, NodeNameChainSchema } from "../parsed-basename";
 import { suffixedBasenameToChainCodec } from "./suffixed-basename-to-chain-codec";
 
 /**
@@ -18,13 +15,13 @@ export const SuffixedBasenameForСodexSchema = z
 	})
 	.refine(
 		(val) => {
-			// After "__", must have delimiter + content (like any regular filename)
-			const afterCoreName = val.slice(CODEX_CORE_NAME.length);
-			if (afterCoreName.length === 0) {
+			// After CODEX_CORE_NAME, must have suffix delimiter + content (like any regular filename)
+			const afterNodeName = val.slice(CODEX_CORE_NAME.length);
+			if (afterNodeName.length === 0) {
 				return false;
 			}
 			const settings = getParsedUserSettings();
-			return afterCoreName.startsWith(settings.suffixDelimiter);
+			return afterNodeName.startsWith(settings.suffixDelimiter);
 		},
 		{
 			message: "Empty after prefix",
@@ -32,14 +29,14 @@ export const SuffixedBasenameForСodexSchema = z
 	);
 
 /**
- * Zod codec from codex basename to CoreNameChainFromRoot (parent section chain).
+ * Zod codec from codex basename to NodeNameChain (parent section chain).
  * Decodes codex basename (e.g., "__-Library" or "__-Child-Parent") to parent section chain.
  * Uses sectionBasenameToChainCodec internally.
  * Reads settings internally.
  */
 export const suffixedBasenameForСodexToParentSectionChainCodec = z.codec(
 	SuffixedBasenameForСodexSchema,
-	CoreNameChainFromRootSchema,
+	NodeNameChainSchema,
 	{
 		decode: (SuffixedBasenameForСodex) => {
 			return suffixedBasenameToChainCodec
@@ -47,7 +44,7 @@ export const suffixedBasenameForСodexToParentSectionChainCodec = z.codec(
 				.slice(0, -1);
 		},
 		encode: (chain) => {
-			// Codex is just a regular file with coreName "__"
+			// Codex is just a regular file with nodeName "__"
 			return suffixedBasenameToChainCodec.encode([
 				...chain,
 				CODEX_CORE_NAME,
@@ -57,16 +54,16 @@ export const suffixedBasenameForСodexToParentSectionChainCodec = z.codec(
 );
 
 /**
- * Zod codec from codex basename to CoreNameChainFromRoot (full section chain).
+ * Zod codec from codex basename to NodeNameChain (full section chain).
  * Decodes codex basename (e.g., "__-Library" or "__-Child-Parent") to full section chain.
  * Handles root case, library validation, delimiter parsing.
  * Reads settings internally.
  */
 export const codexBasenameToSectionChainCodec = z.codec(
 	SuffixedBasenameForСodexSchema,
-	CoreNameChainFromRootSchema,
+	NodeNameChainSchema,
 	{
-		decode: (codexBasename: string): CoreNameChainFromRoot => {
+		decode: (codexBasename: string): NodeNameChain => {
 			const settings = getParsedUserSettings();
 			const libraryRoot = settings.splitPathToLibraryRoot.basename;
 
@@ -82,7 +79,7 @@ export const codexBasenameToSectionChainCodec = z.codec(
 
 			return sectionChain;
 		},
-		encode: (sectionChain: CoreNameChainFromRoot): string => {
+		encode: (sectionChain: NodeNameChain): string => {
 			const settings = getParsedUserSettings();
 			const libraryRoot = settings.splitPathToLibraryRoot.basename;
 

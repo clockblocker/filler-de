@@ -16,14 +16,14 @@ export type LibrarianTestingApi = {
 };
 
 export type LibraryTreeApi = {
-	getNode: (coreNameChain: unknown) => unknown; // TreeNode | null
+	getNode: (nodeNameChain: unknown) => unknown; // TreeNode | null
 	serializeToLeaves: () => unknown; // TreeLeaf[]
 };
 
 export type TreeNodeApi = {
-	coreName: string;
+	nodeName: string;
 	type: string; // "Scroll" | "File" | "Section"
-	coreNameChainToParent: string[];
+	nodeNameChainToParent: string[];
 	status?: string;
 	children?: TreeNodeApi[];
 	tRef?: unknown; // TFile

@@ -1,54 +1,54 @@
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import type {
-	CoreName,
-	CoreNameChainFromRoot,
+	NodeName,
+	NodeNameChain,
 	SplitSuffix,
 } from "../naming/parsed-basename";
 
 /** @deprecated */
 export function computeSuffixFromPathDepreacated(
-	coreNameChain: CoreNameChainFromRoot,
+	nodeNameChain: NodeNameChain,
 ): SplitSuffix {
-	return [...coreNameChain].reverse();
+	return [...nodeNameChain].reverse();
 }
 
 /** @deprecated */
 export function computePathPartsFromSuffixDepreacated(
 	splitSuffix: SplitSuffix,
-): CoreNameChainFromRoot {
+): NodeNameChain {
 	return [...splitSuffix].reverse();
 }
 
 /** @deprecated */
 export function buildBasenameDepreacated(
-	coreName: CoreName,
+	nodeName: NodeName,
 	splitSuffix: SplitSuffix,
 ): string {
 	if (splitSuffix.length === 0) {
-		return coreName;
+		return nodeName;
 	}
 	const suffixDelimiter = getParsedUserSettings().suffixDelimiter;
-	return [coreName, ...splitSuffix].join(suffixDelimiter);
+	return [nodeName, ...splitSuffix].join(suffixDelimiter);
 }
 
 /** @deprecated */
 export function buildCanonicalBasenameDeprecated(
-	coreName: CoreName,
-	coreNameChain: CoreNameChainFromRoot,
+	nodeName: NodeName,
+	nodeNameChain: NodeNameChain,
 ): string {
-	const suffix = computeSuffixFromPathDepreacated(coreNameChain);
-	return buildBasenameDepreacated(coreName, suffix);
+	const suffix = computeSuffixFromPathDepreacated(nodeNameChain);
+	return buildBasenameDepreacated(nodeName, suffix);
 }
 
 /** @deprecated */
 export function suffixMatchesPathDepreacated(
 	splitSuffix: SplitSuffix,
-	coreNameChain: CoreNameChainFromRoot,
+	nodeNameChain: NodeNameChain,
 ): boolean {
-	if (splitSuffix.length !== coreNameChain.length) {
+	if (splitSuffix.length !== nodeNameChain.length) {
 		return false;
 	}
-	const expectedSuffix = computeSuffixFromPathDepreacated(coreNameChain);
+	const expectedSuffix = computeSuffixFromPathDepreacated(nodeNameChain);
 	return splitSuffix.every((s, i) => s === expectedSuffix[i]);
 }
 

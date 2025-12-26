@@ -1,16 +1,16 @@
 import { getParsedUserSettings } from "../../../global-state/global-state";
-import type { CoreNameChainFromRoot } from "../naming/parsed-basename";
+import type { NodeNameChain } from "../naming/parsed-basename";
 import { parseBasenameDeprecated } from "../utils/parse-basename";
 
 /**
- * Extract coreNameChain from delete path.
+ * Extract nodeNameChain from delete path.
  * Pure function for parsing delete events.
  * Reads libraryRoot and suffixDelimiter from global settings.
  */
 export function parseDeletePathToChain(
 	path: string,
 	isFolder: boolean,
-): CoreNameChainFromRoot | null {
+): NodeNameChain | null {
 	const settings = getParsedUserSettings();
 	const libraryRoot = settings.splitPathToLibraryRoot.basename;
 	const pathParts = path.split("/");
@@ -26,14 +26,14 @@ export function parseDeletePathToChain(
 		return partsAfterRoot;
 	}
 
-	// File delete: last part is filename, parse to get coreName
+	// File delete: last part is filename, parse to get nodeName
 	const filename = partsAfterRoot[partsAfterRoot.length - 1] ?? "";
 	const basenameWithoutExt = filename.includes(".")
 		? filename.slice(0, filename.lastIndexOf("."))
 		: filename;
 
 	const parsed = parseBasenameDeprecated(basenameWithoutExt);
-	return [...partsAfterRoot.slice(0, -1), parsed.coreName];
+	return [...partsAfterRoot.slice(0, -1), parsed.nodeName];
 }
 
 /**

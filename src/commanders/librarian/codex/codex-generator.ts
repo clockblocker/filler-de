@@ -12,7 +12,7 @@ import {
 	SPACE_F,
 	TAB,
 } from "../../../types/literals";
-import type { CoreNameChainFromRoot } from "../naming/parsed-basename";
+import type { NodeNameChain } from "../naming/parsed-basename";
 import type { SectionNode, TreeNode } from "../types/tree-node";
 import { TreeNodeStatus, TreeNodeType } from "../types/tree-node";
 import { addCodexPrefixDeprecated } from "../utils/codex-utils";
@@ -42,8 +42,8 @@ export function generateCodexContent(
 
 	// Backlink to parent codex
 	const backlink = generateBacklink(
-		section.coreNameChainToParent,
-		section.coreName,
+		section.nodeNameChainToParent,
+		section.nodeName,
 		delimiter,
 		options.libraryRoot,
 	);
@@ -66,18 +66,18 @@ export function generateCodexContent(
  * First-level sections (with empty chain) link to root codex.
  */
 function generateBacklink(
-	coreNameChainToParent: CoreNameChainFromRoot,
-	sectionCoreName: string,
+	nodeNameChainToParent: NodeNameChain,
+	sectionNodeName: string,
 	delimiter: string,
 	libraryRoot?: string,
 ): string | null {
-	// Root section has empty coreName and empty chain - no backlink
-	if (coreNameChainToParent.length === 0 && sectionCoreName === "") {
+	// Root section has empty nodeName and empty chain - no backlink
+	if (nodeNameChainToParent.length === 0 && sectionNodeName === "") {
 		return null;
 	}
 
-	// First-level section (empty chain but has coreName) - link to root codex
-	if (coreNameChainToParent.length === 0) {
+	// First-level section (empty chain but has nodeName) - link to root codex
+	if (nodeNameChainToParent.length === 0) {
 		if (!libraryRoot) {
 			return null;
 		}
@@ -87,19 +87,19 @@ function generateBacklink(
 
 	// Nested section - link to parent section's codex
 	// Parent is the last element in the chain
-	const lastIndex = coreNameChainToParent.length - 1;
+	const lastIndex = nodeNameChainToParent.length - 1;
 	if (lastIndex < 0) {
 		return null;
 	}
-	const parentName = coreNameChainToParent[lastIndex];
+	const parentName = nodeNameChainToParent[lastIndex];
 	if (!parentName) {
 		return null;
 	}
-	const parentCodexCoreName = addCodexPrefixDeprecated(parentName);
+	const parentCodexNodeName = addCodexPrefixDeprecated(parentName);
 	// Parent's chain is everything except the last element
-	const parentChainToParent = coreNameChainToParent.slice(0, -1);
+	const parentChainToParent = nodeNameChainToParent.slice(0, -1);
 	const parentCodexFullBasename = buildFullBasename(
-		parentCodexCoreName,
+		parentCodexNodeName,
 		parentChainToParent,
 		delimiter,
 	);
@@ -109,18 +109,18 @@ function generateBacklink(
 
 /**
  * Build full basename with suffix from node.
- * e.g., coreName="Rice", chainToParent=["Recipe", "Poridge"] → "Rice-Poridge-Recipe"
+ * e.g., nodeName="Rice", chainToParent=["Recipe", "Poridge"] → "Rice-Poridge-Recipe"
  */
 function buildFullBasename(
-	coreName: string,
-	coreNameChainToParent: string[],
+	nodeName: string,
+	nodeNameChainToParent: string[],
 	delimiter: string,
 ): string {
-	if (coreNameChainToParent.length === 0) {
-		return coreName;
+	if (nodeNameChainToParent.length === 0) {
+		return nodeName;
 	}
-	const suffix = [...coreNameChainToParent].reverse().join(delimiter);
-	return `${coreName}${delimiter}${suffix}`;
+	const suffix = [...nodeNameChainToParent].reverse().join(delimiter);
+	return `${nodeName}${delimiter}${suffix}`;
 }
 
 /**
@@ -140,11 +140,11 @@ function generateItems(
 			case TreeNodeType.Scroll: {
 				const checkbox = statusToCheckbox(child.status);
 				const fullBasename = buildFullBasename(
-					child.coreName,
-					child.coreNameChainToParent,
+					child.nodeName,
+					child.nodeNameChainToParent,
 					delimiter,
 				);
-				const link = `[[${fullBasename}|${child.coreName}]]`;
+				const link = `[[${fullBasename}|${child.nodeName}]]`;
 				lines.push(`${indent}${checkbox} ${link}`);
 				break;
 			}
@@ -152,21 +152,21 @@ function generateItems(
 			case TreeNodeType.File: {
 				// Files don't have checkbox (non-toggleable)
 				const fullBasename = buildFullBasename(
-					child.coreName,
-					child.coreNameChainToParent,
+					child.nodeName,
+					child.nodeNameChainToParent,
 					delimiter,
 				);
-				const link = `[[${fullBasename}|${child.coreName}]]`;
+				const link = `[[${fullBasename}|${child.nodeName}]]`;
 				lines.push(`${indent}- ${link}`);
 				break;
 			}
 
 			case TreeNodeType.Section: {
 				// Build codex link with suffix
-				const codexCoreName = addCodexPrefixDeprecated(child.coreName);
+				const codexNodeName = addCodexPrefixDeprecated(child.nodeName);
 				const codexFullBasename = buildFullBasename(
-					codexCoreName,
-					child.coreNameChainToParent,
+					codexNodeName,
+					child.nodeNameChainToParent,
 					delimiter,
 				);
 
@@ -174,13 +174,13 @@ function generateItems(
 					// At max depth, just show section as link
 					const checkbox = statusToCheckbox(child.status);
 					lines.push(
-						`${indent}${checkbox} [[${codexFullBasename}|${child.coreName}]]`,
+						`${indent}${checkbox} [[${codexFullBasename}|${child.nodeName}]]`,
 					);
 				} else {
 					// Show section with checkbox and recurse into children
 					const checkbox = statusToCheckbox(child.status);
 					lines.push(
-						`${indent}${checkbox} [[${codexFullBasename}|${child.coreName}]]`,
+						`${indent}${checkbox} [[${codexFullBasename}|${child.nodeName}]]`,
 					);
 					lines.push(
 						...generateItems(

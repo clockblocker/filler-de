@@ -11,13 +11,13 @@ import {
 const fakeRootFolder = { name: "Library" } as unknown as TFolder;
 
 const createScrollLeaf = (
-	coreName: string,
-	coreNameChainToParent: string[],
+	nodeName: string,
+	nodeNameChainToParent: string[],
 	status: typeof TreeNodeStatus.Done | typeof TreeNodeStatus.NotStarted = TreeNodeStatus.NotStarted,
 ): TreeLeaf => ({
-	coreName,
-	coreNameChainToParent,
 	extension: "md",
+	nodeName,
+	nodeNameChainToParent,
 	status,
 	type: TreeNodeType.Scroll,
 });
@@ -94,9 +94,9 @@ describe("LibraryTree section status calculation", () => {
 			const leaves: TreeLeaf[] = [
 				createScrollLeaf("Note1", ["folder"], TreeNodeStatus.Done),
 				{
-					coreName: "doc",
-					coreNameChainToParent: ["folder"],
 					extension: "pdf",
+					nodeName: "doc",
+					nodeNameChainToParent: ["folder"],
 					status: TreeNodeStatus.Unknown,
 					type: TreeNodeType.File,
 				},

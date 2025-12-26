@@ -84,13 +84,13 @@ export const testGetNodeHappyPath = async () => {
 		const nonExistent = tree.getNode(["NonExistent"]) as TreeNodeApi | null;
 
 		return {
-			avarar: avarar ? { coreName: avarar.coreName, type: avarar.type } : null,
+			avarar: avarar ? { nodeName: avarar.nodeName, type: avarar.type } : null,
 			e1File: e1File
-				? { coreName: e1File.coreName, type: e1File.type }
+				? { nodeName: e1File.nodeName, type: e1File.type }
 				: null,
 			nonExistent,
-			root: root ? { coreName: root.coreName, type: root.type } : null,
-			s1: s1 ? { coreName: s1.coreName, type: s1.type } : null,
+			root: root ? { nodeName: root.nodeName, type: root.type } : null,
+			s1: s1 ? { nodeName: s1.nodeName, type: s1.type } : null,
 			success: true,
 		};
 	});
@@ -98,15 +98,15 @@ export const testGetNodeHappyPath = async () => {
 	expect(result.success).toBe(true);
 	expect(result.root).not.toBeNull();
 	expect(result.root?.type).toBe("Section");
-	expect(result.root?.coreName).toBe("");
+	expect(result.root?.nodeName).toBe("");
 	expect(result.avarar).not.toBeNull();
 	expect(result.avarar?.type).toBe("Section");
-	expect(result.avarar?.coreName).toBe("Avarar");
+	expect(result.avarar?.nodeName).toBe("Avarar");
 	expect(result.s1).not.toBeNull();
 	expect(result.s1?.type).toBe("Section");
-	expect(result.s1?.coreName).toBe("S1");
+	expect(result.s1?.nodeName).toBe("S1");
 	expect(result.e1File).not.toBeNull();
 	expect(result.e1File?.type).toBe("Scroll");
-	expect(result.e1File?.coreName).toBe("E1");
+	expect(result.e1File?.nodeName).toBe("E1");
 	expect(result.nonExistent).toBeNull();
 };

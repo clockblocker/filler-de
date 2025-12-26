@@ -18,8 +18,8 @@ export {
 export { Librarian } from "./librarian";
 export { LibraryTree } from "./library-tree";
 export type {
-	CoreName,
-	CoreNameChainFromRoot,
+	NodeName,
+	NodeNameChain,
 	ParsedBasename,
 } from "./naming/parsed-basename";
 export {
