@@ -10,8 +10,9 @@ export const SECTION_NODE_TYPE = "Section" as const;
 export type SECTION_NODE_TYPE = "Section";
 
 /** Codex filename prefix */
-export const CODEX_CORE_NAME = "__" as const;
-export type CODEX_CORE_NAME = "__";
+export const CodexCoreNameSchema = z.literal("__");
+export type CODEX_CORE_NAME = z.infer<typeof CodexCoreNameSchema>;
+export const CODEX_CORE_NAME = CodexCoreNameSchema.value;
 
 export const DoneStatusSchema = z.literal("Done");
 export type DONE_STATUS = z.infer<typeof DoneStatusSchema>;

@@ -101,9 +101,9 @@ LibraryTree supports getNode(nodeNameChain: NodeNameChain)
 Example of "filenames in sync with their paths". 
 Given settings (read from `getParsedUserSettings()`): `{ libraryRoot: "Library", suffixDelimiter: "-" }`:
 - "Library/parent/child/NoteBaseName-child-parent.md"; 
-{ pathParts: ["Library", "parent", "child"], extension: "md", parsedBasename: {nodeName: "NoteBaseName", splitSuffix: ["child", "parent"] }} 
+{ pathParts: ["Library", "parent", "child"], extension: "md", separatedCanonicalBasename: {nodeName: "NoteBaseName", splitSuffix: ["child", "parent"] }} 
 - "Library/doc/paper/Pekar/2025/The recency and geographical origins of the bat viruses ancestral to SARS_CoV and SARS_CoV_2-2025-Pekar-paper-doc.pdf"
-{ pathParts: ["Library", "doc", "paper", "Pekar", "2025"], extension: "pdf", parsedBasename: {nodeName: "The recency and geographical origins of the bat viruses ancestral to SARS_CoV and SARS_CoV_2", splitSuffix: ["2025", "Pekar", "paper", "doc"] }}
+{ pathParts: ["Library", "doc", "paper", "Pekar", "2025"], extension: "pdf", separatedCanonicalBasename: {nodeName: "The recency and geographical origins of the bat viruses ancestral to SARS_CoV and SARS_CoV_2", splitSuffix: ["2025", "Pekar", "paper", "doc"] }}
 
 **Settings Access Pattern:**
 - All filename utilities (`parseBasename`, `splitPathToLeaf`, `buildBasename`, etc.) read settings from `getParsedUserSettings()`

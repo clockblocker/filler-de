@@ -20,8 +20,8 @@ export { LibraryTree } from "./library-tree";
 export type {
 	NodeName,
 	NodeNameChain,
-	ParsedBasename,
-} from "./naming/parsed-basename";
+	SeparatedCanonicalBasename,
+} from "./naming/schemas/node-name";
 export {
 	DragInSubtype,
 	HealingMode,

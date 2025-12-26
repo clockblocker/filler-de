@@ -1,13 +1,13 @@
 import z from "zod";
 import { getParsedUserSettings } from "../../../../global-state/global-state";
-import { type NodeNameChain, NodeNameChainSchema } from "../parsed-basename";
+import { type NodeNameChain, NodeNameChainSchema } from "../schemas/node-name";
 
 /**
  * Zod codec from section basename (without prefix) to NodeNameChain.
  * Decodes section basename (e.g., "Library" or "Child-Parent") to section chain.
  * Reads settings internally.
  */
-export const suffixedBasenameToChainCodec = z.codec(
+export const canonicalBasenameToChainCodec = z.codec(
 	z.string(),
 	NodeNameChainSchema,
 	{

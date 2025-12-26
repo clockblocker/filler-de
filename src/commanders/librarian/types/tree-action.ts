@@ -1,4 +1,4 @@
-import type { NodeName, NodeNameChain } from "../naming/parsed-basename";
+import type { NodeName, NodeNameChain } from "../naming/schemas/node-name";
 import { TreeActionType } from "./literals";
 import type { TreeNodeStatus, TreeNodeType } from "./tree-node";
 

@@ -4,7 +4,7 @@ import { getParsedUserSettings } from "../../global-state/global-state";
 import type { ObsidianVaultActionManager } from "../../obsidian-vault-action-manager";
 import { logger } from "../../utils/logger";
 import type { Librarian } from "./librarian";
-import type { NodeNameChain } from "./naming/parsed-basename";
+import type { NodeNameChain } from "./naming/schemas/node-name";
 import { CODEX_CORE_NAME } from "./types/literals";
 
 /**

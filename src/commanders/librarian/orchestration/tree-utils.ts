@@ -1,5 +1,5 @@
 import type { LibraryTree } from "../library-tree";
-import type { NodeNameChain } from "../naming/parsed-basename";
+import type { NodeNameChain } from "../naming/schemas/node-name";
 import type { SectionNode } from "../types/tree-node";
 import { TreeNodeType } from "../types/tree-node";
 

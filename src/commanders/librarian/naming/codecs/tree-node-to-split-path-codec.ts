@@ -10,7 +10,7 @@ import {
 	TreeNodeStatus,
 	TreeNodeType,
 } from "../../types/tree-node";
-import { suffixedBasenameToChainCodec } from "./suffixed-basename-to-chain-codec";
+import { canonicalBasenameToChainCodec } from "./suffixed-basename-to-chain-codec";
 
 /**
  * Zod codec from TreeNode to SplitPath.
@@ -43,7 +43,7 @@ export const treeNodeToSuffixedSplitPathCodec = z.codec(
 
 			// Scroll/File: build basename with suffix
 			// Chain should be from root to leaf: [...parentChain, nodeName]
-			const basename = suffixedBasenameToChainCodec.encode([
+			const basename = canonicalBasenameToChainCodec.encode([
 				...node.nodeNameChainToParent,
 				node.nodeName,
 			]);
@@ -88,7 +88,7 @@ export const treeNodeToSuffixedSplitPathCodec = z.codec(
 			}
 
 			// For files, decode basename to get nodeName and parent chain
-			const fullChain = suffixedBasenameToChainCodec.decode(basename);
+			const fullChain = canonicalBasenameToChainCodec.decode(basename);
 			const nodeName = fullChain[fullChain.length - 1] ?? "";
 			const startIndex = pathParts[0] === libraryRoot ? 1 : 0;
 			const pathPartsAfterRoot = pathParts.slice(startIndex);

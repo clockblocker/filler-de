@@ -11,8 +11,8 @@ The `__` is now part of the nodeName, not a prefix. Codexes follow the same suff
 ## Current State
 
 ### ✅ Completed
-- `suffixedBasenameToChainCodec` - decodes/encodes section basenames to chains
-- `suffixedBasenameForCodexToParentSectionChainCodec` - decodes/encodes codex basenames to parent section chains
+- `canonicalBasenameToChainCodec` - decodes/encodes section basenames to chains
+- `canonicalBasenameForCodexToParentSectionChainCodec` - decodes/encodes codex basenames to parent section chains
 
 ### 📍 Migration Target
 Move naming-related code from `utils/...` to `naming/...` and make it pure/decomposable.
@@ -34,7 +34,7 @@ Move naming-related code from `utils/...` to `naming/...` and make it pure/decom
    - Currently used in: 5 files
 
 3. **`utils/codex-utils.ts`** → `naming/codecs/` (replace with codecs)
-   - `isBasenamePrefixedAsCodexDeprecated()` → use `suffixedBasenameForCodexToParentSectionChainCodec`
+   - `isBasenamePrefixedAsCodexDeprecated()` → use `canonicalBasenameForCodexToParentSectionChainCodec`
    - `addCodexPrefixDeprecated()` → **NEEDS FIX** - currently takes string but called with SectionNode
    - Currently used in: 4 files
 
@@ -50,7 +50,7 @@ Move naming-related code from `utils/...` to `naming/...` and make it pure/decom
 1. **Codex Creation/Regeneration** (`codex-builder.ts`, `codex-regenerator.ts`)
    - `addCodexPrefixDeprecated(section)` - type mismatch (expects string, gets SectionNode)
    - Must build basename using new format: `__-SectionName-parent` pattern
-   - Uses `suffixedBasenameToChainCodec` to build full basename
+   - Uses `canonicalBasenameToChainCodec` to build full basename
 
 2. **Codex Content Generation** (`codex-generator.ts`)
    - `addCodexPrefixDeprecated()` called 3 times with different args (string vs SectionNode)
@@ -93,13 +93,13 @@ Move naming-related code from `utils/...` to `naming/...` and make it pure/decom
 1. **`naming/codecs/basename-to-parsed-codec.ts`**
    - Replace `parseBasenameDeprecated()`
    - Input: basename string
-   - Output: `ParsedBasename` (nodeName + splitSuffix)
+   - Output: `SeparatedCanonicalBasename` (nodeName + splitSuffix)
 
 2. **`naming/codecs/chain-to-suffixed-basename-codec.ts`**
    - Replace `buildBasenameDepreacated()` / `buildCanonicalBasenameDeprecated()`
    - Input: `NodeNameChain`
    - Output: suffixed basename string
-   - Uses `suffixedBasenameToChainCodec.encode()`
+   - Uses `canonicalBasenameToChainCodec.encode()`
 
 3. **`naming/codecs/suffix-to-chain-codec.ts`**
    - Replace `computePathPartsFromSuffixDepreacated()`
@@ -117,17 +117,17 @@ Move naming-related code from `utils/...` to `naming/...` and make it pure/decom
    - Replace `addCodexPrefixDeprecated()` (fix type mismatch)
    - Input: `SectionNode` or `NodeNameChain`
    - Output: codex basename string
-   - Uses `suffixedBasenameToChainCodec` with `CODEX_CORE_NAME` as nodeName
+   - Uses `canonicalBasenameToChainCodec` with `CODEX_CORE_NAME` as nodeName
 
 6. **`naming/codecs/codex-basename-validator-codec.ts`**
    - Replace `isBasenamePrefixedAsCodexDeprecated()`
-   - Uses `suffixedBasenameForCodexToParentSectionChainCodec.safeParse()`
+   - Uses `canonicalBasenameForCodexToParentSectionChainCodec.safeParse()`
 
 ### Phase 2: Update Call Sites
 
 Replace deprecated function calls with new codecs:
 - `parseBasenameDeprecated()` → `basenameToParsedCodec.decode()`
-- `buildBasenameDepreacated()` → `chainToSuffixedBasenameCodec.encode()`
+- `buildBasenameDepreacated()` → `chainToCanonicalBasenameCodec.encode()`
 - `addCodexPrefixDeprecated()` → `codexBasenameBuilderCodec.encode()`
 - `isBasenamePrefixedAsCodexDeprecated()` → `codexBasenameValidatorCodec.safeParse()`
 
@@ -149,7 +149,7 @@ Replace deprecated function calls with new codecs:
    - **New format should be:**
      - Root: `__-Library` (nodeName=`__`, suffix=`Library` from libraryRoot)
      - Nested: `__-Child-Parent` (nodeName=`__`, suffix=`Child-Parent` from section chain)
-   - **Solution:** Use `suffixedBasenameToChainCodec.encode([...section.nodeNameChainToParent, CODEX_CORE_NAME])`
+   - **Solution:** Use `canonicalBasenameToChainCodec.encode([...section.nodeNameChainToParent, CODEX_CORE_NAME])`
    - **Question:** Should we fix the current bug first, or implement new format directly?
 
 2. **Backward Compatibility**

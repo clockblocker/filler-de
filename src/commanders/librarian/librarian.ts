@@ -12,7 +12,7 @@ import {
 } from "./codex/impacted-chains";
 import { healOnInit, type InitHealResult } from "./healing";
 import type { LibraryTree } from "./library-tree";
-import type { NodeNameChain } from "./naming/parsed-basename";
+import type { NodeNameChain } from "./naming/schemas/node-name";
 import {
 	type CodexRegeneratorContext,
 	type EventHandlerContext,

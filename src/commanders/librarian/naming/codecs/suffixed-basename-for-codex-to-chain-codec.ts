@@ -1,14 +1,14 @@
 import z from "zod";
 import { getParsedUserSettings } from "../../../../global-state/global-state";
 import { CODEX_CORE_NAME } from "../../types/literals";
-import { type NodeNameChain, NodeNameChainSchema } from "../parsed-basename";
-import { suffixedBasenameToChainCodec } from "./suffixed-basename-to-chain-codec";
+import { type NodeNameChain, NodeNameChainSchema } from "../schemas/node-name";
+import { canonicalBasenameToChainCodec } from "./suffixed-basename-to-chain-codec";
 
 /**
  * Zod schema for codex basenames.
  * Validates that string starts with CODEX_PREFIX and has content after it.
  */
-export const SuffixedBasenameForСodexSchema = z
+export const CanonicalBasenameForСodexSchema = z
 	.string()
 	.refine((val) => val.startsWith(CODEX_CORE_NAME), {
 		message: `must start with "${CODEX_CORE_NAME}"`,
@@ -34,18 +34,18 @@ export const SuffixedBasenameForСodexSchema = z
  * Uses sectionBasenameToChainCodec internally.
  * Reads settings internally.
  */
-export const suffixedBasenameForСodexToParentSectionChainCodec = z.codec(
-	SuffixedBasenameForСodexSchema,
+export const canonicalBasenameForСodexToParentSectionChainCodec = z.codec(
+	CanonicalBasenameForСodexSchema,
 	NodeNameChainSchema,
 	{
-		decode: (SuffixedBasenameForСodex) => {
-			return suffixedBasenameToChainCodec
-				.decode(SuffixedBasenameForСodex)
+		decode: (CanonicalBasenameForСodex) => {
+			return canonicalBasenameToChainCodec
+				.decode(CanonicalBasenameForСodex)
 				.slice(0, -1);
 		},
 		encode: (chain) => {
 			// Codex is just a regular file with nodeName "__"
-			return suffixedBasenameToChainCodec.encode([
+			return canonicalBasenameToChainCodec.encode([
 				...chain,
 				CODEX_CORE_NAME,
 			]);
@@ -60,7 +60,7 @@ export const suffixedBasenameForСodexToParentSectionChainCodec = z.codec(
  * Reads settings internally.
  */
 export const codexBasenameToSectionChainCodec = z.codec(
-	SuffixedBasenameForСodexSchema,
+	CanonicalBasenameForСodexSchema,
 	NodeNameChainSchema,
 	{
 		decode: (codexBasename: string): NodeNameChain => {
@@ -68,7 +68,7 @@ export const codexBasenameToSectionChainCodec = z.codec(
 			const libraryRoot = settings.splitPathToLibraryRoot.basename;
 
 			const fullChain =
-				suffixedBasenameToChainCodec.decode(codexBasename);
+				canonicalBasenameToChainCodec.decode(codexBasename);
 
 			const sectionChain = fullChain.slice(0, -1);
 
@@ -89,7 +89,7 @@ export const codexBasenameToSectionChainCodec = z.codec(
 					? [libraryRoot, CODEX_CORE_NAME]
 					: [...sectionChain, CODEX_CORE_NAME];
 
-			return suffixedBasenameToChainCodec.encode(fullChain);
+			return canonicalBasenameToChainCodec.encode(fullChain);
 		},
 	},
 );

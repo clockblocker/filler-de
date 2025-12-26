@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { suffixedBasenameToChainCodec } from "../../../../../src/commanders/librarian/naming/codecs/suffixed-basename-to-chain-codec";
+import { canonicalBasenameToChainCodec } from "../../../../../src/commanders/librarian/naming/codecs/suffixed-basename-to-chain-codec";
 import * as globalState from "../../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../../src/global-state/parsed-settings";
 import { SplitPathType } from "../../../../../src/obsidian-vault-action-manager/types/split-path";
@@ -28,25 +28,25 @@ afterEach(() => {
 	getParsedUserSettingsSpy.mockRestore();
 });
 
-describe("suffixedBasenameToChainCodec", () => {
+describe("canonicalBasenameToChainCodec", () => {
 	describe("decode (basename → chain)", () => {
 		it("decodes library root to empty chain", () => {
-			expect(suffixedBasenameToChainCodec.decode("Library")).toEqual([]);
+			expect(canonicalBasenameToChainCodec.decode("Library")).toEqual([]);
 		});
 
 		it("decodes simple section name to single-element chain", () => {
-			expect(suffixedBasenameToChainCodec.decode("Section")).toEqual(["Section"]);
+			expect(canonicalBasenameToChainCodec.decode("Section")).toEqual(["Section"]);
 		});
 
 		it("decodes suffixed basename to reversed chain", () => {
-			expect(suffixedBasenameToChainCodec.decode("Child-Parent")).toEqual([
+			expect(canonicalBasenameToChainCodec.decode("Child-Parent")).toEqual([
 				"Parent",
 				"Child",
 			]);
 		});
 
 		it("decodes deeply nested suffix", () => {
-			expect(suffixedBasenameToChainCodec.decode("A-B-C-D")).toEqual([
+			expect(canonicalBasenameToChainCodec.decode("A-B-C-D")).toEqual([
 				"D",
 				"C",
 				"B",
@@ -55,7 +55,7 @@ describe("suffixedBasenameToChainCodec", () => {
 		});
 
 		it("decodes file basename with suffix", () => {
-			expect(suffixedBasenameToChainCodec.decode("Note-Child-Parent")).toEqual([
+			expect(canonicalBasenameToChainCodec.decode("Note-Child-Parent")).toEqual([
 				"Parent",
 				"Child",
 				"Note",
@@ -67,7 +67,7 @@ describe("suffixedBasenameToChainCodec", () => {
 				...defaultSettings,
 				suffixDelimiter: "_",
 			});
-			expect(suffixedBasenameToChainCodec.decode("A_B_C")).toEqual(["C", "B", "A"]);
+			expect(canonicalBasenameToChainCodec.decode("A_B_C")).toEqual(["C", "B", "A"]);
 		});
 
 		it("handles custom library root", () => {
@@ -79,34 +79,34 @@ describe("suffixedBasenameToChainCodec", () => {
 					type: SplitPathType.Folder,
 				},
 			});
-			expect(suffixedBasenameToChainCodec.decode("Root")).toEqual([]);
-			expect(suffixedBasenameToChainCodec.decode("Library")).toEqual(["Library"]);
+			expect(canonicalBasenameToChainCodec.decode("Root")).toEqual([]);
+			expect(canonicalBasenameToChainCodec.decode("Library")).toEqual(["Library"]);
 		});
 	});
 
 	describe("encode (chain → basename)", () => {
 		it("encodes empty chain to library root", () => {
-			expect(suffixedBasenameToChainCodec.encode([])).toBe("Library");
+			expect(canonicalBasenameToChainCodec.encode([])).toBe("Library");
 		});
 
 		it("encodes single-element chain to section name", () => {
-			expect(suffixedBasenameToChainCodec.encode(["Section"])).toBe("Section");
+			expect(canonicalBasenameToChainCodec.encode(["Section"])).toBe("Section");
 		});
 
 		it("encodes chain to suffixed basename", () => {
-			expect(suffixedBasenameToChainCodec.encode(["Parent", "Child"])).toBe(
+			expect(canonicalBasenameToChainCodec.encode(["Parent", "Child"])).toBe(
 				"Child-Parent",
 			);
 		});
 
 		it("encodes deeply nested chain", () => {
-			expect(suffixedBasenameToChainCodec.encode(["D", "C", "B", "A"])).toBe(
+			expect(canonicalBasenameToChainCodec.encode(["D", "C", "B", "A"])).toBe(
 				"A-B-C-D",
 			);
 		});
 
 		it("encodes file chain with nodeName", () => {
-			expect(suffixedBasenameToChainCodec.encode(["Parent", "Child", "Note"])).toBe(
+			expect(canonicalBasenameToChainCodec.encode(["Parent", "Child", "Note"])).toBe(
 				"Note-Child-Parent",
 			);
 		});
@@ -116,7 +116,7 @@ describe("suffixedBasenameToChainCodec", () => {
 				...defaultSettings,
 				suffixDelimiter: "_",
 			});
-			expect(suffixedBasenameToChainCodec.encode(["C", "B", "A"])).toBe("A_B_C");
+			expect(canonicalBasenameToChainCodec.encode(["C", "B", "A"])).toBe("A_B_C");
 		});
 
 		it("handles custom library root", () => {
@@ -128,7 +128,7 @@ describe("suffixedBasenameToChainCodec", () => {
 					type: SplitPathType.Folder,
 				},
 			});
-			expect(suffixedBasenameToChainCodec.encode([])).toBe("Root");
+			expect(canonicalBasenameToChainCodec.encode([])).toBe("Root");
 		});
 	});
 
@@ -136,28 +136,28 @@ describe("suffixedBasenameToChainCodec", () => {
 		it("roundtrips empty chain", () => {
 			const chain: string[] = [];
 			expect(
-				suffixedBasenameToChainCodec.decode(suffixedBasenameToChainCodec.encode(chain)),
+				canonicalBasenameToChainCodec.decode(canonicalBasenameToChainCodec.encode(chain)),
 			).toEqual(chain);
 		});
 
 		it("roundtrips single-element chain", () => {
 			const chain = ["Section"];
 			expect(
-				suffixedBasenameToChainCodec.decode(suffixedBasenameToChainCodec.encode(chain)),
+				canonicalBasenameToChainCodec.decode(canonicalBasenameToChainCodec.encode(chain)),
 			).toEqual(chain);
 		});
 
 		it("roundtrips multi-element chain", () => {
 			const chain = ["Parent", "Child", "Note"];
 			expect(
-				suffixedBasenameToChainCodec.decode(suffixedBasenameToChainCodec.encode(chain)),
+				canonicalBasenameToChainCodec.decode(canonicalBasenameToChainCodec.encode(chain)),
 			).toEqual(chain);
 		});
 
 		it("roundtrips deeply nested chain", () => {
 			const chain = ["A", "B", "C", "D", "E"];
 			expect(
-				suffixedBasenameToChainCodec.decode(suffixedBasenameToChainCodec.encode(chain)),
+				canonicalBasenameToChainCodec.decode(canonicalBasenameToChainCodec.encode(chain)),
 			).toEqual(chain);
 		});
 	});
