@@ -20,7 +20,7 @@ export { LibraryTree } from "./library-tree";
 export type {
 	NodeName,
 	NodeNameChain,
-	SeparatedCanonicalBasename,
+	SeparatedSuffixedBasename,
 } from "./naming/schemas/node-name";
 export {
 	DragInSubtype,

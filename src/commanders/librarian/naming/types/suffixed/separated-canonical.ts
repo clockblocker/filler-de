@@ -11,8 +11,8 @@ import { NodeNameSchema, SplitSuffixSchema } from "../node-name";
  * // For path "Library/parent/child":
  * { nodeName: "child", splitSuffix: [] }
  */
-export type SeparatedCanonicalBasename = z.infer<
-	typeof SeparatedCanonicalBasenameSchema
+export type SeparatedSuffixedBasename = z.infer<
+	typeof SeparatedSuffixedBasenameSchema
 >;
 
 /**
@@ -20,8 +20,8 @@ export type SeparatedCanonicalBasename = z.infer<
  * // For path "Library/parent/child/NoteName-child-parent.md":
  * { nodeName: "NoteName", splitSuffix: ["child", "parent"] }
  */
-export type SeparatedCanonicalBasenameForFile = z.infer<
-	typeof SeparatedCanonicalBasenameForFileSchema
+export type SeparatedSuffixedBasenameForFile = z.infer<
+	typeof SeparatedSuffixedBasenameForFileSchema
 >;
 
 /**
@@ -29,8 +29,8 @@ export type SeparatedCanonicalBasenameForFile = z.infer<
  * // For path "Library/parent/child/__-child-parent.md":
  * { nodeName: "__", splitSuffix: ["child", "parent"] }
  */
-export type SeparatedCanonicalBasenameForCodex = z.infer<
-	typeof SeparatedCanonicalBasenameForCodexSchema
+export type SeparatedSuffixedBasenameForCodex = z.infer<
+	typeof SeparatedSuffixedBasenameForCodexSchema
 >;
 
 /**
@@ -38,24 +38,24 @@ export type SeparatedCanonicalBasenameForCodex = z.infer<
  * // For path "Library/parent/child":
  * { nodeName: "child", splitSuffix: [] }
  */
-export type SeparatedCanonicalBasenameForSection = z.infer<
-	typeof SeparatedCanonicalBasenameForSectionSchema
+export type SeparatedSuffixedBasenameForSection = z.infer<
+	typeof SeparatedSuffixedBasenameForSectionSchema
 >;
 
-export const SeparatedCanonicalBasenameSchema = z.object({
+export const SeparatedSuffixedBasenameSchema = z.object({
 	nodeName: NodeNameSchema,
 	splitSuffix: SplitSuffixSchema,
 });
 
-export const SeparatedCanonicalBasenameForFileSchema =
-	SeparatedCanonicalBasenameSchema;
+export const SeparatedSuffixedBasenameForFileSchema =
+	SeparatedSuffixedBasenameSchema;
 
-export const SeparatedCanonicalBasenameForCodexSchema = z.object({
+export const SeparatedSuffixedBasenameForCodexSchema = z.object({
 	nodeName: NodeNameSchema.refine((s) => s === CODEX_CORE_NAME),
 	splitSuffix: SplitSuffixSchema,
 });
 
-export const SeparatedCanonicalBasenameForSectionSchema = z.object({
+export const SeparatedSuffixedBasenameForSectionSchema = z.object({
 	nodeName: NodeNameSchema,
 	splitSuffix: SplitSuffixSchema.length(0),
 });

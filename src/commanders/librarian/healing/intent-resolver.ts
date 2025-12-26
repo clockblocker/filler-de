@@ -5,7 +5,7 @@ import type {
 	SplitPathToMdFile,
 } from "../../../obsidian-vault-action-manager/types/split-path";
 import { logger } from "../../../utils/logger";
-import type { SeparatedCanonicalBasename } from "../naming/schemas/node-name";
+import type { SeparatedSuffixedBasename } from "../naming/schemas/node-name";
 import { RuntimeSubtype } from "../types/literals";
 import { parseBasenameDeprecated } from "../utils/parse-basename";
 import {
@@ -31,7 +31,7 @@ type FileInfo = {
 	pathParts: string[];
 	basename: string;
 	extension: string;
-	parsed: SeparatedCanonicalBasename;
+	parsed: SeparatedSuffixedBasename;
 };
 
 function extractFileInfo(path: SplitPathToFile | SplitPathToMdFile): FileInfo {

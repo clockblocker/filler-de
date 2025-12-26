@@ -1,7 +1,7 @@
 import { getParsedUserSettings } from "../../../../global-state/global-state";
 import type { NodeName, SplitSuffix } from "./node-name";
 
-export function joinSeparatedCanonicalBasename({
+export function joinSeparatedSuffixedBasename({
 	nodeName,
 	splitSuffix,
 }: {
@@ -13,7 +13,7 @@ export function joinSeparatedCanonicalBasename({
 	return [nodeName, ...splitSuffix].join(suffixDelimiter);
 }
 
-export function separateJoinedCanonicalBasename(
+export function separateJoinedSuffixedBasename(
 	joinedCanonicalBasename: string,
 ) {
 	const { suffixDelimiter } = getParsedUserSettings();

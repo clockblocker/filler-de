@@ -93,7 +93,7 @@ Move naming-related code from `utils/...` to `naming/...` and make it pure/decom
 1. **`naming/codecs/basename-to-parsed-codec.ts`**
    - Replace `parseBasenameDeprecated()`
    - Input: basename string
-   - Output: `SeparatedCanonicalBasename` (nodeName + splitSuffix)
+   - Output: `SeparatedSuffixedBasename` (nodeName + splitSuffix)
 
 2. **`naming/codecs/chain-to-suffixed-basename-codec.ts`**
    - Replace `buildBasenameDepreacated()` / `buildCanonicalBasenameDeprecated()`

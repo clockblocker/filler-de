@@ -1,10 +1,10 @@
 import z from "zod";
-import type { NodeNameChain, SeparatedCanonicalBasename } from "../../..";
-import { SeparatedCanonicalBasenameSchema } from "../../types/canonical/separated-canonical";
+import type { NodeNameChain, SeparatedSuffixedBasename } from "../../..";
 import { NodeNameChainSchema } from "../../types/node-name";
+import { SeparatedSuffixedBasenameSchema } from "../../types/suffixed/separated-canonical";
 
 /**
- * Zod codec from SeparatedCanonicalBasename to NodeNameChain.
+ * Zod codec from SeparatedSuffixedBasename to NodeNameChain.
  * Converts parsed basename to node name chain.
  *
  * @example
@@ -14,7 +14,7 @@ import { NodeNameChainSchema } from "../../types/node-name";
  * Reads settings internally to get suffix delimiter.
  */
 const separatedCanonicalBasenameToNodeNameChainCodec = z.codec(
-	SeparatedCanonicalBasenameSchema,
+	SeparatedSuffixedBasenameSchema,
 	NodeNameChainSchema,
 	{
 		decode: ({ splitSuffix, nodeName }) => {
@@ -36,14 +36,14 @@ const separatedCanonicalBasenameToNodeNameChainCodec = z.codec(
 	},
 );
 
-export const makeSeparatedCanonicalBasenameFromNodeNameChain = (
+export const makeSeparatedSuffixedBasenameFromNodeNameChain = (
 	chain: NodeNameChain,
-): SeparatedCanonicalBasename => {
+): SeparatedSuffixedBasename => {
 	return separatedCanonicalBasenameToNodeNameChainCodec.encode(chain);
 };
 
-export const makeNodeNameChainFromSeparatedCanonicalBasename = (
-	separated: SeparatedCanonicalBasename,
+export const makeNodeNameChainFromSeparatedSuffixedBasename = (
+	separated: SeparatedSuffixedBasename,
 ): NodeNameChain => {
 	return separatedCanonicalBasenameToNodeNameChainCodec.decode(separated);
 };

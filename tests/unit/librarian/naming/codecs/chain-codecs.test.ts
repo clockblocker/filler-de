@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import  { makeJoinedCanonicalBasenameFromSeparatedCanonicalBasename, makeSeparatedCanonicalBasenameFromJoinedCanonicalBasename } from "../../../../../src/commanders/librarian/naming/codecs/atomic/joined-canonical-basename-and-separated-canonical-basename";
+import  { makeJoinedSuffixedBasenameFromSeparatedSuffixedBasename, makeSeparatedSuffixedBasenameFromJoinedSuffixedBasename } from "../../../../../src/commanders/librarian/naming/codecs/atomic/joined-canonical-basename-and-separated-canonical-basename";
 import  { makeNodeNameChainFromPathParts, makePathPartsFromNodeNameChain } from "../../../../../src/commanders/librarian/naming/codecs/atomic/path-parts-and-node-name-chain";
-import  { makeNodeNameChainFromSeparatedCanonicalBasename, makeSeparatedCanonicalBasenameFromNodeNameChain } from "../../../../../src/commanders/librarian/naming/codecs/atomic/separated-canonical-basename-and-node-name-chain";
+import  { makeNodeNameChainFromSeparatedSuffixedBasename, makeSeparatedSuffixedBasenameFromNodeNameChain } from "../../../../../src/commanders/librarian/naming/codecs/atomic/separated-canonical-basename-and-node-name-chain";
 import * as globalState from "../../../../../src/global-state/global-state";
 import  { ParsedUserSettings } from "../../../../../src/global-state/parsed-settings";
 import { SplitPathType } from "../../../../../src/obsidian-vault-action-manager/types/split-path";
@@ -145,14 +145,14 @@ describe("pathPartsToNodeNameChainCodec", () => {
 describe("separatedCanonicalBasenameToNodeNameChainCodec", () => {
 	describe("encode (chain → separatedCanonicalBasename)", () => {
 		it("encodes single-element chain", () => {
-			expect(makeSeparatedCanonicalBasenameFromNodeNameChain(["child"])).toEqual({
+			expect(makeSeparatedSuffixedBasenameFromNodeNameChain(["child"])).toEqual({
 				nodeName: "child",
 				splitSuffix: [],
 			});
 		});
 
 		it("encodes two-element chain", () => {
-			expect(makeSeparatedCanonicalBasenameFromNodeNameChain(["parent", "child"])).toEqual({
+			expect(makeSeparatedSuffixedBasenameFromNodeNameChain(["parent", "child"])).toEqual({
 				nodeName: "child",
 				splitSuffix: ["parent"],
 			});
@@ -160,7 +160,7 @@ describe("separatedCanonicalBasenameToNodeNameChainCodec", () => {
 
 		it("encodes multi-element chain", () => {
 			expect(
-				makeSeparatedCanonicalBasenameFromNodeNameChain(["grandparent", "parent", "child"]),
+				makeSeparatedSuffixedBasenameFromNodeNameChain(["grandparent", "parent", "child"]),
 			).toEqual({
 				nodeName: "child",
 				splitSuffix: ["grandparent", "parent"],
@@ -168,14 +168,14 @@ describe("separatedCanonicalBasenameToNodeNameChainCodec", () => {
 		});
 
 		it("encodes deeply nested chain", () => {
-			expect(makeSeparatedCanonicalBasenameFromNodeNameChain(["A", "B", "C", "D", "E"])).toEqual({
+			expect(makeSeparatedSuffixedBasenameFromNodeNameChain(["A", "B", "C", "D", "E"])).toEqual({
 				nodeName: "E",
 				splitSuffix: ["A", "B", "C", "D"],
 			});
 		});
 
 		it("encodes empty chain", () => {
-			expect(makeSeparatedCanonicalBasenameFromNodeNameChain([])).toEqual({
+			expect(makeSeparatedSuffixedBasenameFromNodeNameChain([])).toEqual({
 				nodeName: "",
 				splitSuffix: [],
 			});
@@ -185,7 +185,7 @@ describe("separatedCanonicalBasenameToNodeNameChainCodec", () => {
 	describe("decode (separatedCanonicalBasename → chain)", () => {
 		it("decodes separatedCanonicalBasename with no suffix", () => {
 			expect(
-				makeNodeNameChainFromSeparatedCanonicalBasename({
+				makeNodeNameChainFromSeparatedSuffixedBasename({
 					nodeName: "child",
 					splitSuffix: [],
 				}),
@@ -194,7 +194,7 @@ describe("separatedCanonicalBasenameToNodeNameChainCodec", () => {
 
 		it("decodes separatedCanonicalBasename with single suffix", () => {
 			expect(
-				makeNodeNameChainFromSeparatedCanonicalBasename({
+				makeNodeNameChainFromSeparatedSuffixedBasename({
 					nodeName: "child",
 					splitSuffix: ["parent"],
 				}),
@@ -203,7 +203,7 @@ describe("separatedCanonicalBasenameToNodeNameChainCodec", () => {
 
 		it("decodes separatedCanonicalBasename with multiple suffixes", () => {
 			expect(
-				makeNodeNameChainFromSeparatedCanonicalBasename({
+				makeNodeNameChainFromSeparatedSuffixedBasename({
 					nodeName: "child",
 					splitSuffix: ["grandparent", "parent"],
 				}),
@@ -212,7 +212,7 @@ describe("separatedCanonicalBasenameToNodeNameChainCodec", () => {
 
 		it("decodes deeply nested separatedCanonicalBasename", () => {
 			expect(
-				makeNodeNameChainFromSeparatedCanonicalBasename({
+				makeNodeNameChainFromSeparatedSuffixedBasename({
 					nodeName: "E",
 					splitSuffix: ["A", "B", "C", "D"],
 				}),
@@ -221,7 +221,7 @@ describe("separatedCanonicalBasenameToNodeNameChainCodec", () => {
 
 		it("decodes separatedCanonicalBasename with empty nodeName", () => {
 			expect(
-				makeNodeNameChainFromSeparatedCanonicalBasename({
+				makeNodeNameChainFromSeparatedSuffixedBasename({
 					nodeName: "",
 					splitSuffix: [],
 				}),
@@ -233,8 +233,8 @@ describe("separatedCanonicalBasenameToNodeNameChainCodec", () => {
 		it("roundtrips single-element chain", () => {
 			const chain = ["child"];
 			expect(
-				makeNodeNameChainFromSeparatedCanonicalBasename(
-					makeSeparatedCanonicalBasenameFromNodeNameChain(chain),
+				makeNodeNameChainFromSeparatedSuffixedBasename(
+					makeSeparatedSuffixedBasenameFromNodeNameChain(chain),
 				),
 			).toEqual(chain);
 		});
@@ -242,8 +242,8 @@ describe("separatedCanonicalBasenameToNodeNameChainCodec", () => {
 		it("roundtrips two-element chain", () => {
 			const chain = ["parent", "child"];
 			expect(
-				makeNodeNameChainFromSeparatedCanonicalBasename(
-					makeSeparatedCanonicalBasenameFromNodeNameChain(chain),
+				makeNodeNameChainFromSeparatedSuffixedBasename(
+					makeSeparatedSuffixedBasenameFromNodeNameChain(chain),
 				),
 			).toEqual(chain);
 		});
@@ -251,8 +251,8 @@ describe("separatedCanonicalBasenameToNodeNameChainCodec", () => {
 		it("roundtrips multi-element chain", () => {
 			const chain = ["grandparent", "parent", "child"];
 			expect(
-				makeNodeNameChainFromSeparatedCanonicalBasename(
-					makeSeparatedCanonicalBasenameFromNodeNameChain(chain),
+				makeNodeNameChainFromSeparatedSuffixedBasename(
+					makeSeparatedSuffixedBasenameFromNodeNameChain(chain),
 				),
 			).toEqual(chain);
 		});
@@ -260,19 +260,19 @@ describe("separatedCanonicalBasenameToNodeNameChainCodec", () => {
 		it("roundtrips deeply nested chain", () => {
 			const chain = ["A", "B", "C", "D", "E"];
 			expect(
-				makeNodeNameChainFromSeparatedCanonicalBasename(
-					makeSeparatedCanonicalBasenameFromNodeNameChain(chain),
+				makeNodeNameChainFromSeparatedSuffixedBasename(
+					makeSeparatedSuffixedBasenameFromNodeNameChain(chain),
 				),
 			).toEqual(chain);
 		});
 	});
 });
 
-describe("canonicalBasenameToSeparatedCanonicalBasenameCodec", () => {
+describe("canonicalBasenameToSeparatedSuffixedBasenameCodec", () => {
 	describe("encode (separatedCanonicalBasename → canonicalBasename)", () => {
 		it("encodes separatedCanonicalBasename with no suffix", () => {
 			expect(
-				makeJoinedCanonicalBasenameFromSeparatedCanonicalBasename({
+				makeJoinedSuffixedBasenameFromSeparatedSuffixedBasename({
 					nodeName: "NoteName",
 					splitSuffix: [],
 				}),
@@ -281,7 +281,7 @@ describe("canonicalBasenameToSeparatedCanonicalBasenameCodec", () => {
 
 		it("encodes separatedCanonicalBasename with single suffix", () => {
 			expect(
-				makeJoinedCanonicalBasenameFromSeparatedCanonicalBasename({
+				makeJoinedSuffixedBasenameFromSeparatedSuffixedBasename({
 					nodeName: "NoteName",
 					splitSuffix: ["child"],
 				}),
@@ -290,7 +290,7 @@ describe("canonicalBasenameToSeparatedCanonicalBasenameCodec", () => {
 
 		it("encodes separatedCanonicalBasename with multiple suffixes", () => {
 			expect(
-				makeJoinedCanonicalBasenameFromSeparatedCanonicalBasename({
+				makeJoinedSuffixedBasenameFromSeparatedSuffixedBasename({
 					nodeName: "NoteName",
 					splitSuffix: ["child", "parent"],
 				}),
@@ -299,7 +299,7 @@ describe("canonicalBasenameToSeparatedCanonicalBasenameCodec", () => {
 
 		it("encodes deeply nested separatedCanonicalBasename", () => {
 			expect(
-				makeJoinedCanonicalBasenameFromSeparatedCanonicalBasename({
+				makeJoinedSuffixedBasenameFromSeparatedSuffixedBasename({
 					nodeName: "NoteName",
 					splitSuffix: ["A", "B", "C", "D"],
 				}),
@@ -308,7 +308,7 @@ describe("canonicalBasenameToSeparatedCanonicalBasenameCodec", () => {
 
 		it("encodes codex basename", () => {
 			expect(
-				makeJoinedCanonicalBasenameFromSeparatedCanonicalBasename({
+				makeJoinedSuffixedBasenameFromSeparatedSuffixedBasename({
 					nodeName: "__",
 					splitSuffix: ["child", "parent"],
 				}),
@@ -318,14 +318,14 @@ describe("canonicalBasenameToSeparatedCanonicalBasenameCodec", () => {
 
 	describe("decode (canonicalBasename → separatedCanonicalBasename)", () => {
 		it("decodes canonicalBasename with no suffix", () => {
-			expect(makeSeparatedCanonicalBasenameFromJoinedCanonicalBasename("NoteName")).toEqual({
+			expect(makeSeparatedSuffixedBasenameFromJoinedSuffixedBasename("NoteName")).toEqual({
 				nodeName: "NoteName",
 				splitSuffix: [],
 			});
 		});
 
 		it("decodes canonicalBasename with single suffix", () => {
-			expect(makeSeparatedCanonicalBasenameFromJoinedCanonicalBasename("NoteName-child")).toEqual({
+			expect(makeSeparatedSuffixedBasenameFromJoinedSuffixedBasename("NoteName-child")).toEqual({
 				nodeName: "NoteName",
 				splitSuffix: ["child"],
 			});
@@ -333,7 +333,7 @@ describe("canonicalBasenameToSeparatedCanonicalBasenameCodec", () => {
 
 		it("decodes canonicalBasename with multiple suffixes", () => {
 			expect(
-				makeSeparatedCanonicalBasenameFromJoinedCanonicalBasename("NoteName-child-parent"),
+				makeSeparatedSuffixedBasenameFromJoinedSuffixedBasename("NoteName-child-parent"),
 			).toEqual({
 				nodeName: "NoteName",
 				splitSuffix: ["child", "parent"],
@@ -341,14 +341,14 @@ describe("canonicalBasenameToSeparatedCanonicalBasenameCodec", () => {
 		});
 
 		it("decodes deeply nested canonicalBasename", () => {
-			expect(makeSeparatedCanonicalBasenameFromJoinedCanonicalBasename("NoteName-A-B-C-D")).toEqual({
+			expect(makeSeparatedSuffixedBasenameFromJoinedSuffixedBasename("NoteName-A-B-C-D")).toEqual({
 				nodeName: "NoteName",
 				splitSuffix: ["A", "B", "C", "D"],
 			});
 		});
 
 		it("decodes codex basename", () => {
-			expect(makeSeparatedCanonicalBasenameFromJoinedCanonicalBasename("__-child-parent")).toEqual({
+			expect(makeSeparatedSuffixedBasenameFromJoinedSuffixedBasename("__-child-parent")).toEqual({
 				nodeName: "__",
 				splitSuffix: ["child", "parent"],
 			});
@@ -359,7 +359,7 @@ describe("canonicalBasenameToSeparatedCanonicalBasenameCodec", () => {
 				...defaultSettings,
 				suffixDelimiter: "_",
 			});
-			expect(makeSeparatedCanonicalBasenameFromJoinedCanonicalBasename("NoteName_A_B")).toEqual({
+			expect(makeSeparatedSuffixedBasenameFromJoinedSuffixedBasename("NoteName_A_B")).toEqual({
 				nodeName: "NoteName",
 				splitSuffix: ["A", "B"],
 			});
@@ -370,8 +370,8 @@ describe("canonicalBasenameToSeparatedCanonicalBasenameCodec", () => {
 		it("roundtrips separatedCanonicalBasename with no suffix", () => {
 			const parsed = { nodeName: "NoteName", splitSuffix: [] };
 			expect(
-				makeSeparatedCanonicalBasenameFromJoinedCanonicalBasename(
-					makeJoinedCanonicalBasenameFromSeparatedCanonicalBasename(parsed),
+				makeSeparatedSuffixedBasenameFromJoinedSuffixedBasename(
+					makeJoinedSuffixedBasenameFromSeparatedSuffixedBasename(parsed),
 				),
 			).toEqual(parsed);
 		});
@@ -379,8 +379,8 @@ describe("canonicalBasenameToSeparatedCanonicalBasenameCodec", () => {
 		it("roundtrips separatedCanonicalBasename with single suffix", () => {
 			const parsed = { nodeName: "NoteName", splitSuffix: ["child"] };
 			expect(
-				makeSeparatedCanonicalBasenameFromJoinedCanonicalBasename(
-					makeJoinedCanonicalBasenameFromSeparatedCanonicalBasename(parsed),
+				makeSeparatedSuffixedBasenameFromJoinedSuffixedBasename(
+					makeJoinedSuffixedBasenameFromSeparatedSuffixedBasename(parsed),
 				),
 			).toEqual(parsed);
 		});
@@ -388,8 +388,8 @@ describe("canonicalBasenameToSeparatedCanonicalBasenameCodec", () => {
 		it("roundtrips separatedCanonicalBasename with multiple suffixes", () => {
 			const parsed = { nodeName: "NoteName", splitSuffix: ["child", "parent"] };
 			expect(
-				makeSeparatedCanonicalBasenameFromJoinedCanonicalBasename(
-					makeJoinedCanonicalBasenameFromSeparatedCanonicalBasename(parsed),
+				makeSeparatedSuffixedBasenameFromJoinedSuffixedBasename(
+					makeJoinedSuffixedBasenameFromSeparatedSuffixedBasename(parsed),
 				),
 			).toEqual(parsed);
 		});
@@ -397,8 +397,8 @@ describe("canonicalBasenameToSeparatedCanonicalBasenameCodec", () => {
 		it("roundtrips deeply nested separatedCanonicalBasename", () => {
 			const parsed = { nodeName: "NoteName", splitSuffix: ["A", "B", "C", "D"] };
 			expect(
-				makeSeparatedCanonicalBasenameFromJoinedCanonicalBasename(
-					makeJoinedCanonicalBasenameFromSeparatedCanonicalBasename(parsed),
+				makeSeparatedSuffixedBasenameFromJoinedSuffixedBasename(
+					makeJoinedSuffixedBasenameFromSeparatedSuffixedBasename(parsed),
 				),
 			).toEqual(parsed);
 		});
@@ -406,8 +406,8 @@ describe("canonicalBasenameToSeparatedCanonicalBasenameCodec", () => {
 		it("roundtrips codex basename", () => {
 			const parsed = { nodeName: "__", splitSuffix: ["child", "parent"] };
 			expect(
-				makeSeparatedCanonicalBasenameFromJoinedCanonicalBasename(
-					makeJoinedCanonicalBasenameFromSeparatedCanonicalBasename(parsed),
+				makeSeparatedSuffixedBasenameFromJoinedSuffixedBasename(
+					makeJoinedSuffixedBasenameFromSeparatedSuffixedBasename(parsed),
 				),
 			).toEqual(parsed);
 		});

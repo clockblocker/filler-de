@@ -1,5 +1,4 @@
-import { Result, ResultAsync } from "neverthrow";
-import z, { type ZodError } from "zod";
+import z from "zod";
 import {
 	type SplitPath,
 	SplitPathSchema,
@@ -7,7 +6,7 @@ import {
 import {
 	type CanonicalSplitPath,
 	CanonicalSplitPathSchema,
-} from "../../types/canonical/split-path/canonical-split-paths";
+} from "../../types/suffixed/suffixed-split-paths";
 import {
 	makeJoinedCanonicalBasenameFromSeparatedCanonicalBasename,
 	makeSeparatedCanonicalBasenameFromJoinedCanonicalBasename,
@@ -45,18 +44,14 @@ const splitPathToCanonicalSplitPathCodec = z.codec(
 	},
 );
 
-export const makeCanonicalSplitPathFromSplitPathAsync = (
+export const makeCanonicalSplitPathFromSplitPath = (
 	splitPath: SplitPath,
-) =>
-	Result.fromThrowable(
-		() => splitPathToCanonicalSplitPathCodec.decode(splitPath),
-		(e) => e as ZodError,
-	)();
+): CanonicalSplitPath => {
+	return splitPathToCanonicalSplitPathCodec.decode(splitPath);
+};
 
 export const makeSplitPathFromCanonicalSplitPath = (
 	canonical: CanonicalSplitPath,
-) =>
-	Result.fromThrowable(
-		() => splitPathToCanonicalSplitPathCodec.encode(canonical),
-		(e) => e as ZodError,
-	)();
+): SplitPath => {
+	return splitPathToCanonicalSplitPathCodec.encode(canonical);
+};

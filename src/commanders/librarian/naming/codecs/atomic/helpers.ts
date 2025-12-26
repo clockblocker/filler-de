@@ -1,19 +1,19 @@
 import { err, ok, type Result } from "neverthrow";
 import {
-	type JoinedCanonicalBasename,
-	JoinedCanonicalBasenameSchema,
-} from "../../types/canonical/joined-canonical";
+	type JoinedSuffixedBasename,
+	JoinedSuffixedBasenameSchema,
+} from "../../types/suffixed/joined-canonical";
 import {
-	makeJoinedCanonicalBasenameFromSeparatedCanonicalBasename,
-	makeSeparatedCanonicalBasenameFromJoinedCanonicalBasename,
+	makeJoinedSuffixedBasenameFromSeparatedSuffixedBasename,
+	makeSeparatedSuffixedBasenameFromJoinedSuffixedBasename,
 } from "./joined-canonical-basename-and-separated-canonical-basename";
 
-export const tryParseAsJoinedCanonicalBasename = (
+export const tryParseAsJoinedSuffixedBasename = (
 	dirtyBasename: string,
-): Result<JoinedCanonicalBasename, string> => {
-	const parseResult = JoinedCanonicalBasenameSchema.safeParse(
-		makeJoinedCanonicalBasenameFromSeparatedCanonicalBasename(
-			makeSeparatedCanonicalBasenameFromJoinedCanonicalBasename(
+): Result<JoinedSuffixedBasename, string> => {
+	const parseResult = JoinedSuffixedBasenameSchema.safeParse(
+		makeJoinedSuffixedBasenameFromSeparatedSuffixedBasename(
+			makeSeparatedSuffixedBasenameFromJoinedSuffixedBasename(
 				dirtyBasename,
 			),
 		),

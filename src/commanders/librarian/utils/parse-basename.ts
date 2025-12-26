@@ -1,10 +1,10 @@
 import { getParsedUserSettings } from "../../../global-state/global-state";
-import type { SeparatedCanonicalBasename } from "../naming/schemas/node-name";
+import type { SeparatedSuffixedBasename } from "../naming/schemas/node-name";
 
 /** @deprecated */
 export function parseBasenameDeprecated(
 	basename: string,
-): SeparatedCanonicalBasename {
+): SeparatedSuffixedBasename {
 	const suffixDelimiter = getParsedUserSettings().suffixDelimiter;
 	const parts = basename.split(suffixDelimiter);
 	const [nodeName = "", ...splitSuffix] = parts;

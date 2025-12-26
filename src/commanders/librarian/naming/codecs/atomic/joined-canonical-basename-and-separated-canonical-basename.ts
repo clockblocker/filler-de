@@ -1,17 +1,17 @@
 import z from "zod";
-import type { SeparatedCanonicalBasename } from "../../..";
+import type { SeparatedSuffixedBasename } from "../../..";
 import {
-	type JoinedCanonicalBasename,
-	JoinedCanonicalBasenameSchema,
-} from "../../types/canonical/joined-canonical";
-import { SeparatedCanonicalBasenameSchema } from "../../types/canonical/separated-canonical";
+	type JoinedSuffixedBasename,
+	JoinedSuffixedBasenameSchema,
+} from "../../types/suffixed/joined-canonical";
+import { SeparatedSuffixedBasenameSchema } from "../../types/suffixed/separated-canonical";
 import {
-	joinSeparatedCanonicalBasename,
-	separateJoinedCanonicalBasename,
+	joinSeparatedSuffixedBasename,
+	separateJoinedSuffixedBasename,
 } from "../../types/transformers";
 
 /**
- * Zod codec from JoinedCanonicalBasename to SeparatedCanonicalBasename.
+ * Zod codec from JoinedSuffixedBasename to SeparatedSuffixedBasename.
  * Converts suffixed basename string to parsed basename object.
  *
  * @example
@@ -20,27 +20,27 @@ import {
  *
  * Reads settings internally to get suffix delimiter.
  */
-const joinedCanonicalBasenameToSeparatedCanonicalBasenameCodec = z.codec(
-	JoinedCanonicalBasenameSchema,
-	SeparatedCanonicalBasenameSchema,
+const joinedCanonicalBasenameToSeparatedSuffixedBasenameCodec = z.codec(
+	JoinedSuffixedBasenameSchema,
+	SeparatedSuffixedBasenameSchema,
 	{
-		decode: (joined) => separateJoinedCanonicalBasename(joined),
-		encode: (separated) => joinSeparatedCanonicalBasename(separated),
+		decode: (joined) => separateJoinedSuffixedBasename(joined),
+		encode: (separated) => joinSeparatedSuffixedBasename(separated),
 	},
 );
 
-export const makeSeparatedCanonicalBasenameFromJoinedCanonicalBasename = (
-	joined: JoinedCanonicalBasename,
-): SeparatedCanonicalBasename => {
-	return joinedCanonicalBasenameToSeparatedCanonicalBasenameCodec.decode(
+export const makeSeparatedSuffixedBasenameFromJoinedSuffixedBasename = (
+	joined: JoinedSuffixedBasename,
+): SeparatedSuffixedBasename => {
+	return joinedCanonicalBasenameToSeparatedSuffixedBasenameCodec.decode(
 		joined,
 	);
 };
 
-export const makeJoinedCanonicalBasenameFromSeparatedCanonicalBasename = (
-	separated: SeparatedCanonicalBasename,
-): JoinedCanonicalBasename => {
-	return joinedCanonicalBasenameToSeparatedCanonicalBasenameCodec.encode(
+export const makeJoinedSuffixedBasenameFromSeparatedSuffixedBasename = (
+	separated: SeparatedSuffixedBasename,
+): JoinedSuffixedBasename => {
+	return joinedCanonicalBasenameToSeparatedSuffixedBasenameCodec.encode(
 		separated,
 	);
 };

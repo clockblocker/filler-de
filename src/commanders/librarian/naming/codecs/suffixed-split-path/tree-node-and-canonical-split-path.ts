@@ -6,32 +6,32 @@ import {
 	TreeNodeType,
 } from "../../../types/tree-node";
 import {
-	type CanonicalSplitPath,
-	CanonicalSplitPathSchema,
-} from "../../types/canonical/split-path/canonical-split-paths";
+	type SuffixedSplitPath,
+	SuffixedSplitPathSchema,
+} from "../../types/suffixed/suffixed-split-paths";
 import {
-	makeJoinedCanonicalBasenameFromSeparatedCanonicalBasename,
-	makeSeparatedCanonicalBasenameFromJoinedCanonicalBasename,
+	makeJoinedSuffixedBasenameFromSeparatedSuffixedBasename,
+	makeSeparatedSuffixedBasenameFromJoinedSuffixedBasename,
 } from "../atomic/joined-canonical-basename-and-separated-canonical-basename";
 import {
 	makeNodeNameChainFromPathParts,
 	makePathPartsFromNodeNameChain,
 } from "../atomic/path-parts-and-node-name-chain";
 import {
-	makeNodeNameChainFromSeparatedCanonicalBasename,
-	makeSeparatedCanonicalBasenameFromNodeNameChain,
+	makeNodeNameChainFromSeparatedSuffixedBasename,
+	makeSeparatedSuffixedBasenameFromNodeNameChain,
 } from "../atomic/separated-canonical-basename-and-node-name-chain";
 
 /**
- * Zod codec from TreeNode to CanonicalSplitPath.
+ * Zod codec from TreeNode to SuffixedSplitPath.
  * Converts tree representation to canonical split path.
  * Reads settings internally.
  */
-const treeNodeToCanonicalSplitPathCodec = z.codec(
+const treeNodeToSuffixedSplitPathCodec = z.codec(
 	z.custom<TreeNode>(),
-	CanonicalSplitPathSchema,
+	SuffixedSplitPathSchema,
 	{
-		decode: (node: TreeNode): CanonicalSplitPath => {
+		decode: (node: TreeNode): SuffixedSplitPath => {
 			if (node.type === TreeNodeType.Section) {
 				// Section: folder basename is nodeName (no suffix)
 				// pathParts is parent path, doesn't include the section itself
@@ -41,12 +41,12 @@ const treeNodeToCanonicalSplitPathCodec = z.codec(
 
 				// For folders, basename is just the nodeName
 				const separated =
-					makeSeparatedCanonicalBasenameFromNodeNameChain([
+					makeSeparatedSuffixedBasenameFromNodeNameChain([
 						node.nodeName,
 					]);
 
 				const basename =
-					makeJoinedCanonicalBasenameFromSeparatedCanonicalBasename(
+					makeJoinedSuffixedBasenameFromSeparatedSuffixedBasename(
 						separated,
 					);
 
@@ -60,9 +60,9 @@ const treeNodeToCanonicalSplitPathCodec = z.codec(
 			// Scroll/File: build basename with suffix from full chain
 			const fullChain = [...node.nodeNameChainToParent, node.nodeName];
 			const separated =
-				makeSeparatedCanonicalBasenameFromNodeNameChain(fullChain);
+				makeSeparatedSuffixedBasenameFromNodeNameChain(fullChain);
 			const basename =
-				makeJoinedCanonicalBasenameFromSeparatedCanonicalBasename(
+				makeJoinedSuffixedBasenameFromSeparatedSuffixedBasename(
 					separated,
 				);
 
@@ -87,15 +87,15 @@ const treeNodeToCanonicalSplitPathCodec = z.codec(
 				type: SplitPathType.File,
 			};
 		},
-		encode: (canonical: CanonicalSplitPath): TreeNode => {
+		encode: (canonical: SuffixedSplitPath): TreeNode => {
 			if (canonical.type === SplitPathType.Folder) {
 				// For sections, decode basename to get nodeName
 				const separated =
-					makeSeparatedCanonicalBasenameFromJoinedCanonicalBasename(
+					makeSeparatedSuffixedBasenameFromJoinedSuffixedBasename(
 						canonical.basename,
 					);
 				const chain =
-					makeNodeNameChainFromSeparatedCanonicalBasename(separated);
+					makeNodeNameChainFromSeparatedSuffixedBasename(separated);
 				const nodeName = chain[chain.length - 1] ?? "";
 
 				const nodeNameChainToParent = makeNodeNameChainFromPathParts(
@@ -113,11 +113,11 @@ const treeNodeToCanonicalSplitPathCodec = z.codec(
 
 			// For files, decode basename to get full chain
 			const separated =
-				makeSeparatedCanonicalBasenameFromJoinedCanonicalBasename(
+				makeSeparatedSuffixedBasenameFromJoinedSuffixedBasename(
 					canonical.basename,
 				);
 			const fullChain =
-				makeNodeNameChainFromSeparatedCanonicalBasename(separated);
+				makeNodeNameChainFromSeparatedSuffixedBasename(separated);
 			const nodeName = fullChain[fullChain.length - 1] ?? "";
 
 			const nodeNameChainToParent = makeNodeNameChainFromPathParts(
@@ -145,14 +145,14 @@ const treeNodeToCanonicalSplitPathCodec = z.codec(
 	},
 );
 
-export const makeCanonicalSplitPathFromTreeNode = (
+export const makeSuffixedSplitPathFromTreeNode = (
 	node: TreeNode,
-): CanonicalSplitPath => {
-	return treeNodeToCanonicalSplitPathCodec.decode(node);
+): SuffixedSplitPath => {
+	return treeNodeToSuffixedSplitPathCodec.decode(node);
 };
 
-export const makeTreeNodeFromCanonicalSplitPath = (
-	canonical: CanonicalSplitPath,
+export const makeTreeNodeFromSuffixedSplitPath = (
+	canonical: SuffixedSplitPath,
 ): TreeNode => {
-	return treeNodeToCanonicalSplitPathCodec.encode(canonical);
+	return treeNodeToSuffixedSplitPathCodec.encode(canonical);
 };
