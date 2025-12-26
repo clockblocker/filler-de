@@ -1,6 +1,6 @@
 import z from "zod";
 import { getParsedUserSettings } from "../../../../global-state/global-state";
-import { type NodeNameChain, NodeNameChainSchema } from "../schemas/node-name";
+import { type NodeNameChain, NodeNameChainSchema } from "../types/node-name";
 
 /**
  * Zod codec from section basename (without prefix) to NodeNameChain.

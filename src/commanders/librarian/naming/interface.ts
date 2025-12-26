@@ -2,13 +2,12 @@ import { err, ok, type Result } from "neverthrow";
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import {
 	type SplitPathToFolder,
-	type SplitPathToMdFile,
 	SplitPathType,
 } from "../../../obsidian-vault-action-manager/types/split-path";
 import type { SectionNode } from "../types/tree-node";
 import { codexBasenameToSectionChainCodec } from "./codecs/suffixed-basename-for-codex-to-chain-codec";
 import { treeNodeToSuffixedSplitPathCodec } from "./codecs/tree-node-to-split-path-codec";
-import type { NodeNameChain } from "./schemas/node-name";
+import type { NodeNameChain } from "./types/node-name";
 
 /**
  * Build codex basename from section folder path.
@@ -59,32 +58,26 @@ export function buildCodexBasename(
 	return codexBasenameToSectionChainCodec.encode(fullChain);
 }
 
-export function tryBuildingSplitpathToCodex(
-	canonicalBasenameForCodex: string,
-): Result<SplitPathToMdFile, string> {
-	const sectionChainResult = tryExtractingNodeNameChainToSection(
-		canonicalBasenameForCodex,
-	);
+// export function tryBuildingSplitpathToCodex(
+// 	canonicalBasenameForCodex: string,
+// ): Result<SplitPathToMdFile, string> {
+// 	const sectionChainResult = tryExtractingNodeNameChainToSection(
+// 		canonicalBasenameForCodex,
+// 	);
 
-	if (sectionChainResult.isErr()) {
-		return err(sectionChainResult.error);
-	}
+// 	if (sectionChainResult.isErr()) {
+// 		return err(sectionChainResult.error);
+// 	}
 
-	const sectionChain = sectionChainResult.value;
+// 	const sectionChain = sectionChainResult.value;
 
-	const pathParts = [libraryRoot, ...sectionChain.slice(0, -1)];
-	const basename = sectionChain[sectionChain.length - 1] ?? libraryRoot;
-	if (!basename) {
-		return err("Failed to build codex basename");
-	}
-
-	return ok({
-		basename,
-		extension: "md",
-		pathParts: [libraryRoot, ...sectionChain.slice(0, -1)],
-		type: SplitPathType.MdFile,
-	});
-}
+// 	return treeNodeToSuffixedSplitPathCodec.encode({
+// 		basename: CODEX_CORE_NAME,
+// 		extension: "md",
+// 		pathParts: [],
+// 		type: "MdFile",
+// 	});
+// }
 
 /**
  * Extract core name chain to section from codex basename.

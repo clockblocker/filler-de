@@ -1,9 +1,13 @@
 import z from "zod";
 import { getParsedUserSettings } from "../../../../global-state/global-state";
 import { PathPartsSchema } from "../../../../obsidian-vault-action-manager/types/split-path";
-import { JoinedCanonicalBasenameSchema } from "../schemas/canonical/joined-canonical";
-import { SeparatedCanonicalBasenameSchema } from "../schemas/canonical/separated-canonical";
-import { NodeNameChainSchema } from "../schemas/node-name";
+import { JoinedCanonicalBasenameSchema } from "../types/canonical/joined-canonical";
+import { SeparatedCanonicalBasenameSchema } from "../types/canonical/separated-canonical";
+import { NodeNameChainSchema } from "../types/node-name";
+import {
+	joinSeparatedCanonicalBasename,
+	separateJoinedCanonicalBasename,
+} from "../types/transformers";
 
 /**
  * Zod codec from PathParts to NodeNameChain.
@@ -45,8 +49,8 @@ export const separatedCanonicalBasenameToNodeNameChainCodec = z.codec(
 	SeparatedCanonicalBasenameSchema,
 	NodeNameChainSchema,
 	{
-		decode: (parsed) => {
-			return [...parsed.splitSuffix, parsed.nodeName];
+		decode: ({ splitSuffix, nodeName }) => {
+			return [...splitSuffix, nodeName];
 		},
 		encode: (chain) => {
 			if (chain.length === 0) {
@@ -78,29 +82,11 @@ export const joinedCanonicalBasenameToSeparatedCanonicalBasenameCodec = z.codec(
 	JoinedCanonicalBasenameSchema,
 	SeparatedCanonicalBasenameSchema,
 	{
-		decode: (canonicalBasename) => {
-			const settings = getParsedUserSettings();
-			const delimiter = settings.suffixDelimiter;
-
-			const parts = canonicalBasename.split(delimiter);
-			if (parts.length === 0) {
-				return { nodeName: "", splitSuffix: [] };
-			}
-
-			const nodeName = parts[0] ?? "";
-			const splitSuffix = parts.slice(1);
-
-			return { nodeName, splitSuffix };
+		decode: (joined) => {
+			return separateJoinedCanonicalBasename(joined);
 		},
-		encode: (parsed) => {
-			const settings = getParsedUserSettings();
-			const delimiter = settings.suffixDelimiter;
-
-			if (parsed.splitSuffix.length === 0) {
-				return parsed.nodeName;
-			}
-
-			return `${parsed.nodeName}${delimiter}${parsed.splitSuffix.join(delimiter)}`;
+		encode: (separated) => {
+			return joinSeparatedCanonicalBasename(separated);
 		},
 	},
 );
