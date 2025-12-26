@@ -49,4 +49,3 @@ export async function getExistingBasenamesInFolder<SPF extends SplitPath>(
 }
 
 export type CollisionStrategy = "rename" | "skip";
-

@@ -5,8 +5,8 @@ import {
 	SplitPathType,
 } from "../../../obsidian-vault-action-manager/types/split-path";
 import type { SectionNode } from "../types/tree-node";
-import { suffixedBasenameForСodexToParentSectionChainCodec } from "./codecs/suffixed-basename-for-codex-to-chain-codec";
-import { suffixedBasenameToChainCodec } from "./codecs/suffixed-basename-to-chain-codec";
+import { codexBasenameToSectionChainCodec } from "./codecs/suffixed-basename-for-codex-to-chain-codec";
+import { treeNodeToSuffixedSplitPathCodec } from "./codecs/tree-node-to-split-path-codec";
 import type { CoreNameChainFromRoot } from "./parsed-basename";
 
 /**
@@ -34,34 +34,28 @@ export function buildCodexBasename(
  * buildCodexBasename([]) // "__-Library"
  * buildCodexBasename(["Parent"]) // "__-Child-Parent"
  */
-export function buildCodexBasename({
-	coreNameChainToParent,
-}: Pick<SectionNode, "coreNameChainToParent">): string;
 export function buildCodexBasename(
-	splitPathToFolderOrChain:
+	section: Pick<SectionNode, "coreName" | "coreNameChainToParent">,
+): string;
+export function buildCodexBasename(
+	splitPathToFolderOrSection:
 		| SplitPathToFolder
-		| Pick<SectionNode, "coreNameChainToParent">,
+		| Pick<SectionNode, "coreName" | "coreNameChainToParent">,
 ): string {
-	const settings = getParsedUserSettings();
-	const libraryRoot = settings.splitPathToLibraryRoot.basename;
-
-	if ("pathParts" in splitPathToFolderOrChain) {
-		const pathParts = splitPathToFolderOrChain.pathParts;
-		const startIndex = pathParts[0] === libraryRoot ? 1 : 0;
-		const sectionChain: CoreNameChainFromRoot = pathParts.slice(startIndex);
-		return suffixedBasenameForСodexToParentSectionChainCodec.encode(
-			sectionChain,
+	if ("pathParts" in splitPathToFolderOrSection) {
+		const sectionNode = treeNodeToSuffixedSplitPathCodec.encode(
+			splitPathToFolderOrSection,
 		);
+		const fullChain = [
+			...sectionNode.coreNameChainToParent,
+			sectionNode.coreName,
+		];
+		return codexBasenameToSectionChainCodec.encode(fullChain);
 	}
 
-	// It's CoreNameChainFromRoot - TypeScript should narrow this, but we assert for safety
-	if (Array.isArray(splitPathToFolderOrChain)) {
-		return suffixedBasenameForСodexToParentSectionChainCodec.encode(
-			splitPathToFolderOrChain,
-		);
-	}
-
-	return "Unreachable";
+	const { coreName, coreNameChainToParent } = splitPathToFolderOrSection;
+	const fullChain = [...coreNameChainToParent, coreName];
+	return codexBasenameToSectionChainCodec.encode(fullChain);
 }
 
 /**
@@ -80,25 +74,18 @@ export function tryExtractingCoreNameChainToSection(
 	suffixedBasename: string,
 ): Result<CoreNameChainFromRoot, string> {
 	const parseResult =
-		suffixedBasenameToChainCodec.safeParse(suffixedBasename);
-
-	const settings = getParsedUserSettings();
-	const libraryRoot = settings.splitPathToLibraryRoot.basename;
+		codexBasenameToSectionChainCodec.safeParse(suffixedBasename);
 
 	if (!parseResult.success) {
 		const errorMessage = parseResult.error.issues
 			.map((issue) => issue.message)
 			.join("; ");
-		return err(errorMessage);
+		return err(
+			`Invalid codex basename: "${suffixedBasename}". ${errorMessage}`,
+		);
 	}
 
-	const chain = parseResult.data;
-	const lastCoreName = chain.pop();
-
-	if (chain.length === 0 && lastCoreName !== libraryRoot) {
-		return err(`Outside of library: ${suffixedBasename}`);
-	}
-	return ok(chain);
+	return ok(parseResult.data);
 }
 
 /**
@@ -131,8 +118,12 @@ export function tryExtractingSplitPathToFolder(
 	const lastInChain = sectionChain[sectionChain.length - 1];
 	const folderBasename = lastInChain ?? libraryRoot;
 
-	// Path parts: library root + section chain
-	const pathParts = [libraryRoot, ...sectionChain];
+	// Path parts: library root + section chain (excluding basename)
+	// For root case (empty chain), pathParts is empty
+	const pathParts =
+		sectionChain.length === 0
+			? []
+			: [libraryRoot, ...sectionChain.slice(0, -1)];
 
 	return ok({
 		basename: folderBasename,

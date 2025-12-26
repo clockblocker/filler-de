@@ -65,7 +65,11 @@ function splitPathFromAbstract(file: TAbstractFile): SplitPath {
 	const pathParts = parts;
 
 	if (file instanceof TFolder) {
-		return { basename: fullBasename, pathParts, type: "Folder" };
+		return {
+			basename: fullBasename,
+			pathParts,
+			type: "Folder",
+		};
 	}
 
 	const extension = file instanceof TFile ? (file.extension ?? "") : "";
@@ -75,7 +79,12 @@ function splitPathFromAbstract(file: TAbstractFile): SplitPath {
 		: fullBasename;
 
 	if (extension === MD_EXTENSION) {
-		return { basename, extension, pathParts, type: "MdFile" };
+		return {
+			basename,
+			extension,
+			pathParts,
+			type: "MdFile",
+		};
 	}
 
 	return { basename, extension, pathParts, type: "File" };
@@ -96,11 +105,21 @@ function splitPathFromString(path: string): SplitPath {
 		: fullBasename;
 
 	if (ext === MD_EXTENSION) {
-		return { basename, extension: "md", pathParts, type: "MdFile" };
+		return {
+			basename,
+			extension: "md",
+			pathParts,
+			type: "MdFile",
+		};
 	}
 
 	if (hasDot) {
-		return { basename, extension: ext, pathParts, type: "File" };
+		return {
+			basename,
+			extension: ext,
+			pathParts,
+			type: "File",
+		};
 	}
 
 	// Default: treat as folder when no extension present

@@ -55,16 +55,10 @@ describe("suffixedBasenameForСodexToParentSectionChainCodec", () => {
 		it("handles custom delimiter in suffix", () => {
 			getParsedUserSettingsSpy.mockReturnValue({
 				...defaultSettings,
-				suffixDelimiter: "_",
+				suffixDelimiter: ";;",
 			});
-			// "__-A_B_C": split on "_" (delimiter) to ["__-A", "B", "C", ""] (empty at end?)
-			// Actually, the "-" after "__" causes issues when delimiter is "_"
-			// The codex format assumes delimiter matches the separator after "__"
-			// For custom delimiter, use format like "__A_B_C" (no separator)
-			// But schema requires "-" after "__", so this is a limitation
-			const result = suffixedBasenameForСodexToParentSectionChainCodec.decode("__-A_B_C");
-			// Actual result: ["C", "B", "-A", ""]
-			expect(result).toEqual(["C", "B", "-A", ""]);
+			const result = suffixedBasenameForСodexToParentSectionChainCodec.decode("__;;A;;B;;C");
+			expect(result).toEqual(["C", "B", "A"]);
 		});
 
 		it("throws for invalid codex basename (no prefix)", () => {

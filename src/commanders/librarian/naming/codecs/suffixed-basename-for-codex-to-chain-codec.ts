@@ -1,6 +1,10 @@
 import z from "zod";
+import { getParsedUserSettings } from "../../../../global-state/global-state";
 import { CODEX_CORE_NAME } from "../../types/literals";
-import { CoreNameChainFromRootSchema } from "../parsed-basename";
+import {
+	type CoreNameChainFromRoot,
+	CoreNameChainFromRootSchema,
+} from "../parsed-basename";
 import { suffixedBasenameToChainCodec } from "./suffixed-basename-to-chain-codec";
 
 /**
@@ -10,18 +14,28 @@ import { suffixedBasenameToChainCodec } from "./suffixed-basename-to-chain-codec
 export const SuffixedBasenameForСodexSchema = z
 	.string()
 	.refine((val) => val.startsWith(CODEX_CORE_NAME), {
-		message: `Must start with "${CODEX_CORE_NAME}"`,
+		message: `must start with "${CODEX_CORE_NAME}"`,
 	})
-	.refine((val) => val.slice(CODEX_CORE_NAME.length).length > 0, {
-		message: "Empty after prefix",
-	});
+	.refine(
+		(val) => {
+			// After "__", must have delimiter + content (like any regular filename)
+			const afterCoreName = val.slice(CODEX_CORE_NAME.length);
+			if (afterCoreName.length === 0) {
+				return false;
+			}
+			const settings = getParsedUserSettings();
+			return afterCoreName.startsWith(settings.suffixDelimiter);
+		},
+		{
+			message: "Empty after prefix",
+		},
+	);
 
 /**
- * Zod codec from codex basename to CoreNameChainFromRoot.
- * Decodes codex basename (e.g., "__-Library" or "__-Child-Parent") to section chain.
+ * Zod codec from codex basename to CoreNameChainFromRoot (parent section chain).
+ * Decodes codex basename (e.g., "__-Library" or "__-Child-Parent") to parent section chain.
  * Uses sectionBasenameToChainCodec internally.
  * Reads settings internally.
- *
  */
 export const suffixedBasenameForСodexToParentSectionChainCodec = z.codec(
 	SuffixedBasenameForСodexSchema,
@@ -38,6 +52,47 @@ export const suffixedBasenameForСodexToParentSectionChainCodec = z.codec(
 				...chain,
 				CODEX_CORE_NAME,
 			]);
+		},
+	},
+);
+
+/**
+ * Zod codec from codex basename to CoreNameChainFromRoot (full section chain).
+ * Decodes codex basename (e.g., "__-Library" or "__-Child-Parent") to full section chain.
+ * Handles root case, library validation, delimiter parsing.
+ * Reads settings internally.
+ */
+export const codexBasenameToSectionChainCodec = z.codec(
+	SuffixedBasenameForСodexSchema,
+	CoreNameChainFromRootSchema,
+	{
+		decode: (codexBasename: string): CoreNameChainFromRoot => {
+			const settings = getParsedUserSettings();
+			const libraryRoot = settings.splitPathToLibraryRoot.basename;
+
+			const fullChain =
+				suffixedBasenameToChainCodec.decode(codexBasename);
+
+			const sectionChain = fullChain.slice(0, -1);
+
+			// Handle root case: if section chain is [libraryRoot], return []
+			if (sectionChain.length === 1 && sectionChain[0] === libraryRoot) {
+				return [];
+			}
+
+			return sectionChain;
+		},
+		encode: (sectionChain: CoreNameChainFromRoot): string => {
+			const settings = getParsedUserSettings();
+			const libraryRoot = settings.splitPathToLibraryRoot.basename;
+
+			// For root (empty chain), encode as libraryRoot
+			const fullChain =
+				sectionChain.length === 0
+					? [libraryRoot, CODEX_CORE_NAME]
+					: [...sectionChain, CODEX_CORE_NAME];
+
+			return suffixedBasenameToChainCodec.encode(fullChain);
 		},
 	},
 );

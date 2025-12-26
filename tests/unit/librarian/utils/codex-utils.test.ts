@@ -75,7 +75,7 @@ describe("codex-utils", () => {
 			it("builds codex for root folder", () => {
 				const folder: SplitPathToFolder = {
 					basename: "Library",
-					pathParts: ["Library"],
+					pathParts: [],
 					type: SplitPathType.Folder,
 				};
 				expect(buildCodexBasename(folder)).toBe("__-Library");
@@ -84,7 +84,7 @@ describe("codex-utils", () => {
 			it("builds codex for nested folder", () => {
 				const folder: SplitPathToFolder = {
 					basename: "Child",
-					pathParts: ["Library", "Parent", "Child"],
+					pathParts: ["Library", "Parent"],
 					type: SplitPathType.Folder,
 				};
 				expect(buildCodexBasename(folder)).toBe("__-Child-Parent");
@@ -95,7 +95,7 @@ describe("codex-utils", () => {
 			it("uses custom delimiter", () => {
 				getParsedUserSettingsSpy.mockReturnValue({
 					...defaultSettings,
-					suffixDelimiter: "_",
+					suffixDelimiter: ";;",
 				});
 				const section: TreeNode = {
 					children: [],
@@ -104,7 +104,7 @@ describe("codex-utils", () => {
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Section,
 				};
-				expect(buildCodexBasename(section)).toBe("__-Child_Parent");
+				expect(buildCodexBasename(section)).toBe("__;;Child;;Parent");
 			});
 		});
 	});
@@ -146,9 +146,9 @@ describe("codex-utils", () => {
 		it("handles different delimiters", () => {
 			getParsedUserSettingsSpy.mockReturnValue({
 				...defaultSettings,
-				suffixDelimiter: "_",
+				suffixDelimiter: ";;",
 			});
-			const result = tryExtractingCoreNameChainToSection("__-Child_Parent");
+			const result = tryExtractingCoreNameChainToSection("__;;Child;;Parent");
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
 				expect(result.value).toEqual(["Parent", "Child"]);
@@ -163,7 +163,7 @@ describe("codex-utils", () => {
 			if (result.isOk()) {
 				expect(result.value).toEqual({
 					basename: "Library",
-					pathParts: ["Library"],
+					pathParts: [],
 					type: SplitPathType.Folder,
 				});
 			}
@@ -175,7 +175,7 @@ describe("codex-utils", () => {
 			if (result.isOk()) {
 				expect(result.value).toEqual({
 					basename: "Child",
-					pathParts: ["Library", "Parent", "Child"],
+					pathParts: ["Library", "Parent"],
 					type: SplitPathType.Folder,
 				});
 			}
@@ -187,7 +187,7 @@ describe("codex-utils", () => {
 			if (result.isOk()) {
 				expect(result.value).toEqual({
 					basename: "Grandchild",
-					pathParts: ["Library", "Parent", "Child", "Grandchild"],
+					pathParts: ["Library", "Parent", "Child"],
 					type: SplitPathType.Folder,
 				});
 			}
@@ -198,7 +198,7 @@ describe("codex-utils", () => {
 			expect(result.isErr()).toBe(true);
 			if (result.isErr()) {
 				expect(result.error).toContain('Invalid codex basename: "Note"');
-				expect(result.error).toContain('must start with "__-"');
+				expect(result.error).toContain('must start with "__"');
 			}
 		});
 	});

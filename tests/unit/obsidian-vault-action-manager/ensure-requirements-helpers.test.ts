@@ -1,11 +1,4 @@
 import { describe, expect, it } from "bun:test";
-import type {
-	SplitPathToFolder,
-	SplitPathToMdFile,
-} from "../../../src/obsidian-vault-action-manager/types/split-path";
-import { SplitPathType } from "../../../src/obsidian-vault-action-manager/types/split-path";
-import type { VaultAction } from "../../../src/obsidian-vault-action-manager/types/vault-action";
-import { VaultActionType } from "../../../src/obsidian-vault-action-manager/types/vault-action";
 import type { ExistenceChecker } from "../../../src/obsidian-vault-action-manager/impl/dispatcher";
 import {
 	buildEnsureExistKeys,
@@ -16,6 +9,13 @@ import {
 	getDestinationsToCheck,
 	hasActionForKey,
 } from "../../../src/obsidian-vault-action-manager/impl/ensure-requirements-helpers";
+import type {
+	SplitPathToFolder,
+	SplitPathToMdFile,
+} from "../../../src/obsidian-vault-action-manager/types/split-path";
+import { SplitPathType } from "../../../src/obsidian-vault-action-manager/types/split-path";
+import type { VaultAction } from "../../../src/obsidian-vault-action-manager/types/vault-action";
+import { VaultActionType } from "../../../src/obsidian-vault-action-manager/types/vault-action";
 
 const folder = (
 	basename: string,
@@ -40,12 +40,12 @@ describe("collectTrashPaths", () => {
 	it("collects trash folder paths", () => {
 		const actions: VaultAction[] = [
 			{
-				type: VaultActionType.TrashFolder,
 				payload: { splitPath: folder("a", ["root"]) },
+				type: VaultActionType.TrashFolder,
 			},
 			{
-				type: VaultActionType.TrashFolder,
 				payload: { splitPath: folder("b", ["root"]) },
+				type: VaultActionType.TrashFolder,
 			},
 		];
 
@@ -60,12 +60,12 @@ describe("collectTrashPaths", () => {
 	it("collects trash file paths", () => {
 		const actions: VaultAction[] = [
 			{
-				type: VaultActionType.TrashMdFile,
 				payload: { splitPath: mdFile("file1", ["root"]) },
+				type: VaultActionType.TrashMdFile,
 			},
 			{
-				type: VaultActionType.TrashFile,
 				payload: { splitPath: { basename: "file2", extension: "txt", pathParts: ["root"], type: "File" } },
+				type: VaultActionType.TrashFile,
 			},
 		];
 
@@ -80,12 +80,12 @@ describe("collectTrashPaths", () => {
 	it("ignores non-trash actions", () => {
 		const actions: VaultAction[] = [
 			{
-				type: VaultActionType.CreateFolder,
 				payload: { splitPath: folder("a", ["root"]) },
+				type: VaultActionType.CreateFolder,
 			},
 			{
-				type: VaultActionType.UpsertMdFile,
 				payload: { splitPath: mdFile("file", ["root"]) },
+				type: VaultActionType.UpsertMdFile,
 			},
 		];
 
@@ -100,8 +100,8 @@ describe("collectRequirements", () => {
 	it("collects parent folder keys from CreateFolder", () => {
 		const actions: VaultAction[] = [
 			{
-				type: VaultActionType.CreateFolder,
 				payload: { splitPath: folder("child", ["root", "parent"]) },
+				type: VaultActionType.CreateFolder,
 			},
 		];
 
@@ -115,11 +115,11 @@ describe("collectRequirements", () => {
 	it("collects file keys from ProcessMdFile", () => {
 		const actions: VaultAction[] = [
 			{
-				type: VaultActionType.ProcessMdFile,
 				payload: {
 					splitPath: mdFile("file", ["root", "notes"]),
 					transform: (c) => c,
 				},
+				type: VaultActionType.ProcessMdFile,
 			},
 		];
 
@@ -133,11 +133,11 @@ describe("collectRequirements", () => {
 	it("collects parent folders from RenameFolder destination", () => {
 		const actions: VaultAction[] = [
 			{
-				type: VaultActionType.RenameFolder,
 				payload: {
 					from: folder("old", ["root"]),
 					to: folder("new", ["root", "target"]),
 				},
+				type: VaultActionType.RenameFolder,
 			},
 		];
 
@@ -259,8 +259,8 @@ describe("hasActionForKey", () => {
 	it("returns true if CreateFolder exists for folder key", () => {
 		const actions: VaultAction[] = [
 			{
-				type: VaultActionType.CreateFolder,
 				payload: { splitPath: folder("a", ["root"]) },
+				type: VaultActionType.CreateFolder,
 			},
 		];
 
@@ -271,8 +271,8 @@ describe("hasActionForKey", () => {
 	it("returns true if UpsertMdFile exists for file key", () => {
 		const actions: VaultAction[] = [
 			{
-				type: VaultActionType.UpsertMdFile,
 				payload: { splitPath: mdFile("file", ["root"]) },
+				type: VaultActionType.UpsertMdFile,
 			},
 		];
 
@@ -283,11 +283,11 @@ describe("hasActionForKey", () => {
 	it("returns true if ProcessMdFile exists for file key", () => {
 		const actions: VaultAction[] = [
 			{
-				type: VaultActionType.ProcessMdFile,
 				payload: {
 					splitPath: mdFile("file", ["root"]),
 					transform: (c) => c,
 				},
+				type: VaultActionType.ProcessMdFile,
 			},
 		];
 
@@ -314,11 +314,11 @@ describe("getDestinationsToCheck", () => {
 	it("returns destinations for ProcessMdFile action", () => {
 		const actions: VaultAction[] = [
 			{
-				type: VaultActionType.ProcessMdFile,
 				payload: {
 					splitPath: mdFile("file", ["root", "notes"]),
 					transform: (c) => c,
 				},
+				type: VaultActionType.ProcessMdFile,
 			},
 		];
 
@@ -337,15 +337,15 @@ describe("getDestinationsToCheck", () => {
 	it("filters out EnsureExist keys that conflict with Trash", () => {
 		const actions: VaultAction[] = [
 			{
-				type: VaultActionType.TrashFolder,
 				payload: { splitPath: folder("parent", ["root"]) },
+				type: VaultActionType.TrashFolder,
 			},
 			{
-				type: VaultActionType.ProcessMdFile,
 				payload: {
 					splitPath: mdFile("file", ["root", "parent"]),
 					transform: (c) => c,
 				},
+				type: VaultActionType.ProcessMdFile,
 			},
 		];
 
@@ -382,10 +382,10 @@ describe("ensureDestinationsExist", () => {
 
 	it("adds EnsureExist actions for non-existing folders", async () => {
 		const destinations = {
-			ensureExistFolderKeys: new Set<string>(["root/parent"]),
-			ensureExistFileKeys: new Set<string>(),
-			createFolderKeys: new Set<string>(),
 			createFileKeys: new Set<string>(),
+			createFolderKeys: new Set<string>(),
+			ensureExistFileKeys: new Set<string>(),
+			ensureExistFolderKeys: new Set<string>(["root/parent"]),
 		};
 
 		const existenceChecker: ExistenceChecker = {
@@ -409,10 +409,10 @@ describe("ensureDestinationsExist", () => {
 
 	it("skips EnsureExist actions for existing folders", async () => {
 		const destinations = {
-			ensureExistFolderKeys: new Set<string>(["root/parent"]),
-			ensureExistFileKeys: new Set<string>(),
-			createFolderKeys: new Set<string>(),
 			createFileKeys: new Set<string>(),
+			createFolderKeys: new Set<string>(),
+			ensureExistFileKeys: new Set<string>(),
+			ensureExistFolderKeys: new Set<string>(["root/parent"]),
 		};
 
 		const existenceChecker: ExistenceChecker = {
@@ -432,10 +432,10 @@ describe("ensureDestinationsExist", () => {
 
 	it("adds EnsureExist actions for non-existing files with null content", async () => {
 		const destinations = {
-			ensureExistFolderKeys: new Set<string>(),
-			ensureExistFileKeys: new Set<string>(["root/file.md"]),
-			createFolderKeys: new Set<string>(),
 			createFileKeys: new Set<string>(),
+			createFolderKeys: new Set<string>(),
+			ensureExistFileKeys: new Set<string>(["root/file.md"]),
+			ensureExistFolderKeys: new Set<string>(),
 		};
 
 		const existenceChecker: ExistenceChecker = {
@@ -459,16 +459,16 @@ describe("ensureDestinationsExist", () => {
 
 	it("skips actions that already exist in batch", async () => {
 		const destinations = {
-			ensureExistFolderKeys: new Set<string>(["root/parent"]),
-			ensureExistFileKeys: new Set<string>(),
-			createFolderKeys: new Set<string>(),
 			createFileKeys: new Set<string>(),
+			createFolderKeys: new Set<string>(),
+			ensureExistFileKeys: new Set<string>(),
+			ensureExistFolderKeys: new Set<string>(["root/parent"]),
 		};
 
 		const existingActions: VaultAction[] = [
 			{
-				type: VaultActionType.CreateFolder,
 				payload: { splitPath: folder("parent", ["root"]) },
+				type: VaultActionType.CreateFolder,
 			},
 		];
 
@@ -489,10 +489,10 @@ describe("ensureDestinationsExist", () => {
 
 	it("caches existence checks to avoid redundant calls", async () => {
 		const destinations = {
-			ensureExistFolderKeys: new Set<string>(["root/parent", "root/other"]),
-			ensureExistFileKeys: new Set<string>(),
-			createFolderKeys: new Set<string>(["root/parent"]), // Same key
 			createFileKeys: new Set<string>(),
+			createFolderKeys: new Set<string>(["root/parent"]), // Same key
+			ensureExistFileKeys: new Set<string>(),
+			ensureExistFolderKeys: new Set<string>(["root/parent", "root/other"]),
 		};
 
 		let callCount = 0;
@@ -517,10 +517,10 @@ describe("ensureDestinationsExist", () => {
 
 	it("adds CreateFolder actions for non-existing folders", async () => {
 		const destinations = {
-			ensureExistFolderKeys: new Set<string>(),
-			ensureExistFileKeys: new Set<string>(),
-			createFolderKeys: new Set<string>(["root/parent"]),
 			createFileKeys: new Set<string>(),
+			createFolderKeys: new Set<string>(["root/parent"]),
+			ensureExistFileKeys: new Set<string>(),
+			ensureExistFolderKeys: new Set<string>(),
 		};
 
 		const existenceChecker: ExistenceChecker = {
@@ -541,10 +541,10 @@ describe("ensureDestinationsExist", () => {
 
 	it("adds UpsertMdFile actions with empty content for non-existing files", async () => {
 		const destinations = {
-			ensureExistFolderKeys: new Set<string>(),
-			ensureExistFileKeys: new Set<string>(),
-			createFolderKeys: new Set<string>(),
 			createFileKeys: new Set<string>(["root/file.md"]),
+			createFolderKeys: new Set<string>(),
+			ensureExistFileKeys: new Set<string>(),
+			ensureExistFolderKeys: new Set<string>(),
 		};
 
 		const existenceChecker: ExistenceChecker = {
