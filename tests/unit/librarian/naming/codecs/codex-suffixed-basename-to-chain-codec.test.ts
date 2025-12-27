@@ -107,14 +107,11 @@ describe("suffixedBasenameForСodexToParentSectionChainCodec", () => {
 		it("handles custom delimiter", () => {
 			getParsedUserSettingsSpy.mockReturnValue({
 				...defaultSettings,
-				suffixDelimiter: "_",
+				suffixDelimiter: "::",
 			});
-			// Encode ["C", "B", "A", "__"] with delimiter "_": last is "__", suffix is reversed ["C", "B", "A"] = "A_B_C", result = "__A_B_C" (no separator, just delimiter)
-			// But schema requires "-" after "__", so this creates "__-A_B_C" which doesn't work with "_" delimiter
-			// This is a limitation: codex format assumes delimiter matches separator
 			expect(
 				suffixedBasenameForСodexToParentSectionChainCodec.encode(["C", "B", "A"]),
-			).toBe("___A_B_C");
+			).toBe("__::A::B::C");
 		});
 	});
 

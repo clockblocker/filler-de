@@ -94,9 +94,9 @@ describe("buildBasename", () => {
 	it("uses custom delimiter", () => {
 		getParsedUserSettingsSpy.mockReturnValue({
 			...defaultSettings,
-			suffixDelimiter: "_",
+			suffixDelimiter: "::",
 		});
-		expect(buildBasenameDepreacated("Note", ["a", "b"])).toBe("Note_a_b");
+		expect(buildBasenameDepreacated("Note", ["a", "b"])).toBe("Note::a::b");
 	});
 });
 

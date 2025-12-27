@@ -148,10 +148,10 @@ describe("splitPathToLeaf", () => {
 		it("respects custom delimiter", () => {
 			getParsedUserSettingsSpy.mockReturnValue({
 				...defaultSettings,
-				suffixDelimiter: "_",
+				suffixDelimiter: "::",
 			});
 			const input: SplitPathToMdFile = {
-				basename: "Note_suffix1_suffix2",
+				basename: "Note::suffix1::suffix2",
 				extension: "md",
 				pathParts: ["Library"],
 				type: "MdFile",

@@ -65,9 +65,9 @@ describe("canonicalBasenameToChainCodec", () => {
 		it("handles custom delimiter", () => {
 			getParsedUserSettingsSpy.mockReturnValue({
 				...defaultSettings,
-				suffixDelimiter: "_",
+				suffixDelimiter: "::",
 			});
-			expect(canonicalBasenameToChainCodec.decode("A_B_C")).toEqual(["C", "B", "A"]);
+			expect(canonicalBasenameToChainCodec.decode("A::B::C")).toEqual(["C", "B", "A"]);
 		});
 
 		it("handles custom library root", () => {
@@ -114,9 +114,9 @@ describe("canonicalBasenameToChainCodec", () => {
 		it("handles custom delimiter", () => {
 			getParsedUserSettingsSpy.mockReturnValue({
 				...defaultSettings,
-				suffixDelimiter: "_",
+				suffixDelimiter: "::",
 			});
-			expect(canonicalBasenameToChainCodec.encode(["C", "B", "A"])).toBe("A_B_C");
+			expect(canonicalBasenameToChainCodec.encode(["C", "B", "A"])).toBe("A::B::C");
 		});
 
 		it("handles custom library root", () => {

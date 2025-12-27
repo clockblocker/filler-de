@@ -68,7 +68,7 @@ describe("buildCanonicalPathFromTree", () => {
 	it("uses custom suffix delimiter", () => {
 		getParsedUserSettingsSpy.mockReturnValue({
 			...defaultSettings,
-			suffixDelimiter: "_",
+			suffixDelimiter: "::",
 		});
 
 		const leaf: TreeLeaf = {
@@ -81,7 +81,7 @@ describe("buildCanonicalPathFromTree", () => {
 
 		const result = buildCanonicalPathForLeafDeprecated(leaf);
 
-		expect(result).toBe("Library/A/B/Note_B_A.md");
+		expect(result).toBe("Library/A/B/Note::B::A.md");
 	});
 
 	it("handles library root with path parts", () => {
@@ -141,7 +141,7 @@ describe("buildCanonicalBasenameFromTree", () => {
 	it("uses custom suffix delimiter", () => {
 		getParsedUserSettingsSpy.mockReturnValue({
 			...defaultSettings,
-			suffixDelimiter: "_",
+			suffixDelimiter: "::",
 		});
 
 		const leaf: TreeLeaf = {
@@ -154,7 +154,7 @@ describe("buildCanonicalBasenameFromTree", () => {
 
 		const result = buildCanonicalBasenameForLeafDeprecated(leaf);
 
-		expect(result).toBe("Note_B_A");
+		expect(result).toBe("Note::B::A");
 	});
 
 	it("handles single parent folder", () => {
