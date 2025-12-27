@@ -17,10 +17,7 @@ import { translateVaultAction } from "../reconciliation/vault-to-tree";
 import { TreeActionType } from "../types/literals";
 import { isBasenamePrefixedAsCodexDeprecated } from "../utils/codex-utils";
 import { resolveActions } from "./action-resolver";
-import {
-	type CodexRegeneratorContext,
-	regenerateCodexes,
-} from "./codex-regenerator";
+import { generateActionsForCodexRegenerationInImpactedSections } from "./codex-regeneration";
 import { computeCreateAction } from "./create-handler";
 import {
 	extractBasenameWithoutExt,
@@ -38,7 +35,10 @@ export type EventHandlerContext = {
 	) => Promise<
 		import("../../../obsidian-vault-action-manager/types/split-path").SplitPathWithReader[]
 	>;
-} & Pick<CodexRegeneratorContext, "getNode">;
+	getSectionNode: (
+		chain: NodeNameChain,
+	) => import("../types/tree-node").SectionNode | null;
+};
 
 /**
  * Extract handler info from VaultEvent.
@@ -160,10 +160,17 @@ export async function handleDelete(
 	const chains = flattenActionResult(impactedChain);
 	const impactedSections = dedupeChains(expandAllToAncestors(chains));
 
-	await regenerateCodexes(impactedSections, {
-		dispatch: context.dispatch,
-		getNode: context.getNode,
-	});
+	const settings = getParsedUserSettings();
+	const allFiles = await context.listAllFilesWithMdReaders(
+		settings.splitPathToLibraryRoot,
+	);
+	const splitPathsToFiles = allFiles as SplitPath[];
+	const actions = generateActionsForCodexRegenerationInImpactedSections(
+		impactedSections,
+		splitPathsToFiles,
+		context.getSectionNode,
+	);
+	await context.dispatch(actions);
 }
 
 /**
@@ -236,13 +243,18 @@ export async function handleRename(
 					expandAllToAncestors(chains),
 				);
 
-				await regenerateCodexes(impactedSections, {
-					dispatch: context.dispatch,
-					getNode: context.getNode,
-					listAllFilesWithMdReaders:
-						context.listAllFilesWithMdReaders,
-					splitPath: context.splitPath,
-				});
+				const settings = getParsedUserSettings();
+				const allFiles = await context.listAllFilesWithMdReaders(
+					settings.splitPathToLibraryRoot,
+				);
+				const splitPathsToFiles = allFiles as SplitPath[];
+				const actions =
+					generateActionsForCodexRegenerationInImpactedSections(
+						impactedSections,
+						splitPathsToFiles,
+						context.getSectionNode,
+					);
+				await context.dispatch(actions);
 			}
 
 			return [];
@@ -287,13 +299,18 @@ export async function handleRename(
 				// Compute impacted chains from actions (extract parent chains from paths)
 				const impactedChains =
 					computeImpactedChainsFromActions(actionArray);
-				await regenerateCodexes(impactedChains, {
-					dispatch: context.dispatch,
-					getNode: context.getNode,
-					listAllFilesWithMdReaders:
-						context.listAllFilesWithMdReaders,
-					splitPath: context.splitPath,
-				});
+				const settings = getParsedUserSettings();
+				const allFiles = await context.listAllFilesWithMdReaders(
+					settings.splitPathToLibraryRoot,
+				);
+				const splitPathsToFiles = allFiles as SplitPath[];
+				const actions =
+					generateActionsForCodexRegenerationInImpactedSections(
+						impactedChains,
+						splitPathsToFiles,
+						context.getSectionNode,
+					);
+				await context.dispatch(actions);
 			}
 		} finally {
 		}
@@ -372,12 +389,17 @@ async function updateTreeAndCodexesForRename(
 	const parentChain = newSplitPath.pathParts.slice(1);
 
 	const impactedChains = expandToAncestors(parentChain);
-	await regenerateCodexes(impactedChains, {
-		dispatch: context.dispatch,
-		getNode: context.getNode,
-		listAllFilesWithMdReaders: context.listAllFilesWithMdReaders,
-		splitPath: context.splitPath,
-	});
+	const settings = getParsedUserSettings();
+	const allFiles = await context.listAllFilesWithMdReaders(
+		settings.splitPathToLibraryRoot,
+	);
+	const splitPathsToFiles = allFiles as SplitPath[];
+	const actions = generateActionsForCodexRegenerationInImpactedSections(
+		impactedChains,
+		splitPathsToFiles,
+		context.getSectionNode,
+	);
+	await context.dispatch(actions);
 }
 
 /**
@@ -429,10 +451,17 @@ export async function handleCreate(
 
 		// Expand to ancestors and regenerate codexes
 		const impactedChains = expandToAncestors(parentChain);
-		await regenerateCodexes(impactedChains, {
-			dispatch: context.dispatch,
-			getNode: context.getNode,
-		});
+		const settings = getParsedUserSettings();
+		const allFiles = await context.listAllFilesWithMdReaders(
+			settings.splitPathToLibraryRoot,
+		);
+		const splitPathsToFiles = allFiles as SplitPath[];
+		const actions = generateActionsForCodexRegenerationInImpactedSections(
+			impactedChains,
+			splitPathsToFiles,
+			context.getSectionNode,
+		);
+		await context.dispatch(actions);
 	} finally {
 	}
 

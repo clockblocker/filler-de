@@ -1,6 +1,6 @@
 import { spyOn } from "bun:test";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { buildCodexBasename, tryExtractingNodeNameChainToSection, tryExtractingSplitPathToParentFolder } from "../../../../src/commanders/librarian/naming/interface";
+import { buildCodexBasenameDeprecated, tryExtractingNodeNameChainToSection, tryExtractingSplitPathToParentFolderDeprecated } from "../../../../src/commanders/librarian/naming/interface";
 import type { TreeNode } from "../../../../src/commanders/librarian/types/tree-node";
 import { TreeNodeStatus, TreeNodeType } from "../../../../src/commanders/librarian/types/tree-node";
 import * as globalState from "../../../../src/global-state/global-state";
@@ -45,7 +45,7 @@ describe("codex-utils", () => {
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Section,
 				};
-				expect(buildCodexBasename(rootSection)).toBe("__-Library");
+				expect(buildCodexBasenameDeprecated(rootSection)).toBe("__-Library");
 			});
 
 			it("builds nested codex basename with single parent", () => {
@@ -56,7 +56,7 @@ describe("codex-utils", () => {
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Section,
 				};
-				expect(buildCodexBasename(section)).toBe("__-Child-Parent");
+				expect(buildCodexBasenameDeprecated(section)).toBe("__-Child-Parent");
 			});
 
 			it("builds nested codex basename with multiple parents", () => {
@@ -67,7 +67,7 @@ describe("codex-utils", () => {
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Section,
 				};
-				expect(buildCodexBasename(section)).toBe("__-Grandchild-Child-Parent");
+				expect(buildCodexBasenameDeprecated(section)).toBe("__-Grandchild-Child-Parent");
 			});
 		});
 		
@@ -78,7 +78,7 @@ describe("codex-utils", () => {
 					pathParts: [],
 					type: SplitPathType.Folder,
 				};
-				expect(buildCodexBasename(folder)).toBe("__-Library");
+				expect(buildCodexBasenameDeprecated(folder)).toBe("__-Library");
 			});
 
 			it("builds codex for nested folder", () => {
@@ -87,7 +87,7 @@ describe("codex-utils", () => {
 					pathParts: ["Library", "Parent"],
 					type: SplitPathType.Folder,
 				};
-				expect(buildCodexBasename(folder)).toBe("__-Child-Parent");
+				expect(buildCodexBasenameDeprecated(folder)).toBe("__-Child-Parent");
 			});
 		});
 
@@ -104,7 +104,7 @@ describe("codex-utils", () => {
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Section,
 				};
-				expect(buildCodexBasename(section)).toBe("__;;Child;;Parent");
+				expect(buildCodexBasenameDeprecated(section)).toBe("__;;Child;;Parent");
 			});
 		});
 	});
@@ -158,7 +158,7 @@ describe("codex-utils", () => {
 
 	describe("tryExtractingSplitPathToFolder", () => {
 		it("builds SplitPath for root folder", () => {
-			const result = tryExtractingSplitPathToParentFolder("__-Library");
+			const result = tryExtractingSplitPathToParentFolderDeprecated("__-Library");
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
 				expect(result.value).toEqual({
@@ -170,7 +170,7 @@ describe("codex-utils", () => {
 		});
 
 		it("builds SplitPath for nested folder", () => {
-			const result = tryExtractingSplitPathToParentFolder("__-Child-Parent");
+			const result = tryExtractingSplitPathToParentFolderDeprecated("__-Child-Parent");
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
 				expect(result.value).toEqual({
@@ -182,7 +182,7 @@ describe("codex-utils", () => {
 		});
 
 		it("builds SplitPath for deeply nested folder", () => {
-			const result = tryExtractingSplitPathToParentFolder("__-Grandchild-Child-Parent");
+			const result = tryExtractingSplitPathToParentFolderDeprecated("__-Grandchild-Child-Parent");
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
 				expect(result.value).toEqual({
@@ -194,7 +194,7 @@ describe("codex-utils", () => {
 		});
 
 		it("returns error for non-codex basename", () => {
-			const result = tryExtractingSplitPathToParentFolder("Note");
+			const result = tryExtractingSplitPathToParentFolderDeprecated("Note");
 			expect(result.isErr()).toBe(true);
 			if (result.isErr()) {
 				expect(result.error).toContain('Invalid codex basename: "Note"');

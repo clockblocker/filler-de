@@ -3,6 +3,7 @@ import type {
 	ObsidianVaultActionManager,
 	VaultEvent,
 } from "../../obsidian-vault-action-manager";
+import type { SplitPath } from "../../obsidian-vault-action-manager/types/split-path";
 import type { VaultAction } from "../../obsidian-vault-action-manager/types/vault-action";
 import { logger } from "../../utils/logger";
 import {
@@ -14,17 +15,16 @@ import { healOnInit, type InitHealResult } from "./healing";
 import type { LibraryTree } from "./library-tree";
 import type { NodeNameChain } from "./naming/types/node-name";
 import {
-	type CodexRegeneratorContext,
 	type EventHandlerContext,
+	generateActionsForCodexRegenerationInImpactedSections,
 	handleCreate,
 	handleDelete,
 	handleRename,
 	parseEventToHandler,
 	readTreeFromSplitFilesWithReaders,
-	regenerateAllCodexes,
-	regenerateCodexes,
 	writeStatusToMetadata,
 } from "./orchestration";
+import { collectAllSectionChains } from "./orchestration/tree-utils";
 import { TreeActionType } from "./types/literals";
 import { TreeNodeStatus, TreeNodeType } from "./types/tree-node";
 import { buildCanonicalPathForLeafDeprecated } from "./utils/tree-path-utils";
@@ -89,7 +89,18 @@ export class Librarian {
 		this.tree = await this.readTreeFromVault();
 
 		// Regenerate all codexes with up-to-date tree
-		await regenerateAllCodexes(this.tree, this.getCodexContext());
+		const allSectionChains = collectAllSectionChains(this.tree);
+		const allFilesForCodex =
+			await this.vaultActionManager.listAllFilesWithMdReaders(
+				rootSplitPath,
+			);
+		const splitPathsToFiles = allFilesForCodex as SplitPath[];
+		const actions = generateActionsForCodexRegenerationInImpactedSections(
+			allSectionChains,
+			splitPathsToFiles,
+			(chain) => this.tree.getSectionNode(chain),
+		);
+		await this.vaultActionManager.dispatch(actions);
 
 		// Subscribe to vault events after initialization
 		this.subscribeToVaultEvents();
@@ -158,28 +169,12 @@ export class Librarian {
 	}
 
 	/**
-	 * Get codex regeneration context.
-	 */
-	private getCodexContext(): CodexRegeneratorContext {
-		return {
-			dispatch: (actions) => this.vaultActionManager.dispatch(actions),
-			getNode: (chain) => {
-				const node = this.tree.getSectionNode(chain);
-				return node;
-			},
-			listAllFilesWithMdReaders: (sp) =>
-				this.vaultActionManager.listAllFilesWithMdReaders(sp),
-			splitPath: (p) => this.vaultActionManager.splitPath(p),
-		};
-	}
-
-	/**
 	 * Get event handler context.
 	 */
 	private getEventHandlerContext(): EventHandlerContext {
 		return {
 			dispatch: (actions) => this.vaultActionManager.dispatch(actions),
-			getNode: (chain) => {
+			getSectionNode: (chain) => {
 				return this.tree.getSectionNode(chain);
 			},
 			listAllFilesWithMdReaders: (sp) =>
@@ -291,7 +286,19 @@ export class Librarian {
 			JSON.stringify(impactedSections),
 		);
 
-		await regenerateCodexes(impactedSections, this.getCodexContext());
+		const settings = getParsedUserSettings();
+		const allFilesForCodex =
+			await this.vaultActionManager.listAllFilesWithMdReaders(
+				settings.splitPathToLibraryRoot,
+			);
+
+		const splitPathsToFiles = allFilesForCodex as SplitPath[];
+		const actions = generateActionsForCodexRegenerationInImpactedSections(
+			impactedSections,
+			splitPathsToFiles,
+			(chain) => this.tree.getSectionNode(chain),
+		);
+		await this.vaultActionManager.dispatch(actions);
 	}
 
 	/**

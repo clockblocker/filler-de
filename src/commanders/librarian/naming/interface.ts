@@ -20,7 +20,7 @@ import type { NodeNameChain } from "./types/node-name";
  * buildCodexBasename({ basename: "Library", pathParts: [], type: "Folder" }) // "__-Library"
  * buildCodexBasename({ basename: "Child", pathParts: ["Library", "Parent"], type: "Folder" }) // "__-Child-Parent"
  */
-export function buildCodexBasename(
+export function buildCodexBasenameDeprecated(
 	splitPathToFolder: SplitPathToFolder,
 ): string;
 /**
@@ -34,10 +34,10 @@ export function buildCodexBasename(
  * buildCodexBasename([]) // "__-Library"
  * buildCodexBasename(["Parent"]) // "__-Child-Parent"
  */
-export function buildCodexBasename(
+export function buildCodexBasenameDeprecated(
 	section: Pick<SectionNode, "nodeName" | "nodeNameChainToParent">,
 ): string;
-export function buildCodexBasename(
+export function buildCodexBasenameDeprecated(
 	splitPathToFolderOrSection:
 		| SplitPathToFolder
 		| Pick<SectionNode, "nodeName" | "nodeNameChainToParent">,
@@ -122,7 +122,7 @@ export function tryExtractingNodeNameChainToSection(
  * tryExtractingSplitPathToFolder("__-Child-Parent") // ok({ basename: "Child", pathParts: ["Library", "Parent"], type: "Folder" })
  * tryExtractingSplitPathToFolder("Note") // err("Invalid codex basename: ...")
  */
-export function tryExtractingSplitPathToParentFolder(
+export function tryExtractingSplitPathToParentFolderDeprecated(
 	suffixedBasenameForСodex: string,
 ): Result<SplitPathToFolder, string> {
 	const sectionChainResult = tryExtractingNodeNameChainToSection(
