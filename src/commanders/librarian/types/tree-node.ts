@@ -1,5 +1,6 @@
 import z from "zod";
 import type { Prettify } from "../../../types/helpers";
+import type { NodeName } from "../naming/types/node-name";
 import {
 	DONE_STATUS,
 	FILE_NODE_TYPE,
@@ -26,8 +27,6 @@ const TreeNodeTypeSchema = z.enum([
 
 export type TreeNodeType = z.infer<typeof TreeNodeTypeSchema>;
 export const TreeNodeType = TreeNodeTypeSchema.enum;
-
-export type NodeName = string;
 
 /**
  * ScrollNode represents a markdown file in the tree.

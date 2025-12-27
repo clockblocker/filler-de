@@ -101,3 +101,8 @@ export type FOLDER_DRAG_SUBTYPE = "Folder";
 const DragInSubtypeSchema = z.enum([FILE_DRAG_SUBTYPE, FOLDER_DRAG_SUBTYPE]);
 export type DragInSubtype = z.infer<typeof DragInSubtypeSchema>;
 export const DragInSubtype = DragInSubtypeSchema.enum;
+
+/** Codex filename prefix */
+export const CustomErrorCodeSchema = z.literal("custom");
+export type CUSTOM_ERROR_CODE = z.infer<typeof CustomErrorCodeSchema>;
+export const CUSTOM_ERROR_CODE = CustomErrorCodeSchema.value;

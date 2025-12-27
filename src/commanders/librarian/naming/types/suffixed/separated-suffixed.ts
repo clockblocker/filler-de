@@ -1,5 +1,5 @@
 import z from "zod";
-import { CODEX_CORE_NAME, CodexCoreNameSchema } from "../../../types/literals";
+import { CODEX_CORE_NAME } from "../../../types/literals";
 import { NodeNameSchema, SplitSuffixSchema } from "../node-name";
 
 /**

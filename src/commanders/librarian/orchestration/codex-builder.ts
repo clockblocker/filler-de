@@ -10,7 +10,7 @@ import {
 	buildCodexBasename,
 	tryExtractingSplitPathToFolder,
 } from "../naming/interface";
-import type { NodeNameChain } from "../naming/schemas/node-name";
+import type { NodeNameChain } from "../naming/types/node-name";
 import type { SectionNode } from "../types/tree-node";
 import { TreeNodeType } from "../types/tree-node";
 import { addCodexPrefixDeprecated } from "../utils/codex-utils";

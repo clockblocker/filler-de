@@ -7,7 +7,7 @@ import {
 import {
 	JoinedSuffixedBasenameForFileSchema,
 	JoinedSuffixedBasenameForFolderSchema,
-} from "./joined-canonical";
+} from "./joined-suffixed";
 
 const SuffixedSplitPathToFolderSchema = SplitPathToFolderSchema.omit({
 	basename: true,

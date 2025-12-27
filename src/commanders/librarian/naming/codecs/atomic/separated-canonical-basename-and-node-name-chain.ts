@@ -1,7 +1,9 @@
 import z from "zod";
-import type { NodeNameChain, SeparatedSuffixedBasename } from "../../..";
-import { NodeNameChainSchema } from "../../types/node-name";
-import { SeparatedSuffixedBasenameSchema } from "../../types/suffixed/separated-canonical";
+import { type NodeNameChain, NodeNameChainSchema } from "../../types/node-name";
+import {
+	type SeparatedSuffixedBasename,
+	SeparatedSuffixedBasenameSchema,
+} from "../../types/suffixed/separated-suffixed";
 
 /**
  * Zod codec from SeparatedSuffixedBasename to NodeNameChain.

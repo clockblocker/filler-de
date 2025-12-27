@@ -1,10 +1,12 @@
 import z from "zod";
-import type { SeparatedSuffixedBasename } from "../../..";
 import {
 	type JoinedSuffixedBasename,
 	JoinedSuffixedBasenameSchema,
-} from "../../types/suffixed/joined-canonical";
-import { SeparatedSuffixedBasenameSchema } from "../../types/suffixed/separated-canonical";
+} from "../../types/suffixed/joined-suffixed";
+import {
+	type SeparatedSuffixedBasename,
+	SeparatedSuffixedBasenameSchema,
+} from "../../types/suffixed/separated-suffixed";
 import {
 	joinSeparatedSuffixedBasename,
 	separateJoinedSuffixedBasename,

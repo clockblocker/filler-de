@@ -5,7 +5,7 @@ import type {
 	SplitPathToMdFile,
 } from "../../../obsidian-vault-action-manager/types/split-path";
 import { logger } from "../../../utils/logger";
-import type { SeparatedSuffixedBasename } from "../naming/schemas/node-name";
+import type { SeparatedSuffixedBasename } from "../naming/types/suffixed/separated-suffixed";
 import { RuntimeSubtype } from "../types/literals";
 import { parseBasenameDeprecated } from "../utils/parse-basename";
 import {

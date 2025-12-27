@@ -12,7 +12,7 @@ import {
 	SPACE_F,
 	TAB,
 } from "../../../types/literals";
-import type { NodeNameChain } from "../naming/schemas/node-name";
+import type { NodeNameChain } from "../naming/types/node-name";
 import type { SectionNode, TreeNode } from "../types/tree-node";
 import { TreeNodeStatus, TreeNodeType } from "../types/tree-node";
 import { addCodexPrefixDeprecated } from "../utils/codex-utils";

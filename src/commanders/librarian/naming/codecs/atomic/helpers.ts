@@ -2,7 +2,7 @@ import { err, ok, type Result } from "neverthrow";
 import {
 	type JoinedSuffixedBasename,
 	JoinedSuffixedBasenameSchema,
-} from "../../types/suffixed/joined-canonical";
+} from "../../types/suffixed/joined-suffixed";
 import {
 	makeJoinedSuffixedBasenameFromSeparatedSuffixedBasename,
 	makeSeparatedSuffixedBasenameFromJoinedSuffixedBasename,

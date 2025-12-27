@@ -1,5 +1,5 @@
 import { getParsedUserSettings } from "../../../global-state/global-state";
-import type { SeparatedSuffixedBasename } from "../naming/schemas/node-name";
+import type { SeparatedSuffixedBasename } from "../naming/types/suffixed/separated-suffixed";
 
 /** @deprecated */
 export function parseBasenameDeprecated(

@@ -1,4 +1,7 @@
 import z from "zod";
+import { getParsedUserSettings } from "../../../../global-state/global-state";
+import { CUSTOM_ERROR_CODE } from "../../types/literals";
+import { NamingError } from "../errors";
 
 /**
  * @example
@@ -9,7 +12,24 @@ import z from "zod";
  * // For path "Library/parent/child/__-child-parent.md":
  * "__"
  */
-export const NodeNameSchema = z.string();
+export const NodeNameSchema = z.string().superRefine((val, ctx) => {
+	const { suffixDelimiter } = getParsedUserSettings();
+
+	if (val.length === 0) {
+		ctx.addIssue({
+			code: CUSTOM_ERROR_CODE,
+			message: NamingError.EmptyNodeName,
+		});
+		return;
+	}
+
+	if (val.split(suffixDelimiter).length !== 1) {
+		ctx.addIssue({
+			code: CUSTOM_ERROR_CODE,
+			message: NamingError.DelimiterInNodeName,
+		});
+	}
+});
 
 /**
  * @example

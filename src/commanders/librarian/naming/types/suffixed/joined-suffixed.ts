@@ -1,10 +1,11 @@
 import z from "zod";
+import { CUSTOM_ERROR_CODE } from "../../../types/literals";
 import { separateJoinedSuffixedBasename } from "../transformers";
 import {
 	SeparatedSuffixedBasenameForCodexSchema,
 	SeparatedSuffixedBasenameForSectionSchema,
 	SeparatedSuffixedBasenameSchema,
-} from "./separated-canonical";
+} from "./separated-suffixed";
 
 export const JoinedSuffixedBasenameSchema = joinedStringSchema(
 	SeparatedSuffixedBasenameSchema,
@@ -46,7 +47,7 @@ function joinedStringSchema<
 	return z.string().superRefine((joined, ctx) => {
 		const separated = separate(joined);
 		if (!separatedSchema.safeParse(separated).success) {
-			ctx.addIssue({ code: "custom", message });
+			ctx.addIssue({ code: CUSTOM_ERROR_CODE, message });
 		}
 	});
 }
