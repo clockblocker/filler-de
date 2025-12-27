@@ -199,9 +199,7 @@ function generateItems(
 	return lines;
 }
 
-function statusToCheckbox(
-	status: typeof TreeNodeStatus.Done | typeof TreeNodeStatus.NotStarted,
-): string {
+function statusToCheckbox(status: TreeNodeStatus): string {
 	return status === TreeNodeStatus.Done
 		? DONE_CHECKBOX
 		: NOT_STARTED_CHECKBOX;

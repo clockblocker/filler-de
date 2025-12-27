@@ -15,7 +15,7 @@ import {
  *
  * Reads settings internally to get suffix delimiter.
  */
-const separatedCanonicalBasenameToNodeNameChainCodec = z.codec(
+const separatedSuffixedBasenameToNodeNameChainCodec = z.codec(
 	SeparatedSuffixedBasenameSchema,
 	NodeNameChainSchema,
 	{
@@ -41,11 +41,11 @@ const separatedCanonicalBasenameToNodeNameChainCodec = z.codec(
 export const makeSeparatedSuffixedBasenameFromNodeNameChain = (
 	chain: NodeNameChain,
 ): SeparatedSuffixedBasename => {
-	return separatedCanonicalBasenameToNodeNameChainCodec.encode(chain);
+	return separatedSuffixedBasenameToNodeNameChainCodec.encode(chain);
 };
 
 export const makeNodeNameChainFromSeparatedSuffixedBasename = (
 	separated: SeparatedSuffixedBasename,
 ): NodeNameChain => {
-	return separatedCanonicalBasenameToNodeNameChainCodec.decode(separated);
+	return separatedSuffixedBasenameToNodeNameChainCodec.decode(separated);
 };

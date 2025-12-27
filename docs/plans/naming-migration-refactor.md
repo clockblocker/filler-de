@@ -12,7 +12,7 @@ The `__` is now part of the nodeName, not a prefix. Codexes follow the same suff
 
 ### ✅ Completed
 - `canonicalBasenameToChainCodec` - decodes/encodes section basenames to chains
-- `canonicalBasenameForCodexToParentSectionChainCodec` - decodes/encodes codex basenames to parent section chains
+- `suffixedBasenameForCodexToParentSectionChainCodec` - decodes/encodes codex basenames to parent section chains
 
 ### 📍 Migration Target
 Move naming-related code from `utils/...` to `naming/...` and make it pure/decomposable.
@@ -34,7 +34,7 @@ Move naming-related code from `utils/...` to `naming/...` and make it pure/decom
    - Currently used in: 5 files
 
 3. **`utils/codex-utils.ts`** → `naming/codecs/` (replace with codecs)
-   - `isBasenamePrefixedAsCodexDeprecated()` → use `canonicalBasenameForCodexToParentSectionChainCodec`
+   - `isBasenamePrefixedAsCodexDeprecated()` → use `suffixedBasenameForCodexToParentSectionChainCodec`
    - `addCodexPrefixDeprecated()` → **NEEDS FIX** - currently takes string but called with SectionNode
    - Currently used in: 4 files
 
@@ -121,7 +121,7 @@ Move naming-related code from `utils/...` to `naming/...` and make it pure/decom
 
 6. **`naming/codecs/codex-basename-validator-codec.ts`**
    - Replace `isBasenamePrefixedAsCodexDeprecated()`
-   - Uses `canonicalBasenameForCodexToParentSectionChainCodec.safeParse()`
+   - Uses `suffixedBasenameForCodexToParentSectionChainCodec.safeParse()`
 
 ### Phase 2: Update Call Sites
 

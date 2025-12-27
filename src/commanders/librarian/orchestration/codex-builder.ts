@@ -1,5 +1,6 @@
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import { makeSystemPathForSplitPath } from "../../../obsidian-vault-action-manager/impl/split-path";
+import { MD } from "../../../obsidian-vault-action-manager/types/literals";
 import type { SplitPathToMdFile } from "../../../obsidian-vault-action-manager/types/split-path";
 import { SplitPathType } from "../../../obsidian-vault-action-manager/types/split-path";
 import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
@@ -8,7 +9,7 @@ import { logger } from "../../../utils/logger";
 import { generateCodexContent } from "../codex";
 import {
 	buildCodexBasename,
-	tryExtractingSplitPathToFolder,
+	tryExtractingSplitPathToParentFolder,
 } from "../naming/interface";
 import type { NodeNameChain } from "../naming/types/node-name";
 import type { SectionNode } from "../types/tree-node";
@@ -57,7 +58,7 @@ export function buildCodexVaultActions(
 
 		// Codex path: inside the section folder
 		const codexSplitPathResult =
-			tryExtractingSplitPathToFolder(codexBasename);
+			tryExtractingSplitPathToParentFolder(codexBasename);
 
 		if (codexSplitPathResult.isErr()) {
 			logger.warn(
@@ -73,7 +74,11 @@ export function buildCodexVaultActions(
 		const action = {
 			payload: {
 				content,
-				splitPath: { ...codexSplitPath, extension: "md" },
+				splitPath: {
+					...codexSplitPath,
+					extension: MD,
+					type: SplitPathType.MdFile,
+				},
 			},
 			type: VaultActionType.UpsertMdFile,
 		};

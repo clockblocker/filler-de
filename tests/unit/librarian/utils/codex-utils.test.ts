@@ -1,6 +1,6 @@
 import { spyOn } from "bun:test";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { buildCodexBasename, tryExtractingNodeNameChainToSection, tryExtractingSplitPathToFolder } from "../../../../src/commanders/librarian/naming/interface";
+import { buildCodexBasename, tryExtractingNodeNameChainToSection, tryExtractingSplitPathToParentFolder } from "../../../../src/commanders/librarian/naming/interface";
 import type { TreeNode } from "../../../../src/commanders/librarian/types/tree-node";
 import { TreeNodeStatus, TreeNodeType } from "../../../../src/commanders/librarian/types/tree-node";
 import * as globalState from "../../../../src/global-state/global-state";
@@ -158,7 +158,7 @@ describe("codex-utils", () => {
 
 	describe("tryExtractingSplitPathToFolder", () => {
 		it("builds SplitPath for root folder", () => {
-			const result = tryExtractingSplitPathToFolder("__-Library");
+			const result = tryExtractingSplitPathToParentFolder("__-Library");
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
 				expect(result.value).toEqual({
@@ -170,7 +170,7 @@ describe("codex-utils", () => {
 		});
 
 		it("builds SplitPath for nested folder", () => {
-			const result = tryExtractingSplitPathToFolder("__-Child-Parent");
+			const result = tryExtractingSplitPathToParentFolder("__-Child-Parent");
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
 				expect(result.value).toEqual({
@@ -182,7 +182,7 @@ describe("codex-utils", () => {
 		});
 
 		it("builds SplitPath for deeply nested folder", () => {
-			const result = tryExtractingSplitPathToFolder("__-Grandchild-Child-Parent");
+			const result = tryExtractingSplitPathToParentFolder("__-Grandchild-Child-Parent");
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
 				expect(result.value).toEqual({
@@ -194,7 +194,7 @@ describe("codex-utils", () => {
 		});
 
 		it("returns error for non-codex basename", () => {
-			const result = tryExtractingSplitPathToFolder("Note");
+			const result = tryExtractingSplitPathToParentFolder("Note");
 			expect(result.isErr()).toBe(true);
 			if (result.isErr()) {
 				expect(result.error).toContain('Invalid codex basename: "Note"');

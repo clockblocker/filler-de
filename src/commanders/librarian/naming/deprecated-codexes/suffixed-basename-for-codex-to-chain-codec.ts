@@ -34,7 +34,7 @@ export const CanonicalBasenameForСodexSchema = z
  * Uses sectionBasenameToChainCodec internally.
  * Reads settings internally.
  */
-export const canonicalBasenameForСodexToParentSectionChainCodec = z.codec(
+export const suffixedBasenameForСodexToParentSectionChainCodec = z.codec(
 	CanonicalBasenameForСodexSchema,
 	NodeNameChainSchema,
 	{

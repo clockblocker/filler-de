@@ -60,10 +60,10 @@ export function buildCodexBasename(
 }
 
 // export function tryBuildingSplitpathToCodex(
-// 	canonicalBasenameForCodex: string,
+// 	suffixedBasenameForCodex: string,
 // ): Result<SplitPathToMdFile, string> {
 // 	const sectionChainResult = tryExtractingNodeNameChainToSection(
-// 		canonicalBasenameForCodex,
+// 		suffixedBasenameForCodex,
 // 	);
 
 // 	if (sectionChainResult.isErr()) {
@@ -84,7 +84,7 @@ export function buildCodexBasename(
  * Extract core name chain to section from codex basename.
  * Reads settings internally.
  *
- * @param canonicalBasenameForСodex - Codex basename (e.g., "__-Library" or "__-Child-Parent")
+ * @param suffixedBasenameForСodex - Codex basename (e.g., "__-Library" or "__-Child-Parent")
  * @returns Result with core name chain from root to section (e.g., [] or ["Parent", "Child"])
  *
  * @example
@@ -114,7 +114,7 @@ export function tryExtractingNodeNameChainToSection(
  * Build SplitPathToFolder for the section folder from codex basename.
  * Reads settings internally.
  *
- * @param canonicalBasenameForСodex - Codex basename (e.g., "__-Library" or "__-Child-Parent")
+ * @param suffixedBasenameForСodex - Codex basename (e.g., "__-Library" or "__-Child-Parent")
  * @returns Result with SplitPathToFolder for the section folder
  *
  * @example
@@ -122,11 +122,11 @@ export function tryExtractingNodeNameChainToSection(
  * tryExtractingSplitPathToFolder("__-Child-Parent") // ok({ basename: "Child", pathParts: ["Library", "Parent"], type: "Folder" })
  * tryExtractingSplitPathToFolder("Note") // err("Invalid codex basename: ...")
  */
-export function tryExtractingSplitPathToFolder(
-	canonicalBasenameForСodex: string,
+export function tryExtractingSplitPathToParentFolder(
+	suffixedBasenameForСodex: string,
 ): Result<SplitPathToFolder, string> {
 	const sectionChainResult = tryExtractingNodeNameChainToSection(
-		canonicalBasenameForСodex,
+		suffixedBasenameForСodex,
 	);
 	if (sectionChainResult.isErr()) {
 		return err(sectionChainResult.error);

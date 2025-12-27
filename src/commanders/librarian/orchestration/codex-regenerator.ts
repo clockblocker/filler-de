@@ -111,9 +111,7 @@ async function cleanupOrphanedCodexes(
 
 		// Extract section chain from file pathParts
 		// pathParts = [libraryRoot, ...sectionChain] or [..., libraryRoot, ...sectionChain]
-		const rootIndex = file.pathParts.findIndex(
-			(part) => part === libraryRootBasename,
-		);
+		const rootIndex = file.pathParts.indexOf(libraryRootBasename);
 
 		if (rootIndex === -1) {
 			logger.warn(
