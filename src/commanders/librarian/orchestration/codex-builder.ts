@@ -6,8 +6,8 @@ import type { VaultAction } from "../../../obsidian-vault-action-manager/types/v
 import { VaultActionType } from "../../../obsidian-vault-action-manager/types/vault-action";
 import { generateCodexContent } from "../codex";
 import {
-	buildCanonicalBasenameForCodex,
 	buildCanonicalPathPartsForCodex,
+	makeCanonicalBasenameForCodex,
 } from "../naming/functions/codexes";
 import type { NodeNameChain } from "../naming/types/node-name";
 import type { SectionNode } from "../types/tree-node";
@@ -37,7 +37,7 @@ export function buildCodexVaultActions(
 			libraryRoot: libraryRootPath,
 		});
 
-		const codexBasename = buildCanonicalBasenameForCodex(
+		const codexBasename = makeCanonicalBasenameForCodex(
 			nodeNameChainToSection,
 		);
 

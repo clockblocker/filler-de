@@ -12,6 +12,7 @@ import {
 	SPACE_F,
 	TAB,
 } from "../../../types/literals";
+import { makeCanonicalBasenameForCodex } from "../naming/functions/codexes";
 import type { NodeNameChain } from "../naming/types/node-name";
 import type { SectionNode, TreeNode } from "../types/tree-node";
 import { TreeNodeStatus, TreeNodeType } from "../types/tree-node";
@@ -81,7 +82,8 @@ function generateBacklink(
 		if (!libraryRoot) {
 			return null;
 		}
-		const rootCodexName = addCodexPrefixDeprecated(libraryRoot);
+		const rootCodexName = makeCanonicalBasenameForCodex([]);
+
 		return `[[${rootCodexName}|${BACK_ARROW} ${libraryRoot}]]`;
 	}
 
