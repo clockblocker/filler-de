@@ -6,9 +6,8 @@ import type {
 import { SplitPathType } from "../../../obsidian-vault-action-manager/types/split-path";
 import { extractMetaInfo } from "../../../services/dto-services/meta-info-manager/interface";
 import { LibraryTree } from "../library-tree";
-import { tryParseJoinedSuffixedBasenameForCodex } from "../naming/codecs/codexes/interface";
+import { tryParseJoinedSuffixedBasenameForCodex } from "../naming/codecs/atomic/parsers";
 import { TreeNodeStatus } from "../types/tree-node";
-import { isBasenamePrefixedAsCodexDeprecated } from "../utils/codex-utils";
 import { splitPathToLeafDeprecated } from "../utils/split-path-to-leaf";
 
 /**
@@ -31,7 +30,7 @@ export async function readTreeFromSplitFilesWithReaders({
 
 	// Filter out codex files (generated, not source data)
 	const fileEntries = files.filter(
-		(entry): entry is SplitPathWithReader =>
+		(entry) =>
 			(entry.type === SplitPathType.File ||
 				entry.type === SplitPathType.MdFile) &&
 			tryParseJoinedSuffixedBasenameForCodex(entry.basename).isOk(),

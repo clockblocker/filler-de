@@ -3,7 +3,6 @@ export * from "./codex-builder";
 export * from "./codex-regeneration";
 export * from "./create-handler";
 export * from "./event-handlers";
-export * from "./metadata-service";
 export * from "./metadata-writer";
 export * from "./path-parsers";
 export * from "./tree-applier";

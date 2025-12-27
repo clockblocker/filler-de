@@ -18,7 +18,7 @@ import { translateVaultAction } from "../reconciliation/vault-to-tree";
 import { TreeActionType } from "../types/literals";
 import { isBasenamePrefixedAsCodexDeprecated } from "../utils/codex-utils";
 import { resolveActions } from "./action-resolver";
-import { generateActionsForCodexRegenerationInImpactedSections } from "./codex-regeneration";
+import { buildActionsForCodexRegenerationInImpactedSections } from "./codex-regeneration";
 import { computeCreateAction } from "./create-handler";
 import {
 	extractBasenameWithoutExt,
@@ -172,7 +172,7 @@ export async function handleDelete(
 		return;
 	}
 	const splitPathsToFiles = allFilesResult.value as SplitPath[];
-	const actions = generateActionsForCodexRegenerationInImpactedSections(
+	const actions = buildActionsForCodexRegenerationInImpactedSections(
 		impactedSections,
 		splitPathsToFiles,
 		context.getSectionNode,
@@ -255,11 +255,11 @@ export async function handleRename(
 					settings.splitPathToLibraryRoot,
 				);
 				if (allFilesResult.isErr()) {
-					return;
+					return [];
 				}
 				const splitPathsToFiles = allFilesResult.value as SplitPath[];
 				const actions =
-					generateActionsForCodexRegenerationInImpactedSections(
+					buildActionsForCodexRegenerationInImpactedSections(
 						impactedSections,
 						splitPathsToFiles,
 						context.getSectionNode,
@@ -314,11 +314,11 @@ export async function handleRename(
 					settings.splitPathToLibraryRoot,
 				);
 				if (allFilesResult.isErr()) {
-					return;
+					return [];
 				}
 				const splitPathsToFiles = allFilesResult.value as SplitPath[];
 				const actions =
-					generateActionsForCodexRegenerationInImpactedSections(
+					buildActionsForCodexRegenerationInImpactedSections(
 						impactedChains,
 						splitPathsToFiles,
 						context.getSectionNode,
@@ -410,7 +410,7 @@ async function updateTreeAndCodexesForRename(
 		return;
 	}
 	const splitPathsToFiles = allFilesResult.value as SplitPath[];
-	const actions = generateActionsForCodexRegenerationInImpactedSections(
+	const actions = buildActionsForCodexRegenerationInImpactedSections(
 		impactedChains,
 		splitPathsToFiles,
 		context.getSectionNode,
@@ -475,7 +475,7 @@ export async function handleCreate(
 			return [action];
 		}
 		const splitPathsToFiles = allFilesResult.value as SplitPath[];
-		const actions = generateActionsForCodexRegenerationInImpactedSections(
+		const actions = buildActionsForCodexRegenerationInImpactedSections(
 			impactedChains,
 			splitPathsToFiles,
 			context.getSectionNode,

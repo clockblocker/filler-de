@@ -8,7 +8,7 @@ import { generateCodexContent } from "../codex";
 import {
 	buildCanonicalBasenameForCodex,
 	buildCanonicalPathPartsForCodex,
-} from "../naming/codecs/codexes/interface";
+} from "../naming/functions/codexes";
 import type { NodeNameChain } from "../naming/types/node-name";
 import type { SectionNode } from "../types/tree-node";
 
