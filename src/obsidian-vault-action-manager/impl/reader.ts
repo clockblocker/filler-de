@@ -1,3 +1,4 @@
+import { err, ok, type Result } from "neverthrow";
 import { type TFile, TFolder, type Vault } from "obsidian";
 import { logger } from "../../utils/logger";
 import type { OpenedFileService } from "../file-services/active-view/opened-file-service";
@@ -25,15 +26,23 @@ export class Reader {
 		private readonly vault: Vault,
 	) {}
 
-	async readContent(target: SplitPathToMdFile): Promise<string> {
+	async readContent(
+		target: SplitPathToMdFile,
+	): Promise<Result<string, string>> {
 		if (await this.opened.isInActiveView(target)) {
-			return this.opened.readContent(target);
+			const content = await this.opened.readContent(target);
+			return ok(content);
 		}
 		const fileResult = await this.tfileHelper.getFile(target);
 		if (fileResult.isErr()) {
-			throw new Error(`File not found: ${fileResult.error}`);
+			return err(`File not found: ${fileResult.error}`);
 		}
-		return this.vault.read(fileResult.value);
+		try {
+			const content = await this.vault.read(fileResult.value);
+			return ok(content);
+		} catch (error) {
+			return err(error instanceof Error ? error.message : String(error));
+		}
 	}
 
 	async exists(target: SplitPath): Promise<boolean> {
@@ -46,7 +55,9 @@ export class Reader {
 		return result.isOk();
 	}
 
-	async list(folder: SplitPathToFolder): Promise<SplitPath[]> {
+	async list(
+		folder: SplitPathToFolder,
+	): Promise<Result<SplitPath[], string>> {
 		const folderResult = await this.tfolderHelper.getFolder(folder);
 		const fromBg: SplitPath[] = folderResult.isOk()
 			? folderResult.value.children.map((child) => {
@@ -66,10 +77,12 @@ export class Reader {
 		for (const entry of [...fromBg, ...fromOpened]) {
 			dedup.set(makeSystemPathForSplitPath(entry), entry);
 		}
-		return Array.from(dedup.values());
+		return ok(Array.from(dedup.values()));
 	}
 
-	async listAll(folder: SplitPathToFolder): Promise<SplitPathWithTRef[]> {
+	async listAll(
+		folder: SplitPathToFolder,
+	): Promise<Result<SplitPathWithTRef[], string>> {
 		const all: SplitPathWithTRef[] = [];
 		const stack: SplitPathToFolder[] = [folder];
 
@@ -77,75 +90,95 @@ export class Reader {
 			const current = stack.pop();
 			if (!current) continue;
 
-			const children = await this.list(current);
+			const childrenResult = await this.list(current);
+			if (childrenResult.isErr()) {
+				// Skip on error, continue with other folders
+				logger.warn(
+					"[Reader] Failed to list folder:",
+					current,
+					childrenResult.error,
+				);
+				continue;
+			}
+			const children = childrenResult.value;
 			for (const child of children) {
-				try {
-					const tRef = await this.getAbstractFile(child);
-
-					if (child.type === "Folder") {
-						all.push({
-							...child,
-							tRef: tRef as unknown as TFolder,
-						} as SplitPathToFolderWithTRef);
-						stack.push(child);
-					} else if (child.type === "MdFile") {
-						all.push({
-							...child,
-							tRef: tRef as unknown as TFile,
-						} as SplitPathToMdFileWithTRef);
-					} else {
-						all.push({
-							...child,
-							tRef: tRef as unknown as TFile,
-						} as SplitPathToFileWithTRef);
-					}
-				} catch (error) {
+				const tRefResult = await this.getAbstractFile(child);
+				if (tRefResult.isErr()) {
 					// Skip files that can't be resolved (stale refs, deleted files)
 					logger.warn(
 						"[Reader] Skipping unresolvable path:",
 						child,
-						error,
+						tRefResult.error,
 					);
+					continue;
+				}
+				const tRef = tRefResult.value;
+
+				if (child.type === "Folder") {
+					all.push({
+						...child,
+						tRef: tRef as unknown as TFolder,
+					} as SplitPathToFolderWithTRef);
+					stack.push(child);
+				} else if (child.type === "MdFile") {
+					all.push({
+						...child,
+						tRef: tRef as unknown as TFile,
+					} as SplitPathToMdFileWithTRef);
+				} else {
+					all.push({
+						...child,
+						tRef: tRef as unknown as TFile,
+					} as SplitPathToFileWithTRef);
 				}
 			}
 		}
 
-		return all;
+		return ok(all);
 	}
 
-	async pwd(): Promise<SplitPathToFile | SplitPathToMdFile> {
+	async pwd(): Promise<Result<SplitPathToFile | SplitPathToMdFile, string>> {
 		const result = await this.opened.pwd();
 		if (result.isErr()) {
-			throw new Error(result.error);
+			return err(result.error);
 		}
-		return result.value;
+		return ok(result.value);
 	}
 
 	async getAbstractFile<SP extends SplitPath>(
 		target: SP,
-	): Promise<SP["type"] extends "Folder" ? TFolder : TFile> {
+	): Promise<Result<SP["type"] extends "Folder" ? TFolder : TFile, string>> {
 		if (await this.opened.exists(target)) {
-			return this.opened.getAbstractFile(target);
+			try {
+				const file = await this.opened.getAbstractFile(target);
+				return ok(file);
+			} catch (error) {
+				return err(
+					error instanceof Error ? error.message : String(error),
+				);
+			}
 		}
 		if (target.type === "Folder") {
 			const result = await this.tfolderHelper.getFolder(target);
 			if (result.isErr()) {
-				throw new Error(`Folder not found: ${result.error}`);
+				return err(`Folder not found: ${result.error}`);
 			}
-			return result.value as SP["type"] extends "Folder"
-				? TFolder
-				: TFile;
+			return ok(
+				result.value as SP["type"] extends "Folder" ? TFolder : TFile,
+			);
 		}
 		const result = await this.tfileHelper.getFile(target);
 		if (result.isErr()) {
-			throw new Error(`File not found: ${result.error}`);
+			return err(`File not found: ${result.error}`);
 		}
-		return result.value as SP["type"] extends "Folder" ? TFolder : TFile;
+		return ok(
+			result.value as SP["type"] extends "Folder" ? TFolder : TFile,
+		);
 	}
 
 	async listAllFilesWithMdReaders(
 		folder: SplitPathToFolder,
-	): Promise<SplitPathWithReader[]> {
+	): Promise<Result<SplitPathWithReader[], string>> {
 		const all: SplitPathWithReader[] = [];
 		const stack: SplitPathToFolder[] = [folder];
 
@@ -153,7 +186,11 @@ export class Reader {
 			const current = stack.pop();
 			if (!current) continue;
 
-			const children = await this.list(current);
+			const childrenResult = await this.list(current);
+			if (childrenResult.isErr()) {
+				return err(childrenResult.error);
+			}
+			const children = childrenResult.value;
 			for (const child of children) {
 				if (child.type === "Folder") {
 					stack.push(child);
@@ -170,17 +207,19 @@ export class Reader {
 			}
 		}
 
-		return all;
+		return ok(all);
 	}
 }
 
 export type ReaderApi = {
-	readContent: (p: SplitPathToMdFile) => Promise<string>;
+	readContent: (p: SplitPathToMdFile) => Promise<Result<string, string>>;
 	exists: (p: SplitPath) => Promise<boolean>;
-	list: (p: SplitPathToFolder) => Promise<SplitPath[]>;
-	listAll: (p: SplitPathToFolder) => Promise<SplitPathWithTRef[]>;
-	pwd: () => Promise<SplitPathToFile | SplitPathToMdFile>;
+	list: (p: SplitPathToFolder) => Promise<Result<SplitPath[], string>>;
+	listAll: (
+		p: SplitPathToFolder,
+	) => Promise<Result<SplitPathWithTRef[], string>>;
+	pwd: () => Promise<Result<SplitPathToFile | SplitPathToMdFile, string>>;
 	getAbstractFile: <SP extends SplitPath>(
 		p: SP,
-	) => Promise<SP["type"] extends "Folder" ? TFolder : TFile>;
+	) => Promise<Result<SP["type"] extends "Folder" ? TFolder : TFile, string>>;
 };

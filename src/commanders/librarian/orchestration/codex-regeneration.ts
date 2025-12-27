@@ -13,7 +13,7 @@ import type { NodeNameChain } from "../naming/types/node-name";
 import type { SectionNode } from "../types/tree-node";
 import { buildCodexVaultActions } from "./codex-builder";
 
-export function generateActionsForCodexRegenerationInImpactedSections(
+export function buildActionsForCodexRegenerationInImpactedSections(
 	nodeNameChains: NodeNameChain[],
 	splitPathsToFiles: SplitPath[],
 	getSectionNode: (chain: NodeNameChain) => SectionNode | null,
@@ -27,7 +27,7 @@ export function generateActionsForCodexRegenerationInImpactedSections(
 		getSectionNode,
 	);
 
-	const deleteCodexActions = generateDeleteActionsForOrphanedCodexes(
+	const deleteCodexActions = buildDeleteActionsForOrphanedCodexes(
 		splitPathsToFiles,
 		getSectionNode,
 	);
@@ -35,7 +35,7 @@ export function generateActionsForCodexRegenerationInImpactedSections(
 	return [...upsertCodexActions, ...deleteCodexActions];
 }
 
-function generateDeleteActionsForOrphanedCodexes(
+function buildDeleteActionsForOrphanedCodexes(
 	splitPathsToFiles: SplitPath[],
 	getSectionNode: (chain: NodeNameChain) => SectionNode | null,
 ): VaultAction[] {

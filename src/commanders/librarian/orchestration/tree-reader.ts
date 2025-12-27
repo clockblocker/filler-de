@@ -1,3 +1,4 @@
+import { err, ok, type Result } from "neverthrow";
 import type {
 	SplitPathToFolder,
 	SplitPathWithReader,
@@ -5,6 +6,7 @@ import type {
 import { SplitPathType } from "../../../obsidian-vault-action-manager/types/split-path";
 import { extractMetaInfo } from "../../../services/dto-services/meta-info-manager/interface";
 import { LibraryTree } from "../library-tree";
+import { tryParseJoinedSuffixedBasenameForCodex } from "../naming/codecs/codexes/interface";
 import { TreeNodeStatus } from "../types/tree-node";
 import { isBasenamePrefixedAsCodexDeprecated } from "../utils/codex-utils";
 import { splitPathToLeafDeprecated } from "../utils/split-path-to-leaf";
@@ -20,9 +22,9 @@ export async function readTreeFromSplitFilesWithReaders({
 }: {
 	splitPathToLibraryRoot: SplitPathToFolder;
 	files: SplitPathWithReader[];
-}): Promise<LibraryTree> {
+}): Promise<Result<LibraryTree, string>> {
 	if (splitPathToLibraryRoot.type !== SplitPathType.Folder) {
-		throw new Error(
+		return err(
 			`Library root is not a folder: ${splitPathToLibraryRoot.basename}`,
 		);
 	}
@@ -32,7 +34,7 @@ export async function readTreeFromSplitFilesWithReaders({
 		(entry): entry is SplitPathWithReader =>
 			(entry.type === SplitPathType.File ||
 				entry.type === SplitPathType.MdFile) &&
-			!isBasenamePrefixedAsCodexDeprecated(entry.basename),
+			tryParseJoinedSuffixedBasenameForCodex(entry.basename).isOk(),
 	);
 
 	// Create leaves and read content using read() from SplitPathWithReader
@@ -42,13 +44,15 @@ export async function readTreeFromSplitFilesWithReaders({
 
 			// Read content if md file (has read function)
 			if (entry.type === SplitPathType.MdFile && "read" in entry) {
-				const content = await entry.read();
-				const meta = extractMetaInfo(content);
-				if (meta && "status" in meta) {
-					leaf.status =
-						meta.status === "Done"
-							? TreeNodeStatus.Done
-							: TreeNodeStatus.NotStarted;
+				const contentResult = await entry.read();
+				if (contentResult.isOk()) {
+					const meta = extractMetaInfo(contentResult.value);
+					if (meta && "status" in meta) {
+						leaf.status =
+							meta.status === "Done"
+								? TreeNodeStatus.Done
+								: TreeNodeStatus.NotStarted;
+					}
 				}
 			}
 
@@ -56,5 +60,5 @@ export async function readTreeFromSplitFilesWithReaders({
 		}),
 	);
 
-	return new LibraryTree(leaves);
+	return ok(new LibraryTree(leaves));
 }

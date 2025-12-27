@@ -26,11 +26,11 @@ export const testSingleActionHappyPath = async () => {
 		await manager.dispatch([action]);
 
 		// Verify file was created by reading it
-		const content = await manager.readContent(fileSplitPath);
+		const contentResult = await manager.readContent(fileSplitPath);
 		const exists = await manager.exists(fileSplitPath);
 
 		return {
-			content,
+			content: contentResult.isOk() ? contentResult.value : null,
 			exists,
 			success: true,
 		};

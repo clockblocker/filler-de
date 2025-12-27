@@ -1,3 +1,4 @@
+import type { Result } from "neverthrow";
 import type {
 	SplitPathToFile,
 	SplitPathToFolder,
@@ -24,7 +25,7 @@ export type ActionResolverContext = {
 	) => SplitPathToFile | SplitPathToMdFile | SplitPathToFolder;
 	listAllFilesWithMdReaders: (
 		splitPath: SplitPathToFolder,
-	) => Promise<SplitPathWithReader[]>;
+	) => Promise<Result<SplitPathWithReader[], string>>;
 };
 
 /**
@@ -80,7 +81,11 @@ export async function resolveFolderRenameActions(
 	folderPath: SplitPathToFolder,
 	context: ActionResolverContext,
 ): Promise<VaultAction[]> {
-	const allEntries = await context.listAllFilesWithMdReaders(folderPath);
+	const allEntriesResult = await context.listAllFilesWithMdReaders(folderPath);
+	if (allEntriesResult.isErr()) {
+		return [];
+	}
+	const allEntries = allEntriesResult.value;
 	const fileEntries = allEntries.filter(
 		(entry): entry is SplitPathWithReader =>
 			entry.type === SplitPathType.File ||

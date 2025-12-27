@@ -22,8 +22,8 @@ export async function handleCodexCheckboxClick({
 	librarian: Librarian;
 	app: App;
 }): Promise<boolean> {
-	const pwd = await vaultActionManager.pwd();
-	if (!pwd.basename.startsWith(CODEX_CORE_NAME)) {
+	const pwdResult = await vaultActionManager.pwd();
+	if (pwdResult.isErr() || !pwdResult.value.basename.startsWith(CODEX_CORE_NAME)) {
 		return false;
 	}
 

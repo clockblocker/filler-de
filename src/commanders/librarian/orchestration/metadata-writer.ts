@@ -1,25 +1,22 @@
-import type { TFile } from "obsidian";
 import type { SplitPath } from "../../../obsidian-vault-action-manager/types/split-path";
 import { SplitPathType } from "../../../obsidian-vault-action-manager/types/split-path";
-import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
+import type {
+	Transform,
+	VaultAction,
+} from "../../../obsidian-vault-action-manager/types/vault-action";
 import { VaultActionType } from "../../../obsidian-vault-action-manager/types/vault-action";
 import {
 	editOrAddMetaInfo,
 	extractMetaInfo,
 } from "../../../services/dto-services/meta-info-manager/interface";
+import { SCROLL } from "../../../types/literals";
 import { TreeNodeStatus } from "../types/tree-node";
 
-export type MetadataWriterContext = {
-	readContent: (splitPath: SplitPath) => Promise<string>;
-	splitPath: (tFile: TFile) => SplitPath;
-};
-
 /**
- * Build action to write status to metadata in file.
- * Pure function that takes content and returns action.
+ * Build action to update status in metadata.
+ * Pure function that returns ProcessMdFile action with transform.
  */
-export function buildWriteStatusAction(
-	currentContent: string,
+export function buildWriteStatusToMetadataAction(
 	splitPath: SplitPath,
 	status: TreeNodeStatus,
 ): VaultAction | null {
@@ -27,28 +24,29 @@ export function buildWriteStatusAction(
 		return null;
 	}
 
-	const currentMeta = extractMetaInfo(currentContent);
+	const newStatus =
+		status === TreeNodeStatus.Done
+			? TreeNodeStatus.Done
+			: TreeNodeStatus.NotStarted;
 
-	// Determine fileType from existing metadata or default to Scroll
-	const fileType = currentMeta?.fileType ?? "Scroll";
+	const transform: Transform = (content: string) => {
+		const currentMeta = extractMetaInfo(content);
+		const fileType = currentMeta?.fileType;
 
-	// Only update Scroll files (not Pages or other types)
-	if (fileType !== "Scroll") {
-		return null;
-	}
+		if (fileType && fileType !== SCROLL) {
+			return content;
+		}
 
-	const newMeta = {
-		fileType: "Scroll" as const,
-		status:
-			status === TreeNodeStatus.Done
-				? TreeNodeStatus.Done
-				: TreeNodeStatus.NotStarted,
+		const newMeta = {
+			fileType: SCROLL,
+			status: newStatus,
+		};
+
+		return editOrAddMetaInfo(content, newMeta);
 	};
 
-	const updatedContent = editOrAddMetaInfo(currentContent, newMeta);
-
 	return {
-		payload: { content: updatedContent, splitPath },
-		type: VaultActionType.UpsertMdFile,
+		payload: { splitPath, transform },
+		type: VaultActionType.ProcessMdFile,
 	};
 }

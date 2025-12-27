@@ -111,7 +111,7 @@ export class ObsidianVaultActionManagerImpl
 		return this.actionQueue.dispatch(actions);
 	}
 
-	readContent(splitPathArg: SplitPathToMdFile): Promise<string> {
+	readContent(splitPathArg: SplitPathToMdFile): Promise<Result<string, string>> {
 		return this.reader.readContent(splitPathArg);
 	}
 
@@ -133,16 +133,14 @@ export class ObsidianVaultActionManagerImpl
 		return this.reader.listAllFilesWithMdReaders(splitPathArg);
 	}
 
-	pwd(): Promise<SplitPathToFile | SplitPathToMdFile> {
+	pwd(): Promise<Result<SplitPathToFile | SplitPathToMdFile, string>> {
 		return this.reader.pwd();
 	}
 
 	getAbstractFile<SP extends SplitPath>(
 		splitPathArg: SP,
-	): Promise<SP["type"] extends "Folder" ? TFolder : TFile> {
-		return this.reader.getAbstractFile(splitPathArg) as Promise<
-			SP["type"] extends "Folder" ? TFolder : TFile
-		>;
+	): Promise<Result<SP["type"] extends "Folder" ? TFolder : TFile, string>> {
+		return this.reader.getAbstractFile(splitPathArg);
 	}
 
 	splitPath(systemPath: string): SplitPath;

@@ -1,3 +1,4 @@
+import type { Result } from "neverthrow";
 import type { TAbstractFile, TFile, TFolder } from "obsidian";
 import { z } from "zod";
 import type { DispatchResult } from "./impl/dispatcher";
@@ -65,18 +66,18 @@ export interface ObsidianVaultActionManager {
 	dispatch(actions: readonly VaultAction[]): Promise<DispatchResult>;
 
 	// Read-only operations
-	readContent(splitPath: SplitPathToMdFile): Promise<string>;
+	readContent(splitPath: SplitPathToMdFile): Promise<Result<string, string>>;
 	exists(splitPath: SplitPath): Promise<boolean>;
 	isInActiveView(splitPath: SplitPath): Promise<boolean>;
-	list(splitPath: SplitPathToFolder): Promise<SplitPath[]>;
+	list(splitPath: SplitPathToFolder): Promise<Result<SplitPath[], string>>;
 	listAllFilesWithMdReaders(
 		splitPath: SplitPathToFolder,
-	): Promise<SplitPathWithReader[]>;
-	pwd(): Promise<SplitPathToFile | SplitPathToMdFile>;
+	): Promise<Result<SplitPathWithReader[], string>>;
+	pwd(): Promise<Result<SplitPathToFile | SplitPathToMdFile, string>>;
 
 	getAbstractFile<SP extends SplitPath>(
 		splitPath: SP,
-	): Promise<SP["type"] extends "Folder" ? TFolder : TFile>;
+	): Promise<Result<SP["type"] extends "Folder" ? TFolder : TFile, string>>;
 
 	// Helpers
 	splitPath(systemPath: string): SplitPath;

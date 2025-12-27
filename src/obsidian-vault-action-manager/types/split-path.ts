@@ -1,3 +1,4 @@
+import type { Result } from "neverthrow";
 import type { TFile, TFolder } from "obsidian";
 import { z } from "zod";
 import { FILE, FOLDER, MD_FILE, MdSchema } from "./literals";
@@ -56,7 +57,7 @@ export type SplitPath = z.infer<typeof SplitPathSchema>;
 export type SplitPathFromTo<T extends SplitPath> = { from: T; to: T };
 
 export type SplitPathToMdFileWithReader = SplitPathToMdFile & {
-	read: () => Promise<string>;
+	read: () => Promise<Result<string, string>>;
 };
 
 export type SplitPathWithReader = SplitPathToMdFileWithReader | SplitPathToFile;

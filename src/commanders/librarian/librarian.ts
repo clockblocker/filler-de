@@ -15,14 +15,14 @@ import { healOnInit, type InitHealResult } from "./healing";
 import type { LibraryTree } from "./library-tree";
 import type { NodeNameChain } from "./naming/types/node-name";
 import {
+	buildActionsForCodexRegenerationInImpactedSections,
+	buildWriteStatusToMetadataAction,
 	type EventHandlerContext,
-	generateActionsForCodexRegenerationInImpactedSections,
 	handleCreate,
 	handleDelete,
 	handleRename,
 	parseEventToHandler,
 	readTreeFromSplitFilesWithReaders,
-	writeStatusToMetadata,
 } from "./orchestration";
 import { collectAllSectionChains } from "./orchestration/tree-utils";
 import { TreeActionType } from "./types/literals";
@@ -46,35 +46,34 @@ export class Librarian {
 		const settings = getParsedUserSettings();
 		const rootSplitPath = settings.splitPathToLibraryRoot;
 
-		let allFiles: Awaited<
-			ReturnType<typeof this.vaultActionManager.listAllFilesWithMdReaders>
-		>;
-		try {
-			allFiles =
-				await this.vaultActionManager.listAllFilesWithMdReaders(
-					rootSplitPath,
-				);
-		} catch (error) {
+		const allFilesResult =
+			await this.vaultActionManager.listAllFilesWithMdReaders(
+				rootSplitPath,
+			);
+
+		if (allFilesResult.isErr()) {
 			logger.error(
 				"[Librarian] Failed to list files from vault:",
-				error instanceof Error ? error.message : String(error),
+				allFilesResult.error,
 			);
 			return { deleteActions: [], renameActions: [] };
 		}
+		const allFiles = allFilesResult.value;
 
-		try {
-			this.tree = await readTreeFromSplitFilesWithReaders({
-				files: allFiles,
-				splitPathToLibraryRoot: rootSplitPath,
-			});
-		} catch (error) {
+		const treeResult = await readTreeFromSplitFilesWithReaders({
+			files: allFiles,
+			splitPathToLibraryRoot: rootSplitPath,
+		});
+
+		if (treeResult.isErr()) {
 			logger.error(
 				"[Librarian] Failed to read tree from vault:",
-				error instanceof Error ? error.message : String(error),
+				treeResult.error,
 			);
 			// Return empty result if tree can't be read
 			return { deleteActions: [], renameActions: [] };
 		}
+		this.tree = treeResult.value;
 
 		const leaves = this.tree.serializeToLeaves();
 
@@ -90,12 +89,17 @@ export class Librarian {
 
 		// Regenerate all codexes with up-to-date tree
 		const allSectionChains = collectAllSectionChains(this.tree);
-		const allFilesForCodex =
+		const allFilesForCodexResult =
 			await this.vaultActionManager.listAllFilesWithMdReaders(
 				rootSplitPath,
 			);
-		const splitPathsToFiles = allFilesForCodex as SplitPath[];
-		const actions = generateActionsForCodexRegenerationInImpactedSections(
+
+		if (allFilesForCodexResult.isErr()) {
+			return healResult;
+		}
+
+		const splitPathsToFiles = allFilesForCodexResult.value as SplitPath[];
+		const actions = buildActionsForCodexRegenerationInImpactedSections(
 			allSectionChains,
 			splitPathsToFiles,
 			(chain) => this.tree.getSectionNode(chain),
@@ -254,24 +258,14 @@ export class Librarian {
 		if (node?.type === TreeNodeType.Scroll) {
 			// Build canonical path from tree structure
 			const path = buildCanonicalPathForLeafDeprecated(node);
+			const splitPath = this.vaultActionManager.splitPath(path);
 
-			try {
-				await writeStatusToMetadata(path, status, {
-					dispatch: (actions) =>
-						this.vaultActionManager.dispatch(actions),
-					readContent: (sp) => {
-						if (sp.type === "MdFile") {
-							return this.vaultActionManager.readContent(sp);
-						}
-						return Promise.resolve("");
-					},
-					splitPath: (p) => this.vaultActionManager.splitPath(p),
-				});
-			} catch (error) {
-				logger.error(
-					"[Librarian] setStatus: failed to write metadata:",
-					error instanceof Error ? error.message : String(error),
-				);
+			if (splitPath.type === "MdFile") {
+				const actions = [
+					buildWriteStatusToMetadataAction(splitPath, status),
+				].filter(Boolean) as VaultAction[];
+
+				await this.vaultActionManager.dispatch(actions);
 			}
 		}
 
@@ -287,13 +281,15 @@ export class Librarian {
 		);
 
 		const settings = getParsedUserSettings();
-		const allFilesForCodex =
+		const allFilesForCodexResult =
 			await this.vaultActionManager.listAllFilesWithMdReaders(
 				settings.splitPathToLibraryRoot,
 			);
-
-		const splitPathsToFiles = allFilesForCodex as SplitPath[];
-		const actions = generateActionsForCodexRegenerationInImpactedSections(
+		if (allFilesForCodexResult.isErr()) {
+			return;
+		}
+		const splitPathsToFiles = allFilesForCodexResult.value as SplitPath[];
+		const actions = buildActionsForCodexRegenerationInImpactedSections(
 			impactedSections,
 			splitPathsToFiles,
 			(chain) => this.tree.getSectionNode(chain),
@@ -313,15 +309,22 @@ export class Librarian {
 			throw new Error(`Library root is not a folder: ${libraryRoot}`);
 		}
 
-		const files =
+		const filesResult =
 			await this.vaultActionManager.listAllFilesWithMdReaders(
 				rootSplitPath,
 			);
+		if (filesResult.isErr()) {
+			throw new Error(`Failed to list files: ${filesResult.error}`);
+		}
 
-		return readTreeFromSplitFilesWithReaders({
-			files,
+		const treeResult = await readTreeFromSplitFilesWithReaders({
+			files: filesResult.value,
 			splitPathToLibraryRoot: rootSplitPath,
 		});
+		if (treeResult.isErr()) {
+			throw new Error(`Failed to read tree: ${treeResult.error}`);
+		}
+		return treeResult.value;
 	}
 
 	// Note: getTRefForPath removed - tRefs are no longer stored in tree nodes
