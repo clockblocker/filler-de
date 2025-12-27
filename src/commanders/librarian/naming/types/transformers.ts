@@ -13,12 +13,10 @@ export function joinSeparatedSuffixedBasename({
 	return [nodeName, ...splitSuffix].join(suffixDelimiter);
 }
 
-export function separateJoinedSuffixedBasename(
-	joinedCanonicalBasename: string,
-) {
+export function separateJoinedSuffixedBasename(joinedSuffixedBasename: string) {
 	const { suffixDelimiter } = getParsedUserSettings();
 
-	const parts = joinedCanonicalBasename.split(suffixDelimiter);
+	const parts = joinedSuffixedBasename.split(suffixDelimiter);
 	if (parts.length === 0) {
 		return { nodeName: "", splitSuffix: [] };
 	}

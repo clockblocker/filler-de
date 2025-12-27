@@ -22,7 +22,7 @@ import {
  *
  * Reads settings internally to get suffix delimiter.
  */
-const joinedCanonicalBasenameToSeparatedSuffixedBasenameCodec = z.codec(
+const joinedSuffixedBasenameToSeparatedSuffixedBasenameCodec = z.codec(
 	JoinedSuffixedBasenameSchema,
 	SeparatedSuffixedBasenameSchema,
 	{
@@ -34,7 +34,7 @@ const joinedCanonicalBasenameToSeparatedSuffixedBasenameCodec = z.codec(
 export const makeSeparatedSuffixedBasenameFromJoinedSuffixedBasename = (
 	joined: JoinedSuffixedBasename,
 ): SeparatedSuffixedBasename => {
-	return joinedCanonicalBasenameToSeparatedSuffixedBasenameCodec.decode(
+	return joinedSuffixedBasenameToSeparatedSuffixedBasenameCodec.decode(
 		joined,
 	);
 };
@@ -42,7 +42,7 @@ export const makeSeparatedSuffixedBasenameFromJoinedSuffixedBasename = (
 export const makeJoinedSuffixedBasenameFromSeparatedSuffixedBasename = (
 	separated: SeparatedSuffixedBasename,
 ): JoinedSuffixedBasename => {
-	return joinedCanonicalBasenameToSeparatedSuffixedBasenameCodec.encode(
+	return joinedSuffixedBasenameToSeparatedSuffixedBasenameCodec.encode(
 		separated,
 	);
 };

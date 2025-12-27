@@ -4,6 +4,11 @@ import type { VaultAction } from "../../../obsidian-vault-action-manager/types/v
 import { VaultActionType } from "../../../obsidian-vault-action-manager/types/vault-action";
 import { logger } from "../../../utils/logger";
 import type { LibraryTree } from "../library-tree";
+import { makeNodeNameChainFromPathParts } from "../naming/codecs/atomic/path-parts-and-node-name-chain";
+import {
+	buildCanonicalBasenameForCodex,
+	tryParseJoinedSuffixedBasenameForCodex,
+} from "../naming/codecs/codexes/interface";
 import type { NodeNameChain } from "../naming/types/node-name";
 import type { SectionNode } from "../types/tree-node";
 import { TreeNodeType } from "../types/tree-node";
@@ -98,51 +103,39 @@ async function cleanupOrphanedCodexes(
 		settings.splitPathToLibraryRoot,
 	);
 
-	// Extract section chain from pathParts (remove library root)
-	const libraryRootBasename = settings.splitPathToLibraryRoot.basename;
-
 	for (const file of allFiles) {
 		if (
 			file.type !== SplitPathType.MdFile ||
-			!isBasenamePrefixedAsCodexDeprecated(file.basename)
+			tryParseJoinedSuffixedBasenameForCodex(file.basename).isErr()
 		) {
 			continue;
 		}
 
-		// Extract section chain from file pathParts
-		// pathParts = [libraryRoot, ...sectionChain] or [..., libraryRoot, ...sectionChain]
-		const rootIndex = file.pathParts.indexOf(libraryRootBasename);
+		const splitPathToCodex = file;
 
-		if (rootIndex === -1) {
-			logger.warn(
-				"[cleanupOrphanedCodexes] codex file outside library root:",
-				JSON.stringify(file.pathParts),
-			);
-			continue;
-		}
+		const nodeNameChainToParent = makeNodeNameChainFromPathParts(
+			splitPathToCodex.pathParts,
+		);
+		const parentSectionNode = context.getNode(nodeNameChainToParent);
 
-		// Section chain is everything after library root
-		// Codex file is IN the section folder, so section chain = pathParts after root
-		const sectionChain: NodeNameChain = file.pathParts.slice(rootIndex + 1);
-
-		// Get section node
-		const node = context.getNode(sectionChain);
-		if (!node || node.type !== TreeNodeType.Section) {
+		if (
+			!parentSectionNode ||
+			parentSectionNode.type !== TreeNodeType.Section
+		) {
 			deleteActions.push({
-				payload: { splitPath: file },
+				payload: { splitPath: splitPathToCodex },
 				type: VaultActionType.TrashMdFile,
 			});
 			continue;
 		}
 
-		// Build expected codex basename (same logic as buildCodexVaultActions)
-		const section = node as SectionNode;
-		const expectedCodexBasename = addCodexPrefixDeprecated(section);
+		const canonicalBasenameForCodex = buildCanonicalBasenameForCodex(
+			nodeNameChainToParent,
+		);
 
-		// Check if codex name matches expected
-		if (file.basename !== expectedCodexBasename) {
+		if (file.basename !== canonicalBasenameForCodex) {
 			deleteActions.push({
-				payload: { splitPath: file },
+				payload: { splitPath: splitPathToCodex },
 				type: VaultActionType.TrashMdFile,
 			});
 		}
@@ -152,6 +145,8 @@ async function cleanupOrphanedCodexes(
 		await context.dispatch(deleteActions);
 	}
 }
+
+
 
 /**
  * Regenerate codexes for ALL sections in tree.

@@ -1,4 +1,1 @@
-export {
-	type TranslationContext,
-	translateVaultAction,
-} from "./vault-to-tree";
+export { translateVaultAction } from "./vault-to-tree";
