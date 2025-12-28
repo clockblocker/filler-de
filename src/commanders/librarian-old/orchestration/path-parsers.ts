@@ -1,5 +1,5 @@
 import { getParsedUserSettings } from "../../../global-state/global-state";
-import type { NodeNameChain } from "../types/schemas/node-name";
+import type { NodeNameChain } from "../../librarin-shared/types/node-name";
 import { parseBasenameDeprecated } from "../utils/parse-basename";
 
 /**

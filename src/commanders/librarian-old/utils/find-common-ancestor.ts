@@ -1,4 +1,4 @@
-import type { NodeNameChain } from "../types/schemas/node-name";
+import type { NodeNameChain } from "../../librarin-shared/types/node-name";
 
 export function findCommonAncestor(
 	nodeNameChains: NodeNameChain[],

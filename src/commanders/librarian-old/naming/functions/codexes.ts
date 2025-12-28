@@ -1,6 +1,6 @@
 import { getParsedUserSettings } from "../../../../global-state/global-state";
+import type { NodeNameChain } from "../../../librarin-shared/types/node-name";
 import { CODEX_CORE_NAME } from "../../types/literals";
-import type { NodeNameChain } from "../../types/schemas/node-name";
 import type { SectionNode } from "../../types/tree-node";
 import { makePathPartsFromNodeNameChain } from "../codecs/atomic/path-parts-and-node-name-chain";
 import {

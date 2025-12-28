@@ -1,9 +1,9 @@
 import z from "zod";
-import { CODEX_CORE_NAME } from "../../../types/literals";
 import {
 	NodeNameSchema,
 	SplitSuffixSchema,
-} from "../../../types/schemas/node-name";
+} from "../../../../librarin-shared/types/node-name";
+import { CODEX_CORE_NAME } from "../../../types/literals";
 
 /**
  * @example

@@ -1,4 +1,4 @@
-import type { NodeNameChain } from "../../types/schemas/node-name";
+import type { NodeNameChain } from "../../../librarin-shared/types/node-name";
 import { makeJoinedSuffixedBasenameFromSeparatedSuffixedBasename } from "../codecs/atomic/joined-canonical-basename-and-separated-canonical-basename";
 import {
 	tryParseJoinedSuffixedBasenameForFile,

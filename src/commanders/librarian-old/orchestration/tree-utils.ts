@@ -1,6 +1,6 @@
 import { getParsedUserSettings } from "../../../global-state/global-state";
+import type { NodeNameChain } from "../../librarin-shared/types/node-name";
 import type { LibraryTree } from "../library-tree";
-import type { NodeNameChain } from "../types/schemas/node-name";
 import type { SectionNode } from "../types/tree-node";
 import { TreeNodeType } from "../types/tree-node";
 

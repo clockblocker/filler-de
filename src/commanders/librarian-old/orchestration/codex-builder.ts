@@ -2,12 +2,12 @@ import { MD } from "../../../obsidian-vault-action-manager/types/literals";
 import { SplitPathType } from "../../../obsidian-vault-action-manager/types/split-path";
 import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
 import { VaultActionType } from "../../../obsidian-vault-action-manager/types/vault-action";
+import type { NodeNameChain } from "../../librarin-shared/types/node-name";
 import { generateCodexContent } from "../codex";
 import {
 	buildCanonicalPathPartsForCodex,
 	makeCanonicalBasenameForCodexFromSectionNode,
 } from "../naming/functions/codexes";
-import type { NodeNameChain } from "../types/schemas/node-name";
 import type { SectionNode } from "../types/tree-node";
 
 /**

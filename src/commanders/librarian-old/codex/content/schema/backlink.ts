@@ -6,7 +6,7 @@ import {
 	PIPE,
 	SPACE_F,
 } from "../../../../../types/literals";
-import { NodeNameSchema } from "../../../types/schemas/node-name";
+import { NodeNameSchema } from "../../../../librarin-shared/types/node-name";
 
 // Filename can contain delimiters, so we use a more permissive string
 // but exclude the pipe and brackets used in the link format

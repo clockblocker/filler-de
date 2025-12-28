@@ -1,10 +1,10 @@
 import z from "zod";
 import { getParsedUserSettings } from "../../../../global-state/global-state";
-import { CODEX_CORE_NAME } from "../../types/literals";
 import {
 	type NodeNameChain,
 	NodeNameChainSchema,
-} from "../../types/schemas/node-name";
+} from "../../../librarin-shared/types/node-name";
+import { CODEX_CORE_NAME } from "../../types/literals";
 import { canonicalBasenameToChainCodec } from "./suffixed-basename-to-chain-codec";
 
 /**

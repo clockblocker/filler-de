@@ -2,8 +2,8 @@
  * Utilities for collecting and expanding impacted chains.
  */
 
-import type { NodeNameChain } from "../../librarian-old/types/schemas/node-name";
 import { joinPathParts } from "../../librarian-old/utils/tree-path-utils";
+import type { NodeNameChain } from "../types/node-name";
 
 /**
  * Flatten result from applyTreeAction into array of chains.

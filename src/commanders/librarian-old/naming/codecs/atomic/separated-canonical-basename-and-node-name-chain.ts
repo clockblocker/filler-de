@@ -3,7 +3,7 @@ import { getParsedUserSettings } from "../../../../../global-state/global-state"
 import {
 	type NodeNameChain,
 	NodeNameChainSchema,
-} from "../../../types/schemas/node-name";
+} from "../../../../librarin-shared/types/node-name";
 import {
 	type SeparatedSuffixedBasename,
 	SeparatedSuffixedBasenameSchema,

@@ -4,7 +4,7 @@ import {
 	type SplitPathToFolder,
 	SplitPathType,
 } from "../../../obsidian-vault-action-manager/types/split-path";
-import type { NodeNameChain } from "../types/schemas/node-name";
+import type { NodeNameChain } from "../../librarin-shared/types/node-name";
 import type { SectionNode } from "../types/tree-node";
 import { codexBasenameToSectionChainCodec } from "./deprecated-codexes/suffixed-basename-for-codex-to-chain-codec";
 import { treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse } from "./deprecated-codexes/tree-node-to-split-path-codec";

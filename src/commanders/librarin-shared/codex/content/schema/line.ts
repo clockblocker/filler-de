@@ -8,7 +8,7 @@ import {
 	PIPE,
 	SPACE_F,
 } from "../../../../../types/literals";
-import { NodeNameSchema } from "../../../../librarian-old/types/schemas/node-name";
+import { NodeNameSchema } from "../../../types/node-name";
 import type { CodexLineType } from "./literals";
 
 // Filename can contain delimiters, so we use a more permissive string

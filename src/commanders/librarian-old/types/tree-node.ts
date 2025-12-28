@@ -1,5 +1,6 @@
 import z from "zod";
 import type { Prettify } from "../../../types/helpers";
+import type { NodeName } from "../../librarin-shared/types/node-name";
 import {
 	DONE_STATUS,
 	FILE_NODE_TYPE,
@@ -8,7 +9,6 @@ import {
 	SECTION_NODE_TYPE,
 	UNKNOWN_STATUS,
 } from "./literals";
-import type { NodeName } from "./schemas/node-name";
 
 const TreeNodeStatusSchema = z.enum([
 	DONE_STATUS,

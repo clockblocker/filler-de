@@ -1,4 +1,10 @@
 // Click handler
+
+export type {
+	NodeName,
+	NodeNameChain,
+	SplitSuffix,
+} from "../librarin-shared/types/node-name";
 export {
 	handleCodexCheckboxClick,
 	isTaskCheckbox,
@@ -21,11 +27,6 @@ export {
 	HealingMode,
 	RuntimeSubtype,
 } from "./types/literals";
-export type {
-	NodeName,
-	NodeNameChain,
-	SplitSuffix,
-} from "./types/schemas/node-name";
 export type { TreeAction } from "./types/tree-action";
 export type {
 	FileNode,

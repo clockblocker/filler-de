@@ -5,6 +5,7 @@ import { systemPathFromSplitPathInternal } from "../../../obsidian-vault-action-
 import type { SplitPath } from "../../../obsidian-vault-action-manager/types/split-path";
 import { SplitPathType } from "../../../obsidian-vault-action-manager/types/split-path";
 import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
+import type { NodeNameChain } from "../../librarin-shared/types/node-name";
 import {
 	dedupeChains,
 	expandAllToAncestors,
@@ -15,7 +16,6 @@ import { detectRenameMode } from "../healing";
 import type { LibraryTree } from "../library-tree";
 import { translateVaultAction } from "../reconciliation/vault-to-tree";
 import { TreeActionType } from "../types/literals";
-import type { NodeNameChain } from "../types/schemas/node-name";
 import { isBasenamePrefixedAsCodexDeprecated } from "../utils/codex-utils";
 import { resolveActions } from "./action-resolver";
 import { buildActionsForCodexRegenerationInImpactedSections } from "./codex-regeneration";
