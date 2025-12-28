@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import type { TFolder } from "obsidian";
 import { LibraryTree } from "../../../../src/commanders/librarian-old/library-tree";
-import { TreeActionType } from "../../../../src/commanders/librarian-old/types/literals";
 import type { TreeLeaf } from "../../../../src/commanders/librarian-old/types/tree-node";
 import {
 	type SectionNode,
 	TreeNodeStatus,
 	TreeNodeType,
 } from "../../../../src/commanders/librarian-old/types/tree-node";
+import { TreeActionType } from "../../../../src/commanders/librarin-shared/types/literals";
 import * as globalState from "../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
 import { SplitPathType } from "../../../../src/obsidian-vault-action-manager/types/split-path";

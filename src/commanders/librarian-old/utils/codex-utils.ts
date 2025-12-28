@@ -1,4 +1,4 @@
-import { CODEX_CORE_NAME } from "../types/literals";
+import { CODEX_CORE_NAME } from "../../librarin-shared/types/literals";
 
 /** @deprecated Use codexBasenameToChainCodec instead */
 export function isBasenamePrefixedAsCodexDeprecated(basename: string): boolean {

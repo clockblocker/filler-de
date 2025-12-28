@@ -7,7 +7,7 @@ import {
 	DragInSubtype,
 	HealingMode,
 	RuntimeSubtype,
-} from "../../../../src/commanders/librarian-old/types/literals";
+} from "../../../../src/commanders/librarin-shared/types/literals";
 
 const LIBRARY_ROOT = "Library";
 

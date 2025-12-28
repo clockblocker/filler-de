@@ -1,6 +1,6 @@
 import z from "zod";
 import { FILE } from "../../../../../obsidian-vault-action-manager/types/literals";
-import { SCROLL_NODE_TYPE } from "../../../../librarian-old/types/literals";
+import { SCROLL_NODE_TYPE } from "../../../types/literals";
 
 const ChildSectionCodexLineTypeSchema = z.literal("ChildSectionCodex");
 export type CHILD_SECTION_CODEX_LINE_TYPE = z.infer<

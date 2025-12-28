@@ -1,5 +1,5 @@
 import z from "zod";
-import { CUSTOM_ERROR_CODE } from "../../../types/literals";
+import { CUSTOM_ERROR_CODE } from "../../../../librarin-shared/types/literals";
 import { separateJoinedSuffixedBasename } from "../transformers";
 import {
 	SeparatedSuffixedBasenameForCodexSchema,

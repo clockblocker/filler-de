@@ -8,7 +8,7 @@ import {
 	type VaultAction,
 	VaultActionType,
 } from "../../../obsidian-vault-action-manager/types/vault-action";
-import { DragInSubtype } from "../types/literals";
+import { DragInSubtype } from "../../librarin-shared/types/literals";
 import { parseBasenameDeprecated } from "../utils/parse-basename";
 import {
 	computePathPartsFromSuffixDepreacated,

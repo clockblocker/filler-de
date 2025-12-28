@@ -1,6 +1,6 @@
 import { err, ok, type Result } from "neverthrow";
 import z from "zod";
-import { CUSTOM_ERROR_CODE } from "../types/literals";
+import { CUSTOM_ERROR_CODE } from "../../librarin-shared/types/literals";
 
 type ZodIssue = z.core.$ZodIssue;
 

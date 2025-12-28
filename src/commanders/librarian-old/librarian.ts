@@ -7,6 +7,7 @@ import { makeSplitPath } from "../../obsidian-vault-action-manager";
 import type { SplitPath } from "../../obsidian-vault-action-manager/types/split-path";
 import type { VaultAction } from "../../obsidian-vault-action-manager/types/vault-action";
 import { logger } from "../../utils/logger";
+import { TreeActionType } from "../librarin-shared/types/literals";
 import type { NodeNameChain } from "../librarin-shared/types/node-name";
 import {
 	dedupeChains,
@@ -26,7 +27,6 @@ import {
 	readTreeFromSplitFilesWithReaders,
 } from "./orchestration";
 import { collectAllSectionChains } from "./orchestration/tree-utils";
-import { TreeActionType } from "./types/literals";
 import { TreeNodeStatus, TreeNodeType } from "./types/tree-node";
 import { buildCanonicalPathForLeaf } from "./utils/tree-path-utils";
 

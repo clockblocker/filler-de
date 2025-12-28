@@ -3,11 +3,11 @@ import type { App } from "obsidian";
 import { MarkdownView } from "obsidian";
 import type { ObsidianVaultActionManager } from "../../obsidian-vault-action-manager";
 import { logger } from "../../utils/logger";
+import { CODEX_CORE_NAME } from "../librarin-shared/types/literals";
 import type { NodeNameChain } from "../librarin-shared/types/node-name";
 import { tryParseAsIntendedTreeNode } from "./codex/content/intended-tree-node-and-codex-line";
 import { CodexLineType } from "./codex/content/schema/literals";
 import type { Librarian } from "./librarian";
-import { CODEX_CORE_NAME } from "./types/literals";
 
 /**
  * Handle codex checkbox click.

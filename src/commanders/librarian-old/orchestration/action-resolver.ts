@@ -9,15 +9,15 @@ import { SplitPathType } from "../../../obsidian-vault-action-manager/types/spli
 import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
 import { VaultActionType } from "../../../obsidian-vault-action-manager/types/vault-action";
 import {
+	type DragInSubtype,
+	HealingMode,
+	RuntimeSubtype,
+} from "../../librarin-shared/types/literals";
+import {
 	handleDragIn,
 	type RenameIntent,
 	resolveRuntimeIntent,
 } from "../healing";
-import {
-	type DragInSubtype,
-	HealingMode,
-	RuntimeSubtype,
-} from "../types/literals";
 
 export type ActionResolverContext = {
 	makeSplitPath: (

@@ -1,4 +1,8 @@
-import { DragInSubtype, HealingMode, RuntimeSubtype } from "../types/literals";
+import {
+	DragInSubtype,
+	HealingMode,
+	RuntimeSubtype,
+} from "../../librarin-shared/types/literals";
 
 /**
  * Event mode classification for healing.

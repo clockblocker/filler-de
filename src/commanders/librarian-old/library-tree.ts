@@ -1,9 +1,9 @@
 import { getParsedUserSettings } from "../../global-state/global-state";
+import { TreeActionType } from "../librarin-shared/types/literals";
 import type {
 	NodeName,
 	NodeNameChain,
 } from "../librarin-shared/types/node-name";
-import { TreeActionType } from "./types/literals";
 import type {
 	ChangeNodeNameAction,
 	ChangeNodeStatusAction,
