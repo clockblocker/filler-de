@@ -6,7 +6,7 @@ import {
 	expandToAncestors,
 	findCommonAncestor,
 	flattenActionResult,
-} from "../../../../src/commanders/librarian/codex/impacted-chains";
+} from "../../../../src/commanders/librarian-old/codex/impacted-chains";
 
 describe("impacted-chains", () => {
 	describe("flattenActionResult", () => {

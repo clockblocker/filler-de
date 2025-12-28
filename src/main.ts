@@ -4,11 +4,11 @@ import {
 	Plugin,
 	type WorkspaceLeaf,
 } from "obsidian";
-import { Librarian, LibraryTree } from "./commanders/librarian";
+import { Librarian, LibraryTree } from "./commanders/librarian-old";
 import {
 	handleCodexCheckboxClick,
 	isTaskCheckbox,
-} from "./commanders/librarian/handle-codex-checkbox-click";
+} from "./commanders/librarian-old/handle-codex-checkbox-click";
 import { clearState, initializeState } from "./global-state/global-state";
 import {
 	makeSplitPath,

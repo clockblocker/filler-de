@@ -1,8 +1,8 @@
 import { spyOn } from "bun:test";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { buildCodexBasenameDeprecated, tryExtractingNodeNameChainToSection, tryExtractingSplitPathToParentFolderDeprecated } from "../../../../src/commanders/librarian/naming/interface";
-import type { TreeNode } from "../../../../src/commanders/librarian/types/tree-node";
-import { TreeNodeStatus, TreeNodeType } from "../../../../src/commanders/librarian/types/tree-node";
+import { buildCodexBasenameDeprecated, tryExtractingNodeNameChainToSection, tryExtractingSplitPathToParentFolderDeprecated } from "../../../../src/commanders/librarian-old/naming/interface";
+import type { TreeNode } from "../../../../src/commanders/librarian-old/types/tree-node";
+import { TreeNodeStatus, TreeNodeType } from "../../../../src/commanders/librarian-old/types/tree-node";
 import * as globalState from "../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
 import type { SplitPathToFolder } from "../../../../src/obsidian-vault-action-manager/types/split-path";

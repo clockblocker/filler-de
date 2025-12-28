@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { resolveRuntimeIntent } from "../../../../src/commanders/librarian/healing/intent-resolver";
-import { RuntimeSubtype } from "../../../../src/commanders/librarian/types/literals";
+import { resolveRuntimeIntent } from "../../../../src/commanders/librarian-old/healing/intent-resolver";
+import { RuntimeSubtype } from "../../../../src/commanders/librarian-old/types/literals";
 import * as globalState from "../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
 import type { SplitPathToMdFile } from "../../../../src/obsidian-vault-action-manager/types/split-path";

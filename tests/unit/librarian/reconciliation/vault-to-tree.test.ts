@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { translateVaultAction } from "../../../../src/commanders/librarian/reconciliation/vault-to-tree";
-import { TreeActionType } from "../../../../src/commanders/librarian/types/literals";
-import { TreeNodeStatus, TreeNodeType } from "../../../../src/commanders/librarian/types/tree-node";
+import { translateVaultAction } from "../../../../src/commanders/librarian-old/reconciliation/vault-to-tree";
+import { TreeActionType } from "../../../../src/commanders/librarian-old/types/literals";
+import { TreeNodeStatus, TreeNodeType } from "../../../../src/commanders/librarian-old/types/tree-node";
 import * as globalState from "../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
 import { SplitPathType } from "../../../../src/obsidian-vault-action-manager/types/split-path";

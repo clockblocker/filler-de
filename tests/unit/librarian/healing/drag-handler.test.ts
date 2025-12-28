@@ -3,8 +3,8 @@ import {
 	handleDragIn,
 	handleFileDragIn,
 	handleFolderDragIn,
-} from "../../../../src/commanders/librarian/healing/drag-handler";
-import { DragInSubtype } from "../../../../src/commanders/librarian/types/literals";
+} from "../../../../src/commanders/librarian-old/healing/drag-handler";
+import { DragInSubtype } from "../../../../src/commanders/librarian-old/types/literals";
 import * as globalState from "../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
 import type {

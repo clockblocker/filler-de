@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import z from "zod";
-import  { makeJoinedSuffixedBasenameFromSeparatedSuffixedBasename, makeSeparatedSuffixedBasenameFromJoinedSuffixedBasename } from "../../../../../src/commanders/librarian/naming/codecs/atomic/joined-canonical-basename-and-separated-canonical-basename";
-import  { makeNodeNameChainFromPathParts, makePathPartsFromNodeNameChain } from "../../../../../src/commanders/librarian/naming/codecs/atomic/path-parts-and-node-name-chain";
-import  { makeNodeNameChainFromSeparatedSuffixedBasename, makeSeparatedSuffixedBasenameFromNodeNameChain } from "../../../../../src/commanders/librarian/naming/codecs/atomic/separated-canonical-basename-and-node-name-chain";
+import  { makeJoinedSuffixedBasenameFromSeparatedSuffixedBasename, makeSeparatedSuffixedBasenameFromJoinedSuffixedBasename } from "../../../../../src/commanders/librarian-old/naming/codecs/atomic/joined-canonical-basename-and-separated-canonical-basename";
+import  { makeNodeNameChainFromPathParts, makePathPartsFromNodeNameChain } from "../../../../../src/commanders/librarian-old/naming/codecs/atomic/path-parts-and-node-name-chain";
+import  { makeNodeNameChainFromSeparatedSuffixedBasename, makeSeparatedSuffixedBasenameFromNodeNameChain } from "../../../../../src/commanders/librarian-old/naming/codecs/atomic/separated-canonical-basename-and-node-name-chain";
 import * as globalState from "../../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../../src/global-state/parsed-settings";
 import { SplitPathType } from "../../../../../src/obsidian-vault-action-manager/types/split-path";

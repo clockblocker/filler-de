@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { suffixedBasenameForСodexToParentSectionChainCodec } from "../../../../../src/commanders/librarian/naming/deprecated-codexes/suffixed-basename-for-codex-to-chain-codec";
-import { CODEX_CORE_NAME } from "../../../../../src/commanders/librarian/types/literals";
+import { suffixedBasenameForСodexToParentSectionChainCodec } from "../../../../../src/commanders/librarian-old/naming/deprecated-codexes/suffixed-basename-for-codex-to-chain-codec";
+import { CODEX_CORE_NAME } from "../../../../../src/commanders/librarian-old/types/literals";
 import * as globalState from "../../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../../src/global-state/parsed-settings";
 import { SplitPathType } from "../../../../../src/obsidian-vault-action-manager/types/split-path";

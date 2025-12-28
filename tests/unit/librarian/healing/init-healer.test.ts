@@ -3,9 +3,9 @@ import {
 	getExpectedBasename,
 	healOnInit,
 	leafNeedsHealing,
-} from "../../../../src/commanders/librarian/healing/init-healer";
-import type { TreeLeaf } from "../../../../src/commanders/librarian/types/tree-node";
-import { TreeNodeStatus, TreeNodeType } from "../../../../src/commanders/librarian/types/tree-node";
+} from "../../../../src/commanders/librarian-old/healing/init-healer";
+import type { TreeLeaf } from "../../../../src/commanders/librarian-old/types/tree-node";
+import { TreeNodeStatus, TreeNodeType } from "../../../../src/commanders/librarian-old/types/tree-node";
 import * as globalState from "../../../../src/global-state/global-state";
 import { getParsedUserSettings } from "../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";

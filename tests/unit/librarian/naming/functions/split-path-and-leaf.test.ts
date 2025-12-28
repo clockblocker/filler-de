@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { buildCanonicalSplitPathFromNode } from "../../../../../src/commanders/librarian/naming/functions/split-path-and-leaf";
+import { buildCanonicalSplitPathFromNode } from "../../../../../src/commanders/librarian-old/naming/functions/split-path-and-leaf";
 import type {
 	FileNode,
 	ScrollNode,
 	SectionNode,
-} from "../../../../../src/commanders/librarian/types/tree-node";
-import { TreeNodeStatus, TreeNodeType } from "../../../../../src/commanders/librarian/types/tree-node";
+} from "../../../../../src/commanders/librarian-old/types/tree-node";
+import { TreeNodeStatus, TreeNodeType } from "../../../../../src/commanders/librarian-old/types/tree-node";
 import * as globalState from "../../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../../src/global-state/parsed-settings";
 import { SplitPathType } from "../../../../../src/obsidian-vault-action-manager/types/split-path";

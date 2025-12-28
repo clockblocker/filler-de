@@ -9,7 +9,7 @@ import {
 	pathPartsHaveSuffixDepreacated,
 	sanitizeFolderNameDepreacated,
 	suffixMatchesPathDepreacated,
-} from "../../../../src/commanders/librarian/utils/path-suffix-utils";
+} from "../../../../src/commanders/librarian-old/utils/path-suffix-utils";
 import * as globalState from "../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
 import { SplitPathType } from "../../../../src/obsidian-vault-action-manager/types/split-path";

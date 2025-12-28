@@ -3,9 +3,9 @@ import {
 	buildCanonicalPathPartsForCodex,
 	makeCanonicalBasenameForCodexFromSectionNode,
 	makeNodeNameChainToParentFromSeparatedCanonicalBasenameForCodex,
-} from "../../../../../src/commanders/librarian/naming/functions/codexes";
-import { separateJoinedSuffixedBasename } from "../../../../../src/commanders/librarian/naming/types/transformers";
-import { TreeNodeStatus, TreeNodeType } from "../../../../../src/commanders/librarian/types/tree-node";
+} from "../../../../../src/commanders/librarian-old/naming/functions/codexes";
+import { separateJoinedSuffixedBasename } from "../../../../../src/commanders/librarian-old/naming/types/transformers";
+import { TreeNodeStatus, TreeNodeType } from "../../../../../src/commanders/librarian-old/types/tree-node";
 import * as globalState from "../../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../../src/global-state/parsed-settings";
 import { SplitPathType } from "../../../../../src/obsidian-vault-action-manager/types/split-path";

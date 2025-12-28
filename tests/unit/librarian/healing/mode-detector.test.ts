@@ -2,12 +2,12 @@ import { describe, expect, it } from "bun:test";
 import {
 	createInitMode,
 	detectRenameMode,
-} from "../../../../src/commanders/librarian/healing/mode-detector";
+} from "../../../../src/commanders/librarian-old/healing/mode-detector";
 import {
 	DragInSubtype,
 	HealingMode,
 	RuntimeSubtype,
-} from "../../../../src/commanders/librarian/types/literals";
+} from "../../../../src/commanders/librarian-old/types/literals";
 
 const LIBRARY_ROOT = "Library";
 
