@@ -10,10 +10,10 @@ export const testSingleActionHappyPath = async () => {
 			| undefined;
 		if (!api) throw new Error("testing api unavailable");
 
-		const { manager, splitPath } = api;
+		const { manager, makeSplitPath } = api;
 
 		// Create a single UpsertMdFile action
-		const fileSplitPath = splitPath("dispatcher-test.md");
+		const fileSplitPath = makeSplitPath("dispatcher-test.md");
 		const action = {
 			payload: {
 				content: "# Dispatcher Test",

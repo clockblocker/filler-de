@@ -10,7 +10,7 @@ export const testUserEventEmission = async () => {
 			| undefined;
 		if (!api) throw new Error("testing api unavailable");
 
-		const { manager, splitPath } = api;
+		const { manager, makeSplitPath } = api;
 
 		// Subscribe to events
 		const eventsReceived: Array<{ type: string; path?: string }> = [];

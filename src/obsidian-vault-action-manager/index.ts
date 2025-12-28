@@ -3,9 +3,9 @@ import type { TAbstractFile, TFile, TFolder } from "obsidian";
 import { z } from "zod";
 import type { DispatchResult } from "./impl/dispatcher";
 import {
-	splitPath as buildSplitPath,
+	makeSplitPath,
 	makeSystemPathForSplitPath,
-} from "./impl/split-path";
+} from "./impl/split-path-and-system-path";
 import { CREATE, FILE, FOLDER, RENAME, TRASH } from "./types/literals";
 import type {
 	SplitPath,
@@ -79,27 +79,14 @@ export interface ObsidianVaultActionManager {
 		splitPath: SP,
 	): Promise<Result<SP["type"] extends "Folder" ? TFolder : TFile, string>>;
 
-	// Helpers
-	splitPath(systemPath: string): SplitPath;
-	splitPath(tFile: TFile): SplitPathToFile | SplitPathToMdFile;
-	splitPath(tFolder: TFolder): SplitPathToFolder;
-	splitPath(tAbstractFile: TAbstractFile): SplitPath;
+	makeSplitPath(systemPath: string): SplitPath;
+	makeSplitPath(tFile: TFile): SplitPathToFile | SplitPathToMdFile;
+	makeSplitPath(tFolder: TFolder): SplitPathToFolder;
+	makeSplitPath(tAbstractFile: TAbstractFile): SplitPath;
 }
 
 export { makeSystemPathForSplitPath };
-export type { DispatchError, DispatchResult } from "./impl/dispatcher";
-
-export function splitPath(path: string): SplitPath;
-export function splitPath(file: TFile): SplitPathToFile | SplitPathToMdFile;
-export function splitPath(folder: TFolder): SplitPathToFolder;
-export function splitPath(file: TAbstractFile): SplitPath;
-export function splitPath(
-	input: string | TAbstractFile,
-): SplitPath | SplitPathToFile | SplitPathToMdFile | SplitPathToFolder {
-	if (typeof input === "string") {
-		return buildSplitPath(input);
-	}
-	return buildSplitPath(input);
-}
+export { makeSplitPath };
 
 export { ObsidianVaultActionManagerImpl } from "./facade";
+export type { DispatchError, DispatchResult } from "./impl/dispatcher";

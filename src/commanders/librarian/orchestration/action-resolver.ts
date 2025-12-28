@@ -20,7 +20,7 @@ import {
 } from "../types/literals";
 
 export type ActionResolverContext = {
-	splitPath: (
+	makeSplitPath: (
 		path: string,
 	) => SplitPathToFile | SplitPathToMdFile | SplitPathToFolder;
 	listAllFilesWithMdReaders: (
@@ -81,7 +81,8 @@ export async function resolveFolderRenameActions(
 	folderPath: SplitPathToFolder,
 	context: ActionResolverContext,
 ): Promise<VaultAction[]> {
-	const allEntriesResult = await context.listAllFilesWithMdReaders(folderPath);
+	const allEntriesResult =
+		await context.listAllFilesWithMdReaders(folderPath);
 	if (allEntriesResult.isErr()) {
 		return [];
 	}
@@ -121,8 +122,8 @@ export function resolveRuntimeActions(
 	isFolder: boolean,
 	context: ActionResolverContext,
 ): VaultAction[] | Promise<VaultAction[]> {
-	const oldSplitPath = context.splitPath(oldPath);
-	const newSplitPath = context.splitPath(newPath);
+	const oldSplitPath = context.makeSplitPath(oldPath);
+	const newSplitPath = context.makeSplitPath(newPath);
 
 	// Folder renames: handled via resolveFolderRenameActions
 	if (
@@ -174,7 +175,7 @@ export function resolveActions(
 			return resolveDragInActions(
 				newPath,
 				mode.subtype as DragInSubtype,
-				context.splitPath,
+				context.makeSplitPath,
 			);
 
 		case HealingMode.Init:

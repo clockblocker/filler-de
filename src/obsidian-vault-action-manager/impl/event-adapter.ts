@@ -6,7 +6,7 @@ import type {
 	SplitPathToMdFile,
 } from "../types/split-path";
 import type { SelfEventTrackerLegacy } from "./self-event-tracker";
-import { splitPath } from "./split-path";
+import { makeSplitPath } from "./split-path-and-system-path";
 
 export class EventAdapter {
 	private listeners: Array<() => void> = [];
@@ -47,7 +47,7 @@ export class EventAdapter {
 			return;
 		}
 
-		const split = splitPath(tAbstractFile);
+		const split = makeSplitPath(tAbstractFile);
 		if (split.type === "Folder") {
 			void handler({
 				splitPath: split as SplitPathToFolder,
@@ -72,8 +72,8 @@ export class EventAdapter {
 			return;
 		}
 
-		const split = splitPath(tAbstractFile);
-		const from = splitPath(oldPath);
+		const split = makeSplitPath(tAbstractFile);
+		const from = makeSplitPath(oldPath);
 
 		if (split.type === "Folder" && from.type === "Folder") {
 			void handler({
@@ -100,7 +100,7 @@ export class EventAdapter {
 			return;
 		}
 
-		const split = splitPath(tAbstractFile);
+		const split = makeSplitPath(tAbstractFile);
 		if (split.type === "Folder") {
 			void handler({
 				splitPath: split,

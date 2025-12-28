@@ -10,7 +10,7 @@ export const testComplexScenario = async () => {
 			| undefined;
 		if (!api) throw new Error("testing api unavailable");
 
-		const { manager, splitPath } = api;
+		const { manager, makeSplitPath } = api;
 
 		// Complex scenario: collapse + sort + execute
 		// Multiple processes on same file (should collapse)

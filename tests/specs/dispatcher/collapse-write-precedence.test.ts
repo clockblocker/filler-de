@@ -10,7 +10,7 @@ export const testCollapseWritePrecedence = async () => {
 			| undefined;
 		if (!api) throw new Error("testing api unavailable");
 
-		const { manager, splitPath } = api;
+		const { manager, makeSplitPath } = api;
 
 		// Create multiple UpsertMdFile actions on same file
 		const fileSplitPath = splitPath("collapse-test.md");

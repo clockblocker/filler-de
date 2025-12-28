@@ -14,7 +14,7 @@ export const testProcessContentHappyPath = async () => {
 			| undefined;
 		if (!api) throw new Error("testing api unavailable");
 
-		const { openedFileServiceWithResult, splitPath } = api;
+		const { openedFileServiceWithResult, makeSplitPath } = api;
 		if (!openedFileServiceWithResult) {
 			throw new Error("openedFileServiceWithResult not available");
 		}
@@ -261,7 +261,7 @@ export const testProcessContentErrorCases = async () => {
 			| undefined;
 		if (!api) throw new Error("testing api unavailable");
 
-		const { openedFileServiceWithResult, splitPath } = api;
+		const { openedFileServiceWithResult, makeSplitPath } = api;
 		if (!openedFileServiceWithResult) {
 			throw new Error("openedFileServiceWithResult not available");
 		}

@@ -38,7 +38,7 @@ export type OpenedFileServiceTestingApi = {
 		isFileActive: (splitPath: unknown) => Promise<unknown>;
 		cd: (file: unknown) => Promise<unknown>;
 	};
-	splitPath: (input: string) => unknown;
+	makeSplitPath: (input: string) => unknown;
 	makeSystemPathForSplitPath: (splitPath: unknown) => string;
 };
 

@@ -8,7 +8,7 @@ export const testGetFileErrors = async () => {
 			const api = app?.plugins?.plugins?.["cbcr-text-eater-de"]?.getHelpersTestingApi?.() as HelpersTestingApi | undefined;
 			if (!api) throw new Error("testing api unavailable");
 
-			const { tfileHelper, tfolderHelper, splitPath } = api;
+			const { tfileHelper, tfolderHelper, makeSplitPath } = api;
 
 			// Get runErrorTest helper from globalThis
 			const runErrorTestCode = (globalThis as { __runErrorTestCode?: string }).__runErrorTestCode;

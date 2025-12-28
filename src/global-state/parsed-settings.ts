@@ -1,4 +1,4 @@
-import { splitPath } from "../obsidian-vault-action-manager";
+import { makeSplitPath } from "../obsidian-vault-action-manager";
 import {
 	type SplitPathToFolder,
 	SplitPathType,
@@ -13,7 +13,7 @@ export type ParsedUserSettings = Prettify<
 >;
 
 export function parseSettings(settings: TextEaterSettings): ParsedUserSettings {
-	const splitPathResult = splitPath(settings.libraryRoot);
+	const splitPathResult = makeSplitPath(settings.libraryRoot);
 	if (splitPathResult.type !== SplitPathType.Folder) {
 		throw new Error(
 			`Library root must be a folder, got: ${splitPathResult.type}`,

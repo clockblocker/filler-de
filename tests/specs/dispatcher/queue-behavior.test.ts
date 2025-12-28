@@ -10,7 +10,7 @@ export const testQueueBehavior = async () => {
 			| undefined;
 		if (!api) throw new Error("testing api unavailable");
 
-		const { manager, splitPath } = api;
+		const { manager, makeSplitPath } = api;
 
 		// Dispatch multiple actions in quick succession
 		// Queue should batch them and execute in order

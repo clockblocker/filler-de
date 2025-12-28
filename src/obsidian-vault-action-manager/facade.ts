@@ -1,3 +1,4 @@
+import type { Result } from "neverthrow";
 import type { App, TAbstractFile, TFile, TFolder } from "obsidian";
 import { OpenedFileReader } from "./file-services/active-view/opened-file-reader";
 import type { OpenedFileService } from "./file-services/active-view/opened-file-service";
@@ -10,7 +11,7 @@ import { EventAdapter } from "./impl/event-adapter";
 import { Executor } from "./impl/executor";
 import { Reader } from "./impl/reader";
 import { SelfEventTrackerLegacy } from "./impl/self-event-tracker";
-import { splitPath } from "./impl/split-path";
+import { makeSplitPath } from "./impl/split-path-and-system-path";
 import type {
 	DispatchResult,
 	ObsidianVaultActionManager,
@@ -111,7 +112,9 @@ export class ObsidianVaultActionManagerImpl
 		return this.actionQueue.dispatch(actions);
 	}
 
-	readContent(splitPathArg: SplitPathToMdFile): Promise<Result<string, string>> {
+	readContent(
+		splitPathArg: SplitPathToMdFile,
+	): Promise<Result<string, string>> {
 		return this.reader.readContent(splitPathArg);
 	}
 
@@ -123,13 +126,15 @@ export class ObsidianVaultActionManagerImpl
 		return this.opened.isInActiveView(splitPathArg);
 	}
 
-	list(splitPathArg: SplitPathToFolder): Promise<SplitPath[]> {
+	list(
+		splitPathArg: SplitPathToFolder,
+	): Promise<Result<SplitPath[], string>> {
 		return this.reader.list(splitPathArg);
 	}
 
 	listAllFilesWithMdReaders(
 		splitPathArg: SplitPathToFolder,
-	): Promise<SplitPathWithReader[]> {
+	): Promise<Result<SplitPathWithReader[], string>> {
 		return this.reader.listAllFilesWithMdReaders(splitPathArg);
 	}
 
@@ -143,14 +148,14 @@ export class ObsidianVaultActionManagerImpl
 		return this.reader.getAbstractFile(splitPathArg);
 	}
 
-	splitPath(systemPath: string): SplitPath;
-	splitPath(tFile: TFile): SplitPathToFile | SplitPathToMdFile;
-	splitPath(tFolder: TFolder): SplitPathToFolder;
-	splitPath(tAbstractFile: TAbstractFile): SplitPath;
-	splitPath(input: string | TAbstractFile): SplitPath {
+	makeSplitPath(systemPath: string): SplitPath;
+	makeSplitPath(tFile: TFile): SplitPathToFile | SplitPathToMdFile;
+	makeSplitPath(tFolder: TFolder): SplitPathToFolder;
+	makeSplitPath(tAbstractFile: TAbstractFile): SplitPath;
+	makeSplitPath(input: string | TAbstractFile): SplitPath {
 		if (typeof input === "string") {
-			return splitPath(input);
+			return makeSplitPath(input);
 		}
-		return splitPath(input);
+		return makeSplitPath(input);
 	}
 }

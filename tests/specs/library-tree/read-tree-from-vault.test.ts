@@ -22,21 +22,21 @@ import type {
  *     - E2-S2-Avarar.md
  */
 export function createTestTreeActions(
-	splitPath: (input: string) => unknown,
+	makeSplitPath: (input: string) => unknown,
 ): unknown[] {
 	return [
 		// Files in Library/Avarar/S1
 		{
 			payload: {
 				content: "",
-				splitPath: splitPath("Library/Avarar/S1/E1-S1-Avarar.md"),
+				makeSplitPath: makeSplitPath("Library/Avarar/S1/E1-S1-Avarar.md"),
 			},
 			type: "UpsertMdFile",
 		},
 		{
 			payload: {
 				content: "",
-				splitPath: splitPath("Library/Avarar/S1/E2-S1-Avarar.md"),
+				makeSplitPath: makeSplitPath("Library/Avarar/S1/E2-S1-Avarar.md"),
 			},
 			type: "UpsertMdFile",
 		},
@@ -44,14 +44,14 @@ export function createTestTreeActions(
 		{
 			payload: {
 				content: "",
-				splitPath: splitPath("Library/Avarar/S2/E1/000_E1-E1-S2-Avarar.md"),
+				makeSplitPath: makeSplitPath("Library/Avarar/S2/E1/000_E1-E1-S2-Avarar.md"),
 			},
 			type: "UpsertMdFile",
 		},
 		{
 			payload: {
 				content: "",
-				splitPath: splitPath("Library/Avarar/S2/E1/001_E1-E1-S2-Avarar.md"),
+				makeSplitPath: makeSplitPath("Library/Avarar/S2/E1/001_E1-E1-S2-Avarar.md"),
 			},
 			type: "UpsertMdFile",
 		},
@@ -59,7 +59,7 @@ export function createTestTreeActions(
 		{
 			payload: {
 				content: "",
-				splitPath: splitPath("Library/Avarar/S2/E2-S2-Avarar.md"),
+				makeSplitPath: makeSplitPath("Library/Avarar/S2/E2-S2-Avarar.md"),
 			},
 			type: "UpsertMdFile",
 		},
@@ -75,7 +75,7 @@ export const testReadTreeFromVault = async () => {
 			| undefined;
 		if (!vaultApi) throw new Error("vault testing api unavailable");
 
-		const { manager, splitPath: vaultSplitPath } = vaultApi;
+		const { manager, makeSplitPath: vaultSplitPath } = vaultApi;
 		if (!manager) throw new Error("manager is undefined");
 		
 		// Create librarian directly in Obsidian context using vaultActionManager
@@ -112,7 +112,7 @@ export const testReadTreeFromVault = async () => {
 		const createActions = files.map(({ path }) => ({
 			payload: {
 				content: "",
-				splitPath: vaultSplitPath(path),
+				makeSplitPath: vaultSplitPath(path),
 			},
 			type: "UpsertMdFile",
 		}));
@@ -122,7 +122,7 @@ export const testReadTreeFromVault = async () => {
 		const writeActions = files.map(({ path, status }) => ({
 			payload: {
 				content: makeMeta(status),
-				splitPath: vaultSplitPath(path),
+				makeSplitPath: vaultSplitPath(path),
 			},
 			type: "UpsertMdFile",
 		}));

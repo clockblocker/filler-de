@@ -1,5 +1,5 @@
 import { getParsedUserSettings } from "../../../global-state/global-state";
-import { makeSystemPathForSplitPath } from "../../../obsidian-vault-action-manager/impl/split-path";
+import { makeSystemPathForSplitPath } from "../../../obsidian-vault-action-manager/impl/split-path-and-system-path";
 import { MD } from "../../../obsidian-vault-action-manager/types/literals";
 import { SplitPathType } from "../../../obsidian-vault-action-manager/types/split-path";
 import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";

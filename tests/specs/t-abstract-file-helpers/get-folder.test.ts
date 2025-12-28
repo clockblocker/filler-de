@@ -8,7 +8,7 @@ export const testGetFolder = async () => {
 			const api = app?.plugins?.plugins?.["cbcr-text-eater-de"]?.getHelpersTestingApi?.() as HelpersTestingApi | undefined;
 			if (!api) throw new Error("testing api unavailable");
 
-			const { tfileHelper, tfolderHelper, splitPath } = api;
+			const { tfileHelper, tfolderHelper, makeSplitPath } = api;
 
 			// Happy Path: Get existing folder
 			const folderSplitPath1 = splitPath("test-folder");

@@ -12,9 +12,9 @@ import {
 import { clearState, initializeState } from "./global-state/global-state";
 import {
 	makeSystemPathForSplitPath,
-	splitPath as managerSplitPath,
+	makeSplitPath as managerSplitPath,
 	ObsidianVaultActionManagerImpl,
-	splitPath,
+	makeSplitPath,
 } from "./obsidian-vault-action-manager";
 import { OpenedFileReader } from "./obsidian-vault-action-manager/file-services/active-view/opened-file-reader";
 import {
@@ -515,7 +515,7 @@ export default class TextEaterPlugin extends Plugin {
 			makeSystemPathForSplitPath,
 			openedFileServiceWithResult:
 				this.testingOpenedFileServiceWithResult,
-			splitPath,
+			makeSplitPath,
 		};
 	}
 
@@ -531,14 +531,14 @@ export default class TextEaterPlugin extends Plugin {
 		return {
 			makeSystemPathForSplitPath,
 			reader: this.testingReader,
-			splitPath,
+			makeSplitPath,
 		};
 	}
 
 	getVaultActionManagerTestingApi() {
 		return {
 			manager: this.vaultActionManager,
-			splitPath: managerSplitPath,
+			makeSplitPath: managerSplitPath,
 		};
 	}
 
@@ -559,7 +559,7 @@ export default class TextEaterPlugin extends Plugin {
 		// Create on-demand to avoid storing reference
 		return {
 			librarian: new Librarian(this.vaultActionManager as any),
-			splitPath: managerSplitPath,
+			makeSplitPath: managerSplitPath,
 		};
 	}
 

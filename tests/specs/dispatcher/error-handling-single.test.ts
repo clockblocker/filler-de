@@ -10,7 +10,7 @@ export const testErrorHandlingSingle = async () => {
 			| undefined;
 		if (!api) throw new Error("testing api unavailable");
 
-		const { manager, splitPath } = api;
+		const { manager, makeSplitPath } = api;
 
 		// Create first file successfully
 		const fileASplitPath = splitPath("error-test-a.md");

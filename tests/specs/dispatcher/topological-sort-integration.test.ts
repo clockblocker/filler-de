@@ -10,14 +10,14 @@ export const testTopologicalSortProcessWriteDiscard = async () => {
 				| undefined;
 			if (!api) throw new Error("testing api unavailable");
 
-			const { manager, splitPath } = api;
+			const { manager, makeSplitPath } = api;
 
 			// Create actions in wrong order (process before write)
 			// ProcessMdFile should be discarded because write comes after
 			const actions = [
 				{
 					payload: {
-						splitPath: splitPath("test.md"),
+						makeSplitPath: makeSplitPath("test.md"),
 						transform: (content: string) => content + "\nprocessed",
 					},
 					type: "ProcessMdFile",
@@ -25,7 +25,7 @@ export const testTopologicalSortProcessWriteDiscard = async () => {
 				{
 					payload: {
 						content: "initial",
-						splitPath: splitPath("test.md"),
+						makeSplitPath: makeSplitPath("test.md"),
 					},
 					type: "UpsertMdFile",
 				},
@@ -57,19 +57,19 @@ export const testTopologicalSortParentBeforeChild = async () => {
 				| undefined;
 			if (!api) throw new Error("testing api unavailable");
 
-			const { manager, splitPath } = api;
+			const { manager, makeSplitPath } = api;
 
 			// Create actions in wrong order (child before parent)
 			const actions = [
 				{
 					payload: {
-						splitPath: splitPath("parent/child"),
+						makeSplitPath: makeSplitPath("parent/child"),
 					},
 					type: "CreateFolder",
 				},
 				{
 					payload: {
-						splitPath: splitPath("parent"),
+						makeSplitPath: makeSplitPath("parent"),
 					},
 					type: "CreateFolder",
 				},
@@ -104,7 +104,7 @@ export const testTopologicalSortWriteProcessApply = async () => {
 				| undefined;
 			if (!api) throw new Error("testing api unavailable");
 
-			const { manager, splitPath } = api;
+			const { manager, makeSplitPath } = api;
 
 			// Create actions in correct order (write before process)
 			// ProcessMdFile should be applied to the write content
@@ -112,13 +112,13 @@ export const testTopologicalSortWriteProcessApply = async () => {
 				{
 					payload: {
 						content: "initial",
-						splitPath: splitPath("folder/file.md"),
+						makeSplitPath: makeSplitPath("folder/file.md"),
 					},
 					type: "UpsertMdFile",
 				},
 				{
 					payload: {
-						splitPath: splitPath("folder/file.md"),
+						makeSplitPath: makeSplitPath("folder/file.md"),
 						transform: (content: string) => content + "\nprocessed",
 					},
 					type: "ProcessMdFile",

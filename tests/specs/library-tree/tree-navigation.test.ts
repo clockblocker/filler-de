@@ -15,7 +15,7 @@ export const testGetNodeHappyPath = async () => {
 			| undefined;
 		if (!vaultApi) throw new Error("vault testing api unavailable");
 
-		const { manager, splitPath: vaultSplitPath } = vaultApi;
+		const { manager, makeSplitPath: vaultSplitPath } = vaultApi;
 		
 		// Create librarian directly in Obsidian context using vaultActionManager
 		const plugin = app?.plugins?.plugins?.["cbcr-text-eater-de"];

@@ -7,7 +7,7 @@ export const testGetFileHappyPath = async () => {
 		const api = app?.plugins?.plugins?.["cbcr-text-eater-de"]?.getHelpersTestingApi?.() as HelpersTestingApi | undefined;
 		if (!api) throw new Error("testing api unavailable");
 
-		const { tfileHelper, tfolderHelper, splitPath } = api;
+		const { tfileHelper, tfolderHelper, makeSplitPath } = api;
 
 		const runTestCode = (globalThis as { __runTestCode?: string }).__runTestCode;
 		if (!runTestCode) {

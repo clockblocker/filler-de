@@ -9,7 +9,7 @@ import { systemPathFromSplitPathInternal } from "../helpers/pathfinder";
 import type { SplitPathToMdFile } from "../types/split-path";
 import type { VaultAction } from "../types/vault-action";
 import { VaultActionType } from "../types/vault-action";
-import { makeSystemPathForSplitPath } from "./split-path";
+import { makeSystemPathForSplitPath } from "./split-path-and-system-path";
 
 export class Executor {
 	constructor(

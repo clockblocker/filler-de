@@ -187,7 +187,7 @@ export class Librarian {
 			setTree: (tree) => {
 				this.tree = tree;
 			},
-			splitPath: (p) => this.vaultActionManager.splitPath(p),
+			splitPath: (p) => this.vaultActionManager.makeSplitPath(p),
 			tree: this.tree,
 		};
 	}
@@ -258,7 +258,7 @@ export class Librarian {
 		if (node?.type === TreeNodeType.Scroll) {
 			// Build canonical path from tree structure
 			const path = buildCanonicalPathForLeaf(node);
-			const splitPath = this.vaultActionManager.splitPath(path);
+			const splitPath = this.vaultActionManager.makeSplitPath(path);
 
 			if (splitPath.type === "MdFile") {
 				const actions = [
@@ -304,7 +304,7 @@ export class Librarian {
 	async readTreeFromVault(): Promise<LibraryTree> {
 		const settings = getParsedUserSettings();
 		const libraryRoot = settings.splitPathToLibraryRoot.basename;
-		const rootSplitPath = this.vaultActionManager.splitPath(libraryRoot);
+		const rootSplitPath = this.vaultActionManager.makeSplitPath(libraryRoot);
 		if (rootSplitPath.type !== "Folder") {
 			throw new Error(`Library root is not a folder: ${libraryRoot}`);
 		}

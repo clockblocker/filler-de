@@ -10,27 +10,27 @@ export const testSortingWeightOrder = async () => {
 			| undefined;
 		if (!api) throw new Error("testing api unavailable");
 
-		const { manager, splitPath } = api;
+		const { manager, makeSplitPath } = api;
 
 		// Mixed action types - should sort by weight
 		// Weight order: CreateFolder (0) < CreateFile (3) < ProcessMdFile (9)
 		const actions = [
 			{
 				payload: {
-					splitPath: splitPath("z.md"),
+					makeSplitPath: makeSplitPath("z.md"),
 					transform: (c: string) => c,
 				},
 				type: "ProcessMdFile",
 			},
 			{
 				payload: {
-					splitPath: splitPath("a"),
+					makeSplitPath: makeSplitPath("a"),
 				},
 				type: "CreateFolder",
 			},
 			{
 				payload: {
-					splitPath: splitPath("b.txt"),
+					makeSplitPath: makeSplitPath("b.txt"),
 				},
 				type: "CreateFile",
 			},
@@ -41,7 +41,7 @@ export const testSortingWeightOrder = async () => {
 			{
 				payload: {
 					content: "test",
-					splitPath: splitPath("z.md"),
+					makeSplitPath: makeSplitPath("z.md"),
 				},
 				type: "UpsertMdFile",
 			},

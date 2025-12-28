@@ -1,13 +1,13 @@
 import { describe, expect, it } from "bun:test";
 import { TFile, TFolder } from "obsidian";
 import {
+	makeSplitPath,
 	makeSystemPathForSplitPath,
-	splitPath,
 } from "../../../src/obsidian-vault-action-manager";
 
 describe("obsidian-vault-action-manager splitPath helpers", () => {
 	it("splits md file paths from strings", () => {
-		const split = splitPath("root/notes/file.md");
+		const split = makeSplitPath("root/notes/file.md");
 
 		expect(split).toEqual({
 			basename: "file",
@@ -19,7 +19,7 @@ describe("obsidian-vault-action-manager splitPath helpers", () => {
 	});
 
 	it("splits non-md file paths from strings", () => {
-		const split = splitPath("root/assets/image.png");
+		const split = makeSplitPath("root/assets/image.png");
 
 		expect(split).toEqual({
 			basename: "image",
@@ -31,7 +31,7 @@ describe("obsidian-vault-action-manager splitPath helpers", () => {
 	});
 
 	it("splits folder paths from strings without extension", () => {
-		const split = splitPath("root/library/Section");
+		const split = makeSplitPath("root/library/Section");
 
 		expect(split).toEqual({
 			basename: "Section",
@@ -46,7 +46,7 @@ describe("obsidian-vault-action-manager splitPath helpers", () => {
 		file.path = "root/notes/file.md";
 		file.extension = "md";
 
-		const split = splitPath(file);
+		const split = makeSplitPath(file);
 
 		expect(split).toEqual({
 			basename: "file",
@@ -60,7 +60,7 @@ describe("obsidian-vault-action-manager splitPath helpers", () => {
 		const folder = new TFolder();
 		folder.path = "root/library";
 
-		const split = splitPath(folder);
+		const split = makeSplitPath(folder);
 
 		expect(split).toEqual({
 			basename: "library",

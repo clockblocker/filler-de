@@ -10,7 +10,7 @@ export const testCollapseMultipleFiles = async () => {
 			| undefined;
 		if (!api) throw new Error("testing api unavailable");
 
-		const { manager, splitPath } = api;
+		const { manager, makeSplitPath } = api;
 
 		// Create files first
 		const fileASplitPath = splitPath("multi-file-a.md");

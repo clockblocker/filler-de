@@ -12,7 +12,7 @@ export type LibrarianTestingApi = {
 	librarian: {
 		readTreeFromVault: () => Promise<unknown>; // Promise<LibraryTree>
 	} | undefined; // May be undefined if not initialized yet
-	splitPath: (input: string) => unknown; // SplitPath
+	makeSplitPath: (input: string) => unknown; // SplitPath
 };
 
 export type LibraryTreeApi = {
@@ -43,21 +43,21 @@ export type TreeNodeApi = {
  *     - E2-S1-Avarar.md
  */
 export function createTestTreeActions(
-	splitPath: (input: string) => unknown,
+	makeSplitPath: (input: string) => unknown,
 ): unknown[] {
 	return [
 		// Files in Library/Avarar/S1
 		{
 			payload: {
 				content: "",
-				splitPath: splitPath("Library/Avarar/S1/E1-S1-Avarar.md"),
+				makeSplitPath: makeSplitPath("Library/Avarar/S1/E1-S1-Avarar.md"),
 			},
 			type: "UpsertMdFile",
 		},
 		{
 			payload: {
 				content: "",
-				splitPath: splitPath("Library/Avarar/S1/E2-S1-Avarar.md"),
+				makeSplitPath: makeSplitPath("Library/Avarar/S1/E2-S1-Avarar.md"),
 			},
 			type: "UpsertMdFile",
 		},
@@ -65,14 +65,14 @@ export function createTestTreeActions(
 		{
 			payload: {
 				content: "",
-				splitPath: splitPath("Library/Avarar/S2/E1/000_E1-E1-S2-Avarar.md"),
+				makeSplitPath: makeSplitPath("Library/Avarar/S2/E1/000_E1-E1-S2-Avarar.md"),
 			},
 			type: "UpsertMdFile",
 		},
 		{
 			payload: {
 				content: "",
-				splitPath: splitPath("Library/Avarar/S2/E1/001_E1-E1-S2-Avarar.md"),
+				makeSplitPath: makeSplitPath("Library/Avarar/S2/E1/001_E1-E1-S2-Avarar.md"),
 			},
 			type: "UpsertMdFile",
 		},
@@ -80,7 +80,7 @@ export function createTestTreeActions(
 		{
 			payload: {
 				content: "",
-				splitPath: splitPath("Library/Avarar/S2/E2-S1-Avarar.md"),
+				makeSplitPath: makeSplitPath("Library/Avarar/S2/E2-S1-Avarar.md"),
 			},
 			type: "UpsertMdFile",
 		},

@@ -7,7 +7,7 @@ export const testUpsertMdFileHappyPath = async () => {
 		const api = app?.plugins?.plugins?.["cbcr-text-eater-de"]?.getHelpersTestingApi?.() as HelpersTestingApi | undefined;
 		if (!api) throw new Error("testing api unavailable");
 
-		const { tfileHelper, tfolderHelper, splitPath } = api;
+		const { tfileHelper, tfolderHelper, makeSplitPath } = api;
 
 		const runCreateTest = async (name: string, setup: () => Promise<{ filePath: string; content: string; expectedName: string; expectedPath: string }>) => {
 			const { filePath, content, expectedName, expectedPath } = await setup();

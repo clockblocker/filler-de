@@ -15,7 +15,7 @@ export const testCreateFileWithMissingParentFolders = async () => {
 			| undefined;
 		if (!api) throw new Error("testing api unavailable");
 
-		const { manager, splitPath } = api;
+		const { manager, makeSplitPath } = api;
 
 		// Subscribe to events
 		const eventsReceived: Array<{ type: string; path?: string; fullPath?: string }> = [];
@@ -30,12 +30,12 @@ export const testCreateFileWithMissingParentFolders = async () => {
 		// Dispatch action to create file in non-existent nested folder
 		// Obsidian's vault.create() automatically creates parent folders
 		// These parent folder creations should NOT emit events
-		const fileSplitPath = splitPath("parent/child/file.md");
+		const fileSplitPath = makeSplitPath("parent/child/file.md");
 		const dispatchResult = await manager.dispatch([
 			{
 				payload: {
 					content: "# Test",
-					splitPath: fileSplitPath,
+					makeSplitPath: fileSplitPath,
 				},
 				type: "UpsertMdFile",
 			},
@@ -82,7 +82,7 @@ export const testCreateFolderWithMissingParents = async () => {
 			| undefined;
 		if (!api) throw new Error("testing api unavailable");
 
-		const { manager, splitPath } = api;
+		const { manager, makeSplitPath } = api;
 
 		// Subscribe to events
 		const eventsReceived: Array<{ type: string; path?: string }> = [];
@@ -100,7 +100,7 @@ export const testCreateFolderWithMissingParents = async () => {
 		await manager.dispatch([
 			{
 				payload: {
-					splitPath: folderSplitPath,
+					makeSplitPath: folderSplitPath,
 				},
 				type: "CreateFolder",
 			},
@@ -137,7 +137,7 @@ export const testUpsertMdFileWithEnsureFileExists = async () => {
 			| undefined;
 		if (!api) throw new Error("testing api unavailable");
 
-		const { manager, splitPath } = api;
+		const { manager, makeSplitPath } = api;
 
 		// Subscribe to events
 		const eventsReceived: Array<{ type: string; path?: string }> = [];
@@ -156,7 +156,7 @@ export const testUpsertMdFileWithEnsureFileExists = async () => {
 			{
 				payload: {
 					content: "# Replaced Content",
-					splitPath: fileSplitPath,
+					makeSplitPath: fileSplitPath,
 				},
 				type: "UpsertMdFile",
 			},
@@ -196,7 +196,7 @@ export const testUpsertMdFileWithMissingParentFolders = async () => {
 			| undefined;
 		if (!api) throw new Error("testing api unavailable");
 
-		const { manager, splitPath } = api;
+		const { manager, makeSplitPath } = api;
 
 		// Subscribe to events
 		const eventsReceived: Array<{ type: string; path?: string }> = [];
@@ -215,7 +215,7 @@ export const testUpsertMdFileWithMissingParentFolders = async () => {
 			{
 				payload: {
 					content: "# Nested Replaced",
-					splitPath: fileSplitPath,
+					makeSplitPath: fileSplitPath,
 				},
 				type: "UpsertMdFile",
 			},
@@ -255,7 +255,7 @@ export const testMultipleNestedOperations = async () => {
 			| undefined;
 		if (!api) throw new Error("testing api unavailable");
 
-		const { manager, splitPath } = api;
+		const { manager, makeSplitPath } = api;
 
 		// Subscribe to events
 		const eventsReceived: Array<{ type: string; path?: string }> = [];
@@ -271,27 +271,27 @@ export const testMultipleNestedOperations = async () => {
 		await manager.dispatch([
 			{
 				payload: {
-					splitPath: splitPath("multi/a/b"),
+					makeSplitPath: makeSplitPath("multi/a/b"),
 				},
 				type: "CreateFolder",
 			},
 			{
 				payload: {
 					content: "# File 1",
-					splitPath: splitPath("multi/a/b/file1.md"),
+					makeSplitPath: makeSplitPath("multi/a/b/file1.md"),
 				},
 				type: "UpsertMdFile",
 			},
 			{
 				payload: {
 					content: "# File 2",
-					splitPath: splitPath("multi/c/d/file2.md"),
+					makeSplitPath: makeSplitPath("multi/c/d/file2.md"),
 				},
 				type: "UpsertMdFile",
 			},
 			{
 				payload: {
-					splitPath: splitPath("multi/e/f/g"),
+					makeSplitPath: makeSplitPath("multi/e/f/g"),
 				},
 				type: "CreateFolder",
 			},

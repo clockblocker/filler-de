@@ -3,7 +3,7 @@ import type { SplitPathToFolder, SplitPathToMdFile } from "../types/split-path";
 import type { VaultAction } from "../types/vault-action";
 import { VaultActionType } from "../types/vault-action";
 import type { ExistenceChecker } from "./dispatcher";
-import { makeSystemPathForSplitPath } from "./split-path";
+import { makeSystemPathForSplitPath } from "./split-path-and-system-path";
 
 /**
  * Collect trash paths from actions.

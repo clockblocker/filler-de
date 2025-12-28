@@ -10,7 +10,7 @@ export const testCollapseCreateWriteMerge = async () => {
 			| undefined;
 		if (!api) throw new Error("testing api unavailable");
 
-		const { manager, splitPath } = api;
+		const { manager, makeSplitPath } = api;
 
 		// Create then write on same file - should merge into create with final content
 		const fileSplitPath = splitPath("create-write-merge-test.md");

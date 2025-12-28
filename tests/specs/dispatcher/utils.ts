@@ -15,7 +15,7 @@ export type VaultActionManagerTestingApi = {
 		exists: (splitPath: unknown) => Promise<boolean>;
 		subscribe: (handler: (event: unknown) => Promise<void>) => () => void;
 	};
-	splitPath: (input: string) => unknown;
+	makeSplitPath: (input: string) => unknown;
 };
 
 export type DispatchResult = {

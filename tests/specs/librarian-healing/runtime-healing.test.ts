@@ -15,7 +15,7 @@ export const testRuntimeBasenameOnly = async () => {
 			| undefined;
 		if (!vaultApi) throw new Error("vault testing api unavailable");
 
-		const { manager, splitPath } = vaultApi;
+		const { manager, makeSplitPath } = vaultApi;
 		if (!manager) throw new Error("manager is undefined");
 
 		const plugin = app?.plugins?.plugins?.["cbcr-text-eater-de"];
@@ -26,7 +26,7 @@ export const testRuntimeBasenameOnly = async () => {
 		const initialPath = "Library/A/note-A.md";
 		await manager.dispatch([
 			{
-				payload: { content: "", splitPath: splitPath(initialPath) },
+				payload: { content: "", makeSplitPath: makeSplitPath(initialPath) },
 				type: "UpsertMdFile",
 			},
 		]);
@@ -41,8 +41,8 @@ export const testRuntimeBasenameOnly = async () => {
 		await manager.dispatch([
 			{
 				payload: {
-					from: splitPath(initialPath),
-					to: splitPath(renamedPath),
+					from: makeSplitPath(initialPath),
+					to: makeSplitPath(renamedPath),
 				},
 				type: "RenameMdFile",
 			},
@@ -104,7 +104,7 @@ export const testRuntimePathOnly = async () => {
 			| undefined;
 		if (!vaultApi) throw new Error("vault testing api unavailable");
 
-		const { manager, splitPath } = vaultApi;
+		const { manager, makeSplitPath } = vaultApi;
 		if (!manager) throw new Error("manager is undefined");
 
 		const plugin = app?.plugins?.plugins?.["cbcr-text-eater-de"];
@@ -115,7 +115,7 @@ export const testRuntimePathOnly = async () => {
 		const initialPath = "Library/A/note-A.md";
 		await manager.dispatch([
 			{
-				payload: { content: "", splitPath: splitPath(initialPath) },
+				payload: { content: "", makeSplitPath: makeSplitPath(initialPath) },
 				type: "UpsertMdFile",
 			},
 		]);
@@ -130,8 +130,8 @@ export const testRuntimePathOnly = async () => {
 		await manager.dispatch([
 			{
 				payload: {
-					from: splitPath(initialPath),
-					to: splitPath(movedPath),
+					from: makeSplitPath(initialPath),
+					to: makeSplitPath(movedPath),
 				},
 				type: "RenameMdFile",
 			},
@@ -180,7 +180,7 @@ export const testRuntimeNoOpWhenCorrect = async () => {
 			| undefined;
 		if (!vaultApi) throw new Error("vault testing api unavailable");
 
-		const { manager, splitPath } = vaultApi;
+		const { manager, makeSplitPath } = vaultApi;
 		if (!manager) throw new Error("manager is undefined");
 
 		const plugin = app?.plugins?.plugins?.["cbcr-text-eater-de"];
@@ -191,7 +191,7 @@ export const testRuntimeNoOpWhenCorrect = async () => {
 		const initialPath = "Library/A/note-A.md";
 		await manager.dispatch([
 			{
-				payload: { content: "", splitPath: splitPath(initialPath) },
+				payload: { content: "", makeSplitPath: makeSplitPath(initialPath) },
 				type: "UpsertMdFile",
 			},
 		]);
@@ -213,8 +213,8 @@ export const testRuntimeNoOpWhenCorrect = async () => {
 		await manager.dispatch([
 			{
 				payload: {
-					from: splitPath(initialPath),
-					to: splitPath(movedPath),
+					from: makeSplitPath(initialPath),
+					to: makeSplitPath(movedPath),
 				},
 				type: "RenameMdFile",
 			},
@@ -252,7 +252,7 @@ export const testRuntimeFolderRename = async () => {
 			| undefined;
 		if (!vaultApi) throw new Error("vault testing api unavailable");
 
-		const { manager, splitPath } = vaultApi;
+		const { manager, makeSplitPath } = vaultApi;
 		if (!manager) throw new Error("manager is undefined");
 
 		const plugin = app?.plugins?.plugins?.["cbcr-text-eater-de"];
@@ -262,11 +262,11 @@ export const testRuntimeFolderRename = async () => {
 		// Setup: Create files at Library/A/note1-A.md and Library/A/note2-A.md
 		await manager.dispatch([
 			{
-				payload: { content: "", splitPath: splitPath("Library/A/note1-A.md") },
+				payload: { content: "", makeSplitPath: makeSplitPath("Library/A/note1-A.md") },
 				type: "UpsertMdFile",
 			},
 			{
-				payload: { content: "", splitPath: splitPath("Library/A/note2-A.md") },
+				payload: { content: "", makeSplitPath: makeSplitPath("Library/A/note2-A.md") },
 				type: "UpsertMdFile",
 			},
 		]);

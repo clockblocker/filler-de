@@ -10,7 +10,7 @@ export const testCollapseTrashTerminality = async () => {
 			| undefined;
 		if (!api) throw new Error("testing api unavailable");
 
-		const { manager, splitPath } = api;
+		const { manager, makeSplitPath } = api;
 
 		// Create file first
 		const fileSplitPath = splitPath("trash-terminality-test.md");

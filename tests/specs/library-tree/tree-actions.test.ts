@@ -17,7 +17,7 @@ export const testCreateNodeAction = async () => {
 			| undefined;
 		if (!vaultApi) throw new Error("vault testing api unavailable");
 
-		const { manager, splitPath: vaultSplitPath } = vaultApi;
+		const { manager, makeSplitPath: vaultSplitPath } = vaultApi;
 		if (!manager) throw new Error("manager is undefined");
 
 		const plugin = app?.plugins?.plugins?.["cbcr-text-eater-de"];
@@ -84,7 +84,7 @@ export const testDeleteNodeAction = async () => {
 			| undefined;
 		if (!vaultApi) throw new Error("vault testing api unavailable");
 
-		const { manager, splitPath: vaultSplitPath } = vaultApi;
+		const { manager, makeSplitPath: vaultSplitPath } = vaultApi;
 		if (!manager) throw new Error("manager is undefined");
 
 		const plugin = app?.plugins?.plugins?.["cbcr-text-eater-de"];
@@ -161,7 +161,7 @@ export const testChangeNodeNameAction = async () => {
 			| undefined;
 		if (!vaultApi) throw new Error("vault testing api unavailable");
 
-		const { manager, splitPath: vaultSplitPath } = vaultApi;
+		const { manager, makeSplitPath: vaultSplitPath } = vaultApi;
 		if (!manager) throw new Error("manager is undefined");
 
 		const plugin = app?.plugins?.plugins?.["cbcr-text-eater-de"];
@@ -231,7 +231,7 @@ export const testChangeNodeStatusAction = async () => {
 			| undefined;
 		if (!vaultApi) throw new Error("vault testing api unavailable");
 
-		const { manager, splitPath: vaultSplitPath } = vaultApi;
+		const { manager, makeSplitPath: vaultSplitPath } = vaultApi;
 		if (!manager) throw new Error("manager is undefined");
 
 		const plugin = app?.plugins?.plugins?.["cbcr-text-eater-de"];

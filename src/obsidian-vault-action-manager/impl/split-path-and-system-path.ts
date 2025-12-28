@@ -31,11 +31,11 @@ export function makeSystemPathForSplitPath(splitPath: SplitPath): string {
  * Convert string path or TAbstractFile to SplitPath.
  * External API wrapper around internal pathfinder functions.
  */
-export function splitPath(path: string): SplitPath;
-export function splitPath(file: TFile): SplitPathToFile | SplitPathToMdFile;
-export function splitPath(folder: TFolder): SplitPathToFolder;
-export function splitPath(file: TAbstractFile): SplitPath;
-export function splitPath(
+export function makeSplitPath(path: string): SplitPath;
+export function makeSplitPath(file: TFile): SplitPathToFile | SplitPathToMdFile;
+export function makeSplitPath(folder: TFolder): SplitPathToFolder;
+export function makeSplitPath(file: TAbstractFile): SplitPath;
+export function makeSplitPath(
 	input: string | TAbstractFile,
 ): SplitPath | SplitPathToFile | SplitPathToMdFile | SplitPathToFolder {
 	if (typeof input === "string") {

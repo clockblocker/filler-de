@@ -8,7 +8,7 @@ import {
 	errorNotInSourceMode,
 	errorOpenFileFailed,
 } from "../../errors";
-import { makeSystemPathForSplitPath } from "../../impl/split-path";
+import { makeSystemPathForSplitPath } from "../../impl/split-path-and-system-path";
 import type {
 	SplitPath,
 	SplitPathToFile,

@@ -10,7 +10,7 @@ export const testCollapseProcessWrite = async () => {
 			| undefined;
 		if (!api) throw new Error("testing api unavailable");
 
-		const { manager, splitPath } = api;
+		const { manager, makeSplitPath } = api;
 
 		// Create file first
 		const fileSplitPath = splitPath("process-write-test.md");

@@ -29,7 +29,7 @@ export type HelpersTestingApi = {
 		renameFolder: (p: unknown) => Promise<unknown>;
 		trashFolder: (p: unknown) => Promise<unknown>;
 	};
-	splitPath: (input: string) => unknown;
+	makeSplitPath: (input: string) => unknown;
 };
 
 export type Result<T> = {

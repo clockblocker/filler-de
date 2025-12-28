@@ -14,7 +14,7 @@ export const testDragInFileMoveToSuffix = async () => {
 			| undefined;
 		if (!vaultApi) throw new Error("vault testing api unavailable");
 
-		const { manager, splitPath } = vaultApi;
+		const { manager, makeSplitPath } = vaultApi;
 		if (!manager) throw new Error("manager is undefined");
 
 		const plugin = app?.plugins?.plugins?.["cbcr-text-eater-de"];
@@ -24,7 +24,7 @@ export const testDragInFileMoveToSuffix = async () => {
 		await manager.dispatch([
 			{
 				payload: {
-					splitPath: splitPath("Library"),
+					makeSplitPath: makeSplitPath("Library"),
 				},
 				type: "CreateFolder",
 			},
@@ -37,7 +37,7 @@ export const testDragInFileMoveToSuffix = async () => {
 		const outsidePath = "outside/note-B-A.md";
 		await manager.dispatch([
 			{
-				payload: { content: "", splitPath: splitPath(outsidePath) },
+				payload: { content: "", makeSplitPath: makeSplitPath(outsidePath) },
 				type: "UpsertMdFile",
 			},
 		]);
@@ -50,8 +50,8 @@ export const testDragInFileMoveToSuffix = async () => {
 		await manager.dispatch([
 			{
 				payload: {
-					from: splitPath(outsidePath),
-					to: splitPath(droppedPath),
+					from: makeSplitPath(outsidePath),
+					to: makeSplitPath(droppedPath),
 				},
 				type: "RenameMdFile",
 			},
@@ -70,7 +70,7 @@ export const testDragInFileMoveToSuffix = async () => {
 
 		// Verify file was moved to suffix location: Library/A/B/note-B-A.md
 		const expectedPath = "Library/A/B/note-B-A.md";
-		const existsAtExpected = await manager.exists(splitPath(expectedPath));
+		const existsAtExpected = await manager.exists(makeSplitPath(expectedPath));
 
 		return {
 			actionCount: actions.length,
@@ -98,7 +98,7 @@ export const testDragInFileNoSuffixStaysAtRoot = async () => {
 			| undefined;
 		if (!vaultApi) throw new Error("vault testing api unavailable");
 
-		const { manager, splitPath } = vaultApi;
+		const { manager, makeSplitPath } = vaultApi;
 		if (!manager) throw new Error("manager is undefined");
 
 		const plugin = app?.plugins?.plugins?.["cbcr-text-eater-de"];
@@ -107,7 +107,7 @@ export const testDragInFileNoSuffixStaysAtRoot = async () => {
 		await manager.dispatch([
 			{
 				payload: {
-					splitPath: splitPath("Library"),
+					makeSplitPath: makeSplitPath("Library"),
 				},
 				type: "CreateFolder",
 			},
@@ -121,7 +121,7 @@ export const testDragInFileNoSuffixStaysAtRoot = async () => {
 		const outsidePath = "outside/note.md";
 		await manager.dispatch([
 			{
-				payload: { content: "", splitPath: splitPath(outsidePath) },
+				payload: { content: "", makeSplitPath: makeSplitPath(outsidePath) },
 				type: "UpsertMdFile",
 			},
 		]);
@@ -134,8 +134,8 @@ export const testDragInFileNoSuffixStaysAtRoot = async () => {
 		await manager.dispatch([
 			{
 				payload: {
-					from: splitPath(outsidePath),
-					to: splitPath(droppedPath),
+					from: makeSplitPath(outsidePath),
+					to: makeSplitPath(droppedPath),
 				},
 				type: "RenameMdFile",
 			},
@@ -150,7 +150,7 @@ export const testDragInFileNoSuffixStaysAtRoot = async () => {
 		);
 
 		// File should stay where it was dropped
-		const existsAtDropped = await manager.exists(splitPath(droppedPath));
+		const existsAtDropped = await manager.exists(makeSplitPath(droppedPath));
 
 		return {
 			actionCount: actions.length,
@@ -176,7 +176,7 @@ export const testMoveOutOfLibraryIgnored = async () => {
 			| undefined;
 		if (!vaultApi) throw new Error("vault testing api unavailable");
 
-		const { manager, splitPath } = vaultApi;
+		const { manager, makeSplitPath } = vaultApi;
 		if (!manager) throw new Error("manager is undefined");
 
 		const plugin = app?.plugins?.plugins?.["cbcr-text-eater-de"];
@@ -187,7 +187,7 @@ export const testMoveOutOfLibraryIgnored = async () => {
 		const insidePath = "Library/A/note-A.md";
 		await manager.dispatch([
 			{
-				payload: { content: "", splitPath: splitPath(insidePath) },
+				payload: { content: "", makeSplitPath: makeSplitPath(insidePath) },
 				type: "UpsertMdFile",
 			},
 		]);
@@ -200,8 +200,8 @@ export const testMoveOutOfLibraryIgnored = async () => {
 		await manager.dispatch([
 			{
 				payload: {
-					from: splitPath(insidePath),
-					to: splitPath(outsidePath),
+					from: makeSplitPath(insidePath),
+					to: makeSplitPath(outsidePath),
 				},
 				type: "RenameMdFile",
 			},

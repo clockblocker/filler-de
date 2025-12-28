@@ -198,7 +198,7 @@ export async function handleRename(
 		const oldBasenameWithoutExt = extractBasenameWithoutExt(oldPath);
 		if (isBasenamePrefixedAsCodexDeprecated(oldBasenameWithoutExt)) {
 			// Delete the old codex file - regeneration will create new one with correct name
-			const oldSplitPath = context.splitPath(oldPath);
+			const oldSplitPath = context.makeSplitPath(oldPath);
 			if (oldSplitPath.type === SplitPathType.MdFile) {
 				await context.dispatch([
 					{
@@ -291,7 +291,7 @@ export async function handleRename(
 		isFolder,
 		{
 			listAllFilesWithMdReaders: context.listAllFilesWithMdReaders,
-			splitPath: context.splitPath,
+			makeSplitPath: context.makeSplitPath,
 		},
 	);
 
@@ -394,7 +394,7 @@ async function updateTreeAndCodexesForRename(
 	context.setTree(newTree);
 
 	// Compute impacted chain from new file location
-	const newSplitPath = context.splitPath(newPath);
+	const newSplitPath = context.makeSplitPath(newPath);
 	if (newSplitPath.type === SplitPathType.Folder) {
 		return;
 	}
@@ -445,7 +445,7 @@ export async function handleCreate(
 		return [];
 	}
 
-	const splitPath = context.splitPath(path);
+	const splitPath = context.makeSplitPath(path);
 
 	// Only handle files, not folders
 	if (splitPath.type === SplitPathType.Folder) {

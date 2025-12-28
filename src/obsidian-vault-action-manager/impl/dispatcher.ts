@@ -14,7 +14,7 @@ import {
 } from "./ensure-requirements-helpers";
 import type { Executor } from "./executor";
 import type { SelfEventTrackerLegacy } from "./self-event-tracker";
-import { splitPath } from "./split-path";
+import { makeSplitPath } from "./split-path-and-system-path";
 import { topologicalSort } from "./topological-sort";
 
 export type DispatchResult = Result<void, DispatchError[]>;
@@ -140,7 +140,7 @@ export class Dispatcher {
 	 * Convert a folder path string to SplitPathToFolder.
 	 */
 	private pathToSplitPathToFolder(path: string): SplitPathToFolder | null {
-		const parsed = splitPath(path);
+		const parsed = makeSplitPath(path);
 		if (parsed.type === "Folder") {
 			return parsed;
 		}
@@ -152,7 +152,7 @@ export class Dispatcher {
 	 * Key format: "path/to/file.md" (we stored it with extension)
 	 */
 	private keyToSplitPathToMdFile(key: string): SplitPathToMdFile | null {
-		const parsed = splitPath(key);
+		const parsed = makeSplitPath(key);
 		if (parsed.type === "MdFile") {
 			return parsed;
 		}

@@ -14,7 +14,7 @@ export const testInitHealing = async () => {
 			| undefined;
 		if (!vaultApi) throw new Error("vault testing api unavailable");
 
-		const { manager, splitPath } = vaultApi;
+		const { manager, makeSplitPath } = vaultApi;
 		if (!manager) throw new Error("manager is undefined");
 
 		// Create files with WRONG suffixes (mismatch with path)
@@ -115,7 +115,7 @@ export const testInitHealingNoOpForCorrectFiles = async () => {
 			| undefined;
 		if (!vaultApi) throw new Error("vault testing api unavailable");
 
-		const { manager, splitPath } = vaultApi;
+		const { manager, makeSplitPath } = vaultApi;
 		if (!manager) throw new Error("manager is undefined");
 
 		// Create files with CORRECT suffixes
