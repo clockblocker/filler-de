@@ -20,7 +20,7 @@ const separatedSuffixedBasenameToNodeNameChainCodec = z.codec(
 	NodeNameChainSchema,
 	{
 		decode: ({ splitSuffix, nodeName }) => {
-			return [...splitSuffix, nodeName];
+			return [...splitSuffix].reverse().concat(nodeName);
 		},
 		encode: (chain) => {
 			if (chain.length === 0) {
@@ -32,7 +32,7 @@ const separatedSuffixedBasenameToNodeNameChainCodec = z.codec(
 				return { nodeName: "", splitSuffix: [] };
 			}
 
-			const splitSuffix = chain.slice(0, -1);
+			const splitSuffix = chain.slice(0, -1).reverse();
 			return { nodeName, splitSuffix };
 		},
 	},

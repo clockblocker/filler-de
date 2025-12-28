@@ -152,26 +152,26 @@ describe("separatedSuffixedBasenameToNodeNameChainCodec", () => {
 			});
 		});
 
-		it("encodes two-element chain", () => {
+		it("encodes two-element chain (suffix is reversed)", () => {
 			expect(makeSeparatedSuffixedBasenameFromNodeNameChain(["parent", "child"])).toEqual({
 				nodeName: "child",
 				splitSuffix: ["parent"],
 			});
 		});
 
-		it("encodes multi-element chain", () => {
+		it("encodes multi-element chain (suffix is reversed)", () => {
 			expect(
 				makeSeparatedSuffixedBasenameFromNodeNameChain(["grandparent", "parent", "child"]),
 			).toEqual({
 				nodeName: "child",
-				splitSuffix: ["grandparent", "parent"],
+				splitSuffix: ["parent", "grandparent"],
 			});
 		});
 
-		it("encodes deeply nested chain", () => {
+		it("encodes deeply nested chain (suffix is reversed)", () => {
 			expect(makeSeparatedSuffixedBasenameFromNodeNameChain(["A", "B", "C", "D", "E"])).toEqual({
 				nodeName: "E",
-				splitSuffix: ["A", "B", "C", "D"],
+				splitSuffix: ["D", "C", "B", "A"],
 			});
 		});
 
@@ -198,7 +198,7 @@ describe("separatedSuffixedBasenameToNodeNameChainCodec", () => {
 			).toEqual(["child"]);
 		});
 
-		it("decodes separatedSuffixedBasename with single suffix", () => {
+		it("decodes separatedSuffixedBasename with single suffix (reverses back)", () => {
 			expect(
 				makeNodeNameChainFromSeparatedSuffixedBasename({
 					nodeName: "child",
@@ -207,20 +207,20 @@ describe("separatedSuffixedBasenameToNodeNameChainCodec", () => {
 			).toEqual(["parent", "child"]);
 		});
 
-		it("decodes separatedSuffixedBasename with multiple suffixes", () => {
+		it("decodes separatedSuffixedBasename with multiple suffixes (reverses back)", () => {
 			expect(
 				makeNodeNameChainFromSeparatedSuffixedBasename({
 					nodeName: "child",
-					splitSuffix: ["grandparent", "parent"],
+					splitSuffix: ["parent", "grandparent"],
 				}),
 			).toEqual(["grandparent", "parent", "child"]);
 		});
 
-		it("decodes deeply nested separatedSuffixedBasename", () => {
+		it("decodes deeply nested separatedSuffixedBasename (reverses back)", () => {
 			expect(
 				makeNodeNameChainFromSeparatedSuffixedBasename({
 					nodeName: "E",
-					splitSuffix: ["A", "B", "C", "D"],
+					splitSuffix: ["D", "C", "B", "A"],
 				}),
 			).toEqual(["A", "B", "C", "D", "E"]);
 		});

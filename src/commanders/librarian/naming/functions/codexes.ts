@@ -23,7 +23,7 @@ export const makeCanonicalBasenameForCodex = (
 	return joinSeparatedSuffixedBasename(
 		makeSeparatedSuffixedBasenameFromNodeNameChain([
 			...(nodeNameChainToParent.length > 0
-				? [...nodeNameChainToParent].reverse()
+				? nodeNameChainToParent
 				: [libraryRoot]),
 			CODEX_CORE_NAME,
 		]),
@@ -51,8 +51,7 @@ export const makeNodeNameChainToParentFromCanonicalBasenameForCodex = (
 		return [];
 	}
 
-	// Reverse back to original order (was reversed during encoding)
-	return chainWithoutCodex.reverse();
+	return chainWithoutCodex;
 };
 
 export const buildCanonicalPathPartsForCodex = (

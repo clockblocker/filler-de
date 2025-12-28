@@ -21,7 +21,7 @@ export const tryMakeJoinedSuffixedBasenameForFolderFromNodeNameChain = (
 		makeJoinedSuffixedBasenameFromNodeNameChain(chain),
 	);
 
-function makeJoinedSuffixedBasenameFromNodeNameChain(
+export function makeJoinedSuffixedBasenameFromNodeNameChain(
 	chain: NodeNameChain,
 ): JoinedSuffixedBasename {
 	return makeJoinedSuffixedBasenameFromSeparatedSuffixedBasename(
