@@ -18,10 +18,20 @@ export const makeCanonicalBasenameForCodexFromSectionNode = ({
 	nodeNameChainToParent,
 	nodeName,
 }: Pick<SectionNode, "nodeNameChainToParent" | "nodeName">) => {
-	return makeCanonicalBasenameForCodexFromNodeNameChainToParent([
-		...nodeNameChainToParent,
-		nodeName,
-	]);
+	const {
+		splitPathToLibraryRoot: { basename: libraryRoot },
+	} = getParsedUserSettings();
+
+	// Strip library root before encoding (user-visible format should not include it)
+	const fullChain = [...nodeNameChainToParent, nodeName];
+	const chainWithoutLibraryRoot =
+		fullChain.length > 0 && fullChain[0] === libraryRoot
+			? fullChain.slice(1)
+			: fullChain;
+
+	return makeCanonicalBasenameForCodexFromNodeNameChainToParent(
+		chainWithoutLibraryRoot,
+	);
 };
 
 const makeCanonicalBasenameForCodexFromNodeNameChainToParent = (
@@ -56,14 +66,26 @@ export const makeNodeNameChainToParentFromCanonicalBasenameForCodex = ({
 		throw new Error("Invalid codex basename");
 	}
 
+	// Decode the full chain (includes section name)
+	const fullChainWithoutLibraryRoot =
+		makeNodeNameChainFromSeparatedSuffixedBasename({
+			nodeName: sectionNodeName,
+			splitSuffix: splitSuffixOfSection,
+		});
+
+	// Extract parent chain (remove section name, which is the last element)
+	const parentChainWithoutLibraryRoot = fullChainWithoutLibraryRoot.slice(
+		0,
+		-1,
+	);
+
+	// Add library root back (internal representation includes it)
 	if (sectionNodeName === libraryRoot) {
-		return [];
+		// Root codex: return chain with only library root
+		return [libraryRoot];
 	}
 
-	return makeNodeNameChainFromSeparatedSuffixedBasename({
-		nodeName: sectionNodeName,
-		splitSuffix: splitSuffixOfSection,
-	});
+	return [libraryRoot, ...parentChainWithoutLibraryRoot];
 };
 
 export const buildCanonicalPathPartsForCodex = (

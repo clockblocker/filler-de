@@ -37,20 +37,28 @@ export function tryParseCodexLine(
 		});
 	}
 
+	// Check Scroll before ChildSectionCodex since they have the same structure
+	// Scroll is more common, and ChildSectionCodex should have __- prefix
+	const scrollResult = tryParseCodexLineForScroll(trimmedLine);
+	if (scrollResult.isOk()) {
+		// Verify it's not a codex line (codex lines have __- prefix)
+		const backlinkMatch = trimmedLine.match(/\[\[([^\|]+)\|/);
+		if (backlinkMatch && backlinkMatch[1]?.startsWith("__-")) {
+			// It's actually a codex line, skip Scroll
+		} else {
+			return ok({
+				line: scrollResult.value,
+				type: CodexLineType.Scroll,
+			});
+		}
+	}
+
 	const childSectionResult =
 		tryParseCodexLineForChildSectionCodex(trimmedLine);
 	if (childSectionResult.isOk()) {
 		return ok({
 			line: childSectionResult.value,
 			type: CodexLineType.ChildSectionCodex,
-		});
-	}
-
-	const scrollResult = tryParseCodexLineForScroll(trimmedLine);
-	if (scrollResult.isOk()) {
-		return ok({
-			line: scrollResult.value,
-			type: CodexLineType.Scroll,
 		});
 	}
 

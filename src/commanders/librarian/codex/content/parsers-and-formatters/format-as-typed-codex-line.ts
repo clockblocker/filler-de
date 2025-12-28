@@ -1,3 +1,4 @@
+import { getParsedUserSettings } from "../../../../../global-state/global-state";
 import {
 	BACK_ARROW,
 	DASH,
@@ -58,13 +59,22 @@ function formatAsCodexLineForScroll(
 	node: TreeNodeIntendedForScrollLine,
 ): TypedCodexLine<typeof CodexLineType.Scroll> {
 	const { node: treeNode } = node;
+	const {
+		splitPathToLibraryRoot: { basename: libraryRoot },
+	} = getParsedUserSettings();
 	const nodeNameChainToParent = treeNode.nodeNameChainToParent;
 	const nodeName = treeNode.nodeName;
 
-	const basename = makeJoinedSuffixedBasenameFromNodeNameChain([
-		...nodeNameChainToParent,
-		nodeName,
-	]);
+	// Strip library root before formatting (user-visible format should not include it)
+	const fullChain = [...nodeNameChainToParent, nodeName];
+	const chainWithoutLibraryRoot =
+		fullChain.length > 0 && fullChain[0] === libraryRoot
+			? fullChain.slice(1)
+			: fullChain;
+
+	const basename = makeJoinedSuffixedBasenameFromNodeNameChain(
+		chainWithoutLibraryRoot,
+	);
 	const regularBacklink = formatBacklink(basename, nodeName);
 	const checkbox =
 		treeNode.status === TreeNodeStatus.Done
@@ -81,13 +91,22 @@ function formatAsCodexLineForFile(
 	node: TreeNodeIntendedForFileLine,
 ): TypedCodexLine<typeof CodexLineType.File> {
 	const { node: treeNode } = node;
+	const {
+		splitPathToLibraryRoot: { basename: libraryRoot },
+	} = getParsedUserSettings();
 	const nodeNameChainToParent = treeNode.nodeNameChainToParent;
 	const nodeName = treeNode.nodeName;
 
-	const basename = makeJoinedSuffixedBasenameFromNodeNameChain([
-		...nodeNameChainToParent,
-		nodeName,
-	]);
+	// Strip library root before formatting (user-visible format should not include it)
+	const fullChain = [...nodeNameChainToParent, nodeName];
+	const chainWithoutLibraryRoot =
+		fullChain.length > 0 && fullChain[0] === libraryRoot
+			? fullChain.slice(1)
+			: fullChain;
+
+	const basename = makeJoinedSuffixedBasenameFromNodeNameChain(
+		chainWithoutLibraryRoot,
+	);
 	const regularBacklink = formatBacklink(basename, nodeName);
 
 	return {

@@ -33,15 +33,16 @@ afterEach(() => {
 
 describe("pathPartsToNodeNameChainCodec", () => {
 	describe("decode (pathParts → chain)", () => {
-		it("decodes pathParts with library root to chain without root", () => {
+		it("decodes pathParts with library root to chain with root", () => {
 			expect(makeNodeNameChainFromPathParts(["Library", "parent", "child"])).toEqual([
+				"Library",
 				"parent",
 				"child",
 			]);
 		});
 
-		it("decodes pathParts with only library root to empty chain", () => {
-			expect(makeNodeNameChainFromPathParts(["Library"])).toEqual([]);
+		it("decodes pathParts with only library root to chain with only library root", () => {
+			expect(makeNodeNameChainFromPathParts(["Library"])).toEqual(["Library"]);
 		});
 
 		it("decodes empty pathParts to empty chain", () => {
@@ -50,6 +51,7 @@ describe("pathPartsToNodeNameChainCodec", () => {
 
 		it("decodes deeply nested pathParts", () => {
 			expect(makeNodeNameChainFromPathParts(["Library", "A", "B", "C", "D"])).toEqual([
+				"Library",
 				"A",
 				"B",
 				"C",
@@ -67,6 +69,7 @@ describe("pathPartsToNodeNameChainCodec", () => {
 				},
 			});
 			expect(makeNodeNameChainFromPathParts(["Root", "parent", "child"])).toEqual([
+				"Root",
 				"parent",
 				"child",
 			]);
@@ -74,20 +77,24 @@ describe("pathPartsToNodeNameChainCodec", () => {
 	});
 
 	describe("encode (chain → pathParts)", () => {
-		it("encodes chain to pathParts with library root", () => {
-			expect(makePathPartsFromNodeNameChain(["parent", "child"])).toEqual([
+		it("encodes chain with library root to pathParts", () => {
+			expect(makePathPartsFromNodeNameChain(["Library", "parent", "child"])).toEqual([
 				"Library",
 				"parent",
 				"child",
 			]);
 		});
 
-		it("encodes empty chain to pathParts with only library root", () => {
-			expect(makePathPartsFromNodeNameChain([])).toEqual(["Library"]);
+		it("encodes chain with only library root to pathParts with only library root", () => {
+			expect(makePathPartsFromNodeNameChain(["Library"])).toEqual(["Library"]);
+		});
+
+		it("encodes empty chain to empty pathParts", () => {
+			expect(makePathPartsFromNodeNameChain([])).toEqual([]);
 		});
 
 		it("encodes deeply nested chain", () => {
-			expect(makePathPartsFromNodeNameChain(["A", "B", "C", "D"])).toEqual([
+			expect(makePathPartsFromNodeNameChain(["Library", "A", "B", "C", "D"])).toEqual([
 				"Library",
 				"A",
 				"B",
@@ -105,7 +112,7 @@ describe("pathPartsToNodeNameChainCodec", () => {
 					type: SplitPathType.Folder,
 				},
 			});
-			expect(makePathPartsFromNodeNameChain(["parent", "child"])).toEqual([
+			expect(makePathPartsFromNodeNameChain(["Root", "parent", "child"])).toEqual([
 				"Root",
 				"parent",
 				"child",
@@ -123,8 +130,17 @@ describe("pathPartsToNodeNameChainCodec", () => {
 			).toEqual(chain);
 		});
 
-		it("roundtrips single-element chain", () => {
-			const chain = ["parent"];
+		it("roundtrips chain with only library root", () => {
+			const chain = ["Library"];
+			expect(
+				makeNodeNameChainFromPathParts(
+					makePathPartsFromNodeNameChain(chain),
+				),
+			).toEqual(chain);
+		});
+
+		it("roundtrips single-element chain (library root + one section)", () => {
+			const chain = ["Library", "parent"];
 			expect(
 				makeNodeNameChainFromPathParts(
 					makePathPartsFromNodeNameChain(chain),
@@ -133,7 +149,7 @@ describe("pathPartsToNodeNameChainCodec", () => {
 		});
 
 		it("roundtrips multi-element chain", () => {
-			const chain = ["parent", "child", "grandchild"];
+			const chain = ["Library", "parent", "child", "grandchild"];
 			expect(
 				makeNodeNameChainFromPathParts(
 					makePathPartsFromNodeNameChain(chain),

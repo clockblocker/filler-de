@@ -1,5 +1,4 @@
 import z from "zod";
-import { getParsedUserSettings } from "../../../../../global-state/global-state";
 import {
 	PathPartsSchema,
 	type SplitPath,
@@ -9,26 +8,24 @@ import { NodeNameChainSchema } from "../../../types/schemas/node-name";
 
 /**
  * Zod codec from PathParts to NodeNameChain.
- * Converts filesystem path parts (with library root) to node name chain (without library root).
+ * Converts filesystem path parts (with library root) to node name chain (with library root).
+ * After refactor: nodeNameChain now includes library root internally.
  *
  * @example
- * // Decode: ["Library", "parent", "child"] -> ["parent", "child"]
- * // Encode: ["parent", "child"] -> ["Library", "parent", "child"]
+ * // Decode: ["Library", "parent", "child"] -> ["Library", "parent", "child"]
+ * // Encode: ["Library", "parent", "child"] -> ["Library", "parent", "child"]
  *
- * Reads settings internally to get library root basename.
+ * Note: This is now a direct pass-through (no-op) since both include library root.
  */
 const pathPartsToNodeNameChainCodec = z.codec(
 	PathPartsSchema,
 	NodeNameChainSchema,
 	{
 		decode: (pathParts) => {
-			return pathParts.slice(1);
+			return pathParts;
 		},
 		encode: (chain) => {
-			const settings = getParsedUserSettings();
-			const libraryRoot = settings.splitPathToLibraryRoot.basename;
-
-			return [libraryRoot, ...chain];
+			return chain;
 		},
 	},
 );

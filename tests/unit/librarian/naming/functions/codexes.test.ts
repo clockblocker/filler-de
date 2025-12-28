@@ -36,11 +36,11 @@ afterEach(() => {
 });
 
 describe("makeCanonicalBasenameForCodexFromSectionNode", () => {
-	it("creates basename for single-element chain", () => {
+	it("creates basename for root section (library root in chain)", () => {
 		const sectionNode = {
 			children: [],
 			nodeName: "Parent",
-			nodeNameChainToParent: [],
+			nodeNameChainToParent: ["Library"],
 			status: TreeNodeStatus.NotStarted,
 			type: TreeNodeType.Section,
 		};
@@ -48,11 +48,11 @@ describe("makeCanonicalBasenameForCodexFromSectionNode", () => {
 		expect(result).toBe("__-Parent");
 	});
 
-	it("creates basename for multi-element chain", () => {
+	it("creates basename for nested section", () => {
 		const sectionNode = {
 			children: [],
 			nodeName: "Child",
-			nodeNameChainToParent: ["Parent"],
+			nodeNameChainToParent: ["Library", "Parent"],
 			status: TreeNodeStatus.NotStarted,
 			type: TreeNodeType.Section,
 		};
@@ -64,7 +64,7 @@ describe("makeCanonicalBasenameForCodexFromSectionNode", () => {
 		const sectionNode = {
 			children: [],
 			nodeName: "D",
-			nodeNameChainToParent: ["A", "B", "C"],
+			nodeNameChainToParent: ["Library", "A", "B", "C"],
 			status: TreeNodeStatus.NotStarted,
 			type: TreeNodeType.Section,
 		};
@@ -81,7 +81,7 @@ describe("makeCanonicalBasenameForCodexFromSectionNode", () => {
 		const sectionNode = {
 			children: [],
 			nodeName: "Child",
-			nodeNameChainToParent: ["Parent"],
+			nodeNameChainToParent: ["Library", "Parent"],
 			status: TreeNodeStatus.NotStarted,
 			type: TreeNodeType.Section,
 		};
@@ -91,28 +91,28 @@ describe("makeCanonicalBasenameForCodexFromSectionNode", () => {
 });
 
 describe("makeNodeNameChainToParentFromCanonicalBasenameForCodex", () => {
-	it("decodes basename for root codex (empty chain)", () => {
+	it("decodes basename for root codex (library root only)", () => {
 		const separated = separateJoinedSuffixedBasename("__-Library");
 		const result = makeNodeNameChainToParentFromCanonicalBasenameForCodex(separated);
-		expect(result).toEqual([]);
+		expect(result).toEqual(["Library"]);
 	});
 
-	it("decodes basename for single-element chain", () => {
+	it("decodes basename for root section (library root + section)", () => {
 		const separated = separateJoinedSuffixedBasename("__-Parent");
 		const result = makeNodeNameChainToParentFromCanonicalBasenameForCodex(separated);
-		expect(result).toEqual(["Parent"]);
+		expect(result).toEqual(["Library", "Parent"]);
 	});
 
-	it("decodes basename for multi-element chain", () => {
+	it("decodes basename for nested section", () => {
 		const separated = separateJoinedSuffixedBasename("__-Child-Parent");
 		const result = makeNodeNameChainToParentFromCanonicalBasenameForCodex(separated);
-		expect(result).toEqual(["Parent", "Child"]);
+		expect(result).toEqual(["Library", "Parent", "Child"]);
 	});
 
 	it("decodes basename for deeply nested chain", () => {
 		const separated = separateJoinedSuffixedBasename("__-D-C-B-A");
 		const result = makeNodeNameChainToParentFromCanonicalBasenameForCodex(separated);
-		expect(result).toEqual(["A", "B", "C", "D"]);
+		expect(result).toEqual(["Library", "A", "B", "C", "D"]);
 	});
 
 	it("handles custom library root", () => {
@@ -126,7 +126,7 @@ describe("makeNodeNameChainToParentFromCanonicalBasenameForCodex", () => {
 		});
 		const separated = separateJoinedSuffixedBasename("__-Root");
 		const result = makeNodeNameChainToParentFromCanonicalBasenameForCodex(separated);
-		expect(result).toEqual([]);
+		expect(result).toEqual(["Root"]);
 	});
 
 	it("handles custom delimiter", () => {
@@ -136,7 +136,7 @@ describe("makeNodeNameChainToParentFromCanonicalBasenameForCodex", () => {
 		});
 		const separated = separateJoinedSuffixedBasename("__::Child::Parent");
 		const result = makeNodeNameChainToParentFromCanonicalBasenameForCodex(separated);
-		expect(result).toEqual(["Parent", "Child"]);
+		expect(result).toEqual(["Library", "Parent", "Child"]);
 	});
 });
 
@@ -186,56 +186,56 @@ describe("buildCanonicalPathPartsForCodex", () => {
 
 describe("roundtrip tests", () => {
 
-	it("roundtrips single-element chain", () => {
+	it("roundtrips root section", () => {
 		const sectionNode = {
 			children: [],
 			nodeName: "Parent",
-			nodeNameChainToParent: [],
+			nodeNameChainToParent: ["Library"],
 			status: TreeNodeStatus.NotStarted,
 			type: TreeNodeType.Section,
 		};
 		const basename = makeCanonicalBasenameForCodexFromSectionNode(sectionNode);
 		const separated = separateJoinedSuffixedBasename(basename);
 		const result = makeNodeNameChainToParentFromCanonicalBasenameForCodex(separated);
-		// Returns full chain to section (includes section's nodeName)
-		expect(result).toEqual(["Parent"]);
+		// Returns parent chain (nodeNameChainToParent)
+		expect(result).toEqual(["Library", "Parent"]);
 	});
 
-	it("roundtrips multi-element chain", () => {
+	it("roundtrips nested section", () => {
 		const sectionNode = {
 			children: [],
 			nodeName: "Child",
-			nodeNameChainToParent: ["Parent"],
+			nodeNameChainToParent: ["Library", "Parent"],
 			status: TreeNodeStatus.NotStarted,
 			type: TreeNodeType.Section,
 		};
 		const basename = makeCanonicalBasenameForCodexFromSectionNode(sectionNode);
 		const separated = separateJoinedSuffixedBasename(basename);
 		const result = makeNodeNameChainToParentFromCanonicalBasenameForCodex(separated);
-		// Returns full chain to section (includes section's nodeName)
-		expect(result).toEqual(["Parent", "Child"]);
+		// Returns parent chain (nodeNameChainToParent)
+		expect(result).toEqual(["Library", "Parent", "Child"]);
 	});
 
 	it("roundtrips deeply nested chain", () => {
 		const sectionNode = {
 			children: [],
 			nodeName: "D",
-			nodeNameChainToParent: ["A", "B", "C"],
+			nodeNameChainToParent: ["Library", "A", "B", "C"],
 			status: TreeNodeStatus.NotStarted,
 			type: TreeNodeType.Section,
 		};
 		const basename = makeCanonicalBasenameForCodexFromSectionNode(sectionNode);
 		const separated = separateJoinedSuffixedBasename(basename);
 		const result = makeNodeNameChainToParentFromCanonicalBasenameForCodex(separated);
-		// Returns full chain to section (includes section's nodeName)
-		expect(result).toEqual(["A", "B", "C", "D"]);
+		// Returns parent chain (nodeNameChainToParent)
+		expect(result).toEqual(["Library", "A", "B", "C", "D"]);
 	});
 
 	it("roundtrips through buildCanonicalPathPartsForCodex and back", () => {
 		const sectionNode = {
 			children: [],
 			nodeName: "Child",
-			nodeNameChainToParent: ["Parent"],
+			nodeNameChainToParent: ["Library", "Parent"],
 			status: TreeNodeStatus.NotStarted,
 			type: TreeNodeType.Section,
 		};

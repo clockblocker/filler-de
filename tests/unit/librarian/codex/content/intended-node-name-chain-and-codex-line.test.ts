@@ -208,7 +208,7 @@ describe("tryParseAsIntendedTreeNode", () => {
 				const value = result.value;
 				expect(value.type).toBe(CodexLineType.Scroll);
 				expect(value.node.nodeName).toBe("Note");
-				expect(value.node.nodeNameChainToParent).toEqual(["A"]);
+				expect(value.node.nodeNameChainToParent).toEqual(["Library", "A"]);
 				expect(value.node.status).toBe(TreeNodeStatus.NotStarted);
 				expect(value.node.type).toBe(TreeNodeType.Scroll);
 				expect((value.node as any).extension).toBe("md");
@@ -232,7 +232,7 @@ describe("tryParseAsIntendedTreeNode", () => {
 			const result = tryParseAsIntendedTreeNode(line);
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.value.node.nodeNameChainToParent).toEqual([]);
+				expect(result.value.node.nodeNameChainToParent).toEqual(["Library"]);
 			}
 		});
 
@@ -241,7 +241,7 @@ describe("tryParseAsIntendedTreeNode", () => {
 			const result = tryParseAsIntendedTreeNode(line);
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.value.node.nodeNameChainToParent).toEqual(["A", "B", "C"]);
+				expect(result.value.node.nodeNameChainToParent).toEqual(["Library", "A", "B", "C"]);
 			}
 		});
 	});
@@ -255,7 +255,7 @@ describe("tryParseAsIntendedTreeNode", () => {
 				const value = result.value;
 				expect(value.type).toBe(CodexLineType.File);
 				expect(value.node.nodeName).toBe("Document");
-				expect(value.node.nodeNameChainToParent).toEqual(["A"]);
+				expect(value.node.nodeNameChainToParent).toEqual(["Library", "A"]);
 				expect(value.node.status).toBe(TreeNodeStatus.Unknown);
 				expect(value.node.type).toBe(TreeNodeType.File);
 			}
@@ -266,7 +266,7 @@ describe("tryParseAsIntendedTreeNode", () => {
 			const result = tryParseAsIntendedTreeNode(line);
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.value.node.nodeNameChainToParent).toEqual([]);
+				expect(result.value.node.nodeNameChainToParent).toEqual(["Library"]);
 			}
 		});
 	});
@@ -280,7 +280,7 @@ describe("tryParseAsIntendedTreeNode", () => {
 				const value = result.value;
 				expect(value.type).toBe(CodexLineType.ChildSectionCodex);
 				expect(value.node.nodeName).toBe("Section");
-				expect(value.node.nodeNameChainToParent).toEqual([]);
+				expect(value.node.nodeNameChainToParent).toEqual(["Library"]);
 				expect(value.node.status).toBe(TreeNodeStatus.NotStarted);
 				expect(value.node.type).toBe(TreeNodeType.Section);
 			}
@@ -300,7 +300,7 @@ describe("tryParseAsIntendedTreeNode", () => {
 			const result = tryParseAsIntendedTreeNode(line);
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.value.node.nodeNameChainToParent).toEqual(["A", "B"]);
+				expect(result.value.node.nodeNameChainToParent).toEqual(["Library", "A", "B"]);
 			}
 		});
 
@@ -309,7 +309,7 @@ describe("tryParseAsIntendedTreeNode", () => {
 			const result = tryParseAsIntendedTreeNode(line);
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.value.node.nodeNameChainToParent).toEqual([]);
+				expect(result.value.node.nodeNameChainToParent).toEqual(["Library"]);
 			}
 		});
 	});
@@ -323,7 +323,7 @@ describe("tryParseAsIntendedTreeNode", () => {
 				const value = result.value;
 				expect(value.type).toBe(CodexLineType.ParentSectionCodex);
 				expect(value.node.nodeName).toBe("Parent");
-				expect(value.node.nodeNameChainToParent).toEqual([]);
+				expect(value.node.nodeNameChainToParent).toEqual(["Library"]);
 				expect(value.node.status).toBe(TreeNodeStatus.NotStarted);
 				expect(value.node.type).toBe(TreeNodeType.Section);
 			}
@@ -334,7 +334,7 @@ describe("tryParseAsIntendedTreeNode", () => {
 			const result = tryParseAsIntendedTreeNode(line);
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.value.node.nodeNameChainToParent).toEqual(["A", "B"]);
+				expect(result.value.node.nodeNameChainToParent).toEqual(["Library", "A", "B"]);
 			}
 		});
 
@@ -343,7 +343,7 @@ describe("tryParseAsIntendedTreeNode", () => {
 			const result = tryParseAsIntendedTreeNode(line);
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.value.node.nodeNameChainToParent).toEqual([]);
+				expect(result.value.node.nodeNameChainToParent).toEqual(["Library"]);
 			}
 		});
 	});
@@ -377,7 +377,7 @@ describe("tryParseAsIntendedTreeNode", () => {
 
 describe("roundtrip tests", () => {
 	it("roundtrips scroll with not started status", () => {
-		const intended = createScrollIntendedTreeNode("Note", ["A"]);
+		const intended = createScrollIntendedTreeNode("Note", ["Library", "A"]);
 		const line = formatAsLine(intended);
 		const result = tryParseAsIntendedTreeNode(line);
 		expect(result.isOk()).toBe(true);
@@ -391,7 +391,7 @@ describe("roundtrip tests", () => {
 	});
 
 	it("roundtrips scroll with done status", () => {
-		const intended = createScrollIntendedTreeNode("DoneNote", ["A"], TreeNodeStatus.Done);
+		const intended = createScrollIntendedTreeNode("DoneNote", ["Library", "A"], TreeNodeStatus.Done);
 		const line = formatAsLine(intended);
 		const result = tryParseAsIntendedTreeNode(line);
 		expect(result.isOk()).toBe(true);
@@ -401,7 +401,7 @@ describe("roundtrip tests", () => {
 	});
 
 	it("roundtrips file", () => {
-		const intended = createFileIntendedTreeNode("Document", ["A"], "pdf");
+		const intended = createFileIntendedTreeNode("Document", ["Library", "A"], "pdf");
 		const line = formatAsLine(intended);
 		const result = tryParseAsIntendedTreeNode(line);
 		expect(result.isOk()).toBe(true);
@@ -414,7 +414,7 @@ describe("roundtrip tests", () => {
 	});
 
 	it("roundtrips child section codex", () => {
-		const intended = createChildSectionCodexIntendedTreeNode("Section", ["A"]);
+		const intended = createChildSectionCodexIntendedTreeNode("Section", ["Library", "A"]);
 		const line = formatAsLine(intended);
 		const result = tryParseAsIntendedTreeNode(line);
 		expect(result.isOk()).toBe(true);
@@ -428,7 +428,7 @@ describe("roundtrip tests", () => {
 	});
 
 	it("roundtrips parent section codex", () => {
-		const intended = createParentSectionCodexIntendedTreeNode("Parent", ["A"]);
+		const intended = createParentSectionCodexIntendedTreeNode("Parent", ["Library", "A"]);
 		const line = formatAsLine(intended);
 		const result = tryParseAsIntendedTreeNode(line);
 		expect(result.isOk()).toBe(true);
@@ -440,23 +440,23 @@ describe("roundtrip tests", () => {
 		}
 	});
 
-	it("roundtrips scroll with empty chain", () => {
-		const intended = createScrollIntendedTreeNode("RootNote", []);
+	it("roundtrips scroll with empty chain (library root only)", () => {
+		const intended = createScrollIntendedTreeNode("RootNote", ["Library"]);
 		const line = formatAsLine(intended);
 		const result = tryParseAsIntendedTreeNode(line);
 		expect(result.isOk()).toBe(true);
 		if (result.isOk()) {
-			expect(result.value.node.nodeNameChainToParent).toEqual([]);
+			expect(result.value.node.nodeNameChainToParent).toEqual(["Library"]);
 		}
 	});
 
 	it("roundtrips with deep chain", () => {
-		const intended = createScrollIntendedTreeNode("DeepNote", ["A", "B", "C"]);
+		const intended = createScrollIntendedTreeNode("DeepNote", ["Library", "A", "B", "C"]);
 		const line = formatAsLine(intended);
 		const result = tryParseAsIntendedTreeNode(line);
 		expect(result.isOk()).toBe(true);
 		if (result.isOk()) {
-			expect(result.value.node.nodeNameChainToParent).toEqual(["A", "B", "C"]);
+			expect(result.value.node.nodeNameChainToParent).toEqual(["Library", "A", "B", "C"]);
 		}
 	});
 });
