@@ -1,5 +1,5 @@
 import type { Result } from "neverthrow";
-import type { App, TAbstractFile, TFile, TFolder } from "obsidian";
+import type { App, TFile, TFolder } from "obsidian";
 import { OpenedFileReader } from "./file-services/active-view/opened-file-reader";
 import type { OpenedFileService } from "./file-services/active-view/opened-file-service";
 import { OpenedFileService as OpenedFileServiceImpl } from "./file-services/active-view/opened-file-service";
@@ -11,7 +11,6 @@ import { EventAdapter } from "./impl/event-adapter";
 import { Executor } from "./impl/executor";
 import { Reader } from "./impl/reader";
 import { SelfEventTrackerLegacy } from "./impl/self-event-tracker";
-import { makeSplitPath } from "./impl/split-path-and-system-path";
 import type {
 	DispatchResult,
 	ObsidianVaultActionManager,
@@ -146,16 +145,5 @@ export class ObsidianVaultActionManagerImpl
 		splitPathArg: SP,
 	): Promise<Result<SP["type"] extends "Folder" ? TFolder : TFile, string>> {
 		return this.reader.getAbstractFile(splitPathArg);
-	}
-
-	makeSplitPath(systemPath: string): SplitPath;
-	makeSplitPath(tFile: TFile): SplitPathToFile | SplitPathToMdFile;
-	makeSplitPath(tFolder: TFolder): SplitPathToFolder;
-	makeSplitPath(tAbstractFile: TAbstractFile): SplitPath;
-	makeSplitPath(input: string | TAbstractFile): SplitPath {
-		if (typeof input === "string") {
-			return makeSplitPath(input);
-		}
-		return makeSplitPath(input);
 	}
 }

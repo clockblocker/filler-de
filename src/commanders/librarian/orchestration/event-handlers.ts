@@ -29,7 +29,7 @@ export type EventHandlerContext = {
 	dispatch: (actions: VaultAction[]) => Promise<unknown>;
 	readTree: () => Promise<LibraryTree>;
 	setTree: (tree: LibraryTree) => void;
-	splitPath: (path: string) => SplitPath;
+	makeSplitPath: (path: string) => SplitPath;
 	tree: LibraryTree;
 	listAllFilesWithMdReaders: (
 		splitPath: import("../../../obsidian-vault-action-manager/types/split-path").SplitPathToFolder,

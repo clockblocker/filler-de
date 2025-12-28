@@ -1,5 +1,5 @@
 import type { Result } from "neverthrow";
-import type { TAbstractFile, TFile, TFolder } from "obsidian";
+import type { TFile, TFolder } from "obsidian";
 import { z } from "zod";
 import type { DispatchResult } from "./impl/dispatcher";
 import {
@@ -78,11 +78,6 @@ export interface ObsidianVaultActionManager {
 	getAbstractFile<SP extends SplitPath>(
 		splitPath: SP,
 	): Promise<Result<SP["type"] extends "Folder" ? TFolder : TFile, string>>;
-
-	makeSplitPath(systemPath: string): SplitPath;
-	makeSplitPath(tFile: TFile): SplitPathToFile | SplitPathToMdFile;
-	makeSplitPath(tFolder: TFolder): SplitPathToFolder;
-	makeSplitPath(tAbstractFile: TAbstractFile): SplitPath;
 }
 
 export { makeSystemPathForSplitPath };
