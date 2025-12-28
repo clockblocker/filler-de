@@ -49,6 +49,12 @@ const NotStartedCheckboxSchema = z.literal("- [ ]");
 export type NOT_STARTED_CHECKBOX = z.infer<typeof NotStartedCheckboxSchema>;
 export const NOT_STARTED_CHECKBOX = NotStartedCheckboxSchema.value;
 
+export const CheckboxSchema = z.union([
+	z.literal(DONE_CHECKBOX),
+	z.literal(NOT_STARTED_CHECKBOX),
+]);
+export type CHECKBOX = z.infer<typeof CheckboxSchema>;
+
 const PipeSchema = z.literal("|");
 export type PIPE = z.infer<typeof PipeSchema>;
 export const PIPE = PipeSchema.value;
