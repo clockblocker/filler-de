@@ -5,8 +5,11 @@
 
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import { LINE_BREAK, SPACE_F, TAB } from "../../../types/literals";
-import type { SectionNode, TreeNode } from "../types/tree-node";
-import { TreeNodeType } from "../types/tree-node";
+import type {
+	SectionNode,
+	TreeNode,
+} from "../../librarin-shared/types/tree-node";
+import { TreeNodeType } from "../../librarin-shared/types/tree-node";
 import { formatAsLine } from "./content/intended-tree-node-and-codex-line";
 import type { AnyIntendedTreeNode } from "./content/schema/intended-tree-node";
 import { CodexLineType } from "./content/schema/literals";

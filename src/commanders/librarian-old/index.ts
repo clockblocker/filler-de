@@ -11,6 +11,16 @@ export type {
 	SplitSuffix,
 } from "../librarin-shared/types/node-name";
 export type { TreeAction } from "../librarin-shared/types/tree-action";
+export type {
+	FileNode,
+	LeafNode,
+	ScrollNode,
+	SectionNode,
+	TreeLeaf,
+	TreeNode,
+	TreeNodeStatus,
+	TreeNodeType,
+} from "../librarin-shared/types/tree-node";
 export {
 	handleCodexCheckboxClick,
 	isTaskCheckbox,
@@ -28,14 +38,4 @@ export {
 } from "./healing";
 export { Librarian } from "./librarian";
 export { LibraryTree } from "./library-tree";
-export type {
-	FileNode,
-	LeafNode,
-	ScrollNode,
-	SectionNode,
-	TreeLeaf,
-	TreeNode,
-	TreeNodeStatus,
-	TreeNodeType,
-} from "./types/tree-node";
 export { findCommonAncestor } from "./utils/find-common-ancestor";

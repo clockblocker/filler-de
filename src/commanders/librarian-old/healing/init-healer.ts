@@ -8,8 +8,8 @@ import {
 	type VaultAction,
 	VaultActionType,
 } from "../../../obsidian-vault-action-manager/types/vault-action";
-import type { TreeLeaf } from "../types/tree-node";
-import { TreeNodeType } from "../types/tree-node";
+import type { TreeLeaf } from "../../librarin-shared/types/tree-node";
+import { TreeNodeType } from "../../librarin-shared/types/tree-node";
 import { parseBasenameDeprecated } from "../utils/parse-basename";
 import {
 	buildBasenameDepreacated,
@@ -44,9 +44,7 @@ function findMatchingFile(
 	actualFiles: SplitPathWithReader[],
 ): SplitPathWithReader | null {
 	// Expected path (parent chain only, not including nodeName)
-	const expectedParentPath = joinPathParts(
-		leaf.nodeNameChainToParent,
-	);
+	const expectedParentPath = joinPathParts(leaf.nodeNameChainToParent);
 
 	for (const file of actualFiles) {
 		// Skip folders

@@ -1,8 +1,8 @@
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import type { NodeNameChain } from "../../librarin-shared/types/node-name";
+import type { SectionNode } from "../../librarin-shared/types/tree-node";
+import { TreeNodeType } from "../../librarin-shared/types/tree-node";
 import type { LibraryTree } from "../library-tree";
-import type { SectionNode } from "../types/tree-node";
-import { TreeNodeType } from "../types/tree-node";
 
 /**
  * Collect chains for all sections in tree (including root).

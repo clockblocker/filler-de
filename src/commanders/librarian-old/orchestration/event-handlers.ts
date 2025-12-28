@@ -42,7 +42,7 @@ export type EventHandlerContextDeprecated = {
 	>;
 	getSectionNode: (
 		chain: NodeNameChain,
-	) => import("../types/tree-node").SectionNode | null;
+	) => import("../../librarin-shared/types/tree-node").SectionNode | null;
 };
 
 /**

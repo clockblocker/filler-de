@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { TreeNodeStatus, TreeNodeType } from "../../../../src/commanders/librarian-old/types/tree-node";
 import { splitPathToLeafDeprecated } from "../../../../src/commanders/librarian-old/utils/split-path-to-leaf";
+import { TreeNodeStatus, TreeNodeType } from "../../../../src/commanders/librarin-shared/types/tree-node";
 import * as globalState from "../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
 import type {

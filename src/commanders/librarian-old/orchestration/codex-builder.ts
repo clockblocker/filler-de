@@ -3,12 +3,12 @@ import { SplitPathType } from "../../../obsidian-vault-action-manager/types/spli
 import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
 import { VaultActionType } from "../../../obsidian-vault-action-manager/types/vault-action";
 import type { NodeNameChain } from "../../librarin-shared/types/node-name";
+import type { SectionNode } from "../../librarin-shared/types/tree-node";
 import { generateCodexContent } from "../codex";
 import {
 	buildCanonicalPathPartsForCodex,
 	makeCanonicalBasenameForCodexFromSectionNode,
 } from "../naming/functions/codexes";
-import type { SectionNode } from "../types/tree-node";
 
 /**
  * Build VaultActions to create/update codex files for impacted sections.

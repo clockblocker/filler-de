@@ -11,7 +11,7 @@ import {
 } from "../../../../../types/literals";
 import { makeNodeNameChainToParentFromSeparatedCanonicalBasenameForCodex } from "../../../../librarian-old/naming/functions/codexes";
 import { separateJoinedSuffixedBasename } from "../../../../librarian-old/naming/types/transformers";
-import { TreeNodeStatus } from "../../../../librarian-old/types/tree-node";
+import { TreeNodeStatus } from "../../../types/tree-node";
 import type {
 	IntendedTreeNode,
 	TreeNodeIntendedForChildSectionCodexLine,

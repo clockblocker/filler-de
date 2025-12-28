@@ -5,9 +5,9 @@ import type {
 } from "../../../obsidian-vault-action-manager/types/split-path";
 import { SplitPathType } from "../../../obsidian-vault-action-manager/types/split-path";
 import { extractMetaInfo } from "../../../services/dto-services/meta-info-manager/interface";
+import { TreeNodeStatus } from "../../librarin-shared/types/tree-node";
 import { LibraryTree } from "../library-tree";
 import { tryParseJoinedSuffixedBasenameForCodex } from "../naming/codecs/atomic/parsers";
-import { TreeNodeStatus } from "../types/tree-node";
 import { splitPathToLeafDeprecated } from "../utils/split-path-to-leaf";
 
 /**

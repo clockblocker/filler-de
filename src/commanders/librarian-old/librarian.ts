@@ -10,6 +10,10 @@ import { logger } from "../../utils/logger";
 import { TreeActionType } from "../librarin-shared/types/literals";
 import type { NodeNameChain } from "../librarin-shared/types/node-name";
 import {
+	TreeNodeStatus,
+	TreeNodeType,
+} from "../librarin-shared/types/tree-node";
+import {
 	dedupeChains,
 	expandAllToAncestors,
 	flattenActionResult,
@@ -27,7 +31,6 @@ import {
 	readTreeFromSplitFilesWithReaders,
 } from "./orchestration";
 import { collectAllSectionChains } from "./orchestration/tree-utils";
-import { TreeNodeStatus, TreeNodeType } from "./types/tree-node";
 import { buildCanonicalPathForLeaf } from "./utils/tree-path-utils";
 
 export class Librarian {

@@ -1,10 +1,7 @@
 import type { NodeNameChain } from "../../librarian-old";
-import type {
-	TreeNodeStatus,
-	TreeNodeType,
-} from "../../librarian-old/types/tree-node";
 import { TreeActionType } from "./literals";
 import type { NodeName } from "./node-name";
+import type { TreeNodeStatus, TreeNodeType } from "./tree-node";
 
 export { TreeActionType };
 

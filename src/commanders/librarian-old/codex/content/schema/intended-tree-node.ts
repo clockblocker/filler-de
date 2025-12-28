@@ -2,7 +2,7 @@ import type {
 	FileNode,
 	ScrollNode,
 	SectionNode,
-} from "../../../types/tree-node";
+} from "../../../../librarin-shared/types/tree-node";
 import type { CodexLineType } from "./literals";
 
 // Object schemas with type discriminator

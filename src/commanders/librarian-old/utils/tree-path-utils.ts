@@ -1,9 +1,13 @@
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import { makeSystemPathForSplitPath } from "../../../obsidian-vault-action-manager/impl/split-path-and-system-path";
+import type {
+	FileNode,
+	ScrollNode,
+	TreeLeaf,
+} from "../../librarin-shared/types/tree-node";
+import { TreeNodeType } from "../../librarin-shared/types/tree-node";
 import { makeJoinedSuffixedBasenameFromNodeNameChain } from "../naming/functions/basename-and-chain";
 import { buildCanonicalSplitPathFromNode } from "../naming/functions/split-path-and-leaf";
-import type { FileNode, ScrollNode, TreeLeaf } from "../types/tree-node";
-import { TreeNodeType } from "../types/tree-node";
 
 export function joinPathParts(parts: string[]): string {
 	return parts.filter(Boolean).join("/");

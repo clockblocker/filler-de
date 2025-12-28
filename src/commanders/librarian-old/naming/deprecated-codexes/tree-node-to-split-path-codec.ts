@@ -9,7 +9,7 @@ import {
 	type TreeNode,
 	TreeNodeStatus,
 	TreeNodeType,
-} from "../../types/tree-node";
+} from "../../../librarin-shared/types/tree-node";
 import { canonicalBasenameToChainCodec } from "./suffixed-basename-to-chain-codec";
 
 /**

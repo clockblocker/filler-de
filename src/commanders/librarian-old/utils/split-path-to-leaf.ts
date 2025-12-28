@@ -3,8 +3,11 @@ import type {
 	SplitPathToFile,
 	SplitPathToMdFile,
 } from "../../../obsidian-vault-action-manager/types/split-path";
-import type { TreeLeaf } from "../types/tree-node";
-import { TreeNodeStatus, TreeNodeType } from "../types/tree-node";
+import type { TreeLeaf } from "../../librarin-shared/types/tree-node";
+import {
+	TreeNodeStatus,
+	TreeNodeType,
+} from "../../librarin-shared/types/tree-node";
 import { parseBasenameDeprecated } from "./parse-basename";
 
 /** @deprecated */

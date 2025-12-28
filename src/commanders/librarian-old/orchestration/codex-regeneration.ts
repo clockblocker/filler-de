@@ -5,10 +5,10 @@ import {
 import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
 import { VaultActionType } from "../../../obsidian-vault-action-manager/types/vault-action";
 import type { NodeNameChain } from "../../librarin-shared/types/node-name";
+import type { SectionNode } from "../../librarin-shared/types/tree-node";
 import { tryParseJoinedSuffixedBasenameForCodex } from "../naming/codecs/atomic/parsers";
 import { makeNodeNameChainFromPathParts } from "../naming/codecs/atomic/path-parts-and-node-name-chain";
 import { makeCanonicalBasenameForCodexFromSectionNode } from "../naming/functions/codexes";
-import type { SectionNode } from "../types/tree-node";
 import { buildCodexVaultActions } from "./codex-builder";
 
 export function buildActionsForCodexRegenerationInImpactedSections(

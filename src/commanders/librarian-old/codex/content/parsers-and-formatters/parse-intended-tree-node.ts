@@ -9,9 +9,9 @@ import {
 	PIPE,
 	SPACE_F,
 } from "../../../../../types/literals";
+import { TreeNodeStatus } from "../../../../librarin-shared/types/tree-node";
 import { makeNodeNameChainToParentFromSeparatedCanonicalBasenameForCodex } from "../../../naming/functions/codexes";
 import { separateJoinedSuffixedBasename } from "../../../naming/types/transformers";
-import { TreeNodeStatus } from "../../../types/tree-node";
 import type {
 	IntendedTreeNode,
 	TreeNodeIntendedForChildSectionCodexLine,

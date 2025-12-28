@@ -10,7 +10,7 @@ import {
 } from "../../../../../types/literals";
 import { makeJoinedSuffixedBasenameFromNodeNameChain } from "../../../../librarian-old/naming/functions/basename-and-chain";
 import { makeCanonicalBasenameForCodexFromSectionNode } from "../../../../librarian-old/naming/functions/codexes";
-import { TreeNodeStatus } from "../../../../librarian-old/types/tree-node";
+import { TreeNodeStatus } from "../../../types/tree-node";
 import type {
 	IntendedTreeNode,
 	TreeNodeIntendedForChildSectionCodexLine,

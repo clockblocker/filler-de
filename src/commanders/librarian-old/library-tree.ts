@@ -12,14 +12,14 @@ import type {
 	MoveNodeAction,
 	TreeAction,
 } from "../librarin-shared/types/tree-action";
-import type { TreeLeaf } from "./types/tree-node";
+import type { TreeLeaf } from "../librarin-shared/types/tree-node";
 import {
 	type LeafNode,
 	type SectionNode,
 	type TreeNode,
 	TreeNodeStatus,
 	TreeNodeType,
-} from "./types/tree-node";
+} from "../librarin-shared/types/tree-node";
 import { joinPathParts } from "./utils/tree-path-utils";
 
 export class LibraryTree {

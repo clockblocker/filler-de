@@ -7,8 +7,8 @@ import {
 	SCROLL_NODE_TYPE,
 	SECTION_NODE_TYPE,
 	UNKNOWN_STATUS,
-} from "../../librarin-shared/types/literals";
-import type { NodeName } from "../../librarin-shared/types/node-name";
+} from "./literals";
+import type { NodeName } from "./node-name";
 
 const TreeNodeStatusSchema = z.enum([
 	DONE_STATUS,

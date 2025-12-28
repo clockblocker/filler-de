@@ -10,7 +10,7 @@ import {
 	extractMetaInfo,
 } from "../../../services/dto-services/meta-info-manager/interface";
 import { SCROLL } from "../../../types/literals";
-import { TreeNodeStatus } from "../types/tree-node";
+import { TreeNodeStatus } from "../../librarin-shared/types/tree-node";
 
 /**
  * Build action to update status in metadata.

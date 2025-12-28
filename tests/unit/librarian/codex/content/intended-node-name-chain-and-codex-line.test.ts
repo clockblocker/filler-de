@@ -5,7 +5,7 @@ import {
 } from "../../../../../src/commanders/librarian-old/codex/content/intended-tree-node-and-codex-line";
 import type { AnyIntendedTreeNode } from "../../../../../src/commanders/librarian-old/codex/content/schema/intended-tree-node";
 import { CodexLineType } from "../../../../../src/commanders/librarian-old/codex/content/schema/literals";
-import { TreeNodeStatus, TreeNodeType } from "../../../../../src/commanders/librarian-old/types/tree-node";
+import { TreeNodeStatus, TreeNodeType } from "../../../../../src/commanders/librarin-shared/types/tree-node";
 import * as globalState from "../../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../../src/global-state/parsed-settings";
 import { SplitPathType } from "../../../../../src/obsidian-vault-action-manager/types/split-path";

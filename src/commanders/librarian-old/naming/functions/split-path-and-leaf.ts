@@ -4,8 +4,12 @@ import type {
 	SplitPathToMdFile,
 } from "../../../../obsidian-vault-action-manager/types/split-path";
 import { SplitPathType } from "../../../../obsidian-vault-action-manager/types/split-path";
-import type { FileNode, ScrollNode, SectionNode } from "../../types/tree-node";
-import { TreeNodeType } from "../../types/tree-node";
+import type {
+	FileNode,
+	ScrollNode,
+	SectionNode,
+} from "../../../librarin-shared/types/tree-node";
+import { TreeNodeType } from "../../../librarin-shared/types/tree-node";
 import { makePathPartsFromNodeNameChain } from "../codecs/atomic/path-parts-and-node-name-chain";
 import { makeJoinedSuffixedBasenameFromNodeNameChain } from "./basename-and-chain";
 
