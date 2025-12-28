@@ -4,7 +4,7 @@ import { logger } from "../../utils/logger";
 import type { OpenedFileService } from "../file-services/active-view/opened-file-service";
 import type { TFileHelper } from "../file-services/background/helpers/tfile-helper";
 import type { TFolderHelper } from "../file-services/background/helpers/tfolder-helper";
-import { systemPathToSplitPath } from "../helpers/pathfinder/system-path-and-split-path-codec";
+import { splitPathFromAbstractInternal } from "../helpers/pathfinder";
 import type {
 	SplitPath,
 	SplitPathToFile,
@@ -62,12 +62,12 @@ export class Reader {
 		const fromBg: SplitPath[] = folderResult.isOk()
 			? folderResult.value.children.map((child) => {
 					if (child instanceof TFolder) {
-						return systemPathToSplitPath.decode(
-							child.path,
+						return splitPathFromAbstractInternal(
+							child,
 						) as SplitPathToFolder;
 					}
-					return systemPathToSplitPath.decode(
-						child.path,
+					return splitPathFromAbstractInternal(
+						child,
 					) as SplitPathToFile;
 				})
 			: [];

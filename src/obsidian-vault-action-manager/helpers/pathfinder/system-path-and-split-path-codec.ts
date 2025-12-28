@@ -12,7 +12,7 @@ import {
 	safeFileName,
 } from "./path-utils";
 
-export const systemPathToSplitPath = z.codec(z.string(), SplitPathSchema, {
+const systemPathToSplitPath = z.codec(z.string(), SplitPathSchema, {
 	decode: (systemPath: string): SplitPath => {
 		const normalized = systemPath.replace(/^[\\/]+|[\\/]+$/g, "");
 		if (!normalized) {
@@ -62,6 +62,7 @@ export const systemPathToSplitPath = z.codec(z.string(), SplitPathSchema, {
 			extension && title.endsWith(extension)
 				? title.slice(0, -extension.length)
 				: title;
+
 		return joinPosix(
 			pathToFolderFromPathParts(pathParts),
 			safeFileName(basenameWithoutExt) + extension,
@@ -69,10 +70,10 @@ export const systemPathToSplitPath = z.codec(z.string(), SplitPathSchema, {
 	},
 });
 
-export function systemPathFromSplitPath(splitPath: SplitPath): string {
+export function systemPathFromSplitPathInternal(splitPath: SplitPath): string {
 	return systemPathToSplitPath.encode(splitPath);
 }
 
-export function splitPathFromSystemPath(systemPath: string): SplitPath {
+export function splitPathFromSystemPathInternal(systemPath: string): SplitPath {
 	return systemPathToSplitPath.decode(systemPath);
 }

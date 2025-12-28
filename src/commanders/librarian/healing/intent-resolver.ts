@@ -1,5 +1,5 @@
 import { getParsedUserSettings } from "../../../global-state/global-state";
-import { systemPathFromSplitPath } from "../../../obsidian-vault-action-manager/helpers/pathfinder/system-path-and-split-path-codec";
+import { systemPathFromSplitPathInternal } from "../../../obsidian-vault-action-manager/helpers/pathfinder/system-path-and-split-path-codec";
 import type {
 	SplitPathToFile,
 	SplitPathToMdFile,
@@ -37,7 +37,7 @@ type FileInfo = {
 function extractFileInfo(path: SplitPathToFile | SplitPathToMdFile): FileInfo {
 	logger.debug(
 		"[extractFileInfo] input path:",
-		systemPathFromSplitPath(path),
+		systemPathFromSplitPathInternal(path),
 	);
 	const parsed = parseBasenameDeprecated(path.basename);
 	logger.debug("[extractFileInfo] parsed:", JSON.stringify(parsed));

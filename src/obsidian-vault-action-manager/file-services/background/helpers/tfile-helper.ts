@@ -1,7 +1,10 @@
 import { err, ok, type Result } from "neverthrow";
 import { type FileManager, TFile, type Vault } from "obsidian";
 import type { MdFileWithContentDto } from "../../../../obsidian-vault-action-manager/helpers/pathfinder";
-import { findFirstAvailableIndexedPath } from "../../../../obsidian-vault-action-manager/helpers/pathfinder";
+import {
+	findFirstAvailableIndexedPath,
+	systemPathFromSplitPathInternal,
+} from "../../../../obsidian-vault-action-manager/helpers/pathfinder";
 import {
 	type SplitPathFromTo,
 	type SplitPathToFile,
@@ -19,7 +22,6 @@ import {
 	errorTypeMismatch,
 	errorWriteFailed,
 } from "../../../errors";
-import { systemPathToSplitPath } from "../../../helpers/pathfinder/system-path-and-split-path-codec";
 import type { Transform } from "../../../types/vault-action";
 import { type CollisionStrategy, getExistingBasenamesInFolder } from "./common";
 
@@ -43,7 +45,7 @@ export class TFileHelper {
 	async getFile<SPF extends SplitPathToMdFile | SplitPathToFile>(
 		splitPath: SPF,
 	): Promise<Result<TFile, string>> {
-		const systemPath = systemPathToSplitPath.encode(splitPath);
+		const systemPath = systemPathFromSplitPathInternal(splitPath);
 		const tAbstractFile = this.vault.getAbstractFileByPath(systemPath);
 		if (!tAbstractFile) {
 			return err(errorGetByPath("file", systemPath));
@@ -66,7 +68,7 @@ export class TFileHelper {
 			return ok(fileResult.value); // Already exists
 		}
 
-		const systemPath = systemPathToSplitPath.encode(splitPath);
+		const systemPath = systemPathFromSplitPathInternal(splitPath);
 		try {
 			const createdFile = await this.vault.create(
 				systemPath,
@@ -116,8 +118,8 @@ export class TFileHelper {
 
 		if (fromResult.isErr()) {
 			if (toResult.isErr()) {
-				const fromPath = systemPathToSplitPath.encode(from);
-				const toPath = systemPathToSplitPath.encode(to);
+				const fromPath = systemPathFromSplitPathInternal(from);
+				const toPath = systemPathFromSplitPathInternal(to);
 				return err(
 					errorBothSourceAndTargetNotFound(
 						"file",
@@ -148,7 +150,7 @@ export class TFileHelper {
 					} catch (error) {
 						return err(
 							errorTrashDuplicateFile(
-								systemPathToSplitPath.encode(from),
+								systemPathFromSplitPathInternal(from),
 								error.message,
 							),
 						);
@@ -175,14 +177,14 @@ export class TFileHelper {
 			try {
 				await this.fileManager.renameFile(
 					fromResult.value,
-					systemPathToSplitPath.encode(indexedPath),
+					systemPathFromSplitPathInternal(indexedPath),
 				);
 				const renamedResult = await this.getFile(indexedPath);
 				if (renamedResult.isErr()) {
 					return err(
 						errorRetrieveRenamed(
 							"file",
-							systemPathToSplitPath.encode(indexedPath),
+							systemPathFromSplitPathInternal(indexedPath),
 							renamedResult.error,
 						),
 					);
@@ -192,8 +194,8 @@ export class TFileHelper {
 				return err(
 					errorRenameFailed(
 						"file",
-						systemPathToSplitPath.encode(from),
-						systemPathToSplitPath.encode(indexedPath),
+						systemPathFromSplitPathInternal(from),
+						systemPathFromSplitPathInternal(indexedPath),
 						error.message,
 					),
 				);
@@ -203,14 +205,14 @@ export class TFileHelper {
 		try {
 			await this.fileManager.renameFile(
 				fromResult.value,
-				systemPathToSplitPath.encode(to),
+				systemPathFromSplitPathInternal(to),
 			);
 			const renamedResult = await this.getFile(to);
 			if (renamedResult.isErr()) {
 				return err(
 					errorRetrieveRenamed(
 						"file",
-						systemPathToSplitPath.encode(to),
+						systemPathFromSplitPathInternal(to),
 						renamedResult.error,
 					),
 				);
@@ -220,8 +222,8 @@ export class TFileHelper {
 			return err(
 				errorRenameFailed(
 					"file",
-					systemPathToSplitPath.encode(from),
-					systemPathToSplitPath.encode(to),
+					systemPathFromSplitPathInternal(from),
+					systemPathFromSplitPathInternal(to),
 					error.message,
 				),
 			);
@@ -244,7 +246,7 @@ export class TFileHelper {
 			return err(
 				errorWriteFailed(
 					"file",
-					systemPathToSplitPath.encode(splitPath),
+					systemPathFromSplitPathInternal(splitPath),
 					error instanceof Error ? error.message : String(error),
 				),
 			);
@@ -276,7 +278,7 @@ export class TFileHelper {
 			return err(
 				errorWriteFailed(
 					"file",
-					systemPathToSplitPath.encode(splitPath),
+					systemPathFromSplitPathInternal(splitPath),
 					error instanceof Error ? error.message : String(error),
 				),
 			);

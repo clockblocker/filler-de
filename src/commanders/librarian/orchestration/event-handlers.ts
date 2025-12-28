@@ -1,7 +1,7 @@
 import type { Result } from "neverthrow";
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import type { VaultEvent } from "../../../obsidian-vault-action-manager";
-import { systemPathFromSplitPath } from "../../../obsidian-vault-action-manager/helpers/pathfinder/system-path-and-split-path-codec";
+import { systemPathFromSplitPathInternal } from "../../../obsidian-vault-action-manager/helpers/pathfinder/system-path-and-split-path-codec";
 import type { SplitPath } from "../../../obsidian-vault-action-manager/types/split-path";
 import { SplitPathType } from "../../../obsidian-vault-action-manager/types/split-path";
 import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
@@ -59,8 +59,8 @@ export function parseEventToHandler(event: VaultEvent): {
 	const settings = getParsedUserSettings();
 	const libraryRoot = settings.splitPathToLibraryRoot.basename;
 	if (event.type === "FileRenamed" || event.type === "FolderRenamed") {
-		const oldPath = systemPathFromSplitPath(event.from);
-		const newPath = systemPathFromSplitPath(event.to);
+		const oldPath = systemPathFromSplitPathInternal(event.from);
+		const newPath = systemPathFromSplitPathInternal(event.to);
 		// Only handle events within library
 		if (
 			!oldPath.startsWith(`${libraryRoot}/`) &&
@@ -78,7 +78,7 @@ export function parseEventToHandler(event: VaultEvent): {
 	}
 
 	if (event.type === "FileCreated" || event.type === "FolderCreated") {
-		const path = systemPathFromSplitPath(event.splitPath);
+		const path = systemPathFromSplitPathInternal(event.splitPath);
 		// Only handle events within library
 		if (!path.startsWith(`${libraryRoot}/`)) {
 			return null;
@@ -91,7 +91,7 @@ export function parseEventToHandler(event: VaultEvent): {
 	}
 
 	if (event.type === "FileTrashed" || event.type === "FolderTrashed") {
-		const path = systemPathFromSplitPath(event.splitPath);
+		const path = systemPathFromSplitPathInternal(event.splitPath);
 		// Only handle events within library
 		if (!path.startsWith(`${libraryRoot}/`)) {
 			return null;

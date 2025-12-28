@@ -24,7 +24,7 @@ import {
 import { TFileHelper } from "./obsidian-vault-action-manager/file-services/background/helpers/tfile-helper";
 import { TFolderHelper } from "./obsidian-vault-action-manager/file-services/background/helpers/tfolder-helper";
 import { logError } from "./obsidian-vault-action-manager/helpers/issue-handlers";
-import { splitPathFromSystemPath } from "./obsidian-vault-action-manager/helpers/pathfinder/system-path-and-split-path-codec";
+import { splitPathFromSystemPathInternal } from "./obsidian-vault-action-manager/helpers/pathfinder/system-path-and-split-path-codec";
 import { Reader } from "./obsidian-vault-action-manager/impl/reader";
 import { extractMetaInfo } from "./services/dto-services/meta-info-manager/interface";
 import { AboveSelectionToolbarService } from "./services/obsidian-services/atomic-services/above-selection-toolbar-service";
@@ -565,7 +565,7 @@ export default class TextEaterPlugin extends Plugin {
 
 	getHelpersTestingApi() {
 		return {
-			splitPath: splitPathFromSystemPath,
+			splitPath: splitPathFromSystemPathInternal,
 			tfileHelper: this.testingTFileHelper,
 			tfolderHelper: this.testingTFolderHelper,
 		};

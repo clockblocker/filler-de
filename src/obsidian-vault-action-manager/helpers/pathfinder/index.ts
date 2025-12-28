@@ -16,14 +16,9 @@ export {
 	splitPathToFolderFromCore,
 	splitPathToMdFileFromCore,
 } from "./path-utils";
+export { splitPathFromAbstractInternal } from "./split-path-from-abstract";
+// System path <-> split path conversion
 export {
-	makeSystemPathForSplitPath,
-	splitPathFromAbstract,
-	splitPathFromString,
-} from "./split-path-core";
-// Zod codec for system path <-> split path conversion
-export {
-	splitPathFromSystemPath,
-	systemPathFromSplitPath,
-	systemPathToSplitPath,
+	splitPathFromSystemPathInternal,
+	systemPathFromSplitPathInternal,
 } from "./system-path-and-split-path-codec";

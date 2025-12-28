@@ -1,5 +1,7 @@
-import { pathToFolderFromPathParts } from "../helpers/pathfinder";
-import { systemPathToSplitPath } from "../helpers/pathfinder/system-path-and-split-path-codec";
+import {
+	pathToFolderFromPathParts,
+	systemPathFromSplitPathInternal,
+} from "../helpers/pathfinder";
 import type { SplitPath } from "../types/split-path";
 import type { VaultAction } from "../types/vault-action";
 import { VaultActionType } from "../types/vault-action";
@@ -73,7 +75,7 @@ export class SelfEventTrackerLegacy {
 			case VaultActionType.TrashFile:
 			case VaultActionType.TrashMdFile:
 				// Trash operations don't create parent folders, only track target
-				return [systemPathToSplitPath.encode(payload.splitPath)];
+				return [systemPathFromSplitPathInternal(payload.splitPath)];
 
 			case VaultActionType.RenameFolder:
 			case VaultActionType.RenameFile:
@@ -107,7 +109,7 @@ export class SelfEventTrackerLegacy {
 		}
 
 		// Then add the target path (file or folder being created)
-		const targetPath = systemPathToSplitPath.encode(splitPath);
+		const targetPath = systemPathFromSplitPathInternal(splitPath);
 		paths.push(targetPath);
 
 		return paths;
