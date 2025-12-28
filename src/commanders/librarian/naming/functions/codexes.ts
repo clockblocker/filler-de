@@ -18,82 +18,72 @@ export const makeCanonicalBasenameForCodexFromSectionNode = ({
 	nodeNameChainToParent,
 	nodeName,
 }: Pick<SectionNode, "nodeNameChainToParent" | "nodeName">) => {
-	const {
-		splitPathToLibraryRoot: { basename: libraryRoot },
-	} = getParsedUserSettings();
-
-	// Strip library root before encoding (user-visible format should not include it)
 	const fullChain = [...nodeNameChainToParent, nodeName];
-	const chainWithoutLibraryRoot =
-		fullChain.length > 0 && fullChain[0] === libraryRoot
-			? fullChain.slice(1)
-			: fullChain;
-
-	return makeCanonicalBasenameForCodexFromNodeNameChainToParent(
-		chainWithoutLibraryRoot,
-	);
+	return makeCanonicalBasenameForCodexFromNodeNameChainToParent(fullChain);
 };
 
 const makeCanonicalBasenameForCodexFromNodeNameChainToParent = (
 	nodeNameChainToParent: NodeNameChain,
 ) => {
-	const {
-		splitPathToLibraryRoot: { basename: libraryRoot },
-	} = getParsedUserSettings();
-
 	return joinSeparatedSuffixedBasename(
 		makeSeparatedSuffixedBasenameFromNodeNameChain([
-			...(nodeNameChainToParent.length > 0
-				? nodeNameChainToParent
-				: [libraryRoot]),
+			...nodeNameChainToParent,
 			CODEX_CORE_NAME,
 		]),
 	);
 };
 
-export const makeNodeNameChainToParentFromCanonicalBasenameForCodex = ({
-	nodeName: _nodeNameOfCodex,
-	splitSuffix: splitSuffixOfCodex,
-}: SeparatedSuffixedBasename): NodeNameChain => {
-	const {
-		splitPathToLibraryRoot: { basename: libraryRoot },
-	} = getParsedUserSettings();
+export const makeNodeNameChainToParentFromCanonicalBasenameForCodex = (
+	codexBasename: JoinedSuffixedBasenameForCodex,
+): NodeNameChain => {
+	const separated = separateJoinedSuffixedBasename(codexBasename);
+	return makeNodeNameChainToParentFromSeparatedCanonicalBasenameForCodex(
+		separated,
+	);
+};
 
-	const [sectionNodeName, ...splitSuffixOfSection] = splitSuffixOfCodex;
+export const makeNodeNameChainToParentFromSeparatedCanonicalBasenameForCodex =
+	({
+		nodeName: _nodeNameOfCodex,
+		splitSuffix: splitSuffixOfCodex,
+	}: SeparatedSuffixedBasename): NodeNameChain => {
+		const {
+			splitPathToLibraryRoot: { basename: libraryRoot },
+		} = getParsedUserSettings();
 
-	// This should never happen. Assertion of BasenameForCodex's correctness should be handled by the caller.
-	if (!sectionNodeName) {
-		throw new Error("Invalid codex basename");
-	}
+		const [sectionNodeName, ...splitSuffixOfSection] = splitSuffixOfCodex;
 
-	// Decode the full chain (includes section name)
-	const fullChainWithoutLibraryRoot =
-		makeNodeNameChainFromSeparatedSuffixedBasename({
+		// This should never happen. Assertion of BasenameForCodex's correctness should be handled by the caller.
+		if (!sectionNodeName) {
+			throw new Error("Invalid codex basename");
+		}
+
+		// If section is library root, return chain with only library root
+		if (
+			sectionNodeName === libraryRoot &&
+			splitSuffixOfSection.length === 0
+		) {
+			return [libraryRoot];
+		}
+
+		// Decode the full chain (includes section name, already includes library root)
+		const fullChain = makeNodeNameChainFromSeparatedSuffixedBasename({
 			nodeName: sectionNodeName,
 			splitSuffix: splitSuffixOfSection,
 		});
 
-	// Extract parent chain (remove section name, which is the last element)
-	const parentChainWithoutLibraryRoot = fullChainWithoutLibraryRoot.slice(
-		0,
-		-1,
-	);
-
-	// Add library root back (internal representation includes it)
-	if (sectionNodeName === libraryRoot) {
-		// Root codex: return chain with only library root
-		return [libraryRoot];
-	}
-
-	return [libraryRoot, ...parentChainWithoutLibraryRoot];
-};
+		// Return full chain (function name is misleading - it returns full chain, not just parent)
+		return fullChain;
+	};
 
 export const buildCanonicalPathPartsForCodex = (
 	canonicalBasename: JoinedSuffixedBasenameForCodex,
 ) => {
 	const separated = separateJoinedSuffixedBasename(canonicalBasename);
 	const nodeNameChain =
-		makeNodeNameChainToParentFromCanonicalBasenameForCodex(separated);
+		makeNodeNameChainToParentFromSeparatedCanonicalBasenameForCodex(
+			separated,
+		);
 
 	return makePathPartsFromNodeNameChain(nodeNameChain);
 };

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import {
 	buildCanonicalPathPartsForCodex,
 	makeCanonicalBasenameForCodexFromSectionNode,
-	makeNodeNameChainToParentFromCanonicalBasenameForCodex,
+	makeNodeNameChainToParentFromSeparatedCanonicalBasenameForCodex,
 } from "../../../../../src/commanders/librarian/naming/functions/codexes";
 import { separateJoinedSuffixedBasename } from "../../../../../src/commanders/librarian/naming/types/transformers";
 import { TreeNodeStatus, TreeNodeType } from "../../../../../src/commanders/librarian/types/tree-node";
@@ -93,25 +93,25 @@ describe("makeCanonicalBasenameForCodexFromSectionNode", () => {
 describe("makeNodeNameChainToParentFromCanonicalBasenameForCodex", () => {
 	it("decodes basename for root codex (library root only)", () => {
 		const separated = separateJoinedSuffixedBasename("__-Library");
-		const result = makeNodeNameChainToParentFromCanonicalBasenameForCodex(separated);
+		const result = makeNodeNameChainToParentFromSeparatedCanonicalBasenameForCodex(separated);
 		expect(result).toEqual(["Library"]);
 	});
 
 	it("decodes basename for root section (library root + section)", () => {
 		const separated = separateJoinedSuffixedBasename("__-Parent");
-		const result = makeNodeNameChainToParentFromCanonicalBasenameForCodex(separated);
+		const result = makeNodeNameChainToParentFromSeparatedCanonicalBasenameForCodex(separated);
 		expect(result).toEqual(["Library", "Parent"]);
 	});
 
 	it("decodes basename for nested section", () => {
 		const separated = separateJoinedSuffixedBasename("__-Child-Parent");
-		const result = makeNodeNameChainToParentFromCanonicalBasenameForCodex(separated);
+		const result = makeNodeNameChainToParentFromSeparatedCanonicalBasenameForCodex(separated);
 		expect(result).toEqual(["Library", "Parent", "Child"]);
 	});
 
 	it("decodes basename for deeply nested chain", () => {
 		const separated = separateJoinedSuffixedBasename("__-D-C-B-A");
-		const result = makeNodeNameChainToParentFromCanonicalBasenameForCodex(separated);
+		const result = makeNodeNameChainToParentFromSeparatedCanonicalBasenameForCodex(separated);
 		expect(result).toEqual(["Library", "A", "B", "C", "D"]);
 	});
 
@@ -125,7 +125,7 @@ describe("makeNodeNameChainToParentFromCanonicalBasenameForCodex", () => {
 			},
 		});
 		const separated = separateJoinedSuffixedBasename("__-Root");
-		const result = makeNodeNameChainToParentFromCanonicalBasenameForCodex(separated);
+		const result = makeNodeNameChainToParentFromSeparatedCanonicalBasenameForCodex(separated);
 		expect(result).toEqual(["Root"]);
 	});
 
@@ -135,7 +135,7 @@ describe("makeNodeNameChainToParentFromCanonicalBasenameForCodex", () => {
 			suffixDelimiter: "::",
 		});
 		const separated = separateJoinedSuffixedBasename("__::Child::Parent");
-		const result = makeNodeNameChainToParentFromCanonicalBasenameForCodex(separated);
+		const result = makeNodeNameChainToParentFromSeparatedCanonicalBasenameForCodex(separated);
 		expect(result).toEqual(["Library", "Parent", "Child"]);
 	});
 });
@@ -196,7 +196,7 @@ describe("roundtrip tests", () => {
 		};
 		const basename = makeCanonicalBasenameForCodexFromSectionNode(sectionNode);
 		const separated = separateJoinedSuffixedBasename(basename);
-		const result = makeNodeNameChainToParentFromCanonicalBasenameForCodex(separated);
+		const result = makeNodeNameChainToParentFromSeparatedCanonicalBasenameForCodex(separated);
 		// Returns parent chain (nodeNameChainToParent)
 		expect(result).toEqual(["Library", "Parent"]);
 	});
@@ -211,7 +211,7 @@ describe("roundtrip tests", () => {
 		};
 		const basename = makeCanonicalBasenameForCodexFromSectionNode(sectionNode);
 		const separated = separateJoinedSuffixedBasename(basename);
-		const result = makeNodeNameChainToParentFromCanonicalBasenameForCodex(separated);
+		const result = makeNodeNameChainToParentFromSeparatedCanonicalBasenameForCodex(separated);
 		// Returns parent chain (nodeNameChainToParent)
 		expect(result).toEqual(["Library", "Parent", "Child"]);
 	});
@@ -226,7 +226,7 @@ describe("roundtrip tests", () => {
 		};
 		const basename = makeCanonicalBasenameForCodexFromSectionNode(sectionNode);
 		const separated = separateJoinedSuffixedBasename(basename);
-		const result = makeNodeNameChainToParentFromCanonicalBasenameForCodex(separated);
+		const result = makeNodeNameChainToParentFromSeparatedCanonicalBasenameForCodex(separated);
 		// Returns parent chain (nodeNameChainToParent)
 		expect(result).toEqual(["Library", "A", "B", "C", "D"]);
 	});

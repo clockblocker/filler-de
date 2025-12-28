@@ -1,3 +1,4 @@
+import { getParsedUserSettings } from "../../../../../global-state/global-state";
 import {
 	BACK_ARROW,
 	DASH,
@@ -8,8 +9,7 @@ import {
 	PIPE,
 	SPACE_F,
 } from "../../../../../types/literals";
-import { getParsedUserSettings } from "../../../../../global-state/global-state";
-import { makeNodeNameChainToParentFromCanonicalBasenameForCodex } from "../../../naming/functions/codexes";
+import { makeNodeNameChainToParentFromSeparatedCanonicalBasenameForCodex } from "../../../naming/functions/codexes";
 import { separateJoinedSuffixedBasename } from "../../../naming/types/transformers";
 import { TreeNodeStatus } from "../../../types/tree-node";
 import type {
@@ -60,13 +60,16 @@ function parseTreeNodeIntendedForScrollLine(
 	const backlink = extractBacklinkFromRegularLine(codexLine);
 	const { filename, displayName } = parseBacklink(backlink);
 	const separated = separateJoinedSuffixedBasename(filename);
-	
+
 	// For Scroll/File, basename is like "Note-Parent", not codex format
 	// Parent chain is the reversed suffix
 	const parentChainWithoutLibraryRoot = [...separated.splitSuffix].reverse();
-	
+
 	// Add library root (internal representation includes it)
-	const nodeNameChainToParent = [libraryRoot, ...parentChainWithoutLibraryRoot];
+	const nodeNameChainToParent = [
+		libraryRoot,
+		...parentChainWithoutLibraryRoot,
+	];
 
 	const isDone = codexLine.startsWith(DONE_CHECKBOX);
 	const status = isDone ? TreeNodeStatus.Done : TreeNodeStatus.NotStarted;
@@ -92,13 +95,16 @@ function parseTreeNodeIntendedForFileLine(
 	const backlink = extractBacklinkFromRegularLine(codexLine);
 	const { filename, displayName } = parseBacklink(backlink);
 	const separated = separateJoinedSuffixedBasename(filename);
-	
+
 	// For Scroll/File, basename is like "Note-Parent", not codex format
 	// Parent chain is the reversed suffix
 	const parentChainWithoutLibraryRoot = [...separated.splitSuffix].reverse();
-	
+
 	// Add library root (internal representation includes it)
-	const nodeNameChainToParent = [libraryRoot, ...parentChainWithoutLibraryRoot];
+	const nodeNameChainToParent = [
+		libraryRoot,
+		...parentChainWithoutLibraryRoot,
+	];
 
 	const extensionMatch = filename.match(/\.([^.]+)$/);
 	const extension = extensionMatch?.[1] || "";
@@ -122,7 +128,9 @@ function parseTreeNodeIntendedForChildSectionCodexLine(
 	const { filename, displayName } = parseBacklink(backlink);
 	const separated = separateJoinedSuffixedBasename(filename);
 	const nodeNameChainToParent =
-		makeNodeNameChainToParentFromCanonicalBasenameForCodex(separated);
+		makeNodeNameChainToParentFromSeparatedCanonicalBasenameForCodex(
+			separated,
+		);
 
 	const isDone = codexLine.startsWith(DONE_CHECKBOX);
 	const status = isDone ? TreeNodeStatus.Done : TreeNodeStatus.NotStarted;
@@ -145,7 +153,9 @@ function parseTreeNodeIntendedForParentSectionCodexLine(
 	const { filename, displayName } = parseBacklink(backlink);
 	const separated = separateJoinedSuffixedBasename(filename);
 	const nodeNameChainToParent =
-		makeNodeNameChainToParentFromCanonicalBasenameForCodex(separated);
+		makeNodeNameChainToParentFromSeparatedCanonicalBasenameForCodex(
+			separated,
+		);
 
 	return {
 		node: {

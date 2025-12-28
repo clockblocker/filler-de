@@ -1,4 +1,5 @@
 import z from "zod";
+import { getParsedUserSettings } from "../../../../../global-state/global-state";
 import {
 	type NodeNameChain,
 	NodeNameChainSchema,
@@ -13,8 +14,8 @@ import {
  * Converts parsed basename to node name chain.
  *
  * @example
- * // Decode: { nodeName: "child", splitSuffix: ["parent"] } -> ["parent", "child"]
- * // Encode: ["parent", "child"] -> { nodeName: "child", splitSuffix: ["parent"] }
+ * // Decode: { nodeName: "child", splitSuffix: ["parent"] } -> ["Library", "parent", "child"]
+ * // Encode: ["Library", "parent", "child"] -> { nodeName: "child", splitSuffix: ["parent"] }
  *
  * Reads settings internally to get suffix delimiter.
  */
@@ -22,20 +23,33 @@ const separatedSuffixedBasenameToNodeNameChainCodec = z.codec(
 	SeparatedSuffixedBasenameSchema,
 	NodeNameChainSchema,
 	{
-		decode: ({ splitSuffix, nodeName }) => {
-			return [...splitSuffix].reverse().concat(nodeName);
+		decode: ({ splitSuffix, nodeName }): NodeNameChain => {
+			const {
+				splitPathToLibraryRoot: { basename: libraryRoot },
+			} = getParsedUserSettings();
+
+			const reversedSuffix = [...splitSuffix].reverse();
+			return [libraryRoot, ...reversedSuffix, nodeName];
 		},
-		encode: (chain) => {
-			if (chain.length === 0) {
-				return { nodeName: "", splitSuffix: [] };
-			}
+		encode: (chain: NodeNameChain): SeparatedSuffixedBasename => {
+			const {
+				splitPathToLibraryRoot: { basename: libraryRoot },
+			} = getParsedUserSettings();
 
-			const nodeName = chain[chain.length - 1];
+			const chainWithoutLibraryRoot =
+				chain.length > 0 && chain[0] === libraryRoot
+					? chain.slice(1)
+					: chain;
+
+			const nodeName =
+				chainWithoutLibraryRoot[chainWithoutLibraryRoot.length - 1];
 			if (!nodeName) {
-				return { nodeName: "", splitSuffix: [] };
+				throw new Error("Empty chain cannot be encoded");
 			}
 
-			const splitSuffix = chain.slice(0, -1).reverse();
+			const parentChain = chainWithoutLibraryRoot.slice(0, -1);
+			const splitSuffix = [...parentChain].reverse();
+
 			return { nodeName, splitSuffix };
 		},
 	},

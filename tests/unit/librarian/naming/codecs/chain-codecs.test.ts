@@ -162,14 +162,14 @@ describe("pathPartsToNodeNameChainCodec", () => {
 describe("separatedSuffixedBasenameToNodeNameChainCodec", () => {
 	describe("encode (chain → separatedSuffixedBasename)", () => {
 		it("encodes single-element chain", () => {
-			expect(makeSeparatedSuffixedBasenameFromNodeNameChain(["child"])).toEqual({
+			expect(makeSeparatedSuffixedBasenameFromNodeNameChain(["Library", "child"])).toEqual({
 				nodeName: "child",
 				splitSuffix: [],
 			});
 		});
 
 		it("encodes two-element chain (suffix is reversed)", () => {
-			expect(makeSeparatedSuffixedBasenameFromNodeNameChain(["parent", "child"])).toEqual({
+			expect(makeSeparatedSuffixedBasenameFromNodeNameChain(["Library", "parent", "child"])).toEqual({
 				nodeName: "child",
 				splitSuffix: ["parent"],
 			});
@@ -177,7 +177,7 @@ describe("separatedSuffixedBasenameToNodeNameChainCodec", () => {
 
 		it("encodes multi-element chain (suffix is reversed)", () => {
 			expect(
-				makeSeparatedSuffixedBasenameFromNodeNameChain(["grandparent", "parent", "child"]),
+				makeSeparatedSuffixedBasenameFromNodeNameChain(["Library", "grandparent", "parent", "child"]),
 			).toEqual({
 				nodeName: "child",
 				splitSuffix: ["parent", "grandparent"],
@@ -185,7 +185,7 @@ describe("separatedSuffixedBasenameToNodeNameChainCodec", () => {
 		});
 
 		it("encodes deeply nested chain (suffix is reversed)", () => {
-			expect(makeSeparatedSuffixedBasenameFromNodeNameChain(["A", "B", "C", "D", "E"])).toEqual({
+			expect(makeSeparatedSuffixedBasenameFromNodeNameChain(["Library", "A", "B", "C", "D", "E"])).toEqual({
 				nodeName: "E",
 				splitSuffix: ["D", "C", "B", "A"],
 			});
@@ -196,9 +196,9 @@ describe("separatedSuffixedBasenameToNodeNameChainCodec", () => {
 				makeSeparatedSuffixedBasenameFromNodeNameChain([]);
 				expect(false).toBe(true); // Should not reach here
 			} catch (error) {
-				expect(error).toBeInstanceOf(z.ZodError);
-				if (error instanceof z.ZodError) {
-					expect(error.issues.some((issue) => issue.message === "EmptyNodeName")).toBe(true);
+				expect(error).toBeInstanceOf(Error);
+				if (error instanceof Error) {
+					expect(error.message).toBe("Empty chain cannot be encoded");
 				}
 			}
 		});
@@ -211,7 +211,7 @@ describe("separatedSuffixedBasenameToNodeNameChainCodec", () => {
 					nodeName: "child",
 					splitSuffix: [],
 				}),
-			).toEqual(["child"]);
+			).toEqual(["Library", "child"]);
 		});
 
 		it("decodes separatedSuffixedBasename with single suffix (reverses back)", () => {
@@ -220,7 +220,7 @@ describe("separatedSuffixedBasenameToNodeNameChainCodec", () => {
 					nodeName: "child",
 					splitSuffix: ["parent"],
 				}),
-			).toEqual(["parent", "child"]);
+			).toEqual(["Library", "parent", "child"]);
 		});
 
 		it("decodes separatedSuffixedBasename with multiple suffixes (reverses back)", () => {
@@ -229,7 +229,7 @@ describe("separatedSuffixedBasenameToNodeNameChainCodec", () => {
 					nodeName: "child",
 					splitSuffix: ["parent", "grandparent"],
 				}),
-			).toEqual(["grandparent", "parent", "child"]);
+			).toEqual(["Library", "grandparent", "parent", "child"]);
 		});
 
 		it("decodes deeply nested separatedSuffixedBasename (reverses back)", () => {
@@ -238,7 +238,7 @@ describe("separatedSuffixedBasenameToNodeNameChainCodec", () => {
 					nodeName: "E",
 					splitSuffix: ["D", "C", "B", "A"],
 				}),
-			).toEqual(["A", "B", "C", "D", "E"]);
+			).toEqual(["Library", "A", "B", "C", "D", "E"]);
 		});
 
 		it("decodes separatedSuffixedBasename with empty nodeName", () => {
@@ -259,7 +259,7 @@ describe("separatedSuffixedBasenameToNodeNameChainCodec", () => {
 
 	describe("roundtrip (encode/decode)", () => {
 		it("roundtrips single-element chain", () => {
-			const chain = ["child"];
+			const chain = ["Library", "child"];
 			expect(
 				makeNodeNameChainFromSeparatedSuffixedBasename(
 					makeSeparatedSuffixedBasenameFromNodeNameChain(chain),
@@ -268,7 +268,7 @@ describe("separatedSuffixedBasenameToNodeNameChainCodec", () => {
 		});
 
 		it("roundtrips two-element chain", () => {
-			const chain = ["parent", "child"];
+			const chain = ["Library", "parent", "child"];
 			expect(
 				makeNodeNameChainFromSeparatedSuffixedBasename(
 					makeSeparatedSuffixedBasenameFromNodeNameChain(chain),
@@ -277,7 +277,7 @@ describe("separatedSuffixedBasenameToNodeNameChainCodec", () => {
 		});
 
 		it("roundtrips multi-element chain", () => {
-			const chain = ["grandparent", "parent", "child"];
+			const chain = ["Library", "grandparent", "parent", "child"];
 			expect(
 				makeNodeNameChainFromSeparatedSuffixedBasename(
 					makeSeparatedSuffixedBasenameFromNodeNameChain(chain),
@@ -286,14 +286,13 @@ describe("separatedSuffixedBasenameToNodeNameChainCodec", () => {
 		});
 
 		it("roundtrips deeply nested chain", () => {
-			const chain = ["A", "B", "C", "D", "E"];
+			const chain = ["Library", "A", "B", "C", "D", "E"];
 			expect(
 				makeNodeNameChainFromSeparatedSuffixedBasename(
 					makeSeparatedSuffixedBasenameFromNodeNameChain(chain),
 				),
 			).toEqual(chain);
 		});
-	});
 });
 
 describe("canonicalBasenameToSeparatedSuffixedBasenameCodec", () => {
