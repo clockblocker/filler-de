@@ -1,3 +1,4 @@
+import { getParsedUserSettings } from "../../global-state/global-state";
 import { TreeActionType } from "./types/literals";
 import type { NodeName, NodeNameChain } from "./types/schemas/node-name";
 import type {
@@ -28,9 +29,12 @@ export class LibraryTree {
 	}
 
 	private createRootSection(): SectionNode {
+		const {
+			splitPathToLibraryRoot: { basename: libraryRoot },
+		} = getParsedUserSettings();
 		return {
 			children: [],
-			nodeName: "",
+			nodeName: libraryRoot,
 			nodeNameChainToParent: [],
 			status: TreeNodeStatus.NotStarted,
 			type: TreeNodeType.Section,

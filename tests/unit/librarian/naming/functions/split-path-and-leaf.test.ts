@@ -41,7 +41,7 @@ describe("buildCanonicalSplitPathFromNode", () => {
 			const node: SectionNode = {
 				children: [],
 				nodeName: "Section",
-				nodeNameChainToParent: [],
+				nodeNameChainToParent: ["Library"],
 				status: TreeNodeStatus.NotStarted,
 				type: TreeNodeType.Section,
 			};
@@ -57,7 +57,7 @@ describe("buildCanonicalSplitPathFromNode", () => {
 			const node: SectionNode = {
 				children: [],
 				nodeName: "Child",
-				nodeNameChainToParent: ["Parent"],
+				nodeNameChainToParent: ["Library", "Parent"],
 				status: TreeNodeStatus.NotStarted,
 				type: TreeNodeType.Section,
 			};
@@ -73,7 +73,7 @@ describe("buildCanonicalSplitPathFromNode", () => {
 			const node: SectionNode = {
 				children: [],
 				nodeName: "Deep",
-				nodeNameChainToParent: ["Parent", "Child"],
+				nodeNameChainToParent: ["Library", "Parent", "Child"],
 				status: TreeNodeStatus.Done,
 				type: TreeNodeType.Section,
 			};
@@ -97,7 +97,7 @@ describe("buildCanonicalSplitPathFromNode", () => {
 			const node: SectionNode = {
 				children: [],
 				nodeName: "Section",
-				nodeNameChainToParent: ["Parent"],
+				nodeNameChainToParent: ["Root", "Parent"],
 				status: TreeNodeStatus.NotStarted,
 				type: TreeNodeType.Section,
 			};
@@ -115,7 +115,7 @@ describe("buildCanonicalSplitPathFromNode", () => {
 			const node: ScrollNode = {
 				extension: "md",
 				nodeName: "Note",
-				nodeNameChainToParent: [],
+				nodeNameChainToParent: ["Library"],
 				status: TreeNodeStatus.NotStarted,
 				type: TreeNodeType.Scroll,
 			};
@@ -132,7 +132,7 @@ describe("buildCanonicalSplitPathFromNode", () => {
 			const node: ScrollNode = {
 				extension: "md",
 				nodeName: "Note",
-				nodeNameChainToParent: ["Parent"],
+				nodeNameChainToParent: ["Library", "Parent"],
 				status: TreeNodeStatus.NotStarted,
 				type: TreeNodeType.Scroll,
 			};
@@ -149,7 +149,7 @@ describe("buildCanonicalSplitPathFromNode", () => {
 			const node: ScrollNode = {
 				extension: "md",
 				nodeName: "Note",
-				nodeNameChainToParent: ["Parent", "Child"],
+				nodeNameChainToParent: ["Library", "Parent", "Child"],
 				status: TreeNodeStatus.NotStarted,
 				type: TreeNodeType.Scroll,
 			};
@@ -170,7 +170,7 @@ describe("buildCanonicalSplitPathFromNode", () => {
 			const node: ScrollNode = {
 				extension: "md",
 				nodeName: "Note",
-				nodeNameChainToParent: ["Parent", "Child"],
+				nodeNameChainToParent: ["Library", "Parent", "Child"],
 				status: TreeNodeStatus.NotStarted,
 				type: TreeNodeType.Scroll,
 			};
@@ -187,7 +187,7 @@ describe("buildCanonicalSplitPathFromNode", () => {
 			const node: ScrollNode = {
 				extension: "md",
 				nodeName: "Note",
-				nodeNameChainToParent: [],
+				nodeNameChainToParent: ["Library"],
 				status: TreeNodeStatus.Done,
 				type: TreeNodeType.Scroll,
 			};
@@ -206,7 +206,7 @@ describe("buildCanonicalSplitPathFromNode", () => {
 			const node: FileNode = {
 				extension: "png",
 				nodeName: "Image",
-				nodeNameChainToParent: [],
+				nodeNameChainToParent: ["Library"],
 				status: TreeNodeStatus.Unknown,
 				type: TreeNodeType.File,
 			};
@@ -223,7 +223,7 @@ describe("buildCanonicalSplitPathFromNode", () => {
 			const node: FileNode = {
 				extension: "png",
 				nodeName: "Image",
-				nodeNameChainToParent: ["Parent"],
+				nodeNameChainToParent: ["Library", "Parent"],
 				status: TreeNodeStatus.Unknown,
 				type: TreeNodeType.File,
 			};
@@ -240,7 +240,7 @@ describe("buildCanonicalSplitPathFromNode", () => {
 			const node: FileNode = {
 				extension: "jpg",
 				nodeName: "Photo",
-				nodeNameChainToParent: ["Parent", "Child"],
+				nodeNameChainToParent: ["Library", "Parent", "Child"],
 				status: TreeNodeStatus.Unknown,
 				type: TreeNodeType.File,
 			};
@@ -259,7 +259,7 @@ describe("buildCanonicalSplitPathFromNode", () => {
 				const node: FileNode = {
 					extension: ext,
 					nodeName: "Document",
-					nodeNameChainToParent: ["Folder"],
+					nodeNameChainToParent: ["Library", "Folder"],
 					status: TreeNodeStatus.Unknown,
 					type: TreeNodeType.File,
 				};
@@ -281,7 +281,7 @@ describe("buildCanonicalSplitPathFromNode", () => {
 			const node: FileNode = {
 				extension: "pdf",
 				nodeName: "Doc",
-				nodeNameChainToParent: ["A", "B"],
+				nodeNameChainToParent: ["Library", "A", "B"],
 				status: TreeNodeStatus.Unknown,
 				type: TreeNodeType.File,
 			};
@@ -300,7 +300,7 @@ describe("buildCanonicalSplitPathFromNode", () => {
 			const node: ScrollNode = {
 				extension: "md",
 				nodeName: "A",
-				nodeNameChainToParent: ["B"],
+				nodeNameChainToParent: ["Library", "B"],
 				status: TreeNodeStatus.NotStarted,
 				type: TreeNodeType.Scroll,
 			};
@@ -318,7 +318,7 @@ describe("buildCanonicalSplitPathFromNode", () => {
 			const node: SectionNode = {
 				children: [],
 				nodeName: "Final",
-				nodeNameChainToParent: longChain,
+				nodeNameChainToParent: ["Library", ...longChain],
 				status: TreeNodeStatus.NotStarted,
 				type: TreeNodeType.Section,
 			};

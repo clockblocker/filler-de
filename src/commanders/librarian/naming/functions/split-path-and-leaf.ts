@@ -1,3 +1,4 @@
+import { getParsedUserSettings } from "../../../../global-state/global-state";
 import type {
 	SplitPathToFile,
 	SplitPathToFolder,
@@ -35,8 +36,18 @@ export function buildCanonicalSplitPathFromNode(
 		node.nodeNameChainToParent,
 	);
 
+	// Strip library root from chain before building basename (user-visible format)
+	const {
+		splitPathToLibraryRoot: { basename: libraryRoot },
+	} = getParsedUserSettings();
+	const chainWithoutLibraryRoot =
+		node.nodeNameChainToParent.length > 0 &&
+		node.nodeNameChainToParent[0] === libraryRoot
+			? node.nodeNameChainToParent.slice(1)
+			: node.nodeNameChainToParent;
+
 	const basename = makeJoinedSuffixedBasenameFromNodeNameChain([
-		...node.nodeNameChainToParent,
+		...chainWithoutLibraryRoot,
 		node.nodeName,
 	]);
 

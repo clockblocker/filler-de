@@ -11,6 +11,7 @@
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import type { SplitPath } from "../../../obsidian-vault-action-manager/types/split-path";
 import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
+import { makeNodeNameChainFromPathParts } from "../naming/codecs/atomic/path-parts-and-node-name-chain";
 import { TreeActionType } from "../types/literals";
 import type { NodeNameChain } from "../types/schemas/node-name";
 import type { TreeAction } from "../types/tree-action";
@@ -72,34 +73,27 @@ function sameParent(from: SplitPath, to: SplitPath): boolean {
 }
 
 /**
- * Extract nodeNameChain from SplitPath (relative to library root).
+ * Extract nodeNameChain from SplitPath (with library root).
  * Parses basename to extract nodeName (not full basename).
- * Reads libraryRoot and suffixDelimiter from global settings.
+ * Uses codec to convert pathParts to nodeNameChain (keeps library root).
  */
 function toNodeNameChain(splitPath: SplitPath): NodeNameChain {
-	const settings = getParsedUserSettings();
-	const libraryRoot = settings.splitPathToLibraryRoot.basename;
-	const parts = splitPath.pathParts;
-	// Skip library root
-	const startIndex = parts[0] === libraryRoot ? 1 : 0;
-	const pathParts = parts.slice(startIndex);
+	// Convert pathParts to chain (includes library root)
+	const chainFromPath = makeNodeNameChainFromPathParts(splitPath.pathParts);
 
 	// Parse basename to get nodeName (not full basename with suffix)
 	const { nodeName } = parseBasenameDeprecated(splitPath.basename);
 
-	return [...pathParts, nodeName];
+	return [...chainFromPath, nodeName];
 }
 
 /**
- * Extract parent chain from SplitPath (relative to library root).
- * Reads libraryRoot from global settings.
+ * Extract parent chain from SplitPath (with library root).
+ * Uses codec to convert pathParts to nodeNameChain (keeps library root).
  */
 function toParentChain(splitPath: SplitPath): NodeNameChain {
-	const settings = getParsedUserSettings();
-	const libraryRoot = settings.splitPathToLibraryRoot.basename;
-	const parts = splitPath.pathParts;
-	const startIndex = parts[0] === libraryRoot ? 1 : 0;
-	return parts.slice(startIndex);
+	// Convert pathParts to chain (includes library root)
+	return makeNodeNameChainFromPathParts(splitPath.pathParts);
 }
 
 function createSectionAction(splitPath: SplitPath): TreeAction {

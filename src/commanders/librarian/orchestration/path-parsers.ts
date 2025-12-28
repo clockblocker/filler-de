@@ -22,8 +22,8 @@ export function parseDeletePathToChain(
 	const partsAfterRoot = pathParts.slice(libraryRootIndex + 1);
 
 	if (isFolder) {
-		// Folder delete: chain is just the folder path
-		return partsAfterRoot;
+		// Folder delete: chain includes library root
+		return [libraryRoot, ...partsAfterRoot];
 	}
 
 	// File delete: last part is filename, parse to get nodeName
@@ -33,7 +33,7 @@ export function parseDeletePathToChain(
 		: filename;
 
 	const parsed = parseBasenameDeprecated(basenameWithoutExt);
-	return [...partsAfterRoot.slice(0, -1), parsed.nodeName];
+	return [libraryRoot, ...partsAfterRoot.slice(0, -1), parsed.nodeName];
 }
 
 /**

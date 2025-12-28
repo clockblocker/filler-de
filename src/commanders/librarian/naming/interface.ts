@@ -42,20 +42,32 @@ export function buildCodexBasenameDeprecated(
 		| SplitPathToFolder
 		| Pick<SectionNode, "nodeName" | "nodeNameChainToParent">,
 ): string {
+	const settings = getParsedUserSettings();
+	const libraryRoot = settings.splitPathToLibraryRoot.basename;
+
 	if ("pathParts" in splitPathToFolderOrSection) {
 		const sectionNode =
 			treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.encode(
 				splitPathToFolderOrSection,
 			);
-		const fullChain = [
-			...sectionNode.nodeNameChainToParent,
-			sectionNode.nodeName,
-		];
+		// Strip library root from chain before encoding
+		const chainWithoutLibraryRoot =
+			sectionNode.nodeNameChainToParent.length > 0 &&
+			sectionNode.nodeNameChainToParent[0] === libraryRoot
+				? sectionNode.nodeNameChainToParent.slice(1)
+				: sectionNode.nodeNameChainToParent;
+		const fullChain = [...chainWithoutLibraryRoot, sectionNode.nodeName];
 		return codexBasenameToSectionChainCodec.encode(fullChain);
 	}
 
 	const { nodeName, nodeNameChainToParent } = splitPathToFolderOrSection;
-	const fullChain = [...nodeNameChainToParent, nodeName];
+	// Strip library root from chain before encoding
+	const chainWithoutLibraryRoot =
+		nodeNameChainToParent.length > 0 &&
+		nodeNameChainToParent[0] === libraryRoot
+			? nodeNameChainToParent.slice(1)
+			: nodeNameChainToParent;
+	const fullChain = [...chainWithoutLibraryRoot, nodeName];
 	return codexBasenameToSectionChainCodec.encode(fullChain);
 }
 

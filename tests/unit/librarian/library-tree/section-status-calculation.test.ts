@@ -1,5 +1,5 @@
 import type { TFolder } from "obsidian";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { LibraryTree } from "../../../../src/commanders/librarian/library-tree";
 import type { TreeLeaf } from "../../../../src/commanders/librarian/types/tree-node";
 import {
@@ -7,8 +7,35 @@ import {
 	TreeNodeStatus,
 	TreeNodeType,
 } from "../../../../src/commanders/librarian/types/tree-node";
+import * as globalState from "../../../../src/global-state/global-state";
+import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
+import { SplitPathType } from "../../../../src/obsidian-vault-action-manager/types/split-path";
 
 const fakeRootFolder = { name: "Library" } as unknown as TFolder;
+
+const defaultSettings: ParsedUserSettings = {
+	apiProvider: "google",
+	googleApiKey: "",
+	maxSectionDepth: 6,
+	splitPathToLibraryRoot: {
+		basename: "Library",
+		pathParts: [],
+		type: SplitPathType.Folder,
+	},
+	suffixDelimiter: "-",
+};
+
+let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
+
+beforeEach(() => {
+	getParsedUserSettingsSpy = spyOn(globalState, "getParsedUserSettings").mockReturnValue({
+		...defaultSettings,
+	});
+});
+
+afterEach(() => {
+	getParsedUserSettingsSpy.mockRestore();
+});
 
 const createScrollLeaf = (
 	nodeName: string,
@@ -17,7 +44,7 @@ const createScrollLeaf = (
 ): TreeLeaf => ({
 	extension: "md",
 	nodeName,
-	nodeNameChainToParent,
+	nodeNameChainToParent: ["Library", ...nodeNameChainToParent], // Include library root
 	status,
 	type: TreeNodeType.Scroll,
 });
@@ -31,7 +58,7 @@ describe("LibraryTree section status calculation", () => {
 			];
 
 			const tree = new LibraryTree(leaves, fakeRootFolder);
-			const folder = tree.getNode(["folder"]) as SectionNode;
+			const folder = tree.getNode(["Library", "folder"]) as SectionNode;
 
 			expect(folder.status).toBe(TreeNodeStatus.NotStarted);
 		});
@@ -43,7 +70,7 @@ describe("LibraryTree section status calculation", () => {
 			];
 
 			const tree = new LibraryTree(leaves, fakeRootFolder);
-			const folder = tree.getNode(["folder"]) as SectionNode;
+			const folder = tree.getNode(["Library", "folder"]) as SectionNode;
 
 			expect(folder.status).toBe(TreeNodeStatus.Done);
 		});
@@ -55,7 +82,7 @@ describe("LibraryTree section status calculation", () => {
 			];
 
 			const tree = new LibraryTree(leaves, fakeRootFolder);
-			const folder = tree.getNode(["folder"]) as SectionNode;
+			const folder = tree.getNode(["Library", "folder"]) as SectionNode;
 
 			expect(folder.status).toBe(TreeNodeStatus.NotStarted);
 		});
@@ -67,8 +94,8 @@ describe("LibraryTree section status calculation", () => {
 			];
 
 			const tree = new LibraryTree(leaves, fakeRootFolder);
-			const child = tree.getNode(["parent", "child"]) as SectionNode;
-			const parent = tree.getNode(["parent"]) as SectionNode;
+			const child = tree.getNode(["Library", "parent", "child"]) as SectionNode;
+			const parent = tree.getNode(["Library", "parent"]) as SectionNode;
 
 			expect(child.status).toBe(TreeNodeStatus.Done);
 			expect(parent.status).toBe(TreeNodeStatus.Done);
@@ -81,9 +108,9 @@ describe("LibraryTree section status calculation", () => {
 			];
 
 			const tree = new LibraryTree(leaves, fakeRootFolder);
-			const doneChild = tree.getNode(["parent", "doneChild"]) as SectionNode;
-			const notStartedChild = tree.getNode(["parent", "notStartedChild"]) as SectionNode;
-			const parent = tree.getNode(["parent"]) as SectionNode;
+			const doneChild = tree.getNode(["Library", "parent", "doneChild"]) as SectionNode;
+			const notStartedChild = tree.getNode(["Library", "parent", "notStartedChild"]) as SectionNode;
+			const parent = tree.getNode(["Library", "parent"]) as SectionNode;
 
 			expect(doneChild.status).toBe(TreeNodeStatus.Done);
 			expect(notStartedChild.status).toBe(TreeNodeStatus.NotStarted);
@@ -96,14 +123,14 @@ describe("LibraryTree section status calculation", () => {
 				{
 					extension: "pdf",
 					nodeName: "doc",
-					nodeNameChainToParent: ["folder"],
+					nodeNameChainToParent: ["Library", "folder"],
 					status: TreeNodeStatus.Unknown,
 					type: TreeNodeType.File,
 				},
 			];
 
 			const tree = new LibraryTree(leaves, fakeRootFolder);
-			const folder = tree.getNode(["folder"]) as SectionNode;
+			const folder = tree.getNode(["Library", "folder"]) as SectionNode;
 
 			expect(folder.status).toBe(TreeNodeStatus.Done);
 		});
@@ -114,7 +141,7 @@ describe("LibraryTree section status calculation", () => {
 			const leaves: TreeLeaf[] = [];
 
 			const tree = new LibraryTree(leaves, fakeRootFolder);
-			const root = tree.getNode([]) as SectionNode;
+			const root = tree.getNode([]) as SectionNode; // Empty chain = library root
 
 			expect(root.status).toBe(TreeNodeStatus.Done);
 		});
@@ -127,7 +154,7 @@ describe("LibraryTree section status calculation", () => {
 			];
 
 			const tree = new LibraryTree(leaves, fakeRootFolder);
-			const root = tree.getNode([]) as SectionNode;
+			const root = tree.getNode([]) as SectionNode; // Empty chain = library root
 
 			expect(root.status).toBe(TreeNodeStatus.NotStarted);
 		});

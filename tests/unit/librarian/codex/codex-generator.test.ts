@@ -51,14 +51,21 @@ function createSection(
 describe("generateCodexContent", () => {
 	describe("backlink", () => {
 		it("includes backlink for nested section", () => {
-			const section = createSection("B", ["A"]);
+			const section = createSection("B", ["Library", "A"]);
 			const content = generateCodexContent(section);
 
 			expect(content).toContain("[[__-A|← A]]");
 		});
 
-		it("no backlink for root section", () => {
-			const section = createSection("Root", []);
+		it("includes backlink for root section (first level under library)", () => {
+			const section = createSection("Root", ["Library"]);
+			const content = generateCodexContent(section);
+
+			expect(content).toContain("[[__-Library|← Library]]");
+		});
+
+		it("no backlink for root library", () => {
+			const section = createSection("Library", []);
 			const content = generateCodexContent(section);
 
 			expect(content).not.toContain("←");
@@ -67,11 +74,11 @@ describe("generateCodexContent", () => {
 
 	describe("scroll children", () => {
 		it("renders scroll with checkbox and full basename", () => {
-			const section = createSection("A", [], [
+			const section = createSection("A", ["Library"], [
 				{
 					extension: "md",
 					nodeName: "Note",
-					nodeNameChainToParent: ["A"],
+					nodeNameChainToParent: ["Library", "A"],
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Scroll,
 				},
@@ -84,11 +91,11 @@ describe("generateCodexContent", () => {
 		});
 
 		it("renders done scroll with checked checkbox", () => {
-			const section = createSection("A", [], [
+			const section = createSection("A", ["Library"], [
 				{
 					extension: "md",
 					nodeName: "DoneNote",
-					nodeNameChainToParent: ["A"],
+					nodeNameChainToParent: ["Library", "A"],
 					status: TreeNodeStatus.Done,
 					type: TreeNodeType.Scroll,
 				},
@@ -102,11 +109,11 @@ describe("generateCodexContent", () => {
 
 	describe("file children", () => {
 		it("renders file without checkbox", () => {
-			const section = createSection("A", [], [
+			const section = createSection("A", ["Library"], [
 				{
 					extension: "pdf",
 					nodeName: "Document",
-					nodeNameChainToParent: ["A"],
+					nodeNameChainToParent: ["Library", "A"],
 					status: TreeNodeStatus.Unknown,
 					type: TreeNodeType.File,
 				},
@@ -122,8 +129,8 @@ describe("generateCodexContent", () => {
 
 	describe("section children", () => {
 		it("renders section with link to its codex (suffixed)", () => {
-			const childSection = createSection("B", ["A"]);
-			const section = createSection("A", [], [childSection]);
+			const childSection = createSection("B", ["Library", "A"]);
+			const section = createSection("A", ["Library"], [childSection]);
 
 			const content = generateCodexContent(section);
 
@@ -132,16 +139,20 @@ describe("generateCodexContent", () => {
 		});
 
 		it("renders nested scrolls under section", () => {
-			const childSection = createSection("B", ["A"], [
+			getParsedUserSettingsSpy.mockReturnValue({
+				...defaultSettings,
+				showScrollsInCodexesForDepth: 1,
+			});
+			const childSection = createSection("B", ["Library", "A"], [
 				{
 					extension: "md",
 					nodeName: "NestedNote",
-					nodeNameChainToParent: ["A", "B"],
+					nodeNameChainToParent: ["Library", "A", "B"],
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Scroll,
 				},
 			]);
-			const section = createSection("A", [], [childSection]);
+			const section = createSection("A", ["Library"], [childSection]);
 
 			const content = generateCodexContent(section);
 
@@ -155,19 +166,19 @@ describe("generateCodexContent", () => {
 	describe("max depth", () => {
 		it("stops recursing at max depth", () => {
 			// Create deep nesting: A > B > C > D > E
-			const sectionE = createSection("E", ["A", "B", "C", "D"], [
+			const sectionE = createSection("E", ["Library", "A", "B", "C", "D"], [
 				{
 					extension: "md",
 					nodeName: "DeepNote",
-					nodeNameChainToParent: ["A", "B", "C", "D", "E"],
+					nodeNameChainToParent: ["Library", "A", "B", "C", "D", "E"],
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Scroll,
 				},
 			]);
-			const sectionD = createSection("D", ["A", "B", "C"], [sectionE]);
-			const sectionC = createSection("C", ["A", "B"], [sectionD]);
-			const sectionB = createSection("B", ["A"], [sectionC]);
-			const section = createSection("A", [], [sectionB]);
+			const sectionD = createSection("D", ["Library", "A", "B", "C"], [sectionE]);
+			const sectionC = createSection("C", ["Library", "A", "B"], [sectionD]);
+			const sectionB = createSection("B", ["Library", "A"], [sectionC]);
+			const section = createSection("A", ["Library"], [sectionB]);
 
 			// With maxDepth=2, should show B, C, but D should just be a link
 			getParsedUserSettingsSpy.mockReturnValue({

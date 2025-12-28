@@ -1,5 +1,5 @@
 import type { TFolder } from "obsidian";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { LibraryTree } from "../../../../src/commanders/librarian/library-tree";
 import { TreeActionType } from "../../../../src/commanders/librarian/types/literals";
 import type { TreeLeaf } from "../../../../src/commanders/librarian/types/tree-node";
@@ -8,8 +8,35 @@ import {
 	TreeNodeStatus,
 	TreeNodeType,
 } from "../../../../src/commanders/librarian/types/tree-node";
+import * as globalState from "../../../../src/global-state/global-state";
+import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
+import { SplitPathType } from "../../../../src/obsidian-vault-action-manager/types/split-path";
 
 const fakeRootFolder = { name: "Library" } as unknown as TFolder;
+
+const defaultSettings: ParsedUserSettings = {
+	apiProvider: "google",
+	googleApiKey: "",
+	maxSectionDepth: 6,
+	splitPathToLibraryRoot: {
+		basename: "Library",
+		pathParts: [],
+		type: SplitPathType.Folder,
+	},
+	suffixDelimiter: "-",
+};
+
+let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
+
+beforeEach(() => {
+	getParsedUserSettingsSpy = spyOn(globalState, "getParsedUserSettings").mockReturnValue({
+		...defaultSettings,
+	});
+});
+
+afterEach(() => {
+	getParsedUserSettingsSpy.mockRestore();
+});
 
 const createScrollLeaf = (
 	nodeName: string,
@@ -20,7 +47,7 @@ const createScrollLeaf = (
 ): TreeLeaf => ({
 	extension: "md",
 	nodeName,
-	nodeNameChainToParent,
+	nodeNameChainToParent: ["Library", ...nodeNameChainToParent], // Include library root
 	status,
 	type: TreeNodeType.Scroll,
 });
@@ -37,20 +64,20 @@ describe("LibraryTree MoveNode", () => {
 			// Move Note from A to B
 			tree.applyTreeAction({
 				payload: {
-					newNodeNameChainToParent: ["B"],
-					nodeNameChain: ["A", "Note"],
+					newNodeNameChainToParent: ["Library", "B"],
+					nodeNameChain: ["Library", "A", "Note"],
 				},
 				type: TreeActionType.MoveNode,
 			});
 
 			// Node should exist at new location
-			const movedNode = tree.getNode(["B", "Note"]);
+			const movedNode = tree.getNode(["Library", "B", "Note"]);
 			expect(movedNode).not.toBeNull();
 			expect(movedNode?.nodeName).toBe("Note");
-			expect(movedNode?.nodeNameChainToParent).toEqual(["B"]);
+			expect(movedNode?.nodeNameChainToParent).toEqual(["Library", "B"]);
 
 			// Node should not exist at old location
-			const oldNode = tree.getNode(["A", "Note"]);
+			const oldNode = tree.getNode(["Library", "A", "Note"]);
 			expect(oldNode).toBeNull();
 		});
 
@@ -63,13 +90,13 @@ describe("LibraryTree MoveNode", () => {
 
 			const result = tree.applyTreeAction({
 				payload: {
-					newNodeNameChainToParent: ["B"],
-					nodeNameChain: ["A", "Note"],
+					newNodeNameChainToParent: ["Library", "B"],
+					nodeNameChain: ["Library", "A", "Note"],
 				},
 				type: TreeActionType.MoveNode,
 			});
 
-			expect(result).toEqual([["A"], ["B"]]);
+			expect(result).toEqual([["Library", "A"], ["Library", "B"]]);
 		});
 	});
 
@@ -81,18 +108,18 @@ describe("LibraryTree MoveNode", () => {
 			// Move to non-existent path B/C
 			tree.applyTreeAction({
 				payload: {
-					newNodeNameChainToParent: ["B", "C"],
-					nodeNameChain: ["A", "Note"],
+					newNodeNameChainToParent: ["Library", "B", "C"],
+					nodeNameChain: ["Library", "A", "Note"],
 				},
 				type: TreeActionType.MoveNode,
 			});
 
 			// Sections should be created
-			expect(tree.getNode(["B"])).not.toBeNull();
-			expect(tree.getNode(["B", "C"])).not.toBeNull();
+			expect(tree.getNode(["Library", "B"])).not.toBeNull();
+			expect(tree.getNode(["Library", "B", "C"])).not.toBeNull();
 
 			// Node at new location
-			const movedNode = tree.getNode(["B", "C", "Note"]);
+			const movedNode = tree.getNode(["Library", "B", "C", "Note"]);
 			expect(movedNode).not.toBeNull();
 		});
 	});
@@ -109,25 +136,25 @@ describe("LibraryTree MoveNode", () => {
 			// Move section B from A to C
 			tree.applyTreeAction({
 				payload: {
-					newNodeNameChainToParent: ["C"],
-					nodeNameChain: ["A", "B"],
+					newNodeNameChainToParent: ["Library", "C"],
+					nodeNameChain: ["Library", "A", "B"],
 				},
 				type: TreeActionType.MoveNode,
 			});
 
 			// Section B should be under C now
-			const sectionB = tree.getNode(["C", "B"]) as SectionNode;
+			const sectionB = tree.getNode(["Library", "C", "B"]) as SectionNode;
 			expect(sectionB).not.toBeNull();
-			expect(sectionB.nodeNameChainToParent).toEqual(["C"]);
+			expect(sectionB.nodeNameChainToParent).toEqual(["Library", "C"]);
 
 			// Children should have updated chains
-			const note1 = tree.getNode(["C", "B", "Note1"]);
+			const note1 = tree.getNode(["Library", "C", "B", "Note1"]);
 			expect(note1).not.toBeNull();
-			expect(note1?.nodeNameChainToParent).toEqual(["C", "B"]);
+			expect(note1?.nodeNameChainToParent).toEqual(["Library", "C", "B"]);
 
-			const note2 = tree.getNode(["C", "B", "Note2"]);
+			const note2 = tree.getNode(["Library", "C", "B", "Note2"]);
 			expect(note2).not.toBeNull();
-			expect(note2?.nodeNameChainToParent).toEqual(["C", "B"]);
+			expect(note2?.nodeNameChainToParent).toEqual(["Library", "C", "B"]);
 		});
 	});
 
@@ -142,20 +169,20 @@ describe("LibraryTree MoveNode", () => {
 			];
 			const tree = new LibraryTree(leaves, fakeRootFolder);
 
-			const sectionA = tree.getNode(["A"]) as SectionNode;
+			const sectionA = tree.getNode(["Library", "A"]) as SectionNode;
 			expect(sectionA.status).toBe(TreeNodeStatus.NotStarted);
 
 			// Move NotStarted note to B
 			tree.applyTreeAction({
 				payload: {
-					newNodeNameChainToParent: ["B"],
-					nodeNameChain: ["A", "NotStartedNote"],
+					newNodeNameChainToParent: ["Library", "B"],
+					nodeNameChain: ["Library", "A", "NotStartedNote"],
 				},
 				type: TreeActionType.MoveNode,
 			});
 
 			// A should now be Done (only Done children left)
-			const updatedA = tree.getNode(["A"]) as SectionNode;
+			const updatedA = tree.getNode(["Library", "A"]) as SectionNode;
 			expect(updatedA.status).toBe(TreeNodeStatus.Done);
 		});
 
@@ -168,20 +195,20 @@ describe("LibraryTree MoveNode", () => {
 			];
 			const tree = new LibraryTree(leaves, fakeRootFolder);
 
-			const sectionB = tree.getNode(["B"]) as SectionNode;
+			const sectionB = tree.getNode(["Library", "B"]) as SectionNode;
 			expect(sectionB.status).toBe(TreeNodeStatus.Done);
 
 			// Move NotStarted note to B
 			tree.applyTreeAction({
 				payload: {
-					newNodeNameChainToParent: ["B"],
-					nodeNameChain: ["A", "NotStartedNote"],
+					newNodeNameChainToParent: ["Library", "B"],
+					nodeNameChain: ["Library", "A", "NotStartedNote"],
 				},
 				type: TreeActionType.MoveNode,
 			});
 
 			// B should now be NotStarted
-			const updatedB = tree.getNode(["B"]) as SectionNode;
+			const updatedB = tree.getNode(["Library", "B"]) as SectionNode;
 			expect(updatedB.status).toBe(TreeNodeStatus.NotStarted);
 		});
 	});
@@ -197,12 +224,12 @@ describe("LibraryTree MoveNode", () => {
 			expect(() =>
 				tree.applyTreeAction({
 					payload: {
-						newNodeNameChainToParent: ["B"],
-						nodeNameChain: ["A", "Note"],
+						newNodeNameChainToParent: ["Library", "B"],
+						nodeNameChain: ["Library", "A", "Note"],
 					},
 					type: TreeActionType.MoveNode,
 				}),
-			).toThrow("Node already exists: B/Note");
+			).toThrow("Node already exists: Library/B/Note");
 		});
 
 		it("returns chains if node not found", () => {
@@ -211,13 +238,13 @@ describe("LibraryTree MoveNode", () => {
 
 			const result = tree.applyTreeAction({
 				payload: {
-					newNodeNameChainToParent: ["B"],
-					nodeNameChain: ["X", "NonExistent"],
+					newNodeNameChainToParent: ["Library", "B"],
+					nodeNameChain: ["Library", "X", "NonExistent"],
 				},
 				type: TreeActionType.MoveNode,
 			});
 
-			expect(result).toEqual([["X", "NonExistent"], ["B"]]);
+			expect(result).toEqual([["Library", "X", "NonExistent"], ["Library", "B"]]);
 		});
 	});
 });

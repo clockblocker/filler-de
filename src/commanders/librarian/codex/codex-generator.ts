@@ -27,10 +27,31 @@ export function generateCodexContent(section: SectionNode): string {
 	const lines: string[] = [];
 
 	// Backlink to parent codex
-	// Root section (empty chain and empty name) has no parent
-	if (section.nodeNameChainToParent.length === 0 && section.nodeName === "") {
-		// No backlink for root
-	} else if (section.nodeNameChainToParent.length > 0) {
+	const libraryRoot = settings.splitPathToLibraryRoot.basename;
+	
+	// Root library (empty chain, name is library root) - no backlink
+	if (
+		section.nodeNameChainToParent.length === 0 &&
+		section.nodeName === libraryRoot
+	) {
+		// No backlink for root library
+	} else if (
+		section.nodeNameChainToParent.length === 1 &&
+		section.nodeNameChainToParent[0] === libraryRoot
+	) {
+		// Root section (first level under library) - backlink to library root
+		const libraryRootIntended: AnyIntendedTreeNode = {
+			node: {
+				nodeName: libraryRoot,
+				nodeNameChainToParent: [],
+				status: section.status,
+				type: TreeNodeType.Section,
+			},
+			type: CodexLineType.ParentSectionCodex,
+		};
+		const libraryRootLine = formatAsLine(libraryRootIntended);
+		lines.push(libraryRootLine);
+	} else if (section.nodeNameChainToParent.length > 1) {
 		// Nested section: parent is the last element in the chain
 		const parentName =
 			section.nodeNameChainToParent[
@@ -55,8 +76,6 @@ export function generateCodexContent(section: SectionNode): string {
 			lines.push(parentLine);
 		}
 	}
-	// First-level section (empty chain but has name) - no backlink for now
-	// (could link to library root if needed, but that requires libraryRoot option)
 
 	// Generate items for children
 	lines.push(

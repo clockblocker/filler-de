@@ -1,3 +1,4 @@
+import { getParsedUserSettings } from "../../../global-state/global-state";
 import type { LibraryTree } from "../library-tree";
 import type { NodeNameChain } from "../types/schemas/node-name";
 import type { SectionNode } from "../types/tree-node";
@@ -6,9 +7,13 @@ import { TreeNodeType } from "../types/tree-node";
 /**
  * Collect chains for all sections in tree (including root).
  * Pure function that takes tree and returns all section chains.
+ * Chains include library root.
  */
 export function collectAllSectionChains(tree: LibraryTree): NodeNameChain[] {
-	const chains: NodeNameChain[] = [[]]; // Start with root
+	const {
+		splitPathToLibraryRoot: { basename: libraryRoot },
+	} = getParsedUserSettings();
+	const chains: NodeNameChain[] = [[libraryRoot]]; // Start with root library
 
 	const collectRecursive = (
 		node: SectionNode,
@@ -25,7 +30,7 @@ export function collectAllSectionChains(tree: LibraryTree): NodeNameChain[] {
 
 	const root = tree.getNode([]);
 	if (root && root.type === TreeNodeType.Section) {
-		collectRecursive(root, []);
+		collectRecursive(root, [libraryRoot]);
 	}
 
 	return chains;

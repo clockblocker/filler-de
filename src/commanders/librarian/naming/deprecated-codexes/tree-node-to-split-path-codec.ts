@@ -28,11 +28,11 @@ export const treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse = z.codec(
 			if (node.type === TreeNodeType.Section) {
 				// Section: folder basename is nodeName (no suffix)
 				// pathParts is parent path, doesn't include the section itself
-				// For root section (empty parent chain), pathParts is empty
+				// nodeNameChainToParent already includes library root
 				const pathParts =
 					node.nodeNameChainToParent.length === 0
-						? []
-						: [libraryRoot, ...node.nodeNameChainToParent];
+						? [] // Root library
+						: node.nodeNameChainToParent; // Already includes library root
 
 				return {
 					basename: node.nodeName,
@@ -43,12 +43,20 @@ export const treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse = z.codec(
 
 			// Scroll/File: build basename with suffix
 			// Chain should be from root to leaf: [...parentChain, nodeName]
+			// nodeNameChainToParent already includes library root, strip it for basename encoding
+			const parentChainWithoutLibraryRoot =
+				node.nodeNameChainToParent.length > 0 &&
+				node.nodeNameChainToParent[0] === libraryRoot
+					? node.nodeNameChainToParent.slice(1)
+					: node.nodeNameChainToParent;
+
 			const basename = canonicalBasenameToChainCodec.encode([
-				...node.nodeNameChainToParent,
+				...parentChainWithoutLibraryRoot,
 				node.nodeName,
 			]);
 
-			const pathParts = [libraryRoot, ...node.nodeNameChainToParent];
+			// pathParts already includes library root
+			const pathParts = node.nodeNameChainToParent;
 
 			if (node.type === TreeNodeType.Scroll) {
 				return {
@@ -74,9 +82,9 @@ export const treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse = z.codec(
 			if (rest.type === SplitPathType.Folder) {
 				// For sections, basename is the nodeName (no suffix)
 				// pathParts is parent path, doesn't include the section itself
+				// pathParts already includes library root
 				const nodeName = basename;
-				const startIndex = pathParts[0] === libraryRoot ? 1 : 0;
-				const nodeNameChainToParent = pathParts.slice(startIndex);
+				const nodeNameChainToParent = pathParts; // Already includes library root
 
 				return {
 					children: [],
@@ -88,13 +96,13 @@ export const treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse = z.codec(
 			}
 
 			// For files, decode basename to get nodeName and parent chain
-			const fullChain = canonicalBasenameToChainCodec.decode(basename);
-			const nodeName = fullChain[fullChain.length - 1] ?? "";
-			const startIndex = pathParts[0] === libraryRoot ? 1 : 0;
-			const pathPartsAfterRoot = pathParts.slice(startIndex);
+			// Basename doesn't include library root, so decode it
+			const fullChainWithoutLibraryRoot = canonicalBasenameToChainCodec.decode(basename);
+			const nodeName = fullChainWithoutLibraryRoot[fullChainWithoutLibraryRoot.length - 1] ?? "";
+			const parentChainWithoutLibraryRoot = fullChainWithoutLibraryRoot.slice(0, -1);
 
-			// For files, pathParts doesn't include the file name
-			const nodeNameChainToParent = pathPartsAfterRoot;
+			// pathParts already includes library root, use it directly
+			const nodeNameChainToParent = pathParts;
 
 			if (rest.type === SplitPathType.MdFile) {
 				return {

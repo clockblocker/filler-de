@@ -52,7 +52,7 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				const node = {
 					children: [],
 					nodeName: "Child",
-					nodeNameChainToParent: ["Parent"],
+					nodeNameChainToParent: ["Library", "Parent"],
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Section,
 				};
@@ -68,7 +68,7 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				const node = {
 					children: [],
 					nodeName: "Deep",
-					nodeNameChainToParent: ["Parent", "Child"],
+					nodeNameChainToParent: ["Library", "Parent", "Child"],
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Section,
 				};
@@ -86,7 +86,7 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				const node = {
 					extension: "md",
 					nodeName: "Note",
-					nodeNameChainToParent: [],
+					nodeNameChainToParent: ["Library"],
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Scroll,
 				};
@@ -103,7 +103,7 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				const node = {
 					extension: "md",
 					nodeName: "Note",
-					nodeNameChainToParent: ["Parent"],
+					nodeNameChainToParent: ["Library", "Parent"],
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Scroll,
 				};
@@ -120,7 +120,7 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				const node = {
 					extension: "md",
 					nodeName: "Note",
-					nodeNameChainToParent: ["Parent", "Child"],
+					nodeNameChainToParent: ["Library", "Parent", "Child"],
 					status: TreeNodeStatus.NotStarted,
 					type: TreeNodeType.Scroll,
 				};
@@ -139,7 +139,7 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				const node = {
 					extension: "png",
 					nodeName: "Image",
-					nodeNameChainToParent: [],
+					nodeNameChainToParent: ["Library"],
 					status: TreeNodeStatus.Unknown,
 					type: TreeNodeType.File,
 				};
@@ -156,7 +156,7 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				const node = {
 					extension: "png",
 					nodeName: "Image",
-					nodeNameChainToParent: ["Parent"],
+					nodeNameChainToParent: ["Library", "Parent"],
 					status: TreeNodeStatus.Unknown,
 					type: TreeNodeType.File,
 				};
@@ -199,7 +199,7 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				expect(result).toEqual({
 					children: [],
 					nodeName: "Child",
-					nodeNameChainToParent: ["Parent"],
+					nodeNameChainToParent: ["Library", "Parent"],
 					status: TreeNodeStatus.Unknown,
 					type: TreeNodeType.Section,
 				});
@@ -215,7 +215,7 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				expect(result).toEqual({
 					children: [],
 					nodeName: "Deep",
-					nodeNameChainToParent: ["Parent", "Child"],
+					nodeNameChainToParent: ["Library", "Parent", "Child"],
 					status: TreeNodeStatus.Unknown,
 					type: TreeNodeType.Section,
 				});
@@ -234,7 +234,7 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				expect(result).toEqual({
 					extension: "md",
 					nodeName: "Note",
-					nodeNameChainToParent: [],
+					nodeNameChainToParent: ["Library"],
 					status: TreeNodeStatus.Unknown,
 					type: TreeNodeType.Scroll,
 				});
@@ -251,7 +251,7 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				expect(result).toEqual({
 					extension: "md",
 					nodeName: "Note",
-					nodeNameChainToParent: ["Parent"],
+					nodeNameChainToParent: ["Library", "Parent"],
 					status: TreeNodeStatus.Unknown,
 					type: TreeNodeType.Scroll,
 				});
@@ -268,7 +268,7 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				expect(result).toEqual({
 					extension: "md",
 					nodeName: "Note",
-					nodeNameChainToParent: ["Parent", "Child"],
+					nodeNameChainToParent: ["Library", "Parent", "Child"],
 					status: TreeNodeStatus.Unknown,
 					type: TreeNodeType.Scroll,
 				});
@@ -287,7 +287,7 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				expect(result).toEqual({
 					extension: "png",
 					nodeName: "Image",
-					nodeNameChainToParent: [],
+					nodeNameChainToParent: ["Library"],
 					status: TreeNodeStatus.Unknown,
 					type: TreeNodeType.File,
 				});
@@ -304,7 +304,7 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				expect(result).toEqual({
 					extension: "png",
 					nodeName: "Image",
-					nodeNameChainToParent: ["Parent"],
+					nodeNameChainToParent: ["Library", "Parent"],
 					status: TreeNodeStatus.Unknown,
 					type: TreeNodeType.File,
 				});
