@@ -17,7 +17,7 @@ import {
 	TreeNodeStatus,
 	TreeNodeType,
 } from "./types/tree-node";
-import { joinPathPartsDeprecated } from "./utils/tree-path-utils";
+import { joinPathParts } from "./utils/tree-path-utils";
 
 export class LibraryTree {
 	private root: SectionNode;
@@ -90,7 +90,7 @@ export class LibraryTree {
 					type: TreeNodeType.Section,
 				};
 				current.children.push(sectionNode);
-				this.nodeMap.set(joinPathPartsDeprecated(path), sectionNode);
+				this.nodeMap.set(joinPathParts(path), sectionNode);
 				current = sectionNode;
 			} else if (existing.type === TreeNodeType.Section) {
 				current = existing as SectionNode;
@@ -105,7 +105,7 @@ export class LibraryTree {
 		const parent = this.getParentOrThrow(nodeNameChainToParent);
 		parent.children.push(node);
 		const fullChain = [...nodeNameChainToParent, node.nodeName];
-		this.nodeMap.set(joinPathPartsDeprecated(fullChain), node);
+		this.nodeMap.set(joinPathParts(fullChain), node);
 	}
 
 	getNode(nodeNameChain: NodeNameChain): TreeNode | null {
@@ -132,7 +132,7 @@ export class LibraryTree {
 		const parent = this.getParent(nodeNameChain);
 		if (!parent) {
 			throw new Error(
-				`Parent not found: ${joinPathPartsDeprecated(nodeNameChain)}`,
+				`Parent not found: ${joinPathParts(nodeNameChain)}`,
 			);
 		}
 		return parent;
@@ -142,7 +142,7 @@ export class LibraryTree {
 		if (nodeNameChain.length === 0) {
 			return this.root;
 		}
-		return this.nodeMap.get(joinPathPartsDeprecated(nodeNameChain)) ?? null;
+		return this.nodeMap.get(joinPathParts(nodeNameChain)) ?? null;
 	}
 
 	/**
@@ -208,7 +208,7 @@ export class LibraryTree {
 
 		const parent = this.getParentOrThrow(nodeNameChainToParent);
 		parent.children.push(newNode);
-		this.nodeMap.set(joinPathPartsDeprecated(fullChain), newNode);
+		this.nodeMap.set(joinPathParts(fullChain), newNode);
 
 		return fullChain;
 	}
@@ -230,7 +230,7 @@ export class LibraryTree {
 		}
 
 		parent.children.splice(index, 1);
-		this.nodeMap.delete(joinPathPartsDeprecated(nodeNameChain));
+		this.nodeMap.delete(joinPathParts(nodeNameChain));
 
 		if (node.type === TreeNodeType.Section) {
 			this.deleteSubtree(nodeNameChain);
@@ -248,7 +248,7 @@ export class LibraryTree {
 		const sectionNode = node as SectionNode;
 		for (const child of sectionNode.children) {
 			const childChain = [...rootChain, child.nodeName];
-			this.nodeMap.delete(joinPathPartsDeprecated(childChain));
+			this.nodeMap.delete(joinPathParts(childChain));
 			if (child.type === TreeNodeType.Section) {
 				this.deleteSubtree(childChain);
 			}
@@ -267,7 +267,7 @@ export class LibraryTree {
 
 		if (this.getNodeInternal(newFullChain)) {
 			throw new Error(
-				`Node already exists: ${joinPathPartsDeprecated(newFullChain)}`,
+				`Node already exists: ${joinPathParts(newFullChain)}`,
 			);
 		}
 
@@ -279,11 +279,11 @@ export class LibraryTree {
 			return nodeNameChain;
 		}
 
-		const oldKey = joinPathPartsDeprecated(nodeNameChain);
+		const oldKey = joinPathParts(nodeNameChain);
 		this.nodeMap.delete(oldKey);
 
 		node.nodeName = newNodeName;
-		const newKey = joinPathPartsDeprecated(newFullChain);
+		const newKey = joinPathParts(newFullChain);
 		this.nodeMap.set(newKey, node);
 
 		// Note: tRef removed - TFile references become stale when files are renamed/moved
@@ -304,11 +304,11 @@ export class LibraryTree {
 			const oldChildChain = [...oldParentChain, child.nodeName];
 			const newChildChain = [...newParentChain, child.nodeName];
 
-			const oldKey = joinPathPartsDeprecated(oldChildChain);
+			const oldKey = joinPathParts(oldChildChain);
 			this.nodeMap.delete(oldKey);
 
 			child.nodeNameChainToParent = newParentChain;
-			const newKey = joinPathPartsDeprecated(newChildChain);
+			const newKey = joinPathParts(newChildChain);
 			this.nodeMap.set(newKey, child);
 
 			if (child.type === TreeNodeType.Section) {
@@ -364,7 +364,7 @@ export class LibraryTree {
 		// Check if target already exists
 		if (this.getNodeInternal(newFullChain)) {
 			throw new Error(
-				`Node already exists: ${joinPathPartsDeprecated(newFullChain)}`,
+				`Node already exists: ${joinPathParts(newFullChain)}`,
 			);
 		}
 
@@ -381,11 +381,11 @@ export class LibraryTree {
 		}
 
 		// Update node's parent chain
-		const oldKey = joinPathPartsDeprecated(nodeNameChain);
+		const oldKey = joinPathParts(nodeNameChain);
 		this.nodeMap.delete(oldKey);
 
 		node.nodeNameChainToParent = newNodeNameChainToParent;
-		const newKey = joinPathPartsDeprecated(newFullChain);
+		const newKey = joinPathParts(newFullChain);
 		this.nodeMap.set(newKey, node);
 
 		// Add to new parent

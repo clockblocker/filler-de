@@ -3,7 +3,7 @@
  */
 
 import type { NodeNameChain } from "../types/schemas/node-name";
-import { joinPathPartsDeprecated } from "../utils/tree-path-utils";
+import { joinPathParts } from "../utils/tree-path-utils";
 
 /**
  * Flatten result from applyTreeAction into array of chains.
@@ -55,7 +55,7 @@ export function dedupeChains(chains: NodeNameChain[]): NodeNameChain[] {
 	const result: NodeNameChain[] = [];
 
 	for (const chain of chains) {
-		const key = joinPathPartsDeprecated(chain);
+		const key = joinPathParts(chain);
 		if (!seen.has(key)) {
 			seen.add(key);
 			result.push(chain);

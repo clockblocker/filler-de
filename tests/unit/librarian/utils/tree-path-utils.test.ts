@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import type { TreeLeaf } from "../../../../src/commanders/librarian/types/tree-node";
 import { TreeNodeStatus, TreeNodeType } from "../../../../src/commanders/librarian/types/tree-node";
 import {
-	buildCanonicalBasenameForLeafDeprecated,
-	buildCanonicalPathForLeafDeprecated,
+	buildCanonicalBasenameForLeaf,
+	buildCanonicalPathForLeaf,
 } from "../../../../src/commanders/librarian/utils/tree-path-utils";
 import * as globalState from "../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
@@ -41,12 +41,12 @@ describe("buildCanonicalPathFromTree", () => {
 		const leaf: TreeLeaf = {
 			extension: "md",
 			nodeName: "Note",
-			nodeNameChainToParent: [],
+			nodeNameChainToParent: ["Library"],
 			status: TreeNodeStatus.NotStarted,
 			type: TreeNodeType.Scroll,
 		};
 
-		const result = buildCanonicalPathForLeafDeprecated(leaf);
+		const result = buildCanonicalPathForLeaf(leaf);
 
 		expect(result).toBe("Library/Note.md");
 	});
@@ -55,12 +55,12 @@ describe("buildCanonicalPathFromTree", () => {
 		const leaf: TreeLeaf = {
 			extension: "md",
 			nodeName: "Note",
-			nodeNameChainToParent: ["A", "B"],
+			nodeNameChainToParent: ["Library", "A", "B"],
 			status: TreeNodeStatus.NotStarted,
 			type: TreeNodeType.Scroll,
 		};
 
-		const result = buildCanonicalPathForLeafDeprecated(leaf);
+		const result = buildCanonicalPathForLeaf(leaf);
 
 		expect(result).toBe("Library/A/B/Note-B-A.md");
 	});
@@ -74,12 +74,12 @@ describe("buildCanonicalPathFromTree", () => {
 		const leaf: TreeLeaf = {
 			extension: "md",
 			nodeName: "Note",
-			nodeNameChainToParent: ["A", "B"],
+			nodeNameChainToParent: ["Library", "A", "B"],
 			status: TreeNodeStatus.NotStarted,
 			type: TreeNodeType.Scroll,
 		};
 
-		const result = buildCanonicalPathForLeafDeprecated(leaf);
+		const result = buildCanonicalPathForLeaf(leaf);
 
 		expect(result).toBe("Library/A/B/Note::B::A.md");
 	});
@@ -97,12 +97,12 @@ describe("buildCanonicalPathFromTree", () => {
 		const leaf: TreeLeaf = {
 			extension: "md",
 			nodeName: "Note",
-			nodeNameChainToParent: ["A"],
+			nodeNameChainToParent: ["child", "A"],
 			status: TreeNodeStatus.NotStarted,
 			type: TreeNodeType.Scroll,
 		};
 
-		const result = buildCanonicalPathForLeafDeprecated(leaf);
+		const result = buildCanonicalPathForLeaf(leaf);
 
 		expect(result).toBe("parent/child/A/Note-A.md");
 	});
@@ -114,12 +114,12 @@ describe("buildCanonicalBasenameFromTree", () => {
 		const leaf: TreeLeaf = {
 			extension: "md",
 			nodeName: "Note",
-			nodeNameChainToParent: [],
+			nodeNameChainToParent: ["Library"],
 			status: TreeNodeStatus.NotStarted,
 			type: TreeNodeType.Scroll,
 		};
 
-		const result = buildCanonicalBasenameForLeafDeprecated(leaf);
+		const result = buildCanonicalBasenameForLeaf(leaf);
 
 		expect(result).toBe("Note");
 	});
@@ -128,12 +128,12 @@ describe("buildCanonicalBasenameFromTree", () => {
 		const leaf: TreeLeaf = {
 			extension: "md",
 			nodeName: "Note",
-			nodeNameChainToParent: ["A", "B"],
+			nodeNameChainToParent: ["Library", "A", "B"],
 			status: TreeNodeStatus.NotStarted,
 			type: TreeNodeType.Scroll,
 		};
 
-		const result = buildCanonicalBasenameForLeafDeprecated(leaf);
+		const result = buildCanonicalBasenameForLeaf(leaf);
 
 		expect(result).toBe("Note-B-A");
 	});
@@ -147,12 +147,12 @@ describe("buildCanonicalBasenameFromTree", () => {
 		const leaf: TreeLeaf = {
 			extension: "md",
 			nodeName: "Note",
-			nodeNameChainToParent: ["A", "B"],
+			nodeNameChainToParent: ["Library", "A", "B"],
 			status: TreeNodeStatus.NotStarted,
 			type: TreeNodeType.Scroll,
 		};
 
-		const result = buildCanonicalBasenameForLeafDeprecated(leaf);
+		const result = buildCanonicalBasenameForLeaf(leaf);
 
 		expect(result).toBe("Note::B::A");
 	});
@@ -161,12 +161,12 @@ describe("buildCanonicalBasenameFromTree", () => {
 		const leaf: TreeLeaf = {
 			extension: "md",
 			nodeName: "Note",
-			nodeNameChainToParent: ["Parent"],
+			nodeNameChainToParent: ["Library", "Parent"],
 			status: TreeNodeStatus.NotStarted,
 			type: TreeNodeType.Scroll,
 		};
 
-		const result = buildCanonicalBasenameForLeafDeprecated(leaf);
+		const result = buildCanonicalBasenameForLeaf(leaf);
 
 		expect(result).toBe("Note-Parent");
 	});

@@ -1,38 +1,37 @@
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import { makeSystemPathForSplitPath } from "../../../obsidian-vault-action-manager/impl/split-path";
-import type { TreeLeaf } from "../types/tree-node";
-import { buildCanonicalBasenameDeprecated } from "./path-suffix-utils";
+import { makeJoinedSuffixedBasenameFromNodeNameChain } from "../naming/functions/basename-and-chain";
+import { buildCanonicalSplitPathFromNode } from "../naming/functions/split-path-and-leaf";
+import type { FileNode, ScrollNode, TreeLeaf } from "../types/tree-node";
+import { TreeNodeType } from "../types/tree-node";
 
-/** @deprecated */
-export function joinPathPartsDeprecated(parts: string[]): string {
+export function joinPathParts(parts: string[]): string {
 	return parts.filter(Boolean).join("/");
 }
 
-/** @deprecated */
-export function buildCanonicalPathForLeafDeprecated(leaf: TreeLeaf): string {
+export function buildCanonicalPathForLeaf(leaf: TreeLeaf): string {
 	const settings = getParsedUserSettings();
-	const libraryRootPath = makeSystemPathForSplitPath(
-		settings.splitPathToLibraryRoot,
-	);
+	const splitPath =
+		leaf.type === TreeNodeType.Scroll
+			? buildCanonicalSplitPathFromNode(leaf as ScrollNode)
+			: buildCanonicalSplitPathFromNode(leaf as FileNode);
 
-	const canonicalBasename = buildCanonicalBasenameDeprecated(
-		leaf.nodeName,
-		leaf.nodeNameChainToParent,
-	);
+	// If library root has path parts, prepend them to the file's path parts
+	if (settings.splitPathToLibraryRoot.pathParts.length > 0) {
+		const splitPathWithLibraryRoot = {
+			...splitPath,
+			pathParts: [
+				...settings.splitPathToLibraryRoot.pathParts,
+				...splitPath.pathParts,
+			],
+		};
+		return makeSystemPathForSplitPath(splitPathWithLibraryRoot);
+	}
 
-	const pathChain =
-		leaf.nodeNameChainToParent.length > 0
-			? `${joinPathPartsDeprecated(leaf.nodeNameChainToParent)}/`
-			: "";
-	return `${libraryRootPath}/${pathChain}${canonicalBasename}.${leaf.extension}`;
+	return makeSystemPathForSplitPath(splitPath);
 }
 
-/** @deprecated */
-export function buildCanonicalBasenameForLeafDeprecated(
-	leaf: TreeLeaf,
-): string {
-	return buildCanonicalBasenameDeprecated(
-		leaf.nodeName,
-		leaf.nodeNameChainToParent,
-	);
+export function buildCanonicalBasenameForLeaf(leaf: TreeLeaf): string {
+	const fullChain = [...leaf.nodeNameChainToParent, leaf.nodeName];
+	return makeJoinedSuffixedBasenameFromNodeNameChain(fullChain);
 }

@@ -27,7 +27,7 @@ import { collectAllSectionChains } from "./orchestration/tree-utils";
 import { TreeActionType } from "./types/literals";
 import type { NodeNameChain } from "./types/schemas/node-name";
 import { TreeNodeStatus, TreeNodeType } from "./types/tree-node";
-import { buildCanonicalPathForLeafDeprecated } from "./utils/tree-path-utils";
+import { buildCanonicalPathForLeaf } from "./utils/tree-path-utils";
 
 export class Librarian {
 	private tree: LibraryTree;
@@ -257,7 +257,7 @@ export class Librarian {
 		// Write metadata to file if this is a Scroll node
 		if (node?.type === TreeNodeType.Scroll) {
 			// Build canonical path from tree structure
-			const path = buildCanonicalPathForLeafDeprecated(node);
+			const path = buildCanonicalPathForLeaf(node);
 			const splitPath = this.vaultActionManager.splitPath(path);
 
 			if (splitPath.type === "MdFile") {

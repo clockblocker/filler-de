@@ -16,7 +16,7 @@ import {
 	computeSuffixFromPathDepreacated,
 	suffixMatchesPathDepreacated,
 } from "../utils/path-suffix-utils";
-import { joinPathPartsDeprecated } from "../utils/tree-path-utils";
+import { joinPathParts } from "../utils/tree-path-utils";
 
 /**
  * Result of init healing.
@@ -44,7 +44,7 @@ function findMatchingFile(
 	actualFiles: SplitPathWithReader[],
 ): SplitPathWithReader | null {
 	// Expected path (parent chain only, not including nodeName)
-	const expectedParentPath = joinPathPartsDeprecated(
+	const expectedParentPath = joinPathParts(
 		leaf.nodeNameChainToParent,
 	);
 
@@ -72,7 +72,7 @@ function findMatchingFile(
 
 		// Build path key from file pathParts (skip library root)
 		// pathParts is [libraryRoot, ...parentChain], so slice(1) gives parentChain
-		const fileParentPath = joinPathPartsDeprecated(file.pathParts.slice(1));
+		const fileParentPath = joinPathParts(file.pathParts.slice(1));
 
 		// Match if parent path matches (file might be at expected location or wrong location)
 		// We match by nodeName and parent path, then check if suffix needs fixing
