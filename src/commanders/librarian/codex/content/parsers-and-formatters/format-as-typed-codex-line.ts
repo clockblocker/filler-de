@@ -32,20 +32,16 @@ export function formatAsTypedCodexLine<T extends CodexLineType>(
 ): TypedCodexLine<T> {
 	switch (node.type) {
 		case CodexLineType.Scroll:
-			return formatAsCodexLineForScroll(
-				node as TreeNodeIntendedForScrollLine,
-			) as TypedCodexLine<T>;
+			return formatAsCodexLineForScroll(node) as TypedCodexLine<T>;
 		case CodexLineType.File:
-			return formatAsCodexLineForFile(
-				node as TreeNodeIntendedForFileLine,
-			) as TypedCodexLine<T>;
+			return formatAsCodexLineForFile(node) as TypedCodexLine<T>;
 		case CodexLineType.ChildSectionCodex:
 			return formatAsCodexLineForChildSectionCodex(
-				node as TreeNodeIntendedForChildSectionCodexLine,
+				node,
 			) as TypedCodexLine<T>;
 		case CodexLineType.ParentSectionCodex:
 			return formatAsCodexLineForParentSectionCodex(
-				node as TreeNodeIntendedForParentSectionCodexLine,
+				node,
 			) as TypedCodexLine<T>;
 	}
 }

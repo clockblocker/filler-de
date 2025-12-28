@@ -41,28 +41,29 @@ const makeCanonicalBasenameForCodexFromNodeNameChainToParent = (
 	);
 };
 
-export const makeNodeNameChainToParentFromCanonicalBasenameForCodex = (
-	basename: SeparatedSuffixedBasename,
-): NodeNameChain => {
+export const makeNodeNameChainToParentFromCanonicalBasenameForCodex = ({
+	nodeName: _nodeNameOfCodex,
+	splitSuffix: splitSuffixOfCodex,
+}: SeparatedSuffixedBasename): NodeNameChain => {
 	const {
 		splitPathToLibraryRoot: { basename: libraryRoot },
 	} = getParsedUserSettings();
 
-	const fullChain = makeNodeNameChainFromSeparatedSuffixedBasename(basename);
+	const [sectionNodeName, ...splitSuffixOfSection] = splitSuffixOfCodex;
 
-	// CODEX_CORE_NAME is at the end, remove it
-	const chainWithoutCodex = fullChain.slice(0, -1);
+	// This should never happen. Assertion of BasenameForCodex's correctness should be handled by the caller.
+	if (!sectionNodeName) {
+		throw new Error("Invalid codex basename");
+	}
 
-	// If chain was empty originally, it would have been [libraryRoot, CODEX_CORE_NAME]
-	// Remove libraryRoot to get empty chain
-	if (
-		chainWithoutCodex.length === 1 &&
-		chainWithoutCodex[0] === libraryRoot
-	) {
+	if (sectionNodeName === libraryRoot) {
 		return [];
 	}
 
-	return chainWithoutCodex;
+	return makeNodeNameChainFromSeparatedSuffixedBasename({
+		nodeName: sectionNodeName,
+		splitSuffix: splitSuffixOfSection,
+	});
 };
 
 export const buildCanonicalPathPartsForCodex = (

@@ -28,6 +28,24 @@ export function tryParseCodexLine(
 ): Result<TypedCodexLine<CodexLineType>, string> {
 	const trimmedLine = dirtyLine.trim();
 
+	const parentSectionResult =
+		tryParseCodexLineForParentSectionCodex(trimmedLine);
+	if (parentSectionResult.isOk()) {
+		return ok({
+			line: parentSectionResult.value,
+			type: CodexLineType.ParentSectionCodex,
+		});
+	}
+
+	const childSectionResult =
+		tryParseCodexLineForChildSectionCodex(trimmedLine);
+	if (childSectionResult.isOk()) {
+		return ok({
+			line: childSectionResult.value,
+			type: CodexLineType.ChildSectionCodex,
+		});
+	}
+
 	const scrollResult = tryParseCodexLineForScroll(trimmedLine);
 	if (scrollResult.isOk()) {
 		return ok({
@@ -41,24 +59,6 @@ export function tryParseCodexLine(
 		return ok({
 			line: fileResult.value,
 			type: CodexLineType.File,
-		});
-	}
-
-	const childSectionResult =
-		tryParseCodexLineForChildSectionCodex(trimmedLine);
-	if (childSectionResult.isOk()) {
-		return ok({
-			line: childSectionResult.value,
-			type: CodexLineType.ChildSectionCodex,
-		});
-	}
-
-	const parentSectionResult =
-		tryParseCodexLineForParentSectionCodex(trimmedLine);
-	if (parentSectionResult.isOk()) {
-		return ok({
-			line: parentSectionResult.value,
-			type: CodexLineType.ParentSectionCodex,
 		});
 	}
 
