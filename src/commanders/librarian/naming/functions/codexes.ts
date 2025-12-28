@@ -47,43 +47,51 @@ export const makeNodeNameChainToParentFromSeparatedCanonicalBasenameForCodex =
 		nodeName: _nodeNameOfCodex,
 		splitSuffix: splitSuffixOfCodex,
 	}: SeparatedSuffixedBasename): NodeNameChain => {
-		const {
-			splitPathToLibraryRoot: { basename: libraryRoot },
-		} = getParsedUserSettings();
-
 		const [sectionNodeName, ...splitSuffixOfSection] = splitSuffixOfCodex;
 
-		// This should never happen. Assertion of BasenameForCodex's correctness should be handled by the caller.
 		if (!sectionNodeName) {
 			throw new Error("Invalid codex basename");
 		}
 
-		// If section is library root, return chain with only library root
-		if (
-			sectionNodeName === libraryRoot &&
-			splitSuffixOfSection.length === 0
-		) {
-			return [libraryRoot];
-		}
-
-		// Decode the full chain (includes section name, already includes library root)
+		// Use atomic codec to decode full chain, then extract parent chain
 		const fullChain = makeNodeNameChainFromSeparatedSuffixedBasename({
 			nodeName: sectionNodeName,
 			splitSuffix: splitSuffixOfSection,
 		});
 
-		// Return full chain (function name is misleading - it returns full chain, not just parent)
-		return fullChain;
+		// Parent chain is full chain without the section name (last element)
+		return fullChain.slice(0, -1);
 	};
 
 export const buildCanonicalPathPartsForCodex = (
 	canonicalBasename: JoinedSuffixedBasenameForCodex,
 ) => {
-	const separated = separateJoinedSuffixedBasename(canonicalBasename);
-	const nodeNameChain =
-		makeNodeNameChainToParentFromSeparatedCanonicalBasenameForCodex(
-			separated,
-		);
+	const {
+		splitPathToLibraryRoot: { basename: libraryRoot },
+	} = getParsedUserSettings();
 
-	return makePathPartsFromNodeNameChain(nodeNameChain);
+	const separated = separateJoinedSuffixedBasename(canonicalBasename);
+	const [sectionNodeName, ...splitSuffixOfSection] = separated.splitSuffix;
+
+	if (!sectionNodeName) {
+		throw new Error("Invalid codex basename");
+	}
+
+	// Use atomic codec to get full chain directly
+	const fullChain = makeNodeNameChainFromSeparatedSuffixedBasename({
+		nodeName: sectionNodeName,
+		splitSuffix: splitSuffixOfSection,
+	});
+
+	// Root codex special case: if section is library root, path parts is just [libraryRoot]
+	if (
+		fullChain.length === 2 &&
+		fullChain[0] === libraryRoot &&
+		fullChain[1] === libraryRoot
+	) {
+		return [libraryRoot];
+	}
+
+	// Use atomic codec to convert chain to path parts
+	return makePathPartsFromNodeNameChain(fullChain);
 };

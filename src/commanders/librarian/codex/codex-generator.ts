@@ -28,7 +28,7 @@ export function generateCodexContent(section: SectionNode): string {
 
 	// Backlink to parent codex
 	const libraryRoot = settings.splitPathToLibraryRoot.basename;
-	
+
 	// Root library (empty chain, name is library root) - no backlink
 	if (
 		section.nodeNameChainToParent.length === 0 &&
@@ -40,10 +40,12 @@ export function generateCodexContent(section: SectionNode): string {
 		section.nodeNameChainToParent[0] === libraryRoot
 	) {
 		// Root section (first level under library) - backlink to library root
+		// Library root section has nodeNameChainToParent: [] internally, but for encoding
+		// we need to include library root in the chain so it encodes as "__-Library"
 		const libraryRootIntended: AnyIntendedTreeNode = {
 			node: {
 				nodeName: libraryRoot,
-				nodeNameChainToParent: [],
+				nodeNameChainToParent: [libraryRoot],
 				status: section.status,
 				type: TreeNodeType.Section,
 			},

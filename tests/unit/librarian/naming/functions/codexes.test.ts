@@ -100,19 +100,19 @@ describe("makeNodeNameChainToParentFromCanonicalBasenameForCodex", () => {
 	it("decodes basename for root section (library root + section)", () => {
 		const separated = separateJoinedSuffixedBasename("__-Parent");
 		const result = makeNodeNameChainToParentFromSeparatedCanonicalBasenameForCodex(separated);
-		expect(result).toEqual(["Library", "Parent"]);
+		expect(result).toEqual(["Library"]);
 	});
 
 	it("decodes basename for nested section", () => {
 		const separated = separateJoinedSuffixedBasename("__-Child-Parent");
 		const result = makeNodeNameChainToParentFromSeparatedCanonicalBasenameForCodex(separated);
-		expect(result).toEqual(["Library", "Parent", "Child"]);
+		expect(result).toEqual(["Library", "Parent"]);
 	});
 
 	it("decodes basename for deeply nested chain", () => {
 		const separated = separateJoinedSuffixedBasename("__-D-C-B-A");
 		const result = makeNodeNameChainToParentFromSeparatedCanonicalBasenameForCodex(separated);
-		expect(result).toEqual(["Library", "A", "B", "C", "D"]);
+		expect(result).toEqual(["Library", "A", "B", "C"]);
 	});
 
 	it("handles custom library root", () => {
@@ -136,7 +136,7 @@ describe("makeNodeNameChainToParentFromCanonicalBasenameForCodex", () => {
 		});
 		const separated = separateJoinedSuffixedBasename("__::Child::Parent");
 		const result = makeNodeNameChainToParentFromSeparatedCanonicalBasenameForCodex(separated);
-		expect(result).toEqual(["Library", "Parent", "Child"]);
+		expect(result).toEqual(["Library", "Parent"]);
 	});
 });
 
@@ -198,7 +198,7 @@ describe("roundtrip tests", () => {
 		const separated = separateJoinedSuffixedBasename(basename);
 		const result = makeNodeNameChainToParentFromSeparatedCanonicalBasenameForCodex(separated);
 		// Returns parent chain (nodeNameChainToParent)
-		expect(result).toEqual(["Library", "Parent"]);
+		expect(result).toEqual(["Library"]);
 	});
 
 	it("roundtrips nested section", () => {
@@ -213,7 +213,7 @@ describe("roundtrip tests", () => {
 		const separated = separateJoinedSuffixedBasename(basename);
 		const result = makeNodeNameChainToParentFromSeparatedCanonicalBasenameForCodex(separated);
 		// Returns parent chain (nodeNameChainToParent)
-		expect(result).toEqual(["Library", "Parent", "Child"]);
+		expect(result).toEqual(["Library", "Parent"]);
 	});
 
 	it("roundtrips deeply nested chain", () => {
@@ -228,7 +228,7 @@ describe("roundtrip tests", () => {
 		const separated = separateJoinedSuffixedBasename(basename);
 		const result = makeNodeNameChainToParentFromSeparatedCanonicalBasenameForCodex(separated);
 		// Returns parent chain (nodeNameChainToParent)
-		expect(result).toEqual(["Library", "A", "B", "C", "D"]);
+		expect(result).toEqual(["Library", "A", "B", "C"]);
 	});
 
 	it("roundtrips through buildCanonicalPathPartsForCodex and back", () => {
