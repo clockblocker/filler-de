@@ -4,8 +4,8 @@ import { getParsedUserSettings } from "../../global-state/global-state";
 import type { ObsidianVaultActionManager } from "../../obsidian-vault-action-manager";
 import { logger } from "../../utils/logger";
 import type { Librarian } from "./librarian";
-import type { NodeNameChain } from "./naming/types/node-name";
 import { CODEX_CORE_NAME } from "./types/literals";
+import type { NodeNameChain } from "./types/schemas/node-name";
 
 /**
  * Handle codex checkbox click.
@@ -23,7 +23,10 @@ export async function handleCodexCheckboxClick({
 	app: App;
 }): Promise<boolean> {
 	const pwdResult = await vaultActionManager.pwd();
-	if (pwdResult.isErr() || !pwdResult.value.basename.startsWith(CODEX_CORE_NAME)) {
+	if (
+		pwdResult.isErr() ||
+		!pwdResult.value.basename.startsWith(CODEX_CORE_NAME)
+	) {
 		return false;
 	}
 

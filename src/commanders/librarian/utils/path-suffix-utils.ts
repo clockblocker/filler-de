@@ -3,7 +3,7 @@ import type {
 	NodeName,
 	NodeNameChain,
 	SplitSuffix,
-} from "../naming/types/node-name";
+} from "../types/schemas/node-name";
 
 /** @deprecated */
 export function computeSuffixFromPathDepreacated(

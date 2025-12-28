@@ -11,8 +11,8 @@
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import type { SplitPath } from "../../../obsidian-vault-action-manager/types/split-path";
 import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
-import type { NodeNameChain } from "../naming/types/node-name";
 import { TreeActionType } from "../types/literals";
+import type { NodeNameChain } from "../types/schemas/node-name";
 import type { TreeAction } from "../types/tree-action";
 import { TreeNodeStatus, TreeNodeType } from "../types/tree-node";
 import { parseBasenameDeprecated } from "../utils/parse-basename";

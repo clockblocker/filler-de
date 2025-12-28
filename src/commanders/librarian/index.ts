@@ -17,16 +17,16 @@ export {
 } from "./healing";
 export { Librarian } from "./librarian";
 export { LibraryTree } from "./library-tree";
-export type {
-	NodeName,
-	NodeNameChain,
-	SplitSuffix,
-} from "./naming/types/node-name";
 export {
 	DragInSubtype,
 	HealingMode,
 	RuntimeSubtype,
 } from "./types/literals";
+export type {
+	NodeName,
+	NodeNameChain,
+	SplitSuffix,
+} from "./types/schemas/node-name";
 export type { TreeAction } from "./types/tree-action";
 export type {
 	FileNode,

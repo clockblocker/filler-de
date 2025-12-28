@@ -13,7 +13,7 @@ import {
 	TAB,
 } from "../../../types/literals";
 import { makeCanonicalBasenameForCodex } from "../naming/functions/codexes";
-import type { NodeNameChain } from "../naming/types/node-name";
+import type { NodeNameChain } from "../types/schemas/node-name";
 import type { SectionNode, TreeNode } from "../types/tree-node";
 import { TreeNodeStatus, TreeNodeType } from "../types/tree-node";
 import { addCodexPrefixDeprecated } from "../utils/codex-utils";

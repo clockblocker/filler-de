@@ -9,7 +9,7 @@ import {
 	buildCanonicalPathPartsForCodex,
 	makeCanonicalBasenameForCodex,
 } from "../naming/functions/codexes";
-import type { NodeNameChain } from "../naming/types/node-name";
+import type { NodeNameChain } from "../types/schemas/node-name";
 import type { SectionNode } from "../types/tree-node";
 
 /**

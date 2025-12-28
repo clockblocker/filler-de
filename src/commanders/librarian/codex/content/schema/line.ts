@@ -8,18 +8,7 @@ import {
 	PIPE,
 	SPACE_F,
 } from "../../../../../types/literals";
-import { NodeNameSchema } from "../../../naming/types/node-name";
-
-// CodexLineType enum
-export const CodexLineTypeSchema = z.enum([
-	"MdFile",
-	"File",
-	"ChildSectionCodex",
-	"ParentSectionCodex",
-]);
-
-export type CodexLineType = z.infer<typeof CodexLineTypeSchema>;
-export const CodexLineType = CodexLineTypeSchema.enum;
+import { NodeNameSchema } from "../../../types/schemas/node-name";
 
 // Filename can contain delimiters, so we use a more permissive string
 // but exclude the pipe and brackets used in the link format
@@ -57,49 +46,28 @@ const ParentBacklinkSchema = z.templateLiteral([
 ]);
 
 // Template literal schemas for the string values
-const CodexLineForMdFileValueSchema = z.templateLiteral([
+const CodexLineForMdFileSchema = z.templateLiteral([
 	CheckboxSchema,
 	z.literal(SPACE_F),
 	RegularBacklinkSchema,
 ]);
 
-const CodexLineForFileValueSchema = z.templateLiteral([
+const CodexLineForFileSchema = z.templateLiteral([
 	z.literal(DASH),
 	z.literal(SPACE_F),
 	RegularBacklinkSchema,
 ]);
 
-const CodexLineForChildSectionCodexValueSchema = z.templateLiteral([
+const CodexLineForChildSectionCodexSchema = z.templateLiteral([
 	CheckboxSchema,
 	z.literal(SPACE_F),
 	RegularBacklinkSchema,
 ]);
 
-const CodexLineForParentSectionCodexValueSchema = ParentBacklinkSchema;
-
-// Object schemas with type discriminator
-export const CodexLineForMdFileSchema = z.object({
-	type: z.literal(CodexLineType.MdFile),
-	value: CodexLineForMdFileValueSchema,
-});
-
-export const CodexLineForFileSchema = z.object({
-	type: z.literal(CodexLineType.File),
-	value: CodexLineForFileValueSchema,
-});
-
-export const CodexLineForChildSectionCodexSchema = z.object({
-	type: z.literal(CodexLineType.ChildSectionCodex),
-	value: CodexLineForChildSectionCodexValueSchema,
-});
-
-export const CodexLineForParentSectionCodexSchema = z.object({
-	type: z.literal(CodexLineType.ParentSectionCodex),
-	value: CodexLineForParentSectionCodexValueSchema,
-});
+const CodexLineForParentSectionCodexSchema = ParentBacklinkSchema;
 
 // Combined schema using discriminated union
-export const CodexLineSchema = z.discriminatedUnion("type", [
+export const CodexLineSchema = z.union([
 	CodexLineForMdFileSchema,
 	CodexLineForFileSchema,
 	CodexLineForChildSectionCodexSchema,

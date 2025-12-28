@@ -13,9 +13,9 @@ import {
 } from "../codex/impacted-chains";
 import { detectRenameMode } from "../healing";
 import type { LibraryTree } from "../library-tree";
-import type { NodeNameChain } from "../naming/types/node-name";
 import { translateVaultAction } from "../reconciliation/vault-to-tree";
 import { TreeActionType } from "../types/literals";
+import type { NodeNameChain } from "../types/schemas/node-name";
 import { isBasenamePrefixedAsCodexDeprecated } from "../utils/codex-utils";
 import { resolveActions } from "./action-resolver";
 import { buildActionsForCodexRegenerationInImpactedSections } from "./codex-regeneration";

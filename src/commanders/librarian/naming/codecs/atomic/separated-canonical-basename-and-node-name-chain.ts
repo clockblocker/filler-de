@@ -1,5 +1,8 @@
 import z from "zod";
-import { type NodeNameChain, NodeNameChainSchema } from "../../types/node-name";
+import {
+	type NodeNameChain,
+	NodeNameChainSchema,
+} from "../../../types/schemas/node-name";
 import {
 	type SeparatedSuffixedBasename,
 	SeparatedSuffixedBasenameSchema,

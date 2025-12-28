@@ -1,5 +1,5 @@
 import { getParsedUserSettings } from "../../../../global-state/global-state";
-import type { NodeName, SplitSuffix } from "./node-name";
+import type { NodeName, SplitSuffix } from "../../types/schemas/node-name";
 
 export function joinSeparatedSuffixedBasename({
 	nodeName,

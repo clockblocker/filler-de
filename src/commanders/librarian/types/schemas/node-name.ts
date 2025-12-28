@@ -1,7 +1,7 @@
 import z from "zod";
 import { getParsedUserSettings } from "../../../../global-state/global-state";
-import { CUSTOM_ERROR_CODE } from "../../types/literals";
-import { NamingError } from "../errors";
+import { NamingError } from "../../naming/errors";
+import { CUSTOM_ERROR_CODE } from "../literals";
 
 /**
  * @example

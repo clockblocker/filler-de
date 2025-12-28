@@ -5,7 +5,7 @@ import {
 	type SplitPath,
 } from "../../../../../obsidian-vault-action-manager/types/split-path";
 import type { NodeNameChain } from "../../..";
-import { NodeNameChainSchema } from "../../types/node-name";
+import { NodeNameChainSchema } from "../../../types/schemas/node-name";
 
 /**
  * Zod codec from PathParts to NodeNameChain.

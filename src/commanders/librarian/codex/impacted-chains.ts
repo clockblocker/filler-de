@@ -2,7 +2,7 @@
  * Utilities for collecting and expanding impacted chains.
  */
 
-import type { NodeNameChain } from "../naming/types/node-name";
+import type { NodeNameChain } from "../types/schemas/node-name";
 import { joinPathPartsDeprecated } from "../utils/tree-path-utils";
 
 /**

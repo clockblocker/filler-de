@@ -13,7 +13,6 @@ import {
 } from "./codex/impacted-chains";
 import { healOnInit, type InitHealResult } from "./healing";
 import type { LibraryTree } from "./library-tree";
-import type { NodeNameChain } from "./naming/types/node-name";
 import {
 	buildActionsForCodexRegenerationInImpactedSections,
 	buildWriteStatusToMetadataAction,
@@ -26,6 +25,7 @@ import {
 } from "./orchestration";
 import { collectAllSectionChains } from "./orchestration/tree-utils";
 import { TreeActionType } from "./types/literals";
+import type { NodeNameChain } from "./types/schemas/node-name";
 import { TreeNodeStatus, TreeNodeType } from "./types/tree-node";
 import { buildCanonicalPathForLeafDeprecated } from "./utils/tree-path-utils";
 

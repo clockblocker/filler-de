@@ -1,5 +1,5 @@
-import type { NodeName, NodeNameChain } from "./naming/types/node-name";
 import { TreeActionType } from "./types/literals";
+import type { NodeName, NodeNameChain } from "./types/schemas/node-name";
 import type {
 	ChangeNodeNameAction,
 	ChangeNodeStatusAction,
