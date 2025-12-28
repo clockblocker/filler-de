@@ -1,4 +1,4 @@
-import { makeTryParseStringAs } from "../../errors";
+import { makeTryParseStringAs } from "../../../../librarin-shared/error-handeling/tryParseStringAs";
 
 import {
 	JoinedSuffixedBasenameForCodexSchema,

@@ -1,6 +1,6 @@
 import z from "zod";
 import { getParsedUserSettings } from "../../../../global-state/global-state";
-import { CODEX_CORE_NAME } from "../../../librarin-shared/types/literals";
+import { CODEX_NODE_NAME } from "../../../librarin-shared/types/literals";
 import {
 	type NodeNameChain,
 	NodeNameChainSchema,
@@ -13,13 +13,13 @@ import { canonicalBasenameToChainCodec } from "./suffixed-basename-to-chain-code
  */
 export const CanonicalBasenameForСodexSchema = z
 	.string()
-	.refine((val) => val.startsWith(CODEX_CORE_NAME), {
-		message: `must start with "${CODEX_CORE_NAME}"`,
+	.refine((val) => val.startsWith(CODEX_NODE_NAME), {
+		message: `must start with "${CODEX_NODE_NAME}"`,
 	})
 	.refine(
 		(val) => {
 			// After CODEX_CORE_NAME, must have suffix delimiter + content (like any regular filename)
-			const afterNodeName = val.slice(CODEX_CORE_NAME.length);
+			const afterNodeName = val.slice(CODEX_NODE_NAME.length);
 			if (afterNodeName.length === 0) {
 				return false;
 			}
@@ -50,7 +50,7 @@ export const suffixedBasenameForСodexToParentSectionChainCodec = z.codec(
 			// Codex is just a regular file with nodeName "__"
 			return canonicalBasenameToChainCodec.encode([
 				...chain,
-				CODEX_CORE_NAME,
+				CODEX_NODE_NAME,
 			]);
 		},
 	},
@@ -89,8 +89,8 @@ export const codexBasenameToSectionChainCodec = z.codec(
 			// For root (empty chain), encode as libraryRoot
 			const fullChain =
 				sectionChain.length === 0
-					? [libraryRoot, CODEX_CORE_NAME]
-					: [...sectionChain, CODEX_CORE_NAME];
+					? [libraryRoot, CODEX_NODE_NAME]
+					: [...sectionChain, CODEX_NODE_NAME];
 
 			return canonicalBasenameToChainCodec.encode(fullChain);
 		},

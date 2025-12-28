@@ -1,5 +1,5 @@
 import z from "zod";
-import { CODEX_CORE_NAME } from "../../../../librarin-shared/types/literals";
+import { CODEX_NODE_NAME } from "../../../../librarin-shared/types/literals";
 import {
 	NodeNameSchema,
 	SplitSuffixSchema,
@@ -54,7 +54,7 @@ export const SeparatedSuffixedBasenameForFileSchema =
 	SeparatedSuffixedBasenameSchema;
 
 export const SeparatedSuffixedBasenameForCodexSchema = z.object({
-	nodeName: NodeNameSchema.refine((s) => s === CODEX_CORE_NAME),
+	nodeName: NodeNameSchema.refine((s) => s === CODEX_NODE_NAME),
 	splitSuffix: SplitSuffixSchema,
 });
 

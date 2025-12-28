@@ -1,5 +1,5 @@
 import { err, ok, type Result } from "neverthrow";
-import { makeTryParseStringAs } from "../../../naming/errors";
+import { makeTryParseStringAs } from "../../../../librarin-shared/error-handeling/tryParseStringAs";
 import {
 	CodexLineForChildSectionCodexSchema,
 	CodexLineForFileSchema,

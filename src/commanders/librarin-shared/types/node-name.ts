@@ -1,6 +1,6 @@
 import z from "zod";
 import { getParsedUserSettings } from "../../../global-state/global-state";
-import { NamingError } from "../../librarian-old/naming/errors";
+import { NamingError } from "./errors";
 import { CUSTOM_ERROR_CODE } from "./literals";
 
 /**

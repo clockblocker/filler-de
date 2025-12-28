@@ -1,13 +1,10 @@
 import { err, ok, type Result } from "neverthrow";
-import z from "zod";
-import { CUSTOM_ERROR_CODE } from "../../librarin-shared/types/literals";
+
+import type z from "zod";
+
+import { CUSTOM_ERROR_CODE } from "../types/literals";
 
 type ZodIssue = z.core.$ZodIssue;
-
-const NamingErrorSchema = z.enum(["EmptyNodeName", "DelimiterInNodeName"]);
-
-export type NamingError = z.infer<typeof NamingErrorSchema>;
-export const NamingError = NamingErrorSchema.enum;
 
 export const makeTryParseStringAs =
 	<T, E extends string = string>(

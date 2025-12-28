@@ -3,7 +3,7 @@ import type { App } from "obsidian";
 import { MarkdownView } from "obsidian";
 import type { ObsidianVaultActionManager } from "../../obsidian-vault-action-manager";
 import { logger } from "../../utils/logger";
-import { CODEX_CORE_NAME } from "../librarin-shared/types/literals";
+import { CODEX_NODE_NAME } from "../librarin-shared/types/literals";
 import type { NodeNameChain } from "../librarin-shared/types/node-name";
 import { tryParseAsIntendedTreeNode } from "./codex/content/intended-tree-node-and-codex-line";
 import { CodexLineType } from "./codex/content/schema/literals";
@@ -27,7 +27,7 @@ export async function handleCodexCheckboxClick({
 	const pwdResult = await vaultActionManager.pwd();
 	if (
 		pwdResult.isErr() ||
-		!pwdResult.value.basename.startsWith(CODEX_CORE_NAME)
+		!pwdResult.value.basename.startsWith(CODEX_NODE_NAME)
 	) {
 		return false;
 	}
