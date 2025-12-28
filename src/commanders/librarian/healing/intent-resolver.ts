@@ -1,5 +1,5 @@
 import { getParsedUserSettings } from "../../../global-state/global-state";
-import { systemPathFromSplitPath } from "../../../obsidian-vault-action-manager/helpers/pathfinder";
+import { systemPathFromSplitPath } from "../../../obsidian-vault-action-manager/helpers/pathfinder/system-path-and-split-path-codec";
 import type {
 	SplitPathToFile,
 	SplitPathToMdFile,

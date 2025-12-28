@@ -1,7 +1,7 @@
 import type { Result } from "neverthrow";
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import type { VaultEvent } from "../../../obsidian-vault-action-manager";
-import { systemPathFromSplitPath } from "../../../obsidian-vault-action-manager/helpers/pathfinder";
+import { systemPathFromSplitPath } from "../../../obsidian-vault-action-manager/helpers/pathfinder/system-path-and-split-path-codec";
 import type { SplitPath } from "../../../obsidian-vault-action-manager/types/split-path";
 import { SplitPathType } from "../../../obsidian-vault-action-manager/types/split-path";
 import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";

@@ -1,14 +1,13 @@
-import { type TFile, TFolder } from "obsidian";
-import z from "zod/v4";
-import { MD } from "../types/literals";
-import {
-	type CommonSplitPath,
-	type SplitPath,
-	SplitPathSchema,
-	type SplitPathToFolder,
-	type SplitPathToMdFile,
-	SplitPathType,
-} from "../types/split-path";
+import type { TFile } from "obsidian";
+import { TFolder } from "obsidian";
+import { MD } from "../../types/literals";
+import type {
+	CommonSplitPath,
+	SplitPath,
+	SplitPathToFolder,
+	SplitPathToMdFile,
+} from "../../types/split-path";
+import { SplitPathType } from "../../types/split-path";
 
 export function splitPathToMdFileFromCore(
 	core: CommonSplitPath,
@@ -62,73 +61,6 @@ export function getSplitPathForAbstractFile<SP extends SplitPath>(
 		pathParts: fullPath,
 		type: SplitPathType.File,
 	} as SP;
-}
-
-export const systemPathToSplitPath = z.codec(z.string(), SplitPathSchema, {
-	decode: (systemPath: string): SplitPath => {
-		const normalized = systemPath.replace(/^[\\/]+|[\\/]+$/g, "");
-		if (!normalized) {
-			return { ...SPLIT_PATH_TO_ROOT_FOLDER };
-		}
-		const parts = normalized.split("/").filter(Boolean);
-
-		const last = parts[parts.length - 1] ?? "";
-		const hasExtension = last.includes(".");
-
-		if (hasExtension) {
-			const dotIdx = last.lastIndexOf(".");
-			const basename = last.substring(0, dotIdx);
-			const extension = last.substring(dotIdx + 1);
-			if (extension === MD) {
-				return {
-					basename,
-					extension: MD,
-					pathParts: parts.slice(0, -1),
-					type: SplitPathType.MdFile,
-				};
-			}
-
-			return {
-				basename,
-				extension,
-				pathParts: parts.slice(0, -1),
-				type: SplitPathType.File,
-			};
-		}
-
-		return {
-			basename: last,
-			pathParts: parts.slice(0, -1),
-			type: SplitPathType.Folder,
-		};
-	},
-	encode: (splitPath: SplitPath): string => {
-		const { pathParts, basename: title } = splitPath;
-		const extension =
-			splitPath.type === SplitPathType.MdFile ||
-			splitPath.type === SplitPathType.File
-				? `.${splitPath.extension}`
-				: "";
-		// Strip extension from basename if it already includes it
-		// (splitPathFromString sets basename to include extension, but we add it again)
-		const basenameWithoutExt =
-			extension && title.endsWith(extension)
-				? title.slice(0, -extension.length)
-				: title;
-		return joinPosix(
-			pathToFolderFromPathParts(pathParts),
-			safeFileName(basenameWithoutExt) + extension,
-		);
-	},
-});
-
-// Legacy function wrappers for backward compatibility
-export function systemPathFromSplitPath(splitPath: SplitPath): string {
-	return systemPathToSplitPath.encode(splitPath);
-}
-
-export function splitPathFromSystemPath(systemPath: string): SplitPath {
-	return systemPathToSplitPath.decode(systemPath);
 }
 
 export function safeFileName(s: string): string {

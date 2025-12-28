@@ -1,7 +1,5 @@
-import {
-	pathToFolderFromPathParts,
-	systemPathToSplitPath,
-} from "../helpers/pathfinder";
+import { pathToFolderFromPathParts } from "../helpers/pathfinder";
+import { systemPathToSplitPath } from "../helpers/pathfinder/system-path-and-split-path-codec";
 import type { SplitPath } from "../types/split-path";
 import type { VaultAction } from "../types/vault-action";
 import { VaultActionType } from "../types/vault-action";

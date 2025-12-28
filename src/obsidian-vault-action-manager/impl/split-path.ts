@@ -1,5 +1,9 @@
-import type { TAbstractFile } from "obsidian";
-import { TFile, TFolder } from "obsidian";
+import type { TAbstractFile, TFile, TFolder } from "obsidian";
+import {
+	makeSystemPathForSplitPath as makeSystemPathForSplitPathInternal,
+	splitPathFromAbstract as splitPathFromAbstractInternal,
+	splitPathFromString as splitPathFromStringInternal,
+} from "../helpers/pathfinder/index";
 import type {
 	CommonSplitPath,
 	SplitPath,
@@ -7,8 +11,6 @@ import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,
 } from "../types/split-path";
-
-const MD_EXTENSION = "md";
 
 /**
  * Build system path from SplitPath.
@@ -22,106 +24,38 @@ const MD_EXTENSION = "md";
  * makeSystemPathForSplitPath({ pathParts: ["root"], basename: "folder", type: "Folder" })
  * // "root/folder"
  */
-/**
- * Build system path from SplitPath or CommonSplitPath.
- * For files: pathParts/basename.extension
- * For folders: pathParts/basename
- *
- * @example
- * makeSystemPathForSplitPath({ pathParts: ["root", "notes"], basename: "file", extension: "md", type: "MdFile" })
- * // "root/notes/file.md"
- * @example
- * makeSystemPathForSplitPath({ pathParts: ["root"], basename: "folder", type: "Folder" })
- * // "root/folder"
- */
 export function makeSystemPathForSplitPath(
 	splitPath: SplitPath | CommonSplitPath,
 ): string {
-	const ext =
-		"extension" in splitPath
-			? (splitPath as { extension: string }).extension
-			: "";
-
-	const filename = ext ? `${splitPath.basename}.${ext}` : splitPath.basename;
-	return [...splitPath.pathParts, filename].filter(Boolean).join("/");
+	return makeSystemPathForSplitPathInternal(splitPath);
 }
 
-export function makeSplitPath(path: string): SplitPath;
-export function makeSplitPath(file: TFile): SplitPathToFile | SplitPathToMdFile;
-export function makeSplitPath(folder: TFolder): SplitPathToFolder;
-export function makeSplitPath(file: TAbstractFile): SplitPath;
-export function makeSplitPath(
+/**
+ * Convert string path or TAbstractFile to SplitPath.
+ * External API wrapper around internal pathfinder functions.
+ */
+export function splitPath(path: string): SplitPath;
+export function splitPath(file: TFile): SplitPathToFile | SplitPathToMdFile;
+export function splitPath(folder: TFolder): SplitPathToFolder;
+export function splitPath(file: TAbstractFile): SplitPath;
+export function splitPath(
 	input: string | TAbstractFile,
 ): SplitPath | SplitPathToFile | SplitPathToMdFile | SplitPathToFolder {
 	if (typeof input === "string") {
-		return splitPathFromString(input);
+		const result = splitPathFromStringInternal(input);
+		// Convert SplitPathType enum to string literals for external API compatibility
+		return convertToExternalFormat(result);
 	}
-	return splitPathFromAbstract(input);
+	const result = splitPathFromAbstractInternal(input);
+	return convertToExternalFormat(result);
 }
 
-function splitPathFromAbstract(file: TAbstractFile): SplitPath {
-	const parts = file.path.split("/").filter(Boolean);
-	const fullBasename = parts.pop() ?? "";
-	const pathParts = parts;
-
-	if (file instanceof TFolder) {
-		return {
-			basename: fullBasename,
-			pathParts,
-			type: "Folder",
-		};
-	}
-
-	const extension = file instanceof TFile ? (file.extension ?? "") : "";
-	// basename should NOT include extension
-	const basename = extension
-		? fullBasename.slice(0, -(extension.length + 1))
-		: fullBasename;
-
-	if (extension === MD_EXTENSION) {
-		return {
-			basename,
-			extension,
-			pathParts,
-			type: "MdFile",
-		};
-	}
-
-	return { basename, extension, pathParts, type: "File" };
-}
-
-function splitPathFromString(path: string): SplitPath {
-	const parts = path.split("/").filter(Boolean);
-	const fullBasename = parts.pop() ?? "";
-	const pathParts = parts;
-
-	const hasDot = fullBasename.includes(".");
-	const ext = hasDot
-		? fullBasename.slice(fullBasename.lastIndexOf(".") + 1)
-		: "";
-	// basename should NOT include extension
-	const basename = hasDot
-		? fullBasename.slice(0, fullBasename.lastIndexOf("."))
-		: fullBasename;
-
-	if (ext === MD_EXTENSION) {
-		return {
-			basename,
-			extension: "md",
-			pathParts,
-			type: "MdFile",
-		};
-	}
-
-	if (hasDot) {
-		return {
-			basename,
-			extension: ext,
-			pathParts,
-			type: "File",
-		};
-	}
-
-	// Default: treat as folder when no extension present
-	return { basename: fullBasename, pathParts, type: "Folder" };
+/**
+ * Convert internal SplitPath to external format.
+ * SplitPathType enum values are string literals, so types are compatible.
+ */
+function convertToExternalFormat(
+	splitPath: SplitPath,
+): SplitPath | SplitPathToFile | SplitPathToMdFile | SplitPathToFolder {
+	return splitPath;
 }

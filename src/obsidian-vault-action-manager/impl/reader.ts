@@ -4,7 +4,7 @@ import { logger } from "../../utils/logger";
 import type { OpenedFileService } from "../file-services/active-view/opened-file-service";
 import type { TFileHelper } from "../file-services/background/helpers/tfile-helper";
 import type { TFolderHelper } from "../file-services/background/helpers/tfolder-helper";
-import { systemPathToSplitPath } from "../helpers/pathfinder";
+import { systemPathToSplitPath } from "../helpers/pathfinder/system-path-and-split-path-codec";
 import type {
 	SplitPath,
 	SplitPathToFile,
