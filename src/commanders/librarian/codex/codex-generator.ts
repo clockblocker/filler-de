@@ -36,6 +36,7 @@ export function generateCodexContent(section: SectionNode): string {
 			section.nodeNameChainToParent[
 				section.nodeNameChainToParent.length - 1
 			];
+
 		if (parentName) {
 			const parentChainToParent = section.nodeNameChainToParent.slice(
 				0,

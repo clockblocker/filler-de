@@ -54,7 +54,7 @@ describe("generateCodexContent", () => {
 			const section = createSection("B", ["A"]);
 			const content = generateCodexContent(section);
 
-			expect(content).toContain("[[__A|← A]]");
+			expect(content).toContain("[[__-A|← A]]");
 		});
 
 		it("no backlink for root section", () => {
@@ -127,8 +127,8 @@ describe("generateCodexContent", () => {
 
 			const content = generateCodexContent(section);
 
-			// Codex link: __B-A (codex for B, inside A)
-			expect(content).toContain("- [ ] [[__B-A|B]]");
+			// Codex link: __-B-A (codex for B, inside A)
+			expect(content).toContain("- [ ] [[__-B-A|B]]");
 		});
 
 		it("renders nested scrolls under section", () => {
@@ -145,8 +145,8 @@ describe("generateCodexContent", () => {
 
 			const content = generateCodexContent(section);
 
-			// Section B at depth 0: __B-A
-			expect(content).toContain("- [ ] [[__B-A|B]]");
+			// Section B at depth 0: __-B-A
+			expect(content).toContain("- [ ] [[__-B-A|B]]");
 			// NestedNote at depth 1: NestedNote-B-A
 			expect(content).toContain("\t- [ ] [[NestedNote-B-A|NestedNote]]");
 		});
@@ -176,14 +176,14 @@ describe("generateCodexContent", () => {
 			});
 			const content = generateCodexContent(section);
 
-			// B at depth 0: __B-A
-			expect(content).toContain("- [ ] [[__B-A|B]]");
-			// C at depth 1: __C-B-A
-			expect(content).toContain("\t- [ ] [[__C-B-A|C]]");
-			// D at depth 2: __D-C-B-A
-			expect(content).toContain("\t\t- [ ] [[__D-C-B-A|D]]");
+			// B at depth 0: __-B-A
+			expect(content).toContain("- [ ] [[__-B-A|B]]");
+			// C at depth 1: __-C-B-A
+			expect(content).toContain("\t- [ ] [[__-C-B-A|C]]");
+			// D at depth 2: __-D-C-B-A
+			expect(content).toContain("\t\t- [ ] [[__-D-C-B-A|D]]");
 			// E should NOT appear (beyond max depth)
-			expect(content).not.toContain("__E");
+			expect(content).not.toContain("__-E");
 		});
 	});
 

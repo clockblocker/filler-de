@@ -72,5 +72,6 @@ export const buildCanonicalPathPartsForCodex = (
 	const separated = separateJoinedSuffixedBasename(canonicalBasename);
 	const nodeNameChain =
 		makeNodeNameChainToParentFromCanonicalBasenameForCodex(separated);
+
 	return makePathPartsFromNodeNameChain(nodeNameChain);
 };

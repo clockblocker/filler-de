@@ -14,6 +14,7 @@ const defaultSettings: ParsedUserSettings = {
 	apiProvider: "google",
 	googleApiKey: "",
 	maxSectionDepth: 6,
+	showScrollsInCodexesForDepth: 0,
 	splitPathToLibraryRoot: {
 		basename: "Library",
 		pathParts: [],
