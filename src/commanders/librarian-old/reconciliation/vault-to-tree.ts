@@ -13,8 +13,8 @@ import type { SplitPath } from "../../../obsidian-vault-action-manager/types/spl
 import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
 import { TreeActionType } from "../../librarin-shared/types/literals";
 import type { NodeNameChain } from "../../librarin-shared/types/node-name";
+import type { TreeAction } from "../../librarin-shared/types/tree-action";
 import { makeNodeNameChainFromPathParts } from "../naming/codecs/atomic/path-parts-and-node-name-chain";
-import type { TreeAction } from "../types/tree-action";
 import { TreeNodeStatus, TreeNodeType } from "../types/tree-node";
 import { parseBasenameDeprecated } from "../utils/parse-basename";
 

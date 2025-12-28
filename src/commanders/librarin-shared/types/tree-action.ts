@@ -1,7 +1,10 @@
-import { TreeActionType } from "../../librarin-shared/types/literals";
-import type { NodeName } from "../../librarin-shared/types/node-name";
-import type { NodeNameChain } from "..";
-import type { TreeNodeStatus, TreeNodeType } from "./tree-node";
+import type { NodeNameChain } from "../../librarian-old";
+import type {
+	TreeNodeStatus,
+	TreeNodeType,
+} from "../../librarian-old/types/tree-node";
+import { TreeActionType } from "./literals";
+import type { NodeName } from "./node-name";
 
 export { TreeActionType };
 

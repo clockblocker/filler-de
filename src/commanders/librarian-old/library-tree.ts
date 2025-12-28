@@ -11,7 +11,7 @@ import type {
 	DeleteNodeAction,
 	MoveNodeAction,
 	TreeAction,
-} from "./types/tree-action";
+} from "../librarin-shared/types/tree-action";
 import type { TreeLeaf } from "./types/tree-node";
 import {
 	type LeafNode,
