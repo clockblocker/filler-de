@@ -9,6 +9,7 @@ import {
 	SPACE_F,
 } from "../../../../../types/literals";
 import { NodeNameSchema } from "../../../types/schemas/node-name";
+import type { CodexLineType } from "./literals";
 
 // Filename can contain delimiters, so we use a more permissive string
 // but exclude the pipe and brackets used in the link format
@@ -46,7 +47,7 @@ const ParentBacklinkSchema = z.templateLiteral([
 ]);
 
 // Template literal schemas for the string values
-const CodexLineForMdFileSchema = z.templateLiteral([
+const CodexLineForScrollSchema = z.templateLiteral([
 	CheckboxSchema,
 	z.literal(SPACE_F),
 	RegularBacklinkSchema,
@@ -68,14 +69,14 @@ const CodexLineForParentSectionCodexSchema = ParentBacklinkSchema;
 
 // Combined schema using discriminated union
 export const CodexLineSchema = z.union([
-	CodexLineForMdFileSchema,
+	CodexLineForScrollSchema,
 	CodexLineForFileSchema,
 	CodexLineForChildSectionCodexSchema,
 	CodexLineForParentSectionCodexSchema,
 ]);
 
-export type CodexLine = z.infer<typeof CodexLineSchema>;
-export type CodexLineForMdFile = z.infer<typeof CodexLineForMdFileSchema>;
+export type AnyCodexLine = z.infer<typeof CodexLineSchema>;
+export type CodexLineForScroll = z.infer<typeof CodexLineForScrollSchema>;
 export type CodexLineForFile = z.infer<typeof CodexLineForFileSchema>;
 export type CodexLineForChildSectionCodex = z.infer<
 	typeof CodexLineForChildSectionCodexSchema
@@ -83,3 +84,14 @@ export type CodexLineForChildSectionCodex = z.infer<
 export type CodexLineForParentSectionCodex = z.infer<
 	typeof CodexLineForParentSectionCodexSchema
 >;
+
+export type CodexLine<T extends CodexLineType> =
+	T extends typeof CodexLineType.Scroll
+		? CodexLineForScroll
+		: T extends typeof CodexLineType.File
+			? CodexLineForFile
+			: T extends typeof CodexLineType.ChildSectionCodex
+				? CodexLineForChildSectionCodex
+				: T extends typeof CodexLineType.ParentSectionCodex
+					? CodexLineForParentSectionCodex
+					: never;

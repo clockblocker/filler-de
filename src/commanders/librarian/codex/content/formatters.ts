@@ -1,7 +1,0 @@
-CodexLineForMdFile 
-CodexLineForFile 
-CodexLineForChildSectionCodex 
-CodexLineForParentSectionCodex 
-
-NodeNameChain
-
