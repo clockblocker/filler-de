@@ -8,7 +8,7 @@ import { Librarian, LibraryTree } from "./commanders/librarian";
 import {
 	handleCodexCheckboxClick,
 	isTaskCheckbox,
-} from "./commanders/librarian/click-handler";
+} from "./commanders/librarian/handle-codex-checkbox-click";
 import { clearState, initializeState } from "./global-state/global-state";
 import {
 	makeSplitPath,

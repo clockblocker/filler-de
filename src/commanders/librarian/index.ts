@@ -2,7 +2,7 @@
 export {
 	handleCodexCheckboxClick,
 	isTaskCheckbox,
-} from "./click-handler";
+} from "./handle-codex-checkbox-click";
 // Healing exports
 export {
 	type DragInResult,

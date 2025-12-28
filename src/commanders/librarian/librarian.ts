@@ -17,11 +17,11 @@ import type { LibraryTree } from "./library-tree";
 import {
 	buildActionsForCodexRegenerationInImpactedSections,
 	buildWriteStatusToMetadataAction,
-	type EventHandlerContext,
-	handleCreate,
-	handleDelete,
-	handleRename,
-	parseEventToHandler,
+	type EventHandlerContextDeprecated,
+	handleCreateDeprecated,
+	handleDeleteDeprecated,
+	handleRenameDeprecated,
+	parseEventToHandlerDeprecared,
 	readTreeFromSplitFilesWithReaders,
 } from "./orchestration";
 import { collectAllSectionChains } from "./orchestration/tree-utils";
@@ -126,7 +126,7 @@ export class Librarian {
 		this.eventTeardown = this.vaultActionManager.subscribe(
 			async (event: VaultEvent) => {
 				logger.debug("event", JSON.stringify({ type: event.type }));
-				const handlerInfo = parseEventToHandler(event);
+				const handlerInfo = parseEventToHandlerDeprecared(event);
 				if (!handlerInfo) {
 					return;
 				}
@@ -137,7 +137,7 @@ export class Librarian {
 					handlerInfo.oldPath &&
 					handlerInfo.newPath
 				) {
-					await handleRename(
+					await handleRenameDeprecated(
 						handlerInfo.oldPath,
 						handlerInfo.newPath,
 						handlerInfo.isFolder,
@@ -145,7 +145,7 @@ export class Librarian {
 					);
 				} else if (handlerInfo.type === "create") {
 					if (!handlerInfo.isFolder) {
-						await handleCreate(
+						await handleCreateDeprecated(
 							handlerInfo.path,
 							false,
 							eventContext,
@@ -153,7 +153,7 @@ export class Librarian {
 					}
 					// Folders don't need healing, skip
 				} else if (handlerInfo.type === "delete") {
-					await handleDelete(
+					await handleDeleteDeprecated(
 						handlerInfo.path,
 						handlerInfo.isFolder,
 						eventContext,
@@ -176,7 +176,7 @@ export class Librarian {
 	/**
 	 * Get event handler context.
 	 */
-	private getEventHandlerContext(): EventHandlerContext {
+	private getEventHandlerContext(): EventHandlerContextDeprecated {
 		return {
 			dispatch: (actions) => this.vaultActionManager.dispatch(actions),
 			getSectionNode: (chain) => {
@@ -210,7 +210,7 @@ export class Librarian {
 		isFolder: boolean,
 	): Promise<VaultAction[]> {
 		const eventContext = this.getEventHandlerContext();
-		return handleRename(oldPath, newPath, isFolder, eventContext);
+		return handleRenameDeprecated(oldPath, newPath, isFolder, eventContext);
 	}
 
 	/**
@@ -222,7 +222,7 @@ export class Librarian {
 		isFolder: boolean,
 	): Promise<VaultAction[]> {
 		const eventContext = this.getEventHandlerContext();
-		return handleCreate(path, isFolder, eventContext);
+		return handleCreateDeprecated(path, isFolder, eventContext);
 	}
 
 	/**
@@ -231,7 +231,7 @@ export class Librarian {
 	 */
 	async handleDelete(path: string, isFolder: boolean): Promise<void> {
 		const eventContext = this.getEventHandlerContext();
-		return handleDelete(path, isFolder, eventContext);
+		return handleDeleteDeprecated(path, isFolder, eventContext);
 	}
 
 	/**

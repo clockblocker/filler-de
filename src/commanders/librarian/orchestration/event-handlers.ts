@@ -25,7 +25,8 @@ import {
 	parseDeletePathToChain,
 } from "./path-parsers";
 
-export type EventHandlerContext = {
+/** @deprecated  */
+export type EventHandlerContextDeprecated = {
 	dispatch: (actions: VaultAction[]) => Promise<unknown>;
 	readTree: () => Promise<LibraryTree>;
 	setTree: (tree: LibraryTree) => void;
@@ -48,8 +49,9 @@ export type EventHandlerContext = {
  * Extract handler info from VaultEvent.
  * Pure function that converts events to handler parameters.
  * Reads libraryRoot from global settings.
+ * @deprecated
  */
-export function parseEventToHandler(event: VaultEvent): {
+export function parseEventToHandlerDeprecared(event: VaultEvent): {
 	type: "rename" | "create" | "delete";
 	oldPath?: string;
 	newPath?: string;
@@ -109,8 +111,9 @@ export function parseEventToHandler(event: VaultEvent): {
 /**
  * Check if path should be ignored (outside library or codex file).
  * Reads libraryRoot from global settings.
+ * @deprecated
  */
-export function shouldIgnorePath(
+export function shouldIgnorePathDeprecated(
 	path: string,
 	basenameWithoutExt: string,
 	isCodexBasename: (basename: string) => boolean,
@@ -126,16 +129,17 @@ export function shouldIgnorePath(
 /**
  * Handle delete event from vault.
  * Pure function that takes context.
+ * @deprecated
  */
-export async function handleDelete(
+export async function handleDeleteDeprecated(
 	path: string,
 	isFolder: boolean,
-	context: EventHandlerContext,
+	context: EventHandlerContextDeprecated,
 ): Promise<void> {
 	// Skip codex files
 	const basenameWithoutExt = extractBasenameWithoutExt(path);
 	if (
-		shouldIgnorePath(
+		shouldIgnorePathDeprecated(
 			path,
 			basenameWithoutExt,
 			isBasenamePrefixedAsCodexDeprecated,
@@ -183,12 +187,13 @@ export async function handleDelete(
 /**
  * Handle a rename event from vault.
  * Pure function that takes context.
+ * @deprecated
  */
-export async function handleRename(
+export async function handleRenameDeprecated(
 	oldPath: string,
 	newPath: string,
 	isFolder: boolean,
-	context: EventHandlerContext,
+	context: EventHandlerContextDeprecated,
 ): Promise<VaultAction[]> {
 	const settings = getParsedUserSettings();
 	const libraryRoot = settings.splitPathToLibraryRoot.basename;
@@ -308,7 +313,7 @@ export async function handleRename(
 			if (newTree) {
 				// Compute impacted chains from actions (extract parent chains from paths)
 				const impactedChains =
-					computeImpactedChainsFromActions(actionArray);
+					computeImpactedChainsFromActionsDeprecated(actionArray);
 				const settings = getParsedUserSettings();
 				const allFilesResult = await context.listAllFilesWithMdReaders(
 					settings.splitPathToLibraryRoot,
@@ -329,7 +334,7 @@ export async function handleRename(
 		}
 	} else {
 		// No healing needed, but still update tree and codexes for user's rename
-		await updateTreeAndCodexesForRename(newPath, context);
+		await updateTreeAndCodexesForRenameDeprecated(newPath, context);
 	}
 
 	return actionArray;
@@ -338,8 +343,9 @@ export async function handleRename(
 /**
  * Compute impacted section chains from vault actions without applying them to tree.
  * Extracts parent chains from action paths.
+ * @deprecated
  */
-function computeImpactedChainsFromActions(
+function computeImpactedChainsFromActionsDeprecated(
 	actions: VaultAction[],
 ): NodeNameChain[] {
 	const chains: NodeNameChain[] = [];
@@ -384,10 +390,11 @@ function computeImpactedChainsFromActions(
 
 /**
  * Update tree and regenerate codexes for a user rename that needs no healing.
+ * @deprecated
  */
-async function updateTreeAndCodexesForRename(
+async function updateTreeAndCodexesForRenameDeprecated(
 	newPath: string,
-	context: EventHandlerContext,
+	context: EventHandlerContextDeprecated,
 ): Promise<void> {
 	// Re-read tree to get latest state
 	const newTree = await context.readTree();
@@ -421,11 +428,12 @@ async function updateTreeAndCodexesForRename(
 /**
  * Handle file creation event.
  * Pure function that takes context.
+ * @deprecated
  */
-export async function handleCreate(
+export async function handleCreateDeprecated(
 	path: string,
 	isFolder: boolean,
-	context: EventHandlerContext,
+	context: EventHandlerContextDeprecated,
 ): Promise<VaultAction[]> {
 	// Ignore folders - we only heal files
 	if (isFolder) {
