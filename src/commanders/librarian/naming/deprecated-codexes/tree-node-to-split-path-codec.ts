@@ -76,9 +76,6 @@ export const treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse = z.codec(
 			};
 		},
 		encode: ({ basename, pathParts, ...rest }: SplitPath): TreeNode => {
-			const settings = getParsedUserSettings();
-			const libraryRoot = settings.splitPathToLibraryRoot.basename;
-
 			if (rest.type === SplitPathType.Folder) {
 				// For sections, basename is the nodeName (no suffix)
 				// pathParts is parent path, doesn't include the section itself
@@ -97,9 +94,12 @@ export const treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse = z.codec(
 
 			// For files, decode basename to get nodeName and parent chain
 			// Basename doesn't include library root, so decode it
-			const fullChainWithoutLibraryRoot = canonicalBasenameToChainCodec.decode(basename);
-			const nodeName = fullChainWithoutLibraryRoot[fullChainWithoutLibraryRoot.length - 1] ?? "";
-			const parentChainWithoutLibraryRoot = fullChainWithoutLibraryRoot.slice(0, -1);
+			const fullChainWithoutLibraryRoot =
+				canonicalBasenameToChainCodec.decode(basename);
+			const nodeName =
+				fullChainWithoutLibraryRoot[
+					fullChainWithoutLibraryRoot.length - 1
+				] ?? "";
 
 			// pathParts already includes library root, use it directly
 			const nodeNameChainToParent = pathParts;

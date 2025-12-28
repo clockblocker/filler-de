@@ -2,7 +2,6 @@
 export {
 	handleCodexCheckboxClick,
 	isTaskCheckbox,
-	parseCodexLinkTarget,
 } from "./click-handler";
 // Healing exports
 export {

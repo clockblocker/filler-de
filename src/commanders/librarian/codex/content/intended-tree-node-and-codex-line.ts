@@ -1,9 +1,9 @@
 import { err, ok, type Result } from "neverthrow";
-import { formatAsTypedCodexLine } from "./parsers-and-formatters/format-as-typed-codex-line";
+import { formatAsTypedCodexLine } from "./parsers-and-formatters/format-node-as-typed-codex-line";
 import { parseIntendedTreeNode } from "./parsers-and-formatters/parse-intended-tree-node";
 import { tryParseCodexLine } from "./parsers-and-formatters/try-parse-codex-line";
 import type { AnyIntendedTreeNode } from "./schema/intended-tree-node";
-import type { AnyCodexLine, CodexLine } from "./schema/line";
+import type { CodexLine } from "./schema/line";
 
 export function formatAsLine<T extends AnyIntendedTreeNode>(
 	intendedTreeNode: T,
@@ -13,7 +13,7 @@ export function formatAsLine<T extends AnyIntendedTreeNode>(
 }
 
 export function tryParseAsIntendedTreeNode(
-	codexLine: AnyCodexLine,
+	codexLine: string,
 ): Result<AnyIntendedTreeNode, string> {
 	const typedCodexLineResult = tryParseCodexLine(codexLine);
 	if (typedCodexLineResult.isErr()) {

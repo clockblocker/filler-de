@@ -1,8 +1,10 @@
+import { err, ok, type Result } from "neverthrow";
 import type { App } from "obsidian";
 import { MarkdownView } from "obsidian";
-import { getParsedUserSettings } from "../../global-state/global-state";
 import type { ObsidianVaultActionManager } from "../../obsidian-vault-action-manager";
 import { logger } from "../../utils/logger";
+import { tryParseAsIntendedTreeNode } from "./codex/content/intended-tree-node-and-codex-line";
+import { CodexLineType } from "./codex/content/schema/literals";
 import type { Librarian } from "./librarian";
 import { CODEX_CORE_NAME } from "./types/literals";
 import type { NodeNameChain } from "./types/schemas/node-name";
@@ -40,32 +42,25 @@ export async function handleCodexCheckboxClick({
 	}
 
 	// Extract link target from DOM or editor
-	let href = extractLinkTarget(lineContainer);
-	if (!href) {
-		href = extractLinkTargetViaEditor(lineContainer, app);
+	let line = extractLinkTarget(lineContainer);
+	if (!line) {
+		line = extractLinkTargetViaEditor(lineContainer, app);
 	}
-	if (!href) {
+	if (!line) {
 		return false;
 	}
 
 	// Parse to nodeNameChain
-	const nodeNameChain = parseCodexLinkTarget(href);
-	if (!nodeNameChain || nodeNameChain.length === 0) {
-		logger.debug("[handleCodexCheckboxClick] Failed to parse:", href);
+	const nodeNameChainResult = tryParseAsClickableNode(line);
+	if (nodeNameChainResult.isErr()) {
+		logger.warn("[handleCodexCheckboxClick] Failed to parse:", line);
 		return false;
 	}
 
+	const nodeNameChain = nodeNameChainResult.value;
+
 	// Determine new status (checkbox.checked is NEW state after click)
 	const newStatus = checkbox.checked ? "Done" : "NotStarted";
-
-	logger.debug(
-		"[handleCodexCheckboxClick]",
-		JSON.stringify({
-			href,
-			newStatus,
-			nodeNameChain,
-		}),
-	);
 
 	// Fire-and-forget async
 	librarian.setStatus(nodeNameChain, newStatus).catch((error) => {
@@ -76,6 +71,25 @@ export async function handleCodexCheckboxClick({
 	});
 
 	return true;
+}
+
+function tryParseAsClickableNode(
+	codexLine: string,
+): Result<NodeNameChain, string> {
+	const intendedTreeNodeResult = tryParseAsIntendedTreeNode(codexLine);
+	if (intendedTreeNodeResult.isErr()) {
+		return err(intendedTreeNodeResult.error);
+	}
+
+	const { node, type } = intendedTreeNodeResult.value;
+	switch (type) {
+		case CodexLineType.Scroll:
+			return ok([...node.nodeNameChainToParent, node.nodeName]);
+		case CodexLineType.ChildSectionCodex:
+			return ok([...node.nodeNameChainToParent, node.nodeName]);
+		default:
+			return err(`Invalid codex line type: ${node}`);
+	}
 }
 
 /**
@@ -89,31 +103,6 @@ export function isTaskCheckbox(
 		(element as HTMLInputElement).type === "checkbox" &&
 		element.classList.contains("task-list-item-checkbox")
 	);
-}
-
-/**
- * Parse codex link target to NodeNameChain.
- * Reads suffixDelimiter from global settings.
- *
- * New format uses suffixDelimiter:
- * - Codex links: "Aschenputtel-Fairy_Tales" → ["Fairy_Tales", "Aschenputtel"]
- * - With prefix: "__Fairy_Tales" → ["Fairy_Tales"] (section codex)
- * - Scroll links: "NoteName-Parent-GrandParent" → ["GrandParent", "Parent", "NoteName"]
- */
-export function parseCodexLinkTarget(href: string): NodeNameChain | null {
-	// Strip codex prefix if present
-	const cleanHref = href.startsWith(CODEX_CORE_NAME)
-		? href.slice(CODEX_CORE_NAME.length)
-		: href;
-
-	if (!cleanHref) {
-		return null;
-	}
-
-	// Split by delimiter and reverse (suffix is parent chain reversed)
-	const suffixDelimiter = getParsedUserSettings().suffixDelimiter;
-	const parts = cleanHref.split(suffixDelimiter);
-	return parts.toReversed();
 }
 
 // ─── DOM Extraction Helpers (battle-tested from old implementation) ────────

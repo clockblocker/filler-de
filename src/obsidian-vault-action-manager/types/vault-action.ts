@@ -1,6 +1,7 @@
 // ─── Vault Action Definitions (moved here for platform boundary) ───
 
 import z from "zod";
+import { makeSystemPathForSplitPath } from "../impl/split-path-and-system-path";
 import {
 	CREATE,
 	FILE,
@@ -138,12 +139,5 @@ export function getActionTargetPath(action: VaultAction): string {
 }
 
 export function coreSplitPathToKey(splitPath: SplitPath): string {
-	return [
-		...splitPath.pathParts,
-		splitPath.basename,
-		// biome-ignore lint/suspicious/noExplicitAny: Key extraction
-		(splitPath as any)?.extension ?? "",
-	]
-		.filter(Boolean)
-		.join("/");
+	return makeSystemPathForSplitPath(splitPath);
 }

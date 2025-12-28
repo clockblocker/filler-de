@@ -1,7 +1,4 @@
-export {
-	type CodexGeneratorOptions,
-	generateCodexContent,
-} from "./codex-generator";
+export { generateCodexContent } from "./codex-generator";
 
 export {
 	collectImpactedSections,
