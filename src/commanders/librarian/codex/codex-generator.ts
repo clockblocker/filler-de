@@ -23,6 +23,7 @@ import { CodexLineType } from "./content/schema/literals";
 export function generateCodexContent(section: SectionNode): string {
 	const settings = getParsedUserSettings();
 	const maxDepth = settings.maxSectionDepth;
+	const showScrollsForDepth = settings.showScrollsInCodexesForDepth;
 	const lines: string[] = [];
 
 	// Backlink to parent codex
@@ -57,7 +58,9 @@ export function generateCodexContent(section: SectionNode): string {
 	// (could link to library root if needed, but that requires libraryRoot option)
 
 	// Generate items for children
-	lines.push(...generateItems(section.children, 0, maxDepth));
+	lines.push(
+		...generateItems(section.children, 0, maxDepth, showScrollsForDepth),
+	);
 
 	return (
 		LINE_BREAK + lines.map((l) => `${l}${SPACE_F}${LINE_BREAK}`).join("")
@@ -71,6 +74,7 @@ function generateItems(
 	children: TreeNode[],
 	depth: number,
 	maxDepth: number,
+	showScrollsForDepth: number,
 ): string[] {
 	const lines: string[] = [];
 	const indent = TAB.repeat(depth);
@@ -78,12 +82,14 @@ function generateItems(
 	for (const child of children) {
 		switch (child.type) {
 			case TreeNodeType.Scroll: {
-				const intended: AnyIntendedTreeNode = {
-					node: child,
-					type: CodexLineType.Scroll,
-				};
-				const line = formatAsLine(intended);
-				lines.push(`${indent}${line}`);
+				if (depth <= showScrollsForDepth) {
+					const intended: AnyIntendedTreeNode = {
+						node: child,
+						type: CodexLineType.Scroll,
+					};
+					const line = formatAsLine(intended);
+					lines.push(`${indent}${line}`);
+				}
 				break;
 			}
 
@@ -112,7 +118,12 @@ function generateItems(
 
 				if (depth < maxDepth) {
 					lines.push(
-						...generateItems(child.children, depth + 1, maxDepth),
+						...generateItems(
+							child.children,
+							depth + 1,
+							maxDepth,
+							showScrollsForDepth,
+						),
 					);
 				}
 				break;
