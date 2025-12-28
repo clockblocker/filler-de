@@ -4,125 +4,64 @@
  */
 
 import { getParsedUserSettings } from "../../../global-state/global-state";
-import {
-	BACK_ARROW,
-	DONE_CHECKBOX,
-	LINE_BREAK,
-	NOT_STARTED_CHECKBOX,
-	SPACE_F,
-	TAB,
-} from "../../../types/literals";
-import type { NodeNameChain } from "../types/schemas/node-name";
+import { LINE_BREAK, SPACE_F, TAB } from "../../../types/literals";
 import type { SectionNode, TreeNode } from "../types/tree-node";
-import { TreeNodeStatus, TreeNodeType } from "../types/tree-node";
-import { addCodexPrefixDeprecated } from "../utils/codex-utils";
-
-export type CodexGeneratorOptions = {
-	/** Library root name (for generating root codex backlinks) */
-	libraryRoot?: string;
-};
+import { TreeNodeType } from "../types/tree-node";
+import { formatAsLine } from "./content/intended-tree-node-and-codex-line";
+import type { AnyIntendedTreeNode } from "./content/schema/intended-tree-node";
+import { CodexLineType } from "./content/schema/literals";
 
 /**
  * Generate codex content for a section.
- * Reads suffixDelimiter and maxSectionDepth from global settings.
+ * Reads maxSectionDepth from global settings.
  *
  * Structure:
  * - Backlink to parent (if not root)
  * - Own direct children (scrolls with checkbox, files without)
  * - Nested sections with their scrolls (up to maxDepth)
  */
-export function generateCodexContent(
-	section: SectionNode,
-	options: CodexGeneratorOptions = {},
-): string {
+export function generateCodexContent(section: SectionNode): string {
 	const settings = getParsedUserSettings();
 	const maxDepth = settings.maxSectionDepth;
-	const delimiter = settings.suffixDelimiter;
 	const lines: string[] = [];
 
 	// Backlink to parent codex
-	const backlink = generateBacklink(
-		section.nodeNameChainToParent,
-		section.nodeName,
-		delimiter,
-		options.libraryRoot,
-	);
-	if (backlink) {
-		lines.push(backlink);
+	// Root section (empty chain and empty name) has no parent
+	if (section.nodeNameChainToParent.length === 0 && section.nodeName === "") {
+		// No backlink for root
+	} else if (section.nodeNameChainToParent.length > 0) {
+		// Nested section: parent is the last element in the chain
+		const parentName =
+			section.nodeNameChainToParent[
+				section.nodeNameChainToParent.length - 1
+			];
+		if (parentName) {
+			const parentChainToParent = section.nodeNameChainToParent.slice(
+				0,
+				-1,
+			);
+			const parentIntended: AnyIntendedTreeNode = {
+				node: {
+					nodeName: parentName,
+					nodeNameChainToParent: parentChainToParent,
+					status: section.status,
+					type: TreeNodeType.Section,
+				},
+				type: CodexLineType.ParentSectionCodex,
+			};
+			const parentLine = formatAsLine(parentIntended);
+			lines.push(parentLine);
+		}
 	}
+	// First-level section (empty chain but has name) - no backlink for now
+	// (could link to library root if needed, but that requires libraryRoot option)
 
 	// Generate items for children
-	lines.push(...generateItems(section.children, 0, maxDepth, delimiter));
+	lines.push(...generateItems(section.children, 0, maxDepth));
 
-	// Format with trailing space and line breaks
 	return (
 		LINE_BREAK + lines.map((l) => `${l}${SPACE_F}${LINE_BREAK}`).join("")
 	);
-}
-
-/**
- * Generate backlink to parent section's codex.
- * Returns null for root section only.
- * First-level sections (with empty chain) link to root codex.
- */
-function generateBacklink(
-	nodeNameChainToParent: NodeNameChain,
-	sectionNodeName: string,
-	delimiter: string,
-	libraryRoot?: string,
-): string | null {
-	// Root section has empty nodeName and empty chain - no backlink
-	if (nodeNameChainToParent.length === 0 && sectionNodeName === "") {
-		return null;
-	}
-
-	// First-level section (empty chain but has nodeName) - link to root codex
-	if (nodeNameChainToParent.length === 0) {
-		if (!libraryRoot) {
-			return null;
-		}
-		const rootCodexName =
-			makeCanonicalBasenameForCodexFromNodeNameChainToParent([]);
-
-		return `[[${rootCodexName}|${BACK_ARROW} ${libraryRoot}]]`;
-	}
-
-	// Nested section - link to parent section's codex
-	// Parent is the last element in the chain
-	const lastIndex = nodeNameChainToParent.length - 1;
-	if (lastIndex < 0) {
-		return null;
-	}
-	const parentName = nodeNameChainToParent[lastIndex];
-	if (!parentName) {
-		return null;
-	}
-	const parentCodexNodeName = addCodexPrefixDeprecated(parentName);
-	// Parent's chain is everything except the last element
-	const parentChainToParent = nodeNameChainToParent.slice(0, -1);
-	const parentCodexFullBasename = buildFullBasename(
-		parentCodexNodeName,
-		parentChainToParent,
-		delimiter,
-	);
-
-	return `[[${parentCodexFullBasename}|${BACK_ARROW} ${parentName}]]`;
-}
-
-/**
- * Build full basename with suffix from node.
- * e.g., nodeName="Rice", chainToParent=["Recipe", "Poridge"] → "Rice-Poridge-Recipe"
- */
-function buildFullBasename(
-	nodeName: string,
-	nodeNameChainToParent: string[],
-	delimiter: string,
-): string {
-	if (nodeNameChainToParent.length === 0) {
-		return nodeName;
-	}
-	const suffix = [...nodeNameChainToParent].reverse().join(delimiter);
-	return `${nodeName}${delimiter}${suffix}`;
 }
 
 /**
@@ -132,7 +71,6 @@ function generateItems(
 	children: TreeNode[],
 	depth: number,
 	maxDepth: number,
-	delimiter: string,
 ): string[] {
 	const lines: string[] = [];
 	const indent = TAB.repeat(depth);
@@ -140,57 +78,41 @@ function generateItems(
 	for (const child of children) {
 		switch (child.type) {
 			case TreeNodeType.Scroll: {
-				const checkbox = statusToCheckbox(child.status);
-				const fullBasename = buildFullBasename(
-					child.nodeName,
-					child.nodeNameChainToParent,
-					delimiter,
-				);
-				const link = `[[${fullBasename}|${child.nodeName}]]`;
-				lines.push(`${indent}${checkbox} ${link}`);
+				const intended: AnyIntendedTreeNode = {
+					node: child,
+					type: CodexLineType.Scroll,
+				};
+				const line = formatAsLine(intended);
+				lines.push(`${indent}${line}`);
 				break;
 			}
 
 			case TreeNodeType.File: {
-				// Files don't have checkbox (non-toggleable)
-				const fullBasename = buildFullBasename(
-					child.nodeName,
-					child.nodeNameChainToParent,
-					delimiter,
-				);
-				const link = `[[${fullBasename}|${child.nodeName}]]`;
-				lines.push(`${indent}- ${link}`);
+				const intended: AnyIntendedTreeNode = {
+					node: child,
+					type: CodexLineType.File,
+				};
+				const line = formatAsLine(intended);
+				lines.push(`${indent}${line}`);
 				break;
 			}
 
 			case TreeNodeType.Section: {
-				// Build codex link with suffix
-				const codexNodeName = addCodexPrefixDeprecated(child.nodeName);
-				const codexFullBasename = buildFullBasename(
-					codexNodeName,
-					child.nodeNameChainToParent,
-					delimiter,
-				);
+				const intended: AnyIntendedTreeNode = {
+					node: {
+						nodeName: child.nodeName,
+						nodeNameChainToParent: child.nodeNameChainToParent,
+						status: child.status,
+						type: TreeNodeType.Section,
+					},
+					type: CodexLineType.ChildSectionCodex,
+				};
+				const line = formatAsLine(intended);
+				lines.push(`${indent}${line}`);
 
-				if (depth >= maxDepth) {
-					// At max depth, just show section as link
-					const checkbox = statusToCheckbox(child.status);
+				if (depth < maxDepth) {
 					lines.push(
-						`${indent}${checkbox} [[${codexFullBasename}|${child.nodeName}]]`,
-					);
-				} else {
-					// Show section with checkbox and recurse into children
-					const checkbox = statusToCheckbox(child.status);
-					lines.push(
-						`${indent}${checkbox} [[${codexFullBasename}|${child.nodeName}]]`,
-					);
-					lines.push(
-						...generateItems(
-							child.children,
-							depth + 1,
-							maxDepth,
-							delimiter,
-						),
+						...generateItems(child.children, depth + 1, maxDepth),
 					);
 				}
 				break;
@@ -199,13 +121,4 @@ function generateItems(
 	}
 
 	return lines;
-}
-
-function statusToCheckbox(status: TreeNodeStatus): string {
-	return status === TreeNodeStatus.Done
-		? DONE_CHECKBOX
-		: NOT_STARTED_CHECKBOX;
-}
-function makeCanonicalBasenameForCodexFromNodeNameChainToParent(arg0: never[]) {
-	throw new Error("Function not implemented.");
 }

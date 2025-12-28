@@ -18,12 +18,12 @@ export type TreeNodeIntendedForFileLine = {
 
 export type TreeNodeIntendedForChildSectionCodexLine = {
 	type: typeof CodexLineType.ChildSectionCodex;
-	node: SectionNode;
+	node: Omit<SectionNode, "children">;
 };
 
 export type TreeNodeIntendedForParentSectionCodexLine = {
 	type: typeof CodexLineType.ParentSectionCodex;
-	node: SectionNode;
+	node: Omit<SectionNode, "children">;
 };
 
 // Combined schema using discriminated union
