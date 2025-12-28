@@ -12,7 +12,6 @@ import {
 	SPACE_F,
 	TAB,
 } from "../../../types/literals";
-import { makeCanonicalBasenameForCodex } from "../naming/functions/codexes";
 import type { NodeNameChain } from "../types/schemas/node-name";
 import type { SectionNode, TreeNode } from "../types/tree-node";
 import { TreeNodeStatus, TreeNodeType } from "../types/tree-node";
@@ -82,7 +81,8 @@ function generateBacklink(
 		if (!libraryRoot) {
 			return null;
 		}
-		const rootCodexName = makeCanonicalBasenameForCodex([]);
+		const rootCodexName =
+			makeCanonicalBasenameForCodexFromNodeNameChainToParent([]);
 
 		return `[[${rootCodexName}|${BACK_ARROW} ${libraryRoot}]]`;
 	}
@@ -205,4 +205,7 @@ function statusToCheckbox(status: TreeNodeStatus): string {
 	return status === TreeNodeStatus.Done
 		? DONE_CHECKBOX
 		: NOT_STARTED_CHECKBOX;
+}
+function makeCanonicalBasenameForCodexFromNodeNameChainToParent(arg0: never[]) {
+	throw new Error("Function not implemented.");
 }

@@ -8,27 +8,38 @@ import type { CodexLineType } from "./literals";
 // Object schemas with type discriminator
 export type TreeNodeIntendedForScrollLine = {
 	type: typeof CodexLineType.Scroll;
-	value: ScrollNode;
+	node: ScrollNode;
 };
 
 export type TreeNodeIntendedForFileLine = {
 	type: typeof CodexLineType.File;
-	value: FileNode;
+	node: FileNode;
 };
 
 export type TreeNodeIntendedForChildSectionCodexLine = {
 	type: typeof CodexLineType.ChildSectionCodex;
-	value: SectionNode;
+	node: SectionNode;
 };
 
 export type TreeNodeIntendedForParentSectionCodexLine = {
 	type: typeof CodexLineType.ParentSectionCodex;
-	value: SectionNode;
+	node: SectionNode;
 };
 
 // Combined schema using discriminated union
-export type IntendedTreeNode =
+export type AnyIntendedTreeNode =
 	| TreeNodeIntendedForScrollLine
 	| TreeNodeIntendedForFileLine
 	| TreeNodeIntendedForChildSectionCodexLine
 	| TreeNodeIntendedForParentSectionCodexLine;
+
+export type IntendedTreeNode<T extends CodexLineType> =
+	T extends typeof CodexLineType.Scroll
+		? TreeNodeIntendedForScrollLine
+		: T extends typeof CodexLineType.File
+			? TreeNodeIntendedForFileLine
+			: T extends typeof CodexLineType.ChildSectionCodex
+				? TreeNodeIntendedForChildSectionCodexLine
+				: T extends typeof CodexLineType.ParentSectionCodex
+					? TreeNodeIntendedForParentSectionCodexLine
+					: never;

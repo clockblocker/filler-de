@@ -11,68 +11,68 @@ import {
 } from "../../../../types/literals";
 import { makeJoinedSuffixedBasenameFromNodeNameChain } from "../../naming/functions/basename-and-chain";
 import {
-	makeCanonicalBasenameForCodex,
+	makeCanonicalBasenameForCodexFromSectionNode,
 	makeNodeNameChainToParentFromCanonicalBasenameForCodex,
 } from "../../naming/functions/codexes";
 import { separateJoinedSuffixedBasename } from "../../naming/types/transformers";
 import { CODEX_CORE_NAME } from "../../types/literals";
 import { TreeNodeStatus } from "../../types/tree-node";
-import type { IntendedTreeNode } from "./schema/intended-tree-node";
+import type { AnyIntendedTreeNode } from "./schema/intended-tree-node";
 import type { AnyCodexLine, CodexLine } from "./schema/line";
 import { CodexLineSchema } from "./schema/line";
 import { CodexLineType } from "./schema/literals";
 
-export function formatAsLine<T extends IntendedTreeNode>(
+export function formatAsLine<T extends AnyIntendedTreeNode>(
 	intendedTreeNode: T,
 ): CodexLine<T["type"]> {
-	const { value, type } = intendedTreeNode;
-	const nodeNameChainToParent = value.nodeNameChainToParent;
-	const nodeName = value.nodeName;
+	const { node, type } = intendedTreeNode;
+	const nodeNameChainToParent = node.nodeNameChainToParent;
+	const nodeName = node.nodeName;
 
 	let basename: string;
-	if (
-		type === CodexLineType.ChildSectionCodex ||
-		type === CodexLineType.ParentSectionCodex
-	) {
-		basename = makeCanonicalBasenameForCodex(nodeNameChainToParent);
-	} else {
-		basename = makeJoinedSuffixedBasenameFromNodeNameChain([
-			...nodeNameChainToParent,
-			nodeName,
-		]);
+	switch (type) {
+		case CodexLineType.ChildSectionCodex:
+		case CodexLineType.ParentSectionCodex:
+			basename = makeCanonicalBasenameForCodexFromSectionNode(node);
+			break;
+		default:
+			basename = makeJoinedSuffixedBasenameFromNodeNameChain([
+				...nodeNameChainToParent,
+				nodeName,
+			]);
+			break;
 	}
 
-	let backlink: string;
-	if (type === CodexLineType.ParentSectionCodex) {
-		backlink = `${OBSIDIAN_LINK_OPEN}${basename}${PIPE}${BACK_ARROW}${SPACE_F}${nodeName}${OBSIDIAN_LINK_CLOSE}`;
-		return backlink as CodexLine<T["type"]>;
+	const regularBacklink = formatBacklink(basename, nodeName);
+
+	switch (type) {
+		case CodexLineType.ParentSectionCodex:
+			return formatParentBacklink(basename, nodeName) as CodexLine<
+				T["type"]
+			>;
+		case CodexLineType.Scroll:
+		case CodexLineType.ChildSectionCodex: {
+			const checkbox =
+				node.status === TreeNodeStatus.Done
+					? DONE_CHECKBOX
+					: NOT_STARTED_CHECKBOX;
+
+			return `${checkbox}${SPACE_F}${regularBacklink}` as CodexLine<
+				T["type"]
+			>;
+		}
+		case CodexLineType.File:
+			return `${DASH}${SPACE_F}${regularBacklink}` as CodexLine<
+				T["type"]
+			>;
+		default:
+			throw new Error(`Unknown type: ${type}`);
 	}
-
-	const regularBacklink = `${OBSIDIAN_LINK_OPEN}${basename}${PIPE}${nodeName}${OBSIDIAN_LINK_CLOSE}`;
-
-	if (
-		type === CodexLineType.Scroll ||
-		type === CodexLineType.ChildSectionCodex
-	) {
-		const checkbox =
-			value.status === TreeNodeStatus.Done
-				? DONE_CHECKBOX
-				: NOT_STARTED_CHECKBOX;
-		return `${checkbox}${SPACE_F}${regularBacklink}` as CodexLine<
-			T["type"]
-		>;
-	}
-
-	if (type === CodexLineType.File) {
-		return `${DASH}${SPACE_F}${regularBacklink}` as CodexLine<T["type"]>;
-	}
-
-	throw new Error(`Unknown type: ${type}`);
 }
 
 export function tryParseAsIntendedTreeNode(
 	codexLine: AnyCodexLine,
-): Result<IntendedTreeNode, string> {
+): Result<AnyIntendedTreeNode, string> {
 	const parseResult = CodexLineSchema.safeParse(codexLine);
 	if (!parseResult.success) {
 		return err(`Invalid codex line: ${parseResult.error.message}`);
@@ -180,14 +180,14 @@ export function tryParseAsIntendedTreeNode(
 	// Build IntendedTreeNode based on type
 	if (type === CodexLineType.Scroll) {
 		return ok({
-			type: CodexLineType.Scroll,
-			value: {
+			node: {
 				extension: "md",
 				nodeName: displayName,
 				nodeNameChainToParent,
 				status: status || TreeNodeStatus.NotStarted,
 				type: "Scroll",
 			},
+			type: CodexLineType.Scroll,
 		});
 	}
 
@@ -196,42 +196,50 @@ export function tryParseAsIntendedTreeNode(
 		const extensionMatch = filename.match(/\.([^.]+)$/);
 		const extension = extensionMatch?.[1] || "";
 		return ok({
-			type: CodexLineType.File,
-			value: {
+			node: {
 				extension,
 				nodeName: displayName,
 				nodeNameChainToParent,
 				status: TreeNodeStatus.Unknown,
 				type: "File",
 			},
+			type: CodexLineType.File,
 		});
 	}
 
 	if (type === CodexLineType.ChildSectionCodex) {
 		return ok({
-			type: CodexLineType.ChildSectionCodex,
-			value: {
+			node: {
 				children: [],
 				nodeName: displayName,
 				nodeNameChainToParent,
 				status: (status || TreeNodeStatus.NotStarted) as TreeNodeStatus,
 				type: "Section",
 			},
+			type: CodexLineType.ChildSectionCodex,
 		});
 	}
 
 	if (type === CodexLineType.ParentSectionCodex) {
 		return ok({
-			type: CodexLineType.ParentSectionCodex,
-			value: {
+			node: {
 				children: [],
 				nodeName: displayName,
 				nodeNameChainToParent,
 				status: TreeNodeStatus.NotStarted,
 				type: "Section",
 			},
+			type: CodexLineType.ParentSectionCodex,
 		});
 	}
 
 	return err(`Unknown type: ${type}`);
+}
+
+function formatBacklink(basename: string, displayName: string): string {
+	return `${OBSIDIAN_LINK_OPEN}${basename}${PIPE}${displayName}${OBSIDIAN_LINK_CLOSE}`;
+}
+
+function formatParentBacklink(basename: string, displayName: string): string {
+	return formatBacklink(basename, `${BACK_ARROW}${SPACE_F}${displayName}`);
 }

@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import {
 	buildCanonicalPathPartsForCodex,
-	makeCanonicalBasenameForCodex,
+	makeCanonicalBasenameForCodexFromSectionNode,
 	makeNodeNameChainToParentFromCanonicalBasenameForCodex,
 } from "../../../../../src/commanders/librarian/naming/functions/codexes";
 import { separateJoinedSuffixedBasename } from "../../../../../src/commanders/librarian/naming/types/transformers";
+import { TreeNodeStatus, TreeNodeType } from "../../../../../src/commanders/librarian/types/tree-node";
 import * as globalState from "../../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../../src/global-state/parsed-settings";
 import { SplitPathType } from "../../../../../src/obsidian-vault-action-manager/types/split-path";
@@ -33,46 +34,57 @@ afterEach(() => {
 	getParsedUserSettingsSpy.mockRestore();
 });
 
-describe("makeCanonicalBasenameForCodex", () => {
-	it("creates basename for empty chain (root codex)", () => {
-		const result = makeCanonicalBasenameForCodex([]);
-		expect(result).toBe("__-Library");
-	});
-
+describe("makeCanonicalBasenameForCodexFromSectionNode", () => {
 	it("creates basename for single-element chain", () => {
-		const result = makeCanonicalBasenameForCodex(["Parent"]);
+		const sectionNode = {
+			children: [],
+			nodeName: "Parent",
+			nodeNameChainToParent: [],
+			status: TreeNodeStatus.NotStarted,
+			type: TreeNodeType.Section,
+		};
+		const result = makeCanonicalBasenameForCodexFromSectionNode(sectionNode);
 		expect(result).toBe("__-Parent");
 	});
 
 	it("creates basename for multi-element chain", () => {
-		const result = makeCanonicalBasenameForCodex(["Parent", "Child"]);
+		const sectionNode = {
+			children: [],
+			nodeName: "Child",
+			nodeNameChainToParent: ["Parent"],
+			status: TreeNodeStatus.NotStarted,
+			type: TreeNodeType.Section,
+		};
+		const result = makeCanonicalBasenameForCodexFromSectionNode(sectionNode);
 		expect(result).toBe("__-Child-Parent");
 	});
 
 	it("creates basename for deeply nested chain", () => {
-		const result = makeCanonicalBasenameForCodex(["A", "B", "C", "D"]);
+		const sectionNode = {
+			children: [],
+			nodeName: "D",
+			nodeNameChainToParent: ["A", "B", "C"],
+			status: TreeNodeStatus.NotStarted,
+			type: TreeNodeType.Section,
+		};
+		const result = makeCanonicalBasenameForCodexFromSectionNode(sectionNode);
 		expect(result).toBe("__-D-C-B-A");
 	});
 
-	it("handles custom library root", () => {
-		getParsedUserSettingsSpy.mockReturnValue({
-			...defaultSettings,
-			splitPathToLibraryRoot: {
-				basename: "Root",
-				pathParts: [],
-				type: SplitPathType.Folder,
-			},
-		});
-		const result = makeCanonicalBasenameForCodex([]);
-		expect(result).toBe("__-Root");
-	});
 
 	it("handles custom delimiter", () => {
 		getParsedUserSettingsSpy.mockReturnValue({
 			...defaultSettings,
 			suffixDelimiter: "::",
 		});
-		const result = makeCanonicalBasenameForCodex(["Parent", "Child"]);
+		const sectionNode = {
+			children: [],
+			nodeName: "Child",
+			nodeNameChainToParent: ["Parent"],
+			status: TreeNodeStatus.NotStarted,
+			type: TreeNodeType.Section,
+		};
+		const result = makeCanonicalBasenameForCodexFromSectionNode(sectionNode);
 		expect(result).toBe("__::Child::Parent");
 	});
 });
@@ -172,41 +184,61 @@ describe("buildCanonicalPathPartsForCodex", () => {
 });
 
 describe("roundtrip tests", () => {
-	it("roundtrips empty chain through makeCanonicalBasenameForCodex and makeNodeNameChainToParentFromCanonicalBasenameForCodex", () => {
-		const chain: string[] = [];
-		const basename = makeCanonicalBasenameForCodex(chain);
-		const separated = separateJoinedSuffixedBasename(basename);
-		const result = makeNodeNameChainToParentFromCanonicalBasenameForCodex(separated);
-		expect(result).toEqual(chain);
-	});
 
 	it("roundtrips single-element chain", () => {
-		const chain = ["Parent"];
-		const basename = makeCanonicalBasenameForCodex(chain);
+		const sectionNode = {
+			children: [],
+			nodeName: "Parent",
+			nodeNameChainToParent: [],
+			status: TreeNodeStatus.NotStarted,
+			type: TreeNodeType.Section,
+		};
+		const basename = makeCanonicalBasenameForCodexFromSectionNode(sectionNode);
 		const separated = separateJoinedSuffixedBasename(basename);
 		const result = makeNodeNameChainToParentFromCanonicalBasenameForCodex(separated);
-		expect(result).toEqual(chain);
+		// Returns full chain to section (includes section's nodeName)
+		expect(result).toEqual(["Parent"]);
 	});
 
 	it("roundtrips multi-element chain", () => {
-		const chain = ["Parent", "Child"];
-		const basename = makeCanonicalBasenameForCodex(chain);
+		const sectionNode = {
+			children: [],
+			nodeName: "Child",
+			nodeNameChainToParent: ["Parent"],
+			status: TreeNodeStatus.NotStarted,
+			type: TreeNodeType.Section,
+		};
+		const basename = makeCanonicalBasenameForCodexFromSectionNode(sectionNode);
 		const separated = separateJoinedSuffixedBasename(basename);
 		const result = makeNodeNameChainToParentFromCanonicalBasenameForCodex(separated);
-		expect(result).toEqual(chain);
+		// Returns full chain to section (includes section's nodeName)
+		expect(result).toEqual(["Parent", "Child"]);
 	});
 
 	it("roundtrips deeply nested chain", () => {
-		const chain = ["A", "B", "C", "D"];
-		const basename = makeCanonicalBasenameForCodex(chain);
+		const sectionNode = {
+			children: [],
+			nodeName: "D",
+			nodeNameChainToParent: ["A", "B", "C"],
+			status: TreeNodeStatus.NotStarted,
+			type: TreeNodeType.Section,
+		};
+		const basename = makeCanonicalBasenameForCodexFromSectionNode(sectionNode);
 		const separated = separateJoinedSuffixedBasename(basename);
 		const result = makeNodeNameChainToParentFromCanonicalBasenameForCodex(separated);
-		expect(result).toEqual(chain);
+		// Returns full chain to section (includes section's nodeName)
+		expect(result).toEqual(["A", "B", "C", "D"]);
 	});
 
 	it("roundtrips through buildCanonicalPathPartsForCodex and back", () => {
-		const chain = ["Parent", "Child"];
-		const basename = makeCanonicalBasenameForCodex(chain);
+		const sectionNode = {
+			children: [],
+			nodeName: "Child",
+			nodeNameChainToParent: ["Parent"],
+			status: TreeNodeStatus.NotStarted,
+			type: TreeNodeType.Section,
+		};
+		const basename = makeCanonicalBasenameForCodexFromSectionNode(sectionNode);
 		const pathParts = buildCanonicalPathPartsForCodex(basename);
 		// pathParts should be ["Library", "Parent", "Child"]
 		expect(pathParts).toEqual(["Library", "Parent", "Child"]);

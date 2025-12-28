@@ -6,7 +6,7 @@ import type { VaultAction } from "../../../obsidian-vault-action-manager/types/v
 import { VaultActionType } from "../../../obsidian-vault-action-manager/types/vault-action";
 import { tryParseJoinedSuffixedBasenameForCodex } from "../naming/codecs/atomic/parsers";
 import { makeNodeNameChainFromPathParts } from "../naming/codecs/atomic/path-parts-and-node-name-chain";
-import { makeCanonicalBasenameForCodex } from "../naming/functions/codexes";
+import { makeCanonicalBasenameForCodexFromSectionNode } from "../naming/functions/codexes";
 import type { NodeNameChain } from "../types/schemas/node-name";
 import type { SectionNode } from "../types/tree-node";
 import { buildCodexVaultActions } from "./codex-builder";
@@ -64,9 +64,8 @@ function buildDeleteActionsForOrphanedCodexes(
 			continue;
 		}
 
-		const canonicalBasenameForCodex = makeCanonicalBasenameForCodex(
-			nodeNameChainToParent,
-		);
+		const canonicalBasenameForCodex =
+			makeCanonicalBasenameForCodexFromSectionNode(parentSectionNode);
 
 		if (splitPathToImpactedFile.basename !== canonicalBasenameForCodex) {
 			deleteActions.push({

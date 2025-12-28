@@ -1,6 +1,7 @@
 import { getParsedUserSettings } from "../../../../global-state/global-state";
 import { CODEX_CORE_NAME } from "../../types/literals";
 import type { NodeNameChain } from "../../types/schemas/node-name";
+import type { SectionNode } from "../../types/tree-node";
 import { makePathPartsFromNodeNameChain } from "../codecs/atomic/path-parts-and-node-name-chain";
 import {
 	makeNodeNameChainFromSeparatedSuffixedBasename,
@@ -13,7 +14,17 @@ import {
 	separateJoinedSuffixedBasename,
 } from "../types/transformers";
 
-export const makeCanonicalBasenameForCodex = (
+export const makeCanonicalBasenameForCodexFromSectionNode = ({
+	nodeNameChainToParent,
+	nodeName,
+}: Pick<SectionNode, "nodeNameChainToParent" | "nodeName">) => {
+	return makeCanonicalBasenameForCodexFromNodeNameChainToParent([
+		...nodeNameChainToParent,
+		nodeName,
+	]);
+};
+
+const makeCanonicalBasenameForCodexFromNodeNameChainToParent = (
 	nodeNameChainToParent: NodeNameChain,
 ) => {
 	const {

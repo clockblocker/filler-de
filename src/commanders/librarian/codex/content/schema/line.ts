@@ -47,25 +47,25 @@ const ParentBacklinkSchema = z.templateLiteral([
 ]);
 
 // Template literal schemas for the string values
-const CodexLineForScrollSchema = z.templateLiteral([
+export const CodexLineForScrollSchema = z.templateLiteral([
 	CheckboxSchema,
 	z.literal(SPACE_F),
 	RegularBacklinkSchema,
 ]);
 
-const CodexLineForFileSchema = z.templateLiteral([
+export const CodexLineForFileSchema = z.templateLiteral([
 	z.literal(DASH),
 	z.literal(SPACE_F),
 	RegularBacklinkSchema,
 ]);
 
-const CodexLineForChildSectionCodexSchema = z.templateLiteral([
+export const CodexLineForChildSectionCodexSchema = z.templateLiteral([
 	CheckboxSchema,
 	z.literal(SPACE_F),
 	RegularBacklinkSchema,
 ]);
 
-const CodexLineForParentSectionCodexSchema = ParentBacklinkSchema;
+export const CodexLineForParentSectionCodexSchema = ParentBacklinkSchema;
 
 // Combined schema using discriminated union
 export const CodexLineSchema = z.union([
@@ -95,3 +95,8 @@ export type CodexLine<T extends CodexLineType> =
 				: T extends typeof CodexLineType.ParentSectionCodex
 					? CodexLineForParentSectionCodex
 					: never;
+
+export type TypedCodexLine<T extends CodexLineType> = {
+	line: CodexLine<T>;
+	type: T;
+};
