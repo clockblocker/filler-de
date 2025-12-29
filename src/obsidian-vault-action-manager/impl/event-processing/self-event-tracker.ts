@@ -18,74 +18,118 @@ import { VaultActionType } from "../../types/vault-action";
  * TTL: 5s with pop-on-match (one-time use per path).
  */
 export class SelfEventTracker {
-	private readonly trackedPaths = new Map<string, NodeJS.Timeout>();
-	private readonly ttlMs = 5000; // 5 seconds
+	private readonly trackedPaths = new Map<
+		string,
+		ReturnType<typeof setTimeout>
+	>();
+	private readonly trackedPrefixes = new Map<
+		string,
+		ReturnType<typeof setTimeout>
+	>();
+	private readonly ttlMs = 5000;
 
-	/**
-	 * Register actions we're about to dispatch.
-	 * Extracts system paths from all action types and tracks them.
-	 */
 	register(actions: readonly VaultAction[]): void {
 		for (const action of actions) {
-			const paths = this.extractPaths(action);
-			for (const path of paths) {
-				this.trackPath(path);
-			}
+			for (const path of this.extractPaths(action)) this.trackPath(path);
+			for (const prefix of this.extractFolderPrefixes(action))
+				this.trackPrefix(prefix);
 		}
 	}
 
-	/**
-	 * Check if a path should be ignored (is a self-event).
-	 * Returns true if path matches a tracked path.
-	 *
-	 * Pop-on-match: removes path from tracking on match (one-time use).
-	 */
 	shouldIgnore(path: string): boolean {
 		const normalized = this.normalizePath(path);
-		const isTracked = this.trackedPaths.has(normalized);
 
-		if (isTracked) {
-			// Pop-on-match: remove and clear timeout
+		// Exact match (pop-on-match)
+		if (this.trackedPaths.has(normalized)) {
 			this.untrackPath(normalized);
+			return true;
 		}
 
-		return isTracked;
+		// Prefix match (do NOT pop; allow many descendants)
+		for (const prefix of this.trackedPrefixes.keys()) {
+			if (normalized === prefix || normalized.startsWith(prefix + "/")) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
-	/**
-	 * Extract system paths from an action.
-	 * For create operations: returns target path + all parent folder paths
-	 *   (Obsidian auto-creates parent folders, so we must track them).
-	 * For renames: returns both `from` and `to` paths + their parent folders.
-	 * For others: returns target path.
-	 */
-	private extractPaths(action: VaultAction): string[] {
-		const { type, payload } = action;
+	private extractFolderPrefixes(action: VaultAction): string[] {
+		switch (action.type) {
+			case VaultActionType.CreateFolder:
+			case VaultActionType.TrashFolder:
+				return [
+					systemPathFromSplitPathInternal(action.payload.splitPath),
+				];
 
-		switch (type) {
+			case VaultActionType.RenameFolder:
+				return [
+					systemPathFromSplitPathInternal(action.payload.from),
+					systemPathFromSplitPathInternal(action.payload.to),
+				];
+
+			default:
+				return [];
+		}
+	}
+
+	private trackPrefix(prefix: string): void {
+		const normalized = this.normalizePath(prefix);
+
+		const existing = this.trackedPrefixes.get(normalized);
+		if (existing) clearTimeout(existing);
+
+		const timeout = setTimeout(
+			() => this.trackedPrefixes.delete(normalized),
+			this.ttlMs,
+		);
+		this.trackedPrefixes.set(normalized, timeout);
+	}
+
+	private trackPath(path: string): void {
+		const normalized = this.normalizePath(path);
+		const existing = this.trackedPaths.get(normalized);
+		if (existing) clearTimeout(existing);
+
+		const timeout = setTimeout(
+			() => this.trackedPaths.delete(normalized),
+			this.ttlMs,
+		);
+		this.trackedPaths.set(normalized, timeout);
+	}
+
+	private untrackPath(normalized: string): void {
+		const timeout = this.trackedPaths.get(normalized);
+		if (timeout) clearTimeout(timeout);
+		this.trackedPaths.delete(normalized);
+	}
+
+	private extractPaths(action: VaultAction): string[] {
+		switch (action.type) {
 			case VaultActionType.CreateFolder:
 			case VaultActionType.CreateFile:
 			case VaultActionType.UpsertMdFile:
 			case VaultActionType.ProcessMdFile:
-				// Track target path + all parent folder paths
-				// (Obsidian auto-creates parent folders for create operations)
-				return this.extractPathsWithParents(payload.splitPath);
+				return this.extractPathsWithParents(action.payload.splitPath);
 
 			case VaultActionType.TrashFolder:
 			case VaultActionType.TrashFile:
 			case VaultActionType.TrashMdFile:
-				// Trash operations don't create parent folders, only track target
-				return [systemPathFromSplitPathInternal(payload.splitPath)];
+				return [
+					systemPathFromSplitPathInternal(action.payload.splitPath),
+				];
 
 			case VaultActionType.RenameFolder:
 			case VaultActionType.RenameFile:
 			case VaultActionType.RenameMdFile:
-				// Track both from and to paths + their parent folders
-				// (rename to new location may create parent folders)
 				return [
-					...this.extractPathsWithParents(payload.from),
-					...this.extractPathsWithParents(payload.to),
+					...this.extractPathsWithParents(action.payload.from),
+					...this.extractPathsWithParents(action.payload.to),
 				];
+
+			default:
+				return [];
 		}
 	}
 
@@ -116,43 +160,10 @@ export class SelfEventTracker {
 	}
 
 	/**
-	 * Track a path with TTL.
-	 * If path already tracked, resets TTL.
-	 */
-	private trackPath(path: string): void {
-		const normalized = this.normalizePath(path);
-
-		// Clear existing timeout if path already tracked
-		const existingTimeout = this.trackedPaths.get(normalized);
-		if (existingTimeout) {
-			clearTimeout(existingTimeout);
-		}
-
-		// Set new timeout for TTL cleanup
-		const timeout = setTimeout(() => {
-			this.trackedPaths.delete(normalized);
-		}, this.ttlMs);
-
-		this.trackedPaths.set(normalized, timeout);
-	}
-
-	/**
-	 * Remove path from tracking and clear timeout.
-	 */
-	private untrackPath(normalized: string): void {
-		const timeout = this.trackedPaths.get(normalized);
-		if (timeout) {
-			clearTimeout(timeout);
-		}
-		this.trackedPaths.delete(normalized);
-	}
-
-	/**
 	 * Normalize path for matching.
 	 * Obsidian paths are already normalized, but we ensure consistency.
 	 */
 	private normalizePath(path: string): string {
-		// Remove leading/trailing slashes, normalize separators
 		return path.replace(/^[\\/]+|[\\/]+$/g, "").replace(/\\/g, "/");
 	}
 }

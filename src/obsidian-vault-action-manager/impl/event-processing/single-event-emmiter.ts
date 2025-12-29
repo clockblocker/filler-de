@@ -52,12 +52,13 @@ export class SingleEventEmmiter {
 		oldPath: string,
 		handler: VaultEventHandler,
 	): void {
-		// Check new path (file.path) - old path already handled by tracking 'from' in self-event tracker
-		if (this.selfEventTracker.shouldIgnore(tAbstractFile.path)) {
-			return;
-		}
 		const res = tryMakeVaultEventForFileRenamed(tAbstractFile, oldPath);
-		if (res.isErr()) {
+
+		if (
+			this.selfEventTracker.shouldIgnore(tAbstractFile.path) ||
+			this.selfEventTracker.shouldIgnore(oldPath) ||
+			res.isErr()
+		) {
 			return;
 		}
 		void handler(res.value);

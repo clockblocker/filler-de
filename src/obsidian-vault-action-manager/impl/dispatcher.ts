@@ -59,13 +59,12 @@ export class Dispatcher {
 		const graph = buildDependencyGraph(collapsed);
 		const sorted = topologicalSort(collapsed, graph);
 
-		// Register paths from SORTED actions (the ones that will actually execute)
-		// This ensures we track paths from the final actions, not the original batch
-		this.selfEventTracker.register(sorted);
-
 		const errors: DispatchError[] = [];
 
 		for (const action of sorted) {
+			// Arm self-event tracking JUST before this action executes
+			this.selfEventTracker.register([action]);
+
 			const result = await this.executor.execute(action);
 			if (result.isErr()) {
 				errors.push({
@@ -117,7 +116,7 @@ export class Dispatcher {
 
 		// Get destinations to check
 		const destinations = getDestinationsToCheck(
-			actions,
+			result,
 			(path) => this.pathToSplitPathToFolder(path),
 			(key) => this.keyToSplitPathToMdFile(key),
 		);
