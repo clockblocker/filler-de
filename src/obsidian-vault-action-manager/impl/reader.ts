@@ -16,7 +16,7 @@ import type {
 	SplitPathWithReader,
 	SplitPathWithTRef,
 } from "../types/split-path";
-import { makeSystemPathForSplitPath } from "./split-path-and-system-path";
+import { makeSystemPathForSplitPath } from "./common/split-path-and-system-path";
 
 export class Reader {
 	constructor(

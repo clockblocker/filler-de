@@ -9,7 +9,7 @@ import {
 	errorOpenFileFailed,
 } from "../../errors";
 import { getSplitPathForAbstractFile } from "../../helpers/pathfinder";
-import { makeSystemPathForSplitPath } from "../../impl/split-path-and-system-path";
+import { makeSystemPathForSplitPath } from "../../impl/common/split-path-and-system-path";
 import type {
 	SplitPath,
 	SplitPathToFile,

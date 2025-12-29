@@ -3,13 +3,13 @@ import {
 	splitPathFromAbstractInternal,
 	splitPathFromSystemPathInternal,
 	systemPathFromSplitPathInternal,
-} from "../helpers/pathfinder";
+} from "../../helpers/pathfinder";
 import type {
 	SplitPath,
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
-} from "../types/split-path";
+} from "../../types/split-path";
 
 /**
  * Build system path from SplitPath.

@@ -1,7 +1,7 @@
 // ─── Vault Action Definitions (moved here for platform boundary) ───
 
 import z from "zod";
-import { makeSystemPathForSplitPath } from "../impl/split-path-and-system-path";
+import { makeSystemPathForSplitPath } from "../impl/common/split-path-and-system-path";
 import {
 	CREATE,
 	FILE,

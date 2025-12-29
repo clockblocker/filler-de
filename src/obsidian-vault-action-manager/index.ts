@@ -1,11 +1,11 @@
 import type { Result } from "neverthrow";
 import type { TFile, TFolder } from "obsidian";
 import type { DispatchResult } from "./impl/actions-processing/dispatcher";
-import type { BulkVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk/bulk-vault-event";
 import {
 	makeSplitPath,
 	makeSystemPathForSplitPath,
-} from "./impl/split-path-and-system-path";
+} from "./impl/common/split-path-and-system-path";
+import type { BulkVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk/bulk-vault-event";
 import type {
 	SplitPath,
 	SplitPathToFile,

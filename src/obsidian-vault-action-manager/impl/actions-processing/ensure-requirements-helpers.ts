@@ -5,7 +5,7 @@ import type {
 } from "../../types/split-path";
 import type { VaultAction } from "../../types/vault-action";
 import { VaultActionType } from "../../types/vault-action";
-import { makeSystemPathForSplitPath } from "../split-path-and-system-path";
+import { makeSystemPathForSplitPath } from "../common/split-path-and-system-path";
 import type { ExistenceChecker } from "./dispatcher";
 
 /**

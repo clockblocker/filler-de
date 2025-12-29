@@ -1,7 +1,7 @@
 import { err, ok, type Result } from "neverthrow";
 import type { TAbstractFile } from "obsidian";
 import type { VaultEvent } from "../..";
-import { makeSplitPath } from "../split-path-and-system-path";
+import { makeSplitPath } from "../common/split-path-and-system-path";
 import { EventProcessingErrorMessage } from "./errors";
 
 export function makeVaultEventForFileCreated(

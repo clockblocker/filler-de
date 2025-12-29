@@ -5,8 +5,8 @@ import type {
 	SplitPathToMdFile,
 } from "../../types/split-path";
 import { type VaultAction, VaultActionType } from "../../types/vault-action";
+import { makeSplitPath } from "../common/split-path-and-system-path";
 import type { SelfEventTracker } from "../event-processing/self-event-tracker";
-import { makeSplitPath } from "../split-path-and-system-path";
 import { collapseActions } from "./collapse";
 import { buildDependencyGraph } from "./dependency-detector";
 import {
