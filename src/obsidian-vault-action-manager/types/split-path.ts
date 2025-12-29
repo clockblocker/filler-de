@@ -9,6 +9,7 @@ import { FILE, FOLDER, MD_FILE, MdSchema } from "./literals";
  * ["Library", "parent", "child"]
  */
 export const PathPartsSchema = z.array(z.string());
+export type PathParts = z.infer<typeof PathPartsSchema>;
 
 /**
  * @example
