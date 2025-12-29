@@ -107,7 +107,7 @@ export type BulkVaultEvent = {
 		trueCount: {
 			renames: number;
 			creates: number;
-			trashes: number;
+			deletes: number;
 		};
 
 		/**

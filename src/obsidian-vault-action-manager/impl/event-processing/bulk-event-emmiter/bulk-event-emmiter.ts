@@ -9,9 +9,9 @@ import {
 import { BulkEventAccumulator } from "./batteries/event-accumulator";
 import type { BulkVaultEvent } from "./types/bulk/bulk-vault-event";
 import {
+	isDelete,
 	isPossibleRoot,
 	isRename,
-	isTrash,
 	type PossibleRootVaultEvent,
 } from "./types/bulk/helpers";
 
@@ -49,7 +49,7 @@ export class BulkEventEmmiter {
 						collapsedCount,
 						endedAt: window.debug.endedAt,
 						reduced: {
-							rootDeletes: roots.filter(isTrash).length,
+							rootDeletes: roots.filter(isDelete).length,
 							rootRenames: roots.filter(isRename).length,
 						},
 						startedAt: window.debug.startedAt,
