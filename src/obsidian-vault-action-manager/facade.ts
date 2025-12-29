@@ -7,10 +7,10 @@ import { TFileHelper } from "./file-services/background/helpers/tfile-helper";
 import { TFolderHelper } from "./file-services/background/helpers/tfolder-helper";
 import { ActionQueue } from "./impl/action-queue";
 import { Dispatcher, type ExistenceChecker } from "./impl/dispatcher";
-import { EventAdapter } from "./impl/event-adapter";
+import { EventAdapter } from "./impl/event-processing/event-adapter";
+import { SelfEventTracker } from "./impl/event-processing/self-event-tracker";
 import { Executor } from "./impl/executor";
 import { Reader } from "./impl/reader";
-import { SelfEventTrackerLegacy } from "./impl/self-event-tracker";
 import type {
 	DispatchResult,
 	ObsidianVaultActionManager,
@@ -32,7 +32,7 @@ export class ObsidianVaultActionManagerImpl
 	private readonly opened: OpenedFileService;
 	private readonly reader: Reader;
 	private readonly dispatcher: Dispatcher;
-	private readonly selfEventTracker: SelfEventTrackerLegacy;
+	private readonly selfEventTracker: SelfEventTracker;
 	private readonly actionQueue: ActionQueue;
 	private readonly eventAdapter: EventAdapter;
 	private readonly subscribers = new Set<VaultEventHandler>();
@@ -61,7 +61,7 @@ export class ObsidianVaultActionManagerImpl
 			tfolderHelper,
 			app.vault,
 		);
-		this.selfEventTracker = new SelfEventTrackerLegacy();
+		this.selfEventTracker = new SelfEventTracker();
 		const existenceChecker: ExistenceChecker = {
 			exists: async (splitPath) => {
 				if (splitPath.type === "Folder") {

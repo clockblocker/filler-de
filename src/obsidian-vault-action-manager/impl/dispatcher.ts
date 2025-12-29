@@ -12,8 +12,8 @@ import {
 	ensureDestinationsExist,
 	getDestinationsToCheck,
 } from "./ensure-requirements-helpers";
+import type { SelfEventTracker } from "./event-processing/self-event-tracker";
 import type { Executor } from "./executor";
-import type { SelfEventTrackerLegacy } from "./self-event-tracker";
 import { makeSplitPath } from "./split-path-and-system-path";
 import { topologicalSort } from "./topological-sort";
 
@@ -39,7 +39,7 @@ export class Dispatcher {
 	 */
 	constructor(
 		private readonly executor: Executor,
-		private readonly selfEventTracker: SelfEventTrackerLegacy,
+		private readonly selfEventTracker: SelfEventTracker,
 		private readonly existenceChecker: ExistenceChecker,
 	) {}
 

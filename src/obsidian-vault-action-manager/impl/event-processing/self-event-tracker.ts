@@ -1,10 +1,10 @@
 import {
 	pathToFolderFromPathParts,
 	systemPathFromSplitPathInternal,
-} from "../helpers/pathfinder";
-import type { SplitPath } from "../types/split-path";
-import type { VaultAction } from "../types/vault-action";
-import { VaultActionType } from "../types/vault-action";
+} from "../../helpers/pathfinder";
+import type { SplitPath } from "../../types/split-path";
+import type { VaultAction } from "../../types/vault-action";
+import { VaultActionType } from "../../types/vault-action";
 
 /**
  * Tracks paths of actions we dispatch to filter self-events from Obsidian.
@@ -17,7 +17,7 @@ import { VaultActionType } from "../types/vault-action";
  *
  * TTL: 5s with pop-on-match (one-time use per path).
  */
-export class SelfEventTrackerLegacy {
+export class SelfEventTracker {
 	private readonly trackedPaths = new Map<string, NodeJS.Timeout>();
 	private readonly ttlMs = 5000; // 5 seconds
 

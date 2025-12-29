@@ -1,19 +1,19 @@
 import type { App, TAbstractFile } from "obsidian";
-import type { VaultEventHandler } from "../index";
+import type { VaultEventHandler } from "../../index";
 import type {
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
-} from "../types/split-path";
-import type { SelfEventTrackerLegacy } from "./self-event-tracker";
-import { makeSplitPath } from "./split-path-and-system-path";
+} from "../../types/split-path";
+import { makeSplitPath } from "../split-path-and-system-path";
+import type { SelfEventTracker } from "./self-event-tracker";
 
 export class EventAdapter {
 	private listeners: Array<() => void> = [];
 
 	constructor(
 		private readonly app: App,
-		private readonly selfEventTracker: SelfEventTrackerLegacy,
+		private readonly selfEventTracker: SelfEventTracker,
 	) {}
 
 	start(handler: VaultEventHandler): void {
