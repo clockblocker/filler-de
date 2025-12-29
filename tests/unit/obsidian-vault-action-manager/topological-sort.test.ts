@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { buildDependencyGraph } from "../../../src/obsidian-vault-action-manager/impl/actions-processing/dependency-detector";
-import { makeKeyForAction } from "../../../src/obsidian-vault-action-manager/impl/actions-processing/helpers/make-key-for-action";
+import { buildDependencyGraph, makeGraphKey } from "../../../src/obsidian-vault-action-manager/impl/actions-processing/dependency-detector";
+import {  } from "../../../src/obsidian-vault-action-manager/impl/actions-processing/helpers/make-key-for-action";
 import { topologicalSort } from "../../../src/obsidian-vault-action-manager/impl/actions-processing/topological-sort";
 import type {
 	SplitPathToFolder,
@@ -195,8 +195,8 @@ describe("topologicalSort", () => {
 		// Create a graph with a cycle manually (not through buildDependencyGraph)
 		const graph = buildDependencyGraph([action1, action2]);
 		// Manually create cycle (this shouldn't happen in real usage)
-		const key1 = makeKeyForAction(action1);
-		const key2 = makeKeyForAction(action2);
+		const key1 = makeGraphKey(action1);
+		const key2 = makeGraphKey(action2);
 		graph.get(key1)!.dependsOn.push(action2);
 		graph.get(key2)!.dependsOn.push(action1);
 

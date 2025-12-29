@@ -1,7 +1,7 @@
 import type { DependencyGraph } from "../../types/dependency";
 import type { VaultAction } from "../../types/vault-action";
 import { VaultActionType } from "../../types/vault-action";
-import { makeKeyForAction } from "./helpers/make-key-for-action";
+import { makeGraphKey } from "./dependency-detector";
 
 /**
  * Topological sort using Kahn's algorithm.
@@ -23,7 +23,7 @@ export function topologicalSort(
 	// Build in-degree map (how many dependencies each action has)
 	const inDegree = new Map<string, number>();
 	for (const action of actions) {
-		const key = makeKeyForAction(action);
+		const key = makeGraphKey(action);
 		const deps = graph.get(key);
 		inDegree.set(key, deps?.dependsOn.length ?? 0);
 	}
@@ -31,7 +31,7 @@ export function topologicalSort(
 	// Find actions with no dependencies (starting points)
 	const queue: VaultAction[] = [];
 	for (const action of actions) {
-		const key = makeKeyForAction(action);
+		const key = makeGraphKey(action);
 		if ((inDegree.get(key) ?? 0) === 0) {
 			queue.push(action);
 		}
@@ -44,11 +44,12 @@ export function topologicalSort(
 	const processed = new Set<string>();
 
 	// Process level by level
-	while (queue.length > 0) {
-		const action = queue.shift();
-		if (!action) break;
+	let qi = 0;
+	while (qi < queue.length) {
+		const action = queue[qi++];
+		if (!action) continue;
 
-		const key = makeKeyForAction(action);
+		const key = makeGraphKey(action);
 		if (processed.has(key)) {
 			continue; // Already processed
 		}
@@ -60,7 +61,7 @@ export function topologicalSort(
 		const deps = graph.get(key);
 		if (deps) {
 			for (const dependent of deps.requiredBy) {
-				const depKey = makeKeyForAction(dependent);
+				const depKey = makeGraphKey(dependent);
 				const currentInDegree = inDegree.get(depKey) ?? 0;
 				const newInDegree = Math.max(0, currentInDegree - 1);
 				inDegree.set(depKey, newInDegree);
@@ -78,10 +79,10 @@ export function topologicalSort(
 	// Check for cycles (unprocessed actions = cycle)
 	if (sorted.length !== actions.length) {
 		const unprocessed = actions.filter(
-			(a) => !processed.has(makeKeyForAction(a)),
+			(a) => !processed.has(makeGraphKey(a)),
 		);
 		throw new Error(
-			`Cycle detected in dependency graph. Unprocessed actions: ${unprocessed.map((a) => makeKeyForAction(a)).join(", ")}`,
+			`Cycle detected in dependency graph. Unprocessed actions: ${unprocessed.map((a) => makeGraphKey(a)).join(", ")}`,
 		);
 	}
 

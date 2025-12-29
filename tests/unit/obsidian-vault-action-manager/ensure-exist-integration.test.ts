@@ -1,7 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { collapseActions } from "../../../src/obsidian-vault-action-manager/impl/actions-processing/collapse";
-import { buildDependencyGraph } from "../../../src/obsidian-vault-action-manager/impl/actions-processing/dependency-detector";
-import { makeKeyForAction } from "../../../src/obsidian-vault-action-manager/impl/actions-processing/helpers/make-key-for-action";
+import { buildDependencyGraph, makeGraphKey } from "../../../src/obsidian-vault-action-manager/impl/actions-processing/dependency-detector";
 import { topologicalSort } from "../../../src/obsidian-vault-action-manager/impl/actions-processing/topological-sort";
 import type {
 	SplitPathToFolder,
@@ -70,7 +69,7 @@ describe("EnsureExist Integration", () => {
 		]);
 
 		// Verify dependencies
-		const processKey = makeKeyForAction(process);
+		const processKey = makeGraphKey(process);
 		const processDeps = graph.get(processKey);
 		expect(processDeps?.dependsOn).toContain(ensureFile);
 		expect(processDeps?.dependsOn).toContain(childFolder);
