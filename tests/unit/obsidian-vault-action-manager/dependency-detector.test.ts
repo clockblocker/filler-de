@@ -1,6 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { buildDependencyGraph } from "../../../src/obsidian-vault-action-manager/impl/actions-processing/dependency-detector";
-import { makeKeyForAction } from "../../../src/obsidian-vault-action-manager/impl/actions-processing/helpers/make-key-for-action";
+import { buildDependencyGraph, makeGraphKey } from "../../../src/obsidian-vault-action-manager/impl/actions-processing/dependency-detector";
 import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,
@@ -46,8 +45,8 @@ describe("buildDependencyGraph", () => {
 		const graph = buildDependencyGraph(actions);
 
 		expect(graph.size).toBe(2);
-		expect(graph.has(makeKeyForAction(actions[0]!))).toBe(true);
-		expect(graph.has(makeKeyForAction(actions[1]!))).toBe(true);
+		expect(graph.has(makeGraphKey(actions[0]!))).toBe(true);
+		expect(graph.has(makeGraphKey(actions[1]!))).toBe(true);
 	});
 
 	it("should detect ProcessMdFile depends on UpsertMdFile for same file", () => {
@@ -65,12 +64,12 @@ describe("buildDependencyGraph", () => {
 
 		const graph = buildDependencyGraph([create, process]);
 
-		const processKey = makeKeyForAction(process);
+		const processKey = makeGraphKey(process);
 		const processDeps = graph.get(processKey);
 		expect(processDeps?.dependsOn).toHaveLength(1);
 		expect(processDeps?.dependsOn[0]).toBe(create);
 
-		const createKey = makeKeyForAction(create);
+		const createKey = makeGraphKey(create);
 		const createDeps = graph.get(createKey);
 		expect(createDeps?.requiredBy).toContain(process);
 	});
@@ -87,7 +86,7 @@ describe("buildDependencyGraph", () => {
 
 		const graph = buildDependencyGraph([create, replace]);
 
-		const replaceKey = makeKeyForAction(replace);
+		const replaceKey = makeGraphKey(replace);
 		const replaceDeps = graph.get(replaceKey);
 		// UpsertMdFile actions for same file should collapse, not create dependencies
 		// They only depend on parent folders
@@ -106,7 +105,7 @@ describe("buildDependencyGraph", () => {
 
 		const graph = buildDependencyGraph([parent, child]);
 
-		const childKey = makeKeyForAction(child);
+		const childKey = makeGraphKey(child);
 		const childDeps = graph.get(childKey);
 		expect(childDeps?.dependsOn).toContain(parent);
 	});
@@ -127,11 +126,11 @@ describe("buildDependencyGraph", () => {
 
 		const graph = buildDependencyGraph([root, mid, leaf]);
 
-		const midKey = makeKeyForAction(mid);
+		const midKey = makeGraphKey(mid);
 		const midDeps = graph.get(midKey);
 		expect(midDeps?.dependsOn).toContain(root);
 
-		const leafKey = makeKeyForAction(leaf);
+		const leafKey = makeGraphKey(leaf);
 		const leafDeps = graph.get(leafKey);
 		expect(leafDeps?.dependsOn).toContain(root);
 		expect(leafDeps?.dependsOn).toContain(mid);
@@ -152,7 +151,7 @@ describe("buildDependencyGraph", () => {
 
 		const graph = buildDependencyGraph([destParent, rename]);
 
-		const renameKey = makeKeyForAction(rename);
+		const renameKey = makeGraphKey(rename);
 		const renameDeps = graph.get(renameKey);
 		expect(renameDeps?.dependsOn).toContain(destParent);
 	});
@@ -169,7 +168,7 @@ describe("buildDependencyGraph", () => {
 
 		const graph = buildDependencyGraph([parent, create]);
 
-		const createKey = makeKeyForAction(create);
+		const createKey = makeGraphKey(create);
 		const createDeps = graph.get(createKey);
 		expect(createDeps?.dependsOn).toContain(parent);
 	});
@@ -182,7 +181,7 @@ describe("buildDependencyGraph", () => {
 
 		const graph = buildDependencyGraph([trash]);
 
-		const trashKey = makeKeyForAction(trash);
+		const trashKey = makeGraphKey(trash);
 		const trashDeps = graph.get(trashKey);
 		expect(trashDeps?.dependsOn).toHaveLength(0);
 		expect(trashDeps?.requiredBy).toHaveLength(0);
@@ -196,7 +195,7 @@ describe("buildDependencyGraph", () => {
 
 		const graph = buildDependencyGraph([create]);
 
-		const createKey = makeKeyForAction(create);
+		const createKey = makeGraphKey(create);
 		const createDeps = graph.get(createKey);
 		expect(createDeps?.dependsOn).toHaveLength(0);
 	});
@@ -230,17 +229,17 @@ describe("buildDependencyGraph", () => {
 		]);
 
 		// subFolder depends on rootFolder
-		const subKey = makeKeyForAction(subFolder);
+		const subKey = makeGraphKey(subFolder);
 		expect(graph.get(subKey)?.dependsOn).toContain(rootFolder);
 
 		// createFile depends on rootFolder and subFolder
-		const createKey = makeKeyForAction(createFile);
+		const createKey = makeGraphKey(createFile);
 		const createDeps = graph.get(createKey);
 		expect(createDeps?.dependsOn).toContain(rootFolder);
 		expect(createDeps?.dependsOn).toContain(subFolder);
 
 		// process depends on createFile, rootFolder, and subFolder
-		const processKey = makeKeyForAction(process);
+		const processKey = makeGraphKey(process);
 		const processDeps = graph.get(processKey);
 		expect(processDeps?.dependsOn).toContain(createFile);
 		expect(processDeps?.dependsOn).toContain(rootFolder);
@@ -262,7 +261,7 @@ describe("buildDependencyGraph", () => {
 
 		const graph = buildDependencyGraph([ensureExist, process]);
 
-		const processKey = makeKeyForAction(process);
+		const processKey = makeGraphKey(process);
 		const processDeps = graph.get(processKey);
 		expect(processDeps?.dependsOn).toContain(ensureExist);
 	});
@@ -279,7 +278,7 @@ describe("buildDependencyGraph", () => {
 
 		const graph = buildDependencyGraph([ensureExist, replace]);
 
-		const replaceKey = makeKeyForAction(replace);
+		const replaceKey = makeGraphKey(replace);
 		const replaceDeps = graph.get(replaceKey);
 		// UpsertMdFile actions for same file should collapse, not create dependencies
 		// They only depend on parent folders
@@ -298,7 +297,7 @@ describe("buildDependencyGraph", () => {
 
 		const graph = buildDependencyGraph([parent, ensureExist]);
 
-		const ensureKey = makeKeyForAction(ensureExist);
+		const ensureKey = makeGraphKey(ensureExist);
 		const ensureDeps = graph.get(ensureKey);
 		expect(ensureDeps?.dependsOn).toContain(parent);
 	});

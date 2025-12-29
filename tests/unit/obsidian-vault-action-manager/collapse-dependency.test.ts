@@ -1,7 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { collapseActions } from "../../../src/obsidian-vault-action-manager/impl/actions-processing/collapse";
-import { buildDependencyGraph } from "../../../src/obsidian-vault-action-manager/impl/actions-processing/dependency-detector";
-import { makeKeyForAction } from "../../../src/obsidian-vault-action-manager/impl/actions-processing/helpers/make-key-for-action";
+import { buildDependencyGraph, makeGraphKey } from "../../../src/obsidian-vault-action-manager/impl/actions-processing/dependency-detector";
 import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,
@@ -56,7 +55,7 @@ describe("Collapse + Dependencies", () => {
 		// After collapse, UpsertMdFile has no file dependencies (just parent folders if any)
 		// This is expected - dispatcher will re-ensure requirements
 		const graph = buildDependencyGraph(collapsed);
-		const collapsedKey = makeKeyForAction(collapsed[0]!);
+		const collapsedKey = makeGraphKey(collapsed[0]!);
 		const collapsedDeps = graph.get(collapsedKey);
 		expect(collapsedDeps?.dependsOn).toHaveLength(0); // No file dependencies, only parent folders if any
 	});
@@ -75,7 +74,7 @@ describe("Collapse + Dependencies", () => {
 		expect(collapsed).toHaveLength(2); // No collapse for different paths
 
 		const graph = buildDependencyGraph(collapsed);
-		const childKey = makeKeyForAction(child);
+		const childKey = makeGraphKey(child);
 		const childDeps = graph.get(childKey);
 		expect(childDeps?.dependsOn).toContain(parent);
 	});
@@ -97,7 +96,7 @@ describe("Collapse + Dependencies", () => {
 
 		// UpsertMdFile is preserved, so dependencies are fine
 		const graph = buildDependencyGraph(collapsed);
-		const collapsedKey = makeKeyForAction(collapsed[0]!);
+		const collapsedKey = makeGraphKey(collapsed[0]!);
 		expect(graph.has(collapsedKey)).toBe(true); // Key is same (based on path, not content)
 	});
 
@@ -123,7 +122,7 @@ describe("Collapse + Dependencies", () => {
 
 		// After collapse, still needs UpsertMdFile dependency (will be re-ensured)
 		const graph = buildDependencyGraph(collapsed);
-		const processKey = makeKeyForAction(process1);
+		const processKey = makeGraphKey(process1);
 		const processDeps = graph.get(processKey);
 		expect(processDeps?.dependsOn).toHaveLength(0); // No UpsertMdFile in collapsed actions
 	});
@@ -150,7 +149,7 @@ describe("Collapse + Dependencies", () => {
 
 		// Dependency graph should find ProcessMdFile depends on UpsertMdFile
 		const graph = buildDependencyGraph(collapsed);
-		const processKey = makeKeyForAction(process);
+		const processKey = makeGraphKey(process);
 		const processDeps = graph.get(processKey);
 		expect(processDeps?.dependsOn).toHaveLength(1);
 		expect(processDeps?.dependsOn[0]?.type).toBe(VaultActionType.UpsertMdFile);
