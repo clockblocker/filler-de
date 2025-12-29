@@ -13,7 +13,7 @@ import {
 	flattenActionResult,
 } from "./codex/impacted-chains";
 import { healOnInit, type InitHealResult } from "./healing";
-import type { LibraryTree } from "./library-tree";
+import type { LibraryTreeDeprecated } from "./library-tree";
 import {
 	buildActionsForCodexRegenerationInImpactedSections,
 	buildWriteStatusToMetadataAction,
@@ -30,8 +30,11 @@ import type { NodeNameChain } from "./types/schemas/node-name";
 import { TreeNodeStatus, TreeNodeType } from "./types/tree-node";
 import { buildCanonicalPathForLeaf } from "./utils/tree-path-utils";
 
-export class Librarian {
-	private tree: LibraryTree;
+/**
+ * @deprecated Librarian is being fully rewritten. Use new implementation when available.
+ */
+export class LibrarianDeprecated {
+	private tree: LibraryTreeDeprecated;
 	/** Track paths we're currently processing to avoid self-event loops */
 	private eventTeardown: (() => void) | null = null;
 
@@ -196,7 +199,7 @@ export class Librarian {
 	/**
 	 * Get current tree (null if not initialized).
 	 */
-	getTree(): LibraryTree | null {
+	getTree(): LibraryTreeDeprecated | null {
 		return this.tree;
 	}
 
@@ -302,7 +305,7 @@ export class Librarian {
 	 * Read tree from existing vault.
 	 * Lists all files in the library root and builds a LibraryTree.
 	 */
-	async readTreeFromVault(): Promise<LibraryTree> {
+	async readTreeFromVault(): Promise<LibraryTreeDeprecated> {
 		const settings = getParsedUserSettings();
 		const libraryRoot = settings.splitPathToLibraryRoot.basename;
 		const rootSplitPath = makeSplitPath(libraryRoot);

@@ -5,7 +5,7 @@ import type {
 } from "../../../obsidian-vault-action-manager/types/split-path";
 import { SplitPathType } from "../../../obsidian-vault-action-manager/types/split-path";
 import { extractMetaInfo } from "../../../services/dto-services/meta-info-manager/interface";
-import { LibraryTree } from "../library-tree";
+import { LibraryTreeDeprecated } from "../library-tree";
 import { tryParseJoinedSuffixedBasenameForCodex } from "../naming/codecs/atomic/parsers";
 import { TreeNodeStatus } from "../types/tree-node";
 import { splitPathToLeafDeprecated } from "../utils/split-path-to-leaf";
@@ -21,7 +21,7 @@ export async function readTreeFromSplitFilesWithReaders({
 }: {
 	splitPathToLibraryRoot: SplitPathToFolder;
 	files: SplitPathWithReader[];
-}): Promise<Result<LibraryTree, string>> {
+}): Promise<Result<LibraryTreeDeprecated, string>> {
 	if (splitPathToLibraryRoot.type !== SplitPathType.Folder) {
 		return err(
 			`Library root is not a folder: ${splitPathToLibraryRoot.basename}`,
@@ -59,5 +59,5 @@ export async function readTreeFromSplitFilesWithReaders({
 		}),
 	);
 
-	return ok(new LibraryTree(leaves));
+	return ok(new LibraryTreeDeprecated(leaves));
 }

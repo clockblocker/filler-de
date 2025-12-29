@@ -1,5 +1,5 @@
 import { getParsedUserSettings } from "../../../global-state/global-state";
-import type { LibraryTree } from "../library-tree";
+import type { LibraryTreeDeprecated } from "../library-tree";
 import type { NodeNameChain } from "../types/schemas/node-name";
 import type { SectionNode } from "../types/tree-node";
 import { TreeNodeType } from "../types/tree-node";
@@ -9,7 +9,9 @@ import { TreeNodeType } from "../types/tree-node";
  * Pure function that takes tree and returns all section chains.
  * Chains include library root.
  */
-export function collectAllSectionChains(tree: LibraryTree): NodeNameChain[] {
+export function collectAllSectionChains(
+	tree: LibraryTreeDeprecated,
+): NodeNameChain[] {
 	const {
 		splitPathToLibraryRoot: { basename: libraryRoot },
 	} = getParsedUserSettings();

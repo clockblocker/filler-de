@@ -12,7 +12,7 @@ import {
 	flattenActionResult,
 } from "../codex/impacted-chains";
 import { detectRenameMode } from "../healing";
-import type { LibraryTree } from "../library-tree";
+import type { LibraryTreeDeprecated } from "../library-tree";
 import { translateVaultAction } from "../reconciliation/vault-to-tree";
 import { TreeActionType } from "../types/literals";
 import type { NodeNameChain } from "../types/schemas/node-name";
@@ -28,10 +28,10 @@ import {
 /** @deprecated  */
 export type EventHandlerContextDeprecated = {
 	dispatch: (actions: VaultAction[]) => Promise<unknown>;
-	readTree: () => Promise<LibraryTree>;
-	setTree: (tree: LibraryTree) => void;
+	readTree: () => Promise<LibraryTreeDeprecated>;
+	setTree: (tree: LibraryTreeDeprecated) => void;
 	makeSplitPath: (path: string) => SplitPath;
-	tree: LibraryTree;
+	tree: LibraryTreeDeprecated;
 	listAllFilesWithMdReaders: (
 		splitPath: import("../../../obsidian-vault-action-manager/types/split-path").SplitPathToFolder,
 	) => Promise<

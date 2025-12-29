@@ -5,15 +5,16 @@ import type { ObsidianVaultActionManager } from "../../obsidian-vault-action-man
 import { logger } from "../../utils/logger";
 import { tryParseAsIntendedTreeNode } from "./codex/content/intended-tree-node-and-codex-line";
 import { CodexLineType } from "./codex/content/schema/literals";
-import type { Librarian } from "./librarian";
+import type { LibrarianDeprecated } from "./librarian";
 import { CODEX_CORE_NAME } from "./types/literals";
 import type { NodeNameChain } from "./types/schemas/node-name";
 
 /**
  * Handle codex checkbox click.
  * Parses link target, converts to nodeNameChain, calls setStatus.
+ * @deprecated handleCodexCheckboxClick is being fully rewritten. Use new implementation when available.
  */
-export async function handleCodexCheckboxClick({
+export async function handleCodexCheckboxClickDeprecated({
 	checkbox,
 	vaultActionManager,
 	librarian,
@@ -21,7 +22,7 @@ export async function handleCodexCheckboxClick({
 }: {
 	checkbox: HTMLInputElement;
 	vaultActionManager: ObsidianVaultActionManager;
-	librarian: Librarian;
+	librarian: LibrarianDeprecated;
 	app: App;
 }): Promise<boolean> {
 	const pwdResult = await vaultActionManager.pwd();
@@ -94,8 +95,9 @@ function tryParseAsClickableNode(
 
 /**
  * Check if element is a task checkbox.
+ * @deprecated isTaskCheckbox is being fully rewritten. Use new implementation when available.
  */
-export function isTaskCheckbox(
+export function isTaskCheckboxDeprecated(
 	element: HTMLElement,
 ): element is HTMLInputElement {
 	return (

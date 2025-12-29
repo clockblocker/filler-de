@@ -19,7 +19,10 @@ import {
 } from "./types/tree-node";
 import { joinPathParts } from "./utils/tree-path-utils";
 
-export class LibraryTree {
+/**
+ * @deprecated LibraryTree is being fully rewritten. Use new implementation when available.
+ */
+export class LibraryTreeDeprecated {
 	private root: SectionNode;
 	private nodeMap: Map<string, TreeNode> = new Map();
 
