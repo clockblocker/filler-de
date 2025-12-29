@@ -1,5 +1,5 @@
 import z from "zod";
-import { CREATE, FILE, FOLDER, RENAME, TRASH } from "./literals";
+import { CREATE, DELETE, FILE, FOLDER, RENAME } from "./literals";
 import type {
 	SplitPathToFile,
 	SplitPathToFolder,
@@ -9,10 +9,10 @@ import type {
 const VaultEventTypeSchema = z.enum([
 	`${FILE}${CREATE}d`,
 	`${FILE}${RENAME}d`,
-	`${FILE}${TRASH}ed`,
+	`${FILE}${DELETE}d`,
 	`${FOLDER}${CREATE}d`,
 	`${FOLDER}${RENAME}d`,
-	`${FOLDER}${TRASH}ed`,
+	`${FOLDER}${DELETE}d`,
 ] as const);
 
 export const VaultEventType = VaultEventTypeSchema.enum;
@@ -29,7 +29,7 @@ export type VaultEvent =
 			to: SplitPathToFile | SplitPathToMdFile;
 	  }
 	| {
-			type: typeof VaultEventType.FileTrashed;
+			type: typeof VaultEventType.FileDeleted;
 			splitPath: SplitPathToFile | SplitPathToMdFile;
 	  }
 	| {
@@ -42,6 +42,6 @@ export type VaultEvent =
 			to: SplitPathToFolder;
 	  }
 	| {
-			type: typeof VaultEventType.FolderTrashed;
+			type: typeof VaultEventType.FolderDeleted;
 			splitPath: SplitPathToFolder;
 	  };

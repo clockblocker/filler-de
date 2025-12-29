@@ -3,7 +3,7 @@ import { type VaultEvent, VaultEventType } from "../../../types/vault-event";
 import type { SelfEventTracker } from "../self-event-tracker";
 import {
 	makeVaultEventForFileCreated,
-	makeVaultEventForFileTrashed,
+	makeVaultEventForFileDeleted,
 	tryMakeVaultEventForFileRenamed,
 } from "../vault-events-for-events";
 import { BulkEventAccumulator } from "./batteries/event-accumulator";
@@ -121,7 +121,7 @@ export class BulkEventEmmiter {
 
 	private onDelete(tAbstractFile: TAbstractFile): void {
 		if (this.selfEventTracker.shouldIgnore(tAbstractFile.path)) return;
-		this.push(makeVaultEventForFileTrashed(tAbstractFile));
+		this.push(makeVaultEventForFileDeleted(tAbstractFile));
 	}
 }
 
@@ -142,8 +142,8 @@ function countEvents(events: VaultEvent[]) {
 				creates++;
 				break;
 
-			case VaultEventType.FileTrashed:
-			case VaultEventType.FolderTrashed:
+			case VaultEventType.FileDeleted:
+			case VaultEventType.FolderDeleted:
 				deletes++;
 				break;
 		}

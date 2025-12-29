@@ -3,7 +3,7 @@ import type { VaultEventHandler } from "../../index";
 import type { SelfEventTracker } from "./self-event-tracker";
 import {
 	makeVaultEventForFileCreated,
-	makeVaultEventForFileTrashed,
+	makeVaultEventForFileDeleted,
 	tryMakeVaultEventForFileRenamed,
 } from "./vault-events-for-events";
 
@@ -23,7 +23,7 @@ export class SingleEventEmmiter {
 			this.emitFileRenamed(file, oldPath, handler),
 		);
 		const onDelete = this.app.vault.on("delete", (file) =>
-			this.emitFileTrashed(file, handler),
+			this.emitFileDeleted(file, handler),
 		);
 		this.listeners.push(
 			() => this.app.vault.offref(onCreate),
@@ -65,7 +65,7 @@ export class SingleEventEmmiter {
 		void handler(res.value);
 	}
 
-	private emitFileTrashed(
+	private emitFileDeleted(
 		tAbstractFile: TAbstractFile,
 		handler: VaultEventHandler,
 	): void {
@@ -73,6 +73,6 @@ export class SingleEventEmmiter {
 			return;
 		}
 
-		void handler(makeVaultEventForFileTrashed(tAbstractFile));
+		void handler(makeVaultEventForFileDeleted(tAbstractFile));
 	}
 }

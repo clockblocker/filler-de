@@ -46,19 +46,19 @@ export function tryMakeVaultEventForFileRenamed(
 	return err(EventProcessingErrorMessage.MixedFolderFileRename);
 }
 
-export function makeVaultEventForFileTrashed(
+export function makeVaultEventForFileDeleted(
 	tAbstractFile: TAbstractFile,
 ): VaultEvent {
 	const split = makeSplitPath(tAbstractFile);
 	if (split.type === "Folder") {
 		return {
 			splitPath: split,
-			type: "FolderTrashed",
+			type: "FolderDeleted",
 		};
 	}
 
 	return {
 		splitPath: split,
-		type: "FileTrashed",
+		type: "FileDeleted",
 	};
 }

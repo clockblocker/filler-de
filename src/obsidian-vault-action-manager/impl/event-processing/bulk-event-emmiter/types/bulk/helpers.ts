@@ -12,13 +12,13 @@ export function isRename(e: VaultEvent): e is RenameVaultEvent {
 }
 
 export type TrashVaultEvent =
-	| Extract<VaultEvent, { type: typeof VaultEventType.FileTrashed }>
-	| Extract<VaultEvent, { type: typeof VaultEventType.FolderTrashed }>;
+	| Extract<VaultEvent, { type: typeof VaultEventType.FileDeleted }>
+	| Extract<VaultEvent, { type: typeof VaultEventType.FolderDeleted }>;
 
 export function isDelete(e: VaultEvent): e is TrashVaultEvent {
 	return (
-		e.type === VaultEventType.FileTrashed ||
-		e.type === VaultEventType.FolderTrashed
+		e.type === VaultEventType.FileDeleted ||
+		e.type === VaultEventType.FolderDeleted
 	);
 }
 

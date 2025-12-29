@@ -9,6 +9,10 @@ export const RenameSchema = z.literal("Rename");
 export type RENAME = z.infer<typeof RenameSchema>;
 export const RENAME = RenameSchema.value;
 
+export const DeleteSchema = z.literal("Delete");
+export type DELETE = z.infer<typeof DeleteSchema>;
+export const DELETE = DeleteSchema.value;
+
 export const TrashSchema = z.literal("Trash");
 export type TRASH = z.infer<typeof TrashSchema>;
 export const TRASH = TrashSchema.value;

@@ -72,7 +72,7 @@ export type BulkVaultEvent = {
 	 * - A `FolderRenamed` root implies that all descendant paths were renamed.
 	 * - Descendant rename events MUST NOT be treated as independent user intent.
 	 * - `FileRenamed` roots represent standalone renames not covered by any folder root.
-	 * - `FileTrashed` / `FolderTrashed` roots (if present) represent top-level deletions.
+	 * - `FileDeleted` / `FolderDeleted` roots (if present) represent top-level deletions.
 	 *
 	 * Downstream consumers (e.g. LibraryTree) should base their logic on `roots`,
 	 * not on the full `events` list.
@@ -144,7 +144,7 @@ export type BulkVaultEvent = {
 			rootRenames: number;
 
 			/**
-			 * Number of delete root events (FileTrashed / FolderTrashed)
+			 * Number of delete root events (FileDeleted / FolderDeleted)
 			 * that represent top-level deletions not implied by another root.
 			 */
 			rootDeletes: number;

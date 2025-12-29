@@ -92,14 +92,14 @@ export function parseEventToHandlerDeprecared(event: VaultEvent): {
 		};
 	}
 
-	if (event.type === "FileTrashed" || event.type === "FolderTrashed") {
+	if (event.type === "FileDeleted" || event.type === "FolderDeleted") {
 		const path = systemPathFromSplitPathInternal(event.splitPath);
 		// Only handle events within library
 		if (!path.startsWith(`${libraryRoot}/`)) {
 			return null;
 		}
 		return {
-			isFolder: event.type === "FolderTrashed",
+			isFolder: event.type === "FolderDeleted",
 			path,
 			type: "delete",
 		};
