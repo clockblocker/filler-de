@@ -2,6 +2,7 @@ import type { Result } from "neverthrow";
 import type { TFile, TFolder } from "obsidian";
 import { z } from "zod";
 import type { DispatchResult } from "./impl/dispatcher";
+import type { BulkVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk/bulk-vault-event";
 import {
 	makeSplitPath,
 	makeSystemPathForSplitPath,
@@ -16,16 +17,20 @@ import type {
 import type { VaultAction } from "./types/vault-action";
 import type { VaultEvent } from "./types/vault-event";
 
-export type { BulkVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk-vault-event";
+export type { BulkVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk/bulk-vault-event";
 export { type VaultEvent, VaultEventType } from "./types/vault-event";
 
 export type VaultEventHandler = (event: VaultEvent) => Promise<void>;
+export type BulkVaultEventHandler = (event: BulkVaultEvent) => Promise<void>;
 
 export type Teardown = () => void;
 
 export interface ObsidianVaultActionManager {
 	startListening(): void;
-	subscribe(handler: VaultEventHandler): Teardown;
+
+	subscribeToSingle(handler: VaultEventHandler): Teardown;
+	subscribeToBulk(handler: BulkVaultEventHandler): Teardown;
+
 	dispatch(actions: readonly VaultAction[]): Promise<DispatchResult>;
 
 	// Read-only operations

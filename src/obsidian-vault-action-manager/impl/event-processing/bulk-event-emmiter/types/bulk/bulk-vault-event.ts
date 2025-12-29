@@ -1,14 +1,10 @@
-import type { VaultEvent, VaultEventType } from "../../../..";
-
-type RenameVaultEvent =
-	| Extract<VaultEvent, { type: typeof VaultEventType.FileRenamed }>
-	| Extract<VaultEvent, { type: typeof VaultEventType.FolderRenamed }>;
-
-type DeleteVaultEvent =
-	| Extract<VaultEvent, { type: typeof VaultEventType.FileTrashed }>
-	| Extract<VaultEvent, { type: typeof VaultEventType.FolderTrashed }>;
+import type { VaultEvent } from "../../../../..";
+import type { PossibleRootVaultEvent } from "./helpers";
 
 export type BulkVaultEvent = {
+	/**
+	 * Minimally collapsed vault events that were triggered by the user during this bulk operation.
+	 */
 	events: VaultEvent[];
 
 	/**
@@ -81,7 +77,7 @@ export type BulkVaultEvent = {
 	 * Downstream consumers (e.g. LibraryTree) should base their logic on `roots`,
 	 * not on the full `events` list.
 	 */
-	roots: Array<RenameVaultEvent | DeleteVaultEvent>;
+	roots: Array<PossibleRootVaultEvent>;
 
 	/**
 	 * Diagnostic metadata describing how raw vault events were normalized
@@ -111,7 +107,7 @@ export type BulkVaultEvent = {
 		trueCount: {
 			renames: number;
 			creates: number;
-			deletes: number;
+			trashes: number;
 		};
 
 		/**

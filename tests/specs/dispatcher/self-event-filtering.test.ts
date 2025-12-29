@@ -14,7 +14,7 @@ export const testSelfEventFiltering = async () => {
 
 		// Subscribe to events
 		const eventsReceived: Array<{ type: string; path?: string }> = [];
-		const teardown = manager.subscribe(async (event) => {
+		const teardown = manager.subscribeToSingle(async (event) => {
 			eventsReceived.push({
 				path: "splitPath" in event ? event.splitPath.basename : undefined,
 				type: event.type,

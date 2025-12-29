@@ -33,7 +33,7 @@ export class Librarian {
 	 * Converts VaultEvent to librarian handler calls.
 	 */
 	private subscribeToVaultEvents(): void {
-		this.eventTeardown = this.vaultActionManager.subscribe(
+		this.eventTeardown = this.vaultActionManager.subscribeToSingle(
 			async (event: VaultEvent) => {
 				logger.info("event", JSON.stringify({ type: event.type }));
 			},

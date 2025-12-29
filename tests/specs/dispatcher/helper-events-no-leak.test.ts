@@ -19,7 +19,7 @@ export const testCreateFileWithMissingParentFolders = async () => {
 
 		// Subscribe to events
 		const eventsReceived: Array<{ type: string; path?: string; fullPath?: string }> = [];
-		const teardown = manager.subscribe(async (event) => {
+		const teardown = manager.subscribeToSingle(async (event) => {
 			eventsReceived.push({
 				fullPath: "splitPath" in event ? JSON.stringify(event.splitPath) : undefined,
 				path: "splitPath" in event ? event.splitPath.basename : undefined,
@@ -86,7 +86,7 @@ export const testCreateFolderWithMissingParents = async () => {
 
 		// Subscribe to events
 		const eventsReceived: Array<{ type: string; path?: string }> = [];
-		const teardown = manager.subscribe(async (event) => {
+		const teardown = manager.subscribeToSingle(async (event) => {
 			eventsReceived.push({
 				path: "splitPath" in event ? event.splitPath.basename : undefined,
 				type: event.type,
@@ -141,7 +141,7 @@ export const testUpsertMdFileWithEnsureFileExists = async () => {
 
 		// Subscribe to events
 		const eventsReceived: Array<{ type: string; path?: string }> = [];
-		const teardown = manager.subscribe(async (event) => {
+		const teardown = manager.subscribeToSingle(async (event) => {
 			eventsReceived.push({
 				path: "splitPath" in event ? event.splitPath.basename : undefined,
 				type: event.type,
@@ -200,7 +200,7 @@ export const testUpsertMdFileWithMissingParentFolders = async () => {
 
 		// Subscribe to events
 		const eventsReceived: Array<{ type: string; path?: string }> = [];
-		const teardown = manager.subscribe(async (event) => {
+		const teardown = manager.subscribeToSingle(async (event) => {
 			eventsReceived.push({
 				path: "splitPath" in event ? event.splitPath.basename : undefined,
 				type: event.type,
@@ -259,7 +259,7 @@ export const testMultipleNestedOperations = async () => {
 
 		// Subscribe to events
 		const eventsReceived: Array<{ type: string; path?: string }> = [];
-		const teardown = manager.subscribe(async (event) => {
+		const teardown = manager.subscribeToSingle(async (event) => {
 			eventsReceived.push({
 				path: "splitPath" in event ? event.splitPath.basename : undefined,
 				type: event.type,

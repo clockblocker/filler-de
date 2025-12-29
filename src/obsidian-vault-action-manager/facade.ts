@@ -7,6 +7,7 @@ import { TFileHelper } from "./file-services/background/helpers/tfile-helper";
 import { TFolderHelper } from "./file-services/background/helpers/tfolder-helper";
 import { ActionQueue } from "./impl/action-queue";
 import { Dispatcher, type ExistenceChecker } from "./impl/dispatcher";
+import type { BulkEventEmmiter } from "./impl/event-processing/bulk-event-emmiter/bulk-event-emmiter";
 import { SelfEventTracker } from "./impl/event-processing/self-event-tracker";
 import { SingleEventEmmiter } from "./impl/event-processing/single-event-emmiter";
 import { Executor } from "./impl/executor";
@@ -34,9 +35,15 @@ export class ObsidianVaultActionManagerImpl
 	private readonly dispatcher: Dispatcher;
 	private readonly selfEventTracker: SelfEventTracker;
 	private readonly actionQueue: ActionQueue;
-	private readonly eventAdapter: SingleEventEmmiter;
+	private readonly singleEventEmmiter: SingleEventEmmiter;
 	private readonly subscribers = new Set<VaultEventHandler>();
-	private isListening = false;
+
+	private readonly bulkEventEmmiter: BulkEventEmmiter;
+	private readonly bulkSubscribers = new Set<BulkWindowHandler>();
+
+	private isSingleListening = false;
+	private isBulkListening = false;
+	private listeningRequested = false;
 
 	constructor(app: App) {
 		const openedFileReader = new OpenedFileReader(app);
@@ -78,30 +85,67 @@ export class ObsidianVaultActionManagerImpl
 			existenceChecker,
 		);
 		this.actionQueue = new ActionQueue(this.dispatcher);
-		this.eventAdapter = new SingleEventEmmiter(app, this.selfEventTracker);
+		this.singleEventEmmiter = new SingleEventEmmiter(
+			app,
+			this.selfEventTracker,
+		);
 	}
 
 	startListening(): void {
-		if (this.isListening) return;
-		this.isListening = true;
-		this.eventAdapter.start(async (event) => {
-			for (const handel of this.subscribers) {
-				await handel(event);
-			}
+		this.listeningRequested = true;
+
+		// If subscriptions already exist, start immediately.
+		if (this.subscribers.size > 0) this.startSingleIfNeeded();
+		if (this.bulkSubscribers.size > 0) this.startBulkIfNeeded();
+	}
+
+	private startSingleIfNeeded() {
+		if (this.isSingleListening) return;
+		this.isSingleListening = true;
+		this.singleEventEmmiter.start(async (event) => {
+			for (const h of this.subscribers) await h(event);
 		});
 	}
 
-	subscribe(handler: VaultEventHandler): Teardown {
+	private stopSingleIfNeeded() {
+		if (!this.isSingleListening) return;
+		if (this.subscribers.size > 0) return;
+		this.singleEventEmmiter.stop();
+		this.isSingleListening = false;
+	}
+
+	private startBulkIfNeeded() {
+		if (this.isBulkListening) return;
+		this.isBulkListening = true;
+		this.bulkEventEmmiter.start(async (window) => {
+			for (const h of this.bulkSubscribers) await h(window);
+		});
+	}
+
+	private stopBulkIfNeeded() {
+		if (!this.isBulkListening) return;
+		if (this.bulkSubscribers.size > 0) return;
+		this.bulkEventEmmiter.stop();
+		this.isBulkListening = false;
+	}
+
+	subscribeToSingle(handler: VaultEventHandler): Teardown {
 		this.subscribers.add(handler);
-		if (!this.isListening) {
-			this.startListening();
-		}
+		if (this.listeningRequested) this.startSingleIfNeeded();
+
 		return () => {
 			this.subscribers.delete(handler);
-			if (this.subscribers.size === 0) {
-				this.eventAdapter.stop();
-				this.isListening = false;
-			}
+			this.stopSingleIfNeeded();
+		};
+	}
+
+	subscribeToBulk(handler: BulkWindowHandler): Teardown {
+		this.bulkSubscribers.add(handler);
+		if (this.listeningRequested) this.startBulkIfNeeded();
+
+		return () => {
+			this.bulkSubscribers.delete(handler);
+			this.stopBulkIfNeeded();
 		};
 	}
 
