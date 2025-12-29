@@ -6,7 +6,6 @@ import {
 	makeSplitPath,
 	makeSystemPathForSplitPath,
 } from "./impl/split-path-and-system-path";
-import { CREATE, FILE, FOLDER, RENAME, TRASH } from "./types/literals";
 import type {
 	SplitPath,
 	SplitPathToFile,
@@ -15,48 +14,10 @@ import type {
 	SplitPathWithReader,
 } from "./types/split-path";
 import type { VaultAction } from "./types/vault-action";
-
-export const VaultEventTypeSchema = z.enum([
-	`${FILE}${CREATE}d`,
-	`${FILE}${RENAME}d`,
-	`${FILE}${TRASH}ed`,
-	`${FOLDER}${CREATE}d`,
-	`${FOLDER}${RENAME}d`,
-	`${FOLDER}${TRASH}ed`,
-] as const);
-
-export const VaultEventType = VaultEventTypeSchema.enum;
-export type VaultEventType = z.infer<typeof VaultEventTypeSchema>;
-
-export type VaultEvent =
-	| {
-			type: typeof VaultEventType.FileCreated;
-			splitPath: SplitPathToFile | SplitPathToMdFile;
-	  }
-	| {
-			type: typeof VaultEventType.FileRenamed;
-			from: SplitPathToFile | SplitPathToMdFile;
-			to: SplitPathToFile | SplitPathToMdFile;
-	  }
-	| {
-			type: typeof VaultEventType.FileTrashed;
-			splitPath: SplitPathToFile | SplitPathToMdFile;
-	  }
-	| {
-			type: typeof VaultEventType.FolderCreated;
-			splitPath: SplitPathToFolder;
-	  }
-	| {
-			type: typeof VaultEventType.FolderRenamed;
-			from: SplitPathToFolder;
-			to: SplitPathToFolder;
-	  }
-	| {
-			type: typeof VaultEventType.FolderTrashed;
-			splitPath: SplitPathToFolder;
-	  };
+import type { VaultEvent } from "./types/vault-event";
 
 export type { BulkVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk-vault-event";
+export { type VaultEvent, VaultEventType } from "./types/vault-event";
 
 export type VaultEventHandler = (event: VaultEvent) => Promise<void>;
 
