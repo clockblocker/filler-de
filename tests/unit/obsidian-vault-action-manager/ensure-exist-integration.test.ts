@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
-import { collapseActions } from "../../../src/obsidian-vault-action-manager/impl/collapse";
-import { buildDependencyGraph } from "../../../src/obsidian-vault-action-manager/impl/dependency-detector";
-import { topologicalSort } from "../../../src/obsidian-vault-action-manager/impl/topological-sort";
+import { collapseActions } from "../../../src/obsidian-vault-action-manager/impl/actions-processing/collapse";
+import { buildDependencyGraph } from "../../../src/obsidian-vault-action-manager/impl/actions-processing/dependency-detector";
+import { topologicalSort } from "../../../src/obsidian-vault-action-manager/impl/actions-processing/topological-sort";
 import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,

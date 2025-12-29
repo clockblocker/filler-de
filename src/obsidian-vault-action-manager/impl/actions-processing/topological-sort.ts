@@ -1,6 +1,6 @@
-import type { DependencyGraph } from "../types/dependency";
-import type { VaultAction } from "../types/vault-action";
-import { getActionKey, VaultActionType } from "../types/vault-action";
+import type { DependencyGraph } from "../../types/dependency";
+import type { VaultAction } from "../../types/vault-action";
+import { getActionKey, VaultActionType } from "../../types/vault-action";
 
 /**
  * Topological sort using Kahn's algorithm.

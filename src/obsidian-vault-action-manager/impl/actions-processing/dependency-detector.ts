@@ -1,11 +1,11 @@
-import type { ActionDependency, DependencyGraph } from "../types/dependency";
-import type { SplitPathToFolder } from "../types/split-path";
-import type { VaultAction } from "../types/vault-action";
+import type { ActionDependency, DependencyGraph } from "../../types/dependency";
+import type { SplitPathToFolder } from "../../types/split-path";
+import type { VaultAction } from "../../types/vault-action";
 import {
 	coreSplitPathToKey,
 	getActionKey,
 	VaultActionType,
-} from "../types/vault-action";
+} from "../../types/vault-action";
 
 /**
  * Build dependency graph from actions.

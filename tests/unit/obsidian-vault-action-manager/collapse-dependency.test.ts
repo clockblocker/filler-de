@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { collapseActions } from "../../../src/obsidian-vault-action-manager/impl/collapse";
-import { buildDependencyGraph } from "../../../src/obsidian-vault-action-manager/impl/dependency-detector";
+import { collapseActions } from "../../../src/obsidian-vault-action-manager/impl/actions-processing/collapse";
+import { buildDependencyGraph } from "../../../src/obsidian-vault-action-manager/impl/actions-processing/dependency-detector";
 import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,

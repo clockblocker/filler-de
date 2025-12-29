@@ -3,18 +3,17 @@ import type {
 	SplitPath,
 	SplitPathToFolder,
 	SplitPathToMdFile,
-} from "../types/split-path";
-import type { VaultAction } from "../types/vault-action";
-import { VaultActionType } from "../types/vault-action";
+} from "../../types/split-path";
+import { type VaultAction, VaultActionType } from "../../types/vault-action";
+import type { SelfEventTracker } from "../event-processing/self-event-tracker";
+import { makeSplitPath } from "../split-path-and-system-path";
 import { collapseActions } from "./collapse";
 import { buildDependencyGraph } from "./dependency-detector";
 import {
 	ensureDestinationsExist,
 	getDestinationsToCheck,
 } from "./ensure-requirements-helpers";
-import type { SelfEventTracker } from "./event-processing/self-event-tracker";
 import type { Executor } from "./executor";
-import { makeSplitPath } from "./split-path-and-system-path";
 import { topologicalSort } from "./topological-sort";
 
 export type DispatchResult = Result<void, DispatchError[]>;

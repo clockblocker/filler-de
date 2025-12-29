@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { collapseActions } from "../../../src/obsidian-vault-action-manager/impl/collapse";
+import { collapseActions } from "../../../src/obsidian-vault-action-manager/impl/actions-processing/collapse";
 import type { SplitPathToMdFile } from "../../../src/obsidian-vault-action-manager/types/split-path";
 import { VaultActionType } from "../../../src/obsidian-vault-action-manager/types/vault-action";
 

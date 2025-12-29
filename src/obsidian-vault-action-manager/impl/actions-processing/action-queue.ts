@@ -1,5 +1,5 @@
 import { ok } from "neverthrow";
-import type { VaultAction } from "../types/vault-action";
+import type { VaultAction } from "../../types/vault-action";
 import type { Dispatcher, DispatchResult } from "./dispatcher";
 
 /**

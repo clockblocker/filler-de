@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { buildDependencyGraph } from "../../../src/obsidian-vault-action-manager/impl/dependency-detector";
+import { buildDependencyGraph } from "../../../src/obsidian-vault-action-manager/impl/actions-processing/dependency-detector";
 import type {
 	SplitPathToFile,
 	SplitPathToFolder,

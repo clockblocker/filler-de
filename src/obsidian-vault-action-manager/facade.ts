@@ -5,12 +5,13 @@ import type { OpenedFileService } from "./file-services/active-view/opened-file-
 import { OpenedFileService as OpenedFileServiceImpl } from "./file-services/active-view/opened-file-service";
 import { TFileHelper } from "./file-services/background/helpers/tfile-helper";
 import { TFolderHelper } from "./file-services/background/helpers/tfolder-helper";
-import { ActionQueue } from "./impl/action-queue";
-import { Dispatcher, type ExistenceChecker } from "./impl/dispatcher";
+import { ActionQueue } from "./impl/actions-processing/action-queue";
+import type { ExistenceChecker } from "./impl/actions-processing/dispatcher";
+import { Dispatcher } from "./impl/actions-processing/dispatcher";
+import { Executor } from "./impl/actions-processing/executor";
 import { BulkEventEmmiter } from "./impl/event-processing/bulk-event-emmiter/bulk-event-emmiter";
 import { SelfEventTracker } from "./impl/event-processing/self-event-tracker";
 import { SingleEventEmmiter } from "./impl/event-processing/single-event-emmiter";
-import { Executor } from "./impl/executor";
 import { Reader } from "./impl/reader";
 import type {
 	BulkVaultEventHandler,

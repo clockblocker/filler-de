@@ -1,9 +1,12 @@
-import { pathToFolderFromPathParts } from "../helpers/pathfinder";
-import type { SplitPathToFolder, SplitPathToMdFile } from "../types/split-path";
-import type { VaultAction } from "../types/vault-action";
-import { VaultActionType } from "../types/vault-action";
+import { pathToFolderFromPathParts } from "../../helpers/pathfinder";
+import type {
+	SplitPathToFolder,
+	SplitPathToMdFile,
+} from "../../types/split-path";
+import type { VaultAction } from "../../types/vault-action";
+import { VaultActionType } from "../../types/vault-action";
+import { makeSystemPathForSplitPath } from "../split-path-and-system-path";
 import type { ExistenceChecker } from "./dispatcher";
-import { makeSystemPathForSplitPath } from "./split-path-and-system-path";
 
 /**
  * Collect trash paths from actions.

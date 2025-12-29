@@ -1,7 +1,6 @@
 import type { Result } from "neverthrow";
 import type { TFile, TFolder } from "obsidian";
-import { z } from "zod";
-import type { DispatchResult } from "./impl/dispatcher";
+import type { DispatchResult } from "./impl/actions-processing/dispatcher";
 import type { BulkVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk/bulk-vault-event";
 import {
 	makeSplitPath,
@@ -52,4 +51,7 @@ export { makeSystemPathForSplitPath };
 export { makeSplitPath };
 
 export { ObsidianVaultActionManagerImpl } from "./facade";
-export type { DispatchError, DispatchResult } from "./impl/dispatcher";
+export type {
+	DispatchError,
+	DispatchResult,
+} from "./impl/actions-processing/dispatcher";
