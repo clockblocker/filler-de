@@ -49,11 +49,11 @@ export {
 /**
  * @deprecated Librarian is being fully rewritten. Use new implementation when available.
  */
-export { LibrarianDeprecated as Librarian } from "./librarian";
+export { LibrarianDeprecated } from "./librarian";
 /**
  * @deprecated LibraryTree is being fully rewritten. Use new implementation when available.
  */
-export { LibraryTreeDeprecated as LibraryTree } from "./library-tree";
+export { LibraryTreeDeprecated } from "./library-tree";
 /**
  * @deprecated DragInSubtype is being fully rewritten. Use new implementation when available.
  */

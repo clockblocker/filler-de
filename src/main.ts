@@ -4,11 +4,11 @@ import {
 	Plugin,
 	type WorkspaceLeaf,
 } from "obsidian";
-import { Librarian, LibraryTree } from "./commanders/librarian-old";
+import { Librarian, LibraryTree } from "./commanders/librarian-new";
 import {
-	handleCodexCheckboxClick,
-	isTaskCheckbox,
-} from "./commanders/librarian-old/handle-codex-checkbox-click";
+	LibrarianDeprecated,
+	LibraryTreeDeprecated,
+} from "./commanders/librarian-old";
 import { clearState, initializeState } from "./global-state/global-state";
 import {
 	makeSplitPath,
@@ -203,20 +203,19 @@ export default class TextEaterPlugin extends Plugin {
 
 		// Codex checkbox click listener
 		this.registerDomEvent(document, "click", async (evt: MouseEvent) => {
-			const target = evt.target as HTMLElement;
-			if (isTaskCheckbox(target) && this.librarian) {
-				const handled = await handleCodexCheckboxClick({
-					app: this.app,
-					checkbox: target,
-					librarian: this.librarian,
-					vaultActionManager: this.vaultActionManager,
-				});
-
-				if (handled) {
-					evt.preventDefault();
-					evt.stopPropagation();
-				}
-			}
+			// const target = evt.target as HTMLElement;
+			// if (isTaskCheckbox(target) && this.librarian) {
+			// 	const handled = await handleCodexCheckboxClick({
+			// 		app: this.app,
+			// 		checkbox: target,
+			// 		librarian: this.librarian,
+			// 		vaultActionManager: this.vaultActionManager,
+			// 	});
+			// 	if (handled) {
+			// 		evt.preventDefault();
+			// 		evt.stopPropagation();
+			// 	}
+			// }
 		});
 
 		this.bottomToolbarService = new BottomToolbarService(this.app);
@@ -542,11 +541,11 @@ export default class TextEaterPlugin extends Plugin {
 	}
 
 	getLibrarianClass() {
-		return Librarian;
+		return LibrarianDeprecated;
 	}
 
 	getLibraryTreeClass() {
-		return LibraryTree;
+		return LibraryTreeDeprecated;
 	}
 
 	getExtractMetaInfo() {

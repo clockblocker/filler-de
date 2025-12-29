@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import type { TFolder } from "obsidian";
-import { LibraryTree } from "../../../../src/commanders/librarian-old/library-tree";
+import { LibraryTreeDeprecated } from "../../../../src/commanders/librarian-old/library-tree";
 import { TreeActionType } from "../../../../src/commanders/librarian-old/types/literals";
 import type { TreeLeaf } from "../../../../src/commanders/librarian-old/types/tree-node";
 import {
@@ -18,6 +18,7 @@ const defaultSettings: ParsedUserSettings = {
 	apiProvider: "google",
 	googleApiKey: "",
 	maxSectionDepth: 6,
+	showScrollsInCodexesForDepth: 0,
 	splitPathToLibraryRoot: {
 		basename: "Library",
 		pathParts: [],
@@ -52,14 +53,14 @@ const createScrollLeaf = (
 	type: TreeNodeType.Scroll,
 });
 
-describe("LibraryTree MoveNode", () => {
+describe("LibraryTreeD MoveNode", () => {
 	describe("basic move", () => {
 		it("moves node to new parent", () => {
 			const leaves: TreeLeaf[] = [
 				createScrollLeaf("Note", ["A"]),
 				createScrollLeaf("Other", ["B"]),
 			];
-			const tree = new LibraryTree(leaves, fakeRootFolder);
+			const tree = new LibraryTreeDeprecated(leaves);
 
 			// Move Note from A to B
 			tree.applyTreeAction({
@@ -86,7 +87,7 @@ describe("LibraryTree MoveNode", () => {
 				createScrollLeaf("Note", ["A"]),
 				createScrollLeaf("Other", ["B"]),
 			];
-			const tree = new LibraryTree(leaves, fakeRootFolder);
+			const tree = new LibraryTreeDeprecated(leaves);
 
 			const result = tree.applyTreeAction({
 				payload: {
@@ -103,7 +104,7 @@ describe("LibraryTree MoveNode", () => {
 	describe("creates parent path if needed", () => {
 		it("creates intermediate sections", () => {
 			const leaves: TreeLeaf[] = [createScrollLeaf("Note", ["A"])];
-			const tree = new LibraryTree(leaves, fakeRootFolder);
+			const tree = new LibraryTreeDeprecated(leaves);
 
 			// Move to non-existent path B/C
 			tree.applyTreeAction({
@@ -131,7 +132,7 @@ describe("LibraryTree MoveNode", () => {
 				createScrollLeaf("Note2", ["A", "B"]),
 				createScrollLeaf("Other", ["C"]),
 			];
-			const tree = new LibraryTree(leaves, fakeRootFolder);
+			const tree = new LibraryTreeDeprecated(leaves);
 
 			// Move section B from A to C
 			tree.applyTreeAction({
@@ -167,7 +168,7 @@ describe("LibraryTree MoveNode", () => {
 				createScrollLeaf("NotStartedNote", ["A"], TreeNodeStatus.NotStarted),
 				createScrollLeaf("Other", ["B"]),
 			];
-			const tree = new LibraryTree(leaves, fakeRootFolder);
+			const tree = new LibraryTreeDeprecated(leaves);
 
 			const sectionA = tree.getNode(["Library", "A"]) as SectionNode;
 			expect(sectionA.status).toBe(TreeNodeStatus.NotStarted);
@@ -193,7 +194,7 @@ describe("LibraryTree MoveNode", () => {
 				createScrollLeaf("NotStartedNote", ["A"], TreeNodeStatus.NotStarted),
 				createScrollLeaf("DoneNote", ["B"], TreeNodeStatus.Done),
 			];
-			const tree = new LibraryTree(leaves, fakeRootFolder);
+			const tree = new LibraryTreeDeprecated(leaves);
 
 			const sectionB = tree.getNode(["Library", "B"]) as SectionNode;
 			expect(sectionB.status).toBe(TreeNodeStatus.Done);
@@ -219,7 +220,7 @@ describe("LibraryTree MoveNode", () => {
 				createScrollLeaf("Note", ["A"]),
 				createScrollLeaf("Note", ["B"]), // Same name in B
 			];
-			const tree = new LibraryTree(leaves, fakeRootFolder);
+			const tree = new LibraryTreeDeprecated(leaves);
 
 			expect(() =>
 				tree.applyTreeAction({
@@ -234,7 +235,7 @@ describe("LibraryTree MoveNode", () => {
 
 		it("returns chains if node not found", () => {
 			const leaves: TreeLeaf[] = [createScrollLeaf("Note", ["A"])];
-			const tree = new LibraryTree(leaves, fakeRootFolder);
+			const tree = new LibraryTreeDeprecated(leaves);
 
 			const result = tree.applyTreeAction({
 				payload: {

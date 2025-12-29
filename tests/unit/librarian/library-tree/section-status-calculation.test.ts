@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import type { TFolder } from "obsidian";
-import { LibraryTree } from "../../../../src/commanders/librarian-old/library-tree";
+import { LibraryTreeDeprecated } from "../../../../src/commanders/librarian-old/library-tree";
 import type { TreeLeaf } from "../../../../src/commanders/librarian-old/types/tree-node";
 import {
 	type SectionNode,
@@ -17,6 +17,7 @@ const defaultSettings: ParsedUserSettings = {
 	apiProvider: "google",
 	googleApiKey: "",
 	maxSectionDepth: 6,
+	showScrollsInCodexesForDepth: 0,
 	splitPathToLibraryRoot: {
 		basename: "Library",
 		pathParts: [],
@@ -57,7 +58,7 @@ describe("LibraryTree section status calculation", () => {
 				createScrollLeaf("Note2", ["folder"], TreeNodeStatus.NotStarted),
 			];
 
-			const tree = new LibraryTree(leaves, fakeRootFolder);
+			const tree = new LibraryTreeDeprecated(leaves);
 			const folder = tree.getNode(["Library", "folder"]) as SectionNode;
 
 			expect(folder.status).toBe(TreeNodeStatus.NotStarted);
@@ -69,7 +70,7 @@ describe("LibraryTree section status calculation", () => {
 				createScrollLeaf("Note2", ["folder"], TreeNodeStatus.Done),
 			];
 
-			const tree = new LibraryTree(leaves, fakeRootFolder);
+			const tree = new LibraryTreeDeprecated(leaves);
 			const folder = tree.getNode(["Library", "folder"]) as SectionNode;
 
 			expect(folder.status).toBe(TreeNodeStatus.Done);
@@ -81,7 +82,7 @@ describe("LibraryTree section status calculation", () => {
 				createScrollLeaf("Note2", ["folder"], TreeNodeStatus.NotStarted),
 			];
 
-			const tree = new LibraryTree(leaves, fakeRootFolder);
+			const tree = new LibraryTreeDeprecated(leaves);
 			const folder = tree.getNode(["Library", "folder"]) as SectionNode;
 
 			expect(folder.status).toBe(TreeNodeStatus.NotStarted);
@@ -93,7 +94,7 @@ describe("LibraryTree section status calculation", () => {
 				createScrollLeaf("Note2", ["parent", "child"], TreeNodeStatus.Done),
 			];
 
-			const tree = new LibraryTree(leaves, fakeRootFolder);
+			const tree = new LibraryTreeDeprecated(leaves);
 			const child = tree.getNode(["Library", "parent", "child"]) as SectionNode;
 			const parent = tree.getNode(["Library", "parent"]) as SectionNode;
 
@@ -107,7 +108,7 @@ describe("LibraryTree section status calculation", () => {
 				createScrollLeaf("Note2", ["parent", "notStartedChild"], TreeNodeStatus.NotStarted),
 			];
 
-			const tree = new LibraryTree(leaves, fakeRootFolder);
+			const tree = new LibraryTreeDeprecated(leaves);
 			const doneChild = tree.getNode(["Library", "parent", "doneChild"]) as SectionNode;
 			const notStartedChild = tree.getNode(["Library", "parent", "notStartedChild"]) as SectionNode;
 			const parent = tree.getNode(["Library", "parent"]) as SectionNode;
@@ -129,7 +130,7 @@ describe("LibraryTree section status calculation", () => {
 				},
 			];
 
-			const tree = new LibraryTree(leaves, fakeRootFolder);
+			const tree = new LibraryTreeDeprecated(leaves);
 			const folder = tree.getNode(["Library", "folder"]) as SectionNode;
 
 			expect(folder.status).toBe(TreeNodeStatus.Done);
@@ -140,7 +141,7 @@ describe("LibraryTree section status calculation", () => {
 			// Actually, empty sections aren't created by leaves. Let's test root with no children.
 			const leaves: TreeLeaf[] = [];
 
-			const tree = new LibraryTree(leaves, fakeRootFolder);
+			const tree = new LibraryTreeDeprecated(leaves);
 			const root = tree.getNode([]) as SectionNode; // Empty chain = library root
 
 			expect(root.status).toBe(TreeNodeStatus.Done);
@@ -153,7 +154,7 @@ describe("LibraryTree section status calculation", () => {
 				createScrollLeaf("C", ["w"], TreeNodeStatus.NotStarted),
 			];
 
-			const tree = new LibraryTree(leaves, fakeRootFolder);
+			const tree = new LibraryTreeDeprecated(leaves);
 			const root = tree.getNode([]) as SectionNode; // Empty chain = library root
 
 			expect(root.status).toBe(TreeNodeStatus.NotStarted);
