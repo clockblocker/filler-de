@@ -32,7 +32,7 @@ export class Librarian {
 	private subscribeToVaultEvents(): void {
 		this.eventTeardown = this.vaultActionManager.subscribeToBulk(
 			async (bulk) => {
-				logger.info("bulk", bulk);
+				logger.info("bulk", bulk.debug);
 			},
 		);
 	}

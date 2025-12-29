@@ -1,8 +1,14 @@
 import { type VaultEvent, VaultEventType } from "../../../../..";
 
-export type RenameVaultEvent =
-	| Extract<VaultEvent, { type: typeof VaultEventType.FileRenamed }>
-	| Extract<VaultEvent, { type: typeof VaultEventType.FolderRenamed }>;
+export type FileRenamedVaultEvent = Extract<
+	VaultEvent,
+	{ type: typeof VaultEventType.FileRenamed }
+>;
+export type FolderRenamedVaultEvent = Extract<
+	VaultEvent,
+	{ type: typeof VaultEventType.FolderRenamed }
+>;
+export type RenameVaultEvent = FileRenamedVaultEvent | FolderRenamedVaultEvent;
 
 export function isRename(e: VaultEvent): e is RenameVaultEvent {
 	return (
