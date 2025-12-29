@@ -1,7 +1,6 @@
 // ─── Vault Action Definitions (moved here for platform boundary) ───
 
 import z from "zod";
-import { makeSystemPathForSplitPath } from "../impl/common/split-path-and-system-path";
 import {
 	CREATE,
 	FILE,
@@ -13,7 +12,6 @@ import {
 	UPSERT,
 } from "./literals";
 import type {
-	SplitPath,
 	SplitPathFromTo,
 	SplitPathToFile,
 	SplitPathToFolder,
@@ -97,47 +95,3 @@ export type VaultAction =
 			type: typeof VaultActionType.ProcessMdFile;
 			payload: ProcessMdFilePayload;
 	  };
-
-export function getActionKey(action: VaultAction): string {
-	const { type, payload } = action;
-
-	switch (type) {
-		case VaultActionType.CreateFolder:
-		case VaultActionType.TrashFolder:
-		case VaultActionType.CreateFile:
-		case VaultActionType.TrashFile:
-		case VaultActionType.UpsertMdFile:
-		case VaultActionType.TrashMdFile:
-		case VaultActionType.ProcessMdFile:
-			return `${type}:${coreSplitPathToKey(payload.splitPath)}`;
-
-		case VaultActionType.RenameFolder:
-		case VaultActionType.RenameFile:
-		case VaultActionType.RenameMdFile:
-			return `${type}:${coreSplitPathToKey(payload.from)}`;
-	}
-}
-
-export function getActionTargetPath(action: VaultAction): string {
-	const { type, payload } = action;
-
-	switch (type) {
-		case VaultActionType.CreateFolder:
-		case VaultActionType.TrashFolder:
-		case VaultActionType.CreateFile:
-		case VaultActionType.TrashFile:
-		case VaultActionType.UpsertMdFile:
-		case VaultActionType.TrashMdFile:
-		case VaultActionType.ProcessMdFile:
-			return coreSplitPathToKey(payload.splitPath);
-
-		case VaultActionType.RenameFolder:
-		case VaultActionType.RenameFile:
-		case VaultActionType.RenameMdFile:
-			return `${coreSplitPathToKey(payload.from)} → ${coreSplitPathToKey(payload.to)}`;
-	}
-}
-
-export function coreSplitPathToKey(splitPath: SplitPath): string {
-	return makeSystemPathForSplitPath(splitPath);
-}

@@ -1,11 +1,8 @@
 import type { ActionDependency, DependencyGraph } from "../../types/dependency";
-import type { SplitPathToFolder } from "../../types/split-path";
 import type { VaultAction } from "../../types/vault-action";
-import {
-	coreSplitPathToKey,
-	getActionKey,
-	VaultActionType,
-} from "../../types/vault-action";
+import { VaultActionType } from "../../types/vault-action";
+import { makeKeyFor } from "../common/collapse-helpers";
+import { makeKeyForAction } from "./helpers/make-key-for-action";
 
 /**
  * Build dependency graph from actions.
@@ -21,7 +18,7 @@ export function buildDependencyGraph(actions: VaultAction[]): DependencyGraph {
 
 	// Initialize graph entries for all actions
 	for (const action of actions) {
-		const key = getActionKey(action);
+		const key = makeGraphKey(action);
 		graph.set(key, {
 			action,
 			dependsOn: [],
@@ -31,7 +28,7 @@ export function buildDependencyGraph(actions: VaultAction[]): DependencyGraph {
 
 	// Build dependencies
 	for (const action of actions) {
-		const key = getActionKey(action);
+		const key = makeGraphKey(action);
 		const deps = graph.get(key);
 		if (!deps) continue;
 
@@ -40,11 +37,13 @@ export function buildDependencyGraph(actions: VaultAction[]): DependencyGraph {
 
 		// Update requiredBy for dependencies
 		for (const dep of dependencies) {
-			const depKey = getActionKey(dep);
+			const depKey = makeGraphKey(dep);
 			const depEntry = graph.get(depKey);
-			if (depEntry) {
-				depEntry.requiredBy.push(action);
+			if (!depEntry) {
+				continue;
 			}
+			if (!depEntry.requiredBy.includes(action))
+				depEntry.requiredBy.push(action);
 		}
 	}
 
@@ -63,11 +62,11 @@ function findDependenciesForAction(
 	switch (action.type) {
 		case VaultActionType.ProcessMdFile: {
 			// Depends on UpsertMdFile for same file
-			const fileKey = coreSplitPathToKey(action.payload.splitPath);
+			const fileKey = makeKeyForAction(action);
 			const createAction = allActions.find(
 				(a) =>
 					a.type === VaultActionType.UpsertMdFile &&
-					coreSplitPathToKey(a.payload.splitPath) === fileKey,
+					makeKeyForAction(a) === fileKey,
 			);
 			if (createAction) {
 				dependencies.push(createAction);
@@ -125,6 +124,18 @@ function findDependenciesForAction(
 	return dependencies;
 }
 
+function makeGraphKey(action: VaultAction): string {
+	switch (action.type) {
+		case VaultActionType.RenameFolder:
+		case VaultActionType.RenameFile:
+		case VaultActionType.RenameMdFile:
+			return `${action.type}:${makeKeyFor(action.payload.from)}`;
+
+		default:
+			return `${action.type}:${makeKeyFor(action.payload.splitPath)}`;
+	}
+}
+
 /**
  * Find CreateFolder actions for all parent folders of the given path.
  */
@@ -143,17 +154,17 @@ function findParentFolderDependencies(
 		const parentBasename = splitPath.pathParts[i - 1];
 		if (!parentBasename) continue;
 
-		const parentKey = coreSplitPathToKey({
+		const parentKey = makeKeyFor({
 			basename: parentBasename,
 			pathParts: parentPathParts,
 			type: "Folder",
-		} as SplitPathToFolder);
+		});
 
 		// Find CreateFolder action for this parent
 		const createFolder = allActions.find(
 			(a) =>
 				a.type === VaultActionType.CreateFolder &&
-				coreSplitPathToKey(a.payload.splitPath) === parentKey,
+				makeKeyForAction(a) === parentKey,
 		);
 
 		if (createFolder) {

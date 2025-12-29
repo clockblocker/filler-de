@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { collapseActions } from "../../../src/obsidian-vault-action-manager/impl/actions-processing/collapse";
 import { buildDependencyGraph } from "../../../src/obsidian-vault-action-manager/impl/actions-processing/dependency-detector";
+import { makeKeyForAction } from "../../../src/obsidian-vault-action-manager/impl/actions-processing/helpers/make-key-for-action";
 import { topologicalSort } from "../../../src/obsidian-vault-action-manager/impl/actions-processing/topological-sort";
 import type {
 	SplitPathToFolder,
@@ -9,7 +10,6 @@ import type {
 import { SplitPathType } from "../../../src/obsidian-vault-action-manager/types/split-path";
 import type { VaultAction } from "../../../src/obsidian-vault-action-manager/types/vault-action";
 import {
-	getActionKey,
 	VaultActionType,
 } from "../../../src/obsidian-vault-action-manager/types/vault-action";
 
@@ -70,7 +70,7 @@ describe("EnsureExist Integration", () => {
 		]);
 
 		// Verify dependencies
-		const processKey = getActionKey(process);
+		const processKey = makeKeyForAction(process);
 		const processDeps = graph.get(processKey);
 		expect(processDeps?.dependsOn).toContain(ensureFile);
 		expect(processDeps?.dependsOn).toContain(childFolder);
@@ -119,8 +119,8 @@ describe("EnsureExist Integration", () => {
 		const collapsed = await collapseActions([ensureExist, process, replace]);
 		// After collapse: only UpsertMdFile(content) remains
 		expect(collapsed).toHaveLength(1);
-		expect(collapsed[0].type).toBe(VaultActionType.UpsertMdFile);
-		expect((collapsed[0] as typeof replace).payload.content).toBe("new");
+		expect(collapsed[0]?.type).toBe(VaultActionType.UpsertMdFile);
+		expect((collapsed[0]! as typeof replace).payload.content).toBe("new");
 
 		// Build dependency graph on collapsed actions
 		const graph = buildDependencyGraph(collapsed);
@@ -128,7 +128,7 @@ describe("EnsureExist Integration", () => {
 
 		// After collapse, only UpsertMdFile(content) remains
 		expect(sorted).toHaveLength(1);
-		expect(sorted[0].type).toBe(VaultActionType.UpsertMdFile);
+		expect(sorted[0]?.type).toBe(VaultActionType.UpsertMdFile);
 	});
 
 	it("should handle complex scenario: EnsureExist + Create + Process", async () => {
