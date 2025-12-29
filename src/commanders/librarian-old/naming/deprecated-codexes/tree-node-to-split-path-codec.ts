@@ -6,9 +6,9 @@ import {
 	SplitPathType,
 } from "../../../../obsidian-vault-action-manager/types/split-path";
 import {
-	type TreeNode,
-	TreeNodeStatus,
-	TreeNodeType,
+	type TreeNodeDeprecated,
+	TreeNodeStatusDeprecated,
+	TreeNodeTypeDeprecated,
 } from "../../types/tree-node";
 import { canonicalBasenameToChainCodec } from "./suffixed-basename-to-chain-codec";
 
@@ -18,14 +18,14 @@ import { canonicalBasenameToChainCodec } from "./suffixed-basename-to-chain-code
  * Reads settings internally.
  */
 export const treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse = z.codec(
-	z.custom<TreeNode>(),
+	z.custom<TreeNodeDeprecated>(),
 	SplitPathSchema,
 	{
-		decode: (node: TreeNode): SplitPath => {
+		decode: (node: TreeNodeDeprecated): SplitPath => {
 			const settings = getParsedUserSettings();
 			const libraryRoot = settings.splitPathToLibraryRoot.basename;
 
-			if (node.type === TreeNodeType.Section) {
+			if (node.type === TreeNodeTypeDeprecated.Section) {
 				// Section: folder basename is nodeName (no suffix)
 				// pathParts is parent path, doesn't include the section itself
 				// nodeNameChainToParent already includes library root
@@ -58,7 +58,7 @@ export const treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse = z.codec(
 			// pathParts already includes library root
 			const pathParts = node.nodeNameChainToParent;
 
-			if (node.type === TreeNodeType.Scroll) {
+			if (node.type === TreeNodeTypeDeprecated.Scroll) {
 				return {
 					basename,
 					extension: "md",
@@ -75,7 +75,11 @@ export const treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse = z.codec(
 				type: SplitPathType.File,
 			};
 		},
-		encode: ({ basename, pathParts, ...rest }: SplitPath): TreeNode => {
+		encode: ({
+			basename,
+			pathParts,
+			...rest
+		}: SplitPath): TreeNodeDeprecated => {
 			if (rest.type === SplitPathType.Folder) {
 				// For sections, basename is the nodeName (no suffix)
 				// pathParts is parent path, doesn't include the section itself
@@ -87,8 +91,8 @@ export const treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse = z.codec(
 					children: [],
 					nodeName,
 					nodeNameChainToParent,
-					status: TreeNodeStatus.Unknown,
-					type: TreeNodeType.Section,
+					status: TreeNodeStatusDeprecated.Unknown,
+					type: TreeNodeTypeDeprecated.Section,
 				};
 			}
 
@@ -109,8 +113,8 @@ export const treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse = z.codec(
 					extension: "md",
 					nodeName,
 					nodeNameChainToParent,
-					status: TreeNodeStatus.Unknown,
-					type: TreeNodeType.Scroll,
+					status: TreeNodeStatusDeprecated.Unknown,
+					type: TreeNodeTypeDeprecated.Scroll,
 				};
 			}
 
@@ -118,8 +122,8 @@ export const treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse = z.codec(
 				extension: rest.extension,
 				nodeName,
 				nodeNameChainToParent,
-				status: TreeNodeStatus.Unknown,
-				type: TreeNodeType.File,
+				status: TreeNodeStatusDeprecated.Unknown,
+				type: TreeNodeTypeDeprecated.File,
 			};
 		},
 	},

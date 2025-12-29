@@ -15,7 +15,7 @@ import { detectRenameMode } from "../healing";
 import type { LibraryTreeDeprecated } from "../library-tree";
 import { translateVaultAction } from "../reconciliation/vault-to-tree";
 import { TreeActionType } from "../types/literals";
-import type { NodeNameChain } from "../types/schemas/node-name";
+import type { NodeNameChainDeprecated } from "../types/schemas/node-name";
 import { isBasenamePrefixedAsCodexDeprecated } from "../utils/codex-utils";
 import { resolveActions } from "./action-resolver";
 import { buildActionsForCodexRegenerationInImpactedSections } from "./codex-regeneration";
@@ -41,8 +41,8 @@ export type EventHandlerContextDeprecated = {
 		>
 	>;
 	getSectionNode: (
-		chain: NodeNameChain,
-	) => import("../types/tree-node").SectionNode | null;
+		chain: NodeNameChainDeprecated,
+	) => import("../types/tree-node").SectionNodeDeprecated | null;
 };
 
 /**
@@ -347,8 +347,8 @@ export async function handleRenameDeprecated(
  */
 function computeImpactedChainsFromActionsDeprecated(
 	actions: VaultAction[],
-): NodeNameChain[] {
-	const chains: NodeNameChain[] = [];
+): NodeNameChainDeprecated[] {
+	const chains: NodeNameChainDeprecated[] = [];
 
 	for (const action of actions) {
 		const treeAction = translateVaultAction(action);
@@ -366,7 +366,7 @@ function computeImpactedChainsFromActionsDeprecated(
 
 			const movedNodeChain = [...newParent, nodeName].filter(
 				Boolean,
-			) as NodeNameChain;
+			) as NodeNameChainDeprecated;
 
 			chains.push(oldParent, newParent, movedNodeChain);
 		} else if (treeAction.type === TreeActionType.ChangeNodeName) {

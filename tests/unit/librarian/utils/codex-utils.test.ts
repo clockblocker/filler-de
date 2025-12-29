@@ -1,8 +1,8 @@
 import { spyOn } from "bun:test";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { buildCodexBasenameDeprecated, tryExtractingNodeNameChainToSection, tryExtractingSplitPathToParentFolderDeprecated } from "../../../../src/commanders/librarian-old/naming/interface";
-import type { TreeNode } from "../../../../src/commanders/librarian-old/types/tree-node";
-import { TreeNodeStatus, TreeNodeType } from "../../../../src/commanders/librarian-old/types/tree-node";
+import type { TreeNodeDeprecated } from "../../../../src/commanders/librarian-old/types/tree-node";
+import { TreeNodeStatusDeprecated, TreeNodeTypeDeprecated } from "../../../../src/commanders/librarian-old/types/tree-node";
 import * as globalState from "../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
 import type { SplitPathToFolder } from "../../../../src/obsidian-vault-action-manager/types/split-path";
@@ -38,34 +38,34 @@ describe("codex-utils", () => {
 	describe("buildCodexBasename", () => {
 		describe("with TreeNode Section", () => {
 			it("builds root codex basename (no suffix)", () => {
-				const rootSection: TreeNode = {
+				const rootSection: TreeNodeDeprecated = {
 					children: [],
 					nodeName: "Library",
 					nodeNameChainToParent: [],
-					status: TreeNodeStatus.NotStarted,
-					type: TreeNodeType.Section,
+					status: TreeNodeStatusDeprecated.NotStarted,
+					type: TreeNodeTypeDeprecated.Section,
 				};
 				expect(buildCodexBasenameDeprecated(rootSection)).toBe("__-Library");
 			});
 
 			it("builds nested codex basename with single parent", () => {
-				const section: TreeNode = {
+				const section: TreeNodeDeprecated = {
 					children: [],
 					nodeName: "Child",
 					nodeNameChainToParent: ["Parent"],
-					status: TreeNodeStatus.NotStarted,
-					type: TreeNodeType.Section,
+					status: TreeNodeStatusDeprecated.NotStarted,
+					type: TreeNodeTypeDeprecated.Section,
 				};
 				expect(buildCodexBasenameDeprecated(section)).toBe("__-Child-Parent");
 			});
 
 			it("builds nested codex basename with multiple parents", () => {
-				const section: TreeNode = {
+				const section: TreeNodeDeprecated = {
 					children: [],
 					nodeName: "Grandchild",
 					nodeNameChainToParent: ["Parent", "Child"],
-					status: TreeNodeStatus.NotStarted,
-					type: TreeNodeType.Section,
+					status: TreeNodeStatusDeprecated.NotStarted,
+					type: TreeNodeTypeDeprecated.Section,
 				};
 				expect(buildCodexBasenameDeprecated(section)).toBe("__-Grandchild-Child-Parent");
 			});
@@ -97,12 +97,12 @@ describe("codex-utils", () => {
 					...defaultSettings,
 					suffixDelimiter: ";;",
 				});
-				const section: TreeNode = {
+				const section: TreeNodeDeprecated = {
 					children: [],
 					nodeName: "Child",
 					nodeNameChainToParent: ["Parent"],
-					status: TreeNodeStatus.NotStarted,
-					type: TreeNodeType.Section,
+					status: TreeNodeStatusDeprecated.NotStarted,
+					type: TreeNodeTypeDeprecated.Section,
 				};
 				expect(buildCodexBasenameDeprecated(section)).toBe("__;;Child;;Parent");
 			});

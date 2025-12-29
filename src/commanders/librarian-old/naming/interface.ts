@@ -4,8 +4,8 @@ import {
 	type SplitPathToFolder,
 	SplitPathType,
 } from "../../../obsidian-vault-action-manager/types/split-path";
-import type { NodeNameChain } from "../types/schemas/node-name";
-import type { SectionNode } from "../types/tree-node";
+import type { NodeNameChainDeprecated } from "../types/schemas/node-name";
+import type { SectionNodeDeprecated } from "../types/tree-node";
 import { codexBasenameToSectionChainCodec } from "./deprecated-codexes/suffixed-basename-for-codex-to-chain-codec";
 import { treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse } from "./deprecated-codexes/tree-node-to-split-path-codec";
 
@@ -35,12 +35,12 @@ export function buildCodexBasenameDeprecated(
  * buildCodexBasename(["Parent"]) // "__-Child-Parent"
  */
 export function buildCodexBasenameDeprecated(
-	section: Pick<SectionNode, "nodeName" | "nodeNameChainToParent">,
+	section: Pick<SectionNodeDeprecated, "nodeName" | "nodeNameChainToParent">,
 ): string;
 export function buildCodexBasenameDeprecated(
 	splitPathToFolderOrSection:
 		| SplitPathToFolder
-		| Pick<SectionNode, "nodeName" | "nodeNameChainToParent">,
+		| Pick<SectionNodeDeprecated, "nodeName" | "nodeNameChainToParent">,
 ): string {
 	const settings = getParsedUserSettings();
 	const libraryRoot = settings.splitPathToLibraryRoot.basename;
@@ -106,7 +106,7 @@ export function buildCodexBasenameDeprecated(
  */
 export function tryExtractingNodeNameChainToSection(
 	canonicalBasename: string,
-): Result<NodeNameChain, string> {
+): Result<NodeNameChainDeprecated, string> {
 	const parseResult =
 		codexBasenameToSectionChainCodec.safeParse(canonicalBasename);
 

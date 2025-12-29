@@ -10,7 +10,7 @@ import {
 	extractMetaInfo,
 } from "../../../services/dto-services/meta-info-manager/interface";
 import { SCROLL } from "../../../types/literals";
-import { TreeNodeStatus } from "../types/tree-node";
+import { TreeNodeStatusDeprecated } from "../types/tree-node";
 
 /**
  * Build action to update status in metadata.
@@ -18,16 +18,16 @@ import { TreeNodeStatus } from "../types/tree-node";
  */
 export function buildWriteStatusToMetadataAction(
 	splitPath: SplitPath,
-	status: TreeNodeStatus,
+	status: TreeNodeStatusDeprecated,
 ): VaultAction | null {
 	if (splitPath.type !== SplitPathType.MdFile) {
 		return null;
 	}
 
 	const newStatus =
-		status === TreeNodeStatus.Done
-			? TreeNodeStatus.Done
-			: TreeNodeStatus.NotStarted;
+		status === TreeNodeStatusDeprecated.Done
+			? TreeNodeStatusDeprecated.Done
+			: TreeNodeStatusDeprecated.NotStarted;
 
 	const transform: Transform = (content: string) => {
 		const currentMeta = extractMetaInfo(content);

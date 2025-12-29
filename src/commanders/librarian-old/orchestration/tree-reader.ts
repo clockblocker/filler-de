@@ -7,7 +7,7 @@ import { SplitPathType } from "../../../obsidian-vault-action-manager/types/spli
 import { extractMetaInfo } from "../../../services/dto-services/meta-info-manager/interface";
 import { LibraryTreeDeprecated } from "../library-tree";
 import { tryParseJoinedSuffixedBasenameForCodex } from "../naming/codecs/atomic/parsers";
-import { TreeNodeStatus } from "../types/tree-node";
+import { TreeNodeStatusDeprecated } from "../types/tree-node";
 import { splitPathToLeafDeprecated } from "../utils/split-path-to-leaf";
 
 /**
@@ -49,8 +49,8 @@ export async function readTreeFromSplitFilesWithReaders({
 					if (meta && "status" in meta) {
 						leaf.status =
 							meta.status === "Done"
-								? TreeNodeStatus.Done
-								: TreeNodeStatus.NotStarted;
+								? TreeNodeStatusDeprecated.Done
+								: TreeNodeStatusDeprecated.NotStarted;
 					}
 				}
 			}

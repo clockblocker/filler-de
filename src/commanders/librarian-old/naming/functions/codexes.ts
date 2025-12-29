@@ -1,7 +1,7 @@
 import { getParsedUserSettings } from "../../../../global-state/global-state";
 import { CODEX_CORE_NAME } from "../../types/literals";
-import type { NodeNameChain } from "../../types/schemas/node-name";
-import type { SectionNode } from "../../types/tree-node";
+import type { NodeNameChainDeprecated } from "../../types/schemas/node-name";
+import type { SectionNodeDeprecated } from "../../types/tree-node";
 import { makePathPartsFromNodeNameChain } from "../codecs/atomic/path-parts-and-node-name-chain";
 import {
 	makeNodeNameChainFromSeparatedSuffixedBasename,
@@ -17,13 +17,13 @@ import {
 export const makeCanonicalBasenameForCodexFromSectionNode = ({
 	nodeNameChainToParent,
 	nodeName,
-}: Pick<SectionNode, "nodeNameChainToParent" | "nodeName">) => {
+}: Pick<SectionNodeDeprecated, "nodeNameChainToParent" | "nodeName">) => {
 	const fullChain = [...nodeNameChainToParent, nodeName];
 	return makeCanonicalBasenameForCodexFromNodeNameChainToParent(fullChain);
 };
 
 const makeCanonicalBasenameForCodexFromNodeNameChainToParent = (
-	nodeNameChainToParent: NodeNameChain,
+	nodeNameChainToParent: NodeNameChainDeprecated,
 ) => {
 	return joinSeparatedSuffixedBasename(
 		makeSeparatedSuffixedBasenameFromNodeNameChain([
@@ -35,7 +35,7 @@ const makeCanonicalBasenameForCodexFromNodeNameChainToParent = (
 
 export const makeNodeNameChainToParentFromCanonicalBasenameForCodex = (
 	codexBasename: JoinedSuffixedBasenameForCodex,
-): NodeNameChain => {
+): NodeNameChainDeprecated => {
 	const separated = separateJoinedSuffixedBasename(codexBasename);
 	return makeNodeNameChainToParentFromSeparatedCanonicalBasenameForCodex(
 		separated,
@@ -46,7 +46,7 @@ export const makeNodeNameChainToParentFromSeparatedCanonicalBasenameForCodex =
 	({
 		nodeName: _nodeNameOfCodex,
 		splitSuffix: splitSuffixOfCodex,
-	}: SeparatedSuffixedBasename): NodeNameChain => {
+	}: SeparatedSuffixedBasename): NodeNameChainDeprecated => {
 		const [sectionNodeName, ...splitSuffixOfSection] = splitSuffixOfCodex;
 
 		if (!sectionNodeName) {

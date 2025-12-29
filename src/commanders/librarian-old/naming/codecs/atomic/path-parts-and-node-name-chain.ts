@@ -4,7 +4,7 @@ import {
 	type SplitPath,
 } from "../../../../../obsidian-vault-action-manager/types/split-path";
 import type { NodeNameChain } from "../../..";
-import { NodeNameChainSchema } from "../../../types/schemas/node-name";
+import { NodeNameChainSchemaDeprecated } from "../../../types/schemas/node-name";
 
 /**
  * Zod codec from PathParts to NodeNameChain.
@@ -19,7 +19,7 @@ import { NodeNameChainSchema } from "../../../types/schemas/node-name";
  */
 const pathPartsToNodeNameChainCodec = z.codec(
 	PathPartsSchema,
-	NodeNameChainSchema,
+	NodeNameChainSchemaDeprecated,
 	{
 		decode: (pathParts) => {
 			return pathParts;

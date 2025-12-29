@@ -1,5 +1,5 @@
 import { getParsedUserSettings } from "../../../global-state/global-state";
-import type { NodeNameChain } from "../types/schemas/node-name";
+import type { NodeNameChainDeprecated } from "../types/schemas/node-name";
 import { parseBasenameDeprecated } from "../utils/parse-basename";
 
 /**
@@ -10,7 +10,7 @@ import { parseBasenameDeprecated } from "../utils/parse-basename";
 export function parseDeletePathToChain(
 	path: string,
 	isFolder: boolean,
-): NodeNameChain | null {
+): NodeNameChainDeprecated | null {
 	const settings = getParsedUserSettings();
 	const libraryRoot = settings.splitPathToLibraryRoot.basename;
 	const pathParts = path.split("/");

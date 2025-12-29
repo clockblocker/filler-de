@@ -6,7 +6,7 @@ import {
 	PIPE,
 	SPACE_F,
 } from "../../../../../types/literals";
-import { NodeNameSchema } from "../../../types/schemas/node-name";
+import { NodeNameSchemaDeprecated } from "../../../types/schemas/node-name";
 
 // Filename can contain delimiters, so we use a more permissive string
 // but exclude the pipe and brackets used in the link format
@@ -28,7 +28,7 @@ export const CodexBacklinkSchema = z.templateLiteral([
 	z.literal(PIPE),
 	z.literal(BACK_ARROW),
 	z.literal(SPACE_F),
-	NodeNameSchema,
+	NodeNameSchemaDeprecated,
 	z.literal(OBSIDIAN_LINK_CLOSE),
 ]);
 

@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { buildCanonicalSplitPathFromNode } from "../../../../../src/commanders/librarian-old/naming/functions/split-path-and-leaf";
 import type {
-	FileNode,
-	ScrollNode,
-	SectionNode,
+	FileNodeDeprecated,
+	ScrollNodeDeprecated,
+	SectionNodeDeprecated,
 } from "../../../../../src/commanders/librarian-old/types/tree-node";
-import { TreeNodeStatus, TreeNodeType } from "../../../../../src/commanders/librarian-old/types/tree-node";
+import { TreeNodeStatusDeprecated, TreeNodeTypeDeprecated } from "../../../../../src/commanders/librarian-old/types/tree-node";
 import * as globalState from "../../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../../src/global-state/parsed-settings";
 import { SplitPathType } from "../../../../../src/obsidian-vault-action-manager/types/split-path";
@@ -38,12 +38,12 @@ describe("buildCanonicalSplitPathFromNode", () => {
 	describe("SectionNode → SplitPathToFolder", () => {
 
 		it("builds split path for section that is direct child of root", () => {
-			const node: SectionNode = {
+			const node: SectionNodeDeprecated = {
 				children: [],
 				nodeName: "Section",
 				nodeNameChainToParent: ["Library"],
-				status: TreeNodeStatus.NotStarted,
-				type: TreeNodeType.Section,
+				status: TreeNodeStatusDeprecated.NotStarted,
+				type: TreeNodeTypeDeprecated.Section,
 			};
 			const result = buildCanonicalSplitPathFromNode(node);
 			expect(result).toEqual({
@@ -54,12 +54,12 @@ describe("buildCanonicalSplitPathFromNode", () => {
 		});
 
 		it("builds split path for nested section", () => {
-			const node: SectionNode = {
+			const node: SectionNodeDeprecated = {
 				children: [],
 				nodeName: "Child",
 				nodeNameChainToParent: ["Library", "Parent"],
-				status: TreeNodeStatus.NotStarted,
-				type: TreeNodeType.Section,
+				status: TreeNodeStatusDeprecated.NotStarted,
+				type: TreeNodeTypeDeprecated.Section,
 			};
 			const result = buildCanonicalSplitPathFromNode(node);
 			expect(result).toEqual({
@@ -70,12 +70,12 @@ describe("buildCanonicalSplitPathFromNode", () => {
 		});
 
 		it("builds split path for deeply nested section", () => {
-			const node: SectionNode = {
+			const node: SectionNodeDeprecated = {
 				children: [],
 				nodeName: "Deep",
 				nodeNameChainToParent: ["Library", "Parent", "Child"],
-				status: TreeNodeStatus.Done,
-				type: TreeNodeType.Section,
+				status: TreeNodeStatusDeprecated.Done,
+				type: TreeNodeTypeDeprecated.Section,
 			};
 			const result = buildCanonicalSplitPathFromNode(node);
 			expect(result).toEqual({
@@ -94,12 +94,12 @@ describe("buildCanonicalSplitPathFromNode", () => {
 					type: SplitPathType.Folder,
 				},
 			});
-			const node: SectionNode = {
+			const node: SectionNodeDeprecated = {
 				children: [],
 				nodeName: "Section",
 				nodeNameChainToParent: ["Root", "Parent"],
-				status: TreeNodeStatus.NotStarted,
-				type: TreeNodeType.Section,
+				status: TreeNodeStatusDeprecated.NotStarted,
+				type: TreeNodeTypeDeprecated.Section,
 			};
 			const result = buildCanonicalSplitPathFromNode(node);
 			expect(result).toEqual({
@@ -112,12 +112,12 @@ describe("buildCanonicalSplitPathFromNode", () => {
 
 	describe("ScrollNode → SplitPathToMdFile", () => {
 		it("builds split path for root-level scroll", () => {
-			const node: ScrollNode = {
+			const node: ScrollNodeDeprecated = {
 				extension: "md",
 				nodeName: "Note",
 				nodeNameChainToParent: ["Library"],
-				status: TreeNodeStatus.NotStarted,
-				type: TreeNodeType.Scroll,
+				status: TreeNodeStatusDeprecated.NotStarted,
+				type: TreeNodeTypeDeprecated.Scroll,
 			};
 			const result = buildCanonicalSplitPathFromNode(node);
 			expect(result).toEqual({
@@ -129,12 +129,12 @@ describe("buildCanonicalSplitPathFromNode", () => {
 		});
 
 		it("builds split path for nested scroll", () => {
-			const node: ScrollNode = {
+			const node: ScrollNodeDeprecated = {
 				extension: "md",
 				nodeName: "Note",
 				nodeNameChainToParent: ["Library", "Parent"],
-				status: TreeNodeStatus.NotStarted,
-				type: TreeNodeType.Scroll,
+				status: TreeNodeStatusDeprecated.NotStarted,
+				type: TreeNodeTypeDeprecated.Scroll,
 			};
 			const result = buildCanonicalSplitPathFromNode(node);
 			expect(result).toEqual({
@@ -146,12 +146,12 @@ describe("buildCanonicalSplitPathFromNode", () => {
 		});
 
 		it("builds split path for deeply nested scroll", () => {
-			const node: ScrollNode = {
+			const node: ScrollNodeDeprecated = {
 				extension: "md",
 				nodeName: "Note",
 				nodeNameChainToParent: ["Library", "Parent", "Child"],
-				status: TreeNodeStatus.NotStarted,
-				type: TreeNodeType.Scroll,
+				status: TreeNodeStatusDeprecated.NotStarted,
+				type: TreeNodeTypeDeprecated.Scroll,
 			};
 			const result = buildCanonicalSplitPathFromNode(node);
 			expect(result).toEqual({
@@ -167,12 +167,12 @@ describe("buildCanonicalSplitPathFromNode", () => {
 				...defaultSettings,
 				suffixDelimiter: "::",
 			});
-			const node: ScrollNode = {
+			const node: ScrollNodeDeprecated = {
 				extension: "md",
 				nodeName: "Note",
 				nodeNameChainToParent: ["Library", "Parent", "Child"],
-				status: TreeNodeStatus.NotStarted,
-				type: TreeNodeType.Scroll,
+				status: TreeNodeStatusDeprecated.NotStarted,
+				type: TreeNodeTypeDeprecated.Scroll,
 			};
 			const result = buildCanonicalSplitPathFromNode(node);
 			expect(result).toEqual({
@@ -184,12 +184,12 @@ describe("buildCanonicalSplitPathFromNode", () => {
 		});
 
 		it("handles different status values", () => {
-			const node: ScrollNode = {
+			const node: ScrollNodeDeprecated = {
 				extension: "md",
 				nodeName: "Note",
 				nodeNameChainToParent: ["Library"],
-				status: TreeNodeStatus.Done,
-				type: TreeNodeType.Scroll,
+				status: TreeNodeStatusDeprecated.Done,
+				type: TreeNodeTypeDeprecated.Scroll,
 			};
 			const result = buildCanonicalSplitPathFromNode(node);
 			expect(result).toEqual({
@@ -203,12 +203,12 @@ describe("buildCanonicalSplitPathFromNode", () => {
 
 	describe("FileNode → SplitPathToFile", () => {
 		it("builds split path for root-level file", () => {
-			const node: FileNode = {
+			const node: FileNodeDeprecated = {
 				extension: "png",
 				nodeName: "Image",
 				nodeNameChainToParent: ["Library"],
-				status: TreeNodeStatus.Unknown,
-				type: TreeNodeType.File,
+				status: TreeNodeStatusDeprecated.Unknown,
+				type: TreeNodeTypeDeprecated.File,
 			};
 			const result = buildCanonicalSplitPathFromNode(node);
 			expect(result).toEqual({
@@ -220,12 +220,12 @@ describe("buildCanonicalSplitPathFromNode", () => {
 		});
 
 		it("builds split path for nested file", () => {
-			const node: FileNode = {
+			const node: FileNodeDeprecated = {
 				extension: "png",
 				nodeName: "Image",
 				nodeNameChainToParent: ["Library", "Parent"],
-				status: TreeNodeStatus.Unknown,
-				type: TreeNodeType.File,
+				status: TreeNodeStatusDeprecated.Unknown,
+				type: TreeNodeTypeDeprecated.File,
 			};
 			const result = buildCanonicalSplitPathFromNode(node);
 			expect(result).toEqual({
@@ -237,12 +237,12 @@ describe("buildCanonicalSplitPathFromNode", () => {
 		});
 
 		it("builds split path for deeply nested file", () => {
-			const node: FileNode = {
+			const node: FileNodeDeprecated = {
 				extension: "jpg",
 				nodeName: "Photo",
 				nodeNameChainToParent: ["Library", "Parent", "Child"],
-				status: TreeNodeStatus.Unknown,
-				type: TreeNodeType.File,
+				status: TreeNodeStatusDeprecated.Unknown,
+				type: TreeNodeTypeDeprecated.File,
 			};
 			const result = buildCanonicalSplitPathFromNode(node);
 			expect(result).toEqual({
@@ -256,12 +256,12 @@ describe("buildCanonicalSplitPathFromNode", () => {
 		it("handles different file extensions", () => {
 			const extensions = ["pdf", "txt", "json", "xml"];
 			for (const ext of extensions) {
-				const node: FileNode = {
+				const node: FileNodeDeprecated = {
 					extension: ext,
 					nodeName: "Document",
 					nodeNameChainToParent: ["Library", "Folder"],
-					status: TreeNodeStatus.Unknown,
-					type: TreeNodeType.File,
+					status: TreeNodeStatusDeprecated.Unknown,
+					type: TreeNodeTypeDeprecated.File,
 				};
 				const result = buildCanonicalSplitPathFromNode(node);
 				expect(result).toEqual({
@@ -278,12 +278,12 @@ describe("buildCanonicalSplitPathFromNode", () => {
 				...defaultSettings,
 				suffixDelimiter: "::",
 			});
-			const node: FileNode = {
+			const node: FileNodeDeprecated = {
 				extension: "pdf",
 				nodeName: "Doc",
 				nodeNameChainToParent: ["Library", "A", "B"],
-				status: TreeNodeStatus.Unknown,
-				type: TreeNodeType.File,
+				status: TreeNodeStatusDeprecated.Unknown,
+				type: TreeNodeTypeDeprecated.File,
 			};
 			const result = buildCanonicalSplitPathFromNode(node);
 			expect(result).toEqual({
@@ -297,12 +297,12 @@ describe("buildCanonicalSplitPathFromNode", () => {
 
 	describe("edge cases", () => {
 		it("handles single-character node names", () => {
-			const node: ScrollNode = {
+			const node: ScrollNodeDeprecated = {
 				extension: "md",
 				nodeName: "A",
 				nodeNameChainToParent: ["Library", "B"],
-				status: TreeNodeStatus.NotStarted,
-				type: TreeNodeType.Scroll,
+				status: TreeNodeStatusDeprecated.NotStarted,
+				type: TreeNodeTypeDeprecated.Scroll,
 			};
 			const result = buildCanonicalSplitPathFromNode(node);
 			expect(result).toEqual({
@@ -315,12 +315,12 @@ describe("buildCanonicalSplitPathFromNode", () => {
 
 		it("handles very long parent chains", () => {
 			const longChain = Array.from({ length: 10 }, (_, i) => `Parent${i}`);
-			const node: SectionNode = {
+			const node: SectionNodeDeprecated = {
 				children: [],
 				nodeName: "Final",
 				nodeNameChainToParent: ["Library", ...longChain],
-				status: TreeNodeStatus.NotStarted,
-				type: TreeNodeType.Section,
+				status: TreeNodeStatusDeprecated.NotStarted,
+				type: TreeNodeTypeDeprecated.Section,
 			};
 			const result = buildCanonicalSplitPathFromNode(node);
 			expect(result.basename).toBe("Final");

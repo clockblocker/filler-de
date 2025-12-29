@@ -4,24 +4,28 @@ import type {
 	SplitPathToMdFile,
 } from "../../../../obsidian-vault-action-manager/types/split-path";
 import { SplitPathType } from "../../../../obsidian-vault-action-manager/types/split-path";
-import type { FileNode, ScrollNode, SectionNode } from "../../types/tree-node";
-import { TreeNodeType } from "../../types/tree-node";
+import type {
+	FileNodeDeprecated,
+	ScrollNodeDeprecated,
+	SectionNodeDeprecated,
+} from "../../types/tree-node";
+import { TreeNodeTypeDeprecated } from "../../types/tree-node";
 import { makePathPartsFromNodeNameChain } from "../codecs/atomic/path-parts-and-node-name-chain";
 import { makeJoinedSuffixedBasenameFromNodeNameChain } from "./basename-and-chain";
 
 export function buildCanonicalSplitPathFromNode(
-	node: SectionNode,
+	node: SectionNodeDeprecated,
 ): SplitPathToFolder;
 export function buildCanonicalSplitPathFromNode(
-	node: FileNode,
+	node: FileNodeDeprecated,
 ): SplitPathToFile;
 export function buildCanonicalSplitPathFromNode(
-	node: ScrollNode,
+	node: ScrollNodeDeprecated,
 ): SplitPathToMdFile;
 export function buildCanonicalSplitPathFromNode(
-	node: SectionNode | FileNode | ScrollNode,
+	node: SectionNodeDeprecated | FileNodeDeprecated | ScrollNodeDeprecated,
 ): SplitPathToFolder | SplitPathToFile | SplitPathToMdFile {
-	if (node.type === TreeNodeType.Section) {
+	if (node.type === TreeNodeTypeDeprecated.Section) {
 		return {
 			basename: node.nodeName,
 			pathParts: makePathPartsFromNodeNameChain(
@@ -41,7 +45,7 @@ export function buildCanonicalSplitPathFromNode(
 		node.nodeName,
 	]);
 
-	if (node.type === TreeNodeType.Scroll) {
+	if (node.type === TreeNodeTypeDeprecated.Scroll) {
 		return {
 			basename,
 			extension: "md",

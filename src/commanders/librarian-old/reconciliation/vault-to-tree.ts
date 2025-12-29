@@ -13,9 +13,12 @@ import type { SplitPath } from "../../../obsidian-vault-action-manager/types/spl
 import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
 import { makeNodeNameChainFromPathParts } from "../naming/codecs/atomic/path-parts-and-node-name-chain";
 import { TreeActionType } from "../types/literals";
-import type { NodeNameChain } from "../types/schemas/node-name";
+import type { NodeNameChainDeprecated } from "../types/schemas/node-name";
 import type { TreeAction } from "../types/tree-action";
-import { TreeNodeStatus, TreeNodeType } from "../types/tree-node";
+import {
+	TreeNodeStatusDeprecated,
+	TreeNodeTypeDeprecated,
+} from "../types/tree-node";
 import { parseBasenameDeprecated } from "../utils/parse-basename";
 
 /**
@@ -77,7 +80,7 @@ function sameParent(from: SplitPath, to: SplitPath): boolean {
  * Parses basename to extract nodeName (not full basename).
  * Uses codec to convert pathParts to nodeNameChain (keeps library root).
  */
-function toNodeNameChain(splitPath: SplitPath): NodeNameChain {
+function toNodeNameChain(splitPath: SplitPath): NodeNameChainDeprecated {
 	// Convert pathParts to chain (includes library root)
 	const chainFromPath = makeNodeNameChainFromPathParts(splitPath.pathParts);
 
@@ -91,7 +94,7 @@ function toNodeNameChain(splitPath: SplitPath): NodeNameChain {
  * Extract parent chain from SplitPath (with library root).
  * Uses codec to convert pathParts to nodeNameChain (keeps library root).
  */
-function toParentChain(splitPath: SplitPath): NodeNameChain {
+function toParentChain(splitPath: SplitPath): NodeNameChainDeprecated {
 	// Convert pathParts to chain (includes library root)
 	return makeNodeNameChainFromPathParts(splitPath.pathParts);
 }
@@ -101,8 +104,8 @@ function createSectionAction(splitPath: SplitPath): TreeAction {
 		payload: {
 			nodeName: splitPath.basename,
 			nodeNameChainToParent: toParentChain(splitPath),
-			nodeType: TreeNodeType.Section,
-			status: TreeNodeStatus.NotStarted,
+			nodeType: TreeNodeTypeDeprecated.Section,
+			status: TreeNodeStatusDeprecated.NotStarted,
 		},
 		type: TreeActionType.CreateNode,
 	};
@@ -117,8 +120,8 @@ function createFileAction(splitPath: SplitPath): TreeAction | null {
 			extension,
 			nodeName,
 			nodeNameChainToParent: toParentChain(splitPath),
-			nodeType: TreeNodeType.File,
-			status: TreeNodeStatus.Unknown,
+			nodeType: TreeNodeTypeDeprecated.File,
+			status: TreeNodeStatusDeprecated.Unknown,
 		},
 		type: TreeActionType.CreateNode,
 	};
@@ -132,8 +135,8 @@ function createScrollAction(splitPath: SplitPath): TreeAction | null {
 			extension: "md",
 			nodeName,
 			nodeNameChainToParent: toParentChain(splitPath),
-			nodeType: TreeNodeType.Scroll,
-			status: TreeNodeStatus.NotStarted,
+			nodeType: TreeNodeTypeDeprecated.Scroll,
+			status: TreeNodeStatusDeprecated.NotStarted,
 		},
 		type: TreeActionType.CreateNode,
 	};

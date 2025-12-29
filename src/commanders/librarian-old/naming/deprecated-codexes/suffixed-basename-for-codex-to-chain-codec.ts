@@ -2,8 +2,8 @@ import z from "zod";
 import { getParsedUserSettings } from "../../../../global-state/global-state";
 import { CODEX_CORE_NAME } from "../../types/literals";
 import {
-	type NodeNameChain,
-	NodeNameChainSchema,
+	type NodeNameChainDeprecated,
+	NodeNameChainSchemaDeprecated,
 } from "../../types/schemas/node-name";
 import { canonicalBasenameToChainCodec } from "./suffixed-basename-to-chain-codec";
 
@@ -39,7 +39,7 @@ export const CanonicalBasenameForСodexSchema = z
  */
 export const suffixedBasenameForСodexToParentSectionChainCodec = z.codec(
 	CanonicalBasenameForСodexSchema,
-	NodeNameChainSchema,
+	NodeNameChainSchemaDeprecated,
 	{
 		decode: (CanonicalBasenameForСodex) => {
 			return canonicalBasenameToChainCodec
@@ -64,9 +64,9 @@ export const suffixedBasenameForСodexToParentSectionChainCodec = z.codec(
  */
 export const codexBasenameToSectionChainCodec = z.codec(
 	CanonicalBasenameForСodexSchema,
-	NodeNameChainSchema,
+	NodeNameChainSchemaDeprecated,
 	{
-		decode: (codexBasename: string): NodeNameChain => {
+		decode: (codexBasename: string): NodeNameChainDeprecated => {
 			const settings = getParsedUserSettings();
 			const libraryRoot = settings.splitPathToLibraryRoot.basename;
 
@@ -82,7 +82,7 @@ export const codexBasenameToSectionChainCodec = z.codec(
 
 			return sectionChain;
 		},
-		encode: (sectionChain: NodeNameChain): string => {
+		encode: (sectionChain: NodeNameChainDeprecated): string => {
 			const settings = getParsedUserSettings();
 			const libraryRoot = settings.splitPathToLibraryRoot.basename;
 

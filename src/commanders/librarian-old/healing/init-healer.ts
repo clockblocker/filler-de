@@ -8,8 +8,8 @@ import {
 	type VaultAction,
 	VaultActionType,
 } from "../../../obsidian-vault-action-manager/types/vault-action";
-import type { TreeLeaf } from "../types/tree-node";
-import { TreeNodeType } from "../types/tree-node";
+import type { TreeLeafDeprecated } from "../types/tree-node";
+import { TreeNodeTypeDeprecated } from "../types/tree-node";
 import { parseBasenameDeprecated } from "../utils/parse-basename";
 import {
 	buildBasenameDepreacated,
@@ -30,7 +30,7 @@ export type InitHealResult = {
  * Info about a leaf for healing.
  */
 type LeafHealInfo = {
-	leaf: TreeLeaf;
+	leaf: TreeLeafDeprecated;
 	currentBasename: string;
 	expectedBasename: string;
 	needsRename: boolean;
@@ -40,13 +40,11 @@ type LeafHealInfo = {
  * Match actual file to leaf by comparing nodeName and path.
  */
 function findMatchingFile(
-	leaf: TreeLeaf,
+	leaf: TreeLeafDeprecated,
 	actualFiles: SplitPathWithReader[],
 ): SplitPathWithReader | null {
 	// Expected path (parent chain only, not including nodeName)
-	const expectedParentPath = joinPathParts(
-		leaf.nodeNameChainToParent,
-	);
+	const expectedParentPath = joinPathParts(leaf.nodeNameChainToParent);
 
 	for (const file of actualFiles) {
 		// Skip folders
@@ -88,7 +86,7 @@ function findMatchingFile(
  * Analyze a leaf against actual file to determine if it needs healing.
  */
 function analyzeLeaf(
-	leaf: TreeLeaf,
+	leaf: TreeLeafDeprecated,
 	actualFile: SplitPathWithReader | null,
 ): LeafHealInfo {
 	if (!actualFile) {
@@ -130,14 +128,14 @@ function analyzeLeaf(
  * Reads libraryRoot from global settings.
  */
 function leafToSplitPath(
-	leaf: TreeLeaf,
+	leaf: TreeLeafDeprecated,
 	basename: string,
 ): SplitPathToFile | SplitPathToMdFile {
 	const settings = getParsedUserSettings();
 	const libraryRoot = settings.splitPathToLibraryRoot.basename;
 	const pathParts = [libraryRoot, ...leaf.nodeNameChainToParent];
 
-	if (leaf.type === TreeNodeType.Scroll) {
+	if (leaf.type === TreeNodeTypeDeprecated.Scroll) {
 		return {
 			basename,
 			extension: "md",
@@ -162,7 +160,7 @@ function createRenameAction(info: LeafHealInfo): VaultAction {
 	const from = leafToSplitPath(info.leaf, info.currentBasename);
 	const to = leafToSplitPath(info.leaf, info.expectedBasename);
 
-	if (info.leaf.type === TreeNodeType.Scroll) {
+	if (info.leaf.type === TreeNodeTypeDeprecated.Scroll) {
 		return {
 			payload: {
 				from: from as SplitPathToMdFile,
@@ -191,7 +189,7 @@ function createRenameAction(info: LeafHealInfo): VaultAction {
  * @returns Rename and delete actions
  */
 export async function healOnInit(
-	leaves: TreeLeaf[],
+	leaves: TreeLeafDeprecated[],
 	actualFiles: SplitPathWithReader[],
 ): Promise<InitHealResult> {
 	const renameActions: VaultAction[] = [];
@@ -218,7 +216,7 @@ export async function healOnInit(
  * Reads suffixDelimiter from global settings.
  */
 export function leafNeedsHealing(
-	leaf: TreeLeaf,
+	leaf: TreeLeafDeprecated,
 	actualFiles: SplitPathWithReader[],
 ): boolean {
 	const actualFile = findMatchingFile(leaf, actualFiles);
@@ -231,7 +229,7 @@ export function leafNeedsHealing(
  * Reads suffixDelimiter from global settings.
  * Note: tRef removed - computes expected basename from tree structure only.
  */
-export function getExpectedBasename(leaf: TreeLeaf): string {
+export function getExpectedBasename(leaf: TreeLeafDeprecated): string {
 	const nodeNameChain = leaf.nodeNameChainToParent;
 	return buildBasenameDepreacated(
 		leaf.nodeName,

@@ -5,8 +5,11 @@
 
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import { LINE_BREAK, SPACE_F, TAB } from "../../../types/literals";
-import type { SectionNode, TreeNode } from "../types/tree-node";
-import { TreeNodeType } from "../types/tree-node";
+import type {
+	SectionNodeDeprecated,
+	TreeNodeDeprecated,
+} from "../types/tree-node";
+import { TreeNodeTypeDeprecated } from "../types/tree-node";
 import { formatAsLine } from "./content/intended-tree-node-and-codex-line";
 import type { AnyIntendedTreeNode } from "./content/schema/intended-tree-node";
 import { CodexLineType } from "./content/schema/literals";
@@ -20,7 +23,7 @@ import { CodexLineType } from "./content/schema/literals";
  * - Own direct children (scrolls with checkbox, files without)
  * - Nested sections with their scrolls (up to maxDepth)
  */
-export function generateCodexContent(section: SectionNode): string {
+export function generateCodexContent(section: SectionNodeDeprecated): string {
 	const settings = getParsedUserSettings();
 	const maxDepth = settings.maxSectionDepth;
 	const showScrollsForDepth = settings.showScrollsInCodexesForDepth;
@@ -47,7 +50,7 @@ export function generateCodexContent(section: SectionNode): string {
 				nodeName: libraryRoot,
 				nodeNameChainToParent: [libraryRoot],
 				status: section.status,
-				type: TreeNodeType.Section,
+				type: TreeNodeTypeDeprecated.Section,
 			},
 			type: CodexLineType.ParentSectionCodex,
 		};
@@ -70,7 +73,7 @@ export function generateCodexContent(section: SectionNode): string {
 					nodeName: parentName,
 					nodeNameChainToParent: parentChainToParent,
 					status: section.status,
-					type: TreeNodeType.Section,
+					type: TreeNodeTypeDeprecated.Section,
 				},
 				type: CodexLineType.ParentSectionCodex,
 			};
@@ -93,7 +96,7 @@ export function generateCodexContent(section: SectionNode): string {
  * Generate list items for children.
  */
 function generateItems(
-	children: TreeNode[],
+	children: TreeNodeDeprecated[],
 	depth: number,
 	maxDepth: number,
 	showScrollsForDepth: number,
@@ -103,7 +106,7 @@ function generateItems(
 
 	for (const child of children) {
 		switch (child.type) {
-			case TreeNodeType.Scroll: {
+			case TreeNodeTypeDeprecated.Scroll: {
 				if (depth <= showScrollsForDepth) {
 					const intended: AnyIntendedTreeNode = {
 						node: child,
@@ -115,7 +118,7 @@ function generateItems(
 				break;
 			}
 
-			case TreeNodeType.File: {
+			case TreeNodeTypeDeprecated.File: {
 				const intended: AnyIntendedTreeNode = {
 					node: child,
 					type: CodexLineType.File,
@@ -125,13 +128,13 @@ function generateItems(
 				break;
 			}
 
-			case TreeNodeType.Section: {
+			case TreeNodeTypeDeprecated.Section: {
 				const intended: AnyIntendedTreeNode = {
 					node: {
 						nodeName: child.nodeName,
 						nodeNameChainToParent: child.nodeNameChainToParent,
 						status: child.status,
-						type: TreeNodeType.Section,
+						type: TreeNodeTypeDeprecated.Section,
 					},
 					type: CodexLineType.ChildSectionCodex,
 				};

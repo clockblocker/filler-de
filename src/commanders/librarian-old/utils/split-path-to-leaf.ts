@@ -3,14 +3,17 @@ import type {
 	SplitPathToFile,
 	SplitPathToMdFile,
 } from "../../../obsidian-vault-action-manager/types/split-path";
-import type { TreeLeaf } from "../types/tree-node";
-import { TreeNodeStatus, TreeNodeType } from "../types/tree-node";
+import type { TreeLeafDeprecated } from "../types/tree-node";
+import {
+	TreeNodeStatusDeprecated,
+	TreeNodeTypeDeprecated,
+} from "../types/tree-node";
 import { parseBasenameDeprecated } from "./parse-basename";
 
 /** @deprecated */
 export function splitPathToLeafDeprecated(
 	splitPath: SplitPathToFile | SplitPathToMdFile,
-): TreeLeaf {
+): TreeLeafDeprecated {
 	const settings = getParsedUserSettings();
 	const rootFolderName = settings.splitPathToLibraryRoot.basename;
 	const { basename, pathParts, type } = splitPath;
@@ -25,8 +28,8 @@ export function splitPathToLeafDeprecated(
 			extension: "md",
 			nodeName,
 			nodeNameChainToParent,
-			status: TreeNodeStatus.NotStarted,
-			type: TreeNodeType.Scroll,
+			status: TreeNodeStatusDeprecated.NotStarted,
+			type: TreeNodeTypeDeprecated.Scroll,
 		};
 	}
 
@@ -37,7 +40,7 @@ export function splitPathToLeafDeprecated(
 		extension,
 		nodeName,
 		nodeNameChainToParent,
-		status: TreeNodeStatus.Unknown,
-		type: TreeNodeType.File,
+		status: TreeNodeStatusDeprecated.Unknown,
+		type: TreeNodeTypeDeprecated.File,
 	};
 }

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse } from "../../../../../src/commanders/librarian-old/naming/deprecated-codexes/tree-node-to-split-path-codec";
-import { TreeNodeStatus, TreeNodeType } from "../../../../../src/commanders/librarian-old/types/tree-node";
+import { TreeNodeStatusDeprecated, TreeNodeTypeDeprecated } from "../../../../../src/commanders/librarian-old/types/tree-node";
 import * as globalState from "../../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../../src/global-state/parsed-settings";
 import { SplitPathType } from "../../../../../src/obsidian-vault-action-manager/types/split-path";
@@ -37,8 +37,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 					children: [],
 					nodeName: "Library",
 					nodeNameChainToParent: [],
-					status: TreeNodeStatus.NotStarted,
-					type: TreeNodeType.Section,
+					status: TreeNodeStatusDeprecated.NotStarted,
+					type: TreeNodeTypeDeprecated.Section,
 				};
 				const result = treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.decode(node);
 				expect(result).toEqual({
@@ -53,8 +53,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 					children: [],
 					nodeName: "Child",
 					nodeNameChainToParent: ["Library", "Parent"],
-					status: TreeNodeStatus.NotStarted,
-					type: TreeNodeType.Section,
+					status: TreeNodeStatusDeprecated.NotStarted,
+					type: TreeNodeTypeDeprecated.Section,
 				};
 				const result = treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.decode(node);
 				expect(result).toEqual({
@@ -69,8 +69,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 					children: [],
 					nodeName: "Deep",
 					nodeNameChainToParent: ["Library", "Parent", "Child"],
-					status: TreeNodeStatus.NotStarted,
-					type: TreeNodeType.Section,
+					status: TreeNodeStatusDeprecated.NotStarted,
+					type: TreeNodeTypeDeprecated.Section,
 				};
 				const result = treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.decode(node);
 				expect(result).toEqual({
@@ -87,8 +87,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 					extension: "md",
 					nodeName: "Note",
 					nodeNameChainToParent: ["Library"],
-					status: TreeNodeStatus.NotStarted,
-					type: TreeNodeType.Scroll,
+					status: TreeNodeStatusDeprecated.NotStarted,
+					type: TreeNodeTypeDeprecated.Scroll,
 				};
 				const result = treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.decode(node);
 				expect(result).toEqual({
@@ -104,8 +104,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 					extension: "md",
 					nodeName: "Note",
 					nodeNameChainToParent: ["Library", "Parent"],
-					status: TreeNodeStatus.NotStarted,
-					type: TreeNodeType.Scroll,
+					status: TreeNodeStatusDeprecated.NotStarted,
+					type: TreeNodeTypeDeprecated.Scroll,
 				};
 				const result = treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.decode(node);
 				expect(result).toEqual({
@@ -121,8 +121,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 					extension: "md",
 					nodeName: "Note",
 					nodeNameChainToParent: ["Library", "Parent", "Child"],
-					status: TreeNodeStatus.NotStarted,
-					type: TreeNodeType.Scroll,
+					status: TreeNodeStatusDeprecated.NotStarted,
+					type: TreeNodeTypeDeprecated.Scroll,
 				};
 				const result = treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.decode(node);
 				expect(result).toEqual({
@@ -140,8 +140,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 					extension: "png",
 					nodeName: "Image",
 					nodeNameChainToParent: ["Library"],
-					status: TreeNodeStatus.Unknown,
-					type: TreeNodeType.File,
+					status: TreeNodeStatusDeprecated.Unknown,
+					type: TreeNodeTypeDeprecated.File,
 				};
 				const result = treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.decode(node);
 				expect(result).toEqual({
@@ -157,8 +157,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 					extension: "png",
 					nodeName: "Image",
 					nodeNameChainToParent: ["Library", "Parent"],
-					status: TreeNodeStatus.Unknown,
-					type: TreeNodeType.File,
+					status: TreeNodeStatusDeprecated.Unknown,
+					type: TreeNodeTypeDeprecated.File,
 				};
 				const result = treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.decode(node);
 				expect(result).toEqual({
@@ -184,8 +184,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 					children: [],
 					nodeName: "Library",
 					nodeNameChainToParent: [],
-					status: TreeNodeStatus.Unknown,
-					type: TreeNodeType.Section,
+					status: TreeNodeStatusDeprecated.Unknown,
+					type: TreeNodeTypeDeprecated.Section,
 				});
 			});
 
@@ -200,8 +200,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 					children: [],
 					nodeName: "Child",
 					nodeNameChainToParent: ["Library", "Parent"],
-					status: TreeNodeStatus.Unknown,
-					type: TreeNodeType.Section,
+					status: TreeNodeStatusDeprecated.Unknown,
+					type: TreeNodeTypeDeprecated.Section,
 				});
 			});
 
@@ -216,8 +216,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 					children: [],
 					nodeName: "Deep",
 					nodeNameChainToParent: ["Library", "Parent", "Child"],
-					status: TreeNodeStatus.Unknown,
-					type: TreeNodeType.Section,
+					status: TreeNodeStatusDeprecated.Unknown,
+					type: TreeNodeTypeDeprecated.Section,
 				});
 			});
 		});
@@ -235,8 +235,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 					extension: "md",
 					nodeName: "Note",
 					nodeNameChainToParent: ["Library"],
-					status: TreeNodeStatus.Unknown,
-					type: TreeNodeType.Scroll,
+					status: TreeNodeStatusDeprecated.Unknown,
+					type: TreeNodeTypeDeprecated.Scroll,
 				});
 			});
 
@@ -252,8 +252,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 					extension: "md",
 					nodeName: "Note",
 					nodeNameChainToParent: ["Library", "Parent"],
-					status: TreeNodeStatus.Unknown,
-					type: TreeNodeType.Scroll,
+					status: TreeNodeStatusDeprecated.Unknown,
+					type: TreeNodeTypeDeprecated.Scroll,
 				});
 			});
 
@@ -269,8 +269,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 					extension: "md",
 					nodeName: "Note",
 					nodeNameChainToParent: ["Library", "Parent", "Child"],
-					status: TreeNodeStatus.Unknown,
-					type: TreeNodeType.Scroll,
+					status: TreeNodeStatusDeprecated.Unknown,
+					type: TreeNodeTypeDeprecated.Scroll,
 				});
 			});
 		});
@@ -288,8 +288,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 					extension: "png",
 					nodeName: "Image",
 					nodeNameChainToParent: ["Library"],
-					status: TreeNodeStatus.Unknown,
-					type: TreeNodeType.File,
+					status: TreeNodeStatusDeprecated.Unknown,
+					type: TreeNodeTypeDeprecated.File,
 				});
 			});
 
@@ -305,8 +305,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 					extension: "png",
 					nodeName: "Image",
 					nodeNameChainToParent: ["Library", "Parent"],
-					status: TreeNodeStatus.Unknown,
-					type: TreeNodeType.File,
+					status: TreeNodeStatusDeprecated.Unknown,
+					type: TreeNodeTypeDeprecated.File,
 				});
 			});
 		});
@@ -318,8 +318,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				children: [],
 				nodeName: "Library",
 				nodeNameChainToParent: [],
-				status: TreeNodeStatus.NotStarted,
-				type: TreeNodeType.Section,
+				status: TreeNodeStatusDeprecated.NotStarted,
+				type: TreeNodeTypeDeprecated.Section,
 			};
 			const result = treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.encode(
 				treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.decode(node),
@@ -336,8 +336,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				children: [],
 				nodeName: "Child",
 				nodeNameChainToParent: ["Parent"],
-				status: TreeNodeStatus.NotStarted,
-				type: TreeNodeType.Section,
+				status: TreeNodeStatusDeprecated.NotStarted,
+				type: TreeNodeTypeDeprecated.Section,
 			};
 			const result = treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.encode(
 				treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.decode(node),
@@ -354,8 +354,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				extension: "md",
 				nodeName: "Note",
 				nodeNameChainToParent: [],
-				status: TreeNodeStatus.NotStarted,
-				type: TreeNodeType.Scroll,
+				status: TreeNodeStatusDeprecated.NotStarted,
+				type: TreeNodeTypeDeprecated.Scroll,
 			};
 			const result = treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.encode(
 				treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.decode(node),
@@ -372,8 +372,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				extension: "md",
 				nodeName: "Note",
 				nodeNameChainToParent: ["Parent", "Child"],
-				status: TreeNodeStatus.NotStarted,
-				type: TreeNodeType.Scroll,
+				status: TreeNodeStatusDeprecated.NotStarted,
+				type: TreeNodeTypeDeprecated.Scroll,
 			};
 			const result = treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.encode(
 				treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.decode(node),
@@ -390,8 +390,8 @@ describe("treeNodeToSuffixedSplitPathCodec", () => {
 				extension: "png",
 				nodeName: "Image",
 				nodeNameChainToParent: ["Parent"],
-				status: TreeNodeStatus.Unknown,
-				type: TreeNodeType.File,
+				status: TreeNodeStatusDeprecated.Unknown,
+				type: TreeNodeTypeDeprecated.File,
 			};
 			const result = treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.encode(
 				treeNodeToSuffixedSplitPathCodecDeprecatedDoNotUse.decode(node),

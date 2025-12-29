@@ -2,7 +2,7 @@
  * Utilities for collecting and expanding impacted chains.
  */
 
-import type { NodeNameChain } from "../types/schemas/node-name";
+import type { NodeNameChainDeprecated } from "../types/schemas/node-name";
 import { joinPathParts } from "../utils/tree-path-utils";
 
 /**
@@ -10,22 +10,26 @@ import { joinPathParts } from "../utils/tree-path-utils";
  * MoveNode returns [oldParent, newParent], others return single chain.
  */
 export function flattenActionResult(
-	result: NodeNameChain | [NodeNameChain, NodeNameChain],
-): NodeNameChain[] {
+	result:
+		| NodeNameChainDeprecated
+		| [NodeNameChainDeprecated, NodeNameChainDeprecated],
+): NodeNameChainDeprecated[] {
 	if (Array.isArray(result[0])) {
 		// It's a tuple of two chains
-		return result as NodeNameChain[];
+		return result as NodeNameChainDeprecated[];
 	}
 	// It's a single chain
-	return [result as NodeNameChain];
+	return [result as NodeNameChainDeprecated];
 }
 
 /**
  * Expand chains to include all ancestors (including root).
  * ["A", "B", "C"] → [[], ["A"], ["A", "B"], ["A", "B", "C"]]
  */
-export function expandToAncestors(chain: NodeNameChain): NodeNameChain[] {
-	const result: NodeNameChain[] = [[]]; // Start with root
+export function expandToAncestors(
+	chain: NodeNameChainDeprecated,
+): NodeNameChainDeprecated[] {
+	const result: NodeNameChainDeprecated[] = [[]]; // Start with root
 
 	for (let i = 1; i <= chain.length; i++) {
 		result.push(chain.slice(0, i));
@@ -37,8 +41,10 @@ export function expandToAncestors(chain: NodeNameChain): NodeNameChain[] {
 /**
  * Expand multiple chains to include all ancestors.
  */
-export function expandAllToAncestors(chains: NodeNameChain[]): NodeNameChain[] {
-	const result: NodeNameChain[] = [];
+export function expandAllToAncestors(
+	chains: NodeNameChainDeprecated[],
+): NodeNameChainDeprecated[] {
+	const result: NodeNameChainDeprecated[] = [];
 
 	for (const chain of chains) {
 		result.push(...expandToAncestors(chain));
@@ -50,9 +56,11 @@ export function expandAllToAncestors(chains: NodeNameChain[]): NodeNameChain[] {
 /**
  * Deduplicate chains by converting to string keys.
  */
-export function dedupeChains(chains: NodeNameChain[]): NodeNameChain[] {
+export function dedupeChains(
+	chains: NodeNameChainDeprecated[],
+): NodeNameChainDeprecated[] {
 	const seen = new Set<string>();
-	const result: NodeNameChain[] = [];
+	const result: NodeNameChainDeprecated[] = [];
 
 	for (const chain of chains) {
 		const key = joinPathParts(chain);
@@ -69,10 +77,13 @@ export function dedupeChains(chains: NodeNameChain[]): NodeNameChain[] {
  * Collect impacted chains from action results, expand ancestors, and dedupe.
  */
 export function collectImpactedSections(
-	actionResults: Array<NodeNameChain | [NodeNameChain, NodeNameChain]>,
-): NodeNameChain[] {
+	actionResults: Array<
+		| NodeNameChainDeprecated
+		| [NodeNameChainDeprecated, NodeNameChainDeprecated]
+	>,
+): NodeNameChainDeprecated[] {
 	// Flatten all results
-	const allChains: NodeNameChain[] = [];
+	const allChains: NodeNameChainDeprecated[] = [];
 	for (const result of actionResults) {
 		const flattened = flattenActionResult(result);
 		allChains.push(...flattened);
@@ -92,7 +103,9 @@ export function collectImpactedSections(
  * Find common ancestor of multiple chains.
  * Returns the longest common prefix.
  */
-export function findCommonAncestor(chains: NodeNameChain[]): NodeNameChain {
+export function findCommonAncestor(
+	chains: NodeNameChainDeprecated[],
+): NodeNameChainDeprecated {
 	const first = chains[0];
 
 	if (!first) {

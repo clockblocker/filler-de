@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import type { TreeLeaf } from "../../../../src/commanders/librarian-old/types/tree-node";
-import { TreeNodeStatus, TreeNodeType } from "../../../../src/commanders/librarian-old/types/tree-node";
+import type { TreeLeafDeprecated } from "../../../../src/commanders/librarian-old/types/tree-node";
+import { TreeNodeStatusDeprecated, TreeNodeTypeDeprecated } from "../../../../src/commanders/librarian-old/types/tree-node";
 import {
 	buildCanonicalBasenameForLeaf,
 	buildCanonicalPathForLeaf,
@@ -38,12 +38,12 @@ afterEach(() => {
 describe("buildCanonicalPathFromTree", () => {
 
 	it("builds canonical path for root-level file", () => {
-		const leaf: TreeLeaf = {
+		const leaf: TreeLeafDeprecated = {
 			extension: "md",
 			nodeName: "Note",
 			nodeNameChainToParent: ["Library"],
-			status: TreeNodeStatus.NotStarted,
-			type: TreeNodeType.Scroll,
+			status: TreeNodeStatusDeprecated.NotStarted,
+			type: TreeNodeTypeDeprecated.Scroll,
 		};
 
 		const result = buildCanonicalPathForLeaf(leaf);
@@ -52,12 +52,12 @@ describe("buildCanonicalPathFromTree", () => {
 	});
 
 	it("builds canonical path with suffix in basename", () => {
-		const leaf: TreeLeaf = {
+		const leaf: TreeLeafDeprecated = {
 			extension: "md",
 			nodeName: "Note",
 			nodeNameChainToParent: ["Library", "A", "B"],
-			status: TreeNodeStatus.NotStarted,
-			type: TreeNodeType.Scroll,
+			status: TreeNodeStatusDeprecated.NotStarted,
+			type: TreeNodeTypeDeprecated.Scroll,
 		};
 
 		const result = buildCanonicalPathForLeaf(leaf);
@@ -71,12 +71,12 @@ describe("buildCanonicalPathFromTree", () => {
 			suffixDelimiter: "::",
 		});
 
-		const leaf: TreeLeaf = {
+		const leaf: TreeLeafDeprecated = {
 			extension: "md",
 			nodeName: "Note",
 			nodeNameChainToParent: ["Library", "A", "B"],
-			status: TreeNodeStatus.NotStarted,
-			type: TreeNodeType.Scroll,
+			status: TreeNodeStatusDeprecated.NotStarted,
+			type: TreeNodeTypeDeprecated.Scroll,
 		};
 
 		const result = buildCanonicalPathForLeaf(leaf);
@@ -94,12 +94,12 @@ describe("buildCanonicalPathFromTree", () => {
 			},
 		});
 
-		const leaf: TreeLeaf = {
+		const leaf: TreeLeafDeprecated = {
 			extension: "md",
 			nodeName: "Note",
 			nodeNameChainToParent: ["child", "A"],
-			status: TreeNodeStatus.NotStarted,
-			type: TreeNodeType.Scroll,
+			status: TreeNodeStatusDeprecated.NotStarted,
+			type: TreeNodeTypeDeprecated.Scroll,
 		};
 
 		const result = buildCanonicalPathForLeaf(leaf);
@@ -111,12 +111,12 @@ describe("buildCanonicalPathFromTree", () => {
 describe("buildCanonicalBasenameFromTree", () => {
 
 	it("builds canonical basename for root-level file", () => {
-		const leaf: TreeLeaf = {
+		const leaf: TreeLeafDeprecated = {
 			extension: "md",
 			nodeName: "Note",
 			nodeNameChainToParent: ["Library"],
-			status: TreeNodeStatus.NotStarted,
-			type: TreeNodeType.Scroll,
+			status: TreeNodeStatusDeprecated.NotStarted,
+			type: TreeNodeTypeDeprecated.Scroll,
 		};
 
 		const result = buildCanonicalBasenameForLeaf(leaf);
@@ -125,12 +125,12 @@ describe("buildCanonicalBasenameFromTree", () => {
 	});
 
 	it("builds canonical basename with reversed path as suffix", () => {
-		const leaf: TreeLeaf = {
+		const leaf: TreeLeafDeprecated = {
 			extension: "md",
 			nodeName: "Note",
 			nodeNameChainToParent: ["Library", "A", "B"],
-			status: TreeNodeStatus.NotStarted,
-			type: TreeNodeType.Scroll,
+			status: TreeNodeStatusDeprecated.NotStarted,
+			type: TreeNodeTypeDeprecated.Scroll,
 		};
 
 		const result = buildCanonicalBasenameForLeaf(leaf);
@@ -144,12 +144,12 @@ describe("buildCanonicalBasenameFromTree", () => {
 			suffixDelimiter: "::",
 		});
 
-		const leaf: TreeLeaf = {
+		const leaf: TreeLeafDeprecated = {
 			extension: "md",
 			nodeName: "Note",
 			nodeNameChainToParent: ["Library", "A", "B"],
-			status: TreeNodeStatus.NotStarted,
-			type: TreeNodeType.Scroll,
+			status: TreeNodeStatusDeprecated.NotStarted,
+			type: TreeNodeTypeDeprecated.Scroll,
 		};
 
 		const result = buildCanonicalBasenameForLeaf(leaf);
@@ -158,12 +158,12 @@ describe("buildCanonicalBasenameFromTree", () => {
 	});
 
 	it("handles single parent folder", () => {
-		const leaf: TreeLeaf = {
+		const leaf: TreeLeafDeprecated = {
 			extension: "md",
 			nodeName: "Note",
 			nodeNameChainToParent: ["Library", "Parent"],
-			status: TreeNodeStatus.NotStarted,
-			type: TreeNodeType.Scroll,
+			status: TreeNodeStatusDeprecated.NotStarted,
+			type: TreeNodeTypeDeprecated.Scroll,
 		};
 
 		const result = buildCanonicalBasenameForLeaf(leaf);

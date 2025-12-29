@@ -26,8 +26,11 @@ import {
 } from "./orchestration";
 import { collectAllSectionChains } from "./orchestration/tree-utils";
 import { TreeActionType } from "./types/literals";
-import type { NodeNameChain } from "./types/schemas/node-name";
-import { TreeNodeStatus, TreeNodeType } from "./types/tree-node";
+import type { NodeNameChainDeprecated } from "./types/schemas/node-name";
+import {
+	TreeNodeStatusDeprecated,
+	TreeNodeTypeDeprecated,
+} from "./types/tree-node";
 import { buildCanonicalPathForLeaf } from "./utils/tree-path-utils";
 
 /**
@@ -242,13 +245,13 @@ export class LibrarianDeprecated {
 	 * Updates tree, writes metadata to file (for Scroll nodes), and regenerates impacted codexes.
 	 */
 	async setStatus(
-		nodeNameChain: NodeNameChain,
-		status: TreeNodeStatus,
+		nodeNameChain: NodeNameChainDeprecated,
+		status: TreeNodeStatusDeprecated,
 	): Promise<void> {
 		const newStatus =
-			status === TreeNodeStatus.Done
-				? TreeNodeStatus.Done
-				: TreeNodeStatus.NotStarted;
+			status === TreeNodeStatusDeprecated.Done
+				? TreeNodeStatusDeprecated.Done
+				: TreeNodeStatusDeprecated.NotStarted;
 
 		// Get node before updating (to access tRef for Scroll nodes)
 		const node = this.tree.getNode(nodeNameChain);
@@ -259,7 +262,7 @@ export class LibrarianDeprecated {
 		});
 
 		// Write metadata to file if this is a Scroll node
-		if (node?.type === TreeNodeType.Scroll) {
+		if (node?.type === TreeNodeTypeDeprecated.Scroll) {
 			// Build canonical path from tree structure
 			const path = buildCanonicalPathForLeaf(node);
 			const splitPath = makeSplitPath(path);

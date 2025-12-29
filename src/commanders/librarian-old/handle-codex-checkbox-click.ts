@@ -7,7 +7,7 @@ import { tryParseAsIntendedTreeNode } from "./codex/content/intended-tree-node-a
 import { CodexLineType } from "./codex/content/schema/literals";
 import type { LibrarianDeprecated } from "./librarian";
 import { CODEX_CORE_NAME } from "./types/literals";
-import type { NodeNameChain } from "./types/schemas/node-name";
+import type { NodeNameChainDeprecated } from "./types/schemas/node-name";
 
 /**
  * Handle codex checkbox click.
@@ -76,7 +76,7 @@ export async function handleCodexCheckboxClickDeprecated({
 
 function tryParseAsClickableNode(
 	codexLine: string,
-): Result<NodeNameChain, string> {
+): Result<NodeNameChainDeprecated, string> {
 	const intendedTreeNodeResult = tryParseAsIntendedTreeNode(codexLine);
 	if (intendedTreeNodeResult.isErr()) {
 		return err(intendedTreeNodeResult.error);

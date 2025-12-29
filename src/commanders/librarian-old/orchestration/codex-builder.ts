@@ -7,8 +7,8 @@ import {
 	buildCanonicalPathPartsForCodex,
 	makeCanonicalBasenameForCodexFromSectionNode,
 } from "../naming/functions/codexes";
-import type { NodeNameChain } from "../types/schemas/node-name";
-import type { SectionNode } from "../types/tree-node";
+import type { NodeNameChainDeprecated } from "../types/schemas/node-name";
+import type { SectionNodeDeprecated } from "../types/tree-node";
 
 /**
  * Build VaultActions to create/update codex files for impacted sections.
@@ -16,8 +16,10 @@ import type { SectionNode } from "../types/tree-node";
  * INVARIANT: getSectionNode returns state of the updated tree
  */
 export function buildCodexVaultActions(
-	nodeNameChainsToImpactedSections: NodeNameChain[],
-	getSectionNode: (chain: NodeNameChain) => SectionNode | null,
+	nodeNameChainsToImpactedSections: NodeNameChainDeprecated[],
+	getSectionNode: (
+		chain: NodeNameChainDeprecated,
+	) => SectionNodeDeprecated | null,
 ): VaultAction[] {
 	const actions: VaultAction[] = [];
 

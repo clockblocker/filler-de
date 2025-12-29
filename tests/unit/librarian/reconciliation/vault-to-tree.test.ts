@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { translateVaultAction } from "../../../../src/commanders/librarian-old/reconciliation/vault-to-tree";
 import { TreeActionType } from "../../../../src/commanders/librarian-old/types/literals";
-import { TreeNodeStatus, TreeNodeType } from "../../../../src/commanders/librarian-old/types/tree-node";
+import { TreeNodeStatusDeprecated, TreeNodeTypeDeprecated } from "../../../../src/commanders/librarian-old/types/tree-node";
 import * as globalState from "../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
 import { SplitPathType } from "../../../../src/obsidian-vault-action-manager/types/split-path";
@@ -53,8 +53,8 @@ describe("translateVaultAction", () => {
 				payload: {
 					nodeName: "MyFolder",
 					nodeNameChainToParent: ["Library", "Parent"],
-					nodeType: TreeNodeType.Section,
-					status: TreeNodeStatus.NotStarted,
+					nodeType: TreeNodeTypeDeprecated.Section,
+					status: TreeNodeStatusDeprecated.NotStarted,
 				},
 				type: TreeActionType.CreateNode,
 			});
@@ -102,8 +102,8 @@ describe("translateVaultAction", () => {
 					extension: "md",
 					nodeName: "Note",
 					nodeNameChainToParent: ["Library", "A", "B"],
-					nodeType: TreeNodeType.Scroll,
-					status: TreeNodeStatus.NotStarted,
+					nodeType: TreeNodeTypeDeprecated.Scroll,
+					status: TreeNodeStatusDeprecated.NotStarted,
 				},
 				type: TreeActionType.CreateNode,
 			});
@@ -131,8 +131,8 @@ describe("translateVaultAction", () => {
 					extension: "pdf",
 					nodeName: "doc",
 					nodeNameChainToParent: ["Library", "A"],
-					nodeType: TreeNodeType.File,
-					status: TreeNodeStatus.Unknown,
+					nodeType: TreeNodeTypeDeprecated.File,
+					status: TreeNodeStatusDeprecated.Unknown,
 				},
 				type: TreeActionType.CreateNode,
 			});

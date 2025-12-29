@@ -1,28 +1,28 @@
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import type {
-	NodeName,
-	NodeNameChain,
-	SplitSuffix,
+	NodeNameChainDeprecated,
+	NodeNameDeprecated,
+	SplitSuffixDeprecated,
 } from "../types/schemas/node-name";
 
 /** @deprecated */
 export function computeSuffixFromPathDepreacated(
-	nodeNameChain: NodeNameChain,
-): SplitSuffix {
+	nodeNameChain: NodeNameChainDeprecated,
+): SplitSuffixDeprecated {
 	return [...nodeNameChain].reverse();
 }
 
 /** @deprecated */
 export function computePathPartsFromSuffixDepreacated(
-	splitSuffix: SplitSuffix,
-): NodeNameChain {
+	splitSuffix: SplitSuffixDeprecated,
+): NodeNameChainDeprecated {
 	return [...splitSuffix].reverse();
 }
 
 /** @deprecated */
 export function buildBasenameDepreacated(
-	nodeName: NodeName,
-	splitSuffix: SplitSuffix,
+	nodeName: NodeNameDeprecated,
+	splitSuffix: SplitSuffixDeprecated,
 ): string {
 	if (splitSuffix.length === 0) {
 		return nodeName;
@@ -33,8 +33,8 @@ export function buildBasenameDepreacated(
 
 /** @deprecated */
 export function buildCanonicalBasenameDeprecated(
-	nodeName: NodeName,
-	nodeNameChain: NodeNameChain,
+	nodeName: NodeNameDeprecated,
+	nodeNameChain: NodeNameChainDeprecated,
 ): string {
 	const suffix = computeSuffixFromPathDepreacated(nodeNameChain);
 	return buildBasenameDepreacated(nodeName, suffix);
@@ -42,8 +42,8 @@ export function buildCanonicalBasenameDeprecated(
 
 /** @deprecated */
 export function suffixMatchesPathDepreacated(
-	splitSuffix: SplitSuffix,
-	nodeNameChain: NodeNameChain,
+	splitSuffix: SplitSuffixDeprecated,
+	nodeNameChain: NodeNameChainDeprecated,
 ): boolean {
 	if (splitSuffix.length !== nodeNameChain.length) {
 		return false;

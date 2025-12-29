@@ -1,8 +1,8 @@
 import z from "zod";
 import { getParsedUserSettings } from "../../../../global-state/global-state";
 import {
-	type NodeNameChain,
-	NodeNameChainSchema,
+	type NodeNameChainDeprecated,
+	NodeNameChainSchemaDeprecated,
 } from "../../types/schemas/node-name";
 
 /**
@@ -12,9 +12,9 @@ import {
  */
 export const canonicalBasenameToChainCodec = z.codec(
 	z.string(),
-	NodeNameChainSchema,
+	NodeNameChainSchemaDeprecated,
 	{
-		decode: (cleanBasename: string): NodeNameChain => {
+		decode: (cleanBasename: string): NodeNameChainDeprecated => {
 			const settings = getParsedUserSettings();
 			const libraryRoot = settings.splitPathToLibraryRoot.basename;
 
@@ -25,7 +25,7 @@ export const canonicalBasenameToChainCodec = z.codec(
 			const parts = cleanBasename.split(settings.suffixDelimiter);
 			return parts.toReversed();
 		},
-		encode: (chain: NodeNameChain): string => {
+		encode: (chain: NodeNameChainDeprecated): string => {
 			const settings = getParsedUserSettings();
 			const libraryRoot = settings.splitPathToLibraryRoot.basename;
 

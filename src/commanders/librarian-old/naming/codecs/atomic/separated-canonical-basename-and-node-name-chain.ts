@@ -1,8 +1,8 @@
 import z from "zod";
 import { getParsedUserSettings } from "../../../../../global-state/global-state";
 import {
-	type NodeNameChain,
-	NodeNameChainSchema,
+	type NodeNameChainDeprecated,
+	NodeNameChainSchemaDeprecated,
 } from "../../../types/schemas/node-name";
 import {
 	type SeparatedSuffixedBasename,
@@ -21,9 +21,9 @@ import {
  */
 const separatedSuffixedBasenameToNodeNameChainCodec = z.codec(
 	SeparatedSuffixedBasenameSchema,
-	NodeNameChainSchema,
+	NodeNameChainSchemaDeprecated,
 	{
-		decode: ({ splitSuffix, nodeName }): NodeNameChain => {
+		decode: ({ splitSuffix, nodeName }): NodeNameChainDeprecated => {
 			const {
 				splitPathToLibraryRoot: { basename: libraryRoot },
 			} = getParsedUserSettings();
@@ -31,7 +31,7 @@ const separatedSuffixedBasenameToNodeNameChainCodec = z.codec(
 			const reversedSuffix = [...splitSuffix].reverse();
 			return [libraryRoot, ...reversedSuffix, nodeName];
 		},
-		encode: (chain: NodeNameChain): SeparatedSuffixedBasename => {
+		encode: (chain: NodeNameChainDeprecated): SeparatedSuffixedBasename => {
 			const {
 				splitPathToLibraryRoot: { basename: libraryRoot },
 			} = getParsedUserSettings();
@@ -56,13 +56,13 @@ const separatedSuffixedBasenameToNodeNameChainCodec = z.codec(
 );
 
 export const makeSeparatedSuffixedBasenameFromNodeNameChain = (
-	chain: NodeNameChain,
+	chain: NodeNameChainDeprecated,
 ): SeparatedSuffixedBasename => {
 	return separatedSuffixedBasenameToNodeNameChainCodec.encode(chain);
 };
 
 export const makeNodeNameChainFromSeparatedSuffixedBasename = (
 	separated: SeparatedSuffixedBasename,
-): NodeNameChain => {
+): NodeNameChainDeprecated => {
 	return separatedSuffixedBasenameToNodeNameChainCodec.decode(separated);
 };

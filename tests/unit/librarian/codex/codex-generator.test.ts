@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { generateCodexContent } from "../../../../src/commanders/librarian-old/codex/codex-generator";
-import type { SectionNode } from "../../../../src/commanders/librarian-old/types/tree-node";
-import { TreeNodeStatus, TreeNodeType } from "../../../../src/commanders/librarian-old/types/tree-node";
+import type { SectionNodeDeprecated } from "../../../../src/commanders/librarian-old/types/tree-node";
+import { TreeNodeStatusDeprecated, TreeNodeTypeDeprecated } from "../../../../src/commanders/librarian-old/types/tree-node";
 import * as globalState from "../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
 import { SplitPathType } from "../../../../src/obsidian-vault-action-manager/types/split-path";
@@ -36,15 +36,15 @@ afterEach(() => {
 function createSection(
 	nodeName: string,
 	nodeNameChainToParent: string[],
-	children: SectionNode["children"] = [],
-	status: typeof TreeNodeStatus.Done | typeof TreeNodeStatus.NotStarted = TreeNodeStatus.NotStarted,
-): SectionNode {
+	children: SectionNodeDeprecated["children"] = [],
+	status: typeof TreeNodeStatusDeprecated.Done | typeof TreeNodeStatusDeprecated.NotStarted = TreeNodeStatusDeprecated.NotStarted,
+): SectionNodeDeprecated {
 	return {
 		children,
 		nodeName,
 		nodeNameChainToParent,
 		status,
-		type: TreeNodeType.Section,
+		type: TreeNodeTypeDeprecated.Section,
 	};
 }
 
@@ -79,8 +79,8 @@ describe("generateCodexContent", () => {
 					extension: "md",
 					nodeName: "Note",
 					nodeNameChainToParent: ["Library", "A"],
-					status: TreeNodeStatus.NotStarted,
-					type: TreeNodeType.Scroll,
+					status: TreeNodeStatusDeprecated.NotStarted,
+					type: TreeNodeTypeDeprecated.Scroll,
 				},
 			]);
 
@@ -96,8 +96,8 @@ describe("generateCodexContent", () => {
 					extension: "md",
 					nodeName: "DoneNote",
 					nodeNameChainToParent: ["Library", "A"],
-					status: TreeNodeStatus.Done,
-					type: TreeNodeType.Scroll,
+					status: TreeNodeStatusDeprecated.Done,
+					type: TreeNodeTypeDeprecated.Scroll,
 				},
 			]);
 
@@ -114,8 +114,8 @@ describe("generateCodexContent", () => {
 					extension: "pdf",
 					nodeName: "Document",
 					nodeNameChainToParent: ["Library", "A"],
-					status: TreeNodeStatus.Unknown,
-					type: TreeNodeType.File,
+					status: TreeNodeStatusDeprecated.Unknown,
+					type: TreeNodeTypeDeprecated.File,
 				},
 			]);
 
@@ -148,8 +148,8 @@ describe("generateCodexContent", () => {
 					extension: "md",
 					nodeName: "NestedNote",
 					nodeNameChainToParent: ["Library", "A", "B"],
-					status: TreeNodeStatus.NotStarted,
-					type: TreeNodeType.Scroll,
+					status: TreeNodeStatusDeprecated.NotStarted,
+					type: TreeNodeTypeDeprecated.Scroll,
 				},
 			]);
 			const section = createSection("A", ["Library"], [childSection]);
@@ -171,8 +171,8 @@ describe("generateCodexContent", () => {
 					extension: "md",
 					nodeName: "DeepNote",
 					nodeNameChainToParent: ["Library", "A", "B", "C", "D", "E"],
-					status: TreeNodeStatus.NotStarted,
-					type: TreeNodeType.Scroll,
+					status: TreeNodeStatusDeprecated.NotStarted,
+					type: TreeNodeTypeDeprecated.Scroll,
 				},
 			]);
 			const sectionD = createSection("D", ["Library", "A", "B", "C"], [sectionE]);

@@ -1,8 +1,8 @@
 import z from "zod";
 import { CODEX_CORE_NAME } from "../../../types/literals";
 import {
-	NodeNameSchema,
-	SplitSuffixSchema,
+	NodeNameSchemaDeprecated,
+	SplitSuffixSchemaDeprecated,
 } from "../../../types/schemas/node-name";
 
 /**
@@ -46,19 +46,19 @@ export type SeparatedSuffixedBasenameForSection = z.infer<
 >;
 
 export const SeparatedSuffixedBasenameSchema = z.object({
-	nodeName: NodeNameSchema,
-	splitSuffix: SplitSuffixSchema,
+	nodeName: NodeNameSchemaDeprecated,
+	splitSuffix: SplitSuffixSchemaDeprecated,
 });
 
 export const SeparatedSuffixedBasenameForFileSchema =
 	SeparatedSuffixedBasenameSchema;
 
 export const SeparatedSuffixedBasenameForCodexSchema = z.object({
-	nodeName: NodeNameSchema.refine((s) => s === CODEX_CORE_NAME),
-	splitSuffix: SplitSuffixSchema,
+	nodeName: NodeNameSchemaDeprecated.refine((s) => s === CODEX_CORE_NAME),
+	splitSuffix: SplitSuffixSchemaDeprecated,
 });
 
 export const SeparatedSuffixedBasenameForSectionSchema = z.object({
-	nodeName: NodeNameSchema,
-	splitSuffix: SplitSuffixSchema.length(0),
+	nodeName: NodeNameSchemaDeprecated,
+	splitSuffix: SplitSuffixSchemaDeprecated.length(0),
 });

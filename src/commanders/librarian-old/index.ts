@@ -6,8 +6,8 @@
  * @deprecated isTaskCheckbox is being fully rewritten. Use new implementation when available.
  */
 export {
-	handleCodexCheckboxClickDeprecated as handleCodexCheckboxClick,
-	isTaskCheckboxDeprecated as isTaskCheckbox,
+	handleCodexCheckboxClickDeprecated,
+	isTaskCheckboxDeprecated,
 } from "./handle-codex-checkbox-click";
 // Healing exports
 /**
@@ -74,9 +74,9 @@ export { DragInSubtype, HealingMode, RuntimeSubtype } from "./types/literals";
  * @deprecated SplitSuffix is being fully rewritten. Use new implementation when available.
  */
 export type {
-	NodeName,
-	NodeNameChain,
-	SplitSuffix,
+	NodeNameChainDeprecated,
+	NodeNameDeprecated,
+	SplitSuffixDeprecated,
 } from "./types/schemas/node-name";
 /**
  * @deprecated TreeAction is being fully rewritten. Use new implementation when available.
@@ -107,14 +107,14 @@ export type { TreeAction } from "./types/tree-action";
  * @deprecated TreeNodeType is being fully rewritten. Use new implementation when available.
  */
 export type {
-	FileNode,
-	LeafNode,
-	ScrollNode,
-	SectionNode,
-	TreeLeaf,
-	TreeNode,
-	TreeNodeStatus,
-	TreeNodeType,
+	FileNodeDeprecated,
+	LeafNodeDeprecated,
+	ScrollNodeDeprecated,
+	SectionNodeDeprecated,
+	TreeLeafDeprecated,
+	TreeNodeDeprecated,
+	TreeNodeStatusDeprecated,
+	TreeNodeTypeDeprecated,
 } from "./types/tree-node";
 /**
  * @deprecated findCommonAncestor is being fully rewritten. Use new implementation when available.

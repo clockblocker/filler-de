@@ -11,7 +11,7 @@ import {
 } from "../../../../../types/literals";
 import { makeNodeNameChainToParentFromSeparatedCanonicalBasenameForCodex } from "../../../naming/functions/codexes";
 import { separateJoinedSuffixedBasename } from "../../../naming/types/transformers";
-import { TreeNodeStatus } from "../../../types/tree-node";
+import { TreeNodeStatusDeprecated } from "../../../types/tree-node";
 import type {
 	IntendedTreeNode,
 	TreeNodeIntendedForChildSectionCodexLine,
@@ -72,7 +72,9 @@ function parseTreeNodeIntendedForScrollLine(
 	];
 
 	const isDone = codexLine.startsWith(DONE_CHECKBOX);
-	const status = isDone ? TreeNodeStatus.Done : TreeNodeStatus.NotStarted;
+	const status = isDone
+		? TreeNodeStatusDeprecated.Done
+		: TreeNodeStatusDeprecated.NotStarted;
 
 	return {
 		node: {
@@ -114,7 +116,7 @@ function parseTreeNodeIntendedForFileLine(
 			extension,
 			nodeName: displayName,
 			nodeNameChainToParent,
-			status: TreeNodeStatus.Unknown,
+			status: TreeNodeStatusDeprecated.Unknown,
 			type: "File",
 		},
 		type: CodexLineType.File,
@@ -133,7 +135,9 @@ function parseTreeNodeIntendedForChildSectionCodexLine(
 		);
 
 	const isDone = codexLine.startsWith(DONE_CHECKBOX);
-	const status = isDone ? TreeNodeStatus.Done : TreeNodeStatus.NotStarted;
+	const status = isDone
+		? TreeNodeStatusDeprecated.Done
+		: TreeNodeStatusDeprecated.NotStarted;
 
 	return {
 		node: {
@@ -161,7 +165,7 @@ function parseTreeNodeIntendedForParentSectionCodexLine(
 		node: {
 			nodeName: displayName,
 			nodeNameChainToParent,
-			status: TreeNodeStatus.NotStarted,
+			status: TreeNodeStatusDeprecated.NotStarted,
 			type: "Section",
 		},
 		type: CodexLineType.ParentSectionCodex,

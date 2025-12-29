@@ -2,7 +2,7 @@ import type { VaultAction } from "../../../obsidian-vault-action-manager/types/v
 import { collectImpactedSections } from "../codex";
 import type { LibraryTreeDeprecated } from "../library-tree";
 import { translateVaultAction } from "../reconciliation";
-import type { NodeNameChain } from "../types/schemas/node-name";
+import type { NodeNameChainDeprecated } from "../types/schemas/node-name";
 
 export type TreeApplierContext = {
 	tree: LibraryTreeDeprecated;
@@ -16,9 +16,11 @@ export type TreeApplierContext = {
 export function applyActionsToTree(
 	actions: VaultAction[],
 	context: TreeApplierContext,
-): NodeNameChain[] {
-	const actionResults: Array<NodeNameChain | [NodeNameChain, NodeNameChain]> =
-		[];
+): NodeNameChainDeprecated[] {
+	const actionResults: Array<
+		| NodeNameChainDeprecated
+		| [NodeNameChainDeprecated, NodeNameChainDeprecated]
+	> = [];
 
 	for (const action of actions) {
 		const treeAction = translateVaultAction(action);

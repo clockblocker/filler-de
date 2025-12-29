@@ -10,7 +10,7 @@ import {
 } from "../../../../../types/literals";
 import { makeJoinedSuffixedBasenameFromNodeNameChain } from "../../../naming/functions/basename-and-chain";
 import { makeCanonicalBasenameForCodexFromSectionNode } from "../../../naming/functions/codexes";
-import { TreeNodeStatus } from "../../../types/tree-node";
+import { TreeNodeStatusDeprecated } from "../../../types/tree-node";
 import type {
 	IntendedTreeNode,
 	TreeNodeIntendedForChildSectionCodexLine,
@@ -68,7 +68,7 @@ function formatAsCodexLineForScroll(
 	]);
 	const regularBacklink = formatBacklink(basename, nodeName);
 	const checkbox =
-		treeNode.status === TreeNodeStatus.Done
+		treeNode.status === TreeNodeStatusDeprecated.Done
 			? DONE_CHECKBOX
 			: NOT_STARTED_CHECKBOX;
 
@@ -107,7 +107,7 @@ function formatAsCodexLineForChildSectionCodex(
 	const basename = makeCanonicalBasenameForCodexFromSectionNode(treeNode);
 	const regularBacklink = formatBacklink(basename, nodeName);
 	const checkbox =
-		treeNode.status === TreeNodeStatus.Done
+		treeNode.status === TreeNodeStatusDeprecated.Done
 			? DONE_CHECKBOX
 			: NOT_STARTED_CHECKBOX;
 

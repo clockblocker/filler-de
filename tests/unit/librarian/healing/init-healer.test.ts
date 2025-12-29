@@ -4,8 +4,8 @@ import {
 	healOnInit,
 	leafNeedsHealing,
 } from "../../../../src/commanders/librarian-old/healing/init-healer";
-import type { TreeLeaf } from "../../../../src/commanders/librarian-old/types/tree-node";
-import { TreeNodeStatus, TreeNodeType } from "../../../../src/commanders/librarian-old/types/tree-node";
+import type { TreeLeafDeprecated } from "../../../../src/commanders/librarian-old/types/tree-node";
+import { TreeNodeStatusDeprecated, TreeNodeTypeDeprecated } from "../../../../src/commanders/librarian-old/types/tree-node";
 import * as globalState from "../../../../src/global-state/global-state";
 import { getParsedUserSettings } from "../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
@@ -43,13 +43,13 @@ function scrollLeaf(
 	nodeName: string,
 	nodeNameChainToParent: string[],
 	currentBasename: string,
-): TreeLeaf {
+): TreeLeafDeprecated {
 	return {
 		extension: "md",
 		nodeName,
 		nodeNameChainToParent,
-		status: TreeNodeStatus.NotStarted,
-		type: TreeNodeType.Scroll,
+		status: TreeNodeStatusDeprecated.NotStarted,
+		type: TreeNodeTypeDeprecated.Scroll,
 	};
 }
 
@@ -58,13 +58,13 @@ function fileLeaf(
 	nodeNameChainToParent: string[],
 	currentBasename: string,
 	extension: string,
-): TreeLeaf {
+): TreeLeafDeprecated {
 	return {
 		extension,
 		nodeName,
 		nodeNameChainToParent,
-		status: TreeNodeStatus.Unknown,
-		type: TreeNodeType.File,
+		status: TreeNodeStatusDeprecated.Unknown,
+		type: TreeNodeTypeDeprecated.File,
 	};
 }
 
@@ -74,14 +74,14 @@ function fileLeaf(
  * Uses libraryRoot from mocked settings.
  */
 function createActualFiles(
-	leaves: Array<{ leaf: TreeLeaf; currentBasename: string }>,
+	leaves: Array<{ leaf: TreeLeafDeprecated; currentBasename: string }>,
 ): SplitPathWithReader[] {
 	const settings = getParsedUserSettings();
 	const libraryRoot = settings.splitPathToLibraryRoot.basename;
 	const actualFiles: SplitPathWithReader[] = [];
 	for (const { leaf, currentBasename } of leaves) {
 		const pathParts = [libraryRoot, ...leaf.nodeNameChainToParent];
-		if (leaf.type === TreeNodeType.Scroll) {
+		if (leaf.type === TreeNodeTypeDeprecated.Scroll) {
 			actualFiles.push({
 				basename: currentBasename,
 				extension: "md",
@@ -103,7 +103,7 @@ function createActualFiles(
 
 describe("healOnInit", () => {
 	it("returns empty actions when all leaves are correctly named", async () => {
-		const leaves: TreeLeaf[] = [
+		const leaves: TreeLeafDeprecated[] = [
 			scrollLeaf("Note", ["A", "B"], "Note-B-A"),
 			scrollLeaf("Doc", ["X"], "Doc-X"),
 		];
@@ -120,7 +120,7 @@ describe("healOnInit", () => {
 	});
 
 	it("generates rename action for mismatched suffix", async () => {
-		const leaves: TreeLeaf[] = [
+		const leaves: TreeLeafDeprecated[] = [
 			scrollLeaf("Note", ["A", "B"], "Note-X-Y"), // Wrong suffix
 		];
 
@@ -142,7 +142,7 @@ describe("healOnInit", () => {
 	});
 
 	it("handles multiple leaves needing healing", async () => {
-		const leaves: TreeLeaf[] = [
+		const leaves: TreeLeafDeprecated[] = [
 			scrollLeaf("Note1", ["A"], "Note1-Wrong"),
 			scrollLeaf("Note2", ["B"], "Note2-B"), // Correct
 			scrollLeaf("Note3", ["C", "D"], "Note3"), // Missing suffix
@@ -161,7 +161,7 @@ describe("healOnInit", () => {
 	});
 
 	it("handles File nodes (non-md)", async () => {
-		const leaves: TreeLeaf[] = [
+		const leaves: TreeLeafDeprecated[] = [
 			fileLeaf("image", ["A", "B"], "image-wrong", "png"),
 		];
 
@@ -182,7 +182,7 @@ describe("healOnInit", () => {
 	});
 
 	it("preserves nodeName when fixing suffix", async () => {
-		const leaves: TreeLeaf[] = [
+		const leaves: TreeLeafDeprecated[] = [
 			scrollLeaf("MyNote", ["A", "B", "C"], "MyNote-X"),
 		];
 
@@ -202,7 +202,7 @@ describe("healOnInit", () => {
 	});
 
 	it("handles root-level files (empty chain)", async () => {
-		const leaves: TreeLeaf[] = [
+		const leaves: TreeLeafDeprecated[] = [
 			scrollLeaf("RootNote", [], "RootNote-ExtraSuffix"),
 		];
 

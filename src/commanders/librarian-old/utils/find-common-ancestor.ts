@@ -1,8 +1,8 @@
-import type { NodeNameChain } from "../types/schemas/node-name";
+import type { NodeNameChainDeprecated } from "../types/schemas/node-name";
 
 export function findCommonAncestor(
-	nodeNameChains: NodeNameChain[],
-): NodeNameChain {
+	nodeNameChains: NodeNameChainDeprecated[],
+): NodeNameChainDeprecated {
 	if (nodeNameChains.length === 0) {
 		return [];
 	}
@@ -12,7 +12,7 @@ export function findCommonAncestor(
 	}
 
 	const minLength = Math.min(...nodeNameChains.map((chain) => chain.length));
-	const common: NodeNameChain = [];
+	const common: NodeNameChainDeprecated = [];
 
 	for (let i = 0; i < minLength; i++) {
 		const firstSegment = nodeNameChains[0]?.[i];

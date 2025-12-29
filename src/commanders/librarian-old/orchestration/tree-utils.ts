@@ -1,8 +1,8 @@
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import type { LibraryTreeDeprecated } from "../library-tree";
-import type { NodeNameChain } from "../types/schemas/node-name";
-import type { SectionNode } from "../types/tree-node";
-import { TreeNodeType } from "../types/tree-node";
+import type { NodeNameChainDeprecated } from "../types/schemas/node-name";
+import type { SectionNodeDeprecated } from "../types/tree-node";
+import { TreeNodeTypeDeprecated } from "../types/tree-node";
 
 /**
  * Collect chains for all sections in tree (including root).
@@ -11,18 +11,18 @@ import { TreeNodeType } from "../types/tree-node";
  */
 export function collectAllSectionChains(
 	tree: LibraryTreeDeprecated,
-): NodeNameChain[] {
+): NodeNameChainDeprecated[] {
 	const {
 		splitPathToLibraryRoot: { basename: libraryRoot },
 	} = getParsedUserSettings();
-	const chains: NodeNameChain[] = [[libraryRoot]]; // Start with root library
+	const chains: NodeNameChainDeprecated[] = [[libraryRoot]]; // Start with root library
 
 	const collectRecursive = (
-		node: SectionNode,
-		currentChain: NodeNameChain,
+		node: SectionNodeDeprecated,
+		currentChain: NodeNameChainDeprecated,
 	) => {
 		for (const child of node.children) {
-			if (child.type === TreeNodeType.Section) {
+			if (child.type === TreeNodeTypeDeprecated.Section) {
 				const childChain = [...currentChain, child.nodeName];
 				chains.push(childChain);
 				collectRecursive(child, childChain);
@@ -31,7 +31,7 @@ export function collectAllSectionChains(
 	};
 
 	const root = tree.getNode([]);
-	if (root && root.type === TreeNodeType.Section) {
+	if (root && root.type === TreeNodeTypeDeprecated.Section) {
 		collectRecursive(root, [libraryRoot]);
 	}
 

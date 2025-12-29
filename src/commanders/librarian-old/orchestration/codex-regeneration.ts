@@ -7,14 +7,16 @@ import { VaultActionType } from "../../../obsidian-vault-action-manager/types/va
 import { tryParseJoinedSuffixedBasenameForCodex } from "../naming/codecs/atomic/parsers";
 import { makeNodeNameChainFromPathParts } from "../naming/codecs/atomic/path-parts-and-node-name-chain";
 import { makeCanonicalBasenameForCodexFromSectionNode } from "../naming/functions/codexes";
-import type { NodeNameChain } from "../types/schemas/node-name";
-import type { SectionNode } from "../types/tree-node";
+import type { NodeNameChainDeprecated } from "../types/schemas/node-name";
+import type { SectionNodeDeprecated } from "../types/tree-node";
 import { buildCodexVaultActions } from "./codex-builder";
 
 export function buildActionsForCodexRegenerationInImpactedSections(
-	nodeNameChains: NodeNameChain[],
+	nodeNameChains: NodeNameChainDeprecated[],
 	splitPathsToFiles: SplitPath[],
-	getSectionNode: (chain: NodeNameChain) => SectionNode | null,
+	getSectionNode: (
+		chain: NodeNameChainDeprecated,
+	) => SectionNodeDeprecated | null,
 ): VaultAction[] {
 	if (nodeNameChains.length === 0) {
 		return [];
@@ -35,7 +37,9 @@ export function buildActionsForCodexRegenerationInImpactedSections(
 
 function buildDeleteActionsForOrphanedCodexes(
 	splitPathsToFiles: SplitPath[],
-	getSectionNode: (chain: NodeNameChain) => SectionNode | null,
+	getSectionNode: (
+		chain: NodeNameChainDeprecated,
+	) => SectionNodeDeprecated | null,
 ): VaultAction[] {
 	const deleteActions: VaultAction[] = [];
 

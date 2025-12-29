@@ -5,7 +5,7 @@ import {
 } from "../../../../../src/commanders/librarian-old/codex/content/intended-tree-node-and-codex-line";
 import type { AnyIntendedTreeNode } from "../../../../../src/commanders/librarian-old/codex/content/schema/intended-tree-node";
 import { CodexLineType } from "../../../../../src/commanders/librarian-old/codex/content/schema/literals";
-import { TreeNodeStatus, TreeNodeType } from "../../../../../src/commanders/librarian-old/types/tree-node";
+import { TreeNodeStatusDeprecated, TreeNodeTypeDeprecated } from "../../../../../src/commanders/librarian-old/types/tree-node";
 import * as globalState from "../../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../../src/global-state/parsed-settings";
 import { SplitPathType } from "../../../../../src/obsidian-vault-action-manager/types/split-path";
@@ -38,7 +38,7 @@ afterEach(() => {
 function createScrollIntendedTreeNode(
 	nodeName: string,
 	nodeNameChainToParent: string[],
-	status: typeof TreeNodeStatus.Done | typeof TreeNodeStatus.NotStarted = TreeNodeStatus.NotStarted,
+	status: typeof TreeNodeStatusDeprecated.Done | typeof TreeNodeStatusDeprecated.NotStarted = TreeNodeStatusDeprecated.NotStarted,
 ): AnyIntendedTreeNode {
 	return {
 		node: {
@@ -46,7 +46,7 @@ function createScrollIntendedTreeNode(
 			nodeName,
 			nodeNameChainToParent,
 			status,
-			type: TreeNodeType.Scroll,
+			type: TreeNodeTypeDeprecated.Scroll,
 		},
 		type: CodexLineType.Scroll,
 	};
@@ -62,8 +62,8 @@ function createFileIntendedTreeNode(
 			extension,
 			nodeName,
 			nodeNameChainToParent,
-			status: TreeNodeStatus.Unknown,
-			type: TreeNodeType.File,
+			status: TreeNodeStatusDeprecated.Unknown,
+			type: TreeNodeTypeDeprecated.File,
 		},
 		type: CodexLineType.File,
 	};
@@ -72,14 +72,14 @@ function createFileIntendedTreeNode(
 function createChildSectionCodexIntendedTreeNode(
 	nodeName: string,
 	nodeNameChainToParent: string[],
-	status: typeof TreeNodeStatus.Done | typeof TreeNodeStatus.NotStarted = TreeNodeStatus.NotStarted,
+	status: typeof TreeNodeStatusDeprecated.Done | typeof TreeNodeStatusDeprecated.NotStarted = TreeNodeStatusDeprecated.NotStarted,
 ): AnyIntendedTreeNode {
 	return {
 		node: {
 			nodeName,
 			nodeNameChainToParent,
 			status,
-			type: TreeNodeType.Section,
+			type: TreeNodeTypeDeprecated.Section,
 		},
 		type: CodexLineType.ChildSectionCodex,
 	};
@@ -93,8 +93,8 @@ function createParentSectionCodexIntendedTreeNode(
 		node: {
 			nodeName,
 			nodeNameChainToParent,
-			status: TreeNodeStatus.NotStarted,
-			type: TreeNodeType.Section,
+			status: TreeNodeStatusDeprecated.NotStarted,
+			type: TreeNodeTypeDeprecated.Section,
 		},
 		type: CodexLineType.ParentSectionCodex,
 	};
@@ -109,7 +109,7 @@ describe("formatAsLine", () => {
 		});
 
 		it("formats scroll with done status", () => {
-			const intended = createScrollIntendedTreeNode("DoneNote", ["A"], TreeNodeStatus.Done);
+			const intended = createScrollIntendedTreeNode("DoneNote", ["A"], TreeNodeStatusDeprecated.Done);
 			const result = formatAsLine(intended);
 			expect(result).toBe("- [x] [[DoneNote-A|DoneNote]]");
 		});
@@ -158,7 +158,7 @@ describe("formatAsLine", () => {
 			const intended = createChildSectionCodexIntendedTreeNode(
 				"DoneSection",
 				["A"],
-				TreeNodeStatus.Done,
+				TreeNodeStatusDeprecated.Done,
 			);
 			const result = formatAsLine(intended);
 			expect(result).toBe("- [x] [[__-DoneSection-A|DoneSection]]");
@@ -209,8 +209,8 @@ describe("tryParseAsIntendedTreeNode", () => {
 				expect(value.type).toBe(CodexLineType.Scroll);
 				expect(value.node.nodeName).toBe("Note");
 				expect(value.node.nodeNameChainToParent).toEqual(["Library", "A"]);
-				expect(value.node.status).toBe(TreeNodeStatus.NotStarted);
-				expect(value.node.type).toBe(TreeNodeType.Scroll);
+				expect(value.node.status).toBe(TreeNodeStatusDeprecated.NotStarted);
+				expect(value.node.type).toBe(TreeNodeTypeDeprecated.Scroll);
 				expect((value.node as any).extension).toBe("md");
 			}
 		});
@@ -223,7 +223,7 @@ describe("tryParseAsIntendedTreeNode", () => {
 				const value = result.value;
 				expect(value.type).toBe(CodexLineType.Scroll);
 				expect(value.node.nodeName).toBe("DoneNote");
-				expect(value.node.status).toBe(TreeNodeStatus.Done);
+				expect(value.node.status).toBe(TreeNodeStatusDeprecated.Done);
 			}
 		});
 
@@ -256,8 +256,8 @@ describe("tryParseAsIntendedTreeNode", () => {
 				expect(value.type).toBe(CodexLineType.File);
 				expect(value.node.nodeName).toBe("Document");
 				expect(value.node.nodeNameChainToParent).toEqual(["Library", "A"]);
-				expect(value.node.status).toBe(TreeNodeStatus.Unknown);
-				expect(value.node.type).toBe(TreeNodeType.File);
+				expect(value.node.status).toBe(TreeNodeStatusDeprecated.Unknown);
+				expect(value.node.type).toBe(TreeNodeTypeDeprecated.File);
 			}
 		});
 
@@ -281,8 +281,8 @@ describe("tryParseAsIntendedTreeNode", () => {
 				expect(value.type).toBe(CodexLineType.ChildSectionCodex);
 				expect(value.node.nodeName).toBe("Section");
 				expect(value.node.nodeNameChainToParent).toEqual(["Library"]);
-				expect(value.node.status).toBe(TreeNodeStatus.NotStarted);
-				expect(value.node.type).toBe(TreeNodeType.Section);
+				expect(value.node.status).toBe(TreeNodeStatusDeprecated.NotStarted);
+				expect(value.node.type).toBe(TreeNodeTypeDeprecated.Section);
 			}
 		});
 
@@ -291,7 +291,7 @@ describe("tryParseAsIntendedTreeNode", () => {
 			const result = tryParseAsIntendedTreeNode(line);
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.value.node.status).toBe(TreeNodeStatus.Done);
+				expect(result.value.node.status).toBe(TreeNodeStatusDeprecated.Done);
 			}
 		});
 
@@ -324,8 +324,8 @@ describe("tryParseAsIntendedTreeNode", () => {
 				expect(value.type).toBe(CodexLineType.ParentSectionCodex);
 				expect(value.node.nodeName).toBe("Parent");
 				expect(value.node.nodeNameChainToParent).toEqual(["Library"]);
-				expect(value.node.status).toBe(TreeNodeStatus.NotStarted);
-				expect(value.node.type).toBe(TreeNodeType.Section);
+				expect(value.node.status).toBe(TreeNodeStatusDeprecated.NotStarted);
+				expect(value.node.type).toBe(TreeNodeTypeDeprecated.Section);
 			}
 		});
 
@@ -391,12 +391,12 @@ describe("roundtrip tests", () => {
 	});
 
 	it("roundtrips scroll with done status", () => {
-		const intended = createScrollIntendedTreeNode("DoneNote", ["Library", "A"], TreeNodeStatus.Done);
+		const intended = createScrollIntendedTreeNode("DoneNote", ["Library", "A"], TreeNodeStatusDeprecated.Done);
 		const line = formatAsLine(intended);
 		const result = tryParseAsIntendedTreeNode(line);
 		expect(result.isOk()).toBe(true);
 		if (result.isOk()) {
-			expect(result.value.node.status).toBe(TreeNodeStatus.Done);
+			expect(result.value.node.status).toBe(TreeNodeStatusDeprecated.Done);
 		}
 	});
 

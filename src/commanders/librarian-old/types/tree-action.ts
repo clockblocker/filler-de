@@ -1,7 +1,10 @@
-import type { NodeNameChain } from "..";
+import type { NodeNameChainDeprecated } from "..";
 import { TreeActionType } from "./literals";
-import type { NodeName } from "./schemas/node-name";
-import type { TreeNodeStatus, TreeNodeType } from "./tree-node";
+import type { NodeNameDeprecated } from "./schemas/node-name";
+import type {
+	TreeNodeStatusDeprecated,
+	TreeNodeTypeDeprecated,
+} from "./tree-node";
 
 export { TreeActionType };
 
@@ -10,74 +13,74 @@ export { TreeActionType };
  * Note: tRef is NOT stored - TFile references become stale when files are renamed/moved.
  * TFile references are resolved on-demand when file I/O is needed.
  */
-export type CreateNodeAction =
+export type CreateNodeActionDeprecated =
 	| {
 			type: typeof TreeActionType.CreateNode;
 			payload: {
-				nodeName: NodeName;
-				nodeNameChainToParent: NodeNameChain;
-				nodeType: typeof TreeNodeType.Scroll;
+				nodeName: NodeNameDeprecated;
+				nodeNameChainToParent: NodeNameChainDeprecated;
+				nodeType: typeof TreeNodeTypeDeprecated.Scroll;
 				status:
-					| typeof TreeNodeStatus.Done
-					| typeof TreeNodeStatus.NotStarted;
+					| typeof TreeNodeStatusDeprecated.Done
+					| typeof TreeNodeStatusDeprecated.NotStarted;
 				extension: "md";
 			};
 	  }
 	| {
 			type: typeof TreeActionType.CreateNode;
 			payload: {
-				nodeName: NodeName;
-				nodeNameChainToParent: NodeNameChain;
-				nodeType: typeof TreeNodeType.File;
-				status: typeof TreeNodeStatus.Unknown;
+				nodeName: NodeNameDeprecated;
+				nodeNameChainToParent: NodeNameChainDeprecated;
+				nodeType: typeof TreeNodeTypeDeprecated.File;
+				status: typeof TreeNodeStatusDeprecated.Unknown;
 				extension: string;
 			};
 	  }
 	| {
 			type: typeof TreeActionType.CreateNode;
 			payload: {
-				nodeName: NodeName;
-				nodeNameChainToParent: NodeNameChain;
-				nodeType: typeof TreeNodeType.Section;
+				nodeName: NodeNameDeprecated;
+				nodeNameChainToParent: NodeNameChainDeprecated;
+				nodeType: typeof TreeNodeTypeDeprecated.Section;
 				status:
-					| typeof TreeNodeStatus.Done
-					| typeof TreeNodeStatus.NotStarted;
+					| typeof TreeNodeStatusDeprecated.Done
+					| typeof TreeNodeStatusDeprecated.NotStarted;
 			};
 	  };
 
 export type DeleteNodeAction = {
 	type: typeof TreeActionType.DeleteNode;
 	payload: {
-		nodeNameChain: NodeNameChain;
+		nodeNameChain: NodeNameChainDeprecated;
 	};
 };
 
 export type ChangeNodeNameAction = {
 	type: typeof TreeActionType.ChangeNodeName;
 	payload: {
-		nodeNameChain: NodeNameChain;
-		newNodeName: NodeName;
+		nodeNameChain: NodeNameChainDeprecated;
+		newNodeName: NodeNameDeprecated;
 	};
 };
 
 export type ChangeNodeStatusAction = {
 	type: typeof TreeActionType.ChangeNodeStatus;
 	payload: {
-		nodeNameChain: NodeNameChain;
-		newStatus: TreeNodeStatus;
+		nodeNameChain: NodeNameChainDeprecated;
+		newStatus: TreeNodeStatusDeprecated;
 	};
 };
 
 export type MoveNodeAction = {
 	type: typeof TreeActionType.MoveNode;
 	payload: {
-		nodeNameChain: NodeNameChain;
-		newNodeNameChainToParent: NodeNameChain;
+		nodeNameChain: NodeNameChainDeprecated;
+		newNodeNameChainToParent: NodeNameChainDeprecated;
 	};
 };
 
 export type TreeAction =
-	| CreateNodeAction
+	| CreateNodeActionDeprecated
 	| DeleteNodeAction
 	| ChangeNodeNameAction
 	| ChangeNodeStatusAction

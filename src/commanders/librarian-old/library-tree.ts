@@ -1,21 +1,24 @@
 import { getParsedUserSettings } from "../../global-state/global-state";
 import { TreeActionType } from "./types/literals";
-import type { NodeName, NodeNameChain } from "./types/schemas/node-name";
+import type {
+	NodeNameChainDeprecated,
+	NodeNameDeprecated,
+} from "./types/schemas/node-name";
 import type {
 	ChangeNodeNameAction,
 	ChangeNodeStatusAction,
-	CreateNodeAction,
+	CreateNodeActionDeprecated,
 	DeleteNodeAction,
 	MoveNodeAction,
 	TreeAction,
 } from "./types/tree-action";
-import type { TreeLeaf } from "./types/tree-node";
+import type { TreeLeafDeprecated } from "./types/tree-node";
 import {
-	type LeafNode,
-	type SectionNode,
-	type TreeNode,
-	TreeNodeStatus,
-	TreeNodeType,
+	type LeafNodeDeprecated,
+	type SectionNodeDeprecated,
+	type TreeNodeDeprecated,
+	TreeNodeStatusDeprecated,
+	TreeNodeTypeDeprecated,
 } from "./types/tree-node";
 import { joinPathParts } from "./utils/tree-path-utils";
 
@@ -23,15 +26,15 @@ import { joinPathParts } from "./utils/tree-path-utils";
  * @deprecated LibraryTree is being fully rewritten. Use new implementation when available.
  */
 export class LibraryTreeDeprecated {
-	private root: SectionNode;
-	private nodeMap: Map<string, TreeNode> = new Map();
+	private root: SectionNodeDeprecated;
+	private nodeMap: Map<string, TreeNodeDeprecated> = new Map();
 
-	constructor(leaves: TreeLeaf[]) {
+	constructor(leaves: TreeLeafDeprecated[]) {
 		this.root = this.createRootSection();
 		this.buildTreeFromLeaves(leaves);
 	}
 
-	private createRootSection(): SectionNode {
+	private createRootSection(): SectionNodeDeprecated {
 		const {
 			splitPathToLibraryRoot: { basename: libraryRoot },
 		} = getParsedUserSettings();
@@ -39,12 +42,12 @@ export class LibraryTreeDeprecated {
 			children: [],
 			nodeName: libraryRoot,
 			nodeNameChainToParent: [],
-			status: TreeNodeStatus.NotStarted,
-			type: TreeNodeType.Section,
+			status: TreeNodeStatusDeprecated.NotStarted,
+			type: TreeNodeTypeDeprecated.Section,
 		};
 	}
 
-	private buildTreeFromLeaves(leaves: TreeLeaf[]): void {
+	private buildTreeFromLeaves(leaves: TreeLeafDeprecated[]): void {
 		for (const leaf of leaves) {
 			this.ensureSectionPath(leaf.nodeNameChainToParent);
 			this.addNodeToTree(leaf, leaf.nodeNameChainToParent);
@@ -57,53 +60,53 @@ export class LibraryTreeDeprecated {
 	 * Section is Done if all Scroll/Section children are Done, else NotStarted.
 	 * FileNodes (Unknown status) are ignored.
 	 */
-	private recalculateSectionStatuses(section: SectionNode): void {
+	private recalculateSectionStatuses(section: SectionNodeDeprecated): void {
 		for (const child of section.children) {
-			if (child.type === TreeNodeType.Section) {
+			if (child.type === TreeNodeTypeDeprecated.Section) {
 				this.recalculateSectionStatuses(child);
 			}
 		}
 
 		const hasNotStarted = section.children.some(
 			(child) =>
-				(child.type === TreeNodeType.Scroll ||
-					child.type === TreeNodeType.Section) &&
-				child.status === TreeNodeStatus.NotStarted,
+				(child.type === TreeNodeTypeDeprecated.Scroll ||
+					child.type === TreeNodeTypeDeprecated.Section) &&
+				child.status === TreeNodeStatusDeprecated.NotStarted,
 		);
 
 		section.status = hasNotStarted
-			? TreeNodeStatus.NotStarted
-			: TreeNodeStatus.Done;
+			? TreeNodeStatusDeprecated.NotStarted
+			: TreeNodeStatusDeprecated.Done;
 	}
 
-	private ensureSectionPath(nodeNameChain: NodeNameChain): void {
+	private ensureSectionPath(nodeNameChain: NodeNameChainDeprecated): void {
 		let current = this.root;
-		const path: NodeName[] = [];
+		const path: NodeNameDeprecated[] = [];
 
 		for (const segment of nodeNameChain) {
 			path.push(segment);
 			const existing = this.getNodeInternal(path);
 
 			if (!existing) {
-				const sectionNode: SectionNode = {
+				const sectionNode: SectionNodeDeprecated = {
 					children: [],
 					nodeName: segment,
 					nodeNameChainToParent: [...path.slice(0, -1)],
-					status: TreeNodeStatus.NotStarted,
-					type: TreeNodeType.Section,
+					status: TreeNodeStatusDeprecated.NotStarted,
+					type: TreeNodeTypeDeprecated.Section,
 				};
 				current.children.push(sectionNode);
 				this.nodeMap.set(joinPathParts(path), sectionNode);
 				current = sectionNode;
-			} else if (existing.type === TreeNodeType.Section) {
-				current = existing as SectionNode;
+			} else if (existing.type === TreeNodeTypeDeprecated.Section) {
+				current = existing as SectionNodeDeprecated;
 			}
 		}
 	}
 
 	private addNodeToTree(
-		node: LeafNode,
-		nodeNameChainToParent: NodeNameChain,
+		node: LeafNodeDeprecated,
+		nodeNameChainToParent: NodeNameChainDeprecated,
 	): void {
 		const parent = this.getParentOrThrow(nodeNameChainToParent);
 		parent.children.push(node);
@@ -111,27 +114,33 @@ export class LibraryTreeDeprecated {
 		this.nodeMap.set(joinPathParts(fullChain), node);
 	}
 
-	getNode(nodeNameChain: NodeNameChain): TreeNode | null {
+	getNode(nodeNameChain: NodeNameChainDeprecated): TreeNodeDeprecated | null {
 		return this.getNodeInternal(nodeNameChain);
 	}
 
-	getSectionNode(nodeNameChain: NodeNameChain): SectionNode | null {
+	getSectionNode(
+		nodeNameChain: NodeNameChainDeprecated,
+	): SectionNodeDeprecated | null {
 		const node = this.getNodeInternal(nodeNameChain);
-		if (!node || node.type !== TreeNodeType.Section) {
+		if (!node || node.type !== TreeNodeTypeDeprecated.Section) {
 			return null;
 		}
 		return node;
 	}
 
-	getParent(nodeNameChain: NodeNameChain): SectionNode | null {
+	getParent(
+		nodeNameChain: NodeNameChainDeprecated,
+	): SectionNodeDeprecated | null {
 		const node = this.getNodeInternal(nodeNameChain);
-		if (!node || node.type !== TreeNodeType.Section) {
+		if (!node || node.type !== TreeNodeTypeDeprecated.Section) {
 			return null;
 		}
 		return node;
 	}
 
-	private getParentOrThrow(nodeNameChain: NodeNameChain): SectionNode {
+	private getParentOrThrow(
+		nodeNameChain: NodeNameChainDeprecated,
+	): SectionNodeDeprecated {
 		const parent = this.getParent(nodeNameChain);
 		if (!parent) {
 			throw new Error(
@@ -141,7 +150,9 @@ export class LibraryTreeDeprecated {
 		return parent;
 	}
 
-	private getNodeInternal(nodeNameChain: NodeNameChain): TreeNode | null {
+	private getNodeInternal(
+		nodeNameChain: NodeNameChainDeprecated,
+	): TreeNodeDeprecated | null {
 		if (nodeNameChain.length === 0) {
 			return this.root;
 		}
@@ -155,7 +166,9 @@ export class LibraryTreeDeprecated {
 	 */
 	applyTreeAction(
 		action: TreeAction,
-	): NodeNameChain | [NodeNameChain, NodeNameChain] {
+	):
+		| NodeNameChainDeprecated
+		| [NodeNameChainDeprecated, NodeNameChainDeprecated] {
 		switch (action.type) {
 			case TreeActionType.CreateNode:
 				return this.createNode(action);
@@ -170,7 +183,9 @@ export class LibraryTreeDeprecated {
 		}
 	}
 
-	private createNode(action: CreateNodeAction): NodeNameChain {
+	private createNode(
+		action: CreateNodeActionDeprecated,
+	): NodeNameChainDeprecated {
 		const { nodeName, nodeNameChainToParent, nodeType } = action.payload;
 
 		this.ensureSectionPath(nodeNameChainToParent);
@@ -181,23 +196,23 @@ export class LibraryTreeDeprecated {
 			return fullChain;
 		}
 
-		let newNode: TreeNode;
+		let newNode: TreeNodeDeprecated;
 
-		if (nodeType === TreeNodeType.Scroll) {
+		if (nodeType === TreeNodeTypeDeprecated.Scroll) {
 			newNode = {
 				extension: action.payload.extension,
 				nodeName,
 				nodeNameChainToParent,
 				status: action.payload.status,
-				type: TreeNodeType.Scroll,
+				type: TreeNodeTypeDeprecated.Scroll,
 			};
-		} else if (nodeType === TreeNodeType.File) {
+		} else if (nodeType === TreeNodeTypeDeprecated.File) {
 			newNode = {
 				extension: action.payload.extension,
 				nodeName,
 				nodeNameChainToParent,
-				status: TreeNodeStatus.Unknown,
-				type: TreeNodeType.File,
+				status: TreeNodeStatusDeprecated.Unknown,
+				type: TreeNodeTypeDeprecated.File,
 			};
 		} else {
 			newNode = {
@@ -205,7 +220,7 @@ export class LibraryTreeDeprecated {
 				nodeName,
 				nodeNameChainToParent,
 				status: action.payload.status,
-				type: TreeNodeType.Section,
+				type: TreeNodeTypeDeprecated.Section,
 			};
 		}
 
@@ -216,7 +231,7 @@ export class LibraryTreeDeprecated {
 		return fullChain;
 	}
 
-	private deleteNode(action: DeleteNodeAction): NodeNameChain {
+	private deleteNode(action: DeleteNodeAction): NodeNameChainDeprecated {
 		const { nodeNameChain } = action.payload;
 		const node = this.getNodeInternal(nodeNameChain);
 		if (!node) {
@@ -235,30 +250,32 @@ export class LibraryTreeDeprecated {
 		parent.children.splice(index, 1);
 		this.nodeMap.delete(joinPathParts(nodeNameChain));
 
-		if (node.type === TreeNodeType.Section) {
+		if (node.type === TreeNodeTypeDeprecated.Section) {
 			this.deleteSubtree(nodeNameChain);
 		}
 
 		return parentChain;
 	}
 
-	private deleteSubtree(rootChain: NodeNameChain): void {
+	private deleteSubtree(rootChain: NodeNameChainDeprecated): void {
 		const node = this.getNodeInternal(rootChain);
-		if (!node || node.type !== TreeNodeType.Section) {
+		if (!node || node.type !== TreeNodeTypeDeprecated.Section) {
 			return;
 		}
 
-		const sectionNode = node as SectionNode;
+		const sectionNode = node as SectionNodeDeprecated;
 		for (const child of sectionNode.children) {
 			const childChain = [...rootChain, child.nodeName];
 			this.nodeMap.delete(joinPathParts(childChain));
-			if (child.type === TreeNodeType.Section) {
+			if (child.type === TreeNodeTypeDeprecated.Section) {
 				this.deleteSubtree(childChain);
 			}
 		}
 	}
 
-	private changeNodeName(action: ChangeNodeNameAction): NodeNameChain {
+	private changeNodeName(
+		action: ChangeNodeNameAction,
+	): NodeNameChainDeprecated {
 		const { nodeNameChain, newNodeName } = action.payload;
 		const node = this.getNodeInternal(nodeNameChain);
 		if (!node) {
@@ -291,7 +308,7 @@ export class LibraryTreeDeprecated {
 
 		// Note: tRef removed - TFile references become stale when files are renamed/moved
 
-		if (node.type === TreeNodeType.Section) {
+		if (node.type === TreeNodeTypeDeprecated.Section) {
 			this.updateChildrenChains(nodeNameChain, newFullChain, node);
 		}
 
@@ -299,9 +316,9 @@ export class LibraryTreeDeprecated {
 	}
 
 	private updateChildrenChains(
-		oldParentChain: NodeNameChain,
-		newParentChain: NodeNameChain,
-		sectionNode: SectionNode,
+		oldParentChain: NodeNameChainDeprecated,
+		newParentChain: NodeNameChainDeprecated,
+		sectionNode: SectionNodeDeprecated,
 	): void {
 		for (const child of sectionNode.children) {
 			const oldChildChain = [...oldParentChain, child.nodeName];
@@ -314,13 +331,15 @@ export class LibraryTreeDeprecated {
 			const newKey = joinPathParts(newChildChain);
 			this.nodeMap.set(newKey, child);
 
-			if (child.type === TreeNodeType.Section) {
+			if (child.type === TreeNodeTypeDeprecated.Section) {
 				this.updateChildrenChains(oldChildChain, newChildChain, child);
 			}
 		}
 	}
 
-	private changeNodeStatus(action: ChangeNodeStatusAction): NodeNameChain {
+	private changeNodeStatus(
+		action: ChangeNodeStatusAction,
+	): NodeNameChainDeprecated {
 		const { nodeNameChain, newStatus } = action.payload;
 		const node = this.getNodeInternal(nodeNameChain);
 		if (!node) {
@@ -328,15 +347,15 @@ export class LibraryTreeDeprecated {
 		}
 
 		if (
-			node.type === TreeNodeType.File ||
-			newStatus === TreeNodeStatus.Unknown
+			node.type === TreeNodeTypeDeprecated.File ||
+			newStatus === TreeNodeStatusDeprecated.Unknown
 		) {
 			return nodeNameChain;
 		}
 
 		node.status = newStatus;
 
-		if (node.type === TreeNodeType.Section) {
+		if (node.type === TreeNodeTypeDeprecated.Section) {
 			this.updateDescendantsStatus(node, newStatus);
 		}
 
@@ -352,7 +371,9 @@ export class LibraryTreeDeprecated {
 	 * Move node to new parent.
 	 * Returns [oldParentChain, newParentChain].
 	 */
-	private moveNode(action: MoveNodeAction): [NodeNameChain, NodeNameChain] {
+	private moveNode(
+		action: MoveNodeAction,
+	): [NodeNameChainDeprecated, NodeNameChainDeprecated] {
 		const { nodeNameChain, newNodeNameChainToParent } = action.payload;
 		const node = this.getNodeInternal(nodeNameChain);
 		if (!node) {
@@ -398,7 +419,7 @@ export class LibraryTreeDeprecated {
 		// Note: tRef removed - TFile references become stale when files are renamed/moved
 
 		// If section, update all children's chains recursively
-		if (node.type === TreeNodeType.Section) {
+		if (node.type === TreeNodeTypeDeprecated.Section) {
 			this.updateChildrenChains(nodeNameChain, newFullChain, node);
 		}
 
@@ -410,25 +431,25 @@ export class LibraryTreeDeprecated {
 	}
 
 	private updateDescendantsStatus(
-		sectionNode: SectionNode,
+		sectionNode: SectionNodeDeprecated,
 		newStatus:
-			| typeof TreeNodeStatus.Done
-			| typeof TreeNodeStatus.NotStarted,
+			| typeof TreeNodeStatusDeprecated.Done
+			| typeof TreeNodeStatusDeprecated.NotStarted,
 	): void {
 		for (const child of sectionNode.children) {
 			if (
-				child.type === TreeNodeType.Scroll ||
-				child.type === TreeNodeType.Section
+				child.type === TreeNodeTypeDeprecated.Scroll ||
+				child.type === TreeNodeTypeDeprecated.Section
 			) {
 				child.status = newStatus;
-				if (child.type === TreeNodeType.Section) {
+				if (child.type === TreeNodeTypeDeprecated.Section) {
 					this.updateDescendantsStatus(child, newStatus);
 				}
 			}
 		}
 	}
 
-	private updateParentStatus(parentChain: NodeNameChain): void {
+	private updateParentStatus(parentChain: NodeNameChainDeprecated): void {
 		const parent = this.getParent(parentChain);
 		if (!parent) {
 			return;
@@ -436,14 +457,14 @@ export class LibraryTreeDeprecated {
 
 		const hasNotStarted = parent.children.some(
 			(child) =>
-				(child.type === TreeNodeType.Scroll ||
-					child.type === TreeNodeType.Section) &&
-				child.status === TreeNodeStatus.NotStarted,
+				(child.type === TreeNodeTypeDeprecated.Scroll ||
+					child.type === TreeNodeTypeDeprecated.Section) &&
+				child.status === TreeNodeStatusDeprecated.NotStarted,
 		);
 
 		const newStatus = hasNotStarted
-			? TreeNodeStatus.NotStarted
-			: TreeNodeStatus.Done;
+			? TreeNodeStatusDeprecated.NotStarted
+			: TreeNodeStatusDeprecated.Done;
 
 		const oldStatus = parent.status;
 
@@ -456,27 +477,30 @@ export class LibraryTreeDeprecated {
 		}
 	}
 
-	serializeToLeaves(): TreeLeaf[] {
-		const result: TreeLeaf[] = [];
+	serializeToLeaves(): TreeLeafDeprecated[] {
+		const result: TreeLeafDeprecated[] = [];
 		this.collectLeaves(this.root, result);
 		return result;
 	}
 
-	private collectLeaves(node: TreeNode, result: TreeLeaf[]): void {
+	private collectLeaves(
+		node: TreeNodeDeprecated,
+		result: TreeLeafDeprecated[],
+	): void {
 		if (node === this.root) {
-			for (const child of (node as SectionNode).children) {
+			for (const child of (node as SectionNodeDeprecated).children) {
 				this.collectLeaves(child, result);
 			}
 			return;
 		}
 
 		if (
-			node.type === TreeNodeType.Scroll ||
-			node.type === TreeNodeType.File
+			node.type === TreeNodeTypeDeprecated.Scroll ||
+			node.type === TreeNodeTypeDeprecated.File
 		) {
-			result.push(node as LeafNode);
-		} else if (node.type === TreeNodeType.Section) {
-			const sectionNode = node as SectionNode;
+			result.push(node as LeafNodeDeprecated);
+		} else if (node.type === TreeNodeTypeDeprecated.Section) {
+			const sectionNode = node as SectionNodeDeprecated;
 			for (const child of sectionNode.children) {
 				this.collectLeaves(child, result);
 			}

@@ -1,29 +1,29 @@
 import type {
-	FileNode,
-	ScrollNode,
-	SectionNode,
+	FileNodeDeprecated,
+	ScrollNodeDeprecated,
+	SectionNodeDeprecated,
 } from "../../../types/tree-node";
 import type { CodexLineType } from "./literals";
 
 // Object schemas with type discriminator
 export type TreeNodeIntendedForScrollLine = {
 	type: typeof CodexLineType.Scroll;
-	node: ScrollNode;
+	node: ScrollNodeDeprecated;
 };
 
 export type TreeNodeIntendedForFileLine = {
 	type: typeof CodexLineType.File;
-	node: FileNode;
+	node: FileNodeDeprecated;
 };
 
 export type TreeNodeIntendedForChildSectionCodexLine = {
 	type: typeof CodexLineType.ChildSectionCodex;
-	node: Omit<SectionNode, "children">;
+	node: Omit<SectionNodeDeprecated, "children">;
 };
 
 export type TreeNodeIntendedForParentSectionCodexLine = {
 	type: typeof CodexLineType.ParentSectionCodex;
-	node: Omit<SectionNode, "children">;
+	node: Omit<SectionNodeDeprecated, "children">;
 };
 
 // Combined schema using discriminated union

@@ -1,12 +1,15 @@
 import { getParsedUserSettings } from "../../../../global-state/global-state";
-import type { NodeName, SplitSuffix } from "../../types/schemas/node-name";
+import type {
+	NodeNameDeprecated,
+	SplitSuffixDeprecated,
+} from "../../types/schemas/node-name";
 
 export function joinSeparatedSuffixedBasename({
 	nodeName,
 	splitSuffix,
 }: {
-	nodeName: NodeName;
-	splitSuffix: SplitSuffix;
+	nodeName: NodeNameDeprecated;
+	splitSuffix: SplitSuffixDeprecated;
 }) {
 	const { suffixDelimiter } = getParsedUserSettings();
 

@@ -1,4 +1,4 @@
-import type { NodeNameChain } from "../../types/schemas/node-name";
+import type { NodeNameChainDeprecated } from "../../types/schemas/node-name";
 import { makeJoinedSuffixedBasenameFromSeparatedSuffixedBasename } from "../codecs/atomic/joined-canonical-basename-and-separated-canonical-basename";
 import {
 	tryParseJoinedSuffixedBasenameForFile,
@@ -8,21 +8,21 @@ import { makeSeparatedSuffixedBasenameFromNodeNameChain } from "../codecs/atomic
 import type { JoinedSuffixedBasename } from "../types/suffixed/joined-suffixed";
 
 export const tryMakeJoinedSuffixedBasenameForFileFromNodeNameChain = (
-	chain: NodeNameChain,
+	chain: NodeNameChainDeprecated,
 ) =>
 	tryParseJoinedSuffixedBasenameForFile(
 		makeJoinedSuffixedBasenameFromNodeNameChain(chain),
 	);
 
 export const tryMakeJoinedSuffixedBasenameForFolderFromNodeNameChain = (
-	chain: NodeNameChain,
+	chain: NodeNameChainDeprecated,
 ) =>
 	tryParseJoinedSuffixedBasenameForFolder(
 		makeJoinedSuffixedBasenameFromNodeNameChain(chain),
 	);
 
 export function makeJoinedSuffixedBasenameFromNodeNameChain(
-	chain: NodeNameChain,
+	chain: NodeNameChainDeprecated,
 ): JoinedSuffixedBasename {
 	return makeJoinedSuffixedBasenameFromSeparatedSuffixedBasename(
 		makeSeparatedSuffixedBasenameFromNodeNameChain(chain),

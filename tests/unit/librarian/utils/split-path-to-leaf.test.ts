@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { TreeNodeStatus, TreeNodeType } from "../../../../src/commanders/librarian-old/types/tree-node";
+import { TreeNodeStatusDeprecated, TreeNodeTypeDeprecated } from "../../../../src/commanders/librarian-old/types/tree-node";
 import { splitPathToLeafDeprecated } from "../../../../src/commanders/librarian-old/utils/split-path-to-leaf";
 import * as globalState from "../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
@@ -51,8 +51,8 @@ describe("splitPathToLeaf", () => {
 				extension: "md",
 				nodeName: "Note",
 				nodeNameChainToParent: ["parent", "child"],
-				status: TreeNodeStatus.NotStarted,
-				type: TreeNodeType.Scroll,
+				status: TreeNodeStatusDeprecated.NotStarted,
+				type: TreeNodeTypeDeprecated.Scroll,
 			});
 		});
 
@@ -112,8 +112,8 @@ describe("splitPathToLeaf", () => {
 				extension: "pdf",
 				nodeName: "document",
 				nodeNameChainToParent: ["doc", "Pekar", "2025"],
-				status: TreeNodeStatus.Unknown,
-				type: TreeNodeType.File,
+				status: TreeNodeStatusDeprecated.Unknown,
+				type: TreeNodeTypeDeprecated.File,
 			});
 		});
 	});
