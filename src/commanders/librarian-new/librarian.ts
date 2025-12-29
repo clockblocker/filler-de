@@ -1,7 +1,4 @@
-import type {
-	ObsidianVaultActionManager,
-	VaultEvent,
-} from "../../obsidian-vault-action-manager";
+import type { ObsidianVaultActionManager } from "../../obsidian-vault-action-manager";
 import { logger } from "../../utils/logger";
 
 export class Librarian {
@@ -33,9 +30,9 @@ export class Librarian {
 	 * Converts VaultEvent to librarian handler calls.
 	 */
 	private subscribeToVaultEvents(): void {
-		this.eventTeardown = this.vaultActionManager.subscribeToSingle(
-			async (event: VaultEvent) => {
-				logger.info("event", JSON.stringify({ type: event.type }));
+		this.eventTeardown = this.vaultActionManager.subscribeToBulk(
+			async (bulk) => {
+				logger.info("bulk", bulk);
 			},
 		);
 	}

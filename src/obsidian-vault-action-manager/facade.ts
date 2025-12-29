@@ -7,12 +7,13 @@ import { TFileHelper } from "./file-services/background/helpers/tfile-helper";
 import { TFolderHelper } from "./file-services/background/helpers/tfolder-helper";
 import { ActionQueue } from "./impl/action-queue";
 import { Dispatcher, type ExistenceChecker } from "./impl/dispatcher";
-import type { BulkEventEmmiter } from "./impl/event-processing/bulk-event-emmiter/bulk-event-emmiter";
+import { BulkEventEmmiter } from "./impl/event-processing/bulk-event-emmiter/bulk-event-emmiter";
 import { SelfEventTracker } from "./impl/event-processing/self-event-tracker";
 import { SingleEventEmmiter } from "./impl/event-processing/single-event-emmiter";
 import { Executor } from "./impl/executor";
 import { Reader } from "./impl/reader";
 import type {
+	BulkVaultEventHandler,
 	DispatchResult,
 	ObsidianVaultActionManager,
 	Teardown,
@@ -39,7 +40,7 @@ export class ObsidianVaultActionManagerImpl
 	private readonly subscribers = new Set<VaultEventHandler>();
 
 	private readonly bulkEventEmmiter: BulkEventEmmiter;
-	private readonly bulkSubscribers = new Set<BulkWindowHandler>();
+	private readonly bulkSubscribers = new Set<BulkVaultEventHandler>();
 
 	private isSingleListening = false;
 	private isBulkListening = false;
@@ -89,6 +90,10 @@ export class ObsidianVaultActionManagerImpl
 			app,
 			this.selfEventTracker,
 		);
+		this.bulkEventEmmiter = new BulkEventEmmiter(
+			app,
+			this.selfEventTracker,
+		);
 	}
 
 	startListening(): void {
@@ -117,8 +122,11 @@ export class ObsidianVaultActionManagerImpl
 	private startBulkIfNeeded() {
 		if (this.isBulkListening) return;
 		this.isBulkListening = true;
-		this.bulkEventEmmiter.start(async (window) => {
-			for (const h of this.bulkSubscribers) await h(window);
+
+		this.bulkEventEmmiter.start(async (bulk) => {
+			for (const h of this.bulkSubscribers) {
+				await h(bulk);
+			}
 		});
 	}
 
@@ -139,7 +147,7 @@ export class ObsidianVaultActionManagerImpl
 		};
 	}
 
-	subscribeToBulk(handler: BulkWindowHandler): Teardown {
+	subscribeToBulk(handler: BulkVaultEventHandler): Teardown {
 		this.bulkSubscribers.add(handler);
 		if (this.listeningRequested) this.startBulkIfNeeded();
 
