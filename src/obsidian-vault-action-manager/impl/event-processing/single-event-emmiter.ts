@@ -3,6 +3,7 @@ import type { VaultEventHandler } from "../../index";
 import type { SelfEventTracker } from "./self-event-tracker";
 import {
 	makeVaultEventForFileCreated,
+	makeVaultEventForFileTrashed,
 	tryMakeVaultEventForFileRenamed,
 } from "./vault-events-for-events";
 
@@ -72,6 +73,6 @@ export class SingleEventEmmiter {
 			return;
 		}
 
-		void handler(makeVaultEventForFileCreated(tAbstractFile));
+		void handler(makeVaultEventForFileTrashed(tAbstractFile));
 	}
 }

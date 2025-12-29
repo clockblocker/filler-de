@@ -8,6 +8,7 @@ import {
 	errorNotInSourceMode,
 	errorOpenFileFailed,
 } from "../../errors";
+import { getSplitPathForAbstractFile } from "../../helpers/pathfinder";
 import { makeSystemPathForSplitPath } from "../../impl/split-path-and-system-path";
 import type {
 	SplitPath,
@@ -121,59 +122,69 @@ export class OpenedFileService {
 		editor: Editor,
 		newContent: string,
 	): void {
-		// Save cursor position
+		// Save cursor position + a simple anchor (line text) to find roughly same viewport
 		const cursor = editor.getCursor();
-		// Get the line content at cursor (as proxy for visible area)
 		const cursorLineContent = editor.getLine(cursor.line) ?? "";
 
+		// Apply new content
 		editor.setValue(newContent);
 
 		const newLines = newContent.split("\n");
 		const lineCount = newLines.length;
-		let targetLineIndex = cursor.line;
 
-		// Search for the cursor line content in new content, starting from original index
-		const foundIndex = newLines.findIndex(
-			(line, idx) => idx >= cursor.line && line === cursorLineContent,
-		);
-		if (foundIndex !== -1) {
-			targetLineIndex = foundIndex;
-		} else {
-			// If not found from original index, search backwards
-			const foundIndexBackward = newLines
-				.slice(0, cursor.line)
-				.map((line, idx) => ({ idx, line }))
-				.reverse()
-				.find(({ line }) => line === cursorLineContent)?.idx;
-			if (foundIndexBackward !== undefined) {
-				targetLineIndex = foundIndexBackward;
-			} else {
-				const foundIndexAnywhere = newLines.indexOf(cursorLineContent);
-				if (foundIndexAnywhere !== -1) {
-					targetLineIndex = foundIndexAnywhere;
-				} else {
-					// If not found at all, use original index (clamped to valid range)
-					targetLineIndex = Math.min(cursor.line, lineCount - 1);
+		// Helper: clamp to valid editor position
+		const clampPos = (line: number, ch: number) => {
+			const clampedLine = Math.max(
+				0,
+				Math.min(line, Math.max(0, lineCount - 1)),
+			);
+			const lineText = editor.getLine(clampedLine) ?? "";
+			const clampedCh = Math.max(0, Math.min(ch, lineText.length));
+			return { ch: clampedCh, line: clampedLine };
+		};
+
+		// 1) Try to find the same line text at/after the original cursor line
+		let targetLineIndex = -1;
+		for (let i = Math.min(cursor.line, lineCount - 1); i < lineCount; i++) {
+			if (newLines[i] === cursorLineContent) {
+				targetLineIndex = i;
+				break;
+			}
+		}
+
+		// 2) If not found, search backwards before the original cursor line
+		if (targetLineIndex === -1) {
+			for (
+				let i = Math.min(cursor.line - 1, lineCount - 1);
+				i >= 0;
+				i--
+			) {
+				if (newLines[i] === cursorLineContent) {
+					targetLineIndex = i;
+					break;
 				}
 			}
 		}
 
-		// Restore cursor: preserve column if line exists, clamp to line length
-		if (cursor.line < lineCount) {
-			// Line exists, clamp column to valid range
-			const lineLength = editor.getLine(cursor.line).length;
-			const clampedCh = Math.min(cursor.ch, lineLength);
-			editor.setCursor({ ch: clampedCh, line: cursor.line });
-		} else {
-			// Cursor line doesn't exist, use target line from line content preservation
-			editor.setCursor({ ch: 0, line: targetLineIndex });
+		// 3) If still not found, search anywhere
+		if (targetLineIndex === -1) {
+			targetLineIndex = newLines.indexOf(cursorLineContent);
 		}
 
-		// Scroll to target line
+		// 4) If never found, fall back to original line (clamped)
+		if (targetLineIndex === -1) {
+			targetLineIndex = Math.min(cursor.line, lineCount - 1);
+		}
+
+		// Restore cursor using the chosen target line, preserving column as much as possible
+		const pos = clampPos(targetLineIndex, cursor.ch);
+		editor.setCursor(pos);
+
+		// Scroll to the target line
 		editor.scrollIntoView(
 			{
-				from: { ch: 0, line: targetLineIndex },
-				to: { ch: 0, line: targetLineIndex },
+				from: { ch: 0, line: pos.line },
+				to: { ch: 0, line: pos.line },
 			},
 			true,
 		);
@@ -285,32 +296,11 @@ export class OpenedFileService {
 	}
 
 	async list(folder: SplitPathToFolder): Promise<SplitPath[]> {
-		const systemPath = makeSystemPathForSplitPath(folder);
-		const tFolder = this.app.vault.getAbstractFileByPath(systemPath);
-		if (!(tFolder instanceof TFolder)) {
-			return [];
-		}
-		return tFolder.children.map((child) => {
-			if (child instanceof TFolder) {
-				return {
-					basename: child.name,
-					pathParts: child.path
-						.split("/")
-						.slice(0, -1)
-						.filter(Boolean),
-					type: "Folder" as const,
-				} as SplitPathToFolder;
-			}
-			const parts = child.path.split("/");
-			const basename = parts[parts.length - 1] ?? "";
-			const [name, ext] = basename.split(".");
-			return {
-				basename: name,
-				extension: ext ?? "",
-				pathParts: parts.slice(0, -1).filter(Boolean),
-				type: ext === "md" ? ("MdFile" as const) : ("File" as const),
-			} as SplitPathToFile | SplitPathToMdFile;
-		});
+		const folderPath = makeSystemPathForSplitPath(folder);
+		const tFolder = this.app.vault.getAbstractFileByPath(folderPath);
+		if (!(tFolder instanceof TFolder)) return [];
+
+		return tFolder.children.map(getSplitPathForAbstractFile);
 	}
 
 	async getAbstractFile<SP extends SplitPath>(

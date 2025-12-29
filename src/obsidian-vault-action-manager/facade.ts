@@ -7,8 +7,8 @@ import { TFileHelper } from "./file-services/background/helpers/tfile-helper";
 import { TFolderHelper } from "./file-services/background/helpers/tfolder-helper";
 import { ActionQueue } from "./impl/action-queue";
 import { Dispatcher, type ExistenceChecker } from "./impl/dispatcher";
-import { SingleEventEmmiter } from "./impl/event-processing/single-event-emmiter";
 import { SelfEventTracker } from "./impl/event-processing/self-event-tracker";
+import { SingleEventEmmiter } from "./impl/event-processing/single-event-emmiter";
 import { Executor } from "./impl/executor";
 import { Reader } from "./impl/reader";
 import type {

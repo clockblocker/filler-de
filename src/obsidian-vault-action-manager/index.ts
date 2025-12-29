@@ -56,6 +56,8 @@ export type VaultEvent =
 			splitPath: SplitPathToFolder;
 	  };
 
+export type { BulkVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk-vault-event";
+
 export type VaultEventHandler = (event: VaultEvent) => Promise<void>;
 
 export type Teardown = () => void;
