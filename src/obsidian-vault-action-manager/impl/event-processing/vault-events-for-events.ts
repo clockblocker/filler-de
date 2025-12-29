@@ -1,12 +1,12 @@
+import { err, ok, type Result } from "neverthrow";
 import type { TAbstractFile } from "obsidian";
+import type { VaultEvent } from "../..";
 import { makeSplitPath } from "../split-path-and-system-path";
+import { EventProcessingErrorMessage } from "./errors";
 
-export function splitPathsForFileCreated(tAbstractFile: TAbstractFile) {
-	// Filter self-events (actions we dispatched)
-	if (this.selfEventTracker.shouldIgnore(tAbstractFile.path)) {
-		return null;
-	}
-
+export function makeVaultEventForFileCreated(
+	tAbstractFile: TAbstractFile,
+): VaultEvent {
 	const split = makeSplitPath(tAbstractFile);
 	if (split.type === "Folder") {
 		return {
@@ -14,48 +14,41 @@ export function splitPathsForFileCreated(tAbstractFile: TAbstractFile) {
 			type: "FolderCreated",
 		};
 	}
+
 	return {
 		splitPath: split,
 		type: "FileCreated",
 	};
 }
 
-export function splitPathsForFileRenamed(
+export function tryMakeVaultEventForFileRenamed(
 	tAbstractFile: TAbstractFile,
 	oldPath: string,
-) {
-	// Filter self-events (actions we dispatched)
-	// Check new path (file.path) - old path already handled by tracking 'from' in self-event tracker
-	if (this.selfEventTracker.shouldIgnore(tAbstractFile.path)) {
-		return null;
-	}
-
+): Result<VaultEvent, string> {
 	const split = makeSplitPath(tAbstractFile);
 	const from = makeSplitPath(oldPath);
 
 	if (split.type === "Folder" && from.type === "Folder") {
-		return {
+		return ok({
 			from: from,
 			to: split,
 			type: "FolderRenamed",
-		};
+		});
 	}
 	if (split.type !== "Folder" && from.type !== "Folder") {
-		return {
+		return ok({
 			from: from,
 			to: split,
 			type: "FileRenamed",
-		};
+		});
 	}
-	// Mixed folder/file renames are invalid, skip
-	return null;
+
+	return err(EventProcessingErrorMessage.MixedFolderFileRename);
 }
 
-export function splitPathsForFileTrashed(tAbstractFile: TAbstractFile) {
-	if (this.selfEventTracker.shouldIgnore(tAbstractFile.path)) {
-		return null;
-	}
-
+export function makeVaultEventForFileTrashed(
+	tAbstractFile: TAbstractFile,
+): VaultEvent {
 	const split = makeSplitPath(tAbstractFile);
 	if (split.type === "Folder") {
 		return {

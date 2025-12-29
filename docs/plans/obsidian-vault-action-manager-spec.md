@@ -178,7 +178,7 @@ When batch completes:
 
 User Action (Obsidian)
   ↓
-EventAdapter receives Obsidian event
+SingleEventEmmiter receives Obsidian event
   ├── SelfEventTrackerLegacy.shouldIgnore(path)? → YES → filter out
   └── SelfEventTrackerLegacy.shouldIgnore(path)? → NO → emit to subscribers
   ↓

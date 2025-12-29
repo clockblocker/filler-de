@@ -7,7 +7,7 @@ import { TFileHelper } from "./file-services/background/helpers/tfile-helper";
 import { TFolderHelper } from "./file-services/background/helpers/tfolder-helper";
 import { ActionQueue } from "./impl/action-queue";
 import { Dispatcher, type ExistenceChecker } from "./impl/dispatcher";
-import { EventAdapter } from "./impl/event-processing/event-adapter";
+import { SingleEventEmmiter } from "./impl/event-processing/single-event-emmiter";
 import { SelfEventTracker } from "./impl/event-processing/self-event-tracker";
 import { Executor } from "./impl/executor";
 import { Reader } from "./impl/reader";
@@ -34,7 +34,7 @@ export class ObsidianVaultActionManagerImpl
 	private readonly dispatcher: Dispatcher;
 	private readonly selfEventTracker: SelfEventTracker;
 	private readonly actionQueue: ActionQueue;
-	private readonly eventAdapter: EventAdapter;
+	private readonly eventAdapter: SingleEventEmmiter;
 	private readonly subscribers = new Set<VaultEventHandler>();
 	private isListening = false;
 
@@ -78,7 +78,7 @@ export class ObsidianVaultActionManagerImpl
 			existenceChecker,
 		);
 		this.actionQueue = new ActionQueue(this.dispatcher);
-		this.eventAdapter = new EventAdapter(app, this.selfEventTracker);
+		this.eventAdapter = new SingleEventEmmiter(app, this.selfEventTracker);
 	}
 
 	startListening(): void {

@@ -1,14 +1,12 @@
 import type { App, TAbstractFile } from "obsidian";
 import type { VaultEventHandler } from "../../index";
-import type {
-	SplitPathToFile,
-	SplitPathToFolder,
-	SplitPathToMdFile,
-} from "../../types/split-path";
-import { makeSplitPath } from "../split-path-and-system-path";
 import type { SelfEventTracker } from "./self-event-tracker";
+import {
+	makeVaultEventForFileCreated,
+	tryMakeVaultEventForFileRenamed,
+} from "./vault-events-for-events";
 
-export class EventAdapter {
+export class SingleEventEmmiter {
 	private listeners: Array<() => void> = [];
 
 	constructor(
@@ -42,23 +40,11 @@ export class EventAdapter {
 		tAbstractFile: TAbstractFile,
 		handler: VaultEventHandler,
 	): void {
-		// Filter self-events (actions we dispatched)
 		if (this.selfEventTracker.shouldIgnore(tAbstractFile.path)) {
 			return;
 		}
 
-		const split = makeSplitPath(tAbstractFile);
-		if (split.type === "Folder") {
-			void handler({
-				splitPath: split as SplitPathToFolder,
-				type: "FolderCreated",
-			});
-		} else {
-			void handler({
-				splitPath: split as SplitPathToFile | SplitPathToMdFile,
-				type: "FileCreated",
-			});
-		}
+		void handler(makeVaultEventForFileCreated(tAbstractFile));
 	}
 
 	private emitFileRenamed(
@@ -66,51 +52,25 @@ export class EventAdapter {
 		oldPath: string,
 		handler: VaultEventHandler,
 	): void {
-		// Filter self-events (actions we dispatched)
 		// Check new path (file.path) - old path already handled by tracking 'from' in self-event tracker
 		if (this.selfEventTracker.shouldIgnore(tAbstractFile.path)) {
 			return;
 		}
-
-		const split = makeSplitPath(tAbstractFile);
-		const from = makeSplitPath(oldPath);
-
-		if (split.type === "Folder" && from.type === "Folder") {
-			void handler({
-				from: from as SplitPathToFolder,
-				to: split as SplitPathToFolder,
-				type: "FolderRenamed",
-			});
-		} else if (split.type !== "Folder" && from.type !== "Folder") {
-			void handler({
-				from: from as SplitPathToFile | SplitPathToMdFile,
-				to: split as SplitPathToFile | SplitPathToMdFile,
-				type: "FileRenamed",
-			});
+		const res = tryMakeVaultEventForFileRenamed(tAbstractFile, oldPath);
+		if (res.isErr()) {
+			return;
 		}
-		// Mixed folder/file renames are invalid, skip
+		void handler(res.value);
 	}
 
 	private emitFileTrashed(
 		tAbstractFile: TAbstractFile,
 		handler: VaultEventHandler,
 	): void {
-		// Filter self-events (actions we dispatched)
 		if (this.selfEventTracker.shouldIgnore(tAbstractFile.path)) {
 			return;
 		}
 
-		const split = makeSplitPath(tAbstractFile);
-		if (split.type === "Folder") {
-			void handler({
-				splitPath: split,
-				type: "FolderTrashed",
-			});
-		} else {
-			void handler({
-				splitPath: split,
-				type: "FileTrashed",
-			});
-		}
+		void handler(makeVaultEventForFileCreated(tAbstractFile));
 	}
 }
