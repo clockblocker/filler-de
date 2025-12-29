@@ -7,13 +7,10 @@ import {
 	tryMakeVaultEventForFileRenamed,
 } from "../vault-events-for-events";
 import { BulkEventAccumulator } from "./batteries/event-accumulator";
+import { collapseVaultEvents } from "./batteries/processing-chain/collapse";
+import { reduceRoots } from "./batteries/processing-chain/reduce-roots";
 import type { BulkVaultEvent } from "./types/bulk/bulk-vault-event";
-import {
-	isDelete,
-	isPossibleRoot,
-	isRename,
-	type PossibleRootVaultEvent,
-} from "./types/bulk/helpers";
+import { isDelete, isRename } from "./types/bulk/helpers";
 
 export type BulkVaultEventHandler = (bulk: BulkVaultEvent) => Promise<void>;
 
@@ -34,15 +31,13 @@ export class BulkEventEmmiter {
 			(window) => {
 				if (!this.handler) return;
 
-				const events = window.allObsidianEvents;
+				const rawEvents = window.allObsidianEvents;
+				const trueCount = countEvents(rawEvents);
 
-				const trueCount = countEvents(events);
+				const collapsedEvents = collapseVaultEvents(rawEvents);
+				const collapsedCount = countEvents(collapsedEvents);
 
-				// v0: no collapse, no roots reduction
-				const collapsedCount = { ...trueCount };
-				const roots = events.filter(
-					isPossibleRoot,
-				) as Array<PossibleRootVaultEvent>;
+				const roots = reduceRoots(collapsedEvents);
 
 				const bulk: BulkVaultEvent = {
 					debug: {
@@ -55,7 +50,7 @@ export class BulkEventEmmiter {
 						startedAt: window.debug.startedAt,
 						trueCount,
 					},
-					events,
+					events: collapsedEvents,
 					roots,
 				};
 
