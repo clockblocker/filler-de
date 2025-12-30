@@ -4,7 +4,7 @@ import {
 	Plugin,
 	type WorkspaceLeaf,
 } from "obsidian";
-import { Librarian } from "./commanders/librarian-new";
+import { Librarian } from "./commanders/librarian-new/librarian";
 import {
 	LibrarianDeprecated,
 	LibraryTreeDeprecated,

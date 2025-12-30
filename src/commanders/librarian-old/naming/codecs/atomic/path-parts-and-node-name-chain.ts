@@ -3,7 +3,7 @@ import {
 	PathPartsSchema,
 	type SplitPath,
 } from "../../../../../obsidian-vault-action-manager/types/split-path";
-import type { NodeNameChain } from "../../..";
+import type { NodeNameChainDeprecated } from "../../..";
 import { NodeNameChainSchemaDeprecated } from "../../../types/schemas/node-name";
 
 /**
@@ -31,13 +31,13 @@ const pathPartsToNodeNameChainCodec = z.codec(
 );
 
 export const makePathPartsFromNodeNameChain = (
-	chain: NodeNameChain,
+	chain: NodeNameChainDeprecated,
 ): SplitPath["pathParts"] => {
 	return pathPartsToNodeNameChainCodec.encode(chain);
 };
 
 export const makeNodeNameChainFromPathParts = (
 	pathParts: SplitPath["pathParts"],
-): NodeNameChain => {
+): NodeNameChainDeprecated => {
 	return pathPartsToNodeNameChainCodec.decode(pathParts);
 };

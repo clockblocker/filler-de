@@ -40,3 +40,7 @@ export const FOLDER = FolderSchema.value;
 export const MdSchema = z.literal("md");
 export type MD = z.infer<typeof MdSchema>;
 export const MD = MdSchema.value;
+
+export const EmptyStringSchema = z.literal("");
+export type EMPTY_STRING = z.infer<typeof EmptyStringSchema>;
+export const EMPTY_STRING = EmptyStringSchema.value;

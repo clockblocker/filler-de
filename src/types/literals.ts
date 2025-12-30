@@ -67,6 +67,10 @@ const LongDashSchema = z.literal("—");
 export type LONG_DASH = z.infer<typeof LongDashSchema>;
 export const LONG_DASH = LongDashSchema.value;
 
+export const SmallEmDashSchema = z.literal("﹘");
+export type SMALL_EM_DASH = z.infer<typeof SmallEmDashSchema>;
+export const SMALL_EM_DASH = SmallEmDashSchema.value;
+
 const DashSchema = z.literal("-");
 export type DASH = z.infer<typeof DashSchema>;
 export const DASH = DashSchema.value;
