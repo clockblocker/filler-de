@@ -14,7 +14,7 @@ import type { VaultAction } from "../../../obsidian-vault-action-manager/types/v
 import { makeNodeNameChainFromPathParts } from "../naming/codecs/atomic/path-parts-and-node-name-chain";
 import { TreeActionType } from "../types/literals";
 import type { NodeNameChainDeprecated } from "../types/schemas/node-name";
-import type { TreeAction } from "../types/tree-action";
+import type { TreeActionDeprecated } from "../types/tree-action";
 import {
 	TreeNodeStatusDeprecated,
 	TreeNodeTypeDeprecated,
@@ -25,7 +25,9 @@ import { parseBasenameDeprecated } from "../utils/parse-basename";
  * Translate a VaultAction to TreeAction(s).
  * Returns null if action doesn't affect tree (e.g., ProcessMdFile).
  */
-export function translateVaultAction(action: VaultAction): TreeAction | null {
+export function translateVaultAction(
+	action: VaultAction,
+): TreeActionDeprecated | null {
 	const { type, payload } = action;
 
 	switch (type) {
@@ -99,7 +101,7 @@ function toParentChain(splitPath: SplitPath): NodeNameChainDeprecated {
 	return makeNodeNameChainFromPathParts(splitPath.pathParts);
 }
 
-function createSectionAction(splitPath: SplitPath): TreeAction {
+function createSectionAction(splitPath: SplitPath): TreeActionDeprecated {
 	return {
 		payload: {
 			nodeName: splitPath.basename,
@@ -111,7 +113,7 @@ function createSectionAction(splitPath: SplitPath): TreeAction {
 	};
 }
 
-function createFileAction(splitPath: SplitPath): TreeAction | null {
+function createFileAction(splitPath: SplitPath): TreeActionDeprecated | null {
 	const { nodeName } = parseBasenameDeprecated(splitPath.basename);
 	const extension = "extension" in splitPath ? splitPath.extension : "";
 
@@ -127,7 +129,7 @@ function createFileAction(splitPath: SplitPath): TreeAction | null {
 	};
 }
 
-function createScrollAction(splitPath: SplitPath): TreeAction | null {
+function createScrollAction(splitPath: SplitPath): TreeActionDeprecated | null {
 	const { nodeName } = parseBasenameDeprecated(splitPath.basename);
 
 	return {
@@ -142,7 +144,7 @@ function createScrollAction(splitPath: SplitPath): TreeAction | null {
 	};
 }
 
-function deleteNodeAction(splitPath: SplitPath): TreeAction {
+function deleteNodeAction(splitPath: SplitPath): TreeActionDeprecated {
 	return {
 		payload: {
 			nodeNameChain: toNodeNameChain(splitPath),
@@ -151,7 +153,7 @@ function deleteNodeAction(splitPath: SplitPath): TreeAction {
 	};
 }
 
-function translateRename(from: SplitPath, to: SplitPath): TreeAction {
+function translateRename(from: SplitPath, to: SplitPath): TreeActionDeprecated {
 	const settings = getParsedUserSettings();
 	const libraryRoot = settings.splitPathToLibraryRoot.basename;
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { makeNodeSegmentId } from "../../../../../../src/commanders/librarian-new/library-tree/tree-node/codecs/node-and-segment-id/optimistic-makers/make-node-segment-id";
+import { makeNodeSegmentId } from "../../../../../../src/commanders/librarian-new/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import { makeTreeNode } from "../../../../../../src/commanders/librarian-new/library-tree/tree-node/codecs/node-and-segment-id/optimistic-makers/make-tree-node";
 import { tryParseTreeNode } from "../../../../../../src/commanders/librarian-new/library-tree/tree-node/codecs/node-and-segment-id/try-parse-tree-node";
 import { TreeNodeStatus, TreeNodeType } from "../../../../../../src/commanders/librarian-new/library-tree/tree-node/types/atoms";

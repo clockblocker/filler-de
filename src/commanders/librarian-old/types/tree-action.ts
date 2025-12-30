@@ -48,14 +48,14 @@ export type CreateNodeActionDeprecated =
 			};
 	  };
 
-export type DeleteNodeAction = {
+export type DeleteNodeActionDeprecated = {
 	type: typeof TreeActionType.DeleteNode;
 	payload: {
 		nodeNameChain: NodeNameChainDeprecated;
 	};
 };
 
-export type ChangeNodeNameAction = {
+export type ChangeNodeNameActionDeprecated = {
 	type: typeof TreeActionType.ChangeNodeName;
 	payload: {
 		nodeNameChain: NodeNameChainDeprecated;
@@ -63,7 +63,7 @@ export type ChangeNodeNameAction = {
 	};
 };
 
-export type ChangeNodeStatusAction = {
+export type ChangeNodeStatusActionDeprecated = {
 	type: typeof TreeActionType.ChangeNodeStatus;
 	payload: {
 		nodeNameChain: NodeNameChainDeprecated;
@@ -71,7 +71,7 @@ export type ChangeNodeStatusAction = {
 	};
 };
 
-export type MoveNodeAction = {
+export type MoveNodeActionDeprecated = {
 	type: typeof TreeActionType.MoveNode;
 	payload: {
 		nodeNameChain: NodeNameChainDeprecated;
@@ -79,9 +79,9 @@ export type MoveNodeAction = {
 	};
 };
 
-export type TreeAction =
+export type TreeActionDeprecated =
 	| CreateNodeActionDeprecated
-	| DeleteNodeAction
-	| ChangeNodeNameAction
-	| ChangeNodeStatusAction
-	| MoveNodeAction;
+	| DeleteNodeActionDeprecated
+	| ChangeNodeNameActionDeprecated
+	| ChangeNodeStatusActionDeprecated
+	| MoveNodeActionDeprecated;

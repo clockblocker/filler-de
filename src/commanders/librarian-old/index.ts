@@ -81,7 +81,7 @@ export type {
 /**
  * @deprecated TreeAction is being fully rewritten. Use new implementation when available.
  */
-export type { TreeAction } from "./types/tree-action";
+export type { TreeActionDeprecated as TreeAction } from "./types/tree-action";
 /**
  * @deprecated FileNode is being fully rewritten. Use new implementation when available.
  */

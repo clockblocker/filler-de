@@ -1,18 +1,17 @@
-import { TreeNodeType } from "../../../types/atoms";
+import { TreeNodeType } from "../../types/atoms";
 import {
 	type FileNodeSegmentId,
 	NodeSegmentIdSeparator,
 	type ScrollNodeSegmentId,
 	type SectionNodeSegmentId,
 	type TreeNodeSegmentId,
-} from "../../../types/node-segment-id";
+} from "../../types/node-segment-id";
 import type {
 	FileNode,
 	ScrollNode,
 	SectionNode,
 	TreeNode,
-} from "../../../types/tree-node";
-
+} from "../../types/tree-node";
 
 export function makeNodeSegmentId(node: SectionNode): SectionNodeSegmentId;
 export function makeNodeSegmentId(node: ScrollNode): ScrollNodeSegmentId;

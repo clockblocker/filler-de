@@ -5,12 +5,12 @@ import type {
 	NodeNameDeprecated,
 } from "./types/schemas/node-name";
 import type {
-	ChangeNodeNameAction,
-	ChangeNodeStatusAction,
+	ChangeNodeNameActionDeprecated,
+	ChangeNodeStatusActionDeprecated,
 	CreateNodeActionDeprecated,
-	DeleteNodeAction,
-	MoveNodeAction,
-	TreeAction,
+	DeleteNodeActionDeprecated,
+	MoveNodeActionDeprecated,
+	TreeActionDeprecated,
 } from "./types/tree-action";
 import type { TreeLeafDeprecated } from "./types/tree-node";
 import {
@@ -165,7 +165,7 @@ export class LibraryTreeDeprecated {
 	 * Other actions return single chain.
 	 */
 	applyTreeAction(
-		action: TreeAction,
+		action: TreeActionDeprecated,
 	):
 		| NodeNameChainDeprecated
 		| [NodeNameChainDeprecated, NodeNameChainDeprecated] {
@@ -231,7 +231,9 @@ export class LibraryTreeDeprecated {
 		return fullChain;
 	}
 
-	private deleteNode(action: DeleteNodeAction): NodeNameChainDeprecated {
+	private deleteNode(
+		action: DeleteNodeActionDeprecated,
+	): NodeNameChainDeprecated {
 		const { nodeNameChain } = action.payload;
 		const node = this.getNodeInternal(nodeNameChain);
 		if (!node) {
@@ -274,7 +276,7 @@ export class LibraryTreeDeprecated {
 	}
 
 	private changeNodeName(
-		action: ChangeNodeNameAction,
+		action: ChangeNodeNameActionDeprecated,
 	): NodeNameChainDeprecated {
 		const { nodeNameChain, newNodeName } = action.payload;
 		const node = this.getNodeInternal(nodeNameChain);
@@ -338,7 +340,7 @@ export class LibraryTreeDeprecated {
 	}
 
 	private changeNodeStatus(
-		action: ChangeNodeStatusAction,
+		action: ChangeNodeStatusActionDeprecated,
 	): NodeNameChainDeprecated {
 		const { nodeNameChain, newStatus } = action.payload;
 		const node = this.getNodeInternal(nodeNameChain);
@@ -372,7 +374,7 @@ export class LibraryTreeDeprecated {
 	 * Returns [oldParentChain, newParentChain].
 	 */
 	private moveNode(
-		action: MoveNodeAction,
+		action: MoveNodeActionDeprecated,
 	): [NodeNameChainDeprecated, NodeNameChainDeprecated] {
 		const { nodeNameChain, newNodeNameChainToParent } = action.payload;
 		const node = this.getNodeInternal(nodeNameChain);

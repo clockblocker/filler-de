@@ -63,12 +63,3 @@ export const SectionNodeSegmentIdChainSchema = z.array(
 export type SectionNodeSegmentIdChain = z.infer<
 	typeof SectionNodeSegmentIdChainSchema
 >;
-
-export const FullNodeSegmentIdChainSchema = z.object({
-	chainToParent: SectionNodeSegmentIdChainSchema,
-	segmentId: TreeNodeSegmentIdSchema,
-});
-
-export type FullNodeSegmentIdChain = z.infer<
-	typeof FullNodeSegmentIdChainSchema
->;

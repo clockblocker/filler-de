@@ -52,6 +52,9 @@ export type CHANGE_NODE_STATUS_ACTION = "ChangeNodeStatus";
 export const MOVE_NODE_ACTION = "MoveNode" as const;
 export type MOVE_NODE_ACTION = "MoveNode";
 
+export const RENAME_NODE_ACTION = "RenameNode" as const;
+export type RENAME_NODE_ACTION = "RenameNode";
+
 // Healing mode types
 export const RUNTIME_MODE = "Runtime" as const;
 export type RUNTIME_MODE = "Runtime";
