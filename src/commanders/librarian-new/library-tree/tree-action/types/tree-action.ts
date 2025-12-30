@@ -1,4 +1,9 @@
 import z from "zod";
+import type {
+	SplitPathToFile,
+	SplitPathToFolder,
+	SplitPathToMdFile,
+} from "../../../../../obsidian-vault-action-manager/types/split-path";
 import type { Prettify } from "../../../../../types/helpers";
 import {
 	CHANGE_NODE_STATUS_ACTION,
@@ -102,20 +107,47 @@ export type MoveFileNodeAction = {
 	actionType: typeof TreeActionType.MoveNode;
 	target: FileNodeLocator;
 	newParent: SectionNodeLocator;
+
+	observedVaultSplitPath: SplitPathToFile;
 };
 
 export type MoveSectionNodeAction = {
 	actionType: typeof TreeActionType.MoveNode;
 	target: SectionNodeLocator;
 	newParent: SectionNodeLocator;
+
+	observedVaultSplitPath: SplitPathToFolder;
 };
 
 export type MoveScrollNodeAction = {
 	actionType: typeof TreeActionType.MoveNode;
 	target: ScrollNodeLocator;
 	newParent: SectionNodeLocator;
+
+	observedVaultSplitPath: SplitPathToMdFile;
 };
 
+/**
+ * MoveNodeAction represents a semantic move of an existing tree node
+ * to a different parent section.
+ *
+ * Important distinction:
+ * - `target` / `newParent` are **canonical tree locators** and are used
+ *   to mutate the LibraryTree (preserve node identity, status, subtree).
+ * - `observedVaultSplitPath` is the **observed vault location**
+ *   of the node *after the user operation*, and may be non-canonical
+ *   (wrong suffixes, wrong folder, etc.).
+ *
+ * The observed vault split path is **not** used to locate the node in the tree.
+ * It exists solely so the Librarian can generate correct healing
+ * `VaultAction.rename(from, to)` calls, where `from` must match the
+ * actual filesystem state.
+ *
+ * This separation allows:
+ * - enforcing the filename ⇄ path invariant both ways,
+ * - preserving node identity and status in the tree,
+ * - handling user renames/moves that temporarily violate canonical naming.
+ */
 export type MoveNodeAction = Prettify<
 	MoveFileNodeAction | MoveSectionNodeAction | MoveScrollNodeAction
 >;
