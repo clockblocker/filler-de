@@ -1,5 +1,8 @@
 import z from "zod";
-import type { VaultEvent } from "../../../../../../../obsidian-vault-action-manager";
+import type {
+	BulkVaultEvent,
+	VaultEvent,
+} from "../../../../../../../obsidian-vault-action-manager";
 
 export const ScopeSchema = z.enum([
 	"InsideToOutside",
@@ -40,3 +43,11 @@ export type LibraryScopedVaultEvent =
 			 */
 			event: VaultEvent;
 	  };
+
+export type LibraryScopedBulkVaultEvent = Omit<
+	BulkVaultEvent,
+	"events" | "roots"
+> & {
+	events: LibraryScopedVaultEvent[];
+	roots: LibraryScopedVaultEvent[];
+};

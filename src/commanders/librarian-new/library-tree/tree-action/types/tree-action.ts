@@ -40,20 +40,19 @@ export type CreateFileNodeAction = {
 	initialStatus?: FileNode["status"];
 };
 
-export type CreateSectionNodeAction = {
-	actionType: typeof TreeActionType.CreateNode;
-	target: SectionNodeLocator;
-	initialStatus?: undefined;
-};
-
 export type CreateScrollNodeAction = {
 	actionType: typeof TreeActionType.CreateNode;
 	target: ScrollNodeLocator;
 	initialStatus?: ScrollNode["status"];
 };
 
-export type CreateTreeNodeAction = Prettify<
-	CreateFileNodeAction | CreateSectionNodeAction | CreateScrollNodeAction
+/**
+ * CreateTreeLeafAction represents a semantic creation of a new tree leaf node.
+ *
+ * If the sections in chain are not present, they are to be silently created.
+ */
+export type CreateTreeLeafAction = Prettify<
+	CreateFileNodeAction | CreateScrollNodeAction
 >;
 
 // --- Delete
@@ -107,6 +106,7 @@ export type MoveFileNodeAction = {
 	actionType: typeof TreeActionType.MoveNode;
 	target: FileNodeLocator;
 	newParent: SectionNodeLocator;
+	newName: NodeName;
 
 	observedVaultSplitPath: SplitPathToFile;
 };
@@ -115,6 +115,7 @@ export type MoveSectionNodeAction = {
 	actionType: typeof TreeActionType.MoveNode;
 	target: SectionNodeLocator;
 	newParent: SectionNodeLocator;
+	newName: NodeName;
 
 	observedVaultSplitPath: SplitPathToFolder;
 };
@@ -123,6 +124,7 @@ export type MoveScrollNodeAction = {
 	actionType: typeof TreeActionType.MoveNode;
 	target: ScrollNodeLocator;
 	newParent: SectionNodeLocator;
+	newName: NodeName;
 
 	observedVaultSplitPath: SplitPathToMdFile;
 };
@@ -134,6 +136,8 @@ export type MoveScrollNodeAction = {
  * Important distinction:
  * - `target` / `newParent` are **canonical tree locators** and are used
  *   to mutate the LibraryTree (preserve node identity, status, subtree).
+ *   `newParent` and it's chain might not exist, but it's locator is canonical.
+ * - `target` exists in the tree (otherwise it would be a CreateNodeAction)
  * - `observedVaultSplitPath` is the **observed vault location**
  *   of the node *after the user operation*, and may be non-canonical
  *   (wrong suffixes, wrong folder, etc.).
@@ -182,7 +186,7 @@ export type ChangeNodeStatusAction = Prettify<
 >;
 
 export type TreeAction = Prettify<
-	| CreateTreeNodeAction
+	| CreateTreeLeafAction
 	| DeleteNodeAction
 	| RenameNodeAction
 	| MoveNodeAction

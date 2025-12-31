@@ -6,7 +6,7 @@ import type {
 } from "../../../../../../../obsidian-vault-action-manager/types/split-path";
 import { type LibraryScopedVaultEvent, Scope } from "./types";
 
-export const makeLibraryScoped = (
+export const makeLibraryScopedVaultEvent = (
 	event: VaultEvent,
 ): LibraryScopedVaultEvent => {
 	const { splitPathToLibraryRoot: libraryRoot } = getParsedUserSettings();

@@ -74,7 +74,7 @@ export type BulkVaultEvent = {
 	 * - `FileRenamed` roots represent standalone renames not covered by any folder root.
 	 * - `FileDeleted` / `FolderDeleted` roots (if present) represent top-level deletions.
 	 *
-	 * Downstream consumers (e.g. LibraryTree) should base their logic on `roots`,
+	 * Downstream consumers should base their logic on `roots`,
 	 * not on the full `events` list.
 	 */
 	roots: Array<PossibleRootVaultEvent>;
