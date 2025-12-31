@@ -4,7 +4,7 @@ import type {
 	SplitPathToMdFile,
 } from "../../../../obsidian-vault-action-manager/types/split-path";
 import type { NodeName } from "../../types/schemas/node-name";
-import type { TreeNodeType } from "../tree-node/types/atoms";
+import { TreeNodeType } from "../tree-node/types/atoms";
 import {
 	MaterializedEventType,
 	type MaterializedNodeEvent,
@@ -14,19 +14,10 @@ import type {
 	RenameScrollNodeMaterializedEvent,
 	RenameSectionNodeMaterializedEvent,
 } from "./bulk-vault-action-adapter/layers/materialized-node-events/types";
-import type {
-	FileNodeLocator,
-	ScrollNodeLocator,
-	SectionNodeLocator,
-} from "./types/target-chains";
-import {
-	type CreateTreeLeafAction,
-	type DeleteNodeAction,
-	type MoveNodeAction,
-	type RenameNodeAction,
-	type TreeAction,
-	TreeActionType,
-} from "./types/tree-action";
+import { tryParseCanonicalSplitPath } from "./helpers/canonical-split-path/try-parse-canonical-split-path";
+import { makeLocatorFromLibraryScopedCanonicalSplitPath } from "./helpers/make-locator";
+import type { SectionNodeLocator } from "./types/target-chains";
+import { type TreeAction, TreeActionType } from "./types/tree-action";
 
 export const buildTreeActions = (
 	materializedNodeEvents: MaterializedNodeEvent[],
@@ -39,18 +30,35 @@ export const buildTreeActions = (
 			// Create (leaf only)
 			// ----------------------------
 			case MaterializedEventType.Create: {
-				// helpers (unimplemented)
-				const target = makeLeafLocatorFromLibraryScopedSplitPath(
+				// uses existing: tryParseCanonicalSplitPath + makeLocatorFromLibraryScopedCanonicalSplitPath
+				const cspRes = tryParseCanonicalSplitPath(
 					ev.libraryScopedSplitPath,
-					ev.nodeType, // File | Scroll
+				);
+				if (cspRes.isErr()) break;
+
+				const target = makeLocatorFromLibraryScopedCanonicalSplitPath(
+					cspRes.value,
 				);
 
-				out.push({
-					actionType: TreeActionType.CreateNode,
-					target,
-					// initialStatus: optional, later
-				} as CreateTreeLeafAction);
-
+				switch (target.targetType) {
+					case TreeNodeType.File: {
+						out.push({
+							actionType: TreeActionType.CreateNode,
+							target,
+						});
+						break;
+					}
+					case TreeNodeType.Scroll: {
+						out.push({
+							actionType: TreeActionType.CreateNode,
+							target,
+						});
+						break;
+					}
+					default: {
+						break;
+					}
+				}
 				break;
 			}
 
@@ -58,17 +66,42 @@ export const buildTreeActions = (
 			// Delete (file/scroll/section)
 			// ----------------------------
 			case MaterializedEventType.Delete: {
-				// helpers (unimplemented)
-				const target = makeLocatorFromLibraryScopedSplitPath(
+				// uses existing: tryParseCanonicalSplitPath + makeLocatorFromLibraryScopedCanonicalSplitPath
+				const cspRes = tryParseCanonicalSplitPath(
 					ev.libraryScopedSplitPath,
-					ev.nodeType, // File | Scroll | Section
+				);
+				if (cspRes.isErr()) break;
+
+				const target = makeLocatorFromLibraryScopedCanonicalSplitPath(
+					cspRes.value,
 				);
 
-				out.push({
-					actionType: TreeActionType.DeleteNode,
-					target,
-				} as DeleteNodeAction);
-
+				switch (target.targetType) {
+					case TreeNodeType.File: {
+						out.push({
+							actionType: TreeActionType.DeleteNode,
+							target,
+						});
+						break;
+					}
+					case TreeNodeType.Scroll: {
+						out.push({
+							actionType: TreeActionType.DeleteNode,
+							target,
+						});
+						break;
+					}
+					case TreeNodeType.Section: {
+						out.push({
+							actionType: TreeActionType.DeleteNode,
+							target,
+						});
+						break;
+					}
+					default: {
+						break;
+					}
+				}
 				break;
 			}
 
@@ -76,39 +109,106 @@ export const buildTreeActions = (
 			// Rename roots (inside→inside only)
 			// ----------------------------
 			case MaterializedEventType.Rename: {
-				// helpers (unimplemented)
 				const hasDelimiter = hasSuffixDelimiterInRenameTo(ev);
 
-				const target = makeLocatorFromRenameFrom(ev); // locate existing node (from-based, for now)
-				const newName = extractNodeNameFromRenameTo(ev);
+				const fromCspRes = tryParseCanonicalSplitPath(
+					ev.libraryScopedFrom,
+				);
+				if (fromCspRes.isErr()) break;
 
-				if (!hasDelimiter) {
-					out.push({
-						actionType: TreeActionType.RenameNode,
-						newName,
-						target,
-					} as RenameNodeAction);
-					break;
+				const target = makeLocatorFromLibraryScopedCanonicalSplitPath(
+					fromCspRes.value,
+				);
+
+				switch (target.targetType) {
+					case TreeNodeType.File: {
+						const newName = extractNodeNameFromRenameTo(ev);
+
+						if (!hasDelimiter) {
+							out.push({
+								actionType: TreeActionType.RenameNode,
+								newName,
+								target,
+							});
+							break;
+						}
+
+						const newParent = deriveNewParentFromRenameTo(ev);
+						const observedVaultSplitPath =
+							getObservedSplitPathFromRenameTo(ev);
+
+						out.push({
+							actionType: TreeActionType.MoveNode,
+							newName,
+							newParent,
+							observedVaultSplitPath,
+							target,
+						});
+						break;
+					}
+
+					case TreeNodeType.Scroll: {
+						const newName = extractNodeNameFromRenameTo(ev);
+
+						if (!hasDelimiter) {
+							out.push({
+								actionType: TreeActionType.RenameNode,
+								newName,
+								target,
+							});
+							break;
+						}
+
+						const newParent = deriveNewParentFromRenameTo(ev);
+						const observedVaultSplitPath =
+							getObservedSplitPathFromRenameTo(ev);
+
+						out.push({
+							actionType: TreeActionType.MoveNode,
+							newName,
+							newParent,
+							observedVaultSplitPath,
+							target,
+						});
+						break;
+					}
+
+					case TreeNodeType.Section: {
+						const newName = extractNodeNameFromRenameTo(ev);
+
+						if (!hasDelimiter) {
+							out.push({
+								actionType: TreeActionType.RenameNode,
+								newName,
+								target,
+							});
+							break;
+						}
+
+						const newParent = deriveNewParentFromRenameTo(ev);
+						const observedVaultSplitPath =
+							getObservedSplitPathFromRenameTo(ev);
+
+						out.push({
+							actionType: TreeActionType.MoveNode,
+							newName,
+							newParent,
+							observedVaultSplitPath,
+							target,
+						});
+						break;
+					}
+
+					default: {
+						break;
+					}
 				}
-
-				const newParent = deriveNewParentFromRenameTo(ev); // from suffix-chain tokens
-				const observedVaultSplitPath =
-					getObservedSplitPathFromRenameTo(ev); // typed to match nodeType
-
-				out.push({
-					actionType: TreeActionType.MoveNode,
-					newName,
-					newParent,
-					observedVaultSplitPath,
-					target,
-				} as MoveNodeAction);
 
 				break;
 			}
 
 			default: {
-				const _never: never = ev;
-				return _never;
+				break;
 			}
 		}
 	}
@@ -116,22 +216,37 @@ export const buildTreeActions = (
 	return out;
 };
 
-// ------------------------------------
-// helpers (TODO implement)
-// ------------------------------------
+// function buildCreateActionsFromMaterializedEvent(
+// 	ev: CreateFileNodeMaterializedEvent | CreateScrollNodeMaterializedEvent,
+// ): CreateTreeLeafAction[] {
+// 	const out: CreateTreeLeafAction[] = [];
 
-declare function makeLeafLocatorFromLibraryScopedSplitPath(
-	splitPath: SplitPathToFile | SplitPathToMdFile,
-	nodeType: typeof TreeNodeType.File | typeof TreeNodeType.Scroll,
-): FileNodeLocator | ScrollNodeLocator;
+// 	const cspRes = tryParseCanonicalSplitPath(ev.libraryScopedSplitPath);
+// 	if (cspRes.isErr()) return out;
 
-declare function makeLocatorFromLibraryScopedSplitPath(
-	splitPath: SplitPathToFile | SplitPathToMdFile | SplitPathToFolder,
-	nodeType:
-		| typeof TreeNodeType.File
-		| typeof TreeNodeType.Scroll
-		| typeof TreeNodeType.Section,
-): FileNodeLocator | ScrollNodeLocator | SectionNodeLocator;
+// 	const target = makeLocatorFromLibraryScopedCanonicalSplitPath(cspRes.value);
+
+// 	switch (target.targetType) {
+// 		case TreeNodeType.File:
+// 		case TreeNodeType.Scroll: {
+// 			out.push({
+// 				actionType: TreeActionType.CreateNode,
+// 				target,
+// 			});
+// 			break;
+// 		}
+// 		default: {
+// 			// no CreateSectionNode
+// 			break;
+// 		}
+// 	}
+
+// 	return out;
+// }
+
+// ------------------------------------
+// TODO helpers (still needed)
+// ------------------------------------
 
 declare function hasSuffixDelimiterInRenameTo(
 	ev:
@@ -139,13 +254,6 @@ declare function hasSuffixDelimiterInRenameTo(
 		| RenameScrollNodeMaterializedEvent
 		| RenameSectionNodeMaterializedEvent,
 ): boolean;
-
-declare function makeLocatorFromRenameFrom(
-	ev:
-		| RenameFileNodeMaterializedEvent
-		| RenameScrollNodeMaterializedEvent
-		| RenameSectionNodeMaterializedEvent,
-): FileNodeLocator | ScrollNodeLocator | SectionNodeLocator;
 
 declare function extractNodeNameFromRenameTo(
 	ev:
