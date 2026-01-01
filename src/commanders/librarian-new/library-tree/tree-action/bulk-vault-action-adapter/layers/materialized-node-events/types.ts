@@ -39,7 +39,7 @@ export type MaterializedNodeEvent = Prettify<
 export const MaterializedEventTypeSchema = z.enum([
 	"Create",
 	"Delete",
-	"Rename",
+	"Rename", // vault-level rename/move
 ]);
 export const MaterializedEventType = MaterializedEventTypeSchema.enum;
 export type MaterializedEventType = z.infer<typeof MaterializedEventTypeSchema>;
@@ -57,6 +57,10 @@ export type CreateScrollNodeMaterializedEvent = {
 	nodeType: typeof TreeNodeType.Scroll;
 	libraryScopedSplitPath: SplitPathToMdFile;
 };
+
+export type CreateLeafNodeMaterializedEvent =
+	| CreateFileNodeMaterializedEvent
+	| CreateScrollNodeMaterializedEvent;
 
 // -- Delete
 
@@ -100,3 +104,8 @@ export type RenameSectionNodeMaterializedEvent = {
 	libraryScopedFrom: SplitPathToFolder;
 	libraryScopedTo: SplitPathToFolder;
 };
+
+export type RenameTreeNodeNodeMaterializedEvent =
+	| RenameFileNodeMaterializedEvent
+	| RenameScrollNodeMaterializedEvent
+	| RenameSectionNodeMaterializedEvent;

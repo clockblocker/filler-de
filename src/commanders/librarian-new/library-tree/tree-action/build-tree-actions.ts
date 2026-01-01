@@ -5,7 +5,7 @@ import type {
 } from "../../../../obsidian-vault-action-manager/types/split-path";
 import type { NodeName } from "../../types/schemas/node-name";
 import { TreeNodeType } from "../tree-node/types/atoms";
-import { buildCreateActions } from "./action-builders/build-create-actions";
+import { traslateCreateMaterializedEvent } from "./action-builders/build-create-actions";
 import {
 	MaterializedEventType,
 	type MaterializedNodeEvent,
@@ -31,7 +31,7 @@ export const buildTreeActions = (
 			// Create (leaf only)
 			// ----------------------------
 			case MaterializedEventType.Create: {
-				out.push(...buildCreateActions(ev));
+				out.push(...traslateCreateMaterializedEvent(ev));
 				break;
 			}
 

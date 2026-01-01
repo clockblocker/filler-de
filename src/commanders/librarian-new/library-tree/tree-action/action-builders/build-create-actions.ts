@@ -6,6 +6,7 @@ import type {
 import { TreeNodeType } from "../../tree-node/types/atoms";
 import type {
 	CreateFileNodeMaterializedEvent,
+	CreateLeafNodeMaterializedEvent,
 	CreateScrollNodeMaterializedEvent,
 } from "../bulk-vault-action-adapter/layers/materialized-node-events/types";
 import { tryParseCanonicalSplitPath } from "../helpers/canonical-split-path/try-parse-canonical-split-path";
@@ -71,8 +72,8 @@ import {
  * // sectionNames: ["Parent", "Child"]
  * // (suffix "-Other" will be healed later)
  */
-export function buildCreateActions(
-	ev: CreateFileNodeMaterializedEvent | CreateScrollNodeMaterializedEvent,
+export function traslateCreateMaterializedEvent(
+	ev: CreateLeafNodeMaterializedEvent,
 ): CreateTreeLeafAction[] {
 	const out: CreateTreeLeafAction[] = [];
 
@@ -83,7 +84,8 @@ export function buildCreateActions(
 	const canonicalRes = tryMakeCanonicalLeafSplitPathFromObservedCreate(
 		observedVaultSplitPath,
 		policy,
-	); // Result<CanonicalSplitPathToFile|MdFile,string>
+	);
+
 	if (canonicalRes.isErr()) return out;
 
 	const target = makeLocatorFromLibraryScopedCanonicalSplitPath(
