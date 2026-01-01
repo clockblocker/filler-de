@@ -5,6 +5,7 @@ import type {
 } from "../../../../obsidian-vault-action-manager/types/split-path";
 import type { NodeName } from "../../types/schemas/node-name";
 import { TreeNodeType } from "../tree-node/types/atoms";
+import { buildCreateActions } from "./action-builders/build-create-actions";
 import {
 	MaterializedEventType,
 	type MaterializedNodeEvent,
@@ -30,35 +31,7 @@ export const buildTreeActions = (
 			// Create (leaf only)
 			// ----------------------------
 			case MaterializedEventType.Create: {
-				// uses existing: tryParseCanonicalSplitPath + makeLocatorFromLibraryScopedCanonicalSplitPath
-				const cspRes = tryParseCanonicalSplitPath(
-					ev.libraryScopedSplitPath,
-				);
-				if (cspRes.isErr()) break;
-
-				const target = makeLocatorFromLibraryScopedCanonicalSplitPath(
-					cspRes.value,
-				);
-
-				switch (target.targetType) {
-					case TreeNodeType.File: {
-						out.push({
-							actionType: TreeActionType.CreateNode,
-							target,
-						});
-						break;
-					}
-					case TreeNodeType.Scroll: {
-						out.push({
-							actionType: TreeActionType.CreateNode,
-							target,
-						});
-						break;
-					}
-					default: {
-						break;
-					}
-				}
+				out.push(...buildCreateActions(ev));
 				break;
 			}
 
@@ -215,34 +188,6 @@ export const buildTreeActions = (
 
 	return out;
 };
-
-// function buildCreateActionsFromMaterializedEvent(
-// 	ev: CreateFileNodeMaterializedEvent | CreateScrollNodeMaterializedEvent,
-// ): CreateTreeLeafAction[] {
-// 	const out: CreateTreeLeafAction[] = [];
-
-// 	const cspRes = tryParseCanonicalSplitPath(ev.libraryScopedSplitPath);
-// 	if (cspRes.isErr()) return out;
-
-// 	const target = makeLocatorFromLibraryScopedCanonicalSplitPath(cspRes.value);
-
-// 	switch (target.targetType) {
-// 		case TreeNodeType.File:
-// 		case TreeNodeType.Scroll: {
-// 			out.push({
-// 				actionType: TreeActionType.CreateNode,
-// 				target,
-// 			});
-// 			break;
-// 		}
-// 		default: {
-// 			// no CreateSectionNode
-// 			break;
-// 		}
-// 	}
-
-// 	return out;
-// }
 
 // ------------------------------------
 // TODO helpers (still needed)

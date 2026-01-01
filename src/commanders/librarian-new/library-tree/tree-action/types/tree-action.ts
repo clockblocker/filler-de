@@ -38,12 +38,16 @@ export type CreateFileNodeAction = {
 	actionType: typeof TreeActionType.CreateNode;
 	target: FileNodeLocator;
 	initialStatus?: FileNode["status"];
+
+	observedVaultSplitPath: SplitPathToFile;
 };
 
 export type CreateScrollNodeAction = {
 	actionType: typeof TreeActionType.CreateNode;
 	target: ScrollNodeLocator;
 	initialStatus?: ScrollNode["status"];
+
+	observedVaultSplitPath: SplitPathToMdFile;
 };
 
 /**
