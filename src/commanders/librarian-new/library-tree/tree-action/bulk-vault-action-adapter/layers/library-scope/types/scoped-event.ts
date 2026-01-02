@@ -134,11 +134,6 @@ export type LibraryScopedVaultEvent =
 	| ScopedFileRenamedVaultEventOutsideToOutside
 	| ScopedFolderRenamedVaultEventOutsideToOutside;
 
-export type HealingLibraryScopedVaultEvent = Extract<
-	LibraryScopedVaultEvent,
-	{ scope: typeof Scope.Inside }
->;
-
 export type LibraryScopedBulkVaultEvent = Omit<
 	BulkVaultEvent,
 	"events" | "roots"

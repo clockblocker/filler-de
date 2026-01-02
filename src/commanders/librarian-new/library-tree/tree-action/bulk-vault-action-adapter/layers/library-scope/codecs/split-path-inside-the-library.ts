@@ -1,17 +1,10 @@
 import { err, ok, type Result } from "neverthrow";
 import { getParsedUserSettings } from "../../../../../../../../global-state/global-state";
-import {
-	type SplitPath,
-	type SplitPathToFile,
-	type SplitPathToFolder,
-	type SplitPathToMdFile,
-	SplitPathType,
-} from "../../../../../../../../obsidian-vault-action-manager/types/split-path";
+import type { SplitPath } from "../../../../../../../../obsidian-vault-action-manager/types/split-path";
 import type {
+	LibraryScopedSplitPath,
 	SplitPathInsideLibrary,
-	SplitPathToFileInsideLibrary,
-	SplitPathToFolderInsideLibrary,
-	SplitPathToMdFileInsideLibrary,
+	VaultScopedSplitPath,
 } from "../types/inside-library-split-paths";
 
 /**
@@ -39,75 +32,14 @@ import type {
  * // Vault: VaultRoot/Inbox/Todo.md
  * // => Err("OutsideLibrary")
  */
-export function tryParseAsInsideLibrarySplitPath(
-	splitPath: SplitPathToFolder,
-): Result<SplitPathToFolderInsideLibrary, string>;
-export function tryParseAsInsideLibrarySplitPath(
-	splitPath: SplitPathToFile,
-): Result<SplitPathToFileInsideLibrary, string>;
-export function tryParseAsInsideLibrarySplitPath(
-	splitPath: SplitPathToMdFile,
-): Result<SplitPathToMdFileInsideLibrary, string>;
-export function tryParseAsInsideLibrarySplitPath(
-	splitPath: SplitPath,
-): Result<SplitPathInsideLibrary, string>;
-export function tryParseAsInsideLibrarySplitPath(
-	splitPath: SplitPath,
-): Result<SplitPathInsideLibrary, string> {
-	const pathPartsResult = tryParseAsInsideLibraryPathParts(
-		splitPath.pathParts,
-	);
-	if (pathPartsResult.isErr()) return err(pathPartsResult.error);
 
-	const insidePathParts = pathPartsResult.value;
-
-	switch (splitPath.type) {
-		case SplitPathType.Folder:
-			return ok({
-				...splitPath,
-				pathParts: insidePathParts,
-			});
-		case SplitPathType.File:
-			return ok({
-				...splitPath,
-				pathParts: insidePathParts,
-			});
-		case SplitPathType.MdFile:
-			return ok({
-				...splitPath,
-				pathParts: insidePathParts,
-			});
-	}
-}
-
-type VaultScoped<T extends SplitPathInsideLibrary> =
-	T extends SplitPathToFolderInsideLibrary
-		? SplitPathToFolder
-		: T extends SplitPathToMdFileInsideLibrary
-			? SplitPathToMdFile
-			: T extends SplitPathToFileInsideLibrary
-				? SplitPathToFile
-				: SplitPath;
-
-export function makeVaultScopedSplitPath<T extends SplitPathInsideLibrary>(
-	splitPath: T,
-): VaultScoped<T> {
-	const { splitPathToLibraryRoot: libraryRoot } = getParsedUserSettings();
-
-	return {
-		...splitPath,
-		pathParts: [...libraryRoot.pathParts, ...splitPath.pathParts],
-	} as VaultScoped<T>;
-}
-// -- private --
-
-const tryParseAsInsideLibraryPathParts = (
-	pathParts: SplitPath["pathParts"],
-): Result<SplitPathInsideLibrary["pathParts"], string> => {
+export function tryParseAsInsideLibrarySplitPath<SP extends SplitPath>(
+	splitPath: SP,
+): Result<LibraryScopedSplitPath<SP>, string> {
 	const { splitPathToLibraryRoot: libraryRoot } = getParsedUserSettings();
 
 	const libraryPrefix = [...libraryRoot.pathParts, libraryRoot.basename]; // full anchor
-	const full = pathParts;
+	const full = splitPath.pathParts;
 
 	if (full.length < libraryPrefix.length) return err("OutsideLibrary");
 
@@ -118,5 +50,19 @@ const tryParseAsInsideLibraryPathParts = (
 	// keep "Library" as first segment => slice only the *pre*-Library prefix
 	const keepFrom = libraryRoot.pathParts.length;
 
-	return ok(full.slice(keepFrom));
-};
+	return ok({
+		...splitPath,
+		pathParts: full.slice(keepFrom),
+	} as LibraryScopedSplitPath<SP>);
+}
+
+export function makeVaultScopedSplitPath<SPL extends SplitPathInsideLibrary>(
+	splitPath: SPL,
+): VaultScopedSplitPath<SPL> {
+	const { splitPathToLibraryRoot: libraryRoot } = getParsedUserSettings();
+
+	return {
+		...splitPath,
+		pathParts: [...libraryRoot.pathParts, ...splitPath.pathParts],
+	} as VaultScopedSplitPath<SPL>;
+}
