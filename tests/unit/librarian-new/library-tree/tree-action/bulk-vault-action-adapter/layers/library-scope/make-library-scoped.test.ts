@@ -165,7 +165,7 @@ describe("makeEventLibraryScoped", () => {
 			expect(result.to.pathParts).toEqual(["Library"]);
 		});
 
-		it("returns OutsideToOutside when both paths are outside", () => {
+		it("returns Outside when both paths are outside", () => {
 			const event: VaultEvent = {
 				from: {
 					basename: "Old",
@@ -184,7 +184,7 @@ describe("makeEventLibraryScoped", () => {
 
 			const result = makeEventLibraryScoped(event);
 
-			expect(result.scope).toBe(Scope.OutsideToOutside);
+			expect(result.scope).toBe(Scope.Outside);
 			expect(result.from).toEqual(event.from);
 			expect(result.to).toEqual(event.to);
 		});
@@ -319,7 +319,7 @@ describe("makeEventLibraryScoped", () => {
 			expect(result.to.pathParts).toEqual(["Library"]);
 		});
 
-		it("returns OutsideToOutside when both paths are outside", () => {
+		it("returns Outside when both paths are outside", () => {
 			const event: VaultEvent = {
 				from: {
 					basename: "Old",
@@ -336,7 +336,7 @@ describe("makeEventLibraryScoped", () => {
 
 			const result = makeEventLibraryScoped(event);
 
-			expect(result.scope).toBe(Scope.OutsideToOutside);
+			expect(result.scope).toBe(Scope.Outside);
 			expect(result.from).toEqual(event.from);
 			expect(result.to).toEqual(event.to);
 		});

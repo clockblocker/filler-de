@@ -4,7 +4,11 @@ import type {
 	VaultEventType,
 } from "../../../../../../../../obsidian-vault-action-manager";
 import type {
+	FileCreatedVaultEvent,
+	FileDeletedVaultEvent,
 	FileRenamedVaultEvent,
+	FolderCreatedVaultEvent,
+	FolderDeletedVaultEvent,
 	FolderRenamedVaultEvent,
 } from "../../../../../../../../obsidian-vault-action-manager/types/vault-event";
 import type { Prettify } from "../../../../../../../../types/helpers";
@@ -17,14 +21,38 @@ import type {
 export const ScopeSchema = z.enum([
 	"Inside",
 	"Outside",
-	"InsideToInside",
 	"InsideToOutside",
 	"OutsideToInside",
-	"OutsideToOutside",
 ]);
 
 export const Scope = ScopeSchema.enum;
 export type Scope = z.infer<typeof ScopeSchema>;
+
+export type LibraryScopedVaultEvent =
+	| ScopedFileCreatedVaultEventInside
+	| ScopedFileDeletedVaultEventInside
+	| ScopedFolderCreatedVaultEventInside
+	| ScopedFolderDeletedVaultEventInside
+	| ScopedFileRenamedVaultEventInside
+	| ScopedFolderRenamedVaultEventInside
+	| ScopedFileRenamedVaultEventInsideToOutside
+	| ScopedFolderRenamedVaultEventInsideToOutside
+	| ScopedFileRenamedVaultEventOutsideToInside
+	| ScopedFolderRenamedVaultEventOutsideToInside
+	| ScopedFileRenamedVaultEventOutside
+	| ScopedFolderRenamedVaultEventOutside
+	| ScopedFileDeletedVaultEventOutside
+	| ScopedFolderDeletedVaultEventOutside
+	| ScopedFileCreatedVaultEventOutside
+	| ScopedFolderCreatedVaultEventOutside;
+
+export type LibraryScopedBulkVaultEvent = Omit<
+	BulkVaultEvent,
+	"events" | "roots"
+> & {
+	events: LibraryScopedVaultEvent[];
+	roots: LibraryScopedVaultEvent[];
+};
 
 // -- inside --
 
@@ -63,6 +91,8 @@ export type ScopedFileRenamedVaultEventInside = {
 	from: SplitPathToFileInsideLibrary | SplitPathToMdFileInsideLibrary;
 	to: SplitPathToFileInsideLibrary | SplitPathToMdFileInsideLibrary;
 };
+
+// -- inside to inside --
 
 export type ScopedFolderRenamedVaultEventInside = {
 	type: typeof VaultEventType.FolderRenamed;
@@ -110,36 +140,40 @@ export type ScopedFolderRenamedVaultEventOutsideToInside = {
 
 // -- outside to outside --
 
-export type ScopedFileRenamedVaultEventOutsideToOutside = Prettify<
+export type ScopedFileRenamedVaultEventOutside = Prettify<
 	FileRenamedVaultEvent & {
-		scope: typeof Scope.OutsideToOutside;
+		scope: typeof Scope.Outside;
 	}
 >;
 
-export type ScopedFolderRenamedVaultEventOutsideToOutside = Prettify<
+export type ScopedFolderRenamedVaultEventOutside = Prettify<
 	FolderRenamedVaultEvent & {
-		scope: typeof Scope.OutsideToOutside;
+		scope: typeof Scope.Outside;
 	}
 >;
 
-export type LibraryScopedVaultEvent =
-	| ScopedFileCreatedVaultEventInside
-	| ScopedFileDeletedVaultEventInside
-	| ScopedFolderCreatedVaultEventInside
-	| ScopedFolderDeletedVaultEventInside
-	| ScopedFileRenamedVaultEventInside
-	| ScopedFolderRenamedVaultEventInside
-	| ScopedFileRenamedVaultEventInsideToOutside
-	| ScopedFolderRenamedVaultEventInsideToOutside
-	| ScopedFileRenamedVaultEventOutsideToInside
-	| ScopedFolderRenamedVaultEventOutsideToInside
-	| ScopedFileRenamedVaultEventOutsideToOutside
-	| ScopedFolderRenamedVaultEventOutsideToOutside;
+// -- outside --
 
-export type LibraryScopedBulkVaultEvent = Omit<
-	BulkVaultEvent,
-	"events" | "roots"
-> & {
-	events: LibraryScopedVaultEvent[];
-	roots: LibraryScopedVaultEvent[];
-};
+export type ScopedFileDeletedVaultEventOutside = Prettify<
+	FileDeletedVaultEvent & {
+		scope: typeof Scope.Outside;
+	}
+>;
+
+export type ScopedFolderDeletedVaultEventOutside = Prettify<
+	FolderDeletedVaultEvent & {
+		scope: typeof Scope.Outside;
+	}
+>;
+
+export type ScopedFileCreatedVaultEventOutside = Prettify<
+	FileCreatedVaultEvent & {
+		scope: typeof Scope.Outside;
+	}
+>;
+
+export type ScopedFolderCreatedVaultEventOutside = Prettify<
+	FolderCreatedVaultEvent & {
+		scope: typeof Scope.Outside;
+	}
+>;

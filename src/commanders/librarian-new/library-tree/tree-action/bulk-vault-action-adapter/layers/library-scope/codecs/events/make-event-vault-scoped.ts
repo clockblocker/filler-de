@@ -10,6 +10,8 @@ import { makeVaultScopedSplitPath } from "../split-path-inside-the-library";
 export function makeEventVaultScoped(
 	event: LibraryScopedVaultEvent,
 ): VaultEvent {
+	if (event.scope === Scope.Outside) return event;
+
 	switch (event.type) {
 		case VaultEventType.FileCreated:
 		case VaultEventType.FileDeleted: {
@@ -50,13 +52,6 @@ export function makeEventVaultScoped(
 						type: VaultEventType.FileRenamed,
 					};
 
-				case Scope.OutsideToOutside:
-					return {
-						from: event.from,
-						to: event.to,
-						type: VaultEventType.FileRenamed,
-					};
-
 				default: {
 					const _never: never = event;
 					return _never;
@@ -84,13 +79,6 @@ export function makeEventVaultScoped(
 					return {
 						from: event.from,
 						to: makeVaultScopedSplitPath(event.to),
-						type: VaultEventType.FolderRenamed,
-					};
-
-				case Scope.OutsideToOutside:
-					return {
-						from: event.from,
-						to: event.to,
 						type: VaultEventType.FolderRenamed,
 					};
 

@@ -10,34 +10,24 @@ export const makeEventLibraryScoped = (
 	event: VaultEvent,
 ): LibraryScopedVaultEvent => {
 	switch (event.type) {
+		case VaultEventType.FolderCreated:
+		case VaultEventType.FolderDeleted:
 		case VaultEventType.FileCreated:
 		case VaultEventType.FileDeleted: {
 			const splitPathResult = tryParseAsInsideLibrarySplitPath(
 				event.splitPath,
 			);
 			if (splitPathResult.isErr()) {
-				throw new Error("File event outside library not supported");
+				return {
+					scope: Scope.Outside,
+					...event,
+				};
 			}
 			return {
+				...event,
 				scope: Scope.Inside,
 				splitPath: splitPathResult.value,
-				type: event.type,
-			};
-		}
-
-		case VaultEventType.FolderCreated:
-		case VaultEventType.FolderDeleted: {
-			const splitPathResult = tryParseAsInsideLibrarySplitPath(
-				event.splitPath,
-			);
-			if (splitPathResult.isErr()) {
-				throw new Error("Folder event outside library not supported");
-			}
-			return {
-				scope: Scope.Inside,
-				splitPath: splitPathResult.value,
-				type: event.type,
-			};
+			} as LibraryScopedVaultEvent;
 		}
 
 		case VaultEventType.FileRenamed: {
@@ -73,7 +63,7 @@ export const makeEventLibraryScoped = (
 
 			return {
 				from: event.from,
-				scope: Scope.OutsideToOutside,
+				scope: Scope.Outside,
 				to: event.to,
 				type: VaultEventType.FileRenamed,
 			};
@@ -112,7 +102,7 @@ export const makeEventLibraryScoped = (
 
 			return {
 				from: event.from,
-				scope: Scope.OutsideToOutside,
+				scope: Scope.Outside,
 				to: event.to,
 				type: VaultEventType.FolderRenamed,
 			};

@@ -503,7 +503,7 @@ describe("materializeScopedBulk", () => {
 							to: File("new"),
 							type: VaultEventType.FileRenamed,
 						},
-						scope: Scope.OutsideToOutside,
+						scope: Scope.Outside,
 					},
 					{
 						...{
