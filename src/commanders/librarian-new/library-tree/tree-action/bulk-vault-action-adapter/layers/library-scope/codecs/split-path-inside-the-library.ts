@@ -39,9 +39,21 @@ import type {
  * // Vault: VaultRoot/Inbox/Todo.md
  * // => Err("OutsideLibrary")
  */
-export const tryParseAsInsideLibrarySplitPath = (
+export function tryParseAsInsideLibrarySplitPath(
+	splitPath: SplitPathToFolder,
+): Result<SplitPathToFolderInsideLibrary, string>;
+export function tryParseAsInsideLibrarySplitPath(
+	splitPath: SplitPathToFile,
+): Result<SplitPathToFileInsideLibrary, string>;
+export function tryParseAsInsideLibrarySplitPath(
+	splitPath: SplitPathToMdFile,
+): Result<SplitPathToMdFileInsideLibrary, string>;
+export function tryParseAsInsideLibrarySplitPath(
 	splitPath: SplitPath,
-): Result<SplitPathInsideLibrary, string> => {
+): Result<SplitPathInsideLibrary, string>;
+export function tryParseAsInsideLibrarySplitPath(
+	splitPath: SplitPath,
+): Result<SplitPathInsideLibrary, string> {
 	const pathPartsResult = tryParseAsInsideLibraryPathParts(
 		splitPath.pathParts,
 	);
@@ -66,50 +78,28 @@ export const tryParseAsInsideLibrarySplitPath = (
 				pathParts: insidePathParts,
 			});
 	}
-};
-
-export function makeVaultScopedSplitPatToFile(
-	splitPath: SplitPathToFileInsideLibrary | SplitPathToMdFileInsideLibrary,
-): SplitPathToFile | SplitPathToMdFile {
-	if (splitPath.type === SplitPathType.MdFile) {
-		return makeVaultScopedSplitPath(splitPath);
-	}
-	return makeVaultScopedSplitPath(splitPath);
 }
 
-export function makeVaultScopedSplitPathToFolder(
-	splitPath: SplitPathToFolderInsideLibrary,
-): SplitPathToFolder {
-	return makeVaultScopedSplitPath(splitPath);
-}
+type VaultScoped<T extends SplitPathInsideLibrary> =
+	T extends SplitPathToFolderInsideLibrary
+		? SplitPathToFolder
+		: T extends SplitPathToMdFileInsideLibrary
+			? SplitPathToMdFile
+			: T extends SplitPathToFileInsideLibrary
+				? SplitPathToFile
+				: SplitPath;
 
-// -- private --
-
-function makeVaultScopedSplitPath(
-	splitPath: SplitPathToFolderInsideLibrary,
-): SplitPathToFolder;
-function makeVaultScopedSplitPath(
-	splitPath: SplitPathToFileInsideLibrary,
-): SplitPathToFile;
-function makeVaultScopedSplitPath(
-	splitPath: SplitPathToMdFileInsideLibrary,
-): SplitPathToMdFile;
-function makeVaultScopedSplitPath(
-	splitPath: SplitPathInsideLibrary,
-): SplitPath {
-	return {
-		...splitPath,
-		pathParts: makeVaultScopedPathParts(splitPath),
-	};
-}
-
-function makeVaultScopedPathParts(
-	splitPath: SplitPathInsideLibrary,
-): SplitPath["pathParts"] {
+export function makeVaultScopedSplitPath<T extends SplitPathInsideLibrary>(
+	splitPath: T,
+): VaultScoped<T> {
 	const { splitPathToLibraryRoot: libraryRoot } = getParsedUserSettings();
 
-	return [...libraryRoot.pathParts, ...splitPath.pathParts];
+	return {
+		...splitPath,
+		pathParts: [...libraryRoot.pathParts, ...splitPath.pathParts],
+	} as VaultScoped<T>;
 }
+// -- private --
 
 const tryParseAsInsideLibraryPathParts = (
 	pathParts: SplitPath["pathParts"],
