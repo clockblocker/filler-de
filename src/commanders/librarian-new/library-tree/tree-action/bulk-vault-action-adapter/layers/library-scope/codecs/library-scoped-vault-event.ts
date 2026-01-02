@@ -6,8 +6,8 @@ import type { SplitPathToFolderInsideLibrary } from "../types/inside-library-spl
 import type { LibraryScopedVaultEvent } from "../types/scoped-event";
 import { Scope } from "../types/scoped-event";
 import {
-	makeVaultScopedSplitPath,
-	makeVaultScopedSplitPathForFile,
+	makeVaultScopedSplitPathToFolder,
+	makeVaultScopedSplitPatToFile,
 } from "./split-path-inside-the-library";
 
 export const makeEventVaultScoped = (
@@ -17,7 +17,7 @@ export const makeEventVaultScoped = (
 		case VaultEventType.FileCreated:
 		case VaultEventType.FileDeleted: {
 			return {
-				splitPath: makeVaultScopedSplitPathForFile(event.splitPath),
+				splitPath: makeVaultScopedSplitPatToFile(event.splitPath),
 				type: event.type,
 			};
 		}
@@ -25,7 +25,7 @@ export const makeEventVaultScoped = (
 		case VaultEventType.FolderCreated:
 		case VaultEventType.FolderDeleted: {
 			return {
-				splitPath: makeVaultScopedSplitPath(
+				splitPath: makeVaultScopedSplitPathToFolder(
 					event.splitPath as SplitPathToFolderInsideLibrary,
 				),
 				type: event.type,
@@ -36,14 +36,14 @@ export const makeEventVaultScoped = (
 			switch (event.scope) {
 				case Scope.Inside:
 					return {
-						from: makeVaultScopedSplitPathForFile(event.from),
-						to: makeVaultScopedSplitPathForFile(event.to),
+						from: makeVaultScopedSplitPatToFile(event.from),
+						to: makeVaultScopedSplitPatToFile(event.to),
 						type: VaultEventType.FileRenamed,
 					};
 
 				case Scope.InsideToOutside:
 					return {
-						from: makeVaultScopedSplitPathForFile(event.from),
+						from: makeVaultScopedSplitPatToFile(event.from),
 						to: event.to,
 						type: VaultEventType.FileRenamed,
 					};
@@ -51,7 +51,7 @@ export const makeEventVaultScoped = (
 				case Scope.OutsideToInside:
 					return {
 						from: event.from,
-						to: makeVaultScopedSplitPathForFile(event.to),
+						to: makeVaultScopedSplitPatToFile(event.to),
 						type: VaultEventType.FileRenamed,
 					};
 
@@ -73,10 +73,10 @@ export const makeEventVaultScoped = (
 			switch (event.scope) {
 				case Scope.Inside:
 					return {
-						from: makeVaultScopedSplitPath(
+						from: makeVaultScopedSplitPathToFolder(
 							event.from as SplitPathToFolderInsideLibrary,
 						),
-						to: makeVaultScopedSplitPath(
+						to: makeVaultScopedSplitPathToFolder(
 							event.to as SplitPathToFolderInsideLibrary,
 						),
 						type: VaultEventType.FolderRenamed,
@@ -84,7 +84,7 @@ export const makeEventVaultScoped = (
 
 				case Scope.InsideToOutside:
 					return {
-						from: makeVaultScopedSplitPath(
+						from: makeVaultScopedSplitPathToFolder(
 							event.from as SplitPathToFolderInsideLibrary,
 						),
 						to: event.to,
@@ -94,7 +94,7 @@ export const makeEventVaultScoped = (
 				case Scope.OutsideToInside:
 					return {
 						from: event.from,
-						to: makeVaultScopedSplitPath(
+						to: makeVaultScopedSplitPathToFolder(
 							event.to as SplitPathToFolderInsideLibrary,
 						),
 						type: VaultEventType.FolderRenamed,

@@ -42,55 +42,65 @@ import type {
 export const tryParseAsInsideLibrarySplitPath = (
 	splitPath: SplitPath,
 ): Result<SplitPathInsideLibrary, string> => {
-	const { splitPathToLibraryRoot: libraryRoot } = getParsedUserSettings();
+	const pathPartsResult = tryParseAsInsideLibraryPathParts(
+		splitPath.pathParts,
+	);
+	if (pathPartsResult.isErr()) return err(pathPartsResult.error);
 
-	const libraryPrefix = [...libraryRoot.pathParts, libraryRoot.basename]; // full anchor
-	const full = splitPath.pathParts;
+	const insidePathParts = pathPartsResult.value;
 
-	if (full.length < libraryPrefix.length) return err("OutsideLibrary");
-
-	for (let i = 0; i < libraryPrefix.length; i++) {
-		if (full[i] !== libraryPrefix[i]) return err("OutsideLibrary");
-	}
-
-	// keep "Library" as first segment => slice only the *pre*-Library prefix
-	const keepFrom = libraryRoot.pathParts.length;
-
-	return ok({
-		...splitPath,
-		pathParts: full.slice(keepFrom),
-	} as SplitPathInsideLibrary);
-};
-
-export function makeVaultScopedSplitPath(
-	splitPath: SplitPathToFolderInsideLibrary,
-): SplitPathToFolder;
-export function makeVaultScopedSplitPath(
-	splitPath: SplitPathToFileInsideLibrary,
-): SplitPathToFile;
-export function makeVaultScopedSplitPath(
-	splitPath: SplitPathToMdFileInsideLibrary,
-): SplitPathToMdFile;
-export function makeVaultScopedSplitPath(
-	splitPath: SplitPathInsideLibrary,
-): SplitPath {
 	switch (splitPath.type) {
 		case SplitPathType.Folder:
-			return {
+			return ok({
 				...splitPath,
-				pathParts: makeVaultScopedPathParts(splitPath),
-			};
+				pathParts: insidePathParts,
+			});
 		case SplitPathType.File:
-			return {
+			return ok({
 				...splitPath,
-				pathParts: makeVaultScopedPathParts(splitPath),
-			};
+				pathParts: insidePathParts,
+			});
 		case SplitPathType.MdFile:
-			return {
+			return ok({
 				...splitPath,
-				pathParts: makeVaultScopedPathParts(splitPath),
-			};
+				pathParts: insidePathParts,
+			});
 	}
+};
+
+export function makeVaultScopedSplitPatToFile(
+	splitPath: SplitPathToFileInsideLibrary | SplitPathToMdFileInsideLibrary,
+): SplitPathToFile | SplitPathToMdFile {
+	if (splitPath.type === SplitPathType.MdFile) {
+		return makeVaultScopedSplitPath(splitPath);
+	}
+	return makeVaultScopedSplitPath(splitPath);
+}
+
+export function makeVaultScopedSplitPathToFolder(
+	splitPath: SplitPathToFolderInsideLibrary,
+): SplitPathToFolder {
+	return makeVaultScopedSplitPath(splitPath);
+}
+
+// -- private --
+
+function makeVaultScopedSplitPath(
+	splitPath: SplitPathToFolderInsideLibrary,
+): SplitPathToFolder;
+function makeVaultScopedSplitPath(
+	splitPath: SplitPathToFileInsideLibrary,
+): SplitPathToFile;
+function makeVaultScopedSplitPath(
+	splitPath: SplitPathToMdFileInsideLibrary,
+): SplitPathToMdFile;
+function makeVaultScopedSplitPath(
+	splitPath: SplitPathInsideLibrary,
+): SplitPath {
+	return {
+		...splitPath,
+		pathParts: makeVaultScopedPathParts(splitPath),
+	};
 }
 
 function makeVaultScopedPathParts(
@@ -101,11 +111,22 @@ function makeVaultScopedPathParts(
 	return [...libraryRoot.pathParts, ...splitPath.pathParts];
 }
 
-export function makeVaultScopedSplitPathForFile(
-	splitPath: SplitPathToFileInsideLibrary | SplitPathToMdFileInsideLibrary,
-): SplitPathToFile | SplitPathToMdFile {
-	if (splitPath.type === SplitPathType.MdFile) {
-		return makeVaultScopedSplitPath(splitPath);
+const tryParseAsInsideLibraryPathParts = (
+	pathParts: SplitPath["pathParts"],
+): Result<SplitPathInsideLibrary["pathParts"], string> => {
+	const { splitPathToLibraryRoot: libraryRoot } = getParsedUserSettings();
+
+	const libraryPrefix = [...libraryRoot.pathParts, libraryRoot.basename]; // full anchor
+	const full = pathParts;
+
+	if (full.length < libraryPrefix.length) return err("OutsideLibrary");
+
+	for (let i = 0; i < libraryPrefix.length; i++) {
+		if (full[i] !== libraryPrefix[i]) return err("OutsideLibrary");
 	}
-	return makeVaultScopedSplitPath(splitPath);
-}
+
+	// keep "Library" as first segment => slice only the *pre*-Library prefix
+	const keepFrom = libraryRoot.pathParts.length;
+
+	return ok(full.slice(keepFrom));
+};
