@@ -19,29 +19,41 @@ export const VaultEventType = VaultEventTypeSchema.enum;
 export type VaultEventType = z.infer<typeof VaultEventTypeSchema>;
 
 export type VaultEvent =
-	| {
-			type: typeof VaultEventType.FileCreated;
-			splitPath: SplitPathToFile | SplitPathToMdFile;
-	  }
-	| {
-			type: typeof VaultEventType.FileRenamed;
-			from: SplitPathToFile | SplitPathToMdFile;
-			to: SplitPathToFile | SplitPathToMdFile;
-	  }
-	| {
-			type: typeof VaultEventType.FileDeleted;
-			splitPath: SplitPathToFile | SplitPathToMdFile;
-	  }
-	| {
-			type: typeof VaultEventType.FolderCreated;
-			splitPath: SplitPathToFolder;
-	  }
-	| {
-			type: typeof VaultEventType.FolderRenamed;
-			from: SplitPathToFolder;
-			to: SplitPathToFolder;
-	  }
-	| {
-			type: typeof VaultEventType.FolderDeleted;
-			splitPath: SplitPathToFolder;
-	  };
+	| FileCreatedVaultEvent
+	| FileRenamedVaultEvent
+	| FileDeletedVaultEvent
+	| FolderCreatedVaultEvent
+	| FolderRenamedVaultEvent
+	| FolderDeletedVaultEvent;
+
+export type FileCreatedVaultEvent = {
+	type: typeof VaultEventType.FileCreated;
+	splitPath: SplitPathToFile | SplitPathToMdFile;
+};
+
+export type FileRenamedVaultEvent = {
+	type: typeof VaultEventType.FileRenamed;
+	from: SplitPathToFile | SplitPathToMdFile;
+	to: SplitPathToFile | SplitPathToMdFile;
+};
+
+export type FileDeletedVaultEvent = {
+	type: typeof VaultEventType.FileDeleted;
+	splitPath: SplitPathToFile | SplitPathToMdFile;
+};
+
+export type FolderCreatedVaultEvent = {
+	type: typeof VaultEventType.FolderCreated;
+	splitPath: SplitPathToFolder;
+};
+
+export type FolderRenamedVaultEvent = {
+	type: typeof VaultEventType.FolderRenamed;
+	from: SplitPathToFolder;
+	to: SplitPathToFolder;
+};
+
+export type FolderDeletedVaultEvent = {
+	type: typeof VaultEventType.FolderDeleted;
+	splitPath: SplitPathToFolder;
+};

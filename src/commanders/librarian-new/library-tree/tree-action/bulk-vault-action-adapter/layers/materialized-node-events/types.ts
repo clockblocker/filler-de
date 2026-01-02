@@ -1,4 +1,9 @@
 import z from "zod";
+import {
+	CREATE,
+	DELETE,
+	RENAME,
+} from "../../../../../../../obsidian-vault-action-manager/types/literals";
 import type {
 	SplitPathToFile,
 	SplitPathToFolder,
@@ -37,9 +42,9 @@ export type MaterializedNodeEvent = Prettify<
 // --- Materialized Event Type
 
 export const MaterializedEventTypeSchema = z.enum([
-	"Create",
-	"Delete",
-	"Rename", // vault-level rename/move
+	CREATE,
+	DELETE,
+	RENAME, // vault-level rename/move
 ]);
 export const MaterializedEventType = MaterializedEventTypeSchema.enum;
 export type MaterializedEventType = z.infer<typeof MaterializedEventTypeSchema>;

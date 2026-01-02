@@ -20,9 +20,9 @@ import { ChangePolicy } from "./types";
  * inferCreatePolicy({ pathParts: ["Parent", "Child"], ... })
  * // => "PathKing"
  */
-export function inferCreatePolicy({
-	libraryScopedSplitPath,
-}: CreateLeafNodeMaterializedEvent): ChangePolicy {
+export function inferCreatePolicy(
+	libraryScopedSplitPath: CreateLeafNodeMaterializedEvent["libraryScopedSplitPath"],
+): ChangePolicy {
 	// direct child of "Library/" => NameKing
 	// nested under "Library/..." => PathKing
 	return libraryScopedSplitPath.pathParts.length === 0

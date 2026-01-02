@@ -1,14 +1,14 @@
-import type { Result } from "neverthrow";
+import { err, ok, type Result } from "neverthrow";
 import type {
 	SplitPathToFile,
 	SplitPathToMdFile,
 } from "../../../../../obsidian-vault-action-manager/types/split-path";
+import {
+	type NodeName,
+	NodeNameSchema,
+} from "../../../types/schemas/node-name";
 import { TreeNodeType } from "../../tree-node/types/atoms";
-import type {
-	CreateFileNodeMaterializedEvent,
-	CreateLeafNodeMaterializedEvent,
-	CreateScrollNodeMaterializedEvent,
-} from "../bulk-vault-action-adapter/layers/materialized-node-events/types";
+import type { CreateLeafNodeMaterializedEvent } from "../bulk-vault-action-adapter/layers/materialized-node-events/types";
 import { tryParseCanonicalSplitPath } from "../helpers/canonical-split-path/try-parse-canonical-split-path";
 import type {
 	CanonicalSplitPathToFile,
@@ -16,24 +16,20 @@ import type {
 } from "../helpers/canonical-split-path/types";
 import { makeLocatorFromLibraryScopedCanonicalSplitPath } from "../helpers/make-locator";
 import {
+	makePathPartsFromSuffixParts,
+	tryMakeSeparatedSuffixedBasename,
+} from "../helpers/suffix-utils/suffix-utils";
+import {
 	type CreateTreeLeafAction,
 	TreeActionType,
 } from "../types/tree-action";
+import { ChangePolicy } from "./helpers/policy";
+import { inferCreatePolicy } from "./helpers/policy/infer-create";
 
 /**
  * Canonicalizes an observed leaf SplitPath during Create (import / initial load)
  * according to the Create policy.
  *
- * Policy rules:
- * - NameKing:
- *   - Used for direct children of `Library/` (pathParts.length === 0).
- *   - Basename suffix defines section hierarchy.
- *   - Observed pathParts are ignored.
- *
- * - PathKing:
- *   - Used for nested paths under `Library/`.
- *   - Observed pathParts define section hierarchy.
- *   - Basename suffix is ignored and will be healed.
  *
  * Returns a canonical leaf SplitPath (nodeName + sectionNames) suitable
  * for building a TreeNodeLocator and later healing.
@@ -79,11 +75,8 @@ export function traslateCreateMaterializedEvent(
 
 	const observedVaultSplitPath = ev.libraryScopedSplitPath; // already leaf-typed
 
-	const policy = inferCreatePolicy(observedVaultSplitPath); // NameKing|PathKing
-
 	const canonicalRes = tryMakeCanonicalLeafSplitPathFromObservedCreate(
 		observedVaultSplitPath,
-		policy,
 	);
 
 	if (canonicalRes.isErr()) return out;
@@ -123,21 +116,46 @@ export function traslateCreateMaterializedEvent(
 	return out;
 }
 
-// ------------------------------------
-// helpers (TODO)
-// ------------------------------------
-
-declare function inferCreatePolicy(
-	sp: SplitPathToFile | SplitPathToMdFile,
-): "NameKing" | "PathKing";
-
 /**
  * Produces canonical leaf split path (nodeName + sectionNames) from an observed create,
  * applying import policy:
  * - NameKing: derive sectionNames from basename suffix; ignore observed pathParts.
- * - PathKing: derive sectionNames from observed pathParts; derive canonical suffix from it.
+ * - PathKing: derive sectionNames from observed pathParts; ignore basename suffix.
  */
-declare function tryMakeCanonicalLeafSplitPathFromObservedCreate(
+export function tryMakeCanonicalLeafSplitPathFromObservedCreate(
 	sp: SplitPathToFile | SplitPathToMdFile,
-	policy: "NameKing" | "PathKing",
-): Result<CanonicalSplitPathToFile | CanonicalSplitPathToMdFile, string>;
+): Result<CanonicalSplitPathToFile | CanonicalSplitPathToMdFile, string> {
+	const policy = inferCreatePolicy(sp); // NameKing | PathKing
+
+	const sepRes = tryMakeSeparatedSuffixedBasename(sp);
+	if (sepRes.isErr()) return err(sepRes.error);
+
+	if (policy === ChangePolicy.NameKing) {
+		const sectionNames = makePathPartsFromSuffixParts(
+			sepRes.value,
+		) as NodeName[];
+
+		return ok({
+			...sp,
+			nodeName: sepRes.value.nodeName,
+			sectionNames,
+		});
+	}
+
+	const sectionNames: NodeName[] = [];
+	for (const seg of sp.pathParts) {
+		const r = NodeNameSchema.safeParse(seg);
+		if (!r.success) {
+			return err(
+				r.error.issues[0]?.message ?? "Invalid section NodeName",
+			);
+		}
+		sectionNames.push(r.data);
+	}
+
+	return ok({
+		...sp,
+		nodeName: sepRes.value.nodeName,
+		sectionNames,
+	});
+}

@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { makeVaultScoped } from "../../../../../../../../src/commanders/librarian-new/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/make-vault-scoped";
-import { Scope } from "../../../../../../../../src/commanders/librarian-new/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types";
-import type { LibraryScopedVaultEvent } from "../../../../../../../../src/commanders/librarian-new/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types";
+import type { LibraryScopedVaultEvent } from "../../../../../../../../src/commanders/librarian-new/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/scoped-event";
+import { Scope } from "../../../../../../../../src/commanders/librarian-new/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/scoped-event";
 import * as globalState from "../../../../../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../../../../../src/global-state/parsed-settings";
 import { SplitPathType } from "../../../../../../../../src/obsidian-vault-action-manager/types/split-path";
-import { VaultEventType } from "../../../../../../../../src/obsidian-vault-action-manager/types/vault-event";
 import type { VaultEvent } from "../../../../../../../../src/obsidian-vault-action-manager/types/vault-event";
+import { VaultEventType } from "../../../../../../../../src/obsidian-vault-action-manager/types/vault-event";
 
 const defaultSettings: ParsedUserSettings = {
 	apiProvider: "google",
@@ -36,18 +36,18 @@ describe("makeVaultScoped", () => {
 	describe("OutsideToOutside scope", () => {
 		it("returns event unchanged for FileCreated", () => {
 			const event: VaultEvent = {
-				type: VaultEventType.FileCreated,
 				splitPath: {
 					basename: "Note",
+					extension: "md",
 					pathParts: ["Other"],
 					type: SplitPathType.MdFile,
-					extension: "md",
 				},
+				type: VaultEventType.FileCreated,
 			};
 
 			const scopedEvent: LibraryScopedVaultEvent = {
-				scope: Scope.OutsideToOutside,
 				event,
+				scope: Scope.OutsideToOutside,
 			};
 
 			const result = makeVaultScoped(scopedEvent);
@@ -57,24 +57,24 @@ describe("makeVaultScoped", () => {
 
 		it("returns event unchanged for FileRenamed", () => {
 			const event: VaultEvent = {
-				type: VaultEventType.FileRenamed,
 				from: {
 					basename: "Old",
+					extension: "md",
 					pathParts: ["Other"],
 					type: SplitPathType.MdFile,
-					extension: "md",
 				},
 				to: {
 					basename: "New",
+					extension: "md",
 					pathParts: ["Another"],
 					type: SplitPathType.MdFile,
-					extension: "md",
 				},
+				type: VaultEventType.FileRenamed,
 			};
 
 			const scopedEvent: LibraryScopedVaultEvent = {
-				scope: Scope.OutsideToOutside,
 				event,
+				scope: Scope.OutsideToOutside,
 			};
 
 			const result = makeVaultScoped(scopedEvent);
@@ -86,16 +86,16 @@ describe("makeVaultScoped", () => {
 	describe("InsideToInside scope", () => {
 		it("makes absolute path for FileCreated", () => {
 			const scopedEvent: LibraryScopedVaultEvent = {
-				scope: Scope.InsideToInside,
 				event: {
-					type: VaultEventType.FileCreated,
 					splitPath: {
 						basename: "Note",
+						extension: "md",
 						pathParts: ["Section"],
 						type: SplitPathType.MdFile,
-						extension: "md",
 					},
+					type: VaultEventType.FileCreated,
 				},
+				scope: Scope.InsideToInside,
 			};
 
 			const result = makeVaultScoped(scopedEvent);
@@ -109,22 +109,22 @@ describe("makeVaultScoped", () => {
 
 		it("makes absolute paths for FileRenamed", () => {
 			const scopedEvent: LibraryScopedVaultEvent = {
-				scope: Scope.InsideToInside,
 				event: {
-					type: VaultEventType.FileRenamed,
 					from: {
 						basename: "Old",
+						extension: "md",
 						pathParts: ["Section1"],
 						type: SplitPathType.MdFile,
-						extension: "md",
 					},
 					to: {
 						basename: "New",
+						extension: "md",
 						pathParts: ["Section2"],
 						type: SplitPathType.MdFile,
-						extension: "md",
 					},
+					type: VaultEventType.FileRenamed,
 				},
+				scope: Scope.InsideToInside,
 			};
 
 			const result = makeVaultScoped(scopedEvent);
@@ -138,16 +138,16 @@ describe("makeVaultScoped", () => {
 
 		it("makes absolute path for FileDeleted", () => {
 			const scopedEvent: LibraryScopedVaultEvent = {
-				scope: Scope.InsideToInside,
 				event: {
-					type: VaultEventType.FileDeleted,
 					splitPath: {
 						basename: "Note",
+						extension: "md",
 						pathParts: ["Section"],
 						type: SplitPathType.MdFile,
-						extension: "md",
 					},
+					type: VaultEventType.FileDeleted,
 				},
+				scope: Scope.InsideToInside,
 			};
 
 			const result = makeVaultScoped(scopedEvent);
@@ -160,15 +160,15 @@ describe("makeVaultScoped", () => {
 
 		it("makes absolute path for FolderCreated", () => {
 			const scopedEvent: LibraryScopedVaultEvent = {
-				scope: Scope.InsideToInside,
 				event: {
-					type: VaultEventType.FolderCreated,
 					splitPath: {
 						basename: "Section",
 						pathParts: [],
 						type: SplitPathType.Folder,
 					},
+					type: VaultEventType.FolderCreated,
 				},
+				scope: Scope.InsideToInside,
 			};
 
 			const result = makeVaultScoped(scopedEvent);
@@ -182,9 +182,7 @@ describe("makeVaultScoped", () => {
 
 		it("makes absolute paths for FolderRenamed", () => {
 			const scopedEvent: LibraryScopedVaultEvent = {
-				scope: Scope.InsideToInside,
 				event: {
-					type: VaultEventType.FolderRenamed,
 					from: {
 						basename: "Old",
 						pathParts: [],
@@ -195,7 +193,9 @@ describe("makeVaultScoped", () => {
 						pathParts: [],
 						type: SplitPathType.Folder,
 					},
+					type: VaultEventType.FolderRenamed,
 				},
+				scope: Scope.InsideToInside,
 			};
 
 			const result = makeVaultScoped(scopedEvent);
@@ -209,15 +209,15 @@ describe("makeVaultScoped", () => {
 
 		it("makes absolute path for FolderDeleted", () => {
 			const scopedEvent: LibraryScopedVaultEvent = {
-				scope: Scope.InsideToInside,
 				event: {
-					type: VaultEventType.FolderDeleted,
 					splitPath: {
 						basename: "Section",
 						pathParts: [],
 						type: SplitPathType.Folder,
 					},
+					type: VaultEventType.FolderDeleted,
 				},
+				scope: Scope.InsideToInside,
 			};
 
 			const result = makeVaultScoped(scopedEvent);
@@ -232,22 +232,22 @@ describe("makeVaultScoped", () => {
 	describe("InsideToOutside scope", () => {
 		it("makes absolute path for from in FileRenamed", () => {
 			const scopedEvent: LibraryScopedVaultEvent = {
-				scope: Scope.InsideToOutside,
 				event: {
-					type: VaultEventType.FileRenamed,
 					from: {
 						basename: "Old",
+						extension: "md",
 						pathParts: ["Section"],
 						type: SplitPathType.MdFile,
-						extension: "md",
 					},
 					to: {
 						basename: "New",
+						extension: "md",
 						pathParts: ["Other"],
 						type: SplitPathType.MdFile,
-						extension: "md",
 					},
+					type: VaultEventType.FileRenamed,
 				},
+				scope: Scope.InsideToOutside,
 			};
 
 			const result = makeVaultScoped(scopedEvent);
@@ -261,9 +261,7 @@ describe("makeVaultScoped", () => {
 
 		it("makes absolute path for from in FolderRenamed", () => {
 			const scopedEvent: LibraryScopedVaultEvent = {
-				scope: Scope.InsideToOutside,
 				event: {
-					type: VaultEventType.FolderRenamed,
 					from: {
 						basename: "Old",
 						pathParts: [],
@@ -274,7 +272,9 @@ describe("makeVaultScoped", () => {
 						pathParts: ["Other"],
 						type: SplitPathType.Folder,
 					},
+					type: VaultEventType.FolderRenamed,
 				},
+				scope: Scope.InsideToOutside,
 			};
 
 			const result = makeVaultScoped(scopedEvent);
@@ -290,22 +290,22 @@ describe("makeVaultScoped", () => {
 	describe("OutsideToInside scope", () => {
 		it("makes absolute path for to in FileRenamed", () => {
 			const scopedEvent: LibraryScopedVaultEvent = {
-				scope: Scope.OutsideToInside,
 				event: {
-					type: VaultEventType.FileRenamed,
 					from: {
 						basename: "Old",
+						extension: "md",
 						pathParts: ["Other"],
 						type: SplitPathType.MdFile,
-						extension: "md",
 					},
 					to: {
 						basename: "New",
+						extension: "md",
 						pathParts: ["Section"],
 						type: SplitPathType.MdFile,
-						extension: "md",
 					},
+					type: VaultEventType.FileRenamed,
 				},
+				scope: Scope.OutsideToInside,
 			};
 
 			const result = makeVaultScoped(scopedEvent);
@@ -319,9 +319,7 @@ describe("makeVaultScoped", () => {
 
 		it("makes absolute path for to in FolderRenamed", () => {
 			const scopedEvent: LibraryScopedVaultEvent = {
-				scope: Scope.OutsideToInside,
 				event: {
-					type: VaultEventType.FolderRenamed,
 					from: {
 						basename: "Old",
 						pathParts: ["Other"],
@@ -332,7 +330,9 @@ describe("makeVaultScoped", () => {
 						pathParts: [],
 						type: SplitPathType.Folder,
 					},
+					type: VaultEventType.FolderRenamed,
 				},
+				scope: Scope.OutsideToInside,
 			};
 
 			const result = makeVaultScoped(scopedEvent);
@@ -357,16 +357,16 @@ describe("makeVaultScoped", () => {
 			});
 
 			const scopedEvent: LibraryScopedVaultEvent = {
-				scope: Scope.InsideToInside,
 				event: {
-					type: VaultEventType.FileCreated,
 					splitPath: {
 						basename: "Note",
+						extension: "md",
 						pathParts: ["Section"],
 						type: SplitPathType.MdFile,
-						extension: "md",
 					},
+					type: VaultEventType.FileCreated,
 				},
+				scope: Scope.InsideToInside,
 			};
 
 			const result = makeVaultScoped(scopedEvent);

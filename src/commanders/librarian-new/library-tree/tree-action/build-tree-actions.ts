@@ -1,3 +1,4 @@
+import type { BulkVaultEvent } from "../../../../obsidian-vault-action-manager";
 import type {
 	SplitPathToFile,
 	SplitPathToFolder,
@@ -5,10 +6,11 @@ import type {
 } from "../../../../obsidian-vault-action-manager/types/split-path";
 import type { NodeName } from "../../types/schemas/node-name";
 import { TreeNodeType } from "../tree-node/types/atoms";
-import { traslateCreateMaterializedEvent } from "./action-builders/build-create-actions";
+import { traslateCreateMaterializedEvent } from "./action-builders/translate-create-actions";
+import { makeLibraryScopedBulkVaultEvent } from "./bulk-vault-action-adapter/layers/library-scope";
 import {
 	MaterializedEventType,
-	type MaterializedNodeEvent,
+	materializeScopedBulk,
 } from "./bulk-vault-action-adapter/layers/materialized-node-events";
 import type {
 	RenameFileNodeMaterializedEvent,
@@ -20,10 +22,12 @@ import { makeLocatorFromLibraryScopedCanonicalSplitPath } from "./helpers/make-l
 import type { SectionNodeLocator } from "./types/target-chains";
 import { type TreeAction, TreeActionType } from "./types/tree-action";
 
-export const buildTreeActions = (
-	materializedNodeEvents: MaterializedNodeEvent[],
-): TreeAction[] => {
+export const buildTreeActions = (bulk: BulkVaultEvent): TreeAction[] => {
 	const out: TreeAction[] = [];
+
+	const materializedNodeEvents = materializeScopedBulk(
+		makeLibraryScopedBulkVaultEvent(bulk),
+	);
 
 	for (const ev of materializedNodeEvents) {
 		switch (ev.kind) {
@@ -34,6 +38,8 @@ export const buildTreeActions = (
 				out.push(...traslateCreateMaterializedEvent(ev));
 				break;
 			}
+
+			// ...
 
 			// ----------------------------
 			// Delete (file/scroll/section)

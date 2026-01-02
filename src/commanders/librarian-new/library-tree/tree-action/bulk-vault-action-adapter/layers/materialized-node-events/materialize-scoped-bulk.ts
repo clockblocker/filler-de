@@ -4,7 +4,7 @@ import {
 	type LibraryScopedBulkVaultEvent,
 	type LibraryScopedVaultEvent,
 	Scope,
-} from "../library-scope/types";
+} from "../library-scope/types/scoped-event";
 import { MaterializedEventType, type MaterializedNodeEvent } from "./types";
 
 /**

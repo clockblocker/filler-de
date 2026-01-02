@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { makeLibraryScopedVaultEvent } from "../../../../../../../../src/commanders/librarian-new/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/make-library-scoped-vault-event";
-import { Scope } from "../../../../../../../../src/commanders/librarian-new/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types";
+import { Scope } from "../../../../../../../../src/commanders/librarian-new/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/scoped-event";
 import * as globalState from "../../../../../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../../../../../src/global-state/parsed-settings";
 import { SplitPathType } from "../../../../../../../../src/obsidian-vault-action-manager/types/split-path";

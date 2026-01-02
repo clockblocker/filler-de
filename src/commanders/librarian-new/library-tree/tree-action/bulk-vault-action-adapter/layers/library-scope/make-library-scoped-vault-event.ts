@@ -1,209 +1,141 @@
+import { err, ok, type Result } from "neverthrow";
 import { getParsedUserSettings } from "../../../../../../../global-state/global-state";
 import type { VaultEvent } from "../../../../../../../obsidian-vault-action-manager";
-import type {
-	SplitPath,
-	SplitPathToFolder,
-} from "../../../../../../../obsidian-vault-action-manager/types/split-path";
-import { type LibraryScopedVaultEvent, Scope } from "./types";
+import type { SplitPath } from "../../../../../../../obsidian-vault-action-manager/types/split-path";
+import { type LibraryScopedVaultEvent, Scope } from "./types/scoped-event";
 
+/**
+ * Normalizes a raw VaultEvent into a **Library-scoped** event.
+ *
+ * What this does:
+ * - Classifies the event as Inside↔Inside / Inside↔Outside / Outside↔Inside / Outside↔Outside
+ *   relative to the configured Library root.
+ * - **Strips the Library prefix** from all SplitPaths that are inside the Library.
+ * - Guarantees that any SplitPath marked as “inside” is **relative to Library root**
+ *   (`pathParts: []` = direct child of Library).
+ *
+ * Semantics:
+ * - Outside→Outside events are passed through unchanged.
+ * - Outside↔Inside boundary crossings are preserved but only the inside side
+ *   (`from` or `to`) is library-scoped.
+ * - No semantic interpretation is applied; this is pure scoping & normalization.
+ *
+ * This function establishes the invariant that **all downstream logic
+ * operates on Library-relative SplitPaths only**.
+ */
 export const makeLibraryScopedVaultEvent = (
 	event: VaultEvent,
 ): LibraryScopedVaultEvent => {
-	const { splitPathToLibraryRoot: libraryRoot } = getParsedUserSettings();
+	switch (event.type) {
+		case "FileRenamed": {
+			const fromRel = tryMakeLibraryRelative(event.from);
+			const toRel = tryMakeLibraryRelative(event.to);
 
-	if (event.type === "FileRenamed") {
-		const fromInside = isInsideLibrary(event.from, libraryRoot);
-		const toInside = isInsideLibrary(event.to, libraryRoot);
+			if (fromRel.isOk() && toRel.isOk())
+				return {
+					event: { ...event, from: fromRel.value, to: toRel.value },
+					scope: Scope.InsideToInside,
+				};
 
-		if (fromInside && !toInside) {
-			return {
-				event: {
-					...event,
-					from: makeRelative(event.from, libraryRoot),
-				},
-				scope: Scope.InsideToOutside,
-			};
+			if (fromRel.isOk() && toRel.isErr())
+				return {
+					event: { ...event, from: fromRel.value },
+					scope: Scope.InsideToOutside,
+				};
+
+			if (fromRel.isErr() && toRel.isOk())
+				return {
+					event: { ...event, to: toRel.value },
+					scope: Scope.OutsideToInside,
+				};
+
+			return { event, scope: Scope.OutsideToOutside };
 		}
 
-		if (fromInside && toInside) {
-			return {
-				event: {
-					...event,
-					from: makeRelative(event.from, libraryRoot),
-					to: makeRelative(event.to, libraryRoot),
-				},
-				scope: Scope.InsideToInside,
-			};
+		case "FolderRenamed": {
+			const fromRel = tryMakeLibraryRelative(event.from);
+			const toRel = tryMakeLibraryRelative(event.to);
+
+			if (fromRel.isOk() && toRel.isOk())
+				return {
+					event: { ...event, from: fromRel.value, to: toRel.value },
+					scope: Scope.InsideToInside,
+				};
+
+			if (fromRel.isOk() && toRel.isErr())
+				return {
+					event: { ...event, from: fromRel.value },
+					scope: Scope.InsideToOutside,
+				};
+
+			if (fromRel.isErr() && toRel.isOk())
+				return {
+					event: { ...event, to: toRel.value },
+					scope: Scope.OutsideToInside,
+				};
+
+			return { event, scope: Scope.OutsideToOutside };
 		}
 
-		if (!fromInside && toInside) {
-			return {
-				event: {
-					...event,
-					to: makeRelative(event.to, libraryRoot),
-				},
-				scope: Scope.OutsideToInside,
-			};
+		case "FileCreated": {
+			const rel = tryMakeLibraryRelative(event.splitPath);
+			return rel.isOk()
+				? {
+						event: { ...event, splitPath: rel.value },
+						scope: Scope.InsideToInside,
+					}
+				: { event, scope: Scope.OutsideToOutside };
 		}
 
-		return {
-			event,
-			scope: Scope.OutsideToOutside,
-		};
+		case "FolderCreated": {
+			const rel = tryMakeLibraryRelative(event.splitPath);
+			return rel.isOk()
+				? {
+						event: { ...event, splitPath: rel.value },
+						scope: Scope.InsideToInside,
+					}
+				: { event, scope: Scope.OutsideToOutside };
+		}
+
+		case "FileDeleted": {
+			const rel = tryMakeLibraryRelative(event.splitPath);
+			return rel.isOk()
+				? {
+						event: { ...event, splitPath: rel.value },
+						scope: Scope.InsideToInside,
+					}
+				: { event, scope: Scope.OutsideToOutside };
+		}
+
+		case "FolderDeleted": {
+			const rel = tryMakeLibraryRelative(event.splitPath);
+			return rel.isOk()
+				? {
+						event: { ...event, splitPath: rel.value },
+						scope: Scope.InsideToInside,
+					}
+				: { event, scope: Scope.OutsideToOutside };
+		}
 	}
-
-	if (event.type === "FolderRenamed") {
-		const fromInside = isInsideLibrary(event.from, libraryRoot);
-		const toInside = isInsideLibrary(event.to, libraryRoot);
-
-		if (fromInside && !toInside) {
-			return {
-				event: {
-					...event,
-					from: makeRelative(event.from, libraryRoot),
-				},
-				scope: Scope.InsideToOutside,
-			};
-		}
-
-		if (fromInside && toInside) {
-			return {
-				event: {
-					...event,
-					from: makeRelative(event.from, libraryRoot),
-					to: makeRelative(event.to, libraryRoot),
-				},
-				scope: Scope.InsideToInside,
-			};
-		}
-
-		if (!fromInside && toInside) {
-			return {
-				event: {
-					...event,
-					to: makeRelative(event.to, libraryRoot),
-				},
-				scope: Scope.OutsideToInside,
-			};
-		}
-
-		return {
-			event,
-			scope: Scope.OutsideToOutside,
-		};
-	}
-
-	if (event.type === "FileCreated") {
-		const inside = isInsideLibrary(event.splitPath, libraryRoot);
-
-		if (inside) {
-			return {
-				event: {
-					...event,
-					splitPath: makeRelative(event.splitPath, libraryRoot),
-				},
-				scope: Scope.InsideToInside,
-			};
-		}
-
-		return {
-			event,
-			scope: Scope.OutsideToOutside,
-		};
-	}
-
-	if (event.type === "FolderCreated") {
-		const inside = isInsideLibrary(event.splitPath, libraryRoot);
-
-		if (inside) {
-			return {
-				event: {
-					...event,
-					splitPath: makeRelative(event.splitPath, libraryRoot),
-				},
-				scope: Scope.InsideToInside,
-			};
-		}
-
-		return {
-			event,
-			scope: Scope.OutsideToOutside,
-		};
-	}
-
-	if (event.type === "FileDeleted") {
-		const inside = isInsideLibrary(event.splitPath, libraryRoot);
-
-		if (inside) {
-			return {
-				event: {
-					...event,
-					splitPath: makeRelative(event.splitPath, libraryRoot),
-				},
-				scope: Scope.InsideToInside,
-			};
-		}
-
-		return {
-			event,
-			scope: Scope.OutsideToOutside,
-		};
-	}
-
-	if (event.type === "FolderDeleted") {
-		const inside = isInsideLibrary(event.splitPath, libraryRoot);
-
-		if (inside) {
-			return {
-				event: {
-					...event,
-					splitPath: makeRelative(event.splitPath, libraryRoot),
-				},
-				scope: Scope.InsideToInside,
-			};
-		}
-
-		return {
-			event,
-			scope: Scope.OutsideToOutside,
-		};
-	}
-
-	// TypeScript exhaustive check - all cases handled above
-	return {
-		event,
-		scope: Scope.OutsideToOutside,
-	};
 };
 
-function isInsideLibrary(splitPath: SplitPath, libraryRoot: SplitPathToFolder) {
-	const libraryPath = [...libraryRoot.pathParts, libraryRoot.basename];
-	const pathFull = [...splitPath.pathParts];
+function libraryPrefix(): string[] {
+	const { splitPathToLibraryRoot: libraryRoot } = getParsedUserSettings();
+	return [...libraryRoot.pathParts, libraryRoot.basename];
+}
 
-	if (pathFull.length < libraryPath.length) return false;
-
-	for (let i = 0; i < libraryPath.length; i++) {
-		if (pathFull[i] !== libraryPath[i]) return false;
-	}
-
+function isPrefixedBy(path: string[], prefix: string[]) {
+	if (path.length < prefix.length) return false;
+	for (let i = 0; i < prefix.length; i++)
+		if (path[i] !== prefix[i]) return false;
 	return true;
 }
 
-function makeRelative<T extends SplitPath>(
-	splitPath: T,
-	libraryRoot: SplitPathToFolder,
-): T {
-	const libraryPath = [...libraryRoot.pathParts, libraryRoot.basename];
-	const pathFull = [...splitPath.pathParts];
-
-	if (pathFull.length < libraryPath.length) return splitPath;
-
-	for (let i = 0; i < libraryPath.length; i++) {
-		if (pathFull[i] !== libraryPath[i]) return splitPath;
-	}
-
-	return {
-		...splitPath,
-		pathParts: pathFull.slice(libraryPath.length),
-	} as T;
+function tryMakeLibraryRelative<T extends SplitPath>(
+	sp: T,
+): Result<T, "OutsideLibrary"> {
+	const prefix = libraryPrefix();
+	const full = sp.pathParts;
+	if (!isPrefixedBy(full, prefix)) return err("OutsideLibrary");
+	return ok({ ...sp, pathParts: full.slice(prefix.length) } as T);
 }
