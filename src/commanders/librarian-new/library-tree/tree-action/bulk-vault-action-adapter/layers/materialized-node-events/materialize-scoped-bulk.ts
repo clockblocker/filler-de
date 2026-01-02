@@ -60,13 +60,13 @@ export function materializeScopedBulk(
 function materializeCreateFromScopedEvent(
 	e: LibraryScopedVaultEvent,
 ): MaterializedNodeEvent | null {
-	if (e.scope !== Scope.InsideToInside && e.scope !== Scope.OutsideToInside) {
+	if (e.scope !== Scope.Inside && e.scope !== Scope.OutsideToInside) {
 		return null;
 	}
 
-	switch (e.event.type) {
+	switch (e.type) {
 		case VaultEventType.FileCreated: {
-			const ev = e.event;
+			const ev = e;
 			switch (ev.splitPath.type) {
 				case "File":
 					return {
@@ -95,13 +95,12 @@ function materializeCreateFromScopedEvent(
 }
 
 function materializeDeleteFromScopedRoot(
-	r: LibraryScopedBulkVaultEvent["roots"][number],
+	ev: LibraryScopedBulkVaultEvent["roots"][number],
 ): MaterializedNodeEvent | null {
-	if (r.scope !== Scope.InsideToInside) return null;
+	if (ev.scope !== Scope.Inside) return null;
 
-	switch (r.event.type) {
+	switch (ev.type) {
 		case VaultEventType.FileDeleted: {
-			const ev = r.event;
 			switch (ev.splitPath.type) {
 				case "File":
 					return {
@@ -125,7 +124,7 @@ function materializeDeleteFromScopedRoot(
 		case VaultEventType.FolderDeleted:
 			return {
 				kind: MaterializedEventType.Delete,
-				libraryScopedSplitPath: r.event.splitPath,
+				libraryScopedSplitPath: ev.splitPath,
 				nodeType: TreeNodeType.Section,
 			};
 
@@ -139,13 +138,12 @@ function materializeDeleteFromScopedRoot(
  * (We ignore OutsideToInside deletes; they are outside-world.)
  */
 function materializeDeleteFromScopedEventInsideToOutside(
-	e: LibraryScopedVaultEvent,
+	ev: LibraryScopedVaultEvent,
 ): MaterializedNodeEvent | null {
-	if (e.scope !== Scope.InsideToOutside) return null;
+	if (ev.scope !== Scope.InsideToOutside) return null;
 
-	switch (e.event.type) {
+	switch (ev.type) {
 		case VaultEventType.FileRenamed: {
-			const ev = e.event; // inside side is `from`
 			switch (ev.from.type) {
 				case "File":
 					return {
@@ -170,36 +168,7 @@ function materializeDeleteFromScopedEventInsideToOutside(
 			// inside side is `from`
 			return {
 				kind: MaterializedEventType.Delete,
-				libraryScopedSplitPath: e.event.from,
-				nodeType: TreeNodeType.Section,
-			};
-
-		case VaultEventType.FileDeleted: {
-			const ev = e.event;
-			switch (ev.splitPath.type) {
-				case "File":
-					return {
-						kind: MaterializedEventType.Delete,
-						libraryScopedSplitPath: ev.splitPath,
-						nodeType: TreeNodeType.File,
-					};
-				case "MdFile":
-					return {
-						kind: MaterializedEventType.Delete,
-						libraryScopedSplitPath: ev.splitPath,
-						nodeType: TreeNodeType.Scroll,
-					};
-				default: {
-					const _never: never = ev.splitPath;
-					return _never;
-				}
-			}
-		}
-
-		case VaultEventType.FolderDeleted:
-			return {
-				kind: MaterializedEventType.Delete,
-				libraryScopedSplitPath: e.event.splitPath,
+				libraryScopedSplitPath: ev.from,
 				nodeType: TreeNodeType.Section,
 			};
 
@@ -209,14 +178,12 @@ function materializeDeleteFromScopedEventInsideToOutside(
 }
 
 export function materializeRenameFromScopedRoot(
-	r: LibraryScopedBulkVaultEvent["roots"][number],
+	ev: LibraryScopedBulkVaultEvent["roots"][number],
 ): MaterializedNodeEvent | null {
-	if (r.scope !== Scope.InsideToInside) return null;
+	if (ev.scope !== Scope.Inside) return null;
 
-	switch (r.event.type) {
+	switch (ev.type) {
 		case VaultEventType.FileRenamed: {
-			const ev = r.event;
-
 			switch (ev.from.type) {
 				case "File": {
 					const to = ev.to;
@@ -249,8 +216,8 @@ export function materializeRenameFromScopedRoot(
 		case VaultEventType.FolderRenamed:
 			return {
 				kind: MaterializedEventType.Rename,
-				libraryScopedFrom: r.event.from,
-				libraryScopedTo: r.event.to,
+				libraryScopedFrom: ev.from,
+				libraryScopedTo: ev.to,
 				nodeType: TreeNodeType.Section,
 			};
 

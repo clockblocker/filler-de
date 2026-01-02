@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { makeLibraryScopedVaultEvent } from "../../../../../../../../src/commanders/librarian-new/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/make-library-scoped-vault-event";
-import { makeVaultScoped } from "../../../../../../../../src/commanders/librarian-new/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/make-vault-scoped";
+import { makeEventLibraryScoped } from "../../../../../../../../src/commanders/librarian-new/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/events/make-event-libray-scoped";
+import { makeEventVaultScoped } from "../../../../../../../../src/commanders/librarian-new/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/events/make-event-vault-scoped";
 import * as globalState from "../../../../../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../../../../../src/global-state/parsed-settings";
 import { SplitPathType } from "../../../../../../../../src/obsidian-vault-action-manager/types/split-path";
@@ -31,7 +31,7 @@ afterEach(() => {
 	getParsedUserSettingsSpy.mockRestore();
 });
 
-describe("makeLibraryScopedVaultEvent and makeVaultScoped roundtrip", () => {
+describe("makeEventLibraryScoped and makeEventVaultScoped roundtrip", () => {
 	it("roundtrips FileCreated inside library", () => {
 		const original: VaultEvent = {
 			splitPath: {
@@ -43,8 +43,8 @@ describe("makeLibraryScopedVaultEvent and makeVaultScoped roundtrip", () => {
 			type: VaultEventType.FileCreated,
 		};
 
-		const scoped = makeLibraryScopedVaultEvent(original);
-		const restored = makeVaultScoped(scoped);
+		const scoped = makeEventLibraryScoped(original);
+		const restored = makeEventVaultScoped(scoped);
 
 		expect(restored).toEqual(original);
 	});
@@ -66,8 +66,8 @@ describe("makeLibraryScopedVaultEvent and makeVaultScoped roundtrip", () => {
 			type: VaultEventType.FileRenamed,
 		};
 
-		const scoped = makeLibraryScopedVaultEvent(original);
-		const restored = makeVaultScoped(scoped);
+		const scoped = makeEventLibraryScoped(original);
+		const restored = makeEventVaultScoped(scoped);
 
 		expect(restored).toEqual(original);
 	});
@@ -89,8 +89,8 @@ describe("makeLibraryScopedVaultEvent and makeVaultScoped roundtrip", () => {
 			type: VaultEventType.FileRenamed,
 		};
 
-		const scoped = makeLibraryScopedVaultEvent(original);
-		const restored = makeVaultScoped(scoped);
+		const scoped = makeEventLibraryScoped(original);
+		const restored = makeEventVaultScoped(scoped);
 
 		expect(restored).toEqual(original);
 	});
@@ -112,8 +112,8 @@ describe("makeLibraryScopedVaultEvent and makeVaultScoped roundtrip", () => {
 			type: VaultEventType.FileRenamed,
 		};
 
-		const scoped = makeLibraryScopedVaultEvent(original);
-		const restored = makeVaultScoped(scoped);
+		const scoped = makeEventLibraryScoped(original);
+		const restored = makeEventVaultScoped(scoped);
 
 		expect(restored).toEqual(original);
 	});
@@ -129,8 +129,8 @@ describe("makeLibraryScopedVaultEvent and makeVaultScoped roundtrip", () => {
 			type: VaultEventType.FileDeleted,
 		};
 
-		const scoped = makeLibraryScopedVaultEvent(original);
-		const restored = makeVaultScoped(scoped);
+		const scoped = makeEventLibraryScoped(original);
+		const restored = makeEventVaultScoped(scoped);
 
 		expect(restored).toEqual(original);
 	});
@@ -145,8 +145,8 @@ describe("makeLibraryScopedVaultEvent and makeVaultScoped roundtrip", () => {
 			type: VaultEventType.FolderCreated,
 		};
 
-		const scoped = makeLibraryScopedVaultEvent(original);
-		const restored = makeVaultScoped(scoped);
+		const scoped = makeEventLibraryScoped(original);
+		const restored = makeEventVaultScoped(scoped);
 
 		expect(restored).toEqual(original);
 	});
@@ -166,8 +166,8 @@ describe("makeLibraryScopedVaultEvent and makeVaultScoped roundtrip", () => {
 			type: VaultEventType.FolderRenamed,
 		};
 
-		const scoped = makeLibraryScopedVaultEvent(original);
-		const restored = makeVaultScoped(scoped);
+		const scoped = makeEventLibraryScoped(original);
+		const restored = makeEventVaultScoped(scoped);
 
 		expect(restored).toEqual(original);
 	});
@@ -187,8 +187,8 @@ describe("makeLibraryScopedVaultEvent and makeVaultScoped roundtrip", () => {
 			type: VaultEventType.FolderRenamed,
 		};
 
-		const scoped = makeLibraryScopedVaultEvent(original);
-		const restored = makeVaultScoped(scoped);
+		const scoped = makeEventLibraryScoped(original);
+		const restored = makeEventVaultScoped(scoped);
 
 		expect(restored).toEqual(original);
 	});
@@ -208,8 +208,8 @@ describe("makeLibraryScopedVaultEvent and makeVaultScoped roundtrip", () => {
 			type: VaultEventType.FolderRenamed,
 		};
 
-		const scoped = makeLibraryScopedVaultEvent(original);
-		const restored = makeVaultScoped(scoped);
+		const scoped = makeEventLibraryScoped(original);
+		const restored = makeEventVaultScoped(scoped);
 
 		expect(restored).toEqual(original);
 	});
@@ -224,8 +224,8 @@ describe("makeLibraryScopedVaultEvent and makeVaultScoped roundtrip", () => {
 			type: VaultEventType.FolderDeleted,
 		};
 
-		const scoped = makeLibraryScopedVaultEvent(original);
-		const restored = makeVaultScoped(scoped);
+		const scoped = makeEventLibraryScoped(original);
+		const restored = makeEventVaultScoped(scoped);
 
 		expect(restored).toEqual(original);
 	});
@@ -250,8 +250,8 @@ describe("makeLibraryScopedVaultEvent and makeVaultScoped roundtrip", () => {
 			type: VaultEventType.FileCreated,
 		};
 
-		const scoped = makeLibraryScopedVaultEvent(original);
-		const restored = makeVaultScoped(scoped);
+		const scoped = makeEventLibraryScoped(original);
+		const restored = makeEventVaultScoped(scoped);
 
 		expect(restored).toEqual(original);
 	});

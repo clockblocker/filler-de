@@ -9,7 +9,6 @@ import {
 } from "../../../types/schemas/node-name";
 import { TreeNodeType } from "../../tree-node/types/atoms";
 import type { CreateLeafNodeMaterializedEvent } from "../bulk-vault-action-adapter/layers/materialized-node-events/types";
-import { tryParseCanonicalSplitPath } from "../helpers/canonical-split-path/try-parse-canonical-split-path";
 import type {
 	CanonicalSplitPathToFile,
 	CanonicalSplitPathToMdFile,

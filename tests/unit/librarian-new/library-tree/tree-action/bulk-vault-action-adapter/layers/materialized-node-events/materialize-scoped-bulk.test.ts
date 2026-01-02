@@ -77,11 +77,11 @@ describe("materializeScopedBulk", () => {
 				},
 				events: [
 					{
-						event: {
+						...{
 							splitPath: File("note", ["section"]),
 							type: VaultEventType.FileCreated,
 						},
-						scope: Scope.InsideToInside,
+						scope: Scope.Inside,
 					},
 				],
 				roots: [],
@@ -109,11 +109,11 @@ describe("materializeScopedBulk", () => {
 				},
 				events: [
 					{
-						event: {
+						...{
 							splitPath: MdFile("note", ["section"]),
 							type: VaultEventType.FileCreated,
 						},
-						scope: Scope.InsideToInside,
+						scope: Scope.Inside,
 					},
 				],
 				roots: [],
@@ -141,32 +141,32 @@ describe("materializeScopedBulk", () => {
 				},
 				events: [
 					{
-						event: {
+						...{
 							splitPath: F("folder"),
 							type: VaultEventType.FolderCreated,
 						},
-						scope: Scope.InsideToInside,
+						scope: Scope.Inside,
 					},
 					{
-						event: {
+						...{
 							splitPath: File("outside"),
 							type: VaultEventType.FileCreated,
 						},
-						scope: Scope.OutsideToOutside,
+						scope: Scope.Inside,
 					},
 					{
-						event: {
+						...{
 							splitPath: File("boundary"),
 							type: VaultEventType.FileCreated,
 						},
-						scope: Scope.InsideToOutside,
+						scope: Scope.Inside,
 					},
 					{
-						event: {
+						...{
 							splitPath: File("incoming"),
 							type: VaultEventType.FileCreated,
 						},
-						scope: Scope.OutsideToInside,
+						scope: Scope.Inside,
 					},
 				],
 				roots: [],
@@ -197,25 +197,25 @@ describe("materializeScopedBulk", () => {
 				events: [],
 				roots: [
 					{
-						event: {
+						...{
 							splitPath: File("file"),
 							type: VaultEventType.FileDeleted,
 						},
-						scope: Scope.InsideToInside,
+						scope: Scope.Inside,
 					},
 					{
-						event: {
+						...{
 							splitPath: MdFile("scroll"),
 							type: VaultEventType.FileDeleted,
 						},
-						scope: Scope.InsideToInside,
+						scope: Scope.Inside,
 					},
 					{
-						event: {
+						...{
 							splitPath: F("section"),
 							type: VaultEventType.FolderDeleted,
 						},
-						scope: Scope.InsideToInside,
+						scope: Scope.Inside,
 					},
 				],
 			};
@@ -253,25 +253,25 @@ describe("materializeScopedBulk", () => {
 				events: [],
 				roots: [
 					{
-						event: {
+						...{
 							splitPath: File("outside"),
 							type: VaultEventType.FileDeleted,
 						},
-						scope: Scope.OutsideToOutside,
+						scope: Scope.Inside,
 					},
 					{
-						event: {
+						...{
 							splitPath: File("incoming"),
 							type: VaultEventType.FileDeleted,
 						},
-						scope: Scope.OutsideToInside,
+						scope: Scope.Inside,
 					},
 					{
-						event: {
+						...{
 							splitPath: File("outgoing"),
 							type: VaultEventType.FileDeleted,
 						},
-						scope: Scope.InsideToOutside,
+						scope: Scope.Inside,
 					},
 				],
 			};
@@ -294,7 +294,7 @@ describe("materializeScopedBulk", () => {
 				},
 				events: [
 					{
-						event: {
+						...{
 							from: File("file"),
 							to: File("outside"),
 							type: VaultEventType.FileRenamed,
@@ -302,7 +302,7 @@ describe("materializeScopedBulk", () => {
 						scope: Scope.InsideToOutside,
 					},
 					{
-						event: {
+						...{
 							from: MdFile("scroll"),
 							to: MdFile("outside"),
 							type: VaultEventType.FileRenamed,
@@ -310,7 +310,7 @@ describe("materializeScopedBulk", () => {
 						scope: Scope.InsideToOutside,
 					},
 					{
-						event: {
+						...{
 							from: F("section"),
 							to: F("outside"),
 							type: VaultEventType.FolderRenamed,
@@ -318,18 +318,18 @@ describe("materializeScopedBulk", () => {
 						scope: Scope.InsideToOutside,
 					},
 					{
-						event: {
+						...{
 							splitPath: File("deleted"),
 							type: VaultEventType.FileDeleted,
 						},
-						scope: Scope.InsideToOutside,
+						scope: Scope.Inside,
 					},
 					{
-						event: {
+						...{
 							splitPath: F("deleted-section"),
 							type: VaultEventType.FolderDeleted,
 						},
-						scope: Scope.InsideToOutside,
+						scope: Scope.Inside,
 					},
 				],
 				roots: [],
@@ -377,25 +377,25 @@ describe("materializeScopedBulk", () => {
 				},
 				events: [
 					{
-						event: {
+						...{
 							splitPath: File("inside"),
 							type: VaultEventType.FileDeleted,
 						},
-						scope: Scope.InsideToInside,
+						scope: Scope.Inside,
 					},
 					{
-						event: {
+						...{
 							splitPath: File("incoming"),
 							type: VaultEventType.FileDeleted,
 						},
-						scope: Scope.OutsideToInside,
+						scope: Scope.Inside,
 					},
 					{
-						event: {
+						...{
 							splitPath: File("outside"),
 							type: VaultEventType.FileDeleted,
 						},
-						scope: Scope.OutsideToOutside,
+						scope: Scope.Inside,
 					},
 				],
 				roots: [],
@@ -420,28 +420,28 @@ describe("materializeScopedBulk", () => {
 				events: [],
 				roots: [
 					{
-						event: {
+						...{
 							from: File("old-file"),
 							to: File("new-file"),
 							type: VaultEventType.FileRenamed,
 						},
-						scope: Scope.InsideToInside,
+						scope: Scope.Inside,
 					},
 					{
-						event: {
+						...{
 							from: MdFile("old-scroll"),
 							to: MdFile("new-scroll"),
 							type: VaultEventType.FileRenamed,
 						},
-						scope: Scope.InsideToInside,
+						scope: Scope.Inside,
 					},
 					{
-						event: {
+						...{
 							from: F("old-section"),
 							to: F("new-section"),
 							type: VaultEventType.FolderRenamed,
 						},
-						scope: Scope.InsideToInside,
+						scope: Scope.Inside,
 					},
 				],
 			};
@@ -482,23 +482,23 @@ describe("materializeScopedBulk", () => {
 				events: [],
 				roots: [
 					{
-						event: {
+						...{
 							from: File("file"),
 							to: MdFile("scroll"),
 							type: VaultEventType.FileRenamed,
 						},
-						scope: Scope.InsideToInside,
+						scope: Scope.Inside,
 					},
 					{
-						event: {
+						...{
 							from: MdFile("scroll"),
 							to: File("file"),
 							type: VaultEventType.FileRenamed,
 						},
-						scope: Scope.InsideToInside,
+						scope: Scope.Inside,
 					},
 					{
-						event: {
+						...{
 							from: File("old"),
 							to: File("new"),
 							type: VaultEventType.FileRenamed,
@@ -506,7 +506,7 @@ describe("materializeScopedBulk", () => {
 						scope: Scope.OutsideToOutside,
 					},
 					{
-						event: {
+						...{
 							from: File("old"),
 							to: File("new"),
 							type: VaultEventType.FileRenamed,
@@ -514,7 +514,7 @@ describe("materializeScopedBulk", () => {
 						scope: Scope.OutsideToInside,
 					},
 					{
-						event: {
+						...{
 							from: File("old"),
 							to: File("new"),
 							type: VaultEventType.FileRenamed,
@@ -562,21 +562,21 @@ describe("materializeScopedBulk", () => {
 				},
 				events: [
 					{
-						event: {
+						...{
 							splitPath: File("created"),
 							type: VaultEventType.FileCreated,
 						},
-						scope: Scope.InsideToInside,
+						scope: Scope.Inside,
 					},
 					{
-						event: {
+						...{
 							splitPath: MdFile("incoming"),
 							type: VaultEventType.FileCreated,
 						},
-						scope: Scope.OutsideToInside,
+						scope: Scope.Inside,
 					},
 					{
-						event: {
+						...{
 							from: File("outgoing"),
 							to: File("outside"),
 							type: VaultEventType.FileRenamed,
@@ -586,19 +586,19 @@ describe("materializeScopedBulk", () => {
 				],
 				roots: [
 					{
-						event: {
+						...{
 							splitPath: File("deleted"),
 							type: VaultEventType.FileDeleted,
 						},
-						scope: Scope.InsideToInside,
+						scope: Scope.Inside,
 					},
 					{
-						event: {
+						...{
 							from: File("old"),
 							to: File("new"),
 							type: VaultEventType.FileRenamed,
 						},
-						scope: Scope.InsideToInside,
+						scope: Scope.Inside,
 					},
 				],
 			};

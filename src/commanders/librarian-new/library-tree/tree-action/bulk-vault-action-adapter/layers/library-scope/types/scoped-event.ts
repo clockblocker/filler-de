@@ -15,8 +15,10 @@ import type {
 } from "./inside-library-split-paths";
 
 export const ScopeSchema = z.enum([
-	"InsideToOutside",
 	"Inside",
+	"Outside",
+	"InsideToInside",
+	"InsideToOutside",
 	"OutsideToInside",
 	"OutsideToOutside",
 ]);
