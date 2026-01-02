@@ -1,7 +1,5 @@
-import {
-	type VaultEvent,
-	VaultEventType,
-} from "../../../../../../../../../obsidian-vault-action-manager";
+import { VaultEventType } from "../../../../../../../../../obsidian-vault-action-manager";
+import type { DescopedEvent } from "../../types/generics";
 
 import type { LibraryScopedVaultEvent } from "../../types/scoped-event";
 import { Scope } from "../../types/scoped-event";
@@ -9,8 +7,9 @@ import { makeVaultScopedSplitPath } from "../split-path-inside-the-library";
 
 export function makeEventVaultScoped(
 	event: LibraryScopedVaultEvent,
-): VaultEvent {
-	if (event.scope === Scope.Outside) return event;
+): DescopedEvent<LibraryScopedVaultEvent> {
+	const { scope, ...rest } = event;
+	if (scope === Scope.Outside) return rest;
 
 	switch (event.type) {
 		case VaultEventType.FileCreated:

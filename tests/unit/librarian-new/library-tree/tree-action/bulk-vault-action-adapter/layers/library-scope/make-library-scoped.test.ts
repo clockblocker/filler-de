@@ -3,6 +3,7 @@ import { makeEventLibraryScoped } from "../../../../../../../../src/commanders/l
 import { Scope } from "../../../../../../../../src/commanders/librarian-new/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/scoped-event";
 import * as globalState from "../../../../../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../../../../../src/global-state/parsed-settings";
+import { MD } from "../../../../../../../../src/obsidian-vault-action-manager/types/literals";
 import { SplitPathType } from "../../../../../../../../src/obsidian-vault-action-manager/types/split-path";
 import type { VaultEvent } from "../../../../../../../../src/obsidian-vault-action-manager/types/vault-event";
 import { VaultEventType } from "../../../../../../../../src/obsidian-vault-action-manager/types/vault-event";
@@ -37,7 +38,7 @@ describe("makeEventLibraryScoped", () => {
 			const event: VaultEvent = {
 				splitPath: {
 					basename: "Note",
-					extension: "md",
+					extension: MD,
 					pathParts: ["Library"],
 					type: SplitPathType.MdFile,
 				},
@@ -52,17 +53,20 @@ describe("makeEventLibraryScoped", () => {
 		});
 
 		it("throws when file is outside library", () => {
-			const event: VaultEvent = {
+			const event = {
 				splitPath: {
 					basename: "Note",
-					extension: "md",
+					extension: MD,
 					pathParts: ["Other"],
 					type: SplitPathType.MdFile,
 				},
 				type: VaultEventType.FileCreated,
 			};
 
-			expect(() => makeEventLibraryScoped(event)).toThrow("File event outside library not supported");
+			const result = makeEventLibraryScoped(event);
+
+			expect(result.scope).toBe(Scope.Outside);
+			expect(result.splitPath).toEqual(event.splitPath);
 		});
 
 		it("handles nested library path", () => {
@@ -78,7 +82,7 @@ describe("makeEventLibraryScoped", () => {
 			const event: VaultEvent = {
 				splitPath: {
 					basename: "Note",
-					extension: "md",
+					extension: MD,
 					pathParts: ["Root", "Library", "Section"],
 					type: SplitPathType.MdFile,
 				},
@@ -97,13 +101,13 @@ describe("makeEventLibraryScoped", () => {
 			const event: VaultEvent = {
 				from: {
 					basename: "Old",
-					extension: "md",
+					extension: MD,
 					pathParts: ["Library"],
 					type: SplitPathType.MdFile,
 				},
 				to: {
 					basename: "New",
-					extension: "md",
+					extension: MD,
 					pathParts: ["Library", "Section"],
 					type: SplitPathType.MdFile,
 				},
@@ -121,13 +125,13 @@ describe("makeEventLibraryScoped", () => {
 			const event: VaultEvent = {
 				from: {
 					basename: "Old",
-					extension: "md",
+					extension: MD,
 					pathParts: ["Library"],
 					type: SplitPathType.MdFile,
 				},
 				to: {
 					basename: "New",
-					extension: "md",
+					extension: MD,
 					pathParts: ["Other"],
 					type: SplitPathType.MdFile,
 				},
@@ -145,13 +149,13 @@ describe("makeEventLibraryScoped", () => {
 			const event: VaultEvent = {
 				from: {
 					basename: "Old",
-					extension: "md",
+					extension: MD,
 					pathParts: ["Other"],
 					type: SplitPathType.MdFile,
 				},
 				to: {
 					basename: "New",
-					extension: "md",
+					extension: MD,
 					pathParts: ["Library"],
 					type: SplitPathType.MdFile,
 				},
@@ -169,13 +173,13 @@ describe("makeEventLibraryScoped", () => {
 			const event: VaultEvent = {
 				from: {
 					basename: "Old",
-					extension: "md",
+					extension: MD,
 					pathParts: ["Other"],
 					type: SplitPathType.MdFile,
 				},
 				to: {
 					basename: "New",
-					extension: "md",
+					extension: MD,
 					pathParts: ["Another"],
 					type: SplitPathType.MdFile,
 				},
@@ -195,7 +199,7 @@ describe("makeEventLibraryScoped", () => {
 			const event: VaultEvent = {
 				splitPath: {
 					basename: "Note",
-					extension: "md",
+					extension: MD,
 					pathParts: ["Library", "Section"],
 					type: SplitPathType.MdFile,
 				},
@@ -212,7 +216,7 @@ describe("makeEventLibraryScoped", () => {
 			const event: VaultEvent = {
 				splitPath: {
 					basename: "Note",
-					extension: "md",
+					extension: MD,
 					pathParts: ["Other"],
 					type: SplitPathType.MdFile,
 				},
@@ -378,7 +382,7 @@ describe("makeEventLibraryScoped", () => {
 			const event: VaultEvent = {
 				splitPath: {
 					basename: "Note",
-					extension: "md",
+					extension: MD,
 					pathParts: [],
 					type: SplitPathType.MdFile,
 				},
@@ -401,7 +405,7 @@ describe("makeEventLibraryScoped", () => {
 			const event: VaultEvent = {
 				splitPath: {
 					basename: "LibraryNote",
-					extension: "md",
+					extension: MD,
 					pathParts: [],
 					type: SplitPathType.MdFile,
 				},

@@ -1,11 +1,8 @@
 import { err, ok, type Result } from "neverthrow";
 import { getParsedUserSettings } from "../../../../../../../../global-state/global-state";
 import type { SplitPath } from "../../../../../../../../obsidian-vault-action-manager/types/split-path";
-import type {
-	LibraryScopedSplitPath,
-	SplitPathInsideLibrary,
-	VaultScopedSplitPath,
-} from "../types/inside-library-split-paths";
+import type { DescopedSplitPath, EnscopedSplitPath } from "../types/generics";
+import type { SplitPathInsideLibrary } from "../types/inside-library-split-paths";
 
 /**
  * Converts a vault SplitPath into a **SplitPathInsideLibrary**.
@@ -35,7 +32,7 @@ import type {
 
 export function tryParseAsInsideLibrarySplitPath<SP extends SplitPath>(
 	splitPath: SP,
-): Result<LibraryScopedSplitPath<SP>, string> {
+): Result<DescopedSplitPath<SP>, string> {
 	const { splitPathToLibraryRoot: libraryRoot } = getParsedUserSettings();
 
 	const libraryPrefix = [...libraryRoot.pathParts, libraryRoot.basename]; // full anchor
@@ -53,16 +50,16 @@ export function tryParseAsInsideLibrarySplitPath<SP extends SplitPath>(
 	return ok({
 		...splitPath,
 		pathParts: full.slice(keepFrom),
-	} as LibraryScopedSplitPath<SP>);
+	} as DescopedSplitPath<SP>);
 }
 
 export function makeVaultScopedSplitPath<SPL extends SplitPathInsideLibrary>(
 	splitPath: SPL,
-): VaultScopedSplitPath<SPL> {
+): EnscopedSplitPath<SPL> {
 	const { splitPathToLibraryRoot: libraryRoot } = getParsedUserSettings();
 
 	return {
 		...splitPath,
 		pathParts: [...libraryRoot.pathParts, ...splitPath.pathParts],
-	} as VaultScopedSplitPath<SPL>;
+	} as EnscopedSplitPath<SPL>;
 }

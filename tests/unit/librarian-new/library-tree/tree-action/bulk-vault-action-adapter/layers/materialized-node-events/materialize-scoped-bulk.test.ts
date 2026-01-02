@@ -152,21 +152,21 @@ describe("materializeScopedBulk", () => {
 							splitPath: File("outside"),
 							type: VaultEventType.FileCreated,
 						},
-						scope: Scope.Inside,
+						scope: Scope.Outside,
 					},
 					{
 						...{
 							splitPath: File("boundary"),
 							type: VaultEventType.FileCreated,
 						},
-						scope: Scope.Inside,
+						scope: Scope.Outside,
 					},
 					{
 						...{
 							splitPath: File("incoming"),
 							type: VaultEventType.FileCreated,
 						},
-						scope: Scope.Inside,
+						scope: Scope.Outside,
 					},
 				],
 				roots: [],

@@ -1,5 +1,4 @@
 import type {
-	SplitPath,
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
@@ -20,21 +19,3 @@ export type SplitPathInsideLibrary =
 	| SplitPathToFolderInsideLibrary
 	| SplitPathToFileInsideLibrary
 	| SplitPathToMdFileInsideLibrary;
-
-export type VaultScopedSplitPath<T extends SplitPathInsideLibrary> =
-	T extends SplitPathToFolderInsideLibrary
-		? SplitPathToFolder
-		: T extends SplitPathToMdFileInsideLibrary
-			? SplitPathToMdFile
-			: T extends SplitPathToFileInsideLibrary
-				? SplitPathToFile
-				: SplitPath;
-
-export type LibraryScopedSplitPath<T extends SplitPath> =
-	T extends SplitPathToFolder
-		? SplitPathToFolderInsideLibrary
-		: T extends SplitPathToMdFile
-			? SplitPathToMdFileInsideLibrary
-			: T extends SplitPathToFile
-				? SplitPathToFileInsideLibrary
-				: SplitPath;

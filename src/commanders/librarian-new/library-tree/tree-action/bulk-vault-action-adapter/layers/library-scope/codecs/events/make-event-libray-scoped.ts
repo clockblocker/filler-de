@@ -2,16 +2,33 @@ import {
 	type VaultEvent,
 	VaultEventType,
 } from "../../../../../../../../../obsidian-vault-action-manager";
-import type { LibraryScopedVaultEvent } from "../../types/scoped-event";
+
+import type { EnscopedEvent } from "../../types/generics";
 import { Scope } from "../../types/scoped-event";
 import { tryParseAsInsideLibrarySplitPath } from "../split-path-inside-the-library";
 
-export const makeEventLibraryScoped = (
+export function makeEventLibraryScoped(
 	event: VaultEvent,
-): LibraryScopedVaultEvent => {
+): EnscopedEvent<VaultEvent> {
 	switch (event.type) {
 		case VaultEventType.FolderCreated:
-		case VaultEventType.FolderDeleted:
+		case VaultEventType.FolderDeleted: {
+			const splitPathResult = tryParseAsInsideLibrarySplitPath(
+				event.splitPath,
+			);
+			if (splitPathResult.isErr()) {
+				return {
+					scope: Scope.Outside,
+					...event,
+				};
+			}
+			return {
+				...event,
+				scope: Scope.Inside,
+				splitPath: splitPathResult.value,
+			};
+		}
+
 		case VaultEventType.FileCreated:
 		case VaultEventType.FileDeleted: {
 			const splitPathResult = tryParseAsInsideLibrarySplitPath(
@@ -27,7 +44,7 @@ export const makeEventLibraryScoped = (
 				...event,
 				scope: Scope.Inside,
 				splitPath: splitPathResult.value,
-			} as LibraryScopedVaultEvent;
+			};
 		}
 
 		case VaultEventType.FileRenamed: {
@@ -62,10 +79,8 @@ export const makeEventLibraryScoped = (
 			}
 
 			return {
-				from: event.from,
+				...event,
 				scope: Scope.Outside,
-				to: event.to,
-				type: VaultEventType.FileRenamed,
 			};
 		}
 
@@ -101,16 +116,9 @@ export const makeEventLibraryScoped = (
 			}
 
 			return {
-				from: event.from,
+				...event,
 				scope: Scope.Outside,
-				to: event.to,
-				type: VaultEventType.FolderRenamed,
 			};
 		}
-
-		default: {
-			const _never: never = event;
-			return _never;
-		}
 	}
-};
+}
