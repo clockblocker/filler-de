@@ -10,7 +10,6 @@ import type {
 	FolderCreatedVaultEvent,
 	FolderDeletedVaultEvent,
 	FolderRenamedVaultEvent,
-	VaultEvent,
 } from "../../../../../../../../obsidian-vault-action-manager/types/vault-event";
 import type { Prettify } from "../../../../../../../../types/helpers";
 import type {

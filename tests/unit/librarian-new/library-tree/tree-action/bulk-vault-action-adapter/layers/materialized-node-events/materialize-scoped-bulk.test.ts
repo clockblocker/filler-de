@@ -166,7 +166,7 @@ describe("materializeScopedBulk", () => {
 							splitPath: File("incoming"),
 							type: VaultEventType.FileCreated,
 						},
-						scope: Scope.Outside,
+						scope: Scope.OutsideToInside,
 					},
 				],
 				roots: [],
@@ -241,7 +241,7 @@ describe("materializeScopedBulk", () => {
 			]);
 		});
 
-		it("ignores non-InsideToInside scopes", () => {
+		it("ignores non-Inside scopes", () => {
 			const bulk: LibraryScopedBulkVaultEvent = {
 				debug: {
 					collapsedCount: { creates: 0, deletes: 0, renames: 0 },
@@ -257,21 +257,21 @@ describe("materializeScopedBulk", () => {
 							splitPath: File("outside"),
 							type: VaultEventType.FileDeleted,
 						},
-						scope: Scope.Inside,
+						scope: Scope.Outside,
 					},
 					{
 						...{
 							splitPath: File("incoming"),
 							type: VaultEventType.FileDeleted,
 						},
-						scope: Scope.Inside,
+						scope: Scope.OutsideToInside,
 					},
 					{
 						...{
 							splitPath: File("outgoing"),
 							type: VaultEventType.FileDeleted,
 						},
-						scope: Scope.Inside,
+						scope: Scope.InsideToOutside,
 					},
 				],
 			};
@@ -283,7 +283,7 @@ describe("materializeScopedBulk", () => {
 	});
 
 	describe("Delete Events (from bulk.events - InsideToOutside only)", () => {
-		it("deletes from InsideToOutside FileRenamed, FolderRenamed, FileDeleted, FolderDeleted", () => {
+		it("deletes from InsideToOutside FileRenamed and FolderRenamed", () => {
 			const bulk: LibraryScopedBulkVaultEvent = {
 				debug: {
 					collapsedCount: { creates: 0, deletes: 0, renames: 0 },
@@ -317,20 +317,6 @@ describe("materializeScopedBulk", () => {
 						},
 						scope: Scope.InsideToOutside,
 					},
-					{
-						...{
-							splitPath: File("deleted"),
-							type: VaultEventType.FileDeleted,
-						},
-						scope: Scope.Inside,
-					},
-					{
-						...{
-							splitPath: F("deleted-section"),
-							type: VaultEventType.FolderDeleted,
-						},
-						scope: Scope.Inside,
-					},
 				],
 				roots: [],
 			};
@@ -351,16 +337,6 @@ describe("materializeScopedBulk", () => {
 				{
 					kind: MaterializedEventType.Delete,
 					libraryScopedSplitPath: F("section"),
-					nodeType: TreeNodeType.Section,
-				},
-				{
-					kind: MaterializedEventType.Delete,
-					libraryScopedSplitPath: File("deleted"),
-					nodeType: TreeNodeType.File,
-				},
-				{
-					kind: MaterializedEventType.Delete,
-					libraryScopedSplitPath: F("deleted-section"),
 					nodeType: TreeNodeType.Section,
 				},
 			]);
