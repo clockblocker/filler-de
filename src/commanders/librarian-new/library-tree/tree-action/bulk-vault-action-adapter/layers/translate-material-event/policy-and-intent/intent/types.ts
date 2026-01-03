@@ -1,5 +1,5 @@
 import z from "zod";
-import { TreeActionType } from "../../../../types/tree-action";
+import { TreeActionType } from "../../../../../types/tree-action";
 
 export const RenameIntentSchema = z.enum([
 	TreeActionType.Move,

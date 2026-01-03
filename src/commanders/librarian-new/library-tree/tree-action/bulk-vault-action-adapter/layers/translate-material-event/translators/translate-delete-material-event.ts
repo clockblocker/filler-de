@@ -1,12 +1,9 @@
 import { TreeNodeType } from "../../../../../tree-node/types/atoms";
-import type { DeleteTreeNodeMaterializedEvent } from "../../../../bulk-vault-action-adapter/layers/materialized-node-events/types";
 import {
-	type DeleteFileNodeAction,
 	type DeleteNodeAction,
-	type DeleteScrollNodeAction,
-	type DeleteSectionNodeAction,
 	TreeActionType,
 } from "../../../../types/tree-action";
+import type { DeleteTreeNodeMaterializedEvent } from "../../materialized-node-events/types";
 import { tryMakeTargetLocator } from "./helpers/locator";
 
 export function traslateDeleteMaterializedEvent(

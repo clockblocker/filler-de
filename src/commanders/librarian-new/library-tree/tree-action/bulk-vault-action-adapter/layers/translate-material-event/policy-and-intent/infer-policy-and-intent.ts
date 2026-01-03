@@ -1,7 +1,7 @@
 import {
 	MaterializedEventType,
 	type MaterializedNodeEvent,
-} from "../../../bulk-vault-action-adapter/layers/materialized-node-events";
+} from "../../materialized-node-events";
 import { inferRenameIntent } from "./intent/infer-intent";
 import { RenameIntent } from "./intent/types";
 import { inferCreatePolicy } from "./policy/infer-create";

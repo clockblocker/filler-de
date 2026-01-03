@@ -1,11 +1,11 @@
-import type { RenameTreeNodeNodeMaterializedEvent } from "../../../../bulk-vault-action-adapter/layers/materialized-node-events/types";
 import {
 	type MoveNodeAction,
 	type RenameNodeAction,
 	TreeActionType,
 } from "../../../../types/tree-action";
 import { getNodeName, getParentLocator } from "../../../../utils/locator-utils";
-import { inferPolicyAndIntent, RenameIntent } from "../../policy-and-intent";
+import type { RenameTreeNodeNodeMaterializedEvent } from "../../materialized-node-events/types";
+import { inferPolicyAndIntent, RenameIntent } from "../policy-and-intent";
 import { tryMakeTargetLocator } from "./helpers/locator";
 
 export function traslateRenameMaterializedEvent(

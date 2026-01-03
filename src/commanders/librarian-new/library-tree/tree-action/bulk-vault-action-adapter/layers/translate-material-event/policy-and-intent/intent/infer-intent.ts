@@ -1,5 +1,5 @@
-import type { RenameTreeNodeNodeMaterializedEvent } from "../../../../bulk-vault-action-adapter/layers/materialized-node-events/types";
-import { tryMakeSeparatedSuffixedBasename } from "../../../../utils/suffix-utils/suffix-utils";
+import { tryMakeSeparatedSuffixedBasename } from "../../../../../utils/suffix-utils/suffix-utils";
+import type { RenameTreeNodeNodeMaterializedEvent } from "../../../materialized-node-events/types";
 import { RenameIntent } from "./types";
 
 /**

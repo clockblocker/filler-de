@@ -1,4 +1,4 @@
-import type { RenameTreeNodeNodeMaterializedEvent } from "../../../../bulk-vault-action-adapter/layers/materialized-node-events/types";
+import type { RenameTreeNodeNodeMaterializedEvent } from "../../../materialized-node-events/types";
 import { ChangePolicy } from "./types";
 
 /**

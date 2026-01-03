@@ -1,4 +1,4 @@
-import type { CreateLeafNodeMaterializedEvent } from "../../../../bulk-vault-action-adapter/layers/materialized-node-events/types";
+import type { CreateLeafNodeMaterializedEvent } from "../../../materialized-node-events/types";
 import { ChangePolicy } from "./types";
 
 /**

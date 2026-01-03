@@ -1,9 +1,9 @@
 import { TreeNodeType } from "../../../../../tree-node/types/atoms";
-import type { CreateLeafNodeMaterializedEvent } from "../../../../bulk-vault-action-adapter/layers/materialized-node-events/types";
 import {
 	type CreateTreeLeafAction,
 	TreeActionType,
 } from "../../../../types/tree-action";
+import type { CreateLeafNodeMaterializedEvent } from "../../materialized-node-events/types";
 import { tryMakeTargetLocator } from "./helpers/locator";
 
 export function traslateCreateMaterializedEvent(

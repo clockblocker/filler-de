@@ -3,24 +3,24 @@ import {
 	type NodeName,
 	NodeNameSchema,
 } from "../../../../../../../types/schemas/node-name";
-import type { SplitPathInsideLibrary } from "../../../../../bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
-import {
-	type CanonicalSplitPathToTarget,
-	MaterializedEventType,
-	type MaterializedNodeEvent,
-	type TargetTreeNodeLocator,
-} from "../../../../../bulk-vault-action-adapter/layers/materialized-node-events/types";
 import type { CanonicalSplitPath } from "../../../../../utils/canonical-split-path-utils/types";
 import { makeLocatorFromLibraryScopedCanonicalSplitPath } from "../../../../../utils/make-locator";
 import {
 	makePathPartsFromSuffixParts,
 	tryMakeSeparatedSuffixedBasename,
 } from "../../../../../utils/suffix-utils/suffix-utils";
+import type { SplitPathInsideLibrary } from "../../../library-scope/types/inside-library-split-paths";
+import {
+	type CanonicalSplitPathToTarget,
+	MaterializedEventType,
+	type MaterializedNodeEvent,
+	type TargetTreeNodeLocator,
+} from "../../../materialized-node-events/types";
 import {
 	ChangePolicy,
 	inferPolicyAndIntent,
 	RenameIntent,
-} from "../../../policy-and-intent";
+} from "../../policy-and-intent";
 
 export function tryMakeTargetLocator<E extends MaterializedNodeEvent>(
 	ev: E,

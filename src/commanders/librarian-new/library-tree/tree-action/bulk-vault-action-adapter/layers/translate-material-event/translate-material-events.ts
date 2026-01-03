@@ -1,8 +1,8 @@
+import type { TreeAction } from "../../../types/tree-action";
 import {
 	MaterializedEventType,
 	type MaterializedNodeEvent,
-} from "../../../bulk-vault-action-adapter/layers/materialized-node-events";
-import type { TreeAction } from "../../../types/tree-action";
+} from "../materialized-node-events";
 import { traslateCreateMaterializedEvent } from "./translators/translate-create-material-event";
 import { traslateDeleteMaterializedEvent } from "./translators/translate-delete-material-event";
 import { traslateRenameMaterializedEvent } from "./translators/traslate-move-actions";
