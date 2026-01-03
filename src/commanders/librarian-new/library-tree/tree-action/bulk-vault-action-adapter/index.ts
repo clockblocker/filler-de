@@ -4,6 +4,42 @@ import { makeLibraryScopedBulkVaultEvent } from "./layers/library-scope";
 import { materializeScopedBulk } from "./layers/materialized-node-events";
 import { translateMaterializedEvents } from "./layers/translate-material-event/translate-material-events";
 
+/**
+ * The **semantic boundary** between raw vault events and tree-level mutation logic.
+ *
+ * Translates raw user-triggered VaultEvents into ready-for-healing
+ * semantic Tree actions based on inferred user intent.
+ *
+ * Notes:
+ * - Files or folders entering the Library from outside (including initial vault load)
+ *   are registered as `Create` actions.
+ *
+ * @example
+ * // Rename intent (no suffix semantics)
+ * // Library/pie → Library/pies
+ * //
+ * // → RenameNodeAction
+ * //   target: pie
+ * //   newNodeName: pies
+ *
+ * @example
+ * // Move intent via name (suffix-driven)
+ * // Library/pie → Library/sweet-pie
+ * //
+ * // → MoveNodeAction
+ * //   target: pie
+ * //   newParent: sweet
+ * //   newNodeName: pie
+ *
+ * @example
+ * // Path-based move
+ * // Library/pie → Library/recipe/pie
+ * //
+ * // → MoveNodeAction
+ * //   target: pie
+ * //   newParent: recipe
+ * //   newNodeName: pie
+ */
 export const buildTreeActions = (bulk: BulkVaultEvent): TreeAction[] => {
 	return translateMaterializedEvents(
 		materializeScopedBulk(makeLibraryScopedBulkVaultEvent(bulk)),
