@@ -1,3 +1,4 @@
+import { de } from "zod/v4/locales";
 import { SplitPathType } from "../../../../../obsidian-vault-action-manager/types/split-path";
 import { makeNodeSegmentId } from "../../tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import { TreeNodeType } from "../../tree-node/types/atoms";
@@ -12,7 +13,7 @@ import type {
 	CanonicalSplitPathToFile,
 	CanonicalSplitPathToFolder,
 	CanonicalSplitPathToMdFile,
-} from "./canonical-split-path/types";
+} from "./canonical-split-path-utils/types";
 
 export function makeLocatorFromLibraryScopedCanonicalSplitPath(
 	sp: CanonicalSplitPathToFile,
@@ -74,11 +75,6 @@ export function makeLocatorFromLibraryScopedCanonicalSplitPath(
 				segmentIdChainToParent,
 				targetType: TreeNodeType.Section,
 			} satisfies SectionNodeLocator;
-		}
-
-		default: {
-			const _never: never = sp;
-			return _never;
 		}
 	}
 }

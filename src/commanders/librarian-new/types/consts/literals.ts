@@ -37,21 +37,19 @@ export const StatusSchema = z.enum([
 export type Status = z.infer<typeof StatusSchema>;
 export const Status = StatusSchema.enum;
 
-export const CREATE_NODE_ACTION = "CreateNode" as const;
-export type CREATE_NODE_ACTION = "CreateNode";
+export const RenameSchema = z.literal("Rename");
+export type RENAME = z.infer<typeof RenameSchema>;
+export const RENAME = RenameSchema.value;
 
-export const DELETE_NODE_ACTION = "DeleteNode" as const;
-export type DELETE_NODE_ACTION = "DeleteNode";
+export const ChangeStatusSchema = z.literal("ChangeS");
+export type CHANGE_STATUS = z.infer<typeof ChangeStatusSchema>;
+export const CHANGE_STATUS = ChangeStatusSchema.value;
 
-export const CHANGE_NODE_NAME_ACTION = "ChangeNodeName" as const;
-export type CHANGE_NODE_NAME_ACTION = "ChangeNodeName";
+export const MoveSchema = z.literal("Move");
+export type MOVE = z.infer<typeof MoveSchema>;
+export const MOVE = MoveSchema.value;
 
-export const CHANGE_NODE_STATUS_ACTION = "ChangeNodeStatus" as const;
-export type CHANGE_NODE_STATUS_ACTION = "ChangeNodeStatus";
-
-export const MOVE_NODE_ACTION = "MoveNode" as const;
-export type MOVE_NODE_ACTION = "MoveNode";
-
+export const RenameNodeSchema = z.literal("RenameNode");
 export const RENAME_NODE_ACTION = "RenameNode" as const;
 export type RENAME_NODE_ACTION = "RenameNode";
 

@@ -6,7 +6,6 @@ import type {
 } from "../../../../obsidian-vault-action-manager/types/split-path";
 import type { NodeName } from "../../types/schemas/node-name";
 import { TreeNodeType } from "../tree-node/types/atoms";
-import { traslateCreateMaterializedEvent } from "./action-builders/translate-create-actions";
 import { makeLibraryScopedBulkVaultEvent } from "./bulk-vault-action-adapter/layers/library-scope";
 import {
 	MaterializedEventType,
@@ -17,10 +16,10 @@ import type {
 	RenameScrollNodeMaterializedEvent,
 	RenameSectionNodeMaterializedEvent,
 } from "./bulk-vault-action-adapter/layers/materialized-node-events/types";
-import { tryParseCanonicalSplitPath } from "./helpers/canonical-split-path/try-parse-canonical-split-path";
-import { makeLocatorFromLibraryScopedCanonicalSplitPath } from "./helpers/make-locator";
 import type { SectionNodeLocator } from "./types/target-chains";
 import { type TreeAction, TreeActionType } from "./types/tree-action";
+import { tryParseCanonicalSplitPath } from "./utils/canonical-split-path-utils/try-parse-canonical-split-path";
+import { makeLocatorFromLibraryScopedCanonicalSplitPath } from "./utils/make-locator";
 
 export const buildTreeActions = (bulk: BulkVaultEvent): TreeAction[] => {
 	const out: TreeAction[] = [];
@@ -38,7 +37,6 @@ export const buildTreeActions = (bulk: BulkVaultEvent): TreeAction[] => {
 				out.push(...traslateCreateMaterializedEvent(ev));
 				break;
 			}
-
 			// ...
 
 			// ----------------------------

@@ -1,17 +1,15 @@
 import z from "zod";
+import {
+	CREATE,
+	DELETE,
+} from "../../../../../obsidian-vault-action-manager/types/literals";
 import type {
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
 } from "../../../../../obsidian-vault-action-manager/types/split-path";
 import type { Prettify } from "../../../../../types/helpers";
-import {
-	CHANGE_NODE_STATUS_ACTION,
-	CREATE_NODE_ACTION,
-	DELETE_NODE_ACTION,
-	MOVE_NODE_ACTION,
-	RENAME_NODE_ACTION,
-} from "../../../types/consts/literals";
+import { CHANGE_STATUS, MOVE, RENAME } from "../../../types/consts/literals";
 import type { NodeName } from "../../../types/schemas/node-name";
 import type { TreeNodeStatus } from "../../tree-node/types/atoms";
 import type { FileNode, ScrollNode } from "../../tree-node/types/tree-node";
@@ -22,11 +20,11 @@ import type {
 } from "./target-chains";
 
 const TreeActionTypeSchema = z.enum([
-	CREATE_NODE_ACTION,
-	DELETE_NODE_ACTION,
-	RENAME_NODE_ACTION,
-	CHANGE_NODE_STATUS_ACTION,
-	MOVE_NODE_ACTION,
+	CREATE,
+	DELETE,
+	RENAME,
+	CHANGE_STATUS,
+	MOVE,
 ]);
 
 export type TreeActionType = z.infer<typeof TreeActionTypeSchema>;
@@ -35,16 +33,16 @@ export const TreeActionType = TreeActionTypeSchema.enum;
 // --- Create
 
 export type CreateFileNodeAction = {
-	actionType: typeof TreeActionType.CreateNode;
-	target: FileNodeLocator;
+	actionType: typeof TreeActionType.Create;
+	targetLocator: FileNodeLocator;
 	initialStatus?: FileNode["status"];
 
 	observedVaultSplitPath: SplitPathToFile;
 };
 
 export type CreateScrollNodeAction = {
-	actionType: typeof TreeActionType.CreateNode;
-	target: ScrollNodeLocator;
+	actionType: typeof TreeActionType.Create;
+	targetLocator: ScrollNodeLocator;
 	initialStatus?: ScrollNode["status"];
 
 	observedVaultSplitPath: SplitPathToMdFile;
@@ -62,18 +60,18 @@ export type CreateTreeLeafAction = Prettify<
 // --- Delete
 
 export type DeleteFileNodeAction = {
-	actionType: typeof TreeActionType.DeleteNode;
-	target: FileNodeLocator;
+	actionType: typeof TreeActionType.Delete;
+	targetLocator: FileNodeLocator;
 };
 
 export type DeleteSectionNodeAction = {
-	actionType: typeof TreeActionType.DeleteNode;
-	target: SectionNodeLocator;
+	actionType: typeof TreeActionType.Delete;
+	targetLocator: SectionNodeLocator;
 };
 
 export type DeleteScrollNodeAction = {
-	actionType: typeof TreeActionType.DeleteNode;
-	target: ScrollNodeLocator;
+	actionType: typeof TreeActionType.Delete;
+	targetLocator: ScrollNodeLocator;
 };
 
 export type DeleteNodeAction = Prettify<
@@ -83,21 +81,21 @@ export type DeleteNodeAction = Prettify<
 // --- Change Name
 
 export type RenameFileNodeAction = {
-	actionType: typeof TreeActionType.RenameNode;
-	target: FileNodeLocator;
-	newName: NodeName;
+	actionType: typeof TreeActionType.Rename;
+	targetLocator: FileNodeLocator;
+	newNodeName: NodeName;
 };
 
 export type RenameSectionNodeAction = {
-	actionType: typeof TreeActionType.RenameNode;
-	target: SectionNodeLocator;
-	newName: NodeName;
+	actionType: typeof TreeActionType.Rename;
+	targetLocator: SectionNodeLocator;
+	newNodeName: NodeName;
 };
 
 export type RenameScrollNodeAction = {
-	actionType: typeof TreeActionType.RenameNode;
-	target: ScrollNodeLocator;
-	newName: NodeName;
+	actionType: typeof TreeActionType.Rename;
+	targetLocator: ScrollNodeLocator;
+	newNodeName: NodeName;
 };
 
 export type RenameNodeAction = Prettify<
@@ -107,28 +105,28 @@ export type RenameNodeAction = Prettify<
 // --- Move
 
 export type MoveFileNodeAction = {
-	actionType: typeof TreeActionType.MoveNode;
-	target: FileNodeLocator;
-	newParent: SectionNodeLocator;
-	newName: NodeName;
+	actionType: typeof TreeActionType.Move;
+	targetLocator: FileNodeLocator;
+	newParentLocator: SectionNodeLocator;
+	newNodeName: NodeName;
 
 	observedVaultSplitPath: SplitPathToFile;
 };
 
 export type MoveSectionNodeAction = {
-	actionType: typeof TreeActionType.MoveNode;
-	target: SectionNodeLocator;
-	newParent: SectionNodeLocator;
-	newName: NodeName;
+	actionType: typeof TreeActionType.Move;
+	targetLocator: SectionNodeLocator;
+	newParentLocator: SectionNodeLocator;
+	newNodeName: NodeName;
 
 	observedVaultSplitPath: SplitPathToFolder;
 };
 
 export type MoveScrollNodeAction = {
-	actionType: typeof TreeActionType.MoveNode;
-	target: ScrollNodeLocator;
-	newParent: SectionNodeLocator;
-	newName: NodeName;
+	actionType: typeof TreeActionType.Move;
+	targetLocator: ScrollNodeLocator;
+	newParentLocator: SectionNodeLocator;
+	newNodeName: NodeName;
 
 	observedVaultSplitPath: SplitPathToMdFile;
 };
@@ -163,20 +161,20 @@ export type MoveNodeAction = Prettify<
 // --- Change Status
 
 export type ChangeFileNodeStatusAction = {
-	actionType: typeof TreeActionType.ChangeNodeStatus;
-	target: FileNodeLocator;
+	actionType: typeof TreeActionType.ChangeStatus;
+	targetLocator: FileNodeLocator;
 	newStatus: FileNode["status"];
 };
 
 export type ChangeScrollNodeStatusAction = {
-	actionType: typeof TreeActionType.ChangeNodeStatus;
-	target: ScrollNodeLocator;
+	actionType: typeof TreeActionType.ChangeStatus;
+	targetLocator: ScrollNodeLocator;
 	newStatus: ScrollNode["status"];
 };
 
 export type ChangeSectionNodeStatusAction = {
-	actionType: typeof TreeActionType.ChangeNodeStatus;
-	target: SectionNodeLocator;
+	actionType: typeof TreeActionType.ChangeStatus;
+	targetLocator: SectionNodeLocator;
 	/**
 	 * Sections don't store status; this is an instruction to propagate to descendants.
 	 */

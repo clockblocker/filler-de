@@ -92,8 +92,8 @@ describe("materializeScopedBulk", () => {
 			expectMultisetEqual(result, [
 				{
 					kind: MaterializedEventType.Create,
-					libraryScopedSplitPath: File("note", ["section"]),
 					nodeType: TreeNodeType.File,
+					splitPath: File("note", ["section"]),
 				},
 			]);
 		});
@@ -124,8 +124,8 @@ describe("materializeScopedBulk", () => {
 			expectMultisetEqual(result, [
 				{
 					kind: MaterializedEventType.Create,
-					libraryScopedSplitPath: MdFile("note", ["section"]),
 					nodeType: TreeNodeType.Scroll,
+					splitPath: MdFile("note", ["section"]),
 				},
 			]);
 		});
@@ -177,8 +177,8 @@ describe("materializeScopedBulk", () => {
 			expectMultisetEqual(result, [
 				{
 					kind: MaterializedEventType.Create,
-					libraryScopedSplitPath: File("incoming"),
 					nodeType: TreeNodeType.File,
+					splitPath: File("incoming"),
 				},
 			]);
 		});
@@ -225,18 +225,18 @@ describe("materializeScopedBulk", () => {
 			expectMultisetEqual(result, [
 				{
 					kind: MaterializedEventType.Delete,
-					libraryScopedSplitPath: File("file"),
 					nodeType: TreeNodeType.File,
+					splitPath: File("file"),
 				},
 				{
 					kind: MaterializedEventType.Delete,
-					libraryScopedSplitPath: MdFile("scroll"),
 					nodeType: TreeNodeType.Scroll,
+					splitPath: MdFile("scroll"),
 				},
 				{
 					kind: MaterializedEventType.Delete,
-					libraryScopedSplitPath: F("section"),
 					nodeType: TreeNodeType.Section,
+					splitPath: F("section"),
 				},
 			]);
 		});
@@ -326,18 +326,18 @@ describe("materializeScopedBulk", () => {
 			expectMultisetEqual(result, [
 				{
 					kind: MaterializedEventType.Delete,
-					libraryScopedSplitPath: File("file"),
 					nodeType: TreeNodeType.File,
+					splitPath: File("file"),
 				},
 				{
 					kind: MaterializedEventType.Delete,
-					libraryScopedSplitPath: MdFile("scroll"),
 					nodeType: TreeNodeType.Scroll,
+					splitPath: MdFile("scroll"),
 				},
 				{
 					kind: MaterializedEventType.Delete,
-					libraryScopedSplitPath: F("section"),
 					nodeType: TreeNodeType.Section,
+					splitPath: F("section"),
 				},
 			]);
 		});
@@ -426,22 +426,22 @@ describe("materializeScopedBulk", () => {
 
 			expectMultisetEqual(result, [
 				{
+					from: File("old-file"),
 					kind: MaterializedEventType.Rename,
-					libraryScopedFrom: File("old-file"),
-					libraryScopedTo: File("new-file"),
 					nodeType: TreeNodeType.File,
+					to: File("new-file"),
 				},
 				{
+					from: MdFile("old-scroll"),
 					kind: MaterializedEventType.Rename,
-					libraryScopedFrom: MdFile("old-scroll"),
-					libraryScopedTo: MdFile("new-scroll"),
 					nodeType: TreeNodeType.Scroll,
+					to: MdFile("new-scroll"),
 				},
 				{
+					from: F("old-section"),
 					kind: MaterializedEventType.Rename,
-					libraryScopedFrom: F("old-section"),
-					libraryScopedTo: F("new-section"),
 					nodeType: TreeNodeType.Section,
+					to: F("new-section"),
 				},
 			]);
 		});

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { tryParseCanonicalSplitPath } from "../../../../../../../src/commanders/librarian-new/library-tree/tree-action/helpers/canonical-split-path/try-parse-canonical-split-path";
+import { tryParseCanonicalSplitPath } from "../../../../../../../src/commanders/librarian-new/library-tree/tree-action/utils/canonical-split-path-utils/try-parse-canonical-split-path";
 import * as globalState from "../../../../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../../../../src/global-state/parsed-settings";
 import type {

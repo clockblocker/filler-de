@@ -13,13 +13,12 @@ import {
 
 export const NodeSegmentIdSeparatorSchema = z.templateLiteral([
 	SmallEmDashSchema,
-	SmallEmDashSchema,
 ]);
 
 export type NodeSegmentIdSeparator = z.infer<
 	typeof NodeSegmentIdSeparatorSchema
 >;
-export const NodeSegmentIdSeparator: NodeSegmentIdSeparator = `${SMALL_EM_DASH}${SMALL_EM_DASH}`;
+export const NodeSegmentIdSeparator: NodeSegmentIdSeparator = `${SMALL_EM_DASH}`;
 
 export const ScrollNodeSegmentIdSchema = z.templateLiteral([
 	NodeNameSchema,

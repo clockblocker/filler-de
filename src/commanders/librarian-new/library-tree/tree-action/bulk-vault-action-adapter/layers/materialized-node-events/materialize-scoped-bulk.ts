@@ -71,14 +71,14 @@ function materializeCreateFromScopedEvent(
 				case "File":
 					return {
 						kind: MaterializedEventType.Create,
-						libraryScopedSplitPath: ev.splitPath,
 						nodeType: TreeNodeType.File,
+						splitPath: ev.splitPath,
 					};
 				case "MdFile":
 					return {
 						kind: MaterializedEventType.Create,
-						libraryScopedSplitPath: ev.splitPath,
 						nodeType: TreeNodeType.Scroll,
+						splitPath: ev.splitPath,
 					};
 				default:
 					return null;
@@ -105,14 +105,14 @@ function materializeDeleteFromScopedRoot(
 				case "File":
 					return {
 						kind: MaterializedEventType.Delete,
-						libraryScopedSplitPath: ev.splitPath,
 						nodeType: TreeNodeType.File,
+						splitPath: ev.splitPath,
 					};
 				case "MdFile":
 					return {
 						kind: MaterializedEventType.Delete,
-						libraryScopedSplitPath: ev.splitPath,
 						nodeType: TreeNodeType.Scroll,
+						splitPath: ev.splitPath,
 					};
 				default: {
 					const _never: never = ev.splitPath;
@@ -124,8 +124,8 @@ function materializeDeleteFromScopedRoot(
 		case VaultEventType.FolderDeleted:
 			return {
 				kind: MaterializedEventType.Delete,
-				libraryScopedSplitPath: ev.splitPath,
 				nodeType: TreeNodeType.Section,
+				splitPath: ev.splitPath,
 			};
 
 		default:
@@ -148,14 +148,14 @@ function materializeDeleteFromScopedEventInsideToOutside(
 				case "File":
 					return {
 						kind: MaterializedEventType.Delete,
-						libraryScopedSplitPath: ev.from,
 						nodeType: TreeNodeType.File,
+						splitPath: ev.from,
 					};
 				case "MdFile":
 					return {
 						kind: MaterializedEventType.Delete,
-						libraryScopedSplitPath: ev.from,
 						nodeType: TreeNodeType.Scroll,
+						splitPath: ev.from,
 					};
 				default: {
 					const _never: never = ev.from;
@@ -168,8 +168,8 @@ function materializeDeleteFromScopedEventInsideToOutside(
 			// inside side is `from`
 			return {
 				kind: MaterializedEventType.Delete,
-				libraryScopedSplitPath: ev.from,
 				nodeType: TreeNodeType.Section,
+				splitPath: ev.from,
 			};
 
 		default:
@@ -189,10 +189,10 @@ export function materializeRenameFromScopedRoot(
 					const to = ev.to;
 					if (to.type !== "File") return null; // defensive
 					return {
+						from: ev.from,
 						kind: MaterializedEventType.Rename,
-						libraryScopedFrom: ev.from,
-						libraryScopedTo: to,
 						nodeType: TreeNodeType.File,
+						to: to,
 					};
 				}
 
@@ -200,10 +200,10 @@ export function materializeRenameFromScopedRoot(
 					const to = ev.to;
 					if (to.type !== "MdFile") return null; // defensive
 					return {
+						from: ev.from,
 						kind: MaterializedEventType.Rename,
-						libraryScopedFrom: ev.from,
-						libraryScopedTo: to,
 						nodeType: TreeNodeType.Scroll,
+						to: to,
 					};
 				}
 
@@ -215,10 +215,10 @@ export function materializeRenameFromScopedRoot(
 
 		case VaultEventType.FolderRenamed:
 			return {
+				from: ev.from,
 				kind: MaterializedEventType.Rename,
-				libraryScopedFrom: ev.from,
-				libraryScopedTo: ev.to,
 				nodeType: TreeNodeType.Section,
+				to: ev.to,
 			};
 
 		default:

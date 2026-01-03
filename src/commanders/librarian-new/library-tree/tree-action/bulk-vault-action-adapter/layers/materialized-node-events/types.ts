@@ -4,13 +4,23 @@ import {
 	DELETE,
 	RENAME,
 } from "../../../../../../../obsidian-vault-action-manager/types/literals";
-import type {
-	SplitPathToFile,
-	SplitPathToFolder,
-	SplitPathToMdFile,
-} from "../../../../../../../obsidian-vault-action-manager/types/split-path";
 import type { Prettify } from "../../../../../../../types/helpers";
 import type { TreeNodeType } from "../../../../tree-node/types/atoms";
+import type {
+	FileNodeLocator,
+	ScrollNodeLocator,
+	SectionNodeLocator,
+} from "../../../types/target-chains";
+import type {
+	CanonicalSplitPathToFile,
+	CanonicalSplitPathToFolder,
+	CanonicalSplitPathToMdFile,
+} from "../../../utils/canonical-split-path-utils/types";
+import type {
+	SplitPathToFileInsideLibrary,
+	SplitPathToFolderInsideLibrary,
+	SplitPathToMdFileInsideLibrary,
+} from "../library-scope/types/inside-library-split-paths";
 
 /**
  * MaterializedNodeEvent represents a **single-node, inside-Library event**
@@ -29,14 +39,11 @@ import type { TreeNodeType } from "../../../../tree-node/types/atoms";
  *   this type is a pure normalization layer.
  */
 export type MaterializedNodeEvent = Prettify<
-	| CreateFileNodeMaterializedEvent
-	| CreateScrollNodeMaterializedEvent
-	| DeleteFileNodeMaterializedEvent
-	| DeleteScrollNodeMaterializedEvent
-	| DeleteSectionNodeMaterializedEvent
-	| RenameFileNodeMaterializedEvent
-	| RenameScrollNodeMaterializedEvent
-	| RenameSectionNodeMaterializedEvent
+	| DeleteTreeNodeMaterializedEvent
+	| RenameTreeNodeNodeMaterializedEvent
+	| CreateLeafNodeMaterializedEvent
+	| LeafMaterializedEvent
+	| SectionMaterializedEvent
 >;
 
 // --- Materialized Event Type
@@ -54,37 +61,33 @@ export type MaterializedEventType = z.infer<typeof MaterializedEventTypeSchema>;
 export type CreateFileNodeMaterializedEvent = {
 	kind: typeof MaterializedEventType.Create;
 	nodeType: typeof TreeNodeType.File;
-	libraryScopedSplitPath: SplitPathToFile;
+	splitPath: SplitPathToFileInsideLibrary;
 };
 
 export type CreateScrollNodeMaterializedEvent = {
 	kind: typeof MaterializedEventType.Create;
 	nodeType: typeof TreeNodeType.Scroll;
-	libraryScopedSplitPath: SplitPathToMdFile;
+	splitPath: SplitPathToMdFileInsideLibrary;
 };
-
-export type CreateLeafNodeMaterializedEvent =
-	| CreateFileNodeMaterializedEvent
-	| CreateScrollNodeMaterializedEvent;
 
 // -- Delete
 
 export type DeleteFileNodeMaterializedEvent = {
 	kind: typeof MaterializedEventType.Delete;
 	nodeType: typeof TreeNodeType.File;
-	libraryScopedSplitPath: SplitPathToFile;
+	splitPath: SplitPathToFileInsideLibrary;
 };
 
 export type DeleteScrollNodeMaterializedEvent = {
 	kind: typeof MaterializedEventType.Delete;
 	nodeType: typeof TreeNodeType.Scroll;
-	libraryScopedSplitPath: SplitPathToMdFile;
+	splitPath: SplitPathToMdFileInsideLibrary;
 };
 
 export type DeleteSectionNodeMaterializedEvent = {
 	kind: typeof MaterializedEventType.Delete;
 	nodeType: typeof TreeNodeType.Section;
-	libraryScopedSplitPath: SplitPathToFolder;
+	splitPath: SplitPathToFolderInsideLibrary;
 };
 
 // --- Rename
@@ -92,25 +95,84 @@ export type DeleteSectionNodeMaterializedEvent = {
 export type RenameFileNodeMaterializedEvent = {
 	kind: typeof MaterializedEventType.Rename;
 	nodeType: typeof TreeNodeType.File;
-	libraryScopedFrom: SplitPathToFile;
-	libraryScopedTo: SplitPathToFile;
+	from: SplitPathToFileInsideLibrary;
+	to: SplitPathToFileInsideLibrary;
 };
 
 export type RenameScrollNodeMaterializedEvent = {
 	kind: typeof MaterializedEventType.Rename;
 	nodeType: typeof TreeNodeType.Scroll;
-	libraryScopedFrom: SplitPathToMdFile;
-	libraryScopedTo: SplitPathToMdFile;
+	from: SplitPathToMdFileInsideLibrary;
+	to: SplitPathToMdFileInsideLibrary;
 };
 
 export type RenameSectionNodeMaterializedEvent = {
 	kind: typeof MaterializedEventType.Rename;
 	nodeType: typeof TreeNodeType.Section;
-	libraryScopedFrom: SplitPathToFolder;
-	libraryScopedTo: SplitPathToFolder;
+	from: SplitPathToFolderInsideLibrary;
+	to: SplitPathToFolderInsideLibrary;
 };
+
+// -- Gropped By Event Type
+
+export type CreateLeafNodeMaterializedEvent =
+	| CreateFileNodeMaterializedEvent
+	| CreateScrollNodeMaterializedEvent;
+
+export type DeleteTreeNodeMaterializedEvent =
+	| DeleteFileNodeMaterializedEvent
+	| DeleteScrollNodeMaterializedEvent
+	| DeleteSectionNodeMaterializedEvent;
 
 export type RenameTreeNodeNodeMaterializedEvent =
 	| RenameFileNodeMaterializedEvent
 	| RenameScrollNodeMaterializedEvent
 	| RenameSectionNodeMaterializedEvent;
+
+// -- Gropped by File Type
+
+export type LeafMaterializedEvent =
+	| CreateFileNodeMaterializedEvent
+	| CreateScrollNodeMaterializedEvent
+	| DeleteFileNodeMaterializedEvent
+	| DeleteScrollNodeMaterializedEvent
+	| RenameFileNodeMaterializedEvent
+	| RenameScrollNodeMaterializedEvent;
+
+export type SectionMaterializedEvent =
+	| DeleteSectionNodeMaterializedEvent
+	| RenameSectionNodeMaterializedEvent;
+
+type TargetObservedSplitPath<E extends MaterializedNodeEvent> = E extends {
+	kind: typeof MaterializedEventType.Rename;
+}
+	? E extends LeafMaterializedEvent
+		? E["to"]
+		: E extends SectionMaterializedEvent
+			? E["to"]
+			: never
+	: E extends { splitPath: unknown }
+		? E["splitPath"]
+		: never;
+
+type CanonicalForObserved<SP> = SP extends SplitPathToFolderInsideLibrary
+	? CanonicalSplitPathToFolder
+	: SP extends SplitPathToMdFileInsideLibrary
+		? CanonicalSplitPathToMdFile
+		: SP extends SplitPathToFileInsideLibrary
+			? CanonicalSplitPathToFile
+			: never;
+
+export type CanonicalSplitPathToTarget<E extends MaterializedNodeEvent> =
+	CanonicalForObserved<TargetObservedSplitPath<E>>;
+
+type LocatorForObserved<SP> = SP extends SplitPathToFolderInsideLibrary
+	? SectionNodeLocator
+	: SP extends SplitPathToMdFileInsideLibrary
+		? ScrollNodeLocator
+		: SP extends SplitPathToFileInsideLibrary
+			? FileNodeLocator
+			: never;
+
+export type TargetTreeNodeLocator<E extends MaterializedNodeEvent> =
+	LocatorForObserved<TargetObservedSplitPath<E>>;
