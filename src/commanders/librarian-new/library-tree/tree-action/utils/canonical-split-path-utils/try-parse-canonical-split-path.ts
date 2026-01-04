@@ -1,4 +1,5 @@
 import { err, ok, type Result } from "neverthrow";
+import { getParsedUserSettings } from "../../../../../../global-state/global-state";
 import {
 	type SplitPath,
 	type SplitPathToFile,
@@ -49,6 +50,7 @@ export function tryParseCanonicalSplitPath(
  * Canonical file rules:
  * - `basename` = `nodeName` + optional suffix.
  * - Suffix parts (if any) MUST equal `sectionNames.reverse()`.
+ *   **Note**: The Library root (first segment) is excluded from suffix logic.
  * - All parts (`nodeName`, suffix parts, sectionNames) must be valid `NodeName`s.
  *
  * If valid, returns a canonical file split path with normalized `NodeName`s.
@@ -73,7 +75,14 @@ function tryParseCanonicalSplitPathToFile(
 	const sectionNames = sectionNamesRes.value;
 
 	// canonical check: suffixParts === sectionNames.reverse()
-	const expectedSuffix = [...sectionNames].reverse();
+	// Exclude Library root (first segment) from suffix comparison
+	const { splitPathToLibraryRoot } = getParsedUserSettings();
+	const libraryRootName = splitPathToLibraryRoot.basename;
+	const sectionNamesForSuffix =
+		sectionNames.length > 0 && sectionNames[0] === libraryRootName
+			? sectionNames.slice(1)
+			: sectionNames;
+	const expectedSuffix = [...sectionNamesForSuffix].reverse();
 	if (
 		suffixParts.length !== expectedSuffix.length ||
 		suffixParts.some((p, i) => p !== expectedSuffix[i])

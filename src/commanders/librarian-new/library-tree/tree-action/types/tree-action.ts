@@ -69,6 +69,8 @@ export type DeleteNodeAction = Prettify<
  *
  * Notes:
  * - This action represents a **pure rename** with no change in parent section.
+ * - Guaranteed to be a valid NodeName → NodeName transformation.
+ * - All breaking suffix-related issues are handled as MOVES or DELETES, not renames.
  * - Any suffix or descendant updates required to maintain invariants
  *   are handled later during tree application / healing.
  * - If a rename implies a parent change, a `MoveNodeAction` is emitted instead.

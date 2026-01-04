@@ -79,7 +79,7 @@ const extractSplitPathToDestination = (e: MaterializedNodeEvent) => {
 	}
 };
 
-const tryCanonicalizeSplitPathToDestination = (
+export const tryCanonicalizeSplitPathToDestination = (
 	sp: SplitPathInsideLibrary,
 	policy: ChangePolicy,
 	intent?: RenameIntent, // undefined = not rename
@@ -91,6 +91,40 @@ const tryCanonicalizeSplitPathToDestination = (
 	if (sepRes.isErr()) return err(sepRes.error);
 
 	if (effectivePolicy === ChangePolicy.NameKing) {
+		// MOVE-by-name: interpret basename as parent-child, not suffix chain
+		// "sweet-pie" → parent="sweet", child="pie"
+		if (
+			intent === RenameIntent.Move &&
+			sepRes.value.suffixParts.length > 0
+		) {
+			// First segment becomes parent, first suffix part becomes node name
+			const parentName = sepRes.value.nodeName;
+			const childName = sepRes.value.suffixParts[0];
+			if (!childName) {
+				return err("MOVE-by-name requires at least one suffix part");
+			}
+
+			// Parse existing pathParts as sectionNames
+			const sectionNamesFromPath: NodeName[] = [];
+			for (const seg of sp.pathParts) {
+				const r = NodeNameSchema.safeParse(seg);
+				if (!r.success)
+					return err(
+						r.error.issues[0]?.message ??
+							"Invalid section NodeName",
+					);
+				sectionNamesFromPath.push(r.data);
+			}
+
+			// Parent becomes new section, child becomes node name
+			return ok({
+				...sp,
+				nodeName: childName,
+				sectionNames: [...sectionNamesFromPath, parentName],
+			});
+		}
+
+		// Regular NameKing (Create): suffix chain interpretation
 		const sectionNames = makePathPartsFromSuffixParts(
 			sepRes.value,
 		) as NodeName[];
