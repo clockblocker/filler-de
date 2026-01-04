@@ -208,7 +208,7 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 			}
 		});
 
-		it("9. Move-by-name multi-part child (current impl limitation)", () => {
+		it("9. Move-by-name multi-part child", () => {
 			const sp = spMdFile(["Library"], "sweet-berry-pie");
 			const result = tryCanonicalizeSplitPathToDestination(
 				sp,
@@ -218,12 +218,69 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				// TODO: Current impl limitation - only first suffix part used
-				// Expected: nodeName="berry-pie" (joined suffix parts)
-				// Actual: nodeName="berry" (only first suffix part)
-				// This documents the limitation; implementation should be updated to join all suffix parts
-				expect(result.value.nodeName).toBe("berry");
-				expect(result.value.sectionNames).toEqual(["Library", "sweet"]);
+				// Last suffix part becomes node name, middle parts become sections
+				expect(result.value.nodeName).toBe("pie");
+				expect(result.value.sectionNames).toEqual(["Library", "sweet", "berry"]);
+			}
+		});
+
+		it("9a. Folder: sweet-berry-pie => Library/sweet/berry/pie", () => {
+			const sp = spFolder(["Library"], "sweet-berry-pie");
+			const r = tryCanonicalizeSplitPathToDestination(
+				sp,
+				ChangePolicy.NameKing,
+				RenameIntent.Move,
+			);
+	
+			expect(r.isOk()).toBe(true);
+			if (r.isOk()) {
+				expect(r.value.nodeName).toBe("pie");
+				expect(r.value.sectionNames).toEqual(["Library", "sweet", "berry"]);
+			}
+		});
+	
+		it("9b. Folder nested path preserved: Library/recipe + sweet-berry-pie => Library/recipe/sweet/berry/pie", () => {
+			const sp = spFolder(["Library", "recipe"], "sweet-berry-pie");
+			const r = tryCanonicalizeSplitPathToDestination(
+				sp,
+				ChangePolicy.NameKing,
+				RenameIntent.Move,
+			);
+	
+			expect(r.isOk()).toBe(true);
+			if (r.isOk()) {
+				expect(r.value.nodeName).toBe("pie");
+				expect(r.value.sectionNames).toEqual(["Library", "recipe", "sweet", "berry"]);
+			}
+		});
+	
+		it("9c. MdFile: sweet-berry-pie => Library/sweet/berry, nodeName=pie", () => {
+			const sp = spMdFile(["Library"], "sweet-berry-pie");
+			const r = tryCanonicalizeSplitPathToDestination(
+				sp,
+				ChangePolicy.NameKing,
+				RenameIntent.Move,
+			);
+	
+			expect(r.isOk()).toBe(true);
+			if (r.isOk()) {
+				expect(r.value.nodeName).toBe("pie");
+				expect(r.value.sectionNames).toEqual(["Library", "sweet", "berry"]);
+			}
+		});
+	
+		it("9d. Longer: sweet-very-berry-pie => nodeName=pie, parents=sweet/very/berry", () => {
+			const sp = spFolder(["Library"], "sweet-very-berry-pie");
+			const r = tryCanonicalizeSplitPathToDestination(
+				sp,
+				ChangePolicy.NameKing,
+				RenameIntent.Move,
+			);
+	
+			expect(r.isOk()).toBe(true);
+			if (r.isOk()) {
+				expect(r.value.nodeName).toBe("pie");
+				expect(r.value.sectionNames).toEqual(["Library", "sweet", "very", "berry"]);
 			}
 		});
 

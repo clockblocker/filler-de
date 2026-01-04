@@ -91,20 +91,26 @@ export const tryCanonicalizeSplitPathToDestination = (
 	if (sepRes.isErr()) return err(sepRes.error);
 
 	if (effectivePolicy === ChangePolicy.NameKing) {
-		// MOVE-by-name: interpret basename as parent-child, not suffix chain
-		// "sweet-pie" → parent="sweet", child="pie"
+		// MOVE-by-name: interpret basename as parent-child chain, not suffix chain
+		// "sweet-pie" → firstSection="sweet", nodeName="pie"
+		// "sweet-berry-pie" → firstSection="sweet", extraSections=["berry"], nodeName="pie"
 		if (
 			intent === RenameIntent.Move &&
 			sepRes.value.suffixParts.length > 0
 		) {
-			// First segment becomes parent, first suffix part becomes node name
-			const parentName = sepRes.value.nodeName;
-			const childName = sepRes.value.suffixParts[0];
-			if (!childName) {
+			// First segment becomes first parent section
+			const firstSection = sepRes.value.nodeName;
+			const suffixParts = sepRes.value.suffixParts;
+
+			// Last suffix part becomes node name
+			const lastSuffixPart = suffixParts[suffixParts.length - 1];
+			if (!lastSuffixPart) {
 				return err("MOVE-by-name requires at least one suffix part");
 			}
+			// All suffix parts except last become additional parent sections
+			const extraSections = suffixParts.slice(0, -1);
 
-			// Parse existing pathParts as sectionNames
+			// Parse existing pathParts as sectionNames (includes Library root if present)
 			const sectionNamesFromPath: NodeName[] = [];
 			for (const seg of sp.pathParts) {
 				const r = NodeNameSchema.safeParse(seg);
@@ -116,11 +122,15 @@ export const tryCanonicalizeSplitPathToDestination = (
 				sectionNamesFromPath.push(r.data);
 			}
 
-			// Parent becomes new section, child becomes node name
+			// Combine: existing pathParts (including Library) + first section + extra sections
 			return ok({
 				...sp,
-				nodeName: childName,
-				sectionNames: [...sectionNamesFromPath, parentName],
+				nodeName: lastSuffixPart,
+				sectionNames: [
+					...sectionNamesFromPath,
+					firstSection,
+					...extraSections,
+				],
 			});
 		}
 
