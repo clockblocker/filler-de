@@ -60,25 +60,48 @@ export function materializeScopedBulk(
 function materializeCreateFromScopedEvent(
 	e: LibraryScopedVaultEvent,
 ): MaterializedNodeEvent | null {
-	if (e.scope !== Scope.Inside && e.scope !== Scope.OutsideToInside) {
+	if (e.scope !== Scope.Inside && e.scope !== Scope.OutsideToInside)
 		return null;
+
+	// --- Outside→Inside rename counts as Create (import)
+	if (
+		e.scope === Scope.OutsideToInside &&
+		e.type === VaultEventType.FileRenamed
+	) {
+		const sp = e.to; // inside side is `to`
+		switch (sp.type) {
+			case "File":
+				return {
+					kind: MaterializedEventType.Create,
+					nodeType: TreeNodeType.File,
+					splitPath: sp,
+				};
+			case "MdFile":
+				return {
+					kind: MaterializedEventType.Create,
+					nodeType: TreeNodeType.Scroll,
+					splitPath: sp,
+				};
+			default:
+				return null;
+		}
 	}
 
 	switch (e.type) {
 		case VaultEventType.FileCreated: {
-			const ev = e;
-			switch (ev.splitPath.type) {
+			const sp = e.splitPath;
+			switch (sp.type) {
 				case "File":
 					return {
 						kind: MaterializedEventType.Create,
 						nodeType: TreeNodeType.File,
-						splitPath: ev.splitPath,
+						splitPath: sp,
 					};
 				case "MdFile":
 					return {
 						kind: MaterializedEventType.Create,
 						nodeType: TreeNodeType.Scroll,
-						splitPath: ev.splitPath,
+						splitPath: sp,
 					};
 				default:
 					return null;
@@ -86,7 +109,6 @@ function materializeCreateFromScopedEvent(
 		}
 
 		case VaultEventType.FolderCreated:
-			// sections are implicit
 			return null;
 
 		default:
