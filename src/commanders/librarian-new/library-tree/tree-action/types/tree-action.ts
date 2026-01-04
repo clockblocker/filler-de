@@ -28,49 +28,99 @@ export type TreeAction = Prettify<
 >;
 
 /**
- * CreateTreeLeafAction represents a semantic creation of a new tree leaf node.
+ * A semantic "create leaf" Tree action (File | Scroll).
  *
- * If the sections in chain are not present, they are to be silently created.
+ * Meaning:
+ * - A new leaf node is introduced into the LibraryTree at `targetLocator`.
+ * - Any missing sections along `targetLocator.segmentIdChainToParent`
+ *   must be created implicitly by the tree.
+ *
+ * Notes:
+ * - Sections are never created directly by events; they emerge from leaf placement.
+ * - `observedVaultSplitPath` is the post-op vault location (may be non-canonical),
+ *   used later for healing `VaultAction.rename(fromObserved, toCanonical)`.
  */
 export type CreateTreeLeafAction = Prettify<
 	CreateFileNodeAction | CreateScrollNodeAction
 >;
 
+/**
+ * A semantic "delete node" Tree action (File | Scroll | Section).
+ *
+ * Meaning:
+ * - The node identified by `targetLocator` is removed from the LibraryTree.
+ *
+ * Notes:
+ * - For section deletes, the Tree is responsible for deleting the entire subtree.
+ * - No filesystem path is carried here: deletion targets are identified purely
+ *   by canonical tree locators.
+ * - Any healing or vault-side cleanup is handled later by the Librarian.
+ */
 export type DeleteNodeAction = Prettify<
 	DeleteFileNodeAction | DeleteSectionNodeAction | DeleteScrollNodeAction
 >;
 
+/**
+ * A semantic "rename node" Tree action (File | Scroll | Section).
+ *
+ * Meaning:
+ * - The node identified by `targetLocator` keeps its position in the tree,
+ *   but its `nodeName` is changed to `newNodeName`.
+ *
+ * Notes:
+ * - This action represents a **pure rename** with no change in parent section.
+ * - Any suffix or descendant updates required to maintain invariants
+ *   are handled later during tree application / healing.
+ * - If a rename implies a parent change, a `MoveNodeAction` is emitted instead.
+ */
 export type RenameNodeAction = Prettify<
 	RenameFileNodeAction | RenameSectionNodeAction | RenameScrollNodeAction
 >;
 
 /**
- * MoveNodeAction represents a semantic move of an existing tree node
- * to a different parent section.
+ * A semantic "move node" Tree action (File | Scroll | Section).
  *
- * Important distinction:
- * - `target` / `newParent` are **canonical tree locators** and are used
- *   to mutate the LibraryTree (preserve node identity, status, subtree).
- *   `newParent` and it's chain might not exist, but it's locator is canonical.
- * - `target` exists in the tree (otherwise it would be a CreateNodeAction)
- * - `observedVaultSplitPath` is the **observed vault location**
- *   of the node *after the user operation*, and may be non-canonical
- *   (wrong suffixes, wrong folder, etc.).
+ * Meaning:
+ * - The node identified by `targetLocator` is moved under `newParentLocator`
+ *   and renamed to `newNodeName` in a single semantic operation.
  *
- * The observed vault split path is **not** used to locate the node in the tree.
- * It exists solely so the Librarian can generate correct healing
- * `VaultAction.rename(from, to)` calls, where `from` must match the
- * actual filesystem state.
+ * Notes:
+ * - `targetLocator` refers to the node’s **current canonical location** in the tree.
+ * - `newParentLocator` refers to the **canonical destination parent section**.
+ *   This section (and its ancestor chain) **may not exist yet** and must be
+ *   created implicitly by the tree before the move is applied.
+ * - `observedVaultSplitPath` is the **actual vault path after the user operation**
+ *   and may be non-canonical (wrong suffixes, wrong folders, etc.).
+ *
+ * Important:
+ * - The observed vault split path is **never** used to locate the node in the tree.
+ * - It exists solely to generate correct healing `VaultAction.rename(from, to)`
+ *   calls, where `from` must match the real filesystem state.
  *
  * This separation allows:
  * - enforcing the filename ⇄ path invariant both ways,
- * - preserving node identity and status in the tree,
+ * - preserving node identity and status across moves,
  * - handling user renames/moves that temporarily violate canonical naming.
  */
 export type MoveNodeAction = Prettify<
 	MoveFileNodeAction | MoveSectionNodeAction | MoveScrollNodeAction
 >;
 
+/**
+ * A semantic "change node status" Tree action (File | Scroll | Section).
+ *
+ * Meaning:
+ * - Updates the status of the node identified by `targetLocator`.
+ *
+ * Notes:
+ * - For File and Scroll nodes, the status is stored directly on the node.
+ * - For Section nodes, no status is stored on the section itself;
+ *   `newStatus` is interpreted as an instruction to **propagate** the status
+ *   to all descendant leaf nodes.
+ *
+ * This action does not affect node structure or location and is handled
+ * entirely within the tree.
+ */
 export type ChangeNodeStatusAction = Prettify<
 	| ChangeFileNodeStatusAction
 	| ChangeScrollNodeStatusAction
