@@ -19,6 +19,64 @@ import type {
 	SectionNodeLocator,
 } from "./target-chains";
 
+export type TreeAction = Prettify<
+	| CreateTreeLeafAction
+	| DeleteNodeAction
+	| RenameNodeAction
+	| MoveNodeAction
+	| ChangeNodeStatusAction
+>;
+
+/**
+ * CreateTreeLeafAction represents a semantic creation of a new tree leaf node.
+ *
+ * If the sections in chain are not present, they are to be silently created.
+ */
+export type CreateTreeLeafAction = Prettify<
+	CreateFileNodeAction | CreateScrollNodeAction
+>;
+
+export type DeleteNodeAction = Prettify<
+	DeleteFileNodeAction | DeleteSectionNodeAction | DeleteScrollNodeAction
+>;
+
+export type RenameNodeAction = Prettify<
+	RenameFileNodeAction | RenameSectionNodeAction | RenameScrollNodeAction
+>;
+
+/**
+ * MoveNodeAction represents a semantic move of an existing tree node
+ * to a different parent section.
+ *
+ * Important distinction:
+ * - `target` / `newParent` are **canonical tree locators** and are used
+ *   to mutate the LibraryTree (preserve node identity, status, subtree).
+ *   `newParent` and it's chain might not exist, but it's locator is canonical.
+ * - `target` exists in the tree (otherwise it would be a CreateNodeAction)
+ * - `observedVaultSplitPath` is the **observed vault location**
+ *   of the node *after the user operation*, and may be non-canonical
+ *   (wrong suffixes, wrong folder, etc.).
+ *
+ * The observed vault split path is **not** used to locate the node in the tree.
+ * It exists solely so the Librarian can generate correct healing
+ * `VaultAction.rename(from, to)` calls, where `from` must match the
+ * actual filesystem state.
+ *
+ * This separation allows:
+ * - enforcing the filename ⇄ path invariant both ways,
+ * - preserving node identity and status in the tree,
+ * - handling user renames/moves that temporarily violate canonical naming.
+ */
+export type MoveNodeAction = Prettify<
+	MoveFileNodeAction | MoveSectionNodeAction | MoveScrollNodeAction
+>;
+
+export type ChangeNodeStatusAction = Prettify<
+	| ChangeFileNodeStatusAction
+	| ChangeScrollNodeStatusAction
+	| ChangeSectionNodeStatusAction
+>;
+
 const TreeActionTypeSchema = z.enum([
 	CREATE,
 	DELETE,
@@ -48,15 +106,6 @@ export type CreateScrollNodeAction = {
 	observedVaultSplitPath: SplitPathToMdFile;
 };
 
-/**
- * CreateTreeLeafAction represents a semantic creation of a new tree leaf node.
- *
- * If the sections in chain are not present, they are to be silently created.
- */
-export type CreateTreeLeafAction = Prettify<
-	CreateFileNodeAction | CreateScrollNodeAction
->;
-
 // --- Delete
 
 export type DeleteFileNodeAction = {
@@ -73,10 +122,6 @@ export type DeleteScrollNodeAction = {
 	actionType: typeof TreeActionType.Delete;
 	targetLocator: ScrollNodeLocator;
 };
-
-export type DeleteNodeAction = Prettify<
-	DeleteFileNodeAction | DeleteSectionNodeAction | DeleteScrollNodeAction
->;
 
 // --- Change Name
 
@@ -97,10 +142,6 @@ export type RenameScrollNodeAction = {
 	targetLocator: ScrollNodeLocator;
 	newNodeName: NodeName;
 };
-
-export type RenameNodeAction = Prettify<
-	RenameFileNodeAction | RenameSectionNodeAction | RenameScrollNodeAction
->;
 
 // --- Move
 
@@ -131,33 +172,6 @@ export type MoveScrollNodeAction = {
 	observedVaultSplitPath: SplitPathToMdFile;
 };
 
-/**
- * MoveNodeAction represents a semantic move of an existing tree node
- * to a different parent section.
- *
- * Important distinction:
- * - `target` / `newParent` are **canonical tree locators** and are used
- *   to mutate the LibraryTree (preserve node identity, status, subtree).
- *   `newParent` and it's chain might not exist, but it's locator is canonical.
- * - `target` exists in the tree (otherwise it would be a CreateNodeAction)
- * - `observedVaultSplitPath` is the **observed vault location**
- *   of the node *after the user operation*, and may be non-canonical
- *   (wrong suffixes, wrong folder, etc.).
- *
- * The observed vault split path is **not** used to locate the node in the tree.
- * It exists solely so the Librarian can generate correct healing
- * `VaultAction.rename(from, to)` calls, where `from` must match the
- * actual filesystem state.
- *
- * This separation allows:
- * - enforcing the filename ⇄ path invariant both ways,
- * - preserving node identity and status in the tree,
- * - handling user renames/moves that temporarily violate canonical naming.
- */
-export type MoveNodeAction = Prettify<
-	MoveFileNodeAction | MoveSectionNodeAction | MoveScrollNodeAction
->;
-
 // --- Change Status
 
 export type ChangeFileNodeStatusAction = {
@@ -180,17 +194,3 @@ export type ChangeSectionNodeStatusAction = {
 	 */
 	newStatus: TreeNodeStatus;
 };
-
-export type ChangeNodeStatusAction = Prettify<
-	| ChangeFileNodeStatusAction
-	| ChangeScrollNodeStatusAction
-	| ChangeSectionNodeStatusAction
->;
-
-export type TreeAction = Prettify<
-	| CreateTreeLeafAction
-	| DeleteNodeAction
-	| RenameNodeAction
-	| MoveNodeAction
-	| ChangeNodeStatusAction
->;

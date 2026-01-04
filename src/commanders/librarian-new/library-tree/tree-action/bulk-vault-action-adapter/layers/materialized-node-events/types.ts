@@ -17,6 +17,7 @@ import type {
 	CanonicalSplitPathToMdFile,
 } from "../../../utils/canonical-split-path-utils/types";
 import type {
+	SplitPathInsideLibrary,
 	SplitPathToFileInsideLibrary,
 	SplitPathToFolderInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
@@ -163,7 +164,7 @@ type CanonicalForObserved<SP> = SP extends SplitPathToFolderInsideLibrary
 			? CanonicalSplitPathToFile
 			: never;
 
-export type CanonicalSplitPathToTarget<E extends MaterializedNodeEvent> =
+export type CanonicalSplitPathToDestination<E extends MaterializedNodeEvent> =
 	CanonicalForObserved<TargetObservedSplitPath<E>>;
 
 type LocatorForObserved<SP> = SP extends SplitPathToFolderInsideLibrary
@@ -174,5 +175,9 @@ type LocatorForObserved<SP> = SP extends SplitPathToFolderInsideLibrary
 			? FileNodeLocator
 			: never;
 
-export type TargetTreeNodeLocator<E extends MaterializedNodeEvent> =
+export type TreeNodeLocatorForEvent<E extends MaterializedNodeEvent> =
 	LocatorForObserved<TargetObservedSplitPath<E>>;
+
+export type TreeNodeLocatorForLibraryScopedSplitPath<
+	SP extends SplitPathInsideLibrary,
+> = LocatorForObserved<SP>;

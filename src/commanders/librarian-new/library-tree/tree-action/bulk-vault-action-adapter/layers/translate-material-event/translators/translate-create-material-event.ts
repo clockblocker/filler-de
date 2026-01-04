@@ -4,14 +4,14 @@ import {
 	TreeActionType,
 } from "../../../../types/tree-action";
 import type { CreateLeafNodeMaterializedEvent } from "../../materialized-node-events/types";
-import { tryMakeTargetLocator } from "./helpers/locator";
+import { tryMakeDestinationLocatorFromEvent } from "./helpers/locator";
 
 export function traslateCreateMaterializedEvent(
 	ev: CreateLeafNodeMaterializedEvent,
 ): CreateTreeLeafAction[] {
 	const out: CreateTreeLeafAction[] = [];
 
-	const targetRes = tryMakeTargetLocator(ev);
+	const targetRes = tryMakeDestinationLocatorFromEvent(ev);
 	const observedVaultSplitPath = ev.splitPath;
 
 	if (targetRes.isErr()) return out;

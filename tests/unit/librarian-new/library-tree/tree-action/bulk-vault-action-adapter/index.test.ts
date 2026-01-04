@@ -194,7 +194,7 @@ describe("buildTreeActions", () => {
 	describe("B) Delete mapping", () => {
 		it("FileDeleted inside => Delete", () => {
 			const bulkEvent = bulk({
-				roots: [evFileDeleted(spMdFile(["Library", "Section"], "Note"))],
+				roots: [evFileDeleted(spMdFile(["Library", "Section"], "Note-Section"))],
 			});
 
 			const actions = buildTreeActions(bulkEvent);
@@ -226,7 +226,7 @@ describe("buildTreeActions", () => {
 			const bulkEvent = bulk({
 				events: [
 					evFileRenamed(
-						spMdFile(["Library", "A"], "x"),
+						spMdFile(["Library", "A"], "x-A"),
 						spMdFile(["Inbox"], "x"),
 					),
 				],
@@ -259,9 +259,10 @@ describe("buildTreeActions", () => {
 			const action = actions[0];
 			if (!action) throw new Error("Expected action");
 			expect(action.actionType).toBe(TreeActionType.Rename);
-			// targetLocator is based on "to" path, so nodeName is "pies"
-			expect(getNodeName(action.targetLocator)).toBe("pies");
+			// targetLocator is based on "from" path (existing node)
+			expect(getNodeName(action.targetLocator)).toBe("pie");
 			if (action.actionType === TreeActionType.Rename) {
+				// newNodeName is from destination (to) path
 				expect(action.newNodeName).toBe("pies");
 			}
 		});
@@ -282,11 +283,13 @@ describe("buildTreeActions", () => {
 			const action = actions[0];
 			if (!action) throw new Error("Expected action");
 			expect(action.actionType).toBe(TreeActionType.Move);
+			// targetLocator is based on "from" path (existing node)
+			expect(getNodeName(action.targetLocator)).toBe("pie");
 			if (action.actionType === TreeActionType.Move) {
-				// Suffix parsing of "sweet-pie" results in newNodeName based on targetLocator
-				// The actual parsing behavior depends on the suffix delimiter logic
-				expect(typeof action.newNodeName).toBe("string");
-				expect(action.newNodeName.length).toBeGreaterThan(0);
+				// newNodeName and newParentLocator are from destination (to) path
+				// "sweet-pie" parses to nodeName="pie", parent="sweet"
+				expect(action.newNodeName).toBe("pie");
+				expect(getNodeName(action.newParentLocator)).toBe("sweet");
 			}
 		});
 
@@ -317,8 +320,8 @@ describe("buildTreeActions", () => {
 			const bulkEvent = bulk({
 				roots: [
 					evFileRenamed(
-						spMdFile(["Library"], "pie"),
-						spMdFile(["Library"], "pies"),
+						spMdFile([], "pie"),
+						spMdFile([], "pies"),
 					),
 				],
 			});
@@ -329,9 +332,10 @@ describe("buildTreeActions", () => {
 			const action = actions[0];
 			if (!action) throw new Error("Expected action");
 			expect(action.actionType).toBe(TreeActionType.Rename);
-			// targetLocator is based on "to" path, so nodeName is "pies"
-			expect(getNodeName(action.targetLocator)).toBe("pies");
+			// targetLocator is based on "from" path (existing node)
+			expect(getNodeName(action.targetLocator)).toBe("pie");
 			if (action.actionType === TreeActionType.Rename) {
+				// newNodeName is from destination (to) path
 				expect(action.newNodeName).toBe("pies");
 			}
 		});
@@ -340,8 +344,8 @@ describe("buildTreeActions", () => {
 			const bulkEvent = bulk({
 				roots: [
 					evFileRenamed(
-						spMdFile(["Library"], "pie"),
-						spMdFile(["Library"], "sweet-pie"),
+						spMdFile([], "pie"),
+						spMdFile([], "sweet-pie"),
 					),
 				],
 			});
@@ -352,11 +356,13 @@ describe("buildTreeActions", () => {
 			const action = actions[0];
 			if (!action) throw new Error("Expected action");
 			expect(action.actionType).toBe(TreeActionType.Move);
+			// targetLocator is based on "from" path (existing node)
+			expect(getNodeName(action.targetLocator)).toBe("pie");
 			if (action.actionType === TreeActionType.Move) {
-				// Suffix parsing of "sweet-pie" results in newNodeName based on targetLocator
-				// The actual parsing behavior depends on the suffix delimiter logic
-				expect(typeof action.newNodeName).toBe("string");
-				expect(action.newNodeName.length).toBeGreaterThan(0);
+				// newNodeName and newParentLocator are from destination (to) path
+				// "sweet-pie" parses to nodeName="pie", parent="sweet"
+				expect(action.newNodeName).toBe("pie");
+				expect(getNodeName(action.newParentLocator)).toBe("sweet");
 			}
 		});
 
@@ -364,8 +370,8 @@ describe("buildTreeActions", () => {
 			const bulkEvent = bulk({
 				roots: [
 					evFileRenamed(
-						spMdFile(["Library"], "pie"),
-						spMdFile(["Library", "recipe"], "pie"),
+						spMdFile([], "pie"),
+						spMdFile(["recipe"], "pie-recipe"),
 					),
 				],
 			});

@@ -47,7 +47,7 @@ export function inferCreatePolicy(
 ): ChangePolicy {
 	// direct child of "Library/" => NameKing
 	// nested under "Library/..." => PathKing
-	return splitPath.pathParts.length === 0
+	return splitPath.pathParts.length === 1
 		? ChangePolicy.NameKing
 		: ChangePolicy.PathKing;
 }

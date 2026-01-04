@@ -3,6 +3,7 @@ import {
 	type NodeName,
 	NodeNameSchema,
 } from "../../../../../../../types/schemas/node-name";
+import { tryParseCanonicalSplitPath } from "../../../../../utils/canonical-split-path-utils/try-parse-canonical-split-path";
 import type { CanonicalSplitPath } from "../../../../../utils/canonical-split-path-utils/types";
 import { makeLocatorFromLibraryScopedCanonicalSplitPath } from "../../../../../utils/make-locator";
 import {
@@ -11,10 +12,11 @@ import {
 } from "../../../../../utils/suffix-utils/suffix-utils";
 import type { SplitPathInsideLibrary } from "../../../library-scope/types/inside-library-split-paths";
 import {
-	type CanonicalSplitPathToTarget,
+	type CanonicalSplitPathToDestination,
 	MaterializedEventType,
 	type MaterializedNodeEvent,
-	type TargetTreeNodeLocator,
+	type TreeNodeLocatorForEvent,
+	type TreeNodeLocatorForLibraryScopedSplitPath,
 } from "../../../materialized-node-events/types";
 import {
 	ChangePolicy,
@@ -22,32 +24,52 @@ import {
 	RenameIntent,
 } from "../../policy-and-intent";
 
-export function tryMakeTargetLocator<E extends MaterializedNodeEvent>(
-	ev: E,
-): Result<TargetTreeNodeLocator<E>, string> {
-	const cspRes = tryMakeCanonicalSplitPathToTarget(ev);
+export function tryMakeDestinationLocatorFromEvent<
+	E extends MaterializedNodeEvent,
+>(ev: E): Result<TreeNodeLocatorForEvent<E>, string> {
+	const cspRes = tryMakeCanonicalSplitPathToDestination(ev);
 	if (cspRes.isErr()) return err(cspRes.error);
 
 	const locator = makeLocatorFromLibraryScopedCanonicalSplitPath(
 		cspRes.value,
 	);
 
-	return ok(locator as TargetTreeNodeLocator<E>);
+	return ok(locator as TreeNodeLocatorForEvent<E>);
 }
 
-const tryMakeCanonicalSplitPathToTarget = <E extends MaterializedNodeEvent>(
+export function tryMakeTargetLocatorFromLibraryScopedSplitPath<
+	SP extends SplitPathInsideLibrary,
+>(sp: SP): Result<TreeNodeLocatorForLibraryScopedSplitPath<SP>, string> {
+	const cspRes = tryParseCanonicalSplitPath(sp);
+	if (cspRes.isErr()) return err(cspRes.error);
+
+	const locator = makeLocatorFromLibraryScopedCanonicalSplitPath(
+		cspRes.value,
+	);
+
+	return ok(locator as TreeNodeLocatorForLibraryScopedSplitPath<SP>);
+}
+
+const tryMakeCanonicalSplitPathToDestination = <
+	E extends MaterializedNodeEvent,
+>(
 	ev: E,
-): Result<CanonicalSplitPathToTarget<E>, string> => {
-	const sp = extractSplitPathToTarget(ev) as SplitPathInsideLibrary;
+): Result<CanonicalSplitPathToDestination<E>, string> => {
+	if (ev.kind === MaterializedEventType.Delete) {
+		const r = tryParseCanonicalSplitPath(ev.splitPath);
+		return r as Result<CanonicalSplitPathToDestination<E>, string>;
+	}
+
+	const sp = extractSplitPathToDestination(ev) as SplitPathInsideLibrary;
 	const { policy, intent } = inferPolicyAndIntent(
 		ev as MaterializedNodeEvent,
 	);
 
-	const r = tryCanonicalizeSplitPathToTarget(sp, policy, intent);
-	return r as Result<CanonicalSplitPathToTarget<E>, string>;
+	const r = tryCanonicalizeSplitPathToDestination(sp, policy, intent);
+	return r as Result<CanonicalSplitPathToDestination<E>, string>;
 };
 
-const extractSplitPathToTarget = (e: MaterializedNodeEvent) => {
+const extractSplitPathToDestination = (e: MaterializedNodeEvent) => {
 	switch (e.kind) {
 		case MaterializedEventType.Rename:
 			return e.to;
@@ -57,7 +79,7 @@ const extractSplitPathToTarget = (e: MaterializedNodeEvent) => {
 	}
 };
 
-const tryCanonicalizeSplitPathToTarget = (
+const tryCanonicalizeSplitPathToDestination = (
 	sp: SplitPathInsideLibrary,
 	policy: ChangePolicy,
 	intent?: RenameIntent, // undefined = not rename

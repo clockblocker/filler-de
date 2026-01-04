@@ -4,14 +4,14 @@ import {
 	TreeActionType,
 } from "../../../../types/tree-action";
 import type { DeleteTreeNodeMaterializedEvent } from "../../materialized-node-events/types";
-import { tryMakeTargetLocator } from "./helpers/locator";
+import { tryMakeDestinationLocatorFromEvent } from "./helpers/locator";
 
 export function traslateDeleteMaterializedEvent(
 	ev: DeleteTreeNodeMaterializedEvent,
 ): DeleteNodeAction[] {
 	const out: DeleteNodeAction[] = [];
 
-	const targetRes = tryMakeTargetLocator(ev);
+	const targetRes = tryMakeDestinationLocatorFromEvent(ev);
 	if (targetRes.isErr()) return out;
 
 	const targetLocator = targetRes.value;

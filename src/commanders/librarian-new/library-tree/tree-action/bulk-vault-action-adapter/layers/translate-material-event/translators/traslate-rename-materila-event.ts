@@ -6,7 +6,10 @@ import {
 import { getNodeName, getParentLocator } from "../../../../utils/locator-utils";
 import type { RenameTreeNodeNodeMaterializedEvent } from "../../materialized-node-events/types";
 import { inferPolicyAndIntent, RenameIntent } from "../policy-and-intent";
-import { tryMakeTargetLocator } from "./helpers/locator";
+import {
+	tryMakeDestinationLocatorFromEvent,
+	tryMakeTargetLocatorFromLibraryScopedSplitPath,
+} from "./helpers/locator";
 
 export function traslateRenameMaterializedEvent(
 	ev: RenameTreeNodeNodeMaterializedEvent,
@@ -15,10 +18,18 @@ export function traslateRenameMaterializedEvent(
 
 	const { intent } = inferPolicyAndIntent(ev);
 
-	const targetRes = tryMakeTargetLocator(ev);
+	// 1) target = current node location in tree (FROM)
+	const targetRes = tryMakeTargetLocatorFromLibraryScopedSplitPath(ev.from);
 	if (targetRes.isErr()) return out;
 	const targetLocator = targetRes.value;
-	const newNodeName = getNodeName(targetLocator);
+
+	// 2) destination canonical (TO + policy/intent)
+	const destinationRes = tryMakeDestinationLocatorFromEvent(ev);
+	if (destinationRes.isErr()) return out;
+	const destinationLocator = destinationRes.value;
+
+	const newNodeName = getNodeName(destinationLocator);
+	const newParentLocator = getParentLocator(destinationLocator);
 
 	if (intent === RenameIntent.Rename) {
 		out.push({
@@ -29,14 +40,11 @@ export function traslateRenameMaterializedEvent(
 		return out;
 	}
 
-	// MOVE intent
-	const newParentLocator = getParentLocator(targetLocator);
-
 	out.push({
 		actionType: TreeActionType.Move,
 		newNodeName,
 		newParentLocator,
-		observedVaultSplitPath: ev.to,
+		observedVaultSplitPath: ev.to, // observed after user op
 		targetLocator,
 	} as MoveNodeAction);
 

@@ -5,7 +5,7 @@ import {
 } from "../materialized-node-events";
 import { traslateCreateMaterializedEvent } from "./translators/translate-create-material-event";
 import { traslateDeleteMaterializedEvent } from "./translators/translate-delete-material-event";
-import { traslateRenameMaterializedEvent } from "./translators/traslate-move-actions";
+import { traslateRenameMaterializedEvent } from "./translators/traslate-rename-materila-event";
 
 /**
  * Converts `MaterializedNodeEvent[]` into semantic `TreeAction[]`.

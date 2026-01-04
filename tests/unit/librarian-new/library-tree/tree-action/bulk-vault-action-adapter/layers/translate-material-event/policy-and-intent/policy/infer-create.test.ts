@@ -1,0 +1,63 @@
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { inferCreatePolicy } from "../../../../../../../../../../src/commanders/librarian-new/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/infer-create";
+import { ChangePolicy } from "../../../../../../../../../../src/commanders/librarian-new/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/types";
+import * as globalState from "../../../../../../../../../../src/global-state/global-state";
+import type { ParsedUserSettings } from "../../../../../../../../../../src/global-state/parsed-settings";
+import { SplitPathType } from "../../../../../../../../../../src/obsidian-vault-action-manager/types/split-path";
+
+const defaultSettings: ParsedUserSettings = {
+	apiProvider: "google",
+	googleApiKey: "",
+	maxSectionDepth: 6,
+	showScrollsInCodexesForDepth: 0,
+	splitPathToLibraryRoot: {
+		basename: "Library",
+		pathParts: [],
+		type: SplitPathType.Folder,
+	},
+	suffixDelimiter: "-",
+};
+
+let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
+
+beforeEach(() => {
+	getParsedUserSettingsSpy = spyOn(globalState, "getParsedUserSettings").mockReturnValue({
+		...defaultSettings,
+	});
+});
+
+afterEach(() => {
+	getParsedUserSettingsSpy.mockRestore();
+});
+
+// Helper: create library-scoped split paths
+const spMdFile = (
+	pathParts: string[],
+	basename: string,
+): { basename: string; pathParts: string[]; type: typeof SplitPathType.MdFile; extension: "md" } => ({
+	basename,
+	extension: "md",
+	pathParts,
+	type: SplitPathType.MdFile,
+});
+
+describe("inferCreatePolicy", () => {
+	it("spMdFile([\"Library\"], \"Note-Child-Parent\") => NameKing", () => {
+		const splitPath = spMdFile(["Library"], "Note-Child-Parent");
+		const policy = inferCreatePolicy(splitPath);
+		expect(policy).toBe(ChangePolicy.NameKing);
+	});
+
+	it("spMdFile([\"Library\", \"Parent\"], \"Note\") => PathKing (nested)", () => {
+		const splitPath = spMdFile(["Library", "Parent"], "Note");
+		const policy = inferCreatePolicy(splitPath);
+		expect(policy).toBe(ChangePolicy.PathKing);
+	});
+
+	it("spMdFile([\"Library\", \"Parent\", \"Child\"], \"Note\") => PathKing (deeply nested)", () => {
+		const splitPath = spMdFile(["Library", "Parent", "Child"], "Note");
+		const policy = inferCreatePolicy(splitPath);
+		expect(policy).toBe(ChangePolicy.PathKing);
+	});
+});
+
