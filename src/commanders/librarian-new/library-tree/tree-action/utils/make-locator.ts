@@ -12,24 +12,24 @@ import type {
 	CanonicalSplitPathToFileInsideLibrary,
 	CanonicalSplitPathToFolderInsideLibrary,
 	CanonicalSplitPathToMdFileInsideLibrary,
-} from "./canonical-split-path-utils/types";
+} from "./canonical-naming/types";
 
-export function makeLocatorFromLibraryScopedCanonicalSplitPath(
+export function makeLocatorFromCanonicalSplitPathInsideLibrary(
 	sp: CanonicalSplitPathToFileInsideLibrary,
 ): FileNodeLocator;
-export function makeLocatorFromLibraryScopedCanonicalSplitPath(
+export function makeLocatorFromCanonicalSplitPathInsideLibrary(
 	sp: CanonicalSplitPathToMdFileInsideLibrary,
 ): ScrollNodeLocator;
-export function makeLocatorFromLibraryScopedCanonicalSplitPath(
+export function makeLocatorFromCanonicalSplitPathInsideLibrary(
 	sp: CanonicalSplitPathToFolderInsideLibrary,
 ): SectionNodeLocator;
-export function makeLocatorFromLibraryScopedCanonicalSplitPath(
+export function makeLocatorFromCanonicalSplitPathInsideLibrary(
 	sp: CanonicalSplitPathInsideLibrary,
 ): TreeNodeLocator;
-export function makeLocatorFromLibraryScopedCanonicalSplitPath(
+export function makeLocatorFromCanonicalSplitPathInsideLibrary(
 	sp: CanonicalSplitPathInsideLibrary,
 ): TreeNodeLocator {
-	const segmentIdChainToParent = sp.sectionNames.map((nodeName) =>
+	const segmentIdChainToParent = sp.pathParts.map((nodeName) =>
 		makeNodeSegmentId({
 			children: {},
 			nodeName,
@@ -42,7 +42,7 @@ export function makeLocatorFromLibraryScopedCanonicalSplitPath(
 			return {
 				segmentId: makeNodeSegmentId({
 					extension: sp.extension,
-					nodeName: sp.nodeName,
+					nodeName: sp.separatedSuffixedBasename.coreName,
 					status: "Unknown",
 					type: TreeNodeType.File,
 				}),
@@ -55,7 +55,7 @@ export function makeLocatorFromLibraryScopedCanonicalSplitPath(
 			return {
 				segmentId: makeNodeSegmentId({
 					extension: "md",
-					nodeName: sp.nodeName,
+					nodeName: sp.separatedSuffixedBasename.coreName,
 					status: "Unknown",
 					type: TreeNodeType.Scroll,
 				}),
@@ -68,7 +68,7 @@ export function makeLocatorFromLibraryScopedCanonicalSplitPath(
 			return {
 				segmentId: makeNodeSegmentId({
 					children: {},
-					nodeName: sp.nodeName,
+					nodeName: sp.separatedSuffixedBasename.coreName,
 					type: TreeNodeType.Section,
 				}),
 				segmentIdChainToParent,

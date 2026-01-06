@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { tryParseCanonicalSplitPath } from "../../../../../../../src/commanders/librarian-new/library-tree/tree-action/utils/canonical-split-path-utils/try-parse-canonical-split-path";
+import { tryParseCanonicalSplitPathInsideLibrary } from "../../../../../../../src/commanders/librarian-new/library-tree/tree-action/utils/canonical-naming/try-parse-as-canonical-split-path";
 import * as globalState from "../../../../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../../../../src/global-state/parsed-settings";
 import type {
@@ -43,7 +43,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				type: SplitPathType.Folder,
 			};
 
-			const result = tryParseCanonicalSplitPath(sp);
+			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
@@ -60,7 +60,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				type: SplitPathType.Folder,
 			};
 
-			const result = tryParseCanonicalSplitPath(sp);
+			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
@@ -77,7 +77,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				type: SplitPathType.Folder,
 			};
 
-			const result = tryParseCanonicalSplitPath(sp);
+			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
 
 			expect(result.isErr()).toBe(true);
 		});
@@ -89,7 +89,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				type: SplitPathType.Folder,
 			};
 
-			const result = tryParseCanonicalSplitPath(sp);
+			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
 
 			expect(result.isErr()).toBe(true);
 		});
@@ -101,7 +101,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				type: SplitPathType.Folder,
 			};
 
-			const result = tryParseCanonicalSplitPath(sp);
+			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
 
 			expect(result.isErr()).toBe(true);
 		});
@@ -116,7 +116,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				type: SplitPathType.File,
 			};
 
-			const result = tryParseCanonicalSplitPath(sp);
+			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk() && result.value.type === SplitPathType.File) {
@@ -135,7 +135,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				type: SplitPathType.File,
 			};
 
-			const result = tryParseCanonicalSplitPath(sp);
+			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
@@ -153,7 +153,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				type: SplitPathType.File,
 			};
 
-			const result = tryParseCanonicalSplitPath(sp);
+			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
 
 			expect(result.isErr()).toBe(true);
 			if (result.isErr()) {
@@ -169,7 +169,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				type: SplitPathType.File,
 			};
 
-			const result = tryParseCanonicalSplitPath(sp);
+			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
 
 			expect(result.isErr()).toBe(true);
 		});
@@ -182,7 +182,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				type: SplitPathType.File,
 			};
 
-			const result = tryParseCanonicalSplitPath(sp);
+			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
 
 			expect(result.isErr()).toBe(true);
 		});
@@ -195,7 +195,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				type: SplitPathType.File,
 			};
 
-			const result = tryParseCanonicalSplitPath(sp);
+			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
 
 			expect(result.isErr()).toBe(true);
 		});
@@ -210,7 +210,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				type: SplitPathType.MdFile,
 			};
 
-			const result = tryParseCanonicalSplitPath(sp);
+			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk() && result.value.type === SplitPathType.MdFile) {
@@ -229,7 +229,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				type: SplitPathType.MdFile,
 			};
 
-			const result = tryParseCanonicalSplitPath(sp);
+			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
@@ -247,7 +247,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				type: SplitPathType.MdFile,
 			};
 
-			const result = tryParseCanonicalSplitPath(sp);
+			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
 
 			expect(result.isErr()).toBe(true);
 		});
@@ -265,7 +265,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				type: SplitPathType.MdFile,
 			};
 
-			const result = tryParseCanonicalSplitPath(sp);
+			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {

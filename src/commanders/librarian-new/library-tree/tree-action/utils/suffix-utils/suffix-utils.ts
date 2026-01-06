@@ -8,16 +8,14 @@ import {
 } from "../../../../types/schemas/node-name";
 
 export type SeparatedSuffixedBasename = {
-	nodeName: NodeName;
+	coreName: NodeName;
 	suffixParts: NodeName[];
 };
 
 export const tryMakeSeparatedSuffixedBasename = ({
 	basename,
 }: SplitPath): Result<SeparatedSuffixedBasename, string> => {
-	const { suffixDelimiter } = getParsedUserSettings();
-
-	const parts = basename.split(suffixDelimiter);
+	const parts = splitBySuffixDelimiter(basename);
 	const [rawNodeName, ...rawSuffixParts] = parts;
 
 	if (rawNodeName == null) {
@@ -39,17 +37,22 @@ export const tryMakeSeparatedSuffixedBasename = ({
 	}
 
 	return ok({
-		nodeName: nodeNameRes.data,
+		coreName: nodeNameRes.data,
 		suffixParts,
 	});
 };
 
+export const splitBySuffixDelimiter = (basename: string): NodeName[] => {
+	const { suffixDelimiter } = getParsedUserSettings();
+	return basename.split(suffixDelimiter);
+};
+
 export const makeJoinedSuffixedBasename = ({
-	nodeName,
+	coreName,
 	suffixParts,
 }: SeparatedSuffixedBasename): SplitPath["basename"] => {
 	const { suffixDelimiter } = getParsedUserSettings();
-	return [nodeName, ...suffixParts].join(suffixDelimiter);
+	return [coreName, ...suffixParts].join(suffixDelimiter);
 };
 
 export const makePathPartsFromSuffixParts = ({

@@ -15,7 +15,7 @@ import type {
 	CanonicalSplitPathToFileInsideLibrary,
 	CanonicalSplitPathToFolderInsideLibrary,
 	CanonicalSplitPathToMdFileInsideLibrary,
-} from "../../../utils/canonical-split-path-utils/types";
+} from "../../../utils/canonical-naming/types";
 import type {
 	SplitPathInsideLibrary,
 	SplitPathToFileInsideLibrary,

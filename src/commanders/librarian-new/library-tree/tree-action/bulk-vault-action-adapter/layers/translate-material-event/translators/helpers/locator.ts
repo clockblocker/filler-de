@@ -3,9 +3,9 @@ import {
 	type NodeName,
 	NodeNameSchema,
 } from "../../../../../../../types/schemas/node-name";
-import { tryParseCanonicalSplitPath } from "../../../../../utils/canonical-split-path-utils/try-parse-canonical-split-path";
-import type { CanonicalSplitPathInsideLibrary } from "../../../../../utils/canonical-split-path-utils/types";
-import { makeLocatorFromLibraryScopedCanonicalSplitPath } from "../../../../../utils/make-locator";
+import { tryParseCanonicalSplitPathInsideLibrary } from "../../../../../utils/canonical-naming/try-parse-as-canonical-split-path";
+import type { CanonicalSplitPathInsideLibrary } from "../../../../../utils/canonical-naming/types";
+import { makeLocatorFromCanonicalSplitPathInsideLibrary } from "../../../../../utils/make-locator";
 import {
 	makePathPartsFromSuffixParts,
 	tryMakeSeparatedSuffixedBasename,
@@ -30,7 +30,7 @@ export function tryMakeDestinationLocatorFromEvent<
 	const cspRes = tryMakeCanonicalSplitPathToDestination(ev);
 	if (cspRes.isErr()) return err(cspRes.error);
 
-	const locator = makeLocatorFromLibraryScopedCanonicalSplitPath(
+	const locator = makeLocatorFromCanonicalSplitPathInsideLibrary(
 		cspRes.value,
 	);
 
@@ -40,10 +40,10 @@ export function tryMakeDestinationLocatorFromEvent<
 export function tryMakeTargetLocatorFromLibraryScopedSplitPath<
 	SP extends SplitPathInsideLibrary,
 >(sp: SP): Result<TreeNodeLocatorForLibraryScopedSplitPath<SP>, string> {
-	const cspRes = tryParseCanonicalSplitPath(sp);
+	const cspRes = tryParseCanonicalSplitPathInsideLibrary(sp);
 	if (cspRes.isErr()) return err(cspRes.error);
 
-	const locator = makeLocatorFromLibraryScopedCanonicalSplitPath(
+	const locator = makeLocatorFromCanonicalSplitPathInsideLibrary(
 		cspRes.value,
 	);
 
@@ -56,7 +56,7 @@ const tryMakeCanonicalSplitPathToDestination = <
 	ev: E,
 ): Result<CanonicalSplitPathToDestination<E>, string> => {
 	if (ev.kind === MaterializedEventType.Delete) {
-		const r = tryParseCanonicalSplitPath(ev.splitPath);
+		const r = tryParseCanonicalSplitPathInsideLibrary(ev.splitPath);
 		return r as Result<CanonicalSplitPathToDestination<E>, string>;
 	}
 
@@ -99,7 +99,7 @@ export const tryCanonicalizeSplitPathToDestination = (
 			sepRes.value.suffixParts.length > 0
 		) {
 			// First segment becomes first parent section
-			const firstSection = sepRes.value.nodeName;
+			const firstSection = sepRes.value.coreName;
 			const suffixParts = sepRes.value.suffixParts;
 
 			// Last suffix part becomes node name
@@ -125,12 +125,14 @@ export const tryCanonicalizeSplitPathToDestination = (
 			// Combine: existing pathParts (including Library) + first section + extra sections
 			return ok({
 				...sp,
-				nodeName: lastSuffixPart,
-				sectionNames: [
-					...sectionNamesFromPath,
-					firstSection,
-					...extraSections,
-				],
+				separatedSuffixedBasename: {
+					coreName: lastSuffixPart,
+					suffixParts: [
+						...sectionNamesFromPath,
+						firstSection,
+						...extraSections,
+					],
+				},
 			});
 		}
 
@@ -141,8 +143,11 @@ export const tryCanonicalizeSplitPathToDestination = (
 
 		return ok({
 			...sp,
-			nodeName: sepRes.value.nodeName,
 			sectionNames,
+			separatedSuffixedBasename: {
+				coreName: sepRes.value.coreName,
+				suffixParts: sectionNames,
+			},
 		});
 	}
 
@@ -159,7 +164,9 @@ export const tryCanonicalizeSplitPathToDestination = (
 
 	return ok({
 		...sp,
-		nodeName: sepRes.value.nodeName,
-		sectionNames,
+		separatedSuffixedBasename: {
+			coreName: sepRes.value.coreName,
+			suffixParts: sectionNames,
+		},
 	});
 };
