@@ -2,38 +2,41 @@ import { err, ok, type Result } from "neverthrow";
 import { getParsedUserSettings } from "../../../../../../global-state/global-state";
 import {
 	type SplitPath,
-	type SplitPathToFile,
-	type SplitPathToFolder,
-	type SplitPathToMdFile,
 	SplitPathType,
 } from "../../../../../../obsidian-vault-action-manager/types/split-path";
 import {
 	type NodeName,
 	NodeNameSchema,
 } from "../../../../types/schemas/node-name";
+import type {
+	SplitPathInsideLibrary,
+	SplitPathToFileInsideLibrary,
+	SplitPathToFolderInsideLibrary,
+	SplitPathToMdFileInsideLibrary,
+} from "../../bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
 import { tryMakeSeparatedSuffixedBasename } from "../suffix-utils/suffix-utils";
 import type {
-	CanonicalSplitPath,
-	CanonicalSplitPathToFile,
-	CanonicalSplitPathToFolder,
-	CanonicalSplitPathToMdFile,
+	CanonicalSplitPathInsideLibrary,
+	CanonicalSplitPathToFileInsideLibrary,
+	CanonicalSplitPathToFolderInsideLibrary,
+	CanonicalSplitPathToMdFileInsideLibrary,
 } from "./types";
 
 export function tryParseCanonicalSplitPath(
-	sp: SplitPath,
-): Result<CanonicalSplitPath, string>;
+	sp: SplitPathToFolderInsideLibrary,
+): Result<CanonicalSplitPathToFolderInsideLibrary, string>;
 export function tryParseCanonicalSplitPath(
-	sp: SplitPathToFolder,
-): Result<CanonicalSplitPathToFolder, string>;
+	sp: SplitPathToFileInsideLibrary,
+): Result<CanonicalSplitPathToFileInsideLibrary, string>;
 export function tryParseCanonicalSplitPath(
-	sp: SplitPathToFile,
-): Result<CanonicalSplitPathToFile, string>;
+	sp: SplitPathToMdFileInsideLibrary,
+): Result<CanonicalSplitPathToMdFileInsideLibrary, string>;
 export function tryParseCanonicalSplitPath(
-	sp: SplitPathToMdFile,
-): Result<CanonicalSplitPathToMdFile, string>;
+	sp: SplitPathInsideLibrary,
+): Result<CanonicalSplitPathInsideLibrary, string>;
 export function tryParseCanonicalSplitPath(
-	sp: SplitPath,
-): Result<CanonicalSplitPath, string> {
+	sp: SplitPathInsideLibrary,
+): Result<CanonicalSplitPathInsideLibrary, string> {
 	switch (sp.type) {
 		case SplitPathType.File:
 			return tryParseCanonicalSplitPathToFile(sp);
@@ -56,14 +59,18 @@ export function tryParseCanonicalSplitPath(
  * If valid, returns a canonical file split path with normalized `NodeName`s.
  */
 function tryParseCanonicalSplitPathToFile(
-	sp: SplitPathToMdFile,
-): Result<CanonicalSplitPathToMdFile, string>;
+	sp: SplitPathToMdFileInsideLibrary,
+): Result<CanonicalSplitPathToMdFileInsideLibrary, string>;
 function tryParseCanonicalSplitPathToFile(
-	sp: SplitPathToFile,
-): Result<CanonicalSplitPathToFile, string>;
+	sp: SplitPathToFileInsideLibrary,
+): Result<CanonicalSplitPathToFileInsideLibrary, string>;
 function tryParseCanonicalSplitPathToFile(
-	sp: SplitPathToFile | SplitPathToMdFile,
-): Result<CanonicalSplitPathToFile | CanonicalSplitPathToMdFile, string> {
+	sp: SplitPathToFileInsideLibrary | SplitPathToMdFileInsideLibrary,
+): Result<
+	| CanonicalSplitPathToFileInsideLibrary
+	| CanonicalSplitPathToMdFileInsideLibrary,
+	string
+> {
 	// parse nodeName + suffixParts from basename
 	const sepRes = tryMakeSeparatedSuffixedBasename(sp);
 	if (sepRes.isErr()) return err(sepRes.error);
@@ -106,8 +113,8 @@ function tryParseCanonicalSplitPathToFile(
  * If valid, returns a canonical folder split path with normalized `NodeName`s.
  */
 function tryParseCanonicalSplitPathToFolder(
-	sp: SplitPathToFolder,
-): Result<CanonicalSplitPathToFolder, string> {
+	sp: SplitPathToFolderInsideLibrary,
+): Result<CanonicalSplitPathToFolderInsideLibrary, string> {
 	const nodeNameRes = NodeNameSchema.safeParse(sp.basename);
 	if (!nodeNameRes.success) {
 		return err(
@@ -127,7 +134,7 @@ function tryParseCanonicalSplitPathToFolder(
 
 function tryParseSectionNamesFromPathParts(
 	pathParts: SplitPath["pathParts"],
-): Result<CanonicalSplitPath["sectionNames"], string> {
+): Result<CanonicalSplitPathInsideLibrary["sectionNames"], string> {
 	const sectionNames: NodeName[] = [];
 
 	for (const p of pathParts) {

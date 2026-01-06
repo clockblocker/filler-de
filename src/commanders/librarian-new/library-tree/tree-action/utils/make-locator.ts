@@ -1,4 +1,3 @@
-import { de } from "zod/v4/locales";
 import { SplitPathType } from "../../../../../obsidian-vault-action-manager/types/split-path";
 import { makeNodeSegmentId } from "../../tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import { TreeNodeType } from "../../tree-node/types/atoms";
@@ -9,26 +8,26 @@ import type {
 	TreeNodeLocator,
 } from "../types/target-chains";
 import type {
-	CanonicalSplitPath,
-	CanonicalSplitPathToFile,
-	CanonicalSplitPathToFolder,
-	CanonicalSplitPathToMdFile,
+	CanonicalSplitPathInsideLibrary,
+	CanonicalSplitPathToFileInsideLibrary,
+	CanonicalSplitPathToFolderInsideLibrary,
+	CanonicalSplitPathToMdFileInsideLibrary,
 } from "./canonical-split-path-utils/types";
 
 export function makeLocatorFromLibraryScopedCanonicalSplitPath(
-	sp: CanonicalSplitPathToFile,
+	sp: CanonicalSplitPathToFileInsideLibrary,
 ): FileNodeLocator;
 export function makeLocatorFromLibraryScopedCanonicalSplitPath(
-	sp: CanonicalSplitPathToMdFile,
+	sp: CanonicalSplitPathToMdFileInsideLibrary,
 ): ScrollNodeLocator;
 export function makeLocatorFromLibraryScopedCanonicalSplitPath(
-	sp: CanonicalSplitPathToFolder,
+	sp: CanonicalSplitPathToFolderInsideLibrary,
 ): SectionNodeLocator;
 export function makeLocatorFromLibraryScopedCanonicalSplitPath(
-	sp: CanonicalSplitPath,
+	sp: CanonicalSplitPathInsideLibrary,
 ): TreeNodeLocator;
 export function makeLocatorFromLibraryScopedCanonicalSplitPath(
-	sp: CanonicalSplitPath,
+	sp: CanonicalSplitPathInsideLibrary,
 ): TreeNodeLocator {
 	const segmentIdChainToParent = sp.sectionNames.map((nodeName) =>
 		makeNodeSegmentId({

@@ -4,7 +4,7 @@ import {
 	NodeNameSchema,
 } from "../../../../../../../types/schemas/node-name";
 import { tryParseCanonicalSplitPath } from "../../../../../utils/canonical-split-path-utils/try-parse-canonical-split-path";
-import type { CanonicalSplitPath } from "../../../../../utils/canonical-split-path-utils/types";
+import type { CanonicalSplitPathInsideLibrary } from "../../../../../utils/canonical-split-path-utils/types";
 import { makeLocatorFromLibraryScopedCanonicalSplitPath } from "../../../../../utils/make-locator";
 import {
 	makePathPartsFromSuffixParts,
@@ -83,7 +83,7 @@ export const tryCanonicalizeSplitPathToDestination = (
 	sp: SplitPathInsideLibrary,
 	policy: ChangePolicy,
 	intent?: RenameIntent, // undefined = not rename
-): Result<CanonicalSplitPath, string> => {
+): Result<CanonicalSplitPathInsideLibrary, string> => {
 	const effectivePolicy =
 		intent === RenameIntent.Rename ? ChangePolicy.PathKing : policy;
 

@@ -12,9 +12,9 @@ import type {
 	SectionNodeLocator,
 } from "../../../types/target-chains";
 import type {
-	CanonicalSplitPathToFile,
-	CanonicalSplitPathToFolder,
-	CanonicalSplitPathToMdFile,
+	CanonicalSplitPathToFileInsideLibrary,
+	CanonicalSplitPathToFolderInsideLibrary,
+	CanonicalSplitPathToMdFileInsideLibrary,
 } from "../../../utils/canonical-split-path-utils/types";
 import type {
 	SplitPathInsideLibrary,
@@ -157,11 +157,11 @@ type TargetObservedSplitPath<E extends MaterializedNodeEvent> = E extends {
 		: never;
 
 type CanonicalForObserved<SP> = SP extends SplitPathToFolderInsideLibrary
-	? CanonicalSplitPathToFolder
+	? CanonicalSplitPathToFolderInsideLibrary
 	: SP extends SplitPathToMdFileInsideLibrary
-		? CanonicalSplitPathToMdFile
+		? CanonicalSplitPathToMdFileInsideLibrary
 		: SP extends SplitPathToFileInsideLibrary
-			? CanonicalSplitPathToFile
+			? CanonicalSplitPathToFileInsideLibrary
 			: never;
 
 export type CanonicalSplitPathToDestination<E extends MaterializedNodeEvent> =

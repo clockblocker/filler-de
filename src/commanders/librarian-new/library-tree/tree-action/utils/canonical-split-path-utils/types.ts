@@ -1,13 +1,13 @@
 // { pathParts: NodeName[]; nodeName: NodeName }
 
-import type {
-	CommonSplitPath,
-	SplitPathToFile,
-	SplitPathToFolder,
-	SplitPathToMdFile,
-} from "../../../../../../obsidian-vault-action-manager/types/split-path";
+import type { CommonSplitPath } from "../../../../../../obsidian-vault-action-manager/types/split-path";
 import type { Prettify } from "../../../../../../types/helpers";
 import type { NodeName } from "../../../../types/schemas/node-name";
+import type {
+	SplitPathToFileInsideLibrary,
+	SplitPathToFolderInsideLibrary,
+	SplitPathToMdFileInsideLibrary,
+} from "../../bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
 
 export type MakeCanonical<SP extends CommonSplitPath> = Prettify<
 	Omit<SP, "basename"> & {
@@ -16,13 +16,16 @@ export type MakeCanonical<SP extends CommonSplitPath> = Prettify<
 	}
 >;
 
-export type CanonicalSplitPathToFolder = MakeCanonical<SplitPathToFolder>;
+export type CanonicalSplitPathToFolderInsideLibrary =
+	MakeCanonical<SplitPathToFolderInsideLibrary>;
 
-export type CanonicalSplitPathToFile = MakeCanonical<SplitPathToFile>;
+export type CanonicalSplitPathToFileInsideLibrary =
+	MakeCanonical<SplitPathToFileInsideLibrary>;
 
-export type CanonicalSplitPathToMdFile = MakeCanonical<SplitPathToMdFile>;
+export type CanonicalSplitPathToMdFileInsideLibrary =
+	MakeCanonical<SplitPathToMdFileInsideLibrary>;
 
-export type CanonicalSplitPath =
-	| CanonicalSplitPathToFolder
-	| CanonicalSplitPathToFile
-	| CanonicalSplitPathToMdFile;
+export type CanonicalSplitPathInsideLibrary =
+	| CanonicalSplitPathToFolderInsideLibrary
+	| CanonicalSplitPathToFileInsideLibrary
+	| CanonicalSplitPathToMdFileInsideLibrary;
