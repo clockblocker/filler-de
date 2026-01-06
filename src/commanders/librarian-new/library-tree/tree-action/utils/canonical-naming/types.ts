@@ -7,7 +7,7 @@ import type {
 	SplitPathToFolderInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
 } from "../../bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
-import type { SeparatedSuffixedBasename } from "../suffix-utils/suffix-utils";
+import type { SeparatedSuffixedBasename } from "./suffix-utils/core-suffix-utils";
 
 /**
  * LibraryTree compliant canonical split path.

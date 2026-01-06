@@ -7,11 +7,11 @@ import type {
 	SplitPathToFolderInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
 } from "../../bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
+import { buildCanonicalSeparatedSuffixedBasenamePathKingWay } from "./suffix-utils/build-canonical-separated-suffixed-basename-path-king-way";
 import {
 	makeJoinedSuffixedBasename,
 	tryMakeSeparatedSuffixedBasename,
-} from "../suffix-utils/suffix-utils";
-import { buildCanonicalSeparatedSuffixedBasenamePathKingWay } from "./build-canonical-separated-suffixed-basename";
+} from "./suffix-utils/core-suffix-utils";
 import type {
 	CanonicalSplitPathInsideLibrary,
 	CanonicalSplitPathToFileInsideLibrary,
@@ -74,4 +74,26 @@ function tryParsePathParts(
 		}
 	}
 	return ok(pathParts);
+}
+
+export function makeRegularSplitPathInsideLibrary(
+	sp: CanonicalSplitPathToFolderInsideLibrary,
+): SplitPathToFolderInsideLibrary;
+export function makeRegularSplitPathInsideLibrary(
+	sp: CanonicalSplitPathToFileInsideLibrary,
+): SplitPathToFileInsideLibrary;
+export function makeRegularSplitPathInsideLibrary(
+	sp: CanonicalSplitPathToMdFileInsideLibrary,
+): SplitPathToMdFileInsideLibrary;
+export function makeRegularSplitPathInsideLibrary(
+	sp: CanonicalSplitPathInsideLibrary,
+): SplitPathInsideLibrary;
+export function makeRegularSplitPathInsideLibrary(
+	sp: CanonicalSplitPathInsideLibrary,
+): SplitPathInsideLibrary {
+	const basename = makeJoinedSuffixedBasename(sp.separatedSuffixedBasename);
+	return {
+		...sp,
+		basename,
+	};
 }

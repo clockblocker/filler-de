@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { tryParseCanonicalSplitPathInsideLibrary } from "../../../../../../../src/commanders/librarian-new/library-tree/tree-action/utils/canonical-naming/try-parse-as-canonical-split-path";
+import {
+	makeRegularSplitPathInsideLibrary,
+	tryParseCanonicalSplitPathInsideLibrary,
+} from "../../../../../../../src/commanders/librarian-new/library-tree/tree-action/utils/canonical-naming/canonical-split-path-codec";
 import * as globalState from "../../../../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../../../../src/global-state/parsed-settings";
 import type {
@@ -271,6 +274,91 @@ describe("tryParseCanonicalSplitPath", () => {
 			if (result.isOk()) {
 				expect(result.value.nodeName).toBe("MyNote");
 				expect(result.value.sectionNames).toEqual(["Section1", "Section2"]);
+			}
+		});
+	});
+
+	describe("roundtrip", () => {
+		it("roundtrip for folder: canonical -> regular -> canonical", () => {
+			const regular: SplitPathToFolder = {
+				basename: "MyFolder",
+				pathParts: ["Library", "Section1", "Section2"],
+				type: SplitPathType.Folder,
+			};
+
+			const canonical1Res = tryParseCanonicalSplitPathInsideLibrary(regular);
+			expect(canonical1Res.isOk()).toBe(true);
+			if (!canonical1Res.isOk()) return;
+			const canonical1 = canonical1Res.value;
+
+			const regular2 = makeRegularSplitPathInsideLibrary(canonical1);
+			const canonical2Res = tryParseCanonicalSplitPathInsideLibrary(regular2);
+			expect(canonical2Res.isOk()).toBe(true);
+			if (!canonical2Res.isOk()) return;
+			const canonical2 = canonical2Res.value;
+
+			expect(canonical2.pathParts).toEqual(canonical1.pathParts);
+			expect(canonical2.separatedSuffixedBasename).toEqual(
+				canonical1.separatedSuffixedBasename,
+			);
+			expect(canonical2.type).toBe(canonical1.type);
+		});
+
+		it("roundtrip for file: canonical -> regular -> canonical", () => {
+			const regular: SplitPathToFile = {
+				basename: "MyFile-Section2-Section1",
+				extension: "txt",
+				pathParts: ["Library", "Section1", "Section2"],
+				type: SplitPathType.File,
+			};
+
+			const canonical1Res = tryParseCanonicalSplitPathInsideLibrary(regular);
+			expect(canonical1Res.isOk()).toBe(true);
+			if (!canonical1Res.isOk()) return;
+			const canonical1 = canonical1Res.value;
+
+			const regular2 = makeRegularSplitPathInsideLibrary(canonical1);
+			const canonical2Res = tryParseCanonicalSplitPathInsideLibrary(regular2);
+			expect(canonical2Res.isOk()).toBe(true);
+			if (!canonical2Res.isOk()) return;
+			const canonical2 = canonical2Res.value;
+
+			expect(canonical2.pathParts).toEqual(canonical1.pathParts);
+			expect(canonical2.separatedSuffixedBasename).toEqual(
+				canonical1.separatedSuffixedBasename,
+			);
+			expect(canonical2.type).toBe(canonical1.type);
+			if (canonical2.type === SplitPathType.File) {
+				expect(canonical2.extension).toBe(canonical1.extension);
+			}
+		});
+
+		it("roundtrip for md file: canonical -> regular -> canonical", () => {
+			const regular: SplitPathToMdFile = {
+				basename: "MyNote-Section2-Section1",
+				extension: "md",
+				pathParts: ["Library", "Section1", "Section2"],
+				type: SplitPathType.MdFile,
+			};
+
+			const canonical1Res = tryParseCanonicalSplitPathInsideLibrary(regular);
+			expect(canonical1Res.isOk()).toBe(true);
+			if (!canonical1Res.isOk()) return;
+			const canonical1 = canonical1Res.value;
+
+			const regular2 = makeRegularSplitPathInsideLibrary(canonical1);
+			const canonical2Res = tryParseCanonicalSplitPathInsideLibrary(regular2);
+			expect(canonical2Res.isOk()).toBe(true);
+			if (!canonical2Res.isOk()) return;
+			const canonical2 = canonical2Res.value;
+
+			expect(canonical2.pathParts).toEqual(canonical1.pathParts);
+			expect(canonical2.separatedSuffixedBasename).toEqual(
+				canonical1.separatedSuffixedBasename,
+			);
+			expect(canonical2.type).toBe(canonical1.type);
+			if (canonical2.type === SplitPathType.MdFile) {
+				expect(canonical2.extension).toBe(canonical1.extension);
 			}
 		});
 	});

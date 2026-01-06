@@ -3,13 +3,13 @@ import {
 	type NodeName,
 	NodeNameSchema,
 } from "../../../../../../../types/schemas/node-name";
-import { tryParseCanonicalSplitPathInsideLibrary } from "../../../../../utils/canonical-naming/try-parse-as-canonical-split-path";
-import type { CanonicalSplitPathInsideLibrary } from "../../../../../utils/canonical-naming/types";
-import { makeLocatorFromCanonicalSplitPathInsideLibrary } from "../../../../../utils/make-locator";
+import { tryParseCanonicalSplitPathInsideLibrary } from "../../../../../utils/canonical-naming/canonical-split-path-codec";
 import {
 	makePathPartsFromSuffixParts,
 	tryMakeSeparatedSuffixedBasename,
-} from "../../../../../utils/suffix-utils/suffix-utils";
+} from "../../../../../utils/canonical-naming/suffix-utils/core-suffix-utils";
+import type { CanonicalSplitPathInsideLibrary } from "../../../../../utils/canonical-naming/types";
+import { makeLocatorFromCanonicalSplitPathInsideLibrary } from "../../../../../utils/make-locator";
 import type { SplitPathInsideLibrary } from "../../../library-scope/types/inside-library-split-paths";
 import {
 	type CanonicalSplitPathToDestination,

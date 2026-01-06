@@ -1,4 +1,4 @@
-import { tryMakeSeparatedSuffixedBasename } from "../../../../../utils/suffix-utils/suffix-utils";
+import { tryMakeSeparatedSuffixedBasename } from "../../../../../utils/canonical-naming/suffix-utils/core-suffix-utils";
 import type { RenameTreeNodeNodeMaterializedEvent } from "../../../materialized-node-events/types";
 import { RenameIntent } from "./types";
 

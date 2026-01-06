@@ -1,13 +1,13 @@
-import { getParsedUserSettings } from "../../../../../../global-state/global-state";
-import { SplitPathType } from "../../../../../../obsidian-vault-action-manager/types/split-path";
+import { getParsedUserSettings } from "../../../../../../../global-state/global-state";
+import { SplitPathType } from "../../../../../../../obsidian-vault-action-manager/types/split-path";
 import type {
 	SplitPathInsideLibrary,
 	SplitPathToFileInsideLibrary,
 	SplitPathToFolderInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
-} from "../../bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
-import { splitBySuffixDelimiter } from "../suffix-utils/suffix-utils";
-import type { CanonicalSeparatedSuffixedBasename } from "./types";
+} from "../../../bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
+import type { CanonicalSeparatedSuffixedBasename } from "../types";
+import { splitBySuffixDelimiter } from "./core-suffix-utils";
 
 export function buildCanonicalSeparatedSuffixedBasenamePathKingWay(
 	sp: SplitPathToFolderInsideLibrary,

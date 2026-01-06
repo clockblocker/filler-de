@@ -1,11 +1,11 @@
 import { err, ok, type Result } from "neverthrow";
-import { getParsedUserSettings } from "../../../../../../global-state/global-state";
-import type { SplitPath } from "../../../../../../obsidian-vault-action-manager/types/split-path";
-import { NamingError } from "../../../../types/schemas/errors";
+import { getParsedUserSettings } from "../../../../../../../global-state/global-state";
+import type { SplitPath } from "../../../../../../../obsidian-vault-action-manager/types/split-path";
+import { NamingError } from "../../../../../types/schemas/errors";
 import {
 	type NodeName,
 	NodeNameSchema,
-} from "../../../../types/schemas/node-name";
+} from "../../../../../types/schemas/node-name";
 
 export type SeparatedSuffixedBasename = {
 	coreName: NodeName;
