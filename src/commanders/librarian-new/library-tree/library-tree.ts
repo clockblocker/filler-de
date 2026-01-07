@@ -191,20 +191,28 @@ export class LibraryTree {
 
 		// If section renamed, update descendant suffixes
 		if (node.type === TreeNodeType.Section) {
-			// Compute old section path for deriving descendant observed paths
+			// Old path: parent chain + OLD section name (for suffix computation)
 			const oldSectionPath = this.buildSectionPath(
 				targetLocator.segmentIdChainToParent,
 				this.extractNodeNameFromSegmentId(
 					targetLocator.segmentId as SectionNodeSegmentId,
 				),
 			);
+			// New chain in tree (where section IS now)
+			const newSectionChain = [
+				...targetLocator.segmentIdChainToParent,
+				newSegmentId as SectionNodeSegmentId,
+			];
+			// Current path in filesystem: parent chain + NEW section name
+			const currentSectionPath = this.buildSectionPath(
+				targetLocator.segmentIdChainToParent,
+				newNodeName,
+			);
 			return this.computeDescendantSuffixHealing(
-				[
-					...targetLocator.segmentIdChainToParent,
-					newSegmentId as SectionNodeSegmentId,
-				],
+				newSectionChain,
 				node,
 				oldSectionPath,
+				currentSectionPath,
 			);
 		}
 
@@ -282,18 +290,30 @@ export class LibraryTree {
 
 		// Compute healing
 		if (node.type === TreeNodeType.Section && oldSectionPath) {
-			// For section move, use OLD section path to build observed basenames
-			// (children still have old suffix structure)
+			// New chain in tree
+			const newSectionChain = [
+				...newParentChain,
+				newSegmentId as SectionNodeSegmentId,
+			];
+			// Current path in filesystem: new parent + new node name
+			const currentSectionPath = [
+				...newParentChain.map((segId) =>
+					this.extractNodeNameFromSegmentId(segId),
+				),
+				newNodeName,
+			];
 			logger.info("[LibraryTree] Section move healing:", {
 				childCount: Object.keys(node.children).length,
+				currentSectionPath,
 				newParentChain,
 				newSegmentId,
 				oldSectionPath,
 			});
 			return this.computeDescendantSuffixHealing(
-				[...newParentChain, newSegmentId as SectionNodeSegmentId],
+				newSectionChain,
 				node,
 				oldSectionPath,
+				currentSectionPath,
 			);
 		}
 
@@ -454,24 +474,43 @@ export class LibraryTree {
 		return { healingActions };
 	}
 
+	/**
+	 * Compute healing for all descendants after section rename/move.
+	 *
+	 * @param sectionChain - NEW chain to the section (where it IS now in tree)
+	 * @param section - the section node
+	 * @param oldSuffixPathParts - OLD path parts (for computing old basename suffix)
+	 * @param currentPathParts - NEW path parts (where files ARE now in filesystem)
+	 *                           If undefined, derived from sectionChain.
+	 */
 	private computeDescendantSuffixHealing(
 		sectionChain: SectionNodeSegmentId[],
 		section: SectionNode,
-		observedParentPathParts: string[],
+		oldSuffixPathParts: string[],
+		currentPathParts?: string[],
 	): ApplyResult {
+		// Derive current path from sectionChain if not provided
+		const actualCurrentPath =
+			currentPathParts ??
+			sectionChain.map((segId) =>
+				this.extractNodeNameFromSegmentId(segId),
+			);
+
 		const healingActions: HealingAction[] = [];
 
 		for (const [segId, child] of Object.entries(section.children)) {
 			if (child.type === TreeNodeType.Section) {
-				// Recurse with extended observed path
-				const childObservedPath = [
-					...observedParentPathParts,
+				// Recurse with extended paths
+				const childOldSuffixPath = [
+					...oldSuffixPathParts,
 					child.nodeName,
 				];
+				const childCurrentPath = [...actualCurrentPath, child.nodeName];
 				const childHealing = this.computeDescendantSuffixHealing(
 					[...sectionChain, segId as SectionNodeSegmentId],
 					child,
-					childObservedPath,
+					childOldSuffixPath,
+					childCurrentPath,
 				);
 				healingActions.push(...childHealing.healingActions);
 			} else {
@@ -483,16 +522,18 @@ export class LibraryTree {
 				} as ScrollNodeLocator | FileNodeLocator;
 
 				// Build observed split path for this leaf
-				// The basename in observed path uses OLD suffix (before section rename)
-				// We need to compute what the file WAS named
+				// - basename uses OLD suffix (what the file WAS named)
+				// - pathParts uses CURRENT path (where the file IS now)
 				const observedSplitPath = this.buildObservedLeafSplitPath(
 					child,
-					observedParentPathParts,
+					oldSuffixPathParts,
+					actualCurrentPath,
 				);
 
 				logger.info("[LibraryTree] Leaf healing:", {
-					observedParentPathParts,
+					actualCurrentPath,
 					observedSplitPath,
+					oldSuffixPathParts,
 					sectionChain,
 					segId,
 				});
@@ -509,24 +550,33 @@ export class LibraryTree {
 		return { healingActions };
 	}
 
+	/**
+	 * Build the "observed" split path for a leaf after section rename/move.
+	 *
+	 * @param leaf - the leaf node
+	 * @param oldSuffixPathParts - OLD path (for computing old basename suffix)
+	 * @param currentPathParts - NEW path (where file IS now in filesystem)
+	 */
 	private buildObservedLeafSplitPath(
 		leaf: ScrollNode | FileNode,
-		observedParentPathParts: string[],
+		oldSuffixPathParts: string[],
+		currentPathParts: string[],
 	): SplitPathToMdFileInsideLibrary | SplitPathToFileInsideLibrary {
-		const suffixParts = makeSuffixPartsFromPathPartsWithRoot(
-			observedParentPathParts,
-		);
+		// Suffix from OLD path (what the file WAS named)
+		const suffixParts =
+			makeSuffixPartsFromPathPartsWithRoot(oldSuffixPathParts);
 
 		const basename = makeJoinedSuffixedBasename({
 			coreName: leaf.nodeName,
 			suffixParts,
 		});
 
+		// pathParts = CURRENT path (where file IS now)
 		if (leaf.type === TreeNodeType.Scroll) {
 			return {
 				basename,
 				extension: "md",
-				pathParts: observedParentPathParts,
+				pathParts: currentPathParts,
 				type: SplitPathType.MdFile,
 			};
 		}
@@ -534,7 +584,7 @@ export class LibraryTree {
 		return {
 			basename,
 			extension: leaf.extension,
-			pathParts: observedParentPathParts,
+			pathParts: currentPathParts,
 			type: SplitPathType.File,
 		};
 	}
