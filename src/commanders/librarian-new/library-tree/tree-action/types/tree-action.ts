@@ -3,16 +3,16 @@ import {
 	CREATE,
 	DELETE,
 } from "../../../../../obsidian-vault-action-manager/types/literals";
-import type {
-	SplitPathToFile,
-	SplitPathToFolder,
-	SplitPathToMdFile,
-} from "../../../../../obsidian-vault-action-manager/types/split-path";
 import type { Prettify } from "../../../../../types/helpers";
 import { CHANGE_STATUS, MOVE, RENAME } from "../../../types/consts/literals";
 import type { NodeName } from "../../../types/schemas/node-name";
 import type { TreeNodeStatus } from "../../tree-node/types/atoms";
 import type { FileNode, ScrollNode } from "../../tree-node/types/tree-node";
+import type {
+	SplitPathToFileInsideLibrary,
+	SplitPathToFolderInsideLibrary,
+	SplitPathToMdFileInsideLibrary,
+} from "../bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
 import type {
 	FileNodeLocator,
 	ScrollNodeLocator,
@@ -147,7 +147,7 @@ export type CreateFileNodeAction = {
 	targetLocator: FileNodeLocator;
 	initialStatus?: FileNode["status"];
 
-	observedVaultSplitPath: SplitPathToFile;
+	observedSplitPath: SplitPathToFileInsideLibrary;
 };
 
 export type CreateScrollNodeAction = {
@@ -155,7 +155,7 @@ export type CreateScrollNodeAction = {
 	targetLocator: ScrollNodeLocator;
 	initialStatus?: ScrollNode["status"];
 
-	observedVaultSplitPath: SplitPathToMdFile;
+	observedSplitPath: SplitPathToMdFileInsideLibrary;
 };
 
 // --- Delete
@@ -203,7 +203,7 @@ export type MoveFileNodeAction = {
 	newParentLocator: SectionNodeLocator;
 	newNodeName: NodeName;
 
-	observedVaultSplitPath: SplitPathToFile;
+	observedSplitPath: SplitPathToFileInsideLibrary;
 };
 
 export type MoveSectionNodeAction = {
@@ -212,7 +212,7 @@ export type MoveSectionNodeAction = {
 	newParentLocator: SectionNodeLocator;
 	newNodeName: NodeName;
 
-	observedVaultSplitPath: SplitPathToFolder;
+	observedSplitPath: SplitPathToFolderInsideLibrary;
 };
 
 export type MoveScrollNodeAction = {
@@ -221,7 +221,7 @@ export type MoveScrollNodeAction = {
 	newParentLocator: SectionNodeLocator;
 	newNodeName: NodeName;
 
-	observedVaultSplitPath: SplitPathToMdFile;
+	observedSplitPath: SplitPathToMdFileInsideLibrary;
 };
 
 // --- Change Status

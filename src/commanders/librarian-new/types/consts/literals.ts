@@ -41,7 +41,7 @@ export const RenameSchema = z.literal("Rename");
 export type RENAME = z.infer<typeof RenameSchema>;
 export const RENAME = RenameSchema.value;
 
-export const ChangeStatusSchema = z.literal("ChangeS");
+export const ChangeStatusSchema = z.literal("ChangeStatus");
 export type CHANGE_STATUS = z.infer<typeof ChangeStatusSchema>;
 export const CHANGE_STATUS = ChangeStatusSchema.value;
 

@@ -83,7 +83,7 @@ describe("LibraryTree", () => {
 			tree.apply({
 				actionType: TreeActionType.Create,
 				targetLocator: locator,
-				observedVaultSplitPath: {
+				observedSplitPath: {
 					type: SplitPathType.MdFile,
 					pathParts: ["Library", "recipe", "pie"],
 					basename: "Note",

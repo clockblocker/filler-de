@@ -12,30 +12,30 @@ export function traslateCreateMaterializedEvent(
 	const out: CreateTreeLeafAction[] = [];
 
 	const targetRes = tryMakeDestinationLocatorFromEvent(ev);
-	const observedVaultSplitPath = ev.splitPath;
+	const observedSplitPath = ev.splitPath;
 
 	if (targetRes.isErr()) return out;
 	const targetLocator = targetRes.value;
 
 	switch (targetLocator.targetType) {
 		case TreeNodeType.File: {
-			if (observedVaultSplitPath.type !== "File") {
+			if (observedSplitPath.type !== "File") {
 				break;
 			}
 			out.push({
 				actionType: TreeActionType.Create,
-				observedVaultSplitPath: observedVaultSplitPath,
+				observedSplitPath,
 				targetLocator,
 			});
 			break;
 		}
 		case TreeNodeType.Scroll: {
-			if (observedVaultSplitPath.type !== "MdFile") {
+			if (observedSplitPath.type !== "MdFile") {
 				break;
 			}
 			out.push({
 				actionType: TreeActionType.Create,
-				observedVaultSplitPath,
+				observedSplitPath,
 				targetLocator,
 			});
 			break;

@@ -47,7 +47,7 @@ export function traslateRenameMaterializedEvent(
 		actionType: TreeActionType.Move,
 		newNodeName,
 		newParentLocator,
-		observedVaultSplitPath: ev.to, // observed after user op
+		observedSplitPath: ev.to, // observed after user op
 		targetLocator,
 	} as MoveNodeAction);
 

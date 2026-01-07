@@ -1,21 +1,13 @@
 import { getParsedUserSettings } from "../../../global-state/global-state";
-import {
-	type SplitPath,
-	type SplitPathToFile,
-	type SplitPathToFolder,
-	type SplitPathToMdFile,
-	SplitPathType,
-} from "../../../obsidian-vault-action-manager/types/split-path";
-import {
-	type VaultAction,
-	VaultActionType,
-} from "../../../obsidian-vault-action-manager/types/vault-action";
+import { SplitPathType } from "../../../obsidian-vault-action-manager/types/split-path";
 import type { NodeName } from "../types/schemas/node-name";
 import { TreeNodeStatus, TreeNodeType } from "./tree-node/types/atoms";
 import {
 	type SectionNodeSegmentId,
 	NodeSegmentIdSeparator,
 	type TreeNodeSegmentId,
+	type ScrollNodeSegmentId,
+	type FileNodeSegmentId,
 } from "./tree-node/types/node-segment-id";
 import type {
 	FileNode,
@@ -32,25 +24,42 @@ import type {
 	RenameNodeAction,
 	MoveNodeAction,
 	ChangeNodeStatusAction,
-	TreeActionType as TreeActionTypeEnum,
 } from "./tree-action/types/tree-action";
-import { TreeActionType } from "./tree-action/types/tree-action";
 import type {
 	FileNodeLocator,
 	ScrollNodeLocator,
 	SectionNodeLocator,
-	TreeNodeLocator,
 } from "./tree-action/types/target-chains";
-import {
-	makeJoinedSuffixedBasename,
-	makeSuffixPartsFromPathParts,
-} from "./tree-action/utils/canonical-naming/suffix-utils/core-suffix-utils";
+import { makeJoinedSuffixedBasename } from "./tree-action/utils/canonical-naming/suffix-utils/core-suffix-utils";
 import { getNodeName } from "./tree-action/utils/locator/locator-utils";
+import type {
+	SplitPathInsideLibrary,
+	SplitPathToFileInsideLibrary,
+	SplitPathToMdFileInsideLibrary,
+} from "./tree-action/bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
+import type { HealingAction } from "./types/healing-action";
+
+// ─── Helpers ───
+
+/** Helper to make segment ID with proper type narrowing */
+function makeSegmentId(node: ScrollNode): ScrollNodeSegmentId;
+function makeSegmentId(node: FileNode): FileNodeSegmentId;
+function makeSegmentId(node: SectionNode): SectionNodeSegmentId;
+function makeSegmentId(node: TreeNode): TreeNodeSegmentId;
+function makeSegmentId(node: TreeNode): TreeNodeSegmentId {
+	if (node.type === TreeNodeType.Section) {
+		return makeNodeSegmentId(node);
+	}
+	if (node.type === TreeNodeType.Scroll) {
+		return makeNodeSegmentId(node);
+	}
+	return makeNodeSegmentId(node);
+}
 
 // ─── Result Type ───
 
 export type ApplyResult = {
-	healingActions: VaultAction[];
+	healingActions: HealingAction[];
 };
 
 // ─── LibraryTree ───
@@ -66,35 +75,38 @@ export class LibraryTree {
 		};
 	}
 
-	/** Main entry: apply action, return healing VaultActions */
+	/** Main entry: apply action, return healing actions (library-scoped) */
 	apply(action: TreeAction): ApplyResult {
-		switch (action.actionType) {
-			case TreeActionType.Create:
-				return this.applyCreate(action);
-			case TreeActionType.Delete:
-				return this.applyDelete(action);
-			case TreeActionType.Rename:
-				return this.applyRename(action);
-			case TreeActionType.Move:
-				return this.applyMove(action);
-			case TreeActionType.ChangeStatus:
-				return this.applyChangeStatus(action);
+		const actionType = action.actionType;
+		if (actionType === "Create") {
+			return this.applyCreate(action as CreateTreeLeafAction);
 		}
+		if (actionType === "Delete") {
+			return this.applyDelete(action as DeleteNodeAction);
+		}
+		if (actionType === "Rename") {
+			return this.applyRename(action as RenameNodeAction);
+		}
+		if (actionType === "Move") {
+			return this.applyMove(action as MoveNodeAction);
+		}
+		// ChangeStatus
+		return this.applyChangeStatus(action as ChangeNodeStatusAction);
 	}
 
 	// ─── Create ───
 
 	private applyCreate(action: CreateTreeLeafAction): ApplyResult {
-		const { targetLocator, observedVaultSplitPath } = action;
+		const { targetLocator, observedSplitPath } = action;
 		const parentSection = this.ensureSectionChain(
 			targetLocator.segmentIdChainToParent,
 		);
 
 		const node = this.makeLeafNode(action);
-		const segmentId = makeNodeSegmentId(node);
+		const segmentId = makeSegmentId(node);
 		parentSection.children[segmentId] = node;
 
-		return this.computeLeafHealing(targetLocator, observedVaultSplitPath);
+		return this.computeLeafHealing(targetLocator, observedSplitPath);
 	}
 
 	private makeLeafNode(action: CreateTreeLeafAction): LeafNode {
@@ -113,7 +125,7 @@ export class LibraryTree {
 			nodeName,
 			type: TreeNodeType.File,
 			status: TreeNodeStatus.Unknown,
-			extension: action.observedVaultSplitPath.extension,
+			extension: action.observedSplitPath.extension,
 		};
 	}
 
@@ -172,30 +184,40 @@ export class LibraryTree {
 		// Remove old, insert with new name
 		delete parentSection.children[targetLocator.segmentId];
 		node.nodeName = newNodeName;
-		const newSegmentId = makeNodeSegmentId(
-			node as SectionNode | ScrollNode | FileNode,
-		);
+		const newSegmentId = makeSegmentId(node);
 		parentSection.children[newSegmentId] = node;
 
 		// If section renamed, update descendant suffixes
 		if (node.type === TreeNodeType.Section) {
+			// Compute old section path for deriving descendant observed paths
+			const oldSectionPath = this.buildSectionPath(
+				targetLocator.segmentIdChainToParent,
+				this.extractNodeNameFromSegmentId(targetLocator.segmentId as SectionNodeSegmentId),
+			);
 			return this.computeDescendantSuffixHealing(
-				[...targetLocator.segmentIdChainToParent, newSegmentId],
+				[...targetLocator.segmentIdChainToParent, newSegmentId as SectionNodeSegmentId],
 				node,
+				oldSectionPath,
 			);
 		}
 
-		// Leaf rename: compute healing for this leaf
-		return this.computeLeafHealingFromLocator({
+		// Leaf rename needs observed path - but rename action doesn't carry it
+		// The observed path IS the canonical path before rename (tree was in sync)
+		const oldCanonical = this.buildCanonicalLeafSplitPathFromOldLocator(
+			targetLocator as ScrollNodeLocator | FileNodeLocator,
+		);
+		const newLocator = {
 			...targetLocator,
 			segmentId: newSegmentId,
-		} as ScrollNodeLocator | FileNodeLocator);
+		} as ScrollNodeLocator | FileNodeLocator;
+
+		return this.computeLeafHealing(newLocator, oldCanonical);
 	}
 
 	// ─── Move ───
 
 	private applyMove(action: MoveNodeAction): ApplyResult {
-		const { targetLocator, newParentLocator, newNodeName, observedVaultSplitPath } =
+		const { targetLocator, newParentLocator, newNodeName, observedSplitPath } =
 			action;
 
 		// Detach from old parent
@@ -219,27 +241,42 @@ export class LibraryTree {
 
 		// Update node name and attach
 		node.nodeName = newNodeName;
-		const newSegmentId = makeNodeSegmentId(
-			node as SectionNode | ScrollNode | FileNode,
-		);
+		const newSegmentId = makeSegmentId(node);
 		newParent.children[newSegmentId] = node;
 
 		// Compute healing
 		if (node.type === TreeNodeType.Section) {
+			// For section move, observedSplitPath is the section's new observed location
 			return this.computeDescendantSuffixHealing(
-				[...newParentChain, newSegmentId],
+				[...newParentChain, newSegmentId as SectionNodeSegmentId],
 				node,
+				observedSplitPath.pathParts,
 			);
 		}
 
-		// Leaf move
-		const newLocator: ScrollNodeLocator | FileNodeLocator = {
-			segmentIdChainToParent: newParentChain,
-			segmentId: newSegmentId,
-			targetType: node.type,
-		} as ScrollNodeLocator | FileNodeLocator;
+		// Leaf move - narrow the types
+		if (node.type === TreeNodeType.Scroll) {
+			const newLocator: ScrollNodeLocator = {
+				segmentIdChainToParent: newParentChain,
+				segmentId: newSegmentId as ScrollNodeSegmentId,
+				targetType: TreeNodeType.Scroll,
+			};
+			return this.computeLeafHealing(
+				newLocator,
+				observedSplitPath as SplitPathToMdFileInsideLibrary,
+			);
+		}
 
-		return this.computeLeafHealing(newLocator, observedVaultSplitPath);
+		// File
+		const newLocator: FileNodeLocator = {
+			segmentIdChainToParent: newParentChain,
+			segmentId: newSegmentId as FileNodeSegmentId,
+			targetType: TreeNodeType.File,
+		};
+		return this.computeLeafHealing(
+			newLocator,
+			observedSplitPath as SplitPathToFileInsideLibrary,
+		);
 	}
 
 	// ─── ChangeStatus ───
@@ -323,26 +360,26 @@ export class LibraryTree {
 
 	private computeLeafHealing(
 		locator: ScrollNodeLocator | FileNodeLocator,
-		observedSplitPath: SplitPathToMdFile | SplitPathToFile,
+		observedSplitPath: SplitPathToMdFileInsideLibrary | SplitPathToFileInsideLibrary,
 	): ApplyResult {
 		const canonicalSplitPath = this.buildCanonicalLeafSplitPath(locator);
-		const healingActions: VaultAction[] = [];
+		const healingActions: HealingAction[] = [];
 
 		if (!this.splitPathsEqual(observedSplitPath, canonicalSplitPath)) {
 			if (observedSplitPath.type === SplitPathType.MdFile) {
 				healingActions.push({
-					type: VaultActionType.RenameMdFile,
+					type: "RenameMdFile",
 					payload: {
 						from: observedSplitPath,
-						to: canonicalSplitPath as SplitPathToMdFile,
+						to: canonicalSplitPath as SplitPathToMdFileInsideLibrary,
 					},
 				});
 			} else {
 				healingActions.push({
-					type: VaultActionType.RenameFile,
+					type: "RenameFile",
 					payload: {
-						from: observedSplitPath,
-						to: canonicalSplitPath as SplitPathToFile,
+						from: observedSplitPath as SplitPathToFileInsideLibrary,
+						to: canonicalSplitPath as SplitPathToFileInsideLibrary,
 					},
 				});
 			}
@@ -351,54 +388,84 @@ export class LibraryTree {
 		return { healingActions };
 	}
 
-	private computeLeafHealingFromLocator(
-		locator: ScrollNodeLocator | FileNodeLocator,
-	): ApplyResult {
-		// Build observed from current canonical (no mismatch expected after rename)
-		// But we need the actual filesystem path... which we don't have here.
-		// For rename, the caller should provide observed path.
-		// For now, return empty - rename healing is handled by the caller.
-		return { healingActions: [] };
-	}
-
 	private computeDescendantSuffixHealing(
 		sectionChain: SectionNodeSegmentId[],
 		section: SectionNode,
+		observedParentPathParts: string[],
 	): ApplyResult {
-		const healingActions: VaultAction[] = [];
+		const healingActions: HealingAction[] = [];
 
 		for (const [segId, child] of Object.entries(section.children)) {
 			if (child.type === TreeNodeType.Section) {
+				// Recurse with extended observed path
+				const childObservedPath = [...observedParentPathParts, child.nodeName];
 				const childHealing = this.computeDescendantSuffixHealing(
 					[...sectionChain, segId as SectionNodeSegmentId],
 					child,
+					childObservedPath,
 				);
 				healingActions.push(...childHealing.healingActions);
 			} else {
-				// Leaf: compute canonical path and emit rename if needed
+				// Leaf: derive observed path from parent + leaf basename
 				const locator: ScrollNodeLocator | FileNodeLocator = {
 					segmentIdChainToParent: sectionChain,
 					segmentId: segId as TreeNodeSegmentId,
 					targetType: child.type,
 				} as ScrollNodeLocator | FileNodeLocator;
 
-				const canonicalSplitPath = this.buildCanonicalLeafSplitPath(locator);
-				// We need observed path... this is a problem.
-				// For section rename, we need to track old paths.
-				// TODO: This needs refinement - for now, assume caller handles observed paths.
+				// Build observed split path for this leaf
+				// The basename in observed path uses OLD suffix (before section rename)
+				// We need to compute what the file WAS named
+				const observedSplitPath = this.buildObservedLeafSplitPath(
+					child,
+					observedParentPathParts,
+				);
+
+				const leafHealing = this.computeLeafHealing(locator, observedSplitPath);
+				healingActions.push(...leafHealing.healingActions);
 			}
 		}
 
 		return { healingActions };
 	}
 
+	private buildObservedLeafSplitPath(
+		leaf: ScrollNode | FileNode,
+		observedParentPathParts: string[],
+	): SplitPathToMdFileInsideLibrary | SplitPathToFileInsideLibrary {
+		// Build suffix from observed parent path (excluding Library root)
+		// suffixParts is reversed pathParts (excluding first element which is Library root)
+		const suffixParts = [...observedParentPathParts].slice(1).reverse();
+
+		const basename = makeJoinedSuffixedBasename({
+			coreName: leaf.nodeName,
+			suffixParts,
+		});
+
+		if (leaf.type === TreeNodeType.Scroll) {
+			return {
+				type: SplitPathType.MdFile,
+				pathParts: observedParentPathParts,
+				basename,
+				extension: "md",
+			};
+		}
+
+		return {
+			type: SplitPathType.File,
+			pathParts: observedParentPathParts,
+			basename,
+			extension: leaf.extension,
+		};
+	}
+
 	private buildCanonicalLeafSplitPath(
 		locator: ScrollNodeLocator | FileNodeLocator,
-	): SplitPathToMdFile | SplitPathToFile {
+	): SplitPathToMdFileInsideLibrary | SplitPathToFileInsideLibrary {
 		const { splitPathToLibraryRoot } = getParsedUserSettings();
 		const libraryRoot = splitPathToLibraryRoot.basename;
 
-		// Build pathParts from chain
+		// Build pathParts from chain (library-scoped, starts with Library)
 		const pathParts = [
 			libraryRoot,
 			...locator.segmentIdChainToParent.map((segId) =>
@@ -407,7 +474,7 @@ export class LibraryTree {
 		];
 
 		// Build suffix chain (reversed pathParts without library root)
-		const suffixParts = makeSuffixPartsFromPathParts({ pathParts, basename: "" });
+		const suffixParts = [...pathParts].slice(1).reverse();
 
 		// Get node name from locator
 		const nodeName = this.extractNodeNameFromLeafSegmentId(locator.segmentId);
@@ -436,6 +503,28 @@ export class LibraryTree {
 		};
 	}
 
+	private buildCanonicalLeafSplitPathFromOldLocator(
+		locator: ScrollNodeLocator | FileNodeLocator,
+	): SplitPathToMdFileInsideLibrary | SplitPathToFileInsideLibrary {
+		// Same as buildCanonicalLeafSplitPath but uses the locator as-is
+		// (before any modifications)
+		return this.buildCanonicalLeafSplitPath(locator);
+	}
+
+	private buildSectionPath(
+		parentChain: SectionNodeSegmentId[],
+		sectionName: NodeName,
+	): string[] {
+		const { splitPathToLibraryRoot } = getParsedUserSettings();
+		const libraryRoot = splitPathToLibraryRoot.basename;
+
+		return [
+			libraryRoot,
+			...parentChain.map((segId) => this.extractNodeNameFromSegmentId(segId)),
+			sectionName,
+		];
+	}
+
 	private extractNodeNameFromLeafSegmentId(segId: TreeNodeSegmentId): NodeName {
 		const sep = NodeSegmentIdSeparator;
 		const [raw] = segId.split(sep, 1);
@@ -448,7 +537,10 @@ export class LibraryTree {
 		return parts[parts.length - 1] ?? "";
 	}
 
-	private splitPathsEqual(a: SplitPath, b: SplitPath): boolean {
+	private splitPathsEqual(
+		a: SplitPathInsideLibrary,
+		b: SplitPathInsideLibrary,
+	): boolean {
 		if (a.type !== b.type) return false;
 		if (a.basename !== b.basename) return false;
 		if (a.pathParts.length !== b.pathParts.length) return false;
@@ -467,4 +559,3 @@ export class LibraryTree {
 		return this.root;
 	}
 }
-

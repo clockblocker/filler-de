@@ -52,7 +52,10 @@ function populateSection(
 	for (const [name, childShape] of Object.entries(children)) {
 		if (isLeafShape(childShape)) {
 			const leaf = makeLeafFromShape(name as NodeName, childShape);
-			const segId = makeNodeSegmentId(leaf);
+			const segId =
+				leaf.type === TreeNodeType.Scroll
+					? makeNodeSegmentId(leaf)
+					: makeNodeSegmentId(leaf);
 			section.children[segId] = leaf;
 		} else {
 			const childSection: SectionNode = {
