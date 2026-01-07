@@ -3,7 +3,10 @@ import {
 	type RenameNodeAction,
 	TreeActionType,
 } from "../../../../types/tree-action";
-import { getNodeName, getParentLocator } from "../../../../utils/locator-utils";
+import {
+	getNodeName,
+	getParentLocator,
+} from "../../../../utils/locator/locator-utils";
 import type { RenameTreeNodeNodeMaterializedEvent } from "../../materialized-node-events/types";
 import { inferPolicyAndIntent, RenameIntent } from "../policy-and-intent";
 import {

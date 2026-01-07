@@ -8,3 +8,5 @@ export type Optional<T, K extends keyof T> = Prettify<
 
 export const isReadonlyArray = <T>(x: T | readonly T[]): x is readonly T[] =>
 	Array.isArray(x);
+
+export type NonEmptyArray<T> = [T, ...T[]];

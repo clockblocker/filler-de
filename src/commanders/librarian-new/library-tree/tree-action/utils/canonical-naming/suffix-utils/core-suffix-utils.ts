@@ -1,6 +1,8 @@
 import { err, ok, type Result } from "neverthrow";
 import { getParsedUserSettings } from "../../../../../../../global-state/global-state";
 import type { SplitPath } from "../../../../../../../obsidian-vault-action-manager/types/split-path";
+import type { NonEmptyArray } from "../../../../../../../types/helpers";
+import { nonEmptyArrayResult } from "../../../../../../../types/utils";
 import { NamingError } from "../../../../../types/schemas/errors";
 import {
 	type NodeName,
@@ -15,37 +17,36 @@ export type SeparatedSuffixedBasename = {
 export const tryMakeSeparatedSuffixedBasename = ({
 	basename,
 }: SplitPath): Result<SeparatedSuffixedBasename, string> => {
-	const parts = splitBySuffixDelimiter(basename);
-	const [rawNodeName, ...rawSuffixParts] = parts;
+	return splitBySuffixDelimiter(basename).andThen((parts) => {
+		const [coreName, ...suffixParts] = parts;
 
-	if (rawNodeName == null) {
-		return err(NamingError.EmptyNodeName);
-	}
+		if (!coreName) return err(NamingError.EmptyNodeName); // mostly redundant now, ok
 
-	const nodeNameRes = NodeNameSchema.safeParse(rawNodeName);
-	if (!nodeNameRes.success) {
-		return err(nodeNameRes.error.issues[0]?.message ?? "Invalid NodeName");
-	}
-
-	const suffixParts: NodeName[] = [];
-	for (const p of rawSuffixParts) {
-		const r = NodeNameSchema.safeParse(p);
-		if (!r.success) {
-			return err(r.error.issues[0]?.message ?? "Invalid suffix NodeName");
-		}
-		suffixParts.push(r.data);
-	}
-
-	return ok({
-		coreName: nodeNameRes.data,
-		suffixParts,
+		return ok({ coreName, suffixParts });
 	});
 };
 
-export const splitBySuffixDelimiter = (basename: string): NodeName[] => {
+export const splitBySuffixDelimiter = (
+	basename: string,
+): Result<NonEmptyArray<NodeName>, string> => {
 	const { suffixDelimiter } = getParsedUserSettings();
-	return basename.split(suffixDelimiter);
+	const raw = basename.split(suffixDelimiter);
+	const out: NodeName[] = [];
+
+	for (const seg of raw) {
+		const r = NodeNameSchema.safeParse(seg);
+		if (!r.success)
+			return err(r.error.issues[0]?.message ?? NamingError.EmptyNodeName);
+		out.push(r.data);
+	}
+
+	return nonEmptyArrayResult(out);
 };
+
+// function foo<T>(items: T[]): [T, ...T[]] {
+// 	const first = items[0]!
+// 	return [first, ...items]  // always at least 1
+//   }
 
 export const makeJoinedSuffixedBasename = ({
 	coreName,

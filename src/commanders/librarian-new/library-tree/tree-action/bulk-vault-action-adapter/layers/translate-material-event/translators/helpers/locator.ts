@@ -9,7 +9,7 @@ import {
 	tryMakeSeparatedSuffixedBasename,
 } from "../../../../../utils/canonical-naming/suffix-utils/core-suffix-utils";
 import type { CanonicalSplitPathInsideLibrary } from "../../../../../utils/canonical-naming/types";
-import { makeLocatorFromCanonicalSplitPathInsideLibrary } from "../../../../../utils/make-locator";
+import { makeLocatorFromCanonicalSplitPathInsideLibrary } from "../../../../../utils/locator/locator-codec";
 import type { SplitPathInsideLibrary } from "../../../library-scope/types/inside-library-split-paths";
 import {
 	type CanonicalSplitPathToDestination,

@@ -1,4 +1,5 @@
 import { err, ok, type Result } from "neverthrow";
+import { getParsedUserSettings } from "../../../../../../global-state/global-state";
 import type { SplitPath } from "../../../../../../obsidian-vault-action-manager/types/split-path";
 import { NodeNameSchema } from "../../../../types/schemas/node-name";
 import type {
@@ -7,7 +8,7 @@ import type {
 	SplitPathToFolderInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
 } from "../../bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
-import { buildCanonicalSeparatedSuffixedBasenamePathKingWay } from "./suffix-utils/build-canonical-separated-suffixed-basename-path-king-way";
+import { tryBuildCanonicalSeparatedSuffixedBasename } from "./suffix-utils/build-canonical-separated-suffixed-basename-path-king-way";
 import {
 	makeJoinedSuffixedBasename,
 	tryMakeSeparatedSuffixedBasename,
@@ -39,6 +40,7 @@ export function tryParseCanonicalSplitPathInsideLibrary(
 
 	const sepRes = tryMakeSeparatedSuffixedBasename(sp);
 	if (sepRes.isErr()) return err(sepRes.error);
+
 	const { coreName, suffixParts } = sepRes.value;
 
 	const actualBasename = makeJoinedSuffixedBasename({
@@ -46,27 +48,36 @@ export function tryParseCanonicalSplitPathInsideLibrary(
 		suffixParts,
 	});
 
+	const canonicalRes = tryBuildCanonicalSeparatedSuffixedBasename(sp);
+	if (canonicalRes.isErr()) return err(canonicalRes.error);
+
 	const expectedBasename = makeJoinedSuffixedBasename(
-		buildCanonicalSeparatedSuffixedBasenamePathKingWay(sp)
-			.separatedSuffixedBasename,
+		canonicalRes.value.separatedSuffixedBasename,
 	);
 
 	if (actualBasename !== expectedBasename) {
 		return err("Basename does not match canonical format");
 	}
 
-	return ok({
+	const out: CanonicalSplitPathInsideLibrary = {
 		...sp,
+		pathParts: pathPartsRes.value, // (assuming tryParsePathParts returns canonicalized parts)
 		separatedSuffixedBasename: {
 			coreName,
 			suffixParts,
 		},
-	});
+	};
+
+	return ok(out);
 }
 
 function tryParsePathParts(
 	pathParts: SplitPath["pathParts"],
 ): Result<SplitPath["pathParts"], string> {
+	const { splitPathToLibraryRoot } = getParsedUserSettings();
+	const libraryRootName = splitPathToLibraryRoot.basename;
+	if (pathParts[0] !== libraryRootName) return err("ExpectedLibraryRoot");
+
 	for (const p of pathParts) {
 		const r = NodeNameSchema.safeParse(p);
 		if (!r.success) {
