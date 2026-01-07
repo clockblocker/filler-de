@@ -1,4 +1,7 @@
-import { tryMakeSeparatedSuffixedBasename } from "../../../../../utils/canonical-naming/suffix-utils/core-suffix-utils";
+import {
+	makeSuffixPartsFromPathPartsWithRoot,
+	tryMakeSeparatedSuffixedBasename,
+} from "../../../../../utils/canonical-naming/suffix-utils/core-suffix-utils";
 import type { RenameTreeNodeNodeMaterializedEvent } from "../../../materialized-node-events/types";
 import { RenameIntent } from "./types";
 
@@ -9,7 +12,8 @@ import { RenameIntent } from "./types";
  * - If basename did NOT change → MOVE (path-based move).
  * - If basename changed:
  *   - no suffix parts → RENAME (pure rename).
- *   - has suffix parts → MOVE ("move-by-name").
+ *   - suffix matches current path → RENAME (user just changed coreName).
+ *   - suffix differs from current path → MOVE ("move-by-name").
  *
  * ───────────────
  * Folder examples
@@ -37,18 +41,18 @@ import { RenameIntent } from "./types";
  * ──────────────
  *
  * RENAME intent:
- *   Library/pie.md → Library/pies.md
+ *   Library/Test/Untitled-Test.md → Library/Test/123-Test.md
  *
  *   Expected heals:
- *   - File renamed in place:
- *     Library/pie.md → Library/pies.md
+ *   - File renamed in place (suffix matches path):
+ *     Library/Test/123-Test.md stays as is
  *
  * MOVE intent:
  *   Library/pie.md → Library/sweet-pie.md
  *
  *   Expected heals:
  *   - File moved under `sweet/`:
- *     Library/sweet-pie.md → Library/sweet/sweet-pie.md
+ *     Library/sweet-pie.md → Library/sweet/pie-sweet.md
  *
  * Note:
  * This function only infers **intent**.
@@ -63,13 +67,26 @@ export function inferRenameIntent({
 	// path move (basename unchanged)
 	if (!basenameChanged) return RenameIntent.Move;
 
-	// basename changed: "move-by-name" iff suffix chain exists
+	// basename changed: check if it's a "move-by-name" or just a rename
 	const sepRes = tryMakeSeparatedSuffixedBasename(to);
 
 	// if invalid basename, treat as plain rename (will be rejected/healed later anyway)
 	if (sepRes.isErr()) return RenameIntent.Rename;
 
-	return sepRes.value.suffixParts.length > 0
-		? RenameIntent.Move
-		: RenameIntent.Rename;
+	const newSuffixParts = sepRes.value.suffixParts;
+
+	// no suffix → pure rename
+	if (newSuffixParts.length === 0) return RenameIntent.Rename;
+
+	// Compare new suffix with current path (sans Library root)
+	// If they match, user just renamed the coreName — not a move
+	const currentSuffixParts = makeSuffixPartsFromPathPartsWithRoot(
+		to.pathParts,
+	);
+
+	const suffixMatchesPath =
+		newSuffixParts.length === currentSuffixParts.length &&
+		newSuffixParts.every((s, i) => s === currentSuffixParts[i]);
+
+	return suffixMatchesPath ? RenameIntent.Rename : RenameIntent.Move;
 }

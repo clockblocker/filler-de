@@ -1,4 +1,3 @@
-import { basename } from "path";
 import { MD } from "../../../../../../obsidian-vault-action-manager/types/literals";
 import { SplitPathType } from "../../../../../../obsidian-vault-action-manager/types/split-path";
 import type { NodeName } from "../../../../types/schemas/node-name";
@@ -41,6 +40,7 @@ export function makeLocatorFromCanonicalSplitPathInsideLibrary(
 export function makeLocatorFromCanonicalSplitPathInsideLibrary(
 	sp: CanonicalSplitPathInsideLibrary,
 ): TreeNodeLocator {
+	// Both pathParts and segmentIdChainToParent INCLUDE Library root
 	const segmentIdChainToParent = sp.pathParts.map((nodeName) =>
 		makeNodeSegmentId({
 			children: {},
@@ -105,6 +105,7 @@ export function makeCanonicalSplitPathInsideLibraryFromLocator(
 export function makeCanonicalSplitPathInsideLibraryFromLocator(
 	loc: TreeNodeLocator,
 ): CanonicalSplitPathInsideLibrary {
+	// Both segmentIdChainToParent and pathParts INCLUDE Library root
 	const pathParts = loc.segmentIdChainToParent.map(
 		nodeNameFromSectionSegmentId,
 	);

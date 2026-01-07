@@ -75,8 +75,9 @@ describe("LibraryTree", () => {
 		it("creates leaf with implicit sections", () => {
 			const tree = makeTree({ libraryRoot: "Library" as NodeName });
 
+			// Chain INCLUDES Library root
 			const locator = makeScrollLocator(
-				["recipe" as NodeName, "pie" as NodeName],
+				["Library" as NodeName, "recipe" as NodeName, "pie" as NodeName],
 				"Note" as NodeName,
 			);
 
@@ -118,8 +119,9 @@ describe("LibraryTree", () => {
 				},
 			});
 
+			// Chain INCLUDES Library root
 			const locator = makeScrollLocator(
-				["recipe" as NodeName, "pie" as NodeName],
+				["Library" as NodeName, "recipe" as NodeName, "pie" as NodeName],
 				"Note" as NodeName,
 			);
 
@@ -150,8 +152,9 @@ describe("LibraryTree", () => {
 				},
 			});
 
+			// Chain INCLUDES Library root
 			const locator = makeScrollLocator(
-				["recipe" as NodeName, "pie" as NodeName],
+				["Library" as NodeName, "recipe" as NodeName, "pie" as NodeName],
 				"Note1" as NodeName,
 			);
 
@@ -181,7 +184,8 @@ describe("LibraryTree", () => {
 				},
 			});
 
-			const locator = makeSectionLocator([], "pie" as NodeName);
+			// Chain INCLUDES Library root
+			const locator = makeSectionLocator(["Library" as NodeName], "pie" as NodeName);
 
 			tree.apply({
 				actionType: TreeActionType.Rename,
@@ -204,7 +208,8 @@ describe("LibraryTree", () => {
 				},
 			});
 
-			const locator = makeScrollLocator([], "Note" as NodeName);
+			// Chain INCLUDES Library root
+			const locator = makeScrollLocator(["Library" as NodeName], "Note" as NodeName);
 
 			tree.apply({
 				actionType: TreeActionType.ChangeStatus,
@@ -232,7 +237,8 @@ describe("LibraryTree", () => {
 				},
 			});
 
-			const locator = makeSectionLocator([], "recipe" as NodeName);
+			// Chain INCLUDES Library root
+			const locator = makeSectionLocator(["Library" as NodeName], "recipe" as NodeName);
 
 			tree.apply({
 				actionType: TreeActionType.ChangeStatus,
@@ -248,4 +254,3 @@ describe("LibraryTree", () => {
 		});
 	});
 });
-

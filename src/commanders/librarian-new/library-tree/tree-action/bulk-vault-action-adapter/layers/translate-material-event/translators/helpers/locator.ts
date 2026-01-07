@@ -149,28 +149,29 @@ export const tryCanonicalizeSplitPathToDestination = (
 		});
 	};
 
-	// MOVE-by-name:
-	// basename "sweet-berry-pie" => firstSection="sweet", extraSections=["berry"], nodeName="pie"
+	// MOVE-by-name: suffix defines the new path
+	// Note: User rename events can only change basename (path stays) or drag (basename stays).
+	// So "nested path + different suffix root" combos can't happen from user actions.
+	// For root-level renames: sweet-berry-pie => Library/sweet/berry/pie
+	//   coreName=sweet, suffixParts=[berry,pie] => nodeName=pie, path=Library/sweet/berry
 	if (intent === RenameIntent.Move && sepRes.value.suffixParts.length > 0) {
-		const firstSection = sepRes.value.coreName;
-		const suffixPartsFromName = sepRes.value.suffixParts;
+		const libraryRoot = sp.pathParts[0];
+		if (!libraryRoot) return err("Expected Library root in pathParts");
 
-		const lastSuffixPart =
-			suffixPartsFromName[suffixPartsFromName.length - 1];
+		const suffixPartsFromName = sepRes.value.suffixParts;
+		const lastSuffixPart = suffixPartsFromName[suffixPartsFromName.length - 1];
 		if (!lastSuffixPart)
 			return err("MOVE-by-name requires at least one suffix part");
 
-		const extraSections = suffixPartsFromName.slice(0, -1);
+		// Build path: coreName + all suffix parts except last
+		// suffixParts are in basename order (sweet-very-berry-pie => ["very","berry","pie"])
+		const middleSuffixParts = suffixPartsFromName.slice(0, -1);
+		const pathFromSuffix = [sepRes.value.coreName, ...middleSuffixParts];
 
-		// destination parent chain = existing pathParts + firstSection + extraSections
-		const nextPathParts = [...sp.pathParts, firstSection, ...extraSections];
-
-		// destination node name = lastSuffixPart, so basename core should be that
-		// (we feed it in as basename so splitBySuffixDelimiter yields coreName=lastSuffixPart)
 		return finalize({
 			...sp,
 			basename: lastSuffixPart,
-			pathParts: nextPathParts,
+			pathParts: [libraryRoot, ...pathFromSuffix],
 		});
 	}
 

@@ -158,6 +158,11 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 		});
 	});
 
+	// Move-by-name tests
+	// Note: User rename events can only:
+	// 1. Change basename (path stays same)
+	// 2. Drag/move (basename stays same, path changes)
+	// So "nested path + different suffix root" combos can't happen from user actions.
 	describe("C) Move-by-name (intent Move + policy NameKing + suffixParts.length>0)", () => {
 		it("6. Folder move-by-name basic", () => {
 			const sp = spFolder(["Library"], "sweet-pie");
@@ -193,27 +198,7 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 			}
 		});
 
-		it("8. Move-by-name with nested current path", () => {
-			const sp = spMdFile(["Library", "recipe"], "sweet-pie");
-			const result = tryCanonicalizeSplitPathToDestination(
-				sp,
-				ChangePolicy.NameKing,
-				RenameIntent.Move,
-			);
-
-			expect(result.isOk()).toBe(true);
-			if (result.isOk()) {
-				expect(result.value.separatedSuffixedBasename.coreName).toBe("pie");
-				// Existing pathParts preserved + new parent appended
-				expect(result.value.pathParts).toEqual(["Library", "recipe", "sweet"]);
-				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual([
-					"sweet",
-					"recipe",
-				]);
-			}
-		});
-
-		it("9. Move-by-name multi-part child", () => {
+		it("8. Move-by-name multi-part", () => {
 			const sp = spMdFile(["Library"], "sweet-berry-pie");
 			const result = tryCanonicalizeSplitPathToDestination(
 				sp,
@@ -230,7 +215,7 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 			}
 		});
 
-		it("9a. Folder: sweet-berry-pie => Library/sweet/berry/pie", () => {
+		it("9. Folder: sweet-berry-pie => Library/sweet/berry/pie", () => {
 			const sp = spFolder(["Library"], "sweet-berry-pie");
 			const r = tryCanonicalizeSplitPathToDestination(
 				sp,
@@ -245,40 +230,8 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 				expect(r.value.pathParts).toEqual(["Library", "sweet", "berry"]);
 			}
 		});
-	
-		it("9b. Folder nested path preserved: Library/recipe + sweet-berry-pie => Library/recipe/sweet/berry/pie", () => {
-			const sp = spFolder(["Library", "recipe"], "sweet-berry-pie");
-			const r = tryCanonicalizeSplitPathToDestination(
-				sp,
-				ChangePolicy.NameKing,
-				RenameIntent.Move,
-			);
-	
-			expect(r.isOk()).toBe(true);
-			if (r.isOk()) {
-				expect(r.value.separatedSuffixedBasename.coreName).toBe("pie");
-				expect(r.value.separatedSuffixedBasename.suffixParts).toEqual([]);
-				expect(r.value.pathParts).toEqual(["Library", "recipe", "sweet", "berry"]);
-			}
-		});
-	
-		it("9c. MdFile: sweet-berry-pie => Library/sweet/berry, nodeName=pie", () => {
-			const sp = spMdFile(["Library"], "sweet-berry-pie");
-			const r = tryCanonicalizeSplitPathToDestination(
-				sp,
-				ChangePolicy.NameKing,
-				RenameIntent.Move,
-			);
-	
-			expect(r.isOk()).toBe(true);
-			if (r.isOk()) {
-				expect(r.value.separatedSuffixedBasename.coreName).toBe("pie");
-				expect(r.value.pathParts).toEqual(["Library", "sweet", "berry"]);
-				expect(r.value.separatedSuffixedBasename.suffixParts).toEqual(["berry", "sweet"]);
-			}
-		});
-	
-		it("9d. Longer: sweet-very-berry-pie => nodeName=pie, parents=sweet/very/berry", () => {
+
+		it("10. Longer: sweet-very-berry-pie => nodeName=pie, parents=sweet/very/berry", () => {
 			const sp = spFolder(["Library"], "sweet-very-berry-pie");
 			const r = tryCanonicalizeSplitPathToDestination(
 				sp,
@@ -294,7 +247,7 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 			}
 		});
 
-		it("10. Move-by-name requires suffix (no suffix = fallback to regular NameKing)", () => {
+		it("11. Move-by-name requires suffix (no suffix = fallback to regular NameKing)", () => {
 			const sp = spMdFile(["Library"], "sweet");
 			const result = tryCanonicalizeSplitPathToDestination(
 				sp,

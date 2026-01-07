@@ -67,3 +67,14 @@ export const makeSuffixPartsFromPathParts = ({
 }: SplitPath): SeparatedSuffixedBasename["suffixParts"] => {
 	return [...pathParts].reverse();
 };
+
+/**
+ * Converts pathParts (WITH Library root) to suffixParts (WITHOUT root, reversed).
+ * Use when pathParts includes Library root as first element.
+ */
+export const makeSuffixPartsFromPathPartsWithRoot = (
+	pathParts: string[],
+): SeparatedSuffixedBasename["suffixParts"] => {
+	// Drop Library root (first element), then reverse
+	return pathParts.slice(1).reverse() as SeparatedSuffixedBasename["suffixParts"];
+};
