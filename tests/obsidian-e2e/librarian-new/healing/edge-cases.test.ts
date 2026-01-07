@@ -15,15 +15,16 @@ import {
  * User creates: Library/E1/my-note-E1.md
  * Parsing: coreName = "my", suffix = ["note", "E1"]
  *
- * Since suffix ["note", "E1"] doesn't match path ["E1"],
- * NameKing: file should move to Library/E1/note/my-note-E1.md
+ * PathKing (nested file): path defines suffix, not basename.
+ * Canonical suffix from path ["E1"] = ["E1"]
+ * Canonical basename = "my-E1" (coreName + path-derived suffix)
  *
  * Expected:
- * Library/E1/note/my-note-E1.md
+ * Library/E1/my-E1.md (suffix corrected to match path)
  */
 export async function testCoreNameWithDelimiter(): Promise<void> {
 	const createdPath = "Library/E1/my-note-E1.md";
-	const expectedPath = "Library/E1/note/my-note-E1.md";
+	const expectedPath = "Library/E1/my-E1.md";
 
 	await createFile(createdPath, "# My Note");
 

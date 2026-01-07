@@ -19,38 +19,13 @@ export async function testFolderRenameHealsChildSuffix(): Promise<void> {
 	const expectedPath = "Library/grandpa/father/son/Diary-son-father-grandpa.md";
 	const wrongPath = "Library/grandpa/father/son/Diary-kid-father-grandpa.md";
 
-	// Debug: list all files in Library
-	const allFiles = await browser.executeObsidian(async ({ app }) => {
-		return app.vault.getFiles().map((f) => f.path);
-	});
-	console.log("[DEBUG] All files before test:", allFiles);
-
-	// Verify initial file exists
 	const initialExists = await waitForFile(initialPath);
-	console.log("[DEBUG] initialExists:", initialExists, "path:", initialPath);
 	expect(initialExists).toBe(true);
 
-	// Rename folder: kid → son
 	await renamePath("Library/grandpa/father/kid", "Library/grandpa/father/son");
 
-	// Debug: wait a bit and list files
-	await new Promise((r) => setTimeout(r, 2000));
-	const filesAfterRename = await browser.executeObsidian(async ({ app }) => {
-		const files = app.vault.getFiles();
-		const folders = app.vault.getAllFolders();
-		return {
-			files: files.map((f) => f.path),
-			folders: folders.map((f) => f.path),
-		};
-	});
-	console.log("[DEBUG] Files after rename:", JSON.stringify(filesAfterRename, null, 2));
-
-	// Poll for healed file
 	const healedExists = await waitForFile(expectedPath, { timeout: 3000 });
 	const wrongGone = await waitForFileGone(wrongPath, { timeout: 500 });
-
-	console.log("[DEBUG] healedExists:", healedExists, "expectedPath:", expectedPath);
-	console.log("[DEBUG] wrongGone:", wrongGone, "wrongPath:", wrongPath);
 
 	expect(healedExists).toBe(true);
 	expect(wrongGone).toBe(true);
@@ -74,7 +49,6 @@ export async function testDeepFolderRenameHealsAllDescendants(): Promise<void> {
 	const initialExists = await waitForFile(initialPath);
 	expect(initialExists).toBe(true);
 
-	// Rename top-level folder: A → X
 	await renamePath("Library/A", "Library/X");
 
 	const healedExists = await waitForFile(expectedPath, { timeout: 3000 });
@@ -126,10 +100,8 @@ export async function testFolderRenameWithSuffixTriggersMove(): Promise<void> {
 	const initialExists = await waitForFile(initialPath);
 	expect(initialExists).toBe(true);
 
-	// Rename folder with suffix: F1 → F1-F2
 	await renamePath("Library/F1", "Library/F1-F2");
 
-	// Folder should be moved to Library/F2/F1, children healed
 	const healedExists = await waitForFile(expectedPath, { timeout: 3000 });
 	expect(healedExists).toBe(true);
 }
@@ -155,10 +127,8 @@ export async function testNestedFolderRenameWithSuffixTriggersMove(): Promise<vo
 	const initialExists = await waitForFile(initialPath);
 	expect(initialExists).toBe(true);
 
-	// Rename nested folder with suffix
 	await renamePath("Library/F3/F4", "Library/F3/F4-F5");
 
 	const healedExists = await waitForFile(expectedPath, { timeout: 3000 });
 	expect(healedExists).toBe(true);
 }
-

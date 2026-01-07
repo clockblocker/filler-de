@@ -1,3 +1,4 @@
+import { TreeNodeType } from "../../../../../../tree-node/types/atoms";
 import {
 	makeSuffixPartsFromPathPartsWithRoot,
 	tryMakeSeparatedSuffixedBasename,
@@ -11,9 +12,14 @@ import { RenameIntent } from "./types";
  * Rule:
  * - If basename did NOT change → MOVE (path-based move).
  * - If basename changed:
- *   - no suffix parts → RENAME (pure rename).
- *   - suffix matches current path → RENAME (user just changed coreName).
- *   - suffix differs from current path → MOVE ("move-by-name").
+ *   - For FOLDERS:
+ *     - no suffix → RENAME (folders don't have suffixes normally)
+ *     - has suffix → MOVE (folder should be moved based on suffix)
+ *   - For FILES:
+ *     - no suffix AND at root → RENAME
+ *     - no suffix AND nested → MOVE to root (NameKing: empty suffix = root)
+ *     - suffix matches current path → RENAME (user just changed coreName)
+ *     - suffix differs from current path → MOVE ("move-by-name")
  *
  * ───────────────
  * Folder examples
@@ -21,11 +27,11 @@ import { RenameIntent } from "./types";
  *
  * RENAME intent:
  *   Library/pie → Library/pies
+ *   Library/grandpa/father/kid → Library/grandpa/father/son
  *
  *   Expected heals:
- *   - Folder renamed: pie → pies
- *   - Children suffixes updated:
- *     Library/pie/XXX-pie.md → Library/pies/XXX-pies.md
+ *   - Folder renamed in place
+ *   - Children suffixes updated accordingly
  *
  * MOVE intent:
  *   Library/pie → Library/sweet-pie
@@ -33,8 +39,7 @@ import { RenameIntent } from "./types";
  *   Expected heals:
  *   - Folder moved under `sweet/`:
  *     Library/sweet-pie → Library/sweet/pie
- *   - Children moved + suffixes updated:
- *     Library/pie/XXX-pie.md → Library/sweet/pie/XXX-sweet-pie.md
+ *   - Children moved + suffixes updated
  *
  * ──────────────
  * File examples
@@ -44,15 +49,14 @@ import { RenameIntent } from "./types";
  *   Library/Test/Untitled-Test.md → Library/Test/123-Test.md
  *
  *   Expected heals:
- *   - File renamed in place (suffix matches path):
- *     Library/Test/123-Test.md stays as is
+ *   - File renamed in place (suffix matches path)
  *
  * MOVE intent:
  *   Library/pie.md → Library/sweet-pie.md
+ *   Library/A/B/Note-B-A.md → Library/A/B/Note.md (move to root)
  *
  *   Expected heals:
- *   - File moved under `sweet/`:
- *     Library/sweet-pie.md → Library/sweet/pie-sweet.md
+ *   - File moved based on suffix (or to root if no suffix)
  *
  * Note:
  * This function only infers **intent**.
@@ -61,8 +65,10 @@ import { RenameIntent } from "./types";
 export function inferRenameIntent({
 	to,
 	from,
+	nodeType,
 }: RenameTreeNodeNodeMaterializedEvent): RenameIntent {
 	const basenameChanged = from.basename !== to.basename;
+	const isFolder = nodeType === TreeNodeType.Section;
 
 	// path move (basename unchanged)
 	if (!basenameChanged) return RenameIntent.Move;
@@ -75,13 +81,21 @@ export function inferRenameIntent({
 
 	const newSuffixParts = sepRes.value.suffixParts;
 
-	// Compare new suffix with current path (sans Library root)
+	// FOLDERS: no suffix in basename is normal (folders don't have suffixes)
+	// Only Move if user explicitly added a suffix to the folder name
+	if (isFolder) {
+		return newSuffixParts.length === 0
+			? RenameIntent.Rename
+			: RenameIntent.Move;
+	}
+
+	// FILES: compare suffix with current path
 	const currentSuffixParts = makeSuffixPartsFromPathPartsWithRoot(
 		to.pathParts,
 	);
 
 	// no suffix AND already at root → pure rename
-	// no suffix AND NOT at root → move to root
+	// no suffix AND NOT at root → move to root (NameKing: empty suffix = root)
 	if (newSuffixParts.length === 0) {
 		return currentSuffixParts.length === 0
 			? RenameIntent.Rename

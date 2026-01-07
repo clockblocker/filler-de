@@ -175,23 +175,13 @@ export class LibraryTree {
 
 	private applyRename(action: RenameNodeAction): ApplyResult {
 		const { targetLocator, newNodeName } = action;
-		logger.info("[LibraryTree] applyRename:", {
-			newNodeName,
-			targetLocator,
-		});
 		const parentSection = this.findSection(
 			targetLocator.segmentIdChainToParent,
 		);
-		if (!parentSection) {
-			logger.info("[LibraryTree] applyRename: parent not found");
-			return { healingActions: [] };
-		}
+		if (!parentSection) return { healingActions: [] };
 
 		const node = parentSection.children[targetLocator.segmentId];
-		if (!node) {
-			logger.info("[LibraryTree] applyRename: node not found");
-			return { healingActions: [] };
-		}
+		if (!node) return { healingActions: [] };
 
 		// Remove old, insert with new name
 		delete parentSection.children[targetLocator.segmentId];
@@ -218,20 +208,12 @@ export class LibraryTree {
 				targetLocator.segmentIdChainToParent,
 				newNodeName,
 			);
-			logger.info("[LibraryTree] applyRename section:", {
-				childCount: Object.keys(node.children).length,
-				currentSectionPath,
-				newSectionChain,
-				oldSectionPath,
-			});
-			const result = this.computeDescendantSuffixHealing(
+			return this.computeDescendantSuffixHealing(
 				newSectionChain,
 				node,
 				oldSectionPath,
 				currentSectionPath,
 			);
-			logger.info("[LibraryTree] applyRename section result:", result);
-			return result;
 		}
 
 		// Leaf rename needs observed path - but rename action doesn't carry it
