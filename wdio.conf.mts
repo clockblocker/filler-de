@@ -66,7 +66,8 @@ export const config: WebdriverIO.Config = {
 
     services: ["obsidian"],
 
-    specs: ['./tests/specs/**/*.e2e.ts'],
+    // DEPRECATED: old tests at ./tests/specs/**/*.e2e.ts
+    specs: ['./tests/obsidian-e2e/**/*.e2e.ts'],
     waitforInterval: 250,
     waitforTimeout: 5 * 1000,
 }
