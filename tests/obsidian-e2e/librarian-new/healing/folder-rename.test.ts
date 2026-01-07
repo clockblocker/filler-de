@@ -90,11 +90,12 @@ export async function testMiddleFolderRenameHealsDescendants(): Promise<void> {
  * Library/F1/Note-F1.md
  *
  * User renames folder: F1 → F1-F2
- * (suffix "F2" indicates move under Library/F2/)
+ * NameKing: folder suffix defines path
+ * Parsing: nodeName = "F1", suffix = ["F2"]
  *
  * Expected:
- * Library/F2/F1/Note-F1-F2.md
- * (folder moved under F2, children suffixes updated)
+ * Folder heals: Library/F1-F2 → Library/F2/F1
+ * Then children suffixes update: Library/F2/F1/Note-F1-F2.md
  */
 export async function testFolderRenameWithSuffixTriggersMove(): Promise<void> {
 	const initialPath = "Library/F1/Note-F1.md";
@@ -112,17 +113,18 @@ export async function testFolderRenameWithSuffixTriggersMove(): Promise<void> {
 }
 
 /**
- * Test: Renaming nested folder with suffix triggers move up.
+ * Test: Renaming nested folder with suffix triggers move.
  *
  * Scenario:
  * Library/F3/F4/Note-F4-F3.md
  *
  * User renames folder: F4 → F4-F5
- * (suffix "F5" indicates move under Library/F5/)
+ * NameKing: folder suffix defines path
+ * Parsing: nodeName = "F4", suffix = ["F5"]
  *
  * Expected:
- * Library/F5/F4/Note-F4-F5.md
- * (folder moved to Library/F5/F4, children suffixes updated)
+ * Folder heals: Library/F3/F4-F5 → Library/F5/F4
+ * Children suffixes update: Library/F5/F4/Note-F4-F5.md
  */
 export async function testNestedFolderRenameWithSuffixTriggersMove(): Promise<void> {
 	const initialPath = "Library/F3/F4/Note-F4-F3.md";

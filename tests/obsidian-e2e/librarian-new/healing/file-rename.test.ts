@@ -10,7 +10,8 @@ import { createFile, renamePath } from "../../helpers/vault-ops";
  * Library/R1/S1/T1/Untitled-T1-S1-R1.md
  *
  * User renames to: diary-tom-T1-S1-R1.md
- * (suffix now includes "tom" which doesn't exist)
+ * NameKing: basename suffix defines path
+ * Parsing: coreName = "diary", suffix = ["tom", "T1", "S1", "R1"]
  *
  * Expected:
  * Library/R1/S1/T1/tom/diary-tom-T1-S1-R1.md
@@ -44,11 +45,12 @@ export async function testRenameSuffixTriggersMove(): Promise<void> {
  * Library/R2/S2/T2/diary-T2-S2-R2.md
  *
  * User renames to: homework-T2-S2-R2.md
- * (coreName changed, suffix unchanged)
+ * Parsing: coreName = "homework", suffix = ["T2", "S2", "R2"]
+ * Path = ["R2", "S2", "T2"], suffix matches path (reversed)
  *
  * Expected:
  * Library/R2/S2/T2/homework-T2-S2-R2.md
- * (no move, just rename in place)
+ * (no move, suffix already matches path)
  */
 export async function testRenameCoreNameNoHealing(): Promise<void> {
 	const initialPath = "Library/R2/S2/T2/diary-T2-S2-R2.md";
@@ -105,10 +107,11 @@ export async function testRenameRootFileStaysAtRoot(): Promise<void> {
  * Library/RootNote2.md
  *
  * User renames to: RootNote2-P-Q.md
- * (adding suffix implies move to Library/Q/P/)
+ * NameKing: basename suffix defines path
+ * Parsing: coreName = "RootNote2", suffix = ["P", "Q"]
  *
  * Expected:
- * Library/Q/P/RootNote2-P-Q.md
+ * Library/Q/P/RootNote2-P-Q.md (moved to suffix location)
  */
 export async function testRenameRootFileWithSuffixMoves(): Promise<void> {
 	const initialPath = "Library/RootNote2.md";
@@ -135,9 +138,11 @@ export async function testRenameRootFileWithSuffixMoves(): Promise<void> {
  * Library/R3/S3/Note-S3-R3.md
  *
  * User renames to: Note.md (removing suffix)
+ * NameKing: basename suffix defines path
+ * Parsing: coreName = "Note", suffix = []
  *
  * Expected:
- * Library/Note.md (moved to root, no suffix)
+ * Library/Note.md (moved to root, empty suffix = root)
  */
 export async function testRemoveSuffixMovesToRoot(): Promise<void> {
 	const initialPath = "Library/R3/S3/Note-S3-R3.md";

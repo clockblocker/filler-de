@@ -9,25 +9,29 @@ import {
 } from "../../helpers/vault-ops";
 
 /**
- * Test: File with delimiter in coreName.
+ * Test: CoreName = NodeName (no delimiter allowed in coreName).
  *
  * Scenario:
  * User creates: Library/E1/my-note-E1.md
- * (coreName is "my-note", suffix is "E1")
+ * Parsing: coreName = "my", suffix = ["note", "E1"]
+ *
+ * Since suffix ["note", "E1"] doesn't match path ["E1"],
+ * NameKing: file should move to Library/E1/note/my-note-E1.md
  *
  * Expected:
- * Works correctly with delimiters in coreName
+ * Library/E1/note/my-note-E1.md
  */
 export async function testCoreNameWithDelimiter(): Promise<void> {
-	const path = "Library/E1/my-note-E1.md";
+	const createdPath = "Library/E1/my-note-E1.md";
+	const expectedPath = "Library/E1/note/my-note-E1.md";
 
-	await createFile(path, "# My Note");
+	await createFile(createdPath, "# My Note");
 
-	// Wait a bit
-	await new Promise((r) => setTimeout(r, 500));
+	const healedExists = await waitForFile(expectedPath, { timeout: 3000 });
+	const originalGone = await waitForFileGone(createdPath, { timeout: 500 });
 
-	const exists = await waitForFile(path);
-	expect(exists).toBe(true);
+	expect(healedExists).toBe(true);
+	expect(originalGone).toBe(true);
 }
 
 /**

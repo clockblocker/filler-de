@@ -51,6 +51,7 @@ import {
 	testInitHealingMultipleFiles,
 	testInitHealingNoOpForCorrectFiles,
 	testInitHealingRootFileNoSuffix,
+	testInitHealingRootFileSingleSuffix,
 } from "./healing/init-healing.test";
 
 const VAULT_PATH = "tests/obsidian-e2e/vaults/healing";
@@ -58,8 +59,10 @@ const VAULT_PATH = "tests/obsidian-e2e/vaults/healing";
 describe("Librarian New - Healing", () => {
 	beforeEach(async () => {
 		await obsidianPage.resetVault(VAULT_PATH);
-		// Wait for plugin init
-		await new Promise((r) => setTimeout(r, 500));
+		// Wait for plugin init and healing to complete
+		// Mobile emulation is significantly slower than desktop
+		// Init healing processes all files sequentially which can take a while
+		await new Promise((r) => setTimeout(r, 8000));
 	});
 
 	// ─── Init Healing ───
@@ -70,6 +73,7 @@ describe("Librarian New - Healing", () => {
 		it("moves root file with suffix to suffix location", testInitHealingMovesRootFileWithSuffix);
 		it("adds suffix to nested file without one", testInitHealingAddsSuffixToNestedFile);
 		it("root file stays without suffix", testInitHealingRootFileNoSuffix);
+		it("root file single suffix moves (NameKing)", testInitHealingRootFileSingleSuffix);
 		it("processes multiple files", testInitHealingMultipleFiles);
 	});
 

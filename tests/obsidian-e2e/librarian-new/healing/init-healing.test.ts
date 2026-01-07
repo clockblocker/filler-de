@@ -4,13 +4,16 @@ import { obsidianPage } from "wdio-obsidian-service";
 import { waitForFile, waitForFileGone } from "../../helpers/polling";
 
 /**
- * Test: Init healing fixes files with wrong suffix on plugin load.
+ * Test: Init healing for nested file with wrong suffix uses PathKing.
  *
  * Scenario:
  * Vault contains: Library/I1/I2/Note-WRONG.md (wrong suffix)
+ * Parsing: coreName = "Note", suffix = ["WRONG"]
  *
- * On plugin init:
- * Expected: Library/I1/I2/Note-I2-I1.md (suffix fixed)
+ * On plugin init (PathKing for nested files):
+ * Path = ["I1", "I2"], suffix = ["WRONG"] → mismatch
+ * PathKing: path wins → suffix updated to match path
+ * Expected: Library/I1/I2/Note-I2-I1.md
  */
 export async function testInitHealingFixesWrongSuffix(): Promise<void> {
 	// This test uses a special vault with pre-existing wrong files
@@ -44,12 +47,13 @@ export async function testInitHealingNoOpForCorrectFiles(): Promise<void> {
 }
 
 /**
- * Test: Init healing fixes file at root with suffix (moves to suffix location).
+ * Test: Init healing for root file uses NameKing (basename defines path).
  *
  * Scenario:
  * Vault contains: Library/Note-X-Y.md (root file with suffix)
+ * Parsing: coreName = "Note", suffix = ["X", "Y"]
  *
- * On plugin init:
+ * On plugin init (NameKing for direct Library children):
  * Expected: Library/Y/X/Note-X-Y.md (moved to suffix location)
  */
 export async function testInitHealingMovesRootFileWithSuffix(): Promise<void> {
@@ -64,13 +68,13 @@ export async function testInitHealingMovesRootFileWithSuffix(): Promise<void> {
 }
 
 /**
- * Test: Init healing adds suffix to nested file without one.
+ * Test: Init healing for nested file uses PathKing (path defines suffix).
  *
  * Scenario:
  * Vault contains: Library/I3/I4/Untitled.md (no suffix)
  *
- * On plugin init:
- * Expected: Library/I3/I4/Untitled-I4-I3.md (suffix added)
+ * On plugin init (PathKing for nested files):
+ * Expected: Library/I3/I4/Untitled-I4-I3.md (suffix added to match path)
  */
 export async function testInitHealingAddsSuffixToNestedFile(): Promise<void> {
 	const wrongPath = "Library/I3/I4/Untitled.md";
@@ -84,13 +88,15 @@ export async function testInitHealingAddsSuffixToNestedFile(): Promise<void> {
 }
 
 /**
- * Test: Init healing doesn't add suffix to root file.
+ * Test: Init healing for root file without suffix uses NameKing.
  *
  * Scenario:
  * Vault contains: Library/RootNote.md (root file, no suffix)
+ * Parsing: coreName = "RootNote", suffix = []
  *
- * On plugin init:
- * Expected: Library/RootNote.md (stays at root, no suffix needed)
+ * On plugin init (NameKing for direct Library children):
+ * Empty suffix = stays at Library root
+ * Expected: Library/RootNote.md (no change)
  */
 export async function testInitHealingRootFileNoSuffix(): Promise<void> {
 	const path = "Library/RootNote.md";
@@ -98,6 +104,28 @@ export async function testInitHealingRootFileNoSuffix(): Promise<void> {
 	// Root file should stay without suffix
 	const exists = await waitForFile(path);
 	expect(exists).toBe(true);
+}
+
+/**
+ * Test: Init healing for root file with single suffix part uses NameKing.
+ *
+ * Scenario:
+ * Vault contains: Library/move-me.md (root file with suffix)
+ * Parsing: coreName = "move", suffix = ["me"]
+ *
+ * On plugin init (NameKing for direct Library children):
+ * Suffix ["me"] defines path → move to Library/me/
+ * Expected: Library/me/move-me.md
+ */
+export async function testInitHealingRootFileSingleSuffix(): Promise<void> {
+	const wrongPath = "Library/move-me.md";
+	const expectedPath = "Library/me/move-me.md";
+
+	const healedExists = await waitForFile(expectedPath, { timeout: 3000 });
+	const wrongGone = await waitForFileGone(wrongPath, { timeout: 500 });
+
+	expect(healedExists).toBe(true);
+	expect(wrongGone).toBe(true);
 }
 
 /**

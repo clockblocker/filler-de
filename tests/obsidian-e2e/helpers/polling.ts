@@ -5,7 +5,7 @@ export interface PollOptions {
 	interval?: number;
 }
 
-const DEFAULT_TIMEOUT = 5000;
+const DEFAULT_TIMEOUT = 1000;
 const DEFAULT_INTERVAL = 100;
 
 /**

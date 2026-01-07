@@ -4,13 +4,14 @@ import { waitForFile, waitForFileGone } from "../../helpers/polling";
 import { createFile } from "../../helpers/vault-ops";
 
 /**
- * Test: File created at Library root should NOT get suffix.
+ * Test: File created at Library root triggers NameKing healing.
  *
  * Scenario:
  * User creates: Library/Note.md
  *
  * Expected:
- * Library/Note.md (no suffix added)
+ * NameKing: basename defines path, so no suffix = stays at root
+ * Library/Note.md (no suffix, stays at root)
  */
 export async function testRootFileNoSuffix(): Promise<void> {
 	const path = "Library/Note.md";
@@ -20,7 +21,7 @@ export async function testRootFileNoSuffix(): Promise<void> {
 	// Wait a bit for any potential healing
 	await new Promise((r) => setTimeout(r, 500));
 
-	// File should still be at same path (no suffix)
+	// File should still be at same path (no suffix = root)
 	const exists = await waitForFile(path);
 	expect(exists).toBe(true);
 }

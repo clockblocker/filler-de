@@ -149,50 +149,26 @@ export const tryCanonicalizeSplitPathToDestination = (
 		});
 	};
 
-	// MOVE-by-name: suffix defines the new path
-	// Note: User rename events can only change basename (path stays) or drag (basename stays).
+	// MOVE-by-name (NameKing): suffix defines the new path
+	// User renamed basename to include suffix → move file to suffix location
 	//
-	// Two interpretations based on whether suffix matches existing path:
-	//
-	// 1) Canonical suffix edit (suffix root matches path):
-	//    Note-child2-parent-Test at Library/Test/parent/child1
-	//    suffixParts=["child2","parent","Test"], last="Test" matches pathParts[1]
-	//    → interpret as reversed: path = Library/Test/parent/child2, nodeName = Note
-	//
-	// 2) New structure (suffix root doesn't match path):
-	//    sweet-berry-pie at Library/
-	//    suffixParts=["berry","pie"], last="pie" doesn't match pathParts[1]
-	//    → interpret as forward: path = Library/sweet/berry, nodeName = pie
+	// Example:
+	//   Library/RootNote2.md → Library/RootNote2-P-Q.md
+	//   coreName = "RootNote2", suffixParts = ["P", "Q"]
+	//   → path = Library/Q/P/ (suffix reversed)
+	//   → final: Library/Q/P/RootNote2-P-Q.md
 	if (intent === RenameIntent.Move && sepRes.value.suffixParts.length > 0) {
 		const libraryRoot = sp.pathParts[0];
 		if (!libraryRoot) return err("Expected Library root in pathParts");
 
 		const { coreName, suffixParts } = sepRes.value;
-		const lastSuffix = suffixParts[suffixParts.length - 1];
-		if (!lastSuffix) return err("MOVE-by-name requires at least one suffix part");
 
-		// Check if suffix root matches current path root (canonical suffix edit)
-		const currentFirstSection = sp.pathParts[1];
-		const isCanonicalEdit = currentFirstSection === lastSuffix;
-
-		if (isCanonicalEdit) {
-			// Canonical suffix: interpret as reversed path
-			// suffixParts=["child2","parent","Test"] → path=Library/Test/parent/child2
-			const pathFromSuffix = [...suffixParts].reverse();
-			return finalize({
-				...sp,
-				basename: coreName, // coreName is the node name
-				pathParts: [libraryRoot, ...pathFromSuffix],
-			});
-		}
-
-		// New structure: interpret as forward path
-		// suffixParts=["berry","pie"] → path=Library/sweet/berry, nodeName=pie
-		const middleSuffixes = suffixParts.slice(0, -1);
+		// NameKing: suffix reversed = path
+		const pathFromSuffix = [...suffixParts].reverse();
 		return finalize({
 			...sp,
-			basename: lastSuffix,
-			pathParts: [libraryRoot, coreName, ...middleSuffixes],
+			basename: coreName, // coreName is the node name, finalize will add suffix
+			pathParts: [libraryRoot, ...pathFromSuffix],
 		});
 	}
 
