@@ -154,7 +154,7 @@ describe("buildTreeActions", () => {
 
 		it("FileCreated inside nested => Create", () => {
 			const bulkEvent = bulk({
-				events: [evFileCreated(spMdFile(["Library", "Parent", "Child"], "Note"))],
+				events: [evFileCreated(spMdFile(["Library", "Parent", "Child"], "Note-Child-Parent"))],
 			});
 
 			const actions = buildTreeActions(bulkEvent);
@@ -172,7 +172,7 @@ describe("buildTreeActions", () => {
 				events: [
 					evFileRenamed(
 						spMdFile(["Inbox"], "a"),
-						spMdFile(["Library", "Parent"], "a"),
+						spMdFile(["Library", "Parent"], "a-Parent"),
 					),
 				],
 			});

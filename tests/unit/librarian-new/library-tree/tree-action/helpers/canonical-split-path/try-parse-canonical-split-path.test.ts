@@ -41,7 +41,7 @@ describe("tryParseCanonicalSplitPath", () => {
 	describe("SplitPathType.Folder", () => {
 		it("parses valid folder with no path parts", () => {
 			const sp: SplitPathToFolder = {
-				basename: "MyFolder",
+				basename: "Library",
 				pathParts: [],
 				type: SplitPathType.Folder,
 			};
@@ -50,8 +50,9 @@ describe("tryParseCanonicalSplitPath", () => {
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.value.nodeName).toBe("MyFolder");
-				expect(result.value.sectionNames).toEqual([]);
+				expect(result.value.separatedSuffixedBasename.coreName).toBe("Library");
+				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual([]);
+				expect(result.value.pathParts).toEqual([]);
 				expect(result.value.type).toBe(SplitPathType.Folder);
 			}
 		});
@@ -59,7 +60,7 @@ describe("tryParseCanonicalSplitPath", () => {
 		it("parses valid folder with path parts", () => {
 			const sp: SplitPathToFolder = {
 				basename: "MyFolder",
-				pathParts: ["Section1", "Section2"],
+				pathParts: ["Library", "Section1", "Section2"],
 				type: SplitPathType.Folder,
 			};
 
@@ -67,8 +68,9 @@ describe("tryParseCanonicalSplitPath", () => {
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.value.nodeName).toBe("MyFolder");
-				expect(result.value.sectionNames).toEqual(["Section1", "Section2"]);
+				expect(result.value.separatedSuffixedBasename.coreName).toBe("MyFolder");
+				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual([]);
+				expect(result.value.pathParts).toEqual(["Library", "Section1", "Section2"]);
 				expect(result.value.type).toBe(SplitPathType.Folder);
 			}
 		});
@@ -100,7 +102,7 @@ describe("tryParseCanonicalSplitPath", () => {
 		it("returns error for invalid path part (contains delimiter)", () => {
 			const sp: SplitPathToFolder = {
 				basename: "MyFolder",
-				pathParts: ["Section1", "Section-2"],
+				pathParts: ["Library", "Section1", "Section-2"],
 				type: SplitPathType.Folder,
 			};
 
@@ -115,7 +117,7 @@ describe("tryParseCanonicalSplitPath", () => {
 			const sp: SplitPathToFile = {
 				basename: "MyFile",
 				extension: "txt",
-				pathParts: [],
+				pathParts: ["Library"],
 				type: SplitPathType.File,
 			};
 
@@ -123,8 +125,9 @@ describe("tryParseCanonicalSplitPath", () => {
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk() && result.value.type === SplitPathType.File) {
-				expect(result.value.nodeName).toBe("MyFile");
-				expect(result.value.sectionNames).toEqual([]);
+				expect(result.value.separatedSuffixedBasename.coreName).toBe("MyFile");
+				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual([]);
+				expect(result.value.pathParts).toEqual(["Library"]);
 				expect(result.value.type).toBe(SplitPathType.File);
 				expect(result.value.extension).toBe("txt");
 			}
@@ -134,7 +137,7 @@ describe("tryParseCanonicalSplitPath", () => {
 			const sp: SplitPathToFile = {
 				basename: "MyFile-Section2-Section1",
 				extension: "txt",
-				pathParts: ["Section1", "Section2"],
+				pathParts: ["Library", "Section1", "Section2"],
 				type: SplitPathType.File,
 			};
 
@@ -142,8 +145,9 @@ describe("tryParseCanonicalSplitPath", () => {
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.value.nodeName).toBe("MyFile");
-				expect(result.value.sectionNames).toEqual(["Section1", "Section2"]);
+				expect(result.value.separatedSuffixedBasename.coreName).toBe("MyFile");
+				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual(["Section2", "Section1"]);
+				expect(result.value.pathParts).toEqual(["Library", "Section1", "Section2"]);
 				expect(result.value.type).toBe(SplitPathType.File);
 			}
 		});
@@ -152,7 +156,7 @@ describe("tryParseCanonicalSplitPath", () => {
 			const sp: SplitPathToFile = {
 				basename: "MyFile-Section1-Section2",
 				extension: "txt",
-				pathParts: ["Section1", "Section2"],
+				pathParts: ["Library", "Section1", "Section2"],
 				type: SplitPathType.File,
 			};
 
@@ -160,7 +164,7 @@ describe("tryParseCanonicalSplitPath", () => {
 
 			expect(result.isErr()).toBe(true);
 			if (result.isErr()) {
-				expect(result.error).toContain("suffix does not match");
+				expect(result.error).toContain("Basename does not match canonical format");
 			}
 		});
 
@@ -168,7 +172,7 @@ describe("tryParseCanonicalSplitPath", () => {
 			const sp: SplitPathToFile = {
 				basename: "MyFile-Section1",
 				extension: "txt",
-				pathParts: ["Section1", "Section2"],
+				pathParts: ["Library", "Section1", "Section2"],
 				type: SplitPathType.File,
 			};
 
@@ -181,7 +185,7 @@ describe("tryParseCanonicalSplitPath", () => {
 			const sp: SplitPathToFile = {
 				basename: "My-File",
 				extension: "txt",
-				pathParts: [],
+				pathParts: ["Library"],
 				type: SplitPathType.File,
 			};
 
@@ -194,7 +198,7 @@ describe("tryParseCanonicalSplitPath", () => {
 			const sp: SplitPathToFile = {
 				basename: "MyFile-Section-1",
 				extension: "txt",
-				pathParts: ["Section-1"],
+				pathParts: ["Library", "Section-1"],
 				type: SplitPathType.File,
 			};
 
@@ -209,7 +213,7 @@ describe("tryParseCanonicalSplitPath", () => {
 			const sp: SplitPathToMdFile = {
 				basename: "MyNote",
 				extension: "md",
-				pathParts: [],
+				pathParts: ["Library"],
 				type: SplitPathType.MdFile,
 			};
 
@@ -217,8 +221,9 @@ describe("tryParseCanonicalSplitPath", () => {
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk() && result.value.type === SplitPathType.MdFile) {
-				expect(result.value.nodeName).toBe("MyNote");
-				expect(result.value.sectionNames).toEqual([]);
+				expect(result.value.separatedSuffixedBasename.coreName).toBe("MyNote");
+				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual([]);
+				expect(result.value.pathParts).toEqual(["Library"]);
 				expect(result.value.type).toBe(SplitPathType.MdFile);
 				expect(result.value.extension).toBe("md");
 			}
@@ -228,7 +233,7 @@ describe("tryParseCanonicalSplitPath", () => {
 			const sp: SplitPathToMdFile = {
 				basename: "MyNote-Section2-Section1",
 				extension: "md",
-				pathParts: ["Section1", "Section2"],
+				pathParts: ["Library", "Section1", "Section2"],
 				type: SplitPathType.MdFile,
 			};
 
@@ -236,8 +241,9 @@ describe("tryParseCanonicalSplitPath", () => {
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.value.nodeName).toBe("MyNote");
-				expect(result.value.sectionNames).toEqual(["Section1", "Section2"]);
+				expect(result.value.separatedSuffixedBasename.coreName).toBe("MyNote");
+				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual(["Section2", "Section1"]);
+				expect(result.value.pathParts).toEqual(["Library", "Section1", "Section2"]);
 				expect(result.value.type).toBe(SplitPathType.MdFile);
 			}
 		});
@@ -264,7 +270,7 @@ describe("tryParseCanonicalSplitPath", () => {
 			const sp: SplitPathToMdFile = {
 				basename: "MyNote_Section2_Section1",
 				extension: "md",
-				pathParts: ["Section1", "Section2"],
+				pathParts: ["Library", "Section1", "Section2"],
 				type: SplitPathType.MdFile,
 			};
 
@@ -272,8 +278,9 @@ describe("tryParseCanonicalSplitPath", () => {
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.value.nodeName).toBe("MyNote");
-				expect(result.value.sectionNames).toEqual(["Section1", "Section2"]);
+				expect(result.value.separatedSuffixedBasename.coreName).toBe("MyNote");
+				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual(["Section2", "Section1"]);
+				expect(result.value.pathParts).toEqual(["Library", "Section1", "Section2"]);
 			}
 		});
 	});

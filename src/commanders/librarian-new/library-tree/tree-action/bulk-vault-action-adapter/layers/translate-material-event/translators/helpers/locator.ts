@@ -4,10 +4,13 @@ import {
 	NodeNameSchema,
 } from "../../../../../../../types/schemas/node-name";
 import { tryParseCanonicalSplitPathInsideLibrary } from "../../../../../utils/canonical-naming/canonical-split-path-codec";
+import { tryBuildCanonicalSeparatedSuffixedBasename } from "../../../../../utils/canonical-naming/suffix-utils/build-canonical-separated-suffixed-basename-path-king-way";
 import {
+	makeJoinedSuffixedBasename,
 	makePathPartsFromSuffixParts,
 	tryMakeSeparatedSuffixedBasename,
 } from "../../../../../utils/canonical-naming/suffix-utils/core-suffix-utils";
+import { getParsedUserSettings } from "../../../../../../../../../global-state/global-state";
 import type { CanonicalSplitPathInsideLibrary } from "../../../../../utils/canonical-naming/types";
 import { makeLocatorFromCanonicalSplitPathInsideLibrary } from "../../../../../utils/locator/locator-codec";
 import type { SplitPathInsideLibrary } from "../../../library-scope/types/inside-library-split-paths";
@@ -87,86 +90,102 @@ export const tryCanonicalizeSplitPathToDestination = (
 	const effectivePolicy =
 		intent === RenameIntent.Rename ? ChangePolicy.PathKing : policy;
 
+	// Always start by parsing the basename into (coreName, suffixFromName)
 	const sepRes = tryMakeSeparatedSuffixedBasename(sp);
 	if (sepRes.isErr()) return err(sepRes.error);
 
-	if (effectivePolicy === ChangePolicy.NameKing) {
-		// MOVE-by-name: interpret basename as parent-child chain, not suffix chain
-		// "sweet-pie" → firstSection="sweet", nodeName="pie"
-		// "sweet-berry-pie" → firstSection="sweet", extraSections=["berry"], nodeName="pie"
-		if (
-			intent === RenameIntent.Move &&
-			sepRes.value.suffixParts.length > 0
-		) {
-			// First segment becomes first parent section
-			const firstSection = sepRes.value.coreName;
-			const suffixParts = sepRes.value.suffixParts;
-
-			// Last suffix part becomes node name
-			const lastSuffixPart = suffixParts[suffixParts.length - 1];
-			if (!lastSuffixPart) {
-				return err("MOVE-by-name requires at least one suffix part");
+	// --- PathKing: pathParts are source of truth, build canonical from them
+	if (effectivePolicy === ChangePolicy.PathKing) {
+		// Validate pathParts first
+		const { splitPathToLibraryRoot } = getParsedUserSettings();
+		const libraryRootName = splitPathToLibraryRoot.basename;
+		
+		// Empty pathParts is allowed only for Library root folder
+		if (sp.pathParts.length > 0) {
+			// Non-empty pathParts must start with Library
+			if (sp.pathParts[0] !== libraryRootName) {
+				return err("ExpectedLibraryRoot");
 			}
-			// All suffix parts except last become additional parent sections
-			const extraSections = suffixParts.slice(0, -1);
-
-			// Parse existing pathParts as sectionNames (includes Library root if present)
-			const sectionNamesFromPath: NodeName[] = [];
-			for (const seg of sp.pathParts) {
-				const r = NodeNameSchema.safeParse(seg);
-				if (!r.success)
-					return err(
-						r.error.issues[0]?.message ??
-							"Invalid section NodeName",
-					);
-				sectionNamesFromPath.push(r.data);
+			
+			// Validate all pathParts are valid NodeNames
+			for (const p of sp.pathParts) {
+				const r = NodeNameSchema.safeParse(p);
+				if (!r.success) {
+					return err(r.error.issues[0]?.message ?? "Invalid path part");
+				}
 			}
-
-			// Combine: existing pathParts (including Library) + first section + extra sections
-			return ok({
-				...sp,
-				separatedSuffixedBasename: {
-					coreName: lastSuffixPart,
-					suffixParts: [
-						...sectionNamesFromPath,
-						firstSection,
-						...extraSections,
-					],
-				},
-			});
 		}
-
-		// Regular NameKing (Create): suffix chain interpretation
-		const sectionNames = makePathPartsFromSuffixParts(
-			sepRes.value,
-		) as NodeName[];
-
-		return ok({
-			...sp,
-			sectionNames,
-			separatedSuffixedBasename: {
-				coreName: sepRes.value.coreName,
-				suffixParts: sectionNames,
-			},
+		
+		// For PathKing, pathParts define the canonical structure
+		// Extract coreName from basename, build suffixParts from pathParts
+		return tryBuildCanonicalSeparatedSuffixedBasename(sp).map((canon) => {
+			return {
+				...sp,
+				basename: makeJoinedSuffixedBasename(canon.separatedSuffixedBasename),
+				separatedSuffixedBasename: canon.separatedSuffixedBasename,
+			};
 		});
 	}
 
-	// PathKing
-	const sectionNames: NodeName[] = [];
-	for (const seg of sp.pathParts) {
-		const r = NodeNameSchema.safeParse(seg);
-		if (!r.success)
-			return err(
-				r.error.issues[0]?.message ?? "Invalid section NodeName",
-			);
-		sectionNames.push(r.data);
+	// --- NameKing: interpret basename as path intent, then OUTPUT PathKing-canonical split path
+
+	// Helper: finalize by rebuilding canonical separated+basename using your central logic
+	const finalize = (
+		next: SplitPathInsideLibrary,
+	): Result<CanonicalSplitPathInsideLibrary, string> => {
+		return tryBuildCanonicalSeparatedSuffixedBasename(next).map((canon) => {
+			const separatedSuffixedBasename = canon.separatedSuffixedBasename;
+
+			return {
+				...next,
+				// force canonical basename
+				basename: makeJoinedSuffixedBasename(separatedSuffixedBasename),
+				separatedSuffixedBasename,
+			};
+		});
+	};
+
+	// MOVE-by-name:
+	// basename "sweet-berry-pie" => firstSection="sweet", extraSections=["berry"], nodeName="pie"
+	if (intent === RenameIntent.Move && sepRes.value.suffixParts.length > 0) {
+		const firstSection = sepRes.value.coreName;
+		const suffixPartsFromName = sepRes.value.suffixParts;
+
+		const lastSuffixPart =
+			suffixPartsFromName[suffixPartsFromName.length - 1];
+		if (!lastSuffixPart)
+			return err("MOVE-by-name requires at least one suffix part");
+
+		const extraSections = suffixPartsFromName.slice(0, -1);
+
+		// destination parent chain = existing pathParts + firstSection + extraSections
+		const nextPathParts = [...sp.pathParts, firstSection, ...extraSections];
+
+		// destination node name = lastSuffixPart, so basename core should be that
+		// (we feed it in as basename so splitBySuffixDelimiter yields coreName=lastSuffixPart)
+		return finalize({
+			...sp,
+			basename: lastSuffixPart,
+			pathParts: nextPathParts,
+		});
 	}
 
-	return ok({
+	// Regular NameKing (Create / non-move):
+	// interpret basename suffix chain as parent chain
+	// coreName stays nodeName; suffixParts become extra parent sections (your helper decides exact mapping)
+	const convertedPathParts = makePathPartsFromSuffixParts(
+		sepRes.value,
+	) as NodeName[];
+
+	// Preserve Library root from original pathParts
+	const libraryRoot = sp.pathParts[0];
+	const nextPathParts = libraryRoot
+		? [libraryRoot, ...convertedPathParts]
+		: convertedPathParts;
+
+	return finalize({
 		...sp,
-		separatedSuffixedBasename: {
-			coreName: sepRes.value.coreName,
-			suffixParts: sectionNames,
-		},
+		basename: sepRes.value.coreName,
+		pathParts: nextPathParts,
 	});
 };
