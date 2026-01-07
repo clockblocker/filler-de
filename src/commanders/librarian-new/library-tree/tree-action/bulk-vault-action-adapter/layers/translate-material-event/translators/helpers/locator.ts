@@ -150,24 +150,30 @@ export const tryCanonicalizeSplitPathToDestination = (
 	};
 
 	// MOVE-by-name (NameKing): suffix defines the new path
-	// User renamed basename to include suffix → move file to suffix location
-	//
-	// Example:
-	//   Library/RootNote2.md → Library/RootNote2-P-Q.md
-	//   coreName = "RootNote2", suffixParts = ["P", "Q"]
-	//   → path = Library/Q/P/ (suffix reversed)
-	//   → final: Library/Q/P/RootNote2-P-Q.md
-	if (intent === RenameIntent.Move && sepRes.value.suffixParts.length > 0) {
+	if (intent === RenameIntent.Move) {
 		const libraryRoot = sp.pathParts[0];
 		if (!libraryRoot) return err("Expected Library root in pathParts");
 
 		const { coreName, suffixParts } = sepRes.value;
 
-		// NameKing: suffix reversed = path
+		// Empty suffix = move to Library root
+		// Example: Library/R3/S3/Note-S3-R3.md → Library/R3/S3/Note.md
+		//          → Library/Note.md (no suffix = root)
+		if (suffixParts.length === 0) {
+			return finalize({
+				...sp,
+				basename: coreName,
+				pathParts: [libraryRoot],
+			});
+		}
+
+		// Non-empty suffix: move to suffix location
+		// Example: Library/RootNote2.md → Library/RootNote2-P-Q.md
+		//          → Library/Q/P/RootNote2-P-Q.md (suffix reversed = path)
 		const pathFromSuffix = [...suffixParts].reverse();
 		return finalize({
 			...sp,
-			basename: coreName, // coreName is the node name, finalize will add suffix
+			basename: coreName,
 			pathParts: [libraryRoot, ...pathFromSuffix],
 		});
 	}

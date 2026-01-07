@@ -1,0 +1,23 @@
+/// <reference types="@wdio/globals/types" />
+import { obsidianPage } from "wdio-obsidian-service";
+import {
+	testFileWithCorrectSuffixNoOp,
+	testFileWithWrongSuffixHealed,
+	testNestedFileGetsSuffix,
+	testRootFileNoSuffix,
+} from "./healing/file-create.test";
+
+const VAULT_PATH = "tests/obsidian-e2e/vaults/healing";
+
+describe("Healing - File Create", () => {
+	beforeEach(async () => {
+		await obsidianPage.resetVault(VAULT_PATH);
+		await new Promise((r) => setTimeout(r, 7000));
+	});
+
+	it("root file gets no suffix", testRootFileNoSuffix);
+	it("nested file gets suffix added", testNestedFileGetsSuffix);
+	it("file with correct suffix is no-op", testFileWithCorrectSuffixNoOp);
+	it("file with wrong suffix is healed", testFileWithWrongSuffixHealed);
+});
+

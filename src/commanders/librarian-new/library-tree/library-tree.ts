@@ -175,13 +175,23 @@ export class LibraryTree {
 
 	private applyRename(action: RenameNodeAction): ApplyResult {
 		const { targetLocator, newNodeName } = action;
+		logger.info("[LibraryTree] applyRename:", {
+			newNodeName,
+			targetLocator,
+		});
 		const parentSection = this.findSection(
 			targetLocator.segmentIdChainToParent,
 		);
-		if (!parentSection) return { healingActions: [] };
+		if (!parentSection) {
+			logger.info("[LibraryTree] applyRename: parent not found");
+			return { healingActions: [] };
+		}
 
 		const node = parentSection.children[targetLocator.segmentId];
-		if (!node) return { healingActions: [] };
+		if (!node) {
+			logger.info("[LibraryTree] applyRename: node not found");
+			return { healingActions: [] };
+		}
 
 		// Remove old, insert with new name
 		delete parentSection.children[targetLocator.segmentId];
@@ -208,12 +218,20 @@ export class LibraryTree {
 				targetLocator.segmentIdChainToParent,
 				newNodeName,
 			);
-			return this.computeDescendantSuffixHealing(
+			logger.info("[LibraryTree] applyRename section:", {
+				childCount: Object.keys(node.children).length,
+				currentSectionPath,
+				newSectionChain,
+				oldSectionPath,
+			});
+			const result = this.computeDescendantSuffixHealing(
 				newSectionChain,
 				node,
 				oldSectionPath,
 				currentSectionPath,
 			);
+			logger.info("[LibraryTree] applyRename section result:", result);
+			return result;
 		}
 
 		// Leaf rename needs observed path - but rename action doesn't carry it
@@ -295,26 +313,65 @@ export class LibraryTree {
 				...newParentChain,
 				newSegmentId as SectionNodeSegmentId,
 			];
-			// Current path in filesystem: new parent + new node name
-			const currentSectionPath = [
+			// Canonical path: parent chain + new node name
+			const canonicalSectionPath = [
 				...newParentChain.map((segId) =>
 					this.extractNodeNameFromSegmentId(segId),
 				),
 				newNodeName,
 			];
+			// Current path in filesystem (from observed)
+			const currentSectionPath = [
+				...observedSplitPath.pathParts,
+				observedSplitPath.basename,
+			];
 			logger.info("[LibraryTree] Section move healing:", {
+				canonicalSectionPath,
 				childCount: Object.keys(node.children).length,
 				currentSectionPath,
 				newParentChain,
 				newSegmentId,
 				oldSectionPath,
 			});
-			return this.computeDescendantSuffixHealing(
+
+			const healingActions: HealingAction[] = [];
+
+			// 1) Heal the folder itself if observed != canonical
+			const observedFolderPath = currentSectionPath.join("/");
+			const canonicalFolderPath = canonicalSectionPath.join("/");
+			if (observedFolderPath !== canonicalFolderPath) {
+				healingActions.push({
+					payload: {
+						from: {
+							basename: observedSplitPath.basename,
+							pathParts: observedSplitPath.pathParts,
+							type: SplitPathType.Folder,
+						},
+						to: {
+							basename: newNodeName,
+							pathParts: canonicalSectionPath.slice(0, -1),
+							type: SplitPathType.Folder,
+						},
+					},
+					type: "RenameFolder",
+				});
+			}
+
+			// 2) Heal descendants (they will move with folder, but suffixes need update)
+			// After folder heals, descendants are at canonicalSectionPath
+			const descendantHealing = this.computeDescendantSuffixHealing(
 				newSectionChain,
 				node,
 				oldSectionPath,
-				currentSectionPath,
+				canonicalSectionPath, // after folder heals, files are here
 			);
+
+			return {
+				healingActions: [
+					...healingActions,
+					...descendantHealing.healingActions,
+				],
+			};
 		}
 
 		// Leaf move - narrow the types

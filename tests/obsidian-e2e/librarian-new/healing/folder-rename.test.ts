@@ -19,16 +19,38 @@ export async function testFolderRenameHealsChildSuffix(): Promise<void> {
 	const expectedPath = "Library/grandpa/father/son/Diary-son-father-grandpa.md";
 	const wrongPath = "Library/grandpa/father/son/Diary-kid-father-grandpa.md";
 
+	// Debug: list all files in Library
+	const allFiles = await browser.executeObsidian(async ({ app }) => {
+		return app.vault.getFiles().map((f) => f.path);
+	});
+	console.log("[DEBUG] All files before test:", allFiles);
+
 	// Verify initial file exists
 	const initialExists = await waitForFile(initialPath);
+	console.log("[DEBUG] initialExists:", initialExists, "path:", initialPath);
 	expect(initialExists).toBe(true);
 
 	// Rename folder: kid → son
 	await renamePath("Library/grandpa/father/kid", "Library/grandpa/father/son");
 
+	// Debug: wait a bit and list files
+	await new Promise((r) => setTimeout(r, 2000));
+	const filesAfterRename = await browser.executeObsidian(async ({ app }) => {
+		const files = app.vault.getFiles();
+		const folders = app.vault.getAllFolders();
+		return {
+			files: files.map((f) => f.path),
+			folders: folders.map((f) => f.path),
+		};
+	});
+	console.log("[DEBUG] Files after rename:", JSON.stringify(filesAfterRename, null, 2));
+
 	// Poll for healed file
 	const healedExists = await waitForFile(expectedPath, { timeout: 3000 });
 	const wrongGone = await waitForFileGone(wrongPath, { timeout: 500 });
+
+	console.log("[DEBUG] healedExists:", healedExists, "expectedPath:", expectedPath);
+	console.log("[DEBUG] wrongGone:", wrongGone, "wrongPath:", wrongPath);
 
 	expect(healedExists).toBe(true);
 	expect(wrongGone).toBe(true);

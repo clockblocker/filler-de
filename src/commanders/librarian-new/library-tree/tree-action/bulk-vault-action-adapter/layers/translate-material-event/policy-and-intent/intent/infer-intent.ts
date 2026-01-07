@@ -75,15 +75,20 @@ export function inferRenameIntent({
 
 	const newSuffixParts = sepRes.value.suffixParts;
 
-	// no suffix → pure rename
-	if (newSuffixParts.length === 0) return RenameIntent.Rename;
-
 	// Compare new suffix with current path (sans Library root)
-	// If they match, user just renamed the coreName — not a move
 	const currentSuffixParts = makeSuffixPartsFromPathPartsWithRoot(
 		to.pathParts,
 	);
 
+	// no suffix AND already at root → pure rename
+	// no suffix AND NOT at root → move to root
+	if (newSuffixParts.length === 0) {
+		return currentSuffixParts.length === 0
+			? RenameIntent.Rename
+			: RenameIntent.Move;
+	}
+
+	// If suffix matches path, user just renamed the coreName — not a move
 	const suffixMatchesPath =
 		newSuffixParts.length === currentSuffixParts.length &&
 		newSuffixParts.every((s, i) => s === currentSuffixParts[i]);

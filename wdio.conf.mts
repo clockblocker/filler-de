@@ -15,6 +15,9 @@ if (env.CI) {
     console.log("obsidian-cache-key:", JSON.stringify([desktopVersions, mobileVersions]));
 }
 
+// Skip mobile emulation for faster local dev (set WDIO_MOBILE=1 to include)
+const includeMobile = env.WDIO_MOBILE === "1" || env.CI;
+
 export const config: WebdriverIO.Config = {
 
     cacheDir: cacheDir,
@@ -30,7 +33,7 @@ export const config: WebdriverIO.Config = {
                 vault: "tests/simple",
             },
         })),
-        ...mobileVersions.map<WebdriverIO.Capabilities>(([appVersion, installerVersion]) => ({
+        ...(includeMobile ? mobileVersions.map<WebdriverIO.Capabilities>(([appVersion, installerVersion]) => ({
             browserName: 'obsidian',
             'goog:chromeOptions': {
                 mobileEmulation: {
@@ -44,13 +47,13 @@ export const config: WebdriverIO.Config = {
                 plugins: ["."],
                 vault: "tests/simple",
             },
-        })),
+        })) : []),
     ],
     framework: 'mocha',
     logLevel: "warn",
 
     // How many instances of Obsidian should be launched in parallel during testing.
-    maxInstances: Number(env.WDIO_MAX_INSTANCES || 4),
+    maxInstances: Number(env.WDIO_MAX_INSTANCES || 8),
 
     mochaOpts: {
         timeout: 60 * 1000,
