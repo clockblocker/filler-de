@@ -168,10 +168,10 @@ function translateRename(from: SplitPath, to: SplitPath): TreeActionDeprecated {
 	// If from is outside library but to is inside, treat as CreateNode
 	if (!fromInsideLibrary && toInsideLibrary) {
 		if (to.type === "MdFile") {
-			return createScrollAction(to);
+			return createScrollAction(to) as TreeActionDeprecated;
 		}
 		if (to.type === "File") {
-			return createFileAction(to);
+			return createFileAction(to) as TreeActionDeprecated;
 		}
 		// Folder - should be handled by CreateFolder action
 		return createSectionAction(to);

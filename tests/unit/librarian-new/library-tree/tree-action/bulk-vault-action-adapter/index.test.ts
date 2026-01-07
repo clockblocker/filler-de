@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { buildTreeActions } from "../../../../../../src/commanders/librarian-new/library-tree/tree-action/bulk-vault-action-adapter/index";
-import type { TreeAction } from "../../../../../../src/commanders/librarian-new/library-tree/tree-action/types/tree-action";
 import { TreeActionType } from "../../../../../../src/commanders/librarian-new/library-tree/tree-action/types/tree-action";
 import { getNodeName } from "../../../../../../src/commanders/librarian-new/library-tree/tree-action/utils/locator/locator-utils";
 import { TreeNodeType } from "../../../../../../src/commanders/librarian-new/library-tree/tree-node/types/atoms";

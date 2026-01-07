@@ -1,4 +1,5 @@
 import { err, ok, type Result } from "neverthrow";
+import { getParsedUserSettings } from "../../../../../../../../../global-state/global-state";
 import {
 	type NodeName,
 	NodeNameSchema,
@@ -10,7 +11,6 @@ import {
 	makePathPartsFromSuffixParts,
 	tryMakeSeparatedSuffixedBasename,
 } from "../../../../../utils/canonical-naming/suffix-utils/core-suffix-utils";
-import { getParsedUserSettings } from "../../../../../../../../../global-state/global-state";
 import type { CanonicalSplitPathInsideLibrary } from "../../../../../utils/canonical-naming/types";
 import { makeLocatorFromCanonicalSplitPathInsideLibrary } from "../../../../../utils/locator/locator-codec";
 import type { SplitPathInsideLibrary } from "../../../library-scope/types/inside-library-split-paths";
@@ -99,29 +99,33 @@ export const tryCanonicalizeSplitPathToDestination = (
 		// Validate pathParts first
 		const { splitPathToLibraryRoot } = getParsedUserSettings();
 		const libraryRootName = splitPathToLibraryRoot.basename;
-		
+
 		// Empty pathParts is allowed only for Library root folder
 		if (sp.pathParts.length > 0) {
 			// Non-empty pathParts must start with Library
 			if (sp.pathParts[0] !== libraryRootName) {
 				return err("ExpectedLibraryRoot");
 			}
-			
+
 			// Validate all pathParts are valid NodeNames
 			for (const p of sp.pathParts) {
 				const r = NodeNameSchema.safeParse(p);
 				if (!r.success) {
-					return err(r.error.issues[0]?.message ?? "Invalid path part");
+					return err(
+						r.error.issues[0]?.message ?? "Invalid path part",
+					);
 				}
 			}
 		}
-		
+
 		// For PathKing, pathParts define the canonical structure
 		// Extract coreName from basename, build suffixParts from pathParts
 		return tryBuildCanonicalSeparatedSuffixedBasename(sp).map((canon) => {
 			return {
 				...sp,
-				basename: makeJoinedSuffixedBasename(canon.separatedSuffixedBasename),
+				basename: makeJoinedSuffixedBasename(
+					canon.separatedSuffixedBasename,
+				),
 				separatedSuffixedBasename: canon.separatedSuffixedBasename,
 			};
 		});
