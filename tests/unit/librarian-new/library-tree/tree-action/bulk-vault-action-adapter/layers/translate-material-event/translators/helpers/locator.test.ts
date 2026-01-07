@@ -336,7 +336,49 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 		});
 	});
 
-	describe("D) Error cases (validation)", () => {
+	describe("D) Obsidian duplicate marker handling", () => {
+		it("14. PathKing preserves duplicate marker: Note-A 1 at Library/A => Note 1-A", () => {
+			const sp = spMdFile(["Library", "A"], "Note-A 1");
+			const result = tryCanonicalizeSplitPathToDestination(
+				sp,
+				ChangePolicy.PathKing,
+				undefined,
+			);
+
+			expect(result.isOk()).toBe(true);
+			if (result.isOk()) {
+				// Duplicate marker " 1" should be attached to coreName
+				expect(result.value.separatedSuffixedBasename.coreName).toBe("Note 1");
+				expect(result.value.pathParts).toEqual(["Library", "A"]);
+				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual(["A"]);
+			}
+		});
+
+		it("15. PathKing preserves duplicate marker in nested path", () => {
+			const sp = spMdFile(
+				["Library", "Test", "parent", "child"],
+				"Note-child-parent-Test 1",
+			);
+			const result = tryCanonicalizeSplitPathToDestination(
+				sp,
+				ChangePolicy.PathKing,
+				undefined,
+			);
+
+			expect(result.isOk()).toBe(true);
+			if (result.isOk()) {
+				expect(result.value.separatedSuffixedBasename.coreName).toBe("Note 1");
+				expect(result.value.pathParts).toEqual(["Library", "Test", "parent", "child"]);
+				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual([
+					"child",
+					"parent",
+					"Test",
+				]);
+			}
+		});
+	});
+
+	describe("E) Error cases (validation)", () => {
 		it("11. Invalid nodeName in basename (empty)", () => {
 			const sp = spMdFile(["Library"], "");
 			const result = tryCanonicalizeSplitPathToDestination(

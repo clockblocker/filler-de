@@ -1,4 +1,5 @@
 import { SplitPathType } from "../../../obsidian-vault-action-manager/types/split-path";
+import { logger } from "../../../utils/logger";
 import type { NodeName } from "../types/schemas/node-name";
 import type {
 	SplitPathInsideLibrary,
@@ -234,10 +235,33 @@ export class LibraryTree {
 		const oldParent = this.findSection(
 			targetLocator.segmentIdChainToParent,
 		);
+		logger.info("[LibraryTree] applyMove:", {
+			oldParentChildren: oldParent ? Object.keys(oldParent.children) : [],
+			oldParentFound: !!oldParent,
+			targetLocator,
+		});
 		if (!oldParent) return { healingActions: [] };
 
 		const node = oldParent.children[targetLocator.segmentId];
+		logger.info("[LibraryTree] applyMove node:", {
+			nodeChildren:
+				node?.type === TreeNodeType.Section
+					? Object.keys(node.children)
+					: "N/A",
+			nodeFound: !!node,
+			nodeType: node?.type,
+			segmentId: targetLocator.segmentId,
+		});
 		if (!node) return { healingActions: [] };
+
+		// Compute old section path BEFORE detaching (for descendant healing)
+		const oldSectionPath =
+			node.type === TreeNodeType.Section
+				? this.buildSectionPath(
+						targetLocator.segmentIdChainToParent,
+						node.nodeName,
+					)
+				: null;
 
 		delete oldParent.children[targetLocator.segmentId];
 
@@ -257,12 +281,19 @@ export class LibraryTree {
 		newParent.children[newSegmentId] = node;
 
 		// Compute healing
-		if (node.type === TreeNodeType.Section) {
-			// For section move, observedSplitPath is the section's new observed location
+		if (node.type === TreeNodeType.Section && oldSectionPath) {
+			// For section move, use OLD section path to build observed basenames
+			// (children still have old suffix structure)
+			logger.info("[LibraryTree] Section move healing:", {
+				childCount: Object.keys(node.children).length,
+				newParentChain,
+				newSegmentId,
+				oldSectionPath,
+			});
 			return this.computeDescendantSuffixHealing(
 				[...newParentChain, newSegmentId as SectionNodeSegmentId],
 				node,
-				observedSplitPath.pathParts,
+				oldSectionPath,
 			);
 		}
 
@@ -459,10 +490,18 @@ export class LibraryTree {
 					observedParentPathParts,
 				);
 
+				logger.info("[LibraryTree] Leaf healing:", {
+					observedParentPathParts,
+					observedSplitPath,
+					sectionChain,
+					segId,
+				});
+
 				const leafHealing = this.computeLeafHealing(
 					locator,
 					observedSplitPath,
 				);
+				logger.info("[LibraryTree] Leaf healing result:", leafHealing);
 				healingActions.push(...leafHealing.healingActions);
 			}
 		}

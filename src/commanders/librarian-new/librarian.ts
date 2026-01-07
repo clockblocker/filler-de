@@ -18,6 +18,8 @@ import { tryCanonicalizeSplitPathToDestination } from "./library-tree/tree-actio
 import { makeLocatorFromCanonicalSplitPathInsideLibrary } from "./library-tree/tree-action/utils/locator/locator-codec";
 import { inferCreatePolicy } from "./library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/infer-create";
 import { TreeNodeStatus, TreeNodeType } from "./library-tree/tree-node/types/atoms";
+import type { HealingAction } from "./library-tree/types/healing-action";
+import { resolveDuplicateHealingActions } from "./library-tree/utils/resolve-duplicate-healing";
 
 // ─── Queue ───
 
@@ -236,19 +238,28 @@ export class Librarian {
 	private async processActions(actions: TreeAction[]): Promise<void> {
 		if (!this.tree) return;
 
-		const allHealingActions: VaultAction[] = [];
+		const allHealingActions: HealingAction[] = [];
 
 		for (const action of actions) {
 			const result = this.tree.apply(action);
-			const vaultActions = healingActionsToVaultActions(result.healingActions);
-			allHealingActions.push(...vaultActions);
+			allHealingActions.push(...result.healingActions);
 		}
 
-		if (allHealingActions.length > 0) {
+		if (allHealingActions.length === 0) return;
+
+		// Resolve duplicate conflicts before dispatching
+		const resolvedActions = await resolveDuplicateHealingActions(
+			allHealingActions,
+			this.vaultActionManager,
+		);
+
+		const vaultActions = healingActionsToVaultActions(resolvedActions);
+
+		if (vaultActions.length > 0) {
 			logger.info(
-				`[Librarian] Dispatching ${allHealingActions.length} healing actions`,
+				`[Librarian] Dispatching ${vaultActions.length} healing actions`,
 			);
-			await this.vaultActionManager.dispatch(allHealingActions);
+			await this.vaultActionManager.dispatch(vaultActions);
 		}
 	}
 

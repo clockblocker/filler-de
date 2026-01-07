@@ -19,6 +19,20 @@ const dropLibraryRootIfPresent = (pathParts: string[]): string[] => {
 	return pathParts[0] === root ? pathParts.slice(1) : pathParts;
 };
 
+/**
+ * Extracts duplicate marker (e.g., " 1", " 2") from end of basename.
+ * Obsidian appends " N" when duplicating files.
+ */
+const extractDuplicateMarker = (
+	basename: string,
+): { cleanBasename: string; marker: string } => {
+	const match = basename.match(/^(.+?)( \d+)$/);
+	if (match) {
+		return { cleanBasename: match[1] ?? basename, marker: match[2] ?? "" };
+	}
+	return { cleanBasename: basename, marker: "" };
+};
+
 export const tryBuildCanonicalSeparatedSuffixedBasename = ({
 	basename,
 	pathParts,
@@ -27,8 +41,13 @@ export const tryBuildCanonicalSeparatedSuffixedBasename = ({
 	CanonicalSeparatedSuffixedBasename,
 	string
 > => {
-	return splitBySuffixDelimiter(basename).map((parts) => {
-		const [coreName, ..._suffixFromName] = parts;
+	// Handle Obsidian duplicate marker (e.g., "Note-A 1" → coreName="Note 1", suffix=["A"])
+	const { cleanBasename, marker } = extractDuplicateMarker(basename);
+
+	return splitBySuffixDelimiter(cleanBasename).map((parts) => {
+		const [rawCoreName, ..._suffixFromName] = parts;
+		// Re-attach duplicate marker to coreName
+		const coreName = (rawCoreName + marker) as NodeName;
 
 		const pathPartsSansRoot = dropLibraryRootIfPresent(pathParts);
 		const suffixParts =
