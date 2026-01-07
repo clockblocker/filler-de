@@ -262,6 +262,78 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 				expect(result.value.pathParts).toEqual(["Library"]);
 			}
 		});
+
+		it("12. Canonical suffix edit: Note-child2-parent-Test at Library/Test/parent/child1 => Library/Test/parent/child2", () => {
+			// User edits suffix from child1 to child2 while staying in child1 folder
+			const sp = spMdFile(
+				["Library", "Test", "parent", "child1"],
+				"Note-child2-parent-Test",
+			);
+			const result = tryCanonicalizeSplitPathToDestination(
+				sp,
+				ChangePolicy.NameKing,
+				RenameIntent.Move,
+			);
+
+			expect(result.isOk()).toBe(true);
+			if (result.isOk()) {
+				// Suffix is interpreted as reversed path since suffix root "Test" matches pathParts[1]
+				expect(result.value.separatedSuffixedBasename.coreName).toBe("Note");
+				expect(result.value.pathParts).toEqual(["Library", "Test", "parent", "child2"]);
+				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual([
+					"child2",
+					"parent",
+					"Test",
+				]);
+			}
+		});
+
+		it("13. Canonical suffix edit: Note-Test at Library/Test/parent/child1 => Library/Test (shortened suffix)", () => {
+			// User shortens suffix from child1-parent-Test to just Test
+			const sp = spMdFile(
+				["Library", "Test", "parent", "child1"],
+				"Note-Test",
+			);
+			const result = tryCanonicalizeSplitPathToDestination(
+				sp,
+				ChangePolicy.NameKing,
+				RenameIntent.Move,
+			);
+
+			expect(result.isOk()).toBe(true);
+			if (result.isOk()) {
+				// Suffix root "Test" matches pathParts[1], so interpret as reversed
+				// suffixParts=["Test"] reversed = ["Test"] → path = Library/Test
+				expect(result.value.separatedSuffixedBasename.coreName).toBe("Note");
+				expect(result.value.pathParts).toEqual(["Library", "Test"]);
+				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual(["Test"]);
+			}
+		});
+
+		it("13b. Same scenario but with RenameIntent.Rename (should use PathKing)", () => {
+			// If intent is Rename, it forces PathKing which ignores suffix
+			const sp = spMdFile(
+				["Library", "Test", "parent", "child1"],
+				"Note-Test",
+			);
+			const result = tryCanonicalizeSplitPathToDestination(
+				sp,
+				ChangePolicy.NameKing,
+				RenameIntent.Rename, // Forces PathKing
+			);
+
+			expect(result.isOk()).toBe(true);
+			if (result.isOk()) {
+				// PathKing: path stays, suffix is rebuilt from path
+				expect(result.value.separatedSuffixedBasename.coreName).toBe("Note");
+				expect(result.value.pathParts).toEqual(["Library", "Test", "parent", "child1"]);
+				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual([
+					"child1",
+					"parent",
+					"Test",
+				]);
+			}
+		});
 	});
 
 	describe("D) Error cases (validation)", () => {

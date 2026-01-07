@@ -14,7 +14,9 @@ import { buildTreeActions } from "./library-tree/tree-action/bulk-vault-action-a
 import { tryParseAsInsideLibrarySplitPath } from "./library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
 import type { SplitPathInsideLibrary } from "./library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
 import type { CreateTreeLeafAction, TreeAction } from "./library-tree/tree-action/types/tree-action";
-import { tryMakeTargetLocatorFromLibraryScopedSplitPath } from "./library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/translators/helpers/locator";
+import { tryCanonicalizeSplitPathToDestination } from "./library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/translators/helpers/locator";
+import { makeLocatorFromCanonicalSplitPathInsideLibrary } from "./library-tree/tree-action/utils/locator/locator-codec";
+import { inferCreatePolicy } from "./library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/infer-create";
 import { TreeNodeStatus, TreeNodeType } from "./library-tree/tree-node/types/atoms";
 
 // ─── Queue ───
@@ -89,6 +91,7 @@ export class Librarian {
 
 	/**
 	 * Build CreateTreeLeafAction for each file in the library.
+	 * Applies policy (NameKing for root, PathKing for nested) to determine canonical location.
 	 * Reads status from md file metadata.
 	 */
 	private async buildInitialCreateActions(
@@ -100,12 +103,26 @@ export class Librarian {
 			// Convert to library-scoped path
 			const libraryScopedResult = tryParseAsInsideLibrarySplitPath(file);
 			if (libraryScopedResult.isErr()) continue;
-			const libraryScopedPath = libraryScopedResult.value;
+			const observedPath = libraryScopedResult.value;
 
-			// Build locator
-			const locatorResult = tryMakeTargetLocatorFromLibraryScopedSplitPath(libraryScopedPath);
-			if (locatorResult.isErr()) continue;
-			const locator = locatorResult.value;
+			// Apply policy to get canonical destination
+			// NameKing for root-level files, PathKing for nested
+			const policy = inferCreatePolicy(observedPath);
+			const canonicalResult = tryCanonicalizeSplitPathToDestination(
+				observedPath,
+				policy,
+				undefined, // no rename intent for create
+			);
+			if (canonicalResult.isErr()) {
+				logger.warn(
+					`[Librarian] Failed to canonicalize ${observedPath.basename}: ${canonicalResult.error}`,
+				);
+				continue;
+			}
+			const canonicalPath = canonicalResult.value;
+
+			// Build locator from canonical path
+			const locator = makeLocatorFromCanonicalSplitPathInsideLibrary(canonicalPath);
 
 			// Read status for md files
 			let status: TreeNodeStatus = TreeNodeStatus.NotStarted;
@@ -127,7 +144,7 @@ export class Librarian {
 					actionType: "Create",
 					targetLocator: locator,
 					initialStatus: status,
-					observedSplitPath: libraryScopedPath as SplitPathInsideLibrary & {
+					observedSplitPath: observedPath as SplitPathInsideLibrary & {
 						type: typeof SplitPathType.MdFile;
 						extension: "md";
 					},
@@ -136,7 +153,7 @@ export class Librarian {
 				actions.push({
 					actionType: "Create",
 					targetLocator: locator,
-					observedSplitPath: libraryScopedPath as SplitPathInsideLibrary & {
+					observedSplitPath: observedPath as SplitPathInsideLibrary & {
 						type: typeof SplitPathType.File;
 						extension: string;
 					},
