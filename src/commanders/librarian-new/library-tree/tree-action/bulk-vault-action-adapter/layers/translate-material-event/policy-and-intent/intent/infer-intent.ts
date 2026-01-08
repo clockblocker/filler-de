@@ -13,7 +13,7 @@ import { RenameIntent } from "./types";
  * - If basename did NOT change → MOVE (path-based move).
  * - If basename changed:
  *   - For FOLDERS:
- *     - no suffix → RENAME (folders don't have suffixes normally)
+ *     - no suffix → RENAME (folders don't have suffixe canonically)
  *     - has suffix → MOVE (folder should be moved based on suffix)
  *   - For FILES:
  *     - no suffix AND at root → RENAME
