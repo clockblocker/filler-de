@@ -11,7 +11,7 @@ import type {
 import { tryBuildCanonicalSeparatedSuffixedBasename } from "./suffix-utils/build-canonical-separated-suffixed-basename-path-king-way";
 import {
 	makeJoinedSuffixedBasename,
-	tryMakeSeparatedSuffixedBasename,
+	tryParseAsSeparatedSuffixedBasename,
 } from "./suffix-utils/core-suffix-utils";
 import type {
 	CanonicalSplitPathInsideLibrary,
@@ -38,7 +38,7 @@ export function tryParseCanonicalSplitPathInsideLibrary(
 	const pathPartsRes = tryParsePathParts(sp.pathParts);
 	if (pathPartsRes.isErr()) return err(pathPartsRes.error);
 
-	const sepRes = tryMakeSeparatedSuffixedBasename(sp);
+	const sepRes = tryParseAsSeparatedSuffixedBasename(sp);
 	if (sepRes.isErr()) return err(sepRes.error);
 
 	const { coreName, suffixParts } = sepRes.value;

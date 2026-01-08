@@ -2,30 +2,31 @@
  * Click events emitted by ClickManager.
  */
 
-import type { TreeNodeStatus } from "../../commanders/librarian-new/library-tree/tree-node/types/atoms";
-import type { SectionNodeSegmentId } from "../../commanders/librarian-new/library-tree/tree-node/types/node-segment-id";
+import type { SplitPathToMdFile } from "../../vault-action-manager/types/split-path";
 
 // ─── Event Types ───
 
-export type ClickEventType = "CodexCheckboxClicked";
+export type ClickEventType = "CheckboxClicked";
 
 // ─── Events ───
 
 /**
- * Emitted when a checkbox in a codex file is clicked.
+ * Emitted when a task checkbox is clicked in any markdown file.
  */
-export type CodexCheckboxClickedEvent = {
-	type: "CodexCheckboxClicked";
-	/** Target node chain (parsed from link in same line) */
-	targetChain: SectionNodeSegmentId[];
-	/** New status (after click — checkbox.checked) */
-	newStatus: TreeNodeStatus;
-	/** The checkbox element */
-	checkbox: HTMLInputElement;
+export type CheckboxClickedEvent = {
+	type: "CheckboxClicked";
+	/** New state after click (checkbox.checked) */
+	checked: boolean;
+	/** File where checkbox was clicked */
+	splitPath: SplitPathToMdFile;
+	/** Line content after "- [ ] " or "- [x] " */
+	lineContent: string;
 };
 
-export type ClickEvent = CodexCheckboxClickedEvent;
+export type ClickEvent = CheckboxClickedEvent;
 
 // ─── Handler ───
 
 export type ClickEventHandler = (event: ClickEvent) => void;
+
+export type Teardown = () => void;

@@ -1,11 +1,14 @@
 import { getParsedUserSettings } from "../../global-state/global-state";
 import type {
+	CheckboxClickedEvent,
+	ClickManager,
+} from "../../managers/obsidian/click-manager";
+import type {
 	BulkVaultEvent,
 	VaultActionManager,
 } from "../../managers/obsidian/vault-action-manager";
 import type { SplitPathWithReader } from "../../managers/obsidian/vault-action-manager/types/split-path";
 import { SplitPathType } from "../../managers/obsidian/vault-action-manager/types/split-path";
-import type { VaultAction } from "../../managers/obsidian/vault-action-manager/types/vault-action";
 import { extractMetaInfo } from "../../services/dto-services/meta-info-manager/interface";
 import { logger } from "../../utils/logger";
 import { healingActionsToVaultActions } from "./library-tree/codecs/healing-to-vault-action";
@@ -14,6 +17,7 @@ import {
 	type CodexImpact,
 	codexActionsToVaultActions,
 	codexImpactToActions,
+	parseCodexClickLineContent,
 } from "./library-tree/codex";
 import { mergeCodexImpacts } from "./library-tree/codex/merge-codex-impacts";
 import { LibraryTree } from "./library-tree/library-tree";
@@ -26,12 +30,16 @@ import type {
 	CreateTreeLeafAction,
 	TreeAction,
 } from "./library-tree/tree-action/types/tree-action";
-import { tryMakeSeparatedSuffixedBasename } from "./library-tree/tree-action/utils/canonical-naming/suffix-utils/core-suffix-utils";
+import { tryParseAsSeparatedSuffixedBasename } from "./library-tree/tree-action/utils/canonical-naming/suffix-utils/core-suffix-utils";
 import { makeLocatorFromCanonicalSplitPathInsideLibrary } from "./library-tree/tree-action/utils/locator/locator-codec";
 import {
 	TreeNodeStatus,
 	TreeNodeType,
 } from "./library-tree/tree-node/types/atoms";
+import {
+	NodeSegmentIdSeparator,
+	type ScrollNodeSegmentId,
+} from "./library-tree/tree-node/types/node-segment-id";
 import type { HealingAction } from "./library-tree/types/healing-action";
 import { resolveDuplicateHealingActions } from "./library-tree/utils/resolve-duplicate-healing";
 
@@ -47,10 +55,14 @@ type QueueItem = {
 export class Librarian {
 	private tree: LibraryTree | null = null;
 	private eventTeardown: (() => void) | null = null;
+	private clickTeardown: (() => void) | null = null;
 	private queue: QueueItem[] = [];
 	private processing = false;
 
-	constructor(private readonly vaultActionManager: VaultActionManager) {}
+	constructor(
+		private readonly vaultActionManager: VaultActionManager,
+		private readonly clickManager?: ClickManager,
+	) {}
 
 	/**
 	 * Initialize librarian: read tree and heal mismatches.
@@ -122,6 +134,9 @@ export class Librarian {
 		// Subscribe to vault events
 		this.subscribeToVaultEvents();
 
+		// Subscribe to click events
+		this.subscribeToClickEvents();
+
 		logger.info("[Librarian] Initialized");
 	}
 
@@ -137,7 +152,7 @@ export class Librarian {
 
 		for (const file of files) {
 			// Skip codex files (basename starts with __)
-			const coreNameResult = tryMakeSeparatedSuffixedBasename(file);
+			const coreNameResult = tryParseAsSeparatedSuffixedBasename(file);
 			if (
 				coreNameResult.isOk() &&
 				coreNameResult.value.coreName === CODEX_CORE_NAME
@@ -222,6 +237,89 @@ export class Librarian {
 				await this.handleBulkEvent(bulk);
 			},
 		);
+	}
+
+	/**
+	 * Subscribe to click events from ClickManager.
+	 */
+	private subscribeToClickEvents(): void {
+		if (!this.clickManager) return;
+
+		this.clickTeardown = this.clickManager.subscribe((event) => {
+			if (event.type === "CheckboxClicked") {
+				this.handleCheckboxClick(event);
+			}
+		});
+	}
+
+	/**
+	 * Handle checkbox click in a codex file.
+	 */
+	private handleCheckboxClick(event: CheckboxClickedEvent): void {
+		// Check if file is a codex (basename starts with __)
+		const coreNameResult = tryParseAsSeparatedSuffixedBasename(
+			event.splitPath,
+		);
+		if (coreNameResult.isErr()) return;
+
+		if (coreNameResult.value.coreName !== CODEX_CORE_NAME) {
+			// Not a codex file, ignore
+			return;
+		}
+
+		// Parse line content to get target
+		const parseResult = parseCodexClickLineContent(event.lineContent);
+		if (parseResult.isErr()) {
+			logger.warn(
+				"[Librarian] Failed to parse codex click:",
+				parseResult.error,
+			);
+			return;
+		}
+
+		const target = parseResult.value;
+		const newStatus = event.checked
+			? TreeNodeStatus.Done
+			: TreeNodeStatus.NotStarted;
+
+		// Build ChangeStatus action
+		let action: TreeAction;
+
+		if (target.type === "Scroll") {
+			action = {
+				actionType: "ChangeStatus",
+				newStatus,
+				targetLocator: {
+					segmentId:
+						`${target.nodeName}${NodeSegmentIdSeparator}${TreeNodeType.Scroll}${NodeSegmentIdSeparator}md` as ScrollNodeSegmentId,
+					segmentIdChainToParent: target.parentChain,
+					targetType: TreeNodeType.Scroll,
+				},
+			};
+		} else {
+			// Section
+			const sectionName =
+				target.sectionChain[target.sectionChain.length - 1];
+			if (!sectionName) return;
+
+			action = {
+				actionType: "ChangeStatus",
+				newStatus,
+				targetLocator: {
+					segmentId: sectionName,
+					segmentIdChainToParent: target.sectionChain.slice(0, -1),
+					targetType: TreeNodeType.Section,
+				},
+			};
+		}
+
+		// Queue for processing
+		void this.enqueue([action]);
+
+		logger.info("[Librarian] Checkbox click processed:", {
+			newStatus,
+			target,
+		});
 	}
 
 	/**
@@ -324,12 +422,16 @@ export class Librarian {
 	}
 
 	/**
-	 * Cleanup: unsubscribe from vault events.
+	 * Cleanup: unsubscribe from vault and click events.
 	 */
-	unsubscribeFromVaultEvents(): void {
+	unsubscribe(): void {
 		if (this.eventTeardown) {
 			this.eventTeardown();
 			this.eventTeardown = null;
+		}
+		if (this.clickTeardown) {
+			this.clickTeardown();
+			this.clickTeardown = null;
 		}
 	}
 

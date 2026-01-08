@@ -1,7 +1,7 @@
 import { TreeNodeType } from "../../../../../../tree-node/types/atoms";
 import {
 	makeSuffixPartsFromPathPartsWithRoot,
-	tryMakeSeparatedSuffixedBasename,
+	tryParseAsSeparatedSuffixedBasename,
 } from "../../../../../utils/canonical-naming/suffix-utils/core-suffix-utils";
 import type { RenameTreeNodeNodeMaterializedEvent } from "../../../materialized-node-events/types";
 import { RenameIntent } from "./types";
@@ -74,7 +74,7 @@ export function inferRenameIntent({
 	if (!basenameChanged) return RenameIntent.Move;
 
 	// basename changed: check if it's a "move-by-name" or just a rename
-	const sepRes = tryMakeSeparatedSuffixedBasename(to);
+	const sepRes = tryParseAsSeparatedSuffixedBasename(to);
 
 	// if invalid basename, treat as plain rename (will be rejected/healed later anyway)
 	if (sepRes.isErr()) return RenameIntent.Rename;

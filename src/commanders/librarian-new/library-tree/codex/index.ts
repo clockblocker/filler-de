@@ -8,8 +8,8 @@ export {
 } from "./codex-impact-to-actions";
 export { computeCodexSplitPath } from "./codex-split-path";
 export {
-	computeCodexImpact,
 	type CodexImpact,
+	computeCodexImpact,
 	type DescendantsStatusChange,
 } from "./compute-codex-impact";
 export { computeSectionStatus } from "./compute-section-status";
@@ -22,6 +22,11 @@ export {
 export { generateCodexContent } from "./generate-codex-content";
 export { CODEX_CORE_NAME } from "./literals";
 export { mergeCodexImpacts } from "./merge-codex-impacts";
+export {
+	type CodexClickTarget,
+	parseCodexClickLineContent,
+	parseCodexLinkTarget,
+} from "./parse-codex-click";
 export {
 	collectImpactedSections,
 	dedupeChains,

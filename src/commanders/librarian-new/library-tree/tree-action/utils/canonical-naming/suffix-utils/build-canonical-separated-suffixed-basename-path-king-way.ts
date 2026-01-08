@@ -10,7 +10,7 @@ import type {
 import {
 	makeJoinedSuffixedBasename,
 	splitBySuffixDelimiter,
-	tryMakeSeparatedSuffixedBasename,
+	tryParseAsSeparatedSuffixedBasename,
 } from "./core-suffix-utils";
 
 const dropLibraryRootIfPresent = (pathParts: string[]): string[] => {
@@ -71,7 +71,7 @@ export const tryParseCanonicalSplitPathInsideLibrary = (
 			return err(r.error.issues[0]?.message ?? "Invalid path part");
 	}
 
-	return tryMakeSeparatedSuffixedBasename(sp).andThen((actualSep) => {
+	return tryParseAsSeparatedSuffixedBasename(sp).andThen((actualSep) => {
 		return tryBuildCanonicalSeparatedSuffixedBasename(sp).andThen(
 			(expected) => {
 				const { coreName, suffixParts } = actualSep;

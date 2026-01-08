@@ -10,6 +10,7 @@ import {
 	LibraryTreeDeprecated,
 } from "./commanders/librarian-old";
 import { clearState, initializeState } from "./global-state/global-state";
+import { ClickManager } from "./managers/obsidian/click-manager";
 import {
 	makeSplitPath,
 	makeSystemPathForSplitPath,
@@ -44,6 +45,7 @@ export default class TextEaterPlugin extends Plugin {
 	testingTFileHelper: TFileHelper;
 	testingTFolderHelper: TFolderHelper;
 	vaultActionManager: VaultActionManagerImpl;
+	clickManager: ClickManager;
 	selectionService: SelectionService;
 
 	selectionToolbarService: AboveSelectionToolbarService;
@@ -174,6 +176,7 @@ export default class TextEaterPlugin extends Plugin {
 			this.app.vault,
 		);
 		this.vaultActionManager = new VaultActionManagerImpl(this.app);
+		this.clickManager = new ClickManager(this.app, this.vaultActionManager);
 
 		this.selectionToolbarService = new AboveSelectionToolbarService(
 			this.app,
@@ -181,13 +184,19 @@ export default class TextEaterPlugin extends Plugin {
 
 		this.selectionService = new SelectionService(this.app);
 
-		// New Librarian (healing modes)
-		this.librarian = new Librarian(this.vaultActionManager);
+		// New Librarian (healing modes + codex clicks)
+		this.librarian = new Librarian(
+			this.vaultActionManager,
+			this.clickManager,
+		);
 
 		// Start listening to file system events
 		// VaultActionManager will convert events to VaultEvent, filter self-events,
 		// and notify subscribers (e.g., Librarian)
 		this.vaultActionManager.startListening();
+
+		// Start listening to DOM click events
+		this.clickManager.startListening();
 
 		// Initialize librarian: read tree, heal mismatches, regenerate codexes
 		if (this.librarian) {
@@ -200,23 +209,6 @@ export default class TextEaterPlugin extends Plugin {
 				);
 			}
 		}
-
-		// Codex checkbox click listener
-		this.registerDomEvent(document, "click", async (evt: MouseEvent) => {
-			// const target = evt.target as HTMLElement;
-			// if (isTaskCheckbox(target) && this.librarian) {
-			// 	const handled = await handleCodexCheckboxClick({
-			// 		app: this.app,
-			// 		checkbox: target,
-			// 		librarian: this.librarian,
-			// 		vaultActionManager: this.vaultActionManager,
-			// 	});
-			// 	if (handled) {
-			// 		evt.preventDefault();
-			// 		evt.stopPropagation();
-			// 	}
-			// }
-		});
 
 		this.bottomToolbarService = new BottomToolbarService(this.app);
 		this.bottomToolbarService.init();
@@ -289,6 +281,8 @@ export default class TextEaterPlugin extends Plugin {
 	override onunload() {
 		if (this.bottomToolbarService) this.bottomToolbarService.detach();
 		if (this.selectionToolbarService) this.selectionToolbarService.detach();
+		if (this.clickManager) this.clickManager.stopListening();
+		if (this.librarian) this.librarian.unsubscribe();
 		// Clear global state
 		clearState();
 	}

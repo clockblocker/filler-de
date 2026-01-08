@@ -9,7 +9,7 @@ import { tryBuildCanonicalSeparatedSuffixedBasename } from "../../../../../utils
 import {
 	makeJoinedSuffixedBasename,
 	makePathPartsFromSuffixParts,
-	tryMakeSeparatedSuffixedBasename,
+	tryParseAsSeparatedSuffixedBasename,
 } from "../../../../../utils/canonical-naming/suffix-utils/core-suffix-utils";
 import type { CanonicalSplitPathInsideLibrary } from "../../../../../utils/canonical-naming/types";
 import { makeLocatorFromCanonicalSplitPathInsideLibrary } from "../../../../../utils/locator/locator-codec";
@@ -91,7 +91,7 @@ export const tryCanonicalizeSplitPathToDestination = (
 		intent === RenameIntent.Rename ? ChangePolicy.PathKing : policy;
 
 	// Always start by parsing the basename into (coreName, suffixFromName)
-	const sepRes = tryMakeSeparatedSuffixedBasename(sp);
+	const sepRes = tryParseAsSeparatedSuffixedBasename(sp);
 	if (sepRes.isErr()) return err(sepRes.error);
 
 	// --- PathKing: pathParts are source of truth, build canonical from them

@@ -14,14 +14,11 @@ export type SeparatedSuffixedBasename = {
 	suffixParts: NodeName[];
 };
 
-export const tryMakeSeparatedSuffixedBasename = ({
+export const tryParseAsSeparatedSuffixedBasename = ({
 	basename,
-}: SplitPath): Result<SeparatedSuffixedBasename, string> => {
+}: Pick<SplitPath, "basename">): Result<SeparatedSuffixedBasename, string> => {
 	return splitBySuffixDelimiter(basename).andThen((parts) => {
 		const [coreName, ...suffixParts] = parts;
-
-		if (!coreName) return err(NamingError.EmptyNodeName); // mostly redundant now, ok
-
 		return ok({ coreName, suffixParts });
 	});
 };
