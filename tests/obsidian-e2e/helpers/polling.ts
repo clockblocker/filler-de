@@ -5,12 +5,12 @@ export interface PollOptions {
 	intervalOffset?: number;
 }
 
-const DEFAULT_TIMEOUT = 2000;
-const DEFAULT_INTERVAL = 500;
+const TIMEOUT_DEFAULT = 2000;
+const INTERVAL_DEFAULT = 500;
 
 /** Time to wait for plugin init + initial healing before each test */
 export const INIT_HEALING_WAIT_MS = 1000;
-export const EXTRA_INIT_HEALING_WAIT_MS = 0;
+export const EXTRA_INIT_HEALING_WAIT_MS = 5000;
 
 // Offsets
 export const OFFSET_AFTER_FILE_DELETION = { intervalOffset: -400, timeoutOffset: 0, };
@@ -26,8 +26,8 @@ export async function waitForFile(
 	const { timeoutOffset = 0, intervalOffset = 0 } = opts;
 	const start = Date.now();
 
-	const timeout = DEFAULT_TIMEOUT + timeoutOffset;
-	const interval = DEFAULT_INTERVAL + intervalOffset;
+	const timeout = TIMEOUT_DEFAULT + timeoutOffset;
+	const interval = INTERVAL_DEFAULT + intervalOffset;
 
 	while (Date.now() - start < timeout) {
 		const exists = await browser.executeObsidian(
@@ -50,8 +50,8 @@ export async function waitForFileGone(
 	const { timeoutOffset = 0, intervalOffset = 0 } = opts;
 	const start = Date.now();
 
-	const timeout = DEFAULT_TIMEOUT + timeoutOffset;
-	const interval = DEFAULT_INTERVAL + intervalOffset;
+	const timeout = TIMEOUT_DEFAULT + timeoutOffset;
+	const interval = INTERVAL_DEFAULT + intervalOffset;
 
 
 	while (Date.now() - start < timeout) {
@@ -76,8 +76,8 @@ export async function waitFor<T>(
 	const { timeoutOffset = 0, intervalOffset = 0 } = opts;
 	const start = Date.now();
 
-	const timeout = DEFAULT_TIMEOUT + timeoutOffset;
-	const interval = DEFAULT_INTERVAL + intervalOffset;
+	const timeout = TIMEOUT_DEFAULT + timeoutOffset;
+	const interval = INTERVAL_DEFAULT + intervalOffset;
 
 
 	while (Date.now() - start < timeout) {

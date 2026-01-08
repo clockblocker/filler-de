@@ -51,15 +51,23 @@ export function codexImpactToActions(
 	const actions: CodexAction[] = [];
 
 	// 1. Handle renames first (before content updates)
+	// Note: For section renames, Obsidian moves the folder contents automatically.
+	// We need to rename the section's codex AND all descendant codexes.
 	for (const { oldChain, newChain } of impact.renamed) {
-		const fromPath = computeCodexSplitPath(oldChain);
-		const toPath = computeCodexSplitPath(newChain);
+		// Find section in tree (using new chain since tree is already updated)
+		const section = findSectionByChain(tree, newChain);
+		
+		// Collect all rename pairs: [oldChain, newChain] for section + descendants
+		const renamePairs = collectCodexRenamePairs(
+			oldChain,
+			newChain,
+			section,
+		);
 
-		const renameAction: RenameCodexAction = {
-			payload: { from: fromPath, to: toPath },
-			type: "RenameCodex",
-		};
-		actions.push(renameAction);
+		for (const { fromOldChain, toNewChain } of renamePairs) {
+			const renameAction = buildCodexRenameAction(fromOldChain, toNewChain);
+			actions.push(renameAction);
+		}
 	}
 
 	// 2. Handle deletes
@@ -232,4 +240,102 @@ function extractNodeNameFromSegmentId(segId: SectionNodeSegmentId): string {
 	const sep = NodeSegmentIdSeparator;
 	const [raw] = segId.split(sep, 1);
 	return raw ?? "";
+}
+
+// ─── Codex Rename Helpers ───
+
+type RenamePair = {
+	fromOldChain: SectionNodeSegmentId[];
+	toNewChain: SectionNodeSegmentId[];
+};
+
+/**
+ * Collect all codex rename pairs for a section rename.
+ * Includes the renamed section itself + all descendant sections.
+ */
+function collectCodexRenamePairs(
+	oldChain: SectionNodeSegmentId[],
+	newChain: SectionNodeSegmentId[],
+	section: SectionNode | undefined,
+): RenamePair[] {
+	const pairs: RenamePair[] = [];
+
+	// Add the renamed section itself
+	pairs.push({ fromOldChain: oldChain, toNewChain: newChain });
+
+	// Add all descendant sections
+	if (section) {
+		const descendants = collectDescendantRenamePairs(
+			section,
+			oldChain,
+			newChain,
+		);
+		pairs.push(...descendants);
+	}
+
+	return pairs;
+}
+
+/**
+ * Recursively collect rename pairs for descendant sections.
+ */
+function collectDescendantRenamePairs(
+	section: SectionNode,
+	oldParentChain: SectionNodeSegmentId[],
+	newParentChain: SectionNodeSegmentId[],
+): RenamePair[] {
+	const pairs: RenamePair[] = [];
+
+	for (const [segId, child] of Object.entries(section.children)) {
+		if (child.type === TreeNodeType.Section) {
+			const childSegId = segId as SectionNodeSegmentId;
+			const childOldChain = [...oldParentChain, childSegId];
+			const childNewChain = [...newParentChain, childSegId];
+
+			pairs.push({ fromOldChain: childOldChain, toNewChain: childNewChain });
+
+			// Recurse
+			pairs.push(
+				...collectDescendantRenamePairs(child, childOldChain, childNewChain),
+			);
+		}
+	}
+
+	return pairs;
+}
+
+/**
+ * Build a RenameCodex action from old and new chains.
+ * Handles the fact that Obsidian moved files to new folder path.
+ */
+function buildCodexRenameAction(
+	oldChain: SectionNodeSegmentId[],
+	newChain: SectionNodeSegmentId[],
+): RenameCodexAction {
+	// After folder rename, Obsidian moved files to new path but kept old basename.
+	// So "from" path = new folder path + old basename
+	const fromPathParts = newChain.map(extractNodeNameFromSegmentId);
+
+	// Old basename suffix (what the file WAS named)
+	const oldSuffixParts =
+		oldChain.length === 1
+			? [extractNodeNameFromSegmentId(oldChain[0]!)]
+			: oldChain.slice(1).map(extractNodeNameFromSegmentId).reverse();
+
+	const fromPath: SplitPathToMdFileInsideLibrary = {
+		basename: makeJoinedSuffixedBasename({
+			coreName: "__",
+			suffixParts: oldSuffixParts,
+		}),
+		extension: "md",
+		pathParts: fromPathParts,
+		type: SplitPathType.MdFile,
+	};
+
+	const toPath = computeCodexSplitPath(newChain);
+
+	return {
+		payload: { from: fromPath, to: toPath },
+		type: "RenameCodex",
+	};
 }
