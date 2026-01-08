@@ -121,7 +121,7 @@ export async function testInitHealingRootFileSingleSuffix(): Promise<void> {
 	const wrongPath = "Library/move-me.md";
 	const expectedPath = "Library/me/move-me.md";
 
-	const healedExists = await waitForFile(expectedPath);
+	const healedExists = await waitForFile(expectedPath, { interval: 2000, timeout: 4000 });
 	const wrongGone = await waitForFileGone(wrongPath, { timeout: 500 });
 
 	expect(healedExists).toBe(true);

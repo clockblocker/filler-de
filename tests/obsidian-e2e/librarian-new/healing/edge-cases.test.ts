@@ -28,7 +28,7 @@ export async function testCoreNameWithDelimiter(): Promise<void> {
 
 	await createFile(createdPath, "# My Note");
 
-	const healedExists = await waitForFile(expectedPath);
+	const healedExists = await waitForFile(expectedPath, { interval: 1000, timeout: 4000 });
 	const originalGone = await waitForFileGone(createdPath, { timeout: 500 });
 
 	expect(healedExists).toBe(true);
