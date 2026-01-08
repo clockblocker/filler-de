@@ -54,6 +54,7 @@ export async function testInitHealingNoOpForCorrectFiles(): Promise<void> {
  *
  * On plugin init (NameKing for direct Library children):
  * Expected: Library/Y/X/Note-X-Y.md (moved to suffix location)
+ * 
  */
 export async function testInitHealingMovesRootFileWithSuffix(): Promise<void> {
 	const wrongPath = "Library/Note-X-Y.md";

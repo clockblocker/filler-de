@@ -16,7 +16,7 @@ import {
 const VAULT_PATH = "tests/obsidian-e2e/vaults/healing";
 
 describe("Healing - Edge Cases", () => {
-	beforeEach(async () => {
+	before(async () => {
 		await obsidianPage.resetVault(VAULT_PATH);
 		await new Promise((r) => setTimeout(r, INIT_HEALING_WAIT_MS));
 	});
