@@ -2,7 +2,8 @@ import { LINE_BREAK } from "../../../services/dto-services/note-block-manager/no
 import { META_INFO_FORMATTER } from "./formatters/meta-info-formatter";
 import type { MetaInfo } from "./types";
 
-export function extractMetaInfo(str: string): MetaInfo | null {
+/** @deprecated */
+export function extractMetaInfoDeprecated(str: string): MetaInfo | null {
 	const match = str.match(META_INFO_FORMATTER.pattern);
 	if (!match) return null;
 
@@ -14,7 +15,11 @@ export function extractMetaInfo(str: string): MetaInfo | null {
 	return parsed.success ? parsed.data : null;
 }
 
-export function editOrAddMetaInfo(str: string, meta: MetaInfo): string {
+/** @deprecated */
+export function editOrAddMetaInfoDeprecated(
+	str: string,
+	meta: MetaInfo,
+): string {
 	const metaSection = META_INFO_FORMATTER.make(meta);
 
 	let contentWithoutMeta = str

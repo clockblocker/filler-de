@@ -1,4 +1,4 @@
-import type { MetaInfo } from "../../../managers/pure/meta-info-manager/types";
+import type { MetaInfo } from "../../../managers/pure/meta-info-manager-deprecated/types";
 import { FileType } from "../../../types/common-interface/enums";
 import {
 	ACTION_CONFIGS,

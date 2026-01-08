@@ -9,7 +9,7 @@ import type {
 } from "../../managers/obsidian/vault-action-manager";
 import type { SplitPathWithReader } from "../../managers/obsidian/vault-action-manager/types/split-path";
 import { SplitPathType } from "../../managers/obsidian/vault-action-manager/types/split-path";
-import { extractMetaInfo } from "../../managers/pure/meta-info-manager/interface";
+import { extractMetaInfoDeprecated } from "../../managers/pure/meta-info-manager-deprecated/interface";
 import { logger } from "../../utils/logger";
 import { healingActionsToVaultActions } from "./library-tree/codecs/healing-to-vault-action";
 import {
@@ -190,7 +190,7 @@ export class Librarian {
 			if (file.type === SplitPathType.MdFile && "read" in file) {
 				const contentResult = await file.read();
 				if (contentResult.isOk()) {
-					const meta = extractMetaInfo(contentResult.value);
+					const meta = extractMetaInfoDeprecated(contentResult.value);
 					if (meta && "status" in meta) {
 						status =
 							meta.status === "Done"

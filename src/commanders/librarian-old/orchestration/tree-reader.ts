@@ -4,7 +4,7 @@ import type {
 	SplitPathWithReader,
 } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import { SplitPathType } from "../../../managers/obsidian/vault-action-manager/types/split-path";
-import { extractMetaInfo } from "../../../managers/pure/meta-info-manager/interface";
+import { extractMetaInfoDeprecated } from "../../../managers/pure/meta-info-manager-deprecated/interface";
 import { LibraryTreeDeprecated } from "../library-tree";
 import { tryParseJoinedSuffixedBasenameForCodex } from "../naming/codecs/atomic/parsers";
 import { TreeNodeStatusDeprecated } from "../types/tree-node";
@@ -45,7 +45,7 @@ export async function readTreeFromSplitFilesWithReaders({
 			if (entry.type === SplitPathType.MdFile && "read" in entry) {
 				const contentResult = await entry.read();
 				if (contentResult.isOk()) {
-					const meta = extractMetaInfo(contentResult.value);
+					const meta = extractMetaInfoDeprecated(contentResult.value);
 					if (meta && "status" in meta) {
 						leaf.status =
 							meta.status === "Done"

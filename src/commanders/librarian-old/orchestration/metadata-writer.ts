@@ -6,9 +6,9 @@ import type {
 } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { VaultActionType } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import {
-	editOrAddMetaInfo,
-	extractMetaInfo,
-} from "../../../managers/pure/meta-info-manager/interface";
+	editOrAddMetaInfoDeprecated,
+	extractMetaInfoDeprecated,
+} from "../../../managers/pure/meta-info-manager-deprecated/interface";
 import { SCROLL } from "../../../types/literals";
 import { TreeNodeStatusDeprecated } from "../types/tree-node";
 
@@ -30,7 +30,7 @@ export function buildWriteStatusToMetadataAction(
 			: TreeNodeStatusDeprecated.NotStarted;
 
 	const transform: Transform = (content: string) => {
-		const currentMeta = extractMetaInfo(content);
+		const currentMeta = extractMetaInfoDeprecated(content);
 		const fileType = currentMeta?.fileType;
 
 		if (fileType && fileType !== SCROLL) {
@@ -42,7 +42,7 @@ export function buildWriteStatusToMetadataAction(
 			status: newStatus,
 		};
 
-		return editOrAddMetaInfo(content, newMeta);
+		return editOrAddMetaInfoDeprecated(content, newMeta);
 	};
 
 	return {
