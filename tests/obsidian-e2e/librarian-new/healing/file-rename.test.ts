@@ -31,7 +31,7 @@ export async function testRenameSuffixTriggersMove(): Promise<void> {
 	await renamePath(initialPath, renamedPath);
 
 	// Should be moved to tom folder
-	const movedExists = await waitForFile(expectedPath, { timeout: 3000 });
+	const movedExists = await waitForFile(expectedPath);
 	const renamedGone = await waitForFileGone(renamedPath, { timeout: 500 });
 
 	expect(movedExists).toBe(true);
@@ -124,7 +124,7 @@ export async function testRenameRootFileWithSuffixMoves(): Promise<void> {
 
 	await renamePath(initialPath, renamedPath);
 
-	const movedExists = await waitForFile(expectedPath, { timeout: 3000 });
+	const movedExists = await waitForFile(expectedPath);
 	const renamedGone = await waitForFileGone(renamedPath, { timeout: 500 });
 
 	expect(movedExists).toBe(true);
@@ -155,7 +155,7 @@ export async function testRemoveSuffixMovesToRoot(): Promise<void> {
 
 	await renamePath(initialPath, renamedPath);
 
-	const movedExists = await waitForFile(expectedPath, { timeout: 3000 });
+	const movedExists = await waitForFile(expectedPath);
 	const renamedGone = await waitForFileGone(renamedPath, { timeout: 500 });
 
 	expect(movedExists).toBe(true);

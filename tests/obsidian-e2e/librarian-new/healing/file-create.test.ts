@@ -42,7 +42,7 @@ export async function testNestedFileGetsSuffix(): Promise<void> {
 	await createFile(createdPath, "# Untitled");
 
 	// Should be renamed with suffix
-	const healedExists = await waitForFile(expectedPath, { timeout: 3000 });
+	const healedExists = await waitForFile(expectedPath);
 	const originalGone = await waitForFileGone(createdPath, { timeout: 500 });
 
 	expect(healedExists).toBe(true);
@@ -86,7 +86,7 @@ export async function testFileWithWrongSuffixHealed(): Promise<void> {
 
 	await createFile(createdPath, "# Wrong suffix");
 
-	const healedExists = await waitForFile(expectedPath, { timeout: 3000 });
+	const healedExists = await waitForFile(expectedPath);
 	const originalGone = await waitForFileGone(createdPath, { timeout: 500 });
 
 	expect(healedExists).toBe(true);

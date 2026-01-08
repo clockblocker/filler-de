@@ -27,7 +27,7 @@ export async function testMoveFileUpdatesuffix(): Promise<void> {
 	// Move to different folder (keeping old basename)
 	await renamePath(initialPath, movedPath);
 
-	const healedExists = await waitForFile(expectedPath, { timeout: 3000 });
+	const healedExists = await waitForFile(expectedPath);
 	const movedGone = await waitForFileGone(movedPath, { timeout: 500 });
 
 	expect(healedExists).toBe(true);
@@ -57,7 +57,7 @@ export async function testMoveToDeepFolderExtendsSuffix(): Promise<void> {
 
 	await renamePath(initialPath, movedPath);
 
-	const healedExists = await waitForFile(expectedPath, { timeout: 3000 });
+	const healedExists = await waitForFile(expectedPath);
 	const movedGone = await waitForFileGone(movedPath, { timeout: 500 });
 
 	expect(healedExists).toBe(true);
@@ -86,7 +86,7 @@ export async function testMoveToShallowerFolderShortensSuffix(): Promise<void> {
 
 	await renamePath(initialPath, movedPath);
 
-	const healedExists = await waitForFile(expectedPath, { timeout: 3000 });
+	const healedExists = await waitForFile(expectedPath);
 	const movedGone = await waitForFileGone(movedPath, { timeout: 500 });
 
 	expect(healedExists).toBe(true);
@@ -120,7 +120,7 @@ export async function testMoveToRootRemovesSuffix(): Promise<void> {
 
 	// For now, just check the file moved somewhere
 	// The exact behavior depends on NameKing policy
-	const movedGone = await waitForFileGone(movedPath, { timeout: 3000 });
+	const movedGone = await waitForFileGone(movedPath);
 	expect(movedGone).toBe(true);
 }
 
@@ -154,8 +154,8 @@ export async function testMoveFolderUpdatesAllDescendants(): Promise<void> {
 	// Move folder M10 under M12
 	await renamePath("Library/M9/M10", "Library/M12/M10");
 
-	const healed1 = await waitForFile(file1Expected, { timeout: 3000 });
-	const healed2 = await waitForFile(file2Expected, { timeout: 3000 });
+	const healed1 = await waitForFile(file1Expected);
+	const healed2 = await waitForFile(file2Expected);
 
 	expect(healed1).toBe(true);
 	expect(healed2).toBe(true);

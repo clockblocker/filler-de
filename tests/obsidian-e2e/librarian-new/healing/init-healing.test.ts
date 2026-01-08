@@ -22,7 +22,7 @@ export async function testInitHealingFixesWrongSuffix(): Promise<void> {
 	const expectedPath = "Library/I1/I2/Note-I2-I1.md";
 
 	// After plugin init (which happens in beforeEach), file should be healed
-	const healedExists = await waitForFile(expectedPath, { timeout: 3000 });
+	const healedExists = await waitForFile(expectedPath);
 	const wrongGone = await waitForFileGone(wrongPath, { timeout: 500 });
 
 	expect(healedExists).toBe(true);
@@ -60,7 +60,7 @@ export async function testInitHealingMovesRootFileWithSuffix(): Promise<void> {
 	const wrongPath = "Library/Note-X-Y.md";
 	const expectedPath = "Library/Y/X/Note-X-Y.md";
 
-	const healedExists = await waitForFile(expectedPath, { timeout: 3000 });
+	const healedExists = await waitForFile(expectedPath);
 	const wrongGone = await waitForFileGone(wrongPath, { timeout: 500 });
 
 	expect(healedExists).toBe(true);
@@ -80,7 +80,7 @@ export async function testInitHealingAddsSuffixToNestedFile(): Promise<void> {
 	const wrongPath = "Library/I3/I4/Untitled.md";
 	const expectedPath = "Library/I3/I4/Untitled-I4-I3.md";
 
-	const healedExists = await waitForFile(expectedPath, { timeout: 3000 });
+	const healedExists = await waitForFile(expectedPath);
 	const wrongGone = await waitForFileGone(wrongPath, { timeout: 500 });
 
 	expect(healedExists).toBe(true);
@@ -121,7 +121,7 @@ export async function testInitHealingRootFileSingleSuffix(): Promise<void> {
 	const wrongPath = "Library/move-me.md";
 	const expectedPath = "Library/me/move-me.md";
 
-	const healedExists = await waitForFile(expectedPath, { timeout: 3000 });
+	const healedExists = await waitForFile(expectedPath);
 	const wrongGone = await waitForFileGone(wrongPath, { timeout: 500 });
 
 	expect(healedExists).toBe(true);

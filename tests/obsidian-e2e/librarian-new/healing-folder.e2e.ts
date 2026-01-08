@@ -1,5 +1,6 @@
 /// <reference types="@wdio/globals/types" />
 import { obsidianPage } from "wdio-obsidian-service";
+import { INIT_HEALING_WAIT_MS } from "../helpers/polling";
 import {
 	testDeepFolderRenameHealsAllDescendants,
 	testFolderRenameHealsChildSuffix,
@@ -13,7 +14,7 @@ const VAULT_PATH = "tests/obsidian-e2e/vaults/healing";
 describe("Healing - Folder Rename", () => {
 	beforeEach(async () => {
 		await obsidianPage.resetVault(VAULT_PATH);
-		await new Promise((r) => setTimeout(r, 7000));
+		await new Promise((r) => setTimeout(r, INIT_HEALING_WAIT_MS));
 	});
 
 	it("heals child suffix when folder renamed", testFolderRenameHealsChildSuffix);

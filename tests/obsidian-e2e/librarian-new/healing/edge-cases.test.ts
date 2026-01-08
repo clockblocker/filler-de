@@ -28,7 +28,7 @@ export async function testCoreNameWithDelimiter(): Promise<void> {
 
 	await createFile(createdPath, "# My Note");
 
-	const healedExists = await waitForFile(expectedPath, { timeout: 3000 });
+	const healedExists = await waitForFile(expectedPath);
 	const originalGone = await waitForFileGone(createdPath, { timeout: 500 });
 
 	expect(healedExists).toBe(true);
@@ -59,7 +59,7 @@ export async function testEmptyFolderPruned(): Promise<void> {
 	// Rename to remove E3 from suffix
 	await renamePath(initialPath, renamedPath);
 
-	const movedExists = await waitForFile(expectedPath, { timeout: 3000 });
+	const movedExists = await waitForFile(expectedPath);
 	expect(movedExists).toBe(true);
 
 	// Folder E3 should be pruned (empty)
@@ -90,8 +90,8 @@ export async function testFolderRenameMultipleFiles(): Promise<void> {
 
 	await renamePath("Library/E4", "Library/E5");
 
-	const healed1 = await waitForFile(file1Expected, { timeout: 3000 });
-	const healed2 = await waitForFile(file2Expected, { timeout: 3000 });
+	const healed1 = await waitForFile(file1Expected);
+	const healed2 = await waitForFile(file2Expected);
 
 	expect(healed1).toBe(true);
 	expect(healed2).toBe(true);
@@ -161,7 +161,7 @@ export async function testCreateInNonExistentFolders(): Promise<void> {
 
 	await createFile(createdPath, "# Note");
 
-	const healedExists = await waitForFile(expectedPath, { timeout: 3000 });
+	const healedExists = await waitForFile(expectedPath);
 	const originalGone = await waitForFileGone(createdPath, { timeout: 500 });
 
 	expect(healedExists).toBe(true);

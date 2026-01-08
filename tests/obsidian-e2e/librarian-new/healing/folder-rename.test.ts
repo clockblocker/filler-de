@@ -24,7 +24,7 @@ export async function testFolderRenameHealsChildSuffix(): Promise<void> {
 
 	await renamePath("Library/grandpa/father/kid", "Library/grandpa/father/son");
 
-	const healedExists = await waitForFile(expectedPath, { timeout: 3000 });
+	const healedExists = await waitForFile(expectedPath);
 	const wrongGone = await waitForFileGone(wrongPath, { timeout: 500 });
 
 	expect(healedExists).toBe(true);
@@ -51,7 +51,7 @@ export async function testDeepFolderRenameHealsAllDescendants(): Promise<void> {
 
 	await renamePath("Library/A", "Library/X");
 
-	const healedExists = await waitForFile(expectedPath, { timeout: 3000 });
+	const healedExists = await waitForFile(expectedPath);
 	expect(healedExists).toBe(true);
 }
 
@@ -75,7 +75,7 @@ export async function testMiddleFolderRenameHealsDescendants(): Promise<void> {
 
 	await renamePath("Library/A/B", "Library/A/Y");
 
-	const healedExists = await waitForFile(expectedPath, { timeout: 3000 });
+	const healedExists = await waitForFile(expectedPath);
 	expect(healedExists).toBe(true);
 }
 
@@ -102,7 +102,7 @@ export async function testFolderRenameWithSuffixTriggersMove(): Promise<void> {
 
 	await renamePath("Library/F1", "Library/F1-F2");
 
-	const healedExists = await waitForFile(expectedPath, { timeout: 3000 });
+	const healedExists = await waitForFile(expectedPath);
 	expect(healedExists).toBe(true);
 }
 
@@ -129,6 +129,6 @@ export async function testNestedFolderRenameWithSuffixTriggersMove(): Promise<vo
 
 	await renamePath("Library/F3/F4", "Library/F3/F4-F5");
 
-	const healedExists = await waitForFile(expectedPath, { timeout: 3000 });
+	const healedExists = await waitForFile(expectedPath);
 	expect(healedExists).toBe(true);
 }
