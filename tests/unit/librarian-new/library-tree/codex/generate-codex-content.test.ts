@@ -125,7 +125,7 @@ describe("generateCodexContent", () => {
 			const result = generateCodexContent(sectionA, chain);
 
 			// Parent backlink to Library root codex
-			expect(result).toContain("[[__|← Library]]");
+			expect(result).toContain("[[__-Library|← Library]]");
 			// Scroll
 			expect(result).toContain("- [ ] [[Note-A|Note]]");
 		});

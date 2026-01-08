@@ -1,18 +1,7 @@
-import { LINE_BREAK } from "../note-block-manager/note-block-management/types-and-constants";
+import { LINE_BREAK } from "../../../services/dto-services/note-block-manager/note-block-management/types-and-constants";
 import { META_INFO_FORMATTER } from "./formatters/meta-info-formatter";
 import type { MetaInfo } from "./types";
 
-/**
- * Extracts the MetaInfo object from a string containing a special section.
- * The section is expected to look like:
- * <section id={textfresser_meta_keep_me_invisible}>
- * {
- *   "fileType": "Scroll"
- * }
- * </section>
- *
- * If no such section is found, returns null.
- */
 export function extractMetaInfo(str: string): MetaInfo | null {
 	const match = str.match(META_INFO_FORMATTER.pattern);
 	if (!match) return null;

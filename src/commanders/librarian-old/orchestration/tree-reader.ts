@@ -4,7 +4,7 @@ import type {
 	SplitPathWithReader,
 } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import { SplitPathType } from "../../../managers/obsidian/vault-action-manager/types/split-path";
-import { extractMetaInfo } from "../../../services/dto-services/meta-info-manager/interface";
+import { extractMetaInfo } from "../../../managers/pure/meta-info-manager/interface";
 import { LibraryTreeDeprecated } from "../library-tree";
 import { tryParseJoinedSuffixedBasenameForCodex } from "../naming/codecs/atomic/parsers";
 import { TreeNodeStatusDeprecated } from "../types/tree-node";

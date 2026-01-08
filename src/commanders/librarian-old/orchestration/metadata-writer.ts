@@ -8,7 +8,7 @@ import { VaultActionType } from "../../../managers/obsidian/vault-action-manager
 import {
 	editOrAddMetaInfo,
 	extractMetaInfo,
-} from "../../../services/dto-services/meta-info-manager/interface";
+} from "../../../managers/pure/meta-info-manager/interface";
 import { SCROLL } from "../../../types/literals";
 import { TreeNodeStatusDeprecated } from "../types/tree-node";
 

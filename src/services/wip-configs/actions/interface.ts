@@ -1,5 +1,5 @@
+import type { MetaInfo } from "../../../managers/pure/meta-info-manager/types";
 import { FileType } from "../../../types/common-interface/enums";
-import type { MetaInfo } from "../../dto-services/meta-info-manager/types";
 import {
 	ACTION_CONFIGS,
 	CHANGE_FILE_TYPE_ACTIONS,

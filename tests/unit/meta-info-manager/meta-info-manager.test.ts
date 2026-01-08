@@ -3,7 +3,7 @@ import { describe, expect, it } from 'bun:test';
 import {
 	editOrAddMetaInfo,
 	extractMetaInfo,
-} from '../../../src/services/dto-services/meta-info-manager/interface';
+} from '../../../src/managers/pure/meta-info-manager/interface';
 import { TextStatusLegacy } from '../../../src/types/common-interface/enums';
 import { PAGE } from '../../../src/types/literals';
 

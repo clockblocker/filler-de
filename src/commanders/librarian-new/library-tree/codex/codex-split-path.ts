@@ -13,7 +13,12 @@ import { CODEX_CORE_NAME } from "./literals";
  * Compute codex split path from section chain.
  *
  * @param sectionChain - Full chain including Library root, e.g. ["Library﹘Section﹘", "A﹘Section﹘"]
- * @returns Split path for codex file, e.g. { pathParts: ["Library", "A"], basename: "__-A", extension: "md" }
+ * @returns Split path for codex file
+ *
+ * Examples:
+ * - ["Library"] → { pathParts: ["Library"], basename: "__-Library" }
+ * - ["Library", "A"] → { pathParts: ["Library", "A"], basename: "__-A" }
+ * - ["Library", "A", "B"] → { pathParts: ["Library", "A", "B"], basename: "__-B-A" }
  */
 export function computeCodexSplitPath(
 	sectionChain: SectionNodeSegmentId[],
@@ -28,9 +33,13 @@ export function computeCodexSplitPath(
 	// pathParts = all node names (Library root + sections)
 	const pathParts = nodeNames;
 
-	// suffixParts = all except Library root, reversed
-	// For ["Library", "A", "B"] → suffixParts = ["B", "A"]
-	const suffixParts = nodeNames.slice(1).reverse();
+	// suffixParts:
+	// - Root codex (chain length 1): include Library name → ["Library"]
+	// - Nested codex: exclude Library root, reversed → ["B", "A"] for ["Library", "A", "B"]
+	const suffixParts =
+		nodeNames.length === 1
+			? nodeNames // Root: ["Library"]
+			: nodeNames.slice(1).reverse(); // Nested: exclude root, reverse
 
 	const basename = makeJoinedSuffixedBasename({
 		coreName: CODEX_CORE_NAME,

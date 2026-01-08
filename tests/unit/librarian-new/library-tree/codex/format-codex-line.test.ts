@@ -134,9 +134,9 @@ describe("format-codex-line", () => {
 	describe("formatParentBacklink", () => {
 		it("formats backlink to library root", () => {
 			// Parent is Library root
-			// codex basename = "__"
+			// codex basename = "__-Library"
 			const result = formatParentBacklink("Library", ["Library"]);
-			expect(result).toBe("[[__|← Library]]");
+			expect(result).toBe("[[__-Library|← Library]]");
 		});
 
 		it("formats backlink to first-level section", () => {

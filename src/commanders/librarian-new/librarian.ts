@@ -9,7 +9,7 @@ import type {
 } from "../../managers/obsidian/vault-action-manager";
 import type { SplitPathWithReader } from "../../managers/obsidian/vault-action-manager/types/split-path";
 import { SplitPathType } from "../../managers/obsidian/vault-action-manager/types/split-path";
-import { extractMetaInfo } from "../../services/dto-services/meta-info-manager/interface";
+import { extractMetaInfo } from "../../managers/pure/meta-info-manager/interface";
 import { logger } from "../../utils/logger";
 import { healingActionsToVaultActions } from "./library-tree/codecs/healing-to-vault-action";
 import {

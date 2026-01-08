@@ -36,12 +36,12 @@ const sec = (name: string): SectionNodeSegmentId =>
 	`${name}﹘Section﹘` as SectionNodeSegmentId;
 
 describe("computeCodexSplitPath", () => {
-	it("root library codex → Library/__", () => {
+	it("root library codex → Library/__-Library", () => {
 		const chain = [sec("Library")];
 		const result = computeCodexSplitPath(chain);
 
 		expect(result).toEqual({
-			basename: "__",
+			basename: "__-Library",
 			extension: "md",
 			pathParts: ["Library"],
 			type: SplitPathType.MdFile,

@@ -55,9 +55,20 @@ function makeLeafBasename(nodeName: string, pathParts: string[]): string {
 /**
  * Build canonical basename for a section's codex file.
  * "__" + suffix from section's full path.
+ *
+ * Special case: root codex includes Library name in suffix.
+ * - ["Library"] → "__-Library"
+ * - ["Library", "A"] → "__-A"
+ * - ["Library", "A", "B"] → "__-B-A"
  */
 function makeCodexBasename(sectionPathParts: string[]): string {
-	const suffixParts = makeSuffixParts(sectionPathParts);
+	// Root codex: include Library name
+	// Nested codex: drop Library root, reverse
+	const suffixParts =
+		sectionPathParts.length === 1
+			? sectionPathParts // ["Library"]
+			: makeSuffixParts(sectionPathParts); // ["B", "A"] for ["Library", "A", "B"]
+
 	return makeJoinedSuffixedBasename({
 		coreName: CODEX_CORE_NAME,
 		suffixParts: suffixParts as string[],
