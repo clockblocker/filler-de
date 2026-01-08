@@ -159,12 +159,12 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 	});
 
 	// Move-by-name tests
-	// Note: User rename events can only:
-	// 1. Change basename (path stays same)
-	// 2. Drag/move (basename stays same, path changes)
-	// So "nested path + different suffix root" combos can't happen from user actions.
+	// NameKing Move: suffix reversed = path
+	// coreName stays first segment, suffixParts define where to move
 	describe("C) Move-by-name (intent Move + policy NameKing + suffixParts.length>0)", () => {
 		it("6. Folder move-by-name basic", () => {
+			// sweet-pie: coreName="sweet", suffix=["pie"]
+			// suffix reversed = path => Library/pie/sweet
 			const sp = spFolder(["Library"], "sweet-pie");
 			const result = tryCanonicalizeSplitPathToDestination(
 				sp,
@@ -174,14 +174,15 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				// MOVE-by-name: parent="sweet", child="pie"
-				expect(result.value.separatedSuffixedBasename.coreName).toBe("pie");
+				expect(result.value.separatedSuffixedBasename.coreName).toBe("sweet");
 				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual([]);
-				expect(result.value.pathParts).toEqual(["Library", "sweet"]);
+				expect(result.value.pathParts).toEqual(["Library", "pie"]);
 			}
 		});
 
 		it("7. File move-by-name basic", () => {
+			// sweet-pie: coreName="sweet", suffix=["pie"]
+			// suffix reversed = path => Library/pie/sweet-pie.md
 			const sp = spMdFile(["Library"], "sweet-pie");
 			const result = tryCanonicalizeSplitPathToDestination(
 				sp,
@@ -191,14 +192,15 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				// MOVE-by-name: parent="sweet", child="pie"
-				expect(result.value.separatedSuffixedBasename.coreName).toBe("pie");
-				expect(result.value.pathParts).toEqual(["Library", "sweet"]);
-				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual(["sweet"]);
+				expect(result.value.separatedSuffixedBasename.coreName).toBe("sweet");
+				expect(result.value.pathParts).toEqual(["Library", "pie"]);
+				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual(["pie"]);
 			}
 		});
 
 		it("8. Move-by-name multi-part", () => {
+			// sweet-berry-pie: coreName="sweet", suffix=["berry","pie"]
+			// suffix reversed = path => Library/pie/berry/sweet-berry-pie.md
 			const sp = spMdFile(["Library"], "sweet-berry-pie");
 			const result = tryCanonicalizeSplitPathToDestination(
 				sp,
@@ -208,14 +210,15 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				// Last suffix part becomes node name, middle parts become sections
-				expect(result.value.separatedSuffixedBasename.coreName).toBe("pie");
-				expect(result.value.pathParts).toEqual(["Library", "sweet", "berry"]);
-				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual(["berry", "sweet"]);
+				expect(result.value.separatedSuffixedBasename.coreName).toBe("sweet");
+				expect(result.value.pathParts).toEqual(["Library", "pie", "berry"]);
+				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual(["berry", "pie"]);
 			}
 		});
 
-		it("9. Folder: sweet-berry-pie => Library/sweet/berry/pie", () => {
+		it("9. Folder: sweet-berry-pie => Library/pie/berry/sweet", () => {
+			// coreName="sweet", suffix=["berry","pie"]
+			// suffix reversed = path => Library/pie/berry
 			const sp = spFolder(["Library"], "sweet-berry-pie");
 			const r = tryCanonicalizeSplitPathToDestination(
 				sp,
@@ -225,13 +228,15 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 	
 			expect(r.isOk()).toBe(true);
 			if (r.isOk()) {
-				expect(r.value.separatedSuffixedBasename.coreName).toBe("pie");
+				expect(r.value.separatedSuffixedBasename.coreName).toBe("sweet");
 				expect(r.value.separatedSuffixedBasename.suffixParts).toEqual([]);
-				expect(r.value.pathParts).toEqual(["Library", "sweet", "berry"]);
+				expect(r.value.pathParts).toEqual(["Library", "pie", "berry"]);
 			}
 		});
 
-		it("10. Longer: sweet-very-berry-pie => nodeName=pie, parents=sweet/very/berry", () => {
+		it("10. Longer: sweet-very-berry-pie => Library/pie/berry/very/sweet", () => {
+			// coreName="sweet", suffix=["very","berry","pie"]
+			// suffix reversed = path => Library/pie/berry/very
 			const sp = spFolder(["Library"], "sweet-very-berry-pie");
 			const r = tryCanonicalizeSplitPathToDestination(
 				sp,
@@ -241,9 +246,9 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 	
 			expect(r.isOk()).toBe(true);
 			if (r.isOk()) {
-				expect(r.value.separatedSuffixedBasename.coreName).toBe("pie");
+				expect(r.value.separatedSuffixedBasename.coreName).toBe("sweet");
 				expect(r.value.separatedSuffixedBasename.suffixParts).toEqual([]);
-				expect(r.value.pathParts).toEqual(["Library", "sweet", "very", "berry"]);
+				expect(r.value.pathParts).toEqual(["Library", "pie", "berry", "very"]);
 			}
 		});
 

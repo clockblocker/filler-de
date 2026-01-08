@@ -263,6 +263,8 @@ describe("buildTreeActions", () => {
 		});
 
 		it("FolderRenamed inside pie→sweet-pie => Move", () => {
+			// sweet-pie: coreName="sweet", suffix=["pie"]
+			// NameKing Move: suffix reversed = path => Library/pie/sweet
 			const bulkEvent = bulk({
 				roots: [
 					evFolderRenamed(
@@ -280,8 +282,8 @@ describe("buildTreeActions", () => {
 			expect(action.actionType).toBe(TreeActionType.Move);
 			expect(getNodeName(action.targetLocator)).toBe("pie");
 			if (action.actionType === TreeActionType.Move) {
-				expect(action.newNodeName).toBe("pie");
-				expect(getNodeName(action.newParentLocator)).toBe("sweet");
+				expect(action.newNodeName).toBe("sweet");
+				expect(getNodeName(action.newParentLocator)).toBe("pie");
 			}
 		});
 
@@ -331,6 +333,8 @@ describe("buildTreeActions", () => {
 		});
 
 		it("FileRenamed inside pie.md→sweet-pie.md => Move", () => {
+			// sweet-pie: coreName="sweet", suffix=["pie"]
+			// NameKing Move: suffix reversed = path => Library/pie/sweet-pie.md
 			const bulkEvent = bulk({
 				roots: [
 					evFileRenamed(
@@ -348,8 +352,8 @@ describe("buildTreeActions", () => {
 			expect(action.actionType).toBe(TreeActionType.Move);
 			expect(getNodeName(action.targetLocator)).toBe("pie");
 			if (action.actionType === TreeActionType.Move) {
-				expect(action.newNodeName).toBe("pie");
-				expect(getNodeName(action.newParentLocator)).toBe("sweet");
+				expect(action.newNodeName).toBe("sweet");
+				expect(getNodeName(action.newParentLocator)).toBe("pie");
 			}
 		});
 

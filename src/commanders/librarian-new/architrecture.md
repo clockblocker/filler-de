@@ -61,8 +61,14 @@ Converts `BulkVaultEvent` → `TreeAction[]` through layers:
 - **PathKing**: folder path defines suffix (nested files)
 
 **Intent** (what user meant):
-- **Rename**: basename changed, suffix matches path → in-place rename
-- **Move**: path changed OR suffix differs from path → relocate node
+- **Rename**: in-place rename, suffix stays consistent with path
+- **Move**: relocate node based on path change or suffix change
+
+Intent rules:
+- Basename unchanged → Move (path-based move)
+- Folders: no suffix → Rename, has suffix → Move (NameKing)
+- Files: suffix matches path → Rename, suffix differs → Move
+- Files: empty suffix + nested → Move to root (NameKing)
 
 ### LibraryTree
 - Mutable tree structure: root → sections → leaves
@@ -76,8 +82,16 @@ Library-scoped healing actions converted to vault-scoped actions for dispatch.
 ## Runtime Flow
 
 1. **Init**: read Library filesystem, create tree, dispatch initial healing
+   - Root files: NameKing (suffix → path)
+   - Nested files: PathKing (path → suffix)
 2. **Steady-state**: listen to events → build actions → apply to tree → dispatch healing
 3. **Queue**: events processed sequentially to maintain consistency
+
+## Healing Types
+
+- **RenameMdFile / RenameFile**: file path/basename correction
+- **RenameFolder**: folder move when renamed with suffix (NameKing)
+- **CreateFolder**: implicit folder creation for healing destinations
 
 ## Conventions
 
