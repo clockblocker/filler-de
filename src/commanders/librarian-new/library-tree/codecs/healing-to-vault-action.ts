@@ -44,6 +44,15 @@ export function healingActionToVaultAction(action: HealingAction): VaultAction {
 				},
 				type: VaultActionType.RenameMdFile,
 			};
+		case "DeleteMdFile":
+			return {
+				payload: {
+					splitPath: makeVaultScopedSplitPath(
+						action.payload.splitPath,
+					),
+				},
+				type: VaultActionType.TrashMdFile,
+			};
 	}
 }
 

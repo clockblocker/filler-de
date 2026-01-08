@@ -56,7 +56,7 @@ export function codexImpactToActions(
 	for (const { oldChain, newChain } of impact.renamed) {
 		// Find section in tree (using new chain since tree is already updated)
 		const section = findSectionByChain(tree, newChain);
-		
+
 		// Collect all rename pairs: [oldChain, newChain] for section + descendants
 		const renamePairs = collectCodexRenamePairs(
 			oldChain,
@@ -65,8 +65,33 @@ export function codexImpactToActions(
 		);
 
 		for (const { fromOldChain, toNewChain } of renamePairs) {
-			const renameAction = buildCodexRenameAction(fromOldChain, toNewChain);
-			actions.push(renameAction);
+			// For section renames/moves:
+			// 1. Delete orphan at new location (Obsidian moved this file with old suffix)
+			// 2. Create/update canonical codex at new location
+			const targetSection = findSectionByChain(tree, toNewChain);
+			if (!targetSection) continue;
+
+			// Delete orphan at new location with old suffix (if different from canonical)
+			const movedOrphanPath = buildMovedOrphanPath(fromOldChain, toNewChain);
+			const canonicalPath = computeCodexSplitPath(toNewChain);
+
+			// Only delete orphan if it's different from canonical (i.e., suffix changed)
+			if (movedOrphanPath.basename !== canonicalPath.basename) {
+				const deleteMovedAction: DeleteCodexAction = {
+					payload: { splitPath: movedOrphanPath },
+					type: "DeleteCodex",
+				};
+				actions.push(deleteMovedAction);
+			}
+
+			// Create/update canonical codex
+			const content = generateCodexContent(targetSection, toNewChain);
+
+			const updateAction: UpdateCodexAction = {
+				payload: { content, sectionChain: toNewChain, splitPath: canonicalPath },
+				type: "UpdateCodex",
+			};
+			actions.push(updateAction);
 		}
 	}
 
@@ -91,8 +116,9 @@ export function codexImpactToActions(
 	for (const chain of impact.contentChanged) {
 		const chainKey = chainToKey(chain);
 
-		// Skip if deleted
+		// Skip if deleted or renamed (RenameCodex already handles renamed sections)
 		if (deletedChains.has(chainKey)) continue;
+		if (renamedNewChains.has(chainKey)) continue;
 
 		// Find section in tree
 		const section = findSectionByChain(tree, chain);
@@ -103,12 +129,10 @@ export function codexImpactToActions(
 		const splitPath = computeCodexSplitPath(chain);
 
 		// Determine if create or update
-		// - isInit + new section = CreateCodex
-		// - Otherwise = UpdateCodex
+		// - isInit = CreateCodex (codex doesn't exist yet)
+		// - Otherwise = UpdateCodex (codex exists, just updating content)
 		const actionType: "CreateCodex" | "UpdateCodex" =
-			isInit && !renamedNewChains.has(chainKey)
-				? "CreateCodex"
-				: "UpdateCodex";
+			isInit ? "CreateCodex" : "UpdateCodex";
 
 		const upsertAction: CreateCodexAction | UpdateCodexAction = {
 			payload: { content, sectionChain: chain, splitPath },
@@ -305,37 +329,29 @@ function collectDescendantRenamePairs(
 }
 
 /**
- * Build a RenameCodex action from old and new chains.
- * Handles the fact that Obsidian moved files to new folder path.
+ * Build path for orphan codex that Obsidian moved to new location.
+ * This is: new location + old suffix
  */
-function buildCodexRenameAction(
+function buildMovedOrphanPath(
 	oldChain: SectionNodeSegmentId[],
 	newChain: SectionNodeSegmentId[],
-): RenameCodexAction {
-	// After folder rename, Obsidian moved files to new path but kept old basename.
-	// So "from" path = new folder path + old basename
-	const fromPathParts = newChain.map(extractNodeNameFromSegmentId);
+): SplitPathToMdFileInsideLibrary {
+	// Path parts from NEW chain (where Obsidian moved files)
+	const newPathParts = newChain.map(extractNodeNameFromSegmentId);
 
-	// Old basename suffix (what the file WAS named)
+	// Suffix from OLD chain (what the file was named before move)
 	const oldSuffixParts =
 		oldChain.length === 1
 			? [extractNodeNameFromSegmentId(oldChain[0]!)]
 			: oldChain.slice(1).map(extractNodeNameFromSegmentId).reverse();
 
-	const fromPath: SplitPathToMdFileInsideLibrary = {
+	return {
 		basename: makeJoinedSuffixedBasename({
 			coreName: "__",
 			suffixParts: oldSuffixParts,
 		}),
 		extension: "md",
-		pathParts: fromPathParts,
+		pathParts: newPathParts,
 		type: SplitPathType.MdFile,
-	};
-
-	const toPath = computeCodexSplitPath(newChain);
-
-	return {
-		payload: { from: fromPath, to: toPath },
-		type: "RenameCodex",
 	};
 }

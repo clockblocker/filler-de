@@ -15,7 +15,8 @@ export type HealingActionType =
 	| "CreateFolder"
 	| "RenameFolder"
 	| "RenameFile"
-	| "RenameMdFile";
+	| "RenameMdFile"
+	| "DeleteMdFile";
 
 // ─── Payloads ───
 
@@ -36,6 +37,10 @@ export type RenameFileHealingPayload = {
 export type RenameMdFileHealingPayload = {
 	from: SplitPathToMdFileInsideLibrary;
 	to: SplitPathToMdFileInsideLibrary;
+};
+
+export type DeleteMdFileHealingPayload = {
+	splitPath: SplitPathToMdFileInsideLibrary;
 };
 
 // ─── Healing Actions ───
@@ -60,9 +65,15 @@ export type RenameMdFileHealingAction = {
 	payload: RenameMdFileHealingPayload;
 };
 
+export type DeleteMdFileHealingAction = {
+	type: "DeleteMdFile";
+	payload: DeleteMdFileHealingPayload;
+};
+
 export type HealingAction =
 	| CreateFolderHealingAction
 	| RenameFolderHealingAction
 	| RenameFileHealingAction
-	| RenameMdFileHealingAction;
+	| RenameMdFileHealingAction
+	| DeleteMdFileHealingAction;
 

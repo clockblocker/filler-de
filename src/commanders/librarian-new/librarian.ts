@@ -112,6 +112,10 @@ export class Librarian {
 			allCodexImpacts.push(result.codexImpact);
 		}
 
+		// Delete invalid codex files (orphaned __ files)
+		const invalidCodexActions = this.findInvalidCodexFiles(allFiles);
+		allHealingActions.push(...invalidCodexActions);
+
 		// Dispatch healing actions first
 		if (allHealingActions.length > 0) {
 			const vaultActions =
