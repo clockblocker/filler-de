@@ -18,6 +18,7 @@ import {
 	type CodexImpact,
 	codexActionsToVaultActions,
 	codexImpactToActions,
+	computeCodexSplitPath,
 	parseCodexClickLineContent,
 } from "./library-tree/codex";
 import { mergeCodexImpacts } from "./library-tree/codex/merge-codex-impacts";
@@ -33,10 +34,12 @@ import type {
 } from "./library-tree/tree-action/types/tree-action";
 import { tryParseAsSeparatedSuffixedBasename } from "./library-tree/tree-action/utils/canonical-naming/suffix-utils/core-suffix-utils";
 import { makeLocatorFromCanonicalSplitPathInsideLibrary } from "./library-tree/tree-action/utils/locator/locator-codec";
+import { makeNodeSegmentId } from "./library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import {
 	TreeNodeStatus,
 	TreeNodeType,
 } from "./library-tree/tree-node/types/atoms";
+import type { SectionNode } from "./library-tree/tree-node/types/tree-node";
 import {
 	NodeSegmentIdSeparator,
 	type ScrollNodeSegmentId,
@@ -236,6 +239,79 @@ export class Librarian {
 		}
 
 		return actions;
+	}
+
+	/**
+	 * Find invalid codex files (__ prefix but not valid codexes) and return delete actions.
+	 */
+	private findInvalidCodexFiles(
+		allFiles: SplitPathWithReader[],
+	): HealingAction[] {
+		if (!this.tree) return [];
+
+		// Collect all valid codex paths from tree
+		const validCodexPaths = new Set<string>();
+		this.collectValidCodexPaths(this.tree.getRoot(), [], validCodexPaths);
+
+		const deleteActions: HealingAction[] = [];
+
+		for (const file of allFiles) {
+			// Skip non-md files
+			if (file.type !== SplitPathType.MdFile) continue;
+
+			// Check if basename starts with __
+			const coreNameResult = tryParseAsSeparatedSuffixedBasename(file);
+			if (coreNameResult.isErr()) continue;
+
+			if (coreNameResult.value.coreName !== CODEX_CORE_NAME) continue;
+
+			// This is a __ file - check if it's valid
+			const libraryScopedResult = tryParseAsInsideLibrarySplitPath(file);
+			if (libraryScopedResult.isErr()) continue;
+
+			const filePath = [
+				...libraryScopedResult.value.pathParts,
+				libraryScopedResult.value.basename,
+			].join("/");
+
+			if (!validCodexPaths.has(filePath)) {
+				logger.info(`[Librarian] Deleting invalid codex: ${filePath}`);
+				deleteActions.push({
+					type: "DeleteMdFile",
+					payload: { splitPath: libraryScopedResult.value },
+				});
+			}
+		}
+
+		return deleteActions;
+	}
+
+	/**
+	 * Recursively collect all valid codex paths from the tree.
+	 */
+	private collectValidCodexPaths(
+		section: SectionNode,
+		parentChain: SectionNodeSegmentId[],
+		paths: Set<string>,
+	): void {
+		// Current section's chain
+		const currentSegmentId = makeNodeSegmentId(section);
+		const currentChain = [...parentChain, currentSegmentId];
+
+		// Compute codex path for this section
+		const codexSplitPath = computeCodexSplitPath(currentChain);
+		const codexPath = [
+			...codexSplitPath.pathParts,
+			codexSplitPath.basename,
+		].join("/");
+		paths.add(codexPath);
+
+		// Recurse into child sections
+		for (const child of Object.values(section.children)) {
+			if (child.type === TreeNodeType.Section) {
+				this.collectValidCodexPaths(child, currentChain, paths);
+			}
+		}
 	}
 
 	/**
