@@ -13,7 +13,7 @@ export const INIT_HEALING_WAIT_MS = 1000;
 export const EXTRA_INIT_HEALING_WAIT_MS = 0;
 
 // Offsets
-export const OFFSET_AFTER_FILE_DELETION = { intervalOffset: 0, timeoutOffset: 0, };
+export const OFFSET_AFTER_FILE_DELETION = { intervalOffset: -400, timeoutOffset: 0, };
 export const OFFSET_AFTER_HEAL = { intervalOffset: 1500, timeoutOffset: 1000 };
 
 /**
