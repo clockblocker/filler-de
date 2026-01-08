@@ -6,7 +6,7 @@ import {
 	formatError,
 	logError,
 	logWarning,
-} from "../../../obsidian-vault-action-manager/helpers/issue-handlers";
+} from "../../../managers/obsidian/vault-action-manager/helpers/issue-handlers";
 import type { TextEaterSettings } from "../../../types";
 
 function normalizeHeaders(initHeaders?: HeadersInit): Record<string, string> {

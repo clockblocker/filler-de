@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { canonicalBasenameToChainCodec } from "../../../../../src/commanders/librarian-old/naming/deprecated-codexes/suffixed-basename-to-chain-codec";
 import * as globalState from "../../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../../src/global-state/parsed-settings";
-import { SplitPathType } from "../../../../../src/obsidian-vault-action-manager/types/split-path";
+import { SplitPathType } from "../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 
 const defaultSettings: ParsedUserSettings = {
 	apiProvider: "google",

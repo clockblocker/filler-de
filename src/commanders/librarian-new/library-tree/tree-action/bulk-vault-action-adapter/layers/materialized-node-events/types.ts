@@ -3,7 +3,7 @@ import {
 	CREATE,
 	DELETE,
 	RENAME,
-} from "../../../../../../../obsidian-vault-action-manager/types/literals";
+} from "../../../../../../../managers/obsidian/vault-action-manager/types/literals";
 import type { Prettify } from "../../../../../../../types/helpers";
 import type { TreeNodeType } from "../../../../tree-node/types/atoms";
 import type {

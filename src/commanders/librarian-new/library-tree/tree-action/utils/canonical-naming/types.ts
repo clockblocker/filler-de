@@ -1,6 +1,6 @@
 // { pathParts: NodeName[]; nodeName: NodeName }
 
-import type { CommonSplitPath } from "../../../../../../obsidian-vault-action-manager/types/split-path";
+import type { CommonSplitPath } from "../../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { Prettify } from "../../../../../../types/helpers";
 import type {
 	SplitPathToFileInsideLibrary,

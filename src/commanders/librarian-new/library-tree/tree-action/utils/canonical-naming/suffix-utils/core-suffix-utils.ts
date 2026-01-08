@@ -1,6 +1,6 @@
 import { err, ok, type Result } from "neverthrow";
 import { getParsedUserSettings } from "../../../../../../../global-state/global-state";
-import type { SplitPath } from "../../../../../../../obsidian-vault-action-manager/types/split-path";
+import type { SplitPath } from "../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { NonEmptyArray } from "../../../../../../../types/helpers";
 import { nonEmptyArrayResult } from "../../../../../../../types/utils";
 import { NamingError } from "../../../../../types/schemas/errors";
@@ -76,5 +76,7 @@ export const makeSuffixPartsFromPathPartsWithRoot = (
 	pathParts: string[],
 ): SeparatedSuffixedBasename["suffixParts"] => {
 	// Drop Library root (first element), then reverse
-	return pathParts.slice(1).reverse() as SeparatedSuffixedBasename["suffixParts"];
+	return pathParts
+		.slice(1)
+		.reverse() as SeparatedSuffixedBasename["suffixParts"];
 };

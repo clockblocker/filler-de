@@ -13,18 +13,18 @@ import { clearState, initializeState } from "./global-state/global-state";
 import {
 	makeSplitPath,
 	makeSystemPathForSplitPath,
-	ObsidianVaultActionManagerImpl,
-} from "./obsidian-vault-action-manager";
-import { OpenedFileReader } from "./obsidian-vault-action-manager/file-services/active-view/opened-file-reader";
+	VaultActionManagerImpl,
+} from "./managers/obsidian/vault-action-manager";
+import { OpenedFileReader } from "./managers/obsidian/vault-action-manager/file-services/active-view/opened-file-reader";
 import {
 	OpenedFileService,
 	OpenedFileService as OpenedFileServiceWithResult,
-} from "./obsidian-vault-action-manager/file-services/active-view/opened-file-service";
-import { TFileHelper } from "./obsidian-vault-action-manager/file-services/background/helpers/tfile-helper";
-import { TFolderHelper } from "./obsidian-vault-action-manager/file-services/background/helpers/tfolder-helper";
-import { logError } from "./obsidian-vault-action-manager/helpers/issue-handlers";
-import { splitPathFromSystemPathInternal } from "./obsidian-vault-action-manager/helpers/pathfinder/system-path-and-split-path-codec";
-import { Reader } from "./obsidian-vault-action-manager/impl/reader";
+} from "./managers/obsidian/vault-action-manager/file-services/active-view/opened-file-service";
+import { TFileHelper } from "./managers/obsidian/vault-action-manager/file-services/background/helpers/tfile-helper";
+import { TFolderHelper } from "./managers/obsidian/vault-action-manager/file-services/background/helpers/tfolder-helper";
+import { logError } from "./managers/obsidian/vault-action-manager/helpers/issue-handlers";
+import { splitPathFromSystemPathInternal } from "./managers/obsidian/vault-action-manager/helpers/pathfinder/system-path-and-split-path-codec";
+import { Reader } from "./managers/obsidian/vault-action-manager/impl/reader";
 import { extractMetaInfo } from "./services/dto-services/meta-info-manager/interface";
 import { AboveSelectionToolbarService } from "./services/obsidian-services/atomic-services/above-selection-toolbar-service";
 import { ApiService } from "./services/obsidian-services/atomic-services/api-service";
@@ -43,7 +43,7 @@ export default class TextEaterPlugin extends Plugin {
 	testingReader: Reader;
 	testingTFileHelper: TFileHelper;
 	testingTFolderHelper: TFolderHelper;
-	vaultActionManager: ObsidianVaultActionManagerImpl;
+	vaultActionManager: VaultActionManagerImpl;
 	selectionService: SelectionService;
 
 	selectionToolbarService: AboveSelectionToolbarService;
@@ -173,7 +173,7 @@ export default class TextEaterPlugin extends Plugin {
 			this.testingTFolderHelper,
 			this.app.vault,
 		);
-		this.vaultActionManager = new ObsidianVaultActionManagerImpl(this.app);
+		this.vaultActionManager = new VaultActionManagerImpl(this.app);
 
 		this.selectionToolbarService = new AboveSelectionToolbarService(
 			this.app,

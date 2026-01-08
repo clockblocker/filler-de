@@ -3,7 +3,7 @@ import { TFile, TFolder } from "obsidian";
 import {
 	makeSplitPath,
 	makeSystemPathForSplitPath,
-} from "../../../src/obsidian-vault-action-manager";
+} from "../../../src/managers/obsidian/vault-action-manager";
 
 describe("obsidian-vault-action-manager splitPath helpers", () => {
 	it("splits md file paths from strings", () => {

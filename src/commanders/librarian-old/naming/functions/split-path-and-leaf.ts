@@ -2,8 +2,8 @@ import type {
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
-} from "../../../../obsidian-vault-action-manager/types/split-path";
-import { SplitPathType } from "../../../../obsidian-vault-action-manager/types/split-path";
+} from "../../../../managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathType } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type {
 	FileNodeDeprecated,
 	ScrollNodeDeprecated,

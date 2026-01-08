@@ -1,4 +1,4 @@
-import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
+import type { VaultAction } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { collectImpactedSections } from "../codex";
 import type { LibraryTreeDeprecated } from "../library-tree";
 import { translateVaultAction } from "../reconciliation";

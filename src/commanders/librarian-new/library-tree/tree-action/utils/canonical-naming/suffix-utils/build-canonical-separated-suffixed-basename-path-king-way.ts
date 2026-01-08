@@ -1,6 +1,6 @@
 import { err, ok, type Result } from "neverthrow";
 import { getParsedUserSettings } from "../../../../../../../global-state/global-state";
-import { SplitPathType } from "../../../../../../../obsidian-vault-action-manager/types/split-path";
+import { SplitPathType } from "../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import { NodeNameSchema } from "../../../../../types/schemas/node-name";
 import type { SplitPathInsideLibrary } from "../../../bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
 import type {

@@ -1,10 +1,10 @@
 import type { Result } from "neverthrow";
 import { getParsedUserSettings } from "../../../global-state/global-state";
-import type { VaultEvent } from "../../../obsidian-vault-action-manager";
-import { systemPathFromSplitPathInternal } from "../../../obsidian-vault-action-manager/helpers/pathfinder/system-path-and-split-path-codec";
-import type { SplitPath } from "../../../obsidian-vault-action-manager/types/split-path";
-import { SplitPathType } from "../../../obsidian-vault-action-manager/types/split-path";
-import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
+import type { VaultEvent } from "../../../managers/obsidian/vault-action-manager";
+import { systemPathFromSplitPathInternal } from "../../../managers/obsidian/vault-action-manager/helpers/pathfinder/system-path-and-split-path-codec";
+import type { SplitPath } from "../../../managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathType } from "../../../managers/obsidian/vault-action-manager/types/split-path";
+import type { VaultAction } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import {
 	dedupeChains,
 	expandAllToAncestors,
@@ -33,10 +33,10 @@ export type EventHandlerContextDeprecated = {
 	makeSplitPath: (path: string) => SplitPath;
 	tree: LibraryTreeDeprecated;
 	listAllFilesWithMdReaders: (
-		splitPath: import("../../../obsidian-vault-action-manager/types/split-path").SplitPathToFolder,
+		splitPath: import("../../../managers/obsidian/vault-action-manager/types/split-path").SplitPathToFolder,
 	) => Promise<
 		Result<
-			import("../../../obsidian-vault-action-manager/types/split-path").SplitPathWithReader[],
+			import("../../../managers/obsidian/vault-action-manager/types/split-path").SplitPathWithReader[],
 			string
 		>
 	>;

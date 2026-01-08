@@ -1,14 +1,14 @@
 import { describe, expect, it } from "bun:test";
-import { makeSystemPathForSplitPath } from "../../../src/obsidian-vault-action-manager";
-import { reduceRoots } from "../../../src/obsidian-vault-action-manager/impl/event-processing/bulk-event-emmiter/batteries/processing-chain/reduce-roots";
-import { MD } from "../../../src/obsidian-vault-action-manager/types/literals";
+import { makeSystemPathForSplitPath } from "../../../src/managers/obsidian/vault-action-manager";
+import { reduceRoots } from "../../../src/managers/obsidian/vault-action-manager/impl/event-processing/bulk-event-emmiter/batteries/processing-chain/reduce-roots";
+import { MD } from "../../../src/managers/obsidian/vault-action-manager/types/literals";
 import type {
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
-} from "../../../src/obsidian-vault-action-manager/types/split-path";
-import type { VaultEvent } from "../../../src/obsidian-vault-action-manager/types/vault-event";
-import { VaultEventType } from "../../../src/obsidian-vault-action-manager/types/vault-event";
+} from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import type { VaultEvent } from "../../../src/managers/obsidian/vault-action-manager/types/vault-event";
+import { VaultEventType } from "../../../src/managers/obsidian/vault-action-manager/types/vault-event";
 
 // Helper: build split paths
 const F = (path: string): SplitPathToFolder => {

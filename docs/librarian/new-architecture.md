@@ -31,7 +31,7 @@ The core parts of the system are:
 - SectionNodes (a shadows of Tfolder)
 { nodeName: NodeName, nodeNameChainToParent: NodeNameChain, type: "Section", status: "Done" | "NotStarted", children: (ScrollNode | FileNode | SectionNode)[]}
 
-**Note on TFile references**: TFile references (tRef) are NOT stored in tree nodes because they become stale when files are renamed/moved. Obsidian does not automatically update TFile.path when files are renamed/moved, so storing tRefs in the tree would lead to stale references pointing to old paths. TFile references are now internal to the `ObsidianVaultActionManager` and should never leave it. External code (like Librarian) uses `SplitPathWithReader` instead, which provides a `read()` function for markdown files without exposing tRefs.
+**Note on TFile references**: TFile references (tRef) are NOT stored in tree nodes because they become stale when files are renamed/moved. Obsidian does not automatically update TFile.path when files are renamed/moved, so storing tRefs in the tree would lead to stale references pointing to old paths. TFile references are now internal to the `VaultActionManager` and should never leave it. External code (like Librarian) uses `SplitPathWithReader` instead, which provides a `read()` function for markdown files without exposing tRefs.
 
 LibraryTree is initialized with:
 - an array of TreeLeaf: (ScrollNode | FileNode)[]

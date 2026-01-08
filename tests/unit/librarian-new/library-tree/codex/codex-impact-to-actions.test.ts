@@ -9,16 +9,16 @@ import {
 	TreeNodeType,
 } from "../../../../../src/commanders/librarian-new/library-tree/tree-node/types/atoms";
 import type {
-	SectionNode,
-	ScrollNode,
-} from "../../../../../src/commanders/librarian-new/library-tree/tree-node/types/tree-node";
-import type {
 	SectionNodeSegmentId,
 } from "../../../../../src/commanders/librarian-new/library-tree/tree-node/types/node-segment-id";
+import type {
+	ScrollNode,
+	SectionNode,
+} from "../../../../../src/commanders/librarian-new/library-tree/tree-node/types/tree-node";
 import type { NodeName } from "../../../../../src/commanders/librarian-new/types/schemas/node-name";
-import { SplitPathType } from "../../../../../src/obsidian-vault-action-manager/types/split-path";
 import * as globalState from "../../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../../src/global-state/parsed-settings";
+import { SplitPathType } from "../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 
 const defaultSettings: ParsedUserSettings = {
 	apiProvider: "google",

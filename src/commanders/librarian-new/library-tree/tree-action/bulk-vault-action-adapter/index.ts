@@ -1,4 +1,4 @@
-import type { BulkVaultEvent } from "../../../../../obsidian-vault-action-manager";
+import type { BulkVaultEvent } from "../../../../../managers/obsidian/vault-action-manager";
 import type { TreeAction } from "../types/tree-action";
 import { makeLibraryScopedBulkVaultEvent } from "./layers/library-scope";
 import { materializeScopedBulk } from "./layers/materialized-node-events";

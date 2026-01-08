@@ -1,10 +1,5 @@
 import { err, ok, type Result } from "neverthrow";
 import { type FileManager, TFolder, type Vault } from "obsidian";
-import { findFirstAvailableIndexedPath } from "../../../../obsidian-vault-action-manager/helpers/pathfinder";
-import type {
-	SplitPathFromTo,
-	SplitPathToFolder,
-} from "../../../../obsidian-vault-action-manager/types/split-path";
 import {
 	errorBothSourceAndTargetNotFound,
 	errorCreateFailed,
@@ -14,7 +9,14 @@ import {
 	errorRetrieveRenamed,
 	errorTypeMismatch,
 } from "../../../errors";
-import { systemPathFromSplitPathInternal } from "../../../helpers/pathfinder";
+import {
+	findFirstAvailableIndexedPath,
+	systemPathFromSplitPathInternal,
+} from "../../../helpers/pathfinder";
+import type {
+	SplitPathFromTo,
+	SplitPathToFolder,
+} from "../../../types/split-path";
 import { type CollisionStrategy, getExistingBasenamesInFolder } from "./common";
 
 /**

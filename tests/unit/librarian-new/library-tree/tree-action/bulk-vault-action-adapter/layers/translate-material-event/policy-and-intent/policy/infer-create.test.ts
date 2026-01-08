@@ -3,7 +3,7 @@ import { inferCreatePolicy } from "../../../../../../../../../../src/commanders/
 import { ChangePolicy } from "../../../../../../../../../../src/commanders/librarian-new/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/types";
 import * as globalState from "../../../../../../../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../../../../../../../src/global-state/parsed-settings";
-import { SplitPathType } from "../../../../../../../../../../src/obsidian-vault-action-manager/types/split-path";
+import { SplitPathType } from "../../../../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 
 const defaultSettings: ParsedUserSettings = {
 	apiProvider: "google",

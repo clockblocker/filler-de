@@ -2,7 +2,7 @@ import z from "zod";
 import {
 	PathPartsSchema,
 	type SplitPath,
-} from "../../../../../obsidian-vault-action-manager/types/split-path";
+} from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { NodeNameChainDeprecated } from "../../..";
 import { NodeNameChainSchemaDeprecated } from "../../../types/schemas/node-name";
 

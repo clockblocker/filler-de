@@ -3,7 +3,7 @@ import { getParsedUserSettings } from "../../../global-state/global-state";
 import {
 	type SplitPathToFolder,
 	SplitPathType,
-} from "../../../obsidian-vault-action-manager/types/split-path";
+} from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { NodeNameChainDeprecated } from "../types/schemas/node-name";
 import type { SectionNodeDeprecated } from "../types/tree-node";
 import { codexBasenameToSectionChainCodec } from "./deprecated-codexes/suffixed-basename-for-codex-to-chain-codec";

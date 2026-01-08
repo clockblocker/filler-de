@@ -7,7 +7,7 @@ import type {
 import { makeLocatorFromCanonicalSplitPathInsideLibrary } from "../../../../../../src/commanders/librarian-new/library-tree/tree-action/utils/locator/locator-codec";
 import { TreeNodeType } from "../../../../../../src/commanders/librarian-new/library-tree/tree-node/types/atoms";
 import { NodeSegmentIdSeparator } from "../../../../../../src/commanders/librarian-new/library-tree/tree-node/types/node-segment-id";
-import { SplitPathType } from "../../../../../../src/obsidian-vault-action-manager/types/split-path";
+import { SplitPathType } from "../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 
 describe("makeLocatorFromLibraryScopedCanonicalSplitPath", () => {
 	describe("File type", () => {

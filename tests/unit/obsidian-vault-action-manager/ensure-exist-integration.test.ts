@@ -1,16 +1,16 @@
 import { describe, expect, it } from "bun:test";
-import { collapseActions } from "../../../src/obsidian-vault-action-manager/impl/actions-processing/collapse";
-import { buildDependencyGraph, makeGraphKey } from "../../../src/obsidian-vault-action-manager/impl/actions-processing/dependency-detector";
-import { topologicalSort } from "../../../src/obsidian-vault-action-manager/impl/actions-processing/topological-sort";
+import { collapseActions } from "../../../src/managers/obsidian/vault-action-manager/impl/actions-processing/collapse";
+import { buildDependencyGraph, makeGraphKey } from "../../../src/managers/obsidian/vault-action-manager/impl/actions-processing/dependency-detector";
+import { topologicalSort } from "../../../src/managers/obsidian/vault-action-manager/impl/actions-processing/topological-sort";
 import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,
-} from "../../../src/obsidian-vault-action-manager/types/split-path";
-import { SplitPathType } from "../../../src/obsidian-vault-action-manager/types/split-path";
-import type { VaultAction } from "../../../src/obsidian-vault-action-manager/types/vault-action";
+} from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathType } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import type { VaultAction } from "../../../src/managers/obsidian/vault-action-manager/types/vault-action";
 import {
 	VaultActionType,
-} from "../../../src/obsidian-vault-action-manager/types/vault-action";
+} from "../../../src/managers/obsidian/vault-action-manager/types/vault-action";
 
 const folder = (
 	basename: string,

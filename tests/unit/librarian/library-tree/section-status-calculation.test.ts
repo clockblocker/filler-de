@@ -9,7 +9,7 @@ import {
 } from "../../../../src/commanders/librarian-old/types/tree-node";
 import * as globalState from "../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
-import { SplitPathType } from "../../../../src/obsidian-vault-action-manager/types/split-path";
+import { SplitPathType } from "../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 
 const fakeRootFolder = { name: "Library" } as unknown as TFolder;
 

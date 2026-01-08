@@ -3,7 +3,7 @@ import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,
 	SplitPathType,
-} from "../../../../../../../../obsidian-vault-action-manager/types/split-path";
+} from "../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
 
 export type SplitPathToFolderInsideLibrary = SplitPathToFolder & {
 	type: typeof SplitPathType.Folder;

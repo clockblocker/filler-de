@@ -2,8 +2,8 @@ import { err, ok, type Result } from "neverthrow";
 import type {
 	SplitPathToFolder,
 	SplitPathWithReader,
-} from "../../../obsidian-vault-action-manager/types/split-path";
-import { SplitPathType } from "../../../obsidian-vault-action-manager/types/split-path";
+} from "../../../managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathType } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import { extractMetaInfo } from "../../../services/dto-services/meta-info-manager/interface";
 import { LibraryTreeDeprecated } from "../library-tree";
 import { tryParseJoinedSuffixedBasenameForCodex } from "../naming/codecs/atomic/parsers";

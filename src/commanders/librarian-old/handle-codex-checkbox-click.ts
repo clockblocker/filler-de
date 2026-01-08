@@ -1,7 +1,7 @@
 import { err, ok, type Result } from "neverthrow";
 import type { App } from "obsidian";
 import { MarkdownView } from "obsidian";
-import type { ObsidianVaultActionManager } from "../../obsidian-vault-action-manager";
+import type { VaultActionManager } from "../../managers/obsidian/vault-action-manager";
 import { logger } from "../../utils/logger";
 import { tryParseAsIntendedTreeNode } from "./codex/content/intended-tree-node-and-codex-line";
 import { CodexLineType } from "./codex/content/schema/literals";
@@ -21,7 +21,7 @@ export async function handleCodexCheckboxClickDeprecated({
 	app,
 }: {
 	checkbox: HTMLInputElement;
-	vaultActionManager: ObsidianVaultActionManager;
+	vaultActionManager: VaultActionManager;
 	librarian: LibrarianDeprecated;
 	app: App;
 }): Promise<boolean> {

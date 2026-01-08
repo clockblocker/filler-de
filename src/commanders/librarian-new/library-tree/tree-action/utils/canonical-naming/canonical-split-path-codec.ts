@@ -1,6 +1,6 @@
 import { err, ok, type Result } from "neverthrow";
 import { getParsedUserSettings } from "../../../../../../global-state/global-state";
-import type { SplitPath } from "../../../../../../obsidian-vault-action-manager/types/split-path";
+import type { SplitPath } from "../../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import { NodeNameSchema } from "../../../../types/schemas/node-name";
 import type {
 	SplitPathInsideLibrary,
@@ -76,12 +76,12 @@ function tryParsePathParts(
 ): Result<SplitPath["pathParts"], string> {
 	const { splitPathToLibraryRoot } = getParsedUserSettings();
 	const libraryRootName = splitPathToLibraryRoot.basename;
-	
+
 	// Empty pathParts is allowed only for Library root folder
 	if (pathParts.length === 0) {
 		return ok(pathParts);
 	}
-	
+
 	// Non-empty pathParts must start with Library
 	if (pathParts[0] !== libraryRootName) return err("ExpectedLibraryRoot");
 

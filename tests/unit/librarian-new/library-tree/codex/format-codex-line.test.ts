@@ -1,14 +1,14 @@
-import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import {
-	formatScrollLine,
-	formatFileLine,
 	formatChildSectionLine,
+	formatFileLine,
 	formatParentBacklink,
+	formatScrollLine,
 } from "../../../../../src/commanders/librarian-new/library-tree/codex/format-codex-line";
 import { TreeNodeStatus } from "../../../../../src/commanders/librarian-new/library-tree/tree-node/types/atoms";
-import { SplitPathType } from "../../../../../src/obsidian-vault-action-manager/types/split-path";
 import * as globalState from "../../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../../src/global-state/parsed-settings";
+import { SplitPathType } from "../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 
 const defaultSettings: ParsedUserSettings = {
 	apiProvider: "google",

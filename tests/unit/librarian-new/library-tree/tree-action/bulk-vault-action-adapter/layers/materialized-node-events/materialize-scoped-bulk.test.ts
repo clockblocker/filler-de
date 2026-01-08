@@ -5,8 +5,8 @@ import { materializeScopedBulk } from "../../../../../../../../src/commanders/li
 import type { MaterializedNodeEvent } from "../../../../../../../../src/commanders/librarian-new/library-tree/tree-action/bulk-vault-action-adapter/layers/materialized-node-events/types";
 import { MaterializedEventType } from "../../../../../../../../src/commanders/librarian-new/library-tree/tree-action/bulk-vault-action-adapter/layers/materialized-node-events/types";
 import { TreeNodeType } from "../../../../../../../../src/commanders/librarian-new/library-tree/tree-node/types/atoms";
-import { SplitPathType } from "../../../../../../../../src/obsidian-vault-action-manager/types/split-path";
-import { VaultEventType } from "../../../../../../../../src/obsidian-vault-action-manager/types/vault-event";
+import { SplitPathType } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import { VaultEventType } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/vault-event";
 
 // Helper: create library-scoped split paths
 const F = (basename: string, pathParts: string[] = []): { basename: string; pathParts: string[]; type: typeof SplitPathType.Folder } => ({

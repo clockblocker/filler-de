@@ -1,5 +1,5 @@
 import { getParsedUserSettings } from "../../../global-state/global-state";
-import { makeSystemPathForSplitPath } from "../../../obsidian-vault-action-manager/impl/common/split-path-and-system-path";
+import { makeSystemPathForSplitPath } from "../../../managers/obsidian/vault-action-manager/impl/common/split-path-and-system-path";
 import { makeJoinedSuffixedBasenameFromNodeNameChain } from "../naming/functions/basename-and-chain";
 import { buildCanonicalSplitPathFromNode } from "../naming/functions/split-path-and-leaf";
 import type {

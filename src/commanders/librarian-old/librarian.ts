@@ -1,11 +1,11 @@
 import { getParsedUserSettings } from "../../global-state/global-state";
 import type {
-	ObsidianVaultActionManager,
+	VaultActionManager,
 	VaultEvent,
-} from "../../obsidian-vault-action-manager";
-import { makeSplitPath } from "../../obsidian-vault-action-manager";
-import type { SplitPath } from "../../obsidian-vault-action-manager/types/split-path";
-import type { VaultAction } from "../../obsidian-vault-action-manager/types/vault-action";
+} from "../../managers/obsidian/vault-action-manager";
+import { makeSplitPath } from "../../managers/obsidian/vault-action-manager";
+import type { SplitPath } from "../../managers/obsidian/vault-action-manager/types/split-path";
+import type { VaultAction } from "../../managers/obsidian/vault-action-manager/types/vault-action";
 import { logger } from "../../utils/logger";
 import {
 	dedupeChains,
@@ -41,9 +41,7 @@ export class LibrarianDeprecated {
 	/** Track paths we're currently processing to avoid self-event loops */
 	private eventTeardown: (() => void) | null = null;
 
-	constructor(
-		private readonly vaultActionManager: ObsidianVaultActionManager,
-	) {}
+	constructor(private readonly vaultActionManager: VaultActionManager) {}
 
 	/**
 	 * Initialize librarian: read tree and heal mismatches.

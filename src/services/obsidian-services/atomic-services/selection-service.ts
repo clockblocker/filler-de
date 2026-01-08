@@ -1,5 +1,5 @@
 import type { App } from "obsidian";
-import { getEditor } from "../../../obsidian-vault-action-manager/helpers/get-editor";
+import { getEditor } from "../../../managers/obsidian/vault-action-manager/helpers/get-editor";
 import type { MaybeLegacy } from "../../../types/common-interface/maybe";
 
 export class SelectionService {

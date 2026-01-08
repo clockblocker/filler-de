@@ -16,8 +16,8 @@ import { Reader } from "./impl/reader";
 import type {
 	BulkVaultEventHandler,
 	DispatchResult,
-	ObsidianVaultActionManager,
 	Teardown,
+	VaultActionManager,
 	VaultEventHandler,
 } from "./index";
 import type {
@@ -29,9 +29,7 @@ import type {
 } from "./types/split-path";
 import type { VaultAction } from "./types/vault-action";
 
-export class ObsidianVaultActionManagerImpl
-	implements ObsidianVaultActionManager
-{
+export class VaultActionManagerImpl implements VaultActionManager {
 	private readonly opened: OpenedFileService;
 	private readonly reader: Reader;
 	private readonly dispatcher: Dispatcher;

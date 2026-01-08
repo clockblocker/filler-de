@@ -1,13 +1,13 @@
 import { describe, expect, it } from "bun:test";
-import { collapseVaultEvents } from "../../../src/obsidian-vault-action-manager/impl/event-processing/bulk-event-emmiter/batteries/processing-chain/collapse";
-import { makeKeyForEvent } from "../../../src/obsidian-vault-action-manager/impl/event-processing/bulk-event-emmiter/batteries/processing-chain/helpers/make-key-for-event";
+import { collapseVaultEvents } from "../../../src/managers/obsidian/vault-action-manager/impl/event-processing/bulk-event-emmiter/batteries/processing-chain/collapse";
+import { makeKeyForEvent } from "../../../src/managers/obsidian/vault-action-manager/impl/event-processing/bulk-event-emmiter/batteries/processing-chain/helpers/make-key-for-event";
 import type {
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
-} from "../../../src/obsidian-vault-action-manager/types/split-path";
-import type { VaultEvent } from "../../../src/obsidian-vault-action-manager/types/vault-event";
-import { VaultEventType } from "../../../src/obsidian-vault-action-manager/types/vault-event";
+} from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import type { VaultEvent } from "../../../src/managers/obsidian/vault-action-manager/types/vault-event";
+import { VaultEventType } from "../../../src/managers/obsidian/vault-action-manager/types/vault-event";
 
 // Helper: build split paths
 const F = (path: string): SplitPathToFolder => {

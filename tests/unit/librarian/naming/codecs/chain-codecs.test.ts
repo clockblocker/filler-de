@@ -5,7 +5,7 @@ import  { makeNodeNameChainFromPathParts, makePathPartsFromNodeNameChain } from 
 import  { makeNodeNameChainFromSeparatedSuffixedBasename, makeSeparatedSuffixedBasenameFromNodeNameChain } from "../../../../../src/commanders/librarian-old/naming/codecs/atomic/separated-canonical-basename-and-node-name-chain";
 import * as globalState from "../../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../../src/global-state/parsed-settings";
-import { SplitPathType } from "../../../../../src/obsidian-vault-action-manager/types/split-path";
+import { SplitPathType } from "../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 
 const defaultSettings: ParsedUserSettings = {
 	apiProvider: "google",

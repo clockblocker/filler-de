@@ -1,9 +1,9 @@
 import {
 	type SplitPath,
 	SplitPathType,
-} from "../../../obsidian-vault-action-manager/types/split-path";
-import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
-import { VaultActionType } from "../../../obsidian-vault-action-manager/types/vault-action";
+} from "../../../managers/obsidian/vault-action-manager/types/split-path";
+import type { VaultAction } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
+import { VaultActionType } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { tryParseJoinedSuffixedBasenameForCodex } from "../naming/codecs/atomic/parsers";
 import { makeNodeNameChainFromPathParts } from "../naming/codecs/atomic/path-parts-and-node-name-chain";
 import { makeCanonicalBasenameForCodexFromSectionNode } from "../naming/functions/codexes";

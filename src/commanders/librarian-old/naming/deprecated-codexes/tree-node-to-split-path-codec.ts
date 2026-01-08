@@ -4,7 +4,7 @@ import {
 	type SplitPath,
 	SplitPathSchema,
 	SplitPathType,
-} from "../../../../obsidian-vault-action-manager/types/split-path";
+} from "../../../../managers/obsidian/vault-action-manager/types/split-path";
 import {
 	type TreeNodeDeprecated,
 	TreeNodeStatusDeprecated,

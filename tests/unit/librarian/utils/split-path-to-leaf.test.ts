@@ -6,8 +6,8 @@ import type { ParsedUserSettings } from "../../../../src/global-state/parsed-set
 import type {
 	SplitPathToFile,
 	SplitPathToMdFile,
-} from "../../../../src/obsidian-vault-action-manager/types/split-path";
-import { SplitPathType } from "../../../../src/obsidian-vault-action-manager/types/split-path";
+} from "../../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathType } from "../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 
 // Default settings for tests
 const defaultSettings: ParsedUserSettings = {

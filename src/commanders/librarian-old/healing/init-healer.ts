@@ -3,11 +3,11 @@ import type {
 	SplitPathToFile,
 	SplitPathToMdFile,
 	SplitPathWithReader,
-} from "../../../obsidian-vault-action-manager/types/split-path";
+} from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import {
 	type VaultAction,
 	VaultActionType,
-} from "../../../obsidian-vault-action-manager/types/vault-action";
+} from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import type { TreeLeafDeprecated } from "../types/tree-node";
 import { TreeNodeTypeDeprecated } from "../types/tree-node";
 import { parseBasenameDeprecated } from "../utils/parse-basename";

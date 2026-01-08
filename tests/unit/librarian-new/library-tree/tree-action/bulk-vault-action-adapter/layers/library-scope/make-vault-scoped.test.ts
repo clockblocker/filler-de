@@ -4,9 +4,9 @@ import type { LibraryScopedVaultEvent } from "../../../../../../../../src/comman
 import { Scope } from "../../../../../../../../src/commanders/librarian-new/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/scoped-event";
 import * as globalState from "../../../../../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../../../../../src/global-state/parsed-settings";
-import { SplitPathType } from "../../../../../../../../src/obsidian-vault-action-manager/types/split-path";
-import type { VaultEvent } from "../../../../../../../../src/obsidian-vault-action-manager/types/vault-event";
-import { VaultEventType } from "../../../../../../../../src/obsidian-vault-action-manager/types/vault-event";
+import { SplitPathType } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import type { VaultEvent } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/vault-event";
+import { VaultEventType } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/vault-event";
 
 const defaultSettings: ParsedUserSettings = {
 	apiProvider: "google",

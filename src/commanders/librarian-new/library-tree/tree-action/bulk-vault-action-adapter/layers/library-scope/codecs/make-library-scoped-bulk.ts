@@ -1,4 +1,4 @@
-import type { BulkVaultEvent } from "../../../../../../../../obsidian-vault-action-manager";
+import type { BulkVaultEvent } from "../../../../../../../../managers/obsidian/vault-action-manager";
 import type { LibraryScopedBulkVaultEvent } from "../types/scoped-event";
 import { makeEventLibraryScoped } from "./events/make-event-libray-scoped";
 

@@ -1,33 +1,39 @@
 import { getParsedUserSettings } from "../../global-state/global-state";
 import type {
 	BulkVaultEvent,
-	ObsidianVaultActionManager,
-} from "../../obsidian-vault-action-manager";
-import type { SplitPathWithReader } from "../../obsidian-vault-action-manager/types/split-path";
-import { SplitPathType } from "../../obsidian-vault-action-manager/types/split-path";
-import type { VaultAction } from "../../obsidian-vault-action-manager/types/vault-action";
+	VaultActionManager,
+} from "../../managers/obsidian/vault-action-manager";
+import type { SplitPathWithReader } from "../../managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathType } from "../../managers/obsidian/vault-action-manager/types/split-path";
+import type { VaultAction } from "../../managers/obsidian/vault-action-manager/types/vault-action";
 import { extractMetaInfo } from "../../services/dto-services/meta-info-manager/interface";
 import { logger } from "../../utils/logger";
 import { healingActionsToVaultActions } from "./library-tree/codecs/healing-to-vault-action";
 import {
-	codexActionsToVaultActions,
-	codexImpactToActions,
 	CODEX_CORE_NAME,
 	type CodexImpact,
+	codexActionsToVaultActions,
+	codexImpactToActions,
 } from "./library-tree/codex";
+import { mergeCodexImpacts } from "./library-tree/codex/merge-codex-impacts";
 import { LibraryTree } from "./library-tree/library-tree";
 import { buildTreeActions } from "./library-tree/tree-action/bulk-vault-action-adapter";
 import { tryParseAsInsideLibrarySplitPath } from "./library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
 import type { SplitPathInsideLibrary } from "./library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
-import type { CreateTreeLeafAction, TreeAction } from "./library-tree/tree-action/types/tree-action";
-import { tryCanonicalizeSplitPathToDestination } from "./library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/translators/helpers/locator";
-import { makeLocatorFromCanonicalSplitPathInsideLibrary } from "./library-tree/tree-action/utils/locator/locator-codec";
 import { inferCreatePolicy } from "./library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/infer-create";
+import { tryCanonicalizeSplitPathToDestination } from "./library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/translators/helpers/locator";
+import type {
+	CreateTreeLeafAction,
+	TreeAction,
+} from "./library-tree/tree-action/types/tree-action";
 import { tryMakeSeparatedSuffixedBasename } from "./library-tree/tree-action/utils/canonical-naming/suffix-utils/core-suffix-utils";
-import { TreeNodeStatus, TreeNodeType } from "./library-tree/tree-node/types/atoms";
+import { makeLocatorFromCanonicalSplitPathInsideLibrary } from "./library-tree/tree-action/utils/locator/locator-codec";
+import {
+	TreeNodeStatus,
+	TreeNodeType,
+} from "./library-tree/tree-node/types/atoms";
 import type { HealingAction } from "./library-tree/types/healing-action";
 import { resolveDuplicateHealingActions } from "./library-tree/utils/resolve-duplicate-healing";
-import { mergeCodexImpacts } from "./library-tree/codex/merge-codex-impacts";
 
 // ─── Queue ───
 
@@ -44,9 +50,7 @@ export class Librarian {
 	private queue: QueueItem[] = [];
 	private processing = false;
 
-	constructor(
-		private readonly vaultActionManager: ObsidianVaultActionManager,
-	) {}
+	constructor(private readonly vaultActionManager: VaultActionManager) {}
 
 	/**
 	 * Initialize librarian: read tree and heal mismatches.
@@ -61,7 +65,9 @@ export class Librarian {
 
 		// Read all files from library
 		const allFilesResult =
-			await this.vaultActionManager.listAllFilesWithMdReaders(rootSplitPath);
+			await this.vaultActionManager.listAllFilesWithMdReaders(
+				rootSplitPath,
+			);
 
 		if (allFilesResult.isErr()) {
 			logger.error(
@@ -89,7 +95,8 @@ export class Librarian {
 
 		// Dispatch healing actions first
 		if (allHealingActions.length > 0) {
-			const vaultActions = healingActionsToVaultActions(allHealingActions);
+			const vaultActions =
+				healingActionsToVaultActions(allHealingActions);
 			logger.info(
 				`[Librarian] Dispatching ${vaultActions.length} healing actions`,
 			);
@@ -98,7 +105,11 @@ export class Librarian {
 
 		// Then dispatch codex actions
 		const mergedImpact = mergeCodexImpacts(allCodexImpacts);
-		const codexActions = codexImpactToActions(mergedImpact, this.tree, true);
+		const codexActions = codexImpactToActions(
+			mergedImpact,
+			this.tree,
+			true,
+		);
 		const codexVaultActions = codexActionsToVaultActions(codexActions);
 
 		if (codexVaultActions.length > 0) {
@@ -127,7 +138,10 @@ export class Librarian {
 		for (const file of files) {
 			// Skip codex files (basename starts with __)
 			const coreNameResult = tryMakeSeparatedSuffixedBasename(file);
-			if (coreNameResult.isOk() && coreNameResult.value.coreName === CODEX_CORE_NAME) {
+			if (
+				coreNameResult.isOk() &&
+				coreNameResult.value.coreName === CODEX_CORE_NAME
+			) {
 				continue;
 			}
 
@@ -153,7 +167,8 @@ export class Librarian {
 			const canonicalPath = canonicalResult.value;
 
 			// Build locator from canonical path
-			const locator = makeLocatorFromCanonicalSplitPathInsideLibrary(canonicalPath);
+			const locator =
+				makeLocatorFromCanonicalSplitPathInsideLibrary(canonicalPath);
 
 			// Read status for md files
 			let status: TreeNodeStatus = TreeNodeStatus.NotStarted;
@@ -173,21 +188,23 @@ export class Librarian {
 			if (locator.targetType === TreeNodeType.Scroll) {
 				actions.push({
 					actionType: "Create",
-					targetLocator: locator,
 					initialStatus: status,
-					observedSplitPath: observedPath as SplitPathInsideLibrary & {
-						type: typeof SplitPathType.MdFile;
-						extension: "md";
-					},
+					observedSplitPath:
+						observedPath as SplitPathInsideLibrary & {
+							type: typeof SplitPathType.MdFile;
+							extension: "md";
+						},
+					targetLocator: locator,
 				});
 			} else {
 				actions.push({
 					actionType: "Create",
+					observedSplitPath:
+						observedPath as SplitPathInsideLibrary & {
+							type: typeof SplitPathType.File;
+							extension: string;
+						},
 					targetLocator: locator,
-					observedSplitPath: observedPath as SplitPathInsideLibrary & {
-						type: typeof SplitPathType.File;
-						extension: string;
-					},
 				});
 			}
 		}

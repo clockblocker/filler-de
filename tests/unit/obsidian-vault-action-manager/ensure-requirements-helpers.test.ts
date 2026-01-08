@@ -7,15 +7,15 @@ import {
 	ensureDestinationsExist,
 	getDestinationsToCheck,
 	hasActionForKey,
-} from "../../../src/obsidian-vault-action-manager/impl/actions-processing/ensure-requirements-helpers";
-import type { ExistenceChecker } from "../../../src/obsidian-vault-action-manager/impl/dispatcher";
+} from "../../../src/managers/obsidian/vault-action-manager/impl/actions-processing/ensure-requirements-helpers";
+import type { ExistenceChecker } from "../../../src/managers/obsidian/vault-action-manager/impl/dispatcher";
 import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,
-} from "../../../src/obsidian-vault-action-manager/types/split-path";
-import { SplitPathType } from "../../../src/obsidian-vault-action-manager/types/split-path";
-import type { VaultAction } from "../../../src/obsidian-vault-action-manager/types/vault-action";
-import { VaultActionType } from "../../../src/obsidian-vault-action-manager/types/vault-action";
+} from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathType } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import type { VaultAction } from "../../../src/managers/obsidian/vault-action-manager/types/vault-action";
+import { VaultActionType } from "../../../src/managers/obsidian/vault-action-manager/types/vault-action";
 
 const folder = (
 	basename: string,

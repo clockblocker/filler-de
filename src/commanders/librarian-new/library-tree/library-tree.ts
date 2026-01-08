@@ -1,7 +1,10 @@
-import { SplitPathType } from "../../../obsidian-vault-action-manager/types/split-path";
+import { SplitPathType } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import { logger } from "../../../utils/logger";
 import type { NodeName } from "../types/schemas/node-name";
-import { type CodexImpact, computeCodexImpact } from "./codex/compute-codex-impact";
+import {
+	type CodexImpact,
+	computeCodexImpact,
+} from "./codex/compute-codex-impact";
 import type {
 	SplitPathInsideLibrary,
 	SplitPathToFileInsideLibrary,

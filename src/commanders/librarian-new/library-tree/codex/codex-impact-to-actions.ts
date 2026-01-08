@@ -3,7 +3,7 @@
  * Requires tree access to generate content.
  */
 
-import { SplitPathType } from "../../../../obsidian-vault-action-manager/types/split-path";
+import { SplitPathType } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { SplitPathToMdFileInsideLibrary } from "../tree-action/bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
 import {
 	makeJoinedSuffixedBasename,
@@ -116,7 +116,10 @@ export function codexImpactToActions(
 		if (!section) continue;
 
 		// Collect all descendant sections for codex updates
-		const descendantChains = collectDescendantSectionChains(section, sectionChain);
+		const descendantChains = collectDescendantSectionChains(
+			section,
+			sectionChain,
+		);
 		for (const descChain of descendantChains) {
 			const descSection = findSectionByChain(tree, descChain);
 			if (!descSection) continue;

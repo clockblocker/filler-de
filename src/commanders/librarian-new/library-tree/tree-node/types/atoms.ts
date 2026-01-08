@@ -2,7 +2,7 @@ import z from "zod";
 import {
 	EmptyStringSchema,
 	MdSchema,
-} from "../../../../../obsidian-vault-action-manager/types/literals";
+} from "../../../../../managers/obsidian/vault-action-manager/types/literals";
 import {
 	DONE_STATUS,
 	FILE_NODE_TYPE,

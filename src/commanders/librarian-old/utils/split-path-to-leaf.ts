@@ -2,7 +2,7 @@ import { getParsedUserSettings } from "../../../global-state/global-state";
 import type {
 	SplitPathToFile,
 	SplitPathToMdFile,
-} from "../../../obsidian-vault-action-manager/types/split-path";
+} from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { TreeLeafDeprecated } from "../types/tree-node";
 import {
 	TreeNodeStatusDeprecated,

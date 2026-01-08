@@ -24,7 +24,7 @@ export type BulkVaultEventHandler = (event: BulkVaultEvent) => Promise<void>;
 
 export type Teardown = () => void;
 
-export interface ObsidianVaultActionManager {
+export interface VaultActionManager {
 	startListening(): void;
 
 	subscribeToSingle(handler: VaultEventHandler): Teardown;
@@ -50,7 +50,7 @@ export interface ObsidianVaultActionManager {
 export { makeSystemPathForSplitPath };
 export { makeSplitPath };
 
-export { ObsidianVaultActionManagerImpl } from "./facade";
+export { VaultActionManagerImpl } from "./facade";
 export type {
 	DispatchError,
 	DispatchResult,

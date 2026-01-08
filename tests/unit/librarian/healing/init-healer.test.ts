@@ -9,9 +9,9 @@ import { TreeNodeStatusDeprecated, TreeNodeTypeDeprecated } from "../../../../sr
 import * as globalState from "../../../../src/global-state/global-state";
 import { getParsedUserSettings } from "../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
-import type { SplitPathWithReader } from "../../../../src/obsidian-vault-action-manager/types/split-path";
-import { SplitPathType } from "../../../../src/obsidian-vault-action-manager/types/split-path";
-import { VaultActionType } from "../../../../src/obsidian-vault-action-manager/types/vault-action";
+import type { SplitPathWithReader } from "../../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathType } from "../../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import { VaultActionType } from "../../../../src/managers/obsidian/vault-action-manager/types/vault-action";
 
 // Default settings for tests
 const defaultSettings: ParsedUserSettings = {

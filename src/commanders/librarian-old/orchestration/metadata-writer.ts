@@ -1,10 +1,10 @@
-import type { SplitPath } from "../../../obsidian-vault-action-manager/types/split-path";
-import { SplitPathType } from "../../../obsidian-vault-action-manager/types/split-path";
+import type { SplitPath } from "../../../managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathType } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type {
 	Transform,
 	VaultAction,
-} from "../../../obsidian-vault-action-manager/types/vault-action";
-import { VaultActionType } from "../../../obsidian-vault-action-manager/types/vault-action";
+} from "../../../managers/obsidian/vault-action-manager/types/vault-action";
+import { VaultActionType } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import {
 	editOrAddMetaInfo,
 	extractMetaInfo,

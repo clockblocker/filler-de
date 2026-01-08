@@ -2,7 +2,7 @@ import { type App, type Editor, MarkdownView } from "obsidian";
 import {
 	type MaybeLegacy,
 	unwrapMaybeLegacyByThrowing,
-} from "../../types/common-interface/maybe";
+} from "../../../../types/common-interface/maybe";
 
 export async function getMaybeLegacyEditor(
 	app: App,

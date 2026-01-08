@@ -46,7 +46,7 @@ callers still hit BackgroundFileServiceLegacy/OpenedFileService directly, defeat
    - Keep `sortActionsByWeight` and run after collapse; test ordering post-collapse.
 
 4) Facade (`impl/facade.ts`)
-   - Implement `ObsidianVaultActionManager` (`subscribe/dispatch/readContent/exists/list/pwd/getAbstractFile/splitPath`).
+   - Implement `VaultActionManager` (`subscribe/dispatch/readContent/exists/list/pwd/getAbstractFile/splitPath`).
    - Inject opened + background services, dispatcher, event adapter; use one normalization path for `splitPath`.
 
 5) Dispatcher (`impl/dispatcher.ts`) ✅
@@ -130,7 +130,7 @@ callers still hit BackgroundFileServiceLegacy/OpenedFileService directly, defeat
     - `literals.ts`: op/entity literals
     - `vault-action.ts`: action types, weights, helpers (`getActionKey`, `getActionTargetPath`, `sortActions`)
   - `impl/`
-    - `facade.ts`: implements `ObsidianVaultActionManager` (composes reader + dispatcher + queue)
+    - `facade.ts`: implements `VaultActionManager` (composes reader + dispatcher + queue)
     - `action-queue.ts`: **NEW** - Call stack + event queue pattern (queue by default, execute if idle)
     - `self-event-tracker.ts`: **NEW** - Tracks dispatched actions, filters self-events
     - `event-adapter.ts`: Obsidian event → `VaultEvent` (with self-event filtering)
@@ -145,7 +145,7 @@ callers still hit BackgroundFileServiceLegacy/OpenedFileService directly, defeat
 ```
 User Code
   ↓
-ObsidianVaultActionManager.dispatch(actions)
+VaultActionManager.dispatch(actions)
   ↓
 ActionQueue.dispatch(actions)
   ├── Add to queue (FIFO)

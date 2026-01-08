@@ -11,9 +11,9 @@ import type {
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
-} from "../../../../src/obsidian-vault-action-manager/types/split-path";
-import { SplitPathType } from "../../../../src/obsidian-vault-action-manager/types/split-path";
-import { VaultActionType } from "../../../../src/obsidian-vault-action-manager/types/vault-action";
+} from "../../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathType } from "../../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import { VaultActionType } from "../../../../src/managers/obsidian/vault-action-manager/types/vault-action";
 
 // Default settings for tests
 const defaultSettings: ParsedUserSettings = {

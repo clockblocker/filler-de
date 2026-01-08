@@ -1,4 +1,4 @@
-import { VaultEventType } from "../../../../../../../../../obsidian-vault-action-manager";
+import { VaultEventType } from "../../../../../../../../../managers/obsidian/vault-action-manager";
 import type { DescopedEvent } from "../../types/generics";
 
 import type { LibraryScopedVaultEvent } from "../../types/scoped-event";

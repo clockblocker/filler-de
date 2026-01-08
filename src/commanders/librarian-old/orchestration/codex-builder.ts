@@ -1,7 +1,7 @@
-import { MD } from "../../../obsidian-vault-action-manager/types/literals";
-import { SplitPathType } from "../../../obsidian-vault-action-manager/types/split-path";
-import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
-import { VaultActionType } from "../../../obsidian-vault-action-manager/types/vault-action";
+import { MD } from "../../../managers/obsidian/vault-action-manager/types/literals";
+import { SplitPathType } from "../../../managers/obsidian/vault-action-manager/types/split-path";
+import type { VaultAction } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
+import { VaultActionType } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { generateCodexContent } from "../codex";
 import {
 	buildCanonicalPathPartsForCodex,

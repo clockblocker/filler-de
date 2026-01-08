@@ -2,7 +2,7 @@ import z from "zod";
 import {
 	CREATE,
 	DELETE,
-} from "../../../../../obsidian-vault-action-manager/types/literals";
+} from "../../../../../managers/obsidian/vault-action-manager/types/literals";
 import type { Prettify } from "../../../../../types/helpers";
 import { CHANGE_STATUS, MOVE, RENAME } from "../../../types/consts/literals";
 import type { NodeName } from "../../../types/schemas/node-name";

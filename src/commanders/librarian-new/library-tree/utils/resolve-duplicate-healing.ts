@@ -1,9 +1,9 @@
 import { getParsedUserSettings } from "../../../../global-state/global-state";
-import type { ObsidianVaultActionManager } from "../../../../obsidian-vault-action-manager";
-import type { SplitPathToFolder } from "../../../../obsidian-vault-action-manager/types/split-path";
-import { SplitPathType } from "../../../../obsidian-vault-action-manager/types/split-path";
-import { makeJoinedSuffixedBasename } from "../tree-action/utils/canonical-naming/suffix-utils/core-suffix-utils";
+import type { VaultActionManager } from "../../../../managers/obsidian/vault-action-manager";
+import type { SplitPathToFolder } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathType } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { NodeName } from "../../types/schemas/node-name";
+import { makeJoinedSuffixedBasename } from "../tree-action/utils/canonical-naming/suffix-utils/core-suffix-utils";
 import type { HealingAction } from "../types/healing-action";
 import {
 	extractDuplicateMarker,
@@ -17,7 +17,7 @@ import {
  */
 export async function resolveDuplicateHealingActions(
 	actions: HealingAction[],
-	vaultActionManager: ObsidianVaultActionManager,
+	vaultActionManager: VaultActionManager,
 ): Promise<HealingAction[]> {
 	const settings = getParsedUserSettings();
 	const resolved: HealingAction[] = [];
@@ -41,7 +41,7 @@ export async function resolveDuplicateHealingActions(
 async function resolveFileRenameAction(
 	action: HealingAction & { type: "RenameFile" | "RenameMdFile" },
 	suffixDelimiter: string,
-	vaultActionManager: ObsidianVaultActionManager,
+	vaultActionManager: VaultActionManager,
 ): Promise<HealingAction> {
 	const { to } = action.payload;
 
@@ -118,4 +118,3 @@ async function resolveFileRenameAction(
 		},
 	};
 }
-

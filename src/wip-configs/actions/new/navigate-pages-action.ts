@@ -1,7 +1,7 @@
 import {
 	logError,
 	logWarning,
-} from "../../../obsidian-vault-action-manager/helpers/issue-handlers";
+} from "../../../managers/obsidian/vault-action-manager/helpers/issue-handlers";
 import type { TexfresserObsidianServices } from "../../../services/obsidian-services/interface";
 import { unwrapMaybeLegacyByThrowing } from "../../../types/common-interface/maybe";
 

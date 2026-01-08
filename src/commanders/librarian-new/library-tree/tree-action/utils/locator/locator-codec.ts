@@ -1,5 +1,5 @@
-import { MD } from "../../../../../../obsidian-vault-action-manager/types/literals";
-import { SplitPathType } from "../../../../../../obsidian-vault-action-manager/types/split-path";
+import { MD } from "../../../../../../managers/obsidian/vault-action-manager/types/literals";
+import { SplitPathType } from "../../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { NodeName } from "../../../../types/schemas/node-name";
 import { makeNodeSegmentId } from "../../../tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import {

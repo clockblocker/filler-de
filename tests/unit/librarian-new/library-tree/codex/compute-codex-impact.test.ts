@@ -9,7 +9,7 @@ import type { FileNodeSegmentId, ScrollNodeSegmentId, SectionNodeSegmentId } fro
 import type { NodeName } from "../../../../../src/commanders/librarian-new/types/schemas/node-name";
 import * as globalState from "../../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../../src/global-state/parsed-settings";
-import { SplitPathType } from "../../../../../src/obsidian-vault-action-manager/types/split-path";
+import { SplitPathType } from "../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 
 const defaultSettings: ParsedUserSettings = {
 	apiProvider: "google",

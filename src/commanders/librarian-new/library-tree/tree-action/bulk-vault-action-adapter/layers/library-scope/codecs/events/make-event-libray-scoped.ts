@@ -1,7 +1,7 @@
 import {
 	type VaultEvent,
 	VaultEventType,
-} from "../../../../../../../../../obsidian-vault-action-manager";
+} from "../../../../../../../../../managers/obsidian/vault-action-manager";
 
 import type { EnscopedEvent } from "../../types/generics";
 import { Scope } from "../../types/scoped-event";

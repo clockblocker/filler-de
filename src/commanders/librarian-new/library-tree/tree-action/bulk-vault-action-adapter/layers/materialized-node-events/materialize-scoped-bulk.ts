@@ -1,4 +1,4 @@
-import { VaultEventType } from "../../../../../../../obsidian-vault-action-manager";
+import { VaultEventType } from "../../../../../../../managers/obsidian/vault-action-manager";
 import { TreeNodeType } from "../../../../tree-node/types/atoms";
 import {
 	type LibraryScopedBulkVaultEvent,

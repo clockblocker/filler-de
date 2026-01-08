@@ -43,7 +43,7 @@ export function tryParseCodexLine(
 	if (scrollResult.isOk()) {
 		// Verify it's not a codex line (codex lines have __- prefix)
 		const backlinkMatch = trimmedLine.match(/\[\[([^|]+)\|/);
-		if (backlinkMatch && backlinkMatch[1]?.startsWith("__-")) {
+		if (backlinkMatch?.[1]?.startsWith("__-")) {
 			// It's actually a codex line, skip Scroll
 		} else {
 			return ok({

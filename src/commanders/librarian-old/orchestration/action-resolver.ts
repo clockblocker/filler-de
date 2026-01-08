@@ -4,10 +4,10 @@ import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,
 	SplitPathWithReader,
-} from "../../../obsidian-vault-action-manager/types/split-path";
-import { SplitPathType } from "../../../obsidian-vault-action-manager/types/split-path";
-import type { VaultAction } from "../../../obsidian-vault-action-manager/types/vault-action";
-import { VaultActionType } from "../../../obsidian-vault-action-manager/types/vault-action";
+} from "../../../managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathType } from "../../../managers/obsidian/vault-action-manager/types/split-path";
+import type { VaultAction } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
+import { VaultActionType } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import {
 	handleDragIn,
 	type RenameIntent,

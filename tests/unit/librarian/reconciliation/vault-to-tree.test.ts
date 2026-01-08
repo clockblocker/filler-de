@@ -4,8 +4,8 @@ import { TreeActionType } from "../../../../src/commanders/librarian-old/types/l
 import { TreeNodeStatusDeprecated, TreeNodeTypeDeprecated } from "../../../../src/commanders/librarian-old/types/tree-node";
 import * as globalState from "../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
-import { SplitPathType } from "../../../../src/obsidian-vault-action-manager/types/split-path";
-import type { VaultAction } from "../../../../src/obsidian-vault-action-manager/types/vault-action";
+import { SplitPathType } from "../../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import type { VaultAction } from "../../../../src/managers/obsidian/vault-action-manager/types/vault-action";
 
 // Default settings for tests
 const defaultSettings: ParsedUserSettings = {

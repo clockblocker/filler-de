@@ -1,9 +1,9 @@
 import { getParsedUserSettings } from "../../../global-state/global-state";
-import { systemPathFromSplitPathInternal } from "../../../obsidian-vault-action-manager/helpers/pathfinder/system-path-and-split-path-codec";
+import { systemPathFromSplitPathInternal } from "../../../managers/obsidian/vault-action-manager/helpers/pathfinder/system-path-and-split-path-codec";
 import type {
 	SplitPathToFile,
 	SplitPathToMdFile,
-} from "../../../obsidian-vault-action-manager/types/split-path";
+} from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import { logger } from "../../../utils/logger";
 import type { SeparatedSuffixedBasename } from "../naming/types/suffixed/separated-suffixed";
 import { RuntimeSubtype } from "../types/literals";

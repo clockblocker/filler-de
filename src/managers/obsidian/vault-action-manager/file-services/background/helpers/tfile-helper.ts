@@ -1,16 +1,5 @@
 import { err, ok, type Result } from "neverthrow";
 import { type FileManager, TFile, type Vault } from "obsidian";
-import type { MdFileWithContentDto } from "../../../../obsidian-vault-action-manager/helpers/pathfinder";
-import {
-	findFirstAvailableIndexedPath,
-	systemPathFromSplitPathInternal,
-} from "../../../../obsidian-vault-action-manager/helpers/pathfinder";
-import {
-	type SplitPathFromTo,
-	type SplitPathToFile,
-	type SplitPathToMdFile,
-	SplitPathType,
-} from "../../../../obsidian-vault-action-manager/types/split-path";
 import {
 	errorBothSourceAndTargetNotFound,
 	errorCreateFailed,
@@ -22,6 +11,17 @@ import {
 	errorTypeMismatch,
 	errorWriteFailed,
 } from "../../../errors";
+import type { MdFileWithContentDto } from "../../../helpers/pathfinder";
+import {
+	findFirstAvailableIndexedPath,
+	systemPathFromSplitPathInternal,
+} from "../../../helpers/pathfinder";
+import {
+	type SplitPathFromTo,
+	type SplitPathToFile,
+	type SplitPathToMdFile,
+	SplitPathType,
+} from "../../../types/split-path";
 import type { Transform } from "../../../types/vault-action";
 import { type CollisionStrategy, getExistingBasenamesInFolder } from "./common";
 

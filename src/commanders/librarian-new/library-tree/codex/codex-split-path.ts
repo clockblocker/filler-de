@@ -2,7 +2,7 @@
  * Compute the canonical split path for a section's codex file.
  */
 
-import { SplitPathType } from "../../../../obsidian-vault-action-manager/types/split-path";
+import { SplitPathType } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { SplitPathToMdFileInsideLibrary } from "../tree-action/bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
 import { makeJoinedSuffixedBasename } from "../tree-action/utils/canonical-naming/suffix-utils/core-suffix-utils";
 import type { SectionNodeSegmentId } from "../tree-node/types/node-segment-id";
@@ -38,10 +38,10 @@ export function computeCodexSplitPath(
 	});
 
 	return {
-		type: SplitPathType.MdFile,
-		pathParts,
 		basename,
 		extension: "md",
+		pathParts,
+		type: SplitPathType.MdFile,
 	};
 }
 

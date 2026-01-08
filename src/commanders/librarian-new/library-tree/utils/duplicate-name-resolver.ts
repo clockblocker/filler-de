@@ -1,10 +1,10 @@
 import type { Result } from "neverthrow";
 import { ok } from "neverthrow";
-import type { ObsidianVaultActionManager } from "../../../../obsidian-vault-action-manager";
+import type { VaultActionManager } from "../../../../managers/obsidian/vault-action-manager";
 import type {
 	SplitPath,
 	SplitPathToFolder,
-} from "../../../../obsidian-vault-action-manager/types/split-path";
+} from "../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { NodeName } from "../../types/schemas/node-name";
 
 /**
@@ -19,7 +19,7 @@ export const extractDuplicateMarker = (
 		return {
 			cleanName: match[1],
 			marker: match[2],
-			number: parseInt(match[3], 10),
+			number: Number.parseInt(match[3], 10),
 		};
 	}
 	return { cleanName: name, marker: "", number: null };
@@ -53,7 +53,7 @@ export async function resolveUniqueDuplicateName(
 	suffixParts: NodeName[],
 	extension: string,
 	suffixDelimiter: string,
-	vaultActionManager: ObsidianVaultActionManager,
+	vaultActionManager: VaultActionManager,
 ): Promise<Result<NodeName, string>> {
 	// Extract duplicate marker from target coreName
 	const { cleanName, number } = extractDuplicateMarker(targetCoreName);
@@ -90,7 +90,7 @@ export async function resolveUniqueDuplicateName(
 
 		const match = file.basename.match(basenamePattern);
 		if (match && match[1]) {
-			existingNumbers.add(parseInt(match[1], 10));
+			existingNumbers.add(Number.parseInt(match[1], 10));
 		}
 	}
 
@@ -118,4 +118,3 @@ function isFileSplitPath(
 ): sp is SplitPath & { basename: string; extension: string } {
 	return sp.type === "File" || sp.type === "MdFile";
 }
-

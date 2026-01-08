@@ -9,8 +9,8 @@ import type {
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
-} from "../../../../../../../src/obsidian-vault-action-manager/types/split-path";
-import { SplitPathType } from "../../../../../../../src/obsidian-vault-action-manager/types/split-path";
+} from "../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathType } from "../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 
 const defaultSettings: ParsedUserSettings = {
 	apiProvider: "google",

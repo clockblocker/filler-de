@@ -5,7 +5,7 @@
 import {
 	type VaultAction,
 	VaultActionType,
-} from "../../../../obsidian-vault-action-manager/types/vault-action";
+} from "../../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { makeVaultScopedSplitPath } from "../tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
 import type { CodexAction } from "./types/codex-action";
 
@@ -20,7 +20,9 @@ export function codexActionToVaultAction(action: CodexAction): VaultAction {
 			return {
 				payload: {
 					content: action.payload.content,
-					splitPath: makeVaultScopedSplitPath(action.payload.splitPath),
+					splitPath: makeVaultScopedSplitPath(
+						action.payload.splitPath,
+					),
 				},
 				type: VaultActionType.UpsertMdFile,
 			};
@@ -37,7 +39,9 @@ export function codexActionToVaultAction(action: CodexAction): VaultAction {
 		case "DeleteCodex":
 			return {
 				payload: {
-					splitPath: makeVaultScopedSplitPath(action.payload.splitPath),
+					splitPath: makeVaultScopedSplitPath(
+						action.payload.splitPath,
+					),
 				},
 				type: VaultActionType.TrashMdFile,
 			};
@@ -46,7 +50,9 @@ export function codexActionToVaultAction(action: CodexAction): VaultAction {
 			// ProcessMdFile with transform to update metadata
 			return {
 				payload: {
-					splitPath: makeVaultScopedSplitPath(action.payload.splitPath),
+					splitPath: makeVaultScopedSplitPath(
+						action.payload.splitPath,
+					),
 					transform: (content: string) =>
 						updateStatusInContent(content, action.payload.status),
 				},
@@ -70,10 +76,7 @@ export function codexActionsToVaultActions(
  * Update status in markdown content metadata.
  * Simple implementation - can be enhanced later.
  */
-function updateStatusInContent(
-	content: string,
-	status: string,
-): string {
+function updateStatusInContent(content: string, status: string): string {
 	// Look for existing status in frontmatter
 	const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
 
@@ -93,10 +96,7 @@ function updateStatusInContent(
 			);
 		}
 		// Add status to existing frontmatter
-		return content.replace(
-			/^---\n/,
-			`---\nstatus: ${status}\n`,
-		);
+		return content.replace(/^---\n/, `---\nstatus: ${status}\n`);
 	}
 
 	// No frontmatter - add it

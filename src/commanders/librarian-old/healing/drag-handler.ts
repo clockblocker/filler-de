@@ -3,11 +3,11 @@ import type {
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
-} from "../../../obsidian-vault-action-manager/types/split-path";
+} from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import {
 	type VaultAction,
 	VaultActionType,
-} from "../../../obsidian-vault-action-manager/types/vault-action";
+} from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { DragInSubtype } from "../types/literals";
 import { parseBasenameDeprecated } from "../utils/parse-basename";
 import {

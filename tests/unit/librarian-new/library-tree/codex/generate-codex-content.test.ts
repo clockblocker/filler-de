@@ -1,19 +1,19 @@
-import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { generateCodexContent } from "../../../../../src/commanders/librarian-new/library-tree/codex/generate-codex-content";
 import {
 	TreeNodeStatus,
 	TreeNodeType,
 } from "../../../../../src/commanders/librarian-new/library-tree/tree-node/types/atoms";
+import type { SectionNodeSegmentId } from "../../../../../src/commanders/librarian-new/library-tree/tree-node/types/node-segment-id";
 import type {
-	SectionNode,
-	ScrollNode,
 	FileNode,
+	ScrollNode,
+	SectionNode,
 } from "../../../../../src/commanders/librarian-new/library-tree/tree-node/types/tree-node";
 import type { NodeName } from "../../../../../src/commanders/librarian-new/types/schemas/node-name";
-import type { SectionNodeSegmentId } from "../../../../../src/commanders/librarian-new/library-tree/tree-node/types/node-segment-id";
-import { SplitPathType } from "../../../../../src/obsidian-vault-action-manager/types/split-path";
 import * as globalState from "../../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../../src/global-state/parsed-settings";
+import { SplitPathType } from "../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 
 const defaultSettings: ParsedUserSettings = {
 	apiProvider: "google",
@@ -50,26 +50,26 @@ const scroll = (
 	name: string,
 	status: TreeNodeStatus = TreeNodeStatus.NotStarted,
 ): ScrollNode => ({
-	nodeName: name as NodeName,
-	type: TreeNodeType.Scroll,
-	status,
 	extension: "md",
+	nodeName: name as NodeName,
+	status,
+	type: TreeNodeType.Scroll,
 });
 
 const file = (name: string): FileNode => ({
-	nodeName: name as NodeName,
-	type: TreeNodeType.File,
-	status: TreeNodeStatus.Unknown,
 	extension: "png",
+	nodeName: name as NodeName,
+	status: TreeNodeStatus.Unknown,
+	type: TreeNodeType.File,
 });
 
 const section = (
 	name: string,
 	children: Record<string, SectionNode | ScrollNode | FileNode> = {},
 ): SectionNode => ({
+	children: children as SectionNode["children"],
 	nodeName: name as NodeName,
 	type: TreeNodeType.Section,
-	children: children as SectionNode["children"],
 });
 
 describe("generateCodexContent", () => {
@@ -212,10 +212,10 @@ describe("generateCodexContent", () => {
 			});
 
 			const librarySection = section("Library", {
-				"RootNote﹘Scroll﹘md": scroll("RootNote"),
 				"A﹘Section﹘": section("A", {
 					"NestedNote﹘Scroll﹘md": scroll("NestedNote"),
 				}),
+				"RootNote﹘Scroll﹘md": scroll("RootNote"),
 			});
 			const chain = [sec("Library")];
 

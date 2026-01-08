@@ -3,8 +3,8 @@ import {
 	SPLIT_PATH_TO_ROOT_FOLDER,
 	splitPathFromSystemPathInternal,
 	systemPathFromSplitPathInternal,
-} from "../../../src/obsidian-vault-action-manager/helpers/pathfinder";
-import { type SplitPathToFile, type SplitPathToFolder, type SplitPathToMdFile, SplitPathType } from "../../../src/obsidian-vault-action-manager/types/split-path";
+} from "../../../src/managers/obsidian/vault-action-manager/helpers/pathfinder";
+import { type SplitPathToFile, type SplitPathToFolder, type SplitPathToMdFile, SplitPathType } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
 
 describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", () => {
 	describe("decode (string → SplitPath)", () => {

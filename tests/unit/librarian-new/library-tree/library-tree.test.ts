@@ -1,19 +1,19 @@
-import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import {
 	LibraryTree,
 } from "../../../../src/commanders/librarian-new/library-tree/library-tree";
 import {
-	makeTree,
-	toShape,
 	makeScrollLocator,
 	makeSectionLocator,
+	makeTree,
+	toShape,
 } from "../../../../src/commanders/librarian-new/library-tree/test-helpers";
 import { TreeActionType } from "../../../../src/commanders/librarian-new/library-tree/tree-action/types/tree-action";
 import { TreeNodeStatus } from "../../../../src/commanders/librarian-new/library-tree/tree-node/types/atoms";
-import { SplitPathType } from "../../../../src/obsidian-vault-action-manager/types/split-path";
 import type { NodeName } from "../../../../src/commanders/librarian-new/types/schemas/node-name";
 import * as globalState from "../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../src/global-state/parsed-settings";
+import { SplitPathType } from "../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 
 const defaultSettings: ParsedUserSettings = {
 	apiProvider: "google",
@@ -46,25 +46,25 @@ describe("LibraryTree", () => {
 		it("empty tree", () => {
 			const tree = makeTree({ libraryRoot: "Library" as NodeName });
 			expect(toShape(tree)).toEqual({
-				libraryRoot: "Library",
 				children: undefined,
+				libraryRoot: "Library",
 			});
 		});
 
 		it("tree with sections and leaves", () => {
 			const shape = {
-				libraryRoot: "Library" as NodeName,
 				children: {
 					recipe: {
 						children: {
 							pie: {
 								children: {
-									Note: { type: "Scroll" as const, status: TreeNodeStatus.NotStarted },
+									Note: { status: TreeNodeStatus.NotStarted, type: "Scroll" as const },
 								},
 							},
 						},
 					},
 				},
+				libraryRoot: "Library" as NodeName,
 			};
 			const tree = makeTree(shape);
 			expect(toShape(tree)).toEqual(shape);
@@ -83,21 +83,21 @@ describe("LibraryTree", () => {
 
 			tree.apply({
 				actionType: TreeActionType.Create,
-				targetLocator: locator,
 				observedSplitPath: {
-					type: SplitPathType.MdFile,
-					pathParts: ["Library", "recipe", "pie"],
 					basename: "Note",
 					extension: "md",
+					pathParts: ["Library", "recipe", "pie"],
+					type: SplitPathType.MdFile,
 				},
+				targetLocator: locator,
 			});
 
 			const shape = toShape(tree);
 			expect(shape.children?.recipe).toBeDefined();
 			// @ts-expect-error - accessing nested structure
 			expect(shape.children?.recipe?.children?.pie?.children?.Note).toEqual({
-				type: "Scroll",
 				status: TreeNodeStatus.NotStarted,
+				type: "Scroll",
 			});
 		});
 	});
@@ -105,7 +105,6 @@ describe("LibraryTree", () => {
 	describe("apply Delete", () => {
 		it("deletes leaf and prunes empty ancestors", () => {
 			const tree = makeTree({
-				libraryRoot: "Library" as NodeName,
 				children: {
 					recipe: {
 						children: {
@@ -117,6 +116,7 @@ describe("LibraryTree", () => {
 						},
 					},
 				},
+				libraryRoot: "Library" as NodeName,
 			});
 
 			// Chain INCLUDES Library root
@@ -137,7 +137,6 @@ describe("LibraryTree", () => {
 
 		it("preserves non-empty siblings", () => {
 			const tree = makeTree({
-				libraryRoot: "Library" as NodeName,
 				children: {
 					recipe: {
 						children: {
@@ -150,6 +149,7 @@ describe("LibraryTree", () => {
 						},
 					},
 				},
+				libraryRoot: "Library" as NodeName,
 			});
 
 			// Chain INCLUDES Library root
@@ -174,7 +174,6 @@ describe("LibraryTree", () => {
 	describe("apply Rename", () => {
 		it("renames section", () => {
 			const tree = makeTree({
-				libraryRoot: "Library" as NodeName,
 				children: {
 					pie: {
 						children: {
@@ -182,6 +181,7 @@ describe("LibraryTree", () => {
 						},
 					},
 				},
+				libraryRoot: "Library" as NodeName,
 			});
 
 			// Chain INCLUDES Library root
@@ -189,8 +189,8 @@ describe("LibraryTree", () => {
 
 			tree.apply({
 				actionType: TreeActionType.Rename,
-				targetLocator: locator,
 				newNodeName: "pies" as NodeName,
+				targetLocator: locator,
 			});
 
 			const shape = toShape(tree);
@@ -202,10 +202,10 @@ describe("LibraryTree", () => {
 	describe("apply ChangeStatus", () => {
 		it("updates leaf status", () => {
 			const tree = makeTree({
-				libraryRoot: "Library" as NodeName,
 				children: {
-					Note: { type: "Scroll" as const, status: TreeNodeStatus.NotStarted },
+					Note: { status: TreeNodeStatus.NotStarted, type: "Scroll" as const },
 				},
+				libraryRoot: "Library" as NodeName,
 			});
 
 			// Chain INCLUDES Library root
@@ -213,28 +213,28 @@ describe("LibraryTree", () => {
 
 			tree.apply({
 				actionType: TreeActionType.ChangeStatus,
-				targetLocator: locator,
 				newStatus: TreeNodeStatus.Done,
+				targetLocator: locator,
 			});
 
 			const shape = toShape(tree);
 			expect(shape.children?.Note).toEqual({
-				type: "Scroll",
 				status: TreeNodeStatus.Done,
+				type: "Scroll",
 			});
 		});
 
 		it("propagates status to descendants", () => {
 			const tree = makeTree({
-				libraryRoot: "Library" as NodeName,
 				children: {
 					recipe: {
 						children: {
-							Note1: { type: "Scroll" as const, status: TreeNodeStatus.NotStarted },
-							Note2: { type: "Scroll" as const, status: TreeNodeStatus.NotStarted },
+							Note1: { status: TreeNodeStatus.NotStarted, type: "Scroll" as const },
+							Note2: { status: TreeNodeStatus.NotStarted, type: "Scroll" as const },
 						},
 					},
 				},
+				libraryRoot: "Library" as NodeName,
 			});
 
 			// Chain INCLUDES Library root
@@ -242,8 +242,8 @@ describe("LibraryTree", () => {
 
 			tree.apply({
 				actionType: TreeActionType.ChangeStatus,
-				targetLocator: locator,
 				newStatus: TreeNodeStatus.Done,
+				targetLocator: locator,
 			});
 
 			const shape = toShape(tree);

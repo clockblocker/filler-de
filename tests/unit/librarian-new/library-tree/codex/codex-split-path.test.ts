@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
-import type { SectionNodeSegmentId } from "../../../../../src/commanders/librarian-new/library-tree/tree-node/types/node-segment-id";
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { computeCodexSplitPath } from "../../../../../src/commanders/librarian-new/library-tree/codex/codex-split-path";
-import { SplitPathType } from "../../../../../src/obsidian-vault-action-manager/types/split-path";
+import type { SectionNodeSegmentId } from "../../../../../src/commanders/librarian-new/library-tree/tree-node/types/node-segment-id";
 import * as globalState from "../../../../../src/global-state/global-state";
 import type { ParsedUserSettings } from "../../../../../src/global-state/parsed-settings";
+import { SplitPathType } from "../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 
 const defaultSettings: ParsedUserSettings = {
 	apiProvider: "google",
@@ -41,10 +41,10 @@ describe("computeCodexSplitPath", () => {
 		const result = computeCodexSplitPath(chain);
 
 		expect(result).toEqual({
-			type: SplitPathType.MdFile,
-			pathParts: ["Library"],
 			basename: "__",
 			extension: "md",
+			pathParts: ["Library"],
+			type: SplitPathType.MdFile,
 		});
 	});
 
@@ -53,10 +53,10 @@ describe("computeCodexSplitPath", () => {
 		const result = computeCodexSplitPath(chain);
 
 		expect(result).toEqual({
-			type: SplitPathType.MdFile,
-			pathParts: ["Library", "A"],
 			basename: "__-A",
 			extension: "md",
+			pathParts: ["Library", "A"],
+			type: SplitPathType.MdFile,
 		});
 	});
 
@@ -65,10 +65,10 @@ describe("computeCodexSplitPath", () => {
 		const result = computeCodexSplitPath(chain);
 
 		expect(result).toEqual({
-			type: SplitPathType.MdFile,
-			pathParts: ["Library", "A", "B"],
 			basename: "__-B-A",
 			extension: "md",
+			pathParts: ["Library", "A", "B"],
+			type: SplitPathType.MdFile,
 		});
 	});
 
@@ -77,10 +77,10 @@ describe("computeCodexSplitPath", () => {
 		const result = computeCodexSplitPath(chain);
 
 		expect(result).toEqual({
-			type: SplitPathType.MdFile,
-			pathParts: ["Library", "A", "B", "C"],
 			basename: "__-C-B-A",
 			extension: "md",
+			pathParts: ["Library", "A", "B", "C"],
+			type: SplitPathType.MdFile,
 		});
 	});
 
