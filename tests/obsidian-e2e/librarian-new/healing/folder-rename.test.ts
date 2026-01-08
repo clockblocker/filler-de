@@ -1,6 +1,6 @@
 /// <reference types="@wdio/globals/types" />
 import { expect } from "@wdio/globals";
-import { LONGER_POST_HEAL_WAIT_INTERVAL, LONGER_POST_HEAL_WAIT_TIMEOUT, SHORT_TIMEOUT_FOR_DELETION, waitForFile, waitForFileGone } from "../../helpers/polling";
+import { OFFSET_AFTER_FILE_DELETION, OFFSET_AFTER_HEAL, waitForFile, waitForFileGone } from "../../helpers/polling";
 import { renamePath } from "../../helpers/vault-ops";
 
 /**
@@ -24,8 +24,8 @@ export async function testFolderRenameHealsChildSuffix(): Promise<void> {
 
 	await renamePath("Library/grandpa/father/kid", "Library/grandpa/father/son");
 
-	const healedExists = await waitForFile(expectedPath, {interval: LONGER_POST_HEAL_WAIT_INTERVAL, timeout: LONGER_POST_HEAL_WAIT_TIMEOUT});
-	const wrongGone = await waitForFileGone(wrongPath, {interval: SHORT_TIMEOUT_FOR_DELETION});
+	const healedExists = await waitForFile(expectedPath, OFFSET_AFTER_HEAL);
+	const wrongGone = await waitForFileGone(wrongPath, OFFSET_AFTER_FILE_DELETION);
 
 	expect(healedExists).toBe(true);
 	expect(wrongGone).toBe(true);
@@ -46,12 +46,12 @@ export async function testDeepFolderRenameHealsAllDescendants(): Promise<void> {
 	const initialPath = "Library/A/B/C/Note-C-B-A.md";
 	const expectedPath = "Library/X/B/C/Note-C-B-X.md";
 
-	const initialExists = await waitForFile(initialPath, {interval: LONGER_POST_HEAL_WAIT_INTERVAL, timeout: LONGER_POST_HEAL_WAIT_TIMEOUT});
+	const initialExists = await waitForFile(initialPath, OFFSET_AFTER_HEAL);
 	expect(initialExists).toBe(true);
 
 	await renamePath("Library/A", "Library/X");
 
-	const healedExists = await waitForFile(expectedPath, {interval: LONGER_POST_HEAL_WAIT_INTERVAL, timeout: LONGER_POST_HEAL_WAIT_TIMEOUT});
+	const healedExists = await waitForFile(expectedPath, OFFSET_AFTER_HEAL);
 	expect(healedExists).toBe(true);
 }
 
@@ -70,12 +70,12 @@ export async function testMiddleFolderRenameHealsDescendants(): Promise<void> {
 	const initialPath = "Library/A/B/Note-B-A.md";
 	const expectedPath = "Library/A/Y/Note-Y-A.md";
 
-	const initialExists = await waitForFile(initialPath,{interval: LONGER_POST_HEAL_WAIT_INTERVAL, timeout: LONGER_POST_HEAL_WAIT_TIMEOUT});
+	const initialExists = await waitForFile(initialPath, OFFSET_AFTER_HEAL);
 	expect(initialExists).toBe(true);
 
 	await renamePath("Library/A/B", "Library/A/Y");
 
-	const healedExists = await waitForFile(expectedPath, {interval: LONGER_POST_HEAL_WAIT_INTERVAL, timeout: LONGER_POST_HEAL_WAIT_TIMEOUT});
+	const healedExists = await waitForFile(expectedPath, OFFSET_AFTER_HEAL);
 	expect(healedExists).toBe(true);
 }
 
@@ -97,12 +97,12 @@ export async function testFolderRenameWithSuffixTriggersMove(): Promise<void> {
 	const initialPath = "Library/F1/Note-F1.md";
 	const expectedPath = "Library/F2/F1/Note-F1-F2.md";
 
-	const initialExists = await waitForFile(initialPath, {interval: LONGER_POST_HEAL_WAIT_INTERVAL, timeout: LONGER_POST_HEAL_WAIT_TIMEOUT});
+	const initialExists = await waitForFile(initialPath, OFFSET_AFTER_HEAL);
 	expect(initialExists).toBe(true);
 
 	await renamePath("Library/F1", "Library/F1-F2");
 
-	const healedExists = await waitForFile(expectedPath, {interval: LONGER_POST_HEAL_WAIT_INTERVAL, timeout: LONGER_POST_HEAL_WAIT_TIMEOUT});
+	const healedExists = await waitForFile(expectedPath, OFFSET_AFTER_HEAL);
 	expect(healedExists).toBe(true);
 }
 
@@ -124,11 +124,11 @@ export async function testNestedFolderRenameWithSuffixTriggersMove(): Promise<vo
 	const initialPath = "Library/F3/F4/Note-F4-F3.md";
 	const expectedPath = "Library/F5/F4/Note-F4-F5.md";
 
-	const initialExists = await waitForFile(initialPath, {interval: LONGER_POST_HEAL_WAIT_INTERVAL, timeout: LONGER_POST_HEAL_WAIT_TIMEOUT});
+	const initialExists = await waitForFile(initialPath, OFFSET_AFTER_HEAL);
 	expect(initialExists).toBe(true);
 
 	await renamePath("Library/F3/F4", "Library/F3/F4-F5");
 
-	const healedExists = await waitForFile(expectedPath, {interval: LONGER_POST_HEAL_WAIT_INTERVAL, timeout: LONGER_POST_HEAL_WAIT_TIMEOUT});
+	const healedExists = await waitForFile(expectedPath, OFFSET_AFTER_HEAL);
 	expect(healedExists).toBe(true);
 }

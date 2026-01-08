@@ -1,8 +1,8 @@
 import { browser } from "@wdio/globals";
 
 export interface PollOptions {
-	timeout?: number;
-	interval?: number;
+	timeoutOffset?: number;
+	intervalOffset?: number;
 }
 
 const DEFAULT_TIMEOUT = 2000;
@@ -11,10 +11,10 @@ const DEFAULT_INTERVAL = 500;
 /** Time to wait for plugin init + initial healing before each test */
 export const INIT_HEALING_WAIT_MS = 1000;
 export const EXTRA_INIT_HEALING_WAIT_MS = 6000;
-export const SHORT_TIMEOUT_FOR_DELETION = 500;
 
-export const LONGER_POST_HEAL_WAIT_INTERVAL = 2000;
-export const LONGER_POST_HEAL_WAIT_TIMEOUT = 4000;
+// Offsets
+export const OFFSET_AFTER_FILE_DELETION = { intervalOffset: 0, timeoutOffset: 0, };
+export const OFFSET_AFTER_HEAL = { intervalOffset: 1500, timeoutOffset: 1000 };
 
 /**
  * Poll until file exists at path.
@@ -23,8 +23,11 @@ export async function waitForFile(
 	path: string,
 	opts: PollOptions = {},
 ): Promise<boolean> {
-	const { timeout = DEFAULT_TIMEOUT, interval = DEFAULT_INTERVAL } = opts;
+	const { timeoutOffset = 0, intervalOffset = 0 } = opts;
 	const start = Date.now();
+
+	const timeout = DEFAULT_TIMEOUT + timeoutOffset;
+	const interval = DEFAULT_INTERVAL + intervalOffset;
 
 	while (Date.now() - start < timeout) {
 		const exists = await browser.executeObsidian(
@@ -44,8 +47,12 @@ export async function waitForFileGone(
 	path: string,
 	opts: PollOptions = {},
 ): Promise<boolean> {
-	const { timeout = DEFAULT_TIMEOUT, interval = DEFAULT_INTERVAL } = opts;
+	const { timeoutOffset = 0, intervalOffset = 0 } = opts;
 	const start = Date.now();
+
+	const timeout = DEFAULT_TIMEOUT + timeoutOffset;
+	const interval = DEFAULT_INTERVAL + intervalOffset;
+
 
 	while (Date.now() - start < timeout) {
 		const exists = await browser.executeObsidian(
@@ -66,8 +73,12 @@ export async function waitFor<T>(
 	predicate: (v: T) => boolean,
 	opts: PollOptions = {},
 ): Promise<T | null> {
-	const { timeout = DEFAULT_TIMEOUT, interval = DEFAULT_INTERVAL } = opts;
+	const { timeoutOffset = 0, intervalOffset = 0 } = opts;
 	const start = Date.now();
+
+	const timeout = DEFAULT_TIMEOUT + timeoutOffset;
+	const interval = DEFAULT_INTERVAL + intervalOffset;
+
 
 	while (Date.now() - start < timeout) {
 		const value = await fn();

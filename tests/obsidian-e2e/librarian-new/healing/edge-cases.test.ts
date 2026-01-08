@@ -1,6 +1,7 @@
 /// <reference types="@wdio/globals/types" />
 import { expect } from "@wdio/globals";
-import { LONGER_POST_HEAL_WAIT_TIMEOUT, SHORT_TIMEOUT_FOR_DELETION, waitForFile, waitForFileGone } from "../../helpers/polling";
+import { OFFSET_AFTER_FILE_DELETION, OFFSET_AFTER_HEAL, waitForFile, waitForFileGone } from "../../helpers/polling";
+
 import {
 	createFile,
 	createFolder,
@@ -28,8 +29,8 @@ export async function testCoreNameWithDelimiter(): Promise<void> {
 
 	await createFile(createdPath, "# My Note");
 
-	const healedExists = await waitForFile(expectedPath, { timeout: LONGER_POST_HEAL_WAIT_TIMEOUT });
-	const originalGone = await waitForFileGone(createdPath, { interval: SHORT_TIMEOUT_FOR_DELETION });
+	const healedExists = await waitForFile(expectedPath, OFFSET_AFTER_HEAL);
+	const originalGone = await waitForFileGone(createdPath, OFFSET_AFTER_FILE_DELETION);
 
 	expect(healedExists).toBe(true);
 	expect(originalGone).toBe(true);
@@ -141,7 +142,7 @@ export async function testRapidSuccessiveRenames(): Promise<void> {
 	await renamePath("Library/E6", "Library/E7");
 	await renamePath("Library/E7", "Library/E8");
 
-	const finalExists = await waitForFile(finalPath, { timeout: 5000 });
+	const finalExists = await waitForFile(finalPath, { timeoutOffset: 5000 });
 	expect(finalExists).toBe(true);
 }
 
@@ -162,7 +163,7 @@ export async function testCreateInNonExistentFolders(): Promise<void> {
 	await createFile(createdPath, "# Note");
 
 	const healedExists = await waitForFile(expectedPath);
-	const originalGone = await waitForFileGone(createdPath, {interval: SHORT_TIMEOUT_FOR_DELETION});
+	const originalGone = await waitForFileGone(createdPath, OFFSET_AFTER_FILE_DELETION);
 
 	expect(healedExists).toBe(true);
 	expect(originalGone).toBe(true);

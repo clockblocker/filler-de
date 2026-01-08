@@ -1,6 +1,6 @@
 /// <reference types="@wdio/globals/types" />
 import { expect } from "@wdio/globals";
-import { SHORT_TIMEOUT_FOR_DELETION, waitForFile, waitForFileGone } from "../../helpers/polling";
+import { OFFSET_AFTER_FILE_DELETION, waitForFile, waitForFileGone } from "../../helpers/polling";
 import { createFile, renamePath } from "../../helpers/vault-ops";
 
 /**
@@ -32,7 +32,7 @@ export async function testRenameSuffixTriggersMove(): Promise<void> {
 
 	// Should be moved to tom folder
 	const movedExists = await waitForFile(expectedPath);
-	const renamedGone = await waitForFileGone(renamedPath, {interval: SHORT_TIMEOUT_FOR_DELETION});
+	const renamedGone = await waitForFileGone(renamedPath, OFFSET_AFTER_FILE_DELETION);
 
 	expect(movedExists).toBe(true);
 	expect(renamedGone).toBe(true);
@@ -125,7 +125,7 @@ export async function testRenameRootFileWithSuffixMoves(): Promise<void> {
 	await renamePath(initialPath, renamedPath);
 
 	const movedExists = await waitForFile(expectedPath);
-	const renamedGone = await waitForFileGone(renamedPath, {interval: SHORT_TIMEOUT_FOR_DELETION});
+	const renamedGone = await waitForFileGone(renamedPath, OFFSET_AFTER_FILE_DELETION);
 
 	expect(movedExists).toBe(true);
 	expect(renamedGone).toBe(true);
@@ -156,7 +156,7 @@ export async function testRemoveSuffixMovesToRoot(): Promise<void> {
 	await renamePath(initialPath, renamedPath);
 
 	const movedExists = await waitForFile(expectedPath);
-	const renamedGone = await waitForFileGone(renamedPath, {interval: SHORT_TIMEOUT_FOR_DELETION});
+	const renamedGone = await waitForFileGone(renamedPath, OFFSET_AFTER_FILE_DELETION);
 
 	expect(movedExists).toBe(true);
 	expect(renamedGone).toBe(true);

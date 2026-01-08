@@ -1,6 +1,6 @@
 /// <reference types="@wdio/globals/types" />
 import { expect } from "@wdio/globals";
-import { SHORT_TIMEOUT_FOR_DELETION, waitForFile, waitForFileGone } from "../../helpers/polling";
+import { OFFSET_AFTER_FILE_DELETION, waitForFile, waitForFileGone } from "../../helpers/polling";
 import { createFile } from "../../helpers/vault-ops";
 
 /**
@@ -43,7 +43,7 @@ export async function testNestedFileGetsSuffix(): Promise<void> {
 
 	// Should be renamed with suffix
 	const healedExists = await waitForFile(expectedPath);
-	const originalGone = await waitForFileGone(createdPath, {interval: SHORT_TIMEOUT_FOR_DELETION});
+	const originalGone = await waitForFileGone(createdPath, OFFSET_AFTER_FILE_DELETION);
 
 	expect(healedExists).toBe(true);
 	expect(originalGone).toBe(true);
@@ -87,7 +87,7 @@ export async function testFileWithWrongSuffixHealed(): Promise<void> {
 	await createFile(createdPath, "# Wrong suffix");
 
 	const healedExists = await waitForFile(expectedPath);
-	const originalGone = await waitForFileGone(createdPath, {interval: SHORT_TIMEOUT_FOR_DELETION});
+	const originalGone = await waitForFileGone(createdPath, OFFSET_AFTER_FILE_DELETION);
 
 	expect(healedExists).toBe(true);
 	expect(originalGone).toBe(true);
