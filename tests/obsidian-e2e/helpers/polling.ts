@@ -5,11 +5,12 @@ export interface PollOptions {
 	interval?: number;
 }
 
-const DEFAULT_TIMEOUT = 3000;
-const DEFAULT_INTERVAL = 1000;
+const DEFAULT_TIMEOUT = 2000;
+const DEFAULT_INTERVAL = 500;
 
 /** Time to wait for plugin init + initial healing before each test */
 export const INIT_HEALING_WAIT_MS = 1000;
+export const EXTRA_INIT_HEALING_WAIT_MS = 6000;
 export const SHORT_TIMEOUT_FOR_DELETION = 500;
 
 export const LONGER_POST_HEAL_WAIT_INTERVAL = 2000;

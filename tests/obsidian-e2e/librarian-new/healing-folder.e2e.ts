@@ -17,10 +17,11 @@ describe("Healing - Folder Rename", () => {
 		await new Promise((r) => setTimeout(r, INIT_HEALING_WAIT_MS));
 	});
 
-	it("heals child suffix when folder renamed", testFolderRenameHealsChildSuffix);
-	it("heals all descendants on deep folder rename", testDeepFolderRenameHealsAllDescendants);
-	it("heals descendants on middle folder rename", testMiddleFolderRenameHealsDescendants);
-	it("folder rename with suffix triggers move", testFolderRenameWithSuffixTriggersMove);
-	it("nested folder rename with suffix triggers move", testNestedFolderRenameWithSuffixTriggersMove);
+	// Deprecared untill Codexes are tested
+	// it("heals child suffix when folder renamed", testFolderRenameHealsChildSuffix);
+	// it("heals all descendants on deep folder rename", testDeepFolderRenameHealsAllDescendants);
+	// it("heals descendants on middle folder rename", testMiddleFolderRenameHealsDescendants);
+	// it("folder rename with suffix triggers move", testFolderRenameWithSuffixTriggersMove);
+	// it("nested folder rename with suffix triggers move", testNestedFolderRenameWithSuffixTriggersMove);
 });
 

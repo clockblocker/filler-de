@@ -1,6 +1,6 @@
 /// <reference types="@wdio/globals/types" />
 import { obsidianPage } from "wdio-obsidian-service";
-import { INIT_HEALING_WAIT_MS } from "../helpers/polling";
+import { EXTRA_INIT_HEALING_WAIT_MS, INIT_HEALING_WAIT_MS } from "../helpers/polling";
 import {
 	testInitHealingAddsSuffixToNestedFile,
 	testInitHealingFixesWrongSuffix,
@@ -16,7 +16,7 @@ const VAULT_PATH = "tests/obsidian-e2e/vaults/healing";
 describe("Healing - Init", () => {
 	beforeEach(async () => {
 		await obsidianPage.resetVault(VAULT_PATH);
-		await new Promise((r) => setTimeout(r, INIT_HEALING_WAIT_MS + 6000));
+		await new Promise((r) => setTimeout(r, INIT_HEALING_WAIT_MS + EXTRA_INIT_HEALING_WAIT_MS));
 	});
 
 	it("fixes files with wrong suffix on load", testInitHealingFixesWrongSuffix);

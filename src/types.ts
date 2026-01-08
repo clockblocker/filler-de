@@ -12,6 +12,6 @@ export const DEFAULT_SETTINGS: TextEaterSettings = {
 	googleApiKey: "",
 	libraryRoot: "Library",
 	maxSectionDepth: 6,
-	showScrollsInCodexesForDepth: 0,
+	showScrollsInCodexesForDepth: 1,
 	suffixDelimiter: "-",
 };

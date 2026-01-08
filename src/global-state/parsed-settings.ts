@@ -21,6 +21,7 @@ export function parseSettings(settings: TextEaterSettings): ParsedUserSettings {
 	}
 
 	const { libraryRoot: _, ...rest } = settings;
+
 	return {
 		...rest,
 		splitPathToLibraryRoot: splitPathResult,
