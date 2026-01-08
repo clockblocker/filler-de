@@ -4,7 +4,8 @@ import { type MetaInfo, MetaInfoSchema } from "../types";
 const META_SECTION_ID = "textfresser_meta_keep_me_invisible";
 const SECTION = "section";
 
-export const META_INFO_FORMATTER = {
+/** @deprecated */
+export const META_INFO_SECTION_FORMATTER_depreacated = {
 	make(meta: MetaInfo) {
 		return `<${SECTION} id={${META_SECTION_ID}}>
 ${JSON.stringify(meta)}

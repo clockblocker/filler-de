@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { getParsedUserSettings } from "../../global-state/global-state";
 import type {
 	CheckboxClickedEvent,
@@ -9,7 +10,7 @@ import type {
 } from "../../managers/obsidian/vault-action-manager";
 import type { SplitPathWithReader } from "../../managers/obsidian/vault-action-manager/types/split-path";
 import { SplitPathType } from "../../managers/obsidian/vault-action-manager/types/split-path";
-import { extractMetaInfoDeprecated } from "../../managers/pure/meta-info-manager-deprecated/interface";
+import { readMetadata } from "../../managers/pure/note-metadata-manager";
 import { logger } from "../../utils/logger";
 import { healingActionsToVaultActions } from "./library-tree/codecs/healing-to-vault-action";
 import {
@@ -42,6 +43,12 @@ import {
 } from "./library-tree/tree-node/types/node-segment-id";
 import type { HealingAction } from "./library-tree/types/healing-action";
 import { resolveDuplicateHealingActions } from "./library-tree/utils/resolve-duplicate-healing";
+
+// ─── Scroll Metadata Schema ───
+
+const ScrollMetadataSchema = z.object({
+	status: z.enum(["Done", "NotStarted"]),
+});
 
 // ─── Queue ───
 
@@ -190,12 +197,12 @@ export class Librarian {
 			if (file.type === SplitPathType.MdFile && "read" in file) {
 				const contentResult = await file.read();
 				if (contentResult.isOk()) {
-					const meta = extractMetaInfoDeprecated(contentResult.value);
-					if (meta && "status" in meta) {
-						status =
-							meta.status === "Done"
-								? TreeNodeStatus.Done
-								: TreeNodeStatus.NotStarted;
+					const meta = readMetadata(
+						contentResult.value,
+						ScrollMetadataSchema,
+					);
+					if (meta?.status === "Done") {
+						status = TreeNodeStatus.Done;
 					}
 				}
 			}
