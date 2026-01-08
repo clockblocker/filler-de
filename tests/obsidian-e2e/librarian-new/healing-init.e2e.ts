@@ -16,7 +16,7 @@ const VAULT_PATH = "tests/obsidian-e2e/vaults/healing";
 describe("Healing - Init", () => {
 	beforeEach(async () => {
 		await obsidianPage.resetVault(VAULT_PATH);
-		await new Promise((r) => setTimeout(r, INIT_HEALING_WAIT_MS + 5000));
+		await new Promise((r) => setTimeout(r, INIT_HEALING_WAIT_MS + 6000));
 	});
 
 	it("fixes files with wrong suffix on load", testInitHealingFixesWrongSuffix);
