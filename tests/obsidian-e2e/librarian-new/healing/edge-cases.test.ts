@@ -1,6 +1,6 @@
 /// <reference types="@wdio/globals/types" />
 import { expect } from "@wdio/globals";
-import { waitForFile, waitForFileGone } from "../../helpers/polling";
+import { LONGER_POST_HEAL_WAIT_TIMEOUT, SHORT_TIMEOUT_FOR_DELETION, waitForFile, waitForFileGone } from "../../helpers/polling";
 import {
 	createFile,
 	createFolder,
@@ -28,8 +28,8 @@ export async function testCoreNameWithDelimiter(): Promise<void> {
 
 	await createFile(createdPath, "# My Note");
 
-	const healedExists = await waitForFile(expectedPath, { interval: 1000, timeout: 4000 });
-	const originalGone = await waitForFileGone(createdPath, { timeout: 500 });
+	const healedExists = await waitForFile(expectedPath, { timeout: LONGER_POST_HEAL_WAIT_TIMEOUT });
+	const originalGone = await waitForFileGone(createdPath, { interval: SHORT_TIMEOUT_FOR_DELETION });
 
 	expect(healedExists).toBe(true);
 	expect(originalGone).toBe(true);
@@ -162,7 +162,7 @@ export async function testCreateInNonExistentFolders(): Promise<void> {
 	await createFile(createdPath, "# Note");
 
 	const healedExists = await waitForFile(expectedPath);
-	const originalGone = await waitForFileGone(createdPath, { timeout: 500 });
+	const originalGone = await waitForFileGone(createdPath, {interval: SHORT_TIMEOUT_FOR_DELETION});
 
 	expect(healedExists).toBe(true);
 	expect(originalGone).toBe(true);

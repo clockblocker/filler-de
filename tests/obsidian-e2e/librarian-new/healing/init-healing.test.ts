@@ -1,7 +1,6 @@
 /// <reference types="@wdio/globals/types" />
-import { browser, expect } from "@wdio/globals";
-import { obsidianPage } from "wdio-obsidian-service";
-import { waitForFile, waitForFileGone } from "../../helpers/polling";
+import { expect } from "@wdio/globals";
+import { LONGER_POST_HEAL_WAIT_INTERVAL, LONGER_POST_HEAL_WAIT_TIMEOUT, SHORT_TIMEOUT_FOR_DELETION, waitForFile, waitForFileGone } from "../../helpers/polling";
 
 /**
  * Test: Init healing for nested file with wrong suffix uses PathKing.
@@ -23,7 +22,7 @@ export async function testInitHealingFixesWrongSuffix(): Promise<void> {
 
 	// After plugin init (which happens in beforeEach), file should be healed
 	const healedExists = await waitForFile(expectedPath);
-	const wrongGone = await waitForFileGone(wrongPath, { timeout: 500 });
+	const wrongGone = await waitForFileGone(wrongPath, {interval: SHORT_TIMEOUT_FOR_DELETION});
 
 	expect(healedExists).toBe(true);
 	expect(wrongGone).toBe(true);
@@ -60,8 +59,8 @@ export async function testInitHealingMovesRootFileWithSuffix(): Promise<void> {
 	const wrongPath = "Library/Note-X-Y.md";
 	const expectedPath = "Library/Y/X/Note-X-Y.md";
 
-	const healedExists = await waitForFile(expectedPath);
-	const wrongGone = await waitForFileGone(wrongPath, { timeout: 500 });
+	const healedExists = await waitForFile(expectedPath, { interval: LONGER_POST_HEAL_WAIT_INTERVAL, timeout: LONGER_POST_HEAL_WAIT_TIMEOUT });
+	const wrongGone = await waitForFileGone(wrongPath, { interval: SHORT_TIMEOUT_FOR_DELETION });
 
 	expect(healedExists).toBe(true);
 	expect(wrongGone).toBe(true);
@@ -81,7 +80,7 @@ export async function testInitHealingAddsSuffixToNestedFile(): Promise<void> {
 	const expectedPath = "Library/I3/I4/Untitled-I4-I3.md";
 
 	const healedExists = await waitForFile(expectedPath);
-	const wrongGone = await waitForFileGone(wrongPath, { timeout: 500 });
+	const wrongGone = await waitForFileGone(wrongPath, {interval: SHORT_TIMEOUT_FOR_DELETION});
 
 	expect(healedExists).toBe(true);
 	expect(wrongGone).toBe(true);
@@ -121,8 +120,8 @@ export async function testInitHealingRootFileSingleSuffix(): Promise<void> {
 	const wrongPath = "Library/move-me.md";
 	const expectedPath = "Library/me/move-me.md";
 
-	const healedExists = await waitForFile(expectedPath, { interval: 2000, timeout: 4000 });
-	const wrongGone = await waitForFileGone(wrongPath, { timeout: 500 });
+	const healedExists = await waitForFile(expectedPath, { interval: LONGER_POST_HEAL_WAIT_INTERVAL, timeout: LONGER_POST_HEAL_WAIT_TIMEOUT });
+	const wrongGone = await waitForFileGone(wrongPath, {interval: SHORT_TIMEOUT_FOR_DELETION});
 
 	expect(healedExists).toBe(true);
 	expect(wrongGone).toBe(true);

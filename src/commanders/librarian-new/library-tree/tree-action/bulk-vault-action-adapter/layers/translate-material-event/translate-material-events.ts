@@ -1,4 +1,6 @@
 import type { TreeAction } from "../../../types/tree-action";
+import { tryMakeSeparatedSuffixedBasename } from "../../../utils/canonical-naming/suffix-utils/core-suffix-utils";
+import { CODEX_CORE_NAME } from "../../../../codex/literals";
 import {
 	MaterializedEventType,
 	type MaterializedNodeEvent,
@@ -36,6 +38,9 @@ export const translateMaterializedEvents = (
 	const out: TreeAction[] = [];
 
 	for (const ev of events) {
+		// Skip codex files (coreName === "__")
+		if (isCodexEvent(ev)) continue;
+
 		switch (ev.kind) {
 			case MaterializedEventType.Create: {
 				out.push(...traslateCreateMaterializedEvent(ev));
@@ -59,3 +64,12 @@ export const translateMaterializedEvents = (
 
 	return out;
 };
+
+/**
+ * Check if event targets a codex file (coreName === "__").
+ */
+function isCodexEvent(ev: MaterializedNodeEvent): boolean {
+	const splitPath = ev.kind === MaterializedEventType.Rename ? ev.to : ev.splitPath;
+	const result = tryMakeSeparatedSuffixedBasename(splitPath);
+	return result.isOk() && result.value.coreName === CODEX_CORE_NAME;
+}

@@ -9,6 +9,12 @@ import type { VaultAction } from "../../obsidian-vault-action-manager/types/vaul
 import { extractMetaInfo } from "../../services/dto-services/meta-info-manager/interface";
 import { logger } from "../../utils/logger";
 import { healingActionsToVaultActions } from "./library-tree/codecs/healing-to-vault-action";
+import {
+	codexActionsToVaultActions,
+	codexImpactToActions,
+	CODEX_CORE_NAME,
+	type CodexImpact,
+} from "./library-tree/codex";
 import { LibraryTree } from "./library-tree/library-tree";
 import { buildTreeActions } from "./library-tree/tree-action/bulk-vault-action-adapter";
 import { tryParseAsInsideLibrarySplitPath } from "./library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
@@ -17,9 +23,11 @@ import type { CreateTreeLeafAction, TreeAction } from "./library-tree/tree-actio
 import { tryCanonicalizeSplitPathToDestination } from "./library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/translators/helpers/locator";
 import { makeLocatorFromCanonicalSplitPathInsideLibrary } from "./library-tree/tree-action/utils/locator/locator-codec";
 import { inferCreatePolicy } from "./library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/infer-create";
+import { tryMakeSeparatedSuffixedBasename } from "./library-tree/tree-action/utils/canonical-naming/suffix-utils/core-suffix-utils";
 import { TreeNodeStatus, TreeNodeType } from "./library-tree/tree-node/types/atoms";
 import type { HealingAction } from "./library-tree/types/healing-action";
 import { resolveDuplicateHealingActions } from "./library-tree/utils/resolve-duplicate-healing";
+import { mergeCodexImpacts } from "./library-tree/codex/merge-codex-impacts";
 
 // ─── Queue ───
 
@@ -69,20 +77,35 @@ export class Librarian {
 		// Build Create actions for each file
 		const createActions = await this.buildInitialCreateActions(allFiles);
 
-		// Apply all create actions and collect healing actions
-		const allHealingActions: VaultAction[] = [];
+		// Apply all create actions and collect healing + codex impacts
+		const allHealingActions: HealingAction[] = [];
+		const allCodexImpacts: CodexImpact[] = [];
+
 		for (const action of createActions) {
 			const result = this.tree.apply(action);
-			const vaultActions = healingActionsToVaultActions(result.healingActions);
-			allHealingActions.push(...vaultActions);
+			allHealingActions.push(...result.healingActions);
+			allCodexImpacts.push(result.codexImpact);
 		}
 
-		// Dispatch healing actions
+		// Dispatch healing actions first
 		if (allHealingActions.length > 0) {
+			const vaultActions = healingActionsToVaultActions(allHealingActions);
 			logger.info(
-				`[Librarian] Dispatching ${allHealingActions.length} healing actions`,
+				`[Librarian] Dispatching ${vaultActions.length} healing actions`,
 			);
-			await this.vaultActionManager.dispatch(allHealingActions);
+			await this.vaultActionManager.dispatch(vaultActions);
+		}
+
+		// Then dispatch codex actions
+		const mergedImpact = mergeCodexImpacts(allCodexImpacts);
+		const codexActions = codexImpactToActions(mergedImpact, this.tree, true);
+		const codexVaultActions = codexActionsToVaultActions(codexActions);
+
+		if (codexVaultActions.length > 0) {
+			logger.info(
+				`[Librarian] Dispatching ${codexVaultActions.length} codex actions`,
+			);
+			await this.vaultActionManager.dispatch(codexVaultActions);
 		}
 
 		// Subscribe to vault events
@@ -102,6 +125,12 @@ export class Librarian {
 		const actions: CreateTreeLeafAction[] = [];
 
 		for (const file of files) {
+			// Skip codex files (basename starts with __)
+			const coreNameResult = tryMakeSeparatedSuffixedBasename(file);
+			if (coreNameResult.isOk() && coreNameResult.value.coreName === CODEX_CORE_NAME) {
+				continue;
+			}
+
 			// Convert to library-scoped path
 			const libraryScopedResult = tryParseAsInsideLibrarySplitPath(file);
 			if (libraryScopedResult.isErr()) continue;
@@ -239,27 +268,41 @@ export class Librarian {
 		if (!this.tree) return;
 
 		const allHealingActions: HealingAction[] = [];
+		const allCodexImpacts: CodexImpact[] = [];
 
 		for (const action of actions) {
 			const result = this.tree.apply(action);
 			allHealingActions.push(...result.healingActions);
+			allCodexImpacts.push(result.codexImpact);
 		}
 
-		if (allHealingActions.length === 0) return;
-
-		// Resolve duplicate conflicts before dispatching
-		const resolvedActions = await resolveDuplicateHealingActions(
-			allHealingActions,
-			this.vaultActionManager,
-		);
-
-		const vaultActions = healingActionsToVaultActions(resolvedActions);
-
-		if (vaultActions.length > 0) {
-			logger.info(
-				`[Librarian] Dispatching ${vaultActions.length} healing actions`,
+		// 1. Dispatch healing actions first
+		if (allHealingActions.length > 0) {
+			const resolvedActions = await resolveDuplicateHealingActions(
+				allHealingActions,
+				this.vaultActionManager,
 			);
-			await this.vaultActionManager.dispatch(vaultActions);
+
+			const vaultActions = healingActionsToVaultActions(resolvedActions);
+
+			if (vaultActions.length > 0) {
+				logger.info(
+					`[Librarian] Dispatching ${vaultActions.length} healing actions`,
+				);
+				await this.vaultActionManager.dispatch(vaultActions);
+			}
+		}
+
+		// 2. Then dispatch codex actions
+		const mergedImpact = mergeCodexImpacts(allCodexImpacts);
+		const codexActions = codexImpactToActions(mergedImpact, this.tree);
+		const codexVaultActions = codexActionsToVaultActions(codexActions);
+
+		if (codexVaultActions.length > 0) {
+			logger.info(
+				`[Librarian] Dispatching ${codexVaultActions.length} codex actions`,
+			);
+			await this.vaultActionManager.dispatch(codexVaultActions);
 		}
 	}
 

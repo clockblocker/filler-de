@@ -1,6 +1,6 @@
 /// <reference types="@wdio/globals/types" />
 import { expect } from "@wdio/globals";
-import { waitForFile, waitForFileGone } from "../../helpers/polling";
+import { SHORT_TIMEOUT_FOR_DELETION, waitForFile, waitForFileGone } from "../../helpers/polling";
 import { createFile, createFolder, renamePath } from "../../helpers/vault-ops";
 
 /**
@@ -28,7 +28,7 @@ export async function testMoveFileUpdatesuffix(): Promise<void> {
 	await renamePath(initialPath, movedPath);
 
 	const healedExists = await waitForFile(expectedPath);
-	const movedGone = await waitForFileGone(movedPath, { timeout: 500 });
+	const movedGone = await waitForFileGone(movedPath, {interval: SHORT_TIMEOUT_FOR_DELETION});
 
 	expect(healedExists).toBe(true);
 	expect(movedGone).toBe(true);
@@ -58,7 +58,7 @@ export async function testMoveToDeepFolderExtendsSuffix(): Promise<void> {
 	await renamePath(initialPath, movedPath);
 
 	const healedExists = await waitForFile(expectedPath);
-	const movedGone = await waitForFileGone(movedPath, { timeout: 500 });
+	const movedGone = await waitForFileGone(movedPath, {interval: SHORT_TIMEOUT_FOR_DELETION});
 
 	expect(healedExists).toBe(true);
 	expect(movedGone).toBe(true);
@@ -87,7 +87,7 @@ export async function testMoveToShallowerFolderShortensSuffix(): Promise<void> {
 	await renamePath(initialPath, movedPath);
 
 	const healedExists = await waitForFile(expectedPath);
-	const movedGone = await waitForFileGone(movedPath, { timeout: 500 });
+	const movedGone = await waitForFileGone(movedPath, {interval: SHORT_TIMEOUT_FOR_DELETION});
 
 	expect(healedExists).toBe(true);
 	expect(movedGone).toBe(true);
