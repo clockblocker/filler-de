@@ -1,6 +1,5 @@
 /// <reference types="@wdio/globals/types" />
 import { browser, expect } from "@wdio/globals";
-import { logger } from "../../../src/utils/logger";
 import type { VaultActionManagerTestingApi } from "../dispatcher/utils";
 
 /**
@@ -82,8 +81,6 @@ export const testRuntimeBasenameOnly = async () => {
 			success: true,
 		};
 	});
-
-	logger.debug("BasenameOnly test result:", JSON.stringify(result, null, 2));
 
 	expect(result.success).toBe(true);
 	// Should have generated move action
@@ -310,8 +307,6 @@ export const testRuntimeFolderRename = async () => {
 			success: true,
 		};
 	});
-
-	logger.debug("Folder rename test result:", JSON.stringify(result, null, 2));
 
 	expect(result.success).toBe(true);
 	

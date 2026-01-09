@@ -1,5 +1,4 @@
 import { err, ok, type Result } from "neverthrow";
-import { logger } from "../../../../../utils/logger";
 import type {
 	SplitPath,
 	SplitPathToFolder,
@@ -101,31 +100,14 @@ export class Dispatcher {
 				action.type === VaultActionType.TrashFile ||
 				action.type === VaultActionType.TrashMdFile
 			) {
-				const pathStr = [
-					...action.payload.splitPath.pathParts,
-					action.payload.splitPath.basename,
-				].join("/");
 				const exists = await this.existenceChecker.exists(
 					action.payload.splitPath,
 				);
 				if (!exists) {
 					// Target doesn't exist - skip delete action
-					logger.info(
-						"[Dispatcher] Filtering out delete action - file doesn't exist",
-						{
-							path: pathStr,
-							type: action.type,
-						},
-					);
 					continue;
 				}
-				logger.info(
-					"[Dispatcher] Delete action passed existence check",
-					{
-						path: pathStr,
-						type: action.type,
-					},
-				);
+
 				result.push(action);
 			} else {
 				result.push(action);

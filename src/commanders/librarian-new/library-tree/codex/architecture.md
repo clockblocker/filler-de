@@ -11,11 +11,15 @@ Each section folder has a codex file `__SectionName.md` that:
 ## Pipeline
 
 ```
-TreeAction (Create/Delete/Rename/Move/ChangeStatus)
+TreeAction[] (Create/Delete/Rename/Move/ChangeStatus)
     ↓
 computeCodexImpact() → CodexImpact
     ↓
 codexImpactToActions() → CodexAction[]
+    +
+extractScrollStatusActions() → WriteScrollStatusAction[] (from direct scroll changes)
+    ↓
+Merge: CodexAction[] + WriteScrollStatusAction[]
     ↓
 codexActionsToVaultActions() → VaultAction[]
     ↓
@@ -46,13 +50,15 @@ Computed from `TreeAction`, captures what changed:
 
 Impact always includes ancestors (status aggregates upward).
 
+**Note**: Direct scroll status changes (from checkbox clicks) are not tracked in `CodexImpact`. Instead, `Librarian.processActions()` extracts them directly from `TreeAction[]` and generates `WriteScrollStatusAction` separately before merging with codex actions.
+
 ## CodexAction Types
 
 | Action | Trigger | VaultAction |
 |--------|---------|-------------|
 | `UpsertCodex` | Section exists (create or update) | `UpsertMdFile` |
 | `DeleteCodex` | Section deleted or moved (old codex with wrong suffix) | `TrashMdFile` |
-| `WriteScrollStatus` | Status propagation to leaves | `ProcessMdFile` |
+| `WriteScrollStatus` | Status propagation to leaves OR direct scroll status change | `ProcessMdFile` |
 
 **Note:** `UpsertCodex` replaces the old `CreateCodex`/`UpdateCodex` distinction - upsert handles both cases. `RenameCodex` is no longer used; renames are handled as delete old + upsert new.
 
@@ -100,6 +106,7 @@ Section status computed from descendants:
 Status flows:
 - **Up**: leaf change → ancestors recalculate
 - **Down**: section status change → all descendant leaves update
+- **Direct**: scroll checkbox click → scroll metadata updated (via `extractScrollStatusActions` in `Librarian.processActions`)
 
 ## Naming Convention
 

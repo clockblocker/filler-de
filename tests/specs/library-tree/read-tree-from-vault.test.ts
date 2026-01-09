@@ -1,9 +1,7 @@
 /// <reference types="@wdio/globals/types" />
 import { browser, expect } from "@wdio/globals";
-import { logger } from "../../../src/utils/logger";
 import type { VaultActionManagerTestingApi } from "../dispatcher/utils";
 import type {
-	LibrarianTestingApi,
 	LibraryTreeApi,
 	TreeNodeApi,
 } from "./utils";
@@ -206,11 +204,6 @@ export const testReadTreeFromVault = async () => {
 	});
 
 	expect(result.success).toBe(true);
-	
-	// Debug output
-	if (result.debug) {
-		logger.debug("Debug info:", JSON.stringify(result.debug, null, 2));
-	}
 	
 	// Verify structure from serialized data
 	expect(result.root).not.toBeNull();

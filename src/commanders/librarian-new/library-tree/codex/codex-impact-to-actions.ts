@@ -4,7 +4,6 @@
  */
 
 import { SplitPathType } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
-import { logger } from "../../../../utils/logger";
 import type { SplitPathToMdFileInsideLibrary } from "../tree-action/bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
 import {
 	makeJoinedSuffixedBasename,
@@ -50,22 +49,9 @@ export function codexImpactToActions(
 ): CodexAction[] {
 	const actions: CodexAction[] = [];
 
-	logger.info("[codexImpactToActions] Starting", {
-		contentChanged: impact.contentChanged.length,
-		deleted: impact.deleted.length,
-		descendantsChanged: impact.descendantsChanged.length,
-		renamed: impact.renamed.length,
-	});
-
 	// 1. Collect ALL section chains from current tree state
 	// This ensures we regenerate all codexes, not just "touched" ones
 	const allSectionChains = collectAllSectionChains(tree);
-	logger.info("[codexImpactToActions] Collected section chains", {
-		chains: allSectionChains.map((c) =>
-			c.map(extractNodeNameFromSegmentId).join("/"),
-		),
-		count: allSectionChains.length,
-	});
 
 	// 2. Generate UpsertCodex for all sections
 	for (const chain of allSectionChains) {
@@ -81,9 +67,6 @@ export function codexImpactToActions(
 		};
 		actions.push(upsertAction);
 	}
-	logger.info("[codexImpactToActions] Generated UpsertCodex actions", {
-		count: actions.filter((a) => a.type === "UpsertCodex").length,
-	});
 
 	// 3. Handle deletes (sections that were deleted)
 	for (const chain of impact.deleted) {
@@ -104,31 +87,8 @@ export function codexImpactToActions(
 	// - We want: Library/mom/kid2/__-kid2-mom.md (new canonical)
 	// - So we delete: Library/mom/kid2/__-kid2-dad.md (new location, old suffix)
 	for (const { oldChain, newChain } of impact.renamed) {
-		const oldChainStr = oldChain
-			.map(extractNodeNameFromSegmentId)
-			.join("/");
-		const newChainStr = newChain
-			.map(extractNodeNameFromSegmentId)
-			.join("/");
-		logger.info("[codexImpactToActions] Processing rename", {
-			newChain: newChainStr,
-			oldChain: oldChainStr,
-		});
-
 		// Delete the moved codex at NEW location with OLD suffix
 		const movedCodexPath = buildMovedCodexPath(oldChain, newChain);
-		const movedPathStr = [
-			...movedCodexPath.pathParts,
-			movedCodexPath.basename,
-		].join("/");
-		logger.info(
-			"[codexImpactToActions] Built moved codex path for deletion",
-			{
-				basename: movedCodexPath.basename,
-				fullPath: movedPathStr,
-				pathParts: movedCodexPath.pathParts,
-			},
-		);
 
 		const deleteAction: DeleteCodexAction = {
 			payload: { splitPath: movedCodexPath },
@@ -178,22 +138,6 @@ export function codexImpactToActions(
 			actions.push(writeStatusAction);
 		}
 	}
-
-	logger.info("[codexImpactToActions] Final actions", {
-		delete: actions.filter((a) => a.type === "DeleteCodex").length,
-		deletePaths: actions
-			.filter((a) => a.type === "DeleteCodex")
-			.map((a) =>
-				[
-					...a.payload.splitPath.pathParts,
-					a.payload.splitPath.basename,
-				].join("/"),
-			),
-		total: actions.length,
-		upsert: actions.filter((a) => a.type === "UpsertCodex").length,
-		writeStatus: actions.filter((a) => a.type === "WriteScrollStatus")
-			.length,
-	});
 
 	return actions;
 }

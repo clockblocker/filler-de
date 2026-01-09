@@ -10,7 +10,6 @@ import type {
 } from "../../managers/obsidian/vault-action-manager";
 import type { SplitPathWithReader } from "../../managers/obsidian/vault-action-manager/types/split-path";
 import { SplitPathType } from "../../managers/obsidian/vault-action-manager/types/split-path";
-import { VaultActionType } from "../../managers/obsidian/vault-action-manager/types/vault-action";
 import { readMetadata } from "../../managers/pure/note-metadata-manager";
 import { logger } from "../../utils/logger";
 import { healingActionsToVaultActions } from "./library-tree/codecs/healing-to-vault-action";
@@ -131,9 +130,6 @@ export class Librarian {
 		if (allHealingActions.length > 0) {
 			const vaultActions =
 				healingActionsToVaultActions(allHealingActions);
-			logger.info(
-				`[Librarian] Dispatching ${vaultActions.length} healing actions`,
-			);
 			await this.vaultActionManager.dispatch(vaultActions);
 		}
 
@@ -143,9 +139,6 @@ export class Librarian {
 		const codexVaultActions = codexActionsToVaultActions(codexActions);
 
 		if (codexVaultActions.length > 0) {
-			logger.info(
-				`[Librarian] Dispatching ${codexVaultActions.length} codex actions`,
-			);
 			await this.vaultActionManager.dispatch(codexVaultActions);
 		}
 
@@ -154,8 +147,6 @@ export class Librarian {
 
 		// Subscribe to click events
 		this.subscribeToClickEvents();
-
-		logger.info("[Librarian] Initialized");
 	}
 
 	/**
@@ -192,9 +183,6 @@ export class Librarian {
 				undefined, // no rename intent for create
 			);
 			if (canonicalResult.isErr()) {
-				logger.warn(
-					`[Librarian] Failed to canonicalize ${observedPath.basename}: ${canonicalResult.error}`,
-				);
 				continue;
 			}
 			const canonicalPath = canonicalResult.value;
@@ -279,7 +267,6 @@ export class Librarian {
 			].join("/");
 
 			if (!validCodexPaths.has(filePath)) {
-				logger.info(`[Librarian] Deleting invalid codex: ${filePath}`);
 				deleteActions.push({
 					payload: { splitPath: libraryScopedResult.value },
 					type: "DeleteMdFile",
@@ -324,7 +311,6 @@ export class Librarian {
 	private subscribeToVaultEvents(): void {
 		this.eventTeardown = this.vaultActionManager.subscribeToBulk(
 			async (bulk: BulkVaultEvent) => {
-				logger.debug("[Librarian] Received bulk event", bulk.debug);
 				await this.handleBulkEvent(bulk);
 			},
 		);
@@ -361,10 +347,6 @@ export class Librarian {
 		// Parse line content to get target
 		const parseResult = parseCodexClickLineContent(event.lineContent);
 		if (parseResult.isErr()) {
-			logger.warn(
-				"[Librarian] Failed to parse codex click:",
-				parseResult.error,
-			);
 			return;
 		}
 
@@ -406,11 +388,6 @@ export class Librarian {
 
 		// Queue for processing
 		void this.enqueue([action]);
-
-		logger.info("[Librarian] Checkbox click processed:", {
-			newStatus,
-			target,
-		});
 	}
 
 	/**
@@ -418,7 +395,6 @@ export class Librarian {
 	 */
 	private async handleBulkEvent(bulk: BulkVaultEvent): Promise<void> {
 		if (!this.tree) {
-			logger.warn("[Librarian] Tree not initialized, skipping event");
 			return;
 		}
 
@@ -473,32 +449,11 @@ export class Librarian {
 	private async processActions(actions: TreeAction[]): Promise<void> {
 		if (!this.tree) return;
 
-		logger.info("[Librarian] Processing tree actions", {
-			actions: actions.map((a) => ({
-				targetType: a.targetLocator.targetType,
-				type: a.actionType,
-			})),
-			count: actions.length,
-		});
-
 		const allHealingActions: HealingAction[] = [];
 		const allCodexImpacts: CodexImpact[] = [];
 
 		for (const action of actions) {
 			const result = this.tree.apply(action);
-			logger.info("[Librarian] Tree action applied", {
-				actionType: action.actionType,
-				codexImpact: {
-					contentChanged: result.codexImpact.contentChanged.length,
-					deleted: result.codexImpact.deleted.length,
-					renamed: result.codexImpact.renamed.length,
-				},
-				renamedDetails: result.codexImpact.renamed.map((r) => ({
-					new: r.newChain.map((c) => c.split("﹘")[0]).join("/"),
-					old: r.oldChain.map((c) => c.split("﹘")[0]).join("/"),
-				})),
-				targetType: action.targetLocator.targetType,
-			});
 			allHealingActions.push(...result.healingActions);
 			allCodexImpacts.push(result.codexImpact);
 		}
@@ -513,9 +468,6 @@ export class Librarian {
 			const vaultActions = healingActionsToVaultActions(resolvedActions);
 
 			if (vaultActions.length > 0) {
-				logger.info(
-					`[Librarian] Dispatching ${vaultActions.length} healing actions`,
-				);
 				await this.vaultActionManager.dispatch(vaultActions);
 			}
 		}
@@ -534,23 +486,6 @@ export class Librarian {
 		const codexVaultActions = codexActionsToVaultActions(allCodexActions);
 
 		if (codexVaultActions.length > 0) {
-			logger.info(
-				`[Librarian] Dispatching ${codexVaultActions.length} codex actions`,
-			);
-			const deleteActions = codexVaultActions.filter(
-				(a) => a.type === VaultActionType.TrashMdFile,
-			);
-			if (deleteActions.length > 0) {
-				logger.info("[Librarian] Delete actions being dispatched", {
-					count: deleteActions.length,
-					paths: deleteActions.map((a) =>
-						[
-							...a.payload.splitPath.pathParts,
-							a.payload.splitPath.basename,
-						].join("/"),
-					),
-				});
-			}
 			await this.vaultActionManager.dispatch(codexVaultActions);
 		}
 	}

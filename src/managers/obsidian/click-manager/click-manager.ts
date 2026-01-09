@@ -67,7 +67,6 @@ export class ClickManager {
 		// Get current file path
 		const pwdResult = await this.vaultActionManager.pwd();
 		if (pwdResult.isErr()) {
-			logger.debug("[ClickManager] pwd() failed:", pwdResult.error);
 			return;
 		}
 
@@ -79,7 +78,6 @@ export class ClickManager {
 		// Extract line content
 		const lineContent = this.extractLineContent(checkbox);
 		if (lineContent === null) {
-			logger.debug("[ClickManager] Failed to extract line content");
 			return;
 		}
 

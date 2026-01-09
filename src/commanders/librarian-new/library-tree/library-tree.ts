@@ -1,5 +1,4 @@
 import { SplitPathType } from "../../../managers/obsidian/vault-action-manager/types/split-path";
-import { logger } from "../../../utils/logger";
 import type { NodeName } from "../types/schemas/node-name";
 import {
 	type CodexImpact,
@@ -261,23 +260,9 @@ export class LibraryTree implements TreeAccessor {
 		const oldParent = this.findSection(
 			targetLocator.segmentIdChainToParent,
 		);
-		logger.info("[LibraryTree] applyMove:", {
-			oldParentChildren: oldParent ? Object.keys(oldParent.children) : [],
-			oldParentFound: !!oldParent,
-			targetLocator,
-		});
 		if (!oldParent) return [];
 
 		const node = oldParent.children[targetLocator.segmentId];
-		logger.info("[LibraryTree] applyMove node:", {
-			nodeChildren:
-				node?.type === TreeNodeType.Section
-					? Object.keys(node.children)
-					: "N/A",
-			nodeFound: !!node,
-			nodeType: node?.type,
-			segmentId: targetLocator.segmentId,
-		});
 		if (!node) return [];
 
 		// Compute old section path BEFORE detaching (for descendant healing)
@@ -325,14 +310,6 @@ export class LibraryTree implements TreeAccessor {
 				...observedSplitPath.pathParts,
 				observedSplitPath.basename,
 			];
-			logger.info("[LibraryTree] Section move healing:", {
-				canonicalSectionPath,
-				childCount: Object.keys(node.children).length,
-				currentSectionPath,
-				newParentChain,
-				newSegmentId,
-				oldSectionPath,
-			});
 
 			const healingActions: HealingAction[] = [];
 
@@ -581,19 +558,10 @@ export class LibraryTree implements TreeAccessor {
 					actualCurrentPath,
 				);
 
-				logger.info("[LibraryTree] Leaf healing:", {
-					actualCurrentPath,
-					observedSplitPath,
-					oldSuffixPathParts,
-					sectionChain,
-					segId,
-				});
-
 				const leafHealing = this.computeLeafHealing(
 					locator,
 					observedSplitPath,
 				);
-				logger.info("[LibraryTree] Leaf healing result:", leafHealing);
 				healingActions.push(...leafHealing);
 			}
 		}

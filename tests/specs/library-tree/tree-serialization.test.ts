@@ -1,6 +1,5 @@
 /// <reference types="@wdio/globals/types" />
 import { browser, expect } from "@wdio/globals";
-import { logger } from "../../../src/utils/logger";
 import type { VaultActionManagerTestingApi } from "../dispatcher/utils";
 import type { LibraryTreeApi, TreeNodeApi } from "./utils";
 
@@ -171,7 +170,6 @@ export const testSerializeRoundTrip = async () => {
 	});
 
 	if (!result.success) {
-		logger.error("Round-trip test skipped:", result);
 		return;
 	}
 

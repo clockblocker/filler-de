@@ -7,7 +7,6 @@ import {
 	VaultActionType,
 } from "../../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { upsertMetadata } from "../../../../managers/pure/note-metadata-manager";
-import { logger } from "../../../../utils/logger";
 import { makeVaultScopedSplitPath } from "../tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
 import type { CodexAction } from "./types/codex-action";
 
@@ -31,17 +30,7 @@ export function codexActionToVaultAction(action: CodexAction): VaultAction {
 			const vaultScopedPath = makeVaultScopedSplitPath(
 				action.payload.splitPath,
 			);
-			const deletePath = [
-				...vaultScopedPath.pathParts,
-				vaultScopedPath.basename,
-			].join("/");
-			logger.info("[codexActionToVaultAction] Converting DeleteCodex", {
-				originalPath: [
-					...action.payload.splitPath.pathParts,
-					action.payload.splitPath.basename,
-				].join("/"),
-				vaultScopedPath: deletePath,
-			});
+
 			return {
 				payload: {
 					splitPath: vaultScopedPath,
