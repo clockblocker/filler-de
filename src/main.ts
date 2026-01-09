@@ -5,10 +5,7 @@ import {
 	type WorkspaceLeaf,
 } from "obsidian";
 import { Librarian } from "./commanders/librarian-new/librarian";
-import {
-	LibrarianDeprecated,
-	LibraryTreeDeprecated,
-} from "./commanders/librarian-old";
+
 import { clearState, initializeState } from "./global-state/global-state";
 import { ClickManager } from "./managers/obsidian/click-manager";
 import {
@@ -534,14 +531,6 @@ export default class TextEaterPlugin extends Plugin {
 		};
 	}
 
-	getLibrarianClass() {
-		return LibrarianDeprecated;
-	}
-
-	getLibraryTreeClass() {
-		return LibraryTreeDeprecated;
-	}
-
 	getExtractMetaInfo() {
 		return extractMetaInfoDeprecated;
 	}
@@ -550,7 +539,7 @@ export default class TextEaterPlugin extends Plugin {
 		// Return instance directly like vaultActionManager
 		// Create on-demand to avoid storing reference
 		return {
-			librarian: new Librarian(this.vaultActionManager as any),
+			librarian: new Librarian(this.vaultActionManager),
 			makeSplitPath,
 		};
 	}
