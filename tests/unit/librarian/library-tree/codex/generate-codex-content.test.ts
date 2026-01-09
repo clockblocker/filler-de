@@ -12,21 +12,7 @@ import type {
 } from "../../../../../src/commanders/librarian-new/library-tree/tree-node/types/tree-node";
 import type { NodeName } from "../../../../../src/commanders/librarian-new/types/schemas/node-name";
 import * as globalState from "../../../../../src/global-state/global-state";
-import type { ParsedUserSettings } from "../../../../../src/global-state/parsed-settings";
-import { SplitPathType } from "../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
-
-const defaultSettings: ParsedUserSettings = {
-	apiProvider: "google",
-	googleApiKey: "",
-	maxSectionDepth: 6,
-	showScrollsInCodexesForDepth: 0,
-	splitPathToLibraryRoot: {
-		basename: "Library",
-		pathParts: [],
-		type: SplitPathType.Folder,
-	},
-	suffixDelimiter: "-",
-};
+import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
 
 let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
 
@@ -34,7 +20,7 @@ beforeEach(() => {
 	getParsedUserSettingsSpy = spyOn(
 		globalState,
 		"getParsedUserSettings",
-	).mockReturnValue({ ...defaultSettings });
+	).mockReturnValue({ ...defaultSettingsForUnitTests });
 });
 
 afterEach(() => {
@@ -184,7 +170,7 @@ describe("generateCodexContent", () => {
 
 		it("respects maxDepth setting", () => {
 			getParsedUserSettingsSpy.mockReturnValue({
-				...defaultSettings,
+				...defaultSettingsForUnitTests,
 				maxSectionDepth: 0, // Don't show nested sections
 			});
 
@@ -207,7 +193,7 @@ describe("generateCodexContent", () => {
 	describe("showScrollsInCodexesForDepth", () => {
 		it("hides scrolls beyond showScrollsForDepth", () => {
 			getParsedUserSettingsSpy.mockReturnValue({
-				...defaultSettings,
+				...defaultSettingsForUnitTests,
 				showScrollsInCodexesForDepth: 0, // Only show scrolls at depth 0
 			});
 
@@ -229,7 +215,7 @@ describe("generateCodexContent", () => {
 
 		it("shows scrolls at allowed depth", () => {
 			getParsedUserSettingsSpy.mockReturnValue({
-				...defaultSettings,
+				...defaultSettingsForUnitTests,
 				showScrollsInCodexesForDepth: 1, // Show scrolls at depth 0 and 1
 			});
 

@@ -8,21 +8,8 @@ import { TreeNodeStatus, TreeNodeType } from "../../../../../src/commanders/libr
 import type { FileNodeSegmentId, ScrollNodeSegmentId, SectionNodeSegmentId } from "../../../../../src/commanders/librarian-new/library-tree/tree-node/types/node-segment-id";
 import type { NodeName } from "../../../../../src/commanders/librarian-new/types/schemas/node-name";
 import * as globalState from "../../../../../src/global-state/global-state";
-import type { ParsedUserSettings } from "../../../../../src/global-state/parsed-settings";
 import { SplitPathType } from "../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
-
-const defaultSettings: ParsedUserSettings = {
-	apiProvider: "google",
-	googleApiKey: "",
-	maxSectionDepth: 6,
-	showScrollsInCodexesForDepth: 0,
-	splitPathToLibraryRoot: {
-		basename: "Library",
-		pathParts: [],
-		type: SplitPathType.Folder,
-	},
-	suffixDelimiter: "-",
-};
+import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
 
 let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
 
@@ -30,7 +17,7 @@ beforeEach(() => {
 	getParsedUserSettingsSpy = spyOn(
 		globalState,
 		"getParsedUserSettings",
-	).mockReturnValue({ ...defaultSettings });
+	).mockReturnValue({ ...defaultSettingsForUnitTests });
 });
 
 afterEach(() => {
