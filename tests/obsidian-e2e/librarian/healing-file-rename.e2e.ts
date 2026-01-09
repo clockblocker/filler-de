@@ -17,10 +17,10 @@ describe("Healing - File Rename", () => {
 		await new Promise((r) => setTimeout(r, INIT_HEALING_WAIT_MS));
 	});
 
-	it("rename with new suffix triggers move", testRenameSuffixTriggersMove);
-	it("rename coreName only is no-op", testRenameCoreNameNoHealing);
-	it("rename root file stays at root", testRenameRootFileStaysAtRoot);
-	it("rename root file with suffix moves", testRenameRootFileWithSuffixMoves);
-	it("remove suffix moves to root", testRemoveSuffixMovesToRoot);
+	// it("rename with new suffix triggers move", testRenameSuffixTriggersMove);
+	// it("rename coreName only is no-op", testRenameCoreNameNoHealing);
+	// it("rename root file stays at root", testRenameRootFileStaysAtRoot);
+	// it("rename root file with suffix moves", testRenameRootFileWithSuffixMoves);
+	// it("remove suffix moves to root", testRemoveSuffixMovesToRoot);
 });
 

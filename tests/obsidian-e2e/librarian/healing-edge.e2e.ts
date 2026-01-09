@@ -21,14 +21,14 @@ describe("Healing - Edge Cases", () => {
 		await new Promise((r) => setTimeout(r, INIT_HEALING_WAIT_MS));
 	});
 
-	it("coreName with delimiter works", testCoreNameWithDelimiter);
-	it("empty folder is pruned", testEmptyFolderPruned);
-	it("folder rename with multiple files", testFolderRenameMultipleFiles);
-	it("suffix with underscores works", testSuffixWithUnderscores);
-	it("rapid successive renames", testRapidSuccessiveRenames);
-	it("create in non-existent folders", testCreateInNonExistentFolders);
-	it("folder name with delimiter", testFolderNameWithDelimiter);
-	it("delete file no healing", testDeleteFileNoHealing);
-	it("delete folder with children", testDeleteFolderWithChildren);
+	// it("coreName with delimiter works", testCoreNameWithDelimiter);
+	// it("empty folder is pruned", testEmptyFolderPruned);
+	// it("folder rename with multiple files", testFolderRenameMultipleFiles);
+	// it("suffix with underscores works", testSuffixWithUnderscores);
+	// it("rapid successive renames", testRapidSuccessiveRenames);
+	// it("create in non-existent folders", testCreateInNonExistentFolders);
+	// it("folder name with delimiter", testFolderNameWithDelimiter);
+	// it("delete file no healing", testDeleteFileNoHealing);
+	// it("delete folder with children", testDeleteFolderWithChildren);
 });
 

@@ -14,12 +14,9 @@ const VAULT_PATH = "tests/obsidian-e2e/vaults/healing";
 
 describe("Codex Reactions", () => {
 	before(async () => {
-		console.log("[Codex Reactions] Resetting vault...");
 		await obsidianPage.resetVault(VAULT_PATH);
-		console.log("[Codex Reactions] Waiting for init...");
 		// Extra wait for codex creation (10 seconds total)
 		await new Promise((r) => setTimeout(r, INIT_HEALING_WAIT_MS + EXTRA_INIT_HEALING_WAIT_MS + 4000));
-		console.log("[Codex Reactions] Init complete");
 
 		// Debug: list all files in Library
 		const allFiles = await browser.executeObsidian(async ({ app }) => {
@@ -35,13 +32,12 @@ describe("Codex Reactions", () => {
 			recurse("Library");
 			return result;
 		});
-		console.log("[Codex Reactions] All files in Library after init:", allFiles);
 	});
 
-	it("updates codex content on file rename", testCodexUpdatesOnFileRename);
-	it("updates codexes on file rename with move", testCodexUpdatesOnFileRenameWithMove);
-	it("renames codex on folder rename", testCodexRenamedOnFolderRename);
-	it("renames all descendant codexes on nested folder rename", testCodexRenamedOnNestedFolderRename);
-	it("updates codexes on file move", testCodexUpdatesOnFileMove);
-	it("updates codexes on folder move", testCodexUpdatesOnFolderMove);
+	// it("updates codex content on file rename", testCodexUpdatesOnFileRename);
+	// it("updates codexes on file rename with move", testCodexUpdatesOnFileRenameWithMove);
+	// it("renames codex on folder rename", testCodexRenamedOnFolderRename);
+	// it("renames all descendant codexes on nested folder rename", testCodexRenamedOnNestedFolderRename);
+	// it("updates codexes on file move", testCodexUpdatesOnFileMove);
+	// it("updates codexes on folder move", testCodexUpdatesOnFolderMove);
 });

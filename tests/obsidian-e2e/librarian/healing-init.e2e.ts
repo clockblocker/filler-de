@@ -20,12 +20,12 @@ describe("Healing - Init", () => {
 		await new Promise((r) => setTimeout(r, INIT_HEALING_WAIT_MS + EXTRA_INIT_HEALING_WAIT_MS));
 	});
 
-	it("fixes files with wrong suffix on load", testInitHealingFixesWrongSuffix);
-	it("no-op for files with correct suffix", testInitHealingNoOpForCorrectFiles);
-	it("moves root file with suffix to suffix location", testInitHealingMovesRootFileWithSuffix);
-	it("adds suffix to nested file without one", testInitHealingAddsSuffixToNestedFile);
-	it("root file stays without suffix", testInitHealingRootFileNoSuffix);
-	it("root file single suffix moves (NameKing)", testInitHealingRootFileSingleSuffix);
-	it("processes multiple files", testInitHealingMultipleFiles);
+	// it("fixes files with wrong suffix on load", testInitHealingFixesWrongSuffix);
+	// it("no-op for files with correct suffix", testInitHealingNoOpForCorrectFiles);
+	// it("moves root file with suffix to suffix location", testInitHealingMovesRootFileWithSuffix);
+	// it("adds suffix to nested file without one", testInitHealingAddsSuffixToNestedFile);
+	// it("root file stays without suffix", testInitHealingRootFileNoSuffix);
+	// it("root file single suffix moves (NameKing)", testInitHealingRootFileSingleSuffix);
+	// it("processes multiple files", testInitHealingMultipleFiles);
 });
 

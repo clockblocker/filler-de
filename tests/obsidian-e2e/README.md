@@ -40,8 +40,3 @@ obsidian-e2e/
 ```bash
 bun run test:e2e
 ```
-
-## Old Tests
-
-Deprecated tests remain in `tests/specs/` for reference.
-

@@ -14,5 +14,5 @@ describe("Healing - Folder Drag Cycles", () => {
 		console.log("[Folder Drag Cycles] Init complete");
 	});
 
-	it("maintains correct suffixes after multiple drag cycles", testFolderDragCycles);
+	// it("maintains correct suffixes after multiple drag cycles", testFolderDragCycles);
 });

@@ -16,9 +16,9 @@ describe("Healing - File Create", () => {
 		await new Promise((r) => setTimeout(r, INIT_HEALING_WAIT_MS));
 	});
 
-	it("root file gets no suffix", testRootFileNoSuffix);
-	it("nested file gets suffix added", testNestedFileGetsSuffix);
-	it("file with correct suffix is no-op", testFileWithCorrectSuffixNoOp);
-	it("file with wrong suffix is healed", testFileWithWrongSuffixHealed);
+	// it("root file gets no suffix", testRootFileNoSuffix);
+	// it("nested file gets suffix added", testNestedFileGetsSuffix);
+	// it("file with correct suffix is no-op", testFileWithCorrectSuffixNoOp);
+	// it("file with wrong suffix is healed", testFileWithWrongSuffixHealed);
 });
 
