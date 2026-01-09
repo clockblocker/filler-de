@@ -182,6 +182,7 @@ export const config: WebdriverIO.Config = {
 				/^error: script ".*" exited with code \d+/,
 				/^Bundled \d+ modules in \d+ms/,
 				/^\s*main\.js\s+\d+/,
+				/^@.*\(\d+-\d+\)\s*$/,
 			],
 			logFile: "wdio-noise-launcher.log",
 		});

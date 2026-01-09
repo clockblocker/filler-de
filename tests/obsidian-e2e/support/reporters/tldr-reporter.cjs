@@ -4,6 +4,10 @@
  */
 const WDIOReporter = require("@wdio/reporter").default;
 
+// Helper: safe filename (same logic as wdio.conf.mts)
+const safeName = (s) =>
+	s.replace(/[^\w.-]+/g, "_").replace(/_+/g, "_").slice(0, 200);
+
 class TldrReporter extends WDIOReporter {
   constructor(options = {}) {
     // stdout true ensures output goes to console
@@ -33,7 +37,9 @@ class TldrReporter extends WDIOReporter {
   }
 
   onTestFail(test) {
-    this._testLine(test, "✖");
+    const title = test.title ?? "unknown-test";
+    const filename = `fail_${safeName(title)}.log`;
+    this._testLine(test, "✖", `file:///tests/tracing/logs/${filename}`);
   }
 
   onTestSkip(test) {
@@ -44,9 +50,10 @@ class TldrReporter extends WDIOReporter {
     // WDIO prints "Spec Files: ..." itself
   }
 
-  _testLine(test, icon) {
+  _testLine(test, icon, fileRef = "") {
     const title = (test && test.title) || "Unknown Test";
-    this._line(`${" ".repeat(this.indent)}${icon} ${title}`);
+    const suffix = fileRef ? ` ${fileRef}` : "";
+    this._line(`${" ".repeat(this.indent)}${icon} ${title}${suffix}`);
   }
 
   _line(s) {

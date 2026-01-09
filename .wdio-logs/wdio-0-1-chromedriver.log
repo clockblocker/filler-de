@@ -1,8 +1,0 @@
-Starting ChromeDriver 138.0.7204.251 (67bb40a9efd31fbe5fdcdab2a56a7419f2feaede-refs/heads/main@{#1538048}) on port 56542
-Only local connections are allowed.
-Please see https://chromedriver.chromium.org/security-considerations for suggestions on keeping ChromeDriver safe.
-ChromeDriver was started successfully on port 56542.
-2026-01-09 09:03:32 Loading main app package /Users/annagorelova/work/Textfresser_vault/.obsidian/plugins/textfresser/.obsidian-cache/obsidian-installer/darwin-arm64/Obsidian-1.10.6/Contents/Resources/obsidian.asar
-Updates disabled.
-Ignored: Error: Argument must be a file path or a NativeImage
-Ignored: Error: ENOENT: no such file or directory, open '/private/var/folders/hr/d0j3q7_j03b7p9tc92xds1280000gn/T/obsidian-launcher-config-fGBU75/146e801a1a30feaf.json'

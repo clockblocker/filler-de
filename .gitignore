@@ -25,6 +25,7 @@ data.json
 prompt.ts
 
 /tests/tracing/logs/**/*
+/.wdio-logs/**/*
 
 .obsidian-cache
 .env

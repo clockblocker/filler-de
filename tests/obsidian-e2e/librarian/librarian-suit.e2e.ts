@@ -1,6 +1,5 @@
 /// <reference types="@wdio/globals/types" />
 import { obsidianPage } from "wdio-obsidian-service";
-import { EXTRA_INIT_HEALING_WAIT_MS, INIT_HEALING_WAIT_MS } from "../helpers/polling";
 import {
 	testAllCodexesCreatedOnInit,
     testAllFilesSuffixedOnInit,
