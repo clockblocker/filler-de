@@ -29,6 +29,18 @@ export async function createFile(
 }
 
 /**
+ * Create multiple files in parallel via Obsidian API.
+ * Automatically creates parent folders if needed.
+ */
+export async function createFiles(
+	files: readonly { path: string; content?: string }[],
+): Promise<void> {
+	await Promise.all(
+		files.map(({ path, content = "" }) => createFile(path, content)),
+	);
+}
+
+/**
  * Rename a file or folder via Obsidian API.
  */
 export async function renamePath(

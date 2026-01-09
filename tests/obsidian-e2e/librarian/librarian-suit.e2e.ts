@@ -4,7 +4,7 @@ import { EXTRA_INIT_HEALING_WAIT_MS, INIT_HEALING_WAIT_MS } from "../helpers/pol
 import {
 	testAllCodexesCreatedOnInit,
     testAllFilesSuffixedOnInit,
-} from "./init/init.test";
+} from "./chain/000-init";
 
 const VAULT_PATH = "tests/obsidian-e2e/vaults/librarian-for-e2e";
 
@@ -17,5 +17,5 @@ describe("Librarian Full Suit", () => {
 	it("creates all codex files on init", testAllCodexesCreatedOnInit);
 
     // Files are canonically suffixed
-	it("all files are heled to canonical suffixes on init", testAllFilesSuffixedOnInit);
+	it("all files are healed to canonical suffixes on init", testAllFilesSuffixedOnInit);
 });
