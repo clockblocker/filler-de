@@ -11,16 +11,13 @@ import type {
 	SectionNode,
 } from "../../../../../src/commanders/librarian-new/library-tree/tree-node/types/tree-node";
 import type { NodeName } from "../../../../../src/commanders/librarian-new/types/schemas/node-name";
-import * as globalState from "../../../../../src/global-state/global-state";
 import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
+import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
 
 let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
 
 beforeEach(() => {
-	getParsedUserSettingsSpy = spyOn(
-		globalState,
-		"getParsedUserSettings",
-	).mockReturnValue({ ...defaultSettingsForUnitTests });
+	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy();
 });
 
 afterEach(() => {

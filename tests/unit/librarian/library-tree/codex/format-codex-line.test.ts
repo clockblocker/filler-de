@@ -6,16 +6,12 @@ import {
 	formatScrollLine,
 } from "../../../../../src/commanders/librarian-new/library-tree/codex/format-codex-line";
 import { TreeNodeStatus } from "../../../../../src/commanders/librarian-new/library-tree/tree-node/types/atoms";
-import * as globalState from "../../../../../src/global-state/global-state";
-import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
+import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
 
 let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
 
 beforeEach(() => {
-	getParsedUserSettingsSpy = spyOn(
-		globalState,
-		"getParsedUserSettings",
-	).mockReturnValue({ ...defaultSettingsForUnitTests });
+	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy();
 });
 
 afterEach(() => {

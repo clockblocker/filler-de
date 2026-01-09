@@ -10,9 +10,8 @@ import type {
 	ScrollNodeSegmentId,
 	SectionNodeSegmentId,
 } from "../../../../../src/commanders/librarian-new/library-tree/tree-node/types/node-segment-id";
-import * as globalState from "../../../../../src/global-state/global-state";
 import { SplitPathType } from "../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
-import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
+import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
 
 const sec = (name: string): SectionNodeSegmentId =>
 	`${name}﹘Section﹘` as SectionNodeSegmentId;
@@ -24,10 +23,7 @@ describe("Codex init for nested sections", () => {
 	let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
 
 	beforeEach(() => {
-		getParsedUserSettingsSpy = spyOn(
-			globalState,
-			"getParsedUserSettings",
-		).mockReturnValue({ ...defaultSettingsForUnitTests });
+		getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy();
 	});
 
 	afterEach(() => {

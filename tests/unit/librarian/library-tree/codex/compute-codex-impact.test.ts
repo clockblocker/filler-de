@@ -7,17 +7,13 @@ import { TreeActionType } from "../../../../../src/commanders/librarian-new/libr
 import { TreeNodeStatus, TreeNodeType } from "../../../../../src/commanders/librarian-new/library-tree/tree-node/types/atoms";
 import type { FileNodeSegmentId, ScrollNodeSegmentId, SectionNodeSegmentId } from "../../../../../src/commanders/librarian-new/library-tree/tree-node/types/node-segment-id";
 import type { NodeName } from "../../../../../src/commanders/librarian-new/types/schemas/node-name";
-import * as globalState from "../../../../../src/global-state/global-state";
 import { SplitPathType } from "../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
-import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
+import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
 
 let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
 
 beforeEach(() => {
-	getParsedUserSettingsSpy = spyOn(
-		globalState,
-		"getParsedUserSettings",
-	).mockReturnValue({ ...defaultSettingsForUnitTests });
+	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy();
 });
 
 afterEach(() => {

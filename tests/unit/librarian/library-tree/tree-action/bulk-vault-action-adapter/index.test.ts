@@ -3,8 +3,6 @@ import { buildTreeActions } from "../../../../../../src/commanders/librarian-new
 import { TreeActionType } from "../../../../../../src/commanders/librarian-new/library-tree/tree-action/types/tree-action";
 import { getNodeName } from "../../../../../../src/commanders/librarian-new/library-tree/tree-action/utils/locator/locator-utils";
 import { TreeNodeType } from "../../../../../../src/commanders/librarian-new/library-tree/tree-node/types/atoms";
-import * as globalState from "../../../../../../src/global-state/global-state";
-import type { ParsedUserSettings } from "../../../../../../src/global-state/parsed-settings";
 import type { BulkVaultEvent } from "../../../../../../src/managers/obsidian/vault-action-manager";
 import type { PossibleRootVaultEvent } from "../../../../../../src/managers/obsidian/vault-action-manager/impl/event-processing/bulk-event-emmiter/types/bulk/helpers";
 import { SplitPathType } from "../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
@@ -18,25 +16,14 @@ import type {
 	VaultEvent,
 } from "../../../../../../src/managers/obsidian/vault-action-manager/types/vault-event";
 import { VaultEventType } from "../../../../../../src/managers/obsidian/vault-action-manager/types/vault-event";
-
-const defaultSettings: ParsedUserSettings = {
-	apiProvider: "google",
-	googleApiKey: "",
-	maxSectionDepth: 6,
-	showScrollsInCodexesForDepth: 0,
-	splitPathToLibraryRoot: {
-		basename: "Library",
-		pathParts: [],
-		type: SplitPathType.Folder,
-	},
-	suffixDelimiter: "-",
-};
+import { defaultSettingsForUnitTests } from "../../../../common-utils/consts";
+import { setupGetParsedUserSettingsSpy } from "../../../../common-utils/setup-spy";
 
 let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
 
 beforeEach(() => {
-	getParsedUserSettingsSpy = spyOn(globalState, "getParsedUserSettings").mockReturnValue({
-		...defaultSettings,
+	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy({
+		showScrollsInCodexesForDepth: 0,
 	});
 });
 

@@ -2,33 +2,20 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { RenameIntent } from "../../../../../../../../../../src/commanders/librarian-new/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/intent/types";
 import { ChangePolicy } from "../../../../../../../../../../src/commanders/librarian-new/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/types";
 import { tryCanonicalizeSplitPathToDestination } from "../../../../../../../../../../src/commanders/librarian-new/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/translators/helpers/locator";
-import * as globalState from "../../../../../../../../../../src/global-state/global-state";
-import type { ParsedUserSettings } from "../../../../../../../../../../src/global-state/parsed-settings";
 import type {
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
 } from "../../../../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { SplitPathType } from "../../../../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
-
-const defaultSettings: ParsedUserSettings = {
-	apiProvider: "google",
-	googleApiKey: "",
-	maxSectionDepth: 6,
-	showScrollsInCodexesForDepth: 0,
-	splitPathToLibraryRoot: {
-		basename: "Library",
-		pathParts: [],
-		type: SplitPathType.Folder,
-	},
-	suffixDelimiter: "-",
-};
+import { defaultSettingsForUnitTests } from "../../../../../../../../common-utils/consts";
+import { setupGetParsedUserSettingsSpy } from "../../../../../../../../common-utils/setup-spy";
 
 let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
 
 beforeEach(() => {
-	getParsedUserSettingsSpy = spyOn(globalState, "getParsedUserSettings").mockReturnValue({
-		...defaultSettings,
+	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy({
+		showScrollsInCodexesForDepth: 0,
 	});
 });
 

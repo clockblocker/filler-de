@@ -23,7 +23,7 @@ obsidian-e2e/
 - Keep minimal - only files needed for that suite
 
 ### Pure Functions
-- Internal librarian-new funcs are pure → unit tests
+- Internal librarian funcs are pure → unit tests
 - E2E tests interact via Obsidian API only (rename folder, check files)
 
 ### Helpers

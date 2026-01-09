@@ -1,31 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { makeEventLibraryScoped } from "../../../../../../../../src/commanders/librarian-new/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/events/make-event-libray-scoped";
 import { Scope } from "../../../../../../../../src/commanders/librarian-new/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/scoped-event";
-import * as globalState from "../../../../../../../../src/global-state/global-state";
-import type { ParsedUserSettings } from "../../../../../../../../src/global-state/parsed-settings";
 import { MD } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/literals";
 import { SplitPathType } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import type { VaultEvent } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/vault-event";
 import { VaultEventType } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/vault-event";
-
-const defaultSettings: ParsedUserSettings = {
-	apiProvider: "google",
-	googleApiKey: "",
-	maxSectionDepth: 6,
-	splitPathToLibraryRoot: {
-		basename: "Library",
-		pathParts: [],
-		type: SplitPathType.Folder,
-	},
-	suffixDelimiter: "-",
-};
+import { defaultSettingsForUnitTests } from "../../../../../../common-utils/consts";
+import { setupGetParsedUserSettingsSpy } from "../../../../../../common-utils/setup-spy";
 
 let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
 
 beforeEach(() => {
-	getParsedUserSettingsSpy = spyOn(globalState, "getParsedUserSettings").mockReturnValue({
-		...defaultSettings,
-	});
+	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy();
 });
 
 afterEach(() => {
@@ -71,7 +57,7 @@ describe("makeEventLibraryScoped", () => {
 
 		it("handles nested library path", () => {
 			getParsedUserSettingsSpy.mockReturnValue({
-				...defaultSettings,
+				...defaultSettingsForUnitTests,
 				splitPathToLibraryRoot: {
 					basename: "Library",
 					pathParts: ["Root"],
@@ -406,7 +392,7 @@ describe("makeEventLibraryScoped", () => {
 
 		it("returns Outside when path that starts with library root but is not inside", () => {
 			getParsedUserSettingsSpy.mockReturnValue({
-				...defaultSettings,
+				...defaultSettingsForUnitTests,
 				splitPathToLibraryRoot: {
 					basename: "Library",
 					pathParts: [],

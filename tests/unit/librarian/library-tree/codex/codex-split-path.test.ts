@@ -1,18 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { computeCodexSplitPath } from "../../../../../src/commanders/librarian-new/library-tree/codex/codex-split-path";
 import type { SectionNodeSegmentId } from "../../../../../src/commanders/librarian-new/library-tree/tree-node/types/node-segment-id";
-import * as globalState from "../../../../../src/global-state/global-state";
-import type { ParsedUserSettings } from "../../../../../src/global-state/parsed-settings";
 import { SplitPathType } from "../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
-import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
+import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
 
 let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
 
 beforeEach(() => {
-	getParsedUserSettingsSpy = spyOn(
-		globalState,
-		"getParsedUserSettings",
-	).mockReturnValue({ ...defaultSettingsForUnitTests });
+	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy();
 });
 
 afterEach(() => {
