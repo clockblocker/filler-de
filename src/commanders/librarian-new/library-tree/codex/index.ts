@@ -34,9 +34,7 @@ export {
 } from "./section-chain-utils";
 export type {
 	CodexAction,
-	CreateCodexAction,
 	DeleteCodexAction,
-	RenameCodexAction,
-	UpdateCodexAction,
+	UpsertCodexAction,
 	WriteScrollStatusAction,
 } from "./types/codex-action";

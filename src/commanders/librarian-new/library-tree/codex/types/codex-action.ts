@@ -3,16 +3,14 @@
  * Converted to VaultActions for dispatch.
  */
 
+import type { SplitPathToMdFileInsideLibrary } from "../../tree-action/bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
 import type { TreeNodeStatus } from "../../tree-node/types/atoms";
 import type { SectionNodeSegmentId } from "../../tree-node/types/node-segment-id";
-import type { SplitPathToMdFileInsideLibrary } from "../../tree-action/bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
 
 // ─── Action Types ───
 
 export type CodexActionType =
-	| "CreateCodex"
-	| "UpdateCodex"
-	| "RenameCodex"
+	| "UpsertCodex"
 	| "DeleteCodex"
 	| "WriteScrollStatus";
 
@@ -49,21 +47,6 @@ export type WriteScrollStatusPayload = {
 
 // ─── Actions ───
 
-export type CreateCodexAction = {
-	type: "CreateCodex";
-	payload: UpsertCodexPayload;
-};
-
-export type UpdateCodexAction = {
-	type: "UpdateCodex";
-	payload: UpsertCodexPayload;
-};
-
-export type RenameCodexAction = {
-	type: "RenameCodex";
-	payload: RenameCodexPayload;
-};
-
 export type DeleteCodexAction = {
 	type: "DeleteCodex";
 	payload: DeleteCodexPayload;
@@ -74,9 +57,12 @@ export type WriteScrollStatusAction = {
 	payload: WriteScrollStatusPayload;
 };
 
+export type UpsertCodexAction = {
+	type: "UpsertCodex";
+	payload: UpsertCodexPayload;
+};
+
 export type CodexAction =
-	| CreateCodexAction
-	| UpdateCodexAction
-	| RenameCodexAction
+	| UpsertCodexAction
 	| DeleteCodexAction
 	| WriteScrollStatusAction;

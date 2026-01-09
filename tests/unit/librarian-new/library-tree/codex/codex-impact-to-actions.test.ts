@@ -94,7 +94,7 @@ function makeTreeAccessor(root: SectionNode): TreeAccessor {
 
 describe("codexImpactToActions", () => {
 	describe("contentChanged", () => {
-		it("generates UpdateCodex for each changed section", () => {
+		it("generates UpsertCodex for each changed section", () => {
 			const root = section("Library", {
 				"A﹘Section﹘": section("A", {
 					"Note﹘Scroll﹘md": scroll("Note"),
@@ -112,11 +112,11 @@ describe("codexImpactToActions", () => {
 			const actions = codexImpactToActions(impact, tree);
 
 			expect(actions.length).toBe(2);
-			expect(actions[0]?.type).toBe("UpdateCodex");
-			expect(actions[1]?.type).toBe("UpdateCodex");
+			expect(actions[0]?.type).toBe("UpsertCodex");
+			expect(actions[1]?.type).toBe("UpsertCodex");
 		});
 
-		it("generates CreateCodex when isInit=true", () => {
+		it("generates UpsertCodex for new sections", () => {
 			const root = section("Library");
 			const tree = makeTreeAccessor(root);
 
@@ -127,10 +127,10 @@ describe("codexImpactToActions", () => {
 				renamed: [],
 			};
 
-			const actions = codexImpactToActions(impact, tree, true);
+			const actions = codexImpactToActions(impact, tree);
 
 			expect(actions.length).toBe(1);
-			expect(actions[0]?.type).toBe("CreateCodex");
+			expect(actions[0]?.type).toBe("UpsertCodex");
 		});
 
 		it("includes correct splitPath in payload", () => {
@@ -148,9 +148,16 @@ describe("codexImpactToActions", () => {
 
 			const actions = codexImpactToActions(impact, tree);
 
-			expect(actions[0]?.type).toBe("UpdateCodex");
-			if (actions[0]?.type === "UpdateCodex") {
-				expect(actions[0].payload.splitPath).toEqual({
+			// Should regenerate both Library and A (ancestors are included)
+			expect(actions.length).toBeGreaterThanOrEqual(2);
+			const aAction = actions.find(
+				(a) =>
+					a.type === "UpsertCodex" &&
+					a.payload.splitPath.pathParts.join("/") === "Library/A",
+			);
+			expect(aAction).toBeDefined();
+			if (aAction?.type === "UpsertCodex") {
+				expect(aAction.payload.splitPath).toEqual({
 					basename: "__-A",
 					extension: "md",
 					pathParts: ["Library", "A"],
@@ -161,7 +168,7 @@ describe("codexImpactToActions", () => {
 	});
 
 	describe("renamed", () => {
-		it("generates RenameCodex action", () => {
+		it("generates DeleteCodex for new location with old suffix and UpsertCodex for new location", () => {
 			const root = section("Library", {
 				"NewName﹘Section﹘": section("NewName"),
 			});
@@ -181,11 +188,26 @@ describe("codexImpactToActions", () => {
 
 			const actions = codexImpactToActions(impact, tree);
 
-			expect(actions.length).toBe(1);
-			expect(actions[0]?.type).toBe("RenameCodex");
-			if (actions[0]?.type === "RenameCodex") {
-				expect(actions[0].payload.from.basename).toBe("__-OldName");
-				expect(actions[0].payload.to.basename).toBe("__-NewName");
+			// Should have delete for moved codex (new location, old suffix), upsert for new location, and upsert for parent (Library)
+			expect(actions.length).toBeGreaterThanOrEqual(2);
+			
+			const deleteAction = actions.find((a) => a.type === "DeleteCodex");
+			expect(deleteAction).toBeDefined();
+			if (deleteAction?.type === "DeleteCodex") {
+				// Delete should target NEW location with OLD suffix
+				// When Obsidian moves folder, codex moves with it but keeps old suffix
+				expect(deleteAction.payload.splitPath.pathParts.join("/")).toBe("Library/NewName");
+				expect(deleteAction.payload.splitPath.basename).toBe("__-OldName");
+			}
+
+			const newUpsertAction = actions.find(
+				(a) =>
+					a.type === "UpsertCodex" &&
+					a.payload.splitPath.pathParts.join("/") === "Library/NewName",
+			);
+			expect(newUpsertAction).toBeDefined();
+			if (newUpsertAction?.type === "UpsertCodex") {
+				expect(newUpsertAction.payload.splitPath.basename).toBe("__-NewName");
 			}
 		});
 	});
@@ -204,10 +226,12 @@ describe("codexImpactToActions", () => {
 
 			const actions = codexImpactToActions(impact, tree);
 
-			expect(actions.length).toBe(1);
-			expect(actions[0]?.type).toBe("DeleteCodex");
-			if (actions[0]?.type === "DeleteCodex") {
-				expect(actions[0].payload.splitPath.basename).toBe("__-A");
+			// DeleteCodex for A, and UpsertCodex for Library (all codexes are regenerated)
+			expect(actions.length).toBe(2);
+			const deleteAction = actions.find((a) => a.type === "DeleteCodex");
+			expect(deleteAction).toBeDefined();
+			if (deleteAction?.type === "DeleteCodex") {
+				expect(deleteAction.payload.splitPath.basename).toBe("__-A");
 			}
 		});
 
@@ -224,14 +248,28 @@ describe("codexImpactToActions", () => {
 
 			const actions = codexImpactToActions(impact, tree);
 
-			// Only delete, no update
-			expect(actions.length).toBe(1);
-			expect(actions[0]?.type).toBe("DeleteCodex");
+			// Delete for A, and UpsertCodex for parent (Library) which is in contentChanged
+			expect(actions.length).toBe(2);
+			
+			const deleteAction = actions.find((a) => a.type === "DeleteCodex");
+			expect(deleteAction).toBeDefined();
+			if (deleteAction?.type === "DeleteCodex") {
+				expect(deleteAction.payload.splitPath.basename).toBe("__-A");
+			}
+
+			// Parent (Library) should be regenerated
+			const libraryUpsert = actions.find(
+				(a) =>
+					a.type === "UpsertCodex" &&
+					a.payload.splitPath.pathParts.length === 1 &&
+					a.payload.splitPath.pathParts[0] === "Library",
+			);
+			expect(libraryUpsert).toBeDefined();
 		});
 	});
 
 	describe("descendantsChanged", () => {
-		it("generates UpdateCodex for descendant sections + WriteScrollStatus for scrolls", () => {
+		it("generates UpsertCodex for descendant sections + WriteScrollStatus for scrolls", () => {
 			const root = section("Library", {
 				"A﹘Section﹘": section("A", {
 					"B﹘Section﹘": section("B"),
@@ -251,13 +289,13 @@ describe("codexImpactToActions", () => {
 
 			const actions = codexImpactToActions(impact, tree);
 
-			// Should update B (descendant section of A)
-			const updateActions = actions.filter((a) => a.type === "UpdateCodex");
-			expect(updateActions.length).toBe(1);
-			expect(updateActions[0]?.type).toBe("UpdateCodex");
-			if (updateActions[0]?.type === "UpdateCodex") {
-				expect(updateActions[0].payload.splitPath.basename).toBe("__-B-A");
-			}
+			// Should upsert A (the section itself) and B (descendant section of A)
+			const upsertActions = actions.filter((a) => a.type === "UpsertCodex");
+			expect(upsertActions.length).toBeGreaterThanOrEqual(2);
+			const bAction = upsertActions.find((a) => 
+				a.type === "UpsertCodex" && a.payload.splitPath.basename === "__-B-A"
+			);
+			expect(bAction).toBeDefined();
 
 			// Should write status to Note (descendant scroll of A)
 			const writeStatusActions = actions.filter((a) => a.type === "WriteScrollStatus");

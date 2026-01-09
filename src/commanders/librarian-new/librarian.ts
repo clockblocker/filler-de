@@ -10,6 +10,7 @@ import type {
 } from "../../managers/obsidian/vault-action-manager";
 import type { SplitPathWithReader } from "../../managers/obsidian/vault-action-manager/types/split-path";
 import { SplitPathType } from "../../managers/obsidian/vault-action-manager/types/split-path";
+import { VaultActionType } from "../../managers/obsidian/vault-action-manager/types/vault-action";
 import { readMetadata } from "../../managers/pure/note-metadata-manager";
 import { logger } from "../../utils/logger";
 import { healingActionsToVaultActions } from "./library-tree/codecs/healing-to-vault-action";
@@ -39,11 +40,12 @@ import {
 	TreeNodeStatus,
 	TreeNodeType,
 } from "./library-tree/tree-node/types/atoms";
-import type { SectionNode } from "./library-tree/tree-node/types/tree-node";
 import {
 	NodeSegmentIdSeparator,
 	type ScrollNodeSegmentId,
+	type SectionNodeSegmentId,
 } from "./library-tree/tree-node/types/node-segment-id";
+import type { SectionNode } from "./library-tree/tree-node/types/tree-node";
 import type { HealingAction } from "./library-tree/types/healing-action";
 import { resolveDuplicateHealingActions } from "./library-tree/utils/resolve-duplicate-healing";
 
@@ -131,11 +133,7 @@ export class Librarian {
 
 		// Then dispatch codex actions
 		const mergedImpact = mergeCodexImpacts(allCodexImpacts);
-		const codexActions = codexImpactToActions(
-			mergedImpact,
-			this.tree,
-			true,
-		);
+		const codexActions = codexImpactToActions(mergedImpact, this.tree);
 		const codexVaultActions = codexActionsToVaultActions(codexActions);
 
 		if (codexVaultActions.length > 0) {
@@ -277,8 +275,8 @@ export class Librarian {
 			if (!validCodexPaths.has(filePath)) {
 				logger.info(`[Librarian] Deleting invalid codex: ${filePath}`);
 				deleteActions.push({
-					type: "DeleteMdFile",
 					payload: { splitPath: libraryScopedResult.value },
+					type: "DeleteMdFile",
 				});
 			}
 		}
@@ -469,11 +467,32 @@ export class Librarian {
 	private async processActions(actions: TreeAction[]): Promise<void> {
 		if (!this.tree) return;
 
+		logger.info("[Librarian] Processing tree actions", {
+			actions: actions.map((a) => ({
+				targetType: a.targetLocator.targetType,
+				type: a.actionType,
+			})),
+			count: actions.length,
+		});
+
 		const allHealingActions: HealingAction[] = [];
 		const allCodexImpacts: CodexImpact[] = [];
 
 		for (const action of actions) {
 			const result = this.tree.apply(action);
+			logger.info("[Librarian] Tree action applied", {
+				actionType: action.actionType,
+				codexImpact: {
+					contentChanged: result.codexImpact.contentChanged.length,
+					deleted: result.codexImpact.deleted.length,
+					renamed: result.codexImpact.renamed.length,
+				},
+				renamedDetails: result.codexImpact.renamed.map((r) => ({
+					new: r.newChain.map((c) => c.split("﹘")[0]).join("/"),
+					old: r.oldChain.map((c) => c.split("﹘")[0]).join("/"),
+				})),
+				targetType: action.targetLocator.targetType,
+			});
 			allHealingActions.push(...result.healingActions);
 			allCodexImpacts.push(result.codexImpact);
 		}
@@ -504,6 +523,20 @@ export class Librarian {
 			logger.info(
 				`[Librarian] Dispatching ${codexVaultActions.length} codex actions`,
 			);
+			const deleteActions = codexVaultActions.filter(
+				(a) => a.type === VaultActionType.TrashMdFile,
+			);
+			if (deleteActions.length > 0) {
+				logger.info("[Librarian] Delete actions being dispatched", {
+					count: deleteActions.length,
+					paths: deleteActions.map((a) =>
+						[
+							...a.payload.splitPath.pathParts,
+							a.payload.splitPath.basename,
+						].join("/"),
+					),
+				});
+			}
 			await this.vaultActionManager.dispatch(codexVaultActions);
 		}
 	}

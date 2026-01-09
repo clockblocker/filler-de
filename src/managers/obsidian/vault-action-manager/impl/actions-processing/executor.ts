@@ -122,9 +122,26 @@ export class Executor {
 			}
 			case VaultActionType.TrashFile:
 			case VaultActionType.TrashMdFile: {
+				const pathStr = [
+					...action.payload.splitPath.pathParts,
+					action.payload.splitPath.basename,
+				].join("/");
+				logger.info("[Executor] Executing TrashMdFile", {
+					path: pathStr,
+				});
 				const result = await this.tfileHelper.trashFile(
 					action.payload.splitPath,
 				);
+				if (result.isErr()) {
+					logger.error("[Executor] TrashMdFile failed", {
+						path: pathStr,
+						error: result.error,
+					});
+				} else {
+					logger.info("[Executor] TrashMdFile succeeded", {
+						path: pathStr,
+					});
+				}
 				return result;
 			}
 			case VaultActionType.ProcessMdFile: {

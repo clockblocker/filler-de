@@ -22,6 +22,17 @@ codexActionsToVaultActions() → VaultAction[]
 VaultActionManager.dispatch()
 ```
 
+## Regeneration Strategy
+
+`codexImpactToActions` uses a **full regeneration approach** (similar to init):
+1. Collects ALL section chains from current tree state
+2. Generates `UpsertCodex` for all sections (ensures all codexes are up-to-date)
+3. Deletes old codexes:
+   - Sections explicitly deleted (`impact.deleted`)
+   - Moved codexes with old suffix at new location (`impact.renamed` - when Obsidian moves folders, codex files move with them but keep old suffix)
+
+This approach is simpler and more reliable than tracking incremental changes, ensuring no orphaned codexes remain.
+
 ## CodexImpact
 
 Computed from `TreeAction`, captures what changed:
@@ -39,11 +50,11 @@ Impact always includes ancestors (status aggregates upward).
 
 | Action | Trigger | VaultAction |
 |--------|---------|-------------|
-| `CreateCodex` | New section created | `WriteMdFile` |
-| `UpdateCodex` | Content changed | `WriteMdFile` |
-| `RenameCodex` | Section renamed/moved | `RenameMdFile` |
-| `DeleteCodex` | Section deleted | `DeleteMdFile` |
-| `WriteScrollStatus` | Status propagation to leaves | `UpdateMetaInfo` |
+| `UpsertCodex` | Section exists (create or update) | `UpsertMdFile` |
+| `DeleteCodex` | Section deleted or moved (old codex with wrong suffix) | `TrashMdFile` |
+| `WriteScrollStatus` | Status propagation to leaves | `ProcessMdFile` |
+
+**Note:** `UpsertCodex` replaces the old `CreateCodex`/`UpdateCodex` distinction - upsert handles both cases. `RenameCodex` is no longer used; renames are handled as delete old + upsert new.
 
 ## Codex File Format
 

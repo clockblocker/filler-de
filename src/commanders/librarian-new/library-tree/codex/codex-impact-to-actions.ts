@@ -4,6 +4,7 @@
  */
 
 import { SplitPathType } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
+import { logger } from "../../../../utils/logger";
 import type { SplitPathToMdFileInsideLibrary } from "../tree-action/bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
 import {
 	makeJoinedSuffixedBasename,
@@ -12,16 +13,15 @@ import {
 import { TreeNodeType } from "../tree-node/types/atoms";
 import type { SectionNodeSegmentId } from "../tree-node/types/node-segment-id";
 import { NodeSegmentIdSeparator } from "../tree-node/types/node-segment-id";
-import type { ScrollNode, SectionNode } from "../tree-node/types/tree-node";
+import type { SectionNode } from "../tree-node/types/tree-node";
 import { computeCodexSplitPath } from "./codex-split-path";
 import type { CodexImpact } from "./compute-codex-impact";
 import { generateCodexContent } from "./generate-codex-content";
+import { CODEX_CORE_NAME } from "./literals";
 import type {
 	CodexAction,
-	CreateCodexAction,
 	DeleteCodexAction,
-	RenameCodexAction,
-	UpdateCodexAction,
+	UpsertCodexAction,
 	WriteScrollStatusAction,
 } from "./types/codex-action";
 
@@ -38,67 +38,56 @@ export type TreeAccessor = {
 
 /**
  * Convert CodexImpact to CodexAction[].
+ * Regenerates all codexes from current tree state (like init).
+ * Handles deletes and WriteScrollStatus from impact.
  *
  * @param impact - The codex impact from tree.apply()
  * @param tree - Tree accessor for section lookup
- * @param isInit - If true, emit CreateCodex instead of UpdateCodex for new sections
  */
 export function codexImpactToActions(
 	impact: CodexImpact,
 	tree: TreeAccessor,
-	isInit = false,
 ): CodexAction[] {
 	const actions: CodexAction[] = [];
 
-	// 1. Handle renames first (before content updates)
-	// Note: For section renames, Obsidian moves the folder contents automatically.
-	// We need to rename the section's codex AND all descendant codexes.
-	for (const { oldChain, newChain } of impact.renamed) {
-		// Find section in tree (using new chain since tree is already updated)
-		const section = findSectionByChain(tree, newChain);
+	logger.info("[codexImpactToActions] Starting", {
+		contentChanged: impact.contentChanged.length,
+		deleted: impact.deleted.length,
+		descendantsChanged: impact.descendantsChanged.length,
+		renamed: impact.renamed.length,
+	});
 
-		// Collect all rename pairs: [oldChain, newChain] for section + descendants
-		const renamePairs = collectCodexRenamePairs(
-			oldChain,
-			newChain,
-			section,
-		);
+	// 1. Collect ALL section chains from current tree state
+	// This ensures we regenerate all codexes, not just "touched" ones
+	const allSectionChains = collectAllSectionChains(tree);
+	logger.info("[codexImpactToActions] Collected section chains", {
+		chains: allSectionChains.map((c) =>
+			c.map(extractNodeNameFromSegmentId).join("/"),
+		),
+		count: allSectionChains.length,
+	});
 
-		for (const { fromOldChain, toNewChain } of renamePairs) {
-			// For section renames/moves:
-			// 1. Delete orphan at new location (Obsidian moved this file with old suffix)
-			// 2. Create/update canonical codex at new location
-			const targetSection = findSectionByChain(tree, toNewChain);
-			if (!targetSection) continue;
+	// 2. Generate UpsertCodex for all sections
+	for (const chain of allSectionChains) {
+		const section = findSectionByChain(tree, chain);
+		if (!section) continue;
 
-			// Delete orphan at new location with old suffix (if different from canonical)
-			const movedOrphanPath = buildMovedOrphanPath(fromOldChain, toNewChain);
-			const canonicalPath = computeCodexSplitPath(toNewChain);
-
-			// Only delete orphan if it's different from canonical (i.e., suffix changed)
-			if (movedOrphanPath.basename !== canonicalPath.basename) {
-				const deleteMovedAction: DeleteCodexAction = {
-					payload: { splitPath: movedOrphanPath },
-					type: "DeleteCodex",
-				};
-				actions.push(deleteMovedAction);
-			}
-
-			// Create/update canonical codex
-			const content = generateCodexContent(targetSection, toNewChain);
-
-			const updateAction: UpdateCodexAction = {
-				payload: { content, sectionChain: toNewChain, splitPath: canonicalPath },
-				type: "UpdateCodex",
-			};
-			actions.push(updateAction);
-		}
-	}
-
-	// 2. Handle deletes
-	for (const chain of impact.deleted) {
+		const content = generateCodexContent(section, chain);
 		const splitPath = computeCodexSplitPath(chain);
 
+		const upsertAction: UpsertCodexAction = {
+			payload: { content, sectionChain: chain, splitPath },
+			type: "UpsertCodex",
+		};
+		actions.push(upsertAction);
+	}
+	logger.info("[codexImpactToActions] Generated UpsertCodex actions", {
+		count: actions.filter((a) => a.type === "UpsertCodex").length,
+	});
+
+	// 3. Handle deletes (sections that were deleted)
+	for (const chain of impact.deleted) {
+		const splitPath = computeCodexSplitPath(chain);
 		const deleteAction: DeleteCodexAction = {
 			payload: { splitPath },
 			type: "DeleteCodex",
@@ -106,65 +95,76 @@ export function codexImpactToActions(
 		actions.push(deleteAction);
 	}
 
-	// 3. Handle content changes (create or update)
-	// Dedupe chains that were already renamed (use new chain)
-	const renamedNewChains = new Set(
-		impact.renamed.map((r) => chainToKey(r.newChain)),
-	);
-	const deletedChains = new Set(impact.deleted.map(chainToKey));
+	// 4. Handle old rename locations (delete moved codexes with old suffix)
+	// When Obsidian moves a folder, it moves all files inside, including codexes.
+	// So the old codex file is now at the NEW location but with the OLD suffix.
+	// Example: kid2 moved from dad to mom:
+	// - Old: Library/dad/kid2/__-kid2-dad.md
+	// - After Obsidian move: Library/mom/kid2/__-kid2-dad.md (moved with folder)
+	// - We want: Library/mom/kid2/__-kid2-mom.md (new canonical)
+	// - So we delete: Library/mom/kid2/__-kid2-dad.md (new location, old suffix)
+	for (const { oldChain, newChain } of impact.renamed) {
+		const oldChainStr = oldChain
+			.map(extractNodeNameFromSegmentId)
+			.join("/");
+		const newChainStr = newChain
+			.map(extractNodeNameFromSegmentId)
+			.join("/");
+		logger.info("[codexImpactToActions] Processing rename", {
+			newChain: newChainStr,
+			oldChain: oldChainStr,
+		});
 
-	for (const chain of impact.contentChanged) {
-		const chainKey = chainToKey(chain);
+		// Delete the moved codex at NEW location with OLD suffix
+		const movedCodexPath = buildMovedCodexPath(oldChain, newChain);
+		const movedPathStr = [
+			...movedCodexPath.pathParts,
+			movedCodexPath.basename,
+		].join("/");
+		logger.info(
+			"[codexImpactToActions] Built moved codex path for deletion",
+			{
+				basename: movedCodexPath.basename,
+				fullPath: movedPathStr,
+				pathParts: movedCodexPath.pathParts,
+			},
+		);
 
-		// Skip if deleted or renamed (RenameCodex already handles renamed sections)
-		if (deletedChains.has(chainKey)) continue;
-		if (renamedNewChains.has(chainKey)) continue;
-
-		// Find section in tree
-		const section = findSectionByChain(tree, chain);
-		if (!section) continue;
-
-		// Generate content
-		const content = generateCodexContent(section, chain);
-		const splitPath = computeCodexSplitPath(chain);
-
-		// Determine if create or update
-		// - isInit = CreateCodex (codex doesn't exist yet)
-		// - Otherwise = UpdateCodex (codex exists, just updating content)
-		const actionType: "CreateCodex" | "UpdateCodex" =
-			isInit ? "CreateCodex" : "UpdateCodex";
-
-		const upsertAction: CreateCodexAction | UpdateCodexAction = {
-			payload: { content, sectionChain: chain, splitPath },
-			type: actionType,
+		const deleteAction: DeleteCodexAction = {
+			payload: { splitPath: movedCodexPath },
+			type: "DeleteCodex",
 		};
-		actions.push(upsertAction);
+		actions.push(deleteAction);
+
+		// For descendants, we need to delete their moved codexes too
+		const section = findSectionByChain(tree, newChain);
+		if (section) {
+			const newDescendantChains = collectDescendantSectionChains(
+				section,
+				newChain,
+			);
+			// Map new descendant chains back to old chains for suffix computation
+			for (const newDescChain of newDescendantChains) {
+				const relativePath = newDescChain.slice(newChain.length);
+				const oldDescChain = [...oldChain, ...relativePath];
+				// Build path: new location (newDescChain) with old suffix (oldDescChain)
+				const movedDescPath = buildMovedCodexPath(
+					oldDescChain,
+					newDescChain,
+				);
+				const descDeleteAction: DeleteCodexAction = {
+					payload: { splitPath: movedDescPath },
+					type: "DeleteCodex",
+				};
+				actions.push(descDeleteAction);
+			}
+		}
 	}
 
-	// 4. Handle descendantsChanged (for ChangeStatus on section)
-	// These sections need their content regenerated + scrolls need status written
+	// 5. Handle WriteScrollStatus for descendant scrolls
 	for (const { sectionChain, newStatus } of impact.descendantsChanged) {
 		const section = findSectionByChain(tree, sectionChain);
 		if (!section) continue;
-
-		// Collect all descendant sections for codex updates
-		const descendantChains = collectDescendantSectionChains(
-			section,
-			sectionChain,
-		);
-		for (const descChain of descendantChains) {
-			const descSection = findSectionByChain(tree, descChain);
-			if (!descSection) continue;
-
-			const content = generateCodexContent(descSection, descChain);
-			const splitPath = computeCodexSplitPath(descChain);
-
-			const updateAction: UpdateCodexAction = {
-				payload: { content, sectionChain: descChain, splitPath },
-				type: "UpdateCodex",
-			};
-			actions.push(updateAction);
-		}
 
 		// Collect all descendant scrolls for status writes
 		const scrollInfos = collectDescendantScrolls(section, sectionChain);
@@ -179,14 +179,26 @@ export function codexImpactToActions(
 		}
 	}
 
+	logger.info("[codexImpactToActions] Final actions", {
+		delete: actions.filter((a) => a.type === "DeleteCodex").length,
+		deletePaths: actions
+			.filter((a) => a.type === "DeleteCodex")
+			.map((a) =>
+				[
+					...a.payload.splitPath.pathParts,
+					a.payload.splitPath.basename,
+				].join("/"),
+			),
+		total: actions.length,
+		upsert: actions.filter((a) => a.type === "UpsertCodex").length,
+		writeStatus: actions.filter((a) => a.type === "WriteScrollStatus")
+			.length,
+	});
+
 	return actions;
 }
 
 // ─── Helpers ───
-
-function chainToKey(chain: SectionNodeSegmentId[]): string {
-	return chain.join("/");
-}
 
 function findSectionByChain(
 	tree: TreeAccessor,
@@ -266,92 +278,85 @@ function extractNodeNameFromSegmentId(segId: SectionNodeSegmentId): string {
 	return raw ?? "";
 }
 
-// ─── Codex Rename Helpers ───
-
-type RenamePair = {
-	fromOldChain: SectionNodeSegmentId[];
-	toNewChain: SectionNodeSegmentId[];
-};
-
 /**
- * Collect all codex rename pairs for a section rename.
- * Includes the renamed section itself + all descendant sections.
+ * Collect all section chains from the tree (including root).
+ * Similar to init regeneration - collects all sections recursively.
  */
-function collectCodexRenamePairs(
-	oldChain: SectionNodeSegmentId[],
-	newChain: SectionNodeSegmentId[],
-	section: SectionNode | undefined,
-): RenamePair[] {
-	const pairs: RenamePair[] = [];
+function collectAllSectionChains(tree: TreeAccessor): SectionNodeSegmentId[][] {
+	const chains: SectionNodeSegmentId[][] = [];
+	const root = tree.getRoot();
 
-	// Add the renamed section itself
-	pairs.push({ fromOldChain: oldChain, toNewChain: newChain });
+	// Root section chain is just the root segment ID
+	const rootSegId = makeNodeSegmentId(root);
+	chains.push([rootSegId]);
 
-	// Add all descendant sections
-	if (section) {
-		const descendants = collectDescendantRenamePairs(
-			section,
-			oldChain,
-			newChain,
-		);
-		pairs.push(...descendants);
-	}
-
-	return pairs;
-}
-
-/**
- * Recursively collect rename pairs for descendant sections.
- */
-function collectDescendantRenamePairs(
-	section: SectionNode,
-	oldParentChain: SectionNodeSegmentId[],
-	newParentChain: SectionNodeSegmentId[],
-): RenamePair[] {
-	const pairs: RenamePair[] = [];
-
-	for (const [segId, child] of Object.entries(section.children)) {
-		if (child.type === TreeNodeType.Section) {
-			const childSegId = segId as SectionNodeSegmentId;
-			const childOldChain = [...oldParentChain, childSegId];
-			const childNewChain = [...newParentChain, childSegId];
-
-			pairs.push({ fromOldChain: childOldChain, toNewChain: childNewChain });
-
-			// Recurse
-			pairs.push(
-				...collectDescendantRenamePairs(child, childOldChain, childNewChain),
-			);
+	// Recursively collect all descendant sections
+	const collectRecursive = (
+		section: SectionNode,
+		parentChain: SectionNodeSegmentId[],
+	): void => {
+		for (const [segId, child] of Object.entries(section.children)) {
+			if (child.type === TreeNodeType.Section) {
+				const childChain = [
+					...parentChain,
+					segId as SectionNodeSegmentId,
+				];
+				chains.push(childChain);
+				collectRecursive(child, childChain);
+			}
 		}
-	}
+	};
 
-	return pairs;
+	collectRecursive(root, [rootSegId]);
+	return chains;
+}
+
+function makeNodeSegmentId(node: SectionNode): SectionNodeSegmentId {
+	// Extract segment ID from node - we need to construct it
+	// The segment ID format is: nodeName﹘Section﹘
+	return `${node.nodeName}${NodeSegmentIdSeparator}${TreeNodeType.Section}${NodeSegmentIdSeparator}` as SectionNodeSegmentId;
 }
 
 /**
- * Build path for orphan codex that Obsidian moved to new location.
- * This is: new location + old suffix
+ * Build path for a codex file that was moved by Obsidian.
+ * The file is at the NEW location but has the OLD suffix.
+ *
+ * @param oldChain - Old section chain (for computing old suffix)
+ * @param newChain - New section chain (for computing new pathParts)
+ * @returns Split path for the moved codex file
+ *
+ * Example: kid2 moved from dad to mom
+ * - oldChain: [Library, dad, kid2] → suffix: ["kid2", "dad"]
+ * - newChain: [Library, mom, kid2] → pathParts: ["Library", "mom", "kid2"]
+ * - Result: { pathParts: ["Library", "mom", "kid2"], basename: "__-kid2-dad" }
  */
-function buildMovedOrphanPath(
+function buildMovedCodexPath(
 	oldChain: SectionNodeSegmentId[],
 	newChain: SectionNodeSegmentId[],
 ): SplitPathToMdFileInsideLibrary {
-	// Path parts from NEW chain (where Obsidian moved files)
-	const newPathParts = newChain.map(extractNodeNameFromSegmentId);
+	// Extract node names
+	const oldNodeNames = oldChain.map(extractNodeNameFromSegmentId);
+	const newNodeNames = newChain.map(extractNodeNameFromSegmentId);
 
-	// Suffix from OLD chain (what the file was named before move)
-	const oldSuffixParts =
-		oldChain.length === 1
-			? [extractNodeNameFromSegmentId(oldChain[0]!)]
-			: oldChain.slice(1).map(extractNodeNameFromSegmentId).reverse();
+	// pathParts = NEW location (where file is now)
+	const pathParts = newNodeNames;
+
+	// suffixParts = OLD suffix (what the file was named before)
+	// Same logic as computeCodexSplitPath
+	const suffixParts =
+		oldNodeNames.length === 1
+			? oldNodeNames // Root: ["Library"]
+			: oldNodeNames.slice(1).reverse(); // Nested: exclude root, reverse
+
+	const basename = makeJoinedSuffixedBasename({
+		coreName: CODEX_CORE_NAME,
+		suffixParts,
+	});
 
 	return {
-		basename: makeJoinedSuffixedBasename({
-			coreName: "__",
-			suffixParts: oldSuffixParts,
-		}),
+		basename,
 		extension: "md",
-		pathParts: newPathParts,
+		pathParts,
 		type: SplitPathType.MdFile,
 	};
 }

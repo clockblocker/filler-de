@@ -7,6 +7,7 @@ import {
 	VaultActionType,
 } from "../../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { upsertMetadata } from "../../../../managers/pure/note-metadata-manager";
+import { logger } from "../../../../utils/logger";
 import { makeVaultScopedSplitPath } from "../tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
 import type { CodexAction } from "./types/codex-action";
 
@@ -15,9 +16,7 @@ import type { CodexAction } from "./types/codex-action";
  */
 export function codexActionToVaultAction(action: CodexAction): VaultAction {
 	switch (action.type) {
-		case "CreateCodex":
-		case "UpdateCodex":
-			// Both map to UpsertMdFile
+		case "UpsertCodex":
 			return {
 				payload: {
 					content: action.payload.content,
@@ -28,24 +27,28 @@ export function codexActionToVaultAction(action: CodexAction): VaultAction {
 				type: VaultActionType.UpsertMdFile,
 			};
 
-		case "RenameCodex":
+		case "DeleteCodex": {
+			const vaultScopedPath = makeVaultScopedSplitPath(
+				action.payload.splitPath,
+			);
+			const deletePath = [
+				...vaultScopedPath.pathParts,
+				vaultScopedPath.basename,
+			].join("/");
+			logger.info("[codexActionToVaultAction] Converting DeleteCodex", {
+				originalPath: [
+					...action.payload.splitPath.pathParts,
+					action.payload.splitPath.basename,
+				].join("/"),
+				vaultScopedPath: deletePath,
+			});
 			return {
 				payload: {
-					from: makeVaultScopedSplitPath(action.payload.from),
-					to: makeVaultScopedSplitPath(action.payload.to),
-				},
-				type: VaultActionType.RenameMdFile,
-			};
-
-		case "DeleteCodex":
-			return {
-				payload: {
-					splitPath: makeVaultScopedSplitPath(
-						action.payload.splitPath,
-					),
+					splitPath: vaultScopedPath,
 				},
 				type: VaultActionType.TrashMdFile,
 			};
+		}
 
 		case "WriteScrollStatus":
 			// ProcessMdFile with transform to update metadata
@@ -54,7 +57,9 @@ export function codexActionToVaultAction(action: CodexAction): VaultAction {
 					splitPath: makeVaultScopedSplitPath(
 						action.payload.splitPath,
 					),
-					transform: upsertMetadata({ status: action.payload.status }),
+					transform: upsertMetadata({
+						status: action.payload.status,
+					}),
 				},
 				type: VaultActionType.ProcessMdFile,
 			};
