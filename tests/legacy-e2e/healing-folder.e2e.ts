@@ -1,13 +1,13 @@
 /// <reference types="@wdio/globals/types" />
 import { obsidianPage } from "wdio-obsidian-service";
-import { INIT_HEALING_WAIT_MS } from "../helpers/polling";
+import { INIT_HEALING_WAIT_MS } from "../obsidian-e2e/helpers/polling";
 import {
 	testDeepFolderRenameHealsAllDescendants,
 	testFolderRenameHealsChildSuffix,
 	testFolderRenameWithSuffixTriggersMove,
 	testMiddleFolderRenameHealsDescendants,
 	testNestedFolderRenameWithSuffixTriggersMove,
-} from "./healing/folder-rename.test";
+} from "../obsidian-e2e/librarian/healing/folder-rename.test";
 
 const VAULT_PATH = "tests/obsidian-e2e/vaults/healing";
 

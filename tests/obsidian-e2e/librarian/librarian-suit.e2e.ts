@@ -8,12 +8,15 @@ import {
 
 const VAULT_PATH = "tests/obsidian-e2e/vaults/healing";
 
-describe("Codex - Init", () => {
+describe("Librarian Full Suit", () => {
 	before(async () => {
 		await obsidianPage.resetVault(VAULT_PATH);
 		await new Promise((r) => setTimeout(r, INIT_HEALING_WAIT_MS + EXTRA_INIT_HEALING_WAIT_MS));
 	});
 
+    // Codex Init
 	it("creates codex files on init", testCodexCreatedOnInit);
 	it("codex naming for deeply nested sections", testCodexNamingDeeplyNested);
+
+    // Fs init
 });

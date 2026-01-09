@@ -1,6 +1,6 @@
 /// <reference types="@wdio/globals/types" />
 import { obsidianPage } from "wdio-obsidian-service";
-import { EXTRA_INIT_HEALING_WAIT_MS, INIT_HEALING_WAIT_MS } from "../helpers/polling";
+import { EXTRA_INIT_HEALING_WAIT_MS, INIT_HEALING_WAIT_MS } from "../obsidian-e2e/helpers/polling";
 import {
 	testInitHealingAddsSuffixToNestedFile,
 	testInitHealingFixesWrongSuffix,
@@ -9,7 +9,7 @@ import {
 	testInitHealingNoOpForCorrectFiles,
 	testInitHealingRootFileNoSuffix,
 	testInitHealingRootFileSingleSuffix,
-} from "./healing/init-healing.test";
+} from "../obsidian-e2e/librarian/healing/init-healing.test";
 
 const VAULT_PATH = "tests/obsidian-e2e/vaults/healing";
 
