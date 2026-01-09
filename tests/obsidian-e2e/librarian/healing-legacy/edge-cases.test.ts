@@ -7,7 +7,7 @@ import {
 	createFolder,
 	deletePath,
 	renamePath,
-} from "../../helpers/vault-ops";
+} from "../../support/api/vault-ops";
 
 /**
  * Test: CoreName = NodeName (no delimiter allowed in coreName).

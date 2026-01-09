@@ -59,29 +59,14 @@ describe("Codex init for nested sections", () => {
 		const result = tree.apply(createAction);
 		impacts.push(result.codexImpact);
 
-		console.log(
-			"Codex impact contentChanged:",
-			result.codexImpact.contentChanged,
-		);
-
 		const mergedImpact = mergeCodexImpacts(impacts);
-		console.log("Merged contentChanged:", mergedImpact.contentChanged);
 
 		const codexActions = codexImpactToActions(mergedImpact, tree);
-		console.log(
-			"Codex actions:",
-			codexActions.map((a) => ({
-				path: (a.payload as any).splitPath?.pathParts,
-				type: a.type,
-			})),
-		);
 
 		// Should have codexes for: Library, grandpa, father, kid
 		const createCodexPaths = codexActions
 			.filter((a) => a.type === "UpsertCodex")
 			.map((a) => (a.payload as any).splitPath.pathParts.join("/"));
-
-		console.log("Create codex paths:", createCodexPaths);
 
 		expect(createCodexPaths).toContain("Library");
 		expect(createCodexPaths).toContain("Library/grandpa");

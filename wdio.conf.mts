@@ -63,8 +63,9 @@ export const config: WebdriverIO.Config = {
     },
     // You can use any wdio reporter, but they show the Chromium version instead of the
     // Obsidian version a test is running on. obsidian-reporter is just a wrapper around
-    // spec-reporter that shows the Obsidian version.
-    reporters: ['obsidian'],
+    reporters: [
+        ["obsidian", { addConsoleLogs: false, onlyFailures: true }],
+      ],
     runner: 'local',
 
     services: ["obsidian"],

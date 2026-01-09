@@ -4,9 +4,9 @@ import { EXTRA_INIT_HEALING_WAIT_MS, INIT_HEALING_WAIT_MS } from "../helpers/pol
 import {
 	testAllCodexesCreatedOnInit,
     testAllFilesSuffixedOnInit,
-} from "./chain/000-init";
+} from "./chains/0-chain/000-init";
 
-const VAULT_PATH = "tests/obsidian-e2e/vaults/librarian-for-e2e";
+const VAULT_PATH = "tests/obsidian-e2e/vaults/librarian-chain-0";
 
 describe("Librarian Full Suit", () => {
 	before(async () => {

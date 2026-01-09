@@ -1,7 +1,7 @@
 /// <reference types="@wdio/globals/types" />
 import { expect } from "@wdio/globals";
 import { OFFSET_AFTER_FILE_DELETION, waitForFile, waitForFileGone } from "../../helpers/polling";
-import { createFile, renamePath } from "../../helpers/vault-ops";
+import { createFile, renamePath } from "../../support/api/vault-ops";
 
 /**
  * Test: Rename file with suffix indicating move → file moves to suffix location.

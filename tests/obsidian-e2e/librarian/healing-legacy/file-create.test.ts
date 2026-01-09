@@ -1,7 +1,7 @@
 /// <reference types="@wdio/globals/types" />
 import { expect } from "@wdio/globals";
 import { OFFSET_AFTER_FILE_DELETION, waitForFile, waitForFileGone } from "../../helpers/polling";
-import { createFile } from "../../helpers/vault-ops";
+import { createFile } from "../../support/api/vault-ops";
 
 /**
  * Test: File created at Library root triggers NameKing healing.

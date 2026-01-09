@@ -1,7 +1,7 @@
 /// <reference types="@wdio/globals/types" />
 import { expect } from "@wdio/globals";
 import { OFFSET_AFTER_FILE_DELETION, OFFSET_AFTER_HEAL, waitForFile, waitForFileGone } from "../../helpers/polling";
-import { renamePath } from "../../helpers/vault-ops";
+import { renamePath } from "../../support/api/vault-ops";
 
 /**
  * Test: Renaming a folder heals nested leaf suffixes.

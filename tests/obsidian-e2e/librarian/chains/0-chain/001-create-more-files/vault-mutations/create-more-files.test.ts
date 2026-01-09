@@ -1,6 +1,6 @@
 /// <reference types="@wdio/globals/types" />
 import { expect } from "@wdio/globals";
-import { createFiles } from "../../../../helpers/vault-ops";
+import { createFiles } from "../../../../../support/api/vault-ops";
 
 export async function createMoreFiles(): Promise<void> {
 	await createFiles([

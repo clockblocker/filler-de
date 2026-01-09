@@ -1,0 +1,54 @@
+export interface PollOptions {
+    timeoutOffset?: number;
+    intervalOffset?: number;
+  
+    /** Optional hard override if you want to bypass defaults+offsets */
+    timeoutMs?: number;
+    intervalMs?: number;
+  
+    /** Used for error messages */
+    label?: string;
+  }
+  
+  export type PollResult<T> =
+    | {
+        ok: true;
+        value: T;
+        attempts: number;
+        waitedMs: number;
+        timeoutMs: number;
+        intervalMs: number;
+        label?: string;
+      }
+    | {
+        ok: false;
+        value?: T;
+        attempts: number;
+        waitedMs: number;
+        timeoutMs: number;
+        intervalMs: number;
+        label?: string;
+      };
+  
+  export type FileWaitStatus =
+    | { path: string; ok: true; firstSeenAtMs: number; attempts: number }
+    | {
+        path: string;
+        ok: false;
+        attempts: number;
+        waitedMs: number;
+  
+        /** evidence */
+        finalObsidianSeesFile: boolean;
+        vaultSample?: string[];
+      };
+  
+  export type ExpectFilesOptions = PollOptions & {
+    includeVaultSample?: boolean;
+    vaultSampleLimit?: number;
+  };
+
+  export type ExpectFilesGoneOptions = PollOptions & {
+    includeVaultSample?: boolean;
+    vaultSampleLimit?: number;
+  };
