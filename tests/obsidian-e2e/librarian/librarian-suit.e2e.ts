@@ -2,8 +2,7 @@
 import { obsidianPage } from "wdio-obsidian-service";
 import { EXTRA_INIT_HEALING_WAIT_MS, INIT_HEALING_WAIT_MS } from "../helpers/polling";
 import {
-	testCodexCreatedOnInit,
-	testCodexNamingDeeplyNested,
+	testAllCodexesCreatedOnInit,
 } from "./codex/codex-init.test";
 
 const VAULT_PATH = "tests/obsidian-e2e/vaults/healing";
@@ -15,8 +14,7 @@ describe("Librarian Full Suit", () => {
 	});
 
     // Codex Init
-	it("creates codex files on init", testCodexCreatedOnInit);
-	it("codex naming for deeply nested sections", testCodexNamingDeeplyNested);
+	it("creates all codex files on init", testAllCodexesCreatedOnInit);
 
     // Fs init
 });

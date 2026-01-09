@@ -5,16 +5,16 @@ export interface PollOptions {
 	intervalOffset?: number;
 }
 
-const TIMEOUT_DEFAULT = 2000;
-const INTERVAL_DEFAULT = 500;
+const TIMEOUT_DEFAULT = 3000;
+const INTERVAL_DEFAULT = 100;
 
 /** Time to wait for plugin init + initial healing before each test */
-export const INIT_HEALING_WAIT_MS = 1000;
-export const EXTRA_INIT_HEALING_WAIT_MS = 5000;
+export const INIT_HEALING_WAIT_MS = 0;
+export const EXTRA_INIT_HEALING_WAIT_MS = 0;
 
 // Offsets
-export const OFFSET_AFTER_FILE_DELETION = { intervalOffset: -400, timeoutOffset: 0, };
-export const OFFSET_AFTER_HEAL = { intervalOffset: 1500, timeoutOffset: 1000 };
+export const OFFSET_AFTER_FILE_DELETION = { intervalOffset: 0, timeoutOffset: 0, };
+export const OFFSET_AFTER_HEAL = { intervalOffset: 0, timeoutOffset: 0 };
 
 /**
  * Poll until file exists at path.
@@ -38,6 +38,16 @@ export async function waitForFile(
 		await new Promise((r) => setTimeout(r, interval));
 	}
 	return false;
+}
+
+/**
+ * Poll until all files exist at paths. Runs checks in parallel.
+ */
+export async function waitForFiles(
+	paths: readonly string[],
+	opts: PollOptions = {},
+): Promise<boolean[]> {
+	return Promise.all(paths.map((path) => waitForFile(path, opts)));
 }
 
 /**
