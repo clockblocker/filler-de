@@ -1,11 +1,10 @@
 /// <reference types="@wdio/globals/types" />
-import { expect } from "@wdio/globals";
-import { browser } from "@wdio/globals";
+import { browser, expect } from "@wdio/globals";
 import { waitForFile, waitForFileGone } from "../../helpers/polling";
 
 // Shorter timeouts for codex operations (they should be fast after healing)
-const CODEX_WAIT = { timeoutOffset: 1000, intervalOffset: 0 };
-const CODEX_GONE_WAIT = { timeoutOffset: 500, intervalOffset: -300 };
+const CODEX_WAIT = { intervalOffset: 0, timeoutOffset: 1000 };
+const CODEX_GONE_WAIT = { intervalOffset: -300, timeoutOffset: 500 };
 
 // ─── File Rename Tests ───
 
@@ -25,7 +24,7 @@ export async function testCodexUpdatesOnFileRename(): Promise<void> {
 	await browser.executeObsidian(async ({ app }, { oldP, newP }) => {
 		const file = app.vault.getAbstractFileByPath(oldP);
 		if (file) await app.vault.rename(file, newP);
-	}, { oldP: oldPath, newP: newPath });
+	}, { newP: newPath, oldP: oldPath });
 
 	// Wait for rename to complete and codex to update
 	await new Promise((r) => setTimeout(r, 2000));
@@ -72,7 +71,7 @@ export async function testCodexUpdatesOnFileRenameWithMove(): Promise<void> {
 	await browser.executeObsidian(async ({ app }, { oldP, newP }) => {
 		const file = app.vault.getAbstractFileByPath(oldP);
 		if (file) await app.vault.rename(file, newP);
-	}, { oldP: oldPath, newP: renamedPath });
+	}, { newP: renamedPath, oldP: oldPath });
 
 	// File should be healed to new location
 	const healed = await waitForFile(expectedPath, CODEX_WAIT);
@@ -110,7 +109,7 @@ export async function testCodexRenamedOnFolderRename(): Promise<void> {
 	await browser.executeObsidian(async ({ app }, { oldP, newP }) => {
 		const folder = app.vault.getAbstractFileByPath(oldP);
 		if (folder) await app.vault.rename(folder, newP);
-	}, { oldP: oldFolderPath, newP: newFolderPath });
+	}, { newP: newFolderPath, oldP: oldFolderPath });
 
 	// Wait for processing
 	await new Promise((r) => setTimeout(r, 3000));
@@ -163,7 +162,7 @@ export async function testCodexRenamedOnNestedFolderRename(): Promise<void> {
 	await browser.executeObsidian(async ({ app }, { oldP, newP }) => {
 		const folder = app.vault.getAbstractFileByPath(oldP);
 		if (folder) await app.vault.rename(folder, newP);
-	}, { oldP: oldFolderPath, newP: newFolderPath });
+	}, { newP: newFolderPath, oldP: oldFolderPath });
 
 	// Wait for processing
 	await new Promise((r) => setTimeout(r, 5000));
@@ -189,7 +188,7 @@ export async function testCodexRenamedOnNestedFolderRename(): Promise<void> {
 	const oldFatherGone = await waitForFileGone(oldFatherCodex, CODEX_GONE_WAIT);
 	const oldKidGone = await waitForFileGone(oldKidCodex, CODEX_GONE_WAIT);
 	
-	console.log("Old codexes gone:", { oldGrandpaGone, oldFatherGone, oldKidGone });
+	console.log("Old codexes gone:", { oldFatherGone, oldGrandpaGone, oldKidGone });
 	
 	expect(oldGrandpaGone).toBe(true);
 	expect(oldFatherGone).toBe(true);
@@ -229,7 +228,7 @@ export async function testCodexUpdatesOnFileMove(): Promise<void> {
 	await browser.executeObsidian(async ({ app }, { oldP, newP }) => {
 		const file = app.vault.getAbstractFileByPath(oldP);
 		if (file) await app.vault.rename(file, newP);
-	}, { oldP: oldPath, newP: draggedPath });
+	}, { newP: draggedPath, oldP: oldPath });
 
 	// File should be healed
 	const healed = await waitForFile(healedPath, CODEX_WAIT);
@@ -271,7 +270,7 @@ export async function testCodexUpdatesOnFolderMove(): Promise<void> {
 	await browser.executeObsidian(async ({ app }, { oldP, newP }) => {
 		const folder = app.vault.getAbstractFileByPath(oldP);
 		if (folder) await app.vault.rename(folder, newP);
-	}, { oldP: folderPath, newP: newFolderPath });
+	}, { newP: newFolderPath, oldP: folderPath });
 
 	// Old codex should be gone
 	const oldGone = await waitForFileGone(oldCodexF3, CODEX_GONE_WAIT);

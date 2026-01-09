@@ -5,7 +5,7 @@ import {
 	testAllCodexesCreatedOnInit,
 } from "./codex/codex-init.test";
 
-const VAULT_PATH = "tests/obsidian-e2e/vaults/healing";
+const VAULT_PATH = "tests/obsidian-e2e/vaults/librarian-for-e2e";
 
 describe("Librarian Full Suit", () => {
 	before(async () => {

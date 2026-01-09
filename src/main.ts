@@ -32,6 +32,7 @@ import { ACTION_CONFIGS } from "./services/wip-configs/actions/actions-config";
 import addBacklinksToCurrentFile from "./services/wip-configs/actions/old/addBacklinksToCurrentFile";
 import { SettingsTab } from "./settings";
 import { DEFAULT_SETTINGS, type TextEaterSettings } from "./types";
+import { whenIdle as whenIdleTracker } from "./utils/idle-tracker";
 import { logger } from "./utils/logger";
 
 export default class TextEaterPlugin extends Plugin {
@@ -550,6 +551,14 @@ export default class TextEaterPlugin extends Plugin {
 			tfileHelper: this.testingTFileHelper,
 			tfolderHelper: this.testingTFolderHelper,
 		};
+	}
+
+	/**
+	 * E2E test hook: wait until all plugin async work is complete.
+	 * Resolves when all queues are drained and pending tasks are done.
+	 */
+	async whenIdle(): Promise<void> {
+		return whenIdleTracker();
 	}
 
 	async saveSettings() {

@@ -98,3 +98,16 @@ export async function waitFor<T>(
 	return null;
 }
 
+/**
+ * Wait until all plugin async work is complete.
+ * Uses the plugin's whenIdle() hook for deterministic waiting.
+ */
+export async function whenIdle(): Promise<void> {
+	await browser.executeObsidian(async ({ app }) => {
+		const plugin = (app as any).plugins.plugins["cbcr-text-eater-de"];
+		if (!plugin) {
+			throw new Error("Textfresser plugin not found");
+		}
+		await plugin.whenIdle();
+	});
+}

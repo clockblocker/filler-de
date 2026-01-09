@@ -11,6 +11,7 @@ import type {
 import type { SplitPathWithReader } from "../../managers/obsidian/vault-action-manager/types/split-path";
 import { SplitPathType } from "../../managers/obsidian/vault-action-manager/types/split-path";
 import { readMetadata } from "../../managers/pure/note-metadata-manager";
+import { decrementPending, incrementPending } from "../../utils/idle-tracker";
 import { logger } from "../../utils/logger";
 import { healingActionsToVaultActions } from "./library-tree/codecs/healing-to-vault-action";
 import {
@@ -426,21 +427,28 @@ export class Librarian {
 	private async processQueue(): Promise<void> {
 		if (this.processing) return;
 		this.processing = true;
+		incrementPending();
 
-		while (this.queue.length > 0) {
-			const item = this.queue.shift();
-			if (!item) continue;
+		try {
+			while (this.queue.length > 0) {
+				const item = this.queue.shift();
+				if (!item) continue;
 
-			try {
-				await this.processActions(item.actions);
-			} catch (error) {
-				logger.error("[Librarian] Error processing actions:", error);
+				try {
+					await this.processActions(item.actions);
+				} catch (error) {
+					logger.error(
+						"[Librarian] Error processing actions:",
+						error,
+					);
+				}
+
+				item.resolve();
 			}
-
-			item.resolve();
+		} finally {
+			this.processing = false;
+			decrementPending();
 		}
-
-		this.processing = false;
 	}
 
 	/**

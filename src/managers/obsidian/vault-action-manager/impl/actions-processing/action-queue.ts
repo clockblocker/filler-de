@@ -1,4 +1,8 @@
 import { ok } from "neverthrow";
+import {
+	decrementPending,
+	incrementPending,
+} from "../../../../../utils/idle-tracker";
 import type { VaultAction } from "../../types/vault-action";
 import type { Dispatcher, DispatchResult } from "./dispatcher";
 
@@ -57,27 +61,40 @@ export class ActionQueue {
 			// Could return error here, but dropping is safer for now
 		}
 
+		const wasExecuting = this.isExecuting;
 		this.isExecuting = true;
 		this.batchCount++;
 
-		// Take all queued actions as one batch (unlimited size)
-		const batch = [...this.queue];
-		this.queue = [];
-
-		// Dispatch: collapse + sort + register paths + execute (handled by Dispatcher)
-		// Path registration happens INSIDE Dispatcher after collapse
-		// to ensure we track paths from the ACTUAL actions that will execute
-		const result = await this.dispatcher.dispatch(batch);
-
-		this.batchCount--;
-
-		// When dispatched ops are done, check queue for more
-		if (this.queue.length > 0) {
-			// Recursively execute next batch
-			return this.executeNextBatch();
+		// Track pending work: increment only when starting first batch
+		if (!wasExecuting) {
+			incrementPending();
 		}
 
-		this.isExecuting = false;
-		return result;
+		try {
+			// Take all queued actions as one batch (unlimited size)
+			const batch = [...this.queue];
+			this.queue = [];
+
+			// Dispatch: collapse + sort + register paths + execute (handled by Dispatcher)
+			// Path registration happens INSIDE Dispatcher after collapse
+			// to ensure we track paths from the ACTUAL actions that will execute
+			const result = await this.dispatcher.dispatch(batch);
+
+			this.batchCount--;
+
+			// When dispatched ops are done, check queue for more
+			if (this.queue.length > 0) {
+				// Recursively execute next batch
+				return this.executeNextBatch();
+			}
+
+			this.isExecuting = false;
+			return result;
+		} finally {
+			// Decrement only when all batches complete (isExecuting becomes false)
+			if (!this.isExecuting) {
+				decrementPending();
+			}
+		}
 	}
 }
