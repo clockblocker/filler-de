@@ -11,7 +11,7 @@ import {
 	testFolderRenameMultipleFiles,
 	testRapidSuccessiveRenames,
 	testSuffixWithUnderscores,
-} from "../obsidian-e2e/librarian/healing/edge-cases.test";
+} from "../obsidian-e2e/librarian/healing-legacy/edge-cases.test";
 
 const VAULT_PATH = "tests/obsidian-e2e/vaults/healing";
 

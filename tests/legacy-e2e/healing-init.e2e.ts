@@ -9,7 +9,7 @@ import {
 	testInitHealingNoOpForCorrectFiles,
 	testInitHealingRootFileNoSuffix,
 	testInitHealingRootFileSingleSuffix,
-} from "../obsidian-e2e/librarian/healing/init-healing.test";
+} from "../obsidian-e2e/librarian/healing-legacy/init-healing.test";
 
 const VAULT_PATH = "tests/obsidian-e2e/vaults/healing";
 

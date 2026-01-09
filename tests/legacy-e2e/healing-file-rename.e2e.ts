@@ -7,7 +7,7 @@ import {
 	testRenameRootFileStaysAtRoot,
 	testRenameRootFileWithSuffixMoves,
 	testRenameSuffixTriggersMove,
-} from "../obsidian-e2e/librarian/healing/file-rename.test";
+} from "../obsidian-e2e/librarian/healing-legacy/file-rename.test";
 
 const VAULT_PATH = "tests/obsidian-e2e/vaults/healing";
 

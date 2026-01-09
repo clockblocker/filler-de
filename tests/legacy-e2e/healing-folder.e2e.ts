@@ -7,7 +7,7 @@ import {
 	testFolderRenameWithSuffixTriggersMove,
 	testMiddleFolderRenameHealsDescendants,
 	testNestedFolderRenameWithSuffixTriggersMove,
-} from "../obsidian-e2e/librarian/healing/folder-rename.test";
+} from "../obsidian-e2e/librarian/healing-legacy/folder-rename.test";
 
 const VAULT_PATH = "tests/obsidian-e2e/vaults/healing";
 

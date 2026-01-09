@@ -8,7 +8,7 @@ import {
 	testCodexUpdatesOnFileRename,
 	testCodexUpdatesOnFileRenameWithMove,
 	testCodexUpdatesOnFolderMove,
-} from "../obsidian-e2e/librarian/codex/codex-reactions.test";
+} from "../obsidian-e2e/librarian/codex-legacy/codex-reactions.test";
 
 const VAULT_PATH = "tests/obsidian-e2e/vaults/healing";
 

@@ -7,7 +7,7 @@ import {
 	testMoveToDeepFolderExtendsSuffix,
 	testMoveToRootRemovesSuffix,
 	testMoveToShallowerFolderShortensSuffix,
-} from "../obsidian-e2e/librarian/healing/file-move.test";
+} from "../obsidian-e2e/librarian/healing-legacy/file-move.test";
 
 const VAULT_PATH = "tests/obsidian-e2e/vaults/healing";
 
