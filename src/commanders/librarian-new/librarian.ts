@@ -16,11 +16,13 @@ import { logger } from "../../utils/logger";
 import { healingActionsToVaultActions } from "./library-tree/codecs/healing-to-vault-action";
 import {
 	CODEX_CORE_NAME,
+	type CodexAction,
 	type CodexImpact,
 	codexActionsToVaultActions,
 	codexImpactToActions,
 	computeCodexSplitPath,
 	parseCodexClickLineContent,
+	type WriteScrollStatusAction,
 } from "./library-tree/codex";
 import { mergeCodexImpacts } from "./library-tree/codex/merge-codex-impacts";
 import { LibraryTree } from "./library-tree/library-tree";
@@ -33,7 +35,11 @@ import type {
 	CreateTreeLeafAction,
 	TreeAction,
 } from "./library-tree/tree-action/types/tree-action";
-import { tryParseAsSeparatedSuffixedBasename } from "./library-tree/tree-action/utils/canonical-naming/suffix-utils/core-suffix-utils";
+import {
+	makeJoinedSuffixedBasename,
+	makeSuffixPartsFromPathPartsWithRoot,
+	tryParseAsSeparatedSuffixedBasename,
+} from "./library-tree/tree-action/utils/canonical-naming/suffix-utils/core-suffix-utils";
 import { makeLocatorFromCanonicalSplitPathInsideLibrary } from "./library-tree/tree-action/utils/locator/locator-codec";
 import { makeNodeSegmentId } from "./library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import {
@@ -514,10 +520,18 @@ export class Librarian {
 			}
 		}
 
-		// 2. Then dispatch codex actions
+		// 2. Extract scroll status changes from actions
+		const scrollStatusActions = this.extractScrollStatusActions(actions);
+
+		// 3. Then dispatch codex actions
 		const mergedImpact = mergeCodexImpacts(allCodexImpacts);
 		const codexActions = codexImpactToActions(mergedImpact, this.tree);
-		const codexVaultActions = codexActionsToVaultActions(codexActions);
+		// Merge scroll status actions with codex actions
+		const allCodexActions: CodexAction[] = [
+			...codexActions,
+			...scrollStatusActions,
+		];
+		const codexVaultActions = codexActionsToVaultActions(allCodexActions);
 
 		if (codexVaultActions.length > 0) {
 			logger.info(
@@ -539,6 +553,82 @@ export class Librarian {
 			}
 			await this.vaultActionManager.dispatch(codexVaultActions);
 		}
+	}
+
+	/**
+	 * Extract WriteScrollStatusAction from ChangeStatus actions on scrolls.
+	 */
+	private extractScrollStatusActions(
+		actions: TreeAction[],
+	): WriteScrollStatusAction[] {
+		const scrollActions: WriteScrollStatusAction[] = [];
+
+		for (const action of actions) {
+			if (
+				action.actionType !== "ChangeStatus" ||
+				action.targetLocator.targetType !== TreeNodeType.Scroll
+			) {
+				continue;
+			}
+
+			const nodeName = this.extractNodeNameFromScrollSegmentId(
+				action.targetLocator.segmentId,
+			);
+			const parentChain = action.targetLocator.segmentIdChainToParent;
+			const splitPath = this.computeScrollSplitPath(
+				nodeName,
+				parentChain,
+			);
+
+			scrollActions.push({
+				payload: {
+					splitPath,
+					status: action.newStatus,
+				},
+				type: "WriteScrollStatus",
+			});
+		}
+
+		return scrollActions;
+	}
+
+	/**
+	 * Extract node name from scroll segment ID (format: "nodeName﹘Scroll﹘md").
+	 */
+	private extractNodeNameFromScrollSegmentId(
+		segmentId: ScrollNodeSegmentId,
+	): string {
+		const [raw] = segmentId.split(NodeSegmentIdSeparator, 1);
+		return raw ?? "";
+	}
+
+	/**
+	 * Compute split path for a scroll given its node name and parent chain.
+	 */
+	private computeScrollSplitPath(
+		nodeName: string,
+		parentChain: SectionNodeSegmentId[],
+	): SplitPathInsideLibrary & {
+		type: typeof SplitPathType.MdFile;
+		extension: "md";
+	} {
+		const pathParts = parentChain.map((segId) => {
+			const [raw] = segId.split(NodeSegmentIdSeparator, 1);
+			return raw ?? "";
+		});
+		const suffixParts = makeSuffixPartsFromPathPartsWithRoot(pathParts);
+
+		const basename = makeJoinedSuffixedBasename({
+			coreName: nodeName,
+			suffixParts,
+		});
+
+		return {
+			basename,
+			extension: "md",
+			pathParts,
+			type: SplitPathType.MdFile,
+		};
 	}
 
 	/**

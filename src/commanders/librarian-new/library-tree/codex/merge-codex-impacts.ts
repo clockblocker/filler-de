@@ -2,7 +2,10 @@
  * Merge multiple CodexImpact objects into one.
  */
 
-import type { CodexImpact, DescendantsStatusChange } from "./compute-codex-impact";
+import type {
+	CodexImpact,
+	DescendantsStatusChange,
+} from "./compute-codex-impact";
 import { dedupeChains } from "./section-chain-utils";
 
 /**
@@ -26,7 +29,9 @@ export function mergeCodexImpacts(impacts: CodexImpact[]): CodexImpact {
 	// Dedupe chains
 	merged.contentChanged = dedupeChains(merged.contentChanged);
 	merged.deleted = dedupeChains(merged.deleted);
-	merged.descendantsChanged = dedupeDescendantsChanged(merged.descendantsChanged);
+	merged.descendantsChanged = dedupeDescendantsChanged(
+		merged.descendantsChanged,
+	);
 	merged.renamed = dedupeRenamedChains(merged.renamed);
 
 	return merged;

@@ -3,11 +3,11 @@
  * Used to determine which codex files need regeneration/rename/deletion.
  */
 
-import { TreeNodeStatus, TreeNodeType } from "../tree-node/types/atoms";
-import type { SectionNodeSegmentId } from "../tree-node/types/node-segment-id";
-import { NodeSegmentIdSeparator } from "../tree-node/types/node-segment-id";
 import type { TreeAction } from "../tree-action/types/tree-action";
 import { TreeActionType } from "../tree-action/types/tree-action";
+import { type TreeNodeStatus, TreeNodeType } from "../tree-node/types/atoms";
+import type { SectionNodeSegmentId } from "../tree-node/types/node-segment-id";
+import { NodeSegmentIdSeparator } from "../tree-node/types/node-segment-id";
 import { collectImpactedSections } from "./section-chain-utils";
 
 // ─── Types ───
@@ -109,7 +109,7 @@ function computeRenameImpact(
 		const newSegmentId = makeSectionSegmentId(newNodeName);
 		const newChain = [...parentChain, newSegmentId];
 
-		impact.renamed.push({ oldChain, newChain });
+		impact.renamed.push({ newChain, oldChain });
 
 		// Renamed section's content also needs update (parent backlink text changes)
 		impact.contentChanged.push(newChain);
@@ -147,7 +147,7 @@ function computeMoveImpact(
 		const newSegmentId = makeSectionSegmentId(newNodeName);
 		const newChain = [...newParentChain, newSegmentId];
 
-		impact.renamed.push({ oldChain, newChain });
+		impact.renamed.push({ newChain, oldChain });
 
 		// Moved section's content needs update (parent backlink changes)
 		impact.contentChanged.push(newChain);
@@ -157,7 +157,10 @@ function computeMoveImpact(
 }
 
 function computeChangeStatusImpact(
-	action: Extract<TreeAction, { actionType: typeof TreeActionType.ChangeStatus }>,
+	action: Extract<
+		TreeAction,
+		{ actionType: typeof TreeActionType.ChangeStatus }
+	>,
 	impact: CodexImpact,
 ): CodexImpact {
 	const { targetLocator, newStatus } = action;
