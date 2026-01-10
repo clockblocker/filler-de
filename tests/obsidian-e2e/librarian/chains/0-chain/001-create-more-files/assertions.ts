@@ -10,7 +10,8 @@ export async function testPostHealing001(): Promise<void> {
 		],
 		{
 			callerContext: "[testPostHealing001]",
-			timeoutMs: 10000, // Allow time for cascading healing to complete
+			intervalMs: 200, // Check less frequently to give Obsidian more time
+			timeoutMs: 15000, // Allow more time for codex files to be registered by Obsidian
 		},
 	);
 }
