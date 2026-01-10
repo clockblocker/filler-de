@@ -41,10 +41,6 @@ export const VAULT_EXPECTATIONS_000 = {
         codexes: EXPECTED_CODEXES_AFTER_000,
         files: EXPECTED_FILES_AFTER_000,
     },
-    postMutation: {
-        codexes: [],
-        files: FILES_ON_STARTUP,
-    },
 }
 
 

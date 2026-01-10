@@ -178,10 +178,16 @@ export async function deletePath(path: string): Promise<Result<void, string>> {
 
 /**
  * Create a folder via Obsidian API.
+ * Idempotent: returns success if folder already exists.
  */
 export async function createFolder(path: string): Promise<Result<void, string>> {
 	try {
 		await browser.executeObsidian(async ({ app }, p) => {
+			const existing = app.vault.getAbstractFileByPath(p);
+			if (existing) {
+				// Folder already exists, that's fine
+				return;
+			}
 			await app.vault.createFolder(p);
 		}, path);
 		return ok(undefined);

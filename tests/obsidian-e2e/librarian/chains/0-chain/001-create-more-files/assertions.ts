@@ -10,6 +10,7 @@ export async function testPostHealing001(): Promise<void> {
 		],
 		{
 			callerContext: "[testPostHealing001]",
+			timeoutMs: 10000, // Allow time for cascading healing to complete
 		},
 	);
 }

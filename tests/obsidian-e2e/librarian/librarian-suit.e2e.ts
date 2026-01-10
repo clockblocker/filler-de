@@ -24,16 +24,17 @@ describe("Librarian Full Suit", () => {
     // Files are canonically suffixed
 	it("all files are healed to canonical suffixes on init", testAllFilesSuffixedOnInit);
 
-	// // Create more files mutation
-	// it("creates additional files after mutation", async () => {
-	// 	await performMutation001();
-	// 	await waitForIdle();
-	// });
+	// Create more files mutation
+	it("creates additional files after mutation", async () => {
+		await performMutation001();
+		await waitForIdle();
+	});
 
-	// // Post-mutation healing
-	// it("heals all files to canonical suffixes after mutation", async () => {
-	// 	await testPostHealing001();
-	// });
+	// Post-mutation healing
+	it("heals all files to canonical suffixes after mutation", async () => {
+		await waitForIdle();
+		await testPostHealing001();
+	});
 
 	// after(async () => {
 	// 	// Indefinite waiter to keep Obsidian window open for manual inspection
