@@ -162,6 +162,14 @@ export class VaultActionManagerImpl implements VaultActionManager {
 		return this.actionQueue.dispatch(actions);
 	}
 
+	/**
+	 * Wait until all registered paths have been processed by Obsidian (via events).
+	 * Used by E2E tests to ensure files are visible before assertions.
+	 */
+	async waitForObsidianEvents(): Promise<void> {
+		return this.selfEventTracker.waitForAllRegistered();
+	}
+
 	readContent(
 		splitPathArg: SplitPathToMdFile,
 	): Promise<Result<string, string>> {

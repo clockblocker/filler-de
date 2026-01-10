@@ -55,18 +55,29 @@ export function decrementPending(): void {
 
 /**
  * Wait until all pending tasks complete (pendingCount === 0).
+ * Optionally also waits for Obsidian events to confirm actions are registered.
  * Only works in E2E mode.
  */
-export function whenIdle(): Promise<void> {
+export async function whenIdle(
+	waitForObsidian?: () => Promise<void>,
+): Promise<void> {
 	if (!isE2E()) {
 		return Promise.resolve();
 	}
-	if (pendingCount === 0) {
-		return Promise.resolve();
-	}
-	return new Promise((resolve) => {
-		idleWaiters.push(resolve);
+
+	// Wait for pending tasks to complete
+	await new Promise<void>((resolve) => {
+		if (pendingCount === 0) {
+			resolve();
+			return;
+		}
+		idleWaiters.push(() => resolve());
 	});
+
+	// Optionally wait for Obsidian events
+	if (waitForObsidian) {
+		await waitForObsidian();
+	}
 }
 
 /**

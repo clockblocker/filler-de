@@ -27,10 +27,19 @@ export class SelfEventTracker {
 		ReturnType<typeof setTimeout>
 	>();
 	private readonly ttlMs = 5000;
+	/** Track all registered paths (not just active timers) to know when Obsidian has processed them */
+	private readonly registeredPaths = new Set<string>();
+	/** Waiters that resolve when all registered paths are popped */
+	private readonly allRegisteredWaiters: Array<() => void> = [];
 
 	register(actions: readonly VaultAction[]): void {
 		for (const action of actions) {
-			for (const path of this.extractPaths(action)) this.trackPath(path);
+			for (const path of this.extractPaths(action)) {
+				this.trackPath(path);
+				// Track in registeredPaths set (for waitForAllRegistered)
+				const normalized = this.normalizePath(path);
+				this.registeredPaths.add(normalized);
+			}
 			for (const prefix of this.extractFolderPrefixes(action))
 				this.trackPrefix(prefix);
 		}
@@ -42,6 +51,9 @@ export class SelfEventTracker {
 		// Exact match (pop-on-match)
 		if (this.trackedPaths.has(normalized)) {
 			this.untrackPath(normalized);
+			// Remove from registeredPaths and check if all are done
+			this.registeredPaths.delete(normalized);
+			this.checkAllRegistered();
 			return true;
 		}
 
@@ -92,10 +104,12 @@ export class SelfEventTracker {
 		const existing = this.trackedPaths.get(normalized);
 		if (existing) clearTimeout(existing);
 
-		const timeout = setTimeout(
-			() => this.trackedPaths.delete(normalized),
-			this.ttlMs,
-		);
+		const timeout = setTimeout(() => {
+			this.trackedPaths.delete(normalized);
+			// On timeout, remove from registeredPaths and check if all are done
+			this.registeredPaths.delete(normalized);
+			this.checkAllRegistered();
+		}, this.ttlMs);
 		this.trackedPaths.set(normalized, timeout);
 	}
 
@@ -165,5 +179,34 @@ export class SelfEventTracker {
 	 */
 	private normalizePath(path: string): string {
 		return path.replace(/^[\\/]+|[\\/]+$/g, "").replace(/\\/g, "/");
+	}
+
+	/**
+	 * Wait until all registered paths have been popped by Obsidian events.
+	 * Returns immediately if no paths are registered.
+	 */
+	async waitForAllRegistered(): Promise<void> {
+		if (this.registeredPaths.size === 0) {
+			return Promise.resolve();
+		}
+		return new Promise((resolve) => {
+			this.allRegisteredWaiters.push(resolve);
+		});
+	}
+
+	/**
+	 * Check if all registered paths have been popped, and resolve waiters if so.
+	 */
+	private checkAllRegistered(): void {
+		if (
+			this.registeredPaths.size === 0 &&
+			this.allRegisteredWaiters.length > 0
+		) {
+			const waiters = [...this.allRegisteredWaiters];
+			this.allRegisteredWaiters.length = 0;
+			for (const resolve of waiters) {
+				resolve();
+			}
+		}
 	}
 }

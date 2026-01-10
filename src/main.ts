@@ -555,10 +555,12 @@ export default class TextEaterPlugin extends Plugin {
 
 	/**
 	 * E2E test hook: wait until all plugin async work is complete.
-	 * Resolves when all queues are drained and pending tasks are done.
+	 * Resolves when all queues are drained, pending tasks are done, and Obsidian has registered all actions.
 	 */
 	async whenIdle(): Promise<void> {
-		return whenIdleTracker();
+		return whenIdleTracker(() =>
+			this.vaultActionManager.waitForObsidianEvents(),
+		);
 	}
 
 	async saveSettings() {
