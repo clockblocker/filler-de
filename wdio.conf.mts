@@ -28,6 +28,11 @@ function installStdIoNoiseFilter(opts: { logFile: string; deny: RegExp[] }) {
 
 	const buffer: string[] = [];
 	const shouldDeny = (s: string) => opts.deny.some((re) => re.test(s));
+	
+	// State persists across chunks
+	let inErrorBlock = false;
+	let needNewlineAfterError = false;
+	let lastWasReporterHeader = false;
 
 	const handle = (chunk: any, origWrite: typeof process.stdout.write) => {
 		const s =
@@ -38,13 +43,66 @@ function installStdIoNoiseFilter(opts: { logFile: string; deny: RegExp[] }) {
 		const lines = s.split(/\r?\n/);
 
 		let passthrough = "";
+		
 		for (const line of lines) {
-			if (line.length === 0) {
+			// Add newline before "Spec Files:"
+			if (/^Spec Files:\s/.test(line)) {
 				passthrough += "\n";
-				continue;
 			}
-			if (shouldDeny(line)) buffer.push(line);
-			else passthrough += line + "\n";
+			
+			// Check for reporter header (even if not denied, to add spacing)
+			const isReporterHeader = /tldr-reporter\.cjs.*Reporter:\s*$/.test(line);
+			
+			if (shouldDeny(line)) {
+				// Track if this starts an error block
+				if (/^(E2ETestError|FilesExpectationError|FilesNotGoneError|TypeError|Error):/.test(line)) {
+					inErrorBlock = true;
+				} else if (/^\s+at\s/.test(line)) {
+					// Stack trace - continue error block
+					inErrorBlock = true;
+				} else if (isReporterHeader) {
+					// Reporter header comes after error block
+					if (inErrorBlock) {
+						inErrorBlock = false;
+						needNewlineAfterError = true;
+					}
+					lastWasReporterHeader = true;
+				}
+				buffer.push(line);
+			} else {
+				// Check for error patterns even in non-denied lines (for spacing)
+				if (/^(E2ETestError|FilesExpectationError|FilesNotGoneError|TypeError|Error):/.test(line)) {
+					inErrorBlock = true;
+				} else if (/^\s+at\s/.test(line) && inErrorBlock) {
+					// Continue error block
+				} else if (isReporterHeader) {
+					// Reporter header
+					if (inErrorBlock) {
+						inErrorBlock = false;
+						needNewlineAfterError = true;
+					}
+					lastWasReporterHeader = true;
+				} else {
+					// Add newline after error block ends
+					if (inErrorBlock || needNewlineAfterError) {
+						inErrorBlock = false;
+						needNewlineAfterError = false;
+						passthrough += "\n";
+					}
+					
+					// Add newline after reporter header
+					if (lastWasReporterHeader) {
+						lastWasReporterHeader = false;
+						passthrough += "\n";
+					}
+				}
+				
+				if (line.length === 0) {
+					passthrough += "\n";
+				} else {
+					passthrough += line + "\n";
+				}
+			}
 		}
 
 		if (passthrough) origWrite(passthrough);
@@ -71,6 +129,34 @@ function installStdIoNoiseFilter(opts: { logFile: string; deny: RegExp[] }) {
 // Helper: safe filename
 const safeName = (s: string) =>
 	s.replace(/[^\w.-]+/g, "_").replace(/_+/g, "_").slice(0, 200);
+
+// Install noise filter early (before any WDIO output)
+installStdIoNoiseFilter({
+	deny: [
+		// 1) All worker-prefixed noise (RUNNING/FAILED/Error in reporter/etc)
+		/^\[\d+-\d+\]\s/,
+
+		// 2) Unprefixed error blocks (WDIO/Mocha often prints these)
+		/^E2ETestError:/,
+		/^FilesExpectationError:/,
+		/^FilesNotGoneError:/,
+		/^TypeError:\s/,
+		/^Error:\s/,
+		/^\s+at\s/, // stack frames
+
+		// 3) The "custom reporter header" printed by WDIO
+		/".*tldr-reporter\.cjs".*Reporter:\s*$/,
+
+		// 4) Misc launcher noise
+		/^Bundled \d+ modules in \d+ms/,
+		/^\s*main\.js\s+\d+/,
+		/^error: script ".*" exited with code \d+/,
+
+		// 5) Blank lines that originate from denied blocks
+		/^\s*$/,
+	],
+	logFile: "wdio-noise-launcher.log",
+});
 
 // wdio-obsidian-service will download Obsidian versions into this directory
 const cacheDir = path.resolve(".obsidian-cache");
@@ -169,40 +255,8 @@ export const config: WebdriverIO.Config = {
 		logToFile("run-summary.json", JSON.stringify({ exitCode, results }, null, 2));
 	},
 
-	/**
-	 * Install noise filter in launcher process.
-	 * (The TL;DR reporter output will still pass through.)
-	 */
-  onPrepare: function () {
-    installStdIoNoiseFilter({
-      deny: [
-        // 1) All worker-prefixed noise (RUNNING/FAILED/Error in reporter/etc)
-        /^\[\d+-\d+\]\s/,
-  
-        // 2) Unprefixed error blocks (WDIO often prints these too)
-        /^(E2ETestError|FilesExpectationError)\b/,
-        /^TypeError:\s/,
-        /^Error:\s/,
-        /^\s+at\s/, // stack frames
-  
-        // 3) The "custom reporter header" printed by WDIO
-        /^\s*".*tldr-reporter\.cjs"\s+Reporter:\s*$/,
-        /^\s*".*\/tldr-reporter\.cjs"\s+Reporter:\s*$/,
-  
-        // 4) Misc launcher noise (some prints happen before onPrepare; ignore what we can)
-        /^Bundled \d+ modules in \d+ms/,
-        /^\s*main\.js\s+\d+/,
-        /^error: script ".*" exited with code \d+/,
-  
-        // Optional: remove blank lines that originate from denied blocks
-        // (comment out if you want to keep blank lines in general)
-        /^\s*$/,
-
-        
-      ],
-      logFile: "wdio-noise-launcher.log",
-    });
-  },
+	// Noise filter installed at module load time (above)
+	// onPrepare hook removed - filter runs earlier now
 
 	onWorkerEnd: function (cid, exitCode, specs, retries) {
 		const meta = { cid, exitCode, retries, specs };

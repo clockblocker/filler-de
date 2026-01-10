@@ -4,6 +4,11 @@
  */
 const WDIOReporter = require("@wdio/reporter").default;
 
+// ANSI color codes
+const GREEN = "\x1b[32m";
+const RED = "\x1b[31m";
+const RESET = "\x1b[0m";
+
 // Helper: safe filename (same logic as wdio.conf.mts)
 const safeName = (s) =>
 	s.replace(/[^\w.-]+/g, "_").replace(/_+/g, "_").slice(0, 200);
@@ -33,13 +38,13 @@ class TldrReporter extends WDIOReporter {
   }
 
   onTestPass(test) {
-    this._testLine(test, "✓");
+    this._testLine(test, `${GREEN}✓${RESET}`);
   }
 
   onTestFail(test) {
     const title = test.title ?? "unknown-test";
     const filename = `fail_${safeName(title)}.log`;
-    this._testLine(test, "✖", `. Logs: file:///tests/tracing/logs/${filename}`);
+    this._testLine(test, `${RED}✖${RESET}`, `\n Logs: file:///tests/tracing/logs/${filename}\n`);
   }
 
   onTestSkip(test) {
