@@ -1,5 +1,6 @@
 import type { Result } from "neverthrow";
 import type { App, TFile, TFolder } from "obsidian";
+import { logger } from "../../../utils/logger";
 import { OpenedFileReader } from "./file-services/active-view/opened-file-reader";
 import type { OpenedFileService } from "./file-services/active-view/opened-file-service";
 import { OpenedFileService as OpenedFileServiceImpl } from "./file-services/active-view/opened-file-service";
@@ -44,8 +45,10 @@ export class VaultActionManagerImpl implements VaultActionManager {
 	private isSingleListening = false;
 	private isBulkListening = false;
 	private listeningRequested = false;
+	private readonly app: App;
 
 	constructor(app: App) {
+		this.app = app;
 		const openedFileReader = new OpenedFileReader(app);
 		this.opened = new OpenedFileServiceImpl(app, openedFileReader);
 		const tfileHelper = new TFileHelper({
@@ -165,9 +168,79 @@ export class VaultActionManagerImpl implements VaultActionManager {
 	/**
 	 * Wait until all registered paths have been processed by Obsidian (via events).
 	 * Used by E2E tests to ensure files are visible before assertions.
+	 * Also verifies files are queryable via vault API after events fire.
 	 */
 	async waitForObsidianEvents(): Promise<void> {
-		return this.selfEventTracker.waitForAllRegistered();
+		// Capture file paths NOW (before waiting) to ensure we get all files from all dispatches
+		const filePathsToVerify =
+			this.selfEventTracker.getRegisteredFilePaths();
+		await this.selfEventTracker.waitForAllRegistered();
+		// After events fired, verify files are queryable
+		if (filePathsToVerify.length > 0) {
+			await this.verifyFilesQueryable(filePathsToVerify);
+		}
+	}
+
+	/**
+	 * Verify that file paths are queryable via Obsidian vault API.
+	 * Polls with short intervals since events already fired.
+	 * Waits up to 10 seconds to allow Obsidian to fully register files.
+	 * Uses exponential backoff for efficiency.
+	 */
+	private async verifyFilesQueryable(
+		filePaths: readonly string[],
+	): Promise<void> {
+		if (filePaths.length === 0) {
+			return;
+		}
+
+		const initialDelayMs = 100;
+		const maxTimeoutMs = 10000;
+		const startTime = Date.now();
+
+		// Small initial delay to let Obsidian process events
+		await new Promise((resolve) => setTimeout(resolve, initialDelayMs));
+
+		let intervalMs = 50;
+		let consecutiveChecks = 0;
+
+		while (Date.now() - startTime < maxTimeoutMs) {
+			const missingPaths: string[] = [];
+			for (const path of filePaths) {
+				const file = this.app.vault.getAbstractFileByPath(path);
+				if (!file) {
+					missingPaths.push(path);
+				}
+			}
+
+			if (missingPaths.length === 0) {
+				return;
+			}
+
+			// Exponential backoff: start with 50ms, increase gradually
+			consecutiveChecks++;
+			if (consecutiveChecks > 10) {
+				intervalMs = Math.min(intervalMs * 1.2, 200);
+			}
+
+			await new Promise((resolve) => setTimeout(resolve, intervalMs));
+		}
+
+		// Final check - if still missing, log warning (tests will handle with their own polling)
+		const stillMissing: string[] = [];
+		for (const path of filePaths) {
+			const file = this.app.vault.getAbstractFileByPath(path);
+			if (!file) {
+				stillMissing.push(path);
+			}
+		}
+
+		if (stillMissing.length > 0) {
+			logger.warn(
+				`[VaultActionManager] Files not queryable after ${maxTimeoutMs}ms:`,
+				stillMissing,
+			);
+		}
 	}
 
 	readContent(

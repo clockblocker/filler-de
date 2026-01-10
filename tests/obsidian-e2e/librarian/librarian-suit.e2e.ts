@@ -19,4 +19,9 @@ describe("Librarian Full Suit", () => {
 
     // Files are canonically suffixed
 	it("all files are healed to canonical suffixes on init", testAllFilesSuffixedOnInit);
+
+	// after(async () => {
+	// 	// Indefinite waiter to keep Obsidian window open for manual inspection
+	// 	await new Promise(() => {});
+	// });
 });
