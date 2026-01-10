@@ -21,6 +21,12 @@ export function formatMissingFilesLong(
     lines.push(`- Missing: ${m.path}`);
     lines.push(`  waited: ${m.waitedMs}ms, attempts: ${m.attempts}`);
     lines.push(`  final check: getAbstractFileByPath => ${m.finalObsidianSeesFile}`);
+    if (m.folderChainCheck?.missingFolder) {
+      lines.push(`  missing folder in chain: ${m.folderChainCheck.missingFolder}`);
+    }
+    if (m.folderChainCheck?.parentFolderContents) {
+      lines.push(`  ${m.folderChainCheck.parentFolderContents}`);
+    }
     if (m.vaultSample?.length) {
       lines.push(`  vault sample (first ${m.vaultSample.length}):`);
       for (const p of m.vaultSample) lines.push(`    - ${p}`);

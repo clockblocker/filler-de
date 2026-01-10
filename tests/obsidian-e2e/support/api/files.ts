@@ -3,7 +3,7 @@ import { nonEmptyArrayResult } from "../../../../src/types/utils";
 import { INTERVAL_DEFAULT_MS, TIMEOUT_DEFAULT_MS } from "../config";
 import { E2ETestError, FilesExpectationError, FilesNotGoneError, finalizeE2EError } from "../internal/errors";
 import { formatMissingFilesLong, formatMissingFilesShort, formatNotGoneFilesLong, formatNotGoneFilesShort } from "../internal/format";
-import { obsidianFileExists, obsidianVaultSample } from "../internal/obsidian";
+import { obsidianCheckFolderChainAndListParent, obsidianFileExists, obsidianVaultSample } from "../internal/obsidian";
 import { poll } from "../internal/poll";
 import type { ExpectFilesGoneOptions, ExpectFilesOptions, FileWaitStatus, PollOptions } from "../internal/types";
 
@@ -123,10 +123,13 @@ async function waitForFileDetailed(
     if (opts.includeVaultSample) {
       vaultSample = await obsidianVaultSample(opts.vaultSampleLimit ?? 50);
     }
+
+    const folderChainCheck = await obsidianCheckFolderChainAndListParent(path);
   
     return {
       attempts: res.attempts,
       finalObsidianSeesFile,
+      folderChainCheck,
       ok: false,
       path,
       vaultSample,

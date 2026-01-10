@@ -1,4 +1,4 @@
-import { INTERVAL_DEFAULT_MS, TIMEOUT_DEFAULT_MS } from "../config";
+import { INTERVAL_DEFAULT_MS, MAX_ATTEMPTS_DEFAULT, TIMEOUT_DEFAULT_MS } from "../config";
 import type { PollOptions, PollResult } from "./types";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -13,6 +13,11 @@ function resolveIntervalMs(opts: PollOptions): number {
   return INTERVAL_DEFAULT_MS + (opts.intervalOffset ?? 0);
 }
 
+function resolveMaxAttempts(opts: PollOptions): number {
+  if (opts.maxAttempts != null) return opts.maxAttempts;
+  return MAX_ATTEMPTS_DEFAULT;
+}
+
 /**
  * Generic polling engine.
  * - returns structured info (attempts, waitedMs) for better error messages
@@ -24,13 +29,14 @@ export async function poll<T>(
 ): Promise<PollResult<T>> {
   const timeoutMs = resolveTimeoutMs(opts);
   const intervalMs = resolveIntervalMs(opts);
+  const maxAttempts = resolveMaxAttempts(opts);
   const label = opts.label;
 
   const start = Date.now();
   let attempts = 0;
   let lastValue: T | undefined;
 
-  while (Date.now() - start < timeoutMs) {
+  while (Date.now() - start < timeoutMs && attempts < maxAttempts) {
     attempts++;
     lastValue = await fn();
     if (predicate(lastValue)) {
@@ -44,7 +50,9 @@ export async function poll<T>(
         waitedMs: Date.now() - start,
       };
     }
-    await sleep(intervalMs);
+    if (attempts < maxAttempts) {
+      await sleep(intervalMs);
+    }
   }
 
   return {

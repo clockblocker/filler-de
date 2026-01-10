@@ -5,6 +5,7 @@ export interface PollOptions {
     /** Optional hard override if you want to bypass defaults+offsets */
     timeoutMs?: number;
     intervalMs?: number;
+    maxAttempts?: number;
   
     /** Used for error messages */
     label?: string;
@@ -41,6 +42,7 @@ export interface PollOptions {
         /** evidence */
         finalObsidianSeesFile: boolean;
         vaultSample?: string[];
+        folderChainCheck?: { missingFolder?: string; parentFolderContents?: string };
       };
   
   export type ExpectFilesOptions = PollOptions & {
