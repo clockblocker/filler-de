@@ -1,4 +1,4 @@
-const EXPECTED_CODEXES = [
+export const EXPECTED_CODEXES_AFTER_000 = [
 	"Library/__-Library.md",
 	"Library/Recipe/__-Recipe.md",
 	"Library/Recipe/Pie/__-Pie-Recipe.md",
@@ -6,7 +6,7 @@ const EXPECTED_CODEXES = [
 	"Library/Recipe/Soup/Pho_Bo/__-Pho_Bo-Soup-Recipe.md",
 ];
 
-const EXPECTED_FILES = [
+export const EXPECTED_FILES_AFTER_000 = [
 	// Pie
 	"Library/Recipe/Pie/Ingredients-Pie-Recipe.md",
 	"Library/Recipe/Pie/Steps-Pie-Recipe.md",
@@ -38,8 +38,8 @@ export const VAULT_EXPECTATIONS_000 = {
         files: FILES_ON_STARTUP,
     },
     postHealing: {
-        codexes: EXPECTED_CODEXES,
-        files: EXPECTED_FILES,
+        codexes: EXPECTED_CODEXES_AFTER_000,
+        files: EXPECTED_FILES_AFTER_000,
     },
     postMutation: {
         codexes: [],
