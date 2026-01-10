@@ -86,68 +86,79 @@ export class Librarian {
 	 * Initialize librarian: read tree and heal mismatches.
 	 */
 	async init(): Promise<void> {
-		const settings = getParsedUserSettings();
-		const rootSplitPath = settings.splitPathToLibraryRoot;
-		const libraryRoot = rootSplitPath.basename;
+		incrementPending();
+		try {
+			const settings = getParsedUserSettings();
+			const rootSplitPath = settings.splitPathToLibraryRoot;
+			const libraryRoot = rootSplitPath.basename;
 
-		// Create empty tree
-		this.tree = new LibraryTree(libraryRoot);
+			// Create empty tree
+			this.tree = new LibraryTree(libraryRoot);
 
-		// Read all files from library
-		const allFilesResult =
-			await this.vaultActionManager.listAllFilesWithMdReaders(
-				rootSplitPath,
-			);
+			// Read all files from library
+			const allFilesResult =
+				await this.vaultActionManager.listAllFilesWithMdReaders(
+					rootSplitPath,
+				);
 
-		if (allFilesResult.isErr()) {
-			logger.error(
-				"[Librarian] Failed to list files from vault:",
-				allFilesResult.error,
-			);
+			if (allFilesResult.isErr()) {
+				logger.error(
+					"[Librarian] Failed to list files from vault:",
+					allFilesResult.error,
+				);
+				this.subscribeToVaultEvents();
+				return;
+			}
+
+			const allFiles = allFilesResult.value;
+
+			// Build Create actions for each file
+			const createActions =
+				await this.buildInitialCreateActions(allFiles);
+
+			// Apply all create actions and collect healing + codex impacts
+			const allHealingActions: HealingAction[] = [];
+			const allCodexImpacts: CodexImpact[] = [];
+
+			for (const action of createActions) {
+				const result = this.tree.apply(action);
+				allHealingActions.push(...result.healingActions);
+				allCodexImpacts.push(result.codexImpact);
+			}
+
+			// Delete invalid codex files (orphaned __ files)
+			const invalidCodexActions = this.findInvalidCodexFiles(allFiles);
+			allHealingActions.push(...invalidCodexActions);
+
+			// Subscribe to vault events BEFORE dispatching actions
+			// This ensures we catch all events, including cascading healing from init actions
 			this.subscribeToVaultEvents();
-			return;
+
+			// Subscribe to click events
+			this.subscribeToClickEvents();
+
+			// Dispatch healing actions first
+			if (allHealingActions.length > 0) {
+				const vaultActions =
+					healingActionsToVaultActions(allHealingActions);
+				await this.vaultActionManager.dispatch(vaultActions);
+			}
+
+			// Then dispatch codex actions
+			const mergedImpact = mergeCodexImpacts(allCodexImpacts);
+			const codexActions = codexImpactToActions(mergedImpact, this.tree);
+			const codexVaultActions = codexActionsToVaultActions(codexActions);
+
+			if (codexVaultActions.length > 0) {
+				await this.vaultActionManager.dispatch(codexVaultActions);
+			}
+
+			// Wait for queue to drain (events trigger handleBulkEvent which enqueues actions)
+			// This ensures all cascading healing is queued and processed
+			await this.waitForQueueToDrain();
+		} finally {
+			decrementPending();
 		}
-
-		const allFiles = allFilesResult.value;
-
-		// Build Create actions for each file
-		const createActions = await this.buildInitialCreateActions(allFiles);
-
-		// Apply all create actions and collect healing + codex impacts
-		const allHealingActions: HealingAction[] = [];
-		const allCodexImpacts: CodexImpact[] = [];
-
-		for (const action of createActions) {
-			const result = this.tree.apply(action);
-			allHealingActions.push(...result.healingActions);
-			allCodexImpacts.push(result.codexImpact);
-		}
-
-		// Delete invalid codex files (orphaned __ files)
-		const invalidCodexActions = this.findInvalidCodexFiles(allFiles);
-		allHealingActions.push(...invalidCodexActions);
-
-		// Dispatch healing actions first
-		if (allHealingActions.length > 0) {
-			const vaultActions =
-				healingActionsToVaultActions(allHealingActions);
-			await this.vaultActionManager.dispatch(vaultActions);
-		}
-
-		// Then dispatch codex actions
-		const mergedImpact = mergeCodexImpacts(allCodexImpacts);
-		const codexActions = codexImpactToActions(mergedImpact, this.tree);
-		const codexVaultActions = codexActionsToVaultActions(codexActions);
-
-		if (codexVaultActions.length > 0) {
-			await this.vaultActionManager.dispatch(codexVaultActions);
-		}
-
-		// Subscribe to vault events
-		this.subscribeToVaultEvents();
-
-		// Subscribe to click events
-		this.subscribeToClickEvents();
 	}
 
 	/**
@@ -448,6 +459,33 @@ export class Librarian {
 		} finally {
 			this.processing = false;
 			decrementPending();
+		}
+	}
+
+	/**
+	 * Wait for the queue to drain and all processing to complete.
+	 * Used during init to ensure all cascading healing is done.
+	 * Waits for a stable state where queue is empty and no processing is happening.
+	 */
+	private async waitForQueueToDrain(): Promise<void> {
+		const maxWaitMs = 10000;
+		const checkIntervalMs = 100;
+		const stableChecksRequired = 5; // Queue must be empty for 5 consecutive checks (500ms stable)
+		const startTime = Date.now();
+		let stableChecks = 0;
+
+		while (Date.now() - startTime < maxWaitMs) {
+			if (this.queue.length === 0 && !this.processing) {
+				stableChecks++;
+				if (stableChecks >= stableChecksRequired) {
+					return; // Queue is stable and empty
+				}
+			} else {
+				stableChecks = 0; // Reset counter if queue is not empty
+			}
+			await new Promise((resolve) =>
+				setTimeout(resolve, checkIntervalMs),
+			);
 		}
 	}
 

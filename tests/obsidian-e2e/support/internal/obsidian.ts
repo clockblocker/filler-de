@@ -17,6 +17,41 @@ export async function obsidianVaultSample(limit: number): Promise<string[]> {
   }, limit);
 }
 
+export async function obsidianWaitForPluginInitialized(pluginId: string, timeoutMs: number = 10000): Promise<Result<void, string>> {
+  try {
+    const startTime = Date.now();
+    while (Date.now() - startTime < timeoutMs) {
+      const result = await browser.executeObsidian(async ({ app }, id) => {
+        // Obsidian API: app.plugins.plugins is not in types but exists at runtime
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const plugin = (app as any).plugins?.plugins?.[id];
+        if (!plugin) {
+          return { error: `Plugin not found: ${id}`, ok: false as const, initialized: false };
+        }
+        // Check if plugin has initialized property
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const initialized = (plugin as any).initialized === true;
+        return { ok: initialized, initialized };
+      }, pluginId);
+      
+      if (result && typeof result === "object" && "ok" in result) {
+        if (result.ok) {
+          return ok(undefined);
+        }
+        if ("error" in result && result.error) {
+          return err(result.error);
+        }
+      }
+      
+      // Wait a bit before checking again
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    return err(`Plugin ${pluginId} did not initialize within ${timeoutMs}ms`);
+  } catch (error) {
+    return err(error instanceof Error ? error.message : String(error));
+  }
+}
+
 export async function obsidianWhenIdle(pluginId: string): Promise<Result<void, string>> {
   try {
     const result = await browser.executeObsidian(async ({ app }, id) => {
