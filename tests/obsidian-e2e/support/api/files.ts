@@ -1,3 +1,4 @@
+import { err, ok, type Result } from "neverthrow";
 import { INTERVAL_DEFAULT_MS, TIMEOUT_DEFAULT_MS } from "../config";
 import { E2ETestError, FilesExpectationError, FilesNotGoneError, finalizeE2EError } from "../internal/errors";
 import { formatMissingFilesLong, formatMissingFilesShort, formatNotGoneFilesLong, formatNotGoneFilesShort } from "../internal/format";
@@ -37,11 +38,11 @@ export async function waitForFiles(
 export async function expectFilesToExist(
     paths: readonly string[],
     opts: ExpectFilesOptions = {},
-  ): Promise<void> {
+  ): Promise<Result<void, E2ETestError>> {
     const results = await Promise.all(paths.map((p) => waitForFileDetailed(p, opts)));
     const missing = results.filter((r) => !r.ok) as Extract<FileWaitStatus, { ok: false }>[];
   
-    if (missing.length === 0) return;
+    if (missing.length === 0) return ok(undefined);
   
     const timeoutMs = opts.timeoutMs ?? (TIMEOUT_DEFAULT_MS + (opts.timeoutOffset ?? 0));
     const intervalMs = opts.intervalMs ?? (INTERVAL_DEFAULT_MS + (opts.intervalOffset ?? 0));
@@ -49,20 +50,20 @@ export async function expectFilesToExist(
     const shortMsg = formatMissingFilesShort(missing);
     const longMsg = formatMissingFilesLong(missing, { intervalMs, timeoutMs });
   
-    const err = new E2ETestError(shortMsg, longMsg);
-    throw finalizeE2EError(err);
+    const error = finalizeE2EError(new E2ETestError(shortMsg, longMsg));
+    return err(error);
   }
   
 /** Public: expect files are gone; reports *all* that still exist with diagnostics */
 export async function expectFilesToBeGone(
   paths: readonly string[],
   opts: ExpectFilesGoneOptions = {},
-): Promise<void> {
+): Promise<Result<void, E2ETestError>> {
   const results = await Promise.all(paths.map((p) => waitForFileGoneDetailed(p, opts)));
   const notGone = results.filter((r) => !r.ok);
 
   if (notGone.length === 0) {
-    return;
+    return ok(undefined);
   }
 
   const timeoutMs = opts.timeoutMs ?? (TIMEOUT_DEFAULT_MS + (opts.timeoutOffset ?? 0));
@@ -71,8 +72,8 @@ export async function expectFilesToBeGone(
   const shortMsg = formatNotGoneFilesShort(notGone);
   const longMsg = formatNotGoneFilesLong(notGone, { intervalMs, timeoutMs });
 
-  const err = new E2ETestError(shortMsg, longMsg);
-  throw finalizeE2EError(err);
+  const error = finalizeE2EError(new E2ETestError(shortMsg, longMsg));
+  return err(error);
 }
 
 

@@ -1,12 +1,13 @@
 import { browser } from "@wdio/globals";
+import { err, ok, type Result } from "neverthrow";
 
 /**
  * Validate and normalize file path.
  * Rejects empty paths, normalizes leading slashes, ensures filename exists.
  */
-function validatePath(path: string): string {
+function validatePath(path: string): Result<string, string> {
 	if (!path || path.trim() === "") {
-		throw new Error("Path cannot be empty");
+		return err("Path cannot be empty");
 	}
 
 	// Normalize leading slash
@@ -14,16 +15,16 @@ function validatePath(path: string): string {
 
 	// Reject .. segments for safety
 	if (normalized.includes("../") || normalized.includes("..\\")) {
-		throw new Error(`Path contains invalid segments: ${path}`);
+		return err(`Path contains invalid segments: ${path}`);
 	}
 
 	// Ensure there's a filename part (not just folders)
 	const parts = normalized.split("/");
 	if (parts.length === 0 || parts[parts.length - 1] === "") {
-		throw new Error(`Path must include a filename: ${path}`);
+		return err(`Path must include a filename: ${path}`);
 	}
 
-	return normalized;
+	return ok(normalized);
 }
 
 /**
@@ -34,27 +35,37 @@ function validatePath(path: string): string {
 export async function createFile(
 	path: string,
 	content = "",
-): Promise<void> {
-	const validatedPath = validatePath(path);
-	await browser.executeObsidian(
-		async ({ app }, p, c) => {
-			// Ensure parent folders exist
-			const parts = p.split("/");
-			parts.pop(); // remove filename
-			let currentPath = "";
-			for (const part of parts) {
-				currentPath = currentPath ? `${currentPath}/${part}` : part;
-				const folder = app.vault.getAbstractFileByPath(currentPath);
-				if (!folder) {
-					// Obsidian's createFolder is idempotent - safe to call if exists
-					await app.vault.createFolder(currentPath);
+): Promise<Result<void, string>> {
+	const validatedPathResult = validatePath(path);
+	if (validatedPathResult.isErr()) {
+		return err(validatedPathResult.error);
+	}
+	const validatedPath = validatedPathResult.value;
+
+	try {
+		await browser.executeObsidian(
+			async ({ app }, p, c) => {
+				// Ensure parent folders exist
+				const parts = p.split("/");
+				parts.pop(); // remove filename
+				let currentPath = "";
+				for (const part of parts) {
+					currentPath = currentPath ? `${currentPath}/${part}` : part;
+					const folder = app.vault.getAbstractFileByPath(currentPath);
+					if (!folder) {
+						// Obsidian's createFolder is idempotent - safe to call if exists
+						await app.vault.createFolder(currentPath);
+					}
 				}
-			}
-			await app.vault.create(p, c);
-		},
-		validatedPath,
-		content,
-	);
+				await app.vault.create(p, c);
+			},
+			validatedPath,
+			content,
+		);
+		return ok(undefined);
+	} catch (error) {
+		return err(error instanceof Error ? error.message : String(error));
+	}
 }
 
 /**
@@ -67,12 +78,16 @@ export async function createFile(
  */
 export async function createFiles(
 	files: readonly { path: string; content?: string }[],
-): Promise<void> {
+): Promise<Result<void, string>> {
 	// Validate all paths first
-	const validatedFiles = files.map(({ path, content = "" }) => ({
-		content,
-		path: validatePath(path),
-	}));
+	const validatedFiles: Array<{ path: string; content: string }> = [];
+	for (const { path, content = "" } of files) {
+		const pathResult = validatePath(path);
+		if (pathResult.isErr()) {
+			return err(pathResult.error);
+		}
+		validatedFiles.push({ content, path: pathResult.value });
+	}
 
 	// Collect unique parent folders
 	const parentFolders = new Set<string>();
@@ -91,22 +106,30 @@ export async function createFiles(
 	// Create all parent folders first (serialized to avoid race conditions)
 	// Obsidian's createFolder is idempotent, but serializing prevents any edge cases
 	for (const folderPath of parentFolders) {
-		await createFolder(folderPath);
+		const folderResult = await createFolder(folderPath);
+		if (folderResult.isErr()) {
+			return err(folderResult.error);
+		}
 	}
 
 	// Now create files in parallel (safe since folders exist)
 	// Use internal implementation to avoid re-creating folders
-	await Promise.all(
-		validatedFiles.map(({ path, content }) =>
-			browser.executeObsidian(
-				async ({ app }, p, c) => {
-					await app.vault.create(p, c);
-				},
-				path,
-				content,
+	try {
+		await Promise.all(
+			validatedFiles.map(({ path, content }) =>
+				browser.executeObsidian(
+					async ({ app }, p, c) => {
+						await app.vault.create(p, c);
+					},
+					path,
+					content,
+				),
 			),
-		),
-	);
+		);
+		return ok(undefined);
+	} catch (error) {
+		return err(error instanceof Error ? error.message : String(error));
+	}
 }
 
 /**
@@ -115,55 +138,86 @@ export async function createFiles(
 export async function renamePath(
 	oldPath: string,
 	newPath: string,
-): Promise<void> {
-	await browser.executeObsidian(
-		async ({ app }, from, to) => {
-			const file = app.vault.getAbstractFileByPath(from);
-			if (!file) throw new Error(`Path not found: ${from}`);
-			await app.vault.rename(file, to);
-		},
-		oldPath,
-		newPath,
-	);
+): Promise<Result<void, string>> {
+	try {
+		const result = await browser.executeObsidian(
+			async ({ app }, from, to) => {
+				const file = app.vault.getAbstractFileByPath(from);
+				if (!file) {
+					return { error: `Path not found: ${from}`, ok: false as const };
+				}
+				await app.vault.rename(file, to);
+				return { ok: true as const };
+			},
+			oldPath,
+			newPath,
+		);
+		if (result && typeof result === "object" && "ok" in result && !result.ok) {
+			return err(result.error);
+		}
+		return ok(undefined);
+	} catch (error) {
+		return err(error instanceof Error ? error.message : String(error));
+	}
 }
 
 /**
  * Delete a file or folder via Obsidian API.
  */
-export async function deletePath(path: string): Promise<void> {
-	await browser.executeObsidian(async ({ app }, p) => {
-		const file = app.vault.getAbstractFileByPath(p);
-		if (file) await app.vault.trash(file, true);
-	}, path);
+export async function deletePath(path: string): Promise<Result<void, string>> {
+	try {
+		await browser.executeObsidian(async ({ app }, p) => {
+			const file = app.vault.getAbstractFileByPath(p);
+			if (file) await app.vault.trash(file, true);
+		}, path);
+		return ok(undefined);
+	} catch (error) {
+		return err(error instanceof Error ? error.message : String(error));
+	}
 }
 
 /**
  * Create a folder via Obsidian API.
  */
-export async function createFolder(path: string): Promise<void> {
-	await browser.executeObsidian(async ({ app }, p) => {
-		await app.vault.createFolder(p);
-	}, path);
+export async function createFolder(path: string): Promise<Result<void, string>> {
+	try {
+		await browser.executeObsidian(async ({ app }, p) => {
+			await app.vault.createFolder(p);
+		}, path);
+		return ok(undefined);
+	} catch (error) {
+		return err(error instanceof Error ? error.message : String(error));
+	}
 }
 
 /**
  * List all files in vault (for debugging).
  */
-export async function listAllFiles(): Promise<string[]> {
-	return browser.executeObsidian(async ({ app }) => {
-		return app.vault.getFiles().map((f) => f.path);
-	});
+export async function listAllFiles(): Promise<Result<string[], string>> {
+	try {
+		const files = await browser.executeObsidian(async ({ app }) => {
+			return app.vault.getFiles().map((f) => f.path);
+		});
+		return ok(files);
+	} catch (error) {
+		return err(error instanceof Error ? error.message : String(error));
+	}
 }
 
 /**
  * List files under a specific path prefix.
  */
-export async function listFilesUnder(prefix: string): Promise<string[]> {
-	return browser.executeObsidian(async ({ app }, p) => {
-		return app.vault
-			.getFiles()
-			.filter((f) => f.path.startsWith(p))
-			.map((f) => f.path);
-	}, prefix);
+export async function listFilesUnder(prefix: string): Promise<Result<string[], string>> {
+	try {
+		const files = await browser.executeObsidian(async ({ app }, p) => {
+			return app.vault
+				.getFiles()
+				.filter((f) => f.path.startsWith(p))
+				.map((f) => f.path);
+		}, prefix);
+		return ok(files);
+	} catch (error) {
+		return err(error instanceof Error ? error.message : String(error));
+	}
 }
 
