@@ -173,20 +173,36 @@ export const config: WebdriverIO.Config = {
 	 * Install noise filter in launcher process.
 	 * (The TL;DR reporter output will still pass through.)
 	 */
-	onPrepare: function () {
-		installStdIoNoiseFilter({
-			deny: [
-				/^Execution of \d+ workers started/,
-				/^\[\d+-\d+\]\s+(RUNNING|FAILED)/,
-				/^\[\d+-\d+\]\s+SYNCHRONOUS TERMINATION NOTICE:/,
-				/^error: script ".*" exited with code \d+/,
-				/^Bundled \d+ modules in \d+ms/,
-				/^\s*main\.js\s+\d+/,
-				/^@.*\(\d+-\d+\)\s*$/,
-			],
-			logFile: "wdio-noise-launcher.log",
-		});
-	},
+  onPrepare: function () {
+    installStdIoNoiseFilter({
+      deny: [
+        // 1) All worker-prefixed noise (RUNNING/FAILED/Error in reporter/etc)
+        /^\[\d+-\d+\]\s/,
+  
+        // 2) Unprefixed error blocks (WDIO often prints these too)
+        /^(E2ETestError|FilesExpectationError)\b/,
+        /^TypeError:\s/,
+        /^Error:\s/,
+        /^\s+at\s/, // stack frames
+  
+        // 3) The "custom reporter header" printed by WDIO
+        /^\s*".*tldr-reporter\.cjs"\s+Reporter:\s*$/,
+        /^\s*".*\/tldr-reporter\.cjs"\s+Reporter:\s*$/,
+  
+        // 4) Misc launcher noise (some prints happen before onPrepare; ignore what we can)
+        /^Bundled \d+ modules in \d+ms/,
+        /^\s*main\.js\s+\d+/,
+        /^error: script ".*" exited with code \d+/,
+  
+        // Optional: remove blank lines that originate from denied blocks
+        // (comment out if you want to keep blank lines in general)
+        /^\s*$/,
+
+        
+      ],
+      logFile: "wdio-noise-launcher.log",
+    });
+  },
 
 	onWorkerEnd: function (cid, exitCode, specs, retries) {
 		const meta = { cid, exitCode, retries, specs };

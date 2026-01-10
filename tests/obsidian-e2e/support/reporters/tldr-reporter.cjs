@@ -39,7 +39,7 @@ class TldrReporter extends WDIOReporter {
   onTestFail(test) {
     const title = test.title ?? "unknown-test";
     const filename = `fail_${safeName(title)}.log`;
-    this._testLine(test, "✖", `file:///tests/tracing/logs/${filename}`);
+    this._testLine(test, "✖", `. Logs: file:///tests/tracing/logs/${filename}`);
   }
 
   onTestSkip(test) {
