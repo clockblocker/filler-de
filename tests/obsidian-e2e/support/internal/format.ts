@@ -1,11 +1,12 @@
+import type { NonEmptyArray } from "../../../../src/types/helpers";
 import type { FileWaitStatus } from "./types";
 
 export function formatMissingFilesShort(
-  missing: Extract<FileWaitStatus, { ok: false }>[],
+  missing: NonEmptyArray<Extract<FileWaitStatus, { ok: false }>>,
 ): string {
-  const first = missing[0]!;
-  const more = missing.length > 1 ? ` (+${missing.length - 1} more)` : "";
-  return `Missing ${missing.length} file(s)${more}: ${first.path}`;
+  const [__fistMissing, ...restMissing] = missing;
+  const missingMessage = `Missing ${missing.length} file${restMissing.length > 0 ? "s" : ""}:`;
+  return `${missingMessage}\n${missing.map((m) => `- ${m.path}`).join("\n")}\n`;
 }
 
 export function formatMissingFilesLong(

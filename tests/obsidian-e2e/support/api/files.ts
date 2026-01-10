@@ -1,4 +1,5 @@
 import { err, ok, type Result } from "neverthrow";
+import { nonEmptyArrayResult } from "../../../../src/types/utils";
 import { INTERVAL_DEFAULT_MS, TIMEOUT_DEFAULT_MS } from "../config";
 import { E2ETestError, FilesExpectationError, FilesNotGoneError, finalizeE2EError } from "../internal/errors";
 import { formatMissingFilesLong, formatMissingFilesShort, formatNotGoneFilesLong, formatNotGoneFilesShort } from "../internal/format";
@@ -34,15 +35,16 @@ export async function waitForFiles(
   return Promise.all(paths.map((p) => waitForFile(p, opts)));
 }
 
-/** Public: expect files exist; reports *all* missing paths and passes PollOptions */
-export async function expectFilesToExist(
+/** Internal: expect files exist; returns Result */
+async function expectFilesToExistResult(
     paths: readonly string[],
     opts: ExpectFilesOptions = {},
   ): Promise<Result<void, E2ETestError>> {
     const results = await Promise.all(paths.map((p) => waitForFileDetailed(p, opts)));
-    const missing = results.filter((r) => !r.ok) as Extract<FileWaitStatus, { ok: false }>[];
+    const missingResult = nonEmptyArrayResult(results.filter((r) => !r.ok));
   
-    if (missing.length === 0) return ok(undefined);
+    if (missingResult.isErr()) return ok(undefined);
+    const missing = missingResult.value;
   
     const timeoutMs = opts.timeoutMs ?? (TIMEOUT_DEFAULT_MS + (opts.timeoutOffset ?? 0));
     const intervalMs = opts.intervalMs ?? (INTERVAL_DEFAULT_MS + (opts.intervalOffset ?? 0));
@@ -54,8 +56,8 @@ export async function expectFilesToExist(
     return err(error);
   }
   
-/** Public: expect files are gone; reports *all* that still exist with diagnostics */
-export async function expectFilesToBeGone(
+/** Internal: expect files are gone; returns Result */
+async function expectFilesToBeGoneResult(
   paths: readonly string[],
   opts: ExpectFilesGoneOptions = {},
 ): Promise<Result<void, E2ETestError>> {
@@ -74,6 +76,28 @@ export async function expectFilesToBeGone(
 
   const error = finalizeE2EError(new E2ETestError(shortMsg, longMsg));
   return err(error);
+}
+
+/** Public: expect files exist; throws on error for test assertions */
+export async function expectFilesToExist(
+    paths: readonly string[],
+    opts: ExpectFilesOptions = {},
+  ): Promise<void> {
+  const result = await expectFilesToExistResult(paths, opts);
+  if (result.isErr()) {
+    throw result.error;
+  }
+}
+
+/** Public: expect files are gone; throws on error for test assertions */
+export async function expectFilesToBeGone(
+  paths: readonly string[],
+  opts: ExpectFilesGoneOptions = {},
+): Promise<void> {
+  const result = await expectFilesToBeGoneResult(paths, opts);
+  if (result.isErr()) {
+    throw result.error;
+  }
 }
 
 
