@@ -3,17 +3,22 @@ import type { FileWaitStatus } from "./types";
 
 export function formatMissingFilesShort(
   missing: NonEmptyArray<Extract<FileWaitStatus, { ok: false }>>,
+  callerContext?: string,
 ): string {
   const [__fistMissing, ...restMissing] = missing;
-  const missingMessage = `Missing ${missing.length} file${restMissing.length > 0 ? "s" : ""}:`;
+  const contextPrefix = callerContext ? `${callerContext} ` : "";
+  const missingMessage = `${contextPrefix}Missing ${missing.length} file${restMissing.length > 0 ? "s" : ""}:`;
   return `${missingMessage}\n${missing.map((m) => `- ${m.path}`).join("\n")}\n`;
 }
 
 export function formatMissingFilesLong(
   missing: Extract<FileWaitStatus, { ok: false }>[],
-  cfg: { timeoutMs: number; intervalMs: number },
+  cfg: { timeoutMs: number; intervalMs: number; callerContext?: string },
 ): string {
   const lines: string[] = [];
+  if (cfg.callerContext) {
+    lines.push(`Caller: ${cfg.callerContext}`);
+  }
   lines.push(`Polling: timeout=${cfg.timeoutMs}ms, interval=${cfg.intervalMs}ms`);
   lines.push("");
 
@@ -39,17 +44,22 @@ export function formatMissingFilesLong(
 
 export function formatNotGoneFilesShort(
   notGone: Array<{ path: string; waitedMs: number; attempts: number; finalObsidianSeesFile: boolean; vaultSample?: string[] }>,
+  callerContext?: string,
 ): string {
   const first = notGone[0]!;
   const more = notGone.length > 1 ? ` (+${notGone.length - 1} more)` : "";
-  return `Still exists ${notGone.length} file(s)${more}: ${first.path}`;
+  const contextPrefix = callerContext ? `${callerContext} ` : "";
+  return `${contextPrefix}Still exists ${notGone.length} file(s)${more}: ${first.path}`;
 }
 
 export function formatNotGoneFilesLong(
   notGone: Array<{ path: string; waitedMs: number; attempts: number; finalObsidianSeesFile: boolean; vaultSample?: string[] }>,
-  cfg: { timeoutMs: number; intervalMs: number },
+  cfg: { timeoutMs: number; intervalMs: number; callerContext?: string },
 ): string {
   const lines: string[] = [];
+  if (cfg.callerContext) {
+    lines.push(`Caller: ${cfg.callerContext}`);
+  }
   lines.push(`Expected ${notGone.length} file(s) to be gone, but they still exist.`);
   lines.push(`Polling: timeout=${cfg.timeoutMs}ms, interval=${cfg.intervalMs}ms`);
   lines.push("");

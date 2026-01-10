@@ -49,8 +49,8 @@ async function expectFilesToExistResult(
     const timeoutMs = opts.timeoutMs ?? (TIMEOUT_DEFAULT_MS + (opts.timeoutOffset ?? 0));
     const intervalMs = opts.intervalMs ?? (INTERVAL_DEFAULT_MS + (opts.intervalOffset ?? 0));
   
-    const shortMsg = formatMissingFilesShort(missing);
-    const longMsg = formatMissingFilesLong(missing, { intervalMs, timeoutMs });
+    const shortMsg = formatMissingFilesShort(missing, opts.callerContext);
+    const longMsg = formatMissingFilesLong(missing, { callerContext: opts.callerContext, intervalMs, timeoutMs });
   
     const error = finalizeE2EError(new E2ETestError(shortMsg, longMsg));
     return err(error);
@@ -71,8 +71,8 @@ async function expectFilesToBeGoneResult(
   const timeoutMs = opts.timeoutMs ?? (TIMEOUT_DEFAULT_MS + (opts.timeoutOffset ?? 0));
   const intervalMs = opts.intervalMs ?? (INTERVAL_DEFAULT_MS + (opts.intervalOffset ?? 0));
 
-  const shortMsg = formatNotGoneFilesShort(notGone);
-  const longMsg = formatNotGoneFilesLong(notGone, { intervalMs, timeoutMs });
+  const shortMsg = formatNotGoneFilesShort(notGone, opts.callerContext);
+  const longMsg = formatNotGoneFilesLong(notGone, { callerContext: opts.callerContext, intervalMs, timeoutMs });
 
   const error = finalizeE2EError(new E2ETestError(shortMsg, longMsg));
   return err(error);

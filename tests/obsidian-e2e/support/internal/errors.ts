@@ -16,9 +16,9 @@ export class E2ETestError extends Error {
     const debug = process.env.E2E_DEBUG === "1";
   
     if (!debug && err.stack) {
-      // keep only header + a couple frames
+      // Remove stack trace, keep only the error message
       const lines = err.stack.split("\n");
-      err.stack = lines.slice(0, 4).join("\n");
+      err.stack = lines[0];
     }
   
     return err;

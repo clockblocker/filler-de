@@ -48,9 +48,13 @@ export interface PollOptions {
   export type ExpectFilesOptions = PollOptions & {
     includeVaultSample?: boolean;
     vaultSampleLimit?: number;
+    /** Optional caller context to include in error messages (e.g., "[testAllFilesSuffixedOnInit]") */
+    callerContext?: string;
   };
 
   export type ExpectFilesGoneOptions = PollOptions & {
     includeVaultSample?: boolean;
     vaultSampleLimit?: number;
+    /** Optional caller context to include in error messages (e.g., "[testAllFilesSuffixedOnInit]") */
+    callerContext?: string;
   };
