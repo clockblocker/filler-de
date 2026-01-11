@@ -4,7 +4,7 @@
 
 Before implementing the codec API from `plan.md`, we need to:
 1. **Rename first**: `TreeNodeType` → `TreeNodeKind` and `SplitPathType` → `SplitPathKind` (mappings will use new names from the start)
-2. **Support generic interfaces**: Type-safe conversions (e.g., `NodeLocator<NK>`, `SplitPathInsideLibrary<SK>`, `CanonicalSplitPathInsideLibrary<SK>`)
+2. **Support generic interfaces**: Type-safe conversions (e.g., `NodeLocatorOf<NK>`, `SplitPathInsideLibrary<SK>`, `CanonicalSplitPathInsideLibrary<SK>`)
 3. **Generic SegmentIdComponents**: `SegmentIdComponents<T extends TreeNodeKind>` that narrows based on kind
 4. **Establish type mappings**: Between `TreeNodeKind` and `SplitPathKind` to support generic functions like `parseSegmentId<T extends TreeNodeKind>` and eliminate runtime if/switch statements
 
@@ -99,6 +99,13 @@ Ensure type-safe conversions between:
 - Cleaner syntax
 - Types derived from mapping objects using indexed access
 
+### Q11: Total TypeScript Patterns Integration
+**Decision**: **Integrate 4 high-ROI patterns**:
+1. **SegmentIdComponents mapped shapes** - Makes invalid states impossible (`extension?: never` for Section)
+2. **Derive reverse mapping** - Reduces drift risk (one source of truth, reverse derived type-level)
+3. **Name collision fixes** - Use `Of` suffix for generic selectors (avoids self-reference bugs)
+4. **Overloads instead of casts** - Eliminate `as` casts in builder functions (better type safety)
+
 ## Proposed Implementation
 
 ### File Structure
@@ -114,33 +121,35 @@ codecs/
 **Using mapping objects for better maintainability and exhaustiveness checking:**
 
 ```typescript
-// Mapping objects (single source of truth, exhaustiveness checked automatically)
+// Single source of truth: TreeNodeKind → SplitPathKind mapping
 export const TreeNodeKindToSplitPathKind = {
   [TreeNodeKind.Section]: SplitPathKind.Folder,
   [TreeNodeKind.Scroll]: SplitPathKind.MdFile,
   [TreeNodeKind.File]: SplitPathKind.File,
 } as const satisfies Record<TreeNodeKind, SplitPathKind>;
 
-export const SplitPathKindToTreeNodeKind = {
-  [SplitPathKind.Folder]: TreeNodeKind.Section,
-  [SplitPathKind.MdFile]: TreeNodeKind.Scroll,
-  [SplitPathKind.File]: TreeNodeKind.File,
-} as const satisfies Record<SplitPathKind, TreeNodeKind>;
+// Derive reverse mapping type-level (reduces drift risk) 
+// in src/types/helpers.ts
+type InvertRecord<R extends Record<PropertyKey, PropertyKey>> = {
+  [K in keyof R as R[K]]: K
+};
+
+type SplitPathKindToTreeNodeKind = InvertRecord<typeof TreeNodeKindToSplitPathKind>;
 
 // Type-level mappings derived from mapping objects
 export type CorrespondingSplitPathKind<NK extends TreeNodeKind> =
   (typeof TreeNodeKindToSplitPathKind)[NK];
 
 export type CorrespondingTreeNodeKind<SK extends SplitPathKind> =
-  (typeof SplitPathKindToTreeNodeKind)[SK];
+  SplitPathKindToTreeNodeKind[SK];
 ```
 
 **Benefits**:
-- Single source of truth (mapping objects)
+- Single source of truth (one mapping object)
+- Reverse mapping derived type-level (reduces drift risk)
 - Exhaustiveness checked automatically via `satisfies Record<...>`
 - TypeScript errors if mappings are incomplete
 - More maintainable than conditional type chains
-- Can be extended to runtime use if needed later
 
 ### Helper Types
 
@@ -153,36 +162,53 @@ export type TreeNodeKindForSplitPath<T extends SplitPathKind> =
   CorrespondingTreeNodeKind<T>;
 
 // Generic locator type (narrows TreeNodeLocator union)
-export type NodeLocator<NK extends TreeNodeKind> = Extract<
+export type NodeLocatorOf<NK extends TreeNodeKind> = Extract<
   TreeNodeLocator,
   { targetType: NK }
 >;
 
 // Generic split path inside library (narrows union)
-export type SplitPathInsideLibrary<SK extends SplitPathKind> = Extract<
+// Using "Of" suffix to avoid name collision with union type SplitPathInsideLibrary
+export type SplitPathInsideLibraryOf<SK extends SplitPathKind> = Extract<
   SplitPathInsideLibrary,
   { type: SK }
 >;
 
 // Generic canonical split path inside library (narrows union, same pattern as SplitPath)
-export type CanonicalSplitPathInsideLibrary<SK extends SplitPathKind> = Extract<
+// Using "Of" suffix to avoid name collision with union type CanonicalSplitPathInsideLibrary
+export type CanonicalSplitPathInsideLibraryOf<SK extends SplitPathKind> = Extract<
   CanonicalSplitPathInsideLibrary,
   { type: SK }
 >;
 
-// Extension mapping for segment ID components
-type KindToExtension = {
-  [TreeNodeKind.Section]: never;
-  [TreeNodeKind.Scroll]: 'md';
-  [TreeNodeKind.File]: FileExtension;
+// Segment ID components mapped to full shapes (makes invalid states impossible)
+type SegmentIdComponentsMap = {
+  [TreeNodeKind.Section]: {
+    coreName: NodeName;
+    targetType: TreeNodeKind.Section;
+    extension?: never; // <-- forbidden, prevents extension from sneaking in
+  };
+  [TreeNodeKind.Scroll]: {
+    coreName: NodeName;
+    targetType: TreeNodeKind.Scroll;
+    extension: 'md';
+  };
+  [TreeNodeKind.File]: {
+    coreName: NodeName;
+    targetType: TreeNodeKind.File;
+    extension: FileExtension;
+  };
 };
 
 // Generic segment ID components (narrows based on TreeNodeKind)
-export type SegmentIdComponents<NK extends TreeNodeKind> =
-  { coreName: NodeName; targetType: NK } &
-  (KindToExtension[NK] extends never
-    ? {}
-    : { extension: KindToExtension[NK] });
+export type SegmentIdComponents<NK extends TreeNodeKind> = SegmentIdComponentsMap[NK];
+```
+
+**Benefits**:
+- Exact shape per kind (no optional extension on Section)
+- `extension?: never` prevents extension from being added to Section
+- Great autocomplete
+- Makes invalid states unrepresentable
 ```
 
 **Note**: Runtime mappings will be implemented in `plan-impl.md` as part of codec factory functions.
@@ -218,16 +244,19 @@ private buildCanonicalLeafSplitPath(
 }
 ```
 
-**After** (with generics):
+**After** (with overloads - Total TypeScript pattern):
 ```typescript
-private buildCanonicalLeafSplitPath<NK extends TreeNodeKind.Scroll | TreeNodeKind.File>(
-  locator: NodeLocator<NK>,
-): SplitPathInsideLibrary<CorrespondingSplitPathKind<NK>> {
-  // TypeScript infers:
-  // - If NK = TreeNodeKind.Scroll → returns SplitPathToMdFileInsideLibrary
-  // - If NK = TreeNodeKind.File → returns SplitPathToFileInsideLibrary
-  // No runtime if/switch needed - type system handles narrowing
-  
+// Overloads Eliminate type casts like as SplitPathInsideLibraryOf<...> while keeping implementation simple
+// Allow lightweight as const to preserve literal types.
+function buildCanonicalSplitPath(
+  locator: NodeLocatorOf<TreeNodeKind.Scroll>,
+): SplitPathInsideLibraryOf<SplitPathKind.MdFile>;
+function buildCanonicalSplitPath(
+  locator: NodeLocatorOf<TreeNodeKind.File>,
+): SplitPathInsideLibraryOf<SplitPathKind.File>;
+function buildCanonicalSplitPath(
+  locator: NodeLocatorOf<TreeNodeKind.Scroll | TreeNodeKind.File>,
+): SplitPathInsideLibraryOf<SplitPathKind.MdFile> | SplitPathInsideLibraryOf<SplitPathKind.File> {
   const pathParts = locator.segmentIdChainToParent.map((segId) =>
     this.extractNodeNameFromSegmentId(segId),
   );
@@ -235,14 +264,13 @@ private buildCanonicalLeafSplitPath<NK extends TreeNodeKind.Scroll | TreeNodeKin
   const nodeName = this.extractNodeNameFromLeafSegmentId(locator.segmentId);
   const basename = makeJoinedSuffixedBasename({ coreName: nodeName, suffixParts });
   
-  // Type-safe construction based on NK
   if (locator.targetType === TreeNodeKind.Scroll) {
     return {
       basename,
       extension: "md",
       pathParts,
       type: SplitPathKind.MdFile,
-    } as SplitPathInsideLibrary<CorrespondingSplitPathKind<NK>>;
+    } as const;
   }
   
   const extension = this.extractExtensionFromSegmentId(locator.segmentId);
@@ -251,9 +279,15 @@ private buildCanonicalLeafSplitPath<NK extends TreeNodeKind.Scroll | TreeNodeKin
     extension,
     pathParts,
     type: SplitPathKind.File,
-  } as SplitPathInsideLibrary<CorrespondingSplitPathKind<NK>>;
+  } as const;
 }
 ```
+
+**Benefits of overloads**:
+- Call sites get perfect types (no generic parameter needed)
+- Implementation stays readable (no complex generics)
+- No unsafe `as` casts needed
+- TypeScript narrows based on input type
 
 **Benefits**:
 - Type inference eliminates need for explicit union return types
@@ -296,13 +330,22 @@ makeCanonicalSplitPathInsideLibraryFromLocator(
 }
 ```
 
-**After**:
+**After** (with overloads):
 ```typescript
-makeCanonicalSplitPathInsideLibraryFromLocator<NK extends TreeNodeKind>(
-  loc: NodeLocator<NK>,
-): Result<CanonicalSplitPathInsideLibrary<CorrespondingSplitPathKind<NK>>, CodecError> {
-  // Type system ensures return type matches input kind
-  // No manual type assertions needed
+function makeCanonicalSplitPathInsideLibraryFromLocator(
+  loc: NodeLocatorOf<TreeNodeKind.Section>,
+): Result<CanonicalSplitPathInsideLibraryOf<SplitPathKind.Folder>, CodecError>;
+function makeCanonicalSplitPathInsideLibraryFromLocator(
+  loc: NodeLocatorOf<TreeNodeKind.Scroll>,
+): Result<CanonicalSplitPathInsideLibraryOf<SplitPathKind.MdFile>, CodecError>;
+function makeCanonicalSplitPathInsideLibraryFromLocator(
+  loc: NodeLocatorOf<TreeNodeKind.File>,
+): Result<CanonicalSplitPathInsideLibraryOf<SplitPathKind.File>, CodecError>;
+function makeCanonicalSplitPathInsideLibraryFromLocator(
+  loc: NodeLocatorOf<TreeNodeKind>,
+): Result<CanonicalSplitPathInsideLibrary, CodecError> {
+  // Implementation with proper error handling
+  // Type system ensures return type matches input kind via overloads
 }
 ```
 
@@ -322,15 +365,17 @@ parseSegmentId<NK extends TreeNodeKind>(
 Conversions between locators and split paths will use mappings:
 ```typescript
 locatorToCanonicalSplitPath<NK extends TreeNodeKind>(
-  loc: NodeLocator<NK>
-): Result<CanonicalSplitPathInsideLibrary<CorrespondingSplitPathKind<NK>>, CodecError>
+  loc: NodeLocatorOf<NK>
+): Result<CanonicalSplitPathInsideLibraryOf<CorrespondingSplitPathKind<NK>>, CodecError>
 ```
+
+**Note**: Using `CanonicalSplitPathInsideLibraryOf` (with `Of` suffix) to avoid name collision with union type.
 
 ### 3. Existing Code Simplification
 
 Functions like `buildCanonicalLeafSplitPath` in `healer.ts` can be simplified:
 - Replace union return types with generic return types
-- Eliminate runtime if/switch statements where type system can handle narrowing
+- Eliminate runtime mapping switches; keep minimal runtime branching only where data differs (e.g., extension extraction).
 - Better type inference and compile-time guarantees
 
 ## Testing Strategy
@@ -341,7 +386,7 @@ Functions like `buildCanonicalLeafSplitPath` in `healer.ts` can be simplified:
    - Verify `never` is returned for unmapped types
 
 2. **Generic type tests**: Verify generic constraints work correctly
-   - Test `NodeLocator<NK>` narrows correctly for each TreeNodeKind
+   - Test `NodeLocatorOf<NK>` narrows correctly for each TreeNodeKind
    - Test `SplitPathInsideLibrary<SK>` narrows correctly for each SplitPathKind
    - Test helper types like `SplitPathForTreeNodeKind` work correctly
 
@@ -358,7 +403,7 @@ Functions like `buildCanonicalLeafSplitPath` in `healer.ts` can be simplified:
 ### Files That Will Use Mappings
 
 1. `codecs/segment-id/` - Generic `parseSegmentId<NK>`
-2. `codecs/locator/` - Type-safe conversions with `NodeLocator<NK>`
+2. `codecs/locator/` - Type-safe conversions with `NodeLocatorOf<NK>`
 3. `healer.ts` - Simplify `buildCanonicalLeafSplitPath` and similar functions
 4. `locator-codec.ts` - Use generic types for better inference
 5. `codex-impact-to-actions.ts` - Type-safe split path building
@@ -391,7 +436,7 @@ None expected - this is additive. Existing code can continue using manual mappin
 - [ ] Create helper types:
   - [ ] `SplitPathForTreeNodeKind<T>`
   - [ ] `TreeNodeKindForSplitPath<T>`
-  - [ ] `NodeLocator<NK>`
+  - [ ] `NodeLocatorOf<NK>`
   - [ ] `SplitPathInsideLibrary<SK>`
   - [ ] `CanonicalSplitPathInsideLibrary<SK>`
   - [ ] `SegmentIdComponents<NK>`
