@@ -1,9 +1,11 @@
 import { SplitPathType } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { NodeName } from "../types/schemas/node-name";
+import type { TreeAccessor } from "./codex/codex-impact-to-actions";
 import {
 	type CodexImpact,
 	computeCodexImpact,
 } from "./codex/compute-codex-impact";
+import type { Tree } from "./tree";
 import type {
 	SplitPathInsideLibrary,
 	SplitPathToFileInsideLibrary,
@@ -25,41 +27,20 @@ import {
 	makeJoinedSuffixedBasename,
 	makeSuffixPartsFromPathPartsWithRoot,
 } from "./tree-action/utils/canonical-naming/suffix-utils/core-suffix-utils";
-import { getNodeName } from "./tree-action/utils/locator/locator-utils";
 import { makeNodeSegmentId } from "./tree-node/codecs/node-and-segment-id/make-node-segment-id";
-import { TreeNodeStatus, TreeNodeType } from "./tree-node/types/atoms";
+import { TreeNodeType } from "./tree-node/types/atoms";
 import {
-	type FileNodeSegmentId,
 	NodeSegmentIdSeparator,
-	type ScrollNodeSegmentId,
 	type SectionNodeSegmentId,
 	type TreeNodeSegmentId,
 } from "./tree-node/types/node-segment-id";
 import type {
 	FileNode,
-	LeafNode,
 	ScrollNode,
 	SectionNode,
 	TreeNode,
 } from "./tree-node/types/tree-node";
 import type { HealingAction } from "./types/healing-action";
-
-// ─── Helpers ───
-
-/** Helper to make segment ID with proper type narrowing */
-function makeSegmentId(node: ScrollNode): ScrollNodeSegmentId;
-function makeSegmentId(node: FileNode): FileNodeSegmentId;
-function makeSegmentId(node: SectionNode): SectionNodeSegmentId;
-function makeSegmentId(node: TreeNode): TreeNodeSegmentId;
-function makeSegmentId(node: TreeNode): TreeNodeSegmentId {
-	if (node.type === TreeNodeType.Section) {
-		return makeNodeSegmentId(node);
-	}
-	if (node.type === TreeNodeType.Scroll) {
-		return makeNodeSegmentId(node);
-	}
-	return makeNodeSegmentId(node);
-}
 
 // ─── Result Type ───
 
@@ -70,145 +51,99 @@ export type ApplyResult = {
 	codexImpact: CodexImpact;
 };
 
-// ─── TreeAccessor ───
+// ─── Healer ───
 
-import type { TreeAccessor } from "./codex/codex-impact-to-actions";
+export class Healer implements TreeAccessor {
+	private tree: Tree;
 
-// ─── LibraryTree ───
-
-export class LibraryTree implements TreeAccessor {
-	private root: SectionNode;
-
-	constructor(libraryRootName: NodeName) {
-		this.root = {
-			children: {},
-			nodeName: libraryRootName,
-			type: TreeNodeType.Section,
-		};
+	constructor(tree: Tree) {
+		this.tree = tree;
 	}
 
 	/** Main entry: apply action, return healing actions + codex impact */
-	apply(action: TreeAction): ApplyResult {
+	getHealingActionsFor(action: TreeAction): ApplyResult {
 		// Compute codex impact BEFORE applying (uses action locators)
 		const codexImpact = computeCodexImpact(action);
 
-		const actionType = action.actionType;
-		let healingActions: HealingAction[];
+		// Apply action to tree (modifies tree structure)
+		this.tree.apply(action);
 
-		if (actionType === "Create") {
-			healingActions = this.applyCreate(action as CreateTreeLeafAction);
-		} else if (actionType === "Delete") {
-			healingActions = this.applyDelete(action as DeleteNodeAction);
-		} else if (actionType === "Rename") {
-			healingActions = this.applyRename(action as RenameNodeAction);
-		} else if (actionType === "Move") {
-			healingActions = this.applyMove(action as MoveNodeAction);
-		} else {
-			// ChangeStatus
-			healingActions = this.applyChangeStatus(
-				action as ChangeNodeStatusAction,
-			);
-		}
+		// Compute healing actions based on action type
+		const healingActions = this.computeHealingForAction(action);
 
 		return { codexImpact, healingActions };
 	}
 
-	// ─── Create ───
+	// ─── TreeAccessor Implementation ───
 
-	private applyCreate(action: CreateTreeLeafAction): HealingAction[] {
-		const { targetLocator, observedSplitPath } = action;
-		const parentSection = this.ensureSectionChain(
-			targetLocator.segmentIdChainToParent,
+	findSection(chain: SectionNodeSegmentId[]): SectionNode | undefined {
+		return this.tree.findSection(chain);
+	}
+
+	getRoot(): SectionNode {
+		return this.tree.getRoot();
+	}
+
+	// ─── Healing Computation ───
+
+	private computeHealingForAction(action: TreeAction): HealingAction[] {
+		const actionType = action.actionType;
+
+		if (actionType === "Create") {
+			return this.computeCreateHealing(action as CreateTreeLeafAction);
+		}
+		if (actionType === "Delete") {
+			return this.computeDeleteHealing(action as DeleteNodeAction);
+		}
+		if (actionType === "Rename") {
+			return this.computeRenameHealing(action as RenameNodeAction);
+		}
+		if (actionType === "Move") {
+			return this.computeMoveHealing(action as MoveNodeAction);
+		}
+		// ChangeStatus
+		return this.computeChangeStatusHealing(
+			action as ChangeNodeStatusAction,
 		);
+	}
 
-		const node = this.makeLeafNode(action);
-		const segmentId = makeSegmentId(node);
-		parentSection.children[segmentId] = node;
-
+	private computeCreateHealing(
+		action: CreateTreeLeafAction,
+	): HealingAction[] {
+		const { targetLocator, observedSplitPath } = action;
 		return this.computeLeafHealing(targetLocator, observedSplitPath);
 	}
 
-	private makeLeafNode(action: CreateTreeLeafAction): LeafNode {
-		const nodeName = getNodeName(action.targetLocator);
-
-		if (action.targetLocator.targetType === TreeNodeType.Scroll) {
-			return {
-				extension: "md",
-				nodeName,
-				status: action.initialStatus ?? TreeNodeStatus.NotStarted,
-				type: TreeNodeType.Scroll,
-			};
-		}
-		// File
-		return {
-			extension: action.observedSplitPath.extension,
-			nodeName,
-			status: TreeNodeStatus.Unknown,
-			type: TreeNodeType.File,
-		};
-	}
-
-	// ─── Delete ───
-
-	private applyDelete(action: DeleteNodeAction): HealingAction[] {
-		const { targetLocator } = action;
-		const parentSection = this.findSection(
-			targetLocator.segmentIdChainToParent,
-		);
-		if (!parentSection) return [];
-
-		delete parentSection.children[targetLocator.segmentId];
-
-		// Auto-prune empty ancestors
-		this.pruneEmptyAncestors(targetLocator.segmentIdChainToParent);
-
+	private computeDeleteHealing(_action: DeleteNodeAction): HealingAction[] {
+		// Delete doesn't generate healing actions
 		return [];
 	}
 
-	private pruneEmptyAncestors(chain: SectionNodeSegmentId[]): void {
-		// Walk from deepest to shallowest
-		for (let i = chain.length - 1; i >= 0; i--) {
-			const parentChain = chain.slice(0, i);
-			const segmentId = chain[i];
-			if (!segmentId) continue;
-
-			const parent = this.findSection(parentChain);
-			if (!parent) break;
-
-			const child = parent.children[segmentId];
-			if (
-				child &&
-				child.type === TreeNodeType.Section &&
-				Object.keys(child.children).length === 0
-			) {
-				delete parent.children[segmentId];
-			} else {
-				break; // Stop if non-empty
-			}
-		}
-	}
-
-	// ─── Rename ───
-
-	private applyRename(action: RenameNodeAction): HealingAction[] {
+	private computeRenameHealing(action: RenameNodeAction): HealingAction[] {
 		const { targetLocator, newNodeName } = action;
-		const parentSection = this.findSection(
+
+		// Get node after tree.apply() (already renamed)
+		const parentSection = this.tree.findSection(
 			targetLocator.segmentIdChainToParent,
 		);
 		if (!parentSection) return [];
 
-		const node = parentSection.children[targetLocator.segmentId];
+		// Find node by newNodeName (tree already renamed it)
+		let node: TreeNode | null = null;
+		for (const child of Object.values(parentSection.children)) {
+			if (child.nodeName === newNodeName) {
+				node = child;
+				break;
+			}
+		}
 		if (!node) return [];
 
-		// Remove old, insert with new name
-		delete parentSection.children[targetLocator.segmentId];
-		node.nodeName = newNodeName;
-		const newSegmentId = makeSegmentId(node);
-		parentSection.children[newSegmentId] = node;
+		// Compute new segment ID
+		const newSegmentId = this.makeSegmentIdFromNode(node);
 
 		// If section renamed, update descendant suffixes
 		if (node.type === TreeNodeType.Section) {
-			// Old path: parent chain + OLD section name (for suffix computation)
+			// Old path: parent chain + OLD section name (from targetLocator.segmentId)
 			const oldSectionPath = this.buildSectionPath(
 				targetLocator.segmentIdChainToParent,
 				this.extractNodeNameFromSegmentId(
@@ -246,9 +181,7 @@ export class LibraryTree implements TreeAccessor {
 		return this.computeLeafHealing(newLocator, oldCanonical);
 	}
 
-	// ─── Move ───
-
-	private applyMove(action: MoveNodeAction): HealingAction[] {
+	private computeMoveHealing(action: MoveNodeAction): HealingAction[] {
 		const {
 			targetLocator,
 			newParentLocator,
@@ -256,44 +189,40 @@ export class LibraryTree implements TreeAccessor {
 			observedSplitPath,
 		} = action;
 
-		// Detach from old parent
-		const oldParent = this.findSection(
-			targetLocator.segmentIdChainToParent,
-		);
-		if (!oldParent) return [];
-
-		const node = oldParent.children[targetLocator.segmentId];
-		if (!node) return [];
-
-		// Compute old section path BEFORE detaching (for descendant healing)
-		const oldSectionPath =
-			node.type === TreeNodeType.Section
-				? this.buildSectionPath(
-						targetLocator.segmentIdChainToParent,
-						node.nodeName,
-					)
-				: null;
-
-		delete oldParent.children[targetLocator.segmentId];
-
-		// Prune old ancestors if empty
-		this.pruneEmptyAncestors(targetLocator.segmentIdChainToParent);
-
-		// Ensure new parent chain exists
+		// Get node from tree (tree already moved it)
 		const newParentChain = [
 			...newParentLocator.segmentIdChainToParent,
 			newParentLocator.segmentId,
 		];
-		const newParent = this.ensureSectionChain(newParentChain);
+		const newParent = this.tree.findSection(newParentChain);
+		if (!newParent) return [];
 
-		// Update node name and attach
-		node.nodeName = newNodeName;
-		const newSegmentId = makeSegmentId(node);
-		newParent.children[newSegmentId] = node;
+		// Find node by newNodeName (tree already moved and renamed it)
+		let node: TreeNode | null = null;
+		for (const child of Object.values(newParent.children)) {
+			if (child.nodeName === newNodeName) {
+				node = child;
+				break;
+			}
+		}
+		if (!node) return [];
+
+		// Compute old section path (before move) - use old node name from targetLocator
+		const oldNodeName = this.extractNodeNameFromSegmentId(
+			targetLocator.segmentId as SectionNodeSegmentId,
+		);
+		const oldSectionPath =
+			node.type === TreeNodeType.Section
+				? this.buildSectionPath(
+						targetLocator.segmentIdChainToParent,
+						oldNodeName,
+					)
+				: null;
 
 		// Compute healing
 		if (node.type === TreeNodeType.Section && oldSectionPath) {
 			// New chain in tree
+			const newSegmentId = this.makeSegmentIdFromNode(node);
 			const newSectionChain = [
 				...newParentChain,
 				newSegmentId as SectionNodeSegmentId,
@@ -347,9 +276,10 @@ export class LibraryTree implements TreeAccessor {
 		}
 
 		// Leaf move - narrow the types
+		const newSegmentId = this.makeSegmentIdFromNode(node);
 		if (node.type === TreeNodeType.Scroll) {
 			const newLocator: ScrollNodeLocator = {
-				segmentId: newSegmentId as ScrollNodeSegmentId,
+				segmentId: newSegmentId as ScrollNodeLocator["segmentId"],
 				segmentIdChainToParent: newParentChain,
 				targetType: TreeNodeType.Scroll,
 			};
@@ -361,7 +291,7 @@ export class LibraryTree implements TreeAccessor {
 
 		// File
 		const newLocator: FileNodeLocator = {
-			segmentId: newSegmentId as FileNodeSegmentId,
+			segmentId: newSegmentId as FileNodeLocator["segmentId"],
 			segmentIdChainToParent: newParentChain,
 			targetType: TreeNodeType.File,
 		};
@@ -371,104 +301,12 @@ export class LibraryTree implements TreeAccessor {
 		);
 	}
 
-	// ─── ChangeStatus ───
-
-	private applyChangeStatus(action: ChangeNodeStatusAction): HealingAction[] {
-		const { targetLocator, newStatus } = action;
-
-		if (targetLocator.targetType === TreeNodeType.Section) {
-			// Propagate to descendants
-			const section = this.findSection([
-				...targetLocator.segmentIdChainToParent,
-				targetLocator.segmentId,
-			]);
-			if (section) {
-				this.propagateStatus(section, newStatus);
-			}
-		} else {
-			// Direct leaf update
-			const parent = this.findSection(
-				targetLocator.segmentIdChainToParent,
-			);
-			if (parent) {
-				const node = parent.children[targetLocator.segmentId];
-				if (node && node.type !== TreeNodeType.Section) {
-					(node as ScrollNode).status = newStatus;
-				}
-			}
-		}
-
+	private computeChangeStatusHealing(
+		_action: ChangeNodeStatusAction,
+	): HealingAction[] {
+		// ChangeStatus doesn't generate healing actions
 		return [];
 	}
-
-	private propagateStatus(
-		section: SectionNode,
-		status: TreeNodeStatus,
-	): void {
-		for (const child of Object.values(section.children)) {
-			if (child.type === TreeNodeType.Section) {
-				this.propagateStatus(child, status);
-			} else {
-				(child as ScrollNode).status = status;
-			}
-		}
-	}
-
-	// ─── Traversal Helpers ───
-
-	/** Find section by chain. Part of TreeAccessor interface. */
-	findSection(chain: SectionNodeSegmentId[]): SectionNode | undefined {
-		// First element is Library root → current = this.root; rest → traverse children
-		let current: SectionNode | null = null;
-		for (const segId of chain) {
-			if (!current) {
-				current = this.root;
-				continue;
-			}
-			const child = current.children[segId];
-			if (!child || child.type !== TreeNodeType.Section) return undefined;
-			current = child;
-		}
-		return current ?? this.root;
-	}
-
-	private ensureSectionChain(chain: SectionNodeSegmentId[]): SectionNode {
-		// First element is Library root → current = this.root; rest → traverse/create children
-		let current: SectionNode | null = null;
-		for (const segId of chain) {
-			if (!current) {
-				current = this.root;
-				continue;
-			}
-			let child = current.children[segId];
-			if (!child) {
-				const nodeName = this.extractNodeNameFromSegmentId(segId);
-				child = {
-					children: {},
-					nodeName,
-					type: TreeNodeType.Section,
-				};
-				current.children[segId] = child;
-			}
-			if (child.type !== TreeNodeType.Section) {
-				throw new Error(
-					`Expected section at ${segId}, got ${child.type}`,
-				);
-			}
-			current = child;
-		}
-		return current ?? this.root;
-	}
-
-	private extractNodeNameFromSegmentId(
-		segId: SectionNodeSegmentId,
-	): NodeName {
-		const sep = NodeSegmentIdSeparator;
-		const [raw] = segId.split(sep, 1);
-		return raw as NodeName;
-	}
-
-	// ─── Healing Computation ───
 
 	private computeLeafHealing(
 		locator: ScrollNodeLocator | FileNodeLocator,
@@ -668,6 +506,14 @@ export class LibraryTree implements TreeAccessor {
 		];
 	}
 
+	private extractNodeNameFromSegmentId(
+		segId: SectionNodeSegmentId,
+	): NodeName {
+		const sep = NodeSegmentIdSeparator;
+		const [raw] = segId.split(sep, 1);
+		return raw as NodeName;
+	}
+
 	private extractNodeNameFromLeafSegmentId(
 		segId: TreeNodeSegmentId,
 	): NodeName {
@@ -702,9 +548,14 @@ export class LibraryTree implements TreeAccessor {
 		return true;
 	}
 
-	// ─── Test Helpers ───
-
-	getRoot(): SectionNode {
-		return this.root;
+	private makeSegmentIdFromNode(node: TreeNode): TreeNodeSegmentId {
+		// Type narrowing for makeNodeSegmentId overloads
+		if (node.type === TreeNodeType.Section) {
+			return makeNodeSegmentId(node);
+		}
+		if (node.type === TreeNodeType.Scroll) {
+			return makeNodeSegmentId(node);
+		}
+		return makeNodeSegmentId(node);
 	}
 }

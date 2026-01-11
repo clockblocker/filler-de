@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { codexImpactToActions } from "../../../../../src/commanders/librarian-new/library-tree/codex/codex-impact-to-actions";
 import { mergeCodexImpacts } from "../../../../../src/commanders/librarian-new/library-tree/codex/merge-codex-impacts";
-import { LibraryTree } from "../../../../../src/commanders/librarian-new/library-tree/library-tree";
+import { Healer } from "../../../../../src/commanders/librarian-new/library-tree/healer";
+import { Tree } from "../../../../../src/commanders/librarian-new/library-tree/tree";
 import {
 	TreeNodeStatus,
 	TreeNodeType,
@@ -31,8 +32,8 @@ describe("Codex init for nested sections", () => {
 	});
 
 	it("creates codexes for all ancestor sections", () => {
-		const tree = new LibraryTree("Library");
-		const impacts: ReturnType<typeof tree.apply>["codexImpact"][] = [];
+		const healer = new Healer(new Tree("Library"));
+		const impacts: ReturnType<typeof healer.getHealingActionsFor>["codexImpact"][] = [];
 
 		// Create a file at Library/grandpa/father/kid/Diary.md
 		const createAction = {
@@ -56,12 +57,12 @@ describe("Codex init for nested sections", () => {
 			},
 		};
 
-		const result = tree.apply(createAction);
+		const result = healer.getHealingActionsFor(createAction);
 		impacts.push(result.codexImpact);
 
 		const mergedImpact = mergeCodexImpacts(impacts);
 
-		const codexActions = codexImpactToActions(mergedImpact, tree);
+		const codexActions = codexImpactToActions(mergedImpact, healer);
 
 		// Should have codexes for: Library, grandpa, father, kid
 		const createCodexPaths = codexActions

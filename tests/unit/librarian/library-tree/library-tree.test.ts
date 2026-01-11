@@ -1,7 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import {
-	LibraryTree,
-} from "../../../../src/commanders/librarian-new/library-tree/library-tree";
+import { Healer } from "../../../../src/commanders/librarian-new/library-tree/healer";
 import {
 	makeScrollLocator,
 	makeSectionLocator,
@@ -24,7 +22,7 @@ afterEach(() => {
 	getParsedUserSettingsSpy.mockRestore();
 });
 
-describe("LibraryTree", () => {
+describe("Healer", () => {
 	describe("makeTree / toShape roundtrip", () => {
 		it("empty tree", () => {
 			const tree = makeTree({ libraryRoot: "Library" as NodeName });
@@ -56,7 +54,7 @@ describe("LibraryTree", () => {
 
 	describe("apply Create", () => {
 		it("creates leaf with implicit sections", () => {
-			const tree = makeTree({ libraryRoot: "Library" as NodeName });
+			const healer = makeTree({ libraryRoot: "Library" as NodeName });
 
 			// Chain INCLUDES Library root
 			const locator = makeScrollLocator(
@@ -64,7 +62,7 @@ describe("LibraryTree", () => {
 				"Note" as NodeName,
 			);
 
-			tree.apply({
+			healer.getHealingActionsFor({
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note",
@@ -75,7 +73,7 @@ describe("LibraryTree", () => {
 				targetLocator: locator,
 			});
 
-			const shape = toShape(tree);
+			const shape = toShape(healer);
 			expect(shape.children?.recipe).toBeDefined();
 			// @ts-expect-error - accessing nested structure
 			expect(shape.children?.recipe?.children?.pie?.children?.Note).toEqual({
@@ -87,7 +85,7 @@ describe("LibraryTree", () => {
 
 	describe("apply Delete", () => {
 		it("deletes leaf and prunes empty ancestors", () => {
-			const tree = makeTree({
+			const healer = makeTree({
 				children: {
 					recipe: {
 						children: {
@@ -108,18 +106,18 @@ describe("LibraryTree", () => {
 				"Note" as NodeName,
 			);
 
-			tree.apply({
+			healer.getHealingActionsFor({
 				actionType: TreeActionType.Delete,
 				targetLocator: locator,
 			});
 
-			const shape = toShape(tree);
+			const shape = toShape(healer);
 			// All empty ancestors should be pruned
 			expect(shape.children).toBeUndefined();
 		});
 
 		it("preserves non-empty siblings", () => {
-			const tree = makeTree({
+			const healer = makeTree({
 				children: {
 					recipe: {
 						children: {
@@ -141,12 +139,12 @@ describe("LibraryTree", () => {
 				"Note1" as NodeName,
 			);
 
-			tree.apply({
+			healer.getHealingActionsFor({
 				actionType: TreeActionType.Delete,
 				targetLocator: locator,
 			});
 
-			const shape = toShape(tree);
+			const shape = toShape(healer);
 			// @ts-expect-error - accessing nested structure
 			expect(shape.children?.recipe?.children?.pie?.children?.Note2).toBeDefined();
 			// @ts-expect-error - accessing nested structure
@@ -156,7 +154,7 @@ describe("LibraryTree", () => {
 
 	describe("apply Rename", () => {
 		it("renames section", () => {
-			const tree = makeTree({
+			const healer = makeTree({
 				children: {
 					pie: {
 						children: {
@@ -170,13 +168,13 @@ describe("LibraryTree", () => {
 			// Chain INCLUDES Library root
 			const locator = makeSectionLocator(["Library" as NodeName], "pie" as NodeName);
 
-			tree.apply({
+			healer.getHealingActionsFor({
 				actionType: TreeActionType.Rename,
 				newNodeName: "pies" as NodeName,
 				targetLocator: locator,
 			});
 
-			const shape = toShape(tree);
+			const shape = toShape(healer);
 			expect(shape.children?.pie).toBeUndefined();
 			expect(shape.children?.pies).toBeDefined();
 		});
@@ -184,7 +182,7 @@ describe("LibraryTree", () => {
 
 	describe("apply ChangeStatus", () => {
 		it("updates leaf status", () => {
-			const tree = makeTree({
+			const healer = makeTree({
 				children: {
 					Note: { status: TreeNodeStatus.NotStarted, type: "Scroll" as const },
 				},
@@ -194,13 +192,13 @@ describe("LibraryTree", () => {
 			// Chain INCLUDES Library root
 			const locator = makeScrollLocator(["Library" as NodeName], "Note" as NodeName);
 
-			tree.apply({
+			healer.getHealingActionsFor({
 				actionType: TreeActionType.ChangeStatus,
 				newStatus: TreeNodeStatus.Done,
 				targetLocator: locator,
 			});
 
-			const shape = toShape(tree);
+			const shape = toShape(healer);
 			expect(shape.children?.Note).toEqual({
 				status: TreeNodeStatus.Done,
 				type: "Scroll",
@@ -208,7 +206,7 @@ describe("LibraryTree", () => {
 		});
 
 		it("propagates status to descendants", () => {
-			const tree = makeTree({
+			const healer = makeTree({
 				children: {
 					recipe: {
 						children: {
@@ -223,13 +221,13 @@ describe("LibraryTree", () => {
 			// Chain INCLUDES Library root
 			const locator = makeSectionLocator(["Library" as NodeName], "recipe" as NodeName);
 
-			tree.apply({
+			healer.getHealingActionsFor({
 				actionType: TreeActionType.ChangeStatus,
 				newStatus: TreeNodeStatus.Done,
 				targetLocator: locator,
 			});
 
-			const shape = toShape(tree);
+			const shape = toShape(healer);
 			// @ts-expect-error - accessing nested structure
 			expect(shape.children?.recipe?.children?.Note1?.status).toBe(TreeNodeStatus.Done);
 			// @ts-expect-error - accessing nested structure

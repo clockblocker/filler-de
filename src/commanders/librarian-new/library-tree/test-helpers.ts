@@ -1,19 +1,14 @@
 /**
- * Test helpers for LibraryTree.
+ * Test helpers for Healer.
  * Provides factory and snapshot utilities for easy testing.
  */
 
 import type { NodeName } from "../types/schemas/node-name";
-import { LibraryTree } from "./library-tree";
-import { TreeNodeStatus, TreeNodeType } from "./tree-node/types/atoms";
+import { Healer } from "./healer";
+import { Tree } from "./tree";
 import { makeNodeSegmentId } from "./tree-node/codecs/node-and-segment-id/make-node-segment-id";
-import type {
-	FileNode,
-	LeafNode,
-	ScrollNode,
-	SectionNode,
-	TreeNode,
-} from "./tree-node/types/tree-node";
+import { TreeNodeStatus, TreeNodeType } from "./tree-node/types/atoms";
+import type { LeafNode, SectionNode } from "./tree-node/types/tree-node";
 
 // ─── Shape Types ───
 
@@ -34,15 +29,15 @@ export type TreeShape = {
 
 // ─── Factory ───
 
-export function makeTree(shape: TreeShape): LibraryTree {
-	const tree = new LibraryTree(shape.libraryRoot);
+export function makeTree(shape: TreeShape): Healer {
+	const tree = new Tree(shape.libraryRoot);
 	const root = tree.getRoot();
 
 	if (shape.children) {
 		populateSection(root, shape.children);
 	}
 
-	return tree;
+	return new Healer(tree);
 }
 
 function populateSection(
@@ -59,9 +54,9 @@ function populateSection(
 			section.children[segId] = leaf;
 		} else {
 			const childSection: SectionNode = {
+				children: {},
 				nodeName: name as NodeName,
 				type: TreeNodeType.Section,
-				children: {},
 			};
 			const segId = makeNodeSegmentId(childSection);
 			section.children[segId] = childSection;
@@ -74,33 +69,35 @@ function populateSection(
 }
 
 function isLeafShape(shape: SectionShape | LeafShape): shape is LeafShape {
-	return "type" in shape && (shape.type === "Scroll" || shape.type === "File");
+	return (
+		"type" in shape && (shape.type === "Scroll" || shape.type === "File")
+	);
 }
 
 function makeLeafFromShape(name: NodeName, shape: LeafShape): LeafNode {
 	if (shape.type === "Scroll") {
 		return {
-			nodeName: name,
-			type: TreeNodeType.Scroll,
-			status: shape.status ?? TreeNodeStatus.NotStarted,
 			extension: "md",
+			nodeName: name,
+			status: shape.status ?? TreeNodeStatus.NotStarted,
+			type: TreeNodeType.Scroll,
 		};
 	}
 	return {
-		nodeName: name,
-		type: TreeNodeType.File,
-		status: TreeNodeStatus.Unknown,
 		extension: shape.extension ?? "txt",
+		nodeName: name,
+		status: TreeNodeStatus.Unknown,
+		type: TreeNodeType.File,
 	};
 }
 
 // ─── Snapshot ───
 
-export function toShape(tree: LibraryTree): TreeShape {
-	const root = tree.getRoot();
+export function toShape(healer: Healer): TreeShape {
+	const root = healer.getRoot();
 	return {
-		libraryRoot: root.nodeName,
 		children: sectionChildrenToShape(root),
+		libraryRoot: root.nodeName,
 	};
 }
 
@@ -119,13 +116,13 @@ function sectionChildrenToShape(
 			};
 		} else if (child.type === TreeNodeType.Scroll) {
 			result[child.nodeName] = {
-				type: "Scroll",
 				status: child.status,
+				type: "Scroll",
 			};
 		} else {
 			result[child.nodeName] = {
-				type: "File",
 				extension: child.extension,
+				type: "File",
 			};
 		}
 	}
@@ -135,17 +132,17 @@ function sectionChildrenToShape(
 
 // ─── Locator Builders (for tests) ───
 
-import { NodeSegmentIdSeparator } from "./tree-node/types/node-segment-id";
 import type {
-	ScrollNodeLocator,
 	FileNodeLocator,
+	ScrollNodeLocator,
 	SectionNodeLocator,
 } from "./tree-action/types/target-chains";
 import type {
-	ScrollNodeSegmentId,
 	FileNodeSegmentId,
+	ScrollNodeSegmentId,
 	SectionNodeSegmentId,
 } from "./tree-node/types/node-segment-id";
+import { NodeSegmentIdSeparator } from "./tree-node/types/node-segment-id";
 
 export function makeScrollLocator(
 	pathParts: NodeName[],
@@ -153,10 +150,10 @@ export function makeScrollLocator(
 ): ScrollNodeLocator {
 	const sep = NodeSegmentIdSeparator;
 	return {
+		segmentId: `${nodeName}${sep}Scroll${sep}md` as ScrollNodeSegmentId,
 		segmentIdChainToParent: pathParts.map(
 			(p) => `${p}${sep}Section${sep}` as SectionNodeSegmentId,
 		),
-		segmentId: `${nodeName}${sep}Scroll${sep}md` as ScrollNodeSegmentId,
 		targetType: TreeNodeType.Scroll,
 	};
 }
@@ -168,10 +165,11 @@ export function makeFileLocator(
 ): FileNodeLocator {
 	const sep = NodeSegmentIdSeparator;
 	return {
+		segmentId:
+			`${nodeName}${sep}File${sep}${extension}` as FileNodeSegmentId,
 		segmentIdChainToParent: pathParts.map(
 			(p) => `${p}${sep}Section${sep}` as SectionNodeSegmentId,
 		),
-		segmentId: `${nodeName}${sep}File${sep}${extension}` as FileNodeSegmentId,
 		targetType: TreeNodeType.File,
 	};
 }
@@ -182,11 +180,10 @@ export function makeSectionLocator(
 ): SectionNodeLocator {
 	const sep = NodeSegmentIdSeparator;
 	return {
+		segmentId: `${nodeName}${sep}Section${sep}` as SectionNodeSegmentId,
 		segmentIdChainToParent: pathParts.map(
 			(p) => `${p}${sep}Section${sep}` as SectionNodeSegmentId,
 		),
-		segmentId: `${nodeName}${sep}Section${sep}` as SectionNodeSegmentId,
 		targetType: TreeNodeType.Section,
 	};
 }
-

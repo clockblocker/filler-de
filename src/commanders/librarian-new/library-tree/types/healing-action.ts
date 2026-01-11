@@ -1,5 +1,5 @@
 /**
- * Library-scoped healing actions emitted by LibraryTree.
+ * Library-scoped healing actions emitted by Healer.
  * Librarian converts these to VaultActions before dispatch.
  */
 
@@ -76,4 +76,3 @@ export type HealingAction =
 	| RenameFileHealingAction
 	| RenameMdFileHealingAction
 	| DeleteMdFileHealingAction;
-

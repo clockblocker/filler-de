@@ -25,7 +25,8 @@ import {
 	type WriteScrollStatusAction,
 } from "./library-tree/codex";
 import { mergeCodexImpacts } from "./library-tree/codex/merge-codex-impacts";
-import { LibraryTree } from "./library-tree/library-tree";
+import { Healer } from "./library-tree/healer";
+import { Tree } from "./library-tree/tree";
 import { buildTreeActions } from "./library-tree/tree-action/bulk-vault-action-adapter";
 import { tryParseAsInsideLibrarySplitPath } from "./library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
 import type { SplitPathInsideLibrary } from "./library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
@@ -71,7 +72,7 @@ type QueueItem = {
 // ─── Librarian ───
 
 export class Librarian {
-	private tree: LibraryTree | null = null;
+	private healer: Healer | null = null;
 	private eventTeardown: (() => void) | null = null;
 	private clickTeardown: (() => void) | null = null;
 	private queue: QueueItem[] = [];
@@ -92,8 +93,8 @@ export class Librarian {
 			const rootSplitPath = settings.splitPathToLibraryRoot;
 			const libraryRoot = rootSplitPath.basename;
 
-			// Create empty tree
-			this.tree = new LibraryTree(libraryRoot);
+			// Create empty tree and healer
+			this.healer = new Healer(new Tree(libraryRoot));
 
 			// Read all files from library
 			const allFilesResult =
@@ -121,7 +122,7 @@ export class Librarian {
 			const allCodexImpacts: CodexImpact[] = [];
 
 			for (const action of createActions) {
-				const result = this.tree.apply(action);
+				const result = this.healer.getHealingActionsFor(action);
 				allHealingActions.push(...result.healingActions);
 				allCodexImpacts.push(result.codexImpact);
 			}
@@ -146,7 +147,7 @@ export class Librarian {
 
 			// Then dispatch codex actions
 			const mergedImpact = mergeCodexImpacts(allCodexImpacts);
-			const codexActions = codexImpactToActions(mergedImpact, this.tree);
+			const codexActions = codexImpactToActions(mergedImpact, this.healer);
 			const codexVaultActions = codexActionsToVaultActions(codexActions);
 
 			if (codexVaultActions.length > 0) {
@@ -251,11 +252,11 @@ export class Librarian {
 	private findInvalidCodexFiles(
 		allFiles: SplitPathWithReader[],
 	): HealingAction[] {
-		if (!this.tree) return [];
+		if (!this.healer) return [];
 
 		// Collect all valid codex paths from tree
 		const validCodexPaths = new Set<string>();
-		this.collectValidCodexPaths(this.tree.getRoot(), [], validCodexPaths);
+		this.collectValidCodexPaths(this.healer.getRoot(), [], validCodexPaths);
 
 		const deleteActions: HealingAction[] = [];
 
@@ -406,7 +407,7 @@ export class Librarian {
 	 * Handle a bulk event: convert to tree actions, apply, dispatch healing.
 	 */
 	private async handleBulkEvent(bulk: BulkVaultEvent): Promise<void> {
-		if (!this.tree) {
+		if (!this.healer) {
 			return;
 		}
 
@@ -493,13 +494,13 @@ export class Librarian {
 	 * Process a batch of tree actions.
 	 */
 	private async processActions(actions: TreeAction[]): Promise<void> {
-		if (!this.tree) return;
+		if (!this.healer) return;
 
 		const allHealingActions: HealingAction[] = [];
 		const allCodexImpacts: CodexImpact[] = [];
 
 		for (const action of actions) {
-			const result = this.tree.apply(action);
+			const result = this.healer.getHealingActionsFor(action);
 			allHealingActions.push(...result.healingActions);
 			allCodexImpacts.push(result.codexImpact);
 		}
@@ -523,7 +524,7 @@ export class Librarian {
 
 		// 3. Then dispatch codex actions
 		const mergedImpact = mergeCodexImpacts(allCodexImpacts);
-		const codexActions = codexImpactToActions(mergedImpact, this.tree);
+		const codexActions = codexImpactToActions(mergedImpact, this.healer);
 		// Merge scroll status actions with codex actions
 		const allCodexActions: CodexAction[] = [
 			...codexActions,
@@ -627,9 +628,9 @@ export class Librarian {
 	}
 
 	/**
-	 * Get current tree (for testing).
+	 * Get current healer (for testing).
 	 */
-	getTree(): LibraryTree | null {
-		return this.tree;
+	getHealer(): Healer | null {
+		return this.healer;
 	}
 }
