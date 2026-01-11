@@ -1,7 +1,7 @@
 import type {
+	AnySplitPath,
 	CommonSplitPath,
 	PathParts,
-	SplitPath,
 	SplitPathToFolder,
 } from "../../../../../types/split-path";
 import {
@@ -80,15 +80,18 @@ export function reduceRoots(events: VaultEvent[]): PossibleRootVaultEvent[] {
 	return roots;
 }
 
-function isUnderFolder(child: SplitPath, folder: SplitPathToFolder): boolean {
+function isUnderFolder(
+	child: AnySplitPath,
+	folder: SplitPathToFolder,
+): boolean {
 	const cf = fullPathParts(child);
 	const pf = fullPathParts(folder);
 	return isPrefix(pf, cf);
 }
 
 function isCoveredByFolderRename(
-	childFrom: SplitPath,
-	childTo: SplitPath,
+	childFrom: AnySplitPath,
+	childTo: AnySplitPath,
 	parentFrom: SplitPathToFolder,
 	parentTo: SplitPathToFolder,
 ): boolean {

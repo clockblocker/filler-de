@@ -1,6 +1,6 @@
 import { err, ok, type Result } from "neverthrow";
 import { getParsedUserSettings } from "../../../../../../../global-state/global-state";
-import type { SplitPath } from "../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import type { AnySplitPath } from "../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import { NodeNameSchema } from "../../../../../types/schemas/node-name";
 import type {
 	SplitPathInsideLibrary,
@@ -72,8 +72,8 @@ export function tryParseCanonicalSplitPathInsideLibrary(
 }
 
 function tryParsePathParts(
-	pathParts: SplitPath["pathParts"],
-): Result<SplitPath["pathParts"], string> {
+	pathParts: AnySplitPath["pathParts"],
+): Result<AnySplitPath["pathParts"], string> {
 	const { splitPathToLibraryRoot } = getParsedUserSettings();
 	const libraryRootName = splitPathToLibraryRoot.basename;
 

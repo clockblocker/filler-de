@@ -2,7 +2,7 @@ import {
 	pathToFolderFromPathParts,
 	systemPathFromSplitPathInternal,
 } from "../../helpers/pathfinder";
-import type { SplitPath } from "../../types/split-path";
+import type { AnySplitPath } from "../../types/split-path";
 import type { VaultAction } from "../../types/vault-action";
 import { VaultActionType } from "../../types/vault-action";
 
@@ -167,7 +167,7 @@ export class SelfEventTracker {
 	 * Obsidian's vault.create() and vault.createFolder() automatically create
 	 * parent folders, which emit events we must filter.
 	 */
-	private extractPathsWithParents(splitPath: SplitPath): string[] {
+	private extractPathsWithParents(splitPath: AnySplitPath): string[] {
 		const paths: string[] = [];
 
 		// Extract all parent folder paths FIRST (Obsidian creates them before the target)

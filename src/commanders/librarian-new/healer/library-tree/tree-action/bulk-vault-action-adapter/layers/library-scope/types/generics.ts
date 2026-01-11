@@ -1,6 +1,6 @@
 import type { VaultEvent } from "../../../../../../../../../managers/obsidian/vault-action-manager";
 import type {
-	SplitPath,
+	AnySplitPath,
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
@@ -47,15 +47,16 @@ export type DescopedSplitPath<T extends SplitPathInsideLibrary> =
 			? SplitPathToMdFile
 			: T extends SplitPathToFileInsideLibrary
 				? SplitPathToFile
-				: SplitPath;
+				: AnySplitPath;
 
-export type EnscopedSplitPath<T extends SplitPath> = T extends SplitPathToFolder
-	? SplitPathToFolderInsideLibrary
-	: T extends SplitPathToMdFile
-		? SplitPathToMdFileInsideLibrary
-		: T extends SplitPathToFile
-			? SplitPathToFileInsideLibrary
-			: SplitPath;
+export type EnscopedSplitPath<T extends AnySplitPath> =
+	T extends SplitPathToFolder
+		? SplitPathToFolderInsideLibrary
+		: T extends SplitPathToMdFile
+			? SplitPathToMdFileInsideLibrary
+			: T extends SplitPathToFile
+				? SplitPathToFileInsideLibrary
+				: AnySplitPath;
 
 // ---
 

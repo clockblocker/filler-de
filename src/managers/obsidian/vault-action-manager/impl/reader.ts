@@ -6,7 +6,7 @@ import type { TFileHelper } from "../file-services/background/helpers/tfile-help
 import type { TFolderHelper } from "../file-services/background/helpers/tfolder-helper";
 import { splitPathFromAbstractInternal } from "../helpers/pathfinder";
 import type {
-	SplitPath,
+	AnySplitPath,
 	SplitPathToFile,
 	SplitPathToFileWithTRef,
 	SplitPathToFolder,
@@ -45,7 +45,7 @@ export class Reader {
 		}
 	}
 
-	async exists(target: SplitPath): Promise<boolean> {
+	async exists(target: AnySplitPath): Promise<boolean> {
 		if (await this.opened.exists(target)) return true;
 		if (target.type === "Folder") {
 			const result = await this.tfolderHelper.getFolder(target);
@@ -57,9 +57,9 @@ export class Reader {
 
 	async list(
 		folder: SplitPathToFolder,
-	): Promise<Result<SplitPath[], string>> {
+	): Promise<Result<AnySplitPath[], string>> {
 		const folderResult = await this.tfolderHelper.getFolder(folder);
-		const fromBg: SplitPath[] = folderResult.isOk()
+		const fromBg: AnySplitPath[] = folderResult.isOk()
 			? folderResult.value.children.map((child) => {
 					if (child instanceof TFolder) {
 						return splitPathFromAbstractInternal(
@@ -73,7 +73,7 @@ export class Reader {
 			: [];
 		const fromOpened = await this.opened.list(folder);
 
-		const dedup = new Map<string, SplitPath>();
+		const dedup = new Map<string, AnySplitPath>();
 		for (const entry of [...fromBg, ...fromOpened]) {
 			dedup.set(makeSystemPathForSplitPath(entry), entry);
 		}
@@ -145,7 +145,7 @@ export class Reader {
 		return ok(result.value);
 	}
 
-	async getAbstractFile<SP extends SplitPath>(
+	async getAbstractFile<SP extends AnySplitPath>(
 		target: SP,
 	): Promise<Result<SP["type"] extends "Folder" ? TFolder : TFile, string>> {
 		if (await this.opened.exists(target)) {
@@ -213,13 +213,13 @@ export class Reader {
 
 export type ReaderApi = {
 	readContent: (p: SplitPathToMdFile) => Promise<Result<string, string>>;
-	exists: (p: SplitPath) => Promise<boolean>;
-	list: (p: SplitPathToFolder) => Promise<Result<SplitPath[], string>>;
+	exists: (p: AnySplitPath) => Promise<boolean>;
+	list: (p: SplitPathToFolder) => Promise<Result<AnySplitPath[], string>>;
 	listAll: (
 		p: SplitPathToFolder,
 	) => Promise<Result<SplitPathWithTRef[], string>>;
 	pwd: () => Promise<Result<SplitPathToFile | SplitPathToMdFile, string>>;
-	getAbstractFile: <SP extends SplitPath>(
+	getAbstractFile: <SP extends AnySplitPath>(
 		p: SP,
 	) => Promise<Result<SP["type"] extends "Folder" ? TFolder : TFile, string>>;
 };

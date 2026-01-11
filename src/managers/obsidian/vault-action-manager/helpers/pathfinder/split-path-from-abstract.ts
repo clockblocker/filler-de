@@ -1,14 +1,16 @@
 import type { TAbstractFile } from "obsidian";
 import { TFile, TFolder } from "obsidian";
 import { MD } from "../../types/literals";
-import type { SplitPath } from "../../types/split-path";
+import type { AnySplitPath } from "../../types/split-path";
 import { SplitPathType } from "../../types/split-path";
 
 /**
  * Core function to split TAbstractFile into SplitPath.
  * Uses Obsidian's basename property (already excludes extension).
  */
-export function splitPathFromAbstractInternal(file: TAbstractFile): SplitPath {
+export function splitPathFromAbstractInternal(
+	file: TAbstractFile,
+): AnySplitPath {
 	const parts = file.path.split("/").filter(Boolean);
 	const fullBasename = parts.pop() ?? "";
 	const pathParts = parts;

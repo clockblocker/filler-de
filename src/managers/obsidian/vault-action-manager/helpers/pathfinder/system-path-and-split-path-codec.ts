@@ -1,7 +1,7 @@
 import z from "zod";
 import { MD } from "../../types/literals";
 import {
-	type SplitPath,
+	type AnySplitPath,
 	SplitPathSchema,
 	SplitPathType,
 } from "../../types/split-path";
@@ -13,7 +13,7 @@ import {
 } from "./path-utils";
 
 const systemPathToSplitPath = z.codec(z.string(), SplitPathSchema, {
-	decode: (systemPath: string): SplitPath => {
+	decode: (systemPath: string): AnySplitPath => {
 		const normalized = systemPath.replace(/^[\\/]+|[\\/]+$/g, "");
 		if (!normalized) {
 			return { ...SPLIT_PATH_TO_ROOT_FOLDER };
@@ -50,7 +50,7 @@ const systemPathToSplitPath = z.codec(z.string(), SplitPathSchema, {
 			type: SplitPathType.Folder,
 		};
 	},
-	encode: (splitPath: SplitPath): string => {
+	encode: (splitPath: AnySplitPath): string => {
 		const { pathParts, basename: title } = splitPath;
 		const extension =
 			splitPath.type === SplitPathType.MdFile ||
@@ -70,10 +70,14 @@ const systemPathToSplitPath = z.codec(z.string(), SplitPathSchema, {
 	},
 });
 
-export function systemPathFromSplitPathInternal(splitPath: SplitPath): string {
+export function systemPathFromSplitPathInternal(
+	splitPath: AnySplitPath,
+): string {
 	return systemPathToSplitPath.encode(splitPath);
 }
 
-export function splitPathFromSystemPathInternal(systemPath: string): SplitPath {
+export function splitPathFromSystemPathInternal(
+	systemPath: string,
+): AnySplitPath {
 	return systemPathToSplitPath.decode(systemPath);
 }

@@ -1,6 +1,6 @@
 import { err, ok, type Result } from "neverthrow";
 import type {
-	SplitPath,
+	AnySplitPath,
 	SplitPathToFolder,
 	SplitPathToMdFile,
 } from "../../types/split-path";
@@ -27,7 +27,7 @@ export type DispatchError = {
  * Service to check if files/folders exist.
  */
 export type ExistenceChecker = {
-	exists(splitPath: SplitPath): Promise<boolean>;
+	exists(splitPath: AnySplitPath): Promise<boolean>;
 };
 
 export class Dispatcher {

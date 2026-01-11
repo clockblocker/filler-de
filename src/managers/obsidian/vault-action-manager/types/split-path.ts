@@ -1,6 +1,7 @@
 import type { Result } from "neverthrow";
 import type { TFile, TFolder } from "obsidian";
 import { z } from "zod";
+import type { Prettify } from "../../../../types/helpers";
 import { FILE, FOLDER, MD_FILE, MdSchema } from "./literals";
 
 /**
@@ -50,12 +51,19 @@ export const SplitPathSchema = z.discriminatedUnion("type", [
 
 export type CommonSplitPath = z.infer<typeof CoreSplitPathSchema>;
 
-export type SplitPathToFolder = z.infer<typeof SplitPathToFolderSchema>;
-export type SplitPathToFile = z.infer<typeof SplitPathToFileSchema>;
-export type SplitPathToMdFile = z.infer<typeof SplitPathToMdFileSchema>;
-export type SplitPath = z.infer<typeof SplitPathSchema>;
+export type AnySplitPath = z.infer<typeof SplitPathSchema>;
 
-export type SplitPathFromTo<T extends SplitPath> = { from: T; to: T };
+export type SplitPath<T extends SplitPathType> = AnySplitPath & { type: T };
+
+export type SplitPathToFolder = Prettify<
+	SplitPath<typeof SplitPathType.Folder>
+>;
+export type SplitPathToFile = Prettify<SplitPath<typeof SplitPathType.File>>;
+export type SplitPathToMdFile = Prettify<
+	SplitPath<typeof SplitPathType.MdFile>
+>;
+
+export type SplitPathFromTo<T extends AnySplitPath> = { from: T; to: T };
 
 export type SplitPathToMdFileWithReader = SplitPathToMdFile & {
 	read: () => Promise<Result<string, string>>;

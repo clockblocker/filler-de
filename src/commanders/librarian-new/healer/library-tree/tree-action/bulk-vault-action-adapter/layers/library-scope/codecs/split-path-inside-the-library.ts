@@ -1,6 +1,6 @@
 import { err, ok, type Result } from "neverthrow";
 import { getParsedUserSettings } from "../../../../../../../../../global-state/global-state";
-import type { SplitPath } from "../../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import type { AnySplitPath } from "../../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { DescopedSplitPath, EnscopedSplitPath } from "../types/generics";
 import type { SplitPathInsideLibrary } from "../types/inside-library-split-paths";
 
@@ -30,7 +30,7 @@ import type { SplitPathInsideLibrary } from "../types/inside-library-split-paths
  * // => Err("OutsideLibrary")
  */
 
-export function tryParseAsInsideLibrarySplitPath<SP extends SplitPath>(
+export function tryParseAsInsideLibrarySplitPath<SP extends AnySplitPath>(
 	splitPath: SP,
 ): Result<DescopedSplitPath<SP>, string> {
 	const { splitPathToLibraryRoot: libraryRoot } = getParsedUserSettings();

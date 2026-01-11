@@ -11,7 +11,7 @@ import {
 import { getSplitPathForAbstractFile } from "../../helpers/pathfinder";
 import { makeSystemPathForSplitPath } from "../../impl/common/split-path-and-system-path";
 import type {
-	SplitPath,
+	AnySplitPath,
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
@@ -273,7 +273,7 @@ export class OpenedFileService {
 	}
 
 	// Methods for Reader compatibility
-	async isInActiveView(splitPath: SplitPath): Promise<boolean> {
+	async isInActiveView(splitPath: AnySplitPath): Promise<boolean> {
 		if (splitPath.type !== "MdFile") return false;
 		const result = await this.isFileActive(splitPath);
 		return result.isOk() && result.value;
@@ -287,7 +287,7 @@ export class OpenedFileService {
 		return contentResult.value;
 	}
 
-	async exists(splitPath: SplitPath): Promise<boolean> {
+	async exists(splitPath: AnySplitPath): Promise<boolean> {
 		if (splitPath.type === "Folder") return false;
 		const isActive = await this.isInActiveView(splitPath);
 		if (isActive) return true;
@@ -295,7 +295,7 @@ export class OpenedFileService {
 		return this.app.vault.getAbstractFileByPath(systemPath) !== null;
 	}
 
-	async list(folder: SplitPathToFolder): Promise<SplitPath[]> {
+	async list(folder: SplitPathToFolder): Promise<AnySplitPath[]> {
 		const folderPath = makeSystemPathForSplitPath(folder);
 		const tFolder = this.app.vault.getAbstractFileByPath(folderPath);
 		if (!(tFolder instanceof TFolder)) return [];
@@ -303,7 +303,7 @@ export class OpenedFileService {
 		return tFolder.children.map(getSplitPathForAbstractFile);
 	}
 
-	async getAbstractFile<SP extends SplitPath>(
+	async getAbstractFile<SP extends AnySplitPath>(
 		splitPath: SP,
 	): Promise<SP["type"] extends "Folder" ? TFolder : TFile> {
 		const systemPath = makeSystemPathForSplitPath(splitPath);

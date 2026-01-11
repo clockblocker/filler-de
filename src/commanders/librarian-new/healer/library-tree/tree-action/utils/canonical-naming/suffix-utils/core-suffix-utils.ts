@@ -1,6 +1,6 @@
 import { err, ok, type Result } from "neverthrow";
 import { getParsedUserSettings } from "../../../../../../../../global-state/global-state";
-import type { SplitPath } from "../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import type { AnySplitPath } from "../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { NonEmptyArray } from "../../../../../../../../types/helpers";
 import { nonEmptyArrayResult } from "../../../../../../../../types/utils";
 import { NamingError } from "../../../../../../types/schemas/errors";
@@ -16,7 +16,10 @@ export type SeparatedSuffixedBasename = {
 
 export const tryParseAsSeparatedSuffixedBasename = ({
 	basename,
-}: Pick<SplitPath, "basename">): Result<SeparatedSuffixedBasename, string> => {
+}: Pick<AnySplitPath, "basename">): Result<
+	SeparatedSuffixedBasename,
+	string
+> => {
 	return splitBySuffixDelimiter(basename).andThen((parts) => {
 		const [coreName, ...suffixParts] = parts;
 		return ok({ coreName, suffixParts });
@@ -48,20 +51,20 @@ export const splitBySuffixDelimiter = (
 export const makeJoinedSuffixedBasename = ({
 	coreName,
 	suffixParts,
-}: SeparatedSuffixedBasename): SplitPath["basename"] => {
+}: SeparatedSuffixedBasename): AnySplitPath["basename"] => {
 	const { suffixDelimiter } = getParsedUserSettings();
 	return [coreName, ...suffixParts].join(suffixDelimiter);
 };
 
 export const makePathPartsFromSuffixParts = ({
 	suffixParts,
-}: SeparatedSuffixedBasename): SplitPath["pathParts"] => {
+}: SeparatedSuffixedBasename): AnySplitPath["pathParts"] => {
 	return [...suffixParts].reverse();
 };
 
 export const makeSuffixPartsFromPathParts = ({
 	pathParts,
-}: SplitPath): SeparatedSuffixedBasename["suffixParts"] => {
+}: AnySplitPath): SeparatedSuffixedBasename["suffixParts"] => {
 	return [...pathParts].reverse();
 };
 

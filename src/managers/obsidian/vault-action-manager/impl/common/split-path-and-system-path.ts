@@ -5,7 +5,7 @@ import {
 	systemPathFromSplitPathInternal,
 } from "../../helpers/pathfinder";
 import type {
-	SplitPath,
+	AnySplitPath,
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
@@ -23,7 +23,7 @@ import type {
  * makeSystemPathForSplitPath({ pathParts: ["root"], basename: "folder", type: "Folder" })
  * // "root/folder"
  */
-export function makeSystemPathForSplitPath(splitPath: SplitPath): string {
+export function makeSystemPathForSplitPath(splitPath: AnySplitPath): string {
 	return systemPathFromSplitPathInternal(splitPath);
 }
 
@@ -31,13 +31,13 @@ export function makeSystemPathForSplitPath(splitPath: SplitPath): string {
  * Convert string path or TAbstractFile to SplitPath.
  * External API wrapper around internal pathfinder functions.
  */
-export function makeSplitPath(path: string): SplitPath;
+export function makeSplitPath(path: string): AnySplitPath;
 export function makeSplitPath(file: TFile): SplitPathToFile | SplitPathToMdFile;
 export function makeSplitPath(folder: TFolder): SplitPathToFolder;
-export function makeSplitPath(file: TAbstractFile): SplitPath;
+export function makeSplitPath(file: TAbstractFile): AnySplitPath;
 export function makeSplitPath(
 	input: string | TAbstractFile,
-): SplitPath | SplitPathToFile | SplitPathToMdFile | SplitPathToFolder {
+): AnySplitPath | SplitPathToFile | SplitPathToMdFile | SplitPathToFolder {
 	if (typeof input === "string") {
 		const result = splitPathFromSystemPathInternal(input);
 		// Convert SplitPathType enum to string literals for external API compatibility
@@ -52,7 +52,7 @@ export function makeSplitPath(
  * SplitPathType enum values are string literals, so types are compatible.
  */
 function convertToExternalFormat(
-	splitPath: SplitPath,
-): SplitPath | SplitPathToFile | SplitPathToMdFile | SplitPathToFolder {
+	splitPath: AnySplitPath,
+): AnySplitPath | SplitPathToFile | SplitPathToMdFile | SplitPathToFolder {
 	return splitPath;
 }

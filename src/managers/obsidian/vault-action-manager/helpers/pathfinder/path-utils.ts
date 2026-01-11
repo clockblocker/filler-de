@@ -2,8 +2,8 @@ import type { TFile } from "obsidian";
 import { TFolder } from "obsidian";
 import { MD } from "../../types/literals";
 import type {
+	AnySplitPath,
 	CommonSplitPath,
-	SplitPath,
 	SplitPathToFolder,
 	SplitPathToMdFile,
 } from "../../types/split-path";
@@ -30,7 +30,7 @@ export function splitPathToFolderFromCore(
 
 export function getSplitPathForAbstractFile(file: TFile): SplitPathToMdFile;
 export function getSplitPathForAbstractFile(folder: TFolder): SplitPathToFolder;
-export function getSplitPathForAbstractFile<SP extends SplitPath>(
+export function getSplitPathForAbstractFile<SP extends AnySplitPath>(
 	abstractFile: AbstractFileForSplitPath<SP>,
 ): SP {
 	const path = abstractFile.path;
@@ -83,7 +83,7 @@ export function joinPosix(...parts: string[]): string {
 	return cleaned.join("/");
 }
 
-export type AbstractFileForSplitPath<SP extends SplitPath> = SP extends {
+export type AbstractFileForSplitPath<SP extends AnySplitPath> = SP extends {
 	type: "Folder";
 }
 	? TFolder
@@ -108,7 +108,7 @@ export const SPLIT_PATH_TO_ROOT_FOLDER: SplitPathToFolder = {
  * Finds the first available indexed filename in the target folder.
  * Pattern: `${index}_${basename}.md` (e.g., `1_file.md`, `2_file.md`)
  */
-export async function findFirstAvailableIndexedPath<SP extends SplitPath>(
+export async function findFirstAvailableIndexedPath<SP extends AnySplitPath>(
 	target: SP,
 	existingBasenames: Set<string>,
 ): Promise<SP> {

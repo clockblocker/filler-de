@@ -22,7 +22,7 @@ import type {
 	VaultEventHandler,
 } from "./index";
 import type {
-	SplitPath,
+	AnySplitPath,
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
@@ -249,17 +249,17 @@ export class VaultActionManagerImpl implements VaultActionManager {
 		return this.reader.readContent(splitPathArg);
 	}
 
-	exists(splitPathArg: SplitPath): Promise<boolean> {
+	exists(splitPathArg: AnySplitPath): Promise<boolean> {
 		return this.reader.exists(splitPathArg);
 	}
 
-	isInActiveView(splitPathArg: SplitPath): Promise<boolean> {
+	isInActiveView(splitPathArg: AnySplitPath): Promise<boolean> {
 		return this.opened.isInActiveView(splitPathArg);
 	}
 
 	list(
 		splitPathArg: SplitPathToFolder,
-	): Promise<Result<SplitPath[], string>> {
+	): Promise<Result<AnySplitPath[], string>> {
 		return this.reader.list(splitPathArg);
 	}
 
@@ -273,7 +273,7 @@ export class VaultActionManagerImpl implements VaultActionManager {
 		return this.reader.pwd();
 	}
 
-	getAbstractFile<SP extends SplitPath>(
+	getAbstractFile<SP extends AnySplitPath>(
 		splitPathArg: SP,
 	): Promise<Result<SP["type"] extends "Folder" ? TFolder : TFile, string>> {
 		return this.reader.getAbstractFile(splitPathArg);

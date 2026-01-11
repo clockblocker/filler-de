@@ -1,13 +1,13 @@
-import type { SplitPath } from "../../types/split-path";
+import type { AnySplitPath } from "../../types/split-path";
 import { makeSystemPathForSplitPath } from "./split-path-and-system-path";
 
 // --- keys ---
 
-export function makeKeyFor(arg: SplitPath): string;
-export function makeKeyFor(arg: { splitPath: SplitPath }): string;
-export function makeKeyFor(arg: { from: SplitPath }): string;
+export function makeKeyFor(arg: AnySplitPath): string;
+export function makeKeyFor(arg: { splitPath: AnySplitPath }): string;
+export function makeKeyFor(arg: { from: AnySplitPath }): string;
 export function makeKeyFor(
-	arg: SplitPath | { splitPath: SplitPath } | { from: SplitPath },
+	arg: AnySplitPath | { splitPath: AnySplitPath } | { from: AnySplitPath },
 ): string {
 	if (typeof arg === "object" && arg !== null) {
 		if ("from" in arg) {
@@ -21,15 +21,15 @@ export function makeKeyFor(
 }
 
 // optional, logs only
-export function formatRename(from: SplitPath, to: SplitPath): string {
+export function formatRename(from: AnySplitPath, to: AnySplitPath): string {
 	return `${makeKeyFor(from)} → ${makeKeyFor(to)}`;
 }
 
 // --- rename comparator ---
 
 export function sameRename(
-	a: { from: SplitPath; to: SplitPath },
-	b: { from: SplitPath; to: SplitPath },
+	a: { from: AnySplitPath; to: AnySplitPath },
+	b: { from: AnySplitPath; to: AnySplitPath },
 ): boolean {
 	return (
 		makeSystemPathForSplitPath(a.from) ===

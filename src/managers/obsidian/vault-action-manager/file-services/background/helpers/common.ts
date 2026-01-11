@@ -1,9 +1,9 @@
 import { TFile, TFolder, type Vault } from "obsidian";
 import { pathToFolderFromPathParts } from "../../../helpers/pathfinder";
-import type { SplitPath } from "../../../types/split-path";
+import type { AnySplitPath } from "../../../types/split-path";
 import { SplitPathType } from "../../../types/split-path";
 
-export async function getExistingBasenamesInFolder<SPF extends SplitPath>(
+export async function getExistingBasenamesInFolder<SPF extends AnySplitPath>(
 	target: SPF,
 	vault: Vault,
 ): Promise<Set<string>> {

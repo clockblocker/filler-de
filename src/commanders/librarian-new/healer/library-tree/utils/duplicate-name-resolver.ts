@@ -2,7 +2,7 @@ import type { Result } from "neverthrow";
 import { ok } from "neverthrow";
 import type { VaultActionManager } from "../../../../../managers/obsidian/vault-action-manager";
 import type {
-	SplitPath,
+	AnySplitPath,
 	SplitPathToFolder,
 } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { NodeName } from "../../../types/schemas/node-name";
@@ -114,7 +114,7 @@ function escapeRegex(str: string): string {
 }
 
 function isFileSplitPath(
-	sp: SplitPath,
-): sp is SplitPath & { basename: string; extension: string } {
+	sp: AnySplitPath,
+): sp is AnySplitPath & { basename: string; extension: string } {
 	return sp.type === "File" || sp.type === "MdFile";
 }
