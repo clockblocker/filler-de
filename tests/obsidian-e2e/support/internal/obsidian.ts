@@ -26,12 +26,12 @@ export async function obsidianWaitForPluginInitialized(pluginId: string, timeout
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const plugin = (app as any).plugins?.plugins?.[id];
         if (!plugin) {
-          return { error: `Plugin not found: ${id}`, ok: false as const, initialized: false };
+          return { error: `Plugin not found: ${id}`, initialized: false, ok: false as const };
         }
         // Check if plugin has initialized property
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const initialized = (plugin as any).initialized === true;
-        return { ok: initialized, initialized };
+        return { initialized, ok: initialized };
       }, pluginId);
       
       if (result && typeof result === "object" && "ok" in result) {

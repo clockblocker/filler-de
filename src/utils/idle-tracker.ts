@@ -36,25 +36,18 @@ export function incrementPending(): void {
 /**
  * Decrement pending task count.
  * Call when async work completes.
- * Resolves idle waiters if count reaches 0.
  */
 export function decrementPending(): void {
 	if (!isE2E()) return;
 	if (pendingCount > 0) {
 		pendingCount--;
 	}
-	if (pendingCount === 0) {
-		// Resolve all waiters
-		const waiters = [...idleWaiters];
-		idleWaiters.length = 0;
-		for (const resolve of waiters) {
-			resolve();
-		}
-	}
 }
 
 /**
  * Wait until all pending tasks complete (pendingCount === 0).
+ * Uses heuristic: 1000ms grace period after count reaches 0, polling every 100ms.
+ * Resets grace period if new work arrives.
  * Optionally also waits for Obsidian events to confirm actions are registered.
  * Only works in E2E mode.
  */
@@ -65,14 +58,41 @@ export async function whenIdle(
 		return Promise.resolve();
 	}
 
-	// Wait for pending tasks to complete
-	await new Promise<void>((resolve) => {
-		if (pendingCount === 0) {
-			resolve();
-			return;
+	const POLL_INTERVAL_MS = 100;
+	const GRACE_PERIOD_MS = 1000;
+
+	// Wait for pendingCount to reach 0
+	while (pendingCount > 0) {
+		await new Promise<void>((resolve) =>
+			setTimeout(resolve, POLL_INTERVAL_MS),
+		);
+	}
+
+	// Start grace period: wait 1000ms with count staying at 0
+	// Poll every 100ms and reset if new work arrives
+	let gracePeriodStart = Date.now();
+	while (true) {
+		await new Promise<void>((resolve) =>
+			setTimeout(resolve, POLL_INTERVAL_MS),
+		);
+
+		if (pendingCount > 0) {
+			// New work arrived, wait for it to complete and reset grace period
+			while (pendingCount > 0) {
+				await new Promise<void>((resolve) =>
+					setTimeout(resolve, POLL_INTERVAL_MS),
+				);
+			}
+			gracePeriodStart = Date.now();
+			continue;
 		}
-		idleWaiters.push(() => resolve());
-	});
+
+		// Check if grace period has elapsed
+		const elapsed = Date.now() - gracePeriodStart;
+		if (elapsed >= GRACE_PERIOD_MS) {
+			break;
+		}
+	}
 
 	// Optionally wait for Obsidian events
 	if (waitForObsidian) {
