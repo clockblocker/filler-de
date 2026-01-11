@@ -49,29 +49,61 @@ Create a clean, expandable API for orchestrators to work with DTOs, backed by pu
 library-tree/
   codecs/
     errors.ts           # CodecError discriminated union type
-    segment-id/
-      parse.ts          # segment ID -> { nodeName, type, extension }
-      serialize.ts      # { nodeName, type, extension } -> segment ID
-      index.ts
-    locator/
-      to-canonical-split-path.ts  # locator -> canonical split path
-      from-canonical-split-path.ts # canonical split path -> locator
-      index.ts
-    split-path-inside-library/ # (either {pathParts: [], basename: {LibraryRootBasename}}, or pathParts include {LibraryRootBasename})
-      check-if-inside-library.ts   # split path -> bool 
-      to-inside-library.ts   # split path -> split path inside library (Result<chop off LibraryRoot path parts for the files inside>)
-      from-inside-library.ts # canonical -> split path path inside library 
-      index.ts
-    canonical-split-path/
-      to-canonical.ts   # split path inside library -> canonical (with validation and suffix separated)
-      from-canonical.ts # canonical -> split path path inside library (join separated suffix)
-      index.ts
-    suffix/
-      parse.ts          # basename -> separated suffix
-      serialize.ts      # separated suffix -> basename
-      path-parts.ts     # path parts <-> suffix parts conversions
-      index.ts
-    index.ts            # Main API exports
+    rules.ts            # CodecRules type + makeCodecRulesFromSettings helper
+
+    # PUBLIC MODULES (exposed to orchestrators)
+    
+    segment-id/         # Low level - no codec dependencies
+      types.ts          # SegmentIdComponents, public types
+      make.ts           # makeSegmentIdCodecs(rules: CodecRules)
+      internal/
+        parse.ts        # segment ID -> { nodeName, type, extension }
+        serialize.ts    # { nodeName, type, extension } -> segment ID (validated + unchecked)
+      index.ts          # Re-exports public API
+    
+    split-path-inside-library/  # Low-mid level - minimal dependencies
+      types.ts          # SplitPathInsideLibraryCandidate, public types
+      make.ts           # makeSplitPathInsideLibraryCodecs(rules: CodecRules)
+      internal/
+        predicate.ts    # check-if-inside-library.ts: split path -> bool (quick predicate)
+                        # is-inside-library.ts: split path -> type guard
+        to.ts           # to-inside-library.ts: split path -> split path inside library (Result, canonical API)
+        from.ts         # from-inside-library.ts: split path inside library -> split path (adds LibraryRoot back)
+      index.ts          # Re-exports public API
+    
+    canonical-split-path/  # Mid level - depends on suffix
+      types.ts          # CanonicalSplitPathInsideLibrary, public types
+      make.ts           # makeCanonicalSplitPathCodecs(rules: CodecRules, suffix: SuffixCodecs)
+      internal/
+        to.ts           # to-canonical.ts: split path inside library -> canonical (with validation and suffix separated)
+        from.ts        # from-canonical.ts: canonical -> split path inside library (lossy: joins separated suffix)
+      index.ts          # Re-exports public API
+    
+    locator/            # Highest level - depends on segment-id, canonical-split-path, suffix
+      types.ts          # LocatorCodecs type, public types
+      make.ts           # makeLocatorCodecs(rules, segmentId, canonicalSplitPath, suffix)
+      internal/
+        to.ts           # to-canonical-split-path.ts: locator -> canonical split path (Result)
+        from.ts         # from-canonical-split-path.ts: canonical split path -> locator (Result)
+      index.ts          # Re-exports public API
+    
+    # PRIVATE AREA (implementation details, not exposed to orchestrators)
+    
+    internal/           # PRIVATE - no public exports from this directory
+      suffix/           # Lowest level - no codec dependencies
+        types.ts        # SeparatedSuffixedBasename, internal types
+        parse.ts        # basename -> separated suffix
+        serialize.ts    # separated suffix -> basename (validated + unchecked)
+        path-parts.ts   # path parts <-> suffix parts conversions
+        split.ts        # splitBySuffixDelimiter
+        zod.ts          # Zod schemas if needed
+        errors.ts       # Suffix-specific errors if needed
+        index.ts        # makeSuffixCodecs(rules: CodecRules) - only used internally
+    
+    index.ts            # Thin factory layer - creates codecs in dependency order, injects dependencies
+                        # Only file that imports all modules (prevents circular imports)
+                        # Returns public codec objects: { segmentId, splitPathInsideLibrary, canonicalSplitPath, locator }
+                        # Does NOT export internal/suffix (private implementation detail)
 ```
 
 ## Codec API Design
@@ -85,6 +117,50 @@ library-tree/
 - **Type-safe**: Full TypeScript inference
 - **Consistent naming**: Use consistent verb set (`parse`/`serialize`, `toCanonical`/`fromCanonical`), encode scope in function names, avoid mixing "make/build/compute"
 - **Grouped exports**: Organize by concept (segmentId, locator, splitPath, suffix), provide both flat and namespace exports for discoverability
+
+### Dependency Hierarchy (Critical for Avoiding Circular Dependencies)
+
+**Rule**: Each module imports "downwards" only (lower-level modules never import higher-level ones).
+
+**Dependency order** (lowest to highest):
+
+1. **`internal/suffix/`** (lowest level, PRIVATE)
+   - No dependencies on other codec modules
+   - Only depends on: `errors.ts`, `rules.ts`, external types (NodeName, etc.)
+   - **Not exposed to orchestrators** - implementation detail only
+
+2. **`segment-id/`** (low level, PUBLIC)
+   - No dependencies on other codec modules
+   - Only depends on: `errors.ts`, `rules.ts`, external types (NodeName, TreeNodeType, etc.)
+
+3. **`split-path-inside-library/`** (low-mid level, PUBLIC)
+   - Minimal dependencies: only uses `rules.ts`
+   - Depends on: `errors.ts`, `rules.ts`
+
+4. **`canonical-split-path/`** (mid level, PUBLIC)
+   - Depends on: `errors.ts`, `rules.ts`, `internal/suffix/`
+   - Uses internal suffix codecs for separated suffix handling
+
+5. **`locator/`** (highest level, PUBLIC)
+   - Depends on: `errors.ts`, `rules.ts`, `segment-id/`, `canonical-split-path/`, `internal/suffix/`
+   - Combines canonical split path + segment ID + internal suffix codecs
+
+**`codecs/index.ts`** (factory layer):
+- **THE ONLY WIRING POINT** - thin factory layer only
+- No business logic
+- Imports all modules (public + internal) and creates factory function
+- Creates codecs in dependency order, injects dependencies
+- **Returns only public codec objects**: `{ segmentId, splitPathInsideLibrary, canonicalSplitPath, locator }`
+- **Does NOT export `internal/suffix`** - private implementation detail
+- Re-exports public types for convenience
+
+**Enforcement**:
+- Each module's `index.ts` should only import from lower-level modules (or same level if needed)
+- Never import from higher-level modules
+- `codecs/index.ts` is the only place that imports all modules (public + internal)
+- Public modules should NOT import from `internal/` directly - dependencies injected via factory
+- If a module needs functionality from a higher-level module, refactor to move shared logic to a lower level
+- **Orchestrators should only import from `codecs/index.ts`** - never from individual module `index.ts` files
 
 ### Result Return Type Strategy
 
@@ -213,11 +289,10 @@ export type SegmentIdCodecs = {
   parseFileSegmentId: (id: FileNodeSegmentId) => Result<SegmentIdComponents & { extension: FileExtension }, CodecError>;
   
   // Serialize components to segment ID
+  // Validated: assumes inputs are already validated (NodeName, FileExtension, etc.)
   serializeSegmentId: (components: SegmentIdComponents) => TreeNodeSegmentId;
-  
-  // TreeNode <-> SegmentId codec pair
-  makeNodeSegmentId: (node: TreeNode) => TreeNodeSegmentId; // Exposed API, uses serializeSegmentId internally
-  makeTreeNode: (segmentId: TreeNodeSegmentId) => Result<TreeNode, CodecError>; // Parse segment ID to TreeNode
+  // Unchecked: validates inputs and returns Result
+  serializeSegmentIdUnchecked: (components: { coreName: string; targetType: TreeNodeType; extension?: string }) => Result<TreeNodeSegmentId, CodecError>;
 };
 
 export function makeSegmentIdCodecs(rules: CodecRules): SegmentIdCodecs {
@@ -227,9 +302,8 @@ export function makeSegmentIdCodecs(rules: CodecRules): SegmentIdCodecs {
     parseSectionSegmentId: (id) => { /* ... */ },
     parseScrollSegmentId: (id) => { /* ... */ },
     parseFileSegmentId: (id) => { /* ... */ },
-    serializeSegmentId: (components) => { /* ... */ },
-    makeNodeSegmentId: (node) => { /* Uses serializeSegmentId internally */ },
-    makeTreeNode: (segmentId) => { /* Uses parseSegmentId internally */ },
+    serializeSegmentId: (components) => { /* Assumes validated inputs */ },
+    serializeSegmentIdUnchecked: (components) => { /* Validates inputs, returns Result */ },
   };
 }
 
@@ -239,26 +313,38 @@ export type LocatorCodecs = {
   canonicalSplitPathInsideLibraryToLocator: (sp: CanonicalSplitPathInsideLibrary) => Result<TreeNodeLocator, CodecError>;
 };
 
-export function makeLocatorCodecs(rules: CodecRules): LocatorCodecs {
-  // Implementation uses rules
+export function makeLocatorCodecs(
+  rules: CodecRules,
+  segmentId: SegmentIdCodecs, // Inject segment-id codecs (dependency)
+  canonicalSplitPath: CanonicalSplitPathCodecs, // Inject canonical-split-path codecs (dependency)
+  suffix: SuffixCodecs, // Inject suffix codecs (dependency)
+): LocatorCodecs {
+  // Implementation uses injected codecs
   return {
-    locatorToCanonicalSplitPathInsideLibrary: (loc) => { /* ... */ },
-    canonicalSplitPathInsideLibraryToLocator: (sp) => { /* ... */ },
+    locatorToCanonicalSplitPathInsideLibrary: (loc) => { /* Uses segmentId, canonicalSplitPath, suffix */ },
+    canonicalSplitPathInsideLibraryToLocator: (sp) => { /* Uses segmentId, canonicalSplitPath, suffix */ },
   };
 }
 
 // codecs/split-path-inside-library/index.ts
+export type SplitPathInsideLibraryCandidate = SplitPath & { /* type marker */ };
+
 export type SplitPathInsideLibraryCodecs = {
+  // Quick predicate (for early returns)
   checkIfInsideLibrary: (sp: SplitPath) => boolean;
+  // Type guard for narrowing
+  isInsideLibrary: (sp: SplitPath) => sp is SplitPathInsideLibraryCandidate;
+  // Canonical API: returns proper CodecError with reason
   toInsideLibrary: (sp: SplitPath) => Result<SplitPathInsideLibrary, CodecError>; // Chops off LibraryRoot path parts
   fromInsideLibrary: (sp: SplitPathInsideLibrary) => SplitPath; // Adds LibraryRoot path parts back
 };
 
 export function makeSplitPathInsideLibraryCodecs(rules: CodecRules): SplitPathInsideLibraryCodecs {
   return {
-    checkIfInsideLibrary: (sp) => { /* ... */ },
-    toInsideLibrary: (sp) => { /* ... */ },
-    fromInsideLibrary: (sp) => { /* ... */ },
+    checkIfInsideLibrary: (sp) => { /* Quick boolean check */ },
+    isInsideLibrary: (sp): sp is SplitPathInsideLibraryCandidate => { /* Type guard */ },
+    toInsideLibrary: (sp) => { /* Returns CodecError with reason if not inside library */ },
+    fromInsideLibrary: (sp) => { /* Adds LibraryRoot path parts back */ },
   };
 }
 
@@ -268,17 +354,23 @@ export type CanonicalSplitPathCodecs = {
   fromCanonicalSplitPathInsideLibrary: (sp: CanonicalSplitPathInsideLibrary) => SplitPathInsideLibrary; // Lossy: joins separated suffix
 };
 
-export function makeCanonicalSplitPathCodecs(rules: CodecRules): CanonicalSplitPathCodecs {
+export function makeCanonicalSplitPathCodecs(
+  rules: CodecRules,
+  suffix: SuffixCodecs, // Inject suffix codecs (dependency)
+): CanonicalSplitPathCodecs {
   return {
-    splitPathInsideLibraryToCanonical: (sp) => { /* ... */ },
-    fromCanonicalSplitPathInsideLibrary: (sp) => { /* ... */ },
+    splitPathInsideLibraryToCanonical: (sp) => { /* Uses suffix codecs */ },
+    fromCanonicalSplitPathInsideLibrary: (sp) => { /* Uses suffix codecs */ },
   };
 }
 
 // codecs/suffix/index.ts
 export type SuffixCodecs = {
   parseSeparatedSuffix: (basename: string) => Result<SeparatedSuffixedBasename, CodecError>;
+  // Validated: assumes NodeName[] are validated
   serializeSeparatedSuffix: (suffix: SeparatedSuffixedBasename) => string;
+  // Unchecked: validates NodeName[] and returns Result
+  serializeSeparatedSuffixUnchecked: (suffix: { coreName: string; suffixParts: string[] }) => Result<string, CodecError>;
   splitBySuffixDelimiter: (basename: string) => Result<NonEmptyArray<NodeName>, CodecError>;
   pathPartsWithRootToSuffixParts: (pathParts: string[]) => NodeName[];
   pathPartsToSuffixParts: (pathParts: string[]) => NodeName[];
@@ -289,7 +381,8 @@ export function makeSuffixCodecs(rules: CodecRules): SuffixCodecs {
   // Implementation uses rules.suffixDelimiter
   return {
     parseSeparatedSuffix: (basename) => { /* ... */ },
-    serializeSeparatedSuffix: (suffix) => { /* ... */ },
+    serializeSeparatedSuffix: (suffix) => { /* Assumes validated NodeName[] */ },
+    serializeSeparatedSuffixUnchecked: (suffix) => { /* Validates inputs, returns Result */ },
     splitBySuffixDelimiter: (basename) => { /* ... */ },
     pathPartsWithRootToSuffixParts: (pathParts) => { /* ... */ },
     pathPartsToSuffixParts: (pathParts) => { /* ... */ },
@@ -297,14 +390,27 @@ export function makeSuffixCodecs(rules: CodecRules): SuffixCodecs {
   };
 }
 
-// codecs/index.ts - Factory
+// codecs/index.ts - THE ONLY WIRING POINT (thin layer, no business logic)
+import { makeSegmentIdCodecs } from './segment-id';
+import { makeSuffixCodecs } from './internal/suffix'; // Internal - not exported
+import { makeSplitPathInsideLibraryCodecs } from './split-path-inside-library';
+import { makeCanonicalSplitPathCodecs } from './canonical-split-path';
+import { makeLocatorCodecs } from './locator';
+
 export function makeCodecs(rules: CodecRules) {
+  // Create in dependency order (lowest to highest)
+  const suffix = makeSuffixCodecs(rules); // Internal - only used for injection
+  const segmentId = makeSegmentIdCodecs(rules);
+  const splitPathInsideLibrary = makeSplitPathInsideLibraryCodecs(rules);
+  const canonicalSplitPath = makeCanonicalSplitPathCodecs(rules, suffix);
+  const locator = makeLocatorCodecs(rules, segmentId, canonicalSplitPath, suffix);
+  
+  // Return only public codec objects (suffix is internal, not exposed)
   return {
-    segmentId: makeSegmentIdCodecs(rules),
-    locator: makeLocatorCodecs(rules),
-    splitPathInsideLibrary: makeSplitPathInsideLibraryCodecs(rules),
-    canonicalSplitPath: makeCanonicalSplitPathCodecs(rules),
-    suffix: makeSuffixCodecs(rules),
+    segmentId,
+    splitPathInsideLibrary,
+    canonicalSplitPath,
+    locator,
   };
 }
 
@@ -322,7 +428,9 @@ export function makeCodecs(rules: CodecRules) {
 
 **Rationale**: Segment IDs share the same format structure, only differ in required fields (extension). Unified parser reduces duplication while type-specific parsers provide better type safety.
 
-**TreeNode codec pair**: `makeNodeSegmentId` and `makeTreeNode` form a bidirectional codec pair for TreeNode ↔ SegmentId conversions. `makeNodeSegmentId` is exposed in API and uses `serializeSegmentId` internally. `makeTreeNode` uses `parseSegmentId` internally.
+**Layering**: `codecs/segment-id/` stays strictly SegmentId ↔ Components. TreeNode ↔ SegmentId conversions live in `tree-node/codecs/node-and-segment-id/` as a thin adapter that uses `segmentId.parseSegmentId` and `segmentId.serializeSegmentId` internally. This avoids circular dependencies and keeps codecs/ decoupled from domain models.
+
+**Serialize safety**: `serializeSegmentId` assumes validated inputs (NodeName, FileExtension are zod-validated types). For unchecked inputs, use `serializeSegmentIdUnchecked` which validates and returns `Result<TreeNodeSegmentId, CodecError>`. This prevents silent failures from invalid inputs.
 
 ## Integration with bulk-vault-action-adapter
 
@@ -374,68 +482,95 @@ The `bulk-vault-action-adapter` layer has two types of codecs:
    - Create `makeSegmentIdCodecs(rules: CodecRules)` factory function
    - Factory returns codecs using `NodeSegmentIdSeparator` constant (not from rules)
    - Create unified `parseSegmentId` + type-specific convenience parsers (return `Result<T, CodecError>`)
-   - Create `serializeSegmentId` for construction
-   - **Expose `makeNodeSegmentId(node: TreeNode)`** in API - uses `serializeSegmentId` internally
-   - **Expose `makeTreeNode(segmentId: TreeNodeSegmentId)`** - uses `parseSegmentId` internally, returns `Result<TreeNode, CodecError>`
-   - **Replace** existing `tree-node/codecs/node-and-segment-id/make-node-segment-id.ts` and `make-tree-node.ts` with these codecs
+   - Create `serializeSegmentId` for validated inputs (assumes NodeName, FileExtension are validated)
+   - Create `serializeSegmentIdUnchecked` for raw inputs (validates and returns `Result<TreeNodeSegmentId, CodecError>`)
+   - **Do NOT include TreeNode conversions** - keep codecs/ decoupled from domain models
+   - **Note**: TreeNode ↔ SegmentId conversions will live in `tree-node/codecs/node-and-segment-id/` as adapter
 
 4. **Create `codecs/locator/` module**
    - Move existing `locator-codec.ts` functions from `tree-action/utils/locator/`
-   - Create `makeLocatorCodecs(rules: CodecRules)` factory function
+   - Create `makeLocatorCodecs(rules: CodecRules, segmentId: SegmentIdCodecs, canonicalSplitPath: CanonicalSplitPathCodecs, suffix: SuffixCodecs)` factory function
+   - **Dependencies**: Injects `segmentId`, `canonicalSplitPath`, and `suffix` codecs (depends on all lower-level modules)
    - Ensure bidirectional Result-based API (return `Result<T, CodecError>`)
    - **Critical**: Fix `locatorToCanonicalSplitPathInsideLibrary` (renamed to `locatorToCanonicalSplitPathInsideLibrary`) to return `Result<CanonicalSplitPathInsideLibrary, CodecError>` instead of throwing
    - **All functions must be neverthrow-pilled**: No throwing allowed, all errors via Result
+   - **Import rule**: Only imports from `segment-id/`, `canonical-split-path/`, `suffix/`, `errors.ts`, `rules.ts` (never from higher-level modules)
 
 5. **Create `codecs/split-path-inside-library/` module**
    - Move scoping codecs from `tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library.ts`
    - Create `makeSplitPathInsideLibraryCodecs(rules: CodecRules)` factory function
-   - Functions: `checkIfInsideLibrary`, `toInsideLibrary` (chops LibraryRoot), `fromInsideLibrary` (adds LibraryRoot back)
+   - **Dependencies**: Minimal - only uses `rules.libraryRootName` (no other codec modules needed)
+   - Functions:
+     - `checkIfInsideLibrary(sp): boolean` - quick predicate
+     - `isInsideLibrary(sp): sp is SplitPathInsideLibraryCandidate` - type guard for narrowing
+     - `toInsideLibrary(sp): Result<SplitPathInsideLibrary, CodecError>` - canonical API with proper errors
+     - `fromInsideLibrary(sp): SplitPath` - adds LibraryRoot path parts back
    - All functions use `rules.libraryRootName` instead of `getParsedUserSettings()`
-   - Parse functions return `Result<T, CodecError>`
+   - `toInsideLibrary` returns structured `CodecError` with reason (prevents orchestrators from inventing their own errors)
+   - **Import rule**: Only imports from `errors.ts`, `rules.ts` (never from other codec modules)
 
 6. **Create `codecs/canonical-split-path/` module**
    - Move canonical split path codecs from `tree-action/utils/canonical-naming/canonical-split-path-codec.ts`
-   - Create `makeCanonicalSplitPathCodecs(rules: CodecRules)` factory function
+   - Create `makeCanonicalSplitPathCodecs(rules: CodecRules, suffix: SuffixCodecs)` factory function
+   - **Dependency**: Injects `suffix` codecs (depends on suffix module)
    - Use consistent naming: `splitPathInsideLibraryToCanonical`, `fromCanonicalSplitPathInsideLibrary` (lossy: joins separated suffix)
    - Parse functions return `Result<T, CodecError>`
+   - **Import rule**: Only imports from `suffix/`, `errors.ts`, `rules.ts` (never from higher-level modules)
 
 7. **Create `codecs/suffix/` module**
    - Move suffix utilities from `tree-action/utils/canonical-naming/suffix-utils/`
    - Create `makeSuffixCodecs(rules: CodecRules)` factory function
    - All functions use `rules.suffixDelimiter` instead of `getParsedUserSettings()`
    - Use consistent naming: `pathPartsToSuffixParts`, `pathPartsWithRootToSuffixParts`, `suffixPartsToPathParts`
-   - Include `splitBySuffixDelimiter` and `serializeSeparatedSuffix`
+   - Include `splitBySuffixDelimiter` and `serializeSeparatedSuffix` (validated) + `serializeSeparatedSuffixUnchecked` (validates inputs)
    - Parse functions return `Result<T, CodecError>`
+   - Serialize functions: validated version assumes NodeName[] are validated, unchecked version validates and returns Result
 
 8. **Create main `codecs/index.ts` factory**
+   - **Thin factory/re-export layer only** - no business logic
+   - Import all codec modules
    - Export `makeCodecs(rules: CodecRules)` factory function
-   - Factory returns `{ segmentId, locator, splitPathInsideLibrary, canonicalSplitPath, suffix }` codec objects
-   - Export `CodecError` type and `CodecRules` type
-   - Export `makeCodecRulesFromSettings` helper
+   - Factory creates codecs in dependency order (lowest to highest):
+     1. `suffix` (no dependencies)
+     2. `segmentId` (no dependencies)
+     3. `splitPathInsideLibrary` (may use suffix)
+     4. `canonicalSplitPath` (depends on suffix)
+     5. `locator` (depends on segmentId, canonicalSplitPath, suffix)
+   - Factory returns `{ segmentId, splitPathInsideLibrary, canonicalSplitPath, suffix, locator }` codec objects
+   - Re-export `CodecError` type and `CodecRules` type for convenience
+   - Re-export `makeCodecRulesFromSettings` helper
+   - **No circular imports**: This is the only file that imports all modules
 
-### Phase 2: Integration Testing - tree-node Layer
+### Phase 2: Create TreeNode Adapter in tree-node Layer
 
-**Goal**: Try to use codecs in `src/commanders/librarian-new/healer/library-tree/tree-node/`
+**Goal**: Create thin adapter in `tree-node/codecs/node-and-segment-id/` that uses centralized codecs
 
 **Process**:
-- Identify all codec usage points in tree-node layer
-- Create codec instance: `const rules = makeCodecRulesFromSettings(parsedSettings); const { segmentId, ... } = makeCodecs(rules);`
-  - Note: `parsedSettings` comes from main.ts, passed to Librarian, then to codecs
-- Attempt to replace existing parsing/construction logic with codec API
-- **Replace** `tree-node/codecs/node-and-segment-id/` codecs with new centralized codecs
-- **Document missing methods** - functions needed but not yet implemented
-- **Raise problems** - API design issues, type mismatches, error handling gaps
-- **Add missing methods** to appropriate codec modules
-- **Iterate** until tree-node layer can fully use codec API
+- Create `tree-node/codecs/node-and-segment-id/tree-node-segment-id-codec.ts`
+- Adapter functions:
+  - `makeNodeSegmentId(node: TreeNode): TreeNodeSegmentId` - uses `segmentId.serializeSegmentId` internally
+  - `makeTreeNode(segmentId: TreeNodeSegmentId): Result<TreeNode, CodecError>` - uses `segmentId.parseSegmentId` internally
+- Adapter receives codec instance via dependency injection (from Librarian/Healer)
+- **Keep existing `tree-node/codecs/node-and-segment-id/make-node-segment-id.ts`** temporarily for compatibility
+- **Replace call sites** to use adapter instead of direct codec access
+- **Document any missing utilities** needed for TreeNode construction
 
 **Expected findings**:
-- May need additional segment ID utilities
-- May need node construction helpers (covered by `makeTreeNode`)
-- May need type-specific convenience functions
-- Verify rules injection works correctly (no hidden `getParsedUserSettings()` calls in codecs/)
-- Verify `tree-node/codecs/` can be fully replaced
+- Adapter is thin wrapper around codecs (no duplication)
+- No circular dependencies (codecs/ doesn't import TreeNode)
+- May need additional helpers for TreeNode construction from components
 
-### Phase 3: Integration Testing - bulk-vault-action-adapter Layer
+### Phase 3: Integration Testing - tree-node Layer (using adapter)
+
+**Goal**: Verify tree-node layer works with adapter
+
+**Process**:
+- Use adapter from Phase 2 in tree-node layer
+- Replace direct codec access with adapter functions
+- Verify no circular dependencies
+- Test TreeNode ↔ SegmentId conversions
+
+### Phase 4: Integration Testing - bulk-vault-action-adapter Layer
 
 **Goal**: Try to use codecs in `src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/`
 
@@ -572,6 +707,22 @@ Once all layers are tested and codec API is complete:
    - Call sites must use appropriate function based on whether pathParts includes library root
    - Consistent naming: `pathPartsToSuffixParts`, `pathPartsWithRootToSuffixParts`, `suffixPartsToPathParts`
 
+5. **Serialize safety**:
+   - `serializeSegmentId` and `serializeSeparatedSuffix` assume validated inputs (NodeName, FileExtension are zod-validated types)
+   - For unchecked inputs, use `serializeSegmentIdUnchecked` and `serializeSeparatedSuffixUnchecked` which validate and return `Result<T, CodecError>`
+   - This prevents silent failures from invalid inputs
+
+6. **Layering**:
+   - `codecs/segment-id/` does NOT include TreeNode conversions (avoids circular dependencies)
+   - TreeNode ↔ SegmentId conversions live in `tree-node/codecs/node-and-segment-id/tree-node-segment-id-codec.ts` as adapter
+   - Adapter uses `segmentId.parseSegmentId` and `segmentId.serializeSegmentId` internally
+
+7. **split-path-inside-library API**:
+   - Use `toInsideLibrary(sp)` as canonical API (returns proper `CodecError` with reason)
+   - `checkIfInsideLibrary(sp)` is quick predicate for early returns
+   - `isInsideLibrary(sp)` is type guard for narrowing
+   - Prevents orchestrators from inventing their own error variants
+
 ## Todos
 
 ### Phase 1: Core Codecs Implementation
@@ -589,10 +740,9 @@ Once all layers are tested and codec API is complete:
   - [ ] Create `makeSegmentIdCodecs(rules: CodecRules)` factory
   - [ ] Factory returns codecs using `NodeSegmentIdSeparator` constant (not from rules)
   - [ ] Implement unified `parseSegmentId` + type-specific parsers (return `Result<T, CodecError>`)
-  - [ ] Implement `serializeSegmentId`
-  - [ ] Expose `makeNodeSegmentId(node: TreeNode)` - uses `serializeSegmentId` internally
-  - [ ] Expose `makeTreeNode(segmentId: TreeNodeSegmentId)` - uses `parseSegmentId` internally
-  - [ ] Replace `tree-node/codecs/node-and-segment-id/` codecs with these
+  - [ ] Implement `serializeSegmentId` (validated inputs: assumes NodeName, FileExtension are validated)
+  - [ ] Implement `serializeSegmentIdUnchecked` (validates inputs, returns `Result<TreeNodeSegmentId, CodecError>`)
+  - [ ] **Do NOT include TreeNode conversions** - keep codecs/ decoupled
 - [ ] Move locator-codec.ts to codecs/locator/ with factory pattern
   - [ ] Create `makeLocatorCodecs(rules: CodecRules)` factory
   - [ ] Ensure all parse functions return `Result<T, CodecError>`
@@ -600,9 +750,12 @@ Once all layers are tested and codec API is complete:
   - [ ] Ensure all functions are neverthrow-pilled (no throwing)
 - [ ] Create `codecs/split-path-inside-library/` module with factory pattern
   - [ ] Create `makeSplitPathInsideLibraryCodecs(rules: CodecRules)` factory
-  - [ ] Implement `checkIfInsideLibrary`, `toInsideLibrary`, `fromInsideLibrary`
+  - [ ] Implement `checkIfInsideLibrary(sp): boolean` - quick predicate
+  - [ ] Implement `isInsideLibrary(sp): sp is SplitPathInsideLibraryCandidate` - type guard
+  - [ ] Implement `toInsideLibrary(sp): Result<SplitPathInsideLibrary, CodecError>` - canonical API with proper errors
+  - [ ] Implement `fromInsideLibrary(sp): SplitPath` - adds LibraryRoot back
   - [ ] Use `rules.libraryRootName` instead of `getParsedUserSettings()`
-  - [ ] Parse functions return `Result<T, CodecError>`
+  - [ ] `toInsideLibrary` returns structured `CodecError` with reason
 - [ ] Create `codecs/canonical-split-path/` module with factory pattern
   - [ ] Create `makeCanonicalSplitPathCodecs(rules: CodecRules)` factory
   - [ ] Use `fromCanonicalSplitPathInsideLibrary` name (consistent with toCanonical pattern) - document that it's lossy
@@ -611,23 +764,28 @@ Once all layers are tested and codec API is complete:
 - [ ] Move suffix utilities to codecs/suffix/ with factory pattern
   - [ ] Create `makeSuffixCodecs(rules: CodecRules)` factory
   - [ ] Use consistent naming: `pathPartsToSuffixParts`, `pathPartsWithRootToSuffixParts`, `suffixPartsToPathParts`
-  - [ ] Include `splitBySuffixDelimiter` and `serializeSeparatedSuffix`
+  - [ ] Include `splitBySuffixDelimiter` and `serializeSeparatedSuffix` (validated) + `serializeSeparatedSuffixUnchecked` (validates inputs)
   - [ ] All functions use `rules.suffixDelimiter` instead of `getParsedUserSettings()`
   - [ ] Ensure all parse functions return `Result<T, CodecError>` (neverthrow-pilled)
+  - [ ] Serialize functions: validated version assumes NodeName[] are validated, unchecked version validates and returns Result
   - [ ] Document library root handling requirements
   - [ ] Parse functions return `Result<T, CodecError>`
 - [ ] Create codecs/index.ts factory
+  - [ ] Import all codec modules
   - [ ] Export `makeCodecs(rules: CodecRules)` factory function
-  - [ ] Export `CodecError` type and `CodecRules` type
-  - [ ] Export `makeCodecRulesFromSettings` helper
+  - [ ] Factory creates codecs in dependency order (suffix → segmentId → splitPathInsideLibrary → canonicalSplitPath → locator)
+  - [ ] Inject dependencies: `canonicalSplitPath` gets `suffix`, `locator` gets `segmentId`, `canonicalSplitPath`, `suffix`
+  - [ ] Re-export `CodecError` type and `CodecRules` type
+  - [ ] Re-export `makeCodecRulesFromSettings` helper
+  - [ ] Verify no circular imports (this is the only file importing all modules)
 
 ### Phase 2: Integration Testing - tree-node Layer
-- [ ] Identify codec usage points in `tree-node/` layer
-- [ ] Attempt to replace existing logic with codec API
-- [ ] **Document missing methods** - functions needed but not implemented
-- [ ] **Raise problems** - API design issues, type mismatches, error handling gaps
-- [ ] Add missing methods to appropriate codec modules
-- [ ] Iterate until tree-node layer can fully use codec API
+- [ ] Create `tree-node/codecs/node-and-segment-id/tree-node-segment-id-codec.ts` adapter
+- [ ] Implement `makeNodeSegmentId(node: TreeNode)` - uses `segmentId.serializeSegmentId` internally
+- [ ] Implement `makeTreeNode(segmentId: TreeNodeSegmentId)` - uses `segmentId.parseSegmentId` internally
+- [ ] Adapter receives codec instance via dependency injection
+- [ ] Replace call sites to use adapter
+- [ ] Document any missing utilities for TreeNode construction
 
 ### Phase 3: Integration Testing - bulk-vault-action-adapter Layer
 - [ ] Identify codec usage points in `bulk-vault-action-adapter/` layer
