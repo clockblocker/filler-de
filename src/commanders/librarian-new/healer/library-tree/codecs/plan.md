@@ -48,6 +48,7 @@ Create a clean, expandable API for orchestrators to work with DTOs, backed by pu
 ```
 library-tree/
   codecs/
+    errors.ts           # CodecError discriminated union type
     segment-id/
       parse.ts          # segment ID -> { nodeName, type, extension }
       serialize.ts      # { nodeName, type, extension } -> segment ID
@@ -74,25 +75,48 @@ library-tree/
 
 - **Bidirectional**: `parse*` (validate/parse) and `serialize*` (construct)
 - **Pure functions**: No side effects
-- **neverthrow**: Parse functions return `Result<T, string>`, serialize functions return direct values (no validation needed)
+- **neverthrow**: Parse functions return `Result<T, CodecError>`, serialize functions return direct values (no validation needed)
 - **zod validation**: Where applicable for parsing
 - **Type-safe**: Full TypeScript inference
 
 ### Result Return Type Strategy
 
-- **Parse functions** (`parse*`, `tryParse*`): Return `Result<T, string>` - validation may fail
+- **Parse functions** (`parse*`, `tryParse*`): Return `Result<T, CodecError>` - validation may fail with structured errors
 - **Serialize functions** (`serialize*`, `make*`): Return direct values - construction cannot fail
 - **Pure transformations** (e.g., `pathPartsToSuffixParts`): Return direct values - no validation needed
 
 ### Error Handling
 
-- Error messages: Descriptive strings, prefer specific error types where applicable
-- Use zod validation errors when parsing structured data
+**Structured error types**: All parse functions return `Result<T, CodecError>` where `CodecError` is a discriminated union enabling:
+- Actionable error messages with context
+- Stable error classification for telemetry, intent inference, policy decisions
+- Distinction between recoverable vs fatal parsing failures
+- Programmatic routing (e.g., extension invalid vs nodeName invalid)
+
+**CodecError discriminated union** (defined in `codecs/errors.ts`):
+
+```typescript
+export type CodecError =
+  | { kind: 'InvalidNodeName'; message: string; context: { raw: string } }
+  | { kind: 'InvalidSegmentId'; reason: 'MissingParts' | 'UnknownType' | 'InvalidFormat'; raw: string; context?: Record<string, unknown> }
+  | { kind: 'InvalidExtension'; message: string; raw: string; expected?: string[] }
+  | { kind: 'InvalidSplitPath'; reason: 'InvalidPathParts' | 'InvalidBasename' | 'MissingExtension'; context: Record<string, unknown> }
+  | { kind: 'InvalidSuffix'; reason: 'InvalidDelimiter' | 'EmptyParts'; raw: string; context?: Record<string, unknown> }
+  | { kind: 'ZodError'; issues: ZodIssue[]; context?: Record<string, unknown> }
+  | { kind: 'LocatorError'; reason: 'NoParent' | 'InvalidChain'; context: Record<string, unknown> }
+  | { kind: 'CanonicalizationError'; reason: string; context: Record<string, unknown> };
+```
+
+- Use zod validation errors when parsing structured data (wrapped in `ZodError` variant)
 - Preserve original error context when chaining codecs
+- Enable pattern matching on `kind` for error handling strategies
 
 ### Example API Structure
 
 ```typescript
+// codecs/errors.ts
+export type CodecError = /* ... discriminated union ... */
+
 // codecs/segment-id/types.ts
 export type SegmentIdComponents = {
   coreName: NodeName;
@@ -101,29 +125,30 @@ export type SegmentIdComponents = {
 }
 
 // codecs/segment-id/index.ts
+import type { CodecError } from '../errors';
 // Unified parser handles all types, returns discriminated union
-export const parseSegmentId = (id: TreeNodeSegmentId): Result<SegmentIdComponents, string>
+export const parseSegmentId = (id: TreeNodeSegmentId): Result<SegmentIdComponents, CodecError>
 // Type-specific parsers for convenience
-export const parseSectionSegmentId = (id: SectionNodeSegmentId): Result<Omit<SegmentIdComponents, 'extension'>, string>
-export const parseScrollSegmentId = (id: ScrollNodeSegmentId): Result<SegmentIdComponents & { extension: 'md' }, string>
-export const parseFileSegmentId = (id: FileNodeSegmentId): Result<SegmentIdComponents & { extension: FileExtension }, string>
+export const parseSectionSegmentId = (id: SectionNodeSegmentId): Result<Omit<SegmentIdComponents, 'extension'>, CodecError>
+export const parseScrollSegmentId = (id: ScrollNodeSegmentId): Result<SegmentIdComponents & { extension: 'md' }, CodecError>
+export const parseFileSegmentId = (id: FileNodeSegmentId): Result<SegmentIdComponents & { extension: FileExtension }, CodecError>
 
 // Serialize returns direct value (construction cannot fail)
 export const serializeSegmentId = (components: SegmentIdComponents): TreeNodeSegmentId
 
 // codecs/locator/index.ts
-export const locatorToCanonicalSplitPath = (loc: TreeNodeLocator): Result<CanonicalSplitPathInsideLibrary, string>
-export const canonicalSplitPathToLocator = (sp: CanonicalSplitPathInsideLibrary): Result<TreeNodeLocator, string>
+export const locatorToCanonicalSplitPath = (loc: TreeNodeLocator): Result<CanonicalSplitPathInsideLibrary, CodecError>
+export const canonicalSplitPathToLocator = (sp: CanonicalSplitPathInsideLibrary): Result<TreeNodeLocator, CodecError>
 
 // codecs/split-path/index.ts
-export const splitPathToCanonical = (sp: SplitPathInsideLibrary): Result<CanonicalSplitPathInsideLibrary, string>
+export const splitPathToCanonical = (sp: SplitPathInsideLibrary): Result<CanonicalSplitPathInsideLibrary, CodecError>
 // Convert canonical split path back to regular format (for Obsidian API compatibility)
 // Drops separatedSuffixedBasename field, reconstructs basename from it (lossy but required for vault operations)
 export const makeRegularSplitPathInsideLibrary = (sp: CanonicalSplitPathInsideLibrary): SplitPathInsideLibrary
 
 // codecs/suffix/index.ts
-export const parseSeparatedSuffix = (basename: string): Result<SeparatedSuffixedBasename, string>
-export const splitBySuffixDelimiter = (basename: string): Result<NonEmptyArray<NodeName>, string>
+export const parseSeparatedSuffix = (basename: string): Result<SeparatedSuffixedBasename, CodecError>
+export const splitBySuffixDelimiter = (basename: string): Result<NonEmptyArray<NodeName>, CodecError>
 export const serializeSeparatedSuffix = (suffix: SeparatedSuffixedBasename): string
 export const makeJoinedSuffixedBasename = (suffix: SeparatedSuffixedBasename): string
 
@@ -168,55 +193,63 @@ The `bulk-vault-action-adapter` layer has two types of codecs:
 
 ## Implementation Steps
 
-1. **Create `codecs/segment-id/` module**
+1. **Create `codecs/errors.ts`**
+
+   - Define `CodecError` discriminated union type
+   - Export error constructors/helpers for consistent error creation
+   - Document error handling patterns
+
+2. **Create `codecs/segment-id/` module**
 
    - Extract all segment ID parsing logic from: `healer.ts`, `tree.ts`, `codex-split-path.ts`, `codex-impact-to-actions.ts`, `generate-codex-content.ts`, `locator-codec.ts`, `locator-utils.ts`, `librarian.ts`
    - Define `SegmentIdComponents` type: `{ coreName: NodeName; targetType: TreeNodeType; extension?: string }`
-   - Create unified `parseSegmentId` + type-specific convenience parsers
+   - Create unified `parseSegmentId` + type-specific convenience parsers (return `Result<T, CodecError>`)
    - Create `serializeSegmentId` for construction
    - Replace all duplicated parsing calls
    - **Replace `getNodeName` from `locator-utils.ts`** with segment ID codec (currently throws)
 
-2. **Refactor `codecs/locator/`**
+3. **Refactor `codecs/locator/`**
 
    - Move existing `locator-codec.ts` functions from `tree-action/utils/locator/`
-   - Ensure bidirectional Result-based API for parse functions
-   - **Critical**: Fix `makeCanonicalSplitPathInsideLibraryFromLocator` (currently throws on line 127) to return `Result` instead
-   - Update `makeLocatorFromCanonicalSplitPathInsideLibrary` to return `Result` if needed
+   - Ensure bidirectional Result-based API for parse functions (return `Result<T, CodecError>`)
+   - **Critical**: Fix `makeCanonicalSplitPathInsideLibraryFromLocator` (currently throws on line 127) to return `Result<CanonicalSplitPathInsideLibrary, CodecError>` instead
+   - Update `makeLocatorFromCanonicalSplitPathInsideLibrary` to return `Result<TreeNodeLocator, CodecError>` if needed
 
-3. **Refactor `codecs/split-path/`**
+4. **Refactor `codecs/split-path/`**
 
    - Move canonical split path codecs from `tree-action/utils/canonical-naming/`
-   - Ensure clean API surface
+   - Ensure clean API surface (parse functions return `Result<T, CodecError>`)
    - **Note**: `makeRegularSplitPathInsideLibrary` drops `separatedSuffixedBasename` field and reconstructs `basename` from it (lossy conversion) - required for Obsidian vault API compatibility
 
-4. **Refactor `codecs/suffix/`**
+5. **Refactor `codecs/suffix/`**
 
    - Move suffix utilities from `tree-action/utils/canonical-naming/suffix-utils/`
    - Include all variants: `makeSuffixPartsFromPathParts`, `makeSuffixPartsFromPathPartsWithRoot`
    - Organize path parts conversions with clear library root handling
    - Ensure `splitBySuffixDelimiter` and `makeJoinedSuffixedBasename` are included
+   - Parse functions return `Result<T, CodecError>`
 
-5. **Create main `codecs/index.ts`**
+6. **Create main `codecs/index.ts`**
 
-   - Export all codec APIs
+   - Export all codec APIs including `CodecError` type
    - Single entry point for orchestrators
 
-6. **Refactor `healer.ts`**
+7. **Refactor `healer.ts`**
 
    - Replace private helpers with codec API calls
    - Remove `buildCanonicalLeafSplitPath`, `buildObservedLeafSplitPath`, etc.
    - Use `locatorToCanonicalSplitPath` instead
+   - Handle `Result<T, CodecError>` returns with appropriate error handling
 
-7. **Refactor other orchestrators**
+8. **Refactor other orchestrators**
 
-   - `tree.ts`: Use segment ID codecs, replace `getNodeName` call with codec API
-   - `codex-split-path.ts`: Use segment ID + suffix codecs
-   - `codex-impact-to-actions.ts`: Replace `extractNodeNameFromSegmentId` and `computeScrollSplitPath` with codec API
-   - `generate-codex-content.ts`: Use segment ID codecs
-   - `librarian.ts`: Replace `extractNodeNameFromScrollSegmentId` and `computeScrollSplitPath` with codec API, use `serializeSegmentId` for manual construction
+   - `tree.ts`: Use segment ID codecs, replace `getNodeName` call with codec API, handle `CodecError`
+   - `codex-split-path.ts`: Use segment ID + suffix codecs, handle `CodecError`
+   - `codex-impact-to-actions.ts`: Replace `extractNodeNameFromSegmentId` and `computeScrollSplitPath` with codec API, handle `CodecError`
+   - `generate-codex-content.ts`: Use segment ID codecs, handle `CodecError`
+   - `librarian.ts`: Replace `extractNodeNameFromScrollSegmentId` and `computeScrollSplitPath` with codec API, use `serializeSegmentId` for manual construction, handle `CodecError`
 
-8. **Refactor bulk-vault-action-adapter layer**
+9. **Refactor bulk-vault-action-adapter layer**
 
    - `translate-material-event/translators/helpers/locator.ts`: Replace imports from `utils/` with `codecs/`
    - `translate-material-event/translate-material-events.ts`: Use `codecs/suffix/` instead of direct utils
@@ -260,17 +293,18 @@ The `bulk-vault-action-adapter` layer has two types of codecs:
 
 1. **`makeCanonicalSplitPathInsideLibraryFromLocator`** (locator-codec.ts:127):
    - Currently throws `Error` on failure
-   - **Must be changed** to return `Result<CanonicalSplitPathInsideLibrary, string>`
-   - All call sites need error handling updates
+   - **Must be changed** to return `Result<CanonicalSplitPathInsideLibrary, CodecError>`
+   - All call sites need error handling updates with pattern matching on `CodecError.kind`
 
 2. **Segment ID parsing**:
    - All `extractNodeNameFromSegmentId` variants must be replaced
-   - Unified `parseSegmentId` returns `Result`, call sites need error handling
+   - Unified `parseSegmentId` returns `Result<T, CodecError>`, call sites need error handling
    - `getNodeName` from `locator-utils.ts` currently throws - must be replaced with Result-based codec
+   - Error handling should pattern match on `CodecError.kind` for actionable responses
 
 3. **Locator utilities**:
-   - `getNodeName` (locator-utils.ts:12): Currently throws on invalid NodeName - replace with segment ID codec
-   - `getParentLocator` (locator-utils.ts:26): Currently throws when no parent - consider Result-based alternative or explicit root handling
+   - `getNodeName` (locator-utils.ts:12): Currently throws on invalid NodeName - replace with segment ID codec returning `Result<T, CodecError>`
+   - `getParentLocator` (locator-utils.ts:26): Currently throws when no parent - replace with Result-based alternative returning `Result<TreeNodeLocator, CodecError>` with `kind: 'LocatorError', reason: 'NoParent'`
 
 4. **Suffix utilities**:
    - Library root handling now explicit via separate functions (`makeSuffixPartsFromPathParts` vs `makeSuffixPartsFromPathPartsWithRoot`)
@@ -278,24 +312,32 @@ The `bulk-vault-action-adapter` layer has two types of codecs:
 
 ## Todos
 
+- [ ] Create `codecs/errors.ts` with `CodecError` discriminated union type
+  - [ ] Define all error variants with appropriate context fields
+  - [ ] Export error constructors/helpers for consistent error creation
 - [ ] Create `codecs/segment-id/` module with parse.ts, serialize.ts, and types.ts
   - [ ] Define `SegmentIdComponents` type
-  - [ ] Implement unified `parseSegmentId` + type-specific parsers
+  - [ ] Implement unified `parseSegmentId` + type-specific parsers (return `Result<T, CodecError>`)
   - [ ] Implement `serializeSegmentId`
-- [ ] Move locator-codec.ts to codecs/locator/ and ensure all parse functions return Result types
-  - [ ] **Fix**: `makeCanonicalSplitPathInsideLibraryFromLocator` to return Result (currently throws)
+- [ ] Move locator-codec.ts to codecs/locator/ and ensure all parse functions return `Result<T, CodecError>`
+  - [ ] **Fix**: `makeCanonicalSplitPathInsideLibraryFromLocator` to return `Result<CanonicalSplitPathInsideLibrary, CodecError>` (currently throws)
 - [ ] Organize split path codecs in codecs/split-path/ with clean API
   - [ ] Use `makeRegularSplitPathInsideLibrary` name (matches existing code) - document that it's lossy (drops separated suffix, reconstructs basename)
+  - [ ] Parse functions return `Result<T, CodecError>`
 - [ ] Move suffix utilities to codecs/suffix/ with clear separation of concerns
   - [ ] Include all variants: `makeSuffixPartsFromPathParts`, `makeSuffixPartsFromPathPartsWithRoot`
   - [ ] Include `splitBySuffixDelimiter` and `makeJoinedSuffixedBasename`
   - [ ] Document library root handling requirements
-- [ ] Create codecs/index.ts as main entry point exporting all codec APIs
-- [ ] Replace private helpers in healer.ts with codec API calls
-- [ ] Update tree.ts to use segment ID codecs instead of private extractNodeNameFromSegmentId, replace `getNodeName` call
-- [ ] Update codex-split-path.ts, codex-impact-to-actions.ts, and generate-codex-content.ts to use codec API
-- [ ] Replace extractNodeNameFromScrollSegmentId, computeScrollSplitPath, and manual segment ID construction in librarian.ts with codec API
-- [ ] Replace `getNodeName` calls in tree.ts and translate-rename-material-event.ts with segment ID codec
+  - [ ] Parse functions return `Result<T, CodecError>`
+- [ ] Create codecs/index.ts as main entry point exporting all codec APIs including `CodecError`
+- [ ] Replace private helpers in healer.ts with codec API calls, handle `CodecError` appropriately
+- [ ] Update tree.ts to use segment ID codecs instead of private extractNodeNameFromSegmentId, replace `getNodeName` call, handle `CodecError`
+- [ ] Update codex-split-path.ts, codex-impact-to-actions.ts, and generate-codex-content.ts to use codec API, handle `CodecError`
+- [ ] Replace extractNodeNameFromScrollSegmentId, computeScrollSplitPath, and manual segment ID construction in librarian.ts with codec API, handle `CodecError`
+- [ ] Replace `getNodeName` calls in tree.ts and translate-rename-material-event.ts with segment ID codec, handle `CodecError`
 - [ ] Update bulk-vault-action-adapter translate-material-event layer to use centralized codec API instead of direct utils imports
 - [ ] Add unit tests for all codec modules
-- [ ] Update integration tests to verify orchestrators work with new API
+  - [ ] Test error cases return appropriate `CodecError` variants
+  - [ ] Test error context preservation
+  - [ ] Test pattern matching on error kinds
+- [ ] Update integration tests to verify orchestrators work with new API and handle `CodecError` appropriately
