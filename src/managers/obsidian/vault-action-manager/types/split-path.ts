@@ -53,15 +53,14 @@ export type CommonSplitPath = z.infer<typeof CoreSplitPathSchema>;
 
 export type AnySplitPath = z.infer<typeof SplitPathSchema>;
 
-export type SplitPath<T extends SplitPathType> = AnySplitPath & { type: T };
+export type SplitPath<T extends SplitPathType> = Extract<
+	AnySplitPath,
+	{ type: T }
+>;
 
-export type SplitPathToFolder = Prettify<
-	SplitPath<typeof SplitPathType.Folder>
->;
-export type SplitPathToFile = Prettify<SplitPath<typeof SplitPathType.File>>;
-export type SplitPathToMdFile = Prettify<
-	SplitPath<typeof SplitPathType.MdFile>
->;
+export type SplitPathToFolder = SplitPath<typeof SplitPathType.Folder>;
+export type SplitPathToFile = SplitPath<typeof SplitPathType.File>;
+export type SplitPathToMdFile = SplitPath<typeof SplitPathType.MdFile>;
 
 export type SplitPathFromTo<T extends AnySplitPath> = { from: T; to: T };
 
