@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import {
 	makeRegularSplitPathInsideLibrary,
 	tryParseCanonicalSplitPathInsideLibrary,
-} from "../../../../../../../src/commanders/librarian-new/library-tree/tree-action/utils/canonical-naming/canonical-split-path-codec";
+} from "../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/utils/canonical-naming/canonical-split-path-codec";
 import type {
 	SplitPathToFile,
 	SplitPathToFolder,

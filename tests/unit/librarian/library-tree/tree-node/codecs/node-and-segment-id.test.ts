@@ -1,19 +1,19 @@
 import { describe, expect, it } from "bun:test";
-import { makeNodeSegmentId } from "../../../../../../src/commanders/librarian-new/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
-import { makeTreeNode } from "../../../../../../src/commanders/librarian-new/library-tree/tree-node/codecs/node-and-segment-id/optimistic-makers/make-tree-node";
-import { tryParseTreeNode } from "../../../../../../src/commanders/librarian-new/library-tree/tree-node/codecs/node-and-segment-id/try-parse-tree-node";
-import { TreeNodeStatus, TreeNodeType } from "../../../../../../src/commanders/librarian-new/library-tree/tree-node/types/atoms";
+import { makeNodeSegmentId } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
+import { makeTreeNode } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/codecs/node-and-segment-id/optimistic-makers/make-tree-node";
+import { tryParseTreeNode } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/codecs/node-and-segment-id/try-parse-tree-node";
+import { TreeNodeStatus, TreeNodeType } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
 import type {
 	FileNodeSegmentId,
 	ScrollNodeSegmentId,
 	SectionNodeSegmentId,
-} from "../../../../../../src/commanders/librarian-new/library-tree/tree-node/types/node-segment-id";
-import { NodeSegmentIdSeparator as Separator } from "../../../../../../src/commanders/librarian-new/library-tree/tree-node/types/node-segment-id";
+} from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/node-segment-id";
+import { NodeSegmentIdSeparator as Separator } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/node-segment-id";
 import type {
 	FileNode,
 	ScrollNode,
 	SectionNode,
-} from "../../../../../../src/commanders/librarian-new/library-tree/tree-node/types/tree-node";
+} from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/tree-node";
 
 describe("makeNodeSegmentId", () => {
 	it("creates segment ID for Section node", () => {

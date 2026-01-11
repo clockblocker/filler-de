@@ -3,10 +3,10 @@ import type {
 	CanonicalSplitPathToFileInsideLibrary,
 	CanonicalSplitPathToFolderInsideLibrary,
 	CanonicalSplitPathToMdFileInsideLibrary,
-} from "../../../../../../src/commanders/librarian-new/library-tree/tree-action/utils/canonical-naming/types";
-import { makeLocatorFromCanonicalSplitPathInsideLibrary } from "../../../../../../src/commanders/librarian-new/library-tree/tree-action/utils/locator/locator-codec";
-import { TreeNodeType } from "../../../../../../src/commanders/librarian-new/library-tree/tree-node/types/atoms";
-import { NodeSegmentIdSeparator } from "../../../../../../src/commanders/librarian-new/library-tree/tree-node/types/node-segment-id";
+} from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/utils/canonical-naming/types";
+import { makeLocatorFromCanonicalSplitPathInsideLibrary } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/utils/locator/locator-codec";
+import { TreeNodeType } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
+import { NodeSegmentIdSeparator } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/node-segment-id";
 import { SplitPathType } from "../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 
 describe("makeLocatorFromLibraryScopedCanonicalSplitPath", () => {

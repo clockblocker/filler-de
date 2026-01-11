@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { generateCodexContent } from "../../../../../src/commanders/librarian-new/library-tree/codex/generate-codex-content";
+import { generateCodexContent } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/generate-codex-content";
 import {
 	TreeNodeStatus,
 	TreeNodeType,
-} from "../../../../../src/commanders/librarian-new/library-tree/tree-node/types/atoms";
-import type { SectionNodeSegmentId } from "../../../../../src/commanders/librarian-new/library-tree/tree-node/types/node-segment-id";
+} from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
+import type { SectionNodeSegmentId } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/node-segment-id";
 import type {
 	FileNode,
 	ScrollNode,
 	SectionNode,
-} from "../../../../../src/commanders/librarian-new/library-tree/tree-node/types/tree-node";
+} from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/tree-node";
 import type { NodeName } from "../../../../../src/commanders/librarian-new/types/schemas/node-name";
 import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";

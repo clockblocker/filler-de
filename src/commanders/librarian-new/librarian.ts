@@ -13,7 +13,8 @@ import { SplitPathType } from "../../managers/obsidian/vault-action-manager/type
 import { readMetadata } from "../../managers/pure/note-metadata-manager";
 import { decrementPending, incrementPending } from "../../utils/idle-tracker";
 import { logger } from "../../utils/logger";
-import { healingActionsToVaultActions } from "./library-tree/codecs/healing-to-vault-action";
+import { Healer } from "./healer/healer";
+import { healingActionsToVaultActions } from "./healer/library-tree/codecs/healing-to-vault-action";
 import {
 	CODEX_CORE_NAME,
 	type CodexAction,
@@ -23,38 +24,37 @@ import {
 	computeCodexSplitPath,
 	parseCodexClickLineContent,
 	type WriteScrollStatusAction,
-} from "./library-tree/codex";
-import { mergeCodexImpacts } from "./library-tree/codex/merge-codex-impacts";
-import { Healer } from "./library-tree/healer";
-import { Tree } from "./library-tree/tree";
-import { buildTreeActions } from "./library-tree/tree-action/bulk-vault-action-adapter";
-import { tryParseAsInsideLibrarySplitPath } from "./library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
-import type { SplitPathInsideLibrary } from "./library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
-import { inferCreatePolicy } from "./library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/infer-create";
-import { tryCanonicalizeSplitPathToDestination } from "./library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/translators/helpers/locator";
+} from "./healer/library-tree/codex";
+import { mergeCodexImpacts } from "./healer/library-tree/codex/merge-codex-impacts";
+import { Tree } from "./healer/library-tree/tree";
+import { buildTreeActions } from "./healer/library-tree/tree-action/bulk-vault-action-adapter";
+import { tryParseAsInsideLibrarySplitPath } from "./healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
+import type { SplitPathInsideLibrary } from "./healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
+import { inferCreatePolicy } from "./healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/infer-create";
+import { tryCanonicalizeSplitPathToDestination } from "./healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/translators/helpers/locator";
 import type {
 	CreateTreeLeafAction,
 	TreeAction,
-} from "./library-tree/tree-action/types/tree-action";
+} from "./healer/library-tree/tree-action/types/tree-action";
 import {
 	makeJoinedSuffixedBasename,
 	makeSuffixPartsFromPathPartsWithRoot,
 	tryParseAsSeparatedSuffixedBasename,
-} from "./library-tree/tree-action/utils/canonical-naming/suffix-utils/core-suffix-utils";
-import { makeLocatorFromCanonicalSplitPathInsideLibrary } from "./library-tree/tree-action/utils/locator/locator-codec";
-import { makeNodeSegmentId } from "./library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
+} from "./healer/library-tree/tree-action/utils/canonical-naming/suffix-utils/core-suffix-utils";
+import { makeLocatorFromCanonicalSplitPathInsideLibrary } from "./healer/library-tree/tree-action/utils/locator/locator-codec";
+import { makeNodeSegmentId } from "./healer/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import {
 	TreeNodeStatus,
 	TreeNodeType,
-} from "./library-tree/tree-node/types/atoms";
+} from "./healer/library-tree/tree-node/types/atoms";
 import {
 	NodeSegmentIdSeparator,
 	type ScrollNodeSegmentId,
 	type SectionNodeSegmentId,
-} from "./library-tree/tree-node/types/node-segment-id";
-import type { SectionNode } from "./library-tree/tree-node/types/tree-node";
-import type { HealingAction } from "./library-tree/types/healing-action";
-import { resolveDuplicateHealingActions } from "./library-tree/utils/resolve-duplicate-healing";
+} from "./healer/library-tree/tree-node/types/node-segment-id";
+import type { SectionNode } from "./healer/library-tree/tree-node/types/tree-node";
+import type { HealingAction } from "./healer/library-tree/types/healing-action";
+import { resolveDuplicateHealingActions } from "./healer/library-tree/utils/resolve-duplicate-healing";
 
 // ─── Scroll Metadata Schema ───
 
@@ -147,7 +147,10 @@ export class Librarian {
 
 			// Then dispatch codex actions
 			const mergedImpact = mergeCodexImpacts(allCodexImpacts);
-			const codexActions = codexImpactToActions(mergedImpact, this.healer);
+			const codexActions = codexImpactToActions(
+				mergedImpact,
+				this.healer,
+			);
 			const codexVaultActions = codexActionsToVaultActions(codexActions);
 
 			if (codexVaultActions.length > 0) {

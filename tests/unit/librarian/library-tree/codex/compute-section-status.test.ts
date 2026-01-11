@@ -1,33 +1,33 @@
-import { describe, it, expect } from "bun:test";
+import { describe, expect, it } from "bun:test";
+import { computeSectionStatus } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/compute-section-status";
 import {
 	TreeNodeStatus,
 	TreeNodeType,
-} from "../../../../../src/commanders/librarian-new/library-tree/tree-node/types/atoms";
+} from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
 import type {
-	SectionNode,
 	ScrollNode,
-} from "../../../../../src/commanders/librarian-new/library-tree/tree-node/types/tree-node";
+	SectionNode,
+} from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/tree-node";
 import type { NodeName } from "../../../../../src/commanders/librarian-new/types/schemas/node-name";
-import { computeSectionStatus } from "../../../../../src/commanders/librarian-new/library-tree/codex/compute-section-status";
 
 // Helpers
 const scroll = (
 	name: string,
 	status: TreeNodeStatus = TreeNodeStatus.NotStarted,
 ): ScrollNode => ({
-	nodeName: name as NodeName,
-	type: TreeNodeType.Scroll,
-	status,
 	extension: "md",
+	nodeName: name as NodeName,
+	status,
+	type: TreeNodeType.Scroll,
 });
 
 const section = (
 	name: string,
 	children: Record<string, SectionNode | ScrollNode> = {},
 ): SectionNode => ({
+	children: children as SectionNode["children"],
 	nodeName: name as NodeName,
 	type: TreeNodeType.Section,
-	children: children as SectionNode["children"],
 });
 
 describe("computeSectionStatus", () => {

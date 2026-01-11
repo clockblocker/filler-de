@@ -1,10 +1,10 @@
-import { describe, it, expect } from "bun:test";
-import type { SectionNodeSegmentId } from "../../../../../src/commanders/librarian-new/library-tree/tree-node/types/node-segment-id";
+import { describe, expect, it } from "bun:test";
 import {
-	expandToAncestors,
-	dedupeChains,
 	collectImpactedSections,
-} from "../../../../../src/commanders/librarian-new/library-tree/codex/section-chain-utils";
+	dedupeChains,
+	expandToAncestors,
+} from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/section-chain-utils";
+import type { SectionNodeSegmentId } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/node-segment-id";
 
 // Helper to create segment IDs for tests
 const sec = (name: string): SectionNodeSegmentId =>

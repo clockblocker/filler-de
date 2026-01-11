@@ -1,16 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { codexImpactToActions } from "../../../../../src/commanders/librarian-new/library-tree/codex/codex-impact-to-actions";
-import { mergeCodexImpacts } from "../../../../../src/commanders/librarian-new/library-tree/codex/merge-codex-impacts";
-import { Healer } from "../../../../../src/commanders/librarian-new/library-tree/healer";
-import { Tree } from "../../../../../src/commanders/librarian-new/library-tree/tree";
+import { Healer } from "../../../../../src/commanders/librarian-new/healer/healer";
+import { codexImpactToActions } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/codex-impact-to-actions";
+import { mergeCodexImpacts } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/merge-codex-impacts";
+import { Tree } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree";
 import {
 	TreeNodeStatus,
 	TreeNodeType,
-} from "../../../../../src/commanders/librarian-new/library-tree/tree-node/types/atoms";
+} from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
 import type {
 	ScrollNodeSegmentId,
 	SectionNodeSegmentId,
-} from "../../../../../src/commanders/librarian-new/library-tree/tree-node/types/node-segment-id";
+} from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/node-segment-id";
 import { SplitPathType } from "../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
 
