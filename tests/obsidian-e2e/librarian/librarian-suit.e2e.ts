@@ -32,7 +32,6 @@ describe("Librarian Full Suit", () => {
 
 	// Post-mutation healing
 	it("heals all files to canonical suffixes after mutation", async () => {
-		await waitForIdle();
 		await testPostHealing001();
 	});
 
