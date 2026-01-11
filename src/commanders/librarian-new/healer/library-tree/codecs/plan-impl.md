@@ -35,7 +35,7 @@ Create a clean, expandable API for orchestrators to work with DTOs, backed by pu
 3. **Suffix utilities** used directly instead of through codec API
 
 4. **Manual segment ID construction** in `librarian.ts` (line 381):
-   - String concatenation: `` `${target.nodeName}${NodeSegmentIdSeparator}${TreeNodeType.Scroll}${NodeSegmentIdSeparator}md` ``
+   - String concatenation: `` `${target.nodeName}${NodeSegmentIdSeparator}${TreeNodeKind.Scroll}${NodeSegmentIdSeparator}md` ``
    - Should use `serializeSegmentId` codec
 
 5. **Locator utilities that throw** instead of returning Result:
@@ -50,6 +50,8 @@ library-tree/
   codecs/
     errors.ts           # CodecError discriminated union type
     rules.ts            # CodecRules type + makeCodecRulesFromSettings helper
+    types/
+      type-mappings.ts  # Type-level mappings: CorrespondingSplitPathKind, NodeLocatorOf, SegmentIdComponents<T>, etc.
 
     # PUBLIC MODULES (exposed to orchestrators)
     
@@ -131,7 +133,7 @@ library-tree/
 
 2. **`segment-id/`** (low level, PUBLIC)
    - No dependencies on other codec modules
-   - Only depends on: `errors.ts`, `rules.ts`, external types (NodeName, TreeNodeType, etc.)
+   - Only depends on: `errors.ts`, `rules.ts`, `types/type-mappings.ts`, external types (NodeName, TreeNodeKind, etc.)
 
 3. **`split-path-inside-library/`** (low-mid level, PUBLIC)
    - Minimal dependencies: only uses `rules.ts`
@@ -271,28 +273,27 @@ export type CodecRules = {
 };
 
 // codecs/segment-id/types.ts
-export type SegmentIdComponents = {
-  coreName: NodeName;
-  targetType: TreeNodeType;
-  extension?: string; // Required for Scroll/File, absent for Section
-}
+// Import from type-mappings.ts
+import type { SegmentIdComponents } from '../types/type-mappings';
 
 // codecs/segment-id/index.ts
 import type { CodecError } from '../errors';
 import type { CodecRules } from '../rules';
 
 export type SegmentIdCodecs = {
-  // Parse segment ID to components
-  parseSegmentId: (id: TreeNodeSegmentId) => Result<SegmentIdComponents, CodecError>;
-  parseSectionSegmentId: (id: SectionNodeSegmentId) => Result<Omit<SegmentIdComponents, 'extension'>, CodecError>;
-  parseScrollSegmentId: (id: ScrollNodeSegmentId) => Result<SegmentIdComponents & { extension: 'md' }, CodecError>;
-  parseFileSegmentId: (id: FileNodeSegmentId) => Result<SegmentIdComponents & { extension: FileExtension }, CodecError>;
+  // Generic parser (primary API)
+  parseSegmentId: <NK extends TreeNodeKind>(id: TreeNodeSegmentId) => Result<SegmentIdComponents<NK>, CodecError>;
   
-  // Serialize components to segment ID
-  // Validated: assumes inputs are already validated (NodeName, FileExtension, etc.)
-  serializeSegmentId: (components: SegmentIdComponents) => TreeNodeSegmentId;
-  // Unchecked: validates inputs and returns Result
-  serializeSegmentIdUnchecked: (components: { coreName: string; targetType: TreeNodeType; extension?: string }) => Result<TreeNodeSegmentId, CodecError>;
+  // Type-specific convenience parsers (better type inference)
+  parseSectionSegmentId: (id: SectionNodeSegmentId) => Result<SegmentIdComponents<TreeNodeKind.Section>, CodecError>;
+  parseScrollSegmentId: (id: ScrollNodeSegmentId) => Result<SegmentIdComponents<TreeNodeKind.Scroll>, CodecError>;
+  parseFileSegmentId: (id: FileNodeSegmentId) => Result<SegmentIdComponents<TreeNodeKind.File>, CodecError>;
+  
+  // Serialize (validated inputs)
+  serializeSegmentId: <NK extends TreeNodeKind>(components: SegmentIdComponents<NK>) => TreeNodeSegmentId;
+  
+  // Serialize (unchecked inputs)
+  serializeSegmentIdUnchecked: (components: { coreName: string; targetType: TreeNodeKind; extension?: string }) => Result<TreeNodeSegmentId, CodecError>;
 };
 
 export function makeSegmentIdCodecs(rules: CodecRules): SegmentIdCodecs {
@@ -308,9 +309,17 @@ export function makeSegmentIdCodecs(rules: CodecRules): SegmentIdCodecs {
 }
 
 // codecs/locator/index.ts
+import type { NodeLocatorOf, CanonicalSplitPathInsideLibraryOf, CorrespondingSplitPathKind, CorrespondingTreeNodeKind } from '../types/type-mappings';
+
 export type LocatorCodecs = {
-  locatorToCanonicalSplitPathInsideLibrary: (loc: TreeNodeLocator) => Result<CanonicalSplitPathInsideLibrary, CodecError>;
-  canonicalSplitPathInsideLibraryToLocator: (sp: CanonicalSplitPathInsideLibrary) => Result<TreeNodeLocator, CodecError>;
+  // Overloads for type-safe conversions
+  locatorToCanonicalSplitPathInsideLibrary: <NK extends TreeNodeKind>(
+    loc: NodeLocatorOf<NK>
+  ) => Result<CanonicalSplitPathInsideLibraryOf<CorrespondingSplitPathKind<NK>>, CodecError>;
+  
+  canonicalSplitPathInsideLibraryToLocator: <SK extends SplitPathKind>(
+    sp: CanonicalSplitPathInsideLibraryOf<SK>
+  ) => Result<NodeLocatorOf<CorrespondingTreeNodeKind<SK>>, CodecError>;
 };
 
 export function makeLocatorCodecs(
@@ -424,7 +433,7 @@ export function makeCodecs(rules: CodecRules) {
 
 ### Segment ID Handling Strategy
 
-**Design decision deferred**: Generic `parseSegmentId<TreeNodeType>` design to be decided separately. Current plan includes type-specific parsers for convenience and type narrowing.
+**Generic design**: Use generic `parseSegmentId<T extends TreeNodeKind>` as primary API (from `plan-generic-prerequesits.md`). Type-specific parsers (`parseSectionSegmentId`, `parseScrollSegmentId`, `parseFileSegmentId`) provide convenience and better type inference at call sites. Both use `SegmentIdComponents<T>` generic type from `codecs/types/type-mappings.ts`.
 
 **Rationale**: Segment IDs share the same format structure, only differ in required fields (extension). Unified parser reduces duplication while type-specific parsers provide better type safety.
 
@@ -478,23 +487,25 @@ The `bulk-vault-action-adapter` layer has two types of codecs:
 
 3. **Create `codecs/segment-id/` module**
    - Extract segment ID parsing logic from existing code
-   - Define `SegmentIdComponents` type: `{ coreName: NodeName; targetType: TreeNodeType; extension?: string }`
+   - Import `SegmentIdComponents<T extends TreeNodeKind>` from `codecs/types/type-mappings.ts`
    - Create `makeSegmentIdCodecs(rules: CodecRules)` factory function
    - Factory returns codecs using `NodeSegmentIdSeparator` constant (not from rules)
-   - Create unified `parseSegmentId` + type-specific convenience parsers (return `Result<T, CodecError>`)
-   - Create `serializeSegmentId` for validated inputs (assumes NodeName, FileExtension are validated)
+   - Implement generic `parseSegmentId<T extends TreeNodeKind>` + type-specific convenience parsers (return `Result<SegmentIdComponents<T>, CodecError>`)
+   - Implement generic `serializeSegmentId<T extends TreeNodeKind>` for validated inputs (assumes NodeName, FileExtension are validated)
    - Create `serializeSegmentIdUnchecked` for raw inputs (validates and returns `Result<TreeNodeSegmentId, CodecError>`)
    - **Do NOT include TreeNode conversions** - keep codecs/ decoupled from domain models
    - **Note**: TreeNode ↔ SegmentId conversions will live in `tree-node/codecs/node-and-segment-id/` as adapter
 
 4. **Create `codecs/locator/` module**
    - Move existing `locator-codec.ts` functions from `tree-action/utils/locator/`
+   - Import generic types from `codecs/types/type-mappings.ts`: `NodeLocatorOf<NK>`, `CanonicalSplitPathInsideLibraryOf<SK>`, `CorrespondingSplitPathKind<T>`, `CorrespondingTreeNodeKind<T>`
    - Create `makeLocatorCodecs(rules: CodecRules, segmentId: SegmentIdCodecs, canonicalSplitPath: CanonicalSplitPathCodecs, suffix: SuffixCodecs)` factory function
    - **Dependencies**: Injects `segmentId`, `canonicalSplitPath`, and `suffix` codecs (depends on all lower-level modules)
+   - Use overloads pattern for `locatorToCanonicalSplitPathInsideLibrary` and `canonicalSplitPathInsideLibraryToLocator` (better type inference)
    - Ensure bidirectional Result-based API (return `Result<T, CodecError>`)
    - **Critical**: Fix `locatorToCanonicalSplitPathInsideLibrary` (renamed to `locatorToCanonicalSplitPathInsideLibrary`) to return `Result<CanonicalSplitPathInsideLibrary, CodecError>` instead of throwing
    - **All functions must be neverthrow-pilled**: No throwing allowed, all errors via Result
-   - **Import rule**: Only imports from `segment-id/`, `canonical-split-path/`, `suffix/`, `errors.ts`, `rules.ts` (never from higher-level modules)
+   - **Import rule**: Only imports from `segment-id/`, `canonical-split-path/`, `suffix/`, `types/type-mappings.ts`, `errors.ts`, `rules.ts` (never from higher-level modules)
 
 5. **Create `codecs/split-path-inside-library/` module**
    - Move scoping codecs from `tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library.ts`
@@ -735,16 +746,24 @@ Once all layers are tested and codec API is complete:
   - [ ] Define rules: `{ suffixDelimiter, libraryRootName }` (nodeSegmentIdSeparator is constant, not in rules)
   - [ ] Export helper: `makeCodecRulesFromSettings(settings: ParsedUserSettings)` for orchestrators
   - [ ] Extract `libraryRootName` from `settings.splitPathToLibraryRoot.basename`
+- [ ] Create `codecs/types/type-mappings.ts` with type-level mappings (from `plan-generic-prerequesits.md`)
+  - [ ] Implement `TreeNodeKindToSplitPathKind` mapping object
+  - [ ] Implement `CorrespondingSplitPathKind<NK>` and `CorrespondingTreeNodeKind<SK>` types
+  - [ ] Implement helper types: `NodeLocatorOf<NK>`, `SplitPathInsideLibraryOf<SK>`, `CanonicalSplitPathInsideLibraryOf<SK>`
+  - [ ] Implement generic `SegmentIdComponents<T extends TreeNodeKind>` with mapped shapes
+  - [ ] Export all types for use in codec modules
 - [ ] Create `codecs/segment-id/` module with factory pattern
-  - [ ] Define `SegmentIdComponents` type
+  - [ ] Import `SegmentIdComponents<T extends TreeNodeKind>` from `codecs/types/type-mappings.ts`
   - [ ] Create `makeSegmentIdCodecs(rules: CodecRules)` factory
   - [ ] Factory returns codecs using `NodeSegmentIdSeparator` constant (not from rules)
-  - [ ] Implement unified `parseSegmentId` + type-specific parsers (return `Result<T, CodecError>`)
-  - [ ] Implement `serializeSegmentId` (validated inputs: assumes NodeName, FileExtension are validated)
+  - [ ] Implement generic `parseSegmentId<T extends TreeNodeKind>` + type-specific convenience parsers (return `Result<SegmentIdComponents<T>, CodecError>`)
+  - [ ] Implement generic `serializeSegmentId<T extends TreeNodeKind>` for validated inputs
   - [ ] Implement `serializeSegmentIdUnchecked` (validates inputs, returns `Result<TreeNodeSegmentId, CodecError>`)
   - [ ] **Do NOT include TreeNode conversions** - keep codecs/ decoupled
 - [ ] Move locator-codec.ts to codecs/locator/ with factory pattern
+  - [ ] Import generic types from `codecs/types/type-mappings.ts`: `NodeLocatorOf<NK>`, `CanonicalSplitPathInsideLibraryOf<SK>`, `CorrespondingSplitPathKind<T>`, `CorrespondingTreeNodeKind<T>`
   - [ ] Create `makeLocatorCodecs(rules: CodecRules)` factory
+  - [ ] Use overloads pattern for `locatorToCanonicalSplitPathInsideLibrary` and `canonicalSplitPathInsideLibraryToLocator` (better type inference)
   - [ ] Ensure all parse functions return `Result<T, CodecError>`
   - [ ] **Fix**: `locatorToCanonicalSplitPathInsideLibrary` to return `Result<CanonicalSplitPathInsideLibrary, CodecError>` (currently throws)
   - [ ] Ensure all functions are neverthrow-pilled (no throwing)
