@@ -3,12 +3,23 @@
  * Provides factory and snapshot utilities for easy testing.
  */
 
-import type { NodeName } from "../../types/schemas/node-name";
-import { Healer } from "../healer";
-import { Tree } from "./tree";
-import { makeNodeSegmentId } from "./tree-node/codecs/node-and-segment-id/make-node-segment-id";
-import { TreeNodeStatus, TreeNodeType } from "./tree-node/types/atoms";
-import type { LeafNode, SectionNode } from "./tree-node/types/tree-node";
+import { Healer } from "../../../../src/commanders/librarian-new/healer/healer";
+import { Tree } from "../../../../src/commanders/librarian-new/healer/library-tree/tree";
+import type {
+	FileNodeLocator,
+	ScrollNodeLocator,
+	SectionNodeLocator,
+} from "../../../../src/commanders/librarian-new/healer/library-tree/tree-action/types/target-chains";
+import { makeNodeSegmentId } from "../../../../src/commanders/librarian-new/healer/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
+import { TreeNodeStatus, TreeNodeType } from "../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
+import type {
+	FileNodeSegmentId,
+	ScrollNodeSegmentId,
+	SectionNodeSegmentId,
+} from "../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/node-segment-id";
+import { NodeSegmentIdSeparator } from "../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/node-segment-id";
+import type { LeafNode, SectionNode } from "../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/tree-node";
+import type { NodeName } from "../../../../src/commanders/librarian-new/types/schemas/node-name";
 
 // ─── Shape Types ───
 
@@ -131,18 +142,6 @@ function sectionChildrenToShape(
 }
 
 // ─── Locator Builders (for tests) ───
-
-import type {
-	FileNodeLocator,
-	ScrollNodeLocator,
-	SectionNodeLocator,
-} from "./tree-action/types/target-chains";
-import type {
-	FileNodeSegmentId,
-	ScrollNodeSegmentId,
-	SectionNodeSegmentId,
-} from "./tree-node/types/node-segment-id";
-import { NodeSegmentIdSeparator } from "./tree-node/types/node-segment-id";
 
 export function makeScrollLocator(
 	pathParts: NodeName[],

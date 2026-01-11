@@ -1,16 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { Healer } from "../../../../src/commanders/librarian-new/healer/healer";
-import {
-	makeScrollLocator,
-	makeSectionLocator,
-	makeTree,
-	toShape,
-} from "../../../../src/commanders/librarian-new/healer/library-tree/test-helpers";
 import { TreeActionType } from "../../../../src/commanders/librarian-new/healer/library-tree/tree-action/types/tree-action";
 import { TreeNodeStatus } from "../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
 import type { NodeName } from "../../../../src/commanders/librarian-new/types/schemas/node-name";
 import { SplitPathType } from "../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { setupGetParsedUserSettingsSpy } from "../../common-utils/setup-spy";
+import {
+	makeScrollLocator,
+	makeSectionLocator,
+	makeTree,
+	toShape,
+} from "./tree-test-helpers";
 
 let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
 

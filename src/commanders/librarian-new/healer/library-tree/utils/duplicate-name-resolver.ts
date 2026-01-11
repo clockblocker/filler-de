@@ -15,7 +15,7 @@ export const extractDuplicateMarker = (
 	name: string,
 ): { cleanName: string; marker: string; number: number | null } => {
 	const match = name.match(/^(.+?)( (\d+))$/);
-	if (match && match[1] && match[2] && match[3]) {
+	if (match?.[1] && match[2] && match[3]) {
 		return {
 			cleanName: match[1],
 			marker: match[2],
@@ -89,7 +89,7 @@ export async function resolveUniqueDuplicateName(
 		if (file.extension !== extension) continue;
 
 		const match = file.basename.match(basenamePattern);
-		if (match && match[1]) {
+		if (match?.[1]) {
 			existingNumbers.add(Number.parseInt(match[1], 10));
 		}
 	}
