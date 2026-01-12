@@ -7,7 +7,7 @@ import { getParsedUserSettings } from "../../../../../global-state/global-state"
 import { LINE_BREAK, SPACE_F, TAB } from "../../../../../types/literals";
 import type { Codecs } from "../../../codecs";
 import { TreeNodeKind } from "../tree-node/types/atoms";
-import type { SectionNodeSegmentId } from "../tree-node/types/node-segment-id";
+import type { SectionNodeSegmentId } from "../../../../codecs/segment-id/types/segment-id";
 import type { SectionNode, TreeNode } from "../tree-node/types/tree-node";
 import { computeSectionStatus } from "./compute-section-status";
 import {

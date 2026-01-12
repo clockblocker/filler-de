@@ -5,7 +5,7 @@ import {
 } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/compute-codex-impact";
 import { TreeActionType } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/types/tree-action";
 import { TreeNodeKind, TreeNodeStatus } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
-import type { FileNodeSegmentId, ScrollNodeSegmentId, SectionNodeSegmentId } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/node-segment-id";
+import type { FileNodeSegmentId, ScrollNodeSegmentId, SectionNodeSegmentId } from "../../../../../src/commanders/librarian-new/codecs/segment-id/types/segment-id";
 import type { NodeName } from "../../../../../src/commanders/librarian-new/types/schemas/node-name";
 import { SplitPathKind } from "../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";

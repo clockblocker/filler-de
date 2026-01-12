@@ -8,7 +8,7 @@ import {
 	TreeNodeKind,
 	TreeNodeStatus,
 } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
-import type { SectionNodeSegmentId } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/node-segment-id";
+import type { SectionNodeSegmentId } from "../../../../../src/commanders/librarian-new/codecs/segment-id/types/segment-id";
 import type {
 	FileNode,
 	ScrollNode,

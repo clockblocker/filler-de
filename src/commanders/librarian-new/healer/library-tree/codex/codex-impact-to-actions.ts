@@ -4,13 +4,13 @@
  */
 
 import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import type { SectionNodeSegmentId } from "../../../../codecs/segment-id/types/segment-id";
 import type { Codecs, SplitPathToMdFileInsideLibrary } from "../../../codecs";
 import {
 	makeJoinedSuffixedBasename,
 	makeSuffixPartsFromPathPartsWithRoot,
 } from "../tree-action/utils/canonical-naming/suffix-utils/core-suffix-utils";
 import { TreeNodeKind } from "../tree-node/types/atoms";
-import type { SectionNodeSegmentId } from "../tree-node/types/node-segment-id";
 import type { SectionNode } from "../tree-node/types/tree-node";
 import { computeCodexSplitPath } from "./codex-split-path";
 import type { CodexImpact } from "./compute-codex-impact";

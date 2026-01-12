@@ -11,7 +11,7 @@ import {
 	type ScrollNodeSegmentId,
 	type SectionNodeSegmentId,
 	type TreeNodeSegmentId,
-} from "../../../types/node-segment-id";
+} from "../../../../../../../codecs/segment-id/types/segment-id";
 import type {
 	FileNode,
 	ScrollNode,

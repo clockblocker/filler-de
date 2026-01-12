@@ -8,11 +8,12 @@ import {
 import {
 	NodeSegmentIdSeparator,
 	type TreeNodeSegmentId,
-} from "../../../healer/library-tree/tree-node/types/node-segment-id";
+} from "../../types/segment-id";
 import { NodeNameSchema } from "../../../types/schemas/node-name";
 import type { CodecError } from "../../errors";
 import { makeSegmentIdError, makeZodError } from "../../errors";
 import type { SegmentIdComponents } from "../../types/type-mappings";
+import type { SegmentIdOf } from "../../types";
 
 /**
  * Serializes segment ID components to string.
@@ -20,7 +21,7 @@ import type { SegmentIdComponents } from "../../types/type-mappings";
  */
 export function serializeSegmentId<NK extends TreeNodeKind>(
 	components: SegmentIdComponents<NK>,
-): TreeNodeSegmentId {
+): SegmentIdOf<NK> {
 	const { coreName, targetKind } = components;
 
 	switch (targetKind) {

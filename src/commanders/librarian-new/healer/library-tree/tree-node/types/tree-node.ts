@@ -6,7 +6,7 @@ import type {
 	TreeNodeKind,
 	TreeNodeStatus,
 } from "./atoms";
-import type { TreeNodeSegmentId } from "./node-segment-id";
+import type { TreeNodeSegmentId } from "../../../../codecs/segment-id/types/segment-id";
 
 export type ScrollNode = {
 	nodeName: NodeName;

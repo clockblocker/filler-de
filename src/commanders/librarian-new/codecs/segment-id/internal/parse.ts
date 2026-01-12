@@ -11,7 +11,7 @@ import {
 	type ScrollNodeSegmentId,
 	type SectionNodeSegmentId,
 	type TreeNodeSegmentId,
-} from "../../../healer/library-tree/tree-node/types/node-segment-id";
+} from "../../types/segment-id";
 import { NodeNameSchema } from "../../../types/schemas/node-name";
 import type { CodecError } from "../../errors";
 import { makeSegmentIdError, makeZodError } from "../../errors";
@@ -173,19 +173,19 @@ export function parseSegmentId<NK extends TreeNodeKind>(
  * Type-specific convenience parsers for better type inference.
  */
 export function parseSectionSegmentId(
-	id: SectionNodeSegmentId,
+	id: SegmentIdOf<TreeNodeKind.Section>,
 ): Result<SegmentIdComponents<TreeNodeKind.Section>, CodecError> {
 	return parseSegmentId<TreeNodeKind.Section>(id);
 }
 
 export function parseScrollSegmentId(
-	id: ScrollNodeSegmentId,
+	id: SegmentIdOf<TreeNodeKind.Scroll>,
 ): Result<SegmentIdComponents<TreeNodeKind.Scroll>, CodecError> {
 	return parseSegmentId<TreeNodeKind.Scroll>(id);
 }
 
 export function parseFileSegmentId(
-	id: FileNodeSegmentId,
+	id: SegmentIdOf<TreeNodeKind.File>,
 ): Result<SegmentIdComponents<TreeNodeKind.File>, CodecError> {
 	return parseSegmentId<TreeNodeKind.File>(id);
 }

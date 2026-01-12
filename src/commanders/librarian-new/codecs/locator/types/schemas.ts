@@ -5,7 +5,7 @@ import {
 	ScrollNodeSegmentIdSchema,
 	SectionNodeSegmentIdChainSchema,
 	SectionNodeSegmentIdSchema,
-} from "../../../healer/library-tree/tree-node/types/node-segment-id";
+} from "../../segment-id/types/segment-id";
 
 const BaseNodeLocatorSchema = z.object({
 	segmentIdChainToParent: SectionNodeSegmentIdChainSchema,

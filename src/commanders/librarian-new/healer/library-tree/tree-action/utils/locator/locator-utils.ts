@@ -7,7 +7,7 @@ import {
 	NodeNameSchema,
 } from "../../../../../types/schemas/node-name";
 import { TreeNodeKind } from "../../../tree-node/types/atoms";
-import { NodeSegmentIdSeparator } from "../../../tree-node/types/node-segment-id";
+import { NodeSegmentIdSeparator } from "../../../../../../codecs/segment-id/types/segment-id";
 
 export const getNodeName = (locator: TreeNodeLocator): NodeName => {
 	const sep = NodeSegmentIdSeparator; // "──" (your const)

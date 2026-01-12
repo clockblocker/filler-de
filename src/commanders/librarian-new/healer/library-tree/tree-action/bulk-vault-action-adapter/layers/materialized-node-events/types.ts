@@ -7,7 +7,6 @@ import {
 import type { SplitPathKind } from "../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { Prettify } from "../../../../../../../../types/helpers";
 import type {
-	AnySplitPathInsideLibrary,
 	SplitPathInsideLibraryOf,
 	SplitPathToFileInsideLibrary,
 	SplitPathToFolderInsideLibrary,

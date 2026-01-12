@@ -14,7 +14,7 @@ import {
 } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
 import type {
 	SectionNodeSegmentId,
-} from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/node-segment-id";
+} from "../../../../../src/commanders/librarian-new/codecs/segment-id/types/segment-id";
 import type {
 	ScrollNode,
 	SectionNode,

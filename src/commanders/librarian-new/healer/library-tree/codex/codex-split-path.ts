@@ -6,7 +6,7 @@ import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-man
 import type { Codecs } from "../../../codecs";
 import type { SplitPathToMdFileInsideLibrary } from "../../codecs/split-path-inside-library/types";
 import { makeJoinedSuffixedBasename } from "../tree-action/utils/canonical-naming/suffix-utils/core-suffix-utils";
-import type { SectionNodeSegmentId } from "../tree-node/types/node-segment-id";
+import type { SectionNodeSegmentId } from "../../../../codecs/segment-id/types/segment-id";
 import { CODEX_CORE_NAME } from "./literals";
 
 /**

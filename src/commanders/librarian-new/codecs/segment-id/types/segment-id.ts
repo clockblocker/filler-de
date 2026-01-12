@@ -2,14 +2,14 @@ import z from "zod";
 import {
 	SMALL_EM_DASH,
 	SmallEmDashSchema,
-} from "../../../../../../types/literals";
-import { NodeNameSchema } from "../../../../types/schemas/node-name";
+} from "../../../../../types/literals";
 import {
 	FileExtensionSchema,
 	MdExtensionSchema,
 	SectionExtensionSchema,
 	TreeNodeKind,
-} from "./atoms";
+} from "../../../healer/library-tree/tree-node/types/atoms";
+import { NodeNameSchema } from "../../../types/schemas/node-name";
 
 export const NodeSegmentIdSeparatorSchema = z.templateLiteral([
 	SmallEmDashSchema,

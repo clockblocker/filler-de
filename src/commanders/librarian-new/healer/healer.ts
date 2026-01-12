@@ -1,6 +1,10 @@
 import { ok, type Result } from "neverthrow";
 import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type {
+	SectionNodeSegmentId,
+	TreeNodeSegmentId,
+} from "../../codecs/segment-id/types/segment-id";
+import type {
 	AnySplitPathInsideLibrary,
 	Codecs,
 	SplitPathToFileInsideLibrary,
@@ -28,10 +32,6 @@ import type {
 } from "./library-tree/tree-action/types/tree-action";
 import { makeNodeSegmentId } from "./library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import { TreeNodeKind } from "./library-tree/tree-node/types/atoms";
-import type {
-	SectionNodeSegmentId,
-	TreeNodeSegmentId,
-} from "./library-tree/tree-node/types/node-segment-id";
 import type {
 	FileNode,
 	ScrollNode,

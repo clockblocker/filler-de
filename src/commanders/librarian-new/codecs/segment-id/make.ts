@@ -4,10 +4,11 @@ import type {
 	ScrollNodeSegmentId,
 	SectionNodeSegmentId,
 	TreeNodeSegmentId,
-} from "../../healer/library-tree/tree-node/types/node-segment-id";
+} from "./types/segment-id";
 import type { CodecError } from "../errors";
 import type { CodecRules } from "../rules";
 import type { SegmentIdComponents } from "../types/type-mappings";
+import type { SegmentIdOf } from "./types";
 import {
 	parseFileSegmentId,
 	parseScrollSegmentId,
@@ -27,19 +28,19 @@ export type SegmentIdCodecs = {
 
 	/** Type-specific convenience parsers (better type inference) */
 	parseSectionSegmentId: (
-		id: SectionNodeSegmentId,
+		id: SegmentIdOf<TreeNodeKind.Section>,
 	) => Result<SegmentIdComponents<TreeNodeKind.Section>, CodecError>;
 	parseScrollSegmentId: (
-		id: ScrollNodeSegmentId,
+		id: SegmentIdOf<TreeNodeKind.Scroll>,
 	) => Result<SegmentIdComponents<TreeNodeKind.Scroll>, CodecError>;
 	parseFileSegmentId: (
-		id: FileNodeSegmentId,
+		id: SegmentIdOf<TreeNodeKind.File>,
 	) => Result<SegmentIdComponents<TreeNodeKind.File>, CodecError>;
 
 	/** Serialize (validated inputs) */
 	serializeSegmentId: <NK extends TreeNodeKind>(
 		components: SegmentIdComponents<NK>,
-	) => TreeNodeSegmentId;
+	) => SegmentIdOf<NK>;
 
 	/** Serialize (unchecked inputs) */
 	serializeSegmentIdUnchecked: (components: {

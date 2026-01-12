@@ -1,4 +1,9 @@
 import type { Codecs } from "../../codecs";
+import type { SegmentIdOf } from "../../codecs/segment-id/types";
+import type {
+	SectionNodeSegmentId,
+	TreeNodeSegmentId,
+} from "../../codecs/segment-id/types/segment-id";
 import type { NodeName } from "../../types/schemas/node-name";
 import type {
 	ChangeNodeStatusAction,
@@ -11,12 +16,6 @@ import type {
 import { makeNodeSegmentId } from "./tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import { TreeNodeKind, TreeNodeStatus } from "./tree-node/types/atoms";
 import type {
-	FileNodeSegmentId,
-	ScrollNodeSegmentId,
-	SectionNodeSegmentId,
-	TreeNodeSegmentId,
-} from "./tree-node/types/node-segment-id";
-import type {
 	FileNode,
 	LeafNode,
 	ScrollNode,
@@ -27,9 +26,13 @@ import type {
 // ─── Helpers ───
 
 /** Helper to make segment ID with proper type narrowing */
-function makeSegmentId(node: ScrollNode): ScrollNodeSegmentId;
-function makeSegmentId(node: FileNode): FileNodeSegmentId;
-function makeSegmentId(node: SectionNode): SectionNodeSegmentId;
+function makeSegmentId(
+	node: ScrollNode,
+): SegmentIdOf<typeof TreeNodeKind.Scroll>;
+function makeSegmentId(node: FileNode): SegmentIdOf<typeof TreeNodeKind.File>;
+function makeSegmentId(
+	node: SectionNode,
+): SegmentIdOf<typeof TreeNodeKind.Section>;
 function makeSegmentId(node: TreeNode): TreeNodeSegmentId;
 function makeSegmentId(node: TreeNode): TreeNodeSegmentId {
 	if (node.kind === TreeNodeKind.Section) {

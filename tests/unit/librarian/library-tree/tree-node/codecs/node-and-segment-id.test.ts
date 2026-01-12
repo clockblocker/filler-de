@@ -9,8 +9,8 @@ import type {
 	FileNodeSegmentId,
 	ScrollNodeSegmentId,
 	SectionNodeSegmentId,
-} from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/node-segment-id";
-import { NodeSegmentIdSeparator as Separator } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/node-segment-id";
+} from "../../../../../../src/commanders/librarian-new/codecs/segment-id/types/segment-id";
+import { NodeSegmentIdSeparator as Separator } from "../../../../../../src/commanders/librarian-new/codecs/segment-id/types/segment-id";
 import type {
 	FileNode,
 	ScrollNode,

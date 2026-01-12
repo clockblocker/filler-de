@@ -7,6 +7,12 @@ import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
 } from "../../../../src/commanders/librarian-new/codecs";
+import type {
+	FileNodeSegmentId,
+	ScrollNodeSegmentId,
+	SectionNodeSegmentId,
+} from "../../../../src/commanders/librarian-new/codecs/segment-id/types/segment-id";
+import { NodeSegmentIdSeparator } from "../../../../src/commanders/librarian-new/codecs/segment-id/types/segment-id";
 import { Healer } from "../../../../src/commanders/librarian-new/healer/healer";
 import { Tree } from "../../../../src/commanders/librarian-new/healer/library-tree/tree";
 import type {
@@ -16,12 +22,6 @@ import type {
 } from "../../../../src/commanders/librarian-new/healer/library-tree/tree-action/types/target-chains";
 import { makeNodeSegmentId } from "../../../../src/commanders/librarian-new/healer/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import { TreeNodeKind, TreeNodeStatus } from "../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
-import type {
-	FileNodeSegmentId,
-	ScrollNodeSegmentId,
-	SectionNodeSegmentId,
-} from "../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/node-segment-id";
-import { NodeSegmentIdSeparator } from "../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/node-segment-id";
 import type { LeafNode, SectionNode } from "../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/tree-node";
 import type { NodeName } from "../../../../src/commanders/librarian-new/types/schemas/node-name";
 import { defaultSettingsForUnitTests } from "../../common-utils/consts";

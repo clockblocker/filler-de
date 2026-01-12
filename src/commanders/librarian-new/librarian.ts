@@ -24,6 +24,10 @@ import {
 import { healingActionsToVaultActions } from "./codecs/healing-to-vault-action";
 import type { CanonicalSplitPathToMdFileInsideLibrary } from "./codecs/locator";
 import type { ScrollNodeLocator } from "./codecs/locator/types";
+import type {
+	ScrollNodeSegmentId,
+	SectionNodeSegmentId,
+} from "./codecs/segment-id/types/segment-id";
 import { Healer } from "./healer/healer";
 import {
 	CODEX_CORE_NAME,
@@ -50,10 +54,6 @@ import {
 	TreeNodeKind,
 	TreeNodeStatus,
 } from "./healer/library-tree/tree-node/types/atoms";
-import type {
-	ScrollNodeSegmentId,
-	SectionNodeSegmentId,
-} from "./healer/library-tree/tree-node/types/node-segment-id";
 import type { SectionNode } from "./healer/library-tree/tree-node/types/tree-node";
 import type { HealingAction } from "./healer/library-tree/types/healing-action";
 import { resolveDuplicateHealingActions } from "./healer/library-tree/utils/resolve-duplicate-healing";

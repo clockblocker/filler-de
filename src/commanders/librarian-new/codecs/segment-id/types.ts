@@ -1,11 +1,11 @@
 import type { TreeNodeKind } from "../../healer/library-tree/tree-node/types/atoms";
+import type { SegmentIdComponents } from "../types";
 import type {
 	FileNodeSegmentId,
 	ScrollNodeSegmentId,
 	SectionNodeSegmentId,
 	TreeNodeSegmentId,
-} from "../../healer/library-tree/tree-node/types/node-segment-id";
-import type { SegmentIdComponents } from "../types";
+} from "./types/segment-id";
 
 /**
  * Public types for segment-id codecs.

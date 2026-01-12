@@ -1,5 +1,10 @@
 import { MD } from "../../../../../../../managers/obsidian/vault-action-manager/types/literals";
 import { SplitPathKind } from "../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import {
+	NodeSegmentIdSeparator,
+	type SectionNodeSegmentId,
+	type TreeNodeSegmentId,
+} from "../../../../../../codecs/segment-id/types/segment-id";
 import type {
 	CanonicalSplitPathInsideLibrary,
 	CanonicalSplitPathToFileInsideLibrary,
@@ -16,11 +21,6 @@ import {
 	type FileExtension,
 	TreeNodeKind,
 } from "../../../tree-node/types/atoms";
-import {
-	NodeSegmentIdSeparator,
-	type SectionNodeSegmentId,
-	type TreeNodeSegmentId,
-} from "../../../tree-node/types/node-segment-id";
 import { tryBuildCanonicalSeparatedSuffixedBasename } from "../canonical-naming/suffix-utils/build-canonical-separated-suffixed-basename-path-king-way";
 
 export function makeLocatorFromCanonicalSplitPathInsideLibrary(
