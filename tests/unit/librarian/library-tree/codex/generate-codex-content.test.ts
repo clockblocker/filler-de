@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { generateCodexContent } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/generate-codex-content";
 import {
+	TreeNodeKind,
 	TreeNodeStatus,
-	TreeNodeType,
 } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
 import type { SectionNodeSegmentId } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/node-segment-id";
 import type {
@@ -34,16 +34,16 @@ const scroll = (
 	status: TreeNodeStatus = TreeNodeStatus.NotStarted,
 ): ScrollNode => ({
 	extension: "md",
+	kind: TreeNodeKind.Scroll,
 	nodeName: name as NodeName,
 	status,
-	type: TreeNodeType.Scroll,
 });
 
 const file = (name: string): FileNode => ({
 	extension: "png",
+	kind: TreeNodeKind.File,
 	nodeName: name as NodeName,
 	status: TreeNodeStatus.Unknown,
-	type: TreeNodeType.File,
 });
 
 const section = (
@@ -51,8 +51,8 @@ const section = (
 	children: Record<string, SectionNode | ScrollNode | FileNode> = {},
 ): SectionNode => ({
 	children: children as SectionNode["children"],
+	kind: TreeNodeKind.Section,
 	nodeName: name as NodeName,
-	type: TreeNodeType.Section,
 });
 
 describe("generateCodexContent", () => {

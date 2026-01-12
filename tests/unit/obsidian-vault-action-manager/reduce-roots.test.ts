@@ -8,7 +8,7 @@ import type {
 	SplitPathToMdFile,
 } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import type { VaultEvent } from "../../../src/managers/obsidian/vault-action-manager/types/vault-event";
-import { VaultEventType } from "../../../src/managers/obsidian/vault-action-manager/types/vault-event";
+import { VaultEventKind } from "../../../src/managers/obsidian/vault-action-manager/types/vault-event";
 
 // Helper: build split paths
 const F = (path: string): SplitPathToFolder => {
@@ -36,44 +36,44 @@ const P = (path: string): SplitPathToMdFile | SplitPathToFile => {
 const fileRenamed = (from: string, to: string) => ({
     from: P(from),
     to: P(to),
-    type: VaultEventType.FileRenamed,
+    type: VaultEventKind.FileRenamed,
 });
 
 const folderRenamed = (
 	from: string,
 	to: string,
-): Extract<VaultEvent, { type: typeof VaultEventType.FolderRenamed }> => ({
+): Extract<VaultEvent, { type: typeof VaultEventKind.FolderRenamed }> => ({
 	from: F(from),
+	kind: VaultEventKind.FolderRenamed,
 	to: F(to),
-	type: VaultEventType.FolderRenamed,
 });
 
 const fileTrashed = (
 	path: string,
-): Extract<VaultEvent, { type: typeof VaultEventType.FileDeleted }> => ({
+): Extract<VaultEvent, { type: typeof VaultEventKind.FileDeleted }> => ({
+	kind: VaultEventKind.FileDeleted,
 	splitPath: P(path),
-	type: VaultEventType.FileDeleted,
 });
 
 const folderTrashed = (
 	path: string,
-): Extract<VaultEvent, { type: typeof VaultEventType.FolderDeleted }> => ({
+): Extract<VaultEvent, { type: typeof VaultEventKind.FolderDeleted }> => ({
+	kind: VaultEventKind.FolderDeleted,
 	splitPath: F(path),
-	type: VaultEventType.FolderDeleted,
 });
 
 // Helper: stable key for event comparison
 const eventKey = (e: VaultEvent): string => {
-	if (e.type === VaultEventType.FileRenamed || e.type === VaultEventType.FolderRenamed) {
+	if (e.kind === VaultEventKind.FileRenamed || e.kind === VaultEventKind.FolderRenamed) {
 		const from = makeSystemPathForSplitPath(e.from);
 		const to = makeSystemPathForSplitPath(e.to);
 		return `${e.type}:${from}→${to}`;
 	}
-	if (e.type === VaultEventType.FileDeleted || e.type === VaultEventType.FolderDeleted) {
+	if (e.kind === VaultEventKind.FileDeleted || e.kind === VaultEventKind.FolderDeleted) {
 		const path = makeSystemPathForSplitPath(e.splitPath);
 		return `${e.type}:${path}`;
 	}
-	return `${e.type}:unknown`;
+	return `${e.kind}:unknown`;
 };
 
 // Helper: assert roots match expected set (order-independent)

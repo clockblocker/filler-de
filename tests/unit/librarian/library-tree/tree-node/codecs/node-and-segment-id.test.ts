@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { makeNodeSegmentId } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import { makeTreeNode } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/codecs/node-and-segment-id/optimistic-makers/make-tree-node";
 import { tryParseTreeNode } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/codecs/node-and-segment-id/try-parse-tree-node";
-import { TreeNodeStatus, TreeNodeType } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
+import { TreeNodeKind, TreeNodeStatus } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
 import type {
 	FileNodeSegmentId,
 	ScrollNodeSegmentId,
@@ -19,114 +19,114 @@ describe("makeNodeSegmentId", () => {
 	it("creates segment ID for Section node", () => {
 		const node: SectionNode = {
 			children: {},
+			kind: TreeNodeKind.Section,
 			nodeName: "MySection",
-			type: TreeNodeType.Section,
 		};
 		const result = makeNodeSegmentId(node);
 		expect(result).toBe(
-			`MySection${Separator}${TreeNodeType.Section}${Separator}`,
+			`MySection${Separator}${TreeNodeKind.Section}${Separator}`,
 		);
 	});
 
 	it("creates segment ID for Scroll node", () => {
 		const node: ScrollNode = {
 			extension: "md",
+			kind: TreeNodeKind.Scroll,
 			nodeName: "MyScroll",
 			status: TreeNodeStatus.Unknown,
-			type: TreeNodeType.Scroll,
 		};
 		const result = makeNodeSegmentId(node);
 		expect(result).toBe(
-			`MyScroll${Separator}${TreeNodeType.Scroll}${Separator}md`,
+			`MyScroll${Separator}${TreeNodeKind.Scroll}${Separator}md`,
 		);
 	});
 
 	it("creates segment ID for File node", () => {
 		const node: FileNode = {
 			extension: "txt",
+			kind: TreeNodeKind.File,
 			nodeName: "MyFile",
 			status: TreeNodeStatus.Unknown,
-			type: TreeNodeType.File,
 		};
 		const result = makeNodeSegmentId(node);
 		expect(result).toBe(
-			`MyFile${Separator}${TreeNodeType.File}${Separator}txt`,
+			`MyFile${Separator}${TreeNodeKind.File}${Separator}txt`,
 		);
 	});
 });
 
 describe("makeTreeNode", () => {
 	it("creates Section node from segment ID", () => {
-		const segmentId = `MySection${Separator}${TreeNodeType.Section}${Separator}` as SectionNodeSegmentId;
+		const segmentId = `MySection${Separator}${TreeNodeKind.Section}${Separator}` as SectionNodeSegmentId;
 		const result = makeTreeNode(segmentId);
 		expect(result).toEqual({
 			children: {},
+			kind: TreeNodeKind.Section,
 			nodeName: "MySection",
-			type: TreeNodeType.Section,
 		});
 	});
 
 	it("creates Scroll node from segment ID", () => {
-		const segmentId = `MyScroll${Separator}${TreeNodeType.Scroll}${Separator}md` as ScrollNodeSegmentId;
+		const segmentId = `MyScroll${Separator}${TreeNodeKind.Scroll}${Separator}md` as ScrollNodeSegmentId;
 		const result = makeTreeNode(segmentId);
 		expect(result).toEqual({
 			extension: "md",
+			kind: TreeNodeKind.Scroll,
 			nodeName: "MyScroll",
 			status: TreeNodeStatus.Unknown,
-			type: TreeNodeType.Scroll,
 		});
 	});
 
 	it("creates File node from segment ID", () => {
-		const segmentId = `MyFile${Separator}${TreeNodeType.File}${Separator}txt` as FileNodeSegmentId;
+		const segmentId = `MyFile${Separator}${TreeNodeKind.File}${Separator}txt` as FileNodeSegmentId;
 		const result = makeTreeNode(segmentId);
 		expect(result).toEqual({
 			extension: "txt",
+			kind: TreeNodeKind.File,
 			nodeName: "MyFile",
 			status: TreeNodeStatus.Unknown,
-			type: TreeNodeType.File,
 		});
 	});
 });
 
 describe("tryParseTreeNode", () => {
 	it("parses valid Section segment ID", () => {
-		const segmentId = `MySection${Separator}${TreeNodeType.Section}${Separator}`;
+		const segmentId = `MySection${Separator}${TreeNodeKind.Section}${Separator}`;
 		const result = tryParseTreeNode(segmentId);
 		expect(result.isOk()).toBe(true);
 		if (result.isOk()) {
 			expect(result.value).toEqual({
 				children: {},
+				kind: TreeNodeKind.Section,
 				nodeName: "MySection",
-				type: TreeNodeType.Section,
 			});
 		}
 	});
 
 	it("parses valid Scroll segment ID", () => {
-		const segmentId = `MyScroll${Separator}${TreeNodeType.Scroll}${Separator}md`;
+		const segmentId = `MyScroll${Separator}${TreeNodeKind.Scroll}${Separator}md`;
 		const result = tryParseTreeNode(segmentId);
 		expect(result.isOk()).toBe(true);
 		if (result.isOk()) {
 			expect(result.value).toEqual({
 				extension: "md",
+				kind: TreeNodeKind.Scroll,
 				nodeName: "MyScroll",
 				status: TreeNodeStatus.Unknown,
-				type: TreeNodeType.Scroll,
 			});
 		}
 	});
 
 	it("parses valid File segment ID", () => {
-		const segmentId = `MyFile${Separator}${TreeNodeType.File}${Separator}txt`;
+		const segmentId = `MyFile${Separator}${TreeNodeKind.File}${Separator}txt`;
 		const result = tryParseTreeNode(segmentId);
 		expect(result.isOk()).toBe(true);
 		if (result.isOk()) {
 			expect(result.value).toEqual({
 				extension: "txt",
+				kind: TreeNodeKind.File,
 				nodeName: "MyFile",
 				status: TreeNodeStatus.Unknown,
-				type: TreeNodeType.File,
 			});
 		}
 	});
@@ -156,8 +156,8 @@ describe("makeNodeSegmentId and makeTreeNode roundtrip", () => {
 	it("roundtrips Section node", () => {
 		const node: SectionNode = {
 			children: {},
+			kind: TreeNodeKind.Section,
 			nodeName: "TestSection",
-			type: TreeNodeType.Section,
 		};
 		const segmentId = makeNodeSegmentId(node);
 		const reconstructed = makeTreeNode(segmentId);
@@ -167,9 +167,9 @@ describe("makeNodeSegmentId and makeTreeNode roundtrip", () => {
 	it("roundtrips Scroll node", () => {
 		const node: ScrollNode = {
 			extension: "md",
+			kind: TreeNodeKind.Scroll,
 			nodeName: "TestScroll",
 			status: TreeNodeStatus.Unknown,
-			type: TreeNodeType.Scroll,
 		};
 		const segmentId = makeNodeSegmentId(node);
 		const reconstructed = makeTreeNode(segmentId);
@@ -179,9 +179,9 @@ describe("makeNodeSegmentId and makeTreeNode roundtrip", () => {
 	it("roundtrips File node", () => {
 		const node: FileNode = {
 			extension: ".pdf",
+			kind: TreeNodeKind.File,
 			nodeName: "TestFile",
 			status: TreeNodeStatus.Unknown,
-			type: TreeNodeType.File,
 		};
 		const segmentId = makeNodeSegmentId(node);
 		const reconstructed = makeTreeNode(segmentId);
@@ -191,7 +191,7 @@ describe("makeNodeSegmentId and makeTreeNode roundtrip", () => {
 
 describe("tryParseTreeNode and makeTreeNode consistency", () => {
 	it("tryParseTreeNode produces same result as makeTreeNode for valid input", () => {
-		const segmentId = `TestNode${Separator}${TreeNodeType.Scroll}${Separator}md` as ScrollNodeSegmentId;
+		const segmentId = `TestNode${Separator}${TreeNodeKind.Scroll}${Separator}md` as ScrollNodeSegmentId;
 		const parsed = tryParseTreeNode(segmentId);
 		const direct = makeTreeNode(segmentId);
 		expect(parsed.isOk()).toBe(true);

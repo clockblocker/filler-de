@@ -5,7 +5,7 @@
 
 import type { TreeAction } from "../tree-action/types/tree-action";
 import { TreeActionType } from "../tree-action/types/tree-action";
-import { type TreeNodeStatus, TreeNodeType } from "../tree-node/types/atoms";
+import { type TreeNodeStatus, TreeNodeKind } from "../tree-node/types/atoms";
 import type { SectionNodeSegmentId } from "../tree-node/types/node-segment-id";
 import { NodeSegmentIdSeparator } from "../tree-node/types/node-segment-id";
 import { collectImpactedSections } from "./section-chain-utils";
@@ -78,7 +78,7 @@ function computeDeleteImpact(
 	impact.contentChanged = collectImpactedSections([parentChain]);
 
 	// If deleting a section, mark it as deleted
-	if (targetLocator.targetType === TreeNodeType.Section) {
+	if (targetLocator.targetType === TreeNodeKind.Section) {
 		const sectionChain = [
 			...parentChain,
 			targetLocator.segmentId as SectionNodeSegmentId,
@@ -98,7 +98,7 @@ function computeRenameImpact(
 	const { targetLocator, newNodeName } = action;
 	const parentChain = targetLocator.segmentIdChainToParent;
 
-	if (targetLocator.targetType === TreeNodeType.Section) {
+	if (targetLocator.targetType === TreeNodeKind.Section) {
 		// Section rename: parent needs update + section codex moves
 		impact.contentChanged.push(parentChain);
 
@@ -138,7 +138,7 @@ function computeMoveImpact(
 		newParentChain,
 	]);
 
-	if (targetLocator.targetType === TreeNodeType.Section) {
+	if (targetLocator.targetType === TreeNodeKind.Section) {
 		// Section move: codex file moves
 		const oldChain = [
 			...oldParentChain,
@@ -166,7 +166,7 @@ function computeChangeStatusImpact(
 	const { targetLocator, newStatus } = action;
 	const parentChain = targetLocator.segmentIdChainToParent;
 
-	if (targetLocator.targetType === TreeNodeType.Section) {
+	if (targetLocator.targetType === TreeNodeKind.Section) {
 		// Section status change: propagates to descendants
 		const sectionChain = [
 			...parentChain,
@@ -189,5 +189,5 @@ function computeChangeStatusImpact(
 // ─── Helpers ───
 
 function makeSectionSegmentId(nodeName: string): SectionNodeSegmentId {
-	return `${nodeName}${NodeSegmentIdSeparator}${TreeNodeType.Section}${NodeSegmentIdSeparator}` as SectionNodeSegmentId;
+	return `${nodeName}${NodeSegmentIdSeparator}${TreeNodeKind.Section}${NodeSegmentIdSeparator}` as SectionNodeSegmentId;
 }

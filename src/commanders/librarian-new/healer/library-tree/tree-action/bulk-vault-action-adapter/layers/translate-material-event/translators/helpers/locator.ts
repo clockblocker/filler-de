@@ -16,7 +16,7 @@ import { makeLocatorFromCanonicalSplitPathInsideLibrary } from "../../../../../u
 import type { SplitPathInsideLibrary } from "../../../library-scope/types/inside-library-split-paths";
 import {
 	type CanonicalSplitPathToDestination,
-	MaterializedEventType,
+	MaterializedEventKind,
 	type MaterializedNodeEvent,
 	type TreeNodeLocatorForEvent,
 	type TreeNodeLocatorForLibraryScopedSplitPath,
@@ -58,7 +58,7 @@ const tryMakeCanonicalSplitPathToDestination = <
 >(
 	ev: E,
 ): Result<CanonicalSplitPathToDestination<E>, string> => {
-	if (ev.kind === MaterializedEventType.Delete) {
+	if (ev.kind === MaterializedEventKind.Delete) {
 		const r = tryParseCanonicalSplitPathInsideLibrary(ev.splitPath);
 		return r as Result<CanonicalSplitPathToDestination<E>, string>;
 	}
@@ -74,10 +74,10 @@ const tryMakeCanonicalSplitPathToDestination = <
 
 const extractSplitPathToDestination = (e: MaterializedNodeEvent) => {
 	switch (e.kind) {
-		case MaterializedEventType.Rename:
+		case MaterializedEventKind.Rename:
 			return e.to;
-		case MaterializedEventType.Create:
-		case MaterializedEventType.Delete:
+		case MaterializedEventKind.Create:
+		case MaterializedEventKind.Delete:
 			return e.splitPath;
 	}
 };

@@ -6,7 +6,7 @@ import type {
 } from "../../../../../types/split-path";
 import {
 	type VaultEvent,
-	VaultEventType,
+	VaultEventKind,
 } from "../../../../../types/vault-event";
 import {
 	isPossibleRoot,
@@ -19,19 +19,19 @@ export function reduceRoots(events: VaultEvent[]): PossibleRootVaultEvent[] {
 
 	// Folder renames can cover descendant renames.
 	const folderRenames = possibleRoots.filter(
-		(e) => e.type === VaultEventType.FolderRenamed,
+		(e) => e.kind === VaultEventKind.FolderRenamed,
 	);
 
 	// Folder trashes can cover descendant deletes.
 	const folderDeletes = possibleRoots.filter(
-		(e) => e.type === VaultEventType.FolderDeleted,
+		(e) => e.kind === VaultEventKind.FolderDeleted,
 	);
 
 	const roots: PossibleRootVaultEvent[] = [];
 
 	for (const e of possibleRoots) {
 		if (isRename(e)) {
-			if (e.type === VaultEventType.FolderRenamed) {
+			if (e.kind === VaultEventKind.FolderRenamed) {
 				// A folder rename is a root unless covered by another folder rename.
 				const coveredByOtherFolderRename = folderRenames.some(
 					(parent) =>
@@ -55,7 +55,7 @@ export function reduceRoots(events: VaultEvent[]): PossibleRootVaultEvent[] {
 			continue;
 		}
 
-		if (e.type === VaultEventType.FolderDeleted) {
+		if (e.kind === VaultEventKind.FolderDeleted) {
 			// A folder trash is a root unless covered by another folder trash (nested).
 			const coveredByOtherFolderDelete = folderDeletes.some((parent) => {
 				if (parent === e) return false;
@@ -65,7 +65,7 @@ export function reduceRoots(events: VaultEvent[]): PossibleRootVaultEvent[] {
 			continue;
 		}
 
-		if (e.type === VaultEventType.FileDeleted) {
+		if (e.kind === VaultEventKind.FileDeleted) {
 			// FileDeleteed: root only if not under ANY trashed folder.
 			const coveredByFolderDelete = folderDeletes.some((parent) =>
 				isPrefix(

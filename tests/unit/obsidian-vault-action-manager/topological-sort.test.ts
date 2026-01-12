@@ -6,7 +6,7 @@ import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,
 } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
-import { SplitPathType } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathKind } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import {
 	type VaultAction,
 	VaultActionType,
@@ -18,7 +18,7 @@ const folder = (
 ): SplitPathToFolder => ({
 	basename,
 	pathParts,
-	type: SplitPathType.Folder,
+	type: SplitPathKind.Folder,
 });
 
 const mdFile = (
@@ -28,7 +28,7 @@ const mdFile = (
 	basename,
 	extension: "md",
 	pathParts,
-	type: SplitPathType.MdFile,
+	type: SplitPathKind.MdFile,
 });
 
 describe("topologicalSort", () => {

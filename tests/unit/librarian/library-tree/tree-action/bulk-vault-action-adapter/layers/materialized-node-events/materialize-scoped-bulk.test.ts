@@ -3,30 +3,30 @@ import type { LibraryScopedBulkVaultEvent } from "../../../../../../../../src/co
 import { Scope } from "../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/scoped-event";
 import { materializeScopedBulk } from "../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/materialized-node-events/materialize-scoped-bulk";
 import type { MaterializedNodeEvent } from "../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/materialized-node-events/types";
-import { MaterializedEventType } from "../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/materialized-node-events/types";
-import { TreeNodeType } from "../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
-import { SplitPathType } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
-import { VaultEventType } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/vault-event";
+import { MaterializedEventKind } from "../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/materialized-node-events/types";
+import { TreeNodeKind } from "../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
+import { SplitPathKind } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import { VaultEventKind } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/vault-event";
 
 // Helper: create library-scoped split paths
-const F = (basename: string, pathParts: string[] = []): { basename: string; pathParts: string[]; type: typeof SplitPathType.Folder } => ({
+const F = (basename: string, pathParts: string[] = []): { basename: string; pathParts: string[]; type: typeof SplitPathKind.Folder } => ({
 	basename,
 	pathParts,
-	type: SplitPathType.Folder,
+	type: SplitPathKind.Folder,
 });
 
-const File = (basename: string, pathParts: string[] = [], extension = "txt"): { basename: string; pathParts: string[]; type: typeof SplitPathType.File; extension: string } => ({
+const File = (basename: string, pathParts: string[] = [], extension = "txt"): { basename: string; pathParts: string[]; type: typeof SplitPathKind.File; extension: string } => ({
 	basename,
 	extension,
 	pathParts,
-	type: SplitPathType.File,
+	type: SplitPathKind.File,
 });
 
-const MdFile = (basename: string, pathParts: string[] = []): { basename: string; pathParts: string[]; type: typeof SplitPathType.MdFile; extension: "md" } => ({
+const MdFile = (basename: string, pathParts: string[] = []): { basename: string; pathParts: string[]; type: typeof SplitPathKind.MdFile; extension: "md" } => ({
 	basename,
 	extension: "md",
 	pathParts,
-	type: SplitPathType.MdFile,
+	type: SplitPathKind.MdFile,
 });
 
 // Helper: normalize object by sorting keys recursively
@@ -78,8 +78,8 @@ describe("materializeScopedBulk", () => {
 				events: [
 					{
 						...{
+							kind: VaultEventKind.FileCreated,
 							splitPath: File("note", ["section"]),
-							type: VaultEventType.FileCreated,
 						},
 						scope: Scope.Inside,
 					},
@@ -91,8 +91,8 @@ describe("materializeScopedBulk", () => {
 
 			expectMultisetEqual(result, [
 				{
-					kind: MaterializedEventType.Create,
-					nodeType: TreeNodeType.File,
+					kind: MaterializedEventKind.Create,
+					nodeType: TreeNodeKind.File,
 					splitPath: File("note", ["section"]),
 				},
 			]);
@@ -110,8 +110,8 @@ describe("materializeScopedBulk", () => {
 				events: [
 					{
 						...{
+							kind: VaultEventKind.FileCreated,
 							splitPath: MdFile("note", ["section"]),
-							type: VaultEventType.FileCreated,
 						},
 						scope: Scope.Inside,
 					},
@@ -123,8 +123,8 @@ describe("materializeScopedBulk", () => {
 
 			expectMultisetEqual(result, [
 				{
-					kind: MaterializedEventType.Create,
-					nodeType: TreeNodeType.Scroll,
+					kind: MaterializedEventKind.Create,
+					nodeType: TreeNodeKind.Scroll,
 					splitPath: MdFile("note", ["section"]),
 				},
 			]);
@@ -142,29 +142,29 @@ describe("materializeScopedBulk", () => {
 				events: [
 					{
 						...{
+							kind: VaultEventKind.FolderCreated,
 							splitPath: F("folder"),
-							type: VaultEventType.FolderCreated,
 						},
 						scope: Scope.Inside,
 					},
 					{
 						...{
+							kind: VaultEventKind.FileCreated,
 							splitPath: File("outside"),
-							type: VaultEventType.FileCreated,
 						},
 						scope: Scope.Outside,
 					},
 					{
 						...{
+							kind: VaultEventKind.FileCreated,
 							splitPath: File("boundary"),
-							type: VaultEventType.FileCreated,
 						},
 						scope: Scope.Outside,
 					},
 					{
 						...{
+							kind: VaultEventKind.FileCreated,
 							splitPath: File("incoming"),
-							type: VaultEventType.FileCreated,
 						},
 						scope: Scope.OutsideToInside,
 					},
@@ -176,8 +176,8 @@ describe("materializeScopedBulk", () => {
 
 			expectMultisetEqual(result, [
 				{
-					kind: MaterializedEventType.Create,
-					nodeType: TreeNodeType.File,
+					kind: MaterializedEventKind.Create,
+					nodeType: TreeNodeKind.File,
 					splitPath: File("incoming"),
 				},
 			]);
@@ -198,22 +198,22 @@ describe("materializeScopedBulk", () => {
 				roots: [
 					{
 						...{
+							kind: VaultEventKind.FileDeleted,
 							splitPath: File("file"),
-							type: VaultEventType.FileDeleted,
 						},
 						scope: Scope.Inside,
 					},
 					{
 						...{
+							kind: VaultEventKind.FileDeleted,
 							splitPath: MdFile("scroll"),
-							type: VaultEventType.FileDeleted,
 						},
 						scope: Scope.Inside,
 					},
 					{
 						...{
+							kind: VaultEventKind.FolderDeleted,
 							splitPath: F("section"),
-							type: VaultEventType.FolderDeleted,
 						},
 						scope: Scope.Inside,
 					},
@@ -224,18 +224,18 @@ describe("materializeScopedBulk", () => {
 
 			expectMultisetEqual(result, [
 				{
-					kind: MaterializedEventType.Delete,
-					nodeType: TreeNodeType.File,
+					kind: MaterializedEventKind.Delete,
+					nodeType: TreeNodeKind.File,
 					splitPath: File("file"),
 				},
 				{
-					kind: MaterializedEventType.Delete,
-					nodeType: TreeNodeType.Scroll,
+					kind: MaterializedEventKind.Delete,
+					nodeType: TreeNodeKind.Scroll,
 					splitPath: MdFile("scroll"),
 				},
 				{
-					kind: MaterializedEventType.Delete,
-					nodeType: TreeNodeType.Section,
+					kind: MaterializedEventKind.Delete,
+					nodeType: TreeNodeKind.Section,
 					splitPath: F("section"),
 				},
 			]);
@@ -254,22 +254,22 @@ describe("materializeScopedBulk", () => {
 				roots: [
 					{
 						...{
+							kind: VaultEventKind.FileDeleted,
 							splitPath: File("outside"),
-							type: VaultEventType.FileDeleted,
 						},
 						scope: Scope.Outside,
 					},
 					{
 						...{
+							kind: VaultEventKind.FileDeleted,
 							splitPath: File("incoming"),
-							type: VaultEventType.FileDeleted,
 						},
 						scope: Scope.OutsideToInside,
 					},
 					{
 						...{
+							kind: VaultEventKind.FileDeleted,
 							splitPath: File("outgoing"),
-							type: VaultEventType.FileDeleted,
 						},
 						scope: Scope.InsideToOutside,
 					},
@@ -296,24 +296,24 @@ describe("materializeScopedBulk", () => {
 					{
 						...{
 							from: File("file"),
+							kind: VaultEventKind.FileRenamed,
 							to: File("outside"),
-							type: VaultEventType.FileRenamed,
 						},
 						scope: Scope.InsideToOutside,
 					},
 					{
 						...{
 							from: MdFile("scroll"),
+							kind: VaultEventKind.FileRenamed,
 							to: MdFile("outside"),
-							type: VaultEventType.FileRenamed,
 						},
 						scope: Scope.InsideToOutside,
 					},
 					{
 						...{
 							from: F("section"),
+							kind: VaultEventKind.FolderRenamed,
 							to: F("outside"),
-							type: VaultEventType.FolderRenamed,
 						},
 						scope: Scope.InsideToOutside,
 					},
@@ -325,18 +325,18 @@ describe("materializeScopedBulk", () => {
 
 			expectMultisetEqual(result, [
 				{
-					kind: MaterializedEventType.Delete,
-					nodeType: TreeNodeType.File,
+					kind: MaterializedEventKind.Delete,
+					nodeType: TreeNodeKind.File,
 					splitPath: File("file"),
 				},
 				{
-					kind: MaterializedEventType.Delete,
-					nodeType: TreeNodeType.Scroll,
+					kind: MaterializedEventKind.Delete,
+					nodeType: TreeNodeKind.Scroll,
 					splitPath: MdFile("scroll"),
 				},
 				{
-					kind: MaterializedEventType.Delete,
-					nodeType: TreeNodeType.Section,
+					kind: MaterializedEventKind.Delete,
+					nodeType: TreeNodeKind.Section,
 					splitPath: F("section"),
 				},
 			]);
@@ -354,22 +354,22 @@ describe("materializeScopedBulk", () => {
 				events: [
 					{
 						...{
+							kind: VaultEventKind.FileDeleted,
 							splitPath: File("inside"),
-							type: VaultEventType.FileDeleted,
 						},
 						scope: Scope.Inside,
 					},
 					{
 						...{
+							kind: VaultEventKind.FileDeleted,
 							splitPath: File("incoming"),
-							type: VaultEventType.FileDeleted,
 						},
 						scope: Scope.Inside,
 					},
 					{
 						...{
+							kind: VaultEventKind.FileDeleted,
 							splitPath: File("outside"),
-							type: VaultEventType.FileDeleted,
 						},
 						scope: Scope.Inside,
 					},
@@ -398,24 +398,24 @@ describe("materializeScopedBulk", () => {
 					{
 						...{
 							from: File("old-file"),
+							kind: VaultEventKind.FileRenamed,
 							to: File("new-file"),
-							type: VaultEventType.FileRenamed,
 						},
 						scope: Scope.Inside,
 					},
 					{
 						...{
 							from: MdFile("old-scroll"),
+							kind: VaultEventKind.FileRenamed,
 							to: MdFile("new-scroll"),
-							type: VaultEventType.FileRenamed,
 						},
 						scope: Scope.Inside,
 					},
 					{
 						...{
 							from: F("old-section"),
+							kind: VaultEventKind.FolderRenamed,
 							to: F("new-section"),
-							type: VaultEventType.FolderRenamed,
 						},
 						scope: Scope.Inside,
 					},
@@ -427,20 +427,20 @@ describe("materializeScopedBulk", () => {
 			expectMultisetEqual(result, [
 				{
 					from: File("old-file"),
-					kind: MaterializedEventType.Rename,
-					nodeType: TreeNodeType.File,
+					kind: MaterializedEventKind.Rename,
+					nodeType: TreeNodeKind.File,
 					to: File("new-file"),
 				},
 				{
 					from: MdFile("old-scroll"),
-					kind: MaterializedEventType.Rename,
-					nodeType: TreeNodeType.Scroll,
+					kind: MaterializedEventKind.Rename,
+					nodeType: TreeNodeKind.Scroll,
 					to: MdFile("new-scroll"),
 				},
 				{
 					from: F("old-section"),
-					kind: MaterializedEventType.Rename,
-					nodeType: TreeNodeType.Section,
+					kind: MaterializedEventKind.Rename,
+					nodeType: TreeNodeKind.Section,
 					to: F("new-section"),
 				},
 			]);
@@ -460,40 +460,40 @@ describe("materializeScopedBulk", () => {
 					{
 						...{
 							from: File("file"),
+							kind: VaultEventKind.FileRenamed,
 							to: MdFile("scroll"),
-							type: VaultEventType.FileRenamed,
 						},
 						scope: Scope.Inside,
 					},
 					{
 						...{
 							from: MdFile("scroll"),
+							kind: VaultEventKind.FileRenamed,
 							to: File("file"),
-							type: VaultEventType.FileRenamed,
 						},
 						scope: Scope.Inside,
 					},
 					{
 						...{
 							from: File("old"),
+							kind: VaultEventKind.FileRenamed,
 							to: File("new"),
-							type: VaultEventType.FileRenamed,
 						},
 						scope: Scope.Outside,
 					},
 					{
 						...{
 							from: File("old"),
+							kind: VaultEventKind.FileRenamed,
 							to: File("new"),
-							type: VaultEventType.FileRenamed,
 						},
 						scope: Scope.OutsideToInside,
 					},
 					{
 						...{
 							from: File("old"),
+							kind: VaultEventKind.FileRenamed,
 							to: File("new"),
-							type: VaultEventType.FileRenamed,
 						},
 						scope: Scope.InsideToOutside,
 					},
@@ -539,23 +539,23 @@ describe("materializeScopedBulk", () => {
 				events: [
 					{
 						...{
+							kind: VaultEventKind.FileCreated,
 							splitPath: File("created"),
-							type: VaultEventType.FileCreated,
 						},
 						scope: Scope.Inside,
 					},
 					{
 						...{
+							kind: VaultEventKind.FileCreated,
 							splitPath: MdFile("incoming"),
-							type: VaultEventType.FileCreated,
 						},
 						scope: Scope.Inside,
 					},
 					{
 						...{
 							from: File("outgoing"),
+							kind: VaultEventKind.FileRenamed,
 							to: File("outside"),
-							type: VaultEventType.FileRenamed,
 						},
 						scope: Scope.InsideToOutside,
 					},
@@ -563,16 +563,16 @@ describe("materializeScopedBulk", () => {
 				roots: [
 					{
 						...{
+							kind: VaultEventKind.FileDeleted,
 							splitPath: File("deleted"),
-							type: VaultEventType.FileDeleted,
 						},
 						scope: Scope.Inside,
 					},
 					{
 						...{
 							from: File("old"),
+							kind: VaultEventKind.FileRenamed,
 							to: File("new"),
-							type: VaultEventType.FileRenamed,
 						},
 						scope: Scope.Inside,
 					},
@@ -584,9 +584,9 @@ describe("materializeScopedBulk", () => {
 			// Counts: 2 Creates, 2 Deletes (1 from root, 1 from event), 1 Rename
 			expect(result.length).toBe(5);
 			
-			const creates = result.filter(e => e.kind === MaterializedEventType.Create);
-			const deletes = result.filter(e => e.kind === MaterializedEventType.Delete);
-			const renames = result.filter(e => e.kind === MaterializedEventType.Rename);
+			const creates = result.filter(e => e.kind === MaterializedEventKind.Create);
+			const deletes = result.filter(e => e.kind === MaterializedEventKind.Delete);
+			const renames = result.filter(e => e.kind === MaterializedEventKind.Rename);
 
 			expect(creates.length).toBe(2);
 			expect(deletes.length).toBe(2);

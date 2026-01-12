@@ -3,21 +3,21 @@ import type { NodeName } from "../../../../types/schemas/node-name";
 import type {
 	FileExtension,
 	MdExtension,
+	TreeNodeKind,
 	TreeNodeStatus,
-	TreeNodeType,
 } from "./atoms";
 import type { TreeNodeSegmentId } from "./node-segment-id";
 
 export type ScrollNode = {
 	nodeName: NodeName;
-	type: typeof TreeNodeType.Scroll;
+	kind: typeof TreeNodeKind.Scroll;
 	status: TreeNodeStatus;
 	extension: MdExtension;
 };
 
 export type FileNode = {
 	nodeName: NodeName;
-	type: typeof TreeNodeType.File;
+	kind: typeof TreeNodeKind.File;
 	status: typeof TreeNodeStatus.Unknown;
 	extension: FileExtension;
 };
@@ -26,7 +26,7 @@ export type LeafNode = ScrollNode | FileNode;
 
 export type SectionNode = {
 	nodeName: NodeName;
-	type: typeof TreeNodeType.Section;
+	kind: typeof TreeNodeKind.Section;
 	children: Record<TreeNodeSegmentId, TreeNode>;
 };
 

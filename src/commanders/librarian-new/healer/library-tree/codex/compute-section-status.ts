@@ -2,7 +2,7 @@
  * Compute aggregated status for a section from its descendants.
  */
 
-import { TreeNodeStatus, TreeNodeType } from "../tree-node/types/atoms";
+import { TreeNodeKind, TreeNodeStatus } from "../tree-node/types/atoms";
 import type { SectionNode, TreeNode } from "../tree-node/types/tree-node";
 
 /**
@@ -25,7 +25,7 @@ export function computeSectionStatus(section: SectionNode): TreeNodeStatus {
 
 function allDescendantsDone(nodes: TreeNode[]): boolean {
 	for (const node of nodes) {
-		if (node.type === TreeNodeType.Section) {
+		if (node.kind === TreeNodeKind.Section) {
 			const children = Object.values(node.children);
 			if (children.length === 0) {
 				// Empty section counts as not done

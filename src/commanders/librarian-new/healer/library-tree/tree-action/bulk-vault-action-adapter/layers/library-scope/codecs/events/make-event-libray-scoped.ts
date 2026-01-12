@@ -1,6 +1,6 @@
 import {
 	type VaultEvent,
-	VaultEventType,
+	VaultEventKind,
 } from "../../../../../../../../../../managers/obsidian/vault-action-manager";
 
 import type { EnscopedEvent } from "../../types/generics";
@@ -10,9 +10,9 @@ import { tryParseAsInsideLibrarySplitPath } from "../split-path-inside-the-libra
 export function makeEventLibraryScoped(
 	event: VaultEvent,
 ): EnscopedEvent<VaultEvent> {
-	switch (event.type) {
-		case VaultEventType.FolderCreated:
-		case VaultEventType.FolderDeleted: {
+	switch (event.kind) {
+		case VaultEventKind.FolderCreated:
+		case VaultEventKind.FolderDeleted: {
 			const splitPathResult = tryParseAsInsideLibrarySplitPath(
 				event.splitPath,
 			);
@@ -29,8 +29,8 @@ export function makeEventLibraryScoped(
 			};
 		}
 
-		case VaultEventType.FileCreated:
-		case VaultEventType.FileDeleted: {
+		case VaultEventKind.FileCreated:
+		case VaultEventKind.FileDeleted: {
 			const splitPathResult = tryParseAsInsideLibrarySplitPath(
 				event.splitPath,
 			);
@@ -47,34 +47,34 @@ export function makeEventLibraryScoped(
 			};
 		}
 
-		case VaultEventType.FileRenamed: {
+		case VaultEventKind.FileRenamed: {
 			const fromResult = tryParseAsInsideLibrarySplitPath(event.from);
 			const toResult = tryParseAsInsideLibrarySplitPath(event.to);
 
 			if (fromResult.isOk() && toResult.isOk()) {
 				return {
 					from: fromResult.value,
+					kind: VaultEventKind.FileRenamed,
 					scope: Scope.Inside,
 					to: toResult.value,
-					type: VaultEventType.FileRenamed,
 				};
 			}
 
 			if (fromResult.isOk() && toResult.isErr()) {
 				return {
 					from: fromResult.value,
+					kind: VaultEventKind.FileRenamed,
 					scope: Scope.InsideToOutside,
 					to: event.to,
-					type: VaultEventType.FileRenamed,
 				};
 			}
 
 			if (fromResult.isErr() && toResult.isOk()) {
 				return {
 					from: event.from,
+					kind: VaultEventKind.FileRenamed,
 					scope: Scope.OutsideToInside,
 					to: toResult.value,
-					type: VaultEventType.FileRenamed,
 				};
 			}
 
@@ -84,34 +84,34 @@ export function makeEventLibraryScoped(
 			};
 		}
 
-		case VaultEventType.FolderRenamed: {
+		case VaultEventKind.FolderRenamed: {
 			const fromResult = tryParseAsInsideLibrarySplitPath(event.from);
 			const toResult = tryParseAsInsideLibrarySplitPath(event.to);
 
 			if (fromResult.isOk() && toResult.isOk()) {
 				return {
 					from: fromResult.value,
+					kind: VaultEventKind.FolderRenamed,
 					scope: Scope.Inside,
 					to: toResult.value,
-					type: VaultEventType.FolderRenamed,
 				};
 			}
 
 			if (fromResult.isOk() && toResult.isErr()) {
 				return {
 					from: fromResult.value,
+					kind: VaultEventKind.FolderRenamed,
 					scope: Scope.InsideToOutside,
 					to: event.to,
-					type: VaultEventType.FolderRenamed,
 				};
 			}
 
 			if (fromResult.isErr() && toResult.isOk()) {
 				return {
 					from: event.from,
+					kind: VaultEventKind.FolderRenamed,
 					scope: Scope.OutsideToInside,
 					to: toResult.value,
-					type: VaultEventType.FolderRenamed,
 				};
 			}
 

@@ -1,7 +1,7 @@
 import { getParsedUserSettings } from "../../../../../global-state/global-state";
 import type { VaultActionManager } from "../../../../../managers/obsidian/vault-action-manager";
 import type { SplitPathToFolder } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
-import { SplitPathType } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { NodeName } from "../../../types/schemas/node-name";
 import { makeJoinedSuffixedBasename } from "../tree-action/utils/canonical-naming/suffix-utils/core-suffix-utils";
 import type { HealingAction } from "../types/healing-action";
@@ -62,11 +62,11 @@ async function resolveFileRenameAction(
 	const folderPath: SplitPathToFolder = {
 		basename: to.pathParts[to.pathParts.length - 1] ?? "",
 		pathParts: to.pathParts.slice(0, -1),
-		type: SplitPathType.Folder,
+		type: SplitPathKind.Folder,
 	};
 
 	// Resolve unique name
-	const extension = to.type === SplitPathType.MdFile ? "md" : to.extension;
+	const extension = to.type === SplitPathKind.MdFile ? "md" : to.extension;
 	const resolvedCoreNameResult = await resolveUniqueDuplicateName(
 		coreName as NodeName,
 		folderPath,

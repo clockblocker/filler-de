@@ -1,4 +1,4 @@
-import { TreeNodeType } from "../../../../../tree-node/types/atoms";
+import { TreeNodeKind } from "../../../../../tree-node/types/atoms";
 import {
 	type CreateTreeLeafAction,
 	TreeActionType,
@@ -18,7 +18,7 @@ export function traslateCreateMaterializedEvent(
 	const targetLocator = targetRes.value;
 
 	switch (targetLocator.targetType) {
-		case TreeNodeType.File: {
+		case TreeNodeKind.File: {
 			if (observedSplitPath.type !== "File") {
 				break;
 			}
@@ -29,7 +29,7 @@ export function traslateCreateMaterializedEvent(
 			});
 			break;
 		}
-		case TreeNodeType.Scroll: {
+		case TreeNodeKind.Scroll: {
 			if (observedSplitPath.type !== "MdFile") {
 				break;
 			}

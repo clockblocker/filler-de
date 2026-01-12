@@ -6,7 +6,7 @@
 import { err, ok, type Result } from "neverthrow";
 import { getParsedUserSettings } from "../../../../../global-state/global-state";
 import { tryParseAsSeparatedSuffixedBasename } from "../tree-action/utils/canonical-naming/suffix-utils/core-suffix-utils";
-import { TreeNodeType } from "../tree-node/types/atoms";
+import { TreeNodeKind } from "../tree-node/types/atoms";
 import type { SectionNodeSegmentId } from "../tree-node/types/node-segment-id";
 import { NodeSegmentIdSeparator } from "../tree-node/types/node-segment-id";
 import { CODEX_CORE_NAME } from "./literals";
@@ -110,6 +110,6 @@ function buildSectionChain(
 
 	return pathParts.map(
 		(name) =>
-			`${name}${NodeSegmentIdSeparator}${TreeNodeType.Section}${NodeSegmentIdSeparator}` as SectionNodeSegmentId,
+			`${name}${NodeSegmentIdSeparator}${TreeNodeKind.Section}${NodeSegmentIdSeparator}` as SectionNodeSegmentId,
 	);
 }

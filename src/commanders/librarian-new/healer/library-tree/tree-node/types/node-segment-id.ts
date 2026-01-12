@@ -8,7 +8,7 @@ import {
 	FileExtensionSchema,
 	MdExtensionSchema,
 	SectionExtensionSchema,
-	TreeNodeType,
+	TreeNodeKind,
 } from "./atoms";
 
 export const NodeSegmentIdSeparatorSchema = z.templateLiteral([
@@ -23,7 +23,7 @@ export const NodeSegmentIdSeparator: NodeSegmentIdSeparator = `${SMALL_EM_DASH}`
 export const ScrollNodeSegmentIdSchema = z.templateLiteral([
 	NodeNameSchema,
 	NodeSegmentIdSeparator,
-	TreeNodeType.Scroll,
+	TreeNodeKind.Scroll,
 	NodeSegmentIdSeparator,
 	MdExtensionSchema,
 ]);
@@ -32,7 +32,7 @@ export type ScrollNodeSegmentId = z.infer<typeof ScrollNodeSegmentIdSchema>;
 export const FileNodeSegmentIdSchema = z.templateLiteral([
 	NodeNameSchema,
 	NodeSegmentIdSeparator,
-	TreeNodeType.File,
+	TreeNodeKind.File,
 	NodeSegmentIdSeparator,
 	FileExtensionSchema,
 ]);
@@ -41,7 +41,7 @@ export type FileNodeSegmentId = z.infer<typeof FileNodeSegmentIdSchema>;
 export const SectionNodeSegmentIdSchema = z.templateLiteral([
 	NodeNameSchema,
 	NodeSegmentIdSeparator,
-	TreeNodeType.Section,
+	TreeNodeKind.Section,
 	NodeSegmentIdSeparator,
 	SectionExtensionSchema,
 ]);

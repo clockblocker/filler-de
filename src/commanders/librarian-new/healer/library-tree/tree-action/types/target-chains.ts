@@ -1,5 +1,5 @@
 import z from "zod";
-import { TreeNodeType } from "../../tree-node/types/atoms";
+import { TreeNodeKind } from "../../tree-node/types/atoms";
 import {
 	FileNodeSegmentIdSchema,
 	ScrollNodeSegmentIdSchema,
@@ -13,17 +13,17 @@ const BaseNodeLocatorSchema = z.object({
 
 const SectionNodeLocatorSchema = BaseNodeLocatorSchema.extend({
 	segmentId: SectionNodeSegmentIdSchema,
-	targetType: z.literal(TreeNodeType.Section),
+	targetType: z.literal(TreeNodeKind.Section),
 });
 
 const ScrollNodeLocatorSchema = BaseNodeLocatorSchema.extend({
 	segmentId: ScrollNodeSegmentIdSchema,
-	targetType: z.literal(TreeNodeType.Scroll),
+	targetType: z.literal(TreeNodeKind.Scroll),
 });
 
 const FileNodeLocatorSchema = BaseNodeLocatorSchema.extend({
 	segmentId: FileNodeSegmentIdSchema,
-	targetType: z.literal(TreeNodeType.File),
+	targetType: z.literal(TreeNodeKind.File),
 });
 
 const TreeNodeLocatorSchema = z.discriminatedUnion("targetType", [

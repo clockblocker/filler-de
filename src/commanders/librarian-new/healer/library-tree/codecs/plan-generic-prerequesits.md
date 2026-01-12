@@ -427,7 +427,7 @@ None expected - this is additive. Existing code can continue using manual mappin
 - [ ] Rename `TreeNodeType` → `TreeNodeKind` in `tree-node/types/atoms.ts`
 - [ ] Rename `SplitPathType` → `SplitPathKind` in `vault-action-manager/types/split-path.ts`
 - [ ] Update all imports and usages across codebase
-- [ ] Update variable / obj key names to be consistent. ie: "targetType:" -> "targetType:"
+- [ ] Update variable / obj key names to be consistent. ie: "targetType:" -> "targetKind:"
 - [ ] Verify no breaking changes (types are structurally compatible)
 
 ### Phase 1: Type Mappings

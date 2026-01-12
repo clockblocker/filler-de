@@ -8,7 +8,7 @@ import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,
 } from "../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
-import { SplitPathType } from "../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathKind } from "../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { defaultSettingsForUnitTests } from "../../../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../../../common-utils/setup-spy";
 
@@ -25,12 +25,12 @@ afterEach(() => {
 });
 
 describe("tryParseCanonicalSplitPath", () => {
-	describe("SplitPathType.Folder", () => {
+	describe("SplitPathKind.Folder", () => {
 		it("parses valid folder with no path parts", () => {
 			const sp: SplitPathToFolder = {
 				basename: "Library",
 				pathParts: [],
-				type: SplitPathType.Folder,
+				type: SplitPathKind.Folder,
 			};
 
 			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
@@ -40,7 +40,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				expect(result.value.separatedSuffixedBasename.coreName).toBe("Library");
 				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual([]);
 				expect(result.value.pathParts).toEqual([]);
-				expect(result.value.type).toBe(SplitPathType.Folder);
+				expect(result.value.type).toBe(SplitPathKind.Folder);
 			}
 		});
 
@@ -48,7 +48,7 @@ describe("tryParseCanonicalSplitPath", () => {
 			const sp: SplitPathToFolder = {
 				basename: "MyFolder",
 				pathParts: ["Library", "Section1", "Section2"],
-				type: SplitPathType.Folder,
+				type: SplitPathKind.Folder,
 			};
 
 			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
@@ -58,7 +58,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				expect(result.value.separatedSuffixedBasename.coreName).toBe("MyFolder");
 				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual([]);
 				expect(result.value.pathParts).toEqual(["Library", "Section1", "Section2"]);
-				expect(result.value.type).toBe(SplitPathType.Folder);
+				expect(result.value.type).toBe(SplitPathKind.Folder);
 			}
 		});
 
@@ -66,7 +66,7 @@ describe("tryParseCanonicalSplitPath", () => {
 			const sp: SplitPathToFolder = {
 				basename: "My-Folder",
 				pathParts: [],
-				type: SplitPathType.Folder,
+				type: SplitPathKind.Folder,
 			};
 
 			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
@@ -78,7 +78,7 @@ describe("tryParseCanonicalSplitPath", () => {
 			const sp: SplitPathToFolder = {
 				basename: "",
 				pathParts: [],
-				type: SplitPathType.Folder,
+				type: SplitPathKind.Folder,
 			};
 
 			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
@@ -90,7 +90,7 @@ describe("tryParseCanonicalSplitPath", () => {
 			const sp: SplitPathToFolder = {
 				basename: "MyFolder",
 				pathParts: ["Library", "Section1", "Section-2"],
-				type: SplitPathType.Folder,
+				type: SplitPathKind.Folder,
 			};
 
 			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
@@ -99,23 +99,23 @@ describe("tryParseCanonicalSplitPath", () => {
 		});
 	});
 
-	describe("SplitPathType.File", () => {
+	describe("SplitPathKind.File", () => {
 		it("parses valid file with no suffix and no path parts", () => {
 			const sp: SplitPathToFile = {
 				basename: "MyFile",
 				extension: "txt",
 				pathParts: ["Library"],
-				type: SplitPathType.File,
+				type: SplitPathKind.File,
 			};
 
 			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
 
 			expect(result.isOk()).toBe(true);
-			if (result.isOk() && result.value.type === SplitPathType.File) {
+			if (result.isOk() && result.value.type === SplitPathKind.File) {
 				expect(result.value.separatedSuffixedBasename.coreName).toBe("MyFile");
 				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual([]);
 				expect(result.value.pathParts).toEqual(["Library"]);
-				expect(result.value.type).toBe(SplitPathType.File);
+				expect(result.value.type).toBe(SplitPathKind.File);
 				expect(result.value.extension).toBe("txt");
 			}
 		});
@@ -125,7 +125,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				basename: "MyFile-Section2-Section1",
 				extension: "txt",
 				pathParts: ["Library", "Section1", "Section2"],
-				type: SplitPathType.File,
+				type: SplitPathKind.File,
 			};
 
 			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
@@ -135,7 +135,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				expect(result.value.separatedSuffixedBasename.coreName).toBe("MyFile");
 				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual(["Section2", "Section1"]);
 				expect(result.value.pathParts).toEqual(["Library", "Section1", "Section2"]);
-				expect(result.value.type).toBe(SplitPathType.File);
+				expect(result.value.type).toBe(SplitPathKind.File);
 			}
 		});
 
@@ -144,7 +144,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				basename: "MyFile-Section1-Section2",
 				extension: "txt",
 				pathParts: ["Library", "Section1", "Section2"],
-				type: SplitPathType.File,
+				type: SplitPathKind.File,
 			};
 
 			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
@@ -160,7 +160,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				basename: "MyFile-Section1",
 				extension: "txt",
 				pathParts: ["Library", "Section1", "Section2"],
-				type: SplitPathType.File,
+				type: SplitPathKind.File,
 			};
 
 			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
@@ -173,7 +173,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				basename: "My-File",
 				extension: "txt",
 				pathParts: ["Library"],
-				type: SplitPathType.File,
+				type: SplitPathKind.File,
 			};
 
 			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
@@ -186,7 +186,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				basename: "MyFile-Section-1",
 				extension: "txt",
 				pathParts: ["Library", "Section-1"],
-				type: SplitPathType.File,
+				type: SplitPathKind.File,
 			};
 
 			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
@@ -195,23 +195,23 @@ describe("tryParseCanonicalSplitPath", () => {
 		});
 	});
 
-	describe("SplitPathType.MdFile", () => {
+	describe("SplitPathKind.MdFile", () => {
 		it("parses valid md file with no suffix and no path parts", () => {
 			const sp: SplitPathToMdFile = {
 				basename: "MyNote",
 				extension: "md",
 				pathParts: ["Library"],
-				type: SplitPathType.MdFile,
+				type: SplitPathKind.MdFile,
 			};
 
 			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
 
 			expect(result.isOk()).toBe(true);
-			if (result.isOk() && result.value.type === SplitPathType.MdFile) {
+			if (result.isOk() && result.value.type === SplitPathKind.MdFile) {
 				expect(result.value.separatedSuffixedBasename.coreName).toBe("MyNote");
 				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual([]);
 				expect(result.value.pathParts).toEqual(["Library"]);
-				expect(result.value.type).toBe(SplitPathType.MdFile);
+				expect(result.value.type).toBe(SplitPathKind.MdFile);
 				expect(result.value.extension).toBe("md");
 			}
 		});
@@ -221,7 +221,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				basename: "MyNote-Section2-Section1",
 				extension: "md",
 				pathParts: ["Library", "Section1", "Section2"],
-				type: SplitPathType.MdFile,
+				type: SplitPathKind.MdFile,
 			};
 
 			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
@@ -231,7 +231,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				expect(result.value.separatedSuffixedBasename.coreName).toBe("MyNote");
 				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual(["Section2", "Section1"]);
 				expect(result.value.pathParts).toEqual(["Library", "Section1", "Section2"]);
-				expect(result.value.type).toBe(SplitPathType.MdFile);
+				expect(result.value.type).toBe(SplitPathKind.MdFile);
 			}
 		});
 
@@ -240,7 +240,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				basename: "MyNote-Section1-Section2",
 				extension: "md",
 				pathParts: ["Section1", "Section2"],
-				type: SplitPathType.MdFile,
+				type: SplitPathKind.MdFile,
 			};
 
 			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
@@ -258,7 +258,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				basename: "MyNote_Section2_Section1",
 				extension: "md",
 				pathParts: ["Library", "Section1", "Section2"],
-				type: SplitPathType.MdFile,
+				type: SplitPathKind.MdFile,
 			};
 
 			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
@@ -277,7 +277,7 @@ describe("tryParseCanonicalSplitPath", () => {
 			const regular: SplitPathToFolder = {
 				basename: "MyFolder",
 				pathParts: ["Library", "Section1", "Section2"],
-				type: SplitPathType.Folder,
+				type: SplitPathKind.Folder,
 			};
 
 			const canonical1Res = tryParseCanonicalSplitPathInsideLibrary(regular);
@@ -303,7 +303,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				basename: "MyFile-Section2-Section1",
 				extension: "txt",
 				pathParts: ["Library", "Section1", "Section2"],
-				type: SplitPathType.File,
+				type: SplitPathKind.File,
 			};
 
 			const canonical1Res = tryParseCanonicalSplitPathInsideLibrary(regular);
@@ -322,7 +322,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				canonical1.separatedSuffixedBasename,
 			);
 			expect(canonical2.type).toBe(canonical1.type);
-			if (canonical2.type === SplitPathType.File) {
+			if (canonical2.type === SplitPathKind.File) {
 				expect(canonical2.extension).toBe(canonical1.extension);
 			}
 		});
@@ -332,7 +332,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				basename: "MyNote-Section2-Section1",
 				extension: "md",
 				pathParts: ["Library", "Section1", "Section2"],
-				type: SplitPathType.MdFile,
+				type: SplitPathKind.MdFile,
 			};
 
 			const canonical1Res = tryParseCanonicalSplitPathInsideLibrary(regular);
@@ -351,7 +351,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				canonical1.separatedSuffixedBasename,
 			);
 			expect(canonical2.type).toBe(canonical1.type);
-			if (canonical2.type === SplitPathType.MdFile) {
+			if (canonical2.type === SplitPathKind.MdFile) {
 				expect(canonical2.extension).toBe(canonical1.extension);
 			}
 		});

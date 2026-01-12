@@ -3,13 +3,13 @@
  * Requires tree access to generate content.
  */
 
-import { SplitPathType } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { SplitPathToMdFileInsideLibrary } from "../tree-action/bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
 import {
 	makeJoinedSuffixedBasename,
 	makeSuffixPartsFromPathPartsWithRoot,
 } from "../tree-action/utils/canonical-naming/suffix-utils/core-suffix-utils";
-import { TreeNodeType } from "../tree-node/types/atoms";
+import { TreeNodeKind } from "../tree-node/types/atoms";
 import type { SectionNodeSegmentId } from "../tree-node/types/node-segment-id";
 import { NodeSegmentIdSeparator } from "../tree-node/types/node-segment-id";
 import type { SectionNode } from "../tree-node/types/tree-node";
@@ -160,7 +160,7 @@ function collectDescendantSectionChains(
 	const result: SectionNodeSegmentId[][] = [];
 
 	for (const [segId, child] of Object.entries(section.children)) {
-		if (child.type === TreeNodeType.Section) {
+		if (child.kind === TreeNodeKind.Section) {
 			const childChain = [...parentChain, segId as SectionNodeSegmentId];
 			result.push(childChain);
 			result.push(...collectDescendantSectionChains(child, childChain));
@@ -182,12 +182,12 @@ function collectDescendantScrolls(
 	const result: ScrollInfo[] = [];
 
 	for (const [segId, child] of Object.entries(section.children)) {
-		if (child.type === TreeNodeType.Scroll) {
+		if (child.kind === TreeNodeKind.Scroll) {
 			result.push({
 				nodeName: child.nodeName,
 				parentChain,
 			});
-		} else if (child.type === TreeNodeType.Section) {
+		} else if (child.kind === TreeNodeKind.Section) {
 			const childChain = [...parentChain, segId as SectionNodeSegmentId];
 			result.push(...collectDescendantScrolls(child, childChain));
 		}
@@ -212,7 +212,7 @@ function computeScrollSplitPath(
 		basename,
 		extension: "md",
 		pathParts,
-		type: SplitPathType.MdFile,
+		type: SplitPathKind.MdFile,
 	};
 }
 
@@ -240,7 +240,7 @@ function collectAllSectionChains(tree: TreeAccessor): SectionNodeSegmentId[][] {
 		parentChain: SectionNodeSegmentId[],
 	): void => {
 		for (const [segId, child] of Object.entries(section.children)) {
-			if (child.type === TreeNodeType.Section) {
+			if (child.kind === TreeNodeKind.Section) {
 				const childChain = [
 					...parentChain,
 					segId as SectionNodeSegmentId,
@@ -258,7 +258,7 @@ function collectAllSectionChains(tree: TreeAccessor): SectionNodeSegmentId[][] {
 function makeNodeSegmentId(node: SectionNode): SectionNodeSegmentId {
 	// Extract segment ID from node - we need to construct it
 	// The segment ID format is: nodeName﹘Section﹘
-	return `${node.nodeName}${NodeSegmentIdSeparator}${TreeNodeType.Section}${NodeSegmentIdSeparator}` as SectionNodeSegmentId;
+	return `${node.nodeName}${NodeSegmentIdSeparator}${TreeNodeKind.Section}${NodeSegmentIdSeparator}` as SectionNodeSegmentId;
 }
 
 /**
@@ -301,6 +301,6 @@ function buildMovedCodexPath(
 		basename,
 		extension: "md",
 		pathParts,
-		type: SplitPathType.MdFile,
+		type: SplitPathKind.MdFile,
 	};
 }

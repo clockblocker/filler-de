@@ -5,13 +5,13 @@ import { mergeCodexImpacts } from "../../../../../src/commanders/librarian-new/h
 import { Tree } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree";
 import {
 	TreeNodeStatus,
-	TreeNodeType,
+	TreeNodeKind,
 } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
 import type {
 	ScrollNodeSegmentId,
 	SectionNodeSegmentId,
 } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/node-segment-id";
-import { SplitPathType } from "../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathKind } from "../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
 
 const sec = (name: string): SectionNodeSegmentId =>
@@ -43,7 +43,7 @@ describe("Codex init for nested sections", () => {
 				basename: "Diary-kid-father-grandpa",
 				extension: "md" as const,
 				pathParts: ["Library", "grandpa", "father", "kid"],
-				type: SplitPathType.MdFile,
+				type: SplitPathKind.MdFile,
 			},
 			targetLocator: {
 				segmentId: scroll("Diary"),
@@ -53,7 +53,7 @@ describe("Codex init for nested sections", () => {
 					sec("father"),
 					sec("kid"),
 				],
-				targetType: TreeNodeType.Scroll,
+				targetType: TreeNodeKind.Scroll,
 			},
 		};
 

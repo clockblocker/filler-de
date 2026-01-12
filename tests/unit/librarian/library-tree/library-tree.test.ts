@@ -3,7 +3,7 @@ import { Healer } from "../../../../src/commanders/librarian-new/healer/healer";
 import { TreeActionType } from "../../../../src/commanders/librarian-new/healer/library-tree/tree-action/types/tree-action";
 import { TreeNodeStatus } from "../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
 import type { NodeName } from "../../../../src/commanders/librarian-new/types/schemas/node-name";
-import { SplitPathType } from "../../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathKind } from "../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { setupGetParsedUserSettingsSpy } from "../../common-utils/setup-spy";
 import {
 	makeScrollLocator,
@@ -68,7 +68,7 @@ describe("Healer", () => {
 					basename: "Note",
 					extension: "md",
 					pathParts: ["Library", "recipe", "pie"],
-					type: SplitPathType.MdFile,
+					type: SplitPathKind.MdFile,
 				},
 				targetLocator: locator,
 			});

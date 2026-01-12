@@ -1,6 +1,6 @@
 import {
 	type VaultEvent,
-	VaultEventType,
+	VaultEventKind,
 } from "../../../../../types/vault-event";
 import { dedupeByKey, makeKeyFor } from "../../../../common/collapse-helpers";
 import type {
@@ -35,8 +35,8 @@ function collapseRenameChains(events: VaultEvent[]): {
 	const rest: VaultEvent[] = [];
 
 	for (const e of events) {
-		if (e.type === VaultEventType.FileRenamed) fileRenames.push(e);
-		else if (e.type === VaultEventType.FolderRenamed) folderRenames.push(e);
+		if (e.kind === VaultEventKind.FileRenamed) fileRenames.push(e);
+		else if (e.kind === VaultEventKind.FolderRenamed) folderRenames.push(e);
 		else rest.push(e);
 	}
 
@@ -52,7 +52,7 @@ function collapseRenameChains(events: VaultEvent[]): {
 function collapseRenameList<T extends RenameVaultEvent>(renames: T[]): T[] {
 	if (renames.length === 0) return [];
 
-	const type = renames[0]?.type;
+	const type = renames[0]?.kind;
 
 	// forward map: fromKey -> to (keep last)
 	const forward = new Map<string, T["to"]>();
@@ -107,7 +107,7 @@ function collapseRenameList<T extends RenameVaultEvent>(renames: T[]): T[] {
 		// Drop no-op renames A→A
 		if (makeKeyFor(from) === makeKeyFor(toFinal)) continue;
 
-		out.push({ from, to: toFinal, type } as T);
+		out.push({ from, kind: type, to: toFinal } as T);
 	}
 
 	return out;

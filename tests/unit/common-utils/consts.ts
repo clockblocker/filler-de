@@ -1,5 +1,5 @@
 import type { ParsedUserSettings } from "../../../src/global-state/parsed-settings";
-import { SplitPathType } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathKind } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
 
 export const defaultSettingsForUnitTests: ParsedUserSettings = {
 	apiProvider: "google",
@@ -9,7 +9,7 @@ export const defaultSettingsForUnitTests: ParsedUserSettings = {
 	splitPathToLibraryRoot: {
 		basename: "Library",
 		pathParts: [],
-		type: SplitPathType.Folder,
+		type: SplitPathKind.Folder,
 	},
 	suffixDelimiter: "-",
 };

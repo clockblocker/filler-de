@@ -1,5 +1,5 @@
 import type { App, TAbstractFile } from "obsidian";
-import { type VaultEvent, VaultEventType } from "../../../types/vault-event";
+import { type VaultEvent, VaultEventKind } from "../../../types/vault-event";
 import type { SelfEventTracker } from "../self-event-tracker";
 import {
 	makeVaultEventForFileCreated,
@@ -126,19 +126,19 @@ function countEvents(events: VaultEvent[]) {
 	let deletes = 0;
 
 	for (const e of events) {
-		switch (e.type) {
-			case VaultEventType.FileRenamed:
-			case VaultEventType.FolderRenamed:
+		switch (e.kind) {
+			case VaultEventKind.FileRenamed:
+			case VaultEventKind.FolderRenamed:
 				renames++;
 				break;
 
-			case VaultEventType.FileCreated:
-			case VaultEventType.FolderCreated:
+			case VaultEventKind.FileCreated:
+			case VaultEventKind.FolderCreated:
 				creates++;
 				break;
 
-			case VaultEventType.FileDeleted:
-			case VaultEventType.FolderDeleted:
+			case VaultEventKind.FileDeleted:
+			case VaultEventKind.FolderDeleted:
 				deletes++;
 				break;
 		}

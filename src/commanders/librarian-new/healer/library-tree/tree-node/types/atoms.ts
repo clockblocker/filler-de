@@ -21,13 +21,13 @@ export const TreeNodeStatusSchema = z.enum([
 export type TreeNodeStatus = z.infer<typeof TreeNodeStatusSchema>;
 export const TreeNodeStatus = TreeNodeStatusSchema.enum;
 
-export const TreeNodeTypeSchema = z.enum([
+export const TreeNodeKindSchema = z.enum([
 	FILE_NODE_TYPE,
 	SCROLL_NODE_TYPE,
 	SECTION_NODE_TYPE,
 ]);
-export type TreeNodeType = z.infer<typeof TreeNodeTypeSchema>;
-export const TreeNodeType = TreeNodeTypeSchema.enum;
+export type TreeNodeKind = z.infer<typeof TreeNodeKindSchema>;
+export const TreeNodeKind = TreeNodeKindSchema.enum;
 
 export const MdExtensionSchema = MdSchema;
 export type MdExtension = z.infer<typeof MdExtensionSchema>;

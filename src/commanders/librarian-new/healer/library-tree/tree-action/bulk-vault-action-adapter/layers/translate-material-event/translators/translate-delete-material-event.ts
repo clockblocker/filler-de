@@ -1,4 +1,4 @@
-import { TreeNodeType } from "../../../../../tree-node/types/atoms";
+import { TreeNodeKind } from "../../../../../tree-node/types/atoms";
 import {
 	type DeleteNodeAction,
 	TreeActionType,
@@ -17,21 +17,21 @@ export function traslateDeleteMaterializedEvent(
 	const targetLocator = targetRes.value;
 
 	switch (targetLocator.targetType) {
-		case TreeNodeType.File: {
+		case TreeNodeKind.File: {
 			out.push({
 				actionType: TreeActionType.Delete,
 				targetLocator,
 			});
 			break;
 		}
-		case TreeNodeType.Scroll: {
+		case TreeNodeKind.Scroll: {
 			out.push({
 				actionType: TreeActionType.Delete,
 				targetLocator,
 			});
 			break;
 		}
-		case TreeNodeType.Section: {
+		case TreeNodeKind.Section: {
 			out.push({
 				actionType: TreeActionType.Delete,
 				targetLocator,

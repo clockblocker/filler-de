@@ -5,8 +5,8 @@ import {
 } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/codex-impact-to-actions";
 import type { CodexImpact } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/compute-codex-impact";
 import {
+	TreeNodeKind,
 	TreeNodeStatus,
-	TreeNodeType,
 } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
 import type {
 	SectionNodeSegmentId,
@@ -16,7 +16,7 @@ import type {
 	SectionNode,
 } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/tree-node";
 import type { NodeName } from "../../../../../src/commanders/librarian-new/types/schemas/node-name";
-import { SplitPathType } from "../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathKind } from "../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
 
 let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
@@ -39,9 +39,9 @@ const scroll = (
 	status: TreeNodeStatus = TreeNodeStatus.NotStarted,
 ): ScrollNode => ({
 	extension: "md",
+	kind: TreeNodeKind.Scroll,
 	nodeName: name as NodeName,
 	status,
-	type: TreeNodeType.Scroll,
 });
 
 const section = (
@@ -49,8 +49,8 @@ const section = (
 	children: Record<string, SectionNode | ScrollNode> = {},
 ): SectionNode => ({
 	children: children as SectionNode["children"],
+	kind: TreeNodeKind.Section,
 	nodeName: name as NodeName,
-	type: TreeNodeType.Section,
 });
 
 function makeTreeAccessor(root: SectionNode): TreeAccessor {
@@ -64,7 +64,7 @@ function makeTreeAccessor(root: SectionNode): TreeAccessor {
 				const segId = chain[i];
 				if (!segId) return undefined;
 				const child = current.children[segId];
-				if (!child || child.type !== TreeNodeType.Section) return undefined;
+				if (!child || child.kind !== TreeNodeKind.Section) return undefined;
 				current = child;
 			}
 			return current;
@@ -144,7 +144,7 @@ describe("codexImpactToActions", () => {
 					basename: "__-A",
 					extension: "md",
 					pathParts: ["Library", "A"],
-					type: SplitPathType.MdFile,
+					type: SplitPathKind.MdFile,
 				});
 			}
 		});

@@ -11,7 +11,7 @@ import type {
 	SectionNodeLocator,
 } from "../../../../src/commanders/librarian-new/healer/library-tree/tree-action/types/target-chains";
 import { makeNodeSegmentId } from "../../../../src/commanders/librarian-new/healer/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
-import { TreeNodeStatus, TreeNodeType } from "../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
+import { TreeNodeKind, TreeNodeStatus } from "../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
 import type {
 	FileNodeSegmentId,
 	ScrollNodeSegmentId,
@@ -59,15 +59,15 @@ function populateSection(
 		if (isLeafShape(childShape)) {
 			const leaf = makeLeafFromShape(name as NodeName, childShape);
 			const segId =
-				leaf.type === TreeNodeType.Scroll
+				leaf.kind === TreeNodeKind.Scroll
 					? makeNodeSegmentId(leaf)
 					: makeNodeSegmentId(leaf);
 			section.children[segId] = leaf;
 		} else {
 			const childSection: SectionNode = {
 				children: {},
+				kind: TreeNodeKind.Section,
 				nodeName: name as NodeName,
-				type: TreeNodeType.Section,
 			};
 			const segId = makeNodeSegmentId(childSection);
 			section.children[segId] = childSection;
@@ -89,16 +89,16 @@ function makeLeafFromShape(name: NodeName, shape: LeafShape): LeafNode {
 	if (shape.type === "Scroll") {
 		return {
 			extension: "md",
+			kind: TreeNodeKind.Scroll,
 			nodeName: name,
 			status: shape.status ?? TreeNodeStatus.NotStarted,
-			type: TreeNodeType.Scroll,
 		};
 	}
 	return {
 		extension: shape.extension ?? "txt",
+		kind: TreeNodeKind.File,
 		nodeName: name,
 		status: TreeNodeStatus.Unknown,
-		type: TreeNodeType.File,
 	};
 }
 
@@ -121,11 +121,11 @@ function sectionChildrenToShape(
 	const result: Record<string, SectionShape | LeafShape> = {};
 
 	for (const child of entries) {
-		if (child.type === TreeNodeType.Section) {
+		if (child.kind === TreeNodeKind.Section) {
 			result[child.nodeName] = {
 				children: sectionChildrenToShape(child),
 			};
-		} else if (child.type === TreeNodeType.Scroll) {
+		} else if (child.type === TreeNodeKind.Scroll) {
 			result[child.nodeName] = {
 				status: child.status,
 				type: "Scroll",
@@ -153,7 +153,7 @@ export function makeScrollLocator(
 		segmentIdChainToParent: pathParts.map(
 			(p) => `${p}${sep}Section${sep}` as SectionNodeSegmentId,
 		),
-		targetType: TreeNodeType.Scroll,
+		targetType: TreeNodeKind.Scroll,
 	};
 }
 
@@ -169,7 +169,7 @@ export function makeFileLocator(
 		segmentIdChainToParent: pathParts.map(
 			(p) => `${p}${sep}Section${sep}` as SectionNodeSegmentId,
 		),
-		targetType: TreeNodeType.File,
+		targetType: TreeNodeKind.File,
 	};
 }
 
@@ -183,6 +183,6 @@ export function makeSectionLocator(
 		segmentIdChainToParent: pathParts.map(
 			(p) => `${p}${sep}Section${sep}` as SectionNodeSegmentId,
 		),
-		targetType: TreeNodeType.Section,
+		targetType: TreeNodeKind.Section,
 	};
 }

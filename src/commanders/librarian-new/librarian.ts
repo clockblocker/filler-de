@@ -9,7 +9,7 @@ import type {
 	VaultActionManager,
 } from "../../managers/obsidian/vault-action-manager";
 import type { SplitPathWithReader } from "../../managers/obsidian/vault-action-manager/types/split-path";
-import { SplitPathType } from "../../managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathKind } from "../../managers/obsidian/vault-action-manager/types/split-path";
 import { readMetadata } from "../../managers/pure/note-metadata-manager";
 import { decrementPending, incrementPending } from "../../utils/idle-tracker";
 import { logger } from "../../utils/logger";
@@ -44,8 +44,8 @@ import {
 import { makeLocatorFromCanonicalSplitPathInsideLibrary } from "./healer/library-tree/tree-action/utils/locator/locator-codec";
 import { makeNodeSegmentId } from "./healer/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import {
+	TreeNodeKind,
 	TreeNodeStatus,
-	TreeNodeType,
 } from "./healer/library-tree/tree-node/types/atoms";
 import {
 	NodeSegmentIdSeparator,
@@ -209,7 +209,7 @@ export class Librarian {
 
 			// Read status for md files
 			let status: TreeNodeStatus = TreeNodeStatus.NotStarted;
-			if (file.type === SplitPathType.MdFile && "read" in file) {
+			if (file.type === SplitPathKind.MdFile && "read" in file) {
 				const contentResult = await file.read();
 				if (contentResult.isOk()) {
 					const meta = readMetadata(
@@ -222,13 +222,13 @@ export class Librarian {
 				}
 			}
 
-			if (locator.targetType === TreeNodeType.Scroll) {
+			if (locator.targetType === TreeNodeKind.Scroll) {
 				actions.push({
 					actionType: "Create",
 					initialStatus: status,
 					observedSplitPath:
 						observedPath as SplitPathInsideLibrary & {
-							type: typeof SplitPathType.MdFile;
+							type: typeof SplitPathKind.MdFile;
 							extension: "md";
 						},
 					targetLocator: locator,
@@ -238,7 +238,7 @@ export class Librarian {
 					actionType: "Create",
 					observedSplitPath:
 						observedPath as SplitPathInsideLibrary & {
-							type: typeof SplitPathType.File;
+							type: typeof SplitPathKind.File;
 							extension: string;
 						},
 					targetLocator: locator,
@@ -265,7 +265,7 @@ export class Librarian {
 
 		for (const file of allFiles) {
 			// Skip non-md files
-			if (file.type !== SplitPathType.MdFile) continue;
+			if (file.type !== SplitPathKind.MdFile) continue;
 
 			// Check if basename starts with __
 			const coreNameResult = tryParseAsSeparatedSuffixedBasename(file);
@@ -315,7 +315,7 @@ export class Librarian {
 
 		// Recurse into child sections
 		for (const child of Object.values(section.children)) {
-			if (child.type === TreeNodeType.Section) {
+			if (child.kind === TreeNodeKind.Section) {
 				this.collectValidCodexPaths(child, currentChain, paths);
 			}
 		}
@@ -380,9 +380,9 @@ export class Librarian {
 				newStatus,
 				targetLocator: {
 					segmentId:
-						`${target.nodeName}${NodeSegmentIdSeparator}${TreeNodeType.Scroll}${NodeSegmentIdSeparator}md` as ScrollNodeSegmentId,
+						`${target.nodeName}${NodeSegmentIdSeparator}${TreeNodeKind.Scroll}${NodeSegmentIdSeparator}md` as ScrollNodeSegmentId,
 					segmentIdChainToParent: target.parentChain,
-					targetType: TreeNodeType.Scroll,
+					targetType: TreeNodeKind.Scroll,
 				},
 			};
 		} else {
@@ -397,7 +397,7 @@ export class Librarian {
 				targetLocator: {
 					segmentId: sectionName,
 					segmentIdChainToParent: target.sectionChain.slice(0, -1),
-					targetType: TreeNodeType.Section,
+					targetType: TreeNodeKind.Section,
 				},
 			};
 		}
@@ -551,7 +551,7 @@ export class Librarian {
 		for (const action of actions) {
 			if (
 				action.actionType !== "ChangeStatus" ||
-				action.targetLocator.targetType !== TreeNodeType.Scroll
+				action.targetLocator.targetType !== TreeNodeKind.Scroll
 			) {
 				continue;
 			}
@@ -594,7 +594,7 @@ export class Librarian {
 		nodeName: string,
 		parentChain: SectionNodeSegmentId[],
 	): SplitPathInsideLibrary & {
-		type: typeof SplitPathType.MdFile;
+		type: typeof SplitPathKind.MdFile;
 		extension: "md";
 	} {
 		const pathParts = parentChain.map((segId) => {
@@ -612,7 +612,7 @@ export class Librarian {
 			basename,
 			extension: "md",
 			pathParts,
-			type: SplitPathType.MdFile,
+			type: SplitPathKind.MdFile,
 		};
 	}
 

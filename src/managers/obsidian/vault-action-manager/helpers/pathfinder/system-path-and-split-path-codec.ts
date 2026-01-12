@@ -3,7 +3,7 @@ import { MD } from "../../types/literals";
 import {
 	type AnySplitPath,
 	SplitPathSchema,
-	SplitPathType,
+	SplitPathKind,
 } from "../../types/split-path";
 import {
 	joinPosix,
@@ -32,7 +32,7 @@ const systemPathToSplitPath = z.codec(z.string(), SplitPathSchema, {
 					basename,
 					extension: MD,
 					pathParts: parts.slice(0, -1),
-					type: SplitPathType.MdFile,
+					type: SplitPathKind.MdFile,
 				};
 			}
 
@@ -40,21 +40,21 @@ const systemPathToSplitPath = z.codec(z.string(), SplitPathSchema, {
 				basename,
 				extension,
 				pathParts: parts.slice(0, -1),
-				type: SplitPathType.File,
+				type: SplitPathKind.File,
 			};
 		}
 
 		return {
 			basename: last,
 			pathParts: parts.slice(0, -1),
-			type: SplitPathType.Folder,
+			type: SplitPathKind.Folder,
 		};
 	},
 	encode: (splitPath: AnySplitPath): string => {
 		const { pathParts, basename: title } = splitPath;
 		const extension =
-			splitPath.type === SplitPathType.MdFile ||
-			splitPath.type === SplitPathType.File
+			splitPath.type === SplitPathKind.MdFile ||
+			splitPath.type === SplitPathKind.File
 				? `.${splitPath.extension}`
 				: "";
 

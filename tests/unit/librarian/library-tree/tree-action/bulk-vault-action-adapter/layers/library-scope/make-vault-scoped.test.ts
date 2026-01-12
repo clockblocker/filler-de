@@ -2,9 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { makeEventVaultScoped } from "../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/events/make-event-vault-scoped";
 import type { LibraryScopedVaultEvent } from "../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/scoped-event";
 import { Scope } from "../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/scoped-event";
-import { SplitPathType } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathKind } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import type { VaultEvent } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/vault-event";
-import { VaultEventType } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/vault-event";
+import { VaultEventKind } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/vault-event";
 import { defaultSettingsForUnitTests } from "../../../../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../../../../common-utils/setup-spy";
 
@@ -26,15 +26,15 @@ describe("makeEventVaultScoped", () => {
 					basename: "Old",
 					extension: "md",
 					pathParts: ["Other"],
-					type: SplitPathType.MdFile,
+					type: SplitPathKind.MdFile,
 				},
+				kind: VaultEventKind.FileRenamed,
 				to: {
 					basename: "New",
 					extension: "md",
 					pathParts: ["Another"],
-					type: SplitPathType.MdFile,
+					type: SplitPathKind.MdFile,
 				},
-				type: VaultEventType.FileRenamed,
 			};
 
 			const scopedEvent: LibraryScopedVaultEvent = {
@@ -52,20 +52,20 @@ describe("makeEventVaultScoped", () => {
 	describe("InsideToInside scope", () => {
 		it("makes absolute path for FileCreated", () => {
 			const scopedEvent: LibraryScopedVaultEvent = {
+				kind: VaultEventKind.FileCreated,
 				scope: Scope.Inside,
 				splitPath: {
 					basename: "Note",
 					extension: "md",
 					pathParts: ["Section"],
-					type: SplitPathType.MdFile,
+					type: SplitPathKind.MdFile,
 				},
-				type: VaultEventType.FileCreated,
 			};
 
 			const result = makeEventVaultScoped(scopedEvent);
 
-			expect(result.type).toBe(VaultEventType.FileCreated);
-			if (result.type === VaultEventType.FileCreated) {
+			expect(result.kind).toBe(VaultEventKind.FileCreated);
+			if (result.kind === VaultEventKind.FileCreated) {
 				expect(result.splitPath.pathParts).toEqual(["Section"]);
 				expect(result.splitPath.basename).toBe("Note");
 			}
@@ -77,22 +77,22 @@ describe("makeEventVaultScoped", () => {
 					basename: "Old",
 					extension: "md",
 					pathParts: ["Section1"],
-					type: SplitPathType.MdFile,
+					type: SplitPathKind.MdFile,
 				},
+				kind: VaultEventKind.FileRenamed,
 				scope: Scope.Inside,
 				to: {
 					basename: "New",
 					extension: "md",
 					pathParts: ["Section2"],
-					type: SplitPathType.MdFile,
+					type: SplitPathKind.MdFile,
 				},
-				type: VaultEventType.FileRenamed,
 			};
 
 			const result = makeEventVaultScoped(scopedEvent);
 
-			expect(result.type).toBe(VaultEventType.FileRenamed);
-			if (result.type === VaultEventType.FileRenamed) {
+			expect(result.kind).toBe(VaultEventKind.FileRenamed);
+			if (result.kind === VaultEventKind.FileRenamed) {
 				expect(result.from.pathParts).toEqual(["Section1"]);
 				expect(result.to.pathParts).toEqual(["Section2"]);
 			}
@@ -100,39 +100,39 @@ describe("makeEventVaultScoped", () => {
 
 		it("makes absolute path for FileDeleted", () => {
 			const scopedEvent: LibraryScopedVaultEvent = {
+				kind: VaultEventKind.FileDeleted,
 				scope: Scope.Inside,
 				splitPath: {
 					basename: "Note",
 					extension: "md",
 					pathParts: ["Section"],
-					type: SplitPathType.MdFile,
+					type: SplitPathKind.MdFile,
 				},
-				type: VaultEventType.FileDeleted,
 			};
 
 			const result = makeEventVaultScoped(scopedEvent);
 
-			expect(result.type).toBe(VaultEventType.FileDeleted);
-			if (result.type === VaultEventType.FileDeleted) {
+			expect(result.kind).toBe(VaultEventKind.FileDeleted);
+			if (result.kind === VaultEventKind.FileDeleted) {
 				expect(result.splitPath.pathParts).toEqual(["Section"]);
 			}
 		});
 
 		it("makes absolute path for FolderCreated", () => {
 			const scopedEvent: LibraryScopedVaultEvent = {
+				kind: VaultEventKind.FolderCreated,
 				scope: Scope.Inside,
 				splitPath: {
 					basename: "Section",
 					pathParts: [],
-					type: SplitPathType.Folder,
+					type: SplitPathKind.Folder,
 				},
-				type: VaultEventType.FolderCreated,
 			};
 
 			const result = makeEventVaultScoped(scopedEvent);
 
-			expect(result.type).toBe(VaultEventType.FolderCreated);
-			if (result.type === VaultEventType.FolderCreated) {
+			expect(result.kind).toBe(VaultEventKind.FolderCreated);
+			if (result.kind === VaultEventKind.FolderCreated) {
 				expect(result.splitPath.pathParts).toEqual([]);
 				expect(result.splitPath.basename).toBe("Section");
 			}
@@ -143,21 +143,21 @@ describe("makeEventVaultScoped", () => {
 				from: {
 					basename: "Old",
 					pathParts: [],
-					type: SplitPathType.Folder,
+					type: SplitPathKind.Folder,
 				},
+				kind: VaultEventKind.FolderRenamed,
 				scope: Scope.Inside,
 				to: {
 					basename: "New",
 					pathParts: [],
-					type: SplitPathType.Folder,
+					type: SplitPathKind.Folder,
 				},
-				type: VaultEventType.FolderRenamed,
 			};
 
 			const result = makeEventVaultScoped(scopedEvent);
 
-			expect(result.type).toBe(VaultEventType.FolderRenamed);
-			if (result.type === VaultEventType.FolderRenamed) {
+			expect(result.kind).toBe(VaultEventKind.FolderRenamed);
+			if (result.kind === VaultEventKind.FolderRenamed) {
 				expect(result.from.pathParts).toEqual([]);
 				expect(result.to.pathParts).toEqual([]);
 			}
@@ -165,19 +165,19 @@ describe("makeEventVaultScoped", () => {
 
 		it("makes absolute path for FolderDeleted", () => {
 			const scopedEvent: LibraryScopedVaultEvent = {
+				kind: VaultEventKind.FolderDeleted,
 				scope: Scope.Inside,
 				splitPath: {
 					basename: "Section",
 					pathParts: [],
-					type: SplitPathType.Folder,
+					type: SplitPathKind.Folder,
 				},
-				type: VaultEventType.FolderDeleted,
 			};
 
 			const result = makeEventVaultScoped(scopedEvent);
 
-			expect(result.type).toBe(VaultEventType.FolderDeleted);
-			if (result.type === VaultEventType.FolderDeleted) {
+			expect(result.kind).toBe(VaultEventKind.FolderDeleted);
+			if (result.kind === VaultEventKind.FolderDeleted) {
 				expect(result.splitPath.pathParts).toEqual([]);
 			}
 		});
@@ -190,22 +190,22 @@ describe("makeEventVaultScoped", () => {
 					basename: "Old",
 					extension: "md",
 					pathParts: ["Section"],
-					type: SplitPathType.MdFile,
+					type: SplitPathKind.MdFile,
 				},
+				kind: VaultEventKind.FileRenamed,
 				scope: Scope.InsideToOutside,
 				to: {
 					basename: "New",
 					extension: "md",
 					pathParts: ["Other"],
-					type: SplitPathType.MdFile,
+					type: SplitPathKind.MdFile,
 				},
-				type: VaultEventType.FileRenamed,
 			};
 
 			const result = makeEventVaultScoped(scopedEvent);
 
-			expect(result.type).toBe(VaultEventType.FileRenamed);
-			if (result.type === VaultEventType.FileRenamed) {
+			expect(result.kind).toBe(VaultEventKind.FileRenamed);
+			if (result.kind === VaultEventKind.FileRenamed) {
 				expect(result.from.pathParts).toEqual(["Section"]);
 				expect(result.to.pathParts).toEqual(["Other"]);
 			}
@@ -216,21 +216,21 @@ describe("makeEventVaultScoped", () => {
 				from: {
 					basename: "Old",
 					pathParts: [],
-					type: SplitPathType.Folder,
+					type: SplitPathKind.Folder,
 				},
+				kind: VaultEventKind.FolderRenamed,
 				scope: Scope.InsideToOutside,
 				to: {
 					basename: "New",
 					pathParts: ["Other"],
-					type: SplitPathType.Folder,
+					type: SplitPathKind.Folder,
 				},
-				type: VaultEventType.FolderRenamed,
 			};
 
 			const result = makeEventVaultScoped(scopedEvent);
 
-			expect(result.type).toBe(VaultEventType.FolderRenamed);
-			if (result.type === VaultEventType.FolderRenamed) {
+			expect(result.kind).toBe(VaultEventKind.FolderRenamed);
+			if (result.kind === VaultEventKind.FolderRenamed) {
 				expect(result.from.pathParts).toEqual([]);
 				expect(result.to.pathParts).toEqual(["Other"]);
 			}
@@ -244,22 +244,22 @@ describe("makeEventVaultScoped", () => {
 					basename: "Old",
 					extension: "md",
 					pathParts: ["Other"],
-					type: SplitPathType.MdFile,
+					type: SplitPathKind.MdFile,
 				},
+				kind: VaultEventKind.FileRenamed,
 				scope: Scope.OutsideToInside,
 				to: {
 					basename: "New",
 					extension: "md",
 					pathParts: ["Section"],
-					type: SplitPathType.MdFile,
+					type: SplitPathKind.MdFile,
 				},
-				type: VaultEventType.FileRenamed,
 			};
 
 			const result = makeEventVaultScoped(scopedEvent);
 
-			expect(result.type).toBe(VaultEventType.FileRenamed);
-			if (result.type === VaultEventType.FileRenamed) {
+			expect(result.kind).toBe(VaultEventKind.FileRenamed);
+			if (result.kind === VaultEventKind.FileRenamed) {
 				expect(result.from.pathParts).toEqual(["Other"]);
 				expect(result.to.pathParts).toEqual(["Section"]);
 			}
@@ -270,21 +270,21 @@ describe("makeEventVaultScoped", () => {
 				from: {
 					basename: "Old",
 					pathParts: ["Other"],
-					type: SplitPathType.Folder,
+					type: SplitPathKind.Folder,
 				},
+				kind: VaultEventKind.FolderRenamed,
 				scope: Scope.OutsideToInside,
 				to: {
 					basename: "New",
 					pathParts: [],
-					type: SplitPathType.Folder,
+					type: SplitPathKind.Folder,
 				},
-				type: VaultEventType.FolderRenamed,
 			};
 
 			const result = makeEventVaultScoped(scopedEvent);
 
-			expect(result.type).toBe(VaultEventType.FolderRenamed);
-			if (result.type === VaultEventType.FolderRenamed) {
+			expect(result.kind).toBe(VaultEventKind.FolderRenamed);
+			if (result.kind === VaultEventKind.FolderRenamed) {
 				expect(result.from.pathParts).toEqual(["Other"]);
 				expect(result.to.pathParts).toEqual([]);
 			}
@@ -298,25 +298,25 @@ describe("makeEventVaultScoped", () => {
 				splitPathToLibraryRoot: {
 					basename: "Library",
 					pathParts: ["Root"],
-					type: SplitPathType.Folder,
+					type: SplitPathKind.Folder,
 				},
 			});
 
 			const scopedEvent: LibraryScopedVaultEvent = {
+				kind: VaultEventKind.FileCreated,
 				scope: Scope.Inside,
 				splitPath: {
 					basename: "Note",
 					extension: "md",
 					pathParts: ["Section"],
-					type: SplitPathType.MdFile,
+					type: SplitPathKind.MdFile,
 				},
-				type: VaultEventType.FileCreated,
 			};
 
 			const result = makeEventVaultScoped(scopedEvent);
 
-			expect(result.type).toBe(VaultEventType.FileCreated);
-			if (result.type === VaultEventType.FileCreated) {
+			expect(result.kind).toBe(VaultEventKind.FileCreated);
+			if (result.kind === VaultEventKind.FileCreated) {
 				expect(result.splitPath.pathParts).toEqual(["Root", "Section"]);
 			}
 		});

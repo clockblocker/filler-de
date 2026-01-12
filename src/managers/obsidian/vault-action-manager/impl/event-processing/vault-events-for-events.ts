@@ -10,14 +10,14 @@ export function makeVaultEventForFileCreated(
 	const split = makeSplitPath(tAbstractFile);
 	if (split.type === "Folder") {
 		return {
+			kind: "FolderCreated",
 			splitPath: split,
-			type: "FolderCreated",
 		};
 	}
 
 	return {
+		kind: "FileCreated",
 		splitPath: split,
-		type: "FileCreated",
 	};
 }
 
@@ -52,13 +52,13 @@ export function makeVaultEventForFileDeleted(
 	const split = makeSplitPath(tAbstractFile);
 	if (split.type === "Folder") {
 		return {
+			kind: "FolderDeleted",
 			splitPath: split,
-			type: "FolderDeleted",
 		};
 	}
 
 	return {
+		kind: "FileDeleted",
 		splitPath: split,
-		type: "FileDeleted",
 	};
 }

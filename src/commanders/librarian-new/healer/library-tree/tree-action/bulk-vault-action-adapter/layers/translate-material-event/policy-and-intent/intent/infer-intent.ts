@@ -1,4 +1,4 @@
-import { TreeNodeType } from "../../../../../../tree-node/types/atoms";
+import { TreeNodeKind } from "../../../../../../tree-node/types/atoms";
 import {
 	makeSuffixPartsFromPathPartsWithRoot,
 	tryParseAsSeparatedSuffixedBasename,
@@ -68,7 +68,7 @@ export function inferRenameIntent({
 	nodeType,
 }: RenameTreeNodeNodeMaterializedEvent): RenameIntent {
 	const basenameChanged = from.basename !== to.basename;
-	const isFolder = nodeType === TreeNodeType.Section;
+	const isFolder = nodeType === TreeNodeKind.Section;
 
 	// path move (basename unchanged)
 	if (!basenameChanged) return RenameIntent.Move;

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { inferCreatePolicy } from "../../../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/infer-create";
 import { ChangePolicy } from "../../../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/types";
-import { SplitPathType } from "../../../../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathKind } from "../../../../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { defaultSettingsForUnitTests } from "../../../../../../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../../../../../../common-utils/setup-spy";
 
@@ -21,11 +21,11 @@ afterEach(() => {
 const spMdFile = (
 	pathParts: string[],
 	basename: string,
-): { basename: string; pathParts: string[]; type: typeof SplitPathType.MdFile; extension: "md" } => ({
+): { basename: string; pathParts: string[]; type: typeof SplitPathKind.MdFile; extension: "md" } => ({
 	basename,
 	extension: "md",
 	pathParts,
-	type: SplitPathType.MdFile,
+	type: SplitPathKind.MdFile,
 });
 
 describe("inferCreatePolicy", () => {

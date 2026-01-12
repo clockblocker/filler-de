@@ -40,7 +40,7 @@ export function makeSplitPath(
 ): AnySplitPath | SplitPathToFile | SplitPathToMdFile | SplitPathToFolder {
 	if (typeof input === "string") {
 		const result = splitPathFromSystemPathInternal(input);
-		// Convert SplitPathType enum to string literals for external API compatibility
+		// Convert SplitPathKind enum to string literals for external API compatibility
 		return convertToExternalFormat(result);
 	}
 	const result = splitPathFromAbstractInternal(input);
@@ -49,7 +49,7 @@ export function makeSplitPath(
 
 /**
  * Convert internal SplitPath to external format.
- * SplitPathType enum values are string literals, so types are compatible.
+ * SplitPathKind enum values are string literals, so types are compatible.
  */
 function convertToExternalFormat(
 	splitPath: AnySplitPath,

@@ -1,4 +1,4 @@
-import { TreeNodeType } from "../../types/atoms";
+import { TreeNodeKind } from "../../types/atoms";
 import {
 	type FileNodeSegmentId,
 	NodeSegmentIdSeparator,
@@ -17,17 +17,17 @@ export function makeNodeSegmentId(node: SectionNode): SectionNodeSegmentId;
 export function makeNodeSegmentId(node: ScrollNode): ScrollNodeSegmentId;
 export function makeNodeSegmentId(node: FileNode): FileNodeSegmentId;
 export function makeNodeSegmentId(node: TreeNode): TreeNodeSegmentId {
-	switch (node.type) {
-		case TreeNodeType.Section: {
-			return `${node.nodeName}${NodeSegmentIdSeparator}${TreeNodeType.Section}${NodeSegmentIdSeparator}`;
+	switch (node.kind) {
+		case TreeNodeKind.Section: {
+			return `${node.nodeName}${NodeSegmentIdSeparator}${TreeNodeKind.Section}${NodeSegmentIdSeparator}`;
 		}
 
-		case TreeNodeType.Scroll: {
-			return `${node.nodeName}${NodeSegmentIdSeparator}${TreeNodeType.Scroll}${NodeSegmentIdSeparator}${node.extension}`;
+		case TreeNodeKind.Scroll: {
+			return `${node.nodeName}${NodeSegmentIdSeparator}${TreeNodeKind.Scroll}${NodeSegmentIdSeparator}${node.extension}`;
 		}
 
-		case TreeNodeType.File: {
-			return `${node.nodeName}${NodeSegmentIdSeparator}${TreeNodeType.File}${NodeSegmentIdSeparator}${node.extension}`;
+		case TreeNodeKind.File: {
+			return `${node.nodeName}${NodeSegmentIdSeparator}${TreeNodeKind.File}${NodeSegmentIdSeparator}${node.extension}`;
 		}
 	}
 }

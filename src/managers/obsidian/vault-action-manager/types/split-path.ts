@@ -1,7 +1,6 @@
 import type { Result } from "neverthrow";
 import type { TFile, TFolder } from "obsidian";
 import { z } from "zod";
-import type { Prettify } from "../../../../types/helpers";
 import { FILE, FOLDER, MD_FILE, MdSchema } from "./literals";
 
 /**
@@ -25,22 +24,22 @@ export const CoreSplitPathSchema = z.object({
 	pathParts: PathPartsSchema,
 });
 
-const SplitPathTypeSchema = z.enum([FOLDER, FILE, MD_FILE]);
-export const SplitPathType = SplitPathTypeSchema.enum;
-export type SplitPathType = z.infer<typeof SplitPathTypeSchema>;
+const SplitPathKindSchema = z.enum([FOLDER, FILE, MD_FILE]);
+export const SplitPathKind = SplitPathKindSchema.enum;
+export type SplitPathKind = z.infer<typeof SplitPathKindSchema>;
 
 export const SplitPathToFolderSchema = CoreSplitPathSchema.extend({
-	type: z.literal(SplitPathType.Folder),
+	type: z.literal(SplitPathKind.Folder),
 });
 
 export const SplitPathToFileSchema = CoreSplitPathSchema.extend({
 	extension: z.string(),
-	type: z.literal(SplitPathType.File),
+	type: z.literal(SplitPathKind.File),
 });
 
 export const SplitPathToMdFileSchema = CoreSplitPathSchema.extend({
 	extension: MdSchema,
-	type: z.literal(SplitPathType.MdFile),
+	type: z.literal(SplitPathKind.MdFile),
 });
 
 export const SplitPathSchema = z.discriminatedUnion("type", [
@@ -53,14 +52,14 @@ export type CommonSplitPath = z.infer<typeof CoreSplitPathSchema>;
 
 export type AnySplitPath = z.infer<typeof SplitPathSchema>;
 
-export type SplitPath<T extends SplitPathType> = Extract<
+export type SplitPath<T extends SplitPathKind> = Extract<
 	AnySplitPath,
 	{ type: T }
 >;
 
-export type SplitPathToFolder = SplitPath<typeof SplitPathType.Folder>;
-export type SplitPathToFile = SplitPath<typeof SplitPathType.File>;
-export type SplitPathToMdFile = SplitPath<typeof SplitPathType.MdFile>;
+export type SplitPathToFolder = SplitPath<typeof SplitPathKind.Folder>;
+export type SplitPathToFile = SplitPath<typeof SplitPathKind.File>;
+export type SplitPathToMdFile = SplitPath<typeof SplitPathKind.MdFile>;
 
 export type SplitPathFromTo<T extends AnySplitPath> = { from: T; to: T };
 

@@ -1,7 +1,7 @@
 import { TFile, TFolder, type Vault } from "obsidian";
 import { pathToFolderFromPathParts } from "../../../helpers/pathfinder";
 import type { AnySplitPath } from "../../../types/split-path";
-import { SplitPathType } from "../../../types/split-path";
+import { SplitPathKind } from "../../../types/split-path";
 
 export async function getExistingBasenamesInFolder<SPF extends AnySplitPath>(
 	target: SPF,
@@ -16,7 +16,7 @@ export async function getExistingBasenamesInFolder<SPF extends AnySplitPath>(
 		return existingBasenames;
 	}
 
-	if (target.type === SplitPathType.Folder) {
+	if (target.type === SplitPathKind.Folder) {
 		// For folders, collect all folder basenames
 		for (const child of targetFolder.children) {
 			if (child instanceof TFolder) {
@@ -26,9 +26,9 @@ export async function getExistingBasenamesInFolder<SPF extends AnySplitPath>(
 	} else {
 		// For files, collect basenames matching the extension
 		const targetExtension =
-			target.type === SplitPathType.MdFile
+			target.type === SplitPathKind.MdFile
 				? "md"
-				: target.type === SplitPathType.File
+				: target.type === SplitPathKind.File
 					? target.extension
 					: undefined;
 

@@ -1,2 +1,5 @@
 export { materializeScopedBulk } from "./materialize-scoped-bulk";
-export { MaterializedEventType, type MaterializedNodeEvent } from "./types";
+export {
+	MaterializedEventKind as MaterializedEventType,
+	type MaterializedNodeEvent,
+} from "./types";

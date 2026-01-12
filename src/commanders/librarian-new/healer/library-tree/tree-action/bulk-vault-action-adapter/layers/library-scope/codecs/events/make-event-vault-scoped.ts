@@ -1,4 +1,4 @@
-import { VaultEventType } from "../../../../../../../../../../managers/obsidian/vault-action-manager";
+import { VaultEventKind } from "../../../../../../../../../../managers/obsidian/vault-action-manager";
 import type { DescopedEvent } from "../../types/generics";
 
 import type { LibraryScopedVaultEvent } from "../../types/scoped-event";
@@ -11,44 +11,44 @@ export function makeEventVaultScoped(
 	const { scope, ...rest } = event;
 	if (scope === Scope.Outside) return rest;
 
-	switch (event.type) {
-		case VaultEventType.FileCreated:
-		case VaultEventType.FileDeleted: {
+	switch (event.kind) {
+		case VaultEventKind.FileCreated:
+		case VaultEventKind.FileDeleted: {
 			return {
+				kind: event.kind,
 				splitPath: makeVaultScopedSplitPath(event.splitPath),
-				type: event.type,
 			};
 		}
 
-		case VaultEventType.FolderCreated:
-		case VaultEventType.FolderDeleted: {
+		case VaultEventKind.FolderCreated:
+		case VaultEventKind.FolderDeleted: {
 			return {
+				kind: event.type,
 				splitPath: makeVaultScopedSplitPath(event.splitPath),
-				type: event.type,
 			};
 		}
 
-		case VaultEventType.FileRenamed: {
+		case VaultEventKind.FileRenamed: {
 			switch (event.scope) {
 				case Scope.Inside:
 					return {
 						from: makeVaultScopedSplitPath(event.from),
+						kind: VaultEventKind.FileRenamed,
 						to: makeVaultScopedSplitPath(event.to),
-						type: VaultEventType.FileRenamed,
 					};
 
 				case Scope.InsideToOutside:
 					return {
 						from: makeVaultScopedSplitPath(event.from),
+						kind: VaultEventKind.FileRenamed,
 						to: event.to,
-						type: VaultEventType.FileRenamed,
 					};
 
 				case Scope.OutsideToInside:
 					return {
 						from: event.from,
+						kind: VaultEventKind.FileRenamed,
 						to: makeVaultScopedSplitPath(event.to),
-						type: VaultEventType.FileRenamed,
 					};
 
 				default: {
@@ -58,27 +58,27 @@ export function makeEventVaultScoped(
 			}
 		}
 
-		case VaultEventType.FolderRenamed: {
+		case VaultEventKind.FolderRenamed: {
 			switch (event.scope) {
 				case Scope.Inside:
 					return {
 						from: makeVaultScopedSplitPath(event.from),
+						kind: VaultEventKind.FolderRenamed,
 						to: makeVaultScopedSplitPath(event.to),
-						type: VaultEventType.FolderRenamed,
 					};
 
 				case Scope.InsideToOutside:
 					return {
 						from: makeVaultScopedSplitPath(event.from),
+						kind: VaultEventKind.FolderRenamed,
 						to: event.to,
-						type: VaultEventType.FolderRenamed,
 					};
 
 				case Scope.OutsideToInside:
 					return {
 						from: event.from,
+						kind: VaultEventKind.FolderRenamed,
 						to: makeVaultScopedSplitPath(event.to),
-						type: VaultEventType.FolderRenamed,
 					};
 
 				default: {

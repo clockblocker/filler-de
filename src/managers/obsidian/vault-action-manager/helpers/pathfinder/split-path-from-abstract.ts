@@ -2,7 +2,7 @@ import type { TAbstractFile } from "obsidian";
 import { TFile, TFolder } from "obsidian";
 import { MD } from "../../types/literals";
 import type { AnySplitPath } from "../../types/split-path";
-import { SplitPathType } from "../../types/split-path";
+import { SplitPathKind } from "../../types/split-path";
 
 /**
  * Core function to split TAbstractFile into SplitPath.
@@ -19,7 +19,7 @@ export function splitPathFromAbstractInternal(
 		return {
 			basename: fullBasename,
 			pathParts,
-			type: SplitPathType.Folder,
+			type: SplitPathKind.Folder,
 		};
 	}
 
@@ -34,9 +34,9 @@ export function splitPathFromAbstractInternal(
 			basename,
 			extension: MD,
 			pathParts,
-			type: SplitPathType.MdFile,
+			type: SplitPathKind.MdFile,
 		};
 	}
 
-	return { basename, extension, pathParts, type: SplitPathType.File };
+	return { basename, extension, pathParts, type: SplitPathKind.File };
 }

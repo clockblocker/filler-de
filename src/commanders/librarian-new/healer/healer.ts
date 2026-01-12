@@ -1,4 +1,4 @@
-import { SplitPathType } from "../../../managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { NodeName } from "../types/schemas/node-name";
 import type { TreeAccessor } from "./library-tree/codex/codex-impact-to-actions";
 import {
@@ -28,7 +28,7 @@ import {
 	makeSuffixPartsFromPathPartsWithRoot,
 } from "./library-tree/tree-action/utils/canonical-naming/suffix-utils/core-suffix-utils";
 import { makeNodeSegmentId } from "./library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
-import { TreeNodeType } from "./library-tree/tree-node/types/atoms";
+import { TreeNodeKind } from "./library-tree/tree-node/types/atoms";
 import {
 	NodeSegmentIdSeparator,
 	type SectionNodeSegmentId,
@@ -142,7 +142,7 @@ export class Healer implements TreeAccessor {
 		const newSegmentId = this.makeSegmentIdFromNode(node);
 
 		// If section renamed, update descendant suffixes
-		if (node.type === TreeNodeType.Section) {
+		if (node.kind === TreeNodeKind.Section) {
 			// Old path: parent chain + OLD section name (from targetLocator.segmentId)
 			const oldSectionPath = this.buildSectionPath(
 				targetLocator.segmentIdChainToParent,
@@ -212,7 +212,7 @@ export class Healer implements TreeAccessor {
 			targetLocator.segmentId as SectionNodeSegmentId,
 		);
 		const oldSectionPath =
-			node.type === TreeNodeType.Section
+			node.kind === TreeNodeKind.Section
 				? this.buildSectionPath(
 						targetLocator.segmentIdChainToParent,
 						oldNodeName,
@@ -220,7 +220,7 @@ export class Healer implements TreeAccessor {
 				: null;
 
 		// Compute healing
-		if (node.type === TreeNodeType.Section && oldSectionPath) {
+		if (node.kind === TreeNodeKind.Section && oldSectionPath) {
 			// New chain in tree
 			const newSegmentId = this.makeSegmentIdFromNode(node);
 			const newSectionChain = [
@@ -251,12 +251,12 @@ export class Healer implements TreeAccessor {
 						from: {
 							basename: observedSplitPath.basename,
 							pathParts: observedSplitPath.pathParts,
-							type: SplitPathType.Folder,
+							type: SplitPathKind.Folder,
 						},
 						to: {
 							basename: newNodeName,
 							pathParts: canonicalSectionPath.slice(0, -1),
-							type: SplitPathType.Folder,
+							type: SplitPathKind.Folder,
 						},
 					},
 					type: "RenameFolder",
@@ -277,11 +277,11 @@ export class Healer implements TreeAccessor {
 
 		// Leaf move - narrow the types
 		const newSegmentId = this.makeSegmentIdFromNode(node);
-		if (node.type === TreeNodeType.Scroll) {
+		if (node.kind === TreeNodeKind.Scroll) {
 			const newLocator: ScrollNodeLocator = {
 				segmentId: newSegmentId as ScrollNodeLocator["segmentId"],
 				segmentIdChainToParent: newParentChain,
-				targetType: TreeNodeType.Scroll,
+				targetType: TreeNodeKind.Scroll,
 			};
 			return this.computeLeafHealing(
 				newLocator,
@@ -293,7 +293,7 @@ export class Healer implements TreeAccessor {
 		const newLocator: FileNodeLocator = {
 			segmentId: newSegmentId as FileNodeLocator["segmentId"],
 			segmentIdChainToParent: newParentChain,
-			targetType: TreeNodeType.File,
+			targetType: TreeNodeKind.File,
 		};
 		return this.computeLeafHealing(
 			newLocator,
@@ -318,7 +318,7 @@ export class Healer implements TreeAccessor {
 		const healingActions: HealingAction[] = [];
 
 		if (!this.splitPathsEqual(observedSplitPath, canonicalSplitPath)) {
-			if (observedSplitPath.type === SplitPathType.MdFile) {
+			if (observedSplitPath.type === SplitPathKind.MdFile) {
 				healingActions.push({
 					payload: {
 						from: observedSplitPath,
@@ -365,7 +365,7 @@ export class Healer implements TreeAccessor {
 		const healingActions: HealingAction[] = [];
 
 		for (const [segId, child] of Object.entries(section.children)) {
-			if (child.type === TreeNodeType.Section) {
+			if (child.kind === TreeNodeKind.Section) {
 				// Recurse with extended paths
 				const childOldSuffixPath = [
 					...oldSuffixPathParts,
@@ -429,12 +429,12 @@ export class Healer implements TreeAccessor {
 		});
 
 		// pathParts = CURRENT path (where file IS now)
-		if (leaf.type === TreeNodeType.Scroll) {
+		if (leaf.kind === TreeNodeKind.Scroll) {
 			return {
 				basename,
 				extension: "md",
 				pathParts: currentPathParts,
-				type: SplitPathType.MdFile,
+				type: SplitPathKind.MdFile,
 			};
 		}
 
@@ -442,7 +442,7 @@ export class Healer implements TreeAccessor {
 			basename,
 			extension: leaf.extension,
 			pathParts: currentPathParts,
-			type: SplitPathType.File,
+			type: SplitPathKind.File,
 		};
 	}
 
@@ -466,12 +466,12 @@ export class Healer implements TreeAccessor {
 			suffixParts,
 		});
 
-		if (locator.targetType === TreeNodeType.Scroll) {
+		if (locator.targetType === TreeNodeKind.Scroll) {
 			return {
 				basename,
 				extension: "md",
 				pathParts,
-				type: SplitPathType.MdFile,
+				type: SplitPathKind.MdFile,
 			};
 		}
 
@@ -481,7 +481,7 @@ export class Healer implements TreeAccessor {
 			basename,
 			extension,
 			pathParts,
-			type: SplitPathType.File,
+			type: SplitPathKind.File,
 		};
 	}
 
@@ -550,10 +550,10 @@ export class Healer implements TreeAccessor {
 
 	private makeSegmentIdFromNode(node: TreeNode): TreeNodeSegmentId {
 		// Type narrowing for makeNodeSegmentId overloads
-		if (node.type === TreeNodeType.Section) {
+		if (node.kind === TreeNodeKind.Section) {
 			return makeNodeSegmentId(node);
 		}
-		if (node.type === TreeNodeType.Scroll) {
+		if (node.type === TreeNodeKind.Scroll) {
 			return makeNodeSegmentId(node);
 		}
 		return makeNodeSegmentId(node);

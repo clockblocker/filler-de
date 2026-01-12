@@ -4,10 +4,10 @@ import {
 	computeCodexImpact,
 } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/compute-codex-impact";
 import { TreeActionType } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/types/tree-action";
-import { TreeNodeStatus, TreeNodeType } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
+import { TreeNodeStatus, TreeNodeKind } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
 import type { FileNodeSegmentId, ScrollNodeSegmentId, SectionNodeSegmentId } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/node-segment-id";
 import type { NodeName } from "../../../../../src/commanders/librarian-new/types/schemas/node-name";
-import { SplitPathType } from "../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathKind } from "../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
 
 let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
@@ -40,12 +40,12 @@ describe("computeCodexImpact", () => {
 					basename: "Note-B-A",
 					extension: "md",
 					pathParts: ["Library", "A", "B"],
-					type: SplitPathType.MdFile,
+					type: SplitPathKind.MdFile,
 				},
 				targetLocator: {
 					segmentId: scroll("Note"),
 					segmentIdChainToParent: [sec("Library"), sec("A"), sec("B")],
-					targetType: TreeNodeType.Scroll,
+					targetType: TreeNodeKind.Scroll,
 				},
 			} as const;
 
@@ -66,12 +66,12 @@ describe("computeCodexImpact", () => {
 					basename: "Note",
 					extension: "md",
 					pathParts: ["Library"],
-					type: SplitPathType.MdFile,
+					type: SplitPathKind.MdFile,
 				},
 				targetLocator: {
 					segmentId: scroll("Note"),
 					segmentIdChainToParent: [sec("Library")],
-					targetType: TreeNodeType.Scroll,
+					targetType: TreeNodeKind.Scroll,
 				},
 			} as const;
 
@@ -89,7 +89,7 @@ describe("computeCodexImpact", () => {
 				targetLocator: {
 					segmentId: scroll("Note"),
 					segmentIdChainToParent: [sec("Library"), sec("A")],
-					targetType: TreeNodeType.Scroll,
+					targetType: TreeNodeKind.Scroll,
 				},
 			} as const;
 
@@ -108,7 +108,7 @@ describe("computeCodexImpact", () => {
 				targetLocator: {
 					segmentId: sec("A"),
 					segmentIdChainToParent: [sec("Library")],
-					targetType: TreeNodeType.Section,
+					targetType: TreeNodeKind.Section,
 				},
 			} as const;
 
@@ -129,7 +129,7 @@ describe("computeCodexImpact", () => {
 				targetLocator: {
 					segmentId: scroll("OldNote"),
 					segmentIdChainToParent: [sec("Library"), sec("A")],
-					targetType: TreeNodeType.Scroll,
+					targetType: TreeNodeKind.Scroll,
 				},
 			} as const;
 
@@ -150,7 +150,7 @@ describe("computeCodexImpact", () => {
 				targetLocator: {
 					segmentId: sec("OldName"),
 					segmentIdChainToParent: [sec("Library")],
-					targetType: TreeNodeType.Section,
+					targetType: TreeNodeKind.Section,
 				},
 			} as const;
 
@@ -176,18 +176,18 @@ describe("computeCodexImpact", () => {
 				newParentLocator: {
 					segmentId: sec("B"),
 					segmentIdChainToParent: [sec("Library")],
-					targetType: TreeNodeType.Section,
+					targetType: TreeNodeKind.Section,
 				},
 				observedSplitPath: {
 					basename: "Note-B",
 					extension: "md",
 					pathParts: ["Library", "B"],
-					type: SplitPathType.MdFile,
+					type: SplitPathKind.MdFile,
 				},
 				targetLocator: {
 					segmentId: scroll("Note"),
 					segmentIdChainToParent: [sec("Library"), sec("A")],
-					targetType: TreeNodeType.Scroll,
+					targetType: TreeNodeKind.Scroll,
 				},
 			} as const;
 
@@ -209,17 +209,17 @@ describe("computeCodexImpact", () => {
 				newParentLocator: {
 					segmentId: sec("B"),
 					segmentIdChainToParent: [sec("Library")],
-					targetType: TreeNodeType.Section,
+					targetType: TreeNodeKind.Section,
 				},
 				observedSplitPath: {
 					basename: "Child",
 					pathParts: ["Library", "B"],
-					type: SplitPathType.Folder,
+					type: SplitPathKind.Folder,
 				},
 				targetLocator: {
 					segmentId: sec("Child"),
 					segmentIdChainToParent: [sec("Library"), sec("A")],
-					targetType: TreeNodeType.Section,
+					targetType: TreeNodeKind.Section,
 				},
 			} as const;
 
@@ -247,7 +247,7 @@ describe("computeCodexImpact", () => {
 				targetLocator: {
 					segmentId: scroll("Note"),
 					segmentIdChainToParent: [sec("Library"), sec("A")],
-					targetType: TreeNodeType.Scroll,
+					targetType: TreeNodeKind.Scroll,
 				},
 			} as const;
 
@@ -267,7 +267,7 @@ describe("computeCodexImpact", () => {
 				targetLocator: {
 					segmentId: sec("A"),
 					segmentIdChainToParent: [sec("Library")],
-					targetType: TreeNodeType.Section,
+					targetType: TreeNodeKind.Section,
 				},
 			} as const;
 

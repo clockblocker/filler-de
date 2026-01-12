@@ -1,10 +1,10 @@
 import { MD } from "../../../../../../../managers/obsidian/vault-action-manager/types/literals";
-import { SplitPathType } from "../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathKind } from "../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { NodeName } from "../../../../../types/schemas/node-name";
 import { makeNodeSegmentId } from "../../../tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import {
 	type FileExtension,
-	TreeNodeType,
+	TreeNodeKind,
 } from "../../../tree-node/types/atoms";
 import {
 	NodeSegmentIdSeparator,
@@ -44,47 +44,47 @@ export function makeLocatorFromCanonicalSplitPathInsideLibrary(
 	const segmentIdChainToParent = sp.pathParts.map((nodeName) =>
 		makeNodeSegmentId({
 			children: {},
+			kind: TreeNodeKind.Section,
 			nodeName,
-			type: TreeNodeType.Section,
 		}),
 	);
 
 	switch (sp.type) {
-		case SplitPathType.File: {
+		case SplitPathKind.File: {
 			return {
 				segmentId: makeNodeSegmentId({
 					extension: sp.extension,
+					kind: TreeNodeKind.File,
 					nodeName: sp.separatedSuffixedBasename.coreName,
 					status: "Unknown",
-					type: TreeNodeType.File,
 				}),
 				segmentIdChainToParent,
-				targetType: TreeNodeType.File,
+				targetType: TreeNodeKind.File,
 			} satisfies FileNodeLocator;
 		}
 
-		case SplitPathType.MdFile: {
+		case SplitPathKind.MdFile: {
 			return {
 				segmentId: makeNodeSegmentId({
 					extension: "md",
+					kind: TreeNodeKind.Scroll,
 					nodeName: sp.separatedSuffixedBasename.coreName,
 					status: "Unknown",
-					type: TreeNodeType.Scroll,
 				}),
 				segmentIdChainToParent,
-				targetType: TreeNodeType.Scroll,
+				targetType: TreeNodeKind.Scroll,
 			} satisfies ScrollNodeLocator;
 		}
 
-		case SplitPathType.Folder: {
+		case SplitPathKind.Folder: {
 			return {
 				segmentId: makeNodeSegmentId({
 					children: {},
+					kind: TreeNodeKind.Section,
 					nodeName: sp.separatedSuffixedBasename.coreName,
-					type: TreeNodeType.Section,
 				}),
 				segmentIdChainToParent,
-				targetType: TreeNodeType.Section,
+				targetType: TreeNodeKind.Section,
 			} satisfies SectionNodeLocator;
 		}
 	}
@@ -118,9 +118,9 @@ export function makeCanonicalSplitPathInsideLibraryFromLocator(
 		basename: coreName,
 		pathParts,
 		type:
-			targetType === TreeNodeType.Section
-				? SplitPathType.Folder
-				: SplitPathType.File,
+			targetType === TreeNodeKind.Section
+				? SplitPathKind.Folder
+				: SplitPathKind.File,
 	});
 
 	if (canonicalRes.isErr())
@@ -130,29 +130,29 @@ export function makeCanonicalSplitPathInsideLibraryFromLocator(
 		canonicalRes.value.separatedSuffixedBasename.suffixParts;
 
 	switch (targetType) {
-		case TreeNodeType.Section: {
+		case TreeNodeKind.Section: {
 			return {
 				pathParts,
 				separatedSuffixedBasename: { coreName, suffixParts },
-				type: SplitPathType.Folder,
+				type: SplitPathKind.Folder,
 			} satisfies CanonicalSplitPathToFolderInsideLibrary;
 		}
 
-		case TreeNodeType.Scroll: {
+		case TreeNodeKind.Scroll: {
 			return {
 				extension: MD,
 				pathParts,
 				separatedSuffixedBasename: { coreName, suffixParts },
-				type: SplitPathType.MdFile,
+				type: SplitPathKind.MdFile,
 			} satisfies CanonicalSplitPathToMdFileInsideLibrary;
 		}
 
-		case TreeNodeType.File: {
+		case TreeNodeKind.File: {
 			return {
 				extension: extension as FileExtension,
 				pathParts,
 				separatedSuffixedBasename: { coreName, suffixParts },
-				type: SplitPathType.File,
+				type: SplitPathKind.File,
 			} satisfies CanonicalSplitPathToFileInsideLibrary;
 		}
 	}
@@ -165,7 +165,7 @@ function nodeNameFromSectionSegmentId(id: SectionNodeSegmentId): NodeName {
 
 function parseSegmentIdTrusted(id: TreeNodeSegmentId): {
 	coreName: NodeName;
-	targetType: TreeNodeType;
+	targetType: TreeNodeKind;
 	extension?: string;
 } {
 	const [coreName, targetType, extension] = id.split(NodeSegmentIdSeparator);
@@ -173,6 +173,6 @@ function parseSegmentIdTrusted(id: TreeNodeSegmentId): {
 	return {
 		coreName: coreName as NodeName,
 		extension,
-		targetType: targetType as TreeNodeType,
+		targetType: targetType as TreeNodeKind,
 	};
 }

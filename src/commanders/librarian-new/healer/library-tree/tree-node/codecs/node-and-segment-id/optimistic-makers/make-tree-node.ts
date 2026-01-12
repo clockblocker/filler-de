@@ -2,8 +2,8 @@ import type { NodeName } from "../../../../../../types/schemas/node-name";
 import {
 	type FileExtension,
 	type MdExtension,
+	TreeNodeKind,
 	TreeNodeStatus,
-	TreeNodeType,
 } from "../../../types/atoms";
 import {
 	type FileNodeSegmentId,
@@ -28,34 +28,34 @@ export function makeTreeNode(segmentId: TreeNodeSegmentId): TreeNode {
 	const parts = segmentId.split(NodeSegmentIdSeparator);
 
 	const nodeName = parts[0] as NodeName;
-	const type = parts[1] as TreeNodeType;
+	const type = parts[1] as TreeNodeKind;
 
 	switch (type) {
-		case TreeNodeType.Section: {
+		case TreeNodeKind.Section: {
 			return {
 				children: {},
+				kind: TreeNodeKind.Section,
 				nodeName,
-				type: TreeNodeType.Section,
 			};
 		}
 
-		case TreeNodeType.Scroll: {
+		case TreeNodeKind.Scroll: {
 			const extension = parts[2] as MdExtension;
 			return {
 				extension,
+				kind: TreeNodeKind.Scroll,
 				nodeName,
 				status: TreeNodeStatus.Unknown,
-				type: TreeNodeType.Scroll,
 			};
 		}
 
-		case TreeNodeType.File: {
+		case TreeNodeKind.File: {
 			const extension = parts[2] as FileExtension;
 			return {
 				extension,
+				kind: TreeNodeKind.File,
 				nodeName,
 				status: TreeNodeStatus.Unknown,
-				type: TreeNodeType.File,
 			};
 		}
 	}

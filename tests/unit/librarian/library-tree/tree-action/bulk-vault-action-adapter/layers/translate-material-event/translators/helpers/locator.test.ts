@@ -7,7 +7,7 @@ import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,
 } from "../../../../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
-import { SplitPathType } from "../../../../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathKind } from "../../../../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { defaultSettingsForUnitTests } from "../../../../../../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../../../../../../common-utils/setup-spy";
 
@@ -31,7 +31,7 @@ const spMdFile = (
 	basename,
 	extension: "md",
 	pathParts,
-	type: SplitPathType.MdFile,
+	type: SplitPathKind.MdFile,
 });
 
 const spFolder = (
@@ -40,7 +40,7 @@ const spFolder = (
 ): SplitPathToFolder => ({
 	basename,
 	pathParts,
-	type: SplitPathType.Folder,
+	type: SplitPathKind.Folder,
 });
 
 const spFile = (
@@ -51,7 +51,7 @@ const spFile = (
 	basename,
 	extension,
 	pathParts,
-	type: SplitPathType.File,
+	type: SplitPathKind.File,
 });
 
 describe("tryCanonicalizeSplitPathToDestination", () => {

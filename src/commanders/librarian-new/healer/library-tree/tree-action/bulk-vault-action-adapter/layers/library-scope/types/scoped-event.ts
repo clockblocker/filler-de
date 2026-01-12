@@ -1,7 +1,7 @@
 import z from "zod";
 import type {
 	BulkVaultEvent,
-	VaultEventType,
+	VaultEventKind,
 } from "../../../../../../../../../managers/obsidian/vault-action-manager";
 import type {
 	FileCreatedVaultEvent,
@@ -57,35 +57,35 @@ export type LibraryScopedBulkVaultEvent = Omit<
 // -- inside --
 
 export type ScopedFileCreatedVaultEventInside = {
-	type: typeof VaultEventType.FileCreated;
+	kind: typeof VaultEventKind.FileCreated;
 	scope: typeof Scope.Inside;
 
 	splitPath: SplitPathToFileInsideLibrary | SplitPathToMdFileInsideLibrary;
 };
 
 export type ScopedFileDeletedVaultEventInside = {
-	type: typeof VaultEventType.FileDeleted;
+	kind: typeof VaultEventKind.FileDeleted;
 	scope: typeof Scope.Inside;
 
 	splitPath: SplitPathToFileInsideLibrary | SplitPathToMdFileInsideLibrary;
 };
 
 export type ScopedFolderCreatedVaultEventInside = {
-	type: typeof VaultEventType.FolderCreated;
+	kind: typeof VaultEventKind.FolderCreated;
 	scope: typeof Scope.Inside;
 
 	splitPath: SplitPathToFolderInsideLibrary;
 };
 
 export type ScopedFolderDeletedVaultEventInside = {
-	type: typeof VaultEventType.FolderDeleted;
+	kind: typeof VaultEventKind.FolderDeleted;
 	scope: typeof Scope.Inside;
 
 	splitPath: SplitPathToFolderInsideLibrary;
 };
 
 export type ScopedFileRenamedVaultEventInside = {
-	type: typeof VaultEventType.FileRenamed;
+	kind: typeof VaultEventKind.FileRenamed;
 	scope: typeof Scope.Inside;
 
 	from: SplitPathToFileInsideLibrary | SplitPathToMdFileInsideLibrary;
@@ -95,7 +95,7 @@ export type ScopedFileRenamedVaultEventInside = {
 // -- inside to inside --
 
 export type ScopedFolderRenamedVaultEventInside = {
-	type: typeof VaultEventType.FolderRenamed;
+	kind: typeof VaultEventKind.FolderRenamed;
 	scope: typeof Scope.Inside;
 
 	from: SplitPathToFolderInsideLibrary;
@@ -105,7 +105,7 @@ export type ScopedFolderRenamedVaultEventInside = {
 // -- inside to outside --
 
 export type ScopedFileRenamedVaultEventInsideToOutside = {
-	type: typeof VaultEventType.FileRenamed;
+	kind: typeof VaultEventKind.FileRenamed;
 	scope: typeof Scope.InsideToOutside;
 
 	from: ScopedFileRenamedVaultEventInside["from"];
@@ -113,7 +113,7 @@ export type ScopedFileRenamedVaultEventInsideToOutside = {
 };
 
 export type ScopedFolderRenamedVaultEventInsideToOutside = {
-	type: typeof VaultEventType.FolderRenamed;
+	kind: typeof VaultEventKind.FolderRenamed;
 	scope: typeof Scope.InsideToOutside;
 
 	from: ScopedFolderRenamedVaultEventInside["from"];
@@ -123,7 +123,7 @@ export type ScopedFolderRenamedVaultEventInsideToOutside = {
 // -- outside to inside --
 
 export type ScopedFileRenamedVaultEventOutsideToInside = {
-	type: typeof VaultEventType.FileRenamed;
+	kind: typeof VaultEventKind.FileRenamed;
 	scope: typeof Scope.OutsideToInside;
 
 	from: FileRenamedVaultEvent["to"];
@@ -131,7 +131,7 @@ export type ScopedFileRenamedVaultEventOutsideToInside = {
 };
 
 export type ScopedFolderRenamedVaultEventOutsideToInside = {
-	type: typeof VaultEventType.FolderRenamed;
+	kind: typeof VaultEventKind.FolderRenamed;
 	scope: typeof Scope.OutsideToInside;
 
 	from: FolderRenamedVaultEvent["to"];

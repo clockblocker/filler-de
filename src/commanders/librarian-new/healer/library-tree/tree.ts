@@ -9,7 +9,7 @@ import type {
 } from "./tree-action/types/tree-action";
 import { getNodeName } from "./tree-action/utils/locator/locator-utils";
 import { makeNodeSegmentId } from "./tree-node/codecs/node-and-segment-id/make-node-segment-id";
-import { TreeNodeStatus, TreeNodeType } from "./tree-node/types/atoms";
+import { TreeNodeKind, TreeNodeStatus } from "./tree-node/types/atoms";
 import {
 	type FileNodeSegmentId,
 	NodeSegmentIdSeparator,
@@ -33,10 +33,10 @@ function makeSegmentId(node: FileNode): FileNodeSegmentId;
 function makeSegmentId(node: SectionNode): SectionNodeSegmentId;
 function makeSegmentId(node: TreeNode): TreeNodeSegmentId;
 function makeSegmentId(node: TreeNode): TreeNodeSegmentId {
-	if (node.type === TreeNodeType.Section) {
+	if (node.kind === TreeNodeKind.Section) {
 		return makeNodeSegmentId(node);
 	}
-	if (node.type === TreeNodeType.Scroll) {
+	if (node.type === TreeNodeKind.Scroll) {
 		return makeNodeSegmentId(node);
 	}
 	return makeNodeSegmentId(node);
@@ -50,8 +50,8 @@ export class Tree {
 	constructor(libraryRootName: NodeName) {
 		this.root = {
 			children: {},
+			kind: TreeNodeKind.Section,
 			nodeName: libraryRootName,
-			type: TreeNodeType.Section,
 		};
 	}
 
@@ -89,20 +89,20 @@ export class Tree {
 	private makeLeafNode(action: CreateTreeLeafAction): LeafNode {
 		const nodeName = getNodeName(action.targetLocator);
 
-		if (action.targetLocator.targetType === TreeNodeType.Scroll) {
+		if (action.targetLocator.targetType === TreeNodeKind.Scroll) {
 			return {
 				extension: "md",
+				kind: TreeNodeKind.Scroll,
 				nodeName,
 				status: action.initialStatus ?? TreeNodeStatus.NotStarted,
-				type: TreeNodeType.Scroll,
 			};
 		}
 		// File
 		return {
 			extension: action.observedSplitPath.extension,
+			kind: TreeNodeKind.File,
 			nodeName,
 			status: TreeNodeStatus.Unknown,
-			type: TreeNodeType.File,
 		};
 	}
 
@@ -134,7 +134,7 @@ export class Tree {
 			const child = parent.children[segmentId];
 			if (
 				child &&
-				child.type === TreeNodeType.Section &&
+				child.kind === TreeNodeKind.Section &&
 				Object.keys(child.children).length === 0
 			) {
 				delete parent.children[segmentId];
@@ -200,7 +200,7 @@ export class Tree {
 	private applyChangeStatus(action: ChangeNodeStatusAction): void {
 		const { targetLocator, newStatus } = action;
 
-		if (targetLocator.targetType === TreeNodeType.Section) {
+		if (targetLocator.targetType === TreeNodeKind.Section) {
 			// Propagate to descendants
 			const section = this.findSection([
 				...targetLocator.segmentIdChainToParent,
@@ -216,7 +216,7 @@ export class Tree {
 			);
 			if (parent) {
 				const node = parent.children[targetLocator.segmentId];
-				if (node && node.type !== TreeNodeType.Section) {
+				if (node && node.kind !== TreeNodeKind.Section) {
 					(node as ScrollNode).status = newStatus;
 				}
 			}
@@ -228,7 +228,7 @@ export class Tree {
 		status: TreeNodeStatus,
 	): void {
 		for (const child of Object.values(section.children)) {
-			if (child.type === TreeNodeType.Section) {
+			if (child.kind === TreeNodeKind.Section) {
 				this.propagateStatus(child, status);
 			} else {
 				(child as ScrollNode).status = status;
@@ -248,7 +248,7 @@ export class Tree {
 				continue;
 			}
 			const child = current.children[segId];
-			if (!child || child.type !== TreeNodeType.Section) return undefined;
+			if (!child || child.type !== TreeNodeKind.Section) return undefined;
 			current = child;
 		}
 		return current ?? this.root;
@@ -268,11 +268,11 @@ export class Tree {
 				child = {
 					children: {},
 					nodeName,
-					type: TreeNodeType.Section,
+					type: TreeNodeKind.Section,
 				};
 				current.children[segId] = child;
 			}
-			if (child.type !== TreeNodeType.Section) {
+			if (child.type !== TreeNodeKind.Section) {
 				throw new Error(
 					`Expected section at ${segId}, got ${child.type}`,
 				);

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { computeCodexSplitPath } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/codex-split-path";
 import type { SectionNodeSegmentId } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/node-segment-id";
-import { SplitPathType } from "../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathKind } from "../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
 
 let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
@@ -27,7 +27,7 @@ describe("computeCodexSplitPath", () => {
 			basename: "__-Library",
 			extension: "md",
 			pathParts: ["Library"],
-			type: SplitPathType.MdFile,
+			type: SplitPathKind.MdFile,
 		});
 	});
 
@@ -39,7 +39,7 @@ describe("computeCodexSplitPath", () => {
 			basename: "__-A",
 			extension: "md",
 			pathParts: ["Library", "A"],
-			type: SplitPathType.MdFile,
+			type: SplitPathKind.MdFile,
 		});
 	});
 
@@ -51,7 +51,7 @@ describe("computeCodexSplitPath", () => {
 			basename: "__-B-A",
 			extension: "md",
 			pathParts: ["Library", "A", "B"],
-			type: SplitPathType.MdFile,
+			type: SplitPathKind.MdFile,
 		});
 	});
 
@@ -63,7 +63,7 @@ describe("computeCodexSplitPath", () => {
 			basename: "__-C-B-A",
 			extension: "md",
 			pathParts: ["Library", "A", "B", "C"],
-			type: SplitPathType.MdFile,
+			type: SplitPathKind.MdFile,
 		});
 	});
 

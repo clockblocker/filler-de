@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
 import { computeSectionStatus } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/compute-section-status";
 import {
+	TreeNodeKind,
 	TreeNodeStatus,
-	TreeNodeType,
 } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
 import type {
 	ScrollNode,
@@ -16,9 +16,9 @@ const scroll = (
 	status: TreeNodeStatus = TreeNodeStatus.NotStarted,
 ): ScrollNode => ({
 	extension: "md",
+	kind: TreeNodeKind.Scroll,
 	nodeName: name as NodeName,
 	status,
-	type: TreeNodeType.Scroll,
 });
 
 const section = (
@@ -26,8 +26,8 @@ const section = (
 	children: Record<string, SectionNode | ScrollNode> = {},
 ): SectionNode => ({
 	children: children as SectionNode["children"],
+	kind: TreeNodeKind.Section,
 	nodeName: name as NodeName,
-	type: TreeNodeType.Section,
 });
 
 describe("computeSectionStatus", () => {

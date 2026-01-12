@@ -1,6 +1,6 @@
 import { err, ok, type Result } from "neverthrow";
 import { getParsedUserSettings } from "../../../../../../../../global-state/global-state";
-import { SplitPathType } from "../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathKind } from "../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import { NodeNameSchema } from "../../../../../../types/schemas/node-name";
 import type { SplitPathInsideLibrary } from "../../../bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
 import type {
@@ -51,7 +51,7 @@ export const tryBuildCanonicalSeparatedSuffixedBasename = ({
 
 		const pathPartsSansRoot = dropLibraryRootIfPresent(pathParts);
 		const suffixParts =
-			type === SplitPathType.Folder
+			type === SplitPathKind.Folder
 				? []
 				: [...pathPartsSansRoot].reverse();
 
@@ -87,7 +87,7 @@ export const tryParseCanonicalSplitPathInsideLibrary = (
 
 				// additionally enforce folder has no suffixParts (redundant but explicit)
 				if (
-					sp.type === SplitPathType.Folder &&
+					sp.type === SplitPathKind.Folder &&
 					suffixParts.length !== 0
 				) {
 					return err("Folder basename must not contain suffix parts");

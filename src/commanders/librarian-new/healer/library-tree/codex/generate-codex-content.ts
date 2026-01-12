@@ -5,7 +5,7 @@
 
 import { getParsedUserSettings } from "../../../../../global-state/global-state";
 import { LINE_BREAK, SPACE_F, TAB } from "../../../../../types/literals";
-import { TreeNodeType } from "../tree-node/types/atoms";
+import { TreeNodeKind } from "../tree-node/types/atoms";
 import type { SectionNodeSegmentId } from "../tree-node/types/node-segment-id";
 import { NodeSegmentIdSeparator } from "../tree-node/types/node-segment-id";
 import type { SectionNode, TreeNode } from "../tree-node/types/tree-node";
@@ -86,8 +86,8 @@ function generateItems(
 	const children = Object.values(section.children);
 
 	for (const child of children) {
-		switch (child.type) {
-			case TreeNodeType.Scroll: {
+		switch (child.kind) {
+			case TreeNodeKind.Scroll: {
 				if (depth <= showScrollsForDepth) {
 					const line = formatScrollLine(
 						child.nodeName,
@@ -99,13 +99,13 @@ function generateItems(
 				break;
 			}
 
-			case TreeNodeType.File: {
+			case TreeNodeKind.File: {
 				const line = formatFileLine(child.nodeName, parentPathParts);
 				lines.push(`${indent}${line}`);
 				break;
 			}
 
-			case TreeNodeType.Section: {
+			case TreeNodeKind.Section: {
 				const sectionStatus = computeSectionStatus(child);
 				const line = formatChildSectionLine(
 					child.nodeName,

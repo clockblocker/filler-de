@@ -2,7 +2,7 @@ import {
 	type NodeName,
 	NodeNameSchema,
 } from "../../../../../types/schemas/node-name";
-import { TreeNodeType } from "../../../tree-node/types/atoms";
+import { TreeNodeKind } from "../../../tree-node/types/atoms";
 import { NodeSegmentIdSeparator } from "../../../tree-node/types/node-segment-id";
 import type {
 	SectionNodeLocator,
@@ -38,6 +38,6 @@ export const getParentLocator = (
 	return {
 		segmentId: parentSegmentId,
 		segmentIdChainToParent: chain.slice(0, -1),
-		targetType: TreeNodeType.Section,
+		targetType: TreeNodeKind.Section,
 	};
 };

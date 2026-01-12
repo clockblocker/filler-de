@@ -12,7 +12,7 @@ import type {
 	FolderCreatedVaultEvent,
 	FolderDeletedVaultEvent,
 	FolderRenamedVaultEvent,
-	VaultEventType,
+	VaultEventKind,
 } from "../../../../../../../../../managers/obsidian/vault-action-manager/types/vault-event";
 import type {
 	SplitPathInsideLibrary,
@@ -92,12 +92,12 @@ export type EnscopedEvent<T extends VaultEvent> =
 							: never;
 
 type DescopedByType = {
-	[VaultEventType.FileCreated]: FileCreatedVaultEvent;
-	[VaultEventType.FileDeleted]: FileDeletedVaultEvent;
-	[VaultEventType.FolderCreated]: FolderCreatedVaultEvent;
-	[VaultEventType.FolderDeleted]: FolderDeletedVaultEvent;
-	[VaultEventType.FileRenamed]: FileRenamedVaultEvent;
-	[VaultEventType.FolderRenamed]: FolderRenamedVaultEvent;
+	[VaultEventKind.FileCreated]: FileCreatedVaultEvent;
+	[VaultEventKind.FileDeleted]: FileDeletedVaultEvent;
+	[VaultEventKind.FolderCreated]: FolderCreatedVaultEvent;
+	[VaultEventKind.FolderDeleted]: FolderDeletedVaultEvent;
+	[VaultEventKind.FileRenamed]: FileRenamedVaultEvent;
+	[VaultEventKind.FolderRenamed]: FolderRenamedVaultEvent;
 };
 
 export type DescopedEvent<T extends LibraryScopedVaultEvent> = T extends {

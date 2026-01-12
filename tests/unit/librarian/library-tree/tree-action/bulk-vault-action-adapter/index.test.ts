@@ -2,10 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { buildTreeActions } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/index";
 import { TreeActionType } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/types/tree-action";
 import { getNodeName } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/utils/locator/locator-utils";
-import { TreeNodeType } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
+import { TreeNodeKind } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
 import type { BulkVaultEvent } from "../../../../../../src/managers/obsidian/vault-action-manager";
 import type { PossibleRootVaultEvent } from "../../../../../../src/managers/obsidian/vault-action-manager/impl/event-processing/bulk-event-emmiter/types/bulk/helpers";
-import { SplitPathType } from "../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathKind } from "../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import type {
 	FileCreatedVaultEvent,
 	FileDeletedVaultEvent,
@@ -15,7 +15,7 @@ import type {
 	FolderRenamedVaultEvent,
 	VaultEvent,
 } from "../../../../../../src/managers/obsidian/vault-action-manager/types/vault-event";
-import { VaultEventType } from "../../../../../../src/managers/obsidian/vault-action-manager/types/vault-event";
+import { VaultEventKind } from "../../../../../../src/managers/obsidian/vault-action-manager/types/vault-event";
 import { defaultSettingsForUnitTests } from "../../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../../common-utils/setup-spy";
 
@@ -35,44 +35,44 @@ const spFile = (
 	pathParts: string[],
 	basename: string,
 	ext: string = "txt",
-): { basename: string; pathParts: string[]; type: typeof SplitPathType.File; extension: string } => ({
+): { basename: string; pathParts: string[]; type: typeof SplitPathKind.File; extension: string } => ({
 	basename,
 	extension: ext,
 	pathParts,
-	type: SplitPathType.File,
+	type: SplitPathKind.File,
 });
 
 const spFolder = (
 	pathParts: string[],
 	basename: string,
-): { basename: string; pathParts: string[]; type: typeof SplitPathType.Folder } => ({
+): { basename: string; pathParts: string[]; type: typeof SplitPathKind.Folder } => ({
 	basename,
 	pathParts,
-	type: SplitPathType.Folder,
+	type: SplitPathKind.Folder,
 });
 
 const spMdFile = (
 	pathParts: string[],
 	basename: string,
-): { basename: string; pathParts: string[]; type: typeof SplitPathType.MdFile; extension: "md" } => ({
+): { basename: string; pathParts: string[]; type: typeof SplitPathKind.MdFile; extension: "md" } => ({
 	basename,
 	extension: "md",
 	pathParts,
-	type: SplitPathType.MdFile,
+	type: SplitPathKind.MdFile,
 });
 
 const evFileCreated = (
 	sp: ReturnType<typeof spFile> | ReturnType<typeof spMdFile>,
 ): FileCreatedVaultEvent => ({
+	kind: VaultEventKind.FileCreated,
 	splitPath: sp,
-	type: VaultEventType.FileCreated,
 });
 
 const evFileDeleted = (
 	sp: ReturnType<typeof spFile> | ReturnType<typeof spMdFile>,
 ): FileDeletedVaultEvent => ({
+	kind: VaultEventKind.FileDeleted,
 	splitPath: sp,
-	type: VaultEventType.FileDeleted,
 });
 
 const evFileRenamed = (
@@ -80,18 +80,18 @@ const evFileRenamed = (
 	to: ReturnType<typeof spFile> | ReturnType<typeof spMdFile>,
 ): FileRenamedVaultEvent => ({
 	from,
+	kind: VaultEventKind.FileRenamed,
 	to,
-	type: VaultEventType.FileRenamed,
 });
 
 const evFolderCreated = (sp: ReturnType<typeof spFolder>): FolderCreatedVaultEvent => ({
+	kind: VaultEventKind.FolderCreated,
 	splitPath: sp,
-	type: VaultEventType.FolderCreated,
 });
 
 const evFolderDeleted = (sp: ReturnType<typeof spFolder>): FolderDeletedVaultEvent => ({
+	kind: VaultEventKind.FolderDeleted,
 	splitPath: sp,
-	type: VaultEventType.FolderDeleted,
 });
 
 const evFolderRenamed = (
@@ -99,8 +99,8 @@ const evFolderRenamed = (
 	to: ReturnType<typeof spFolder>,
 ): FolderRenamedVaultEvent => ({
 	from,
+	kind: VaultEventKind.FolderRenamed,
 	to,
-	type: VaultEventType.FolderRenamed,
 });
 
 const bulk = ({
@@ -135,7 +135,7 @@ describe("buildTreeActions", () => {
 			if (!action) throw new Error("Expected action");
 			expect(action.actionType).toBe(TreeActionType.Create);
 			expect(getNodeName(action.targetLocator)).toBe("Note");
-			expect(action.targetLocator.targetType).toBe(TreeNodeType.Scroll);
+			expect(action.targetLocator.targetType).toBe(TreeNodeKind.Scroll);
 		});
 
 		it("FileCreated inside nested => Create", () => {
@@ -150,7 +150,7 @@ describe("buildTreeActions", () => {
 			if (!action) throw new Error("Expected action");
 			expect(action.actionType).toBe(TreeActionType.Create);
 			expect(getNodeName(action.targetLocator)).toBe("Note");
-			expect(action.targetLocator.targetType).toBe(TreeNodeType.Scroll);
+			expect(action.targetLocator.targetType).toBe(TreeNodeKind.Scroll);
 		});
 
 		it("FileRenamed outside→inside => Create", () => {
@@ -170,7 +170,7 @@ describe("buildTreeActions", () => {
 			if (!action) throw new Error("Expected action");
 			expect(action.actionType).toBe(TreeActionType.Create);
 			expect(getNodeName(action.targetLocator)).toBe("a");
-			expect(action.targetLocator.targetType).toBe(TreeNodeType.Scroll);
+			expect(action.targetLocator.targetType).toBe(TreeNodeKind.Scroll);
 		});
 	});
 
@@ -202,7 +202,7 @@ describe("buildTreeActions", () => {
 			if (!action) throw new Error("Expected action");
 			expect(action.actionType).toBe(TreeActionType.Delete);
 			expect(getNodeName(action.targetLocator)).toBe("Section");
-			expect(action.targetLocator.targetType).toBe(TreeNodeType.Section);
+			expect(action.targetLocator.targetType).toBe(TreeNodeKind.Section);
 		});
 
 		it("FileRenamed inside→outside => Delete", () => {

@@ -7,7 +7,7 @@ import type {
 	SplitPathToMdFile,
 } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import type { VaultEvent } from "../../../src/managers/obsidian/vault-action-manager/types/vault-event";
-import { VaultEventType } from "../../../src/managers/obsidian/vault-action-manager/types/vault-event";
+import { VaultEventKind } from "../../../src/managers/obsidian/vault-action-manager/types/vault-event";
 
 // Helper: build split paths
 const F = (path: string): SplitPathToFolder => {
@@ -35,26 +35,26 @@ const P = (path: string): SplitPathToMdFile | SplitPathToFile => {
 const fileRenamed = (
 	from: string,
 	to: string,
-): Extract<VaultEvent, { type: typeof VaultEventType.FileRenamed }> => ({
+): Extract<VaultEvent, { type: typeof VaultEventKind.FileRenamed }> => ({
 	from: P(from),
+	kind: VaultEventKind.FileRenamed,
 	to: P(to),
-	type: VaultEventType.FileRenamed,
 });
 
 const folderRenamed = (
 	from: string,
 	to: string,
-): Extract<VaultEvent, { type: typeof VaultEventType.FolderRenamed }> => ({
+): Extract<VaultEvent, { type: typeof VaultEventKind.FolderRenamed }> => ({
 	from: F(from),
+	kind: VaultEventKind.FolderRenamed,
 	to: F(to),
-	type: VaultEventType.FolderRenamed,
 });
 
 const fileDeleted = (
 	path: string,
-): Extract<VaultEvent, { type: typeof VaultEventType.FileDeleted }> => ({
+): Extract<VaultEvent, { type: typeof VaultEventKind.FileDeleted }> => ({
+	kind: VaultEventKind.FileDeleted,
 	splitPath: P(path),
-	type: VaultEventType.FileDeleted,
 });
 
 // Helper: compare sets of events (order-independent)
