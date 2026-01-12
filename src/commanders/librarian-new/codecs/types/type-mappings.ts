@@ -1,11 +1,17 @@
 import { SplitPathKind } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { InvertRecord } from "../../../../types/helpers";
-import type { SplitPathInsideLibrary } from "../../healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
-import type { TreeNodeLocator } from "../../healer/library-tree/tree-action/types/target-chains";
-import type { CanonicalSplitPathInsideLibrary } from "../../healer/library-tree/tree-action/utils/canonical-naming/types";
 import type { FileExtension } from "../../healer/library-tree/tree-node/types/atoms";
 import { TreeNodeKind } from "../../healer/library-tree/tree-node/types/atoms";
+import type {
+	FileNodeSegmentId,
+	ScrollNodeSegmentId,
+	SectionNodeSegmentId,
+	TreeNodeSegmentId,
+} from "../../healer/library-tree/tree-node/types/node-segment-id";
 import type { NodeName } from "../../types/schemas/node-name";
+import type { CanonicalSplitPathInsideLibrary } from "../canonical-split-path/types";
+import type { TreeNodeLocator } from "../locator/types";
+import type { SplitPathInsideLibrary } from "../split-path-inside-library/types";
 
 export const TreeNodeKindToSplitPathKind = {
 	[TreeNodeKind.Section]: SplitPathKind.Folder,
@@ -64,3 +70,12 @@ type SegmentIdComponentsMap = {
 
 export type SegmentIdComponents<NK extends TreeNodeKind> =
 	SegmentIdComponentsMap[NK];
+
+export type SegmentIdOf<NK extends TreeNodeKind> =
+	NK extends typeof TreeNodeKind.Section
+		? SectionNodeSegmentId
+		: NK extends typeof TreeNodeKind.Scroll
+			? ScrollNodeSegmentId
+			: NK extends typeof TreeNodeKind.File
+				? FileNodeSegmentId
+				: never;

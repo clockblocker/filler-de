@@ -1,6 +1,6 @@
 import type { SuffixCodecs } from "../../internal/suffix";
-import type { SplitPathInsideLibrary } from "../../tree-action/bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
-import type { CanonicalSplitPathInsideLibrary } from "../../tree-action/utils/canonical-naming/types";
+import type { SplitPathInsideLibrary } from "../../split-path-inside-library/types";
+import type { CanonicalSplitPathInsideLibrary } from "../types";
 
 /**
  * Converts canonical split path to regular split path inside library.
@@ -10,7 +10,9 @@ export function fromCanonicalSplitPathInsideLibrary(
 	suffix: SuffixCodecs,
 	sp: CanonicalSplitPathInsideLibrary,
 ): SplitPathInsideLibrary {
-	const basename = suffix.serializeSeparatedSuffix(sp.separatedSuffixedBasename);
+	const basename = suffix.serializeSeparatedSuffix(
+		sp.separatedSuffixedBasename,
+	);
 	return {
 		...sp,
 		basename,

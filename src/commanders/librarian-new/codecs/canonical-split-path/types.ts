@@ -1,9 +1,10 @@
 import type {
+	CanonicalSeparatedSuffixedBasename,
 	CanonicalSplitPathInsideLibrary,
 	CanonicalSplitPathToFileInsideLibrary,
 	CanonicalSplitPathToFolderInsideLibrary,
 	CanonicalSplitPathToMdFileInsideLibrary,
-} from "../../healer/library-tree/tree-action/utils/canonical-naming/types";
+} from "./types";
 
 /**
  * Public types for canonical-split-path codecs.
@@ -13,4 +14,5 @@ export type {
 	CanonicalSplitPathToFileInsideLibrary,
 	CanonicalSplitPathToFolderInsideLibrary,
 	CanonicalSplitPathToMdFileInsideLibrary,
+	CanonicalSeparatedSuffixedBasename,
 };

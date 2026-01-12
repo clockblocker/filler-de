@@ -12,12 +12,12 @@ import type {
 	SplitPathToFileInsideLibrary,
 	SplitPathToFolderInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
-} from "../bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
+} from "../../../../codecs/split-path-inside-library/types";
 import type {
 	FileNodeLocator,
 	ScrollNodeLocator,
 	SectionNodeLocator,
-} from "./target-chains";
+} from "../../../../codecs/locator/types";
 
 export type TreeAction = Prettify<
 	| CreateTreeLeafAction

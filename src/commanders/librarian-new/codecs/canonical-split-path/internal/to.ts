@@ -5,11 +5,11 @@ import { NodeNameSchema } from "../../../types/schemas/node-name";
 import type { CodecError } from "../../errors";
 import { makeSplitPathError, makeZodError } from "../../errors";
 import type { SuffixCodecs } from "../../internal/suffix";
-import type { SplitPathInsideLibrary } from "../../tree-action/bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
+import type { SplitPathInsideLibrary } from "../../split-path-inside-library/types";
 import type {
 	CanonicalSeparatedSuffixedBasename,
 	CanonicalSplitPathInsideLibrary,
-} from "../../tree-action/utils/canonical-naming/types";
+} from "../types";
 
 /**
  * Extracts duplicate marker (e.g., " 1", " 2") from end of basename.

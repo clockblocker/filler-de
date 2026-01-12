@@ -22,6 +22,8 @@ import {
 } from "./codecs";
 import { healingActionsToVaultActions } from "./codecs/healing-to-vault-action";
 import type { CanonicalSplitPathToMdFileInsideLibrary } from "./codecs/locator";
+import type { ScrollNodeLocator } from "./codecs/locator/types";
+import type { SplitPathInsideLibrary } from "./codecs/split-path-inside-library/types";
 import { Healer } from "./healer/healer";
 import {
 	CODEX_CORE_NAME,
@@ -37,10 +39,8 @@ import { mergeCodexImpacts } from "./healer/library-tree/codex/merge-codex-impac
 import { Tree } from "./healer/library-tree/tree";
 import { buildTreeActions } from "./healer/library-tree/tree-action/bulk-vault-action-adapter";
 import { tryParseAsInsideLibrarySplitPath } from "./healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
-import type { SplitPathInsideLibrary } from "./healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
 import { inferCreatePolicy } from "./healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/infer-create";
 import { tryCanonicalizeSplitPathToDestination } from "./healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/translators/helpers/locator";
-import type { ScrollNodeLocator } from "./healer/library-tree/tree-action/types/target-chains";
 import type {
 	CreateTreeLeafAction,
 	TreeAction,

@@ -1,5 +1,17 @@
 import { MD } from "../../../../../../../managers/obsidian/vault-action-manager/types/literals";
 import { SplitPathKind } from "../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import type {
+	CanonicalSplitPathInsideLibrary,
+	CanonicalSplitPathToFileInsideLibrary,
+	CanonicalSplitPathToFolderInsideLibrary,
+	CanonicalSplitPathToMdFileInsideLibrary,
+} from "../../../../../codecs/canonical-split-path/types";
+import type {
+	FileNodeLocator,
+	ScrollNodeLocator,
+	SectionNodeLocator,
+	TreeNodeLocator,
+} from "../../../../../codecs/locator/types";
 import type { NodeName } from "../../../../../types/schemas/node-name";
 import { makeNodeSegmentId } from "../../../tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import {
@@ -11,19 +23,7 @@ import {
 	type SectionNodeSegmentId,
 	type TreeNodeSegmentId,
 } from "../../../tree-node/types/node-segment-id";
-import type {
-	FileNodeLocator,
-	ScrollNodeLocator,
-	SectionNodeLocator,
-	TreeNodeLocator,
-} from "../../types/target-chains";
 import { tryBuildCanonicalSeparatedSuffixedBasename } from "../canonical-naming/suffix-utils/build-canonical-separated-suffixed-basename-path-king-way";
-import type {
-	CanonicalSplitPathInsideLibrary,
-	CanonicalSplitPathToFileInsideLibrary,
-	CanonicalSplitPathToFolderInsideLibrary,
-	CanonicalSplitPathToMdFileInsideLibrary,
-} from "../canonical-naming/types";
 
 export function makeLocatorFromCanonicalSplitPathInsideLibrary(
 	sp: CanonicalSplitPathToFileInsideLibrary,

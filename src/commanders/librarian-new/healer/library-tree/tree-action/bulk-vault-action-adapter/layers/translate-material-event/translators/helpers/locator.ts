@@ -5,8 +5,8 @@ import {
 	type NodeName,
 	NodeNameSchema,
 } from "../../../../../../../../types/schemas/node-name";
-import type { CanonicalSplitPathInsideLibrary } from "../../../../../utils/canonical-naming/types";
-import type { SplitPathInsideLibrary } from "../../../library-scope/types/inside-library-split-paths";
+import type { CanonicalSplitPathInsideLibrary } from "../../../../../../../../codecs/canonical-split-path/types";
+import type { SplitPathInsideLibrary } from "../../../../../../../../codecs/split-path-inside-library/types";
 import {
 	type CanonicalSplitPathToDestination,
 	MaterializedEventKind,

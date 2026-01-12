@@ -6,13 +6,11 @@ import type {
 	ScrollNodeLocator,
 	SectionNodeLocator,
 	TreeNodeLocator,
-} from "../../../healer/library-tree/tree-action/types/target-chains";
-import type {
 	CanonicalSplitPathInsideLibrary,
 	CanonicalSplitPathToFileInsideLibrary,
 	CanonicalSplitPathToFolderInsideLibrary,
 	CanonicalSplitPathToMdFileInsideLibrary,
-} from "../../../healer/library-tree/tree-action/utils/canonical-naming/types";
+} from "../../types";
 import { makeNodeSegmentId } from "../../../healer/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import type { FileExtension } from "../../../healer/library-tree/tree-node/types/atoms";
 import { TreeNodeKind } from "../../../healer/library-tree/tree-node/types/atoms";

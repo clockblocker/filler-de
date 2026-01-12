@@ -2,6 +2,15 @@ import { ok, type Result } from "neverthrow";
 import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { Codecs } from "../codecs";
 import type { CodecError } from "../codecs/errors";
+import type {
+	FileNodeLocator,
+	ScrollNodeLocator,
+} from "../codecs/locator/types";
+import type {
+	SplitPathInsideLibrary,
+	SplitPathToFileInsideLibrary,
+	SplitPathToMdFileInsideLibrary,
+} from "../codecs/split-path-inside-library/types";
 import type { NodeName } from "../types/schemas/node-name";
 import type { TreeAccessor } from "./library-tree/codex/codex-impact-to-actions";
 import {
@@ -9,15 +18,6 @@ import {
 	computeCodexImpact,
 } from "./library-tree/codex/compute-codex-impact";
 import type { Tree } from "./library-tree/tree";
-import type {
-	SplitPathInsideLibrary,
-	SplitPathToFileInsideLibrary,
-	SplitPathToMdFileInsideLibrary,
-} from "./library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
-import type {
-	FileNodeLocator,
-	ScrollNodeLocator,
-} from "./library-tree/tree-action/types/target-chains";
 import type {
 	ChangeNodeStatusAction,
 	CreateTreeLeafAction,

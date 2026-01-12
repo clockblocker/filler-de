@@ -1,6 +1,6 @@
 import type { AnySplitPath } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { CodecRules } from "../../rules";
-import type { SplitPathInsideLibrary } from "../../tree-action/bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
+import type { SplitPathInsideLibrary } from "../types";
 
 /**
  * Converts library-scoped split path to vault-scoped split path.

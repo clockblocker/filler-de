@@ -10,18 +10,18 @@ import type {
 	FileNodeLocator,
 	ScrollNodeLocator,
 	SectionNodeLocator,
-} from "../../../types/target-chains";
+} from "../../../../../../codecs/locator/types";
 import type {
 	CanonicalSplitPathToFileInsideLibrary,
 	CanonicalSplitPathToFolderInsideLibrary,
 	CanonicalSplitPathToMdFileInsideLibrary,
-} from "../../../utils/canonical-naming/types";
+} from "../../../../../../codecs/canonical-split-path/types";
 import type {
 	SplitPathInsideLibrary,
 	SplitPathToFileInsideLibrary,
 	SplitPathToFolderInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
-} from "../library-scope/types/inside-library-split-paths";
+} from "../../../../../../codecs/split-path-inside-library/types";
 
 /**
  * MaterializedNodeEvent represents a **single-node, inside-Library event**

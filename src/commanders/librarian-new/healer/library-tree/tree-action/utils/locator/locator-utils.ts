@@ -1,13 +1,13 @@
+import type {
+	SectionNodeLocator,
+	TreeNodeLocator,
+} from "../../../../../codecs/locator/types";
 import {
 	type NodeName,
 	NodeNameSchema,
 } from "../../../../../types/schemas/node-name";
 import { TreeNodeKind } from "../../../tree-node/types/atoms";
 import { NodeSegmentIdSeparator } from "../../../tree-node/types/node-segment-id";
-import type {
-	SectionNodeLocator,
-	TreeNodeLocator,
-} from "../../types/target-chains";
 
 export const getNodeName = (locator: TreeNodeLocator): NodeName => {
 	const sep = NodeSegmentIdSeparator; // "──" (your const)

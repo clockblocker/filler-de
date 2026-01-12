@@ -1,7 +1,10 @@
 import { err, ok, type Result } from "neverthrow";
 import { getParsedUserSettings } from "../../../../../../../../global-state/global-state";
 import { SplitPathKind } from "../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
-import { NodeNameSchema } from "../../../../../../types/schemas/node-name";
+import {
+	type NodeName,
+	NodeNameSchema,
+} from "../../../../../../types/schemas/node-name";
 import type { SplitPathInsideLibrary } from "../../../bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
 import type {
 	CanonicalSeparatedSuffixedBasename,
@@ -36,8 +39,8 @@ const extractDuplicateMarker = (
 export const tryBuildCanonicalSeparatedSuffixedBasename = ({
 	basename,
 	pathParts,
-	kind: type,
-}: Pick<SplitPathInsideLibrary, "basename" | "pathParts" | "type">): Result<
+	kind,
+}: Pick<SplitPathInsideLibrary, "basename" | "pathParts" | "kind">): Result<
 	CanonicalSeparatedSuffixedBasename,
 	string
 > => {
@@ -51,7 +54,7 @@ export const tryBuildCanonicalSeparatedSuffixedBasename = ({
 
 		const pathPartsSansRoot = dropLibraryRootIfPresent(pathParts);
 		const suffixParts =
-			type === SplitPathKind.Folder
+			kind === SplitPathKind.Folder
 				? []
 				: [...pathPartsSansRoot].reverse();
 

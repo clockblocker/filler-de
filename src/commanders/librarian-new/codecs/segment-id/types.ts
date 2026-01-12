@@ -1,6 +1,6 @@
-import type { SegmentIdComponents } from "../types/type-mappings";
+import type { SegmentIdComponents, SegmentIdOf } from "../types";
 
 /**
  * Public types for segment-id codecs.
  */
-export type { SegmentIdComponents };
+export type { SegmentIdComponents, SegmentIdOf };

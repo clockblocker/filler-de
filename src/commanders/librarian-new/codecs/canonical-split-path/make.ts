@@ -1,6 +1,6 @@
 import type { Result } from "neverthrow";
-import type { SplitPathInsideLibrary } from "../../healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
-import type { CanonicalSplitPathInsideLibrary } from "../../healer/library-tree/tree-action/utils/canonical-naming/types";
+import type { SplitPathInsideLibrary } from "../split-path-inside-library/types";
+import type { CanonicalSplitPathInsideLibrary } from "./types";
 import type { NodeName } from "../../types/schemas/node-name";
 import type { CodecError } from "../errors";
 import type { SuffixCodecs } from "../internal/suffix";

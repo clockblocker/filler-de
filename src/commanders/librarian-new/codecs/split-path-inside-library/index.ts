@@ -1,3 +1,5 @@
+import type { AnySplitPath } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
+
 export type { SplitPathInsideLibraryCodecs } from "./make";
 export { makeSplitPathInsideLibraryCodecs } from "./make";
 export type {
@@ -5,5 +7,11 @@ export type {
 	SplitPathToFileInsideLibrary,
 	SplitPathToFolderInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
-	SplitPathInsideLibraryCandidate,
 } from "./types";
+
+/**
+ * Candidate type for type guard narrowing.
+ */
+export type SplitPathInsideLibraryCandidate = AnySplitPath & {
+	/* type marker */
+};

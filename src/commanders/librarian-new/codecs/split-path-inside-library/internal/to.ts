@@ -4,7 +4,7 @@ import { NodeNameSchema } from "../../../types/schemas/node-name";
 import type { CodecError } from "../../errors";
 import { makeSplitPathError, makeZodError } from "../../errors";
 import type { CodecRules } from "../../rules";
-import type { SplitPathInsideLibrary } from "../../tree-action/bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
+import type { SplitPathInsideLibrary } from "../../types";
 
 /**
  * Converts vault-scoped split path to library-scoped split path.

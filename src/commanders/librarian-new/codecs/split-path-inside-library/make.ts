@@ -1,12 +1,14 @@
 import type { Result } from "neverthrow";
 import type { AnySplitPath } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
-import type { SplitPathInsideLibrary } from "../../healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
 import type { CodecError } from "../errors";
 import type { CodecRules } from "../rules";
+import type {
+	SplitPathInsideLibrary,
+	SplitPathInsideLibraryCandidate,
+} from ".";
 import { fromInsideLibrary } from "./internal/from";
 import { checkIfInsideLibrary } from "./internal/predicate";
 import { toInsideLibrary } from "./internal/to";
-import type { SplitPathInsideLibraryCandidate } from "./types";
 
 export type SplitPathInsideLibraryCodecs = {
 	/** Quick predicate (for early returns) */
