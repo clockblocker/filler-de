@@ -1,15 +1,15 @@
 import { err, ok, type Result } from "neverthrow";
 import { getParsedUserSettings } from "../../../../../../../../global-state/global-state";
 import { SplitPathKind } from "../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import type {
+	CanonicalSeparatedSuffixedBasename,
+	CanonicalSplitPathInsideLibrary,
+} from "../../../../../../codecs/canonical-split-path/types";
+import type { SplitPathInsideLibrary } from "../../../../../../codecs/split-path-inside-library/types";
 import {
 	type NodeName,
 	NodeNameSchema,
 } from "../../../../../../types/schemas/node-name";
-import type { SplitPathInsideLibrary } from "../../../bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
-import type {
-	CanonicalSeparatedSuffixedBasename,
-	CanonicalSplitPathInsideLibrary,
-} from "../types";
 import {
 	makeJoinedSuffixedBasename,
 	splitBySuffixDelimiter,

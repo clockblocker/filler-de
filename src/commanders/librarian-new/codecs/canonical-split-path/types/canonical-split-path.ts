@@ -1,11 +1,11 @@
 import type { CommonSplitPath } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { Prettify } from "../../../../../types/helpers";
+import type { SeparatedSuffixedBasename } from "../../internal/suffix/types";
 import type {
 	SplitPathToFileInsideLibrary,
 	SplitPathToFolderInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
-} from "../../split-path-inside-library/types";
-import type { SeparatedSuffixedBasename } from "../../internal/suffix/types";
+} from "../../split-path-inside-library";
 
 /**
  * LibraryTree compliant canonical split path.

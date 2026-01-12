@@ -16,7 +16,7 @@ import type {
 	SplitPathToFileInsideLibrary,
 	SplitPathToFolderInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
-} from "./inside-library-split-paths";
+} from "../../../../../../../codecs/split-path-inside-library/types";
 
 export const ScopeSchema = z.enum([
 	"Inside",

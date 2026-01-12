@@ -3,7 +3,7 @@
  * Converted to VaultActions for dispatch.
  */
 
-import type { SplitPathToMdFileInsideLibrary } from "../../tree-action/bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
+import type { SplitPathToMdFileInsideLibrary } from "../../../codecs/split-path-inside-library/types";
 import type { TreeNodeStatus } from "../../tree-node/types/atoms";
 import type { SectionNodeSegmentId } from "../../tree-node/types/node-segment-id";
 

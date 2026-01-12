@@ -7,7 +7,7 @@ import type {
 	SplitPathToFileInsideLibrary,
 	SplitPathToFolderInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
-} from "../../bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
+} from "../../../../../../codecs/split-path-inside-library/types";
 import { tryBuildCanonicalSeparatedSuffixedBasename } from "./suffix-utils/build-canonical-separated-suffixed-basename-path-king-way";
 import {
 	makeJoinedSuffixedBasename,
@@ -18,7 +18,7 @@ import type {
 	CanonicalSplitPathToFileInsideLibrary,
 	CanonicalSplitPathToFolderInsideLibrary,
 	CanonicalSplitPathToMdFileInsideLibrary,
-} from "./types";
+} from "../../../../../../codecs/canonical-split-path/types";
 
 export function tryParseCanonicalSplitPathInsideLibrary(
 	sp: SplitPathToFolderInsideLibrary,

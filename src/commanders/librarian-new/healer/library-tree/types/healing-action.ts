@@ -7,7 +7,7 @@ import type {
 	SplitPathToFileInsideLibrary,
 	SplitPathToFolderInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
-} from "../tree-action/bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
+} from "../codecs/split-path-inside-library/types";
 
 // ─── Healing Action Types ───
 

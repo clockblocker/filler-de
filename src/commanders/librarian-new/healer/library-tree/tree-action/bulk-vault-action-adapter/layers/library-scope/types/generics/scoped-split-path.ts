@@ -9,7 +9,7 @@ import type {
 	SplitPathToFileInsideLibrary,
 	SplitPathToFolderInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
-} from "../inside-library-split-paths";
+} from "../../../../../../../../codecs/split-path-inside-library/types";
 
 export type DescopedSplitPath<T extends SplitPathInsideLibrary> =
 	T extends SplitPathToFolderInsideLibrary
