@@ -2,9 +2,7 @@ import { err, ok, type Result } from "neverthrow";
 import { MD } from "../../../../../managers/obsidian/vault-action-manager/types/literals";
 import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type {
-	FileNodeLocator,
-	ScrollNodeLocator,
-	SectionNodeLocator,
+	NodeLocatorOf,
 	TreeNodeLocator,
 	CanonicalSplitPathInsideLibrary,
 	CanonicalSplitPathToFileInsideLibrary,
@@ -28,19 +26,19 @@ export function locatorToCanonicalSplitPathInsideLibrary(
 	segmentId: SegmentIdCodecs,
 	canonicalSplitPath: CanonicalSplitPathCodecs,
 	suffix: SuffixCodecs,
-	loc: FileNodeLocator,
+	loc: NodeLocatorOf<"File">,
 ): Result<CanonicalSplitPathToFileInsideLibrary, CodecError>;
 export function locatorToCanonicalSplitPathInsideLibrary(
 	segmentId: SegmentIdCodecs,
 	canonicalSplitPath: CanonicalSplitPathCodecs,
 	suffix: SuffixCodecs,
-	loc: ScrollNodeLocator,
+	loc: NodeLocatorOf<"Scroll">,
 ): Result<CanonicalSplitPathToMdFileInsideLibrary, CodecError>;
 export function locatorToCanonicalSplitPathInsideLibrary(
 	segmentId: SegmentIdCodecs,
 	canonicalSplitPath: CanonicalSplitPathCodecs,
 	suffix: SuffixCodecs,
-	loc: SectionNodeLocator,
+	loc: NodeLocatorOf<"Section">,
 ): Result<CanonicalSplitPathToFolderInsideLibrary, CodecError>;
 export function locatorToCanonicalSplitPathInsideLibrary(
 	segmentId: SegmentIdCodecs,

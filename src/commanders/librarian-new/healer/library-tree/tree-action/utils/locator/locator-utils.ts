@@ -1,5 +1,5 @@
 import type {
-	SectionNodeLocator,
+	NodeLocatorOf,
 	TreeNodeLocator,
 } from "../../../../../codecs/locator/types";
 import {
@@ -9,7 +9,9 @@ import {
 import { TreeNodeKind } from "../../../tree-node/types/atoms";
 import { NodeSegmentIdSeparator } from "../../../../../../codecs/segment-id/types/segment-id";
 
-export const getNodeName = (locator: TreeNodeLocator): NodeName => {
+export const getNodeName = <NK extends TreeNodeKind>(
+	locator: NodeLocatorOf<NK>,
+): NodeName => {
 	const sep = NodeSegmentIdSeparator; // "──" (your const)
 	const [raw] = locator.segmentId.split(sep, 1);
 
@@ -25,7 +27,7 @@ export const getNodeName = (locator: TreeNodeLocator): NodeName => {
 
 export const getParentLocator = (
 	locator: TreeNodeLocator,
-): SectionNodeLocator => {
+): NodeLocatorOf<"Section"> => {
 	const chain = locator.segmentIdChainToParent;
 	const parentSegmentId = chain.at(-1);
 

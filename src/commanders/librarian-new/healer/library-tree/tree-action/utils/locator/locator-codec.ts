@@ -10,28 +10,24 @@ import type {
 	CanonicalSplitPathToFileInsideLibrary,
 	CanonicalSplitPathToFolderInsideLibrary,
 	CanonicalSplitPathToMdFileInsideLibrary,
-	FileNodeLocator,
-	ScrollNodeLocator,
-	SectionNodeLocator,
+	NodeLocatorOf,
 	TreeNodeLocator,
 } from "../../../../../codecs/locator/types";
 import type { NodeName } from "../../../../../types/schemas/node-name";
 import { makeNodeSegmentId } from "../../../tree-node/codecs/node-and-segment-id/make-node-segment-id";
-import {
-	type FileExtension,
-	TreeNodeKind,
-} from "../../../tree-node/types/atoms";
+import type { FileExtension } from "../../../tree-node/types/atoms";
+import { TreeNodeKind } from "../../../tree-node/types/atoms";
 import { tryBuildCanonicalSeparatedSuffixedBasename } from "../canonical-naming/suffix-utils/build-canonical-separated-suffixed-basename-path-king-way";
 
 export function makeLocatorFromCanonicalSplitPathInsideLibrary(
 	sp: CanonicalSplitPathToFileInsideLibrary,
-): FileNodeLocator;
+): NodeLocatorOf<"File">;
 export function makeLocatorFromCanonicalSplitPathInsideLibrary(
 	sp: CanonicalSplitPathToMdFileInsideLibrary,
-): ScrollNodeLocator;
+): NodeLocatorOf<"Scroll">;
 export function makeLocatorFromCanonicalSplitPathInsideLibrary(
 	sp: CanonicalSplitPathToFolderInsideLibrary,
-): SectionNodeLocator;
+): NodeLocatorOf<"Section">;
 export function makeLocatorFromCanonicalSplitPathInsideLibrary(
 	sp: CanonicalSplitPathInsideLibrary,
 ): TreeNodeLocator;
@@ -58,7 +54,7 @@ export function makeLocatorFromCanonicalSplitPathInsideLibrary(
 				}),
 				segmentIdChainToParent,
 				targetKind: TreeNodeKind.File,
-			} satisfies FileNodeLocator;
+			} satisfies NodeLocatorOf<"File">;
 		}
 
 		case SplitPathKind.MdFile: {
@@ -71,7 +67,7 @@ export function makeLocatorFromCanonicalSplitPathInsideLibrary(
 				}),
 				segmentIdChainToParent,
 				targetKind: TreeNodeKind.Scroll,
-			} satisfies ScrollNodeLocator;
+			} satisfies NodeLocatorOf<"Scroll">;
 		}
 
 		case SplitPathKind.Folder: {
@@ -83,19 +79,19 @@ export function makeLocatorFromCanonicalSplitPathInsideLibrary(
 				}),
 				segmentIdChainToParent,
 				targetKind: TreeNodeKind.Section,
-			} satisfies SectionNodeLocator;
+			} satisfies NodeLocatorOf<"Section">;
 		}
 	}
 }
 
 export function makeCanonicalSplitPathInsideLibraryFromLocator(
-	loc: FileNodeLocator,
+	loc: NodeLocatorOf<"File">,
 ): CanonicalSplitPathToFileInsideLibrary;
 export function makeCanonicalSplitPathInsideLibraryFromLocator(
-	loc: ScrollNodeLocator,
+	loc: NodeLocatorOf<"Scroll">,
 ): CanonicalSplitPathToMdFileInsideLibrary;
 export function makeCanonicalSplitPathInsideLibraryFromLocator(
-	loc: SectionNodeLocator,
+	loc: NodeLocatorOf<"Section">,
 ): CanonicalSplitPathToFolderInsideLibrary;
 export function makeCanonicalSplitPathInsideLibraryFromLocator(
 	loc: TreeNodeLocator,

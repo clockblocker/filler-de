@@ -1,13 +1,7 @@
+import type z from "zod";
 import type { TreeNodeKind } from "../../../healer/library-tree/tree-node/types/atoms";
-import z from "zod";
+
 import type {
-	CanonicalSplitPathInsideLibrary,
-	CanonicalSplitPathToFileInsideLibrary,
-	CanonicalSplitPathToFolderInsideLibrary,
-	CanonicalSplitPathToMdFileInsideLibrary,
-} from "../../canonical-split-path/types";
-import {
-	BaseNodeLocatorSchema,
 	FileNodeLocatorSchema,
 	ScrollNodeLocatorSchema,
 	SectionNodeLocatorSchema,
@@ -25,7 +19,7 @@ export type AnyNodeLocator =
 	| FileNodeLocator;
 
 export type NodeLocatorOf<NK extends TreeNodeKind> = Extract<
-	AnyNodeLocator,
+	TreeNodeLocator,
 	{ targetKind: NK }
 >;
 
@@ -37,11 +31,3 @@ export {
 	SectionNodeLocatorSchema,
 	TreeNodeLocatorSchema,
 } from "./schemas";
-
-// Re-export canonical split path types
-export type {
-	CanonicalSplitPathInsideLibrary,
-	CanonicalSplitPathToFileInsideLibrary,
-	CanonicalSplitPathToFolderInsideLibrary,
-	CanonicalSplitPathToMdFileInsideLibrary,
-};

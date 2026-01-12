@@ -1,9 +1,7 @@
 import { err, ok, type Result } from "neverthrow";
 import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type {
-	FileNodeLocator,
-	ScrollNodeLocator,
-	SectionNodeLocator,
+	NodeLocatorOf,
 	TreeNodeLocator,
 	CanonicalSplitPathInsideLibrary,
 	CanonicalSplitPathToFileInsideLibrary,
@@ -26,17 +24,17 @@ export function canonicalSplitPathInsideLibraryToLocator(
 	segmentId: SegmentIdCodecs,
 	canonicalSplitPath: CanonicalSplitPathCodecs,
 	sp: CanonicalSplitPathToFileInsideLibrary,
-): Result<FileNodeLocator, CodecError>;
+): Result<NodeLocatorOf<"File">, CodecError>;
 export function canonicalSplitPathInsideLibraryToLocator(
 	segmentId: SegmentIdCodecs,
 	canonicalSplitPath: CanonicalSplitPathCodecs,
 	sp: CanonicalSplitPathToMdFileInsideLibrary,
-): Result<ScrollNodeLocator, CodecError>;
+): Result<NodeLocatorOf<"Scroll">, CodecError>;
 export function canonicalSplitPathInsideLibraryToLocator(
 	segmentId: SegmentIdCodecs,
 	canonicalSplitPath: CanonicalSplitPathCodecs,
 	sp: CanonicalSplitPathToFolderInsideLibrary,
-): Result<SectionNodeLocator, CodecError>;
+): Result<NodeLocatorOf<"Section">, CodecError>;
 export function canonicalSplitPathInsideLibraryToLocator(
 	segmentId: SegmentIdCodecs,
 	canonicalSplitPath: CanonicalSplitPathCodecs,
@@ -77,7 +75,7 @@ export function canonicalSplitPathInsideLibraryToLocator(
 				segmentId: segmentIdResult.value,
 				segmentIdChainToParent,
 				targetKind: TreeNodeKind.File,
-			} satisfies FileNodeLocator);
+			} satisfies NodeLocatorOf<"File">);
 		}
 
 		case SplitPathKind.MdFile: {
@@ -100,7 +98,7 @@ export function canonicalSplitPathInsideLibraryToLocator(
 				segmentId: segmentIdResult.value,
 				segmentIdChainToParent,
 				targetKind: TreeNodeKind.Scroll,
-			} satisfies ScrollNodeLocator);
+			} satisfies NodeLocatorOf<"Scroll">);
 		}
 
 		case SplitPathKind.Folder: {
@@ -122,7 +120,7 @@ export function canonicalSplitPathInsideLibraryToLocator(
 				segmentId: segmentIdResult.value,
 				segmentIdChainToParent,
 				targetKind: TreeNodeKind.Section,
-			} satisfies SectionNodeLocator);
+			} satisfies NodeLocatorOf<"Section">);
 		}
 	}
 }
