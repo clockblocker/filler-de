@@ -4,9 +4,11 @@ import {
 	DELETE,
 	RENAME,
 } from "../../../../../../../../managers/obsidian/vault-action-manager/types/literals";
+import type { SplitPathKind } from "../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { Prettify } from "../../../../../../../../types/helpers";
 import type {
 	AnySplitPathInsideLibrary,
+	SplitPathInsideLibraryOf,
 	SplitPathToFileInsideLibrary,
 	SplitPathToFolderInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
@@ -176,6 +178,5 @@ type LocatorForObserved<SP> = SP extends SplitPathToFolderInsideLibrary
 export type TreeNodeLocatorForEvent<E extends MaterializedNodeEvent> =
 	LocatorForObserved<TargetObservedSplitPath<E>>;
 
-export type TreeNodeLocatorForLibraryScopedSplitPath<
-	SP extends AnySplitPathInsideLibrary,
-> = LocatorForObserved<SP>;
+export type TreeNodeLocatorForLibraryScopedSplitPath<SK extends SplitPathKind> =
+	LocatorForObserved<SplitPathInsideLibraryOf<SK>>;

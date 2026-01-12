@@ -1,13 +1,17 @@
 import { err, ok, type Result } from "neverthrow";
-import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import type { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathKind as SplitPathKindEnum } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import { NodeNameSchema } from "../../../types/schemas/node-name";
 import type { CodecError } from "../../errors";
 import { makeSplitPathError, makeZodError } from "../../errors";
 import type { SuffixCodecs } from "../../internal/suffix";
-import type { AnySplitPathInsideLibrary } from "../../split-path-inside-library";
+import type {
+	AnySplitPathInsideLibrary,
+	SplitPathInsideLibraryOf,
+} from "../../split-path-inside-library";
 import type {
 	CanonicalSeparatedSuffixedBasename,
-	CanonicalSplitPathInsideLibrary,
+	CanonicalSplitPathInsideLibraryOf,
 } from "../types/canonical-split-path";
 
 /**
@@ -56,7 +60,7 @@ function buildCanonicalSeparatedSuffixedBasename(
 			sp.pathParts,
 		);
 		const suffixParts =
-			sp.kind === SplitPathKind.Folder
+			sp.kind === SplitPathKindEnum.Folder
 				? []
 				: suffix.pathPartsToSuffixParts(pathPartsSansRoot);
 
@@ -70,11 +74,11 @@ function buildCanonicalSeparatedSuffixedBasename(
  * Converts split path inside library to canonical format.
  * Validates and separates suffix.
  */
-export function splitPathInsideLibraryToCanonical(
+export function splitPathInsideLibraryToCanonical<SK extends SplitPathKind>(
 	suffix: SuffixCodecs,
 	libraryRootName: string,
-	sp: AnySplitPathInsideLibrary,
-): Result<CanonicalSplitPathInsideLibrary, CodecError> {
+	sp: SplitPathInsideLibraryOf<SK>,
+): Result<CanonicalSplitPathInsideLibraryOf<SK>, CodecError> {
 	// Validate path parts as NodeNames
 	for (const p of sp.pathParts) {
 		const r = NodeNameSchema.safeParse(p);
@@ -148,7 +152,7 @@ export function splitPathInsideLibraryToCanonical(
 	}
 
 	// Additionally enforce folder has no suffixParts (redundant but explicit)
-	if (sp.kind === SplitPathKind.Folder && suffixParts.length !== 0) {
+	if (sp.kind === SplitPathKindEnum.Folder && suffixParts.length !== 0) {
 		return err(
 			makeSplitPathError(
 				"CanonicalizationFailed",
@@ -161,5 +165,5 @@ export function splitPathInsideLibraryToCanonical(
 	return ok({
 		...sp,
 		separatedSuffixedBasename: actualSepResult.value,
-	} as CanonicalSplitPathInsideLibrary);
+	} as CanonicalSplitPathInsideLibraryOf<SK>);
 }

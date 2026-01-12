@@ -1,24 +1,24 @@
 import type {
 	AnySplitPath,
+	SplitPathKind,
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
 } from "../../../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type {
-	AnySplitPathInsideLibrary,
 	SplitPathToFileInsideLibrary,
 	SplitPathToFolderInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
 } from "../../../../../../../../codecs";
 
-export type DescopedSplitPath<T extends AnySplitPathInsideLibrary> =
-	T extends SplitPathToFolderInsideLibrary
+export type DescopedSplitPath<SK extends SplitPathKind> =
+	SK extends typeof SplitPathKind.Folder
 		? SplitPathToFolder
-		: T extends SplitPathToMdFileInsideLibrary
+		: SK extends typeof SplitPathKind.MdFile
 			? SplitPathToMdFile
-			: T extends SplitPathToFileInsideLibrary
-				? SplitPathToFile
-				: AnySplitPath;
+			: SplitPathToFile;
+
+export type ExtractKind<SP extends AnySplitPath> = SP["kind"];
 
 export type EnscopedSplitPath<T extends AnySplitPath> =
 	T extends SplitPathToFolder

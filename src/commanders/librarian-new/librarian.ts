@@ -14,6 +14,7 @@ import { SplitPathKind } from "../../managers/obsidian/vault-action-manager/type
 import { readMetadata } from "../../managers/pure/note-metadata-manager";
 import { decrementPending, incrementPending } from "../../utils/idle-tracker";
 import { logger } from "../../utils/logger";
+import type { AnySplitPathInsideLibrary } from "./codecs";
 import {
 	type CodecRules,
 	type Codecs,
@@ -23,7 +24,6 @@ import {
 import { healingActionsToVaultActions } from "./codecs/healing-to-vault-action";
 import type { CanonicalSplitPathToMdFileInsideLibrary } from "./codecs/locator";
 import type { ScrollNodeLocator } from "./codecs/locator/types";
-import type { SplitPathInsideLibrary } from "./codecs/split-path-inside-library/types/generic-split-path-inside-library-of";
 import { Healer } from "./healer/healer";
 import {
 	CODEX_CORE_NAME,
@@ -250,7 +250,7 @@ export class Librarian {
 					actionType: "Create",
 					initialStatus: status,
 					observedSplitPath:
-						observedPath as SplitPathInsideLibrary & {
+						observedPath as AnySplitPathInsideLibrary & {
 							kind: typeof SplitPathKind.MdFile;
 							extension: "md";
 						},
@@ -260,7 +260,7 @@ export class Librarian {
 				actions.push({
 					actionType: "Create",
 					observedSplitPath:
-						observedPath as SplitPathInsideLibrary & {
+						observedPath as AnySplitPathInsideLibrary & {
 							kind: typeof SplitPathKind.File;
 							extension: string;
 						},
@@ -665,7 +665,7 @@ export class Librarian {
 		nodeName: string,
 		parentChain: SectionNodeSegmentId[],
 	): Result<
-		SplitPathInsideLibrary & {
+		AnySplitPathInsideLibrary & {
 			kind: typeof SplitPathKind.MdFile;
 			extension: "md";
 		},
@@ -720,7 +720,7 @@ export class Librarian {
 				);
 
 			return ok(
-				splitPath as SplitPathInsideLibrary & {
+				splitPath as AnySplitPathInsideLibrary & {
 					kind: typeof SplitPathKind.MdFile;
 					extension: "md";
 				},

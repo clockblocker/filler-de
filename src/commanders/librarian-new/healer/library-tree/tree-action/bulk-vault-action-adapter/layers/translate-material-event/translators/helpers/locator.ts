@@ -1,9 +1,9 @@
 import { err, ok, type Result } from "neverthrow";
-import { SplitPathKind } from "../../../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import type { SplitPathKind } from "../../../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type {
 	AnySplitPathInsideLibrary,
-	CanonicalSplitPathInsideLibrary,
 	Codecs,
+	SplitPathInsideLibraryOf,
 } from "../../../../../../../../codecs";
 import {
 	type NodeName,
@@ -40,11 +40,11 @@ export function tryMakeDestinationLocatorFromEvent<
 }
 
 export function tryMakeTargetLocatorFromLibraryScopedSplitPath<
-	SP extends AnySplitPathInsideLibrary,
+	SK extends SplitPathKind,
 >(
-	sp: SP,
+	sp: SplitPathInsideLibraryOf<SK>,
 	codecs: Codecs,
-): Result<TreeNodeLocatorForLibraryScopedSplitPath<SP>, string> {
+): Result<TreeNodeLocatorForLibraryScopedSplitPath<SK>, string> {
 	const cspRes = adaptCodecResult(
 		codecs.canonicalSplitPath.splitPathInsideLibraryToCanonical(sp),
 	);
@@ -55,7 +55,7 @@ export function tryMakeTargetLocatorFromLibraryScopedSplitPath<
 	);
 	if (locatorRes.isErr()) return err(locatorRes.error);
 
-	return ok(locatorRes.value as TreeNodeLocatorForLibraryScopedSplitPath<SP>);
+	return ok(locatorRes.value as TreeNodeLocatorForLibraryScopedSplitPath<SK>);
 }
 
 const tryMakeCanonicalSplitPathToDestination = <
@@ -73,13 +73,21 @@ const tryMakeCanonicalSplitPathToDestination = <
 		return r as Result<CanonicalSplitPathToDestination<E>, string>;
 	}
 
-	const sp = extractSplitPathToDestination(ev) as AnySplitPathInsideLibrary;
+	const sp = extractSplitPathToDestination(ev);
+	if (!("kind" in sp)) {
+		return err("Invalid split path: missing kind");
+	}
 	const { policy, intent } = inferPolicyAndIntent(
 		ev as MaterializedNodeEvent,
 		codecs,
 	);
 
-	const r = tryCanonicalizeSplitPathToDestination(sp, policy, intent, codecs);
+	const r = tryCanonicalizeSplitPathToDestination(
+		sp as AnySplitPathInsideLibrary,
+		policy,
+		intent,
+		codecs,
+	);
 	return r as Result<CanonicalSplitPathToDestination<E>, string>;
 };
 

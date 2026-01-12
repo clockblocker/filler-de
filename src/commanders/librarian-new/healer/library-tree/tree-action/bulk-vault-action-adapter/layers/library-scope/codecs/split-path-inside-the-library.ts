@@ -1,8 +1,14 @@
 import { err, ok, type Result } from "neverthrow";
 import type { AnySplitPath } from "../../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { CodecRules } from "../../../../../../../codecs/rules";
-import type { DescopedSplitPath, EnscopedSplitPath } from "../types/generics";
-import type { SplitPathInsideLibrary } from "../../../../../../codecs/split-path-inside-library/types";
+import type {
+	EnscopedSplitPath,
+	ExtractKind,
+} from "../types/generics";
+import type {
+	AnySplitPathInsideLibrary,
+	SplitPathInsideLibraryOf,
+} from "../../../../../../codecs";
 
 /**
  * Converts a vault SplitPath into a **SplitPathInsideLibrary**.
@@ -33,7 +39,7 @@ import type { SplitPathInsideLibrary } from "../../../../../../codecs/split-path
 export function tryParseAsInsideLibrarySplitPath<SP extends AnySplitPath>(
 	splitPath: SP,
 	rules: CodecRules,
-): Result<DescopedSplitPath<SP>, string> {
+): Result<SplitPathInsideLibraryOf<ExtractKind<SP>>, string> {
 	const libraryPrefix = [
 		...rules.libraryRootPathParts,
 		rules.libraryRootName,
@@ -52,10 +58,10 @@ export function tryParseAsInsideLibrarySplitPath<SP extends AnySplitPath>(
 	return ok({
 		...splitPath,
 		pathParts: full.slice(keepFrom),
-	} as DescopedSplitPath<SP>);
+	} as SplitPathInsideLibraryOf<ExtractKind<SP>>);
 }
 
-export function makeVaultScopedSplitPath<SPL extends SplitPathInsideLibrary>(
+export function makeVaultScopedSplitPath<SPL extends AnySplitPathInsideLibrary>(
 	splitPath: SPL,
 	rules: CodecRules,
 ): EnscopedSplitPath<SPL> {

@@ -67,6 +67,7 @@ export { makeCodecRulesFromSettings } from "./rules";
 export type { SegmentIdComponents } from "./segment-id";
 export type {
 	AnySplitPathInsideLibrary,
+	SplitPathInsideLibraryOf,
 	SplitPathToFileInsideLibrary,
 	SplitPathToFolderInsideLibrary,
 	SplitPathToMdFileInsideLibrary,

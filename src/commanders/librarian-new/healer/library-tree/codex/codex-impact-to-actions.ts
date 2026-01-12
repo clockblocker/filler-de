@@ -4,8 +4,7 @@
  */
 
 import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
-import type { Codecs } from "../../../codecs";
-import type { SplitPathToMdFileInsideLibrary } from "../../../codecs/split-path-inside-library/types/generic-split-path-inside-library-of";
+import type { Codecs, SplitPathToMdFileInsideLibrary } from "../../../codecs";
 import {
 	makeJoinedSuffixedBasename,
 	makeSuffixPartsFromPathPartsWithRoot,

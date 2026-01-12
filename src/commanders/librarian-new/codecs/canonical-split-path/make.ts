@@ -1,21 +1,28 @@
 import type { Result } from "neverthrow";
+import type { SplitPathKind } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { NodeName } from "../../types/schemas/node-name";
 import type { CodecError } from "../errors";
 import type { SuffixCodecs } from "../internal/suffix";
 import type { SeparatedSuffixedBasename } from "../internal/suffix/types";
 import type { CodecRules } from "../rules";
-import type { AnySplitPathInsideLibrary } from "../split-path-inside-library";
+import type {
+	AnySplitPathInsideLibrary,
+	SplitPathInsideLibraryOf,
+} from "../split-path-inside-library";
 import { fromCanonicalSplitPathInsideLibrary } from "./internal/from";
 import { splitPathInsideLibraryToCanonical } from "./internal/to";
-import type { CanonicalSplitPathInsideLibrary } from "./types/canonical-split-path";
+import type {
+	AnyCanonicalSplitPathInsideLibrary,
+	CanonicalSplitPathInsideLibraryOf,
+} from "./types/canonical-split-path";
 
 export type CanonicalSplitPathCodecs = {
-	splitPathInsideLibraryToCanonical: (
-		sp: AnySplitPathInsideLibrary,
-	) => Result<CanonicalSplitPathInsideLibrary, CodecError>;
-	fromCanonicalSplitPathInsideLibrary: (
-		sp: CanonicalSplitPathInsideLibrary,
-	) => AnySplitPathInsideLibrary;
+	splitPathInsideLibraryToCanonical: <SK extends SplitPathKind>(
+		sp: SplitPathInsideLibraryOf<SK>,
+	) => Result<CanonicalSplitPathInsideLibraryOf<SK>, CodecError>;
+	fromCanonicalSplitPathInsideLibrary: <SK extends SplitPathKind>(
+		sp: CanonicalSplitPathInsideLibraryOf<SK>,
+	) => SplitPathInsideLibraryOf<SK>;
 	// Suffix wrapper functions (expose internal suffix codecs)
 	parseSeparatedSuffix: (
 		basename: string,
