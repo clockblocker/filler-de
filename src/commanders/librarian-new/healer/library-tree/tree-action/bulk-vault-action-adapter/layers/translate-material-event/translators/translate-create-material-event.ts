@@ -1,3 +1,4 @@
+import type { Codecs } from "../../../../../../codecs";
 import { TreeNodeKind } from "../../../../../tree-node/types/atoms";
 import {
 	type CreateTreeLeafAction,
@@ -8,10 +9,11 @@ import { tryMakeDestinationLocatorFromEvent } from "./helpers/locator";
 
 export function traslateCreateMaterializedEvent(
 	ev: CreateLeafNodeMaterializedEvent,
+	codecs: Codecs,
 ): CreateTreeLeafAction[] {
 	const out: CreateTreeLeafAction[] = [];
 
-	const targetRes = tryMakeDestinationLocatorFromEvent(ev);
+	const targetRes = tryMakeDestinationLocatorFromEvent(ev, codecs);
 	const observedSplitPath = ev.splitPath;
 
 	if (targetRes.isErr()) return out;

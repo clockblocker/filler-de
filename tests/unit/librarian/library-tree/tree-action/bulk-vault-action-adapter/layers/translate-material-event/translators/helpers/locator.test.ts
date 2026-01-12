@@ -1,4 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import {
+	makeCodecs,
+	makeCodecRulesFromSettings,
+	type Codecs,
+	type CodecRules,
+} from "../../../../../../../../../../src/commanders/librarian-new/healer/library-tree/codecs";
 import { RenameIntent } from "../../../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/intent/types";
 import { ChangePolicy } from "../../../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/types";
 import { tryCanonicalizeSplitPathToDestination } from "../../../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/translators/helpers/locator";
@@ -12,11 +18,15 @@ import { defaultSettingsForUnitTests } from "../../../../../../../../common-util
 import { setupGetParsedUserSettingsSpy } from "../../../../../../../../common-utils/setup-spy";
 
 let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
+let codecs: Codecs;
+let rules: CodecRules;
 
 beforeEach(() => {
 	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy({
 		showScrollsInCodexesForDepth: 0,
 	});
+	rules = makeCodecRulesFromSettings(defaultSettingsForUnitTests);
+	codecs = makeCodecs(rules);
 });
 
 afterEach(() => {
@@ -62,6 +72,7 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 				sp,
 				ChangePolicy.NameKing,
 				undefined,
+				codecs,
 			);
 
 			expect(result.isOk()).toBe(true);
@@ -78,6 +89,7 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 				sp,
 				ChangePolicy.NameKing,
 				undefined,
+				codecs,
 			);
 
 			expect(result.isOk()).toBe(true);
@@ -95,6 +107,7 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 				sp,
 				ChangePolicy.PathKing,
 				undefined,
+				codecs,
 			);
 
 			expect(result.isOk()).toBe(true);
@@ -117,6 +130,7 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 				sp,
 				ChangePolicy.NameKing, // doesn't matter, Rename forces PathKing
 				RenameIntent.Rename,
+				codecs,
 			);
 
 			expect(result.isOk()).toBe(true);
@@ -134,6 +148,7 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 				sp,
 				ChangePolicy.NameKing,
 				RenameIntent.Rename,
+				codecs,
 			);
 
 			expect(result.isOk()).toBe(true);
@@ -157,6 +172,7 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 				sp,
 				ChangePolicy.NameKing,
 				RenameIntent.Move,
+				codecs,
 			);
 
 			expect(result.isOk()).toBe(true);
@@ -175,6 +191,7 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 				sp,
 				ChangePolicy.NameKing,
 				RenameIntent.Move,
+				codecs,
 			);
 
 			expect(result.isOk()).toBe(true);
@@ -193,6 +210,7 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 				sp,
 				ChangePolicy.NameKing,
 				RenameIntent.Move,
+				codecs,
 			);
 
 			expect(result.isOk()).toBe(true);
@@ -245,6 +263,7 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 				sp,
 				ChangePolicy.NameKing,
 				RenameIntent.Move,
+				codecs,
 			);
 
 			expect(result.isOk()).toBe(true);
@@ -265,6 +284,7 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 				sp,
 				ChangePolicy.NameKing,
 				RenameIntent.Move,
+				codecs,
 			);
 
 			expect(result.isOk()).toBe(true);
@@ -290,6 +310,7 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 				sp,
 				ChangePolicy.NameKing,
 				RenameIntent.Move,
+				codecs,
 			);
 
 			expect(result.isOk()).toBe(true);
@@ -335,6 +356,7 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 				sp,
 				ChangePolicy.PathKing,
 				undefined,
+				codecs,
 			);
 
 			expect(result.isOk()).toBe(true);
@@ -355,6 +377,7 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 				sp,
 				ChangePolicy.PathKing,
 				undefined,
+				codecs,
 			);
 
 			expect(result.isOk()).toBe(true);
@@ -377,6 +400,7 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 				sp,
 				ChangePolicy.NameKing,
 				undefined,
+				codecs,
 			);
 
 			expect(result.isErr()).toBe(true);
@@ -388,6 +412,7 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 				sp,
 				ChangePolicy.NameKing,
 				undefined,
+				codecs,
 			);
 
 			expect(result.isErr()).toBe(true);
@@ -399,6 +424,7 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 				sp,
 				ChangePolicy.PathKing,
 				undefined,
+				codecs,
 			);
 
 			expect(result.isErr()).toBe(true);

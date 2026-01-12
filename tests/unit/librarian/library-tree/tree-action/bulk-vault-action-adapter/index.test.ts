@@ -1,4 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import {
+	makeCodecs,
+	makeCodecRulesFromSettings,
+	type Codecs,
+	type CodecRules,
+} from "../../../../../../src/commanders/librarian-new/healer/library-tree/codecs";
 import { buildTreeActions } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/index";
 import { TreeActionType } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/types/tree-action";
 import { getNodeName } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/utils/locator/locator-utils";
@@ -20,11 +26,15 @@ import { defaultSettingsForUnitTests } from "../../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../../common-utils/setup-spy";
 
 let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
+let codecs: Codecs;
+let rules: CodecRules;
 
 beforeEach(() => {
 	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy({
 		showScrollsInCodexesForDepth: 0,
 	});
+	rules = makeCodecRulesFromSettings(defaultSettingsForUnitTests);
+	codecs = makeCodecs(rules);
 });
 
 afterEach(() => {
@@ -128,7 +138,7 @@ describe("buildTreeActions", () => {
 				events: [evFileCreated(spMdFile(["Library"], "Note-Child-Parent"))],
 			});
 
-			const actions = buildTreeActions(bulkEvent);
+			const actions = buildTreeActions(bulkEvent, codecs, rules);
 
 			expect(actions.length).toBe(1);
 			const action = actions[0];
@@ -143,7 +153,7 @@ describe("buildTreeActions", () => {
 				events: [evFileCreated(spMdFile(["Library", "Parent", "Child"], "Note-Child-Parent"))],
 			});
 
-			const actions = buildTreeActions(bulkEvent);
+			const actions = buildTreeActions(bulkEvent, codecs, rules);
 
 			expect(actions.length).toBe(1);
 			const action = actions[0];
@@ -163,7 +173,7 @@ describe("buildTreeActions", () => {
 				],
 			});
 
-			const actions = buildTreeActions(bulkEvent);
+			const actions = buildTreeActions(bulkEvent, codecs, rules);
 
 			expect(actions.length).toBe(1);
 			const action = actions[0];
@@ -180,7 +190,7 @@ describe("buildTreeActions", () => {
 				roots: [evFileDeleted(spMdFile(["Library", "Section"], "Note-Section"))],
 			});
 
-			const actions = buildTreeActions(bulkEvent);
+			const actions = buildTreeActions(bulkEvent, codecs, rules);
 
 			expect(actions.length).toBeGreaterThanOrEqual(0);
 			if (actions.length > 0) {
@@ -195,7 +205,7 @@ describe("buildTreeActions", () => {
 				roots: [evFolderDeleted(spFolder(["Library"], "Section"))],
 			});
 
-			const actions = buildTreeActions(bulkEvent);
+			const actions = buildTreeActions(bulkEvent, codecs, rules);
 
 			expect(actions.length).toBe(1);
 			const action = actions[0];
@@ -215,7 +225,7 @@ describe("buildTreeActions", () => {
 				],
 			});
 
-			const actions = buildTreeActions(bulkEvent);
+			const actions = buildTreeActions(bulkEvent, codecs, rules);
 
 			expect(actions.length).toBeGreaterThanOrEqual(0);
 			if (actions.length > 0) {
@@ -237,7 +247,7 @@ describe("buildTreeActions", () => {
 				],
 			});
 
-			const actions = buildTreeActions(bulkEvent);
+			const actions = buildTreeActions(bulkEvent, codecs, rules);
 
 			expect(actions.length).toBe(1);
 			const action = actions[0];
@@ -261,7 +271,7 @@ describe("buildTreeActions", () => {
 				],
 			});
 
-			const actions = buildTreeActions(bulkEvent);
+			const actions = buildTreeActions(bulkEvent, codecs, rules);
 
 			expect(actions.length).toBe(1);
 			const action = actions[0];
@@ -284,7 +294,7 @@ describe("buildTreeActions", () => {
 				],
 			});
 
-			const actions = buildTreeActions(bulkEvent);
+			const actions = buildTreeActions(bulkEvent, codecs, rules);
 
 			expect(actions.length).toBe(1);
 			const action = actions[0];
@@ -307,7 +317,7 @@ describe("buildTreeActions", () => {
 				],
 			});
 
-			const actions = buildTreeActions(bulkEvent);
+			const actions = buildTreeActions(bulkEvent, codecs, rules);
 
 			expect(actions.length).toBe(1);
 			const action = actions[0];
@@ -331,7 +341,7 @@ describe("buildTreeActions", () => {
 				],
 			});
 
-			const actions = buildTreeActions(bulkEvent);
+			const actions = buildTreeActions(bulkEvent, codecs, rules);
 
 			expect(actions.length).toBe(1);
 			const action = actions[0];
@@ -354,7 +364,7 @@ describe("buildTreeActions", () => {
 				],
 			});
 
-			const actions = buildTreeActions(bulkEvent);
+			const actions = buildTreeActions(bulkEvent, codecs, rules);
 
 			expect(actions.length).toBe(1);
 			const action = actions[0];
@@ -374,7 +384,7 @@ describe("buildTreeActions", () => {
 				events: [evFileCreated(spMdFile(["Inbox"], "a"))],
 			});
 
-			const actions = buildTreeActions(bulkEvent);
+			const actions = buildTreeActions(bulkEvent, codecs, rules);
 
 			expect(actions.length).toBe(0);
 		});
@@ -399,7 +409,7 @@ describe("buildTreeActions", () => {
 				],
 			});
 
-			const actions = buildTreeActions(bulkEvent);
+			const actions = buildTreeActions(bulkEvent, codecs, rules);
 
 			expect(actions.length).toBe(1);
 			const action = actions[0];

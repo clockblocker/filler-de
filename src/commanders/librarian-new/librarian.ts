@@ -14,6 +14,12 @@ import { readMetadata } from "../../managers/pure/note-metadata-manager";
 import { decrementPending, incrementPending } from "../../utils/idle-tracker";
 import { logger } from "../../utils/logger";
 import { Healer } from "./healer/healer";
+import {
+	type CodecRules,
+	type Codecs,
+	makeCodecRulesFromSettings,
+	makeCodecs,
+} from "./healer/library-tree/codecs";
 import { healingActionsToVaultActions } from "./healer/library-tree/codecs/healing-to-vault-action";
 import {
 	CODEX_CORE_NAME,
@@ -36,12 +42,6 @@ import type {
 	CreateTreeLeafAction,
 	TreeAction,
 } from "./healer/library-tree/tree-action/types/tree-action";
-import {
-	makeJoinedSuffixedBasename,
-	makeSuffixPartsFromPathPartsWithRoot,
-	tryParseAsSeparatedSuffixedBasename,
-} from "./healer/library-tree/tree-action/utils/canonical-naming/suffix-utils/core-suffix-utils";
-import { makeLocatorFromCanonicalSplitPathInsideLibrary } from "./healer/library-tree/tree-action/utils/locator/locator-codec";
 import { makeNodeSegmentId } from "./healer/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import {
 	TreeNodeKind,
@@ -77,6 +77,8 @@ export class Librarian {
 	private clickTeardown: (() => void) | null = null;
 	private queue: QueueItem[] = [];
 	private processing = false;
+	private codecs: Codecs | null = null;
+	private rules: CodecRules | null = null;
 
 	constructor(
 		private readonly vaultActionManager: VaultActionManager,
@@ -90,6 +92,8 @@ export class Librarian {
 		incrementPending();
 		try {
 			const settings = getParsedUserSettings();
+			this.rules = makeCodecRulesFromSettings(settings);
+			this.codecs = makeCodecs(this.rules);
 			const rootSplitPath = settings.splitPathToLibraryRoot;
 			const libraryRoot = rootSplitPath.basename;
 
@@ -140,8 +144,10 @@ export class Librarian {
 
 			// Dispatch healing actions first
 			if (allHealingActions.length > 0) {
-				const vaultActions =
-					healingActionsToVaultActions(allHealingActions);
+				const vaultActions = healingActionsToVaultActions(
+					allHealingActions,
+					this.rules!,
+				);
 				await this.vaultActionManager.dispatch(vaultActions);
 			}
 
@@ -177,7 +183,10 @@ export class Librarian {
 
 		for (const file of files) {
 			// Skip codex files (basename starts with __)
-			const coreNameResult = tryParseAsSeparatedSuffixedBasename(file);
+			const coreNameResult =
+				this.codecs!.canonicalSplitPath.parseSeparatedSuffix(
+					file.basename,
+				);
 			if (
 				coreNameResult.isOk() &&
 				coreNameResult.value.coreName === CODEX_CORE_NAME
@@ -186,7 +195,10 @@ export class Librarian {
 			}
 
 			// Convert to library-scoped path
-			const libraryScopedResult = tryParseAsInsideLibrarySplitPath(file);
+			const libraryScopedResult = tryParseAsInsideLibrarySplitPath(
+				file,
+				this.rules!,
+			);
 			if (libraryScopedResult.isErr()) continue;
 			const observedPath = libraryScopedResult.value;
 
@@ -197,6 +209,7 @@ export class Librarian {
 				observedPath,
 				policy,
 				undefined, // no rename intent for create
+				this.codecs!,
 			);
 			if (canonicalResult.isErr()) {
 				continue;
@@ -204,8 +217,12 @@ export class Librarian {
 			const canonicalPath = canonicalResult.value;
 
 			// Build locator from canonical path
-			const locator =
-				makeLocatorFromCanonicalSplitPathInsideLibrary(canonicalPath);
+			const locatorResult =
+				this.codecs!.locator.canonicalSplitPathInsideLibraryToLocator(
+					canonicalPath,
+				);
+			if (locatorResult.isErr()) continue;
+			const locator = locatorResult.value;
 
 			// Read status for md files
 			let status: TreeNodeStatus = TreeNodeStatus.NotStarted;
@@ -233,7 +250,7 @@ export class Librarian {
 						},
 					targetLocator: locator,
 				});
-			} else {
+			} else if (locator.targetKind === TreeNodeKind.File) {
 				actions.push({
 					actionType: "Create",
 					observedSplitPath:
@@ -268,13 +285,19 @@ export class Librarian {
 			if (file.kind !== SplitPathKind.MdFile) continue;
 
 			// Check if basename starts with __
-			const coreNameResult = tryParseAsSeparatedSuffixedBasename(file);
+			const coreNameResult =
+				this.codecs!.canonicalSplitPath.parseSeparatedSuffix(
+					file.basename,
+				);
 			if (coreNameResult.isErr()) continue;
 
 			if (coreNameResult.value.coreName !== CODEX_CORE_NAME) continue;
 
 			// This is a __ file - check if it's valid
-			const libraryScopedResult = tryParseAsInsideLibrarySplitPath(file);
+			const libraryScopedResult = tryParseAsInsideLibrarySplitPath(
+				file,
+				this.rules!,
+			);
 			if (libraryScopedResult.isErr()) continue;
 
 			const filePath = [
@@ -350,9 +373,10 @@ export class Librarian {
 	 */
 	private handleCheckboxClick(event: CheckboxClickedEvent): void {
 		// Check if file is a codex (basename starts with __)
-		const coreNameResult = tryParseAsSeparatedSuffixedBasename(
-			event.splitPath,
-		);
+		const coreNameResult =
+			this.codecs!.canonicalSplitPath.parseSeparatedSuffix(
+				event.splitPath.basename,
+			);
 		if (coreNameResult.isErr()) return;
 
 		if (coreNameResult.value.coreName !== CODEX_CORE_NAME) {
@@ -415,7 +439,7 @@ export class Librarian {
 		}
 
 		// Build tree actions from bulk event
-		const treeActions = buildTreeActions(bulk);
+		const treeActions = buildTreeActions(bulk, this.codecs!, this.rules!);
 
 		if (treeActions.length === 0) {
 			return;
@@ -515,7 +539,10 @@ export class Librarian {
 				this.vaultActionManager,
 			);
 
-			const vaultActions = healingActionsToVaultActions(resolvedActions);
+			const vaultActions = healingActionsToVaultActions(
+				resolvedActions,
+				this.rules!,
+			);
 
 			if (vaultActions.length > 0) {
 				await this.vaultActionManager.dispatch(vaultActions);
@@ -601,12 +628,16 @@ export class Librarian {
 			const [raw] = segId.split(NodeSegmentIdSeparator, 1);
 			return raw ?? "";
 		});
-		const suffixParts = makeSuffixPartsFromPathPartsWithRoot(pathParts);
+		const suffixParts =
+			this.codecs!.canonicalSplitPath.pathPartsWithRootToSuffixParts(
+				pathParts,
+			);
 
-		const basename = makeJoinedSuffixedBasename({
-			coreName: nodeName,
-			suffixParts,
-		});
+		const basename =
+			this.codecs!.canonicalSplitPath.serializeSeparatedSuffix({
+				coreName: nodeName,
+				suffixParts,
+			});
 
 		return {
 			basename,

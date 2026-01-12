@@ -614,6 +614,8 @@ The `bulk-vault-action-adapter` layer has two types of codecs:
 
 **Status**: 🚧 IN PROGRESS - Foundation complete, adapter layer migration in progress
 
+**Last Updated**: Phase 3 implementation session - foundation work completed, adapter function migration remaining
+
 **Process**:
 - ✅ Identify all codec usage points in adapter layer
 - ✅ Create codec instance with rules from parsed settings (injected from Librarian)
@@ -655,11 +657,37 @@ The `bulk-vault-action-adapter` layer has two types of codecs:
 - Verify no orchestrator uses wrong delimiter (rules ensure consistency)
 
 **Key files to test**:
-- `translate-material-event/translators/helpers/locator.ts`
-- `translate-material-event/translate-material-events.ts`
-- `translate-material-event/policy-and-intent/intent/infer-intent.ts`
+- `translate-material-event/translators/helpers/locator.ts` 🚧 Needs migration
+- `translate-material-event/translate-material-events.ts` 🚧 Needs migration
+- `translate-material-event/policy-and-intent/intent/infer-intent.ts` 🚧 Needs migration
 
-**Note from Phase 1**: The existing `locator-codec.ts` functions have been moved to `codecs/locator/`. The adapter layer should import from `codecs/index.ts` and use the factory pattern. Error handling will need to be updated from string errors to `CodecError` pattern matching.
+**Migration Guide for Remaining Files**:
+
+1. **`locator.ts`** - Replace:
+   - `tryParseCanonicalSplitPathInsideLibrary` → `codecs.canonicalSplitPath.splitPathInsideLibraryToCanonical`
+   - `makeLocatorFromCanonicalSplitPathInsideLibrary` → `codecs.locator.canonicalSplitPathInsideLibraryToLocator`
+   - `tryParseAsSeparatedSuffixedBasename` → `codecs.canonicalSplitPath.parseSeparatedSuffix` (use `adaptCodecResult` for string errors)
+   - `makePathPartsFromSuffixParts` → `codecs.canonicalSplitPath.suffixPartsToPathParts`
+   - `makeJoinedSuffixedBasename` → `codecs.canonicalSplitPath.serializeSeparatedSuffix`
+   - `tryBuildCanonicalSeparatedSuffixedBasename` → `codecs.canonicalSplitPath.splitPathInsideLibraryToCanonical` (logic already in new API)
+
+2. **`infer-intent.ts`** - Replace:
+   - `tryParseAsSeparatedSuffixedBasename` → `codecs.canonicalSplitPath.parseSeparatedSuffix` (use `adaptCodecResult`)
+   - `makeSuffixPartsFromPathPartsWithRoot` → `codecs.canonicalSplitPath.pathPartsWithRootToSuffixParts`
+
+3. **`translate-material-events.ts`** - Replace:
+   - `tryParseAsSeparatedSuffixedBasename` → `codecs.canonicalSplitPath.parseSeparatedSuffix` (use `adaptCodecResult`)
+
+4. **Librarian** - Update `init()` and `handleBulkEvent()`:
+   ```typescript
+   const settings = getParsedUserSettings();
+   const rules = makeCodecRulesFromSettings(settings);
+   const codecs = makeCodecs(rules);
+   // Pass codecs and rules to buildTreeActions(bulk, codecs, rules)
+   // Pass rules to healingActionsToVaultActions(actions, rules)
+   ```
+
+**Note from Phase 1**: The existing `locator-codec.ts` functions have been moved to `codecs/locator/`. The adapter layer should import from `codecs/index.ts` and use the factory pattern. Error handling uses temporary adapters (`adaptCodecResult`) to convert `CodecError` → `string` during migration.
 
 ### Phase 5: Integration Testing - tree Layer
 

@@ -1,10 +1,11 @@
 import { CODEX_CORE_NAME } from "../../../../codex/literals";
+import type { Codecs } from "../../../../codecs";
 import type { TreeAction } from "../../../types/tree-action";
-import { tryParseAsSeparatedSuffixedBasename } from "../../../utils/canonical-naming/suffix-utils/core-suffix-utils";
 import {
 	MaterializedEventType,
 	type MaterializedNodeEvent,
 } from "../materialized-node-events";
+import { adaptCodecResult } from "./error-adapters";
 import { traslateCreateMaterializedEvent } from "./translators/translate-create-material-event";
 import { traslateDeleteMaterializedEvent } from "./translators/translate-delete-material-event";
 import { traslateRenameMaterializedEvent } from "./translators/traslate-rename-materila-event";
@@ -34,25 +35,26 @@ import { traslateRenameMaterializedEvent } from "./translators/traslate-rename-m
  */
 export const translateMaterializedEvents = (
 	events: MaterializedNodeEvent[],
+	codecs: Codecs,
 ): TreeAction[] => {
 	const out: TreeAction[] = [];
 
 	for (const ev of events) {
 		// Skip codex files (coreName === "__")
-		if (isCodexEvent(ev)) continue;
+		if (isCodexEvent(ev, codecs)) continue;
 
 		switch (ev.kind) {
 			case MaterializedEventType.Create: {
-				out.push(...traslateCreateMaterializedEvent(ev));
+				out.push(...traslateCreateMaterializedEvent(ev, codecs));
 				break;
 			}
 			case MaterializedEventType.Delete: {
-				out.push(...traslateDeleteMaterializedEvent(ev));
+				out.push(...traslateDeleteMaterializedEvent(ev, codecs));
 				break;
 			}
 
 			case MaterializedEventType.Rename: {
-				out.push(...traslateRenameMaterializedEvent(ev));
+				out.push(...traslateRenameMaterializedEvent(ev, codecs));
 				break;
 			}
 
@@ -68,9 +70,11 @@ export const translateMaterializedEvents = (
 /**
  * Check if event targets a codex file (coreName === "__").
  */
-function isCodexEvent(ev: MaterializedNodeEvent): boolean {
+function isCodexEvent(ev: MaterializedNodeEvent, codecs: Codecs): boolean {
 	const splitPath =
 		ev.kind === MaterializedEventType.Rename ? ev.to : ev.splitPath;
-	const result = tryParseAsSeparatedSuffixedBasename(splitPath);
+	const result = adaptCodecResult(
+		codecs.canonicalSplitPath.parseSeparatedSuffix(splitPath.basename),
+	);
 	return result.isOk() && result.value.coreName === CODEX_CORE_NAME;
 }

@@ -29,24 +29,24 @@ export function healingActionToVaultAction(
 			return {
 				kind: VaultActionKind.RenameFolder,
 				payload: {
-					from: makeVaultScopedSplitPath(action.payload.from),
-					to: makeVaultScopedSplitPath(action.payload.to),
+					from: makeVaultScopedSplitPath(action.payload.from, rules),
+					to: makeVaultScopedSplitPath(action.payload.to, rules),
 				},
 			};
 		case "RenameFile":
 			return {
 				kind: VaultActionKind.RenameFile,
 				payload: {
-					from: makeVaultScopedSplitPath(action.payload.from),
-					to: makeVaultScopedSplitPath(action.payload.to),
+					from: makeVaultScopedSplitPath(action.payload.from, rules),
+					to: makeVaultScopedSplitPath(action.payload.to, rules),
 				},
 			};
 		case "RenameMdFile":
 			return {
 				kind: VaultActionKind.RenameMdFile,
 				payload: {
-					from: makeVaultScopedSplitPath(action.payload.from),
-					to: makeVaultScopedSplitPath(action.payload.to),
+					from: makeVaultScopedSplitPath(action.payload.from, rules),
+					to: makeVaultScopedSplitPath(action.payload.to, rules),
 				},
 			};
 		case "DeleteMdFile":

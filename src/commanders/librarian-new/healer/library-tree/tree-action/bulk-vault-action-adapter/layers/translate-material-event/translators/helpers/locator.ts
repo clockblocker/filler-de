@@ -1,19 +1,12 @@
 import { err, ok, type Result } from "neverthrow";
-import { getParsedUserSettings } from "../../../../../../../../../../global-state/global-state";
+import type { Codecs } from "../../../../../../codecs";
 import {
 	type NodeName,
 	NodeNameSchema,
 } from "../../../../../../../../types/schemas/node-name";
-import { tryParseCanonicalSplitPathInsideLibrary } from "../../../../../utils/canonical-naming/canonical-split-path-codec";
-import { tryBuildCanonicalSeparatedSuffixedBasename } from "../../../../../utils/canonical-naming/suffix-utils/build-canonical-separated-suffixed-basename-path-king-way";
-import {
-	makeJoinedSuffixedBasename,
-	makePathPartsFromSuffixParts,
-	tryParseAsSeparatedSuffixedBasename,
-} from "../../../../../utils/canonical-naming/suffix-utils/core-suffix-utils";
 import type { CanonicalSplitPathInsideLibrary } from "../../../../../utils/canonical-naming/types";
-import { makeLocatorFromCanonicalSplitPathInsideLibrary } from "../../../../../utils/locator/locator-codec";
 import type { SplitPathInsideLibrary } from "../../../library-scope/types/inside-library-split-paths";
+import { adaptCodecResult } from "../error-adapters";
 import {
 	type CanonicalSplitPathToDestination,
 	MaterializedEventKind,
@@ -29,46 +22,62 @@ import {
 
 export function tryMakeDestinationLocatorFromEvent<
 	E extends MaterializedNodeEvent,
->(ev: E): Result<TreeNodeLocatorForEvent<E>, string> {
-	const cspRes = tryMakeCanonicalSplitPathToDestination(ev);
+>(
+	ev: E,
+	codecs: Codecs,
+): Result<TreeNodeLocatorForEvent<E>, string> {
+	const cspRes = tryMakeCanonicalSplitPathToDestination(ev, codecs);
 	if (cspRes.isErr()) return err(cspRes.error);
 
-	const locator = makeLocatorFromCanonicalSplitPathInsideLibrary(
-		cspRes.value,
+	const locatorRes = adaptCodecResult(
+		codecs.locator.canonicalSplitPathInsideLibraryToLocator(cspRes.value),
 	);
+	if (locatorRes.isErr()) return err(locatorRes.error);
 
-	return ok(locator as TreeNodeLocatorForEvent<E>);
+	return ok(locatorRes.value as TreeNodeLocatorForEvent<E>);
 }
 
 export function tryMakeTargetLocatorFromLibraryScopedSplitPath<
 	SP extends SplitPathInsideLibrary,
->(sp: SP): Result<TreeNodeLocatorForLibraryScopedSplitPath<SP>, string> {
-	const cspRes = tryParseCanonicalSplitPathInsideLibrary(sp);
+>(
+	sp: SP,
+	codecs: Codecs,
+): Result<TreeNodeLocatorForLibraryScopedSplitPath<SP>, string> {
+	const cspRes = adaptCodecResult(
+		codecs.canonicalSplitPath.splitPathInsideLibraryToCanonical(sp),
+	);
 	if (cspRes.isErr()) return err(cspRes.error);
 
-	const locator = makeLocatorFromCanonicalSplitPathInsideLibrary(
-		cspRes.value,
+	const locatorRes = adaptCodecResult(
+		codecs.locator.canonicalSplitPathInsideLibraryToLocator(cspRes.value),
 	);
+	if (locatorRes.isErr()) return err(locatorRes.error);
 
-	return ok(locator as TreeNodeLocatorForLibraryScopedSplitPath<SP>);
+	return ok(locatorRes.value as TreeNodeLocatorForLibraryScopedSplitPath<SP>);
 }
 
 const tryMakeCanonicalSplitPathToDestination = <
 	E extends MaterializedNodeEvent,
 >(
 	ev: E,
+	codecs: Codecs,
 ): Result<CanonicalSplitPathToDestination<E>, string> => {
 	if (ev.kind === MaterializedEventKind.Delete) {
-		const r = tryParseCanonicalSplitPathInsideLibrary(ev.splitPath);
+		const r = adaptCodecResult(
+			codecs.canonicalSplitPath.splitPathInsideLibraryToCanonical(
+				ev.splitPath,
+			),
+		);
 		return r as Result<CanonicalSplitPathToDestination<E>, string>;
 	}
 
 	const sp = extractSplitPathToDestination(ev) as SplitPathInsideLibrary;
 	const { policy, intent } = inferPolicyAndIntent(
 		ev as MaterializedNodeEvent,
+		codecs,
 	);
 
-	const r = tryCanonicalizeSplitPathToDestination(sp, policy, intent);
+	const r = tryCanonicalizeSplitPathToDestination(sp, policy, intent, codecs);
 	return r as Result<CanonicalSplitPathToDestination<E>, string>;
 };
 
@@ -85,28 +94,23 @@ const extractSplitPathToDestination = (e: MaterializedNodeEvent) => {
 export const tryCanonicalizeSplitPathToDestination = (
 	sp: SplitPathInsideLibrary,
 	policy: ChangePolicy,
-	intent?: RenameIntent, // undefined = not rename
+	intent: RenameIntent | undefined, // undefined = not rename
+	codecs: Codecs,
 ): Result<CanonicalSplitPathInsideLibrary, string> => {
 	const effectivePolicy =
 		intent === RenameIntent.Rename ? ChangePolicy.PathKing : policy;
 
 	// Always start by parsing the basename into (coreName, suffixFromName)
-	const sepRes = tryParseAsSeparatedSuffixedBasename(sp);
+	const sepRes = adaptCodecResult(
+		codecs.canonicalSplitPath.parseSeparatedSuffix(sp.basename),
+	);
 	if (sepRes.isErr()) return err(sepRes.error);
 
 	// --- PathKing: pathParts are source of truth, build canonical from them
 	if (effectivePolicy === ChangePolicy.PathKing) {
 		// Validate pathParts first
-		const { splitPathToLibraryRoot } = getParsedUserSettings();
-		const libraryRootName = splitPathToLibraryRoot.basename;
-
 		// Empty pathParts is allowed only for Library root folder
 		if (sp.pathParts.length > 0) {
-			// Non-empty pathParts must start with Library
-			if (sp.pathParts[0] !== libraryRootName) {
-				return err("ExpectedLibraryRoot");
-			}
-
 			// Validate all pathParts are valid NodeNames
 			for (const p of sp.pathParts) {
 				const r = NodeNameSchema.safeParse(p);
@@ -119,34 +123,21 @@ export const tryCanonicalizeSplitPathToDestination = (
 		}
 
 		// For PathKing, pathParts define the canonical structure
-		// Extract coreName from basename, build suffixParts from pathParts
-		return tryBuildCanonicalSeparatedSuffixedBasename(sp).map((canon) => {
-			return {
-				...sp,
-				basename: makeJoinedSuffixedBasename(
-					canon.separatedSuffixedBasename,
-				),
-				separatedSuffixedBasename: canon.separatedSuffixedBasename,
-			};
-		});
+		// Use codec to build canonical split path
+		return adaptCodecResult(
+			codecs.canonicalSplitPath.splitPathInsideLibraryToCanonical(sp),
+		);
 	}
 
 	// --- NameKing: interpret basename as path intent, then OUTPUT PathKing-canonical split path
 
-	// Helper: finalize by rebuilding canonical separated+basename using your central logic
+	// Helper: finalize by rebuilding canonical separated+basename using codec
 	const finalize = (
 		next: SplitPathInsideLibrary,
 	): Result<CanonicalSplitPathInsideLibrary, string> => {
-		return tryBuildCanonicalSeparatedSuffixedBasename(next).map((canon) => {
-			const separatedSuffixedBasename = canon.separatedSuffixedBasename;
-
-			return {
-				...next,
-				// force canonical basename
-				basename: makeJoinedSuffixedBasename(separatedSuffixedBasename),
-				separatedSuffixedBasename,
-			};
-		});
+		return adaptCodecResult(
+			codecs.canonicalSplitPath.splitPathInsideLibraryToCanonical(next),
+		);
 	};
 
 	// MOVE-by-name (NameKing): suffix defines the new path
@@ -180,9 +171,9 @@ export const tryCanonicalizeSplitPathToDestination = (
 
 	// Regular NameKing (Create / non-move):
 	// interpret basename suffix chain as parent chain
-	// coreName stays nodeName; suffixParts become extra parent sections (your helper decides exact mapping)
-	const convertedPathParts = makePathPartsFromSuffixParts(
-		sepRes.value,
+	// coreName stays nodeName; suffixParts become extra parent sections
+	const convertedPathParts = codecs.canonicalSplitPath.suffixPartsToPathParts(
+		sepRes.value.suffixParts,
 	) as NodeName[];
 
 	// Preserve Library root from original pathParts

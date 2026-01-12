@@ -1,3 +1,4 @@
+import type { Codecs } from "../../../../codecs";
 import {
 	MaterializedEventType,
 	type MaterializedNodeEvent,
@@ -10,6 +11,7 @@ import { ChangePolicy } from "./policy/types";
 
 export const inferPolicyAndIntent = (
 	e: MaterializedNodeEvent,
+	codecs: Codecs,
 ): {
 	policy: ChangePolicy;
 	intent?: RenameIntent | undefined;
@@ -31,7 +33,7 @@ export const inferPolicyAndIntent = (
 		}
 
 		case MaterializedEventType.Rename: {
-			const intent = inferRenameIntent(e);
+			const intent = inferRenameIntent(e, codecs);
 			const movePolicy = inferMovePolicy(e);
 
 			// intent=Rename => force PathKing, else use movePolicy

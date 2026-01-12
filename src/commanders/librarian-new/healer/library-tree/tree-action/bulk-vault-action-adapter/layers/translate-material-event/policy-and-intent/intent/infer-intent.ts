@@ -1,9 +1,7 @@
+import type { Codecs } from "../../../../../../codecs";
 import { TreeNodeKind } from "../../../../../../tree-node/types/atoms";
-import {
-	makeSuffixPartsFromPathPartsWithRoot,
-	tryParseAsSeparatedSuffixedBasename,
-} from "../../../../../utils/canonical-naming/suffix-utils/core-suffix-utils";
 import type { RenameTreeNodeNodeMaterializedEvent } from "../../../materialized-node-events/types";
+import { adaptCodecResult } from "../../error-adapters";
 import { RenameIntent } from "./types";
 
 /**
@@ -62,11 +60,14 @@ import { RenameIntent } from "./types";
  * This function only infers **intent**.
  * All actual filesystem changes are produced later by Tree healing logic.
  */
-export function inferRenameIntent({
-	to,
-	from,
-	nodeKind,
-}: RenameTreeNodeNodeMaterializedEvent): RenameIntent {
+export function inferRenameIntent(
+	{
+		to,
+		from,
+		nodeKind,
+	}: RenameTreeNodeNodeMaterializedEvent,
+	codecs: Codecs,
+): RenameIntent {
 	const basenameChanged = from.basename !== to.basename;
 	const isFolder = nodeKind === TreeNodeKind.Section;
 
@@ -74,7 +75,9 @@ export function inferRenameIntent({
 	if (!basenameChanged) return RenameIntent.Move;
 
 	// basename changed: check if it's a "move-by-name" or just a rename
-	const sepRes = tryParseAsSeparatedSuffixedBasename(to);
+	const sepRes = adaptCodecResult(
+		codecs.canonicalSplitPath.parseSeparatedSuffix(to.basename),
+	);
 
 	// if invalid basename, treat as plain rename (will be rejected/healed later anyway)
 	if (sepRes.isErr()) return RenameIntent.Rename;
@@ -90,9 +93,8 @@ export function inferRenameIntent({
 	}
 
 	// FILES: compare suffix with current path
-	const currentSuffixParts = makeSuffixPartsFromPathPartsWithRoot(
-		to.pathParts,
-	);
+	const currentSuffixParts =
+		codecs.canonicalSplitPath.pathPartsWithRootToSuffixParts(to.pathParts);
 
 	// no suffix AND already at root → pure rename
 	// no suffix AND NOT at root → move to root (NameKing: empty suffix = root)

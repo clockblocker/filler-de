@@ -1,3 +1,4 @@
+import type { Codecs } from "../../../../../../codecs";
 import { TreeNodeKind } from "../../../../../tree-node/types/atoms";
 import {
 	type DeleteNodeAction,
@@ -8,10 +9,11 @@ import { tryMakeDestinationLocatorFromEvent } from "./helpers/locator";
 
 export function traslateDeleteMaterializedEvent(
 	ev: DeleteTreeNodeMaterializedEvent,
+	codecs: Codecs,
 ): DeleteNodeAction[] {
 	const out: DeleteNodeAction[] = [];
 
-	const targetRes = tryMakeDestinationLocatorFromEvent(ev);
+	const targetRes = tryMakeDestinationLocatorFromEvent(ev, codecs);
 	if (targetRes.isErr()) return out;
 
 	const targetLocator = targetRes.value;
