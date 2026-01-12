@@ -112,7 +112,7 @@ describe("generateCodexContent", () => {
 			});
 			const chain = [sec("Library"), sec("A")];
 
-			const result = generateCodexContent(sectionA, chain);
+			const result = generateCodexContent(sectionA, chain, codecs);
 
 			// Parent backlink to Library root codex
 			expect(result).toContain("[[__-Library|← Library]]");
@@ -128,7 +128,7 @@ describe("generateCodexContent", () => {
 			});
 			const chain = [sec("Library"), sec("A"), sec("B")];
 
-			const result = generateCodexContent(sectionB, chain);
+			const result = generateCodexContent(sectionB, chain, codecs);
 
 			// Parent backlink to section A
 			expect(result).toContain("[[__-A|← A]]");

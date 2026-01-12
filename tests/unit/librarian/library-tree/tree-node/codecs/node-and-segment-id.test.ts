@@ -1,9 +1,8 @@
-import { describe, expect, it } from "bun:test";
-import { makeCodecs } from "../../../../../../src/commanders/librarian-new/healer/library-tree/codecs";
-import { makeCodecRulesFromSettings } from "../../../../../../src/commanders/librarian-new/healer/library-tree/codecs";
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { makeCodecRulesFromSettings, makeCodecs } from "../../../../../../src/commanders/librarian-new/healer/library-tree/codecs";
+import { makeTreeNodeCodecs } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/codecs/node-and-segment-id";
 import { makeNodeSegmentId } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import { makeTreeNode } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/codecs/node-and-segment-id/optimistic-makers/make-tree-node";
-import { makeTreeNodeCodecs } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/codecs/node-and-segment-id";
 import { tryParseTreeNode } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/codecs/node-and-segment-id/try-parse-tree-node";
 import { TreeNodeKind, TreeNodeStatus } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
 import type {
@@ -18,6 +17,17 @@ import type {
 	SectionNode,
 } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/tree-node";
 import { defaultSettingsForUnitTests } from "../../../../common-utils/consts";
+import { setupGetParsedUserSettingsSpy } from "../../../../common-utils/setup-spy";
+
+let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
+
+beforeEach(() => {
+	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy();
+});
+
+afterEach(() => {
+	getParsedUserSettingsSpy.mockRestore();
+});
 
 describe("makeNodeSegmentId", () => {
 	it("creates segment ID for Section node", () => {

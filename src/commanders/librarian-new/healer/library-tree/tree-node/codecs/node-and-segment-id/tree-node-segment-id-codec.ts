@@ -1,22 +1,9 @@
 import { err, ok, type Result } from "neverthrow";
-import type { SegmentIdCodecs } from "../../../codecs/segment-id";
 import type { CodecError } from "../../../codecs/errors";
-import {
-	TreeNodeKind,
-	TreeNodeStatus,
-} from "../../types/atoms";
-import {
-	type FileNodeSegmentId,
-	type ScrollNodeSegmentId,
-	type SectionNodeSegmentId,
-	type TreeNodeSegmentId,
-} from "../../types/node-segment-id";
-import type {
-	FileNode,
-	ScrollNode,
-	SectionNode,
-	TreeNode,
-} from "../../types/tree-node";
+import type { SegmentIdCodecs } from "../../../codecs/segment-id";
+import { TreeNodeKind, TreeNodeStatus } from "../../types/atoms";
+import type { TreeNodeSegmentId } from "../../types/node-segment-id";
+import type { TreeNode } from "../../types/tree-node";
 
 /**
  * TreeNode ↔ SegmentId adapter codecs.
@@ -43,9 +30,7 @@ export type TreeNodeCodecs = {
  * Creates TreeNode codecs that use centralized segment-id codecs.
  * Factory pattern for dependency injection.
  */
-export function makeTreeNodeCodecs(
-	segmentId: SegmentIdCodecs,
-): TreeNodeCodecs {
+export function makeTreeNodeCodecs(segmentId: SegmentIdCodecs): TreeNodeCodecs {
 	// Helper function for makeNodeSegmentId
 	function makeNodeSegmentId(node: TreeNode): TreeNodeSegmentId {
 		// Extract components from TreeNode with proper type narrowing
@@ -59,15 +44,15 @@ export function makeTreeNodeCodecs(
 			case TreeNodeKind.Scroll: {
 				return segmentId.serializeSegmentId({
 					coreName: node.nodeName,
-					targetKind: TreeNodeKind.Scroll,
 					extension: node.extension,
+					targetKind: TreeNodeKind.Scroll,
 				});
 			}
 			case TreeNodeKind.File: {
 				return segmentId.serializeSegmentId({
 					coreName: node.nodeName,
-					targetKind: TreeNodeKind.File,
 					extension: node.extension,
+					targetKind: TreeNodeKind.File,
 				});
 			}
 		}

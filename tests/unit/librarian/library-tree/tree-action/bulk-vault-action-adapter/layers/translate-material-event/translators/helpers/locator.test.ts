@@ -229,6 +229,7 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 				sp,
 				ChangePolicy.NameKing,
 				RenameIntent.Move,
+				codecs,
 			);
 	
 			expect(r.isOk()).toBe(true);
@@ -247,6 +248,7 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 				sp,
 				ChangePolicy.NameKing,
 				RenameIntent.Move,
+				codecs,
 			);
 	
 			expect(r.isOk()).toBe(true);
@@ -333,6 +335,7 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 				sp,
 				ChangePolicy.NameKing,
 				RenameIntent.Rename, // Forces PathKing
+				codecs,
 			);
 
 			expect(result.isOk()).toBe(true);
@@ -440,6 +443,7 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 				sp,
 				ChangePolicy.NameKing,
 				RenameIntent.Rename, // forces PathKing
+				codecs,
 			);
 
 			expect(result.isErr()).toBe(true);

@@ -1,6 +1,6 @@
 import { err, ok, type Result } from "neverthrow";
 import type { AnySplitPath } from "../../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
-import type { CodecRules } from "../../../../codecs/rules";
+import type { CodecRules } from "../../../../../codecs/rules";
 import type { DescopedSplitPath, EnscopedSplitPath } from "../types/generics";
 import type { SplitPathInsideLibrary } from "../types/inside-library-split-paths";
 

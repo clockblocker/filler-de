@@ -63,7 +63,7 @@ export function makeEventVaultScoped(
 			switch (event.scope) {
 				case Scope.Inside:
 					return {
-1						from: makeVaultScopedSplitPath(event.from, rules),
+						from: makeVaultScopedSplitPath(event.from, rules),
 						kind: VaultEventKind.FolderRenamed,
 						to: makeVaultScopedSplitPath(event.to, rules),
 					};
