@@ -689,7 +689,7 @@ Phase 3 successfully migrated the entire bulk-vault-action-adapter layer to use 
 
 4. **Librarian** - ✅ COMPLETED:
    - Codecs created in `init()` and stored as instance properties
-   - All call sites updated to use `this.codecs!` and `this.rules!`
+   - All call sites updated to use `this.codecs` and `this.rules!`
    - Old utility function calls replaced with codec API
 
 **Implementation Notes**:
@@ -726,7 +726,7 @@ Phase 4 successfully migrated the tree layer (`tree.ts`) and healer layer (`heal
   - Error handling: throws on invalid segment IDs (indicates bugs in tree structure)
 
 - ✅ **Librarian** (`librarian.ts`):
-  - Updated Healer creation (line 101) to pass codecs: `new Healer(new Tree(libraryRoot, this.codecs!), this.codecs!)`
+  - Updated Healer creation (line 101) to pass codecs: `new Healer(new Tree(libraryRoot, this.codecs), this.codecs)`
   - Codecs are guaranteed to exist after `init()`, so non-null assertions are acceptable
 
 - ✅ **Test helpers** (`tree-test-helpers.ts`):
@@ -1042,8 +1042,8 @@ Phase 5 successfully migrated all codex-related functions to use the centralized
     - Updated `computeScrollSplitPath` to use codec API for parsing parent chain
     - Updated `buildMovedCodexPath` to use codec API
 - [x] **Librarian updates**:
-  - ✅ Updated all `codexImpactToActions` calls to pass `this.codecs!`
-  - ✅ Updated `computeCodexSplitPath` call to pass `this.codecs!`
+  - ✅ Updated all `codexImpactToActions` calls to pass `this.codecs`
+  - ✅ Updated `computeCodexSplitPath` call to pass `this.codecs`
   - ✅ Replaced manual segment ID construction (line 410) with `codecs.segmentId.serializeSegmentIdUnchecked` for unsafe user input (validates and returns Result)
 - [x] **Test files updated**:
   - ✅ `codex-split-path.test.ts` - Creates codecs in `beforeEach`, passes to all function calls

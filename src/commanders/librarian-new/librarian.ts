@@ -79,8 +79,8 @@ export class Librarian {
 	private clickTeardown: (() => void) | null = null;
 	private queue: QueueItem[] = [];
 	private processing = false;
-	private codecs: Codecs | null = null;
-	private rules: CodecRules | null = null;
+	private codecs: Codecs;
+	private rules: CodecRules;
 
 	constructor(
 		private readonly vaultActionManager: VaultActionManager,
@@ -101,8 +101,8 @@ export class Librarian {
 
 			// Create empty tree and healer
 			this.healer = new Healer(
-				new Tree(libraryRoot, this.codecs!),
-				this.codecs!,
+				new Tree(libraryRoot, this.codecs),
+				this.codecs,
 			);
 
 			// Read all files from library
@@ -151,7 +151,7 @@ export class Librarian {
 			if (allHealingActions.length > 0) {
 				const vaultActions = healingActionsToVaultActions(
 					allHealingActions,
-					this.rules!,
+					this.rules,
 				);
 				await this.vaultActionManager.dispatch(vaultActions);
 			}
@@ -161,7 +161,7 @@ export class Librarian {
 			const codexActions = codexImpactToActions(
 				mergedImpact,
 				this.healer,
-				this.codecs!,
+				this.codecs,
 			);
 			const codexVaultActions = codexActionsToVaultActions(codexActions);
 
@@ -190,7 +190,7 @@ export class Librarian {
 		for (const file of files) {
 			// Skip codex files (basename starts with __)
 			const coreNameResult =
-				this.codecs!.canonicalSplitPath.parseSeparatedSuffix(
+				this.codecs.canonicalSplitPath.parseSeparatedSuffix(
 					file.basename,
 				);
 			if (
@@ -203,7 +203,7 @@ export class Librarian {
 			// Convert to library-scoped path
 			const libraryScopedResult = tryParseAsInsideLibrarySplitPath(
 				file,
-				this.rules!,
+				this.rules,
 			);
 			if (libraryScopedResult.isErr()) continue;
 			const observedPath = libraryScopedResult.value;
@@ -215,7 +215,7 @@ export class Librarian {
 				observedPath,
 				policy,
 				undefined, // no rename intent for create
-				this.codecs!,
+				this.codecs,
 			);
 			if (canonicalResult.isErr()) {
 				continue;
@@ -224,7 +224,7 @@ export class Librarian {
 
 			// Build locator from canonical path
 			const locatorResult =
-				this.codecs!.locator.canonicalSplitPathInsideLibraryToLocator(
+				this.codecs.locator.canonicalSplitPathInsideLibraryToLocator(
 					canonicalPath,
 				);
 			if (locatorResult.isErr()) continue;
@@ -292,7 +292,7 @@ export class Librarian {
 
 			// Check if basename starts with __
 			const coreNameResult =
-				this.codecs!.canonicalSplitPath.parseSeparatedSuffix(
+				this.codecs.canonicalSplitPath.parseSeparatedSuffix(
 					file.basename,
 				);
 			if (coreNameResult.isErr()) continue;
@@ -302,7 +302,7 @@ export class Librarian {
 			// This is a __ file - check if it's valid
 			const libraryScopedResult = tryParseAsInsideLibrarySplitPath(
 				file,
-				this.rules!,
+				this.rules,
 			);
 			if (libraryScopedResult.isErr()) continue;
 
@@ -335,10 +335,7 @@ export class Librarian {
 		const currentChain = [...parentChain, currentSegmentId];
 
 		// Compute codex path for this section
-		const codexSplitPath = computeCodexSplitPath(
-			currentChain,
-			this.codecs!,
-		);
+		const codexSplitPath = computeCodexSplitPath(currentChain, this.codecs);
 		const codexPath = [
 			...codexSplitPath.pathParts,
 			codexSplitPath.basename,
@@ -383,7 +380,7 @@ export class Librarian {
 	private handleCheckboxClick(event: CheckboxClickedEvent): void {
 		// Check if file is a codex (basename starts with __)
 		const coreNameResult =
-			this.codecs!.canonicalSplitPath.parseSeparatedSuffix(
+			this.codecs.canonicalSplitPath.parseSeparatedSuffix(
 				event.splitPath.basename,
 			);
 		if (coreNameResult.isErr()) return;
@@ -410,7 +407,7 @@ export class Librarian {
 		if (target.kind === "Scroll") {
 			// Use serializeSegmentIdUnchecked for unsafe user input (validates and returns Result)
 			const segmentIdResult =
-				this.codecs!.segmentId.serializeSegmentIdUnchecked({
+				this.codecs.segmentId.serializeSegmentIdUnchecked({
 					coreName: target.nodeName,
 					extension: "md",
 					targetKind: TreeNodeKind.Scroll,
@@ -461,7 +458,7 @@ export class Librarian {
 		}
 
 		// Build tree actions from bulk event
-		const treeActions = buildTreeActions(bulk, this.codecs!, this.rules!);
+		const treeActions = buildTreeActions(bulk, this.codecs, this.rules);
 
 		if (treeActions.length === 0) {
 			return;
@@ -563,7 +560,7 @@ export class Librarian {
 
 			const vaultActions = healingActionsToVaultActions(
 				resolvedActions,
-				this.rules!,
+				this.rules,
 			);
 
 			if (vaultActions.length > 0) {
@@ -579,7 +576,7 @@ export class Librarian {
 		const codexActions = codexImpactToActions(
 			mergedImpact,
 			this.healer,
-			this.codecs!,
+			this.codecs,
 		);
 		// Merge scroll status actions with codex actions
 		const allCodexActions: CodexAction[] = [
@@ -657,7 +654,7 @@ export class Librarian {
 		import("./healer/library-tree/codecs/errors").CodecError
 	> {
 		const parseResult =
-			this.codecs!.segmentId.parseScrollSegmentId(segmentId);
+			this.codecs.segmentId.parseScrollSegmentId(segmentId);
 		if (parseResult.isErr()) {
 			return parseResult;
 		}
@@ -681,7 +678,7 @@ export class Librarian {
 		const segmentIdChainToParent: SectionNodeSegmentId[] = [];
 		for (const segId of parentChain) {
 			const parseResult =
-				this.codecs!.segmentId.parseSectionSegmentId(segId);
+				this.codecs.segmentId.parseSectionSegmentId(segId);
 			if (parseResult.isErr()) {
 				return parseResult;
 			}
@@ -691,7 +688,7 @@ export class Librarian {
 
 		// Create ScrollNodeSegmentId
 		const segmentIdResult =
-			this.codecs!.segmentId.serializeSegmentIdUnchecked({
+			this.codecs.segmentId.serializeSegmentIdUnchecked({
 				coreName: nodeName,
 				extension: "md",
 				targetKind: TreeNodeKind.Scroll,
@@ -709,7 +706,7 @@ export class Librarian {
 
 		// Convert locator to canonical split path, then to split path
 		const canonicalResult =
-			this.codecs!.locator.locatorToCanonicalSplitPathInsideLibrary(
+			this.codecs.locator.locatorToCanonicalSplitPathInsideLibrary(
 				locator,
 			);
 
@@ -721,7 +718,7 @@ export class Librarian {
 
 			// Convert canonical to split path
 			const splitPath =
-				this.codecs!.canonicalSplitPath.fromCanonicalSplitPathInsideLibrary(
+				this.codecs.canonicalSplitPath.fromCanonicalSplitPathInsideLibrary(
 					canonicalScroll,
 				);
 
