@@ -16,7 +16,7 @@ export async function getExistingBasenamesInFolder<SPF extends AnySplitPath>(
 		return existingBasenames;
 	}
 
-	if (target.type === SplitPathKind.Folder) {
+	if (target.kind === SplitPathKind.Folder) {
 		// For folders, collect all folder basenames
 		for (const child of targetFolder.children) {
 			if (child instanceof TFolder) {
@@ -26,9 +26,9 @@ export async function getExistingBasenamesInFolder<SPF extends AnySplitPath>(
 	} else {
 		// For files, collect basenames matching the extension
 		const targetExtension =
-			target.type === SplitPathKind.MdFile
+			target.kind === SplitPathKind.MdFile
 				? "md"
-				: target.type === SplitPathKind.File
+				: target.kind === SplitPathKind.File
 					? target.extension
 					: undefined;
 

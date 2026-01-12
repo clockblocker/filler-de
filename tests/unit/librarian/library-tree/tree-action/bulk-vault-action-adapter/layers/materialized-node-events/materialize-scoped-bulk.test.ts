@@ -9,24 +9,24 @@ import { SplitPathKind } from "../../../../../../../../src/managers/obsidian/vau
 import { VaultEventKind } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/vault-event";
 
 // Helper: create library-scoped split paths
-const F = (basename: string, pathParts: string[] = []): { basename: string; pathParts: string[]; type: typeof SplitPathKind.Folder } => ({
+const F = (basename: string, pathParts: string[] = []): { basename: string; pathParts: string[]; kind: typeof SplitPathKind.Folder } => ({
 	basename,
+	kind: SplitPathKind.Folder,
 	pathParts,
-	type: SplitPathKind.Folder,
 });
 
-const File = (basename: string, pathParts: string[] = [], extension = "txt"): { basename: string; pathParts: string[]; type: typeof SplitPathKind.File; extension: string } => ({
+const File = (basename: string, pathParts: string[] = [], extension = "txt"): { basename: string; pathParts: string[]; kind: typeof SplitPathKind.File; extension: string } => ({
 	basename,
 	extension,
+	kind: SplitPathKind.File,
 	pathParts,
-	type: SplitPathKind.File,
 });
 
-const MdFile = (basename: string, pathParts: string[] = []): { basename: string; pathParts: string[]; type: typeof SplitPathKind.MdFile; extension: "md" } => ({
+const MdFile = (basename: string, pathParts: string[] = []): { basename: string; pathParts: string[]; kind: typeof SplitPathKind.MdFile; extension: "md" } => ({
 	basename,
 	extension: "md",
+	kind: SplitPathKind.MdFile,
 	pathParts,
-	type: SplitPathKind.MdFile,
 });
 
 // Helper: normalize object by sorting keys recursively
@@ -92,7 +92,7 @@ describe("materializeScopedBulk", () => {
 			expectMultisetEqual(result, [
 				{
 					kind: MaterializedEventKind.Create,
-					nodeType: TreeNodeKind.File,
+					nodeKind: TreeNodeKind.File,
 					splitPath: File("note", ["section"]),
 				},
 			]);
@@ -124,7 +124,7 @@ describe("materializeScopedBulk", () => {
 			expectMultisetEqual(result, [
 				{
 					kind: MaterializedEventKind.Create,
-					nodeType: TreeNodeKind.Scroll,
+					nodeKind: TreeNodeKind.Scroll,
 					splitPath: MdFile("note", ["section"]),
 				},
 			]);
@@ -177,7 +177,7 @@ describe("materializeScopedBulk", () => {
 			expectMultisetEqual(result, [
 				{
 					kind: MaterializedEventKind.Create,
-					nodeType: TreeNodeKind.File,
+					nodeKind: TreeNodeKind.File,
 					splitPath: File("incoming"),
 				},
 			]);
@@ -225,17 +225,17 @@ describe("materializeScopedBulk", () => {
 			expectMultisetEqual(result, [
 				{
 					kind: MaterializedEventKind.Delete,
-					nodeType: TreeNodeKind.File,
+					nodeKind: TreeNodeKind.File,
 					splitPath: File("file"),
 				},
 				{
 					kind: MaterializedEventKind.Delete,
-					nodeType: TreeNodeKind.Scroll,
+					nodeKind: TreeNodeKind.Scroll,
 					splitPath: MdFile("scroll"),
 				},
 				{
 					kind: MaterializedEventKind.Delete,
-					nodeType: TreeNodeKind.Section,
+					nodeKind: TreeNodeKind.Section,
 					splitPath: F("section"),
 				},
 			]);
@@ -326,17 +326,17 @@ describe("materializeScopedBulk", () => {
 			expectMultisetEqual(result, [
 				{
 					kind: MaterializedEventKind.Delete,
-					nodeType: TreeNodeKind.File,
+					nodeKind: TreeNodeKind.File,
 					splitPath: File("file"),
 				},
 				{
 					kind: MaterializedEventKind.Delete,
-					nodeType: TreeNodeKind.Scroll,
+					nodeKind: TreeNodeKind.Scroll,
 					splitPath: MdFile("scroll"),
 				},
 				{
 					kind: MaterializedEventKind.Delete,
-					nodeType: TreeNodeKind.Section,
+					nodeKind: TreeNodeKind.Section,
 					splitPath: F("section"),
 				},
 			]);
@@ -428,19 +428,19 @@ describe("materializeScopedBulk", () => {
 				{
 					from: File("old-file"),
 					kind: MaterializedEventKind.Rename,
-					nodeType: TreeNodeKind.File,
+					nodeKind: TreeNodeKind.File,
 					to: File("new-file"),
 				},
 				{
 					from: MdFile("old-scroll"),
 					kind: MaterializedEventKind.Rename,
-					nodeType: TreeNodeKind.Scroll,
+					nodeKind: TreeNodeKind.Scroll,
 					to: MdFile("new-scroll"),
 				},
 				{
 					from: F("old-section"),
 					kind: MaterializedEventKind.Rename,
-					nodeType: TreeNodeKind.Section,
+					nodeKind: TreeNodeKind.Section,
 					to: F("new-section"),
 				},
 			]);

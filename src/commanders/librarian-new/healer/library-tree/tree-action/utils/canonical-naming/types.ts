@@ -21,7 +21,7 @@ import type { SeparatedSuffixedBasename } from "./suffix-utils/core-suffix-utils
  * {
  *   pathParts: ["Library", "parent", "child"],
  *   extension: "md",
- *   type: "MdFile",
+ *   kind: "MdFile",
  *   separatedSuffixedBasename: { coreName: "NoteName", suffixParts: ["child", "parent"] },
  * }
  *
@@ -30,7 +30,7 @@ import type { SeparatedSuffixedBasename } from "./suffix-utils/core-suffix-utils
  * =>
  * {
  *   pathParts: ["Library", "parent"],
- *   type: "Folder",
+ *   kind: "Folder",
  *   separatedSuffixedBasename: { coreName: "child", suffixParts: [] },
  * }
  */

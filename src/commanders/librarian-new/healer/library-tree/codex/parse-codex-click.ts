@@ -15,14 +15,14 @@ import { CODEX_CORE_NAME } from "./literals";
 
 export type CodexClickTarget =
 	| {
-			type: "Scroll";
+			kind: "Scroll";
 			/** Full chain to scroll's parent section */
 			parentChain: SectionNodeSegmentId[];
 			/** Scroll node name */
 			nodeName: string;
 	  }
 	| {
-			type: "Section";
+			kind: "Section";
 			/** Full chain to section */
 			sectionChain: SectionNodeSegmentId[];
 	  };
@@ -82,8 +82,8 @@ export function parseCodexLinkTarget(
 		// Chain: [Library, Parent, Child]
 		const sectionChain = buildSectionChain(libraryRoot, suffixParts);
 		return ok({
+			kind: "Section",
 			sectionChain,
-			type: "Section",
 		});
 	}
 
@@ -92,9 +92,9 @@ export function parseCodexLinkTarget(
 	// parentChain: [Library, Parent, Child]
 	const parentChain = buildSectionChain(libraryRoot, suffixParts);
 	return ok({
+		kind: "Scroll",
 		nodeName: coreName,
 		parentChain,
-		type: "Scroll",
 	});
 }
 

@@ -26,14 +26,14 @@ const MdFileOps = z.enum([UPSERT, PROCESS, RENAME, TRASH] as const);
 const TargetSchema = z.enum([FOLDER, FILE, MD_FILE] as const);
 const Target = TargetSchema.enum;
 
-export const VaultActionTypeSchema = z.enum([
+export const VaultActionKindSchema = z.enum([
 	...FolderOps.options.map((op) => `${op}${Target.Folder}` as const),
 	...FileOps.options.map((op) => `${op}${Target.File}` as const),
 	...MdFileOps.options.map((op) => `${op}${Target.MdFile}` as const),
 ] as const);
 
-export const VaultActionType = VaultActionTypeSchema.enum;
-export type VaultActionType = z.infer<typeof VaultActionTypeSchema>;
+export const VaultActionKind = VaultActionKindSchema.enum;
+export type VaultActionKind = z.infer<typeof VaultActionKindSchema>;
 
 export type Transform = (content: string) => string | Promise<string>;
 
@@ -71,27 +71,27 @@ type ProcessMdFilePayload = {
 
 export type VaultAction =
 	| {
-			type: typeof VaultActionType.CreateFolder;
+			kind: typeof VaultActionKind.CreateFolder;
 			payload: CreateFolderPayload;
 	  }
 	| {
-			type: typeof VaultActionType.RenameFolder;
+			kind: typeof VaultActionKind.RenameFolder;
 			payload: RenameFolderPayload;
 	  }
-	| { type: typeof VaultActionType.TrashFolder; payload: TrashFolderPayload }
-	| { type: typeof VaultActionType.CreateFile; payload: CreateFilePayload }
-	| { type: typeof VaultActionType.RenameFile; payload: RenameFilePayload }
-	| { type: typeof VaultActionType.TrashFile; payload: TrashFilePayload }
+	| { kind: typeof VaultActionKind.TrashFolder; payload: TrashFolderPayload }
+	| { kind: typeof VaultActionKind.CreateFile; payload: CreateFilePayload }
+	| { kind: typeof VaultActionKind.RenameFile; payload: RenameFilePayload }
+	| { kind: typeof VaultActionKind.TrashFile; payload: TrashFilePayload }
 	| {
-			type: typeof VaultActionType.UpsertMdFile;
+			kind: typeof VaultActionKind.UpsertMdFile;
 			payload: UpsertMdFilePayload;
 	  }
 	| {
-			type: typeof VaultActionType.RenameMdFile;
+			kind: typeof VaultActionKind.RenameMdFile;
 			payload: RenameMdFilePayload;
 	  }
-	| { type: typeof VaultActionType.TrashMdFile; payload: TrashMdFilePayload }
+	| { kind: typeof VaultActionKind.TrashMdFile; payload: TrashMdFilePayload }
 	| {
-			type: typeof VaultActionType.ProcessMdFile;
+			kind: typeof VaultActionKind.ProcessMdFile;
 			payload: ProcessMdFilePayload;
 	  };

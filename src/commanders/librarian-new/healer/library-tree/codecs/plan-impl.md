@@ -293,7 +293,7 @@ export type SegmentIdCodecs = {
   serializeSegmentId: <NK extends TreeNodeKind>(components: SegmentIdComponents<NK>) => TreeNodeSegmentId;
   
   // Serialize (unchecked inputs)
-  serializeSegmentIdUnchecked: (components: { coreName: string; targetType: TreeNodeKind; extension?: string }) => Result<TreeNodeSegmentId, CodecError>;
+  serializeSegmentIdUnchecked: (components: { coreName: string; targetKind: TreeNodeKind; extension?: string }) => Result<TreeNodeSegmentId, CodecError>;
 };
 
 export function makeSegmentIdCodecs(rules: CodecRules): SegmentIdCodecs {
@@ -479,7 +479,7 @@ The `bulk-vault-action-adapter` layer has two types of codecs:
    - Document error handling patterns
 
 2. **Create `codecs/rules.ts`**
-   - Define `CodecRules` type: `{ suffixDelimiter, libraryRootName }` (nodeSegmentIdSeparator is constant, not in rules)
+   - Define `CodecRules` kind: `{ suffixDelimiter, libraryRootName }` (nodeSegmentIdSeparator is constant, not in rules)
    - Document all required naming conventions
    - Export helper to create rules from parsed settings: `makeCodecRulesFromSettings(settings: ParsedUserSettings)`
    - Extract `suffixDelimiter` from `settings.suffixDelimiter`

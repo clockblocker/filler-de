@@ -14,7 +14,7 @@ export type ClickEventType = "CheckboxClicked";
  * Emitted when a task checkbox is clicked in any markdown file.
  */
 export type CheckboxClickedEvent = {
-	type: "CheckboxClicked";
+	kind: "CheckboxClicked";
 	/** New state after click (checkbox.checked) */
 	checked: boolean;
 	/** File where checkbox was clicked */

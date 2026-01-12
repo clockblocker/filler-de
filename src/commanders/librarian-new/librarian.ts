@@ -209,7 +209,7 @@ export class Librarian {
 
 			// Read status for md files
 			let status: TreeNodeStatus = TreeNodeStatus.NotStarted;
-			if (file.type === SplitPathKind.MdFile && "read" in file) {
+			if (file.kind === SplitPathKind.MdFile && "read" in file) {
 				const contentResult = await file.read();
 				if (contentResult.isOk()) {
 					const meta = readMetadata(
@@ -222,13 +222,13 @@ export class Librarian {
 				}
 			}
 
-			if (locator.targetType === TreeNodeKind.Scroll) {
+			if (locator.targetKind === TreeNodeKind.Scroll) {
 				actions.push({
 					actionType: "Create",
 					initialStatus: status,
 					observedSplitPath:
 						observedPath as SplitPathInsideLibrary & {
-							type: typeof SplitPathKind.MdFile;
+							kind: typeof SplitPathKind.MdFile;
 							extension: "md";
 						},
 					targetLocator: locator,
@@ -238,7 +238,7 @@ export class Librarian {
 					actionType: "Create",
 					observedSplitPath:
 						observedPath as SplitPathInsideLibrary & {
-							type: typeof SplitPathKind.File;
+							kind: typeof SplitPathKind.File;
 							extension: string;
 						},
 					targetLocator: locator,
@@ -265,7 +265,7 @@ export class Librarian {
 
 		for (const file of allFiles) {
 			// Skip non-md files
-			if (file.type !== SplitPathKind.MdFile) continue;
+			if (file.kind !== SplitPathKind.MdFile) continue;
 
 			// Check if basename starts with __
 			const coreNameResult = tryParseAsSeparatedSuffixedBasename(file);
@@ -284,8 +284,8 @@ export class Librarian {
 
 			if (!validCodexPaths.has(filePath)) {
 				deleteActions.push({
+					kind: "DeleteMdFile",
 					payload: { splitPath: libraryScopedResult.value },
-					type: "DeleteMdFile",
 				});
 			}
 		}
@@ -339,7 +339,7 @@ export class Librarian {
 		if (!this.clickManager) return;
 
 		this.clickTeardown = this.clickManager.subscribe((event) => {
-			if (event.type === "CheckboxClicked") {
+			if (event.kind === "CheckboxClicked") {
 				this.handleCheckboxClick(event);
 			}
 		});
@@ -374,7 +374,7 @@ export class Librarian {
 		// Build ChangeStatus action
 		let action: TreeAction;
 
-		if (target.type === "Scroll") {
+		if (target.kind === "Scroll") {
 			action = {
 				actionType: "ChangeStatus",
 				newStatus,
@@ -382,7 +382,7 @@ export class Librarian {
 					segmentId:
 						`${target.nodeName}${NodeSegmentIdSeparator}${TreeNodeKind.Scroll}${NodeSegmentIdSeparator}md` as ScrollNodeSegmentId,
 					segmentIdChainToParent: target.parentChain,
-					targetType: TreeNodeKind.Scroll,
+					targetKind: TreeNodeKind.Scroll,
 				},
 			};
 		} else {
@@ -397,7 +397,7 @@ export class Librarian {
 				targetLocator: {
 					segmentId: sectionName,
 					segmentIdChainToParent: target.sectionChain.slice(0, -1),
-					targetType: TreeNodeKind.Section,
+					targetKind: TreeNodeKind.Section,
 				},
 			};
 		}
@@ -551,7 +551,7 @@ export class Librarian {
 		for (const action of actions) {
 			if (
 				action.actionType !== "ChangeStatus" ||
-				action.targetLocator.targetType !== TreeNodeKind.Scroll
+				action.targetLocator.targetKind !== TreeNodeKind.Scroll
 			) {
 				continue;
 			}
@@ -566,11 +566,11 @@ export class Librarian {
 			);
 
 			scrollActions.push({
+				kind: "WriteScrollStatus",
 				payload: {
 					splitPath,
 					status: action.newStatus,
 				},
-				type: "WriteScrollStatus",
 			});
 		}
 
@@ -594,7 +594,7 @@ export class Librarian {
 		nodeName: string,
 		parentChain: SectionNodeSegmentId[],
 	): SplitPathInsideLibrary & {
-		type: typeof SplitPathKind.MdFile;
+		kind: typeof SplitPathKind.MdFile;
 		extension: "md";
 	} {
 		const pathParts = parentChain.map((segId) => {
@@ -611,8 +611,8 @@ export class Librarian {
 		return {
 			basename,
 			extension: "md",
+			kind: SplitPathKind.MdFile,
 			pathParts,
-			type: SplitPathKind.MdFile,
 		};
 	}
 

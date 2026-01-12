@@ -9,7 +9,7 @@ import type {
 import { SplitPathKind } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import type { VaultAction } from "../../../src/managers/obsidian/vault-action-manager/types/vault-action";
 import {
-	VaultActionType,
+	VaultActionKind,
 } from "../../../src/managers/obsidian/vault-action-manager/types/vault-action";
 
 const folder = (
@@ -17,8 +17,8 @@ const folder = (
 	pathParts: string[] = [],
 ): SplitPathToFolder => ({
 	basename,
+	kind: SplitPathKind.Folder,
 	pathParts,
-	type: SplitPathKind.Folder,
 });
 
 const mdFile = (
@@ -27,37 +27,37 @@ const mdFile = (
 ): SplitPathToMdFile => ({
 	basename,
 	extension: "md",
+	kind: SplitPathKind.MdFile,
 	pathParts,
-	type: SplitPathKind.MdFile,
 });
 
 describe("EnsureExist Integration", () => {
 	it("should ensure parent folders exist before files (recursive)", () => {
 		// ProcessMdFile on nested file should require parent folders
 		const process: VaultAction = {
+			kind: VaultActionKind.ProcessMdFile,
 			payload: {
 				splitPath: mdFile("file", ["root", "parent", "child"]),
 				transform: async (c) => c,
 			},
-			type: VaultActionType.ProcessMdFile,
 		};
 
 		// EnsureExist actions would be added by dispatcher
 		const rootFolder: VaultAction = {
+			kind: VaultActionKind.CreateFolder,
 			payload: { splitPath: folder("root") },
-			type: VaultActionType.CreateFolder,
 		};
 		const parentFolder: VaultAction = {
+			kind: VaultActionKind.CreateFolder,
 			payload: { splitPath: folder("parent", ["root"]) },
-			type: VaultActionType.CreateFolder,
 		};
 		const childFolder: VaultAction = {
+			kind: VaultActionKind.CreateFolder,
 			payload: { splitPath: folder("child", ["root", "parent"]) },
-			type: VaultActionType.CreateFolder,
 		};
 		const ensureFile: VaultAction = {
+			kind: VaultActionKind.UpsertMdFile,
 			payload: { content: null, splitPath: mdFile("file", ["root", "parent", "child"]) },
-			type: VaultActionType.UpsertMdFile,
 		};
 
 		const graph = buildDependencyGraph([
@@ -79,38 +79,38 @@ describe("EnsureExist Integration", () => {
 
 	it("should collapse EnsureExist + Create to Create", async () => {
 		const ensureExist: VaultAction = {
+			kind: VaultActionKind.UpsertMdFile,
 			payload: { content: null, splitPath: mdFile("file") },
-			type: VaultActionType.UpsertMdFile,
 		};
 		const create: VaultAction = {
+			kind: VaultActionKind.UpsertMdFile,
 			payload: { content: "content", splitPath: mdFile("file") },
-			type: VaultActionType.UpsertMdFile,
 		};
 
 		const collapsed = await collapseActions([ensureExist, create]);
 
 		expect(collapsed).toHaveLength(1);
-		expect(collapsed[0]?.type).toBe(VaultActionType.UpsertMdFile);
-		if (collapsed[0]?.type === VaultActionType.UpsertMdFile) {
+		expect(collapsed[0]?.kind).toBe(VaultActionKind.UpsertMdFile);
+		if (collapsed[0]?.kind === VaultActionKind.UpsertMdFile) {
 			expect(collapsed[0].payload.content).toBe("content");
 		}
 	});
 
 	it("should sort EnsureExist before mutator actions", async () => {
 		const ensureExist: VaultAction = {
+			kind: VaultActionKind.UpsertMdFile,
 			payload: { content: null, splitPath: mdFile("file") },
-			type: VaultActionType.UpsertMdFile,
 		};
 		const process: VaultAction = {
+			kind: VaultActionKind.ProcessMdFile,
 			payload: {
 				splitPath: mdFile("file"),
 				transform: async (c) => c,
 			},
-			type: VaultActionType.ProcessMdFile,
 		};
 		const replace: VaultAction = {
+			kind: VaultActionKind.UpsertMdFile,
 			payload: { content: "new", splitPath: mdFile("file") },
-			type: VaultActionType.UpsertMdFile,
 		};
 
 		// Collapse first: UpsertMdFile(null) + ProcessMdFile → both kept,
@@ -118,7 +118,7 @@ describe("EnsureExist Integration", () => {
 		const collapsed = await collapseActions([ensureExist, process, replace]);
 		// After collapse: only UpsertMdFile(content) remains
 		expect(collapsed).toHaveLength(1);
-		expect(collapsed[0]?.type).toBe(VaultActionType.UpsertMdFile);
+		expect(collapsed[0]?.kind).toBe(VaultActionKind.UpsertMdFile);
 		expect((collapsed[0]! as typeof replace).payload.content).toBe("new");
 
 		// Build dependency graph on collapsed actions
@@ -127,28 +127,28 @@ describe("EnsureExist Integration", () => {
 
 		// After collapse, only UpsertMdFile(content) remains
 		expect(sorted).toHaveLength(1);
-		expect(sorted[0]?.type).toBe(VaultActionType.UpsertMdFile);
+		expect(sorted[0]?.kind).toBe(VaultActionKind.UpsertMdFile);
 	});
 
 	it("should handle complex scenario: EnsureExist + Create + Process", async () => {
 		const rootFolder: VaultAction = {
+			kind: VaultActionKind.CreateFolder,
 			payload: { splitPath: folder("root") },
-			type: VaultActionType.CreateFolder,
 		};
 		const ensureFile: VaultAction = {
+			kind: VaultActionKind.UpsertMdFile,
 			payload: { content: null, splitPath: mdFile("file", ["root"]) },
-			type: VaultActionType.UpsertMdFile,
 		};
 		const createFile: VaultAction = {
+			kind: VaultActionKind.UpsertMdFile,
 			payload: { content: "initial", splitPath: mdFile("file", ["root"]) },
-			type: VaultActionType.UpsertMdFile,
 		};
 		const process: VaultAction = {
+			kind: VaultActionKind.ProcessMdFile,
 			payload: {
 				splitPath: mdFile("file", ["root"]),
 				transform: async (c) => c + "\nprocessed",
 			},
-			type: VaultActionType.ProcessMdFile,
 		};
 
 		// Collapse: EnsureExist + Create → Create

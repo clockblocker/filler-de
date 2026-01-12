@@ -35,30 +35,30 @@ const spFile = (
 	pathParts: string[],
 	basename: string,
 	ext: string = "txt",
-): { basename: string; pathParts: string[]; type: typeof SplitPathKind.File; extension: string } => ({
+): { basename: string; pathParts: string[]; kind: typeof SplitPathKind.File; extension: string } => ({
 	basename,
 	extension: ext,
+	kind: SplitPathKind.File,
 	pathParts,
-	type: SplitPathKind.File,
 });
 
 const spFolder = (
 	pathParts: string[],
 	basename: string,
-): { basename: string; pathParts: string[]; type: typeof SplitPathKind.Folder } => ({
+): { basename: string; pathParts: string[]; kind: typeof SplitPathKind.Folder } => ({
 	basename,
+	kind: SplitPathKind.Folder,
 	pathParts,
-	type: SplitPathKind.Folder,
 });
 
 const spMdFile = (
 	pathParts: string[],
 	basename: string,
-): { basename: string; pathParts: string[]; type: typeof SplitPathKind.MdFile; extension: "md" } => ({
+): { basename: string; pathParts: string[]; kind: typeof SplitPathKind.MdFile; extension: "md" } => ({
 	basename,
 	extension: "md",
+	kind: SplitPathKind.MdFile,
 	pathParts,
-	type: SplitPathKind.MdFile,
 });
 
 const evFileCreated = (
@@ -135,7 +135,7 @@ describe("buildTreeActions", () => {
 			if (!action) throw new Error("Expected action");
 			expect(action.actionType).toBe(TreeActionType.Create);
 			expect(getNodeName(action.targetLocator)).toBe("Note");
-			expect(action.targetLocator.targetType).toBe(TreeNodeKind.Scroll);
+			expect(action.targetLocator.targetKind).toBe(TreeNodeKind.Scroll);
 		});
 
 		it("FileCreated inside nested => Create", () => {
@@ -150,7 +150,7 @@ describe("buildTreeActions", () => {
 			if (!action) throw new Error("Expected action");
 			expect(action.actionType).toBe(TreeActionType.Create);
 			expect(getNodeName(action.targetLocator)).toBe("Note");
-			expect(action.targetLocator.targetType).toBe(TreeNodeKind.Scroll);
+			expect(action.targetLocator.targetKind).toBe(TreeNodeKind.Scroll);
 		});
 
 		it("FileRenamed outside→inside => Create", () => {
@@ -170,7 +170,7 @@ describe("buildTreeActions", () => {
 			if (!action) throw new Error("Expected action");
 			expect(action.actionType).toBe(TreeActionType.Create);
 			expect(getNodeName(action.targetLocator)).toBe("a");
-			expect(action.targetLocator.targetType).toBe(TreeNodeKind.Scroll);
+			expect(action.targetLocator.targetKind).toBe(TreeNodeKind.Scroll);
 		});
 	});
 
@@ -202,7 +202,7 @@ describe("buildTreeActions", () => {
 			if (!action) throw new Error("Expected action");
 			expect(action.actionType).toBe(TreeActionType.Delete);
 			expect(getNodeName(action.targetLocator)).toBe("Section");
-			expect(action.targetLocator.targetType).toBe(TreeNodeKind.Section);
+			expect(action.targetLocator.targetKind).toBe(TreeNodeKind.Section);
 		});
 
 		it("FileRenamed inside→outside => Delete", () => {

@@ -36,7 +36,7 @@ function makeSegmentId(node: TreeNode): TreeNodeSegmentId {
 	if (node.kind === TreeNodeKind.Section) {
 		return makeNodeSegmentId(node);
 	}
-	if (node.type === TreeNodeKind.Scroll) {
+	if (node.kind === TreeNodeKind.Scroll) {
 		return makeNodeSegmentId(node);
 	}
 	return makeNodeSegmentId(node);
@@ -89,7 +89,7 @@ export class Tree {
 	private makeLeafNode(action: CreateTreeLeafAction): LeafNode {
 		const nodeName = getNodeName(action.targetLocator);
 
-		if (action.targetLocator.targetType === TreeNodeKind.Scroll) {
+		if (action.targetLocator.targetKind === TreeNodeKind.Scroll) {
 			return {
 				extension: "md",
 				kind: TreeNodeKind.Scroll,
@@ -200,7 +200,7 @@ export class Tree {
 	private applyChangeStatus(action: ChangeNodeStatusAction): void {
 		const { targetLocator, newStatus } = action;
 
-		if (targetLocator.targetType === TreeNodeKind.Section) {
+		if (targetLocator.targetKind === TreeNodeKind.Section) {
 			// Propagate to descendants
 			const section = this.findSection([
 				...targetLocator.segmentIdChainToParent,
@@ -248,7 +248,7 @@ export class Tree {
 				continue;
 			}
 			const child = current.children[segId];
-			if (!child || child.type !== TreeNodeKind.Section) return undefined;
+			if (!child || child.kind !== TreeNodeKind.Section) return undefined;
 			current = child;
 		}
 		return current ?? this.root;
@@ -267,14 +267,14 @@ export class Tree {
 				const nodeName = this.extractNodeNameFromSegmentId(segId);
 				child = {
 					children: {},
+					kind: TreeNodeKind.Section,
 					nodeName,
-					type: TreeNodeKind.Section,
 				};
 				current.children[segId] = child;
 			}
-			if (child.type !== TreeNodeKind.Section) {
+			if (child.kind !== TreeNodeKind.Section) {
 				throw new Error(
-					`Expected section at ${segId}, got ${child.type}`,
+					`Expected section at ${segId}, got ${child.kind}`,
 				);
 			}
 			current = child;

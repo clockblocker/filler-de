@@ -274,7 +274,7 @@ export class OpenedFileService {
 
 	// Methods for Reader compatibility
 	async isInActiveView(splitPath: AnySplitPath): Promise<boolean> {
-		if (splitPath.type !== "MdFile") return false;
+		if (splitPath.kind !== "MdFile") return false;
 		const result = await this.isFileActive(splitPath);
 		return result.isOk() && result.value;
 	}
@@ -288,7 +288,7 @@ export class OpenedFileService {
 	}
 
 	async exists(splitPath: AnySplitPath): Promise<boolean> {
-		if (splitPath.type === "Folder") return false;
+		if (splitPath.kind === "Folder") return false;
 		const isActive = await this.isInActiveView(splitPath);
 		if (isActive) return true;
 		const systemPath = makeSystemPathForSplitPath(splitPath);
@@ -305,18 +305,18 @@ export class OpenedFileService {
 
 	async getAbstractFile<SP extends AnySplitPath>(
 		splitPath: SP,
-	): Promise<SP["type"] extends "Folder" ? TFolder : TFile> {
+	): Promise<SP["kind"] extends "Folder" ? TFolder : TFile> {
 		const systemPath = makeSystemPathForSplitPath(splitPath);
 		const file = this.app.vault.getAbstractFileByPath(systemPath);
 		if (!file) {
 			throw new Error(`File not found: ${systemPath}`);
 		}
-		if (splitPath.type === "Folder" && !(file instanceof TFolder)) {
+		if (splitPath.kind === "Folder" && !(file instanceof TFolder)) {
 			throw new Error(`Expected folder but got file: ${systemPath}`);
 		}
-		if (splitPath.type !== "Folder" && !(file instanceof TFile)) {
+		if (splitPath.kind !== "Folder" && !(file instanceof TFile)) {
 			throw new Error(`Expected file but got folder: ${systemPath}`);
 		}
-		return file as SP["type"] extends "Folder" ? TFolder : TFile;
+		return file as SP["kind"] extends "Folder" ? TFolder : TFile;
 	}
 }

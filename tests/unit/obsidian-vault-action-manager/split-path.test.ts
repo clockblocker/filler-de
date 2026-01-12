@@ -12,8 +12,8 @@ describe("obsidian-vault-action-manager splitPath helpers", () => {
 		expect(split).toEqual({
 			basename: "file",
 			extension: "md",
+			kind: "MdFile",
 			pathParts: ["root", "notes"],
-			type: "MdFile",
 		});
 		expect(makeSystemPathForSplitPath(split)).toBe("root/notes/file.md");
 	});
@@ -24,8 +24,8 @@ describe("obsidian-vault-action-manager splitPath helpers", () => {
 		expect(split).toEqual({
 			basename: "image",
 			extension: "png",
+			kind: "File",
 			pathParts: ["root", "assets"],
-			type: "File",
 		});
 		expect(makeSystemPathForSplitPath(split)).toBe("root/assets/image.png");
 	});
@@ -35,8 +35,8 @@ describe("obsidian-vault-action-manager splitPath helpers", () => {
 
 		expect(split).toEqual({
 			basename: "Section",
+			kind: "Folder",
 			pathParts: ["root", "library"],
-			type: "Folder",
 		});
 		expect(makeSystemPathForSplitPath(split)).toBe("root/library/Section");
 	});
@@ -51,8 +51,8 @@ describe("obsidian-vault-action-manager splitPath helpers", () => {
 		expect(split).toEqual({
 			basename: "file",
 			extension: "md",
+			kind: "MdFile",
 			pathParts: ["root", "notes"],
-			type: "MdFile",
 		});
 	});
 
@@ -64,8 +64,8 @@ describe("obsidian-vault-action-manager splitPath helpers", () => {
 
 		expect(split).toEqual({
 			basename: "library",
+			kind: "Folder",
 			pathParts: ["root"],
-			type: "Folder",
 		});
 	});
 });

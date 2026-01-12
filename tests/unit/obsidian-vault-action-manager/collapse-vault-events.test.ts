@@ -15,8 +15,8 @@ const F = (path: string): SplitPathToFolder => {
 	const basename = parts.pop() ?? "";
 	return {
 		basename,
+		kind: "Folder",
 		pathParts: parts,
-		type: "Folder",
 	};
 };
 
@@ -28,14 +28,14 @@ const P = (path: string): SplitPathToMdFile | SplitPathToFile => {
 	const ext = dot === -1 ? "" : filename.slice(dot + 1);
 
 	return ext === "md"
-		? { basename, extension: "md", pathParts: parts, type: "MdFile" }
-		: { basename, extension: ext, pathParts: parts, type: "File" };
+		? { basename, extension: "md", kind: "MdFile", pathParts: parts }
+		: { basename, extension: ext, kind: "File", pathParts: parts };
 };
 
 const fileRenamed = (
 	from: string,
 	to: string,
-): Extract<VaultEvent, { type: typeof VaultEventKind.FileRenamed }> => ({
+): Extract<VaultEvent, { kind: typeof VaultEventKind.FileRenamed }> => ({
 	from: P(from),
 	kind: VaultEventKind.FileRenamed,
 	to: P(to),
@@ -44,7 +44,7 @@ const fileRenamed = (
 const folderRenamed = (
 	from: string,
 	to: string,
-): Extract<VaultEvent, { type: typeof VaultEventKind.FolderRenamed }> => ({
+): Extract<VaultEvent, { kind: typeof VaultEventKind.FolderRenamed }> => ({
 	from: F(from),
 	kind: VaultEventKind.FolderRenamed,
 	to: F(to),
@@ -52,7 +52,7 @@ const folderRenamed = (
 
 const fileDeleted = (
 	path: string,
-): Extract<VaultEvent, { type: typeof VaultEventKind.FileDeleted }> => ({
+): Extract<VaultEvent, { kind: typeof VaultEventKind.FileDeleted }> => ({
 	kind: VaultEventKind.FileDeleted,
 	splitPath: P(path),
 });

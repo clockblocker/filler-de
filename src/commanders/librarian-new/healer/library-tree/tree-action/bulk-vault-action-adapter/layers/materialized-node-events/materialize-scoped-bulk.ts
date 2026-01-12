@@ -69,17 +69,17 @@ function materializeCreateFromScopedEvent(
 		e.kind === VaultEventKind.FileRenamed
 	) {
 		const sp = e.to; // inside side is `to`
-		switch (sp.type) {
+		switch (sp.kind) {
 			case "File":
 				return {
 					kind: MaterializedEventKind.Create,
-					nodeType: TreeNodeKind.File,
+					nodeKind: TreeNodeKind.File,
 					splitPath: sp,
 				};
 			case "MdFile":
 				return {
 					kind: MaterializedEventKind.Create,
-					nodeType: TreeNodeKind.Scroll,
+					nodeKind: TreeNodeKind.Scroll,
 					splitPath: sp,
 				};
 			default:
@@ -90,17 +90,17 @@ function materializeCreateFromScopedEvent(
 	switch (e.kind) {
 		case VaultEventKind.FileCreated: {
 			const sp = e.splitPath;
-			switch (sp.type) {
+			switch (sp.kind) {
 				case "File":
 					return {
 						kind: MaterializedEventKind.Create,
-						nodeType: TreeNodeKind.File,
+						nodeKind: TreeNodeKind.File,
 						splitPath: sp,
 					};
 				case "MdFile":
 					return {
 						kind: MaterializedEventKind.Create,
-						nodeType: TreeNodeKind.Scroll,
+						nodeKind: TreeNodeKind.Scroll,
 						splitPath: sp,
 					};
 				default:
@@ -123,17 +123,17 @@ function materializeDeleteFromScopedRoot(
 
 	switch (ev.kind) {
 		case VaultEventKind.FileDeleted: {
-			switch (ev.splitPath.type) {
+			switch (ev.splitPath.kind) {
 				case "File":
 					return {
 						kind: MaterializedEventKind.Delete,
-						nodeType: TreeNodeKind.File,
+						nodeKind: TreeNodeKind.File,
 						splitPath: ev.splitPath,
 					};
 				case "MdFile":
 					return {
 						kind: MaterializedEventKind.Delete,
-						nodeType: TreeNodeKind.Scroll,
+						nodeKind: TreeNodeKind.Scroll,
 						splitPath: ev.splitPath,
 					};
 				default: {
@@ -146,7 +146,7 @@ function materializeDeleteFromScopedRoot(
 		case VaultEventKind.FolderDeleted:
 			return {
 				kind: MaterializedEventKind.Delete,
-				nodeType: TreeNodeKind.Section,
+				nodeKind: TreeNodeKind.Section,
 				splitPath: ev.splitPath,
 			};
 
@@ -166,17 +166,17 @@ function materializeDeleteFromScopedEventInsideToOutside(
 
 	switch (ev.kind) {
 		case VaultEventKind.FileRenamed: {
-			switch (ev.from.type) {
+			switch (ev.from.kind) {
 				case "File":
 					return {
 						kind: MaterializedEventKind.Delete,
-						nodeType: TreeNodeKind.File,
+						nodeKind: TreeNodeKind.File,
 						splitPath: ev.from,
 					};
 				case "MdFile":
 					return {
 						kind: MaterializedEventKind.Delete,
-						nodeType: TreeNodeKind.Scroll,
+						nodeKind: TreeNodeKind.Scroll,
 						splitPath: ev.from,
 					};
 				default: {
@@ -190,7 +190,7 @@ function materializeDeleteFromScopedEventInsideToOutside(
 			// inside side is `from`
 			return {
 				kind: MaterializedEventKind.Delete,
-				nodeType: TreeNodeKind.Section,
+				nodeKind: TreeNodeKind.Section,
 				splitPath: ev.from,
 			};
 
@@ -206,25 +206,25 @@ export function materializeRenameFromScopedRoot(
 
 	switch (ev.kind) {
 		case VaultEventKind.FileRenamed: {
-			switch (ev.from.type) {
+			switch (ev.from.kind) {
 				case "File": {
 					const to = ev.to;
-					if (to.type !== "File") return null; // defensive
+					if (to.kind !== "File") return null; // defensive
 					return {
 						from: ev.from,
 						kind: MaterializedEventKind.Rename,
-						nodeType: TreeNodeKind.File,
+						nodeKind: TreeNodeKind.File,
 						to: to,
 					};
 				}
 
 				case "MdFile": {
 					const to = ev.to;
-					if (to.type !== "MdFile") return null; // defensive
+					if (to.kind !== "MdFile") return null; // defensive
 					return {
 						from: ev.from,
 						kind: MaterializedEventKind.Rename,
-						nodeType: TreeNodeKind.Scroll,
+						nodeKind: TreeNodeKind.Scroll,
 						to: to,
 					};
 				}
@@ -239,7 +239,7 @@ export function materializeRenameFromScopedRoot(
 			return {
 				from: ev.from,
 				kind: MaterializedEventKind.Rename,
-				nodeType: TreeNodeKind.Section,
+				nodeKind: TreeNodeKind.Section,
 				to: ev.to,
 			};
 

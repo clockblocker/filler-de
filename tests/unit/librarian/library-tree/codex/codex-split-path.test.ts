@@ -26,8 +26,8 @@ describe("computeCodexSplitPath", () => {
 		expect(result).toEqual({
 			basename: "__-Library",
 			extension: "md",
+			kind: SplitPathKind.MdFile,
 			pathParts: ["Library"],
-			type: SplitPathKind.MdFile,
 		});
 	});
 
@@ -38,8 +38,8 @@ describe("computeCodexSplitPath", () => {
 		expect(result).toEqual({
 			basename: "__-A",
 			extension: "md",
+			kind: SplitPathKind.MdFile,
 			pathParts: ["Library", "A"],
-			type: SplitPathKind.MdFile,
 		});
 	});
 
@@ -50,8 +50,8 @@ describe("computeCodexSplitPath", () => {
 		expect(result).toEqual({
 			basename: "__-B-A",
 			extension: "md",
+			kind: SplitPathKind.MdFile,
 			pathParts: ["Library", "A", "B"],
-			type: SplitPathKind.MdFile,
 		});
 	});
 
@@ -62,8 +62,8 @@ describe("computeCodexSplitPath", () => {
 		expect(result).toEqual({
 			basename: "__-C-B-A",
 			extension: "md",
+			kind: SplitPathKind.MdFile,
 			pathParts: ["Library", "A", "B", "C"],
-			type: SplitPathKind.MdFile,
 		});
 	});
 

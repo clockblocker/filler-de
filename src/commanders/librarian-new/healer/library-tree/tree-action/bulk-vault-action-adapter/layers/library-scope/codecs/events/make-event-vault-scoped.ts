@@ -23,7 +23,7 @@ export function makeEventVaultScoped(
 		case VaultEventKind.FolderCreated:
 		case VaultEventKind.FolderDeleted: {
 			return {
-				kind: event.type,
+				kind: event.kind,
 				splitPath: makeVaultScopedSplitPath(event.splitPath),
 			};
 		}

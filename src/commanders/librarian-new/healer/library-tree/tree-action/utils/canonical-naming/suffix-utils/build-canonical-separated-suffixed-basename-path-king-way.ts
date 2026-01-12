@@ -36,7 +36,7 @@ const extractDuplicateMarker = (
 export const tryBuildCanonicalSeparatedSuffixedBasename = ({
 	basename,
 	pathParts,
-	type,
+	kind: type,
 }: Pick<SplitPathInsideLibrary, "basename" | "pathParts" | "type">): Result<
 	CanonicalSeparatedSuffixedBasename,
 	string
@@ -87,7 +87,7 @@ export const tryParseCanonicalSplitPathInsideLibrary = (
 
 				// additionally enforce folder has no suffixParts (redundant but explicit)
 				if (
-					sp.type === SplitPathKind.Folder &&
+					sp.kind === SplitPathKind.Folder &&
 					suffixParts.length !== 0
 				) {
 					return err("Folder basename must not contain suffix parts");

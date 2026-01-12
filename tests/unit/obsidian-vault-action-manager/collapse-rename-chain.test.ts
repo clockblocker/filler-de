@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { collapseActions } from "../../../src/managers/obsidian/vault-action-manager/impl/actions-processing/collapse";
 import type { SplitPathToMdFile } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
-import { VaultActionType } from "../../../src/managers/obsidian/vault-action-manager/types/vault-action";
+import { VaultActionKind } from "../../../src/managers/obsidian/vault-action-manager/types/vault-action";
 
 const mdFile = (
 	basename: string,
@@ -9,25 +9,25 @@ const mdFile = (
 ): SplitPathToMdFile => ({
 	basename,
 	extension: "md",
+	kind: "MdFile",
 	pathParts,
-	type: "MdFile",
 });
 
 describe("collapseActions - Rename Chain Handling", () => {
 	it("should handle rename chain: a.md → b.md then b.md → c.md", async () => {
 		const r1 = {
+			kind: VaultActionKind.RenameMdFile,
 			payload: {
 				from: mdFile("a.md"),
 				to: mdFile("b.md"),
 			},
-			type: VaultActionType.RenameMdFile,
 		} as const;
 		const r2 = {
+			kind: VaultActionKind.RenameMdFile,
 			payload: {
 				from: mdFile("b.md"),
 				to: mdFile("c.md"),
 			},
-			type: VaultActionType.RenameMdFile,
 		} as const;
 
 		const collapsed = await collapseActions([r1, r2]);
@@ -39,10 +39,10 @@ describe("collapseActions - Rename Chain Handling", () => {
 		// Verify both renames are present (current implementation)
 		// Or verify single rename a→c (if optimization implemented)
 		const fromPaths = collapsed
-			.filter((a) => a.type === VaultActionType.RenameMdFile)
+			.filter((a) => a.kind === VaultActionKind.RenameMdFile)
 			.map((a) => (a as typeof r1).payload.from.basename);
 		const toPaths = collapsed
-			.filter((a) => a.type === VaultActionType.RenameMdFile)
+			.filter((a) => a.kind === VaultActionKind.RenameMdFile)
 			.map((a) => (a as typeof r1).payload.to.basename);
 
 		// Current: both kept (different keys)
@@ -52,25 +52,25 @@ describe("collapseActions - Rename Chain Handling", () => {
 
 	it("should handle rename chain with operations in between", async () => {
 		const r1 = {
+			kind: VaultActionKind.RenameMdFile,
 			payload: {
 				from: mdFile("a.md"),
 				to: mdFile("b.md"),
 			},
-			type: VaultActionType.RenameMdFile,
 		} as const;
 		const process = {
+			kind: VaultActionKind.ProcessMdFile,
 			payload: {
 				splitPath: mdFile("b.md"),
 				transform: (c: string) => `${c}!`,
 			},
-			type: VaultActionType.ProcessMdFile,
 		} as const;
 		const r2 = {
+			kind: VaultActionKind.RenameMdFile,
 			payload: {
 				from: mdFile("b.md"),
 				to: mdFile("c.md"),
 			},
-			type: VaultActionType.RenameMdFile,
 		} as const;
 
 		const collapsed = await collapseActions([r1, process, r2]);

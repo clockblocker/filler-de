@@ -21,11 +21,11 @@ afterEach(() => {
 const spMdFile = (
 	pathParts: string[],
 	basename: string,
-): { basename: string; pathParts: string[]; type: typeof SplitPathKind.MdFile; extension: "md" } => ({
+): { basename: string; pathParts: string[]; kind: typeof SplitPathKind.MdFile; extension: "md" } => ({
 	basename,
 	extension: "md",
+	kind: SplitPathKind.MdFile,
 	pathParts,
-	type: SplitPathKind.MdFile,
 });
 
 describe("inferCreatePolicy", () => {

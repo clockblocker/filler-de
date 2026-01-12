@@ -8,8 +8,8 @@ export const defaultSettingsForUnitTests: ParsedUserSettings = {
 	showScrollsInCodexesForDepth: 1,
 	splitPathToLibraryRoot: {
 		basename: "Library",
+		kind: SplitPathKind.Folder,
 		pathParts: [],
-		type: SplitPathKind.Folder,
 	},
 	suffixDelimiter: "-",
 };

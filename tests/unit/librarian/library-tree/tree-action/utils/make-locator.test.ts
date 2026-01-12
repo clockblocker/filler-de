@@ -14,17 +14,17 @@ describe("makeLocatorFromLibraryScopedCanonicalSplitPath", () => {
 		it("creates FileNodeLocator with empty sectionNames", () => {
 			const sp: CanonicalSplitPathToFileInsideLibrary = {
 				extension: "txt",
+				kind: SplitPathKind.File,
 				pathParts: ["Library"],
 				separatedSuffixedBasename: {
 					coreName: "MyFile",
 					suffixParts: [],
 				},
-				type: SplitPathKind.File,
 			};
 
 			const result = makeLocatorFromCanonicalSplitPathInsideLibrary(sp);
 
-			expect(result.targetType).toBe(TreeNodeKind.File);
+			expect(result.targetKind).toBe(TreeNodeKind.File);
 			expect(result.segmentIdChainToParent).toHaveLength(1);
 			expect(result.segmentIdChainToParent[0]).toBe(
 				`Library${NodeSegmentIdSeparator}${TreeNodeKind.Section}${NodeSegmentIdSeparator}`,
@@ -37,17 +37,17 @@ describe("makeLocatorFromLibraryScopedCanonicalSplitPath", () => {
 		it("creates FileNodeLocator with single sectionName", () => {
 			const sp: CanonicalSplitPathToFileInsideLibrary = {
 				extension: "pdf",
+				kind: SplitPathKind.File,
 				pathParts: ["Library", "Parent"],
 				separatedSuffixedBasename: {
 					coreName: "MyFile",
 					suffixParts: ["Parent"],
 				},
-				type: SplitPathKind.File,
 			};
 
 			const result = makeLocatorFromCanonicalSplitPathInsideLibrary(sp);
 
-			expect(result.targetType).toBe(TreeNodeKind.File);
+			expect(result.targetKind).toBe(TreeNodeKind.File);
 			expect(result.segmentIdChainToParent).toHaveLength(2);
 			expect(result.segmentIdChainToParent[0]).toBe(
 				`Library${NodeSegmentIdSeparator}${TreeNodeKind.Section}${NodeSegmentIdSeparator}`,
@@ -63,17 +63,17 @@ describe("makeLocatorFromLibraryScopedCanonicalSplitPath", () => {
 		it("creates FileNodeLocator with multiple sectionNames", () => {
 			const sp: CanonicalSplitPathToFileInsideLibrary = {
 				extension: "docx",
+				kind: SplitPathKind.File,
 				pathParts: ["Library", "Parent", "Child", "Grandchild"],
 				separatedSuffixedBasename: {
 					coreName: "MyFile",
 					suffixParts: ["Grandchild", "Child", "Parent"],
 				},
-				type: SplitPathKind.File,
 			};
 
 			const result = makeLocatorFromCanonicalSplitPathInsideLibrary(sp);
 
-			expect(result.targetType).toBe(TreeNodeKind.File);
+			expect(result.targetKind).toBe(TreeNodeKind.File);
 			expect(result.segmentIdChainToParent).toHaveLength(4);
 			expect(result.segmentIdChainToParent[0]).toBe(
 				`Library${NodeSegmentIdSeparator}${TreeNodeKind.Section}${NodeSegmentIdSeparator}`,
@@ -97,17 +97,17 @@ describe("makeLocatorFromLibraryScopedCanonicalSplitPath", () => {
 		it("creates ScrollNodeLocator with empty sectionNames", () => {
 			const sp: CanonicalSplitPathToMdFileInsideLibrary = {
 				extension: "md",
+				kind: SplitPathKind.MdFile,
 				pathParts: ["Library"],
 				separatedSuffixedBasename: {
 					coreName: "MyScroll",
 					suffixParts: [],
 				},
-				type: SplitPathKind.MdFile,
 			};
 
 			const result = makeLocatorFromCanonicalSplitPathInsideLibrary(sp);
 
-			expect(result.targetType).toBe(TreeNodeKind.Scroll);
+			expect(result.targetKind).toBe(TreeNodeKind.Scroll);
 			expect(result.segmentIdChainToParent).toHaveLength(1);
 			expect(result.segmentIdChainToParent[0]).toBe(
 				`Library${NodeSegmentIdSeparator}${TreeNodeKind.Section}${NodeSegmentIdSeparator}`,
@@ -120,17 +120,17 @@ describe("makeLocatorFromLibraryScopedCanonicalSplitPath", () => {
 		it("creates ScrollNodeLocator with single sectionName", () => {
 			const sp: CanonicalSplitPathToMdFileInsideLibrary = {
 				extension: "md",
+				kind: SplitPathKind.MdFile,
 				pathParts: ["Library", "Parent"],
 				separatedSuffixedBasename: {
 					coreName: "MyScroll",
 					suffixParts: ["Parent"],
 				},
-				type: SplitPathKind.MdFile,
 			};
 
 			const result = makeLocatorFromCanonicalSplitPathInsideLibrary(sp);
 
-			expect(result.targetType).toBe(TreeNodeKind.Scroll);
+			expect(result.targetKind).toBe(TreeNodeKind.Scroll);
 			expect(result.segmentIdChainToParent).toHaveLength(2);
 			expect(result.segmentIdChainToParent[0]).toBe(
 				`Library${NodeSegmentIdSeparator}${TreeNodeKind.Section}${NodeSegmentIdSeparator}`,
@@ -146,17 +146,17 @@ describe("makeLocatorFromLibraryScopedCanonicalSplitPath", () => {
 		it("creates ScrollNodeLocator with multiple sectionNames", () => {
 			const sp: CanonicalSplitPathToMdFileInsideLibrary = {
 				extension: "md",
+				kind: SplitPathKind.MdFile,
 				pathParts: ["Library", "Section1", "Section2", "Section3"],
 				separatedSuffixedBasename: {
 					coreName: "MyScroll",
 					suffixParts: ["Section3", "Section2", "Section1"],
 				},
-				type: SplitPathKind.MdFile,
 			};
 
 			const result = makeLocatorFromCanonicalSplitPathInsideLibrary(sp);
 
-			expect(result.targetType).toBe(TreeNodeKind.Scroll);
+			expect(result.targetKind).toBe(TreeNodeKind.Scroll);
 			expect(result.segmentIdChainToParent).toHaveLength(4);
 			expect(result.segmentIdChainToParent[0]).toBe(
 				`Library${NodeSegmentIdSeparator}${TreeNodeKind.Section}${NodeSegmentIdSeparator}`,
@@ -178,12 +178,12 @@ describe("makeLocatorFromLibraryScopedCanonicalSplitPath", () => {
 		it("always uses 'md' extension regardless of input", () => {
 			const sp: CanonicalSplitPathToMdFileInsideLibrary = {
 				extension: "md",
+				kind: SplitPathKind.MdFile,
 				pathParts: ["Library"],
 				separatedSuffixedBasename: {
 					coreName: "MyScroll",
 					suffixParts: [],
 				},
-				type: SplitPathKind.MdFile,
 			};
 
 			const result = makeLocatorFromCanonicalSplitPathInsideLibrary(sp);
@@ -197,17 +197,17 @@ describe("makeLocatorFromLibraryScopedCanonicalSplitPath", () => {
 	describe("Folder type", () => {
 		it("creates SectionNodeLocator with empty sectionNames", () => {
 			const sp: CanonicalSplitPathToFolderInsideLibrary = {
+				kind: SplitPathKind.Folder,
 				pathParts: [],
 				separatedSuffixedBasename: {
 					coreName: "MyFolder",
 					suffixParts: [],
 				},
-				type: SplitPathKind.Folder,
 			};
 
 			const result = makeLocatorFromCanonicalSplitPathInsideLibrary(sp);
 
-			expect(result.targetType).toBe(TreeNodeKind.Section);
+			expect(result.targetKind).toBe(TreeNodeKind.Section);
 			expect(result.segmentIdChainToParent).toEqual([]);
 			expect(result.segmentId).toBe(
 				`MyFolder${NodeSegmentIdSeparator}${TreeNodeKind.Section}${NodeSegmentIdSeparator}`,
@@ -216,17 +216,17 @@ describe("makeLocatorFromLibraryScopedCanonicalSplitPath", () => {
 
 		it("creates SectionNodeLocator with single sectionName", () => {
 			const sp: CanonicalSplitPathToFolderInsideLibrary = {
+				kind: SplitPathKind.Folder,
 				pathParts: ["Library", "Parent"],
 				separatedSuffixedBasename: {
 					coreName: "MyFolder",
 					suffixParts: [],
 				},
-				type: SplitPathKind.Folder,
 			};
 
 			const result = makeLocatorFromCanonicalSplitPathInsideLibrary(sp);
 
-			expect(result.targetType).toBe(TreeNodeKind.Section);
+			expect(result.targetKind).toBe(TreeNodeKind.Section);
 			expect(result.segmentIdChainToParent).toHaveLength(2);
 			expect(result.segmentIdChainToParent[0]).toBe(
 				`Library${NodeSegmentIdSeparator}${TreeNodeKind.Section}${NodeSegmentIdSeparator}`,
@@ -241,17 +241,17 @@ describe("makeLocatorFromLibraryScopedCanonicalSplitPath", () => {
 
 		it("creates SectionNodeLocator with multiple sectionNames", () => {
 			const sp: CanonicalSplitPathToFolderInsideLibrary = {
+				kind: SplitPathKind.Folder,
 				pathParts: ["Library", "Level1", "Level2", "Level3"],
 				separatedSuffixedBasename: {
 					coreName: "MyFolder",
 					suffixParts: [],
 				},
-				type: SplitPathKind.Folder,
 			};
 
 			const result = makeLocatorFromCanonicalSplitPathInsideLibrary(sp);
 
-			expect(result.targetType).toBe(TreeNodeKind.Section);
+			expect(result.targetKind).toBe(TreeNodeKind.Section);
 			expect(result.segmentIdChainToParent).toHaveLength(4);
 			expect(result.segmentIdChainToParent[0]).toBe(
 				`Library${NodeSegmentIdSeparator}${TreeNodeKind.Section}${NodeSegmentIdSeparator}`,

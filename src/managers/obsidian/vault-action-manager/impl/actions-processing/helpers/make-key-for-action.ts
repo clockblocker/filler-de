@@ -1,11 +1,11 @@
-import { type VaultAction, VaultActionType } from "../../../types/vault-action";
+import { type VaultAction, VaultActionKind } from "../../../types/vault-action";
 import { makeKeyFor } from "../../common/collapse-helpers";
 
 export function makeKeyForAction(action: VaultAction): string {
-	switch (action.type) {
-		case VaultActionType.RenameFolder:
-		case VaultActionType.RenameFile:
-		case VaultActionType.RenameMdFile:
+	switch (action.kind) {
+		case VaultActionKind.RenameFolder:
+		case VaultActionKind.RenameFile:
+		case VaultActionKind.RenameMdFile:
 			return makeKeyFor({ from: action.payload.from });
 
 		default:

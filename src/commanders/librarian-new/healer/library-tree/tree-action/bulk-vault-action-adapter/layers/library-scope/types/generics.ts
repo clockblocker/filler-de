@@ -101,7 +101,7 @@ type DescopedByType = {
 };
 
 export type DescopedEvent<T extends LibraryScopedVaultEvent> = T extends {
-	type: infer K;
+	kind: infer K;
 }
 	? K extends keyof DescopedByType
 		? DescopedByType[K]

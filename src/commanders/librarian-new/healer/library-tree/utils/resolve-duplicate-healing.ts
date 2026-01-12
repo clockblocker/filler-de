@@ -23,7 +23,7 @@ export async function resolveDuplicateHealingActions(
 	const resolved: HealingAction[] = [];
 
 	for (const action of actions) {
-		if (action.type === "RenameFile" || action.type === "RenameMdFile") {
+		if (action.kind === "RenameFile" || action.kind === "RenameMdFile") {
 			const resolvedAction = await resolveFileRenameAction(
 				action,
 				settings.suffixDelimiter,
@@ -39,7 +39,7 @@ export async function resolveDuplicateHealingActions(
 }
 
 async function resolveFileRenameAction(
-	action: HealingAction & { type: "RenameFile" | "RenameMdFile" },
+	action: HealingAction & { kind: "RenameFile" | "RenameMdFile" },
 	suffixDelimiter: string,
 	vaultActionManager: VaultActionManager,
 ): Promise<HealingAction> {
@@ -61,12 +61,12 @@ async function resolveFileRenameAction(
 	// Build folder path from pathParts
 	const folderPath: SplitPathToFolder = {
 		basename: to.pathParts[to.pathParts.length - 1] ?? "",
+		kind: SplitPathKind.Folder,
 		pathParts: to.pathParts.slice(0, -1),
-		type: SplitPathKind.Folder,
 	};
 
 	// Resolve unique name
-	const extension = to.type === SplitPathKind.MdFile ? "md" : to.extension;
+	const extension = to.kind === SplitPathKind.MdFile ? "md" : to.extension;
 	const resolvedCoreNameResult = await resolveUniqueDuplicateName(
 		coreName as NodeName,
 		folderPath,
@@ -94,7 +94,7 @@ async function resolveFileRenameAction(
 	});
 
 	// Return updated action
-	if (action.type === "RenameMdFile") {
+	if (action.kind === "RenameMdFile") {
 		return {
 			...action,
 			payload: {

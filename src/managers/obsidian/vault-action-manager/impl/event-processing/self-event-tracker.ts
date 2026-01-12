@@ -4,7 +4,7 @@ import {
 } from "../../helpers/pathfinder";
 import type { AnySplitPath } from "../../types/split-path";
 import type { VaultAction } from "../../types/vault-action";
-import { VaultActionType } from "../../types/vault-action";
+import { VaultActionKind } from "../../types/vault-action";
 
 /**
  * Tracks paths of actions we dispatch to filter self-events from Obsidian.
@@ -82,14 +82,14 @@ export class SelfEventTracker {
 	}
 
 	private extractFolderPrefixes(action: VaultAction): string[] {
-		switch (action.type) {
-			case VaultActionType.CreateFolder:
-			case VaultActionType.TrashFolder:
+		switch (action.kind) {
+			case VaultActionKind.CreateFolder:
+			case VaultActionKind.TrashFolder:
 				return [
 					systemPathFromSplitPathInternal(action.payload.splitPath),
 				];
 
-			case VaultActionType.RenameFolder:
+			case VaultActionKind.RenameFolder:
 				return [
 					systemPathFromSplitPathInternal(action.payload.from),
 					systemPathFromSplitPathInternal(action.payload.to),
@@ -135,23 +135,23 @@ export class SelfEventTracker {
 	}
 
 	private extractPaths(action: VaultAction): string[] {
-		switch (action.type) {
-			case VaultActionType.CreateFolder:
-			case VaultActionType.CreateFile:
-			case VaultActionType.UpsertMdFile:
-			case VaultActionType.ProcessMdFile:
+		switch (action.kind) {
+			case VaultActionKind.CreateFolder:
+			case VaultActionKind.CreateFile:
+			case VaultActionKind.UpsertMdFile:
+			case VaultActionKind.ProcessMdFile:
 				return this.extractPathsWithParents(action.payload.splitPath);
 
-			case VaultActionType.TrashFolder:
-			case VaultActionType.TrashFile:
-			case VaultActionType.TrashMdFile:
+			case VaultActionKind.TrashFolder:
+			case VaultActionKind.TrashFile:
+			case VaultActionKind.TrashMdFile:
 				return [
 					systemPathFromSplitPathInternal(action.payload.splitPath),
 				];
 
-			case VaultActionType.RenameFolder:
-			case VaultActionType.RenameFile:
-			case VaultActionType.RenameMdFile:
+			case VaultActionKind.RenameFolder:
+			case VaultActionKind.RenameFile:
+			case VaultActionKind.RenameMdFile:
 				return [
 					...this.extractPathsWithParents(action.payload.from),
 					...this.extractPathsWithParents(action.payload.to),
@@ -204,26 +204,26 @@ export class SelfEventTracker {
 		action: VaultAction,
 		paths: string[],
 	): string | undefined {
-		switch (action.type) {
-			case VaultActionType.CreateFile:
-			case VaultActionType.UpsertMdFile:
-			case VaultActionType.ProcessMdFile:
+		switch (action.kind) {
+			case VaultActionKind.CreateFile:
+			case VaultActionKind.UpsertMdFile:
+			case VaultActionKind.ProcessMdFile:
 				// Target file path is the last one (after parent folders)
 				return paths[paths.length - 1];
 
-			case VaultActionType.RenameFile:
-			case VaultActionType.RenameMdFile: {
+			case VaultActionKind.RenameFile:
+			case VaultActionKind.RenameMdFile: {
 				// For renames, verify the "to" path (destination)
 				// extractPaths returns: [...fromParents, fromTarget, ...toParents, toTarget]
 				// So the last path is the "to" target
 				return paths[paths.length - 1];
 			}
 
-			case VaultActionType.TrashFile:
-			case VaultActionType.TrashMdFile:
-			case VaultActionType.CreateFolder:
-			case VaultActionType.RenameFolder:
-			case VaultActionType.TrashFolder:
+			case VaultActionKind.TrashFile:
+			case VaultActionKind.TrashMdFile:
+			case VaultActionKind.CreateFolder:
+			case VaultActionKind.RenameFolder:
+			case VaultActionKind.TrashFolder:
 				// Don't verify folders or trashed files
 				return undefined;
 		}

@@ -1,6 +1,6 @@
 import type { DependencyGraph } from "../../types/dependency";
 import type { VaultAction } from "../../types/vault-action";
-import { VaultActionType } from "../../types/vault-action";
+import { VaultActionKind } from "../../types/vault-action";
 import { makeGraphKey } from "./dependency-detector";
 
 /**
@@ -106,20 +106,20 @@ function sortQueue(queue: VaultAction[]): void {
  * Get path depth for an action (number of path parts).
  */
 function getPathDepth(action: VaultAction): number {
-	switch (action.type) {
-		case VaultActionType.CreateFolder:
-		case VaultActionType.TrashFolder:
+	switch (action.kind) {
+		case VaultActionKind.CreateFolder:
+		case VaultActionKind.TrashFolder:
 			return action.payload.splitPath.pathParts.length;
-		case VaultActionType.RenameFolder:
+		case VaultActionKind.RenameFolder:
 			return action.payload.to.pathParts.length;
-		case VaultActionType.CreateFile:
-		case VaultActionType.TrashFile:
-		case VaultActionType.UpsertMdFile:
-		case VaultActionType.TrashMdFile:
-		case VaultActionType.ProcessMdFile:
+		case VaultActionKind.CreateFile:
+		case VaultActionKind.TrashFile:
+		case VaultActionKind.UpsertMdFile:
+		case VaultActionKind.TrashMdFile:
+		case VaultActionKind.ProcessMdFile:
 			return action.payload.splitPath.pathParts.length;
-		case VaultActionType.RenameFile:
-		case VaultActionType.RenameMdFile:
+		case VaultActionKind.RenameFile:
+		case VaultActionKind.RenameMdFile:
 			return action.payload.to.pathParts.length;
 	}
 }

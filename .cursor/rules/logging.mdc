@@ -15,7 +15,7 @@ console.log("event", event);
 log.info("chains:", chains);
 
 // ✅ GOOD
-log.debug("event", JSON.stringify({ type: event.type }));
+log.debug("event", JSON.stringify({ kind: event.kind }));
 log.info("chains:", JSON.stringify(chains));
 log.error("Failed:", error instanceof Error ? error.message : String(error));
 ```

@@ -30,8 +30,8 @@ const spMdFile = (
 ): SplitPathToMdFile => ({
 	basename,
 	extension: "md",
+	kind: SplitPathKind.MdFile,
 	pathParts,
-	type: SplitPathKind.MdFile,
 });
 
 const spFolder = (
@@ -39,8 +39,8 @@ const spFolder = (
 	basename: string,
 ): SplitPathToFolder => ({
 	basename,
+	kind: SplitPathKind.Folder,
 	pathParts,
-	type: SplitPathKind.Folder,
 });
 
 const spFile = (
@@ -50,8 +50,8 @@ const spFile = (
 ): SplitPathToFile => ({
 	basename,
 	extension,
+	kind: SplitPathKind.File,
 	pathParts,
-	type: SplitPathKind.File,
 });
 
 describe("tryCanonicalizeSplitPathToDestination", () => {

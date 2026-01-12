@@ -29,20 +29,20 @@ export const SplitPathKind = SplitPathKindSchema.enum;
 export type SplitPathKind = z.infer<typeof SplitPathKindSchema>;
 
 export const SplitPathToFolderSchema = CoreSplitPathSchema.extend({
-	type: z.literal(SplitPathKind.Folder),
+	kind: z.literal(SplitPathKind.Folder),
 });
 
 export const SplitPathToFileSchema = CoreSplitPathSchema.extend({
 	extension: z.string(),
-	type: z.literal(SplitPathKind.File),
+	kind: z.literal(SplitPathKind.File),
 });
 
 export const SplitPathToMdFileSchema = CoreSplitPathSchema.extend({
 	extension: MdSchema,
-	type: z.literal(SplitPathKind.MdFile),
+	kind: z.literal(SplitPathKind.MdFile),
 });
 
-export const SplitPathSchema = z.discriminatedUnion("type", [
+export const SplitPathSchema = z.discriminatedUnion("kind", [
 	SplitPathToFolderSchema,
 	SplitPathToFileSchema,
 	SplitPathToMdFileSchema,
@@ -52,9 +52,9 @@ export type CommonSplitPath = z.infer<typeof CoreSplitPathSchema>;
 
 export type AnySplitPath = z.infer<typeof SplitPathSchema>;
 
-export type SplitPath<T extends SplitPathKind> = Extract<
+export type SplitPath<K extends SplitPathKind> = Extract<
 	AnySplitPath,
-	{ type: T }
+	{ kind: K }
 >;
 
 export type SplitPathToFolder = SplitPath<typeof SplitPathKind.Folder>;

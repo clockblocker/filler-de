@@ -4,7 +4,7 @@
 
 import {
 	type VaultAction,
-	VaultActionType,
+	VaultActionKind,
 } from "../../../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { upsertMetadata } from "../../../../../managers/pure/note-metadata-manager";
 import { makeVaultScopedSplitPath } from "../tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
@@ -14,16 +14,16 @@ import type { CodexAction } from "./types/codex-action";
  * Convert a single CodexAction to VaultAction.
  */
 export function codexActionToVaultAction(action: CodexAction): VaultAction {
-	switch (action.type) {
+	switch (action.kind) {
 		case "UpsertCodex":
 			return {
+				kind: VaultActionKind.UpsertMdFile,
 				payload: {
 					content: action.payload.content,
 					splitPath: makeVaultScopedSplitPath(
 						action.payload.splitPath,
 					),
 				},
-				type: VaultActionType.UpsertMdFile,
 			};
 
 		case "DeleteCodex": {
@@ -32,16 +32,17 @@ export function codexActionToVaultAction(action: CodexAction): VaultAction {
 			);
 
 			return {
+				kind: VaultActionKind.TrashMdFile,
 				payload: {
 					splitPath: vaultScopedPath,
 				},
-				type: VaultActionType.TrashMdFile,
 			};
 		}
 
 		case "WriteScrollStatus":
 			// ProcessMdFile with transform to update metadata
 			return {
+				kind: VaultActionKind.ProcessMdFile,
 				payload: {
 					splitPath: makeVaultScopedSplitPath(
 						action.payload.splitPath,
@@ -50,7 +51,6 @@ export function codexActionToVaultAction(action: CodexAction): VaultAction {
 						status: action.payload.status,
 					}),
 				},
-				type: VaultActionType.ProcessMdFile,
 			};
 	}
 }

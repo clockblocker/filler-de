@@ -48,17 +48,17 @@ export type WriteScrollStatusPayload = {
 // ─── Actions ───
 
 export type DeleteCodexAction = {
-	type: "DeleteCodex";
+	kind: "DeleteCodex";
 	payload: DeleteCodexPayload;
 };
 
 export type WriteScrollStatusAction = {
-	type: "WriteScrollStatus";
+	kind: "WriteScrollStatus";
 	payload: WriteScrollStatusPayload;
 };
 
 export type UpsertCodexAction = {
-	type: "UpsertCodex";
+	kind: "UpsertCodex";
 	payload: UpsertCodexPayload;
 };
 

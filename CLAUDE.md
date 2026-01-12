@@ -121,7 +121,7 @@ bun test --test-name-pattern "pattern"
 console.log("event", event);
 
 // ✅ GOOD
-log.debug("event", JSON.stringify({ type: event.type }));
+log.debug("event", JSON.stringify({ kind: event.kind }));
 log.error("Failed:", error instanceof Error ? error.message : String(error));
 ```
 

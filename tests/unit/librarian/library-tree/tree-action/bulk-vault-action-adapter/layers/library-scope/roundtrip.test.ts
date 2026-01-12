@@ -24,8 +24,8 @@ describe("makeEventLibraryScoped and makeEventVaultScoped roundtrip", () => {
 			splitPath: {
 				basename: "Note",
 				extension: "md",
+				kind: SplitPathKind.MdFile,
 				pathParts: ["Library", "Section"],
-				type: SplitPathKind.MdFile,
 			},
 		};
 
@@ -40,15 +40,15 @@ describe("makeEventLibraryScoped and makeEventVaultScoped roundtrip", () => {
 			from: {
 				basename: "Old",
 				extension: "md",
+				kind: SplitPathKind.MdFile,
 				pathParts: ["Library", "Section1"],
-				type: SplitPathKind.MdFile,
 			},
 			kind: VaultEventKind.FileRenamed,
 			to: {
 				basename: "New",
 				extension: "md",
+				kind: SplitPathKind.MdFile,
 				pathParts: ["Library", "Section2"],
-				type: SplitPathKind.MdFile,
 			},
 		};
 
@@ -63,15 +63,15 @@ describe("makeEventLibraryScoped and makeEventVaultScoped roundtrip", () => {
 			from: {
 				basename: "Old",
 				extension: "md",
+				kind: SplitPathKind.MdFile,
 				pathParts: ["Library", "Section"],
-				type: SplitPathKind.MdFile,
 			},
 			kind: VaultEventKind.FileRenamed,
 			to: {
 				basename: "New",
 				extension: "md",
+				kind: SplitPathKind.MdFile,
 				pathParts: ["Other"],
-				type: SplitPathKind.MdFile,
 			},
 		};
 
@@ -86,15 +86,15 @@ describe("makeEventLibraryScoped and makeEventVaultScoped roundtrip", () => {
 			from: {
 				basename: "Old",
 				extension: "md",
+				kind: SplitPathKind.MdFile,
 				pathParts: ["Other"],
-				type: SplitPathKind.MdFile,
 			},
 			kind: VaultEventKind.FileRenamed,
 			to: {
 				basename: "New",
 				extension: "md",
+				kind: SplitPathKind.MdFile,
 				pathParts: ["Library", "Section"],
-				type: SplitPathKind.MdFile,
 			},
 		};
 
@@ -110,8 +110,8 @@ describe("makeEventLibraryScoped and makeEventVaultScoped roundtrip", () => {
 			splitPath: {
 				basename: "Note",
 				extension: "md",
+				kind: SplitPathKind.MdFile,
 				pathParts: ["Library", "Section"],
-				type: SplitPathKind.MdFile,
 			},
 		};
 
@@ -126,8 +126,8 @@ describe("makeEventLibraryScoped and makeEventVaultScoped roundtrip", () => {
 			kind: VaultEventKind.FolderCreated,
 			splitPath: {
 				basename: "Section",
+				kind: SplitPathKind.Folder,
 				pathParts: ["Library"],
-				type: SplitPathKind.Folder,
 			},
 		};
 
@@ -141,14 +141,14 @@ describe("makeEventLibraryScoped and makeEventVaultScoped roundtrip", () => {
 		const original: VaultEvent = {
 			from: {
 				basename: "Old",
+				kind: SplitPathKind.Folder,
 				pathParts: ["Library"],
-				type: SplitPathKind.Folder,
 			},
 			kind: VaultEventKind.FolderRenamed,
 			to: {
 				basename: "New",
+				kind: SplitPathKind.Folder,
 				pathParts: ["Library"],
-				type: SplitPathKind.Folder,
 			},
 		};
 
@@ -162,14 +162,14 @@ describe("makeEventLibraryScoped and makeEventVaultScoped roundtrip", () => {
 		const original: VaultEvent = {
 			from: {
 				basename: "Old",
+				kind: SplitPathKind.Folder,
 				pathParts: ["Library"],
-				type: SplitPathKind.Folder,
 			},
 			kind: VaultEventKind.FolderRenamed,
 			to: {
 				basename: "New",
+				kind: SplitPathKind.Folder,
 				pathParts: ["Other"],
-				type: SplitPathKind.Folder,
 			},
 		};
 
@@ -183,14 +183,14 @@ describe("makeEventLibraryScoped and makeEventVaultScoped roundtrip", () => {
 		const original: VaultEvent = {
 			from: {
 				basename: "Old",
+				kind: SplitPathKind.Folder,
 				pathParts: ["Other"],
-				type: SplitPathKind.Folder,
 			},
 			kind: VaultEventKind.FolderRenamed,
 			to: {
 				basename: "New",
+				kind: SplitPathKind.Folder,
 				pathParts: ["Library"],
-				type: SplitPathKind.Folder,
 			},
 		};
 
@@ -205,8 +205,8 @@ describe("makeEventLibraryScoped and makeEventVaultScoped roundtrip", () => {
 			kind: VaultEventKind.FolderDeleted,
 			splitPath: {
 				basename: "Section",
+				kind: SplitPathKind.Folder,
 				pathParts: ["Library"],
-				type: SplitPathKind.Folder,
 			},
 		};
 
@@ -221,8 +221,8 @@ describe("makeEventLibraryScoped and makeEventVaultScoped roundtrip", () => {
 				...defaultSettingsForUnitTests,
 			splitPathToLibraryRoot: {
 				basename: "Library",
+				kind: SplitPathKind.Folder,
 				pathParts: ["Root"],
-				type: SplitPathKind.Folder,
 			},
 		});
 
@@ -231,8 +231,8 @@ describe("makeEventLibraryScoped and makeEventVaultScoped roundtrip", () => {
 			splitPath: {
 				basename: "Note",
 				extension: "md",
+				kind: SplitPathKind.MdFile,
 				pathParts: ["Root", "Library", "Section"],
-				type: SplitPathKind.MdFile,
 			},
 		};
 

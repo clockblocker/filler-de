@@ -7,7 +7,7 @@ import type {
 import { SplitPathKind } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import {
 	type VaultAction,
-	VaultActionType,
+	VaultActionKind,
 } from "../../../src/managers/obsidian/vault-action-manager/types/vault-action";
 
 const folder = (
@@ -15,8 +15,8 @@ const folder = (
 	pathParts: string[] = [],
 ): SplitPathToFolder => ({
 	basename,
+	kind: SplitPathKind.Folder,
 	pathParts,
-	type: SplitPathKind.Folder,
 });
 
 const mdFile = (
@@ -25,20 +25,20 @@ const mdFile = (
 ): SplitPathToMdFile => ({
 	basename,
 	extension: "md",
+	kind: SplitPathKind.MdFile,
 	pathParts,
-	type: SplitPathKind.MdFile,
 });
 
 describe("buildDependencyGraph", () => {
 	it("should create graph entries for all actions", () => {
 		const actions: VaultAction[] = [
 			{
+				kind: VaultActionKind.CreateFolder,
 				payload: { splitPath: folder("A") },
-				type: VaultActionType.CreateFolder,
 			},
 			{
+				kind: VaultActionKind.UpsertMdFile,
 				payload: { content: "", splitPath: mdFile("file") },
-				type: VaultActionType.UpsertMdFile,
 			},
 		];
 
@@ -51,15 +51,15 @@ describe("buildDependencyGraph", () => {
 
 	it("should detect ProcessMdFile depends on UpsertMdFile for same file", () => {
 		const create: VaultAction = {
+			kind: VaultActionKind.UpsertMdFile,
 			payload: { content: "", splitPath: mdFile("file") },
-			type: VaultActionType.UpsertMdFile,
 		};
 		const process: VaultAction = {
+			kind: VaultActionKind.ProcessMdFile,
 			payload: {
 				splitPath: mdFile("file"),
 				transform: async (c) => c,
 			},
-			type: VaultActionType.ProcessMdFile,
 		};
 
 		const graph = buildDependencyGraph([create, process]);
@@ -76,12 +76,12 @@ describe("buildDependencyGraph", () => {
 
 	it("should not create dependency between UpsertMdFile actions for same file (they collapse)", () => {
 		const create: VaultAction = {
+			kind: VaultActionKind.UpsertMdFile,
 			payload: { content: "", splitPath: mdFile("file") },
-			type: VaultActionType.UpsertMdFile,
 		};
 		const replace: VaultAction = {
+			kind: VaultActionKind.UpsertMdFile,
 			payload: { content: "new", splitPath: mdFile("file") },
-			type: VaultActionType.UpsertMdFile,
 		};
 
 		const graph = buildDependencyGraph([create, replace]);
@@ -95,12 +95,12 @@ describe("buildDependencyGraph", () => {
 
 	it("should detect CreateFolder depends on parent CreateFolder", () => {
 		const parent: VaultAction = {
+			kind: VaultActionKind.CreateFolder,
 			payload: { splitPath: folder("parent") },
-			type: VaultActionType.CreateFolder,
 		};
 		const child: VaultAction = {
+			kind: VaultActionKind.CreateFolder,
 			payload: { splitPath: folder("child", ["parent"]) },
-			type: VaultActionType.CreateFolder,
 		};
 
 		const graph = buildDependencyGraph([parent, child]);
@@ -112,16 +112,16 @@ describe("buildDependencyGraph", () => {
 
 	it("should detect nested folder dependencies", () => {
 		const root: VaultAction = {
+			kind: VaultActionKind.CreateFolder,
 			payload: { splitPath: folder("root") },
-			type: VaultActionType.CreateFolder,
 		};
 		const mid: VaultAction = {
+			kind: VaultActionKind.CreateFolder,
 			payload: { splitPath: folder("mid", ["root"]) },
-			type: VaultActionType.CreateFolder,
 		};
 		const leaf: VaultAction = {
+			kind: VaultActionKind.CreateFolder,
 			payload: { splitPath: folder("leaf", ["root", "mid"]) },
-			type: VaultActionType.CreateFolder,
 		};
 
 		const graph = buildDependencyGraph([root, mid, leaf]);
@@ -138,15 +138,15 @@ describe("buildDependencyGraph", () => {
 
 	it("should detect RenameMdFile depends on destination parent folders", () => {
 		const destParent: VaultAction = {
+			kind: VaultActionKind.CreateFolder,
 			payload: { splitPath: folder("dest") },
-			type: VaultActionType.CreateFolder,
 		};
 		const rename: VaultAction = {
+			kind: VaultActionKind.RenameMdFile,
 			payload: {
 				from: mdFile("file"),
 				to: mdFile("file", ["dest"]),
 			},
-			type: VaultActionType.RenameMdFile,
 		};
 
 		const graph = buildDependencyGraph([destParent, rename]);
@@ -158,12 +158,12 @@ describe("buildDependencyGraph", () => {
 
 	it("should detect UpsertMdFile depends on parent folders", () => {
 		const parent: VaultAction = {
+			kind: VaultActionKind.CreateFolder,
 			payload: { splitPath: folder("parent") },
-			type: VaultActionType.CreateFolder,
 		};
 		const create: VaultAction = {
+			kind: VaultActionKind.UpsertMdFile,
 			payload: { content: "", splitPath: mdFile("file", ["parent"]) },
-			type: VaultActionType.UpsertMdFile,
 		};
 
 		const graph = buildDependencyGraph([parent, create]);
@@ -175,8 +175,8 @@ describe("buildDependencyGraph", () => {
 
 	it("should not create dependencies for Trash actions", () => {
 		const trash: VaultAction = {
+			kind: VaultActionKind.TrashMdFile,
 			payload: { splitPath: mdFile("file") },
-			type: VaultActionType.TrashMdFile,
 		};
 
 		const graph = buildDependencyGraph([trash]);
@@ -189,8 +189,8 @@ describe("buildDependencyGraph", () => {
 
 	it("should handle actions with no dependencies", () => {
 		const create: VaultAction = {
+			kind: VaultActionKind.CreateFolder,
 			payload: { splitPath: folder("root") },
-			type: VaultActionType.CreateFolder,
 		};
 
 		const graph = buildDependencyGraph([create]);
@@ -202,23 +202,23 @@ describe("buildDependencyGraph", () => {
 
 	it("should handle complex scenario with multiple dependencies", () => {
 		const rootFolder: VaultAction = {
+			kind: VaultActionKind.CreateFolder,
 			payload: { splitPath: folder("root") },
-			type: VaultActionType.CreateFolder,
 		};
 		const subFolder: VaultAction = {
+			kind: VaultActionKind.CreateFolder,
 			payload: { splitPath: folder("sub", ["root"]) },
-			type: VaultActionType.CreateFolder,
 		};
 		const createFile: VaultAction = {
+			kind: VaultActionKind.UpsertMdFile,
 			payload: { content: "", splitPath: mdFile("file", ["root", "sub"]) },
-			type: VaultActionType.UpsertMdFile,
 		};
 		const process: VaultAction = {
+			kind: VaultActionKind.ProcessMdFile,
 			payload: {
 				splitPath: mdFile("file", ["root", "sub"]),
 				transform: async (c) => c,
 			},
-			type: VaultActionType.ProcessMdFile,
 		};
 
 		const graph = buildDependencyGraph([
@@ -248,15 +248,15 @@ describe("buildDependencyGraph", () => {
 
 	it("should detect ProcessMdFile depends on UpsertMdFile with null content (EnsureExist)", () => {
 		const ensureExist: VaultAction = {
+			kind: VaultActionKind.UpsertMdFile,
 			payload: { content: null, splitPath: mdFile("file") },
-			type: VaultActionType.UpsertMdFile,
 		};
 		const process: VaultAction = {
+			kind: VaultActionKind.ProcessMdFile,
 			payload: {
 				splitPath: mdFile("file"),
 				transform: async (c) => c,
 			},
-			type: VaultActionType.ProcessMdFile,
 		};
 
 		const graph = buildDependencyGraph([ensureExist, process]);
@@ -268,12 +268,12 @@ describe("buildDependencyGraph", () => {
 
 	it("should not create dependency between UpsertMdFile(null) and UpsertMdFile(content) (they collapse)", () => {
 		const ensureExist: VaultAction = {
+			kind: VaultActionKind.UpsertMdFile,
 			payload: { content: null, splitPath: mdFile("file") },
-			type: VaultActionType.UpsertMdFile,
 		};
 		const replace: VaultAction = {
+			kind: VaultActionKind.UpsertMdFile,
 			payload: { content: "new", splitPath: mdFile("file") },
-			type: VaultActionType.UpsertMdFile,
 		};
 
 		const graph = buildDependencyGraph([ensureExist, replace]);
@@ -287,12 +287,12 @@ describe("buildDependencyGraph", () => {
 
 	it("should detect UpsertMdFile with null content depends on parent folders", () => {
 		const parent: VaultAction = {
+			kind: VaultActionKind.CreateFolder,
 			payload: { splitPath: folder("parent") },
-			type: VaultActionType.CreateFolder,
 		};
 		const ensureExist: VaultAction = {
+			kind: VaultActionKind.UpsertMdFile,
 			payload: { content: null, splitPath: mdFile("file", ["parent"]) },
-			type: VaultActionType.UpsertMdFile,
 		};
 
 		const graph = buildDependencyGraph([parent, ensureExist]);

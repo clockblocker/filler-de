@@ -4,7 +4,7 @@ import {
 	splitPathFromSystemPathInternal,
 	systemPathFromSplitPathInternal,
 } from "../../../src/managers/obsidian/vault-action-manager/helpers/pathfinder";
-import { type SplitPathToFile, type SplitPathToFolder, type SplitPathToMdFile, SplitPathKind } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathKind, type SplitPathToFile, type SplitPathToFolder, type SplitPathToMdFile } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
 
 describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", () => {
 	describe("decode (string → SplitPath)", () => {
@@ -23,8 +23,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 			expect(result).toEqual({
 				basename: "file",
 				extension: "md",
+				kind: SplitPathKind.MdFile,
 				pathParts: ["root", "notes"],
-				type: SplitPathKind.MdFile,
 			});
 		});
 
@@ -35,8 +35,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 			expect(result).toEqual({
 				basename: "Note-Section",
 				extension: "md",
+				kind: SplitPathKind.MdFile,
 				pathParts: ["Library", "Section"],
-				type: SplitPathKind.MdFile,
 			});
 		});
 
@@ -45,8 +45,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 			expect(result).toEqual({
 				basename: "image",
 				extension: "png",
+				kind: SplitPathKind.File,
 				pathParts: ["root", "assets"],
-				type: SplitPathKind.File,
 			});
 		});
 
@@ -54,8 +54,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 			const result = splitPathFromSystemPathInternal("root/library/Section");
 			expect(result).toEqual({
 				basename: "Section",
+				kind: SplitPathKind.Folder,
 				pathParts: ["root", "library"],
-				type: SplitPathKind.Folder,
 			});
 		});
 
@@ -63,8 +63,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 			const result = splitPathFromSystemPathInternal("Library");
 			expect(result).toEqual({
 				basename: "Library",
+				kind: SplitPathKind.Folder,
 				pathParts: [],
-				type: SplitPathKind.Folder,
 			});
 		});
 
@@ -73,8 +73,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 			expect(result).toEqual({
 				basename: "file",
 				extension: "md",
+				kind: SplitPathKind.MdFile,
 				pathParts: ["root"],
-				type: SplitPathKind.MdFile,
 			});
 		});
 
@@ -82,8 +82,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 			const result = splitPathFromSystemPathInternal("root/folder///");
 			expect(result).toEqual({
 				basename: "folder",
+				kind: SplitPathKind.Folder,
 				pathParts: ["root"],
-				type: SplitPathKind.Folder,
 			});
 		});
 
@@ -92,8 +92,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 			expect(result).toEqual({
 				basename: "file.name",
 				extension: "md",
+				kind: SplitPathKind.MdFile,
 				pathParts: ["root"],
-				type: SplitPathKind.MdFile,
 			});
 		});
 
@@ -102,8 +102,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 			expect(result).toEqual({
 				basename: "file",
 				extension: "md",
+				kind: SplitPathKind.MdFile,
 				pathParts: ["root"],
-				type: SplitPathKind.MdFile,
 			});
 		});
 	});
@@ -118,8 +118,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 			const splitPath = {
 				basename: "file",
 				extension: "md",
+				kind: SplitPathKind.MdFile,
 				pathParts: ["root", "notes"],
-				type: SplitPathKind.MdFile,
 			} as SplitPathToMdFile;
 			const result = systemPathFromSplitPathInternal(splitPath);
 			expect(result).toBe("root/notes/file.md");
@@ -129,8 +129,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 			const splitPath = {
 				basename: "Note-Section",
 				extension: "md",
+				kind: SplitPathKind.MdFile,
 				pathParts: ["Library", "Section"],
-				type: SplitPathKind.MdFile,
 			} as SplitPathToMdFile;
 			const result = systemPathFromSplitPathInternal(splitPath);
 			expect(result).toBe("Library/Section/Note-Section.md");
@@ -140,8 +140,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 			const splitPath = {
 				basename: "image",
 				extension: "png",
+				kind: SplitPathKind.File,
 				pathParts: ["root", "assets"],
-				type: SplitPathKind.File,
 			};
 			const result = systemPathFromSplitPathInternal(splitPath);
 			expect(result).toBe("root/assets/image.png");
@@ -150,8 +150,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 		it("encodes folder", () => {
 			const splitPath = {
 				basename: "Section",
+				kind: SplitPathKind.Folder,
 				pathParts: ["root", "library"],
-				type: SplitPathKind.Folder,
 			};
 			const result = systemPathFromSplitPathInternal(splitPath);
 			expect(result).toBe("root/library/Section");
@@ -160,8 +160,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 		it("encodes single-segment folder", () => {
 			const splitPath = {
 				basename: "Library",
+				kind: SplitPathKind.Folder,
 				pathParts: [],
-				type: SplitPathKind.Folder,
 			};
 			const result = systemPathFromSplitPathInternal(splitPath);
 			expect(result).toBe("Library");
@@ -171,8 +171,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 			const splitPath = {
 				basename: "file/name",
 				extension: "md",
+				kind: SplitPathKind.MdFile,
 				pathParts: ["root"],
-				type: SplitPathKind.MdFile,
 			} as SplitPathToMdFile;
 			const result = systemPathFromSplitPathInternal(splitPath);
 			expect(result).toBe("root/file name.md");
@@ -182,8 +182,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 			const splitPath = {
 				basename: "file\\name",
 				extension: "md",
+				kind: SplitPathKind.MdFile,
 				pathParts: ["root"],
-				type: SplitPathKind.MdFile,
 			} as SplitPathToMdFile;
 			const result = systemPathFromSplitPathInternal(splitPath);
 			expect(result).toBe("root/file name.md");
@@ -193,8 +193,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 			const splitPath = {
 				basename: "file-with-!@#$%",
 				extension: "md",
+				kind: SplitPathKind.MdFile,
 				pathParts: ["root"],
-				type: SplitPathKind.MdFile,
 			} as SplitPathToMdFile;
 			const result = systemPathFromSplitPathInternal(splitPath);
 			// Obsidian accepts these characters - they should be preserved
@@ -205,8 +205,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 			const splitPath = {
 				basename: "file with spaces",
 				extension: "md",
+				kind: SplitPathKind.MdFile,
 				pathParts: ["root"],
-				type: SplitPathKind.MdFile,
 			} as SplitPathToMdFile;
 			const result = systemPathFromSplitPathInternal(splitPath);
 			expect(result).toBe("root/file with spaces.md");
@@ -216,8 +216,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 			const splitPath = {
 				basename: "  file  ",
 				extension: "md",
+				kind: SplitPathKind.MdFile,
 				pathParts: ["root"],
-				type: SplitPathKind.MdFile,
 			} as SplitPathToMdFile;
 			const result = systemPathFromSplitPathInternal(splitPath);
 			expect(result).toBe("root/file.md");
@@ -236,8 +236,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 			const original = {
 				basename: "file",
 				extension: "md",
+				kind: SplitPathKind.MdFile,
 				pathParts: ["root", "notes"],
-				type: SplitPathKind.MdFile,
 			} as SplitPathToMdFile;
 			const encoded = systemPathFromSplitPathInternal(original);
 			const decoded = splitPathFromSystemPathInternal(encoded);
@@ -248,8 +248,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 			const original = {
 				basename: "Note-Section",
 				extension: "md",
+				kind: SplitPathKind.MdFile,
 				pathParts: ["Library", "Section", "Subsection"],
-				type: SplitPathKind.MdFile,
 			} as SplitPathToMdFile;
 			const encoded = systemPathFromSplitPathInternal(original);
 			const decoded = splitPathFromSystemPathInternal(encoded);
@@ -260,8 +260,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 			const original = {
 				basename: "image",
 				extension: "png",
+				kind: SplitPathKind.File,
 				pathParts: ["root", "assets"],
-				type: SplitPathKind.File,
 			} as SplitPathToFile;
 			const encoded = systemPathFromSplitPathInternal(original);
 			const decoded = splitPathFromSystemPathInternal(encoded);
@@ -271,8 +271,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 		it("round-trips folder", () => {
 			const original = {
 				basename: "Section",
+				kind: SplitPathKind.Folder,
 				pathParts: ["root", "library"],
-				type: SplitPathKind.Folder,
 			} as SplitPathToFolder;
 			const encoded = systemPathFromSplitPathInternal(original);
 			const decoded = splitPathFromSystemPathInternal(encoded);
@@ -282,8 +282,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 		it("round-trips single-segment folder", () => {
 			const original = {
 				basename: "Library",
+				kind: SplitPathKind.Folder,
 				pathParts: [],
-				type: SplitPathKind.Folder,
 			};
 			const encoded = systemPathFromSplitPathInternal(original);
 			const decoded = splitPathFromSystemPathInternal(encoded);
@@ -294,8 +294,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 			const original = {
 				basename: "file.name",
 				extension: "md",
+				kind: SplitPathKind.MdFile,
 				pathParts: ["root"],
-				type: SplitPathKind.MdFile,
 			} as SplitPathToMdFile;
 			const encoded = systemPathFromSplitPathInternal(original);
 			const decoded = splitPathFromSystemPathInternal(encoded);
@@ -309,8 +309,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 			expect(result).toEqual({
 				basename: "",
 				extension: "md",
+				kind: SplitPathKind.MdFile,
 				pathParts: [],
-				type: SplitPathKind.MdFile,
 			});
 		});
 
@@ -321,8 +321,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 			expect(result).toEqual({
 				basename: "file",
 				extension: "md",
+				kind: SplitPathKind.MdFile,
 				pathParts: ["a", "b", "c", "d", "e", "f", "g", "h"],
-				type: SplitPathKind.MdFile,
 			});
 		});
 
@@ -330,8 +330,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 			const splitPath = {
 				basename: "café",
 				extension: "md",
+				kind: SplitPathKind.MdFile,
 				pathParts: ["répertoire"],
-				type: SplitPathKind.MdFile,
 			} as SplitPathToMdFile;
 			const encoded = systemPathFromSplitPathInternal(splitPath);
 			const decoded = splitPathFromSystemPathInternal(encoded);
@@ -342,8 +342,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 			const splitPath = {
 				basename: "file/name\\with-separators",
 				extension: "md",
+				kind: SplitPathKind.MdFile,
 				pathParts: ["root"],
-				type: SplitPathKind.MdFile,
 			} as SplitPathToMdFile;
 			const encoded = systemPathFromSplitPathInternal(splitPath);
 			// Only path separators (/ and \) are sanitized to spaces
@@ -355,8 +355,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 			const splitPath = {
 				basename: "file!@#$%with-special",
 				extension: "md",
+				kind: SplitPathKind.MdFile,
 				pathParts: ["root"],
-				type: SplitPathKind.MdFile,
 			} as SplitPathToMdFile;
 			const encoded = systemPathFromSplitPathInternal(splitPath);
 			// Obsidian accepts these characters - they should be preserved

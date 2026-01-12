@@ -61,13 +61,13 @@ export type MaterializedEventKind = z.infer<typeof MaterializedEventKindSchema>;
 
 export type CreateFileNodeMaterializedEvent = {
 	kind: typeof MaterializedEventKind.Create;
-	nodeType: typeof TreeNodeKind.File;
+	nodeKind: typeof TreeNodeKind.File;
 	splitPath: SplitPathToFileInsideLibrary;
 };
 
 export type CreateScrollNodeMaterializedEvent = {
 	kind: typeof MaterializedEventKind.Create;
-	nodeType: typeof TreeNodeKind.Scroll;
+	nodeKind: typeof TreeNodeKind.Scroll;
 	splitPath: SplitPathToMdFileInsideLibrary;
 };
 
@@ -75,19 +75,19 @@ export type CreateScrollNodeMaterializedEvent = {
 
 export type DeleteFileNodeMaterializedEvent = {
 	kind: typeof MaterializedEventKind.Delete;
-	nodeType: typeof TreeNodeKind.File;
+	nodeKind: typeof TreeNodeKind.File;
 	splitPath: SplitPathToFileInsideLibrary;
 };
 
 export type DeleteScrollNodeMaterializedEvent = {
 	kind: typeof MaterializedEventKind.Delete;
-	nodeType: typeof TreeNodeKind.Scroll;
+	nodeKind: typeof TreeNodeKind.Scroll;
 	splitPath: SplitPathToMdFileInsideLibrary;
 };
 
 export type DeleteSectionNodeMaterializedEvent = {
 	kind: typeof MaterializedEventKind.Delete;
-	nodeType: typeof TreeNodeKind.Section;
+	nodeKind: typeof TreeNodeKind.Section;
 	splitPath: SplitPathToFolderInsideLibrary;
 };
 
@@ -95,21 +95,21 @@ export type DeleteSectionNodeMaterializedEvent = {
 
 export type RenameFileNodeMaterializedEvent = {
 	kind: typeof MaterializedEventKind.Rename;
-	nodeType: typeof TreeNodeKind.File;
+	nodeKind: typeof TreeNodeKind.File;
 	from: SplitPathToFileInsideLibrary;
 	to: SplitPathToFileInsideLibrary;
 };
 
 export type RenameScrollNodeMaterializedEvent = {
 	kind: typeof MaterializedEventKind.Rename;
-	nodeType: typeof TreeNodeKind.Scroll;
+	nodeKind: typeof TreeNodeKind.Scroll;
 	from: SplitPathToMdFileInsideLibrary;
 	to: SplitPathToMdFileInsideLibrary;
 };
 
 export type RenameSectionNodeMaterializedEvent = {
 	kind: typeof MaterializedEventKind.Rename;
-	nodeType: typeof TreeNodeKind.Section;
+	nodeKind: typeof TreeNodeKind.Section;
 	from: SplitPathToFolderInsideLibrary;
 	to: SplitPathToFolderInsideLibrary;
 };

@@ -39,7 +39,7 @@ describe("Healer", () => {
 						children: {
 							pie: {
 								children: {
-									Note: { status: TreeNodeStatus.NotStarted, type: "Scroll" as const },
+									Note: { kind: "Scroll" as const, status: TreeNodeStatus.NotStarted },
 								},
 							},
 						},
@@ -67,8 +67,8 @@ describe("Healer", () => {
 				observedSplitPath: {
 					basename: "Note",
 					extension: "md",
+					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "recipe", "pie"],
-					type: SplitPathKind.MdFile,
 				},
 				targetLocator: locator,
 			});
@@ -77,8 +77,8 @@ describe("Healer", () => {
 			expect(shape.children?.recipe).toBeDefined();
 			// @ts-expect-error - accessing nested structure
 			expect(shape.children?.recipe?.children?.pie?.children?.Note).toEqual({
+				kind: "Scroll",
 				status: TreeNodeStatus.NotStarted,
-				type: "Scroll",
 			});
 		});
 	});
@@ -91,7 +91,7 @@ describe("Healer", () => {
 						children: {
 							pie: {
 								children: {
-									Note: { type: "Scroll" as const },
+									Note: { kind: "Scroll" as const },
 								},
 							},
 						},
@@ -123,8 +123,8 @@ describe("Healer", () => {
 						children: {
 							pie: {
 								children: {
-									Note1: { type: "Scroll" as const },
-									Note2: { type: "Scroll" as const },
+									Note1: { kind: "Scroll" as const },
+									Note2: { kind: "Scroll" as const },
 								},
 							},
 						},
@@ -158,7 +158,7 @@ describe("Healer", () => {
 				children: {
 					pie: {
 						children: {
-							Note: { type: "Scroll" as const },
+							Note: { kind: "Scroll" as const },
 						},
 					},
 				},
@@ -184,7 +184,7 @@ describe("Healer", () => {
 		it("updates leaf status", () => {
 			const healer = makeTree({
 				children: {
-					Note: { status: TreeNodeStatus.NotStarted, type: "Scroll" as const },
+					Note: { kind: "Scroll" as const, status: TreeNodeStatus.NotStarted },
 				},
 				libraryRoot: "Library" as NodeName,
 			});
@@ -200,8 +200,8 @@ describe("Healer", () => {
 
 			const shape = toShape(healer);
 			expect(shape.children?.Note).toEqual({
+				kind: "Scroll",
 				status: TreeNodeStatus.Done,
-				type: "Scroll",
 			});
 		});
 
@@ -210,8 +210,8 @@ describe("Healer", () => {
 				children: {
 					recipe: {
 						children: {
-							Note1: { status: TreeNodeStatus.NotStarted, type: "Scroll" as const },
-							Note2: { status: TreeNodeStatus.NotStarted, type: "Scroll" as const },
+							Note1: { kind: "Scroll" as const, status: TreeNodeStatus.NotStarted },
+							Note2: { kind: "Scroll" as const, status: TreeNodeStatus.NotStarted },
 						},
 					},
 				},

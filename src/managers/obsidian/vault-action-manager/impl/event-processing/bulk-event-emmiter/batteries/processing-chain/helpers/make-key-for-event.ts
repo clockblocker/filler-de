@@ -12,10 +12,10 @@ export function makeKeyForEvent(e: VaultEvent): string {
 
 		case VaultEventKind.FileDeleted:
 		case VaultEventKind.FolderDeleted:
-			return `${e.type}:${makeKeyFor(e)}`;
+			return `${e.kind}:${makeKeyFor(e)}`;
 
 		case VaultEventKind.FileRenamed:
 		case VaultEventKind.FolderRenamed:
-			return `${e.type}:${makeKeyFor(e.from)}→${makeKeyFor(e.to)}`;
+			return `${e.kind}:${makeKeyFor(e.from)}→${makeKeyFor(e.to)}`;
 	}
 }

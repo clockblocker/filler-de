@@ -9,7 +9,7 @@ import {
 	systemPathFromSplitPathInternal,
 } from "../../helpers/pathfinder";
 import type { SplitPathToMdFile } from "../../types/split-path";
-import { type VaultAction, VaultActionType } from "../../types/vault-action";
+import { type VaultAction, VaultActionKind } from "../../types/vault-action";
 import { makeSystemPathForSplitPath } from "../common/split-path-and-system-path";
 
 export class Executor {
@@ -21,27 +21,27 @@ export class Executor {
 	) {}
 
 	async execute(action: VaultAction) {
-		switch (action.type) {
-			case VaultActionType.CreateFolder: {
+		switch (action.kind) {
+			case VaultActionKind.CreateFolder: {
 				const result = await this.tfolderHelper.createFolder(
 					action.payload.splitPath,
 				);
 				return result;
 			}
-			case VaultActionType.RenameFolder: {
+			case VaultActionKind.RenameFolder: {
 				const result = await this.tfolderHelper.renameFolder({
 					from: action.payload.from,
 					to: action.payload.to,
 				});
 				return result;
 			}
-			case VaultActionType.TrashFolder: {
+			case VaultActionKind.TrashFolder: {
 				const result = await this.tfolderHelper.trashFolder(
 					action.payload.splitPath,
 				);
 				return result;
 			}
-			case VaultActionType.CreateFile: {
+			case VaultActionKind.CreateFile: {
 				const systemPath = systemPathFromSplitPathInternal(
 					action.payload.splitPath,
 				);
@@ -57,7 +57,7 @@ export class Executor {
 					);
 				}
 			}
-			case VaultActionType.UpsertMdFile: {
+			case VaultActionKind.UpsertMdFile: {
 				// INVARIANT: Parent folders exist (ensured by dispatcher)
 				const { splitPath, content } = action.payload;
 				const path = makeSystemPathForSplitPath(splitPath);
@@ -112,16 +112,16 @@ export class Executor {
 				const result = await this.tfileHelper.upsertMdFile(dto);
 				return result;
 			}
-			case VaultActionType.RenameFile:
-			case VaultActionType.RenameMdFile: {
+			case VaultActionKind.RenameFile:
+			case VaultActionKind.RenameMdFile: {
 				const result = await this.tfileHelper.renameFile({
 					from: action.payload.from,
 					to: action.payload.to,
 				});
 				return result;
 			}
-			case VaultActionType.TrashFile:
-			case VaultActionType.TrashMdFile: {
+			case VaultActionKind.TrashFile:
+			case VaultActionKind.TrashMdFile: {
 				const pathStr = [
 					...action.payload.splitPath.pathParts,
 					action.payload.splitPath.basename,
@@ -134,8 +134,8 @@ export class Executor {
 				);
 				if (result.isErr()) {
 					logger.error("[Executor] TrashMdFile failed", {
-						path: pathStr,
 						error: result.error,
+						path: pathStr,
 					});
 				} else {
 					logger.info("[Executor] TrashMdFile succeeded", {
@@ -144,7 +144,7 @@ export class Executor {
 				}
 				return result;
 			}
-			case VaultActionType.ProcessMdFile: {
+			case VaultActionKind.ProcessMdFile: {
 				// INVARIANT: File exists (ensured by dispatcher)
 				const isActive = await this.checkFileActive(
 					action.payload.splitPath,

@@ -15,7 +15,7 @@ export function splitPathToMdFileFromCore(
 	return {
 		...core,
 		extension: MD,
-		type: SplitPathKind.MdFile,
+		kind: SplitPathKind.MdFile,
 	};
 }
 
@@ -24,7 +24,7 @@ export function splitPathToFolderFromCore(
 ): SplitPathToFolder {
 	return {
 		...core,
-		type: SplitPathKind.Folder,
+		kind: SplitPathKind.Folder,
 	};
 }
 
@@ -40,8 +40,8 @@ export function getSplitPathForAbstractFile<SP extends AnySplitPath>(
 	if (abstractFile instanceof TFolder) {
 		return {
 			basename: title,
+			kind: SplitPathKind.Folder,
 			pathParts: fullPath,
-			type: SplitPathKind.Folder,
 		} as SP;
 	}
 
@@ -50,16 +50,16 @@ export function getSplitPathForAbstractFile<SP extends AnySplitPath>(
 		return {
 			basename: abstractFile.basename,
 			extension: MD,
+			kind: SplitPathKind.MdFile,
 			pathParts: fullPath,
-			type: SplitPathKind.MdFile,
 		} as SP;
 	}
 
 	return {
 		basename: abstractFile.basename,
 		extension,
+		kind: SplitPathKind.File,
 		pathParts: fullPath,
-		type: SplitPathKind.File,
 	} as SP;
 }
 
@@ -84,12 +84,12 @@ export function joinPosix(...parts: string[]): string {
 }
 
 export type AbstractFileForSplitPath<SP extends AnySplitPath> = SP extends {
-	type: "Folder";
+	kind: "Folder";
 }
 	? TFolder
-	: SP extends { type: "MdFile" }
+	: SP extends { kind: "MdFile" }
 		? TFile
-		: SP extends { type: "File" }
+		: SP extends { kind: "File" }
 			? TFile
 			: never;
 
@@ -100,8 +100,8 @@ export type MdFileWithContentDto = {
 
 export const SPLIT_PATH_TO_ROOT_FOLDER: SplitPathToFolder = {
 	basename: "",
+	kind: SplitPathKind.Folder,
 	pathParts: [],
-	type: SplitPathKind.Folder,
 } as const;
 
 /**

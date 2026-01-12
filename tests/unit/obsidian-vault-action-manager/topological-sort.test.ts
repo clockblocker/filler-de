@@ -9,7 +9,7 @@ import type {
 import { SplitPathKind } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import {
 	type VaultAction,
-	VaultActionType,
+	VaultActionKind,
 } from "../../../src/managers/obsidian/vault-action-manager/types/vault-action";
 
 const folder = (
@@ -17,8 +17,8 @@ const folder = (
 	pathParts: string[] = [],
 ): SplitPathToFolder => ({
 	basename,
+	kind: SplitPathKind.Folder,
 	pathParts,
-	type: SplitPathKind.Folder,
 });
 
 const mdFile = (
@@ -27,8 +27,8 @@ const mdFile = (
 ): SplitPathToMdFile => ({
 	basename,
 	extension: "md",
+	kind: SplitPathKind.MdFile,
 	pathParts,
-	type: SplitPathKind.MdFile,
 });
 
 describe("topologicalSort", () => {
@@ -40,12 +40,12 @@ describe("topologicalSort", () => {
 
 	it("should sort actions with no dependencies", () => {
 		const action1: VaultAction = {
+			kind: VaultActionKind.CreateFolder,
 			payload: { splitPath: folder("A") },
-			type: VaultActionType.CreateFolder,
 		};
 		const action2: VaultAction = {
+			kind: VaultActionKind.CreateFolder,
 			payload: { splitPath: folder("B") },
-			type: VaultActionType.CreateFolder,
 		};
 
 		const graph = buildDependencyGraph([action1, action2]);
@@ -58,15 +58,15 @@ describe("topologicalSort", () => {
 
 	it("should respect dependency: UpsertMdFile before ProcessMdFile", () => {
 		const create: VaultAction = {
+			kind: VaultActionKind.UpsertMdFile,
 			payload: { content: "", splitPath: mdFile("file") },
-			type: VaultActionType.UpsertMdFile,
 		};
 		const process: VaultAction = {
+			kind: VaultActionKind.ProcessMdFile,
 			payload: {
 				splitPath: mdFile("file"),
 				transform: async (c) => c,
 			},
-			type: VaultActionType.ProcessMdFile,
 		};
 
 		const graph = buildDependencyGraph([create, process]);
@@ -79,12 +79,12 @@ describe("topologicalSort", () => {
 
 	it("should respect dependency: parent folder before child folder", () => {
 		const parent: VaultAction = {
+			kind: VaultActionKind.CreateFolder,
 			payload: { splitPath: folder("parent") },
-			type: VaultActionType.CreateFolder,
 		};
 		const child: VaultAction = {
+			kind: VaultActionKind.CreateFolder,
 			payload: { splitPath: folder("child", ["parent"]) },
-			type: VaultActionType.CreateFolder,
 		};
 
 		const graph = buildDependencyGraph([parent, child]);
@@ -97,12 +97,12 @@ describe("topologicalSort", () => {
 
 	it("should sort by path depth when no dependencies (shallow first)", () => {
 		const deep: VaultAction = {
+			kind: VaultActionKind.CreateFolder,
 			payload: { splitPath: folder("deep", ["a", "b", "c"]) },
-			type: VaultActionType.CreateFolder,
 		};
 		const shallow: VaultAction = {
+			kind: VaultActionKind.CreateFolder,
 			payload: { splitPath: folder("shallow", ["a"]) },
-			type: VaultActionType.CreateFolder,
 		};
 
 		const graph = buildDependencyGraph([deep, shallow]);
@@ -115,23 +115,23 @@ describe("topologicalSort", () => {
 
 	it("should handle complex dependency chain", () => {
 		const root: VaultAction = {
+			kind: VaultActionKind.CreateFolder,
 			payload: { splitPath: folder("root") },
-			type: VaultActionType.CreateFolder,
 		};
 		const sub: VaultAction = {
+			kind: VaultActionKind.CreateFolder,
 			payload: { splitPath: folder("sub", ["root"]) },
-			type: VaultActionType.CreateFolder,
 		};
 		const create: VaultAction = {
+			kind: VaultActionKind.UpsertMdFile,
 			payload: { content: "", splitPath: mdFile("file", ["root", "sub"]) },
-			type: VaultActionType.UpsertMdFile,
 		};
 		const process: VaultAction = {
+			kind: VaultActionKind.ProcessMdFile,
 			payload: {
 				splitPath: mdFile("file", ["root", "sub"]),
 				transform: async (c) => c,
 			},
-			type: VaultActionType.ProcessMdFile,
 		};
 
 		const graph = buildDependencyGraph([root, sub, create, process]);
@@ -154,16 +154,16 @@ describe("topologicalSort", () => {
 
 	it("should handle parallel actions with same dependency", () => {
 		const parentFolder: VaultAction = {
+			kind: VaultActionKind.CreateFolder,
 			payload: { splitPath: folder("parent") },
-			type: VaultActionType.CreateFolder,
 		};
 		const file1: VaultAction = {
+			kind: VaultActionKind.UpsertMdFile,
 			payload: { content: "", splitPath: mdFile("file1", ["parent"]) },
-			type: VaultActionType.UpsertMdFile,
 		};
 		const file2: VaultAction = {
+			kind: VaultActionKind.UpsertMdFile,
 			payload: { content: "", splitPath: mdFile("file2", ["parent"]) },
-			type: VaultActionType.UpsertMdFile,
 		};
 
 		const graph = buildDependencyGraph([parentFolder, file1, file2]);
@@ -184,12 +184,12 @@ describe("topologicalSort", () => {
 		// We can't easily create a cycle with our dependency rules,
 		// but we can test with a malformed graph
 		const action1: VaultAction = {
+			kind: VaultActionKind.CreateFolder,
 			payload: { splitPath: folder("A") },
-			type: VaultActionType.CreateFolder,
 		};
 		const action2: VaultAction = {
+			kind: VaultActionKind.CreateFolder,
 			payload: { splitPath: folder("B") },
-			type: VaultActionType.CreateFolder,
 		};
 
 		// Create a graph with a cycle manually (not through buildDependencyGraph)
@@ -207,15 +207,15 @@ describe("topologicalSort", () => {
 
 	it("should handle RenameMdFile dependency on destination folder", () => {
 		const destFolder: VaultAction = {
+			kind: VaultActionKind.CreateFolder,
 			payload: { splitPath: folder("dest") },
-			type: VaultActionType.CreateFolder,
 		};
 		const rename: VaultAction = {
+			kind: VaultActionKind.RenameMdFile,
 			payload: {
 				from: mdFile("file"),
 				to: mdFile("file", ["dest"]),
 			},
-			type: VaultActionType.RenameMdFile,
 		};
 
 		const graph = buildDependencyGraph([destFolder, rename]);
@@ -228,15 +228,15 @@ describe("topologicalSort", () => {
 
 	it("should sort UpsertMdFile(null) before ProcessMdFile (EnsureExist)", () => {
 		const ensureExist: VaultAction = {
+			kind: VaultActionKind.UpsertMdFile,
 			payload: { content: null, splitPath: mdFile("file") },
-			type: VaultActionType.UpsertMdFile,
 		};
 		const process: VaultAction = {
+			kind: VaultActionKind.ProcessMdFile,
 			payload: {
 				splitPath: mdFile("file"),
 				transform: async (c) => c,
 			},
-			type: VaultActionType.ProcessMdFile,
 		};
 
 		const graph = buildDependencyGraph([ensureExist, process]);
@@ -249,16 +249,16 @@ describe("topologicalSort", () => {
 
 	it("should sort EnsureExist folders recursively (parent before child)", () => {
 		const root: VaultAction = {
+			kind: VaultActionKind.CreateFolder,
 			payload: { splitPath: folder("root") },
-			type: VaultActionType.CreateFolder,
 		};
 		const parent: VaultAction = {
+			kind: VaultActionKind.CreateFolder,
 			payload: { splitPath: folder("parent", ["root"]) },
-			type: VaultActionType.CreateFolder,
 		};
 		const child: VaultAction = {
+			kind: VaultActionKind.CreateFolder,
 			payload: { splitPath: folder("child", ["root", "parent"]) },
-			type: VaultActionType.CreateFolder,
 		};
 
 		const graph = buildDependencyGraph([root, parent, child]);

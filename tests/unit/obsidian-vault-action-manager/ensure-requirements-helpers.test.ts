@@ -15,15 +15,15 @@ import type {
 } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { SplitPathKind } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import type { VaultAction } from "../../../src/managers/obsidian/vault-action-manager/types/vault-action";
-import { VaultActionType } from "../../../src/managers/obsidian/vault-action-manager/types/vault-action";
+import { VaultActionKind } from "../../../src/managers/obsidian/vault-action-manager/types/vault-action";
 
 const folder = (
 	basename: string,
 	pathParts: string[] = [],
 ): SplitPathToFolder => ({
 	basename,
+	kind: SplitPathKind.Folder,
 	pathParts,
-	type: SplitPathKind.Folder,
 });
 
 const mdFile = (
@@ -32,20 +32,20 @@ const mdFile = (
 ): SplitPathToMdFile => ({
 	basename,
 	extension: "md",
+	kind: SplitPathKind.MdFile,
 	pathParts,
-	type: SplitPathKind.MdFile,
 });
 
 describe("collectTrashPaths", () => {
 	it("collects trash folder paths", () => {
 		const actions: VaultAction[] = [
 			{
+				kind: VaultActionKind.TrashFolder,
 				payload: { splitPath: folder("a", ["root"]) },
-				type: VaultActionType.TrashFolder,
 			},
 			{
+				kind: VaultActionKind.TrashFolder,
 				payload: { splitPath: folder("b", ["root"]) },
-				type: VaultActionType.TrashFolder,
 			},
 		];
 
@@ -60,12 +60,12 @@ describe("collectTrashPaths", () => {
 	it("collects trash file paths", () => {
 		const actions: VaultAction[] = [
 			{
+				kind: VaultActionKind.TrashMdFile,
 				payload: { splitPath: mdFile("file1", ["root"]) },
-				type: VaultActionType.TrashMdFile,
 			},
 			{
-				payload: { splitPath: { basename: "file2", extension: "txt", pathParts: ["root"], type: "File" } },
-				type: VaultActionType.TrashFile,
+				kind: VaultActionKind.TrashFile,
+				payload: { splitPath: { basename: "file2", extension: "txt", kind: "File", pathParts: ["root"] } },
 			},
 		];
 
@@ -80,12 +80,12 @@ describe("collectTrashPaths", () => {
 	it("ignores non-trash actions", () => {
 		const actions: VaultAction[] = [
 			{
+				kind: VaultActionKind.CreateFolder,
 				payload: { splitPath: folder("a", ["root"]) },
-				type: VaultActionType.CreateFolder,
 			},
 			{
+				kind: VaultActionKind.UpsertMdFile,
 				payload: { splitPath: mdFile("file", ["root"]) },
-				type: VaultActionType.UpsertMdFile,
 			},
 		];
 
@@ -100,8 +100,8 @@ describe("collectRequirements", () => {
 	it("collects parent folder keys from CreateFolder", () => {
 		const actions: VaultAction[] = [
 			{
+				kind: VaultActionKind.CreateFolder,
 				payload: { splitPath: folder("child", ["root", "parent"]) },
-				type: VaultActionType.CreateFolder,
 			},
 		];
 
@@ -115,11 +115,11 @@ describe("collectRequirements", () => {
 	it("collects file keys from ProcessMdFile", () => {
 		const actions: VaultAction[] = [
 			{
+				kind: VaultActionKind.ProcessMdFile,
 				payload: {
 					splitPath: mdFile("file", ["root", "notes"]),
 					transform: (c) => c,
 				},
-				type: VaultActionType.ProcessMdFile,
 			},
 		];
 
@@ -133,11 +133,11 @@ describe("collectRequirements", () => {
 	it("collects parent folders from RenameFolder destination", () => {
 		const actions: VaultAction[] = [
 			{
+				kind: VaultActionKind.RenameFolder,
 				payload: {
 					from: folder("old", ["root"]),
 					to: folder("new", ["root", "target"]),
 				},
-				type: VaultActionType.RenameFolder,
 			},
 		];
 
@@ -259,8 +259,8 @@ describe("hasActionForKey", () => {
 	it("returns true if CreateFolder exists for folder key", () => {
 		const actions: VaultAction[] = [
 			{
+				kind: VaultActionKind.CreateFolder,
 				payload: { splitPath: folder("a", ["root"]) },
-				type: VaultActionType.CreateFolder,
 			},
 		];
 
@@ -271,8 +271,8 @@ describe("hasActionForKey", () => {
 	it("returns true if UpsertMdFile exists for file key", () => {
 		const actions: VaultAction[] = [
 			{
+				kind: VaultActionKind.UpsertMdFile,
 				payload: { splitPath: mdFile("file", ["root"]) },
-				type: VaultActionType.UpsertMdFile,
 			},
 		];
 
@@ -283,11 +283,11 @@ describe("hasActionForKey", () => {
 	it("returns true if ProcessMdFile exists for file key", () => {
 		const actions: VaultAction[] = [
 			{
+				kind: VaultActionKind.ProcessMdFile,
 				payload: {
 					splitPath: mdFile("file", ["root"]),
 					transform: (c) => c,
 				},
-				type: VaultActionType.ProcessMdFile,
 			},
 		];
 
@@ -314,11 +314,11 @@ describe("getDestinationsToCheck", () => {
 	it("returns destinations for ProcessMdFile action", () => {
 		const actions: VaultAction[] = [
 			{
+				kind: VaultActionKind.ProcessMdFile,
 				payload: {
 					splitPath: mdFile("file", ["root", "notes"]),
 					transform: (c) => c,
 				},
-				type: VaultActionType.ProcessMdFile,
 			},
 		];
 
@@ -337,15 +337,15 @@ describe("getDestinationsToCheck", () => {
 	it("filters out EnsureExist keys that conflict with Trash", () => {
 		const actions: VaultAction[] = [
 			{
+				kind: VaultActionKind.TrashFolder,
 				payload: { splitPath: folder("parent", ["root"]) },
-				type: VaultActionType.TrashFolder,
 			},
 			{
+				kind: VaultActionKind.ProcessMdFile,
 				payload: {
 					splitPath: mdFile("file", ["root", "parent"]),
 					transform: (c) => c,
 				},
-				type: VaultActionType.ProcessMdFile,
 			},
 		];
 
@@ -401,8 +401,8 @@ describe("ensureDestinationsExist", () => {
 		);
 
 		expect(result.length).toBe(1);
-		expect(result[0]?.type).toBe(VaultActionType.CreateFolder);
-		if (result[0]?.type === VaultActionType.CreateFolder) {
+		expect(result[0]?.kind).toBe(VaultActionKind.CreateFolder);
+		if (result[0]?.kind === VaultActionKind.CreateFolder) {
 			expect(result[0].payload.splitPath.basename).toBe("parent");
 		}
 	});
@@ -451,8 +451,8 @@ describe("ensureDestinationsExist", () => {
 		);
 
 		expect(result.length).toBe(1);
-		expect(result[0]?.type).toBe(VaultActionType.UpsertMdFile);
-		if (result[0]?.type === VaultActionType.UpsertMdFile) {
+		expect(result[0]?.kind).toBe(VaultActionKind.UpsertMdFile);
+		if (result[0]?.kind === VaultActionKind.UpsertMdFile) {
 			expect(result[0].payload.content).toBe(null);
 		}
 	});
@@ -467,8 +467,8 @@ describe("ensureDestinationsExist", () => {
 
 		const existingActions: VaultAction[] = [
 			{
+				kind: VaultActionKind.CreateFolder,
 				payload: { splitPath: folder("parent", ["root"]) },
-				type: VaultActionType.CreateFolder,
 			},
 		];
 
@@ -536,7 +536,7 @@ describe("ensureDestinationsExist", () => {
 		);
 
 		expect(result.length).toBe(1);
-		expect(result[0]?.type).toBe(VaultActionType.CreateFolder);
+		expect(result[0]?.kind).toBe(VaultActionKind.CreateFolder);
 	});
 
 	it("adds UpsertMdFile actions with empty content for non-existing files", async () => {
@@ -560,8 +560,8 @@ describe("ensureDestinationsExist", () => {
 		);
 
 		expect(result.length).toBe(1);
-		expect(result[0]?.type).toBe(VaultActionType.UpsertMdFile);
-		if (result[0]?.type === VaultActionType.UpsertMdFile) {
+		expect(result[0]?.kind).toBe(VaultActionKind.UpsertMdFile);
+		if (result[0]?.kind === VaultActionKind.UpsertMdFile) {
 			// Use content: null (EnsureExist) so collapse can keep both actions if ProcessMdFile is present
 			// File will be created with empty content if it doesn't exist
 			expect(result[0].payload.content).toBe(null);

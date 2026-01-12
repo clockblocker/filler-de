@@ -16,7 +16,7 @@ export function traslateDeleteMaterializedEvent(
 
 	const targetLocator = targetRes.value;
 
-	switch (targetLocator.targetType) {
+	switch (targetLocator.targetKind) {
 		case TreeNodeKind.File: {
 			out.push({
 				actionType: TreeActionType.Delete,

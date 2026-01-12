@@ -8,7 +8,7 @@ export function makeVaultEventForFileCreated(
 	tAbstractFile: TAbstractFile,
 ): VaultEvent {
 	const split = makeSplitPath(tAbstractFile);
-	if (split.type === "Folder") {
+	if (split.kind === "Folder") {
 		return {
 			kind: "FolderCreated",
 			splitPath: split,
@@ -28,18 +28,18 @@ export function tryMakeVaultEventForFileRenamed(
 	const split = makeSplitPath(tAbstractFile);
 	const from = makeSplitPath(oldPath);
 
-	if (split.type === "Folder" && from.type === "Folder") {
+	if (split.kind === "Folder" && from.kind === "Folder") {
 		return ok({
 			from: from,
+			kind: "FolderRenamed",
 			to: split,
-			type: "FolderRenamed",
 		});
 	}
-	if (split.type !== "Folder" && from.type !== "Folder") {
+	if (split.kind !== "Folder" && from.kind !== "Folder") {
 		return ok({
 			from: from,
+			kind: "FileRenamed",
 			to: split,
-			type: "FileRenamed",
 		});
 	}
 
@@ -50,7 +50,7 @@ export function makeVaultEventForFileDeleted(
 	tAbstractFile: TAbstractFile,
 ): VaultEvent {
 	const split = makeSplitPath(tAbstractFile);
-	if (split.type === "Folder") {
+	if (split.kind === "Folder") {
 		return {
 			kind: "FolderDeleted",
 			splitPath: split,

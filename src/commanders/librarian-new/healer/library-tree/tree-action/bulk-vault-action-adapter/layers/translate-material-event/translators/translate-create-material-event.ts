@@ -17,9 +17,9 @@ export function traslateCreateMaterializedEvent(
 	if (targetRes.isErr()) return out;
 	const targetLocator = targetRes.value;
 
-	switch (targetLocator.targetType) {
+	switch (targetLocator.targetKind) {
 		case TreeNodeKind.File: {
-			if (observedSplitPath.type !== "File") {
+			if (observedSplitPath.kind !== "File") {
 				break;
 			}
 			out.push({
@@ -30,7 +30,7 @@ export function traslateCreateMaterializedEvent(
 			break;
 		}
 		case TreeNodeKind.Scroll: {
-			if (observedSplitPath.type !== "MdFile") {
+			if (observedSplitPath.kind !== "MdFile") {
 				break;
 			}
 			out.push({

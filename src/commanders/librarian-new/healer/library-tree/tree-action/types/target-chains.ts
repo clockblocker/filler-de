@@ -13,20 +13,20 @@ const BaseNodeLocatorSchema = z.object({
 
 const SectionNodeLocatorSchema = BaseNodeLocatorSchema.extend({
 	segmentId: SectionNodeSegmentIdSchema,
-	targetType: z.literal(TreeNodeKind.Section),
+	targetKind: z.literal(TreeNodeKind.Section),
 });
 
 const ScrollNodeLocatorSchema = BaseNodeLocatorSchema.extend({
 	segmentId: ScrollNodeSegmentIdSchema,
-	targetType: z.literal(TreeNodeKind.Scroll),
+	targetKind: z.literal(TreeNodeKind.Scroll),
 });
 
 const FileNodeLocatorSchema = BaseNodeLocatorSchema.extend({
 	segmentId: FileNodeSegmentIdSchema,
-	targetType: z.literal(TreeNodeKind.File),
+	targetKind: z.literal(TreeNodeKind.File),
 });
 
-const TreeNodeLocatorSchema = z.discriminatedUnion("targetType", [
+const TreeNodeLocatorSchema = z.discriminatedUnion("targetKind", [
 	SectionNodeLocatorSchema,
 	ScrollNodeLocatorSchema,
 	FileNodeLocatorSchema,

@@ -33,7 +33,7 @@ Found in `locator-codec.ts`:
 
 `SplitPath<T extends SplitPathKind>` already exists (line 56 of `split-path.ts`):
 ```typescript
-export type SplitPath<T extends SplitPathKind> = AnySplitPath & { type: T };
+export type SplitPath<T extends SplitPathKind> = AnySplitPath & { kind: T };
 ```
 
 ## Requirements
@@ -164,38 +164,38 @@ export type TreeNodeKindForSplitPath<T extends SplitPathKind> =
 // Generic locator type (narrows TreeNodeLocator union)
 export type NodeLocatorOf<NK extends TreeNodeKind> = Extract<
   TreeNodeLocator,
-  { targetType: NK }
+  { targetKind: NK }
 >;
 
 // Generic split path inside library (narrows union)
 // Using "Of" suffix to avoid name collision with union type SplitPathInsideLibrary
 export type SplitPathInsideLibraryOf<SK extends SplitPathKind> = Extract<
   SplitPathInsideLibrary,
-  { type: SK }
+  { kind: SK }
 >;
 
 // Generic canonical split path inside library (narrows union, same pattern as SplitPath)
 // Using "Of" suffix to avoid name collision with union type CanonicalSplitPathInsideLibrary
 export type CanonicalSplitPathInsideLibraryOf<SK extends SplitPathKind> = Extract<
   CanonicalSplitPathInsideLibrary,
-  { type: SK }
+  { kind: SK }
 >;
 
 // Segment ID components mapped to full shapes (makes invalid states impossible)
 type SegmentIdComponentsMap = {
   [TreeNodeKind.Section]: {
     coreName: NodeName;
-    targetType: TreeNodeKind.Section;
+    targetKind: TreeNodeKind.Section;
     extension?: never; // <-- forbidden, prevents extension from sneaking in
   };
   [TreeNodeKind.Scroll]: {
     coreName: NodeName;
-    targetType: TreeNodeKind.Scroll;
+    targetKind: TreeNodeKind.Scroll;
     extension: 'md';
   };
   [TreeNodeKind.File]: {
     coreName: NodeName;
-    targetType: TreeNodeKind.File;
+    targetKind: TreeNodeKind.File;
     extension: FileExtension;
   };
 };
@@ -229,7 +229,7 @@ private buildCanonicalLeafSplitPath(
       basename,
       extension: "md",
       pathParts,
-      type: SplitPathKind.MdFile,
+      kind: SplitPathKind.MdFile,
     };
   }
   
@@ -239,7 +239,7 @@ private buildCanonicalLeafSplitPath(
     basename,
     extension,
     pathParts,
-    type: SplitPathKind.File,
+    kind: SplitPathKind.File,
   };
 }
 ```
@@ -269,7 +269,7 @@ function buildCanonicalSplitPath(
       basename,
       extension: "md",
       pathParts,
-      type: SplitPathKind.MdFile,
+      kind: SplitPathKind.MdFile,
     } as const;
   }
   
@@ -278,7 +278,7 @@ function buildCanonicalSplitPath(
     basename,
     extension,
     pathParts,
-    type: SplitPathKind.File,
+    kind: SplitPathKind.File,
   } as const;
 }
 ```
@@ -427,7 +427,7 @@ None expected - this is additive. Existing code can continue using manual mappin
 - [ ] Rename `TreeNodeType` → `TreeNodeKind` in `tree-node/types/atoms.ts`
 - [ ] Rename `SplitPathType` → `SplitPathKind` in `vault-action-manager/types/split-path.ts`
 - [ ] Update all imports and usages across codebase
-- [ ] Update variable / obj key names to be consistent. ie: "targetType:" -> "targetKind:"
+- [ ] Update variable / obj key names to be consistent. ie: "targetKind:" -> "targetKind:"
 - [ ] Verify no breaking changes (types are structurally compatible)
 
 ### Phase 1: Type Mappings

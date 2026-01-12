@@ -65,10 +65,10 @@ import { RenameIntent } from "./types";
 export function inferRenameIntent({
 	to,
 	from,
-	nodeType,
+	nodeKind,
 }: RenameTreeNodeNodeMaterializedEvent): RenameIntent {
 	const basenameChanged = from.basename !== to.basename;
-	const isFolder = nodeType === TreeNodeKind.Section;
+	const isFolder = nodeKind === TreeNodeKind.Section;
 
 	// path move (basename unchanged)
 	if (!basenameChanged) return RenameIntent.Move;

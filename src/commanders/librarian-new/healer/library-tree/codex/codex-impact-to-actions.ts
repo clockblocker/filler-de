@@ -62,8 +62,8 @@ export function codexImpactToActions(
 		const splitPath = computeCodexSplitPath(chain);
 
 		const upsertAction: UpsertCodexAction = {
+			kind: "UpsertCodex",
 			payload: { content, sectionChain: chain, splitPath },
-			type: "UpsertCodex",
 		};
 		actions.push(upsertAction);
 	}
@@ -72,8 +72,8 @@ export function codexImpactToActions(
 	for (const chain of impact.deleted) {
 		const splitPath = computeCodexSplitPath(chain);
 		const deleteAction: DeleteCodexAction = {
+			kind: "DeleteCodex",
 			payload: { splitPath },
-			type: "DeleteCodex",
 		};
 		actions.push(deleteAction);
 	}
@@ -91,8 +91,8 @@ export function codexImpactToActions(
 		const movedCodexPath = buildMovedCodexPath(oldChain, newChain);
 
 		const deleteAction: DeleteCodexAction = {
+			kind: "DeleteCodex",
 			payload: { splitPath: movedCodexPath },
-			type: "DeleteCodex",
 		};
 		actions.push(deleteAction);
 
@@ -113,8 +113,8 @@ export function codexImpactToActions(
 					newDescChain,
 				);
 				const descDeleteAction: DeleteCodexAction = {
+					kind: "DeleteCodex",
 					payload: { splitPath: movedDescPath },
-					type: "DeleteCodex",
 				};
 				actions.push(descDeleteAction);
 			}
@@ -132,8 +132,8 @@ export function codexImpactToActions(
 			const splitPath = computeScrollSplitPath(nodeName, parentChain);
 
 			const writeStatusAction: WriteScrollStatusAction = {
+				kind: "WriteScrollStatus",
 				payload: { splitPath, status: newStatus },
-				type: "WriteScrollStatus",
 			};
 			actions.push(writeStatusAction);
 		}
@@ -211,8 +211,8 @@ function computeScrollSplitPath(
 	return {
 		basename,
 		extension: "md",
+		kind: SplitPathKind.MdFile,
 		pathParts,
-		type: SplitPathKind.MdFile,
 	};
 }
 
@@ -300,7 +300,7 @@ function buildMovedCodexPath(
 	return {
 		basename,
 		extension: "md",
+		kind: SplitPathKind.MdFile,
 		pathParts,
-		type: SplitPathKind.MdFile,
 	};
 }

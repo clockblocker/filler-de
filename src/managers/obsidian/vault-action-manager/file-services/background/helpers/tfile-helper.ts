@@ -18,9 +18,9 @@ import {
 } from "../../../helpers/pathfinder";
 import {
 	type SplitPathFromTo,
+	SplitPathKind,
 	type SplitPathToFile,
 	type SplitPathToMdFile,
-	SplitPathKind,
 } from "../../../types/split-path";
 import type { Transform } from "../../../types/vault-action";
 import { type CollisionStrategy, getExistingBasenamesInFolder } from "./common";
@@ -139,7 +139,7 @@ export class TFileHelper {
 		}
 
 		if (toResult.isOk()) {
-			if (to.type === SplitPathKind.MdFile) {
+			if (to.kind === SplitPathKind.MdFile) {
 				const targetContent = await this.vault.read(toResult.value);
 				const sourceContent = await this.vault.read(fromResult.value);
 

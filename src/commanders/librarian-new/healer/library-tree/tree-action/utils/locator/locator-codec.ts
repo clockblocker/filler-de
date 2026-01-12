@@ -49,7 +49,7 @@ export function makeLocatorFromCanonicalSplitPathInsideLibrary(
 		}),
 	);
 
-	switch (sp.type) {
+	switch (sp.kind) {
 		case SplitPathKind.File: {
 			return {
 				segmentId: makeNodeSegmentId({
@@ -59,7 +59,7 @@ export function makeLocatorFromCanonicalSplitPathInsideLibrary(
 					status: "Unknown",
 				}),
 				segmentIdChainToParent,
-				targetType: TreeNodeKind.File,
+				targetKind: TreeNodeKind.File,
 			} satisfies FileNodeLocator;
 		}
 
@@ -72,7 +72,7 @@ export function makeLocatorFromCanonicalSplitPathInsideLibrary(
 					status: "Unknown",
 				}),
 				segmentIdChainToParent,
-				targetType: TreeNodeKind.Scroll,
+				targetKind: TreeNodeKind.Scroll,
 			} satisfies ScrollNodeLocator;
 		}
 
@@ -84,7 +84,7 @@ export function makeLocatorFromCanonicalSplitPathInsideLibrary(
 					nodeName: sp.separatedSuffixedBasename.coreName,
 				}),
 				segmentIdChainToParent,
-				targetType: TreeNodeKind.Section,
+				targetKind: TreeNodeKind.Section,
 			} satisfies SectionNodeLocator;
 		}
 	}
@@ -116,11 +116,11 @@ export function makeCanonicalSplitPathInsideLibraryFromLocator(
 
 	const canonicalRes = tryBuildCanonicalSeparatedSuffixedBasename({
 		basename: coreName,
-		pathParts,
-		type:
+		kind:
 			targetType === TreeNodeKind.Section
 				? SplitPathKind.Folder
 				: SplitPathKind.File,
+		pathParts,
 	});
 
 	if (canonicalRes.isErr())
@@ -132,27 +132,27 @@ export function makeCanonicalSplitPathInsideLibraryFromLocator(
 	switch (targetType) {
 		case TreeNodeKind.Section: {
 			return {
+				kind: SplitPathKind.Folder,
 				pathParts,
 				separatedSuffixedBasename: { coreName, suffixParts },
-				type: SplitPathKind.Folder,
 			} satisfies CanonicalSplitPathToFolderInsideLibrary;
 		}
 
 		case TreeNodeKind.Scroll: {
 			return {
 				extension: MD,
+				kind: SplitPathKind.MdFile,
 				pathParts,
 				separatedSuffixedBasename: { coreName, suffixParts },
-				type: SplitPathKind.MdFile,
 			} satisfies CanonicalSplitPathToMdFileInsideLibrary;
 		}
 
 		case TreeNodeKind.File: {
 			return {
 				extension: extension as FileExtension,
+				kind: SplitPathKind.File,
 				pathParts,
 				separatedSuffixedBasename: { coreName, suffixParts },
-				type: SplitPathKind.File,
 			} satisfies CanonicalSplitPathToFileInsideLibrary;
 		}
 	}
@@ -165,7 +165,7 @@ function nodeNameFromSectionSegmentId(id: SectionNodeSegmentId): NodeName {
 
 function parseSegmentIdTrusted(id: TreeNodeSegmentId): {
 	coreName: NodeName;
-	targetType: TreeNodeKind;
+	targetKind: TreeNodeKind;
 	extension?: string;
 } {
 	const [coreName, targetType, extension] = id.split(NodeSegmentIdSeparator);
@@ -173,6 +173,6 @@ function parseSegmentIdTrusted(id: TreeNodeSegmentId): {
 	return {
 		coreName: coreName as NodeName,
 		extension,
-		targetType: targetType as TreeNodeKind,
+		targetKind: targetType as TreeNodeKind,
 	};
 }

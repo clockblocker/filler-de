@@ -116,5 +116,5 @@ function escapeRegex(str: string): string {
 function isFileSplitPath(
 	sp: AnySplitPath,
 ): sp is AnySplitPath & { basename: string; extension: string } {
-	return sp.type === "File" || sp.type === "MdFile";
+	return sp.kind === "File" || sp.kind === "MdFile";
 }

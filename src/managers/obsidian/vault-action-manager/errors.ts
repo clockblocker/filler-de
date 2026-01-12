@@ -10,7 +10,7 @@ export function errorTypeMismatch(
 	entityType: "file" | "folder",
 	path: string,
 ): string {
-	return `Expected ${entityType} type missmatched the found type: ${path}`;
+	return `Expected ${entityType} kind missmatched the found kind: ${path}`;
 }
 
 export function errorCreationRaceCondition(

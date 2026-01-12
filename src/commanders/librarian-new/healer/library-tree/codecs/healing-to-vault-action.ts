@@ -4,54 +4,54 @@
 
 import {
 	type VaultAction,
-	VaultActionType,
+	VaultActionKind,
 } from "../../../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { makeVaultScopedSplitPath } from "../tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
 import type { HealingAction } from "../types/healing-action";
 
 export function healingActionToVaultAction(action: HealingAction): VaultAction {
-	switch (action.type) {
+	switch (action.kind) {
 		case "CreateFolder":
 			return {
+				kind: VaultActionKind.CreateFolder,
 				payload: {
 					splitPath: makeVaultScopedSplitPath(
 						action.payload.splitPath,
 					),
 				},
-				type: VaultActionType.CreateFolder,
 			};
 		case "RenameFolder":
 			return {
+				kind: VaultActionKind.RenameFolder,
 				payload: {
 					from: makeVaultScopedSplitPath(action.payload.from),
 					to: makeVaultScopedSplitPath(action.payload.to),
 				},
-				type: VaultActionType.RenameFolder,
 			};
 		case "RenameFile":
 			return {
+				kind: VaultActionKind.RenameFile,
 				payload: {
 					from: makeVaultScopedSplitPath(action.payload.from),
 					to: makeVaultScopedSplitPath(action.payload.to),
 				},
-				type: VaultActionType.RenameFile,
 			};
 		case "RenameMdFile":
 			return {
+				kind: VaultActionKind.RenameMdFile,
 				payload: {
 					from: makeVaultScopedSplitPath(action.payload.from),
 					to: makeVaultScopedSplitPath(action.payload.to),
 				},
-				type: VaultActionType.RenameMdFile,
 			};
 		case "DeleteMdFile":
 			return {
+				kind: VaultActionKind.TrashMdFile,
 				payload: {
 					splitPath: makeVaultScopedSplitPath(
 						action.payload.splitPath,
 					),
 				},
-				type: VaultActionType.TrashMdFile,
 			};
 	}
 }

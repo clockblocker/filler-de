@@ -38,6 +38,6 @@ export const getParentLocator = (
 	return {
 		segmentId: parentSegmentId,
 		segmentIdChainToParent: chain.slice(0, -1),
-		targetType: TreeNodeKind.Section,
+		targetKind: TreeNodeKind.Section,
 	};
 };

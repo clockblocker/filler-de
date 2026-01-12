@@ -46,27 +46,27 @@ export type DeleteMdFileHealingPayload = {
 // ─── Healing Actions ───
 
 export type CreateFolderHealingAction = {
-	type: "CreateFolder";
+	kind: "CreateFolder";
 	payload: CreateFolderHealingPayload;
 };
 
 export type RenameFolderHealingAction = {
-	type: "RenameFolder";
+	kind: "RenameFolder";
 	payload: RenameFolderHealingPayload;
 };
 
 export type RenameFileHealingAction = {
-	type: "RenameFile";
+	kind: "RenameFile";
 	payload: RenameFileHealingPayload;
 };
 
 export type RenameMdFileHealingAction = {
-	type: "RenameMdFile";
+	kind: "RenameMdFile";
 	payload: RenameMdFileHealingPayload;
 };
 
 export type DeleteMdFileHealingAction = {
-	type: "DeleteMdFile";
+	kind: "DeleteMdFile";
 	payload: DeleteMdFileHealingPayload;
 };
 

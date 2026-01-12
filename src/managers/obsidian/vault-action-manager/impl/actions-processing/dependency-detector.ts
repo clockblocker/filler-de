@@ -1,6 +1,6 @@
 import type { ActionDependency, DependencyGraph } from "../../types/dependency";
 import type { VaultAction } from "../../types/vault-action";
-import { VaultActionType } from "../../types/vault-action";
+import { VaultActionKind } from "../../types/vault-action";
 import { makeKeyFor } from "../common/collapse-helpers";
 
 /**
@@ -21,10 +21,10 @@ export function buildDependencyGraph(actions: VaultAction[]): DependencyGraph {
 	const upsertByPathKey = new Map<string, VaultAction>();
 
 	for (const a of actions) {
-		if (a.type === VaultActionType.CreateFolder) {
+		if (a.kind === VaultActionKind.CreateFolder) {
 			createFolderByPathKey.set(makeKeyFor(a.payload.splitPath), a);
 		}
-		if (a.type === VaultActionType.UpsertMdFile) {
+		if (a.kind === VaultActionKind.UpsertMdFile) {
 			upsertByPathKey.set(makeKeyFor(a.payload.splitPath), a);
 		}
 	}
@@ -74,8 +74,8 @@ function findDependenciesForAction(
 ): VaultAction[] {
 	const dependencies: VaultAction[] = [];
 
-	switch (action.type) {
-		case VaultActionType.ProcessMdFile: {
+	switch (action.kind) {
+		case VaultActionKind.ProcessMdFile: {
 			// Depends on UpsertMdFile for same file (path-based lookup)
 			const filePathKey = makeKeyFor(action.payload.splitPath);
 			const upsert = upsertByPathKey.get(filePathKey);
@@ -91,8 +91,8 @@ function findDependenciesForAction(
 			break;
 		}
 
-		case VaultActionType.UpsertMdFile:
-		case VaultActionType.CreateFile: {
+		case VaultActionKind.UpsertMdFile:
+		case VaultActionKind.CreateFile: {
 			dependencies.push(
 				...findParentFolderDependencies(
 					action.payload.splitPath,
@@ -102,9 +102,9 @@ function findDependenciesForAction(
 			break;
 		}
 
-		case VaultActionType.RenameFolder:
-		case VaultActionType.RenameFile:
-		case VaultActionType.RenameMdFile: {
+		case VaultActionKind.RenameFolder:
+		case VaultActionKind.RenameFile:
+		case VaultActionKind.RenameMdFile: {
 			dependencies.push(
 				...findParentFolderDependencies(
 					action.payload.to,
@@ -114,7 +114,7 @@ function findDependenciesForAction(
 			break;
 		}
 
-		case VaultActionType.CreateFolder: {
+		case VaultActionKind.CreateFolder: {
 			dependencies.push(
 				...findParentFolderDependencies(
 					action.payload.splitPath,
@@ -124,9 +124,9 @@ function findDependenciesForAction(
 			break;
 		}
 
-		case VaultActionType.TrashFolder:
-		case VaultActionType.TrashFile:
-		case VaultActionType.TrashMdFile:
+		case VaultActionKind.TrashFolder:
+		case VaultActionKind.TrashFile:
+		case VaultActionKind.TrashMdFile:
 			break;
 	}
 
@@ -146,8 +146,8 @@ function findParentFolderDependencies(
 
 		const parentKey = makeKeyFor({
 			basename: parentBasename,
+			kind: "Folder",
 			pathParts: parentPathParts,
-			type: "Folder",
 		});
 
 		const createFolder = createFolderByPathKey.get(parentKey);
@@ -158,13 +158,13 @@ function findParentFolderDependencies(
 }
 
 export function makeGraphKey(action: VaultAction): string {
-	switch (action.type) {
-		case VaultActionType.RenameFolder:
-		case VaultActionType.RenameFile:
-		case VaultActionType.RenameMdFile:
-			return `${action.type}:${makeKeyFor(action.payload.from)}`;
+	switch (action.kind) {
+		case VaultActionKind.RenameFolder:
+		case VaultActionKind.RenameFile:
+		case VaultActionKind.RenameMdFile:
+			return `${action.kind}:${makeKeyFor(action.payload.from)}`;
 
 		default:
-			return `${action.type}:${makeKeyFor(action.payload.splitPath)}`;
+			return `${action.kind}:${makeKeyFor(action.payload.splitPath)}`;
 	}
 }

@@ -17,10 +17,10 @@ import type {
  * For folders: pathParts/basename
  *
  * @example
- * makeSystemPathForSplitPath({ pathParts: ["root", "notes"], basename: "file", extension: "md", type: "MdFile" })
+ * makeSystemPathForSplitPath({ pathParts: ["root", "notes"], basename: "file", extension: "md", kind: "MdFile" })
  * // "root/notes/file.md"
  * @example
- * makeSystemPathForSplitPath({ pathParts: ["root"], basename: "folder", type: "Folder" })
+ * makeSystemPathForSplitPath({ pathParts: ["root"], basename: "folder", kind: "Folder" })
  * // "root/folder"
  */
 export function makeSystemPathForSplitPath(splitPath: AnySplitPath): string {

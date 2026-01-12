@@ -4,7 +4,7 @@ import type {
 	SplitPathToMdFile,
 } from "../../types/split-path";
 import type { VaultAction } from "../../types/vault-action";
-import { VaultActionType } from "../../types/vault-action";
+import { VaultActionKind } from "../../types/vault-action";
 import { makeSystemPathForSplitPath } from "../common/split-path-and-system-path";
 import type { ExistenceChecker } from "./dispatcher";
 
@@ -20,13 +20,13 @@ export function collectTrashPaths(actions: readonly VaultAction[]): {
 	const fileKeys = new Set<string>();
 
 	for (const action of actions) {
-		if (action.type === VaultActionType.TrashFolder) {
+		if (action.kind === VaultActionKind.TrashFolder) {
 			folderKeys.add(
 				makeSystemPathForSplitPath(action.payload.splitPath),
 			);
 		} else if (
-			action.type === VaultActionType.TrashFile ||
-			action.type === VaultActionType.TrashMdFile
+			action.kind === VaultActionKind.TrashFile ||
+			action.kind === VaultActionKind.TrashMdFile
 		) {
 			fileKeys.add(makeSystemPathForSplitPath(action.payload.splitPath));
 		}
@@ -47,12 +47,12 @@ export function collectRequirements(actions: readonly VaultAction[]): {
 	const fileKeys = new Set<string>();
 
 	for (const action of actions) {
-		switch (action.type) {
+		switch (action.kind) {
 			// Actions with splitPath: extract parent folders
-			case VaultActionType.CreateFolder:
-			case VaultActionType.CreateFile:
-			case VaultActionType.UpsertMdFile:
-			case VaultActionType.ProcessMdFile: {
+			case VaultActionKind.CreateFolder:
+			case VaultActionKind.CreateFile:
+			case VaultActionKind.UpsertMdFile:
+			case VaultActionKind.ProcessMdFile: {
 				const { splitPath } = action.payload;
 				// Extract all parent folders from pathParts
 				for (let i = 1; i <= splitPath.pathParts.length; i++) {
@@ -64,7 +64,7 @@ export function collectRequirements(actions: readonly VaultAction[]): {
 					}
 				}
 				// For ProcessMdFile, ensure the file exists
-				if (action.type === VaultActionType.ProcessMdFile) {
+				if (action.kind === VaultActionKind.ProcessMdFile) {
 					const fileKey = makeSystemPathForSplitPath(
 						splitPath as SplitPathToMdFile,
 					);
@@ -74,9 +74,9 @@ export function collectRequirements(actions: readonly VaultAction[]): {
 			}
 
 			// Rename actions: extract parent folders from "to" path
-			case VaultActionType.RenameFolder:
-			case VaultActionType.RenameFile:
-			case VaultActionType.RenameMdFile: {
+			case VaultActionKind.RenameFolder:
+			case VaultActionKind.RenameFile:
+			case VaultActionKind.RenameMdFile: {
 				const { to } = action.payload;
 				// Extract all parent folders from "to" pathParts
 				for (let i = 1; i <= to.pathParts.length; i++) {
@@ -109,8 +109,8 @@ export function buildParentFolderKeys(splitPath: SplitPathToFolder): string[] {
 
 		const parentSplitPath: SplitPathToFolder = {
 			basename: parentBasename,
+			kind: "Folder",
 			pathParts: parentPathParts,
-			type: "Folder",
 		};
 		keys.push(makeSystemPathForSplitPath(parentSplitPath));
 	}
@@ -177,8 +177,8 @@ export function buildEnsureExistKeys(
 
 			const parentSplitPath: SplitPathToFolder = {
 				basename: parentBasename,
+				kind: "Folder",
 				pathParts: parentPathParts,
-				type: "Folder",
 			};
 			const parentKey = makeSystemPathForSplitPath(parentSplitPath);
 			if (!trashFolderKeys.has(parentKey)) {
@@ -202,12 +202,12 @@ export function buildEnsureExistKeys(
 export function hasActionForKey(
 	actions: readonly VaultAction[],
 	key: string,
-	type: "folder" | "file",
+	kind: "folder" | "file",
 ): boolean {
-	if (type === "folder") {
+	if (kind === "folder") {
 		return actions.some(
 			(a) =>
-				a.type === VaultActionType.CreateFolder &&
+				a.kind === VaultActionKind.CreateFolder &&
 				makeSystemPathForSplitPath(a.payload.splitPath) === key,
 		);
 	}
@@ -215,9 +215,9 @@ export function hasActionForKey(
 	// For files, check UpsertMdFile and ProcessMdFile
 	return actions.some(
 		(a) =>
-			(a.type === VaultActionType.UpsertMdFile &&
+			(a.kind === VaultActionKind.UpsertMdFile &&
 				makeSystemPathForSplitPath(a.payload.splitPath) === key) ||
-			(a.type === VaultActionType.ProcessMdFile &&
+			(a.kind === VaultActionKind.ProcessMdFile &&
 				makeSystemPathForSplitPath(a.payload.splitPath) === key),
 	);
 }
@@ -248,9 +248,9 @@ export function getDestinationsToCheck(
 	// Collect requirements from non-trash actions
 	const nonTrashActions = actions.filter(
 		(a) =>
-			a.type !== VaultActionType.TrashFolder &&
-			a.type !== VaultActionType.TrashFile &&
-			a.type !== VaultActionType.TrashMdFile,
+			a.kind !== VaultActionKind.TrashFolder &&
+			a.kind !== VaultActionKind.TrashFile &&
+			a.kind !== VaultActionKind.TrashMdFile,
 	);
 	const { folderKeys, fileKeys } = collectRequirements(nonTrashActions);
 
@@ -315,8 +315,8 @@ export async function ensureDestinationsExist(
 		// Check if already in batch
 		if (!hasActionForKey(existingActions, folderKey, "folder")) {
 			actionsToAdd.push({
+				kind: VaultActionKind.CreateFolder,
 				payload: { splitPath: folderSplitPath },
-				type: VaultActionType.CreateFolder,
 			});
 		}
 	}
@@ -343,8 +343,8 @@ export async function ensureDestinationsExist(
 		// Check if already in batch
 		if (!hasActionForKey(existingActions, fileKey, "file")) {
 			actionsToAdd.push({
+				kind: VaultActionKind.UpsertMdFile,
 				payload: { content: null, splitPath: fileSplitPath },
-				type: VaultActionType.UpsertMdFile,
 			});
 		}
 	}
@@ -373,8 +373,8 @@ export async function ensureDestinationsExist(
 		// Check if already in batch
 		if (!hasActionForKey(existingActions, folderKey, "folder")) {
 			actionsToAdd.push({
+				kind: VaultActionKind.CreateFolder,
 				payload: { splitPath: folderSplitPath },
-				type: VaultActionType.CreateFolder,
 			});
 		}
 	}
@@ -404,8 +404,8 @@ export async function ensureDestinationsExist(
 			// Use content: null (EnsureExist) so collapse keeps both ProcessMdFile + UpsertMdFile(null)
 			// Dependency graph ensures UpsertMdFile executes first, then ProcessMdFile processes it
 			actionsToAdd.push({
+				kind: VaultActionKind.UpsertMdFile,
 				payload: { content: null, splitPath: fileSplitPath },
-				type: VaultActionType.UpsertMdFile,
 			});
 		}
 	}

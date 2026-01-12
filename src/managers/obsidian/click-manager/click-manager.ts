@@ -71,7 +71,7 @@ export class ClickManager {
 		}
 
 		const splitPath = pwdResult.value;
-		if (splitPath.type !== "MdFile") {
+		if (splitPath.kind !== "MdFile") {
 			return;
 		}
 
@@ -84,9 +84,9 @@ export class ClickManager {
 		// Emit event
 		const event: CheckboxClickedEvent = {
 			checked: checkbox.checked,
+			kind: "CheckboxClicked",
 			lineContent,
 			splitPath: splitPath as SplitPathToMdFile,
-			type: "CheckboxClicked",
 		};
 
 		this.emit(event);
@@ -105,7 +105,7 @@ export class ClickManager {
 	private isTaskCheckbox(element: HTMLElement): element is HTMLInputElement {
 		return (
 			element.tagName === "INPUT" &&
-			(element as HTMLInputElement).type === "checkbox" &&
+			(element as HTMLInputElement).kind === "checkbox" &&
 			element.classList.contains("task-list-item-checkbox")
 		);
 	}

@@ -18,8 +18,8 @@ export function splitPathFromAbstractInternal(
 	if (file instanceof TFolder) {
 		return {
 			basename: fullBasename,
+			kind: SplitPathKind.Folder,
 			pathParts,
-			type: SplitPathKind.Folder,
 		};
 	}
 
@@ -33,10 +33,10 @@ export function splitPathFromAbstractInternal(
 		return {
 			basename,
 			extension: MD,
+			kind: SplitPathKind.MdFile,
 			pathParts,
-			type: SplitPathKind.MdFile,
 		};
 	}
 
-	return { basename, extension, pathParts, type: SplitPathKind.File };
+	return { basename, extension, kind: SplitPathKind.File, pathParts };
 }

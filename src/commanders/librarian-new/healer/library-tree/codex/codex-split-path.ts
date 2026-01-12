@@ -49,8 +49,8 @@ export function computeCodexSplitPath(
 	return {
 		basename,
 		extension: "md",
+		kind: SplitPathKind.MdFile,
 		pathParts,
-		type: SplitPathKind.MdFile,
 	};
 }
 

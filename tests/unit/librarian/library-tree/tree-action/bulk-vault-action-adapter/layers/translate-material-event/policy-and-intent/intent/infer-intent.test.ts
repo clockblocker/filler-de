@@ -25,15 +25,15 @@ describe("inferRenameIntent", () => {
 				from: {
 					basename: "Note-A",
 					extension: "md",
+					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "A"],
-					type: SplitPathKind.MdFile,
 				},
 				kind: MaterializedEventKind.Rename,
 				to: {
 					basename: "Note-A",
 					extension: "md",
+					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "B"],
-					type: SplitPathKind.MdFile,
 				},
 			});
 			expect(result).toBe(RenameIntent.Move);
@@ -46,15 +46,15 @@ describe("inferRenameIntent", () => {
 				from: {
 					basename: "Note-Test",
 					extension: "md",
+					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "Test"],
-					type: SplitPathKind.MdFile,
 				},
 				kind: MaterializedEventKind.Rename,
 				to: {
 					basename: "NewNote-Test",
 					extension: "md",
+					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "Test"],
-					type: SplitPathKind.MdFile,
 				},
 			});
 			expect(result).toBe(RenameIntent.Rename);
@@ -65,15 +65,15 @@ describe("inferRenameIntent", () => {
 				from: {
 					basename: "Note-child-parent-Test",
 					extension: "md",
+					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "Test", "parent", "child"],
-					type: SplitPathKind.MdFile,
 				},
 				kind: MaterializedEventKind.Rename,
 				to: {
 					basename: "NewNote-child-parent-Test",
 					extension: "md",
+					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "Test", "parent", "child"],
-					type: SplitPathKind.MdFile,
 				},
 			});
 			expect(result).toBe(RenameIntent.Rename);
@@ -86,15 +86,15 @@ describe("inferRenameIntent", () => {
 				from: {
 					basename: "Note",
 					extension: "md",
+					kind: SplitPathKind.MdFile,
 					pathParts: ["Library"],
-					type: SplitPathKind.MdFile,
 				},
 				kind: MaterializedEventKind.Rename,
 				to: {
 					basename: "NewNote",
 					extension: "md",
+					kind: SplitPathKind.MdFile,
 					pathParts: ["Library"],
-					type: SplitPathKind.MdFile,
 				},
 			});
 			expect(result).toBe(RenameIntent.Rename);
@@ -107,15 +107,15 @@ describe("inferRenameIntent", () => {
 				from: {
 					basename: "Note-child1-parent-Test",
 					extension: "md",
+					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "Test", "parent", "child1"],
-					type: SplitPathKind.MdFile,
 				},
 				kind: MaterializedEventKind.Rename,
 				to: {
 					basename: "Note-child2-parent-Test",
 					extension: "md",
+					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "Test", "parent", "child1"],
-					type: SplitPathKind.MdFile,
 				},
 			});
 			expect(result).toBe(RenameIntent.Move);
@@ -126,15 +126,15 @@ describe("inferRenameIntent", () => {
 				from: {
 					basename: "Note-child1-parent-Test",
 					extension: "md",
+					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "Test", "parent", "child1"],
-					type: SplitPathKind.MdFile,
 				},
 				kind: MaterializedEventKind.Rename,
 				to: {
 					basename: "Note-Test",
 					extension: "md",
+					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "Test", "parent", "child1"],
-					type: SplitPathKind.MdFile,
 				},
 			});
 			expect(result).toBe(RenameIntent.Move);
@@ -145,15 +145,15 @@ describe("inferRenameIntent", () => {
 				from: {
 					basename: "Note",
 					extension: "md",
+					kind: SplitPathKind.MdFile,
 					pathParts: ["Library"],
-					type: SplitPathKind.MdFile,
 				},
 				kind: MaterializedEventKind.Rename,
 				to: {
 					basename: "Note-NewSection",
 					extension: "md",
+					kind: SplitPathKind.MdFile,
 					pathParts: ["Library"],
-					type: SplitPathKind.MdFile,
 				},
 			});
 			expect(result).toBe(RenameIntent.Move);

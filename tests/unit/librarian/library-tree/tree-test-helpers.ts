@@ -24,7 +24,7 @@ import type { NodeName } from "../../../../src/commanders/librarian-new/types/sc
 // ─── Shape Types ───
 
 export type LeafShape = {
-	type: "Scroll" | "File";
+	kind: "Scroll" | "File";
 	status?: TreeNodeStatus;
 	extension?: string;
 };
@@ -81,12 +81,12 @@ function populateSection(
 
 function isLeafShape(shape: SectionShape | LeafShape): shape is LeafShape {
 	return (
-		"type" in shape && (shape.type === "Scroll" || shape.type === "File")
+		"kind" in shape && (shape.kind === "Scroll" || shape.kind === "File")
 	);
 }
 
 function makeLeafFromShape(name: NodeName, shape: LeafShape): LeafNode {
-	if (shape.type === "Scroll") {
+	if (shape.kind === "Scroll") {
 		return {
 			extension: "md",
 			kind: TreeNodeKind.Scroll,
@@ -125,15 +125,15 @@ function sectionChildrenToShape(
 			result[child.nodeName] = {
 				children: sectionChildrenToShape(child),
 			};
-		} else if (child.type === TreeNodeKind.Scroll) {
+		} else if (child.kind === TreeNodeKind.Scroll) {
 			result[child.nodeName] = {
+				kind: "Scroll",
 				status: child.status,
-				type: "Scroll",
 			};
 		} else {
 			result[child.nodeName] = {
 				extension: child.extension,
-				type: "File",
+				kind: "File",
 			};
 		}
 	}
@@ -153,7 +153,7 @@ export function makeScrollLocator(
 		segmentIdChainToParent: pathParts.map(
 			(p) => `${p}${sep}Section${sep}` as SectionNodeSegmentId,
 		),
-		targetType: TreeNodeKind.Scroll,
+		targetKind: TreeNodeKind.Scroll,
 	};
 }
 
@@ -169,7 +169,7 @@ export function makeFileLocator(
 		segmentIdChainToParent: pathParts.map(
 			(p) => `${p}${sep}Section${sep}` as SectionNodeSegmentId,
 		),
-		targetType: TreeNodeKind.File,
+		targetKind: TreeNodeKind.File,
 	};
 }
 
@@ -183,6 +183,6 @@ export function makeSectionLocator(
 		segmentIdChainToParent: pathParts.map(
 			(p) => `${p}${sep}Section${sep}` as SectionNodeSegmentId,
 		),
-		targetType: TreeNodeKind.Section,
+		targetKind: TreeNodeKind.Section,
 	};
 }

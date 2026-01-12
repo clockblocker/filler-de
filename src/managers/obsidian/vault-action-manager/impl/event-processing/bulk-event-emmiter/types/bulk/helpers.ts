@@ -2,11 +2,11 @@ import { type VaultEvent, VaultEventKind } from "../../../../..";
 
 export type FileRenamedVaultEvent = Extract<
 	VaultEvent,
-	{ type: typeof VaultEventKind.FileRenamed }
+	{ kind: typeof VaultEventKind.FileRenamed }
 >;
 export type FolderRenamedVaultEvent = Extract<
 	VaultEvent,
-	{ type: typeof VaultEventKind.FolderRenamed }
+	{ kind: typeof VaultEventKind.FolderRenamed }
 >;
 export type RenameVaultEvent = FileRenamedVaultEvent | FolderRenamedVaultEvent;
 
@@ -18,8 +18,8 @@ export function isRename(e: VaultEvent): e is RenameVaultEvent {
 }
 
 export type TrashVaultEvent =
-	| Extract<VaultEvent, { type: typeof VaultEventKind.FileDeleted }>
-	| Extract<VaultEvent, { type: typeof VaultEventKind.FolderDeleted }>;
+	| Extract<VaultEvent, { kind: typeof VaultEventKind.FileDeleted }>
+	| Extract<VaultEvent, { kind: typeof VaultEventKind.FolderDeleted }>;
 
 export function isDelete(e: VaultEvent): e is TrashVaultEvent {
 	return (
@@ -29,13 +29,13 @@ export function isDelete(e: VaultEvent): e is TrashVaultEvent {
 }
 
 export type CreateVaultEvent =
-	| Extract<VaultEvent, { type: typeof VaultEventKind.FileCreated }>
-	| Extract<VaultEvent, { type: typeof VaultEventKind.FolderCreated }>;
+	| Extract<VaultEvent, { kind: typeof VaultEventKind.FileCreated }>
+	| Extract<VaultEvent, { kind: typeof VaultEventKind.FolderCreated }>;
 
 export function isCreate(e: VaultEvent): e is CreateVaultEvent {
 	return (
 		e.kind === VaultEventKind.FileCreated ||
-		e.type === VaultEventKind.FolderCreated
+		e.kind === VaultEventKind.FolderCreated
 	);
 }
 

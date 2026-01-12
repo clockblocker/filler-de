@@ -33,9 +33,9 @@ export type BulkVaultEvent = {
 	 * ```ts
 	 * [
 	 *   {
-	 *     type: VaultEventKind.FolderRenamed,
-	 *     from: { type: "Folder", pathParts: ["Library"], basename: "parent" },
-	 *     to:   { type: "Folder", pathParts: ["Library","archived"], basename: "parent" },
+	 *     kind: VaultEventKind.FolderRenamed,
+	 *     from: { kind: "Folder", pathParts: ["Library"], basename: "parent" },
+	 *     to:   { kind: "Folder", pathParts: ["Library","archived"], basename: "parent" },
 	 *   }
 	 * ]
 	 * ```
@@ -56,12 +56,12 @@ export type BulkVaultEvent = {
 	 * ```ts
 	 * [
 	 *   {
-	 *     type: VaultEventKind.FolderRenamed,
+	 *     kind: VaultEventKind.FolderRenamed,
 	 *     from: Library/parent,
 	 *     to:   Library/archived/parent,
 	 *   },
 	 *   {
-	 *     type: VaultEventKind.FileRenamed,
+	 *     kind: VaultEventKind.FileRenamed,
 	 *     from: Library/misc/todo.md,
 	 *     to:   Library/misc/tasks.md,
 	 *   }

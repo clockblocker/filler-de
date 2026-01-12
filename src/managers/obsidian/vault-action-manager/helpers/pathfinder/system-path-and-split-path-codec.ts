@@ -2,8 +2,8 @@ import z from "zod";
 import { MD } from "../../types/literals";
 import {
 	type AnySplitPath,
-	SplitPathSchema,
 	SplitPathKind,
+	SplitPathSchema,
 } from "../../types/split-path";
 import {
 	joinPosix,
@@ -31,30 +31,30 @@ const systemPathToSplitPath = z.codec(z.string(), SplitPathSchema, {
 				return {
 					basename,
 					extension: MD,
+					kind: SplitPathKind.MdFile,
 					pathParts: parts.slice(0, -1),
-					type: SplitPathKind.MdFile,
 				};
 			}
 
 			return {
 				basename,
 				extension,
+				kind: SplitPathKind.File,
 				pathParts: parts.slice(0, -1),
-				type: SplitPathKind.File,
 			};
 		}
 
 		return {
 			basename: last,
+			kind: SplitPathKind.Folder,
 			pathParts: parts.slice(0, -1),
-			type: SplitPathKind.Folder,
 		};
 	},
 	encode: (splitPath: AnySplitPath): string => {
 		const { pathParts, basename: title } = splitPath;
 		const extension =
-			splitPath.type === SplitPathKind.MdFile ||
-			splitPath.type === SplitPathKind.File
+			splitPath.kind === SplitPathKind.MdFile ||
+			splitPath.kind === SplitPathKind.File
 				? `.${splitPath.extension}`
 				: "";
 

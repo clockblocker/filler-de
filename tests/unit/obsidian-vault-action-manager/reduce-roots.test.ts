@@ -16,8 +16,8 @@ const F = (path: string): SplitPathToFolder => {
 	const basename = parts.pop() ?? "";
 	return {
 		basename,
+		kind: "Folder",
 		pathParts: parts,
-		type: "Folder",
 	};
 };
 
@@ -29,20 +29,20 @@ const P = (path: string): SplitPathToMdFile | SplitPathToFile => {
     const ext = dot === -1 ? "" : filename.slice(dot + 1);
   
     return ext === "md"
-      ? { basename, extension: "md", pathParts: parts, type: "MdFile" }
-      : { basename, extension: ext, pathParts: parts, type: "File" };
+      ? { basename, extension: "md", kind: "MdFile", pathParts: parts }
+      : { basename, extension: ext, kind: "File", pathParts: parts };
 };
 
 const fileRenamed = (from: string, to: string) => ({
     from: P(from),
+    kind: VaultEventKind.FileRenamed,
     to: P(to),
-    type: VaultEventKind.FileRenamed,
 });
 
 const folderRenamed = (
 	from: string,
 	to: string,
-): Extract<VaultEvent, { type: typeof VaultEventKind.FolderRenamed }> => ({
+): Extract<VaultEvent, { kind: typeof VaultEventKind.FolderRenamed }> => ({
 	from: F(from),
 	kind: VaultEventKind.FolderRenamed,
 	to: F(to),
@@ -50,14 +50,14 @@ const folderRenamed = (
 
 const fileTrashed = (
 	path: string,
-): Extract<VaultEvent, { type: typeof VaultEventKind.FileDeleted }> => ({
+): Extract<VaultEvent, { kind: typeof VaultEventKind.FileDeleted }> => ({
 	kind: VaultEventKind.FileDeleted,
 	splitPath: P(path),
 });
 
 const folderTrashed = (
 	path: string,
-): Extract<VaultEvent, { type: typeof VaultEventKind.FolderDeleted }> => ({
+): Extract<VaultEvent, { kind: typeof VaultEventKind.FolderDeleted }> => ({
 	kind: VaultEventKind.FolderDeleted,
 	splitPath: F(path),
 });
@@ -67,11 +67,11 @@ const eventKey = (e: VaultEvent): string => {
 	if (e.kind === VaultEventKind.FileRenamed || e.kind === VaultEventKind.FolderRenamed) {
 		const from = makeSystemPathForSplitPath(e.from);
 		const to = makeSystemPathForSplitPath(e.to);
-		return `${e.type}:${from}→${to}`;
+		return `${e.kind}:${from}→${to}`;
 	}
 	if (e.kind === VaultEventKind.FileDeleted || e.kind === VaultEventKind.FolderDeleted) {
 		const path = makeSystemPathForSplitPath(e.splitPath);
-		return `${e.type}:${path}`;
+		return `${e.kind}:${path}`;
 	}
 	return `${e.kind}:unknown`;
 };

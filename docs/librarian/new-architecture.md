@@ -25,11 +25,11 @@ The core parts of the system are:
 
 2) LibraryTree. The shadow of existing file system. Consists of:
 - ScrollNodes (a shadows of markdown Tfiles)
-{ nodeName: NodeName, nodeNameChainToParent: NodeNameChain, extension: "md", type: "Scroll", status: "Done" | "NotStarted" }
+{ nodeName: NodeName, nodeNameChainToParent: NodeNameChain, extension: "md", kind: "Scroll", status: "Done" | "NotStarted" }
 - FileNodes (a shadows of non-markdown Tfiles)
-{ nodeName: NodeName, nodeNameChainToParent: NodeNameChain, extension: string, type: "File", status: "Unknown" }
+{ nodeName: NodeName, nodeNameChainToParent: NodeNameChain, extension: string, kind: "File", status: "Unknown" }
 - SectionNodes (a shadows of Tfolder)
-{ nodeName: NodeName, nodeNameChainToParent: NodeNameChain, type: "Section", status: "Done" | "NotStarted", children: (ScrollNode | FileNode | SectionNode)[]}
+{ nodeName: NodeName, nodeNameChainToParent: NodeNameChain, kind: "Section", status: "Done" | "NotStarted", children: (ScrollNode | FileNode | SectionNode)[]}
 
 **Note on TFile references**: TFile references (tRef) are NOT stored in tree nodes because they become stale when files are renamed/moved. Obsidian does not automatically update TFile.path when files are renamed/moved, so storing tRefs in the tree would lead to stale references pointing to old paths. TFile references are now internal to the `VaultActionManager` and should never leave it. External code (like Librarian) uses `SplitPathWithReader` instead, which provides a `read()` function for markdown files without exposing tRefs.
 

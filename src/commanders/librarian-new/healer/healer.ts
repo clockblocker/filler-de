@@ -247,19 +247,19 @@ export class Healer implements TreeAccessor {
 			const canonicalFolderPath = canonicalSectionPath.join("/");
 			if (observedFolderPath !== canonicalFolderPath) {
 				healingActions.push({
+					kind: "RenameFolder",
 					payload: {
 						from: {
 							basename: observedSplitPath.basename,
+							kind: SplitPathKind.Folder,
 							pathParts: observedSplitPath.pathParts,
-							type: SplitPathKind.Folder,
 						},
 						to: {
 							basename: newNodeName,
+							kind: SplitPathKind.Folder,
 							pathParts: canonicalSectionPath.slice(0, -1),
-							type: SplitPathKind.Folder,
 						},
 					},
-					type: "RenameFolder",
 				});
 			}
 
@@ -281,7 +281,7 @@ export class Healer implements TreeAccessor {
 			const newLocator: ScrollNodeLocator = {
 				segmentId: newSegmentId as ScrollNodeLocator["segmentId"],
 				segmentIdChainToParent: newParentChain,
-				targetType: TreeNodeKind.Scroll,
+				targetKind: TreeNodeKind.Scroll,
 			};
 			return this.computeLeafHealing(
 				newLocator,
@@ -293,7 +293,7 @@ export class Healer implements TreeAccessor {
 		const newLocator: FileNodeLocator = {
 			segmentId: newSegmentId as FileNodeLocator["segmentId"],
 			segmentIdChainToParent: newParentChain,
-			targetType: TreeNodeKind.File,
+			targetKind: TreeNodeKind.File,
 		};
 		return this.computeLeafHealing(
 			newLocator,
@@ -318,21 +318,21 @@ export class Healer implements TreeAccessor {
 		const healingActions: HealingAction[] = [];
 
 		if (!this.splitPathsEqual(observedSplitPath, canonicalSplitPath)) {
-			if (observedSplitPath.type === SplitPathKind.MdFile) {
+			if (observedSplitPath.kind === SplitPathKind.MdFile) {
 				healingActions.push({
+					kind: "RenameMdFile",
 					payload: {
 						from: observedSplitPath,
 						to: canonicalSplitPath as SplitPathToMdFileInsideLibrary,
 					},
-					type: "RenameMdFile",
 				});
 			} else {
 				healingActions.push({
+					kind: "RenameFile",
 					payload: {
 						from: observedSplitPath as SplitPathToFileInsideLibrary,
 						to: canonicalSplitPath as SplitPathToFileInsideLibrary,
 					},
-					type: "RenameFile",
 				});
 			}
 		}
@@ -384,7 +384,7 @@ export class Healer implements TreeAccessor {
 				const locator: ScrollNodeLocator | FileNodeLocator = {
 					segmentId: segId as TreeNodeSegmentId,
 					segmentIdChainToParent: sectionChain,
-					targetType: child.type,
+					targetKind: child.kind,
 				} as ScrollNodeLocator | FileNodeLocator;
 
 				// Build observed split path for this leaf
@@ -433,16 +433,16 @@ export class Healer implements TreeAccessor {
 			return {
 				basename,
 				extension: "md",
+				kind: SplitPathKind.MdFile,
 				pathParts: currentPathParts,
-				type: SplitPathKind.MdFile,
 			};
 		}
 
 		return {
 			basename,
 			extension: leaf.extension,
+			kind: SplitPathKind.File,
 			pathParts: currentPathParts,
-			type: SplitPathKind.File,
 		};
 	}
 
@@ -466,12 +466,12 @@ export class Healer implements TreeAccessor {
 			suffixParts,
 		});
 
-		if (locator.targetType === TreeNodeKind.Scroll) {
+		if (locator.targetKind === TreeNodeKind.Scroll) {
 			return {
 				basename,
 				extension: "md",
+				kind: SplitPathKind.MdFile,
 				pathParts,
-				type: SplitPathKind.MdFile,
 			};
 		}
 
@@ -480,8 +480,8 @@ export class Healer implements TreeAccessor {
 		return {
 			basename,
 			extension,
+			kind: SplitPathKind.File,
 			pathParts,
-			type: SplitPathKind.File,
 		};
 	}
 
@@ -532,7 +532,7 @@ export class Healer implements TreeAccessor {
 		a: SplitPathInsideLibrary,
 		b: SplitPathInsideLibrary,
 	): boolean {
-		if (a.type !== b.type) return false;
+		if (a.kind !== b.kind) return false;
 		if (a.basename !== b.basename) return false;
 		if (a.pathParts.length !== b.pathParts.length) return false;
 		for (let i = 0; i < a.pathParts.length; i++) {
@@ -553,7 +553,7 @@ export class Healer implements TreeAccessor {
 		if (node.kind === TreeNodeKind.Section) {
 			return makeNodeSegmentId(node);
 		}
-		if (node.type === TreeNodeKind.Scroll) {
+		if (node.kind === TreeNodeKind.Scroll) {
 			return makeNodeSegmentId(node);
 		}
 		return makeNodeSegmentId(node);

@@ -4,7 +4,7 @@ import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,
 } from "../../types/split-path";
-import { type VaultAction, VaultActionType } from "../../types/vault-action";
+import { type VaultAction, VaultActionKind } from "../../types/vault-action";
 import { makeSplitPath } from "../common/split-path-and-system-path";
 import type { SelfEventTracker } from "../event-processing/self-event-tracker";
 import { collapseActions } from "./collapse";
@@ -96,9 +96,9 @@ export class Dispatcher {
 		// Filter out invalid delete actions
 		for (const action of actions) {
 			if (
-				action.type === VaultActionType.TrashFolder ||
-				action.type === VaultActionType.TrashFile ||
-				action.type === VaultActionType.TrashMdFile
+				action.kind === VaultActionKind.TrashFolder ||
+				action.kind === VaultActionKind.TrashFile ||
+				action.kind === VaultActionKind.TrashMdFile
 			) {
 				const exists = await this.existenceChecker.exists(
 					action.payload.splitPath,
@@ -140,7 +140,7 @@ export class Dispatcher {
 	 */
 	private pathToSplitPathToFolder(path: string): SplitPathToFolder | null {
 		const parsed = makeSplitPath(path);
-		if (parsed.type === "Folder") {
+		if (parsed.kind === "Folder") {
 			return parsed;
 		}
 		return null;
@@ -152,7 +152,7 @@ export class Dispatcher {
 	 */
 	private keyToSplitPathToMdFile(key: string): SplitPathToMdFile | null {
 		const parsed = makeSplitPath(key);
-		if (parsed.type === "MdFile") {
+		if (parsed.kind === "MdFile") {
 			return parsed;
 		}
 		return null;

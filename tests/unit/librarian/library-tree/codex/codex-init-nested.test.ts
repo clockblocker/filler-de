@@ -4,8 +4,8 @@ import { codexImpactToActions } from "../../../../../src/commanders/librarian-ne
 import { mergeCodexImpacts } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/merge-codex-impacts";
 import { Tree } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree";
 import {
-	TreeNodeStatus,
 	TreeNodeKind,
+	TreeNodeStatus,
 } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
 import type {
 	ScrollNodeSegmentId,
@@ -42,8 +42,8 @@ describe("Codex init for nested sections", () => {
 			observedSplitPath: {
 				basename: "Diary-kid-father-grandpa",
 				extension: "md" as const,
+				kind: SplitPathKind.MdFile,
 				pathParts: ["Library", "grandpa", "father", "kid"],
-				type: SplitPathKind.MdFile,
 			},
 			targetLocator: {
 				segmentId: scroll("Diary"),
@@ -53,7 +53,7 @@ describe("Codex init for nested sections", () => {
 					sec("father"),
 					sec("kid"),
 				],
-				targetType: TreeNodeKind.Scroll,
+				targetKind: TreeNodeKind.Scroll,
 			},
 		};
 
@@ -66,7 +66,7 @@ describe("Codex init for nested sections", () => {
 
 		// Should have codexes for: Library, grandpa, father, kid
 		const createCodexPaths = codexActions
-			.filter((a) => a.type === "UpsertCodex")
+			.filter((a) => a.kind === "UpsertCodex")
 			.map((a) => (a.payload as any).splitPath.pathParts.join("/"));
 
 		expect(createCodexPaths).toContain("Library");

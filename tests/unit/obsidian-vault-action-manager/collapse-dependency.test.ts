@@ -8,7 +8,7 @@ import type {
 import { SplitPathKind } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import {
 	type VaultAction,
-	VaultActionType,
+	VaultActionKind,
 } from "../../../src/managers/obsidian/vault-action-manager/types/vault-action";
 
 const folder = (
@@ -16,8 +16,8 @@ const folder = (
 	pathParts: string[] = [],
 ): SplitPathToFolder => ({
 	basename,
+	kind: SplitPathKind.Folder,
 	pathParts,
-	type: SplitPathKind.Folder,
 });
 
 const mdFile = (
@@ -26,28 +26,28 @@ const mdFile = (
 ): SplitPathToMdFile => ({
 	basename,
 	extension: "md",
+	kind: SplitPathKind.MdFile,
 	pathParts,
-	type: SplitPathKind.MdFile,
 });
 
 describe("Collapse + Dependencies", () => {
 	it("should preserve file dependency after UpsertMdFile + ProcessMdFile collapse", async () => {
 		const create: VaultAction = {
+			kind: VaultActionKind.UpsertMdFile,
 			payload: { content: "initial", splitPath: mdFile("file") },
-			type: VaultActionType.UpsertMdFile,
 		};
 		const process: VaultAction = {
+			kind: VaultActionKind.ProcessMdFile,
 			payload: {
 				splitPath: mdFile("file"),
 				transform: async (c) => c + "\nprocessed",
 			},
-			type: VaultActionType.ProcessMdFile,
 		};
 
 		// Collapse: UpsertMdFile + ProcessMdFile → UpsertMdFile with transformed content
 		const collapsed = await collapseActions([create, process]);
 		expect(collapsed).toHaveLength(1);
-		expect(collapsed[0]?.type).toBe(VaultActionType.UpsertMdFile);
+		expect(collapsed[0]?.kind).toBe(VaultActionKind.UpsertMdFile);
 		expect(
 			(collapsed[0] as typeof create).payload.content,
 		).toBe("initial\nprocessed");
@@ -62,12 +62,12 @@ describe("Collapse + Dependencies", () => {
 
 	it("should preserve folder dependencies after collapse", async () => {
 		const parent: VaultAction = {
+			kind: VaultActionKind.CreateFolder,
 			payload: { splitPath: folder("parent") },
-			type: VaultActionType.CreateFolder,
 		};
 		const child: VaultAction = {
+			kind: VaultActionKind.CreateFolder,
 			payload: { splitPath: folder("child", ["parent"]) },
-			type: VaultActionType.CreateFolder,
 		};
 
 		const collapsed = await collapseActions([parent, child]);
@@ -81,17 +81,17 @@ describe("Collapse + Dependencies", () => {
 
 	it("should handle UpsertMdFile + UpsertMdFile collapse (keeps UpsertMdFile)", async () => {
 		const create: VaultAction = {
+			kind: VaultActionKind.UpsertMdFile,
 			payload: { content: "", splitPath: mdFile("file") },
-			type: VaultActionType.UpsertMdFile,
 		};
 		const replace: VaultAction = {
+			kind: VaultActionKind.UpsertMdFile,
 			payload: { content: "final", splitPath: mdFile("file") },
-			type: VaultActionType.UpsertMdFile,
 		};
 
 		const collapsed = await collapseActions([create, replace]);
 		expect(collapsed).toHaveLength(1);
-		expect(collapsed[0]?.type).toBe(VaultActionType.UpsertMdFile);
+		expect(collapsed[0]?.kind).toBe(VaultActionKind.UpsertMdFile);
 		expect(collapsed[0]?.payload?.content).toBe("final");
 
 		// UpsertMdFile is preserved, so dependencies are fine
@@ -102,23 +102,23 @@ describe("Collapse + Dependencies", () => {
 
 	it("should handle multiple ProcessMdFile collapse (composes transforms)", async () => {
 		const process1: VaultAction = {
+			kind: VaultActionKind.ProcessMdFile,
 			payload: {
 				splitPath: mdFile("file"),
 				transform: async (c) => c + "A",
 			},
-			type: VaultActionType.ProcessMdFile,
 		};
 		const process2: VaultAction = {
+			kind: VaultActionKind.ProcessMdFile,
 			payload: {
 				splitPath: mdFile("file"),
 				transform: async (c) => c + "B",
 			},
-			type: VaultActionType.ProcessMdFile,
 		};
 
 		const collapsed = await collapseActions([process1, process2]);
 		expect(collapsed).toHaveLength(1);
-		expect(collapsed[0]?.type).toBe(VaultActionType.ProcessMdFile);
+		expect(collapsed[0]?.kind).toBe(VaultActionKind.ProcessMdFile);
 
 		// After collapse, still needs UpsertMdFile dependency (will be re-ensured)
 		const graph = buildDependencyGraph(collapsed);
@@ -130,29 +130,29 @@ describe("Collapse + Dependencies", () => {
 	it("should preserve dependency when ProcessMdFile comes first and UpsertMdFile(null) comes after", async () => {
 		// This simulates the order from ensureDestinationsExist: ProcessMdFile first, UpsertMdFile(null) added after
 		const process: VaultAction = {
+			kind: VaultActionKind.ProcessMdFile,
 			payload: {
 				splitPath: mdFile("file"),
 				transform: async (c) => c + "\nprocessed",
 			},
-			type: VaultActionType.ProcessMdFile,
 		};
 		const upsert: VaultAction = {
+			kind: VaultActionKind.UpsertMdFile,
 			payload: { content: null, splitPath: mdFile("file") },
-			type: VaultActionType.UpsertMdFile,
 		};
 
 		// Collapse: ProcessMdFile first, UpsertMdFile(null) after
 		const collapsed = await collapseActions([process, upsert]);
 		expect(collapsed).toHaveLength(2);
-		expect(collapsed.some(a => a.type === VaultActionType.UpsertMdFile)).toBe(true);
-		expect(collapsed.some(a => a.type === VaultActionType.ProcessMdFile)).toBe(true);
+		expect(collapsed.some(a => a.kind === VaultActionKind.UpsertMdFile)).toBe(true);
+		expect(collapsed.some(a => a.kind === VaultActionKind.ProcessMdFile)).toBe(true);
 
 		// Dependency graph should find ProcessMdFile depends on UpsertMdFile
 		const graph = buildDependencyGraph(collapsed);
 		const processKey = makeGraphKey(process);
 		const processDeps = graph.get(processKey);
 		expect(processDeps?.dependsOn).toHaveLength(1);
-		expect(processDeps?.dependsOn[0]?.type).toBe(VaultActionType.UpsertMdFile);
+		expect(processDeps?.dependsOn[0]?.kind).toBe(VaultActionKind.UpsertMdFile);
 	});
 });
 

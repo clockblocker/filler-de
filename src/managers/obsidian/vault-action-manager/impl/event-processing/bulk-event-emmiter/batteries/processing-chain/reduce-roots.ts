@@ -111,7 +111,7 @@ function isCoveredByFolderRename(
 
 	// Optional sanity: type compatibility (avoids weird matches)
 	// e.g. file→folder rename shouldn't be "covered"
-	if (childFrom.type !== childTo.type) return false;
+	if (childFrom.kind !== childTo.kind) return false;
 
 	// Optional: extension compatibility for files
 	if ("extension" in childFrom && "extension" in childTo) {

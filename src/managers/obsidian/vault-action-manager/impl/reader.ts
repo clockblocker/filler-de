@@ -47,7 +47,7 @@ export class Reader {
 
 	async exists(target: AnySplitPath): Promise<boolean> {
 		if (await this.opened.exists(target)) return true;
-		if (target.type === "Folder") {
+		if (target.kind === "Folder") {
 			const result = await this.tfolderHelper.getFolder(target);
 			return result.isOk();
 		}
@@ -114,13 +114,13 @@ export class Reader {
 				}
 				const tRef = tRefResult.value;
 
-				if (child.type === "Folder") {
+				if (child.kind === "Folder") {
 					all.push({
 						...child,
 						tRef: tRef as unknown as TFolder,
 					} as SplitPathToFolderWithTRef);
 					stack.push(child);
-				} else if (child.type === "MdFile") {
+				} else if (child.kind === "MdFile") {
 					all.push({
 						...child,
 						tRef: tRef as unknown as TFile,
@@ -147,7 +147,7 @@ export class Reader {
 
 	async getAbstractFile<SP extends AnySplitPath>(
 		target: SP,
-	): Promise<Result<SP["type"] extends "Folder" ? TFolder : TFile, string>> {
+	): Promise<Result<SP["kind"] extends "Folder" ? TFolder : TFile, string>> {
 		if (await this.opened.exists(target)) {
 			try {
 				const file = await this.opened.getAbstractFile(target);
@@ -158,13 +158,13 @@ export class Reader {
 				);
 			}
 		}
-		if (target.type === "Folder") {
+		if (target.kind === "Folder") {
 			const result = await this.tfolderHelper.getFolder(target);
 			if (result.isErr()) {
 				return err(`Folder not found: ${result.error}`);
 			}
 			return ok(
-				result.value as SP["type"] extends "Folder" ? TFolder : TFile,
+				result.value as SP["kind"] extends "Folder" ? TFolder : TFile,
 			);
 		}
 		const result = await this.tfileHelper.getFile(target);
@@ -172,7 +172,7 @@ export class Reader {
 			return err(`File not found: ${result.error}`);
 		}
 		return ok(
-			result.value as SP["type"] extends "Folder" ? TFolder : TFile,
+			result.value as SP["kind"] extends "Folder" ? TFolder : TFile,
 		);
 	}
 
@@ -192,9 +192,9 @@ export class Reader {
 			}
 			const children = childrenResult.value;
 			for (const child of children) {
-				if (child.type === "Folder") {
+				if (child.kind === "Folder") {
 					stack.push(child);
-				} else if (child.type === "MdFile") {
+				} else if (child.kind === "MdFile") {
 					// Attach read function (no tRef needed)
 					all.push({
 						...child,
@@ -221,5 +221,5 @@ export type ReaderApi = {
 	pwd: () => Promise<Result<SplitPathToFile | SplitPathToMdFile, string>>;
 	getAbstractFile: <SP extends AnySplitPath>(
 		p: SP,
-	) => Promise<Result<SP["type"] extends "Folder" ? TFolder : TFile, string>>;
+	) => Promise<Result<SP["kind"] extends "Folder" ? TFolder : TFile, string>>;
 };

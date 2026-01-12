@@ -74,7 +74,7 @@ export class VaultActionManagerImpl implements VaultActionManager {
 		this.selfEventTracker = new SelfEventTracker();
 		const existenceChecker: ExistenceChecker = {
 			exists: async (splitPath) => {
-				if (splitPath.type === "Folder") {
+				if (splitPath.kind === "Folder") {
 					const result = await tfolderHelper.getFolder(splitPath);
 					return result.isOk();
 				}
@@ -275,7 +275,7 @@ export class VaultActionManagerImpl implements VaultActionManager {
 
 	getAbstractFile<SP extends AnySplitPath>(
 		splitPathArg: SP,
-	): Promise<Result<SP["type"] extends "Folder" ? TFolder : TFile, string>> {
+	): Promise<Result<SP["kind"] extends "Folder" ? TFolder : TFile, string>> {
 		return this.reader.getAbstractFile(splitPathArg);
 	}
 }
