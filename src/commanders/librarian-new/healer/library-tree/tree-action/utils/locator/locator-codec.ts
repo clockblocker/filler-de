@@ -19,18 +19,38 @@ import type { FileExtension } from "../../../tree-node/types/atoms";
 import { TreeNodeKind } from "../../../tree-node/types/atoms";
 import { tryBuildCanonicalSeparatedSuffixedBasename } from "../canonical-naming/suffix-utils/build-canonical-separated-suffixed-basename-path-king-way";
 
+/**
+ * @deprecated Use `codecs.locator.canonicalSplitPathInsideLibraryToLocator` instead.
+ * This function will be removed in a future version.
+ */
 export function makeLocatorFromCanonicalSplitPathInsideLibrary(
 	sp: CanonicalSplitPathToFileInsideLibrary,
 ): NodeLocatorOf<"File">;
+/**
+ * @deprecated Use `codecs.locator.canonicalSplitPathInsideLibraryToLocator` instead.
+ * This function will be removed in a future version.
+ */
 export function makeLocatorFromCanonicalSplitPathInsideLibrary(
 	sp: CanonicalSplitPathToMdFileInsideLibrary,
 ): NodeLocatorOf<"Scroll">;
+/**
+ * @deprecated Use `codecs.locator.canonicalSplitPathInsideLibraryToLocator` instead.
+ * This function will be removed in a future version.
+ */
 export function makeLocatorFromCanonicalSplitPathInsideLibrary(
 	sp: CanonicalSplitPathToFolderInsideLibrary,
 ): NodeLocatorOf<"Section">;
+/**
+ * @deprecated Use `codecs.locator.canonicalSplitPathInsideLibraryToLocator` instead.
+ * This function will be removed in a future version.
+ */
 export function makeLocatorFromCanonicalSplitPathInsideLibrary(
 	sp: CanonicalSplitPathInsideLibrary,
 ): TreeNodeLocator;
+/**
+ * @deprecated Use `codecs.locator.canonicalSplitPathInsideLibraryToLocator` instead.
+ * This function will be removed in a future version.
+ */
 export function makeLocatorFromCanonicalSplitPathInsideLibrary(
 	sp: CanonicalSplitPathInsideLibrary,
 ): TreeNodeLocator {
@@ -84,18 +104,38 @@ export function makeLocatorFromCanonicalSplitPathInsideLibrary(
 	}
 }
 
+/**
+ * @deprecated Use `codecs.locator.locatorToCanonicalSplitPathInsideLibrary` instead.
+ * This function will be removed in a future version.
+ */
 export function makeCanonicalSplitPathInsideLibraryFromLocator(
 	loc: NodeLocatorOf<"File">,
 ): CanonicalSplitPathToFileInsideLibrary;
+/**
+ * @deprecated Use `codecs.locator.locatorToCanonicalSplitPathInsideLibrary` instead.
+ * This function will be removed in a future version.
+ */
 export function makeCanonicalSplitPathInsideLibraryFromLocator(
 	loc: NodeLocatorOf<"Scroll">,
 ): CanonicalSplitPathToMdFileInsideLibrary;
+/**
+ * @deprecated Use `codecs.locator.locatorToCanonicalSplitPathInsideLibrary` instead.
+ * This function will be removed in a future version.
+ */
 export function makeCanonicalSplitPathInsideLibraryFromLocator(
 	loc: NodeLocatorOf<"Section">,
 ): CanonicalSplitPathToFolderInsideLibrary;
+/**
+ * @deprecated Use `codecs.locator.locatorToCanonicalSplitPathInsideLibrary` instead.
+ * This function will be removed in a future version.
+ */
 export function makeCanonicalSplitPathInsideLibraryFromLocator(
 	loc: TreeNodeLocator,
 ): CanonicalSplitPathInsideLibrary;
+/**
+ * @deprecated Use `codecs.locator.locatorToCanonicalSplitPathInsideLibrary` instead.
+ * This function will be removed in a future version.
+ */
 export function makeCanonicalSplitPathInsideLibraryFromLocator(
 	loc: TreeNodeLocator,
 ): CanonicalSplitPathInsideLibrary {

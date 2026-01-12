@@ -1,13 +1,18 @@
 import { err, ok, type Result } from "neverthrow";
 import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import type { TreeNodeKind } from "../../../healer/library-tree/tree-node/types/atoms";
 import type {
 	NodeLocatorOf,
 	TreeNodeLocator,
-	CanonicalSplitPathInsideLibrary,
 	CanonicalSplitPathToFileInsideLibrary,
 	CanonicalSplitPathToFolderInsideLibrary,
 	CanonicalSplitPathToMdFileInsideLibrary,
 } from "../../types";
+import type {
+	AnyCanonicalSplitPathInsideLibrary,
+	CanonicalSplitPathInsideLibraryOf,
+} from "../../canonical-split-path/types/canonical-split-path";
+import type { CorrespondingTreeNodeKind } from "../../types/type-mappings";
 import { makeNodeSegmentId } from "../../../healer/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import type { FileExtension } from "../../../healer/library-tree/tree-node/types/atoms";
 import { TreeNodeKind } from "../../../healer/library-tree/tree-node/types/atoms";
@@ -35,15 +40,15 @@ export function canonicalSplitPathInsideLibraryToLocator(
 	canonicalSplitPath: CanonicalSplitPathCodecs,
 	sp: CanonicalSplitPathToFolderInsideLibrary,
 ): Result<NodeLocatorOf<"Section">, CodecError>;
-export function canonicalSplitPathInsideLibraryToLocator(
+export function canonicalSplitPathInsideLibraryToLocator<SK extends SplitPathKind>(
 	segmentId: SegmentIdCodecs,
 	canonicalSplitPath: CanonicalSplitPathCodecs,
-	sp: CanonicalSplitPathInsideLibrary,
-): Result<TreeNodeLocator, CodecError>;
+	sp: CanonicalSplitPathInsideLibraryOf<SK>,
+): Result<NodeLocatorOf<CorrespondingTreeNodeKind<SK>>, CodecError>;
 export function canonicalSplitPathInsideLibraryToLocator(
 	segmentId: SegmentIdCodecs,
 	_canonicalSplitPath: CanonicalSplitPathCodecs,
-	sp: CanonicalSplitPathInsideLibrary,
+	sp: AnyCanonicalSplitPathInsideLibrary,
 ): Result<TreeNodeLocator, CodecError> {
 	// Both pathParts and segmentIdChainToParent INCLUDE Library root
 	const segmentIdChainToParent = sp.pathParts.map((nodeName) =>

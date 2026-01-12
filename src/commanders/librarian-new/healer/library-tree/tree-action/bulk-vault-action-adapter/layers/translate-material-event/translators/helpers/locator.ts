@@ -2,9 +2,11 @@ import { err, ok, type Result } from "neverthrow";
 import type { SplitPathKind } from "../../../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type {
 	AnySplitPathInsideLibrary,
+	CanonicalSplitPathInsideLibrary,
 	Codecs,
 	SplitPathInsideLibraryOf,
 } from "../../../../../../../../codecs";
+import type { CanonicalSplitPathInsideLibraryOf } from "../../../../../../../../codecs/canonical-split-path/types/canonical-split-path";
 import {
 	type NodeName,
 	NodeNameSchema,
@@ -30,9 +32,7 @@ export function tryMakeDestinationLocatorFromEvent<
 	if (cspRes.isErr()) return err(cspRes.error);
 
 	const locatorRes = adaptCodecResult(
-		codecs.locator.canonicalSplitPathInsideLibraryToLocator(
-			cspRes.value as CanonicalSplitPathInsideLibrary,
-		),
+		codecs.locator.canonicalSplitPathInsideLibraryToLocator(cspRes.value),
 	);
 	if (locatorRes.isErr()) return err(locatorRes.error);
 
@@ -116,12 +116,24 @@ function extractDuplicateMarker(basename: string): {
 	return { cleanBasename: basename, marker: "" };
 }
 
-export const tryCanonicalizeSplitPathToDestination = (
+export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
+	sp: SplitPathInsideLibraryOf<SK>,
+	policy: ChangePolicy,
+	intent: RenameIntent | undefined, // undefined = not rename
+	codecs: Codecs,
+): Result<CanonicalSplitPathInsideLibraryOf<SK>, string>;
+export function tryCanonicalizeSplitPathToDestination(
 	sp: AnySplitPathInsideLibrary,
 	policy: ChangePolicy,
 	intent: RenameIntent | undefined, // undefined = not rename
 	codecs: Codecs,
-): Result<CanonicalSplitPathInsideLibrary, string> => {
+): Result<CanonicalSplitPathInsideLibrary, string>;
+export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
+	sp: AnySplitPathInsideLibrary,
+	policy: ChangePolicy,
+	intent: RenameIntent | undefined, // undefined = not rename
+	codecs: Codecs,
+): Result<CanonicalSplitPathInsideLibraryOf<SK> | CanonicalSplitPathInsideLibrary, string> {
 	const effectivePolicy =
 		intent === RenameIntent.Rename ? ChangePolicy.PathKing : policy;
 
@@ -185,9 +197,9 @@ export const tryCanonicalizeSplitPathToDestination = (
 	if (sepRes.isErr()) return err(sepRes.error);
 
 	// Helper: finalize by rebuilding canonical separated+basename using codec
-	const finalize = (
-		next: AnySplitPathInsideLibrary,
-	): Result<CanonicalSplitPathInsideLibrary, string> => {
+	const finalize = <SK extends SplitPathKind>(
+		next: SplitPathInsideLibraryOf<SK>,
+	): Result<CanonicalSplitPathInsideLibraryOf<SK>, string> => {
 		return adaptCodecResult(
 			codecs.canonicalSplitPath.splitPathInsideLibraryToCanonical(next),
 		);

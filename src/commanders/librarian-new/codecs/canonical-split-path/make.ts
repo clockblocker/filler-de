@@ -5,16 +5,10 @@ import type { CodecError } from "../errors";
 import type { SuffixCodecs } from "../internal/suffix";
 import type { SeparatedSuffixedBasename } from "../internal/suffix/types";
 import type { CodecRules } from "../rules";
-import type {
-	AnySplitPathInsideLibrary,
-	SplitPathInsideLibraryOf,
-} from "../split-path-inside-library";
+import type { SplitPathInsideLibraryOf } from "../split-path-inside-library";
 import { fromCanonicalSplitPathInsideLibrary } from "./internal/from";
 import { splitPathInsideLibraryToCanonical } from "./internal/to";
-import type {
-	AnyCanonicalSplitPathInsideLibrary,
-	CanonicalSplitPathInsideLibraryOf,
-} from "./types/canonical-split-path";
+import type { CanonicalSplitPathInsideLibraryOf } from "./types/canonical-split-path";
 
 export type CanonicalSplitPathCodecs = {
 	splitPathInsideLibraryToCanonical: <SK extends SplitPathKind>(

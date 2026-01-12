@@ -57,7 +57,7 @@ export function tryParseCanonicalSplitPathInsideLibrary(
 		return err("Basename does not match canonical format");
 	}
 
-	const out: CanonicalSplitPathInsideLibrary = {
+	const out = {
 		...sp,
 		pathParts: pathPartsRes.value, // (assuming tryParsePathParts returns canonicalized parts)
 		separatedSuffixedBasename: {

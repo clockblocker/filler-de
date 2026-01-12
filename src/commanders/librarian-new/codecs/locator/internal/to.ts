@@ -1,14 +1,19 @@
 import { err, ok, type Result } from "neverthrow";
 import { MD } from "../../../../../managers/obsidian/vault-action-manager/types/literals";
 import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import type { TreeNodeKind } from "../../../healer/library-tree/tree-node/types/atoms";
 import type {
 	NodeLocatorOf,
 	TreeNodeLocator,
-	CanonicalSplitPathInsideLibrary,
 	CanonicalSplitPathToFileInsideLibrary,
 	CanonicalSplitPathToFolderInsideLibrary,
 	CanonicalSplitPathToMdFileInsideLibrary,
 } from "../../types";
+import type {
+	AnyCanonicalSplitPathInsideLibrary,
+	CanonicalSplitPathInsideLibraryOf,
+} from "../../canonical-split-path/types/canonical-split-path";
+import type { CorrespondingSplitPathKind } from "../../types/type-mappings";
 import { makeNodeSegmentId } from "../../../healer/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import type { FileExtension } from "../../../healer/library-tree/tree-node/types/atoms";
 import { TreeNodeKind } from "../../../healer/library-tree/tree-node/types/atoms";
@@ -40,18 +45,18 @@ export function locatorToCanonicalSplitPathInsideLibrary(
 	suffix: SuffixCodecs,
 	loc: NodeLocatorOf<"Section">,
 ): Result<CanonicalSplitPathToFolderInsideLibrary, CodecError>;
+export function locatorToCanonicalSplitPathInsideLibrary<NK extends TreeNodeKind>(
+	segmentId: SegmentIdCodecs,
+	canonicalSplitPath: CanonicalSplitPathCodecs,
+	suffix: SuffixCodecs,
+	loc: NodeLocatorOf<NK>,
+): Result<CanonicalSplitPathInsideLibraryOf<CorrespondingSplitPathKind<NK>>, CodecError>;
 export function locatorToCanonicalSplitPathInsideLibrary(
 	segmentId: SegmentIdCodecs,
 	canonicalSplitPath: CanonicalSplitPathCodecs,
 	suffix: SuffixCodecs,
 	loc: TreeNodeLocator,
-): Result<CanonicalSplitPathInsideLibrary, CodecError>;
-export function locatorToCanonicalSplitPathInsideLibrary(
-	segmentId: SegmentIdCodecs,
-	canonicalSplitPath: CanonicalSplitPathCodecs,
-	suffix: SuffixCodecs,
-	loc: TreeNodeLocator,
-): Result<CanonicalSplitPathInsideLibrary, CodecError> {
+): Result<AnyCanonicalSplitPathInsideLibrary, CodecError> {
 	// Both segmentIdChainToParent and pathParts INCLUDE Library root
 	const pathPartsResult = loc.segmentIdChainToParent.reduce<
 		Result<string[], CodecError>
