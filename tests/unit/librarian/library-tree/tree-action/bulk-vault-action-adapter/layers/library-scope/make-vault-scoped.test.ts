@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { makeCodecRulesFromSettings } from "../../../../../../../../src/commanders/librarian-new/healer/library-tree/codecs";
 import { makeEventVaultScoped } from "../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/events/make-event-vault-scoped";
 import type { LibraryScopedVaultEvent } from "../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/scoped-event";
 import { Scope } from "../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/scoped-event";
@@ -9,9 +10,11 @@ import { defaultSettingsForUnitTests } from "../../../../../../common-utils/cons
 import { setupGetParsedUserSettingsSpy } from "../../../../../../common-utils/setup-spy";
 
 let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
+let rules: ReturnType<typeof makeCodecRulesFromSettings>;
 
 beforeEach(() => {
 	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy();
+	rules = makeCodecRulesFromSettings(defaultSettingsForUnitTests);
 });
 
 afterEach(() => {
@@ -42,7 +45,7 @@ describe("makeEventVaultScoped", () => {
 				scope: Scope.Outside,
 			};
 
-			const result = makeEventVaultScoped(scopedEvent);
+			const result = makeEventVaultScoped(scopedEvent, rules);
 
 			expect(result).toEqual(event);
 		});
@@ -62,7 +65,7 @@ describe("makeEventVaultScoped", () => {
 				},
 			};
 
-			const result = makeEventVaultScoped(scopedEvent);
+			const result = makeEventVaultScoped(scopedEvent, rules);
 
 			expect(result.kind).toBe(VaultEventKind.FileCreated);
 			if (result.kind === VaultEventKind.FileCreated) {
@@ -89,7 +92,7 @@ describe("makeEventVaultScoped", () => {
 				},
 			};
 
-			const result = makeEventVaultScoped(scopedEvent);
+			const result = makeEventVaultScoped(scopedEvent, rules);
 
 			expect(result.kind).toBe(VaultEventKind.FileRenamed);
 			if (result.kind === VaultEventKind.FileRenamed) {
@@ -110,7 +113,7 @@ describe("makeEventVaultScoped", () => {
 				},
 			};
 
-			const result = makeEventVaultScoped(scopedEvent);
+			const result = makeEventVaultScoped(scopedEvent, rules);
 
 			expect(result.kind).toBe(VaultEventKind.FileDeleted);
 			if (result.kind === VaultEventKind.FileDeleted) {
@@ -129,7 +132,7 @@ describe("makeEventVaultScoped", () => {
 				},
 			};
 
-			const result = makeEventVaultScoped(scopedEvent);
+			const result = makeEventVaultScoped(scopedEvent, rules);
 
 			expect(result.kind).toBe(VaultEventKind.FolderCreated);
 			if (result.kind === VaultEventKind.FolderCreated) {
@@ -154,7 +157,7 @@ describe("makeEventVaultScoped", () => {
 				},
 			};
 
-			const result = makeEventVaultScoped(scopedEvent);
+			const result = makeEventVaultScoped(scopedEvent, rules);
 
 			expect(result.kind).toBe(VaultEventKind.FolderRenamed);
 			if (result.kind === VaultEventKind.FolderRenamed) {
@@ -174,7 +177,7 @@ describe("makeEventVaultScoped", () => {
 				},
 			};
 
-			const result = makeEventVaultScoped(scopedEvent);
+			const result = makeEventVaultScoped(scopedEvent, rules);
 
 			expect(result.kind).toBe(VaultEventKind.FolderDeleted);
 			if (result.kind === VaultEventKind.FolderDeleted) {
@@ -202,7 +205,7 @@ describe("makeEventVaultScoped", () => {
 				},
 			};
 
-			const result = makeEventVaultScoped(scopedEvent);
+			const result = makeEventVaultScoped(scopedEvent, rules);
 
 			expect(result.kind).toBe(VaultEventKind.FileRenamed);
 			if (result.kind === VaultEventKind.FileRenamed) {
@@ -227,7 +230,7 @@ describe("makeEventVaultScoped", () => {
 				},
 			};
 
-			const result = makeEventVaultScoped(scopedEvent);
+			const result = makeEventVaultScoped(scopedEvent, rules);
 
 			expect(result.kind).toBe(VaultEventKind.FolderRenamed);
 			if (result.kind === VaultEventKind.FolderRenamed) {
@@ -256,7 +259,7 @@ describe("makeEventVaultScoped", () => {
 				},
 			};
 
-			const result = makeEventVaultScoped(scopedEvent);
+			const result = makeEventVaultScoped(scopedEvent, rules);
 
 			expect(result.kind).toBe(VaultEventKind.FileRenamed);
 			if (result.kind === VaultEventKind.FileRenamed) {
@@ -281,7 +284,7 @@ describe("makeEventVaultScoped", () => {
 				},
 			};
 
-			const result = makeEventVaultScoped(scopedEvent);
+			const result = makeEventVaultScoped(scopedEvent, rules);
 
 			expect(result.kind).toBe(VaultEventKind.FolderRenamed);
 			if (result.kind === VaultEventKind.FolderRenamed) {
@@ -293,14 +296,16 @@ describe("makeEventVaultScoped", () => {
 
 	describe("nested library root", () => {
 		it("handles nested library root path", () => {
-			getParsedUserSettingsSpy.mockReturnValue({
+			const nestedSettings = {
 				...defaultSettingsForUnitTests,
 				splitPathToLibraryRoot: {
 					basename: "Library",
 					kind: SplitPathKind.Folder,
 					pathParts: ["Root"],
 				},
-			});
+			};
+			getParsedUserSettingsSpy.mockReturnValue(nestedSettings);
+			const nestedRules = makeCodecRulesFromSettings(nestedSettings);
 
 			const scopedEvent: LibraryScopedVaultEvent = {
 				kind: VaultEventKind.FileCreated,
@@ -313,7 +318,7 @@ describe("makeEventVaultScoped", () => {
 				},
 			};
 
-			const result = makeEventVaultScoped(scopedEvent);
+			const result = makeEventVaultScoped(scopedEvent, nestedRules);
 
 			expect(result.kind).toBe(VaultEventKind.FileCreated);
 			if (result.kind === VaultEventKind.FileCreated) {

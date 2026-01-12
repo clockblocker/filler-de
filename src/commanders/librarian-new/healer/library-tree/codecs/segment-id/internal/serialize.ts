@@ -1,19 +1,17 @@
 import { err, ok, type Result } from "neverthrow";
+import { NodeNameSchema } from "../../../../../types/schemas/node-name";
 import {
 	FileExtensionSchema,
 	MdExtensionSchema,
 	TreeNodeKind,
-} from "../../../../tree-node/types/atoms";
+	TreeNodeKindSchema,
+} from "../../../tree-node/types/atoms";
 import {
 	NodeSegmentIdSeparator,
 	type TreeNodeSegmentId,
-} from "../../../../tree-node/types/node-segment-id";
-import { NodeNameSchema } from "../../../../../types/schemas/node-name";
+} from "../../../tree-node/types/node-segment-id";
 import type { CodecError } from "../../errors";
-import {
-	makeSegmentIdError,
-	makeZodError,
-} from "../../errors";
+import { makeSegmentIdError, makeZodError } from "../../errors";
 import type { SegmentIdComponents } from "../../types/type-mappings";
 
 /**
@@ -30,11 +28,13 @@ export function serializeSegmentId<NK extends TreeNodeKind>(
 			return `${coreName}${NodeSegmentIdSeparator}${targetKind}${NodeSegmentIdSeparator}`;
 		}
 		case TreeNodeKind.Scroll: {
-			const { extension } = components as SegmentIdComponents<TreeNodeKind.Scroll>;
+			const { extension } =
+				components as SegmentIdComponents<TreeNodeKind.Scroll>;
 			return `${coreName}${NodeSegmentIdSeparator}${targetKind}${NodeSegmentIdSeparator}${extension}`;
 		}
 		case TreeNodeKind.File: {
-			const { extension } = components as SegmentIdComponents<TreeNodeKind.File>;
+			const { extension } =
+				components as SegmentIdComponents<TreeNodeKind.File>;
 			return `${coreName}${NodeSegmentIdSeparator}${targetKind}${NodeSegmentIdSeparator}${extension}`;
 		}
 	}
@@ -44,13 +44,11 @@ export function serializeSegmentId<NK extends TreeNodeKind>(
  * Serializes segment ID from unchecked inputs.
  * Validates inputs and returns Result.
  */
-export function serializeSegmentIdUnchecked(
-	components: {
-		coreName: string;
-		targetKind: TreeNodeKind;
-		extension?: string;
-	},
-): Result<TreeNodeSegmentId, CodecError> {
+export function serializeSegmentIdUnchecked(components: {
+	coreName: string;
+	targetKind: TreeNodeKind;
+	extension?: string;
+}): Result<TreeNodeSegmentId, CodecError> {
 	// Validate coreName
 	const nodeNameResult = NodeNameSchema.safeParse(components.coreName);
 	if (!nodeNameResult.success) {
@@ -71,7 +69,9 @@ export function serializeSegmentIdUnchecked(
 	const coreName = nodeNameResult.data;
 
 	// Validate targetKind
-	const targetKindResult = TreeNodeKind.safeParse(components.targetKind);
+	const targetKindResult = TreeNodeKindSchema.safeParse(
+		components.targetKind,
+	);
 	if (!targetKindResult.success) {
 		return err(
 			makeSegmentIdError(
@@ -92,7 +92,10 @@ export function serializeSegmentIdUnchecked(
 	// Validate extension based on kind
 	switch (targetKind) {
 		case TreeNodeKind.Section: {
-			if (components.extension !== undefined && components.extension !== "") {
+			if (
+				components.extension !== undefined &&
+				components.extension !== ""
+			) {
 				return err(
 					makeSegmentIdError(
 						"InvalidExtension",
@@ -121,7 +124,9 @@ export function serializeSegmentIdUnchecked(
 					),
 				);
 			}
-			const extensionResult = MdExtensionSchema.safeParse(components.extension);
+			const extensionResult = MdExtensionSchema.safeParse(
+				components.extension,
+			);
 			if (!extensionResult.success) {
 				return err(
 					makeSegmentIdError(
@@ -140,8 +145,8 @@ export function serializeSegmentIdUnchecked(
 			return ok(
 				serializeSegmentId({
 					coreName,
-					targetKind: TreeNodeKind.Scroll,
 					extension: "md",
+					targetKind: TreeNodeKind.Scroll,
 				}),
 			);
 		}
@@ -157,7 +162,9 @@ export function serializeSegmentIdUnchecked(
 					),
 				);
 			}
-			const extensionResult = FileExtensionSchema.safeParse(components.extension);
+			const extensionResult = FileExtensionSchema.safeParse(
+				components.extension,
+			);
 			if (!extensionResult.success) {
 				return err(
 					makeSegmentIdError(
@@ -176,8 +183,8 @@ export function serializeSegmentIdUnchecked(
 			return ok(
 				serializeSegmentId({
 					coreName,
-					targetKind: TreeNodeKind.File,
 					extension: extensionResult.data,
+					targetKind: TreeNodeKind.File,
 				}),
 			);
 		}

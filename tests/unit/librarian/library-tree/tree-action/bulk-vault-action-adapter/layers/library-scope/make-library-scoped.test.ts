@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { makeCodecRulesFromSettings } from "../../../../../../../../src/commanders/librarian-new/healer/library-tree/codecs";
 import { makeEventLibraryScoped } from "../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/events/make-event-libray-scoped";
 import { Scope } from "../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/scoped-event";
 import { MD } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/literals";
@@ -9,6 +10,7 @@ import { defaultSettingsForUnitTests } from "../../../../../../common-utils/cons
 import { setupGetParsedUserSettingsSpy } from "../../../../../../common-utils/setup-spy";
 
 let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
+const rules = makeCodecRulesFromSettings(defaultSettingsForUnitTests);
 
 beforeEach(() => {
 	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy();
@@ -31,7 +33,7 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event);
+			const result = makeEventLibraryScoped(event, rules);
 
 			expect(result.scope).toBe(Scope.Inside);
 			expect(result.splitPath.pathParts).toEqual(["Library"]);
@@ -49,21 +51,23 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event);
+			const result = makeEventLibraryScoped(event, rules);
 
 			expect(result.scope).toBe(Scope.Outside);
 			expect(result.splitPath).toEqual(event.splitPath);
 		});
 
 		it("handles nested library path", () => {
-			getParsedUserSettingsSpy.mockReturnValue({
+			const mockedSettings = {
 				...defaultSettingsForUnitTests,
 				splitPathToLibraryRoot: {
 					basename: "Library",
 					kind: SplitPathKind.Folder,
 					pathParts: ["Root"],
 				},
-			});
+			};
+			getParsedUserSettingsSpy.mockReturnValue(mockedSettings);
+			const testRules = makeCodecRulesFromSettings(mockedSettings);
 
 			const event: VaultEvent = {
 				kind: VaultEventKind.FileCreated,
@@ -75,7 +79,7 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event);
+			const result = makeEventLibraryScoped(event, testRules);
 
 			expect(result.scope).toBe(Scope.Inside);
 			expect(result.splitPath.pathParts).toEqual(["Library", "Section"]);
@@ -100,7 +104,7 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event);
+			const result = makeEventLibraryScoped(event, rules);
 
 			expect(result.scope).toBe(Scope.Inside);
 			expect(result.from.pathParts).toEqual(["Library"]);
@@ -124,7 +128,7 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event);
+			const result = makeEventLibraryScoped(event, rules);
 
 			expect(result.scope).toBe(Scope.InsideToOutside);
 			expect(result.from.pathParts).toEqual(["Library"]);
@@ -148,7 +152,7 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event);
+			const result = makeEventLibraryScoped(event, rules);
 
 			expect(result.scope).toBe(Scope.OutsideToInside);
 			expect(result.from.pathParts).toEqual(["Other"]);
@@ -172,7 +176,7 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event);
+			const result = makeEventLibraryScoped(event, rules);
 
 			expect(result.scope).toBe(Scope.Outside);
 			expect(result.from).toEqual(event.from);
@@ -192,7 +196,7 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event);
+			const result = makeEventLibraryScoped(event, rules);
 
 			expect(result.scope).toBe(Scope.Inside);
 			expect(result.splitPath.pathParts).toEqual(["Library", "Section"]);
@@ -209,7 +213,7 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event);
+			const result = makeEventLibraryScoped(event, rules);
 
 			expect(result.scope).toBe(Scope.Outside);
 			expect(result.splitPath).toEqual(event.splitPath);
@@ -227,7 +231,7 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event);
+			const result = makeEventLibraryScoped(event, rules);
 
 			expect(result.scope).toBe(Scope.Inside);
 			expect(result.splitPath.pathParts).toEqual(["Library"]);
@@ -243,7 +247,7 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event);
+			const result = makeEventLibraryScoped(event, rules);
 
 			expect(result.scope).toBe(Scope.Outside);
 			expect(result.splitPath).toEqual(event.splitPath);
@@ -266,7 +270,7 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event);
+			const result = makeEventLibraryScoped(event, rules);
 
 			expect(result.scope).toBe(Scope.Inside);
 			expect(result.from.pathParts).toEqual(["Library"]);
@@ -288,7 +292,7 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event);
+			const result = makeEventLibraryScoped(event, rules);
 
 			expect(result.scope).toBe(Scope.InsideToOutside);
 			expect(result.from.pathParts).toEqual(["Library"]);
@@ -309,7 +313,7 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event);
+			const result = makeEventLibraryScoped(event, rules);
 
 			expect(result.scope).toBe(Scope.OutsideToInside);
 			expect(result.to.pathParts).toEqual(["Library"]);
@@ -330,7 +334,7 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event);
+			const result = makeEventLibraryScoped(event, rules);
 
 			expect(result.scope).toBe(Scope.Outside);
 			expect(result.from).toEqual(event.from);
@@ -349,7 +353,7 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event);
+			const result = makeEventLibraryScoped(event, rules);
 
 			expect(result.scope).toBe(Scope.Inside);
 			expect(result.splitPath.pathParts).toEqual(["Library"]);
@@ -365,7 +369,7 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event);
+			const result = makeEventLibraryScoped(event, rules);
 
 			expect(result.scope).toBe(Scope.Outside);
 			expect(result.splitPath).toEqual(event.splitPath);
@@ -384,21 +388,23 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event);
+			const result = makeEventLibraryScoped(event, rules);
 
 			expect(result.scope).toBe(Scope.Outside);
 			expect(result.splitPath).toEqual(event.splitPath);
 		});
 
 		it("returns Outside when path that starts with library root but is not inside", () => {
-			getParsedUserSettingsSpy.mockReturnValue({
+			const mockedSettings = {
 				...defaultSettingsForUnitTests,
 				splitPathToLibraryRoot: {
 					basename: "Library",
 					kind: SplitPathKind.Folder,
 					pathParts: [],
 				},
-			});
+			};
+			getParsedUserSettingsSpy.mockReturnValue(mockedSettings);
+			const testRules = makeCodecRulesFromSettings(mockedSettings);
 
 			const event: VaultEvent = {
 				kind: VaultEventKind.FileCreated,
@@ -410,7 +416,7 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event);
+			const result = makeEventLibraryScoped(event, testRules);
 
 			expect(result.scope).toBe(Scope.Outside);
 			expect(result.splitPath).toEqual(event.splitPath);

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { makeCodecRulesFromSettings } from "../../../../../../../../src/commanders/librarian-new/healer/library-tree/codecs";
 import { makeEventLibraryScoped } from "../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/events/make-event-libray-scoped";
 import { makeEventVaultScoped } from "../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/events/make-event-vault-scoped";
 import { SplitPathKind } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
@@ -8,6 +9,7 @@ import { defaultSettingsForUnitTests } from "../../../../../../common-utils/cons
 import { setupGetParsedUserSettingsSpy } from "../../../../../../common-utils/setup-spy";
 
 let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
+const rules = makeCodecRulesFromSettings(defaultSettingsForUnitTests);
 
 beforeEach(() => {
 	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy();
@@ -29,8 +31,8 @@ describe("makeEventLibraryScoped and makeEventVaultScoped roundtrip", () => {
 			},
 		};
 
-		const scoped = makeEventLibraryScoped(original);
-		const restored = makeEventVaultScoped(scoped);
+		const scoped = makeEventLibraryScoped(original, rules);
+		const restored = makeEventVaultScoped(scoped, rules);
 
 		expect(restored).toEqual(original);
 	});
@@ -52,8 +54,8 @@ describe("makeEventLibraryScoped and makeEventVaultScoped roundtrip", () => {
 			},
 		};
 
-		const scoped = makeEventLibraryScoped(original);
-		const restored = makeEventVaultScoped(scoped);
+		const scoped = makeEventLibraryScoped(original, rules);
+		const restored = makeEventVaultScoped(scoped, rules);
 
 		expect(restored).toEqual(original);
 	});
@@ -75,8 +77,8 @@ describe("makeEventLibraryScoped and makeEventVaultScoped roundtrip", () => {
 			},
 		};
 
-		const scoped = makeEventLibraryScoped(original);
-		const restored = makeEventVaultScoped(scoped);
+		const scoped = makeEventLibraryScoped(original, rules);
+		const restored = makeEventVaultScoped(scoped, rules);
 
 		expect(restored).toEqual(original);
 	});
@@ -98,8 +100,8 @@ describe("makeEventLibraryScoped and makeEventVaultScoped roundtrip", () => {
 			},
 		};
 
-		const scoped = makeEventLibraryScoped(original);
-		const restored = makeEventVaultScoped(scoped);
+		const scoped = makeEventLibraryScoped(original, rules);
+		const restored = makeEventVaultScoped(scoped, rules);
 
 		expect(restored).toEqual(original);
 	});
@@ -115,8 +117,8 @@ describe("makeEventLibraryScoped and makeEventVaultScoped roundtrip", () => {
 			},
 		};
 
-		const scoped = makeEventLibraryScoped(original);
-		const restored = makeEventVaultScoped(scoped);
+		const scoped = makeEventLibraryScoped(original, rules);
+		const restored = makeEventVaultScoped(scoped, rules);
 
 		expect(restored).toEqual(original);
 	});
@@ -131,8 +133,8 @@ describe("makeEventLibraryScoped and makeEventVaultScoped roundtrip", () => {
 			},
 		};
 
-		const scoped = makeEventLibraryScoped(original);
-		const restored = makeEventVaultScoped(scoped);
+		const scoped = makeEventLibraryScoped(original, rules);
+		const restored = makeEventVaultScoped(scoped, rules);
 
 		expect(restored).toEqual(original);
 	});
@@ -152,8 +154,8 @@ describe("makeEventLibraryScoped and makeEventVaultScoped roundtrip", () => {
 			},
 		};
 
-		const scoped = makeEventLibraryScoped(original);
-		const restored = makeEventVaultScoped(scoped);
+		const scoped = makeEventLibraryScoped(original, rules);
+		const restored = makeEventVaultScoped(scoped, rules);
 
 		expect(restored).toEqual(original);
 	});
@@ -173,8 +175,8 @@ describe("makeEventLibraryScoped and makeEventVaultScoped roundtrip", () => {
 			},
 		};
 
-		const scoped = makeEventLibraryScoped(original);
-		const restored = makeEventVaultScoped(scoped);
+		const scoped = makeEventLibraryScoped(original, rules);
+		const restored = makeEventVaultScoped(scoped, rules);
 
 		expect(restored).toEqual(original);
 	});
@@ -194,8 +196,8 @@ describe("makeEventLibraryScoped and makeEventVaultScoped roundtrip", () => {
 			},
 		};
 
-		const scoped = makeEventLibraryScoped(original);
-		const restored = makeEventVaultScoped(scoped);
+		const scoped = makeEventLibraryScoped(original, rules);
+		const restored = makeEventVaultScoped(scoped, rules);
 
 		expect(restored).toEqual(original);
 	});
@@ -210,21 +212,23 @@ describe("makeEventLibraryScoped and makeEventVaultScoped roundtrip", () => {
 			},
 		};
 
-		const scoped = makeEventLibraryScoped(original);
-		const restored = makeEventVaultScoped(scoped);
+		const scoped = makeEventLibraryScoped(original, rules);
+		const restored = makeEventVaultScoped(scoped, rules);
 
 		expect(restored).toEqual(original);
 	});
 
 	it("roundtrips with nested library root", () => {
-			getParsedUserSettingsSpy.mockReturnValue({
-				...defaultSettingsForUnitTests,
+		const mockedSettings = {
+			...defaultSettingsForUnitTests,
 			splitPathToLibraryRoot: {
 				basename: "Library",
 				kind: SplitPathKind.Folder,
 				pathParts: ["Root"],
 			},
-		});
+		};
+		getParsedUserSettingsSpy.mockReturnValue(mockedSettings);
+		const testRules = makeCodecRulesFromSettings(mockedSettings);
 
 		const original: VaultEvent = {
 			kind: VaultEventKind.FileCreated,
@@ -236,8 +240,8 @@ describe("makeEventLibraryScoped and makeEventVaultScoped roundtrip", () => {
 			},
 		};
 
-		const scoped = makeEventLibraryScoped(original);
-		const restored = makeEventVaultScoped(scoped);
+		const scoped = makeEventLibraryScoped(original, testRules);
+		const restored = makeEventVaultScoped(scoped, testRules);
 
 		expect(restored).toEqual(original);
 	});

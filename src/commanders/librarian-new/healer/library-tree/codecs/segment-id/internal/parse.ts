@@ -1,22 +1,20 @@
 import { err, ok, type Result } from "neverthrow";
+import { NodeNameSchema } from "../../../../../types/schemas/node-name";
 import {
 	FileExtensionSchema,
 	MdExtensionSchema,
 	TreeNodeKind,
-} from "../../../../tree-node/types/atoms";
+	TreeNodeKindSchema,
+} from "../../../tree-node/types/atoms";
 import {
-	NodeSegmentIdSeparator,
 	type FileNodeSegmentId,
-	type SectionNodeSegmentId,
+	NodeSegmentIdSeparator,
 	type ScrollNodeSegmentId,
+	type SectionNodeSegmentId,
 	type TreeNodeSegmentId,
-} from "../../../../tree-node/types/node-segment-id";
-import { NodeNameSchema } from "../../../../../types/schemas/node-name";
+} from "../../../tree-node/types/node-segment-id";
 import type { CodecError } from "../../errors";
-import {
-	makeSegmentIdError,
-	makeZodError,
-} from "../../errors";
+import { makeSegmentIdError, makeZodError } from "../../errors";
 import type { SegmentIdComponents } from "../../types/type-mappings";
 
 /**
@@ -61,7 +59,7 @@ export function parseSegmentId<NK extends TreeNodeKind>(
 	const coreName = nodeNameResult.data;
 
 	// Validate targetKind
-	const targetKindResult = TreeNodeKind.safeParse(rawTargetKind);
+	const targetKindResult = TreeNodeKindSchema.safeParse(rawTargetKind);
 	if (!targetKindResult.success) {
 		return err(
 			makeSegmentIdError(
@@ -129,8 +127,8 @@ export function parseSegmentId<NK extends TreeNodeKind>(
 			}
 			return ok({
 				coreName,
-				targetKind: TreeNodeKind.Scroll,
 				extension: "md",
+				targetKind: TreeNodeKind.Scroll,
 			} as SegmentIdComponents<NK>);
 		}
 
@@ -164,8 +162,8 @@ export function parseSegmentId<NK extends TreeNodeKind>(
 			}
 			return ok({
 				coreName,
-				targetKind: TreeNodeKind.File,
 				extension: extensionResult.data,
+				targetKind: TreeNodeKind.File,
 			} as SegmentIdComponents<NK>);
 		}
 	}

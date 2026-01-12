@@ -1,6 +1,6 @@
 import { err, ok, type Result } from "neverthrow";
 import type { NonEmptyArray } from "../../../../../../types/helpers";
-import { nonEmptyArrayResult } from "../../../../../../types/utils";
+import { nonEmptyArrayResult } from "../../../../../../../types/utils";
 import { NodeNameSchema } from "../../../../../types/schemas/node-name";
 import type { CodecError } from "../../errors";
 import { makeSuffixError, makeZodError } from "../../errors";

@@ -1,5 +1,5 @@
 import { VaultEventKind } from "../../../../../../../../../../managers/obsidian/vault-action-manager";
-import type { CodecRules } from "../../../../codecs/rules";
+import type { CodecRules } from "../../../../../../codecs/rules";
 import type { DescopedEvent } from "../../types/generics";
 import type { LibraryScopedVaultEvent } from "../../types/scoped-event";
 import { Scope } from "../../types/scoped-event";
@@ -33,14 +33,14 @@ export function makeEventVaultScoped(
 			switch (event.scope) {
 				case Scope.Inside:
 					return {
-						from: makeVaultScopedSplitPath(event.from),
+						from: makeVaultScopedSplitPath(event.from, rules),
 						kind: VaultEventKind.FileRenamed,
-						to: makeVaultScopedSplitPath(event.to),
+						to: makeVaultScopedSplitPath(event.to, rules),
 					};
 
 				case Scope.InsideToOutside:
 					return {
-						from: makeVaultScopedSplitPath(event.from),
+						from: makeVaultScopedSplitPath(event.from, rules),
 						kind: VaultEventKind.FileRenamed,
 						to: event.to,
 					};
@@ -49,7 +49,7 @@ export function makeEventVaultScoped(
 					return {
 						from: event.from,
 						kind: VaultEventKind.FileRenamed,
-						to: makeVaultScopedSplitPath(event.to),
+						to: makeVaultScopedSplitPath(event.to, rules),
 					};
 
 				default: {
@@ -63,14 +63,14 @@ export function makeEventVaultScoped(
 			switch (event.scope) {
 				case Scope.Inside:
 					return {
-						from: makeVaultScopedSplitPath(event.from),
+1						from: makeVaultScopedSplitPath(event.from, rules),
 						kind: VaultEventKind.FolderRenamed,
-						to: makeVaultScopedSplitPath(event.to),
+						to: makeVaultScopedSplitPath(event.to, rules),
 					};
 
 				case Scope.InsideToOutside:
 					return {
-						from: makeVaultScopedSplitPath(event.from),
+						from: makeVaultScopedSplitPath(event.from, rules),
 						kind: VaultEventKind.FolderRenamed,
 						to: event.to,
 					};
@@ -79,7 +79,7 @@ export function makeEventVaultScoped(
 					return {
 						from: event.from,
 						kind: VaultEventKind.FolderRenamed,
-						to: makeVaultScopedSplitPath(event.to),
+						to: makeVaultScopedSplitPath(event.to, rules),
 					};
 
 				default: {

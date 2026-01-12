@@ -1,12 +1,11 @@
 import { err, ok, type Result } from "neverthrow";
-import type { Codecs } from "../../../../../../codecs";
 import {
 	type NodeName,
 	NodeNameSchema,
 } from "../../../../../../../../types/schemas/node-name";
+import type { Codecs } from "../../../../../../codecs";
 import type { CanonicalSplitPathInsideLibrary } from "../../../../../utils/canonical-naming/types";
 import type { SplitPathInsideLibrary } from "../../../library-scope/types/inside-library-split-paths";
-import { adaptCodecResult } from "../error-adapters";
 import {
 	type CanonicalSplitPathToDestination,
 	MaterializedEventKind,
@@ -14,6 +13,7 @@ import {
 	type TreeNodeLocatorForEvent,
 	type TreeNodeLocatorForLibraryScopedSplitPath,
 } from "../../../materialized-node-events/types";
+import { adaptCodecResult } from "../../error-adapters";
 import {
 	ChangePolicy,
 	inferPolicyAndIntent,
@@ -22,10 +22,7 @@ import {
 
 export function tryMakeDestinationLocatorFromEvent<
 	E extends MaterializedNodeEvent,
->(
-	ev: E,
-	codecs: Codecs,
-): Result<TreeNodeLocatorForEvent<E>, string> {
+>(ev: E, codecs: Codecs): Result<TreeNodeLocatorForEvent<E>, string> {
 	const cspRes = tryMakeCanonicalSplitPathToDestination(ev, codecs);
 	if (cspRes.isErr()) return err(cspRes.error);
 

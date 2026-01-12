@@ -1,6 +1,9 @@
 import { describe, expect, it } from "bun:test";
+import { makeCodecs } from "../../../../../../src/commanders/librarian-new/healer/library-tree/codecs";
+import { makeCodecRulesFromSettings } from "../../../../../../src/commanders/librarian-new/healer/library-tree/codecs";
 import { makeNodeSegmentId } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import { makeTreeNode } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/codecs/node-and-segment-id/optimistic-makers/make-tree-node";
+import { makeTreeNodeCodecs } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/codecs/node-and-segment-id";
 import { tryParseTreeNode } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/codecs/node-and-segment-id/try-parse-tree-node";
 import { TreeNodeKind, TreeNodeStatus } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
 import type {
@@ -14,6 +17,7 @@ import type {
 	ScrollNode,
 	SectionNode,
 } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/tree-node";
+import { defaultSettingsForUnitTests } from "../../../../common-utils/consts";
 
 describe("makeNodeSegmentId", () => {
 	it("creates segment ID for Section node", () => {
@@ -90,9 +94,13 @@ describe("makeTreeNode", () => {
 });
 
 describe("tryParseTreeNode", () => {
+	const rules = makeCodecRulesFromSettings(defaultSettingsForUnitTests);
+	const codecs = makeCodecs(rules);
+	const treeNodeCodecs = makeTreeNodeCodecs(codecs.segmentId);
+
 	it("parses valid Section segment ID", () => {
 		const segmentId = `MySection${Separator}${TreeNodeKind.Section}${Separator}`;
-		const result = tryParseTreeNode(segmentId);
+		const result = tryParseTreeNode(treeNodeCodecs, segmentId);
 		expect(result.isOk()).toBe(true);
 		if (result.isOk()) {
 			expect(result.value).toEqual({
@@ -105,7 +113,7 @@ describe("tryParseTreeNode", () => {
 
 	it("parses valid Scroll segment ID", () => {
 		const segmentId = `MyScroll${Separator}${TreeNodeKind.Scroll}${Separator}md`;
-		const result = tryParseTreeNode(segmentId);
+		const result = tryParseTreeNode(treeNodeCodecs, segmentId);
 		expect(result.isOk()).toBe(true);
 		if (result.isOk()) {
 			expect(result.value).toEqual({
@@ -119,7 +127,7 @@ describe("tryParseTreeNode", () => {
 
 	it("parses valid File segment ID", () => {
 		const segmentId = `MyFile${Separator}${TreeNodeKind.File}${Separator}txt`;
-		const result = tryParseTreeNode(segmentId);
+		const result = tryParseTreeNode(treeNodeCodecs, segmentId);
 		expect(result.isOk()).toBe(true);
 		if (result.isOk()) {
 			expect(result.value).toEqual({
@@ -133,7 +141,7 @@ describe("tryParseTreeNode", () => {
 
 	it("returns error for invalid segment ID", () => {
 		const invalidId = "invalid-segment-id";
-		const result = tryParseTreeNode(invalidId);
+		const result = tryParseTreeNode(treeNodeCodecs, invalidId);
 		expect(result.isErr()).toBe(true);
 		if (result.isErr()) {
 			expect(result.error).toBeTruthy();
@@ -141,13 +149,13 @@ describe("tryParseTreeNode", () => {
 	});
 
 	it("returns error for empty string", () => {
-		const result = tryParseTreeNode("");
+		const result = tryParseTreeNode(treeNodeCodecs, "");
 		expect(result.isErr()).toBe(true);
 	});
 
 	it("returns error for malformed segment ID", () => {
 		const malformed = `MyNode${Separator}InvalidType${Separator}`;
-		const result = tryParseTreeNode(malformed);
+		const result = tryParseTreeNode(treeNodeCodecs, malformed);
 		expect(result.isErr()).toBe(true);
 	});
 });
@@ -190,9 +198,13 @@ describe("makeNodeSegmentId and makeTreeNode roundtrip", () => {
 });
 
 describe("tryParseTreeNode and makeTreeNode consistency", () => {
+	const rules = makeCodecRulesFromSettings(defaultSettingsForUnitTests);
+	const codecs = makeCodecs(rules);
+	const treeNodeCodecs = makeTreeNodeCodecs(codecs.segmentId);
+
 	it("tryParseTreeNode produces same result as makeTreeNode for valid input", () => {
 		const segmentId = `TestNode${Separator}${TreeNodeKind.Scroll}${Separator}md` as ScrollNodeSegmentId;
-		const parsed = tryParseTreeNode(segmentId);
+		const parsed = tryParseTreeNode(treeNodeCodecs, segmentId);
 		const direct = makeTreeNode(segmentId);
 		expect(parsed.isOk()).toBe(true);
 		if (parsed.isOk()) {
