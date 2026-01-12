@@ -1,3 +1,10 @@
+import type {
+	FileNodeSegmentId,
+	ScrollNodeSegmentId,
+	SectionNodeSegmentId,
+	TreeNodeSegmentId,
+} from "../../../../../../codecs/segment-id";
+import { NodeSegmentIdSeparator } from "../../../../../../codecs/segment-id/types/segment-id";
 import type { NodeName } from "../../../../../../types/schemas/node-name";
 import {
 	type FileExtension,
@@ -5,13 +12,6 @@ import {
 	TreeNodeKind,
 	TreeNodeStatus,
 } from "../../../types/atoms";
-import {
-	type FileNodeSegmentId,
-	NodeSegmentIdSeparator,
-	type ScrollNodeSegmentId,
-	type SectionNodeSegmentId,
-	type TreeNodeSegmentId,
-} from "../../../../../../../codecs/segment-id/types/segment-id";
 import type {
 	FileNode,
 	ScrollNode,

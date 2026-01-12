@@ -2,12 +2,12 @@ import type {
 	NodeLocatorOf,
 	TreeNodeLocator,
 } from "../../../../../codecs/locator/types";
+import { NodeSegmentIdSeparator } from "../../../../../codecs/segment-id/types/segment-id";
 import {
 	type NodeName,
 	NodeNameSchema,
 } from "../../../../../types/schemas/node-name";
 import { TreeNodeKind } from "../../../tree-node/types/atoms";
-import { NodeSegmentIdSeparator } from "../../../../../../codecs/segment-id/types/segment-id";
 
 export const getNodeName = <NK extends TreeNodeKind>(
 	locator: NodeLocatorOf<NK>,

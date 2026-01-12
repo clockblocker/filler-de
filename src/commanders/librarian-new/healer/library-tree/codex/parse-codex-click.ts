@@ -5,10 +5,10 @@
 
 import { err, ok, type Result } from "neverthrow";
 import { getParsedUserSettings } from "../../../../../global-state/global-state";
+import type { SectionNodeSegmentId } from "../../../codecs/segment-id";
+import { NodeSegmentIdSeparator } from "../../../codecs/segment-id/types/segment-id";
 import { tryParseAsSeparatedSuffixedBasename } from "../tree-action/utils/canonical-naming/suffix-utils/core-suffix-utils";
 import { TreeNodeKind } from "../tree-node/types/atoms";
-import type { SectionNodeSegmentId } from "../../../../codecs/segment-id/types/segment-id";
-import { NodeSegmentIdSeparator } from "../../../../codecs/segment-id/types/segment-id";
 import { CODEX_CORE_NAME } from "./literals";
 
 // ─── Types ───

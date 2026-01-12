@@ -1,5 +1,5 @@
 import { err, ok, type Result } from "neverthrow";
-import type { SplitPathKind } from "../../../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathKind } from "../../../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type {
 	AnySplitPathInsideLibrary,
 	CanonicalSplitPathInsideLibrary,
@@ -133,7 +133,10 @@ export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
 	policy: ChangePolicy,
 	intent: RenameIntent | undefined, // undefined = not rename
 	codecs: Codecs,
-): Result<CanonicalSplitPathInsideLibraryOf<SK> | CanonicalSplitPathInsideLibrary, string> {
+): Result<
+	CanonicalSplitPathInsideLibraryOf<SK> | CanonicalSplitPathInsideLibrary,
+	string
+> {
 	const effectivePolicy =
 		intent === RenameIntent.Rename ? ChangePolicy.PathKing : policy;
 
@@ -280,4 +283,4 @@ export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
 		basename: canonicalBasename,
 		pathParts: nextPathParts,
 	});
-};
+}

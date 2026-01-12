@@ -1,14 +1,12 @@
 import { err, ok, type Result } from "neverthrow";
 import type { AnySplitPath } from "../../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
-import type { CodecRules } from "../../../../../../../codecs/rules";
-import type {
-	EnscopedSplitPath,
-	ExtractKind,
-} from "../types/generics";
 import type {
 	AnySplitPathInsideLibrary,
 	SplitPathInsideLibraryOf,
-} from "../../../../../../codecs";
+} from "../../../../../../../codecs";
+import type { CodecRules } from "../../../../../../../codecs/rules";
+import type { EnscopedSplitPath } from "../types/generics";
+import type { ExtractKind } from "../types/generics/scoped-split-path";
 
 /**
  * Converts a vault SplitPath into a **SplitPathInsideLibrary**.

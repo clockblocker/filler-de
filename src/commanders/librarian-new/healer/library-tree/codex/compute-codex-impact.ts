@@ -3,11 +3,11 @@
  * Used to determine which codex files need regeneration/rename/deletion.
  */
 
+import type { SectionNodeSegmentId } from "../../../codecs/segment-id";
+import { NodeSegmentIdSeparator } from "../../../codecs/segment-id/types/segment-id";
 import type { TreeAction } from "../tree-action/types/tree-action";
 import { TreeActionType } from "../tree-action/types/tree-action";
 import { TreeNodeKind, type TreeNodeStatus } from "../tree-node/types/atoms";
-import type { SectionNodeSegmentId } from "../../../../codecs/segment-id/types/segment-id";
-import { NodeSegmentIdSeparator } from "../../../../codecs/segment-id/types/segment-id";
 import { collectImpactedSections } from "./section-chain-utils";
 
 // ─── Types ───

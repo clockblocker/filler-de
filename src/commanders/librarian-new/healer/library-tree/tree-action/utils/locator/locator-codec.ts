@@ -1,10 +1,5 @@
 import { MD } from "../../../../../../../managers/obsidian/vault-action-manager/types/literals";
 import { SplitPathKind } from "../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
-import {
-	NodeSegmentIdSeparator,
-	type SectionNodeSegmentId,
-	type TreeNodeSegmentId,
-} from "../../../../../../codecs/segment-id/types/segment-id";
 import type {
 	CanonicalSplitPathInsideLibrary,
 	CanonicalSplitPathToFileInsideLibrary,
@@ -13,6 +8,11 @@ import type {
 	NodeLocatorOf,
 	TreeNodeLocator,
 } from "../../../../../codecs/locator/types";
+import type {
+	SectionNodeSegmentId,
+	TreeNodeSegmentId,
+} from "../../../../../codecs/segment-id";
+import { NodeSegmentIdSeparator } from "../../../../../codecs/segment-id/types/segment-id";
 import type { NodeName } from "../../../../../types/schemas/node-name";
 import { makeNodeSegmentId } from "../../../tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import type { FileExtension } from "../../../tree-node/types/atoms";

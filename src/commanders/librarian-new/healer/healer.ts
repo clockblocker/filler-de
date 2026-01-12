@@ -1,10 +1,6 @@
 import { ok, type Result } from "neverthrow";
 import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type {
-	SectionNodeSegmentId,
-	TreeNodeSegmentId,
-} from "../../codecs/segment-id/types/segment-id";
-import type {
 	AnySplitPathInsideLibrary,
 	Codecs,
 	SplitPathToFileInsideLibrary,
@@ -15,6 +11,10 @@ import type {
 	FileNodeLocator,
 	ScrollNodeLocator,
 } from "../codecs/locator/types";
+import type {
+	SectionNodeSegmentId,
+	TreeNodeSegmentId,
+} from "../codecs/segment-id/types/segment-id";
 import type { NodeName } from "../types/schemas/node-name";
 import type { TreeAccessor } from "./library-tree/codex/codex-impact-to-actions";
 import {
@@ -111,7 +111,23 @@ export class Healer implements TreeAccessor {
 		action: CreateTreeLeafAction,
 	): HealingAction[] {
 		const { targetLocator, observedSplitPath } = action;
-		return this.computeLeafHealing(targetLocator, observedSplitPath);
+		// Narrow types based on locator kind
+		if (targetLocator.targetKind === TreeNodeKind.Scroll) {
+			if (observedSplitPath.kind === SplitPathKind.MdFile) {
+				return this.computeLeafHealing(
+					targetLocator,
+					observedSplitPath,
+				);
+			}
+		} else {
+			if (observedSplitPath.kind === SplitPathKind.File) {
+				return this.computeLeafHealing(
+					targetLocator,
+					observedSplitPath,
+				);
+			}
+		}
+		return [];
 	}
 
 	private computeDeleteHealing(_action: DeleteNodeAction): HealingAction[] {
@@ -186,7 +202,17 @@ export class Healer implements TreeAccessor {
 			segmentId: newSegmentId,
 		} as ScrollNodeLocator | FileNodeLocator;
 
-		return this.computeLeafHealing(newLocator, oldCanonical);
+		// Narrow types based on locator kind
+		if (newLocator.targetKind === TreeNodeKind.Scroll) {
+			if (oldCanonical.kind === SplitPathKind.MdFile) {
+				return this.computeLeafHealing(newLocator, oldCanonical);
+			}
+		} else {
+			if (oldCanonical.kind === SplitPathKind.File) {
+				return this.computeLeafHealing(newLocator, oldCanonical);
+			}
+		}
+		return [];
 	}
 
 	private computeMoveHealing(action: MoveNodeAction): HealingAction[] {
@@ -291,10 +317,10 @@ export class Healer implements TreeAccessor {
 				segmentIdChainToParent: newParentChain,
 				targetKind: TreeNodeKind.Scroll,
 			};
-			return this.computeLeafHealing(
-				newLocator,
-				observedSplitPath as SplitPathToMdFileInsideLibrary,
-			);
+			// Type guard: observedSplitPath must be MdFile for Scroll
+			if (observedSplitPath.kind === SplitPathKind.MdFile) {
+				return this.computeLeafHealing(newLocator, observedSplitPath);
+			}
 		}
 
 		// File
@@ -303,10 +329,13 @@ export class Healer implements TreeAccessor {
 			segmentIdChainToParent: newParentChain,
 			targetKind: TreeNodeKind.File,
 		};
-		return this.computeLeafHealing(
-			newLocator,
-			observedSplitPath as SplitPathToFileInsideLibrary,
-		);
+		// Type guard: observedSplitPath must be File for File
+		if (observedSplitPath.kind === SplitPathKind.File) {
+			return this.computeLeafHealing(newLocator, observedSplitPath);
+		}
+
+		// Fallback (should not happen if types are correct)
+		return [];
 	}
 
 	private computeChangeStatusHealing(
@@ -316,6 +345,14 @@ export class Healer implements TreeAccessor {
 		return [];
 	}
 
+	private computeLeafHealing(
+		locator: ScrollNodeLocator,
+		observedSplitPath: SplitPathToMdFileInsideLibrary,
+	): HealingAction[];
+	private computeLeafHealing(
+		locator: FileNodeLocator,
+		observedSplitPath: SplitPathToFileInsideLibrary,
+	): HealingAction[];
 	private computeLeafHealing(
 		locator: ScrollNodeLocator | FileNodeLocator,
 		observedSplitPath:
@@ -335,21 +372,27 @@ export class Healer implements TreeAccessor {
 
 		if (!this.splitPathsEqual(observedSplitPath, canonicalSplitPath)) {
 			if (observedSplitPath.kind === SplitPathKind.MdFile) {
-				healingActions.push({
-					kind: "RenameMdFile",
-					payload: {
-						from: observedSplitPath,
-						to: canonicalSplitPath as SplitPathToMdFileInsideLibrary,
-					},
-				});
+				// Narrow canonicalSplitPath based on observedSplitPath.kind
+				if (canonicalSplitPath.kind === SplitPathKind.MdFile) {
+					healingActions.push({
+						kind: "RenameMdFile",
+						payload: {
+							from: observedSplitPath,
+							to: canonicalSplitPath,
+						},
+					});
+				}
 			} else {
-				healingActions.push({
-					kind: "RenameFile",
-					payload: {
-						from: observedSplitPath as SplitPathToFileInsideLibrary,
-						to: canonicalSplitPath as SplitPathToFileInsideLibrary,
-					},
-				});
+				// Narrow canonicalSplitPath based on observedSplitPath.kind
+				if (canonicalSplitPath.kind === SplitPathKind.File) {
+					healingActions.push({
+						kind: "RenameFile",
+						payload: {
+							from: observedSplitPath,
+							to: canonicalSplitPath,
+						},
+					});
+				}
 			}
 		}
 
@@ -412,11 +455,24 @@ export class Healer implements TreeAccessor {
 					actualCurrentPath,
 				);
 
-				const leafHealing = this.computeLeafHealing(
-					locator,
-					observedSplitPath,
-				);
-				healingActions.push(...leafHealing);
+				// Narrow types based on child kind
+				if (child.kind === TreeNodeKind.Scroll) {
+					if (observedSplitPath.kind === SplitPathKind.MdFile) {
+						const leafHealing = this.computeLeafHealing(
+							locator,
+							observedSplitPath,
+						);
+						healingActions.push(...leafHealing);
+					}
+				} else {
+					if (observedSplitPath.kind === SplitPathKind.File) {
+						const leafHealing = this.computeLeafHealing(
+							locator,
+							observedSplitPath,
+						);
+						healingActions.push(...leafHealing);
+					}
+				}
 			}
 		}
 
@@ -481,6 +537,8 @@ export class Healer implements TreeAccessor {
 						canonical,
 					);
 
+				// Type assertion: leaf locators (Scroll/File) only produce MdFile/File split paths, never Folder
+				// The codec chain preserves types, but TypeScript widens due to union input
 				return ok(
 					splitPath as
 						| SplitPathToMdFileInsideLibrary

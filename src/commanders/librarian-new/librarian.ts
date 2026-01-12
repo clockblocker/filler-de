@@ -14,15 +14,15 @@ import { SplitPathKind } from "../../managers/obsidian/vault-action-manager/type
 import { readMetadata } from "../../managers/pure/note-metadata-manager";
 import { decrementPending, incrementPending } from "../../utils/idle-tracker";
 import { logger } from "../../utils/logger";
-import type { AnySplitPathInsideLibrary } from "./codecs";
 import {
+	type AnySplitPathInsideLibrary,
 	type CodecRules,
 	type Codecs,
 	makeCodecRulesFromSettings,
 	makeCodecs,
+	type SplitPathToMdFileInsideLibrary,
 } from "./codecs";
 import { healingActionsToVaultActions } from "./codecs/healing-to-vault-action";
-import type { CanonicalSplitPathToMdFileInsideLibrary } from "./codecs/locator";
 import type { ScrollNodeLocator } from "./codecs/locator/types";
 import type {
 	ScrollNodeSegmentId,
@@ -665,10 +665,7 @@ export class Librarian {
 		nodeName: string,
 		parentChain: SectionNodeSegmentId[],
 	): Result<
-		AnySplitPathInsideLibrary & {
-			kind: typeof SplitPathKind.MdFile;
-			extension: "md";
-		},
+		SplitPathToMdFileInsideLibrary,
 		import("./codecs/errors").CodecError
 	> {
 		// Build segmentIdChainToParent by parsing each segment ID
@@ -709,22 +706,15 @@ export class Librarian {
 
 		// Chain: canonical -> split path
 		return canonicalResult.andThen((canonical) => {
-			// Type assertion: we know it's a Scroll, so result is CanonicalSplitPathToMdFileInsideLibrary
-			const canonicalScroll =
-				canonical as CanonicalSplitPathToMdFileInsideLibrary;
-
 			// Convert canonical to split path
 			const splitPath =
 				this.codecs.canonicalSplitPath.fromCanonicalSplitPathInsideLibrary(
-					canonicalScroll,
+					canonical,
 				);
 
-			return ok(
-				splitPath as AnySplitPathInsideLibrary & {
-					kind: typeof SplitPathKind.MdFile;
-					extension: "md";
-				},
-			);
+			// Type assertion: ScrollNodeLocator only produces SplitPathToMdFileInsideLibrary
+			// The codec chain preserves types, but TypeScript widens due to generic inference
+			return ok(splitPath as SplitPathToMdFileInsideLibrary);
 		});
 	}
 

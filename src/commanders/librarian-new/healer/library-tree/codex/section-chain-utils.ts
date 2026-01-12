@@ -2,7 +2,7 @@
  * Utilities for working with section chains in codex generation.
  */
 
-import type { SectionNodeSegmentId } from "../../../../codecs/segment-id/types/segment-id";
+import type { SectionNodeSegmentId } from "../../../codecs/segment-id";
 
 /**
  * Expand a section chain to include all ancestor prefixes.

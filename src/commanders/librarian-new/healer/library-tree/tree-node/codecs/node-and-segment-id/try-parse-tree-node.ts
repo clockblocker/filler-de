@@ -1,7 +1,7 @@
-import { err, ok, type Result } from "neverthrow";
+import { err, type Result } from "neverthrow";
 import type { CodecError } from "../../../../../codecs/errors";
 import { makeZodError } from "../../../../../codecs/errors";
-import { TreeNodeSegmentIdSchema } from "../../../../../../codecs/segment-id/types/segment-id";
+import { TreeNodeSegmentIdSchema } from "../../../../../codecs/segment-id";
 import type { TreeNode } from "../../types/tree-node";
 import type { TreeNodeCodecs } from "./tree-node-segment-id-codec";
 

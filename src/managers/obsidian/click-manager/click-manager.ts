@@ -105,7 +105,7 @@ export class ClickManager {
 	private isTaskCheckbox(element: HTMLElement): element is HTMLInputElement {
 		return (
 			element.tagName === "INPUT" &&
-			(element as HTMLInputElement).kind === "checkbox" &&
+			(element as HTMLInputElement).type === "checkbox" &&
 			element.classList.contains("task-list-item-checkbox")
 		);
 	}

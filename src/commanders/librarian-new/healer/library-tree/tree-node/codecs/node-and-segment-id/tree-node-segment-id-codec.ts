@@ -1,8 +1,10 @@
 import { err, ok, type Result } from "neverthrow";
 import type { CodecError } from "../../../../../codecs/errors";
-import type { SegmentIdCodecs } from "../../../../../codecs/segment-id";
+import type {
+	SegmentIdCodecs,
+	TreeNodeSegmentId,
+} from "../../../../../codecs/segment-id";
 import { TreeNodeKind, TreeNodeStatus } from "../../types/atoms";
-import type { TreeNodeSegmentId } from "../../../../../../codecs/segment-id/types/segment-id";
 import type { TreeNode } from "../../types/tree-node";
 
 /**
