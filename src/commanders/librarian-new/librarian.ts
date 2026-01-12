@@ -14,15 +14,15 @@ import { SplitPathKind } from "../../managers/obsidian/vault-action-manager/type
 import { readMetadata } from "../../managers/pure/note-metadata-manager";
 import { decrementPending, incrementPending } from "../../utils/idle-tracker";
 import { logger } from "../../utils/logger";
-import { Healer } from "./healer/healer";
 import {
 	type CodecRules,
 	type Codecs,
 	makeCodecRulesFromSettings,
 	makeCodecs,
-} from "./healer/library-tree/codecs";
-import { healingActionsToVaultActions } from "./healer/library-tree/codecs/healing-to-vault-action";
-import type { CanonicalSplitPathToMdFileInsideLibrary } from "./healer/library-tree/codecs/locator";
+} from "./codecs";
+import { healingActionsToVaultActions } from "./codecs/healing-to-vault-action";
+import type { CanonicalSplitPathToMdFileInsideLibrary } from "./codecs/locator";
+import { Healer } from "./healer/healer";
 import {
 	CODEX_CORE_NAME,
 	type CodexAction,
@@ -649,10 +649,7 @@ export class Librarian {
 	 */
 	private extractNodeNameFromScrollSegmentId(
 		segmentId: ScrollNodeSegmentId,
-	): Result<
-		string,
-		import("./healer/library-tree/codecs/errors").CodecError
-	> {
+	): Result<string, import("./codecs/errors").CodecError> {
 		const parseResult =
 			this.codecs.segmentId.parseScrollSegmentId(segmentId);
 		if (parseResult.isErr()) {
@@ -672,7 +669,7 @@ export class Librarian {
 			kind: typeof SplitPathKind.MdFile;
 			extension: "md";
 		},
-		import("./healer/library-tree/codecs/errors").CodecError
+		import("./codecs/errors").CodecError
 	> {
 		// Build segmentIdChainToParent by parsing each segment ID
 		const segmentIdChainToParent: SectionNodeSegmentId[] = [];

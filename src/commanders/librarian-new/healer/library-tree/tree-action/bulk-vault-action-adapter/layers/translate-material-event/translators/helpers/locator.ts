@@ -1,10 +1,10 @@
 import { err, ok, type Result } from "neverthrow";
 import { SplitPathKind } from "../../../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import type { Codecs } from "../../../../../../../../codecs";
 import {
 	type NodeName,
 	NodeNameSchema,
 } from "../../../../../../../../types/schemas/node-name";
-import type { Codecs } from "../../../../../../codecs";
 import type { CanonicalSplitPathInsideLibrary } from "../../../../../utils/canonical-naming/types";
 import type { SplitPathInsideLibrary } from "../../../library-scope/types/inside-library-split-paths";
 import {

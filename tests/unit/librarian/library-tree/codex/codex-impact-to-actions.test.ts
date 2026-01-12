@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import {
+	makeCodecRulesFromSettings,
+	makeCodecs,
+} from "../../../../../src/commanders/librarian-new/codecs";
+import {
 	codexImpactToActions,
 	type TreeAccessor,
 } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/codex-impact-to-actions";
 import type { CodexImpact } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/compute-codex-impact";
-import {
-	makeCodecs,
-	makeCodecRulesFromSettings,
-} from "../../../../../src/commanders/librarian-new/healer/library-tree/codecs";
 import {
 	TreeNodeKind,
 	TreeNodeStatus,

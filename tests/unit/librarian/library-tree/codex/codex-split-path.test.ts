@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { computeCodexSplitPath } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/codex-split-path";
 import {
-	makeCodecs,
 	makeCodecRulesFromSettings,
-} from "../../../../../src/commanders/librarian-new/healer/library-tree/codecs";
+	makeCodecs,
+} from "../../../../../src/commanders/librarian-new/codecs";
+import { computeCodexSplitPath } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/codex-split-path";
 import type { SectionNodeSegmentId } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/node-segment-id";
 import { SplitPathKind } from "../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { defaultSettingsForUnitTests } from "../../../common-utils/consts";

@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import {
-	makeCodecs,
-	makeCodecRulesFromSettings,
-	type Codecs,
 	type CodecRules,
-} from "../../../../../../../../../../src/commanders/librarian-new/healer/library-tree/codecs";
+	type Codecs,
+	makeCodecRulesFromSettings,
+	makeCodecs,
+} from "../../../../../../../../../../src/commanders/librarian-new/codecs";
 import { RenameIntent } from "../../../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/intent/types";
 import { ChangePolicy } from "../../../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/types";
 import { tryCanonicalizeSplitPathToDestination } from "../../../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/translators/helpers/locator";

@@ -4,7 +4,7 @@ import {
 	type Codecs,
 	makeCodecRulesFromSettings,
 	makeCodecs,
-} from "../../../../../../../../../../src/commanders/librarian-new/healer/library-tree/codecs";
+} from "../../../../../../../../../../src/commanders/librarian-new/codecs";
 import { MaterializedEventKind } from "../../../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/materialized-node-events/types";
 import { inferRenameIntent } from "../../../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/intent/infer-intent";
 import { RenameIntent } from "../../../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/intent/types";

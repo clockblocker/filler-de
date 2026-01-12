@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { makeCodecRulesFromSettings, makeCodecs } from "../../../../../../src/commanders/librarian-new/healer/library-tree/codecs";
+import { makeCodecRulesFromSettings, makeCodecs } from "../../../../../../src/commanders/librarian-new/codecs";
 import { makeTreeNodeCodecs } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/codecs/node-and-segment-id";
 import { makeNodeSegmentId } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import { makeTreeNode } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/codecs/node-and-segment-id/optimistic-makers/make-tree-node";

@@ -1,5 +1,5 @@
+import type { Codecs } from "../../codecs";
 import type { NodeName } from "../../types/schemas/node-name";
-import type { Codecs } from "./codecs";
 import type {
 	ChangeNodeStatusAction,
 	CreateTreeLeafAction,

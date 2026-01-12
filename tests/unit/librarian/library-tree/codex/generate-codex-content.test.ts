@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { generateCodexContent } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/generate-codex-content";
 import {
-	makeCodecs,
 	makeCodecRulesFromSettings,
-} from "../../../../../src/commanders/librarian-new/healer/library-tree/codecs";
+	makeCodecs,
+} from "../../../../../src/commanders/librarian-new/codecs";
+import { generateCodexContent } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/generate-codex-content";
 import {
 	TreeNodeKind,
 	TreeNodeStatus,

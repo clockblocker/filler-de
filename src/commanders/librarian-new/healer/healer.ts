@@ -1,8 +1,8 @@
 import { ok, type Result } from "neverthrow";
 import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
+import type { Codecs } from "../codecs";
+import type { CodecError } from "../codecs/errors";
 import type { NodeName } from "../types/schemas/node-name";
-import type { Codecs } from "./library-tree/codecs";
-import type { CodecError } from "./library-tree/codecs/errors";
 import type { TreeAccessor } from "./library-tree/codex/codex-impact-to-actions";
 import {
 	type CodexImpact,

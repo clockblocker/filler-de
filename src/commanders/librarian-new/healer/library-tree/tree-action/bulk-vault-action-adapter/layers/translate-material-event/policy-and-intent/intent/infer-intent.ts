@@ -1,4 +1,4 @@
-import type { Codecs } from "../../../../../../codecs";
+import type { Codecs } from "../../../../../../../../codecs";
 import { TreeNodeKind } from "../../../../../../tree-node/types/atoms";
 import type { RenameTreeNodeNodeMaterializedEvent } from "../../../materialized-node-events/types";
 import { adaptCodecResult } from "../../error-adapters";
@@ -61,11 +61,7 @@ import { RenameIntent } from "./types";
  * All actual filesystem changes are produced later by Tree healing logic.
  */
 export function inferRenameIntent(
-	{
-		to,
-		from,
-		nodeKind,
-	}: RenameTreeNodeNodeMaterializedEvent,
+	{ to, from, nodeKind }: RenameTreeNodeNodeMaterializedEvent,
 	codecs: Codecs,
 ): RenameIntent {
 	const basenameChanged = from.basename !== to.basename;

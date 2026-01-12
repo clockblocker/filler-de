@@ -1,5 +1,5 @@
 import { VaultEventKind } from "../../../../../../../../../../managers/obsidian/vault-action-manager";
-import type { CodecRules } from "../../../../../../codecs/rules";
+import type { CodecRules } from "../../../../../../../../codecs/rules";
 import type { DescopedEvent } from "../../types/generics";
 import type { LibraryScopedVaultEvent } from "../../types/scoped-event";
 import { Scope } from "../../types/scoped-event";

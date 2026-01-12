@@ -2,7 +2,7 @@ import {
 	type VaultEvent,
 	VaultEventKind,
 } from "../../../../../../../../../../managers/obsidian/vault-action-manager";
-import type { CodecRules } from "../../../../codecs/rules";
+import type { CodecRules } from "../../../../../../../../codecs/rules";
 import type { EnscopedEvent } from "../../types/generics";
 import { Scope } from "../../types/scoped-event";
 import { tryParseAsInsideLibrarySplitPath } from "../split-path-inside-the-library";
@@ -51,7 +51,10 @@ export function makeEventLibraryScoped(
 		}
 
 		case VaultEventKind.FileRenamed: {
-			const fromResult = tryParseAsInsideLibrarySplitPath(event.from, rules);
+			const fromResult = tryParseAsInsideLibrarySplitPath(
+				event.from,
+				rules,
+			);
 			const toResult = tryParseAsInsideLibrarySplitPath(event.to, rules);
 
 			if (fromResult.isOk() && toResult.isOk()) {
@@ -88,7 +91,10 @@ export function makeEventLibraryScoped(
 		}
 
 		case VaultEventKind.FolderRenamed: {
-			const fromResult = tryParseAsInsideLibrarySplitPath(event.from, rules);
+			const fromResult = tryParseAsInsideLibrarySplitPath(
+				event.from,
+				rules,
+			);
 			const toResult = tryParseAsInsideLibrarySplitPath(event.to, rules);
 
 			if (fromResult.isOk() && toResult.isOk()) {

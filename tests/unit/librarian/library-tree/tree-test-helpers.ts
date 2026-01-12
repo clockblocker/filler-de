@@ -3,11 +3,11 @@
  * Provides factory and snapshot utilities for easy testing.
  */
 
-import { Healer } from "../../../../src/commanders/librarian-new/healer/healer";
 import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
-} from "../../../../src/commanders/librarian-new/healer/library-tree/codecs";
+} from "../../../../src/commanders/librarian-new/codecs";
+import { Healer } from "../../../../src/commanders/librarian-new/healer/healer";
 import { Tree } from "../../../../src/commanders/librarian-new/healer/library-tree/tree";
 import type {
 	FileNodeLocator,

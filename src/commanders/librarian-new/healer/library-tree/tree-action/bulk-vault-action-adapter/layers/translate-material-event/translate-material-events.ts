@@ -1,5 +1,5 @@
+import type { Codecs } from "../../../../../../codecs";
 import { CODEX_CORE_NAME } from "../../../../codex/literals";
-import type { Codecs } from "../../../../codecs";
 import type { TreeAction } from "../../../types/tree-action";
 import {
 	MaterializedEventType,

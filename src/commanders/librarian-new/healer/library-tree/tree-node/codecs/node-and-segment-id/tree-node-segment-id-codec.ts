@@ -1,6 +1,6 @@
 import { err, ok, type Result } from "neverthrow";
-import type { CodecError } from "../../../codecs/errors";
-import type { SegmentIdCodecs } from "../../../codecs/segment-id";
+import type { CodecError } from "../../../../../codecs/errors";
+import type { SegmentIdCodecs } from "../../../../../codecs/segment-id";
 import { TreeNodeKind, TreeNodeStatus } from "../../types/atoms";
 import type { TreeNodeSegmentId } from "../../types/node-segment-id";
 import type { TreeNode } from "../../types/tree-node";
