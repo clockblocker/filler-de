@@ -1,6 +1,8 @@
+import { ok, type Result } from "neverthrow";
 import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { NodeName } from "../types/schemas/node-name";
 import type { Codecs } from "./library-tree/codecs";
+import type { CodecError } from "./library-tree/codecs/errors";
 import type { TreeAccessor } from "./library-tree/codex/codex-impact-to-actions";
 import {
 	type CodexImpact,
@@ -24,16 +26,11 @@ import type {
 	RenameNodeAction,
 	TreeAction,
 } from "./library-tree/tree-action/types/tree-action";
-import {
-	makeJoinedSuffixedBasename,
-	makeSuffixPartsFromPathPartsWithRoot,
-} from "./library-tree/tree-action/utils/canonical-naming/suffix-utils/core-suffix-utils";
 import { makeNodeSegmentId } from "./library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import { TreeNodeKind } from "./library-tree/tree-node/types/atoms";
-import {
-	NodeSegmentIdSeparator,
-	type SectionNodeSegmentId,
-	type TreeNodeSegmentId,
+import type {
+	SectionNodeSegmentId,
+	TreeNodeSegmentId,
 } from "./library-tree/tree-node/types/node-segment-id";
 import type {
 	FileNode,
@@ -173,9 +170,17 @@ export class Healer implements TreeAccessor {
 
 		// Leaf rename needs observed path - but rename action doesn't carry it
 		// The observed path IS the canonical path before rename (tree was in sync)
-		const oldCanonical = this.buildCanonicalLeafSplitPathFromOldLocator(
-			targetLocator as ScrollNodeLocator | FileNodeLocator,
-		);
+		const oldCanonicalResult =
+			this.buildCanonicalLeafSplitPathFromOldLocator(
+				targetLocator as ScrollNodeLocator | FileNodeLocator,
+			);
+		if (oldCanonicalResult.isErr()) {
+			// Error indicates bug in tree structure - propagate by throwing
+			throw new Error(
+				`Failed to build canonical split path from old locator: ${oldCanonicalResult.error.message}`,
+			);
+		}
+		const oldCanonical = oldCanonicalResult.value;
 		const newLocator = {
 			...targetLocator,
 			segmentId: newSegmentId,
@@ -317,7 +322,15 @@ export class Healer implements TreeAccessor {
 			| SplitPathToMdFileInsideLibrary
 			| SplitPathToFileInsideLibrary,
 	): HealingAction[] {
-		const canonicalSplitPath = this.buildCanonicalLeafSplitPath(locator);
+		const canonicalSplitPathResult =
+			this.buildCanonicalLeafSplitPath(locator);
+		if (canonicalSplitPathResult.isErr()) {
+			// Error indicates bug in tree structure - propagate by throwing
+			throw new Error(
+				`Failed to build canonical split path: ${canonicalSplitPathResult.error.message}`,
+			);
+		}
+		const canonicalSplitPath = canonicalSplitPathResult.value;
 		const healingActions: HealingAction[] = [];
 
 		if (!this.splitPathsEqual(observedSplitPath, canonicalSplitPath)) {
@@ -424,12 +437,15 @@ export class Healer implements TreeAccessor {
 	): SplitPathToMdFileInsideLibrary | SplitPathToFileInsideLibrary {
 		// Suffix from OLD path (what the file WAS named)
 		const suffixParts =
-			makeSuffixPartsFromPathPartsWithRoot(oldSuffixPathParts);
+			this.codecs.canonicalSplitPath.pathPartsWithRootToSuffixParts(
+				oldSuffixPathParts,
+			);
 
-		const basename = makeJoinedSuffixedBasename({
-			coreName: leaf.nodeName,
-			suffixParts,
-		});
+		const basename =
+			this.codecs.canonicalSplitPath.serializeSeparatedSuffix({
+				coreName: leaf.nodeName,
+				suffixParts,
+			});
 
 		// pathParts = CURRENT path (where file IS now)
 		if (leaf.kind === TreeNodeKind.Scroll) {
@@ -451,46 +467,34 @@ export class Healer implements TreeAccessor {
 
 	private buildCanonicalLeafSplitPath(
 		locator: ScrollNodeLocator | FileNodeLocator,
-	): SplitPathToMdFileInsideLibrary | SplitPathToFileInsideLibrary {
-		// Chain already includes Library root
-		const pathParts = locator.segmentIdChainToParent.map((segId) =>
-			this.extractNodeNameFromSegmentId(segId),
-		);
+	): Result<
+		SplitPathToMdFileInsideLibrary | SplitPathToFileInsideLibrary,
+		CodecError
+	> {
+		// Convert locator to canonical split path, then to split path
+		return this.codecs.locator
+			.locatorToCanonicalSplitPathInsideLibrary(locator)
+			.andThen((canonical) => {
+				// Convert canonical to split path
+				const splitPath =
+					this.codecs.canonicalSplitPath.fromCanonicalSplitPathInsideLibrary(
+						canonical,
+					);
 
-		const suffixParts = makeSuffixPartsFromPathPartsWithRoot(pathParts);
-
-		// Get node name from locator
-		const nodeName = this.extractNodeNameFromLeafSegmentId(
-			locator.segmentId,
-		);
-
-		const basename = makeJoinedSuffixedBasename({
-			coreName: nodeName,
-			suffixParts,
-		});
-
-		if (locator.targetKind === TreeNodeKind.Scroll) {
-			return {
-				basename,
-				extension: "md",
-				kind: SplitPathKind.MdFile,
-				pathParts,
-			};
-		}
-
-		// Extract extension from segmentId
-		const extension = this.extractExtensionFromSegmentId(locator.segmentId);
-		return {
-			basename,
-			extension,
-			kind: SplitPathKind.File,
-			pathParts,
-		};
+				return ok(
+					splitPath as
+						| SplitPathToMdFileInsideLibrary
+						| SplitPathToFileInsideLibrary,
+				);
+			});
 	}
 
 	private buildCanonicalLeafSplitPathFromOldLocator(
 		locator: ScrollNodeLocator | FileNodeLocator,
-	): SplitPathToMdFileInsideLibrary | SplitPathToFileInsideLibrary {
+	): Result<
+		SplitPathToMdFileInsideLibrary | SplitPathToFileInsideLibrary,
+		CodecError
+	> {
 		// Same as buildCanonicalLeafSplitPath but uses the locator as-is
 		// (before any modifications)
 		return this.buildCanonicalLeafSplitPath(locator);
@@ -519,20 +523,6 @@ export class Healer implements TreeAccessor {
 			);
 		}
 		return parseResult.value.coreName;
-	}
-
-	private extractNodeNameFromLeafSegmentId(
-		segId: TreeNodeSegmentId,
-	): NodeName {
-		const sep = NodeSegmentIdSeparator;
-		const [raw] = segId.split(sep, 1);
-		return raw as NodeName;
-	}
-
-	private extractExtensionFromSegmentId(segId: TreeNodeSegmentId): string {
-		const sep = NodeSegmentIdSeparator;
-		const parts = segId.split(sep);
-		return parts[parts.length - 1] ?? "";
 	}
 
 	private splitPathsEqual(
