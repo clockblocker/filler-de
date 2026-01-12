@@ -7,7 +7,7 @@ import type {
 	SplitPathToFileInsideLibrary,
 	SplitPathToFolderInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
-} from "../codecs/split-path-inside-library/types";
+} from "../../../codecs";
 
 // ─── Healing Action Types ───
 

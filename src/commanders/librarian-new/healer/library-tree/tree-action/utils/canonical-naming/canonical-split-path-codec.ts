@@ -1,24 +1,22 @@
 import { err, ok, type Result } from "neverthrow";
 import { getParsedUserSettings } from "../../../../../../../global-state/global-state";
 import type { AnySplitPath } from "../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
-import { NodeNameSchema } from "../../../../../types/schemas/node-name";
-import type {
-	SplitPathInsideLibrary,
-	SplitPathToFileInsideLibrary,
-	SplitPathToFolderInsideLibrary,
-	SplitPathToMdFileInsideLibrary,
-} from "../../../../../../codecs/split-path-inside-library/types";
-import { tryBuildCanonicalSeparatedSuffixedBasename } from "./suffix-utils/build-canonical-separated-suffixed-basename-path-king-way";
-import {
-	makeJoinedSuffixedBasename,
-	tryParseAsSeparatedSuffixedBasename,
-} from "./suffix-utils/core-suffix-utils";
 import type {
 	CanonicalSplitPathInsideLibrary,
 	CanonicalSplitPathToFileInsideLibrary,
 	CanonicalSplitPathToFolderInsideLibrary,
 	CanonicalSplitPathToMdFileInsideLibrary,
-} from "../../../../../../codecs/canonical-split-path/types";
+	SplitPathInsideLibrary,
+	SplitPathToFileInsideLibrary,
+	SplitPathToFolderInsideLibrary,
+	SplitPathToMdFileInsideLibrary,
+} from "../../../../../codecs";
+import { NodeNameSchema } from "../../../../../types/schemas/node-name";
+import { tryBuildCanonicalSeparatedSuffixedBasename } from "./suffix-utils/build-canonical-separated-suffixed-basename-path-king-way";
+import {
+	makeJoinedSuffixedBasename,
+	tryParseAsSeparatedSuffixedBasename,
+} from "./suffix-utils/core-suffix-utils";
 
 export function tryParseCanonicalSplitPathInsideLibrary(
 	sp: SplitPathToFolderInsideLibrary,

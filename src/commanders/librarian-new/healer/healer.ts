@@ -1,16 +1,16 @@
 import { ok, type Result } from "neverthrow";
 import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
-import type { Codecs } from "../codecs";
+import type {
+	Codecs,
+	SplitPathInsideLibrary,
+	SplitPathToFileInsideLibrary,
+	SplitPathToMdFileInsideLibrary,
+} from "../codecs";
 import type { CodecError } from "../codecs/errors";
 import type {
 	FileNodeLocator,
 	ScrollNodeLocator,
 } from "../codecs/locator/types";
-import type {
-	SplitPathInsideLibrary,
-	SplitPathToFileInsideLibrary,
-	SplitPathToMdFileInsideLibrary,
-} from "../codecs/split-path-inside-library/types/generic-split-path-inside-library-of";
 import type { NodeName } from "../types/schemas/node-name";
 import type { TreeAccessor } from "./library-tree/codex/codex-impact-to-actions";
 import {

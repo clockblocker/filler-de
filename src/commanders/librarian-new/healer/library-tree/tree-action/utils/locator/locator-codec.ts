@@ -5,8 +5,6 @@ import type {
 	CanonicalSplitPathToFileInsideLibrary,
 	CanonicalSplitPathToFolderInsideLibrary,
 	CanonicalSplitPathToMdFileInsideLibrary,
-} from "../../../../../codecs/canonical-split-path/types";
-import type {
 	FileNodeLocator,
 	ScrollNodeLocator,
 	SectionNodeLocator,

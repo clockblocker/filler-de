@@ -1,4 +1,4 @@
-import type { Codecs } from "../../../../../../codecs";
+import type { Codecs } from "../../../../../../../codecs";
 import { TreeNodeKind } from "../../../../../tree-node/types/atoms";
 import {
 	type CreateTreeLeafAction,

@@ -1,4 +1,4 @@
-import type { Codecs } from "../../../../codecs";
+import type { Codecs } from "../../../../../../../codecs";
 import {
 	MaterializedEventType,
 	type MaterializedNodeEvent,

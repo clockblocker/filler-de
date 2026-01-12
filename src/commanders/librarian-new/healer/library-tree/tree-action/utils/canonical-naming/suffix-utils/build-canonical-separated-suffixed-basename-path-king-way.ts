@@ -2,10 +2,10 @@ import { err, ok, type Result } from "neverthrow";
 import { getParsedUserSettings } from "../../../../../../../../global-state/global-state";
 import { SplitPathKind } from "../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type {
-	CanonicalSeparatedSuffixedBasename,
 	CanonicalSplitPathInsideLibrary,
-} from "../../../../../../codecs/canonical-split-path/types";
-import type { SplitPathInsideLibrary } from "../../../../../../codecs/split-path-inside-library/types/generic-split-path-inside-library-of";
+	SplitPathInsideLibrary,
+} from "../../../../../../codecs";
+import type { CanonicalSeparatedSuffixedBasename } from "../../../../../../codecs/canonical-split-path/types/canonical-split-path";
 import {
 	type NodeName,
 	NodeNameSchema,

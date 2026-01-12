@@ -6,21 +6,19 @@ import {
 } from "../../../../../../../../managers/obsidian/vault-action-manager/types/literals";
 import type { Prettify } from "../../../../../../../../types/helpers";
 import type {
-	CanonicalSplitPathToFileInsideLibrary,
-	CanonicalSplitPathToFolderInsideLibrary,
-	CanonicalSplitPathToMdFileInsideLibrary,
-} from "../../../../../../codecs/canonical-split-path/types";
-import type {
-	FileNodeLocator,
-	ScrollNodeLocator,
-	SectionNodeLocator,
-} from "../../../../../../codecs/locator/types";
-import type {
 	SplitPathInsideLibrary,
 	SplitPathToFileInsideLibrary,
 	SplitPathToFolderInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
-} from "../../../../../../codecs/split-path-inside-library/types/generic-split-path-inside-library-of";
+} from "../../../../../../codecs";
+import type {
+	CanonicalSplitPathToFileInsideLibrary,
+	CanonicalSplitPathToFolderInsideLibrary,
+	CanonicalSplitPathToMdFileInsideLibrary,
+	FileNodeLocator,
+	ScrollNodeLocator,
+	SectionNodeLocator,
+} from "../../../../../../codecs/locator/types";
 import type { TreeNodeKind } from "../../../../tree-node/types/atoms";
 
 /**

@@ -1,5 +1,5 @@
-import { err, ok, type Result } from "neverthrow";
-import type { CodecError } from "../../../codecs/errors";
+import type { Result } from "neverthrow";
+import type { CodecError } from "../../../../../../codecs/errors";
 
 /**
  * Temporary adapter to convert CodecError to string for migration.
