@@ -562,30 +562,45 @@ The `bulk-vault-action-adapter` layer has two types of codecs:
    - Re-export `makeCodecRulesFromSettings` helper
    - **No circular imports**: This is the only file that imports all modules
 
-### Phase 2: Create TreeNode Adapter in tree-node Layer
+### Phase 2: Create TreeNode Adapter in tree-node Layer ✅ COMPLETED
+
+**Status**: ✅ COMPLETED - Adapter created and ready for integration testing
 
 **Goal**: Create thin adapter in `tree-node/codecs/node-and-segment-id/` that uses centralized codecs
 
-**Process**:
-- Create `tree-node/codecs/node-and-segment-id/tree-node-segment-id-codec.ts`
-- Adapter functions:
-  - `makeNodeSegmentId(node: TreeNode): TreeNodeSegmentId` - uses `segmentId.serializeSegmentId` internally
-  - `makeTreeNode(segmentId: TreeNodeSegmentId): Result<TreeNode, CodecError>` - uses `segmentId.parseSegmentId` internally
-- Adapter receives codec instance via dependency injection (from Librarian/Healer)
-- **Keep existing `tree-node/codecs/node-and-segment-id/make-node-segment-id.ts`** temporarily for compatibility
-- **Replace call sites** to use adapter instead of direct codec access
-- **Document any missing utilities** needed for TreeNode construction
+**Implementation Notes**:
+- ✅ Created `tree-node-segment-id-codec.ts` with factory pattern `makeTreeNodeCodecs(segmentId: SegmentIdCodecs)`
+- ✅ Adapter functions implemented:
+  - `makeNodeSegmentId(node: TreeNode): TreeNodeSegmentId` - uses `segmentId.serializeSegmentId` internally with proper type narrowing
+  - `makeTreeNode(segmentId: TreeNodeSegmentId): Result<TreeNode, CodecError>` - uses `segmentId.parseSegmentId` internally, returns Result (neverthrow-pilled)
+- ✅ Updated `try-parse-tree-node.ts` to use adapter and return `Result<TreeNode, CodecError>` instead of `Result<TreeNode, string>`
+- ✅ Created `index.ts` that exports adapter API and maintains backward compatibility (re-exports old functions)
+- ✅ **Old functions kept for compatibility**: `make-node-segment-id.ts` and `optimistic-makers/make-tree-node.ts` still exported during migration
 
-**Expected findings**:
-- Adapter is thin wrapper around codecs (no duplication)
-- No circular dependencies (codecs/ doesn't import TreeNode)
-- May need additional helpers for TreeNode construction from components
+**Architecture**:
+- Adapter uses centralized codecs (no circular dependencies - codecs/ doesn't import TreeNode)
+- Factory pattern enables dependency injection from Librarian/Healer
+- Type-safe with proper narrowing (switch statements for type safety)
+- All functions return `Result<T, CodecError>` (neverthrow-pilled)
+
+**Next Steps for Phase 3**:
+- Librarian/Healer should create codecs via `makeCodecs(rules)` and pass `segmentId` to `makeTreeNodeCodecs(segmentId)`
+- Tree layer (`tree.ts`) can use adapter instead of direct `makeNodeSegmentId` calls
+- `codecs/locator` can continue using `makeNodeSegmentId` (which will use codecs internally after migration)
+- Integration testing: verify adapter works in tree-node layer, update call sites incrementally
+
+**Files Created**:
+- `tree-node/codecs/node-and-segment-id/tree-node-segment-id-codec.ts` - Main adapter implementation
+- `tree-node/codecs/node-and-segment-id/index.ts` - Public API exports
+
+**Files Updated**:
+- `tree-node/codecs/node-and-segment-id/try-parse-tree-node.ts` - Now uses adapter, returns `CodecError`
 
 ### Phase 3: Integration Testing - tree-node Layer (using adapter)
 
 **Goal**: Verify tree-node layer works with adapter
 
-**Status**: ⏳ PENDING - Depends on Phase 2
+**Status**: ⏳ PENDING - Ready to start (Phase 2 completed)
 
 **Process**:
 - Use adapter from Phase 2 in tree-node layer
@@ -838,13 +853,28 @@ Once all layers are tested and codec API is complete:
   - [x] Verify no circular imports (this is the only file importing all modules)
   - **Note**: Factory returns `{ segmentId, splitPathInsideLibrary, canonicalSplitPath, locator }` - suffix is internal and not exposed. Re-exports all public types for convenience.
 
-### Phase 2: Integration Testing - tree-node Layer ⏳ PENDING
-- [ ] Create `tree-node/codecs/node-and-segment-id/tree-node-segment-id-codec.ts` adapter
-- [ ] Implement `makeNodeSegmentId(node: TreeNode)` - uses `segmentId.serializeSegmentId` internally
-- [ ] Implement `makeTreeNode(segmentId: TreeNodeSegmentId)` - uses `segmentId.parseSegmentId` internally
-- [ ] Adapter receives codec instance via dependency injection
-- [ ] Replace call sites to use adapter
-- [ ] Document any missing utilities for TreeNode construction
+### Phase 2: Create TreeNode Adapter in tree-node Layer ✅ COMPLETED
+- [x] Create `tree-node/codecs/node-and-segment-id/tree-node-segment-id-codec.ts` adapter
+  - ✅ Factory pattern: `makeTreeNodeCodecs(segmentId: SegmentIdCodecs)`
+  - ✅ Returns `TreeNodeCodecs` type with `makeNodeSegmentId` and `makeTreeNode` methods
+- [x] Implement `makeNodeSegmentId(node: TreeNode)` - uses `segmentId.serializeSegmentId` internally
+  - ✅ Proper type narrowing with switch statements
+  - ✅ Handles Section, Scroll, and File nodes correctly
+- [x] Implement `makeTreeNode(segmentId: TreeNodeSegmentId)` - uses `segmentId.parseSegmentId` internally
+  - ✅ Returns `Result<TreeNode, CodecError>` (neverthrow-pilled)
+  - ✅ Constructs TreeNode from parsed components with proper status initialization
+- [x] Adapter receives codec instance via dependency injection
+  - ✅ Factory pattern enables clean dependency injection
+  - ✅ No circular dependencies (codecs/ doesn't import TreeNode)
+- [x] Update `try-parse-tree-node.ts` to use adapter
+  - ✅ Now accepts `TreeNodeCodecs` as first parameter
+  - ✅ Returns `Result<TreeNode, CodecError>` instead of `Result<TreeNode, string>`
+  - ✅ Uses `makeZodError` helper for error construction
+- [x] Create `index.ts` for public API exports
+  - ✅ Exports `TreeNodeCodecs` type and `makeTreeNodeCodecs` factory
+  - ✅ Re-exports old functions for backward compatibility during migration
+- [ ] Replace call sites to use adapter (Phase 3 - integration testing)
+- [ ] Document any missing utilities for TreeNode construction (if needed during Phase 3)
 
 ### Phase 3: Integration Testing - bulk-vault-action-adapter Layer ⏳ PENDING
 - [ ] Identify codec usage points in `bulk-vault-action-adapter/` layer
