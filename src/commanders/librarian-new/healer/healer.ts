@@ -1,8 +1,8 @@
 import { ok, type Result } from "neverthrow";
 import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type {
+	AnySplitPathInsideLibrary,
 	Codecs,
-	SplitPathInsideLibrary,
 	SplitPathToFileInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
 } from "../codecs";
@@ -526,8 +526,8 @@ export class Healer implements TreeAccessor {
 	}
 
 	private splitPathsEqual(
-		a: SplitPathInsideLibrary,
-		b: SplitPathInsideLibrary,
+		a: AnySplitPathInsideLibrary,
+		b: AnySplitPathInsideLibrary,
 	): boolean {
 		if (a.kind !== b.kind) return false;
 		if (a.basename !== b.basename) return false;

@@ -1,12 +1,9 @@
 import type { CanonicalSplitPathCodecs } from "./canonical-split-path";
 import { makeCanonicalSplitPathCodecs } from "./canonical-split-path";
-import type { CodecError } from "./errors";
-import type { SuffixCodecs } from "./internal/suffix";
 import { makeSuffixCodecs } from "./internal/suffix";
 import type { LocatorCodecs } from "./locator";
 import { makeLocatorCodecs } from "./locator";
 import type { CodecRules } from "./rules";
-import { makeCodecRulesFromSettings } from "./rules";
 import type { SegmentIdCodecs } from "./segment-id";
 import { makeSegmentIdCodecs } from "./segment-id";
 import type { SplitPathInsideLibraryCodecs } from "./split-path-inside-library";
@@ -69,7 +66,7 @@ export { makeCodecRulesFromSettings } from "./rules";
 // Re-export public types from modules
 export type { SegmentIdComponents } from "./segment-id";
 export type {
-	AnySplitPathInsideLibrary as SplitPathInsideLibrary,
+	AnySplitPathInsideLibrary,
 	SplitPathToFileInsideLibrary,
 	SplitPathToFolderInsideLibrary,
 	SplitPathToMdFileInsideLibrary,

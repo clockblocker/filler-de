@@ -5,13 +5,13 @@ import type {
 	SplitPathToMdFile,
 } from "../../../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type {
-	SplitPathInsideLibrary,
+	AnySplitPathInsideLibrary,
 	SplitPathToFileInsideLibrary,
 	SplitPathToFolderInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
 } from "../../../../../../../../codecs";
 
-export type DescopedSplitPath<T extends SplitPathInsideLibrary> =
+export type DescopedSplitPath<T extends AnySplitPathInsideLibrary> =
 	T extends SplitPathToFolderInsideLibrary
 		? SplitPathToFolder
 		: T extends SplitPathToMdFileInsideLibrary

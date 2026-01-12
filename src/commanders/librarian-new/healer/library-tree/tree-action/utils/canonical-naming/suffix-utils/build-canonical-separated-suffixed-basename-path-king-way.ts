@@ -2,8 +2,8 @@ import { err, ok, type Result } from "neverthrow";
 import { getParsedUserSettings } from "../../../../../../../../global-state/global-state";
 import { SplitPathKind } from "../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type {
+	AnySplitPathInsideLibrary,
 	CanonicalSplitPathInsideLibrary,
-	SplitPathInsideLibrary,
 } from "../../../../../../codecs";
 import type { CanonicalSeparatedSuffixedBasename } from "../../../../../../codecs/canonical-split-path/types/canonical-split-path";
 import {
@@ -40,7 +40,7 @@ export const tryBuildCanonicalSeparatedSuffixedBasename = ({
 	basename,
 	pathParts,
 	kind,
-}: Pick<SplitPathInsideLibrary, "basename" | "pathParts" | "kind">): Result<
+}: Pick<AnySplitPathInsideLibrary, "basename" | "pathParts" | "kind">): Result<
 	CanonicalSeparatedSuffixedBasename,
 	string
 > => {
@@ -65,7 +65,7 @@ export const tryBuildCanonicalSeparatedSuffixedBasename = ({
 };
 
 export const tryParseCanonicalSplitPathInsideLibrary = (
-	sp: SplitPathInsideLibrary,
+	sp: AnySplitPathInsideLibrary,
 ): Result<CanonicalSplitPathInsideLibrary, string> => {
 	// validate path parts as NodeNames (already required by your system)
 	for (const p of sp.pathParts) {
@@ -104,7 +104,7 @@ export const tryParseCanonicalSplitPathInsideLibrary = (
 
 export const makeRegularSplitPathInsideLibrary = (
 	sp: CanonicalSplitPathInsideLibrary,
-): SplitPathInsideLibrary => {
+): AnySplitPathInsideLibrary => {
 	return {
 		...sp,
 		basename: makeJoinedSuffixedBasename(sp.separatedSuffixedBasename),

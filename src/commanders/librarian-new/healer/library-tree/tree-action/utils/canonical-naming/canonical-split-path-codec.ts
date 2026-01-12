@@ -2,11 +2,11 @@ import { err, ok, type Result } from "neverthrow";
 import { getParsedUserSettings } from "../../../../../../../global-state/global-state";
 import type { AnySplitPath } from "../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type {
+	AnySplitPathInsideLibrary,
 	CanonicalSplitPathInsideLibrary,
 	CanonicalSplitPathToFileInsideLibrary,
 	CanonicalSplitPathToFolderInsideLibrary,
 	CanonicalSplitPathToMdFileInsideLibrary,
-	SplitPathInsideLibrary,
 	SplitPathToFileInsideLibrary,
 	SplitPathToFolderInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
@@ -28,10 +28,10 @@ export function tryParseCanonicalSplitPathInsideLibrary(
 	sp: SplitPathToMdFileInsideLibrary,
 ): Result<CanonicalSplitPathToMdFileInsideLibrary, string>;
 export function tryParseCanonicalSplitPathInsideLibrary(
-	sp: SplitPathInsideLibrary,
+	sp: AnySplitPathInsideLibrary,
 ): Result<CanonicalSplitPathInsideLibrary, string>;
 export function tryParseCanonicalSplitPathInsideLibrary(
-	sp: SplitPathInsideLibrary,
+	sp: AnySplitPathInsideLibrary,
 ): Result<CanonicalSplitPathInsideLibrary, string> {
 	const pathPartsRes = tryParsePathParts(sp.pathParts);
 	if (pathPartsRes.isErr()) return err(pathPartsRes.error);
@@ -103,10 +103,10 @@ export function makeRegularSplitPathInsideLibrary(
 ): SplitPathToMdFileInsideLibrary;
 export function makeRegularSplitPathInsideLibrary(
 	sp: CanonicalSplitPathInsideLibrary,
-): SplitPathInsideLibrary;
+): AnySplitPathInsideLibrary;
 export function makeRegularSplitPathInsideLibrary(
 	sp: CanonicalSplitPathInsideLibrary,
-): SplitPathInsideLibrary {
+): AnySplitPathInsideLibrary {
 	const basename = makeJoinedSuffixedBasename(sp.separatedSuffixedBasename);
 	return {
 		...sp,

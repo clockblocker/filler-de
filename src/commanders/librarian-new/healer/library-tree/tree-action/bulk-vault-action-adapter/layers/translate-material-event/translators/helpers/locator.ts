@@ -1,9 +1,9 @@
 import { err, ok, type Result } from "neverthrow";
 import { SplitPathKind } from "../../../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type {
+	AnySplitPathInsideLibrary,
 	CanonicalSplitPathInsideLibrary,
 	Codecs,
-	SplitPathInsideLibrary,
 } from "../../../../../../../../codecs";
 import {
 	type NodeName,
@@ -40,7 +40,7 @@ export function tryMakeDestinationLocatorFromEvent<
 }
 
 export function tryMakeTargetLocatorFromLibraryScopedSplitPath<
-	SP extends SplitPathInsideLibrary,
+	SP extends AnySplitPathInsideLibrary,
 >(
 	sp: SP,
 	codecs: Codecs,
@@ -73,7 +73,7 @@ const tryMakeCanonicalSplitPathToDestination = <
 		return r as Result<CanonicalSplitPathToDestination<E>, string>;
 	}
 
-	const sp = extractSplitPathToDestination(ev) as SplitPathInsideLibrary;
+	const sp = extractSplitPathToDestination(ev) as AnySplitPathInsideLibrary;
 	const { policy, intent } = inferPolicyAndIntent(
 		ev as MaterializedNodeEvent,
 		codecs,
@@ -109,7 +109,7 @@ function extractDuplicateMarker(basename: string): {
 }
 
 export const tryCanonicalizeSplitPathToDestination = (
-	sp: SplitPathInsideLibrary,
+	sp: AnySplitPathInsideLibrary,
 	policy: ChangePolicy,
 	intent: RenameIntent | undefined, // undefined = not rename
 	codecs: Codecs,
@@ -178,7 +178,7 @@ export const tryCanonicalizeSplitPathToDestination = (
 
 	// Helper: finalize by rebuilding canonical separated+basename using codec
 	const finalize = (
-		next: SplitPathInsideLibrary,
+		next: AnySplitPathInsideLibrary,
 	): Result<CanonicalSplitPathInsideLibrary, string> => {
 		return adaptCodecResult(
 			codecs.canonicalSplitPath.splitPathInsideLibraryToCanonical(next),

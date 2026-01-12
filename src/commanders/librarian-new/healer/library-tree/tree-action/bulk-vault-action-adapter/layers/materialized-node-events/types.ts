@@ -6,7 +6,7 @@ import {
 } from "../../../../../../../../managers/obsidian/vault-action-manager/types/literals";
 import type { Prettify } from "../../../../../../../../types/helpers";
 import type {
-	SplitPathInsideLibrary,
+	AnySplitPathInsideLibrary,
 	SplitPathToFileInsideLibrary,
 	SplitPathToFolderInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
@@ -177,5 +177,5 @@ export type TreeNodeLocatorForEvent<E extends MaterializedNodeEvent> =
 	LocatorForObserved<TargetObservedSplitPath<E>>;
 
 export type TreeNodeLocatorForLibraryScopedSplitPath<
-	SP extends SplitPathInsideLibrary,
+	SP extends AnySplitPathInsideLibrary,
 > = LocatorForObserved<SP>;
