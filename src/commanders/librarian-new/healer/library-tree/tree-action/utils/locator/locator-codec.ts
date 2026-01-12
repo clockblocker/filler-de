@@ -110,14 +110,14 @@ export function makeCanonicalSplitPathInsideLibraryFromLocator(
 		nodeNameFromSectionSegmentId,
 	);
 
-	const { coreName, targetType, extension } = parseSegmentIdTrusted(
+	const { coreName, targetKind, extension } = parseSegmentIdTrusted(
 		loc.segmentId,
 	);
 
 	const canonicalRes = tryBuildCanonicalSeparatedSuffixedBasename({
 		basename: coreName,
 		kind:
-			targetType === TreeNodeKind.Section
+			targetKind === TreeNodeKind.Section
 				? SplitPathKind.Folder
 				: SplitPathKind.File,
 		pathParts,
@@ -129,7 +129,7 @@ export function makeCanonicalSplitPathInsideLibraryFromLocator(
 	const suffixParts =
 		canonicalRes.value.separatedSuffixedBasename.suffixParts;
 
-	switch (targetType) {
+	switch (targetKind) {
 		case TreeNodeKind.Section: {
 			return {
 				kind: SplitPathKind.Folder,
@@ -168,11 +168,11 @@ function parseSegmentIdTrusted(id: TreeNodeSegmentId): {
 	targetKind: TreeNodeKind;
 	extension?: string;
 } {
-	const [coreName, targetType, extension] = id.split(NodeSegmentIdSeparator);
+	const [coreName, targetKind, extension] = id.split(NodeSegmentIdSeparator);
 
 	return {
 		coreName: coreName as NodeName,
 		extension,
-		targetKind: targetType as TreeNodeKind,
+		targetKind: targetKind as TreeNodeKind,
 	};
 }

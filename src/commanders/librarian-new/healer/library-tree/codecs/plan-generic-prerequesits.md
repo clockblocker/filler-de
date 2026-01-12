@@ -224,7 +224,7 @@ private buildCanonicalLeafSplitPath(
 ): SplitPathToMdFileInsideLibrary | SplitPathToFileInsideLibrary {
   // ... manual extraction logic ...
   
-  if (locator.targetType === TreeNodeKind.Scroll) {
+  if (locator.targetKind === TreeNodeKind.Scroll) {
     return {
       basename,
       extension: "md",
@@ -264,7 +264,7 @@ function buildCanonicalSplitPath(
   const nodeName = this.extractNodeNameFromLeafSegmentId(locator.segmentId);
   const basename = makeJoinedSuffixedBasename({ coreName: nodeName, suffixParts });
   
-  if (locator.targetType === TreeNodeKind.Scroll) {
+  if (locator.targetKind === TreeNodeKind.Scroll) {
     return {
       basename,
       extension: "md",
@@ -323,7 +323,7 @@ makeCanonicalSplitPathInsideLibraryFromLocator(
   loc: TreeNodeLocator,
 ): CanonicalSplitPathInsideLibrary {
   // Manual switch statement with type assertions
-  switch (loc.targetType) {
+  switch (loc.targetKind) {
     case TreeNodeKind.Section: return { /* ... */ } as CanonicalSplitPathToFolderInsideLibrary;
     // ...
   }
@@ -424,24 +424,24 @@ None expected - this is additive. Existing code can continue using manual mappin
 ## Implementation Checklist
 
 ### Phase 0: Renaming
-- [ ] Rename `TreeNodeType` → `TreeNodeKind` in `tree-node/types/atoms.ts`
-- [ ] Rename `SplitPathType` → `SplitPathKind` in `vault-action-manager/types/split-path.ts`
-- [ ] Update all imports and usages across codebase
-- [ ] Update variable / obj key names to be consistent. ie: "targetKind:" -> "targetKind:"
-- [ ] Verify no breaking changes (types are structurally compatible)
+- [x] Rename `TreeNodeType` → `TreeNodeKind` in `tree-node/types/atoms.ts`
+- [x] Rename `SplitPathType` → `SplitPathKind` in `vault-action-manager/types/split-path.ts`
+- [x] Update all imports and usages across codebase
+- [x] Update variable / obj key names to be consistent. ie: "targetKind:" -> "targetKind:"
+- [x] Verify no breaking changes (types are structurally compatible)
 
 ### Phase 1: Type Mappings
-- [ ] Create `codecs/types/type-mappings.ts` with type-level mappings
-- [ ] Test conditional type syntax (`typeof EnumValue` vs `EnumValue`) - use better one
-- [ ] Implement `CorrespondingTreeNodeKind<SplitPathKind>` and `CorrespondingSplitPathKind<TreeNodeKind>`
-- [ ] Create helper types:
-  - [ ] `SplitPathForTreeNodeKind<T>`
-  - [ ] `TreeNodeKindForSplitPath<T>`
-  - [ ] `NodeLocatorOf<NK>`
-  - [ ] `SplitPathInsideLibrary<SK>`
-  - [ ] `CanonicalSplitPathInsideLibrary<SK>`
-  - [ ] `SegmentIdComponents<NK>`
-- [ ] Add type-level tests for exhaustiveness
-- [ ] Add round-trip tests for bidirectional mappings
-- [ ] Document usage examples in JSDoc comments
-- [ ] Update codec APIs in `plan-impl.md` to use generic types
+- [x] Create `codecs/types/type-mappings.ts` with type-level mappings
+- [x] Test conditional type syntax (`typeof EnumValue` vs `EnumValue`) - use better one
+- [x] Implement `CorrespondingTreeNodeKind<SplitPathKind>` and `CorrespondingSplitPathKind<TreeNodeKind>`
+- [x] Create helper types:
+  - [x] `SplitPathForTreeNodeKind<T>`
+  - [x] `TreeNodeKindForSplitPath<T>`
+  - [x] `NodeLocatorOf<NK>`
+  - [x] `SplitPathInsideLibrary<SK>`
+  - [x] `CanonicalSplitPathInsideLibrary<SK>`
+  - [x] `SegmentIdComponents<NK>`
+- [x] Add type-level tests for exhaustiveness
+- [x] Add round-trip tests for bidirectional mappings
+- [x] Document usage examples in JSDoc comments
+- [x] Update codec APIs in `plan-impl.md` to use generic types
