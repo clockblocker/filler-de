@@ -6,3 +6,5 @@ export type {
 	CanonicalSplitPathToFolderInsideLibrary,
 	CanonicalSplitPathToMdFileInsideLibrary,
 } from "./types";
+// Re-export SeparatedSuffixedBasename for adapter layer (suffix is internal)
+export type { SeparatedSuffixedBasename } from "../internal/suffix/types";

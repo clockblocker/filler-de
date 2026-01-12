@@ -1,12 +1,13 @@
 import { VaultEventKind } from "../../../../../../../../../../managers/obsidian/vault-action-manager";
+import type { CodecRules } from "../../../../codecs/rules";
 import type { DescopedEvent } from "../../types/generics";
-
 import type { LibraryScopedVaultEvent } from "../../types/scoped-event";
 import { Scope } from "../../types/scoped-event";
 import { makeVaultScopedSplitPath } from "../split-path-inside-the-library";
 
 export function makeEventVaultScoped(
 	event: LibraryScopedVaultEvent,
+	rules: CodecRules,
 ): DescopedEvent<LibraryScopedVaultEvent> {
 	const { scope, ...rest } = event;
 	if (scope === Scope.Outside) return rest;
@@ -16,7 +17,7 @@ export function makeEventVaultScoped(
 		case VaultEventKind.FileDeleted: {
 			return {
 				kind: event.kind,
-				splitPath: makeVaultScopedSplitPath(event.splitPath),
+				splitPath: makeVaultScopedSplitPath(event.splitPath, rules),
 			};
 		}
 
@@ -24,7 +25,7 @@ export function makeEventVaultScoped(
 		case VaultEventKind.FolderDeleted: {
 			return {
 				kind: event.kind,
-				splitPath: makeVaultScopedSplitPath(event.splitPath),
+				splitPath: makeVaultScopedSplitPath(event.splitPath, rules),
 			};
 		}
 

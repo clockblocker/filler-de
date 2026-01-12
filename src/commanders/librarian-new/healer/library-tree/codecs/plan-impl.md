@@ -612,17 +612,40 @@ The `bulk-vault-action-adapter` layer has two types of codecs:
 
 **Goal**: Try to use codecs in `src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/`
 
-**Status**: ⏳ PENDING - Ready to start after Phase 1 completion
+**Status**: 🚧 IN PROGRESS - Foundation complete, adapter layer migration in progress
 
 **Process**:
-- Identify all codec usage points in adapter layer
-- Create codec instance with rules from parsed settings (injected from Librarian)
-- Attempt to replace imports from `utils/` with `codecs/` factory
-- **Update `library-scope/codecs/`** to use codec rules instead of `getParsedUserSettings()` directly
-- **Document missing methods** - functions needed for adapter layer
-- **Raise problems** - scoping issues, conversion gaps, error handling needs
-- **Add missing methods** to appropriate codec modules
-- **Iterate** until adapter layer can fully use codec API
+- ✅ Identify all codec usage points in adapter layer
+- ✅ Create codec instance with rules from parsed settings (injected from Librarian)
+- 🚧 Attempt to replace imports from `utils/` with `codecs/` factory
+- ✅ **Update `library-scope/codecs/`** to use codec rules instead of `getParsedUserSettings()` directly
+- ✅ **Document missing methods** - functions needed for adapter layer
+- ✅ **Raise problems** - scoping issues, conversion gaps, error handling needs
+- ✅ **Add missing methods** to appropriate codec modules (suffix wrappers added to canonicalSplitPath)
+- 🚧 **Iterate** until adapter layer can fully use codec API
+
+**Completed Work**:
+- ✅ Added suffix wrapper functions to `canonicalSplitPath` codecs (exposes internal suffix via `parseSeparatedSuffix`, `serializeSeparatedSuffix`, `suffixPartsToPathParts`, `pathPartsWithRootToSuffixParts`, `pathPartsToSuffixParts`)
+- ✅ Updated `CodecRules` to include `libraryRootPathParts` (needed for nested library roots)
+- ✅ Updated all `library-scope/codecs/` functions to accept `CodecRules` parameter instead of calling `getParsedUserSettings()` directly
+- ✅ Updated `buildTreeActions` to accept `Codecs` and `CodecRules` parameters
+- ✅ Created temporary string adapters in `error-adapters.ts` for migration (converts `CodecError` → `string` for backward compatibility)
+- ✅ Updated `healingActionToVaultAction` to accept `CodecRules` parameter
+
+**Remaining Work**:
+- 🚧 Update `translateMaterializedEvents` to accept `codecs` parameter and pass to translators
+- 🚧 Update `locator.ts` to use new codec API (replace `tryParseCanonicalSplitPathInsideLibrary`, `makeLocatorFromCanonicalSplitPathInsideLibrary`, suffix utils)
+- 🚧 Update `infer-intent.ts` to use new codec API (replace suffix utils)
+- 🚧 Update `translate-material-events.ts` to use new codec API (replace `tryParseAsSeparatedSuffixedBasename`)
+- 🚧 Update `tryCanonicalizeSplitPathToDestination` in `locator.ts` to use new codec API
+- 🚧 Update Librarian to create codecs in `init()` and pass to `buildTreeActions` and `healingActionsToVaultActions`
+
+**Notes for Next Developer**:
+- All library-scope codecs now require `CodecRules` as parameter - update all call sites
+- Suffix functions are exposed via `canonicalSplitPath` codecs (not directly from internal suffix module)
+- Use `adaptCodecResult()` from `error-adapters.ts` to convert `Result<T, CodecError>` → `Result<T, string>` during migration
+- `buildTreeActions` signature changed: `(bulk, codecs, rules)` - update Librarian call site
+- `healingActionsToVaultActions` now requires `rules` parameter - update Librarian call sites
 
 **Expected findings**:
 - May need additional locator utilities
@@ -876,14 +899,20 @@ Once all layers are tested and codec API is complete:
 - [ ] Replace call sites to use adapter (Phase 3 - integration testing)
 - [ ] Document any missing utilities for TreeNode construction (if needed during Phase 3)
 
-### Phase 3: Integration Testing - bulk-vault-action-adapter Layer ⏳ PENDING
-- [ ] Identify codec usage points in `bulk-vault-action-adapter/` layer
-- [ ] Attempt to replace imports from `utils/` with `codecs/`
-- [ ] **Document missing methods** - adapter-specific needs
-- [ ] **Raise problems** - scoping issues, conversion gaps, error handling needs
-- [ ] Add missing methods to appropriate codec modules
-- [ ] Test integration with existing `library-scope/codecs/`
-- [ ] Iterate until adapter layer can fully use codec API
+### Phase 3: Integration Testing - bulk-vault-action-adapter Layer 🚧 IN PROGRESS
+- [x] Identify codec usage points in `bulk-vault-action-adapter/` layer
+- [x] Attempt to replace imports from `utils/` with `codecs/` (foundation complete, migration in progress)
+- [x] **Document missing methods** - adapter-specific needs (suffix wrappers added)
+- [x] **Raise problems** - scoping issues, conversion gaps, error handling needs (resolved: suffix exposed via canonicalSplitPath, rules threaded through)
+- [x] Add missing methods to appropriate codec modules (suffix wrappers added to canonicalSplitPath)
+- [x] Test integration with existing `library-scope/codecs/` (updated to use CodecRules)
+- [ ] Iterate until adapter layer can fully use codec API (remaining: update translate-material-event layer functions)
+
+**Migration Status**:
+- ✅ Foundation: Codec injection points established, rules threaded through library-scope layer
+- ✅ Error adapters: Temporary string adapters created for backward compatibility
+- 🚧 Adapter functions: Need to update `locator.ts`, `infer-intent.ts`, `translate-material-events.ts` to use new API
+- 🚧 Librarian integration: Need to create codecs in `init()` and pass to adapter functions
 
 ### Phase 4: Integration Testing - tree Layer ⏳ PENDING
 - [ ] Replace `extractNodeNameFromSegmentId` with segment ID codec in `tree.ts`

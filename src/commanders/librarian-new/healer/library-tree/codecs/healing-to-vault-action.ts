@@ -8,8 +8,12 @@ import {
 } from "../../../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { makeVaultScopedSplitPath } from "../tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
 import type { HealingAction } from "../types/healing-action";
+import type { CodecRules } from "./rules";
 
-export function healingActionToVaultAction(action: HealingAction): VaultAction {
+export function healingActionToVaultAction(
+	action: HealingAction,
+	rules: CodecRules,
+): VaultAction {
 	switch (action.kind) {
 		case "CreateFolder":
 			return {
@@ -17,6 +21,7 @@ export function healingActionToVaultAction(action: HealingAction): VaultAction {
 				payload: {
 					splitPath: makeVaultScopedSplitPath(
 						action.payload.splitPath,
+						rules,
 					),
 				},
 			};
@@ -50,6 +55,7 @@ export function healingActionToVaultAction(action: HealingAction): VaultAction {
 				payload: {
 					splitPath: makeVaultScopedSplitPath(
 						action.payload.splitPath,
+						rules,
 					),
 				},
 			};
@@ -58,6 +64,7 @@ export function healingActionToVaultAction(action: HealingAction): VaultAction {
 
 export function healingActionsToVaultActions(
 	actions: HealingAction[],
+	rules: CodecRules,
 ): VaultAction[] {
-	return actions.map(healingActionToVaultAction);
+	return actions.map((action) => healingActionToVaultAction(action, rules));
 }

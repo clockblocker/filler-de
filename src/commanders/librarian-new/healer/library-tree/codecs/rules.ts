@@ -9,6 +9,8 @@ export type CodecRules = {
 	suffixDelimiter: string;
 	/** Library root name (from splitPathToLibraryRoot.basename) */
 	libraryRootName: string;
+	/** Full library root path parts (from splitPathToLibraryRoot.pathParts) */
+	libraryRootPathParts: string[];
 };
 
 /**
@@ -21,5 +23,6 @@ export function makeCodecRulesFromSettings(
 	return {
 		suffixDelimiter: settings.suffixDelimiter,
 		libraryRootName: settings.splitPathToLibraryRoot.basename,
+		libraryRootPathParts: settings.splitPathToLibraryRoot.pathParts,
 	};
 }

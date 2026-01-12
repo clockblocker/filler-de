@@ -1,6 +1,6 @@
 import { err, ok, type Result } from "neverthrow";
-import { getParsedUserSettings } from "../../../../../../../../../global-state/global-state";
 import type { AnySplitPath } from "../../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import type { CodecRules } from "../../../../codecs/rules";
 import type { DescopedSplitPath, EnscopedSplitPath } from "../types/generics";
 import type { SplitPathInsideLibrary } from "../types/inside-library-split-paths";
 
@@ -32,10 +32,12 @@ import type { SplitPathInsideLibrary } from "../types/inside-library-split-paths
 
 export function tryParseAsInsideLibrarySplitPath<SP extends AnySplitPath>(
 	splitPath: SP,
+	rules: CodecRules,
 ): Result<DescopedSplitPath<SP>, string> {
-	const { splitPathToLibraryRoot: libraryRoot } = getParsedUserSettings();
-
-	const libraryPrefix = [...libraryRoot.pathParts, libraryRoot.basename]; // full anchor
+	const libraryPrefix = [
+		...rules.libraryRootPathParts,
+		rules.libraryRootName,
+	]; // full anchor
 	const full = splitPath.pathParts;
 
 	if (full.length < libraryPrefix.length) return err("OutsideLibrary");
@@ -45,7 +47,7 @@ export function tryParseAsInsideLibrarySplitPath<SP extends AnySplitPath>(
 	}
 
 	// keep "Library" as first segment => slice only the *pre*-Library prefix
-	const keepFrom = libraryRoot.pathParts.length;
+	const keepFrom = rules.libraryRootPathParts.length;
 
 	return ok({
 		...splitPath,
@@ -55,11 +57,10 @@ export function tryParseAsInsideLibrarySplitPath<SP extends AnySplitPath>(
 
 export function makeVaultScopedSplitPath<SPL extends SplitPathInsideLibrary>(
 	splitPath: SPL,
+	rules: CodecRules,
 ): EnscopedSplitPath<SPL> {
-	const { splitPathToLibraryRoot: libraryRoot } = getParsedUserSettings();
-
 	return {
 		...splitPath,
-		pathParts: [...libraryRoot.pathParts, ...splitPath.pathParts],
+		pathParts: [...rules.libraryRootPathParts, ...splitPath.pathParts],
 	} as EnscopedSplitPath<SPL>;
 }

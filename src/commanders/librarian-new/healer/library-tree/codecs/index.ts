@@ -67,6 +67,7 @@ export type {
 	CanonicalSplitPathToFileInsideLibrary,
 	CanonicalSplitPathToFolderInsideLibrary,
 	CanonicalSplitPathToMdFileInsideLibrary,
+	SeparatedSuffixedBasename,
 } from "./canonical-split-path";
 export type {
 	TreeNodeLocator,

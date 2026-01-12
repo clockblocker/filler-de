@@ -1,4 +1,5 @@
 import type { BulkVaultEvent } from "../../../../../../../../../managers/obsidian/vault-action-manager";
+import type { CodecRules } from "../../../codecs/rules";
 import type { LibraryScopedBulkVaultEvent } from "../types/scoped-event";
 import { makeEventLibraryScoped } from "./events/make-event-libray-scoped";
 
@@ -22,8 +23,9 @@ import { makeEventLibraryScoped } from "./events/make-event-libray-scoped";
  */
 export const makeLibraryScopedBulkVaultEvent = (
 	bulk: BulkVaultEvent,
+	rules: CodecRules,
 ): LibraryScopedBulkVaultEvent => ({
 	...bulk,
-	events: bulk.events.map(makeEventLibraryScoped),
-	roots: bulk.roots.map(makeEventLibraryScoped),
+	events: bulk.events.map((ev) => makeEventLibraryScoped(ev, rules)),
+	roots: bulk.roots.map((ev) => makeEventLibraryScoped(ev, rules)),
 });

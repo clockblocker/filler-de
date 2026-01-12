@@ -1,4 +1,5 @@
 import type { BulkVaultEvent } from "../../../../../../managers/obsidian/vault-action-manager";
+import type { CodecRules, Codecs } from "../../codecs";
 import type { TreeAction } from "../types/tree-action";
 import { makeLibraryScopedBulkVaultEvent } from "./layers/library-scope";
 import { materializeScopedBulk } from "./layers/materialized-node-events";
@@ -40,8 +41,13 @@ import { translateMaterializedEvents } from "./layers/translate-material-event/t
  * //   newParent: recipe
  * //   newNodeName: pie
  */
-export const buildTreeActions = (bulk: BulkVaultEvent): TreeAction[] => {
+export const buildTreeActions = (
+	bulk: BulkVaultEvent,
+	codecs: Codecs,
+	rules: CodecRules,
+): TreeAction[] => {
 	return translateMaterializedEvents(
-		materializeScopedBulk(makeLibraryScopedBulkVaultEvent(bulk)),
+		materializeScopedBulk(makeLibraryScopedBulkVaultEvent(bulk, rules)),
+		codecs,
 	);
 };
