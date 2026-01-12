@@ -5,15 +5,16 @@ import {
 	TreeNodeKind,
 	TreeNodeKindSchema,
 } from "../../../healer/library-tree/tree-node/types/atoms";
-import {
-	NodeSegmentIdSeparator,
-	type TreeNodeSegmentId,
-} from "../../types/segment-id";
+
 import { NodeNameSchema } from "../../../types/schemas/node-name";
 import type { CodecError } from "../../errors";
 import { makeSegmentIdError, makeZodError } from "../../errors";
-import type { SegmentIdComponents } from "../../types/type-mappings";
 import type { SegmentIdOf } from "../../types";
+import type { SegmentIdComponents } from "../../types/type-mappings";
+import {
+	NodeSegmentIdSeparator,
+	type TreeNodeSegmentId,
+} from "../types/segment-id";
 
 /**
  * Serializes segment ID components to string.
@@ -26,17 +27,19 @@ export function serializeSegmentId<NK extends TreeNodeKind>(
 
 	switch (targetKind) {
 		case TreeNodeKind.Section: {
-			return `${coreName}${NodeSegmentIdSeparator}${targetKind}${NodeSegmentIdSeparator}`;
+			return `${coreName}${NodeSegmentIdSeparator}${targetKind}${NodeSegmentIdSeparator}` as SegmentIdOf<NK>;
 		}
 		case TreeNodeKind.Scroll: {
-			const { extension } =
-				components as SegmentIdComponents<TreeNodeKind.Scroll>;
-			return `${coreName}${NodeSegmentIdSeparator}${targetKind}${NodeSegmentIdSeparator}${extension}`;
+			const { extension } = components as SegmentIdComponents<
+				typeof TreeNodeKind.Scroll
+			>;
+			return `${coreName}${NodeSegmentIdSeparator}${targetKind}${NodeSegmentIdSeparator}${extension}` as SegmentIdOf<NK>;
 		}
 		case TreeNodeKind.File: {
-			const { extension } =
-				components as SegmentIdComponents<TreeNodeKind.File>;
-			return `${coreName}${NodeSegmentIdSeparator}${targetKind}${NodeSegmentIdSeparator}${extension}`;
+			const { extension } = components as SegmentIdComponents<
+				typeof TreeNodeKind.File
+			>;
+			return `${coreName}${NodeSegmentIdSeparator}${targetKind}${NodeSegmentIdSeparator}${extension}` as SegmentIdOf<NK>;
 		}
 	}
 }

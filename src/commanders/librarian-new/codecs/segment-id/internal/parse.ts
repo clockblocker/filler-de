@@ -5,17 +5,16 @@ import {
 	TreeNodeKind,
 	TreeNodeKindSchema,
 } from "../../../healer/library-tree/tree-node/types/atoms";
-import {
-	type FileNodeSegmentId,
-	NodeSegmentIdSeparator,
-	type ScrollNodeSegmentId,
-	type SectionNodeSegmentId,
-	type TreeNodeSegmentId,
-} from "../../types/segment-id";
+
 import { NodeNameSchema } from "../../../types/schemas/node-name";
 import type { CodecError } from "../../errors";
 import { makeSegmentIdError, makeZodError } from "../../errors";
 import type { SegmentIdComponents } from "../../types/type-mappings";
+import type { SegmentIdOf } from "../types";
+import {
+	NodeSegmentIdSeparator,
+	type TreeNodeSegmentId,
+} from "../types/segment-id";
 
 /**
  * Parses segment ID into components with validation.
@@ -173,19 +172,19 @@ export function parseSegmentId<NK extends TreeNodeKind>(
  * Type-specific convenience parsers for better type inference.
  */
 export function parseSectionSegmentId(
-	id: SegmentIdOf<TreeNodeKind.Section>,
-): Result<SegmentIdComponents<TreeNodeKind.Section>, CodecError> {
-	return parseSegmentId<TreeNodeKind.Section>(id);
+	id: SegmentIdOf<typeof TreeNodeKind.Section>,
+): Result<SegmentIdComponents<typeof TreeNodeKind.Section>, CodecError> {
+	return parseSegmentId<typeof TreeNodeKind.Section>(id);
 }
 
 export function parseScrollSegmentId(
-	id: SegmentIdOf<TreeNodeKind.Scroll>,
-): Result<SegmentIdComponents<TreeNodeKind.Scroll>, CodecError> {
-	return parseSegmentId<TreeNodeKind.Scroll>(id);
+	id: SegmentIdOf<typeof TreeNodeKind.Scroll>,
+): Result<SegmentIdComponents<typeof TreeNodeKind.Scroll>, CodecError> {
+	return parseSegmentId<typeof TreeNodeKind.Scroll>(id);
 }
 
 export function parseFileSegmentId(
-	id: SegmentIdOf<TreeNodeKind.File>,
-): Result<SegmentIdComponents<TreeNodeKind.File>, CodecError> {
-	return parseSegmentId<TreeNodeKind.File>(id);
+	id: SegmentIdOf<typeof TreeNodeKind.File>,
+): Result<SegmentIdComponents<typeof TreeNodeKind.File>, CodecError> {
+	return parseSegmentId<typeof TreeNodeKind.File>(id);
 }

@@ -3,18 +3,16 @@ export { makeSegmentIdCodecs } from "./make";
 export type { AnySegmentId, SegmentIdComponents, SegmentIdOf } from "./types";
 export type {
 	FileNodeSegmentId,
-	NodeSegmentIdSeparator,
 	ScrollNodeSegmentId,
 	SectionNodeSegmentId,
 	SectionNodeSegmentIdChain,
 	TreeNodeSegmentId,
 } from "./types/segment-id";
 export {
-	NodeSegmentIdSeparator,
+	FileNodeSegmentIdSchema,
 	NodeSegmentIdSeparatorSchema,
 	ScrollNodeSegmentIdSchema,
-	FileNodeSegmentIdSchema,
+	SectionNodeSegmentIdChainSchema,
 	SectionNodeSegmentIdSchema,
 	TreeNodeSegmentIdSchema,
-	SectionNodeSegmentIdChainSchema,
 } from "./types/segment-id";
