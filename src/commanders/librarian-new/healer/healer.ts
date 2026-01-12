@@ -10,7 +10,7 @@ import type {
 	SplitPathInsideLibrary,
 	SplitPathToFileInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
-} from "../codecs/split-path-inside-library/types";
+} from "../codecs/split-path-inside-library/types/generic-split-path-inside-library-of";
 import type { NodeName } from "../types/schemas/node-name";
 import type { TreeAccessor } from "./library-tree/codex/codex-impact-to-actions";
 import {

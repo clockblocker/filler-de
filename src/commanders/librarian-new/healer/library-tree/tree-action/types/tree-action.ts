@@ -4,20 +4,20 @@ import {
 	DELETE,
 } from "../../../../../../managers/obsidian/vault-action-manager/types/literals";
 import type { Prettify } from "../../../../../../types/helpers";
-import { CHANGE_STATUS, MOVE, RENAME } from "../../../../types/consts/literals";
-import type { NodeName } from "../../../../types/schemas/node-name";
-import type { TreeNodeStatus } from "../../tree-node/types/atoms";
-import type { FileNode, ScrollNode } from "../../tree-node/types/tree-node";
-import type {
-	SplitPathToFileInsideLibrary,
-	SplitPathToFolderInsideLibrary,
-	SplitPathToMdFileInsideLibrary,
-} from "../../../../codecs/split-path-inside-library/types";
 import type {
 	FileNodeLocator,
 	ScrollNodeLocator,
 	SectionNodeLocator,
 } from "../../../../codecs/locator/types";
+import type {
+	SplitPathToFileInsideLibrary,
+	SplitPathToFolderInsideLibrary,
+	SplitPathToMdFileInsideLibrary,
+} from "../../../../codecs/split-path-inside-library/types/generic-split-path-inside-library-of";
+import { CHANGE_STATUS, MOVE, RENAME } from "../../../../types/consts/literals";
+import type { NodeName } from "../../../../types/schemas/node-name";
+import type { TreeNodeStatus } from "../../tree-node/types/atoms";
+import type { FileNode, ScrollNode } from "../../tree-node/types/tree-node";
 
 export type TreeAction = Prettify<
 	| CreateTreeLeafAction

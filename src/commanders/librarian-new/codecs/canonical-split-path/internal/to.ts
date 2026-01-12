@@ -4,11 +4,11 @@ import { NodeNameSchema } from "../../../types/schemas/node-name";
 import type { CodecError } from "../../errors";
 import { makeSplitPathError, makeZodError } from "../../errors";
 import type { SuffixCodecs } from "../../internal/suffix";
-import type { SplitPathInsideLibrary } from "../../split-path-inside-library/types";
+import type { SplitPathInsideLibrary } from "../../split-path-inside-library/types/generic-split-path-inside-library-of";
 import type {
 	CanonicalSeparatedSuffixedBasename,
 	CanonicalSplitPathInsideLibrary,
-} from "../types";
+} from "../types/canonical-split-path";
 
 /**
  * Extracts duplicate marker (e.g., " 1", " 2") from end of basename.

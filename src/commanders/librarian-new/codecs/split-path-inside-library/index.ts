@@ -4,10 +4,11 @@ export type { SplitPathInsideLibraryCodecs } from "./make";
 export { makeSplitPathInsideLibraryCodecs } from "./make";
 export type {
 	SplitPathInsideLibrary,
+	SplitPathInsideLibraryOf,
 	SplitPathToFileInsideLibrary,
 	SplitPathToFolderInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
-} from "./types";
+} from "./types/split-path-inside-library.ts";
 
 /**
  * Candidate type for type guard narrowing.

@@ -10,7 +10,6 @@ export type {
 	SegmentIdComponents,
 	SegmentIdOf,
 	SplitPathForTreeNodeKind,
-	SplitPathInsideLibraryOf,
 	TreeNodeKindForSplitPath,
 } from "./type-mappings";
 

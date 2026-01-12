@@ -5,7 +5,7 @@ import type {
 	CanonicalSeparatedSuffixedBasename,
 	CanonicalSplitPathInsideLibrary,
 } from "../../../../../../codecs/canonical-split-path/types";
-import type { SplitPathInsideLibrary } from "../../../../../../codecs/split-path-inside-library/types";
+import type { SplitPathInsideLibrary } from "../../../../../../codecs/split-path-inside-library/types/generic-split-path-inside-library-of";
 import {
 	type NodeName,
 	NodeNameSchema,

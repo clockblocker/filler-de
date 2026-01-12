@@ -23,7 +23,7 @@ import {
 import { healingActionsToVaultActions } from "./codecs/healing-to-vault-action";
 import type { CanonicalSplitPathToMdFileInsideLibrary } from "./codecs/locator";
 import type { ScrollNodeLocator } from "./codecs/locator/types";
-import type { SplitPathInsideLibrary } from "./codecs/split-path-inside-library/types";
+import type { SplitPathInsideLibrary } from "./codecs/split-path-inside-library/types/generic-split-path-inside-library-of";
 import { Healer } from "./healer/healer";
 import {
 	CODEX_CORE_NAME,

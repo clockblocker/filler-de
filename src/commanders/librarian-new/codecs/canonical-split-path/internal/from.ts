@@ -1,6 +1,6 @@
 import type { SuffixCodecs } from "../../internal/suffix";
-import type { SplitPathInsideLibrary } from "../../split-path-inside-library/types";
-import type { CanonicalSplitPathInsideLibrary } from "../types";
+import type { SplitPathInsideLibrary } from "../../split-path-inside-library/types/generic-split-path-inside-library-of";
+import type { CanonicalSplitPathInsideLibrary } from "../types/canonical-split-path";
 
 /**
  * Converts canonical split path to regular split path inside library.

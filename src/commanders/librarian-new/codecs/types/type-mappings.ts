@@ -6,12 +6,10 @@ import type {
 	FileNodeSegmentId,
 	ScrollNodeSegmentId,
 	SectionNodeSegmentId,
-	TreeNodeSegmentId,
 } from "../../healer/library-tree/tree-node/types/node-segment-id";
 import type { NodeName } from "../../types/schemas/node-name";
-import type { CanonicalSplitPathInsideLibrary } from "../canonical-split-path/types";
+import type { CanonicalSplitPathInsideLibrary } from "../canonical-split-path/types/canonical-split-path";
 import type { TreeNodeLocator } from "../locator/types";
-import type { SplitPathInsideLibrary } from "../split-path-inside-library/types";
 
 export const TreeNodeKindToSplitPathKind = {
 	[TreeNodeKind.Section]: SplitPathKind.Folder,
@@ -40,11 +38,6 @@ export type TreeNodeKindForSplitPath<T extends SplitPathKind> =
 export type NodeLocatorOf<NK extends TreeNodeKind> = Extract<
 	TreeNodeLocator,
 	{ targetKind: NK }
->;
-
-export type SplitPathInsideLibraryOf<SK extends SplitPathKind> = Extract<
-	SplitPathInsideLibrary,
-	{ kind: SK }
 >;
 
 export type CanonicalSplitPathInsideLibraryOf<SK extends SplitPathKind> =

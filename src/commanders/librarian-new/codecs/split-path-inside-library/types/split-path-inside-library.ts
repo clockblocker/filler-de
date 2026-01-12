@@ -21,3 +21,8 @@ export type SplitPathInsideLibrary =
 	| SplitPathToFolderInsideLibrary
 	| SplitPathToFileInsideLibrary
 	| SplitPathToMdFileInsideLibrary;
+
+export type SplitPathInsideLibraryOf<SK extends SplitPathKind> = Extract<
+	SplitPathInsideLibrary,
+	{ kind: SK }
+>;

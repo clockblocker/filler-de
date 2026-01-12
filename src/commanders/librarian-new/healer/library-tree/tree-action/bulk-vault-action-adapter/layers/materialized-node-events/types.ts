@@ -5,23 +5,23 @@ import {
 	RENAME,
 } from "../../../../../../../../managers/obsidian/vault-action-manager/types/literals";
 import type { Prettify } from "../../../../../../../../types/helpers";
-import type { TreeNodeKind } from "../../../../tree-node/types/atoms";
-import type {
-	FileNodeLocator,
-	ScrollNodeLocator,
-	SectionNodeLocator,
-} from "../../../../../../codecs/locator/types";
 import type {
 	CanonicalSplitPathToFileInsideLibrary,
 	CanonicalSplitPathToFolderInsideLibrary,
 	CanonicalSplitPathToMdFileInsideLibrary,
 } from "../../../../../../codecs/canonical-split-path/types";
 import type {
+	FileNodeLocator,
+	ScrollNodeLocator,
+	SectionNodeLocator,
+} from "../../../../../../codecs/locator/types";
+import type {
 	SplitPathInsideLibrary,
 	SplitPathToFileInsideLibrary,
 	SplitPathToFolderInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
-} from "../../../../../../codecs/split-path-inside-library/types";
+} from "../../../../../../codecs/split-path-inside-library/types/generic-split-path-inside-library-of";
+import type { TreeNodeKind } from "../../../../tree-node/types/atoms";
 
 /**
  * MaterializedNodeEvent represents a **single-node, inside-Library event**
