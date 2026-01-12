@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import {
-	makeCodecs,
-	makeCodecRulesFromSettings,
-	type Codecs,
 	type CodecRules,
+	type Codecs,
+	makeCodecRulesFromSettings,
+	makeCodecs,
 } from "../../../../../../../../../../src/commanders/librarian-new/healer/library-tree/codecs";
 import { MaterializedEventKind } from "../../../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/materialized-node-events/types";
 import { inferRenameIntent } from "../../../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/intent/infer-intent";
@@ -121,6 +121,7 @@ describe("inferRenameIntent", () => {
 		it("suffix changed (child1 -> child2)", () => {
 			const result = inferRenameIntent(
 				{
+				codecs,
 				from: {
 					basename: "Note-child1-parent-Test",
 					extension: "md",
@@ -134,7 +135,6 @@ describe("inferRenameIntent", () => {
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "Test", "parent", "child1"],
 				},
-				codecs,
 			);
 			expect(result).toBe(RenameIntent.Move);
 		});
@@ -142,6 +142,7 @@ describe("inferRenameIntent", () => {
 		it("suffix shortened (child1-parent-Test -> Test)", () => {
 			const result = inferRenameIntent(
 				{
+				codecs,
 				from: {
 					basename: "Note-child1-parent-Test",
 					extension: "md",
@@ -155,7 +156,6 @@ describe("inferRenameIntent", () => {
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "Test", "parent", "child1"],
 				},
-				codecs,
 			);
 			expect(result).toBe(RenameIntent.Move);
 		});
@@ -163,6 +163,7 @@ describe("inferRenameIntent", () => {
 		it("new suffix added at root", () => {
 			const result = inferRenameIntent(
 				{
+				codecs,
 				from: {
 					basename: "Note",
 					extension: "md",
@@ -175,8 +176,7 @@ describe("inferRenameIntent", () => {
 					extension: "md",
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library"],
-				},
-				codecs,
+				},}
 			);
 			expect(result).toBe(RenameIntent.Move);
 		});

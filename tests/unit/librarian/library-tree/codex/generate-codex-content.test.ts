@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { generateCodexContent } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/generate-codex-content";
 import {
+	makeCodecs,
+	makeCodecRulesFromSettings,
+} from "../../../../../src/commanders/librarian-new/healer/library-tree/codecs";
+import {
 	TreeNodeKind,
 	TreeNodeStatus,
 } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
@@ -15,9 +19,12 @@ import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
 
 let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
+let codecs: ReturnType<typeof makeCodecs>;
 
 beforeEach(() => {
 	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy();
+	const rules = makeCodecRulesFromSettings(defaultSettingsForUnitTests);
+	codecs = makeCodecs(rules);
 });
 
 afterEach(() => {
@@ -61,7 +68,7 @@ describe("generateCodexContent", () => {
 			const librarySection = section("Library");
 			const chain = [sec("Library")];
 
-			const result = generateCodexContent(librarySection, chain);
+			const result = generateCodexContent(librarySection, chain, codecs);
 
 			// Empty library: just newline
 			expect(result).toBe("\n");
@@ -74,7 +81,7 @@ describe("generateCodexContent", () => {
 			});
 			const chain = [sec("Library")];
 
-			const result = generateCodexContent(librarySection, chain);
+			const result = generateCodexContent(librarySection, chain, codecs);
 
 			// Root library has no parent backlink
 			// Scrolls at depth 0 are shown (showScrollsInCodexesForDepth: 0)
@@ -91,7 +98,7 @@ describe("generateCodexContent", () => {
 			});
 			const chain = [sec("Library")];
 
-			const result = generateCodexContent(librarySection, chain);
+			const result = generateCodexContent(librarySection, chain, codecs);
 
 			// Child section links to its codex
 			expect(result).toContain("- [ ] [[__-A|A]]");
@@ -137,7 +144,7 @@ describe("generateCodexContent", () => {
 			});
 			const chain = [sec("Library")];
 
-			const result = generateCodexContent(librarySection, chain);
+			const result = generateCodexContent(librarySection, chain, codecs);
 
 			// Files use dash, not checkbox
 			expect(result).toContain("- [[image|image]]");
@@ -157,7 +164,7 @@ describe("generateCodexContent", () => {
 			});
 			const chain = [sec("Library")];
 
-			const result = generateCodexContent(librarySection, chain);
+			const result = generateCodexContent(librarySection, chain, codecs);
 
 			// Section A
 			expect(result).toContain("- [ ] [[__-A|A]]");
@@ -178,7 +185,7 @@ describe("generateCodexContent", () => {
 			});
 			const chain = [sec("Library")];
 
-			const result = generateCodexContent(librarySection, chain);
+			const result = generateCodexContent(librarySection, chain, codecs);
 
 			// Section A shown
 			expect(result).toContain("[[__-A|A]]");
@@ -202,7 +209,7 @@ describe("generateCodexContent", () => {
 			});
 			const chain = [sec("Library")];
 
-			const result = generateCodexContent(librarySection, chain);
+			const result = generateCodexContent(librarySection, chain, codecs);
 
 			// Root scroll shown
 			expect(result).toContain("[[RootNote|RootNote]]");
@@ -223,7 +230,7 @@ describe("generateCodexContent", () => {
 			});
 			const chain = [sec("Library")];
 
-			const result = generateCodexContent(librarySection, chain);
+			const result = generateCodexContent(librarySection, chain, codecs);
 
 			// Nested scroll shown (depth 1 <= showScrollsInCodexesForDepth 1)
 			expect(result).toContain("[[NestedNote-A|NestedNote]]");
@@ -239,7 +246,7 @@ describe("generateCodexContent", () => {
 			});
 			const chain = [sec("Library")];
 
-			const result = generateCodexContent(librarySection, chain);
+			const result = generateCodexContent(librarySection, chain, codecs);
 
 			// Section A should have Done checkbox
 			expect(result).toContain("- [x] [[__-A|A]]");
@@ -254,7 +261,7 @@ describe("generateCodexContent", () => {
 			});
 			const chain = [sec("Library")];
 
-			const result = generateCodexContent(librarySection, chain);
+			const result = generateCodexContent(librarySection, chain, codecs);
 
 			// Section A should have NotStarted checkbox
 			expect(result).toContain("- [ ] [[__-A|A]]");

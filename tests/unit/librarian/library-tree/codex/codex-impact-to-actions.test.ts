@@ -5,6 +5,10 @@ import {
 } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/codex-impact-to-actions";
 import type { CodexImpact } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/compute-codex-impact";
 import {
+	makeCodecs,
+	makeCodecRulesFromSettings,
+} from "../../../../../src/commanders/librarian-new/healer/library-tree/codecs";
+import {
 	TreeNodeKind,
 	TreeNodeStatus,
 } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
@@ -17,12 +21,16 @@ import type {
 } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/tree-node";
 import type { NodeName } from "../../../../../src/commanders/librarian-new/types/schemas/node-name";
 import { SplitPathKind } from "../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
 
 let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
+let codecs: ReturnType<typeof makeCodecs>;
 
 beforeEach(() => {
 	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy();
+	const rules = makeCodecRulesFromSettings(defaultSettingsForUnitTests);
+	codecs = makeCodecs(rules);
 });
 
 afterEach(() => {
@@ -92,7 +100,7 @@ describe("codexImpactToActions", () => {
 				renamed: [],
 			};
 
-			const actions = codexImpactToActions(impact, tree);
+			const actions = codexImpactToActions(impact, tree, codecs);
 
 			expect(actions.length).toBe(2);
 			expect(actions[0]?.kind).toBe("UpsertCodex");
@@ -110,7 +118,7 @@ describe("codexImpactToActions", () => {
 				renamed: [],
 			};
 
-			const actions = codexImpactToActions(impact, tree);
+			const actions = codexImpactToActions(impact, tree, codecs);
 
 			expect(actions.length).toBe(1);
 			expect(actions[0]?.kind).toBe("UpsertCodex");
@@ -129,7 +137,7 @@ describe("codexImpactToActions", () => {
 				renamed: [],
 			};
 
-			const actions = codexImpactToActions(impact, tree);
+			const actions = codexImpactToActions(impact, tree, codecs);
 
 			// Should regenerate both Library and A (ancestors are included)
 			expect(actions.length).toBeGreaterThanOrEqual(2);
@@ -169,7 +177,7 @@ describe("codexImpactToActions", () => {
 				],
 			};
 
-			const actions = codexImpactToActions(impact, tree);
+			const actions = codexImpactToActions(impact, tree, codecs);
 
 			// Should have delete for moved codex (new location, old suffix), upsert for new location, and upsert for parent (Library)
 			expect(actions.length).toBeGreaterThanOrEqual(2);
@@ -207,7 +215,7 @@ describe("codexImpactToActions", () => {
 				renamed: [],
 			};
 
-			const actions = codexImpactToActions(impact, tree);
+			const actions = codexImpactToActions(impact, tree, codecs);
 
 			// DeleteCodex for A, and UpsertCodex for Library (all codexes are regenerated)
 			expect(actions.length).toBe(2);
@@ -229,7 +237,7 @@ describe("codexImpactToActions", () => {
 				renamed: [],
 			};
 
-			const actions = codexImpactToActions(impact, tree);
+			const actions = codexImpactToActions(impact, tree, codecs);
 
 			// Delete for A, and UpsertCodex for parent (Library) which is in contentChanged
 			expect(actions.length).toBe(2);
@@ -270,7 +278,7 @@ describe("codexImpactToActions", () => {
 				renamed: [],
 			};
 
-			const actions = codexImpactToActions(impact, tree);
+			const actions = codexImpactToActions(impact, tree, codecs);
 
 			// Should upsert A (the section itself) and B (descendant section of A)
 			const upsertActions = actions.filter((a) => a.kind === "UpsertCodex");

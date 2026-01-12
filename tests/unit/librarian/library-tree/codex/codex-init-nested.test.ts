@@ -69,7 +69,7 @@ describe("Codex init for nested sections", () => {
 
 		const mergedImpact = mergeCodexImpacts(impacts);
 
-		const codexActions = codexImpactToActions(mergedImpact, healer);
+		const codexActions = codexImpactToActions(mergedImpact, healer, codecs);
 
 		// Should have codexes for: Library, grandpa, father, kid
 		const createCodexPaths = codexActions

@@ -159,6 +159,7 @@ export class Librarian {
 			const codexActions = codexImpactToActions(
 				mergedImpact,
 				this.healer,
+				this.codecs!,
 			);
 			const codexVaultActions = codexActionsToVaultActions(codexActions);
 
@@ -332,7 +333,10 @@ export class Librarian {
 		const currentChain = [...parentChain, currentSegmentId];
 
 		// Compute codex path for this section
-		const codexSplitPath = computeCodexSplitPath(currentChain);
+		const codexSplitPath = computeCodexSplitPath(
+			currentChain,
+			this.codecs!,
+		);
 		const codexPath = [
 			...codexSplitPath.pathParts,
 			codexSplitPath.basename,
@@ -402,12 +406,25 @@ export class Librarian {
 		let action: TreeAction;
 
 		if (target.kind === "Scroll") {
+			// Use serializeSegmentIdUnchecked for unsafe user input (validates and returns Result)
+			const segmentIdResult =
+				this.codecs!.segmentId.serializeSegmentIdUnchecked({
+					coreName: target.nodeName,
+					extension: "md",
+					targetKind: TreeNodeKind.Scroll,
+				});
+			if (segmentIdResult.isErr()) {
+				logger.error(
+					"[Librarian] Failed to serialize scroll segment ID:",
+					segmentIdResult.error,
+				);
+				return;
+			}
 			action = {
 				actionType: "ChangeStatus",
 				newStatus,
 				targetLocator: {
-					segmentId:
-						`${target.nodeName}${NodeSegmentIdSeparator}${TreeNodeKind.Scroll}${NodeSegmentIdSeparator}md` as ScrollNodeSegmentId,
+					segmentId: segmentIdResult.value as ScrollNodeSegmentId,
 					segmentIdChainToParent: target.parentChain,
 					targetKind: TreeNodeKind.Scroll,
 				},
@@ -557,7 +574,11 @@ export class Librarian {
 
 		// 3. Then dispatch codex actions
 		const mergedImpact = mergeCodexImpacts(allCodexImpacts);
-		const codexActions = codexImpactToActions(mergedImpact, this.healer);
+		const codexActions = codexImpactToActions(
+			mergedImpact,
+			this.healer,
+			this.codecs!,
+		);
 		// Merge scroll status actions with codex actions
 		const allCodexActions: CodexAction[] = [
 			...codexActions,

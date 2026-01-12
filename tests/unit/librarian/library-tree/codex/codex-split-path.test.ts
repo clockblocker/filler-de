@@ -1,13 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { computeCodexSplitPath } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/codex-split-path";
+import {
+	makeCodecs,
+	makeCodecRulesFromSettings,
+} from "../../../../../src/commanders/librarian-new/healer/library-tree/codecs";
 import type { SectionNodeSegmentId } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/node-segment-id";
 import { SplitPathKind } from "../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
 
 let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
+let codecs: ReturnType<typeof makeCodecs>;
 
 beforeEach(() => {
 	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy();
+	const rules = makeCodecRulesFromSettings(defaultSettingsForUnitTests);
+	codecs = makeCodecs(rules);
 });
 
 afterEach(() => {
@@ -21,7 +29,7 @@ const sec = (name: string): SectionNodeSegmentId =>
 describe("computeCodexSplitPath", () => {
 	it("root library codex → Library/__-Library", () => {
 		const chain = [sec("Library")];
-		const result = computeCodexSplitPath(chain);
+		const result = computeCodexSplitPath(chain, codecs);
 
 		expect(result).toEqual({
 			basename: "__-Library",
@@ -33,7 +41,7 @@ describe("computeCodexSplitPath", () => {
 
 	it("first-level section → Library/A/__-A", () => {
 		const chain = [sec("Library"), sec("A")];
-		const result = computeCodexSplitPath(chain);
+		const result = computeCodexSplitPath(chain, codecs);
 
 		expect(result).toEqual({
 			basename: "__-A",
@@ -45,7 +53,7 @@ describe("computeCodexSplitPath", () => {
 
 	it("nested section → Library/A/B/__-B-A", () => {
 		const chain = [sec("Library"), sec("A"), sec("B")];
-		const result = computeCodexSplitPath(chain);
+		const result = computeCodexSplitPath(chain, codecs);
 
 		expect(result).toEqual({
 			basename: "__-B-A",
@@ -57,7 +65,7 @@ describe("computeCodexSplitPath", () => {
 
 	it("deeply nested → Library/A/B/C/__-C-B-A", () => {
 		const chain = [sec("Library"), sec("A"), sec("B"), sec("C")];
-		const result = computeCodexSplitPath(chain);
+		const result = computeCodexSplitPath(chain, codecs);
 
 		expect(result).toEqual({
 			basename: "__-C-B-A",
@@ -68,6 +76,6 @@ describe("computeCodexSplitPath", () => {
 	});
 
 	it("throws on empty chain", () => {
-		expect(() => computeCodexSplitPath([])).toThrow();
+		expect(() => computeCodexSplitPath([], codecs)).toThrow();
 	});
 });

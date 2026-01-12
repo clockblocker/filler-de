@@ -17,26 +17,25 @@ Create a clean, expandable API for orchestrators to work with DTOs, backed by pu
 
 1. **Segment ID parsing duplicated** in 8+ places:
 
-   - `healer.ts`: `extractNodeNameFromSegmentId`, `extractNodeNameFromLeafSegmentId`, `extractExtensionFromSegmentId`
-   - `tree.ts`: `extractNodeNameFromSegmentId`
-   - `codex-split-path.ts`: `extractNodeNameFromSegmentId`
-   - `codex-impact-to-actions.ts`: `extractNodeNameFromSegmentId`
-   - `generate-codex-content.ts`: `extractNodeNameFromSegmentId`
-   - `locator-codec.ts`: `nodeNameFromSectionSegmentId`, `parseSegmentIdTrusted`
-   - `locator-utils.ts`: `getNodeName` (throws instead of returning Result)
-   - `librarian.ts`: `extractNodeNameFromScrollSegmentId` (line 583)
+   - `healer.ts`: `extractNodeNameFromSegmentId`, `extractNodeNameFromLeafSegmentId`, `extractExtensionFromSegmentId` ✅ **RESOLVED** (Phase 4)
+   - `tree.ts`: `extractNodeNameFromSegmentId` ✅ **RESOLVED** (Phase 4)
+   - `codex-split-path.ts`: `extractNodeNameFromSegmentId` ✅ **RESOLVED** (Codex Migration)
+   - `codex-impact-to-actions.ts`: `extractNodeNameFromSegmentId` ✅ **RESOLVED** (Codex Migration)
+   - `generate-codex-content.ts`: `extractNodeNameFromSegmentId` ✅ **RESOLVED** (Codex Migration)
+   - `locator-codec.ts`: `nodeNameFromSectionSegmentId`, `parseSegmentIdTrusted` ✅ **RESOLVED** (Phase 1 - moved to codecs/locator/)
+   - `locator-utils.ts`: `getNodeName` (throws instead of returning Result) ⏳ **PENDING** (Phase 6)
+   - `librarian.ts`: `extractNodeNameFromScrollSegmentId` (line 583) ⏳ **PENDING** (Phase 5)
 
 2. **Split path building logic** duplicated in orchestrators:
 
-   - `healer.ts`: `buildCanonicalLeafSplitPath`, `buildObservedLeafSplitPath`, `buildSectionPath`
-   - `librarian.ts`: `computeScrollSplitPath` (line 593) - manually builds split path from node name + parent chain
-   - `codex-impact-to-actions.ts`: `computeScrollSplitPath` - duplicate implementation
+   - `healer.ts`: `buildCanonicalLeafSplitPath`, `buildObservedLeafSplitPath`, `buildSectionPath` ⏳ **PENDING** (Phase 6)
+   - `librarian.ts`: `computeScrollSplitPath` (line 593) - manually builds split path from node name + parent chain ⏳ **PENDING** (Phase 5)
+   - `codex-impact-to-actions.ts`: `computeScrollSplitPath` ✅ **RESOLVED** (Codex Migration - now uses codec API)
 
 3. **Suffix utilities** used directly instead of through codec API
 
-4. **Manual segment ID construction** in `librarian.ts` (line 381):
-   - String concatenation: `` `${target.nodeName}${NodeSegmentIdSeparator}${TreeNodeKind.Scroll}${NodeSegmentIdSeparator}md` ``
-   - Should use `serializeSegmentId` codec
+4. **Manual segment ID construction** in `librarian.ts` (line 410):
+   - String concatenation: `` `${target.nodeName}${NodeSegmentIdSeparator}${TreeNodeKind.Scroll}${NodeSegmentIdSeparator}md` `` ✅ **RESOLVED** (Codex Migration - now uses `serializeSegmentIdUnchecked`)
 
 5. **Locator utilities that throw** instead of returning Result:
    - `locator-utils.ts`: `getNodeName` (line 12) - throws on invalid NodeName
@@ -822,9 +821,9 @@ Once all layers are tested and codec API is complete:
 - [src/commanders/librarian-new/healer/library-tree/tree-action/utils/locator/locator-codec.ts](src/commanders/librarian-new/healer/library-tree/tree-action/utils/locator/locator-codec.ts) - Move functions to `codecs/locator/`
 - [src/commanders/librarian-new/healer/library-tree/tree-action/utils/canonical-naming/canonical-split-path-codec.ts](src/commanders/librarian-new/healer/library-tree/tree-action/utils/canonical-naming/canonical-split-path-codec.ts) - Move to `codecs/canonical-split-path/`
 - [src/commanders/librarian-new/healer/library-tree/tree-action/utils/canonical-naming/suffix-utils/core-suffix-utils.ts](src/commanders/librarian-new/healer/library-tree/tree-action/utils/canonical-naming/suffix-utils/core-suffix-utils.ts) - Move to `codecs/suffix/`
-- [src/commanders/librarian-new/healer/library-tree/codex/codex-split-path.ts](src/commanders/librarian-new/healer/library-tree/codex/codex-split-path.ts) - Use codec API
-- [src/commanders/librarian-new/healer/library-tree/codex/codex-impact-to-actions.ts](src/commanders/librarian-new/healer/library-tree/codex/codex-impact-to-actions.ts) - Use codec API
-- [src/commanders/librarian-new/healer/library-tree/codex/generate-codex-content.ts](src/commanders/librarian-new/healer/library-tree/codex/generate-codex-content.ts) - Use codec API
+- [src/commanders/librarian-new/healer/library-tree/codex/codex-split-path.ts](src/commanders/librarian-new/healer/library-tree/codex/codex-split-path.ts) ✅ **COMPLETED** - Uses `codecs.segmentId.parseSectionSegmentId`
+- [src/commanders/librarian-new/healer/library-tree/codex/codex-impact-to-actions.ts](src/commanders/librarian-new/healer/library-tree/codex/codex-impact-to-actions.ts) ✅ **COMPLETED** - Uses codec API for parsing and segment ID construction
+- [src/commanders/librarian-new/healer/library-tree/codex/generate-codex-content.ts](src/commanders/librarian-new/healer/library-tree/codex/generate-codex-content.ts) ✅ **COMPLETED** - Uses `codecs.segmentId.parseSectionSegmentId`
 - [src/commanders/librarian-new/healer/library-tree/tree-action/utils/locator/locator-utils.ts](src/commanders/librarian-new/healer/library-tree/tree-action/utils/locator/locator-utils.ts) - Replace `getNodeName` and `getParentLocator` with codec API
 - [src/commanders/librarian-new/librarian.ts](src/commanders/librarian-new/librarian.ts) - Replace private helpers with codec API
 
@@ -1023,23 +1022,82 @@ Once all layers are tested and codec API is complete:
 - Error handling: throws on invalid segment IDs (indicates bugs during tree construction)
 - Test pattern: Create codecs in test helpers using `makeCodecRulesFromSettings(defaultSettingsForUnitTests)`
 
-### Phase 5: Integration Testing - librarian Layer ⏳ PENDING
-- [x] Update Librarian to receive parsed settings and create codec instance (✅ Completed in Phase 3)
-- [ ] Replace `extractNodeNameFromScrollSegmentId` with segment ID codec in `librarian.ts`
-- [ ] Replace `computeScrollSplitPath` with codec API (partially done - uses codecs for suffix operations)
-- [ ] Replace manual segment ID construction with `segmentId.serializeSegmentId(components)` or `segmentId.serializeSegmentIdUnchecked` if inputs are unchecked
-- [ ] **Document missing methods** - librarian-specific needs
-- [ ] **Raise problems** - API ergonomics, error handling
-- [ ] Add missing methods if needed
-- [ ] Iterate until librarian works with codec API
+### Phase 5: Integration Testing - librarian Layer (Codex Migration) ✅ COMPLETED
 
-**Note**: Librarian codec creation was completed in Phase 3. Remaining work is replacing helper functions that still use old utilities (e.g., `extractNodeNameFromScrollSegmentId`, manual segment ID construction).
+**Status**: ✅ **COMPLETED** - Codex files migrated to use centralized codec API
+
+**Last Updated**: Codex migration session - All codex functions now use centralized codecs
+
+**Summary**:
+Phase 5 successfully migrated all codex-related functions to use the centralized codec API. All manual segment ID parsing and construction in codex files has been replaced with codec API calls. Codecs are passed as parameters to maintain function purity.
+
+**Completed Work**:
+- [x] Update Librarian to receive parsed settings and create codec instance (✅ Completed in Phase 3)
+- [x] **Codex files migration**:
+  - ✅ `codex-split-path.ts`: Replaced `extractNodeNameFromSegmentId` with `codecs.segmentId.parseSectionSegmentId`
+  - ✅ `generate-codex-content.ts`: Replaced manual parsing with `codecs.segmentId.parseSectionSegmentId`
+  - ✅ `codex-impact-to-actions.ts`: 
+    - Replaced `extractNodeNameFromSegmentId` with `codecs.segmentId.parseSectionSegmentId`
+    - Replaced `makeNodeSegmentId` with `codecs.segmentId.serializeSegmentId` (for TreeNode inputs)
+    - Updated `computeScrollSplitPath` to use codec API for parsing parent chain
+    - Updated `buildMovedCodexPath` to use codec API
+- [x] **Librarian updates**:
+  - ✅ Updated all `codexImpactToActions` calls to pass `this.codecs!`
+  - ✅ Updated `computeCodexSplitPath` call to pass `this.codecs!`
+  - ✅ Replaced manual segment ID construction (line 410) with `codecs.segmentId.serializeSegmentIdUnchecked` for unsafe user input (validates and returns Result)
+- [x] **Test files updated**:
+  - ✅ `codex-split-path.test.ts` - Creates codecs in `beforeEach`, passes to all function calls
+  - ✅ `codex-impact-to-actions.test.ts` - Creates codecs, passes to `codexImpactToActions`
+  - ✅ `codex-init-nested.test.ts` - Passes codecs to `codexImpactToActions`
+  - ✅ `generate-codex-content.test.ts` - Creates codecs, passes to all `generateCodexContent` calls
+
+**Implementation Notes**:
+- **Function signatures updated**: All codex functions now accept `codecs: Codecs` parameter:
+  - `computeCodexSplitPath(sectionChain, codecs)`
+  - `generateCodexContent(section, sectionChain, codecs)`
+  - `codexImpactToActions(impact, tree, codecs)`
+- **Error handling strategy**:
+  - `computeCodexSplitPath`: Throws on parse failure (should never happen with valid tree state)
+  - `generateCodexContent`: Throws on parse failure (should never happen with valid tree state)
+  - `codexImpactToActions`: Skips sections/scrolls silently if parsing fails (logs would require side effects in pure functions)
+  - `librarian.ts` line 410: Logs error and returns early if `serializeSegmentIdUnchecked` fails (user input validation)
+- **Codec usage patterns**:
+  - Section segment IDs: Use `codecs.segmentId.parseSectionSegmentId(segId)` → `Result<SegmentIdComponents<TreeNodeKind.Section>, CodecError>`
+  - Scroll segment IDs: Use `codecs.segmentId.parseScrollSegmentId(segId)` → `Result<SegmentIdComponents<TreeNodeKind.Scroll>, CodecError>`
+  - Building segment IDs from TreeNode: Use `codecs.segmentId.serializeSegmentId(components)` (validated inputs)
+  - Building segment IDs from unsafe input: Use `codecs.segmentId.serializeSegmentIdUnchecked(components)` (validates and returns Result)
+- **Test pattern**: Create codecs in `beforeEach` using `makeCodecRulesFromSettings(defaultSettingsForUnitTests)` and `makeCodecs(rules)`
+
+**Files Modified**:
+- `src/commanders/librarian-new/healer/library-tree/codex/codex-split-path.ts` - Added codecs parameter, replaced manual parsing
+- `src/commanders/librarian-new/healer/library-tree/codex/generate-codex-content.ts` - Added codecs parameter, replaced manual parsing
+- `src/commanders/librarian-new/healer/library-tree/codex/codex-impact-to-actions.ts` - Added codecs parameter, replaced all manual parsing/construction
+- `src/commanders/librarian-new/librarian.ts` - Updated call sites, replaced manual segment ID construction
+- All codex test files - Updated to create and pass codecs
+
+**Notes for Future Maintainers**:
+- ✅ **Codex migration COMPLETED**: All codex functions now use centralized codec API
+- All codex functions are pure (no side effects) - adding `codecs` parameter maintains purity
+- When adding new codex functionality, always accept `codecs: Codecs` as a parameter
+- Use `parseSectionSegmentId` for section segment IDs, `parseScrollSegmentId` for scroll segment IDs
+- For TreeNode → SegmentId: Use `codecs.segmentId.serializeSegmentId` (validated) or TreeNode adapter
+- For unsafe input → SegmentId: Use `codecs.segmentId.serializeSegmentIdUnchecked` (validates and returns Result)
+- Error handling: Parse failures in codex functions indicate bugs (invalid tree state) - throw with descriptive messages
+- Test pattern: Always create codecs in test setup using `makeCodecRulesFromSettings(defaultSettingsForUnitTests)`
+
+**Remaining Work (Phase 5 continuation)**:
+- [ ] Replace `extractNodeNameFromScrollSegmentId` with segment ID codec in `librarian.ts` (non-codex usage)
+- [ ] Replace `computeScrollSplitPath` in `librarian.ts` with codec API (non-codex usage - line 593)
+- [ ] **Document missing methods** - librarian-specific needs (if any)
+- [ ] **Raise problems** - API ergonomics, error handling (if any)
+- [ ] Add missing methods if needed
+- [ ] Iterate until all librarian helper functions use codec API
 
 ### Phase 6: Final Migration ⏳ PENDING
 - [ ] Remove old implementations from orchestrators
   - [ ] Delete duplicated parsing functions
   - [ ] Remove `buildCanonicalLeafSplitPath`, `buildObservedLeafSplitPath`, etc. from `healer.ts`
-  - [ ] Remove `extractNodeNameFromSegmentId` variants from all files
+  - [ ] Remove `extractNodeNameFromSegmentId` variants from all files (codex files ✅ completed, healer/tree ✅ completed, librarian ⏳ pending)
   - [ ] Remove or replace `getNodeName` and `getParentLocator` from `locator-utils.ts`
   - [ ] Replace/remove `tree-node/codecs/node-and-segment-id/make-node-segment-id.ts` and `make-tree-node.ts`
   - [ ] Remove old `locator-codec.ts` from `tree-action/utils/locator/` (moved to `codecs/locator/`)

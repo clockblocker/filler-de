@@ -5,9 +5,9 @@
 
 import { getParsedUserSettings } from "../../../../../global-state/global-state";
 import { LINE_BREAK, SPACE_F, TAB } from "../../../../../types/literals";
+import type { Codecs } from "../codecs";
 import { TreeNodeKind } from "../tree-node/types/atoms";
 import type { SectionNodeSegmentId } from "../tree-node/types/node-segment-id";
-import { NodeSegmentIdSeparator } from "../tree-node/types/node-segment-id";
 import type { SectionNode, TreeNode } from "../tree-node/types/tree-node";
 import { computeSectionStatus } from "./compute-section-status";
 import {
@@ -27,11 +27,13 @@ import {
  *
  * @param section - The section node to generate codex for
  * @param sectionChain - Full chain including Library root, e.g. ["Library﹘Section﹘", "A﹘Section﹘"]
+ * @param codecs - Codec API for parsing segment IDs
  * @returns Markdown content for codex file
  */
 export function generateCodexContent(
 	section: SectionNode,
 	sectionChain: SectionNodeSegmentId[],
+	codecs: Codecs,
 ): string {
 	const settings = getParsedUserSettings();
 	const maxDepth = settings.maxSectionDepth;
@@ -40,14 +42,32 @@ export function generateCodexContent(
 
 	const lines: string[] = [];
 
-	// Extract path parts from chain (node names)
-	const pathParts = sectionChain.map(extractNodeNameFromSegmentId);
+	// Extract path parts from chain (node names) using codec API
+	const pathParts: string[] = [];
+	for (const segId of sectionChain) {
+		const parseResult = codecs.segmentId.parseSectionSegmentId(segId);
+		if (parseResult.isErr()) {
+			throw new Error(
+				`Failed to parse segment ID: ${segId}. Should never happen with valid tree state.`,
+			);
+		}
+		pathParts.push(parseResult.value.coreName);
+	}
 
 	// Parent backlink (if not root)
 	if (sectionChain.length > 1) {
 		// Has parent
 		const parentChain = sectionChain.slice(0, -1);
-		const parentPathParts = parentChain.map(extractNodeNameFromSegmentId);
+		const parentPathParts: string[] = [];
+		for (const segId of parentChain) {
+			const parseResult = codecs.segmentId.parseSectionSegmentId(segId);
+			if (parseResult.isErr()) {
+				throw new Error(
+					`Failed to parse segment ID: ${segId}. Should never happen with valid tree state.`,
+				);
+			}
+			parentPathParts.push(parseResult.value.coreName);
+		}
 		const parentName = parentPathParts[parentPathParts.length - 1];
 
 		if (parentName) {
@@ -133,10 +153,4 @@ function generateItems(
 	}
 
 	return lines;
-}
-
-function extractNodeNameFromSegmentId(segId: SectionNodeSegmentId): string {
-	const sep = NodeSegmentIdSeparator;
-	const [raw] = segId.split(sep, 1);
-	return raw ?? "";
 }

@@ -4,6 +4,7 @@
  */
 
 import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import type { Codecs } from "../codecs";
 import type { SplitPathToMdFileInsideLibrary } from "../tree-action/bulk-vault-action-adapter/layers/library-scope/types/inside-library-split-paths";
 import {
 	makeJoinedSuffixedBasename,
@@ -11,7 +12,6 @@ import {
 } from "../tree-action/utils/canonical-naming/suffix-utils/core-suffix-utils";
 import { TreeNodeKind } from "../tree-node/types/atoms";
 import type { SectionNodeSegmentId } from "../tree-node/types/node-segment-id";
-import { NodeSegmentIdSeparator } from "../tree-node/types/node-segment-id";
 import type { SectionNode } from "../tree-node/types/tree-node";
 import { computeCodexSplitPath } from "./codex-split-path";
 import type { CodexImpact } from "./compute-codex-impact";
@@ -42,24 +42,26 @@ export type TreeAccessor = {
  *
  * @param impact - The codex impact from tree.apply()
  * @param tree - Tree accessor for section lookup
+ * @param codecs - Codec API for parsing/constructing segment IDs
  */
 export function codexImpactToActions(
 	impact: CodexImpact,
 	tree: TreeAccessor,
+	codecs: Codecs,
 ): CodexAction[] {
 	const actions: CodexAction[] = [];
 
 	// 1. Collect ALL section chains from current tree state
 	// This ensures we regenerate all codexes, not just "touched" ones
-	const allSectionChains = collectAllSectionChains(tree);
+	const allSectionChains = collectAllSectionChains(tree, codecs);
 
 	// 2. Generate UpsertCodex for all sections
 	for (const chain of allSectionChains) {
 		const section = findSectionByChain(tree, chain);
 		if (!section) continue;
 
-		const content = generateCodexContent(section, chain);
-		const splitPath = computeCodexSplitPath(chain);
+		const content = generateCodexContent(section, chain, codecs);
+		const splitPath = computeCodexSplitPath(chain, codecs);
 
 		const upsertAction: UpsertCodexAction = {
 			kind: "UpsertCodex",
@@ -70,7 +72,7 @@ export function codexImpactToActions(
 
 	// 3. Handle deletes (sections that were deleted)
 	for (const chain of impact.deleted) {
-		const splitPath = computeCodexSplitPath(chain);
+		const splitPath = computeCodexSplitPath(chain, codecs);
 		const deleteAction: DeleteCodexAction = {
 			kind: "DeleteCodex",
 			payload: { splitPath },
@@ -88,7 +90,7 @@ export function codexImpactToActions(
 	// - So we delete: Library/mom/kid2/__-kid2-dad.md (new location, old suffix)
 	for (const { oldChain, newChain } of impact.renamed) {
 		// Delete the moved codex at NEW location with OLD suffix
-		const movedCodexPath = buildMovedCodexPath(oldChain, newChain);
+		const movedCodexPath = buildMovedCodexPath(oldChain, newChain, codecs);
 
 		const deleteAction: DeleteCodexAction = {
 			kind: "DeleteCodex",
@@ -111,6 +113,7 @@ export function codexImpactToActions(
 				const movedDescPath = buildMovedCodexPath(
 					oldDescChain,
 					newDescChain,
+					codecs,
 				);
 				const descDeleteAction: DeleteCodexAction = {
 					kind: "DeleteCodex",
@@ -129,7 +132,11 @@ export function codexImpactToActions(
 		// Collect all descendant scrolls for status writes
 		const scrollInfos = collectDescendantScrolls(section, sectionChain);
 		for (const { nodeName, parentChain } of scrollInfos) {
-			const splitPath = computeScrollSplitPath(nodeName, parentChain);
+			const splitPath = computeScrollSplitPath(
+				nodeName,
+				parentChain,
+				codecs,
+			);
 
 			const writeStatusAction: WriteScrollStatusAction = {
 				kind: "WriteScrollStatus",
@@ -199,8 +206,18 @@ function collectDescendantScrolls(
 function computeScrollSplitPath(
 	nodeName: string,
 	parentChain: SectionNodeSegmentId[],
+	codecs: Codecs,
 ): SplitPathToMdFileInsideLibrary {
-	const pathParts = parentChain.map(extractNodeNameFromSegmentId);
+	// Extract path parts from parent chain using codec API
+	const pathParts: string[] = [];
+	for (const segId of parentChain) {
+		const parseResult = codecs.segmentId.parseSectionSegmentId(segId);
+		if (parseResult.isErr()) {
+			// Skip this scroll if parsing fails (should never happen with valid tree state)
+			continue;
+		}
+		pathParts.push(parseResult.value.coreName);
+	}
 	const suffixParts = makeSuffixPartsFromPathPartsWithRoot(pathParts);
 
 	const basename = makeJoinedSuffixedBasename({
@@ -216,22 +233,23 @@ function computeScrollSplitPath(
 	};
 }
 
-function extractNodeNameFromSegmentId(segId: SectionNodeSegmentId): string {
-	const sep = NodeSegmentIdSeparator;
-	const [raw] = segId.split(sep, 1);
-	return raw ?? "";
-}
-
 /**
  * Collect all section chains from the tree (including root).
  * Similar to init regeneration - collects all sections recursively.
  */
-function collectAllSectionChains(tree: TreeAccessor): SectionNodeSegmentId[][] {
+function collectAllSectionChains(
+	tree: TreeAccessor,
+	codecs: Codecs,
+): SectionNodeSegmentId[][] {
 	const chains: SectionNodeSegmentId[][] = [];
 	const root = tree.getRoot();
 
 	// Root section chain is just the root segment ID
-	const rootSegId = makeNodeSegmentId(root);
+	// Use codec API to serialize segment ID from TreeNode
+	const rootSegId = codecs.segmentId.serializeSegmentId({
+		coreName: root.nodeName,
+		targetKind: TreeNodeKind.Section,
+	}) as SectionNodeSegmentId;
 	chains.push([rootSegId]);
 
 	// Recursively collect all descendant sections
@@ -255,18 +273,13 @@ function collectAllSectionChains(tree: TreeAccessor): SectionNodeSegmentId[][] {
 	return chains;
 }
 
-function makeNodeSegmentId(node: SectionNode): SectionNodeSegmentId {
-	// Extract segment ID from node - we need to construct it
-	// The segment ID format is: nodeName﹘Section﹘
-	return `${node.nodeName}${NodeSegmentIdSeparator}${TreeNodeKind.Section}${NodeSegmentIdSeparator}` as SectionNodeSegmentId;
-}
-
 /**
  * Build path for a codex file that was moved by Obsidian.
  * The file is at the NEW location but has the OLD suffix.
  *
  * @param oldChain - Old section chain (for computing old suffix)
  * @param newChain - New section chain (for computing new pathParts)
+ * @param codecs - Codec API for parsing segment IDs
  * @returns Split path for the moved codex file
  *
  * Example: kid2 moved from dad to mom
@@ -277,10 +290,28 @@ function makeNodeSegmentId(node: SectionNode): SectionNodeSegmentId {
 function buildMovedCodexPath(
 	oldChain: SectionNodeSegmentId[],
 	newChain: SectionNodeSegmentId[],
+	codecs: Codecs,
 ): SplitPathToMdFileInsideLibrary {
-	// Extract node names
-	const oldNodeNames = oldChain.map(extractNodeNameFromSegmentId);
-	const newNodeNames = newChain.map(extractNodeNameFromSegmentId);
+	// Extract node names using codec API
+	const oldNodeNames: string[] = [];
+	for (const segId of oldChain) {
+		const parseResult = codecs.segmentId.parseSectionSegmentId(segId);
+		if (parseResult.isErr()) {
+			// Skip if parsing fails (should never happen with valid tree state)
+			continue;
+		}
+		oldNodeNames.push(parseResult.value.coreName);
+	}
+
+	const newNodeNames: string[] = [];
+	for (const segId of newChain) {
+		const parseResult = codecs.segmentId.parseSectionSegmentId(segId);
+		if (parseResult.isErr()) {
+			// Skip if parsing fails (should never happen with valid tree state)
+			continue;
+		}
+		newNodeNames.push(parseResult.value.coreName);
+	}
 
 	// pathParts = NEW location (where file is now)
 	const pathParts = newNodeNames;
