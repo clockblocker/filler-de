@@ -1,16 +1,16 @@
-import { makeCanonicalSplitPathCodecs } from "./canonical-split-path";
 import type { CanonicalSplitPathCodecs } from "./canonical-split-path";
+import { makeCanonicalSplitPathCodecs } from "./canonical-split-path";
 import type { CodecError } from "./errors";
-import { makeLocatorCodecs } from "./locator";
-import type { LocatorCodecs } from "./locator";
-import { makeSegmentIdCodecs } from "./segment-id";
-import type { SegmentIdCodecs } from "./segment-id";
-import { makeSplitPathInsideLibraryCodecs } from "./split-path-inside-library";
-import type { SplitPathInsideLibraryCodecs } from "./split-path-inside-library";
-import { makeSuffixCodecs } from "./internal/suffix";
 import type { SuffixCodecs } from "./internal/suffix";
+import { makeSuffixCodecs } from "./internal/suffix";
+import type { LocatorCodecs } from "./locator";
+import { makeLocatorCodecs } from "./locator";
 import type { CodecRules } from "./rules";
 import { makeCodecRulesFromSettings } from "./rules";
+import type { SegmentIdCodecs } from "./segment-id";
+import { makeSegmentIdCodecs } from "./segment-id";
+import type { SplitPathInsideLibraryCodecs } from "./split-path-inside-library";
+import { makeSplitPathInsideLibraryCodecs } from "./split-path-inside-library";
 
 /**
  * Public codec API.
@@ -42,18 +42,30 @@ export function makeCodecs(rules: CodecRules): Codecs {
 
 	// Return only public codec objects (suffix is internal, not exposed)
 	return {
-		segmentId,
-		splitPathInsideLibrary,
 		canonicalSplitPath,
 		locator,
+		segmentId,
+		splitPathInsideLibrary,
 	};
 }
 
+export type {
+	CanonicalSplitPathInsideLibrary,
+	CanonicalSplitPathToFileInsideLibrary,
+	CanonicalSplitPathToFolderInsideLibrary,
+	CanonicalSplitPathToMdFileInsideLibrary,
+	SeparatedSuffixedBasename,
+} from "./canonical-split-path";
 // Re-export types for convenience
 export type { CodecError } from "./errors";
+export type {
+	FileNodeLocator,
+	ScrollNodeLocator,
+	SectionNodeLocator,
+	TreeNodeLocator,
+} from "./locator";
 export type { CodecRules } from "./rules";
 export { makeCodecRulesFromSettings } from "./rules";
-
 // Re-export public types from modules
 export type { SegmentIdComponents } from "./segment-id";
 export type {
@@ -62,16 +74,3 @@ export type {
 	SplitPathToFolderInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
 } from "./split-path-inside-library";
-export type {
-	CanonicalSplitPathInsideLibrary,
-	CanonicalSplitPathToFileInsideLibrary,
-	CanonicalSplitPathToFolderInsideLibrary,
-	CanonicalSplitPathToMdFileInsideLibrary,
-	SeparatedSuffixedBasename,
-} from "./canonical-split-path";
-export type {
-	TreeNodeLocator,
-	SectionNodeLocator,
-	ScrollNodeLocator,
-	FileNodeLocator,
-} from "./locator";

@@ -1,5 +1,6 @@
 import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { NodeName } from "../types/schemas/node-name";
+import type { Codecs } from "./library-tree/codecs";
 import type { TreeAccessor } from "./library-tree/codex/codex-impact-to-actions";
 import {
 	type CodexImpact,
@@ -55,9 +56,11 @@ export type ApplyResult = {
 
 export class Healer implements TreeAccessor {
 	private tree: Tree;
+	private codecs: Codecs;
 
-	constructor(tree: Tree) {
+	constructor(tree: Tree, codecs: Codecs) {
 		this.tree = tree;
+		this.codecs = codecs;
 	}
 
 	/** Main entry: apply action, return healing actions + codex impact */
@@ -509,9 +512,13 @@ export class Healer implements TreeAccessor {
 	private extractNodeNameFromSegmentId(
 		segId: SectionNodeSegmentId,
 	): NodeName {
-		const sep = NodeSegmentIdSeparator;
-		const [raw] = segId.split(sep, 1);
-		return raw as NodeName;
+		const parseResult = this.codecs.segmentId.parseSectionSegmentId(segId);
+		if (parseResult.isErr()) {
+			throw new Error(
+				`Invalid section segment ID: ${parseResult.error.message}`,
+			);
+		}
+		return parseResult.value.coreName;
 	}
 
 	private extractNodeNameFromLeafSegmentId(

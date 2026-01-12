@@ -1,8 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { Healer } from "../../../../../src/commanders/librarian-new/healer/healer";
+import {
+	makeCodecs,
+	makeCodecRulesFromSettings,
+} from "../../../../../src/commanders/librarian-new/healer/library-tree/codecs";
 import { codexImpactToActions } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/codex-impact-to-actions";
 import { mergeCodexImpacts } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/merge-codex-impacts";
 import { Tree } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree";
+import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
 import {
 	TreeNodeKind,
 	TreeNodeStatus,
@@ -32,7 +37,9 @@ describe("Codex init for nested sections", () => {
 	});
 
 	it("creates codexes for all ancestor sections", () => {
-		const healer = new Healer(new Tree("Library"));
+		const rules = makeCodecRulesFromSettings(defaultSettingsForUnitTests);
+		const codecs = makeCodecs(rules);
+		const healer = new Healer(new Tree("Library", codecs), codecs);
 		const impacts: ReturnType<typeof healer.getHealingActionsFor>["codexImpact"][] = [];
 
 		// Create a file at Library/grandpa/father/kid/Diary.md

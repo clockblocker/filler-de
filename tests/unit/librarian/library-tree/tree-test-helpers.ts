@@ -4,6 +4,10 @@
  */
 
 import { Healer } from "../../../../src/commanders/librarian-new/healer/healer";
+import {
+	makeCodecRulesFromSettings,
+	makeCodecs,
+} from "../../../../src/commanders/librarian-new/healer/library-tree/codecs";
 import { Tree } from "../../../../src/commanders/librarian-new/healer/library-tree/tree";
 import type {
 	FileNodeLocator,
@@ -20,6 +24,7 @@ import type {
 import { NodeSegmentIdSeparator } from "../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/node-segment-id";
 import type { LeafNode, SectionNode } from "../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/tree-node";
 import type { NodeName } from "../../../../src/commanders/librarian-new/types/schemas/node-name";
+import { defaultSettingsForUnitTests } from "../../common-utils/consts";
 
 // ─── Shape Types ───
 
@@ -41,14 +46,16 @@ export type TreeShape = {
 // ─── Factory ───
 
 export function makeTree(shape: TreeShape): Healer {
-	const tree = new Tree(shape.libraryRoot);
+	const rules = makeCodecRulesFromSettings(defaultSettingsForUnitTests);
+	const codecs = makeCodecs(rules);
+	const tree = new Tree(shape.libraryRoot, codecs);
 	const root = tree.getRoot();
 
 	if (shape.children) {
 		populateSection(root, shape.children);
 	}
 
-	return new Healer(tree);
+	return new Healer(tree, codecs);
 }
 
 function populateSection(

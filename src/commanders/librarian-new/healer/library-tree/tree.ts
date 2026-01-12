@@ -1,4 +1,5 @@
 import type { NodeName } from "../../types/schemas/node-name";
+import type { Codecs } from "./codecs";
 import type {
 	ChangeNodeStatusAction,
 	CreateTreeLeafAction,
@@ -7,15 +8,13 @@ import type {
 	RenameNodeAction,
 	TreeAction,
 } from "./tree-action/types/tree-action";
-import { getNodeName } from "./tree-action/utils/locator/locator-utils";
 import { makeNodeSegmentId } from "./tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import { TreeNodeKind, TreeNodeStatus } from "./tree-node/types/atoms";
-import {
-	type FileNodeSegmentId,
-	NodeSegmentIdSeparator,
-	type ScrollNodeSegmentId,
-	type SectionNodeSegmentId,
-	type TreeNodeSegmentId,
+import type {
+	FileNodeSegmentId,
+	ScrollNodeSegmentId,
+	SectionNodeSegmentId,
+	TreeNodeSegmentId,
 } from "./tree-node/types/node-segment-id";
 import type {
 	FileNode,
@@ -46,8 +45,10 @@ function makeSegmentId(node: TreeNode): TreeNodeSegmentId {
 
 export class Tree {
 	private root: SectionNode;
+	private codecs: Codecs;
 
-	constructor(libraryRootName: NodeName) {
+	constructor(libraryRootName: NodeName, codecs: Codecs) {
+		this.codecs = codecs;
 		this.root = {
 			children: {},
 			kind: TreeNodeKind.Section,
@@ -87,7 +88,15 @@ export class Tree {
 	}
 
 	private makeLeafNode(action: CreateTreeLeafAction): LeafNode {
-		const nodeName = getNodeName(action.targetLocator);
+		const parseResult = this.codecs.segmentId.parseSegmentId(
+			action.targetLocator.segmentId,
+		);
+		if (parseResult.isErr()) {
+			throw new Error(
+				`Invalid segment ID in targetLocator: ${parseResult.error.message}`,
+			);
+		}
+		const nodeName = parseResult.value.coreName;
 
 		if (action.targetLocator.targetKind === TreeNodeKind.Scroll) {
 			return {
@@ -285,9 +294,13 @@ export class Tree {
 	private extractNodeNameFromSegmentId(
 		segId: SectionNodeSegmentId,
 	): NodeName {
-		const sep = NodeSegmentIdSeparator;
-		const [raw] = segId.split(sep, 1);
-		return raw as NodeName;
+		const parseResult = this.codecs.segmentId.parseSectionSegmentId(segId);
+		if (parseResult.isErr()) {
+			throw new Error(
+				`Invalid section segment ID during tree construction: ${parseResult.error.message}`,
+			);
+		}
+		return parseResult.value.coreName;
 	}
 
 	// ─── Test Helpers ───

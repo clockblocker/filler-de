@@ -98,7 +98,10 @@ export class Librarian {
 			const libraryRoot = rootSplitPath.basename;
 
 			// Create empty tree and healer
-			this.healer = new Healer(new Tree(libraryRoot));
+			this.healer = new Healer(
+				new Tree(libraryRoot, this.codecs!),
+				this.codecs!,
+			);
 
 			// Read all files from library
 			const allFilesResult =

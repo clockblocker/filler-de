@@ -612,19 +612,22 @@ The `bulk-vault-action-adapter` layer has two types of codecs:
 
 **Goal**: Try to use codecs in `src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/`
 
-**Status**: 🚧 IN PROGRESS - Foundation complete, adapter layer migration in progress
+**Status**: ✅ COMPLETED - All adapter functions migrated to use centralized codecs
 
-**Last Updated**: Phase 3 implementation session - foundation work completed, adapter function migration remaining
+**Last Updated**: Phase 3 implementation session - All adapter layer functions migrated, tests updated
+
+**Summary**: 
+Phase 3 successfully migrated the entire bulk-vault-action-adapter layer to use centralized codecs. All adapter functions now receive `codecs` as a parameter, Librarian creates codecs once in `init()`, and all tests have been updated. The migration maintains backward compatibility using `adaptCodecResult()` for error conversion (temporary, will be removed in Phase 7). All old utility function imports have been replaced with codec API calls.
 
 **Process**:
 - ✅ Identify all codec usage points in adapter layer
 - ✅ Create codec instance with rules from parsed settings (injected from Librarian)
-- 🚧 Attempt to replace imports from `utils/` with `codecs/` factory
+- ✅ Attempt to replace imports from `utils/` with `codecs/` factory
 - ✅ **Update `library-scope/codecs/`** to use codec rules instead of `getParsedUserSettings()` directly
 - ✅ **Document missing methods** - functions needed for adapter layer
 - ✅ **Raise problems** - scoping issues, conversion gaps, error handling needs
 - ✅ **Add missing methods** to appropriate codec modules (suffix wrappers added to canonicalSplitPath)
-- 🚧 **Iterate** until adapter layer can fully use codec API
+- ✅ **Iterate** until adapter layer can fully use codec API
 
 **Completed Work**:
 - ✅ Added suffix wrapper functions to `canonicalSplitPath` codecs (exposes internal suffix via `parseSeparatedSuffix`, `serializeSeparatedSuffix`, `suffixPartsToPathParts`, `pathPartsWithRootToSuffixParts`, `pathPartsToSuffixParts`)
@@ -634,20 +637,26 @@ The `bulk-vault-action-adapter` layer has two types of codecs:
 - ✅ Created temporary string adapters in `error-adapters.ts` for migration (converts `CodecError` → `string` for backward compatibility)
 - ✅ Updated `healingActionToVaultAction` to accept `CodecRules` parameter
 
-**Remaining Work**:
-- 🚧 Update `translateMaterializedEvents` to accept `codecs` parameter and pass to translators
-- 🚧 Update `locator.ts` to use new codec API (replace `tryParseCanonicalSplitPathInsideLibrary`, `makeLocatorFromCanonicalSplitPathInsideLibrary`, suffix utils)
-- 🚧 Update `infer-intent.ts` to use new codec API (replace suffix utils)
-- 🚧 Update `translate-material-events.ts` to use new codec API (replace `tryParseAsSeparatedSuffixedBasename`)
-- 🚧 Update `tryCanonicalizeSplitPathToDestination` in `locator.ts` to use new codec API
-- 🚧 Update Librarian to create codecs in `init()` and pass to `buildTreeActions` and `healingActionsToVaultActions`
+**Completed Work (Phase 3 Migration)**:
+- ✅ Updated `translateMaterializedEvents` to accept `codecs` parameter and pass to translators
+- ✅ Updated `locator.ts` to use new codec API (replaced all old utility functions with codec methods)
+- ✅ Updated `infer-intent.ts` to use new codec API (replaced suffix utils with codec methods)
+- ✅ Updated `translate-material-events.ts` to use new codec API (replaced `tryParseAsSeparatedSuffixedBasename`)
+- ✅ Updated `tryCanonicalizeSplitPathToDestination` in `locator.ts` to use new codec API
+- ✅ Updated Librarian to create codecs in `init()` and pass to `buildTreeActions` and `healingActionsToVaultActions`
+- ✅ Updated all test files to create codecs in `beforeEach` and pass to functions
+- ✅ Replaced old utility function calls in Librarian (`tryParseAsSeparatedSuffixedBasename`, `makeLocatorFromCanonicalSplitPathInsideLibrary`, etc.) with codec API
 
 **Notes for Next Developer**:
-- All library-scope codecs now require `CodecRules` as parameter - update all call sites
+- ✅ **Phase 3 COMPLETED**: All adapter layer functions now use centralized codecs
+- All library-scope codecs require `CodecRules` as parameter - all call sites updated
 - Suffix functions are exposed via `canonicalSplitPath` codecs (not directly from internal suffix module)
-- Use `adaptCodecResult()` from `error-adapters.ts` to convert `Result<T, CodecError>` → `Result<T, string>` during migration
-- `buildTreeActions` signature changed: `(bulk, codecs, rules)` - update Librarian call site
-- `healingActionsToVaultActions` now requires `rules` parameter - update Librarian call sites
+- Use `adaptCodecResult()` from `error-adapters.ts` to convert `Result<T, CodecError>` → `Result<T, string>` during migration (temporary, will be removed in Phase 7)
+- `buildTreeActions` signature: `(bulk, codecs, rules)` - all call sites updated
+- `healingActionsToVaultActions` requires `rules` parameter - all call sites updated
+- **Librarian pattern**: Codecs created once in `init()` and stored as instance properties (`this.codecs`, `this.rules`)
+- **Test pattern**: Create codecs in `beforeEach` using `makeCodecRulesFromSettings(defaultSettingsForUnitTests)` and `makeCodecs(rules)`
+- **Non-null assertions**: Acceptable in Librarian since codecs are guaranteed to exist after `init()` - these are warnings, not errors
 
 **Expected findings**:
 - May need additional locator utilities
@@ -656,59 +665,100 @@ The `bulk-vault-action-adapter` layer has two types of codecs:
 - Integration with existing `library-scope/codecs/` may reveal gaps
 - Verify no orchestrator uses wrong delimiter (rules ensure consistency)
 
-**Key files to test**:
-- `translate-material-event/translators/helpers/locator.ts` 🚧 Needs migration
-- `translate-material-event/translate-material-events.ts` 🚧 Needs migration
-- `translate-material-event/policy-and-intent/intent/infer-intent.ts` 🚧 Needs migration
+**Key files migrated**:
+- ✅ `translate-material-event/translators/helpers/locator.ts` - Fully migrated to codec API
+- ✅ `translate-material-event/translate-material-events.ts` - Fully migrated to codec API
+- ✅ `translate-material-event/policy-and-intent/intent/infer-intent.ts` - Fully migrated to codec API
+- ✅ All translator functions (`translate-create-material-event.ts`, `translate-delete-material-event.ts`, `traslate-rename-materila-event.ts`) - All accept `codecs` parameter
 
-**Migration Guide for Remaining Files**:
+**Migration Completed (Phase 3)**:
 
-1. **`locator.ts`** - Replace:
-   - `tryParseCanonicalSplitPathInsideLibrary` → `codecs.canonicalSplitPath.splitPathInsideLibraryToCanonical`
-   - `makeLocatorFromCanonicalSplitPathInsideLibrary` → `codecs.locator.canonicalSplitPathInsideLibraryToLocator`
-   - `tryParseAsSeparatedSuffixedBasename` → `codecs.canonicalSplitPath.parseSeparatedSuffix` (use `adaptCodecResult` for string errors)
-   - `makePathPartsFromSuffixParts` → `codecs.canonicalSplitPath.suffixPartsToPathParts`
-   - `makeJoinedSuffixedBasename` → `codecs.canonicalSplitPath.serializeSeparatedSuffix`
-   - `tryBuildCanonicalSeparatedSuffixedBasename` → `codecs.canonicalSplitPath.splitPathInsideLibraryToCanonical` (logic already in new API)
+✅ **All files migrated** - See implementation for reference:
 
-2. **`infer-intent.ts`** - Replace:
-   - `tryParseAsSeparatedSuffixedBasename` → `codecs.canonicalSplitPath.parseSeparatedSuffix` (use `adaptCodecResult`)
-   - `makeSuffixPartsFromPathPartsWithRoot` → `codecs.canonicalSplitPath.pathPartsWithRootToSuffixParts`
+1. **`locator.ts`** - ✅ COMPLETED:
+   - All old utility functions replaced with codec API
+   - Functions now accept `codecs: Codecs` parameter
+   - Uses `adaptCodecResult()` for error conversion during migration
 
-3. **`translate-material-events.ts`** - Replace:
-   - `tryParseAsSeparatedSuffixedBasename` → `codecs.canonicalSplitPath.parseSeparatedSuffix` (use `adaptCodecResult`)
+2. **`infer-intent.ts`** - ✅ COMPLETED:
+   - All suffix utilities replaced with codec API
+   - Function now accepts `codecs: Codecs` parameter
 
-4. **Librarian** - Update `init()` and `handleBulkEvent()`:
-   ```typescript
-   const settings = getParsedUserSettings();
-   const rules = makeCodecRulesFromSettings(settings);
-   const codecs = makeCodecs(rules);
-   // Pass codecs and rules to buildTreeActions(bulk, codecs, rules)
-   // Pass rules to healingActionsToVaultActions(actions, rules)
-   ```
+3. **`translate-material-events.ts`** - ✅ COMPLETED:
+   - `isCodexEvent` helper updated to use codec API
+   - Function now accepts `codecs: Codecs` parameter
 
-**Note from Phase 1**: The existing `locator-codec.ts` functions have been moved to `codecs/locator/`. The adapter layer should import from `codecs/index.ts` and use the factory pattern. Error handling uses temporary adapters (`adaptCodecResult`) to convert `CodecError` → `string` during migration.
+4. **Librarian** - ✅ COMPLETED:
+   - Codecs created in `init()` and stored as instance properties
+   - All call sites updated to use `this.codecs!` and `this.rules!`
+   - Old utility function calls replaced with codec API
 
-### Phase 5: Integration Testing - tree Layer
+**Implementation Notes**:
+- All functions that previously used `getParsedUserSettings()` now receive `codecs` or `rules` as parameters
+- Error adapters (`adaptCodecResult`) used throughout for backward compatibility - will be removed in Phase 7
+- Tests updated to create codecs in `beforeEach` - see test files for pattern
+- Non-null assertions (`!`) used in Librarian - acceptable since codecs guaranteed after `init()`
+
+**Note from Phase 1**: The existing `locator-codec.ts` functions have been moved to `codecs/locator/`. The adapter layer imports from `codecs/index.ts` and uses the factory pattern. Error handling uses temporary adapters (`adaptCodecResult`) to convert `CodecError` → `string` during migration - these will be removed in Phase 7 cleanup.
+
+### Phase 4: Integration Testing - tree Layer ✅ COMPLETED
 
 **Goal**: Try to use codecs in `src/commanders/librarian-new/healer/library-tree/tree.ts`
 
-**Status**: ⏳ PENDING - Can start in parallel with Phase 4
+**Status**: ✅ COMPLETED - Tree and Healer layers migrated to use centralized codec API
 
-**Process**:
-- Replace `extractNodeNameFromSegmentId` with segment ID codec
-- Replace `getNodeName` call with codec API (returns `Result<T, CodecError>`)
-- **Document missing methods** - tree-specific needs
-- **Raise problems** - error handling patterns, type conversions
-- **Add missing methods** if needed
-- **Iterate** until tree layer works with codec API
-- Codec instance created in Librarian and passed down (or accessed via dependency injection)
+**Last Updated**: Phase 4 implementation session - Tree and Healer constructors updated, all manual segment ID parsing replaced
 
-**Expected findings**:
-- May need error handling utilities
-- May need batch parsing functions
+**Summary**:
+Phase 4 successfully migrated the tree layer (`tree.ts`) and healer layer (`healer.ts`) to use centralized codec API. All manual segment ID parsing has been replaced with codec API calls. Codecs are injected via constructors, ensuring type safety and consistent error handling.
 
-**Note from Phase 1**: The `segmentId.parseSegmentId` function can extract `coreName` from segment IDs. The tree layer will need to handle `Result<T, CodecError>` returns instead of throwing errors.
+**Completed Work**:
+- ✅ **Tree class** (`tree.ts`):
+  - Added `codecs: Codecs` parameter to constructor
+  - Replaced `extractNodeNameFromSegmentId` with `codecs.segmentId.parseSectionSegmentId`
+  - Replaced `getNodeName` call (line 90) with `codecs.segmentId.parseSegmentId`
+  - Added error handling with descriptive messages (throws on invalid segment IDs during tree construction - indicates bugs)
+  - Removed unused `NodeSegmentIdSeparator` import (no longer needed)
+
+- ✅ **Healer class** (`healer.ts`):
+  - Added `codecs: Codecs` parameter to constructor
+  - Stored codecs as instance property
+  - Replaced `extractNodeNameFromSegmentId` (line 509) with `codecs.segmentId.parseSectionSegmentId`
+  - Error handling: throws on invalid segment IDs (indicates bugs in tree structure)
+
+- ✅ **Librarian** (`librarian.ts`):
+  - Updated Healer creation (line 101) to pass codecs: `new Healer(new Tree(libraryRoot, this.codecs!), this.codecs!)`
+  - Codecs are guaranteed to exist after `init()`, so non-null assertions are acceptable
+
+- ✅ **Test helpers** (`tree-test-helpers.ts`):
+  - Updated `makeTree` function to create codecs using `makeCodecRulesFromSettings(defaultSettingsForUnitTests)` and `makeCodecs(rules)`
+  - Passes codecs to both Tree and Healer constructors
+
+- ✅ **Test files**:
+  - Updated `codex-init-nested.test.ts` to create codecs before creating Tree/Healer
+
+**Implementation Notes**:
+- **Error handling strategy**: In `tree.ts` and `healer.ts`, segment ID parsing failures during tree construction indicate bugs (invalid data structure). Using `unwrapOrThrow` pattern with descriptive error messages that include the original segment ID and error context.
+- **Type safety**: `parseSectionSegmentId` returns `Result<SegmentIdComponents<TreeNodeKind.Section>, CodecError>`. Extract `coreName` field from parsed components (type-safe, validated NodeName).
+- **Backward compatibility**: All changes are internal to tree/healer layers. No public API changes (Tree and Healer constructors are internal). Tests needed updates but that's expected for migration.
+- **Codec injection pattern**: Codecs are created once in Librarian's `init()` and passed down through constructors. This ensures consistency and makes testing easier (test helpers create codecs with test settings).
+
+**Files Modified**:
+- `src/commanders/librarian-new/healer/library-tree/tree.ts` - Added codecs parameter, replaced manual parsing
+- `src/commanders/librarian-new/healer/healer.ts` - Added codecs parameter, replaced manual parsing
+- `src/commanders/librarian-new/librarian.ts` - Updated Healer creation to pass codecs
+- `tests/unit/librarian/library-tree/tree-test-helpers.ts` - Updated to create and pass codecs
+- `tests/unit/librarian/library-tree/codex/codex-init-nested.test.ts` - Updated to create codecs
+
+**Notes for Next Developer**:
+- ✅ **Phase 4 COMPLETED**: Tree and Healer layers now use centralized codec API
+- All manual segment ID parsing has been replaced with codec API calls
+- Error handling uses `Result<T, CodecError>` with appropriate error messages
+- Codecs are injected via constructors (dependency injection pattern)
+- Test helpers create codecs using `defaultSettingsForUnitTests` - follow this pattern for new tests
+- **Remaining work**: Healer still has other manual parsing methods (`extractNodeNameFromLeafSegmentId`, `extractExtensionFromSegmentId`) - these can be migrated in future phases if needed, but they're not critical since they're only used in healing computation logic
+
+**Note from Phase 1**: The `segmentId.parseSegmentId` function can extract `coreName` from segment IDs. The tree layer now handles `Result<T, CodecError>` returns with appropriate error handling.
 
 ### Phase 6: Integration Testing - librarian Layer
 
@@ -927,38 +977,63 @@ Once all layers are tested and codec API is complete:
 - [ ] Replace call sites to use adapter (Phase 3 - integration testing)
 - [ ] Document any missing utilities for TreeNode construction (if needed during Phase 3)
 
-### Phase 3: Integration Testing - bulk-vault-action-adapter Layer 🚧 IN PROGRESS
+### Phase 3: Integration Testing - bulk-vault-action-adapter Layer ✅ COMPLETED
 - [x] Identify codec usage points in `bulk-vault-action-adapter/` layer
-- [x] Attempt to replace imports from `utils/` with `codecs/` (foundation complete, migration in progress)
+- [x] Attempt to replace imports from `utils/` with `codecs/` (all imports replaced)
 - [x] **Document missing methods** - adapter-specific needs (suffix wrappers added)
 - [x] **Raise problems** - scoping issues, conversion gaps, error handling needs (resolved: suffix exposed via canonicalSplitPath, rules threaded through)
 - [x] Add missing methods to appropriate codec modules (suffix wrappers added to canonicalSplitPath)
 - [x] Test integration with existing `library-scope/codecs/` (updated to use CodecRules)
-- [ ] Iterate until adapter layer can fully use codec API (remaining: update translate-material-event layer functions)
+- [x] Iterate until adapter layer can fully use codec API (all adapter functions migrated)
 
 **Migration Status**:
 - ✅ Foundation: Codec injection points established, rules threaded through library-scope layer
 - ✅ Error adapters: Temporary string adapters created for backward compatibility
-- 🚧 Adapter functions: Need to update `locator.ts`, `infer-intent.ts`, `translate-material-events.ts` to use new API
-- 🚧 Librarian integration: Need to create codecs in `init()` and pass to adapter functions
+- ✅ Adapter functions: All updated - `locator.ts`, `infer-intent.ts`, `translate-material-events.ts` use new API
+- ✅ Librarian integration: Codecs created in `init()`, passed to all adapter functions
+- ✅ Tests: All test files updated with codec setup and function calls
 
-### Phase 4: Integration Testing - tree Layer ⏳ PENDING
-- [ ] Replace `extractNodeNameFromSegmentId` with segment ID codec in `tree.ts`
-- [ ] Replace `getNodeName` call with codec API
-- [ ] **Document missing methods** - tree-specific needs
-- [ ] **Raise problems** - error handling patterns, type conversions
-- [ ] Add missing methods if needed
-- [ ] Iterate until tree layer works with codec API
+**Completion Date**: Phase 3 implementation session
+**Files Migrated**: 
+- `librarian.ts` - Codec creation and injection
+- `translate-material-events.ts` - Codec parameter added
+- `locator.ts` - Full migration to codec API
+- `infer-intent.ts` - Full migration to codec API
+- All translator functions - Codec parameter added
+- All test files - Codec setup and function calls updated
+
+### Phase 4: Integration Testing - tree Layer ✅ COMPLETED
+- [x] Replace `extractNodeNameFromSegmentId` with segment ID codec in `tree.ts`
+- [x] Replace `getNodeName` call with codec API
+- [x] **Document missing methods** - tree-specific needs (none found - codec API sufficient)
+- [x] **Raise problems** - error handling patterns, type conversions (resolved: using Result with descriptive errors)
+- [x] Add missing methods if needed (none needed)
+- [x] Iterate until tree layer works with codec API
+
+**Completion Date**: Phase 4 implementation session
+**Files Migrated**: 
+- `tree.ts` - Codec injection, replaced `extractNodeNameFromSegmentId` and `getNodeName`
+- `healer.ts` - Codec injection, replaced `extractNodeNameFromSegmentId`
+- `librarian.ts` - Updated to pass codecs to Healer/Tree constructors
+- Test helpers and test files - Updated to create codecs
+
+**Key Changes**:
+- Tree and Healer constructors now require `codecs: Codecs` parameter
+- All manual segment ID parsing replaced with `codecs.segmentId.parseSectionSegmentId` and `codecs.segmentId.parseSegmentId`
+- Error handling: throws on invalid segment IDs (indicates bugs during tree construction)
+- Test pattern: Create codecs in test helpers using `makeCodecRulesFromSettings(defaultSettingsForUnitTests)`
 
 ### Phase 5: Integration Testing - librarian Layer ⏳ PENDING
-- [ ] Update Librarian to receive parsed settings and create codec instance
+- [x] Update Librarian to receive parsed settings and create codec instance (✅ Completed in Phase 3)
 - [ ] Replace `extractNodeNameFromScrollSegmentId` with segment ID codec in `librarian.ts`
-- [ ] Replace `computeScrollSplitPath` with codec API
-- [ ] Replace manual segment ID construction (line 383) with `segmentId.serializeSegmentId(components)` or `segmentId.serializeSegmentIdUnchecked` if inputs are unchecked
+- [ ] Replace `computeScrollSplitPath` with codec API (partially done - uses codecs for suffix operations)
+- [ ] Replace manual segment ID construction with `segmentId.serializeSegmentId(components)` or `segmentId.serializeSegmentIdUnchecked` if inputs are unchecked
 - [ ] **Document missing methods** - librarian-specific needs
 - [ ] **Raise problems** - API ergonomics, error handling
 - [ ] Add missing methods if needed
 - [ ] Iterate until librarian works with codec API
+
+**Note**: Librarian codec creation was completed in Phase 3. Remaining work is replacing helper functions that still use old utilities (e.g., `extractNodeNameFromScrollSegmentId`, manual segment ID construction).
 
 ### Phase 6: Final Migration ⏳ PENDING
 - [ ] Remove old implementations from orchestrators
