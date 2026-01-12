@@ -17,12 +17,12 @@ export type SplitPathToMdFileInsideLibrary = SplitPathToMdFile & {
 	kind: typeof SplitPathKind.MdFile;
 };
 
-export type SplitPathInsideLibrary =
+export type AnySplitPathInsideLibrary =
 	| SplitPathToFolderInsideLibrary
 	| SplitPathToFileInsideLibrary
 	| SplitPathToMdFileInsideLibrary;
 
 export type SplitPathInsideLibraryOf<SK extends SplitPathKind> = Extract<
-	SplitPathInsideLibrary,
+	AnySplitPathInsideLibrary,
 	{ kind: SK }
 >;

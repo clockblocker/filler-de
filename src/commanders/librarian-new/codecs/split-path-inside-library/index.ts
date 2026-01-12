@@ -3,7 +3,7 @@ import type { AnySplitPath } from "../../../../managers/obsidian/vault-action-ma
 export type { SplitPathInsideLibraryCodecs } from "./make";
 export { makeSplitPathInsideLibraryCodecs } from "./make";
 export type {
-	SplitPathInsideLibrary,
+	AnySplitPathInsideLibrary,
 	SplitPathInsideLibraryOf,
 	SplitPathToFileInsideLibrary,
 	SplitPathToFolderInsideLibrary,

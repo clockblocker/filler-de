@@ -69,7 +69,7 @@ export { makeCodecRulesFromSettings } from "./rules";
 // Re-export public types from modules
 export type { SegmentIdComponents } from "./segment-id";
 export type {
-	SplitPathInsideLibrary,
+	AnySplitPathInsideLibrary as SplitPathInsideLibrary,
 	SplitPathToFileInsideLibrary,
 	SplitPathToFolderInsideLibrary,
 	SplitPathToMdFileInsideLibrary,

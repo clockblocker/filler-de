@@ -4,18 +4,18 @@ import type { CodecError } from "../errors";
 import type { SuffixCodecs } from "../internal/suffix";
 import type { SeparatedSuffixedBasename } from "../internal/suffix/types";
 import type { CodecRules } from "../rules";
-import type { SplitPathInsideLibrary } from "../split-path-inside-library/types/generic-split-path-inside-library-of";
+import type { AnySplitPathInsideLibrary } from "../split-path-inside-library";
 import { fromCanonicalSplitPathInsideLibrary } from "./internal/from";
 import { splitPathInsideLibraryToCanonical } from "./internal/to";
 import type { CanonicalSplitPathInsideLibrary } from "./types/canonical-split-path";
 
 export type CanonicalSplitPathCodecs = {
 	splitPathInsideLibraryToCanonical: (
-		sp: SplitPathInsideLibrary,
+		sp: AnySplitPathInsideLibrary,
 	) => Result<CanonicalSplitPathInsideLibrary, CodecError>;
 	fromCanonicalSplitPathInsideLibrary: (
 		sp: CanonicalSplitPathInsideLibrary,
-	) => SplitPathInsideLibrary;
+	) => AnySplitPathInsideLibrary;
 	// Suffix wrapper functions (expose internal suffix codecs)
 	parseSeparatedSuffix: (
 		basename: string,

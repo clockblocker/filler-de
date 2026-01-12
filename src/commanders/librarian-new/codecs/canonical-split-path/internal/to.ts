@@ -4,7 +4,7 @@ import { NodeNameSchema } from "../../../types/schemas/node-name";
 import type { CodecError } from "../../errors";
 import { makeSplitPathError, makeZodError } from "../../errors";
 import type { SuffixCodecs } from "../../internal/suffix";
-import type { SplitPathInsideLibrary } from "../../split-path-inside-library/types/generic-split-path-inside-library-of";
+import type { AnySplitPathInsideLibrary } from "../../split-path-inside-library";
 import type {
 	CanonicalSeparatedSuffixedBasename,
 	CanonicalSplitPathInsideLibrary,
@@ -41,7 +41,7 @@ function dropLibraryRootIfPresent(
 function buildCanonicalSeparatedSuffixedBasename(
 	suffix: SuffixCodecs,
 	libraryRootName: string,
-	sp: Pick<SplitPathInsideLibrary, "basename" | "pathParts" | "kind">,
+	sp: Pick<AnySplitPathInsideLibrary, "basename" | "pathParts" | "kind">,
 ): Result<CanonicalSeparatedSuffixedBasename, CodecError> {
 	// Handle Obsidian duplicate marker (e.g., "Note-A 1" → coreName="Note 1", suffix=["A"])
 	const { cleanBasename, marker } = extractDuplicateMarker(sp.basename);
@@ -73,7 +73,7 @@ function buildCanonicalSeparatedSuffixedBasename(
 export function splitPathInsideLibraryToCanonical(
 	suffix: SuffixCodecs,
 	libraryRootName: string,
-	sp: SplitPathInsideLibrary,
+	sp: AnySplitPathInsideLibrary,
 ): Result<CanonicalSplitPathInsideLibrary, CodecError> {
 	// Validate path parts as NodeNames
 	for (const p of sp.pathParts) {

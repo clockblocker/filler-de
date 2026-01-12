@@ -3,7 +3,7 @@ import type { AnySplitPath } from "../../../../managers/obsidian/vault-action-ma
 import type { CodecError } from "../errors";
 import type { CodecRules } from "../rules";
 import type {
-	SplitPathInsideLibrary,
+	AnySplitPathInsideLibrary,
 	SplitPathInsideLibraryCandidate,
 } from ".";
 import { fromInsideLibrary } from "./internal/from";
@@ -20,9 +20,9 @@ export type SplitPathInsideLibraryCodecs = {
 	/** Canonical API: returns proper CodecError with reason */
 	toInsideLibrary: (
 		sp: AnySplitPath,
-	) => Result<SplitPathInsideLibrary, CodecError>;
+	) => Result<AnySplitPathInsideLibrary, CodecError>;
 	/** Adds LibraryRoot path parts back */
-	fromInsideLibrary: (sp: SplitPathInsideLibrary) => AnySplitPath;
+	fromInsideLibrary: (sp: AnySplitPathInsideLibrary) => AnySplitPath;
 };
 
 export function makeSplitPathInsideLibraryCodecs(

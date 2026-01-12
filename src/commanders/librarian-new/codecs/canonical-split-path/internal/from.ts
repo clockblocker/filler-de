@@ -1,5 +1,5 @@
 import type { SuffixCodecs } from "../../internal/suffix";
-import type { SplitPathInsideLibrary } from "../../split-path-inside-library/types/generic-split-path-inside-library-of";
+import type { AnySplitPathInsideLibrary } from "../../split-path-inside-library";
 import type { CanonicalSplitPathInsideLibrary } from "../types/canonical-split-path";
 
 /**
@@ -9,7 +9,7 @@ import type { CanonicalSplitPathInsideLibrary } from "../types/canonical-split-p
 export function fromCanonicalSplitPathInsideLibrary(
 	suffix: SuffixCodecs,
 	sp: CanonicalSplitPathInsideLibrary,
-): SplitPathInsideLibrary {
+): AnySplitPathInsideLibrary {
 	const basename = suffix.serializeSeparatedSuffix(
 		sp.separatedSuffixedBasename,
 	);
