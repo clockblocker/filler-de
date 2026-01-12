@@ -470,7 +470,17 @@ The `bulk-vault-action-adapter` layer has two types of codecs:
 
 **Approach**: Implement codecs incrementally, test integration at each layer, identify gaps, and fill them before proceeding. This ensures the API is complete and usable before full migration.
 
-### Phase 1: Implement Core Codecs
+### Phase 1: Implement Core Codecs ✅ COMPLETED
+
+**Status**: All core codec modules implemented and wired together. Ready for Phase 2 integration testing.
+
+**Implementation Notes**:
+- All modules follow factory pattern with dependency injection
+- All parse functions return `Result<T, CodecError>` (neverthrow-pilled)
+- No circular dependencies - strict dependency hierarchy enforced
+- Suffix module is private (`internal/suffix/`) and not exported from main index
+- Error handling uses structured `CodecError` discriminated union with `cause` chaining
+- Type safety: Generic functions with type-specific overloads for better inference
 
 1. **Create `codecs/errors.ts`**
    - Define `CodecError` discriminated union type with smaller top-level set
@@ -575,6 +585,8 @@ The `bulk-vault-action-adapter` layer has two types of codecs:
 
 **Goal**: Verify tree-node layer works with adapter
 
+**Status**: ⏳ PENDING - Depends on Phase 2
+
 **Process**:
 - Use adapter from Phase 2 in tree-node layer
 - Replace direct codec access with adapter functions
@@ -584,6 +596,8 @@ The `bulk-vault-action-adapter` layer has two types of codecs:
 ### Phase 4: Integration Testing - bulk-vault-action-adapter Layer
 
 **Goal**: Try to use codecs in `src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/`
+
+**Status**: ⏳ PENDING - Ready to start after Phase 1 completion
 
 **Process**:
 - Identify all codec usage points in adapter layer
@@ -607,9 +621,13 @@ The `bulk-vault-action-adapter` layer has two types of codecs:
 - `translate-material-event/translate-material-events.ts`
 - `translate-material-event/policy-and-intent/intent/infer-intent.ts`
 
-### Phase 4: Integration Testing - tree Layer
+**Note from Phase 1**: The existing `locator-codec.ts` functions have been moved to `codecs/locator/`. The adapter layer should import from `codecs/index.ts` and use the factory pattern. Error handling will need to be updated from string errors to `CodecError` pattern matching.
+
+### Phase 5: Integration Testing - tree Layer
 
 **Goal**: Try to use codecs in `src/commanders/librarian-new/healer/library-tree/tree.ts`
+
+**Status**: ⏳ PENDING - Can start in parallel with Phase 4
 
 **Process**:
 - Replace `extractNodeNameFromSegmentId` with segment ID codec
@@ -624,15 +642,19 @@ The `bulk-vault-action-adapter` layer has two types of codecs:
 - May need error handling utilities
 - May need batch parsing functions
 
-### Phase 5: Integration Testing - librarian Layer
+**Note from Phase 1**: The `segmentId.parseSegmentId` function can extract `coreName` from segment IDs. The tree layer will need to handle `Result<T, CodecError>` returns instead of throwing errors.
+
+### Phase 6: Integration Testing - librarian Layer
 
 **Goal**: Try to use codecs in `src/commanders/librarian-new/librarian.ts`
+
+**Status**: ⏳ PENDING - Can start after Phase 5
 
 **Process**:
 - **Update Librarian constructor** to accept `ParsedUserSettings` (or create codec instance in `init()`)
 - Replace `extractNodeNameFromScrollSegmentId` with segment ID codec
 - Replace `computeScrollSplitPath` with codec API
-- Replace manual segment ID construction (line 383) with `segmentId.makeNodeSegmentId(node)` or `segmentId.serializeSegmentId(components)`
+- Replace manual segment ID construction (line 383) with `segmentId.serializeSegmentId(components)` or `segmentId.serializeSegmentIdUnchecked` if inputs are unchecked
 - **Document missing methods** - librarian-specific needs
 - **Raise problems** - API ergonomics, error handling
 - **Add missing methods** if needed
@@ -642,7 +664,11 @@ The `bulk-vault-action-adapter` layer has two types of codecs:
 - May need convenience wrappers for common patterns
 - May need error recovery strategies
 
-### Phase 6: Final Migration
+**Note from Phase 1**: Use `segmentId.parseScrollSegmentId` for type-specific parsing. Use `segmentId.serializeSegmentId` for validated inputs, or `serializeSegmentIdUnchecked` for raw inputs. All functions return `Result<T, CodecError>` - update error handling accordingly.
+
+### Phase 7: Final Migration
+
+**Status**: ⏳ PENDING - Depends on all previous phases
 
 Once all layers are tested and codec API is complete:
 
@@ -652,16 +678,22 @@ Once all layers are tested and codec API is complete:
    - Remove `extractNodeNameFromSegmentId` variants from all files
    - Remove `getNodeName` and `getParentLocator` from `locator-utils.ts` (or replace with codec wrappers)
    - **Replace/remove** `tree-node/codecs/node-and-segment-id/make-node-segment-id.ts` and `make-tree-node.ts` (replaced by centralized codecs)
+   - Remove old `locator-codec.ts` from `tree-action/utils/locator/` (moved to `codecs/locator/`)
+   - Remove old `canonical-split-path-codec.ts` (moved to `codecs/canonical-split-path/`)
+   - Remove old `suffix-utils/` directory (moved to `codecs/internal/suffix/`)
 
 2. **Update all call sites**
    - Replace all old function calls with codec API
    - Add appropriate error handling for `Result<T, CodecError>` returns
    - Use pattern matching on `CodecError.kind` where appropriate
+   - Update error handling from string errors to `CodecError` discriminated union
 
 3. **Clean up**
    - Remove unused imports
    - Update tests to use codec API
    - Document any remaining edge cases
+
+**Note from Phase 1**: All old implementations are still in place. They should be removed only after all integration testing is complete and the new API is proven to work. The old code serves as a reference during migration.
 
 ## Key Files to Modify
 
@@ -672,7 +704,7 @@ Once all layers are tested and codec API is complete:
 - [src/commanders/librarian-new/healer/healer.ts](src/commanders/librarian-new/healer/healer.ts) - Remove private helpers, use codec API
 - [src/commanders/librarian-new/healer/library-tree/tree.ts](src/commanders/librarian-new/healer/library-tree/tree.ts) - Use segment ID codecs
 - [src/commanders/librarian-new/healer/library-tree/tree-action/utils/locator/locator-codec.ts](src/commanders/librarian-new/healer/library-tree/tree-action/utils/locator/locator-codec.ts) - Move functions to `codecs/locator/`
-- [src/commanders/librarian-new/healer/library-tree/tree-action/utils/canonical-naming/canonical-split-path-codec.ts](src/commanders/librarian-new/healer/library-tree/tree-action/utils/canonical-naming/canonical-split-path-codec.ts) - Move to `codecs/split-path/`
+- [src/commanders/librarian-new/healer/library-tree/tree-action/utils/canonical-naming/canonical-split-path-codec.ts](src/commanders/librarian-new/healer/library-tree/tree-action/utils/canonical-naming/canonical-split-path-codec.ts) - Move to `codecs/canonical-split-path/`
 - [src/commanders/librarian-new/healer/library-tree/tree-action/utils/canonical-naming/suffix-utils/core-suffix-utils.ts](src/commanders/librarian-new/healer/library-tree/tree-action/utils/canonical-naming/suffix-utils/core-suffix-utils.ts) - Move to `codecs/suffix/`
 - [src/commanders/librarian-new/healer/library-tree/codex/codex-split-path.ts](src/commanders/librarian-new/healer/library-tree/codex/codex-split-path.ts) - Use codec API
 - [src/commanders/librarian-new/healer/library-tree/codex/codex-impact-to-actions.ts](src/commanders/librarian-new/healer/library-tree/codex/codex-impact-to-actions.ts) - Use codec API
@@ -736,69 +768,77 @@ Once all layers are tested and codec API is complete:
 
 ## Todos
 
-### Phase 1: Core Codecs Implementation
-- [ ] Create `codecs/errors.ts` with `CodecError` discriminated union type
-  - [ ] Use smaller top-level set: `SegmentIdError | SuffixError | SplitPathError | LocatorError | ZodError`
-  - [ ] Include detailed `reason` field inside each variant
-  - [ ] Add standard `cause?: CodecError` field for error chaining
-  - [ ] Export error constructors/helpers for consistent error creation
-- [ ] Create `codecs/rules.ts` with `CodecRules` type
-  - [ ] Define rules: `{ suffixDelimiter, libraryRootName }` (nodeSegmentIdSeparator is constant, not in rules)
-  - [ ] Export helper: `makeCodecRulesFromSettings(settings: ParsedUserSettings)` for orchestrators
-  - [ ] Extract `libraryRootName` from `settings.splitPathToLibraryRoot.basename`
-- [ ] Create `codecs/types/type-mappings.ts` with type-level mappings (from `plan-generic-prerequesits.md`)
-  - [ ] Implement `TreeNodeKindToSplitPathKind` mapping object
-  - [ ] Implement `CorrespondingSplitPathKind<NK>` and `CorrespondingTreeNodeKind<SK>` types
-  - [ ] Implement helper types: `NodeLocatorOf<NK>`, `SplitPathInsideLibraryOf<SK>`, `CanonicalSplitPathInsideLibraryOf<SK>`
-  - [ ] Implement generic `SegmentIdComponents<T extends TreeNodeKind>` with mapped shapes
-  - [ ] Export all types for use in codec modules
-- [ ] Create `codecs/segment-id/` module with factory pattern
-  - [ ] Import `SegmentIdComponents<T extends TreeNodeKind>` from `codecs/types/type-mappings.ts`
-  - [ ] Create `makeSegmentIdCodecs(rules: CodecRules)` factory
-  - [ ] Factory returns codecs using `NodeSegmentIdSeparator` constant (not from rules)
-  - [ ] Implement generic `parseSegmentId<T extends TreeNodeKind>` + type-specific convenience parsers (return `Result<SegmentIdComponents<T>, CodecError>`)
-  - [ ] Implement generic `serializeSegmentId<T extends TreeNodeKind>` for validated inputs
-  - [ ] Implement `serializeSegmentIdUnchecked` (validates inputs, returns `Result<TreeNodeSegmentId, CodecError>`)
-  - [ ] **Do NOT include TreeNode conversions** - keep codecs/ decoupled
-- [ ] Move locator-codec.ts to codecs/locator/ with factory pattern
-  - [ ] Import generic types from `codecs/types/type-mappings.ts`: `NodeLocatorOf<NK>`, `CanonicalSplitPathInsideLibraryOf<SK>`, `CorrespondingSplitPathKind<T>`, `CorrespondingTreeNodeKind<T>`
-  - [ ] Create `makeLocatorCodecs(rules: CodecRules)` factory
-  - [ ] Use overloads pattern for `locatorToCanonicalSplitPathInsideLibrary` and `canonicalSplitPathInsideLibraryToLocator` (better type inference)
-  - [ ] Ensure all parse functions return `Result<T, CodecError>`
-  - [ ] **Fix**: `locatorToCanonicalSplitPathInsideLibrary` to return `Result<CanonicalSplitPathInsideLibrary, CodecError>` (currently throws)
-  - [ ] Ensure all functions are neverthrow-pilled (no throwing)
-- [ ] Create `codecs/split-path-inside-library/` module with factory pattern
-  - [ ] Create `makeSplitPathInsideLibraryCodecs(rules: CodecRules)` factory
-  - [ ] Implement `checkIfInsideLibrary(sp): boolean` - quick predicate
-  - [ ] Implement `isInsideLibrary(sp): sp is SplitPathInsideLibraryCandidate` - type guard
-  - [ ] Implement `toInsideLibrary(sp): Result<SplitPathInsideLibrary, CodecError>` - canonical API with proper errors
-  - [ ] Implement `fromInsideLibrary(sp): SplitPath` - adds LibraryRoot back
-  - [ ] Use `rules.libraryRootName` instead of `getParsedUserSettings()`
-  - [ ] `toInsideLibrary` returns structured `CodecError` with reason
-- [ ] Create `codecs/canonical-split-path/` module with factory pattern
-  - [ ] Create `makeCanonicalSplitPathCodecs(rules: CodecRules)` factory
-  - [ ] Use `fromCanonicalSplitPathInsideLibrary` name (consistent with toCanonical pattern) - document that it's lossy
-  - [ ] Use `splitPathInsideLibraryToCanonical` for parse direction
-  - [ ] Parse functions return `Result<T, CodecError>`
-- [ ] Move suffix utilities to codecs/suffix/ with factory pattern
-  - [ ] Create `makeSuffixCodecs(rules: CodecRules)` factory
-  - [ ] Use consistent naming: `pathPartsToSuffixParts`, `pathPartsWithRootToSuffixParts`, `suffixPartsToPathParts`
-  - [ ] Include `splitBySuffixDelimiter` and `serializeSeparatedSuffix` (validated) + `serializeSeparatedSuffixUnchecked` (validates inputs)
-  - [ ] All functions use `rules.suffixDelimiter` instead of `getParsedUserSettings()`
-  - [ ] Ensure all parse functions return `Result<T, CodecError>` (neverthrow-pilled)
-  - [ ] Serialize functions: validated version assumes NodeName[] are validated, unchecked version validates and returns Result
-  - [ ] Document library root handling requirements
-  - [ ] Parse functions return `Result<T, CodecError>`
-- [ ] Create codecs/index.ts factory
-  - [ ] Import all codec modules
-  - [ ] Export `makeCodecs(rules: CodecRules)` factory function
-  - [ ] Factory creates codecs in dependency order (suffix → segmentId → splitPathInsideLibrary → canonicalSplitPath → locator)
-  - [ ] Inject dependencies: `canonicalSplitPath` gets `suffix`, `locator` gets `segmentId`, `canonicalSplitPath`, `suffix`
-  - [ ] Re-export `CodecError` type and `CodecRules` type
-  - [ ] Re-export `makeCodecRulesFromSettings` helper
-  - [ ] Verify no circular imports (this is the only file importing all modules)
+### Phase 1: Core Codecs Implementation ✅ COMPLETED
+- [x] Create `codecs/errors.ts` with `CodecError` discriminated union type
+  - [x] Use smaller top-level set: `SegmentIdError | SuffixError | SplitPathError | LocatorError | ZodError`
+  - [x] Include detailed `reason` field inside each variant
+  - [x] Add standard `cause?: CodecError` field for error chaining
+  - [x] Export error constructors/helpers for consistent error creation
+  - **Note**: Error constructors exported: `makeSegmentIdError`, `makeSuffixError`, `makeSplitPathError`, `makeLocatorError`, `makeZodError`
+- [x] Create `codecs/rules.ts` with `CodecRules` type
+  - [x] Define rules: `{ suffixDelimiter, libraryRootName }` (nodeSegmentIdSeparator is constant, not in rules)
+  - [x] Export helper: `makeCodecRulesFromSettings(settings: ParsedUserSettings)` for orchestrators
+  - [x] Extract `libraryRootName` from `settings.splitPathToLibraryRoot.basename`
+- [x] Create `codecs/types/type-mappings.ts` with type-level mappings (from `plan-generic-prerequesits.md`)
+  - [x] Implement `TreeNodeKindToSplitPathKind` mapping object
+  - [x] Implement `CorrespondingSplitPathKind<NK>` and `CorrespondingTreeNodeKind<SK>` types
+  - [x] Implement helper types: `NodeLocatorOf<NK>`, `SplitPathInsideLibraryOf<SK>`, `CanonicalSplitPathInsideLibraryOf<SK>`
+  - [x] Implement generic `SegmentIdComponents<T extends TreeNodeKind>` with mapped shapes
+  - [x] Export all types for use in codec modules
+  - **Note**: File already existed, verified all required types are present
+- [x] Create `codecs/segment-id/` module with factory pattern
+  - [x] Import `SegmentIdComponents<T extends TreeNodeKind>` from `codecs/types/type-mappings.ts`
+  - [x] Create `makeSegmentIdCodecs(rules: CodecRules)` factory
+  - [x] Factory returns codecs using `NodeSegmentIdSeparator` constant (not from rules)
+  - [x] Implement generic `parseSegmentId<T extends TreeNodeKind>` + type-specific convenience parsers (return `Result<SegmentIdComponents<T>, CodecError>`)
+  - [x] Implement generic `serializeSegmentId<T extends TreeNodeKind>` for validated inputs
+  - [x] Implement `serializeSegmentIdUnchecked` (validates inputs, returns `Result<TreeNodeSegmentId, CodecError>`)
+  - [x] **Do NOT include TreeNode conversions** - keep codecs/ decoupled
+  - **Note**: Created from scratch (new implementation). Structure: `internal/parse.ts`, `internal/serialize.ts`, `make.ts`, `index.ts`, `types.ts`
+- [x] Move locator-codec.ts to codecs/locator/ with factory pattern
+  - [x] Import generic types from `codecs/types/type-mappings.ts`: `NodeLocatorOf<NK>`, `CanonicalSplitPathInsideLibraryOf<SK>`, `CorrespondingSplitPathKind<T>`, `CorrespondingTreeNodeKind<T>`
+  - [x] Create `makeLocatorCodecs(rules: CodecRules)` factory (actually takes `segmentId`, `canonicalSplitPath`, `suffix` as dependencies)
+  - [x] Use overloads pattern for `locatorToCanonicalSplitPathInsideLibrary` and `canonicalSplitPathInsideLibraryToLocator` (better type inference)
+  - [x] Ensure all parse functions return `Result<T, CodecError>`
+  - [x] **Fix**: `locatorToCanonicalSplitPathInsideLibrary` to return `Result<CanonicalSplitPathInsideLibrary, CodecError>` (currently throws)
+  - [x] Ensure all functions are neverthrow-pilled (no throwing)
+  - **Note**: Refactored from existing `locator-codec.ts`. Structure: `internal/to.ts`, `internal/from.ts`, `make.ts`, `index.ts`, `types.ts`. Uses `makeNodeSegmentId` from tree-node layer (acceptable dependency).
+- [x] Create `codecs/split-path-inside-library/` module with factory pattern
+  - [x] Create `makeSplitPathInsideLibraryCodecs(rules: CodecRules)` factory
+  - [x] Implement `checkIfInsideLibrary(sp): boolean` - quick predicate
+  - [x] Implement `isInsideLibrary(sp): sp is SplitPathInsideLibraryCandidate` - type guard
+  - [x] Implement `toInsideLibrary(sp): Result<SplitPathInsideLibrary, CodecError>` - canonical API with proper errors
+  - [x] Implement `fromInsideLibrary(sp): SplitPath` - adds LibraryRoot back
+  - [x] Use `rules.libraryRootName` instead of `getParsedUserSettings()`
+  - [x] `toInsideLibrary` returns structured `CodecError` with reason
+  - **Note**: Structure: `internal/predicate.ts`, `internal/to.ts`, `internal/from.ts`, `make.ts`, `index.ts`, `types.ts`. Validates pathParts as NodeNames.
+- [x] Create `codecs/canonical-split-path/` module with factory pattern
+  - [x] Create `makeCanonicalSplitPathCodecs(rules: CodecRules, suffix: SuffixCodecs)` factory
+  - [x] Use `fromCanonicalSplitPathInsideLibrary` name (consistent with toCanonical pattern) - document that it's lossy
+  - [x] Use `splitPathInsideLibraryToCanonical` for parse direction
+  - [x] Parse functions return `Result<T, CodecError>`
+  - **Note**: Structure: `internal/to.ts`, `internal/from.ts`, `make.ts`, `index.ts`, `types.ts`. Includes duplicate marker extraction logic from `build-canonical-separated-suffixed-basename-path-king-way.ts`. Validates canonical format matches expected.
+- [x] Move suffix utilities to codecs/internal/suffix/ with factory pattern
+  - [x] Create `makeSuffixCodecs(rules: CodecRules)` factory
+  - [x] Use consistent naming: `pathPartsToSuffixParts`, `pathPartsWithRootToSuffixParts`, `suffixPartsToPathParts`
+  - [x] Include `splitBySuffixDelimiter` and `serializeSeparatedSuffix` (validated) + `serializeSeparatedSuffixUnchecked` (validates inputs)
+  - [x] All functions use `rules.suffixDelimiter` instead of `getParsedUserSettings()`
+  - [x] Ensure all parse functions return `Result<T, CodecError>` (neverthrow-pilled)
+  - [x] Serialize functions: validated version assumes NodeName[] are validated, unchecked version validates and returns Result
+  - [x] Document library root handling requirements
+  - [x] Parse functions return `Result<T, CodecError>`
+  - **Note**: Created as `codecs/internal/suffix/` (private, not exported from main index). Structure: `split.ts`, `parse.ts`, `serialize.ts`, `path-parts.ts`, `index.ts`, `types.ts`. All functions take `rules` as first parameter in internal implementations, wrapped by factory.
+- [x] Create codecs/index.ts factory
+  - [x] Import all codec modules
+  - [x] Export `makeCodecs(rules: CodecRules)` factory function
+  - [x] Factory creates codecs in dependency order (suffix → segmentId → splitPathInsideLibrary → canonicalSplitPath → locator)
+  - [x] Inject dependencies: `canonicalSplitPath` gets `suffix`, `locator` gets `segmentId`, `canonicalSplitPath`, `suffix`
+  - [x] Re-export `CodecError` type and `CodecRules` type
+  - [x] Re-export `makeCodecRulesFromSettings` helper
+  - [x] Verify no circular imports (this is the only file importing all modules)
+  - **Note**: Factory returns `{ segmentId, splitPathInsideLibrary, canonicalSplitPath, locator }` - suffix is internal and not exposed. Re-exports all public types for convenience.
 
-### Phase 2: Integration Testing - tree-node Layer
+### Phase 2: Integration Testing - tree-node Layer ⏳ PENDING
 - [ ] Create `tree-node/codecs/node-and-segment-id/tree-node-segment-id-codec.ts` adapter
 - [ ] Implement `makeNodeSegmentId(node: TreeNode)` - uses `segmentId.serializeSegmentId` internally
 - [ ] Implement `makeTreeNode(segmentId: TreeNodeSegmentId)` - uses `segmentId.parseSegmentId` internally
@@ -806,7 +846,7 @@ Once all layers are tested and codec API is complete:
 - [ ] Replace call sites to use adapter
 - [ ] Document any missing utilities for TreeNode construction
 
-### Phase 3: Integration Testing - bulk-vault-action-adapter Layer
+### Phase 3: Integration Testing - bulk-vault-action-adapter Layer ⏳ PENDING
 - [ ] Identify codec usage points in `bulk-vault-action-adapter/` layer
 - [ ] Attempt to replace imports from `utils/` with `codecs/`
 - [ ] **Document missing methods** - adapter-specific needs
@@ -815,7 +855,7 @@ Once all layers are tested and codec API is complete:
 - [ ] Test integration with existing `library-scope/codecs/`
 - [ ] Iterate until adapter layer can fully use codec API
 
-### Phase 4: Integration Testing - tree Layer
+### Phase 4: Integration Testing - tree Layer ⏳ PENDING
 - [ ] Replace `extractNodeNameFromSegmentId` with segment ID codec in `tree.ts`
 - [ ] Replace `getNodeName` call with codec API
 - [ ] **Document missing methods** - tree-specific needs
@@ -823,23 +863,26 @@ Once all layers are tested and codec API is complete:
 - [ ] Add missing methods if needed
 - [ ] Iterate until tree layer works with codec API
 
-### Phase 5: Integration Testing - librarian Layer
+### Phase 5: Integration Testing - librarian Layer ⏳ PENDING
 - [ ] Update Librarian to receive parsed settings and create codec instance
 - [ ] Replace `extractNodeNameFromScrollSegmentId` with segment ID codec in `librarian.ts`
 - [ ] Replace `computeScrollSplitPath` with codec API
-- [ ] Replace manual segment ID construction (line 383) with `segmentId.makeNodeSegmentId(node)` or `segmentId.serializeSegmentId(components)`
+- [ ] Replace manual segment ID construction (line 383) with `segmentId.serializeSegmentId(components)` or `segmentId.serializeSegmentIdUnchecked` if inputs are unchecked
 - [ ] **Document missing methods** - librarian-specific needs
 - [ ] **Raise problems** - API ergonomics, error handling
 - [ ] Add missing methods if needed
 - [ ] Iterate until librarian works with codec API
 
-### Phase 6: Final Migration
+### Phase 6: Final Migration ⏳ PENDING
 - [ ] Remove old implementations from orchestrators
   - [ ] Delete duplicated parsing functions
   - [ ] Remove `buildCanonicalLeafSplitPath`, `buildObservedLeafSplitPath`, etc. from `healer.ts`
   - [ ] Remove `extractNodeNameFromSegmentId` variants from all files
   - [ ] Remove or replace `getNodeName` and `getParentLocator` from `locator-utils.ts`
   - [ ] Replace/remove `tree-node/codecs/node-and-segment-id/make-node-segment-id.ts` and `make-tree-node.ts`
+  - [ ] Remove old `locator-codec.ts` from `tree-action/utils/locator/` (moved to `codecs/locator/`)
+  - [ ] Remove old `canonical-split-path-codec.ts` (moved to `codecs/canonical-split-path/`)
+  - [ ] Remove old `suffix-utils/` directory (moved to `codecs/internal/suffix/`)
 - [ ] Update all call sites with appropriate error handling
 - [ ] Clean up unused imports
 - [ ] Add unit tests for all codec modules
