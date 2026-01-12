@@ -163,7 +163,10 @@ export class Librarian {
 				this.healer,
 				this.codecs,
 			);
-			const codexVaultActions = codexActionsToVaultActions(codexActions);
+			const codexVaultActions = codexActionsToVaultActions(
+				codexActions,
+				this.rules,
+			);
 
 			if (codexVaultActions.length > 0) {
 				await this.vaultActionManager.dispatch(codexVaultActions);
@@ -583,7 +586,10 @@ export class Librarian {
 			...codexActions,
 			...scrollStatusActions,
 		];
-		const codexVaultActions = codexActionsToVaultActions(allCodexActions);
+		const codexVaultActions = codexActionsToVaultActions(
+			allCodexActions,
+			this.rules,
+		);
 
 		if (codexVaultActions.length > 0) {
 			await this.vaultActionManager.dispatch(codexVaultActions);

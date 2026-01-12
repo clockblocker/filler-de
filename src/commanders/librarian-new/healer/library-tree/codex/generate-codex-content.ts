@@ -38,7 +38,6 @@ export function generateCodexContent(
 	const settings = getParsedUserSettings();
 	const maxDepth = settings.maxSectionDepth;
 	const showScrollsForDepth = settings.showScrollsInCodexesForDepth;
-	const libraryRoot = settings.splitPathToLibraryRoot.basename;
 
 	const lines: string[] = [];
 

@@ -1,5 +1,8 @@
 import { err, ok, type Result } from "neverthrow";
-import type { CodecError } from "../../../../../codecs/errors";
+import {
+	type CodecError,
+	makeSegmentIdError,
+} from "../../../../../codecs/errors";
 import type {
 	SegmentIdCodecs,
 	TreeNodeSegmentId,
@@ -99,6 +102,18 @@ export function makeTreeNodeCodecs(segmentId: SegmentIdCodecs): TreeNodeCodecs {
 					nodeName: components.coreName,
 					status: TreeNodeStatus.Unknown,
 				});
+			}
+
+			default: {
+				// TypeScript exhaustiveness check - should never happen if parseSegmentId is correct
+				return err(
+					makeSegmentIdError(
+						"UnknownType",
+						String(segmentIdValue),
+						`Unknown TreeNodeKind: ${String(components.targetKind)}`,
+						{ targetKind: components.targetKind },
+					),
+				);
 			}
 		}
 	}
