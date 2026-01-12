@@ -1,8 +1,8 @@
-import { err, ok, type Result } from "neverthrow";
+import type { Result } from "neverthrow";
 import type { CodecError } from "../../errors";
 import type { CodecRules } from "../../rules";
-import type { SeparatedSuffixedBasename } from "./types";
 import { splitBySuffixDelimiter } from "./split";
+import type { SeparatedSuffixedBasename } from "./types";
 
 /**
  * Parses basename into separated suffixed basename.

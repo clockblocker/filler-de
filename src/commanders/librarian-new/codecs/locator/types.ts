@@ -1,5 +1,7 @@
 import type {
+	AnyNodeLocator,
 	FileNodeLocator,
+	NodeLocatorOf,
 	ScrollNodeLocator,
 	SectionNodeLocator,
 	TreeNodeLocator,
@@ -13,6 +15,8 @@ import type {
  * Public types for locator codecs.
  */
 export type {
+	AnyNodeLocator,
+	NodeLocatorOf,
 	TreeNodeLocator,
 	SectionNodeLocator,
 	ScrollNodeLocator,

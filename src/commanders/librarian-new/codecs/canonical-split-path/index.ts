@@ -3,7 +3,10 @@ export type { SeparatedSuffixedBasename } from "../internal/suffix/types";
 export type { CanonicalSplitPathCodecs } from "./make";
 export { makeCanonicalSplitPathCodecs } from "./make";
 export type {
+	AnyCanonicalSplitPathInsideLibrary,
+	// Legacy alias
 	CanonicalSplitPathInsideLibrary,
+	CanonicalSplitPathInsideLibraryOf,
 	CanonicalSplitPathToFileInsideLibrary,
 	CanonicalSplitPathToFolderInsideLibrary,
 	CanonicalSplitPathToMdFileInsideLibrary,

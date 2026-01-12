@@ -1,4 +1,5 @@
-import type { NonEmptyArray } from "../../../../../../types/helpers";
+import type { Result } from "neverthrow";
+import type { NonEmptyArray } from "../../../../../types/helpers";
 import type { NodeName } from "../../../types/schemas/node-name";
 import type { CodecError } from "../../errors";
 import type { CodecRules } from "../../rules";

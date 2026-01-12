@@ -1,4 +1,7 @@
-import type { CommonSplitPath } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import type {
+	CommonSplitPath,
+	SplitPathKind,
+} from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { Prettify } from "../../../../../types/helpers";
 import type { SeparatedSuffixedBasename } from "../../internal/suffix/types";
 import type {
@@ -32,10 +35,13 @@ import type {
  *   separatedSuffixedBasename: { coreName: "child", suffixParts: [] },
  * }
  */
-export type CanonicalSplitPathInsideLibrary =
+export type AnyCanonicalSplitPathInsideLibrary =
 	| CanonicalSplitPathToFolderInsideLibrary
 	| CanonicalSplitPathToFileInsideLibrary
 	| CanonicalSplitPathToMdFileInsideLibrary;
+
+export type CanonicalSplitPathInsideLibraryOf<SK extends SplitPathKind> =
+	Extract<AnyCanonicalSplitPathInsideLibrary, { kind: SK }>;
 
 // --
 
@@ -61,3 +67,7 @@ export type CanonicalSplitPathToFileInsideLibrary =
 
 export type CanonicalSplitPathToMdFileInsideLibrary =
 	MakeCanonical<SplitPathToMdFileInsideLibrary>;
+
+// Legacy alias for backward compatibility
+export type CanonicalSplitPathInsideLibrary =
+	AnyCanonicalSplitPathInsideLibrary;

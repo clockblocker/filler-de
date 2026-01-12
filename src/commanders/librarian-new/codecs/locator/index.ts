@@ -1,12 +1,14 @@
 export type { LocatorCodecs } from "./make";
 export { makeLocatorCodecs } from "./make";
 export type {
-	TreeNodeLocator,
-	SectionNodeLocator,
-	ScrollNodeLocator,
-	FileNodeLocator,
+	AnyNodeLocator,
 	CanonicalSplitPathInsideLibrary,
 	CanonicalSplitPathToFileInsideLibrary,
 	CanonicalSplitPathToFolderInsideLibrary,
 	CanonicalSplitPathToMdFileInsideLibrary,
+	FileNodeLocator,
+	NodeLocatorOf,
+	ScrollNodeLocator,
+	SectionNodeLocator,
+	TreeNodeLocator,
 } from "./types";

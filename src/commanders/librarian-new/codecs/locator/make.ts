@@ -6,11 +6,11 @@ import type { CodecError } from "../errors";
 import type { SuffixCodecs } from "../internal/suffix";
 import type { SegmentIdCodecs } from "../segment-id";
 import type {
-	CanonicalSplitPathInsideLibraryOf,
 	CorrespondingSplitPathKind,
 	CorrespondingTreeNodeKind,
-	NodeLocatorOf,
 } from "../types/type-mappings";
+import type { CanonicalSplitPathInsideLibraryOf } from "../canonical-split-path/types/canonical-split-path";
+import type { NodeLocatorOf } from "./types";
 import { canonicalSplitPathInsideLibraryToLocator } from "./internal/from";
 import { locatorToCanonicalSplitPathInsideLibrary } from "./internal/to";
 

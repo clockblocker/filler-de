@@ -14,7 +14,7 @@ export function pathPartsToSuffixParts(pathParts: string[]): NodeName[] {
  * Use when pathParts includes Library root as first element.
  */
 export function pathPartsWithRootToSuffixParts(
-	rules: CodecRules,
+	_rules: CodecRules,
 	pathParts: string[],
 ): NodeName[] {
 	// Drop Library root (first element), then reverse
