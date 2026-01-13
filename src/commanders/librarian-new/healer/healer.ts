@@ -1,12 +1,10 @@
-import { ok, type Result } from "neverthrow";
+import { ok } from "neverthrow";
 import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type {
-	AnySplitPathInsideLibrary,
 	Codecs,
 	SplitPathToFileInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
 } from "../codecs";
-import type { CodecError } from "../codecs/errors";
 import type {
 	FileNodeLocator,
 	ScrollNodeLocator,
@@ -15,7 +13,6 @@ import type {
 	SectionNodeSegmentId,
 	TreeNodeSegmentId,
 } from "../codecs/segment-id/types/segment-id";
-import type { NodeName } from "../types/schemas/node-name";
 import type { TreeAccessor } from "./library-tree/codex/codex-impact-to-actions";
 import {
 	type CodexImpact,
@@ -33,12 +30,16 @@ import type {
 import { makeNodeSegmentId } from "./library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import { TreeNodeKind } from "./library-tree/tree-node/types/atoms";
 import type {
-	FileNode,
-	ScrollNode,
 	SectionNode,
 	TreeNode,
 } from "./library-tree/tree-node/types/tree-node";
 import type { HealingAction } from "./library-tree/types/healing-action";
+import { sectionChainToPathParts } from "./library-tree/utils/section-chain-utils";
+import {
+	buildCanonicalLeafSplitPath,
+	buildObservedLeafSplitPath,
+	splitPathsEqual,
+} from "./library-tree/utils/split-path-utils";
 
 // ─── Result Type ───
 
@@ -155,27 +156,44 @@ export class Healer implements TreeAccessor {
 		if (!node) return [];
 
 		// Compute new segment ID
-		const newSegmentId = this.makeSegmentIdFromNode(node);
+		// Type assertion needed: makeNodeSegmentId overloads require specific node types, but TypeScript can't narrow union for overload resolution
+		const newSegmentId = makeNodeSegmentId(node as any);
 
 		// If section renamed, update descendant suffixes
 		if (node.kind === TreeNodeKind.Section) {
 			// Old path: parent chain + OLD section name (from targetLocator.segmentId)
-			const oldSectionPath = this.buildSectionPath(
+			const oldSectionPathResult = sectionChainToPathParts(
 				targetLocator.segmentIdChainToParent,
-				this.extractNodeNameFromSegmentId(
-					targetLocator.segmentId as SectionNodeSegmentId,
-				),
+				this.codecs.segmentId,
 			);
+			if (oldSectionPathResult.isErr()) {
+				throw new Error(
+					`Failed to parse section chain: ${oldSectionPathResult.error.message}`,
+				);
+			}
+			const oldNodeNameResult =
+				this.codecs.segmentId.parseSectionSegmentId(
+					targetLocator.segmentId as SectionNodeSegmentId,
+				);
+			if (oldNodeNameResult.isErr()) {
+				throw new Error(
+					`Failed to parse segment ID: ${oldNodeNameResult.error.message}`,
+				);
+			}
+			const oldSectionPath = [
+				...oldSectionPathResult.value,
+				oldNodeNameResult.value.coreName,
+			];
 			// New chain in tree (where section IS now)
 			const newSectionChain = [
 				...targetLocator.segmentIdChainToParent,
 				newSegmentId as SectionNodeSegmentId,
 			];
 			// Current path in filesystem: parent chain + NEW section name
-			const currentSectionPath = this.buildSectionPath(
-				targetLocator.segmentIdChainToParent,
+			const currentSectionPath = [
+				...oldSectionPathResult.value,
 				newNodeName,
-			);
+			];
 			return this.computeDescendantSuffixHealing(
 				newSectionChain,
 				node,
@@ -186,10 +204,10 @@ export class Healer implements TreeAccessor {
 
 		// Leaf rename needs observed path - but rename action doesn't carry it
 		// The observed path IS the canonical path before rename (tree was in sync)
-		const oldCanonicalResult =
-			this.buildCanonicalLeafSplitPathFromOldLocator(
-				targetLocator as ScrollNodeLocator | FileNodeLocator,
-			);
+		const oldCanonicalResult = buildCanonicalLeafSplitPath(
+			targetLocator as ScrollNodeLocator | FileNodeLocator,
+			this.codecs,
+		);
 		if (oldCanonicalResult.isErr()) {
 			// Error indicates bug in tree structure - propagate by throwing
 			throw new Error(
@@ -242,30 +260,58 @@ export class Healer implements TreeAccessor {
 		if (!node) return [];
 
 		// Compute old section path (before move) - use old node name from targetLocator
-		const oldNodeName = this.extractNodeNameFromSegmentId(
-			targetLocator.segmentId as SectionNodeSegmentId,
-		);
-		const oldSectionPath =
+		const oldSectionPathResult =
 			node.kind === TreeNodeKind.Section
-				? this.buildSectionPath(
-						targetLocator.segmentIdChainToParent,
-						oldNodeName,
-					)
+				? (() => {
+						const parentPathResult = sectionChainToPathParts(
+							targetLocator.segmentIdChainToParent,
+							this.codecs.segmentId,
+						);
+						if (parentPathResult.isErr()) {
+							return parentPathResult;
+						}
+						const oldNodeNameResult =
+							this.codecs.segmentId.parseSectionSegmentId(
+								targetLocator.segmentId as SectionNodeSegmentId,
+							);
+						if (oldNodeNameResult.isErr()) {
+							return oldNodeNameResult;
+						}
+						return ok([
+							...parentPathResult.value,
+							oldNodeNameResult.value.coreName,
+						]);
+					})()
 				: null;
+		if (oldSectionPathResult?.isErr()) {
+			throw new Error(
+				`Failed to parse section path: ${oldSectionPathResult.error.message}`,
+			);
+		}
+		const oldSectionPath = oldSectionPathResult?.isOk()
+			? oldSectionPathResult.value
+			: null;
 
 		// Compute healing
 		if (node.kind === TreeNodeKind.Section && oldSectionPath) {
 			// New chain in tree
-			const newSegmentId = this.makeSegmentIdFromNode(node);
+			const newSegmentId = makeNodeSegmentId(node);
 			const newSectionChain = [
 				...newParentChain,
 				newSegmentId as SectionNodeSegmentId,
 			];
 			// Canonical path: parent chain + new node name
+			const canonicalSectionPathResult = sectionChainToPathParts(
+				newParentChain,
+				this.codecs.segmentId,
+			);
+			if (canonicalSectionPathResult.isErr()) {
+				throw new Error(
+					`Failed to parse section chain: ${canonicalSectionPathResult.error.message}`,
+				);
+			}
 			const canonicalSectionPath = [
-				...newParentChain.map((segId) =>
-					this.extractNodeNameFromSegmentId(segId),
-				),
+				...canonicalSectionPathResult.value,
 				newNodeName,
 			];
 			// Current path in filesystem (from observed)
@@ -310,7 +356,8 @@ export class Healer implements TreeAccessor {
 		}
 
 		// Leaf move - narrow the types
-		const newSegmentId = this.makeSegmentIdFromNode(node);
+		// Type assertion needed: makeNodeSegmentId overloads require specific node types, but TypeScript can't narrow union for overload resolution
+		const newSegmentId = makeNodeSegmentId(node as any);
 		if (node.kind === TreeNodeKind.Scroll) {
 			const newLocator: ScrollNodeLocator = {
 				segmentId: newSegmentId as ScrollNodeLocator["segmentId"],
@@ -359,8 +406,10 @@ export class Healer implements TreeAccessor {
 			| SplitPathToMdFileInsideLibrary
 			| SplitPathToFileInsideLibrary,
 	): HealingAction[] {
-		const canonicalSplitPathResult =
-			this.buildCanonicalLeafSplitPath(locator);
+		const canonicalSplitPathResult = buildCanonicalLeafSplitPath(
+			locator,
+			this.codecs,
+		);
 		if (canonicalSplitPathResult.isErr()) {
 			// Error indicates bug in tree structure - propagate by throwing
 			throw new Error(
@@ -370,7 +419,7 @@ export class Healer implements TreeAccessor {
 		const canonicalSplitPath = canonicalSplitPathResult.value;
 		const healingActions: HealingAction[] = [];
 
-		if (!this.splitPathsEqual(observedSplitPath, canonicalSplitPath)) {
+		if (!splitPathsEqual(observedSplitPath, canonicalSplitPath)) {
 			if (observedSplitPath.kind === SplitPathKind.MdFile) {
 				// Narrow canonicalSplitPath based on observedSplitPath.kind
 				if (canonicalSplitPath.kind === SplitPathKind.MdFile) {
@@ -417,9 +466,18 @@ export class Healer implements TreeAccessor {
 		// Derive current path from sectionChain if not provided
 		const actualCurrentPath =
 			currentPathParts ??
-			sectionChain.map((segId) =>
-				this.extractNodeNameFromSegmentId(segId),
-			);
+			(() => {
+				const pathResult = sectionChainToPathParts(
+					sectionChain,
+					this.codecs.segmentId,
+				);
+				if (pathResult.isErr()) {
+					throw new Error(
+						`Failed to parse section chain: ${pathResult.error.message}`,
+					);
+				}
+				return pathResult.value;
+			})();
 
 		const healingActions: HealingAction[] = [];
 
@@ -440,19 +498,20 @@ export class Healer implements TreeAccessor {
 				healingActions.push(...childHealing);
 			} else {
 				// Leaf: derive observed path from parent + leaf basename
-				const locator: ScrollNodeLocator | FileNodeLocator = {
+				const locator = {
 					segmentId: segId as TreeNodeSegmentId,
 					segmentIdChainToParent: sectionChain,
 					targetKind: child.kind,
-				} as ScrollNodeLocator | FileNodeLocator;
+				};
 
 				// Build observed split path for this leaf
 				// - basename uses OLD suffix (what the file WAS named)
 				// - pathParts uses CURRENT path (where the file IS now)
-				const observedSplitPath = this.buildObservedLeafSplitPath(
+				const observedSplitPath = buildObservedLeafSplitPath(
 					child,
 					oldSuffixPathParts,
 					actualCurrentPath,
+					this.codecs,
 				);
 
 				// Narrow types based on child kind
@@ -477,139 +536,5 @@ export class Healer implements TreeAccessor {
 		}
 
 		return healingActions;
-	}
-
-	/**
-	 * Build the "observed" split path for a leaf after section rename/move.
-	 *
-	 * @param leaf - the leaf node
-	 * @param oldSuffixPathParts - OLD path (for computing old basename suffix)
-	 * @param currentPathParts - NEW path (where file IS now in filesystem)
-	 */
-	private buildObservedLeafSplitPath(
-		leaf: ScrollNode | FileNode,
-		oldSuffixPathParts: string[],
-		currentPathParts: string[],
-	): SplitPathToMdFileInsideLibrary | SplitPathToFileInsideLibrary {
-		// Suffix from OLD path (what the file WAS named)
-		const suffixParts =
-			this.codecs.suffix.pathPartsWithRootToSuffixParts(
-				oldSuffixPathParts,
-			);
-
-		const basename = this.codecs.suffix.serializeSeparatedSuffix({
-			coreName: leaf.nodeName,
-			suffixParts,
-		});
-
-		// pathParts = CURRENT path (where file IS now)
-		if (leaf.kind === TreeNodeKind.Scroll) {
-			return {
-				basename,
-				extension: "md",
-				kind: SplitPathKind.MdFile,
-				pathParts: currentPathParts,
-			};
-		}
-
-		return {
-			basename,
-			extension: leaf.extension,
-			kind: SplitPathKind.File,
-			pathParts: currentPathParts,
-		};
-	}
-
-	private buildCanonicalLeafSplitPath(
-		locator: ScrollNodeLocator | FileNodeLocator,
-	): Result<
-		SplitPathToMdFileInsideLibrary | SplitPathToFileInsideLibrary,
-		CodecError
-	> {
-		// Convert locator to canonical split path, then to split path
-		return this.codecs.locator
-			.locatorToCanonicalSplitPathInsideLibrary(locator)
-			.andThen((canonical) => {
-				// Convert canonical to split path
-				const splitPath =
-					this.codecs.splitPathWithSeparatedSuffix.fromSplitPathInsideLibraryWithSeparatedSuffix(
-						canonical,
-					);
-
-				// Type assertion: leaf locators (Scroll/File) only produce MdFile/File split paths, never Folder
-				// The codec chain preserves types, but TypeScript widens due to union input
-				return ok(
-					splitPath as
-						| SplitPathToMdFileInsideLibrary
-						| SplitPathToFileInsideLibrary,
-				);
-			});
-	}
-
-	private buildCanonicalLeafSplitPathFromOldLocator(
-		locator: ScrollNodeLocator | FileNodeLocator,
-	): Result<
-		SplitPathToMdFileInsideLibrary | SplitPathToFileInsideLibrary,
-		CodecError
-	> {
-		// Same as buildCanonicalLeafSplitPath but uses the locator as-is
-		// (before any modifications)
-		return this.buildCanonicalLeafSplitPath(locator);
-	}
-
-	private buildSectionPath(
-		parentChain: SectionNodeSegmentId[],
-		sectionName: NodeName,
-	): string[] {
-		// parentChain already includes Library root
-		return [
-			...parentChain.map((segId) =>
-				this.extractNodeNameFromSegmentId(segId),
-			),
-			sectionName,
-		];
-	}
-
-	private extractNodeNameFromSegmentId(
-		segId: SectionNodeSegmentId,
-	): NodeName {
-		const parseResult = this.codecs.segmentId.parseSectionSegmentId(segId);
-		if (parseResult.isErr()) {
-			throw new Error(
-				`Invalid section segment ID: ${parseResult.error.message}`,
-			);
-		}
-		return parseResult.value.coreName;
-	}
-
-	private splitPathsEqual(
-		a: AnySplitPathInsideLibrary,
-		b: AnySplitPathInsideLibrary,
-	): boolean {
-		if (a.kind !== b.kind) return false;
-		if (a.basename !== b.basename) return false;
-		if (a.pathParts.length !== b.pathParts.length) return false;
-		for (let i = 0; i < a.pathParts.length; i++) {
-			if (a.pathParts[i] !== b.pathParts[i]) return false;
-		}
-		if (
-			"extension" in a &&
-			"extension" in b &&
-			a.extension !== b.extension
-		) {
-			return false;
-		}
-		return true;
-	}
-
-	private makeSegmentIdFromNode(node: TreeNode): TreeNodeSegmentId {
-		// Type narrowing for makeNodeSegmentId overloads
-		if (node.kind === TreeNodeKind.Section) {
-			return makeNodeSegmentId(node);
-		}
-		if (node.kind === TreeNodeKind.Scroll) {
-			return makeNodeSegmentId(node);
-		}
-		return makeNodeSegmentId(node);
 	}
 }

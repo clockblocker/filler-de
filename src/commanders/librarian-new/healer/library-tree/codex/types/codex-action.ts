@@ -3,9 +3,9 @@
  * Converted to VaultActions for dispatch.
  */
 
-import type { SplitPathToMdFileInsideLibrary } from "../../../codecs/split-path-inside-library/types";
+import type { SplitPathToMdFileInsideLibrary } from "../../../../codecs";
+import type { SectionNodeSegmentId } from "../../../../codecs/segment-id";
 import type { TreeNodeStatus } from "../../tree-node/types/atoms";
-import type { SectionNodeSegmentId } from "../../../../codecs/segment-id/types/segment-id";
 
 // ─── Action Types ───
 

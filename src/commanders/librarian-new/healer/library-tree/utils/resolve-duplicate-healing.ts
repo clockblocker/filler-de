@@ -2,11 +2,13 @@ import { getParsedUserSettings } from "../../../../../global-state/global-state"
 import type { VaultActionManager } from "../../../../../managers/obsidian/vault-action-manager";
 import type { SplitPathToFolder } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
-import type { NodeName } from "../../../types/schemas/node-name";
 import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
+	type SplitPathToFileInsideLibrary,
+	type SplitPathToMdFileInsideLibrary,
 } from "../../../codecs";
+import type { NodeName } from "../../../types/schemas/node-name";
 import type { HealingAction } from "../types/healing-action";
 import {
 	extractDuplicateMarker,
@@ -110,7 +112,9 @@ async function resolveFileRenameAction(
 				to: {
 					...to,
 					basename: newBasename,
-				},
+					extension: "md",
+					kind: SplitPathKind.MdFile,
+				} as SplitPathToMdFileInsideLibrary,
 			},
 		};
 	}
@@ -122,7 +126,9 @@ async function resolveFileRenameAction(
 			to: {
 				...to,
 				basename: newBasename,
-			},
+				extension: to.extension,
+				kind: SplitPathKind.File,
+			} as SplitPathToFileInsideLibrary,
 		},
 	};
 }

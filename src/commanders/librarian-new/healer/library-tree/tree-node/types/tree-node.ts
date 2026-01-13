@@ -1,4 +1,5 @@
 import type { Prettify } from "../../../../../../types/helpers";
+import type { TreeNodeSegmentId } from "../../../../codecs/segment-id/types/segment-id";
 import type { NodeName } from "../../../../types/schemas/node-name";
 import type {
 	FileExtension,
@@ -6,7 +7,6 @@ import type {
 	TreeNodeKind,
 	TreeNodeStatus,
 } from "./atoms";
-import type { TreeNodeSegmentId } from "../../../../codecs/segment-id/types/segment-id";
 
 export type ScrollNode = {
 	nodeName: NodeName;

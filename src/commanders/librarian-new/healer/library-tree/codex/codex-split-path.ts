@@ -3,9 +3,9 @@
  */
 
 import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
-import type { Codecs } from "../../../codecs";
-import type { SplitPathToMdFileInsideLibrary } from "../../codecs/split-path-inside-library/types";
-import type { SectionNodeSegmentId } from "../../../../codecs/segment-id/types/segment-id";
+import type { Codecs, SplitPathToMdFileInsideLibrary } from "../../../codecs";
+import type { SectionNodeSegmentId } from "../../../codecs/segment-id/types/segment-id";
+import { sectionChainToPathParts } from "../utils/section-chain-utils";
 import { CODEX_CORE_NAME } from "./literals";
 
 /**
@@ -29,19 +29,17 @@ export function computeCodexSplitPath(
 	}
 
 	// Extract node names from segment IDs using codec API
-	const nodeNames: string[] = [];
-	for (const segId of sectionChain) {
-		const parseResult = codecs.segmentId.parseSectionSegmentId(segId);
-		if (parseResult.isErr()) {
-			throw new Error(
-				`Failed to parse segment ID: ${segId}. Should never happen with valid tree state.`,
-			);
-		}
-		nodeNames.push(parseResult.value.coreName);
+	const pathPartsResult = sectionChainToPathParts(
+		sectionChain,
+		codecs.segmentId,
+	);
+	if (pathPartsResult.isErr()) {
+		throw new Error(
+			`Failed to parse segment IDs. Should never happen with valid tree state: ${pathPartsResult.error.message}`,
+		);
 	}
-
-	// pathParts = all node names (Library root + sections)
-	const pathParts = nodeNames;
+	const pathParts = pathPartsResult.value;
+	const nodeNames = pathParts;
 
 	// suffixParts:
 	// - Root codex (chain length 1): include Library name → ["Library"]

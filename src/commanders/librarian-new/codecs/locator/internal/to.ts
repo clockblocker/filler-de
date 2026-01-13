@@ -12,6 +12,7 @@ import type {
 } from "../../split-path-with-separated-suffix";
 import type { CorrespondingSplitPathKind } from "../../types/type-mappings";
 import type { NodeLocatorOf, TreeNodeLocator } from "../types";
+import { sectionChainToPathParts } from "../../../healer/library-tree/utils/section-chain-utils";
 
 /**
  * Converts locator to canonical split path inside library.
@@ -33,17 +34,10 @@ export function locatorToCanonicalSplitPathInsideLibrary(
 	loc: TreeNodeLocator,
 ): Result<AnyCanonicalSplitPathInsideLibrary, CodecError> {
 	// Both segmentIdChainToParent and pathParts INCLUDE Library root
-	const pathPartsResult = loc.segmentIdChainToParent.reduce<
-		Result<string[], CodecError>
-	>((acc, segmentIdStr) => {
-		if (acc.isErr()) return acc;
-		return segmentId
-			.parseSegmentId<typeof TreeNodeKind.Section>(segmentIdStr)
-			.map((components) => {
-				acc.value.push(components.coreName);
-				return acc.value;
-			});
-	}, ok([]));
+	const pathPartsResult = sectionChainToPathParts(
+		loc.segmentIdChainToParent,
+		segmentId,
+	);
 
 	if (pathPartsResult.isErr()) {
 		return err(
