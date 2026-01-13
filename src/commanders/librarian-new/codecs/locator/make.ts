@@ -1,8 +1,7 @@
 import type { Result } from "neverthrow";
 import type { SplitPathKind } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { TreeNodeKind } from "../../healer/library-tree/tree-node/types/atoms";
-import type { CanonicalSplitPathCodecs } from "../canonical-split-path";
-import type { CanonicalSplitPathInsideLibraryOf } from "../canonical-split-path/types/canonical-split-path";
+import type { CanonicalSplitPathInsideLibraryOf } from "../split-path-with-separated-suffix";
 import type { CodecError } from "../errors";
 import type { SuffixCodecs } from "../internal/suffix";
 import type { SegmentIdCodecs } from "../segment-id";
@@ -28,22 +27,12 @@ export type LocatorCodecs = {
 
 export function makeLocatorCodecs(
 	_segmentId: SegmentIdCodecs,
-	_canonicalSplitPath: CanonicalSplitPathCodecs,
 	_suffix: SuffixCodecs,
 ): LocatorCodecs {
 	return {
 		canonicalSplitPathInsideLibraryToLocator: (sp) =>
-			canonicalSplitPathInsideLibraryToLocator(
-				_segmentId,
-				_canonicalSplitPath,
-				sp,
-			),
+			canonicalSplitPathInsideLibraryToLocator(_segmentId, sp),
 		locatorToCanonicalSplitPathInsideLibrary: (loc) =>
-			locatorToCanonicalSplitPathInsideLibrary(
-				_segmentId,
-				_canonicalSplitPath,
-				_suffix,
-				loc,
-			),
+			locatorToCanonicalSplitPathInsideLibrary(_segmentId, _suffix, loc),
 	};
 }

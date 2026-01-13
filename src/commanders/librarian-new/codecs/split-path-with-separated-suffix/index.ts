@@ -1,9 +1,8 @@
-// Re-export SeparatedSuffixedBasename for adapter layer (suffix is internal)
-export type { SeparatedSuffixedBasename } from "../internal/suffix/types";
-export type { CanonicalSplitPathCodecs } from "./make";
-export { makeCanonicalSplitPathCodecs } from "./make";
+export type { SplitPathWithSeparatedSuffixCodecs } from "./make";
+export { makeSplitPathWithSeparatedSuffixCodecs } from "./make";
 export type {
 	AnyCanonicalSplitPathInsideLibrary,
+	CanonicalSeparatedSuffixedBasename,
 	// Legacy alias
 	CanonicalSplitPathInsideLibrary,
 	CanonicalSplitPathInsideLibraryOf,
@@ -11,4 +10,4 @@ export type {
 	CanonicalSplitPathToFolderInsideLibrary,
 	CanonicalSplitPathToMdFileInsideLibrary,
 	SplitPathInsideLibraryWithSeparatedSuffixOf,
-} from "./types/canonical-split-path";
+} from "./types";

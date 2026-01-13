@@ -493,15 +493,14 @@ export class Healer implements TreeAccessor {
 	): SplitPathToMdFileInsideLibrary | SplitPathToFileInsideLibrary {
 		// Suffix from OLD path (what the file WAS named)
 		const suffixParts =
-			this.codecs.canonicalSplitPath.pathPartsWithRootToSuffixParts(
+			this.codecs.suffix.pathPartsWithRootToSuffixParts(
 				oldSuffixPathParts,
 			);
 
-		const basename =
-			this.codecs.canonicalSplitPath.serializeSeparatedSuffix({
-				coreName: leaf.nodeName,
-				suffixParts,
-			});
+		const basename = this.codecs.suffix.serializeSeparatedSuffix({
+			coreName: leaf.nodeName,
+			suffixParts,
+		});
 
 		// pathParts = CURRENT path (where file IS now)
 		if (leaf.kind === TreeNodeKind.Scroll) {
@@ -533,7 +532,7 @@ export class Healer implements TreeAccessor {
 			.andThen((canonical) => {
 				// Convert canonical to split path
 				const splitPath =
-					this.codecs.canonicalSplitPath.fromCanonicalSplitPathInsideLibrary(
+					this.codecs.splitPathWithSeparatedSuffix.fromSplitPathInsideLibraryWithSeparatedSuffix(
 						canonical,
 					);
 

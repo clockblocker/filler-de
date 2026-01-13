@@ -1,7 +1,7 @@
 import type { SplitPathKind } from "../../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { SuffixCodecs } from "../../../internal/suffix";
 import type { SplitPathInsideLibraryOf } from "../../../split-path-inside-library";
-import type { SplitPathInsideLibraryWithSeparatedSuffixOf } from "../../types/canonical-split-path";
+import type { SplitPathInsideLibraryWithSeparatedSuffixOf } from "../types";
 
 /**
  * Converts split path with separated suffix to regular split path inside library.

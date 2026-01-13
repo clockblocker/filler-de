@@ -1,6 +1,4 @@
-import type { CanonicalSplitPathCodecs } from "./canonical-split-path";
-import { makeCanonicalSplitPathCodecs } from "./canonical-split-path";
-import { makeSuffixCodecs } from "./internal/suffix";
+import { makeSuffixCodecs, type SuffixCodecs } from "./internal/suffix";
 import type { LocatorCodecs } from "./locator";
 import { makeLocatorCodecs } from "./locator";
 import type { CodecRules } from "./rules";
@@ -8,6 +6,8 @@ import type { SegmentIdCodecs } from "./segment-id";
 import { makeSegmentIdCodecs } from "./segment-id";
 import type { SplitPathInsideLibraryCodecs } from "./split-path-inside-library";
 import { makeSplitPathInsideLibraryCodecs } from "./split-path-inside-library";
+import type { SplitPathWithSeparatedSuffixCodecs } from "./split-path-with-separated-suffix";
+import { makeSplitPathWithSeparatedSuffixCodecs } from "./split-path-with-separated-suffix";
 
 /**
  * Public codec API.
@@ -16,7 +16,8 @@ import { makeSplitPathInsideLibraryCodecs } from "./split-path-inside-library";
 export type Codecs = {
 	segmentId: SegmentIdCodecs;
 	splitPathInsideLibrary: SplitPathInsideLibraryCodecs;
-	canonicalSplitPath: CanonicalSplitPathCodecs;
+	splitPathWithSeparatedSuffix: SplitPathWithSeparatedSuffixCodecs;
+	suffix: SuffixCodecs;
 	locator: LocatorCodecs;
 };
 
@@ -26,35 +27,31 @@ export type Codecs = {
  * 1. suffix (no dependencies, internal)
  * 2. segmentId (no dependencies)
  * 3. splitPathInsideLibrary (minimal dependencies)
- * 4. canonicalSplitPath (depends on suffix)
- * 5. locator (depends on segmentId, canonicalSplitPath, suffix)
+ * 4. splitPathWithSeparatedSuffix (depends on suffix)
+ * 5. locator (depends on segmentId, suffix)
  */
 export function makeCodecs(rules: CodecRules): Codecs {
 	// Create in dependency order (lowest to highest)
 	const suffix = makeSuffixCodecs(rules); // Internal - only used for injection
 	const segmentId = makeSegmentIdCodecs(rules);
 	const splitPathInsideLibrary = makeSplitPathInsideLibraryCodecs(rules);
-	const canonicalSplitPath = makeCanonicalSplitPathCodecs(rules, suffix);
-	const locator = makeLocatorCodecs(segmentId, canonicalSplitPath, suffix);
+	const splitPathWithSeparatedSuffix =
+		makeSplitPathWithSeparatedSuffixCodecs(suffix);
+	const locator = makeLocatorCodecs(segmentId, suffix);
 
-	// Return only public codec objects (suffix is internal, not exposed)
+	// Return public codec objects
 	return {
-		canonicalSplitPath,
 		locator,
 		segmentId,
 		splitPathInsideLibrary,
+		splitPathWithSeparatedSuffix,
+		suffix,
 	};
 }
 
-export type {
-	CanonicalSplitPathInsideLibrary,
-	CanonicalSplitPathToFileInsideLibrary,
-	CanonicalSplitPathToFolderInsideLibrary,
-	CanonicalSplitPathToMdFileInsideLibrary,
-	SeparatedSuffixedBasename,
-} from "./canonical-split-path";
 // Re-export types for convenience
 export type { CodecError } from "./errors";
+export type { SeparatedSuffixedBasename } from "./internal/suffix/types";
 export type {
 	FileNodeLocator,
 	ScrollNodeLocator,
@@ -72,3 +69,12 @@ export type {
 	SplitPathToFolderInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
 } from "./split-path-inside-library";
+export type {
+	AnyCanonicalSplitPathInsideLibrary,
+	CanonicalSplitPathInsideLibrary,
+	CanonicalSplitPathInsideLibraryOf,
+	CanonicalSplitPathToFileInsideLibrary,
+	CanonicalSplitPathToFolderInsideLibrary,
+	CanonicalSplitPathToMdFileInsideLibrary,
+	SplitPathInsideLibraryWithSeparatedSuffixOf,
+} from "./split-path-with-separated-suffix";

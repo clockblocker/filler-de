@@ -2,15 +2,14 @@ import { err, ok, type Result } from "neverthrow";
 import { MD } from "../../../../../managers/obsidian/vault-action-manager/types/literals";
 import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import { TreeNodeKind } from "../../../healer/library-tree/tree-node/types/atoms";
-import type { CanonicalSplitPathCodecs } from "../../canonical-split-path";
-import type {
-	AnyCanonicalSplitPathInsideLibrary,
-	CanonicalSplitPathInsideLibraryOf,
-} from "../../canonical-split-path/types/canonical-split-path";
 import type { CodecError } from "../../errors";
 import { makeLocatorError } from "../../errors";
 import type { SuffixCodecs } from "../../internal/suffix";
 import type { SegmentIdCodecs } from "../../segment-id";
+import type {
+	AnyCanonicalSplitPathInsideLibrary,
+	CanonicalSplitPathInsideLibraryOf,
+} from "../../split-path-with-separated-suffix";
 import type { CorrespondingSplitPathKind } from "../../types/type-mappings";
 import type { NodeLocatorOf, TreeNodeLocator } from "../types";
 
@@ -22,7 +21,6 @@ export function locatorToCanonicalSplitPathInsideLibrary<
 	NK extends TreeNodeKind,
 >(
 	segmentId: SegmentIdCodecs,
-	canonicalSplitPath: CanonicalSplitPathCodecs,
 	suffix: SuffixCodecs,
 	loc: NodeLocatorOf<NK>,
 ): Result<
@@ -31,7 +29,6 @@ export function locatorToCanonicalSplitPathInsideLibrary<
 >;
 export function locatorToCanonicalSplitPathInsideLibrary(
 	segmentId: SegmentIdCodecs,
-	_canonicalSplitPath: CanonicalSplitPathCodecs,
 	suffix: SuffixCodecs,
 	loc: TreeNodeLocator,
 ): Result<AnyCanonicalSplitPathInsideLibrary, CodecError> {

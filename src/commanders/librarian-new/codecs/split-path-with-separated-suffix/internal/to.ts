@@ -6,7 +6,7 @@ import { makeSplitPathError, makeZodError } from "../../../errors";
 
 import type { SuffixCodecs } from "../../../internal/suffix";
 import type { SplitPathInsideLibraryOf } from "../../../split-path-inside-library";
-import type { SplitPathInsideLibraryWithSeparatedSuffixOf } from "../../types/canonical-split-path";
+import type { SplitPathInsideLibraryWithSeparatedSuffixOf } from "../types";
 
 /**
  * Converts split path inside library to split path with separated suffix.

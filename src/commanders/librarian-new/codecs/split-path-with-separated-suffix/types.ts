@@ -1,9 +1,9 @@
 import type {
 	SplitPathKind,
 	SplitPathKind as SplitPathKindEnum,
-} from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
-import type { SeparatedSuffixedBasename } from "../../internal/suffix/types";
-import type { SplitPathInsideLibraryOf } from "../../split-path-inside-library";
+} from "../../../../managers/obsidian/vault-action-manager/types/split-path";
+import type { SeparatedSuffixedBasename } from "../internal/suffix/types";
+import type { SplitPathInsideLibraryOf } from "../split-path-inside-library";
 
 /**
  * Split path inside library with separated suffix.

@@ -74,7 +74,7 @@ function isCodexEvent(ev: MaterializedNodeEvent, codecs: Codecs): boolean {
 	const splitPath =
 		ev.kind === MaterializedEventType.Rename ? ev.to : ev.splitPath;
 	const result = adaptCodecResult(
-		codecs.canonicalSplitPath.parseSeparatedSuffix(splitPath.basename),
+		codecs.suffix.parseSeparatedSuffix(splitPath.basename),
 	);
 	return result.isOk() && result.value.coreName === CODEX_CORE_NAME;
 }

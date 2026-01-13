@@ -4,13 +4,11 @@ import type { SplitPathKind } from "../../../../../../../../../../managers/obsid
 import type {
 	AnySplitPathInsideLibrary,
 	CanonicalSplitPathInsideLibrary,
+	CanonicalSplitPathInsideLibraryOf,
 	Codecs,
 	SplitPathInsideLibraryOf,
-} from "../../../../../../../../codecs";
-import type {
-	CanonicalSplitPathInsideLibraryOf,
 	SplitPathInsideLibraryWithSeparatedSuffixOf,
-} from "../../../../../../../../codecs/canonical-split-path/types/canonical-split-path";
+} from "../../../../../../../../codecs";
 import type { NodeName } from "../../../../../../../../types/schemas/node-name";
 import {
 	buildCanonicalSeparatedSuffixedBasename,
@@ -50,8 +48,22 @@ export function tryMakeTargetLocatorFromLibraryScopedSplitPath<
 	sp: SplitPathInsideLibraryOf<SK>,
 	codecs: Codecs,
 ): Result<TreeNodeLocatorForLibraryScopedSplitPath<SK>, string> {
+	const withSeparatedSuffixResult = adaptCodecResult(
+		codecs.splitPathWithSeparatedSuffix.splitPathInsideLibraryToWithSeparatedSuffix(
+			sp,
+		),
+	);
+	if (withSeparatedSuffixResult.isErr()) {
+		return err(withSeparatedSuffixResult.error);
+	}
+	const { splitPathToLibraryRoot } = getParsedUserSettings();
+	const libraryRootName = splitPathToLibraryRoot.basename;
 	const cspRes = adaptCodecResult(
-		codecs.canonicalSplitPath.splitPathInsideLibraryToCanonical(sp),
+		canonizeSplitPathWithSeparatedSuffix(
+			codecs.suffix,
+			libraryRootName,
+			withSeparatedSuffixResult.value,
+		),
 	);
 	if (cspRes.isErr()) return err(cspRes.error);
 
@@ -70,9 +82,24 @@ const tryMakeCanonicalSplitPathToDestination = <
 	codecs: Codecs,
 ): Result<CanonicalSplitPathToDestination<E>, string> => {
 	if (ev.kind === MaterializedEventKind.Delete) {
-		const r = adaptCodecResult(
-			codecs.canonicalSplitPath.splitPathInsideLibraryToCanonical(
+		const withSeparatedSuffixResult = adaptCodecResult(
+			codecs.splitPathWithSeparatedSuffix.splitPathInsideLibraryToWithSeparatedSuffix(
 				ev.splitPath,
+			),
+		);
+		if (withSeparatedSuffixResult.isErr()) {
+			return err(withSeparatedSuffixResult.error) as Result<
+				CanonicalSplitPathToDestination<E>,
+				string
+			>;
+		}
+		const { splitPathToLibraryRoot } = getParsedUserSettings();
+		const libraryRootName = splitPathToLibraryRoot.basename;
+		const r = adaptCodecResult(
+			canonizeSplitPathWithSeparatedSuffix(
+				codecs.suffix,
+				libraryRootName,
+				withSeparatedSuffixResult.value,
 			),
 		);
 		return r as Result<CanonicalSplitPathToDestination<E>, string>;
@@ -149,7 +176,7 @@ export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
 	if (effectivePolicy === ChangePolicy.PathKing) {
 		// Convert to split path with separated suffix (validates NodeNames)
 		const withSeparatedSuffixResult = adaptCodecResult(
-			codecs.canonicalSplitPath.splitPathInsideLibraryToWithSeparatedSuffix(
+			codecs.splitPathWithSeparatedSuffix.splitPathInsideLibraryToWithSeparatedSuffix(
 				sp,
 			),
 		);
@@ -165,7 +192,7 @@ export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
 		if (marker) {
 			// Re-parse without duplicate marker to get clean coreName
 			const cleanSepRes = adaptCodecResult(
-				codecs.canonicalSplitPath.parseSeparatedSuffix(cleanBasename),
+				codecs.suffix.parseSeparatedSuffix(cleanBasename),
 			);
 			if (cleanSepRes.isErr()) return err(cleanSepRes.error);
 			// Re-attach marker to coreName
@@ -184,9 +211,7 @@ export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
 		const { splitPathToLibraryRoot } = getParsedUserSettings();
 		const libraryRootName = splitPathToLibraryRoot.basename;
 		const expected = buildCanonicalSeparatedSuffixedBasename(
-			codecs.canonicalSplitPath as unknown as Parameters<
-				typeof buildCanonicalSeparatedSuffixedBasename
-			>[0],
+			codecs.suffix,
 			libraryRootName,
 			spWithSeparatedSuffix.separatedSuffixedBasename.coreName,
 			spWithSeparatedSuffix,
@@ -200,9 +225,7 @@ export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
 
 		// Canonize using policy (validates format)
 		const canonizedResult = canonizeSplitPathWithSeparatedSuffix(
-			codecs.canonicalSplitPath as unknown as Parameters<
-				typeof canonizeSplitPathWithSeparatedSuffix
-			>[0],
+			codecs.suffix,
 			libraryRootName,
 			spWithSeparatedSuffix,
 		);
@@ -221,7 +244,7 @@ export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
 
 	// Convert to split path with separated suffix (validates NodeNames)
 	const withSeparatedSuffixResult = adaptCodecResult(
-		codecs.canonicalSplitPath.splitPathInsideLibraryToWithSeparatedSuffix(
+		codecs.splitPathWithSeparatedSuffix.splitPathInsideLibraryToWithSeparatedSuffix(
 			sp,
 		),
 	);
@@ -235,7 +258,7 @@ export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
 	const { cleanBasename, marker } = extractDuplicateMarker(sp.basename);
 	if (marker) {
 		const cleanSepRes = adaptCodecResult(
-			codecs.canonicalSplitPath.parseSeparatedSuffix(cleanBasename),
+			codecs.suffix.parseSeparatedSuffix(cleanBasename),
 		);
 		if (cleanSepRes.isErr()) return err(cleanSepRes.error);
 		const coreNameWithMarker = (cleanSepRes.value.coreName +
@@ -278,10 +301,9 @@ export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
 		// Regular NameKing (Create / non-move):
 		// interpret basename suffix chain as parent chain
 		// coreName stays nodeName; suffixParts become extra parent sections
-		const convertedPathParts =
-			codecs.canonicalSplitPath.suffixPartsToPathParts(
-				suffixParts,
-			) as NodeName[];
+		const convertedPathParts = codecs.suffix.suffixPartsToPathParts(
+			suffixParts,
+		) as NodeName[];
 		spWithSeparatedSuffix = {
 			...spWithSeparatedSuffix,
 			pathParts: [libraryRoot, ...convertedPathParts],
@@ -292,9 +314,7 @@ export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
 	const { splitPathToLibraryRoot } = getParsedUserSettings();
 	const libraryRootName = splitPathToLibraryRoot.basename;
 	const expected = buildCanonicalSeparatedSuffixedBasename(
-		codecs.canonicalSplitPath as unknown as Parameters<
-			typeof buildCanonicalSeparatedSuffixedBasename
-		>[0],
+		codecs.suffix,
 		libraryRootName,
 		coreName,
 		spWithSeparatedSuffix,
@@ -308,9 +328,7 @@ export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
 
 	// Canonize using policy (validates format)
 	const canonizedResult = canonizeSplitPathWithSeparatedSuffix(
-		codecs.canonicalSplitPath as unknown as Parameters<
-			typeof canonizeSplitPathWithSeparatedSuffix
-		>[0],
+		codecs.suffix,
 		libraryRootName,
 		spWithSeparatedSuffix,
 	);

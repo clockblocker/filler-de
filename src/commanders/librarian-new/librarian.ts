@@ -193,9 +193,7 @@ export class Librarian {
 		for (const file of files) {
 			// Skip codex files (basename starts with __)
 			const coreNameResult =
-				this.codecs.canonicalSplitPath.parseSeparatedSuffix(
-					file.basename,
-				);
+				this.codecs.suffix.parseSeparatedSuffix(file.basename);
 			if (
 				coreNameResult.isOk() &&
 				coreNameResult.value.coreName === CODEX_CORE_NAME
@@ -295,9 +293,7 @@ export class Librarian {
 
 			// Check if basename starts with __
 			const coreNameResult =
-				this.codecs.canonicalSplitPath.parseSeparatedSuffix(
-					file.basename,
-				);
+				this.codecs.suffix.parseSeparatedSuffix(file.basename);
 			if (coreNameResult.isErr()) continue;
 
 			if (coreNameResult.value.coreName !== CODEX_CORE_NAME) continue;
@@ -383,9 +379,7 @@ export class Librarian {
 	private handleCheckboxClick(event: CheckboxClickedEvent): void {
 		// Check if file is a codex (basename starts with __)
 		const coreNameResult =
-			this.codecs.canonicalSplitPath.parseSeparatedSuffix(
-				event.splitPath.basename,
-			);
+			this.codecs.suffix.parseSeparatedSuffix(event.splitPath.basename);
 		if (coreNameResult.isErr()) return;
 
 		if (coreNameResult.value.coreName !== CODEX_CORE_NAME) {
@@ -714,7 +708,7 @@ export class Librarian {
 		return canonicalResult.andThen((canonical) => {
 			// Convert canonical to split path
 			const splitPath =
-				this.codecs.canonicalSplitPath.fromCanonicalSplitPathInsideLibrary(
+				this.codecs.splitPathWithSeparatedSuffix.fromSplitPathInsideLibraryWithSeparatedSuffix(
 					canonical,
 				);
 

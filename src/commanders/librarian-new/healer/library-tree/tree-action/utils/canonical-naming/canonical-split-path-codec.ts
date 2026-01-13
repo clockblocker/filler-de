@@ -11,12 +11,9 @@ import type {
 	SplitPathToFolderInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
 } from "../../../../../codecs";
-import { makeCodecs, makeCodecRulesFromSettings } from "../../../../../codecs";
+import { makeCodecRulesFromSettings, makeCodecs } from "../../../../../codecs";
 import { NodeNameSchema } from "../../../../../types/schemas/node-name";
-import {
-	buildCanonicalSeparatedSuffixedBasename,
-	canonizeSplitPathWithSeparatedSuffix,
-} from "../../../../../codecs/canonical-split-path/internal/canonicalization-policy";
+import { canonizeSplitPathWithSeparatedSuffix } from "./canonicalization-policy";
 import { makeJoinedSuffixedBasename } from "./suffix-utils/core-suffix-utils";
 
 export function tryParseCanonicalSplitPathInsideLibrary(
@@ -44,7 +41,7 @@ export function tryParseCanonicalSplitPathInsideLibrary(
 
 	// Convert to separated suffix format using new codec
 	const withSeparatedSuffixResult =
-		codecs.canonicalSplitPath.splitPathInsideLibraryToWithSeparatedSuffix(
+		codecs.splitPathWithSeparatedSuffix.splitPathInsideLibraryToWithSeparatedSuffix(
 			sp,
 		);
 	if (withSeparatedSuffixResult.isErr()) {
@@ -56,17 +53,16 @@ export function tryParseCanonicalSplitPathInsideLibrary(
 
 	// Canonize using policy (validates format by comparing actual with expected)
 	const canonizedResult = canonizeSplitPathWithSeparatedSuffix(
-		codecs.canonicalSplitPath as unknown as Parameters<
-			typeof canonizeSplitPathWithSeparatedSuffix
-		>[0],
+		codecs.suffix,
 		rules.libraryRootName,
 		actualSeparatedSuffix,
 	);
+
 	if (canonizedResult.isErr()) {
 		return err(canonizedResult.error.message);
 	}
 
-	return ok(canonizedResult.value);
+	return ok(canonizedResult.value as CanonicalSplitPathInsideLibrary);
 }
 
 function tryParsePathParts(

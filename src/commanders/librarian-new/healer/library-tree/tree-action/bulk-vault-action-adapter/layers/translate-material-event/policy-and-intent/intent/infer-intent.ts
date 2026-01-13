@@ -72,7 +72,7 @@ export function inferRenameIntent(
 
 	// basename changed: check if it's a "move-by-name" or just a rename
 	const sepRes = adaptCodecResult(
-		codecs.canonicalSplitPath.parseSeparatedSuffix(to.basename),
+		codecs.suffix.parseSeparatedSuffix(to.basename),
 	);
 
 	// if invalid basename, treat as plain rename (will be rejected/healed later anyway)
@@ -90,7 +90,7 @@ export function inferRenameIntent(
 
 	// FILES: compare suffix with current path
 	const currentSuffixParts =
-		codecs.canonicalSplitPath.pathPartsWithRootToSuffixParts(to.pathParts);
+		codecs.suffix.pathPartsWithRootToSuffixParts(to.pathParts);
 
 	// no suffix AND already at root → pure rename
 	// no suffix AND NOT at root → move to root (NameKing: empty suffix = root)
