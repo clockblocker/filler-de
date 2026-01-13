@@ -5,6 +5,8 @@ import {
 } from "../../../../../src/commanders/librarian-new/codecs";
 import {
 	codexImpactToActions,
+	codexImpactToDeletions,
+	codexImpactToRecreations,
 	type TreeAccessor,
 } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/codex-impact-to-actions";
 import type { CodexImpact } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/compute-codex-impact";
@@ -159,7 +161,9 @@ describe("codexImpactToActions", () => {
 	});
 
 	describe("renamed", () => {
-		it("generates DeleteCodex for new location with old suffix and UpsertCodex for new location", () => {
+		// Note: This test uses the deprecated codexImpactToActions which no longer generates DeleteCodex.
+		// Use codexImpactToDeletions and codexImpactToRecreations for new code.
+		it("generates UpsertCodex for new location (deletions handled separately)", () => {
 			const root = section("Library", {
 				"NewName﹘Section﹘": section("NewName"),
 			});
@@ -179,17 +183,9 @@ describe("codexImpactToActions", () => {
 
 			const actions = codexImpactToActions(impact, tree, codecs);
 
-			// Should have delete for moved codex (new location, old suffix), upsert for new location, and upsert for parent (Library)
+			// Deprecated function only generates recreations, not deletions
+			// Should have upsert for new location and upsert for parent (Library)
 			expect(actions.length).toBeGreaterThanOrEqual(2);
-			
-			const deleteAction = actions.find((a) => a.kind === "DeleteCodex");
-			expect(deleteAction).toBeDefined();
-			if (deleteAction?.kind === "DeleteCodex") {
-				// Delete should target NEW location with OLD suffix
-				// When Obsidian moves folder, codex moves with it but keeps old suffix
-				expect(deleteAction.payload.splitPath.pathParts.join("/")).toBe("Library/NewName");
-				expect(deleteAction.payload.splitPath.basename).toBe("__-OldName");
-			}
 
 			const newUpsertAction = actions.find(
 				(a) =>
@@ -204,7 +200,9 @@ describe("codexImpactToActions", () => {
 	});
 
 	describe("deleted", () => {
-		it("generates DeleteCodex action", () => {
+		// Note: This test uses the deprecated codexImpactToActions which no longer generates DeleteCodex.
+		// Use codexImpactToDeletions and codexImpactToRecreations for new code.
+		it("generates UpsertCodex for parent (deletions handled separately)", () => {
 			const root = section("Library");
 			const tree = makeTreeAccessor(root);
 
@@ -217,13 +215,16 @@ describe("codexImpactToActions", () => {
 
 			const actions = codexImpactToActions(impact, tree, codecs);
 
-			// DeleteCodex for A, and UpsertCodex for Library (all codexes are regenerated)
-			expect(actions.length).toBe(2);
-			const deleteAction = actions.find((a) => a.kind === "DeleteCodex");
-			expect(deleteAction).toBeDefined();
-			if (deleteAction?.kind === "DeleteCodex") {
-				expect(deleteAction.payload.splitPath.basename).toBe("__-A");
-			}
+			// Deprecated function only generates recreations, not deletions
+			// Should have UpsertCodex for Library (all codexes are regenerated)
+			expect(actions.length).toBe(1);
+			const libraryUpsert = actions.find(
+				(a) =>
+					a.kind === "UpsertCodex" &&
+					a.payload.splitPath.pathParts.length === 1 &&
+					a.payload.splitPath.pathParts[0] === "Library",
+			);
+			expect(libraryUpsert).toBeDefined();
 		});
 
 		it("skips contentChanged for deleted sections", () => {
@@ -239,14 +240,9 @@ describe("codexImpactToActions", () => {
 
 			const actions = codexImpactToActions(impact, tree, codecs);
 
-			// Delete for A, and UpsertCodex for parent (Library) which is in contentChanged
-			expect(actions.length).toBe(2);
-			
-			const deleteAction = actions.find((a) => a.kind === "DeleteCodex");
-			expect(deleteAction).toBeDefined();
-			if (deleteAction?.kind === "DeleteCodex") {
-				expect(deleteAction.payload.splitPath.basename).toBe("__-A");
-			}
+			// Deprecated function only generates recreations, not deletions
+			// Should have UpsertCodex for parent (Library) which is in contentChanged
+			expect(actions.length).toBe(1);
 
 			// Parent (Library) should be regenerated
 			const libraryUpsert = actions.find(
@@ -297,5 +293,179 @@ describe("codexImpactToActions", () => {
 				expect(writeStatusActions[0].payload.status).toBe(TreeNodeStatus.Done);
 			}
 		});
+	});
+});
+
+describe("codexImpactToDeletions", () => {
+	describe("deleted", () => {
+		it("generates DeleteMdFile for deleted sections", () => {
+			const root = section("Library");
+			const tree = makeTreeAccessor(root);
+
+			const impact: CodexImpact = {
+				contentChanged: [],
+				deleted: [[sec("Library"), sec("A")]],
+				descendantsChanged: [],
+				renamed: [],
+			};
+
+			const actions = codexImpactToDeletions(impact, tree, codecs);
+
+			expect(actions.length).toBe(1);
+			const deleteAction = actions.find((a) => a.kind === "DeleteMdFile");
+			expect(deleteAction).toBeDefined();
+			if (deleteAction?.kind === "DeleteMdFile") {
+				expect(deleteAction.payload.splitPath.basename).toBe("__-A");
+			}
+		});
+	});
+
+	describe("renamed", () => {
+		it("generates DeleteMdFile for new location with old suffix", () => {
+			const root = section("Library", {
+				"NewName﹘Section﹘": section("NewName"),
+			});
+			const tree = makeTreeAccessor(root);
+
+			const impact: CodexImpact = {
+				contentChanged: [],
+				deleted: [],
+				descendantsChanged: [],
+				renamed: [
+					{
+						newChain: [sec("Library"), sec("NewName")],
+						oldChain: [sec("Library"), sec("OldName")],
+					},
+				],
+			};
+
+			const actions = codexImpactToDeletions(impact, tree, codecs);
+
+			expect(actions.length).toBe(1);
+			const deleteAction = actions.find((a) => a.kind === "DeleteMdFile");
+			expect(deleteAction).toBeDefined();
+			if (deleteAction?.kind === "DeleteMdFile") {
+				// Delete should target NEW location with OLD suffix
+				expect(deleteAction.payload.splitPath.pathParts.join("/")).toBe(
+					"Library/NewName",
+				);
+				expect(deleteAction.payload.splitPath.basename).toBe("__-OldName");
+			}
+		});
+
+		it("generates DeleteMdFile for renamed section and its descendants", () => {
+			const root = section("Library", {
+				"NewName﹘Section﹘": section("NewName", {
+					"Child﹘Section﹘": section("Child"),
+				}),
+			});
+			const tree = makeTreeAccessor(root);
+
+			const impact: CodexImpact = {
+				contentChanged: [],
+				deleted: [],
+				descendantsChanged: [],
+				renamed: [
+					{
+						newChain: [sec("Library"), sec("NewName")],
+						oldChain: [sec("Library"), sec("OldName")],
+					},
+				],
+			};
+
+			const actions = codexImpactToDeletions(impact, tree, codecs);
+
+			// Should delete both the renamed section and its descendant
+			expect(actions.length).toBe(2);
+			const parentDelete = actions.find(
+				(a) =>
+					a.kind === "DeleteMdFile" &&
+					a.payload.splitPath.pathParts.join("/") === "Library/NewName" &&
+					a.payload.splitPath.basename === "__-OldName",
+			);
+			expect(parentDelete).toBeDefined();
+
+			const childDelete = actions.find(
+				(a) =>
+					a.kind === "DeleteMdFile" &&
+					a.payload.splitPath.pathParts.join("/") ===
+						"Library/NewName/Child" &&
+					a.payload.splitPath.basename === "__-Child-OldName",
+			);
+			expect(childDelete).toBeDefined();
+		});
+	});
+});
+
+describe("codexImpactToRecreations", () => {
+	it("generates UpsertCodex for all sections", () => {
+		const root = section("Library", {
+			"A﹘Section﹘": section("A"),
+		});
+		const tree = makeTreeAccessor(root);
+
+		const impact: CodexImpact = {
+			contentChanged: [],
+			deleted: [],
+			descendantsChanged: [],
+			renamed: [],
+		};
+
+		const actions = codexImpactToRecreations(impact, tree, codecs);
+
+		// Should regenerate all sections (Library and A)
+		expect(actions.length).toBe(2);
+		const libraryUpsert = actions.find(
+			(a) =>
+				a.kind === "UpsertCodex" &&
+				a.payload.splitPath.pathParts.length === 1 &&
+				a.payload.splitPath.pathParts[0] === "Library",
+		);
+		expect(libraryUpsert).toBeDefined();
+
+		const aUpsert = actions.find(
+			(a) =>
+				a.kind === "UpsertCodex" &&
+				a.payload.splitPath.pathParts.join("/") === "Library/A",
+		);
+		expect(aUpsert).toBeDefined();
+	});
+
+	it("generates WriteScrollStatus for descendant scrolls", () => {
+		const root = section("Library", {
+			"A﹘Section﹘": section("A", {
+				"scroll1﹘Scroll﹘md": scroll("scroll1", TreeNodeStatus.Done),
+			}),
+		});
+		const tree = makeTreeAccessor(root);
+
+		const impact: CodexImpact = {
+			contentChanged: [],
+			deleted: [],
+			descendantsChanged: [
+				{
+					sectionChain: [sec("Library"), sec("A")],
+					newStatus: TreeNodeStatus.Done,
+				},
+			],
+			renamed: [],
+		};
+
+		const actions = codexImpactToRecreations(impact, tree, codecs);
+
+		// Should have UpsertCodex for Library and A, plus WriteScrollStatus for scroll1
+		expect(actions.length).toBeGreaterThanOrEqual(3);
+		const writeStatus = actions.find(
+			(a) =>
+				a.kind === "WriteScrollStatus" &&
+				a.payload.splitPath.pathParts.join("/") === "Library/A" &&
+				a.payload.splitPath.basename.startsWith("scroll1"),
+		);
+		expect(writeStatus).toBeDefined();
+		if (writeStatus?.kind === "WriteScrollStatus") {
+			expect(writeStatus.payload.status).toBe(TreeNodeStatus.Done);
+			// Scroll basename includes parent section suffix (e.g., "scroll1-A")
+			expect(writeStatus.payload.splitPath.basename).toContain("scroll1");
+		}
 	});
 });

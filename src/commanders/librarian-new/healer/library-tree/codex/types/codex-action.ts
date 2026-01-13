@@ -11,7 +11,6 @@ import type { TreeNodeStatus } from "../../tree-node/types/atoms";
 
 export type CodexActionType =
 	| "UpsertCodex"
-	| "DeleteCodex"
 	| "WriteScrollStatus";
 
 // ─── Payloads ───
@@ -32,11 +31,6 @@ export type RenameCodexPayload = {
 	to: SplitPathToMdFileInsideLibrary;
 };
 
-/** Delete codex file */
-export type DeleteCodexPayload = {
-	splitPath: SplitPathToMdFileInsideLibrary;
-};
-
 /** Write status to scroll metadata */
 export type WriteScrollStatusPayload = {
 	/** Target scroll path */
@@ -46,11 +40,6 @@ export type WriteScrollStatusPayload = {
 };
 
 // ─── Actions ───
-
-export type DeleteCodexAction = {
-	kind: "DeleteCodex";
-	payload: DeleteCodexPayload;
-};
 
 export type WriteScrollStatusAction = {
 	kind: "WriteScrollStatus";
@@ -64,5 +53,4 @@ export type UpsertCodexAction = {
 
 export type CodexAction =
 	| UpsertCodexAction
-	| DeleteCodexAction
 	| WriteScrollStatusAction;

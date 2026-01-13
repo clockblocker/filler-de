@@ -33,21 +33,6 @@ export function codexActionToVaultAction(
 				},
 			};
 
-		case "DeleteCodex": {
-			// Type assertion: SplitPathToMdFileInsideLibrary → SplitPathToMdFile via EnscopedSplitPath
-			const vaultScopedPath = makeVaultScopedSplitPath(
-				action.payload.splitPath,
-				rules,
-			) as SplitPathToMdFile;
-
-			return {
-				kind: VaultActionKind.TrashMdFile,
-				payload: {
-					splitPath: vaultScopedPath,
-				},
-			};
-		}
-
 		case "WriteScrollStatus":
 			// ProcessMdFile with transform to update metadata
 			return {

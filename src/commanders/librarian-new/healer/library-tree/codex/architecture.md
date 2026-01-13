@@ -15,25 +15,37 @@ TreeAction[] (Create/Delete/Rename/Move/ChangeStatus)
     ↓
 computeCodexImpact() → CodexImpact
     ↓
-codexImpactToActions() → CodexAction[]
+codexImpactToDeletions() → HealingAction[] (DeleteMdFile)
+    +
+codexImpactToRecreations() → CodexAction[] (UpsertCodex + WriteScrollStatus)
     +
 extractScrollStatusActions() → WriteScrollStatusAction[] (from direct scroll changes)
     ↓
-Merge: CodexAction[] + WriteScrollStatusAction[]
+Merge: HealingAction[] + CodexAction[] + WriteScrollStatusAction[]
     ↓
-codexActionsToVaultActions() → VaultAction[]
+healingActionsToVaultActions() + codexActionsToVaultActions() → VaultAction[]
     ↓
-VaultActionManager.dispatch()
+VaultActionManager.dispatch() (single dispatch with topological sort)
 ```
 
 ## Regeneration Strategy
 
-`codexImpactToActions` uses a **full regeneration approach** (similar to init):
-1. Collects ALL section chains from current tree state
-2. Generates `UpsertCodex` for all sections (ensures all codexes are up-to-date)
-3. Deletes old codexes:
-   - Sections explicitly deleted (`impact.deleted`)
-   - Moved codexes with old suffix at new location (`impact.renamed` - when Obsidian moves folders, codex files move with them but keep old suffix)
+Codex processing uses a **two-phase approach**:
+
+**Phase 1: Deletions** (`codexImpactToDeletions`)
+- Converts codex deletions to `DeleteMdFile` HealingActions
+- Handles:
+  - Sections explicitly deleted (`impact.deleted`)
+  - Moved codexes with old suffix at new location (`impact.renamed` - when Obsidian moves folders, codex files move with them but keep old suffix)
+  - Descendants of renamed sections (with old suffix at new location)
+
+**Phase 2: Recreations** (`codexImpactToRecreations`)
+- Uses **full regeneration approach** (similar to init):
+  1. Collects ALL section chains from current tree state
+  2. Generates `UpsertCodex` for all sections (ensures all codexes are up-to-date)
+  3. Generates `WriteScrollStatus` for descendant scrolls when status propagates
+
+Both phases are combined with healing actions and dispatched in a single batch. The `VaultActionManager`'s topological sort ensures correct ordering (deletes before creates when needed).
 
 This approach is simpler and more reliable than tracking incremental changes, ensuring no orphaned codexes remain.
 
@@ -57,10 +69,11 @@ Impact always includes ancestors (status aggregates upward).
 | Action | Trigger | VaultAction |
 |--------|---------|-------------|
 | `UpsertCodex` | Section exists (create or update) | `UpsertMdFile` |
-| `DeleteCodex` | Section deleted or moved (old codex with wrong suffix) | `TrashMdFile` |
 | `WriteScrollStatus` | Status propagation to leaves OR direct scroll status change | `ProcessMdFile` |
 
-**Note:** `UpsertCodex` replaces the old `CreateCodex`/`UpdateCodex` distinction - upsert handles both cases. `RenameCodex` is no longer used; renames are handled as delete old + upsert new.
+**Note:** 
+- `UpsertCodex` replaces the old `CreateCodex`/`UpdateCodex` distinction - upsert handles both cases.
+- Codex deletions are now handled as `DeleteMdFile` HealingActions (via `codexImpactToDeletions`), not as `DeleteCodex` CodexActions. This ensures proper ordering with healing actions in a single dispatch.
 
 ## Codex File Format
 
@@ -94,8 +107,10 @@ Impact always includes ancestors (status aggregates upward).
 | `computeSectionStatus` | Aggregate status from descendants |
 | `generateCodexContent` | SectionNode → markdown content |
 | `computeCodexSplitPath` | Section chain → codex file path |
-| `codexImpactToActions` | CodexImpact → CodexAction[] |
+| `codexImpactToDeletions` | CodexImpact → HealingAction[] (DeleteMdFile) |
+| `codexImpactToRecreations` | CodexImpact → CodexAction[] (UpsertCodex + WriteScrollStatus) |
 | `codexActionsToVaultActions` | CodexAction[] → VaultAction[] |
+| `codexImpactToActions` | (deprecated) CodexImpact → CodexAction[] |
 
 ## Status Aggregation
 

@@ -4,6 +4,8 @@ export {
 } from "./codex-actions-to-vault-actions";
 export {
 	codexImpactToActions,
+	codexImpactToDeletions,
+	codexImpactToRecreations,
 	type TreeAccessor,
 } from "./codex-impact-to-actions";
 export { computeCodexSplitPath } from "./codex-split-path";
@@ -34,7 +36,6 @@ export {
 } from "./section-chain-utils";
 export type {
 	CodexAction,
-	DeleteCodexAction,
 	UpsertCodexAction,
 	WriteScrollStatusAction,
 } from "./types/codex-action";

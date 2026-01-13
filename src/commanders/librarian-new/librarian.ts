@@ -24,10 +24,10 @@ import { healingActionsToVaultActions } from "./codecs/healing-to-vault-action";
 import type { ScrollNodeSegmentId } from "./codecs/segment-id/types/segment-id";
 import { Healer } from "./healer/healer";
 import {
-	type CodexAction,
 	type CodexImpact,
 	codexActionsToVaultActions,
-	codexImpactToActions,
+	codexImpactToDeletions,
+	codexImpactToRecreations,
 	parseCodexClickLineContent,
 } from "./healer/library-tree/codex";
 import { isCodexSplitPath } from "./healer/library-tree/codex/helpers";
@@ -48,7 +48,6 @@ import {
 import type { HealingAction } from "./healer/library-tree/types/healing-action";
 import { extractScrollStatusActions } from "./healer/library-tree/utils/extract-scroll-status-actions";
 import { findInvalidCodexFiles } from "./healer/library-tree/utils/find-invalid-codex-files";
-import { resolveDuplicateHealingActions } from "./healer/library-tree/utils/resolve-duplicate-healing";
 
 // ─── Scroll Metadata Schema ───
 
@@ -114,9 +113,43 @@ export class Librarian {
 
 			const allFiles = allFilesResult.value;
 
+			// Log initial read
+			logger.info("[Librarian] Initial read - allFiles:", {
+				count: allFiles.length,
+				files: allFiles.map((f) => ({
+					basename: f.basename,
+					extension: "extension" in f ? f.extension : undefined,
+					hasRead: "read" in f,
+					kind: f.kind,
+					pathParts: f.pathParts,
+				})),
+			});
+
 			// Build Create actions for each file
 			const createActions =
 				await this.buildInitialCreateActions(allFiles);
+
+			// Log create actions
+			logger.info("[Librarian] Initial read - createActions:", {
+				actions: createActions.map((a) => ({
+					actionType: a.actionType,
+					observedSplitPath: a.observedSplitPath
+						? {
+								basename: a.observedSplitPath.basename,
+								extension: a.observedSplitPath.extension,
+								kind: a.observedSplitPath.kind,
+								pathParts: a.observedSplitPath.pathParts,
+							}
+						: undefined,
+					targetLocator: {
+						segmentId: a.targetLocator.segmentId,
+						segmentIdChainToParent:
+							a.targetLocator.segmentIdChainToParent,
+						targetKind: a.targetLocator.targetKind,
+					},
+				})),
+				count: createActions.length,
+			});
 
 			// Apply all create actions and collect healing + codex impacts
 			const allHealingActions: HealingAction[] = [];
@@ -144,29 +177,30 @@ export class Librarian {
 			// Subscribe to click events
 			this.subscribeToClickEvents();
 
-			// Dispatch healing actions first
-			if (allHealingActions.length > 0) {
-				const vaultActions = healingActionsToVaultActions(
-					allHealingActions,
-					this.rules,
-				);
-				await this.vaultActionManager.dispatch(vaultActions);
-			}
-
-			// Then dispatch codex actions
+			// Convert codex deletions to healing actions
 			const mergedImpact = mergeCodexImpacts(allCodexImpacts);
-			const codexActions = codexImpactToActions(
+			const codexDeletions = codexImpactToDeletions(
 				mergedImpact,
 				this.healer,
 				this.codecs,
 			);
-			const codexVaultActions = codexActionsToVaultActions(
-				codexActions,
-				this.rules,
+			allHealingActions.push(...codexDeletions);
+
+			// Generate codex recreations
+			const codexRecreations = codexImpactToRecreations(
+				mergedImpact,
+				this.healer,
+				this.codecs,
 			);
 
-			if (codexVaultActions.length > 0) {
-				await this.vaultActionManager.dispatch(codexVaultActions);
+			// Combine all actions and dispatch once
+			const allVaultActions = [
+				...healingActionsToVaultActions(allHealingActions, this.rules),
+				...codexActionsToVaultActions(codexRecreations, this.rules),
+			];
+
+			if (allVaultActions.length > 0) {
+				await this.vaultActionManager.dispatch(allVaultActions);
 			}
 
 			// Wait for queue to drain (events trigger handleBulkEvent which enqueues actions)
@@ -366,6 +400,59 @@ export class Librarian {
 			return;
 		}
 
+		// Log received bulk event
+		logger.info("[Librarian] Received bulk event:", {
+			debug: bulk.debug,
+			events: bulk.events.map((e) => ({
+				kind: e.kind,
+				...(e.kind === "FileRenamed" || e.kind === "FolderRenamed"
+					? {
+							from: {
+								basename: e.from.basename,
+								kind: e.from.kind,
+								pathParts: e.from.pathParts,
+							},
+							to: {
+								basename: e.to.basename,
+								kind: e.to.kind,
+								pathParts: e.to.pathParts,
+							},
+						}
+					: {
+							splitPath: {
+								basename: e.splitPath.basename,
+								kind: e.splitPath.kind,
+								pathParts: e.splitPath.pathParts,
+							},
+						}),
+			})),
+			eventsCount: bulk.events.length,
+			roots: bulk.roots.map((r) => ({
+				kind: r.kind,
+				...(r.kind === "FileRenamed" || r.kind === "FolderRenamed"
+					? {
+							from: {
+								basename: r.from.basename,
+								kind: r.from.kind,
+								pathParts: r.from.pathParts,
+							},
+							to: {
+								basename: r.to.basename,
+								kind: r.to.kind,
+								pathParts: r.to.pathParts,
+							},
+						}
+					: {
+							splitPath: {
+								basename: r.splitPath.basename,
+								kind: r.splitPath.kind,
+								pathParts: r.splitPath.pathParts,
+							},
+						}),
+			})),
+			rootsCount: bulk.roots.length,
+		});
+
 		// Build tree actions from bulk event
 		const treeActions = buildTreeActions(bulk, this.codecs, this.rules);
 
@@ -460,48 +547,39 @@ export class Librarian {
 			allCodexImpacts.push(result.codexImpact);
 		}
 
-		// 1. Dispatch healing actions first
-		if (allHealingActions.length > 0) {
-			const resolvedActions = await resolveDuplicateHealingActions(
-				allHealingActions,
-				this.vaultActionManager,
-			);
+		// Convert codex deletions to healing actions
+		const mergedImpact = mergeCodexImpacts(allCodexImpacts);
+		const codexDeletions = codexImpactToDeletions(
+			mergedImpact,
+			this.healer,
+			this.codecs,
+		);
+		allHealingActions.push(...codexDeletions);
 
-			const vaultActions = healingActionsToVaultActions(
-				resolvedActions,
-				this.rules,
-			);
-
-			if (vaultActions.length > 0) {
-				await this.vaultActionManager.dispatch(vaultActions);
-			}
-		}
-
-		// 2. Extract scroll status changes from actions
+		// Extract scroll status changes from actions
 		const scrollStatusActions = extractScrollStatusActions(
 			actions,
 			this.codecs,
 		);
 
-		// 3. Then dispatch codex actions
-		const mergedImpact = mergeCodexImpacts(allCodexImpacts);
-		const codexActions = codexImpactToActions(
+		// Generate codex recreations
+		const codexRecreations = codexImpactToRecreations(
 			mergedImpact,
 			this.healer,
 			this.codecs,
 		);
-		// Merge scroll status actions with codex actions
-		const allCodexActions: CodexAction[] = [
-			...codexActions,
-			...scrollStatusActions,
-		];
-		const codexVaultActions = codexActionsToVaultActions(
-			allCodexActions,
-			this.rules,
-		);
 
-		if (codexVaultActions.length > 0) {
-			await this.vaultActionManager.dispatch(codexVaultActions);
+		// Combine all actions and dispatch once
+		const allVaultActions = [
+			...healingActionsToVaultActions(allHealingActions, this.rules),
+			...codexActionsToVaultActions(
+				[...codexRecreations, ...scrollStatusActions],
+				this.rules,
+			),
+		];
+
+		if (allVaultActions.length > 0) {
+			await this.vaultActionManager.dispatch(allVaultActions);
 		}
 	}
 
