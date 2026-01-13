@@ -1,27 +1,22 @@
 import { err, ok, type Result } from "neverthrow";
 import { MD } from "../../../../../managers/obsidian/vault-action-manager/types/literals";
 import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
-import type { TreeNodeKind } from "../../../healer/library-tree/tree-node/types/atoms";
-import type {
-	NodeLocatorOf,
-	TreeNodeLocator,
-	CanonicalSplitPathToFileInsideLibrary,
-	CanonicalSplitPathToFolderInsideLibrary,
-	CanonicalSplitPathToMdFileInsideLibrary,
-} from "../../types";
+import { TreeNodeKind } from "../../../healer/library-tree/tree-node/types/atoms";
+import type { CanonicalSplitPathCodecs } from "../../canonical-split-path";
 import type {
 	AnyCanonicalSplitPathInsideLibrary,
 	CanonicalSplitPathInsideLibraryOf,
+	CanonicalSplitPathToFileInsideLibrary,
+	CanonicalSplitPathToFolderInsideLibrary,
+	CanonicalSplitPathToMdFileInsideLibrary,
 } from "../../canonical-split-path/types/canonical-split-path";
-import type { CorrespondingSplitPathKind } from "../../types/type-mappings";
-import { makeNodeSegmentId } from "../../../healer/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
-import type { FileExtension } from "../../../healer/library-tree/tree-node/types/atoms";
-import { TreeNodeKind } from "../../../healer/library-tree/tree-node/types/atoms";
-import type { CanonicalSplitPathCodecs } from "../../canonical-split-path";
 import type { CodecError } from "../../errors";
 import { makeLocatorError } from "../../errors";
 import type { SuffixCodecs } from "../../internal/suffix";
 import type { SegmentIdCodecs } from "../../segment-id";
+import type { AnySplitPathInsideLibrary } from "../../split-path-inside-library";
+import type { CorrespondingSplitPathKind } from "../../types/type-mappings";
+import type { NodeLocatorOf, TreeNodeLocator } from "../types";
 
 /**
  * Converts locator to canonical split path inside library.
@@ -45,12 +40,17 @@ export function locatorToCanonicalSplitPathInsideLibrary(
 	suffix: SuffixCodecs,
 	loc: NodeLocatorOf<"Section">,
 ): Result<CanonicalSplitPathToFolderInsideLibrary, CodecError>;
-export function locatorToCanonicalSplitPathInsideLibrary<NK extends TreeNodeKind>(
+export function locatorToCanonicalSplitPathInsideLibrary<
+	NK extends TreeNodeKind,
+>(
 	segmentId: SegmentIdCodecs,
 	canonicalSplitPath: CanonicalSplitPathCodecs,
 	suffix: SuffixCodecs,
 	loc: NodeLocatorOf<NK>,
-): Result<CanonicalSplitPathInsideLibraryOf<CorrespondingSplitPathKind<NK>>, CodecError>;
+): Result<
+	CanonicalSplitPathInsideLibraryOf<CorrespondingSplitPathKind<NK>>,
+	CodecError
+>;
 export function locatorToCanonicalSplitPathInsideLibrary(
 	segmentId: SegmentIdCodecs,
 	canonicalSplitPath: CanonicalSplitPathCodecs,
@@ -63,7 +63,7 @@ export function locatorToCanonicalSplitPathInsideLibrary(
 	>((acc, segmentIdStr) => {
 		if (acc.isErr()) return acc;
 		return segmentId
-			.parseSegmentId<TreeNodeKind.Section>(segmentIdStr)
+			.parseSegmentId<typeof TreeNodeKind.Section>(segmentIdStr)
 			.map((components) => {
 				acc.value.push(components.coreName);
 				return acc.value;
@@ -102,34 +102,36 @@ export function locatorToCanonicalSplitPathInsideLibrary(
 	const suffixParts =
 		targetKind === TreeNodeKind.Section ? [] : pathPartsSansRoot;
 
-	// Build split path inside library first
-	const splitPathInsideLibraryBase = {
-		basename: suffix.serializeSeparatedSuffix({ coreName, suffixParts }),
-		kind:
-			targetKind === TreeNodeKind.Section
-				? SplitPathKind.Folder
-				: targetKind === TreeNodeKind.Scroll
-					? SplitPathKind.MdFile
-					: SplitPathKind.File,
-		pathParts,
-	} as const;
+	const basename = suffix.serializeSeparatedSuffix({ coreName, suffixParts });
 
-	const splitPathInsideLibrary =
+	// Build split path inside library with proper type inference
+	const splitPathInsideLibrary: AnySplitPathInsideLibrary =
 		targetKind === TreeNodeKind.Section
-			? splitPathInsideLibraryBase
-			: {
-					...splitPathInsideLibraryBase,
-					extension:
-						targetKind === TreeNodeKind.Scroll
-							? (MD as const)
-							: (extension as FileExtension),
-				};
+			? {
+					basename,
+					kind: SplitPathKind.Folder,
+					pathParts,
+				}
+			: targetKind === TreeNodeKind.Scroll
+				? {
+						basename,
+						extension: MD,
+						kind: SplitPathKind.MdFile,
+						pathParts,
+					}
+				: {
+						basename,
+						extension: extension,
+						kind: SplitPathKind.File,
+						pathParts,
+					};
 
 	// Convert to canonical
 	const canonicalResult =
 		canonicalSplitPath.splitPathInsideLibraryToCanonical(
 			splitPathInsideLibrary,
 		);
+
 	if (canonicalResult.isErr()) {
 		return err(
 			makeLocatorError(

@@ -165,5 +165,5 @@ export function splitPathInsideLibraryToCanonical<SK extends SplitPathKind>(
 	return ok({
 		...sp,
 		separatedSuffixedBasename: actualSepResult.value,
-	} as CanonicalSplitPathInsideLibraryOf<SK>);
+	} as unknown as CanonicalSplitPathInsideLibraryOf<SK>);
 }

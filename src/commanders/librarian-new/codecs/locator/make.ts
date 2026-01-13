@@ -2,6 +2,7 @@ import type { Result } from "neverthrow";
 import type { SplitPathKind } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { TreeNodeKind } from "../../healer/library-tree/tree-node/types/atoms";
 import type { CanonicalSplitPathCodecs } from "../canonical-split-path";
+import type { CanonicalSplitPathInsideLibraryOf } from "../canonical-split-path/types/canonical-split-path";
 import type { CodecError } from "../errors";
 import type { SuffixCodecs } from "../internal/suffix";
 import type { SegmentIdCodecs } from "../segment-id";
@@ -9,10 +10,9 @@ import type {
 	CorrespondingSplitPathKind,
 	CorrespondingTreeNodeKind,
 } from "../types/type-mappings";
-import type { CanonicalSplitPathInsideLibraryOf } from "../canonical-split-path/types/canonical-split-path";
-import type { NodeLocatorOf } from "./types";
 import { canonicalSplitPathInsideLibraryToLocator } from "./internal/from";
 import { locatorToCanonicalSplitPathInsideLibrary } from "./internal/to";
+import type { NodeLocatorOf } from "./types";
 
 export type LocatorCodecs = {
 	locatorToCanonicalSplitPathInsideLibrary: <NK extends TreeNodeKind>(

@@ -1,14 +1,8 @@
+import type { Result } from "neverthrow";
 import type { TreeNodeKind } from "../../healer/library-tree/tree-node/types/atoms";
-import type {
-	FileNodeSegmentId,
-	ScrollNodeSegmentId,
-	SectionNodeSegmentId,
-	TreeNodeSegmentId,
-} from "./types/segment-id";
 import type { CodecError } from "../errors";
 import type { CodecRules } from "../rules";
 import type { SegmentIdComponents } from "../types/type-mappings";
-import type { SegmentIdOf } from "./types";
 import {
 	parseFileSegmentId,
 	parseScrollSegmentId,
@@ -19,6 +13,8 @@ import {
 	serializeSegmentId,
 	serializeSegmentIdUnchecked,
 } from "./internal/serialize";
+import type { SegmentIdOf } from "./types";
+import type { TreeNodeSegmentId } from "./types/segment-id";
 
 export type SegmentIdCodecs = {
 	/** Generic parser (primary API) */
@@ -28,14 +24,14 @@ export type SegmentIdCodecs = {
 
 	/** Type-specific convenience parsers (better type inference) */
 	parseSectionSegmentId: (
-		id: SegmentIdOf<TreeNodeKind.Section>,
-	) => Result<SegmentIdComponents<TreeNodeKind.Section>, CodecError>;
+		id: SegmentIdOf<typeof TreeNodeKind.Section>,
+	) => Result<SegmentIdComponents<typeof TreeNodeKind.Section>, CodecError>;
 	parseScrollSegmentId: (
-		id: SegmentIdOf<TreeNodeKind.Scroll>,
-	) => Result<SegmentIdComponents<TreeNodeKind.Scroll>, CodecError>;
+		id: SegmentIdOf<typeof TreeNodeKind.Scroll>,
+	) => Result<SegmentIdComponents<typeof TreeNodeKind.Scroll>, CodecError>;
 	parseFileSegmentId: (
-		id: SegmentIdOf<TreeNodeKind.File>,
-	) => Result<SegmentIdComponents<TreeNodeKind.File>, CodecError>;
+		id: SegmentIdOf<typeof TreeNodeKind.File>,
+	) => Result<SegmentIdComponents<typeof TreeNodeKind.File>, CodecError>;
 
 	/** Serialize (validated inputs) */
 	serializeSegmentId: <NK extends TreeNodeKind>(

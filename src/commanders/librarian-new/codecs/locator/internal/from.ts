@@ -1,25 +1,21 @@
 import { err, ok, type Result } from "neverthrow";
 import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
-import type { TreeNodeKind } from "../../../healer/library-tree/tree-node/types/atoms";
-import type {
-	NodeLocatorOf,
-	TreeNodeLocator,
-	CanonicalSplitPathToFileInsideLibrary,
-	CanonicalSplitPathToFolderInsideLibrary,
-	CanonicalSplitPathToMdFileInsideLibrary,
-} from "../../types";
+import { makeNodeSegmentId } from "../../../healer/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
+import { TreeNodeKind } from "../../../healer/library-tree/tree-node/types/atoms";
+import type { CanonicalSplitPathCodecs } from "../../canonical-split-path";
 import type {
 	AnyCanonicalSplitPathInsideLibrary,
 	CanonicalSplitPathInsideLibraryOf,
+	CanonicalSplitPathToFileInsideLibrary,
+	CanonicalSplitPathToFolderInsideLibrary,
+	CanonicalSplitPathToMdFileInsideLibrary,
 } from "../../canonical-split-path/types/canonical-split-path";
-import type { CorrespondingTreeNodeKind } from "../../types/type-mappings";
-import { makeNodeSegmentId } from "../../../healer/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
-import type { FileExtension } from "../../../healer/library-tree/tree-node/types/atoms";
-import { TreeNodeKind } from "../../../healer/library-tree/tree-node/types/atoms";
-import type { CanonicalSplitPathCodecs } from "../../canonical-split-path";
 import type { CodecError } from "../../errors";
 import { makeLocatorError } from "../../errors";
 import type { SegmentIdCodecs } from "../../segment-id";
+import type { NodeLocatorOf } from "../../types";
+import type { CorrespondingTreeNodeKind } from "../../types/type-mappings";
+import type { TreeNodeLocator } from "../types";
 
 /**
  * Converts canonical split path inside library to locator.
@@ -40,7 +36,9 @@ export function canonicalSplitPathInsideLibraryToLocator(
 	canonicalSplitPath: CanonicalSplitPathCodecs,
 	sp: CanonicalSplitPathToFolderInsideLibrary,
 ): Result<NodeLocatorOf<"Section">, CodecError>;
-export function canonicalSplitPathInsideLibraryToLocator<SK extends SplitPathKind>(
+export function canonicalSplitPathInsideLibraryToLocator<
+	SK extends SplitPathKind,
+>(
 	segmentId: SegmentIdCodecs,
 	canonicalSplitPath: CanonicalSplitPathCodecs,
 	sp: CanonicalSplitPathInsideLibraryOf<SK>,
@@ -66,6 +64,7 @@ export function canonicalSplitPathInsideLibraryToLocator(
 				extension: sp.extension,
 				targetKind: TreeNodeKind.File,
 			});
+
 			if (segmentIdResult.isErr()) {
 				return err(
 					makeLocatorError(
@@ -80,7 +79,7 @@ export function canonicalSplitPathInsideLibraryToLocator(
 				segmentId: segmentIdResult.value,
 				segmentIdChainToParent,
 				targetKind: TreeNodeKind.File,
-			} satisfies NodeLocatorOf<"File">);
+			});
 		}
 
 		case SplitPathKind.MdFile: {
@@ -103,7 +102,7 @@ export function canonicalSplitPathInsideLibraryToLocator(
 				segmentId: segmentIdResult.value,
 				segmentIdChainToParent,
 				targetKind: TreeNodeKind.Scroll,
-			} satisfies NodeLocatorOf<"Scroll">);
+			});
 		}
 
 		case SplitPathKind.Folder: {
@@ -125,7 +124,7 @@ export function canonicalSplitPathInsideLibraryToLocator(
 				segmentId: segmentIdResult.value,
 				segmentIdChainToParent,
 				targetKind: TreeNodeKind.Section,
-			} satisfies NodeLocatorOf<"Section">);
+			});
 		}
 	}
 }

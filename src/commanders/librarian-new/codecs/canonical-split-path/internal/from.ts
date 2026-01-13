@@ -14,8 +14,13 @@ export function fromCanonicalSplitPathInsideLibrary<SK extends SplitPathKind>(
 	const basename = suffix.serializeSeparatedSuffix(
 		sp.separatedSuffixedBasename,
 	);
+	const { separatedSuffixedBasename: _, ...rest } = sp;
+	// TypeScript can't prove structural equivalence: CanonicalSplitPathInsideLibraryOf<SK>
+	// is Omit<SplitPathInsideLibraryOf<SK>, "basename"> & { separatedSuffixedBasename },
+	// so omitting separatedSuffixedBasename and adding basename should yield SplitPathInsideLibraryOf<SK>,
+	// but the generic SK prevents TypeScript from narrowing the union.
 	return {
-		...sp,
+		...rest,
 		basename,
-	} as SplitPathInsideLibraryOf<SK>;
+	} as unknown as SplitPathInsideLibraryOf<SK>;
 }
