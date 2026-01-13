@@ -1,18 +1,11 @@
-import { err, ok, type Result } from "neverthrow";
+import type { Result } from "neverthrow";
 import type { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
-import { SplitPathKind as SplitPathKindEnum } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
-import { NodeNameSchema } from "../../../types/schemas/node-name";
 import type { CodecError } from "../../errors";
-import { makeSplitPathError, makeZodError } from "../../errors";
 import type { SuffixCodecs } from "../../internal/suffix";
-import type {
-	AnySplitPathInsideLibrary,
-	SplitPathInsideLibraryOf,
-} from "../../split-path-inside-library";
-import type {
-	CanonicalSeparatedSuffixedBasename,
-	CanonicalSplitPathInsideLibraryOf,
-} from "../types/canonical-split-path";
+import type { SplitPathInsideLibraryOf } from "../../split-path-inside-library";
+import type { CanonicalSplitPathInsideLibraryOf } from "../types/canonical-split-path";
+import { canonizeSplitPathWithSeparatedSuffix } from "./canonicalization-policy";
+import { splitPathInsideLibraryToWithSeparatedSuffix } from "./split-path-with-separated-suffix/to";
 
 /**
  * Extracts duplicate marker (e.g., " 1", " 2") from end of basename.
@@ -30,140 +23,56 @@ function extractDuplicateMarker(basename: string): {
 }
 
 /**
- * Drops Library root from pathParts if present.
- */
-function dropLibraryRootIfPresent(
-	libraryRootName: string,
-	pathParts: string[],
-): string[] {
-	return pathParts[0] === libraryRootName ? pathParts.slice(1) : pathParts;
-}
-
-/**
- * Builds canonical separated suffixed basename from split path.
- */
-function buildCanonicalSeparatedSuffixedBasename(
-	suffix: SuffixCodecs,
-	libraryRootName: string,
-	sp: Pick<AnySplitPathInsideLibrary, "basename" | "pathParts" | "kind">,
-): Result<CanonicalSeparatedSuffixedBasename, CodecError> {
-	// Handle Obsidian duplicate marker (e.g., "Note-A 1" → coreName="Note 1", suffix=["A"])
-	const { cleanBasename, marker } = extractDuplicateMarker(sp.basename);
-
-	return suffix.splitBySuffixDelimiter(cleanBasename).map((parts) => {
-		const [rawCoreName, ..._suffixFromName] = parts;
-		// Re-attach duplicate marker to coreName
-		const coreName = (rawCoreName + marker) as typeof rawCoreName;
-
-		const pathPartsSansRoot = dropLibraryRootIfPresent(
-			libraryRootName,
-			sp.pathParts,
-		);
-		const suffixParts =
-			sp.kind === SplitPathKindEnum.Folder
-				? []
-				: suffix.pathPartsToSuffixParts(pathPartsSansRoot);
-
-		return {
-			separatedSuffixedBasename: { coreName, suffixParts },
-		};
-	});
-}
-
-/**
  * Converts split path inside library to canonical format.
- * Validates and separates suffix.
+ * Wrapper that uses new codec + policy for backward compatibility.
+ * Handles duplicate markers (business logic) before canonization.
  */
 export function splitPathInsideLibraryToCanonical<SK extends SplitPathKind>(
 	suffix: SuffixCodecs,
 	libraryRootName: string,
 	sp: SplitPathInsideLibraryOf<SK>,
 ): Result<CanonicalSplitPathInsideLibraryOf<SK>, CodecError> {
-	// Validate path parts as NodeNames
-	for (const p of sp.pathParts) {
-		const r = NodeNameSchema.safeParse(p);
-		if (!r.success) {
-			return err(
-				makeSplitPathError(
-					"InvalidPathParts",
-					r.error.issues[0]?.message ?? "Invalid path part",
-					{ pathPart: p, pathParts: sp.pathParts },
-					makeZodError(r.error.issues, "NodeName validation failed", {
-						pathPart: p,
-					}),
-				),
-			);
+	// Use new codec to convert to separated suffix format
+	const withSeparatedSuffixResult =
+		splitPathInsideLibraryToWithSeparatedSuffix(suffix, sp);
+	if (withSeparatedSuffixResult.isErr()) {
+		return withSeparatedSuffixResult as Result<
+			CanonicalSplitPathInsideLibraryOf<SK>,
+			CodecError
+		>;
+	}
+
+	let spWithSeparatedSuffix = withSeparatedSuffixResult.value;
+
+	// Handle Obsidian duplicate marker (business logic)
+	// Extract duplicate marker and re-attach to coreName
+	const { cleanBasename, marker } = extractDuplicateMarker(sp.basename);
+	if (marker) {
+		// Re-parse without duplicate marker to get clean coreName
+		const cleanSepResult = suffix.parseSeparatedSuffix(cleanBasename);
+		if (cleanSepResult.isErr()) {
+			return cleanSepResult as unknown as Result<
+				CanonicalSplitPathInsideLibraryOf<SK>,
+				CodecError
+			>;
 		}
+
+		// Re-attach marker to coreName
+		const coreNameWithMarker = cleanSepResult.value.coreName + marker;
+
+		spWithSeparatedSuffix = {
+			...spWithSeparatedSuffix,
+			separatedSuffixedBasename: {
+				coreName: coreNameWithMarker,
+				suffixParts: cleanSepResult.value.suffixParts,
+			},
+		};
 	}
 
-	// Parse actual separated suffix from basename
-	const actualSepResult = suffix.parseSeparatedSuffix(sp.basename);
-	if (actualSepResult.isErr()) {
-		return err(
-			makeSplitPathError(
-				"InvalidBasename",
-				actualSepResult.error.message,
-				{ basename: sp.basename },
-				actualSepResult.error,
-			),
-		);
-	}
-
-	// Build expected canonical separated suffix
-	const canonicalResult = buildCanonicalSeparatedSuffixedBasename(
+	// Use policy to canonize (validates format)
+	return canonizeSplitPathWithSeparatedSuffix(
 		suffix,
 		libraryRootName,
-		sp,
-	);
-	if (canonicalResult.isErr()) {
-		return err(
-			makeSplitPathError(
-				"CanonicalizationFailed",
-				canonicalResult.error.message,
-				{ basename: sp.basename, pathParts: sp.pathParts },
-				canonicalResult.error,
-			),
-		);
-	}
-
-	const { coreName, suffixParts } = actualSepResult.value;
-	const expected = canonicalResult.value.separatedSuffixedBasename;
-
-	// Verify actual matches expected
-	const same =
-		coreName === expected.coreName &&
-		suffixParts.length === expected.suffixParts.length &&
-		suffixParts.every((v, i) => v === expected.suffixParts[i]);
-
-	if (!same) {
-		return err(
-			makeSplitPathError(
-				"CanonicalizationFailed",
-				"Basename does not match canonical format",
-				{
-					actual: { coreName, suffixParts },
-					expected: {
-						coreName: expected.coreName,
-						suffixParts: expected.suffixParts,
-					},
-				},
-			),
-		);
-	}
-
-	// Additionally enforce folder has no suffixParts (redundant but explicit)
-	if (sp.kind === SplitPathKindEnum.Folder && suffixParts.length !== 0) {
-		return err(
-			makeSplitPathError(
-				"CanonicalizationFailed",
-				"Folder basename must not contain suffix parts",
-				{ suffixParts },
-			),
-		);
-	}
-
-	return ok({
-		...sp,
-		separatedSuffixedBasename: actualSepResult.value,
-	} as unknown as CanonicalSplitPathInsideLibraryOf<SK>);
+		spWithSeparatedSuffix,
+	) as Result<CanonicalSplitPathInsideLibraryOf<SK>, CodecError>;
 }

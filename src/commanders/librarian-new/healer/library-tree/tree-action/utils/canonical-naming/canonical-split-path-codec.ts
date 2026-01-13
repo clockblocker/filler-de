@@ -11,8 +11,12 @@ import type {
 	SplitPathToFolderInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
 } from "../../../../../codecs";
+import { makeCodecs, makeCodecRulesFromSettings } from "../../../../../codecs";
 import { NodeNameSchema } from "../../../../../types/schemas/node-name";
-import { tryBuildCanonicalSeparatedSuffixedBasename } from "./suffix-utils/build-canonical-separated-suffixed-basename-path-king-way";
+import {
+	buildCanonicalSeparatedSuffixedBasename,
+	canonizeSplitPathWithSeparatedSuffix,
+} from "../../../../../codecs/canonical-split-path/internal/canonicalization-policy";
 import {
 	makeJoinedSuffixedBasename,
 	tryParseAsSeparatedSuffixedBasename,
@@ -39,34 +43,49 @@ export function tryParseCanonicalSplitPathInsideLibrary(
 	const sepRes = tryParseAsSeparatedSuffixedBasename(sp);
 	if (sepRes.isErr()) return err(sepRes.error);
 
-	const { coreName, suffixParts } = sepRes.value;
+	// Create codecs for policy functions
+	const settings = getParsedUserSettings();
+	const rules = makeCodecRulesFromSettings(settings);
+	const codecs = makeCodecs(rules);
 
-	const actualBasename = makeJoinedSuffixedBasename({
-		coreName,
-		suffixParts,
-	});
-
-	const canonicalRes = tryBuildCanonicalSeparatedSuffixedBasename(sp);
-	if (canonicalRes.isErr()) return err(canonicalRes.error);
-
-	const expectedBasename = makeJoinedSuffixedBasename(
-		canonicalRes.value.separatedSuffixedBasename,
-	);
-
-	if (actualBasename !== expectedBasename) {
-		return err("Basename does not match canonical format");
+	// Convert to separated suffix format using new codec
+	const withSeparatedSuffixResult =
+		codecs.canonicalSplitPath.splitPathInsideLibraryToWithSeparatedSuffix(
+			sp,
+		);
+	if (withSeparatedSuffixResult.isErr()) {
+		return err(withSeparatedSuffixResult.error.message);
 	}
 
-	const out = {
-		...sp,
-		pathParts: pathPartsRes.value, // (assuming tryParsePathParts returns canonicalized parts)
-		separatedSuffixedBasename: {
-			coreName,
-			suffixParts,
-		},
+	// Build expected canonical from pathParts (policy)
+	const expected = buildCanonicalSeparatedSuffixedBasename(
+		codecs.canonicalSplitPath as unknown as Parameters<
+			typeof buildCanonicalSeparatedSuffixedBasename
+		>[0],
+		rules.libraryRootName,
+		sepRes.value.coreName,
+		sp,
+	);
+
+	// Update suffixParts to match canonical
+	const spWithSeparatedSuffix = {
+		...withSeparatedSuffixResult.value,
+		separatedSuffixedBasename: expected.separatedSuffixedBasename,
 	};
 
-	return ok(out);
+	// Canonize using policy (validates format)
+	const canonizedResult = canonizeSplitPathWithSeparatedSuffix(
+		codecs.canonicalSplitPath as unknown as Parameters<
+			typeof canonizeSplitPathWithSeparatedSuffix
+		>[0],
+		rules.libraryRootName,
+		spWithSeparatedSuffix,
+	);
+	if (canonizedResult.isErr()) {
+		return err(canonizedResult.error.message);
+	}
+
+	return ok(canonizedResult.value);
 }
 
 function tryParsePathParts(

@@ -10,4 +10,5 @@ export type {
 	CanonicalSplitPathToFileInsideLibrary,
 	CanonicalSplitPathToFolderInsideLibrary,
 	CanonicalSplitPathToMdFileInsideLibrary,
+	SplitPathInsideLibraryWithSeparatedSuffixOf,
 } from "./types/canonical-split-path";

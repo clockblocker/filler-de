@@ -1,6 +1,6 @@
 import { err, ok, type Result } from "neverthrow";
 import { getParsedUserSettings } from "../../../../../../../../../../global-state/global-state";
-import { SplitPathKind } from "../../../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import type { SplitPathKind } from "../../../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type {
 	AnySplitPathInsideLibrary,
 	CanonicalSplitPathInsideLibrary,
@@ -219,94 +219,108 @@ export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
 
 	// --- NameKing: interpret basename as path intent, then OUTPUT PathKing-canonical split path
 
-	// Always start by parsing the basename into (coreName, suffixFromName)
-	const sepRes = adaptCodecResult(
-		codecs.canonicalSplitPath.parseSeparatedSuffix(sp.basename),
+	// Convert to split path with separated suffix (validates NodeNames)
+	const withSeparatedSuffixResult = adaptCodecResult(
+		codecs.canonicalSplitPath.splitPathInsideLibraryToWithSeparatedSuffix(
+			sp,
+		),
 	);
-	if (sepRes.isErr()) return err(sepRes.error);
+	if (withSeparatedSuffixResult.isErr()) {
+		return err(withSeparatedSuffixResult.error);
+	}
+	let spWithSeparatedSuffix =
+		withSeparatedSuffixResult.value as SplitPathInsideLibraryWithSeparatedSuffixOf<SplitPathKind>;
 
-	// Helper: finalize by rebuilding canonical separated+basename using codec
-	const finalize = <SK extends SplitPathKind>(
-		next: SplitPathInsideLibraryOf<SK>,
-	): Result<CanonicalSplitPathInsideLibraryOf<SK>, string> => {
-		return adaptCodecResult(
-			codecs.canonicalSplitPath.splitPathInsideLibraryToCanonical(next),
+	// Handle duplicate markers (business logic)
+	const { cleanBasename, marker } = extractDuplicateMarker(sp.basename);
+	if (marker) {
+		const cleanSepRes = adaptCodecResult(
+			codecs.canonicalSplitPath.parseSeparatedSuffix(cleanBasename),
 		);
-	};
+		if (cleanSepRes.isErr()) return err(cleanSepRes.error);
+		const coreNameWithMarker = (cleanSepRes.value.coreName +
+			marker) as NodeName;
+		spWithSeparatedSuffix = {
+			...spWithSeparatedSuffix,
+			separatedSuffixedBasename: {
+				coreName: coreNameWithMarker,
+				suffixParts: cleanSepRes.value.suffixParts,
+			},
+		} as SplitPathInsideLibraryWithSeparatedSuffixOf<SplitPathKind>;
+	}
+
+	const { coreName, suffixParts } =
+		spWithSeparatedSuffix.separatedSuffixedBasename;
+	const libraryRoot = sp.pathParts[0];
+	if (!libraryRoot) return err("Expected Library root in pathParts");
 
 	// MOVE-by-name (NameKing): suffix defines the new path
 	if (intent === RenameIntent.Move) {
-		const libraryRoot = sp.pathParts[0];
-		if (!libraryRoot) return err("Expected Library root in pathParts");
-
-		const { coreName, suffixParts } = sepRes.value;
-
 		// Empty suffix = move to Library root
 		// Example: Library/R3/S3/Note-S3-R3.md → Library/R3/S3/Note.md
 		//          → Library/Note.md (no suffix = root)
 		if (suffixParts.length === 0) {
-			return finalize({
-				...sp,
-				basename: coreName,
+			spWithSeparatedSuffix = {
+				...spWithSeparatedSuffix,
 				pathParts: [libraryRoot],
-			});
+			} as SplitPathInsideLibraryWithSeparatedSuffixOf<SplitPathKind>;
+		} else {
+			// Non-empty suffix: move to suffix location
+			// Example: Library/RootNote2.md → Library/RootNote2-P-Q.md
+			//          → Library/Q/P/RootNote2-P-Q.md (suffix reversed = path)
+			const pathFromSuffix = [...suffixParts].reverse();
+			spWithSeparatedSuffix = {
+				...spWithSeparatedSuffix,
+				pathParts: [libraryRoot, ...pathFromSuffix],
+			} as SplitPathInsideLibraryWithSeparatedSuffixOf<SplitPathKind>;
 		}
-
-		// Non-empty suffix: move to suffix location
-		// Example: Library/RootNote2.md → Library/RootNote2-P-Q.md
-		//          → Library/Q/P/RootNote2-P-Q.md (suffix reversed = path)
-		const pathFromSuffix = [...suffixParts].reverse();
-		const finalPathParts = [libraryRoot, ...pathFromSuffix];
-		// Build canonical basename: coreName + suffixParts derived from final pathParts (reversed)
-		// For folders, suffixParts are always empty in canonical format
-		const finalSuffixParts =
-			sp.kind === SplitPathKind.Folder
-				? []
-				: codecs.canonicalSplitPath.pathPartsWithRootToSuffixParts(
-						finalPathParts,
-					);
-		const canonicalBasename =
-			codecs.canonicalSplitPath.serializeSeparatedSuffix({
-				coreName,
-				suffixParts: finalSuffixParts,
-			});
-		return finalize({
-			...sp,
-			basename: canonicalBasename,
-			pathParts: finalPathParts,
-		});
+	} else {
+		// Regular NameKing (Create / non-move):
+		// interpret basename suffix chain as parent chain
+		// coreName stays nodeName; suffixParts become extra parent sections
+		const convertedPathParts =
+			codecs.canonicalSplitPath.suffixPartsToPathParts(
+				suffixParts,
+			) as NodeName[];
+		spWithSeparatedSuffix = {
+			...spWithSeparatedSuffix,
+			pathParts: [libraryRoot, ...convertedPathParts],
+		} as SplitPathInsideLibraryWithSeparatedSuffixOf<SplitPathKind>;
 	}
 
-	// Regular NameKing (Create / non-move):
-	// interpret basename suffix chain as parent chain
-	// coreName stays nodeName; suffixParts become extra parent sections
-	const convertedPathParts = codecs.canonicalSplitPath.suffixPartsToPathParts(
-		sepRes.value.suffixParts,
-	) as NodeName[];
+	// Build expected canonical separated suffix from new pathParts (policy)
+	const { splitPathToLibraryRoot } = getParsedUserSettings();
+	const libraryRootName = splitPathToLibraryRoot.basename;
+	const expected = buildCanonicalSeparatedSuffixedBasename(
+		codecs.canonicalSplitPath as unknown as Parameters<
+			typeof buildCanonicalSeparatedSuffixedBasename
+		>[0],
+		libraryRootName,
+		coreName,
+		spWithSeparatedSuffix,
+	);
 
-	// Preserve Library root from original pathParts
-	const libraryRoot = sp.pathParts[0];
-	const nextPathParts = libraryRoot
-		? [libraryRoot, ...convertedPathParts]
-		: convertedPathParts;
+	// Update suffixParts to match canonical (from pathParts)
+	spWithSeparatedSuffix = {
+		...spWithSeparatedSuffix,
+		separatedSuffixedBasename: expected.separatedSuffixedBasename,
+	} as SplitPathInsideLibraryWithSeparatedSuffixOf<SplitPathKind>;
 
-	// Build canonical basename: coreName + suffixParts derived from nextPathParts (reversed)
-	// For folders, suffixParts are always empty in canonical format
-	const finalSuffixParts =
-		sp.kind === SplitPathKind.Folder
-			? []
-			: codecs.canonicalSplitPath.pathPartsWithRootToSuffixParts(
-					nextPathParts,
-				);
-	const canonicalBasename =
-		codecs.canonicalSplitPath.serializeSeparatedSuffix({
-			coreName: sepRes.value.coreName,
-			suffixParts: finalSuffixParts,
-		});
+	// Canonize using policy (validates format)
+	const canonizedResult = canonizeSplitPathWithSeparatedSuffix(
+		codecs.canonicalSplitPath as unknown as Parameters<
+			typeof canonizeSplitPathWithSeparatedSuffix
+		>[0],
+		libraryRootName,
+		spWithSeparatedSuffix,
+	);
+	if (canonizedResult.isErr()) {
+		return err(canonizedResult.error.message);
+	}
 
-	return finalize({
-		...sp,
-		basename: canonicalBasename,
-		pathParts: nextPathParts,
-	});
+	return ok(
+		canonizedResult.value as unknown as
+			| CanonicalSplitPathInsideLibraryOf<SK>
+			| CanonicalSplitPathInsideLibrary,
+	);
 }
