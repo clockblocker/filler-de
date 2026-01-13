@@ -7,7 +7,11 @@ import { err, ok, type Result } from "neverthrow";
 import { getParsedUserSettings } from "../../../../../global-state/global-state";
 import type { SectionNodeSegmentId } from "../../../codecs/segment-id";
 import { NodeSegmentIdSeparator } from "../../../codecs/segment-id/types/segment-id";
-import { tryParseAsSeparatedSuffixedBasename } from "../tree-action/utils/canonical-naming/suffix-utils/core-suffix-utils";
+import {
+	makeCodecRulesFromSettings,
+	makeCodecs,
+} from "../../../codecs";
+import { adaptCodecResult } from "../tree-action/bulk-vault-action-adapter/layers/translate-material-event/error-adapters";
 import { TreeNodeKind } from "../tree-node/types/atoms";
 import { CODEX_CORE_NAME } from "./literals";
 
@@ -64,10 +68,14 @@ export function parseCodexLinkTarget(
 	const settings = getParsedUserSettings();
 	const libraryRoot = settings.splitPathToLibraryRoot.basename;
 
+	// Create codecs
+	const rules = makeCodecRulesFromSettings(settings);
+	const codecs = makeCodecs(rules);
+
 	// Parse as suffixed basename
-	const parseResult = tryParseAsSeparatedSuffixedBasename({
-		basename: linkTarget,
-	});
+	const parseResult = adaptCodecResult(
+		codecs.suffix.parseSeparatedSuffix(linkTarget),
+	);
 
 	if (parseResult.isErr()) {
 		return err(`Failed to parse link target: ${parseResult.error}`);

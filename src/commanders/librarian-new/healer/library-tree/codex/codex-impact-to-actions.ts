@@ -6,10 +6,6 @@
 import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { Codecs, SplitPathToMdFileInsideLibrary } from "../../../codecs";
 import type { SectionNodeSegmentId } from "../../../codecs/segment-id/types/segment-id";
-import {
-	makeJoinedSuffixedBasename,
-	makeSuffixPartsFromPathPartsWithRoot,
-} from "../tree-action/utils/canonical-naming/suffix-utils/core-suffix-utils";
 import { TreeNodeKind } from "../tree-node/types/atoms";
 import type { SectionNode } from "../tree-node/types/tree-node";
 import { computeCodexSplitPath } from "./codex-split-path";
@@ -217,9 +213,9 @@ function computeScrollSplitPath(
 		}
 		pathParts.push(parseResult.value.coreName);
 	}
-	const suffixParts = makeSuffixPartsFromPathPartsWithRoot(pathParts);
+	const suffixParts = codecs.suffix.pathPartsWithRootToSuffixParts(pathParts);
 
-	const basename = makeJoinedSuffixedBasename({
+	const basename = codecs.suffix.serializeSeparatedSuffix({
 		coreName: nodeName,
 		suffixParts,
 	});
@@ -322,7 +318,7 @@ function buildMovedCodexPath(
 			? oldNodeNames // Root: ["Library"]
 			: oldNodeNames.slice(1).reverse(); // Nested: exclude root, reverse
 
-	const basename = makeJoinedSuffixedBasename({
+	const basename = codecs.suffix.serializeSeparatedSuffix({
 		coreName: CODEX_CORE_NAME,
 		suffixParts,
 	});

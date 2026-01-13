@@ -3,6 +3,7 @@
  * Pure functions that produce markdown strings for codex entries.
  */
 
+import { getParsedUserSettings } from "../../../../../global-state/global-state";
 import {
 	BACK_ARROW,
 	DASH,
@@ -13,7 +14,10 @@ import {
 	PIPE,
 	SPACE_F,
 } from "../../../../../types/literals";
-import { makeJoinedSuffixedBasename } from "../tree-action/utils/canonical-naming/suffix-utils/core-suffix-utils";
+import {
+	makeCodecRulesFromSettings,
+	makeCodecs,
+} from "../../../codecs";
 import type { TreeNodeStatus } from "../tree-node/types/atoms";
 import { TreeNodeStatus as Status } from "../tree-node/types/atoms";
 import { CODEX_CORE_NAME } from "./literals";
@@ -48,13 +52,12 @@ function makeSuffixParts(pathParts: string[]): string[] {
  * coreName + suffix from path.
  */
 function makeLeafBasename(nodeName: string, pathParts: string[]): string {
+	const settings = getParsedUserSettings();
+	const rules = makeCodecRulesFromSettings(settings);
+	const codecs = makeCodecs(rules);
 	const suffixParts = makeSuffixParts(pathParts);
-	return makeJoinedSuffixedBasename({
-		coreName: nodeName as ReturnType<
-			typeof makeJoinedSuffixedBasename
-		> extends string
-			? typeof nodeName
-			: never,
+	return codecs.suffix.serializeSeparatedSuffix({
+		coreName: nodeName,
 		suffixParts: suffixParts as string[],
 	});
 }
@@ -69,6 +72,9 @@ function makeLeafBasename(nodeName: string, pathParts: string[]): string {
  * - ["Library", "A", "B"] → "__-B-A"
  */
 function makeCodexBasename(sectionPathParts: string[]): string {
+	const settings = getParsedUserSettings();
+	const rules = makeCodecRulesFromSettings(settings);
+	const codecs = makeCodecs(rules);
 	// Root codex: include Library name
 	// Nested codex: drop Library root, reverse
 	const suffixParts =
@@ -76,7 +82,7 @@ function makeCodexBasename(sectionPathParts: string[]): string {
 			? sectionPathParts // ["Library"]
 			: makeSuffixParts(sectionPathParts); // ["B", "A"] for ["Library", "A", "B"]
 
-	return makeJoinedSuffixedBasename({
+	return codecs.suffix.serializeSeparatedSuffix({
 		coreName: CODEX_CORE_NAME,
 		suffixParts: suffixParts as string[],
 	});

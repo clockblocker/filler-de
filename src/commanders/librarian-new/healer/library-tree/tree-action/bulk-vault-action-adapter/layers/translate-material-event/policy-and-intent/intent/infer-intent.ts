@@ -89,8 +89,9 @@ export function inferRenameIntent(
 	}
 
 	// FILES: compare suffix with current path
-	const currentSuffixParts =
-		codecs.suffix.pathPartsWithRootToSuffixParts(to.pathParts);
+	const currentSuffixParts = codecs.suffix.pathPartsWithRootToSuffixParts(
+		to.pathParts,
+	);
 
 	// no suffix AND already at root → pure rename
 	// no suffix AND NOT at root → move to root (NameKing: empty suffix = root)

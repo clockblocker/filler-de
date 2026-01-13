@@ -14,7 +14,6 @@ import type {
 import { makeCodecRulesFromSettings, makeCodecs } from "../../../../../codecs";
 import { NodeNameSchema } from "../../../../../types/schemas/node-name";
 import { canonizeSplitPathWithSeparatedSuffix } from "./canonicalization-policy";
-import { makeJoinedSuffixedBasename } from "./suffix-utils/core-suffix-utils";
 
 export function tryParseCanonicalSplitPathInsideLibrary(
 	sp: SplitPathToFolderInsideLibrary,
@@ -103,7 +102,12 @@ export function makeRegularSplitPathInsideLibrary(
 export function makeRegularSplitPathInsideLibrary(
 	sp: CanonicalSplitPathInsideLibrary,
 ): AnySplitPathInsideLibrary {
-	const basename = makeJoinedSuffixedBasename(sp.separatedSuffixedBasename);
+	const settings = getParsedUserSettings();
+	const rules = makeCodecRulesFromSettings(settings);
+	const codecs = makeCodecs(rules);
+	const basename = codecs.suffix.serializeSeparatedSuffix(
+		sp.separatedSuffixedBasename,
+	);
 	return {
 		...sp,
 		basename,

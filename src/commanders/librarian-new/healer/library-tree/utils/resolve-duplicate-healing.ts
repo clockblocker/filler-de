@@ -3,7 +3,10 @@ import type { VaultActionManager } from "../../../../../managers/obsidian/vault-
 import type { SplitPathToFolder } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { NodeName } from "../../../types/schemas/node-name";
-import { makeJoinedSuffixedBasename } from "../tree-action/utils/canonical-naming/suffix-utils/core-suffix-utils";
+import {
+	makeCodecRulesFromSettings,
+	makeCodecs,
+} from "../../../codecs";
 import type { HealingAction } from "../types/healing-action";
 import {
 	extractDuplicateMarker,
@@ -87,8 +90,13 @@ async function resolveFileRenameAction(
 		return action;
 	}
 
+	// Create codecs
+	const settings = getParsedUserSettings();
+	const rules = makeCodecRulesFromSettings(settings);
+	const codecs = makeCodecs(rules);
+
 	// Build new basename with resolved coreName
-	const newBasename = makeJoinedSuffixedBasename({
+	const newBasename = codecs.suffix.serializeSeparatedSuffix({
 		coreName: resolvedCoreName,
 		suffixParts: suffixParts as NodeName[],
 	});

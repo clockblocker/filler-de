@@ -5,7 +5,6 @@
 import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { Codecs } from "../../../codecs";
 import type { SplitPathToMdFileInsideLibrary } from "../../codecs/split-path-inside-library/types";
-import { makeJoinedSuffixedBasename } from "../tree-action/utils/canonical-naming/suffix-utils/core-suffix-utils";
 import type { SectionNodeSegmentId } from "../../../../codecs/segment-id/types/segment-id";
 import { CODEX_CORE_NAME } from "./literals";
 
@@ -52,7 +51,7 @@ export function computeCodexSplitPath(
 			? nodeNames // Root: ["Library"]
 			: nodeNames.slice(1).reverse(); // Nested: exclude root, reverse
 
-	const basename = makeJoinedSuffixedBasename({
+	const basename = codecs.suffix.serializeSeparatedSuffix({
 		coreName: CODEX_CORE_NAME,
 		suffixParts,
 	});
