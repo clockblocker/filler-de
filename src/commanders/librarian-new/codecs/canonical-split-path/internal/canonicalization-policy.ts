@@ -1,5 +1,5 @@
 import { err, ok, type Result } from "neverthrow";
-import { SplitPathKind } from "../../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type {
 	CanonicalSeparatedSuffixedBasename,
 	SplitPathInsideLibraryWithSeparatedSuffixOf,

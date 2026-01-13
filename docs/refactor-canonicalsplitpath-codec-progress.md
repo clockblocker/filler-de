@@ -88,86 +88,75 @@ Refactoring to separate business logic from codec layer in `CanonicalSplitPath` 
   4. Uses `canonizeSplitPathWithSeparatedSuffix` to validate and canonize
   5. Returns `CanonicalSplitPathInsideLibraryOf<SK>`
 
-## Unfinished Issues
+### 7. Old Codec Wrapper Refactoring ✅
 
-### 1. Old Codec Wrapper Needs Refactoring ⚠️
+**File**: `src/commanders/librarian-new/codecs/canonical-split-path/internal/to.ts`
 
-**File**: `src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/translators/helpers/locator.ts`
+- Refactored `splitPathInsideLibraryToCanonical` to use new codec + policy internally
+- Maintains backward compatibility as wrapper function
+- Implementation:
+  1. Uses `splitPathInsideLibraryToWithSeparatedSuffix` to convert (validates NodeNames, parses basename)
+  2. Handles duplicate markers in business logic (extracts and re-attaches to coreName)
+  3. Uses `canonizeSplitPathWithSeparatedSuffix` to validate and canonize
+  4. Returns `CanonicalSplitPathInsideLibraryOf<SK>`
 
-**Lines**: 223-315 (approximately)
+**Why this matters**: Validates architecture, provides backward compatibility during transition
 
-**Current State**:
-- NameKing paths (Move intent and regular NameKing) still use old `splitPathInsideLibraryToCanonical` approach
-- Still build basenames manually and call old codec
-
-**Needs**:
-- Refactor to use new codec `splitPathInsideLibraryToWithSeparatedSuffix`
-- Use policy functions for canonization
-- Handle duplicate markers in business logic (already done)
-
-**Pattern** (same as PathKing, different manipulation):
-```typescript
-// 1. Convert to split path with separated suffix
-const withSeparatedSuffixResult = adaptCodecResult(
-  codecs.canonicalSplitPath.splitPathInsideLibraryToWithSeparatedSuffix(sp),
-);
-
-// 2. Manipulate pathParts based on suffix (business logic)
-//    - Move: suffix reversed = new path
-//    - Create: suffix becomes parent chain
-const newPathParts = [...suffixParts].reverse(); // or convert suffixParts
-
-// 3. Build expected canonical from new pathParts (policy)
-const expected = buildCanonicalSeparatedSuffixedBasename(...);
-
-// 4. Update and canonize
-spWithSeparatedSuffix = { ...spWithSeparatedSuffix, pathParts: newPathParts, ... };
-return canonizeSplitPathWithSeparatedSuffix(...);
-```
-
-### 3. Type Narrowing Issues ⚠️
+### 8. NameKing Policy Refactoring ✅
 
 **File**: `src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/translators/helpers/locator.ts`
 
-**Lines**: 248, 273, 307
+- Refactored NameKing paths (Move intent and regular NameKing) in `tryCanonicalizeSplitPathToDestination`:
+  1. Uses new codec `splitPathInsideLibraryToWithSeparatedSuffix` to convert
+  2. Handles duplicate markers in business logic
+  3. Manipulates pathParts based on suffix interpretation (business logic):
+     - Move: suffix reversed = new path location
+     - Create: suffix becomes parent chain
+  4. Uses policy functions to build expected canonical format from new pathParts
+  5. Uses `canonizeSplitPathWithSeparatedSuffix` to validate and canonize
+  6. Returns `CanonicalSplitPathInsideLibraryOf<SK>` with type assertions
 
-**Issue**: TypeScript can't narrow union types properly in return statements
+**Pattern**: Same as PathKing (convert → manipulate → canonize), but manipulation interprets basename suffix as path intent
 
-**Error**: 
-```
-Type 'Result<CanonicalSplitPathInsideLibraryOf<"Folder" | "File" | "MdFile">, string>' 
-is not assignable to type 'Result<CanonicalSplitPathInsideLibraryOf<SK> | AnyCanonicalSplitPathInsideLibrary, string>'
-```
-
-**Solution**: Use type assertions (same pattern as PathKing line 214-219)
-```typescript
-return ok(
-  canonizedResult.value as unknown as
-    | CanonicalSplitPathInsideLibraryOf<SK>
-    | CanonicalSplitPathInsideLibrary,
-);
-```
-
-### 4. Business Consumer Update Needed ⚠️
+### 9. Business Consumer Update ✅
 
 **File**: `src/commanders/librarian-new/healer/library-tree/tree-action/utils/canonical-naming/canonical-split-path-codec.ts`
 
-**Current State**: Still uses old approach with manual parsing and validation
+- Updated `tryParseCanonicalSplitPathInsideLibrary` to use new codec + policy
+- Creates codecs internally from user settings
+- Implementation:
+  1. Uses `splitPathInsideLibraryToWithSeparatedSuffix` to convert
+  2. Uses `buildCanonicalSeparatedSuffixedBasename` to build expected canonical
+  3. Uses `canonizeSplitPathWithSeparatedSuffix` to validate and canonize
+- Removed duplicate logic that's now in codec/policy
+- Maintains same API for tests
 
-**Needs**:
-- Update to use new codec `splitPathInsideLibraryToWithSeparatedSuffix`
-- Use policy functions for canonization validation
-- Remove duplicate logic that's now in codec/policy
+### 10. Type Narrowing Fixes ✅
 
-**Note**: Used in tests, so keep it but update implementation
+**File**: `src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/translators/helpers/locator.ts`
 
-### 5. Index Exports ⚠️
+- Fixed TypeScript type narrowing issues in return statements
+- Added type assertions using pattern:
+  ```typescript
+  return ok(
+    canonizedResult.value as unknown as
+      | CanonicalSplitPathInsideLibraryOf<SK>
+      | CanonicalSplitPathInsideLibrary,
+  );
+  ```
+- Applied to NameKing paths (Move and regular)
+
+### 11. Index Exports Update ✅
 
 **File**: `src/commanders/librarian-new/codecs/canonical-split-path/index.ts`
 
-**Needs**:
-- Export `SplitPathInsideLibraryWithSeparatedSuffixOf` (business logic needs this intermediate type)
+- Exported `SplitPathInsideLibraryWithSeparatedSuffixOf` type
+- Business logic needs this intermediate type for manipulation before canonization
 - New codec functions already exposed via `CanonicalSplitPathCodecs` interface
+
+## Unfinished Issues
+
+None - all planned refactoring work is complete! ✅
 
 
 ## Architecture Summary
@@ -188,60 +177,27 @@ SplitPathInsideLibrary
   → CanonicalSplitPathInsideLibraryOf (validated)
 ```
 
-## Next Steps (Recommended Order)
+## Refactoring Summary
 
-### 1. Refactor Old Codec Wrapper (First) 🔴
-**File**: `src/commanders/librarian-new/codecs/canonical-split-path/internal/to.ts`
+All planned refactoring work has been completed! The architecture now cleanly separates:
 
-Refactor `splitPathInsideLibraryToCanonical` to use new codec + policy internally:
-```typescript
-export function splitPathInsideLibraryToCanonical<SK extends SplitPathKind>(
-  suffix: SuffixCodecs,
-  libraryRootName: string,
-  sp: SplitPathInsideLibraryOf<SK>,
-): Result<CanonicalSplitPathInsideLibraryOf<SK>, CodecError> {
-  // Use new codec
-  const withSeparatedSuffixResult = splitPathInsideLibraryToWithSeparatedSuffix(suffix, sp);
-  if (withSeparatedSuffixResult.isErr()) return withSeparatedSuffixResult;
-  
-  // Use policy to canonize
-  return canonizeSplitPathWithSeparatedSuffix(suffix, libraryRootName, withSeparatedSuffixResult.value);
-}
-```
+1. **Codec layer** (`splitPathInsideLibraryToWithSeparatedSuffix`): Pure format conversion, validates NodeNames, parses basename
+2. **Policy layer** (`canonicalization-policy.ts`): Business rules for canonical format (suffixParts derived from pathParts)
+3. **Business logic layer**: Handles duplicate markers, interprets suffix as path intent (NameKing), manipulates paths
 
-**Why first**: Validates architecture, provides backward compatibility, enables other refactors
+### Key Achievements
 
-### 2. Refactor NameKing Paths 🔴
-**File**: `src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/translators/helpers/locator.ts`
+- ✅ Codecs are now pure format converters (no policy enforcement)
+- ✅ Policy functions moved to codecs layer (avoids circular dependencies)
+- ✅ All consumers updated to use new architecture
+- ✅ Backward compatibility maintained via wrapper function
+- ✅ Type system properly reflects semantic differences (canonical vs non-canonical)
+- ✅ All type narrowing issues resolved
 
-Follow same pattern as PathKing:
-- Convert to separated suffix using new codec
-- Manipulate pathParts based on suffix (business logic)
-- Build expected canonical from new pathParts
-- Canonize using policy
+### Future Considerations
 
-**Why second**: Completes main refactoring work
-
-### 3. Update Business Consumer 🟡
-**File**: `src/commanders/librarian-new/healer/library-tree/tree-action/utils/canonical-naming/canonical-split-path-codec.ts`
-
-Update to use new codec + policy instead of manual parsing/validation.
-
-**Why third**: Proves architecture works, used in tests
-
-### 4. Fix Type Narrowing Issues 🟡
-**File**: `src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/translators/helpers/locator.ts`
-
-Use type assertions (same pattern as line 214).
-
-**Why fourth**: Cleanup/polish
-
-### 5. Update Exports 🟢
-**File**: `src/commanders/librarian-new/codecs/canonical-split-path/index.ts`
-
-Export `SplitPathInsideLibraryWithSeparatedSuffixOf` (business logic needs it).
-
-**Why fifth**: Finalize API surface
+- Consider deprecating `splitPathInsideLibraryToCanonical` wrapper once all consumers are confirmed updated
+- Monitor for any remaining uses of old manual parsing/validation patterns
 
 ## Notes
 

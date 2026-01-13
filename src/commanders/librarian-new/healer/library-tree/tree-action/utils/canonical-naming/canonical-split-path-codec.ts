@@ -17,10 +17,7 @@ import {
 	buildCanonicalSeparatedSuffixedBasename,
 	canonizeSplitPathWithSeparatedSuffix,
 } from "../../../../../codecs/canonical-split-path/internal/canonicalization-policy";
-import {
-	makeJoinedSuffixedBasename,
-	tryParseAsSeparatedSuffixedBasename,
-} from "./suffix-utils/core-suffix-utils";
+import { makeJoinedSuffixedBasename } from "./suffix-utils/core-suffix-utils";
 
 export function tryParseCanonicalSplitPathInsideLibrary(
 	sp: SplitPathToFolderInsideLibrary,
@@ -40,9 +37,6 @@ export function tryParseCanonicalSplitPathInsideLibrary(
 	const pathPartsRes = tryParsePathParts(sp.pathParts);
 	if (pathPartsRes.isErr()) return err(pathPartsRes.error);
 
-	const sepRes = tryParseAsSeparatedSuffixedBasename(sp);
-	if (sepRes.isErr()) return err(sepRes.error);
-
 	// Create codecs for policy functions
 	const settings = getParsedUserSettings();
 	const rules = makeCodecRulesFromSettings(settings);
@@ -57,29 +51,16 @@ export function tryParseCanonicalSplitPathInsideLibrary(
 		return err(withSeparatedSuffixResult.error.message);
 	}
 
-	// Build expected canonical from pathParts (policy)
-	const expected = buildCanonicalSeparatedSuffixedBasename(
-		codecs.canonicalSplitPath as unknown as Parameters<
-			typeof buildCanonicalSeparatedSuffixedBasename
-		>[0],
-		rules.libraryRootName,
-		sepRes.value.coreName,
-		sp,
-	);
+	// Use actual separated suffix from codec (contains parsed basename)
+	const actualSeparatedSuffix = withSeparatedSuffixResult.value;
 
-	// Update suffixParts to match canonical
-	const spWithSeparatedSuffix = {
-		...withSeparatedSuffixResult.value,
-		separatedSuffixedBasename: expected.separatedSuffixedBasename,
-	};
-
-	// Canonize using policy (validates format)
+	// Canonize using policy (validates format by comparing actual with expected)
 	const canonizedResult = canonizeSplitPathWithSeparatedSuffix(
 		codecs.canonicalSplitPath as unknown as Parameters<
 			typeof canonizeSplitPathWithSeparatedSuffix
 		>[0],
 		rules.libraryRootName,
-		spWithSeparatedSuffix,
+		actualSeparatedSuffix,
 	);
 	if (canonizedResult.isErr()) {
 		return err(canonizedResult.error.message);
