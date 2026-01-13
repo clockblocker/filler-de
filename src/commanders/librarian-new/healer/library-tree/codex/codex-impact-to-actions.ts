@@ -3,6 +3,7 @@
  * Requires tree access to generate content.
  */
 
+import { logger } from "../../../../../utils/logger";
 import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { Codecs, SplitPathToMdFileInsideLibrary } from "../../../codecs";
 import type { SectionNodeSegmentId } from "../../../codecs/segment-id/types/segment-id";
@@ -12,6 +13,7 @@ import { computeCodexSplitPath } from "./codex-split-path";
 import type { CodexImpact } from "./compute-codex-impact";
 import { generateCodexContent } from "./generate-codex-content";
 import { CODEX_CORE_NAME } from "./literals";
+import { computeScrollSplitPath } from "../utils/compute-scroll-split-path";
 import type {
 	CodexAction,
 	DeleteCodexAction,
@@ -127,11 +129,19 @@ export function codexImpactToActions(
 		// Collect all descendant scrolls for status writes
 		const scrollInfos = collectDescendantScrolls(section, sectionChain);
 		for (const { nodeName, parentChain } of scrollInfos) {
-			const splitPath = computeScrollSplitPath(
+			const splitPathResult = computeScrollSplitPath(
 				nodeName,
 				parentChain,
 				codecs,
 			);
+			if (splitPathResult.isErr()) {
+				logger.warn(
+					"[Codex] Failed to compute scroll split path:",
+					splitPathResult.error,
+				);
+				continue; // Maintain current behavior: skip on error
+			}
+			const splitPath = splitPathResult.value;
 
 			const writeStatusAction: WriteScrollStatusAction = {
 				kind: "WriteScrollStatus",
@@ -198,35 +208,6 @@ function collectDescendantScrolls(
 	return result;
 }
 
-function computeScrollSplitPath(
-	nodeName: string,
-	parentChain: SectionNodeSegmentId[],
-	codecs: Codecs,
-): SplitPathToMdFileInsideLibrary {
-	// Extract path parts from parent chain using codec API
-	const pathParts: string[] = [];
-	for (const segId of parentChain) {
-		const parseResult = codecs.segmentId.parseSectionSegmentId(segId);
-		if (parseResult.isErr()) {
-			// Skip this scroll if parsing fails (should never happen with valid tree state)
-			continue;
-		}
-		pathParts.push(parseResult.value.coreName);
-	}
-	const suffixParts = codecs.suffix.pathPartsWithRootToSuffixParts(pathParts);
-
-	const basename = codecs.suffix.serializeSeparatedSuffix({
-		coreName: nodeName,
-		suffixParts,
-	});
-
-	return {
-		basename,
-		extension: "md",
-		kind: SplitPathKind.MdFile,
-		pathParts,
-	};
-}
 
 /**
  * Collect all section chains from the tree (including root).

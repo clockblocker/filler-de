@@ -1,4 +1,3 @@
-import { ok, type Result } from "neverthrow";
 import { z } from "zod";
 import { getParsedUserSettings } from "../../global-state/global-state";
 import type {
@@ -20,42 +19,35 @@ import {
 	type Codecs,
 	makeCodecRulesFromSettings,
 	makeCodecs,
-	type SplitPathToMdFileInsideLibrary,
 } from "./codecs";
 import { healingActionsToVaultActions } from "./codecs/healing-to-vault-action";
-import type { ScrollNodeLocator } from "./codecs/locator/types";
-import type {
-	ScrollNodeSegmentId,
-	SectionNodeSegmentId,
-} from "./codecs/segment-id/types/segment-id";
+import type { ScrollNodeSegmentId } from "./codecs/segment-id/types/segment-id";
 import { Healer } from "./healer/healer";
 import {
-	CODEX_CORE_NAME,
 	type CodexAction,
 	type CodexImpact,
 	codexActionsToVaultActions,
 	codexImpactToActions,
-	computeCodexSplitPath,
 	parseCodexClickLineContent,
-	type WriteScrollStatusAction,
 } from "./healer/library-tree/codex";
+import { isCodexSplitPath } from "./healer/library-tree/codex/helpers";
 import { mergeCodexImpacts } from "./healer/library-tree/codex/merge-codex-impacts";
 import { Tree } from "./healer/library-tree/tree";
 import { buildTreeActions } from "./healer/library-tree/tree-action/bulk-vault-action-adapter";
 import { tryParseAsInsideLibrarySplitPath } from "./healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
 import { inferCreatePolicy } from "./healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/infer-create";
-import { tryCanonicalizeSplitPathToDestination } from "./healer/library-tree/tree-action/utils/canonical-naming/canonicalize-to-destination";
 import type {
 	CreateTreeLeafAction,
 	TreeAction,
 } from "./healer/library-tree/tree-action/types/tree-action";
-import { makeNodeSegmentId } from "./healer/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
+import { tryCanonicalizeSplitPathToDestination } from "./healer/library-tree/tree-action/utils/canonical-naming/canonicalize-to-destination";
 import {
 	TreeNodeKind,
 	TreeNodeStatus,
 } from "./healer/library-tree/tree-node/types/atoms";
-import type { SectionNode } from "./healer/library-tree/tree-node/types/tree-node";
 import type { HealingAction } from "./healer/library-tree/types/healing-action";
+import { extractScrollStatusActions } from "./healer/library-tree/utils/extract-scroll-status-actions";
+import { findInvalidCodexFiles } from "./healer/library-tree/utils/find-invalid-codex-files";
 import { resolveDuplicateHealingActions } from "./healer/library-tree/utils/resolve-duplicate-healing";
 
 // ─── Scroll Metadata Schema ───
@@ -137,7 +129,12 @@ export class Librarian {
 			}
 
 			// Delete invalid codex files (orphaned __ files)
-			const invalidCodexActions = this.findInvalidCodexFiles(allFiles);
+			const invalidCodexActions = findInvalidCodexFiles(
+				allFiles,
+				this.healer,
+				this.codecs,
+				this.rules,
+			);
 			allHealingActions.push(...invalidCodexActions);
 
 			// Subscribe to vault events BEFORE dispatching actions
@@ -192,12 +189,7 @@ export class Librarian {
 
 		for (const file of files) {
 			// Skip codex files (basename starts with __)
-			const coreNameResult =
-				this.codecs.suffix.parseSeparatedSuffix(file.basename);
-			if (
-				coreNameResult.isOk() &&
-				coreNameResult.value.coreName === CODEX_CORE_NAME
-			) {
+			if (isCodexSplitPath(file, this.codecs)) {
 				continue;
 			}
 
@@ -274,82 +266,6 @@ export class Librarian {
 	}
 
 	/**
-	 * Find invalid codex files (__ prefix but not valid codexes) and return delete actions.
-	 */
-	private findInvalidCodexFiles(
-		allFiles: SplitPathWithReader[],
-	): HealingAction[] {
-		if (!this.healer) return [];
-
-		// Collect all valid codex paths from tree
-		const validCodexPaths = new Set<string>();
-		this.collectValidCodexPaths(this.healer.getRoot(), [], validCodexPaths);
-
-		const deleteActions: HealingAction[] = [];
-
-		for (const file of allFiles) {
-			// Skip non-md files
-			if (file.kind !== SplitPathKind.MdFile) continue;
-
-			// Check if basename starts with __
-			const coreNameResult =
-				this.codecs.suffix.parseSeparatedSuffix(file.basename);
-			if (coreNameResult.isErr()) continue;
-
-			if (coreNameResult.value.coreName !== CODEX_CORE_NAME) continue;
-
-			// This is a __ file - check if it's valid
-			const libraryScopedResult = tryParseAsInsideLibrarySplitPath(
-				file,
-				this.rules,
-			);
-			if (libraryScopedResult.isErr()) continue;
-
-			const filePath = [
-				...libraryScopedResult.value.pathParts,
-				libraryScopedResult.value.basename,
-			].join("/");
-
-			if (!validCodexPaths.has(filePath)) {
-				deleteActions.push({
-					kind: "DeleteMdFile",
-					payload: { splitPath: libraryScopedResult.value },
-				});
-			}
-		}
-
-		return deleteActions;
-	}
-
-	/**
-	 * Recursively collect all valid codex paths from the tree.
-	 */
-	private collectValidCodexPaths(
-		section: SectionNode,
-		parentChain: SectionNodeSegmentId[],
-		paths: Set<string>,
-	): void {
-		// Current section's chain
-		const currentSegmentId = makeNodeSegmentId(section);
-		const currentChain = [...parentChain, currentSegmentId];
-
-		// Compute codex path for this section
-		const codexSplitPath = computeCodexSplitPath(currentChain, this.codecs);
-		const codexPath = [
-			...codexSplitPath.pathParts,
-			codexSplitPath.basename,
-		].join("/");
-		paths.add(codexPath);
-
-		// Recurse into child sections
-		for (const child of Object.values(section.children)) {
-			if (child.kind === TreeNodeKind.Section) {
-				this.collectValidCodexPaths(child, currentChain, paths);
-			}
-		}
-	}
-
-	/**
 	 * Subscribe to file system events from VaultActionManager.
 	 */
 	private subscribeToVaultEvents(): void {
@@ -378,11 +294,7 @@ export class Librarian {
 	 */
 	private handleCheckboxClick(event: CheckboxClickedEvent): void {
 		// Check if file is a codex (basename starts with __)
-		const coreNameResult =
-			this.codecs.suffix.parseSeparatedSuffix(event.splitPath.basename);
-		if (coreNameResult.isErr()) return;
-
-		if (coreNameResult.value.coreName !== CODEX_CORE_NAME) {
+		if (!isCodexSplitPath(event.splitPath, this.codecs)) {
 			// Not a codex file, ignore
 			return;
 		}
@@ -566,7 +478,10 @@ export class Librarian {
 		}
 
 		// 2. Extract scroll status changes from actions
-		const scrollStatusActions = this.extractScrollStatusActions(actions);
+		const scrollStatusActions = extractScrollStatusActions(
+			actions,
+			this.codecs,
+		);
 
 		// 3. Then dispatch codex actions
 		const mergedImpact = mergeCodexImpacts(allCodexImpacts);
@@ -588,134 +503,6 @@ export class Librarian {
 		if (codexVaultActions.length > 0) {
 			await this.vaultActionManager.dispatch(codexVaultActions);
 		}
-	}
-
-	/**
-	 * Extract WriteScrollStatusAction from ChangeStatus actions on scrolls.
-	 */
-	private extractScrollStatusActions(
-		actions: TreeAction[],
-	): WriteScrollStatusAction[] {
-		const scrollActions: WriteScrollStatusAction[] = [];
-
-		for (const action of actions) {
-			if (
-				action.actionType !== "ChangeStatus" ||
-				action.targetLocator.targetKind !== TreeNodeKind.Scroll
-			) {
-				continue;
-			}
-
-			const nodeNameResult = this.extractNodeNameFromScrollSegmentId(
-				action.targetLocator.segmentId,
-			);
-			if (nodeNameResult.isErr()) {
-				logger.error(
-					"[Librarian] Failed to parse scroll segment ID:",
-					nodeNameResult.error,
-				);
-				continue;
-			}
-			const nodeName = nodeNameResult.value;
-
-			const parentChain = action.targetLocator.segmentIdChainToParent;
-			const splitPathResult = this.computeScrollSplitPath(
-				nodeName,
-				parentChain,
-			);
-			if (splitPathResult.isErr()) {
-				logger.error(
-					"[Librarian] Failed to compute scroll split path:",
-					splitPathResult.error,
-				);
-				continue;
-			}
-			const splitPath = splitPathResult.value;
-
-			scrollActions.push({
-				kind: "WriteScrollStatus",
-				payload: {
-					splitPath,
-					status: action.newStatus,
-				},
-			});
-		}
-
-		return scrollActions;
-	}
-
-	/**
-	 * Extract node name from scroll segment ID using codec API.
-	 */
-	private extractNodeNameFromScrollSegmentId(
-		segmentId: ScrollNodeSegmentId,
-	): Result<string, import("./codecs/errors").CodecError> {
-		const parseResult =
-			this.codecs.segmentId.parseScrollSegmentId(segmentId);
-		if (parseResult.isErr()) {
-			return parseResult;
-		}
-		return parseResult.map((components) => components.coreName);
-	}
-
-	/**
-	 * Compute split path for a scroll given its node name and parent chain.
-	 */
-	private computeScrollSplitPath(
-		nodeName: string,
-		parentChain: SectionNodeSegmentId[],
-	): Result<
-		SplitPathToMdFileInsideLibrary,
-		import("./codecs/errors").CodecError
-	> {
-		// Build segmentIdChainToParent by parsing each segment ID
-		const segmentIdChainToParent: SectionNodeSegmentId[] = [];
-		for (const segId of parentChain) {
-			const parseResult =
-				this.codecs.segmentId.parseSectionSegmentId(segId);
-			if (parseResult.isErr()) {
-				return parseResult;
-			}
-			// Keep original segment ID (already validated)
-			segmentIdChainToParent.push(segId);
-		}
-
-		// Create ScrollNodeSegmentId
-		const segmentIdResult =
-			this.codecs.segmentId.serializeSegmentIdUnchecked({
-				coreName: nodeName,
-				extension: "md",
-				targetKind: TreeNodeKind.Scroll,
-			});
-		if (segmentIdResult.isErr()) {
-			return segmentIdResult;
-		}
-
-		// Construct ScrollNodeLocator
-		const locator: ScrollNodeLocator = {
-			segmentId: segmentIdResult.value as ScrollNodeSegmentId,
-			segmentIdChainToParent,
-			targetKind: TreeNodeKind.Scroll,
-		};
-
-		// Convert locator to canonical split path, then to split path
-		const canonicalResult =
-			this.codecs.locator.locatorToCanonicalSplitPathInsideLibrary(
-				locator,
-			);
-
-		// Chain: canonical -> split path
-		return canonicalResult.andThen((canonical) => {
-			// Convert canonical to split path
-			const splitPath =
-				this.codecs.splitPathWithSeparatedSuffix.fromSplitPathInsideLibraryWithSeparatedSuffix(
-					canonical,
-				);
-
-			// Type assertion: ScrollNodeLocator only produces SplitPathToMdFileInsideLibrary
-			// The codec chain preserves types, but TypeScript widens due to generic inference
-			return ok(splitPath as SplitPathToMdFileInsideLibrary);
-		});
 	}
 
 	/**

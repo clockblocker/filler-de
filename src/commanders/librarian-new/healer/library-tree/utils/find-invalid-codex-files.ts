@@ -1,0 +1,53 @@
+import { systemPathFromSplitPathInternal } from "../../../../managers/obsidian/vault-action-manager/helpers/pathfinder";
+import type { SplitPathWithReader } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathKind } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
+import type { CodecRules, Codecs } from "../../../codecs";
+import type { TreeAccessor } from "../codex/codex-impact-to-actions";
+import { isCodexSplitPath } from "../codex/helpers";
+import { tryParseAsInsideLibrarySplitPath } from "../tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
+import type { HealingAction } from "../types/healing-action";
+import { collectValidCodexPaths } from "./collect-codex-paths";
+
+/**
+ * Find invalid codex files (__ prefix but not valid codexes) and return delete actions.
+ */
+export function findInvalidCodexFiles(
+	allFiles: SplitPathWithReader[],
+	healer: TreeAccessor,
+	codecs: Codecs,
+	rules: CodecRules,
+): HealingAction[] {
+	// Collect all valid codex paths from tree
+	const validCodexPaths = new Set<string>();
+	collectValidCodexPaths(healer.getRoot(), [], validCodexPaths, codecs);
+
+	const deleteActions: HealingAction[] = [];
+
+	for (const file of allFiles) {
+		// Skip non-md files
+		if (file.kind !== SplitPathKind.MdFile) continue;
+
+		// Check if basename starts with __
+		if (!isCodexSplitPath(file, codecs)) continue;
+
+		// This is a __ file - check if it's valid
+		const libraryScopedResult = tryParseAsInsideLibrarySplitPath(
+			file,
+			rules,
+		);
+		if (libraryScopedResult.isErr()) continue;
+
+		const filePath = systemPathFromSplitPathInternal(
+			libraryScopedResult.value,
+		);
+
+		if (!validCodexPaths.has(filePath)) {
+			deleteActions.push({
+				kind: "DeleteMdFile",
+				payload: { splitPath: libraryScopedResult.value },
+			});
+		}
+	}
+
+	return deleteActions;
+}

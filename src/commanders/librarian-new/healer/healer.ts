@@ -156,7 +156,7 @@ export class Healer implements TreeAccessor {
 		if (!node) return [];
 
 		// Compute new segment ID
-		// Type assertion needed: makeNodeSegmentId overloads require specific node types, but TypeScript can't narrow union for overload resolution
+		// biome-ignore lint/suspicious/noExplicitAny: Type assertion needed: makeNodeSegmentId overloads require specific node types, but TypeScript can't narrow union for overload resolution
 		const newSegmentId = makeNodeSegmentId(node as any);
 
 		// If section renamed, update descendant suffixes
@@ -356,7 +356,7 @@ export class Healer implements TreeAccessor {
 		}
 
 		// Leaf move - narrow the types
-		// Type assertion needed: makeNodeSegmentId overloads require specific node types, but TypeScript can't narrow union for overload resolution
+		// biome-ignore lint/suspicious/noExplicitAny: Type assertion needed: makeNodeSegmentId overloads require specific node types, but TypeScript can't narrow union for overload resolution
 		const newSegmentId = makeNodeSegmentId(node as any);
 		if (node.kind === TreeNodeKind.Scroll) {
 			const newLocator: ScrollNodeLocator = {
