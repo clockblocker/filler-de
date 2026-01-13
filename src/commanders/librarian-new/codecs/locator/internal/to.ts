@@ -6,15 +6,11 @@ import type { CanonicalSplitPathCodecs } from "../../canonical-split-path";
 import type {
 	AnyCanonicalSplitPathInsideLibrary,
 	CanonicalSplitPathInsideLibraryOf,
-	CanonicalSplitPathToFileInsideLibrary,
-	CanonicalSplitPathToFolderInsideLibrary,
-	CanonicalSplitPathToMdFileInsideLibrary,
 } from "../../canonical-split-path/types/canonical-split-path";
 import type { CodecError } from "../../errors";
 import { makeLocatorError } from "../../errors";
 import type { SuffixCodecs } from "../../internal/suffix";
 import type { SegmentIdCodecs } from "../../segment-id";
-import type { AnySplitPathInsideLibrary } from "../../split-path-inside-library";
 import type { CorrespondingSplitPathKind } from "../../types/type-mappings";
 import type { NodeLocatorOf, TreeNodeLocator } from "../types";
 
@@ -22,24 +18,6 @@ import type { NodeLocatorOf, TreeNodeLocator } from "../types";
  * Converts locator to canonical split path inside library.
  * Returns Result instead of throwing.
  */
-export function locatorToCanonicalSplitPathInsideLibrary(
-	segmentId: SegmentIdCodecs,
-	canonicalSplitPath: CanonicalSplitPathCodecs,
-	suffix: SuffixCodecs,
-	loc: NodeLocatorOf<"File">,
-): Result<CanonicalSplitPathToFileInsideLibrary, CodecError>;
-export function locatorToCanonicalSplitPathInsideLibrary(
-	segmentId: SegmentIdCodecs,
-	canonicalSplitPath: CanonicalSplitPathCodecs,
-	suffix: SuffixCodecs,
-	loc: NodeLocatorOf<"Scroll">,
-): Result<CanonicalSplitPathToMdFileInsideLibrary, CodecError>;
-export function locatorToCanonicalSplitPathInsideLibrary(
-	segmentId: SegmentIdCodecs,
-	canonicalSplitPath: CanonicalSplitPathCodecs,
-	suffix: SuffixCodecs,
-	loc: NodeLocatorOf<"Section">,
-): Result<CanonicalSplitPathToFolderInsideLibrary, CodecError>;
 export function locatorToCanonicalSplitPathInsideLibrary<
 	NK extends TreeNodeKind,
 >(
@@ -53,7 +31,7 @@ export function locatorToCanonicalSplitPathInsideLibrary<
 >;
 export function locatorToCanonicalSplitPathInsideLibrary(
 	segmentId: SegmentIdCodecs,
-	canonicalSplitPath: CanonicalSplitPathCodecs,
+	_canonicalSplitPath: CanonicalSplitPathCodecs,
 	suffix: SuffixCodecs,
 	loc: TreeNodeLocator,
 ): Result<AnyCanonicalSplitPathInsideLibrary, CodecError> {
@@ -102,46 +80,33 @@ export function locatorToCanonicalSplitPathInsideLibrary(
 	const suffixParts =
 		targetKind === TreeNodeKind.Section ? [] : pathPartsSansRoot;
 
-	const basename = suffix.serializeSeparatedSuffix({ coreName, suffixParts });
+	// Build split path with separated suffix directly (assumes canonical I/O as invariant)
+	const separatedSuffixedBasename = { coreName, suffixParts };
+	let splitPathWithSeparatedSuffix: AnyCanonicalSplitPathInsideLibrary;
 
-	// Build split path inside library with proper type inference
-	const splitPathInsideLibrary: AnySplitPathInsideLibrary =
-		targetKind === TreeNodeKind.Section
-			? {
-					basename,
-					kind: SplitPathKind.Folder,
-					pathParts,
-				}
-			: targetKind === TreeNodeKind.Scroll
-				? {
-						basename,
-						extension: MD,
-						kind: SplitPathKind.MdFile,
-						pathParts,
-					}
-				: {
-						basename,
-						extension: extension,
-						kind: SplitPathKind.File,
-						pathParts,
-					};
-
-	// Convert to canonical
-	const canonicalResult =
-		canonicalSplitPath.splitPathInsideLibraryToCanonical(
-			splitPathInsideLibrary,
-		);
-
-	if (canonicalResult.isErr()) {
-		return err(
-			makeLocatorError(
-				"InvalidChain",
-				"Failed to convert split path to canonical",
-				{ splitPath: splitPathInsideLibrary },
-				canonicalResult.error,
-			),
-		);
+	if (targetKind === TreeNodeKind.Section) {
+		splitPathWithSeparatedSuffix = {
+			kind: SplitPathKind.Folder,
+			pathParts,
+			separatedSuffixedBasename,
+		} as AnyCanonicalSplitPathInsideLibrary;
+	} else if (targetKind === TreeNodeKind.Scroll) {
+		splitPathWithSeparatedSuffix = {
+			extension: MD,
+			kind: SplitPathKind.MdFile,
+			pathParts,
+			separatedSuffixedBasename,
+		} as AnyCanonicalSplitPathInsideLibrary;
+	} else {
+		splitPathWithSeparatedSuffix = {
+			extension: extension,
+			kind: SplitPathKind.File,
+			pathParts,
+			separatedSuffixedBasename,
+		} as AnyCanonicalSplitPathInsideLibrary;
 	}
 
-	return ok(canonicalResult.value);
+	// Return as CanonicalSplitPathInsideLibraryOf (type alias, structure is same)
+	// No validation - locator codec assumes canonical input/output
+	return ok(splitPathWithSeparatedSuffix);
 }

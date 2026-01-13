@@ -1,14 +1,19 @@
 import type {
-	CommonSplitPath,
 	SplitPathKind,
+	SplitPathKind as SplitPathKindEnum,
 } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
-import type { Prettify } from "../../../../../types/helpers";
 import type { SeparatedSuffixedBasename } from "../../internal/suffix/types";
-import type {
-	SplitPathToFileInsideLibrary,
-	SplitPathToFolderInsideLibrary,
-	SplitPathToMdFileInsideLibrary,
-} from "../../split-path-inside-library";
+import type { SplitPathInsideLibraryOf } from "../../split-path-inside-library";
+
+/**
+ * Split path inside library with separated suffix.
+ * Can be non-canonical (suffixParts may not match pathParts).
+ */
+export type SplitPathInsideLibraryWithSeparatedSuffixOf<
+	SK extends SplitPathKind,
+> = Omit<SplitPathInsideLibraryOf<SK>, "basename"> & {
+	separatedSuffixedBasename: SeparatedSuffixedBasename;
+};
 
 /**
  * LibraryTree compliant canonical split path.
@@ -34,14 +39,12 @@ import type {
  *   kind: "Folder",
  *   separatedSuffixedBasename: { coreName: "child", suffixParts: [] },
  * }
+ *
+ * Semantically validated/canonical version of SplitPathInsideLibraryWithSeparatedSuffixOf.
+ * Structure is identical, but this type indicates the path has been validated against canonization policy.
  */
-export type AnyCanonicalSplitPathInsideLibrary =
-	| CanonicalSplitPathToFolderInsideLibrary
-	| CanonicalSplitPathToFileInsideLibrary
-	| CanonicalSplitPathToMdFileInsideLibrary;
-
 export type CanonicalSplitPathInsideLibraryOf<SK extends SplitPathKind> =
-	Extract<AnyCanonicalSplitPathInsideLibrary, { kind: SK }>;
+	SplitPathInsideLibraryWithSeparatedSuffixOf<SK>;
 
 // --
 
@@ -55,18 +58,23 @@ export type CanonicalSeparatedSuffixedBasename = {
 	separatedSuffixedBasename: SeparatedSuffixedBasename;
 };
 
-export type MakeCanonical<SP extends CommonSplitPath> = Prettify<
-	Omit<SP, "basename"> & CanonicalSeparatedSuffixedBasename
->;
-
 export type CanonicalSplitPathToFolderInsideLibrary =
-	MakeCanonical<SplitPathToFolderInsideLibrary>;
+	SplitPathInsideLibraryWithSeparatedSuffixOf<
+		typeof SplitPathKindEnum.Folder
+	>;
 
 export type CanonicalSplitPathToFileInsideLibrary =
-	MakeCanonical<SplitPathToFileInsideLibrary>;
+	SplitPathInsideLibraryWithSeparatedSuffixOf<typeof SplitPathKindEnum.File>;
 
 export type CanonicalSplitPathToMdFileInsideLibrary =
-	MakeCanonical<SplitPathToMdFileInsideLibrary>;
+	SplitPathInsideLibraryWithSeparatedSuffixOf<
+		typeof SplitPathKindEnum.MdFile
+	>;
+
+export type AnyCanonicalSplitPathInsideLibrary =
+	| CanonicalSplitPathToFolderInsideLibrary
+	| CanonicalSplitPathToFileInsideLibrary
+	| CanonicalSplitPathToMdFileInsideLibrary;
 
 // Legacy alias for backward compatibility
 export type CanonicalSplitPathInsideLibrary =

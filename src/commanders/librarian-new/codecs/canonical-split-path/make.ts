@@ -8,7 +8,12 @@ import type { CodecRules } from "../rules";
 import type { SplitPathInsideLibraryOf } from "../split-path-inside-library";
 import { fromCanonicalSplitPathInsideLibrary } from "./internal/from";
 import { splitPathInsideLibraryToCanonical } from "./internal/to";
-import type { CanonicalSplitPathInsideLibraryOf } from "./types/canonical-split-path";
+import { fromSplitPathInsideLibraryWithSeparatedSuffix } from "./internal/split-path-with-separated-suffix/from";
+import { splitPathInsideLibraryToWithSeparatedSuffix } from "./internal/split-path-with-separated-suffix/to";
+import type {
+	CanonicalSplitPathInsideLibraryOf,
+	SplitPathInsideLibraryWithSeparatedSuffixOf,
+} from "./types/canonical-split-path";
 
 export type CanonicalSplitPathCodecs = {
 	splitPathInsideLibraryToCanonical: <SK extends SplitPathKind>(
@@ -16,6 +21,12 @@ export type CanonicalSplitPathCodecs = {
 	) => Result<CanonicalSplitPathInsideLibraryOf<SK>, CodecError>;
 	fromCanonicalSplitPathInsideLibrary: <SK extends SplitPathKind>(
 		sp: CanonicalSplitPathInsideLibraryOf<SK>,
+	) => SplitPathInsideLibraryOf<SK>;
+	splitPathInsideLibraryToWithSeparatedSuffix: <SK extends SplitPathKind>(
+		sp: SplitPathInsideLibraryOf<SK>,
+	) => Result<SplitPathInsideLibraryWithSeparatedSuffixOf<SK>, CodecError>;
+	fromSplitPathInsideLibraryWithSeparatedSuffix: <SK extends SplitPathKind>(
+		sp: SplitPathInsideLibraryWithSeparatedSuffixOf<SK>,
 	) => SplitPathInsideLibraryOf<SK>;
 	// Suffix wrapper functions (expose internal suffix codecs)
 	parseSeparatedSuffix: (
@@ -34,6 +45,10 @@ export function makeCanonicalSplitPathCodecs(
 	return {
 		fromCanonicalSplitPathInsideLibrary: (sp) =>
 			fromCanonicalSplitPathInsideLibrary(suffix, sp),
+		splitPathInsideLibraryToWithSeparatedSuffix: (sp) =>
+			splitPathInsideLibraryToWithSeparatedSuffix(suffix, sp),
+		fromSplitPathInsideLibraryWithSeparatedSuffix: (sp) =>
+			fromSplitPathInsideLibraryWithSeparatedSuffix(suffix, sp),
 		// Suffix wrapper functions
 		parseSeparatedSuffix: (basename) =>
 			suffix.parseSeparatedSuffix(basename),
