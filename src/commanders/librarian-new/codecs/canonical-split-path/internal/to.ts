@@ -8,24 +8,8 @@ import { canonizeSplitPathWithSeparatedSuffix } from "./canonicalization-policy"
 import { splitPathInsideLibraryToWithSeparatedSuffix } from "./split-path-with-separated-suffix/to";
 
 /**
- * Extracts duplicate marker (e.g., " 1", " 2") from end of basename.
- * Obsidian appends " N" when duplicating files.
- */
-function extractDuplicateMarker(basename: string): {
-	cleanBasename: string;
-	marker: string;
-} {
-	const match = basename.match(/^(.+?)( \d+)$/);
-	if (match) {
-		return { cleanBasename: match[1] ?? basename, marker: match[2] ?? "" };
-	}
-	return { cleanBasename: basename, marker: "" };
-}
-
-/**
  * Converts split path inside library to canonical format.
  * Wrapper that uses new codec + policy for backward compatibility.
- * Handles duplicate markers (business logic) before canonization.
  */
 export function splitPathInsideLibraryToCanonical<SK extends SplitPathKind>(
 	suffix: SuffixCodecs,
@@ -42,37 +26,10 @@ export function splitPathInsideLibraryToCanonical<SK extends SplitPathKind>(
 		>;
 	}
 
-	let spWithSeparatedSuffix = withSeparatedSuffixResult.value;
-
-	// Handle Obsidian duplicate marker (business logic)
-	// Extract duplicate marker and re-attach to coreName
-	const { cleanBasename, marker } = extractDuplicateMarker(sp.basename);
-	if (marker) {
-		// Re-parse without duplicate marker to get clean coreName
-		const cleanSepResult = suffix.parseSeparatedSuffix(cleanBasename);
-		if (cleanSepResult.isErr()) {
-			return cleanSepResult as unknown as Result<
-				CanonicalSplitPathInsideLibraryOf<SK>,
-				CodecError
-			>;
-		}
-
-		// Re-attach marker to coreName
-		const coreNameWithMarker = cleanSepResult.value.coreName + marker;
-
-		spWithSeparatedSuffix = {
-			...spWithSeparatedSuffix,
-			separatedSuffixedBasename: {
-				coreName: coreNameWithMarker,
-				suffixParts: cleanSepResult.value.suffixParts,
-			},
-		};
-	}
-
 	// Use policy to canonize (validates format)
 	return canonizeSplitPathWithSeparatedSuffix(
 		suffix,
 		libraryRootName,
-		spWithSeparatedSuffix,
+		withSeparatedSuffixResult.value,
 	) as Result<CanonicalSplitPathInsideLibraryOf<SK>, CodecError>;
 }
