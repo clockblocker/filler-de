@@ -1,10 +1,10 @@
 import type { Result } from "neverthrow";
 import type { SplitPathKind } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { TreeNodeKind } from "../../healer/library-tree/tree-node/types/atoms";
-import type { CanonicalSplitPathInsideLibraryOf } from "../split-path-with-separated-suffix";
 import type { CodecError } from "../errors";
 import type { SuffixCodecs } from "../internal/suffix";
 import type { SegmentIdCodecs } from "../segment-id";
+import type { CanonicalSplitPathInsideLibraryOf } from "../split-path-with-separated-suffix";
 import type {
 	CorrespondingSplitPathKind,
 	CorrespondingTreeNodeKind,

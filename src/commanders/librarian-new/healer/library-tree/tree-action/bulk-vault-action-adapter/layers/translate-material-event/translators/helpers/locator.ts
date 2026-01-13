@@ -39,7 +39,7 @@ export function tryMakeDestinationLocatorFromEvent<
 	);
 	if (locatorRes.isErr()) return err(locatorRes.error);
 
-	return ok(locatorRes.value as TreeNodeLocatorForEvent<E>);
+	return ok(locatorRes.value);
 }
 
 export function tryMakeTargetLocatorFromLibraryScopedSplitPath<
@@ -72,7 +72,7 @@ export function tryMakeTargetLocatorFromLibraryScopedSplitPath<
 	);
 	if (locatorRes.isErr()) return err(locatorRes.error);
 
-	return ok(locatorRes.value as TreeNodeLocatorForLibraryScopedSplitPath<SK>);
+	return ok(locatorRes.value);
 }
 
 const tryMakeCanonicalSplitPathToDestination = <
