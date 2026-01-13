@@ -1,4 +1,4 @@
-import { systemPathFromSplitPathInternal } from "../../../../managers/obsidian/vault-action-manager/helpers/pathfinder";
+import { systemPathFromSplitPathInternal } from "../../../../../managers/obsidian/vault-action-manager/helpers/pathfinder";
 import type { Codecs } from "../../../codecs";
 import { computeCodexSplitPath } from "../codex/codex-split-path";
 import { makeNodeSegmentId } from "../tree-node/codecs/node-and-segment-id/make-node-segment-id";

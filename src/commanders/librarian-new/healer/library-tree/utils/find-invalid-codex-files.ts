@@ -1,6 +1,6 @@
-import { systemPathFromSplitPathInternal } from "../../../../managers/obsidian/vault-action-manager/helpers/pathfinder";
-import type { SplitPathWithReader } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
-import { SplitPathKind } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
+import { systemPathFromSplitPathInternal } from "../../../../../managers/obsidian/vault-action-manager/helpers/pathfinder";
+import type { SplitPathWithReader } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { CodecRules, Codecs } from "../../../codecs";
 import type { TreeAccessor } from "../codex/codex-impact-to-actions";
 import { isCodexSplitPath } from "../codex/helpers";

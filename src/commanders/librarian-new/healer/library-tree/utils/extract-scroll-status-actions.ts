@@ -1,4 +1,4 @@
-import { logger } from "../../../../utils/logger";
+import { logger } from "../../../../../utils/logger";
 import type { Codecs } from "../../../codecs";
 import type { ScrollNodeSegmentId } from "../../../codecs/segment-id/types/segment-id";
 import { TreeNodeKind } from "../tree-node/types/atoms";
