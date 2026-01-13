@@ -5,7 +5,7 @@ import {
 	TreeActionType,
 } from "../../../../types/tree-action";
 import type { DeleteTreeNodeMaterializedEvent } from "../../materialized-node-events/types";
-import { tryMakeDestinationLocatorFromEvent } from "./helpers/locator";
+import { tryMakeDestinationLocatorFromEvent } from "./helpers/event-to-locator";
 
 export function traslateDeleteMaterializedEvent(
 	ev: DeleteTreeNodeMaterializedEvent,

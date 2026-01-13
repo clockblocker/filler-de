@@ -5,7 +5,7 @@ import {
 	TreeActionType,
 } from "../../../../types/tree-action";
 import type { CreateLeafNodeMaterializedEvent } from "../../materialized-node-events/types";
-import { tryMakeDestinationLocatorFromEvent } from "./helpers/locator";
+import { tryMakeDestinationLocatorFromEvent } from "./helpers/event-to-locator";
 
 export function traslateCreateMaterializedEvent(
 	ev: CreateLeafNodeMaterializedEvent,

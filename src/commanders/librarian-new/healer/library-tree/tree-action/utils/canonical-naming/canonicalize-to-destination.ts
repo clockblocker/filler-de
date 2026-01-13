@@ -1,6 +1,6 @@
 import { err, ok, type Result } from "neverthrow";
-import { getParsedUserSettings } from "../../../../../../../../../../global-state/global-state";
-import type { SplitPathKind } from "../../../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import { getParsedUserSettings } from "../../../../../../../../global-state/global-state";
+import type { SplitPathKind } from "../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type {
 	AnySplitPathInsideLibrary,
 	CanonicalSplitPathInsideLibrary,
@@ -8,130 +8,14 @@ import type {
 	Codecs,
 	SplitPathInsideLibraryOf,
 	SplitPathInsideLibraryWithSeparatedSuffixOf,
-} from "../../../../../../../../codecs";
-import type { NodeName } from "../../../../../../../../types/schemas/node-name";
+} from "../../../../../../codecs";
+import type { NodeName } from "../../../../../../types/schemas/node-name";
 import {
 	buildCanonicalSeparatedSuffixedBasename,
 	canonizeSplitPathWithSeparatedSuffix,
-} from "../../../../../utils/canonical-naming/canonicalization-policy";
-import {
-	type CanonicalSplitPathToDestination,
-	MaterializedEventKind,
-	type MaterializedNodeEvent,
-	type TreeNodeLocatorForEvent,
-	type TreeNodeLocatorForLibraryScopedSplitPath,
-} from "../../../materialized-node-events/types";
-import { adaptCodecResult } from "../../error-adapters";
-import {
-	ChangePolicy,
-	inferPolicyAndIntent,
-	RenameIntent,
-} from "../../policy-and-intent";
-
-export function tryMakeDestinationLocatorFromEvent<
-	E extends MaterializedNodeEvent,
->(ev: E, codecs: Codecs): Result<TreeNodeLocatorForEvent<E>, string> {
-	const cspRes = tryMakeCanonicalSplitPathToDestination(ev, codecs);
-	if (cspRes.isErr()) return err(cspRes.error);
-
-	const locatorRes = adaptCodecResult(
-		codecs.locator.canonicalSplitPathInsideLibraryToLocator(cspRes.value),
-	);
-	if (locatorRes.isErr()) return err(locatorRes.error);
-
-	return ok(locatorRes.value);
-}
-
-export function tryMakeTargetLocatorFromLibraryScopedSplitPath<
-	SK extends SplitPathKind,
->(
-	sp: SplitPathInsideLibraryOf<SK>,
-	codecs: Codecs,
-): Result<TreeNodeLocatorForLibraryScopedSplitPath<SK>, string> {
-	const withSeparatedSuffixResult = adaptCodecResult(
-		codecs.splitPathWithSeparatedSuffix.splitPathInsideLibraryToWithSeparatedSuffix(
-			sp,
-		),
-	);
-	if (withSeparatedSuffixResult.isErr()) {
-		return err(withSeparatedSuffixResult.error);
-	}
-	const { splitPathToLibraryRoot } = getParsedUserSettings();
-	const libraryRootName = splitPathToLibraryRoot.basename;
-	const cspRes = adaptCodecResult(
-		canonizeSplitPathWithSeparatedSuffix(
-			codecs.suffix,
-			libraryRootName,
-			withSeparatedSuffixResult.value,
-		),
-	);
-	if (cspRes.isErr()) return err(cspRes.error);
-
-	const locatorRes = adaptCodecResult(
-		codecs.locator.canonicalSplitPathInsideLibraryToLocator(cspRes.value),
-	);
-	if (locatorRes.isErr()) return err(locatorRes.error);
-
-	return ok(locatorRes.value);
-}
-
-const tryMakeCanonicalSplitPathToDestination = <
-	E extends MaterializedNodeEvent,
->(
-	ev: E,
-	codecs: Codecs,
-): Result<CanonicalSplitPathToDestination<E>, string> => {
-	if (ev.kind === MaterializedEventKind.Delete) {
-		const withSeparatedSuffixResult = adaptCodecResult(
-			codecs.splitPathWithSeparatedSuffix.splitPathInsideLibraryToWithSeparatedSuffix(
-				ev.splitPath,
-			),
-		);
-		if (withSeparatedSuffixResult.isErr()) {
-			return err(withSeparatedSuffixResult.error) as Result<
-				CanonicalSplitPathToDestination<E>,
-				string
-			>;
-		}
-		const { splitPathToLibraryRoot } = getParsedUserSettings();
-		const libraryRootName = splitPathToLibraryRoot.basename;
-		const r = adaptCodecResult(
-			canonizeSplitPathWithSeparatedSuffix(
-				codecs.suffix,
-				libraryRootName,
-				withSeparatedSuffixResult.value,
-			),
-		);
-		return r as Result<CanonicalSplitPathToDestination<E>, string>;
-	}
-
-	const sp = extractSplitPathToDestination(ev);
-	if (!("kind" in sp)) {
-		return err("Invalid split path: missing kind");
-	}
-	const { policy, intent } = inferPolicyAndIntent(
-		ev as MaterializedNodeEvent,
-		codecs,
-	);
-
-	const r = tryCanonicalizeSplitPathToDestination(
-		sp as AnySplitPathInsideLibrary,
-		policy,
-		intent,
-		codecs,
-	);
-	return r as Result<CanonicalSplitPathToDestination<E>, string>;
-};
-
-const extractSplitPathToDestination = (e: MaterializedNodeEvent) => {
-	switch (e.kind) {
-		case MaterializedEventKind.Rename:
-			return e.to;
-		case MaterializedEventKind.Create:
-		case MaterializedEventKind.Delete:
-			return e.splitPath;
-	}
-};
+} from "./canonicalization-policy";
+import { adaptCodecResult } from "../../bulk-vault-action-adapter/layers/translate-material-event/error-adapters";
+import { ChangePolicy, RenameIntent } from "../../bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent";
 
 /**
  * Extracts duplicate marker (e.g., " 1", " 2") from end of basename.

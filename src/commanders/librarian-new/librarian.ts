@@ -44,7 +44,7 @@ import { Tree } from "./healer/library-tree/tree";
 import { buildTreeActions } from "./healer/library-tree/tree-action/bulk-vault-action-adapter";
 import { tryParseAsInsideLibrarySplitPath } from "./healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
 import { inferCreatePolicy } from "./healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/infer-create";
-import { tryCanonicalizeSplitPathToDestination } from "./healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/translators/helpers/locator";
+import { tryCanonicalizeSplitPathToDestination } from "./healer/library-tree/tree-action/utils/canonical-naming/canonicalize-to-destination";
 import type {
 	CreateTreeLeafAction,
 	TreeAction,

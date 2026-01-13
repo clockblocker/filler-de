@@ -10,10 +10,8 @@ import {
 } from "../../../../utils/locator/locator-utils";
 import type { RenameTreeNodeNodeMaterializedEvent } from "../../materialized-node-events/types";
 import { inferPolicyAndIntent, RenameIntent } from "../policy-and-intent";
-import {
-	tryMakeDestinationLocatorFromEvent,
-	tryMakeTargetLocatorFromLibraryScopedSplitPath,
-} from "./helpers/locator";
+import { tryMakeDestinationLocatorFromEvent } from "./helpers/event-to-locator";
+import { tryMakeTargetLocatorFromLibraryScopedSplitPath } from "./helpers/split-path-to-locator";
 
 export function traslateRenameMaterializedEvent(
 	ev: RenameTreeNodeNodeMaterializedEvent,
