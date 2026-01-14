@@ -20,6 +20,7 @@ import type { HealingAction } from "../../../../../src/commanders/librarian-new/
 import type { TreeAction } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/types/tree-action";
 import type { Healer } from "../../../../../src/commanders/librarian-new/healer/healer";
 import type { BulkVaultEvent } from "../../../../../src/managers/obsidian/vault-action-manager";
+import type { CreateTreeLeafAction } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/types/tree-action";
 import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
 import { makeTree, type TreeShape } from "../tree-test-helpers";
 
@@ -141,4 +142,33 @@ export function processBulkEvent(
 	}
 
 	return result;
+}
+
+/**
+ * Initialize pipeline from logged createActions (from Obsidian init).
+ * Applies all create actions to build the initial tree state.
+ */
+export function createPipelineFromCreateActions(
+	createActions: CreateTreeLeafAction[],
+): PersistentPipelineState {
+	const rules = makeCodecRulesFromSettings(defaultSettingsForUnitTests);
+	const codecs = makeCodecs(rules);
+	
+	// Create empty tree
+	const libraryRoot = "Library" as const;
+	const healer = makeTree({ libraryRoot });
+
+	// Apply all create actions to build initial tree state
+	const codexImpacts: CodexImpact[] = [];
+	for (const action of createActions) {
+		const result = healer.getHealingActionsFor(action);
+		codexImpacts.push(result.codexImpact);
+	}
+
+	return {
+		healer,
+		codecs,
+		rules,
+		history: [],
+	};
 }
