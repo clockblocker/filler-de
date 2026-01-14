@@ -72,9 +72,13 @@ function formatTreeAction(action: TreeAction): string {
 		case "Create":
 			return `${action.targetLocator.targetKind} at ${action.observedSplitPath.pathParts.join("/")}`;
 		case "Delete":
-			return `${action.targetLocator.targetKind} at ${action.observedSplitPath.pathParts.join("/")}`;
+			return `${action.targetLocator.targetKind} (deleted)`;
 		case "Rename":
-			return `${action.targetLocator.targetKind}: ${action.from.pathParts.join("/")} → ${action.to.pathParts.join("/")}`;
+			return `${action.targetLocator.targetKind}: ${action.newNodeName}`;
+		case "Move":
+			return `${action.targetLocator.targetKind}: moved to ${action.observedSplitPath.pathParts.join("/")}`;
+		case "ChangeStatus":
+			return `${action.targetLocator.targetKind}: status changed`;
 	}
 }
 
@@ -205,3 +209,252 @@ if (import.meta.main) {
 
 	investigateBulkEvent(data.createActions, data.bulkEvent);
 }
+
+// ─── Unit Tests: extractInvalidCodexesFromBulk Expectations ───
+// Step 0: Define expectations before implementation
+
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import type { Codecs } from "../../../../../src/commanders/librarian-new/codecs";
+import type { TreeAccessor } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/codex-impact-to-actions";
+import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
+import { createActions } from "./observed-bulks/001-create";
+import { bulkEvent as duplicateBulk } from "./observed-bulks/002-duplicate";
+
+let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
+
+beforeEach(() => {
+	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy();
+});
+
+afterEach(() => {
+	getParsedUserSettingsSpy.mockRestore();
+});
+
+/**
+ * Placeholder for extractInvalidCodexesFromBulk function.
+ * TODO: Implement in codex-impact-to-actions.ts
+ */
+function extractInvalidCodexesFromBulk(
+	bulkEvent: BulkVaultEvent,
+	healer: TreeAccessor,
+	codecs: Codecs,
+): HealingAction[] {
+	// TODO: Implement according to plan
+	// - Extract FileCreated and FileRenamed events for codex files
+	// - Validate each codex's suffix against current tree state
+	// - Return deletion actions for wrong-suffix codexes
+	throw new Error("extractInvalidCodexesFromBulk not yet implemented");
+}
+
+describe("extractInvalidCodexesFromBulk (Step 0: Expectations)", () => {
+	it("detects wrong-suffix codex from duplicate folder (002-duplicate)", () => {
+		const state = createPipelineFromCreateActions(createActions);
+		
+		// Process duplicate bulk event to update tree state
+		processBulkEvent(state, duplicateBulk);
+		
+		// Extract invalid codexes from bulk event
+		const invalidCodexDeletions = extractInvalidCodexesFromBulk(
+			duplicateBulk,
+			state.healer,
+			state.codecs,
+		);
+		
+		// Expect deletion for wrong-suffix codex
+		// Observed: __-kid1-mommy-parents.md at Library/parents/mommy/kid1 1
+		// Expected: __-kid1 1-mommy-parents.md (suffix mismatch)
+		const wrongCodexPath = "Library/parents/mommy/kid1 1/__-kid1-mommy-parents.md";
+		const deletion = invalidCodexDeletions.find(
+			(action) =>
+				action.kind === "DeleteMdFile" &&
+				action.payload.splitPath.pathParts.join("/") === wrongCodexPath,
+		);
+		
+		expect(deletion).toBeDefined();
+		expect(deletion?.kind).toBe("DeleteMdFile");
+	});
+
+	it("handles FileCreated events for codex files", () => {
+		const state = createPipelineFromCreateActions(createActions);
+		processBulkEvent(state, duplicateBulk);
+		
+		const invalidCodexDeletions = extractInvalidCodexesFromBulk(
+			duplicateBulk,
+			state.healer,
+			state.codecs,
+		);
+		
+		// Should process FileCreated event for codex
+		expect(invalidCodexDeletions.length).toBeGreaterThan(0);
+	});
+
+	it("handles FileRenamed events for codex files with wrong suffixes", () => {
+		const state = createPipelineFromCreateActions(createActions);
+		
+		// Create a bulk event with FileRenamed for codex
+		const renameBulk: BulkVaultEvent = {
+			debug: {
+				collapsedCount: { creates: 0, deletes: 0, renames: 1 },
+				endedAt: 0,
+				reduced: { rootDeletes: 0, rootRenames: 0 },
+				startedAt: 0,
+				trueCount: { creates: 0, deletes: 0, renames: 1 },
+			},
+			events: [
+				{
+					from: {
+						basename: "__-kid1-mommy-parents",
+						extension: "md",
+						kind: "MdFile",
+						pathParts: ["Library", "parents", "mommy", "kid1"],
+					},
+					kind: "FileRenamed",
+					to: {
+						basename: "__-kid1-mommy-parents", // old suffix at new location
+						extension: "md",
+						kind: "MdFile",
+						pathParts: ["Library", "parents", "mommy", "kid1 1"], // moved
+					},
+				},
+			],
+			roots: [],
+		};
+		
+		processBulkEvent(state, renameBulk);
+		
+		const invalidCodexDeletions = extractInvalidCodexesFromBulk(
+			renameBulk,
+			state.healer,
+			state.codecs,
+		);
+		
+		// Should detect wrong suffix at new location
+		expect(invalidCodexDeletions.length).toBeGreaterThan(0);
+	});
+
+	it("does not delete valid codexes with correct suffixes", () => {
+		const state = createPipelineFromCreateActions(createActions);
+		
+		// Create bulk event with valid codex (correct suffix)
+		const validCodexBulk: BulkVaultEvent = {
+			debug: {
+				collapsedCount: { creates: 1, deletes: 0, renames: 0 },
+				endedAt: 0,
+				reduced: { rootDeletes: 0, rootRenames: 0 },
+				startedAt: 0,
+				trueCount: { creates: 1, deletes: 0, renames: 0 },
+			},
+			events: [
+				{
+					kind: "FileCreated",
+					splitPath: {
+						basename: "__-kid1-mommy-parents", // correct for Library/parents/mommy/kid1
+						extension: "md",
+						kind: "MdFile",
+						pathParts: ["Library", "parents", "mommy", "kid1"],
+					},
+				},
+			],
+			roots: [],
+		};
+		
+		processBulkEvent(state, validCodexBulk);
+		
+		const invalidCodexDeletions = extractInvalidCodexesFromBulk(
+			validCodexBulk,
+			state.healer,
+			state.codecs,
+		);
+		
+		// Should not delete valid codex
+		const validCodexPath = "Library/parents/mommy/kid1/__-kid1-mommy-parents.md";
+		const deletion = invalidCodexDeletions.find(
+			(action) =>
+				action.kind === "DeleteMdFile" &&
+				action.payload.splitPath.pathParts.join("/") === validCodexPath,
+		);
+		
+		expect(deletion).toBeUndefined();
+	});
+
+	it("validates codex suffix against current tree state after actions applied", () => {
+		const state = createPipelineFromCreateActions(createActions);
+		
+		// Process duplicate to update tree (creates "kid1 1" section)
+		processBulkEvent(state, duplicateBulk);
+		
+		const invalidCodexDeletions = extractInvalidCodexesFromBulk(
+			duplicateBulk,
+			state.healer, // tree state after "kid1 1" section created
+			state.codecs,
+		);
+		
+		// Should use updated tree state to compute expected suffix
+		// Expected for "kid1 1" section: __-kid1 1-mommy-parents
+		// Observed: __-kid1-mommy-parents → mismatch detected
+		expect(invalidCodexDeletions.length).toBeGreaterThan(0);
+	});
+
+	it("handles nested folder duplicates with multiple codexes", () => {
+		const state = createPipelineFromCreateActions(createActions);
+		
+		// Nested duplicate scenario
+		const nestedDuplicateBulk: BulkVaultEvent = {
+			debug: {
+				collapsedCount: { creates: 4, deletes: 0, renames: 0 },
+				endedAt: 0,
+				reduced: { rootDeletes: 0, rootRenames: 0 },
+				startedAt: 0,
+				trueCount: { creates: 4, deletes: 0, renames: 0 },
+			},
+			events: [
+				{
+					kind: "FolderCreated",
+					splitPath: {
+						basename: "mommy 1",
+						kind: "Folder",
+						pathParts: ["Library", "parents"],
+					},
+				},
+				{
+					kind: "FolderCreated",
+					splitPath: {
+						basename: "kid1 1",
+						kind: "Folder",
+						pathParts: ["Library", "parents", "mommy 1"],
+					},
+				},
+				{
+					kind: "FileCreated",
+					splitPath: {
+						basename: "__-mommy-parents", // wrong: should be __-mommy 1-parents
+						extension: "md",
+						kind: "MdFile",
+						pathParts: ["Library", "parents", "mommy 1"],
+					},
+				},
+				{
+					kind: "FileCreated",
+					splitPath: {
+						basename: "__-kid1-mommy-parents", // wrong: should be __-kid1 1-mommy 1-parents
+						extension: "md",
+						kind: "MdFile",
+						pathParts: ["Library", "parents", "mommy 1", "kid1 1"],
+					},
+				},
+			],
+			roots: [],
+		};
+		
+		processBulkEvent(state, nestedDuplicateBulk);
+		
+		const invalidCodexDeletions = extractInvalidCodexesFromBulk(
+			nestedDuplicateBulk,
+			state.healer,
+			state.codecs,
+		);
+		
+		// Should detect both wrong-suffix codexes
+		expect(invalidCodexDeletions.length).toBeGreaterThanOrEqual(2);
+	});
+});

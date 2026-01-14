@@ -13,6 +13,7 @@ import type { Healer } from "../../../../../src/commanders/librarian-new/healer/
 import {
 	codexImpactToDeletions,
 	codexImpactToRecreations,
+	extractInvalidCodexesFromBulk,
 	type TreeAccessor,
 } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/codex-impact-to-actions";
 import type { CodexImpact } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/compute-codex-impact";
@@ -122,14 +123,21 @@ export function processBulkEvent(
 	// Step 3: Merge codex impacts
 	const mergedCodexImpact = mergeCodexImpacts(codexImpacts);
 
-	// Step 4: Convert codex deletions to healing actions
-	const deletionActions = codexImpactToDeletions(
+	// Step 4: Extract invalid codexes from bulk event (after tree state updated)
+	const invalidCodexDeletions = extractInvalidCodexesFromBulk(
+		normalizedBulk,
+		codecs,
+	);
+
+	// Step 5: Convert codex deletions to healing actions (merge with invalid codexes)
+	const codexImpactDeletions = codexImpactToDeletions(
 		mergedCodexImpact,
 		healer,
 		codecs,
 	);
+	const deletionActions = [...invalidCodexDeletions, ...codexImpactDeletions];
 
-	// Step 5: Convert codex recreations to codex actions
+	// Step 6: Convert codex recreations to codex actions
 	const recreationActions = codexImpactToRecreations(
 		mergedCodexImpact,
 		healer,

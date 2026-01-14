@@ -28,6 +28,7 @@ import {
 	codexActionsToVaultActions,
 	codexImpactToDeletions,
 	codexImpactToRecreations,
+	extractInvalidCodexesFromBulk,
 	parseCodexClickLineContent,
 } from "./healer/library-tree/codex";
 import { isCodexSplitPath } from "./healer/library-tree/codex/helpers";
@@ -59,6 +60,7 @@ const ScrollMetadataSchema = z.object({
 
 type QueueItem = {
 	actions: TreeAction[];
+	bulkEvent: BulkVaultEvent | null;
 	resolve: () => void;
 };
 
@@ -461,16 +463,19 @@ export class Librarian {
 		}
 
 		// Queue and process
-		await this.enqueue(treeActions);
+		await this.enqueue(treeActions, bulk);
 	}
 
 	/**
 	 * Enqueue tree actions for processing.
 	 * Ensures serial processing of batches.
 	 */
-	private enqueue(actions: TreeAction[]): Promise<void> {
+	private enqueue(
+		actions: TreeAction[],
+		bulkEvent: BulkVaultEvent | null = null,
+	): Promise<void> {
 		return new Promise((resolve) => {
-			this.queue.push({ actions, resolve });
+			this.queue.push({ actions, bulkEvent, resolve });
 			this.processQueue();
 		});
 	}
@@ -489,7 +494,7 @@ export class Librarian {
 				if (!item) continue;
 
 				try {
-					await this.processActions(item.actions);
+					await this.processActions(item.actions, item.bulkEvent);
 				} catch (error) {
 					logger.error(
 						"[Librarian] Error processing actions:",
@@ -535,7 +540,10 @@ export class Librarian {
 	/**
 	 * Process a batch of tree actions.
 	 */
-	private async processActions(actions: TreeAction[]): Promise<void> {
+	private async processActions(
+		actions: TreeAction[],
+		bulkEvent: BulkVaultEvent | null,
+	): Promise<void> {
 		if (!this.healer) return;
 
 		const allHealingActions: HealingAction[] = [];
@@ -545,6 +553,15 @@ export class Librarian {
 			const result = this.healer.getHealingActionsFor(action);
 			allHealingActions.push(...result.healingActions);
 			allCodexImpacts.push(result.codexImpact);
+		}
+
+		// Extract invalid codexes from bulk event (after tree state updated)
+		if (bulkEvent) {
+			const invalidCodexDeletions = extractInvalidCodexesFromBulk(
+				bulkEvent,
+				this.codecs,
+			);
+			allHealingActions.push(...invalidCodexDeletions);
 		}
 
 		// Convert codex deletions to healing actions

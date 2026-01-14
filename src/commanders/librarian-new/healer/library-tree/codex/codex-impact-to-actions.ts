@@ -3,23 +3,30 @@
  * Requires tree access to generate content.
  */
 
-import { logger } from "../../../../../utils/logger";
+import { err, ok } from "neverthrow";
+import {
+	type BulkVaultEvent,
+	VaultEventKind,
+} from "../../../../../managers/obsidian/vault-action-manager";
 import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import { logger } from "../../../../../utils/logger";
 import type { Codecs, SplitPathToMdFileInsideLibrary } from "../../../codecs";
+import type { CodecError } from "../../../codecs/errors";
 import type { SectionNodeSegmentId } from "../../../codecs/segment-id/types/segment-id";
 import { TreeNodeKind } from "../tree-node/types/atoms";
 import type { SectionNode } from "../tree-node/types/tree-node";
+import type { HealingAction } from "../types/healing-action";
+import { computeScrollSplitPath } from "../utils/compute-scroll-split-path";
 import { computeCodexSplitPath } from "./codex-split-path";
 import type { CodexImpact } from "./compute-codex-impact";
 import { generateCodexContent } from "./generate-codex-content";
+import { isCodexSplitPath } from "./helpers";
 import { CODEX_CORE_NAME } from "./literals";
-import { computeScrollSplitPath } from "../utils/compute-scroll-split-path";
 import type {
 	CodexAction,
 	UpsertCodexAction,
 	WriteScrollStatusAction,
 } from "./types/codex-action";
-import type { HealingAction } from "../types/healing-action";
 
 // ─── Types ───
 
@@ -241,6 +248,109 @@ export function codexImpactToActions(
 	return actions;
 }
 
+/**
+ * Extract invalid codex files from bulk events and return deletion actions.
+ * Detects codexes with wrong suffixes (e.g., from folder duplicates, moves, renames).
+ *
+ * @param bulkEvent - The bulk vault event containing FileCreated/FileRenamed events
+ * @param codecs - Codec API for parsing/constructing segment IDs
+ * @returns Array of deletion actions for invalid codexes
+ */
+export function extractInvalidCodexesFromBulk(
+	bulkEvent: BulkVaultEvent,
+	codecs: Codecs,
+): HealingAction[] {
+	const actions: HealingAction[] = [];
+
+	for (const event of bulkEvent.events) {
+		// Check FileCreated events
+		if (event.kind === VaultEventKind.FileCreated) {
+			if (event.splitPath.kind !== SplitPathKind.MdFile) continue;
+			if (!isCodexSplitPath(event.splitPath, codecs)) continue;
+
+			const invalidAction = validateCodexSplitPath(
+				event.splitPath,
+				codecs,
+			);
+			if (invalidAction) {
+				actions.push(invalidAction);
+			}
+		}
+
+		// Check FileRenamed events (only "to" path)
+		if (event.kind === VaultEventKind.FileRenamed) {
+			if (event.to.kind !== SplitPathKind.MdFile) continue;
+			if (!isCodexSplitPath(event.to, codecs)) continue;
+
+			const invalidAction = validateCodexSplitPath(event.to, codecs);
+			if (invalidAction) {
+				actions.push(invalidAction);
+			}
+		}
+	}
+
+	return actions;
+}
+
+/**
+ * Validate a codex split path by comparing observed basename with expected basename.
+ * Returns deletion action if mismatch, null if valid or on parse error.
+ */
+function validateCodexSplitPath(
+	splitPath: SplitPathToMdFileInsideLibrary,
+	codecs: Codecs,
+): HealingAction | null {
+	// Build section chain from pathParts
+	const sectionChainResult = buildSectionChainFromPathParts(
+		splitPath.pathParts,
+		codecs,
+	);
+	if (sectionChainResult.isErr()) {
+		// Skip on parse error
+		return null;
+	}
+	const sectionChain = sectionChainResult.value;
+
+	// Compute expected codex basename for this section chain
+	const expectedSplitPath = computeCodexSplitPath(sectionChain, codecs);
+
+	// Compare observed vs expected basename
+	if (splitPath.basename !== expectedSplitPath.basename) {
+		// Mismatch: return deletion action
+		return {
+			kind: "DeleteMdFile",
+			payload: { splitPath },
+		};
+	}
+
+	// Valid: no action needed
+	return null;
+}
+
+/**
+ * Build section chain (segment IDs) from path parts (node names).
+ * Returns Result to handle parse errors gracefully.
+ */
+function buildSectionChainFromPathParts(
+	pathParts: string[],
+	codecs: Codecs,
+): import("neverthrow").Result<SectionNodeSegmentId[], CodecError> {
+	const sectionChain: SectionNodeSegmentId[] = [];
+
+	for (const nodeName of pathParts) {
+		const segIdResult = codecs.segmentId.serializeSegmentIdUnchecked({
+			coreName: nodeName,
+			targetKind: TreeNodeKind.Section,
+		});
+		if (segIdResult.isErr()) {
+			return err(segIdResult.error);
+		}
+		sectionChain.push(segIdResult.value as SectionNodeSegmentId);
+	}
+
+	return ok(sectionChain);
+}
+
 // ─── Helpers ───
 
 function findSectionByChain(
@@ -294,7 +404,6 @@ function collectDescendantScrolls(
 
 	return result;
 }
-
 
 /**
  * Collect all section chains from the tree (including root).
