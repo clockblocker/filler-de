@@ -398,7 +398,7 @@ describe("codexImpactToDeletions", () => {
 });
 
 describe("codexImpactToRecreations", () => {
-	it("generates UpsertCodex for all sections", () => {
+	it("generates separated codex actions for all sections", () => {
 		const root = section("Library", {
 			"A﹘Section﹘": section("A"),
 		});
@@ -413,22 +413,45 @@ describe("codexImpactToRecreations", () => {
 
 		const actions = codexImpactToRecreations(impact, tree, codecs);
 
-		// Should regenerate all sections (Library and A)
-		expect(actions.length).toBe(2);
-		const libraryUpsert = actions.find(
+		// Should generate actions for all sections:
+		// Library (root): EnsureCodexFileExists + ProcessCodex
+		// A: EnsureCodexFileExists + ProcessCodex
+		// Total: 2 + 2 = 4 actions
+		expect(actions.length).toBe(4);
+
+		// Library codex: ensure exists
+		const libraryEnsure = actions.find(
 			(a) =>
-				a.kind === "UpsertCodex" &&
+				a.kind === "EnsureCodexFileExists" &&
 				a.payload.splitPath.pathParts.length === 1 &&
 				a.payload.splitPath.pathParts[0] === "Library",
 		);
-		expect(libraryUpsert).toBeDefined();
+		expect(libraryEnsure).toBeDefined();
 
-		const aUpsert = actions.find(
+		// Library codex: process (combined backlink + content)
+		const libraryProcess = actions.find(
 			(a) =>
-				a.kind === "UpsertCodex" &&
+				a.kind === "ProcessCodex" &&
+				a.payload.splitPath.pathParts.length === 1 &&
+				a.payload.splitPath.pathParts[0] === "Library",
+		);
+		expect(libraryProcess).toBeDefined();
+
+		// A codex: ensure exists
+		const aEnsure = actions.find(
+			(a) =>
+				a.kind === "EnsureCodexFileExists" &&
 				a.payload.splitPath.pathParts.join("/") === "Library/A",
 		);
-		expect(aUpsert).toBeDefined();
+		expect(aEnsure).toBeDefined();
+
+		// A codex: process (combined backlink + content)
+		const aProcess = actions.find(
+			(a) =>
+				a.kind === "ProcessCodex" &&
+				a.payload.splitPath.pathParts.join("/") === "Library/A",
+		);
+		expect(aProcess).toBeDefined();
 	});
 
 	it("generates WriteScrollStatus for descendant scrolls", () => {

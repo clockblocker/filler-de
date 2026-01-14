@@ -24,6 +24,9 @@ import { isCodexSplitPath } from "./helpers";
 import { CODEX_CORE_NAME } from "./literals";
 import type {
 	CodexAction,
+	EnsureCodexFileExistsAction,
+	ProcessCodexAction,
+	ProcessScrollBacklinkAction,
 	UpsertCodexAction,
 	WriteScrollStatusAction,
 } from "./types/codex-action";
@@ -131,19 +134,26 @@ export function codexImpactToRecreations(
 	// This ensures we regenerate all codexes, not just "touched" ones
 	const allSectionChains = collectAllSectionChains(tree, codecs);
 
-	// 2. Generate UpsertCodex for all sections
+	// 2. Generate codex actions for all sections (2 actions per codex)
 	for (const chain of allSectionChains) {
 		const section = findSectionByChain(tree, chain);
 		if (!section) continue;
 
-		const content = generateCodexContent(section, chain, codecs);
 		const splitPath = computeCodexSplitPath(chain, codecs);
 
-		const upsertAction: UpsertCodexAction = {
-			kind: "UpsertCodex",
-			payload: { content, sectionChain: chain, splitPath },
+		// 2a. Ensure codex file exists
+		const ensureAction: EnsureCodexFileExistsAction = {
+			kind: "EnsureCodexFileExists",
+			payload: { splitPath },
 		};
-		actions.push(upsertAction);
+		actions.push(ensureAction);
+
+		// 2b. Process codex (backlink + content combined)
+		const processAction: ProcessCodexAction = {
+			kind: "ProcessCodex",
+			payload: { splitPath, section, sectionChain: chain },
+		};
+		actions.push(processAction);
 	}
 
 	// 3. Handle WriteScrollStatus for descendant scrolls
@@ -174,6 +184,30 @@ export function codexImpactToRecreations(
 			};
 			actions.push(writeStatusAction);
 		}
+	}
+
+	// 4. Generate scroll backlink actions for ALL scrolls in the tree
+	const allScrolls = collectAllScrolls(tree, codecs);
+	for (const { nodeName, parentChain } of allScrolls) {
+		const splitPathResult = computeScrollSplitPath(
+			nodeName,
+			parentChain,
+			codecs,
+		);
+		if (splitPathResult.isErr()) {
+			logger.warn(
+				"[Codex] Failed to compute scroll split path for backlink:",
+				splitPathResult.error,
+			);
+			continue;
+		}
+		const splitPath = splitPathResult.value;
+
+		const scrollBacklinkAction: ProcessScrollBacklinkAction = {
+			kind: "ProcessScrollBacklink",
+			payload: { splitPath, parentChain },
+		};
+		actions.push(scrollBacklinkAction);
 	}
 
 	return actions;
@@ -403,6 +437,23 @@ function collectDescendantScrolls(
 	}
 
 	return result;
+}
+
+/**
+ * Collect all scrolls from the entire tree.
+ * Returns scroll info (name + parent chain) for each scroll.
+ */
+function collectAllScrolls(
+	tree: TreeAccessor,
+	codecs: Codecs,
+): ScrollInfo[] {
+	const root = tree.getRoot();
+	const rootSegId = codecs.segmentId.serializeSegmentId({
+		coreName: root.nodeName,
+		targetKind: TreeNodeKind.Section,
+	}) as SectionNodeSegmentId;
+
+	return collectDescendantScrolls(root, [rootSegId]);
 }
 
 /**

@@ -17,6 +17,52 @@ import {
 	formatScrollLine,
 } from "./format-codex-line";
 
+// ─── Children List Generation ───
+
+/**
+ * Generate children list content for a section (without backlink).
+ * Used by both generateCodexContent and makeCodexContentTransform.
+ *
+ * @param section - The section node to generate content for
+ * @param sectionChain - Full chain including this section
+ * @param codecs - Codec API for parsing segment IDs
+ * @returns Markdown content for children list
+ */
+export function generateChildrenList(
+	section: SectionNode,
+	sectionChain: SectionNodeSegmentId[],
+	codecs: Codecs,
+): string {
+	const settings = getParsedUserSettings();
+	const maxDepth = settings.maxSectionDepth;
+	const showScrollsForDepth = settings.showScrollsInCodexesForDepth;
+
+	// Extract path parts from chain (node names) using codec API
+	const pathParts: string[] = [];
+	for (const segId of sectionChain) {
+		const parseResult = codecs.segmentId.parseSectionSegmentId(segId);
+		if (parseResult.isErr()) {
+			throw new Error(
+				`Failed to parse segment ID: ${segId}. Should never happen with valid tree state.`,
+			);
+		}
+		pathParts.push(parseResult.value.coreName);
+	}
+
+	// Generate items for children
+	const lines = generateItems(section, pathParts, 0, maxDepth, showScrollsForDepth);
+
+	if (lines.length === 0) {
+		return LINE_BREAK;
+	}
+
+	return (
+		LINE_BREAK + lines.map((l) => `${l}${SPACE_F}${LINE_BREAK}`).join("")
+	);
+}
+
+// ─── Full Codex Generation ───
+
 /**
  * Generate codex content for a section.
  *

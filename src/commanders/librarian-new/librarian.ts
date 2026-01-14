@@ -198,7 +198,7 @@ export class Librarian {
 			// Combine all actions and dispatch once
 			const allVaultActions = [
 				...healingActionsToVaultActions(allHealingActions, this.rules),
-				...codexActionsToVaultActions(codexRecreations, this.rules),
+				...codexActionsToVaultActions(codexRecreations, this.rules, this.codecs),
 			];
 
 			if (allVaultActions.length > 0) {
@@ -592,6 +592,7 @@ export class Librarian {
 			...codexActionsToVaultActions(
 				[...codexRecreations, ...scrollStatusActions],
 				this.rules,
+				this.codecs,
 			),
 		];
 

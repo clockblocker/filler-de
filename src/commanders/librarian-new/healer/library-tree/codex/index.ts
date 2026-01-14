@@ -22,7 +22,11 @@ export {
 	formatParentBacklink,
 	formatScrollLine,
 } from "./format-codex-line";
-export { generateCodexContent } from "./generate-codex-content";
+export { generateChildrenList, generateCodexContent } from "./generate-codex-content";
+export {
+	makeCodexTransform,
+	makeScrollBacklinkTransform,
+} from "./backlink-transforms";
 export { CODEX_CORE_NAME } from "./literals";
 export { mergeCodexImpacts } from "./merge-codex-impacts";
 export {
@@ -37,6 +41,9 @@ export {
 } from "./section-chain-utils";
 export type {
 	CodexAction,
+	EnsureCodexFileExistsAction,
+	ProcessCodexAction,
+	ProcessScrollBacklinkAction,
 	UpsertCodexAction,
 	WriteScrollStatusAction,
 } from "./types/codex-action";

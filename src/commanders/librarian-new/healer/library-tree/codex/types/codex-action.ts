@@ -5,13 +5,17 @@
 
 import type { SplitPathToMdFileInsideLibrary } from "../../../../codecs";
 import type { SectionNodeSegmentId } from "../../../../codecs/segment-id";
+import type { SectionNode } from "../../tree-node/types/tree-node";
 import type { TreeNodeStatus } from "../../tree-node/types/atoms";
 
 // ─── Action Types ───
 
 export type CodexActionType =
 	| "UpsertCodex"
-	| "WriteScrollStatus";
+	| "WriteScrollStatus"
+	| "EnsureCodexFileExists"
+	| "ProcessCodex"
+	| "ProcessScrollBacklink";
 
 // ─── Payloads ───
 
@@ -39,6 +43,30 @@ export type WriteScrollStatusPayload = {
 	status: TreeNodeStatus;
 };
 
+/** Ensure codex file exists (creates if missing, no overwrite) */
+export type EnsureCodexFileExistsPayload = {
+	/** Target codex path */
+	splitPath: SplitPathToMdFileInsideLibrary;
+};
+
+/** Process codex (backlink + children list combined) */
+export type ProcessCodexPayload = {
+	/** Target codex path */
+	splitPath: SplitPathToMdFileInsideLibrary;
+	/** Section node for content generation */
+	section: SectionNode;
+	/** Full section chain */
+	sectionChain: SectionNodeSegmentId[];
+};
+
+/** Process scroll backlink (line 1) */
+export type ProcessScrollBacklinkPayload = {
+	/** Target scroll path */
+	splitPath: SplitPathToMdFileInsideLibrary;
+	/** Parent chain for backlink generation */
+	parentChain: SectionNodeSegmentId[];
+};
+
 // ─── Actions ───
 
 export type WriteScrollStatusAction = {
@@ -51,6 +79,24 @@ export type UpsertCodexAction = {
 	payload: UpsertCodexPayload;
 };
 
+export type EnsureCodexFileExistsAction = {
+	kind: "EnsureCodexFileExists";
+	payload: EnsureCodexFileExistsPayload;
+};
+
+export type ProcessCodexAction = {
+	kind: "ProcessCodex";
+	payload: ProcessCodexPayload;
+};
+
+export type ProcessScrollBacklinkAction = {
+	kind: "ProcessScrollBacklink";
+	payload: ProcessScrollBacklinkPayload;
+};
+
 export type CodexAction =
 	| UpsertCodexAction
-	| WriteScrollStatusAction;
+	| WriteScrollStatusAction
+	| EnsureCodexFileExistsAction
+	| ProcessCodexAction
+	| ProcessScrollBacklinkAction;
