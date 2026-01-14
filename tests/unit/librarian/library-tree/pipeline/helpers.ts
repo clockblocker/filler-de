@@ -1,26 +1,27 @@
 /**
  * Test helpers for running the full pipeline:
- * BulkVaultEvent → TreeActions → Healer → CodexImpact → Deletions → HealingActions
+ * BulkVaultEvent → TreeActions → Healer → CodexImpact → Deletions → Recreations → HealingActions
  */
 
 import {
-	makeCodecRulesFromSettings,
-	makeCodecs,
 	type CodecRules,
 	type Codecs,
+	makeCodecRulesFromSettings,
+	makeCodecs,
 } from "../../../../../src/commanders/librarian-new/codecs";
-import { buildTreeActions } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/index";
-import type { CodexImpact } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/compute-codex-impact";
+import type { Healer } from "../../../../../src/commanders/librarian-new/healer/healer";
 import {
 	codexImpactToDeletions,
+	codexImpactToRecreations,
 	type TreeAccessor,
 } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/codex-impact-to-actions";
+import type { CodexImpact } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/compute-codex-impact";
 import { mergeCodexImpacts } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/merge-codex-impacts";
+import type { CodexAction } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/types/codex-action";
+import { buildTreeActions } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/index";
+import type { CreateTreeLeafAction, TreeAction } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/types/tree-action";
 import type { HealingAction } from "../../../../../src/commanders/librarian-new/healer/library-tree/types/healing-action";
-import type { TreeAction } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/types/tree-action";
-import type { Healer } from "../../../../../src/commanders/librarian-new/healer/healer";
 import type { BulkVaultEvent } from "../../../../../src/managers/obsidian/vault-action-manager";
-import type { CreateTreeLeafAction } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/types/tree-action";
 import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
 import { makeTree, type TreeShape } from "../tree-test-helpers";
 
@@ -31,6 +32,7 @@ export type PipelineResult = {
 	codexImpacts: CodexImpact[];
 	mergedCodexImpact: CodexImpact;
 	deletionActions: HealingAction[];
+	recreationActions: CodexAction[];
 	healingActions: HealingAction[];
 	healer: Healer;
 };
@@ -47,7 +49,7 @@ export type PersistentPipelineState = {
 // ─── Main Pipeline Runner ───
 
 /**
- * Run full pipeline: BulkVaultEvent → TreeActions → Healer → CodexImpact → Deletions
+ * Run full pipeline: BulkVaultEvent → TreeActions → Healer → CodexImpact → Deletions → Recreations
  * Creates a new healer instance (for single-event tests).
  */
 export function runPipeline(
@@ -58,7 +60,7 @@ export function runPipeline(
 	const codecs = makeCodecs(rules);
 	const healer = makeTree(initialTree);
 
-	return processBulkEvent(healer, codecs, rules, bulkEvent);
+	return processBulkEvent({ codecs, healer, rules }, bulkEvent);
 }
 
 /**
@@ -73,10 +75,10 @@ export function createPersistentPipeline(
 	const healer = makeTree(initialTree);
 
 	return {
-		healer,
 		codecs,
-		rules,
+		healer,
 		history: [],
+		rules,
 	};
 }
 
@@ -93,8 +95,6 @@ export function processBulkEvent(
 	// Normalize bulk event to ensure required fields exist
 	const normalizedBulk: BulkVaultEvent = {
 		...bulkEvent,
-		events: bulkEvent.events ?? [],
-		roots: bulkEvent.roots ?? [],
 		debug: bulkEvent.debug ?? {
 			collapsedCount: { creates: 0, deletes: 0, renames: 0 },
 			endedAt: 0,
@@ -102,6 +102,8 @@ export function processBulkEvent(
 			startedAt: 0,
 			trueCount: { creates: 0, deletes: 0, renames: 0 },
 		},
+		events: bulkEvent.events ?? [],
+		roots: bulkEvent.roots ?? [],
 	};
 
 	// Step 1: Build tree actions from bulk event
@@ -127,13 +129,21 @@ export function processBulkEvent(
 		codecs,
 	);
 
-	const result: PipelineResult = {
-		treeActions,
-		codexImpacts,
+	// Step 5: Convert codex recreations to codex actions
+	const recreationActions = codexImpactToRecreations(
 		mergedCodexImpact,
-		deletionActions,
-		healingActions,
 		healer,
+		codecs,
+	);
+
+	const result: PipelineResult = {
+		codexImpacts,
+		deletionActions,
+		healer,
+		healingActions,
+		mergedCodexImpact,
+		recreationActions,
+		treeActions,
 	};
 
 	// Record in history if using PersistentPipelineState
@@ -166,9 +176,9 @@ export function createPipelineFromCreateActions(
 	}
 
 	return {
-		healer,
 		codecs,
-		rules,
+		healer,
 		history: [],
+		rules,
 	};
 }
