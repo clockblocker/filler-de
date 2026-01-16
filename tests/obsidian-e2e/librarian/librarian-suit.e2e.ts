@@ -9,6 +9,10 @@ import {
 	performMutation001,
 	testPostHealing001,
 } from "./chains/0-chain/001-create-more-files";
+import {
+	performMutation002,
+	testPostHealing002,
+} from "./chains/0-chain/002-rename-files";
 
 const VAULT_PATH = "tests/obsidian-e2e/vaults/librarian-chain-0";
 
@@ -33,6 +37,17 @@ describe("Librarian Full Suit", () => {
 	// Post-mutation healing
 	it("heals all files to canonical suffixes after mutation", async () => {
 		await testPostHealing001();
+	});
+
+	// 002: Rename files mutation
+	it("renames folders for 002", async () => {
+		await performMutation002();
+		await waitForIdle();
+	});
+
+	// 002: Post-rename healing logging
+	it("logs vault state after rename healing", async () => {
+		await testPostHealing002();
 	});
 
 	// after(async () => {

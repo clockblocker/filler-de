@@ -1,2 +1,2 @@
-export { testPostHealing001 } from "./assertions";
-export { performMutation001 } from "./mutation";
+export { testPostHealing002 } from "./assertions";
+export { performMutation002 } from "./mutation";

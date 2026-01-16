@@ -56,8 +56,8 @@ export function makeCodexTransform(
 
 		const backlinkLine = `${formatParentBacklink(parentName, parentPathParts)}${SPACE_F}`;
 
-		// Combine backlink + children content
-		return `${backlinkLine}${LINE_BREAK}${childrenContent}`;
+		// Combine backlink + children content (newline before backlink)
+		return `${LINE_BREAK}${backlinkLine}${childrenContent}`;
 	};
 }
 
@@ -175,8 +175,9 @@ export function makeCodexContentTransform(
 }
 
 /**
- * Create transform that updates backlink on first line of a scroll.
+ * Create transform that updates backlink on a scroll.
  * Scrolls link back to their parent section's codex.
+ * Format: \n[[backlink]]<user content>
  *
  * @param parentChain - Chain to parent section
  * @param codecs - Codec API
@@ -207,17 +208,27 @@ export function makeScrollBacklinkTransform(
 			return content;
 		}
 
-		// Scroll backlink points to parent section's codex (same as codex backlink)
+		// Scroll backlink points to parent section's codex
 		const backlinkLine = `${formatParentBacklink(parentName, parentPathParts)}${SPACE_F}`;
 
+		// Check for existing backlink in new format: \n[[backlink]]\n...
 		const { firstLine, rest } = splitFirstLine(content);
-
-		if (isBacklinkLine(firstLine)) {
-			// Replace existing backlink
-			return `${backlinkLine}${LINE_BREAK}${rest}`;
+		if (firstLine.trim() === "") {
+			// First line is empty, check second line
+			const { firstLine: secondLine, rest: restAfterSecond } = splitFirstLine(rest);
+			if (isBacklinkLine(secondLine)) {
+				// Replace existing backlink, preserve user content with newline
+				return `${LINE_BREAK}${backlinkLine}${LINE_BREAK}${restAfterSecond}`;
+			}
 		}
 
-		// Prepend backlink (preserve user content)
-		return `${backlinkLine}${LINE_BREAK}${content}`;
+		// Check for old format: [[backlink]]\n...
+		if (isBacklinkLine(firstLine)) {
+			// Replace existing backlink (migrate to new format)
+			return `${LINE_BREAK}${backlinkLine}${LINE_BREAK}${rest}`;
+		}
+
+		// No existing backlink - prepend with newline after backlink
+		return `${LINE_BREAK}${backlinkLine}${LINE_BREAK}${content}`;
 	};
 }

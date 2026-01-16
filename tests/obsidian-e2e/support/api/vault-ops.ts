@@ -227,3 +227,57 @@ export async function listFilesUnder(prefix: string): Promise<Result<string[], s
 	}
 }
 
+/**
+ * Read file content via Obsidian API.
+ */
+export async function readFile(path: string): Promise<Result<string, string>> {
+	try {
+		const content = await browser.executeObsidian(async ({ app }, p) => {
+			const file = app.vault.getAbstractFileByPath(p);
+			if (!file || !("extension" in file)) {
+				return { error: `File not found: ${p}`, ok: false as const };
+			}
+			const content = await app.vault.read(file);
+			return { content, ok: true as const };
+		}, path);
+		if (content && typeof content === "object" && "ok" in content) {
+			if (!content.ok) {
+				return err(content.error);
+			}
+			return ok(content.content);
+		}
+		return err("Unexpected result from executeObsidian");
+	} catch (error) {
+		return err(error instanceof Error ? error.message : String(error));
+	}
+}
+
+/**
+ * Modify file content via Obsidian API.
+ */
+export async function modifyFile(
+	path: string,
+	content: string,
+): Promise<Result<void, string>> {
+	try {
+		const result = await browser.executeObsidian(
+			async ({ app }, p, c) => {
+				const file = app.vault.getAbstractFileByPath(p);
+				if (!file || !("extension" in file)) {
+					return { error: `File not found: ${p}`, ok: false as const };
+				}
+				await app.vault.modify(file, c);
+				return { ok: true as const };
+			},
+			path,
+			content,
+		);
+		if (result && typeof result === "object" && "ok" in result && !result.ok) {
+			return err(result.error);
+		}
+		return ok(undefined);
+	} catch (error) {
+		return err(error instanceof Error ? error.message : String(error));
+	}
+}
+

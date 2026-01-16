@@ -1,17 +1,26 @@
 /// <reference types="@wdio/globals/types" />
-import { expectFilesToExist } from "../../../../support/api";
-import { VAULT_EXPECTATIONS_001 } from "./vault-expectations";
+import { listFilesUnder } from "../../../../support/api/vault-ops";
 
-export async function testPostHealing001(): Promise<void> {
-	await expectFilesToExist(
-		[
-			...VAULT_EXPECTATIONS_001.postHealing.codexes,
-			...VAULT_EXPECTATIONS_001.postHealing.files,
-		],
-		{
-			callerContext: "[testPostHealing001]",
-			intervalMs: 200, // Check less frequently to give Obsidian more time
-			timeoutMs: 15000, // Allow more time for codex files to be registered by Obsidian
-		},
-	);
+export async function testPostHealing002(): Promise<void> {
+	// Log all files in Library to inspect actual vault state after healing
+	const libraryFilesResult = await listFilesUnder("Library");
+	if (libraryFilesResult.isErr()) {
+		console.error(`Failed to list Library files: ${libraryFilesResult.error}`);
+		return;
+	}
+
+	const libraryFiles = libraryFilesResult.value;
+	const codexes = libraryFiles.filter((f) => f.includes("/__-"));
+	const regularFiles = libraryFiles.filter((f) => !f.includes("/__-"));
+
+	console.log("\n=== POST-HEALING 002 VAULT STATE ===");
+	console.log("\n--- CODEXES ---");
+	for (const codex of codexes.sort()) {
+		console.log(codex);
+	}
+	console.log("\n--- REGULAR FILES ---");
+	for (const file of regularFiles.sort()) {
+		console.log(file);
+	}
+	console.log("\n=== END VAULT STATE ===\n");
 }
