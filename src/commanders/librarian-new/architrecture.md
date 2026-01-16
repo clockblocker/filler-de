@@ -47,6 +47,31 @@ Obsidian API
 - Normalizes/collapses redundant events
 - Extracts semantic root events (folder rename covers descendants)
 
+#### Self-Event Filtering (SelfEventTracker)
+
+When VaultActionManager dispatches actions, Obsidian emits corresponding events. The SelfEventTracker filters these out to prevent feedback loops and ensure only user-triggered events reach the Librarian.
+
+**Path tracking** (exact match, pop-on-match):
+- All action types track their target paths
+- Matched events are filtered; path is then removed from tracker
+- TTL: 5 seconds (cleanup stale registrations)
+
+**Prefix tracking** (prefix match, does NOT pop):
+- Only certain folder operations track prefixes
+- Allows filtering multiple descendant events from a single folder operation
+
+**Prefix tracking rules by action type:**
+
+| Action | Prefix Tracked | Rationale |
+|--------|----------------|-----------|
+| `CreateFolder` | None | Obsidian emits only a single create event for the folder itself. Tracking as prefix would incorrectly filter user-created files inside. |
+| `TrashFolder` | Folder path | Obsidian emits delete events for all descendants; prefix needed to filter them all. |
+| `RenameFolder` | Source (from) only | Obsidian emits rename events with `oldPath` under source prefix. Tracking destination would incorrectly filter user-created files in the renamed folder. |
+
+**Why destination prefix is NOT tracked for RenameFolder:**
+
+When renaming `A → B`, Obsidian emits `rename: A/file.md → B/file.md` for each child. The `oldPath` check against source prefix `A` is sufficient to identify these as self-events. Tracking destination `B` as prefix would cause newly created files in `B/` to be incorrectly filtered during the TTL window.
+
 ### buildTreeActions (Adapter Layer)
 Converts `BulkVaultEvent` → `TreeAction[]` through layers:
 

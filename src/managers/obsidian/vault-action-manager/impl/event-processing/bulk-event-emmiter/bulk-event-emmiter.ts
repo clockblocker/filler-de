@@ -12,11 +12,6 @@ import { reduceRoots } from "./batteries/processing-chain/reduce-roots";
 import type { BulkVaultEvent } from "./types/bulk/bulk-vault-event";
 import { isDelete, isRename } from "./types/bulk/helpers";
 
-// Debug logging
-function debugLog(msg: string): void {
-	console.log(`[BULK-EVENT-DEBUG] ${msg}`);
-}
-
 export type BulkVaultEventHandler = (bulk: BulkVaultEvent) => Promise<void>;
 
 export class BulkEventEmmiter {
@@ -24,7 +19,7 @@ export class BulkEventEmmiter {
 	private readonly acc: BulkEventAccumulator;
 	private handler: BulkVaultEventHandler | null = null;
 
-	// Debug: store all received events (before filtering)
+	// Debug: store all received events (before filtering) for test diagnostics
 	public _debugAllRawEvents: Array<{ event: string; ignored: boolean; reason?: string }> = [];
 
 	constructor(
@@ -37,12 +32,7 @@ export class BulkEventEmmiter {
 	) {
 		this.acc = new BulkEventAccumulator(
 			(window) => {
-				debugLog(`accumulator flush: ${window.allObsidianEvents.length} raw events`);
-
-				if (!this.handler) {
-					debugLog(`accumulator flush: NO HANDLER!`);
-					return;
-				}
+				if (!this.handler) return;
 
 				const rawEvents = window.allObsidianEvents;
 				const trueCount = countEvents(rawEvents);
@@ -67,7 +57,6 @@ export class BulkEventEmmiter {
 					roots,
 				};
 
-				debugLog(`accumulator flush: calling handler with ${bulk.events.length} events, ${bulk.roots.length} roots`);
 				void this.handler(bulk);
 			},
 			{
@@ -111,45 +100,34 @@ export class BulkEventEmmiter {
 	}
 
 	private onCreate(tAbstractFile: TAbstractFile): void {
-		if (this.selfEventTracker.shouldIgnore(tAbstractFile.path)) return;
+		const path = tAbstractFile.path;
+		const ignored = this.selfEventTracker.shouldIgnore(path);
+
+		this._debugAllRawEvents.push({
+			event: `onCreate: ${path}`,
+			ignored,
+			reason: ignored ? "selfEventTracker" : undefined,
+		});
+
+		if (ignored) return;
 		this.push(makeVaultEventForFileCreated(tAbstractFile));
 	}
 
 	private onRename(tAbstractFile: TAbstractFile, oldPath: string): void {
-		debugLog(`onRename: ${oldPath} → ${tAbstractFile.path}`);
-
-		// For folder renames, log the current tracker state BEFORE checking
-		const isFolder = !tAbstractFile.extension || tAbstractFile.extension === '';
-		if (isFolder) {
-			// @ts-ignore - accessing private for debugging
-			const trackedPaths = Array.from((this.selfEventTracker as any).trackedPaths?.keys() ?? []).filter((p: string) => p.includes(oldPath.split('/').pop() ?? ''));
-			// @ts-ignore - accessing private for debugging
-			const trackedPrefixes = Array.from((this.selfEventTracker as any).trackedPrefixes?.keys() ?? []);
-			debugLog(`onRename FOLDER: oldPath=${oldPath}, relevant trackedPaths=${JSON.stringify(trackedPaths)}, trackedPrefixes=${JSON.stringify(trackedPrefixes)}`);
-		}
-
 		const newPathIgnored = this.selfEventTracker.shouldIgnore(tAbstractFile.path);
 		const oldPathIgnored = this.selfEventTracker.shouldIgnore(oldPath);
 
 		if (newPathIgnored || oldPathIgnored) {
-			debugLog(`onRename: IGNORED by selfEventTracker (newPath: ${newPathIgnored}, oldPath: ${oldPathIgnored})`);
-			// @ts-ignore - accessing private for debugging
-			const currentTrackedPaths = Array.from((this.selfEventTracker as any).trackedPaths?.keys() ?? []);
-			// @ts-ignore - accessing private for debugging
-			const currentTrackedPrefixes = Array.from((this.selfEventTracker as any).trackedPrefixes?.keys() ?? []);
 			this._debugAllRawEvents.push({
 				event: `onRename: ${oldPath} → ${tAbstractFile.path}`,
 				ignored: true,
 				reason: `newPath: ${newPathIgnored}, oldPath: ${oldPathIgnored}`,
-				debugTrackedPaths: currentTrackedPaths.filter((p: string) => p.includes('Pie') || p.includes('Berry')),
-				debugTrackedPrefixes: currentTrackedPrefixes,
 			});
 			return;
 		}
 
 		const res = tryMakeVaultEventForFileRenamed(tAbstractFile, oldPath);
 		if (res.isErr()) {
-			debugLog(`onRename: FAILED to make event: ${res.error}`);
 			this._debugAllRawEvents.push({
 				event: `onRename: ${oldPath} → ${tAbstractFile.path}`,
 				ignored: true,
@@ -157,7 +135,6 @@ export class BulkEventEmmiter {
 			});
 			return;
 		}
-		debugLog(`onRename: pushing event kind=${res.value.kind}`);
 		this._debugAllRawEvents.push({
 			event: `onRename: ${oldPath} → ${tAbstractFile.path} (kind=${res.value.kind})`,
 			ignored: false,

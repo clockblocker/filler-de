@@ -13,6 +13,10 @@ import {
 	performMutation002,
 	testPostHealing002,
 } from "./chains/0-chain/002-rename-files";
+import {
+	performMutation003,
+	testPostHealing003,
+} from "./chains/0-chain/003-create-and-rename-a-file";
 
 const VAULT_PATH = "tests/obsidian-e2e/vaults/librarian-chain-0";
 
@@ -48,6 +52,17 @@ describe("Librarian Full Suit", () => {
 	// 002: Post-rename healing logging
 	it("logs vault state after rename healing", async () => {
 		await testPostHealing002();
+	});
+
+	// 003: Create and rename a file mutation
+	it("creates and renames a file for 003", async () => {
+		await performMutation003();
+		await waitForIdle();
+	});
+
+	// 003: Post create-and-rename healing - BUG: codex should update to new name
+	it("codex should reflect renamed file", async () => {
+		await testPostHealing003();
 	});
 
 	// after(async () => {

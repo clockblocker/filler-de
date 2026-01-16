@@ -21,6 +21,7 @@ export type PluginDebugInfo = {
 	dispatcherErrors?: any[];
 	executionTrace?: any[];
 	rawRenameEvents?: any[];
+	rawCreateEvents?: any[];
 	batchCounter?: number;
 	allBatches?: any[];
 };
@@ -225,6 +226,9 @@ export async function gatherPluginDebugInfo(
 					})),
 					rawRenameEvents: rawEvents.filter((e: any) =>
 						e.event?.includes("onRename"),
+					),
+					rawCreateEvents: rawEvents.filter((e: any) =>
+						e.event?.includes("onCreate"),
 					),
 					selfTracker: selfTrackerState,
 					treeRootName: root?.nodeName ?? null,

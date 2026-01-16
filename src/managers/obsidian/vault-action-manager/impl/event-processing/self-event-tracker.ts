@@ -83,17 +83,25 @@ export class SelfEventTracker {
 
 	private extractFolderPrefixes(action: VaultAction): string[] {
 		switch (action.kind) {
+			// CreateFolder: Don't use prefix matching.
+			// Obsidian only emits a single create event for the folder itself.
+			// Using prefix matching incorrectly filters out user-created files inside.
+			// The folder path is already tracked via extractPaths for exact matching.
 			case VaultActionKind.CreateFolder:
+				return [];
+
 			case VaultActionKind.TrashFolder:
+				// TrashFolder needs prefix matching to filter child file delete events
 				return [
 					systemPathFromSplitPathInternal(action.payload.splitPath),
 				];
 
 			case VaultActionKind.RenameFolder:
-				return [
-					systemPathFromSplitPathInternal(action.payload.from),
-					systemPathFromSplitPathInternal(action.payload.to),
-				];
+				// Only track the source (from) folder as a prefix.
+				// Obsidian emits rename events with oldPath under the source prefix.
+				// Tracking the destination prefix would incorrectly filter out
+				// user-created files in the renamed folder.
+				return [systemPathFromSplitPathInternal(action.payload.from)];
 
 			default:
 				return [];
