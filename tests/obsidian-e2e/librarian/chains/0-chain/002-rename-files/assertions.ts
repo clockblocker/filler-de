@@ -1,24 +1,13 @@
 /// <reference types="@wdio/globals/types" />
-import { expectFilesToExist, gatherPluginDebugInfo } from "../../../../support/api";
+import { createTestContext } from "../../../../support/api";
+import { HEALING_POLL_OPTIONS } from "../../../../support/config";
 import { VAULT_EXPECTATIONS_002 } from "./vault-expectations";
 
 export async function testPostHealing002(): Promise<void> {
-	// Gather debug info for diagnostics (writes to /tmp/debug-002-rename.log)
-	await gatherPluginDebugInfo({
-		folderFilter: "Library/Recipe",
-		logPath: "/tmp/debug-002-rename.log",
+	const t = createTestContext("testPostHealing002");
+	await t.gatherDebug("Library/Recipe");
+	await t.expectPostHealing(VAULT_EXPECTATIONS_002.postHealing, {
+		...HEALING_POLL_OPTIONS,
+		logFolderOnFail: "Library/Recipe",
 	});
-
-	await expectFilesToExist(
-		[
-			...VAULT_EXPECTATIONS_002.postHealing.codexes,
-			...VAULT_EXPECTATIONS_002.postHealing.files,
-		],
-		{
-			callerContext: "[testPostHealing002]",
-			intervalMs: 200,
-			logFolderOnFail: "Library/Recipe",
-			timeoutMs: 15000,
-		},
-	);
 }

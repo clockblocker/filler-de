@@ -1,16 +1,13 @@
 /// <reference types="@wdio/globals/types" />
-import { expectFilesToExist } from "../../../../support/api";
+import { createTestContext } from "../../../../support/api";
 import { VAULT_EXPECTATIONS_000 } from "./vault-expectations";
 
 export async function testAllCodexesCreatedOnInit(): Promise<void> {
-	await expectFilesToExist([...VAULT_EXPECTATIONS_000.postHealing.codexes], {
-		callerContext: "[testAllCodexesCreatedOnInit]",
-	});
+	const t = createTestContext("testAllCodexesCreatedOnInit");
+	await t.expectFiles(VAULT_EXPECTATIONS_000.postHealing.codexes);
 }
 
 export async function testAllFilesSuffixedOnInit(): Promise<void> {
-	await expectFilesToExist(VAULT_EXPECTATIONS_000.postHealing.files, {
-		callerContext: "[testAllFilesSuffixedOnInit]",
-	});
+	const t = createTestContext("testAllFilesSuffixedOnInit");
+	await t.expectFiles(VAULT_EXPECTATIONS_000.postHealing.files);
 }
-

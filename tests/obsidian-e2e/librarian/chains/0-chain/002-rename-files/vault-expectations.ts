@@ -43,10 +43,27 @@ const EXPECTED_FILES_AFTER_002 = [
     "Outside/Avatar-S2-E1.md",
 ];
 
+// Content checks: verify parent codexes have new child names after rename healing
+// Old names that should NOT appear: Berry_Pie, Fish-Pie (the raw renamed folders)
+// New names that SHOULD appear: Berry, Fish (as children of Pie)
+const CONTENT_CHECKS_002: readonly [string, readonly string[]][] = [
+    // Recipe codex should have Pie as child section (not Berry_Pie or Fish-Pie at root)
+    [
+        "Library/Recipe/__-Recipe.md",
+        ["[[__-Pie-Recipe|Pie]]"],
+    ],
+    // Pie codex should have Berry and Fish as children
+    [
+        "Library/Recipe/Pie/__-Pie-Recipe.md",
+        ["[[__-Berry-Pie-Recipe|Berry]]", "[[__-Fish-Pie-Recipe|Fish]]"],
+    ],
+];
+
 export const VAULT_EXPECTATIONS_002 = {
     initial: VAULT_EXPECTATIONS_001.postHealing,
     postHealing: {
         codexes: EXPECTED_CODEXES_AFTER_002,
         files: EXPECTED_FILES_AFTER_002,
+        contentChecks: CONTENT_CHECKS_002,
     },
 };

@@ -6,6 +6,7 @@ import { formatMissingFilesLong, formatMissingFilesShort, formatNotGoneFilesLong
 import { obsidianCheckFolderChainAndListParent, obsidianFileExists, obsidianVaultSample } from "../internal/obsidian";
 import { poll } from "../internal/poll";
 import type { ExpectFilesGoneOptions, ExpectFilesOptions, FileWaitStatus, PollOptions } from "../internal/types";
+import { readFile } from "./vault-ops";
 
 /** Public: wait until a file exists */
 export async function waitForFile(path: string, opts: PollOptions = {}): Promise<boolean> {
@@ -137,6 +138,77 @@ async function waitForFileDetailed(
     };
   }
 
+
+/** Type for vault expectations with codexes and files */
+export type PostHealingExpectations = {
+	codexes: readonly string[];
+	files: readonly string[];
+	/** Optional content checks: [path, lines that must be present][] */
+	contentChecks?: readonly [path: string, expectedLines: readonly string[]][];
+};
+
+/** Content check failure info */
+export type ContentCheckFailure = {
+	path: string;
+	missingLines: readonly string[];
+	actualContent: string;
+};
+
+/** Public: expect post-healing files (codexes + files) exist, then validate content */
+export async function expectPostHealingFiles(
+	expectations: PostHealingExpectations,
+	opts: ExpectFilesOptions = {},
+): Promise<void> {
+	// First check all files exist
+	await expectFilesToExist([...expectations.codexes, ...expectations.files], opts);
+
+	// Then validate content if checks provided
+	if (expectations.contentChecks && expectations.contentChecks.length > 0) {
+		const failures: ContentCheckFailure[] = [];
+
+		for (const [path, expectedLines] of expectations.contentChecks) {
+			const contentResult = await readFile(path);
+			if (contentResult.isErr()) {
+				failures.push({
+					path,
+					missingLines: expectedLines,
+					actualContent: `[read error: ${contentResult.error}]`,
+				});
+				continue;
+			}
+
+			const actualContent = contentResult.value;
+			const missingLines = expectedLines.filter((line) => !actualContent.includes(line));
+
+			if (missingLines.length > 0) {
+				failures.push({ path, missingLines, actualContent });
+			}
+		}
+
+		if (failures.length > 0) {
+			const shortMsg = formatContentFailuresShort(failures, opts.callerContext);
+			const longMsg = formatContentFailuresLong(failures, opts.callerContext);
+			throw finalizeE2EError(new E2ETestError(shortMsg, longMsg));
+		}
+	}
+}
+
+function formatContentFailuresShort(failures: ContentCheckFailure[], callerContext?: string): string {
+	const prefix = callerContext ? `${callerContext} ` : "";
+	const paths = failures.map((f) => f.path).join(", ");
+	return `${prefix}Content check failed for ${failures.length} file(s): ${paths}`;
+}
+
+function formatContentFailuresLong(failures: ContentCheckFailure[], callerContext?: string): string {
+	const prefix = callerContext ? `${callerContext}\n` : "";
+	const details = failures
+		.map((f) => {
+			const missing = f.missingLines.map((l) => `  - "${l}"`).join("\n");
+			return `File: ${f.path}\nMissing lines:\n${missing}\nActual content:\n${f.actualContent}`;
+		})
+		.join("\n\n---\n\n");
+	return `${prefix}Content validation failed:\n\n${details}`;
+}
 
 /** Internal helper: detailed per-file wait status for "gone" check */
 async function waitForFileGoneDetailed(
