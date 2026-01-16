@@ -1,6 +1,6 @@
 /// <reference types="@wdio/globals/types" />
 import { expect } from "@wdio/globals";
-import { waitForFile, waitForFileGone, OFFSET_AFTER_FILE_DELETION } from "../../helpers/polling";
+import { OFFSET_AFTER_FILE_DELETION, waitForFile, waitForFileGone } from "../../helpers/polling";
 import { createFile, createFolder, modifyFile, readFile, renamePath } from "../../support/api/vault-ops";
 
 /**
