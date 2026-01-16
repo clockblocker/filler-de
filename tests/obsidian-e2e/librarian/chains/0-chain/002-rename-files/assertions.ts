@@ -1,7 +1,6 @@
 /// <reference types="@wdio/globals/types" />
 import { browser } from "@wdio/globals";
 import * as fs from "fs";
-import * as path from "path";
 import { expectFilesToExist } from "../../../../support/api";
 import { VAULT_EXPECTATIONS_002 } from "./vault-expectations";
 
@@ -9,8 +8,8 @@ import { VAULT_EXPECTATIONS_002 } from "./vault-expectations";
 function serializeTree(node: any, depth = 0): any {
 	if (!node) return null;
 	const result: any = {
-		nodeName: node.nodeName,
 		kind: node.kind,
+		nodeName: node.nodeName,
 	};
 	if (node.status !== undefined) {
 		result.status = node.status;
@@ -39,7 +38,7 @@ export async function testPostHealing002(): Promise<void> {
 			const allFiles = app.vault.getAllLoadedFiles();
 			const libraryFolders = allFiles
 				.filter((f: any) => f.path?.startsWith("Library/Recipe"))
-				.map((f: any) => ({ path: f.path, isFolder: !f.extension }));
+				.map((f: any) => ({ isFolder: !f.extension, path: f.path }));
 
 			// Check plugin state
 			// @ts-ignore
@@ -63,8 +62,8 @@ export async function testPostHealing002(): Promise<void> {
 			const serializeNode = (node: any): any => {
 				if (!node) return null;
 				const result: any = {
-					nodeName: node.nodeName,
 					kind: node.kind,
+					nodeName: node.nodeName,
 				};
 				if (node.status !== undefined) result.status = node.status;
 				if (node.extension !== undefined) result.extension = node.extension;
@@ -91,78 +90,74 @@ export async function testPostHealing002(): Promise<void> {
 			const serializeBulkEvent = (bulk: any) => {
 				if (!bulk) return null;
 				return {
-					eventsCount: bulk.events?.length ?? 0,
-					rootsCount: bulk.roots?.length ?? 0,
 					events: bulk.events?.map((e: any) => ({
+						from: e.from ? { basename: e.from.basename, kind: e.from.kind, pathParts: e.from.pathParts } : undefined,
 						kind: e.kind,
-						from: e.from ? { basename: e.from.basename, pathParts: e.from.pathParts, kind: e.from.kind } : undefined,
-						to: e.to ? { basename: e.to.basename, pathParts: e.to.pathParts, kind: e.to.kind } : undefined,
-						splitPath: e.splitPath ? { basename: e.splitPath.basename, pathParts: e.splitPath.pathParts, kind: e.splitPath.kind } : undefined,
+						splitPath: e.splitPath ? { basename: e.splitPath.basename, kind: e.splitPath.kind, pathParts: e.splitPath.pathParts } : undefined,
+						to: e.to ? { basename: e.to.basename, kind: e.to.kind, pathParts: e.to.pathParts } : undefined,
 					})) ?? [],
+					eventsCount: bulk.events?.length ?? 0,
 					roots: bulk.roots?.map((r: any) => ({
+						from: r.from ? { basename: r.from.basename, kind: r.from.kind, pathParts: r.from.pathParts } : undefined,
 						kind: r.kind,
-						from: r.from ? { basename: r.from.basename, pathParts: r.from.pathParts, kind: r.from.kind } : undefined,
-						to: r.to ? { basename: r.to.basename, pathParts: r.to.pathParts, kind: r.to.kind } : undefined,
-						splitPath: r.splitPath ? { basename: r.splitPath.basename, pathParts: r.splitPath.pathParts, kind: r.splitPath.kind } : undefined,
+						splitPath: r.splitPath ? { basename: r.splitPath.basename, kind: r.splitPath.kind, pathParts: r.splitPath.pathParts } : undefined,
+						to: r.to ? { basename: r.to.basename, kind: r.to.kind, pathParts: r.to.pathParts } : undefined,
 					})) ?? [],
+					rootsCount: bulk.roots?.length ?? 0,
 				};
 			};
 
 			// Get raw events from BulkEventEmmiter
 			const rawEvents = vam?._getDebugAllRawEvents?.() ?? [];
 
-			// Get dispatcher debug info
-			const sortedActions = vam?._getDebugDispatcherSortedActions?.() ?? [];
-			const dispatchErrors = vam?._getDebugDispatcherErrors?.() ?? [];
-			const executionTrace = vam?._getDebugExecutionTrace?.() ?? [];
-			const batchInfo = vam?._getDebugBatchInfo?.() ?? { batchCounter: 0, allSortedActions: [] };
+			// Get dispatcher debug state (formalized API)
+			const debugState = vam?.getDebugState?.() ?? {
+				allSortedActions: [],
+				batchCounter: 0,
+				executionTrace: [],
+				lastErrors: [],
+			};
 
 			return {
-				hasLibrarian: true,
-				hasHealer: true,
-				hasTree: !!tree,
-				treeRootName: root?.nodeName ?? null,
-				fullTree: serializeNode(root),
-				vaultFolders: libraryFolders,
-				selfTracker: selfTrackerState,
-				lastBulkEvent: serializeBulkEvent(lastBulkEvent),
-				lastTreeActions: lastTreeActions.map((a: any) => ({
-					actionType: a.actionType,
-					targetLocator: a.targetLocator,
-					newNodeName: a.newNodeName,
-					newParentLocator: a.newParentLocator,
+				allBatches: debugState.allSortedActions.map((batch: any[], batchIdx: number) => ({
+					actionCount: batch.length,
+					actions: batch.map((a: any) => ({
+						from: a.payload?.from?.basename,
+						kind: a.kind,
+						pathParts: a.payload?.to?.pathParts || a.payload?.splitPath?.pathParts,
+						to: a.payload?.to?.basename || a.payload?.splitPath?.basename,
+					})),
+					batchNumber: batchIdx + 1,
 				})),
+				batchCounter: debugState.batchCounter,
+				dispatcherErrors: debugState.lastErrors.map((e: any) => ({
+					error: e.error,
+					kind: e.action?.kind,
+				})),
+				executionTrace: debugState.executionTrace,
+				fullTree: serializeNode(root),
+				hasHealer: true,
+				hasLibrarian: true,
+				hasTree: !!tree,
+				lastBulkEvent: serializeBulkEvent(lastBulkEvent),
 				lastHealingActions: lastHealingActions.map((h: any) => ({
 					kind: h.kind,
 					payload: h.payload,
+				})),
+				lastTreeActions: lastTreeActions.map((a: any) => ({
+					actionType: a.actionType,
+					newNodeName: a.newNodeName,
+					newParentLocator: a.newParentLocator,
+					targetLocator: a.targetLocator,
 				})),
 				lastVaultActions: lastVaultActions.map((v: any) => ({
 					kind: v.kind,
 					payload: v.payload,
 				})),
-				dispatcherSortedActions: sortedActions.map((a: any) => ({
-					kind: a.kind,
-					from: a.payload?.from?.basename,
-					to: a.payload?.to?.basename || a.payload?.splitPath?.basename,
-					pathParts: a.payload?.to?.pathParts || a.payload?.splitPath?.pathParts,
-				})),
-				dispatcherErrors: dispatchErrors.map((e: any) => ({
-					kind: e.action?.kind,
-					error: e.error,
-				})),
-				executionTrace: executionTrace,
 				rawRenameEvents: rawEvents.filter((e: any) => e.event?.includes('onRename')),
-				batchCounter: batchInfo.batchCounter,
-				allBatches: batchInfo.allSortedActions.map((batch: any[], batchIdx: number) => ({
-					batchNumber: batchIdx + 1,
-					actionCount: batch.length,
-					actions: batch.map((a: any) => ({
-						kind: a.kind,
-						from: a.payload?.from?.basename,
-						to: a.payload?.to?.basename || a.payload?.splitPath?.basename,
-						pathParts: a.payload?.to?.pathParts || a.payload?.splitPath?.pathParts,
-					})),
-				})),
+				selfTracker: selfTrackerState,
+				treeRootName: root?.nodeName ?? null,
+				vaultFolders: libraryFolders,
 			};
 		});
 
@@ -181,8 +176,8 @@ export async function testPostHealing002(): Promise<void> {
 		{
 			callerContext: "[testPostHealing002]",
 			intervalMs: 200,
-			timeoutMs: 15000,
 			logFolderOnFail: "Library/Recipe",
+			timeoutMs: 15000,
 		},
 	);
 }

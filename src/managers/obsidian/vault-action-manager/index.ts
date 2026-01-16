@@ -52,6 +52,8 @@ export { makeSplitPath };
 
 export { VaultActionManagerImpl } from "./facade";
 export type {
+	DebugTraceEntry,
+	DispatcherDebugState,
 	DispatchError,
 	DispatchResult,
 } from "./impl/actions-processing/dispatcher";

@@ -25,6 +25,33 @@ export type DispatchError = {
 };
 
 /**
+ * Single trace entry recording one action's execution result.
+ */
+export type DebugTraceEntry = {
+	batch: number;
+	index: number;
+	kind: string;
+	path: string;
+	result: "ok" | "err";
+	error?: string;
+};
+
+/**
+ * Debug state accumulated across dispatch batches.
+ * Use `resetDebugState()` to clear between test runs.
+ */
+export type DispatcherDebugState = {
+	/** Number of dispatch batches executed since last reset */
+	batchCounter: number;
+	/** Execution trace entries accumulated across all batches */
+	executionTrace: DebugTraceEntry[];
+	/** Sorted actions from each batch (array of arrays) */
+	allSortedActions: VaultAction[][];
+	/** Errors from the most recent batch only */
+	lastErrors: DispatchError[];
+};
+
+/**
  * Service to check if files/folders exist.
  */
 export type ExistenceChecker = {
@@ -38,25 +65,41 @@ export class Dispatcher {
 	 * - Delete actions only execute if target exists
 	 */
 
-	// Debug: store last sorted actions and errors for testing
-	public _debugLastSortedActions: VaultAction[] = [];
-	public _debugAllSortedActions: VaultAction[][] = []; // Accumulates across batches
-	public _debugLastErrors: DispatchError[] = [];
-	public _debugBatchCounter = 0;
-	public _debugExecutionTrace: Array<{
-		batch: number;
-		index: number;
-		kind: string;
-		path: string;
-		result: "ok" | "err";
-		error?: string;
-	}> = [];
+	// Debug state - accumulates across batches, call resetDebugState() to clear
+	private _debugLastSortedActions: VaultAction[] = [];
+	private _debugAllSortedActions: VaultAction[][] = [];
+	private _debugLastErrors: DispatchError[] = [];
+	private _debugBatchCounter = 0;
+	private _debugExecutionTrace: DebugTraceEntry[] = [];
 
 	constructor(
 		private readonly executor: Executor,
 		private readonly selfEventTracker: SelfEventTracker,
 		private readonly existenceChecker: ExistenceChecker,
 	) {}
+
+	/**
+	 * Reset all debug state. Call at the start of each test to get clean traces.
+	 */
+	resetDebugState(): void {
+		this._debugBatchCounter = 0;
+		this._debugExecutionTrace = [];
+		this._debugAllSortedActions = [];
+		this._debugLastSortedActions = [];
+		this._debugLastErrors = [];
+	}
+
+	/**
+	 * Get accumulated debug state across all dispatch batches since last reset.
+	 */
+	getDebugState(): DispatcherDebugState {
+		return {
+			batchCounter: this._debugBatchCounter,
+			executionTrace: this._debugExecutionTrace,
+			allSortedActions: this._debugAllSortedActions,
+			lastErrors: this._debugLastErrors,
+		};
+	}
 
 	async dispatch(actions: readonly VaultAction[]): Promise<DispatchResult> {
 		if (actions.length === 0) {

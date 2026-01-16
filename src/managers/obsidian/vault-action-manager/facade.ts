@@ -7,7 +7,10 @@ import { OpenedFileService as OpenedFileServiceImpl } from "./file-services/acti
 import { TFileHelper } from "./file-services/background/helpers/tfile-helper";
 import { TFolderHelper } from "./file-services/background/helpers/tfolder-helper";
 import { ActionQueue } from "./impl/actions-processing/action-queue";
-import type { ExistenceChecker } from "./impl/actions-processing/dispatcher";
+import type {
+	DispatcherDebugState,
+	ExistenceChecker,
+} from "./impl/actions-processing/dispatcher";
 import { Dispatcher } from "./impl/actions-processing/dispatcher";
 import { Executor } from "./impl/actions-processing/executor";
 import { BulkEventEmmiter } from "./impl/event-processing/bulk-event-emmiter/bulk-event-emmiter";
@@ -279,56 +282,42 @@ export class VaultActionManagerImpl implements VaultActionManager {
 		return this.reader.getAbstractFile(splitPathArg);
 	}
 
-	// Debug method for testing - expose selfEventTracker state
+	// ─────────────────────────────────────────────────────────────────────────
+	// Debug API - for testing multi-batch scenarios
+	// ─────────────────────────────────────────────────────────────────────────
+
+	/**
+	 * Reset all dispatcher debug state. Call at the start of each test
+	 * to get clean traces that don't include state from previous tests.
+	 */
+	resetDebugState(): void {
+		this.dispatcher.resetDebugState();
+	}
+
+	/**
+	 * Get accumulated debug state across all dispatch batches since last reset.
+	 * Includes execution trace, sorted actions per batch, and error info.
+	 */
+	getDebugState(): DispatcherDebugState {
+		return this.dispatcher.getDebugState();
+	}
+
+	/**
+	 * Get self-event tracker state for debugging event filtering.
+	 */
 	_getDebugSelfTrackerState(): { trackedPaths: string[]; trackedPrefixes: string[] } {
 		return {
-			// @ts-ignore - accessing private Maps for debugging
-			trackedPaths: Array.from((this.selfEventTracker as any).trackedPaths?.keys() ?? []),
-			// @ts-ignore - accessing private Maps for debugging
-			trackedPrefixes: Array.from((this.selfEventTracker as any).trackedPrefixes?.keys() ?? []),
+			// @ts-expect-error - accessing private Maps for debugging
+			trackedPaths: Array.from((this.selfEventTracker as unknown).trackedPaths?.keys() ?? []),
+			// @ts-expect-error - accessing private Maps for debugging
+			trackedPrefixes: Array.from((this.selfEventTracker as unknown).trackedPrefixes?.keys() ?? []),
 		};
 	}
 
-	// Debug method for testing - expose raw events from BulkEventEmmiter
+	/**
+	 * Get raw events from BulkEventEmmiter for debugging event processing.
+	 */
 	_getDebugAllRawEvents(): Array<{ event: string; ignored: boolean; reason?: string }> {
 		return this.bulkEventEmmiter._debugAllRawEvents ?? [];
-	}
-
-	// Debug method for testing - expose dispatcher sorted actions
-	_getDebugDispatcherSortedActions(): VaultAction[] {
-		// @ts-ignore - accessing private for debugging
-		return this.dispatcher._debugLastSortedActions ?? [];
-	}
-
-	// Debug method for testing - expose dispatcher errors
-	_getDebugDispatcherErrors(): Array<{ action: VaultAction; error: string }> {
-		// @ts-ignore - accessing private for debugging
-		return this.dispatcher._debugLastErrors ?? [];
-	}
-
-	// Debug method for testing - expose dispatcher execution trace
-	_getDebugExecutionTrace(): Array<{
-		batch: number;
-		index: number;
-		kind: string;
-		path: string;
-		result: "ok" | "err";
-		error?: string;
-	}> {
-		// @ts-ignore - accessing private for debugging
-		return this.dispatcher._debugExecutionTrace ?? [];
-	}
-
-	// Debug method for testing - expose batch counter and all sorted actions
-	_getDebugBatchInfo(): {
-		batchCounter: number;
-		allSortedActions: VaultAction[][];
-	} {
-		return {
-			// @ts-ignore - accessing private for debugging
-			batchCounter: this.dispatcher._debugBatchCounter ?? 0,
-			// @ts-ignore - accessing private for debugging
-			allSortedActions: this.dispatcher._debugAllSortedActions ?? [],
-		};
 	}
 }
