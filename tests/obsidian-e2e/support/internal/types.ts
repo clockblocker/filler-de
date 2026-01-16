@@ -50,6 +50,8 @@ export interface PollOptions {
     vaultSampleLimit?: number;
     /** Optional caller context to include in error messages (e.g., "[testAllFilesSuffixedOnInit]") */
     callerContext?: string;
+    /** Optional folder path to log to file on failure */
+    logFolderOnFail?: string;
   };
 
   export type ExpectFilesGoneOptions = PollOptions & {

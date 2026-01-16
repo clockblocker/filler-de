@@ -173,12 +173,17 @@ export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
 			} as SplitPathInsideLibraryWithSeparatedSuffixOf<SplitPathKind>;
 		} else {
 			// Non-empty suffix: move to suffix location
-			// Example: Library/RootNote2.md → Library/RootNote2-P-Q.md
-			//          → Library/Q/P/RootNote2-P-Q.md (suffix reversed = path)
-			const pathFromSuffix = [...suffixParts].reverse();
+			// For FOLDERS: suffix is RELATIVE to parent (append to current path)
+			//   Example: Library/Recipe/Berry_Pie → Library/Recipe/Berry-Pie
+			//            → Library/Recipe/Pie/Berry/ (suffix appended to parent context)
+			// For FILES: suffix is ABSOLUTE (from Library root)
+			//   Example: Library/A/B/Note-C.md → Library/C/Note-C.md
+			const pathFromSuffix = codecs.suffix.suffixPartsToPathParts(suffixParts);
+			const isFolder = sp.kind === "Folder";
+			const basePath = isFolder ? sp.pathParts : [libraryRoot];
 			spWithSeparatedSuffix = {
 				...spWithSeparatedSuffix,
-				pathParts: [libraryRoot, ...pathFromSuffix],
+				pathParts: [...basePath, ...pathFromSuffix],
 			} as SplitPathInsideLibraryWithSeparatedSuffixOf<SplitPathKind>;
 		}
 	} else {

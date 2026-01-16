@@ -2,7 +2,7 @@ export const PLUGIN_ID = "cbcr-text-eater-de";
 
 export const TIMEOUT_DEFAULT_MS = 1000;
 export const INTERVAL_DEFAULT_MS = 200;
-export const MAX_ATTEMPTS_DEFAULT = 5;
+export const MAX_ATTEMPTS_DEFAULT = 10;
 
 /** Time to wait for plugin init + initial healing before each test */
 export const INIT_HEALING_WAIT_MS = 0;

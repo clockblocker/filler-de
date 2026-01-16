@@ -278,4 +278,57 @@ export class VaultActionManagerImpl implements VaultActionManager {
 	): Promise<Result<SP["kind"] extends "Folder" ? TFolder : TFile, string>> {
 		return this.reader.getAbstractFile(splitPathArg);
 	}
+
+	// Debug method for testing - expose selfEventTracker state
+	_getDebugSelfTrackerState(): { trackedPaths: string[]; trackedPrefixes: string[] } {
+		return {
+			// @ts-ignore - accessing private Maps for debugging
+			trackedPaths: Array.from((this.selfEventTracker as any).trackedPaths?.keys() ?? []),
+			// @ts-ignore - accessing private Maps for debugging
+			trackedPrefixes: Array.from((this.selfEventTracker as any).trackedPrefixes?.keys() ?? []),
+		};
+	}
+
+	// Debug method for testing - expose raw events from BulkEventEmmiter
+	_getDebugAllRawEvents(): Array<{ event: string; ignored: boolean; reason?: string }> {
+		return this.bulkEventEmmiter._debugAllRawEvents ?? [];
+	}
+
+	// Debug method for testing - expose dispatcher sorted actions
+	_getDebugDispatcherSortedActions(): VaultAction[] {
+		// @ts-ignore - accessing private for debugging
+		return this.dispatcher._debugLastSortedActions ?? [];
+	}
+
+	// Debug method for testing - expose dispatcher errors
+	_getDebugDispatcherErrors(): Array<{ action: VaultAction; error: string }> {
+		// @ts-ignore - accessing private for debugging
+		return this.dispatcher._debugLastErrors ?? [];
+	}
+
+	// Debug method for testing - expose dispatcher execution trace
+	_getDebugExecutionTrace(): Array<{
+		batch: number;
+		index: number;
+		kind: string;
+		path: string;
+		result: "ok" | "err";
+		error?: string;
+	}> {
+		// @ts-ignore - accessing private for debugging
+		return this.dispatcher._debugExecutionTrace ?? [];
+	}
+
+	// Debug method for testing - expose batch counter and all sorted actions
+	_getDebugBatchInfo(): {
+		batchCounter: number;
+		allSortedActions: VaultAction[][];
+	} {
+		return {
+			// @ts-ignore - accessing private for debugging
+			batchCounter: this.dispatcher._debugBatchCounter ?? 0,
+			// @ts-ignore - accessing private for debugging
+			allSortedActions: this.dispatcher._debugAllSortedActions ?? [],
+		};
+	}
 }

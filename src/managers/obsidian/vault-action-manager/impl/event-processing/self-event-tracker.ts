@@ -137,10 +137,16 @@ export class SelfEventTracker {
 	private extractPaths(action: VaultAction): string[] {
 		switch (action.kind) {
 			case VaultActionKind.CreateFolder:
+				// For folder creation, track with parents (Obsidian may auto-create parent folders)
+				return this.extractPathsWithParents(action.payload.splitPath);
+
 			case VaultActionKind.CreateFile:
 			case VaultActionKind.UpsertMdFile:
 			case VaultActionKind.ProcessMdFile:
-				return this.extractPathsWithParents(action.payload.splitPath);
+				// For file creation, only track the file itself, NOT parent folders.
+				// Parent folders either already exist or are explicitly created via CreateFolder.
+				// Tracking parent folders caused user folder operations to be incorrectly filtered.
+				return [systemPathFromSplitPathInternal(action.payload.splitPath)];
 
 			case VaultActionKind.TrashFolder:
 			case VaultActionKind.TrashFile:
@@ -150,11 +156,22 @@ export class SelfEventTracker {
 				];
 
 			case VaultActionKind.RenameFolder:
-			case VaultActionKind.RenameFile:
-			case VaultActionKind.RenameMdFile:
+				// For folder renames, track with parents (folder rename may involve subtree)
 				return [
 					...this.extractPathsWithParents(action.payload.from),
 					...this.extractPathsWithParents(action.payload.to),
+				];
+
+			case VaultActionKind.RenameFile:
+			case VaultActionKind.RenameMdFile:
+				// For file renames, only track the file paths themselves, NOT parent folders.
+				// Reason: Parent folder paths from the source location were incorrectly
+				// causing user folder rename events to be filtered out. The parent folders
+				// either already exist (for in-place renames) or should be created via
+				// explicit CreateFolder actions if they don't exist.
+				return [
+					systemPathFromSplitPathInternal(action.payload.from),
+					systemPathFromSplitPathInternal(action.payload.to),
 				];
 
 			default:

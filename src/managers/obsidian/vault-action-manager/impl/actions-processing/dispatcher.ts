@@ -1,11 +1,12 @@
 import { err, ok, type Result } from "neverthrow";
+import { logger } from "../../../../../utils/logger";
 import type {
 	AnySplitPath,
 	SplitPathToFolder,
 	SplitPathToMdFile,
 } from "../../types/split-path";
 import { type VaultAction, VaultActionKind } from "../../types/vault-action";
-import { makeSplitPath } from "../common/split-path-and-system-path";
+import { makeSplitPath, makeSystemPathForSplitPath } from "../common/split-path-and-system-path";
 import type { SelfEventTracker } from "../event-processing/self-event-tracker";
 import { collapseActions } from "./collapse";
 import { buildDependencyGraph } from "./dependency-detector";
@@ -36,6 +37,21 @@ export class Dispatcher {
 	 * - Files/folders that need to exist have been created
 	 * - Delete actions only execute if target exists
 	 */
+
+	// Debug: store last sorted actions and errors for testing
+	public _debugLastSortedActions: VaultAction[] = [];
+	public _debugAllSortedActions: VaultAction[][] = []; // Accumulates across batches
+	public _debugLastErrors: DispatchError[] = [];
+	public _debugBatchCounter = 0;
+	public _debugExecutionTrace: Array<{
+		batch: number;
+		index: number;
+		kind: string;
+		path: string;
+		result: "ok" | "err";
+		error?: string;
+	}> = [];
+
 	constructor(
 		private readonly executor: Executor,
 		private readonly selfEventTracker: SelfEventTracker,
@@ -60,18 +76,107 @@ export class Dispatcher {
 
 		const errors: DispatchError[] = [];
 
-		for (const action of sorted) {
+		// Store sorted actions for debugging - ACCUMULATE across batches
+		this._debugBatchCounter++;
+		const currentBatch = this._debugBatchCounter;
+		this._debugLastSortedActions = sorted;
+		this._debugAllSortedActions.push(sorted);
+		this._debugLastErrors = [];
+		// Don't clear trace - accumulate across batches
+
+		logger.info("[Dispatcher] Starting execution loop", {
+			actionCount: sorted.length,
+			batch: currentBatch,
+		});
+
+		for (const [i, action] of sorted.entries()) {
+			// Get path info for logging
+			const actionPath = action.kind === VaultActionKind.RenameFile ||
+				action.kind === VaultActionKind.RenameMdFile ||
+				action.kind === VaultActionKind.RenameFolder
+				? `${makeSystemPathForSplitPath((action.payload as { from: AnySplitPath }).from)} → ${makeSystemPathForSplitPath((action.payload as { to: AnySplitPath }).to)}`
+				: makeSystemPathForSplitPath((action.payload as { splitPath: AnySplitPath }).splitPath);
+
+			logger.info("[Dispatcher] Executing action", {
+				actionPath,
+				index: i,
+				kind: action.kind,
+				total: sorted.length,
+			});
+
 			// Arm self-event tracking JUST before this action executes
 			this.selfEventTracker.register([action]);
 
-			const result = await this.executor.execute(action);
-			if (result.isErr()) {
-				errors.push({
+			try {
+				const result = await this.executor.execute(action);
+				if (result.isErr()) {
+					logger.error("[Dispatcher] Action failed", {
+						actionPath,
+						error: result.error,
+						index: i,
+						kind: action.kind,
+					});
+					const errorInfo = {
+						action,
+						error: result.error,
+					};
+					errors.push(errorInfo);
+					this._debugLastErrors.push(errorInfo);
+					// Add to execution trace
+					this._debugExecutionTrace.push({
+						batch: currentBatch,
+						error: result.error,
+						index: i,
+						kind: action.kind,
+						path: actionPath,
+						result: "err",
+					});
+				} else {
+					logger.info("[Dispatcher] Action completed", {
+						actionPath,
+						batch: currentBatch,
+						index: i,
+						kind: action.kind,
+					});
+					// Add to execution trace
+					this._debugExecutionTrace.push({
+						batch: currentBatch,
+						index: i,
+						kind: action.kind,
+						path: actionPath,
+						result: "ok",
+					});
+				}
+			} catch (e) {
+				const errorMsg = e instanceof Error ? e.message : String(e);
+				logger.error("[Dispatcher] Action threw exception", {
+					actionPath,
+					error: errorMsg,
+					index: i,
+					kind: action.kind,
+				});
+				const errorInfo = {
 					action,
-					error: result.error,
+					error: `EXCEPTION: ${errorMsg}`,
+				};
+				errors.push(errorInfo);
+				this._debugLastErrors.push(errorInfo);
+				// Add to execution trace
+				this._debugExecutionTrace.push({
+					batch: currentBatch,
+					error: `EXCEPTION: ${errorMsg}`,
+					index: i,
+					kind: action.kind,
+					path: actionPath,
+					result: "err",
 				});
 			}
 		}
+
+		logger.info("[Dispatcher] Execution loop complete", {
+			actionCount: sorted.length,
+			errorCount: errors.length,
+		});
 
 		if (errors.length > 0) {
 			return err(errors);

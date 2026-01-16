@@ -93,6 +93,39 @@ Library-scoped healing actions converted to vault-scoped actions for dispatch.
 - **RenameFolder**: folder move when renamed with suffix (NameKing)
 - **CreateFolder**: implicit folder creation for healing destinations
 
+## Canonicalization: Move-by-Name
+
+When a node is renamed with a suffix (Move intent + NameKing policy), the suffix is interpreted differently for folders vs files:
+
+### Folders: Relative Suffix Interpretation
+
+Suffix is interpreted **relative to current parent context**.
+
+```
+Library/Recipe/Berry_Pie → Library/Recipe/Berry-Pie
+  ↓ suffix = ["Pie"], parent = ["Library", "Recipe"]
+Library/Recipe/Pie/Berry/
+```
+
+The destination path = `parent + reversed(suffix)` = `["Library", "Recipe"] + ["Pie"]`.
+
+### Files: Absolute Suffix Interpretation
+
+Suffix is interpreted **absolutely from Library root**.
+
+```
+Library/A/B/Note-C-D.md
+  ↓ suffix = ["C", "D"]
+Library/D/C/Note-C-D.md
+```
+
+The destination path = `["Library"] + reversed(suffix)` = `["Library", "D", "C"]`.
+
+### Rationale
+
+- **Folders** typically represent categories/topics. Adding a suffix creates subcategorization under the current context.
+- **Files** use suffix as a full location specifier for drag-in scenarios and explicit user moves.
+
 ## Conventions
 
 - `pathParts` and `segmentIdChainToParent`: include Library root (e.g., `["Library", "A", "B"]`)

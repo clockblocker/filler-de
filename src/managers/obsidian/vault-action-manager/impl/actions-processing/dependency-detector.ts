@@ -8,8 +8,9 @@ import { makeKeyFor } from "../common/collapse-helpers";
  *
  * Rules:
  * - ProcessMdFile depends on UpsertMdFile for same file
- * - Rename actions depend on CreateFolder for destination parent folders
- * - CreateFolder depends on parent CreateFolder actions
+ * - Rename actions depend on folder-creating actions for destination parent folders
+ * - Folder-creating actions: CreateFolder OR RenameFolder (destination creates folder)
+ * - CreateFolder depends on parent folder-creating actions
  * - Trash actions have no dependencies
  */
 export function buildDependencyGraph(actions: VaultAction[]): DependencyGraph {
@@ -17,12 +18,17 @@ export function buildDependencyGraph(actions: VaultAction[]): DependencyGraph {
 
 	// --- indices (O(N)) ---
 	// NOTE: these are path-based indices (not graph keys).
-	const createFolderByPathKey = new Map<string, VaultAction>();
+	// Tracks actions that CREATE a folder at a given path (CreateFolder or RenameFolder.to)
+	const folderCreatorByPathKey = new Map<string, VaultAction>();
 	const upsertByPathKey = new Map<string, VaultAction>();
 
 	for (const a of actions) {
 		if (a.kind === VaultActionKind.CreateFolder) {
-			createFolderByPathKey.set(makeKeyFor(a.payload.splitPath), a);
+			folderCreatorByPathKey.set(makeKeyFor(a.payload.splitPath), a);
+		}
+		// RenameFolder.to creates a folder at the destination path
+		if (a.kind === VaultActionKind.RenameFolder) {
+			folderCreatorByPathKey.set(makeKeyFor(a.payload.to), a);
 		}
 		if (a.kind === VaultActionKind.UpsertMdFile) {
 			upsertByPathKey.set(makeKeyFor(a.payload.splitPath), a);
@@ -47,7 +53,7 @@ export function buildDependencyGraph(actions: VaultAction[]): DependencyGraph {
 
 		const dependencies = findDependenciesForAction(
 			action,
-			createFolderByPathKey,
+			folderCreatorByPathKey,
 			upsertByPathKey,
 		);
 
@@ -69,7 +75,7 @@ export function buildDependencyGraph(actions: VaultAction[]): DependencyGraph {
 
 function findDependenciesForAction(
 	action: VaultAction,
-	createFolderByPathKey: Map<string, VaultAction>,
+	folderCreatorByPathKey: Map<string, VaultAction>,
 	upsertByPathKey: Map<string, VaultAction>,
 ): VaultAction[] {
 	const dependencies: VaultAction[] = [];
@@ -85,7 +91,7 @@ function findDependenciesForAction(
 			dependencies.push(
 				...findParentFolderDependencies(
 					action.payload.splitPath,
-					createFolderByPathKey,
+					folderCreatorByPathKey,
 				),
 			);
 			break;
@@ -96,7 +102,7 @@ function findDependenciesForAction(
 			dependencies.push(
 				...findParentFolderDependencies(
 					action.payload.splitPath,
-					createFolderByPathKey,
+					folderCreatorByPathKey,
 				),
 			);
 			break;
@@ -108,7 +114,7 @@ function findDependenciesForAction(
 			dependencies.push(
 				...findParentFolderDependencies(
 					action.payload.to,
-					createFolderByPathKey,
+					folderCreatorByPathKey,
 				),
 			);
 			break;
@@ -118,7 +124,7 @@ function findDependenciesForAction(
 			dependencies.push(
 				...findParentFolderDependencies(
 					action.payload.splitPath,
-					createFolderByPathKey,
+					folderCreatorByPathKey,
 				),
 			);
 			break;
@@ -135,7 +141,7 @@ function findDependenciesForAction(
 
 function findParentFolderDependencies(
 	splitPath: { pathParts: string[]; basename: string },
-	createFolderByPathKey: Map<string, VaultAction>,
+	folderCreatorByPathKey: Map<string, VaultAction>,
 ): VaultAction[] {
 	const dependencies: VaultAction[] = [];
 
@@ -150,7 +156,7 @@ function findParentFolderDependencies(
 			pathParts: parentPathParts,
 		});
 
-		const createFolder = createFolderByPathKey.get(parentKey);
+		const createFolder = folderCreatorByPathKey.get(parentKey);
 		if (createFolder) dependencies.push(createFolder);
 	}
 

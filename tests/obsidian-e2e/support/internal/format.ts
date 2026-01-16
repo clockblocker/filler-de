@@ -1,4 +1,6 @@
 import type { NonEmptyArray } from "../../../../src/types/helpers";
+import logToFile from "../../../tracing/functions/write-log-to-file";
+import { listFilesUnder } from "../api/vault-ops";
 import type { FileWaitStatus } from "./types";
 
 export function formatMissingFilesShort(
@@ -11,10 +13,10 @@ export function formatMissingFilesShort(
   return `${missingMessage}\n${missing.map((m) => `- ${m.path}`).join("\n")}\n`;
 }
 
-export function formatMissingFilesLong(
+export async function formatMissingFilesLong(
   missing: Extract<FileWaitStatus, { ok: false }>[],
-  cfg: { timeoutMs: number; intervalMs: number; callerContext?: string },
-): string {
+  cfg: { timeoutMs: number; intervalMs: number; callerContext?: string; logFolderOnFail?: string },
+): Promise<string> {
   const lines: string[] = [];
   if (cfg.callerContext) {
     lines.push(`Caller: ${cfg.callerContext}`);
@@ -37,6 +39,21 @@ export function formatMissingFilesLong(
       for (const p of m.vaultSample) lines.push(`    - ${p}`);
     }
     lines.push("");
+  }
+
+  // Log folder contents to file on failure
+  if (cfg.logFolderOnFail) {
+    const folderResult = await listFilesUnder(cfg.logFolderOnFail);
+    if (folderResult.isOk()) {
+      const files = folderResult.value.sort();
+      const content = [
+        `=== FOLDER STATE: ${cfg.logFolderOnFail} ===`,
+        ...files,
+        "=== END FOLDER STATE ===",
+      ].join("\n");
+      const safeFolderName = cfg.logFolderOnFail.replace(/\//g, "_");
+      logToFile(`fail_logs_${safeFolderName}.log`, content);
+    }
   }
 
   return lines.join("\n");

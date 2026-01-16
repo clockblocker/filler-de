@@ -1,3 +1,4 @@
+import { logger } from "../../../../../../../../../utils/logger";
 import type { Codecs } from "../../../../../../../codecs";
 import {
 	type MoveNodeAction,
@@ -19,25 +20,47 @@ export function traslateRenameMaterializedEvent(
 ): Array<RenameNodeAction | MoveNodeAction> {
 	const out: Array<RenameNodeAction | MoveNodeAction> = [];
 
-	const { intent } = inferPolicyAndIntent(ev, codecs);
+	const { intent, policy } = inferPolicyAndIntent(ev, codecs);
+
+	logger.info("[translateRename] Event:", JSON.stringify({
+		from: { basename: ev.from.basename, pathParts: ev.from.pathParts, kind: ev.from.kind },
+		to: { basename: ev.to.basename, pathParts: ev.to.pathParts, kind: ev.to.kind },
+		nodeKind: ev.nodeKind,
+		intent,
+		policy,
+	}));
 
 	// 1) target = current node location in tree (FROM)
 	const targetRes = tryMakeTargetLocatorFromLibraryScopedSplitPath(
 		ev.from,
 		codecs,
 	);
-	if (targetRes.isErr()) return out;
+	if (targetRes.isErr()) {
+		logger.warn("[translateRename] targetRes error:", targetRes.error);
+		return out;
+	}
 	const targetLocator = targetRes.value;
 
 	// 2) destination canonical (TO + policy/intent)
 	const destinationRes = tryMakeDestinationLocatorFromEvent(ev, codecs);
-	if (destinationRes.isErr()) return out;
+	if (destinationRes.isErr()) {
+		logger.warn("[translateRename] destinationRes error:", destinationRes.error);
+		return out;
+	}
 	const destinationLocator = destinationRes.value;
 
 	const newNodeName = getNodeName(destinationLocator);
 	const newParentLocator = getParentLocator(destinationLocator);
 
+	logger.info("[translateRename] Locators:", JSON.stringify({
+		targetLocator,
+		destinationLocator,
+		newNodeName,
+		newParentLocator,
+	}));
+
 	if (intent === RenameIntent.Rename) {
+		logger.info("[translateRename] Creating RenameNodeAction");
 		out.push({
 			actionType: TreeActionType.Rename,
 			newNodeName,
@@ -46,6 +69,7 @@ export function traslateRenameMaterializedEvent(
 		return out;
 	}
 
+	logger.info("[translateRename] Creating MoveNodeAction");
 	out.push({
 		actionType: TreeActionType.Move,
 		newNodeName,

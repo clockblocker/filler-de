@@ -198,6 +198,7 @@ export function buildEnsureExistKeys(
 
 /**
  * Check if an action already exists in the batch for a given key.
+ * For folders, also checks if a RenameFolder action creates the folder at the destination.
  */
 export function hasActionForKey(
 	actions: readonly VaultAction[],
@@ -207,8 +208,12 @@ export function hasActionForKey(
 	if (kind === "folder") {
 		return actions.some(
 			(a) =>
-				a.kind === VaultActionKind.CreateFolder &&
-				makeSystemPathForSplitPath(a.payload.splitPath) === key,
+				// CreateFolder directly creates the folder
+				(a.kind === VaultActionKind.CreateFolder &&
+					makeSystemPathForSplitPath(a.payload.splitPath) === key) ||
+				// RenameFolder creates the folder at the destination
+				(a.kind === VaultActionKind.RenameFolder &&
+					makeSystemPathForSplitPath(a.payload.to) === key),
 		);
 	}
 

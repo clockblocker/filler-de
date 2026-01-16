@@ -50,7 +50,7 @@ async function expectFilesToExistResult(
     const intervalMs = opts.intervalMs ?? (INTERVAL_DEFAULT_MS + (opts.intervalOffset ?? 0));
   
     const shortMsg = formatMissingFilesShort(missing, opts.callerContext);
-    const longMsg = formatMissingFilesLong(missing, { callerContext: opts.callerContext, intervalMs, timeoutMs });
+    const longMsg = await formatMissingFilesLong(missing, { callerContext: opts.callerContext, intervalMs, timeoutMs, logFolderOnFail: opts.logFolderOnFail });
   
     const error = finalizeE2EError(new E2ETestError(shortMsg, longMsg));
     return err(error);

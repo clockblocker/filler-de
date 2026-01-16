@@ -114,10 +114,29 @@ export class Executor {
 			}
 			case VaultActionKind.RenameFile:
 			case VaultActionKind.RenameMdFile: {
+				const fromPath = systemPathFromSplitPathInternal(action.payload.from);
+				const toPath = systemPathFromSplitPathInternal(action.payload.to);
+				logger.info("[Executor] RenameFile ENTRY", {
+					from: fromPath,
+					kind: action.kind,
+					to: toPath,
+				});
 				const result = await this.tfileHelper.renameFile({
 					from: action.payload.from,
 					to: action.payload.to,
 				});
+				if (result.isErr()) {
+					logger.error("[Executor] RenameFile FAILED", {
+						error: result.error,
+						from: fromPath,
+						to: toPath,
+					});
+				} else {
+					logger.info("[Executor] RenameFile SUCCESS", {
+						from: fromPath,
+						to: toPath,
+					});
+				}
 				return result;
 			}
 			case VaultActionKind.TrashFile:

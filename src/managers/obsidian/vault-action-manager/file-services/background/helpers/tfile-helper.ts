@@ -1,5 +1,6 @@
 import { err, ok, type Result } from "neverthrow";
 import { type FileManager, TFile, type Vault } from "obsidian";
+import { logger } from "../../../../../../utils/logger";
 import {
 	errorBothSourceAndTargetNotFound,
 	errorCreateFailed,
@@ -113,13 +114,50 @@ export class TFileHelper {
 	}: SplitPathFromTo<SPF> & {
 		collisionStrategy?: CollisionStrategy;
 	}): Promise<Result<TFile, string>> {
-		const fromResult = await this.getFile(from);
+		const fromPath = systemPathFromSplitPathInternal(from);
+		const toPath = systemPathFromSplitPathInternal(to);
+		logger.info("[TFileHelper.renameFile] ENTRY", {
+			from: fromPath,
+			to: toPath,
+		});
+
+		// Poll-wait for source file to be available (Obsidian index may lag after folder renames)
+		let fromResult = await this.getFile(from);
 		const toResult = await this.getFile(to);
+
+		if (fromResult.isErr() && toResult.isErr()) {
+			// Both missing - wait a bit and retry for source file
+			// This handles the case where Obsidian's index hasn't updated after a parent folder rename
+			const maxRetries = 10;
+			const retryDelayMs = 50;
+			for (let retry = 0; retry < maxRetries && fromResult.isErr(); retry++) {
+				await new Promise(r => setTimeout(r, retryDelayMs));
+				fromResult = await this.getFile(from);
+				if (fromResult.isOk()) {
+					logger.info("[TFileHelper.renameFile] Source file found after retry", {
+						from: fromPath,
+						retry,
+					});
+					break;
+				}
+			}
+		}
+
+		logger.info("[TFileHelper.renameFile] getFile results", {
+			from: fromPath,
+			fromExists: fromResult.isOk(),
+			fromError: fromResult.isErr() ? fromResult.error : null,
+			to: toPath,
+			toExists: toResult.isOk(),
+			toError: toResult.isErr() ? toResult.error : null,
+		});
 
 		if (fromResult.isErr()) {
 			if (toResult.isErr()) {
-				const fromPath = systemPathFromSplitPathInternal(from);
-				const toPath = systemPathFromSplitPathInternal(to);
+				logger.error("[TFileHelper.renameFile] Both from and to not found", {
+					from: fromPath,
+					to: toPath,
+				});
 				return err(
 					errorBothSourceAndTargetNotFound(
 						"file",
@@ -130,6 +168,10 @@ export class TFileHelper {
 				);
 			}
 			// FromFile not found, but ToFile found. Assume already moved.
+			logger.info("[TFileHelper.renameFile] Assuming already moved (from not found, to exists)", {
+				from: fromPath,
+				to: toPath,
+			});
 			return ok(toResult.value);
 		}
 
@@ -175,7 +217,8 @@ export class TFileHelper {
 			);
 
 			try {
-				await this.fileManager.renameFile(
+				// Use vault.rename to avoid "update links?" dialog
+				await this.vault.rename(
 					fromResult.value,
 					systemPathFromSplitPathInternal(indexedPath),
 				);
@@ -203,10 +246,22 @@ export class TFileHelper {
 		}
 
 		try {
-			await this.fileManager.renameFile(
+			logger.info("[TFileHelper.renameFile] About to call vault.rename", {
+				from: fromPath,
+				to: toPath,
+			});
+
+			// Use vault.rename instead of fileManager.renameFile to avoid
+			// the "update links?" dialog that blocks in headless/E2E mode
+			await this.vault.rename(
 				fromResult.value,
 				systemPathFromSplitPathInternal(to),
 			);
+
+			logger.info("[TFileHelper.renameFile] vault.rename completed", {
+				from: fromPath,
+				to: toPath,
+			});
 			const renamedResult = await this.getFile(to);
 			if (renamedResult.isErr()) {
 				return err(
@@ -219,6 +274,11 @@ export class TFileHelper {
 			}
 			return ok(renamedResult.value);
 		} catch (error) {
+			logger.error("[TFileHelper.renameFile] vault.rename threw", {
+				error: error.message,
+				from: fromPath,
+				to: toPath,
+			});
 			return err(
 				errorRenameFailed(
 					"file",

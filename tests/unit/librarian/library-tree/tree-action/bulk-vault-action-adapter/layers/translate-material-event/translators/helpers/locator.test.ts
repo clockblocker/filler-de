@@ -250,12 +250,52 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 				RenameIntent.Move,
 				codecs,
 			);
-	
+
 			expect(r.isOk()).toBe(true);
 			if (r.isOk()) {
 				expect(r.value.separatedSuffixedBasename.coreName).toBe("sweet");
 				expect(r.value.separatedSuffixedBasename.suffixParts).toEqual([]);
 				expect(r.value.pathParts).toEqual(["Library", "pie", "berry", "very"]);
+			}
+		});
+
+		it("10b. Nested folder move: Berry-Pie at Library/Recipe => Library/Recipe/Pie/Berry", () => {
+			// E2E scenario: Berry_Pie renamed to Berry-Pie at Library/Recipe/
+			// coreName="Berry", suffix=["Pie"]
+			// For FOLDERS: suffix is RELATIVE to parent, so path = parent + reversed suffix
+			const sp = spFolder(["Library", "Recipe"], "Berry-Pie");
+			const r = tryCanonicalizeSplitPathToDestination(
+				sp,
+				ChangePolicy.NameKing,
+				RenameIntent.Move,
+				codecs,
+			);
+
+			expect(r.isOk()).toBe(true);
+			if (r.isOk()) {
+				expect(r.value.separatedSuffixedBasename.coreName).toBe("Berry");
+				expect(r.value.separatedSuffixedBasename.suffixParts).toEqual([]);
+				// For folders, suffix is relative: ["Library", "Recipe"] + ["Pie"] = ["Library", "Recipe", "Pie"]
+				expect(r.value.pathParts).toEqual(["Library", "Recipe", "Pie"]);
+			}
+		});
+
+		it("10c. Nested folder move: Fish-Pie at Library/Recipe => Library/Recipe/Pie/Fish", () => {
+			// E2E scenario: Pie renamed to Fish-Pie at Library/Recipe/
+			// coreName="Fish", suffix=["Pie"]
+			const sp = spFolder(["Library", "Recipe"], "Fish-Pie");
+			const r = tryCanonicalizeSplitPathToDestination(
+				sp,
+				ChangePolicy.NameKing,
+				RenameIntent.Move,
+				codecs,
+			);
+
+			expect(r.isOk()).toBe(true);
+			if (r.isOk()) {
+				expect(r.value.separatedSuffixedBasename.coreName).toBe("Fish");
+				expect(r.value.separatedSuffixedBasename.suffixParts).toEqual([]);
+				expect(r.value.pathParts).toEqual(["Library", "Recipe", "Pie"]);
 			}
 		});
 

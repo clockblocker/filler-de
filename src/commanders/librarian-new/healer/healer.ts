@@ -1,4 +1,5 @@
 import { ok } from "neverthrow";
+import { logger } from "../../../utils/logger";
 import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type {
 	Codecs,
@@ -241,13 +242,27 @@ export class Healer implements TreeAccessor {
 			observedSplitPath,
 		} = action;
 
+		logger.info("[computeMoveHealing] Action:", JSON.stringify({
+			targetLocator,
+			newParentLocator,
+			newNodeName,
+			observedSplitPath: {
+				basename: observedSplitPath.basename,
+				pathParts: observedSplitPath.pathParts,
+				kind: observedSplitPath.kind,
+			},
+		}));
+
 		// Get node from tree (tree already moved it)
 		const newParentChain = [
 			...newParentLocator.segmentIdChainToParent,
 			newParentLocator.segmentId,
 		];
 		const newParent = this.tree.findSection(newParentChain);
-		if (!newParent) return [];
+		if (!newParent) {
+			logger.warn("[computeMoveHealing] newParent not found:", JSON.stringify({ newParentChain }));
+			return [];
+		}
 
 		// Find node by newNodeName (tree already moved and renamed it)
 		let node: TreeNode | null = null;
@@ -325,9 +340,14 @@ export class Healer implements TreeAccessor {
 			// 1) Heal the folder itself if observed != canonical
 			const observedFolderPath = currentSectionPath.join("/");
 			const canonicalFolderPath = canonicalSectionPath.join("/");
+			logger.info("[computeMoveHealing] Folder paths:", JSON.stringify({
+				observedFolderPath,
+				canonicalFolderPath,
+				needsHealing: observedFolderPath !== canonicalFolderPath,
+			}));
 			if (observedFolderPath !== canonicalFolderPath) {
-				healingActions.push({
-					kind: "RenameFolder",
+				const renameFolderAction = {
+					kind: "RenameFolder" as const,
 					payload: {
 						from: {
 							basename: observedSplitPath.basename,
@@ -340,7 +360,9 @@ export class Healer implements TreeAccessor {
 							pathParts: canonicalSectionPath.slice(0, -1),
 						},
 					},
-				});
+				};
+				logger.info("[computeMoveHealing] RenameFolder action:", JSON.stringify(renameFolderAction));
+				healingActions.push(renameFolderAction);
 			}
 
 			// 2) Heal descendants (they will move with folder, but suffixes need update)
