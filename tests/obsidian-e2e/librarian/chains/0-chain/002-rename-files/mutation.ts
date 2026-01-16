@@ -1,4 +1,5 @@
 /// <reference types="@wdio/globals/types" />
+import { waitForIdle } from "../../../../support/api/idle";
 import { renamePath } from "../../../../support/api/vault-ops";
 
 export async function performMutation002(): Promise<void> {
@@ -10,6 +11,7 @@ export async function performMutation002(): Promise<void> {
 	if (berryResult.isErr()) {
 		throw new Error(`Failed to rename Berry_Pie: ${berryResult.error}`);
 	}
+	await waitForIdle();
 
 	// Rename Pie -> Fish-Pie
 	const pieResult = await renamePath(
@@ -19,4 +21,5 @@ export async function performMutation002(): Promise<void> {
 	if (pieResult.isErr()) {
 		throw new Error(`Failed to rename Pie: ${pieResult.error}`);
 	}
+	await waitForIdle();
 }

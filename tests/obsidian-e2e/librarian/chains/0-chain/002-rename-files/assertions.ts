@@ -1,26 +1,27 @@
 /// <reference types="@wdio/globals/types" />
+import { expectFilesToExist } from "../../../../support/api";
 import { listFilesUnder } from "../../../../support/api/vault-ops";
+import { VAULT_EXPECTATIONS_002 } from "./vault-expectations";
 
 export async function testPostHealing002(): Promise<void> {
-	// Log all files in Library to inspect actual vault state after healing
-	const libraryFilesResult = await listFilesUnder("Library");
-	if (libraryFilesResult.isErr()) {
-		throw new Error(`Failed to list Library files: ${libraryFilesResult.error}`);
+	await expectFilesToExist(
+		[
+			...VAULT_EXPECTATIONS_002.postHealing.codexes,
+			...VAULT_EXPECTATIONS_002.postHealing.files,
+		],
+		{
+			callerContext: "[testPostHealing002]",
+			intervalMs: 200,
+			timeoutMs: 15000,
+		},
+	);
+
+	// Log Recipe/ folder state after healing
+	const recipeFilesResult = await listFilesUnder("Library/Recipe");
+	if (recipeFilesResult.isOk()) {
+		const files = recipeFilesResult.value.sort();
+		process.stdout.write("\n=== RECIPE FOLDER STATE AFTER 002 ===\n");
+		process.stdout.write(files.join("\n"));
+		process.stdout.write("\n=== END RECIPE STATE ===\n");
 	}
-
-	const libraryFiles = libraryFilesResult.value;
-	const codexes = libraryFiles.filter((f) => f.includes("/__-"));
-	const regularFiles = libraryFiles.filter((f) => !f.includes("/__-"));
-
-	const output = [
-		"\n=== POST-HEALING 002 VAULT STATE ===",
-		"\n--- CODEXES ---",
-		...codexes.sort(),
-		"\n--- REGULAR FILES ---",
-		...regularFiles.sort(),
-		"\n=== END VAULT STATE ===\n",
-	].join("\n");
-
-	// Log output via process.stdout for visibility
-	process.stdout.write(output);
 }
