@@ -20,15 +20,7 @@ export function traslateRenameMaterializedEvent(
 ): Array<RenameNodeAction | MoveNodeAction> {
 	const out: Array<RenameNodeAction | MoveNodeAction> = [];
 
-	const { intent, policy } = inferPolicyAndIntent(ev, codecs);
-
-	logger.info("[translateRename] Event:", JSON.stringify({
-		from: { basename: ev.from.basename, pathParts: ev.from.pathParts, kind: ev.from.kind },
-		to: { basename: ev.to.basename, pathParts: ev.to.pathParts, kind: ev.to.kind },
-		nodeKind: ev.nodeKind,
-		intent,
-		policy,
-	}));
+	const { intent } = inferPolicyAndIntent(ev, codecs);
 
 	// 1) target = current node location in tree (FROM)
 	const targetRes = tryMakeTargetLocatorFromLibraryScopedSplitPath(
@@ -44,7 +36,10 @@ export function traslateRenameMaterializedEvent(
 	// 2) destination canonical (TO + policy/intent)
 	const destinationRes = tryMakeDestinationLocatorFromEvent(ev, codecs);
 	if (destinationRes.isErr()) {
-		logger.warn("[translateRename] destinationRes error:", destinationRes.error);
+		logger.warn(
+			"[translateRename] destinationRes error:",
+			destinationRes.error,
+		);
 		return out;
 	}
 	const destinationLocator = destinationRes.value;
@@ -52,15 +47,7 @@ export function traslateRenameMaterializedEvent(
 	const newNodeName = getNodeName(destinationLocator);
 	const newParentLocator = getParentLocator(destinationLocator);
 
-	logger.info("[translateRename] Locators:", JSON.stringify({
-		targetLocator,
-		destinationLocator,
-		newNodeName,
-		newParentLocator,
-	}));
-
 	if (intent === RenameIntent.Rename) {
-		logger.info("[translateRename] Creating RenameNodeAction");
 		out.push({
 			actionType: TreeActionType.Rename,
 			newNodeName,
@@ -69,7 +56,6 @@ export function traslateRenameMaterializedEvent(
 		return out;
 	}
 
-	logger.info("[translateRename] Creating MoveNodeAction");
 	out.push({
 		actionType: TreeActionType.Move,
 		newNodeName,

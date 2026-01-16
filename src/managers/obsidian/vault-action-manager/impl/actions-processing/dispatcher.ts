@@ -127,11 +127,6 @@ export class Dispatcher {
 		this._debugLastErrors = [];
 		// Don't clear trace - accumulate across batches
 
-		logger.info("[Dispatcher] Starting execution loop", {
-			actionCount: sorted.length,
-			batch: currentBatch,
-		});
-
 		for (const [i, action] of sorted.entries()) {
 			// Get path info for logging
 			const actionPath = action.kind === VaultActionKind.RenameFile ||
@@ -139,13 +134,6 @@ export class Dispatcher {
 				action.kind === VaultActionKind.RenameFolder
 				? `${makeSystemPathForSplitPath((action.payload as { from: AnySplitPath }).from)} → ${makeSystemPathForSplitPath((action.payload as { to: AnySplitPath }).to)}`
 				: makeSystemPathForSplitPath((action.payload as { splitPath: AnySplitPath }).splitPath);
-
-			logger.info("[Dispatcher] Executing action", {
-				actionPath,
-				index: i,
-				kind: action.kind,
-				total: sorted.length,
-			});
 
 			// Arm self-event tracking JUST before this action executes
 			this.selfEventTracker.register([action]);
@@ -175,12 +163,6 @@ export class Dispatcher {
 						result: "err",
 					});
 				} else {
-					logger.info("[Dispatcher] Action completed", {
-						actionPath,
-						batch: currentBatch,
-						index: i,
-						kind: action.kind,
-					});
 					// Add to execution trace
 					this._debugExecutionTrace.push({
 						batch: currentBatch,
@@ -215,11 +197,6 @@ export class Dispatcher {
 				});
 			}
 		}
-
-		logger.info("[Dispatcher] Execution loop complete", {
-			actionCount: sorted.length,
-			errorCount: errors.length,
-		});
 
 		if (errors.length > 0) {
 			return err(errors);

@@ -242,17 +242,6 @@ export class Healer implements TreeAccessor {
 			observedSplitPath,
 		} = action;
 
-		logger.info("[computeMoveHealing] Action:", JSON.stringify({
-			targetLocator,
-			newParentLocator,
-			newNodeName,
-			observedSplitPath: {
-				basename: observedSplitPath.basename,
-				pathParts: observedSplitPath.pathParts,
-				kind: observedSplitPath.kind,
-			},
-		}));
-
 		// Get node from tree (tree already moved it)
 		const newParentChain = [
 			...newParentLocator.segmentIdChainToParent,
@@ -340,11 +329,6 @@ export class Healer implements TreeAccessor {
 			// 1) Heal the folder itself if observed != canonical
 			const observedFolderPath = currentSectionPath.join("/");
 			const canonicalFolderPath = canonicalSectionPath.join("/");
-			logger.info("[computeMoveHealing] Folder paths:", JSON.stringify({
-				observedFolderPath,
-				canonicalFolderPath,
-				needsHealing: observedFolderPath !== canonicalFolderPath,
-			}));
 			if (observedFolderPath !== canonicalFolderPath) {
 				const renameFolderAction = {
 					kind: "RenameFolder" as const,
@@ -361,7 +345,6 @@ export class Healer implements TreeAccessor {
 						},
 					},
 				};
-				logger.info("[computeMoveHealing] RenameFolder action:", JSON.stringify(renameFolderAction));
 				healingActions.push(renameFolderAction);
 			}
 

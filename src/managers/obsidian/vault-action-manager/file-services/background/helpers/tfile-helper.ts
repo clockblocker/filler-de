@@ -116,10 +116,6 @@ export class TFileHelper {
 	}): Promise<Result<TFile, string>> {
 		const fromPath = systemPathFromSplitPathInternal(from);
 		const toPath = systemPathFromSplitPathInternal(to);
-		logger.info("[TFileHelper.renameFile] ENTRY", {
-			from: fromPath,
-			to: toPath,
-		});
 
 		// Poll-wait for source file to be available (Obsidian index may lag after folder renames)
 		let fromResult = await this.getFile(from);
@@ -134,23 +130,10 @@ export class TFileHelper {
 				await new Promise(r => setTimeout(r, retryDelayMs));
 				fromResult = await this.getFile(from);
 				if (fromResult.isOk()) {
-					logger.info("[TFileHelper.renameFile] Source file found after retry", {
-						from: fromPath,
-						retry,
-					});
 					break;
 				}
 			}
 		}
-
-		logger.info("[TFileHelper.renameFile] getFile results", {
-			from: fromPath,
-			fromExists: fromResult.isOk(),
-			fromError: fromResult.isErr() ? fromResult.error : null,
-			to: toPath,
-			toExists: toResult.isOk(),
-			toError: toResult.isErr() ? toResult.error : null,
-		});
 
 		if (fromResult.isErr()) {
 			if (toResult.isErr()) {
@@ -168,10 +151,6 @@ export class TFileHelper {
 				);
 			}
 			// FromFile not found, but ToFile found. Assume already moved.
-			logger.info("[TFileHelper.renameFile] Assuming already moved (from not found, to exists)", {
-				from: fromPath,
-				to: toPath,
-			});
 			return ok(toResult.value);
 		}
 
@@ -246,11 +225,6 @@ export class TFileHelper {
 		}
 
 		try {
-			logger.info("[TFileHelper.renameFile] About to call vault.rename", {
-				from: fromPath,
-				to: toPath,
-			});
-
 			// Use vault.rename instead of fileManager.renameFile to avoid
 			// the "update links?" dialog that blocks in headless/E2E mode
 			await this.vault.rename(
@@ -258,10 +232,6 @@ export class TFileHelper {
 				systemPathFromSplitPathInternal(to),
 			);
 
-			logger.info("[TFileHelper.renameFile] vault.rename completed", {
-				from: fromPath,
-				to: toPath,
-			});
 			const renamedResult = await this.getFile(to);
 			if (renamedResult.isErr()) {
 				return err(

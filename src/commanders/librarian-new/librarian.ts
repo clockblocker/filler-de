@@ -129,43 +129,9 @@ export class Librarian {
 
 			const allFiles = allFilesResult.value;
 
-			// Log initial read
-			logger.info("[Librarian] Initial read - allFiles:", {
-				count: allFiles.length,
-				files: allFiles.map((f) => ({
-					basename: f.basename,
-					extension: "extension" in f ? f.extension : undefined,
-					hasRead: "read" in f,
-					kind: f.kind,
-					pathParts: f.pathParts,
-				})),
-			});
-
 			// Build Create actions for each file
 			const createActions =
 				await this.buildInitialCreateActions(allFiles);
-
-			// Log create actions
-			logger.info("[Librarian] Initial read - createActions:", {
-				actions: createActions.map((a) => ({
-					actionType: a.actionType,
-					observedSplitPath: a.observedSplitPath
-						? {
-								basename: a.observedSplitPath.basename,
-								extension: a.observedSplitPath.extension,
-								kind: a.observedSplitPath.kind,
-								pathParts: a.observedSplitPath.pathParts,
-							}
-						: undefined,
-					targetLocator: {
-						segmentId: a.targetLocator.segmentId,
-						segmentIdChainToParent:
-							a.targetLocator.segmentIdChainToParent,
-						targetKind: a.targetLocator.targetKind,
-					},
-				})),
-				count: createActions.length,
-			});
 
 			// Apply all create actions and collect healing + codex impacts
 			const allHealingActions: HealingAction[] = [];
@@ -426,15 +392,6 @@ export class Librarian {
 			`handleBulkEvent events: ${JSON.stringify(bulk.events.map((e) => ({ from: "from" in e ? (e as any).from?.basename : undefined, kind: e.kind, to: "to" in e ? (e as any).to?.basename : undefined })))}`,
 		);
 
-		logger.info(
-			"[Librarian.handleBulkEvent] ENTRY",
-			JSON.stringify({
-				eventsCount: bulk.events.length,
-				hasHealer: !!this.healer,
-				rootsCount: bulk.roots.length,
-			}),
-		);
-
 		if (!this.healer) {
 			debugLog("handleBulkEvent: No healer!");
 			logger.warn(
@@ -442,59 +399,6 @@ export class Librarian {
 			);
 			return;
 		}
-
-		// Log received bulk event
-		logger.info("[Librarian] Received bulk event:", {
-			debug: bulk.debug,
-			events: bulk.events.map((e) => ({
-				kind: e.kind,
-				...(e.kind === "FileRenamed" || e.kind === "FolderRenamed"
-					? {
-							from: {
-								basename: e.from.basename,
-								kind: e.from.kind,
-								pathParts: e.from.pathParts,
-							},
-							to: {
-								basename: e.to.basename,
-								kind: e.to.kind,
-								pathParts: e.to.pathParts,
-							},
-						}
-					: {
-							splitPath: {
-								basename: e.splitPath.basename,
-								kind: e.splitPath.kind,
-								pathParts: e.splitPath.pathParts,
-							},
-						}),
-			})),
-			eventsCount: bulk.events.length,
-			roots: bulk.roots.map((r) => ({
-				kind: r.kind,
-				...(r.kind === "FileRenamed" || r.kind === "FolderRenamed"
-					? {
-							from: {
-								basename: r.from.basename,
-								kind: r.from.kind,
-								pathParts: r.from.pathParts,
-							},
-							to: {
-								basename: r.to.basename,
-								kind: r.to.kind,
-								pathParts: r.to.pathParts,
-							},
-						}
-					: {
-							splitPath: {
-								basename: r.splitPath.basename,
-								kind: r.splitPath.kind,
-								pathParts: r.splitPath.pathParts,
-							},
-						}),
-			})),
-			rootsCount: bulk.roots.length,
-		});
 
 		// Build tree actions from bulk event
 		const treeActions = buildTreeActions(bulk, this.codecs, this.rules);
@@ -507,22 +411,8 @@ export class Librarian {
 			`handleBulkEvent treeActions: ${JSON.stringify(treeActions.map((a) => ({ actionType: a.actionType, targetLocator: a.targetLocator })))}`,
 		);
 
-		logger.info(
-			"[Librarian.handleBulkEvent] Built tree actions:",
-			JSON.stringify({
-				actions: treeActions.map((a) => ({
-					actionType: a.actionType,
-					targetLocator: a.targetLocator,
-				})),
-				count: treeActions.length,
-			}),
-		);
-
 		if (treeActions.length === 0) {
 			debugLog("handleBulkEvent: No tree actions!");
-			logger.info(
-				"[Librarian.handleBulkEvent] No tree actions, returning early",
-			);
 			return;
 		}
 

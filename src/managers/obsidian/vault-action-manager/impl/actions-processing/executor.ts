@@ -116,11 +116,6 @@ export class Executor {
 			case VaultActionKind.RenameMdFile: {
 				const fromPath = systemPathFromSplitPathInternal(action.payload.from);
 				const toPath = systemPathFromSplitPathInternal(action.payload.to);
-				logger.info("[Executor] RenameFile ENTRY", {
-					from: fromPath,
-					kind: action.kind,
-					to: toPath,
-				});
 				const result = await this.tfileHelper.renameFile({
 					from: action.payload.from,
 					to: action.payload.to,
@@ -128,11 +123,6 @@ export class Executor {
 				if (result.isErr()) {
 					logger.error("[Executor] RenameFile FAILED", {
 						error: result.error,
-						from: fromPath,
-						to: toPath,
-					});
-				} else {
-					logger.info("[Executor] RenameFile SUCCESS", {
 						from: fromPath,
 						to: toPath,
 					});
@@ -145,19 +135,12 @@ export class Executor {
 					...action.payload.splitPath.pathParts,
 					action.payload.splitPath.basename,
 				].join("/");
-				logger.info("[Executor] Executing TrashMdFile", {
-					path: pathStr,
-				});
 				const result = await this.tfileHelper.trashFile(
 					action.payload.splitPath,
 				);
 				if (result.isErr()) {
 					logger.error("[Executor] TrashMdFile failed", {
 						error: result.error,
-						path: pathStr,
-					});
-				} else {
-					logger.info("[Executor] TrashMdFile succeeded", {
 						path: pathStr,
 					});
 				}
