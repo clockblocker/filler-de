@@ -126,8 +126,12 @@ export class TFileHelper {
 			// This handles the case where Obsidian's index hasn't updated after a parent folder rename
 			const maxRetries = 10;
 			const retryDelayMs = 50;
-			for (let retry = 0; retry < maxRetries && fromResult.isErr(); retry++) {
-				await new Promise(r => setTimeout(r, retryDelayMs));
+			for (
+				let retry = 0;
+				retry < maxRetries && fromResult.isErr();
+				retry++
+			) {
+				await new Promise((r) => setTimeout(r, retryDelayMs));
 				fromResult = await this.getFile(from);
 				if (fromResult.isOk()) {
 					break;
@@ -137,10 +141,13 @@ export class TFileHelper {
 
 		if (fromResult.isErr()) {
 			if (toResult.isErr()) {
-				logger.error("[TFileHelper.renameFile] Both from and to not found", {
-					from: fromPath,
-					to: toPath,
-				});
+				logger.error(
+					"[TFileHelper.renameFile] Both from and to not found",
+					{
+						from: fromPath,
+						to: toPath,
+					},
+				);
 				return err(
 					errorBothSourceAndTargetNotFound(
 						"file",

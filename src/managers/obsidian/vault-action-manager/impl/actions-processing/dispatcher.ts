@@ -6,7 +6,10 @@ import type {
 	SplitPathToMdFile,
 } from "../../types/split-path";
 import { type VaultAction, VaultActionKind } from "../../types/vault-action";
-import { makeSplitPath, makeSystemPathForSplitPath } from "../common/split-path-and-system-path";
+import {
+	makeSplitPath,
+	makeSystemPathForSplitPath,
+} from "../common/split-path-and-system-path";
 import type { SelfEventTracker } from "../event-processing/self-event-tracker";
 import { collapseActions } from "./collapse";
 import { buildDependencyGraph } from "./dependency-detector";
@@ -129,11 +132,15 @@ export class Dispatcher {
 
 		for (const [i, action] of sorted.entries()) {
 			// Get path info for logging
-			const actionPath = action.kind === VaultActionKind.RenameFile ||
+			const actionPath =
+				action.kind === VaultActionKind.RenameFile ||
 				action.kind === VaultActionKind.RenameMdFile ||
 				action.kind === VaultActionKind.RenameFolder
-				? `${makeSystemPathForSplitPath((action.payload as { from: AnySplitPath }).from)} → ${makeSystemPathForSplitPath((action.payload as { to: AnySplitPath }).to)}`
-				: makeSystemPathForSplitPath((action.payload as { splitPath: AnySplitPath }).splitPath);
+					? `${makeSystemPathForSplitPath((action.payload as { from: AnySplitPath }).from)} → ${makeSystemPathForSplitPath((action.payload as { to: AnySplitPath }).to)}`
+					: makeSystemPathForSplitPath(
+							(action.payload as { splitPath: AnySplitPath })
+								.splitPath,
+						);
 
 			// Arm self-event tracking JUST before this action executes
 			this.selfEventTracker.register([action]);

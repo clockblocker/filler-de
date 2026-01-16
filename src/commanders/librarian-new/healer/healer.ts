@@ -75,7 +75,10 @@ export class Healer implements TreeAccessor {
 		const mutatedNode = this.tree.apply(action);
 
 		// Compute healing actions based on action type
-		const healingActions = this.computeHealingForAction(action, mutatedNode);
+		const healingActions = this.computeHealingForAction(
+			action,
+			mutatedNode,
+		);
 
 		return { codexImpact, healingActions };
 	}
@@ -124,7 +127,9 @@ export class Healer implements TreeAccessor {
 	 * Check if there are deferred actions waiting to be flushed.
 	 */
 	hasDeferredActions(): boolean {
-		return this.deferredCodexImpacts.length > 0 || !this.dirtyTracker.isEmpty();
+		return (
+			this.deferredCodexImpacts.length > 0 || !this.dirtyTracker.isEmpty()
+		);
 	}
 
 	// ─── TreeAccessor Implementation ───
@@ -158,7 +163,10 @@ export class Healer implements TreeAccessor {
 			);
 		}
 		if (actionType === "Move") {
-			return this.computeMoveHealing(action as MoveNodeAction, mutatedNode);
+			return this.computeMoveHealing(
+				action as MoveNodeAction,
+				mutatedNode,
+			);
 		}
 		// ChangeStatus
 		return this.computeChangeStatusHealing(

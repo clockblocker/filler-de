@@ -30,7 +30,11 @@ export function makeCodexTransform(
 ): Transform {
 	return (content: string): string => {
 		// Generate children content
-		const childrenContent = generateChildrenList(section, sectionChain, codecs);
+		const childrenContent = generateChildrenList(
+			section,
+			sectionChain,
+			codecs,
+		);
 
 		// For root section (chain length 1), no backlink
 		if (sectionChain.length <= 1) {
@@ -159,7 +163,11 @@ export function makeCodexContentTransform(
 	codecs: Codecs,
 ): Transform {
 	return (content: string): string => {
-		const childrenContent = generateChildrenList(section, sectionChain, codecs);
+		const childrenContent = generateChildrenList(
+			section,
+			sectionChain,
+			codecs,
+		);
 
 		const { firstLine } = splitFirstLine(content);
 
@@ -215,7 +223,8 @@ export function makeScrollBacklinkTransform(
 		const { firstLine, rest } = splitFirstLine(content);
 		if (firstLine.trim() === "") {
 			// First line is empty, check second line
-			const { firstLine: secondLine, rest: restAfterSecond } = splitFirstLine(rest);
+			const { firstLine: secondLine, rest: restAfterSecond } =
+				splitFirstLine(rest);
 			if (isBacklinkLine(secondLine)) {
 				// Replace existing backlink, preserve user content with newline
 				return `${LINE_BREAK}${backlinkLine}${LINE_BREAK}${restAfterSecond}`;

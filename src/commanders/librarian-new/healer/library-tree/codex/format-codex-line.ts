@@ -14,10 +14,7 @@ import {
 	PIPE,
 	SPACE_F,
 } from "../../../../../types/literals";
-import {
-	makeCodecRulesFromSettings,
-	makeCodecs,
-} from "../../../codecs";
+import { makeCodecRulesFromSettings, makeCodecs } from "../../../codecs";
 import type { TreeNodeStatus } from "../tree-node/types/atoms";
 import { TreeNodeStatus as Status } from "../tree-node/types/atoms";
 import { CODEX_CORE_NAME } from "./literals";

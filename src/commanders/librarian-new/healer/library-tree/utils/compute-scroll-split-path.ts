@@ -30,12 +30,11 @@ export function computeScrollSplitPath(
 	}
 
 	// Create ScrollNodeSegmentId
-	const segmentIdResult =
-		codecs.segmentId.serializeSegmentIdUnchecked({
-			coreName: nodeName,
-			extension: "md",
-			targetKind: TreeNodeKind.Scroll,
-		});
+	const segmentIdResult = codecs.segmentId.serializeSegmentIdUnchecked({
+		coreName: nodeName,
+		extension: "md",
+		targetKind: TreeNodeKind.Scroll,
+	});
 	if (segmentIdResult.isErr()) {
 		return segmentIdResult;
 	}

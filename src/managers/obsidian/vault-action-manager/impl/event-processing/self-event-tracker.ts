@@ -140,7 +140,9 @@ export class SelfEventTracker {
 				// For file creation, only track the file itself, NOT parent folders.
 				// Parent folders either already exist or are explicitly created via CreateFolder.
 				// Tracking parent folders caused user folder operations to be incorrectly filtered.
-				return [systemPathFromSplitPathInternal(action.payload.splitPath)];
+				return [
+					systemPathFromSplitPathInternal(action.payload.splitPath),
+				];
 
 			case VaultActionKind.TrashFolder:
 			case VaultActionKind.TrashFile:

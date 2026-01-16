@@ -1,5 +1,12 @@
 import { err, ok, type Result } from "neverthrow";
-import { type App, type Editor, MarkdownView, TFile, TFolder } from "obsidian";
+import {
+	type App,
+	type Editor,
+	type EditorPosition,
+	MarkdownView,
+	TFile,
+	TFolder,
+} from "obsidian";
 import {
 	errorFileStale,
 	errorGetEditor,
@@ -18,6 +25,11 @@ import type {
 } from "../../types/split-path";
 import type { Transform } from "../../types/vault-action";
 import type { OpenedFileReader } from "./opened-file-reader";
+
+export type SavedSelection = {
+	anchor: EditorPosition;
+	head: EditorPosition;
+};
 
 export class OpenedFileService {
 	private lastOpenedFiles: SplitPathToMdFile[] = [];
@@ -90,6 +102,27 @@ export class OpenedFileService {
 			pwd.basename === splitPath.basename;
 
 		return ok(isActive);
+	}
+
+	saveSelection(): Result<SavedSelection | null, string> {
+		const editorResult = this.getEditor();
+		if (editorResult.isErr()) return ok(null); // No active editor
+
+		const { editor } = editorResult.value;
+		const selections = editor.listSelections?.();
+		if (!selections?.length) return ok(null);
+
+		const sel = selections[0];
+		return ok({ anchor: sel.anchor, head: sel.head });
+	}
+
+	restoreSelection(saved: SavedSelection): Result<void, string> {
+		const editorResult = this.getEditor();
+		if (editorResult.isErr()) return err(editorResult.error);
+
+		const { editor } = editorResult.value;
+		editor.setSelection(saved.anchor, saved.head);
+		return ok(undefined);
 	}
 
 	private getEditor(): Result<

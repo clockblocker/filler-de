@@ -20,7 +20,11 @@ export class BulkEventEmmiter {
 	private handler: BulkVaultEventHandler | null = null;
 
 	// Debug: store all received events (before filtering) for test diagnostics
-	public _debugAllRawEvents: Array<{ event: string; ignored: boolean; reason?: string }> = [];
+	public _debugAllRawEvents: Array<{
+		event: string;
+		ignored: boolean;
+		reason?: string;
+	}> = [];
 
 	constructor(
 		private readonly app: App,
@@ -114,7 +118,9 @@ export class BulkEventEmmiter {
 	}
 
 	private onRename(tAbstractFile: TAbstractFile, oldPath: string): void {
-		const newPathIgnored = this.selfEventTracker.shouldIgnore(tAbstractFile.path);
+		const newPathIgnored = this.selfEventTracker.shouldIgnore(
+			tAbstractFile.path,
+		);
 		const oldPathIgnored = this.selfEventTracker.shouldIgnore(oldPath);
 
 		if (newPathIgnored || oldPathIgnored) {

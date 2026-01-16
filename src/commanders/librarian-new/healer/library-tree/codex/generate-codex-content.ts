@@ -50,7 +50,13 @@ export function generateChildrenList(
 	}
 
 	// Generate items for children
-	const lines = generateItems(section, pathParts, 0, maxDepth, showScrollsForDepth);
+	const lines = generateItems(
+		section,
+		pathParts,
+		0,
+		maxDepth,
+		showScrollsForDepth,
+	);
 
 	if (lines.length === 0) {
 		return LINE_BREAK;

@@ -22,7 +22,10 @@ export {
 	formatParentBacklink,
 	formatScrollLine,
 } from "./format-codex-line";
-export { generateChildrenList, generateCodexContent } from "./generate-codex-content";
+export {
+	generateChildrenList,
+	generateCodexContent,
+} from "./generate-codex-content";
 export {
 	makeCodexTransform,
 	makeScrollBacklinkTransform,

@@ -231,9 +231,7 @@ export class Tree {
 			return null;
 		}
 		// Direct leaf update
-		const parent = this.findSection(
-			targetLocator.segmentIdChainToParent,
-		);
+		const parent = this.findSection(targetLocator.segmentIdChainToParent);
 		if (parent) {
 			const node = parent.children[targetLocator.segmentId];
 			if (node && node.kind !== TreeNodeKind.Section) {

@@ -15,7 +15,10 @@ import {
 	canonizeSplitPathWithSeparatedSuffix,
 } from "./canonicalization-policy";
 import { adaptCodecResult } from "../../bulk-vault-action-adapter/layers/translate-material-event/error-adapters";
-import { ChangePolicy, RenameIntent } from "../../bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent";
+import {
+	ChangePolicy,
+	RenameIntent,
+} from "../../bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent";
 
 /**
  * Extracts duplicate marker (e.g., " 1", " 2") from end of basename.
@@ -178,7 +181,8 @@ export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
 			//            → Library/Recipe/Pie/Berry/ (suffix appended to parent context)
 			// For FILES: suffix is ABSOLUTE (from Library root)
 			//   Example: Library/A/B/Note-C.md → Library/C/Note-C.md
-			const pathFromSuffix = codecs.suffix.suffixPartsToPathParts(suffixParts);
+			const pathFromSuffix =
+				codecs.suffix.suffixPartsToPathParts(suffixParts);
 			const isFolder = sp.kind === "Folder";
 			const basePath = isFolder ? sp.pathParts : [libraryRoot];
 			spWithSeparatedSuffix = {

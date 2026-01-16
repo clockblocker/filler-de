@@ -159,7 +159,10 @@ export function codexImpactToRecreations(
 		if (!section) continue;
 
 		// Collect all descendant scrolls for status writes
-		const descendantScrolls = collectDescendantScrolls(section, sectionChain);
+		const descendantScrolls = collectDescendantScrolls(
+			section,
+			sectionChain,
+		);
 		for (const { nodeName, parentChain } of descendantScrolls) {
 			const splitPathResult = computeScrollSplitPath(
 				nodeName,
@@ -266,7 +269,10 @@ export function codexImpactToIncrementalRecreations(
 
 				const scrollBacklinkAction: ProcessScrollBacklinkAction = {
 					kind: "ProcessScrollBacklink",
-					payload: { splitPath: splitPathResult.value, parentChain: chain },
+					payload: {
+						splitPath: splitPathResult.value,
+						parentChain: chain,
+					},
 				};
 				actions.push(scrollBacklinkAction);
 			}
@@ -278,7 +284,10 @@ export function codexImpactToIncrementalRecreations(
 		const section = findSectionByChain(tree, sectionChain);
 		if (!section) continue;
 
-		const descendantScrolls = collectDescendantScrolls(section, sectionChain);
+		const descendantScrolls = collectDescendantScrolls(
+			section,
+			sectionChain,
+		);
 		for (const { nodeName, parentChain } of descendantScrolls) {
 			const splitPathResult = computeScrollSplitPath(
 				nodeName,
@@ -295,7 +304,10 @@ export function codexImpactToIncrementalRecreations(
 
 			const writeStatusAction: WriteScrollStatusAction = {
 				kind: "WriteScrollStatus",
-				payload: { splitPath: splitPathResult.value, status: newStatus },
+				payload: {
+					splitPath: splitPathResult.value,
+					status: newStatus,
+				},
 			};
 			actions.push(writeStatusAction);
 		}

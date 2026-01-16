@@ -305,19 +305,31 @@ export class VaultActionManagerImpl implements VaultActionManager {
 	/**
 	 * Get self-event tracker state for debugging event filtering.
 	 */
-	_getDebugSelfTrackerState(): { trackedPaths: string[]; trackedPrefixes: string[] } {
+	_getDebugSelfTrackerState(): {
+		trackedPaths: string[];
+		trackedPrefixes: string[];
+	} {
 		return {
 			// @ts-expect-error - accessing private Maps for debugging
-			trackedPaths: Array.from((this.selfEventTracker as unknown).trackedPaths?.keys() ?? []),
+			trackedPaths: Array.from(
+				(this.selfEventTracker as unknown).trackedPaths?.keys() ?? [],
+			),
 			// @ts-expect-error - accessing private Maps for debugging
-			trackedPrefixes: Array.from((this.selfEventTracker as unknown).trackedPrefixes?.keys() ?? []),
+			trackedPrefixes: Array.from(
+				(this.selfEventTracker as unknown).trackedPrefixes?.keys() ??
+					[],
+			),
 		};
 	}
 
 	/**
 	 * Get raw events from BulkEventEmmiter for debugging event processing.
 	 */
-	_getDebugAllRawEvents(): Array<{ event: string; ignored: boolean; reason?: string }> {
+	_getDebugAllRawEvents(): Array<{
+		event: string;
+		ignored: boolean;
+		reason?: string;
+	}> {
 		return this.bulkEventEmmiter._debugAllRawEvents ?? [];
 	}
 }

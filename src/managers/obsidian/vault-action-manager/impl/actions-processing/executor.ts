@@ -114,12 +114,34 @@ export class Executor {
 			}
 			case VaultActionKind.RenameFile:
 			case VaultActionKind.RenameMdFile: {
-				const fromPath = systemPathFromSplitPathInternal(action.payload.from);
-				const toPath = systemPathFromSplitPathInternal(action.payload.to);
+				const fromPath = systemPathFromSplitPathInternal(
+					action.payload.from,
+				);
+				const toPath = systemPathFromSplitPathInternal(
+					action.payload.to,
+				);
+
+				// Save selection if renaming active file
+				const isActive =
+					action.payload.from.kind === "MdFile"
+						? await this.checkFileActive(action.payload.from)
+						: false;
+				const savedSelection = isActive
+					? this.opened.saveSelection().unwrapOr(null)
+					: null;
+
 				const result = await this.tfileHelper.renameFile({
 					from: action.payload.from,
 					to: action.payload.to,
 				});
+
+				// Restore selection after rename
+				if (result.isOk() && savedSelection) {
+					// Small delay for Obsidian to update view.file reference
+					await new Promise((resolve) => setTimeout(resolve, 50));
+					this.opened.restoreSelection(savedSelection);
+				}
+
 				if (result.isErr()) {
 					logger.error("[Executor] RenameFile FAILED", {
 						error: result.error,

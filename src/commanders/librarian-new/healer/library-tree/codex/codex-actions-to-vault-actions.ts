@@ -109,5 +109,7 @@ export function codexActionsToVaultActions(
 	rules: CodecRules,
 	codecs: Codecs,
 ): VaultAction[] {
-	return actions.map((action) => codexActionToVaultAction(action, rules, codecs));
+	return actions.map((action) =>
+		codexActionToVaultAction(action, rules, codecs),
+	);
 }
