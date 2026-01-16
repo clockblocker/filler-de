@@ -29,6 +29,8 @@ export type CodexImpact = {
 	deleted: SectionNodeSegmentId[][];
 	/** Sections whose descendants need status update (for ChangeStatus on section) */
 	descendantsChanged: DescendantsStatusChange[];
+	/** All impacted chains (contentChanged + renamed.newChain + their ancestors) - for incremental updates */
+	impactedChains: Set<string>;
 };
 
 // ─── Main ───
@@ -38,21 +40,32 @@ export function computeCodexImpact(action: TreeAction): CodexImpact {
 		contentChanged: [],
 		deleted: [],
 		descendantsChanged: [],
+		impactedChains: new Set(),
 		renamed: [],
 	};
 
+	let result: CodexImpact;
 	switch (action.actionType) {
 		case TreeActionType.Create:
-			return computeCreateImpact(action, impact);
+			result = computeCreateImpact(action, impact);
+			break;
 		case TreeActionType.Delete:
-			return computeDeleteImpact(action, impact);
+			result = computeDeleteImpact(action, impact);
+			break;
 		case TreeActionType.Rename:
-			return computeRenameImpact(action, impact);
+			result = computeRenameImpact(action, impact);
+			break;
 		case TreeActionType.Move:
-			return computeMoveImpact(action, impact);
+			result = computeMoveImpact(action, impact);
+			break;
 		case TreeActionType.ChangeStatus:
-			return computeChangeStatusImpact(action, impact);
+			result = computeChangeStatusImpact(action, impact);
+			break;
 	}
+
+	// Populate impactedChains from contentChanged + renamed.newChain + their ancestors
+	populateImpactedChains(result);
+	return result;
 }
 
 // ─── Per-action Impact ───
@@ -190,4 +203,41 @@ function computeChangeStatusImpact(
 
 function makeSectionSegmentId(nodeName: string): SectionNodeSegmentId {
 	return `${nodeName}${NodeSegmentIdSeparator}${TreeNodeKind.Section}${NodeSegmentIdSeparator}` as SectionNodeSegmentId;
+}
+
+/**
+ * Serialize a chain to a string key for Set membership.
+ */
+function chainToKey(chain: SectionNodeSegmentId[]): string {
+	return chain.join("/");
+}
+
+/**
+ * Populate impactedChains by walking contentChanged + renamed chains and their ancestors.
+ * This enables O(k) incremental updates instead of O(n) full tree traversal.
+ */
+function populateImpactedChains(impact: CodexImpact): void {
+	const addChainAndAncestors = (chain: SectionNodeSegmentId[]): void => {
+		// Add the chain itself
+		impact.impactedChains.add(chainToKey(chain));
+		// Add all ancestor chains
+		for (let i = chain.length - 1; i >= 1; i--) {
+			impact.impactedChains.add(chainToKey(chain.slice(0, i)));
+		}
+	};
+
+	// Add contentChanged chains and their ancestors
+	for (const chain of impact.contentChanged) {
+		addChainAndAncestors(chain);
+	}
+
+	// Add renamed.newChain and their ancestors (old chains are handled as deletions)
+	for (const { newChain } of impact.renamed) {
+		addChainAndAncestors(newChain);
+	}
+
+	// Add descendantsChanged chains and their ancestors
+	for (const { sectionChain } of impact.descendantsChanged) {
+		addChainAndAncestors(sectionChain);
+	}
 }

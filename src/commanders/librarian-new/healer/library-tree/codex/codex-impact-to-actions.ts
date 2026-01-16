@@ -19,7 +19,6 @@ import type { HealingAction } from "../types/healing-action";
 import { computeScrollSplitPath } from "../utils/compute-scroll-split-path";
 import { computeCodexSplitPath } from "./codex-split-path";
 import type { CodexImpact } from "./compute-codex-impact";
-import { generateCodexContent } from "./generate-codex-content";
 import { isCodexSplitPath } from "./helpers";
 import { CODEX_CORE_NAME } from "./literals";
 import type {
@@ -27,7 +26,6 @@ import type {
 	EnsureCodexFileExistsAction,
 	ProcessCodexAction,
 	ProcessScrollBacklinkAction,
-	UpsertCodexAction,
 	WriteScrollStatusAction,
 } from "./types/codex-action";
 
@@ -130,12 +128,11 @@ export function codexImpactToRecreations(
 ): CodexAction[] {
 	const actions: CodexAction[] = [];
 
-	// 1. Collect ALL section chains from current tree state
-	// This ensures we regenerate all codexes, not just "touched" ones
-	const allSectionChains = collectAllSectionChains(tree, codecs);
+	// 1. Single traversal to collect all section chains AND all scrolls
+	const { sectionChains, scrollInfos } = collectTreeData(tree, codecs);
 
 	// 2. Generate codex actions for all sections (2 actions per codex)
-	for (const chain of allSectionChains) {
+	for (const chain of sectionChains) {
 		const section = findSectionByChain(tree, chain);
 		if (!section) continue;
 
@@ -162,8 +159,8 @@ export function codexImpactToRecreations(
 		if (!section) continue;
 
 		// Collect all descendant scrolls for status writes
-		const scrollInfos = collectDescendantScrolls(section, sectionChain);
-		for (const { nodeName, parentChain } of scrollInfos) {
+		const descendantScrolls = collectDescendantScrolls(section, sectionChain);
+		for (const { nodeName, parentChain } of descendantScrolls) {
 			const splitPathResult = computeScrollSplitPath(
 				nodeName,
 				parentChain,
@@ -187,8 +184,8 @@ export function codexImpactToRecreations(
 	}
 
 	// 4. Generate scroll backlink actions for ALL scrolls in the tree
-	const allScrolls = collectAllScrolls(tree, codecs);
-	for (const { nodeName, parentChain } of allScrolls) {
+	// (Already collected in single traversal above)
+	for (const { nodeName, parentChain } of scrollInfos) {
 		const splitPathResult = computeScrollSplitPath(
 			nodeName,
 			parentChain,
@@ -214,49 +211,75 @@ export function codexImpactToRecreations(
 }
 
 /**
- * @deprecated Use codexImpactToDeletions and codexImpactToRecreations instead.
- * Convert CodexImpact to CodexAction[].
- * Regenerates all codexes from current tree state (like init).
- * Handles deletes and WriteScrollStatus from impact.
+ * Convert CodexImpact to CodexAction[] (incremental recreations).
+ * Only processes impacted sections from impact.impactedChains - O(k) instead of O(n).
+ * Use this for event-driven updates; use codexImpactToRecreations for full init.
  *
  * @param impact - The codex impact from tree.apply()
  * @param tree - Tree accessor for section lookup
  * @param codecs - Codec API for parsing/constructing segment IDs
  */
-export function codexImpactToActions(
+export function codexImpactToIncrementalRecreations(
 	impact: CodexImpact,
 	tree: TreeAccessor,
 	codecs: Codecs,
 ): CodexAction[] {
-	// Legacy function - kept for backwards compatibility during migration
-	// Combines deletions (as DeleteCodex) and recreations
 	const actions: CodexAction[] = [];
 
-	// Collect ALL section chains from current tree state
-	const allSectionChains = collectAllSectionChains(tree, codecs);
-
-	// Generate UpsertCodex for all sections
-	for (const chain of allSectionChains) {
+	// 1. Convert impactedChains Set to actual chains and process only those
+	for (const chainKey of impact.impactedChains) {
+		const chain = chainKey.split("/") as SectionNodeSegmentId[];
 		const section = findSectionByChain(tree, chain);
 		if (!section) continue;
 
-		const content = generateCodexContent(section, chain, codecs);
 		const splitPath = computeCodexSplitPath(chain, codecs);
 
-		const upsertAction: UpsertCodexAction = {
-			kind: "UpsertCodex",
-			payload: { content, sectionChain: chain, splitPath },
+		// 1a. Ensure codex file exists
+		const ensureAction: EnsureCodexFileExistsAction = {
+			kind: "EnsureCodexFileExists",
+			payload: { splitPath },
 		};
-		actions.push(upsertAction);
+		actions.push(ensureAction);
+
+		// 1b. Process codex (backlink + content combined)
+		const processAction: ProcessCodexAction = {
+			kind: "ProcessCodex",
+			payload: { splitPath, section, sectionChain: chain },
+		};
+		actions.push(processAction);
+
+		// 1c. Generate scroll backlink actions for scrolls in this section (direct children only)
+		for (const [_segId, child] of Object.entries(section.children)) {
+			if (child.kind === TreeNodeKind.Scroll) {
+				const splitPathResult = computeScrollSplitPath(
+					child.nodeName,
+					chain,
+					codecs,
+				);
+				if (splitPathResult.isErr()) {
+					logger.warn(
+						"[Codex] Failed to compute scroll split path for backlink:",
+						splitPathResult.error,
+					);
+					continue;
+				}
+
+				const scrollBacklinkAction: ProcessScrollBacklinkAction = {
+					kind: "ProcessScrollBacklink",
+					payload: { splitPath: splitPathResult.value, parentChain: chain },
+				};
+				actions.push(scrollBacklinkAction);
+			}
+		}
 	}
 
-	// Handle WriteScrollStatus for descendant scrolls
+	// 2. Handle WriteScrollStatus for descendant scrolls
 	for (const { sectionChain, newStatus } of impact.descendantsChanged) {
 		const section = findSectionByChain(tree, sectionChain);
 		if (!section) continue;
 
-		const scrollInfos = collectDescendantScrolls(section, sectionChain);
-		for (const { nodeName, parentChain } of scrollInfos) {
+		const descendantScrolls = collectDescendantScrolls(section, sectionChain);
+		for (const { nodeName, parentChain } of descendantScrolls) {
 			const splitPathResult = computeScrollSplitPath(
 				nodeName,
 				parentChain,
@@ -269,11 +292,10 @@ export function codexImpactToActions(
 				);
 				continue;
 			}
-			const splitPath = splitPathResult.value;
 
 			const writeStatusAction: WriteScrollStatusAction = {
 				kind: "WriteScrollStatus",
-				payload: { splitPath, status: newStatus },
+				payload: { splitPath: splitPathResult.value, status: newStatus },
 			};
 			actions.push(writeStatusAction);
 		}
@@ -418,6 +440,59 @@ type ScrollInfo = {
 	parentChain: SectionNodeSegmentId[];
 };
 
+// ─── Unified Tree Traversal ───
+
+type TreeTraversalResult = {
+	sectionChains: SectionNodeSegmentId[][];
+	scrollInfos: ScrollInfo[];
+};
+
+/**
+ * Single DFS traversal collecting both section chains and scroll infos.
+ * More efficient than separate collectAllSectionChains + collectAllScrolls.
+ */
+function collectTreeData(
+	tree: TreeAccessor,
+	codecs: Codecs,
+): TreeTraversalResult {
+	const sectionChains: SectionNodeSegmentId[][] = [];
+	const scrollInfos: ScrollInfo[] = [];
+
+	const root = tree.getRoot();
+	const rootSegId = codecs.segmentId.serializeSegmentId({
+		coreName: root.nodeName,
+		targetKind: TreeNodeKind.Section,
+	}) as SectionNodeSegmentId;
+
+	// Add root chain
+	sectionChains.push([rootSegId]);
+
+	// Single recursive traversal collecting both
+	const traverse = (
+		section: SectionNode,
+		parentChain: SectionNodeSegmentId[],
+	): void => {
+		for (const [segId, child] of Object.entries(section.children)) {
+			if (child.kind === TreeNodeKind.Section) {
+				const childChain = [
+					...parentChain,
+					segId as SectionNodeSegmentId,
+				];
+				sectionChains.push(childChain);
+				traverse(child, childChain);
+			} else if (child.kind === TreeNodeKind.Scroll) {
+				scrollInfos.push({
+					nodeName: child.nodeName,
+					parentChain,
+				});
+			}
+		}
+	};
+
+	traverse(root, [rootSegId]);
+	return { sectionChains, scrollInfos };
+}
+
 function collectDescendantScrolls(
 	section: SectionNode,
 	parentChain: SectionNodeSegmentId[],
@@ -437,63 +512,6 @@ function collectDescendantScrolls(
 	}
 
 	return result;
-}
-
-/**
- * Collect all scrolls from the entire tree.
- * Returns scroll info (name + parent chain) for each scroll.
- */
-function collectAllScrolls(
-	tree: TreeAccessor,
-	codecs: Codecs,
-): ScrollInfo[] {
-	const root = tree.getRoot();
-	const rootSegId = codecs.segmentId.serializeSegmentId({
-		coreName: root.nodeName,
-		targetKind: TreeNodeKind.Section,
-	}) as SectionNodeSegmentId;
-
-	return collectDescendantScrolls(root, [rootSegId]);
-}
-
-/**
- * Collect all section chains from the tree (including root).
- * Similar to init regeneration - collects all sections recursively.
- */
-function collectAllSectionChains(
-	tree: TreeAccessor,
-	codecs: Codecs,
-): SectionNodeSegmentId[][] {
-	const chains: SectionNodeSegmentId[][] = [];
-	const root = tree.getRoot();
-
-	// Root section chain is just the root segment ID
-	// Use codec API to serialize segment ID from TreeNode
-	const rootSegId = codecs.segmentId.serializeSegmentId({
-		coreName: root.nodeName,
-		targetKind: TreeNodeKind.Section,
-	}) as SectionNodeSegmentId;
-	chains.push([rootSegId]);
-
-	// Recursively collect all descendant sections
-	const collectRecursive = (
-		section: SectionNode,
-		parentChain: SectionNodeSegmentId[],
-	): void => {
-		for (const [segId, child] of Object.entries(section.children)) {
-			if (child.kind === TreeNodeKind.Section) {
-				const childChain = [
-					...parentChain,
-					segId as SectionNodeSegmentId,
-				];
-				chains.push(childChain);
-				collectRecursive(child, childChain);
-			}
-		}
-	};
-
-	collectRecursive(root, [rootSegId]);
-	return chains;
 }
 
 /**

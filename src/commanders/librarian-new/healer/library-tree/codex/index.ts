@@ -3,8 +3,8 @@ export {
 	codexActionToVaultAction,
 } from "./codex-actions-to-vault-actions";
 export {
-	codexImpactToActions,
 	codexImpactToDeletions,
+	codexImpactToIncrementalRecreations,
 	codexImpactToRecreations,
 	extractInvalidCodexesFromBulk,
 	type TreeAccessor,

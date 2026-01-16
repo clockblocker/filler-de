@@ -16,6 +16,7 @@ export function mergeCodexImpacts(impacts: CodexImpact[]): CodexImpact {
 		contentChanged: [],
 		deleted: [],
 		descendantsChanged: [],
+		impactedChains: new Set(),
 		renamed: [],
 	};
 
@@ -24,6 +25,10 @@ export function mergeCodexImpacts(impacts: CodexImpact[]): CodexImpact {
 		merged.deleted.push(...impact.deleted);
 		merged.descendantsChanged.push(...impact.descendantsChanged);
 		merged.renamed.push(...impact.renamed);
+		// Merge impactedChains Sets
+		for (const chain of impact.impactedChains) {
+			merged.impactedChains.add(chain);
+		}
 	}
 
 	// Dedupe chains

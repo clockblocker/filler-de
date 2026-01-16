@@ -59,27 +59,29 @@ export class Tree {
 		};
 	}
 
-	/** Apply action to tree structure. Returns void - only modifies tree. */
-	apply(action: TreeAction): void {
+	/** Apply action to tree structure. Returns the mutated node, or null for delete. */
+	apply(action: TreeAction): TreeNode | null {
 		const actionType = action.actionType;
 
 		if (actionType === "Create") {
-			this.applyCreate(action as CreateTreeLeafAction);
-		} else if (actionType === "Delete") {
-			this.applyDelete(action as DeleteNodeAction);
-		} else if (actionType === "Rename") {
-			this.applyRename(action as RenameNodeAction);
-		} else if (actionType === "Move") {
-			this.applyMove(action as MoveNodeAction);
-		} else {
-			// ChangeStatus
-			this.applyChangeStatus(action as ChangeNodeStatusAction);
+			return this.applyCreate(action as CreateTreeLeafAction);
 		}
+		if (actionType === "Delete") {
+			return this.applyDelete(action as DeleteNodeAction);
+		}
+		if (actionType === "Rename") {
+			return this.applyRename(action as RenameNodeAction);
+		}
+		if (actionType === "Move") {
+			return this.applyMove(action as MoveNodeAction);
+		}
+		// ChangeStatus
+		return this.applyChangeStatus(action as ChangeNodeStatusAction);
 	}
 
 	// ─── Create ───
 
-	private applyCreate(action: CreateTreeLeafAction): void {
+	private applyCreate(action: CreateTreeLeafAction): LeafNode {
 		const { targetLocator } = action;
 		const parentSection = this.ensureSectionChain(
 			targetLocator.segmentIdChainToParent,
@@ -88,6 +90,7 @@ export class Tree {
 		const node = this.makeLeafNode(action);
 		const segmentId = makeSegmentId(node);
 		parentSection.children[segmentId] = node;
+		return node;
 	}
 
 	private makeLeafNode(action: CreateTreeLeafAction): LeafNode {
@@ -120,17 +123,18 @@ export class Tree {
 
 	// ─── Delete ───
 
-	private applyDelete(action: DeleteNodeAction): void {
+	private applyDelete(action: DeleteNodeAction): null {
 		const { targetLocator } = action;
 		const parentSection = this.findSection(
 			targetLocator.segmentIdChainToParent,
 		);
-		if (!parentSection) return;
+		if (!parentSection) return null;
 
 		delete parentSection.children[targetLocator.segmentId];
 
 		// Auto-prune empty ancestors
 		this.pruneEmptyAncestors(targetLocator.segmentIdChainToParent);
+		return null;
 	}
 
 	private pruneEmptyAncestors(chain: SectionNodeSegmentId[]): void {
@@ -158,36 +162,37 @@ export class Tree {
 
 	// ─── Rename ───
 
-	private applyRename(action: RenameNodeAction): void {
+	private applyRename(action: RenameNodeAction): TreeNode | null {
 		const { targetLocator, newNodeName } = action;
 		const parentSection = this.findSection(
 			targetLocator.segmentIdChainToParent,
 		);
-		if (!parentSection) return;
+		if (!parentSection) return null;
 
 		const node = parentSection.children[targetLocator.segmentId];
-		if (!node) return;
+		if (!node) return null;
 
 		// Remove old, insert with new name
 		delete parentSection.children[targetLocator.segmentId];
 		node.nodeName = newNodeName;
 		const newSegmentId = makeSegmentId(node);
 		parentSection.children[newSegmentId] = node;
+		return node;
 	}
 
 	// ─── Move ───
 
-	private applyMove(action: MoveNodeAction): void {
+	private applyMove(action: MoveNodeAction): TreeNode | null {
 		const { targetLocator, newParentLocator, newNodeName } = action;
 
 		// Detach from old parent
 		const oldParent = this.findSection(
 			targetLocator.segmentIdChainToParent,
 		);
-		if (!oldParent) return;
+		if (!oldParent) return null;
 
 		const node = oldParent.children[targetLocator.segmentId];
-		if (!node) return;
+		if (!node) return null;
 
 		delete oldParent.children[targetLocator.segmentId];
 
@@ -205,11 +210,12 @@ export class Tree {
 		node.nodeName = newNodeName;
 		const newSegmentId = makeSegmentId(node);
 		newParent.children[newSegmentId] = node;
+		return node;
 	}
 
 	// ─── ChangeStatus ───
 
-	private applyChangeStatus(action: ChangeNodeStatusAction): void {
+	private applyChangeStatus(action: ChangeNodeStatusAction): TreeNode | null {
 		const { targetLocator, newStatus } = action;
 
 		if (targetLocator.targetKind === TreeNodeKind.Section) {
@@ -220,19 +226,22 @@ export class Tree {
 			]);
 			if (section) {
 				this.propagateStatus(section, newStatus);
+				return section;
 			}
-		} else {
-			// Direct leaf update
-			const parent = this.findSection(
-				targetLocator.segmentIdChainToParent,
-			);
-			if (parent) {
-				const node = parent.children[targetLocator.segmentId];
-				if (node && node.kind !== TreeNodeKind.Section) {
-					(node as ScrollNode).status = newStatus;
-				}
+			return null;
+		}
+		// Direct leaf update
+		const parent = this.findSection(
+			targetLocator.segmentIdChainToParent,
+		);
+		if (parent) {
+			const node = parent.children[targetLocator.segmentId];
+			if (node && node.kind !== TreeNodeKind.Section) {
+				(node as ScrollNode).status = newStatus;
+				return node;
 			}
 		}
+		return null;
 	}
 
 	private propagateStatus(

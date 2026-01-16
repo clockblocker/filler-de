@@ -4,7 +4,7 @@ import {
 	makeCodecs,
 } from "../../../../../src/commanders/librarian-new/codecs";
 import { Healer } from "../../../../../src/commanders/librarian-new/healer/healer";
-import { codexImpactToActions } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/codex-impact-to-actions";
+import { codexImpactToRecreations } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/codex-impact-to-actions";
 import { mergeCodexImpacts } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/merge-codex-impacts";
 import { Tree } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree";
 import {
@@ -69,11 +69,12 @@ describe("Codex init for nested sections", () => {
 
 		const mergedImpact = mergeCodexImpacts(impacts);
 
-		const codexActions = codexImpactToActions(mergedImpact, healer, codecs);
+		const codexActions = codexImpactToRecreations(mergedImpact, healer, codecs);
 
 		// Should have codexes for: Library, grandpa, father, kid
+		// New API uses ProcessCodex instead of UpsertCodex
 		const createCodexPaths = codexActions
-			.filter((a) => a.kind === "UpsertCodex")
+			.filter((a) => a.kind === "ProcessCodex")
 			.map((a) => (a.payload as any).splitPath.pathParts.join("/"));
 
 		expect(createCodexPaths).toContain("Library");

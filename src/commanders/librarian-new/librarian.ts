@@ -35,6 +35,7 @@ import {
 	type CodexImpact,
 	codexActionsToVaultActions,
 	codexImpactToDeletions,
+	codexImpactToIncrementalRecreations,
 	codexImpactToRecreations,
 	extractInvalidCodexesFromBulk,
 	parseCodexClickLineContent,
@@ -82,6 +83,12 @@ export class Librarian {
 	private processing = false;
 	private codecs: Codecs;
 	private rules: CodecRules;
+
+	// Event-based queue drain
+	private drainResolvers: Set<() => void> = new Set();
+
+	// Track pending click operations for graceful unsubscribe
+	private pendingClicks: Set<Promise<void>> = new Set();
 
 	// Debug: store last events and actions for testing
 	public _debugLastBulkEvent: BulkVaultEvent | null = null;
@@ -374,8 +381,10 @@ export class Librarian {
 			};
 		}
 
-		// Queue for processing
-		void this.enqueue([action]);
+		// Queue for processing and track pending operation
+		const p = this.enqueue([action]);
+		this.pendingClicks.add(p);
+		p.finally(() => this.pendingClicks.delete(p));
 	}
 
 	/**
@@ -461,34 +470,29 @@ export class Librarian {
 		} finally {
 			this.processing = false;
 			decrementPending();
+			this.signalQueueDrained();
 		}
 	}
 
 	/**
 	 * Wait for the queue to drain and all processing to complete.
-	 * Used during init to ensure all cascading healing is done.
-	 * Waits for a stable state where queue is empty and no processing is happening.
+	 * Uses event-based signaling instead of polling.
 	 */
-	private async waitForQueueToDrain(): Promise<void> {
-		const maxWaitMs = 10000;
-		const checkIntervalMs = 100;
-		const stableChecksRequired = 5; // Queue must be empty for 5 consecutive checks (500ms stable)
-		const startTime = Date.now();
-		let stableChecks = 0;
-
-		while (Date.now() - startTime < maxWaitMs) {
-			if (this.queue.length === 0 && !this.processing) {
-				stableChecks++;
-				if (stableChecks >= stableChecksRequired) {
-					return; // Queue is stable and empty
-				}
-			} else {
-				stableChecks = 0; // Reset counter if queue is not empty
-			}
-			await new Promise((resolve) =>
-				setTimeout(resolve, checkIntervalMs),
-			);
+	private waitForQueueToDrain(): Promise<void> {
+		if (this.queue.length === 0 && !this.processing) {
+			return Promise.resolve();
 		}
+		return new Promise((resolve) => this.drainResolvers.add(resolve));
+	}
+
+	/**
+	 * Signal all waiters that the queue has drained.
+	 */
+	private signalQueueDrained(): void {
+		for (const resolve of this.drainResolvers) {
+			resolve();
+		}
+		this.drainResolvers.clear();
 	}
 
 	/**
@@ -544,8 +548,8 @@ export class Librarian {
 			this.codecs,
 		);
 
-		// Generate codex recreations
-		const codexRecreations = codexImpactToRecreations(
+		// Generate codex recreations (incremental - only impacted sections)
+		const codexRecreations = codexImpactToIncrementalRecreations(
 			mergedImpact,
 			this.healer,
 			this.codecs,
@@ -583,8 +587,9 @@ export class Librarian {
 
 	/**
 	 * Cleanup: unsubscribe from vault and click events.
+	 * Waits for any pending click operations to complete.
 	 */
-	unsubscribe(): void {
+	async unsubscribe(): Promise<void> {
 		if (this.eventTeardown) {
 			this.eventTeardown();
 			this.eventTeardown = null;
@@ -593,6 +598,8 @@ export class Librarian {
 			this.clickTeardown();
 			this.clickTeardown = null;
 		}
+		// Wait for pending clicks to complete
+		await Promise.all(this.pendingClicks);
 	}
 
 	/**

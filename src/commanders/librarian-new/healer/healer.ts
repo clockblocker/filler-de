@@ -14,11 +14,13 @@ import type {
 	SectionNodeSegmentId,
 	TreeNodeSegmentId,
 } from "../codecs/segment-id/types/segment-id";
+import { DirtyTracker } from "./dirty-tracker";
 import type { TreeAccessor } from "./library-tree/codex/codex-impact-to-actions";
 import {
 	type CodexImpact,
 	computeCodexImpact,
 } from "./library-tree/codex/compute-codex-impact";
+import { mergeCodexImpacts } from "./library-tree/codex/merge-codex-impacts";
 import type { Tree } from "./library-tree/tree";
 import type {
 	ChangeNodeStatusAction,
@@ -56,6 +58,8 @@ export type ApplyResult = {
 export class Healer implements TreeAccessor {
 	private tree: Tree;
 	private codecs: Codecs;
+	private dirtyTracker = new DirtyTracker();
+	private deferredCodexImpacts: CodexImpact[] = [];
 
 	constructor(tree: Tree, codecs: Codecs) {
 		this.tree = tree;
@@ -67,13 +71,60 @@ export class Healer implements TreeAccessor {
 		// Compute codex impact BEFORE applying (uses action locators)
 		const codexImpact = computeCodexImpact(action);
 
-		// Apply action to tree (modifies tree structure)
-		this.tree.apply(action);
+		// Apply action to tree (modifies tree structure), capture mutated node
+		const mutatedNode = this.tree.apply(action);
 
 		// Compute healing actions based on action type
-		const healingActions = this.computeHealingForAction(action);
+		const healingActions = this.computeHealingForAction(action, mutatedNode);
 
 		return { codexImpact, healingActions };
+	}
+
+	// ─── Deferred Healing (Pull-based) ───
+
+	/**
+	 * Apply action to tree and mark dirty for later healing computation.
+	 * Use flushHealing() to compute all healing in a single pass.
+	 */
+	applyDeferred(action: TreeAction): TreeNode | null {
+		// Compute codex impact BEFORE applying (uses action locators)
+		const impact = computeCodexImpact(action);
+
+		// Apply action to tree
+		const node = this.tree.apply(action);
+
+		// Store impact for batch processing
+		this.deferredCodexImpacts.push(impact);
+
+		// Mark dirty chains from impact
+		this.dirtyTracker.markAllDirty(impact.impactedChains, "content");
+
+		return node;
+	}
+
+	/**
+	 * Flush all dirty nodes and compute healing in a single pass.
+	 * Returns combined ApplyResult for all deferred actions.
+	 */
+	flushHealing(): ApplyResult {
+		// Merge all deferred codex impacts
+		const mergedImpact = mergeCodexImpacts(this.deferredCodexImpacts);
+		this.deferredCodexImpacts = [];
+
+		// Get and clear dirty nodes
+		const dirtyNodes = this.dirtyTracker.flush();
+
+		// Compute healing for all dirty chains (currently no-op, healing is codex-based)
+		const healingActions: HealingAction[] = [];
+
+		return { codexImpact: mergedImpact, healingActions };
+	}
+
+	/**
+	 * Check if there are deferred actions waiting to be flushed.
+	 */
+	hasDeferredActions(): boolean {
+		return this.deferredCodexImpacts.length > 0 || !this.dirtyTracker.isEmpty();
 	}
 
 	// ─── TreeAccessor Implementation ───
@@ -88,7 +139,10 @@ export class Healer implements TreeAccessor {
 
 	// ─── Healing Computation ───
 
-	private computeHealingForAction(action: TreeAction): HealingAction[] {
+	private computeHealingForAction(
+		action: TreeAction,
+		mutatedNode: TreeNode | null,
+	): HealingAction[] {
 		const actionType = action.actionType;
 
 		if (actionType === "Create") {
@@ -98,10 +152,13 @@ export class Healer implements TreeAccessor {
 			return this.computeDeleteHealing(action as DeleteNodeAction);
 		}
 		if (actionType === "Rename") {
-			return this.computeRenameHealing(action as RenameNodeAction);
+			return this.computeRenameHealing(
+				action as RenameNodeAction,
+				mutatedNode,
+			);
 		}
 		if (actionType === "Move") {
-			return this.computeMoveHealing(action as MoveNodeAction);
+			return this.computeMoveHealing(action as MoveNodeAction, mutatedNode);
 		}
 		// ChangeStatus
 		return this.computeChangeStatusHealing(
@@ -137,24 +194,15 @@ export class Healer implements TreeAccessor {
 		return [];
 	}
 
-	private computeRenameHealing(action: RenameNodeAction): HealingAction[] {
+	private computeRenameHealing(
+		action: RenameNodeAction,
+		mutatedNode: TreeNode | null,
+	): HealingAction[] {
 		const { targetLocator, newNodeName } = action;
 
-		// Get node after tree.apply() (already renamed)
-		const parentSection = this.tree.findSection(
-			targetLocator.segmentIdChainToParent,
-		);
-		if (!parentSection) return [];
-
-		// Find node by newNodeName (tree already renamed it)
-		let node: TreeNode | null = null;
-		for (const child of Object.values(parentSection.children)) {
-			if (child.nodeName === newNodeName) {
-				node = child;
-				break;
-			}
-		}
-		if (!node) return [];
+		// Use mutated node directly (returned from tree.apply)
+		if (!mutatedNode) return [];
+		const node = mutatedNode;
 
 		// Compute new segment ID
 		// biome-ignore lint/suspicious/noExplicitAny: Type assertion needed: makeNodeSegmentId overloads require specific node types, but TypeScript can't narrow union for overload resolution
@@ -234,7 +282,10 @@ export class Healer implements TreeAccessor {
 		return [];
 	}
 
-	private computeMoveHealing(action: MoveNodeAction): HealingAction[] {
+	private computeMoveHealing(
+		action: MoveNodeAction,
+		mutatedNode: TreeNode | null,
+	): HealingAction[] {
 		const {
 			targetLocator,
 			newParentLocator,
@@ -242,26 +293,15 @@ export class Healer implements TreeAccessor {
 			observedSplitPath,
 		} = action;
 
-		// Get node from tree (tree already moved it)
+		// Use mutated node directly (returned from tree.apply)
+		if (!mutatedNode) return [];
+		const node = mutatedNode;
+
+		// Compute new parent chain
 		const newParentChain = [
 			...newParentLocator.segmentIdChainToParent,
 			newParentLocator.segmentId,
 		];
-		const newParent = this.tree.findSection(newParentChain);
-		if (!newParent) {
-			logger.warn("[computeMoveHealing] newParent not found:", JSON.stringify({ newParentChain }));
-			return [];
-		}
-
-		// Find node by newNodeName (tree already moved and renamed it)
-		let node: TreeNode | null = null;
-		for (const child of Object.values(newParent.children)) {
-			if (child.nodeName === newNodeName) {
-				node = child;
-				break;
-			}
-		}
-		if (!node) return [];
 
 		// Compute old section path (before move) - use old node name from targetLocator
 		const oldSectionPathResult =

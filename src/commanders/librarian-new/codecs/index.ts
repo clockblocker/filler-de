@@ -1,4 +1,6 @@
 import { makeSuffixCodecs, type SuffixCodecs } from "./internal/suffix";
+import type { LibraryPathCodecs } from "./library-path";
+import { makeLibraryPathCodecs } from "./library-path";
 import type { LocatorCodecs } from "./locator";
 import { makeLocatorCodecs } from "./locator";
 import type { CodecRules } from "./rules";
@@ -14,11 +16,12 @@ import { makeSplitPathWithSeparatedSuffixCodecs } from "./split-path-with-separa
  * All codecs are created in dependency order and dependencies are injected.
  */
 export type Codecs = {
+	libraryPath: LibraryPathCodecs;
+	locator: LocatorCodecs;
 	segmentId: SegmentIdCodecs;
 	splitPathInsideLibrary: SplitPathInsideLibraryCodecs;
 	splitPathWithSeparatedSuffix: SplitPathWithSeparatedSuffixCodecs;
 	suffix: SuffixCodecs;
-	locator: LocatorCodecs;
 };
 
 /**
@@ -28,7 +31,8 @@ export type Codecs = {
  * 2. segmentId (no dependencies)
  * 3. splitPathInsideLibrary (minimal dependencies)
  * 4. splitPathWithSeparatedSuffix (depends on suffix)
- * 5. locator (depends on segmentId, suffix)
+ * 5. libraryPath (depends on segmentId)
+ * 6. locator (depends on segmentId, suffix)
  */
 export function makeCodecs(rules: CodecRules): Codecs {
 	// Create in dependency order (lowest to highest)
@@ -37,10 +41,12 @@ export function makeCodecs(rules: CodecRules): Codecs {
 	const splitPathInsideLibrary = makeSplitPathInsideLibraryCodecs(rules);
 	const splitPathWithSeparatedSuffix =
 		makeSplitPathWithSeparatedSuffixCodecs(suffix);
+	const libraryPath = makeLibraryPathCodecs(segmentId);
 	const locator = makeLocatorCodecs(segmentId, suffix);
 
 	// Return public codec objects
 	return {
+		libraryPath,
 		locator,
 		segmentId,
 		splitPathInsideLibrary,
@@ -52,6 +58,7 @@ export function makeCodecs(rules: CodecRules): Codecs {
 // Re-export types for convenience
 export type { CodecError } from "./errors";
 export type { SeparatedSuffixedBasename } from "./internal/suffix/types";
+export type { LibraryPath } from "./library-path";
 export type {
 	FileNodeLocator,
 	ScrollNodeLocator,
