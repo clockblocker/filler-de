@@ -18,19 +18,18 @@ import { VaultActionKind } from "../../types/vault-action";
  * TTL: 5s with pop-on-match (one-time use per path).
  */
 export class SelfEventTracker {
-	private readonly trackedPaths = new Map<
+	private readonly tracked = new Map<
 		string,
-		ReturnType<typeof setTimeout>
+		{
+			timeout: ReturnType<typeof setTimeout>;
+			isFilePath: boolean;
+		}
 	>();
 	private readonly trackedPrefixes = new Map<
 		string,
 		ReturnType<typeof setTimeout>
 	>();
 	private readonly ttlMs = 5000;
-	/** Track all registered paths (not just active timers) to know when Obsidian has processed them */
-	private readonly registeredPaths = new Set<string>();
-	/** Track registered file paths separately (for queryability verification) */
-	private readonly registeredFilePaths = new Set<string>();
 	/** Waiters that resolve when all registered paths are popped */
 	private readonly allRegisteredWaiters: Array<() => void> = [];
 
@@ -41,17 +40,11 @@ export class SelfEventTracker {
 			const filePathToVerify = this.getFilePathToVerify(action, paths);
 
 			for (const path of paths) {
-				this.trackPath(path);
-				// Track in registeredPaths set (for waitForAllRegistered)
 				const normalized = this.normalizePath(path);
-				this.registeredPaths.add(normalized);
-				// Track only file paths that should exist for queryability verification
-				if (
-					filePathToVerify &&
-					normalized === this.normalizePath(filePathToVerify)
-				) {
-					this.registeredFilePaths.add(normalized);
-				}
+				const isFilePath =
+					filePathToVerify !== undefined &&
+					normalized === this.normalizePath(filePathToVerify);
+				this.trackPath(normalized, isFilePath);
 			}
 			for (const prefix of this.extractFolderPrefixes(action))
 				this.trackPrefix(prefix);
@@ -62,11 +55,8 @@ export class SelfEventTracker {
 		const normalized = this.normalizePath(path);
 
 		// Exact match (pop-on-match)
-		if (this.trackedPaths.has(normalized)) {
+		if (this.tracked.has(normalized)) {
 			this.untrackPath(normalized);
-			// Remove from registeredPaths and check if all are done
-			this.registeredPaths.delete(normalized);
-			this.registeredFilePaths.delete(normalized);
 			this.checkAllRegistered();
 			return true;
 		}
@@ -121,25 +111,21 @@ export class SelfEventTracker {
 		this.trackedPrefixes.set(normalized, timeout);
 	}
 
-	private trackPath(path: string): void {
-		const normalized = this.normalizePath(path);
-		const existing = this.trackedPaths.get(normalized);
-		if (existing) clearTimeout(existing);
+	private trackPath(normalized: string, isFilePath: boolean): void {
+		const existing = this.tracked.get(normalized);
+		if (existing) clearTimeout(existing.timeout);
 
 		const timeout = setTimeout(() => {
-			this.trackedPaths.delete(normalized);
-			// On timeout, remove from registeredPaths and check if all are done
-			this.registeredPaths.delete(normalized);
-			this.registeredFilePaths.delete(normalized);
+			this.tracked.delete(normalized);
 			this.checkAllRegistered();
 		}, this.ttlMs);
-		this.trackedPaths.set(normalized, timeout);
+		this.tracked.set(normalized, { timeout, isFilePath });
 	}
 
 	private untrackPath(normalized: string): void {
-		const timeout = this.trackedPaths.get(normalized);
-		if (timeout) clearTimeout(timeout);
-		this.trackedPaths.delete(normalized);
+		const entry = this.tracked.get(normalized);
+		if (entry) clearTimeout(entry.timeout);
+		this.tracked.delete(normalized);
 	}
 
 	private extractPaths(action: VaultAction): string[] {
@@ -164,10 +150,10 @@ export class SelfEventTracker {
 				];
 
 			case VaultActionKind.RenameFolder:
-				// For folder renames, track with parents (folder rename may involve subtree)
+				// For folder renames, track source with parents and just the destination folder
 				return [
 					...this.extractPathsWithParents(action.payload.from),
-					...this.extractPathsWithParents(action.payload.to),
+					systemPathFromSplitPathInternal(action.payload.to),
 				];
 
 			case VaultActionKind.RenameFile:
@@ -196,9 +182,9 @@ export class SelfEventTracker {
 		const paths: string[] = [];
 
 		// Extract all parent folder paths FIRST (Obsidian creates them before the target)
-		// For pathParts ["a", "b", "c"], generate: "a", "a/b", "a/b/c"
+		// For pathParts ["a", "b", "c"], generate: "a", "a/b" (parents only, not target)
 		const { pathParts } = splitPath;
-		for (let i = 1; i <= pathParts.length; i++) {
+		for (let i = 1; i < pathParts.length; i++) {
 			const parentPathParts = pathParts.slice(0, i);
 			const parentPath = pathToFolderFromPathParts(parentPathParts);
 			if (parentPath) {
@@ -239,7 +225,7 @@ export class SelfEventTracker {
 			case VaultActionKind.RenameFile:
 			case VaultActionKind.RenameMdFile: {
 				// For renames, verify the "to" path (destination)
-				// extractPaths returns: [...fromParents, fromTarget, ...toParents, toTarget]
+				// extractPaths for file renames returns: [from, to]
 				// So the last path is the "to" target
 				return paths[paths.length - 1];
 			}
@@ -259,7 +245,9 @@ export class SelfEventTracker {
 	 * Should be called before waitForAllRegistered() to capture all files.
 	 */
 	getRegisteredFilePaths(): readonly string[] {
-		return Array.from(this.registeredFilePaths);
+		return Array.from(this.tracked.entries())
+			.filter(([, entry]) => entry.isFilePath)
+			.map(([path]) => path);
 	}
 
 	/**
@@ -267,7 +255,7 @@ export class SelfEventTracker {
 	 * Returns immediately if no paths are registered.
 	 */
 	async waitForAllRegistered(): Promise<void> {
-		if (this.registeredPaths.size === 0) {
+		if (this.tracked.size === 0) {
 			return Promise.resolve();
 		}
 		await new Promise<void>((resolve) => {
@@ -279,10 +267,7 @@ export class SelfEventTracker {
 	 * Check if all registered paths have been popped, and resolve waiters if so.
 	 */
 	private checkAllRegistered(): void {
-		if (
-			this.registeredPaths.size === 0 &&
-			this.allRegisteredWaiters.length > 0
-		) {
+		if (this.tracked.size === 0 && this.allRegisteredWaiters.length > 0) {
 			const waiters = [...this.allRegisteredWaiters];
 			this.allRegisteredWaiters.length = 0;
 			for (const resolve of waiters) {
