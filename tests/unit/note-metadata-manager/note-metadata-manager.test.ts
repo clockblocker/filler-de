@@ -20,7 +20,7 @@ describe("note-metadata-manager", () => {
 		it("parses valid metadata", () => {
 			const content = `Some content
 
-<section id={textfresser_meta_keep_me_invisible}>
+<section id="textfresser_meta_keep_me_invisible">
 {"status":"Done","fileType":"Scroll"}
 </section>
 
@@ -30,14 +30,14 @@ describe("note-metadata-manager", () => {
 		});
 
 		it("returns null for invalid JSON", () => {
-			const content = `<section id={textfresser_meta_keep_me_invisible}>
+			const content = `<section id="textfresser_meta_keep_me_invisible">
 not json
 </section>`;
 			expect(readMetadata(content, TestSchema)).toBeNull();
 		});
 
 		it("returns null for schema mismatch", () => {
-			const content = `<section id={textfresser_meta_keep_me_invisible}>
+			const content = `<section id="textfresser_meta_keep_me_invisible">
 {"wrong":"data"}
 </section>`;
 			expect(readMetadata(content, TestSchema)).toBeNull();
@@ -47,7 +47,7 @@ not json
 			const content = `Content
 
 
-<section id={textfresser_meta_keep_me_invisible}>
+<section id="textfresser_meta_keep_me_invisible">
   {"status":"NotStarted","fileType":"Scroll"}
 </section>
 
@@ -65,7 +65,7 @@ not json
 			const result = transform(content);
 
 			expect(result).toContain("Some content");
-			expect(result).toContain("<section id={textfresser_meta_keep_me_invisible}>");
+			expect(result).toContain('<section id="textfresser_meta_keep_me_invisible">');
 			expect(result).toContain('{"status":"Done","fileType":"Scroll"}');
 			expect(result).toContain("</section>");
 		});
@@ -73,7 +73,7 @@ not json
 		it("replaces existing metadata", () => {
 			const content = `Content
 
-<section id={textfresser_meta_keep_me_invisible}>
+<section id="textfresser_meta_keep_me_invisible">
 {"status":"NotStarted","fileType":"Scroll"}
 </section>
 
