@@ -18,6 +18,7 @@ import type { VaultEvent } from "./types/vault-event";
 
 export type { BulkVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk/bulk-vault-event";
 export { type VaultEvent, VaultEventKind } from "./types/vault-event";
+export type { VaultAction } from "./types/vault-action";
 
 export type VaultEventHandler = (event: VaultEvent) => Promise<void>;
 export type BulkVaultEventHandler = (event: BulkVaultEvent) => Promise<void>;
@@ -44,7 +45,7 @@ export interface VaultActionManager {
 
 	getAbstractFile<SP extends AnySplitPath>(
 		splitPath: SP,
-	): Promise<Result<SP["type"] extends "Folder" ? TFolder : TFile, string>>;
+	): Promise<Result<SP["kind"] extends "Folder" ? TFolder : TFile, string>>;
 }
 
 export { makeSystemPathForSplitPath };
@@ -53,7 +54,7 @@ export { makeSplitPath };
 export { VaultActionManagerImpl } from "./facade";
 export type {
 	DebugTraceEntry,
-	DispatcherDebugState,
 	DispatchError,
+	DispatcherDebugState,
 	DispatchResult,
 } from "./impl/actions-processing/dispatcher";

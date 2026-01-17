@@ -1,19 +1,12 @@
 import { getParsedUserSettings } from "../../global-state/global-state";
-
-// Debug logging using console (visible in Obsidian dev tools)
-function debugLog(msg: string): void {
-	const timestamp = new Date().toISOString();
-	console.log(`[LIBRARIAN-DEBUG ${timestamp}] ${msg}`);
-}
-
 import type {
 	CheckboxClickedEvent,
 	ClickManager,
 } from "../../managers/obsidian/click-manager";
 import type {
 	BulkVaultEvent,
-	VaultActionManager,
 	VaultAction,
+	VaultActionManager,
 } from "../../managers/obsidian/vault-action-manager";
 import { decrementPending, incrementPending } from "../../utils/idle-tracker";
 import { logger } from "../../utils/logger";
@@ -283,15 +276,7 @@ export class Librarian {
 		// Store for debugging
 		this._debugLastBulkEvent = bulk;
 
-		debugLog(
-			`handleBulkEvent ENTRY: eventsCount=${bulk.events.length}, rootsCount=${bulk.roots.length}`,
-		);
-		debugLog(
-			`handleBulkEvent events: ${JSON.stringify(bulk.events.map((e) => ({ from: "from" in e ? (e as any).from?.basename : undefined, kind: e.kind, to: "to" in e ? (e as any).to?.basename : undefined })))}`,
-		);
-
 		if (!this.healer) {
-			debugLog("handleBulkEvent: No healer!");
 			logger.warn(
 				"[Librarian.handleBulkEvent] No healer, returning early",
 			);
@@ -304,13 +289,7 @@ export class Librarian {
 		// Store for debugging
 		this._debugLastTreeActions = treeActions;
 
-		debugLog(`handleBulkEvent: Built ${treeActions.length} tree actions`);
-		debugLog(
-			`handleBulkEvent treeActions: ${JSON.stringify(treeActions.map((a) => ({ actionType: a.actionType, targetLocator: a.targetLocator })))}`,
-		);
-
 		if (treeActions.length === 0) {
-			debugLog("handleBulkEvent: No tree actions!");
 			return;
 		}
 
@@ -391,9 +370,7 @@ export class Librarian {
 		actions: TreeAction[],
 		bulkEvent: BulkVaultEvent | null,
 	): Promise<void> {
-		debugLog(`processActions ENTRY: ${actions.length} actions`);
 		if (!this.healer) {
-			debugLog("processActions: No healer!");
 			return;
 		}
 
@@ -401,14 +378,7 @@ export class Librarian {
 		const allCodexImpacts: CodexImpact[] = [];
 
 		for (const action of actions) {
-			debugLog(`processActions: Processing action ${action.actionType}`);
 			const result = this.healer.getHealingActionsFor(action);
-			debugLog(
-				`processActions: Got ${result.healingActions.length} healing actions`,
-			);
-			debugLog(
-				`processActions healingActions: ${JSON.stringify(result.healingActions.map((h) => ({ kind: h.kind })))}`,
-			);
 			allHealingActions.push(...result.healingActions);
 			allCodexImpacts.push(result.codexImpact);
 		}
@@ -445,19 +415,8 @@ export class Librarian {
 		this._debugLastHealingActions = allHealingActions;
 		this._debugLastVaultActions = allVaultActions;
 
-		debugLog(
-			`processActions: ${allVaultActions.length} vault actions to dispatch`,
-		);
-		debugLog(
-			`processActions vaultActions: ${JSON.stringify(allVaultActions.map((v) => ({ kind: v.kind })))}`,
-		);
-
 		if (allVaultActions.length > 0) {
-			debugLog("processActions: Dispatching vault actions...");
 			await this.vaultActionManager.dispatch(allVaultActions);
-			debugLog("processActions: Dispatch complete");
-		} else {
-			debugLog("processActions: No vault actions to dispatch");
 		}
 	}
 

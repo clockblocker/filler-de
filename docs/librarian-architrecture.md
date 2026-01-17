@@ -55,6 +55,7 @@ When VaultActionManager dispatches actions, Obsidian emits corresponding events.
 - All action types track their target paths
 - Matched events are filtered; path is then removed from tracker
 - TTL: 5 seconds (cleanup stale registrations)
+- **Registration timing**: All paths are registered upfront before any action executes. This prevents later actions (e.g., `ProcessScrollBacklink`) from re-registering paths that were already popped by earlier actions (e.g., `RenameMdFile`), which would incorrectly filter user events.
 
 **Prefix tracking** (prefix match, does NOT pop):
 - Only certain folder operations track prefixes

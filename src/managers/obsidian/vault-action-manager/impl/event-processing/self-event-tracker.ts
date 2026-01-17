@@ -39,9 +39,6 @@ export class SelfEventTracker {
 			// Determine which file path should be queryable (if any)
 			const filePathToVerify = this.getFilePathToVerify(action, paths);
 
-			// Log registered paths for debugging
-			console.log(`[SELF-EVENT-TRACKER-DEBUG] register action kind=${action.kind}, paths=${JSON.stringify(paths)}`);
-
 			for (const path of paths) {
 				const normalized = this.normalizePath(path);
 				const isFilePath =
@@ -59,7 +56,6 @@ export class SelfEventTracker {
 
 		// Exact match (pop-on-match)
 		if (this.tracked.has(normalized)) {
-			console.log(`[SELF-EVENT-TRACKER-DEBUG] shouldIgnore EXACT MATCH: ${normalized}, popping`);
 			this.untrackPath(normalized);
 			this.checkAllRegistered();
 			return true;
@@ -68,12 +64,10 @@ export class SelfEventTracker {
 		// Prefix match (do NOT pop; allow many descendants)
 		for (const prefix of this.trackedPrefixes.keys()) {
 			if (normalized === prefix || normalized.startsWith(`${prefix}/`)) {
-				console.log(`[SELF-EVENT-TRACKER-DEBUG] shouldIgnore PREFIX MATCH: ${normalized} matches prefix ${prefix}`);
 				return true;
 			}
 		}
 
-		console.log(`[SELF-EVENT-TRACKER-DEBUG] shouldIgnore NO MATCH: ${normalized}, currentTracked=${JSON.stringify([...this.tracked.keys()])}`);
 		return false;
 	}
 

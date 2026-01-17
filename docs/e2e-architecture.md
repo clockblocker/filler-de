@@ -109,11 +109,6 @@ Short message → test output; details → log file
 
 ## Known Issues
 
-### Codex Not Updated After File Rename
-- **Location**: `003-create-and-rename-a-file`
-- User renames suffixed file → parent codex still references old name
-- Status: documented, test reproduces it
-
 ### New Files with Suffix Not Indexed
 - Files created with correct suffix directly bypass codex registration
 - Only healing-processed files added to parent codex

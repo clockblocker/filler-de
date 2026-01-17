@@ -1,4 +1,3 @@
-import { logger } from "../../../../utils/logger";
 import type { Codecs } from "../../codecs";
 import type { SegmentIdOf } from "../../codecs/segment-id/types";
 import type {
@@ -92,11 +91,6 @@ export class Tree {
 		const segmentId = makeSegmentId(node);
 		parentSection.children[segmentId] = node;
 
-		// Diagnostic logging for bug investigation
-		logger.info(
-			`[Tree.applyCreate] stored node: segmentId=${segmentId}, nodeName=${node.nodeName}, locatorSegmentId=${targetLocator.segmentId}`,
-		);
-
 		return node;
 	}
 
@@ -175,24 +169,10 @@ export class Tree {
 			targetLocator.segmentIdChainToParent,
 		);
 		if (!parentSection) {
-			logger.info(
-				`[Tree.applyRename] parentSection not found for chain: ${JSON.stringify(targetLocator.segmentIdChainToParent)}`,
-			);
 			return null;
 		}
 
 		const node = parentSection.children[targetLocator.segmentId];
-
-		// Diagnostic logging for bug investigation
-		logger.info(
-			`[Tree.applyRename] lookup: ${JSON.stringify({
-				childrenKeys: Object.keys(parentSection.children),
-				found: !!node,
-				newNodeName,
-				targetSegmentId: targetLocator.segmentId,
-			})}`,
-		);
-
 		if (!node) return null;
 
 		// Remove old, insert with new name
@@ -200,10 +180,6 @@ export class Tree {
 		node.nodeName = newNodeName;
 		const newSegmentId = makeSegmentId(node);
 		parentSection.children[newSegmentId] = node;
-
-		logger.info(
-			`[Tree.applyRename] success: oldSegmentId=${targetLocator.segmentId} -> newSegmentId=${newSegmentId}, nodeName=${newNodeName}`,
-		);
 
 		return node;
 	}

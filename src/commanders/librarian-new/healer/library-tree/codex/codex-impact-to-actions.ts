@@ -258,29 +258,10 @@ export function codexImpactToIncrementalRecreations(
 ): CodexAction[] {
 	const actions: CodexAction[] = [];
 
-	// Diagnostic logging for bug investigation
-	logger.info(
-		`[codexImpactToIncrementalRecreations] impactedChains: ${JSON.stringify([...impact.impactedChains])}`,
-	);
-
 	// 1. Convert impactedChains Set to actual chains and process only those
 	for (const chainKey of impact.impactedChains) {
 		const chain = chainKey.split("/") as SectionNodeSegmentId[];
 		const section = findSectionByChain(tree, chain);
-
-		// Diagnostic logging for bug investigation
-		logger.info(
-			`[codexImpactToIncrementalRecreations] chain lookup: ${JSON.stringify({
-				chainKey,
-				found: !!section,
-				childrenKeys: section
-					? Object.keys(section.children)
-					: "N/A",
-				childNodeNames: section
-					? Object.values(section.children).map((c) => c.nodeName)
-					: "N/A",
-			})}`,
-		);
 
 		if (!section) continue;
 

@@ -97,9 +97,9 @@ export class Dispatcher {
 	 */
 	getDebugState(): DispatcherDebugState {
 		return {
+			allSortedActions: this._debugAllSortedActions,
 			batchCounter: this._debugBatchCounter,
 			executionTrace: this._debugExecutionTrace,
-			allSortedActions: this._debugAllSortedActions,
 			lastErrors: this._debugLastErrors,
 		};
 	}
@@ -130,6 +130,13 @@ export class Dispatcher {
 		this._debugLastErrors = [];
 		// Don't clear trace - accumulate across batches
 
+		// Register ALL actions upfront before any execution.
+		// This ensures that paths from later actions (e.g., ProcessScrollBacklink)
+		// don't re-register paths that were already popped by earlier actions
+		// (e.g., RenameMdFile). Without this, user renames between healing rename
+		// and backlink processing would be incorrectly filtered.
+		this.selfEventTracker.register(sorted);
+
 		for (const [i, action] of sorted.entries()) {
 			// Get path info for logging
 			const actionPath =
@@ -141,9 +148,6 @@ export class Dispatcher {
 							(action.payload as { splitPath: AnySplitPath })
 								.splitPath,
 						);
-
-			// Arm self-event tracking JUST before this action executes
-			this.selfEventTracker.register([action]);
 
 			try {
 				const result = await this.executor.execute(action);
