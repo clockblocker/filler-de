@@ -4,38 +4,6 @@
 
 Tests Librarian healing behavior in real Obsidian instances. Validates file operations → healing → vault state invariants.
 
-## Directory Structure
-
-```
-tests/obsidian-e2e/
-├── librarian/
-│   ├── librarian-suit.e2e.ts       # Main test suite
-│   └── chains/0-chain/             # Sequential mutation chain
-│       ├── 000-init/               # Initial healing
-│       ├── 001-create-more-files/
-│       ├── 002-rename-files/
-│       └── 003-create-and-rename-a-file/
-│           ├── index.ts            # Exports
-│           ├── mutation.ts         # User actions
-│           ├── assertions.ts       # Test checks
-│           └── vault-expectations.ts
-├── vaults/librarian-chain-0/       # Test vault fixture
-├── support/
-│   ├── config.ts                   # Timeouts, polling defaults
-│   ├── api/                        # Public test APIs
-│   │   ├── vault-ops.ts            # File/folder ops via Obsidian
-│   │   ├── files.ts                # Existence assertions (polling)
-│   │   ├── idle.ts                 # Plugin sync waits
-│   │   └── debug.ts                # Diagnostic info gathering
-│   ├── internal/
-│   │   ├── poll.ts                 # Polling engine
-│   │   ├── obsidian.ts             # Direct Obsidian bindings
-│   │   ├── errors.ts               # Custom error classes
-│   │   └── format.ts               # Error formatting
-│   └── reporters/tldr-reporter.cjs # Minimal ✓/✖ reporter
-└── helpers/                        # Deprecated shims
-```
-
 ## Pipeline
 
 ```
@@ -82,6 +50,7 @@ VAULT_EXPECTATIONS_NNN = {
 **files.ts** - Polling assertions
 - `expectFilesToExist(paths)` - throws with diagnostics on timeout
 - `expectPostHealingFiles(expectations)` - validates files + content
+- `expectExactCodexes(expected)` - lists all `__-*.md` under Library, fails if orphans found
 
 **idle.ts** - Plugin synchronization
 - `waitForPluginInitialized(id)` - polls `plugin.initialized`

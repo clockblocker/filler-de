@@ -5,6 +5,7 @@
 
 import { getParsedUserSettings } from "../../../../../global-state/global-state";
 import { LINE_BREAK, SPACE_F, TAB } from "../../../../../types/literals";
+import { logger } from "../../../../../utils/logger";
 import type { Codecs } from "../../../codecs";
 import type { SectionNodeSegmentId } from "../../../codecs/segment-id";
 import { TreeNodeKind } from "../tree-node/types/atoms";
@@ -48,6 +49,18 @@ export function generateChildrenList(
 		}
 		pathParts.push(parseResult.value.coreName);
 	}
+
+	// Diagnostic logging for bug investigation
+	const childKeys = Object.keys(section.children);
+	const childNames = Object.values(section.children).map((c) => c.nodeName);
+	logger.info(
+		`[generateChildrenList] section: ${JSON.stringify({
+			sectionName: section.nodeName,
+			pathParts,
+			childKeys,
+			childNames,
+		})}`,
+	);
 
 	// Generate items for children
 	const lines = generateItems(

@@ -117,6 +117,15 @@ Library-scoped healing actions converted to vault-scoped actions for dispatch.
 - **RenameMdFile / RenameFile**: file path/basename correction
 - **RenameFolder**: folder move when renamed with suffix (NameKing)
 - **CreateFolder**: implicit folder creation for healing destinations
+- **DeleteMdFile**: codex cleanup (orphaned codexes with wrong suffix)
+
+### Dispatch Ordering Note
+
+All healing actions are batched into a single `VaultActionManager.dispatch()` call. The dispatcher applies topological sort, but some orderings matter:
+
+**Codex deletions for Move actions**: When a folder is moved (e.g., `L2 → L3-L2` interpreted as move to `L2/L3/`), old codexes must be deleted at their **intermediate location** (where Obsidian moved them), not the final canonical location (where the healing RenameFolder will put them). This is because DeleteMdFile executes before RenameFolder in the batch.
+
+See `src/commanders/librarian-new/healer/library-tree/codex/architecture.md` for details on the `observedPathParts` mechanism.
 
 ## Canonicalization: Move-by-Name
 

@@ -39,6 +39,30 @@ Codex processing uses a **two-phase approach**:
   - Moved codexes with old suffix at new location (`impact.renamed` - when Obsidian moves folders, codex files move with them but keep old suffix)
   - Descendants of renamed sections (with old suffix at new location)
 
+**⚠️ Critical: Move vs Rename Timing**
+
+For `impact.renamed` entries, the delete path depends on whether it's a Move or Rename:
+
+| Action Type | `observedPathParts` | Delete Target |
+|-------------|---------------------|---------------|
+| **Move** | Set (intermediate location) | `observedPathParts` + old suffix |
+| **Rename** | Undefined | `newChain` location + old suffix |
+
+**Why the difference?**
+
+For **Rename** actions, Obsidian's rename IS the final state. The codex file stays in place with old suffix.
+
+For **Move** actions (folder renames interpreted as moves), there's an **intermediate state**:
+1. User renames folder `L2` → `L3-L2` (interpreted as: move L2 under new parent L2/L3)
+2. Obsidian immediately moves folder to `Library/L1/L3-L2/` (intermediate)
+3. Healer plans: RenameFolder from `L3-L2/` to `L2/L3/` (canonical destination)
+4. **Problem**: Delete actions execute BEFORE folder renames in dispatch batch
+
+If delete targets `L2/L3/__-L2-L1.md` (post-healing-folder-move), the file isn't there yet!
+The codex is still at `L3-L2/__-L2-L1.md` (intermediate location).
+
+**Solution**: `computeMoveImpact` captures `observedSplitPath` (intermediate location) and `codexImpactToDeletions` uses it for Move actions via `buildIntermediateCodexPath()`.
+
 **Phase 2: Recreations** (`codexImpactToRecreations`)
 - Uses **full regeneration approach** (similar to init):
   1. Collects ALL section chains from current tree state
@@ -56,9 +80,19 @@ Computed from `TreeAction`, captures what changed:
 | Field | When Populated |
 |-------|----------------|
 | `contentChanged` | Children added/removed/renamed, status changed |
-| `renamed` | Section renamed/moved |
+| `renamed` | Section renamed/moved (includes `observedPathParts` for Moves) |
 | `deleted` | Section deleted |
 | `descendantsChanged` | Status change on section (propagates down) |
+| `impactedChains` | All chains needing updates (for incremental processing) |
+
+**`renamed` entry structure:**
+```typescript
+{
+  oldChain: SectionNodeSegmentId[];   // Where section WAS in tree
+  newChain: SectionNodeSegmentId[];   // Where section IS NOW in tree
+  observedPathParts?: string[];       // Move only: intermediate vault location
+}
+```
 
 Impact always includes ancestors (status aggregates upward).
 
@@ -110,6 +144,8 @@ Impact always includes ancestors (status aggregates upward).
 | `codexImpactToDeletions` | CodexImpact → HealingAction[] (DeleteMdFile) |
 | `codexImpactToRecreations` | CodexImpact → CodexAction[] (UpsertCodex + WriteScrollStatus) |
 | `codexActionsToVaultActions` | CodexAction[] → VaultAction[] |
+| `buildIntermediateCodexPath` | Build delete path at intermediate (observed) location |
+| `buildMovedCodexPath` | Build delete path at final (newChain) location |
 | `codexImpactToActions` | (deprecated) CodexImpact → CodexAction[] |
 
 ## Status Aggregation

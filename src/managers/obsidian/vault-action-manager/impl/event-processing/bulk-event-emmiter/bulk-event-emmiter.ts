@@ -118,10 +118,15 @@ export class BulkEventEmmiter {
 	}
 
 	private onRename(tAbstractFile: TAbstractFile, oldPath: string): void {
+		// Log ALL rename events for debugging
+		console.log(`[BULK-EVENT-DEBUG] onRename: ${oldPath} → ${tAbstractFile.path}`);
+
 		const newPathIgnored = this.selfEventTracker.shouldIgnore(
 			tAbstractFile.path,
 		);
 		const oldPathIgnored = this.selfEventTracker.shouldIgnore(oldPath);
+
+		console.log(`[BULK-EVENT-DEBUG] shouldIgnore results: newPath=${newPathIgnored}, oldPath=${oldPathIgnored}`);
 
 		if (newPathIgnored || oldPathIgnored) {
 			this._debugAllRawEvents.push({
@@ -129,8 +134,11 @@ export class BulkEventEmmiter {
 				ignored: true,
 				reason: `newPath: ${newPathIgnored}, oldPath: ${oldPathIgnored}`,
 			});
+			console.log(`[BULK-EVENT-DEBUG] Event FILTERED`);
 			return;
 		}
+
+		console.log(`[BULK-EVENT-DEBUG] Event NOT FILTERED - will be processed`);
 
 		const res = tryMakeVaultEventForFileRenamed(tAbstractFile, oldPath);
 		if (res.isErr()) {

@@ -91,6 +91,12 @@ export class Tree {
 		const node = this.makeLeafNode(action);
 		const segmentId = makeSegmentId(node);
 		parentSection.children[segmentId] = node;
+
+		// Diagnostic logging for bug investigation
+		logger.info(
+			`[Tree.applyCreate] stored node: segmentId=${segmentId}, nodeName=${node.nodeName}, locatorSegmentId=${targetLocator.segmentId}`,
+		);
+
 		return node;
 	}
 
@@ -169,7 +175,7 @@ export class Tree {
 			targetLocator.segmentIdChainToParent,
 		);
 		if (!parentSection) {
-			logger.debug(
+			logger.info(
 				`[Tree.applyRename] parentSection not found for chain: ${JSON.stringify(targetLocator.segmentIdChainToParent)}`,
 			);
 			return null;
@@ -178,7 +184,7 @@ export class Tree {
 		const node = parentSection.children[targetLocator.segmentId];
 
 		// Diagnostic logging for bug investigation
-		logger.debug(
+		logger.info(
 			`[Tree.applyRename] lookup: ${JSON.stringify({
 				childrenKeys: Object.keys(parentSection.children),
 				found: !!node,
@@ -195,7 +201,7 @@ export class Tree {
 		const newSegmentId = makeSegmentId(node);
 		parentSection.children[newSegmentId] = node;
 
-		logger.debug(
+		logger.info(
 			`[Tree.applyRename] success: oldSegmentId=${targetLocator.segmentId} -> newSegmentId=${newSegmentId}, nodeName=${newNodeName}`,
 		);
 
