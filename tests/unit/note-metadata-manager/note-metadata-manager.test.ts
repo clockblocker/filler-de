@@ -102,10 +102,10 @@ not json
 			const transform = upsertMetadata({ status: "Done" });
 			const result = transform(content);
 
-			// Should have \n\n before metadata
-			expect(result).toMatch(/Content\n\n<section/);
-			// Should end with \n\n
-			expect(result).toMatch(/<\/section>\n\n$/);
+			// Should have 20 newlines before metadata to push it below visible area
+			expect(result).toMatch(/Content\n{20}<section/);
+			// Should end with single \n
+			expect(result).toMatch(/<\/section>\n$/);
 		});
 	});
 

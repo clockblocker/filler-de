@@ -53,8 +53,9 @@ export function upsertMetadata(metadata: Metadata): Transform {
 		// Remove existing metadata section
 		const contentWithoutMeta = content.replace(PATTERN, "").trimEnd();
 
-		// Add metadata at end with proper padding
+		// Add metadata at end with padding to push it below visible area
 		const metaSection = formatMetadata(metadata);
-		return `${contentWithoutMeta}\n\n${metaSection}\n\n`;
+		const PADDING = "\n".repeat(20);
+		return `${contentWithoutMeta}${PADDING}${metaSection}\n`;
 	};
 }

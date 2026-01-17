@@ -146,5 +146,5 @@ body.hide-status-bar .mod-root .workspace-split {
 }
 
 #textfresser_meta_keep_me_invisible {
-	display: none;
+    opacity: 0;
 }
