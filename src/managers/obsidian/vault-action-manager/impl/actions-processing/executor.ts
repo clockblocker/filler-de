@@ -130,6 +130,15 @@ export class Executor {
 					? this.opened.saveSelection().unwrapOr(null)
 					: null;
 
+				console.log(
+					`[EXECUTOR-DEBUG ${new Date().toISOString()}] RenameFile selection`,
+					JSON.stringify({
+						fromPath,
+						isActive,
+						savedSelection,
+					}),
+				);
+
 				const result = await this.tfileHelper.renameFile({
 					from: action.payload.from,
 					to: action.payload.to,
@@ -139,7 +148,14 @@ export class Executor {
 				if (result.isOk() && savedSelection) {
 					// Small delay for Obsidian to update view.file reference
 					await new Promise((resolve) => setTimeout(resolve, 50));
-					this.opened.restoreSelection(savedSelection);
+					const restoreResult = this.opened.restoreSelection(savedSelection);
+					console.log(
+						`[EXECUTOR-DEBUG ${new Date().toISOString()}] RenameFile restore`,
+						JSON.stringify({
+							success: restoreResult.isOk(),
+							error: restoreResult.isErr() ? restoreResult.error : null,
+						}),
+					);
 				}
 
 				if (result.isErr()) {

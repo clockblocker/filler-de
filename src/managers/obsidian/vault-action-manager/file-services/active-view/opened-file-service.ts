@@ -105,7 +105,7 @@ export class OpenedFileService {
 	}
 
 	saveSelection(): Result<SavedSelection | null, string> {
-		const editorResult = this.getEditor();
+		const editorResult = this.getEditorAnyMode();
 		if (editorResult.isErr()) return ok(null); // No active editor
 
 		const { editor } = editorResult.value;
@@ -117,12 +117,23 @@ export class OpenedFileService {
 	}
 
 	restoreSelection(saved: SavedSelection): Result<void, string> {
-		const editorResult = this.getEditor();
+		const editorResult = this.getEditorAnyMode();
 		if (editorResult.isErr()) return err(editorResult.error);
 
 		const { editor } = editorResult.value;
 		editor.setSelection(saved.anchor, saved.head);
 		return ok(undefined);
+	}
+
+	private getEditorAnyMode(): Result<
+		{ editor: Editor; view: MarkdownView },
+		string
+	> {
+		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+		if (!view?.file) {
+			return err(errorGetEditor());
+		}
+		return ok({ editor: view.editor, view });
 	}
 
 	private getEditor(): Result<

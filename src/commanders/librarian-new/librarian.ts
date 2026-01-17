@@ -1,4 +1,3 @@
-import { z } from "zod";
 import { getParsedUserSettings } from "../../global-state/global-state";
 
 // Debug logging using console (visible in Obsidian dev tools)
@@ -16,41 +15,25 @@ import type {
 	VaultActionManager,
 	VaultAction,
 } from "../../managers/obsidian/vault-action-manager";
-import type { SplitPathWithReader } from "../../managers/obsidian/vault-action-manager/types/split-path";
-import { SplitPathKind } from "../../managers/obsidian/vault-action-manager/types/split-path";
-import { readMetadata } from "../../managers/pure/note-metadata-manager";
 import { decrementPending, incrementPending } from "../../utils/idle-tracker";
 import { logger } from "../../utils/logger";
 import {
-	type AnySplitPathInsideLibrary,
 	type CodecRules,
 	type Codecs,
 	makeCodecRulesFromSettings,
 	makeCodecs,
 } from "./codecs";
-import { healingActionsToVaultActions } from "./codecs/healing-to-vault-action";
 import type { ScrollNodeSegmentId } from "./codecs/segment-id/types/segment-id";
 import { Healer } from "./healer/healer";
+import type { CodexImpact } from "./healer/library-tree/codex";
 import {
-	type CodexImpact,
-	codexActionsToVaultActions,
-	codexImpactToDeletions,
-	codexImpactToIncrementalRecreations,
-	codexImpactToRecreations,
 	extractInvalidCodexesFromBulk,
 	parseCodexClickLineContent,
 } from "./healer/library-tree/codex";
 import { isCodexSplitPath } from "./healer/library-tree/codex/helpers";
-import { mergeCodexImpacts } from "./healer/library-tree/codex/merge-codex-impacts";
 import { Tree } from "./healer/library-tree/tree";
 import { buildTreeActions } from "./healer/library-tree/tree-action/bulk-vault-action-adapter";
-import { tryParseAsInsideLibrarySplitPath } from "./healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
-import { inferCreatePolicy } from "./healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/infer-create";
-import type {
-	CreateTreeLeafAction,
-	TreeAction,
-} from "./healer/library-tree/tree-action/types/tree-action";
-import { tryCanonicalizeSplitPathToDestination } from "./healer/library-tree/tree-action/utils/canonical-naming/canonicalize-to-destination";
+import type { TreeAction } from "./healer/library-tree/tree-action/types/tree-action";
 import {
 	TreeNodeKind,
 	TreeNodeStatus,
@@ -58,12 +41,12 @@ import {
 import type { HealingAction } from "./healer/library-tree/types/healing-action";
 import { extractScrollStatusActions } from "./healer/library-tree/utils/extract-scroll-status-actions";
 import { findInvalidCodexFiles } from "./healer/library-tree/utils/find-invalid-codex-files";
-
-// ─── Scroll Metadata Schema ───
-
-const ScrollMetadataSchema = z.object({
-	status: z.enum(["Done", "NotStarted"]),
-});
+import {
+	assembleVaultActions,
+	buildInitialCreateActions,
+	processCodexImpacts,
+	processCodexImpactsForInit,
+} from "./librarian-init";
 
 // ─── Queue ───
 
@@ -137,8 +120,11 @@ export class Librarian {
 			const allFiles = allFilesResult.value;
 
 			// Build Create actions for each file
-			const createActions =
-				await this.buildInitialCreateActions(allFiles);
+			const createActions = await buildInitialCreateActions(
+				allFiles,
+				this.codecs,
+				this.rules,
+			);
 
 			// Apply all create actions and collect healing + codex impacts
 			const allHealingActions: HealingAction[] = [];
@@ -166,31 +152,22 @@ export class Librarian {
 			// Subscribe to click events
 			this.subscribeToClickEvents();
 
-			// Convert codex deletions to healing actions
-			const mergedImpact = mergeCodexImpacts(allCodexImpacts);
-			const codexDeletions = codexImpactToDeletions(
-				mergedImpact,
-				this.healer,
-				this.codecs,
-			);
-			allHealingActions.push(...codexDeletions);
-
-			// Generate codex recreations
-			const codexRecreations = codexImpactToRecreations(
-				mergedImpact,
-				this.healer,
-				this.codecs,
-			);
+			// Process codex impacts: merge, compute deletions and recreations
+			const { deletionHealingActions, codexRecreations } =
+				processCodexImpactsForInit(
+					allCodexImpacts,
+					this.healer,
+					this.codecs,
+				);
+			allHealingActions.push(...deletionHealingActions);
 
 			// Combine all actions and dispatch once
-			const allVaultActions = [
-				...healingActionsToVaultActions(allHealingActions, this.rules),
-				...codexActionsToVaultActions(
-					codexRecreations,
-					this.rules,
-					this.codecs,
-				),
-			];
+			const allVaultActions = assembleVaultActions(
+				allHealingActions,
+				codexRecreations,
+				this.rules,
+				this.codecs,
+			);
 
 			if (allVaultActions.length > 0) {
 				await this.vaultActionManager.dispatch(allVaultActions);
@@ -202,94 +179,6 @@ export class Librarian {
 		} finally {
 			decrementPending();
 		}
-	}
-
-	/**
-	 * Build CreateTreeLeafAction for each file in the library.
-	 * Applies policy (NameKing for root, PathKing for nested) to determine canonical location.
-	 * Reads status from md file metadata.
-	 */
-	private async buildInitialCreateActions(
-		files: SplitPathWithReader[],
-	): Promise<CreateTreeLeafAction[]> {
-		const actions: CreateTreeLeafAction[] = [];
-
-		for (const file of files) {
-			// Skip codex files (basename starts with __)
-			if (isCodexSplitPath(file, this.codecs)) {
-				continue;
-			}
-
-			// Convert to library-scoped path
-			const libraryScopedResult = tryParseAsInsideLibrarySplitPath(
-				file,
-				this.rules,
-			);
-			if (libraryScopedResult.isErr()) continue;
-			const observedPath = libraryScopedResult.value;
-
-			// Apply policy to get canonical destination
-			// NameKing for root-level files, PathKing for nested
-			const policy = inferCreatePolicy(observedPath);
-			const canonicalResult = tryCanonicalizeSplitPathToDestination(
-				observedPath,
-				policy,
-				undefined, // no rename intent for create
-				this.codecs,
-			);
-			if (canonicalResult.isErr()) {
-				continue;
-			}
-			const canonicalPath = canonicalResult.value;
-
-			// Build locator from canonical path
-			const locatorResult =
-				this.codecs.locator.canonicalSplitPathInsideLibraryToLocator(
-					canonicalPath,
-				);
-			if (locatorResult.isErr()) continue;
-			const locator = locatorResult.value;
-
-			// Read status for md files
-			let status: TreeNodeStatus = TreeNodeStatus.NotStarted;
-			if (file.kind === SplitPathKind.MdFile && "read" in file) {
-				const contentResult = await file.read();
-				if (contentResult.isOk()) {
-					const meta = readMetadata(
-						contentResult.value,
-						ScrollMetadataSchema,
-					);
-					if (meta?.status === "Done") {
-						status = TreeNodeStatus.Done;
-					}
-				}
-			}
-
-			if (locator.targetKind === TreeNodeKind.Scroll) {
-				actions.push({
-					actionType: "Create",
-					initialStatus: status,
-					observedSplitPath:
-						observedPath as AnySplitPathInsideLibrary & {
-							kind: typeof SplitPathKind.MdFile;
-							extension: "md";
-						},
-					targetLocator: locator,
-				});
-			} else if (locator.targetKind === TreeNodeKind.File) {
-				actions.push({
-					actionType: "Create",
-					observedSplitPath:
-						observedPath as AnySplitPathInsideLibrary & {
-							kind: typeof SplitPathKind.File;
-							extension: string;
-						},
-					targetLocator: locator,
-				});
-			}
-		}
-
-		return actions;
 	}
 
 	/**
@@ -533,14 +422,13 @@ export class Librarian {
 			allHealingActions.push(...invalidCodexDeletions);
 		}
 
-		// Convert codex deletions to healing actions
-		const mergedImpact = mergeCodexImpacts(allCodexImpacts);
-		const codexDeletions = codexImpactToDeletions(
-			mergedImpact,
+		// Process codex impacts: merge, compute deletions and recreations
+		const { deletionHealingActions, codexRecreations } = processCodexImpacts(
+			allCodexImpacts,
 			this.healer,
 			this.codecs,
 		);
-		allHealingActions.push(...codexDeletions);
+		allHealingActions.push(...deletionHealingActions);
 
 		// Extract scroll status changes from actions
 		const scrollStatusActions = extractScrollStatusActions(
@@ -548,22 +436,13 @@ export class Librarian {
 			this.codecs,
 		);
 
-		// Generate codex recreations (incremental - only impacted sections)
-		const codexRecreations = codexImpactToIncrementalRecreations(
-			mergedImpact,
-			this.healer,
+		// Combine all actions and dispatch once
+		const allVaultActions = assembleVaultActions(
+			allHealingActions,
+			[...codexRecreations, ...scrollStatusActions],
+			this.rules,
 			this.codecs,
 		);
-
-		// Combine all actions and dispatch once
-		const allVaultActions = [
-			...healingActionsToVaultActions(allHealingActions, this.rules),
-			...codexActionsToVaultActions(
-				[...codexRecreations, ...scrollStatusActions],
-				this.rules,
-				this.codecs,
-			),
-		];
 
 		// Store for debugging
 		this._debugLastHealingActions = allHealingActions;
