@@ -121,21 +121,16 @@ export class Executor {
 					action.payload.to,
 				);
 
-				// Save selection if renaming active file
-				const isActive =
-					action.payload.from.kind === "MdFile"
-						? await this.checkFileActive(action.payload.from)
-						: false;
-				const savedSelection = isActive
-					? this.opened.saveSelection().unwrapOr(null)
-					: null;
+				// Save inline title selection (for newly created files being renamed)
+				const savedInlineTitleSelection = this.opened
+					.saveInlineTitleSelection()
+					.unwrapOr(null);
 
 				console.log(
 					`[EXECUTOR-DEBUG ${new Date().toISOString()}] RenameFile selection`,
 					JSON.stringify({
 						fromPath,
-						isActive,
-						savedSelection,
+						savedInlineTitleSelection,
 					}),
 				);
 
@@ -144,16 +139,21 @@ export class Executor {
 					to: action.payload.to,
 				});
 
-				// Restore selection after rename
-				if (result.isOk() && savedSelection) {
-					// Small delay for Obsidian to update view.file reference
+				// Restore inline title selection after rename
+				if (result.isOk() && savedInlineTitleSelection) {
+					// Small delay for Obsidian to update view after rename
 					await new Promise((resolve) => setTimeout(resolve, 50));
-					const restoreResult = this.opened.restoreSelection(savedSelection);
+					const restoreResult =
+						this.opened.restoreInlineTitleSelection(
+							savedInlineTitleSelection,
+						);
 					console.log(
 						`[EXECUTOR-DEBUG ${new Date().toISOString()}] RenameFile restore`,
 						JSON.stringify({
 							success: restoreResult.isOk(),
-							error: restoreResult.isErr() ? restoreResult.error : null,
+							error: restoreResult.isErr()
+								? restoreResult.error
+								: null,
 						}),
 					);
 				}

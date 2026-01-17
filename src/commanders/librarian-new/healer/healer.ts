@@ -33,7 +33,10 @@ import type {
 } from "./library-tree/tree-action/types/tree-action";
 import { makeNodeSegmentId } from "./library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import { TreeNodeKind } from "./library-tree/tree-node/types/atoms";
-import type { SectionNode, TreeNode } from "./library-tree/tree-node/types/tree-node";
+import type {
+	SectionNode,
+	TreeNode,
+} from "./library-tree/tree-node/types/tree-node";
 import type { HealingAction } from "./library-tree/types/healing-action";
 import { parseOldSectionPath } from "./utils/old-section-path";
 import { buildCanonicalLeafSplitPath } from "./library-tree/utils/split-path-utils";
@@ -264,7 +267,8 @@ export class Healer implements TreeAccessor {
 				newParentChain,
 				newNodeName,
 				oldSectionPath: oldSectionPathResult.value,
-				observedSplitPath: observedSplitPath as SplitPathToFolderInsideLibrary,
+				observedSplitPath:
+					observedSplitPath as SplitPathToFolderInsideLibrary,
 				codecs: this.codecs,
 			});
 		}

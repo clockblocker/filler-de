@@ -423,11 +423,8 @@ export class Librarian {
 		}
 
 		// Process codex impacts: merge, compute deletions and recreations
-		const { deletionHealingActions, codexRecreations } = processCodexImpacts(
-			allCodexImpacts,
-			this.healer,
-			this.codecs,
-		);
+		const { deletionHealingActions, codexRecreations } =
+			processCodexImpacts(allCodexImpacts, this.healer, this.codecs);
 		allHealingActions.push(...deletionHealingActions);
 
 		// Extract scroll status changes from actions

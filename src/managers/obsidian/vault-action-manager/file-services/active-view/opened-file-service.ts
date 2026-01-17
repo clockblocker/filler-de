@@ -31,6 +31,12 @@ export type SavedSelection = {
 	head: EditorPosition;
 };
 
+export type SavedInlineTitleSelection = {
+	start: number;
+	end: number;
+	text: string;
+};
+
 export class OpenedFileService {
 	private lastOpenedFiles: SplitPathToMdFile[] = [];
 	private reader: OpenedFileReader;
@@ -123,6 +129,90 @@ export class OpenedFileService {
 		const { editor } = editorResult.value;
 		editor.setSelection(saved.anchor, saved.head);
 		return ok(undefined);
+	}
+
+	saveInlineTitleSelection(): Result<
+		SavedInlineTitleSelection | null,
+		string
+	> {
+		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+		if (!view) return ok(null);
+
+		// Find the inline title element
+		const inlineTitle = view.contentEl.querySelector(
+			".inline-title",
+		) as HTMLElement | null;
+		if (!inlineTitle) return ok(null);
+
+		// Check if inline title has focus
+		if (document.activeElement !== inlineTitle) return ok(null);
+
+		// Get selection using DOM Selection API
+		const selection = window.getSelection();
+		if (!selection || selection.rangeCount === 0) return ok(null);
+
+		const range = selection.getRangeAt(0);
+		// Verify selection is within inline title
+		if (!inlineTitle.contains(range.commonAncestorContainer))
+			return ok(null);
+
+		const text = inlineTitle.textContent ?? "";
+
+		// Handle case where entire element is selected (node indices vs char offsets)
+		// When selecting all, browser may use element as container with offsets 0-1
+		let start = range.startOffset;
+		let end = range.endOffset;
+		if (
+			range.startContainer === inlineTitle ||
+			range.endContainer === inlineTitle
+		) {
+			// Selection is on element level, convert to character offsets
+			start = 0;
+			end = text.length;
+		}
+
+		return ok({
+			end,
+			start,
+			text,
+		});
+	}
+
+	restoreInlineTitleSelection(
+		saved: SavedInlineTitleSelection,
+	): Result<void, string> {
+		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+		if (!view) return err("No active view");
+
+		const inlineTitle = view.contentEl.querySelector(
+			".inline-title",
+		) as HTMLElement | null;
+		if (!inlineTitle) return err("No inline title element");
+
+		// Focus the inline title
+		inlineTitle.focus();
+
+		// Restore selection
+		const selection = window.getSelection();
+		if (!selection) return err("No selection API");
+
+		const textNode = inlineTitle.firstChild;
+		if (!textNode) return err("No text node in inline title");
+
+		try {
+			const range = document.createRange();
+			const textLength = textNode.textContent?.length ?? 0;
+			// Clamp offsets to current text length
+			const start = Math.min(saved.start, textLength);
+			const end = Math.min(saved.end, textLength);
+			range.setStart(textNode, start);
+			range.setEnd(textNode, end);
+			selection.removeAllRanges();
+			selection.addRange(range);
+			return ok(undefined);
+		} catch (e) {
+			return err(e instanceof Error ? e.message : String(e));
+		}
 	}
 
 	private getEditorAnyMode(): Result<
