@@ -17,6 +17,14 @@ import {
 	performMutation003,
 	testPostHealing003,
 } from "./chains/0-chain/003-create-and-rename-a-file";
+import {
+	performMutation004,
+	testPostHealing004,
+} from "./chains/1-chain/004-delete-file";
+import {
+	performMutation005,
+	testPostHealing005,
+} from "./chains/1-chain/005-delete-folder";
 
 const VAULT_PATH = "tests/obsidian-e2e/vaults/librarian-chain-0";
 
@@ -63,6 +71,28 @@ describe("Librarian Full Suit", () => {
 	// 003: Post create-and-rename healing - BUG: codex should update to new name
 	it("codex should reflect renamed file", async () => {
 		await testPostHealing003();
+	});
+
+	// 004: Delete file mutation
+	it("deletes file for 004", async () => {
+		await performMutation004();
+		await waitForIdle();
+	});
+
+	// 004: Post-deletion healing
+	it("codex no longer refs deleted file", async () => {
+		await testPostHealing004();
+	});
+
+	// 005: Delete folder mutation
+	it("deletes folder for 005", async () => {
+		await performMutation005();
+		await waitForIdle();
+	});
+
+	// 005: Post-deletion healing
+	it("codexes no longer ref deleted folder", async () => {
+		await testPostHealing005();
 	});
 
 	// after(async () => {

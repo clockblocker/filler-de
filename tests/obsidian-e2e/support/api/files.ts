@@ -143,14 +143,25 @@ async function waitForFileDetailed(
 export type PostHealingExpectations = {
 	codexes: readonly string[];
 	files: readonly string[];
+	/** Files that should no longer exist after healing */
+	goneFiles?: readonly string[];
 	/** Optional content checks: [path, lines that must be present][] */
 	contentChecks?: readonly [path: string, expectedLines: readonly string[]][];
+	/** Optional negative content checks: [path, lines that must NOT be present][] */
+	contentMustNotContain?: readonly [path: string, forbiddenLines: readonly string[]][];
 };
 
 /** Content check failure info */
 export type ContentCheckFailure = {
 	path: string;
 	missingLines: readonly string[];
+	actualContent: string;
+};
+
+/** Negative content check failure info */
+export type NegativeContentCheckFailure = {
+	path: string;
+	foundForbiddenLines: readonly string[];
 	actualContent: string;
 };
 
@@ -161,6 +172,11 @@ export async function expectPostHealingFiles(
 ): Promise<void> {
 	// First check all files exist
 	await expectFilesToExist([...expectations.codexes, ...expectations.files], opts);
+
+	// Check that goneFiles no longer exist
+	if (expectations.goneFiles && expectations.goneFiles.length > 0) {
+		await expectFilesToBeGone(expectations.goneFiles, opts);
+	}
 
 	// Then validate content if checks provided
 	if (expectations.contentChecks && expectations.contentChecks.length > 0) {
@@ -191,6 +207,32 @@ export async function expectPostHealingFiles(
 			throw finalizeE2EError(new E2ETestError(shortMsg, longMsg));
 		}
 	}
+
+	// Validate negative content checks (lines that must NOT be present)
+	if (expectations.contentMustNotContain && expectations.contentMustNotContain.length > 0) {
+		const negativeFailures: NegativeContentCheckFailure[] = [];
+
+		for (const [path, forbiddenLines] of expectations.contentMustNotContain) {
+			const contentResult = await readFile(path);
+			if (contentResult.isErr()) {
+				// Can't check content if file read fails, skip (file existence is checked separately)
+				continue;
+			}
+
+			const actualContent = contentResult.value;
+			const foundForbiddenLines = forbiddenLines.filter((line) => actualContent.includes(line));
+
+			if (foundForbiddenLines.length > 0) {
+				negativeFailures.push({ path, foundForbiddenLines, actualContent });
+			}
+		}
+
+		if (negativeFailures.length > 0) {
+			const shortMsg = formatNegativeContentFailuresShort(negativeFailures, opts.callerContext);
+			const longMsg = formatNegativeContentFailuresLong(negativeFailures, opts.callerContext);
+			throw finalizeE2EError(new E2ETestError(shortMsg, longMsg));
+		}
+	}
 }
 
 function formatContentFailuresShort(failures: ContentCheckFailure[], callerContext?: string): string {
@@ -208,6 +250,23 @@ function formatContentFailuresLong(failures: ContentCheckFailure[], callerContex
 		})
 		.join("\n\n---\n\n");
 	return `${prefix}Content validation failed:\n\n${details}`;
+}
+
+function formatNegativeContentFailuresShort(failures: NegativeContentCheckFailure[], callerContext?: string): string {
+	const prefix = callerContext ? `${callerContext} ` : "";
+	const paths = failures.map((f) => f.path).join(", ");
+	return `${prefix}Forbidden content found in ${failures.length} file(s): ${paths}`;
+}
+
+function formatNegativeContentFailuresLong(failures: NegativeContentCheckFailure[], callerContext?: string): string {
+	const prefix = callerContext ? `${callerContext}\n` : "";
+	const details = failures
+		.map((f) => {
+			const found = f.foundForbiddenLines.map((l) => `  - "${l}"`).join("\n");
+			return `File: ${f.path}\nFound forbidden lines:\n${found}\nActual content:\n${f.actualContent}`;
+		})
+		.join("\n\n---\n\n");
+	return `${prefix}Forbidden content validation failed:\n\n${details}`;
 }
 
 /** Internal helper: detailed per-file wait status for "gone" check */

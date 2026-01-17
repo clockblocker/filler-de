@@ -126,14 +126,6 @@ export class Executor {
 					.saveInlineTitleSelection()
 					.unwrapOr(null);
 
-				console.log(
-					`[EXECUTOR-DEBUG ${new Date().toISOString()}] RenameFile selection`,
-					JSON.stringify({
-						fromPath,
-						savedInlineTitleSelection,
-					}),
-				);
-
 				const result = await this.tfileHelper.renameFile({
 					from: action.payload.from,
 					to: action.payload.to,
@@ -143,18 +135,8 @@ export class Executor {
 				if (result.isOk() && savedInlineTitleSelection) {
 					// Small delay for Obsidian to update view after rename
 					await new Promise((resolve) => setTimeout(resolve, 50));
-					const restoreResult =
-						this.opened.restoreInlineTitleSelection(
-							savedInlineTitleSelection,
-						);
-					console.log(
-						`[EXECUTOR-DEBUG ${new Date().toISOString()}] RenameFile restore`,
-						JSON.stringify({
-							success: restoreResult.isOk(),
-							error: restoreResult.isErr()
-								? restoreResult.error
-								: null,
-						}),
+					this.opened.restoreInlineTitleSelection(
+						savedInlineTitleSelection,
 					);
 				}
 
