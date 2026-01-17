@@ -10,4 +10,6 @@ export async function testPostHealing002(): Promise<void> {
 		...HEALING_POLL_OPTIONS,
 		logFolderOnFail: "Library/Recipe",
 	});
+	// Check for orphan codexes (old codexes that should have been deleted)
+	await t.expectExactCodexes(VAULT_EXPECTATIONS_002.postHealing.codexes);
 }

@@ -6,7 +6,7 @@ import { formatMissingFilesLong, formatMissingFilesShort, formatNotGoneFilesLong
 import { obsidianCheckFolderChainAndListParent, obsidianFileExists, obsidianVaultSample } from "../internal/obsidian";
 import { poll } from "../internal/poll";
 import type { ExpectFilesGoneOptions, ExpectFilesOptions, FileWaitStatus, PollOptions } from "../internal/types";
-import { readFile } from "./vault-ops";
+import { listFilesUnder, readFile } from "./vault-ops";
 
 /** Public: wait until a file exists */
 export async function waitForFile(path: string, opts: PollOptions = {}): Promise<boolean> {
@@ -51,7 +51,7 @@ async function expectFilesToExistResult(
     const intervalMs = opts.intervalMs ?? (INTERVAL_DEFAULT_MS + (opts.intervalOffset ?? 0));
   
     const shortMsg = formatMissingFilesShort(missing, opts.callerContext);
-    const longMsg = await formatMissingFilesLong(missing, { callerContext: opts.callerContext, intervalMs, timeoutMs, logFolderOnFail: opts.logFolderOnFail });
+    const longMsg = await formatMissingFilesLong(missing, { callerContext: opts.callerContext, intervalMs, logFolderOnFail: opts.logFolderOnFail, timeoutMs });
   
     const error = finalizeE2EError(new E2ETestError(shortMsg, longMsg));
     return err(error);
@@ -186,9 +186,9 @@ export async function expectPostHealingFiles(
 			const contentResult = await readFile(path);
 			if (contentResult.isErr()) {
 				failures.push({
-					path,
-					missingLines: expectedLines,
 					actualContent: `[read error: ${contentResult.error}]`,
+					missingLines: expectedLines,
+					path,
 				});
 				continue;
 			}
@@ -197,7 +197,7 @@ export async function expectPostHealingFiles(
 			const missingLines = expectedLines.filter((line) => !actualContent.includes(line));
 
 			if (missingLines.length > 0) {
-				failures.push({ path, missingLines, actualContent });
+				failures.push({ actualContent, missingLines, path });
 			}
 		}
 
@@ -223,7 +223,7 @@ export async function expectPostHealingFiles(
 			const foundForbiddenLines = forbiddenLines.filter((line) => actualContent.includes(line));
 
 			if (foundForbiddenLines.length > 0) {
-				negativeFailures.push({ path, foundForbiddenLines, actualContent });
+				negativeFailures.push({ actualContent, foundForbiddenLines, path });
 			}
 		}
 
@@ -267,6 +267,67 @@ function formatNegativeContentFailuresLong(failures: NegativeContentCheckFailure
 		})
 		.join("\n\n---\n\n");
 	return `${prefix}Forbidden content validation failed:\n\n${details}`;
+}
+
+/** Orphan codex check failure info */
+export type OrphanCodexFailure = {
+	orphanPaths: readonly string[];
+	expectedPaths: readonly string[];
+	actualPaths: readonly string[];
+};
+
+/**
+ * Check that exactly the expected codex files exist (no orphans).
+ * Lists all __-*.md files under Library/ and compares to expected list.
+ */
+export async function expectExactCodexes(
+	expectedCodexes: readonly string[],
+	opts: ExpectFilesOptions & { libraryRoot?: string } = {},
+): Promise<void> {
+	const libraryRoot = opts.libraryRoot ?? "Library/";
+
+	// List all files under library root
+	const filesResult = await listFilesUnder(libraryRoot);
+	if (filesResult.isErr()) {
+		throw finalizeE2EError(new E2ETestError(
+			`Failed to list files under ${libraryRoot}`,
+			`Error: ${filesResult.error}`
+		));
+	}
+
+	// Filter for codex files (basename starts with __ and extension is .md)
+	const actualCodexes = filesResult.value.filter((path) => {
+		const basename = path.split("/").pop() ?? "";
+		return basename.startsWith("__-") && path.endsWith(".md");
+	}).sort();
+
+	const expectedSorted = [...expectedCodexes].sort();
+
+	// Find orphans (files that exist but shouldn't)
+	const orphans = actualCodexes.filter((path) => !expectedSorted.includes(path));
+
+	if (orphans.length > 0) {
+		const shortMsg = formatOrphanCodexFailureShort(orphans, opts.callerContext);
+		const longMsg = formatOrphanCodexFailureLong({
+			actualPaths: actualCodexes,
+			expectedPaths: expectedSorted,
+			orphanPaths: orphans,
+		}, opts.callerContext);
+		throw finalizeE2EError(new E2ETestError(shortMsg, longMsg));
+	}
+}
+
+function formatOrphanCodexFailureShort(orphans: readonly string[], callerContext?: string): string {
+	const prefix = callerContext ? `${callerContext} ` : "";
+	return `${prefix}Found ${orphans.length} orphan codex file(s): ${orphans.join(", ")}`;
+}
+
+function formatOrphanCodexFailureLong(failure: OrphanCodexFailure, callerContext?: string): string {
+	const prefix = callerContext ? `${callerContext}\n` : "";
+	const orphanList = failure.orphanPaths.map((p) => `  - ${p}`).join("\n");
+	const expectedList = failure.expectedPaths.map((p) => `  - ${p}`).join("\n");
+	const actualList = failure.actualPaths.map((p) => `  - ${p}`).join("\n");
+	return `${prefix}Orphan codex files detected:\n\nOrphans:\n${orphanList}\n\nExpected codexes:\n${expectedList}\n\nActual codexes found:\n${actualList}`;
 }
 
 /** Internal helper: detailed per-file wait status for "gone" check */

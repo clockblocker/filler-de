@@ -1,3 +1,4 @@
+import { logger } from "../../../../utils/logger";
 import type { Codecs } from "../../codecs";
 import type { SegmentIdOf } from "../../codecs/segment-id/types";
 import type {
@@ -167,9 +168,25 @@ export class Tree {
 		const parentSection = this.findSection(
 			targetLocator.segmentIdChainToParent,
 		);
-		if (!parentSection) return null;
+		if (!parentSection) {
+			logger.debug(
+				`[Tree.applyRename] parentSection not found for chain: ${JSON.stringify(targetLocator.segmentIdChainToParent)}`,
+			);
+			return null;
+		}
 
 		const node = parentSection.children[targetLocator.segmentId];
+
+		// Diagnostic logging for bug investigation
+		logger.debug(
+			`[Tree.applyRename] lookup: ${JSON.stringify({
+				childrenKeys: Object.keys(parentSection.children),
+				found: !!node,
+				newNodeName,
+				targetSegmentId: targetLocator.segmentId,
+			})}`,
+		);
+
 		if (!node) return null;
 
 		// Remove old, insert with new name
@@ -177,6 +194,11 @@ export class Tree {
 		node.nodeName = newNodeName;
 		const newSegmentId = makeSegmentId(node);
 		parentSection.children[newSegmentId] = node;
+
+		logger.debug(
+			`[Tree.applyRename] success: oldSegmentId=${targetLocator.segmentId} -> newSegmentId=${newSegmentId}, nodeName=${newNodeName}`,
+		);
+
 		return node;
 	}
 

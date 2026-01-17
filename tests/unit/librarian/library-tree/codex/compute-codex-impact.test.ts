@@ -230,8 +230,10 @@ describe("computeCodexImpact", () => {
 			// New parent B + Library
 			expect(impact.contentChanged).toContainEqual([sec("Library"), sec("B")]);
 			// Section moves (codex file moves)
+			// Move actions include observedPathParts for intermediate location
 			expect(impact.renamed).toContainEqual({
 				newChain: [sec("Library"), sec("B"), sec("Child")],
+				observedPathParts: ["Library", "B", "Child"],
 				oldChain: [sec("Library"), sec("A"), sec("Child")],
 			});
 			// Moved section's content needs update (parent backlink changes)

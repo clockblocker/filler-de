@@ -24,6 +24,13 @@ export type CodexImpact = {
 	renamed: Array<{
 		oldChain: SectionNodeSegmentId[];
 		newChain: SectionNodeSegmentId[];
+		/**
+		 * For Move actions only: the INTERMEDIATE path where Obsidian moved the folder.
+		 * This is where the old codex file actually IS after the user's folder rename,
+		 * before our healing folder rename executes.
+		 * Undefined for Rename actions (no intermediate state - Obsidian's rename IS final).
+		 */
+		observedPathParts?: string[];
 	}>;
 	/** Sections deleted (codex should be deleted) */
 	deleted: SectionNodeSegmentId[][];
@@ -138,7 +145,8 @@ function computeMoveImpact(
 	action: Extract<TreeAction, { actionType: typeof TreeActionType.Move }>,
 	impact: CodexImpact,
 ): CodexImpact {
-	const { targetLocator, newParentLocator, newNodeName } = action;
+	const { targetLocator, newParentLocator, newNodeName, observedSplitPath } =
+		action;
 	const oldParentChain = targetLocator.segmentIdChainToParent;
 	const newParentChain = [
 		...newParentLocator.segmentIdChainToParent,
@@ -160,7 +168,20 @@ function computeMoveImpact(
 		const newSegmentId = makeSectionSegmentId(newNodeName);
 		const newChain = [...newParentChain, newSegmentId];
 
-		impact.renamed.push({ newChain, oldChain });
+		// Include observedPathParts for Move actions - this is where Obsidian
+		// actually moved the folder (intermediate location), needed to delete
+		// the old codex at the correct path before folder healing executes.
+		// For folders: pathParts is the parent path, basename is the folder name.
+		// Full folder path = [...pathParts, basename]
+		const fullObservedPath = [
+			...observedSplitPath.pathParts,
+			observedSplitPath.basename,
+		];
+		impact.renamed.push({
+			newChain,
+			observedPathParts: fullObservedPath,
+			oldChain,
+		});
 
 		// Moved section's content needs update (parent backlink changes)
 		impact.contentChanged.push(newChain);

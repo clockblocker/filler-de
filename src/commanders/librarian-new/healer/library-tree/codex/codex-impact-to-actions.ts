@@ -73,9 +73,17 @@ export function codexImpactToDeletions(
 	// - After Obsidian move: Library/mom/kid2/__-kid2-dad.md (moved with folder)
 	// - We want: Library/mom/kid2/__-kid2-mom.md (new canonical)
 	// - So we delete: Library/mom/kid2/__-kid2-dad.md (new location, old suffix)
-	for (const { oldChain, newChain } of impact.renamed) {
-		// Delete the moved codex at NEW location with OLD suffix
-		const movedCodexPath = buildMovedCodexPath(oldChain, newChain, codecs);
+	//
+	// IMPORTANT: For Move actions (where observedPathParts is set), we need to
+	// delete at the INTERMEDIATE location (where Obsidian actually moved the folder),
+	// not the final location (where our healing folder move will put it).
+	// This is because delete actions execute BEFORE folder move actions in dispatch.
+	for (const { oldChain, newChain, observedPathParts } of impact.renamed) {
+		// For Move: use observedPathParts (intermediate location) with old suffix
+		// For Rename: use newChain (final location) with old suffix (no intermediate state)
+		const movedCodexPath = observedPathParts
+			? buildIntermediateCodexPath(oldChain, observedPathParts, codecs)
+			: buildMovedCodexPath(oldChain, newChain, codecs);
 
 		const deleteAction: HealingAction = {
 			kind: "DeleteMdFile",
@@ -94,12 +102,33 @@ export function codexImpactToDeletions(
 			for (const newDescChain of newDescendantChains) {
 				const relativePath = newDescChain.slice(newChain.length);
 				const oldDescChain = [...oldChain, ...relativePath];
-				// Build path: new location (newDescChain) with old suffix (oldDescChain)
-				const movedDescPath = buildMovedCodexPath(
-					oldDescChain,
-					newDescChain,
-					codecs,
-				);
+
+				// For Move: compute intermediate path for descendant
+				// For Rename: use final path (no intermediate state)
+				let movedDescPath: SplitPathToMdFileInsideLibrary;
+				if (observedPathParts) {
+					// Extract node names from relative path segments for intermediate path
+					const relativeNodeNames = extractNodeNamesFromChain(
+						relativePath,
+						codecs,
+					);
+					const descObservedPathParts = [
+						...observedPathParts,
+						...relativeNodeNames,
+					];
+					movedDescPath = buildIntermediateCodexPath(
+						oldDescChain,
+						descObservedPathParts,
+						codecs,
+					);
+				} else {
+					movedDescPath = buildMovedCodexPath(
+						oldDescChain,
+						newDescChain,
+						codecs,
+					);
+				}
+
 				const descDeleteAction: HealingAction = {
 					kind: "DeleteMdFile",
 					payload: { splitPath: movedDescPath },
@@ -148,7 +177,7 @@ export function codexImpactToRecreations(
 		// 2b. Process codex (backlink + content combined)
 		const processAction: ProcessCodexAction = {
 			kind: "ProcessCodex",
-			payload: { splitPath, section, sectionChain: chain },
+			payload: { section, sectionChain: chain, splitPath },
 		};
 		actions.push(processAction);
 	}
@@ -205,7 +234,7 @@ export function codexImpactToRecreations(
 
 		const scrollBacklinkAction: ProcessScrollBacklinkAction = {
 			kind: "ProcessScrollBacklink",
-			payload: { splitPath, parentChain },
+			payload: { parentChain, splitPath },
 		};
 		actions.push(scrollBacklinkAction);
 	}
@@ -247,7 +276,7 @@ export function codexImpactToIncrementalRecreations(
 		// 1b. Process codex (backlink + content combined)
 		const processAction: ProcessCodexAction = {
 			kind: "ProcessCodex",
-			payload: { splitPath, section, sectionChain: chain },
+			payload: { section, sectionChain: chain, splitPath },
 		};
 		actions.push(processAction);
 
@@ -270,8 +299,8 @@ export function codexImpactToIncrementalRecreations(
 				const scrollBacklinkAction: ProcessScrollBacklinkAction = {
 					kind: "ProcessScrollBacklink",
 					payload: {
-						splitPath: splitPathResult.value,
 						parentChain: chain,
+						splitPath: splitPathResult.value,
 					},
 				};
 				actions.push(scrollBacklinkAction);
@@ -430,6 +459,26 @@ function findSectionByChain(
 	return tree.findSection(chain);
 }
 
+/**
+ * Extract node names from a chain of segment IDs.
+ * Used for building intermediate paths for descendant codexes.
+ */
+function extractNodeNamesFromChain(
+	chain: SectionNodeSegmentId[],
+	codecs: Codecs,
+): string[] {
+	const nodeNames: string[] = [];
+	for (const segId of chain) {
+		const parseResult = codecs.segmentId.parseSectionSegmentId(segId);
+		if (parseResult.isErr()) {
+			// Skip if parsing fails (should never happen with valid tree state)
+			continue;
+		}
+		nodeNames.push(parseResult.value.coreName);
+	}
+	return nodeNames;
+}
+
 function collectDescendantSectionChains(
 	section: SectionNode,
 	parentChain: SectionNodeSegmentId[],
@@ -502,7 +551,7 @@ function collectTreeData(
 	};
 
 	traverse(root, [rootSegId]);
-	return { sectionChains, scrollInfos };
+	return { scrollInfos, sectionChains };
 }
 
 function collectDescendantScrolls(
@@ -524,6 +573,59 @@ function collectDescendantScrolls(
 	}
 
 	return result;
+}
+
+/**
+ * Build path for a codex file at an INTERMEDIATE location.
+ * Used for Move actions where Obsidian has moved the folder but our healing
+ * folder rename hasn't executed yet.
+ *
+ * @param oldChain - Old section chain (for computing old suffix)
+ * @param observedPathParts - The intermediate location (where Obsidian moved the folder)
+ * @param codecs - Codec API for parsing segment IDs
+ * @returns Split path for the codex file at intermediate location
+ *
+ * Example: L2 renamed to L3-L2 (interpreted as move L2 → L2/L3)
+ * - oldChain: [Library, L1, L2] → suffix: ["L2", "L1"]
+ * - observedPathParts: ["Library", "L1", "L3-L2"] (where Obsidian moved it)
+ * - Result: { pathParts: ["Library", "L1", "L3-L2"], basename: "__-L2-L1" }
+ */
+function buildIntermediateCodexPath(
+	oldChain: SectionNodeSegmentId[],
+	observedPathParts: string[],
+	codecs: Codecs,
+): SplitPathToMdFileInsideLibrary {
+	// Extract old node names for suffix computation
+	const oldNodeNames: string[] = [];
+	for (const segId of oldChain) {
+		const parseResult = codecs.segmentId.parseSectionSegmentId(segId);
+		if (parseResult.isErr()) {
+			// Skip if parsing fails (should never happen with valid tree state)
+			continue;
+		}
+		oldNodeNames.push(parseResult.value.coreName);
+	}
+
+	// pathParts = intermediate location (where Obsidian actually moved the folder)
+	const pathParts = observedPathParts;
+
+	// suffixParts = OLD suffix (what the codex file was named before)
+	const suffixParts =
+		oldNodeNames.length === 1
+			? oldNodeNames // Root: ["Library"]
+			: oldNodeNames.slice(1).reverse(); // Nested: exclude root, reverse
+
+	const basename = codecs.suffix.serializeSeparatedSuffix({
+		coreName: CODEX_CORE_NAME,
+		suffixParts,
+	});
+
+	return {
+		basename,
+		extension: "md",
+		kind: SplitPathKind.MdFile,
+		pathParts,
+	};
 }
 
 /**
