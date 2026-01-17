@@ -1,8 +1,8 @@
 import { getParsedUserSettings } from "../../global-state/global-state";
 import type {
 	CheckboxClickedEvent,
-	ClickManager,
-} from "../../managers/obsidian/click-manager";
+	ClickInterceptor,
+} from "../../managers/obsidian/click-interceptor";
 import type {
 	BulkVaultEvent,
 	VaultAction,
@@ -74,7 +74,7 @@ export class Librarian {
 
 	constructor(
 		private readonly vaultActionManager: VaultActionManager,
-		private readonly clickManager?: ClickManager,
+		private readonly clickInterceptor?: ClickInterceptor,
 	) {}
 
 	/**
@@ -189,9 +189,9 @@ export class Librarian {
 	 * Subscribe to click events from ClickManager.
 	 */
 	private subscribeToClickEvents(): void {
-		if (!this.clickManager) return;
+		if (!this.clickInterceptor) return;
 
-		this.clickTeardown = this.clickManager.subscribe((event) => {
+		this.clickTeardown = this.clickInterceptor.subscribe((event) => {
 			if (event.kind === "CheckboxClicked") {
 				this.handleCheckboxClick(event);
 			}

@@ -15,6 +15,9 @@ const PATTERN = new RegExp(
 	`\\n*<${SECTION}\\s+id=[\\{"]${reEscape(META_SECTION_ID)}[\\}"]>([\\s\\S]*?)<\\/${SECTION}>\\n*`,
 );
 
+/** Exported pattern for stripping metadata from copied text */
+export const META_SECTION_PATTERN = PATTERN;
+
 // ─── Public API ───
 
 type Metadata = Record<string, unknown>;

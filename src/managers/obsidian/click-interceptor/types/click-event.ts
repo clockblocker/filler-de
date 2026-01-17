@@ -1,5 +1,5 @@
 /**
- * Click events emitted by ClickManager.
+ * Click events emitted by ClickInterceptor.
  */
 
 import type { SplitPathToMdFile } from "../../vault-action-manager/types/split-path";

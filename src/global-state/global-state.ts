@@ -39,3 +39,7 @@ export function initializeState(settings: TextEaterSettings): void {
 export function clearState(): void {
 	globalState = EMPTY_GLOBAL_STATE;
 }
+
+export function updateParsedSettings(settings: TextEaterSettings): void {
+	setState({ parsedUserSettings: parseSettings(settings) });
+}

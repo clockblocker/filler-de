@@ -1,4 +1,4 @@
-export { ClickManager } from "./click-manager";
+export { ClickInterceptor } from "./click-interceptor";
 export type {
 	CheckboxClickedEvent,
 	ClickEvent,

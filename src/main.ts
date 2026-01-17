@@ -1,13 +1,21 @@
 import {
 	type Editor,
 	type MarkdownView,
+	Modal,
+	Notice,
 	Plugin,
+	type TFile,
 	type WorkspaceLeaf,
 } from "obsidian";
 import { Librarian } from "./commanders/librarian-new/librarian";
 
-import { clearState, initializeState } from "./global-state/global-state";
-import { ClickManager } from "./managers/obsidian/click-manager";
+import {
+	clearState,
+	initializeState,
+	updateParsedSettings,
+} from "./global-state/global-state";
+import { ClickInterceptor } from "./managers/obsidian/click-interceptor";
+import { ClipboardInterceptor } from "./managers/obsidian/clipboard-interceptor";
 import {
 	makeSplitPath,
 	makeSystemPathForSplitPath,
@@ -43,7 +51,8 @@ export default class TextEaterPlugin extends Plugin {
 	testingTFileHelper: TFileHelper;
 	testingTFolderHelper: TFolderHelper;
 	vaultActionManager: VaultActionManagerImpl;
-	clickManager: ClickManager;
+	clickInterceptor: ClickInterceptor;
+	clipboardInterceptor: ClipboardInterceptor;
 	selectionService: SelectionService;
 
 	selectionToolbarService: AboveSelectionToolbarService;
@@ -54,6 +63,7 @@ export default class TextEaterPlugin extends Plugin {
 	// librarianLegacy: LibrarianLegacy; // Unplugged
 
 	private initialized = false;
+	private previousSettings: TextEaterSettings | null = null;
 
 	override async onload() {
 		try {
@@ -174,7 +184,8 @@ export default class TextEaterPlugin extends Plugin {
 			this.app.vault,
 		);
 		this.vaultActionManager = new VaultActionManagerImpl(this.app);
-		this.clickManager = new ClickManager(this.app, this.vaultActionManager);
+		this.clickInterceptor = new ClickInterceptor(this.app, this.vaultActionManager);
+		this.clipboardInterceptor = new ClipboardInterceptor();
 
 		this.selectionToolbarService = new AboveSelectionToolbarService(
 			this.app,
@@ -185,7 +196,7 @@ export default class TextEaterPlugin extends Plugin {
 		// New Librarian (healing modes + codex clicks)
 		this.librarian = new Librarian(
 			this.vaultActionManager,
-			this.clickManager,
+			this.clickInterceptor,
 		);
 
 		// Start listening to file system events
@@ -194,7 +205,10 @@ export default class TextEaterPlugin extends Plugin {
 		this.vaultActionManager.startListening();
 
 		// Start listening to DOM click events
-		this.clickManager.startListening();
+		this.clickInterceptor.startListening();
+
+		// Start listening to clipboard events (strips metadata from copied text)
+		this.clipboardInterceptor.startListening();
 
 		// Initialize librarian: read tree, heal mismatches, regenerate codexes
 		if (this.librarian) {
@@ -279,7 +293,8 @@ export default class TextEaterPlugin extends Plugin {
 	override onunload() {
 		if (this.bottomToolbarService) this.bottomToolbarService.detach();
 		if (this.selectionToolbarService) this.selectionToolbarService.detach();
-		if (this.clickManager) this.clickManager.stopListening();
+		if (this.clickInterceptor) this.clickInterceptor.stopListening();
+		if (this.clipboardInterceptor) this.clipboardInterceptor.stopListening();
 		if (this.librarian) this.librarian.unsubscribe();
 		// Clear global state
 		clearState();
@@ -293,6 +308,8 @@ export default class TextEaterPlugin extends Plugin {
 		);
 		// Initialize global state with parsed settings
 		initializeState(this.settings);
+		// Store initial settings for change detection
+		this.previousSettings = { ...this.settings };
 	}
 
 	private async addCommands() {
@@ -564,7 +581,179 @@ export default class TextEaterPlugin extends Plugin {
 	}
 
 	async saveSettings() {
+		const prev = this.previousSettings;
+		const curr = this.settings;
+
+		if (prev) {
+			const delimiterChanged = prev.suffixDelimiter !== curr.suffixDelimiter;
+			const depthChanged =
+				prev.maxSectionDepth !== curr.maxSectionDepth ||
+				prev.showScrollsInCodexesForDepth !==
+					curr.showScrollsInCodexesForDepth;
+			const rootChanged = prev.libraryRoot !== curr.libraryRoot;
+
+			if (delimiterChanged) {
+				const confirmed = await this.handleDelimiterChange(
+					prev.suffixDelimiter,
+					curr.suffixDelimiter,
+				);
+				if (!confirmed) {
+					// User cancelled - restore old delimiter
+					this.settings.suffixDelimiter = prev.suffixDelimiter;
+					return;
+				}
+			}
+
+			if (delimiterChanged || depthChanged || rootChanged) {
+				// Update global state BEFORE reinit so librarian uses new settings
+				updateParsedSettings(this.settings);
+				await this.reinitLibrarian();
+			}
+		}
+
 		await this.saveData(this.settings);
+		this.previousSettings = { ...this.settings };
+		updateParsedSettings(this.settings);
+	}
+
+	/**
+	 * Handle delimiter change by renaming files with suffixes.
+	 * Returns true if user confirmed, false if cancelled.
+	 */
+	private async handleDelimiterChange(
+		oldDelim: string,
+		newDelim: string,
+	): Promise<boolean> {
+		if (oldDelim === newDelim) return true;
+
+		// Get all .md files in library
+		const libraryRoot = this.settings.libraryRoot;
+		const rootFolder = this.app.vault.getAbstractFileByPath(libraryRoot);
+		if (!rootFolder) {
+			new Notice(`Library folder "${libraryRoot}" not found`);
+			return false;
+		}
+
+		// Collect all .md files in library recursively
+		const mdFiles: TFile[] = [];
+		const collectMdFiles = (folder: string) => {
+			const children = this.app.vault.getFiles().filter((f) => {
+				const filePath = f.path;
+				return (
+					filePath.startsWith(folder + "/") && filePath.endsWith(".md")
+				);
+			});
+			mdFiles.push(...children);
+		};
+		collectMdFiles(libraryRoot);
+
+		// Count files that need renaming (have oldDelim in basename)
+		const filesToRename = mdFiles.filter((f) =>
+			f.basename.includes(oldDelim),
+		);
+
+		// Also count files that need escape (have newDelim in basename)
+		const filesNeedingEscape = mdFiles.filter((f) =>
+			f.basename.includes(newDelim),
+		);
+
+		const totalAffected = new Set([
+			...filesToRename.map((f) => f.path),
+			...filesNeedingEscape.map((f) => f.path),
+		]).size;
+
+		if (totalAffected === 0) {
+			// No files to rename, just confirm
+			return true;
+		}
+
+		// Show confirmation dialog
+		const confirmed = await this.showConfirmDialog(
+			"Rename files?",
+			`Changing suffix delimiter from "${oldDelim}" to "${newDelim}" will rename ${totalAffected} file(s). Continue?`,
+		);
+
+		if (!confirmed) return false;
+
+		// Escape character: if newDelim is space, use hyphen; otherwise use space
+		const escapeChar = newDelim === " " ? "-" : " ";
+
+		// Phase 1: Escape conflicts (replace newDelim with escapeChar)
+		for (const file of filesNeedingEscape) {
+			const newBasename = file.basename.replaceAll(newDelim, escapeChar);
+			const newPath = file.path.replace(file.name, newBasename + ".md");
+			try {
+				await this.app.fileManager.renameFile(file, newPath);
+			} catch (error) {
+				logger.error(
+					`[TextEaterPlugin] Failed to escape-rename ${file.path}:`,
+					error instanceof Error ? error.message : String(error),
+				);
+			}
+		}
+
+		// Phase 2: Delimiter swap (split by oldDelim, join by newDelim)
+		// Re-fetch files since some may have been renamed
+		const updatedMdFiles = this.app.vault
+			.getFiles()
+			.filter(
+				(f) =>
+					f.path.startsWith(libraryRoot + "/") &&
+					f.path.endsWith(".md"),
+			);
+		const filesToSwap = updatedMdFiles.filter((f) =>
+			f.basename.includes(oldDelim),
+		);
+
+		for (const file of filesToSwap) {
+			const parts = file.basename.split(oldDelim);
+			if (parts.length > 1) {
+				const newBasename = parts.join(newDelim);
+				const newPath = file.path.replace(file.name, newBasename + ".md");
+				try {
+					await this.app.fileManager.renameFile(file, newPath);
+				} catch (error) {
+					logger.error(
+						`[TextEaterPlugin] Failed to swap-rename ${file.path}:`,
+						error instanceof Error ? error.message : String(error),
+					);
+				}
+			}
+		}
+
+		new Notice(`Renamed ${totalAffected} file(s)`);
+		return true;
+	}
+
+	/**
+	 * Show a simple confirmation dialog.
+	 */
+	private showConfirmDialog(title: string, message: string): Promise<boolean> {
+		return new Promise((resolve) => {
+			const modal = new ConfirmModal(this.app, title, message, resolve);
+			modal.open();
+		});
+	}
+
+	/**
+	 * Reinitialize the librarian with current settings.
+	 */
+	private async reinitLibrarian(): Promise<void> {
+		if (this.librarian) {
+			await this.librarian.unsubscribe();
+		}
+		this.librarian = new Librarian(
+			this.vaultActionManager,
+			this.clickInterceptor,
+		);
+		try {
+			await this.librarian.init();
+		} catch (error) {
+			logger.error(
+				"[TextEaterPlugin] Failed to reinitialize librarian:",
+				error instanceof Error ? error.message : String(error),
+			);
+		}
 	}
 
 	private async updateBottomActions(): Promise<void> {
@@ -597,5 +786,56 @@ export default class TextEaterPlugin extends Plugin {
 		// 		sectionText,
 		// 	}),
 		// );
+	}
+}
+
+/**
+ * Simple confirmation modal with OK/Cancel buttons.
+ */
+class ConfirmModal extends Modal {
+	private readonly title: string;
+	private readonly message: string;
+	private readonly onResult: (confirmed: boolean) => void;
+
+	constructor(
+		app: import("obsidian").App,
+		title: string,
+		message: string,
+		onResult: (confirmed: boolean) => void,
+	) {
+		super(app);
+		this.title = title;
+		this.message = message;
+		this.onResult = onResult;
+	}
+
+	override onOpen() {
+		const { contentEl } = this;
+		contentEl.createEl("h2", { text: this.title });
+		contentEl.createEl("p", { text: this.message });
+
+		const buttonContainer = contentEl.createDiv({
+			cls: "modal-button-container",
+		});
+
+		const cancelBtn = buttonContainer.createEl("button", { text: "Cancel" });
+		cancelBtn.addEventListener("click", () => {
+			this.onResult(false);
+			this.close();
+		});
+
+		const confirmBtn = buttonContainer.createEl("button", {
+			cls: "mod-cta",
+			text: "OK",
+		});
+		confirmBtn.addEventListener("click", () => {
+			this.onResult(true);
+			this.close();
+		});
+	}
+
+	override onClose() {
+		const { contentEl } = this;
+		contentEl.empty();
 	}
 }

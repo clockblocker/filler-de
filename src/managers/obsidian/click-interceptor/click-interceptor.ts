@@ -1,5 +1,5 @@
 /**
- * ClickManager - listens to DOM click events and emits semantic click events.
+ * ClickInterceptor - listens to DOM click events and emits semantic click events.
  */
 
 import type { App } from "obsidian";
@@ -14,7 +14,7 @@ import type {
 	Teardown,
 } from "./types/click-event";
 
-export class ClickManager {
+export class ClickInterceptor {
 	private readonly subscribers = new Set<ClickEventHandler>();
 	private clickHandler: ((evt: MouseEvent) => void) | null = null;
 
@@ -97,7 +97,7 @@ export class ClickManager {
 			try {
 				handler(event);
 			} catch (error) {
-				logger.error("[ClickManager] Handler error:", error);
+				logger.error("[ClickInterceptor] Handler error:", error);
 			}
 		}
 	}
