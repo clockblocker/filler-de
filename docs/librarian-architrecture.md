@@ -24,22 +24,29 @@ Library/Note-pie-recipe.md → Library/recipe/pie/Note-pie-recipe.md
 ## Pipeline
 
 ```
-Obsidian API
-    ↓
-VaultActionManager (BulkVaultEvent)
-    ↓
-buildTreeActions() → TreeAction[]
-    ↓
-LibraryTree.apply() → HealingAction[]
-    ↓
-healingActionsToVaultActions() → VaultAction[]
-    ↓
-VaultActionManager.dispatch()
-    ↓
-Obsidian API
+Obsidian API                     DOM Events
+    ↓                                ↓
+VaultActionManager          ClickInterceptor
+    ↓ (BulkVaultEvent)              ↓ (CheckboxClickedEvent)
+    └──────────────┬────────────────┘
+                   ↓
+           buildTreeActions() → TreeAction[]
+                   ↓
+           LibraryTree.apply() → HealingAction[]
+                   ↓
+           healingActionsToVaultActions() → VaultAction[]
+                   ↓
+           VaultActionManager.dispatch()
+                   ↓
+              Obsidian API
 ```
 
 ## Key Components
+
+### ClickInterceptor
+- Listens to DOM click events, identifies task checkboxes
+- Emits `CheckboxClickedEvent` with file path, line content, checked state
+- Librarian subscribes to toggle node status in codex files
 
 ### VaultActionManager
 - Groups low-level filesystem callbacks into **BulkVaultEvent** windows
@@ -160,6 +167,41 @@ The destination path = `["Library"] + reversed(suffix)` = `["Library", "D", "C"]
 
 - **Folders** typically represent categories/topics. Adding a suffix creates subcategorization under the current context.
 - **Files** use suffix as a full location specifier for drag-in scenarios and explicit user moves.
+
+## DOM Interceptors
+
+The plugin uses interceptor classes to handle DOM events and transform them into semantic actions.
+
+### ClickInterceptor
+
+`src/managers/obsidian/click-interceptor/`
+
+Listens to DOM click events and emits semantic `ClickEvent` objects. Currently handles:
+- **Checkbox clicks** in codex files → `CheckboxClickedEvent` with file path, line content, checked state
+
+The Librarian subscribes to these events to update node status when users toggle checkboxes in codex files.
+
+```
+DOM click event
+    ↓
+ClickInterceptor.handleClick()
+    ↓
+CheckboxClickedEvent { splitPath, lineContent, checked }
+    ↓
+Librarian.handleCheckboxClick()
+    ↓
+TreeAction (ChangeStatus)
+    ↓
+Healing pipeline...
+```
+
+### ClipboardInterceptor
+
+`src/managers/obsidian/clipboard-interceptor/`
+
+Intercepts `copy` and `cut` events to strip metadata from copied text. When users copy text containing the hidden `<section id="textfresser_meta_keep_me_invisible">` block, this interceptor removes it before the text reaches the clipboard.
+
+Uses `META_SECTION_PATTERN` exported from `src/managers/pure/note-metadata-manager/impl.ts`.
 
 ## Conventions
 

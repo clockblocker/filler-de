@@ -18,6 +18,7 @@ import { makeSplitPathWithSeparatedSuffixCodecs } from "./split-path-with-separa
 export type Codecs = {
 	libraryPath: LibraryPathCodecs;
 	locator: LocatorCodecs;
+	rules: CodecRules;
 	segmentId: SegmentIdCodecs;
 	splitPathInsideLibrary: SplitPathInsideLibraryCodecs;
 	splitPathWithSeparatedSuffix: SplitPathWithSeparatedSuffixCodecs;
@@ -48,6 +49,7 @@ export function makeCodecs(rules: CodecRules): Codecs {
 	return {
 		libraryPath,
 		locator,
+		rules,
 		segmentId,
 		splitPathInsideLibrary,
 		splitPathWithSeparatedSuffix,

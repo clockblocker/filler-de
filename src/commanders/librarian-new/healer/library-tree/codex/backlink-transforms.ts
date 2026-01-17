@@ -65,21 +65,24 @@ export function makeCodexTransform(
 	};
 }
 
-// ─── Constants ───
-
-/**
- * Loose regex to detect existing backlink on first line.
- * Matches patterns like: [[__-...|← ...]] or [[__-...]]
- */
-const BACKLINK_PATTERN = /^\[\[__-[^\]]*\]\]/;
-
 // ─── Helpers ───
 
 /**
- * Check if the first line looks like a backlink.
+ * Escape special regex characters in a string.
  */
-function isBacklinkLine(line: string): boolean {
-	return BACKLINK_PATTERN.test(line.trim());
+function escapeRegex(str: string): string {
+	return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Check if the first line looks like a backlink.
+ * Matches patterns like: [[__<delim>...|← ...]] or [[__<delim>...]]
+ * where <delim> is the suffix delimiter from settings.
+ */
+function isBacklinkLine(line: string, suffixDelimiter: string): boolean {
+	const escapedDelim = escapeRegex(suffixDelimiter);
+	const pattern = new RegExp(`^\\[\\[__${escapedDelim}[^\\]]*\\]\\]`);
+	return pattern.test(line.trim());
 }
 
 /**
@@ -137,7 +140,7 @@ export function makeCodexBacklinkTransform(
 
 		const { firstLine, rest } = splitFirstLine(content);
 
-		if (isBacklinkLine(firstLine)) {
+		if (isBacklinkLine(firstLine, codecs.rules.suffixDelimiter)) {
 			// Replace existing backlink
 			return `${backlinkLine}${LINE_BREAK}${rest}`;
 		}
@@ -171,7 +174,7 @@ export function makeCodexContentTransform(
 
 		const { firstLine } = splitFirstLine(content);
 
-		if (isBacklinkLine(firstLine)) {
+		if (isBacklinkLine(firstLine, codecs.rules.suffixDelimiter)) {
 			// Preserve backlink, replace rest
 			return `${firstLine}${LINE_BREAK}${childrenContent}`;
 		}
@@ -225,14 +228,14 @@ export function makeScrollBacklinkTransform(
 			// First line is empty, check second line
 			const { firstLine: secondLine, rest: restAfterSecond } =
 				splitFirstLine(rest);
-			if (isBacklinkLine(secondLine)) {
+			if (isBacklinkLine(secondLine, codecs.rules.suffixDelimiter)) {
 				// Replace existing backlink, preserve user content with newline
 				return `${LINE_BREAK}${backlinkLine}${LINE_BREAK}${restAfterSecond}`;
 			}
 		}
 
 		// Check for old format: [[backlink]]\n...
-		if (isBacklinkLine(firstLine)) {
+		if (isBacklinkLine(firstLine, codecs.rules.suffixDelimiter)) {
 			// Replace existing backlink (migrate to new format)
 			return `${LINE_BREAK}${backlinkLine}${LINE_BREAK}${rest}`;
 		}
