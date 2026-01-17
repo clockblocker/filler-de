@@ -25,6 +25,10 @@ import {
 	performMutation005,
 	testPostHealing005,
 } from "./chains/1-chain/005-delete-folder";
+import {
+	performMutation006,
+	testPostHealing006,
+} from "./chains/1-chain/006-rename-corename";
 
 const VAULT_PATH = "tests/obsidian-e2e/vaults/librarian-chain-0";
 
@@ -93,6 +97,17 @@ describe("Librarian Full Suit", () => {
 	// 005: Post-deletion healing
 	it("codexes no longer ref deleted folder", async () => {
 		await testPostHealing005();
+	});
+
+	// 006: Rename coreName (keep suffix) mutation
+	it("creates and renames coreName for 006", async () => {
+		await performMutation006();
+		await waitForIdle();
+	});
+
+	// 006: Post-rename healing - BUG: codex should update display name
+	it("codex should show new coreName after rename", async () => {
+		await testPostHealing006();
 	});
 
 	// after(async () => {
