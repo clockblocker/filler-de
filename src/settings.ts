@@ -108,30 +108,35 @@ export class SettingsTab extends PluginSettingTab {
 			.setDesc(
 				"1-3 characters used to separate base name from suffix (e.g., '-' or ' - ')",
 			)
-			.addText((text) =>
-				text
-					.setPlaceholder("-")
-					.setValue(this.plugin.settings.suffixDelimiter)
-					.onChange(async (value) => {
-						// Validate length: 1-5 chars
-						if (value.length < 1 || value.length > 5) {
+			.addText((text) => {
+				text.setPlaceholder("-").setValue(
+					this.plugin.settings.suffixDelimiter,
+				);
+
+				text.inputEl.addEventListener("blur", async () => {
+					const value = text.getValue();
+					// Validate length: 1-3 chars
+					if (value.length < 1 || value.length > 5) {
+						new Notice("Suffix delimiter must be 1-5 characters");
+						text.setValue(this.plugin.settings.suffixDelimiter);
+						return;
+					}
+					// Validate each char against forbidden list
+					for (const char of value) {
+						if (FORBIDDEN_DELIMITER_CHARS.includes(char)) {
 							new Notice(
-								"Suffix delimiter must be 1-3 characters",
+								`Cannot use "${char}" in delimiter (forbidden character)`,
 							);
+							text.setValue(this.plugin.settings.suffixDelimiter);
 							return;
 						}
-						// Validate each char against forbidden list
-						for (const char of value) {
-							if (FORBIDDEN_DELIMITER_CHARS.includes(char)) {
-								new Notice(
-									`Cannot use "${char}" in delimiter (forbidden character)`,
-								);
-								return;
-							}
-						}
+					}
+					// Only save if value changed
+					if (value !== this.plugin.settings.suffixDelimiter) {
 						this.plugin.settings.suffixDelimiter = value;
 						await this.plugin.saveSettings();
-					}),
-			);
+					}
+				});
+			});
 	}
 }
