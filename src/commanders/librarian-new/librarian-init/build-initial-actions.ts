@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { logger } from "../../../utils/logger";
 import type { SplitPathWithReader } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type {
@@ -62,7 +63,7 @@ export async function buildInitialCreateActions(
 
 	for (const file of files) {
 		// Skip codex files (basename starts with __)
-		if (isCodexSplitPath(file, codecs)) {
+		if (isCodexSplitPath(file)) {
 			continue;
 		}
 
@@ -71,7 +72,12 @@ export async function buildInitialCreateActions(
 			file,
 			rules,
 		);
-		if (libraryScopedResult.isErr()) continue;
+		if (libraryScopedResult.isErr()) {
+			logger.warn(
+				`[Librarian] Skipping file outside library: ${file.basename}`,
+			);
+			continue;
+		}
 		const observedPath = libraryScopedResult.value;
 
 		// Apply policy to get canonical destination
@@ -84,6 +90,10 @@ export async function buildInitialCreateActions(
 			codecs,
 		);
 		if (canonicalResult.isErr()) {
+			logger.error(
+				`[Librarian] Failed to parse file: ${file.basename}`,
+				canonicalResult.error,
+			);
 			continue;
 		}
 		const canonicalPath = canonicalResult.value;
@@ -93,7 +103,13 @@ export async function buildInitialCreateActions(
 			codecs.locator.canonicalSplitPathInsideLibraryToLocator(
 				canonicalPath,
 			);
-		if (locatorResult.isErr()) continue;
+		if (locatorResult.isErr()) {
+			logger.error(
+				`[Librarian] Failed to build locator: ${file.basename}`,
+				locatorResult.error,
+			);
+			continue;
+		}
 		const locator = locatorResult.value;
 
 		// Read status for md files

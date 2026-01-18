@@ -2,8 +2,8 @@ import { getParsedUserSettings } from "../../global-state/global-state";
 import type {
 	CheckboxClickedEvent,
 	ClickInterceptor,
-	PropertyCheckboxClickedEvent,
 } from "../../managers/obsidian/click-interceptor";
+import type { PropertyCheckboxClickedEvent } from "../../managers/obsidian/click-interceptor/types/click-event";
 import type {
 	BulkVaultEvent,
 	VaultAction,
@@ -212,7 +212,7 @@ export class Librarian {
 	 */
 	private handleCheckboxClick(event: CheckboxClickedEvent): void {
 		// Check if file is a codex (basename starts with __)
-		if (!isCodexSplitPath(event.splitPath, this.codecs)) {
+		if (!isCodexSplitPath(event.splitPath)) {
 			// Not a codex file, ignore
 			return;
 		}
@@ -288,7 +288,7 @@ export class Librarian {
 		if (event.propertyName !== "status") return;
 
 		// Skip codex files
-		if (isCodexSplitPath(event.splitPath, this.codecs)) return;
+		if (isCodexSplitPath(event.splitPath)) return;
 
 		// Try to parse as library-scoped path
 		const libraryScopedResult = tryParseAsInsideLibrarySplitPath(

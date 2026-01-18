@@ -28,7 +28,7 @@ export function findInvalidCodexFiles(
 		if (file.kind !== SplitPathKind.MdFile) continue;
 
 		// Check if basename starts with __
-		if (!isCodexSplitPath(file, codecs)) continue;
+		if (!isCodexSplitPath(file)) continue;
 
 		// This is a __ file - check if it's valid
 		const libraryScopedResult = tryParseAsInsideLibrarySplitPath(

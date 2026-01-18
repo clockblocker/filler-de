@@ -364,7 +364,7 @@ export function extractInvalidCodexesFromBulk(
 		// Check FileCreated events
 		if (event.kind === VaultEventKind.FileCreated) {
 			if (event.splitPath.kind !== SplitPathKind.MdFile) continue;
-			if (!isCodexSplitPath(event.splitPath, codecs)) continue;
+			if (!isCodexSplitPath(event.splitPath)) continue;
 
 			const invalidAction = validateCodexSplitPath(
 				event.splitPath,
@@ -378,7 +378,7 @@ export function extractInvalidCodexesFromBulk(
 		// Check FileRenamed events (only "to" path)
 		if (event.kind === VaultEventKind.FileRenamed) {
 			if (event.to.kind !== SplitPathKind.MdFile) continue;
-			if (!isCodexSplitPath(event.to, codecs)) continue;
+			if (!isCodexSplitPath(event.to)) continue;
 
 			const invalidAction = validateCodexSplitPath(event.to, codecs);
 			if (invalidAction) {

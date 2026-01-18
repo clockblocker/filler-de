@@ -1,13 +1,10 @@
-import type { Codecs } from "../../../codecs";
 import { CODEX_CORE_NAME } from "./literals";
 
 /**
  * Check if a split path represents a codex file (basename starts with __).
+ * Uses simple prefix check - more robust than full suffix parsing which can
+ * fail on edge cases and incorrectly identify codexes as scrolls.
  */
-export function isCodexSplitPath(
-	splitPath: { basename: string },
-	codecs: Codecs,
-): boolean {
-	const result = codecs.suffix.parseSeparatedSuffix(splitPath.basename);
-	return result.isOk() && result.value.coreName === CODEX_CORE_NAME;
+export function isCodexSplitPath(splitPath: { basename: string }): boolean {
+	return splitPath.basename.startsWith(CODEX_CORE_NAME);
 }

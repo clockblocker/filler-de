@@ -637,54 +637,41 @@ export default class TextEaterPlugin extends Plugin {
 					!newConfig.symbol.includes(c),
 			) ?? "_";
 
-		// Phase 1: Escape conflicts (replace new symbol occurrences with escapeChar)
-		for (const file of filesNeedingEscape) {
-			const newBasename = file.basename.replace(
-				new RegExp(newPattern.source, "g"),
-				escapeChar,
-			);
+		const symbolChanged = oldConfig.symbol !== newConfig.symbol;
+
+		// Single-pass atomic rename: parse with old pattern, escape new symbol in parts, join with new delimiter
+		for (const file of filesToRename) {
+			const parts = file.basename.split(oldPattern);
+			if (parts.length <= 1) continue;
+
+			// Escape new symbol in each part (node name) if symbol is changing
+			let escapedParts = parts;
+			if (symbolChanged) {
+				const newSymbolRegex = new RegExp(
+					newConfig.symbol.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+					"g",
+				);
+				escapedParts = parts.map((part) =>
+					part.replace(newSymbolRegex, escapeChar),
+				);
+			}
+
+			const newBasename = escapedParts.join(newDelim);
+			if (newBasename === file.basename) continue;
+
 			const newPath = file.path.replace(file.name, newBasename + ".md");
 			try {
 				await this.app.fileManager.renameFile(file, newPath);
 			} catch (error) {
 				logger.error(
-					`[TextEaterPlugin] Failed to escape-rename ${file.path}:`,
+					`[TextEaterPlugin] Failed to rename ${file.path}:`,
 					error instanceof Error ? error.message : String(error),
 				);
 			}
 		}
 
-		// Phase 2: Delimiter swap (split by old pattern, join by new canonical)
-		// Re-fetch files since some may have been renamed
-		const updatedMdFiles = this.app.vault
-			.getFiles()
-			.filter(
-				(f) =>
-					f.path.startsWith(libraryRoot + "/") &&
-					f.path.endsWith(".md"),
-			);
-		const filesToSwap = updatedMdFiles.filter((f) =>
-			oldPattern.test(f.basename),
-		);
-
-		for (const file of filesToSwap) {
-			const parts = file.basename.split(oldPattern);
-			if (parts.length > 1) {
-				const newBasename = parts.join(newDelim);
-				const newPath = file.path.replace(
-					file.name,
-					newBasename + ".md",
-				);
-				try {
-					await this.app.fileManager.renameFile(file, newPath);
-				} catch (error) {
-					logger.error(
-						`[TextEaterPlugin] Failed to swap-rename ${file.path}:`,
-						error instanceof Error ? error.message : String(error),
-					);
-				}
-			}
-		}
+		// Let Obsidian process file events before reinit
+		await new Promise((resolve) => setTimeout(resolve, 100));
 
 		new Notice(`Renamed ${totalAffected} file(s)`);
 		return true;
