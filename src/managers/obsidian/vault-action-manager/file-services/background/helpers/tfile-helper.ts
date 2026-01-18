@@ -203,8 +203,7 @@ export class TFileHelper {
 			);
 
 			try {
-				// Use vault.rename to avoid "update links?" dialog
-				await this.vault.rename(
+				await this.fileManager.renameFile(
 					fromResult.value,
 					systemPathFromSplitPathInternal(indexedPath),
 				);
@@ -232,9 +231,7 @@ export class TFileHelper {
 		}
 
 		try {
-			// Use vault.rename instead of fileManager.renameFile to avoid
-			// the "update links?" dialog that blocks in headless/E2E mode
-			await this.vault.rename(
+			await this.fileManager.renameFile(
 				fromResult.value,
 				systemPathFromSplitPathInternal(to),
 			);

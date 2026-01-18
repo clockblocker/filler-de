@@ -152,8 +152,7 @@ export class TFolderHelper {
 			);
 
 			try {
-				// Use vault.rename to avoid "update links?" dialog
-				await this.vault.rename(
+				await this.fileManager.renameFile(
 					fromResult.value,
 					systemPathFromSplitPathInternal(indexedPath),
 				);
@@ -181,8 +180,7 @@ export class TFolderHelper {
 		}
 
 		try {
-			// Use vault.rename to avoid "update links?" dialog
-			await this.vault.rename(
+			await this.fileManager.renameFile(
 				fromResult.value,
 				systemPathFromSplitPathInternal(to),
 			);
