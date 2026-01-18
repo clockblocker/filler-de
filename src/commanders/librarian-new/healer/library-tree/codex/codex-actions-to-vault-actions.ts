@@ -14,6 +14,7 @@ import { makeVaultScopedSplitPath } from "../tree-action/bulk-vault-action-adapt
 import {
 	makeCodexTransform,
 	makeScrollBacklinkTransform,
+	makeStripScrollBacklinkTransform,
 } from "./backlink-transforms";
 import type { CodexAction } from "./types/codex-action";
 
@@ -92,10 +93,12 @@ export function codexActionToVaultAction(
 						action.payload.splitPath,
 						rules,
 					) as SplitPathToMdFile,
-					transform: makeScrollBacklinkTransform(
-						action.payload.parentChain,
-						codecs,
-					),
+					transform: rules.showScrollBacklinks
+						? makeScrollBacklinkTransform(
+								action.payload.parentChain,
+								codecs,
+							)
+						: makeStripScrollBacklinkTransform(codecs),
 				},
 			};
 	}

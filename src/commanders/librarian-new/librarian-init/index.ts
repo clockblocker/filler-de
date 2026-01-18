@@ -1,5 +1,8 @@
 export { assembleVaultActions } from "./assemble-vault-actions";
-export { buildInitialCreateActions } from "./build-initial-actions";
+export {
+	buildInitialCreateActions,
+	type BuildInitialActionsResult,
+} from "./build-initial-actions";
 export {
 	processCodexImpacts,
 	processCodexImpactsForInit,

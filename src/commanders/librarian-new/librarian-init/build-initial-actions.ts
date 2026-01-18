@@ -1,10 +1,20 @@
 import { z } from "zod";
 import type { SplitPathWithReader } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
-import { readMetadata } from "../../../managers/pure/note-metadata-manager";
+import type { VaultAction } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
+import { VaultActionKind } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
+import {
+	readMetadata,
+	parseFrontmatter,
+	frontmatterToInternal,
+	migrateFrontmatter,
+} from "../../../managers/pure/note-metadata-manager";
 import type { AnySplitPathInsideLibrary, CodecRules, Codecs } from "../codecs";
 import { isCodexSplitPath } from "../healer/library-tree/codex/helpers";
-import { tryParseAsInsideLibrarySplitPath } from "../healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
+import {
+	tryParseAsInsideLibrarySplitPath,
+	makeVaultScopedSplitPath,
+} from "../healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
 import { inferCreatePolicy } from "../healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/infer-create";
 import type { CreateTreeLeafAction } from "../healer/library-tree/tree-action/types/tree-action";
 import { tryCanonicalizeSplitPathToDestination } from "../healer/library-tree/tree-action/utils/canonical-naming/canonicalize-to-destination";
@@ -17,12 +27,19 @@ import {
 
 const ScrollMetadataSchema = z.object({
 	status: z.enum(["Done", "NotStarted"]),
+	imported: z.record(z.unknown()).optional(),
 });
+
+export type BuildInitialActionsResult = {
+	createActions: CreateTreeLeafAction[];
+	migrationActions: VaultAction[];
+};
 
 /**
  * Build CreateTreeLeafAction for each file in the library.
  * Applies policy (NameKing for root, PathKing for nested) to determine canonical location.
- * Reads status from md file metadata.
+ * Reads status from md file metadata or YAML frontmatter.
+ * Returns migration actions for files that need frontmatter conversion.
  *
  * @param files - Files from vault with readers
  * @param codecs - Codec API
@@ -32,8 +49,9 @@ export async function buildInitialCreateActions(
 	files: SplitPathWithReader[],
 	codecs: Codecs,
 	rules: CodecRules,
-): Promise<CreateTreeLeafAction[]> {
-	const actions: CreateTreeLeafAction[] = [];
+): Promise<BuildInitialActionsResult> {
+	const createActions: CreateTreeLeafAction[] = [];
+	const migrationActions: VaultAction[] = [];
 
 	for (const file of files) {
 		// Skip codex files (basename starts with __)
@@ -76,18 +94,36 @@ export async function buildInitialCreateActions(
 		if (file.kind === SplitPathKind.MdFile && "read" in file) {
 			const contentResult = await file.read();
 			if (contentResult.isOk()) {
-				const meta = readMetadata(
-					contentResult.value,
-					ScrollMetadataSchema,
-				);
+				const content = contentResult.value;
+
+				// Try internal metadata format first
+				const meta = readMetadata(content, ScrollMetadataSchema);
 				if (meta?.status === "Done") {
 					status = TreeNodeStatus.Done;
+				} else if (!meta) {
+					// Fallback: try YAML frontmatter
+					const fm = parseFrontmatter(content);
+					if (fm) {
+						const converted = frontmatterToInternal(fm);
+						if (converted.status === "Done") {
+							status = TreeNodeStatus.Done;
+						}
+
+						// Queue migration action to convert frontmatter to internal format
+						migrationActions.push({
+							kind: VaultActionKind.ProcessMdFile,
+							payload: {
+								splitPath: makeVaultScopedSplitPath(observedPath, rules),
+								transform: migrateFrontmatter(),
+							},
+						});
+					}
 				}
 			}
 		}
 
 		if (locator.targetKind === TreeNodeKind.Scroll) {
-			actions.push({
+			createActions.push({
 				actionType: "Create",
 				initialStatus: status,
 				observedSplitPath: observedPath as AnySplitPathInsideLibrary & {
@@ -97,7 +133,7 @@ export async function buildInitialCreateActions(
 				targetLocator: locator,
 			});
 		} else if (locator.targetKind === TreeNodeKind.File) {
-			actions.push({
+			createActions.push({
 				actionType: "Create",
 				observedSplitPath: observedPath as AnySplitPathInsideLibrary & {
 					kind: typeof SplitPathKind.File;
@@ -108,5 +144,5 @@ export async function buildInitialCreateActions(
 		}
 	}
 
-	return actions;
+	return { createActions, migrationActions };
 }

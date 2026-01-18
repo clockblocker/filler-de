@@ -99,6 +99,43 @@ function splitFirstLine(content: string): { firstLine: string; rest: string } {
 	};
 }
 
+/**
+ * Split content into YAML frontmatter and rest.
+ * Frontmatter is enclosed by --- at start and end.
+ * Returns null for frontmatter if none present.
+ */
+function splitFrontmatter(content: string): {
+	frontmatter: string | null;
+	rest: string;
+} {
+	const trimmed = content.trimStart();
+	if (!trimmed.startsWith("---")) {
+		return { frontmatter: null, rest: content };
+	}
+
+	// Find the closing ---
+	const startOffset = content.length - trimmed.length;
+	const afterOpening = content.indexOf(LINE_BREAK, startOffset);
+	if (afterOpening === -1) {
+		return { frontmatter: null, rest: content };
+	}
+
+	const closingIndex = content.indexOf(`${LINE_BREAK}---`, afterOpening);
+	if (closingIndex === -1) {
+		return { frontmatter: null, rest: content };
+	}
+
+	// Find end of closing --- line
+	const endOfClosing = content.indexOf(LINE_BREAK, closingIndex + 1);
+	const frontmatterEnd =
+		endOfClosing === -1 ? content.length : endOfClosing + 1;
+
+	return {
+		frontmatter: content.slice(0, frontmatterEnd),
+		rest: content.slice(frontmatterEnd),
+	};
+}
+
 // ─── Backlink Transforms ───
 
 /**
@@ -186,9 +223,47 @@ export function makeCodexContentTransform(
 }
 
 /**
+ * Create transform that strips backlink from a scroll.
+ * Removes the go-back link from the file (after frontmatter if present).
+ *
+ * @param codecs - Codec API
+ * @returns Transform function
+ */
+export function makeStripScrollBacklinkTransform(codecs: Codecs): Transform {
+	return (content: string): string => {
+		const { frontmatter, rest: afterFrontmatter } = splitFrontmatter(content);
+
+		// Work with content after frontmatter
+		const workContent = frontmatter ? afterFrontmatter : content;
+
+		// Check for format: \n[[backlink]]\n...
+		const { firstLine, rest } = splitFirstLine(workContent);
+		if (firstLine.trim() === "") {
+			const { firstLine: secondLine, rest: restAfterSecond } =
+				splitFirstLine(rest);
+			if (isBacklinkLine(secondLine, codecs.rules.suffixDelimiter)) {
+				// Strip backlink
+				return frontmatter
+					? `${frontmatter}${restAfterSecond}`
+					: restAfterSecond;
+			}
+		}
+
+		// Check for format without leading newline: [[backlink]]\n...
+		if (isBacklinkLine(firstLine, codecs.rules.suffixDelimiter)) {
+			return frontmatter ? `${frontmatter}${rest}` : rest;
+		}
+
+		// No backlink to strip
+		return content;
+	};
+}
+
+/**
  * Create transform that updates backlink on a scroll.
  * Scrolls link back to their parent section's codex.
- * Format: \n[[backlink]]<user content>
+ * Places backlink after YAML frontmatter if present.
+ * Format: [frontmatter]\n[[backlink]]\n<user content>
  *
  * @param parentChain - Chain to parent section
  * @param codecs - Codec API
@@ -222,25 +297,34 @@ export function makeScrollBacklinkTransform(
 		// Scroll backlink points to parent section's codex
 		const backlinkLine = `${formatParentBacklink(parentName, parentPathParts)}${SPACE_F}`;
 
-		// Check for existing backlink in new format: \n[[backlink]]\n...
-		const { firstLine, rest } = splitFirstLine(content);
+		// Split frontmatter from rest
+		const { frontmatter, rest: afterFrontmatter } = splitFrontmatter(content);
+
+		// Work with content after frontmatter
+		const workContent = frontmatter ? afterFrontmatter : content;
+
+		// Check for existing backlink in format: \n[[backlink]]\n...
+		const { firstLine, rest } = splitFirstLine(workContent);
 		if (firstLine.trim() === "") {
 			// First line is empty, check second line
 			const { firstLine: secondLine, rest: restAfterSecond } =
 				splitFirstLine(rest);
 			if (isBacklinkLine(secondLine, codecs.rules.suffixDelimiter)) {
-				// Replace existing backlink, preserve user content with newline
-				return `${LINE_BREAK}${backlinkLine}${LINE_BREAK}${restAfterSecond}`;
+				// Replace existing backlink
+				const newContent = `${LINE_BREAK}${backlinkLine}${LINE_BREAK}${restAfterSecond}`;
+				return frontmatter ? `${frontmatter}${newContent}` : newContent;
 			}
 		}
 
-		// Check for old format: [[backlink]]\n...
+		// Check for format without leading newline: [[backlink]]\n...
 		if (isBacklinkLine(firstLine, codecs.rules.suffixDelimiter)) {
-			// Replace existing backlink (migrate to new format)
-			return `${LINE_BREAK}${backlinkLine}${LINE_BREAK}${rest}`;
+			// Replace existing backlink
+			const newContent = `${LINE_BREAK}${backlinkLine}${LINE_BREAK}${rest}`;
+			return frontmatter ? `${frontmatter}${newContent}` : newContent;
 		}
 
-		// No existing backlink - prepend with newline after backlink
-		return `${LINE_BREAK}${backlinkLine}${LINE_BREAK}${content}`;
+		// No existing backlink - insert after frontmatter or at start
+		const newContent = `${LINE_BREAK}${backlinkLine}${LINE_BREAK}${workContent}`;
+		return frontmatter ? `${frontmatter}${newContent}` : newContent;
 	};
 }

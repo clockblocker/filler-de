@@ -113,7 +113,7 @@ export class Librarian {
 			const allFiles = allFilesResult.value;
 
 			// Build Create actions for each file
-			const createActions = await buildInitialCreateActions(
+			const { createActions, migrationActions } = await buildInitialCreateActions(
 				allFiles,
 				this.codecs,
 				this.rules,
@@ -155,12 +155,15 @@ export class Librarian {
 			allHealingActions.push(...deletionHealingActions);
 
 			// Combine all actions and dispatch once
-			const allVaultActions = assembleVaultActions(
-				allHealingActions,
-				codexRecreations,
-				this.rules,
-				this.codecs,
-			);
+			const allVaultActions = [
+				...assembleVaultActions(
+					allHealingActions,
+					codexRecreations,
+					this.rules,
+					this.codecs,
+				),
+				...migrationActions, // Convert YAML frontmatter to internal format
+			];
 
 			if (allVaultActions.length > 0) {
 				await this.vaultActionManager.dispatch(allVaultActions);

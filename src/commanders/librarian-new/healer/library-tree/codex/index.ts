@@ -29,6 +29,7 @@ export {
 export {
 	makeCodexTransform,
 	makeScrollBacklinkTransform,
+	makeStripScrollBacklinkTransform,
 } from "./backlink-transforms";
 export { CODEX_CORE_NAME } from "./literals";
 export { mergeCodexImpacts } from "./merge-codex-impacts";

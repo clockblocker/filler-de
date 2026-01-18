@@ -138,5 +138,17 @@ export class SettingsTab extends PluginSettingTab {
 					}
 				});
 			});
+
+		new Setting(containerEl)
+			.setName("Show backlinks on scrolls")
+			.setDesc("Add go-back links at the top of scroll files")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.showScrollBacklinks)
+					.onChange(async (value) => {
+						this.plugin.settings.showScrollBacklinks = value;
+						await this.plugin.saveSettings();
+					}),
+			);
 	}
 }

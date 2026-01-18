@@ -1,0 +1,171 @@
+import type { Transform } from "../../obsidian/vault-action-manager/types/vault-action";
+import { upsertMetadata } from "./impl";
+
+// ─── Constants ───
+
+/** Pattern to match YAML frontmatter at start of file */
+const FRONTMATTER_PATTERN = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
+
+// ─── Types ───
+
+export type ScrollMetadataWithImport = {
+	status: "Done" | "NotStarted";
+	imported?: Record<string, unknown>;
+};
+
+// ─── Helpers ───
+
+/**
+ * Parse simple YAML key-value pairs.
+ * Handles: strings, numbers, booleans, dates, arrays (inline and multiline).
+ */
+function parseSimpleYaml(yamlContent: string): Record<string, unknown> {
+	const result: Record<string, unknown> = {};
+	const lines = yamlContent.split(/\r?\n/);
+
+	let currentKey: string | null = null;
+	let currentArray: unknown[] | null = null;
+
+	for (const line of lines) {
+		// Skip empty lines and comments
+		if (line.trim() === "" || line.trim().startsWith("#")) continue;
+
+		// Array item (indented with -)
+		const arrayItemMatch = line.match(/^\s+-\s+(.*)$/);
+		if (arrayItemMatch && currentKey && currentArray) {
+			currentArray.push(parseValue(arrayItemMatch[1].trim()));
+			continue;
+		}
+
+		// Key-value pair
+		const kvMatch = line.match(/^([a-zA-Z_][a-zA-Z0-9_-]*):\s*(.*)$/);
+		if (kvMatch) {
+			// Save previous array if any
+			if (currentKey && currentArray) {
+				result[currentKey] = currentArray;
+			}
+
+			const key = kvMatch[1];
+			const rawValue = kvMatch[2].trim();
+
+			// Check for inline array [a, b, c]
+			if (rawValue.startsWith("[") && rawValue.endsWith("]")) {
+				const inner = rawValue.slice(1, -1);
+				result[key] = inner
+					.split(",")
+					.map((s) => parseValue(s.trim()))
+					.filter((v) => v !== "");
+				currentKey = null;
+				currentArray = null;
+			} else if (rawValue === "") {
+				// Multiline array starts
+				currentKey = key;
+				currentArray = [];
+			} else {
+				result[key] = parseValue(rawValue);
+				currentKey = null;
+				currentArray = null;
+			}
+		}
+	}
+
+	// Save final array if any
+	if (currentKey && currentArray) {
+		result[currentKey] = currentArray;
+	}
+
+	return result;
+}
+
+/**
+ * Parse a single YAML value (string, number, boolean, null, date).
+ */
+function parseValue(raw: string): unknown {
+	// Remove quotes
+	if (
+		(raw.startsWith('"') && raw.endsWith('"')) ||
+		(raw.startsWith("'") && raw.endsWith("'"))
+	) {
+		return raw.slice(1, -1);
+	}
+
+	// Booleans
+	if (raw === "true" || raw === "True" || raw === "TRUE") return true;
+	if (raw === "false" || raw === "False" || raw === "FALSE") return false;
+
+	// Null
+	if (raw === "null" || raw === "~") return null;
+
+	// Numbers
+	if (/^-?\d+$/.test(raw)) return Number.parseInt(raw, 10);
+	if (/^-?\d+\.\d+$/.test(raw)) return Number.parseFloat(raw);
+
+	// Date-like (YYYY-MM-DD or YYYY-MM-DD HH:MM)
+	if (/^\d{4}-\d{2}-\d{2}(\s+\d{2}:\d{2})?$/.test(raw)) {
+		return raw; // Keep as string for simplicity
+	}
+
+	return raw;
+}
+
+// ─── Public API ───
+
+/**
+ * Parse YAML frontmatter from note content.
+ * Returns null if no frontmatter present.
+ */
+export function parseFrontmatter(
+	content: string,
+): Record<string, unknown> | null {
+	const match = content.match(FRONTMATTER_PATTERN);
+	if (!match?.[1]) return null;
+
+	const parsed = parseSimpleYaml(match[1]);
+	return Object.keys(parsed).length > 0 ? parsed : null;
+}
+
+/**
+ * Strip YAML frontmatter from content.
+ * Returns original content if no frontmatter present.
+ */
+export function stripFrontmatter(content: string): string {
+	return content.replace(FRONTMATTER_PATTERN, "");
+}
+
+/**
+ * Convert frontmatter object to internal metadata format.
+ * Maps common status field values to internal status.
+ * Preserves all fields in `imported` sub-object.
+ */
+export function frontmatterToInternal(
+	fm: Record<string, unknown>,
+): ScrollMetadataWithImport {
+	// Detect status from common field names and values
+	const statusField = fm.status ?? fm.completion ?? fm.state;
+	const isDone =
+		statusField === "done" ||
+		statusField === "Done" ||
+		statusField === "completed" ||
+		statusField === "Completed" ||
+		statusField === true;
+
+	return {
+		status: isDone ? "Done" : "NotStarted",
+		imported: fm,
+	};
+}
+
+/**
+ * Create transform that migrates YAML frontmatter to internal format.
+ * Strips YAML and adds internal metadata section.
+ */
+export function migrateFrontmatter(): Transform {
+	return (content: string) => {
+		const fm = parseFrontmatter(content);
+		if (!fm) return content;
+
+		const stripped = stripFrontmatter(content);
+		const meta = frontmatterToInternal(fm);
+		return upsertMetadata(meta)(stripped);
+	};
+}

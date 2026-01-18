@@ -591,6 +591,8 @@ export default class TextEaterPlugin extends Plugin {
 				prev.showScrollsInCodexesForDepth !==
 					curr.showScrollsInCodexesForDepth;
 			const rootChanged = prev.libraryRoot !== curr.libraryRoot;
+			const backlinksChanged =
+				prev.showScrollBacklinks !== curr.showScrollBacklinks;
 
 			if (delimiterChanged) {
 				const confirmed = await this.handleDelimiterChange(
@@ -604,7 +606,7 @@ export default class TextEaterPlugin extends Plugin {
 				}
 			}
 
-			if (delimiterChanged || depthChanged || rootChanged) {
+			if (delimiterChanged || depthChanged || rootChanged || backlinksChanged) {
 				// Update global state BEFORE reinit so librarian uses new settings
 				updateParsedSettings(this.settings);
 				await this.reinitLibrarian();

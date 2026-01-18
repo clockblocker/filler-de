@@ -11,6 +11,8 @@ export type CodecRules = {
 	libraryRootName: string;
 	/** Full library root path parts (from splitPathToLibraryRoot.pathParts) */
 	libraryRootPathParts: string[];
+	/** Whether to add go-back links on scroll files */
+	showScrollBacklinks: boolean;
 };
 
 /**
@@ -24,5 +26,6 @@ export function makeCodecRulesFromSettings(
 		libraryRootName: settings.splitPathToLibraryRoot.basename,
 		libraryRootPathParts: settings.splitPathToLibraryRoot.pathParts,
 		suffixDelimiter: settings.suffixDelimiter,
+		showScrollBacklinks: settings.showScrollBacklinks,
 	};
 }
