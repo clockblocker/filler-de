@@ -100,6 +100,18 @@ function splitFirstLine(content: string): { firstLine: string; rest: string } {
 }
 
 /**
+ * Ensure content starts with at least one blank line (for spacing after backlink).
+ * If content already starts with newlines, just return it.
+ * Otherwise, prepend a newline.
+ */
+function ensureLeadingBlankLine(content: string): string {
+	if (content.startsWith(LINE_BREAK)) {
+		return content;
+	}
+	return `${LINE_BREAK}${content}`;
+}
+
+/**
  * Split content into YAML frontmatter and rest.
  * Frontmatter is enclosed by --- at start and end.
  * Returns null for frontmatter if none present.
@@ -310,21 +322,21 @@ export function makeScrollBacklinkTransform(
 			const { firstLine: secondLine, rest: restAfterSecond } =
 				splitFirstLine(rest);
 			if (isBacklinkLine(secondLine, codecs.rules.suffixDelimiter)) {
-				// Replace existing backlink
-				const newContent = `${LINE_BREAK}${backlinkLine}${LINE_BREAK}${restAfterSecond}`;
+				// Replace existing backlink, ensure blank line before content
+				const newContent = `${LINE_BREAK}${backlinkLine}${ensureLeadingBlankLine(restAfterSecond)}`;
 				return frontmatter ? `${frontmatter}${newContent}` : newContent;
 			}
 		}
 
 		// Check for format without leading newline: [[backlink]]\n...
 		if (isBacklinkLine(firstLine, codecs.rules.suffixDelimiter)) {
-			// Replace existing backlink
-			const newContent = `${LINE_BREAK}${backlinkLine}${LINE_BREAK}${rest}`;
+			// Replace existing backlink, ensure blank line before content
+			const newContent = `${LINE_BREAK}${backlinkLine}${ensureLeadingBlankLine(rest)}`;
 			return frontmatter ? `${frontmatter}${newContent}` : newContent;
 		}
 
 		// No existing backlink - insert after frontmatter or at start
-		const newContent = `${LINE_BREAK}${backlinkLine}${LINE_BREAK}${workContent}`;
+		const newContent = `${LINE_BREAK}${backlinkLine}${ensureLeadingBlankLine(workContent)}`;
 		return frontmatter ? `${frontmatter}${newContent}` : newContent;
 	};
 }

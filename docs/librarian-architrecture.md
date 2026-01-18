@@ -117,8 +117,27 @@ Library-scoped healing actions converted to vault-scoped actions for dispatch.
 1. **Init**: read Library filesystem, create tree, dispatch initial healing
    - Root files: NameKing (suffix → path)
    - Nested files: PathKing (path → suffix)
+   - YAML frontmatter migration: external files with `---` frontmatter are auto-converted
 2. **Steady-state**: listen to events → build actions → apply to tree → dispatch healing
 3. **Queue**: events processed sequentially to maintain consistency
+
+## Metadata
+
+### Internal Format
+Scroll status stored in hidden `<section>` at file end (20 lines padding):
+```html
+<section id="textfresser_meta_keep_me_invisible">
+{"status":"Done","imported":{"title":"My Note","created":"2023-04-18"}}
+</section>
+```
+
+### YAML Frontmatter Import
+During init, files without internal metadata but with YAML frontmatter are auto-migrated:
+- `status`/`completion` field → internal `status` (Done/NotStarted)
+- All YAML fields preserved in `imported` sub-object
+- YAML frontmatter stripped from file
+
+See `src/managers/pure/note-metadata-manager/frontmatter.ts`.
 
 ## Healing Types
 
