@@ -6,6 +6,7 @@ export type TextEaterSettings = {
 	maxSectionDepth: number; // 0 = own children only, 1 = own children and their children, etc.
 	showScrollsInCodexesForDepth: number;
 	showScrollBacklinks: boolean;
+	hideMetadata: boolean; // Store metadata invisibly at end of file. When false, uses YAML frontmatter.
 };
 
 export const DEFAULT_SETTINGS: TextEaterSettings = {
@@ -16,4 +17,5 @@ export const DEFAULT_SETTINGS: TextEaterSettings = {
 	showScrollsInCodexesForDepth: 1,
 	suffixDelimiter: "-",
 	showScrollBacklinks: true,
+	hideMetadata: true,
 };

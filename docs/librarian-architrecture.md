@@ -127,15 +127,15 @@ Library-scoped healing actions converted to vault-scoped actions for dispatch.
 Scroll status stored in hidden `<section>` at file end (20 lines padding):
 ```html
 <section id="textfresser_meta_keep_me_invisible">
-{"status":"Done","imported":{"title":"My Note","created":"2023-04-18"}}
+{"status":"Done","title":"My Note","created":"2023-04-18"}
 </section>
 ```
 
 ### YAML Frontmatter Import
 During init, files without internal metadata but with YAML frontmatter are auto-migrated:
 - `status`/`completion` field → internal `status` (Done/NotStarted)
-- All YAML fields preserved in `imported` sub-object
-- YAML frontmatter stripped from file
+- All YAML fields spread directly into metadata object
+- YAML frontmatter stripped from file (configurable via settings)
 
 See `src/managers/pure/note-metadata-manager/frontmatter.ts`.
 

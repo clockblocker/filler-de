@@ -13,6 +13,8 @@ export type CodecRules = {
 	libraryRootPathParts: string[];
 	/** Whether to add go-back links on scroll files */
 	showScrollBacklinks: boolean;
+	/** Store metadata invisibly at end of file. When false, uses YAML frontmatter. */
+	hideMetadata: boolean;
 };
 
 /**
@@ -27,5 +29,6 @@ export function makeCodecRulesFromSettings(
 		libraryRootPathParts: settings.splitPathToLibraryRoot.pathParts,
 		suffixDelimiter: settings.suffixDelimiter,
 		showScrollBacklinks: settings.showScrollBacklinks,
+		hideMetadata: settings.hideMetadata,
 	};
 }

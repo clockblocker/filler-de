@@ -117,6 +117,7 @@ export class Librarian {
 				allFiles,
 				this.codecs,
 				this.rules,
+				{ stripYamlFrontmatter: settings.stripYamlFrontmatter },
 			);
 
 			// Apply all create actions and collect healing + codex impacts

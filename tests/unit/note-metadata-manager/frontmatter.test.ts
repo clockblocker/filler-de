@@ -180,14 +180,16 @@ title: Test
 			expect(result.status).toBe("NotStarted");
 		});
 
-		it("preserves all fields in imported", () => {
+		it("spreads all fields directly", () => {
 			const fm = {
 				title: "My Note",
 				created: "2023-04-18",
 				tags: ["a", "b"],
 			};
 			const result = frontmatterToInternal(fm);
-			expect(result.imported).toEqual(fm);
+			expect(result.title).toBe("My Note");
+			expect(result.created).toBe("2023-04-18");
+			expect(result.tags).toEqual(["a", "b"]);
 		});
 
 		it("uses completion field as fallback", () => {
@@ -212,9 +214,9 @@ Content here`;
 			expect(result).toContain('<section id="textfresser_meta_keep_me_invisible">');
 			// Should contain Done status
 			expect(result).toContain('"status":"Done"');
-			// Should preserve imported data
-			expect(result).toContain('"imported"');
+			// Should contain title directly (not in "imported")
 			expect(result).toContain('"title":"Test"');
+			expect(result).not.toContain('"imported"');
 			// Should preserve content
 			expect(result).toContain("Content here");
 		});
@@ -231,6 +233,37 @@ title: Only Meta
 ---
 `;
 			const transform = migrateFrontmatter();
+			const result = transform(content);
+
+			expect(result).not.toContain("---");
+			expect(result).toContain('<section id="textfresser_meta_keep_me_invisible">');
+		});
+
+		it("keeps YAML when stripYaml is false", () => {
+			const content = `---
+title: Test
+status: done
+---
+Content here`;
+			const transform = migrateFrontmatter({ stripYaml: false });
+			const result = transform(content);
+
+			// Should keep YAML frontmatter
+			expect(result).toContain("---");
+			expect(result).toContain("title: Test");
+			// Should also have internal metadata section
+			expect(result).toContain('<section id="textfresser_meta_keep_me_invisible">');
+			expect(result).toContain('"status":"Done"');
+			// Should preserve content
+			expect(result).toContain("Content here");
+		});
+
+		it("strips YAML when stripYaml is true (explicit)", () => {
+			const content = `---
+title: Test
+---
+Content`;
+			const transform = migrateFrontmatter({ stripYaml: true });
 			const result = transform(content);
 
 			expect(result).not.toContain("---");

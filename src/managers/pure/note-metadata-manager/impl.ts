@@ -63,3 +63,13 @@ export function upsertMetadata(metadata: Metadata): Transform {
 		return `${contentWithoutMeta}${PADDING}${metaSection}\n`;
 	};
 }
+
+/**
+ * Strip internal metadata section from content.
+ * Returns Transform function for use with ProcessMdFile.
+ */
+export function stripInternalMetadata(): Transform {
+	return (content: string) => {
+		return content.replace(PATTERN, "").trimEnd();
+	};
+}

@@ -2,6 +2,7 @@ export { assembleVaultActions } from "./assemble-vault-actions";
 export {
 	buildInitialCreateActions,
 	type BuildInitialActionsResult,
+	type BuildInitialActionsOptions,
 } from "./build-initial-actions";
 export {
 	processCodexImpacts,

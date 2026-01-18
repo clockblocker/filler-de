@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Read the high-level descripton of the project in docs/**
 
-If you change anything maningfull, modify the files tehre for thode, who come after.
+If you change anything maningful, modify the files for those who come after.
 
 ## Plan Mode
 

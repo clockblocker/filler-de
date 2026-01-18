@@ -25,14 +25,20 @@ import {
 
 // ─── Scroll Metadata Schema ───
 
-const ScrollMetadataSchema = z.object({
-	status: z.enum(["Done", "NotStarted"]),
-	imported: z.record(z.unknown()).optional(),
-});
+const ScrollMetadataSchema = z
+	.object({
+		status: z.enum(["Done", "NotStarted"]),
+	})
+	.passthrough();
 
 export type BuildInitialActionsResult = {
 	createActions: CreateTreeLeafAction[];
 	migrationActions: VaultAction[];
+};
+
+export type BuildInitialActionsOptions = {
+	/** Whether to strip YAML frontmatter after conversion. Default: true */
+	stripYamlFrontmatter?: boolean;
 };
 
 /**
@@ -44,12 +50,15 @@ export type BuildInitialActionsResult = {
  * @param files - Files from vault with readers
  * @param codecs - Codec API
  * @param rules - Codec rules
+ * @param options - Optional settings
  */
 export async function buildInitialCreateActions(
 	files: SplitPathWithReader[],
 	codecs: Codecs,
 	rules: CodecRules,
+	options?: BuildInitialActionsOptions,
 ): Promise<BuildInitialActionsResult> {
+	const stripYaml = options?.stripYamlFrontmatter ?? true;
 	const createActions: CreateTreeLeafAction[] = [];
 	const migrationActions: VaultAction[] = [];
 
@@ -114,7 +123,7 @@ export async function buildInitialCreateActions(
 							kind: VaultActionKind.ProcessMdFile,
 							payload: {
 								splitPath: makeVaultScopedSplitPath(observedPath, rules),
-								transform: migrateFrontmatter(),
+								transform: migrateFrontmatter({ stripYaml }),
 							},
 						});
 					}

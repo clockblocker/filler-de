@@ -150,5 +150,19 @@ export class SettingsTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					}),
 			);
+
+		new Setting(containerEl)
+			.setName("Hide metadata")
+			.setDesc(
+				"Store metadata invisibly at end of file. When off, uses YAML frontmatter.",
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.hideMetadata)
+					.onChange(async (value) => {
+						this.plugin.settings.hideMetadata = value;
+						await this.plugin.saveSettings();
+					}),
+			);
 	}
 }

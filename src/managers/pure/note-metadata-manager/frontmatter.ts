@@ -10,8 +10,7 @@ const FRONTMATTER_PATTERN = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
 
 export type ScrollMetadataWithImport = {
 	status: "Done" | "NotStarted";
-	imported?: Record<string, unknown>;
-};
+} & Record<string, unknown>;
 
 // ─── Helpers ───
 
@@ -135,7 +134,7 @@ export function stripFrontmatter(content: string): string {
 /**
  * Convert frontmatter object to internal metadata format.
  * Maps common status field values to internal status.
- * Preserves all fields in `imported` sub-object.
+ * Spreads all other fields directly into metadata.
  */
 export function frontmatterToInternal(
 	fm: Record<string, unknown>,
@@ -150,22 +149,63 @@ export function frontmatterToInternal(
 		statusField === true;
 
 	return {
+		...fm,
 		status: isDone ? "Done" : "NotStarted",
-		imported: fm,
 	};
 }
 
+export type MigrateFrontmatterOptions = {
+	/** Whether to strip YAML frontmatter after conversion. Default: true */
+	stripYaml?: boolean;
+};
+
 /**
  * Create transform that migrates YAML frontmatter to internal format.
- * Strips YAML and adds internal metadata section.
+ * @param options.stripYaml - If true (default), removes YAML frontmatter. If false, keeps it.
  */
-export function migrateFrontmatter(): Transform {
+export function migrateFrontmatter(options?: MigrateFrontmatterOptions): Transform {
+	const stripYaml = options?.stripYaml ?? true;
+
 	return (content: string) => {
 		const fm = parseFrontmatter(content);
 		if (!fm) return content;
 
-		const stripped = stripFrontmatter(content);
+		const baseContent = stripYaml ? stripFrontmatter(content) : content;
 		const meta = frontmatterToInternal(fm);
-		return upsertMetadata(meta)(stripped);
+		return upsertMetadata(meta)(baseContent);
 	};
+}
+
+/**
+ * Convert metadata object to YAML frontmatter string.
+ * Preserves all fields.
+ */
+export function internalToFrontmatter(meta: ScrollMetadataWithImport): string {
+	const lines: string[] = ["---"];
+	for (const [key, value] of Object.entries(meta)) {
+		if (value === null || value === undefined) continue;
+		if (Array.isArray(value)) {
+			lines.push(`${key}: [${value.map((v) => formatYamlValue(v)).join(", ")}]`);
+		} else {
+			lines.push(`${key}: ${formatYamlValue(value)}`);
+		}
+	}
+	lines.push("---");
+	return lines.join("\n");
+}
+
+/**
+ * Format a value for YAML output.
+ */
+function formatYamlValue(value: unknown): string {
+	if (typeof value === "string") {
+		// Quote strings that need escaping
+		if (/[:#\[\]{}'",\n]/.test(value) || value === "") {
+			return `"${value.replace(/"/g, '\\"')}"`;
+		}
+		return value;
+	}
+	if (typeof value === "boolean") return value ? "true" : "false";
+	if (typeof value === "number") return String(value);
+	return String(value);
 }
