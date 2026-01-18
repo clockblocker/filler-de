@@ -106,10 +106,14 @@ function splitFirstLine(content: string): { firstLine: string; rest: string } {
  * Otherwise, prepend a newline.
  */
 function ensureLeadingBlankLine(content: string): string {
-	if (content.startsWith(LINE_BREAK)) {
+	const DOUBLE_BREAK = `${LINE_BREAK}${LINE_BREAK}`;
+	if (content.startsWith(DOUBLE_BREAK)) {
 		return content;
 	}
-	return `${LINE_BREAK}${content}`;
+	if (content.startsWith(LINE_BREAK)) {
+		return `${LINE_BREAK}${content}`;
+	}
+	return `${DOUBLE_BREAK}${content}`;
 }
 
 /**
@@ -255,7 +259,9 @@ export function makeStripScrollBacklinkTransform(codecs: Codecs): Transform {
 		if (firstLine.trim() === "") {
 			const { firstLine: secondLine, rest: restAfterSecond } =
 				splitFirstLine(rest);
-			if (isBacklinkLine(secondLine, codecs.rules.suffixDelimiterPattern)) {
+			if (
+				isBacklinkLine(secondLine, codecs.rules.suffixDelimiterPattern)
+			) {
 				// Strip backlink
 				return frontmatter
 					? `${frontmatter}${restAfterSecond}`
@@ -324,7 +330,9 @@ export function makeScrollBacklinkTransform(
 			// First line is empty, check second line
 			const { firstLine: secondLine, rest: restAfterSecond } =
 				splitFirstLine(rest);
-			if (isBacklinkLine(secondLine, codecs.rules.suffixDelimiterPattern)) {
+			if (
+				isBacklinkLine(secondLine, codecs.rules.suffixDelimiterPattern)
+			) {
 				// Replace existing backlink, ensure blank line before content
 				const newContent = `${LINE_BREAK}${backlinkLine}${ensureLeadingBlankLine(restAfterSecond)}`;
 				return frontmatter ? `${frontmatter}${newContent}` : newContent;

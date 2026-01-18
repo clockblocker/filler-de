@@ -284,6 +284,15 @@ export class Librarian {
 	private handlePropertyCheckboxClick(
 		event: PropertyCheckboxClickedEvent,
 	): void {
+		logger.debug(
+			"[Librarian] PropertyClick event:",
+			JSON.stringify({
+				propertyName: event.propertyName,
+				checked: event.checked,
+				path: event.splitPath.pathParts,
+			}),
+		);
+
 		// Only handle "status" property
 		if (event.propertyName !== "status") return;
 
@@ -311,6 +320,14 @@ export class Librarian {
 		}
 
 		const locator = locatorResult.value;
+		logger.debug(
+			"[Librarian] Locator for property click:",
+			JSON.stringify({
+				segmentId: locator.segmentId,
+				segmentIdChainToParent: locator.segmentIdChainToParent,
+				targetKind: locator.targetKind,
+			}),
+		);
 
 		// Only handle scroll nodes
 		if (locator.targetKind !== TreeNodeKind.Scroll) return;
