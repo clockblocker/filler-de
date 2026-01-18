@@ -1,4 +1,4 @@
-import { type Result } from "neverthrow";
+import type { Result } from "neverthrow";
 import type { Codecs } from "../../../codecs";
 import type { CodecError } from "../../../codecs/errors";
 import type { ScrollNodeSegmentId } from "../../../codecs/segment-id/types/segment-id";

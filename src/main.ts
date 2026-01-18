@@ -39,7 +39,17 @@ import { SelectionService } from "./services/obsidian-services/atomic-services/s
 import { ACTION_CONFIGS } from "./services/wip-configs/actions/actions-config";
 import addBacklinksToCurrentFile from "./services/wip-configs/actions/old/addBacklinksToCurrentFile";
 import { SettingsTab } from "./settings";
-import { DEFAULT_SETTINGS, type TextEaterSettings } from "./types";
+import {
+	DEFAULT_SETTINGS,
+	type SuffixDelimiterConfig,
+	type TextEaterSettings,
+} from "./types";
+import {
+	buildCanonicalDelimiter,
+	buildFlexibleDelimiterPattern,
+	isSuffixDelimiterConfig,
+	migrateStringDelimiter,
+} from "./utils/delimiter";
 import { whenIdle as whenIdleTracker } from "./utils/idle-tracker";
 import { logger } from "./utils/logger";
 
@@ -184,7 +194,10 @@ export default class TextEaterPlugin extends Plugin {
 			this.app.vault,
 		);
 		this.vaultActionManager = new VaultActionManagerImpl(this.app);
-		this.clickInterceptor = new ClickInterceptor(this.app, this.vaultActionManager);
+		this.clickInterceptor = new ClickInterceptor(
+			this.app,
+			this.vaultActionManager,
+		);
 		this.clipboardInterceptor = new ClipboardInterceptor();
 
 		this.selectionToolbarService = new AboveSelectionToolbarService(
@@ -294,22 +307,34 @@ export default class TextEaterPlugin extends Plugin {
 		if (this.bottomToolbarService) this.bottomToolbarService.detach();
 		if (this.selectionToolbarService) this.selectionToolbarService.detach();
 		if (this.clickInterceptor) this.clickInterceptor.stopListening();
-		if (this.clipboardInterceptor) this.clipboardInterceptor.stopListening();
+		if (this.clipboardInterceptor)
+			this.clipboardInterceptor.stopListening();
 		if (this.librarian) this.librarian.unsubscribe();
 		// Clear global state
 		clearState();
 	}
 
 	private async loadSettings() {
-		this.settings = Object.assign(
-			{},
-			DEFAULT_SETTINGS,
-			await this.loadData(),
-		);
+		const loadedData = await this.loadData();
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData);
+
+		// Migrate old string delimiter format to new config format
+		if (
+			loadedData?.suffixDelimiter &&
+			!isSuffixDelimiterConfig(loadedData.suffixDelimiter)
+		) {
+			this.settings.suffixDelimiter = migrateStringDelimiter(
+				loadedData.suffixDelimiter as string,
+			);
+		}
+
 		// Initialize global state with parsed settings
 		initializeState(this.settings);
-		// Store initial settings for change detection
-		this.previousSettings = { ...this.settings };
+		// Store initial settings for change detection (deep copy delimiter)
+		this.previousSettings = {
+			...this.settings,
+			suffixDelimiter: { ...this.settings.suffixDelimiter },
+		};
 	}
 
 	private async addCommands() {
@@ -342,65 +367,12 @@ export default class TextEaterPlugin extends Plugin {
 		});
 
 		this.addCommand({
-			editorCheckCallback: (
-				// checking: boolean,
-				// editor: Editor,
-				// view: MarkdownView,
-			) => {
-				// if (view.file) {
-				// 	if (!checking) {
-				// 		// fillTemplate(this, editor, view.file);
-				// 		// testEndgame(this, editor, view.file);
-				// 	}
-				// 	return true;
-				// }
+			editorCheckCallback: () => {
 				return false;
 			},
 			id: "fill-template",
 			name: "Generate a dictionary entry for the word in the title of the file",
 		});
-
-		// TODO: Re-enable when LibrarianLegacy methods are ported to new Librarian
-		// this.addCommand({
-		// 	editorCheckCallback: () => {
-		// 		const librarianTester = new LibrarianLegacyTester(
-		// 			this.librarian,
-		// 		);
-		// 		librarianTester.createAvatar();
-		// 	},
-		// 	id: "get-infinitive-and-emoji",
-		// 	name: "Get infinitive/normal form and emoji for current word",
-		// });
-
-		// this.addCommand({
-		// 	editorCheckCallback: () => {
-		// 		this.librarian.createNewNoteInCurrentFolder();
-		// 	},
-		// 	id: "create-new-text-in-the-current-folder-and-open-it",
-		// 	name: "Create new text in the current folder and open it",
-		// });
-
-		// this.addCommand({
-		// 	editorCheckCallback: (
-		// 		checking: boolean,
-		// 		_editor: Editor,
-		// 		view: MarkdownView,
-		// 	) => {
-		// 		// Only show if file is in a Library folder
-		// 		if (
-		// 			!view.file ||
-		// 			!this.librarian.isInLibraryFolder(view.file)
-		// 		) {
-		// 			return false;
-		// 		}
-		// 		if (!checking) {
-		// 			this.librarian.makeNoteAText();
-		// 		}
-		// 		return true;
-		// 	},
-		// 	id: "make-note-a-text",
-		// 	name: "Make this note a text",
-		// });
 
 		this.addCommand({
 			editorCheckCallback: (
@@ -468,54 +440,11 @@ export default class TextEaterPlugin extends Plugin {
 		});
 
 		this.addCommand({
-			editorCheckCallback: (
-				// checking: boolean,
-				// editor: Editor,
-				// view: MarkdownView,
-			) => {
-				// if (view.file) {
-				// 	if (!checking) {
-				// 		newGenCommand(this);
-				// 	}
-				// 	return true;
-				// }
-				// return false;
-			},
+			editorCheckCallback: () => {},
 			id: "new-gen-command",
 			name: "new-gen-command",
 		});
-
-		// Legacy command - unplugged
-		// this.addCommand({
-		// 	callback: () => {
-		// 		this.backgroundFileService.logDeepLs();
-		// 	},
-		// 	id: "librarian-log-deep-ls",
-		// 	name: "LibrarianLegacy: log tree structure",
-		// });
 	}
-
-	// private setTestingGlobals() {
-	// 	(
-	// 		window as unknown as {
-	// 			__textfresserTesting?: Record<string, unknown>;
-	// 		}
-	// 	).__textfresserTesting = {
-	// 		backgroundFileService: this.testingBackgroundFileServiceLegacy,
-	// 		managerSplitPath,
-	// 		openedFileService: this.testingOpenedFileService,
-	// 		reader: this.testingReader,
-	// 		splitPath,
-	// 		splitPathBackground: splitPathForBackground,
-	// 		splitPathKey,
-	// 		splitPathKeyBackground: splitPathKeyForBackground,
-	// 		vaultActionManager: this.vaultActionManager,
-	// 	};
-	// }
-
-	// getOpenedFileServiceForTesting() {
-	// 	return this.testingOpenedFileService;
-	// }
 
 	getOpenedFileServiceTestingApi() {
 		return {
@@ -585,7 +514,13 @@ export default class TextEaterPlugin extends Plugin {
 		const curr = this.settings;
 
 		if (prev) {
-			const delimiterChanged = prev.suffixDelimiter !== curr.suffixDelimiter;
+			// Compare delimiter configs
+			const symbolChanged =
+				prev.suffixDelimiter.symbol !== curr.suffixDelimiter.symbol;
+			const paddingChanged =
+				prev.suffixDelimiter.padded !== curr.suffixDelimiter.padded;
+			const delimiterChanged = symbolChanged || paddingChanged;
+
 			const depthChanged =
 				prev.maxSectionDepth !== curr.maxSectionDepth ||
 				prev.showScrollsInCodexesForDepth !==
@@ -593,6 +528,7 @@ export default class TextEaterPlugin extends Plugin {
 			const rootChanged = prev.libraryRoot !== curr.libraryRoot;
 			const backlinksChanged =
 				prev.showScrollBacklinks !== curr.showScrollBacklinks;
+			const hideMetadataChanged = prev.hideMetadata !== curr.hideMetadata;
 
 			if (delimiterChanged) {
 				const confirmed = await this.handleDelimiterChange(
@@ -601,12 +537,18 @@ export default class TextEaterPlugin extends Plugin {
 				);
 				if (!confirmed) {
 					// User cancelled - restore old delimiter
-					this.settings.suffixDelimiter = prev.suffixDelimiter;
+					this.settings.suffixDelimiter = { ...prev.suffixDelimiter };
 					return;
 				}
 			}
 
-			if (delimiterChanged || depthChanged || rootChanged || backlinksChanged) {
+			if (
+				delimiterChanged ||
+				depthChanged ||
+				rootChanged ||
+				backlinksChanged ||
+				hideMetadataChanged
+			) {
 				// Update global state BEFORE reinit so librarian uses new settings
 				updateParsedSettings(this.settings);
 				await this.reinitLibrarian();
@@ -614,7 +556,10 @@ export default class TextEaterPlugin extends Plugin {
 		}
 
 		await this.saveData(this.settings);
-		this.previousSettings = { ...this.settings };
+		this.previousSettings = {
+			...this.settings,
+			suffixDelimiter: { ...this.settings.suffixDelimiter },
+		};
 		updateParsedSettings(this.settings);
 	}
 
@@ -623,9 +568,13 @@ export default class TextEaterPlugin extends Plugin {
 	 * Returns true if user confirmed, false if cancelled.
 	 */
 	private async handleDelimiterChange(
-		oldDelim: string,
-		newDelim: string,
+		oldConfig: SuffixDelimiterConfig,
+		newConfig: SuffixDelimiterConfig,
 	): Promise<boolean> {
+		const oldDelim = buildCanonicalDelimiter(oldConfig);
+		const newDelim = buildCanonicalDelimiter(newConfig);
+		const oldPattern = buildFlexibleDelimiterPattern(oldConfig);
+
 		if (oldDelim === newDelim) return true;
 
 		// Get all .md files in library
@@ -642,21 +591,23 @@ export default class TextEaterPlugin extends Plugin {
 			const children = this.app.vault.getFiles().filter((f) => {
 				const filePath = f.path;
 				return (
-					filePath.startsWith(folder + "/") && filePath.endsWith(".md")
+					filePath.startsWith(folder + "/") &&
+					filePath.endsWith(".md")
 				);
 			});
 			mdFiles.push(...children);
 		};
 		collectMdFiles(libraryRoot);
 
-		// Count files that need renaming (have oldDelim in basename)
+		// Count files that need renaming (match old pattern - any spacing around symbol)
 		const filesToRename = mdFiles.filter((f) =>
-			f.basename.includes(oldDelim),
+			oldPattern.test(f.basename),
 		);
 
-		// Also count files that need escape (have newDelim in basename)
+		// Also count files that need escape (have new symbol in basename)
+		const newPattern = buildFlexibleDelimiterPattern(newConfig);
 		const filesNeedingEscape = mdFiles.filter((f) =>
-			f.basename.includes(newDelim),
+			newPattern.test(f.basename),
 		);
 
 		const totalAffected = new Set([
@@ -677,16 +628,21 @@ export default class TextEaterPlugin extends Plugin {
 
 		if (!confirmed) return false;
 
-		// Find escape char not present in either delimiter
+		// Find escape char not present in either delimiter symbol
 		const escapeCandidates = ["_", "~", ".", " ", "-", "+", "="];
 		const escapeChar =
 			escapeCandidates.find(
-				(c) => !oldDelim.includes(c) && !newDelim.includes(c),
+				(c) =>
+					!oldConfig.symbol.includes(c) &&
+					!newConfig.symbol.includes(c),
 			) ?? "_";
 
-		// Phase 1: Escape conflicts (replace newDelim with escapeChar)
+		// Phase 1: Escape conflicts (replace new symbol occurrences with escapeChar)
 		for (const file of filesNeedingEscape) {
-			const newBasename = file.basename.replaceAll(newDelim, escapeChar);
+			const newBasename = file.basename.replace(
+				new RegExp(newPattern.source, "g"),
+				escapeChar,
+			);
 			const newPath = file.path.replace(file.name, newBasename + ".md");
 			try {
 				await this.app.fileManager.renameFile(file, newPath);
@@ -698,7 +654,7 @@ export default class TextEaterPlugin extends Plugin {
 			}
 		}
 
-		// Phase 2: Delimiter swap (split by oldDelim, join by newDelim)
+		// Phase 2: Delimiter swap (split by old pattern, join by new canonical)
 		// Re-fetch files since some may have been renamed
 		const updatedMdFiles = this.app.vault
 			.getFiles()
@@ -708,14 +664,17 @@ export default class TextEaterPlugin extends Plugin {
 					f.path.endsWith(".md"),
 			);
 		const filesToSwap = updatedMdFiles.filter((f) =>
-			f.basename.includes(oldDelim),
+			oldPattern.test(f.basename),
 		);
 
 		for (const file of filesToSwap) {
-			const parts = file.basename.split(oldDelim);
+			const parts = file.basename.split(oldPattern);
 			if (parts.length > 1) {
 				const newBasename = parts.join(newDelim);
-				const newPath = file.path.replace(file.name, newBasename + ".md");
+				const newPath = file.path.replace(
+					file.name,
+					newBasename + ".md",
+				);
 				try {
 					await this.app.fileManager.renameFile(file, newPath);
 				} catch (error) {
@@ -734,7 +693,10 @@ export default class TextEaterPlugin extends Plugin {
 	/**
 	 * Show a simple confirmation dialog.
 	 */
-	private showConfirmDialog(title: string, message: string): Promise<boolean> {
+	private showConfirmDialog(
+		title: string,
+		message: string,
+	): Promise<boolean> {
 		return new Promise((resolve) => {
 			const modal = new ConfirmModal(this.app, title, message, resolve);
 			modal.open();
@@ -824,7 +786,9 @@ class ConfirmModal extends Modal {
 			cls: "modal-button-container",
 		});
 
-		const cancelBtn = buttonContainer.createEl("button", { text: "Cancel" });
+		const cancelBtn = buttonContainer.createEl("button", {
+			text: "Cancel",
+		});
 		cancelBtn.addEventListener("click", () => {
 			this.onResult(false);
 			this.close();

@@ -1,4 +1,9 @@
 export {
+	makeCodexTransform,
+	makeScrollBacklinkTransform,
+	makeStripScrollBacklinkTransform,
+} from "./backlink-transforms";
+export {
 	codexActionsToVaultActions,
 	codexActionToVaultAction,
 } from "./codex-actions-to-vault-actions";
@@ -26,11 +31,6 @@ export {
 	generateChildrenList,
 	generateCodexContent,
 } from "./generate-codex-content";
-export {
-	makeCodexTransform,
-	makeScrollBacklinkTransform,
-	makeStripScrollBacklinkTransform,
-} from "./backlink-transforms";
 export { CODEX_CORE_NAME } from "./literals";
 export { mergeCodexImpacts } from "./merge-codex-impacts";
 export {

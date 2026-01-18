@@ -3,6 +3,10 @@ import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
 } from "../../../../../src/commanders/librarian-new/codecs";
+import type {
+	ScrollNodeSegmentId,
+	SectionNodeSegmentId,
+} from "../../../../../src/commanders/librarian-new/codecs/segment-id/types/segment-id";
 import { Healer } from "../../../../../src/commanders/librarian-new/healer/healer";
 import { codexImpactToRecreations } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/codex-impact-to-actions";
 import { mergeCodexImpacts } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/merge-codex-impacts";
@@ -11,10 +15,6 @@ import {
 	TreeNodeKind,
 	TreeNodeStatus,
 } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
-import type {
-	ScrollNodeSegmentId,
-	SectionNodeSegmentId,
-} from "../../../../../src/commanders/librarian-new/codecs/segment-id/types/segment-id";
 import { SplitPathKind } from "../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";

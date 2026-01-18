@@ -47,7 +47,7 @@ export function processCodexImpacts(
 		codecs,
 	);
 
-	return { deletionHealingActions, codexRecreations };
+	return { codexRecreations, deletionHealingActions };
 }
 
 /**
@@ -75,5 +75,5 @@ export function processCodexImpactsForInit(
 		codecs,
 	);
 
-	return { deletionHealingActions, codexRecreations };
+	return { codexRecreations, deletionHealingActions };
 }

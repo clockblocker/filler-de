@@ -3,6 +3,9 @@ import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
 } from "../../../../../src/commanders/librarian-new/codecs";
+import type {
+	SectionNodeSegmentId,
+} from "../../../../../src/commanders/librarian-new/codecs/segment-id/types/segment-id";
 import {
 	codexImpactToDeletions,
 	codexImpactToRecreations,
@@ -13,9 +16,6 @@ import {
 	TreeNodeKind,
 	TreeNodeStatus,
 } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
-import type {
-	SectionNodeSegmentId,
-} from "../../../../../src/commanders/librarian-new/codecs/segment-id/types/segment-id";
 import type {
 	ScrollNode,
 	SectionNode,
@@ -254,8 +254,8 @@ describe("codexImpactToRecreations", () => {
 			deleted: [],
 			descendantsChanged: [
 				{
-					sectionChain: [sec("Library"), sec("A")],
 					newStatus: TreeNodeStatus.Done,
+					sectionChain: [sec("Library"), sec("A")],
 				},
 			],
 			renamed: [],

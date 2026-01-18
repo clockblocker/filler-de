@@ -3,8 +3,8 @@
  * Used by ProcessMdFile actions to update codexes and scrolls.
  */
 
-import { LINE_BREAK, SPACE_F } from "../../../../../types/literals";
 import type { Transform } from "../../../../../managers/obsidian/vault-action-manager/types/vault-action";
+import { LINE_BREAK, SPACE_F } from "../../../../../types/literals";
 import type { Codecs } from "../../../codecs";
 import type { SectionNodeSegmentId } from "../../../codecs/segment-id";
 import type { SectionNode } from "../tree-node/types/tree-node";
@@ -77,11 +77,12 @@ function escapeRegex(str: string): string {
 /**
  * Check if the first line looks like a backlink.
  * Matches patterns like: [[__<delim>...|← ...]] or [[__<delim>...]]
- * where <delim> is the suffix delimiter from settings.
+ * Uses flexible pattern (any spacing around symbol) for matching.
  */
-function isBacklinkLine(line: string, suffixDelimiter: string): boolean {
-	const escapedDelim = escapeRegex(suffixDelimiter);
-	const pattern = new RegExp(`^\\[\\[__${escapedDelim}[^\\]]*\\]\\]`);
+function isBacklinkLine(line: string, suffixDelimiterPattern: RegExp): boolean {
+	// Convert pattern to string without slashes and flags
+	const patternStr = suffixDelimiterPattern.source;
+	const pattern = new RegExp(`^\\[\\[__${patternStr}[^\\]]*\\]\\]`);
 	return pattern.test(line.trim());
 }
 
@@ -189,7 +190,7 @@ export function makeCodexBacklinkTransform(
 
 		const { firstLine, rest } = splitFirstLine(content);
 
-		if (isBacklinkLine(firstLine, codecs.rules.suffixDelimiter)) {
+		if (isBacklinkLine(firstLine, codecs.rules.suffixDelimiterPattern)) {
 			// Replace existing backlink
 			return `${backlinkLine}${LINE_BREAK}${rest}`;
 		}
@@ -223,7 +224,7 @@ export function makeCodexContentTransform(
 
 		const { firstLine } = splitFirstLine(content);
 
-		if (isBacklinkLine(firstLine, codecs.rules.suffixDelimiter)) {
+		if (isBacklinkLine(firstLine, codecs.rules.suffixDelimiterPattern)) {
 			// Preserve backlink, replace rest
 			return `${firstLine}${LINE_BREAK}${childrenContent}`;
 		}
@@ -243,7 +244,8 @@ export function makeCodexContentTransform(
  */
 export function makeStripScrollBacklinkTransform(codecs: Codecs): Transform {
 	return (content: string): string => {
-		const { frontmatter, rest: afterFrontmatter } = splitFrontmatter(content);
+		const { frontmatter, rest: afterFrontmatter } =
+			splitFrontmatter(content);
 
 		// Work with content after frontmatter
 		const workContent = frontmatter ? afterFrontmatter : content;
@@ -253,7 +255,7 @@ export function makeStripScrollBacklinkTransform(codecs: Codecs): Transform {
 		if (firstLine.trim() === "") {
 			const { firstLine: secondLine, rest: restAfterSecond } =
 				splitFirstLine(rest);
-			if (isBacklinkLine(secondLine, codecs.rules.suffixDelimiter)) {
+			if (isBacklinkLine(secondLine, codecs.rules.suffixDelimiterPattern)) {
 				// Strip backlink
 				return frontmatter
 					? `${frontmatter}${restAfterSecond}`
@@ -262,7 +264,7 @@ export function makeStripScrollBacklinkTransform(codecs: Codecs): Transform {
 		}
 
 		// Check for format without leading newline: [[backlink]]\n...
-		if (isBacklinkLine(firstLine, codecs.rules.suffixDelimiter)) {
+		if (isBacklinkLine(firstLine, codecs.rules.suffixDelimiterPattern)) {
 			return frontmatter ? `${frontmatter}${rest}` : rest;
 		}
 
@@ -310,7 +312,8 @@ export function makeScrollBacklinkTransform(
 		const backlinkLine = `${formatParentBacklink(parentName, parentPathParts)}${SPACE_F}`;
 
 		// Split frontmatter from rest
-		const { frontmatter, rest: afterFrontmatter } = splitFrontmatter(content);
+		const { frontmatter, rest: afterFrontmatter } =
+			splitFrontmatter(content);
 
 		// Work with content after frontmatter
 		const workContent = frontmatter ? afterFrontmatter : content;
@@ -321,7 +324,7 @@ export function makeScrollBacklinkTransform(
 			// First line is empty, check second line
 			const { firstLine: secondLine, rest: restAfterSecond } =
 				splitFirstLine(rest);
-			if (isBacklinkLine(secondLine, codecs.rules.suffixDelimiter)) {
+			if (isBacklinkLine(secondLine, codecs.rules.suffixDelimiterPattern)) {
 				// Replace existing backlink, ensure blank line before content
 				const newContent = `${LINE_BREAK}${backlinkLine}${ensureLeadingBlankLine(restAfterSecond)}`;
 				return frontmatter ? `${frontmatter}${newContent}` : newContent;
@@ -329,7 +332,7 @@ export function makeScrollBacklinkTransform(
 		}
 
 		// Check for format without leading newline: [[backlink]]\n...
-		if (isBacklinkLine(firstLine, codecs.rules.suffixDelimiter)) {
+		if (isBacklinkLine(firstLine, codecs.rules.suffixDelimiterPattern)) {
 			// Replace existing backlink, ensure blank line before content
 			const newContent = `${LINE_BREAK}${backlinkLine}${ensureLeadingBlankLine(rest)}`;
 			return frontmatter ? `${frontmatter}${newContent}` : newContent;

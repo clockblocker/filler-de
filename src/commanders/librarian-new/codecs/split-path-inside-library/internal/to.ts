@@ -4,7 +4,7 @@ import { NodeNameSchema } from "../../../types/schemas/node-name";
 import type { CodecError } from "../../errors";
 import { makeSplitPathError, makeZodError } from "../../errors";
 import type { CodecRules } from "../../rules";
-import type { SplitPathInsideLibrary } from "../../types";
+import type { AnySplitPathInsideLibrary } from "../types/split-path-inside-library";
 
 /**
  * Converts vault-scoped split path to library-scoped split path.
@@ -14,13 +14,13 @@ import type { SplitPathInsideLibrary } from "../../types";
 export function toInsideLibrary(
 	rules: CodecRules,
 	sp: AnySplitPath,
-): Result<SplitPathInsideLibrary, CodecError> {
+): Result<AnySplitPathInsideLibrary, CodecError> {
 	const { pathParts } = sp;
 	const libraryRootName = rules.libraryRootName;
 
 	// Empty pathParts is allowed only for Library root folder
 	if (pathParts.length === 0) {
-		return ok(sp as SplitPathInsideLibrary);
+		return ok(sp as AnySplitPathInsideLibrary);
 	}
 
 	// Non-empty pathParts must start with Library root
@@ -56,5 +56,5 @@ export function toInsideLibrary(
 	}
 
 	// Path is inside library, return as-is (already has correct type)
-	return ok(sp as SplitPathInsideLibrary);
+	return ok(sp as AnySplitPathInsideLibrary);
 }

@@ -1,9 +1,10 @@
 import { describe, expect, it } from "bun:test";
 import {
+	frontmatterToInternal,
+	internalToFrontmatter,
+	migrateFrontmatter,
 	parseFrontmatter,
 	stripFrontmatter,
-	frontmatterToInternal,
-	migrateFrontmatter,
 } from "../../../src/managers/pure/note-metadata-manager";
 
 describe("frontmatter", () => {
@@ -28,7 +29,7 @@ status: done
 ---
 Content here`;
 			const result = parseFrontmatter(content);
-			expect(result).toEqual({ title: "My Note", status: "done" });
+			expect(result).toEqual({ status: "done", title: "My Note" });
 		});
 
 		it("parses numbers", () => {
@@ -38,7 +39,7 @@ rating: 4.5
 negative: -10
 ---`;
 			const result = parseFrontmatter(content);
-			expect(result).toEqual({ count: 42, rating: 4.5, negative: -10 });
+			expect(result).toEqual({ count: 42, negative: -10, rating: 4.5 });
 		});
 
 		it("parses booleans", () => {
@@ -47,7 +48,7 @@ enabled: true
 disabled: false
 ---`;
 			const result = parseFrontmatter(content);
-			expect(result).toEqual({ enabled: true, disabled: false });
+			expect(result).toEqual({ disabled: false, enabled: true });
 		});
 
 		it("parses inline arrays", () => {
@@ -76,8 +77,8 @@ note: 'Single quoted'
 ---`;
 			const result = parseFrontmatter(content);
 			expect(result).toEqual({
-				title: "Hello World",
 				note: "Single quoted",
+				title: "Hello World",
 			});
 		});
 
@@ -182,9 +183,9 @@ title: Test
 
 		it("spreads all fields directly", () => {
 			const fm = {
-				title: "My Note",
 				created: "2023-04-18",
 				tags: ["a", "b"],
+				title: "My Note",
 			};
 			const result = frontmatterToInternal(fm);
 			expect(result.title).toBe("My Note");
@@ -268,6 +269,82 @@ Content`;
 
 			expect(result).not.toContain("---");
 			expect(result).toContain('<section id="textfresser_meta_keep_me_invisible">');
+		});
+	});
+
+	describe("internalToFrontmatter", () => {
+		it("converts Done status to checkbox true", () => {
+			const result = internalToFrontmatter({ status: "Done" });
+			expect(result).toBe("---\nstatus: true\n---");
+		});
+
+		it("converts NotStarted status to checkbox false", () => {
+			const result = internalToFrontmatter({ status: "NotStarted" });
+			expect(result).toBe("---\nstatus: false\n---");
+		});
+
+		it("converts multiple fields", () => {
+			const result = internalToFrontmatter({
+				count: 42,
+				status: "NotStarted",
+				title: "My Note",
+			});
+			expect(result).toContain("---\n");
+			expect(result).toContain("status: false");
+			expect(result).toContain("title: My Note");
+			expect(result).toContain("count: 42");
+			expect(result).toMatch(/---$/);
+		});
+
+		it("handles arrays", () => {
+			const result = internalToFrontmatter({
+				status: "Done",
+				tags: ["one", "two"],
+			});
+			expect(result).toContain("tags: [one, two]");
+		});
+
+		it("quotes strings with special characters", () => {
+			const result = internalToFrontmatter({
+				status: "Done",
+				title: "Hello: World",
+			});
+			expect(result).toContain('title: "Hello: World"');
+		});
+
+		it("handles booleans", () => {
+			const result = internalToFrontmatter({
+				disabled: false,
+				enabled: true,
+				status: "Done",
+			});
+			expect(result).toContain("enabled: true");
+			expect(result).toContain("disabled: false");
+		});
+
+		it("skips null and undefined values", () => {
+			const result = internalToFrontmatter({
+				empty: null,
+				missing: undefined,
+				status: "Done",
+			});
+			expect(result).not.toContain("empty");
+			expect(result).not.toContain("missing");
+		});
+
+		it("roundtrips with frontmatterToInternal", () => {
+			const original = {
+				count: 5,
+				status: "Done" as const,
+				title: "Test",
+			};
+			const yaml = internalToFrontmatter(original);
+			const parsed = parseFrontmatter(yaml + "\nContent");
+			const converted = frontmatterToInternal(parsed!);
+
+			expect(converted.status).toBe("Done");
+			expect(converted.title).toBe("Test");
+			expect(converted.count).toBe(5);
 		});
 	});
 });

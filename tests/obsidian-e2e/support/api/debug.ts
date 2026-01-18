@@ -224,11 +224,11 @@ export async function gatherPluginDebugInfo(
 						kind: v.kind,
 						payload: v.payload,
 					})),
-					rawRenameEvents: rawEvents.filter((e: any) =>
-						e.event?.includes("onRename"),
-					),
 					rawCreateEvents: rawEvents.filter((e: any) =>
 						e.event?.includes("onCreate"),
+					),
+					rawRenameEvents: rawEvents.filter((e: any) =>
+						e.event?.includes("onRename"),
 					),
 					selfTracker: selfTrackerState,
 					treeRootName: root?.nodeName ?? null,

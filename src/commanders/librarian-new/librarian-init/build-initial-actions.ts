@@ -1,19 +1,25 @@
 import { z } from "zod";
 import type { SplitPathWithReader } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
-import type { VaultAction } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
+import type {
+	Transform,
+	VaultAction,
+} from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { VaultActionKind } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import {
-	readMetadata,
-	parseFrontmatter,
 	frontmatterToInternal,
+	internalToFrontmatter,
 	migrateFrontmatter,
+	parseFrontmatter,
+	readMetadata,
+	stripFrontmatter,
+	stripInternalMetadata,
 } from "../../../managers/pure/note-metadata-manager";
 import type { AnySplitPathInsideLibrary, CodecRules, Codecs } from "../codecs";
 import { isCodexSplitPath } from "../healer/library-tree/codex/helpers";
 import {
-	tryParseAsInsideLibrarySplitPath,
 	makeVaultScopedSplitPath,
+	tryParseAsInsideLibrarySplitPath,
 } from "../healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
 import { inferCreatePolicy } from "../healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/infer-create";
 import type { CreateTreeLeafAction } from "../healer/library-tree/tree-action/types/tree-action";
@@ -36,29 +42,21 @@ export type BuildInitialActionsResult = {
 	migrationActions: VaultAction[];
 };
 
-export type BuildInitialActionsOptions = {
-	/** Whether to strip YAML frontmatter after conversion. Default: true */
-	stripYamlFrontmatter?: boolean;
-};
-
 /**
  * Build CreateTreeLeafAction for each file in the library.
  * Applies policy (NameKing for root, PathKing for nested) to determine canonical location.
  * Reads status from md file metadata or YAML frontmatter.
- * Returns migration actions for files that need frontmatter conversion.
+ * Returns migration actions for files that need format conversion.
  *
  * @param files - Files from vault with readers
  * @param codecs - Codec API
- * @param rules - Codec rules
- * @param options - Optional settings
+ * @param rules - Codec rules (includes hideMetadata setting)
  */
 export async function buildInitialCreateActions(
 	files: SplitPathWithReader[],
 	codecs: Codecs,
 	rules: CodecRules,
-	options?: BuildInitialActionsOptions,
 ): Promise<BuildInitialActionsResult> {
-	const stripYaml = options?.stripYamlFrontmatter ?? true;
 	const createActions: CreateTreeLeafAction[] = [];
 	const migrationActions: VaultAction[] = [];
 
@@ -105,25 +103,60 @@ export async function buildInitialCreateActions(
 			if (contentResult.isOk()) {
 				const content = contentResult.value;
 
-				// Try internal metadata format first
+				// Read metadata from both formats
 				const meta = readMetadata(content, ScrollMetadataSchema);
-				if (meta?.status === "Done") {
-					status = TreeNodeStatus.Done;
-				} else if (!meta) {
-					// Fallback: try YAML frontmatter
-					const fm = parseFrontmatter(content);
-					if (fm) {
-						const converted = frontmatterToInternal(fm);
-						if (converted.status === "Done") {
-							status = TreeNodeStatus.Done;
-						}
+				const fm = parseFrontmatter(content);
+				const converted = fm ? frontmatterToInternal(fm) : null;
 
-						// Queue migration action to convert frontmatter to internal format
+				// Determine status from available format
+				if (meta?.status === "Done" || converted?.status === "Done") {
+					status = TreeNodeStatus.Done;
+				}
+
+				// Queue format conversion if needed
+				const hasInternal = meta !== null;
+				const hasFrontmatter = fm !== null;
+
+				if (rules.hideMetadata) {
+					// Want internal format - migrate YAML to internal if needed
+					if (hasFrontmatter && !hasInternal) {
 						migrationActions.push({
 							kind: VaultActionKind.ProcessMdFile,
 							payload: {
-								splitPath: makeVaultScopedSplitPath(observedPath, rules),
-								transform: migrateFrontmatter({ stripYaml }),
+								splitPath: makeVaultScopedSplitPath(
+									observedPath,
+									rules,
+								),
+								transform: migrateFrontmatter({
+									stripYaml: true,
+								}),
+							},
+						});
+					}
+				} else {
+					// Want YAML format - convert internal to YAML if needed
+					if (hasInternal) {
+						migrationActions.push({
+							kind: VaultActionKind.ProcessMdFile,
+							payload: {
+								splitPath: makeVaultScopedSplitPath(
+									observedPath,
+									rules,
+								),
+								transform:
+									makeConvertToFrontmatterTransform(meta),
+							},
+						});
+					} else if (!hasFrontmatter) {
+						// No metadata at all - add YAML with current status
+						migrationActions.push({
+							kind: VaultActionKind.ProcessMdFile,
+							payload: {
+								splitPath: makeVaultScopedSplitPath(
+									observedPath,
+									rules,
+								),
+								transform: makeAddFrontmatterTransform(status),
 							},
 						});
 					}
@@ -154,4 +187,45 @@ export async function buildInitialCreateActions(
 	}
 
 	return { createActions, migrationActions };
+}
+
+// ─── Transform Helpers ───
+
+type MetadataWithStatus = { status: "Done" | "NotStarted" } & Record<
+	string,
+	unknown
+>;
+
+/**
+ * Create transform that converts internal metadata to YAML frontmatter.
+ * Strips internal section and prepends YAML frontmatter.
+ */
+function makeConvertToFrontmatterTransform(
+	meta: MetadataWithStatus,
+): Transform {
+	return (content: string) => {
+		// Strip internal metadata section
+		const stripped = stripInternalMetadata()(content);
+		// Strip existing frontmatter if any
+		const withoutFm = stripFrontmatter(stripped);
+		// Prepend new frontmatter
+		const yaml = internalToFrontmatter(meta);
+		return `${yaml}\n${withoutFm}`;
+	};
+}
+
+/**
+ * Create transform that adds YAML frontmatter with given status.
+ * Used when file has no metadata at all.
+ */
+function makeAddFrontmatterTransform(status: TreeNodeStatus): Transform {
+	const meta: MetadataWithStatus = {
+		status: status === TreeNodeStatus.Done ? "Done" : "NotStarted",
+	};
+	return (content: string) => {
+		// Strip existing frontmatter if any (shouldn't be any, but be safe)
+		const withoutFm = stripFrontmatter(content);
+		const yaml = internalToFrontmatter(meta);
+		return `${yaml}\n${withoutFm}`;
+	};
 }

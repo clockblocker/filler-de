@@ -11,6 +11,7 @@ import type {
 	CheckboxClickedEvent,
 	ClickEvent,
 	ClickEventHandler,
+	PropertyCheckboxClickedEvent,
 	Teardown,
 } from "./types/click-event";
 
@@ -59,21 +60,30 @@ export class ClickInterceptor {
 	private async handleClick(evt: MouseEvent): Promise<void> {
 		const target = evt.target as HTMLElement;
 
+		// Get current file path (needed for both types)
+		const pwdResult = await this.vaultActionManager.pwd();
+		if (pwdResult.isErr()) return;
+
+		const splitPath = pwdResult.value;
+		if (splitPath.kind !== "MdFile") return;
+
+		// Check if it's a property checkbox (frontmatter)
+		const propertyInfo = this.getPropertyCheckboxInfo(target);
+		if (propertyInfo) {
+			const event: PropertyCheckboxClickedEvent = {
+				checked: propertyInfo.checked,
+				kind: "PropertyCheckboxClicked",
+				propertyName: propertyInfo.propertyName,
+				splitPath: splitPath as SplitPathToMdFile,
+			};
+			this.emit(event);
+			return;
+		}
+
 		// Check if it's a task checkbox
 		if (!this.isTaskCheckbox(target)) return;
 
 		const checkbox = target as HTMLInputElement;
-
-		// Get current file path
-		const pwdResult = await this.vaultActionManager.pwd();
-		if (pwdResult.isErr()) {
-			return;
-		}
-
-		const splitPath = pwdResult.value;
-		if (splitPath.kind !== "MdFile") {
-			return;
-		}
 
 		// Extract line content
 		const lineContent = this.extractLineContent(checkbox);
@@ -108,6 +118,39 @@ export class ClickInterceptor {
 			(element as HTMLInputElement).type === "checkbox" &&
 			element.classList.contains("task-list-item-checkbox")
 		);
+	}
+
+	/**
+	 * Check if element is a property checkbox and extract info.
+	 * Returns null if not a property checkbox.
+	 */
+	private getPropertyCheckboxInfo(
+		element: HTMLElement,
+	): { propertyName: string; checked: boolean } | null {
+		// Must be a checkbox input
+		if (element.tagName !== "INPUT") return null;
+		const input = element as HTMLInputElement;
+		if (input.type !== "checkbox") return null;
+
+		// Must be inside metadata/properties container
+		const metadataContainer = element.closest(".metadata-container");
+		if (!metadataContainer) return null;
+
+		// Find the property row
+		const propertyRow = element.closest(".metadata-property");
+		if (!propertyRow) return null;
+
+		// Get property name from the key element
+		const keyElement = propertyRow.querySelector(".metadata-property-key");
+		if (!keyElement) return null;
+
+		const propertyName = keyElement.textContent?.trim();
+		if (!propertyName) return null;
+
+		return {
+			checked: input.checked,
+			propertyName,
+		};
 	}
 
 	/**

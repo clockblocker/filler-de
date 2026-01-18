@@ -1,6 +1,6 @@
 import { err, ok, type Result } from "neverthrow";
-import { getParsedUserSettings } from "../../../../../../../global-state/global-state";
 import type { SplitPathKind } from "../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import { getParsedUserSettings } from "../../../../../../../global-state/global-state";
 import type {
 	AnySplitPathInsideLibrary,
 	CanonicalSplitPathInsideLibrary,
@@ -10,15 +10,15 @@ import type {
 	SplitPathInsideLibraryWithSeparatedSuffixOf,
 } from "../../../../../../codecs";
 import type { NodeName } from "../../../../../../types/schemas/node-name";
-import {
-	buildCanonicalSeparatedSuffixedBasename,
-	canonizeSplitPathWithSeparatedSuffix,
-} from "./canonicalization-policy";
 import { adaptCodecResult } from "../../bulk-vault-action-adapter/layers/translate-material-event/error-adapters";
 import {
 	ChangePolicy,
 	RenameIntent,
 } from "../../bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent";
+import {
+	buildCanonicalSeparatedSuffixedBasename,
+	canonizeSplitPathWithSeparatedSuffix,
+} from "./canonicalization-policy";
 
 /**
  * Extracts duplicate marker (e.g., " 1", " 2") from end of basename.

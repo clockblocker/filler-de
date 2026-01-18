@@ -3,12 +3,21 @@ import {
 	SplitPathKind,
 	type SplitPathToFolder,
 } from "../managers/obsidian/vault-action-manager/types/split-path";
-import type { TextEaterSettings } from "../types";
+import type { SuffixDelimiterConfig, TextEaterSettings } from "../types";
 import type { Prettify } from "../types/helpers";
+import {
+	buildCanonicalDelimiter,
+	buildFlexibleDelimiterPattern,
+	isSuffixDelimiterConfig,
+	migrateStringDelimiter,
+} from "../utils/delimiter";
 
 export type ParsedUserSettings = Prettify<
-	Omit<TextEaterSettings, "libraryRoot"> & {
+	Omit<TextEaterSettings, "libraryRoot" | "suffixDelimiter"> & {
 		splitPathToLibraryRoot: SplitPathToFolder;
+		suffixDelimiterConfig: SuffixDelimiterConfig;
+		suffixDelimiter: string; // canonical form
+		suffixDelimiterPattern: RegExp; // flexible pattern for parsing
 	}
 >;
 
@@ -20,10 +29,20 @@ export function parseSettings(settings: TextEaterSettings): ParsedUserSettings {
 		);
 	}
 
-	const { libraryRoot: _, ...rest } = settings;
+	// Migrate old string format to new config format
+	const suffixDelimiterConfig = isSuffixDelimiterConfig(
+		settings.suffixDelimiter,
+	)
+		? settings.suffixDelimiter
+		: migrateStringDelimiter(settings.suffixDelimiter as unknown as string);
+
+	const { libraryRoot: _, suffixDelimiter: __, ...rest } = settings;
 
 	return {
 		...rest,
 		splitPathToLibraryRoot: splitPathResult,
+		suffixDelimiter: buildCanonicalDelimiter(suffixDelimiterConfig),
+		suffixDelimiterConfig,
+		suffixDelimiterPattern: buildFlexibleDelimiterPattern(suffixDelimiterConfig),
 	};
 }

@@ -5,11 +5,14 @@ import type {
 	ScrollNodeLocator,
 	SectionNodeLocator,
 	TreeNodeLocator,
+} from "./types/index";
+
+import type {
 	CanonicalSplitPathInsideLibrary,
 	CanonicalSplitPathToFileInsideLibrary,
 	CanonicalSplitPathToFolderInsideLibrary,
 	CanonicalSplitPathToMdFileInsideLibrary,
-} from "./types";
+} from "../split-path-with-separated-suffix";
 
 /**
  * Public types for locator codecs.

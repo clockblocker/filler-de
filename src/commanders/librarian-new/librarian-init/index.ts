@@ -1,11 +1,10 @@
 export { assembleVaultActions } from "./assemble-vault-actions";
 export {
-	buildInitialCreateActions,
 	type BuildInitialActionsResult,
-	type BuildInitialActionsOptions,
+	buildInitialCreateActions,
 } from "./build-initial-actions";
 export {
+	type ProcessCodexImpactsResult,
 	processCodexImpacts,
 	processCodexImpactsForInit,
-	type ProcessCodexImpactsResult,
 } from "./process-codex-impacts";

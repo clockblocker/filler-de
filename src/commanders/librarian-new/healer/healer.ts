@@ -38,8 +38,8 @@ import type {
 	TreeNode,
 } from "./library-tree/tree-node/types/tree-node";
 import type { HealingAction } from "./library-tree/types/healing-action";
-import { parseOldSectionPath } from "./utils/old-section-path";
 import { buildCanonicalLeafSplitPath } from "./library-tree/utils/split-path-utils";
+import { parseOldSectionPath } from "./utils/old-section-path";
 
 // ─── Result Type ───
 
@@ -263,24 +263,24 @@ export class Healer implements TreeAccessor {
 			}
 
 			return computeSectionMoveHealing({
-				section: node,
-				newParentChain,
+				codecs: this.codecs,
 				newNodeName,
-				oldSectionPath: oldSectionPathResult.value,
+				newParentChain,
 				observedSplitPath:
 					observedSplitPath as SplitPathToFolderInsideLibrary,
-				codecs: this.codecs,
+				oldSectionPath: oldSectionPathResult.value,
+				section: node,
 			});
 		}
 
 		// Leaf move (Scroll or File)
 		return computeLeafMoveHealing({
-			node,
+			codecs: this.codecs,
 			newParentChain,
+			node,
 			observedSplitPath: observedSplitPath as
 				| SplitPathToMdFileInsideLibrary
 				| SplitPathToFileInsideLibrary,
-			codecs: this.codecs,
 		});
 	}
 

@@ -117,13 +117,15 @@ Library-scoped healing actions converted to vault-scoped actions for dispatch.
 1. **Init**: read Library filesystem, create tree, dispatch initial healing
    - Root files: NameKing (suffix → path)
    - Nested files: PathKing (path → suffix)
-   - YAML frontmatter migration: external files with `---` frontmatter are auto-converted
+   - Metadata format conversion: files reformatted based on `hideMetadata` setting
 2. **Steady-state**: listen to events → build actions → apply to tree → dispatch healing
 3. **Queue**: events processed sequentially to maintain consistency
 
 ## Metadata
 
-### Internal Format
+Controlled by `hideMetadata` setting (Settings → Hide metadata).
+
+### hideMetadata = true (default)
 Scroll status stored in hidden `<section>` at file end (20 lines padding):
 ```html
 <section id="textfresser_meta_keep_me_invisible">
@@ -131,11 +133,21 @@ Scroll status stored in hidden `<section>` at file end (20 lines padding):
 </section>
 ```
 
-### YAML Frontmatter Import
-During init, files without internal metadata but with YAML frontmatter are auto-migrated:
-- `status`/`completion` field → internal `status` (Done/NotStarted)
-- All YAML fields spread directly into metadata object
-- YAML frontmatter stripped from file (configurable via settings)
+### hideMetadata = false
+Scroll status stored in standard YAML frontmatter:
+```yaml
+---
+status: Done
+title: My Note
+created: 2023-04-18
+---
+```
+
+### Format Conversion
+Toggling `hideMetadata` triggers librarian reinit, which reformats all scrolls:
+- `true→false`: internal section → YAML frontmatter (all fields preserved)
+- `false→true`: YAML frontmatter → internal section (YAML stripped)
+- Status mapping: `status`/`completion` field → internal status (Done/NotStarted)
 
 See `src/managers/pure/note-metadata-manager/frontmatter.ts`.
 

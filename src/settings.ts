@@ -104,21 +104,35 @@ export class SettingsTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Suffix delimiter")
+			.setName("Suffix delimiter symbol")
 			.setDesc(
-				"1-3 characters used to separate base name from suffix (e.g., '-' or ' - ')",
+				"1-3 characters used to separate base name from suffix (no spaces)",
 			)
 			.addText((text) => {
 				text.setPlaceholder("-").setValue(
-					this.plugin.settings.suffixDelimiter,
+					this.plugin.settings.suffixDelimiter.symbol,
 				);
 
 				text.inputEl.addEventListener("blur", async () => {
-					const value = text.getValue();
+					const value = text.getValue().trim();
 					// Validate length: 1-3 chars
-					if (value.length < 1 || value.length > 5) {
-						new Notice("Suffix delimiter must be 1-5 characters");
-						text.setValue(this.plugin.settings.suffixDelimiter);
+					if (value.length < 1 || value.length > 3) {
+						new Notice(
+							"Suffix delimiter symbol must be 1-3 characters",
+						);
+						text.setValue(
+							this.plugin.settings.suffixDelimiter.symbol,
+						);
+						return;
+					}
+					// Validate no spaces
+					if (value.includes(" ")) {
+						new Notice(
+							"Suffix delimiter symbol cannot contain spaces",
+						);
+						text.setValue(
+							this.plugin.settings.suffixDelimiter.symbol,
+						);
 						return;
 					}
 					// Validate each char against forbidden list
@@ -127,17 +141,37 @@ export class SettingsTab extends PluginSettingTab {
 							new Notice(
 								`Cannot use "${char}" in delimiter (forbidden character)`,
 							);
-							text.setValue(this.plugin.settings.suffixDelimiter);
+							text.setValue(
+								this.plugin.settings.suffixDelimiter.symbol,
+							);
 							return;
 						}
 					}
 					// Only save if value changed
-					if (value !== this.plugin.settings.suffixDelimiter) {
-						this.plugin.settings.suffixDelimiter = value;
+					if (value !== this.plugin.settings.suffixDelimiter.symbol) {
+						this.plugin.settings.suffixDelimiter = {
+							...this.plugin.settings.suffixDelimiter,
+							symbol: value,
+						};
 						await this.plugin.saveSettings();
 					}
 				});
 			});
+
+		new Setting(containerEl)
+			.setName("Wrap delimiter in spaces")
+			.setDesc("Use ' - ' instead of '-' as delimiter")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.suffixDelimiter.padded)
+					.onChange(async (value) => {
+						this.plugin.settings.suffixDelimiter = {
+							...this.plugin.settings.suffixDelimiter,
+							padded: value,
+						};
+						await this.plugin.saveSettings();
+					}),
+			);
 
 		new Setting(containerEl)
 			.setName("Show backlinks on scrolls")

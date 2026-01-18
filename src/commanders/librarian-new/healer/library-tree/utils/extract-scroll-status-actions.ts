@@ -1,9 +1,9 @@
 import { logger } from "../../../../../utils/logger";
 import type { Codecs } from "../../../codecs";
 import type { ScrollNodeSegmentId } from "../../../codecs/segment-id/types/segment-id";
-import { TreeNodeKind } from "../tree-node/types/atoms";
-import type { TreeAction } from "../tree-action/types/tree-action";
 import type { WriteScrollStatusAction } from "../codex/types/codex-action";
+import type { TreeAction } from "../tree-action/types/tree-action";
+import { TreeNodeKind } from "../tree-node/types/atoms";
 import { computeScrollSplitPath } from "./compute-scroll-split-path";
 import { extractNodeNameFromScrollSegmentId } from "./segment-id-helpers";
 

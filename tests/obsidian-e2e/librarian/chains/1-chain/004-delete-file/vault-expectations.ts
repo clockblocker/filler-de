@@ -36,9 +36,9 @@ export const VAULT_EXPECTATIONS_004 = {
 	initial: VAULT_EXPECTATIONS_003.postHealing,
 	postHealing: {
 		codexes: EXPECTED_CODEXES_AFTER_004,
-		files: EXPECTED_FILES_AFTER_004,
-		goneFiles: GONE_FILES_004,
 		contentChecks: CONTENT_CHECKS_004,
 		contentMustNotContain: CONTENT_MUST_NOT_CONTAIN_004,
+		files: EXPECTED_FILES_AFTER_004,
+		goneFiles: GONE_FILES_004,
 	},
 };

@@ -3,12 +3,12 @@ import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
 } from "../../../../../src/commanders/librarian-new/codecs";
+import type { SectionNodeSegmentId } from "../../../../../src/commanders/librarian-new/codecs/segment-id/types/segment-id";
 import { generateCodexContent } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/generate-codex-content";
 import {
 	TreeNodeKind,
 	TreeNodeStatus,
 } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
-import type { SectionNodeSegmentId } from "../../../../../src/commanders/librarian-new/codecs/segment-id/types/segment-id";
 import type {
 	FileNode,
 	ScrollNode,

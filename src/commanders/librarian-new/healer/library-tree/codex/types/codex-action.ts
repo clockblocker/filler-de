@@ -5,8 +5,8 @@
 
 import type { SplitPathToMdFileInsideLibrary } from "../../../../codecs";
 import type { SectionNodeSegmentId } from "../../../../codecs/segment-id";
-import type { SectionNode } from "../../tree-node/types/tree-node";
 import type { TreeNodeStatus } from "../../tree-node/types/atoms";
+import type { SectionNode } from "../../tree-node/types/tree-node";
 
 // ─── Action Types ───
 

@@ -2,6 +2,7 @@ import { getParsedUserSettings } from "../../global-state/global-state";
 import type {
 	CheckboxClickedEvent,
 	ClickInterceptor,
+	PropertyCheckboxClickedEvent,
 } from "../../managers/obsidian/click-interceptor";
 import type {
 	BulkVaultEvent,
@@ -26,6 +27,8 @@ import {
 import { isCodexSplitPath } from "./healer/library-tree/codex/helpers";
 import { Tree } from "./healer/library-tree/tree";
 import { buildTreeActions } from "./healer/library-tree/tree-action/bulk-vault-action-adapter";
+import { tryParseAsInsideLibrarySplitPath } from "./healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
+import { tryMakeTargetLocatorFromLibraryScopedSplitPath } from "./healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/translators/helpers/split-path-to-locator";
 import type { TreeAction } from "./healer/library-tree/tree-action/types/tree-action";
 import {
 	TreeNodeKind,
@@ -113,12 +116,12 @@ export class Librarian {
 			const allFiles = allFilesResult.value;
 
 			// Build Create actions for each file
-			const { createActions, migrationActions } = await buildInitialCreateActions(
-				allFiles,
-				this.codecs,
-				this.rules,
-				{ stripYamlFrontmatter: settings.stripYamlFrontmatter },
-			);
+			const { createActions, migrationActions } =
+				await buildInitialCreateActions(
+					allFiles,
+					this.codecs,
+					this.rules,
+				);
 
 			// Apply all create actions and collect healing + codex impacts
 			const allHealingActions: HealingAction[] = [];
@@ -198,6 +201,8 @@ export class Librarian {
 		this.clickTeardown = this.clickInterceptor.subscribe((event) => {
 			if (event.kind === "CheckboxClicked") {
 				this.handleCheckboxClick(event);
+			} else if (event.kind === "PropertyCheckboxClicked") {
+				this.handlePropertyCheckboxClick(event);
 			}
 		});
 	}
@@ -268,6 +273,63 @@ export class Librarian {
 		}
 
 		// Queue for processing and track pending operation
+		const p = this.enqueue([action]);
+		this.pendingClicks.add(p);
+		p.finally(() => this.pendingClicks.delete(p));
+	}
+
+	/**
+	 * Handle property checkbox click (frontmatter status toggle).
+	 */
+	private handlePropertyCheckboxClick(
+		event: PropertyCheckboxClickedEvent,
+	): void {
+		// Only handle "status" property
+		if (event.propertyName !== "status") return;
+
+		// Skip codex files
+		if (isCodexSplitPath(event.splitPath, this.codecs)) return;
+
+		// Try to parse as library-scoped path
+		const libraryScopedResult = tryParseAsInsideLibrarySplitPath(
+			event.splitPath,
+			this.rules,
+		);
+		if (libraryScopedResult.isErr()) return;
+
+		// Get locator from split path
+		const locatorResult = tryMakeTargetLocatorFromLibraryScopedSplitPath(
+			libraryScopedResult.value,
+			this.codecs,
+		);
+		if (locatorResult.isErr()) {
+			logger.warn(
+				"[Librarian] Failed to get locator for property click:",
+				locatorResult.error,
+			);
+			return;
+		}
+
+		const locator = locatorResult.value;
+
+		// Only handle scroll nodes
+		if (locator.targetKind !== TreeNodeKind.Scroll) return;
+
+		const newStatus = event.checked
+			? TreeNodeStatus.Done
+			: TreeNodeStatus.NotStarted;
+
+		const action: TreeAction = {
+			actionType: "ChangeStatus",
+			newStatus,
+			targetLocator: {
+				segmentId: locator.segmentId as ScrollNodeSegmentId,
+				segmentIdChainToParent: locator.segmentIdChainToParent,
+				targetKind: TreeNodeKind.Scroll,
+			},
+		};
+
+		// Queue for processing
 		const p = this.enqueue([action]);
 		this.pendingClicks.add(p);
 		p.finally(() => this.pendingClicks.delete(p));

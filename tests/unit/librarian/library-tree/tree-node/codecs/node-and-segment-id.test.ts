@@ -1,16 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { makeCodecRulesFromSettings, makeCodecs } from "../../../../../../src/commanders/librarian-new/codecs";
-import { makeTreeNodeCodecs } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/codecs/node-and-segment-id";
-import { makeNodeSegmentId } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
-import { makeTreeNode } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/codecs/node-and-segment-id/optimistic-makers/make-tree-node";
-import { tryParseTreeNode } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/codecs/node-and-segment-id/try-parse-tree-node";
-import { TreeNodeKind, TreeNodeStatus } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
 import type {
 	FileNodeSegmentId,
 	ScrollNodeSegmentId,
 	SectionNodeSegmentId,
 } from "../../../../../../src/commanders/librarian-new/codecs/segment-id/types/segment-id";
 import { NodeSegmentIdSeparator as Separator } from "../../../../../../src/commanders/librarian-new/codecs/segment-id/types/segment-id";
+import { makeTreeNodeCodecs } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/codecs/node-and-segment-id";
+import { makeNodeSegmentId } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
+import { makeTreeNode } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/codecs/node-and-segment-id/optimistic-makers/make-tree-node";
+import { tryParseTreeNode } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/codecs/node-and-segment-id/try-parse-tree-node";
+import { TreeNodeKind, TreeNodeStatus } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
 import type {
 	FileNode,
 	ScrollNode,

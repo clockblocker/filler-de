@@ -249,9 +249,15 @@ describe("tryParseCanonicalSplitPath", () => {
 		});
 
 		it("handles custom suffix delimiter", () => {
+			const customDelimiterConfig = {
+				padded: false,
+				symbol: "_",
+			};
 			getParsedUserSettingsSpy.mockReturnValue({
 				...defaultSettingsForUnitTests,
 				suffixDelimiter: "_",
+				suffixDelimiterConfig: customDelimiterConfig,
+				suffixDelimiterPattern: /\s*_\s*/,
 			});
 
 			const sp: SplitPathToMdFile = {

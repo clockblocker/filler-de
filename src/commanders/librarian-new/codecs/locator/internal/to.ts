@@ -2,6 +2,7 @@ import { err, ok, type Result } from "neverthrow";
 import { MD } from "../../../../../managers/obsidian/vault-action-manager/types/literals";
 import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import { TreeNodeKind } from "../../../healer/library-tree/tree-node/types/atoms";
+import { sectionChainToPathParts } from "../../../healer/library-tree/utils/section-chain-utils";
 import type { CodecError } from "../../errors";
 import { makeLocatorError } from "../../errors";
 import type { SuffixCodecs } from "../../internal/suffix";
@@ -12,7 +13,6 @@ import type {
 } from "../../split-path-with-separated-suffix";
 import type { CorrespondingSplitPathKind } from "../../types/type-mappings";
 import type { NodeLocatorOf, TreeNodeLocator } from "../types";
-import { sectionChainToPathParts } from "../../../healer/library-tree/utils/section-chain-utils";
 
 /**
  * Converts locator to canonical split path inside library.

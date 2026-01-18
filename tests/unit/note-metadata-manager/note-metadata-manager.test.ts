@@ -2,12 +2,13 @@ import { describe, expect, it } from "bun:test";
 import { z } from "zod";
 import {
 	readMetadata,
+	stripInternalMetadata,
 	upsertMetadata,
 } from "../../../src/managers/pure/note-metadata-manager";
 
 const TestSchema = z.object({
-	status: z.enum(["Done", "NotStarted"]),
 	fileType: z.literal("Scroll"),
+	status: z.enum(["Done", "NotStarted"]),
 });
 
 describe("note-metadata-manager", () => {
@@ -26,7 +27,7 @@ describe("note-metadata-manager", () => {
 
 `;
 			const result = readMetadata(content, TestSchema);
-			expect(result).toEqual({ status: "Done", fileType: "Scroll" });
+			expect(result).toEqual({ fileType: "Scroll", status: "Done" });
 		});
 
 		it("returns null for invalid JSON", () => {
@@ -54,19 +55,19 @@ not json
 
 `;
 			const result = readMetadata(content, TestSchema);
-			expect(result).toEqual({ status: "NotStarted", fileType: "Scroll" });
+			expect(result).toEqual({ fileType: "Scroll", status: "NotStarted" });
 		});
 	});
 
 	describe("upsertMetadata", () => {
 		it("adds metadata to content without existing metadata", () => {
 			const content = "Some content";
-			const transform = upsertMetadata({ status: "Done", fileType: "Scroll" });
+			const transform = upsertMetadata({ fileType: "Scroll", status: "Done" });
 			const result = transform(content);
 
 			expect(result).toContain("Some content");
 			expect(result).toContain('<section id="textfresser_meta_keep_me_invisible">');
-			expect(result).toContain('{"status":"Done","fileType":"Scroll"}');
+			expect(result).toContain('{"fileType":"Scroll","status":"Done"}');
 			expect(result).toContain("</section>");
 		});
 
@@ -78,7 +79,7 @@ not json
 </section>
 
 `;
-			const transform = upsertMetadata({ status: "Done", fileType: "Scroll" });
+			const transform = upsertMetadata({ fileType: "Scroll", status: "Done" });
 			const result = transform(content);
 
 			// Should have new status
@@ -112,13 +113,49 @@ not json
 	describe("roundtrip", () => {
 		it("upsert then read returns same data", () => {
 			const original = "My note content";
-			const metadata = { status: "Done" as const, fileType: "Scroll" as const };
+			const metadata = { fileType: "Scroll" as const, status: "Done" as const };
 
 			const transform = upsertMetadata(metadata);
 			const withMeta = transform(original);
 			const readBack = readMetadata(withMeta, TestSchema);
 
 			expect(readBack).toEqual(metadata);
+		});
+	});
+
+	describe("stripInternalMetadata", () => {
+		it("removes metadata section from content", () => {
+			const content = `Content here
+
+
+<section id="textfresser_meta_keep_me_invisible">
+{"status":"Done"}
+</section>
+`;
+			const transform = stripInternalMetadata();
+			const result = transform(content);
+
+			expect(result).not.toContain('<section id="textfresser_meta_keep_me_invisible">');
+			expect(result).not.toContain("</section>");
+			expect(result).toBe("Content here");
+		});
+
+		it("returns original if no metadata", () => {
+			const content = "Just content";
+			const transform = stripInternalMetadata();
+			expect(transform(content)).toBe("Just content");
+		});
+
+		it("handles content with padding newlines", () => {
+			const padding = "\n".repeat(20);
+			const content = `Content${padding}<section id="textfresser_meta_keep_me_invisible">
+{"status":"Done"}
+</section>
+`;
+			const transform = stripInternalMetadata();
+			const result = transform(content);
+
+			expect(result).toBe("Content");
 		});
 	});
 });

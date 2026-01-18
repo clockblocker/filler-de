@@ -1,4 +1,4 @@
-import { type Result, err, ok } from "neverthrow";
+import { err, ok, type Result } from "neverthrow";
 import type { Codecs } from "../../codecs";
 import type { CodecError } from "../../codecs/errors";
 import type { SectionNodeSegmentId } from "../../codecs/segment-id/types/segment-id";

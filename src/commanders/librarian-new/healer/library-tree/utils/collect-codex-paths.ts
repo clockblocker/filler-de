@@ -1,10 +1,10 @@
 import { systemPathFromSplitPathInternal } from "../../../../../managers/obsidian/vault-action-manager/helpers/pathfinder";
 import type { Codecs } from "../../../codecs";
+import type { SectionNodeSegmentId } from "../../../codecs/segment-id/types/segment-id";
 import { computeCodexSplitPath } from "../codex/codex-split-path";
 import { makeNodeSegmentId } from "../tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import { TreeNodeKind } from "../tree-node/types/atoms";
 import type { SectionNode } from "../tree-node/types/tree-node";
-import type { SectionNodeSegmentId } from "../../../codecs/segment-id/types/segment-id";
 
 /**
  * Recursively collect all valid codex paths from the tree.

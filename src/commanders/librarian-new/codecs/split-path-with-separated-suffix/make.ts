@@ -20,9 +20,9 @@ export function makeSplitPathWithSeparatedSuffixCodecs(
 	suffix: SuffixCodecs,
 ): SplitPathWithSeparatedSuffixCodecs {
 	return {
-		splitPathInsideLibraryToWithSeparatedSuffix: (sp) =>
-			splitPathInsideLibraryToWithSeparatedSuffix(suffix, sp),
 		fromSplitPathInsideLibraryWithSeparatedSuffix: (sp) =>
 			fromSplitPathInsideLibraryWithSeparatedSuffix(suffix, sp),
+		splitPathInsideLibraryToWithSeparatedSuffix: (sp) =>
+			splitPathInsideLibraryToWithSeparatedSuffix(suffix, sp),
 	};
 }

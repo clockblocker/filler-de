@@ -6,7 +6,7 @@ import type { SplitPathToMdFile } from "../../vault-action-manager/types/split-p
 
 // ─── Event Types ───
 
-export type ClickEventType = "CheckboxClicked";
+export type ClickEventType = "CheckboxClicked" | "PropertyCheckboxClicked";
 
 // ─── Events ───
 
@@ -23,7 +23,20 @@ export type CheckboxClickedEvent = {
 	lineContent: string;
 };
 
-export type ClickEvent = CheckboxClickedEvent;
+/**
+ * Emitted when a property checkbox (frontmatter) is clicked.
+ */
+export type PropertyCheckboxClickedEvent = {
+	kind: "PropertyCheckboxClicked";
+	/** New state after click */
+	checked: boolean;
+	/** File where property checkbox was clicked */
+	splitPath: SplitPathToMdFile;
+	/** Property name (e.g., "status") */
+	propertyName: string;
+};
+
+export type ClickEvent = CheckboxClickedEvent | PropertyCheckboxClickedEvent;
 
 // ─── Handler ───
 

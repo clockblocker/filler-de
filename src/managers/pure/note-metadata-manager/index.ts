@@ -1,10 +1,11 @@
-export { readMetadata, upsertMetadata, stripInternalMetadata } from "./impl";
 export {
-	parseFrontmatter,
-	stripFrontmatter,
 	frontmatterToInternal,
-	migrateFrontmatter,
 	internalToFrontmatter,
-	type ScrollMetadataWithImport,
 	type MigrateFrontmatterOptions,
+	migrateFrontmatter,
+	parseFrontmatter,
+	type ScrollMetadataWithImport,
+	stripFrontmatter,
+	upsertFrontmatterStatus,
 } from "./frontmatter";
+export { readMetadata, stripInternalMetadata, upsertMetadata } from "./impl";

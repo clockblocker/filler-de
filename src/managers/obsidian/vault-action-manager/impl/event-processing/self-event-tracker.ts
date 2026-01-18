@@ -119,7 +119,7 @@ export class SelfEventTracker {
 			this.tracked.delete(normalized);
 			this.checkAllRegistered();
 		}, this.ttlMs);
-		this.tracked.set(normalized, { timeout, isFilePath });
+		this.tracked.set(normalized, { isFilePath, timeout });
 	}
 
 	private untrackPath(normalized: string): void {

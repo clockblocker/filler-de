@@ -1,12 +1,17 @@
 import type { ParsedUserSettings } from "../../../global-state/parsed-settings";
+import type { SuffixDelimiterConfig } from "../../../types";
 
 /**
  * Codec configuration rules.
  * Keeps codecs pure by injecting rules instead of reaching for user settings internally.
  */
 export type CodecRules = {
-	/** Suffix delimiter (e.g., "-") */
+	/** Suffix delimiter config (symbol + padding) */
+	suffixDelimiterConfig: SuffixDelimiterConfig;
+	/** Suffix delimiter canonical form (e.g., "-" or " - ") */
 	suffixDelimiter: string;
+	/** Suffix delimiter flexible pattern for parsing */
+	suffixDelimiterPattern: RegExp;
 	/** Library root name (from splitPathToLibraryRoot.basename) */
 	libraryRootName: string;
 	/** Full library root path parts (from splitPathToLibraryRoot.pathParts) */
@@ -25,10 +30,12 @@ export function makeCodecRulesFromSettings(
 	settings: ParsedUserSettings,
 ): CodecRules {
 	return {
+		hideMetadata: settings.hideMetadata,
 		libraryRootName: settings.splitPathToLibraryRoot.basename,
 		libraryRootPathParts: settings.splitPathToLibraryRoot.pathParts,
-		suffixDelimiter: settings.suffixDelimiter,
 		showScrollBacklinks: settings.showScrollBacklinks,
-		hideMetadata: settings.hideMetadata,
+		suffixDelimiter: settings.suffixDelimiter,
+		suffixDelimiterConfig: settings.suffixDelimiterConfig,
+		suffixDelimiterPattern: settings.suffixDelimiterPattern,
 	};
 }

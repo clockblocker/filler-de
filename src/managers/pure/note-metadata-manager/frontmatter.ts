@@ -163,7 +163,9 @@ export type MigrateFrontmatterOptions = {
  * Create transform that migrates YAML frontmatter to internal format.
  * @param options.stripYaml - If true (default), removes YAML frontmatter. If false, keeps it.
  */
-export function migrateFrontmatter(options?: MigrateFrontmatterOptions): Transform {
+export function migrateFrontmatter(
+	options?: MigrateFrontmatterOptions,
+): Transform {
 	const stripYaml = options?.stripYaml ?? true;
 
 	return (content: string) => {
@@ -178,14 +180,19 @@ export function migrateFrontmatter(options?: MigrateFrontmatterOptions): Transfo
 
 /**
  * Convert metadata object to YAML frontmatter string.
- * Preserves all fields.
+ * Preserves all fields. Status is output as boolean checkbox.
  */
 export function internalToFrontmatter(meta: ScrollMetadataWithImport): string {
 	const lines: string[] = ["---"];
 	for (const [key, value] of Object.entries(meta)) {
 		if (value === null || value === undefined) continue;
-		if (Array.isArray(value)) {
-			lines.push(`${key}: [${value.map((v) => formatYamlValue(v)).join(", ")}]`);
+		// Convert status to boolean checkbox format
+		if (key === "status") {
+			lines.push(`status: ${value === "Done" ? "true" : "false"}`);
+		} else if (Array.isArray(value)) {
+			lines.push(
+				`${key}: [${value.map((v) => formatYamlValue(v)).join(", ")}]`,
+			);
 		} else {
 			lines.push(`${key}: ${formatYamlValue(value)}`);
 		}
@@ -200,7 +207,7 @@ export function internalToFrontmatter(meta: ScrollMetadataWithImport): string {
 function formatYamlValue(value: unknown): string {
 	if (typeof value === "string") {
 		// Quote strings that need escaping
-		if (/[:#\[\]{}'",\n]/.test(value) || value === "") {
+		if (/[:#[\]{}'",\n]/.test(value) || value === "") {
 			return `"${value.replace(/"/g, '\\"')}"`;
 		}
 		return value;
@@ -208,4 +215,29 @@ function formatYamlValue(value: unknown): string {
 	if (typeof value === "boolean") return value ? "true" : "false";
 	if (typeof value === "number") return String(value);
 	return String(value);
+}
+
+/**
+ * Create transform that updates status in YAML frontmatter.
+ * If no frontmatter exists, creates one with just the status.
+ * Status is stored as boolean checkbox (true/false).
+ */
+export function upsertFrontmatterStatus(
+	status: "Done" | "NotStarted",
+): Transform {
+	const statusValue = status === "Done";
+
+	return (content: string) => {
+		const fm = parseFrontmatter(content);
+
+		if (fm) {
+			// Update existing frontmatter
+			const updated: ScrollMetadataWithImport = { ...fm, status };
+			const newYaml = internalToFrontmatter(updated);
+			const withoutFm = stripFrontmatter(content);
+			return `${newYaml}\n${withoutFm}`;
+		}
+		// No frontmatter - create one with just status
+		return `---\nstatus: ${statusValue}\n---\n${content}`;
+	};
 }

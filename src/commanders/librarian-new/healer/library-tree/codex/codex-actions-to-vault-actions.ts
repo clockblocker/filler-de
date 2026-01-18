@@ -7,7 +7,10 @@ import {
 	type VaultAction,
 	VaultActionKind,
 } from "../../../../../managers/obsidian/vault-action-manager/types/vault-action";
-import { upsertMetadata } from "../../../../../managers/pure/note-metadata-manager";
+import {
+	upsertFrontmatterStatus,
+	upsertMetadata,
+} from "../../../../../managers/pure/note-metadata-manager";
 import type { Codecs } from "../../../codecs";
 import type { CodecRules } from "../../../codecs/rules";
 import { makeVaultScopedSplitPath } from "../tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
@@ -42,6 +45,7 @@ export function codexActionToVaultAction(
 
 		case "WriteScrollStatus":
 			// ProcessMdFile with transform to update metadata
+			// Use internal section format or YAML frontmatter based on hideMetadata setting
 			return {
 				kind: VaultActionKind.ProcessMdFile,
 				payload: {
@@ -50,9 +54,9 @@ export function codexActionToVaultAction(
 						action.payload.splitPath,
 						rules,
 					) as SplitPathToMdFile,
-					transform: upsertMetadata({
-						status: action.payload.status,
-					}),
+					transform: rules.hideMetadata
+						? upsertMetadata({ status: action.payload.status })
+						: upsertFrontmatterStatus(action.payload.status),
 				},
 			};
 
@@ -61,11 +65,11 @@ export function codexActionToVaultAction(
 			return {
 				kind: VaultActionKind.UpsertMdFile,
 				payload: {
+					content: null,
 					splitPath: makeVaultScopedSplitPath(
 						action.payload.splitPath,
 						rules,
 					) as SplitPathToMdFile,
-					content: null,
 				},
 			};
 

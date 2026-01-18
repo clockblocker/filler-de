@@ -11,26 +11,31 @@ import type { CodecRules } from "../../rules";
 
 /**
  * Splits basename by suffix delimiter into parts.
+ * Uses flexible pattern (any spacing around symbol) for parsing.
+ * Trims each segment after split.
  * Returns Result with NonEmptyArray<NodeName>.
  */
 export function splitBySuffixDelimiter(
 	rules: CodecRules,
 	basename: string,
 ): Result<NonEmptyArray<NodeName>, CodecError> {
-	const raw = basename.split(rules.suffixDelimiter);
+	// Use flexible pattern for parsing (accepts any spacing)
+	const raw = basename.split(rules.suffixDelimiterPattern);
 	const out: NodeName[] = [];
 
 	for (const seg of raw) {
-		const r = NodeNameSchema.safeParse(seg);
+		// Trim each segment after split
+		const trimmed = seg.trim();
+		const r = NodeNameSchema.safeParse(trimmed);
 		if (!r.success) {
 			return err(
 				makeSuffixError(
 					"InvalidNodeName",
 					basename,
 					r.error.issues[0]?.message ?? "Invalid node name in suffix",
-					{ segment: seg },
+					{ segment: trimmed },
 					makeZodError(r.error.issues, "NodeName validation failed", {
-						segment: seg,
+						segment: trimmed,
 					}),
 				),
 			);

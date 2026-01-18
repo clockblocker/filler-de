@@ -17,9 +17,10 @@ import { NamingError } from "./errors";
  * "child"
  */
 export const NodeNameSchema = z.string().superRefine((val, ctx) => {
-	const { suffixDelimiter } = getParsedUserSettings();
+	const { suffixDelimiterPattern } = getParsedUserSettings();
 
-	if (val.length === 0) {
+	// Reject empty or whitespace-only names
+	if (val.trim().length === 0) {
 		ctx.addIssue({
 			code: CUSTOM_ERROR_CODE,
 			message: NamingError.EmptyNodeName,
@@ -27,7 +28,8 @@ export const NodeNameSchema = z.string().superRefine((val, ctx) => {
 		return;
 	}
 
-	if (val.split(suffixDelimiter).length !== 1) {
+	// Use flexible pattern to detect delimiter (any spacing around symbol)
+	if (val.split(suffixDelimiterPattern).length !== 1) {
 		ctx.addIssue({
 			code: CUSTOM_ERROR_CODE,
 			message: NamingError.DelimiterInNodeName,
