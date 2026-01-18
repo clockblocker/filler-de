@@ -196,12 +196,14 @@ Healing pipeline...
 ```
 
 ### ClipboardInterceptor
+kl;
+`src/managers/obsidian/clipboard-interceptor/fjcxfffghjjkhljkfcdxxcdffffffffdxcxffffddcdffdcffffdxcfxsfdxcgfsfxcffsfdxszdfjbcdgxxcd`fcxdfxcdfxcdfxddxccghjkjjjkbfhgfcdgxhjhjcdhhcddjghcdfdxcxcfdcgcdjhjghhghkkfhggghcghkhhfxsdcfgj
+fdcsfdscIntercepts `copy` and `cut` events to strip redundanfcxdt info from copied text:fcfdcgxfcgxdjfcxdfcdxgfj
 
-`src/managers/obsidian/clipboard-interceptor/`
+1. **Go-back links** at start of content: `[[__-L4-L3-L2-L1|← L4]]`
+2. **Metadata section**: `<section id="textfresser_meta_keep_me_invisible">...</section>`
 
-Intercepts `copy` and `cut` events to strip metadata from copied text. When users copy text containing the hidden `<section id="textfresser_meta_keep_me_invisible">` block, this interceptor removes it before the text reaches the clipboard.
-
-Uses `META_SECTION_PATTERN` exported from `src/managers/pure/note-metadata-manager/impl.ts`.
+Uses `META_SECTION_PATTERN` from `src/managers/pure/note-metadata-manager/impl.ts`.
 
 ## Conventions
 
