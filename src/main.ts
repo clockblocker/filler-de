@@ -675,8 +675,12 @@ export default class TextEaterPlugin extends Plugin {
 
 		if (!confirmed) return false;
 
-		// Escape character: if newDelim is space, use hyphen; otherwise use space
-		const escapeChar = newDelim === " " ? "-" : " ";
+		// Find escape char not present in either delimiter
+		const escapeCandidates = ["_", "~", ".", " ", "-", "+", "="];
+		const escapeChar =
+			escapeCandidates.find(
+				(c) => !oldDelim.includes(c) && !newDelim.includes(c),
+			) ?? "_";
 
 		// Phase 1: Escape conflicts (replace newDelim with escapeChar)
 		for (const file of filesNeedingEscape) {

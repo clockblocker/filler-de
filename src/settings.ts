@@ -1,7 +1,17 @@
 import { type App, Notice, PluginSettingTab, Setting } from "obsidian";
 import type TextEaterPluginStripped from "./main-stripped";
 
-const FORBIDDEN_DELIMITER_CHARS = ["/", "\\", ":", "*", "?", '"', "<", ">", "|"];
+const FORBIDDEN_DELIMITER_CHARS = [
+	"/",
+	"\\",
+	":",
+	"*",
+	"?",
+	'"',
+	"<",
+	">",
+	"|",
+];
 
 export class SettingsTab extends PluginSettingTab {
 	plugin: TextEaterPluginStripped;
@@ -87,7 +97,8 @@ export class SettingsTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.showScrollsInCodexesForDepth)
 					.setDynamicTooltip()
 					.onChange(async (value) => {
-						this.plugin.settings.showScrollsInCodexesForDepth = value;
+						this.plugin.settings.showScrollsInCodexesForDepth =
+							value;
 						await this.plugin.saveSettings();
 					}),
 			);
@@ -95,23 +106,28 @@ export class SettingsTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Suffix delimiter")
 			.setDesc(
-				"Character used to separate base name from suffix in file names (e.g., '-' in 'word-noun.md')",
+				"1-3 characters used to separate base name from suffix (e.g., '-' or ' - ')",
 			)
 			.addText((text) =>
 				text
 					.setPlaceholder("-")
 					.setValue(this.plugin.settings.suffixDelimiter)
 					.onChange(async (value) => {
-						// Validate: must be single char, not forbidden
-						if (value.length !== 1) {
-							new Notice("Suffix delimiter must be exactly one character");
-							return;
-						}
-						if (FORBIDDEN_DELIMITER_CHARS.includes(value)) {
+						// Validate length: 1-5 chars
+						if (value.length < 1 || value.length > 5) {
 							new Notice(
-								`Cannot use "${value}" as delimiter (forbidden character)`,
+								"Suffix delimiter must be 1-3 characters",
 							);
 							return;
+						}
+						// Validate each char against forbidden list
+						for (const char of value) {
+							if (FORBIDDEN_DELIMITER_CHARS.includes(char)) {
+								new Notice(
+									`Cannot use "${char}" in delimiter (forbidden character)`,
+								);
+								return;
+							}
 						}
 						this.plugin.settings.suffixDelimiter = value;
 						await this.plugin.saveSettings();
