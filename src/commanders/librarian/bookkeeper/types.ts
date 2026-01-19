@@ -105,6 +105,6 @@ export const PAGE_FRONTMATTER: PageFrontmatter = {
 export const PAGE_PREFIX = "Page";
 
 /**
- * Number of digits for page index (e.g., 3 → Page000, Page001).
+ * Number of digits for page index (e.g., 3 → CoreName_Page_000).
  */
 export const PAGE_INDEX_DIGITS = 3;

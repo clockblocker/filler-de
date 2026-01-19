@@ -8,9 +8,9 @@ Splits long markdown files into paginated folder structures.
 Library/Märchen/Aschenputtel-Märchen.md
 ↓
 Library/Märchen/Aschenputtel/
-  __-Aschenputtel-Märchen.md      # codex (index)
-  Page000-Aschenputtel-Märchen.md
-  Page001-Aschenputtel-Märchen.md
+  __-Aschenputtel-Märchen.md                   # codex (index)
+  Aschenputtel_Page_000-Aschenputtel-Märchen.md
+  Aschenputtel_Page_001-Aschenputtel-Märchen.md
   ...
 ```
 
@@ -20,7 +20,7 @@ Library/Märchen/Aschenputtel/
 bookkeeper/
   index.ts                 # exports
   types.ts                 # zod enums + types
-  page-codec.ts            # Page naming: Page000-Suffix
+  page-codec.ts            # Page naming: CoreName_Page_NNN-Suffix
   build-actions.ts         # VaultAction[] generation
   split-to-pages-action.ts # command handler
   error/
