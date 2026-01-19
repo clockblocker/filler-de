@@ -58,7 +58,7 @@ export type CodecError =
  * Error constructors for consistent error creation.
  */
 export const makeSegmentIdError = (
-	reason: CodecError & { kind: "SegmentIdError" }["reason"],
+	reason: (CodecError & { kind: "SegmentIdError" })["reason"],
 	raw: string,
 	message: string,
 	context?: Record<string, unknown>,
@@ -73,7 +73,7 @@ export const makeSegmentIdError = (
 });
 
 export const makeSuffixError = (
-	reason: CodecError & { kind: "SuffixError" }["reason"],
+	reason: (CodecError & { kind: "SuffixError" })["reason"],
 	raw: string,
 	message: string,
 	context?: Record<string, unknown>,
@@ -88,7 +88,7 @@ export const makeSuffixError = (
 });
 
 export const makeSplitPathError = (
-	reason: CodecError & { kind: "SplitPathError" }["reason"],
+	reason: (CodecError & { kind: "SplitPathError" })["reason"],
 	message: string,
 	context: Record<string, unknown>,
 	cause?: CodecError,
@@ -101,7 +101,7 @@ export const makeSplitPathError = (
 });
 
 export const makeLocatorError = (
-	reason: CodecError & { kind: "LocatorError" }["reason"],
+	reason: (CodecError & { kind: "LocatorError" })["reason"],
 	message: string,
 	context: Record<string, unknown>,
 	cause?: CodecError,

@@ -1,4 +1,4 @@
-import type { Result } from "neverthrow";
+import { err, type Result } from "neverthrow";
 import type { Codecs } from "../../../codecs";
 import type { CodecError } from "../../../codecs/errors";
 import type { ScrollNodeSegmentId } from "../../../codecs/segment-id/types/segment-id";
@@ -12,7 +12,7 @@ export function extractNodeNameFromScrollSegmentId(
 ): Result<string, CodecError> {
 	const parseResult = codecs.segmentId.parseScrollSegmentId(segmentId);
 	if (parseResult.isErr()) {
-		return parseResult;
+		return err(parseResult.error);
 	}
 	return parseResult.map((components) => components.coreName);
 }

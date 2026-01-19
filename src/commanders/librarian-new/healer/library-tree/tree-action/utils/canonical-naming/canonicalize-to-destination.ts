@@ -1,5 +1,5 @@
 import { err, ok, type Result } from "neverthrow";
-import type { SplitPathKind } from "../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import type { SplitPathKind } from "../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import { getParsedUserSettings } from "../../../../../../../global-state/global-state";
 import type {
 	AnySplitPathInsideLibrary,
@@ -8,8 +8,8 @@ import type {
 	Codecs,
 	SplitPathInsideLibraryOf,
 	SplitPathInsideLibraryWithSeparatedSuffixOf,
-} from "../../../../../../codecs";
-import type { NodeName } from "../../../../../../types/schemas/node-name";
+} from "../../../../../codecs";
+import type { NodeName } from "../../../../../types/schemas/node-name";
 import { adaptCodecResult } from "../../bulk-vault-action-adapter/layers/translate-material-event/error-adapters";
 import {
 	ChangePolicy,

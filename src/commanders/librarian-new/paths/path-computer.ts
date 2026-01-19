@@ -25,7 +25,7 @@ import type {
 	ScrollNodeLocator,
 } from "../codecs/locator/types";
 import type {
-	NodeSegmentId,
+	TreeNodeSegmentId,
 	SectionNodeSegmentId,
 } from "../codecs/segment-id/types/segment-id";
 import { TreeNodeKind } from "../healer/library-tree/tree-node/types/atoms";
@@ -106,7 +106,7 @@ export function suffixPartsToPathParts(suffixParts: NodeName[]): string[] {
  * @param codecs - Codec instance for parsing
  */
 export function parseChainToNodeNames(
-	chain: NodeSegmentId[],
+	chain: TreeNodeSegmentId[],
 	codecs: Codecs,
 ): Result<string[], PathComputerError> {
 	if (chain.length === 0) {
@@ -138,7 +138,7 @@ export function parseSectionChainToNodeNames(
 	chain: SectionNodeSegmentId[],
 	codecs: Codecs,
 ): Result<string[], PathComputerError> {
-	return parseChainToNodeNames(chain as NodeSegmentId[], codecs);
+	return parseChainToNodeNames(chain as TreeNodeSegmentId[], codecs);
 }
 
 // ─── Canonical Path Building ───

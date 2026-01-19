@@ -80,7 +80,7 @@ export function computeDescendantSuffixHealing(
 							typeof computeLeafHealingForScroll
 						>[0]["segmentId"],
 						segmentIdChainToParent: sectionChain,
-						targetKind: TreeNodeKind.Scroll as const,
+						targetKind: TreeNodeKind.Scroll,
 					};
 					const leafHealing = computeLeafHealingForScroll(
 						locator,
@@ -96,7 +96,7 @@ export function computeDescendantSuffixHealing(
 							typeof computeLeafHealingForFile
 						>[0]["segmentId"],
 						segmentIdChainToParent: sectionChain,
-						targetKind: TreeNodeKind.File as const,
+						targetKind: TreeNodeKind.File,
 					};
 					const leafHealing = computeLeafHealingForFile(
 						locator,

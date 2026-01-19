@@ -119,6 +119,7 @@ export class OpenedFileService {
 		if (!selections?.length) return ok(null);
 
 		const sel = selections[0];
+		if (!sel) return ok(null);
 		return ok({ anchor: sel.anchor, head: sel.head });
 	}
 

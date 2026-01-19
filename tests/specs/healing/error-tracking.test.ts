@@ -147,7 +147,7 @@ describe("HealingTransaction Error Tracking", () => {
 			expect(tx.hasErrors()).toBe(true);
 			const summary = tx.getSummary();
 			expect(summary.errors.length).toBe(1);
-			expect(summary.errors[0].kind).toBe("VaultFailed");
+			expect(summary.errors[0]!.kind).toBe("VaultFailed");
 		});
 
 		it("aggregates multiple errors", () => {
@@ -218,7 +218,7 @@ describe("HealingTransaction Error Tracking", () => {
 			const recent = auditLog.getRecent(10);
 			expect(recent.length).toBeGreaterThan(0);
 
-			const lastEntry = recent[recent.length - 1];
+			const lastEntry = recent[recent.length - 1]!;
 			expect(lastEntry.treeAction.actionType).toBe(TreeActionType.Create);
 			expect(lastEntry.status).toBe("success");
 		});

@@ -95,7 +95,7 @@ tests/specs/
 - HealingTransaction integrated into Librarian.init() and processActions()
 - HealingAuditLog records all healing operations on transaction commit
 - OrphanCodexScanner runs at startup to clean orphaned codexes
-- TreeAccessor alias fully removed - all consumers use TreeReader
+- TreeAccessor alias ful∆ly removed - all consumers use TreeReader
 - types/helpers.ts deleted - collapse.ts imports from action-helpers.ts directly
 - isUpsertMdFileAction() added to action-helpers.ts
 - avgDurationPerAction metric added to TransactionSummary for performance monitoring

@@ -13,7 +13,7 @@
  */
 
 import type {
-	SplitPath,
+	AnySplitPath,
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
@@ -183,7 +183,7 @@ export function getRenameTargetPath(action: VaultAction): string[] | undefined {
  * Get the split path from an action.
  * For rename actions, returns the 'from' split path.
  */
-export function getActionSplitPath(action: VaultAction): SplitPath {
+export function getActionSplitPath(action: VaultAction): AnySplitPath {
 	switch (action.kind) {
 		case VaultActionKind.CreateFolder:
 		case VaultActionKind.TrashFolder:

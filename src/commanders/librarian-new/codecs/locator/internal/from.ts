@@ -6,6 +6,11 @@ import type { CodecError } from "../../errors";
 import { makeLocatorError } from "../../errors";
 import type { SegmentIdCodecs } from "../../segment-id";
 import type {
+	FileNodeSegmentId,
+	ScrollNodeSegmentId,
+	SectionNodeSegmentId,
+} from "../../segment-id";
+import type {
 	AnyCanonicalSplitPathInsideLibrary,
 	CanonicalSplitPathInsideLibraryOf,
 	CanonicalSplitPathToFileInsideLibrary,
@@ -70,7 +75,9 @@ export function canonicalSplitPathInsideLibraryToLocator(
 				);
 			}
 			return ok({
-				segmentId: segmentIdResult.value,
+				// Type assertion: serializeSegmentIdUnchecked returns TreeNodeSegmentId union,
+				// but we know it's FileNodeSegmentId because targetKind is File
+				segmentId: segmentIdResult.value as FileNodeSegmentId,
 				segmentIdChainToParent,
 				targetKind: TreeNodeKind.File,
 			});
@@ -93,7 +100,9 @@ export function canonicalSplitPathInsideLibraryToLocator(
 				);
 			}
 			return ok({
-				segmentId: segmentIdResult.value,
+				// Type assertion: serializeSegmentIdUnchecked returns TreeNodeSegmentId union,
+				// but we know it's ScrollNodeSegmentId because targetKind is Scroll
+				segmentId: segmentIdResult.value as ScrollNodeSegmentId,
 				segmentIdChainToParent,
 				targetKind: TreeNodeKind.Scroll,
 			});
@@ -115,7 +124,9 @@ export function canonicalSplitPathInsideLibraryToLocator(
 				);
 			}
 			return ok({
-				segmentId: segmentIdResult.value,
+				// Type assertion: serializeSegmentIdUnchecked returns TreeNodeSegmentId union,
+				// but we know it's SectionNodeSegmentId because targetKind is Section
+				segmentId: segmentIdResult.value as SectionNodeSegmentId,
 				segmentIdChainToParent,
 				targetKind: TreeNodeKind.Section,
 			});

@@ -309,16 +309,14 @@ export class VaultActionManagerImpl implements VaultActionManager {
 		trackedPaths: string[];
 		trackedPrefixes: string[];
 	} {
+		// Accessing private Maps for debugging
+		const tracker = this.selfEventTracker as unknown as {
+			trackedPaths?: Map<string, unknown>;
+			trackedPrefixes?: Map<string, unknown>;
+		};
 		return {
-			// @ts-expect-error - accessing private Maps for debugging
-			trackedPaths: Array.from(
-				(this.selfEventTracker as unknown).trackedPaths?.keys() ?? [],
-			),
-			// @ts-expect-error - accessing private Maps for debugging
-			trackedPrefixes: Array.from(
-				(this.selfEventTracker as unknown).trackedPrefixes?.keys() ??
-					[],
-			),
+			trackedPaths: Array.from(tracker.trackedPaths?.keys() ?? []),
+			trackedPrefixes: Array.from(tracker.trackedPrefixes?.keys() ?? []),
 		};
 	}
 

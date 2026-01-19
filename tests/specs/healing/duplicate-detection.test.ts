@@ -59,8 +59,8 @@ describe("OrphanCodexScanner", () => {
 			const result = scanner.scan(vaultPaths);
 
 			expect(result.orphans.length).toBe(1);
-			expect(result.orphans[0].reason).toBe("wrong_suffix");
-			expect(result.orphans[0].observedPath.basename).toBe("__-recipes-WRONG");
+			expect(result.orphans[0]!.reason).toBe("wrong_suffix");
+			expect(result.orphans[0]!.observedPath.basename).toBe("__-recipes-WRONG");
 		});
 
 		it("does not flag valid codex", () => {
@@ -115,7 +115,7 @@ describe("OrphanCodexScanner", () => {
 			const result = scanner.scan(vaultPaths);
 
 			expect(result.orphans.length).toBe(1);
-			expect(result.orphans[0].reason).toBe("missing_section");
+			expect(result.orphans[0]!.reason).toBe("missing_section");
 		});
 	});
 
@@ -152,7 +152,7 @@ describe("OrphanCodexScanner", () => {
 
 			// First one is valid, second is duplicate
 			expect(result.orphans.length).toBe(1);
-			expect(result.orphans[0].reason).toBe("duplicate");
+			expect(result.orphans[0]!.reason).toBe("duplicate");
 		});
 
 		it("handles multiple sections with duplicates", () => {
@@ -237,8 +237,11 @@ describe("OrphanCodexScanner", () => {
 			const actions = scanner.generateCleanupActions(orphans);
 
 			expect(actions.length).toBe(1);
-			expect(actions[0].kind).toBe("DeleteMdFile");
-			expect(actions[0].payload.splitPath.basename).toBe("__-recipes-WRONG");
+			expect(actions[0]!.kind).toBe("DeleteMdFile");
+			const deleteAction = actions[0]!;
+			if (deleteAction.kind === "DeleteMdFile") {
+				expect(deleteAction.payload.splitPath.basename).toBe("__-recipes-WRONG");
+			}
 		});
 
 		it("generates delete actions for all orphans", () => {
@@ -315,7 +318,7 @@ describe("OrphanCodexScanner", () => {
 
 			expect(result.scanResult.orphans.length).toBe(1);
 			expect(result.cleanupActions.length).toBe(1);
-			expect(result.cleanupActions[0].kind).toBe("DeleteMdFile");
+			expect(result.cleanupActions[0]!.kind).toBe("DeleteMdFile");
 		});
 
 		it("returns empty arrays when no orphans", () => {
@@ -442,7 +445,7 @@ describe("OrphanCodexScanner", () => {
 			const result = scanner.scan(vaultPaths);
 
 			expect(result.orphans.length).toBe(1);
-			expect(result.orphans[0].reason).toBe("wrong_suffix");
+			expect(result.orphans[0]!.reason).toBe("wrong_suffix");
 		});
 	});
 });

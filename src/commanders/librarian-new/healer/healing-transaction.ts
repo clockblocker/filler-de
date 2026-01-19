@@ -189,7 +189,7 @@ export class HealingTransaction {
 	 */
 	logSummary(level: "debug" | "info" | "warn" | "error" = "debug"): void {
 		const summary = this.getSummary();
-		const avgMs = summary.avgDurationPerAction.toFixed(1);
+		const avgMs = Number(summary.avgDurationPerAction).toFixed(1);
 		const msg = `[HealingTx] ${summary.state}: ${summary.entries} actions, ${summary.healingActions} healing, ${summary.errors.length} errors, ${summary.duration}ms (avg ${avgMs}ms/action)`;
 
 		if (summary.errors.length > 0) {
