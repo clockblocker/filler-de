@@ -1,12 +1,12 @@
 import type { VaultAction } from "../../types/vault-action";
-import { sameRename } from "../common/collapse-helpers";
-import { makeKeyForAction } from "./helpers/make-key-for-action";
 import {
 	isProcessAction,
 	isRenameAction,
 	isTrashAction,
 	isUpsertMdFileAction,
-} from "./types/helpers";
+} from "../../helpers/action-helpers";
+import { sameRename } from "../common/collapse-helpers";
+import { makeKeyForAction } from "./helpers/make-key-for-action";
 export async function collapseActions(
 	actions: readonly VaultAction[],
 ): Promise<VaultAction[]> {

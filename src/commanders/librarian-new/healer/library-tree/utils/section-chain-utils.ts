@@ -1,3 +1,11 @@
+/**
+ * Section chain utilities for the library tree.
+ *
+ * NOTE: For new code, prefer importing from `src/commanders/librarian-new/paths/path-computer.ts`
+ * which consolidates all path computation logic. This file is kept for backward compatibility.
+ *
+ * @see PathComputer.parseSectionChainToNodeNames in `src/commanders/librarian-new/paths/path-computer.ts`
+ */
 import { err, ok, type Result } from "neverthrow";
 import type { CodecError } from "../../../codecs/errors";
 import type { SegmentIdCodecs } from "../../../codecs/segment-id";

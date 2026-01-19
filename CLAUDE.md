@@ -82,6 +82,7 @@ bun test --test-name-pattern "pattern"
 - **Event System**: Emits bulk vault events after dispatching actions; filters self-generated events
 - **SplitPath**: Internal path representation separating directory segments and basename
 - Manages dependencies between file operations to ensure correct execution order
+- **ActionHelpers** (`helpers/action-helpers.ts`): Utility functions eliminating switch statements over VaultAction types
 
 **Managers** (`src/managers/`)
 - `obsidian/`: Obsidian-specific services (vault, clicks, files)
@@ -93,6 +94,8 @@ bun test --test-name-pattern "pattern"
 - `LibraryTree`: In-memory tree representation with nodes, codexes (index files), and status tracking
 - **Healing**: Reconciles discrepancies between vault state and tree state through healing actions
 - **Codex**: Special index files that track children nodes and their completion status via clickable checkboxes
+- **PathComputer** (`paths/path-computer.ts`): Single source of truth for all suffix/path computation logic
+- **HealingError** (`errors/healing-error.ts`): Unified error types for healing operations
 
 **Services** (`src/services/`)
 - `prompts/`: LLM prompt definitions for German word processing (verbs, nouns, adjectives, morphemes)
@@ -185,3 +188,46 @@ log.error("Failed:", error instanceof Error ? error.message : String(error));
 - Prompts in `src/services/prompts/` define structured outputs
 - Zod schemas validate LLM responses
 - Handles German linguistic structures (verbs, nouns, adjectives, morphemes)
+
+## Refactoring Infrastructure
+
+### New Modules Added
+These modules consolidate duplicated logic and improve error handling:
+
+**PathComputer** (`src/commanders/librarian-new/paths/path-computer.ts`)
+- Single source of truth for suffix/path computation
+- Use instead of duplicate logic in `split-path-utils.ts` and `section-chain-utils.ts`
+- Key functions: `computeCodexSuffix()`, `buildObservedLeafSplitPath()`, `parseChainToNodeNames()`
+
+**HealingError** (`src/commanders/librarian-new/errors/healing-error.ts`)
+- Unified error type for all healing operations
+- Discriminated union with error constructors and utilities
+- Use with `Result<T, HealingError>` instead of throwing
+
+**ActionHelpers** (`src/managers/obsidian/vault-action-manager/helpers/action-helpers.ts`)
+- Eliminates switch statements over VaultAction types
+- Use `isCreateAction()`, `getActionPath()`, `asRenameAction()` etc.
+
+**TreeReader/TreeWriter/TreeFacade** (`src/commanders/librarian-new/healer/library-tree/tree-interfaces.ts`)
+- Clean separation of read/write concerns for LibraryTree
+- `TreeReader`: Read-only access (`findSection`, `getRoot`)
+- `TreeWriter`: Mutation access (`apply`, `ensureSectionChain`)
+- `TreeFacade`: Combined interface (Tree class implements this)
+
+**HealingTransaction** (`src/commanders/librarian-new/healer/healing-transaction.ts`)
+- Wraps healing operations with verification and audit
+- Collects healing actions, tracks errors, logs audit info
+- Use `executeHealingTransaction()` for automatic commit/rollback
+
+**HealingAuditLog** (`src/commanders/librarian-new/healer/healing-audit-log.ts`)
+- In-memory rolling log for debugging healing issues
+- Tracks success/failure rates, error types, durations
+- Use `getHealingAuditLog()` for singleton access
+
+**OrphanCodexScanner** (`src/commanders/librarian-new/healer/orphan-codex-scanner.ts`)
+- Scans vault for codexes with wrong suffixes
+- Generates cleanup and recreation actions
+- Use `scanAndGenerateOrphanActions()` for full scan
+
+### Test Coverage
+Tests added in `tests/unit/paths/`, `tests/specs/healing/`, `tests/specs/vault-actions/`, `tests/specs/tree/`

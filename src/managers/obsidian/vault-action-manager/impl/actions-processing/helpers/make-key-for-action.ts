@@ -1,14 +1,8 @@
-import { type VaultAction, VaultActionKind } from "../../../types/vault-action";
+import type { VaultAction } from "../../../types/vault-action";
+import { getActionSplitPath } from "../../../helpers/action-helpers";
 import { makeKeyFor } from "../../common/collapse-helpers";
 
 export function makeKeyForAction(action: VaultAction): string {
-	switch (action.kind) {
-		case VaultActionKind.RenameFolder:
-		case VaultActionKind.RenameFile:
-		case VaultActionKind.RenameMdFile:
-			return makeKeyFor({ from: action.payload.from });
-
-		default:
-			return makeKeyFor({ splitPath: action.payload.splitPath });
-	}
+	// getActionSplitPath returns 'from' for rename actions, 'splitPath' otherwise
+	return makeKeyFor({ splitPath: getActionSplitPath(action) });
 }

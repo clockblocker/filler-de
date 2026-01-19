@@ -17,12 +17,12 @@ import {
 	computeLeafMoveHealing,
 	computeSectionMoveHealing,
 } from "./healing-computers";
-import type { TreeAccessor } from "./library-tree/codex/codex-impact-to-actions";
 import {
 	type CodexImpact,
 	computeCodexImpact,
 } from "./library-tree/codex/compute-codex-impact";
 import type { Tree } from "./library-tree/tree";
+import type { TreeReader } from "./library-tree/tree-interfaces";
 import type {
 	ChangeNodeStatusAction,
 	CreateTreeLeafAction,
@@ -52,7 +52,7 @@ export type ApplyResult = {
 
 // ─── Healer ───
 
-export class Healer implements TreeAccessor {
+export class Healer implements TreeReader {
 	private tree: Tree;
 	private codecs: Codecs;
 
@@ -78,7 +78,7 @@ export class Healer implements TreeAccessor {
 		return { codexImpact, healingActions };
 	}
 
-	// ─── TreeAccessor Implementation ───
+	// ─── TreeReader Implementation ───
 
 	findSection(chain: SectionNodeSegmentId[]): SectionNode | undefined {
 		return this.tree.findSection(chain);

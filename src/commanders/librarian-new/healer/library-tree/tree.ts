@@ -13,6 +13,7 @@ import type {
 	RenameNodeAction,
 	TreeAction,
 } from "./tree-action/types/tree-action";
+import type { TreeFacade } from "./tree-interfaces";
 import { makeNodeSegmentId } from "./tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import { TreeNodeKind, TreeNodeStatus } from "./tree-node/types/atoms";
 import type {
@@ -46,7 +47,7 @@ function makeSegmentId(node: TreeNode): TreeNodeSegmentId {
 
 // ─── Tree ───
 
-export class Tree {
+export class Tree implements TreeFacade {
 	private root: SectionNode;
 	private codecs: Codecs;
 
@@ -261,7 +262,7 @@ export class Tree {
 
 	// ─── Traversal Helpers ───
 
-	/** Find section by chain. Part of TreeAccessor interface. */
+	/** Find section by chain. Part of TreeReader interface. */
 	findSection(chain: SectionNodeSegmentId[]): SectionNode | undefined {
 		// First element is Library root → current = this.root; rest → traverse children
 		let current: SectionNode | null = null;

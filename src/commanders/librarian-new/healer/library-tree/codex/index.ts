@@ -12,7 +12,6 @@ export {
 	codexImpactToIncrementalRecreations,
 	codexImpactToRecreations,
 	extractInvalidCodexesFromBulk,
-	type TreeAccessor,
 } from "./codex-impact-to-actions";
 export { computeCodexSplitPath } from "./codex-split-path";
 export {

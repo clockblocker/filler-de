@@ -16,6 +16,7 @@ import type { SectionNodeSegmentId } from "../../../codecs/segment-id/types/segm
 import { TreeNodeKind } from "../tree-node/types/atoms";
 import type { SectionNode } from "../tree-node/types/tree-node";
 import type { HealingAction } from "../types/healing-action";
+import type { TreeReader } from "../tree-interfaces";
 import { computeScrollSplitPath } from "../utils/compute-scroll-split-path";
 import { computeCodexSplitPath } from "./codex-split-path";
 import type { CodexImpact } from "./compute-codex-impact";
@@ -29,15 +30,6 @@ import type {
 	WriteScrollStatusAction,
 } from "./types/codex-action";
 
-// ─── Types ───
-
-export type TreeAccessor = {
-	/** Find section by chain. Returns undefined if not found. */
-	findSection(chain: SectionNodeSegmentId[]): SectionNode | undefined;
-	/** Get root section */
-	getRoot(): SectionNode;
-};
-
 // ─── Main ───
 
 /**
@@ -50,7 +42,7 @@ export type TreeAccessor = {
  */
 export function codexImpactToDeletions(
 	impact: CodexImpact,
-	tree: TreeAccessor,
+	tree: TreeReader,
 	codecs: Codecs,
 ): HealingAction[] {
 	const actions: HealingAction[] = [];
@@ -152,7 +144,7 @@ export function codexImpactToDeletions(
  */
 export function codexImpactToRecreations(
 	impact: CodexImpact,
-	tree: TreeAccessor,
+	tree: TreeReader,
 	codecs: Codecs,
 ): CodexAction[] {
 	const actions: CodexAction[] = [];
@@ -253,7 +245,7 @@ export function codexImpactToRecreations(
  */
 export function codexImpactToIncrementalRecreations(
 	impact: CodexImpact,
-	tree: TreeAccessor,
+	tree: TreeReader,
 	codecs: Codecs,
 ): CodexAction[] {
 	const actions: CodexAction[] = [];
@@ -461,7 +453,7 @@ function buildSectionChainFromPathParts(
 // ─── Helpers ───
 
 function findSectionByChain(
-	tree: TreeAccessor,
+	tree: TreeReader,
 	chain: SectionNodeSegmentId[],
 ): SectionNode | undefined {
 	if (chain.length === 0) return undefined;
@@ -523,7 +515,7 @@ type TreeTraversalResult = {
  * More efficient than separate collectAllSectionChains + collectAllScrolls.
  */
 function collectTreeData(
-	tree: TreeAccessor,
+	tree: TreeReader,
 	codecs: Codecs,
 ): TreeTraversalResult {
 	const sectionChains: SectionNodeSegmentId[][] = [];

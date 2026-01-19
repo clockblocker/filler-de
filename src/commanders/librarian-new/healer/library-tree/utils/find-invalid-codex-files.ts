@@ -2,9 +2,9 @@ import { systemPathFromSplitPathInternal } from "../../../../../managers/obsidia
 import type { SplitPathWithReader } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { CodecRules, Codecs } from "../../../codecs";
-import type { TreeAccessor } from "../codex/codex-impact-to-actions";
 import { isCodexSplitPath } from "../codex/helpers";
 import { tryParseAsInsideLibrarySplitPath } from "../tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
+import type { TreeReader } from "../tree-interfaces";
 import type { HealingAction } from "../types/healing-action";
 import { collectValidCodexPaths } from "./collect-codex-paths";
 
@@ -13,7 +13,7 @@ import { collectValidCodexPaths } from "./collect-codex-paths";
  */
 export function findInvalidCodexFiles(
 	allFiles: SplitPathWithReader[],
-	healer: TreeAccessor,
+	healer: TreeReader,
 	codecs: Codecs,
 	rules: CodecRules,
 ): HealingAction[] {

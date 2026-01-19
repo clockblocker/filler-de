@@ -9,16 +9,19 @@ import type {
 	VaultAction,
 	VaultActionManager,
 } from "../../managers/obsidian/vault-action-manager";
+import { SplitPathKind } from "../../managers/obsidian/vault-action-manager/types/split-path";
 import { decrementPending, incrementPending } from "../../utils/idle-tracker";
 import { logger } from "../../utils/logger";
 import {
 	type CodecRules,
 	type Codecs,
+	type SplitPathToMdFileInsideLibrary,
 	makeCodecRulesFromSettings,
 	makeCodecs,
 } from "./codecs";
 import type { ScrollNodeSegmentId } from "./codecs/segment-id/types/segment-id";
 import { Healer } from "./healer/healer";
+import { HealingTransaction } from "./healer/healing-transaction";
 import type { CodexImpact } from "./healer/library-tree/codex";
 import {
 	extractInvalidCodexesFromBulk,
@@ -43,6 +46,7 @@ import {
 	processCodexImpacts,
 	processCodexImpactsForInit,
 } from "./librarian-init";
+import { scanAndGenerateOrphanActions } from "./healer/orphan-codex-scanner";
 
 // ─── Queue ───
 
@@ -123,15 +127,20 @@ export class Librarian {
 					this.rules,
 				);
 
-			// Apply all create actions and collect healing + codex impacts
-			const allHealingActions: HealingAction[] = [];
-			const allCodexImpacts: CodexImpact[] = [];
-
+			// Apply all create actions via HealingTransaction
+			const tx = new HealingTransaction(this.healer);
 			for (const action of createActions) {
-				const result = this.healer.getHealingActionsFor(action);
-				allHealingActions.push(...result.healingActions);
-				allCodexImpacts.push(result.codexImpact);
+				const result = tx.apply(action);
+				if (result.isErr()) {
+					tx.logSummary("error");
+					logger.error("[Librarian] Init transaction failed:", result.error);
+					this.subscribeToVaultEvents();
+					return;
+				}
 			}
+
+			const allHealingActions: HealingAction[] = tx.getHealingActions();
+			const allCodexImpacts: CodexImpact[] = tx.getCodexImpacts();
 
 			// Delete invalid codex files (orphaned __ files)
 			const invalidCodexActions = findInvalidCodexFiles(
@@ -141,6 +150,21 @@ export class Librarian {
 				this.rules,
 			);
 			allHealingActions.push(...invalidCodexActions);
+
+			// Scan for orphaned codexes (wrong suffix, duplicates)
+			const mdPaths = allFiles
+				.filter((f): f is SplitPathToMdFileInsideLibrary & { read: () => Promise<string> } =>
+					f.kind === SplitPathKind.MdFile)
+				.map(({ read, ...path }) => path);
+			const { cleanupActions, scanResult } = scanAndGenerateOrphanActions(
+				this.healer,
+				this.codecs,
+				mdPaths,
+			);
+			if (scanResult.orphans.length > 0) {
+				logger.info(`[Librarian] Found ${scanResult.orphans.length} orphaned codexes`);
+			}
+			allHealingActions.push(...cleanupActions);
 
 			// Subscribe to vault events BEFORE dispatching actions
 			// This ensures we catch all events, including cascading healing from init actions
@@ -172,6 +196,10 @@ export class Librarian {
 			if (allVaultActions.length > 0) {
 				await this.vaultActionManager.dispatch(allVaultActions);
 			}
+
+			// Commit transaction after successful dispatch
+			tx.commit();
+			tx.logSummary("debug");
 
 			// Wait for queue to drain (events trigger handleBulkEvent which enqueues actions)
 			// This ensures all cascading healing is queued and processed
@@ -457,14 +485,19 @@ export class Librarian {
 			return;
 		}
 
-		const allHealingActions: HealingAction[] = [];
-		const allCodexImpacts: CodexImpact[] = [];
-
+		// Apply all tree actions via HealingTransaction
+		const tx = new HealingTransaction(this.healer);
 		for (const action of actions) {
-			const result = this.healer.getHealingActionsFor(action);
-			allHealingActions.push(...result.healingActions);
-			allCodexImpacts.push(result.codexImpact);
+			const result = tx.apply(action);
+			if (result.isErr()) {
+				tx.logSummary("error");
+				logger.error("[Librarian] Transaction failed:", result.error);
+				return;
+			}
 		}
+
+		const allHealingActions: HealingAction[] = tx.getHealingActions();
+		const allCodexImpacts: CodexImpact[] = tx.getCodexImpacts();
 
 		// Extract invalid codexes from bulk event (after tree state updated)
 		if (bulkEvent) {
@@ -501,6 +534,10 @@ export class Librarian {
 		if (allVaultActions.length > 0) {
 			await this.vaultActionManager.dispatch(allVaultActions);
 		}
+
+		// Commit transaction after successful dispatch
+		tx.commit();
+		tx.logSummary("debug");
 	}
 
 	/**
