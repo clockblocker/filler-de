@@ -8,20 +8,20 @@ import {
 	type Codecs,
 	makeCodecRulesFromSettings,
 	makeCodecs,
-} from "../../../../../src/commanders/librarian-new/codecs";
-import type { Healer } from "../../../../../src/commanders/librarian-new/healer/healer";
+} from "../../../../../src/commanders/librarian/codecs";
+import type { Healer } from "../../../../../src/commanders/librarian/healer/healer";
 import {
 	codexImpactToDeletions,
 	codexImpactToRecreations,
 	extractInvalidCodexesFromBulk,
 	type TreeAccessor,
-} from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/codex-impact-to-actions";
-import type { CodexImpact } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/compute-codex-impact";
-import { mergeCodexImpacts } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/merge-codex-impacts";
-import type { CodexAction } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/types/codex-action";
-import { buildTreeActions } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/index";
-import type { CreateTreeLeafAction, TreeAction } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/types/tree-action";
-import type { HealingAction } from "../../../../../src/commanders/librarian-new/healer/library-tree/types/healing-action";
+} from "../../../../../src/commanders/librarian/healer/library-tree/codex/codex-impact-to-actions";
+import type { CodexImpact } from "../../../../../src/commanders/librarian/healer/library-tree/codex/compute-codex-impact";
+import { mergeCodexImpacts } from "../../../../../src/commanders/librarian/healer/library-tree/codex/merge-codex-impacts";
+import type { CodexAction } from "../../../../../src/commanders/librarian/healer/library-tree/codex/types/codex-action";
+import { buildTreeActions } from "../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/index";
+import type { CreateTreeLeafAction, TreeAction } from "../../../../../src/commanders/librarian/healer/library-tree/tree-action/types/tree-action";
+import type { HealingAction } from "../../../../../src/commanders/librarian/healer/library-tree/types/healing-action";
 import type { BulkVaultEvent } from "../../../../../src/managers/obsidian/vault-action-manager";
 import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
 import { makeTree, type TreeShape } from "../tree-test-helpers";

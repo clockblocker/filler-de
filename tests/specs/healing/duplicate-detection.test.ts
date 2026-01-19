@@ -7,17 +7,17 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import type { SplitPathToMdFileInsideLibrary } from "../../../src/commanders/librarian/codecs";
 import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
-} from "../../../src/commanders/librarian-new/codecs";
+} from "../../../src/commanders/librarian/codecs";
 import {
 	OrphanCodexScanner,
 	scanAndGenerateOrphanActions,
-} from "../../../src/commanders/librarian-new/healer/orphan-codex-scanner";
-import type { SplitPathToMdFileInsideLibrary } from "../../../src/commanders/librarian-new/codecs";
+} from "../../../src/commanders/librarian/healer/orphan-codex-scanner";
+import type { NodeName } from "../../../src/commanders/librarian/types/schemas/node-name";
 import { SplitPathKind } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
-import type { NodeName } from "../../../src/commanders/librarian-new/types/schemas/node-name";
 import { defaultSettingsForUnitTests } from "../../unit/common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
 import { makeTree } from "../../unit/librarian/library-tree/tree-test-helpers";
@@ -158,8 +158,8 @@ describe("OrphanCodexScanner", () => {
 		it("handles multiple sections with duplicates", () => {
 			const healer = makeTree({
 				children: {
-					recipes: {},
 					archive: {},
+					recipes: {},
 				},
 				libraryRoot: "Library" as NodeName,
 			});
@@ -228,8 +228,8 @@ describe("OrphanCodexScanner", () => {
 
 			const orphans = [
 				{
-					observedPath: orphanedPath,
 					expectedPath: null,
+					observedPath: orphanedPath,
 					reason: "wrong_suffix" as const,
 				},
 			];
@@ -258,23 +258,23 @@ describe("OrphanCodexScanner", () => {
 
 			const orphans = [
 				{
+					expectedPath: null,
 					observedPath: {
 						basename: "__-recipes-WRONG",
 						extension: "md",
 						kind: SplitPathKind.MdFile,
 						pathParts: ["Library", "recipes"],
 					} as SplitPathToMdFileInsideLibrary,
-					expectedPath: null,
 					reason: "wrong_suffix" as const,
 				},
 				{
+					expectedPath: null,
 					observedPath: {
 						basename: "__-duplicate",
 						extension: "md",
 						kind: SplitPathKind.MdFile,
 						pathParts: ["Library", "recipes"],
 					} as SplitPathToMdFileInsideLibrary,
-					expectedPath: null,
 					reason: "duplicate" as const,
 				},
 			];

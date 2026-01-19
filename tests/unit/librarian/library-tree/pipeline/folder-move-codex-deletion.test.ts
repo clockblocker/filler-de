@@ -6,7 +6,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { TreeActionType } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/types/tree-action";
+import { TreeActionType } from "../../../../../src/commanders/librarian/healer/library-tree/tree-action/types/tree-action";
 import type { BulkVaultEvent } from "../../../../../src/managers/obsidian/vault-action-manager";
 import type { PossibleRootVaultEvent } from "../../../../../src/managers/obsidian/vault-action-manager/impl/event-processing/bulk-event-emmiter/types/bulk/helpers";
 import { SplitPathKind } from "../../../../../src/managers/obsidian/vault-action-manager/types/split-path";

@@ -7,7 +7,7 @@ import {
 	type TFile,
 	type WorkspaceLeaf,
 } from "obsidian";
-import { Librarian } from "./commanders/librarian-new/librarian";
+import { Librarian } from "./commanders/librarian/librarian";
 
 import {
 	clearState,
@@ -513,7 +513,9 @@ export default class TextEaterPlugin extends Plugin {
 	 * E2E test hook: reset settings to provided values and reinitialize librarian.
 	 * This bypasses the confirmation dialog and forces a full reinit.
 	 */
-	async resetSettingsForTesting(newSettings: Partial<TextEaterSettings>): Promise<void> {
+	async resetSettingsForTesting(
+		newSettings: Partial<TextEaterSettings>,
+	): Promise<void> {
 		// Update settings
 		Object.assign(this.settings, newSettings);
 		// Update global state so codecs use new settings

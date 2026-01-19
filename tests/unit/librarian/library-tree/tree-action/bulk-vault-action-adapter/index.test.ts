@@ -4,11 +4,11 @@ import {
 	type Codecs,
 	makeCodecRulesFromSettings,
 	makeCodecs,
-} from "../../../../../../src/commanders/librarian-new/codecs";
-import { buildTreeActions } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/index";
-import { TreeActionType } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/types/tree-action";
-import { getNodeName } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/utils/locator/locator-utils";
-import { TreeNodeKind } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
+} from "../../../../../../src/commanders/librarian/codecs";
+import { buildTreeActions } from "../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/index";
+import { TreeActionType } from "../../../../../../src/commanders/librarian/healer/library-tree/tree-action/types/tree-action";
+import { getNodeName } from "../../../../../../src/commanders/librarian/healer/library-tree/tree-action/utils/locator/locator-utils";
+import { TreeNodeKind } from "../../../../../../src/commanders/librarian/healer/library-tree/tree-node/types/atoms";
 import type { BulkVaultEvent } from "../../../../../../src/managers/obsidian/vault-action-manager";
 import type { PossibleRootVaultEvent } from "../../../../../../src/managers/obsidian/vault-action-manager/impl/event-processing/bulk-event-emmiter/types/bulk/helpers";
 import { SplitPathKind } from "../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";

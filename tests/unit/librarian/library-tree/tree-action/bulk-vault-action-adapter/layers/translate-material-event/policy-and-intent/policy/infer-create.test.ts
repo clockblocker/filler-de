@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { inferCreatePolicy } from "../../../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/infer-create";
-import { ChangePolicy } from "../../../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/types";
+import { inferCreatePolicy } from "../../../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/infer-create";
+import { ChangePolicy } from "../../../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/types";
 import { SplitPathKind } from "../../../../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { defaultSettingsForUnitTests } from "../../../../../../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../../../../../../common-utils/setup-spy";

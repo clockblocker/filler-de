@@ -1,7 +1,7 @@
-import type { AnySplitPath } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
+import type { AnySplitPath } from "../../../../managers/obsidian/vault-action-manager/types/split-path.ts";
 
-export type { SplitPathInsideLibraryCodecs } from "./make";
-export { makeSplitPathInsideLibraryCodecs } from "./make";
+export type { SplitPathInsideLibraryCodecs } from "./make.ts";
+export { makeSplitPathInsideLibraryCodecs } from "./make.ts";
 export type {
 	AnySplitPathInsideLibrary,
 	SplitPathInsideLibraryOf,

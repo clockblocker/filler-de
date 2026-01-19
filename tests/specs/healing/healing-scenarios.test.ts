@@ -13,21 +13,21 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
-} from "../../../src/commanders/librarian-new/codecs";
-import { Healer } from "../../../src/commanders/librarian-new/healer/healer";
+} from "../../../src/commanders/librarian/codecs";
+import { Healer } from "../../../src/commanders/librarian/healer/healer";
 import {
 	codexImpactToDeletions,
 	codexImpactToIncrementalRecreations,
 	codexImpactToRecreations,
-} from "../../../src/commanders/librarian-new/healer/library-tree/codex/codex-impact-to-actions";
-import { mergeCodexImpacts } from "../../../src/commanders/librarian-new/healer/library-tree/codex/merge-codex-impacts";
-import { Tree } from "../../../src/commanders/librarian-new/healer/library-tree/tree";
-import { TreeActionType } from "../../../src/commanders/librarian-new/healer/library-tree/tree-action/types/tree-action";
+} from "../../../src/commanders/librarian/healer/library-tree/codex/codex-impact-to-actions";
+import { mergeCodexImpacts } from "../../../src/commanders/librarian/healer/library-tree/codex/merge-codex-impacts";
+import { Tree } from "../../../src/commanders/librarian/healer/library-tree/tree";
+import { TreeActionType } from "../../../src/commanders/librarian/healer/library-tree/tree-action/types/tree-action";
 import {
 	TreeNodeKind,
 	TreeNodeStatus,
-} from "../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
-import type { NodeName } from "../../../src/commanders/librarian-new/types/schemas/node-name";
+} from "../../../src/commanders/librarian/healer/library-tree/tree-node/types/atoms";
+import type { NodeName } from "../../../src/commanders/librarian/types/schemas/node-name";
 import { SplitPathKind } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { defaultSettingsForUnitTests } from "../../unit/common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
@@ -256,6 +256,7 @@ describe("Healing Scenarios", () => {
 		it("moving section generates codex impact for descendants", () => {
 			const healer = makeTree({
 				children: {
+					archive: {},
 					recipes: {
 						children: {
 							soup: {
@@ -268,7 +269,6 @@ describe("Healing Scenarios", () => {
 							},
 						},
 					},
-					archive: {},
 				},
 				libraryRoot: "Library" as NodeName,
 			});
@@ -290,13 +290,13 @@ describe("Healing Scenarios", () => {
 				actionType: TreeActionType.Move,
 				newNodeName: "soup" as NodeName,
 				newParentLocator,
-				targetLocator,
 				// Required: observedSplitPath is where the folder is NOW in the filesystem
 				observedSplitPath: {
 					basename: "soup",
 					kind: SplitPathKind.Folder,
 					pathParts: ["Library", "archive"],
 				},
+				targetLocator,
 			});
 
 			// Move operation generates codex impact

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { makeCodecRulesFromSettings } from "../../../../../../../../src/commanders/librarian-new/codecs";
-import { makeEventLibraryScoped } from "../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/events/make-event-libray-scoped";
-import { Scope } from "../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/scoped-event";
+import { makeCodecRulesFromSettings } from "../../../../../../../../src/commanders/librarian/codecs";
+import { makeEventLibraryScoped } from "../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/events/make-event-libray-scoped";
+import { Scope } from "../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/scoped-event";
 import { MD } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/literals";
 import { SplitPathKind } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import type { VaultEvent } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/vault-event";

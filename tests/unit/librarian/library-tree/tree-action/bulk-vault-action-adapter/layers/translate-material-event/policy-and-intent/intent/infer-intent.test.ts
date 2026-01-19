@@ -4,11 +4,11 @@ import {
 	type Codecs,
 	makeCodecRulesFromSettings,
 	makeCodecs,
-} from "../../../../../../../../../../src/commanders/librarian-new/codecs";
-import { MaterializedEventKind } from "../../../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/materialized-node-events/types";
-import { inferRenameIntent } from "../../../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/intent/infer-intent";
-import { RenameIntent } from "../../../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/intent/types";
-import { TreeNodeKind } from "../../../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
+} from "../../../../../../../../../../src/commanders/librarian/codecs";
+import { MaterializedEventKind } from "../../../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/materialized-node-events/types";
+import { inferRenameIntent } from "../../../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/intent/infer-intent";
+import { RenameIntent } from "../../../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/intent/types";
+import { TreeNodeKind } from "../../../../../../../../../../src/commanders/librarian/healer/library-tree/tree-node/types/atoms";
 import { SplitPathKind } from "../../../../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { defaultSettingsForUnitTests } from "../../../../../../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../../../../../../common-utils/setup-spy";

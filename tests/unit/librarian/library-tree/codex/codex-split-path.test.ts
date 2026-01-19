@@ -2,9 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
-} from "../../../../../src/commanders/librarian-new/codecs";
-import type { SectionNodeSegmentId } from "../../../../../src/commanders/librarian-new/codecs/segment-id/types/segment-id";
-import { computeCodexSplitPath } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/codex-split-path";
+} from "../../../../../src/commanders/librarian/codecs";
+import type { SectionNodeSegmentId } from "../../../../../src/commanders/librarian/codecs/segment-id/types/segment-id";
+import { computeCodexSplitPath } from "../../../../../src/commanders/librarian/healer/library-tree/codex/codex-split-path";
 import { SplitPathKind } from "../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";

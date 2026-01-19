@@ -13,22 +13,22 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
-} from "../../../src/commanders/librarian-new/codecs";
-import { Tree } from "../../../src/commanders/librarian-new/healer/library-tree/tree";
-import { TreeActionType } from "../../../src/commanders/librarian-new/healer/library-tree/tree-action/types/tree-action";
+} from "../../../src/commanders/librarian/codecs";
+import { Tree } from "../../../src/commanders/librarian/healer/library-tree/tree";
+import { TreeActionType } from "../../../src/commanders/librarian/healer/library-tree/tree-action/types/tree-action";
 import {
 	TreeNodeKind,
 	TreeNodeStatus,
-} from "../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
-import type { SectionNode } from "../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/tree-node";
-import type { NodeName } from "../../../src/commanders/librarian-new/types/schemas/node-name";
+} from "../../../src/commanders/librarian/healer/library-tree/tree-node/types/atoms";
+import type { SectionNode } from "../../../src/commanders/librarian/healer/library-tree/tree-node/types/tree-node";
+import type { NodeName } from "../../../src/commanders/librarian/types/schemas/node-name";
 import { SplitPathKind } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { defaultSettingsForUnitTests } from "../../unit/common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
 import {
+	makeFileLocator,
 	makeScrollLocator,
 	makeSectionLocator,
-	makeFileLocator,
 } from "../../unit/librarian/library-tree/tree-test-helpers";
 
 let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;

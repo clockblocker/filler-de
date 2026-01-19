@@ -6,21 +6,21 @@
  * - Logs errors on commit/rollback
  */
 
-import { afterEach, beforeEach, describe, expect, it, spyOn, mock } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
-} from "../../../src/commanders/librarian-new/codecs";
-import { Healer } from "../../../src/commanders/librarian-new/healer/healer";
-import { HealingTransaction } from "../../../src/commanders/librarian-new/healer/healing-transaction";
+} from "../../../src/commanders/librarian/codecs";
+import { Healer } from "../../../src/commanders/librarian/healer/healer";
 import {
 	getHealingAuditLog,
 	resetHealingAuditLog,
-} from "../../../src/commanders/librarian-new/healer/healing-audit-log";
-import { Tree } from "../../../src/commanders/librarian-new/healer/library-tree/tree";
-import { TreeActionType } from "../../../src/commanders/librarian-new/healer/library-tree/tree-action/types/tree-action";
-import { TreeNodeStatus } from "../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
-import type { NodeName } from "../../../src/commanders/librarian-new/types/schemas/node-name";
+} from "../../../src/commanders/librarian/healer/healing-audit-log";
+import { HealingTransaction } from "../../../src/commanders/librarian/healer/healing-transaction";
+import { Tree } from "../../../src/commanders/librarian/healer/library-tree/tree";
+import { TreeActionType } from "../../../src/commanders/librarian/healer/library-tree/tree-action/types/tree-action";
+import { TreeNodeStatus } from "../../../src/commanders/librarian/healer/library-tree/tree-node/types/atoms";
+import type { NodeName } from "../../../src/commanders/librarian/types/schemas/node-name";
 import { SplitPathKind } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { defaultSettingsForUnitTests } from "../../unit/common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";

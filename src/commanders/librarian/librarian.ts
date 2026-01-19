@@ -9,15 +9,18 @@ import type {
 	VaultAction,
 	VaultActionManager,
 } from "../../managers/obsidian/vault-action-manager";
-import { SplitPathKind, type SplitPathToMdFileWithReader } from "../../managers/obsidian/vault-action-manager/types/split-path";
+import {
+	SplitPathKind,
+	type SplitPathToMdFileWithReader,
+} from "../../managers/obsidian/vault-action-manager/types/split-path";
 import { decrementPending, incrementPending } from "../../utils/idle-tracker";
 import { logger } from "../../utils/logger";
 import {
 	type CodecRules,
 	type Codecs,
-	type SplitPathToMdFileInsideLibrary,
 	makeCodecRulesFromSettings,
 	makeCodecs,
+	type SplitPathToMdFileInsideLibrary,
 } from "./codecs";
 import type { ScrollNodeSegmentId } from "./codecs/segment-id/types/segment-id";
 import { Healer } from "./healer/healer";
@@ -40,13 +43,13 @@ import {
 import type { HealingAction } from "./healer/library-tree/types/healing-action";
 import { extractScrollStatusActions } from "./healer/library-tree/utils/extract-scroll-status-actions";
 import { findInvalidCodexFiles } from "./healer/library-tree/utils/find-invalid-codex-files";
+import { scanAndGenerateOrphanActions } from "./healer/orphan-codex-scanner";
 import {
 	assembleVaultActions,
 	buildInitialCreateActions,
 	processCodexImpacts,
 	processCodexImpactsForInit,
 } from "./librarian-init";
-import { scanAndGenerateOrphanActions } from "./healer/orphan-codex-scanner";
 
 // ─── Queue ───
 
@@ -133,7 +136,10 @@ export class Librarian {
 				const result = tx.apply(action);
 				if (result.isErr()) {
 					tx.logSummary("error");
-					logger.error("[Librarian] Init transaction failed:", result.error);
+					logger.error(
+						"[Librarian] Init transaction failed:",
+						result.error,
+					);
 					this.subscribeToVaultEvents();
 					return;
 				}
@@ -153,15 +159,23 @@ export class Librarian {
 
 			// Scan for orphaned codexes (wrong suffix, duplicates)
 			const mdPaths = allFiles
-				.filter((f): f is SplitPathToMdFileWithReader => f.kind === SplitPathKind.MdFile)
-				.map(({ read, ...path }) => path as SplitPathToMdFileInsideLibrary);
+				.filter(
+					(f): f is SplitPathToMdFileWithReader =>
+						f.kind === SplitPathKind.MdFile,
+				)
+				.map(
+					({ read, ...path }) =>
+						path as SplitPathToMdFileInsideLibrary,
+				);
 			const { cleanupActions, scanResult } = scanAndGenerateOrphanActions(
 				this.healer,
 				this.codecs,
 				mdPaths,
 			);
 			if (scanResult.orphans.length > 0) {
-				logger.info(`[Librarian] Found ${scanResult.orphans.length} orphaned codexes`);
+				logger.info(
+					`[Librarian] Found ${scanResult.orphans.length} orphaned codexes`,
+				);
 			}
 			allHealingActions.push(...cleanupActions);
 
@@ -314,9 +328,9 @@ export class Librarian {
 		logger.debug(
 			"[Librarian] PropertyClick event:",
 			JSON.stringify({
-				propertyName: event.propertyName,
 				checked: event.checked,
 				path: event.splitPath.pathParts,
+				propertyName: event.propertyName,
 			}),
 		);
 

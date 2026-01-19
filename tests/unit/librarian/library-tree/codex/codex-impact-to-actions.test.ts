@@ -2,25 +2,25 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
-} from "../../../../../src/commanders/librarian-new/codecs";
+} from "../../../../../src/commanders/librarian/codecs";
 import type {
 	SectionNodeSegmentId,
-} from "../../../../../src/commanders/librarian-new/codecs/segment-id/types/segment-id";
+} from "../../../../../src/commanders/librarian/codecs/segment-id/types/segment-id";
 import {
 	codexImpactToDeletions,
 	codexImpactToRecreations,
 	type TreeAccessor,
-} from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/codex-impact-to-actions";
-import type { CodexImpact } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/compute-codex-impact";
+} from "../../../../../src/commanders/librarian/healer/library-tree/codex/codex-impact-to-actions";
+import type { CodexImpact } from "../../../../../src/commanders/librarian/healer/library-tree/codex/compute-codex-impact";
 import {
 	TreeNodeKind,
 	TreeNodeStatus,
-} from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
+} from "../../../../../src/commanders/librarian/healer/library-tree/tree-node/types/atoms";
 import type {
 	ScrollNode,
 	SectionNode,
-} from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/tree-node";
-import type { NodeName } from "../../../../../src/commanders/librarian-new/types/schemas/node-name";
+} from "../../../../../src/commanders/librarian/healer/library-tree/tree-node/types/tree-node";
+import type { NodeName } from "../../../../../src/commanders/librarian/types/schemas/node-name";
 import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
 

@@ -1,4 +1,4 @@
-import type { CreateTreeLeafAction } from "../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/types/tree-action";
+import type { CreateTreeLeafAction } from "../../../../../../src/commanders/librarian/healer/library-tree/tree-action/types/tree-action";
 
 export const createActions: CreateTreeLeafAction[] = [
 	{

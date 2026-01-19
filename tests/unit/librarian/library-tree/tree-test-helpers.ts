@@ -6,24 +6,24 @@
 import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
-} from "../../../../src/commanders/librarian-new/codecs";
-import type {
-	FileNodeSegmentId,
-	ScrollNodeSegmentId,
-	SectionNodeSegmentId,
-} from "../../../../src/commanders/librarian-new/codecs/segment-id/types/segment-id";
-import { NodeSegmentIdSeparator } from "../../../../src/commanders/librarian-new/codecs/segment-id/types/segment-id";
-import { Healer } from "../../../../src/commanders/librarian-new/healer/healer";
-import { Tree } from "../../../../src/commanders/librarian-new/healer/library-tree/tree";
+} from "../../../../src/commanders/librarian/codecs";
 import type {
 	FileNodeLocator,
 	ScrollNodeLocator,
 	SectionNodeLocator,
-} from "../../../../src/commanders/librarian-new/codecs/locator/types";
-import { makeNodeSegmentId } from "../../../../src/commanders/librarian-new/healer/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
-import { TreeNodeKind, TreeNodeStatus } from "../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
-import type { LeafNode, SectionNode } from "../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/tree-node";
-import type { NodeName } from "../../../../src/commanders/librarian-new/types/schemas/node-name";
+} from "../../../../src/commanders/librarian/codecs/locator/types";
+import type {
+	FileNodeSegmentId,
+	ScrollNodeSegmentId,
+	SectionNodeSegmentId,
+} from "../../../../src/commanders/librarian/codecs/segment-id/types/segment-id";
+import { NodeSegmentIdSeparator } from "../../../../src/commanders/librarian/codecs/segment-id/types/segment-id";
+import { Healer } from "../../../../src/commanders/librarian/healer/healer";
+import { Tree } from "../../../../src/commanders/librarian/healer/library-tree/tree";
+import { makeNodeSegmentId } from "../../../../src/commanders/librarian/healer/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
+import { TreeNodeKind, TreeNodeStatus } from "../../../../src/commanders/librarian/healer/library-tree/tree-node/types/atoms";
+import type { LeafNode, SectionNode } from "../../../../src/commanders/librarian/healer/library-tree/tree-node/types/tree-node";
+import type { NodeName } from "../../../../src/commanders/librarian/types/schemas/node-name";
 import { defaultSettingsForUnitTests } from "../../common-utils/consts";
 
 // ─── Shape Types ───

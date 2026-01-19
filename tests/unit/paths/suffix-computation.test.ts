@@ -13,20 +13,20 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
-} from "../../../src/commanders/librarian-new/codecs";
+} from "../../../src/commanders/librarian/codecs";
 import {
 	pathPartsToSuffixParts,
 	pathPartsWithRootToSuffixParts,
 	suffixPartsToPathParts,
-} from "../../../src/commanders/librarian-new/codecs/internal/suffix/path-parts";
+} from "../../../src/commanders/librarian/codecs/internal/suffix/path-parts";
 import {
 	serializeSeparatedSuffix,
 	serializeSeparatedSuffixUnchecked,
-} from "../../../src/commanders/librarian-new/codecs/internal/suffix/serialize";
-import { TreeNodeKind, TreeNodeStatus } from "../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
-import type { ScrollNode } from "../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/tree-node";
-import { buildObservedLeafSplitPath } from "../../../src/commanders/librarian-new/healer/library-tree/utils/split-path-utils";
-import type { NodeName } from "../../../src/commanders/librarian-new/types/schemas/node-name";
+} from "../../../src/commanders/librarian/codecs/internal/suffix/serialize";
+import { TreeNodeKind, TreeNodeStatus } from "../../../src/commanders/librarian/healer/library-tree/tree-node/types/atoms";
+import type { ScrollNode } from "../../../src/commanders/librarian/healer/library-tree/tree-node/types/tree-node";
+import { buildObservedLeafSplitPath } from "../../../src/commanders/librarian/healer/library-tree/utils/split-path-utils";
+import type { NodeName } from "../../../src/commanders/librarian/types/schemas/node-name";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../common-utils/setup-spy";
 

@@ -4,10 +4,10 @@ import {
 	type Codecs,
 	makeCodecRulesFromSettings,
 	makeCodecs,
-} from "../../../../../../../../../../src/commanders/librarian-new/codecs";
-import { RenameIntent } from "../../../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/intent/types";
-import { ChangePolicy } from "../../../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/types";
-import { tryCanonicalizeSplitPathToDestination } from "../../../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/utils/canonical-naming/canonicalize-to-destination";
+} from "../../../../../../../../../../src/commanders/librarian/codecs";
+import { RenameIntent } from "../../../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/intent/types";
+import { ChangePolicy } from "../../../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/types";
+import { tryCanonicalizeSplitPathToDestination } from "../../../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/utils/canonical-naming/canonicalize-to-destination";
 import type {
 	SplitPathToFile,
 	SplitPathToFolder,

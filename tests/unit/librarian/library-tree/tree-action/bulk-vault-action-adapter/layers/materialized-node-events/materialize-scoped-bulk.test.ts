@@ -1,10 +1,10 @@
 import { describe, expect, it } from "bun:test";
-import type { LibraryScopedBulkVaultEvent } from "../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/scoped-event";
-import { Scope } from "../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/scoped-event";
-import { materializeScopedBulk } from "../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/materialized-node-events/materialize-scoped-bulk";
-import type { MaterializedNodeEvent } from "../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/materialized-node-events/types";
-import { MaterializedEventKind } from "../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/materialized-node-events/types";
-import { TreeNodeKind } from "../../../../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
+import type { LibraryScopedBulkVaultEvent } from "../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/scoped-event";
+import { Scope } from "../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/scoped-event";
+import { materializeScopedBulk } from "../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/materialized-node-events/materialize-scoped-bulk";
+import type { MaterializedNodeEvent } from "../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/materialized-node-events/types";
+import { MaterializedEventKind } from "../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/materialized-node-events/types";
+import { TreeNodeKind } from "../../../../../../../../src/commanders/librarian/healer/library-tree/tree-node/types/atoms";
 import { SplitPathKind } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { VaultEventKind } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/vault-event";
 

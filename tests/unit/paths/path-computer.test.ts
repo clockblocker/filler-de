@@ -7,11 +7,11 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
-} from "../../../src/commanders/librarian-new/codecs";
-import type { SectionNodeSegmentId } from "../../../src/commanders/librarian-new/codecs/segment-id/types/segment-id";
-import { NodeSegmentIdSeparator } from "../../../src/commanders/librarian-new/codecs/segment-id/types/segment-id";
-import { TreeNodeKind, TreeNodeStatus } from "../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
-import type { FileNode, ScrollNode } from "../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/tree-node";
+} from "../../../src/commanders/librarian/codecs";
+import type { SectionNodeSegmentId } from "../../../src/commanders/librarian/codecs/segment-id/types/segment-id";
+import { NodeSegmentIdSeparator } from "../../../src/commanders/librarian/codecs/segment-id/types/segment-id";
+import { TreeNodeKind, TreeNodeStatus } from "../../../src/commanders/librarian/healer/library-tree/tree-node/types/atoms";
+import type { FileNode, ScrollNode } from "../../../src/commanders/librarian/healer/library-tree/tree-node/types/tree-node";
 import {
 	buildCodexBasename,
 	buildObservedLeafSplitPath,
@@ -22,8 +22,8 @@ import {
 	pathPartsWithRootToSuffixParts,
 	splitPathsEqual,
 	suffixPartsToPathParts,
-} from "../../../src/commanders/librarian-new/paths";
-import type { NodeName } from "../../../src/commanders/librarian-new/types/schemas/node-name";
+} from "../../../src/commanders/librarian/paths";
+import type { NodeName } from "../../../src/commanders/librarian/types/schemas/node-name";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../common-utils/setup-spy";
 

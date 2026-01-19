@@ -1,14 +1,14 @@
 import { describe, expect, it } from "bun:test";
-import { computeSectionStatus } from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/compute-section-status";
+import { computeSectionStatus } from "../../../../../src/commanders/librarian/healer/library-tree/codex/compute-section-status";
 import {
 	TreeNodeKind,
 	TreeNodeStatus,
-} from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
+} from "../../../../../src/commanders/librarian/healer/library-tree/tree-node/types/atoms";
 import type {
 	ScrollNode,
 	SectionNode,
-} from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/tree-node";
-import type { NodeName } from "../../../../../src/commanders/librarian-new/types/schemas/node-name";
+} from "../../../../../src/commanders/librarian/healer/library-tree/tree-node/types/tree-node";
+import type { NodeName } from "../../../../../src/commanders/librarian/types/schemas/node-name";
 
 // Helpers
 const scroll = (

@@ -4,8 +4,8 @@ import {
 	formatFileLine,
 	formatParentBacklink,
 	formatScrollLine,
-} from "../../../../../src/commanders/librarian-new/healer/library-tree/codex/format-codex-line";
-import { TreeNodeStatus } from "../../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
+} from "../../../../../src/commanders/librarian/healer/library-tree/codex/format-codex-line";
+import { TreeNodeStatus } from "../../../../../src/commanders/librarian/healer/library-tree/tree-node/types/atoms";
 import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
 
 let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
