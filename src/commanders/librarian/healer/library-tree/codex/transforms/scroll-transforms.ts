@@ -37,7 +37,7 @@ export function makeStripScrollBacklinkTransform(codecs: Codecs): Transform {
 			const { firstLine: secondLine, rest: restAfterSecond } =
 				splitFirstLine(rest);
 			if (
-				isBacklinkLine(secondLine, codecs.rules.suffixDelimiterPattern)
+				isBacklinkLine(secondLine)
 			) {
 				// Strip backlink
 				return frontmatter
@@ -47,7 +47,7 @@ export function makeStripScrollBacklinkTransform(codecs: Codecs): Transform {
 		}
 
 		// Check for format without leading newline: [[backlink]]\n...
-		if (isBacklinkLine(firstLine, codecs.rules.suffixDelimiterPattern)) {
+		if (isBacklinkLine(firstLine)) {
 			return frontmatter ? `${frontmatter}${rest}` : rest;
 		}
 
@@ -108,7 +108,7 @@ export function makeScrollBacklinkTransform(
 			const { firstLine: secondLine, rest: restAfterSecond } =
 				splitFirstLine(rest);
 			if (
-				isBacklinkLine(secondLine, codecs.rules.suffixDelimiterPattern)
+				isBacklinkLine(secondLine)
 			) {
 				// Replace existing backlink, ensure blank line before content
 				const newContent = `${LINE_BREAK}${backlinkLine}${ensureLeadingBlankLine(restAfterSecond)}`;
@@ -117,7 +117,7 @@ export function makeScrollBacklinkTransform(
 		}
 
 		// Check for format without leading newline: [[backlink]]\n...
-		if (isBacklinkLine(firstLine, codecs.rules.suffixDelimiterPattern)) {
+		if (isBacklinkLine(firstLine)) {
 			// Replace existing backlink, ensure blank line before content
 			const newContent = `${LINE_BREAK}${backlinkLine}${ensureLeadingBlankLine(rest)}`;
 			return frontmatter ? `${frontmatter}${newContent}` : newContent;

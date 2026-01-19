@@ -104,7 +104,7 @@ export function makeCodexBacklinkTransform(
 
 		const { firstLine, rest } = splitFirstLine(content);
 
-		if (isBacklinkLine(firstLine, codecs.rules.suffixDelimiterPattern)) {
+		if (isBacklinkLine(firstLine)) {
 			// Replace existing backlink
 			return `${backlinkLine}${LINE_BREAK}${rest}`;
 		}
@@ -138,7 +138,7 @@ export function makeCodexContentTransform(
 
 		const { firstLine } = splitFirstLine(content);
 
-		if (isBacklinkLine(firstLine, codecs.rules.suffixDelimiterPattern)) {
+		if (isBacklinkLine(firstLine)) {
 			// Preserve backlink, replace rest
 			return `${firstLine}${LINE_BREAK}${childrenContent}`;
 		}

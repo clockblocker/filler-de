@@ -7,16 +7,11 @@ import { LINE_BREAK } from "../../../../../../types/literals";
 
 /**
  * Check if the first line looks like a backlink.
- * Matches patterns like: [[__<delim>...|← ...]] or [[__<delim>...]]
- * Uses flexible pattern (any spacing around symbol) for matching.
+ * Matches any link starting with [[__ and ending with ]].
+ * This handles both old and new delimiter formats.
  */
-export function isBacklinkLine(
-	line: string,
-	suffixDelimiterPattern: RegExp,
-): boolean {
-	// Convert pattern to string without slashes and flags
-	const patternStr = suffixDelimiterPattern.source;
-	const pattern = new RegExp(`^\\[\\[__${patternStr}[^\\]]*\\]\\]`);
+export function isBacklinkLine(line: string): boolean {
+	const pattern = /^\[\[__[^\]]+\]\]/;
 	return pattern.test(line.trim());
 }
 
