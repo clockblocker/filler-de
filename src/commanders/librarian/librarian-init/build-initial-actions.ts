@@ -5,20 +5,16 @@ import type {
 	SplitPathWithReader,
 } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
-import type {
-	Transform,
-	VaultAction,
-} from "../../../managers/obsidian/vault-action-manager/types/vault-action";
+import type { VaultAction } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { VaultActionKind } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
+import { readMetadata } from "../../../managers/pure/note-metadata-manager";
 import {
-	frontmatterToInternal,
-	internalToFrontmatter,
+	addFrontmatter,
 	migrateFrontmatter,
-	parseFrontmatter,
-	readMetadata,
-	stripFrontmatter,
-	stripInternalMetadata,
-} from "../../../managers/pure/note-metadata-manager";
+	migrateToFrontmatter,
+} from "../../../managers/pure/note-metadata-manager/internal/migration";
+import { readJsonSection } from "../../../managers/pure/note-metadata-manager/internal/json-section";
+import { parseFrontmatter } from "../../../managers/pure/note-metadata-manager/internal/frontmatter";
 import type {
 	AnySplitPathInsideLibrary,
 	CodecRules,
@@ -127,19 +123,16 @@ export async function buildInitialCreateActions(
 			if (contentResult.isOk()) {
 				const content = contentResult.value;
 
-				// Read metadata from both formats
+				// Read metadata using unified API (tries JSON first, then YAML)
 				const meta = readMetadata(content, ScrollMetadataSchema);
-				const fm = parseFrontmatter(content);
-				const converted = fm ? frontmatterToInternal(fm) : null;
-
-				// Determine status from available format
-				if (meta?.status === "Done" || converted?.status === "Done") {
+				if (meta?.status === "Done") {
 					status = TreeNodeStatus.Done;
 				}
 
-				// Queue format conversion if needed
-				const hasInternal = meta !== null;
-				const hasFrontmatter = fm !== null;
+				// Check which formats exist for migration
+				const hasInternal =
+					readJsonSection(content, ScrollMetadataSchema) !== null;
+				const hasFrontmatter = parseFrontmatter(content) !== null;
 
 				// Cast observedPath to MdFile since we're inside file.kind === MdFile check
 				const mdPath = observedPath as SplitPathToMdFileInsideLibrary;
@@ -147,6 +140,7 @@ export async function buildInitialCreateActions(
 					mdPath,
 					rules,
 				) as SplitPathToMdFile;
+
 				if (rules.hideMetadata) {
 					// Want internal format - migrate YAML to internal if needed
 					if (hasFrontmatter && !hasInternal) {
@@ -161,23 +155,27 @@ export async function buildInitialCreateActions(
 						});
 					}
 				} else {
-					// Want YAML format - convert internal to YAML if needed
-					if (hasInternal) {
+					// Want YAML format
+					if (hasInternal && meta) {
+						// Convert internal to YAML
 						migrationActions.push({
 							kind: VaultActionKind.ProcessMdFile,
 							payload: {
 								splitPath: vaultMdPath,
-								transform:
-									makeConvertToFrontmatterTransform(meta),
+								transform: migrateToFrontmatter(meta),
 							},
 						});
 					} else if (!hasFrontmatter) {
 						// No metadata at all - add YAML with current status
+						const statusValue =
+							status === TreeNodeStatus.Done
+								? ("Done" as const)
+								: ("NotStarted" as const);
 						migrationActions.push({
 							kind: VaultActionKind.ProcessMdFile,
 							payload: {
 								splitPath: vaultMdPath,
-								transform: makeAddFrontmatterTransform(status),
+								transform: addFrontmatter({ status: statusValue }),
 							},
 						});
 					}
@@ -208,45 +206,4 @@ export async function buildInitialCreateActions(
 	}
 
 	return { createActions, migrationActions };
-}
-
-// ─── Transform Helpers ───
-
-type MetadataWithStatus = { status: "Done" | "NotStarted" } & Record<
-	string,
-	unknown
->;
-
-/**
- * Create transform that converts internal metadata to YAML frontmatter.
- * Strips internal section and prepends YAML frontmatter.
- */
-function makeConvertToFrontmatterTransform(
-	meta: MetadataWithStatus,
-): Transform {
-	return (content: string) => {
-		// Strip internal metadata section (sync function, cast is safe)
-		const stripped = stripInternalMetadata()(content) as string;
-		// Strip existing frontmatter if any
-		const withoutFm = stripFrontmatter(stripped);
-		// Prepend new frontmatter
-		const yaml = internalToFrontmatter(meta);
-		return `${yaml}\n${withoutFm}`;
-	};
-}
-
-/**
- * Create transform that adds YAML frontmatter with given status.
- * Used when file has no metadata at all.
- */
-function makeAddFrontmatterTransform(status: TreeNodeStatus): Transform {
-	const meta: MetadataWithStatus = {
-		status: status === TreeNodeStatus.Done ? "Done" : "NotStarted",
-	};
-	return (content: string) => {
-		// Strip existing frontmatter if any (shouldn't be any, but be safe)
-		const withoutFm = stripFrontmatter(content);
-		const yaml = internalToFrontmatter(meta);
-		return `${yaml}\n${withoutFm}`;
-	};
 }

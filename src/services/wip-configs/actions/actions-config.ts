@@ -21,44 +21,44 @@ export const ACTION_CONFIGS = {
 	[UserAction.Generate]: {
 		execute: newGenCommand,
 		id: UserAction.Generate,
+		isAvailable: (ctx: ButtonContext) =>
+			ctx.hasSelection && ctx.isInLibrary,
 		label: "Generate",
 		placement: UserActionPlacement.Bottom,
 		priority: 5,
-		isAvailable: (ctx: ButtonContext) =>
-			ctx.hasSelection && ctx.isInLibrary,
 	},
 	[UserAction.AddContext]: {
 		execute: newGenCommand,
 		id: UserAction.AddContext,
+		isAvailable: () => false, // Shortcut only
 		label: "Add Context",
 		placement: UserActionPlacement.ShortcutOnly,
 		priority: 10,
-		isAvailable: () => false, // Shortcut only
 	},
 	[UserAction.ExplainGrammar]: {
 		execute: newGenCommand,
 		id: UserAction.ExplainGrammar,
+		isAvailable: (ctx: ButtonContext) =>
+			ctx.hasSelection && ctx.isInLibrary,
 		label: "Explain Grammar",
 		placement: UserActionPlacement.AboveSelection,
 		priority: 3,
-		isAvailable: (ctx: ButtonContext) =>
-			ctx.hasSelection && ctx.isInLibrary,
 	},
 	[UserAction.SplitContexts]: {
 		execute: newGenCommand,
 		id: UserAction.SplitContexts,
+		isAvailable: () => false, // Shortcut only
 		label: "Sort Contexts",
 		placement: UserActionPlacement.ShortcutOnly,
 		priority: 10,
-		isAvailable: () => false, // Shortcut only
 	},
 	[UserAction.SplitInBlocks]: {
 		execute: newSplitCommand,
 		id: UserAction.SplitInBlocks,
+		isAvailable: () => false, // Shortcut only
 		label: "Split",
 		placement: UserActionPlacement.ShortcutOnly,
 		priority: 10,
-		isAvailable: () => false, // Shortcut only
 	},
 	[UserAction.SplitToPages]: {
 		execute: () => {
@@ -66,54 +66,54 @@ export const ACTION_CONFIGS = {
 			// This stub exists to satisfy the type requirement
 		},
 		id: UserAction.SplitToPages,
-		label: "Split to Pages",
-		placement: UserActionPlacement.Bottom,
-		priority: 1,
 		isAvailable: (ctx: ButtonContext) =>
 			ctx.isInLibrary &&
 			ctx.fileType === FileType.Scroll &&
 			!ctx.hasSelection,
+		label: "Split to Pages",
+		placement: UserActionPlacement.Bottom,
+		priority: 1,
 	},
 	[UserAction.TranslateBlock]: {
 		execute: newGenCommand,
 		id: UserAction.TranslateBlock,
+		isAvailable: () => false, // Shortcut only
 		label: "Translate",
 		placement: UserActionPlacement.ShortcutOnly,
 		priority: 10,
-		isAvailable: () => false, // Shortcut only
 	},
 	[UserAction.TranslateSelection]: {
 		execute: newTranslateSelection,
 		id: UserAction.TranslateSelection,
+		isAvailable: (ctx: ButtonContext) => ctx.hasSelection,
 		label: "Translate",
 		placement: UserActionPlacement.AboveSelection,
 		priority: 1,
-		isAvailable: (ctx: ButtonContext) => ctx.hasSelection,
 	},
 	[UserAction.MakeText]: {
 		execute: makeTextAction,
 		id: UserAction.MakeText,
+		isAvailable: (ctx: ButtonContext) =>
+			ctx.isInLibrary && ctx.fileType === null,
 		label: "Make this a text",
 		placement: UserActionPlacement.Bottom,
 		priority: 2,
-		isAvailable: (ctx: ButtonContext) =>
-			ctx.isInLibrary && ctx.fileType === null,
 	},
 	[UserAction.NavigatePage]: {
 		execute: (services) => navigatePageAction(services, "next"),
 		id: UserAction.NavigatePage,
+		isAvailable: (ctx: ButtonContext) => ctx.fileType === FileType.Page,
 		label: "→",
 		placement: UserActionPlacement.Bottom,
 		priority: 2,
-		isAvailable: (ctx: ButtonContext) => ctx.fileType === FileType.Page,
 	},
 	[UserAction.PreviousPage]: {
 		execute: (services) => navigatePageAction(services, "prev"),
 		id: UserAction.PreviousPage,
+		isAvailable: (ctx: ButtonContext) => ctx.fileType === FileType.Page,
 		label: "←",
 		placement: UserActionPlacement.Bottom,
 		priority: 1,
-		isAvailable: (ctx: ButtonContext) => ctx.fileType === FileType.Page,
 	},
 } satisfies { [A in UserAction]: ActionConfig<A> };
 

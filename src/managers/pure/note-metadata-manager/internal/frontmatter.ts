@@ -1,9 +1,13 @@
+/**
+ * YAML frontmatter format for metadata.
+ * Not exported from the module - use public API instead.
+ */
+
 import {
 	TreeNodeStatus,
 	type TreeNodeStatus as TreeNodeStatusType,
-} from "../../../commanders/librarian/healer/library-tree/tree-node/types/atoms";
-import type { Transform } from "../../obsidian/vault-action-manager/types/vault-action";
-import { upsertMetadata } from "./impl";
+} from "../../../../commanders/librarian/healer/library-tree/tree-node/types/atoms";
+import type { Transform } from "../../../obsidian/vault-action-manager/types/vault-action";
 
 // ─── Constants ───
 
@@ -111,7 +115,7 @@ function parseValue(raw: string): unknown {
 	return raw;
 }
 
-// ─── Public API ───
+// ─── Read ───
 
 /**
  * Parse YAML frontmatter from note content.
@@ -158,29 +162,7 @@ export function frontmatterToInternal(
 	};
 }
 
-export type MigrateFrontmatterOptions = {
-	/** Whether to strip YAML frontmatter after conversion. Default: true */
-	stripYaml?: boolean;
-};
-
-/**
- * Create transform that migrates YAML frontmatter to internal format.
- * @param options.stripYaml - If true (default), removes YAML frontmatter. If false, keeps it.
- */
-export function migrateFrontmatter(
-	options?: MigrateFrontmatterOptions,
-): Transform {
-	const stripYaml = options?.stripYaml ?? true;
-
-	return (content: string) => {
-		const fm = parseFrontmatter(content);
-		if (!fm) return content;
-
-		const baseContent = stripYaml ? stripFrontmatter(content) : content;
-		const meta = frontmatterToInternal(fm);
-		return upsertMetadata(meta)(baseContent);
-	};
-}
+// ─── Write ───
 
 /**
  * Convert metadata object to YAML frontmatter string.
@@ -221,6 +203,18 @@ function formatYamlValue(value: unknown): string {
 	if (typeof value === "boolean") return value ? "true" : "false";
 	if (typeof value === "number") return String(value);
 	return String(value);
+}
+
+/**
+ * Create transform that writes YAML frontmatter.
+ * Replaces existing frontmatter or prepends new one.
+ */
+export function writeFrontmatter(meta: ScrollMetadataWithImport): Transform {
+	return (content: string) => {
+		const withoutFm = stripFrontmatter(content);
+		const yaml = internalToFrontmatter(meta);
+		return `${yaml}\n${withoutFm}`;
+	};
 }
 
 /**

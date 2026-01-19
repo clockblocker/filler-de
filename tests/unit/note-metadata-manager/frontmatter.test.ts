@@ -2,10 +2,10 @@ import { describe, expect, it } from "bun:test";
 import {
 	frontmatterToInternal,
 	internalToFrontmatter,
-	migrateFrontmatter,
 	parseFrontmatter,
 	stripFrontmatter,
-} from "../../../src/managers/pure/note-metadata-manager";
+} from "../../../src/managers/pure/note-metadata-manager/internal/frontmatter";
+import { migrateFrontmatter } from "../../../src/managers/pure/note-metadata-manager/internal/migration";
 
 describe("frontmatter", () => {
 	describe("parseFrontmatter", () => {

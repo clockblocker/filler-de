@@ -1,5 +1,10 @@
+/**
+ * Internal JSON section format for metadata.
+ * Not exported from the module - use public API instead.
+ */
+
 import type { z } from "zod";
-import type { Transform } from "../../obsidian/vault-action-manager/types/vault-action";
+import type { Transform } from "../../../obsidian/vault-action-manager/types/vault-action";
 
 // ─── Constants ───
 
@@ -18,15 +23,17 @@ const PATTERN = new RegExp(
 /** Exported pattern for stripping metadata from copied text */
 export const META_SECTION_PATTERN = PATTERN;
 
-// ─── Public API ───
+// ─── Types ───
 
-type Metadata = Record<string, unknown>;
+export type Metadata = Record<string, unknown>;
+
+// ─── Read ───
 
 /**
- * Read metadata from note content.
+ * Read JSON metadata from note content.
  * Returns null if no metadata or parse fails.
  */
-export function readMetadata<T extends Metadata>(
+export function readJsonSection<T extends Metadata>(
 	contentOfNote: string,
 	schema: z.ZodSchema<T>,
 ): T | null {
@@ -41,6 +48,8 @@ export function readMetadata<T extends Metadata>(
 	}
 }
 
+// ─── Write ───
+
 /**
  * Format metadata as section string.
  */
@@ -49,10 +58,10 @@ function formatMetadata(metadata: Metadata): string {
 }
 
 /**
- * Upsert metadata in note content.
+ * Upsert JSON metadata in note content.
  * Returns Transform function for use with ProcessMdFile.
  */
-export function upsertMetadata(metadata: Metadata): Transform {
+export function writeJsonSection(metadata: Metadata): Transform {
 	return (content: string) => {
 		// Remove existing metadata section
 		const contentWithoutMeta = content.replace(PATTERN, "").trimEnd();
@@ -64,12 +73,11 @@ export function upsertMetadata(metadata: Metadata): Transform {
 	};
 }
 
+// ─── Strip ───
+
 /**
  * Strip internal metadata section from content.
- * Returns Transform function for use with ProcessMdFile.
  */
-export function stripInternalMetadata(): Transform {
-	return (content: string) => {
-		return content.replace(PATTERN, "").trimEnd();
-	};
+export function stripJsonSection(content: string): string {
+	return content.replace(PATTERN, "").trimEnd();
 }

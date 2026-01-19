@@ -6,7 +6,7 @@
  * - Go-back links: [[__-L4-L3-L2-L1|← L4]]
  */
 
-import { META_SECTION_PATTERN } from "../../pure/note-metadata-manager/impl";
+import { META_SECTION_PATTERN } from "../../pure/note-metadata-manager";
 
 /**
  * Pattern to match "go back" wikilinks at start of content.

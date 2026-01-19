@@ -7,10 +7,7 @@ import {
 	type VaultAction,
 	VaultActionKind,
 } from "../../../../../managers/obsidian/vault-action-manager/types/vault-action";
-import {
-	upsertFrontmatterStatus,
-	upsertMetadata,
-} from "../../../../../managers/pure/note-metadata-manager";
+import { upsertMetadata } from "../../../../../managers/pure/note-metadata-manager";
 import type { Codecs } from "../../../codecs";
 import type { CodecRules } from "../../../codecs/rules";
 import { makeVaultScopedSplitPath } from "../tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
@@ -45,10 +42,10 @@ export function codexActionToVaultAction(
 
 		case "WriteScrollStatus": {
 			// ProcessMdFile with transform to update metadata
-			// Use internal section format or YAML frontmatter based on hideMetadata setting
+			// upsertMetadata internally uses hideMetadata setting to choose format
 			const status = action.payload.status;
 			// For frontmatter, "Unknown" status is treated as "NotStarted"
-			const frontmatterStatus =
+			const normalizedStatus =
 				status === "Unknown" ? ("NotStarted" as const) : status;
 			return {
 				kind: VaultActionKind.ProcessMdFile,
@@ -58,9 +55,7 @@ export function codexActionToVaultAction(
 						action.payload.splitPath,
 						rules,
 					) as SplitPathToMdFile,
-					transform: rules.hideMetadata
-						? upsertMetadata({ status })
-						: upsertFrontmatterStatus(frontmatterStatus),
+					transform: upsertMetadata({ status: normalizedStatus }),
 				},
 			};
 		}

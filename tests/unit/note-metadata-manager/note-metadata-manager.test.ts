@@ -1,10 +1,17 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, mock, beforeEach, afterEach } from "bun:test";
 import { z } from "zod";
 import {
+	getContentBody,
 	readMetadata,
-	stripInternalMetadata,
 	upsertMetadata,
 } from "../../../src/managers/pure/note-metadata-manager";
+import { stripJsonSection } from "../../../src/managers/pure/note-metadata-manager/internal/json-section";
+
+// Mock the global state module
+const mockSettings = { hideMetadata: true };
+mock.module("../../../src/global-state/global-state", () => ({
+	getParsedUserSettings: () => mockSettings,
+}));
 
 const TestSchema = z.object({
 	fileType: z.literal("Scroll"),
@@ -123,7 +130,7 @@ not json
 		});
 	});
 
-	describe("stripInternalMetadata", () => {
+	describe("getContentBody", () => {
 		it("removes metadata section from content", () => {
 			const content = `Content here
 
@@ -132,7 +139,7 @@ not json
 {"status":"Done"}
 </section>
 `;
-			const transform = stripInternalMetadata();
+			const transform = getContentBody();
 			const result = transform(content);
 
 			expect(result).not.toContain('<section id="textfresser_meta_keep_me_invisible">');
@@ -142,7 +149,7 @@ not json
 
 		it("returns original if no metadata", () => {
 			const content = "Just content";
-			const transform = stripInternalMetadata();
+			const transform = getContentBody();
 			expect(transform(content)).toBe("Just content");
 		});
 
@@ -152,10 +159,44 @@ not json
 {"status":"Done"}
 </section>
 `;
-			const transform = stripInternalMetadata();
+			const transform = getContentBody();
 			const result = transform(content);
 
 			expect(result).toBe("Content");
+		});
+
+		it("strips both YAML frontmatter and JSON section", () => {
+			const content = `---
+title: Test
+---
+Content here
+
+<section id="textfresser_meta_keep_me_invisible">
+{"status":"Done"}
+</section>
+`;
+			const transform = getContentBody();
+			const result = transform(content);
+
+			expect(result).not.toContain("---");
+			expect(result).not.toContain('<section id="textfresser_meta_keep_me_invisible">');
+			expect(result).toBe("Content here");
+		});
+	});
+
+	describe("stripJsonSection (internal)", () => {
+		it("removes JSON metadata section from content", () => {
+			const content = `Content here
+
+
+<section id="textfresser_meta_keep_me_invisible">
+{"status":"Done"}
+</section>
+`;
+			const result = stripJsonSection(content);
+
+			expect(result).not.toContain('<section id="textfresser_meta_keep_me_invisible">');
+			expect(result).toBe("Content here");
 		});
 	});
 });

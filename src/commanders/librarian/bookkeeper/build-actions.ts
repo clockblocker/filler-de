@@ -2,6 +2,7 @@
  * Builds VaultActions for page splitting operation.
  */
 
+import { z } from "zod";
 import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,
@@ -10,9 +11,9 @@ import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/t
 import type { VaultAction } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { VaultActionKind } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import {
-	internalToFrontmatter,
-	parseFrontmatter,
-	stripFrontmatter,
+	getContentBody,
+	readMetadata,
+	upsertMetadata,
 } from "../../../managers/pure/note-metadata-manager";
 import {
 	LINE_BREAK,
@@ -28,6 +29,14 @@ import type { NodeName } from "../types/schemas/node-name";
 import { buildPageBasename, buildPageFolderBasename } from "./page-codec";
 import type { SegmentationResult } from "./types";
 import { PAGE_FRONTMATTER } from "./types";
+
+// Schema for reading existing page metadata
+const PageMetadataSchema = z
+	.object({
+		noteType: z.string().optional(),
+		status: z.enum(["Done", "NotStarted"]).optional(),
+	})
+	.passthrough();
 
 /**
  * Builds all VaultActions needed for page splitting.
@@ -216,14 +225,14 @@ function formatBacklink(basename: string, displayName: string): string {
 }
 
 /**
- * Formats page content with frontmatter.
+ * Formats page content with metadata.
+ * Uses upsertMetadata to respect hideMetadata setting.
  */
 function formatPageContent(content: string): string {
-	const yaml = internalToFrontmatter({
+	return upsertMetadata({
 		noteType: PAGE_FRONTMATTER.noteType,
 		status: PAGE_FRONTMATTER.status,
-	});
-	return `${yaml}\n${content}`;
+	})(content);
 }
 
 /**
@@ -242,16 +251,21 @@ export function buildTooShortMetadataAction(
 }
 
 /**
- * Adds noteType: Page frontmatter to content.
+ * Adds noteType: Page metadata to content.
+ * Uses upsertMetadata to respect hideMetadata setting.
  */
 function addPageFrontmatter(content: string): string {
-	const existing = parseFrontmatter(content);
+	// Read existing metadata (from either format)
+	const existing = readMetadata(content, PageMetadataSchema);
+
+	// Build new metadata, preserving existing fields
 	const meta = {
 		...(existing ?? {}),
 		noteType: PAGE_FRONTMATTER.noteType,
 		status: (existing?.status as TreeNodeStatus) ?? PAGE_FRONTMATTER.status,
 	};
-	const withoutFm = stripFrontmatter(content);
-	const yaml = internalToFrontmatter(meta);
-	return `${yaml}\n${withoutFm}`;
+
+	// Strip existing metadata and add new
+	const cleanContent = getContentBody()(content);
+	return upsertMetadata(meta)(cleanContent);
 }
