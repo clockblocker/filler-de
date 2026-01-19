@@ -5,6 +5,7 @@
 
 import type { SectionNodeSegmentId } from "../../../codecs/segment-id";
 import { NodeSegmentIdSeparator } from "../../../codecs/segment-id/types/segment-id";
+import { locatorToSectionSegmentId } from "../../../paths/path-computer";
 import type { TreeAction } from "../tree-action/types/tree-action";
 import { TreeActionType } from "../tree-action/types/tree-action";
 import { TreeNodeKind, type TreeNodeStatus } from "../tree-node/types/atoms";
@@ -101,7 +102,7 @@ function computeDeleteImpact(
 	if (targetLocator.targetKind === TreeNodeKind.Section) {
 		const sectionChain = [
 			...parentChain,
-			targetLocator.segmentId as SectionNodeSegmentId,
+			locatorToSectionSegmentId(targetLocator),
 		];
 		impact.deleted.push(sectionChain);
 		// Note: descendants are implicitly deleted with the section
@@ -124,7 +125,7 @@ function computeRenameImpact(
 
 		const oldChain = [
 			...parentChain,
-			targetLocator.segmentId as SectionNodeSegmentId,
+			locatorToSectionSegmentId(targetLocator),
 		];
 		const newSegmentId = makeSectionSegmentId(newNodeName);
 		const newChain = [...parentChain, newSegmentId];
@@ -163,7 +164,7 @@ function computeMoveImpact(
 		// Section move: codex file moves
 		const oldChain = [
 			...oldParentChain,
-			targetLocator.segmentId as SectionNodeSegmentId,
+			locatorToSectionSegmentId(targetLocator),
 		];
 		const newSegmentId = makeSectionSegmentId(newNodeName);
 		const newChain = [...newParentChain, newSegmentId];
@@ -204,7 +205,7 @@ function computeChangeStatusImpact(
 		// Section status change: propagates to descendants
 		const sectionChain = [
 			...parentChain,
-			targetLocator.segmentId as SectionNodeSegmentId,
+			locatorToSectionSegmentId(targetLocator),
 		];
 
 		// Section + ancestors need update (aggregated status changes)

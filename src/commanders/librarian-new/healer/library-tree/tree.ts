@@ -45,6 +45,18 @@ function makeSegmentId(node: TreeNode): TreeNodeSegmentId {
 	return makeNodeSegmentId(node);
 }
 
+// ─── Result Type ───
+
+/**
+ * Result of applying an action to the tree.
+ * `changed` indicates if the tree state was actually modified.
+ * This enables idempotent healing - if tree already reflects the action, no healing needed.
+ */
+export type ApplyResult = {
+	changed: boolean;
+	node: TreeNode | null;
+};
+
 // ─── Tree ───
 
 export class Tree implements TreeFacade {
@@ -60,8 +72,13 @@ export class Tree implements TreeFacade {
 		};
 	}
 
-	/** Apply action to tree structure. Returns the mutated node, or null for delete. */
-	apply(action: TreeAction): TreeNode | null {
+	/**
+	 * Apply action to tree structure.
+	 * Returns { changed, node } where:
+	 * - changed: true if tree was actually modified, false if already in target state
+	 * - node: the affected node (or null for delete)
+	 */
+	apply(action: TreeAction): ApplyResult {
 		const actionType = action.actionType;
 
 		if (actionType === "Create") {
@@ -82,17 +99,24 @@ export class Tree implements TreeFacade {
 
 	// ─── Create ───
 
-	private applyCreate(action: CreateTreeLeafAction): LeafNode {
+	private applyCreate(action: CreateTreeLeafAction): ApplyResult {
 		const { targetLocator } = action;
 		const parentSection = this.ensureSectionChain(
 			targetLocator.segmentIdChainToParent,
 		);
 
+		// Check if node already exists at this location
+		const existingNode = parentSection.children[targetLocator.segmentId];
+		if (existingNode) {
+			// Node already exists - idempotent no-op
+			return { changed: false, node: existingNode };
+		}
+
 		const node = this.makeLeafNode(action);
 		const segmentId = makeSegmentId(node);
 		parentSection.children[segmentId] = node;
 
-		return node;
+		return { changed: true, node };
 	}
 
 	private makeLeafNode(action: CreateTreeLeafAction): LeafNode {
@@ -125,18 +149,29 @@ export class Tree implements TreeFacade {
 
 	// ─── Delete ───
 
-	private applyDelete(action: DeleteNodeAction): null {
+	private applyDelete(action: DeleteNodeAction): ApplyResult {
 		const { targetLocator } = action;
 		const parentSection = this.findSection(
 			targetLocator.segmentIdChainToParent,
 		);
-		if (!parentSection) return null;
+
+		// If parent doesn't exist, node is already gone - idempotent
+		if (!parentSection) {
+			return { changed: false, node: null };
+		}
+
+		// Check if node exists
+		const node = parentSection.children[targetLocator.segmentId];
+		if (!node) {
+			// Node doesn't exist - idempotent no-op
+			return { changed: false, node: null };
+		}
 
 		delete parentSection.children[targetLocator.segmentId];
 
 		// Auto-prune empty ancestors
 		this.pruneEmptyAncestors(targetLocator.segmentIdChainToParent);
-		return null;
+		return { changed: true, node: null };
 	}
 
 	private pruneEmptyAncestors(chain: SectionNodeSegmentId[]): void {
@@ -164,17 +199,24 @@ export class Tree implements TreeFacade {
 
 	// ─── Rename ───
 
-	private applyRename(action: RenameNodeAction): TreeNode | null {
+	private applyRename(action: RenameNodeAction): ApplyResult {
 		const { targetLocator, newNodeName } = action;
 		const parentSection = this.findSection(
 			targetLocator.segmentIdChainToParent,
 		);
 		if (!parentSection) {
-			return null;
+			return { changed: false, node: null };
 		}
 
 		const node = parentSection.children[targetLocator.segmentId];
-		if (!node) return null;
+		if (!node) {
+			return { changed: false, node: null };
+		}
+
+		// Check if already renamed (idempotent check)
+		if (node.nodeName === newNodeName) {
+			return { changed: false, node };
+		}
 
 		// Remove old, insert with new name
 		delete parentSection.children[targetLocator.segmentId];
@@ -182,22 +224,26 @@ export class Tree implements TreeFacade {
 		const newSegmentId = makeSegmentId(node);
 		parentSection.children[newSegmentId] = node;
 
-		return node;
+		return { changed: true, node };
 	}
 
 	// ─── Move ───
 
-	private applyMove(action: MoveNodeAction): TreeNode | null {
+	private applyMove(action: MoveNodeAction): ApplyResult {
 		const { targetLocator, newParentLocator, newNodeName } = action;
 
 		// Detach from old parent
 		const oldParent = this.findSection(
 			targetLocator.segmentIdChainToParent,
 		);
-		if (!oldParent) return null;
+		if (!oldParent) {
+			return { changed: false, node: null };
+		}
 
 		const node = oldParent.children[targetLocator.segmentId];
-		if (!node) return null;
+		if (!node) {
+			return { changed: false, node: null };
+		}
 
 		delete oldParent.children[targetLocator.segmentId];
 
@@ -215,12 +261,12 @@ export class Tree implements TreeFacade {
 		node.nodeName = newNodeName;
 		const newSegmentId = makeSegmentId(node);
 		newParent.children[newSegmentId] = node;
-		return node;
+		return { changed: true, node };
 	}
 
 	// ─── ChangeStatus ───
 
-	private applyChangeStatus(action: ChangeNodeStatusAction): TreeNode | null {
+	private applyChangeStatus(action: ChangeNodeStatusAction): ApplyResult {
 		const { targetLocator, newStatus } = action;
 
 		if (targetLocator.targetKind === TreeNodeKind.Section) {
@@ -230,34 +276,47 @@ export class Tree implements TreeFacade {
 				targetLocator.segmentId,
 			]);
 			if (section) {
-				this.propagateStatus(section, newStatus);
-				return section;
+				const changed = this.propagateStatus(section, newStatus);
+				return { changed, node: section };
 			}
-			return null;
+			return { changed: false, node: null };
 		}
 		// Direct leaf update
 		const parent = this.findSection(targetLocator.segmentIdChainToParent);
 		if (parent) {
 			const node = parent.children[targetLocator.segmentId];
 			if (node && node.kind !== TreeNodeKind.Section) {
-				(node as ScrollNode).status = newStatus;
-				return node;
+				const scrollNode = node as ScrollNode;
+				// Check if already at target status (idempotent)
+				if (scrollNode.status === newStatus) {
+					return { changed: false, node };
+				}
+				scrollNode.status = newStatus;
+				return { changed: true, node };
 			}
 		}
-		return null;
+		return { changed: false, node: null };
 	}
 
 	private propagateStatus(
 		section: SectionNode,
 		status: TreeNodeStatus,
-	): void {
+	): boolean {
+		let changed = false;
 		for (const child of Object.values(section.children)) {
 			if (child.kind === TreeNodeKind.Section) {
-				this.propagateStatus(child, status);
+				if (this.propagateStatus(child, status)) {
+					changed = true;
+				}
 			} else {
-				(child as ScrollNode).status = status;
+				const scrollNode = child as ScrollNode;
+				if (scrollNode.status !== status) {
+					scrollNode.status = status;
+					changed = true;
+				}
 			}
 		}
+		return changed;
 	}
 
 	// ─── Traversal Helpers ───

@@ -16,6 +16,20 @@ import { VaultActionKind } from "../../types/vault-action";
  * For renames, tracks both `from` and `to` paths.
  *
  * TTL: 5s with pop-on-match (one-time use per path).
+ *
+ * ## Note on Idempotency (Issue 10)
+ *
+ * As of the idempotent tree changes, tree.apply() now returns { changed, node }.
+ * The healer skips healing when !changed, preventing infinite loops at the source.
+ *
+ * This means SelfEventTracker is now a **performance optimization** rather than
+ * a correctness requirement. Even if self-events slip through, the idempotent
+ * pipeline handles them safely (no healing generated for already-applied actions).
+ *
+ * Benefits of keeping SelfEventTracker:
+ * - Avoids processing self-events entirely (better performance)
+ * - Provides waitForObsidianEvents() for E2E test synchronization
+ * - Cleaner event logs (only user-triggered events appear)
  */
 export class SelfEventTracker {
 	private readonly tracked = new Map<

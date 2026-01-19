@@ -28,15 +28,26 @@ export type TreeReader = {
 // ─── Write Interface ───
 
 /**
+ * Result of applying an action to the tree.
+ * `changed` indicates if the tree state was actually modified.
+ */
+export type TreeApplyResult = {
+	changed: boolean;
+	node: TreeNode | null;
+};
+
+/**
  * Mutating access to the library tree.
  * Use this interface for consumers that modify the tree structure.
  */
 export type TreeWriter = {
 	/**
 	 * Apply a tree action, mutating the tree structure.
-	 * Returns the mutated node, or null for delete operations.
+	 * Returns { changed, node } where:
+	 * - changed: true if tree was actually modified, false if already in target state
+	 * - node: the affected node (or null for delete)
 	 */
-	apply(action: TreeAction): TreeNode | null;
+	apply(action: TreeAction): TreeApplyResult;
 
 	/**
 	 * Ensure a chain of sections exists, creating missing ones.

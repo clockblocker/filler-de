@@ -14,6 +14,7 @@
 
 import { err, ok, type Result } from "neverthrow";
 import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
+import { logger } from "../../../utils/logger";
 import type {
 	Codecs,
 	SplitPathToFileInsideLibrary,
@@ -25,8 +26,8 @@ import type {
 	ScrollNodeLocator,
 } from "../codecs/locator/types";
 import type {
-	TreeNodeSegmentId,
 	SectionNodeSegmentId,
+	TreeNodeSegmentId,
 } from "../codecs/segment-id/types/segment-id";
 import { TreeNodeKind } from "../healer/library-tree/tree-node/types/atoms";
 import type {
@@ -334,9 +335,157 @@ export function splitPathsEqual(
 	return true;
 }
 
+// ─── Segment ID Validation (Issue 13) ───
+
+/**
+ * Validate and narrow a string to SectionNodeSegmentId.
+ * Returns Result for explicit error handling.
+ *
+ * Use when:
+ * - Parsing user input or external data
+ * - Any untrusted segment ID string
+ *
+ * @param segmentId - The segment ID to validate
+ * @param codecs - Codec instance for parsing
+ */
+export function validateSectionSegmentId(
+	segmentId: string,
+	codecs: Codecs,
+): Result<SectionNodeSegmentId, PathComputerError> {
+	const parseResult = codecs.segmentId.parseSegmentId(segmentId);
+	if (parseResult.isErr()) {
+		return err({
+			kind: "ParseFailed",
+			reason: parseResult.error.message,
+			segmentId,
+		});
+	}
+
+	if (parseResult.value.targetKind !== TreeNodeKind.Section) {
+		return err({
+			kind: "ParseFailed",
+			reason: `Expected Section segment ID, got ${parseResult.value.targetKind}`,
+			segmentId,
+		});
+	}
+
+	return ok(segmentId as SectionNodeSegmentId);
+}
+
+/**
+ * Validate and narrow a parsed segment ID result to SectionNodeSegmentId.
+ * Use after codecs.segmentId.serializeSegmentId when you know the input was targetKind: Section.
+ *
+ * This is the PREFERRED way to narrow after serialization, as it validates
+ * the result rather than blindly casting.
+ *
+ * @param segmentId - The serialized segment ID
+ * @param expectedKind - Expected target kind (should be TreeNodeKind.Section)
+ * @param codecs - Codec instance for parsing
+ */
+export function assertSectionSegmentId(
+	segmentId: TreeNodeSegmentId,
+	expectedKind: typeof TreeNodeKind.Section,
+	codecs: Codecs,
+): SectionNodeSegmentId {
+	const parseResult = codecs.segmentId.parseSegmentId(segmentId);
+	if (parseResult.isErr()) {
+		logger.error(
+			"[assertSectionSegmentId] Parse failed",
+			JSON.stringify({ error: parseResult.error.message, segmentId }),
+		);
+		throw new Error(
+			`Invalid segment ID '${segmentId}': ${parseResult.error.message}`,
+		);
+	}
+
+	if (parseResult.value.targetKind !== expectedKind) {
+		logger.error(
+			"[assertSectionSegmentId] Wrong target kind",
+			JSON.stringify({
+				actual: parseResult.value.targetKind,
+				expected: expectedKind,
+				segmentId,
+			}),
+		);
+		throw new Error(
+			`Expected ${expectedKind} segment ID, got ${parseResult.value.targetKind}: '${segmentId}'`,
+		);
+	}
+
+	return segmentId as SectionNodeSegmentId;
+}
+
+/**
+ * Validate an array of strings as SectionNodeSegmentId[].
+ * Returns Result for explicit error handling.
+ *
+ * @param chain - Array of segment ID strings
+ * @param codecs - Codec instance for parsing
+ */
+export function validateSectionChain(
+	chain: string[],
+	codecs: Codecs,
+): Result<SectionNodeSegmentId[], PathComputerError> {
+	const result: SectionNodeSegmentId[] = [];
+
+	for (const segId of chain) {
+		const validated = validateSectionSegmentId(segId, codecs);
+		if (validated.isErr()) {
+			return err(validated.error);
+		}
+		result.push(validated.value);
+	}
+
+	return ok(result);
+}
+
+/**
+ * Cast a segment ID from tree children keys to SectionNodeSegmentId.
+ *
+ * Use ONLY when iterating over section.children where you've already
+ * verified the child is a Section node. This is a "trusted cast" that
+ * logs a warning if validation fails (for debugging).
+ *
+ * @param segId - Segment ID from Object.entries(section.children)
+ * @param childKind - The child node's kind (must be Section)
+ */
+export function narrowChildSegmentId(
+	segId: string,
+	childKind: TreeNodeKind,
+): SectionNodeSegmentId {
+	if (childKind !== TreeNodeKind.Section) {
+		logger.warn(
+			"[narrowChildSegmentId] Expected Section child",
+			JSON.stringify({ actualKind: childKind, segId }),
+		);
+	}
+	// Type assertion justified: tree invariant - section children with kind Section
+	// have SectionNodeSegmentId keys. Logged if invariant violated.
+	return segId as SectionNodeSegmentId;
+}
+
+/**
+ * Narrow locator segmentId to SectionNodeSegmentId when locator.targetKind is Section.
+ *
+ * Use when you have a locator and need to pass its segmentId to a function
+ * expecting SectionNodeSegmentId. The type system can't narrow this automatically.
+ *
+ * @param locator - A locator with targetKind: TreeNodeKind.Section
+ */
+export function locatorToSectionSegmentId(locator: {
+	segmentId: TreeNodeSegmentId;
+	targetKind: TreeNodeKind.Section;
+}): SectionNodeSegmentId {
+	// Type assertion justified: locator.segmentId type corresponds to locator.targetKind
+	return locator.segmentId as SectionNodeSegmentId;
+}
+
 // ─── Namespace Export ───
 
 export const PathComputer = {
+	// Validation (Issue 13)
+	assertSectionSegmentId,
 	// Path building
 	buildCanonicalLeafSplitPath,
 	buildCodexBasename,
@@ -345,6 +494,8 @@ export const PathComputer = {
 	buildSectionCanonicalPath,
 	// Suffix computation
 	computeCodexSuffix,
+	locatorToSectionSegmentId,
+	narrowChildSegmentId,
 
 	// Parsing
 	parseChainToNodeNames,
@@ -356,4 +507,6 @@ export const PathComputer = {
 	// Comparison
 	splitPathsEqual,
 	suffixPartsToPathParts,
+	validateSectionChain,
+	validateSectionSegmentId,
 };

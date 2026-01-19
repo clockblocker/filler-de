@@ -509,6 +509,26 @@ export default class TextEaterPlugin extends Plugin {
 		);
 	}
 
+	/**
+	 * E2E test hook: reset settings to provided values and reinitialize librarian.
+	 * This bypasses the confirmation dialog and forces a full reinit.
+	 */
+	async resetSettingsForTesting(newSettings: Partial<TextEaterSettings>): Promise<void> {
+		// Update settings
+		Object.assign(this.settings, newSettings);
+		// Update global state so codecs use new settings
+		updateParsedSettings(this.settings);
+		// Persist to disk
+		await this.saveData(this.settings);
+		// Update previousSettings to avoid dialog on next saveSettings
+		this.previousSettings = {
+			...this.settings,
+			suffixDelimiter: { ...this.settings.suffixDelimiter },
+		};
+		// Reinitialize librarian with new settings
+		await this.reinitLibrarian();
+	}
+
 	async saveSettings() {
 		const prev = this.previousSettings;
 		const curr = this.settings;

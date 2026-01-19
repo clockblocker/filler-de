@@ -34,6 +34,9 @@ const VAULT_PATH = "tests/obsidian-e2e/vaults/librarian-chain-0";
 
 describe("Librarian Full Suit", () => {
 	before(async () => {
+		// Note: run-e2e.sh removes data.json before tests so plugin uses default settings
+		// Double reset ensures clean state: 1st loads plugin, 2nd gives clean files
+		await obsidianPage.resetVault(VAULT_PATH);
 		await obsidianPage.resetVault(VAULT_PATH);
 		await waitForIdle();
 	});

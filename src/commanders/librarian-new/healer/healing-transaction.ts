@@ -16,20 +16,19 @@
  *   tx.commit(); // or tx.rollback() on error
  */
 
-import { type Result, err, ok } from "neverthrow";
+import { err, ok, type Result } from "neverthrow";
+import { logger } from "../../../utils/logger";
 import {
-	type HealingError,
 	aggregateErrors,
-	formatHealingError,
+	type HealingError,
 	makeInternalError,
 	makeVaultOperationError,
 } from "../errors/healing-error";
-import { logger } from "../../../utils/logger";
-import type { Healer, ApplyResult } from "./healer";
+import type { Healer, HealerApplyResult } from "./healer";
 import { getHealingAuditLog } from "./healing-audit-log";
+import type { CodexImpact } from "./library-tree/codex/compute-codex-impact";
 import type { TreeAction } from "./library-tree/tree-action/types/tree-action";
 import type { HealingAction } from "./library-tree/types/healing-action";
-import type { CodexImpact } from "./library-tree/codex/compute-codex-impact";
 
 // ─── Types ───
 
@@ -37,7 +36,7 @@ type TransactionState = "pending" | "committed" | "rolledBack";
 
 type TransactionEntry = {
 	treeAction: TreeAction;
-	result: ApplyResult;
+	result: HealerApplyResult;
 	timestamp: number;
 };
 
@@ -66,9 +65,9 @@ export class HealingTransaction {
 
 	/**
 	 * Apply a tree action and collect healing actions.
-	 * Returns the ApplyResult from healer.
+	 * Returns the HealerApplyResult from healer.
 	 */
-	apply(action: TreeAction): Result<ApplyResult, HealingError> {
+	apply(action: TreeAction): Result<HealerApplyResult, HealingError> {
 		if (this.state !== "pending") {
 			return err(
 				makeInternalError(

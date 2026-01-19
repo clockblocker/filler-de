@@ -22,7 +22,6 @@ import {
 	computeCodexImpact,
 } from "./library-tree/codex/compute-codex-impact";
 import type { Tree } from "./library-tree/tree";
-import type { TreeReader } from "./library-tree/tree-interfaces";
 import type {
 	ChangeNodeStatusAction,
 	CreateTreeLeafAction,
@@ -31,6 +30,7 @@ import type {
 	RenameNodeAction,
 	TreeAction,
 } from "./library-tree/tree-action/types/tree-action";
+import type { TreeReader } from "./library-tree/tree-interfaces";
 import { makeNodeSegmentId } from "./library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import { TreeNodeKind } from "./library-tree/tree-node/types/atoms";
 import type {
@@ -45,9 +45,21 @@ import { parseOldSectionPath } from "./utils/old-section-path";
 
 export type { CodexImpact };
 
-export type ApplyResult = {
+export type HealerApplyResult = {
 	healingActions: HealingAction[];
 	codexImpact: CodexImpact;
+	/** True if tree state was actually modified */
+	changed: boolean;
+};
+
+// ─── Empty Impact (for no-op actions) ───
+
+const EMPTY_CODEX_IMPACT: CodexImpact = {
+	contentChanged: [],
+	deleted: [],
+	descendantsChanged: [],
+	impactedChains: new Set(),
+	renamed: [],
 };
 
 // ─── Healer ───
@@ -61,13 +73,28 @@ export class Healer implements TreeReader {
 		this.codecs = codecs;
 	}
 
-	/** Main entry: apply action, return healing actions + codex impact */
-	getHealingActionsFor(action: TreeAction): ApplyResult {
-		// Compute codex impact BEFORE applying (uses action locators)
-		const codexImpact = computeCodexImpact(action);
+	/**
+	 * Main entry: apply action, return healing actions + codex impact.
+	 *
+	 * Key change for idempotency: codex impact and healing are only computed
+	 * if the tree actually changed. This prevents infinite loops when events
+	 * fire for already-applied actions.
+	 */
+	getHealingActionsFor(action: TreeAction): HealerApplyResult {
+		// Apply action to tree (modifies tree structure), get change indicator
+		const { changed, node: mutatedNode } = this.tree.apply(action);
 
-		// Apply action to tree (modifies tree structure), capture mutated node
-		const mutatedNode = this.tree.apply(action);
+		// If tree didn't change, skip healing - action was already applied
+		if (!changed) {
+			return {
+				changed: false,
+				codexImpact: EMPTY_CODEX_IMPACT,
+				healingActions: [],
+			};
+		}
+
+		// Compute codex impact AFTER applying (only if state changed)
+		const codexImpact = computeCodexImpact(action);
 
 		// Compute healing actions based on action type
 		const healingActions = this.computeHealingForAction(
@@ -75,7 +102,7 @@ export class Healer implements TreeReader {
 			mutatedNode,
 		);
 
-		return { codexImpact, healingActions };
+		return { changed: true, codexImpact, healingActions };
 	}
 
 	// ─── TreeReader Implementation ───
