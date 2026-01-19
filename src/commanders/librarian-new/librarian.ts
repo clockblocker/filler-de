@@ -9,7 +9,7 @@ import type {
 	VaultAction,
 	VaultActionManager,
 } from "../../managers/obsidian/vault-action-manager";
-import { SplitPathKind } from "../../managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathKind, type SplitPathToMdFileWithReader } from "../../managers/obsidian/vault-action-manager/types/split-path";
 import { decrementPending, incrementPending } from "../../utils/idle-tracker";
 import { logger } from "../../utils/logger";
 import {
@@ -153,9 +153,8 @@ export class Librarian {
 
 			// Scan for orphaned codexes (wrong suffix, duplicates)
 			const mdPaths = allFiles
-				.filter((f): f is SplitPathToMdFileInsideLibrary & { read: () => Promise<string> } =>
-					f.kind === SplitPathKind.MdFile)
-				.map(({ read, ...path }) => path);
+				.filter((f): f is SplitPathToMdFileWithReader => f.kind === SplitPathKind.MdFile)
+				.map(({ read, ...path }) => path as SplitPathToMdFileInsideLibrary);
 			const { cleanupActions, scanResult } = scanAndGenerateOrphanActions(
 				this.healer,
 				this.codecs,

@@ -1,5 +1,5 @@
 /**
- * PathComputer - Consolidated path and suffix computation logic.
+ * PathFinder - Consolidated path and suffix computation logic.
  *
  * This module is the single source of truth for all path operations in the
  * librarian system. It consolidates logic that was previously duplicated in:
@@ -38,7 +38,7 @@ import type { NodeName } from "../types/schemas/node-name";
 
 // ─── Types ───
 
-export type PathComputerError =
+export type PathFinderError =
 	| { kind: "ParseFailed"; segmentId: string; reason: string }
 	| { kind: "InvalidChain"; chain: string[]; reason: string }
 	| { kind: "EmptyChain"; reason: string };
@@ -109,7 +109,7 @@ export function suffixPartsToPathParts(suffixParts: NodeName[]): string[] {
 export function parseChainToNodeNames(
 	chain: TreeNodeSegmentId[],
 	codecs: Codecs,
-): Result<string[], PathComputerError> {
+): Result<string[], PathFinderError> {
 	if (chain.length === 0) {
 		return err({ kind: "EmptyChain", reason: "Cannot parse empty chain" });
 	}
@@ -138,7 +138,7 @@ export function parseChainToNodeNames(
 export function parseSectionChainToNodeNames(
 	chain: SectionNodeSegmentId[],
 	codecs: Codecs,
-): Result<string[], PathComputerError> {
+): Result<string[], PathFinderError> {
 	return parseChainToNodeNames(chain as TreeNodeSegmentId[], codecs);
 }
 
@@ -227,7 +227,7 @@ export function buildObservedLeafSplitPath(
 export function sectionChainToPathParts(
 	chain: SectionNodeSegmentId[],
 	codecs: Codecs,
-): Result<string[], PathComputerError> {
+): Result<string[], PathFinderError> {
 	return parseSectionChainToNodeNames(chain, codecs);
 }
 
@@ -239,7 +239,7 @@ export function buildSectionCanonicalPath(
 	nodeName: NodeName,
 	libraryRoot: NodeName,
 	codecs: Codecs,
-): Result<string[], PathComputerError> {
+): Result<string[], PathFinderError> {
 	const parentNamesResult = parseSectionChainToNodeNames(parentChain, codecs);
 	if (parentNamesResult.isErr()) {
 		return parentNamesResult;
@@ -275,18 +275,20 @@ export function buildCodexBasename(
 /**
  * Build the full codex split path for a section.
  *
- * @param sectionChain - Chain of segment IDs leading to the section
- * @param libraryRoot - The library root folder name
- * @param codexPrefix - Prefix for codex files
+ * @param sectionChain - Full chain including Library root, e.g. ["Library﹘Section﹘", "A﹘Section﹘"]
+ * @param codexPrefix - Prefix for codex files (e.g., "__")
  * @param codecs - Codec instance
  */
 export function buildCodexSplitPath(
 	sectionChain: SectionNodeSegmentId[],
-	libraryRoot: NodeName,
 	codexPrefix: string,
 	codecs: Codecs,
-): Result<SplitPathToMdFileInsideLibrary, PathComputerError> {
-	// Parse chain to get node names
+): Result<SplitPathToMdFileInsideLibrary, PathFinderError> {
+	if (sectionChain.length === 0) {
+		return err({ kind: "EmptyChain", reason: "Section chain cannot be empty" });
+	}
+
+	// Parse chain to get node names (includes Library root)
 	const nodeNamesResult = parseSectionChainToNodeNames(sectionChain, codecs);
 	if (nodeNamesResult.isErr()) {
 		return err(nodeNamesResult.error);
@@ -295,14 +297,12 @@ export function buildCodexSplitPath(
 	const nodeNames = nodeNamesResult.value;
 	const basename = buildCodexBasename(nodeNames, codexPrefix, codecs);
 
-	// Path parts include Library root + all parent sections
-	const pathParts = [libraryRoot, ...nodeNames];
-
+	// pathParts = nodeNames (already includes Library root from chain)
 	return ok({
 		basename,
 		extension: "md",
 		kind: SplitPathKind.MdFile,
-		pathParts,
+		pathParts: nodeNames,
 	});
 }
 
@@ -351,8 +351,9 @@ export function splitPathsEqual(
 export function validateSectionSegmentId(
 	segmentId: string,
 	codecs: Codecs,
-): Result<SectionNodeSegmentId, PathComputerError> {
-	const parseResult = codecs.segmentId.parseSegmentId(segmentId);
+): Result<SectionNodeSegmentId, PathFinderError> {
+	// Cast to TreeNodeSegmentId for parsing - this function validates untrusted strings
+	const parseResult = codecs.segmentId.parseSegmentId(segmentId as TreeNodeSegmentId);
 	if (parseResult.isErr()) {
 		return err({
 			kind: "ParseFailed",
@@ -426,7 +427,7 @@ export function assertSectionSegmentId(
 export function validateSectionChain(
 	chain: string[],
 	codecs: Codecs,
-): Result<SectionNodeSegmentId[], PathComputerError> {
+): Result<SectionNodeSegmentId[], PathFinderError> {
 	const result: SectionNodeSegmentId[] = [];
 
 	for (const segId of chain) {
@@ -475,38 +476,8 @@ export function narrowChildSegmentId(
  */
 export function locatorToSectionSegmentId(locator: {
 	segmentId: TreeNodeSegmentId;
-	targetKind: TreeNodeKind.Section;
+	targetKind: typeof TreeNodeKind.Section;
 }): SectionNodeSegmentId {
 	// Type assertion justified: locator.segmentId type corresponds to locator.targetKind
 	return locator.segmentId as SectionNodeSegmentId;
 }
-
-// ─── Namespace Export ───
-
-export const PathComputer = {
-	// Validation (Issue 13)
-	assertSectionSegmentId,
-	// Path building
-	buildCanonicalLeafSplitPath,
-	buildCodexBasename,
-	buildCodexSplitPath,
-	buildObservedLeafSplitPath,
-	buildSectionCanonicalPath,
-	// Suffix computation
-	computeCodexSuffix,
-	locatorToSectionSegmentId,
-	narrowChildSegmentId,
-
-	// Parsing
-	parseChainToNodeNames,
-	parseSectionChainToNodeNames,
-	pathPartsToSuffixParts,
-	pathPartsWithRootToSuffixParts,
-	sectionChainToPathParts,
-
-	// Comparison
-	splitPathsEqual,
-	suffixPartsToPathParts,
-	validateSectionChain,
-	validateSectionSegmentId,
-};

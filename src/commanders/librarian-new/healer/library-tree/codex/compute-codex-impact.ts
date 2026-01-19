@@ -5,11 +5,11 @@
 
 import type { SectionNodeSegmentId } from "../../../codecs/segment-id";
 import { NodeSegmentIdSeparator } from "../../../codecs/segment-id/types/segment-id";
-import { locatorToSectionSegmentId } from "../../../paths/path-computer";
+import { locatorToSectionSegmentId } from "../../../paths/path-finder";
 import type { TreeAction } from "../tree-action/types/tree-action";
 import { TreeActionType } from "../tree-action/types/tree-action";
 import { TreeNodeKind, type TreeNodeStatus } from "../tree-node/types/atoms";
-import { collectImpactedSections } from "./section-chain-utils";
+import { chainToKey, collectImpactedSections } from "./section-chain-utils";
 
 // ─── Types ───
 
@@ -225,13 +225,6 @@ function computeChangeStatusImpact(
 
 function makeSectionSegmentId(nodeName: string): SectionNodeSegmentId {
 	return `${nodeName}${NodeSegmentIdSeparator}${TreeNodeKind.Section}${NodeSegmentIdSeparator}` as SectionNodeSegmentId;
-}
-
-/**
- * Serialize a chain to a string key for Set membership.
- */
-function chainToKey(chain: SectionNodeSegmentId[]): string {
-	return chain.join("/");
 }
 
 /**

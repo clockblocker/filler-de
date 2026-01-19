@@ -1,15 +1,18 @@
 /**
  * Compute the canonical split path for a section's codex file.
+ *
+ * NOTE: This file is a thin wrapper around PathFinder.buildCodexSplitPath
+ * for backward compatibility. New code should import from paths/path-finder directly.
  */
 
-import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { Codecs, SplitPathToMdFileInsideLibrary } from "../../../codecs";
 import type { SectionNodeSegmentId } from "../../../codecs/segment-id/types/segment-id";
-import { sectionChainToPathParts } from "../utils/section-chain-utils";
+import { buildCodexSplitPath } from "../../../paths/path-finder";
 import { CODEX_CORE_NAME } from "./literals";
 
 /**
  * Compute codex split path from section chain.
+ * Throws on error for backward compatibility.
  *
  * @param sectionChain - Full chain including Library root, e.g. ["Library﹘Section﹘", "A﹘Section﹘"]
  * @param codecs - Codec API for parsing segment IDs
@@ -24,40 +27,13 @@ export function computeCodexSplitPath(
 	sectionChain: SectionNodeSegmentId[],
 	codecs: Codecs,
 ): SplitPathToMdFileInsideLibrary {
-	if (sectionChain.length === 0) {
-		throw new Error("Section chain cannot be empty");
-	}
+	const result = buildCodexSplitPath(sectionChain, CODEX_CORE_NAME, codecs);
 
-	// Extract node names from segment IDs using codec API
-	const pathPartsResult = sectionChainToPathParts(
-		sectionChain,
-		codecs.segmentId,
-	);
-	if (pathPartsResult.isErr()) {
+	if (result.isErr()) {
 		throw new Error(
-			`Failed to parse segment IDs. Should never happen with valid tree state: ${pathPartsResult.error.message}`,
+			`Failed to compute codex split path: ${result.error.kind} - ${result.error.reason}`,
 		);
 	}
-	const pathParts = pathPartsResult.value;
-	const nodeNames = pathParts;
 
-	// suffixParts:
-	// - Root codex (chain length 1): include Library name → ["Library"]
-	// - Nested codex: exclude Library root, reversed → ["B", "A"] for ["Library", "A", "B"]
-	const suffixParts =
-		nodeNames.length === 1
-			? nodeNames // Root: ["Library"]
-			: nodeNames.slice(1).reverse(); // Nested: exclude root, reverse
-
-	const basename = codecs.suffix.serializeSeparatedSuffix({
-		coreName: CODEX_CORE_NAME,
-		suffixParts,
-	});
-
-	return {
-		basename,
-		extension: "md",
-		kind: SplitPathKind.MdFile,
-		pathParts,
-	};
+	return result.value;
 }

@@ -1,5 +1,5 @@
 /**
- * Tests for PathComputer module.
+ * Tests for PathFinder module.
  * Ensures the consolidated path computation logic works correctly.
  */
 
@@ -8,22 +8,22 @@ import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
 } from "../../../src/commanders/librarian-new/codecs";
+import type { SectionNodeSegmentId } from "../../../src/commanders/librarian-new/codecs/segment-id/types/segment-id";
+import { NodeSegmentIdSeparator } from "../../../src/commanders/librarian-new/codecs/segment-id/types/segment-id";
+import { TreeNodeKind, TreeNodeStatus } from "../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
+import type { FileNode, ScrollNode } from "../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/tree-node";
 import {
 	buildCodexBasename,
 	buildObservedLeafSplitPath,
 	computeCodexSuffix,
+	PathFinder,
 	parseChainToNodeNames,
-	PathComputer,
 	pathPartsToSuffixParts,
 	pathPartsWithRootToSuffixParts,
 	splitPathsEqual,
 	suffixPartsToPathParts,
-} from "../../../src/commanders/librarian-new/paths/path-computer";
-import { TreeNodeKind, TreeNodeStatus } from "../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
-import type { ScrollNode, FileNode } from "../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/tree-node";
+} from "../../../src/commanders/librarian-new/paths";
 import type { NodeName } from "../../../src/commanders/librarian-new/types/schemas/node-name";
-import type { SectionNodeSegmentId } from "../../../src/commanders/librarian-new/codecs/segment-id/types/segment-id";
-import { NodeSegmentIdSeparator } from "../../../src/commanders/librarian-new/codecs/segment-id/types/segment-id";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../common-utils/setup-spy";
 
@@ -37,7 +37,7 @@ afterEach(() => {
 	getParsedUserSettingsSpy.mockRestore();
 });
 
-describe("PathComputer", () => {
+describe("PathFinder", () => {
 	describe("computeCodexSuffix", () => {
 		it("returns empty for empty chain", () => {
 			expect(computeCodexSuffix([])).toEqual([]);
@@ -215,40 +215,40 @@ describe("PathComputer", () => {
 
 	describe("splitPathsEqual", () => {
 		it("returns true for identical paths", () => {
-			const a = { kind: "MdFile", basename: "note", pathParts: ["a", "b"], extension: "md" };
-			const b = { kind: "MdFile", basename: "note", pathParts: ["a", "b"], extension: "md" };
+			const a = { basename: "note", extension: "md", kind: "MdFile", pathParts: ["a", "b"] };
+			const b = { basename: "note", extension: "md", kind: "MdFile", pathParts: ["a", "b"] };
 			expect(splitPathsEqual(a, b)).toBe(true);
 		});
 
 		it("returns false for different basenames", () => {
-			const a = { kind: "MdFile", basename: "note1", pathParts: ["a"], extension: "md" };
-			const b = { kind: "MdFile", basename: "note2", pathParts: ["a"], extension: "md" };
+			const a = { basename: "note1", extension: "md", kind: "MdFile", pathParts: ["a"] };
+			const b = { basename: "note2", extension: "md", kind: "MdFile", pathParts: ["a"] };
 			expect(splitPathsEqual(a, b)).toBe(false);
 		});
 
 		it("returns false for different path parts", () => {
-			const a = { kind: "MdFile", basename: "note", pathParts: ["a"], extension: "md" };
-			const b = { kind: "MdFile", basename: "note", pathParts: ["b"], extension: "md" };
+			const a = { basename: "note", extension: "md", kind: "MdFile", pathParts: ["a"] };
+			const b = { basename: "note", extension: "md", kind: "MdFile", pathParts: ["b"] };
 			expect(splitPathsEqual(a, b)).toBe(false);
 		});
 
 		it("returns false for different kinds", () => {
-			const a = { kind: "MdFile", basename: "note", pathParts: ["a"], extension: "md" };
-			const b = { kind: "File", basename: "note", pathParts: ["a"], extension: "txt" };
+			const a = { basename: "note", extension: "md", kind: "MdFile", pathParts: ["a"] };
+			const b = { basename: "note", extension: "txt", kind: "File", pathParts: ["a"] };
 			expect(splitPathsEqual(a, b)).toBe(false);
 		});
 	});
 
-	describe("PathComputer namespace", () => {
+	describe("PathFinder namespace", () => {
 		it("exports all functions", () => {
-			expect(PathComputer.computeCodexSuffix).toBeDefined();
-			expect(PathComputer.pathPartsToSuffixParts).toBeDefined();
-			expect(PathComputer.pathPartsWithRootToSuffixParts).toBeDefined();
-			expect(PathComputer.suffixPartsToPathParts).toBeDefined();
-			expect(PathComputer.parseChainToNodeNames).toBeDefined();
-			expect(PathComputer.buildObservedLeafSplitPath).toBeDefined();
-			expect(PathComputer.buildCodexBasename).toBeDefined();
-			expect(PathComputer.splitPathsEqual).toBeDefined();
+			expect(PathFinder.computeCodexSuffix).toBeDefined();
+			expect(PathFinder.pathPartsToSuffixParts).toBeDefined();
+			expect(PathFinder.pathPartsWithRootToSuffixParts).toBeDefined();
+			expect(PathFinder.suffixPartsToPathParts).toBeDefined();
+			expect(PathFinder.parseChainToNodeNames).toBeDefined();
+			expect(PathFinder.buildObservedLeafSplitPath).toBeDefined();
+			expect(PathFinder.buildCodexBasename).toBeDefined();
+			expect(PathFinder.splitPathsEqual).toBeDefined();
 		});
 	});
 });

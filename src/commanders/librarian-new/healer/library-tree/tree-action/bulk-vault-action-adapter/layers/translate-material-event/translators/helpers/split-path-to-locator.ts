@@ -20,9 +20,11 @@ export function tryMakeTargetLocatorFromLibraryScopedSplitPath<
 			sp,
 		),
 	);
+
 	if (withSeparatedSuffixResult.isErr()) {
 		return err(withSeparatedSuffixResult.error);
 	}
+
 	const { splitPathToLibraryRoot } = getParsedUserSettings();
 	const libraryRootName = splitPathToLibraryRoot.basename;
 	const cspRes = adaptCodecResult(
@@ -39,5 +41,8 @@ export function tryMakeTargetLocatorFromLibraryScopedSplitPath<
 	);
 	if (locatorRes.isErr()) return err(locatorRes.error);
 
-	return ok(locatorRes.value);
+	// Cast is safe: locator type corresponds to split path kind
+	return ok(
+		locatorRes.value as unknown as TreeNodeLocatorForLibraryScopedSplitPath<SK>,
+	);
 }

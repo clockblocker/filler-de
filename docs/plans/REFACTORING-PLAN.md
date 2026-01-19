@@ -15,12 +15,12 @@
 - [x] 1.4 Tree Mutation Tests - `tests/specs/tree/tree-mutations.test.ts`
 
 ### Phase 2: Introduce New Infrastructure ✅ DONE
-- [x] 2.1 PathComputer Module - `src/commanders/librarian-new/paths/path-computer.ts`
+- [x] 2.1 PathFinder Module - `src/commanders/librarian-new/paths/path-computer.ts`
 - [x] 2.2 HealingError Type - `src/commanders/librarian-new/errors/healing-error.ts`
 - [x] 2.3 Generic Action Helpers - `src/managers/obsidian/vault-action-manager/helpers/action-helpers.ts`
 
 ### Phase 3: Migrate Module by Module ✅ DONE
-- [x] 3.1 Replace Path Duplication - Added comments pointing to PathComputer, migration path established
+- [x] 3.1 Replace Path Duplication - Added comments pointing to PathFinder, migration path established
 - [x] 3.2 Split Healer into TreeReader/TreeWriter/TreeFacade - `tree-interfaces.ts`
 - [x] 3.3 Add HealingTransaction layer - `healing-transaction.ts`
 - [x] 3.4 Migrate VaultActions to ActionHelpers - Updated `types/helpers.ts`, `make-key-for-action.ts`
@@ -101,7 +101,7 @@ tests/specs/
 - avgDurationPerAction metric added to TransactionSummary for performance monitoring
 
 ### Migration Strategy
-- New code should import from PathComputer, ActionHelpers, tree-interfaces
+- New code should import from PathFinder, ActionHelpers, tree-interfaces
 - Old utils files have comments pointing to new modules
 - No breaking changes to existing API - additive only
 
@@ -116,8 +116,8 @@ tests/specs/
 
 ### CRITICAL ✅ ALL ADDRESSED
 1. ~~Silent path parsing → state corruption~~ - HealingError type provides explicit error handling
-2. ~~5 implementations of "heal leaf path"~~ - PathComputer consolidates logic
-3. ~~Suffix logic in 4+ places~~ - PathComputer.computeCodexSuffix() is single source
+2. ~~5 implementations of "heal leaf path"~~ - PathFinder consolidates logic
+3. ~~Suffix logic in 4+ places~~ - PathFinder.computeCodexSuffix() is single source
 4. ~~No healing verification~~ - HealingTransaction tracks all operations
 
 ### HIGH PRIORITY ✅ ALL ADDRESSED

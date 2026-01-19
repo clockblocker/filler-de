@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { logger } from "../../../utils/logger";
-import type { SplitPathWithReader } from "../../../managers/obsidian/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile, SplitPathWithReader } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type {
 	Transform,
@@ -16,7 +16,7 @@ import {
 	stripFrontmatter,
 	stripInternalMetadata,
 } from "../../../managers/pure/note-metadata-manager";
-import type { AnySplitPathInsideLibrary, CodecRules, Codecs } from "../codecs";
+import type { AnySplitPathInsideLibrary, CodecRules, Codecs, SplitPathToMdFileInsideLibrary } from "../codecs";
 import { isCodexSplitPath } from "../healer/library-tree/codex/helpers";
 import {
 	makeVaultScopedSplitPath,
@@ -133,16 +133,16 @@ export async function buildInitialCreateActions(
 				const hasInternal = meta !== null;
 				const hasFrontmatter = fm !== null;
 
+				// Cast observedPath to MdFile since we're inside file.kind === MdFile check
+				const mdPath = observedPath as SplitPathToMdFileInsideLibrary;
+				const vaultMdPath = makeVaultScopedSplitPath(mdPath, rules) as SplitPathToMdFile;
 				if (rules.hideMetadata) {
 					// Want internal format - migrate YAML to internal if needed
 					if (hasFrontmatter && !hasInternal) {
 						migrationActions.push({
 							kind: VaultActionKind.ProcessMdFile,
 							payload: {
-								splitPath: makeVaultScopedSplitPath(
-									observedPath,
-									rules,
-								),
+								splitPath: vaultMdPath,
 								transform: migrateFrontmatter({
 									stripYaml: true,
 								}),
@@ -155,10 +155,7 @@ export async function buildInitialCreateActions(
 						migrationActions.push({
 							kind: VaultActionKind.ProcessMdFile,
 							payload: {
-								splitPath: makeVaultScopedSplitPath(
-									observedPath,
-									rules,
-								),
+								splitPath: vaultMdPath,
 								transform:
 									makeConvertToFrontmatterTransform(meta),
 							},
@@ -168,10 +165,7 @@ export async function buildInitialCreateActions(
 						migrationActions.push({
 							kind: VaultActionKind.ProcessMdFile,
 							payload: {
-								splitPath: makeVaultScopedSplitPath(
-									observedPath,
-									rules,
-								),
+								splitPath: vaultMdPath,
 								transform: makeAddFrontmatterTransform(status),
 							},
 						});
@@ -220,8 +214,8 @@ function makeConvertToFrontmatterTransform(
 	meta: MetadataWithStatus,
 ): Transform {
 	return (content: string) => {
-		// Strip internal metadata section
-		const stripped = stripInternalMetadata()(content);
+		// Strip internal metadata section (sync function, cast is safe)
+		const stripped = stripInternalMetadata()(content) as string;
 		// Strip existing frontmatter if any
 		const withoutFm = stripFrontmatter(stripped);
 		// Prepend new frontmatter

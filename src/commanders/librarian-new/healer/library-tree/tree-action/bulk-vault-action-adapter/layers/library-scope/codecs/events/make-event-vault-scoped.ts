@@ -1,5 +1,5 @@
-import { VaultEventKind } from "../../../../../../../../../../managers/obsidian/vault-action-manager";
 import type { CodecRules } from "../../../../../../../../codecs/rules";
+import type { AnySplitPathInsideLibrary } from "../../../../../../../../codecs/split-path-inside-library/types/split-path-inside-library";
 import { visitInsideEvent } from "../../helpers/scoped-event-helpers";
 import type { DescopedEvent } from "../../types/generics";
 import type { LibraryScopedVaultEvent } from "../../types/scoped-event";
@@ -12,9 +12,13 @@ function descopeSimpleEvent<E extends { kind: string; splitPath: unknown }>(
 	event: E,
 	rules: CodecRules,
 ): DescopedEvent<LibraryScopedVaultEvent> {
+	// Cast through AnySplitPathInsideLibrary - splitPath is unknown but we know it's a valid inside-library path
 	return {
 		kind: event.kind,
-		splitPath: makeVaultScopedSplitPath(event.splitPath, rules),
+		splitPath: makeVaultScopedSplitPath(
+			event.splitPath as AnySplitPathInsideLibrary,
+			rules,
+		),
 	} as DescopedEvent<LibraryScopedVaultEvent>;
 }
 
@@ -24,10 +28,17 @@ function descopeSimpleEvent<E extends { kind: string; splitPath: unknown }>(
 function descopeRenameInside<
 	E extends { kind: string; from: unknown; to: unknown },
 >(event: E, rules: CodecRules): DescopedEvent<LibraryScopedVaultEvent> {
+	// Cast through AnySplitPathInsideLibrary - from/to are unknown but we know they're valid inside-library paths
 	return {
-		from: makeVaultScopedSplitPath(event.from, rules),
+		from: makeVaultScopedSplitPath(
+			event.from as AnySplitPathInsideLibrary,
+			rules,
+		),
 		kind: event.kind,
-		to: makeVaultScopedSplitPath(event.to, rules),
+		to: makeVaultScopedSplitPath(
+			event.to as AnySplitPathInsideLibrary,
+			rules,
+		),
 	} as DescopedEvent<LibraryScopedVaultEvent>;
 }
 
@@ -37,8 +48,12 @@ function descopeRenameInside<
 function descopeRenameInsideToOutside<
 	E extends { kind: string; from: unknown; to: unknown },
 >(event: E, rules: CodecRules): DescopedEvent<LibraryScopedVaultEvent> {
+	// Cast through AnySplitPathInsideLibrary - from is inside library, to stays as-is
 	return {
-		from: makeVaultScopedSplitPath(event.from, rules),
+		from: makeVaultScopedSplitPath(
+			event.from as AnySplitPathInsideLibrary,
+			rules,
+		),
 		kind: event.kind,
 		to: event.to, // outside path stays as-is
 	} as DescopedEvent<LibraryScopedVaultEvent>;
@@ -50,10 +65,14 @@ function descopeRenameInsideToOutside<
 function descopeRenameOutsideToInside<
 	E extends { kind: string; from: unknown; to: unknown },
 >(event: E, rules: CodecRules): DescopedEvent<LibraryScopedVaultEvent> {
+	// Cast through AnySplitPathInsideLibrary - to is inside library, from stays as-is
 	return {
 		from: event.from, // outside path stays as-is
 		kind: event.kind,
-		to: makeVaultScopedSplitPath(event.to, rules),
+		to: makeVaultScopedSplitPath(
+			event.to as AnySplitPathInsideLibrary,
+			rules,
+		),
 	} as DescopedEvent<LibraryScopedVaultEvent>;
 }
 
@@ -65,22 +84,28 @@ export function makeEventVaultScoped(
 		// Simple events
 		FileCreated: (e) => descopeSimpleEvent(e, rules),
 		FileDeleted: (e) => descopeSimpleEvent(e, rules),
-		FolderCreated: (e) => descopeSimpleEvent(e, rules),
-		FolderDeleted: (e) => descopeSimpleEvent(e, rules),
 
 		// Inside renames
 		FileRenamed: (e) => descopeRenameInside(e, rules),
-		FolderRenamed: (e) => descopeRenameInside(e, rules),
 
 		// Boundary crossing renames
-		FileRenamedInsideToOutside: (e) => descopeRenameInsideToOutside(e, rules),
-		FolderRenamedInsideToOutside: (e) => descopeRenameInsideToOutside(e, rules),
-		FileRenamedOutsideToInside: (e) => descopeRenameOutsideToInside(e, rules),
-		FolderRenamedOutsideToInside: (e) => descopeRenameOutsideToInside(e, rules),
+		FileRenamedInsideToOutside: (e) =>
+			descopeRenameInsideToOutside(e, rules),
+
+		FileRenamedOutsideToInside: (e) =>
+			descopeRenameOutsideToInside(e, rules),
+
+		FolderCreated: (e) => descopeSimpleEvent(e, rules),
+		FolderDeleted: (e) => descopeSimpleEvent(e, rules),
+		FolderRenamed: (e) => descopeRenameInside(e, rules),
+		FolderRenamedInsideToOutside: (e) =>
+			descopeRenameInsideToOutside(e, rules),
+		FolderRenamedOutsideToInside: (e) =>
+			descopeRenameOutsideToInside(e, rules),
 
 		// Outside events - strip scope, keep rest
 		Outside: (e) => {
-			const { scope, ...rest } = e;
+			const { scope: _scope, ...rest } = e;
 			return rest as DescopedEvent<LibraryScopedVaultEvent>;
 		},
 	});

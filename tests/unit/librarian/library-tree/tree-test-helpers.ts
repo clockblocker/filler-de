@@ -19,7 +19,7 @@ import type {
 	FileNodeLocator,
 	ScrollNodeLocator,
 	SectionNodeLocator,
-} from "../../../../src/commanders/librarian-new/healer/library-tree/tree-action/types/target-chains";
+} from "../../../../src/commanders/librarian-new/codecs/locator/types";
 import { makeNodeSegmentId } from "../../../../src/commanders/librarian-new/healer/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import { TreeNodeKind, TreeNodeStatus } from "../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
 import type { LeafNode, SectionNode } from "../../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/tree-node";

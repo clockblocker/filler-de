@@ -94,7 +94,7 @@ bun test --test-name-pattern "pattern"
 - `LibraryTree`: In-memory tree representation with nodes, codexes (index files), and status tracking
 - **Healing**: Reconciles discrepancies between vault state and tree state through healing actions
 - **Codex**: Special index files that track children nodes and their completion status via clickable checkboxes
-- **PathComputer** (`paths/path-computer.ts`): Single source of truth for all suffix/path computation logic
+- **PathFinder** (`paths/path-computer.ts`): Single source of truth for all suffix/path computation logic
 - **HealingError** (`errors/healing-error.ts`): Unified error types for healing operations
 
 **Services** (`src/services/`)
@@ -194,10 +194,9 @@ log.error("Failed:", error instanceof Error ? error.message : String(error));
 ### New Modules Added
 These modules consolidate duplicated logic and improve error handling:
 
-**PathComputer** (`src/commanders/librarian-new/paths/path-computer.ts`)
+**PathFinder** (`src/commanders/librarian-new/paths/path-finder.ts`)
 - Single source of truth for suffix/path computation
-- Use instead of duplicate logic in `split-path-utils.ts` and `section-chain-utils.ts`
-- Key functions: `computeCodexSuffix()`, `buildObservedLeafSplitPath()`, `parseChainToNodeNames()`
+- Key functions: `computeCodexSuffix()`, `buildCodexSplitPath()`, `sectionChainToPathParts()`, `parseSectionChainToNodeNames()`
 
 **HealingError** (`src/commanders/librarian-new/errors/healing-error.ts`)
 - Unified error type for all healing operations
@@ -228,6 +227,12 @@ These modules consolidate duplicated logic and improve error handling:
 - Scans vault for codexes with wrong suffixes
 - Generates cleanup and recreation actions
 - Use `scanAndGenerateOrphanActions()` for full scan
+
+### Codex Module (`src/commanders/librarian-new/healer/library-tree/codex/`)
+- `tree-collectors.ts`: Tree traversal (`collectDescendantSectionChains`, `collectTreeData`)
+- `section-chain-utils.ts`: `dedupeByKey<T>`, `chainToKey`, `dedupeChains`
+- `transforms/`: Subdirectory with `codex-transforms.ts`, `scroll-transforms.ts`, `transform-utils.ts`
+- All path/suffix computation delegated to PathFinder
 
 ### Test Coverage
 Tests added in `tests/unit/paths/`, `tests/specs/healing/`, `tests/specs/vault-actions/`, `tests/specs/tree/`

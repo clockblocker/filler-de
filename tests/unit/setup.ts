@@ -18,7 +18,6 @@ mock.module("obsidian", () => ({
 }));
 
 // CJS fallback (kept for any require-using code paths)
-// @ts-expect-error - require only exists in CJS
 if (typeof require !== "undefined") {
 	// @ts-expect-error - require.cache shape
 	require.cache = require.cache || {};

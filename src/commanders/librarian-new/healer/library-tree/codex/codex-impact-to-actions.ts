@@ -13,15 +13,24 @@ import { logger } from "../../../../../utils/logger";
 import type { Codecs, SplitPathToMdFileInsideLibrary } from "../../../codecs";
 import type { CodecError } from "../../../codecs/errors";
 import type { SectionNodeSegmentId } from "../../../codecs/segment-id/types/segment-id";
+import {
+	computeCodexSuffix,
+	parseSectionChainToNodeNames,
+} from "../../../paths/path-finder";
+import type { TreeReader } from "../tree-interfaces";
 import { TreeNodeKind } from "../tree-node/types/atoms";
 import type { SectionNode } from "../tree-node/types/tree-node";
 import type { HealingAction } from "../types/healing-action";
-import type { TreeReader } from "../tree-interfaces";
 import { computeScrollSplitPath } from "../utils/compute-scroll-split-path";
 import { computeCodexSplitPath } from "./codex-split-path";
 import type { CodexImpact } from "./compute-codex-impact";
 import { isCodexSplitPath } from "./helpers";
 import { CODEX_CORE_NAME } from "./literals";
+import {
+	collectDescendantScrolls,
+	collectDescendantSectionChains,
+	collectTreeData,
+} from "./tree-collectors";
 import type {
 	CodexAction,
 	EnsureCodexFileExistsAction,
@@ -463,119 +472,17 @@ function findSectionByChain(
 
 /**
  * Extract node names from a chain of segment IDs.
- * Used for building intermediate paths for descendant codexes.
+ * Wrapper around PathFinder.parseSectionChainToNodeNames that returns empty array on error.
  */
 function extractNodeNamesFromChain(
 	chain: SectionNodeSegmentId[],
 	codecs: Codecs,
 ): string[] {
-	const nodeNames: string[] = [];
-	for (const segId of chain) {
-		const parseResult = codecs.segmentId.parseSectionSegmentId(segId);
-		if (parseResult.isErr()) {
-			// Skip if parsing fails (should never happen with valid tree state)
-			continue;
-		}
-		nodeNames.push(parseResult.value.coreName);
-	}
-	return nodeNames;
+	const result = parseSectionChainToNodeNames(chain, codecs);
+	return result.isOk() ? result.value : [];
 }
 
-function collectDescendantSectionChains(
-	section: SectionNode,
-	parentChain: SectionNodeSegmentId[],
-): SectionNodeSegmentId[][] {
-	const result: SectionNodeSegmentId[][] = [];
-
-	for (const [segId, child] of Object.entries(section.children)) {
-		if (child.kind === TreeNodeKind.Section) {
-			const childChain = [...parentChain, segId as SectionNodeSegmentId];
-			result.push(childChain);
-			result.push(...collectDescendantSectionChains(child, childChain));
-		}
-	}
-
-	return result;
-}
-
-type ScrollInfo = {
-	nodeName: string;
-	parentChain: SectionNodeSegmentId[];
-};
-
-// ─── Unified Tree Traversal ───
-
-type TreeTraversalResult = {
-	sectionChains: SectionNodeSegmentId[][];
-	scrollInfos: ScrollInfo[];
-};
-
-/**
- * Single DFS traversal collecting both section chains and scroll infos.
- * More efficient than separate collectAllSectionChains + collectAllScrolls.
- */
-function collectTreeData(
-	tree: TreeReader,
-	codecs: Codecs,
-): TreeTraversalResult {
-	const sectionChains: SectionNodeSegmentId[][] = [];
-	const scrollInfos: ScrollInfo[] = [];
-
-	const root = tree.getRoot();
-	const rootSegId = codecs.segmentId.serializeSegmentId({
-		coreName: root.nodeName,
-		targetKind: TreeNodeKind.Section,
-	}) as SectionNodeSegmentId;
-
-	// Add root chain
-	sectionChains.push([rootSegId]);
-
-	// Single recursive traversal collecting both
-	const traverse = (
-		section: SectionNode,
-		parentChain: SectionNodeSegmentId[],
-	): void => {
-		for (const [segId, child] of Object.entries(section.children)) {
-			if (child.kind === TreeNodeKind.Section) {
-				const childChain = [
-					...parentChain,
-					segId as SectionNodeSegmentId,
-				];
-				sectionChains.push(childChain);
-				traverse(child, childChain);
-			} else if (child.kind === TreeNodeKind.Scroll) {
-				scrollInfos.push({
-					nodeName: child.nodeName,
-					parentChain,
-				});
-			}
-		}
-	};
-
-	traverse(root, [rootSegId]);
-	return { scrollInfos, sectionChains };
-}
-
-function collectDescendantScrolls(
-	section: SectionNode,
-	parentChain: SectionNodeSegmentId[],
-): ScrollInfo[] {
-	const result: ScrollInfo[] = [];
-
-	for (const [segId, child] of Object.entries(section.children)) {
-		if (child.kind === TreeNodeKind.Scroll) {
-			result.push({
-				nodeName: child.nodeName,
-				parentChain,
-			});
-		} else if (child.kind === TreeNodeKind.Section) {
-			const childChain = [...parentChain, segId as SectionNodeSegmentId];
-			result.push(...collectDescendantScrolls(child, childChain));
-		}
-	}
-
-	return result;
-}
+// Tree traversal functions moved to tree-collectors.ts
 
 /**
  * Build path for a codex file at an INTERMEDIATE location.
@@ -597,25 +504,8 @@ function buildIntermediateCodexPath(
 	observedPathParts: string[],
 	codecs: Codecs,
 ): SplitPathToMdFileInsideLibrary {
-	// Extract old node names for suffix computation
-	const oldNodeNames: string[] = [];
-	for (const segId of oldChain) {
-		const parseResult = codecs.segmentId.parseSectionSegmentId(segId);
-		if (parseResult.isErr()) {
-			// Skip if parsing fails (should never happen with valid tree state)
-			continue;
-		}
-		oldNodeNames.push(parseResult.value.coreName);
-	}
-
-	// pathParts = intermediate location (where Obsidian actually moved the folder)
-	const pathParts = observedPathParts;
-
-	// suffixParts = OLD suffix (what the codex file was named before)
-	const suffixParts =
-		oldNodeNames.length === 1
-			? oldNodeNames // Root: ["Library"]
-			: oldNodeNames.slice(1).reverse(); // Nested: exclude root, reverse
+	const oldNodeNames = extractNodeNamesFromChain(oldChain, codecs);
+	const suffixParts = computeCodexSuffix(oldNodeNames);
 
 	const basename = codecs.suffix.serializeSeparatedSuffix({
 		coreName: CODEX_CORE_NAME,
@@ -626,7 +516,7 @@ function buildIntermediateCodexPath(
 		basename,
 		extension: "md",
 		kind: SplitPathKind.MdFile,
-		pathParts,
+		pathParts: observedPathParts,
 	};
 }
 
@@ -649,36 +539,9 @@ function buildMovedCodexPath(
 	newChain: SectionNodeSegmentId[],
 	codecs: Codecs,
 ): SplitPathToMdFileInsideLibrary {
-	// Extract node names using codec API
-	const oldNodeNames: string[] = [];
-	for (const segId of oldChain) {
-		const parseResult = codecs.segmentId.parseSectionSegmentId(segId);
-		if (parseResult.isErr()) {
-			// Skip if parsing fails (should never happen with valid tree state)
-			continue;
-		}
-		oldNodeNames.push(parseResult.value.coreName);
-	}
-
-	const newNodeNames: string[] = [];
-	for (const segId of newChain) {
-		const parseResult = codecs.segmentId.parseSectionSegmentId(segId);
-		if (parseResult.isErr()) {
-			// Skip if parsing fails (should never happen with valid tree state)
-			continue;
-		}
-		newNodeNames.push(parseResult.value.coreName);
-	}
-
-	// pathParts = NEW location (where file is now)
-	const pathParts = newNodeNames;
-
-	// suffixParts = OLD suffix (what the file was named before)
-	// Same logic as computeCodexSplitPath
-	const suffixParts =
-		oldNodeNames.length === 1
-			? oldNodeNames // Root: ["Library"]
-			: oldNodeNames.slice(1).reverse(); // Nested: exclude root, reverse
+	const oldNodeNames = extractNodeNamesFromChain(oldChain, codecs);
+	const newNodeNames = extractNodeNamesFromChain(newChain, codecs);
+	const suffixParts = computeCodexSuffix(oldNodeNames);
 
 	const basename = codecs.suffix.serializeSeparatedSuffix({
 		coreName: CODEX_CORE_NAME,
@@ -689,6 +552,6 @@ function buildMovedCodexPath(
 		basename,
 		extension: "md",
 		kind: SplitPathKind.MdFile,
-		pathParts,
+		pathParts: newNodeNames,
 	};
 }

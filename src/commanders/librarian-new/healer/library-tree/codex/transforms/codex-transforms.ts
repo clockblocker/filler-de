@@ -1,0 +1,150 @@
+/**
+ * Transforms for processing codex files.
+ * Used by ProcessMdFile actions to update codex content and backlinks.
+ */
+
+import type { Transform } from "../../../../../../managers/obsidian/vault-action-manager/types/vault-action";
+import { LINE_BREAK, SPACE_F } from "../../../../../../types/literals";
+import type { Codecs } from "../../../../codecs";
+import type { SectionNodeSegmentId } from "../../../../codecs/segment-id";
+import { sectionChainToPathParts } from "../../../../paths/path-finder";
+import type { SectionNode } from "../../tree-node/types/tree-node";
+import { formatParentBacklink } from "../format-codex-line";
+import { generateChildrenList } from "../generate-codex-content";
+import { isBacklinkLine, splitFirstLine } from "./transform-utils";
+
+/**
+ * Create a single transform that updates both backlink and content for a codex.
+ * This is the primary transform for codex healing - combines backlink + content
+ * into one atomic operation to avoid dependency graph conflicts.
+ *
+ * @param section - Section node to generate content for
+ * @param sectionChain - Full chain including this section
+ * @param codecs - Codec API
+ * @returns Transform function that updates entire codex
+ */
+export function makeCodexTransform(
+	section: SectionNode,
+	sectionChain: SectionNodeSegmentId[],
+	codecs: Codecs,
+): Transform {
+	return (_content: string): string => {
+		// Generate children content
+		const childrenContent = generateChildrenList(
+			section,
+			sectionChain,
+			codecs,
+		);
+
+		// For root section (chain length 1), no backlink
+		if (sectionChain.length <= 1) {
+			return childrenContent;
+		}
+
+		// Generate backlink for non-root sections
+		const parentChain = sectionChain.slice(0, -1);
+		const parentPathPartsResult = sectionChainToPathParts(
+			parentChain,
+			codecs,
+		);
+		if (parentPathPartsResult.isErr()) {
+			// Fall back to just children content
+			return childrenContent;
+		}
+
+		const parentPathParts = parentPathPartsResult.value;
+		const parentName = parentPathParts[parentPathParts.length - 1];
+		if (!parentName) {
+			return childrenContent;
+		}
+
+		const backlinkLine = `${formatParentBacklink(parentName, parentPathParts)}${SPACE_F}`;
+
+		// Combine backlink + children content (newline before backlink)
+		return `${LINE_BREAK}${backlinkLine}${childrenContent}`;
+	};
+}
+
+/**
+ * Create transform that updates backlink on first line of a codex.
+ * - If line 1 is a backlink: replace it
+ * - If line 1 is not a backlink: prepend backlink + newline
+ *
+ * @param parentChain - Chain to parent section (for backlink target)
+ * @param codecs - Codec API for segment ID parsing
+ * @returns Transform function
+ */
+export function makeCodexBacklinkTransform(
+	parentChain: SectionNodeSegmentId[],
+	codecs: Codecs,
+): Transform {
+	return (content: string): string => {
+		// Root codex has no parent backlink
+		if (parentChain.length === 0) {
+			return content;
+		}
+
+		// Parse parent name from chain
+		const parentPathPartsResult = sectionChainToPathParts(
+			parentChain,
+			codecs,
+		);
+		if (parentPathPartsResult.isErr()) {
+			// Skip if parsing fails - return content unchanged
+			return content;
+		}
+
+		const parentPathParts = parentPathPartsResult.value;
+		const parentName = parentPathParts[parentPathParts.length - 1];
+		if (!parentName) {
+			return content;
+		}
+
+		const backlinkLine = `${formatParentBacklink(parentName, parentPathParts)}${SPACE_F}`;
+
+		const { firstLine, rest } = splitFirstLine(content);
+
+		if (isBacklinkLine(firstLine, codecs.rules.suffixDelimiterPattern)) {
+			// Replace existing backlink
+			return `${backlinkLine}${LINE_BREAK}${rest}`;
+		}
+
+		// Prepend backlink (preserve existing content)
+		return `${backlinkLine}${LINE_BREAK}${content}`;
+	};
+}
+
+/**
+ * Create transform that updates content (children list) of a codex.
+ * - Preserves line 1 if it's a backlink
+ * - Replaces everything after with generated children list
+ *
+ * @param section - Section node to generate content for
+ * @param sectionChain - Full chain including this section
+ * @param codecs - Codec API
+ * @returns Transform function
+ */
+export function makeCodexContentTransform(
+	section: SectionNode,
+	sectionChain: SectionNodeSegmentId[],
+	codecs: Codecs,
+): Transform {
+	return (content: string): string => {
+		const childrenContent = generateChildrenList(
+			section,
+			sectionChain,
+			codecs,
+		);
+
+		const { firstLine } = splitFirstLine(content);
+
+		if (isBacklinkLine(firstLine, codecs.rules.suffixDelimiterPattern)) {
+			// Preserve backlink, replace rest
+			return `${firstLine}${LINE_BREAK}${childrenContent}`;
+		}
+
+		// No backlink - just use children content
+		// (backlink transform will add it)
+		return childrenContent;
+	};
+}

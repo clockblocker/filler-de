@@ -15,6 +15,10 @@ import {
 	SPACE_F,
 } from "../../../../../types/literals";
 import { makeCodecRulesFromSettings, makeCodecs } from "../../../codecs";
+import {
+	computeCodexSuffix,
+	pathPartsWithRootToSuffixParts,
+} from "../../../paths/path-finder";
 import type { TreeNodeStatus } from "../tree-node/types/atoms";
 import { TreeNodeStatus as Status } from "../tree-node/types/atoms";
 import { CODEX_CORE_NAME } from "./literals";
@@ -37,14 +41,6 @@ function checkbox(status: TreeNodeStatus): string {
 }
 
 /**
- * Build suffix parts from path parts (drops Library root, reverses).
- * ["Library", "A", "B"] → ["B", "A"]
- */
-function makeSuffixParts(pathParts: string[]): string[] {
-	return pathParts.slice(1).reverse();
-}
-
-/**
  * Build canonical basename for a leaf (scroll/file).
  * coreName + suffix from path.
  */
@@ -52,10 +48,10 @@ function makeLeafBasename(nodeName: string, pathParts: string[]): string {
 	const settings = getParsedUserSettings();
 	const rules = makeCodecRulesFromSettings(settings);
 	const codecs = makeCodecs(rules);
-	const suffixParts = makeSuffixParts(pathParts);
+	const suffixParts = pathPartsWithRootToSuffixParts(pathParts);
 	return codecs.suffix.serializeSeparatedSuffix({
 		coreName: nodeName,
-		suffixParts: suffixParts as string[],
+		suffixParts,
 	});
 }
 
@@ -72,16 +68,11 @@ function makeCodexBasename(sectionPathParts: string[]): string {
 	const settings = getParsedUserSettings();
 	const rules = makeCodecRulesFromSettings(settings);
 	const codecs = makeCodecs(rules);
-	// Root codex: include Library name
-	// Nested codex: drop Library root, reverse
-	const suffixParts =
-		sectionPathParts.length === 1
-			? sectionPathParts // ["Library"]
-			: makeSuffixParts(sectionPathParts); // ["B", "A"] for ["Library", "A", "B"]
+	const suffixParts = computeCodexSuffix(sectionPathParts);
 
 	return codecs.suffix.serializeSeparatedSuffix({
 		coreName: CODEX_CORE_NAME,
-		suffixParts: suffixParts as string[],
+		suffixParts,
 	});
 }
 

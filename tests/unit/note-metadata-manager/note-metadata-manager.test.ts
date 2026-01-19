@@ -80,7 +80,7 @@ not json
 
 `;
 			const transform = upsertMetadata({ fileType: "Scroll", status: "Done" });
-			const result = transform(content);
+			const result = transform(content) as string;
 
 			// Should have new status
 			expect(result).toContain('"status":"Done"');
@@ -116,7 +116,7 @@ not json
 			const metadata = { fileType: "Scroll" as const, status: "Done" as const };
 
 			const transform = upsertMetadata(metadata);
-			const withMeta = transform(original);
+			const withMeta = transform(original) as string;
 			const readBack = readMetadata(withMeta, TestSchema);
 
 			expect(readBack).toEqual(metadata);

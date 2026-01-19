@@ -26,7 +26,8 @@ export function tryMakeDestinationLocatorFromEvent<
 	);
 	if (locatorRes.isErr()) return err(locatorRes.error);
 
-	return ok(locatorRes.value);
+	// Cast is safe: locator type corresponds to event's split path kind
+	return ok(locatorRes.value as TreeNodeLocatorForEvent<E>);
 }
 
 const tryMakeCanonicalSplitPathToDestination = <

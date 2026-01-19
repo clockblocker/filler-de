@@ -8,7 +8,7 @@ import {
 	getDestinationsToCheck,
 	hasActionForKey,
 } from "../../../src/managers/obsidian/vault-action-manager/impl/actions-processing/ensure-requirements-helpers";
-import type { ExistenceChecker } from "../../../src/managers/obsidian/vault-action-manager/impl/dispatcher";
+import type { ExistenceChecker } from "../../../src/managers/obsidian/vault-action-manager/impl/actions-processing/dispatcher";
 import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,

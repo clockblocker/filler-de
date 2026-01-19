@@ -1,6 +1,6 @@
 /**
  * Tests for suffix computation logic.
- * Captures current behavior before Phase 2 consolidation into PathComputer.
+ * Captures current behavior before Phase 2 consolidation into PathFinder.
  *
  * These tests document the suffix computation patterns that appear in 4+ places:
  * - codecs/internal/suffix/path-parts.ts
@@ -23,9 +23,9 @@ import {
 	serializeSeparatedSuffix,
 	serializeSeparatedSuffixUnchecked,
 } from "../../../src/commanders/librarian-new/codecs/internal/suffix/serialize";
-import { buildObservedLeafSplitPath } from "../../../src/commanders/librarian-new/healer/library-tree/utils/split-path-utils";
 import { TreeNodeKind, TreeNodeStatus } from "../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/atoms";
 import type { ScrollNode } from "../../../src/commanders/librarian-new/healer/library-tree/tree-node/types/tree-node";
+import { buildObservedLeafSplitPath } from "../../../src/commanders/librarian-new/healer/library-tree/utils/split-path-utils";
 import type { NodeName } from "../../../src/commanders/librarian-new/types/schemas/node-name";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../common-utils/setup-spy";

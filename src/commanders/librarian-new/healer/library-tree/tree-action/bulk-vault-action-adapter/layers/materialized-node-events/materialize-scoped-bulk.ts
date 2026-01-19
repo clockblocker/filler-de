@@ -156,8 +156,7 @@ export function materializeRenameFromScopedRoot(
 	if (ev.kind === VaultEventKind.FileRenamed) {
 		// Defensive: ensure from and to have matching kinds
 		if (ev.from.kind !== ev.to.kind) return null;
-		// Only leaf nodes (File/MdFile) for file renames
-		if (ev.from.kind === SplitPathKind.Folder) return null;
+		// FileRenamed events always have File/MdFile paths (never Folder)
 
 		const nodeKind = SPLIT_PATH_KIND_TO_TREE_NODE_KIND[ev.from.kind];
 		return {

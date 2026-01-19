@@ -38,10 +38,19 @@ export {
 	parseCodexLinkTarget,
 } from "./parse-codex-click";
 export {
+	chainToKey,
 	collectImpactedSections,
+	dedupeByKey,
 	dedupeChains,
 	expandToAncestors,
 } from "./section-chain-utils";
+export {
+	collectDescendantScrolls,
+	collectDescendantSectionChains,
+	collectTreeData,
+	type ScrollInfo,
+	type TreeTraversalResult,
+} from "./tree-collectors";
 export type {
 	CodexAction,
 	EnsureCodexFileExistsAction,

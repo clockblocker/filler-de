@@ -4,7 +4,7 @@
  * NOTE: For new code, prefer importing from `src/commanders/librarian-new/paths/path-computer.ts`
  * which consolidates all path computation logic. This file is kept for backward compatibility.
  *
- * @see PathComputer in `src/commanders/librarian-new/paths/path-computer.ts`
+ * @see PathFinder in `src/commanders/librarian-new/paths/path-computer.ts`
  */
 import { ok, type Result } from "neverthrow";
 import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";

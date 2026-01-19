@@ -1,4 +1,5 @@
 # Librarian Architecture
+Keep this file accurate, lean and high-signal
 
 ## Business Purpose
 
@@ -32,9 +33,13 @@ VaultActionManager          ClickInterceptor
                    ↓
            buildTreeActions() → TreeAction[]
                    ↓
-           LibraryTree.apply() → HealingAction[]
+           HealingTransaction.apply()
                    ↓
-           healingActionsToVaultActions() → VaultAction[]
+           LibraryTree.apply() → { changed, node }
+                   ↓ (if changed)
+           HealingAction[] + CodexImpact
+                   ↓
+           HealingTransaction.commit()
                    ↓
            VaultActionManager.dispatch()
                    ↓
@@ -105,12 +110,19 @@ Intent rules:
 
 ### LibraryTree
 - Mutable tree structure: root → sections → leaves
-- `apply(action)` mutates tree, returns `HealingAction[]`
+- `apply(action)` returns `{ changed: boolean, node: TreeNode | null }`. Changed flag enables idempotent processing
 - Sections auto-created on leaf creation, auto-pruned on delete
 - Computes healing for mismatches between observed and canonical paths
+- Implements `TreeFacade` interface (see Refactoring Infrastructure)
 
 ### HealingAction → VaultAction
 Library-scoped healing actions converted to vault-scoped actions for dispatch.
+
+## Refactoring Infrastructure
+
+Key modules: PathFinder (path/suffix), HealingError (error union), TreeReader/Writer/Facade (interface separation), HealingTransaction (wraps ops), HealingAuditLog (debug log), OrphanCodexScanner (startup cleanup), ActionHelpers (VaultAction helpers).
+
+Details in `librarian-pieces.md`.
 
 ## Runtime Flow
 
@@ -227,9 +239,10 @@ Healing pipeline...
 ```
 
 ### ClipboardInterceptor
-kl;
-`src/managers/obsidian/clipboard-interceptor/fjcxfffghjjkhljkfcdxxcdffffffffdxcxffffddcdffdcffffdxcfxsfdxcgfsfxcffsfdxszdfjbcdgxxcd`fcxdfxcdfxcdfxddxccghjkjjjkbfhgfcdgxhjhjcdhhcddjghcdfdxcxcfdcgcdjhjghhghkkfhggghcghkhhfxsdcfgj
-fdcsfdscIntercepts `copy` and `cut` events to strip redundanfcxdt info from copied text:fcfdcgxfcgxdjfcxdfcdxgfj
+
+`src/managers/obsidian/clipboard-interceptor/`
+
+Intercepts `copy` and `cut` events to strip redundant info from copied text:
 
 1. **Go-back links** at start of content: `[[__-L4-L3-L2-L1|← L4]]`
 2. **Metadata section**: `<section id="textfresser_meta_keep_me_invisible">...</section>`

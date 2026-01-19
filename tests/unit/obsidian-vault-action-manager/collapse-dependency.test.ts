@@ -49,7 +49,7 @@ describe("Collapse + Dependencies", () => {
 		expect(collapsed).toHaveLength(1);
 		expect(collapsed[0]?.kind).toBe(VaultActionKind.UpsertMdFile);
 		expect(
-			(collapsed[0] as typeof create).payload.content,
+			(collapsed[0] as { payload: { content: string } }).payload.content,
 		).toBe("initial\nprocessed");
 
 		// After collapse, UpsertMdFile has no file dependencies (just parent folders if any)

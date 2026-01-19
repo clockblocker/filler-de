@@ -4,7 +4,7 @@
  * NOTE: For new code, prefer importing from `src/commanders/librarian-new/paths/path-computer.ts`
  * which consolidates all path computation logic. This file is kept for backward compatibility.
  *
- * @see PathComputer.parseSectionChainToNodeNames in `src/commanders/librarian-new/paths/path-computer.ts`
+ * @see PathFinder.parseSectionChainToNodeNames in `src/commanders/librarian-new/paths/path-computer.ts`
  */
 import { err, ok, type Result } from "neverthrow";
 import type { CodecError } from "../../../codecs/errors";

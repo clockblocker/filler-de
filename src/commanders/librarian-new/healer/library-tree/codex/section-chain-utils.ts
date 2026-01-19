@@ -4,6 +4,39 @@
 
 import type { SectionNodeSegmentId } from "../../../codecs/segment-id";
 
+// ─── Generic Dedup ───
+
+/**
+ * Generic deduplication by key function.
+ * Preserves first occurrence order.
+ *
+ * @param items - Array of items to deduplicate
+ * @param keyFn - Function to extract a string key from each item
+ */
+export function dedupeByKey<T>(items: T[], keyFn: (t: T) => string): T[] {
+	const seen = new Set<string>();
+	const result: T[] = [];
+
+	for (const item of items) {
+		const key = keyFn(item);
+		if (!seen.has(key)) {
+			seen.add(key);
+			result.push(item);
+		}
+	}
+
+	return result;
+}
+
+// ─── Chain Utilities ───
+
+/**
+ * Serialize a chain to a string key for deduplication.
+ */
+export function chainToKey(chain: SectionNodeSegmentId[]): string {
+	return chain.join("/");
+}
+
 /**
  * Expand a section chain to include all ancestor prefixes.
  * ["Lib", "A", "B"] → [[], ["Lib"], ["Lib", "A"], ["Lib", "A", "B"]]
@@ -27,18 +60,7 @@ export function expandToAncestors(
 export function dedupeChains(
 	chains: SectionNodeSegmentId[][],
 ): SectionNodeSegmentId[][] {
-	const seen = new Set<string>();
-	const result: SectionNodeSegmentId[][] = [];
-
-	for (const chain of chains) {
-		const key = chain.join("/");
-		if (!seen.has(key)) {
-			seen.add(key);
-			result.push(chain);
-		}
-	}
-
-	return result;
+	return dedupeByKey(chains, chainToKey);
 }
 
 /**

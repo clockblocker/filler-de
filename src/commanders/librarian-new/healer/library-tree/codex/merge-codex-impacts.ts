@@ -6,7 +6,7 @@ import type {
 	CodexImpact,
 	DescendantsStatusChange,
 } from "./compute-codex-impact";
-import { dedupeChains } from "./section-chain-utils";
+import { chainToKey, dedupeByKey, dedupeChains } from "./section-chain-utils";
 
 /**
  * Merge multiple CodexImpact objects, deduplicating chains.
@@ -31,47 +31,17 @@ export function mergeCodexImpacts(impacts: CodexImpact[]): CodexImpact {
 		}
 	}
 
-	// Dedupe chains
+	// Dedupe using generic dedupeByKey
 	merged.contentChanged = dedupeChains(merged.contentChanged);
 	merged.deleted = dedupeChains(merged.deleted);
-	merged.descendantsChanged = dedupeDescendantsChanged(
+	merged.descendantsChanged = dedupeByKey(
 		merged.descendantsChanged,
+		(d: DescendantsStatusChange) => chainToKey(d.sectionChain),
 	);
-	merged.renamed = dedupeRenamedChains(merged.renamed);
+	merged.renamed = dedupeByKey(
+		merged.renamed,
+		(r) => chainToKey(r.oldChain),
+	);
 
 	return merged;
-}
-
-function dedupeRenamedChains(
-	renamed: CodexImpact["renamed"],
-): CodexImpact["renamed"] {
-	const seen = new Set<string>();
-	const result: CodexImpact["renamed"] = [];
-
-	for (const r of renamed) {
-		const key = r.oldChain.join("/");
-		if (!seen.has(key)) {
-			seen.add(key);
-			result.push(r);
-		}
-	}
-
-	return result;
-}
-
-function dedupeDescendantsChanged(
-	items: DescendantsStatusChange[],
-): DescendantsStatusChange[] {
-	const seen = new Set<string>();
-	const result: DescendantsStatusChange[] = [];
-
-	for (const item of items) {
-		const key = item.sectionChain.join("/");
-		if (!seen.has(key)) {
-			seen.add(key);
-			result.push(item);
-		}
-	}
-
-	return result;
 }
