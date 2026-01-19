@@ -12,12 +12,7 @@
  * - Easier testing and maintenance
  */
 
-import type {
-	AnySplitPath,
-	SplitPathToFile,
-	SplitPathToFolder,
-	SplitPathToMdFile,
-} from "../types/split-path";
+import type { AnySplitPath } from "../types/split-path";
 import { type VaultAction, VaultActionKind } from "../types/vault-action";
 
 // ─── Operation Classification ───
@@ -33,10 +28,36 @@ export function isCreateAction(action: VaultAction): boolean {
 	);
 }
 
+// ─── Action Type Aliases for Type Predicates ───
+
+type RenameAction = Extract<
+	VaultAction,
+	| { kind: typeof VaultActionKind.RenameFolder }
+	| { kind: typeof VaultActionKind.RenameMdFile }
+	| { kind: typeof VaultActionKind.RenameFile }
+>;
+
+type TrashAction = Extract<
+	VaultAction,
+	| { kind: typeof VaultActionKind.TrashFolder }
+	| { kind: typeof VaultActionKind.TrashFile }
+	| { kind: typeof VaultActionKind.TrashMdFile }
+>;
+
+type ProcessAction = Extract<
+	VaultAction,
+	{ kind: typeof VaultActionKind.ProcessMdFile }
+>;
+
+type UpsertMdFileAction = Extract<
+	VaultAction,
+	{ kind: typeof VaultActionKind.UpsertMdFile }
+>;
+
 /**
  * Check if action renames a resource.
  */
-export function isRenameAction(action: VaultAction): boolean {
+export function isRenameAction(action: VaultAction): action is RenameAction {
 	return (
 		action.kind === VaultActionKind.RenameFolder ||
 		action.kind === VaultActionKind.RenameMdFile ||
@@ -47,7 +68,7 @@ export function isRenameAction(action: VaultAction): boolean {
 /**
  * Check if action deletes/trashes a resource.
  */
-export function isTrashAction(action: VaultAction): boolean {
+export function isTrashAction(action: VaultAction): action is TrashAction {
 	return (
 		action.kind === VaultActionKind.TrashFolder ||
 		action.kind === VaultActionKind.TrashFile ||
@@ -58,14 +79,16 @@ export function isTrashAction(action: VaultAction): boolean {
 /**
  * Check if action processes content (modifies without creating/renaming).
  */
-export function isProcessAction(action: VaultAction): boolean {
+export function isProcessAction(action: VaultAction): action is ProcessAction {
 	return action.kind === VaultActionKind.ProcessMdFile;
 }
 
 /**
  * Check if action upserts a markdown file.
  */
-export function isUpsertMdFileAction(action: VaultAction): boolean {
+export function isUpsertMdFileAction(
+	action: VaultAction,
+): action is UpsertMdFileAction {
 	return action.kind === VaultActionKind.UpsertMdFile;
 }
 
