@@ -19,6 +19,8 @@ export {
 export {
 	buildPageBasename,
 	buildPageFolderBasename,
+	getNextPageSplitPath,
+	getPrevPageSplitPath,
 	PAGE_PREFIX_PATTERN,
 	parsePageIndex,
 } from "./page-codec";
