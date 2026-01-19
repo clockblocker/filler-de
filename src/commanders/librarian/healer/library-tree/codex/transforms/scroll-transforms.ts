@@ -20,10 +20,9 @@ import {
  * Create transform that strips backlink from a scroll.
  * Removes the go-back link from the file (after frontmatter if present).
  *
- * @param codecs - Codec API
  * @returns Transform function
  */
-export function makeStripScrollBacklinkTransform(codecs: Codecs): Transform {
+export function makeStripScrollBacklinkTransform(): Transform {
 	return (content: string): string => {
 		const { frontmatter, rest: afterFrontmatter } =
 			splitFrontmatter(content);
@@ -36,9 +35,7 @@ export function makeStripScrollBacklinkTransform(codecs: Codecs): Transform {
 		if (firstLine.trim() === "") {
 			const { firstLine: secondLine, rest: restAfterSecond } =
 				splitFirstLine(rest);
-			if (
-				isBacklinkLine(secondLine)
-			) {
+			if (isBacklinkLine(secondLine)) {
 				// Strip backlink
 				return frontmatter
 					? `${frontmatter}${restAfterSecond}`
@@ -107,9 +104,7 @@ export function makeScrollBacklinkTransform(
 			// First line is empty, check second line
 			const { firstLine: secondLine, rest: restAfterSecond } =
 				splitFirstLine(rest);
-			if (
-				isBacklinkLine(secondLine)
-			) {
+			if (isBacklinkLine(secondLine)) {
 				// Replace existing backlink, ensure blank line before content
 				const newContent = `${LINE_BREAK}${backlinkLine}${ensureLeadingBlankLine(restAfterSecond)}`;
 				return frontmatter ? `${frontmatter}${newContent}` : newContent;

@@ -102,7 +102,7 @@ export function codexActionToVaultAction(
 								action.payload.parentChain,
 								codecs,
 							)
-						: makeStripScrollBacklinkTransform(codecs),
+						: makeStripScrollBacklinkTransform(),
 				},
 			};
 	}
