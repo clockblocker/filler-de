@@ -1,13 +1,17 @@
 import type { SeparatedSuffixedBasename } from "../../codecs/internal/suffix/types";
 import type {
-	Block,
 	PageSegment,
 	SegmentationConfig,
 	SegmentationResult,
+	TextBlock,
 } from "../types";
 import { DEFAULT_SEGMENTATION_CONFIG } from "../types";
 import { blocksCharCount, blocksToContent, parseBlocks } from "./parse-blocks";
 import { canSplitBetweenBlocks, isPreferredSplitPoint } from "./rules";
+import {
+	canSplitBlock,
+	splitBlockAtSentenceBoundary,
+} from "./sentence-splitter";
 
 /**
  * Segments markdown content into pages.
@@ -53,36 +57,73 @@ export function segmentContent(
 
 /**
  * Segments blocks into pages using the configured rules.
+ * Uses Intl.Segmenter for sentence-level splitting when blocks exceed target.
  */
 function segmentBlocks(
-	blocks: Block[],
+	blocks: TextBlock[],
 	config: SegmentationConfig,
 ): PageSegment[] {
 	const pages: PageSegment[] = [];
-	let currentPageBlocks: Block[] = [];
+	let currentPageBlocks: TextBlock[] = [];
 	let currentPageSize = 0;
 
-	for (let i = 0; i < blocks.length; i++) {
-		const block = blocks[i];
-		const nextBlock = blocks[i + 1];
+	for (const [i, block] of blocks.entries()) {
+		// Check if adding this block would exceed target and block can be split
+		const wouldExceedTarget =
+			currentPageSize + block.charCount > config.targetPageSizeChars;
 
-		// Add block to current page
-		currentPageBlocks.push(block);
-		currentPageSize += block.charCount;
+		if (wouldExceedTarget && canSplitBlock(block)) {
+			// Calculate remaining space on current page
+			const remainingSpace = config.targetPageSizeChars - currentPageSize;
+			// Split block at sentence boundaries using remaining space as target
+			const subBlocks = splitBlockAtSentenceBoundary(
+				block,
+				Math.max(remainingSpace, config.targetPageSizeChars / 2),
+			);
 
-		// Check if we should create a page break
-		const shouldBreak = shouldCreatePageBreak(
-			currentPageBlocks,
-			currentPageSize,
-			block,
-			nextBlock,
-			config,
-		);
+			// Process each sub-block through normal flow
+			for (const [j, subBlock] of subBlocks.entries()) {
+				const nextSubBlock = subBlocks[j + 1];
+				const nextOriginalBlock = blocks[i + 1];
+				const nextBlock = nextSubBlock ?? nextOriginalBlock;
 
-		if (shouldBreak && currentPageBlocks.length > 0) {
-			pages.push(createPage(currentPageBlocks, pages.length));
-			currentPageBlocks = [];
-			currentPageSize = 0;
+				currentPageBlocks.push(subBlock);
+				currentPageSize += subBlock.charCount;
+
+				const shouldBreak = shouldCreatePageBreak(
+					currentPageBlocks,
+					currentPageSize,
+					subBlock,
+					nextBlock,
+					config,
+				);
+
+				if (shouldBreak && currentPageBlocks.length > 0) {
+					pages.push(createPage(currentPageBlocks, pages.length));
+					currentPageBlocks = [];
+					currentPageSize = 0;
+				}
+			}
+		} else {
+			// Normal flow: add block and check for page break
+			const nextBlock = blocks[i + 1];
+
+			currentPageBlocks.push(block);
+			currentPageSize += block.charCount;
+
+			const shouldBreak = shouldCreatePageBreak(
+				currentPageBlocks,
+				currentPageSize,
+				block,
+				nextBlock,
+				config,
+			);
+
+			if (shouldBreak && currentPageBlocks.length > 0) {
+				pages.push(createPage(currentPageBlocks, pages.length));
+				currentPageBlocks = [];
+				currentPageSize = 0;
+			}
 		}
 	}
 
@@ -98,10 +139,10 @@ function segmentBlocks(
  * Determines if a page break should be created at current position.
  */
 function shouldCreatePageBreak(
-	_currentBlocks: Block[],
+	_currentBlocks: TextBlock[],
 	currentSize: number,
-	currentBlock: Block,
-	nextBlock: Block | undefined,
+	currentBlock: TextBlock,
+	nextBlock: TextBlock | undefined,
 	config: SegmentationConfig,
 ): boolean {
 	// No next block - don't break, will be handled at end
@@ -136,7 +177,7 @@ function shouldCreatePageBreak(
 /**
  * Creates a PageSegment from blocks.
  */
-function createPage(blocks: Block[], pageIndex: number): PageSegment {
+function createPage(blocks: TextBlock[], pageIndex: number): PageSegment {
 	return {
 		charCount: blocksCharCount(blocks),
 		content: blocksToContent(blocks),

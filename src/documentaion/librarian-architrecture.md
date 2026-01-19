@@ -161,7 +161,20 @@ Toggling `hideMetadata` triggers librarian reinit, which reformats all scrolls:
 - `false→true`: YAML frontmatter → internal section (YAML stripped)
 - Status mapping: `status`/`completion` field → internal status (Done/NotStarted)
 
-See `src/managers/pure/note-metadata-manager/frontmatter.ts`.
+### NoteMetadataManager (`src/managers/pure/note-metadata-manager/`)
+
+Pure functions for reading/writing note metadata (no Obsidian dependency).
+
+- **Internal metadata** (`impl.ts`): Hidden `<section>` blocks appended to notes storing JSON; uses Zod for parsing
+- **Frontmatter** (`frontmatter.ts`): YAML frontmatter parsing/serialization; conversion between frontmatter and internal format
+- Returns `Transform` functions for use with `ProcessMdFile` actions
+
+Key exports:
+- `readMetadata(content, schema)` → parse internal metadata with Zod
+- `upsertMetadata(meta)` → Transform to write internal metadata
+- `parseFrontmatter(content)` → parse YAML frontmatter
+- `migrateFrontmatter()` → Transform to convert YAML → internal format
+- `upsertFrontmatterStatus(status)` → Transform to update YAML status
 
 ## Healing Types
 

@@ -1,4 +1,4 @@
-import type { Block, BlockType } from "../types";
+import type { BlockType, TextBlock } from "../types";
 
 /**
  * German dialogue patterns.
@@ -69,11 +69,11 @@ function getLineType(line: string): BlockType {
  * Groups consecutive lines of the same type into blocks.
  * Special handling for dialogue to keep exchanges together.
  */
-export function parseBlocks(content: string): Block[] {
+export function parseBlocks(content: string): TextBlock[] {
 	const lines = content.split("\n");
-	const blocks: Block[] = [];
+	const blocks: TextBlock[] = [];
 
-	let currentBlock: Block | null = null;
+	let currentBlock: TextBlock | null = null;
 
 	for (const line of lines) {
 		const lineType = getLineType(line);
@@ -138,12 +138,13 @@ export function parseBlocks(content: string): Block[] {
  * Marks dialogue blocks with their position in exchanges.
  * Consecutive dialogue blocks form an exchange.
  */
-function markDialoguePositions(blocks: Block[]): Block[] {
-	const result: Block[] = [];
+function markDialoguePositions(blocks: TextBlock[]): TextBlock[] {
+	const result: TextBlock[] = [];
 	let i = 0;
 
 	while (i < blocks.length) {
 		const block = blocks[i];
+		if (!block) break;
 
 		if (block.type !== "dialogue") {
 			result.push(block);
@@ -152,22 +153,25 @@ function markDialoguePositions(blocks: Block[]): Block[] {
 		}
 
 		// Find consecutive dialogue blocks (allowing blanks between)
-		const exchange: Block[] = [block];
+		const exchange: TextBlock[] = [block];
 
 		i++;
 		while (i < blocks.length) {
 			const next = blocks[i];
+			if (!next) break;
+
 			if (next.type === "dialogue") {
 				exchange.push(next);
 				i++;
-			} else if (
-				next.type === "blank" &&
-				i + 1 < blocks.length &&
-				blocks[i + 1].type === "dialogue"
-			) {
-				// Allow single blank between dialogue lines
-				exchange.push(next);
-				i++;
+			} else if (next.type === "blank") {
+				const afterNext = blocks[i + 1];
+				if (afterNext && afterNext.type === "dialogue") {
+					// Allow single blank between dialogue lines
+					exchange.push(next);
+					i++;
+				} else {
+					break;
+				}
 			} else {
 				break;
 			}
@@ -175,11 +179,14 @@ function markDialoguePositions(blocks: Block[]): Block[] {
 
 		// Mark positions
 		if (exchange.length === 1) {
-			result.push({ ...exchange[0], dialoguePosition: "single" });
+			const first = exchange[0];
+			if (first) {
+				result.push({ ...first, dialoguePosition: "single" });
+			}
 		} else {
-			for (let j = 0; j < exchange.length; j++) {
+			for (const [j, exBlock] of exchange.entries()) {
 				const pos =
-					exchange[j].type === "blank"
+					exBlock.type === "blank"
 						? undefined
 						: j === 0
 							? "start"
@@ -187,8 +194,8 @@ function markDialoguePositions(blocks: Block[]): Block[] {
 								? "end"
 								: "middle";
 				result.push({
-					...exchange[j],
-					dialoguePosition: pos as Block["dialoguePosition"],
+					...exBlock,
+					dialoguePosition: pos as TextBlock["dialoguePosition"],
 				});
 			}
 		}
@@ -200,13 +207,13 @@ function markDialoguePositions(blocks: Block[]): Block[] {
 /**
  * Reconstructs content from blocks.
  */
-export function blocksToContent(blocks: Block[]): string {
+export function blocksToContent(blocks: TextBlock[]): string {
 	return blocks.flatMap((b) => b.lines).join("\n");
 }
 
 /**
  * Calculates total character count for blocks.
  */
-export function blocksCharCount(blocks: Block[]): number {
+export function blocksCharCount(blocks: TextBlock[]): number {
 	return blocks.reduce((sum, b) => sum + b.charCount, 0);
 }

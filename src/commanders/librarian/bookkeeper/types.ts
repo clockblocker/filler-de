@@ -1,3 +1,7 @@
+import {
+	TreeNodeStatus,
+	type TreeNodeStatus as TreeNodeStatusType,
+} from "../healer/library-tree/tree-node/types/atoms";
 import type { NodeName } from "../types/schemas/node-name";
 
 /**
@@ -32,12 +36,14 @@ export type BlockType = "paragraph" | "heading" | "dialogue" | "blank";
 /**
  * A structural block of content.
  */
-export type Block = {
+export type TextBlock = {
 	type: BlockType;
 	lines: string[];
 	charCount: number;
 	/** For dialogue blocks: tracks if this is start/middle/end of dialogue exchange */
 	dialoguePosition?: "start" | "middle" | "end" | "single";
+	/** True if this block was created by sentence-level splitting */
+	isSentenceSplit?: boolean;
 };
 
 /**
@@ -67,10 +73,12 @@ export type SegmentationResult = {
  */
 export type PageFrontmatter = {
 	noteType: "Page";
+	status: TreeNodeStatusType;
 };
 
 export const PAGE_FRONTMATTER: PageFrontmatter = {
 	noteType: "Page",
+	status: TreeNodeStatus.NotStarted,
 };
 
 /**

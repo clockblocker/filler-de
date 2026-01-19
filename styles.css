@@ -148,3 +148,81 @@ body.hide-status-bar .mod-root .workspace-split {
 #textfresser_meta_keep_me_invisible {
     opacity: 0;
 }
+
+/* ------ Edge Navigation Buttons ------ */
+
+.edge-nav-btn {
+	position: absolute;
+	top: 50%;
+	z-index: 15;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 40px;
+	height: 60px;
+	font-size: 20px;
+	font-weight: bold;
+	cursor: pointer;
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	opacity: 0.6;
+	transition: opacity 0.2s, background 0.2s;
+	transform: translateY(-50%);
+}
+
+.edge-nav-btn:hover {
+	background: var(--background-secondary-alt);
+	opacity: 1;
+}
+
+.edge-nav-left {
+	left: 8px;
+}
+
+.edge-nav-right {
+	right: 8px;
+}
+
+/* Hide edge buttons on narrow viewports */
+@media (max-width: 600px) {
+	.edge-nav-btn {
+		display: none;
+	}
+}
+
+/* ------ Overflow Menu ------ */
+
+.bottom-overflow-menu {
+	z-index: 100;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 140px;
+	padding: 8px;
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.bottom-overflow-item {
+	width: 100%;
+	padding: 8px 12px;
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+	background: transparent;
+	border: none;
+	border-radius: 4px;
+}
+
+.bottom-overflow-item:hover {
+	background: var(--background-secondary);
+}
+
+/* Overflow button styling */
+.overflow-btn {
+	min-width: 40px;
+	font-size: 18px;
+}

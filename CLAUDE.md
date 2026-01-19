@@ -88,6 +88,9 @@ bun test --test-name-pattern "pattern"
 - `obsidian/`: Obsidian-specific services (vault, clicks, files)
 - `pure/`: Framework-agnostic business logic (metadata parsing)
 
+**NoteMetadataManager** (`src/managers/pure/note-metadata-manager/`)
+- See `src/documentaion/librarian-architrecture.md` → Metadata → NoteMetadataManager
+
 **Librarian System** (`src/commanders/librarian-new/`)
 - The central orchestrator managing a hierarchical library tree structure
 - `Librarian`: Main class that initializes tree from vault, processes user events, and coordinates healing actions

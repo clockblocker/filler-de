@@ -36,7 +36,9 @@ import { AboveSelectionToolbarService } from "./services/obsidian-services/atomi
 import { ApiService } from "./services/obsidian-services/atomic-services/api-service";
 import { BottomToolbarService } from "./services/obsidian-services/atomic-services/bottom-toolbar-service";
 import { SelectionService } from "./services/obsidian-services/atomic-services/selection-service";
+import { ButtonRegistry } from "./services/obsidian-services/button-registry";
 import { ACTION_CONFIGS } from "./services/wip-configs/actions/actions-config";
+import type { UserAction } from "./services/wip-configs/actions/types";
 import addBacklinksToCurrentFile from "./services/wip-configs/actions/old/addBacklinksToCurrentFile";
 import { SettingsTab } from "./settings";
 import {
@@ -67,6 +69,7 @@ export default class TextEaterPlugin extends Plugin {
 
 	selectionToolbarService: AboveSelectionToolbarService;
 	bottomToolbarService: BottomToolbarService;
+	buttonRegistry: ButtonRegistry;
 
 	// Commanders
 	librarian: Librarian | null = null;
@@ -238,9 +241,20 @@ export default class TextEaterPlugin extends Plugin {
 		this.bottomToolbarService = new BottomToolbarService(this.app);
 		this.bottomToolbarService.init();
 
+		// Initialize ButtonRegistry and wire up subscriptions
+		this.buttonRegistry = new ButtonRegistry(this.app);
+		this.buttonRegistry.subscribeBottom((actions) => {
+			this.bottomToolbarService.setActions(actions);
+		});
+		this.buttonRegistry.subscribeSelection((actions) => {
+			this.selectionToolbarService.setActions(actions);
+		});
+
+		// Add click handler for button actions
+		this.setupButtonClickHandlers();
+
 		this.app.workspace.onLayoutReady(async () => {
-			await this.updateBottomActions();
-			await this.updateSelectionActions();
+			await this.buttonRegistry.recompute();
 			this.selectionToolbarService.reattach();
 			this.bottomToolbarService.reattach();
 		});
@@ -250,7 +264,7 @@ export default class TextEaterPlugin extends Plugin {
 			this.app.workspace.on(
 				"active-leaf-change",
 				async (_leaf: WorkspaceLeaf) => {
-					await this.updateBottomActions();
+					await this.buttonRegistry.recompute();
 					this.selectionToolbarService.reattach();
 				},
 			),
@@ -258,12 +272,12 @@ export default class TextEaterPlugin extends Plugin {
 
 		// Add listeners to show the selection toolbar after drag or keyboard selection
 		this.registerDomEvent(document, "dragend", async () => {
-			await this.updateSelectionActions();
+			await this.buttonRegistry.recompute();
 			this.selectionToolbarService.reattach();
 		});
 
 		this.registerDomEvent(document, "mouseup", async () => {
-			await this.updateSelectionActions();
+			await this.buttonRegistry.recompute();
 			this.selectionToolbarService.reattach();
 		});
 
@@ -283,7 +297,7 @@ export default class TextEaterPlugin extends Plugin {
 			];
 
 			if (evt.shiftKey || selectionKeys.includes(evt.key)) {
-				await this.updateSelectionActions();
+				await this.buttonRegistry.recompute();
 				this.selectionToolbarService.reattach();
 			}
 		});
@@ -291,7 +305,7 @@ export default class TextEaterPlugin extends Plugin {
 		// Also re-check after major layout changes (splits, etc.)
 		this.registerEvent(
 			this.app.workspace.on("layout-change", async () => {
-				await this.updateBottomActions();
+				await this.buttonRegistry.recompute();
 				this.selectionToolbarService.reattach();
 			}),
 		);
@@ -301,6 +315,34 @@ export default class TextEaterPlugin extends Plugin {
 				this.selectionToolbarService.onCssChange(),
 			),
 		);
+	}
+
+	/**
+	 * Setup delegated click handlers for toolbar buttons.
+	 */
+	private setupButtonClickHandlers(): void {
+		// Handle clicks on buttons with data-action attribute
+		this.registerDomEvent(document, "click", (evt: MouseEvent) => {
+			const target = evt.target as HTMLElement;
+			const button = target.closest(
+				"button[data-action]",
+			) as HTMLElement | null;
+			if (!button) return;
+
+			const actionId = button.dataset.action as UserAction;
+			if (!actionId) return;
+
+			const config = ACTION_CONFIGS[actionId];
+			if (!config) return;
+
+			// Execute the action with plugin services
+			config.execute({
+				apiService: this.apiService,
+				selectionService: this.selectionService,
+				selectionToolbarService: this.selectionToolbarService,
+				bottomToolbarService: this.bottomToolbarService,
+			});
+		});
 	}
 
 	override onunload() {
@@ -750,38 +792,6 @@ export default class TextEaterPlugin extends Plugin {
 				error instanceof Error ? error.message : String(error),
 			);
 		}
-	}
-
-	private async updateBottomActions(): Promise<void> {
-		// const { fileName, pathParts } =
-		// 	this.openedFileService.getFileNameAndPathParts();
-		// const metaInfo = extractMetaInfo(
-		// 	await this.openedFileService.getContent(),
-		// );
-		// this.bottomToolbarService.setActions(
-		// 	getBottomActionConfigs({
-		// 		fileName,
-		// 		metaInfo,
-		// 		pathParts,
-		// 	}),
-		// );
-	}
-
-	private async updateSelectionActions(): Promise<void> {
-		// const { fileName, pathParts } =
-		// 	this.openedFileService.getFileNameAndPathParts();
-		// const sectionText = await this.selectionService.getSelection();
-		// const metaInfo = extractMetaInfo(
-		// 	await this.openedFileService.getContent(),
-		// );
-		// this.selectionToolbarService.setActions(
-		// 	getAboveSelectionActionConfigs({
-		// 		fileName,
-		// 		metaInfo,
-		// 		pathParts,
-		// 		sectionText,
-		// 	}),
-		// );
 	}
 }
 

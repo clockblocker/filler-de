@@ -21,12 +21,12 @@ export type { SplitToPagesContext } from "./split-to-pages-action";
 export { splitToPagesAction } from "./split-to-pages-action";
 // Types
 export type {
-	Block,
 	BlockType,
 	PageFrontmatter,
 	PageSegment,
 	SegmentationConfig,
 	SegmentationResult,
+	TextBlock as Block,
 } from "./types";
 export {
 	DEFAULT_SEGMENTATION_CONFIG,

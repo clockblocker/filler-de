@@ -10,6 +10,11 @@ import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/t
 import type { VaultAction } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { VaultActionKind } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import {
+	internalToFrontmatter,
+	parseFrontmatter,
+	stripFrontmatter,
+} from "../../../managers/pure/note-metadata-manager";
+import {
 	LINE_BREAK,
 	NOT_STARTED_CHECKBOX,
 	OBSIDIAN_LINK_CLOSE,
@@ -18,6 +23,7 @@ import {
 	SPACE_F,
 } from "../../../types/literals";
 import type { CodecRules } from "../codecs/rules";
+import type { TreeNodeStatus } from "../healer/library-tree/tree-node/types/atoms";
 import type { NodeName } from "../types/schemas/node-name";
 import { buildPageBasename, buildPageFolderBasename } from "./page-codec";
 import type { SegmentationResult } from "./types";
@@ -213,13 +219,11 @@ function formatBacklink(basename: string, displayName: string): string {
  * Formats page content with frontmatter.
  */
 function formatPageContent(content: string): string {
-	const frontmatter = [
-		"---",
-		`noteType: ${PAGE_FRONTMATTER.noteType}`,
-		"---",
-		"",
-	].join("\n");
-	return frontmatter + content;
+	const yaml = internalToFrontmatter({
+		noteType: PAGE_FRONTMATTER.noteType,
+		status: PAGE_FRONTMATTER.status,
+	});
+	return `${yaml}\n${content}`;
 }
 
 /**
@@ -241,22 +245,13 @@ export function buildTooShortMetadataAction(
  * Adds noteType: Page frontmatter to content.
  */
 function addPageFrontmatter(content: string): string {
-	// Check if frontmatter exists
-	if (content.startsWith("---")) {
-		const endIndex = content.indexOf("---", 3);
-		if (endIndex !== -1) {
-			// Insert noteType into existing frontmatter
-			const frontmatter = content.substring(0, endIndex);
-			const rest = content.substring(endIndex);
-			return `${frontmatter}noteType: ${PAGE_FRONTMATTER.noteType}\n${rest}`;
-		}
-	}
-	// Add new frontmatter
-	const frontmatter = [
-		"---",
-		`noteType: ${PAGE_FRONTMATTER.noteType}`,
-		"---",
-		"",
-	].join("\n");
-	return frontmatter + content;
+	const existing = parseFrontmatter(content);
+	const meta = {
+		...(existing ?? {}),
+		noteType: PAGE_FRONTMATTER.noteType,
+		status: (existing?.status as TreeNodeStatus) ?? PAGE_FRONTMATTER.status,
+	};
+	const withoutFm = stripFrontmatter(content);
+	const yaml = internalToFrontmatter(meta);
+	return `${yaml}\n${withoutFm}`;
 }

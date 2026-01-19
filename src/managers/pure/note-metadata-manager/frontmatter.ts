@@ -1,3 +1,7 @@
+import {
+	TreeNodeStatus,
+	type TreeNodeStatus as TreeNodeStatusType,
+} from "../../../commanders/librarian/healer/library-tree/tree-node/types/atoms";
 import type { Transform } from "../../obsidian/vault-action-manager/types/vault-action";
 import { upsertMetadata } from "./impl";
 
@@ -9,7 +13,7 @@ const FRONTMATTER_PATTERN = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
 // ─── Types ───
 
 export type ScrollMetadataWithImport = {
-	status: "Done" | "NotStarted";
+	status: TreeNodeStatusType;
 } & Record<string, unknown>;
 
 // ─── Helpers ───
@@ -143,14 +147,14 @@ export function frontmatterToInternal(
 	const statusField = fm.status ?? fm.completion ?? fm.state;
 	const isDone =
 		statusField === "done" ||
-		statusField === "Done" ||
+		statusField === TreeNodeStatus.Done ||
 		statusField === "completed" ||
 		statusField === "Completed" ||
 		statusField === true;
 
 	return {
 		...fm,
-		status: isDone ? "Done" : "NotStarted",
+		status: isDone ? TreeNodeStatus.Done : TreeNodeStatus.NotStarted,
 	};
 }
 
@@ -188,7 +192,9 @@ export function internalToFrontmatter(meta: ScrollMetadataWithImport): string {
 		if (value === null || value === undefined) continue;
 		// Convert status to boolean checkbox format
 		if (key === "status") {
-			lines.push(`status: ${value === "Done" ? "true" : "false"}`);
+			lines.push(
+				`status: ${value === TreeNodeStatus.Done ? "true" : "false"}`,
+			);
 		} else if (Array.isArray(value)) {
 			lines.push(
 				`${key}: [${value.map((v) => formatYamlValue(v)).join(", ")}]`,
@@ -222,10 +228,8 @@ function formatYamlValue(value: unknown): string {
  * If no frontmatter exists, creates one with just the status.
  * Status is stored as boolean checkbox (true/false).
  */
-export function upsertFrontmatterStatus(
-	status: "Done" | "NotStarted",
-): Transform {
-	const statusValue = status === "Done";
+export function upsertFrontmatterStatus(status: TreeNodeStatusType): Transform {
+	const statusValue = status === TreeNodeStatus.Done;
 
 	return (content: string) => {
 		const fm = parseFrontmatter(content);

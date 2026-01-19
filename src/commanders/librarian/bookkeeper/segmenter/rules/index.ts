@@ -1,4 +1,4 @@
-import type { Block, SegmentationConfig } from "../../types";
+import type { SegmentationConfig, TextBlock } from "../../types";
 
 /**
  * A segmentation rule determines where content can be split.
@@ -10,8 +10,8 @@ export type SegmentationRule = {
 	 * Returns true if splitting is allowed between blockA and blockB.
 	 */
 	canSplitBetween: (
-		blockA: Block,
-		blockB: Block,
+		blockA: TextBlock,
+		blockB: TextBlock,
 		config: SegmentationConfig,
 	) => boolean;
 };
@@ -92,8 +92,8 @@ export const ALL_RULES: SegmentationRule[] = [
  * Checks if splitting between two blocks is allowed by all rules.
  */
 export function canSplitBetweenBlocks(
-	blockA: Block,
-	blockB: Block,
+	blockA: TextBlock,
+	blockB: TextBlock,
 	config: SegmentationConfig,
 ): boolean {
 	for (const rule of ALL_RULES) {
@@ -107,6 +107,6 @@ export function canSplitBetweenBlocks(
 /**
  * Returns true if blockB is a preferred split point (e.g., heading).
  */
-export function isPreferredSplitPoint(blockB: Block): boolean {
+export function isPreferredSplitPoint(blockB: TextBlock): boolean {
 	return blockB.type === "heading";
 }

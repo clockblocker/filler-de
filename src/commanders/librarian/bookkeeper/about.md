@@ -21,11 +21,12 @@ bookkeeper/
   index.ts                 # exports
   types.ts                 # SegmentationConfig, Block, PageSegment
   page-codec.ts            # Page naming: Page000-Suffix
-  build-actions.ts         # VaultAction[] generation
+  build-actions.ts         # VaultAction[] generation (uses note-metadata-manager)
   split-to-pages-action.ts # command handler
   segmenter/
     index.ts               # main algorithm
     parse-blocks.ts        # content → Block[]
+    sentence-splitter.ts   # Intl.Segmenter for sentence boundaries
     rules/index.ts         # dialogue, paragraph rules
 ```
 
@@ -37,7 +38,12 @@ bookkeeper/
 
 2. **Paragraph preservation** - never splits mid-paragraph
 
-3. **Size targets** (configurable):
+3. **Sentence splitting** - uses `Intl.Segmenter('de', {granularity: 'sentence'})`:
+   - Applied when paragraph block would exceed target size
+   - Finds natural sentence boundaries for cleaner page breaks
+   - Only paragraphs split; dialogue/heading/blank blocks unchanged
+
+4. **Size targets** (configurable):
    - Target: ~3000 chars
    - Max: ~5000 chars
    - Min content for split: ~1500 chars
@@ -50,12 +56,15 @@ bookkeeper/
 
 ## Page Metadata
 
-All page files get YAML frontmatter:
+All page files get YAML frontmatter via `note-metadata-manager`:
 ```yaml
 ---
 noteType: Page
+status: false
 ---
 ```
+- `status: false` = NotStarted, `status: true` = Done
+- Uses `internalToFrontmatter()` for consistent YAML generation
 
 ## Command
 
@@ -64,6 +73,7 @@ Registered as `split-to-pages` in main.ts. Invokable via command palette: "Split
 ## Integration
 
 - Uses `VaultActionManager.dispatch()` for atomic file operations
+- Uses `note-metadata-manager` for frontmatter serialization
 - Codex follows existing `__-Suffix` naming convention
 - Pages are regular ScrollNodes in LibraryTree
 - Existing healing works automatically
