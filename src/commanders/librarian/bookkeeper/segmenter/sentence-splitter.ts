@@ -1,4 +1,4 @@
-import type { TextBlock } from "../types";
+import { type TextBlock, TextBlockKind } from "../types";
 
 /**
  * German sentence segmenter using Intl.Segmenter.
@@ -10,7 +10,7 @@ const sentenceSegmenter = new Intl.Segmenter("de", { granularity: "sentence" });
  * Only paragraph blocks can be split; dialogue/heading/blank cannot.
  */
 export function canSplitBlock(block: TextBlock): boolean {
-	return block.type === "paragraph";
+	return block.kind === TextBlockKind.Paragraph;
 }
 
 /**
@@ -92,7 +92,7 @@ function createSubBlock(lines: string[], charCount: number): TextBlock {
 	return {
 		charCount,
 		isSentenceSplit: true,
+		kind: TextBlockKind.Paragraph,
 		lines,
-		type: "paragraph",
 	};
 }

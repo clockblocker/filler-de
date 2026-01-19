@@ -16,10 +16,10 @@ import {
 } from "./internal/frontmatter";
 import {
 	META_SECTION_PATTERN,
+	type Metadata,
 	readJsonSection,
 	stripJsonSection,
 	writeJsonSection,
-	type Metadata,
 } from "./internal/json-section";
 
 // ─── Public API ───
@@ -53,7 +53,9 @@ export function readMetadata<T extends Metadata>(
  */
 export function upsertMetadata(metadata: Metadata): Transform {
 	const { hideMetadata } = getParsedUserSettings();
-	return hideMetadata ? writeJsonSection(metadata) : writeFrontmatter(metadata);
+	return hideMetadata
+		? writeJsonSection(metadata)
+		: writeFrontmatter(metadata);
 }
 
 /**

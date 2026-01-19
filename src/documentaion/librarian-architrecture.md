@@ -163,18 +163,28 @@ Toggling `hideMetadata` triggers librarian reinit, which reformats all scrolls:
 
 ### NoteMetadataManager (`src/managers/pure/note-metadata-manager/`)
 
-Pure functions for reading/writing note metadata (no Obsidian dependency).
+Format-agnostic API for reading/writing note metadata (no Obsidian dependency).
+Consumers don't need to know whether metadata is stored as YAML frontmatter or internal JSON.
 
-- **Internal metadata** (`impl.ts`): Hidden `<section>` blocks appended to notes storing JSON; uses Zod for parsing
-- **Frontmatter** (`frontmatter.ts`): YAML frontmatter parsing/serialization; conversion between frontmatter and internal format
-- Returns `Transform` functions for use with `ProcessMdFile` actions
+**File Structure:**
+```
+note-metadata-manager/
+├── index.ts           # Public API only
+├── internal/
+│   ├── frontmatter.ts # YAML logic (not exported)
+│   ├── json-section.ts # Internal JSON format (not exported)
+│   └── migration.ts   # Migration transforms (internal)
+```
 
-Key exports:
-- `readMetadata(content, schema)` → parse internal metadata with Zod
-- `upsertMetadata(meta)` → Transform to write internal metadata
-- `parseFrontmatter(content)` → parse YAML frontmatter
-- `migrateFrontmatter()` → Transform to convert YAML → internal format
-- `upsertFrontmatterStatus(status)` → Transform to update YAML status
+**Public API:**
+- `readMetadata(content, schema)` → reads from either format (JSON first, fallback to YAML)
+- `upsertMetadata(meta)` → writes to appropriate format based on `hideMetadata` setting
+- `getContentBody()` → strips all metadata, returns clean content
+- `META_SECTION_PATTERN` → regex for clipboard stripping
+
+**Internal modules** (only imported by `build-initial-actions.ts` for migrations):
+- `migrateFrontmatter()` → Transform to convert YAML → internal JSON
+- `migrateToFrontmatter(meta)` → Transform to convert internal JSON → YAML
 
 ## Healing Types
 
@@ -260,7 +270,7 @@ Intercepts `copy` and `cut` events to strip redundant info from copied text:
 1. **Go-back links** at start of content: `[[__-L4-L3-L2-L1|← L4]]`
 2. **Metadata section**: `<section id="textfresser_meta_keep_me_invisible">...</section>`
 
-Uses `META_SECTION_PATTERN` from `src/managers/pure/note-metadata-manager/impl.ts`.
+Uses `META_SECTION_PATTERN` from `src/managers/pure/note-metadata-manager`.
 
 ## Conventions
 

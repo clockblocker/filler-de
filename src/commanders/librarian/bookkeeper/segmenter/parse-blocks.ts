@@ -1,4 +1,9 @@
-import type { BlockType, TextBlock } from "../types";
+import {
+	DialoguePosition,
+	TextBlockKind,
+	type TextBlock,
+	type TextBlockKind as TextBlockKindType,
+} from "../types";
 
 /**
  * German dialogue patterns.
@@ -55,18 +60,18 @@ function isBlankLine(line: string): boolean {
 }
 
 /**
- * Determines block type for a line.
+ * Determines block kind for a line.
  */
-function getLineType(line: string): BlockType {
-	if (isBlankLine(line)) return "blank";
-	if (isHeadingLine(line)) return "heading";
-	if (isDialogueLine(line)) return "dialogue";
-	return "paragraph";
+function getLineKind(line: string): TextBlockKindType {
+	if (isBlankLine(line)) return TextBlockKind.Blank;
+	if (isHeadingLine(line)) return TextBlockKind.Heading;
+	if (isDialogueLine(line)) return TextBlockKind.Dialogue;
+	return TextBlockKind.Paragraph;
 }
 
 /**
  * Parses markdown content into structural blocks.
- * Groups consecutive lines of the same type into blocks.
+ * Groups consecutive lines of the same kind into blocks.
  * Special handling for dialogue to keep exchanges together.
  */
 export function parseBlocks(content: string): TextBlock[] {
@@ -76,10 +81,10 @@ export function parseBlocks(content: string): TextBlock[] {
 	let currentBlock: TextBlock | null = null;
 
 	for (const line of lines) {
-		const lineType = getLineType(line);
+		const lineKind = getLineKind(line);
 
 		// Blank lines always create a new block
-		if (lineType === "blank") {
+		if (lineKind === TextBlockKind.Blank) {
 			if (currentBlock) {
 				blocks.push(currentBlock);
 				currentBlock = null;
@@ -87,28 +92,28 @@ export function parseBlocks(content: string): TextBlock[] {
 			// Add blank block
 			blocks.push({
 				charCount: line.length + 1, // +1 for newline
+				kind: TextBlockKind.Blank,
 				lines: [line],
-				type: "blank",
 			});
 			continue;
 		}
 
 		// Headings always standalone
-		if (lineType === "heading") {
+		if (lineKind === TextBlockKind.Heading) {
 			if (currentBlock) {
 				blocks.push(currentBlock);
 			}
 			blocks.push({
 				charCount: line.length + 1,
+				kind: TextBlockKind.Heading,
 				lines: [line],
-				type: "heading",
 			});
 			currentBlock = null;
 			continue;
 		}
 
-		// Continue current block if same type
-		if (currentBlock && currentBlock.type === lineType) {
+		// Continue current block if same kind
+		if (currentBlock && currentBlock.kind === lineKind) {
 			currentBlock.lines.push(line);
 			currentBlock.charCount += line.length + 1;
 			continue;
@@ -120,8 +125,8 @@ export function parseBlocks(content: string): TextBlock[] {
 		}
 		currentBlock = {
 			charCount: line.length + 1,
+			kind: lineKind,
 			lines: [line],
-			type: lineType,
 		};
 	}
 
@@ -146,7 +151,7 @@ function markDialoguePositions(blocks: TextBlock[]): TextBlock[] {
 		const block = blocks[i];
 		if (!block) break;
 
-		if (block.type !== "dialogue") {
+		if (block.kind !== TextBlockKind.Dialogue) {
 			result.push(block);
 			i++;
 			continue;
@@ -160,12 +165,12 @@ function markDialoguePositions(blocks: TextBlock[]): TextBlock[] {
 			const next = blocks[i];
 			if (!next) break;
 
-			if (next.type === "dialogue") {
+			if (next.kind === TextBlockKind.Dialogue) {
 				exchange.push(next);
 				i++;
-			} else if (next.type === "blank") {
+			} else if (next.kind === TextBlockKind.Blank) {
 				const afterNext = blocks[i + 1];
-				if (afterNext && afterNext.type === "dialogue") {
+				if (afterNext && afterNext.kind === TextBlockKind.Dialogue) {
 					// Allow single blank between dialogue lines
 					exchange.push(next);
 					i++;
@@ -181,21 +186,21 @@ function markDialoguePositions(blocks: TextBlock[]): TextBlock[] {
 		if (exchange.length === 1) {
 			const first = exchange[0];
 			if (first) {
-				result.push({ ...first, dialoguePosition: "single" });
+				result.push({ ...first, dialoguePosition: DialoguePosition.Single });
 			}
 		} else {
 			for (const [j, exBlock] of exchange.entries()) {
 				const pos =
-					exBlock.type === "blank"
+					exBlock.kind === TextBlockKind.Blank
 						? undefined
 						: j === 0
-							? "start"
+							? DialoguePosition.Start
 							: j === exchange.length - 1
-								? "end"
-								: "middle";
+								? DialoguePosition.End
+								: DialoguePosition.Middle;
 				result.push({
 					...exBlock,
-					dialoguePosition: pos as TextBlock["dialoguePosition"],
+					dialoguePosition: pos,
 				});
 			}
 		}

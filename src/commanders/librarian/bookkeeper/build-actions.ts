@@ -229,10 +229,11 @@ function formatBacklink(basename: string, displayName: string): string {
  * Uses upsertMetadata to respect hideMetadata setting.
  */
 function formatPageContent(content: string): string {
+	// Transform is synchronous here, cast is safe
 	return upsertMetadata({
 		noteType: PAGE_FRONTMATTER.noteType,
 		status: PAGE_FRONTMATTER.status,
-	})(content);
+	})(content) as string;
 }
 
 /**
@@ -266,6 +267,7 @@ function addPageFrontmatter(content: string): string {
 	};
 
 	// Strip existing metadata and add new
-	const cleanContent = getContentBody()(content);
-	return upsertMetadata(meta)(cleanContent);
+	// Transforms are synchronous here, casts are safe
+	const cleanContent = getContentBody()(content) as string;
+	return upsertMetadata(meta)(cleanContent) as string;
 }

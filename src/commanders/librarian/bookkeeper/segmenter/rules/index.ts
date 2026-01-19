@@ -1,4 +1,9 @@
-import type { SegmentationConfig, TextBlock } from "../../types";
+import {
+	DialoguePosition,
+	type SegmentationConfig,
+	type TextBlock,
+	TextBlockKind,
+} from "../../types";
 
 /**
  * A segmentation rule determines where content can be split.
@@ -18,20 +23,22 @@ export type SegmentationRule = {
 
 /**
  * Dialogue rule: Never split within a dialogue exchange.
- * Allows split only when dialogue has ended (position is "end" or "single").
+ * Allows split only when dialogue has ended (position is "End" or "Single").
  */
 export const dialogueRule: SegmentationRule = {
 	canSplitBetween: (blockA, _blockB, config) => {
 		if (!config.preserveDialogues) return true;
 
 		// If blockA is dialogue and not at end of exchange, don't split
-		if (blockA.type === "dialogue") {
+		if (blockA.kind === TextBlockKind.Dialogue) {
 			const pos = blockA.dialoguePosition;
-			return pos === "end" || pos === "single";
+			return (
+				pos === DialoguePosition.End || pos === DialoguePosition.Single
+			);
 		}
 		return true;
 	},
-	name: "dialogue",
+	name: "Dialogue",
 	priority: 1, // Highest priority
 };
 
@@ -47,7 +54,7 @@ export const paragraphRule: SegmentationRule = {
 		// for paragraph preservation (we never split within a block)
 		return true;
 	},
-	name: "paragraph",
+	name: "Paragraph",
 	priority: 2,
 };
 
@@ -61,7 +68,7 @@ export const headingRule: SegmentationRule = {
 		// Always allow, but segmenter prefers heading boundaries
 		return true;
 	},
-	name: "heading",
+	name: "Heading",
 	priority: 3,
 };
 
@@ -108,5 +115,5 @@ export function canSplitBetweenBlocks(
  * Returns true if blockB is a preferred split point (e.g., heading).
  */
 export function isPreferredSplitPoint(blockB: TextBlock): boolean {
-	return blockB.type === "heading";
+	return blockB.kind === TextBlockKind.Heading;
 }

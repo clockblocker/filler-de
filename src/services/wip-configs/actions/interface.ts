@@ -1,4 +1,3 @@
-import type { MetaInfo } from "../../../managers/pure/meta-info-manager-deprecated/types";
 import { FileType } from "../../../types/common-interface/enums";
 import {
 	ACTION_CONFIGS,
@@ -11,11 +10,11 @@ import {
 import type { AnyActionConfig } from "./types";
 
 export const getBottomActionConfigs = ({
-	metaInfo,
+	fileType,
 	fileName,
 	pathParts,
 }: {
-	metaInfo: MetaInfo | null;
+	fileType: FileType | null;
 	fileName: string;
 	pathParts: string[];
 }): AnyActionConfig[] => {
@@ -23,11 +22,11 @@ export const getBottomActionConfigs = ({
 		OPTIONAL_BOTTOM_ACTIONS.includes(action),
 	);
 
-	if (!metaInfo) {
+	if (!fileType) {
 		CHANGE_FILE_TYPE_ACTIONS.forEach((action) => actions.push(action));
 	}
 
-	if (metaInfo && metaInfo.fileType === FileType.Page) {
+	if (fileType === FileType.Page) {
 		NAVIGATE_PAGE_ACTIONS.forEach((action) => actions.push(action));
 	}
 
@@ -35,12 +34,12 @@ export const getBottomActionConfigs = ({
 };
 
 export const getAboveSelectionActionConfigs = ({
-	metaInfo,
+	fileType,
 	fileName,
 	pathParts,
 	sectionText,
 }: {
-	metaInfo: MetaInfo | null;
+	fileType: FileType | null;
 	fileName: string;
 	pathParts: string[];
 	sectionText: string;

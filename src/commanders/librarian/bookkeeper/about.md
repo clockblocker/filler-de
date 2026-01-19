@@ -19,15 +19,25 @@ Library/Märchen/Aschenputtel/
 ```
 bookkeeper/
   index.ts                 # exports
-  types.ts                 # SegmentationConfig, Block, PageSegment
+  types.ts                 # zod enums + types
   page-codec.ts            # Page naming: Page000-Suffix
-  build-actions.ts         # VaultAction[] generation (uses note-metadata-manager)
+  build-actions.ts         # VaultAction[] generation
   split-to-pages-action.ts # command handler
+  error/
+    index.ts               # SplitToPagesErrorKind enum + handlers
   segmenter/
     index.ts               # main algorithm
-    parse-blocks.ts        # content → Block[]
+    parse-blocks.ts        # content → TextBlock[]
     sentence-splitter.ts   # Intl.Segmenter for sentence boundaries
     rules/index.ts         # dialogue, paragraph rules
+```
+
+## Zod Enums
+
+```ts
+TextBlockKind: Paragraph | Heading | Dialogue | Blank
+DialoguePosition: Start | Middle | End | Single
+SplitToPagesErrorKind: NoPwd | NoContent | ParseFailed | DispatchFailed
 ```
 
 ## Segmentation Rules

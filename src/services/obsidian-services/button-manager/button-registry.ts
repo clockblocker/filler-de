@@ -1,16 +1,25 @@
 import { type App, MarkdownView } from "obsidian";
-import { getParsedUserSettings } from "../../global-state/global-state";
-import { makeSplitPath } from "../../managers/obsidian/vault-action-manager";
-import type { AnySplitPath } from "../../managers/obsidian/vault-action-manager/types/split-path";
-import { extractMetaInfoDeprecated } from "../../managers/pure/meta-info-manager-deprecated/interface";
-import type { FileType } from "../../types/common-interface/enums";
-import { ACTION_CONFIGS } from "../wip-configs/actions/actions-config";
+import { z } from "zod";
+import { getParsedUserSettings } from "../../../global-state/global-state";
+import { makeSplitPath } from "../../../managers/obsidian/vault-action-manager";
+import type { AnySplitPath } from "../../../managers/obsidian/vault-action-manager/types/split-path";
+import { readMetadata } from "../../../managers/pure/note-metadata-manager";
+import {
+	type FileType,
+	MdFileSubTypeSchema,
+} from "../../../types/common-interface/enums";
+import { ACTION_CONFIGS } from "../../wip-configs/actions/actions-config";
+
+// Schema for reading fileType from metadata
+const FileTypeMetadataSchema = z.object({
+	fileType: MdFileSubTypeSchema.optional(),
+});
 import {
 	ALL_USER_ACTIONS,
 	type AnyActionConfig,
 	type ButtonContext,
 	UserActionPlacement,
-} from "../wip-configs/actions/types";
+} from "../../wip-configs/actions/types";
 
 type ActionSubscriber = (actions: AnyActionConfig[]) => void;
 
@@ -56,7 +65,7 @@ export class ButtonRegistry {
 			if (isInLibrary) {
 				try {
 					const content = await this.app.vault.read(file);
-					const metaInfo = extractMetaInfoDeprecated(content);
+					const metaInfo = readMetadata(content, FileTypeMetadataSchema);
 					fileType = metaInfo?.fileType ?? null;
 				} catch {
 					fileType = null;

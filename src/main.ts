@@ -5,7 +5,6 @@ import {
 	Notice,
 	Plugin,
 	type TFile,
-	type WorkspaceLeaf,
 } from "obsidian";
 import { Librarian } from "./commanders/librarian/librarian";
 
@@ -31,14 +30,10 @@ import { TFolderHelper } from "./managers/obsidian/vault-action-manager/file-ser
 import { logError } from "./managers/obsidian/vault-action-manager/helpers/issue-handlers";
 import { splitPathFromSystemPathInternal } from "./managers/obsidian/vault-action-manager/helpers/pathfinder/system-path-and-split-path-codec";
 import { Reader } from "./managers/obsidian/vault-action-manager/impl/reader";
-import { extractMetaInfoDeprecated } from "./managers/pure/meta-info-manager-deprecated/interface";
-import { AboveSelectionToolbarService } from "./services/obsidian-services/atomic-services/above-selection-toolbar-service";
 import { ApiService } from "./services/obsidian-services/atomic-services/api-service";
-import { BottomToolbarService } from "./services/obsidian-services/atomic-services/bottom-toolbar-service";
 import { SelectionService } from "./services/obsidian-services/atomic-services/selection-service";
-import { ButtonRegistry } from "./services/obsidian-services/button-registry";
+import { ButtonManager } from "./services/obsidian-services/button-manager";
 import { ACTION_CONFIGS } from "./services/wip-configs/actions/actions-config";
-import type { UserAction } from "./services/wip-configs/actions/types";
 import addBacklinksToCurrentFile from "./services/wip-configs/actions/old/addBacklinksToCurrentFile";
 import { SettingsTab } from "./settings";
 import {
@@ -66,10 +61,7 @@ export default class TextEaterPlugin extends Plugin {
 	clickInterceptor: ClickInterceptor;
 	clipboardInterceptor: ClipboardInterceptor;
 	selectionService: SelectionService;
-
-	selectionToolbarService: AboveSelectionToolbarService;
-	bottomToolbarService: BottomToolbarService;
-	buttonRegistry: ButtonRegistry;
+	buttonManager: ButtonManager;
 
 	// Commanders
 	librarian: Librarian | null = null;
@@ -203,10 +195,6 @@ export default class TextEaterPlugin extends Plugin {
 		);
 		this.clipboardInterceptor = new ClipboardInterceptor();
 
-		this.selectionToolbarService = new AboveSelectionToolbarService(
-			this.app,
-		);
-
 		this.selectionService = new SelectionService(this.app);
 
 		// New Librarian (healing modes + codex clicks)
@@ -238,116 +226,16 @@ export default class TextEaterPlugin extends Plugin {
 			}
 		}
 
-		this.bottomToolbarService = new BottomToolbarService(this.app);
-		this.bottomToolbarService.init();
-
-		// Initialize ButtonRegistry and wire up subscriptions
-		this.buttonRegistry = new ButtonRegistry(this.app);
-		this.buttonRegistry.subscribeBottom((actions) => {
-			this.bottomToolbarService.setActions(actions);
-		});
-		this.buttonRegistry.subscribeSelection((actions) => {
-			this.selectionToolbarService.setActions(actions);
-		});
-
-		// Add click handler for button actions
-		this.setupButtonClickHandlers();
-
-		this.app.workspace.onLayoutReady(async () => {
-			await this.buttonRegistry.recompute();
-			this.selectionToolbarService.reattach();
-			this.bottomToolbarService.reattach();
-		});
-
-		// Reattach when user switches panes/notes
-		this.registerEvent(
-			this.app.workspace.on(
-				"active-leaf-change",
-				async (_leaf: WorkspaceLeaf) => {
-					await this.buttonRegistry.recompute();
-					this.selectionToolbarService.reattach();
-				},
-			),
-		);
-
-		// Add listeners to show the selection toolbar after drag or keyboard selection
-		this.registerDomEvent(document, "dragend", async () => {
-			await this.buttonRegistry.recompute();
-			this.selectionToolbarService.reattach();
-		});
-
-		this.registerDomEvent(document, "mouseup", async () => {
-			await this.buttonRegistry.recompute();
-			this.selectionToolbarService.reattach();
-		});
-
-		this.registerDomEvent(document, "keyup", async (evt: KeyboardEvent) => {
-			// Only reattach for keys that could affect selection
-			const selectionKeys = [
-				"ArrowLeft",
-				"ArrowRight",
-				"ArrowUp",
-				"ArrowDown",
-				"Shift",
-				"Home",
-				"End",
-				"PageUp",
-				"PageDown",
-				"a",
-			];
-
-			if (evt.shiftKey || selectionKeys.includes(evt.key)) {
-				await this.buttonRegistry.recompute();
-				this.selectionToolbarService.reattach();
-			}
-		});
-
-		// Also re-check after major layout changes (splits, etc.)
-		this.registerEvent(
-			this.app.workspace.on("layout-change", async () => {
-				await this.buttonRegistry.recompute();
-				this.selectionToolbarService.reattach();
-			}),
-		);
-
-		this.registerEvent(
-			this.app.workspace.on("css-change", () =>
-				this.selectionToolbarService.onCssChange(),
-			),
-		);
-	}
-
-	/**
-	 * Setup delegated click handlers for toolbar buttons.
-	 */
-	private setupButtonClickHandlers(): void {
-		// Handle clicks on buttons with data-action attribute
-		this.registerDomEvent(document, "click", (evt: MouseEvent) => {
-			const target = evt.target as HTMLElement;
-			const button = target.closest(
-				"button[data-action]",
-			) as HTMLElement | null;
-			if (!button) return;
-
-			const actionId = button.dataset.action as UserAction;
-			if (!actionId) return;
-
-			const config = ACTION_CONFIGS[actionId];
-			if (!config) return;
-
-			// Execute the action with plugin services
-			config.execute({
-				apiService: this.apiService,
-				selectionService: this.selectionService,
-				selectionToolbarService: this.selectionToolbarService,
-				bottomToolbarService: this.bottomToolbarService,
-			});
+		// Initialize ButtonManager (consolidates toolbar + registry + event wiring)
+		this.buttonManager = new ButtonManager(this.app, this);
+		this.buttonManager.init({
+			apiService: this.apiService,
+			selectionService: this.selectionService,
 		});
 	}
 
 	override onunload() {
-		if (this.bottomToolbarService) this.bottomToolbarService.detach();
-		if (this.selectionToolbarService) this.selectionToolbarService.detach();
+		if (this.buttonManager) this.buttonManager.destroy();
 		if (this.clickInterceptor) this.clickInterceptor.stopListening();
 		if (this.clipboardInterceptor)
 			this.clipboardInterceptor.stopListening();
@@ -539,8 +427,9 @@ export default class TextEaterPlugin extends Plugin {
 		};
 	}
 
-	getExtractMetaInfo() {
-		return extractMetaInfoDeprecated;
+	getReadMetadata() {
+		// Import the new readMetadata function for testing API
+		return require("./managers/pure/note-metadata-manager").readMetadata;
 	}
 
 	getLibrarianTestingApi() {

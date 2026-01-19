@@ -1,8 +1,31 @@
+import { z } from "zod";
 import {
 	TreeNodeStatus,
 	type TreeNodeStatus as TreeNodeStatusType,
 } from "../healer/library-tree/tree-node/types/atoms";
 import type { NodeName } from "../types/schemas/node-name";
+
+// ─── Zod Enums ───
+
+export const TextBlockKindSchema = z.enum([
+	"Paragraph",
+	"Heading",
+	"Dialogue",
+	"Blank",
+]);
+export type TextBlockKind = z.infer<typeof TextBlockKindSchema>;
+export const TextBlockKind = TextBlockKindSchema.enum;
+
+export const DialoguePositionSchema = z.enum([
+	"Start",
+	"Middle",
+	"End",
+	"Single",
+]);
+export type DialoguePosition = z.infer<typeof DialoguePositionSchema>;
+export const DialoguePosition = DialoguePositionSchema.enum;
+
+// ─── Types ───
 
 /**
  * Configuration for page segmentation.
@@ -29,19 +52,14 @@ export const DEFAULT_SEGMENTATION_CONFIG: SegmentationConfig = {
 };
 
 /**
- * Block types recognized during parsing.
- */
-export type BlockType = "paragraph" | "heading" | "dialogue" | "blank";
-
-/**
  * A structural block of content.
  */
 export type TextBlock = {
-	type: BlockType;
+	kind: TextBlockKind;
 	lines: string[];
 	charCount: number;
 	/** For dialogue blocks: tracks if this is start/middle/end of dialogue exchange */
-	dialoguePosition?: "start" | "middle" | "end" | "single";
+	dialoguePosition?: DialoguePosition;
 	/** True if this block was created by sentence-level splitting */
 	isSentenceSplit?: boolean;
 };

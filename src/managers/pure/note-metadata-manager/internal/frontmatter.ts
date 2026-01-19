@@ -209,10 +209,18 @@ function formatYamlValue(value: unknown): string {
  * Create transform that writes YAML frontmatter.
  * Replaces existing frontmatter or prepends new one.
  */
-export function writeFrontmatter(meta: ScrollMetadataWithImport): Transform {
+export function writeFrontmatter(meta: Record<string, unknown>): Transform {
+	// Cast to ScrollMetadataWithImport for internalToFrontmatter
+	// Status defaults to NotStarted if not provided
+	const normalized: ScrollMetadataWithImport = {
+		...meta,
+		status:
+			(meta.status as ScrollMetadataWithImport["status"]) ??
+			TreeNodeStatus.NotStarted,
+	};
 	return (content: string) => {
 		const withoutFm = stripFrontmatter(content);
-		const yaml = internalToFrontmatter(meta);
+		const yaml = internalToFrontmatter(normalized);
 		return `${yaml}\n${withoutFm}`;
 	};
 }
