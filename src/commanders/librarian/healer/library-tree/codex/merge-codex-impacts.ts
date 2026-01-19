@@ -38,10 +38,7 @@ export function mergeCodexImpacts(impacts: CodexImpact[]): CodexImpact {
 		merged.descendantsChanged,
 		(d: DescendantsStatusChange) => chainToKey(d.sectionChain),
 	);
-	merged.renamed = dedupeByKey(
-		merged.renamed,
-		(r) => chainToKey(r.oldChain),
-	);
+	merged.renamed = dedupeByKey(merged.renamed, (r) => chainToKey(r.oldChain));
 
 	return merged;
 }

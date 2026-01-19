@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { logger } from "../../../utils/logger";
-import type { SplitPathToMdFile, SplitPathWithReader } from "../../../managers/obsidian/vault-action-manager/types/split-path";
+import type {
+	SplitPathToMdFile,
+	SplitPathWithReader,
+} from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type {
 	Transform,
@@ -16,7 +19,12 @@ import {
 	stripFrontmatter,
 	stripInternalMetadata,
 } from "../../../managers/pure/note-metadata-manager";
-import type { AnySplitPathInsideLibrary, CodecRules, Codecs, SplitPathToMdFileInsideLibrary } from "../codecs";
+import type {
+	AnySplitPathInsideLibrary,
+	CodecRules,
+	Codecs,
+	SplitPathToMdFileInsideLibrary,
+} from "../codecs";
 import { isCodexSplitPath } from "../healer/library-tree/codex/helpers";
 import {
 	makeVaultScopedSplitPath,
@@ -135,7 +143,10 @@ export async function buildInitialCreateActions(
 
 				// Cast observedPath to MdFile since we're inside file.kind === MdFile check
 				const mdPath = observedPath as SplitPathToMdFileInsideLibrary;
-				const vaultMdPath = makeVaultScopedSplitPath(mdPath, rules) as SplitPathToMdFile;
+				const vaultMdPath = makeVaultScopedSplitPath(
+					mdPath,
+					rules,
+				) as SplitPathToMdFile;
 				if (rules.hideMetadata) {
 					// Want internal format - migrate YAML to internal if needed
 					if (hasFrontmatter && !hasInternal) {

@@ -41,6 +41,15 @@ export const ACTION_CONFIGS = {
 		label: "Split",
 		placement: UserActionPlacement.ShortcutOnly,
 	},
+	[UserAction.SplitToPages]: {
+		execute: () => {
+			// Command-only action, executed via main.ts command registration
+			// This stub exists to satisfy the type requirement
+		},
+		id: UserAction.SplitToPages,
+		label: "Split to Pages",
+		placement: UserActionPlacement.ShortcutOnly,
+	},
 	[UserAction.TranslateBlock]: {
 		execute: newGenCommand,
 		id: UserAction.TranslateBlock,

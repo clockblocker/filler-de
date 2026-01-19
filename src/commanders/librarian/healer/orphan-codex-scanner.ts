@@ -107,7 +107,10 @@ export class OrphanCodexScanner {
 			}
 
 			// Compute expected codex path for this section
-			const expectedPath = computeCodexSplitPath(sectionChain, this.codecs);
+			const expectedPath = computeCodexSplitPath(
+				sectionChain,
+				this.codecs,
+			);
 
 			// Compare basenames (suffix)
 			if (observedPath.basename !== expectedPath.basename) {
@@ -179,10 +182,11 @@ export class OrphanCodexScanner {
 		const chain: SectionNodeSegmentId[] = [];
 
 		for (const nodeName of pathParts) {
-			const segIdResult = this.codecs.segmentId.serializeSegmentIdUnchecked({
-				coreName: nodeName,
-				targetKind: TreeNodeKind.Section,
-			});
+			const segIdResult =
+				this.codecs.segmentId.serializeSegmentIdUnchecked({
+					coreName: nodeName,
+					targetKind: TreeNodeKind.Section,
+				});
 			if (segIdResult.isErr()) {
 				return null;
 			}

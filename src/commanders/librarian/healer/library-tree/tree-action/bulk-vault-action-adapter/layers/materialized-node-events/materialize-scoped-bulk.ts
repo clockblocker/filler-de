@@ -67,9 +67,7 @@ export function materializeScopedBulk(
  * Creates a Create event for leaf nodes from a split path.
  * Returns null for folders (sections are implicit, not created via Create).
  */
-function makeCreateEvent(
-	sp: AnySplitPath,
-): MaterializedNodeEvent | null {
+function makeCreateEvent(sp: AnySplitPath): MaterializedNodeEvent | null {
 	const nodeKind = getLeafNodeKind(sp);
 	if (!nodeKind) return null; // folders don't create events
 	return {

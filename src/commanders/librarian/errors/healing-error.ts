@@ -12,7 +12,10 @@
  * - Enables transaction-based healing with rollback
  */
 
-import type { SplitPathToFileInsideLibrary, SplitPathToMdFileInsideLibrary } from "../codecs";
+import type {
+	SplitPathToFileInsideLibrary,
+	SplitPathToMdFileInsideLibrary,
+} from "../codecs";
 import type { VaultAction } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import type { HealingAction } from "../healer/library-tree/types/healing-action";
 
@@ -33,8 +36,14 @@ export type ParseError = {
  */
 export type PathMismatchError = {
 	kind: "PathMismatch";
-	expected: SplitPathToMdFileInsideLibrary | SplitPathToFileInsideLibrary | { pathParts: string[]; basename: string };
-	actual: SplitPathToMdFileInsideLibrary | SplitPathToFileInsideLibrary | { pathParts: string[]; basename: string };
+	expected:
+		| SplitPathToMdFileInsideLibrary
+		| SplitPathToFileInsideLibrary
+		| { pathParts: string[]; basename: string };
+	actual:
+		| SplitPathToMdFileInsideLibrary
+		| SplitPathToFileInsideLibrary
+		| { pathParts: string[]; basename: string };
 	reason: string;
 };
 
@@ -254,6 +263,8 @@ export function aggregateErrors(errors: HealingError[]): string {
 		{} as Record<string, number>,
 	);
 
-	const parts = Object.entries(summary).map(([kind, count]) => `${kind}: ${count}`);
+	const parts = Object.entries(summary).map(
+		([kind, count]) => `${kind}: ${count}`,
+	);
 	return `${errors.length} errors (${parts.join(", ")})`;
 }

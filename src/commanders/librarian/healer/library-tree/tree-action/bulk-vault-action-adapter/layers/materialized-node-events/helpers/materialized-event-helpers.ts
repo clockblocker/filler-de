@@ -127,7 +127,9 @@ export function isMaterializedRenameEvent(
 /**
  * Check if event operates on a File node.
  */
-export function isFileNodeEvent(event: MaterializedNodeEvent): event is
+export function isFileNodeEvent(
+	event: MaterializedNodeEvent,
+): event is
 	| CreateFileNodeMaterializedEvent
 	| DeleteFileNodeMaterializedEvent
 	| RenameFileNodeMaterializedEvent {
@@ -137,7 +139,9 @@ export function isFileNodeEvent(event: MaterializedNodeEvent): event is
 /**
  * Check if event operates on a Scroll node.
  */
-export function isScrollNodeEvent(event: MaterializedNodeEvent): event is
+export function isScrollNodeEvent(
+	event: MaterializedNodeEvent,
+): event is
 	| CreateScrollNodeMaterializedEvent
 	| DeleteScrollNodeMaterializedEvent
 	| RenameScrollNodeMaterializedEvent {
@@ -147,7 +151,9 @@ export function isScrollNodeEvent(event: MaterializedNodeEvent): event is
 /**
  * Check if event operates on a Section node.
  */
-export function isSectionNodeEvent(event: MaterializedNodeEvent): event is
+export function isSectionNodeEvent(
+	event: MaterializedNodeEvent,
+): event is
 	| DeleteSectionNodeMaterializedEvent
 	| RenameSectionNodeMaterializedEvent {
 	return event.nodeKind === TreeNodeKind.Section;
@@ -156,7 +162,9 @@ export function isSectionNodeEvent(event: MaterializedNodeEvent): event is
 /**
  * Check if event operates on a leaf node (File or Scroll).
  */
-export function isLeafNodeEvent(event: MaterializedNodeEvent): event is
+export function isLeafNodeEvent(
+	event: MaterializedNodeEvent,
+): event is
 	| CreateFileNodeMaterializedEvent
 	| CreateScrollNodeMaterializedEvent
 	| DeleteFileNodeMaterializedEvent

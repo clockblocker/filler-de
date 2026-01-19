@@ -43,6 +43,8 @@ export function parseSettings(settings: TextEaterSettings): ParsedUserSettings {
 		splitPathToLibraryRoot: splitPathResult,
 		suffixDelimiter: buildCanonicalDelimiter(suffixDelimiterConfig),
 		suffixDelimiterConfig,
-		suffixDelimiterPattern: buildFlexibleDelimiterPattern(suffixDelimiterConfig),
+		suffixDelimiterPattern: buildFlexibleDelimiterPattern(
+			suffixDelimiterConfig,
+		),
 	};
 }

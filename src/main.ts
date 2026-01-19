@@ -444,6 +444,25 @@ export default class TextEaterPlugin extends Plugin {
 			id: "new-gen-command",
 			name: "new-gen-command",
 		});
+
+		this.addCommand({
+			editorCheckCallback: (checking: boolean) => {
+				if (!checking) {
+					import(
+						"./commanders/librarian/bookkeeper/split-to-pages-action"
+					).then(({ splitToPagesAction }) => {
+						splitToPagesAction({
+							openedFileService:
+								this.testingOpenedFileServiceWithResult,
+							vaultActionManager: this.vaultActionManager,
+						});
+					});
+				}
+				return true;
+			},
+			id: "split-to-pages",
+			name: "Split file into pages",
+		});
 	}
 
 	getOpenedFileServiceTestingApi() {

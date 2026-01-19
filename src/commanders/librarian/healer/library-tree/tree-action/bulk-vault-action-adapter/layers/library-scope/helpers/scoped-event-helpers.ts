@@ -53,14 +53,18 @@ export function isOutsideScope(event: LibraryScopedVaultEvent): boolean {
 /**
  * Check if event crosses from inside to outside the library.
  */
-export function isInsideToOutsideScope(event: LibraryScopedVaultEvent): boolean {
+export function isInsideToOutsideScope(
+	event: LibraryScopedVaultEvent,
+): boolean {
 	return event.scope === Scope.InsideToOutside;
 }
 
 /**
  * Check if event crosses from outside to inside the library.
  */
-export function isOutsideToInsideScope(event: LibraryScopedVaultEvent): boolean {
+export function isOutsideToInsideScope(
+	event: LibraryScopedVaultEvent,
+): boolean {
 	return event.scope === Scope.OutsideToInside;
 }
 
@@ -186,7 +190,8 @@ export function isFileCreatedInside(
 	event: LibraryScopedVaultEvent,
 ): event is ScopedFileCreatedVaultEventInside {
 	return (
-		event.kind === VaultEventKind.FileCreated && event.scope === Scope.Inside
+		event.kind === VaultEventKind.FileCreated &&
+		event.scope === Scope.Inside
 	);
 }
 
@@ -194,7 +199,8 @@ export function isFileDeletedInside(
 	event: LibraryScopedVaultEvent,
 ): event is ScopedFileDeletedVaultEventInside {
 	return (
-		event.kind === VaultEventKind.FileDeleted && event.scope === Scope.Inside
+		event.kind === VaultEventKind.FileDeleted &&
+		event.scope === Scope.Inside
 	);
 }
 
@@ -202,7 +208,8 @@ export function isFileRenamedInside(
 	event: LibraryScopedVaultEvent,
 ): event is ScopedFileRenamedVaultEventInside {
 	return (
-		event.kind === VaultEventKind.FileRenamed && event.scope === Scope.Inside
+		event.kind === VaultEventKind.FileRenamed &&
+		event.scope === Scope.Inside
 	);
 }
 
@@ -211,7 +218,8 @@ export function isFolderCreatedInside(
 	event: LibraryScopedVaultEvent,
 ): event is ScopedFolderCreatedVaultEventInside {
 	return (
-		event.kind === VaultEventKind.FolderCreated && event.scope === Scope.Inside
+		event.kind === VaultEventKind.FolderCreated &&
+		event.scope === Scope.Inside
 	);
 }
 
@@ -219,7 +227,8 @@ export function isFolderDeletedInside(
 	event: LibraryScopedVaultEvent,
 ): event is ScopedFolderDeletedVaultEventInside {
 	return (
-		event.kind === VaultEventKind.FolderDeleted && event.scope === Scope.Inside
+		event.kind === VaultEventKind.FolderDeleted &&
+		event.scope === Scope.Inside
 	);
 }
 
@@ -227,7 +236,8 @@ export function isFolderRenamedInside(
 	event: LibraryScopedVaultEvent,
 ): event is ScopedFolderRenamedVaultEventInside {
 	return (
-		event.kind === VaultEventKind.FolderRenamed && event.scope === Scope.Inside
+		event.kind === VaultEventKind.FolderRenamed &&
+		event.scope === Scope.Inside
 	);
 }
 

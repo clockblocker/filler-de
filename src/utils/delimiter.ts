@@ -76,8 +76,7 @@ export function migrateStringDelimiter(
 	}
 
 	// If there's spacing on either side, consider it padded
-	const padded =
-		oldDelimiter.startsWith(" ") || oldDelimiter.endsWith(" ");
+	const padded = oldDelimiter.startsWith(" ") || oldDelimiter.endsWith(" ");
 
 	return {
 		padded,

@@ -115,9 +115,13 @@ export class HealingAuditLog {
 	 */
 	getStats(): AuditStats {
 		const total = this.entries.length;
-		const success = this.entries.filter((e) => e.status === "success").length;
+		const success = this.entries.filter(
+			(e) => e.status === "success",
+		).length;
 		const failed = this.entries.filter((e) => e.status === "failed").length;
-		const partial = this.entries.filter((e) => e.status === "partial").length;
+		const partial = this.entries.filter(
+			(e) => e.status === "partial",
+		).length;
 
 		const totalDuration = this.entries.reduce(
 			(sum, e) => sum + e.durationMs,
@@ -154,7 +158,9 @@ export class HealingAuditLog {
 		];
 
 		for (const entry of entries) {
-			lines.push(`[${entry.id}] ${entry.treeAction.actionType} - ${entry.status}`);
+			lines.push(
+				`[${entry.id}] ${entry.treeAction.actionType} - ${entry.status}`,
+			);
 			lines.push(`  Time: ${new Date(entry.timestamp).toISOString()}`);
 			lines.push(`  Duration: ${entry.durationMs}ms`);
 			lines.push(`  Healing actions: ${entry.healingActions.length}`);

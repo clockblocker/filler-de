@@ -6,6 +6,7 @@ const USER_ACTION_LITERALS = [
 	"AddContext",
 	"SplitContexts",
 	"SplitInBlocks",
+	"SplitToPages",
 	"TranslateSelection",
 	"TranslateBlock",
 	"ExplainGrammar",

@@ -285,7 +285,10 @@ export function buildCodexSplitPath(
 	codecs: Codecs,
 ): Result<SplitPathToMdFileInsideLibrary, PathFinderError> {
 	if (sectionChain.length === 0) {
-		return err({ kind: "EmptyChain", reason: "Section chain cannot be empty" });
+		return err({
+			kind: "EmptyChain",
+			reason: "Section chain cannot be empty",
+		});
 	}
 
 	// Parse chain to get node names (includes Library root)
@@ -353,7 +356,9 @@ export function validateSectionSegmentId(
 	codecs: Codecs,
 ): Result<SectionNodeSegmentId, PathFinderError> {
 	// Cast to TreeNodeSegmentId for parsing - this function validates untrusted strings
-	const parseResult = codecs.segmentId.parseSegmentId(segmentId as TreeNodeSegmentId);
+	const parseResult = codecs.segmentId.parseSegmentId(
+		segmentId as TreeNodeSegmentId,
+	);
 	if (parseResult.isErr()) {
 		return err({
 			kind: "ParseFailed",
