@@ -189,7 +189,8 @@ export class HealingTransaction {
 	 */
 	logSummary(level: "debug" | "info" | "warn" | "error" = "debug"): void {
 		const summary = this.getSummary();
-		const avgMs = Number(summary.avgDurationPerAction).toFixed(1);
+		// Workaround: bun-types may not properly type Number.prototype.toFixed
+		const avgMs = Math.round(summary.avgDurationPerAction * 10) / 10;
 		const msg = `[HealingTx] ${summary.state}: ${summary.entries} actions, ${summary.healingActions} healing, ${summary.errors.length} errors, ${summary.duration}ms (avg ${avgMs}ms/action)`;
 
 		if (summary.errors.length > 0) {

@@ -288,7 +288,7 @@ export function buildCodexSplitPath(
 	// Parse chain to get node names
 	const nodeNamesResult = parseSectionChainToNodeNames(sectionChain, codecs);
 	if (nodeNamesResult.isErr()) {
-		return nodeNamesResult;
+		return err(nodeNamesResult.error);
 	}
 
 	const nodeNames = nodeNamesResult.value;

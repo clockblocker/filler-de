@@ -43,9 +43,13 @@ export function codexActionToVaultAction(
 				},
 			};
 
-		case "WriteScrollStatus":
+		case "WriteScrollStatus": {
 			// ProcessMdFile with transform to update metadata
 			// Use internal section format or YAML frontmatter based on hideMetadata setting
+			const status = action.payload.status;
+			// For frontmatter, "Unknown" status is treated as "NotStarted"
+			const frontmatterStatus =
+				status === "Unknown" ? ("NotStarted" as const) : status;
 			return {
 				kind: VaultActionKind.ProcessMdFile,
 				payload: {
@@ -55,10 +59,11 @@ export function codexActionToVaultAction(
 						rules,
 					) as SplitPathToMdFile,
 					transform: rules.hideMetadata
-						? upsertMetadata({ status: action.payload.status })
-						: upsertFrontmatterStatus(action.payload.status),
+						? upsertMetadata({ status })
+						: upsertFrontmatterStatus(frontmatterStatus),
 				},
 			};
+		}
 
 		case "EnsureCodexFileExists":
 			// UpsertMdFile with null content = ensure exists without overwrite

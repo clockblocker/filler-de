@@ -31,21 +31,21 @@ function parseSimpleYaml(yamlContent: string): Record<string, unknown> {
 
 		// Array item (indented with -)
 		const arrayItemMatch = line.match(/^\s+-\s+(.*)$/);
-		if (arrayItemMatch && currentKey && currentArray) {
-			currentArray.push(parseValue(arrayItemMatch[1].trim()));
+		const arrayItemValue = arrayItemMatch?.[1];
+		if (arrayItemValue !== undefined && currentKey && currentArray) {
+			currentArray.push(parseValue(arrayItemValue.trim()));
 			continue;
 		}
 
 		// Key-value pair
 		const kvMatch = line.match(/^([a-zA-Z_][a-zA-Z0-9_-]*):\s*(.*)$/);
-		if (kvMatch) {
+		const key = kvMatch?.[1];
+		const rawValue = kvMatch?.[2]?.trim();
+		if (key !== undefined && rawValue !== undefined) {
 			// Save previous array if any
 			if (currentKey && currentArray) {
 				result[currentKey] = currentArray;
 			}
-
-			const key = kvMatch[1];
-			const rawValue = kvMatch[2].trim();
 
 			// Check for inline array [a, b, c]
 			if (rawValue.startsWith("[") && rawValue.endsWith("]")) {

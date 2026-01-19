@@ -1,10 +1,16 @@
 import { VaultEventKind } from "../../../../../../../../managers/obsidian/vault-action-manager";
+import type { AnySplitPath } from "../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathKind } from "../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import { TreeNodeKind } from "../../../../tree-node/types/atoms";
 import {
 	type LibraryScopedBulkVaultEvent,
 	type LibraryScopedVaultEvent,
 	Scope,
 } from "../library-scope/types/scoped-event";
+import {
+	getLeafNodeKind,
+	SPLIT_PATH_KIND_TO_TREE_NODE_KIND,
+} from "./helpers/materialized-event-helpers";
 import { MaterializedEventKind, type MaterializedNodeEvent } from "./types";
 
 /**
@@ -57,63 +63,54 @@ export function materializeScopedBulk(
 	return out;
 }
 
+/**
+ * Creates a Create event for leaf nodes from a split path.
+ * Returns null for folders (sections are implicit, not created via Create).
+ */
+function makeCreateEvent(
+	sp: AnySplitPath,
+): MaterializedNodeEvent | null {
+	const nodeKind = getLeafNodeKind(sp);
+	if (!nodeKind) return null; // folders don't create events
+	return {
+		kind: MaterializedEventKind.Create,
+		nodeKind,
+		splitPath: sp,
+	} as MaterializedNodeEvent;
+}
+
 function materializeCreateFromScopedEvent(
 	e: LibraryScopedVaultEvent,
 ): MaterializedNodeEvent | null {
 	if (e.scope !== Scope.Inside && e.scope !== Scope.OutsideToInside)
 		return null;
 
-	// --- Outside→Inside rename counts as Create (import)
+	// Outside→Inside rename counts as Create (import)
 	if (
 		e.scope === Scope.OutsideToInside &&
 		e.kind === VaultEventKind.FileRenamed
 	) {
-		const sp = e.to; // inside side is `to`
-		switch (sp.kind) {
-			case "File":
-				return {
-					kind: MaterializedEventKind.Create,
-					nodeKind: TreeNodeKind.File,
-					splitPath: sp,
-				};
-			case "MdFile":
-				return {
-					kind: MaterializedEventKind.Create,
-					nodeKind: TreeNodeKind.Scroll,
-					splitPath: sp,
-				};
-			default:
-				return null;
-		}
+		return makeCreateEvent(e.to); // inside side is `to`
 	}
 
-	switch (e.kind) {
-		case VaultEventKind.FileCreated: {
-			const sp = e.splitPath;
-			switch (sp.kind) {
-				case "File":
-					return {
-						kind: MaterializedEventKind.Create,
-						nodeKind: TreeNodeKind.File,
-						splitPath: sp,
-					};
-				case "MdFile":
-					return {
-						kind: MaterializedEventKind.Create,
-						nodeKind: TreeNodeKind.Scroll,
-						splitPath: sp,
-					};
-				default:
-					return null;
-			}
-		}
-
-		case VaultEventKind.FolderCreated:
-			return null;
-
-		default:
-			return null;
+	// Only FileCreated creates events (FolderCreated doesn't)
+	if (e.kind === VaultEventKind.FileCreated) {
+		return makeCreateEvent(e.splitPath);
 	}
+
+	return null;
+}
+
+/**
+ * Creates a Delete event for any node type from a split path.
+ */
+function makeDeleteEvent(sp: AnySplitPath): MaterializedNodeEvent {
+	const nodeKind = SPLIT_PATH_KIND_TO_TREE_NODE_KIND[sp.kind];
+	return {
+		kind: MaterializedEventKind.Delete,
+		nodeKind,
+		splitPath: sp,
+	} as MaterializedNodeEvent;
 }
 
 function materializeDeleteFromScopedRoot(
@@ -121,38 +118,14 @@ function materializeDeleteFromScopedRoot(
 ): MaterializedNodeEvent | null {
 	if (ev.scope !== Scope.Inside) return null;
 
-	switch (ev.kind) {
-		case VaultEventKind.FileDeleted: {
-			switch (ev.splitPath.kind) {
-				case "File":
-					return {
-						kind: MaterializedEventKind.Delete,
-						nodeKind: TreeNodeKind.File,
-						splitPath: ev.splitPath,
-					};
-				case "MdFile":
-					return {
-						kind: MaterializedEventKind.Delete,
-						nodeKind: TreeNodeKind.Scroll,
-						splitPath: ev.splitPath,
-					};
-				default: {
-					const _never: never = ev.splitPath;
-					return _never;
-				}
-			}
-		}
-
-		case VaultEventKind.FolderDeleted:
-			return {
-				kind: MaterializedEventKind.Delete,
-				nodeKind: TreeNodeKind.Section,
-				splitPath: ev.splitPath,
-			};
-
-		default:
-			return null;
+	if (
+		ev.kind === VaultEventKind.FileDeleted ||
+		ev.kind === VaultEventKind.FolderDeleted
+	) {
+		return makeDeleteEvent(ev.splitPath);
 	}
+
+	return null;
 }
 
 /**
@@ -164,39 +137,15 @@ function materializeDeleteFromScopedEventInsideToOutside(
 ): MaterializedNodeEvent | null {
 	if (ev.scope !== Scope.InsideToOutside) return null;
 
-	switch (ev.kind) {
-		case VaultEventKind.FileRenamed: {
-			switch (ev.from.kind) {
-				case "File":
-					return {
-						kind: MaterializedEventKind.Delete,
-						nodeKind: TreeNodeKind.File,
-						splitPath: ev.from,
-					};
-				case "MdFile":
-					return {
-						kind: MaterializedEventKind.Delete,
-						nodeKind: TreeNodeKind.Scroll,
-						splitPath: ev.from,
-					};
-				default: {
-					const _never: never = ev.from;
-					return _never;
-				}
-			}
-		}
-
-		case VaultEventKind.FolderRenamed:
-			// inside side is `from`
-			return {
-				kind: MaterializedEventKind.Delete,
-				nodeKind: TreeNodeKind.Section,
-				splitPath: ev.from,
-			};
-
-		default:
-			return null;
+	// For InsideToOutside renames, the inside side is `from`
+	if (
+		ev.kind === VaultEventKind.FileRenamed ||
+		ev.kind === VaultEventKind.FolderRenamed
+	) {
+		return makeDeleteEvent(ev.from);
 	}
+
+	return null;
 }
 
 export function materializeRenameFromScopedRoot(
@@ -204,46 +153,29 @@ export function materializeRenameFromScopedRoot(
 ): MaterializedNodeEvent | null {
 	if (ev.scope !== Scope.Inside) return null;
 
-	switch (ev.kind) {
-		case VaultEventKind.FileRenamed: {
-			switch (ev.from.kind) {
-				case "File": {
-					const to = ev.to;
-					if (to.kind !== "File") return null; // defensive
-					return {
-						from: ev.from,
-						kind: MaterializedEventKind.Rename,
-						nodeKind: TreeNodeKind.File,
-						to: to,
-					};
-				}
+	if (ev.kind === VaultEventKind.FileRenamed) {
+		// Defensive: ensure from and to have matching kinds
+		if (ev.from.kind !== ev.to.kind) return null;
+		// Only leaf nodes (File/MdFile) for file renames
+		if (ev.from.kind === SplitPathKind.Folder) return null;
 
-				case "MdFile": {
-					const to = ev.to;
-					if (to.kind !== "MdFile") return null; // defensive
-					return {
-						from: ev.from,
-						kind: MaterializedEventKind.Rename,
-						nodeKind: TreeNodeKind.Scroll,
-						to: to,
-					};
-				}
-
-				default: {
-					return null;
-				}
-			}
-		}
-
-		case VaultEventKind.FolderRenamed:
-			return {
-				from: ev.from,
-				kind: MaterializedEventKind.Rename,
-				nodeKind: TreeNodeKind.Section,
-				to: ev.to,
-			};
-
-		default:
-			return null;
+		const nodeKind = SPLIT_PATH_KIND_TO_TREE_NODE_KIND[ev.from.kind];
+		return {
+			from: ev.from,
+			kind: MaterializedEventKind.Rename,
+			nodeKind,
+			to: ev.to,
+		} as MaterializedNodeEvent;
 	}
+
+	if (ev.kind === VaultEventKind.FolderRenamed) {
+		return {
+			from: ev.from,
+			kind: MaterializedEventKind.Rename,
+			nodeKind: TreeNodeKind.Section,
+			to: ev.to,
+		} as MaterializedNodeEvent;
+	}
+
+	return null;
 }
