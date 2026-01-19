@@ -1,8 +1,8 @@
 # Codebase Audit: Librarian, Healer & VaultActionManager
 
-**Status:** Phase 5 remaining (Integration & Cleanup)
+**Status:** ✅ COMPLETE - All phases finished
 **Last Updated:** 2026-01-19
-**Progress:** Phases 1-4 complete, all CRITICAL and HIGH issues addressed
+**Progress:** All 5 phases complete, all CRITICAL and HIGH issues addressed
 
 ---
 
@@ -29,15 +29,15 @@
 - [x] 4.1 Healing Audit Log - `healing-audit-log.ts`
 - [x] 4.2 Migration Script for orphaned codexes - `orphan-codex-scanner.ts`
 
-### Phase 5: Integration & Cleanup ⏳ TODO
-- [ ] 5.1 Integrate HealingTransaction into Librarian.processActions()
-- [ ] 5.2 Integrate HealingAuditLog into HealingTransaction
-- [ ] 5.3 Add OrphanCodexScanner to Librarian.init() for startup cleanup
-- [ ] 5.4 Verify action queue errors now tracked (issue #11)
-- [ ] 5.5 Verify codex duplicates now detected (issue #12)
-- [ ] 5.6 Remove TreeAccessor alias (after consumers migrate to TreeReader)
-- [ ] 5.7 Remove types/helpers.ts duplicates (after consumers use ActionHelpers directly)
-- [ ] 5.8 Performance profiling of healing pipeline
+### Phase 5: Integration & Cleanup ✅ DONE
+- [x] 5.1 Integrate HealingTransaction into Librarian.processActions() and init()
+- [x] 5.2 Integrate HealingAuditLog into HealingTransaction commit()
+- [x] 5.3 Add OrphanCodexScanner to Librarian.init() for startup cleanup
+- [x] 5.4 Verify action queue errors now tracked - `tests/specs/healing/error-tracking.test.ts`
+- [x] 5.5 Verify codex duplicates now detected - `tests/specs/healing/duplicate-detection.test.ts`
+- [x] 5.6 Remove TreeAccessor alias - all consumers migrated to TreeReader
+- [x] 5.7 Remove types/helpers.ts duplicates - collapse.ts uses ActionHelpers directly
+- [x] 5.8 Performance profiling - avgDurationPerAction added to TransactionSummary
 
 ---
 
@@ -72,7 +72,10 @@ tests/unit/vault-action-helpers/
 └── action-helpers.test.ts
 
 tests/specs/
-├── healing/healing-scenarios.test.ts
+├── healing/
+│   ├── healing-scenarios.test.ts
+│   ├── error-tracking.test.ts        # Phase 5: HealingTransaction error handling
+│   └── duplicate-detection.test.ts   # Phase 5: OrphanCodexScanner verification
 ├── vault-actions/action-processing.test.ts
 └── tree/tree-mutations.test.ts
 ```
@@ -82,11 +85,20 @@ tests/specs/
 ## NOTES
 
 ### Phase 3-4 Implementation Notes
-- TreeReader/TreeWriter/TreeFacade: Clean interface separation, backward compatible via TreeAccessor alias
+- TreeReader/TreeWriter/TreeFacade: Clean interface separation
 - HealingTransaction: Collects healing actions, tracks errors, logs audit info
 - HealingAuditLog: In-memory rolling log for debugging healing issues
 - OrphanCodexScanner: Scans vault for codexes with wrong suffixes, generates cleanup actions
 - ActionHelpers migration: Updated `types/helpers.ts` to re-export from ActionHelpers
+
+### Phase 5 Implementation Notes
+- HealingTransaction integrated into Librarian.init() and processActions()
+- HealingAuditLog records all healing operations on transaction commit
+- OrphanCodexScanner runs at startup to clean orphaned codexes
+- TreeAccessor alias fully removed - all consumers use TreeReader
+- types/helpers.ts deleted - collapse.ts imports from action-helpers.ts directly
+- isUpsertMdFileAction() added to action-helpers.ts
+- avgDurationPerAction metric added to TransactionSummary for performance monitoring
 
 ### Migration Strategy
 - New code should import from PathComputer, ActionHelpers, tree-interfaces
@@ -94,8 +106,9 @@ tests/specs/
 - No breaking changes to existing API - additive only
 
 ### Test Coverage
-- 591 total tests passing
+- 613 total tests passing
 - New tests capture current behavior before any structural changes
+- Phase 5 added 21 new tests for error tracking and duplicate detection
 
 ---
 
@@ -116,6 +129,6 @@ tests/specs/
 ### MEDIUM PRIORITY - PARTIAL
 9. Repetitive event translators - **Deferred** (separate plan)
 10. SelfEventTracker race conditions - **Deferred** (separate plan)
-11. ~~Action queue silent dropping~~ - HealingTransaction now tracks errors (verify in 5.4)
-12. ~~Codex recreation duplication~~ - OrphanCodexScanner detects duplicates (verify in 5.5)
+11. ~~Action queue silent dropping~~ - HealingTransaction tracks errors ✅ Verified
+12. ~~Codex recreation duplication~~ - OrphanCodexScanner detects duplicates ✅ Verified
 13. Type assertions masking bugs - **Deferred** (gradual cleanup)
