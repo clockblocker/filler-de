@@ -67,9 +67,10 @@ export class ButtonManager {
 		this.plugin.registerEvent(
 			this.app.workspace.on(
 				"active-leaf-change",
-				async (_leaf: WorkspaceLeaf) => {
-					await this.registry.recompute();
+				(_leaf: WorkspaceLeaf) => {
+					this.registry.scheduleRecompute();
 					this.selection.reattach();
+					this.bottom.reattach();
 				},
 			),
 		);
@@ -113,9 +114,10 @@ export class ButtonManager {
 
 		// Re-check after major layout changes (splits, etc.)
 		this.plugin.registerEvent(
-			this.app.workspace.on("layout-change", async () => {
-				await this.registry.recompute();
+			this.app.workspace.on("layout-change", () => {
+				this.registry.scheduleRecompute();
 				this.selection.reattach();
+				this.bottom.reattach();
 			}),
 		);
 

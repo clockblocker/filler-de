@@ -3,6 +3,7 @@
  */
 
 import { z } from "zod";
+import { splitStrInBlocks } from "./segmenter/block-marker";
 import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,
@@ -38,19 +39,24 @@ const PageMetadataSchema = z
 	})
 	.passthrough();
 
+export type PageSplitResult = {
+	actions: VaultAction[];
+	firstPagePath: SplitPathToMdFile;
+};
+
 /**
  * Builds all VaultActions needed for page splitting.
  *
  * @param result - Segmentation result with pages
  * @param sourcePath - Original file's split path
  * @param rules - Codec rules for naming
- * @returns Array of VaultActions to execute
+ * @returns Actions and first page path
  */
 export function buildPageSplitActions(
 	result: SegmentationResult,
 	sourcePath: SplitPathToMdFile,
 	rules: CodecRules,
-): VaultAction[] {
+): PageSplitResult {
 	const actions: VaultAction[] = [];
 
 	// Calculate folder path
@@ -86,16 +92,29 @@ export function buildPageSplitActions(
 		},
 	});
 
-	// 3. Create pages
+	// 3. Create pages (always at least one when this function is called)
+	const firstPagePath = buildPageSplitPath(
+		0,
+		result.sourceCoreName,
+		result.sourceSuffix,
+		newPathParts,
+		rules,
+	);
+
 	for (const page of result.pages) {
-		const pageContent = formatPageContent(page.content);
-		const pagePath = buildPageSplitPath(
-			page.pageIndex,
-			result.sourceCoreName,
-			result.sourceSuffix,
-			newPathParts,
-			rules,
-		);
+		// Apply block markers to page content (each page resets at ^0)
+		const { markedText } = splitStrInBlocks(page.content, 0);
+		const pageContent = formatPageContent(markedText);
+		const pagePath =
+			page.pageIndex === 0
+				? firstPagePath
+				: buildPageSplitPath(
+						page.pageIndex,
+						result.sourceCoreName,
+						result.sourceSuffix,
+						newPathParts,
+						rules,
+					);
 		actions.push({
 			kind: VaultActionKind.UpsertMdFile,
 			payload: {
@@ -111,7 +130,7 @@ export function buildPageSplitActions(
 		payload: { splitPath: sourcePath },
 	});
 
-	return actions;
+	return { actions, firstPagePath };
 }
 
 /**

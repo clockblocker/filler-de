@@ -341,11 +341,21 @@ export default class TextEaterPlugin extends Plugin {
 		});
 
 		this.addCommand({
-			// editorCheckCallback: () => {
-			// 	ACTION_CONFIGS.SplitInBlocks.execute(this);
-			// },
-			id: "format-selection-with-number",
-			name: "Split selection into linked blocks",
+			editorCheckCallback: (checking: boolean, editor: Editor) => {
+				const selection = editor.getSelection();
+				if (selection) {
+					if (!checking) {
+						ACTION_CONFIGS.SplitInBlocks.execute({
+							selectionService: this.selectionService,
+							vaultActionManager: this.vaultActionManager,
+						});
+					}
+					return true;
+				}
+				return false;
+			},
+			id: "split-selection-in-blocks",
+			name: "Split selected text in blocks",
 		});
 
 		this.addCommand({

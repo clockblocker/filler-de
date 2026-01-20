@@ -52,6 +52,8 @@ export type ButtonContext = {
 	isInLibrary: boolean;
 	/** Whether scroll content would split into >1 page */
 	wouldSplitToMultiplePages: boolean;
+	/** Page index (0-999) for Page files, null otherwise */
+	pageIndex: number | null;
 };
 
 export type ActionConfig<A extends UserAction> = {

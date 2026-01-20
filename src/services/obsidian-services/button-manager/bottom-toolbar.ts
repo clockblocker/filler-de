@@ -5,8 +5,12 @@ import {
 } from "../../wip-configs/actions/types";
 import { EdgePaddingNavigator } from "./edge-padding-navigator";
 
-/** Max buttons in bottom bar before overflow */
-const MAX_VISIBLE_BUTTONS = 4;
+/** Estimated width per button (including gap) */
+const BUTTON_WIDTH_ESTIMATE = 90;
+/** Minimum buttons to show */
+const MIN_VISIBLE_BUTTONS = 2;
+/** Fallback max buttons if width unknown */
+const DEFAULT_MAX_BUTTONS = 4;
 
 /** Navigation actions that can appear as edge buttons */
 const EDGE_BUTTON_ACTIONS = new Set<string>([
@@ -21,6 +25,7 @@ export class BottomToolbarService {
 	private overflowMenuEl: HTMLElement | null = null;
 	private edgePaddingNavigator: EdgePaddingNavigator;
 	private useZoneNavigation = false;
+	private resizeObserver: ResizeObserver | null = null;
 
 	constructor(private app: App) {
 		this.edgePaddingNavigator = new EdgePaddingNavigator();
@@ -57,7 +62,18 @@ export class BottomToolbarService {
 		// Re-render bottom bar (includes/excludes edge actions based on zone state)
 		this.renderButtons(this.overlayEl);
 
+		// Setup resize observer to re-render on width changes
+		this.setupResizeObserver(container);
+
 		this.attachedView = view;
+	}
+
+	private setupResizeObserver(container: HTMLElement): void {
+		this.resizeObserver?.disconnect();
+		this.resizeObserver = new ResizeObserver(() => {
+			if (this.overlayEl) this.renderButtons(this.overlayEl);
+		});
+		this.resizeObserver.observe(container);
 	}
 
 	public detach(): void {
@@ -76,6 +92,10 @@ export class BottomToolbarService {
 		// Detach padding zones
 		this.edgePaddingNavigator.detach();
 		this.useZoneNavigation = false;
+
+		// Disconnect resize observer
+		this.resizeObserver?.disconnect();
+		this.resizeObserver = null;
 
 		// Hide overflow menu
 		this.hideOverflowMenu();
@@ -120,6 +140,13 @@ export class BottomToolbarService {
 		const bottomActions = excludeEdgeActions
 			? this.actionConfigs.filter((a) => !EDGE_BUTTON_ACTIONS.has(a.id))
 			: this.actionConfigs;
+
+		// Hide toolbar when no actions available
+		if (bottomActions.length === 0) {
+			host.style.display = "none";
+			return;
+		}
+		host.style.display = "";
 
 		// Determine visible vs overflow actions
 		const visibleActions = bottomActions.slice(0, MAX_VISIBLE_BUTTONS);

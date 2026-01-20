@@ -76,10 +76,14 @@ async function gatherInput(
 	return ok({ content, rules, segmentation, sourcePath });
 }
 
+type DispatchResult =
+	| { tooShort: true }
+	| { tooShort: false; pageCount: number; firstPagePath: SplitPathToMdFile };
+
 async function executeDispatch(
 	vaultActionManager: VaultActionManager,
 	input: SplitInput,
-): Promise<Result<number, SplitToPagesError>> {
+): Promise<Result<DispatchResult, SplitToPagesError>> {
 	const { sourcePath, rules, segmentation } = input;
 
 	if (segmentation.tooShortToSplit) {
@@ -90,16 +94,24 @@ async function executeDispatch(
 				makeSplitToPagesError.dispatchFailed(String(result.error)),
 			);
 		}
-		return ok(0); // 0 = too short, metadata added
+		return ok({ tooShort: true });
 	}
 
-	const actions = buildPageSplitActions(segmentation, sourcePath, rules);
+	const { actions, firstPagePath } = buildPageSplitActions(
+		segmentation,
+		sourcePath,
+		rules,
+	);
 	const result = await vaultActionManager.dispatch(actions);
 	if (result.isErr()) {
 		return err(makeSplitToPagesError.dispatchFailed(String(result.error)));
 	}
 
-	return ok(segmentation.pages.length);
+	return ok({
+		firstPagePath,
+		pageCount: segmentation.pages.length,
+		tooShort: false,
+	});
 }
 
 // ─── Public API ───
@@ -123,10 +135,14 @@ export async function splitToPagesAction(
 		return;
 	}
 
-	const pageCount = dispatchResult.value;
-	if (pageCount === 0) {
-		new Notice("File is too short to split - adding Page metadata");
-	} else {
-		new Notice(`Split into ${pageCount} pages`);
+	const result = dispatchResult.value;
+	if (result.tooShort) {
+		// Should not happen. We only show button for 2+ pages.
+		// If user still invokes the command, we just add metadata.
+		// Invoking the command on an already split page is idempotent.
+		return;
 	}
+
+	new Notice(`Split into ${result.pageCount} pages`);
+	await context.openedFileService.cd(result.firstPagePath);
 }

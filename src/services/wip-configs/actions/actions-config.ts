@@ -2,7 +2,7 @@ import { FileType } from "../../../types/common-interface/enums";
 import { makeTextAction } from "./new/make-text-action";
 import { navigatePageAction } from "./new/navigate-pages-action";
 import newGenCommand from "./new/new-gen-command";
-import newSplitCommand from "./new/new-split-command";
+import { splitSelectionInBlocksAction } from "./new/split-selection-blocks-action";
 import newTranslateSelection from "./new/translateSelection";
 import {
 	type ActionConfig,
@@ -53,12 +53,13 @@ export const ACTION_CONFIGS = {
 		priority: 10,
 	},
 	[UserAction.SplitInBlocks]: {
-		execute: newSplitCommand,
+		execute: splitSelectionInBlocksAction,
 		id: UserAction.SplitInBlocks,
-		isAvailable: () => false, // Shortcut only
-		label: "Split",
-		placement: UserActionPlacement.ShortcutOnly,
-		priority: 10,
+		isAvailable: (ctx: ButtonContext) =>
+			ctx.hasSelection && ctx.isInLibrary,
+		label: "Split in Blocks",
+		placement: UserActionPlacement.AboveSelection,
+		priority: 2,
 	},
 	[UserAction.SplitToPages]: {
 		execute: () => {
@@ -105,7 +106,10 @@ export const ACTION_CONFIGS = {
 	[UserAction.NavigatePage]: {
 		execute: (services) => navigatePageAction(services, "next"),
 		id: UserAction.NavigatePage,
-		isAvailable: (ctx: ButtonContext) => ctx.fileType === FileType.Page,
+		isAvailable: (ctx: ButtonContext) =>
+			ctx.fileType === FileType.Page &&
+			ctx.pageIndex !== null &&
+			ctx.pageIndex < 999,
 		label: "→",
 		placement: UserActionPlacement.Bottom,
 		priority: 2,
@@ -113,7 +117,10 @@ export const ACTION_CONFIGS = {
 	[UserAction.PreviousPage]: {
 		execute: (services) => navigatePageAction(services, "prev"),
 		id: UserAction.PreviousPage,
-		isAvailable: (ctx: ButtonContext) => ctx.fileType === FileType.Page,
+		isAvailable: (ctx: ButtonContext) =>
+			ctx.fileType === FileType.Page &&
+			ctx.pageIndex !== null &&
+			ctx.pageIndex > 0,
 		label: "←",
 		placement: UserActionPlacement.Bottom,
 		priority: 1,

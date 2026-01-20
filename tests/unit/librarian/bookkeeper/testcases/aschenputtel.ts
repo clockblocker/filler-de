@@ -66,3 +66,33 @@ Die rechte Braut, die führt er heim."
 Und als sie das gerufen hatten, kamen sie beide herabgeflogen und setzten sich dem Aschenputtel auf die Schultern, eine rechts, die andere links, und blieben da sitzen.
 
 Als die Hochzeit mit dem Königssohn sollte gehalten werden, kamen die falschen Schwestern, wollten sich einschmeicheln und teil an seinem Glück nehmen. Als die Brautleute nun zur Kirche gingen, war die älteste zur rechten, die jüngste zur linken Seite: da pickten die Tauben einer jeden das eine Auge aus. Hernach, als sie herausgingen, war die älteste zur linken und die jüngste zur rechten: da pickten die Tauben einer jeden das andere Auge aus. Und waren sie also für ihre Bosheit und Falschheit mit Blindheit auf ihr Lebtag bestraft.`;
+
+
+const START_OF_THE_FIRST_PAGE_OF_SPLIT_ASCHENPUTTEL = `
+Einem reichen Manne, dem wurde seine Frau krank, und als sie fühlte, daß ihr Ende herankam, rief sie ihr einziges Töchterlein zu sich ans Bett und sprach: ^0
+
+"Liebes Kind, bleibe fromm und gut, so wird dir der liebe Gott immer beistehen, und ich will vom Himmel auf dich herabblicken, und will um dich sein."^1
+
+Darauf tat sie die Augen zu und verschied. Das Mädchen ging jeden Tag hinaus zu dem Grabe der Mutter und weinte, und blieb fromm und gut. ^2
+
+Als der Winter kam, deckte der Schnee ein weißes Tüchlein auf das Grab, und als die Sonne im Frühjahr es wieder herabgezogen hatte, nahm sich der Mann eine andere Frau. ^3
+
+
+
+Die Frau hatte zwei Töchter mit ins Haus gebracht, die schön und weiß von Angesicht waren, aber garstig und schwarz von Herzen. ^4
+
+Da ging eine schlimme Zeit für das arme Stiefkind an. ^5
+
+"Soll die dumme Gans bei uns in der Stube sitzen!" sprachen sie, "wer Brot essen will, muß verdienen: hinaus mit der Küchenmagd!" ^6
+
+Sie nahmen ihm seine schönen Kleider weg, zogen ihm einen grauen, alten Kittel an und gaben ihm hölzerne Schuhe. ^7
+
+"Seht einmal die stolze Prinzessin, wie sie geputzt ist!" riefen sie, lachten und führten es in die Küche. ^8
+
+Da mußte es von Morgen bis Abend schwere Arbeit tun, früh vor Tag aufstehen, Wasser tragen, Feuer anmachen, kochen und waschen. ^9
+
+Obendrein taten ihm die Schwestern alles ersinnliche Herzeleid an, verspotteten es und schütteten ihm die Erbsen und Linsen in die Asche, so daß es sitzen und sie wieder auslesen mußte. ^10
+
+Abends, wenn es sich müde gearbeitet hatte, kam es in kein Bett, sondern mußte sich neben den Herd in die Asche legen. ^11
+
+Und weil es darum immer staubig und schmutzig aussah, nannten sie es Aschenputtel. ^12`;

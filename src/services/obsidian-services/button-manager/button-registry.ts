@@ -12,9 +12,9 @@ import {
 } from "../../../types/common-interface/enums";
 import { ACTION_CONFIGS } from "../../wip-configs/actions/actions-config";
 
-// Schema for reading fileType from metadata
+// Schema for reading noteType from metadata
 const FileTypeMetadataSchema = z.object({
-	fileType: MdFileSubTypeSchema.optional(),
+	noteType: MdFileSubTypeSchema.optional(),
 });
 
 import {
@@ -31,9 +31,11 @@ type ActionSubscriber = (actions: AnyActionConfig[]) => void;
  * Services subscribe to receive action updates for their placement.
  */
 export class ButtonRegistry {
+	private static readonly DEBOUNCE_MS = 50;
 	private bottomSubscribers: ActionSubscriber[] = [];
 	private selectionSubscribers: ActionSubscriber[] = [];
 	private currentContext: ButtonContext | null = null;
+	private recomputeTimeout: ReturnType<typeof setTimeout> | null = null;
 
 	constructor(private app: App) {}
 
@@ -48,6 +50,7 @@ export class ButtonRegistry {
 		let fileType: FileType | null = null;
 		let isInLibrary = false;
 		let wouldSplitToMultiplePages = false;
+		let pageIndex: number | null = null;
 
 		if (file) {
 			const splitPath = makeSplitPath(file.path);
@@ -73,7 +76,7 @@ export class ButtonRegistry {
 						content,
 						FileTypeMetadataSchema,
 					);
-					fileType = metaInfo?.fileType ?? null;
+					fileType = metaInfo?.noteType ?? null;
 
 					// Check if scroll would split to multiple pages
 					if (fileType === FileType.Scroll) {
@@ -84,6 +87,14 @@ export class ButtonRegistry {
 							splitPath.basename,
 							rules,
 						);
+					}
+
+					// Extract page index for Page files
+					if (fileType === FileType.Page) {
+						const match = splitPath.basename.match(/_Page_(\d{3})/);
+						if (match?.[1]) {
+							pageIndex = Number.parseInt(match[1], 10);
+						}
 					}
 				} catch {
 					fileType = null;
@@ -103,6 +114,7 @@ export class ButtonRegistry {
 			hasSelection,
 			isInLibrary,
 			isMobile,
+			pageIndex,
 			path,
 			wouldSplitToMultiplePages,
 		};
@@ -158,6 +170,17 @@ export class ButtonRegistry {
 		for (const fn of this.selectionSubscribers) {
 			fn(selectionActions);
 		}
+	}
+
+	/**
+	 * Schedule a debounced recompute. Useful for handling rapid events.
+	 */
+	public scheduleRecompute(): void {
+		if (this.recomputeTimeout) clearTimeout(this.recomputeTimeout);
+		this.recomputeTimeout = setTimeout(() => {
+			this.recomputeTimeout = null;
+			void this.recompute();
+		}, ButtonRegistry.DEBOUNCE_MS);
 	}
 
 	/**
