@@ -3,8 +3,11 @@ import type { LanguageConfig } from "../language-config";
 
 /**
  * Heading pattern (markdown).
+ * Matches 1-6 hashes followed by:
+ * - a space (standard markdown), OR
+ * - directly followed by asterisk (e.g., `###### **ANNA:**`)
  */
-const HEADING_PATTERN = /^#{1,6}\s/;
+const HEADING_PATTERN = /^#{1,6}(?:\s|(?=\*))/;
 
 /**
  * Creates an initial (empty) quote state.

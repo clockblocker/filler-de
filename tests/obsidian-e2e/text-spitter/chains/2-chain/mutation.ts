@@ -1,7 +1,7 @@
 /// <reference types="@wdio/globals/types" />
 import { ASCHENPUTTEL_CONTENT } from "../../../../unit/librarian/bookkeeper/testcases/aschenputtel";
-import { clickButton, createFile, openFile, renamePath } from "../../../support/api/vault-ops";
 import { waitForIdle } from "../../../support/api/idle";
+import { clickButton, createFile, openFile, renamePath } from "../../../support/api/vault-ops";
 
 // Suffix delimiter (matches default settings: "-")
 const D = "-";

@@ -37,7 +37,7 @@ import { PAGE_FRONTMATTER, PAGE_INDEX_DIGITS, PAGE_PREFIX } from "./types";
 // Schema for reading existing page metadata
 const PageMetadataSchema = z
 	.object({
-		noteType: z.string().optional(),
+		noteKind: z.string().optional(),
 		status: z.enum(["Done", "NotStarted"]).optional(),
 	})
 	.passthrough();
@@ -202,13 +202,13 @@ function buildCodexBasename(
 function formatPageContent(content: string): string {
 	// Transform is synchronous here, cast is safe
 	return upsertMetadata({
-		noteType: PAGE_FRONTMATTER.noteType,
+		noteKind: PAGE_FRONTMATTER.noteKind,
 		status: PAGE_FRONTMATTER.status,
 	})(content) as string;
 }
 
 /**
- * Builds VaultAction to add noteType metadata to a file that's too short to split.
+ * Builds VaultAction to add noteKind metadata to a file that's too short to split.
  */
 export function buildTooShortMetadataAction(
 	sourcePath: SplitPathToMdFile,
@@ -223,7 +223,7 @@ export function buildTooShortMetadataAction(
 }
 
 /**
- * Adds noteType: Page metadata to content.
+ * Adds noteKind: Page metadata to content.
  * Uses upsertMetadata to respect hideMetadata setting.
  */
 function addPageFrontmatter(content: string): string {
@@ -233,7 +233,7 @@ function addPageFrontmatter(content: string): string {
 	// Build new metadata, preserving existing fields
 	const meta = {
 		...(existing ?? {}),
-		noteType: PAGE_FRONTMATTER.noteType,
+		noteKind: PAGE_FRONTMATTER.noteKind,
 		status: (existing?.status as TreeNodeStatus) ?? PAGE_FRONTMATTER.status,
 	};
 

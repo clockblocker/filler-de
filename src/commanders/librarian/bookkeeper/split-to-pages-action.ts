@@ -120,8 +120,13 @@ async function executeDispatch(
 		return ok({ tooShort: true });
 	}
 
-	const { actions, deletedScrollSegmentId, firstPagePath, pageNodeNames, sectionChain } =
-		buildPageSplitActions(segmentation, sourcePath, rules);
+	const {
+		actions,
+		deletedScrollSegmentId,
+		firstPagePath,
+		pageNodeNames,
+		sectionChain,
+	} = buildPageSplitActions(segmentation, sourcePath, rules);
 	const result = await vaultActionManager.dispatch(actions);
 	if (result.isErr()) {
 		return err(makeSplitToPagesError.dispatchFailed(String(result.error)));

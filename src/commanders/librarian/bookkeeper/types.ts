@@ -8,6 +8,10 @@ import type { NodeName } from "../types/schemas/node-name";
 
 // ─── Zod Enums ───
 
+export const NoteKindSchema = z.enum(["Codex", "Page", "Scroll", "Unknown"]);
+export type NoteKind = z.infer<typeof NoteKindSchema>;
+export const NoteKind = NoteKindSchema.enum;
+
 export const TextBlockKindSchema = z.enum([
 	"Paragraph",
 	"Heading",
@@ -95,12 +99,12 @@ export type SegmentationResult = {
  * Frontmatter added to all page files.
  */
 export type PageFrontmatter = {
-	noteType: "Page";
+	noteKind: "Page";
 	status: TreeNodeStatusType;
 };
 
 export const PAGE_FRONTMATTER: PageFrontmatter = {
-	noteType: "Page",
+	noteKind: "Page",
 	status: TreeNodeStatus.NotStarted,
 };
 

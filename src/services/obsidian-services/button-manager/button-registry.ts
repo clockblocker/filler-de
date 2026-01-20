@@ -16,9 +16,9 @@ import {
 } from "../../../types/common-interface/enums";
 import { ACTION_CONFIGS } from "../../wip-configs/actions/actions-config";
 
-// Schema for reading noteType from metadata
+// Schema for reading noteKind from metadata
 const FileTypeMetadataSchema = z.object({
-	noteType: MdFileSubTypeSchema.optional(),
+	noteKind: MdFileSubTypeSchema.optional(),
 });
 
 import {
@@ -82,13 +82,10 @@ export class ButtonRegistry {
 						content,
 						FileTypeMetadataSchema,
 					);
-					fileType = metaInfo?.noteType ?? null;
+					fileType = metaInfo?.noteKind ?? null;
 
-					// Check if scroll/codex would split to multiple pages
-					if (
-						fileType === FileType.Scroll ||
-						fileType === FileType.Codex
-					) {
+					// Check if scroll would split to multiple pages
+					if (fileType === FileType.Scroll) {
 						const settings = getParsedUserSettings();
 						const rules = makeCodecRulesFromSettings(settings);
 						wouldSplitToMultiplePages = checkWouldSplit(

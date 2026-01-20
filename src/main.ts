@@ -4,7 +4,6 @@ import {
 	Modal,
 	Notice,
 	Plugin,
-	type TFile,
 } from "obsidian";
 import { Librarian } from "./commanders/librarian/librarian";
 
@@ -31,6 +30,7 @@ import { TFolderHelper } from "./managers/obsidian/vault-action-manager/file-ser
 import { logError } from "./managers/obsidian/vault-action-manager/helpers/issue-handlers";
 import { splitPathFromSystemPathInternal } from "./managers/obsidian/vault-action-manager/helpers/pathfinder/system-path-and-split-path-codec";
 import { Reader } from "./managers/obsidian/vault-action-manager/impl/reader";
+import { DelimiterChangeService } from "./services/delimiter-change-service";
 import { ApiService } from "./services/obsidian-services/atomic-services/api-service";
 import { SelectionService } from "./services/obsidian-services/atomic-services/selection-service";
 import { ButtonManager } from "./services/obsidian-services/button-manager";
@@ -64,6 +64,7 @@ export default class TextEaterPlugin extends Plugin {
 	selectAllInterceptor: SelectAllInterceptor;
 	selectionService: SelectionService;
 	buttonManager: ButtonManager;
+	delimiterChangeService: DelimiterChangeService | null = null;
 
 	// Commanders
 	librarian: Librarian | null = null;
@@ -219,6 +220,12 @@ export default class TextEaterPlugin extends Plugin {
 
 		// Start listening to select-all events (excludes go-back links, frontmatter, metadata)
 		this.selectAllInterceptor.startListening();
+
+		// Initialize delimiter change service (does not require librarian)
+		this.delimiterChangeService = new DelimiterChangeService(
+			this.app,
+			this.vaultActionManager,
+		);
 
 		// Initialize librarian: read tree, heal mismatches, regenerate codexes
 		if (this.librarian) {
@@ -560,6 +567,7 @@ export default class TextEaterPlugin extends Plugin {
 
 	/**
 	 * Handle delimiter change by renaming files with suffixes.
+	 * Uses DelimiterChangeService for safe bulk operations with proper event synchronization.
 	 * Returns true if user confirmed, false if cancelled.
 	 */
 	private async handleDelimiterChange(
@@ -572,7 +580,7 @@ export default class TextEaterPlugin extends Plugin {
 
 		if (oldDelim === newDelim) return true;
 
-		// Get all .md files in library
+		// Get all .md files in library for counting
 		const libraryRoot = this.settings.libraryRoot;
 		const rootFolder = this.app.vault.getAbstractFileByPath(libraryRoot);
 		if (!rootFolder) {
@@ -580,26 +588,18 @@ export default class TextEaterPlugin extends Plugin {
 			return false;
 		}
 
-		// Collect all .md files in library recursively
-		const mdFiles: TFile[] = [];
-		const collectMdFiles = (folder: string) => {
-			const children = this.app.vault.getFiles().filter((f) => {
-				const filePath = f.path;
-				return (
-					filePath.startsWith(`${folder}/`) &&
-					filePath.endsWith(".md")
-				);
-			});
-			mdFiles.push(...children);
-		};
-		collectMdFiles(libraryRoot);
+		// Count files that will be affected
+		const mdFiles = this.app.vault.getFiles().filter((f) => {
+			return (
+				f.path.startsWith(`${libraryRoot}/`) &&
+				f.path.endsWith(".md")
+			);
+		});
 
-		// Count files that need renaming (match old pattern - any spacing around symbol)
 		const filesToRename = mdFiles.filter((f) =>
 			oldPattern.test(f.basename),
 		);
 
-		// Also count files that need escape (have new symbol in basename)
 		const newPattern = buildFlexibleDelimiterPattern(newConfig);
 		const filesNeedingEscape = mdFiles.filter((f) =>
 			newPattern.test(f.basename),
@@ -611,7 +611,6 @@ export default class TextEaterPlugin extends Plugin {
 		]).size;
 
 		if (totalAffected === 0) {
-			// No files to rename, just confirm
 			return true;
 		}
 
@@ -623,53 +622,31 @@ export default class TextEaterPlugin extends Plugin {
 
 		if (!confirmed) return false;
 
-		// Find escape char not present in either delimiter symbol
-		const escapeCandidates = ["_", "~", ".", " ", "-", "+", "="];
-		const escapeChar =
-			escapeCandidates.find(
-				(c) =>
-					!oldConfig.symbol.includes(c) &&
-					!newConfig.symbol.includes(c),
-			) ?? "_";
-
-		const symbolChanged = oldConfig.symbol !== newConfig.symbol;
-
-		// Single-pass atomic rename: parse with old pattern, escape new symbol in parts, join with new delimiter
-		for (const file of filesToRename) {
-			const parts = file.basename.split(oldPattern);
-			if (parts.length <= 1) continue;
-
-			// Escape new symbol in each part (node name) if symbol is changing
-			let escapedParts = parts;
-			if (symbolChanged) {
-				const newSymbolRegex = new RegExp(
-					newConfig.symbol.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
-					"g",
-				);
-				escapedParts = parts.map((part) =>
-					part.replace(newSymbolRegex, escapeChar),
-				);
-			}
-
-			const newBasename = escapedParts.join(newDelim);
-			if (newBasename === file.basename) continue;
-
-			const newPath = file.path.replace(file.name, `${newBasename}.md`);
-			try {
-				await this.app.fileManager.renameFile(file, newPath);
-			} catch (error) {
-				logger.error(
-					`[TextEaterPlugin] Failed to rename ${file.path}:`,
-					error instanceof Error ? error.message : String(error),
-				);
-			}
+		// Use DelimiterChangeService for safe bulk operations
+		if (!this.delimiterChangeService || !this.librarian) {
+			logger.error(
+				"[TextEaterPlugin] DelimiterChangeService or Librarian not initialized",
+			);
+			return false;
 		}
 
-		// Let Obsidian process file events before reinit
-		await new Promise((resolve) => setTimeout(resolve, 100));
+		const result = await this.delimiterChangeService.changeDelimiter(
+			oldConfig,
+			newConfig,
+			libraryRoot,
+			this.librarian,
+		);
 
-		new Notice(`Renamed ${totalAffected} file(s)`);
-		return true;
+		new Notice(`Renamed ${result.renamedCount} file(s)`);
+
+		if (result.errors.length > 0) {
+			logger.error(
+				"[TextEaterPlugin] Delimiter change errors:",
+				result.errors.slice(0, 10).join(", "),
+			);
+		}
+
+		return result.success;
 	}
 
 	/**

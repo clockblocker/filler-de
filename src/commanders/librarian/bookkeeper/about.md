@@ -132,7 +132,7 @@ Quoted content (`isQuotedContent: true`) can exceed max to preserve integrity.
 ## Behavior
 
 - **Normal files**: Creates folder + codex + page files, trashes original
-- **Short files**: Adds `noteType: Page` frontmatter only, no folder
+- **Short files**: Adds `noteKind: Page` frontmatter only, no folder
 - **Empty pages**: Filtered out, page indices re-numbered
 - **Name conflicts**: Uses `duplicate-name-resolver.ts`
 
@@ -141,7 +141,7 @@ Quoted content (`isQuotedContent: true`) can exceed max to preserve integrity.
 All page files get YAML frontmatter:
 ```yaml
 ---
-noteType: Page
+noteKind: Page
 status: false
 ---
 ```

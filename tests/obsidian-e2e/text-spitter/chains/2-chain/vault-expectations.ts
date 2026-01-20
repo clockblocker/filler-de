@@ -33,14 +33,6 @@ export const EXPECTED_AFTER_MAKE_TEXT = {
 		// NEW: Section codex for Aschenputtel folder
 		`Library/Märchen/Aschenputtel/__${D}Aschenputtel${D}Märchen.md`,
 	],
-	files: [
-		// Pages created from scroll split
-		`Library/Märchen/Aschenputtel/Aschenputtel_Page_000${D}Aschenputtel${D}Märchen.md`,
-	],
-	goneFiles: [
-		// Original scroll should be deleted after split
-		`Library/Märchen/Aschenputtel${D}Märchen.md`,
-	],
 	contentChecks: [
 		// Parent codex should contain link to section (not scroll)
 		// The section node name is "Aschenputtel"
@@ -53,4 +45,12 @@ export const EXPECTED_AFTER_MAKE_TEXT = {
 		// Use prefix to distinguish: scroll links start with [[Aschenputtel-, codex links start with [[__-
 		[`Library/Märchen/__${D}Märchen.md`, [`[[Aschenputtel${D}Märchen|`]],
 	] as [string, string[]][],
+	files: [
+		// Pages created from scroll split
+		`Library/Märchen/Aschenputtel/Aschenputtel_Page_000${D}Aschenputtel${D}Märchen.md`,
+	],
+	goneFiles: [
+		// Original scroll should be deleted after split
+		`Library/Märchen/Aschenputtel${D}Märchen.md`,
+	],
 };

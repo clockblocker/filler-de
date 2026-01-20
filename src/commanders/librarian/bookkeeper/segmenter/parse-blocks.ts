@@ -24,8 +24,11 @@ const DIALOGUE_ATTRIBUTION_PATTERN =
 
 /**
  * Heading pattern (markdown).
+ * Matches 1-6 hashes followed by:
+ * - a space (standard markdown), OR
+ * - directly followed by asterisk (e.g., `###### **ANNA:**`)
  */
-const HEADING_PATTERN = /^#{1,6}\s/;
+const HEADING_PATTERN = /^#{1,6}(?:\s|(?=\*))/;
 
 /**
  * Checks if a line appears to be dialogue.

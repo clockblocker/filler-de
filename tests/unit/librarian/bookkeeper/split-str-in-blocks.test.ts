@@ -4,6 +4,7 @@ import {
 	ASCHENPUTTEL_FIRST_TWO_PARAGRAPHS,
 	EXPECTED_BLOCK_OUTPUT_WITH_PARAGRAPHS,
 } from "./testcases/aschenputtel";
+import { EXTRA_E2_CONTENT } from "./testcases/extra-e2";
 
 describe("splitStrInBlocks", () => {
 	test("empty text returns empty result", () => {
@@ -144,5 +145,45 @@ Dritter Satz nach Absatz. Vierter Satz hier auch.`;
 
 		// Should have 4 newlines (3 blank lines) between paragraphs
 		expect(result.markedText).toContain("^1\n\n\n\n");
+	});
+
+	test("headings without space after hashes are detected", () => {
+		const text = `###### **ANNA:**
+Groß, schlank .. ein cooler Amerikaner.`;
+
+		const result = splitStrInBlocks(text);
+
+		// Heading should NOT be merged into content
+		expect(result.markedText).not.toContain("###### **ANNA:**Groß");
+		// Heading should be on its own line
+		expect(result.markedText).toContain("###### **ANNA:**\n");
+		// Content should have block marker
+		expect(result.markedText).toContain("Groß, schlank .. ein cooler Amerikaner. ^0");
+	});
+
+	test("EXTRA_E2_CONTENT: headings preserved as metadata", () => {
+		const result = splitStrInBlocks(EXTRA_E2_CONTENT);
+
+		// Should have many blocks (one per dialogue)
+		expect(result.blockCount).toBeGreaterThan(10);
+
+		// Headings should NOT be merged with content (no space/text directly after **)
+		expect(result.markedText).not.toMatch(/###### \*\*ANNA:\*\*[^\n]/);
+		expect(result.markedText).not.toMatch(/###### \*\*SAM:\*\*[^\n]/);
+
+		// Each heading should be followed by newline (heading ends at **)
+		expect(result.markedText).toMatch(/###### \*\*ANNA:\*\*\n/);
+		expect(result.markedText).toMatch(/###### \*\*SAM:\*\*\n/);
+		expect(result.markedText).toMatch(/###### \*\*SASCHA:\*\*\n/);
+		expect(result.markedText).toMatch(/###### \*\*NIC:\*\*\n/);
+
+		// Block markers should be on content, not headings
+		const lines = result.markedText.split("\n");
+		for (const line of lines) {
+			// Heading lines should NOT have block markers
+			if (line.startsWith("######")) {
+				expect(line).not.toMatch(/\^\d+$/);
+			}
+		}
 	});
 });

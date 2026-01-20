@@ -1,4 +1,4 @@
-import type { AnnotatedSentence } from "../../types";
+import type { AnnotatedSentence, ScannedLine } from "../../types";
 import {
 	DEFAULT_LANGUAGE_CONFIG,
 	type LanguageConfig,
@@ -6,6 +6,20 @@ import {
 import { annotateSentences } from "../stream/context-annotator";
 import { scanLines } from "../stream/line-scanner";
 import { segmentSentences } from "../stream/sentence-segmenter";
+
+/**
+ * A heading extracted from content with its position info.
+ */
+type ExtractedHeading = {
+	/** The heading text (e.g., "###### **ANNA:**") */
+	text: string;
+	/** Character offset in original content where heading starts */
+	startOffset: number;
+	/** Character offset where heading ends (including newline) */
+	endOffset: number;
+	/** Line number (0-indexed) */
+	lineNumber: number;
+};
 
 /**
  * Configuration for block marking.
@@ -44,6 +58,144 @@ type Block = {
 	/** True if this block is a short speech intro waiting for next sentence */
 	pendingSpeechIntro: boolean;
 };
+
+/**
+ * Extract headings from scanned lines.
+ * Returns headings with their original character offsets.
+ */
+function extractHeadings(lines: ScannedLine[]): ExtractedHeading[] {
+	const headings: ExtractedHeading[] = [];
+	let currentOffset = 0;
+
+	for (const line of lines) {
+		const lineLength = line.text.length;
+		const endOffset = currentOffset + lineLength;
+
+		if (line.isHeading) {
+			headings.push({
+				endOffset: endOffset + 1, // +1 for newline
+				lineNumber: line.lineNumber,
+				startOffset: currentOffset,
+				text: line.text,
+			});
+		}
+
+		// Move to next line (+1 for newline, except last line)
+		currentOffset = endOffset + 1;
+	}
+
+	return headings;
+}
+
+/**
+ * Remove heading lines from text, replacing them with blank lines to preserve structure.
+ * This ensures paragraph boundary detection still works correctly.
+ */
+function filterHeadingsFromText(
+	originalText: string,
+	headings: ExtractedHeading[],
+): string {
+	if (headings.length === 0) return originalText;
+
+	let result = originalText;
+	// Process in reverse order to maintain offset validity
+	const sortedHeadings = [...headings].sort(
+		(a, b) => b.startOffset - a.startOffset,
+	);
+
+	for (const heading of sortedHeadings) {
+		// Replace heading with empty line (keep the newline)
+		const before = result.slice(0, heading.startOffset);
+		const after = result.slice(heading.endOffset);
+		result = before + after;
+	}
+
+	return result;
+}
+
+/**
+ * Find which heading precedes a given sentence based on character offset.
+ * Returns the heading that immediately precedes (and is closest to) the sentence.
+ */
+function findPrecedingHeading(
+	sentenceOriginalOffset: number,
+	headings: ExtractedHeading[],
+	usedHeadings: Set<number>,
+): ExtractedHeading | null {
+	// Find headings that come before this sentence
+	let bestHeading: ExtractedHeading | null = null;
+
+	for (let i = 0; i < headings.length; i++) {
+		const heading = headings[i];
+		if (!heading) continue;
+		// Skip already-used headings
+		if (usedHeadings.has(i)) continue;
+
+		// Heading must end before or at sentence start
+		if (heading.endOffset <= sentenceOriginalOffset) {
+			// Take the closest (latest) heading before this sentence
+			if (!bestHeading || heading.endOffset > bestHeading.endOffset) {
+				bestHeading = heading;
+			}
+		}
+	}
+
+	// Mark as used
+	if (bestHeading) {
+		const idx = headings.indexOf(bestHeading);
+		if (idx >= 0) usedHeadings.add(idx);
+	}
+
+	return bestHeading;
+}
+
+/**
+ * Create an offset mapping from filtered text positions to original text positions.
+ * This accounts for the removed heading content.
+ */
+function createOffsetMap(
+	headings: ExtractedHeading[],
+): (filtered: number) => number {
+	if (headings.length === 0) {
+		return (offset) => offset;
+	}
+
+	// Sort by original start offset
+	const sorted = [...headings].sort((a, b) => a.startOffset - b.startOffset);
+
+	// Calculate cumulative removed length at each heading
+	type Removal = {
+		originalStart: number;
+		removedLength: number;
+		cumulative: number;
+	};
+	const removals: Removal[] = [];
+	let cumulative = 0;
+
+	for (const h of sorted) {
+		const len = h.endOffset - h.startOffset;
+		removals.push({
+			cumulative,
+			originalStart: h.startOffset,
+			removedLength: len,
+		});
+		cumulative += len;
+	}
+
+	return (filteredOffset: number) => {
+		// Find how much has been removed before this filtered offset
+		let totalRemoved = 0;
+		for (const r of removals) {
+			// If the filtered offset (+ what we've already removed) is past this removal point
+			if (filteredOffset + totalRemoved >= r.originalStart) {
+				totalRemoved = r.cumulative + r.removedLength;
+			} else {
+				break;
+			}
+		}
+		return filteredOffset + totalRemoved;
+	};
+}
 
 /**
  * Count words in text.
@@ -278,13 +430,27 @@ function groupSentencesIntoBlocks(
 }
 
 /**
+ * Context for formatting blocks with headings.
+ */
+type FormatContext = {
+	headings: ExtractedHeading[];
+	offsetMap: (filtered: number) => number;
+};
+
+/**
  * Format blocks into marked text with block IDs.
  * Preserves paragraph spacing by adding extra blank lines between paragraph-crossing blocks.
+ * Reinserts headings before their corresponding content blocks.
  */
-function formatBlocksWithMarkers(blocks: Block[], startIndex: number): string {
+function formatBlocksWithMarkers(
+	blocks: Block[],
+	startIndex: number,
+	context?: FormatContext,
+): string {
 	if (blocks.length === 0) return "";
 
 	const parts: string[] = [];
+	const usedHeadings = new Set<number>();
 
 	for (let i = 0; i < blocks.length; i++) {
 		const block = blocks[i];
@@ -294,8 +460,25 @@ function formatBlocksWithMarkers(blocks: Block[], startIndex: number): string {
 		const blockId = startIndex + i;
 		const markedBlock = `${blockText} ^${blockId}`;
 
+		// Find preceding heading for this block
+		let precedingHeading: ExtractedHeading | null = null;
+		if (context && block.sentences[0]) {
+			const firstSentenceOffset = block.sentences[0].sourceOffset;
+			// Map back to original offset to find the correct heading
+			const originalOffset = context.offsetMap(firstSentenceOffset);
+			precedingHeading = findPrecedingHeading(
+				originalOffset,
+				context.headings,
+				usedHeadings,
+			);
+		}
+
 		if (i === 0) {
-			parts.push(markedBlock);
+			if (precedingHeading) {
+				parts.push(`${precedingHeading.text}\n${markedBlock}`);
+			} else {
+				parts.push(markedBlock);
+			}
 			continue;
 		}
 
@@ -303,9 +486,13 @@ function formatBlocksWithMarkers(blocks: Block[], startIndex: number): string {
 		const firstSentence = block.sentences[0];
 		const startsNewParagraph = firstSentence?.startsNewParagraph ?? false;
 
-		if (startsNewParagraph) {
-			// Extra blank lines for paragraph boundary
-			parts.push(`\n\n\n${markedBlock}`);
+		const separator = startsNewParagraph ? "\n\n\n\n" : "\n\n";
+
+		if (precedingHeading) {
+			parts.push(`${separator}${precedingHeading.text}\n${markedBlock}`);
+		} else if (startsNewParagraph) {
+			// Extra blank lines for paragraph boundary (3 blank lines = 4 newlines)
+			parts.push(`\n\n\n\n${markedBlock}`);
 		} else {
 			// Standard single blank line between blocks
 			parts.push(`\n\n${markedBlock}`);
@@ -344,13 +531,30 @@ export function splitStrInBlocks(
 		return { blockCount: 0, markedText: "" };
 	}
 
-	// Run pipeline stages 1-3
+	// Stage 1: Scan lines to detect headings and other line metadata
 	const lines = scanLines(text, fullConfig.languageConfig);
-	const sentenceTokens = segmentSentences(text, fullConfig.languageConfig);
+
+	// Extract headings for later reinsertion
+	const headings = extractHeadings(lines);
+
+	// Filter out heading content before sentence segmentation
+	const filteredText = filterHeadingsFromText(text, headings);
+
+	// Create offset mapping for later heading placement
+	const offsetMap = createOffsetMap(headings);
+
+	// Scan the filtered text for proper line metadata
+	const filteredLines = scanLines(filteredText, fullConfig.languageConfig);
+
+	// Run pipeline stages 2-3 on filtered text
+	const sentenceTokens = segmentSentences(
+		filteredText,
+		fullConfig.languageConfig,
+	);
 	const annotated = annotateSentences(
 		sentenceTokens,
-		lines,
-		text,
+		filteredLines,
+		filteredText,
 		fullConfig.languageConfig,
 	);
 
@@ -358,13 +562,21 @@ export function splitStrInBlocks(
 	const filtered = annotated.filter((s) => s.text.trim().length > 0);
 
 	// Re-detect paragraph boundaries after filtering
-	const withParagraphs = detectParagraphsAfterFilter(filtered, text);
+	const withParagraphs = detectParagraphsAfterFilter(filtered, filteredText);
 
 	// Group sentences into blocks
 	const blocks = groupSentencesIntoBlocks(withParagraphs, fullConfig);
 
-	// Format with markers
-	const markedText = formatBlocksWithMarkers(blocks, startIndex);
+	// Format with markers and reinsert headings
+	const formatContext: FormatContext =
+		headings.length > 0
+			? { headings, offsetMap }
+			: { headings: [], offsetMap };
+	const markedText = formatBlocksWithMarkers(
+		blocks,
+		startIndex,
+		formatContext,
+	);
 
 	return {
 		blockCount: blocks.length,
