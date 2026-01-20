@@ -43,18 +43,37 @@ export function calculateSmartRange(content: string): SmartRange {
 		from = frontmatter.length;
 	}
 
-	// Step 2: Skip go-back link (first line after frontmatter)
+	// Step 2: Skip leading whitespace/empty lines, then check for go-back link
 	const contentAfterFrontmatter = content.slice(from);
 	if (contentAfterFrontmatter.length > 0) {
-		const { firstLine, rest: afterFirstLine } = splitFirstLine(
-			contentAfterFrontmatter,
-		);
+		// Skip leading empty lines to find the first non-empty line
+		let searchPos = 0;
+		let currentLine = "";
 
-		if (isGoBackLine(firstLine)) {
-			// Skip the first line and the newline after it
-			from += firstLine.length;
-			if (afterFirstLine.length > 0 || content[from] === "\n") {
-				from += 1; // Skip the newline
+		while (searchPos < contentAfterFrontmatter.length) {
+			const remaining = contentAfterFrontmatter.slice(searchPos);
+			const { firstLine, rest } = splitFirstLine(remaining);
+
+			if (firstLine.trim().length === 0) {
+				// Empty line - skip it and continue
+				searchPos += firstLine.length;
+				if (rest.length > 0 || remaining[firstLine.length] === "\n") {
+					searchPos += 1; // Skip newline
+				}
+			} else {
+				// Found non-empty line
+				currentLine = firstLine;
+				break;
+			}
+		}
+
+		// Check if the first non-empty line is a go-back link
+		if (isGoBackLine(currentLine)) {
+			// Skip everything up to and including this line
+			from += searchPos + currentLine.length;
+			// Skip the trailing newline if present
+			if (from < content.length && content[from] === "\n") {
+				from += 1;
 			}
 		}
 	}

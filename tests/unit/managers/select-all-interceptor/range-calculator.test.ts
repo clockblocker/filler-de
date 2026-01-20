@@ -57,6 +57,21 @@ describe("calculateSmartRange", () => {
 			expect(result).toEqual({ from: expectedFrom, to: content.length });
 		});
 
+		it("excludes go-back link after leading empty line", () => {
+			const content =
+				"\n[[__;;Struwwelpeter;;Aschenputtel-Märchen|← Struwwelpeter]] \n\nActual content";
+			const result = calculateSmartRange(content);
+			const expectedFrom = content.indexOf("Actual");
+			expect(result).toEqual({ from: expectedFrom, to: content.length });
+		});
+
+		it("excludes go-back link after multiple empty lines", () => {
+			const content = "\n\n\n[[__-L4|← L4]]\n\nActual content";
+			const result = calculateSmartRange(content);
+			const expectedFrom = content.indexOf("Actual");
+			expect(result).toEqual({ from: expectedFrom, to: content.length });
+		});
+
 		it("does not exclude regular links", () => {
 			const content = "[[Some Link]]\nActual content";
 			const result = calculateSmartRange(content);
