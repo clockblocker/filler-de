@@ -1,9 +1,7 @@
 import type { MarkdownView } from "obsidian";
 import type { RenderedActionConfig } from "../../wip-configs/actions/types";
 import { UserAction } from "../../wip-configs/actions/types";
-
-/** Minimum padding width to show edge zones (px) */
-const MIN_PADDING_THRESHOLD = 60;
+import type { NavigationLayoutState } from "./navigation-layout-coordinator";
 
 /** Maximum zone width on ultra-wide displays (px) */
 const MAX_ZONE_WIDTH = 120;
@@ -11,50 +9,16 @@ const MAX_ZONE_WIDTH = 120;
 /**
  * Manages full-height clickable zones in editor padding for page navigation.
  * Only active when there's sufficient padding (readable-line-width mode).
+ *
+ * Note: This class no longer manages its own ResizeObserver. Layout decisions
+ * are coordinated by NavigationLayoutCoordinator for atomic updates.
  */
 export class EdgePaddingNavigator {
 	private leftZone: HTMLElement | null = null;
 	private rightZone: HTMLElement | null = null;
-	private resizeObserver: ResizeObserver | null = null;
 	private prevAction: RenderedActionConfig | null = null;
 	private nextAction: RenderedActionConfig | null = null;
-	private active = false;
-
-	/**
-	 * Initialize the navigator (creates ResizeObserver).
-	 */
-	public init(): void {
-		// ResizeObserver created on attach
-	}
-
-	/**
-	 * Attach zones to the given view if in editing mode with sufficient padding.
-	 * @returns true if zones are active, false if fallback needed
-	 */
-	public reattach(view: MarkdownView): boolean {
-		this.detach();
-
-		if (!this.isEditingMode(view)) {
-			this.active = false;
-			return false;
-		}
-
-		const container = view.contentEl;
-		const padding = this.detectEditorPadding(container);
-
-		if (
-			padding.left < MIN_PADDING_THRESHOLD &&
-			padding.right < MIN_PADDING_THRESHOLD
-		) {
-			this.active = false;
-			return false;
-		}
-
-		this.createZones(container, padding);
-		this.setupResizeObserver(container);
-		this.active = true;
-		return true;
-	}
+	private container: HTMLElement | null = null;
 
 	/**
 	 * Detach zones and cleanup.
@@ -64,16 +28,7 @@ export class EdgePaddingNavigator {
 		this.rightZone?.remove();
 		this.leftZone = null;
 		this.rightZone = null;
-		this.resizeObserver?.disconnect();
-		this.resizeObserver = null;
-		this.active = false;
-	}
-
-	/**
-	 * Check if zones are currently active.
-	 */
-	public isActive(): boolean {
-		return this.active;
+		this.container = null;
 	}
 
 	/**
@@ -88,6 +43,49 @@ export class EdgePaddingNavigator {
 	}
 
 	/**
+	 * Calculate zone visibility and apply changes.
+	 * Called by NavigationLayoutCoordinator with pre-calculated padding.
+	 *
+	 * @returns Layout state indicating which zones are active
+	 */
+	public calculateAndApplyZones(
+		container: HTMLElement,
+		view: MarkdownView,
+		padding: { left: number; right: number },
+		minThreshold: number,
+	): NavigationLayoutState {
+		// Check if view is in editing mode
+		if (!this.isEditingMode(view)) {
+			this.detach();
+			return { leftZoneActive: false, rightZoneActive: false };
+		}
+
+		this.container = container;
+
+		// Determine which zones should be visible
+		const shouldShowLeft =
+			padding.left >= minThreshold &&
+			this.prevAction !== null &&
+			!this.prevAction.disabled;
+
+		const shouldShowRight =
+			padding.right >= minThreshold &&
+			this.nextAction !== null &&
+			!this.nextAction.disabled;
+
+		// Update left zone
+		this.updateZone("left", shouldShowLeft, padding.left);
+
+		// Update right zone
+		this.updateZone("right", shouldShowRight, padding.right);
+
+		return {
+			leftZoneActive: shouldShowLeft,
+			rightZoneActive: shouldShowRight,
+		};
+	}
+
+	/**
 	 * Check if view is in editing mode (source or live-preview).
 	 */
 	private isEditingMode(view: MarkdownView): boolean {
@@ -96,49 +94,36 @@ export class EdgePaddingNavigator {
 	}
 
 	/**
-	 * Detect available padding by comparing .cm-sizer rect to container rect.
+	 * Update a single zone - create, show, hide, or remove as needed.
 	 */
-	private detectEditorPadding(container: HTMLElement): {
-		left: number;
-		right: number;
-	} {
-		const sizer = container.querySelector(".cm-sizer");
-		if (!sizer) {
-			return { left: 0, right: 0 };
-		}
-
-		const containerRect = container.getBoundingClientRect();
-		const sizerRect = sizer.getBoundingClientRect();
-
-		return {
-			left: Math.max(0, sizerRect.left - containerRect.left),
-			right: Math.max(0, containerRect.right - sizerRect.right),
-		};
-	}
-
-	/**
-	 * Create left and right zones in the container.
-	 */
-	private createZones(
-		container: HTMLElement,
-		padding: { left: number; right: number },
+	private updateZone(
+		side: "left" | "right",
+		shouldShow: boolean,
+		width: number,
 	): void {
-		if (
-			padding.left >= MIN_PADDING_THRESHOLD &&
-			this.prevAction &&
-			!this.prevAction.disabled
-		) {
-			this.leftZone = this.createZone("left", padding.left);
-			container.appendChild(this.leftZone);
-		}
+		const zone = side === "left" ? this.leftZone : this.rightZone;
 
-		if (
-			padding.right >= MIN_PADDING_THRESHOLD &&
-			this.nextAction &&
-			!this.nextAction.disabled
-		) {
-			this.rightZone = this.createZone("right", padding.right);
-			container.appendChild(this.rightZone);
+		if (shouldShow) {
+			if (zone) {
+				// Update existing zone
+				zone.style.display = "";
+				const clampedWidth = Math.min(width, MAX_ZONE_WIDTH);
+				zone.style.width = `${clampedWidth}px`;
+			} else {
+				// Create new zone
+				const newZone = this.createZone(side, width);
+				if (this.container) {
+					this.container.appendChild(newZone);
+				}
+				if (side === "left") {
+					this.leftZone = newZone;
+				} else {
+					this.rightZone = newZone;
+				}
+			}
+		} else if (zone) {
+			// Hide existing zone
+			zone.style.display = "none";
 		}
 	}
 
@@ -178,65 +163,5 @@ export class EdgePaddingNavigator {
 		if (this.rightZone) {
 			this.rightZone.dataset.action = this.nextAction?.id ?? "";
 		}
-	}
-
-	/**
-	 * Setup ResizeObserver to recalculate zones on resize.
-	 */
-	private setupResizeObserver(container: HTMLElement): void {
-		this.resizeObserver = new ResizeObserver(() => {
-			this.recalculateZones(container);
-		});
-		this.resizeObserver.observe(container);
-	}
-
-	/**
-	 * Recalculate zone widths on resize.
-	 */
-	private recalculateZones(container: HTMLElement): void {
-		const padding = this.detectEditorPadding(container);
-
-		// Update left zone
-		if (this.leftZone) {
-			if (padding.left < MIN_PADDING_THRESHOLD) {
-				this.leftZone.style.display = "none";
-			} else {
-				this.leftZone.style.display = "";
-				const clampedWidth = Math.min(padding.left, MAX_ZONE_WIDTH);
-				this.leftZone.style.width = `${clampedWidth}px`;
-			}
-		} else if (
-			padding.left >= MIN_PADDING_THRESHOLD &&
-			this.prevAction &&
-			!this.prevAction.disabled
-		) {
-			this.leftZone = this.createZone("left", padding.left);
-			container.appendChild(this.leftZone);
-		}
-
-		// Update right zone
-		if (this.rightZone) {
-			if (padding.right < MIN_PADDING_THRESHOLD) {
-				this.rightZone.style.display = "none";
-			} else {
-				this.rightZone.style.display = "";
-				const clampedWidth = Math.min(padding.right, MAX_ZONE_WIDTH);
-				this.rightZone.style.width = `${clampedWidth}px`;
-			}
-		} else if (
-			padding.right >= MIN_PADDING_THRESHOLD &&
-			this.nextAction &&
-			!this.nextAction.disabled
-		) {
-			this.rightZone = this.createZone("right", padding.right);
-			container.appendChild(this.rightZone);
-		}
-
-		// Update active status based on zone visibility
-		const leftVisible =
-			this.leftZone && this.leftZone.style.display !== "none";
-		const rightVisible =
-			this.rightZone && this.rightZone.style.display !== "none";
-		this.active = Boolean(leftVisible || rightVisible);
 	}
 }

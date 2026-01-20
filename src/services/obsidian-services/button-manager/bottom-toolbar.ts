@@ -3,7 +3,7 @@ import {
 	type RenderedActionConfig,
 	UserAction,
 } from "../../wip-configs/actions/types";
-import { EdgePaddingNavigator } from "./edge-padding-navigator";
+import type { NavigationLayoutState } from "./navigation-layout-coordinator";
 
 /** Estimated width per button (including gap) */
 const BUTTON_WIDTH_ESTIMATE = 90;
@@ -12,24 +12,17 @@ const MIN_VISIBLE_BUTTONS = 2;
 /** Fallback max buttons if width unknown */
 const DEFAULT_MAX_BUTTONS = 4;
 
-/** Navigation actions that can appear as edge buttons */
-const EDGE_BUTTON_ACTIONS = new Set<string>([
-	UserAction.PreviousPage,
-	UserAction.NavigatePage,
-]);
-
 export class BottomToolbarService {
 	private overlayEl: HTMLElement | null = null;
 	private attachedView: MarkdownView | null = null;
 	private actionConfigs: RenderedActionConfig[] = [];
 	private overflowMenuEl: HTMLElement | null = null;
-	private edgePaddingNavigator: EdgePaddingNavigator;
-	private useZoneNavigation = false;
-	private resizeObserver: ResizeObserver | null = null;
+	private layoutState: NavigationLayoutState = {
+		leftZoneActive: false,
+		rightZoneActive: false,
+	};
 
-	constructor(private app: App) {
-		this.edgePaddingNavigator = new EdgePaddingNavigator();
-	}
+	constructor(private app: App) {}
 
 	public init(): void {
 		if (!this.overlayEl) this.overlayEl = this.createOverlay();
@@ -57,28 +50,10 @@ export class BottomToolbarService {
 		container.appendChild(this.overlayEl);
 		container.style.paddingBottom = "64px";
 
-		// Try padding zones first on desktop
-		if (!this.isMobile()) {
-			this.edgePaddingNavigator.setActions(this.actionConfigs);
-			this.useZoneNavigation = this.edgePaddingNavigator.reattach(view);
-			// If zones not active, edge actions go to bottom bar (handled by renderButtons)
-		}
-
-		// Re-render bottom bar (includes/excludes edge actions based on zone state)
+		// Render bottom bar (coordinator will update layout state separately)
 		this.renderButtons(this.overlayEl);
 
-		// Setup resize observer to re-render on width changes
-		this.setupResizeObserver(container);
-
 		this.attachedView = view;
-	}
-
-	private setupResizeObserver(container: HTMLElement): void {
-		this.resizeObserver?.disconnect();
-		this.resizeObserver = new ResizeObserver(() => {
-			if (this.overlayEl) this.renderButtons(this.overlayEl);
-		});
-		this.resizeObserver.observe(container);
 	}
 
 	public detach(): void {
@@ -93,14 +68,6 @@ export class BottomToolbarService {
 		if (this.overlayEl.parentElement) {
 			this.overlayEl.parentElement.removeChild(this.overlayEl);
 		}
-
-		// Detach padding zones
-		this.edgePaddingNavigator.detach();
-		this.useZoneNavigation = false;
-
-		// Disconnect resize observer
-		this.resizeObserver?.disconnect();
-		this.resizeObserver = null;
 
 		// Hide overflow menu
 		this.hideOverflowMenu();
@@ -118,12 +85,15 @@ export class BottomToolbarService {
 
 	public setActions(actionConfigs: RenderedActionConfig[]): void {
 		this.actionConfigs = actionConfigs;
+		if (this.overlayEl) this.renderButtons(this.overlayEl);
+	}
 
-		// Update padding zones if attached
-		if (this.attachedView && !this.isMobile()) {
-			this.edgePaddingNavigator.setActions(actionConfigs);
-		}
-
+	/**
+	 * Update layout state from NavigationLayoutCoordinator.
+	 * Triggers re-render to show/hide nav buttons based on zone visibility.
+	 */
+	public updateLayoutState(state: NavigationLayoutState): void {
+		this.layoutState = state;
 		if (this.overlayEl) this.renderButtons(this.overlayEl);
 	}
 
@@ -131,7 +101,7 @@ export class BottomToolbarService {
 		return this.app.workspace.getActiveViewOfType(MarkdownView);
 	}
 
-	private isMobile(): boolean {
+	public isMobile(): boolean {
 		// biome-ignore lint/suspicious/noExplicitAny: <isMobile exists but not in types>
 		return (this.app as any).isMobile ?? false;
 	}
@@ -139,13 +109,17 @@ export class BottomToolbarService {
 	private renderButtons(host: HTMLElement): void {
 		while (host.firstChild) host.removeChild(host.firstChild);
 
-		// On desktop with active zone navigation, edge actions handled by zones
-		// Check isActive() dynamically since zones may hide/show on resize
-		const excludeEdgeActions =
-			!this.isMobile() && this.edgePaddingNavigator.isActive();
-		const bottomActions = excludeEdgeActions
-			? this.actionConfigs.filter((a) => !EDGE_BUTTON_ACTIONS.has(a.id))
-			: this.actionConfigs;
+		// Filter out nav actions that are handled by edge zones
+		// PreviousPage → left zone, NavigatePage → right zone
+		const bottomActions = this.actionConfigs.filter((a) => {
+			if (a.id === UserAction.PreviousPage && this.layoutState.leftZoneActive) {
+				return false;
+			}
+			if (a.id === UserAction.NavigatePage && this.layoutState.rightZoneActive) {
+				return false;
+			}
+			return true;
+		});
 
 		// Hide toolbar when no actions available
 		if (bottomActions.length === 0) {

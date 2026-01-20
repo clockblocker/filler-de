@@ -1,4 +1,4 @@
-import type { App, Plugin, WorkspaceLeaf } from "obsidian";
+import type { App, MarkdownView, Plugin, WorkspaceLeaf } from "obsidian";
 import type { VaultActionManager } from "../../../managers/obsidian/vault-action-manager";
 import { ACTION_CONFIGS } from "../../wip-configs/actions/actions-config";
 import type { UserAction } from "../../wip-configs/actions/types";
@@ -6,6 +6,8 @@ import type { ApiService } from "../atomic-services/api-service";
 import type { SelectionService } from "../atomic-services/selection-service";
 import { BottomToolbarService } from "./bottom-toolbar";
 import { ButtonRegistry } from "./button-registry";
+import { EdgePaddingNavigator } from "./edge-padding-navigator";
+import { NavigationLayoutCoordinator } from "./navigation-layout-coordinator";
 import { AboveSelectionToolbarService } from "./selection-toolbar";
 
 export type ButtonManagerServices = {
@@ -23,6 +25,8 @@ export class ButtonManager {
 	private registry: ButtonRegistry;
 	private bottom: BottomToolbarService;
 	private selection: AboveSelectionToolbarService;
+	private edgePaddingNavigator: EdgePaddingNavigator;
+	private layoutCoordinator: NavigationLayoutCoordinator;
 	private services: ButtonManagerServices | null = null;
 
 	constructor(
@@ -32,6 +36,11 @@ export class ButtonManager {
 		this.registry = new ButtonRegistry(this.app);
 		this.bottom = new BottomToolbarService(this.app);
 		this.selection = new AboveSelectionToolbarService(this.app);
+		this.edgePaddingNavigator = new EdgePaddingNavigator();
+		this.layoutCoordinator = new NavigationLayoutCoordinator(
+			this.edgePaddingNavigator,
+			this.bottom,
+		);
 	}
 
 	/**
@@ -47,6 +56,8 @@ export class ButtonManager {
 		// Wire registry → toolbar subscriptions
 		this.registry.subscribeBottom((actions) => {
 			this.bottom.setActions(actions);
+			// Update coordinator with new actions (affects zone visibility)
+			this.layoutCoordinator.setActions(actions);
 		});
 		this.registry.subscribeSelection((actions) => {
 			this.selection.setActions(actions);
@@ -59,7 +70,7 @@ export class ButtonManager {
 		this.app.workspace.onLayoutReady(async () => {
 			await this.registry.recompute();
 			this.selection.reattach();
-			this.bottom.reattach();
+			this.reattachBottomAndCoordinator();
 		});
 
 		// Reattach when user switches panes/notes
@@ -69,7 +80,7 @@ export class ButtonManager {
 				(_leaf: WorkspaceLeaf) => {
 					this.registry.scheduleRecompute();
 					this.selection.reattach();
-					this.bottom.reattach();
+					this.reattachBottomAndCoordinator();
 				},
 			),
 		);
@@ -116,7 +127,7 @@ export class ButtonManager {
 			this.app.workspace.on("layout-change", () => {
 				this.registry.scheduleRecompute();
 				this.selection.reattach();
-				this.bottom.reattach();
+				this.reattachBottomAndCoordinator();
 			}),
 		);
 
@@ -126,6 +137,21 @@ export class ButtonManager {
 				this.selection.onCssChange(),
 			),
 		);
+	}
+
+	/**
+	 * Reattach bottom toolbar and navigation coordinator.
+	 * Coordinator manages ResizeObserver for both edge zones and bottom toolbar.
+	 */
+	private reattachBottomAndCoordinator(): void {
+		this.bottom.reattach();
+
+		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+		if (view) {
+			this.layoutCoordinator.attach(view, this.bottom.isMobile());
+		} else {
+			this.layoutCoordinator.detach();
+		}
 	}
 
 	/**
@@ -164,5 +190,6 @@ export class ButtonManager {
 	public destroy(): void {
 		this.bottom.detach();
 		this.selection.detach();
+		this.layoutCoordinator.detach();
 	}
 }

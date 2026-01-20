@@ -10,7 +10,7 @@ import { segmentSentences } from "../stream/sentence-segmenter";
 /**
  * A heading extracted from content with its position info.
  */
-type ExtractedHeading = {
+export type ExtractedHeading = {
 	/** The heading text (e.g., "###### **ANNA:**") */
 	text: string;
 	/** Character offset in original content where heading starts */
@@ -63,7 +63,7 @@ type Block = {
  * Extract headings from scanned lines.
  * Returns headings with their original character offsets.
  */
-function extractHeadings(lines: ScannedLine[]): ExtractedHeading[] {
+export function extractHeadings(lines: ScannedLine[]): ExtractedHeading[] {
 	const headings: ExtractedHeading[] = [];
 	let currentOffset = 0;
 
@@ -91,7 +91,7 @@ function extractHeadings(lines: ScannedLine[]): ExtractedHeading[] {
  * Remove heading lines from text, replacing them with blank lines to preserve structure.
  * This ensures paragraph boundary detection still works correctly.
  */
-function filterHeadingsFromText(
+export function filterHeadingsFromText(
 	originalText: string,
 	headings: ExtractedHeading[],
 ): string {
@@ -117,7 +117,7 @@ function filterHeadingsFromText(
  * Find which heading precedes a given sentence based on character offset.
  * Returns the heading that immediately precedes (and is closest to) the sentence.
  */
-function findPrecedingHeading(
+export function findPrecedingHeading(
 	sentenceOriginalOffset: number,
 	headings: ExtractedHeading[],
 	usedHeadings: Set<number>,
@@ -153,7 +153,7 @@ function findPrecedingHeading(
  * Create an offset mapping from filtered text positions to original text positions.
  * This accounts for the removed heading content.
  */
-function createOffsetMap(
+export function createOffsetMap(
 	headings: ExtractedHeading[],
 ): (filtered: number) => number {
 	if (headings.length === 0) {

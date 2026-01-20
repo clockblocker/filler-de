@@ -558,6 +558,8 @@ export default class TextEaterPlugin extends Plugin {
 		}
 
 		await this.saveData(this.settings);
+		// Allow file system to flush before any potential reload
+		await new Promise((resolve) => setTimeout(resolve, 100));
 		this.previousSettings = {
 			...this.settings,
 			suffixDelimiter: { ...this.settings.suffixDelimiter },

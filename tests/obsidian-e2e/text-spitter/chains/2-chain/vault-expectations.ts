@@ -89,10 +89,26 @@ export const EXPECTED_AFTER_MAKE_TEXT_EXTRA_E2 = {
 	contentChecks: [
 		// Parent codex should contain link to section (not scroll)
 		[`Library/Dialog/__${D}Dialog.md`, ["ExtraE2"]],
+		// CRITICAL: Page content should have headings on their own lines, not merged with content
+		// This verifies the heading preservation fix is working
+		[
+			`Library/Dialog/ExtraE2/ExtraE2_Page_000${D}ExtraE2${D}Dialog.md`,
+			[
+				"###### **ANNA:**\n", // Heading followed by newline (not merged with content)
+			],
+		],
 	] as [string, string[]][],
 	contentMustNotContain: [
 		// Parent codex should NOT have old scroll link format
 		[`Library/Dialog/__${D}Dialog.md`, [`[[ExtraE2${D}Dialog|`]],
+		// CRITICAL: Page should NOT have headings merged with content
+		// If this appears, the heading fix is broken
+		[
+			`Library/Dialog/ExtraE2/ExtraE2_Page_000${D}ExtraE2${D}Dialog.md`,
+			[
+				"###### **ANNA:**Groß", // Bad: heading merged with content
+			],
+		],
 	] as [string, string[]][],
 	files: [
 		// Pages created from scroll split - should have multiple pages
