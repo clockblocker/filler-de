@@ -1,5 +1,7 @@
 import type {
 	AnnotatedSentence,
+	ContentToken,
+	RawContentToken,
 	RegionKind,
 	ScannedLine,
 	SentenceToken,
@@ -149,4 +151,48 @@ export function annotateSentences(
 	}
 
 	return annotated;
+}
+
+/**
+ * Stage 3 (token-based): Context Annotator
+ * Annotates sentence tokens, passes through paragraph breaks unchanged.
+ */
+export function annotateTokens(
+	tokens: RawContentToken[],
+	lines: ScannedLine[],
+	config: LanguageConfig,
+): ContentToken[] {
+	const result: ContentToken[] = [];
+	let prevAnnotated: AnnotatedSentence | undefined;
+
+	for (const token of tokens) {
+		if (token.kind === "paragraphBreak") {
+			result.push({ kind: "paragraphBreak" });
+			continue;
+		}
+
+		const sentence = token.sentence;
+		const quoteDepth = findQuoteDepthAtOffset(lines, sentence.sourceOffset);
+		const isPoem = detectPoemSentence(sentence, lines, config);
+		const inRegion = detectRegion(
+			sentence,
+			quoteDepth,
+			isPoem,
+			prevAnnotated,
+		);
+
+		const annotated: AnnotatedSentence = {
+			...sentence,
+			inRegion,
+			isPoem,
+			quoteDepth,
+			// With tokens, paragraph breaks are explicit; first sentence always starts new
+			startsNewParagraph: prevAnnotated === undefined,
+		};
+
+		result.push({ kind: "sentence", sentence: annotated });
+		prevAnnotated = annotated;
+	}
+
+	return result;
 }

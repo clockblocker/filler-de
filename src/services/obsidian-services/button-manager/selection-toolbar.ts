@@ -1,12 +1,12 @@
 import type { EditorView } from "@codemirror/view";
 import { type App, MarkdownView } from "obsidian";
-import type { AnyActionConfig } from "../../wip-configs/actions/types";
+import type { RenderedActionConfig } from "../../wip-configs/actions/types";
 
 export class AboveSelectionToolbarService {
 	private toolbarEl: HTMLDivElement | null = null;
 	private attachedView: MarkdownView | null = null;
 	private cm: EditorView | null = null;
-	private actionConfigs: AnyActionConfig[] = [];
+	private actionConfigs: RenderedActionConfig[] = [];
 
 	constructor(private app: App) {}
 
@@ -68,7 +68,7 @@ export class AboveSelectionToolbarService {
 		return el;
 	}
 
-	public setActions(actions: AnyActionConfig[]): void {
+	public setActions(actions: RenderedActionConfig[]): void {
 		this.actionConfigs = Array.isArray(actions) ? actions : [];
 	}
 
@@ -90,6 +90,11 @@ export class AboveSelectionToolbarService {
 			b.style.padding = "4px 8px";
 			b.style.border = "1px solid #000000";
 			b.style.borderRadius = "4px";
+
+			if (a.disabled) {
+				b.disabled = true;
+				b.classList.add("is-disabled");
+			}
 
 			host.appendChild(b);
 		}

@@ -1,6 +1,6 @@
 import { type App, MarkdownView } from "obsidian";
 import {
-	type AnyActionConfig,
+	type RenderedActionConfig,
 	UserAction,
 } from "../../wip-configs/actions/types";
 import { EdgePaddingNavigator } from "./edge-padding-navigator";
@@ -21,7 +21,7 @@ const EDGE_BUTTON_ACTIONS = new Set<string>([
 export class BottomToolbarService {
 	private overlayEl: HTMLElement | null = null;
 	private attachedView: MarkdownView | null = null;
-	private actionConfigs: AnyActionConfig[] = [];
+	private actionConfigs: RenderedActionConfig[] = [];
 	private overflowMenuEl: HTMLElement | null = null;
 	private edgePaddingNavigator: EdgePaddingNavigator;
 	private useZoneNavigation = false;
@@ -37,7 +37,12 @@ export class BottomToolbarService {
 
 	public reattach(): void {
 		const view = this.getActiveMarkdownView();
-		if (view && this.attachedView === view && this.overlayEl?.isConnected)
+		if (
+			view &&
+			this.attachedView === view &&
+			this.overlayEl?.isConnected &&
+			this.overlayEl.parentElement === view.contentEl
+		)
 			return;
 
 		this.detach();
@@ -111,7 +116,7 @@ export class BottomToolbarService {
 		return el;
 	}
 
-	public setActions(actionConfigs: AnyActionConfig[]): void {
+	public setActions(actionConfigs: RenderedActionConfig[]): void {
 		this.actionConfigs = actionConfigs;
 
 		// Update padding zones if attached
@@ -134,9 +139,10 @@ export class BottomToolbarService {
 	private renderButtons(host: HTMLElement): void {
 		while (host.firstChild) host.removeChild(host.firstChild);
 
-		// On desktop with zone navigation, edge actions handled by zones
-		// On desktop without zones OR on mobile, include edge actions in bottom bar
-		const excludeEdgeActions = !this.isMobile() && this.useZoneNavigation;
+		// On desktop with active zone navigation, edge actions handled by zones
+		// Check isActive() dynamically since zones may hide/show on resize
+		const excludeEdgeActions =
+			!this.isMobile() && this.edgePaddingNavigator.isActive();
 		const bottomActions = excludeEdgeActions
 			? this.actionConfigs.filter((a) => !EDGE_BUTTON_ACTIONS.has(a.id))
 			: this.actionConfigs;
@@ -144,13 +150,31 @@ export class BottomToolbarService {
 		// Hide toolbar when no actions available
 		if (bottomActions.length === 0) {
 			host.style.display = "none";
+			// Clear padding when hidden
+			if (host.parentElement) {
+				host.parentElement.style.paddingBottom = "";
+			}
 			return;
 		}
 		host.style.display = "";
+		// Restore padding when shown
+		if (host.parentElement) {
+			host.parentElement.style.paddingBottom = "64px";
+		}
+
+		// Calculate max visible buttons based on container width
+		const containerWidth = host.parentElement?.clientWidth ?? 0;
+		const maxButtons =
+			containerWidth > 0
+				? Math.max(
+						MIN_VISIBLE_BUTTONS,
+						Math.floor(containerWidth / BUTTON_WIDTH_ESTIMATE),
+					)
+				: DEFAULT_MAX_BUTTONS;
 
 		// Determine visible vs overflow actions
-		const visibleActions = bottomActions.slice(0, MAX_VISIBLE_BUTTONS);
-		const overflowActions = bottomActions.slice(MAX_VISIBLE_BUTTONS);
+		const visibleActions = bottomActions.slice(0, maxButtons);
+		const overflowActions = bottomActions.slice(maxButtons);
 
 		// Render visible buttons
 		for (const actionConfig of visibleActions) {
@@ -171,11 +195,17 @@ export class BottomToolbarService {
 		}
 	}
 
-	private createButton(actionConfig: AnyActionConfig): HTMLButtonElement {
+	private createButton(
+		actionConfig: RenderedActionConfig,
+	): HTMLButtonElement {
 		const b = document.createElement("button");
 		b.dataset.action = actionConfig.id;
 		b.className = "my-bottom-overlay-btn";
 		b.textContent = actionConfig.label;
+		if (actionConfig.disabled) {
+			b.disabled = true;
+			b.classList.add("is-disabled");
+		}
 		return b;
 	}
 
@@ -183,7 +213,7 @@ export class BottomToolbarService {
 	 * Toggle overflow menu visibility.
 	 */
 	private toggleOverflowMenu(
-		actions: AnyActionConfig[],
+		actions: RenderedActionConfig[],
 		anchorBtn: HTMLElement,
 	): void {
 		if (this.overflowMenuEl) {
@@ -200,6 +230,10 @@ export class BottomToolbarService {
 			item.dataset.action = action.id;
 			item.className = "bottom-overflow-item";
 			item.textContent = action.label;
+			if (action.disabled) {
+				item.disabled = true;
+				item.classList.add("is-disabled");
+			}
 			item.addEventListener("click", () => this.hideOverflowMenu());
 			menu.appendChild(item);
 		}

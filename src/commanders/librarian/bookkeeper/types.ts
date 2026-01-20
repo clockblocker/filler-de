@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { NonEmptyArray } from "../../../types/helpers";
 import {
 	TreeNodeStatus,
 	type TreeNodeStatus as TreeNodeStatusType,
@@ -162,8 +163,8 @@ export type AnnotatedSentence = SentenceToken & {
  * A group of sentences to keep together.
  */
 export type SentenceGroup = {
-	/** Sentences in this group */
-	sentences: AnnotatedSentence[];
+	/** Sentences in this group (always non-empty) */
+	sentences: NonEmptyArray<AnnotatedSentence>;
 	/** Total character count */
 	charCount: number;
 	/** True if group can be split (false for poems, multiline quotes) */
@@ -187,3 +188,20 @@ export type ScannedLine = {
 	/** True if line could be part of a poem */
 	isPotentialPoemLine: boolean;
 };
+
+// ─── Content Token Types ───
+
+/**
+ * A token representing either a sentence or a paragraph break.
+ * Used in the pipeline to explicitly track paragraph boundaries.
+ */
+export type ContentToken =
+	| { kind: "sentence"; sentence: AnnotatedSentence }
+	| { kind: "paragraphBreak" };
+
+/**
+ * A sentence token before annotation (used in early pipeline stages).
+ */
+export type RawContentToken =
+	| { kind: "sentence"; sentence: SentenceToken }
+	| { kind: "paragraphBreak" };

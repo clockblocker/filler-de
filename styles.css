@@ -106,8 +106,13 @@ span.cm-html-embed {
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 8px;
 }
-.my-bottom-overlay-btn:hover {
+.my-bottom-overlay-btn:hover:not(:disabled) {
 	background: var(--background-secondary-alt);
+}
+.my-bottom-overlay-btn:disabled,
+.my-bottom-overlay-btn.is-disabled {
+	cursor: not-allowed;
+	opacity: 0.4;
 }
 
 /* Toggle this class from your plugin if you want */
@@ -141,8 +146,13 @@ body.hide-status-bar .mod-root .workspace-split {
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 8px;
 }
-.selection-toolbar-btn:hover {
+.selection-toolbar-btn:hover:not(:disabled) {
 	background: var(--background-secondary-alt);
+}
+.selection-toolbar-btn:disabled,
+.selection-toolbar-btn.is-disabled {
+	cursor: not-allowed;
+	opacity: 0.4;
 }
 
 #textfresser_meta_keep_me_invisible {
@@ -217,8 +227,14 @@ body.hide-status-bar .mod-root .workspace-split {
 	border-radius: 4px;
 }
 
-.bottom-overflow-item:hover {
+.bottom-overflow-item:hover:not(:disabled) {
 	background: var(--background-secondary);
+}
+
+.bottom-overflow-item:disabled,
+.bottom-overflow-item.is-disabled {
+	cursor: not-allowed;
+	opacity: 0.4;
 }
 
 /* Overflow button styling */

@@ -4,7 +4,6 @@ import { ACTION_CONFIGS } from "../../wip-configs/actions/actions-config";
 import type { UserAction } from "../../wip-configs/actions/types";
 import type { ApiService } from "../atomic-services/api-service";
 import type { SelectionService } from "../atomic-services/selection-service";
-import type { TexfresserObsidianServices } from "../interface";
 import { BottomToolbarService } from "./bottom-toolbar";
 import { ButtonRegistry } from "./button-registry";
 import { AboveSelectionToolbarService } from "./selection-toolbar";
@@ -135,8 +134,9 @@ export class ButtonManager {
 	private setupButtonClickHandlers(): void {
 		this.plugin.registerDomEvent(document, "click", (evt: MouseEvent) => {
 			const target = evt.target as HTMLElement;
+			// Match both buttons and edge zone divs with data-action
 			const button = target.closest(
-				"button[data-action]",
+				"[data-action]",
 			) as HTMLElement | null;
 			if (!button) return;
 

@@ -35,7 +35,10 @@ export async function splitSelectionInBlocksAction(
 		const startIndex = highestBlockNumber + 1;
 
 		// Split selection into blocks
-		const { markedText, blockCount } = splitStrInBlocks(selection, startIndex);
+		const { markedText, blockCount } = splitStrInBlocks(
+			selection,
+			startIndex,
+		);
 
 		// Replace selection with marked text
 		await selectionService.replaceSelection(markedText);

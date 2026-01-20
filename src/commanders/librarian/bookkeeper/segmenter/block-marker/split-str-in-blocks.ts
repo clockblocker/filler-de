@@ -1,5 +1,8 @@
 import type { AnnotatedSentence } from "../../types";
-import { DEFAULT_LANGUAGE_CONFIG, type LanguageConfig } from "../language-config";
+import {
+	DEFAULT_LANGUAGE_CONFIG,
+	type LanguageConfig,
+} from "../language-config";
 import { annotateSentences } from "../stream/context-annotator";
 import { scanLines } from "../stream/line-scanner";
 import { segmentSentences } from "../stream/sentence-segmenter";
@@ -54,7 +57,10 @@ function countWords(text: string): number {
 /**
  * Check if sentence is a short speech intro (ends with ":" and ≤4 words).
  */
-function isShortSpeechIntro(sentence: AnnotatedSentence, threshold: number): boolean {
+function isShortSpeechIntro(
+	sentence: AnnotatedSentence,
+	threshold: number,
+): boolean {
 	const text = sentence.text.trim();
 	return text.endsWith(":") && countWords(text) <= threshold;
 }
@@ -101,7 +107,10 @@ function detectParagraphsAfterFilter(
 /**
  * Create a new block with one sentence.
  */
-function newBlock(sentence: AnnotatedSentence, pendingSpeechIntro = false): Block {
+function newBlock(
+	sentence: AnnotatedSentence,
+	pendingSpeechIntro = false,
+): Block {
 	return {
 		pendingSpeechIntro,
 		sentences: [sentence],
@@ -148,7 +157,11 @@ function groupSentencesIntoBlocks(
 		if (startsNewPara) {
 			if (pendingShort) {
 				// Can't merge forward (new paragraph), try backward or keep alone
-				if (current && current.wordCount + pendingShort.wordCount <= config.maxMergedWords) {
+				if (
+					current &&
+					current.wordCount + pendingShort.wordCount <=
+						config.maxMergedWords
+				) {
 					for (const s of pendingShort.sentences) {
 						appendToBlock(current, s);
 						current.wordCount -= countWords(s.text); // Undo double-count
@@ -180,20 +193,23 @@ function groupSentencesIntoBlocks(
 					current = null;
 				}
 				continue;
-			} else {
-				// Can't merge forward, try backward
-				if (current && current.wordCount + pendingShort.wordCount <= config.maxMergedWords) {
-					for (const s of pendingShort.sentences) {
-						appendToBlock(current, s);
-						current.wordCount -= countWords(s.text);
-					}
-					current.wordCount += pendingShort.wordCount;
-				} else {
-					if (current) blocks.push(current);
-					current = pendingShort;
-				}
-				pendingShort = null;
 			}
+			// Can't merge forward, try backward
+			if (
+				current &&
+				current.wordCount + pendingShort.wordCount <=
+					config.maxMergedWords
+			) {
+				for (const s of pendingShort.sentences) {
+					appendToBlock(current, s);
+					current.wordCount -= countWords(s.text);
+				}
+				current.wordCount += pendingShort.wordCount;
+			} else {
+				if (current) blocks.push(current);
+				current = pendingShort;
+			}
+			pendingShort = null;
 		}
 
 		// If previous block was pending speech intro, merge this sentence
@@ -241,7 +257,10 @@ function groupSentencesIntoBlocks(
 
 	// Finalize any remaining pending short
 	if (pendingShort) {
-		if (current && current.wordCount + pendingShort.wordCount <= config.maxMergedWords) {
+		if (
+			current &&
+			current.wordCount + pendingShort.wordCount <= config.maxMergedWords
+		) {
 			for (const s of pendingShort.sentences) {
 				appendToBlock(current, s);
 				current.wordCount -= countWords(s.text);
@@ -260,9 +279,12 @@ function groupSentencesIntoBlocks(
 
 /**
  * Format blocks into marked text with block IDs.
+ * Preserves paragraph spacing by adding extra blank lines between paragraph-crossing blocks.
  */
 function formatBlocksWithMarkers(blocks: Block[], startIndex: number): string {
-	const lines: string[] = [];
+	if (blocks.length === 0) return "";
+
+	const parts: string[] = [];
 
 	for (let i = 0; i < blocks.length; i++) {
 		const block = blocks[i];
@@ -270,11 +292,27 @@ function formatBlocksWithMarkers(blocks: Block[], startIndex: number): string {
 
 		const blockText = combineSentences(block.sentences).trim();
 		const blockId = startIndex + i;
+		const markedBlock = `${blockText} ^${blockId}`;
 
-		lines.push(`${blockText} ^${blockId}`);
+		if (i === 0) {
+			parts.push(markedBlock);
+			continue;
+		}
+
+		// Check if this block starts a new paragraph
+		const firstSentence = block.sentences[0];
+		const startsNewParagraph = firstSentence?.startsNewParagraph ?? false;
+
+		if (startsNewParagraph) {
+			// Extra blank line for paragraph boundary
+			parts.push(`\n\n\n${markedBlock}`);
+		} else {
+			// Standard single blank line between blocks
+			parts.push(`\n\n${markedBlock}`);
+		}
 	}
 
-	return lines.join("\n\n");
+	return parts.join("");
 }
 
 /**
@@ -309,7 +347,12 @@ export function splitStrInBlocks(
 	// Run pipeline stages 1-3
 	const lines = scanLines(text, fullConfig.languageConfig);
 	const sentenceTokens = segmentSentences(text, fullConfig.languageConfig);
-	const annotated = annotateSentences(sentenceTokens, lines, text, fullConfig.languageConfig);
+	const annotated = annotateSentences(
+		sentenceTokens,
+		lines,
+		text,
+		fullConfig.languageConfig,
+	);
 
 	// Filter out blank "sentences" (whitespace-only)
 	const filtered = annotated.filter((s) => s.text.trim().length > 0);

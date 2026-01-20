@@ -1,3 +1,4 @@
+import { stripGoBackLink } from "../../../../managers/obsidian/navigation/go-back-link";
 import { parseSeparatedSuffix } from "../../codecs/internal/suffix/parse";
 import type { SeparatedSuffixedBasename } from "../../codecs/internal/suffix/types";
 import type { CodecRules } from "../../codecs/rules";
@@ -13,11 +14,11 @@ import {
 } from "./language-config";
 import {
 	accumulatePages,
-	annotateSentences,
-	groupSentences,
+	annotateTokens,
+	groupTokens,
 	preprocessLargeGroups,
 	scanLines,
-	segmentSentences,
+	segmentToTokens,
 } from "./stream";
 
 /**
@@ -44,13 +45,16 @@ export function segmentContent(
 ): SegmentationResult {
 	const { coreName, suffixParts } = sourceBasenameInfo;
 
+	// Strip navigation go-back link before processing
+	const cleanContent = stripGoBackLink(content);
+
 	// Check if content is too short to split
-	if (content.length < config.minContentSizeChars) {
+	if (cleanContent.length < config.minContentSizeChars) {
 		return {
 			pages: [
 				{
-					charCount: content.length,
-					content,
+					charCount: cleanContent.length,
+					content: cleanContent,
 					pageIndex: 0,
 				},
 			],
@@ -61,7 +65,7 @@ export function segmentContent(
 	}
 
 	// Run the pipeline
-	const pages = runPipeline(content, config, langConfig);
+	const pages = runPipeline(cleanContent, config, langConfig);
 
 	// Filter out empty pages
 	const nonEmpty = filterEmptyPages(pages);
@@ -75,7 +79,7 @@ export function segmentContent(
 }
 
 /**
- * Runs the sentence-stream pipeline.
+ * Runs the token-based pipeline with explicit paragraph break markers.
  */
 function runPipeline(
 	content: string,
@@ -85,14 +89,14 @@ function runPipeline(
 	// Stage 1: Scan lines and track quote state
 	const lines = scanLines(content, langConfig);
 
-	// Stage 2: Segment into sentences
-	const sentences = segmentSentences(content, langConfig);
+	// Stage 2: Segment into tokens (sentences + paragraph breaks)
+	const rawTokens = segmentToTokens(content, langConfig);
 
-	// Stage 3: Annotate sentences with context
-	const annotated = annotateSentences(sentences, lines, content, langConfig);
+	// Stage 3: Annotate tokens with context
+	const annotatedTokens = annotateTokens(rawTokens, lines, langConfig);
 
-	// Stage 4: Group sentences that should stay together
-	const groups = groupSentences(annotated);
+	// Stage 4: Group tokens (paragraph breaks force boundaries)
+	const groups = groupTokens(annotatedTokens);
 
 	// Pre-process: split any oversized groups
 	const processedGroups = preprocessLargeGroups(groups, config);
@@ -129,13 +133,13 @@ export function wouldSplitToMultiplePages(
 	return result.pages.length > 1;
 }
 
+export type { LanguageConfig } from "./language-config";
 // Re-exports for compatibility
 export {
 	DEFAULT_LANGUAGE_CONFIG,
-	GERMAN_CONFIG,
 	ENGLISH_CONFIG,
+	GERMAN_CONFIG,
 } from "./language-config";
-export type { LanguageConfig } from "./language-config";
 
 // Legacy exports (deprecated - kept for compatibility)
 export { blocksCharCount, blocksToContent, parseBlocks } from "./parse-blocks";

@@ -1,17 +1,28 @@
+import { nonEmptyArrayResult } from "../../../../../types/utils";
 import type {
+	AnnotatedSentence,
 	PageSegment,
 	SegmentationConfig,
 	SentenceGroup,
 } from "../../types";
 
 /**
- * Reconstructs text from sentence groups.
+ * Reconstructs text from sentence groups, preserving paragraph spacing.
  */
 function groupsToContent(groups: SentenceGroup[]): string {
-	return groups
-		.flatMap((g) => g.sentences)
-		.map((s) => s.text)
-		.join("");
+	const sentences = groups.flatMap((g) => g.sentences);
+	if (sentences.length === 0) return "";
+
+	const [first, ...rest] = sentences;
+	let result = first.text;
+	for (const s of rest) {
+		if (s.startsNewParagraph) {
+			result += `\n\n${s.text.trimStart()}`;
+		} else {
+			result += s.text;
+		}
+	}
+	return result;
 }
 
 /**
@@ -117,17 +128,20 @@ export function splitLargeGroup(
 	if (group.charCount <= targetSize) return [group];
 
 	const subGroups: SentenceGroup[] = [];
-	let currentSentences: typeof group.sentences = [];
+	let currentSentences: AnnotatedSentence[] = [];
 	let currentSize = 0;
 
 	for (const sentence of group.sentences) {
 		// If adding this sentence exceeds target and we have content, start new sub-group
 		if (currentSize > 0 && currentSize + sentence.charCount > targetSize) {
-			subGroups.push({
-				charCount: currentSize,
-				isSplittable: true,
-				sentences: currentSentences,
-			});
+			const nonEmpty = nonEmptyArrayResult(currentSentences);
+			if (nonEmpty.isOk()) {
+				subGroups.push({
+					charCount: currentSize,
+					isSplittable: true,
+					sentences: nonEmpty.value,
+				});
+			}
 			currentSentences = [];
 			currentSize = 0;
 		}
@@ -137,11 +151,12 @@ export function splitLargeGroup(
 	}
 
 	// Don't forget remaining
-	if (currentSentences.length > 0) {
+	const nonEmpty = nonEmptyArrayResult(currentSentences);
+	if (nonEmpty.isOk()) {
 		subGroups.push({
 			charCount: currentSize,
 			isSplittable: true,
-			sentences: currentSentences,
+			sentences: nonEmpty.value,
 		});
 	}
 

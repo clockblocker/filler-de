@@ -3,7 +3,7 @@
  */
 
 import { z } from "zod";
-import { splitStrInBlocks } from "./segmenter/block-marker";
+import { buildGoBackLink } from "../../../managers/obsidian/navigation/go-back-link";
 import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,
@@ -16,18 +16,12 @@ import {
 	readMetadata,
 	upsertMetadata,
 } from "../../../managers/pure/note-metadata-manager";
-import {
-	LINE_BREAK,
-	NOT_STARTED_CHECKBOX,
-	OBSIDIAN_LINK_CLOSE,
-	OBSIDIAN_LINK_OPEN,
-	PIPE,
-	SPACE_F,
-} from "../../../types/literals";
+import { LINE_BREAK } from "../../../types/literals";
 import type { CodecRules } from "../codecs/rules";
 import type { TreeNodeStatus } from "../healer/library-tree/tree-node/types/atoms";
 import type { NodeName } from "../types/schemas/node-name";
 import { buildPageBasename, buildPageFolderBasename } from "./page-codec";
+import { splitStrInBlocks } from "./segmenter/block-marker";
 import type { SegmentationResult } from "./types";
 import { PAGE_FRONTMATTER } from "./types";
 
@@ -76,23 +70,8 @@ export function buildPageSplitActions(
 		payload: { splitPath: folderPath },
 	});
 
-	// 2. Create codex
-	const codexContent = generatePagesCodexContent(result, newPathParts, rules);
-	const codexPath = buildCodexSplitPath(
-		result.sourceCoreName,
-		result.sourceSuffix,
-		newPathParts,
-		rules,
-	);
-	actions.push({
-		kind: VaultActionKind.UpsertMdFile,
-		payload: {
-			content: codexContent,
-			splitPath: codexPath,
-		},
-	});
-
-	// 3. Create pages (always at least one when this function is called)
+	// 2. Create pages (always at least one when this function is called)
+	// Note: Codex is created by Librarian based on page creation events
 	const firstPagePath = buildPageSplitPath(
 		0,
 		result.sourceCoreName,
@@ -101,10 +80,21 @@ export function buildPageSplitActions(
 		rules,
 	);
 
+	// Build go-back link to codex for all pages
+	const codexBasename = buildCodexBasename(
+		result.sourceCoreName,
+		result.sourceSuffix,
+		rules,
+	);
+	const goBackLink = buildGoBackLink(codexBasename, result.sourceCoreName);
+
 	for (const page of result.pages) {
 		// Apply block markers to page content (each page resets at ^0)
 		const { markedText } = splitStrInBlocks(page.content, 0);
-		const pageContent = formatPageContent(markedText);
+		// Add go-back link at top, then formatted content with metadata
+		const pageContent = formatPageContent(
+			goBackLink + LINE_BREAK + LINE_BREAK + markedText,
+		);
 		const pagePath =
 			page.pageIndex === 0
 				? firstPagePath
@@ -124,7 +114,7 @@ export function buildPageSplitActions(
 		});
 	}
 
-	// 4. Trash source file
+	// 3. Trash source file
 	actions.push({
 		kind: VaultActionKind.TrashMdFile,
 		payload: { splitPath: sourcePath },
@@ -153,94 +143,16 @@ function buildPageSplitPath(
 }
 
 /**
- * Builds a SplitPath for the codex file.
+ * Builds the codex basename.
  * Codex naming follows pattern: __-coreName-suffix
  */
-function buildCodexSplitPath(
+function buildCodexBasename(
 	coreName: NodeName,
 	suffixParts: NodeName[],
-	pathParts: string[],
 	rules: CodecRules,
-): SplitPathToMdFile {
-	// Codex uses __ as core name with the source info as suffix
+): string {
 	const codexSuffixParts = [coreName, ...suffixParts];
-	const basename = ["__", ...codexSuffixParts].join(rules.suffixDelimiter);
-	return {
-		basename,
-		extension: "md",
-		kind: SplitPathKind.MdFile,
-		pathParts,
-	};
-}
-
-/**
- * Generates codex content listing all pages.
- */
-function generatePagesCodexContent(
-	result: SegmentationResult,
-	pathParts: string[],
-	rules: CodecRules,
-): string {
-	const lines: string[] = [];
-
-	// Parent backlink (to parent folder's codex)
-	const parentPathParts = pathParts.slice(0, -1);
-	if (parentPathParts.length > 0) {
-		const parentName = parentPathParts[parentPathParts.length - 1];
-		if (parentName) {
-			const parentCodexBasename = computeParentCodexBasename(
-				parentPathParts,
-				rules,
-			);
-			lines.push(formatBacklink(parentCodexBasename, `← ${parentName}`));
-		}
-	}
-
-	// Page entries
-	for (const page of result.pages) {
-		const pageBasename = buildPageBasename(
-			page.pageIndex,
-			result.sourceCoreName,
-			result.sourceSuffix,
-			rules,
-		);
-		const displayName = `Page ${page.pageIndex + 1}`;
-		const checkbox = NOT_STARTED_CHECKBOX;
-		const link = formatBacklink(pageBasename, displayName);
-		lines.push(`${checkbox}${SPACE_F}${link}`);
-	}
-
-	if (lines.length === 0) {
-		return LINE_BREAK;
-	}
-
-	return (
-		LINE_BREAK + lines.map((l) => `${l}${SPACE_F}${LINE_BREAK}`).join("")
-	);
-}
-
-/**
- * Computes parent codex basename.
- */
-function computeParentCodexBasename(
-	parentPathParts: string[],
-	rules: CodecRules,
-): string {
-	// For parent codex, compute suffix from path
-	// ["Library", "Märchen"] → "__-Märchen"
-	// ["Library"] → "__-Library"
-	const suffix =
-		parentPathParts.length === 1
-			? parentPathParts
-			: parentPathParts.slice(1).reverse();
-	return ["__", ...suffix].join(rules.suffixDelimiter);
-}
-
-/**
- * Formats a backlink.
- */
-function formatBacklink(basename: string, displayName: string): string {
-	return `${OBSIDIAN_LINK_OPEN}${basename}${PIPE}${displayName}${OBSIDIAN_LINK_CLOSE}`;
+	return ["__", ...codexSuffixParts].join(rules.suffixDelimiter);
 }
 
 /**

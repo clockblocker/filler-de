@@ -9,12 +9,16 @@
  * 5. Page Accumulator: Builds pages respecting size limits
  */
 
-export { annotateSentences } from "./context-annotator";
+export { annotateSentences, annotateTokens } from "./context-annotator";
 export { createInitialQuoteState, scanLines } from "./line-scanner";
 export {
 	accumulatePages,
 	preprocessLargeGroups,
 	splitLargeGroup,
 } from "./page-accumulator";
-export { flattenGroups, groupSentences } from "./region-grouper";
-export { segmentSentences, segmentWithParagraphs } from "./sentence-segmenter";
+export { flattenGroups, groupSentences, groupTokens } from "./region-grouper";
+export {
+	segmentSentences,
+	segmentToTokens,
+	segmentWithParagraphs,
+} from "./sentence-segmenter";

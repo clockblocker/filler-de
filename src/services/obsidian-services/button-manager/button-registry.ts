@@ -1,9 +1,13 @@
 import { type App, MarkdownView } from "obsidian";
 import { z } from "zod";
+import { getNextPageSplitPath } from "../../../commanders/librarian/bookkeeper/page-codec";
 import { wouldSplitToMultiplePages as checkWouldSplit } from "../../../commanders/librarian/bookkeeper/segmenter";
 import { makeCodecRulesFromSettings } from "../../../commanders/librarian/codecs/rules";
 import { getParsedUserSettings } from "../../../global-state/global-state";
-import { makeSplitPath } from "../../../managers/obsidian/vault-action-manager";
+import {
+	makeSplitPath,
+	makeSystemPathForSplitPath,
+} from "../../../managers/obsidian/vault-action-manager";
 import type { AnySplitPath } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import { readMetadata } from "../../../managers/pure/note-metadata-manager";
 import {
@@ -21,10 +25,11 @@ import {
 	ALL_USER_ACTIONS,
 	type AnyActionConfig,
 	type ButtonContext,
+	type RenderedActionConfig,
 	UserActionPlacement,
 } from "../../wip-configs/actions/types";
 
-type ActionSubscriber = (actions: AnyActionConfig[]) => void;
+type ActionSubscriber = (actions: RenderedActionConfig[]) => void;
 
 /**
  * Central registry that computes available actions based on context.
@@ -51,6 +56,7 @@ export class ButtonRegistry {
 		let isInLibrary = false;
 		let wouldSplitToMultiplePages = false;
 		let pageIndex: number | null = null;
+		let hasNextPage = false;
 
 		if (file) {
 			const splitPath = makeSplitPath(file.path);
@@ -90,10 +96,23 @@ export class ButtonRegistry {
 					}
 
 					// Extract page index for Page files
-					if (fileType === FileType.Page) {
+					if (
+						fileType === FileType.Page &&
+						splitPath.kind === "MdFile"
+					) {
 						const match = splitPath.basename.match(/_Page_(\d{3})/);
 						if (match?.[1]) {
 							pageIndex = Number.parseInt(match[1], 10);
+						}
+						// Check if next page exists
+						const nextPath = getNextPageSplitPath(splitPath);
+						if (nextPath) {
+							const systemPath =
+								makeSystemPathForSplitPath(nextPath);
+							hasNextPage =
+								this.app.vault.getAbstractFileByPath(
+									systemPath,
+								) !== null;
 						}
 					}
 				} catch {
@@ -111,6 +130,7 @@ export class ButtonRegistry {
 
 		return {
 			fileType,
+			hasNextPage,
 			hasSelection,
 			isInLibrary,
 			isMobile,
@@ -134,17 +154,23 @@ export class ButtonRegistry {
 	}
 
 	/**
-	 * Filter actions by predicate and placement.
+	 * Filter actions by predicate and placement, computing disabled state.
 	 */
 	private filterActions(
 		ctx: ButtonContext,
 		placement: (typeof UserActionPlacement)[keyof typeof UserActionPlacement],
-	): AnyActionConfig[] {
+	): RenderedActionConfig[] {
 		return ALL_USER_ACTIONS.filter((action) => {
 			const config = ACTION_CONFIGS[action];
 			return config.placement === placement && config.isAvailable(ctx);
 		})
-			.map((action) => ACTION_CONFIGS[action])
+			.map((action) => {
+				const config: AnyActionConfig = ACTION_CONFIGS[action];
+				const disabled = config.isEnabled
+					? !config.isEnabled(ctx)
+					: false;
+				return { ...config, disabled };
+			})
 			.sort((a, b) => a.priority - b.priority);
 	}
 

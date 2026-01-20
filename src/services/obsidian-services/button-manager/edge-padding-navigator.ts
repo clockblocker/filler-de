@@ -1,5 +1,5 @@
 import type { MarkdownView } from "obsidian";
-import type { AnyActionConfig } from "../../wip-configs/actions/types";
+import type { RenderedActionConfig } from "../../wip-configs/actions/types";
 import { UserAction } from "../../wip-configs/actions/types";
 
 /** Minimum padding width to show edge zones (px) */
@@ -16,8 +16,8 @@ export class EdgePaddingNavigator {
 	private leftZone: HTMLElement | null = null;
 	private rightZone: HTMLElement | null = null;
 	private resizeObserver: ResizeObserver | null = null;
-	private prevAction: AnyActionConfig | null = null;
-	private nextAction: AnyActionConfig | null = null;
+	private prevAction: RenderedActionConfig | null = null;
+	private nextAction: RenderedActionConfig | null = null;
 	private active = false;
 
 	/**
@@ -79,7 +79,7 @@ export class EdgePaddingNavigator {
 	/**
 	 * Set navigation actions for the zones.
 	 */
-	public setActions(actions: AnyActionConfig[]): void {
+	public setActions(actions: RenderedActionConfig[]): void {
 		this.prevAction =
 			actions.find((a) => a.id === UserAction.PreviousPage) ?? null;
 		this.nextAction =
@@ -123,12 +123,20 @@ export class EdgePaddingNavigator {
 		container: HTMLElement,
 		padding: { left: number; right: number },
 	): void {
-		if (padding.left >= MIN_PADDING_THRESHOLD && this.prevAction) {
+		if (
+			padding.left >= MIN_PADDING_THRESHOLD &&
+			this.prevAction &&
+			!this.prevAction.disabled
+		) {
 			this.leftZone = this.createZone("left", padding.left);
 			container.appendChild(this.leftZone);
 		}
 
-		if (padding.right >= MIN_PADDING_THRESHOLD && this.nextAction) {
+		if (
+			padding.right >= MIN_PADDING_THRESHOLD &&
+			this.nextAction &&
+			!this.nextAction.disabled
+		) {
 			this.rightZone = this.createZone("right", padding.right);
 			container.appendChild(this.rightZone);
 		}
@@ -197,7 +205,11 @@ export class EdgePaddingNavigator {
 				const clampedWidth = Math.min(padding.left, MAX_ZONE_WIDTH);
 				this.leftZone.style.width = `${clampedWidth}px`;
 			}
-		} else if (padding.left >= MIN_PADDING_THRESHOLD && this.prevAction) {
+		} else if (
+			padding.left >= MIN_PADDING_THRESHOLD &&
+			this.prevAction &&
+			!this.prevAction.disabled
+		) {
 			this.leftZone = this.createZone("left", padding.left);
 			container.appendChild(this.leftZone);
 		}
@@ -211,7 +223,11 @@ export class EdgePaddingNavigator {
 				const clampedWidth = Math.min(padding.right, MAX_ZONE_WIDTH);
 				this.rightZone.style.width = `${clampedWidth}px`;
 			}
-		} else if (padding.right >= MIN_PADDING_THRESHOLD && this.nextAction) {
+		} else if (
+			padding.right >= MIN_PADDING_THRESHOLD &&
+			this.nextAction &&
+			!this.nextAction.disabled
+		) {
 			this.rightZone = this.createZone("right", padding.right);
 			container.appendChild(this.rightZone);
 		}

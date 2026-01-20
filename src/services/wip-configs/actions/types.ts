@@ -54,6 +54,8 @@ export type ButtonContext = {
 	wouldSplitToMultiplePages: boolean;
 	/** Page index (0-999) for Page files, null otherwise */
 	pageIndex: number | null;
+	/** Whether next page exists in vault (for Page files) */
+	hasNextPage: boolean;
 };
 
 export type ActionConfig<A extends UserAction> = {
@@ -67,6 +69,13 @@ export type ActionConfig<A extends UserAction> = {
 	priority: number;
 	/** Predicate to determine if action is available in current context */
 	isAvailable: (ctx: ButtonContext) => boolean;
+	/** Optional predicate to determine if action is enabled (shown but inactive if false) */
+	isEnabled?: (ctx: ButtonContext) => boolean;
 };
 
 export type AnyActionConfig = ActionConfig<UserAction>;
+
+/** Action config with computed disabled state for rendering */
+export type RenderedActionConfig = AnyActionConfig & {
+	disabled: boolean;
+};

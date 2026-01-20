@@ -1,4 +1,10 @@
-import type { AnnotatedSentence, SentenceGroup } from "../../types";
+import type { NonEmptyArray } from "../../../../../types/helpers";
+import { nonEmptyArrayResult } from "../../../../../types/utils";
+import type {
+	AnnotatedSentence,
+	ContentToken,
+	SentenceGroup,
+} from "../../types";
 
 /**
  * Detects if a sentence looks like a verse line (short, potentially poetic).
@@ -62,7 +68,9 @@ function shouldGroupTogether(
  * Determines if a group is splittable.
  * Poems, verses, and multiline quotes should not be split.
  */
-function isGroupSplittable(sentences: AnnotatedSentence[]): boolean {
+function isGroupSplittable(
+	sentences: NonEmptyArray<AnnotatedSentence>,
+): boolean {
 	// If any sentence is a poem, group is not splittable
 	if (sentences.some((s) => s.isPoem)) return false;
 
@@ -81,7 +89,9 @@ function isGroupSplittable(sentences: AnnotatedSentence[]): boolean {
 /**
  * Calculates total character count for a group.
  */
-function calculateGroupCharCount(sentences: AnnotatedSentence[]): number {
+function calculateGroupCharCount(
+	sentences: NonEmptyArray<AnnotatedSentence>,
+): number {
 	return sentences.reduce((sum, s) => sum + s.charCount, 0);
 }
 
@@ -118,21 +128,25 @@ export function groupSentences(
 			currentGroup.push(sentence);
 		} else {
 			// Finish current group and start new one
-			groups.push({
-				charCount: calculateGroupCharCount(currentGroup),
-				isSplittable: isGroupSplittable(currentGroup),
-				sentences: currentGroup,
-			});
+			const nonEmpty = nonEmptyArrayResult(currentGroup);
+			if (nonEmpty.isOk()) {
+				groups.push({
+					charCount: calculateGroupCharCount(nonEmpty.value),
+					isSplittable: isGroupSplittable(nonEmpty.value),
+					sentences: nonEmpty.value,
+				});
+			}
 			currentGroup = [sentence];
 		}
 	}
 
 	// Don't forget the last group
-	if (currentGroup.length > 0) {
+	const nonEmpty = nonEmptyArrayResult(currentGroup);
+	if (nonEmpty.isOk()) {
 		groups.push({
-			charCount: calculateGroupCharCount(currentGroup),
-			isSplittable: isGroupSplittable(currentGroup),
-			sentences: currentGroup,
+			charCount: calculateGroupCharCount(nonEmpty.value),
+			isSplittable: isGroupSplittable(nonEmpty.value),
+			sentences: nonEmpty.value,
 		});
 	}
 
@@ -144,4 +158,86 @@ export function groupSentences(
  */
 export function flattenGroups(groups: SentenceGroup[]): AnnotatedSentence[] {
 	return groups.flatMap((g) => g.sentences);
+}
+
+/**
+ * Stage 4 (token-based): Region Grouper
+ * Groups content tokens, with paragraph breaks forcing group boundaries.
+ * Returns groups that track whether they follow a paragraph break.
+ */
+export function groupTokens(tokens: ContentToken[]): SentenceGroup[] {
+	if (tokens.length === 0) return [];
+
+	const groups: SentenceGroup[] = [];
+	let currentGroup: AnnotatedSentence[] = [];
+	let afterParagraphBreak = false;
+
+	for (const token of tokens) {
+		if (token.kind === "paragraphBreak") {
+			// Finish current group if non-empty
+			const nonEmpty = nonEmptyArrayResult(currentGroup);
+			if (nonEmpty.isOk()) {
+				const group = createGroup(nonEmpty.value, afterParagraphBreak);
+				groups.push(group);
+			}
+			currentGroup = [];
+			afterParagraphBreak = true;
+			continue;
+		}
+
+		const sentence = token.sentence;
+
+		// First sentence in group
+		if (currentGroup.length === 0) {
+			currentGroup.push(sentence);
+			continue;
+		}
+
+		const lastSentence = currentGroup[currentGroup.length - 1];
+		if (!lastSentence) {
+			currentGroup.push(sentence);
+			continue;
+		}
+
+		// Check if this sentence should be grouped with previous
+		if (shouldGroupTogether(lastSentence, sentence)) {
+			currentGroup.push(sentence);
+		} else {
+			// Finish current group and start new one
+			const nonEmpty = nonEmptyArrayResult(currentGroup);
+			if (nonEmpty.isOk()) {
+				const group = createGroup(nonEmpty.value, afterParagraphBreak);
+				groups.push(group);
+				afterParagraphBreak = false;
+			}
+			currentGroup = [sentence];
+		}
+	}
+
+	// Don't forget the last group
+	const nonEmpty = nonEmptyArrayResult(currentGroup);
+	if (nonEmpty.isOk()) {
+		const group = createGroup(nonEmpty.value, afterParagraphBreak);
+		groups.push(group);
+	}
+
+	return groups;
+}
+
+/**
+ * Creates a SentenceGroup with paragraph boundary tracking.
+ */
+function createGroup(
+	sentences: NonEmptyArray<AnnotatedSentence>,
+	afterParagraphBreak: boolean,
+): SentenceGroup {
+	// Mark the first sentence as starting a new paragraph if after a break
+	if (afterParagraphBreak && sentences.length > 0) {
+		sentences[0] = { ...sentences[0], startsNewParagraph: true };
+	}
+	return {
+		charCount: calculateGroupCharCount(sentences),
+		isSplittable: isGroupSplittable(sentences),
+		sentences,
+	};
 }

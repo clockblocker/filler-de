@@ -396,7 +396,7 @@ export class OpenedFileService {
 		}
 
 		try {
-			await this.app.workspace.getLeaf(true).openFile(tfile);
+			await this.app.workspace.getLeaf(false).openFile(tfile);
 			return ok(tfile);
 		} catch (error) {
 			return err(

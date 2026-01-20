@@ -1,4 +1,4 @@
-import type { SentenceToken } from "../../types";
+import type { RawContentToken, SentenceToken } from "../../types";
 import type { LanguageConfig } from "../language-config";
 
 /**
@@ -73,7 +73,7 @@ export function segmentSentences(
 
 /**
  * Segments text preserving paragraph structure.
- * Returns sentences with paragraph boundary markers.
+ * Returns sentences with paragraph boundary markers (legacy version).
  */
 export function segmentWithParagraphs(
 	content: string,
@@ -105,4 +105,49 @@ export function segmentWithParagraphs(
 	}
 
 	return sentences;
+}
+
+/**
+ * Segments text into content tokens, emitting explicit paragraph break markers.
+ * Returns a mix of sentence tokens and paragraph break tokens.
+ */
+export function segmentToTokens(
+	content: string,
+	config: LanguageConfig,
+): RawContentToken[] {
+	const tokens: RawContentToken[] = [];
+	const sentences = segmentSentences(content, config);
+
+	for (let i = 0; i < sentences.length; i++) {
+		const sentence = sentences[i];
+		if (!sentence) continue;
+
+		const prevSentence = sentences[i - 1];
+
+		// Check if there's a paragraph break before this sentence
+		if (prevSentence) {
+			const gapStart = prevSentence.sourceOffset + prevSentence.charCount;
+			const gapEnd = sentence.sourceOffset;
+			const gap = content.slice(gapStart, gapEnd);
+
+			// Paragraph break = two consecutive newlines (with optional whitespace between)
+			if (/\n\s*\n/.test(gap)) {
+				tokens.push({ kind: "paragraphBreak" });
+			}
+		}
+
+		// Trim trailing newlines from sentence text but keep leading content
+		const trimmedText = sentence.text.replace(/\n+$/, "");
+
+		tokens.push({
+			kind: "sentence",
+			sentence: {
+				...sentence,
+				charCount: trimmedText.length,
+				text: trimmedText,
+			},
+		});
+	}
+
+	return tokens;
 }
