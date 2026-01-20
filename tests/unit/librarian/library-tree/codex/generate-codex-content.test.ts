@@ -15,6 +15,7 @@ import type {
 	SectionNode,
 } from "../../../../../src/commanders/librarian/healer/library-tree/tree-node/types/tree-node";
 import type { NodeName } from "../../../../../src/commanders/librarian/types/schemas/node-name";
+import { MD } from "../../../../../src/managers/obsidian/vault-action-manager/types/literals";
 import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
 
@@ -40,7 +41,7 @@ const scroll = (
 	name: string,
 	status: TreeNodeStatus = TreeNodeStatus.NotStarted,
 ): ScrollNode => ({
-	extension: "md",
+	extension: MD,
 	kind: TreeNodeKind.Scroll,
 	nodeName: name as NodeName,
 	status,

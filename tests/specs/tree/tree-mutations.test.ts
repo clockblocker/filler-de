@@ -22,6 +22,7 @@ import {
 } from "../../../src/commanders/librarian/healer/library-tree/tree-node/types/atoms";
 import type { SectionNode } from "../../../src/commanders/librarian/healer/library-tree/tree-node/types/tree-node";
 import type { NodeName } from "../../../src/commanders/librarian/types/schemas/node-name";
+import { MD } from "../../../src/managers/obsidian/vault-action-manager/types/literals";
 import { SplitPathKind } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { defaultSettingsForUnitTests } from "../../unit/common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
@@ -80,7 +81,7 @@ describe("Tree Mutations", () => {
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library"],
 				},
@@ -110,7 +111,7 @@ describe("Tree Mutations", () => {
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note-soup-recipes",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "recipes", "soup"],
 				},
@@ -182,7 +183,7 @@ describe("Tree Mutations", () => {
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library"],
 				},
@@ -213,7 +214,7 @@ describe("Tree Mutations", () => {
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note-c-b-a",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "a", "b", "c"],
 				},
@@ -259,7 +260,7 @@ describe("Tree Mutations", () => {
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note1-recipes",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "recipes"],
 				},
@@ -273,7 +274,7 @@ describe("Tree Mutations", () => {
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note2-recipes",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "recipes"],
 				},
@@ -314,7 +315,7 @@ describe("Tree Mutations", () => {
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Untitled",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library"],
 				},
@@ -351,7 +352,7 @@ describe("Tree Mutations", () => {
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note-recipes",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "recipes"],
 				},
@@ -395,7 +396,7 @@ describe("Tree Mutations", () => {
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library"],
 				},
@@ -445,7 +446,7 @@ describe("Tree Mutations", () => {
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note-recipes",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "recipes"],
 				},
@@ -460,7 +461,7 @@ describe("Tree Mutations", () => {
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "placeholder-archive",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "archive"],
 				},
@@ -514,7 +515,7 @@ describe("Tree Mutations", () => {
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note-soup-recipes",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "recipes", "soup"],
 				},
@@ -533,7 +534,7 @@ describe("Tree Mutations", () => {
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "x-archive",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "archive"],
 				},
@@ -584,7 +585,7 @@ describe("Tree Mutations", () => {
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library"],
 				},
@@ -629,7 +630,7 @@ describe("Tree Mutations", () => {
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note1-recipes",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "recipes"],
 				},
@@ -643,7 +644,7 @@ describe("Tree Mutations", () => {
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note2-recipes",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "recipes"],
 				},
@@ -694,7 +695,7 @@ describe("Tree Mutations", () => {
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note-c-b-a",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "a", "b", "c"],
 				},
@@ -739,7 +740,7 @@ describe("Tree Mutations", () => {
 				actionType: TreeActionType.Create as const,
 				observedSplitPath: {
 					basename: "Note",
-					extension: "md" as const,
+					extension: MD,
 					kind: SplitPathKind.MdFile as const,
 					pathParts: ["Library"],
 				},
@@ -778,7 +779,7 @@ describe("Tree Mutations", () => {
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "A",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library"],
 				},
@@ -792,7 +793,7 @@ describe("Tree Mutations", () => {
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "B-section",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "section"],
 				},

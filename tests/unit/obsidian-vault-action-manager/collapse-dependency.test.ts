@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { collapseActions } from "../../../src/managers/obsidian/vault-action-manager/impl/actions-processing/collapse";
 import { buildDependencyGraph, makeGraphKey } from "../../../src/managers/obsidian/vault-action-manager/impl/actions-processing/dependency-detector";
+import { MD } from "../../../src/managers/obsidian/vault-action-manager/types/literals";
 import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,
@@ -25,7 +26,7 @@ const mdFile = (
 	pathParts: string[] = [],
 ): SplitPathToMdFile => ({
 	basename,
-	extension: "md",
+	extension: MD,
 	kind: SplitPathKind.MdFile,
 	pathParts,
 });

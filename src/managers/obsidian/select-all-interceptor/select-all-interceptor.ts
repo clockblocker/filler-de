@@ -50,6 +50,10 @@ export class SelectAllInterceptor {
 
 		if (!isSelectAll) return;
 
+		// Don't interfere when user is editing the file basename (inline title)
+		const activeEl = document.activeElement;
+		if (activeEl?.classList.contains("inline-title")) return;
+
 		// Get active markdown view
 		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 		if (!view) return;

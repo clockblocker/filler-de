@@ -8,6 +8,7 @@ import {
 	type BulkVaultEvent,
 	VaultEventKind,
 } from "../../../../../managers/obsidian/vault-action-manager";
+import { MD } from "../../../../../managers/obsidian/vault-action-manager/types/literals";
 import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import { logger } from "../../../../../utils/logger";
 import type { Codecs, SplitPathToMdFileInsideLibrary } from "../../../codecs";
@@ -514,7 +515,7 @@ function buildIntermediateCodexPath(
 
 	return {
 		basename,
-		extension: "md",
+		extension: MD,
 		kind: SplitPathKind.MdFile,
 		pathParts: observedPathParts,
 	};
@@ -550,7 +551,7 @@ function buildMovedCodexPath(
 
 	return {
 		basename,
-		extension: "md",
+		extension: MD,
 		kind: SplitPathKind.MdFile,
 		pathParts: newNodeNames,
 	};

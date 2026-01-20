@@ -4,6 +4,7 @@
  */
 
 import { err, ok, type Result } from "neverthrow";
+import { MD } from "../../../../managers/obsidian/vault-action-manager/types/literals";
 import type { SplitPathKind } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
 import { SplitPathKind as SplitPathKindEnum } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { CodecError } from "../errors";
@@ -77,7 +78,7 @@ export function toSplitPath(p: LibraryPath): AnySplitPathInsideLibrary {
 	if (p.kind === SplitPathKindEnum.MdFile) {
 		return {
 			basename,
-			extension: "md" as const,
+			extension: MD,
 			kind: SplitPathKindEnum.MdFile,
 			pathParts,
 		} as SplitPathToMdFileInsideLibrary;
@@ -135,7 +136,7 @@ export function makeLeafPath(
 	leafName: string,
 	extension: string,
 ): LibraryPath {
-	const isMd = extension === "md";
+	const isMd = extension === MD;
 	return {
 		extension,
 		kind: isMd ? SplitPathKindEnum.MdFile : SplitPathKindEnum.File,

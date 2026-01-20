@@ -15,6 +15,7 @@ import {
 	TreeNodeKind,
 	TreeNodeStatus,
 } from "../../../../../src/commanders/librarian/healer/library-tree/tree-node/types/atoms";
+import { MD } from "../../../../../src/managers/obsidian/vault-action-manager/types/literals";
 import { SplitPathKind } from "../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
@@ -48,7 +49,7 @@ describe("Codex init for nested sections", () => {
 			initialStatus: TreeNodeStatus.NotStarted,
 			observedSplitPath: {
 				basename: "Diary-kid-father-grandpa",
-				extension: "md" as const,
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: ["Library", "grandpa", "father", "kid"],
 			},

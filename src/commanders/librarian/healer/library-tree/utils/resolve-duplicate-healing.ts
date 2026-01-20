@@ -1,5 +1,6 @@
 import { getParsedUserSettings } from "../../../../../global-state/global-state";
 import type { VaultActionManager } from "../../../../../managers/obsidian/vault-action-manager";
+import { MD } from "../../../../../managers/obsidian/vault-action-manager/types/literals";
 import type { SplitPathToFolder } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import {
@@ -71,7 +72,7 @@ async function resolveFileRenameAction(
 	};
 
 	// Resolve unique name
-	const extension = to.kind === SplitPathKind.MdFile ? "md" : to.extension;
+	const extension = to.kind === SplitPathKind.MdFile ? MD : to.extension;
 	const resolvedCoreNameResult = await resolveUniqueDuplicateName(
 		coreName as NodeName,
 		folderPath,
@@ -112,7 +113,7 @@ async function resolveFileRenameAction(
 				to: {
 					...to,
 					basename: newBasename,
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 				} as SplitPathToMdFileInsideLibrary,
 			},

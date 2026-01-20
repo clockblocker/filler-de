@@ -37,6 +37,8 @@ export type SplitHealingInfo = {
 	sectionChain: SectionNodeSegmentId[];
 	/** Segment ID of the deleted scroll (to remove from tree) */
 	deletedScrollSegmentId: ScrollNodeSegmentId;
+	/** Node names of created pages (e.g., "Aschenputtel_Page_000") */
+	pageNodeNames: string[];
 };
 
 export type SplitToPagesContext = {
@@ -98,6 +100,7 @@ type DispatchResult =
 			firstPagePath: SplitPathToMdFile;
 			sectionChain: SectionNodeSegmentId[];
 			deletedScrollSegmentId: ScrollNodeSegmentId;
+			pageNodeNames: string[];
 	  };
 
 async function executeDispatch(
@@ -117,7 +120,7 @@ async function executeDispatch(
 		return ok({ tooShort: true });
 	}
 
-	const { actions, deletedScrollSegmentId, firstPagePath, sectionChain } =
+	const { actions, deletedScrollSegmentId, firstPagePath, pageNodeNames, sectionChain } =
 		buildPageSplitActions(segmentation, sourcePath, rules);
 	const result = await vaultActionManager.dispatch(actions);
 	if (result.isErr()) {
@@ -128,6 +131,7 @@ async function executeDispatch(
 		deletedScrollSegmentId,
 		firstPagePath,
 		pageCount: segmentation.pages.length,
+		pageNodeNames,
 		sectionChain,
 		tooShort: false,
 	});
@@ -166,6 +170,7 @@ export async function splitToPagesAction(
 	if (context.onSectionCreated) {
 		context.onSectionCreated({
 			deletedScrollSegmentId: result.deletedScrollSegmentId,
+			pageNodeNames: result.pageNodeNames,
 			sectionChain: result.sectionChain,
 		});
 	}

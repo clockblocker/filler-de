@@ -5,6 +5,7 @@ import { materializeScopedBulk } from "../../../../../../../../src/commanders/li
 import type { MaterializedNodeEvent } from "../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/materialized-node-events/types";
 import { MaterializedEventKind } from "../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/materialized-node-events/types";
 import { TreeNodeKind } from "../../../../../../../../src/commanders/librarian/healer/library-tree/tree-node/types/atoms";
+import { MD } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/literals";
 import { SplitPathKind } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { VaultEventKind } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/vault-event";
 
@@ -22,9 +23,9 @@ const File = (basename: string, pathParts: string[] = [], extension = "txt"): { 
 	pathParts,
 });
 
-const MdFile = (basename: string, pathParts: string[] = []): { basename: string; pathParts: string[]; kind: typeof SplitPathKind.MdFile; extension: "md" } => ({
+const MdFile = (basename: string, pathParts: string[] = []): { basename: string; pathParts: string[]; kind: typeof SplitPathKind.MdFile; extension: MD } => ({
 	basename,
-	extension: "md",
+	extension: MD,
 	kind: SplitPathKind.MdFile,
 	pathParts,
 });

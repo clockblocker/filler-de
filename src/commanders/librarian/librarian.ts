@@ -9,12 +9,14 @@ import type {
 	VaultAction,
 	VaultActionManager,
 } from "../../managers/obsidian/vault-action-manager";
+import { MD } from "../../managers/obsidian/vault-action-manager/types/literals";
 import {
 	SplitPathKind,
 	type SplitPathToMdFileWithReader,
 } from "../../managers/obsidian/vault-action-manager/types/split-path";
 import { decrementPending, incrementPending } from "../../utils/idle-tracker";
 import { logger } from "../../utils/logger";
+import type { SplitHealingInfo } from "./bookkeeper/split-to-pages-action";
 import {
 	type CodecRules,
 	type Codecs,
@@ -26,7 +28,6 @@ import type {
 	ScrollNodeSegmentId,
 	SectionNodeSegmentId,
 } from "./codecs/segment-id/types/segment-id";
-import type { SplitHealingInfo } from "./bookkeeper/split-to-pages-action";
 import { Healer } from "./healer/healer";
 import { HealingTransaction } from "./healer/healing-transaction";
 import type { CodexImpact } from "./healer/library-tree/codex";
@@ -281,7 +282,7 @@ export class Librarian {
 			const segmentIdResult =
 				this.codecs.segmentId.serializeSegmentIdUnchecked({
 					coreName: target.nodeName,
-					extension: "md",
+					extension: MD,
 					targetKind: TreeNodeKind.Scroll,
 				});
 			if (segmentIdResult.isErr()) {
@@ -585,7 +586,7 @@ export class Librarian {
 	 * Trigger section healing for a newly created section.
 	 * Called by Bookkeeper to bypass self-event filtering.
 	 *
-	 * @param info - Contains section chain and deleted scroll info
+	 * @param info - Contains section chain, deleted scroll, and page node names
 	 */
 	async triggerSectionHealing(info: SplitHealingInfo): Promise<void> {
 		if (!this.healer) {
@@ -595,7 +596,7 @@ export class Librarian {
 			return;
 		}
 
-		const { sectionChain, deletedScrollSegmentId } = info;
+		const { sectionChain, deletedScrollSegmentId, pageNodeNames } = info;
 
 		// Delete the old scroll from the tree (self-event filtering blocked the Delete event)
 		// The scroll was in the parent section
@@ -609,7 +610,24 @@ export class Librarian {
 
 		// Ensure the section chain exists in the tree
 		// (self-event filtering blocked the normal Create events)
-		this.healer.ensureSectionChain(sectionChain);
+		const section = this.healer.ensureSectionChain(sectionChain);
+
+		// Populate section with page scroll nodes BEFORE codex generation
+		// (self-event filtering will block the page Create events, so we add them here)
+		for (const pageName of pageNodeNames) {
+			const scrollSegId = this.codecs.segmentId.serializeSegmentId({
+				coreName: pageName,
+				extension: MD,
+				targetKind: TreeNodeKind.Scroll,
+			}) as ScrollNodeSegmentId;
+
+			section.children[scrollSegId] = {
+				extension: MD,
+				kind: TreeNodeKind.Scroll,
+				nodeName: pageName,
+				status: TreeNodeStatus.NotStarted,
+			};
+		}
 
 		// Build impacted chains: the new section + its parent (for codex content update)
 		const chainKey = sectionChain.join("/");
@@ -648,7 +666,7 @@ export class Librarian {
 		if (vaultActions.length > 0) {
 			logger.debug(
 				"[Librarian.triggerSectionHealing] Dispatching codex actions:",
-				JSON.stringify({ chainKey, actionCount: vaultActions.length }),
+				JSON.stringify({ actionCount: vaultActions.length, chainKey }),
 			);
 			await this.vaultActionManager.dispatch(vaultActions);
 		}

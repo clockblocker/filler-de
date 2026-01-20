@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { makeCodecRulesFromSettings } from "../../../../../../../../src/commanders/librarian/codecs";
 import { makeEventLibraryScoped } from "../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/events/make-event-libray-scoped";
 import { makeEventVaultScoped } from "../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/events/make-event-vault-scoped";
+import { MD } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/literals";
 import { SplitPathKind } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import type { VaultEvent } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/vault-event";
 import { VaultEventKind } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/vault-event";
@@ -25,7 +26,7 @@ describe("makeEventLibraryScoped and makeEventVaultScoped roundtrip", () => {
 			kind: VaultEventKind.FileCreated,
 			splitPath: {
 				basename: "Note",
-				extension: "md",
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: ["Library", "Section"],
 			},
@@ -41,14 +42,14 @@ describe("makeEventLibraryScoped and makeEventVaultScoped roundtrip", () => {
 		const original: VaultEvent = {
 			from: {
 				basename: "Old",
-				extension: "md",
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: ["Library", "Section1"],
 			},
 			kind: VaultEventKind.FileRenamed,
 			to: {
 				basename: "New",
-				extension: "md",
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: ["Library", "Section2"],
 			},
@@ -64,14 +65,14 @@ describe("makeEventLibraryScoped and makeEventVaultScoped roundtrip", () => {
 		const original: VaultEvent = {
 			from: {
 				basename: "Old",
-				extension: "md",
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: ["Library", "Section"],
 			},
 			kind: VaultEventKind.FileRenamed,
 			to: {
 				basename: "New",
-				extension: "md",
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: ["Other"],
 			},
@@ -87,14 +88,14 @@ describe("makeEventLibraryScoped and makeEventVaultScoped roundtrip", () => {
 		const original: VaultEvent = {
 			from: {
 				basename: "Old",
-				extension: "md",
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: ["Other"],
 			},
 			kind: VaultEventKind.FileRenamed,
 			to: {
 				basename: "New",
-				extension: "md",
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: ["Library", "Section"],
 			},
@@ -111,7 +112,7 @@ describe("makeEventLibraryScoped and makeEventVaultScoped roundtrip", () => {
 			kind: VaultEventKind.FileDeleted,
 			splitPath: {
 				basename: "Note",
-				extension: "md",
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: ["Library", "Section"],
 			},
@@ -234,7 +235,7 @@ describe("makeEventLibraryScoped and makeEventVaultScoped roundtrip", () => {
 			kind: VaultEventKind.FileCreated,
 			splitPath: {
 				basename: "Note",
-				extension: "md",
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: ["Root", "Library", "Section"],
 			},

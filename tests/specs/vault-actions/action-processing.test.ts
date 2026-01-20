@@ -15,6 +15,7 @@ import {
 	makeGraphKey,
 } from "../../../src/managers/obsidian/vault-action-manager/impl/actions-processing/dependency-detector";
 import { topologicalSort } from "../../../src/managers/obsidian/vault-action-manager/impl/actions-processing/topological-sort";
+import { MD } from "../../../src/managers/obsidian/vault-action-manager/types/literals";
 import type {
 	SplitPathToFile,
 	SplitPathToFolder,
@@ -38,7 +39,7 @@ const mdFile = (
 	pathParts: string[] = [],
 ): SplitPathToMdFile => ({
 	basename,
-	extension: "md",
+	extension: MD,
 	kind: "MdFile",
 	pathParts,
 });

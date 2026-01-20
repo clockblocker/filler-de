@@ -84,8 +84,11 @@ export class ButtonRegistry {
 					);
 					fileType = metaInfo?.noteType ?? null;
 
-					// Check if scroll would split to multiple pages
-					if (fileType === FileType.Scroll) {
+					// Check if scroll/codex would split to multiple pages
+					if (
+						fileType === FileType.Scroll ||
+						fileType === FileType.Codex
+					) {
 						const settings = getParsedUserSettings();
 						const rules = makeCodecRulesFromSettings(settings);
 						wouldSplitToMultiplePages = checkWouldSplit(

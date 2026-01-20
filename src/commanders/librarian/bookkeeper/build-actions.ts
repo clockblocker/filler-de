@@ -4,6 +4,7 @@
 
 import { z } from "zod";
 import { buildGoBackLink } from "../../../managers/obsidian/navigation/go-back-link";
+import { MD } from "../../../managers/obsidian/vault-action-manager/types/literals";
 import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,
@@ -16,7 +17,7 @@ import {
 	readMetadata,
 	upsertMetadata,
 } from "../../../managers/pure/note-metadata-manager";
-import { LINE_BREAK } from "../../../types/literals";
+import { LINE_BREAK, SPACE_F } from "../../../types/literals";
 import type { CodecRules } from "../codecs/rules";
 import { serializeSegmentId } from "../codecs/segment-id/internal/serialize";
 import type {
@@ -31,7 +32,7 @@ import type { NodeName } from "../types/schemas/node-name";
 import { buildPageBasename, buildPageFolderBasename } from "./page-codec";
 import { splitStrInBlocks } from "./segmenter/block-marker";
 import type { SegmentationResult } from "./types";
-import { PAGE_FRONTMATTER } from "./types";
+import { PAGE_FRONTMATTER, PAGE_INDEX_DIGITS, PAGE_PREFIX } from "./types";
 
 // Schema for reading existing page metadata
 const PageMetadataSchema = z
@@ -48,6 +49,8 @@ export type PageSplitResult = {
 	sectionChain: SectionNodeSegmentId[];
 	/** Segment ID of the deleted scroll (for tree update) */
 	deletedScrollSegmentId: ScrollNodeSegmentId;
+	/** Node names of created pages (e.g., "Aschenputtel_Page_000") */
+	pageNodeNames: string[];
 };
 
 /**
@@ -82,7 +85,7 @@ export function buildPageSplitActions(
 	// Build segment ID for the deleted scroll (same coreName, but Scroll kind)
 	const deletedScrollSegmentId = serializeSegmentId({
 		coreName: result.sourceCoreName,
-		extension: "md",
+		extension: MD,
 		targetKind: TreeNodeKind.Scroll,
 	}) as ScrollNodeSegmentId;
 
@@ -115,7 +118,7 @@ export function buildPageSplitActions(
 		const { markedText } = splitStrInBlocks(page.content, 0);
 		// Add go-back link at top, then formatted content with metadata
 		const pageContent = formatPageContent(
-			goBackLink + LINE_BREAK + LINE_BREAK + markedText,
+			SPACE_F + goBackLink + LINE_BREAK + LINE_BREAK + markedText,
 		);
 		const pagePath =
 			page.pageIndex === 0
@@ -142,7 +145,22 @@ export function buildPageSplitActions(
 		payload: { splitPath: sourcePath },
 	});
 
-	return { actions, deletedScrollSegmentId, firstPagePath, sectionChain };
+	// 4. Extract page node names for tree population
+	const pageNodeNames = result.pages.map((page) => {
+		const paddedIndex = String(page.pageIndex).padStart(
+			PAGE_INDEX_DIGITS,
+			"0",
+		);
+		return `${result.sourceCoreName}_${PAGE_PREFIX}_${paddedIndex}`;
+	});
+
+	return {
+		actions,
+		deletedScrollSegmentId,
+		firstPagePath,
+		pageNodeNames,
+		sectionChain,
+	};
 }
 
 /**
@@ -158,7 +176,7 @@ function buildPageSplitPath(
 	const basename = buildPageBasename(pageIndex, coreName, suffixParts, rules);
 	return {
 		basename,
-		extension: "md",
+		extension: MD,
 		kind: SplitPathKind.MdFile,
 		pathParts,
 	};

@@ -5,6 +5,7 @@ import {
 } from "../../../../../src/commanders/librarian/codecs";
 import type { SectionNodeSegmentId } from "../../../../../src/commanders/librarian/codecs/segment-id/types/segment-id";
 import { computeCodexSplitPath } from "../../../../../src/commanders/librarian/healer/library-tree/codex/codex-split-path";
+import { MD } from "../../../../../src/managers/obsidian/vault-action-manager/types/literals";
 import { SplitPathKind } from "../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
@@ -33,7 +34,7 @@ describe("computeCodexSplitPath", () => {
 
 		expect(result).toEqual({
 			basename: "__-Library",
-			extension: "md",
+			extension: MD,
 			kind: SplitPathKind.MdFile,
 			pathParts: ["Library"],
 		});
@@ -45,7 +46,7 @@ describe("computeCodexSplitPath", () => {
 
 		expect(result).toEqual({
 			basename: "__-A",
-			extension: "md",
+			extension: MD,
 			kind: SplitPathKind.MdFile,
 			pathParts: ["Library", "A"],
 		});
@@ -57,7 +58,7 @@ describe("computeCodexSplitPath", () => {
 
 		expect(result).toEqual({
 			basename: "__-B-A",
-			extension: "md",
+			extension: MD,
 			kind: SplitPathKind.MdFile,
 			pathParts: ["Library", "A", "B"],
 		});
@@ -69,7 +70,7 @@ describe("computeCodexSplitPath", () => {
 
 		expect(result).toEqual({
 			basename: "__-C-B-A",
-			extension: "md",
+			extension: MD,
 			kind: SplitPathKind.MdFile,
 			pathParts: ["Library", "A", "B", "C"],
 		});

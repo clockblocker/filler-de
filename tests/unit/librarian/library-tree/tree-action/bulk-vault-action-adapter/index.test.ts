@@ -11,6 +11,7 @@ import { getNodeName } from "../../../../../../src/commanders/librarian/healer/l
 import { TreeNodeKind } from "../../../../../../src/commanders/librarian/healer/library-tree/tree-node/types/atoms";
 import type { BulkVaultEvent } from "../../../../../../src/managers/obsidian/vault-action-manager";
 import type { PossibleRootVaultEvent } from "../../../../../../src/managers/obsidian/vault-action-manager/impl/event-processing/bulk-event-emmiter/types/bulk/helpers";
+import { MD } from "../../../../../../src/managers/obsidian/vault-action-manager/types/literals";
 import { SplitPathKind } from "../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import type {
 	FileCreatedVaultEvent,
@@ -64,9 +65,9 @@ const spFolder = (
 const spMdFile = (
 	pathParts: string[],
 	basename: string,
-): { basename: string; pathParts: string[]; kind: typeof SplitPathKind.MdFile; extension: "md" } => ({
+): { basename: string; pathParts: string[]; kind: typeof SplitPathKind.MdFile; extension: MD } => ({
 	basename,
-	extension: "md",
+	extension: MD,
 	kind: SplitPathKind.MdFile,
 	pathParts,
 });

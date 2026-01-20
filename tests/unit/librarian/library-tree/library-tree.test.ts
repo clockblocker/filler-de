@@ -6,6 +6,7 @@ import { generateChildrenList } from "../../../../src/commanders/librarian/heale
 import { TreeActionType } from "../../../../src/commanders/librarian/healer/library-tree/tree-action/types/tree-action";
 import { TreeNodeStatus } from "../../../../src/commanders/librarian/healer/library-tree/tree-node/types/atoms";
 import type { NodeName } from "../../../../src/commanders/librarian/types/schemas/node-name";
+import { MD } from "../../../../src/managers/obsidian/vault-action-manager/types/literals";
 import { SplitPathKind } from "../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { defaultSettingsForUnitTests } from "../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../common-utils/setup-spy";
@@ -70,7 +71,7 @@ describe("Healer", () => {
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "recipe", "pie"],
 				},
@@ -244,7 +245,7 @@ describe("Healer", () => {
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Untitled",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "Recipe", "Soup", "Ramen"],
 				},
@@ -313,7 +314,7 @@ describe("Healer", () => {
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Untitled",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "Recipe", "Soup", "Ramen"],
 				},

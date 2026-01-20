@@ -4,6 +4,7 @@ import {
 	splitPathFromSystemPathInternal,
 	systemPathFromSplitPathInternal,
 } from "../../../src/managers/obsidian/vault-action-manager/helpers/pathfinder";
+import { MD } from "../../../src/managers/obsidian/vault-action-manager/types/literals";
 import { SplitPathKind, type SplitPathToFile, type SplitPathToFolder, type SplitPathToMdFile } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
 
 describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", () => {
@@ -22,7 +23,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 			const result = splitPathFromSystemPathInternal("root/notes/file.md");
 			expect(result).toEqual({
 				basename: "file",
-				extension: "md",
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: ["root", "notes"],
 			});
@@ -34,7 +35,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 			);
 			expect(result).toEqual({
 				basename: "Note-Section",
-				extension: "md",
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: ["Library", "Section"],
 			});
@@ -72,7 +73,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 			const result = splitPathFromSystemPathInternal("///root/file.md");
 			expect(result).toEqual({
 				basename: "file",
-				extension: "md",
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: ["root"],
 			});
@@ -91,7 +92,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 			const result = splitPathFromSystemPathInternal("root/file.name.md");
 			expect(result).toEqual({
 				basename: "file.name",
-				extension: "md",
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: ["root"],
 			});
@@ -101,7 +102,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 			const result = splitPathFromSystemPathInternal("//root//file.md//");
 			expect(result).toEqual({
 				basename: "file",
-				extension: "md",
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: ["root"],
 			});
@@ -117,7 +118,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 		it("encodes md file", () => {
 			const splitPath = {
 				basename: "file",
-				extension: "md",
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: ["root", "notes"],
 			} as SplitPathToMdFile;
@@ -128,7 +129,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 		it("encodes nested md file", () => {
 			const splitPath = {
 				basename: "Note-Section",
-				extension: "md",
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: ["Library", "Section"],
 			} as SplitPathToMdFile;
@@ -170,7 +171,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 		it("sanitizes basename with slashes", () => {
 			const splitPath = {
 				basename: "file/name",
-				extension: "md",
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: ["root"],
 			} as SplitPathToMdFile;
@@ -181,7 +182,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 		it("sanitizes basename with backslashes", () => {
 			const splitPath = {
 				basename: "file\\name",
-				extension: "md",
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: ["root"],
 			} as SplitPathToMdFile;
@@ -192,7 +193,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 		it("preserves special characters that Obsidian allows", () => {
 			const splitPath = {
 				basename: "file-with-!@#$%",
-				extension: "md",
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: ["root"],
 			} as SplitPathToMdFile;
@@ -204,7 +205,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 		it("preserves spaces in basename", () => {
 			const splitPath = {
 				basename: "file with spaces",
-				extension: "md",
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: ["root"],
 			} as SplitPathToMdFile;
@@ -215,7 +216,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 		it("trims basename whitespace", () => {
 			const splitPath = {
 				basename: "  file  ",
-				extension: "md",
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: ["root"],
 			} as SplitPathToMdFile;
@@ -235,7 +236,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 		it("round-trips md file", () => {
 			const original = {
 				basename: "file",
-				extension: "md",
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: ["root", "notes"],
 			} as SplitPathToMdFile;
@@ -247,7 +248,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 		it("round-trips nested md file", () => {
 			const original = {
 				basename: "Note-Section",
-				extension: "md",
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: ["Library", "Section", "Subsection"],
 			} as SplitPathToMdFile;
@@ -293,7 +294,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 		it("round-trips file with dots in basename", () => {
 			const original = {
 				basename: "file.name",
-				extension: "md",
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: ["root"],
 			} as SplitPathToMdFile;
@@ -308,7 +309,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 			const result = splitPathFromSystemPathInternal(".md");
 			expect(result).toEqual({
 				basename: "",
-				extension: "md",
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: [],
 			});
@@ -320,7 +321,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 			);
 			expect(result).toEqual({
 				basename: "file",
-				extension: "md",
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: ["a", "b", "c", "d", "e", "f", "g", "h"],
 			});
@@ -329,7 +330,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 		it("handles unicode characters in path", () => {
 			const splitPath = {
 				basename: "café",
-				extension: "md",
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: ["répertoire"],
 			} as SplitPathToMdFile;
@@ -341,7 +342,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 		it("sanitizes path separators in basename", () => {
 			const splitPath = {
 				basename: "file/name\\with-separators",
-				extension: "md",
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: ["root"],
 			} as SplitPathToMdFile;
@@ -354,7 +355,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 		it("preserves Obsidian-allowed special characters", () => {
 			const splitPath = {
 				basename: "file!@#$%with-special",
-				extension: "md",
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: ["root"],
 			} as SplitPathToMdFile;

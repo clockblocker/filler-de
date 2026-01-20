@@ -1,11 +1,11 @@
 import { err, ok, type Result } from "neverthrow";
+import { MD } from "../../../../../managers/obsidian/vault-action-manager/types/literals";
 import {
 	FileExtensionSchema,
 	MdExtensionSchema,
 	TreeNodeKind,
 	TreeNodeKindSchema,
 } from "../../../healer/library-tree/tree-node/types/atoms";
-
 import { NodeNameSchema } from "../../../types/schemas/node-name";
 import type { CodecError } from "../../errors";
 import { makeSegmentIdError, makeZodError } from "../../errors";
@@ -136,7 +136,7 @@ export function serializeSegmentIdUnchecked(components: {
 					makeSegmentIdError(
 						"InvalidExtension",
 						components.extension,
-						`Scroll segment ID must have "md" extension, got: ${components.extension}`,
+						`Scroll segment ID must have ${MD} extension, got: ${components.extension}`,
 						{ extension: components.extension },
 						makeZodError(
 							extensionResult.error.issues,
@@ -149,7 +149,7 @@ export function serializeSegmentIdUnchecked(components: {
 			return ok(
 				serializeSegmentId({
 					coreName,
-					extension: "md",
+					extension: MD,
 					targetKind: TreeNodeKind.Scroll,
 				}),
 			);

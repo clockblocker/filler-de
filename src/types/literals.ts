@@ -33,6 +33,10 @@ const BackArrowSchema = z.literal("←");
 export type BACK_ARROW = z.infer<typeof BackArrowSchema>;
 export const BACK_ARROW = BackArrowSchema.value;
 
+const ForwardArrowSchema = z.literal("→");
+export type FORWARD_ARROW = z.infer<typeof ForwardArrowSchema>;
+export const FORWARD_ARROW = ForwardArrowSchema.value;
+
 const ObsidianLinkOpenSchema = z.literal("[[");
 export type OBSIDIAN_LINK_OPEN = z.infer<typeof ObsidianLinkOpenSchema>;
 export const OBSIDIAN_LINK_OPEN = ObsidianLinkOpenSchema.value;

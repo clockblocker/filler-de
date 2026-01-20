@@ -1,5 +1,6 @@
 import { TFile, TFolder, type Vault } from "obsidian";
 import { pathToFolderFromPathParts } from "../../../helpers/pathfinder";
+import { MD } from "../../../types/literals";
 import type { AnySplitPath } from "../../../types/split-path";
 import { SplitPathKind } from "../../../types/split-path";
 
@@ -27,7 +28,7 @@ export async function getExistingBasenamesInFolder<SPF extends AnySplitPath>(
 		// For files, collect basenames matching the extension
 		const targetExtension =
 			target.kind === SplitPathKind.MdFile
-				? "md"
+				? MD
 				: target.kind === SplitPathKind.File
 					? target.extension
 					: undefined;

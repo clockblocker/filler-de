@@ -1,5 +1,5 @@
 import { err, ok, type Result } from "neverthrow";
-import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import { MD } from "../../../../../managers/obsidian/vault-action-manager/types/literals";
 import type { Codecs, SplitPathToMdFileInsideLibrary } from "../../../codecs";
 import type { CodecError } from "../../../codecs/errors";
 import type { ScrollNodeLocator } from "../../../codecs/locator/types";
@@ -32,7 +32,7 @@ export function computeScrollSplitPath(
 	// Create ScrollNodeSegmentId
 	const segmentIdResult = codecs.segmentId.serializeSegmentIdUnchecked({
 		coreName: nodeName,
-		extension: "md",
+		extension: MD,
 		targetKind: TreeNodeKind.Scroll,
 	});
 	if (segmentIdResult.isErr()) {

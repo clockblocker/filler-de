@@ -48,6 +48,27 @@ VaultActionManager          ClickInterceptor
 
 ## Key Components
 
+### Bookkeeper
+
+`src/commanders/librarian/bookkeeper/`
+
+Splits long scrolls into paginated folder structure.
+
+```
+splitToPagesAction() → segmentContent() → buildPageSplitActions()
+    ↓
+VaultActionManager.dispatch([CreateFolder, UpsertPages..., TrashScroll])
+    ↓
+onSectionCreated(SplitHealingInfo) → Librarian.triggerSectionHealing()
+```
+
+**SplitHealingInfo:**
+- `sectionChain`: segment IDs for new folder
+- `deletedScrollSegmentId`: trashed scroll ID
+- `pageNodeNames`: created page names (e.g., `["Story_Page_000", "Story_Page_001"]`)
+
+**Bypasses self-event filtering:** Dispatched page creates are filtered out. Bookkeeper passes `pageNodeNames` directly; `triggerSectionHealing` populates tree with scroll nodes before codex generation.
+
 ### ClickInterceptor
 - Listens to DOM click events, identifies task checkboxes
 - Emits `CheckboxClickedEvent` with file path, line content, checked state

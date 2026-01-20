@@ -24,6 +24,7 @@ import { makeNodeSegmentId } from "../../../../src/commanders/librarian/healer/l
 import { TreeNodeKind, TreeNodeStatus } from "../../../../src/commanders/librarian/healer/library-tree/tree-node/types/atoms";
 import type { LeafNode, SectionNode } from "../../../../src/commanders/librarian/healer/library-tree/tree-node/types/tree-node";
 import type { NodeName } from "../../../../src/commanders/librarian/types/schemas/node-name";
+import { MD } from "../../../../src/managers/obsidian/vault-action-manager/types/literals";
 import { defaultSettingsForUnitTests } from "../../common-utils/consts";
 
 // ─── Shape Types ───
@@ -95,7 +96,7 @@ function isLeafShape(shape: SectionShape | LeafShape): shape is LeafShape {
 function makeLeafFromShape(name: NodeName, shape: LeafShape): LeafNode {
 	if (shape.kind === "Scroll") {
 		return {
-			extension: "md",
+			extension: MD,
 			kind: TreeNodeKind.Scroll,
 			nodeName: name,
 			status: shape.status ?? TreeNodeStatus.NotStarted,

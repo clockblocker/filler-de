@@ -29,7 +29,7 @@ const P = (path: string): SplitPathToMdFile | SplitPathToFile => {
     const ext = dot === -1 ? "" : filename.slice(dot + 1);
   
     return ext === "md"
-      ? { basename, extension: "md", kind: "MdFile", pathParts: parts }
+      ? { basename, extension: MD, kind: "MdFile", pathParts: parts }
       : { basename, extension: ext, kind: "File", pathParts: parts };
 };
 

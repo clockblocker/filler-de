@@ -7,6 +7,7 @@
  * @see PathFinder in `src/commanders/librarian-new/paths/path-computer.ts`
  */
 import { ok, type Result } from "neverthrow";
+import { MD } from "../../../../../managers/obsidian/vault-action-manager/types/literals";
 import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type {
 	AnySplitPathInsideLibrary,
@@ -69,7 +70,7 @@ export function buildObservedLeafSplitPath(
 	if (leaf.kind === TreeNodeKind.Scroll) {
 		return {
 			basename,
-			extension: "md",
+			extension: MD,
 			kind: SplitPathKind.MdFile,
 			pathParts: currentPathParts,
 		};

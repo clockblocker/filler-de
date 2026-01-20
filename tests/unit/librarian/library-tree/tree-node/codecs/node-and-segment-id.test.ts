@@ -16,6 +16,7 @@ import type {
 	ScrollNode,
 	SectionNode,
 } from "../../../../../../src/commanders/librarian/healer/library-tree/tree-node/types/tree-node";
+import { MD } from "../../../../../../src/managers/obsidian/vault-action-manager/types/literals";
 import { defaultSettingsForUnitTests } from "../../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../../common-utils/setup-spy";
 
@@ -44,7 +45,7 @@ describe("makeNodeSegmentId", () => {
 
 	it("creates segment ID for Scroll node", () => {
 		const node: ScrollNode = {
-			extension: "md",
+			extension: MD,
 			kind: TreeNodeKind.Scroll,
 			nodeName: "MyScroll",
 			status: TreeNodeStatus.Unknown,
@@ -84,7 +85,7 @@ describe("makeTreeNode", () => {
 		const segmentId = `MyScroll${Separator}${TreeNodeKind.Scroll}${Separator}md` as ScrollNodeSegmentId;
 		const result = makeTreeNode(segmentId);
 		expect(result).toEqual({
-			extension: "md",
+			extension: MD,
 			kind: TreeNodeKind.Scroll,
 			nodeName: "MyScroll",
 			status: TreeNodeStatus.Unknown,
@@ -127,7 +128,7 @@ describe("tryParseTreeNode", () => {
 		expect(result.isOk()).toBe(true);
 		if (result.isOk()) {
 			expect(result.value).toEqual({
-				extension: "md",
+				extension: MD,
 				kind: TreeNodeKind.Scroll,
 				nodeName: "MyScroll",
 				status: TreeNodeStatus.Unknown,
@@ -184,7 +185,7 @@ describe("makeNodeSegmentId and makeTreeNode roundtrip", () => {
 
 	it("roundtrips Scroll node", () => {
 		const node: ScrollNode = {
-			extension: "md",
+			extension: MD,
 			kind: TreeNodeKind.Scroll,
 			nodeName: "TestScroll",
 			status: TreeNodeStatus.Unknown,

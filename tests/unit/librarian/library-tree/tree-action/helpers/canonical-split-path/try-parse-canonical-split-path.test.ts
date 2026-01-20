@@ -3,6 +3,7 @@ import {
 	makeRegularSplitPathInsideLibrary,
 	tryParseCanonicalSplitPathInsideLibrary,
 } from "../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/utils/canonical-naming/canonical-split-path-codec";
+import { MD } from "../../../../../../../src/managers/obsidian/vault-action-manager/types/literals";
 import type {
 	SplitPathToFile,
 	SplitPathToFolder,
@@ -199,7 +200,7 @@ describe("tryParseCanonicalSplitPath", () => {
 		it("parses valid md file with no suffix and no path parts", () => {
 			const sp: SplitPathToMdFile = {
 				basename: "MyNote",
-				extension: "md",
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: ["Library"],
 			};
@@ -219,7 +220,7 @@ describe("tryParseCanonicalSplitPath", () => {
 		it("parses valid md file with matching suffix and path parts", () => {
 			const sp: SplitPathToMdFile = {
 				basename: "MyNote-Section2-Section1",
-				extension: "md",
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: ["Library", "Section1", "Section2"],
 			};
@@ -238,7 +239,7 @@ describe("tryParseCanonicalSplitPath", () => {
 		it("returns error when suffix does not match reversed path parts", () => {
 			const sp: SplitPathToMdFile = {
 				basename: "MyNote-Section1-Section2",
-				extension: "md",
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: ["Section1", "Section2"],
 			};
@@ -262,7 +263,7 @@ describe("tryParseCanonicalSplitPath", () => {
 
 			const sp: SplitPathToMdFile = {
 				basename: "MyNote_Section2_Section1",
-				extension: "md",
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: ["Library", "Section1", "Section2"],
 			};
@@ -336,7 +337,7 @@ describe("tryParseCanonicalSplitPath", () => {
 		it("roundtrip for md file: canonical -> regular -> canonical", () => {
 			const regular: SplitPathToMdFile = {
 				basename: "MyNote-Section2-Section1",
-				extension: "md",
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: ["Library", "Section1", "Section2"],
 			};

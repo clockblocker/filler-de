@@ -17,6 +17,7 @@ import {
 	scanAndGenerateOrphanActions,
 } from "../../../src/commanders/librarian/healer/orphan-codex-scanner";
 import type { NodeName } from "../../../src/commanders/librarian/types/schemas/node-name";
+import { MD } from "../../../src/managers/obsidian/vault-action-manager/types/literals";
 import { SplitPathKind } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { defaultSettingsForUnitTests } from "../../unit/common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
@@ -50,7 +51,7 @@ describe("OrphanCodexScanner", () => {
 			const vaultPaths: SplitPathToMdFileInsideLibrary[] = [
 				{
 					basename: "__-recipes-WRONG", // Wrong suffix!
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "recipes"],
 				},
@@ -79,7 +80,7 @@ describe("OrphanCodexScanner", () => {
 			const vaultPaths: SplitPathToMdFileInsideLibrary[] = [
 				{
 					basename: "__-recipes", // Correct suffix for recipes section
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "recipes"],
 				},
@@ -106,7 +107,7 @@ describe("OrphanCodexScanner", () => {
 			const vaultPaths: SplitPathToMdFileInsideLibrary[] = [
 				{
 					basename: "__-nonexistent",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "nonexistent"], // Section doesn't exist
 				},
@@ -136,13 +137,13 @@ describe("OrphanCodexScanner", () => {
 			const vaultPaths: SplitPathToMdFileInsideLibrary[] = [
 				{
 					basename: "__-recipes",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "recipes"],
 				},
 				{
 					basename: "__-recipes", // Duplicate!
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "recipes"],
 				},
@@ -172,28 +173,28 @@ describe("OrphanCodexScanner", () => {
 				// Valid
 				{
 					basename: "__-recipes",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "recipes"],
 				},
 				// Duplicate of recipes
 				{
 					basename: "__-recipes",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "recipes"],
 				},
 				// Valid
 				{
 					basename: "__-archive",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "archive"],
 				},
 				// Duplicate of archive
 				{
 					basename: "__-archive",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "archive"],
 				},
@@ -221,7 +222,7 @@ describe("OrphanCodexScanner", () => {
 
 			const orphanedPath: SplitPathToMdFileInsideLibrary = {
 				basename: "__-recipes-WRONG",
-				extension: "md",
+				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts: ["Library", "recipes"],
 			};
@@ -261,7 +262,7 @@ describe("OrphanCodexScanner", () => {
 					expectedPath: null,
 					observedPath: {
 						basename: "__-recipes-WRONG",
-						extension: "md",
+						extension: MD,
 						kind: SplitPathKind.MdFile,
 						pathParts: ["Library", "recipes"],
 					} as SplitPathToMdFileInsideLibrary,
@@ -271,7 +272,7 @@ describe("OrphanCodexScanner", () => {
 					expectedPath: null,
 					observedPath: {
 						basename: "__-duplicate",
-						extension: "md",
+						extension: MD,
 						kind: SplitPathKind.MdFile,
 						pathParts: ["Library", "recipes"],
 					} as SplitPathToMdFileInsideLibrary,
@@ -301,14 +302,14 @@ describe("OrphanCodexScanner", () => {
 				// Valid codex
 				{
 					basename: "__-recipes",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "recipes"],
 				},
 				// Orphan with wrong suffix
 				{
 					basename: "__-recipes-OLD",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "recipes"],
 				},
@@ -335,7 +336,7 @@ describe("OrphanCodexScanner", () => {
 			const vaultPaths: SplitPathToMdFileInsideLibrary[] = [
 				{
 					basename: "__-recipes",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "recipes"],
 				},
@@ -365,13 +366,13 @@ describe("OrphanCodexScanner", () => {
 			const vaultPaths: SplitPathToMdFileInsideLibrary[] = [
 				{
 					basename: "Note-recipes", // Not a codex (no __ prefix)
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "recipes"],
 				},
 				{
 					basename: "AnotherNote",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library"],
 				},
@@ -405,7 +406,7 @@ describe("OrphanCodexScanner", () => {
 			const vaultPaths: SplitPathToMdFileInsideLibrary[] = [
 				{
 					basename: "__-soup-recipes", // Correct suffix for nested section
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "recipes", "soup"],
 				},
@@ -436,7 +437,7 @@ describe("OrphanCodexScanner", () => {
 			const vaultPaths: SplitPathToMdFileInsideLibrary[] = [
 				{
 					basename: "__-soup", // Wrong! Should be __-soup-recipes
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "recipes", "soup"],
 				},

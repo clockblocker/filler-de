@@ -3,6 +3,7 @@ import { makeCodecRulesFromSettings } from "../../../../../../../../src/commande
 import { makeEventVaultScoped } from "../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/events/make-event-vault-scoped";
 import type { LibraryScopedVaultEvent } from "../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/scoped-event";
 import { Scope } from "../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/scoped-event";
+import { MD } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/literals";
 import { SplitPathKind } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import type { VaultEvent } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/vault-event";
 import { VaultEventKind } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/vault-event";
@@ -27,14 +28,14 @@ describe("makeEventVaultScoped", () => {
 			const event: VaultEvent = {
 				from: {
 					basename: "Old",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Other"],
 				},
 				kind: VaultEventKind.FileRenamed,
 				to: {
 					basename: "New",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Another"],
 				},
@@ -59,7 +60,7 @@ describe("makeEventVaultScoped", () => {
 				scope: Scope.Inside,
 				splitPath: {
 					basename: "Note",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Section"],
 				},
@@ -78,7 +79,7 @@ describe("makeEventVaultScoped", () => {
 			const scopedEvent: LibraryScopedVaultEvent = {
 				from: {
 					basename: "Old",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Section1"],
 				},
@@ -86,7 +87,7 @@ describe("makeEventVaultScoped", () => {
 				scope: Scope.Inside,
 				to: {
 					basename: "New",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Section2"],
 				},
@@ -107,7 +108,7 @@ describe("makeEventVaultScoped", () => {
 				scope: Scope.Inside,
 				splitPath: {
 					basename: "Note",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Section"],
 				},
@@ -191,7 +192,7 @@ describe("makeEventVaultScoped", () => {
 			const scopedEvent: LibraryScopedVaultEvent = {
 				from: {
 					basename: "Old",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Section"],
 				},
@@ -199,7 +200,7 @@ describe("makeEventVaultScoped", () => {
 				scope: Scope.InsideToOutside,
 				to: {
 					basename: "New",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Other"],
 				},
@@ -245,7 +246,7 @@ describe("makeEventVaultScoped", () => {
 			const scopedEvent: LibraryScopedVaultEvent = {
 				from: {
 					basename: "Old",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Other"],
 				},
@@ -253,7 +254,7 @@ describe("makeEventVaultScoped", () => {
 				scope: Scope.OutsideToInside,
 				to: {
 					basename: "New",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Section"],
 				},
@@ -312,7 +313,7 @@ describe("makeEventVaultScoped", () => {
 				scope: Scope.Inside,
 				splitPath: {
 					basename: "Note",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Section"],
 				},

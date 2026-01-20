@@ -61,7 +61,7 @@ export function parseGoBackLink(line: string): GoBackLinkInfo | null {
 	const pattern = buildGoBackLinkCapturePattern();
 	const match = line.match(pattern);
 
-	if (!match) {
+	if (!match || !match[2] || !match[1]) {
 		return null;
 	}
 

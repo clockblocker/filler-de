@@ -28,6 +28,7 @@ import {
 	TreeNodeStatus,
 } from "../../../src/commanders/librarian/healer/library-tree/tree-node/types/atoms";
 import type { NodeName } from "../../../src/commanders/librarian/types/schemas/node-name";
+import { MD } from "../../../src/managers/obsidian/vault-action-manager/types/literals";
 import { SplitPathKind } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { defaultSettingsForUnitTests } from "../../unit/common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
@@ -65,7 +66,7 @@ describe("Healing Scenarios", () => {
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library"],
 				},
@@ -98,7 +99,7 @@ describe("Healing Scenarios", () => {
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note", // Wrong! Should be "Note-recipes"
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "recipes"],
 				},
@@ -139,7 +140,7 @@ describe("Healing Scenarios", () => {
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note", // Wrong! Should be "Note-soup-recipes"
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "recipes", "soup"],
 				},
@@ -337,7 +338,7 @@ describe("Healing Scenarios", () => {
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Untitled-recipes",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "recipes"],
 				},
@@ -388,7 +389,7 @@ describe("Healing Scenarios", () => {
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note-recipes",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "recipes"],
 				},
@@ -498,7 +499,7 @@ describe("Healing Scenarios", () => {
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note-deep-nonexistent",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "nonexistent", "deep"],
 				},

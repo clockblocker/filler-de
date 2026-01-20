@@ -1,4 +1,5 @@
 import type { BulkVaultEvent } from "../../../../../../src/managers/obsidian/vault-action-manager";
+import { MD } from "../../../../../../src/managers/obsidian/vault-action-manager/types/literals";
 
 export const bulkEvent: BulkVaultEvent = {
 	debug: {
@@ -32,7 +33,7 @@ export const bulkEvent: BulkVaultEvent = {
 			kind: "FileCreated",
 			splitPath: {
 				basename: "ReName-kid1-mommy-parents",
-				extension: "md",
+				extension: MD,
 				kind: "MdFile",
 				pathParts: ["Library", "parents", "mommy", "kid1 1"],
 			},
@@ -41,7 +42,7 @@ export const bulkEvent: BulkVaultEvent = {
 			kind: "FileCreated",
 			splitPath: {
 				basename: "__-kid1-mommy-parents",
-				extension: "md",
+				extension: MD,
 				kind: "MdFile",
 				pathParts: ["Library", "parents", "mommy", "kid1 1"],
 			},

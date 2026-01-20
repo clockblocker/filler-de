@@ -9,6 +9,7 @@ import { MaterializedEventKind } from "../../../../../../../../../../src/command
 import { inferRenameIntent } from "../../../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/intent/infer-intent";
 import { RenameIntent } from "../../../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/intent/types";
 import { TreeNodeKind } from "../../../../../../../../../../src/commanders/librarian/healer/library-tree/tree-node/types/atoms";
+import { MD } from "../../../../../../../../../../src/managers/obsidian/vault-action-manager/types/literals";
 import { SplitPathKind } from "../../../../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { defaultSettingsForUnitTests } from "../../../../../../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../../../../../../common-utils/setup-spy";
@@ -36,7 +37,7 @@ describe("inferRenameIntent", () => {
 				{
 					from: {
 						basename: "Note-A",
-						extension: "md",
+						extension: MD,
 						kind: SplitPathKind.MdFile,
 						pathParts: ["Library", "A"],
 					},
@@ -44,7 +45,7 @@ describe("inferRenameIntent", () => {
 					nodeKind: TreeNodeKind.Scroll,
 					to: {
 						basename: "Note-A",
-						extension: "md",
+						extension: MD,
 						kind: SplitPathKind.MdFile,
 						pathParts: ["Library", "B"],
 					},
@@ -61,7 +62,7 @@ describe("inferRenameIntent", () => {
 				{
 					from: {
 						basename: "Note-Test",
-						extension: "md",
+						extension: MD,
 						kind: SplitPathKind.MdFile,
 						pathParts: ["Library", "Test"],
 					},
@@ -69,7 +70,7 @@ describe("inferRenameIntent", () => {
 					nodeKind: TreeNodeKind.Scroll,
 					to: {
 						basename: "NewNote-Test",
-						extension: "md",
+						extension: MD,
 						kind: SplitPathKind.MdFile,
 						pathParts: ["Library", "Test"],
 					},
@@ -84,7 +85,7 @@ describe("inferRenameIntent", () => {
 				{
 					from: {
 						basename: "Note-child-parent-Test",
-						extension: "md",
+						extension: MD,
 						kind: SplitPathKind.MdFile,
 						pathParts: ["Library", "Test", "parent", "child"],
 					},
@@ -92,7 +93,7 @@ describe("inferRenameIntent", () => {
 					nodeKind: TreeNodeKind.Scroll,
 					to: {
 						basename: "NewNote-child-parent-Test",
-						extension: "md",
+						extension: MD,
 						kind: SplitPathKind.MdFile,
 						pathParts: ["Library", "Test", "parent", "child"],
 					},
@@ -109,7 +110,7 @@ describe("inferRenameIntent", () => {
 				{
 					from: {
 						basename: "Note",
-						extension: "md",
+						extension: MD,
 						kind: SplitPathKind.MdFile,
 						pathParts: ["Library"],
 					},
@@ -117,7 +118,7 @@ describe("inferRenameIntent", () => {
 					nodeKind: TreeNodeKind.Scroll,
 					to: {
 						basename: "NewNote",
-						extension: "md",
+						extension: MD,
 						kind: SplitPathKind.MdFile,
 						pathParts: ["Library"],
 					},
@@ -134,7 +135,7 @@ describe("inferRenameIntent", () => {
 				{
 					from: {
 						basename: "Note-child1-parent-Test",
-						extension: "md",
+						extension: MD,
 						kind: SplitPathKind.MdFile,
 						pathParts: ["Library", "Test", "parent", "child1"],
 					},
@@ -142,7 +143,7 @@ describe("inferRenameIntent", () => {
 					nodeKind: TreeNodeKind.Scroll,
 					to: {
 						basename: "Note-child2-parent-Test",
-						extension: "md",
+						extension: MD,
 						kind: SplitPathKind.MdFile,
 						pathParts: ["Library", "Test", "parent", "child1"],
 					},
@@ -157,7 +158,7 @@ describe("inferRenameIntent", () => {
 				{
 					from: {
 						basename: "Note-child1-parent-Test",
-						extension: "md",
+						extension: MD,
 						kind: SplitPathKind.MdFile,
 						pathParts: ["Library", "Test", "parent", "child1"],
 					},
@@ -165,7 +166,7 @@ describe("inferRenameIntent", () => {
 					nodeKind: TreeNodeKind.Scroll,
 					to: {
 						basename: "Note-Test",
-						extension: "md",
+						extension: MD,
 						kind: SplitPathKind.MdFile,
 						pathParts: ["Library", "Test", "parent", "child1"],
 					},
@@ -180,7 +181,7 @@ describe("inferRenameIntent", () => {
 				{
 					from: {
 						basename: "Note",
-						extension: "md",
+						extension: MD,
 						kind: SplitPathKind.MdFile,
 						pathParts: ["Library"],
 					},
@@ -188,7 +189,7 @@ describe("inferRenameIntent", () => {
 					nodeKind: TreeNodeKind.Scroll,
 					to: {
 						basename: "Note-NewSection",
-						extension: "md",
+						extension: MD,
 						kind: SplitPathKind.MdFile,
 						pathParts: ["Library"],
 					},

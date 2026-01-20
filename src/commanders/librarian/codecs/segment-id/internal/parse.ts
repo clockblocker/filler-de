@@ -1,11 +1,11 @@
 import { err, ok, type Result } from "neverthrow";
+import { MD } from "../../../../../managers/obsidian/vault-action-manager/types/literals";
 import {
 	FileExtensionSchema,
 	MdExtensionSchema,
 	TreeNodeKind,
 	TreeNodeKindSchema,
 } from "../../../healer/library-tree/tree-node/types/atoms";
-
 import { NodeNameSchema } from "../../../types/schemas/node-name";
 import type { CodecError } from "../../errors";
 import { makeSegmentIdError, makeZodError } from "../../errors";
@@ -97,7 +97,6 @@ export function parseSegmentId<NK extends TreeNodeKind>(
 		}
 
 		case TreeNodeKind.Scroll: {
-			// Scroll must have "md" extension
 			if (rawExtension === undefined) {
 				return err(
 					makeSegmentIdError(
@@ -114,7 +113,7 @@ export function parseSegmentId<NK extends TreeNodeKind>(
 					makeSegmentIdError(
 						"InvalidExtension",
 						id,
-						`Scroll segment ID must have "md" extension, got: ${rawExtension}`,
+						`Scroll segment ID must have ${MD} extension, got: ${rawExtension}`,
 						{ rawExtension },
 						makeZodError(
 							extensionResult.error.issues,
@@ -126,7 +125,7 @@ export function parseSegmentId<NK extends TreeNodeKind>(
 			}
 			return ok({
 				coreName,
-				extension: "md",
+				extension: MD,
 				targetKind: TreeNodeKind.Scroll,
 			} as SegmentIdComponents<NK>);
 		}

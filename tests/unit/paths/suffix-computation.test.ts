@@ -27,6 +27,7 @@ import { TreeNodeKind, TreeNodeStatus } from "../../../src/commanders/librarian/
 import type { ScrollNode } from "../../../src/commanders/librarian/healer/library-tree/tree-node/types/tree-node";
 import { buildObservedLeafSplitPath } from "../../../src/commanders/librarian/healer/library-tree/utils/split-path-utils";
 import type { NodeName } from "../../../src/commanders/librarian/types/schemas/node-name";
+import { MD } from "../../../src/managers/obsidian/vault-action-manager/types/literals";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../common-utils/setup-spy";
 
@@ -189,7 +190,7 @@ describe("Suffix Computation", () => {
 
 		function makeScrollNode(name: string): ScrollNode {
 			return {
-				extension: "md",
+				extension: MD,
 				kind: TreeNodeKind.Scroll,
 				nodeName: name as NodeName,
 				status: TreeNodeStatus.NotStarted,

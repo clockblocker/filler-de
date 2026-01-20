@@ -1,3 +1,4 @@
+import type { MD } from "../../../../managers/obsidian/vault-action-manager/types/literals";
 import { SplitPathKind } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { InvertRecord } from "../../../../types/helpers";
 import type { FileExtension } from "../../healer/library-tree/tree-node/types/atoms";
@@ -37,7 +38,7 @@ type SegmentIdComponentsMap = {
 	[TreeNodeKind.Scroll]: {
 		coreName: NodeName;
 		targetKind: typeof TreeNodeKind.Scroll;
-		extension: "md";
+		extension: MD;
 	};
 	[TreeNodeKind.File]: {
 		coreName: NodeName;

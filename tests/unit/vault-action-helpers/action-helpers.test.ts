@@ -25,6 +25,7 @@ import {
 	isRenameAction,
 	isTrashAction,
 } from "../../../src/managers/obsidian/vault-action-manager/helpers/action-helpers";
+import { MD } from "../../../src/managers/obsidian/vault-action-manager/types/literals";
 import type { SplitPathToFile, SplitPathToFolder, SplitPathToMdFile } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { type VaultAction, VaultActionKind } from "../../../src/managers/obsidian/vault-action-manager/types/vault-action";
 
@@ -38,7 +39,7 @@ const folder = (basename: string, pathParts: string[] = []): SplitPathToFolder =
 
 const mdFile = (basename: string, pathParts: string[] = []): SplitPathToMdFile => ({
 	basename,
-	extension: "md",
+	extension: MD,
 	kind: "MdFile",
 	pathParts,
 });

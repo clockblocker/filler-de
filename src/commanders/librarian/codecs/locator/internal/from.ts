@@ -1,4 +1,5 @@
 import { err, ok, type Result } from "neverthrow";
+import { MD } from "../../../../../managers/obsidian/vault-action-manager/types/literals";
 import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import { makeNodeSegmentId } from "../../../healer/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import { TreeNodeKind } from "../../../healer/library-tree/tree-node/types/atoms";
@@ -86,7 +87,7 @@ export function canonicalSplitPathInsideLibraryToLocator(
 		case SplitPathKind.MdFile: {
 			const segmentIdResult = segmentId.serializeSegmentIdUnchecked({
 				coreName: sp.separatedSuffixedBasename.coreName,
-				extension: "md",
+				extension: MD,
 				targetKind: TreeNodeKind.Scroll,
 			});
 			if (segmentIdResult.isErr()) {

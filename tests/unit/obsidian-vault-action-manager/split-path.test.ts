@@ -4,6 +4,7 @@ import {
 	makeSplitPath,
 	makeSystemPathForSplitPath,
 } from "../../../src/managers/obsidian/vault-action-manager";
+import { MD } from "../../../src/managers/obsidian/vault-action-manager/types/literals";
 
 describe("obsidian-vault-action-manager splitPath helpers", () => {
 	it("splits md file paths from strings", () => {
@@ -11,7 +12,7 @@ describe("obsidian-vault-action-manager splitPath helpers", () => {
 
 		expect(split).toEqual({
 			basename: "file",
-			extension: "md",
+			extension: MD,
 			kind: "MdFile",
 			pathParts: ["root", "notes"],
 		});
@@ -50,7 +51,7 @@ describe("obsidian-vault-action-manager splitPath helpers", () => {
 
 		expect(split).toEqual({
 			basename: "file",
-			extension: "md",
+			extension: MD,
 			kind: "MdFile",
 			pathParts: ["root", "notes"],
 		});

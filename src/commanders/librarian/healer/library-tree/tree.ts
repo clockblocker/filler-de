@@ -1,3 +1,4 @@
+import { MD } from "../../../../managers/obsidian/vault-action-manager/types/literals";
 import type { Codecs } from "../../codecs";
 import type { SegmentIdOf } from "../../codecs/segment-id/types";
 import type {
@@ -132,7 +133,7 @@ export class Tree implements TreeFacade {
 
 		if (action.targetLocator.targetKind === TreeNodeKind.Scroll) {
 			return {
-				extension: "md",
+				extension: MD,
 				kind: TreeNodeKind.Scroll,
 				nodeName,
 				status: action.initialStatus ?? TreeNodeStatus.NotStarted,

@@ -24,6 +24,7 @@ import {
 	suffixPartsToPathParts,
 } from "../../../src/commanders/librarian/paths";
 import type { NodeName } from "../../../src/commanders/librarian/types/schemas/node-name";
+import { MD } from "../../../src/managers/obsidian/vault-action-manager/types/literals";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../common-utils/setup-spy";
 
@@ -144,7 +145,7 @@ describe("PathFinder", () => {
 
 		function makeScrollNode(name: string): ScrollNode {
 			return {
-				extension: "md",
+				extension: MD,
 				kind: TreeNodeKind.Scroll,
 				nodeName: name as NodeName,
 				status: TreeNodeStatus.NotStarted,
@@ -215,25 +216,25 @@ describe("PathFinder", () => {
 
 	describe("splitPathsEqual", () => {
 		it("returns true for identical paths", () => {
-			const a = { basename: "note", extension: "md", kind: "MdFile", pathParts: ["a", "b"] };
-			const b = { basename: "note", extension: "md", kind: "MdFile", pathParts: ["a", "b"] };
+			const a = { basename: "note", extension: MD, kind: "MdFile", pathParts: ["a", "b"] };
+			const b = { basename: "note", extension: MD, kind: "MdFile", pathParts: ["a", "b"] };
 			expect(splitPathsEqual(a, b)).toBe(true);
 		});
 
 		it("returns false for different basenames", () => {
-			const a = { basename: "note1", extension: "md", kind: "MdFile", pathParts: ["a"] };
-			const b = { basename: "note2", extension: "md", kind: "MdFile", pathParts: ["a"] };
+			const a = { basename: "note1", extension: MD, kind: "MdFile", pathParts: ["a"] };
+			const b = { basename: "note2", extension: MD, kind: "MdFile", pathParts: ["a"] };
 			expect(splitPathsEqual(a, b)).toBe(false);
 		});
 
 		it("returns false for different path parts", () => {
-			const a = { basename: "note", extension: "md", kind: "MdFile", pathParts: ["a"] };
-			const b = { basename: "note", extension: "md", kind: "MdFile", pathParts: ["b"] };
+			const a = { basename: "note", extension: MD, kind: "MdFile", pathParts: ["a"] };
+			const b = { basename: "note", extension: MD, kind: "MdFile", pathParts: ["b"] };
 			expect(splitPathsEqual(a, b)).toBe(false);
 		});
 
 		it("returns false for different kinds", () => {
-			const a = { basename: "note", extension: "md", kind: "MdFile", pathParts: ["a"] };
+			const a = { basename: "note", extension: MD, kind: "MdFile", pathParts: ["a"] };
 			const b = { basename: "note", extension: "txt", kind: "File", pathParts: ["a"] };
 			expect(splitPathsEqual(a, b)).toBe(false);
 		});

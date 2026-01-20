@@ -7,6 +7,7 @@ import {
 import { TreeActionType } from "../../../../../src/commanders/librarian/healer/library-tree/tree-action/types/tree-action";
 import { TreeNodeKind, TreeNodeStatus } from "../../../../../src/commanders/librarian/healer/library-tree/tree-node/types/atoms";
 import type { NodeName } from "../../../../../src/commanders/librarian/types/schemas/node-name";
+import { MD } from "../../../../../src/managers/obsidian/vault-action-manager/types/literals";
 import { SplitPathKind } from "../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
 
@@ -38,7 +39,7 @@ describe("computeCodexImpact", () => {
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note-B-A",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "A", "B"],
 				},
@@ -64,7 +65,7 @@ describe("computeCodexImpact", () => {
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library"],
 				},
@@ -180,7 +181,7 @@ describe("computeCodexImpact", () => {
 				},
 				observedSplitPath: {
 					basename: "Note-B",
-					extension: "md",
+					extension: MD,
 					kind: SplitPathKind.MdFile,
 					pathParts: ["Library", "B"],
 				},

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { MD } from "../../../managers/obsidian/vault-action-manager/types/literals";
 import type {
 	SplitPathToMdFile,
 	SplitPathWithReader,
@@ -169,8 +170,9 @@ export async function buildInitialCreateActions(
 						// No metadata at all - add YAML with current status
 						const statusValue =
 							status === TreeNodeStatus.Done
-								? ("Done" as const)
-								: ("NotStarted" as const);
+								? TreeNodeStatus.Done
+								: TreeNodeStatus.NotStarted;
+
 						migrationActions.push({
 							kind: VaultActionKind.ProcessMdFile,
 							payload: {
@@ -191,7 +193,7 @@ export async function buildInitialCreateActions(
 				initialStatus: status,
 				observedSplitPath: observedPath as AnySplitPathInsideLibrary & {
 					kind: typeof SplitPathKind.MdFile;
-					extension: "md";
+					extension: MD;
 				},
 				targetLocator: locator,
 			});

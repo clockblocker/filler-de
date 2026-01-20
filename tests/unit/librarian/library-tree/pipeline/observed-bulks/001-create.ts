@@ -1,11 +1,12 @@
 import type { CreateTreeLeafAction } from "../../../../../../src/commanders/librarian/healer/library-tree/tree-action/types/tree-action";
+import { MD } from "../../../../../../src/managers/obsidian/vault-action-manager/types/literals";
 
 export const createActions: CreateTreeLeafAction[] = [
 	{
 		actionType: "Create",
 		observedSplitPath: {
 			basename: "ReName-kid1-mommy-parents",
-			extension: "md",
+			extension: MD,
 			kind: "MdFile",
 			pathParts: ["Library", "parents", "mommy", "kid1"],
 		},
@@ -24,7 +25,7 @@ export const createActions: CreateTreeLeafAction[] = [
 		actionType: "Create",
 		observedSplitPath: {
 			basename: "ReName-kid2-daddy-parents",
-			extension: "md",
+			extension: MD,
 			kind: "MdFile",
 			pathParts: ["Library", "parents", "daddy", "kid2"],
 		},

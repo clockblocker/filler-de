@@ -13,6 +13,7 @@
  */
 
 import { err, ok, type Result } from "neverthrow";
+import { MD } from "../../../managers/obsidian/vault-action-manager/types/literals";
 import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import { logger } from "../../../utils/logger";
 import type {
@@ -201,7 +202,7 @@ export function buildObservedLeafSplitPath(
 	if (leaf.kind === TreeNodeKind.Scroll) {
 		return {
 			basename,
-			extension: "md",
+			extension: MD,
 			kind: SplitPathKind.MdFile,
 			pathParts: currentPathParts,
 		};
@@ -303,7 +304,7 @@ export function buildCodexSplitPath(
 	// pathParts = nodeNames (already includes Library root from chain)
 	return ok({
 		basename,
-		extension: "md",
+		extension: MD,
 		kind: SplitPathKind.MdFile,
 		pathParts: nodeNames,
 	});

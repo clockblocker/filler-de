@@ -1,4 +1,5 @@
 import type { BulkVaultEvent } from "../../../../../../src/managers/obsidian/vault-action-manager";
+import { MD } from "../../../../../../src/managers/obsidian/vault-action-manager/types/literals";
 
 export const bulkEvent: BulkVaultEvent = {
 	debug: {
@@ -23,14 +24,14 @@ export const bulkEvent: BulkVaultEvent = {
 		{
 			from: {
 				basename: "__-kid1-mommy-parents",
-				extension: "md",
+				extension: MD,
 				kind: "MdFile",
 				pathParts: ["Library", "parents", "mommy", "kid3"],
 			},
 			kind: "FileRenamed",
 			to: {
 				basename: "__-kid1-mommy-parents",
-				extension: "md",
+				extension: MD,
 				kind: "MdFile",
 				pathParts: ["Library", "parents", "daddy", "kid3"],
 			},
@@ -38,14 +39,14 @@ export const bulkEvent: BulkVaultEvent = {
 		{
 			from: {
 				basename: "ReName-kid3-mommy-parents",
-				extension: "md",
+				extension: MD,
 				kind: "MdFile",
 				pathParts: ["Library", "parents", "mommy", "kid3"],
 			},
 			kind: "FileRenamed",
 			to: {
 				basename: "ReName-kid3-mommy-parents",
-				extension: "md",
+				extension: MD,
 				kind: "MdFile",
 				pathParts: ["Library", "parents", "daddy", "kid3"],
 			},
@@ -53,14 +54,14 @@ export const bulkEvent: BulkVaultEvent = {
 		{
 			from: {
 				basename: "__-kid3-mommy-parents",
-				extension: "md",
+				extension: MD,
 				kind: "MdFile",
 				pathParts: ["Library", "parents", "mommy", "kid3"],
 			},
 			kind: "FileRenamed",
 			to: {
 				basename: "__-kid3-mommy-parents",
-				extension: "md",
+				extension: MD,
 				kind: "MdFile",
 				pathParts: ["Library", "parents", "daddy", "kid3"],
 			},

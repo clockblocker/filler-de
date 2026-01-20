@@ -8,6 +8,7 @@ import {
 import { RenameIntent } from "../../../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/intent/types";
 import { ChangePolicy } from "../../../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/types";
 import { tryCanonicalizeSplitPathToDestination } from "../../../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/utils/canonical-naming/canonicalize-to-destination";
+import { MD } from "../../../../../../../../../../src/managers/obsidian/vault-action-manager/types/literals";
 import type {
 	SplitPathToFile,
 	SplitPathToFolder,
@@ -39,7 +40,7 @@ const spMdFile = (
 	basename: string,
 ): SplitPathToMdFile => ({
 	basename,
-	extension: "md",
+	extension: MD,
 	kind: SplitPathKind.MdFile,
 	pathParts,
 });

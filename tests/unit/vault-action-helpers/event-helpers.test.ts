@@ -38,6 +38,7 @@ import {
 	visitEvent,
 	visitSplitPath,
 } from "../../../src/managers/obsidian/vault-action-manager/helpers/event-helpers";
+import { MD } from "../../../src/managers/obsidian/vault-action-manager/types/literals";
 import type {
 	SplitPathToFile,
 	SplitPathToFolder,
@@ -64,7 +65,7 @@ const mdFile = (
 	pathParts: string[] = [],
 ): SplitPathToMdFile => ({
 	basename,
-	extension: "md",
+	extension: MD,
 	kind: "MdFile",
 	pathParts,
 });

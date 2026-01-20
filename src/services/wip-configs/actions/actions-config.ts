@@ -1,4 +1,5 @@
 import { FileType } from "../../../types/common-interface/enums";
+import { BACK_ARROW, FORWARD_ARROW } from "../../../types/literals";
 import { makeTextAction } from "./new/make-text-action";
 import { navigatePageAction } from "./new/navigate-pages-action";
 import newGenCommand from "./new/new-gen-command";
@@ -97,7 +98,8 @@ export const ACTION_CONFIGS = {
 		isAvailable: (ctx: ButtonContext) =>
 			ctx.isInLibrary &&
 			(ctx.fileType === null ||
-				(ctx.fileType === FileType.Scroll &&
+				((ctx.fileType === FileType.Scroll ||
+					ctx.fileType === FileType.Codex) &&
 					ctx.wouldSplitToMultiplePages)),
 		label: "Make this a text",
 		placement: UserActionPlacement.Bottom,
@@ -109,7 +111,7 @@ export const ACTION_CONFIGS = {
 		isAvailable: (ctx: ButtonContext) =>
 			ctx.fileType === FileType.Page && ctx.pageIndex !== null,
 		isEnabled: (ctx: ButtonContext) => ctx.hasNextPage,
-		label: "→",
+		label: FORWARD_ARROW,
 		placement: UserActionPlacement.Bottom,
 		priority: 2,
 	},
@@ -120,7 +122,7 @@ export const ACTION_CONFIGS = {
 			ctx.fileType === FileType.Page && ctx.pageIndex !== null,
 		isEnabled: (ctx: ButtonContext) =>
 			ctx.pageIndex !== null && ctx.pageIndex > 0,
-		label: "←",
+		label: BACK_ARROW,
 		placement: UserActionPlacement.Bottom,
 		priority: 1,
 	},
