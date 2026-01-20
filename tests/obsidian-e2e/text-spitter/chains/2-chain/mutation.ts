@@ -1,5 +1,6 @@
 /// <reference types="@wdio/globals/types" />
 import { ASCHENPUTTEL_CONTENT } from "../../../../unit/librarian/bookkeeper/testcases/aschenputtel";
+import { EXTRA_E2_FULL_CONTENT } from "../../../../unit/librarian/bookkeeper/testcases/extra-e2";
 import { waitForIdle } from "../../../support/api/idle";
 import { clickButton, createFile, openFile, renamePath } from "../../../support/api/vault-ops";
 
@@ -35,6 +36,49 @@ export async function performSetup(): Promise<void> {
 export async function performMakeText(): Promise<void> {
 	// 1. Open the healed file path
 	const filePath = `Library/Märchen/Aschenputtel${D}Märchen.md`;
+	const openResult = await openFile(filePath);
+	if (openResult.isErr()) {
+		throw new Error(`Failed to open file: ${openResult.error}`);
+	}
+	await waitForIdle();
+
+	// 2. Click "Make this a text" button
+	const clickResult = await clickButton("MakeText");
+	if (clickResult.isErr()) {
+		throw new Error(`Failed to click button: ${clickResult.error}`);
+	}
+	await waitForIdle();
+}
+
+/**
+ * Setup for EXTRA_E2: Create scroll file with dialogue content and move to Library.
+ * 1. Create ExtraE2-Dialog.md in vault root
+ * 2. Move to Library → triggers healing to Library/Dialog/ExtraE2-Dialog.md
+ */
+export async function performSetupExtraE2(): Promise<void> {
+	// 1. Create file in root with suffix format (ExtraE2-Dialog = coreName-suffix)
+	const createResult = await createFile("ExtraE2-Dialog.md", EXTRA_E2_FULL_CONTENT);
+	if (createResult.isErr()) {
+		throw new Error(`Failed to create file: ${createResult.error}`);
+	}
+	await waitForIdle();
+
+	// 2. Move to Library → librarian heals to Library/Dialog/ExtraE2-Dialog.md
+	const renameResult = await renamePath("ExtraE2-Dialog.md", "Library/ExtraE2-Dialog.md");
+	if (renameResult.isErr()) {
+		throw new Error(`Failed to rename file: ${renameResult.error}`);
+	}
+	await waitForIdle();
+}
+
+/**
+ * Click "Make this a text" button for EXTRA_E2.
+ * 1. Open the healed scroll file
+ * 2. Click the MakeText button
+ */
+export async function performMakeTextExtraE2(): Promise<void> {
+	// 1. Open the healed file path
+	const filePath = `Library/Dialog/ExtraE2${D}Dialog.md`;
 	const openResult = await openFile(filePath);
 	if (openResult.isErr()) {
 		throw new Error(`Failed to open file: ${openResult.error}`);

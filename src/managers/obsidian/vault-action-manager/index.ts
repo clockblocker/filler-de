@@ -33,6 +33,12 @@ export interface VaultActionManager {
 
 	dispatch(actions: readonly VaultAction[]): Promise<DispatchResult>;
 
+	/**
+	 * Wait until all registered paths have been processed by Obsidian (via events).
+	 * Used to ensure files are visible before subsequent operations.
+	 */
+	waitForObsidianEvents(): Promise<void>;
+
 	// Read-only operations
 	readContent(splitPath: SplitPathToMdFile): Promise<Result<string, string>>;
 	exists(splitPath: AnySplitPath): Promise<boolean>;

@@ -3,9 +3,13 @@ import { obsidianPage } from "wdio-obsidian-service";
 import { waitForIdle } from "../support/api/idle";
 import {
 	performMakeText,
+	performMakeTextExtraE2,
 	performSetup,
+	performSetupExtraE2,
 	testPostMakeText,
+	testPostMakeTextExtraE2,
 	testPostSetup,
+	testPostSetupExtraE2,
 } from "./chains/2-chain";
 
 const VAULT_PATH = "tests/obsidian-e2e/vaults/text-spitter";
@@ -49,6 +53,28 @@ describe("Text Spitter - Bookkeeper/Librarian Integration", () => {
 	// Verify post-healing state
 	it("verifies section codex and pages created correctly", async () => {
 		await testPostMakeText();
+	});
+
+	// --- EXTRA_E2: Dialogue content with headings ---
+
+	// Setup EXTRA_E2: Create file and move to Library
+	it("creates EXTRA_E2 dialogue scroll and moves to Library", async () => {
+		await performSetupExtraE2();
+	});
+
+	// Verify EXTRA_E2 setup healing
+	it("verifies EXTRA_E2 scroll healed to Library/Dialog/", async () => {
+		await testPostSetupExtraE2();
+	});
+
+	// Click "Make this a text" button for EXTRA_E2
+	it("clicks Make this a text button for EXTRA_E2", async () => {
+		await performMakeTextExtraE2();
+	});
+
+	// Verify EXTRA_E2 post-healing state (headings preserved as metadata)
+	it("verifies EXTRA_E2 section codex and pages created with headings preserved", async () => {
+		await testPostMakeTextExtraE2();
 	});
 
 	// Uncomment to keep Obsidian window open for manual inspection

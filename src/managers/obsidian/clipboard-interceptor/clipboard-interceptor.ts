@@ -41,14 +41,17 @@ export class ClipboardInterceptor {
 		if (!selection) return;
 
 		const goBackPattern = buildGoBackLinkPattern();
-		const cleaned = selection
-			.replace(goBackPattern, "")
-			.replace(META_SECTION_PATTERN, "")
-			.trim();
+		const withoutGoBack = selection.replace(goBackPattern, "");
+		const withoutMeta = withoutGoBack.replace(META_SECTION_PATTERN, "");
 
-		if (cleaned !== selection) {
-			evt.preventDefault();
-			evt.clipboardData?.setData("text/plain", cleaned);
-		}
+		// Only intercept if we actually stripped metadata/links
+		const strippedContent =
+			withoutGoBack.length < selection.length ||
+			withoutMeta.length < withoutGoBack.length;
+
+		if (!strippedContent) return; // Let native copy handle it
+
+		evt.preventDefault();
+		evt.clipboardData?.setData("text/plain", withoutMeta.trim());
 	}
 }

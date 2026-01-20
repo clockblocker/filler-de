@@ -54,3 +54,52 @@ export const EXPECTED_AFTER_MAKE_TEXT = {
 		`Library/Märchen/Aschenputtel${D}Märchen.md`,
 	],
 };
+
+/**
+ * Expected state after EXTRA_E2 setup (file created and moved to Library).
+ * Librarian heals:
+ * - ExtraE2-Dialog.md → Library/Dialog/ExtraE2-Dialog.md
+ */
+export const EXPECTED_AFTER_SETUP_EXTRA_E2 = {
+	codexes: [
+		`Library/__${D}Library.md`,
+		`Library/Märchen/__${D}Märchen.md`,
+		`Library/Märchen/Aschenputtel/__${D}Aschenputtel${D}Märchen.md`,
+		`Library/Dialog/__${D}Dialog.md`,
+	],
+	files: [
+		// Scroll file after healing
+		`Library/Dialog/ExtraE2${D}Dialog.md`,
+	],
+};
+
+/**
+ * Expected state after EXTRA_E2 "Make this a text" button click.
+ * Tests that dialogue content with headings is properly split.
+ */
+export const EXPECTED_AFTER_MAKE_TEXT_EXTRA_E2 = {
+	codexes: [
+		`Library/__${D}Library.md`,
+		`Library/Märchen/__${D}Märchen.md`,
+		`Library/Märchen/Aschenputtel/__${D}Aschenputtel${D}Märchen.md`,
+		`Library/Dialog/__${D}Dialog.md`,
+		// NEW: Section codex for ExtraE2 folder
+		`Library/Dialog/ExtraE2/__${D}ExtraE2${D}Dialog.md`,
+	],
+	contentChecks: [
+		// Parent codex should contain link to section (not scroll)
+		[`Library/Dialog/__${D}Dialog.md`, ["ExtraE2"]],
+	] as [string, string[]][],
+	contentMustNotContain: [
+		// Parent codex should NOT have old scroll link format
+		[`Library/Dialog/__${D}Dialog.md`, [`[[ExtraE2${D}Dialog|`]],
+	] as [string, string[]][],
+	files: [
+		// Pages created from scroll split - should have multiple pages
+		`Library/Dialog/ExtraE2/ExtraE2_Page_000${D}ExtraE2${D}Dialog.md`,
+	],
+	goneFiles: [
+		// Original scroll should be deleted after split
+		`Library/Dialog/ExtraE2${D}Dialog.md`,
+	],
+};
