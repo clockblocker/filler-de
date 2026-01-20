@@ -68,31 +68,54 @@ Und als sie das gerufen hatten, kamen sie beide herabgeflogen und setzten sich d
 Als die Hochzeit mit dem Königssohn sollte gehalten werden, kamen die falschen Schwestern, wollten sich einschmeicheln und teil an seinem Glück nehmen. Als die Brautleute nun zur Kirche gingen, war die älteste zur rechten, die jüngste zur linken Seite: da pickten die Tauben einer jeden das eine Auge aus. Hernach, als sie herausgingen, war die älteste zur linken und die jüngste zur rechten: da pickten die Tauben einer jeden das andere Auge aus. Und waren sie also für ihre Bosheit und Falschheit mit Blindheit auf ihr Lebtag bestraft.`;
 
 
-const START_OF_THE_FIRST_PAGE_OF_SPLIT_ASCHENPUTTEL = `
-Einem reichen Manne, dem wurde seine Frau krank, und als sie fühlte, daß ihr Ende herankam, rief sie ihr einziges Töchterlein zu sich ans Bett und sprach: ^0
+/**
+ * Input text for paragraph preservation test (first two paragraphs).
+ */
+export const ASCHENPUTTEL_FIRST_TWO_PARAGRAPHS = `Einem reichen Manne, dem wurde seine Frau krank, und als sie fühlte, daß ihr Ende herankam, rief sie ihr einziges Töchterlein zu sich ans Bett und sprach:
 
-"Liebes Kind, bleibe fromm und gut, so wird dir der liebe Gott immer beistehen, und ich will vom Himmel auf dich herabblicken, und will um dich sein."^1
+"Liebes Kind, bleibe fromm und gut, so wird dir der liebe Gott immer beistehen, und ich will vom Himmel auf dich herabblicken, und will um dich sein." Darauf tat sie die Augen zu und verschied. Das Mädchen ging jeden Tag hinaus zu dem Grabe der Mutter und weinte, und blieb fromm und gut. Als der Winter kam, deckte der Schnee ein weißes Tüchlein auf das Grab, und als die Sonne im Frühjahr es wieder herabgezogen hatte, nahm sich der Mann eine andere Frau.
 
-Darauf tat sie die Augen zu und verschied. Das Mädchen ging jeden Tag hinaus zu dem Grabe der Mutter und weinte, und blieb fromm und gut. ^2
+Die Frau hatte zwei Töchter mit ins Haus gebracht, die schön und weiß von Angesicht waren, aber garstig und schwarz von Herzen. Da ging eine schlimme Zeit für das arme Stiefkind an. "Soll die dumme Gans bei uns in der Stube sitzen!" sprachen sie, "wer Brot essen will, muß verdienen: hinaus mit der Küchenmagd!" Sie nahmen ihm seine schönen Kleider weg, zogen ihm einen grauen, alten Kittel an und gaben ihm hölzerne Schuhe. "Seht einmal die stolze Prinzessin, wie sie geputzt ist!" riefen sie, lachten und führten es in die Küche. Da mußte es von Morgen bis Abend schwere Arbeit tun, früh vor Tag aufstehen, Wasser tragen, Feuer anmachen, kochen und waschen. Obendrein taten ihm die Schwestern alles ersinnliche Herzeleid an, verspotteten es und schütteten ihm die Erbsen und Linsen in die Asche, so daß es sitzen und sie wieder auslesen mußte. Abends, wenn es sich müde gearbeitet hatte, kam es in kein Bett, sondern mußte sich neben den Herd in die Asche legen. Und weil es darum immer staubig und schmutzig aussah, nannten sie es Aschenputtel.`;
 
-Als der Winter kam, deckte der Schnee ein weißes Tüchlein auf das Grab, und als die Sonne im Frühjahr es wieder herabgezogen hatte, nahm sich der Mann eine andere Frau. ^3
+/**
+ * Expected output for paragraph preservation test.
+ * Note: paragraph breaks in the source are preserved with 3 blank lines (4 newlines).
+ * The input has 2 paragraph breaks:
+ * 1. After "sprach:" before the quoted speech
+ * 2. After "andere Frau." before the new paragraph
+ */
+export const EXPECTED_BLOCK_OUTPUT_WITH_PARAGRAPHS = `Einem reichen Manne, dem wurde seine Frau krank, und als sie fühlte, daß ihr Ende herankam, rief sie ihr einziges Töchterlein zu sich ans Bett und sprach: ^0
 
 
 
-Die Frau hatte zwei Töchter mit ins Haus gebracht, die schön und weiß von Angesicht waren, aber garstig und schwarz von Herzen. ^4
+"Liebes Kind, bleibe fromm und gut, so wird dir der liebe Gott immer beistehen, und ich will vom Himmel auf dich herabblicken, und will um dich sein." ^1
 
-Da ging eine schlimme Zeit für das arme Stiefkind an. ^5
+Darauf tat sie die Augen zu und verschied. ^2
 
-"Soll die dumme Gans bei uns in der Stube sitzen!" sprachen sie, "wer Brot essen will, muß verdienen: hinaus mit der Küchenmagd!" ^6
+Das Mädchen ging jeden Tag hinaus zu dem Grabe der Mutter und weinte, und blieb fromm und gut. ^3
 
-Sie nahmen ihm seine schönen Kleider weg, zogen ihm einen grauen, alten Kittel an und gaben ihm hölzerne Schuhe. ^7
+Als der Winter kam, deckte der Schnee ein weißes Tüchlein auf das Grab, und als die Sonne im Frühjahr es wieder herabgezogen hatte, nahm sich der Mann eine andere Frau. ^4
 
-"Seht einmal die stolze Prinzessin, wie sie geputzt ist!" riefen sie, lachten und führten es in die Küche. ^8
 
-Da mußte es von Morgen bis Abend schwere Arbeit tun, früh vor Tag aufstehen, Wasser tragen, Feuer anmachen, kochen und waschen. ^9
 
-Obendrein taten ihm die Schwestern alles ersinnliche Herzeleid an, verspotteten es und schütteten ihm die Erbsen und Linsen in die Asche, so daß es sitzen und sie wieder auslesen mußte. ^10
+Die Frau hatte zwei Töchter mit ins Haus gebracht, die schön und weiß von Angesicht waren, aber garstig und schwarz von Herzen. ^5
 
-Abends, wenn es sich müde gearbeitet hatte, kam es in kein Bett, sondern mußte sich neben den Herd in die Asche legen. ^11
+Da ging eine schlimme Zeit für das arme Stiefkind an. ^6
 
-Und weil es darum immer staubig und schmutzig aussah, nannten sie es Aschenputtel. ^12`;
+"Soll die dumme Gans bei uns in der Stube sitzen!" ^7
+
+sprachen sie, "wer Brot essen will, muß verdienen: hinaus mit der Küchenmagd!" ^8
+
+Sie nahmen ihm seine schönen Kleider weg, zogen ihm einen grauen, alten Kittel an und gaben ihm hölzerne Schuhe. ^9
+
+"Seht einmal die stolze Prinzessin, wie sie geputzt ist!" ^10
+
+riefen sie, lachten und führten es in die Küche. ^11
+
+Da mußte es von Morgen bis Abend schwere Arbeit tun, früh vor Tag aufstehen, Wasser tragen, Feuer anmachen, kochen und waschen. ^12
+
+Obendrein taten ihm die Schwestern alles ersinnliche Herzeleid an, verspotteten es und schütteten ihm die Erbsen und Linsen in die Asche, so daß es sitzen und sie wieder auslesen mußte. ^13
+
+Abends, wenn es sich müde gearbeitet hatte, kam es in kein Bett, sondern mußte sich neben den Herd in die Asche legen. ^14
+
+Und weil es darum immer staubig und schmutzig aussah, nannten sie es Aschenputtel. ^15`;

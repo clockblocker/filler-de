@@ -404,6 +404,10 @@ export default class TextEaterPlugin extends Plugin {
 							openedFileService:
 								this.testingOpenedFileServiceWithResult,
 							vaultActionManager: this.vaultActionManager,
+							onSectionCreated: (info) => {
+								// Notify librarian to create codex (bypasses self-event filtering)
+								this.librarian?.triggerSectionHealing(info);
+							},
 						});
 					});
 				}

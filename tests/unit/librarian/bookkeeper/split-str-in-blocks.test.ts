@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { splitStrInBlocks } from "../../../../src/commanders/librarian/bookkeeper/segmenter/block-marker";
+import {
+	ASCHENPUTTEL_FIRST_TWO_PARAGRAPHS,
+	EXPECTED_BLOCK_OUTPUT_WITH_PARAGRAPHS,
+} from "./testcases/aschenputtel";
 
 describe("splitStrInBlocks", () => {
 	test("empty text returns empty result", () => {
@@ -121,5 +125,24 @@ describe("splitStrInBlocks", () => {
 		// Direct speech should be together
 		expect(result.markedText).toContain("Liebes Kind");
 		expect(result.markedText).toContain("um dich sein.");
+	});
+
+	test("paragraph breaks are preserved with extra blank lines", () => {
+		const result = splitStrInBlocks(ASCHENPUTTEL_FIRST_TWO_PARAGRAPHS);
+
+		// Should match the expected output exactly
+		expect(result.markedText).toBe(EXPECTED_BLOCK_OUTPUT_WITH_PARAGRAPHS);
+	});
+
+	test("paragraph break creates 4 newlines between blocks", () => {
+		// Simple test with two paragraphs
+		const text = `Erster Satz ist lang genug. Zweiter Satz ist auch lang.
+
+Dritter Satz nach Absatz. Vierter Satz hier auch.`;
+
+		const result = splitStrInBlocks(text);
+
+		// Should have 4 newlines (3 blank lines) between paragraphs
+		expect(result.markedText).toContain("^1\n\n\n\n");
 	});
 });

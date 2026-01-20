@@ -22,7 +22,11 @@ import {
 	makeCodecs,
 	type SplitPathToMdFileInsideLibrary,
 } from "./codecs";
-import type { ScrollNodeSegmentId } from "./codecs/segment-id/types/segment-id";
+import type {
+	ScrollNodeSegmentId,
+	SectionNodeSegmentId,
+} from "./codecs/segment-id/types/segment-id";
+import type { SplitHealingInfo } from "./bookkeeper/split-to-pages-action";
 import { Healer } from "./healer/healer";
 import { HealingTransaction } from "./healer/healing-transaction";
 import type { CodexImpact } from "./healer/library-tree/codex";
@@ -575,5 +579,78 @@ export class Librarian {
 	 */
 	getHealer(): Healer | null {
 		return this.healer;
+	}
+
+	/**
+	 * Trigger section healing for a newly created section.
+	 * Called by Bookkeeper to bypass self-event filtering.
+	 *
+	 * @param info - Contains section chain and deleted scroll info
+	 */
+	async triggerSectionHealing(info: SplitHealingInfo): Promise<void> {
+		if (!this.healer) {
+			logger.warn(
+				"[Librarian.triggerSectionHealing] No healer, returning early",
+			);
+			return;
+		}
+
+		const { sectionChain, deletedScrollSegmentId } = info;
+
+		// Delete the old scroll from the tree (self-event filtering blocked the Delete event)
+		// The scroll was in the parent section
+		if (sectionChain.length > 1) {
+			const parentChain = sectionChain.slice(0, -1);
+			const parentSection = this.healer.findSection(parentChain);
+			if (parentSection) {
+				delete parentSection.children[deletedScrollSegmentId];
+			}
+		}
+
+		// Ensure the section chain exists in the tree
+		// (self-event filtering blocked the normal Create events)
+		this.healer.ensureSectionChain(sectionChain);
+
+		// Build impacted chains: the new section + its parent (for codex content update)
+		const chainKey = sectionChain.join("/");
+		const impactedChains = new Set([chainKey]);
+
+		// Parent section also needs codex regeneration (its children changed)
+		if (sectionChain.length > 1) {
+			const parentChain = sectionChain.slice(0, -1);
+			impactedChains.add(parentChain.join("/"));
+		}
+
+		// Create synthetic CodexImpact for the impacted sections
+		const codexImpact: CodexImpact = {
+			contentChanged: [],
+			deleted: [],
+			descendantsChanged: [],
+			impactedChains,
+			renamed: [],
+		};
+
+		// Process codex impact to generate vault actions
+		const { codexRecreations } = processCodexImpacts(
+			[codexImpact],
+			this.healer,
+			this.codecs,
+		);
+
+		// Assemble and dispatch vault actions
+		const vaultActions = assembleVaultActions(
+			[],
+			codexRecreations,
+			this.rules,
+			this.codecs,
+		);
+
+		if (vaultActions.length > 0) {
+			logger.debug(
+				"[Librarian.triggerSectionHealing] Dispatching codex actions:",
+				JSON.stringify({ chainKey, actionCount: vaultActions.length }),
+			);
+			await this.vaultActionManager.dispatch(vaultActions);
+		}
 	}
 }

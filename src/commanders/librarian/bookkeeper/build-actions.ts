@@ -18,7 +18,15 @@ import {
 } from "../../../managers/pure/note-metadata-manager";
 import { LINE_BREAK } from "../../../types/literals";
 import type { CodecRules } from "../codecs/rules";
-import type { TreeNodeStatus } from "../healer/library-tree/tree-node/types/atoms";
+import { serializeSegmentId } from "../codecs/segment-id/internal/serialize";
+import type {
+	ScrollNodeSegmentId,
+	SectionNodeSegmentId,
+} from "../codecs/segment-id/types/segment-id";
+import {
+	TreeNodeKind,
+	type TreeNodeStatus,
+} from "../healer/library-tree/tree-node/types/atoms";
 import type { NodeName } from "../types/schemas/node-name";
 import { buildPageBasename, buildPageFolderBasename } from "./page-codec";
 import { splitStrInBlocks } from "./segmenter/block-marker";
@@ -36,6 +44,10 @@ const PageMetadataSchema = z
 export type PageSplitResult = {
 	actions: VaultAction[];
 	firstPagePath: SplitPathToMdFile;
+	/** Section chain for the newly created folder (for Librarian notification) */
+	sectionChain: SectionNodeSegmentId[];
+	/** Segment ID of the deleted scroll (for tree update) */
+	deletedScrollSegmentId: ScrollNodeSegmentId;
 };
 
 /**
@@ -63,6 +75,16 @@ export function buildPageSplitActions(
 
 	// New path parts for items inside the folder
 	const newPathParts = [...sourcePath.pathParts, folderBasename];
+
+	// Build section chain for the new folder (all path parts including the new folder)
+	const sectionChain = buildSectionChain(newPathParts);
+
+	// Build segment ID for the deleted scroll (same coreName, but Scroll kind)
+	const deletedScrollSegmentId = serializeSegmentId({
+		coreName: result.sourceCoreName,
+		extension: "md",
+		targetKind: TreeNodeKind.Scroll,
+	}) as ScrollNodeSegmentId;
 
 	// 1. Create folder
 	actions.push({
@@ -120,7 +142,7 @@ export function buildPageSplitActions(
 		payload: { splitPath: sourcePath },
 	});
 
-	return { actions, firstPagePath };
+	return { actions, deletedScrollSegmentId, firstPagePath, sectionChain };
 }
 
 /**
@@ -201,4 +223,18 @@ function addPageFrontmatter(content: string): string {
 	// Transforms are synchronous here, casts are safe
 	const cleanContent = getContentBody()(content) as string;
 	return upsertMetadata(meta)(cleanContent) as string;
+}
+
+/**
+ * Builds section chain (segment IDs) from path parts (node names).
+ * Each path part becomes a section segment ID.
+ */
+function buildSectionChain(pathParts: string[]): SectionNodeSegmentId[] {
+	return pathParts.map(
+		(nodeName) =>
+			serializeSegmentId({
+				coreName: nodeName as NodeName,
+				targetKind: TreeNodeKind.Section,
+			}) as SectionNodeSegmentId,
+	);
 }

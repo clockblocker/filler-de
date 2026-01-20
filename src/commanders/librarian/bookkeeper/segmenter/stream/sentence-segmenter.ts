@@ -9,11 +9,12 @@ const SENTENCE_ENDING = /[.!?]["»«"']?\s*$/;
 
 /**
  * Colon-as-sentence-end pattern.
- * Colon followed by space and then quote/uppercase/dash indicates sentence break.
+ * Colon followed by whitespace and then quote/uppercase/dash indicates sentence break.
+ * Captures the whitespace to preserve it in the replacement.
  * Based on split-on-colon.ts logic.
  */
 const COLON_SENTENCE_BREAK =
-	/(?<!\p{Nd}):\s+(?!\/\/)(?=(\p{Quotation_Mark}|[\p{Lu}\p{Lt}]|[\p{Dash_Punctuation}—–-]))/gu;
+	/(?<!\p{Nd}):(\s+)(?!\/\/)(?=(\p{Quotation_Mark}|[\p{Lu}\p{Lt}]|[\p{Dash_Punctuation}—–-]))/gu;
 
 /**
  * Checks if text ends with complete sentence punctuation.
@@ -26,11 +27,12 @@ function isCompleteSentence(text: string): boolean {
  * Pre-processes text to add markers at colon sentence boundaries.
  * This helps Intl.Segmenter recognize German speech patterns like:
  * "Die Mutter sprach: „Geh nach Hause!""
+ * Preserves original whitespace (including paragraph breaks) after the colon.
  */
 function preprocessColons(text: string): string {
 	// Insert a zero-width space after colons that introduce speech
-	// This helps the segmenter recognize the boundary
-	return text.replace(COLON_SENTENCE_BREAK, ":\u200B ");
+	// Preserve the original whitespace by using captured group $1
+	return text.replace(COLON_SENTENCE_BREAK, ":\u200B$1");
 }
 
 /**
@@ -49,26 +51,57 @@ export function segmentSentences(
 	const preprocessed = preprocessColons(content);
 	const segments = [...segmenter.segment(preprocessed)];
 
+	// Count zero-width spaces inserted before each position to map back to original
+	const zwsPositions = findZwsPositions(preprocessed);
+
 	const sentences: SentenceToken[] = [];
-	let sourceOffset = 0;
 
 	for (const segment of segments) {
 		// Remove zero-width spaces that were added during preprocessing
 		const text = segment.segment.replace(/\u200B/g, "");
 
-		if (text.length === 0) continue;
+		// Skip empty or whitespace-only segments
+		if (text.trim().length === 0) continue;
+
+		// Map preprocessed index back to original content index
+		const preprocessedIndex = segment.index;
+		const zwsCountBefore = countZwsBefore(zwsPositions, preprocessedIndex);
+		const originalIndex = preprocessedIndex - zwsCountBefore;
 
 		sentences.push({
 			charCount: text.length,
 			isComplete: isCompleteSentence(text),
-			sourceOffset,
+			sourceOffset: originalIndex,
 			text,
 		});
-
-		sourceOffset += text.length;
 	}
 
 	return sentences;
+}
+
+/**
+ * Find all positions of zero-width spaces in the preprocessed string.
+ */
+function findZwsPositions(preprocessed: string): number[] {
+	const positions: number[] = [];
+	for (let i = 0; i < preprocessed.length; i++) {
+		if (preprocessed[i] === "\u200B") {
+			positions.push(i);
+		}
+	}
+	return positions;
+}
+
+/**
+ * Count how many zero-width spaces appear before the given position.
+ */
+function countZwsBefore(positions: number[], index: number): number {
+	let count = 0;
+	for (const pos of positions) {
+		if (pos < index) count++;
+		else break;
+	}
+	return count;
 }
 
 /**
@@ -125,10 +158,13 @@ export function segmentToTokens(
 		const prevSentence = sentences[i - 1];
 
 		// Check if there's a paragraph break before this sentence
+		// Look at the range from end of previous sentence's non-whitespace content
+		// to start of this sentence
 		if (prevSentence) {
-			const gapStart = prevSentence.sourceOffset + prevSentence.charCount;
-			const gapEnd = sentence.sourceOffset;
-			const gap = content.slice(gapStart, gapEnd);
+			// Find where the actual content ends (excluding trailing whitespace)
+			const prevTrimmedLen = prevSentence.text.trimEnd().length;
+			const prevContentEnd = prevSentence.sourceOffset + prevTrimmedLen;
+			const gap = content.slice(prevContentEnd, sentence.sourceOffset);
 
 			// Paragraph break = two consecutive newlines (with optional whitespace between)
 			if (/\n\s*\n/.test(gap)) {

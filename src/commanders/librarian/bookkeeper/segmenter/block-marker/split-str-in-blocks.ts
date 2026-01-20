@@ -304,7 +304,7 @@ function formatBlocksWithMarkers(blocks: Block[], startIndex: number): string {
 		const startsNewParagraph = firstSentence?.startsNewParagraph ?? false;
 
 		if (startsNewParagraph) {
-			// Extra blank line for paragraph boundary
+			// Extra blank lines for paragraph boundary
 			parts.push(`\n\n\n${markedBlock}`);
 		} else {
 			// Standard single blank line between blocks

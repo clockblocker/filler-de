@@ -115,6 +115,14 @@ export class Healer implements TreeReader {
 		return this.tree.getRoot();
 	}
 
+	/**
+	 * Ensure a section chain exists in the tree, creating missing sections as needed.
+	 * Used to bypass self-event filtering when Bookkeeper creates sections directly.
+	 */
+	ensureSectionChain(chain: SectionNodeSegmentId[]): SectionNode {
+		return this.tree.ensureSectionChain(chain);
+	}
+
 	// ─── Healing Computation ───
 
 	private computeHealingForAction(

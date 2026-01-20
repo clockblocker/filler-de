@@ -11,7 +11,7 @@ export {
 	waitForFiles,
 } from "./files";
 export { whenIdle } from "./idle";
-export { createFile, createFiles, createFolder, deletePath, listAllFiles, listFilesUnder, renamePath } from "./vault-ops";
+export { clickButton, createFile, createFiles, createFolder, deletePath, listAllFiles, listFilesUnder, openFile, renamePath } from "./vault-ops";
 
 import type { ExpectFilesGoneOptions, ExpectFilesOptions } from "../internal/types";
 import { type GatherDebugInfoOptions, gatherPluginDebugInfo } from "./debug";

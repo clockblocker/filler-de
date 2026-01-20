@@ -281,3 +281,51 @@ export async function modifyFile(
 	}
 }
 
+/**
+ * Open a file in the Obsidian editor.
+ */
+export async function openFile(path: string): Promise<Result<void, string>> {
+	try {
+		const result = await browser.executeObsidian(async ({ app }, p) => {
+			const file = app.vault.getAbstractFileByPath(p);
+			if (!file) {
+				return { error: `File not found: ${p}`, ok: false as const };
+			}
+			if (!("extension" in file)) {
+				return { error: `Path is not a file: ${p}`, ok: false as const };
+			}
+			const leaf = app.workspace.getLeaf(false);
+			await leaf.openFile(file);
+			return { ok: true as const };
+		}, path);
+		if (result && typeof result === "object" && "ok" in result && !result.ok) {
+			return err(result.error);
+		}
+		return ok(undefined);
+	} catch (error) {
+		return err(error instanceof Error ? error.message : String(error));
+	}
+}
+
+/**
+ * Click a button by its data-action attribute.
+ */
+export async function clickButton(actionId: string): Promise<Result<void, string>> {
+	try {
+		const result = await browser.executeObsidian(async ({}, id) => {
+			const btn = document.querySelector(`[data-action="${id}"]`) as HTMLElement | null;
+			if (!btn) {
+				return { error: `Button not found: data-action="${id}"`, ok: false as const };
+			}
+			btn.click();
+			return { ok: true as const };
+		}, actionId);
+		if (result && typeof result === "object" && "ok" in result && !result.ok) {
+			return err(result.error);
+		}
+		return ok(undefined);
+	} catch (error) {
+		return err(error instanceof Error ? error.message : String(error));
+	}
+}
+

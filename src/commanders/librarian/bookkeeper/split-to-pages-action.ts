@@ -12,6 +12,10 @@ import type { SplitPathToMdFile } from "../../../managers/obsidian/vault-action-
 import { parseSeparatedSuffix } from "../codecs/internal/suffix/parse";
 import type { CodecRules } from "../codecs/rules";
 import { makeCodecRulesFromSettings } from "../codecs/rules";
+import type {
+	ScrollNodeSegmentId,
+	SectionNodeSegmentId,
+} from "../codecs/segment-id/types/segment-id";
 import {
 	buildPageSplitActions,
 	buildTooShortMetadataAction,
@@ -27,9 +31,19 @@ import { DEFAULT_SEGMENTATION_CONFIG } from "./types";
 
 // ─── Types ───
 
+/** Info about the split operation for Librarian healing */
+export type SplitHealingInfo = {
+	/** Section chain for the newly created folder */
+	sectionChain: SectionNodeSegmentId[];
+	/** Segment ID of the deleted scroll (to remove from tree) */
+	deletedScrollSegmentId: ScrollNodeSegmentId;
+};
+
 export type SplitToPagesContext = {
 	openedFileService: OpenedFileService;
 	vaultActionManager: VaultActionManager;
+	/** Called after pages are created, bypasses self-event filtering */
+	onSectionCreated?: (info: SplitHealingInfo) => void;
 };
 
 type SplitInput = {
@@ -78,7 +92,13 @@ async function gatherInput(
 
 type DispatchResult =
 	| { tooShort: true }
-	| { tooShort: false; pageCount: number; firstPagePath: SplitPathToMdFile };
+	| {
+			tooShort: false;
+			pageCount: number;
+			firstPagePath: SplitPathToMdFile;
+			sectionChain: SectionNodeSegmentId[];
+			deletedScrollSegmentId: ScrollNodeSegmentId;
+	  };
 
 async function executeDispatch(
 	vaultActionManager: VaultActionManager,
@@ -97,19 +117,18 @@ async function executeDispatch(
 		return ok({ tooShort: true });
 	}
 
-	const { actions, firstPagePath } = buildPageSplitActions(
-		segmentation,
-		sourcePath,
-		rules,
-	);
+	const { actions, deletedScrollSegmentId, firstPagePath, sectionChain } =
+		buildPageSplitActions(segmentation, sourcePath, rules);
 	const result = await vaultActionManager.dispatch(actions);
 	if (result.isErr()) {
 		return err(makeSplitToPagesError.dispatchFailed(String(result.error)));
 	}
 
 	return ok({
+		deletedScrollSegmentId,
 		firstPagePath,
 		pageCount: segmentation.pages.length,
+		sectionChain,
 		tooShort: false,
 	});
 }
@@ -141,6 +160,14 @@ export async function splitToPagesAction(
 		// If user still invokes the command, we just add metadata.
 		// Invoking the command on an already split page is idempotent.
 		return;
+	}
+
+	// Notify Librarian about the new section (bypasses self-event filtering)
+	if (context.onSectionCreated) {
+		context.onSectionCreated({
+			deletedScrollSegmentId: result.deletedScrollSegmentId,
+			sectionChain: result.sectionChain,
+		});
 	}
 
 	new Notice(`Split into ${result.pageCount} pages`);
