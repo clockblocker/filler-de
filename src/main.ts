@@ -231,6 +231,7 @@ export default class TextEaterPlugin extends Plugin {
 		this.buttonManager.init({
 			apiService: this.apiService,
 			selectionService: this.selectionService,
+			vaultActionManager: this.vaultActionManager,
 		});
 	}
 
@@ -563,7 +564,7 @@ export default class TextEaterPlugin extends Plugin {
 			const children = this.app.vault.getFiles().filter((f) => {
 				const filePath = f.path;
 				return (
-					filePath.startsWith(folder + "/") &&
+					filePath.startsWith(`${folder}/`) &&
 					filePath.endsWith(".md")
 				);
 			});
@@ -631,7 +632,7 @@ export default class TextEaterPlugin extends Plugin {
 			const newBasename = escapedParts.join(newDelim);
 			if (newBasename === file.basename) continue;
 
-			const newPath = file.path.replace(file.name, newBasename + ".md");
+			const newPath = file.path.replace(file.name, `${newBasename}.md`);
 			try {
 				await this.app.fileManager.renameFile(file, newPath);
 			} catch (error) {

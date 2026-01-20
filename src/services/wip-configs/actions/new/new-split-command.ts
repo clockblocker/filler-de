@@ -1,21 +1,23 @@
 import { Notice } from "obsidian";
-import type { OpenedFileService } from "../../../../managers/obsidian/vault-action-manager/file-services/active-view/opened-file-service";
 import {
 	formatQuotedLines,
 	segmentInQuotedLines,
 } from "../../../dto-services/quote-manager/interface";
-import type { SelectionService } from "../../../obsidian-services/atomic-services/selection-service";
+import type { TexfresserObsidianServices } from "../../../obsidian-services/interface";
 
-export default async function wrapSentencesInQuoteAnchor({
-	selectionService,
-	openedFileService,
-}: {
-	selectionService: SelectionService;
-	openedFileService: OpenedFileService;
-}) {
+export default async function wrapSentencesInQuoteAnchor(
+	services: Partial<TexfresserObsidianServices>,
+) {
+	const { selectionService, vaultActionManager } = services;
+
+	if (!selectionService || !vaultActionManager) {
+		new Notice("Error: Missing required services");
+		return;
+	}
+
 	try {
 		const selection = await selectionService.getSelection();
-		const contentResult = await openedFileService.getContent();
+		const contentResult = await vaultActionManager.getOpenedContent();
 		if (contentResult.isErr()) {
 			throw new Error(contentResult.error);
 		}
@@ -23,11 +25,11 @@ export default async function wrapSentencesInQuoteAnchor({
 
 		const highestBlockNumber = findHighestBlockNumber(fileContent);
 
-		const tFileResult = await openedFileService.getOpenedTFile();
-		if (tFileResult.isErr()) {
-			throw new Error(tFileResult.error);
+		const fileNameResult = await vaultActionManager.getOpenedFileName();
+		if (fileNameResult.isErr()) {
+			throw new Error(fileNameResult.error);
 		}
-		const nameOfTheOpenendFile = tFileResult.value.name;
+		const nameOfTheOpenendFile = fileNameResult.value;
 
 		await selectionService.replaceSelection(
 			formatQuotedLines(

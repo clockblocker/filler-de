@@ -46,6 +46,12 @@ export interface VaultActionManager {
 	getAbstractFile<SP extends AnySplitPath>(
 		splitPath: SP,
 	): Promise<Result<SP["kind"] extends "Folder" ? TFolder : TFile, string>>;
+
+	// Opened file operations (high-level, no TFile leakage)
+	getOpenedFileName(): Promise<Result<string, string>>;
+	getOpenedContent(): Promise<Result<string, string>>;
+	replaceOpenedContent(content: string): Promise<Result<string, string>>;
+	cd(splitPath: SplitPathToMdFile): Promise<Result<void, string>>;
 }
 
 export { makeSystemPathForSplitPath };

@@ -1,11 +1,13 @@
 import { type App, MarkdownView } from "obsidian";
 import { z } from "zod";
+import { wouldSplitToMultiplePages as checkWouldSplit } from "../../../commanders/librarian/bookkeeper/segmenter";
+import { makeCodecRulesFromSettings } from "../../../commanders/librarian/codecs/rules";
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import { makeSplitPath } from "../../../managers/obsidian/vault-action-manager";
 import type { AnySplitPath } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import { readMetadata } from "../../../managers/pure/note-metadata-manager";
 import {
-	type FileType,
+	FileType,
 	MdFileSubTypeSchema,
 } from "../../../types/common-interface/enums";
 import { ACTION_CONFIGS } from "../../wip-configs/actions/actions-config";
@@ -14,6 +16,7 @@ import { ACTION_CONFIGS } from "../../wip-configs/actions/actions-config";
 const FileTypeMetadataSchema = z.object({
 	fileType: MdFileSubTypeSchema.optional(),
 });
+
 import {
 	ALL_USER_ACTIONS,
 	type AnyActionConfig,
@@ -44,6 +47,7 @@ export class ButtonRegistry {
 		let path: AnySplitPath | null = null;
 		let fileType: FileType | null = null;
 		let isInLibrary = false;
+		let wouldSplitToMultiplePages = false;
 
 		if (file) {
 			const splitPath = makeSplitPath(file.path);
@@ -65,8 +69,22 @@ export class ButtonRegistry {
 			if (isInLibrary) {
 				try {
 					const content = await this.app.vault.read(file);
-					const metaInfo = readMetadata(content, FileTypeMetadataSchema);
+					const metaInfo = readMetadata(
+						content,
+						FileTypeMetadataSchema,
+					);
 					fileType = metaInfo?.fileType ?? null;
+
+					// Check if scroll would split to multiple pages
+					if (fileType === FileType.Scroll) {
+						const settings = getParsedUserSettings();
+						const rules = makeCodecRulesFromSettings(settings);
+						wouldSplitToMultiplePages = checkWouldSplit(
+							content,
+							splitPath.basename,
+							rules,
+						);
+					}
 				} catch {
 					fileType = null;
 				}
@@ -86,6 +104,7 @@ export class ButtonRegistry {
 			isInLibrary,
 			isMobile,
 			path,
+			wouldSplitToMultiplePages,
 		};
 	}
 

@@ -283,6 +283,28 @@ export class VaultActionManagerImpl implements VaultActionManager {
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────
+	// Opened file operations (high-level, no TFile leakage)
+	// ─────────────────────────────────────────────────────────────────────────
+
+	async getOpenedFileName(): Promise<Result<string, string>> {
+		const result = await this.opened.getOpenedTFile();
+		return result.map((f) => f.name);
+	}
+
+	getOpenedContent(): Promise<Result<string, string>> {
+		return this.opened.getContent();
+	}
+
+	replaceOpenedContent(content: string): Promise<Result<string, string>> {
+		return this.opened.replaceAllContentInOpenedFile(content);
+	}
+
+	async cd(splitPath: SplitPathToMdFile): Promise<Result<void, string>> {
+		const result = await this.opened.cd(splitPath);
+		return result.map(() => undefined);
+	}
+
+	// ─────────────────────────────────────────────────────────────────────────
 	// Debug API - for testing multi-batch scenarios
 	// ─────────────────────────────────────────────────────────────────────────
 

@@ -2,27 +2,33 @@ import {
 	logError,
 	logWarning,
 } from "../../../../managers/obsidian/vault-action-manager/helpers/issue-handlers";
-import { unwrapMaybeLegacyByThrowing } from "../../../../types/common-interface/maybe";
+import type { SplitPathToMdFile } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { TexfresserObsidianServices } from "../../../obsidian-services/interface";
 
 export async function navigatePageAction(
 	services: Partial<TexfresserObsidianServices>,
 	direction: "prev" | "next",
 ): Promise<void> {
-	const { openedFileService } = services;
+	const { vaultActionManager } = services;
 
-	if (!openedFileService) {
+	if (!vaultActionManager) {
 		console.error("Missing required services for navigatePageAction");
 		return;
 	}
 
-	const maybeFile = await openedFileService.getMaybeLegacyOpenedTFile();
-	const currentFile = unwrapMaybeLegacyByThrowing(maybeFile);
+	const fileNameResult = await vaultActionManager.getOpenedFileName();
+	if (fileNameResult.isErr()) {
+		logError({
+			description: `Error getting current file: ${fileNameResult.error}`,
+			location: "navigatePageAction",
+		});
+		return;
+	}
 
-	// const textsManagerService = new VaultCurrator(openedFileService.getApp());
+	// const textsManagerService = new VaultCurrator(...);
 
 	try {
-		const targetPage: any = null;
+		const targetPage: SplitPathToMdFile | null = null;
 
 		if (direction === "prev") {
 			// targetPage = await textsManagerService.getPreviousPage(currentFile);
@@ -31,7 +37,7 @@ export async function navigatePageAction(
 		}
 
 		if (targetPage) {
-			await openedFileService.cd(targetPage);
+			await vaultActionManager.cd(targetPage);
 		} else {
 			logWarning({
 				description: `No ${direction} page found`,

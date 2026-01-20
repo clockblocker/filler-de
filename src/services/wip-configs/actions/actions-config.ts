@@ -94,7 +94,9 @@ export const ACTION_CONFIGS = {
 		execute: makeTextAction,
 		id: UserAction.MakeText,
 		isAvailable: (ctx: ButtonContext) =>
-			ctx.isInLibrary && ctx.fileType === null,
+			ctx.isInLibrary &&
+			(ctx.fileType === null ||
+				(ctx.fileType === FileType.Scroll && ctx.wouldSplitToMultiplePages)),
 		label: "Make this a text",
 		placement: UserActionPlacement.Bottom,
 		priority: 2,

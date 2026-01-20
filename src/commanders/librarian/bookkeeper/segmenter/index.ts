@@ -1,4 +1,6 @@
+import { parseSeparatedSuffix } from "../../codecs/internal/suffix/parse";
 import type { SeparatedSuffixedBasename } from "../../codecs/internal/suffix/types";
+import type { CodecRules } from "../../codecs/rules";
 import type {
 	PageSegment,
 	SegmentationConfig,
@@ -183,6 +185,23 @@ function createPage(blocks: TextBlock[], pageIndex: number): PageSegment {
 		content: blocksToContent(blocks),
 		pageIndex,
 	};
+}
+
+/**
+ * Quick check if content would segment into multiple pages.
+ * Useful for UI decisions (e.g., showing "Make this a text" button).
+ */
+export function wouldSplitToMultiplePages(
+	content: string,
+	basename: string,
+	rules: CodecRules,
+	config: SegmentationConfig = DEFAULT_SEGMENTATION_CONFIG,
+): boolean {
+	const basenameResult = parseSeparatedSuffix(rules, basename);
+	if (basenameResult.isErr()) return false;
+
+	const result = segmentContent(content, basenameResult.value, config);
+	return result.pages.length > 1;
 }
 
 /**

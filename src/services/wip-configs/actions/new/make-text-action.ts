@@ -1,45 +1,22 @@
 import { logError } from "../../../../managers/obsidian/vault-action-manager/helpers/issue-handlers";
-import { unwrapMaybeLegacyByThrowing } from "../../../../types/common-interface/maybe";
 import type { TexfresserObsidianServices } from "../../../obsidian-services/interface";
-// import { VaultCurrator } from '../../obsidian-services/managers/vault-currator';
+
+const SPLIT_TO_PAGES_COMMAND = "cbcr-text-eater-de:split-to-pages";
 
 export async function makeTextAction(
 	services: Partial<TexfresserObsidianServices>,
 ): Promise<void> {
-	const { openedFileService } = services;
+	const { app } = services;
 
-	if (!openedFileService) {
+	if (!app) {
 		logError({
-			description: "Missing required services for makeTextAction",
+			description: "Missing app for makeTextAction",
 			location: "makeTextAction",
 		});
 		return;
 	}
 
-	const maybeFile = await openedFileService.getMaybeLegacyOpenedTFile();
-	const currentFile = unwrapMaybeLegacyByThrowing(maybeFile);
-
-	// const textsManagerService = new VaultCurrator(openedFileService.getApp());
-
-	// const hasEmptyMeta = await textsManagerService.hasEmptyMetaInfo(currentFile);
-	// if (!hasEmptyMeta) {
-	// 	return;
-	// }
-
-	try {
-		const maybeContent = await openedFileService.getMaybeLegacyContent();
-		const content = unwrapMaybeLegacyByThrowing(maybeContent);
-
-		// const textStructure = await textsManagerService.createTextFromCurrentFile(
-		// 	currentFile,
-		// 	content
-		// );
-
-		// await openedFileService.openFile(textStructure.textRootFile);
-	} catch (error) {
-		logError({
-			description: `Error creating text structure: ${error}`,
-			location: "makeTextAction",
-		});
-	}
+	// Delegate to the split-to-pages command which handles the conversion
+	// biome-ignore lint/suspicious/noExplicitAny: <commands API not in official types>
+	(app as any).commands.executeCommandById(SPLIT_TO_PAGES_COMMAND);
 }

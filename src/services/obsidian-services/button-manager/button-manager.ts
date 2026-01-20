@@ -1,8 +1,10 @@
 import type { App, Plugin, WorkspaceLeaf } from "obsidian";
+import type { VaultActionManager } from "../../../managers/obsidian/vault-action-manager";
 import { ACTION_CONFIGS } from "../../wip-configs/actions/actions-config";
 import type { UserAction } from "../../wip-configs/actions/types";
 import type { ApiService } from "../atomic-services/api-service";
 import type { SelectionService } from "../atomic-services/selection-service";
+import type { TexfresserObsidianServices } from "../interface";
 import { BottomToolbarService } from "./bottom-toolbar";
 import { ButtonRegistry } from "./button-registry";
 import { AboveSelectionToolbarService } from "./selection-toolbar";
@@ -10,6 +12,7 @@ import { AboveSelectionToolbarService } from "./selection-toolbar";
 export type ButtonManagerServices = {
 	apiService: ApiService;
 	selectionService: SelectionService;
+	vaultActionManager: VaultActionManager;
 };
 
 /**
@@ -146,7 +149,9 @@ export class ButtonManager {
 			// Execute the action with services
 			config.execute({
 				apiService: this.services.apiService,
+				app: this.app,
 				selectionService: this.services.selectionService,
+				vaultActionManager: this.services.vaultActionManager,
 			});
 		});
 	}

@@ -1,17 +1,24 @@
 import { Notice } from "obsidian";
-import { unwrapMaybeLegacyByThrowing } from "../../../../types/common-interface/maybe";
 import { LONG_DASH } from "../../../../types/literals";
 import type { TexfresserObsidianServices } from "../../../obsidian-services/interface";
 
 export default async function newGenCommand(
-	services: TexfresserObsidianServices,
+	services: Partial<TexfresserObsidianServices>,
 ) {
-	try {
-		const file = unwrapMaybeLegacyByThrowing(
-			await services.openedFileService.getMaybeLegacyOpenedTFile(),
-		);
+	const { vaultActionManager } = services;
 
-		const word = file.name;
+	if (!vaultActionManager) {
+		new Notice("Error: Missing vaultActionManager");
+		return;
+	}
+
+	try {
+		const fileNameResult = await vaultActionManager.getOpenedFileName();
+		if (fileNameResult.isErr()) {
+			throw new Error(fileNameResult.error);
+		}
+
+		// const word = fileNameResult.value;
 		// const [dictionaryEntry, froms, morphems, valence] = await Promise.all([
 		// 	services.apiService.generateContent(
 		// 		prompts.generate_dictionary_entry,
@@ -45,9 +52,11 @@ export default async function newGenCommand(
 
 		const blocks = [buttonsBlock];
 
-		const fileContent = unwrapMaybeLegacyByThrowing(
-			await services.openedFileService.getMaybeLegacyContent(),
-		);
+		const fileContentResult = await vaultActionManager.getOpenedContent();
+		if (fileContentResult.isErr()) {
+			throw new Error(fileContentResult.error);
+		}
+		const fileContent = fileContentResult.value;
 
 		// const exisingBlocks = services.blockManager.extractAllBlocks(fileContent);
 
@@ -56,13 +65,12 @@ export default async function newGenCommand(
 		if (fileContent.trim() === "") {
 			await Promise.all(
 				blocks.map((block) => {
-					const a =
-						services.openedFileService.writeToOpenedFile(block);
+					return vaultActionManager.replaceOpenedContent(block);
 				}),
 			);
 		} else {
 			// Change the buttons to somehting meaningfull
-			return null;
+			return;
 		}
 
 		const entrie = blocks.filter(Boolean).join("\n---\n");
