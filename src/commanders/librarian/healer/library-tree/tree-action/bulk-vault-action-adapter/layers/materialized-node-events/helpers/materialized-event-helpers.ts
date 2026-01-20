@@ -26,8 +26,8 @@ import {
 	type DeleteScrollNodeMaterializedEvent,
 	type DeleteSectionNodeMaterializedEvent,
 	type DeleteTreeNodeMaterializedEvent,
-	type MaterializedNodeEvent,
 	MaterializedEventKind,
+	type MaterializedNodeEvent,
 	type RenameFileNodeMaterializedEvent,
 	type RenameScrollNodeMaterializedEvent,
 	type RenameSectionNodeMaterializedEvent,
@@ -343,23 +343,8 @@ export function visitMaterializedOperation<T>(
 // ─── Namespace Export ───
 
 export const MaterializedEventHelpers = {
-	// SplitPathKind ↔ TreeNodeKind mapping
-	SPLIT_PATH_KIND_TO_TREE_NODE_KIND,
-	splitPathKindToTreeNodeKind,
-	getTreeNodeKindForSplitPath,
-	isLeafSplitPath,
 	getLeafNodeKind,
-
-	// Operation classification
-	isMaterializedCreateEvent,
-	isMaterializedDeleteEvent,
-	isMaterializedRenameEvent,
-
-	// Node kind classification
-	isFileNodeEvent,
-	isScrollNodeEvent,
-	isSectionNodeEvent,
-	isLeafNodeEvent,
+	getTreeNodeKindForSplitPath,
 
 	// Specific type guards
 	isCreateFileEvent,
@@ -367,9 +352,24 @@ export const MaterializedEventHelpers = {
 	isDeleteFileEvent,
 	isDeleteScrollEvent,
 	isDeleteSectionEvent,
+
+	// Node kind classification
+	isFileNodeEvent,
+	isLeafNodeEvent,
+	isLeafSplitPath,
+
+	// Operation classification
+	isMaterializedCreateEvent,
+	isMaterializedDeleteEvent,
+	isMaterializedRenameEvent,
 	isRenameFileEvent,
 	isRenameScrollEvent,
 	isRenameSectionEvent,
+	isScrollNodeEvent,
+	isSectionNodeEvent,
+	// SplitPathKind ↔ TreeNodeKind mapping
+	SPLIT_PATH_KIND_TO_TREE_NODE_KIND,
+	splitPathKindToTreeNodeKind,
 
 	// Visitor pattern
 	visitMaterializedEvent,

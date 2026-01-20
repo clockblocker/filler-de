@@ -10,14 +10,14 @@
  * and generates cleanup actions for mismatched codexes.
  */
 
+import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { Codecs, SplitPathToMdFileInsideLibrary } from "../codecs";
 import type { SectionNodeSegmentId } from "../codecs/segment-id/types/segment-id";
-import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
-import { TreeNodeKind } from "./library-tree/tree-node/types/atoms";
 import { computeCodexSplitPath } from "./library-tree/codex/codex-split-path";
 import { isCodexSplitPath } from "./library-tree/codex/helpers";
-import type { HealingAction } from "./library-tree/types/healing-action";
 import type { TreeReader } from "./library-tree/tree-interfaces";
+import { TreeNodeKind } from "./library-tree/tree-node/types/atoms";
+import type { HealingAction } from "./library-tree/types/healing-action";
 
 // ─── Types ───
 

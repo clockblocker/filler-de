@@ -1,4 +1,10 @@
 import type {
+	CanonicalSplitPathInsideLibrary,
+	CanonicalSplitPathToFileInsideLibrary,
+	CanonicalSplitPathToFolderInsideLibrary,
+	CanonicalSplitPathToMdFileInsideLibrary,
+} from "../split-path-with-separated-suffix";
+import type {
 	AnyNodeLocator,
 	FileNodeLocator,
 	NodeLocatorOf,
@@ -6,13 +12,6 @@ import type {
 	SectionNodeLocator,
 	TreeNodeLocator,
 } from "./types/index";
-
-import type {
-	CanonicalSplitPathInsideLibrary,
-	CanonicalSplitPathToFileInsideLibrary,
-	CanonicalSplitPathToFolderInsideLibrary,
-	CanonicalSplitPathToMdFileInsideLibrary,
-} from "../split-path-with-separated-suffix";
 
 /**
  * Public types for locator codecs.

@@ -59,6 +59,22 @@ export const paragraphRule: SegmentationRule = {
 };
 
 /**
+ * Speech introduction rule: Don't split between a block that introduces
+ * speech (ends with ':') and the following dialogue.
+ */
+export const speechIntroductionRule: SegmentationRule = {
+	canSplitBetween: (blockA, _blockB, _config) => {
+		// If blockA introduces speech, don't allow split
+		if (blockA.introducesSpeech) {
+			return false;
+		}
+		return true;
+	},
+	name: "SpeechIntroduction",
+	priority: 1, // Same priority as dialogue - speech context is important
+};
+
+/**
  * Heading rule: Prefer to split before headings.
  * This is a soft preference - it returns true always but
  * the segmenter can use this to prefer heading boundaries.
@@ -90,6 +106,7 @@ export const sizeRule: SegmentationRule = {
  */
 export const ALL_RULES: SegmentationRule[] = [
 	dialogueRule,
+	speechIntroductionRule,
 	paragraphRule,
 	headingRule,
 	sizeRule,

@@ -7,13 +7,7 @@
  */
 
 import { META_SECTION_PATTERN } from "../../pure/note-metadata-manager";
-
-/**
- * Pattern to match "go back" wikilinks at start of content.
- * Format: [[__-path-chain|← DisplayName]]
- * Example: [[__-L4-L3-L2-L1|← L4]]
- */
-const GO_BACK_LINK_PATTERN = /^\s*\[\[__-[^\]]+\|←[^\]]+\]\]\s*/;
+import { buildGoBackLinkPattern } from "../navigation";
 
 export class ClipboardInterceptor {
 	private handler: ((evt: ClipboardEvent) => void) | null = null;
@@ -46,8 +40,9 @@ export class ClipboardInterceptor {
 		const selection = window.getSelection()?.toString();
 		if (!selection) return;
 
+		const goBackPattern = buildGoBackLinkPattern();
 		const cleaned = selection
-			.replace(GO_BACK_LINK_PATTERN, "")
+			.replace(goBackPattern, "")
 			.replace(META_SECTION_PATTERN, "")
 			.trim();
 

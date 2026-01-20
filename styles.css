@@ -167,8 +167,8 @@ body.hide-status-bar .mod-root .workspace-split {
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 8px;
 	opacity: 0.6;
-	transition: opacity 0.2s, background 0.2s;
 	transform: translateY(-50%);
+	transition: opacity 0.2s, background 0.2s;
 }
 
 .edge-nav-btn:hover {

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { logger } from "../../../utils/logger";
 import type {
 	SplitPathToMdFile,
 	SplitPathWithReader,
@@ -8,13 +7,14 @@ import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/t
 import type { VaultAction } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { VaultActionKind } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { readMetadata } from "../../../managers/pure/note-metadata-manager";
+import { parseFrontmatter } from "../../../managers/pure/note-metadata-manager/internal/frontmatter";
+import { readJsonSection } from "../../../managers/pure/note-metadata-manager/internal/json-section";
 import {
 	addFrontmatter,
 	migrateFrontmatter,
 	migrateToFrontmatter,
 } from "../../../managers/pure/note-metadata-manager/internal/migration";
-import { readJsonSection } from "../../../managers/pure/note-metadata-manager/internal/json-section";
-import { parseFrontmatter } from "../../../managers/pure/note-metadata-manager/internal/frontmatter";
+import { logger } from "../../../utils/logger";
 import type {
 	AnySplitPathInsideLibrary,
 	CodecRules,
@@ -175,7 +175,9 @@ export async function buildInitialCreateActions(
 							kind: VaultActionKind.ProcessMdFile,
 							payload: {
 								splitPath: vaultMdPath,
-								transform: addFrontmatter({ status: statusValue }),
+								transform: addFrontmatter({
+									status: statusValue,
+								}),
 							},
 						});
 					}

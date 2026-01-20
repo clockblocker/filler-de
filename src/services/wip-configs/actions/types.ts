@@ -56,7 +56,9 @@ export type ButtonContext = {
 
 export type ActionConfig<A extends UserAction> = {
 	id: A;
-	execute: (services: Partial<TexfresserObsidianServices>) => void | Promise<void>;
+	execute: (
+		services: Partial<TexfresserObsidianServices>,
+	) => void | Promise<void>;
 	label: string;
 	placement: UserActionPlacement;
 	/** Lower number = higher priority (1-10). Used for sorting and overflow. */

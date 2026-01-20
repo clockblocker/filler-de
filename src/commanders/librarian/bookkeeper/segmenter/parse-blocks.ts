@@ -1,7 +1,7 @@
 import {
 	DialoguePosition,
-	TextBlockKind,
 	type TextBlock,
+	TextBlockKind,
 	type TextBlockKind as TextBlockKindType,
 } from "../types";
 
@@ -70,35 +70,93 @@ function getLineKind(line: string): TextBlockKindType {
 }
 
 /**
+ * Patterns for German quote marks.
+ * Using Unicode escapes to be explicit about characters:
+ * - U+201E „ (DOUBLE LOW-9 QUOTATION MARK) - German opening
+ * - U+00BB » (RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK) - French/German opening
+ * - U+201D " (RIGHT DOUBLE QUOTATION MARK) - German closing
+ * - U+00AB « (LEFT-POINTING DOUBLE ANGLE QUOTATION MARK) - French/German closing
+ * - U+0022 " (QUOTATION MARK) - ASCII neutral
+ */
+const OPENING_QUOTE_PATTERN = /[\u201E\u00BB]/g;
+const CLOSING_QUOTE_PATTERN = /[\u201D\u00AB]/g;
+const NEUTRAL_QUOTE_PATTERN = /\u0022/g;
+
+/**
+ * Counts net open quotes in a line given current open count.
+ * Returns the new open quote count after processing this line.
+ */
+function updateQuoteCount(line: string, currentOpenCount: number): number {
+	const openingMatches = line.match(OPENING_QUOTE_PATTERN);
+	const closingMatches = line.match(CLOSING_QUOTE_PATTERN);
+
+	const germanOpens = openingMatches?.length ?? 0;
+	const germanCloses = closingMatches?.length ?? 0;
+
+	// Process German quotes first (they're unambiguous)
+	let openCount = currentOpenCount + germanOpens - germanCloses;
+
+	// Process ASCII quotes character by character
+	// Each " toggles: if inside quote, it closes; if outside, it opens
+	for (const char of line) {
+		if (char === '"') {
+			if (openCount > 0) {
+				openCount--; // Closing
+			} else {
+				openCount++; // Opening
+			}
+		}
+	}
+
+	return Math.max(0, openCount);
+}
+
+/**
  * Parses markdown content into structural blocks.
  * Groups consecutive lines of the same kind into blocks.
  * Special handling for dialogue to keep exchanges together.
+ * Keeps multi-line quoted content (poems, songs) together even across blank lines.
  */
 export function parseBlocks(content: string): TextBlock[] {
 	const lines = content.split("\n");
 	const blocks: TextBlock[] = [];
 
 	let currentBlock: TextBlock | null = null;
+	let openQuoteCount = 0; // Track unclosed quotes across lines
 
 	for (const line of lines) {
 		const lineKind = getLineKind(line);
 
-		// Blank lines always create a new block
+		// Check if we're inside a quote BEFORE processing this line
+		const wasInsideQuote = openQuoteCount > 0;
+
+		// Handle blank lines - check quote state before updating
 		if (lineKind === TextBlockKind.Blank) {
+			// If inside a quote, don't break - keep blank line in current block
+			if (wasInsideQuote && currentBlock) {
+				currentBlock.lines.push(line);
+				currentBlock.charCount += line.length + 1;
+				currentBlock.isQuotedContent = true;
+				continue;
+			}
+
+			// Normal case: blank line creates a new block
 			if (currentBlock) {
 				blocks.push(currentBlock);
 				currentBlock = null;
 			}
-			// Add blank block
 			blocks.push({
-				charCount: line.length + 1, // +1 for newline
+				charCount: line.length + 1,
 				kind: TextBlockKind.Blank,
 				lines: [line],
 			});
 			continue;
 		}
 
-		// Headings always standalone
+		// Update quote count for non-blank lines
+		openQuoteCount = updateQuoteCount(line, openQuoteCount);
+
+		// Headings always standalone (even inside quotes - unlikely but safe)
 		if (lineKind === TextBlockKind.Heading) {
 			if (currentBlock) {
 				blocks.push(currentBlock);
@@ -109,6 +167,14 @@ export function parseBlocks(content: string): TextBlock[] {
 				lines: [line],
 			});
 			currentBlock = null;
+			continue;
+		}
+
+		// If inside quote and we have a current block, extend it regardless of kind
+		if (wasInsideQuote && currentBlock) {
+			currentBlock.lines.push(line);
+			currentBlock.charCount += line.length + 1;
+			currentBlock.isQuotedContent = true;
 			continue;
 		}
 
@@ -135,8 +201,9 @@ export function parseBlocks(content: string): TextBlock[] {
 		blocks.push(currentBlock);
 	}
 
-	// Post-process dialogue blocks to mark positions
-	return markDialoguePositions(blocks);
+	// Post-process: mark dialogue positions, then speech introductions
+	const withDialoguePositions = markDialoguePositions(blocks);
+	return markSpeechIntroductions(withDialoguePositions);
 }
 
 /**
@@ -186,7 +253,10 @@ function markDialoguePositions(blocks: TextBlock[]): TextBlock[] {
 		if (exchange.length === 1) {
 			const first = exchange[0];
 			if (first) {
-				result.push({ ...first, dialoguePosition: DialoguePosition.Single });
+				result.push({
+					...first,
+					dialoguePosition: DialoguePosition.Single,
+				});
 			}
 		} else {
 			for (const [j, exBlock] of exchange.entries()) {
@@ -207,6 +277,57 @@ function markDialoguePositions(blocks: TextBlock[]): TextBlock[] {
 	}
 
 	return result;
+}
+
+/**
+ * Marks blocks that introduce speech (end with ':' followed by dialogue).
+ * These blocks should not be split from the following dialogue.
+ * Checks both Paragraph and Dialogue blocks (dialogue can introduce more dialogue).
+ */
+function markSpeechIntroductions(blocks: TextBlock[]): TextBlock[] {
+	const result: TextBlock[] = [];
+
+	for (let i = 0; i < blocks.length; i++) {
+		const block = blocks[i];
+		if (!block) continue;
+
+		// Check if this block ends with ':' and is followed by dialogue
+		// Both Paragraph and Dialogue blocks can introduce speech
+		if (
+			block.kind === TextBlockKind.Paragraph ||
+			block.kind === TextBlockKind.Dialogue
+		) {
+			const lastLine = block.lines[block.lines.length - 1];
+			if (lastLine?.trim().endsWith(":")) {
+				// Look ahead for dialogue (skip blanks)
+				const nextNonBlank = findNextNonBlankBlock(blocks, i + 1);
+				if (nextNonBlank?.kind === TextBlockKind.Dialogue) {
+					result.push({ ...block, introducesSpeech: true });
+					continue;
+				}
+			}
+		}
+
+		result.push(block);
+	}
+
+	return result;
+}
+
+/**
+ * Finds the next non-blank block starting from index.
+ */
+function findNextNonBlankBlock(
+	blocks: TextBlock[],
+	startIndex: number,
+): TextBlock | undefined {
+	for (let i = startIndex; i < blocks.length; i++) {
+		const b = blocks[i];
+		if (b && b.kind !== TextBlockKind.Blank) {
+			return b;
+		}
+	}
+	return undefined;
 }
 
 /**

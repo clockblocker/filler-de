@@ -1,13 +1,14 @@
 import { parseSeparatedSuffix } from "../../codecs/internal/suffix/parse";
 import type { SeparatedSuffixedBasename } from "../../codecs/internal/suffix/types";
 import type { CodecRules } from "../../codecs/rules";
-import type {
-	PageSegment,
-	SegmentationConfig,
-	SegmentationResult,
-	TextBlock,
+import {
+	DEFAULT_SEGMENTATION_CONFIG,
+	type PageSegment,
+	type SegmentationConfig,
+	type SegmentationResult,
+	type TextBlock,
+	TextBlockKind,
 } from "../types";
-import { DEFAULT_SEGMENTATION_CONFIG } from "../types";
 import { blocksCharCount, blocksToContent, parseBlocks } from "./parse-blocks";
 import { canSplitBetweenBlocks, isPreferredSplitPoint } from "./rules";
 import {
@@ -47,7 +48,10 @@ export function segmentContent(
 	}
 
 	const blocks = parseBlocks(content);
-	const pages = segmentBlocks(blocks, config);
+	const rawPages = segmentBlocks(blocks, config);
+
+	// Filter out empty pages (only whitespace)
+	const pages = filterEmptyPages(rawPages);
 
 	return {
 		pages,
@@ -138,10 +142,41 @@ function segmentBlocks(
 }
 
 /**
+ * Sentence-ending punctuation marks.
+ * Pages should ideally end with one of these (or a closing quote after one).
+ */
+const SENTENCE_ENDINGS = /[.!?]["»«"]?\s*$/;
+
+/**
+ * Punctuation that indicates mid-sentence (not a valid break point).
+ */
+const MID_SENTENCE_ENDINGS = /[,;:\-–—]\s*$/;
+
+/**
+ * Checks if a block ends with complete sentence.
+ */
+function endsWithCompleteSentence(block: TextBlock): boolean {
+	const lastLine = block.lines[block.lines.length - 1];
+	if (!lastLine) return true; // Empty block - allow break
+
+	const trimmed = lastLine.trim();
+	if (trimmed.length === 0) return true; // Blank line - allow break
+
+	// Check for sentence-ending punctuation
+	if (SENTENCE_ENDINGS.test(trimmed)) return true;
+
+	// Check for mid-sentence endings - definitely not complete
+	if (MID_SENTENCE_ENDINGS.test(trimmed)) return false;
+
+	// No clear punctuation - be conservative, allow break
+	return true;
+}
+
+/**
  * Determines if a page break should be created at current position.
  */
 function shouldCreatePageBreak(
-	_currentBlocks: TextBlock[],
+	currentBlocks: TextBlock[],
 	currentSize: number,
 	currentBlock: TextBlock,
 	nextBlock: TextBlock | undefined,
@@ -149,6 +184,18 @@ function shouldCreatePageBreak(
 ): boolean {
 	// No next block - don't break, will be handled at end
 	if (!nextBlock) return false;
+
+	// Check if the last non-blank block introduces speech - prevents splitting
+	// between speech intro and following dialogue even with blank lines between
+	if (nextBlock.kind === TextBlockKind.Dialogue) {
+		// Find last non-blank block in current page
+		const lastNonBlank = [...currentBlocks]
+			.reverse()
+			.find((b) => b.kind !== TextBlockKind.Blank);
+		if (lastNonBlank?.introducesSpeech) {
+			return false;
+		}
+	}
 
 	// Under target size - don't break unless at preferred point
 	if (currentSize < config.targetPageSizeChars) {
@@ -160,15 +207,27 @@ function shouldCreatePageBreak(
 		return false;
 	}
 
+	// Check if we would be splitting mid-sentence
+	if (!endsWithCompleteSentence(currentBlock)) {
+		// Don't split mid-sentence unless we're way over max
+		if (currentSize < config.maxPageSizeChars * 1.5) {
+			return false;
+		}
+		// Extreme overflow - log warning but force break
+	}
+
 	// At or over target - check if we can split
 	if (canSplitBetweenBlocks(currentBlock, nextBlock, config)) {
 		return true;
 	}
 
-	// Over max size - force break at next allowed point
+	// Over max size - force break unless we're in quoted content
 	if (currentSize >= config.maxPageSizeChars) {
-		// Even if rules don't allow, we must break at max
-		// Log warning in production
+		// Allow overflow for quoted content to preserve poems/songs
+		if (currentBlock.isQuotedContent || nextBlock.isQuotedContent) {
+			return false; // Don't force-break within quoted content
+		}
+		// Force break at max for non-quoted content
 		return true;
 	}
 
@@ -185,6 +244,15 @@ function createPage(blocks: TextBlock[], pageIndex: number): PageSegment {
 		content: blocksToContent(blocks),
 		pageIndex,
 	};
+}
+
+/**
+ * Filters out pages with only whitespace and re-indexes remaining pages.
+ */
+function filterEmptyPages(pages: PageSegment[]): PageSegment[] {
+	const nonEmpty = pages.filter((p) => p.content.trim().length > 0);
+	// Re-index to ensure consecutive page numbers
+	return nonEmpty.map((p, i) => ({ ...p, pageIndex: i }));
 }
 
 /**

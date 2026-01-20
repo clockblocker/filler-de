@@ -12,11 +12,11 @@
  * - Enables transaction-based healing with rollback
  */
 
+import type { VaultAction } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import type {
 	SplitPathToFileInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
 } from "../codecs";
-import type { VaultAction } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import type { HealingAction } from "../healer/library-tree/types/healing-action";
 
 // ─── Error Types ───

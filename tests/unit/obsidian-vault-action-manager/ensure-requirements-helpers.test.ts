@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import type { ExistenceChecker } from "../../../src/managers/obsidian/vault-action-manager/impl/actions-processing/dispatcher";
 import {
 	buildEnsureExistKeys,
 	buildParentFolderKeys,
@@ -8,7 +9,6 @@ import {
 	getDestinationsToCheck,
 	hasActionForKey,
 } from "../../../src/managers/obsidian/vault-action-manager/impl/actions-processing/ensure-requirements-helpers";
-import type { ExistenceChecker } from "../../../src/managers/obsidian/vault-action-manager/impl/actions-processing/dispatcher";
 import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,

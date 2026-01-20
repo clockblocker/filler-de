@@ -446,36 +446,36 @@ export function visitInsideEvent<T>(
 // ─── Namespace Export ───
 
 export const ScopedEventHelpers = {
-	// Scope classification
-	isInsideScope,
-	isOutsideScope,
-	isInsideToOutsideScope,
-	isOutsideToInsideScope,
 	involvesLibrary,
 	isBoundaryCrossing,
-
-	// Operation classification
-	isScopedCreateEvent,
-	isScopedDeleteEvent,
-	isScopedRenameEvent,
-
-	// Target type classification
-	isScopedFolderEvent,
-	isScopedFileEvent,
 
 	// Specific combinations
 	isFileCreatedInside,
 	isFileDeletedInside,
 	isFileRenamedInside,
+	isFileRenamedInsideToOutside,
+	isFileRenamedOutsideToInside,
 	isFolderCreatedInside,
 	isFolderDeletedInside,
 	isFolderRenamedInside,
-	isFileRenamedInsideToOutside,
-	isFileRenamedOutsideToInside,
 	isFolderRenamedInsideToOutside,
 	isFolderRenamedOutsideToInside,
+	// Scope classification
+	isInsideScope,
+	isInsideToOutsideScope,
+	isOutsideScope,
+	isOutsideToInsideScope,
+
+	// Operation classification
+	isScopedCreateEvent,
+	isScopedDeleteEvent,
+	isScopedFileEvent,
+
+	// Target type classification
+	isScopedFolderEvent,
+	isScopedRenameEvent,
+	visitInsideEvent,
 
 	// Visitor pattern
 	visitScopedEvent,
-	visitInsideEvent,
 };

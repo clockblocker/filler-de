@@ -166,7 +166,7 @@ export class HealingAuditLog {
 			lines.push(`  Healing actions: ${entry.healingActions.length}`);
 
 			if (entry.errors.length > 0) {
-				lines.push(`  Errors:`);
+				lines.push("  Errors:");
 				for (const error of entry.errors) {
 					lines.push(`    - ${formatHealingError(error)}`);
 				}

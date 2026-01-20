@@ -27,20 +27,20 @@ export type SplitToPagesError = {
 // ─── Error Constructors ───
 
 export const makeSplitToPagesError = {
-	noPwd: (reason: string): SplitToPagesError => ({
-		kind: SplitToPagesErrorKind.NoPwd,
+	dispatchFailed: (reason: string): SplitToPagesError => ({
+		kind: SplitToPagesErrorKind.DispatchFailed,
 		reason,
 	}),
 	noContent: (reason: string): SplitToPagesError => ({
 		kind: SplitToPagesErrorKind.NoContent,
 		reason,
 	}),
-	parseFailed: (reason: string): SplitToPagesError => ({
-		kind: SplitToPagesErrorKind.ParseFailed,
+	noPwd: (reason: string): SplitToPagesError => ({
+		kind: SplitToPagesErrorKind.NoPwd,
 		reason,
 	}),
-	dispatchFailed: (reason: string): SplitToPagesError => ({
-		kind: SplitToPagesErrorKind.DispatchFailed,
+	parseFailed: (reason: string): SplitToPagesError => ({
+		kind: SplitToPagesErrorKind.ParseFailed,
 		reason,
 	}),
 };

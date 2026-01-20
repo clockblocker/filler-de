@@ -15,6 +15,7 @@ import {
 } from "./global-state/global-state";
 import { ClickInterceptor } from "./managers/obsidian/click-interceptor";
 import { ClipboardInterceptor } from "./managers/obsidian/clipboard-interceptor";
+import { SelectAllInterceptor } from "./managers/obsidian/select-all-interceptor";
 import {
 	makeSplitPath,
 	makeSystemPathForSplitPath,
@@ -60,6 +61,7 @@ export default class TextEaterPlugin extends Plugin {
 	vaultActionManager: VaultActionManagerImpl;
 	clickInterceptor: ClickInterceptor;
 	clipboardInterceptor: ClipboardInterceptor;
+	selectAllInterceptor: SelectAllInterceptor;
 	selectionService: SelectionService;
 	buttonManager: ButtonManager;
 
@@ -194,6 +196,7 @@ export default class TextEaterPlugin extends Plugin {
 			this.vaultActionManager,
 		);
 		this.clipboardInterceptor = new ClipboardInterceptor();
+		this.selectAllInterceptor = new SelectAllInterceptor(this.app);
 
 		this.selectionService = new SelectionService(this.app);
 
@@ -213,6 +216,9 @@ export default class TextEaterPlugin extends Plugin {
 
 		// Start listening to clipboard events (strips metadata from copied text)
 		this.clipboardInterceptor.startListening();
+
+		// Start listening to select-all events (excludes go-back links, frontmatter, metadata)
+		this.selectAllInterceptor.startListening();
 
 		// Initialize librarian: read tree, heal mismatches, regenerate codexes
 		if (this.librarian) {
@@ -240,6 +246,8 @@ export default class TextEaterPlugin extends Plugin {
 		if (this.clickInterceptor) this.clickInterceptor.stopListening();
 		if (this.clipboardInterceptor)
 			this.clipboardInterceptor.stopListening();
+		if (this.selectAllInterceptor)
+			this.selectAllInterceptor.stopListening();
 		if (this.librarian) this.librarian.unsubscribe();
 		// Clear global state
 		clearState();

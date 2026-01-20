@@ -3,17 +3,15 @@
  * Used by codex and scroll backlink transforms.
  */
 
+import { isGoBackLine } from "../../../../../../managers/obsidian/navigation";
 import { LINE_BREAK } from "../../../../../../types/literals";
 
 /**
  * Check if the first line looks like a backlink.
- * Matches any link starting with [[__ and ending with ]].
- * This handles both old and new delimiter formats.
+ * Re-exported from navigation module for backwards compatibility.
+ * @deprecated Use isGoBackLine from navigation module directly.
  */
-export function isBacklinkLine(line: string): boolean {
-	const pattern = /^\[\[__[^\]]+\]\]/;
-	return pattern.test(line.trim());
-}
+export const isBacklinkLine = isGoBackLine;
 
 /**
  * Split content into first line and rest.

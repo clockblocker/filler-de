@@ -1,10 +1,10 @@
-import type { VaultAction } from "../../types/vault-action";
 import {
 	isProcessAction,
 	isRenameAction,
 	isTrashAction,
 	isUpsertMdFileAction,
 } from "../../helpers/action-helpers";
+import type { VaultAction } from "../../types/vault-action";
 import { sameRename } from "../common/collapse-helpers";
 import { makeKeyForAction } from "./helpers/make-key-for-action";
 export async function collapseActions(

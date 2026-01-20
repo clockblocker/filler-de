@@ -501,7 +501,7 @@ describe("VaultAction Processing", () => {
 			expect(
 				isCreateAction({
 					kind: VaultActionKind.UpsertMdFile,
-					payload: { splitPath: mdFile("note"), content: "" },
+					payload: { content: "", splitPath: mdFile("note") },
 				}),
 			).toBe(true);
 		});
@@ -558,7 +558,7 @@ describe("VaultAction Processing", () => {
 			expect(
 				isProcessAction({
 					kind: VaultActionKind.UpsertMdFile,
-					payload: { splitPath: mdFile("note"), content: "" },
+					payload: { content: "", splitPath: mdFile("note") },
 				}),
 			).toBe(false);
 		});

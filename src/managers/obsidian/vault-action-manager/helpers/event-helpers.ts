@@ -419,36 +419,6 @@ export function visitSplitPath<T>(
 // ─── Namespace Export ───
 
 export const EventHelpers = {
-	// Operation classification
-	isCreateEvent,
-	isDeleteEvent,
-	isRenameEvent,
-
-	// Target type classification
-	isFolderEvent,
-	isFileEvent,
-
-	// Individual type guards
-	isFileCreatedEvent,
-	isFileDeletedEvent,
-	isFileRenamedEvent,
-	isFolderCreatedEvent,
-	isFolderDeletedEvent,
-	isFolderRenamedEvent,
-
-	// Path extraction
-	getEventSplitPath,
-	getEventToSplitPath,
-	getEventFromSplitPath,
-	getEventPath,
-	getEventToPath,
-	getEventParentPathParts,
-	getEventPathDepth,
-
-	// Identification
-	getEventKey,
-	eventsSharePath,
-
 	// Type narrowing
 	asFileCreatedEvent,
 	asFileDeletedEvent,
@@ -456,11 +426,40 @@ export const EventHelpers = {
 	asFolderCreatedEvent,
 	asFolderDeletedEvent,
 	asFolderRenamedEvent,
+	eventsSharePath,
+	getEventFromSplitPath,
+
+	// Identification
+	getEventKey,
+	getEventParentPathParts,
+	getEventPath,
+	getEventPathDepth,
+
+	// Path extraction
+	getEventSplitPath,
+	getEventToPath,
+	getEventToSplitPath,
+	// Operation classification
+	isCreateEvent,
+	isDeleteEvent,
+
+	// Individual type guards
+	isFileCreatedEvent,
+	isFileDeletedEvent,
+	isFileEvent,
+	isFileRenamedEvent,
+	isFileSplitPath,
+	isFolderCreatedEvent,
+	isFolderDeletedEvent,
+
+	// Target type classification
+	isFolderEvent,
+	isFolderRenamedEvent,
 
 	// SplitPath helpers
 	isFolderSplitPath,
-	isFileSplitPath,
 	isMdFileSplitPath,
+	isRenameEvent,
 
 	// Visitor pattern
 	visitEvent,

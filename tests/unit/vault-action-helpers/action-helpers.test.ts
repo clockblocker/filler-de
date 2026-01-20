@@ -72,7 +72,7 @@ describe("ActionHelpers", () => {
 			it("returns true for UpsertMdFile", () => {
 				const action: VaultAction = {
 					kind: VaultActionKind.UpsertMdFile,
-					payload: { splitPath: mdFile("note"), content: "" },
+					payload: { content: "", splitPath: mdFile("note") },
 				};
 				expect(isCreateAction(action)).toBe(true);
 			});
@@ -150,7 +150,7 @@ describe("ActionHelpers", () => {
 			it("returns false for UpsertMdFile", () => {
 				const action: VaultAction = {
 					kind: VaultActionKind.UpsertMdFile,
-					payload: { splitPath: mdFile("note"), content: "" },
+					payload: { content: "", splitPath: mdFile("note") },
 				};
 				expect(isProcessAction(action)).toBe(false);
 			});
@@ -175,7 +175,7 @@ describe("ActionHelpers", () => {
 			it("returns false for file actions", () => {
 				expect(isFolderAction({
 					kind: VaultActionKind.UpsertMdFile,
-					payload: { splitPath: mdFile("note"), content: "" },
+					payload: { content: "", splitPath: mdFile("note") },
 				})).toBe(false);
 			});
 		});
@@ -184,7 +184,7 @@ describe("ActionHelpers", () => {
 			it("returns true for md file actions", () => {
 				expect(isMdFileAction({
 					kind: VaultActionKind.UpsertMdFile,
-					payload: { splitPath: mdFile("note"), content: "" },
+					payload: { content: "", splitPath: mdFile("note") },
 				})).toBe(true);
 				expect(isMdFileAction({
 					kind: VaultActionKind.ProcessMdFile,
@@ -220,7 +220,7 @@ describe("ActionHelpers", () => {
 			it("extracts path from UpsertMdFile", () => {
 				const action: VaultAction = {
 					kind: VaultActionKind.UpsertMdFile,
-					payload: { splitPath: mdFile("note", ["docs"]), content: "" },
+					payload: { content: "", splitPath: mdFile("note", ["docs"]) },
 				};
 				expect(getActionPath(action)).toEqual(["docs", "note.md"]);
 			});
@@ -284,7 +284,7 @@ describe("ActionHelpers", () => {
 			it("returns pathParts from split path", () => {
 				const action: VaultAction = {
 					kind: VaultActionKind.UpsertMdFile,
-					payload: { splitPath: mdFile("note", ["docs", "subdir"]), content: "" },
+					payload: { content: "", splitPath: mdFile("note", ["docs", "subdir"]) },
 				};
 				expect(getParentPathParts(action)).toEqual(["docs", "subdir"]);
 			});
@@ -352,7 +352,7 @@ describe("ActionHelpers", () => {
 			it("returns undefined for non-folder actions", () => {
 				const action: VaultAction = {
 					kind: VaultActionKind.UpsertMdFile,
-					payload: { splitPath: mdFile("note"), content: "" },
+					payload: { content: "", splitPath: mdFile("note") },
 				};
 				expect(asFolderAction(action)).toBeUndefined();
 			});

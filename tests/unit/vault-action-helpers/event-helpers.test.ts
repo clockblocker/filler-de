@@ -5,13 +5,13 @@
 
 import { describe, expect, it } from "bun:test";
 import {
-	EventHelpers,
 	asFileCreatedEvent,
 	asFileDeletedEvent,
 	asFileRenamedEvent,
 	asFolderCreatedEvent,
 	asFolderDeletedEvent,
 	asFolderRenamedEvent,
+	EventHelpers,
 	eventsSharePath,
 	getEventFromSplitPath,
 	getEventKey,
@@ -137,8 +137,8 @@ describe("EventHelpers", () => {
 		describe("isRenameEvent", () => {
 			it("returns true for FileRenamed", () => {
 				const event: VaultEvent = {
-					kind: VaultEventKind.FileRenamed,
 					from: mdFile("old"),
+					kind: VaultEventKind.FileRenamed,
 					to: mdFile("new"),
 				};
 				expect(isRenameEvent(event)).toBe(true);
@@ -146,8 +146,8 @@ describe("EventHelpers", () => {
 
 			it("returns true for FolderRenamed", () => {
 				const event: VaultEvent = {
-					kind: VaultEventKind.FolderRenamed,
 					from: folder("old"),
+					kind: VaultEventKind.FolderRenamed,
 					to: folder("new"),
 				};
 				expect(isRenameEvent(event)).toBe(true);
@@ -178,8 +178,8 @@ describe("EventHelpers", () => {
 				).toBe(true);
 				expect(
 					isFolderEvent({
-						kind: VaultEventKind.FolderRenamed,
 						from: folder("old"),
+						kind: VaultEventKind.FolderRenamed,
 						to: folder("new"),
 					}),
 				).toBe(true);
@@ -211,8 +211,8 @@ describe("EventHelpers", () => {
 				).toBe(true);
 				expect(
 					isFileEvent({
-						kind: VaultEventKind.FileRenamed,
 						from: mdFile("old"),
+						kind: VaultEventKind.FileRenamed,
 						to: mdFile("new"),
 					}),
 				).toBe(true);
@@ -257,8 +257,8 @@ describe("EventHelpers", () => {
 		it("isFileRenamedEvent", () => {
 			expect(
 				isFileRenamedEvent({
-					kind: VaultEventKind.FileRenamed,
 					from: mdFile("old"),
+					kind: VaultEventKind.FileRenamed,
 					to: mdFile("new"),
 				}),
 			).toBe(true);
@@ -285,8 +285,8 @@ describe("EventHelpers", () => {
 		it("isFolderRenamedEvent", () => {
 			expect(
 				isFolderRenamedEvent({
-					kind: VaultEventKind.FolderRenamed,
 					from: folder("old"),
+					kind: VaultEventKind.FolderRenamed,
 					to: folder("new"),
 				}),
 			).toBe(true);
@@ -307,8 +307,8 @@ describe("EventHelpers", () => {
 			it("returns from path for rename events", () => {
 				const from = mdFile("old", ["docs"]);
 				const event: VaultEvent = {
-					kind: VaultEventKind.FileRenamed,
 					from,
+					kind: VaultEventKind.FileRenamed,
 					to: mdFile("new", ["docs"]),
 				};
 				expect(getEventSplitPath(event)).toBe(from);
@@ -319,8 +319,8 @@ describe("EventHelpers", () => {
 			it("returns to path for rename events", () => {
 				const to = mdFile("new", ["docs"]);
 				const event: VaultEvent = {
-					kind: VaultEventKind.FileRenamed,
 					from: mdFile("old", ["docs"]),
+					kind: VaultEventKind.FileRenamed,
 					to,
 				};
 				expect(getEventToSplitPath(event)).toBe(to);
@@ -339,8 +339,8 @@ describe("EventHelpers", () => {
 			it("returns from path for rename events", () => {
 				const from = mdFile("old", ["docs"]);
 				const event: VaultEvent = {
-					kind: VaultEventKind.FileRenamed,
 					from,
+					kind: VaultEventKind.FileRenamed,
 					to: mdFile("new", ["docs"]),
 				};
 				expect(getEventFromSplitPath(event)).toBe(from);
@@ -374,8 +374,8 @@ describe("EventHelpers", () => {
 
 			it("extracts from path for FileRenamed", () => {
 				const event: VaultEvent = {
-					kind: VaultEventKind.FileRenamed,
 					from: mdFile("old", ["docs"]),
+					kind: VaultEventKind.FileRenamed,
 					to: mdFile("new", ["docs"]),
 				};
 				expect(getEventPath(event)).toEqual(["docs", "old.md"]);
@@ -393,8 +393,8 @@ describe("EventHelpers", () => {
 		describe("getEventToPath", () => {
 			it("returns to path for rename events", () => {
 				const event: VaultEvent = {
-					kind: VaultEventKind.FileRenamed,
 					from: mdFile("old", ["docs"]),
+					kind: VaultEventKind.FileRenamed,
 					to: mdFile("new", ["other"]),
 				};
 				expect(getEventToPath(event)).toEqual(["other", "new.md"]);
@@ -442,8 +442,8 @@ describe("EventHelpers", () => {
 
 			it("creates unique key for rename events", () => {
 				const event: VaultEvent = {
-					kind: VaultEventKind.FileRenamed,
 					from: mdFile("old", ["docs"]),
+					kind: VaultEventKind.FileRenamed,
 					to: mdFile("new", ["other"]),
 				};
 				expect(getEventKey(event)).toBe(
@@ -511,8 +511,8 @@ describe("EventHelpers", () => {
 		describe("asFileRenamedEvent", () => {
 			it("returns event for FileRenamed", () => {
 				const event: VaultEvent = {
-					kind: VaultEventKind.FileRenamed,
 					from: mdFile("old"),
+					kind: VaultEventKind.FileRenamed,
 					to: mdFile("new"),
 				};
 				expect(asFileRenamedEvent(event)).toBe(event);
@@ -542,8 +542,8 @@ describe("EventHelpers", () => {
 		describe("asFolderRenamedEvent", () => {
 			it("returns event for FolderRenamed", () => {
 				const event: VaultEvent = {
-					kind: VaultEventKind.FolderRenamed,
 					from: folder("old"),
+					kind: VaultEventKind.FolderRenamed,
 					to: folder("new"),
 				};
 				expect(asFolderRenamedEvent(event)).toBe(event);
@@ -580,15 +580,15 @@ describe("EventHelpers", () => {
 					{ kind: VaultEventKind.FileCreated, splitPath: mdFile("test") },
 					{ kind: VaultEventKind.FileDeleted, splitPath: mdFile("test") },
 					{
-						kind: VaultEventKind.FileRenamed,
 						from: mdFile("old"),
+						kind: VaultEventKind.FileRenamed,
 						to: mdFile("new"),
 					},
 					{ kind: VaultEventKind.FolderCreated, splitPath: folder("test") },
 					{ kind: VaultEventKind.FolderDeleted, splitPath: folder("test") },
 					{
-						kind: VaultEventKind.FolderRenamed,
 						from: folder("old"),
+						kind: VaultEventKind.FolderRenamed,
 						to: folder("new"),
 					},
 				];
@@ -637,24 +637,24 @@ describe("EventHelpers", () => {
 			it("calls correct handler for each split path type", () => {
 				expect(
 					visitSplitPath(folder("test"), {
-						Folder: () => "folder",
 						File: () => "file",
+						Folder: () => "folder",
 						MdFile: () => "mdFile",
 					}),
 				).toBe("folder");
 
 				expect(
 					visitSplitPath(file("img", "png"), {
-						Folder: () => "folder",
 						File: () => "file",
+						Folder: () => "folder",
 						MdFile: () => "mdFile",
 					}),
 				).toBe("file");
 
 				expect(
 					visitSplitPath(mdFile("note"), {
-						Folder: () => "folder",
 						File: () => "file",
+						Folder: () => "folder",
 						MdFile: () => "mdFile",
 					}),
 				).toBe("mdFile");

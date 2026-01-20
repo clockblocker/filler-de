@@ -2,7 +2,7 @@
 
 export { Tree } from "./tree";
 export type {
+	TreeFacade,
 	TreeReader,
 	TreeWriter,
-	TreeFacade,
 } from "./tree-interfaces";

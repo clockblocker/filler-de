@@ -2,6 +2,24 @@
 
 Splits long markdown files into paginated folder structures.
 
+## Phylosophy
+
+our north star shoul be user experience.
+
+the unit of the split in not words, or sybbols, but paragraphs and sentences
+
+we can make pages a bit longer of shorter to keep the context intact.
+
+we do whant to pages to be about 3k symbols, but this is is but a target, not hard limit. The actual
+hard limit should be ~5-6k
+
+we may use a lot of eursitics and any number of segementing tools to accomplish the task.
+
+with more examoles, we might wanna intoduce more eurestics and tools.
+
+let's update the bookkeeper with this in mind. Any questions / suggestions? Any other issues you see in
+logs?
+
 ## Input/Output
 
 ```

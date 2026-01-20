@@ -44,7 +44,7 @@ export type SegmentationConfig = {
 };
 
 export const DEFAULT_SEGMENTATION_CONFIG: SegmentationConfig = {
-	maxPageSizeChars: 5000,
+	maxPageSizeChars: 6000,
 	minContentSizeChars: 1500,
 	preserveDialogues: true,
 	preserveParagraphs: true,
@@ -62,6 +62,10 @@ export type TextBlock = {
 	dialoguePosition?: DialoguePosition;
 	/** True if this block was created by sentence-level splitting */
 	isSentenceSplit?: boolean;
+	/** True if block ends with ':' and is followed by dialogue (speech intro) */
+	introducesSpeech?: boolean;
+	/** True if block is multi-line quoted content (poem, song) */
+	isQuotedContent?: boolean;
 };
 
 /**
