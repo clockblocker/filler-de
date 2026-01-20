@@ -103,9 +103,10 @@ export const sizeRule: SegmentationRule = {
 
 /**
  * All rules in priority order.
+ * NOTE: dialogueRule removed - the new sentence-stream pipeline handles
+ * dialogue and quoted content via quote depth tracking, not pattern matching.
  */
 export const ALL_RULES: SegmentationRule[] = [
-	dialogueRule,
 	speechIntroductionRule,
 	paragraphRule,
 	headingRule,

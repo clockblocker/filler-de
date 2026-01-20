@@ -6,28 +6,41 @@ import {
 	type PageSegment,
 	type SegmentationConfig,
 	type SegmentationResult,
-	type TextBlock,
-	TextBlockKind,
 } from "../types";
-import { blocksCharCount, blocksToContent, parseBlocks } from "./parse-blocks";
-import { canSplitBetweenBlocks, isPreferredSplitPoint } from "./rules";
 import {
-	canSplitBlock,
-	splitBlockAtSentenceBoundary,
-} from "./sentence-splitter";
+	DEFAULT_LANGUAGE_CONFIG,
+	type LanguageConfig,
+} from "./language-config";
+import {
+	accumulatePages,
+	annotateSentences,
+	groupSentences,
+	preprocessLargeGroups,
+	scanLines,
+	segmentSentences,
+} from "./stream";
 
 /**
- * Segments markdown content into pages.
+ * Segments markdown content into pages using the sentence-stream pipeline.
+ *
+ * Pipeline stages:
+ * 1. Line Scanner: Scans lines and tracks quote state
+ * 2. Sentence Segmenter: Splits into sentences using Intl.Segmenter
+ * 3. Context Annotator: Adds quote depth, region markers
+ * 4. Region Grouper: Groups keep-together content (poems, quotes)
+ * 5. Page Accumulator: Builds pages respecting size limits
  *
  * @param content - The markdown content to segment
  * @param sourceBasenameInfo - Parsed basename info (coreName + suffixParts)
  * @param config - Segmentation configuration
+ * @param langConfig - Language-specific configuration
  * @returns Segmentation result with pages and metadata
  */
 export function segmentContent(
 	content: string,
 	sourceBasenameInfo: SeparatedSuffixedBasename,
 	config: SegmentationConfig = DEFAULT_SEGMENTATION_CONFIG,
+	langConfig: LanguageConfig = DEFAULT_LANGUAGE_CONFIG,
 ): SegmentationResult {
 	const { coreName, suffixParts } = sourceBasenameInfo;
 
@@ -47,14 +60,14 @@ export function segmentContent(
 		};
 	}
 
-	const blocks = parseBlocks(content);
-	const rawPages = segmentBlocks(blocks, config);
+	// Run the pipeline
+	const pages = runPipeline(content, config, langConfig);
 
-	// Filter out empty pages (only whitespace)
-	const pages = filterEmptyPages(rawPages);
+	// Filter out empty pages
+	const nonEmpty = filterEmptyPages(pages);
 
 	return {
-		pages,
+		pages: nonEmpty,
 		sourceCoreName: coreName,
 		sourceSuffix: suffixParts,
 		tooShortToSplit: false,
@@ -62,188 +75,32 @@ export function segmentContent(
 }
 
 /**
- * Segments blocks into pages using the configured rules.
- * Uses Intl.Segmenter for sentence-level splitting when blocks exceed target.
+ * Runs the sentence-stream pipeline.
  */
-function segmentBlocks(
-	blocks: TextBlock[],
+function runPipeline(
+	content: string,
 	config: SegmentationConfig,
+	langConfig: LanguageConfig,
 ): PageSegment[] {
-	const pages: PageSegment[] = [];
-	let currentPageBlocks: TextBlock[] = [];
-	let currentPageSize = 0;
+	// Stage 1: Scan lines and track quote state
+	const lines = scanLines(content, langConfig);
 
-	for (const [i, block] of blocks.entries()) {
-		// Check if adding this block would exceed target and block can be split
-		const wouldExceedTarget =
-			currentPageSize + block.charCount > config.targetPageSizeChars;
+	// Stage 2: Segment into sentences
+	const sentences = segmentSentences(content, langConfig);
 
-		if (wouldExceedTarget && canSplitBlock(block)) {
-			// Calculate remaining space on current page
-			const remainingSpace = config.targetPageSizeChars - currentPageSize;
-			// Split block at sentence boundaries using remaining space as target
-			const subBlocks = splitBlockAtSentenceBoundary(
-				block,
-				Math.max(remainingSpace, config.targetPageSizeChars / 2),
-			);
+	// Stage 3: Annotate sentences with context
+	const annotated = annotateSentences(sentences, lines, content, langConfig);
 
-			// Process each sub-block through normal flow
-			for (const [j, subBlock] of subBlocks.entries()) {
-				const nextSubBlock = subBlocks[j + 1];
-				const nextOriginalBlock = blocks[i + 1];
-				const nextBlock = nextSubBlock ?? nextOriginalBlock;
+	// Stage 4: Group sentences that should stay together
+	const groups = groupSentences(annotated);
 
-				currentPageBlocks.push(subBlock);
-				currentPageSize += subBlock.charCount;
+	// Pre-process: split any oversized groups
+	const processedGroups = preprocessLargeGroups(groups, config);
 
-				const shouldBreak = shouldCreatePageBreak(
-					currentPageBlocks,
-					currentPageSize,
-					subBlock,
-					nextBlock,
-					config,
-				);
-
-				if (shouldBreak && currentPageBlocks.length > 0) {
-					pages.push(createPage(currentPageBlocks, pages.length));
-					currentPageBlocks = [];
-					currentPageSize = 0;
-				}
-			}
-		} else {
-			// Normal flow: add block and check for page break
-			const nextBlock = blocks[i + 1];
-
-			currentPageBlocks.push(block);
-			currentPageSize += block.charCount;
-
-			const shouldBreak = shouldCreatePageBreak(
-				currentPageBlocks,
-				currentPageSize,
-				block,
-				nextBlock,
-				config,
-			);
-
-			if (shouldBreak && currentPageBlocks.length > 0) {
-				pages.push(createPage(currentPageBlocks, pages.length));
-				currentPageBlocks = [];
-				currentPageSize = 0;
-			}
-		}
-	}
-
-	// Don't forget remaining blocks
-	if (currentPageBlocks.length > 0) {
-		pages.push(createPage(currentPageBlocks, pages.length));
-	}
+	// Stage 5: Accumulate groups into pages
+	const pages = accumulatePages(processedGroups, config);
 
 	return pages;
-}
-
-/**
- * Sentence-ending punctuation marks.
- * Pages should ideally end with one of these (or a closing quote after one).
- */
-const SENTENCE_ENDINGS = /[.!?]["»«"]?\s*$/;
-
-/**
- * Punctuation that indicates mid-sentence (not a valid break point).
- */
-const MID_SENTENCE_ENDINGS = /[,;:\-–—]\s*$/;
-
-/**
- * Checks if a block ends with complete sentence.
- */
-function endsWithCompleteSentence(block: TextBlock): boolean {
-	const lastLine = block.lines[block.lines.length - 1];
-	if (!lastLine) return true; // Empty block - allow break
-
-	const trimmed = lastLine.trim();
-	if (trimmed.length === 0) return true; // Blank line - allow break
-
-	// Check for sentence-ending punctuation
-	if (SENTENCE_ENDINGS.test(trimmed)) return true;
-
-	// Check for mid-sentence endings - definitely not complete
-	if (MID_SENTENCE_ENDINGS.test(trimmed)) return false;
-
-	// No clear punctuation - be conservative, allow break
-	return true;
-}
-
-/**
- * Determines if a page break should be created at current position.
- */
-function shouldCreatePageBreak(
-	currentBlocks: TextBlock[],
-	currentSize: number,
-	currentBlock: TextBlock,
-	nextBlock: TextBlock | undefined,
-	config: SegmentationConfig,
-): boolean {
-	// No next block - don't break, will be handled at end
-	if (!nextBlock) return false;
-
-	// Check if the last non-blank block introduces speech - prevents splitting
-	// between speech intro and following dialogue even with blank lines between
-	if (nextBlock.kind === TextBlockKind.Dialogue) {
-		// Find last non-blank block in current page
-		const lastNonBlank = [...currentBlocks]
-			.reverse()
-			.find((b) => b.kind !== TextBlockKind.Blank);
-		if (lastNonBlank?.introducesSpeech) {
-			return false;
-		}
-	}
-
-	// Under target size - don't break unless at preferred point
-	if (currentSize < config.targetPageSizeChars) {
-		// But if we're close and next block is a heading, prefer to break
-		const isNearTarget = currentSize >= config.targetPageSizeChars * 0.8;
-		if (isNearTarget && isPreferredSplitPoint(nextBlock)) {
-			return canSplitBetweenBlocks(currentBlock, nextBlock, config);
-		}
-		return false;
-	}
-
-	// Check if we would be splitting mid-sentence
-	if (!endsWithCompleteSentence(currentBlock)) {
-		// Don't split mid-sentence unless we're way over max
-		if (currentSize < config.maxPageSizeChars * 1.5) {
-			return false;
-		}
-		// Extreme overflow - log warning but force break
-	}
-
-	// At or over target - check if we can split
-	if (canSplitBetweenBlocks(currentBlock, nextBlock, config)) {
-		return true;
-	}
-
-	// Over max size - force break unless we're in quoted content
-	if (currentSize >= config.maxPageSizeChars) {
-		// Allow overflow for quoted content to preserve poems/songs
-		if (currentBlock.isQuotedContent || nextBlock.isQuotedContent) {
-			return false; // Don't force-break within quoted content
-		}
-		// Force break at max for non-quoted content
-		return true;
-	}
-
-	// Continue accumulating
-	return false;
-}
-
-/**
- * Creates a PageSegment from blocks.
- */
-function createPage(blocks: TextBlock[], pageIndex: number): PageSegment {
-	return {
-		charCount: blocksCharCount(blocks),
-		content: blocksToContent(blocks),
-		pageIndex,
-	};
 }
 
 /**
@@ -272,9 +129,15 @@ export function wouldSplitToMultiplePages(
 	return result.pages.length > 1;
 }
 
-/**
- * Re-exports for convenience.
- */
+// Re-exports for compatibility
+export {
+	DEFAULT_LANGUAGE_CONFIG,
+	GERMAN_CONFIG,
+	ENGLISH_CONFIG,
+} from "./language-config";
+export type { LanguageConfig } from "./language-config";
+
+// Legacy exports (deprecated - kept for compatibility)
 export { blocksCharCount, blocksToContent, parseBlocks } from "./parse-blocks";
 export {
 	canSplitBetweenBlocks,

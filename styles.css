@@ -226,3 +226,38 @@ body.hide-status-bar .mod-root .workspace-split {
 	min-width: 40px;
 	font-size: 18px;
 }
+
+/* ------ Edge Padding Zones ------ */
+
+.edge-padding-zone {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	z-index: 15;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	opacity: 0;
+	transition: opacity 0.2s, background-color 0.2s;
+}
+
+.edge-padding-zone:hover {
+	background-color: var(--background-modifier-hover);
+	opacity: 1;
+}
+
+.edge-padding-zone-left {
+	left: 0;
+}
+
+.edge-padding-zone-right {
+	right: 0;
+}
+
+.edge-padding-icon {
+	font-size: 28px;
+	font-weight: bold;
+	color: var(--text-muted);
+	user-select: none;
+}

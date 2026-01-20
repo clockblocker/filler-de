@@ -112,3 +112,78 @@ export const PAGE_PREFIX = "Page";
  * Number of digits for page index (e.g., 3 → CoreName_Page_000).
  */
 export const PAGE_INDEX_DIGITS = 3;
+
+// ─── Stream Pipeline Types ───
+
+/**
+ * A sentence extracted from content.
+ */
+export type SentenceToken = {
+	/** Raw text of the sentence */
+	text: string;
+	/** Character count including trailing whitespace */
+	charCount: number;
+	/** Offset in original content */
+	sourceOffset: number;
+	/** True if sentence ends with sentence-ending punctuation */
+	isComplete: boolean;
+};
+
+/**
+ * Quote depth tracking state.
+ */
+export type QuoteState = {
+	/** Current nesting depth (0 = not in quote) */
+	depth: number;
+	/** Stack of opening quote marks for matching */
+	openingMarks: string[];
+};
+
+/**
+ * Kind of keep-together region.
+ */
+export type RegionKind = "poem" | "multilineQuote" | "speechIntro";
+
+/**
+ * A sentence with context annotations.
+ */
+export type AnnotatedSentence = SentenceToken & {
+	/** Quote nesting depth at this sentence */
+	quoteDepth: number;
+	/** Region this sentence belongs to, if any */
+	inRegion: RegionKind | null;
+	/** True if this sentence starts a new paragraph */
+	startsNewParagraph: boolean;
+	/** True if this is part of a poem/verse */
+	isPoem: boolean;
+};
+
+/**
+ * A group of sentences to keep together.
+ */
+export type SentenceGroup = {
+	/** Sentences in this group */
+	sentences: AnnotatedSentence[];
+	/** Total character count */
+	charCount: number;
+	/** True if group can be split (false for poems, multiline quotes) */
+	isSplittable: boolean;
+};
+
+/**
+ * A line with its quote state at the end of the line.
+ */
+export type ScannedLine = {
+	/** Raw line text */
+	text: string;
+	/** Line number (0-indexed) */
+	lineNumber: number;
+	/** Quote state after processing this line */
+	quoteStateAfter: QuoteState;
+	/** True if line is blank */
+	isBlank: boolean;
+	/** True if line is a markdown heading */
+	isHeading: boolean;
+	/** True if line could be part of a poem */
+	isPotentialPoemLine: boolean;
+};

@@ -3,6 +3,7 @@ import {
 	type AnyActionConfig,
 	UserAction,
 } from "../../wip-configs/actions/types";
+import { EdgePaddingNavigator } from "./edge-padding-navigator";
 
 /** Max buttons in bottom bar before overflow */
 const MAX_VISIBLE_BUTTONS = 4;
@@ -18,10 +19,12 @@ export class BottomToolbarService {
 	private attachedView: MarkdownView | null = null;
 	private actionConfigs: AnyActionConfig[] = [];
 	private overflowMenuEl: HTMLElement | null = null;
-	private leftEdgeEl: HTMLElement | null = null;
-	private rightEdgeEl: HTMLElement | null = null;
+	private edgePaddingNavigator: EdgePaddingNavigator;
+	private useZoneNavigation = false;
 
-	constructor(private app: App) {}
+	constructor(private app: App) {
+		this.edgePaddingNavigator = new EdgePaddingNavigator();
+	}
 
 	public init(): void {
 		if (!this.overlayEl) this.overlayEl = this.createOverlay();
@@ -44,10 +47,15 @@ export class BottomToolbarService {
 		container.appendChild(this.overlayEl);
 		container.style.paddingBottom = "64px";
 
-		// Add edge buttons on desktop
+		// Try padding zones first on desktop
 		if (!this.isMobile()) {
-			this.attachEdgeButtons(container);
+			this.edgePaddingNavigator.setActions(this.actionConfigs);
+			this.useZoneNavigation = this.edgePaddingNavigator.reattach(view);
+			// If zones not active, edge actions go to bottom bar (handled by renderButtons)
 		}
+
+		// Re-render bottom bar (includes/excludes edge actions based on zone state)
+		this.renderButtons(this.overlayEl);
 
 		this.attachedView = view;
 	}
@@ -65,11 +73,9 @@ export class BottomToolbarService {
 			this.overlayEl.parentElement.removeChild(this.overlayEl);
 		}
 
-		// Detach edge buttons
-		this.leftEdgeEl?.remove();
-		this.rightEdgeEl?.remove();
-		this.leftEdgeEl = null;
-		this.rightEdgeEl = null;
+		// Detach padding zones
+		this.edgePaddingNavigator.detach();
+		this.useZoneNavigation = false;
 
 		// Hide overflow menu
 		this.hideOverflowMenu();
@@ -87,11 +93,13 @@ export class BottomToolbarService {
 
 	public setActions(actionConfigs: AnyActionConfig[]): void {
 		this.actionConfigs = actionConfigs;
-		if (this.overlayEl) this.renderButtons(this.overlayEl);
-		// Re-render edge buttons if attached
+
+		// Update padding zones if attached
 		if (this.attachedView && !this.isMobile()) {
-			this.updateEdgeButtons();
+			this.edgePaddingNavigator.setActions(actionConfigs);
 		}
+
+		if (this.overlayEl) this.renderButtons(this.overlayEl);
 	}
 
 	private getActiveMarkdownView(): MarkdownView | null {
@@ -106,10 +114,12 @@ export class BottomToolbarService {
 	private renderButtons(host: HTMLElement): void {
 		while (host.firstChild) host.removeChild(host.firstChild);
 
-		// On desktop, edge actions go to side buttons, not bottom bar
-		const bottomActions = this.isMobile()
-			? this.actionConfigs
-			: this.actionConfigs.filter((a) => !EDGE_BUTTON_ACTIONS.has(a.id));
+		// On desktop with zone navigation, edge actions handled by zones
+		// On desktop without zones OR on mobile, include edge actions in bottom bar
+		const excludeEdgeActions = !this.isMobile() && this.useZoneNavigation;
+		const bottomActions = excludeEdgeActions
+			? this.actionConfigs.filter((a) => !EDGE_BUTTON_ACTIONS.has(a.id))
+			: this.actionConfigs;
 
 		// Determine visible vs overflow actions
 		const visibleActions = bottomActions.slice(0, MAX_VISIBLE_BUTTONS);
@@ -189,62 +199,5 @@ export class BottomToolbarService {
 	private hideOverflowMenu(): void {
 		this.overflowMenuEl?.remove();
 		this.overflowMenuEl = null;
-	}
-
-	/**
-	 * Attach edge buttons for navigation (desktop only).
-	 */
-	private attachEdgeButtons(container: HTMLElement): void {
-		const edgeActions = this.actionConfigs.filter((a) =>
-			EDGE_BUTTON_ACTIONS.has(a.id),
-		);
-		if (edgeActions.length === 0) return;
-
-		const prevAction = edgeActions.find(
-			(a) => a.id === UserAction.PreviousPage,
-		);
-		const nextAction = edgeActions.find(
-			(a) => a.id === UserAction.NavigatePage,
-		);
-
-		// Create left edge button (previous)
-		if (prevAction) {
-			this.leftEdgeEl = this.createEdgeButton(prevAction, "left");
-			container.appendChild(this.leftEdgeEl);
-		}
-
-		// Create right edge button (next)
-		if (nextAction) {
-			this.rightEdgeEl = this.createEdgeButton(nextAction, "right");
-			container.appendChild(this.rightEdgeEl);
-		}
-	}
-
-	private createEdgeButton(
-		action: AnyActionConfig,
-		side: "left" | "right",
-	): HTMLElement {
-		const btn = document.createElement("button");
-		btn.dataset.action = action.id;
-		btn.className = `edge-nav-btn edge-nav-${side}`;
-		btn.textContent = action.label;
-		btn.title =
-			action.id === UserAction.PreviousPage
-				? "Previous page"
-				: "Next page";
-		return btn;
-	}
-
-	private updateEdgeButtons(): void {
-		if (!this.attachedView) return;
-
-		// Remove existing edge buttons
-		this.leftEdgeEl?.remove();
-		this.rightEdgeEl?.remove();
-		this.leftEdgeEl = null;
-		this.rightEdgeEl = null;
-
-		// Re-attach with current actions
-		this.attachEdgeButtons(this.attachedView.contentEl);
 	}
 }
