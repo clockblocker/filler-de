@@ -32,7 +32,7 @@ export class UserEventInterceptor {
 	) {
 		this.detectors = [
 			new ClickDetector(app, vaultActionManager),
-			new ClipboardDetector(),
+			new ClipboardDetector(app),
 			new SelectAllDetector(app),
 			new WikilinkDetector(plugin),
 		];
