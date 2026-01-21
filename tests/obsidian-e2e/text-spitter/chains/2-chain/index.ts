@@ -9,4 +9,5 @@ export {
 	performMakeTextExtraE2,
 	performSetup,
 	performSetupExtraE2,
+	testNavigationButtons,
 } from "./mutation";

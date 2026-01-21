@@ -1,4 +1,5 @@
 /// <reference types="@wdio/globals/types" />
+import { browser } from "@wdio/globals";
 import { ASCHENPUTTEL_CONTENT } from "../../../../unit/librarian/bookkeeper/testcases/aschenputtel";
 import { EXTRA_E2_FULL_CONTENT } from "../../../../unit/librarian/bookkeeper/testcases/extra-e2";
 import { waitForIdle } from "../../../support/api/idle";
@@ -91,4 +92,51 @@ export async function performMakeTextExtraE2(): Promise<void> {
 		throw new Error(`Failed to click button: ${clickResult.error}`);
 	}
 	await waitForIdle();
+}
+
+/**
+ * Test navigation buttons on a Page file.
+ * Verifies that clicking NavigatePage button navigates to next page.
+ */
+export async function testNavigationButtons(): Promise<void> {
+	// Open the Page file created after MakeText
+	const pagePath = `Library/Märchen/Aschenputtel/Aschenputtel_Page_000${D}Aschenputtel${D}Märchen.md`;
+	const openResult = await openFile(pagePath);
+	if (openResult.isErr()) {
+		throw new Error(`Failed to open Page file: ${openResult.error}`);
+	}
+	await waitForIdle();
+
+	// Get current file before click
+	const fileBefore = await browser.executeObsidian(async ({ app }) => {
+		const file = app.workspace.getActiveFile();
+		return file?.path ?? "none";
+	});
+
+	// Click NavigatePage (next) button
+	const nextResult = await clickButton("NavigatePage");
+	if (nextResult.isErr()) {
+		throw new Error(`Failed to click NavigatePage: ${nextResult.error}`);
+	}
+
+	// Wait for navigation
+	await waitForIdle();
+
+	// Get current file after click
+	const fileAfter = await browser.executeObsidian(async ({ app }) => {
+		const file = app.workspace.getActiveFile();
+		return file?.path ?? "none";
+	});
+
+	// Verify navigation occurred
+	if (fileBefore === fileAfter) {
+		throw new Error(
+			`Navigation did not work. File before: ${fileBefore}, after: ${fileAfter}`,
+		);
+	}
+
+	// Verify we're on Page_001
+	if (!fileAfter.includes("Page_001")) {
+		throw new Error(`Expected to navigate to Page_001, but got: ${fileAfter}`);
+	}
 }

@@ -19,6 +19,7 @@ import {
 	FileType,
 	MdFileSubTypeSchema,
 } from "../../../types/common-interface/enums";
+import { logger } from "../../../utils/logger";
 import type { ApiService } from "../atomic-services/api-service";
 import type { SelectionService } from "../atomic-services/selection-service";
 import { BottomToolbarService } from "../button-manager/bottom-toolbar";
@@ -99,10 +100,16 @@ export class OverlayManager {
 	public init(services: OverlayManagerServices): void {
 		this.services = services;
 
+		// Set direct click handler for bottom toolbar buttons BEFORE init
+		// (init calls renderButtons which needs the handler to attach listeners)
+		this.bottom.setClickHandler((actionId) => {
+			this.handleActionClick(actionId);
+		});
+
 		// Initialize bottom toolbar
 		this.bottom.init();
 
-		// Setup delegated click handler
+		// Setup delegated click handler (for edge zones and other elements)
 		this.setupClickHandler();
 
 		// Initial recompute on layout ready
@@ -128,7 +135,12 @@ export class OverlayManager {
 		});
 
 		// Show selection toolbar after mouse selection
-		this.plugin.registerDomEvent(document, "mouseup", async () => {
+		// Skip recompute if clicking on action buttons (prevents destroying button mid-click)
+		this.plugin.registerDomEvent(document, "mouseup", async (evt) => {
+			const target = evt.target as HTMLElement;
+			if (target.closest("[data-action]")) {
+				return; // Don't recompute when clicking action buttons
+			}
 			await this.recompute();
 		});
 
@@ -379,7 +391,42 @@ export class OverlayManager {
 	}
 
 	/**
-	 * Setup delegated click handler for action buttons.
+	 * Handle action click by ID - shared between direct and delegated handlers.
+	 */
+	private handleActionClick(actionId: string): void {
+		logger.info(`[OverlayManager] handleActionClick called: ${actionId}`);
+		if (!this.services || !this.currentContext) {
+			logger.warn(
+				`[OverlayManager] handleActionClick early return: services=${!!this.services}, context=${!!this.currentContext}`,
+			);
+			return;
+		}
+
+		// Find the action by ID
+		const allActions = this.queryProviders(this.currentContext);
+		const action = allActions.find((a) => a.id === actionId);
+
+		if (!action) {
+			logger.warn(
+				`[OverlayManager] Action not found: ${actionId}. Available: ${allActions.map((a) => a.id).join(", ")}`,
+			);
+			return;
+		}
+
+		logger.info(
+			`[OverlayManager] Executing action: ${actionId}, kind=${action.kind}`,
+		);
+		// Execute the action
+		executeAction(action, {
+			apiService: this.services.apiService,
+			app: this.app,
+			selectionService: this.services.selectionService,
+			vaultActionManager: this.services.vaultActionManager,
+		});
+	}
+
+	/**
+	 * Setup delegated click handler for action buttons (edge zones, etc).
 	 */
 	private setupClickHandler(): void {
 		this.plugin.registerDomEvent(document, "click", (evt: MouseEvent) => {
@@ -392,21 +439,7 @@ export class OverlayManager {
 			const actionId = button.dataset.action;
 			if (!actionId) return;
 
-			if (!this.services || !this.currentContext) return;
-
-			// Find the action by ID
-			const allActions = this.queryProviders(this.currentContext);
-			const action = allActions.find((a) => a.id === actionId);
-
-			if (!action) return;
-
-			// Execute the action
-			executeAction(action, {
-				apiService: this.services.apiService,
-				app: this.app,
-				selectionService: this.services.selectionService,
-				vaultActionManager: this.services.vaultActionManager,
-			});
+			this.handleActionClick(actionId);
 		});
 	}
 

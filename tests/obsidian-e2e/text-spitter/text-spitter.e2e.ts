@@ -6,6 +6,7 @@ import {
 	performMakeTextExtraE2,
 	performSetup,
 	performSetupExtraE2,
+	testNavigationButtons,
 	testPostMakeText,
 	testPostMakeTextExtraE2,
 	testPostSetup,
@@ -53,6 +54,11 @@ describe("Text Spitter - Bookkeeper/Librarian Integration", () => {
 	// Verify post-healing state
 	it("verifies section codex and pages created correctly", async () => {
 		await testPostMakeText();
+	});
+
+	// Test navigation buttons on Page file
+	it("tests navigation button diagnostics", async () => {
+		await testNavigationButtons();
 	});
 
 	// --- EXTRA_E2: Dialogue content with headings ---

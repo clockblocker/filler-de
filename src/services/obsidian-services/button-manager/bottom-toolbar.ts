@@ -1,4 +1,5 @@
 import { type App, MarkdownView } from "obsidian";
+import { logger } from "../../../utils/logger";
 import type { RenderedActionConfig } from "../../wip-configs/actions/types";
 
 /** Estimated width per button (including gap) */
@@ -22,6 +23,7 @@ export class BottomToolbarService {
 	 * Called by ButtonManager to inject action execution logic.
 	 */
 	public setClickHandler(handler: (actionId: string) => void): void {
+		logger.info("[BottomToolbar] setClickHandler called");
 		this.clickHandler = handler;
 	}
 
@@ -158,15 +160,24 @@ export class BottomToolbarService {
 		b.dataset.action = actionConfig.id;
 		b.className = "my-bottom-overlay-btn";
 		b.textContent = actionConfig.label;
+		logger.info(
+			`[BottomToolbar] createButton: id=${actionConfig.id}, disabled=${actionConfig.disabled}, hasHandler=${!!this.clickHandler}`,
+		);
 		if (actionConfig.disabled) {
 			b.disabled = true;
 			b.classList.add("is-disabled");
 		} else if (this.clickHandler) {
 			// Direct click handler for non-disabled buttons
 			// (delegated handler doesn't work reliably for button elements)
+			const handler = this.clickHandler;
 			b.addEventListener("click", () => {
-				this.clickHandler?.(actionConfig.id);
+				logger.info(`[BottomToolbar] Button CLICKED: ${actionConfig.id}`);
+				handler(actionConfig.id);
 			});
+		} else {
+			logger.warn(
+				`[BottomToolbar] No clickHandler when creating button: ${actionConfig.id}`,
+			);
 		}
 		return b;
 	}
