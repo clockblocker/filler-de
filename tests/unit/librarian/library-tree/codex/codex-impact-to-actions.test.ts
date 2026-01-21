@@ -9,8 +9,8 @@ import type {
 import {
 	codexImpactToDeletions,
 	codexImpactToRecreations,
-	type TreeAccessor,
 } from "../../../../../src/commanders/librarian/healer/library-tree/codex/codex-impact-to-actions";
+import type { TreeReader } from "../../../../../src/commanders/librarian/healer/library-tree/tree-interfaces";
 import type { CodexImpact } from "../../../../../src/commanders/librarian/healer/library-tree/codex/compute-codex-impact";
 import {
 	TreeNodeKind,
@@ -62,7 +62,7 @@ const section = (
 	nodeName: name as NodeName,
 });
 
-function makeTreeAccessor(root: SectionNode): TreeAccessor {
+function makeTreeAccessor(root: SectionNode): TreeReader {
 	return {
 		findSection(chain: SectionNodeSegmentId[]): SectionNode | undefined {
 			if (chain.length === 0) return undefined;
@@ -94,6 +94,7 @@ describe("codexImpactToDeletions", () => {
 				contentChanged: [],
 				deleted: [[sec("Library"), sec("A")]],
 				descendantsChanged: [],
+				impactedChains: new Set(),
 				renamed: [],
 			};
 
@@ -119,6 +120,7 @@ describe("codexImpactToDeletions", () => {
 				contentChanged: [],
 				deleted: [],
 				descendantsChanged: [],
+				impactedChains: new Set(),
 				renamed: [
 					{
 						newChain: [sec("Library"), sec("NewName")],
@@ -153,6 +155,7 @@ describe("codexImpactToDeletions", () => {
 				contentChanged: [],
 				deleted: [],
 				descendantsChanged: [],
+				impactedChains: new Set(),
 				renamed: [
 					{
 						newChain: [sec("Library"), sec("NewName")],
@@ -196,6 +199,7 @@ describe("codexImpactToRecreations", () => {
 			contentChanged: [],
 			deleted: [],
 			descendantsChanged: [],
+			impactedChains: new Set(),
 			renamed: [],
 		};
 
@@ -259,6 +263,7 @@ describe("codexImpactToRecreations", () => {
 					sectionChain: [sec("Library"), sec("A")],
 				},
 			],
+			impactedChains: new Set(),
 			renamed: [],
 		};
 

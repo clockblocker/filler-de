@@ -8,7 +8,7 @@ import {
 	PronomenType,
 	Trennbarkeit,
 	Wortart,
-} from "prompts/endgame/zod/types";
+} from "../../../zod/types";
 
 const sitzen = {
 	sitzen: [

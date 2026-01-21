@@ -1,5 +1,5 @@
 import type { TFile } from "obsidian";
-import type TextEaterPlugin from "../../../main";
+import type TextEaterPlugin from "../../../../main";
 import {
 	formatPathToNoteAsLink,
 	getPathsToGrundformNotes,

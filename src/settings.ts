@@ -255,5 +255,21 @@ export class SettingsTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					});
 			});
+
+		new Setting(containerEl)
+			.setName("Navigation buttons position")
+			.setDesc(
+				"Where to show navigation buttons (← →) in the bottom toolbar",
+			)
+			.addDropdown((dropdown) => {
+				dropdown
+					.addOption("left", "Left")
+					.addOption("right", "Right")
+					.setValue(this.plugin.settings.navButtonsPosition)
+					.onChange(async (value: "left" | "right") => {
+						this.plugin.settings.navButtonsPosition = value;
+						await this.plugin.saveSettings();
+					});
+			});
 	}
 }

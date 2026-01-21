@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { makeCodecRulesFromSettings, makeCodecs } from "../../../../src/commanders/librarian/codecs";
 import { Healer } from "../../../../src/commanders/librarian/healer/healer";
-import { codexImpactToIncrementalRecreations, mergeCodexImpacts } from "../../../../src/commanders/librarian/healer/library-tree/codex/codex-impact-to-actions";
+import { codexImpactToIncrementalRecreations } from "../../../../src/commanders/librarian/healer/library-tree/codex/codex-impact-to-actions";
+import { mergeCodexImpacts } from "../../../../src/commanders/librarian/healer/library-tree/codex/merge-codex-impacts";
 import { generateChildrenList } from "../../../../src/commanders/librarian/healer/library-tree/codex/generate-codex-content";
 import { TreeActionType } from "../../../../src/commanders/librarian/healer/library-tree/tree-action/types/tree-action";
 import { TreeNodeStatus } from "../../../../src/commanders/librarian/healer/library-tree/tree-node/types/atoms";

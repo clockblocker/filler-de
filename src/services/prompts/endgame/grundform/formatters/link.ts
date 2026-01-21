@@ -1,11 +1,11 @@
-import type TextEaterPlugin from "main";
+import type TextEaterPlugin from "../../../../../main";
 import type { TFile } from "obsidian";
 import {
 	type GrundformKerl,
 	Match,
 	type MorphemKerl,
 	Wortart,
-} from "prompts/endgame/zod/types";
+} from "../../zod/types";
 
 export async function getMaybeLegacyExistingNotePath(
 	plugin: TextEaterPlugin,

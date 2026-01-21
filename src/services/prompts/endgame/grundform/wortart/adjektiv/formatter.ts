@@ -1,9 +1,4 @@
-import {
-	Genus,
-	Kasus,
-	NomenDeklination,
-	Numerus,
-} from "prompts/endgame/zod/types";
+import { Genus, Kasus, NomenDeklination, Numerus } from "../../../zod/types";
 import { formatPathToNoteAsLink } from "../../formatters/link";
 import {
 	type AllDeclensions,

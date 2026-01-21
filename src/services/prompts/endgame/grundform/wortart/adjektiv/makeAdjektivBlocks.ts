@@ -1,15 +1,15 @@
-import type TextEaterPlugin from "main";
+import type TextEaterPlugin from "../../../../../../main";
 import type { TFile } from "obsidian";
-import { makeTagChain, Tag } from "prompts/endgame/zod/consts";
-import { adjektivOutputSchema } from "prompts/endgame/zod/schemas";
+import { makeTagChain, Tag } from "../../../zod/consts";
+import { adjektivOutputSchema } from "../../../zod/schemas";
 import {
 	type AdjektivOutput,
 	type Backlink,
-	Block,
+	type Block,
 	type GrundformKerl,
 	Match,
 	Wortart,
-} from "prompts/endgame/zod/types";
+} from "../../../zod/types";
 import { getPathsToNotes } from "../../formatters/link";
 import { promtMakerFromKeyword } from "../endgamePromptMakers";
 import {

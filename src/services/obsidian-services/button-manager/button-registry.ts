@@ -81,7 +81,7 @@ export class ButtonRegistry {
 					? splitPath.basename.match(/_Page_(\d{3})/)
 					: null;
 
-			if (pageMatch?.[1]) {
+			if (pageMatch?.[1] && splitPath.kind === "MdFile") {
 				// File IS a page (by naming convention)
 				fileType = FileType.Page;
 				pageIndex = Number.parseInt(pageMatch[1], 10);

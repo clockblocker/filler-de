@@ -115,6 +115,13 @@ span.cm-html-embed {
 	opacity: 0.4;
 }
 
+/* Separator between nav buttons and other buttons */
+.bottom-toolbar-separator {
+	color: var(--text-muted);
+	user-select: none;
+	opacity: 0.5;
+}
+
 /* Toggle this class from your plugin if you want */
 body.hide-status-bar .status-bar {
 	display: none !important;

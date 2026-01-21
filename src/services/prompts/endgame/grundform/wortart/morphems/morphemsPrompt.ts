@@ -1,4 +1,4 @@
-import { morphemAnalysisOutputSchema } from "prompts/endgame/zod/schemas";
+import { morphemAnalysisOutputSchema } from "../../../zod/schemas";
 import { z } from "zod";
 import { tests } from "./tests";
 

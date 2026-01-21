@@ -188,6 +188,10 @@ export const SuffixLiteralSchema = z.literal("Suffix");
 export type SUFFIX = z.infer<typeof SuffixLiteralSchema>;
 export const SUFFIX = SuffixLiteralSchema.value;
 
+export const RootLiteralSchema = z.literal("Root");
+export type ROOT = z.infer<typeof RootLiteralSchema>;
+export const ROOT = RootLiteralSchema.value;
+
 export const InfixLiteralSchema = z.literal("Infix");
 export type INFIX = z.infer<typeof InfixLiteralSchema>;
 export const INFIX = InfixLiteralSchema.value;

@@ -14,8 +14,8 @@ import {
 	codexImpactToDeletions,
 	codexImpactToRecreations,
 	extractInvalidCodexesFromBulk,
-	type TreeAccessor,
 } from "../../../../../src/commanders/librarian/healer/library-tree/codex/codex-impact-to-actions";
+import type { TreeReader } from "../../../../../src/commanders/librarian/healer/library-tree/tree-interfaces";
 import type { CodexImpact } from "../../../../../src/commanders/librarian/healer/library-tree/codex/compute-codex-impact";
 import { mergeCodexImpacts } from "../../../../../src/commanders/librarian/healer/library-tree/codex/merge-codex-impacts";
 import type { CodexAction } from "../../../../../src/commanders/librarian/healer/library-tree/codex/types/codex-action";

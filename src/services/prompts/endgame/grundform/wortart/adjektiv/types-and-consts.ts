@@ -4,7 +4,7 @@ import {
 	NomenDeklination,
 	Numerus,
 	Vergleichsgrad,
-} from "prompts/endgame/zod/types";
+} from "../../../zod/types";
 import { z } from "zod";
 
 const FormSchema = z.object({

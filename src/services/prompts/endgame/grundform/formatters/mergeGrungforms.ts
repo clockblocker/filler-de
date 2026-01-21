@@ -1,4 +1,4 @@
-import { type Grundform, Wortart } from "prompts/endgame/zod/types";
+import { type Grundform, Wortart } from "../../zod/types";
 
 function keyFromGrundform<G extends Grundform>(g: G) {
 	if (g.wortart === Wortart.Nomen) {

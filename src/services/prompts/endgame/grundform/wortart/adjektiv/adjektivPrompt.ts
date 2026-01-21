@@ -1,4 +1,4 @@
-import { adjektivOutputSchema } from "prompts/endgame/zod/schemas";
+import { adjektivOutputSchema } from "../../../zod/schemas";
 import { z } from "zod";
 import { tests } from "./tests";
 

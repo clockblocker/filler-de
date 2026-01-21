@@ -1,5 +1,5 @@
 import {
-	Grundform,
+	type Grundform,
 	type GrundformWithMatch,
 	Match,
 	Wortart,

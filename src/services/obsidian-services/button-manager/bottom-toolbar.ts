@@ -1,6 +1,8 @@
 import { type App, MarkdownView } from "obsidian";
+import { getParsedUserSettings } from "../../../global-state/global-state";
 import { logger } from "../../../utils/logger";
 import type { RenderedActionConfig } from "../../wip-configs/actions/types";
+import { UserAction } from "../../wip-configs/actions/types";
 
 /** Estimated width per button (including gap) */
 const BUTTON_WIDTH_ESTIMATE = 90;
@@ -120,6 +122,26 @@ export class BottomToolbarService {
 			host.parentElement.style.paddingBottom = "64px";
 		}
 
+		// Split actions into nav vs non-nav
+		const navActions = bottomActions.filter(
+			(a) =>
+				a.id === UserAction.NavigatePage ||
+				a.id === UserAction.PreviousPage,
+		);
+		const otherActions = bottomActions.filter(
+			(a) =>
+				a.id !== UserAction.NavigatePage &&
+				a.id !== UserAction.PreviousPage,
+		);
+
+		// Get position setting
+		const navPosition =
+			getParsedUserSettings().navButtonsPosition ?? "left";
+
+		// Determine order based on position
+		const leftGroup = navPosition === "left" ? navActions : otherActions;
+		const rightGroup = navPosition === "left" ? otherActions : navActions;
+
 		// Calculate max visible buttons based on container width
 		const containerWidth = host.parentElement?.clientWidth ?? 0;
 		const maxButtons =
@@ -130,13 +152,38 @@ export class BottomToolbarService {
 					)
 				: DEFAULT_MAX_BUTTONS;
 
-		// Determine visible vs overflow actions
-		const visibleActions = bottomActions.slice(0, maxButtons);
-		const overflowActions = bottomActions.slice(maxButtons);
+		// Account for separator in max buttons calculation
+		const hasSeparator = leftGroup.length > 0 && rightGroup.length > 0;
+		const effectiveMaxButtons = hasSeparator ? maxButtons - 1 : maxButtons;
 
-		// Render visible buttons
-		for (const actionConfig of visibleActions) {
-			host.appendChild(this.createButton(actionConfig));
+		// Combine groups for overflow calculation
+		const allOrdered = [...leftGroup, ...rightGroup];
+		const visibleCount = Math.min(allOrdered.length, effectiveMaxButtons);
+		const overflowActions = allOrdered.slice(visibleCount);
+
+		// Render left group buttons
+		const visibleLeftCount = Math.min(leftGroup.length, visibleCount);
+		for (let i = 0; i < visibleLeftCount; i++) {
+			host.appendChild(this.createButton(leftGroup[i]));
+		}
+
+		// Add separator if both groups have visible buttons
+		const remainingSlots = visibleCount - visibleLeftCount;
+		if (
+			visibleLeftCount > 0 &&
+			remainingSlots > 0 &&
+			rightGroup.length > 0
+		) {
+			const separator = document.createElement("span");
+			separator.className = "bottom-toolbar-separator";
+			separator.textContent = "|";
+			host.appendChild(separator);
+		}
+
+		// Render right group buttons
+		const visibleRightCount = Math.min(rightGroup.length, remainingSlots);
+		for (let i = 0; i < visibleRightCount; i++) {
+			host.appendChild(this.createButton(rightGroup[i]));
 		}
 
 		// Add overflow button if needed
@@ -171,7 +218,9 @@ export class BottomToolbarService {
 			// (delegated handler doesn't work reliably for button elements)
 			const handler = this.clickHandler;
 			b.addEventListener("click", () => {
-				logger.info(`[BottomToolbar] Button CLICKED: ${actionConfig.id}`);
+				logger.info(
+					`[BottomToolbar] Button CLICKED: ${actionConfig.id}`,
+				);
 				handler(actionConfig.id);
 			});
 		} else {

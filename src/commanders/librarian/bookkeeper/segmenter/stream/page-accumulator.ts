@@ -14,6 +14,7 @@ function groupsToContent(groups: SentenceGroup[]): string {
 	if (sentences.length === 0) return "";
 
 	const [first, ...rest] = sentences;
+	if (!first) return ""; // TypeScript narrowing guard
 	let result = first.text;
 	for (const s of rest) {
 		if (s.startsNewParagraph) {

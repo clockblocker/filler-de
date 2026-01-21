@@ -4,7 +4,7 @@ import {
 	type GrundformWithMatch,
 	type Nomen,
 	Wortart,
-} from "prompts/endgame/zod/types";
+} from "../../zod/types";
 import { getFormatLinkToGrundformNote } from "./link";
 import { formatMatch } from "./match";
 

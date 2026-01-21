@@ -1,5 +1,5 @@
 import { Notice } from "obsidian";
-import type { OpenedFileService } from "../../../../obsidian-vault-action-manager/file-services/active-view/opened-file-service";
+import type { OpenedFileService } from "../../../managers/obsidian/vault-action-manager/file-services/active-view/opened-file-service";
 import {
 	formatQuotedLines,
 	segmentInQuotedLines,

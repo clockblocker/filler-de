@@ -52,6 +52,7 @@ export type TextEaterSettings = {
 	translatePlacement: SelectionActionPlacement;
 	splitInBlocksPlacement: SelectionActionPlacement;
 	explainGrammarPlacement: SelectionActionPlacement;
+	navButtonsPosition: "left" | "right";
 };
 
 export const DEFAULT_SETTINGS: TextEaterSettings = {
@@ -61,6 +62,7 @@ export const DEFAULT_SETTINGS: TextEaterSettings = {
 	hideMetadata: true,
 	libraryRoot: "Library",
 	maxSectionDepth: 6,
+	navButtonsPosition: "left",
 	showScrollBacklinks: true,
 	showScrollsInCodexesForDepth: 1,
 	splitInBlocksPlacement: "selection",

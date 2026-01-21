@@ -198,7 +198,8 @@ export class ApiService {
 			const completion = await this.openai.chat.completions.parse({
 				messages,
 				model: this.model,
-				response_format: zodResponseFormat(schema, "data"),
+				// Type assertion needed due to Zod version mismatch between our deps and OpenAI SDK
+				response_format: zodResponseFormat(schema as unknown as Parameters<typeof zodResponseFormat>[0], "data"),
 				temperature: 0,
 				top_p: 0.95,
 				...(cachedId
@@ -213,10 +214,17 @@ export class ApiService {
 			const parsed = completion.choices?.[0]?.message?.parsed;
 
 			if (parsed) return parsed;
+
+			throw new Error(
+				formatError({
+					description: "Failed to parse response: parsed is undefined",
+					location: "ApiService",
+				}),
+			);
 		} catch (err) {
 			throw new Error(
 				formatError({
-					description: `Failed to generate: ${err?.message}`,
+					description: `Failed to generate: ${err instanceof Error ? err.message : String(err)}`,
 					location: "ApiService",
 				}),
 			);

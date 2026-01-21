@@ -164,8 +164,9 @@ describe("materializeScopedBulk", () => {
 					},
 					{
 						...{
-							kind: VaultEventKind.FileCreated,
-							splitPath: File("incoming"),
+							from: File("incoming-old"),
+							kind: VaultEventKind.FileRenamed,
+							to: File("incoming"),
 						},
 						scope: Scope.OutsideToInside,
 					},
@@ -262,17 +263,10 @@ describe("materializeScopedBulk", () => {
 					},
 					{
 						...{
-							kind: VaultEventKind.FileDeleted,
-							splitPath: File("incoming"),
+							kind: VaultEventKind.FolderDeleted,
+							splitPath: F("outside-folder"),
 						},
-						scope: Scope.OutsideToInside,
-					},
-					{
-						...{
-							kind: VaultEventKind.FileDeleted,
-							splitPath: File("outgoing"),
-						},
-						scope: Scope.InsideToOutside,
+						scope: Scope.Outside,
 					},
 				],
 			};

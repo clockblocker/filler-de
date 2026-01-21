@@ -1,7 +1,25 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { makeCodecRulesFromSettings } from "../../../../../../../../src/commanders/librarian/codecs";
 import { makeEventLibraryScoped } from "../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/events/make-event-libray-scoped";
-import { Scope } from "../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/scoped-event";
+import {
+	Scope,
+	type ScopedFileCreatedVaultEventInside,
+	type ScopedFileCreatedVaultEventOutside,
+	type ScopedFileDeletedVaultEventInside,
+	type ScopedFileDeletedVaultEventOutside,
+	type ScopedFileRenamedVaultEventInside,
+	type ScopedFileRenamedVaultEventInsideToOutside,
+	type ScopedFileRenamedVaultEventOutside,
+	type ScopedFileRenamedVaultEventOutsideToInside,
+	type ScopedFolderCreatedVaultEventInside,
+	type ScopedFolderCreatedVaultEventOutside,
+	type ScopedFolderDeletedVaultEventInside,
+	type ScopedFolderDeletedVaultEventOutside,
+	type ScopedFolderRenamedVaultEventInside,
+	type ScopedFolderRenamedVaultEventInsideToOutside,
+	type ScopedFolderRenamedVaultEventOutside,
+	type ScopedFolderRenamedVaultEventOutsideToInside,
+} from "../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/scoped-event";
 import { MD } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/literals";
 import { SplitPathKind } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import type { VaultEvent } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/vault-event";
@@ -33,14 +51,14 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event, rules);
+			const result = makeEventLibraryScoped(event, rules) as ScopedFileCreatedVaultEventInside;
 
 			expect(result.scope).toBe(Scope.Inside);
 			expect(result.splitPath.pathParts).toEqual(["Library"]);
 			expect(result.splitPath.basename).toBe("Note");
 		});
 
-		it("throws when file is outside library", () => {
+		it("returns Outside when file is outside library", () => {
 			const event = {
 				kind: VaultEventKind.FileCreated,
 				splitPath: {
@@ -51,7 +69,7 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event, rules);
+			const result = makeEventLibraryScoped(event, rules) as ScopedFileCreatedVaultEventOutside;
 
 			expect(result.scope).toBe(Scope.Outside);
 			expect(result.splitPath).toEqual(event.splitPath);
@@ -79,7 +97,7 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event, testRules);
+			const result = makeEventLibraryScoped(event, testRules) as ScopedFileCreatedVaultEventInside;
 
 			expect(result.scope).toBe(Scope.Inside);
 			expect(result.splitPath.pathParts).toEqual(["Library", "Section"]);
@@ -104,7 +122,7 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event, rules);
+			const result = makeEventLibraryScoped(event, rules) as ScopedFileRenamedVaultEventInside;
 
 			expect(result.scope).toBe(Scope.Inside);
 			expect(result.from.pathParts).toEqual(["Library"]);
@@ -128,7 +146,7 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event, rules);
+			const result = makeEventLibraryScoped(event, rules) as ScopedFileRenamedVaultEventInsideToOutside;
 
 			expect(result.scope).toBe(Scope.InsideToOutside);
 			expect(result.from.pathParts).toEqual(["Library"]);
@@ -152,7 +170,7 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event, rules);
+			const result = makeEventLibraryScoped(event, rules) as ScopedFileRenamedVaultEventOutsideToInside;
 
 			expect(result.scope).toBe(Scope.OutsideToInside);
 			expect(result.from.pathParts).toEqual(["Other"]);
@@ -176,7 +194,7 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event, rules);
+			const result = makeEventLibraryScoped(event, rules) as ScopedFileRenamedVaultEventOutside;
 
 			expect(result.scope).toBe(Scope.Outside);
 			expect(result.from).toEqual(event.from);
@@ -185,7 +203,7 @@ describe("makeEventLibraryScoped", () => {
 	});
 
 	describe("FileDeleted", () => {
-		it("returns InsideToInside when file is inside library", () => {
+		it("returns Inside when file is inside library", () => {
 			const event: VaultEvent = {
 				kind: VaultEventKind.FileDeleted,
 				splitPath: {
@@ -196,7 +214,7 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event, rules);
+			const result = makeEventLibraryScoped(event, rules) as ScopedFileDeletedVaultEventInside;
 
 			expect(result.scope).toBe(Scope.Inside);
 			expect(result.splitPath.pathParts).toEqual(["Library", "Section"]);
@@ -213,7 +231,7 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event, rules);
+			const result = makeEventLibraryScoped(event, rules) as ScopedFileDeletedVaultEventOutside;
 
 			expect(result.scope).toBe(Scope.Outside);
 			expect(result.splitPath).toEqual(event.splitPath);
@@ -221,7 +239,7 @@ describe("makeEventLibraryScoped", () => {
 	});
 
 	describe("FolderCreated", () => {
-		it("returns InsideToInside when folder is inside library", () => {
+		it("returns Inside when folder is inside library", () => {
 			const event: VaultEvent = {
 				kind: VaultEventKind.FolderCreated,
 				splitPath: {
@@ -231,7 +249,7 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event, rules);
+			const result = makeEventLibraryScoped(event, rules) as ScopedFolderCreatedVaultEventInside;
 
 			expect(result.scope).toBe(Scope.Inside);
 			expect(result.splitPath.pathParts).toEqual(["Library"]);
@@ -247,7 +265,7 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event, rules);
+			const result = makeEventLibraryScoped(event, rules) as ScopedFolderCreatedVaultEventOutside;
 
 			expect(result.scope).toBe(Scope.Outside);
 			expect(result.splitPath).toEqual(event.splitPath);
@@ -270,7 +288,7 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event, rules);
+			const result = makeEventLibraryScoped(event, rules) as ScopedFolderRenamedVaultEventInside;
 
 			expect(result.scope).toBe(Scope.Inside);
 			expect(result.from.pathParts).toEqual(["Library"]);
@@ -292,7 +310,7 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event, rules);
+			const result = makeEventLibraryScoped(event, rules) as ScopedFolderRenamedVaultEventInsideToOutside;
 
 			expect(result.scope).toBe(Scope.InsideToOutside);
 			expect(result.from.pathParts).toEqual(["Library"]);
@@ -313,7 +331,7 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event, rules);
+			const result = makeEventLibraryScoped(event, rules) as ScopedFolderRenamedVaultEventOutsideToInside;
 
 			expect(result.scope).toBe(Scope.OutsideToInside);
 			expect(result.to.pathParts).toEqual(["Library"]);
@@ -334,7 +352,7 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event, rules);
+			const result = makeEventLibraryScoped(event, rules) as ScopedFolderRenamedVaultEventOutside;
 
 			expect(result.scope).toBe(Scope.Outside);
 			expect(result.from).toEqual(event.from);
@@ -343,7 +361,7 @@ describe("makeEventLibraryScoped", () => {
 	});
 
 	describe("FolderDeleted", () => {
-		it("returns InsideToInside when folder is inside library", () => {
+		it("returns Inside when folder is inside library", () => {
 			const event: VaultEvent = {
 				kind: VaultEventKind.FolderDeleted,
 				splitPath: {
@@ -353,7 +371,7 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event, rules);
+			const result = makeEventLibraryScoped(event, rules) as ScopedFolderDeletedVaultEventInside;
 
 			expect(result.scope).toBe(Scope.Inside);
 			expect(result.splitPath.pathParts).toEqual(["Library"]);
@@ -369,7 +387,7 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event, rules);
+			const result = makeEventLibraryScoped(event, rules) as ScopedFolderDeletedVaultEventOutside;
 
 			expect(result.scope).toBe(Scope.Outside);
 			expect(result.splitPath).toEqual(event.splitPath);
@@ -388,7 +406,7 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event, rules);
+			const result = makeEventLibraryScoped(event, rules) as ScopedFileCreatedVaultEventOutside;
 
 			expect(result.scope).toBe(Scope.Outside);
 			expect(result.splitPath).toEqual(event.splitPath);
@@ -416,7 +434,7 @@ describe("makeEventLibraryScoped", () => {
 				},
 			};
 
-			const result = makeEventLibraryScoped(event, testRules);
+			const result = makeEventLibraryScoped(event, testRules) as ScopedFileCreatedVaultEventOutside;
 
 			expect(result.scope).toBe(Scope.Outside);
 			expect(result.splitPath).toEqual(event.splitPath);

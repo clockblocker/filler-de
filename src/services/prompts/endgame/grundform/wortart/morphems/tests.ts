@@ -1,4 +1,4 @@
-import { Morphem, Wortart } from "prompts/endgame/zod/types";
+import { Morphem, Wortart } from "../../../zod/types";
 
 const fahren = {
 	fahren: {

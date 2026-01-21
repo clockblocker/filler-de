@@ -48,7 +48,7 @@ describe("computeCodexImpact", () => {
 					segmentIdChainToParent: [sec("Library"), sec("A"), sec("B")],
 					targetKind: TreeNodeKind.Scroll,
 				},
-			} as const;
+			};
 
 			const impact = computeCodexImpact(action);
 
@@ -74,7 +74,7 @@ describe("computeCodexImpact", () => {
 					segmentIdChainToParent: [sec("Library")],
 					targetKind: TreeNodeKind.Scroll,
 				},
-			} as const;
+			};
 
 			const impact = computeCodexImpact(action);
 
@@ -92,7 +92,7 @@ describe("computeCodexImpact", () => {
 					segmentIdChainToParent: [sec("Library"), sec("A")],
 					targetKind: TreeNodeKind.Scroll,
 				},
-			} as const;
+			};
 
 			const impact = computeCodexImpact(action);
 
@@ -111,7 +111,7 @@ describe("computeCodexImpact", () => {
 					segmentIdChainToParent: [sec("Library")],
 					targetKind: TreeNodeKind.Section,
 				},
-			} as const;
+			};
 
 			const impact = computeCodexImpact(action);
 
@@ -132,7 +132,7 @@ describe("computeCodexImpact", () => {
 					segmentIdChainToParent: [sec("Library"), sec("A")],
 					targetKind: TreeNodeKind.Scroll,
 				},
-			} as const;
+			};
 
 			const impact = computeCodexImpact(action);
 
@@ -153,7 +153,7 @@ describe("computeCodexImpact", () => {
 					segmentIdChainToParent: [sec("Library")],
 					targetKind: TreeNodeKind.Section,
 				},
-			} as const;
+			};
 
 			const impact = computeCodexImpact(action);
 
@@ -190,7 +190,7 @@ describe("computeCodexImpact", () => {
 					segmentIdChainToParent: [sec("Library"), sec("A")],
 					targetKind: TreeNodeKind.Scroll,
 				},
-			} as const;
+			};
 
 			const impact = computeCodexImpact(action);
 
@@ -222,7 +222,7 @@ describe("computeCodexImpact", () => {
 					segmentIdChainToParent: [sec("Library"), sec("A")],
 					targetKind: TreeNodeKind.Section,
 				},
-			} as const;
+			};
 
 			const impact = computeCodexImpact(action);
 
@@ -252,7 +252,7 @@ describe("computeCodexImpact", () => {
 					segmentIdChainToParent: [sec("Library"), sec("A")],
 					targetKind: TreeNodeKind.Scroll,
 				},
-			} as const;
+			};
 
 			const impact = computeCodexImpact(action);
 
@@ -272,7 +272,7 @@ describe("computeCodexImpact", () => {
 					segmentIdChainToParent: [sec("Library")],
 					targetKind: TreeNodeKind.Section,
 				},
-			} as const;
+			};
 
 			const impact = computeCodexImpact(action);
 

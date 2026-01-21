@@ -1,5 +1,5 @@
-import { grundformsOutputSchema } from "prompts/endgame/zod/schemas";
 import { z } from "zod";
+import { grundformsOutputSchema } from "../../../zod/schemas";
 import { tests } from "./tests";
 
 export const makeGrundformsPrompt = () => {

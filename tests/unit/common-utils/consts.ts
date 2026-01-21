@@ -12,11 +12,14 @@ const defaultDelimiterConfig = {
 
 export const defaultSettingsForUnitTests: ParsedUserSettings = {
 	apiProvider: "google",
+	explainGrammarPlacement: "selection",
 	googleApiKey: "",
 	hideMetadata: true,
 	maxSectionDepth: 6,
+	navButtonsPosition: "left",
 	showScrollBacklinks: true,
 	showScrollsInCodexesForDepth: 1,
+	splitInBlocksPlacement: "selection",
 	splitPathToLibraryRoot: {
 		basename: "Library",
 		kind: SplitPathKind.Folder,
@@ -25,4 +28,5 @@ export const defaultSettingsForUnitTests: ParsedUserSettings = {
 	suffixDelimiter: buildCanonicalDelimiter(defaultDelimiterConfig),
 	suffixDelimiterConfig: defaultDelimiterConfig,
 	suffixDelimiterPattern: buildFlexibleDelimiterPattern(defaultDelimiterConfig),
+	translatePlacement: "selection",
 };

@@ -1,5 +1,5 @@
 import { logger } from "../../../../utils/logger";
-import type { TexfresserObsidianServices } from "../../../services/obsidian-services/obsidian-services/interface";
+import type { TexfresserObsidianServices } from "../../../obsidian-services/interface";
 import { ACTION_CONFIGS } from "../../actions/actions-config";
 import { type UserAction, UserActionSchema } from "../../actions/types";
 

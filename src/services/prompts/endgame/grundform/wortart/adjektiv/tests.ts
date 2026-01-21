@@ -1,4 +1,4 @@
-import { Vergleichsgrad } from "prompts/endgame/zod/types";
+import { Vergleichsgrad } from "../../../zod/types";
 
 const gut = {
 	gut: [
