@@ -125,9 +125,14 @@ Default provider implementing all current actions:
 | SplitToPages | bottom | Scroll file, no selection |
 | MakeText | bottom | No type OR Scroll with multi-page |
 | Generate | bottom | Selection + in library |
-| TranslateSelection | selection | Has selection |
-| SplitInBlocks | selection | Selection + in library |
-| ExplainGrammar | selection | Selection + in library |
+| TranslateSelection | configurable* | Has selection |
+| SplitInBlocks | configurable* | Selection + in library |
+| ExplainGrammar | configurable* | Selection + in library |
+
+*Selection actions placement controlled by `selectionActionPlacement` setting:
+- `"selection"` (default): toolbar above selection
+- `"bottom"`: in bottom toolbar
+- `"shortcut-only"`: no toolbar, keyboard shortcuts only
 
 ## Hybrid Action Design
 
@@ -142,8 +147,16 @@ Gradual migration: start with `custom`, promote to named `kind` when stable.
 OverlayManager delegates rendering to existing services:
 - `BottomToolbarService` - Bottom bar with overflow menu
 - `AboveSelectionToolbarService` - Floating selection toolbar
-- `EdgePaddingNavigator` - Edge zone navigation (readable-line-width mode)
-- `NavigationLayoutCoordinator` - Coordinates edge zones vs bottom buttons
+- `EdgePaddingNavigator` - Edge zone navigation
+- `NavigationLayoutCoordinator` - Coordinates edge zones layout
+
+### Navigation Button Behavior
+
+Nav buttons (prev/next) always visible in bottom toolbar, shown as disabled when unavailable. Edge zones provide additional click targets but don't hide bottom bar buttons.
+
+### Edge Zone Positioning
+
+Edge zones extend from workspace-leaf edge to 12px before `.cm-contentContainer`. Works on desktop and mobile, only shown in source/editing mode.
 
 ## Adding New Actions
 

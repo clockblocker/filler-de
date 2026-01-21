@@ -1,5 +1,6 @@
 import { type App, Notice, PluginSettingTab, Setting } from "obsidian";
 import type TextEaterPluginStripped from "./main-stripped";
+import type { SelectionActionPlacement } from "./types";
 
 const FORBIDDEN_DELIMITER_CHARS = [
 	"/",
@@ -198,5 +199,25 @@ export class SettingsTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					}),
 			);
+
+		// Actions settings
+		new Setting(containerEl).setName("Actions").setHeading();
+
+		new Setting(containerEl)
+			.setName("Selection action placement")
+			.setDesc(
+				"Where to show selection actions (Translate, Split in Blocks, Explain Grammar)",
+			)
+			.addDropdown((dropdown) => {
+				dropdown
+					.addOption("selection", "Above selection")
+					.addOption("bottom", "In bottom toolbar")
+					.addOption("shortcut-only", "Shortcut only")
+					.setValue(this.plugin.settings.selectionActionPlacement)
+					.onChange(async (value: SelectionActionPlacement) => {
+						this.plugin.settings.selectionActionPlacement = value;
+						await this.plugin.saveSettings();
+					});
+			});
 	}
 }

@@ -1,9 +1,5 @@
 import { type App, MarkdownView } from "obsidian";
-import {
-	type RenderedActionConfig,
-	UserAction,
-} from "../../wip-configs/actions/types";
-import type { NavigationLayoutState } from "./navigation-layout-coordinator";
+import type { RenderedActionConfig } from "../../wip-configs/actions/types";
 
 /** Estimated width per button (including gap) */
 const BUTTON_WIDTH_ESTIMATE = 90;
@@ -17,10 +13,6 @@ export class BottomToolbarService {
 	private attachedView: MarkdownView | null = null;
 	private actionConfigs: RenderedActionConfig[] = [];
 	private overflowMenuEl: HTMLElement | null = null;
-	private layoutState: NavigationLayoutState = {
-		leftZoneActive: false,
-		rightZoneActive: false,
-	};
 
 	constructor(private app: App) {}
 
@@ -88,15 +80,6 @@ export class BottomToolbarService {
 		if (this.overlayEl) this.renderButtons(this.overlayEl);
 	}
 
-	/**
-	 * Update layout state from NavigationLayoutCoordinator.
-	 * Triggers re-render to show/hide nav buttons based on zone visibility.
-	 */
-	public updateLayoutState(state: NavigationLayoutState): void {
-		this.layoutState = state;
-		if (this.overlayEl) this.renderButtons(this.overlayEl);
-	}
-
 	private getActiveMarkdownView(): MarkdownView | null {
 		return this.app.workspace.getActiveViewOfType(MarkdownView);
 	}
@@ -109,23 +92,7 @@ export class BottomToolbarService {
 	private renderButtons(host: HTMLElement): void {
 		while (host.firstChild) host.removeChild(host.firstChild);
 
-		// Filter out nav actions that are handled by edge zones
-		// PreviousPage → left zone, NavigatePage → right zone
-		const bottomActions = this.actionConfigs.filter((a) => {
-			if (
-				a.id === UserAction.PreviousPage &&
-				this.layoutState.leftZoneActive
-			) {
-				return false;
-			}
-			if (
-				a.id === UserAction.NavigatePage &&
-				this.layoutState.rightZoneActive
-			) {
-				return false;
-			}
-			return true;
-		});
+		const bottomActions = this.actionConfigs;
 
 		// Hide toolbar when no actions available
 		if (bottomActions.length === 0) {

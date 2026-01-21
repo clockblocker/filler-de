@@ -31,24 +31,13 @@ export class NavigationLayoutCoordinator {
 
 	/**
 	 * Attach coordinator to a view. Sets up single ResizeObserver
-	 * that coordinates both edge zones and bottom toolbar.
+	 * that coordinates edge zones (now enabled on mobile too).
 	 */
-	public attach(view: MarkdownView, isMobile: boolean): void {
+	public attach(view: MarkdownView, _isMobile: boolean): void {
 		this.detach();
 
 		this.attachedView = view;
 		this.container = view.contentEl;
-
-		// On mobile, skip edge zones entirely
-		if (isMobile) {
-			this.layoutState = {
-				leftZoneActive: false,
-				rightZoneActive: false,
-			};
-			this.edgePaddingNavigator.detach();
-			this.bottomToolbar.updateLayoutState(this.layoutState);
-			return;
-		}
 
 		// Initial layout calculation
 		this.calculateAndApplyLayout();
@@ -101,13 +90,15 @@ export class NavigationLayoutCoordinator {
 
 	/**
 	 * Core layout calculation - single source of truth.
-	 * Calculates padding, updates edge zones, notifies bottom toolbar atomically.
+	 * Calculates padding, leaf rect, and content rect, updates edge zones.
 	 */
 	private calculateAndApplyLayout(): void {
 		if (!this.container || !this.attachedView) return;
 
-		// Detect available padding
-		const padding = this.detectEditorPadding(this.container);
+		// Detect available padding, leaf rect, and content rect
+		const { padding, leafRect, contentRect } = this.detectEditorPadding(
+			this.container,
+		);
 
 		// Determine zone visibility based on padding and action availability
 		const zoneState = this.edgePaddingNavigator.calculateAndApplyZones(
@@ -115,33 +106,47 @@ export class NavigationLayoutCoordinator {
 			this.attachedView,
 			padding,
 			MIN_PADDING_THRESHOLD,
+			leafRect,
+			contentRect,
 		);
 
 		// Update layout state
 		this.layoutState = zoneState;
-
-		// Notify bottom toolbar to re-render with correct exclusions
-		this.bottomToolbar.updateLayoutState(this.layoutState);
 	}
 
 	/**
-	 * Detect available padding by comparing .cm-sizer rect to container rect.
+	 * Detect available padding by comparing .cm-contentContainer rect to workspace-leaf rect.
+	 * Returns content rect and leaf rect for zone positioning.
 	 */
 	private detectEditorPadding(container: HTMLElement): {
-		left: number;
-		right: number;
+		padding: { left: number; right: number };
+		leafRect: DOMRect | null;
+		contentRect: DOMRect | null;
 	} {
-		const sizer = container.querySelector(".cm-sizer");
-		if (!sizer) {
-			return { left: 0, right: 0 };
+		// Use cm-contentContainer as the content boundary
+		const contentEl = container.querySelector(".cm-contentContainer");
+		if (!contentEl) {
+			return {
+				padding: { left: 0, right: 0 },
+				leafRect: null,
+				contentRect: null,
+			};
 		}
 
-		const containerRect = container.getBoundingClientRect();
-		const sizerRect = sizer.getBoundingClientRect();
+		const contentRect = contentEl.getBoundingClientRect();
 
-		return {
-			left: Math.max(0, sizerRect.left - containerRect.left),
-			right: Math.max(0, containerRect.right - sizerRect.right),
-		};
+		// Find workspace-leaf ancestor
+		const leafEl = container.closest(".workspace-leaf");
+		const leafRect = leafEl ? leafEl.getBoundingClientRect() : null;
+
+		// Padding is the space between content and leaf edges
+		const padding = leafRect
+			? {
+					left: Math.max(0, contentRect.left - leafRect.left),
+					right: Math.max(0, leafRect.right - contentRect.right),
+				}
+			: { left: 0, right: 0 };
+
+		return { padding, leafRect, contentRect };
 	}
 }

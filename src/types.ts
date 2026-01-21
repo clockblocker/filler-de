@@ -8,6 +8,14 @@ export type SuffixDelimiterConfig = {
 	padded: boolean; // wrap in spaces: " - " vs "-"
 };
 
+/**
+ * Where selection actions (Translate, Split in Blocks, Explain Grammar) appear.
+ * - "selection": toolbar above selection (default)
+ * - "bottom": in bottom toolbar
+ * - "shortcut-only": no toolbar, keyboard shortcuts only
+ */
+export type SelectionActionPlacement = "selection" | "bottom" | "shortcut-only";
+
 export type TextEaterSettings = {
 	googleApiKey: string;
 	apiProvider: "google";
@@ -17,6 +25,7 @@ export type TextEaterSettings = {
 	showScrollsInCodexesForDepth: number;
 	showScrollBacklinks: boolean;
 	hideMetadata: boolean; // Store metadata invisibly at end of file. When false, uses YAML frontmatter.
+	selectionActionPlacement: SelectionActionPlacement;
 };
 
 export const DEFAULT_SETTINGS: TextEaterSettings = {
@@ -25,6 +34,7 @@ export const DEFAULT_SETTINGS: TextEaterSettings = {
 	hideMetadata: true,
 	libraryRoot: "Library",
 	maxSectionDepth: 6,
+	selectionActionPlacement: "selection",
 	showScrollBacklinks: true,
 	showScrollsInCodexesForDepth: 1,
 	suffixDelimiter: { padded: false, symbol: "-" },

@@ -1,3 +1,4 @@
+import { getParsedUserSettings } from "../../../global-state/global-state";
 import { FileType } from "../../../types/common-interface/enums";
 import { BACK_ARROW, FORWARD_ARROW } from "../../../types/literals";
 import {
@@ -103,39 +104,48 @@ export class LibrarianActionProvider implements CommanderActionProvider {
 		}
 
 		// ─── Selection Actions ───
+		// Placement controlled by selectionActionPlacement setting
+
+		const { selectionActionPlacement } = getParsedUserSettings();
+		const showSelectionActions =
+			selectionActionPlacement !== "shortcut-only";
+		const selectionPlacement =
+			selectionActionPlacement === "bottom"
+				? ActionPlacement.Bottom
+				: ActionPlacement.Selection;
 
 		// TranslateSelection: show when selection exists
-		if (ctx.hasSelection) {
+		if (ctx.hasSelection && showSelectionActions) {
 			actions.push({
 				id: "TranslateSelection",
 				kind: ActionKind.TranslateSelection,
 				label: "Translate",
 				params: {},
-				placement: ActionPlacement.Selection,
+				placement: selectionPlacement,
 				priority: 1,
 			});
 		}
 
 		// SplitInBlocks: show when selection exists in library
-		if (ctx.hasSelection && ctx.isInLibrary) {
+		if (ctx.hasSelection && ctx.isInLibrary && showSelectionActions) {
 			actions.push({
 				id: "SplitInBlocks",
 				kind: ActionKind.SplitInBlocks,
 				label: "Split in Blocks",
 				params: {},
-				placement: ActionPlacement.Selection,
+				placement: selectionPlacement,
 				priority: 2,
 			});
 		}
 
 		// ExplainGrammar: show when selection exists in library
-		if (ctx.hasSelection && ctx.isInLibrary) {
+		if (ctx.hasSelection && ctx.isInLibrary && showSelectionActions) {
 			actions.push({
 				id: "ExplainGrammar",
 				kind: ActionKind.ExplainGrammar,
 				label: "Explain Grammar",
 				params: {},
-				placement: ActionPlacement.Selection,
+				placement: selectionPlacement,
 				priority: 3,
 			});
 		}

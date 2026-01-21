@@ -3,8 +3,8 @@ import type { RenderedActionConfig } from "../../wip-configs/actions/types";
 import { UserAction } from "../../wip-configs/actions/types";
 import type { NavigationLayoutState } from "./navigation-layout-coordinator";
 
-/** Maximum zone width on ultra-wide displays (px) */
-const MAX_ZONE_WIDTH = 120;
+/** Inset from edge of workspace-leaf (px) */
+const ZONE_INSET = 12;
 
 /**
  * Manages full-height clickable zones in editor padding for page navigation.
@@ -44,7 +44,8 @@ export class EdgePaddingNavigator {
 
 	/**
 	 * Calculate zone visibility and apply changes.
-	 * Called by NavigationLayoutCoordinator with pre-calculated padding.
+	 * Called by NavigationLayoutCoordinator with pre-calculated padding, leaf rect, and content rect.
+	 * Zones extend from workspace-leaf edge to ZONE_INSET (12px) before cm-contentContainer.
 	 *
 	 * @returns Layout state indicating which zones are active
 	 */
@@ -53,6 +54,8 @@ export class EdgePaddingNavigator {
 		view: MarkdownView,
 		padding: { left: number; right: number },
 		minThreshold: number,
+		leafRect: DOMRect | null,
+		contentRect: DOMRect | null,
 	): NavigationLayoutState {
 		// Check if view is in editing mode
 		if (!this.isEditingMode(view)) {
@@ -61,23 +64,57 @@ export class EdgePaddingNavigator {
 		}
 
 		this.container = container;
+		const containerRect = container.getBoundingClientRect();
+
+		// Calculate zone widths: from leaf edge to 12px before content
+		let leftZoneWidth = 0;
+		let rightZoneWidth = 0;
+
+		if (leafRect && contentRect) {
+			// Zone extends from leaf edge to ZONE_INSET before content
+			leftZoneWidth = Math.max(
+				0,
+				contentRect.left - leafRect.left - ZONE_INSET,
+			);
+			rightZoneWidth = Math.max(
+				0,
+				leafRect.right - contentRect.right - ZONE_INSET,
+			);
+		} else {
+			// Fallback to padding-based calculation
+			leftZoneWidth = Math.max(0, padding.left - ZONE_INSET);
+			rightZoneWidth = Math.max(0, padding.right - ZONE_INSET);
+		}
 
 		// Determine which zones should be visible
+		const hasLeftSpace = leftZoneWidth > 0;
+		const hasRightSpace = rightZoneWidth > 0;
+
 		const shouldShowLeft =
-			padding.left >= minThreshold &&
+			hasLeftSpace &&
 			this.prevAction !== null &&
 			!this.prevAction.disabled;
 
 		const shouldShowRight =
-			padding.right >= minThreshold &&
+			hasRightSpace &&
 			this.nextAction !== null &&
 			!this.nextAction.disabled;
 
-		// Update left zone
-		this.updateZone("left", shouldShowLeft, padding.left);
-
-		// Update right zone
-		this.updateZone("right", shouldShowRight, padding.right);
+		// Update zones with calculated dimensions
+		this.updateZone(
+			"left",
+			shouldShowLeft,
+			leftZoneWidth,
+			leafRect,
+			containerRect,
+		);
+		this.updateZone(
+			"right",
+			shouldShowRight,
+			rightZoneWidth,
+			leafRect,
+			containerRect,
+		);
 
 		return {
 			leftZoneActive: shouldShowLeft,
@@ -100,18 +137,37 @@ export class EdgePaddingNavigator {
 		side: "left" | "right",
 		shouldShow: boolean,
 		width: number,
+		leafRect: DOMRect | null,
+		containerRect: DOMRect,
 	): void {
 		const zone = side === "left" ? this.leftZone : this.rightZone;
 
-		if (shouldShow) {
+		if (shouldShow && width > 0) {
+			// Calculate position relative to container
+			const leftOffset = leafRect
+				? leafRect.left - containerRect.left
+				: 0;
+			const rightOffset = leafRect
+				? containerRect.right - leafRect.right
+				: 0;
+
 			if (zone) {
 				// Update existing zone
 				zone.style.display = "";
-				const clampedWidth = Math.min(width, MAX_ZONE_WIDTH);
-				zone.style.width = `${clampedWidth}px`;
+				zone.style.width = `${width}px`;
+				if (side === "left") {
+					zone.style.left = `${leftOffset}px`;
+				} else {
+					zone.style.right = `${rightOffset}px`;
+				}
 			} else {
 				// Create new zone
-				const newZone = this.createZone(side, width);
+				const newZone = this.createZone(
+					side,
+					width,
+					leftOffset,
+					rightOffset,
+				);
 				if (this.container) {
 					this.container.appendChild(newZone);
 				}
@@ -129,25 +185,31 @@ export class EdgePaddingNavigator {
 
 	/**
 	 * Create a single zone element.
+	 * Left zone: positioned at leaf left edge (relative to container)
+	 * Right zone: positioned at leaf right edge (relative to container)
 	 */
-	private createZone(side: "left" | "right", width: number): HTMLElement {
+	private createZone(
+		side: "left" | "right",
+		width: number,
+		leftOffset: number,
+		rightOffset: number,
+	): HTMLElement {
 		const zone = document.createElement("div");
 		zone.className = `edge-padding-zone edge-padding-zone-${side}`;
-		const clampedWidth = Math.min(width, MAX_ZONE_WIDTH);
-		zone.style.width = `${clampedWidth}px`;
+		zone.style.width = `${width}px`;
 
 		if (side === "left") {
-			zone.style.left = "0";
+			zone.style.left = `${leftOffset}px`;
 			zone.dataset.action = this.prevAction?.id ?? "";
 		} else {
-			zone.style.right = "0";
+			zone.style.right = `${rightOffset}px`;
 			zone.dataset.action = this.nextAction?.id ?? "";
 		}
 
 		// Add icon
 		const icon = document.createElement("span");
 		icon.className = "edge-padding-icon";
-		icon.textContent = side === "left" ? "<" : ">";
+		icon.textContent = side === "left" ? "‹" : "›";
 		zone.appendChild(icon);
 
 		return zone;

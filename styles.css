@@ -85,7 +85,7 @@ span.cm-html-embed {
 	right: 0;
 	bottom: 0;
 	left: 0;
-	z-index: 10; /* above note content, below app headers */
+	z-index: 20; /* above edge zones (z-index 15), below app headers */
 	display: flex;
 	gap: 8px;
 	align-items: center;
