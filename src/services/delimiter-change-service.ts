@@ -60,10 +60,6 @@ export class DelimiterChangeService {
 			return { errors: [], renamedCount: 0, success: true };
 		}
 
-		logger.info(
-			`[DelimiterChangeService] Starting delimiter change: "${oldDelim}" → "${newDelim}", ${actions.length} files to rename`,
-		);
-
 		// 1. Pause librarian (unsubscribe from events)
 		await librarian.unsubscribe();
 
@@ -94,10 +90,6 @@ export class DelimiterChangeService {
 			logger.error(
 				`[DelimiterChangeService] Completed with ${errors.length} errors:`,
 				errors.slice(0, 5).join(", "),
-			);
-		} else {
-			logger.info(
-				`[DelimiterChangeService] Successfully renamed ${renamedCount} files`,
 			);
 		}
 

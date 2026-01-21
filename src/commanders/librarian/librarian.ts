@@ -157,16 +157,11 @@ export class Librarian {
 					({ read, ...path }) =>
 						path as SplitPathToMdFileInsideLibrary,
 				);
-			const { cleanupActions, scanResult } = scanAndGenerateOrphanActions(
+			const { cleanupActions } = scanAndGenerateOrphanActions(
 				this.healer,
 				this.codecs,
 				mdPaths,
 			);
-			if (scanResult.orphans.length > 0) {
-				logger.info(
-					`[Librarian] Found ${scanResult.orphans.length} orphaned codexes`,
-				);
-			}
 			allHealingActions.push(...cleanupActions);
 
 			// Subscribe to vault events BEFORE dispatching actions
@@ -227,12 +222,7 @@ export class Librarian {
 	 * Subscribe to user events (clicks, clipboard, select-all, wikilinks).
 	 */
 	private subscribeToUserEvents(): void {
-		if (!this.userEventInterceptor) {
-			logger.info(
-				"[Librarian] no userEventInterceptor, skipping subscription",
-			);
-			return;
-		}
+		if (!this.userEventInterceptor) return;
 
 		// Create router with enqueue callback
 		this.router = new UserEventRouter({
@@ -248,13 +238,11 @@ export class Librarian {
 			rules: this.rules,
 		});
 
-		logger.info("[Librarian] subscribing to user events");
 		this.userEventTeardown = this.userEventInterceptor.subscribe(
 			(event: UserEvent) => {
 				this.router?.handle(event);
 			},
 		);
-		logger.info("[Librarian] subscribed to user events");
 	}
 
 	/**

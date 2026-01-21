@@ -213,8 +213,10 @@ export class OverlayManager {
 								executeAction(action, {
 									apiService: this.services.apiService,
 									app: this.app,
-									selectionService: this.services.selectionService,
-									vaultActionManager: this.services.vaultActionManager,
+									selectionService:
+										this.services.selectionService,
+									vaultActionManager:
+										this.services.vaultActionManager,
 								});
 							}),
 					);
@@ -435,7 +437,6 @@ export class OverlayManager {
 	 * Handle action click by ID - shared between direct and delegated handlers.
 	 */
 	private handleActionClick(actionId: string): void {
-		logger.info(`[OverlayManager] handleActionClick called: ${actionId}`);
 		if (!this.services || !this.currentContext) {
 			logger.warn(
 				`[OverlayManager] handleActionClick early return: services=${!!this.services}, context=${!!this.currentContext}`,
@@ -454,9 +455,6 @@ export class OverlayManager {
 			return;
 		}
 
-		logger.info(
-			`[OverlayManager] Executing action: ${actionId}, kind=${action.kind}`,
-		);
 		// Execute the action
 		executeAction(action, {
 			apiService: this.services.apiService,

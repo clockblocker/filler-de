@@ -25,7 +25,6 @@ export class BottomToolbarService {
 	 * Called by ButtonManager to inject action execution logic.
 	 */
 	public setClickHandler(handler: (actionId: string) => void): void {
-		logger.info("[BottomToolbar] setClickHandler called");
 		this.clickHandler = handler;
 	}
 
@@ -207,9 +206,6 @@ export class BottomToolbarService {
 		b.dataset.action = actionConfig.id;
 		b.className = "my-bottom-overlay-btn";
 		b.textContent = actionConfig.label;
-		logger.info(
-			`[BottomToolbar] createButton: id=${actionConfig.id}, disabled=${actionConfig.disabled}, hasHandler=${!!this.clickHandler}`,
-		);
 		if (actionConfig.disabled) {
 			b.disabled = true;
 			b.classList.add("is-disabled");
@@ -217,12 +213,7 @@ export class BottomToolbarService {
 			// Direct click handler for non-disabled buttons
 			// (delegated handler doesn't work reliably for button elements)
 			const handler = this.clickHandler;
-			b.addEventListener("click", () => {
-				logger.info(
-					`[BottomToolbar] Button CLICKED: ${actionConfig.id}`,
-				);
-				handler(actionConfig.id);
-			});
+			b.addEventListener("click", () => handler(actionConfig.id));
 		} else {
 			logger.warn(
 				`[BottomToolbar] No clickHandler when creating button: ${actionConfig.id}`,
