@@ -12,9 +12,7 @@ import {
 	initializeState,
 	updateParsedSettings,
 } from "./global-state/global-state";
-import { ClickInterceptor } from "./managers/obsidian/click-interceptor";
-import { ClipboardInterceptor } from "./managers/obsidian/clipboard-interceptor";
-import { SelectAllInterceptor } from "./managers/obsidian/select-all-interceptor";
+import { UserEventInterceptor } from "./managers/obsidian/user-event-interceptor";
 import {
 	makeSplitPath,
 	makeSystemPathForSplitPath,
@@ -30,7 +28,6 @@ import { TFolderHelper } from "./managers/obsidian/vault-action-manager/file-ser
 import { logError } from "./managers/obsidian/vault-action-manager/helpers/issue-handlers";
 import { splitPathFromSystemPathInternal } from "./managers/obsidian/vault-action-manager/helpers/pathfinder/system-path-and-split-path-codec";
 import { Reader } from "./managers/obsidian/vault-action-manager/impl/reader";
-import { WikilinkAliasInterceptor } from "./managers/obsidian/wikilink-alias-interceptor";
 import { DelimiterChangeService } from "./services/delimiter-change-service";
 import { ApiService } from "./services/obsidian-services/atomic-services/api-service";
 import { SelectionService } from "./services/obsidian-services/atomic-services/selection-service";
@@ -60,10 +57,7 @@ export default class TextEaterPlugin extends Plugin {
 	testingTFileHelper: TFileHelper;
 	testingTFolderHelper: TFolderHelper;
 	vaultActionManager: VaultActionManagerImpl;
-	clickInterceptor: ClickInterceptor;
-	clipboardInterceptor: ClipboardInterceptor;
-	selectAllInterceptor: SelectAllInterceptor;
-	wikilinkAliasInterceptor: WikilinkAliasInterceptor;
+	userEventInterceptor: UserEventInterceptor;
 	selectionService: SelectionService;
 	buttonManager: ButtonManager;
 	delimiterChangeService: DelimiterChangeService | null = null;
@@ -194,25 +188,20 @@ export default class TextEaterPlugin extends Plugin {
 			this.app.vault,
 		);
 		this.vaultActionManager = new VaultActionManagerImpl(this.app);
-		this.clickInterceptor = new ClickInterceptor(
+
+		// Unified user event interceptor (clicks, clipboard, select-all, wikilinks)
+		this.userEventInterceptor = new UserEventInterceptor(
 			this.app,
+			this,
 			this.vaultActionManager,
 		);
-		this.clipboardInterceptor = new ClipboardInterceptor();
-		this.selectAllInterceptor = new SelectAllInterceptor(this.app);
 
 		this.selectionService = new SelectionService(this.app);
 
-		// Register wikilink alias interceptor (emits events for library wikilinks)
-		// Created before Librarian so it can subscribe
-		this.wikilinkAliasInterceptor = new WikilinkAliasInterceptor(this);
-		this.wikilinkAliasInterceptor.register();
-
-		// New Librarian (healing modes + codex clicks + wikilink alias)
+		// New Librarian (healing modes + unified user events)
 		this.librarian = new Librarian(
 			this.vaultActionManager,
-			this.clickInterceptor,
-			this.wikilinkAliasInterceptor,
+			this.userEventInterceptor,
 		);
 
 		// Start listening to file system events
@@ -220,14 +209,8 @@ export default class TextEaterPlugin extends Plugin {
 		// and notify subscribers (e.g., Librarian)
 		this.vaultActionManager.startListening();
 
-		// Start listening to DOM click events
-		this.clickInterceptor.startListening();
-
-		// Start listening to clipboard events (strips metadata from copied text)
-		this.clipboardInterceptor.startListening();
-
-		// Start listening to select-all events (excludes go-back links, frontmatter, metadata)
-		this.selectAllInterceptor.startListening();
+		// Start listening to user events (clicks, clipboard, select-all, wikilinks)
+		this.userEventInterceptor.startListening();
 
 		// Initialize delimiter change service (does not require librarian)
 		this.delimiterChangeService = new DelimiterChangeService(
@@ -258,11 +241,7 @@ export default class TextEaterPlugin extends Plugin {
 
 	override onunload() {
 		if (this.buttonManager) this.buttonManager.destroy();
-		if (this.clickInterceptor) this.clickInterceptor.stopListening();
-		if (this.clipboardInterceptor)
-			this.clipboardInterceptor.stopListening();
-		if (this.selectAllInterceptor)
-			this.selectAllInterceptor.stopListening();
+		if (this.userEventInterceptor) this.userEventInterceptor.stopListening();
 		if (this.librarian) this.librarian.unsubscribe();
 		// Clear global state
 		clearState();
@@ -680,8 +659,7 @@ export default class TextEaterPlugin extends Plugin {
 		}
 		this.librarian = new Librarian(
 			this.vaultActionManager,
-			this.clickInterceptor,
-			this.wikilinkAliasInterceptor,
+			this.userEventInterceptor,
 		);
 		try {
 			await this.librarian.init();

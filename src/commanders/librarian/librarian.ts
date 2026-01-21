@@ -1,9 +1,17 @@
 import { getParsedUserSettings } from "../../global-state/global-state";
+import {
+	buildGoBackLinkPattern,
+	isGoBackLine,
+} from "../../managers/obsidian/navigation";
 import type {
 	CheckboxClickedEvent,
-	ClickInterceptor,
-} from "../../managers/obsidian/click-interceptor";
-import type { PropertyCheckboxClickedEvent } from "../../managers/obsidian/click-interceptor/types/click-event";
+	ClipboardCopyEvent,
+	PropertyCheckboxClickedEvent,
+	SelectAllEvent,
+	UserEventInterceptor,
+	WikilinkCompletedEvent,
+} from "../../managers/obsidian/user-event-interceptor";
+import { InterceptableUserEventKind } from "../../managers/obsidian/user-event-interceptor/types/user-event";
 import type {
 	BulkVaultEvent,
 	VaultAction,
@@ -14,10 +22,7 @@ import {
 	SplitPathKind,
 	type SplitPathToMdFileWithReader,
 } from "../../managers/obsidian/vault-action-manager/types/split-path";
-import type {
-	WikilinkAliasInterceptor,
-	WikilinkCompletedEvent,
-} from "../../managers/obsidian/wikilink-alias-interceptor";
+import { META_SECTION_PATTERN } from "../../managers/pure/note-metadata-manager";
 import { decrementPending, incrementPending } from "../../utils/idle-tracker";
 import { logger } from "../../utils/logger";
 import type { SplitHealingInfo } from "./bookkeeper/split-to-pages-action";
@@ -28,10 +33,7 @@ import {
 	makeCodecs,
 	type SplitPathToMdFileInsideLibrary,
 } from "./codecs";
-import type {
-	ScrollNodeSegmentId,
-	SectionNodeSegmentId,
-} from "./codecs/segment-id/types/segment-id";
+import type { ScrollNodeSegmentId } from "./codecs/segment-id/types/segment-id";
 import { Healer } from "./healer/healer";
 import { HealingTransaction } from "./healer/healing-transaction";
 import type { CodexImpact } from "./healer/library-tree/codex";
@@ -40,6 +42,10 @@ import {
 	parseCodexClickLineContent,
 } from "./healer/library-tree/codex";
 import { isCodexSplitPath } from "./healer/library-tree/codex/helpers";
+import {
+	splitFirstLine,
+	splitFrontmatter,
+} from "./healer/library-tree/codex/transforms/transform-utils";
 import { Tree } from "./healer/library-tree/tree";
 import { buildTreeActions } from "./healer/library-tree/tree-action/bulk-vault-action-adapter";
 import { tryParseAsInsideLibrarySplitPath } from "./healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
@@ -73,8 +79,7 @@ type QueueItem = {
 export class Librarian {
 	private healer: Healer | null = null;
 	private eventTeardown: (() => void) | null = null;
-	private clickTeardown: (() => void) | null = null;
-	private wikilinkTeardown: (() => void) | null = null;
+	private userEventTeardown: (() => void) | null = null;
 	private queue: QueueItem[] = [];
 	private processing = false;
 	private codecs: Codecs;
@@ -94,8 +99,7 @@ export class Librarian {
 
 	constructor(
 		private readonly vaultActionManager: VaultActionManager,
-		private readonly clickInterceptor?: ClickInterceptor,
-		private readonly wikilinkInterceptor?: WikilinkAliasInterceptor,
+		private readonly userEventInterceptor?: UserEventInterceptor,
 	) {}
 
 	/**
@@ -194,11 +198,8 @@ export class Librarian {
 			// This ensures we catch all events, including cascading healing from init actions
 			this.subscribeToVaultEvents();
 
-			// Subscribe to click events
-			this.subscribeToClickEvents();
-
-			// Subscribe to wikilink events
-			this.subscribeToWikilinkEvents();
+			// Subscribe to user events (clicks, clipboard, select-all, wikilinks)
+			this.subscribeToUserEvents();
 
 			// Process codex impacts: merge, compute deletions and recreations
 			const { deletionHealingActions, codexRecreations } =
@@ -248,37 +249,39 @@ export class Librarian {
 	}
 
 	/**
-	 * Subscribe to click events from ClickManager.
+	 * Subscribe to user events (clicks, clipboard, select-all, wikilinks).
 	 */
-	private subscribeToClickEvents(): void {
-		if (!this.clickInterceptor) return;
-
-		this.clickTeardown = this.clickInterceptor.subscribe((event) => {
-			if (event.kind === "CheckboxClicked") {
-				this.handleCheckboxClick(event);
-			} else if (event.kind === "PropertyCheckboxClicked") {
-				this.handlePropertyCheckboxClick(event);
-			}
-		});
-	}
-
-	/**
-	 * Subscribe to wikilink completion events.
-	 */
-	private subscribeToWikilinkEvents(): void {
-		if (!this.wikilinkInterceptor) {
+	private subscribeToUserEvents(): void {
+		if (!this.userEventInterceptor) {
 			logger.info(
-				"[Librarian] no wikilinkInterceptor, skipping subscription",
+				"[Librarian] no userEventInterceptor, skipping subscription",
 			);
 			return;
 		}
 
-		logger.info("[Librarian] subscribing to wikilink events");
-		this.wikilinkTeardown = this.wikilinkInterceptor.subscribe((event) => {
-			logger.info("[Librarian] wikilink event received in subscriber");
-			this.handleWikilinkCompleted(event);
-		});
-		logger.info("[Librarian] subscribed to wikilink events");
+		logger.info("[Librarian] subscribing to user events");
+		this.userEventTeardown = this.userEventInterceptor.subscribe(
+			(event) => {
+				switch (event.kind) {
+					case InterceptableUserEventKind.CheckboxClicked:
+						this.handleCheckboxClick(event);
+						break;
+					case InterceptableUserEventKind.PropertyCheckboxClicked:
+						this.handlePropertyCheckboxClick(event);
+						break;
+					case InterceptableUserEventKind.WikilinkCompleted:
+						this.handleWikilinkCompleted(event);
+						break;
+					case InterceptableUserEventKind.ClipboardCopy:
+						this.handleClipboardCopy(event);
+						break;
+					case InterceptableUserEventKind.SelectAll:
+						this.handleSelectAll(event);
+						break;
+				}
+			},
+		);
+		logger.info("[Librarian] subscribed to user events");
 	}
 
 	/**
@@ -286,7 +289,7 @@ export class Librarian {
 	 * If basename has suffix parts (delimiter-separated), it's a library file.
 	 */
 	private handleWikilinkCompleted(event: WikilinkCompletedEvent): void {
-		const { linkContent, closePos, view } = event;
+		const { linkContent, closePos, insertAlias } = event;
 
 		logger.info(
 			"[Librarian] handleWikilinkCompleted received:",
@@ -325,17 +328,129 @@ export class Librarian {
 		// Has suffix parts = library file, add alias
 		logger.info(
 			"[Librarian] inserting alias:",
-			JSON.stringify({ alias: `|${coreName}`, closePos }),
+			JSON.stringify({ alias: coreName, closePos }),
 		);
 
-		view.dispatch({
-			changes: { from: closePos, insert: `|${coreName}` },
-		});
+		insertAlias(coreName);
 
 		logger.info(
 			"[Librarian] Inserted wikilink alias:",
 			JSON.stringify({ coreName, linkContent }),
 		);
+	}
+
+	/**
+	 * Handle clipboard copy: strip metadata and go-back links from copied text.
+	 */
+	private handleClipboardCopy(event: ClipboardCopyEvent): void {
+		const { originalText, preventDefault, setClipboardData } = event;
+
+		const goBackPattern = buildGoBackLinkPattern();
+		const withoutGoBack = originalText.replace(goBackPattern, "");
+		const withoutMeta = withoutGoBack.replace(META_SECTION_PATTERN, "");
+
+		// Only intercept if we actually stripped metadata/links
+		const strippedContent =
+			withoutGoBack.length < originalText.length ||
+			withoutMeta.length < withoutGoBack.length;
+
+		if (!strippedContent) return; // Let native copy handle it
+
+		preventDefault();
+		setClipboardData(withoutMeta.trim());
+	}
+
+	/**
+	 * Handle select-all: use smart range excluding frontmatter, go-back links, metadata.
+	 */
+	private handleSelectAll(event: SelectAllEvent): void {
+		const { content, preventDefault, setSelection } = event;
+
+		const { from, to } = this.calculateSmartRange(content);
+
+		// If the range covers everything or nothing, let default behavior handle it
+		if ((from === 0 && to === content.length) || from >= to) {
+			return;
+		}
+
+		preventDefault();
+		setSelection(from, to);
+	}
+
+	/**
+	 * Calculate smart selection range that excludes:
+	 * 1. YAML frontmatter (--- ... ---)
+	 * 2. Go-back links at the start ([[__...]])
+	 * 3. Metadata section at the end (<section id="textfresser_meta...">)
+	 */
+	private calculateSmartRange(content: string): { from: number; to: number } {
+		if (!content || content.length === 0) {
+			return { from: 0, to: 0 };
+		}
+
+		let from = 0;
+		let to = content.length;
+
+		// Step 1: Skip frontmatter
+		const { frontmatter } = splitFrontmatter(content);
+		if (frontmatter) {
+			from = frontmatter.length;
+		}
+
+		// Step 2: Skip leading whitespace/empty lines, then check for go-back link
+		const contentAfterFrontmatter = content.slice(from);
+		if (contentAfterFrontmatter.length > 0) {
+			let searchPos = 0;
+			let currentLine = "";
+
+			while (searchPos < contentAfterFrontmatter.length) {
+				const remaining = contentAfterFrontmatter.slice(searchPos);
+				const { firstLine, rest } = splitFirstLine(remaining);
+
+				if (firstLine.trim().length === 0) {
+					searchPos += firstLine.length;
+					if (
+						rest.length > 0 ||
+						remaining[firstLine.length] === "\n"
+					) {
+						searchPos += 1;
+					}
+				} else {
+					currentLine = firstLine;
+					break;
+				}
+			}
+
+			if (isGoBackLine(currentLine)) {
+				from += searchPos + currentLine.length;
+				if (from < content.length && content[from] === "\n") {
+					from += 1;
+				}
+			}
+		}
+
+		// Step 3: Find metadata section start
+		const metaMatch = content.match(META_SECTION_PATTERN);
+		if (metaMatch && metaMatch.index !== undefined) {
+			to = metaMatch.index;
+		}
+
+		// Trim trailing whitespace from selection
+		while (to > from && /\s/.test(content[to - 1])) {
+			to--;
+		}
+
+		// Trim leading whitespace from selection (after go-back link)
+		while (from < to && /\s/.test(content[from])) {
+			from++;
+		}
+
+		// Handle edge case where everything is excluded
+		if (from >= to) {
+			return { from: 0, to: 0 };
+		}
+
+		return { from, to };
 	}
 
 	/**
@@ -644,7 +759,7 @@ export class Librarian {
 	}
 
 	/**
-	 * Cleanup: unsubscribe from vault and click events.
+	 * Cleanup: unsubscribe from vault and user events.
 	 * Waits for any pending click operations to complete.
 	 */
 	async unsubscribe(): Promise<void> {
@@ -652,13 +767,9 @@ export class Librarian {
 			this.eventTeardown();
 			this.eventTeardown = null;
 		}
-		if (this.clickTeardown) {
-			this.clickTeardown();
-			this.clickTeardown = null;
-		}
-		if (this.wikilinkTeardown) {
-			this.wikilinkTeardown();
-			this.wikilinkTeardown = null;
+		if (this.userEventTeardown) {
+			this.userEventTeardown();
+			this.userEventTeardown = null;
 		}
 		// Wait for pending clicks to complete
 		await Promise.all(this.pendingClicks);

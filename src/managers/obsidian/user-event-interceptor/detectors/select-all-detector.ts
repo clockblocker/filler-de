@@ -1,46 +1,54 @@
 /**
- * SelectAllInterceptor - intercepts Ctrl/Cmd+A to exclude
- * go-back links, frontmatter, and metadata from selection.
+ * SelectAllDetector - detects Ctrl/Cmd+A and provides callbacks for custom selection.
  *
- * Only active in source mode (CodeMirror editor).
+ * Emits SelectAllEvent with:
+ * - Full document content
+ * - CodeMirror view for selection dispatch
+ * - Callbacks to prevent default and set selection range
+ *
+ * Business logic (smart range calculation) is handled by subscribers.
  */
 
 import { EditorSelection } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import { type App, MarkdownView, Platform } from "obsidian";
-import { calculateSmartRange } from "./range-calculator";
+import {
+	InterceptableUserEventKind,
+	type SelectAllEvent,
+} from "../types/user-event";
+import type { Detector, DetectorEmitter } from "./detector";
 
-export class SelectAllInterceptor {
+export class SelectAllDetector implements Detector {
 	private handler: ((evt: KeyboardEvent) => void) | null = null;
+	private emit: DetectorEmitter | null = null;
 
 	constructor(private app: App) {}
 
-	/**
-	 * Start listening to keydown events.
-	 */
-	startListening(): void {
+	startListening(emit: DetectorEmitter): void {
 		if (this.handler) return;
 
+		this.emit = emit;
 		this.handler = (evt) => this.handleKeydown(evt);
+
 		// Use capture phase to intercept before the editor
 		document.addEventListener("keydown", this.handler, { capture: true });
 	}
 
-	/**
-	 * Stop listening to keydown events.
-	 */
 	stopListening(): void {
 		if (this.handler) {
 			document.removeEventListener("keydown", this.handler, {
 				capture: true,
 			});
 			this.handler = null;
+			this.emit = null;
 		}
 	}
 
 	// ─── Private ───
 
 	private handleKeydown(evt: KeyboardEvent): void {
+		if (!this.emit) return;
+
 		// Check for Ctrl+A (Windows/Linux) or Cmd+A (Mac)
 		const isSelectAll =
 			evt.key === "a" &&
@@ -70,21 +78,21 @@ export class SelectAllInterceptor {
 		const content = cm.state.doc.toString();
 		if (!content) return;
 
-		// Calculate smart range
-		const { from, to } = calculateSmartRange(content);
+		const event: SelectAllEvent = {
+			content,
+			kind: InterceptableUserEventKind.SelectAll,
+			preventDefault: () => {
+				evt.preventDefault();
+				evt.stopPropagation();
+			},
+			setSelection: (from: number, to: number) => {
+				cm.dispatch({
+					selection: EditorSelection.single(from, to),
+				});
+			},
+			view: cm,
+		};
 
-		// If the range covers everything or nothing, let default behavior handle it
-		if ((from === 0 && to === content.length) || from >= to) {
-			return;
-		}
-
-		// Prevent default select-all
-		evt.preventDefault();
-		evt.stopPropagation();
-
-		// Dispatch selection change to CodeMirror
-		cm.dispatch({
-			selection: EditorSelection.single(from, to),
-		});
+		this.emit(event);
 	}
 }
