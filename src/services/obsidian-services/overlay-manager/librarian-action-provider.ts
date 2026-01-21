@@ -104,48 +104,63 @@ export class LibrarianActionProvider implements CommanderActionProvider {
 		}
 
 		// ─── Selection Actions ───
-		// Placement controlled by selectionActionPlacement setting
+		// Placement controlled by per-action settings
 
-		const { selectionActionPlacement } = getParsedUserSettings();
-		const showSelectionActions =
-			selectionActionPlacement !== "shortcut-only";
-		const selectionPlacement =
-			selectionActionPlacement === "bottom"
-				? ActionPlacement.Bottom
-				: ActionPlacement.Selection;
+		const {
+			translatePlacement,
+			splitInBlocksPlacement,
+			explainGrammarPlacement,
+		} = getParsedUserSettings();
 
 		// TranslateSelection: show when selection exists
-		if (ctx.hasSelection && showSelectionActions) {
+		if (ctx.hasSelection && translatePlacement !== "shortcut-only") {
 			actions.push({
 				id: "TranslateSelection",
 				kind: ActionKind.TranslateSelection,
 				label: "Translate",
 				params: {},
-				placement: selectionPlacement,
+				placement:
+					translatePlacement === "bottom"
+						? ActionPlacement.Bottom
+						: ActionPlacement.Selection,
 				priority: 1,
 			});
 		}
 
 		// SplitInBlocks: show when selection exists in library
-		if (ctx.hasSelection && ctx.isInLibrary && showSelectionActions) {
+		if (
+			ctx.hasSelection &&
+			ctx.isInLibrary &&
+			splitInBlocksPlacement !== "shortcut-only"
+		) {
 			actions.push({
 				id: "SplitInBlocks",
 				kind: ActionKind.SplitInBlocks,
 				label: "Split in Blocks",
 				params: {},
-				placement: selectionPlacement,
+				placement:
+					splitInBlocksPlacement === "bottom"
+						? ActionPlacement.Bottom
+						: ActionPlacement.Selection,
 				priority: 2,
 			});
 		}
 
 		// ExplainGrammar: show when selection exists in library
-		if (ctx.hasSelection && ctx.isInLibrary && showSelectionActions) {
+		if (
+			ctx.hasSelection &&
+			ctx.isInLibrary &&
+			explainGrammarPlacement !== "shortcut-only"
+		) {
 			actions.push({
 				id: "ExplainGrammar",
 				kind: ActionKind.ExplainGrammar,
 				label: "Explain Grammar",
 				params: {},
-				placement: selectionPlacement,
+				placement:
+					explainGrammarPlacement === "bottom"
+						? ActionPlacement.Bottom
+						: ActionPlacement.Selection,
 				priority: 3,
 			});
 		}

@@ -125,11 +125,11 @@ Default provider implementing all current actions:
 | SplitToPages | bottom | Scroll file, no selection |
 | MakeText | bottom | No type OR Scroll with multi-page |
 | Generate | bottom | Selection + in library |
-| TranslateSelection | configurable* | Has selection |
-| SplitInBlocks | configurable* | Selection + in library |
-| ExplainGrammar | configurable* | Selection + in library |
+| TranslateSelection | per `translatePlacement` | Has selection |
+| SplitInBlocks | per `splitInBlocksPlacement` | Selection + in library |
+| ExplainGrammar | per `explainGrammarPlacement` | Selection + in library |
 
-*Selection actions placement controlled by `selectionActionPlacement` setting:
+Each selection action has its own placement setting (`translatePlacement`, `splitInBlocksPlacement`, `explainGrammarPlacement`):
 - `"selection"` (default): toolbar above selection
 - `"bottom"`: in bottom toolbar
 - `"shortcut-only"`: no toolbar, keyboard shortcuts only

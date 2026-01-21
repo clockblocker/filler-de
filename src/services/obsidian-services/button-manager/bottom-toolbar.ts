@@ -13,8 +13,17 @@ export class BottomToolbarService {
 	private attachedView: MarkdownView | null = null;
 	private actionConfigs: RenderedActionConfig[] = [];
 	private overflowMenuEl: HTMLElement | null = null;
+	private clickHandler: ((actionId: string) => void) | null = null;
 
 	constructor(private app: App) {}
+
+	/**
+	 * Set click handler for button actions.
+	 * Called by ButtonManager to inject action execution logic.
+	 */
+	public setClickHandler(handler: (actionId: string) => void): void {
+		this.clickHandler = handler;
+	}
 
 	public init(): void {
 		if (!this.overlayEl) this.overlayEl = this.createOverlay();
@@ -152,6 +161,12 @@ export class BottomToolbarService {
 		if (actionConfig.disabled) {
 			b.disabled = true;
 			b.classList.add("is-disabled");
+		} else if (this.clickHandler) {
+			// Direct click handler for non-disabled buttons
+			// (delegated handler doesn't work reliably for button elements)
+			b.addEventListener("click", () => {
+				this.clickHandler?.(actionConfig.id);
+			});
 		}
 		return b;
 	}
@@ -180,8 +195,15 @@ export class BottomToolbarService {
 			if (action.disabled) {
 				item.disabled = true;
 				item.classList.add("is-disabled");
+			} else if (this.clickHandler) {
+				// Direct click handler for non-disabled buttons
+				item.addEventListener("click", () => {
+					this.clickHandler?.(action.id);
+					this.hideOverflowMenu();
+				});
+			} else {
+				item.addEventListener("click", () => this.hideOverflowMenu());
 			}
-			item.addEventListener("click", () => this.hideOverflowMenu());
 			menu.appendChild(item);
 		}
 

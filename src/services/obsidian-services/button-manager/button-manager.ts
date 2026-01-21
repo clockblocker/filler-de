@@ -55,7 +55,10 @@ export class ButtonManager {
 	public init(services: ButtonManagerServices): void {
 		this.services = services;
 
-		// Initialize bottom toolbar
+		// Initialize bottom toolbar with direct click handler
+		this.bottom.setClickHandler((actionId) => {
+			this.executeAction(actionId as UserAction);
+		});
 		this.bottom.init();
 
 		// Wire registry → toolbar subscriptions
@@ -153,6 +156,7 @@ export class ButtonManager {
 
 	/**
 	 * Setup delegated click handlers for toolbar buttons.
+	 * Used for edge zones (div elements) where direct handlers aren't set.
 	 */
 	private setupButtonClickHandlers(): void {
 		this.plugin.registerDomEvent(document, "click", (evt: MouseEvent) => {
@@ -166,18 +170,24 @@ export class ButtonManager {
 			const actionId = button.dataset.action as UserAction;
 			if (!actionId) return;
 
-			const config = ACTION_CONFIGS[actionId];
-			if (!config) return;
+			this.executeAction(actionId);
+		});
+	}
 
-			if (!this.services) return;
+	/**
+	 * Execute an action by its ID.
+	 */
+	private executeAction(actionId: UserAction): void {
+		const config = ACTION_CONFIGS[actionId];
+		if (!config) return;
 
-			// Execute the action with services
-			config.execute({
-				apiService: this.services.apiService,
-				app: this.app,
-				selectionService: this.services.selectionService,
-				vaultActionManager: this.services.vaultActionManager,
-			});
+		if (!this.services) return;
+
+		config.execute({
+			apiService: this.services.apiService,
+			app: this.app,
+			selectionService: this.services.selectionService,
+			vaultActionManager: this.services.vaultActionManager,
 		});
 	}
 

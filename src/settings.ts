@@ -1,6 +1,10 @@
 import { type App, Notice, PluginSettingTab, Setting } from "obsidian";
 import type TextEaterPluginStripped from "./main-stripped";
-import type { SelectionActionPlacement } from "./types";
+import {
+	SELECTION_ACTION_PLACEMENT_TEXT,
+	SelectionActionPlacement,
+	type SelectionActionPlacement as SelectionActionPlacementType,
+} from "./types";
 
 const FORBIDDEN_DELIMITER_CHARS = [
 	"/",
@@ -203,19 +207,51 @@ export class SettingsTab extends PluginSettingTab {
 		// Actions settings
 		new Setting(containerEl).setName("Actions").setHeading();
 
+		const addPlacementOptions = (
+			dropdown: import("obsidian").DropdownComponent,
+		) => {
+			for (const key of Object.keys(
+				SelectionActionPlacement,
+			) as SelectionActionPlacementType[]) {
+				dropdown.addOption(key, SELECTION_ACTION_PLACEMENT_TEXT[key]);
+			}
+		};
+
 		new Setting(containerEl)
-			.setName("Selection action placement")
-			.setDesc(
-				"Where to show selection actions (Translate, Split in Blocks, Explain Grammar)",
-			)
+			.setName("Translate")
+			.setDesc("Where to show the Translate action")
 			.addDropdown((dropdown) => {
+				addPlacementOptions(dropdown);
 				dropdown
-					.addOption("selection", "Above selection")
-					.addOption("bottom", "In bottom toolbar")
-					.addOption("shortcut-only", "Shortcut only")
-					.setValue(this.plugin.settings.selectionActionPlacement)
-					.onChange(async (value: SelectionActionPlacement) => {
-						this.plugin.settings.selectionActionPlacement = value;
+					.setValue(this.plugin.settings.translatePlacement)
+					.onChange(async (value: SelectionActionPlacementType) => {
+						this.plugin.settings.translatePlacement = value;
+						await this.plugin.saveSettings();
+					});
+			});
+
+		new Setting(containerEl)
+			.setName("Split in Blocks")
+			.setDesc("Where to show the Split in Blocks action")
+			.addDropdown((dropdown) => {
+				addPlacementOptions(dropdown);
+				dropdown
+					.setValue(this.plugin.settings.splitInBlocksPlacement)
+					.onChange(async (value: SelectionActionPlacementType) => {
+						this.plugin.settings.splitInBlocksPlacement = value;
+						await this.plugin.saveSettings();
+					});
+			});
+
+		new Setting(containerEl)
+			.setName("Explain Grammar")
+			.setDesc("Where to show the Explain Grammar action")
+			.addDropdown((dropdown) => {
+				addPlacementOptions(dropdown);
+				dropdown
+					.setValue(this.plugin.settings.explainGrammarPlacement)
+					.onChange(async (value: SelectionActionPlacementType) => {
+						this.plugin.settings.explainGrammarPlacement = value;
 						await this.plugin.saveSettings();
 					});
 			});

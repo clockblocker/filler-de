@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 /**
  * Suffix delimiter configuration.
  * Symbol: 1-3 non-space chars (e.g., "-", "~")
@@ -9,12 +11,34 @@ export type SuffixDelimiterConfig = {
 };
 
 /**
- * Where selection actions (Translate, Split in Blocks, Explain Grammar) appear.
+ * Where a selection action appears.
  * - "selection": toolbar above selection (default)
  * - "bottom": in bottom toolbar
  * - "shortcut-only": no toolbar, keyboard shortcuts only
  */
-export type SelectionActionPlacement = "selection" | "bottom" | "shortcut-only";
+const SELECTION_ACTION_PLACEMENT_LITERALS = [
+	"selection",
+	"bottom",
+	"shortcut-only",
+] as const;
+
+export const SelectionActionPlacementSchema = z.enum(
+	SELECTION_ACTION_PLACEMENT_LITERALS,
+);
+export type SelectionActionPlacement = z.infer<
+	typeof SelectionActionPlacementSchema
+>;
+export const SelectionActionPlacement = SelectionActionPlacementSchema.enum;
+
+/** Display text for selection action placement options in settings UI */
+export const SELECTION_ACTION_PLACEMENT_TEXT: Record<
+	SelectionActionPlacement,
+	string
+> = {
+	selection: "Above selection",
+	bottom: "In bottom toolbar",
+	"shortcut-only": "Shortcut only",
+};
 
 export type TextEaterSettings = {
 	googleApiKey: string;
@@ -25,17 +49,21 @@ export type TextEaterSettings = {
 	showScrollsInCodexesForDepth: number;
 	showScrollBacklinks: boolean;
 	hideMetadata: boolean; // Store metadata invisibly at end of file. When false, uses YAML frontmatter.
-	selectionActionPlacement: SelectionActionPlacement;
+	translatePlacement: SelectionActionPlacement;
+	splitInBlocksPlacement: SelectionActionPlacement;
+	explainGrammarPlacement: SelectionActionPlacement;
 };
 
 export const DEFAULT_SETTINGS: TextEaterSettings = {
 	apiProvider: "google",
+	explainGrammarPlacement: "selection",
 	googleApiKey: "",
 	hideMetadata: true,
 	libraryRoot: "Library",
 	maxSectionDepth: 6,
-	selectionActionPlacement: "selection",
 	showScrollBacklinks: true,
 	showScrollsInCodexesForDepth: 1,
+	splitInBlocksPlacement: "selection",
 	suffixDelimiter: { padded: false, symbol: "-" },
+	translatePlacement: "selection",
 };
