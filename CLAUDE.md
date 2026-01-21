@@ -88,6 +88,11 @@ bun test --test-name-pattern "pattern"
 - `obsidian/`: Obsidian-specific services (vault, clicks, files)
 - `pure/`: Framework-agnostic business logic (metadata parsing)
 
+**Interceptors** (`src/managers/obsidian/`)
+- Pub-sub event emitters for UI interactions; Librarian subscribes to handle business logic
+- **ClickInterceptor**: Detects checkbox clicks in codex files, emits events for status toggling
+- **WikilinkAliasInterceptor**: Detects wikilink completion (`[[...]]`), emits events; Librarian adds `|alias` for library files (files with suffix parts)
+
 **NoteMetadataManager** (`src/managers/pure/note-metadata-manager/`)
 - See `src/documentaion/librarian-architrecture.md` → Metadata → NoteMetadataManager
 

@@ -30,6 +30,7 @@ import { TFolderHelper } from "./managers/obsidian/vault-action-manager/file-ser
 import { logError } from "./managers/obsidian/vault-action-manager/helpers/issue-handlers";
 import { splitPathFromSystemPathInternal } from "./managers/obsidian/vault-action-manager/helpers/pathfinder/system-path-and-split-path-codec";
 import { Reader } from "./managers/obsidian/vault-action-manager/impl/reader";
+import { WikilinkAliasInterceptor } from "./managers/obsidian/wikilink-alias-interceptor";
 import { DelimiterChangeService } from "./services/delimiter-change-service";
 import { ApiService } from "./services/obsidian-services/atomic-services/api-service";
 import { SelectionService } from "./services/obsidian-services/atomic-services/selection-service";
@@ -62,6 +63,7 @@ export default class TextEaterPlugin extends Plugin {
 	clickInterceptor: ClickInterceptor;
 	clipboardInterceptor: ClipboardInterceptor;
 	selectAllInterceptor: SelectAllInterceptor;
+	wikilinkAliasInterceptor: WikilinkAliasInterceptor;
 	selectionService: SelectionService;
 	buttonManager: ButtonManager;
 	delimiterChangeService: DelimiterChangeService | null = null;
@@ -201,10 +203,16 @@ export default class TextEaterPlugin extends Plugin {
 
 		this.selectionService = new SelectionService(this.app);
 
-		// New Librarian (healing modes + codex clicks)
+		// Register wikilink alias interceptor (emits events for library wikilinks)
+		// Created before Librarian so it can subscribe
+		this.wikilinkAliasInterceptor = new WikilinkAliasInterceptor(this);
+		this.wikilinkAliasInterceptor.register();
+
+		// New Librarian (healing modes + codex clicks + wikilink alias)
 		this.librarian = new Librarian(
 			this.vaultActionManager,
 			this.clickInterceptor,
+			this.wikilinkAliasInterceptor,
 		);
 
 		// Start listening to file system events
@@ -408,13 +416,13 @@ export default class TextEaterPlugin extends Plugin {
 						"./commanders/librarian/bookkeeper/split-to-pages-action"
 					).then(({ splitToPagesAction }) => {
 						splitToPagesAction({
-							openedFileService:
-								this.testingOpenedFileServiceWithResult,
-							vaultActionManager: this.vaultActionManager,
 							onSectionCreated: (info) => {
 								// Notify librarian to create codex (bypasses self-event filtering)
 								this.librarian?.triggerSectionHealing(info);
 							},
+							openedFileService:
+								this.testingOpenedFileServiceWithResult,
+							vaultActionManager: this.vaultActionManager,
 						});
 					});
 				}
@@ -593,8 +601,7 @@ export default class TextEaterPlugin extends Plugin {
 		// Count files that will be affected
 		const mdFiles = this.app.vault.getFiles().filter((f) => {
 			return (
-				f.path.startsWith(`${libraryRoot}/`) &&
-				f.path.endsWith(".md")
+				f.path.startsWith(`${libraryRoot}/`) && f.path.endsWith(".md")
 			);
 		});
 
@@ -674,6 +681,7 @@ export default class TextEaterPlugin extends Plugin {
 		this.librarian = new Librarian(
 			this.vaultActionManager,
 			this.clickInterceptor,
+			this.wikilinkAliasInterceptor,
 		);
 		try {
 			await this.librarian.init();

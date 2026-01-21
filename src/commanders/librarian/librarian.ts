@@ -5,6 +5,10 @@ import type {
 } from "../../managers/obsidian/click-interceptor";
 import type { PropertyCheckboxClickedEvent } from "../../managers/obsidian/click-interceptor/types/click-event";
 import type {
+	WikilinkAliasInterceptor,
+	WikilinkCompletedEvent,
+} from "../../managers/obsidian/wikilink-alias-interceptor";
+import type {
 	BulkVaultEvent,
 	VaultAction,
 	VaultActionManager,
@@ -70,6 +74,7 @@ export class Librarian {
 	private healer: Healer | null = null;
 	private eventTeardown: (() => void) | null = null;
 	private clickTeardown: (() => void) | null = null;
+	private wikilinkTeardown: (() => void) | null = null;
 	private queue: QueueItem[] = [];
 	private processing = false;
 	private codecs: Codecs;
@@ -90,6 +95,7 @@ export class Librarian {
 	constructor(
 		private readonly vaultActionManager: VaultActionManager,
 		private readonly clickInterceptor?: ClickInterceptor,
+		private readonly wikilinkInterceptor?: WikilinkAliasInterceptor,
 	) {}
 
 	/**
@@ -191,6 +197,9 @@ export class Librarian {
 			// Subscribe to click events
 			this.subscribeToClickEvents();
 
+			// Subscribe to wikilink events
+			this.subscribeToWikilinkEvents();
+
 			// Process codex impacts: merge, compute deletions and recreations
 			const { deletionHealingActions, codexRecreations } =
 				processCodexImpactsForInit(
@@ -251,6 +260,79 @@ export class Librarian {
 				this.handlePropertyCheckboxClick(event);
 			}
 		});
+	}
+
+	/**
+	 * Subscribe to wikilink completion events.
+	 */
+	private subscribeToWikilinkEvents(): void {
+		if (!this.wikilinkInterceptor) {
+			logger.info("[Librarian] no wikilinkInterceptor, skipping subscription");
+			return;
+		}
+
+		logger.info("[Librarian] subscribing to wikilink events");
+		this.wikilinkTeardown = this.wikilinkInterceptor.subscribe((event) => {
+			logger.info("[Librarian] wikilink event received in subscriber");
+			this.handleWikilinkCompleted(event);
+		});
+		logger.info("[Librarian] subscribed to wikilink events");
+	}
+
+	/**
+	 * Handle wikilink completion: add alias for library files.
+	 * If basename has suffix parts (delimiter-separated), it's a library file.
+	 */
+	private handleWikilinkCompleted(event: WikilinkCompletedEvent): void {
+		const { linkContent, closePos, view } = event;
+
+		logger.info(
+			"[Librarian] handleWikilinkCompleted received:",
+			JSON.stringify({ linkContent, closePos }),
+		);
+
+		// Parse basename to extract suffix parts
+		const parseResult = this.codecs.suffix.parseSeparatedSuffix(linkContent);
+		if (parseResult.isErr()) {
+			logger.info(
+				"[Librarian] parseSeparatedSuffix failed:",
+				JSON.stringify({ error: parseResult.error, linkContent }),
+			);
+			return;
+		}
+
+		const { coreName, suffixParts } = parseResult.value;
+		logger.info(
+			"[Librarian] parsed suffix:",
+			JSON.stringify({ coreName, suffixParts }),
+		);
+
+		// Skip codex files (start with __)
+		if (coreName.startsWith("__")) {
+			logger.info("[Librarian] skipping codex file (__ prefix)");
+			return;
+		}
+
+		// No suffix = not a library file (or root-level file without hierarchy)
+		if (suffixParts.length === 0) {
+			logger.info("[Librarian] no suffix parts, skipping");
+			return;
+		}
+
+		// Has suffix parts = library file, add alias
+		logger.info(
+			"[Librarian] inserting alias:",
+			JSON.stringify({ closePos, alias: `|${coreName}` }),
+		);
+
+		view.dispatch({
+			changes: { from: closePos, insert: `|${coreName}` },
+		});
+
+		logger.info(
+			"[Librarian] Inserted wikilink alias:",
+			JSON.stringify({ coreName, linkContent }),
+		);
 	}
 
 	/**
@@ -570,6 +652,10 @@ export class Librarian {
 		if (this.clickTeardown) {
 			this.clickTeardown();
 			this.clickTeardown = null;
+		}
+		if (this.wikilinkTeardown) {
+			this.wikilinkTeardown();
+			this.wikilinkTeardown = null;
 		}
 		// Wait for pending clicks to complete
 		await Promise.all(this.pendingClicks);
