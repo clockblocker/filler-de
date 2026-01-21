@@ -5,6 +5,8 @@ import { EXTRA_E2_FULL_CONTENT } from "../../../../unit/librarian/bookkeeper/tes
 import { waitForIdle } from "../../../support/api/idle";
 import { clickButton, createFile, openFile, renamePath } from "../../../support/api/vault-ops";
 
+const SPLIT_TO_PAGES_COMMAND = "cbcr-text-eater-de:split-to-pages";
+
 // Suffix delimiter (matches default settings: "-")
 const D = "-";
 
@@ -30,9 +32,9 @@ export async function performSetup(): Promise<void> {
 }
 
 /**
- * Click "Make this a text" button.
+ * Trigger "Split into pages" via command.
  * 1. Open the healed scroll file
- * 2. Click the MakeText button
+ * 2. Execute split-to-pages command
  */
 export async function performMakeText(): Promise<void> {
 	// 1. Open the healed file path
@@ -43,11 +45,11 @@ export async function performMakeText(): Promise<void> {
 	}
 	await waitForIdle();
 
-	// 2. Click "Make this a text" button
-	const clickResult = await clickButton("MakeText");
-	if (clickResult.isErr()) {
-		throw new Error(`Failed to click button: ${clickResult.error}`);
-	}
+	// 2. Execute split-to-pages command (moved from bottom toolbar to context menu)
+	await browser.executeObsidian(async ({ app }, cmd) => {
+		// biome-ignore lint/suspicious/noExplicitAny: <commands API not in official types>
+		(app as any).commands.executeCommandById(cmd);
+	}, SPLIT_TO_PAGES_COMMAND);
 	await waitForIdle();
 }
 
@@ -73,9 +75,9 @@ export async function performSetupExtraE2(): Promise<void> {
 }
 
 /**
- * Click "Make this a text" button for EXTRA_E2.
+ * Trigger "Split into pages" via command for EXTRA_E2.
  * 1. Open the healed scroll file
- * 2. Click the MakeText button
+ * 2. Execute split-to-pages command
  */
 export async function performMakeTextExtraE2(): Promise<void> {
 	// 1. Open the healed file path
@@ -86,11 +88,11 @@ export async function performMakeTextExtraE2(): Promise<void> {
 	}
 	await waitForIdle();
 
-	// 2. Click "Make this a text" button
-	const clickResult = await clickButton("MakeText");
-	if (clickResult.isErr()) {
-		throw new Error(`Failed to click button: ${clickResult.error}`);
-	}
+	// 2. Execute split-to-pages command (moved from bottom toolbar to context menu)
+	await browser.executeObsidian(async ({ app }, cmd) => {
+		// biome-ignore lint/suspicious/noExplicitAny: <commands API not in official types>
+		(app as any).commands.executeCommandById(cmd);
+	}, SPLIT_TO_PAGES_COMMAND);
 	await waitForIdle();
 }
 

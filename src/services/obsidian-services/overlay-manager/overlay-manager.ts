@@ -28,6 +28,7 @@ import { NavigationLayoutCoordinator } from "../button-manager/navigation-layout
 import { AboveSelectionToolbarService } from "../button-manager/selection-toolbar";
 import { executeAction } from "./executor-registry";
 import {
+	ActionKind,
 	ActionPlacement,
 	type CommanderAction,
 	type CommanderActionProvider,
@@ -179,6 +180,46 @@ export class OverlayManager {
 		// Handle CSS changes - hide selection toolbar
 		this.plugin.registerEvent(
 			this.app.workspace.on("css-change", () => this.selection.hide()),
+		);
+
+		// Register "Split into pages" in editor context menu
+		// Uses currentContext (synchronous) since menu callbacks must be sync
+		this.plugin.registerEvent(
+			this.app.workspace.on("editor-menu", (menu, _editor, _view) => {
+				const ctx = this.currentContext;
+				if (!ctx) return;
+
+				const shouldShow =
+					ctx.isInLibrary &&
+					(ctx.fileType === null ||
+						(ctx.fileType === FileType.Scroll &&
+							ctx.wouldSplitToMultiplePages));
+
+				if (shouldShow) {
+					menu.addItem((item) =>
+						item
+							.setTitle("Split into pages")
+							.setIcon("split")
+							.onClick(() => {
+								if (!this.services) return;
+								const action: CommanderAction<"MakeText"> = {
+									id: "MakeText",
+									kind: ActionKind.MakeText,
+									label: "Split into pages",
+									params: {},
+									placement: ActionPlacement.Bottom,
+									priority: 2,
+								};
+								executeAction(action, {
+									apiService: this.services.apiService,
+									app: this.app,
+									selectionService: this.services.selectionService,
+									vaultActionManager: this.services.vaultActionManager,
+								});
+							}),
+					);
+				}
+			}),
 		);
 	}
 

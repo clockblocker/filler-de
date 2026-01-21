@@ -100,7 +100,7 @@ export const ACTION_CONFIGS = {
 			(ctx.fileType === null ||
 				(ctx.fileType === FileType.Scroll &&
 					ctx.wouldSplitToMultiplePages)),
-		label: "Make this a text",
+		label: "Split into pages",
 		placement: UserActionPlacement.Bottom,
 		priority: 2,
 	},
@@ -149,11 +149,6 @@ export const NAVIGATE_PAGE_ACTIONS: UserAction[] = [
 	UserAction.NavigatePage,
 ] as const;
 
-export const CHANGE_FILE_TYPE_ACTIONS: UserAction[] = [
-	UserAction.MakeText,
-] as const;
+export const CHANGE_FILE_TYPE_ACTIONS: UserAction[] = [] as const;
 
-export const OPTIONAL_BOTTOM_ACTIONS = [
-	...NAVIGATE_PAGE_ACTIONS,
-	...CHANGE_FILE_TYPE_ACTIONS,
-];
+export const OPTIONAL_BOTTOM_ACTIONS = [...NAVIGATE_PAGE_ACTIONS];

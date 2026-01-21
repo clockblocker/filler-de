@@ -74,23 +74,6 @@ export class LibrarianActionProvider implements CommanderActionProvider {
 			});
 		}
 
-		// MakeText: show on files without type, or Scroll files that would split to multiple pages
-		if (
-			ctx.isInLibrary &&
-			(ctx.fileType === null ||
-				(ctx.fileType === FileType.Scroll &&
-					ctx.wouldSplitToMultiplePages))
-		) {
-			actions.push({
-				id: "MakeText",
-				kind: ActionKind.MakeText,
-				label: "Make this a text",
-				params: {},
-				placement: ActionPlacement.Bottom,
-				priority: 2,
-			});
-		}
-
 		// Generate: show when selection exists in library
 		if (ctx.hasSelection && ctx.isInLibrary) {
 			actions.push({
