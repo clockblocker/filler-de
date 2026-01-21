@@ -1,4 +1,9 @@
-import { type App, MarkdownView, type Plugin, type WorkspaceLeaf } from "obsidian";
+import {
+	type App,
+	MarkdownView,
+	type Plugin,
+	type WorkspaceLeaf,
+} from "obsidian";
 import type { VaultActionManager } from "../../../managers/obsidian/vault-action-manager";
 import { ACTION_CONFIGS } from "../../wip-configs/actions/actions-config";
 import type { UserAction } from "../../wip-configs/actions/types";

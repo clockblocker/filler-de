@@ -110,6 +110,13 @@ bun test --test-name-pattern "pattern"
 - **PathFinder** (`paths/path-finder.ts`): Single source of truth for all suffix/path computation logic
 - **HealingError** (`errors/healing-error.ts`): Unified error types for healing operations
 
+**OverlayManager** (`src/services/obsidian-services/overlay-manager/`)
+- Unified facade for UI overlays (bottom toolbar, selection toolbar, edge zones)
+- **CommanderActionProvider interface**: Commanders provide actions via `getAvailableActions(context)`
+- **ActionExecutorRegistry**: Maps action kinds to typed execution logic
+- **LibrarianActionProvider**: Default provider for library-related actions
+- See `src/documentaion/overlay-manager.md` for full architecture
+
 **Services** (`src/services/`)
 - `prompts/`: LLM prompt definitions for German word processing (verbs, nouns, adjectives, morphemes)
 - `dto-services/`: Data transformation for notes and quotes

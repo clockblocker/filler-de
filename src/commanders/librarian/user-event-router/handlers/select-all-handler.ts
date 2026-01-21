@@ -29,7 +29,10 @@ export function handleSelectAll(event: SelectAllEvent): void {
  * 2. Go-back links at the start ([[__...]])
  * 3. Metadata section at the end (<section id="textfresser_meta...">)
  */
-export function calculateSmartRange(content: string): { from: number; to: number } {
+export function calculateSmartRange(content: string): {
+	from: number;
+	to: number;
+} {
 	if (!content || content.length === 0) {
 		return { from: 0, to: 0 };
 	}
@@ -55,10 +58,7 @@ export function calculateSmartRange(content: string): { from: number; to: number
 
 			if (firstLine.trim().length === 0) {
 				searchPos += firstLine.length;
-				if (
-					rest.length > 0 ||
-					remaining[firstLine.length] === "\n"
-				) {
+				if (rest.length > 0 || remaining[firstLine.length] === "\n") {
 					searchPos += 1;
 				}
 			} else {

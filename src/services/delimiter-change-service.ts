@@ -3,7 +3,10 @@ import type { Librarian } from "../commanders/librarian/librarian";
 import type { VaultActionManager } from "../managers/obsidian/vault-action-manager";
 import { makeSplitPath } from "../managers/obsidian/vault-action-manager/impl/common/split-path-and-system-path";
 import type { SplitPathToMdFile } from "../managers/obsidian/vault-action-manager/types/split-path";
-import { type VaultAction, VaultActionKind } from "../managers/obsidian/vault-action-manager/types/vault-action";
+import {
+	type VaultAction,
+	VaultActionKind,
+} from "../managers/obsidian/vault-action-manager/types/vault-action";
 import type { SuffixDelimiterConfig } from "../types";
 import {
 	buildCanonicalDelimiter,
@@ -77,9 +80,7 @@ export class DelimiterChangeService {
 			const result = await this.vaultActionManager.dispatch(chunk);
 			if (result.isErr()) {
 				errors.push(
-					...result.error.map(
-						(e) => `${e.action.kind}: ${e.error}`,
-					),
+					...result.error.map((e) => `${e.action.kind}: ${e.error}`),
 				);
 			}
 
@@ -121,8 +122,7 @@ export class DelimiterChangeService {
 
 		return this.app.vault.getFiles().filter((f) => {
 			return (
-				f.path.startsWith(`${libraryRoot}/`) &&
-				f.path.endsWith(".md")
+				f.path.startsWith(`${libraryRoot}/`) && f.path.endsWith(".md")
 			);
 		});
 	}

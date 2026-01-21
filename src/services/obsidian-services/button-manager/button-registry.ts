@@ -74,8 +74,28 @@ export class ButtonRegistry {
 				isInLibrary = false;
 			}
 
-			// Get file type from metadata
-			if (isInLibrary) {
+			// Detect Page by filename pattern FIRST (before metadata read)
+			// This ensures Pages are always detected, even if metadata is missing
+			const pageMatch =
+				splitPath.kind === "MdFile"
+					? splitPath.basename.match(/_Page_(\d{3})/)
+					: null;
+
+			if (pageMatch?.[1]) {
+				// File IS a page (by naming convention)
+				fileType = FileType.Page;
+				pageIndex = Number.parseInt(pageMatch[1], 10);
+
+				// Check if next page exists
+				const nextPath = getNextPageSplitPath(splitPath);
+				if (nextPath) {
+					const systemPath = makeSystemPathForSplitPath(nextPath);
+					hasNextPage =
+						this.app.vault.getAbstractFileByPath(systemPath) !==
+						null;
+				}
+			} else if (isInLibrary) {
+				// For non-page files, read metadata to determine type
 				try {
 					const content = await this.app.vault.read(file);
 					const metaInfo = readMetadata(
@@ -93,27 +113,6 @@ export class ButtonRegistry {
 							splitPath.basename,
 							rules,
 						);
-					}
-
-					// Extract page index for Page files
-					if (
-						fileType === FileType.Page &&
-						splitPath.kind === "MdFile"
-					) {
-						const match = splitPath.basename.match(/_Page_(\d{3})/);
-						if (match?.[1]) {
-							pageIndex = Number.parseInt(match[1], 10);
-						}
-						// Check if next page exists
-						const nextPath = getNextPageSplitPath(splitPath);
-						if (nextPath) {
-							const systemPath =
-								makeSystemPathForSplitPath(nextPath);
-							hasNextPage =
-								this.app.vault.getAbstractFileByPath(
-									systemPath,
-								) !== null;
-						}
 					}
 				} catch {
 					fileType = null;

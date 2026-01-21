@@ -1,1 +1,4 @@
-export { triggerSectionHealing, type SectionHealingDeps } from "./section-healing-coordinator";
+export {
+	triggerSectionHealing,
+	type SectionHealingDeps,
+} from "./section-healing-coordinator";

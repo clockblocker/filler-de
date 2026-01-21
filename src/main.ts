@@ -31,7 +31,10 @@ import { Reader } from "./managers/obsidian/vault-action-manager/impl/reader";
 import { DelimiterChangeService } from "./services/delimiter-change-service";
 import { ApiService } from "./services/obsidian-services/atomic-services/api-service";
 import { SelectionService } from "./services/obsidian-services/atomic-services/selection-service";
-import { ButtonManager } from "./services/obsidian-services/button-manager";
+import {
+	LibrarianActionProvider,
+	OverlayManager,
+} from "./services/obsidian-services/overlay-manager";
 import { ACTION_CONFIGS } from "./services/wip-configs/actions/actions-config";
 import addBacklinksToCurrentFile from "./services/wip-configs/actions/old/addBacklinksToCurrentFile";
 import { SettingsTab } from "./settings";
@@ -59,7 +62,7 @@ export default class TextEaterPlugin extends Plugin {
 	vaultActionManager: VaultActionManagerImpl;
 	userEventInterceptor: UserEventInterceptor;
 	selectionService: SelectionService;
-	buttonManager: ButtonManager;
+	overlayManager: OverlayManager;
 	delimiterChangeService: DelimiterChangeService | null = null;
 
 	// Commanders
@@ -230,9 +233,10 @@ export default class TextEaterPlugin extends Plugin {
 			}
 		}
 
-		// Initialize ButtonManager (consolidates toolbar + registry + event wiring)
-		this.buttonManager = new ButtonManager(this.app, this);
-		this.buttonManager.init({
+		// Initialize OverlayManager (unified UI overlay with commander-based actions)
+		this.overlayManager = new OverlayManager(this.app, this);
+		this.overlayManager.registerProvider(new LibrarianActionProvider());
+		this.overlayManager.init({
 			apiService: this.apiService,
 			selectionService: this.selectionService,
 			vaultActionManager: this.vaultActionManager,
@@ -240,8 +244,9 @@ export default class TextEaterPlugin extends Plugin {
 	}
 
 	override onunload() {
-		if (this.buttonManager) this.buttonManager.destroy();
-		if (this.userEventInterceptor) this.userEventInterceptor.stopListening();
+		if (this.overlayManager) this.overlayManager.destroy();
+		if (this.userEventInterceptor)
+			this.userEventInterceptor.stopListening();
 		if (this.librarian) this.librarian.unsubscribe();
 		// Clear global state
 		clearState();

@@ -1,4 +1,7 @@
-import { decrementPending, incrementPending } from "../../../utils/idle-tracker";
+import {
+	decrementPending,
+	incrementPending,
+} from "../../../utils/idle-tracker";
 import { logger } from "../../../utils/logger";
 
 /**

@@ -112,10 +112,16 @@ export class BottomToolbarService {
 		// Filter out nav actions that are handled by edge zones
 		// PreviousPage → left zone, NavigatePage → right zone
 		const bottomActions = this.actionConfigs.filter((a) => {
-			if (a.id === UserAction.PreviousPage && this.layoutState.leftZoneActive) {
+			if (
+				a.id === UserAction.PreviousPage &&
+				this.layoutState.leftZoneActive
+			) {
 				return false;
 			}
-			if (a.id === UserAction.NavigatePage && this.layoutState.rightZoneActive) {
+			if (
+				a.id === UserAction.NavigatePage &&
+				this.layoutState.rightZoneActive
+			) {
 				return false;
 			}
 			return true;

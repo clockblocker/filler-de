@@ -41,7 +41,10 @@ export class NavigationLayoutCoordinator {
 
 		// On mobile, skip edge zones entirely
 		if (isMobile) {
-			this.layoutState = { leftZoneActive: false, rightZoneActive: false };
+			this.layoutState = {
+				leftZoneActive: false,
+				rightZoneActive: false,
+			};
 			this.edgePaddingNavigator.detach();
 			this.bottomToolbar.updateLayoutState(this.layoutState);
 			return;
