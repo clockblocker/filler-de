@@ -2,136 +2,175 @@ import type { EditorView } from "@codemirror/view";
 import { type App, MarkdownView } from "obsidian";
 import type { RenderedActionConfig } from "../../wip-configs/actions/types";
 
+/**
+ * Floating toolbar that appears above text selection.
+ * Reactive design: call update() with actions, toolbar shows/hides automatically.
+ */
 export class AboveSelectionToolbarService {
 	private toolbarEl: HTMLDivElement | null = null;
-	private attachedView: MarkdownView | null = null;
-	private cm: EditorView | null = null;
-	private actionConfigs: RenderedActionConfig[] = [];
 
 	constructor(private app: App) {}
 
-	public reattach(): void {
-		const view = this.getActiveMarkdownView();
-		if (this.attachedView === view) return;
-
-		this.detach();
+	/**
+	 * Update toolbar with new actions. Shows if actions exist + selection present, hides otherwise.
+	 */
+	public update(actions: RenderedActionConfig[]): void {
+		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 		if (!view || view.getMode() !== "source") {
+			this.hide();
 			return;
 		}
 
-		// biome-ignore lint/suspicious/noExplicitAny: <cm exists but is not inferred>
-		const cm: EditorView = (view.editor as any).cm;
-		this.cm = cm;
-		this.attachedView = view;
+		// biome-ignore lint/suspicious/noExplicitAny: <cm exists but not in types>
+		const cm: EditorView | undefined = (view.editor as any)?.cm;
+		if (!cm) {
+			this.hide();
+			return;
+		}
 
-		this.toolbarEl = this.createToolbar();
-		const host = cm.dom as HTMLElement;
-		host.style.position ||= "relative";
-		host.appendChild(this.toolbarEl);
+		const selection = cm.state.selection.main;
+		if (selection.empty || actions.length === 0) {
+			this.hide();
+			return;
+		}
 
-		const showMaybeLegacy = () =>
-			setTimeout(() => this.updateToolbarPosition(), 0);
-		const hide = () => this.hideToolbar();
-
-		host.addEventListener("mouseup", showMaybeLegacy);
-		host.addEventListener("keyup", showMaybeLegacy);
-		cm.scrollDOM.addEventListener("scroll", hide, { passive: true });
-		cm.scrollDOM.addEventListener("scrollend", showMaybeLegacy, {
-			passive: true,
-		});
+		this.ensureToolbar(cm);
+		this.renderButtons(actions);
+		this.position(cm, selection);
 	}
 
-	public detach(): void {
-		this.hideToolbar();
-		if (this.toolbarEl?.parentElement)
-			this.toolbarEl.parentElement.removeChild(this.toolbarEl);
-		this.toolbarEl = null;
-		this.cm = null;
-		this.attachedView = null;
-	}
-
-	public onCssChange(): void {
-		this.hideToolbar();
-	}
-
-	private getActiveMarkdownView(): MarkdownView | null {
-		return this.app.workspace.getActiveViewOfType(MarkdownView);
-	}
-
-	private createToolbar(): HTMLDivElement {
-		const el = document.createElement("div");
-		el.className = "selection-toolbar";
-		el.style.display = "none";
-		el.style.pointerEvents = "auto";
-		el.style.zIndex = "1000";
-		this.rerenderButtons(el);
-		return el;
-	}
-
-	public setActions(actions: RenderedActionConfig[]): void {
-		this.actionConfigs = Array.isArray(actions) ? actions : [];
-	}
-
-	private rerenderButtons(host: HTMLElement): void {
-		while (host.firstChild) host.removeChild(host.firstChild);
-		for (const a of this.actionConfigs) {
-			const b = document.createElement("button");
-			b.dataset.action = a.id;
-			b.className = "selection-toolbar-btn";
-			b.textContent = a.label;
-
-			// Ensure button is clickable
-			b.style.pointerEvents = "auto";
-			b.style.cursor = "pointer";
-			b.style.zIndex = "1000";
-			b.style.position = "relative";
-			b.style.backgroundColor = "black";
-			b.style.color = "#ffffff";
-			b.style.padding = "4px 8px";
-			b.style.border = "1px solid #000000";
-			b.style.borderRadius = "4px";
-
-			if (a.disabled) {
-				b.disabled = true;
-				b.classList.add("is-disabled");
-			}
-
-			host.appendChild(b);
+	/**
+	 * Hide and detach toolbar.
+	 */
+	public hide(): void {
+		if (this.toolbarEl) {
+			this.toolbarEl.style.display = "none";
 		}
 	}
 
-	private hideToolbar() {
-		if (this.toolbarEl) this.toolbarEl.style.display = "none";
+	/**
+	 * Full cleanup.
+	 */
+	public destroy(): void {
+		if (this.toolbarEl?.parentElement) {
+			this.toolbarEl.parentElement.removeChild(this.toolbarEl);
+		}
+		this.toolbarEl = null;
 	}
 
-	public updateToolbarPosition() {
-		if (!this.cm || !this.toolbarEl || !this.attachedView) return;
+	/**
+	 * Ensure toolbar element exists and is attached to current editor.
+	 */
+	private ensureToolbar(cm: EditorView): void {
+		const host = cm.dom as HTMLElement;
 
-		const selectionRange = this.cm.state.selection.main;
-		if (selectionRange.empty) return this.hideToolbar();
+		// If toolbar exists but is in wrong parent, move it
+		if (this.toolbarEl && this.toolbarEl.parentElement !== host) {
+			this.toolbarEl.parentElement?.removeChild(this.toolbarEl);
+			host.appendChild(this.toolbarEl);
+		}
 
-		const from = this.cm.coordsAtPos(selectionRange.from);
-		const to = this.cm.coordsAtPos(selectionRange.to);
-		if (!from || !to) return this.hideToolbar();
+		// Create if doesn't exist
+		if (!this.toolbarEl) {
+			this.toolbarEl = document.createElement("div");
+			this.toolbarEl.className = "selection-toolbar";
+			Object.assign(this.toolbarEl.style, {
+				position: "absolute",
+				display: "none",
+				zIndex: "1000",
+				pointerEvents: "auto",
+				background: "var(--background-secondary)",
+				borderRadius: "6px",
+				padding: "4px",
+				boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+				gap: "4px",
+			});
+			host.style.position ||= "relative";
+			host.appendChild(this.toolbarEl);
+		}
+	}
 
-		const hostRect = (this.cm.dom as HTMLElement).getBoundingClientRect();
-		const midX =
-			(Math.min(from.left, to.left) + Math.max(from.right, to.right)) / 2;
+	/**
+	 * Render action buttons.
+	 */
+	private renderButtons(actions: RenderedActionConfig[]): void {
+		if (!this.toolbarEl) return;
+
+		this.toolbarEl.innerHTML = "";
+		for (const action of actions) {
+			const btn = document.createElement("button");
+			btn.dataset.action = action.id;
+			btn.textContent = action.label;
+			btn.disabled = action.disabled ?? false;
+			Object.assign(btn.style, {
+				padding: "4px 8px",
+				border: "none",
+				borderRadius: "4px",
+				background: action.disabled
+					? "var(--background-modifier-hover)"
+					: "var(--interactive-accent)",
+				color: action.disabled
+					? "var(--text-muted)"
+					: "var(--text-on-accent)",
+				cursor: action.disabled ? "not-allowed" : "pointer",
+				fontSize: "12px",
+				fontWeight: "500",
+			});
+			this.toolbarEl.appendChild(btn);
+		}
+	}
+
+	/**
+	 * Position toolbar above selection.
+	 */
+	private position(
+		cm: EditorView,
+		selection: { from: number; to: number },
+	): void {
+		if (!this.toolbarEl) return;
+
+		const from = cm.coordsAtPos(selection.from);
+		const to = cm.coordsAtPos(selection.to);
+		if (!from || !to) {
+			this.hide();
+			return;
+		}
+
+		const hostRect = (cm.dom as HTMLElement).getBoundingClientRect();
+		const scrollTop = cm.scrollDOM.scrollTop;
+		const scrollLeft = cm.scrollDOM.scrollLeft;
+
+		// Show to measure
+		this.toolbarEl.style.display = "flex";
+
+		const toolbarHeight = this.toolbarEl.offsetHeight;
+		const toolbarWidth = this.toolbarEl.offsetWidth;
+
+		// Position above selection, centered
+		const midX = (from.left + to.right) / 2;
 		const top = Math.min(from.top, to.top);
 
-		const t = this.toolbarEl;
+		let left = midX - hostRect.left - toolbarWidth / 2 + scrollLeft;
+		const topPos = top - hostRect.top - toolbarHeight - 8 + scrollTop;
 
-		t.style.display = "block";
-		t.style.position = "absolute";
-		t.style.top = `${top - hostRect.top - t.offsetHeight - 8 + this.cm.scrollDOM.scrollTop}px`;
-		t.style.left = `${midX - hostRect.left - t.offsetWidth / 2 + this.cm.scrollDOM.scrollLeft}px`;
+		// Clamp horizontal position
+		const maxLeft = cm.scrollDOM.scrollWidth - toolbarWidth - 8;
+		left = Math.max(8, Math.min(left, maxLeft));
 
-		const maxLeft = this.cm.scrollDOM.scrollWidth - t.offsetWidth - 8;
-		const minLeft = 8;
-		const leftNum = Math.max(
-			minLeft,
-			Math.min(Number.parseFloat(t.style.left), maxLeft),
-		);
-		t.style.left = `${leftNum}px`;
+		this.toolbarEl.style.top = `${topPos}px`;
+		this.toolbarEl.style.left = `${left}px`;
+	}
+
+	// Legacy methods for compatibility - can be removed after ButtonManager update
+	public reattach(): void {
+		// No-op, update() handles everything
+	}
+
+	public setActions(actions: RenderedActionConfig[]): void {
+		this.update(actions);
+	}
+
+	public onCssChange(): void {
+		this.hide();
 	}
 }

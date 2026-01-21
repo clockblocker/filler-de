@@ -1,4 +1,4 @@
-import type { App, MarkdownView, Plugin, WorkspaceLeaf } from "obsidian";
+import { type App, MarkdownView, type Plugin, type WorkspaceLeaf } from "obsidian";
 import type { VaultActionManager } from "../../../managers/obsidian/vault-action-manager";
 import { ACTION_CONFIGS } from "../../wip-configs/actions/actions-config";
 import type { UserAction } from "../../wip-configs/actions/types";
@@ -69,7 +69,6 @@ export class ButtonManager {
 		// Initial recompute on layout ready
 		this.app.workspace.onLayoutReady(async () => {
 			await this.registry.recompute();
-			this.selection.reattach();
 			this.reattachBottomAndCoordinator();
 		});
 
@@ -79,7 +78,6 @@ export class ButtonManager {
 				"active-leaf-change",
 				(_leaf: WorkspaceLeaf) => {
 					this.registry.scheduleRecompute();
-					this.selection.reattach();
 					this.reattachBottomAndCoordinator();
 				},
 			),
@@ -88,13 +86,11 @@ export class ButtonManager {
 		// Show selection toolbar after drag
 		this.plugin.registerDomEvent(document, "dragend", async () => {
 			await this.registry.recompute();
-			this.selection.reattach();
 		});
 
 		// Show selection toolbar after mouse selection
 		this.plugin.registerDomEvent(document, "mouseup", async () => {
 			await this.registry.recompute();
-			this.selection.reattach();
 		});
 
 		// Show selection toolbar after keyboard selection
@@ -117,7 +113,6 @@ export class ButtonManager {
 
 				if (evt.shiftKey || selectionKeys.includes(evt.key)) {
 					await this.registry.recompute();
-					this.selection.reattach();
 				}
 			},
 		);
@@ -126,16 +121,13 @@ export class ButtonManager {
 		this.plugin.registerEvent(
 			this.app.workspace.on("layout-change", () => {
 				this.registry.scheduleRecompute();
-				this.selection.reattach();
 				this.reattachBottomAndCoordinator();
 			}),
 		);
 
-		// Handle CSS changes
+		// Handle CSS changes - hide selection toolbar
 		this.plugin.registerEvent(
-			this.app.workspace.on("css-change", () =>
-				this.selection.onCssChange(),
-			),
+			this.app.workspace.on("css-change", () => this.selection.hide()),
 		);
 	}
 
@@ -185,11 +177,11 @@ export class ButtonManager {
 	}
 
 	/**
-	 * Cleanup - detach both toolbars.
+	 * Cleanup - destroy all toolbar services.
 	 */
 	public destroy(): void {
 		this.bottom.detach();
-		this.selection.detach();
+		this.selection.destroy();
 		this.layoutCoordinator.detach();
 	}
 }

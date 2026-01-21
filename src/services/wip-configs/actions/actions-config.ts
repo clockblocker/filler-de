@@ -108,7 +108,7 @@ export const ACTION_CONFIGS = {
 		execute: (services) => navigatePageAction(services, "next"),
 		id: UserAction.NavigatePage,
 		isAvailable: (ctx: ButtonContext) =>
-			ctx.fileType === FileType.Page && ctx.pageIndex !== null,
+			ctx.isInLibrary && ctx.fileType === FileType.Page && ctx.pageIndex !== null,
 		isEnabled: (ctx: ButtonContext) => ctx.hasNextPage,
 		label: FORWARD_ARROW,
 		placement: UserActionPlacement.Bottom,
@@ -118,7 +118,7 @@ export const ACTION_CONFIGS = {
 		execute: (services) => navigatePageAction(services, "prev"),
 		id: UserAction.PreviousPage,
 		isAvailable: (ctx: ButtonContext) =>
-			ctx.fileType === FileType.Page && ctx.pageIndex !== null,
+			ctx.isInLibrary && ctx.fileType === FileType.Page && ctx.pageIndex !== null,
 		isEnabled: (ctx: ButtonContext) =>
 			ctx.pageIndex !== null && ctx.pageIndex > 0,
 		label: BACK_ARROW,
