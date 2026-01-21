@@ -25,11 +25,11 @@ Library/Note-pie-recipe.md → Library/recipe/pie/Note-pie-recipe.md
 ## Pipeline
 
 ```
-Obsidian API                     DOM Events
-    ↓                                ↓
-VaultActionManager          ClickInterceptor
-    ↓ (BulkVaultEvent)              ↓ (CheckboxClickedEvent)
-    └──────────────┬────────────────┘
+Obsidian API                     DOM/Editor Events
+    ↓                                  ↓
+VaultActionManager            UserEventInterceptor
+    ↓ (BulkVaultEvent)                ↓ (UserEvent)
+    └──────────────┬──────────────────┘
                    ↓
            buildTreeActions() → TreeAction[]
                    ↓
@@ -255,43 +255,69 @@ The destination path = `["Library"] + reversed(suffix)` = `["Library", "D", "C"]
 - **Folders** typically represent categories/topics. Adding a suffix creates subcategorization under the current context.
 - **Files** use suffix as a full location specifier for drag-in scenarios and explicit user moves.
 
-## DOM Interceptors
+## UserEventInterceptor
 
-The plugin uses interceptor classes to handle DOM events and transform them into semantic actions.
+`src/managers/obsidian/user-event-interceptor/`
 
-### ClickInterceptor
+Unified facade for all user-triggered DOM/editor events. Combines multiple detectors into a single subscription point for the Librarian.
 
-`src/managers/obsidian/click-interceptor/`
-
-Listens to DOM click events and emits semantic `ClickEvent` objects. Currently handles:
-- **Checkbox clicks** in codex files → `CheckboxClickedEvent` with file path, line content, checked state
-
-The Librarian subscribes to these events to update node status when users toggle checkboxes in codex files.
+### Architecture
 
 ```
-DOM click event
-    ↓
-ClickInterceptor.handleClick()
-    ↓
-CheckboxClickedEvent { splitPath, lineContent, checked }
-    ↓
-Librarian.handleCheckboxClick()
-    ↓
-TreeAction (ChangeStatus)
-    ↓
-Healing pipeline...
+UserEventInterceptor (facade)
+    ├── ClickDetector      → CheckboxClicked, PropertyCheckboxClicked
+    ├── ClipboardDetector  → ClipboardCopy
+    ├── SelectAllDetector  → SelectAll
+    └── WikilinkDetector   → WikilinkCompleted
+           ↓
+    UserEvent (discriminated union)
+           ↓
+    Librarian.subscribeToUserEvents()
 ```
 
-### ClipboardInterceptor
+### Event Types
 
-`src/managers/obsidian/clipboard-interceptor/`
+| Event | Source | Purpose |
+|-------|--------|---------|
+| `CheckboxClicked` | DOM click on task checkbox | Toggle node status in codex |
+| `PropertyCheckboxClicked` | DOM click on frontmatter checkbox | Toggle scroll status |
+| `ClipboardCopy` | copy/cut events | Strip metadata from clipboard |
+| `SelectAll` | Ctrl/Cmd+A | Smart selection excluding frontmatter/metadata |
+| `WikilinkCompleted` | Editor `]]` typed | Auto-insert alias for library links |
 
-Intercepts `copy` and `cut` events to strip redundant info from copied text:
+### Event Callbacks
 
-1. **Go-back links** at start of content: `[[__-L4-L3-L2-L1|← L4]]`
-2. **Metadata section**: `<section id="textfresser_meta_keep_me_invisible">...</section>`
+Events include callbacks for DOM/editor actions, keeping detection separate from business logic:
 
-Uses `META_SECTION_PATTERN` from `src/managers/pure/note-metadata-manager`.
+- `ClipboardCopy`: `preventDefault()`, `setClipboardData(text)`
+- `SelectAll`: `preventDefault()`, `setSelection(from, to)`
+- `WikilinkCompleted`: `insertAlias(alias)`
+
+### Librarian Handling
+
+```
+UserEvent
+    ↓
+switch (event.kind)
+    ├── CheckboxClicked → handleCheckboxClick() → TreeAction
+    ├── PropertyCheckboxClicked → handlePropertyCheckboxClick() → TreeAction
+    ├── ClipboardCopy → handleClipboardCopy() → strip metadata, set clipboard
+    ├── SelectAll → handleSelectAll() → calculateSmartRange(), set selection
+    └── WikilinkCompleted → handleWikilinkCompleted() → insertAlias if library file
+```
+
+### Smart Range Calculation
+
+`calculateSmartRange(content)` excludes from Ctrl+A selection:
+1. YAML frontmatter (`---...---`)
+2. Go-back links at start (`[[__...]]`)
+3. Metadata section at end (`<section id="textfresser_meta...">`)
+
+### Clipboard Stripping
+
+Strips from copied text:
+1. Go-back links: `[[__-L4-L3-L2-L1|← L4]]`
+2. Metadata section: `<section id="textfresser_meta_keep_me_invisible">...</section>`
 
 ## Conventions
 
