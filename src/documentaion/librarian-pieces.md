@@ -2,9 +2,21 @@
 
 Detailed reference for librarian modules. For architecture overview see `librarian-architrecture.md`.
 
+## Extracted Modules
+
+Modules extracted from Librarian to reduce its size and improve testability:
+
+| Module | Location | Purpose |
+|--------|----------|---------|
+| **VaultActionQueue** | `vault-action-queue/` | Generic queue for serializing async processing. Librarian uses it to process TreeActions sequentially |
+| **UserEventRouter** | `user-event-router/` | Routes user events to handlers. Handlers in `handlers/` subdirectory: wikilink, clipboard, select-all, checkbox |
+| **SectionHealingCoordinator** | `section-healing/` | Coordinates section healing for split-to-pages. Called by Bookkeeper via `triggerSectionHealing()` |
+
+All paths relative to `src/commanders/librarian/`.
+
 ## Refactoring Infrastructure
 
-New modules consolidating logic and error handling:
+Modules consolidating logic and error handling:
 
 | Module | Location | Purpose |
 |--------|----------|---------|
@@ -16,7 +28,7 @@ New modules consolidating logic and error handling:
 | **OrphanCodexScanner** | `healer/orphan-codex-scanner.ts` | Startup scan for codexes with wrong suffixes; generates cleanup actions |
 | **ActionHelpers** | `vault-action-manager/helpers/action-helpers.ts` | Eliminates switch on VaultAction. Type guards: `isCreateAction()`, `isRenameAction()`. Extractors: `getActionPath()` |
 
-All paths relative to `src/commanders/librarian-new/` except ActionHelpers (`src/managers/obsidian/`).
+All paths relative to `src/commanders/librarian/` except ActionHelpers (`src/managers/obsidian/`).
 
 ## Codex Module Structure
 

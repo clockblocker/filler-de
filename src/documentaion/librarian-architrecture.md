@@ -152,7 +152,7 @@ Details in `librarian-pieces.md`.
    - Nested files: PathKing (path → suffix)
    - Metadata format conversion: files reformatted based on `hideMetadata` setting
 2. **Steady-state**: listen to events → build actions → apply to tree → dispatch healing
-3. **Queue**: events processed sequentially to maintain consistency
+3. **Queue**: **VaultActionQueue** (`src/commanders/librarian/vault-action-queue/`) serializes processing to maintain consistency
 
 ## Metadata
 
@@ -295,16 +295,20 @@ Events include callbacks for DOM/editor actions, keeping detection separate from
 
 ### Librarian Handling
 
+User events are routed through **UserEventRouter** (`src/commanders/librarian/user-event-router/`):
+
 ```
 UserEvent
     ↓
-switch (event.kind)
-    ├── CheckboxClicked → handleCheckboxClick() → TreeAction
-    ├── PropertyCheckboxClicked → handlePropertyCheckboxClick() → TreeAction
-    ├── ClipboardCopy → handleClipboardCopy() → strip metadata, set clipboard
-    ├── SelectAll → handleSelectAll() → calculateSmartRange(), set selection
-    └── WikilinkCompleted → handleWikilinkCompleted() → insertAlias if library file
+UserEventRouter.handle(event)
+    ├── CheckboxClicked → checkbox-handler → TreeAction → enqueue
+    ├── PropertyCheckboxClicked → checkbox-handler → TreeAction → enqueue
+    ├── ClipboardCopy → clipboard-handler → strip metadata, set clipboard
+    ├── SelectAll → select-all-handler → calculateSmartRange(), set selection
+    └── WikilinkCompleted → wikilink-handler → insertAlias if library file
 ```
+
+Handlers are extracted to `user-event-router/handlers/` for testability.
 
 ### Smart Range Calculation
 

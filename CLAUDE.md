@@ -97,13 +97,17 @@ bun test --test-name-pattern "pattern"
 **NoteMetadataManager** (`src/managers/pure/note-metadata-manager/`)
 - See `src/documentaion/librarian-architrecture.md` → Metadata → NoteMetadataManager
 
-**Librarian System** (`src/commanders/librarian-new/`)
+**Librarian System** (`src/commanders/librarian/`)
 - The central orchestrator managing a hierarchical library tree structure
-- `Librarian`: Main class that initializes tree from vault, processes user events, and coordinates healing actions
+- `Librarian`: Thin orchestrator + state holder; delegates to extracted modules
 - `LibraryTree`: In-memory tree representation with nodes, codexes (index files), and status tracking
 - **Healing**: Reconciles discrepancies between vault state and tree state through healing actions
 - **Codex**: Special index files that track children nodes and their completion status via clickable checkboxes
-- **PathFinder** (`paths/path-computer.ts`): Single source of truth for all suffix/path computation logic
+- **Extracted Modules**:
+  - `VaultActionQueue` (`vault-action-queue/`): Serializes async processing of TreeActions
+  - `UserEventRouter` (`user-event-router/`): Routes user events to handlers (checkbox, clipboard, select-all, wikilink)
+  - `SectionHealingCoordinator` (`section-healing/`): Coordinates section healing for split-to-pages
+- **PathFinder** (`paths/path-finder.ts`): Single source of truth for all suffix/path computation logic
 - **HealingError** (`errors/healing-error.ts`): Unified error types for healing operations
 
 **Services** (`src/services/`)
