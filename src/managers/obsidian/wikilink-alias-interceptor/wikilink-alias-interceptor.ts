@@ -13,7 +13,6 @@
 
 import { EditorView, type ViewUpdate } from "@codemirror/view";
 import type { Plugin } from "obsidian";
-import { logger } from "../../../utils/logger";
 
 // ─── Event Types ───
 
@@ -50,18 +49,14 @@ export class WikilinkAliasInterceptor {
 	 */
 	register(): void {
 		if (this.extension) {
-			logger.info("[WikilinkAlias] already registered");
 			return;
 		}
-
-		logger.info("[WikilinkAlias] registering editor extension");
 
 		this.extension = EditorView.updateListener.of((vu: ViewUpdate) => {
 			this.handleUpdate(vu);
 		});
 
 		this.plugin.registerEditorExtension(this.extension);
-		logger.info("[WikilinkAlias] editor extension registered");
 	}
 
 	// ─── Private ───
@@ -75,13 +70,6 @@ export class WikilinkAliasInterceptor {
 		const text = vu.state.doc.toString();
 		const charsBeforeCursor = text.slice(cursor - 2, cursor);
 
-		logger.info(
-			"[WikilinkAlias] handleUpdate docChanged, cursor:",
-			String(cursor),
-			"charsBeforeCursor:",
-			JSON.stringify(charsBeforeCursor),
-		);
-
 		// Check if we just completed a wikilink (cursor right after ]])
 		if (charsBeforeCursor !== "]]") {
 			return;
@@ -90,49 +78,36 @@ export class WikilinkAliasInterceptor {
 		// Find matching [[
 		const closePos = cursor - 2;
 		const openPos = text.lastIndexOf("[[", closePos);
-		logger.info(
-			"[WikilinkAlias] found ]], closePos:",
-			String(closePos),
-			"openPos:",
-			String(openPos),
-		);
 
 		if (openPos === -1) {
-			logger.info("[WikilinkAlias] no [[ found, skipping");
 			return;
 		}
 
 		// Ensure no nested [[ between open and close
 		const between = text.slice(openPos + 2, closePos);
-		logger.info("[WikilinkAlias] content between [[...]]:", JSON.stringify(between));
 
 		if (between.includes("[[")) {
-			logger.info("[WikilinkAlias] nested [[ found, skipping");
 			return;
 		}
 
 		// Skip if already has an alias
 		if (between.includes("|")) {
-			logger.info("[WikilinkAlias] already has alias, skipping");
 			return;
 		}
 
 		const linkContent = between.trim();
 		if (!linkContent) {
-			logger.info("[WikilinkAlias] empty link content, skipping");
 			return;
 		}
 
-		logger.info(
-			"[WikilinkAlias] emitting WikilinkCompleted, subscribers:",
-			String(this.subscribers.size),
-			"linkContent:",
-			JSON.stringify(linkContent),
-		);
-
 		// Emit to all subscribers
 		for (const handler of this.subscribers) {
-			handler({ kind: "WikilinkCompleted", linkContent, closePos, view: vu.view });
+			handler({
+				closePos,
+				kind: "WikilinkCompleted",
+				linkContent,
+				view: vu.view,
+			});
 		}
 	}
 }

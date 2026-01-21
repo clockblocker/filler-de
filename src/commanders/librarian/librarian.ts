@@ -5,10 +5,6 @@ import type {
 } from "../../managers/obsidian/click-interceptor";
 import type { PropertyCheckboxClickedEvent } from "../../managers/obsidian/click-interceptor/types/click-event";
 import type {
-	WikilinkAliasInterceptor,
-	WikilinkCompletedEvent,
-} from "../../managers/obsidian/wikilink-alias-interceptor";
-import type {
 	BulkVaultEvent,
 	VaultAction,
 	VaultActionManager,
@@ -18,6 +14,10 @@ import {
 	SplitPathKind,
 	type SplitPathToMdFileWithReader,
 } from "../../managers/obsidian/vault-action-manager/types/split-path";
+import type {
+	WikilinkAliasInterceptor,
+	WikilinkCompletedEvent,
+} from "../../managers/obsidian/wikilink-alias-interceptor";
 import { decrementPending, incrementPending } from "../../utils/idle-tracker";
 import { logger } from "../../utils/logger";
 import type { SplitHealingInfo } from "./bookkeeper/split-to-pages-action";
@@ -267,7 +267,9 @@ export class Librarian {
 	 */
 	private subscribeToWikilinkEvents(): void {
 		if (!this.wikilinkInterceptor) {
-			logger.info("[Librarian] no wikilinkInterceptor, skipping subscription");
+			logger.info(
+				"[Librarian] no wikilinkInterceptor, skipping subscription",
+			);
 			return;
 		}
 
@@ -288,11 +290,12 @@ export class Librarian {
 
 		logger.info(
 			"[Librarian] handleWikilinkCompleted received:",
-			JSON.stringify({ linkContent, closePos }),
+			JSON.stringify({ closePos, linkContent }),
 		);
 
 		// Parse basename to extract suffix parts
-		const parseResult = this.codecs.suffix.parseSeparatedSuffix(linkContent);
+		const parseResult =
+			this.codecs.suffix.parseSeparatedSuffix(linkContent);
 		if (parseResult.isErr()) {
 			logger.info(
 				"[Librarian] parseSeparatedSuffix failed:",
@@ -322,7 +325,7 @@ export class Librarian {
 		// Has suffix parts = library file, add alias
 		logger.info(
 			"[Librarian] inserting alias:",
-			JSON.stringify({ closePos, alias: `|${coreName}` }),
+			JSON.stringify({ alias: `|${coreName}`, closePos }),
 		);
 
 		view.dispatch({
