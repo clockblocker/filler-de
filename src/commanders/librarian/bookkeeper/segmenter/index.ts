@@ -4,7 +4,6 @@ import type { SeparatedSuffixedBasename } from "../../codecs/internal/suffix/typ
 import type { CodecRules } from "../../codecs/rules";
 import {
 	DEFAULT_SEGMENTATION_CONFIG,
-	type AnnotatedSentence,
 	type PageSegment,
 	type SegmentationConfig,
 	type SegmentationResult,
@@ -12,8 +11,8 @@ import {
 } from "../types";
 import {
 	createOffsetMap,
-	extractHeadings,
 	type ExtractedHeading,
+	extractHeadings,
 	filterHeadingsFromText,
 	findPrecedingHeading,
 } from "./block-marker/split-str-in-blocks";
@@ -115,7 +114,11 @@ function runPipeline(
 	const rawTokens = segmentToTokens(filteredContent, langConfig);
 
 	// Stage 3: Annotate tokens with context
-	const annotatedTokens = annotateTokens(rawTokens, filteredLines, langConfig);
+	const annotatedTokens = annotateTokens(
+		rawTokens,
+		filteredLines,
+		langConfig,
+	);
 
 	// Stage 4: Group tokens (paragraph breaks force boundaries)
 	const groups = groupTokens(annotatedTokens);
@@ -190,7 +193,11 @@ function groupsToContentWithHeadings(
 
 		// Map filtered offset back to original to find preceding heading
 		const originalOffset = offsetMap(s.sourceOffset);
-		const heading = findPrecedingHeading(originalOffset, headings, usedHeadings);
+		const heading = findPrecedingHeading(
+			originalOffset,
+			headings,
+			usedHeadings,
+		);
 
 		if (i === 0) {
 			if (heading) {

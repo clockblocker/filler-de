@@ -1,0 +1,168 @@
+import type {
+	CheckboxClickedEvent,
+	PropertyCheckboxClickedEvent,
+} from "../../../../managers/obsidian/user-event-interceptor";
+import { MD } from "../../../../managers/obsidian/vault-action-manager/types/literals";
+import { logger } from "../../../../utils/logger";
+import type { CodecRules, Codecs } from "../../codecs";
+import type { ScrollNodeSegmentId } from "../../codecs/segment-id/types/segment-id";
+import { isCodexSplitPath } from "../../healer/library-tree/codex/helpers";
+import { parseCodexClickLineContent } from "../../healer/library-tree/codex";
+import { tryParseAsInsideLibrarySplitPath } from "../../healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
+import { tryMakeTargetLocatorFromLibraryScopedSplitPath } from "../../healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/translators/helpers/split-path-to-locator";
+import type { TreeAction } from "../../healer/library-tree/tree-action/types/tree-action";
+import {
+	TreeNodeKind,
+	TreeNodeStatus,
+} from "../../healer/library-tree/tree-node/types/atoms";
+
+/**
+ * Result of handling a checkbox click.
+ */
+export type CheckboxHandlerResult = {
+	action: TreeAction;
+} | null;
+
+/**
+ * Handle checkbox click in a codex file.
+ * Returns a TreeAction to enqueue, or null if no action needed.
+ */
+export function handleCheckboxClick(
+	event: CheckboxClickedEvent,
+	codecs: Codecs,
+): CheckboxHandlerResult {
+	// Check if file is a codex (basename starts with __)
+	if (!isCodexSplitPath(event.splitPath)) {
+		// Not a codex file, ignore
+		return null;
+	}
+
+	// Parse line content to get target
+	const parseResult = parseCodexClickLineContent(event.lineContent);
+	if (parseResult.isErr()) {
+		return null;
+	}
+
+	const target = parseResult.value;
+	const newStatus = event.checked
+		? TreeNodeStatus.Done
+		: TreeNodeStatus.NotStarted;
+
+	// Build ChangeStatus action
+	let action: TreeAction;
+
+	if (target.kind === "Scroll") {
+		// Use serializeSegmentIdUnchecked for unsafe user input (validates and returns Result)
+		const segmentIdResult = codecs.segmentId.serializeSegmentIdUnchecked({
+			coreName: target.nodeName,
+			extension: MD,
+			targetKind: TreeNodeKind.Scroll,
+		});
+		if (segmentIdResult.isErr()) {
+			logger.error(
+				"[Librarian] Failed to serialize scroll segment ID:",
+				segmentIdResult.error,
+			);
+			return null;
+		}
+		action = {
+			actionType: "ChangeStatus",
+			newStatus,
+			targetLocator: {
+				segmentId: segmentIdResult.value as ScrollNodeSegmentId,
+				segmentIdChainToParent: target.parentChain,
+				targetKind: TreeNodeKind.Scroll,
+			},
+		};
+	} else {
+		// Section
+		const sectionName = target.sectionChain[target.sectionChain.length - 1];
+		if (!sectionName) return null;
+
+		action = {
+			actionType: "ChangeStatus",
+			newStatus,
+			targetLocator: {
+				segmentId: sectionName,
+				segmentIdChainToParent: target.sectionChain.slice(0, -1),
+				targetKind: TreeNodeKind.Section,
+			},
+		};
+	}
+
+	return { action };
+}
+
+/**
+ * Handle property checkbox click (frontmatter status toggle).
+ * Returns a TreeAction to enqueue, or null if no action needed.
+ */
+export function handlePropertyCheckboxClick(
+	event: PropertyCheckboxClickedEvent,
+	codecs: Codecs,
+	rules: CodecRules,
+): CheckboxHandlerResult {
+	logger.debug(
+		"[Librarian] PropertyClick event:",
+		JSON.stringify({
+			checked: event.checked,
+			path: event.splitPath.pathParts,
+			propertyName: event.propertyName,
+		}),
+	);
+
+	// Only handle "status" property
+	if (event.propertyName !== "status") return null;
+
+	// Skip codex files
+	if (isCodexSplitPath(event.splitPath)) return null;
+
+	// Try to parse as library-scoped path
+	const libraryScopedResult = tryParseAsInsideLibrarySplitPath(
+		event.splitPath,
+		rules,
+	);
+	if (libraryScopedResult.isErr()) return null;
+
+	// Get locator from split path
+	const locatorResult = tryMakeTargetLocatorFromLibraryScopedSplitPath(
+		libraryScopedResult.value,
+		codecs,
+	);
+	if (locatorResult.isErr()) {
+		logger.warn(
+			"[Librarian] Failed to get locator for property click:",
+			locatorResult.error,
+		);
+		return null;
+	}
+
+	const locator = locatorResult.value;
+	logger.debug(
+		"[Librarian] Locator for property click:",
+		JSON.stringify({
+			segmentId: locator.segmentId,
+			segmentIdChainToParent: locator.segmentIdChainToParent,
+			targetKind: locator.targetKind,
+		}),
+	);
+
+	// Only handle scroll nodes
+	if (locator.targetKind !== TreeNodeKind.Scroll) return null;
+
+	const newStatus = event.checked
+		? TreeNodeStatus.Done
+		: TreeNodeStatus.NotStarted;
+
+	const action: TreeAction = {
+		actionType: "ChangeStatus",
+		newStatus,
+		targetLocator: {
+			segmentId: locator.segmentId as ScrollNodeSegmentId,
+			segmentIdChainToParent: locator.segmentIdChainToParent,
+			targetKind: TreeNodeKind.Scroll,
+		},
+	};
+
+	return { action };
+}
