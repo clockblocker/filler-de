@@ -52,12 +52,14 @@ export type TextEaterSettings = {
 	translatePlacement: SelectionActionPlacement;
 	splitInBlocksPlacement: SelectionActionPlacement;
 	explainGrammarPlacement: SelectionActionPlacement;
+	generatePlacement: SelectionActionPlacement;
 	navButtonsPosition: "left" | "right";
 };
 
 export const DEFAULT_SETTINGS: TextEaterSettings = {
 	apiProvider: "google",
 	explainGrammarPlacement: "selection",
+	generatePlacement: "bottom",
 	googleApiKey: "",
 	hideMetadata: true,
 	libraryRoot: "Library",

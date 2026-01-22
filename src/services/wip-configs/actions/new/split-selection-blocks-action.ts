@@ -1,6 +1,7 @@
 import { Notice } from "obsidian";
 import { splitStrInBlocks } from "../../../../commanders/librarian/bookkeeper/segmenter/block-marker";
 import type { TexfresserObsidianServices } from "../../../obsidian-services/interface";
+import { findHighestBlockNumber } from "./block-utils";
 
 /**
  * Splits selected text into blocks with Obsidian block markers (^N).
@@ -48,21 +49,4 @@ export async function splitSelectionInBlocksAction(
 		const message = error instanceof Error ? error.message : String(error);
 		new Notice(`Error: ${message}`);
 	}
-}
-
-/**
- * Find the highest block ID number in file content.
- * Matches patterns like " ^0", " ^123", etc.
- */
-function findHighestBlockNumber(content: string): number {
-	// Match block markers at end of lines: " ^N" or "^N" at line end
-	const matches = content.match(/\s\^(\d+)(?:\s*$|\n)/gm);
-	if (!matches) return -1;
-
-	const numbers = matches.map((match) => {
-		const numMatch = match.match(/\^(\d+)/);
-		return numMatch ? Number.parseInt(numMatch[1], 10) : 0;
-	});
-
-	return Math.max(-1, ...numbers);
 }

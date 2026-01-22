@@ -36,6 +36,7 @@ import {
 	OverlayManager,
 } from "./services/obsidian-services/overlay-manager";
 import { ACTION_CONFIGS } from "./services/wip-configs/actions/actions-config";
+import { tagLineCopyEmbedAction } from "./services/wip-configs/actions/new/tag-line-copy-embed-action";
 import addBacklinksToCurrentFile from "./services/wip-configs/actions/old/addBacklinksToCurrentFile";
 import { SettingsTab } from "./settings";
 import {
@@ -341,17 +342,21 @@ export default class TextEaterPlugin extends Plugin {
 
 		this.addCommand({
 			editorCheckCallback: (checking: boolean, editor: Editor) => {
-				const selection = editor.getSelection();
-				if (selection) {
-					if (!checking) {
+				if (!checking) {
+					const selection = editor.getSelection();
+					if (selection) {
 						ACTION_CONFIGS.SplitInBlocks.execute({
 							selectionService: this.selectionService,
 							vaultActionManager: this.vaultActionManager,
 						});
+					} else {
+						tagLineCopyEmbedAction({
+							app: this.app,
+							vaultActionManager: this.vaultActionManager,
+						});
 					}
-					return true;
 				}
-				return false;
+				return true;
 			},
 			id: "split-selection-in-blocks",
 			name: "Split selected text in blocks",

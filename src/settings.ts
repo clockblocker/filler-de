@@ -257,6 +257,19 @@ export class SettingsTab extends PluginSettingTab {
 			});
 
 		new Setting(containerEl)
+			.setName("Generate")
+			.setDesc("Where to show the Generate action")
+			.addDropdown((dropdown) => {
+				addPlacementOptions(dropdown);
+				dropdown
+					.setValue(this.plugin.settings.generatePlacement)
+					.onChange(async (value: SelectionActionPlacementType) => {
+						this.plugin.settings.generatePlacement = value;
+						await this.plugin.saveSettings();
+					});
+			});
+
+		new Setting(containerEl)
 			.setName("Navigation buttons position")
 			.setDesc(
 				"Where to show navigation buttons (← →) in the bottom toolbar",

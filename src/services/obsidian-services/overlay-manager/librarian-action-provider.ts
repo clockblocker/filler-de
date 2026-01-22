@@ -22,6 +22,13 @@ export class LibrarianActionProvider implements CommanderActionProvider {
 	getAvailableActions(ctx: OverlayContext): CommanderAction[] {
 		const actions: CommanderAction[] = [];
 
+		const {
+			translatePlacement,
+			splitInBlocksPlacement,
+			explainGrammarPlacement,
+			generatePlacement,
+		} = getParsedUserSettings();
+
 		// ─── Bottom Actions ───
 
 		// PreviousPage: show on Page files, disabled if first page
@@ -75,25 +82,27 @@ export class LibrarianActionProvider implements CommanderActionProvider {
 		}
 
 		// Generate: show when selection exists in library
-		if (ctx.hasSelection && ctx.isInLibrary) {
+		// Placement controlled by generatePlacement setting
+		if (
+			ctx.hasSelection &&
+			ctx.isInLibrary &&
+			generatePlacement !== "shortcut-only"
+		) {
 			actions.push({
 				id: "Generate",
 				kind: ActionKind.Generate,
 				label: "Generate",
 				params: {},
-				placement: ActionPlacement.Bottom,
+				placement:
+					generatePlacement === "bottom"
+						? ActionPlacement.Bottom
+						: ActionPlacement.Selection,
 				priority: 5,
 			});
 		}
 
 		// ─── Selection Actions ───
 		// Placement controlled by per-action settings
-
-		const {
-			translatePlacement,
-			splitInBlocksPlacement,
-			explainGrammarPlacement,
-		} = getParsedUserSettings();
 
 		// TranslateSelection: show when selection exists
 		if (ctx.hasSelection && translatePlacement !== "shortcut-only") {

@@ -397,6 +397,8 @@ export class OpenedFileService {
 
 		try {
 			await this.app.workspace.getLeaf(false).openFile(tfile);
+			// Reveal file in explorer sidebar. Using `as any` because `commands` is not in public Obsidian API types.
+			(this.app as unknown as { commands: { executeCommandById: (id: string) => void } }).commands.executeCommandById('file-explorer:reveal-active-file');
 			return ok(tfile);
 		} catch (error) {
 			return err(
