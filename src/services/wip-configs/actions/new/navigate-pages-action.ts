@@ -4,7 +4,6 @@ import {
 } from "../../../../commanders/librarian/bookkeeper/page-codec";
 import { logError } from "../../../../managers/obsidian/vault-action-manager/helpers/issue-handlers";
 import type { SplitPathToMdFile } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
-import { logger } from "../../../../utils/logger";
 import type { TexfresserObsidianServices } from "../../../obsidian-services/interface";
 
 export async function navigatePageAction(
@@ -34,9 +33,7 @@ export async function navigatePageAction(
 				: getNextPageSplitPath(currentPath);
 
 		if (targetPage) {
-			logger.info(`[NAV] navigatePageAction cd START direction=${direction}`);
 			await vaultActionManager.cd(targetPage);
-			logger.info(`[NAV] navigatePageAction cd END`);
 		}
 	} catch (error) {
 		logError({

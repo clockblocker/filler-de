@@ -1,6 +1,5 @@
 import type { App, Plugin } from "obsidian";
 import { DebounceScheduler } from "../../../utils/debounce-scheduler";
-import { logger } from "../../../utils/logger";
 import { BottomToolbarService } from "../button-manager/bottom-toolbar";
 import { EdgePaddingNavigator } from "../button-manager/edge-padding-navigator";
 import { NavigationLayoutCoordinator } from "../button-manager/navigation-layout-coordinator";
@@ -167,7 +166,6 @@ export class OverlayManager {
 	 * Reattach UI elements to current view.
 	 */
 	private reattachUI(): void {
-		logger.info(`[NAV] reattachUI`);
 		doReattachUI(this.reattachDeps);
 	}
 
@@ -175,7 +173,6 @@ export class OverlayManager {
 	 * Reattach UI elements for a specific file path.
 	 */
 	private reattachUIForFile(filePath: string): void {
-		logger.info(`[NAV] reattachUIForFile path=${filePath}`);
 		doReattachUIForFile(this.reattachDeps, filePath);
 	}
 
@@ -183,14 +180,12 @@ export class OverlayManager {
 	 * Try to reattach UI with retry mechanism.
 	 */
 	private async tryReattachWithRetry(filePath: string): Promise<void> {
-		logger.info(`[NAV] tryReattachWithRetry START path=${filePath}`);
 		await doTryReattachWithRetry(this.reattachDeps, filePath, {
 			reattachUI: () => this.reattachUI(),
 			reattachUIForFile: (p) => this.reattachUIForFile(p),
 			recompute: () => this.recompute(),
 			recomputeForFile: (p) => this.recomputeForFile(p),
 		});
-		logger.info(`[NAV] tryReattachWithRetry END`);
 	}
 
 	/**
@@ -198,12 +193,9 @@ export class OverlayManager {
 	 * Cancels debouncer, awaits recompute, then reattaches UI.
 	 */
 	private async completeNavigation(filePath: string): Promise<void> {
-		logger.info(`[NAV] completeNavigation START path=${filePath}`);
 		this.debouncer.cancel();
 		await this.recomputeForFile(filePath);
-		logger.info(`[NAV] completeNavigation recomputeForFile DONE, calling reattachUIForFile`);
 		this.reattachUIForFile(filePath);
-		logger.info(`[NAV] completeNavigation END`);
 	}
 
 	/**

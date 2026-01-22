@@ -1,6 +1,5 @@
 import { type App, MarkdownView } from "obsidian";
 import { getParsedUserSettings } from "../../../global-state/global-state";
-import { logger } from "../../../utils/logger";
 import type { RenderedActionConfig } from "../../wip-configs/actions/types";
 import { UserAction } from "../../wip-configs/actions/types";
 
@@ -41,14 +40,11 @@ export class BottomToolbarService {
 	}
 
 	private reattachToView(view: MarkdownView | null): void {
-		const viewPath = view?.file?.path ?? "null";
-		logger.info(`[NAV] bottom.reattachToView START viewPath=${viewPath} hasOverlayEl=${!!this.overlayEl}`);
 		// Always detach and reattach - DOM may have changed even if "same view"
-		// The early return optimization was causing overlay to not appear after navigation
+		// See: src/documentaion/insights-about-obsidian-quirks/overlay-navigation-race.md
 		this.detach();
 
 		if (!view || !this.overlayEl) {
-			logger.info(`[NAV] bottom.reattachToView ABORT no view or overlayEl`);
 			this.attachedView = null;
 			return;
 		}
@@ -62,7 +58,6 @@ export class BottomToolbarService {
 		this.renderButtons(this.overlayEl);
 
 		this.attachedView = view;
-		logger.info(`[NAV] bottom.reattachToView DONE attached to ${viewPath} numButtons=${this.actionConfigs.length}`);
 	}
 
 	/**

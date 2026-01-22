@@ -1,8 +1,8 @@
-import { logger } from "../../../../utils/logger";
-
 /**
  * State machine to prevent race conditions during navigation.
  * Tracks whether we're in a plugin-initiated nav vs external nav.
+ *
+ * See: src/documentaion/insights-about-obsidian-quirks/overlay-navigation-race.md
  */
 export class NavigationState {
 	private state: "idle" | "navigating" = "idle";
@@ -14,7 +14,6 @@ export class NavigationState {
 	 * Marks navigation as plugin-initiated.
 	 */
 	startPluginNav(path: string): void {
-		logger.info(`[NAV] startPluginNav path=${path}`);
 		this.state = "navigating";
 		this.pendingPath = path;
 		this.isPlugin = true;
@@ -26,10 +25,8 @@ export class NavigationState {
 	 */
 	startExternalNav(path: string): void {
 		if (this.state === "navigating") {
-			logger.info(`[NAV] startExternalNav SKIPPED (plugin nav in progress) path=${path}`);
 			return;
 		}
-		logger.info(`[NAV] startExternalNav path=${path}`);
 		this.state = "navigating";
 		this.pendingPath = path;
 		this.isPlugin = false;
@@ -41,7 +38,6 @@ export class NavigationState {
 	 */
 	complete(): string | null {
 		const path = this.pendingPath;
-		logger.info(`[NAV] complete wasPlugin=${this.isPlugin} path=${path}`);
 		this.state = "idle";
 		this.pendingPath = null;
 		this.isPlugin = false;

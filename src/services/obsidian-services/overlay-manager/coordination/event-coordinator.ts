@@ -8,7 +8,6 @@ import {
 } from "obsidian";
 import { FileType } from "../../../../types/common-interface/enums";
 import { waitForDomCondition } from "../../../../utils/dom-waiter";
-import { logger } from "../../../../utils/logger";
 import { executeAction } from "../executor-registry";
 import { ActionKind, ActionPlacement, type OverlayContext } from "../types";
 import type { NavigationState } from "./navigation-state";
@@ -68,16 +67,13 @@ export function setupEventSubscriptions(
 	plugin.registerEvent(
 		app.workspace.on("active-leaf-change", (leaf: WorkspaceLeaf | null) => {
 			if (navState.isNavigating()) {
-				logger.info(`[NAV] active-leaf-change SKIPPED (navigating)`);
 				return;
 			}
 			const view = leaf?.view;
 			const isMarkdown = view instanceof MarkdownView;
 			if (!isMarkdown) {
-				logger.info(`[NAV] active-leaf-change SKIPPED (not markdown)`);
 				return;
 			}
-			logger.info(`[NAV] active-leaf-change -> scheduleRecompute + reattachUI`);
 			callbacks.scheduleRecompute();
 			callbacks.reattachUI();
 		}),
@@ -87,7 +83,6 @@ export function setupEventSubscriptions(
 	// No-op if plugin nav in progress (cd() already called startPluginNav)
 	plugin.registerEvent(
 		app.workspace.on("file-open", (file) => {
-			logger.info(`[NAV] file-open path=${file?.path ?? "null"}`);
 			if (!file) return;
 			navState.startExternalNav(file.path);
 		}),
@@ -98,11 +93,8 @@ export function setupEventSubscriptions(
 	plugin.registerEvent(
 		// @ts-expect-error - custom event not in Obsidian types
 		app.workspace.on("textfresser:file-ready", async (file: TFile) => {
-			logger.info(`[NAV] textfresser:file-ready path=${file.path}`);
 			navState.complete();
-			logger.info(`[NAV] textfresser:file-ready -> completeNavigation`);
 			await callbacks.completeNavigation(file.path);
-			logger.info(`[NAV] textfresser:file-ready DONE`);
 		}),
 	);
 
@@ -145,25 +137,17 @@ export function setupEventSubscriptions(
 	// Skip if plugin nav - file-ready handles it
 	plugin.registerEvent(
 		app.workspace.on("layout-change", async () => {
-			const isPluginNav = navState.isPluginNav();
-			const pendingPath = navState.getPendingPath();
-			logger.info(`[NAV] layout-change isPluginNav=${isPluginNav} pendingPath=${pendingPath}`);
-			if (isPluginNav) {
-				logger.info(`[NAV] layout-change SKIPPED (plugin nav)`);
+			if (navState.isPluginNav()) {
 				return;
 			}
 			const view = app.workspace.getActiveViewOfType(MarkdownView);
+			const pendingPath = navState.getPendingPath();
 			if (pendingPath) {
-				logger.info(`[NAV] layout-change -> tryReattachWithRetry (external nav)`);
 				navState.complete();
 				await callbacks.tryReattachWithRetry(pendingPath);
-				logger.info(`[NAV] layout-change tryReattachWithRetry DONE`);
 			} else if (view) {
-				logger.info(`[NAV] layout-change -> scheduleRecompute + reattachUI (no nav)`);
 				callbacks.scheduleRecompute();
 				callbacks.reattachUI();
-			} else {
-				logger.info(`[NAV] layout-change SKIPPED (no view, no pending)`);
 			}
 		}),
 	);
