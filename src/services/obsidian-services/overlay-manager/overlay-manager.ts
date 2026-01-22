@@ -20,6 +20,7 @@ import {
 	FileType,
 	MdFileSubTypeSchema,
 } from "../../../types/common-interface/enums";
+import { waitForDomCondition } from "../../../utils/dom-waiter";
 import { logger } from "../../../utils/logger";
 import type { ApiService } from "../atomic-services/api-service";
 import type { SelectionService } from "../atomic-services/selection-service";
@@ -598,52 +599,15 @@ export class OverlayManager {
 	 * Wait for the active view to be ready (DOM rendered) using MutationObserver.
 	 * Returns when `.cm-contentContainer` appears in any active MarkdownView.
 	 */
-	private waitForActiveViewReady(timeoutMs = 500): Promise<void> {
-		logger.info("[OverlayManager.waitForActiveViewReady] START");
-		return new Promise((resolve) => {
-			const check = () => {
-				const view =
-					this.app.workspace.getActiveViewOfType(MarkdownView);
-				const hasContainer = view?.contentEl.querySelector(
-					".cm-contentContainer",
-				);
-				logger.info(
-					`[OverlayManager.waitForActiveViewReady] check: view=${!!view}, hasContainer=${!!hasContainer}`,
-				);
-				if (hasContainer) {
-					return true;
-				}
-				return false;
-			};
+	private async waitForActiveViewReady(timeoutMs = 500): Promise<void> {
+		const check = () => {
+			const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+			return !!view?.contentEl.querySelector(".cm-contentContainer");
+		};
 
-			if (check()) {
-				logger.info(
-					"[OverlayManager.waitForActiveViewReady] IMMEDIATE resolve",
-				);
-				resolve();
-				return;
-			}
+		await waitForDomCondition(check, { timeout: timeoutMs });
 
-			const observer = new MutationObserver(() => {
-				if (check()) {
-					logger.info(
-						"[OverlayManager.waitForActiveViewReady] OBSERVER resolve",
-					);
-					observer.disconnect();
-					resolve();
-				}
-			});
-
-			observer.observe(document.body, { childList: true, subtree: true });
-
-			setTimeout(() => {
-				logger.info(
-					`[OverlayManager.waitForActiveViewReady] TIMEOUT resolve after ${timeoutMs}ms`,
-				);
-				observer.disconnect();
-				resolve();
-			}, timeoutMs);
-		});
+		logger.info("[OverlayManager.waitForActiveViewReady] DONE");
 	}
 
 	/**
