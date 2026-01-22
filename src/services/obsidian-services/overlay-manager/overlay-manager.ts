@@ -1,10 +1,11 @@
 import type { App, Plugin } from "obsidian";
 import { DebounceScheduler } from "../../../utils/debounce-scheduler";
+import { logger } from "../../../utils/logger";
 import { BottomToolbarService } from "../button-manager/bottom-toolbar";
 import { EdgePaddingNavigator } from "../button-manager/edge-padding-navigator";
 import { NavigationLayoutCoordinator } from "../button-manager/navigation-layout-coordinator";
 import { AboveSelectionToolbarService } from "../button-manager/selection-toolbar";
-import { handleActionClick, setupDelegatedClickHandler } from "./actions";
+import { setupDelegatedClickHandler } from "./actions";
 import {
 	buildOverlayContext,
 	buildOverlayContextForFile,
@@ -20,6 +21,7 @@ import {
 	setupEventSubscriptions,
 	type ToolbarServices,
 } from "./coordination";
+import { NavigationState } from "./coordination/navigation-state";
 import type { CommanderActionProvider, OverlayContext } from "./types";
 
 export type { OverlayManagerServices };
@@ -50,6 +52,7 @@ export class OverlayManager {
 	private services: OverlayManagerServices | null = null;
 	private currentContext: OverlayContext | null = null;
 	private debouncer: DebounceScheduler;
+	private navState: NavigationState;
 
 	// Cached deps
 	private contextBuilderDeps: ContextBuilderDeps;
@@ -69,6 +72,7 @@ export class OverlayManager {
 		);
 
 		this.debouncer = new DebounceScheduler(OverlayManager.DEBOUNCE_MS);
+		this.navState = new NavigationState();
 
 		// Cache deps
 		this.contextBuilderDeps = { app: this.app };
@@ -99,23 +103,11 @@ export class OverlayManager {
 	public init(services: OverlayManagerServices): void {
 		this.services = services;
 
-		// Set direct click handler for bottom toolbar buttons
-		this.bottom.setClickHandler((actionId) => {
-			handleActionClick(
-				{
-					app: this.app,
-					getCurrentContext: () => this.currentContext,
-					getProviders: () => this.providers,
-					getServices: () => this.services,
-				},
-				actionId,
-			);
-		});
-
 		// Initialize bottom toolbar
 		this.bottom.init();
 
-		// Setup delegated click handler (for edge zones and other elements)
+		// Setup delegated click handler for all [data-action] buttons
+		// (bottom toolbar, edge zones, overflow menu, etc.)
 		setupDelegatedClickHandler(this.plugin, {
 			app: this.app,
 			getCurrentContext: () => this.currentContext,
@@ -124,17 +116,23 @@ export class OverlayManager {
 		});
 
 		// Setup event subscriptions
-		setupEventSubscriptions(this.app, this.plugin, {
-			getContext: () => this.currentContext,
-			getServices: () => this.services,
-			hideSelectionToolbar: () => this.selection.hide(),
-			reattachUI: () => this.reattachUI(),
-			reattachUIForFile: (path) => this.reattachUIForFile(path),
-			recompute: () => this.recompute(),
-			recomputeForFile: (path) => this.recomputeForFile(path),
-			scheduleRecompute: () => this.scheduleRecompute(),
-			tryReattachWithRetry: (path) => this.tryReattachWithRetry(path),
-		});
+		setupEventSubscriptions(
+			this.app,
+			this.plugin,
+			{
+				completeNavigation: (path) => this.completeNavigation(path),
+				getContext: () => this.currentContext,
+				getServices: () => this.services,
+				hideSelectionToolbar: () => this.selection.hide(),
+				reattachUI: () => this.reattachUI(),
+				reattachUIForFile: (path) => this.reattachUIForFile(path),
+				recompute: () => this.recompute(),
+				recomputeForFile: (path) => this.recomputeForFile(path),
+				scheduleRecompute: () => this.scheduleRecompute(),
+				tryReattachWithRetry: (path) => this.tryReattachWithRetry(path),
+			},
+			this.navState,
+		);
 	}
 
 	/**
@@ -169,6 +167,7 @@ export class OverlayManager {
 	 * Reattach UI elements to current view.
 	 */
 	private reattachUI(): void {
+		logger.info(`[NAV] reattachUI`);
 		doReattachUI(this.reattachDeps);
 	}
 
@@ -176,19 +175,35 @@ export class OverlayManager {
 	 * Reattach UI elements for a specific file path.
 	 */
 	private reattachUIForFile(filePath: string): void {
+		logger.info(`[NAV] reattachUIForFile path=${filePath}`);
 		doReattachUIForFile(this.reattachDeps, filePath);
 	}
 
 	/**
 	 * Try to reattach UI with retry mechanism.
 	 */
-	private tryReattachWithRetry(filePath: string): void {
-		doTryReattachWithRetry(this.reattachDeps, filePath, {
+	private async tryReattachWithRetry(filePath: string): Promise<void> {
+		logger.info(`[NAV] tryReattachWithRetry START path=${filePath}`);
+		await doTryReattachWithRetry(this.reattachDeps, filePath, {
 			reattachUI: () => this.reattachUI(),
 			reattachUIForFile: (p) => this.reattachUIForFile(p),
+			recompute: () => this.recompute(),
 			recomputeForFile: (p) => this.recomputeForFile(p),
-			scheduleRecompute: () => this.scheduleRecompute(),
 		});
+		logger.info(`[NAV] tryReattachWithRetry END`);
+	}
+
+	/**
+	 * Complete navigation - single entry point for plugin-initiated navigation.
+	 * Cancels debouncer, awaits recompute, then reattaches UI.
+	 */
+	private async completeNavigation(filePath: string): Promise<void> {
+		logger.info(`[NAV] completeNavigation START path=${filePath}`);
+		this.debouncer.cancel();
+		await this.recomputeForFile(filePath);
+		logger.info(`[NAV] completeNavigation recomputeForFile DONE, calling reattachUIForFile`);
+		this.reattachUIForFile(filePath);
+		logger.info(`[NAV] completeNavigation END`);
 	}
 
 	/**
@@ -196,6 +211,13 @@ export class OverlayManager {
 	 */
 	public getContext(): OverlayContext | null {
 		return this.currentContext;
+	}
+
+	/**
+	 * Get navigation state (for opened-file-service to signal nav start).
+	 */
+	public getNavigationState(): NavigationState {
+		return this.navState;
 	}
 
 	/**

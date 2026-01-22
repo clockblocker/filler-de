@@ -199,7 +199,12 @@ export class ApiService {
 				messages,
 				model: this.model,
 				// Type assertion needed due to Zod version mismatch between our deps and OpenAI SDK
-				response_format: zodResponseFormat(schema as unknown as Parameters<typeof zodResponseFormat>[0], "data"),
+				response_format: zodResponseFormat(
+					schema as unknown as Parameters<
+						typeof zodResponseFormat
+					>[0],
+					"data",
+				),
 				temperature: 0,
 				top_p: 0.95,
 				...(cachedId
@@ -217,7 +222,8 @@ export class ApiService {
 
 			throw new Error(
 				formatError({
-					description: "Failed to parse response: parsed is undefined",
+					description:
+						"Failed to parse response: parsed is undefined",
 					location: "ApiService",
 				}),
 			);

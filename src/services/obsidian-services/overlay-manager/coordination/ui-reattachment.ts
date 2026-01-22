@@ -1,4 +1,5 @@
 import { type App, MarkdownView } from "obsidian";
+import { waitForDomCondition } from "../../../../utils/dom-waiter";
 import { logger } from "../../../../utils/logger";
 import type { BottomToolbarService } from "../../button-manager/bottom-toolbar";
 import type { NavigationLayoutCoordinator } from "../../button-manager/navigation-layout-coordinator";
@@ -55,41 +56,48 @@ export function reattachUIForFile(deps: ReattachDeps, filePath: string): void {
 export type RetryCallbacks = {
 	reattachUIForFile: (filePath: string) => void;
 	recomputeForFile: (filePath: string) => Promise<void>;
-	scheduleRecompute: () => void;
+	recompute: () => Promise<void>;
 	reattachUI: () => void;
 };
 
 /**
- * Try to reattach UI with retry mechanism using requestAnimationFrame.
+ * Try to reattach UI with retry mechanism using MutationObserver.
+ * Waits for view DOM to be ready (`.cm-contentContainer` present) before reattaching.
  * This handles the case where layout-change fires before view is fully ready.
+ *
+ * IMPORTANT: This function is now async and awaits everything to prevent race conditions.
  */
-export function tryReattachWithRetry(
+export async function tryReattachWithRetry(
 	deps: ReattachDeps,
 	filePath: string,
 	callbacks: RetryCallbacks,
-	attempt = 0,
-): void {
-	const MAX_ATTEMPTS = 5;
+): Promise<void> {
+	const TIMEOUT_MS = 500;
 
-	const view =
-		getMarkdownViewForFile(deps.app, filePath) ??
-		deps.app.workspace.getActiveViewOfType(MarkdownView);
+	// Check if view is ready: correct file AND DOM rendered
+	const isViewReady = () => {
+		const view =
+			getMarkdownViewForFile(deps.app, filePath) ??
+			deps.app.workspace.getActiveViewOfType(MarkdownView);
+		return (
+			view?.file?.path === filePath &&
+			!!view.contentEl.querySelector(".cm-contentContainer")
+		);
+	};
 
-	if (view?.file?.path === filePath) {
-		// View is ready - reattach and recompute
+	// Wait for view DOM to be ready using MutationObserver
+	await waitForDomCondition(isViewReady, { timeout: TIMEOUT_MS });
+
+	if (isViewReady()) {
+		// Recompute FIRST to update actionConfigs, THEN reattach with correct buttons
+		await callbacks.recomputeForFile(filePath);
 		callbacks.reattachUIForFile(filePath);
-		void callbacks.recomputeForFile(filePath);
-	} else if (attempt < MAX_ATTEMPTS) {
-		// Retry in next animation frame
-		requestAnimationFrame(() =>
-			tryReattachWithRetry(deps, filePath, callbacks, attempt + 1),
-		);
 	} else {
-		// Max retries reached - fall back to standard recompute
+		// Timeout reached - fall back to standard recompute
 		logger.warn(
-			`[OverlayManager] View not ready after ${MAX_ATTEMPTS} attempts for: ${filePath}`,
+			`[OverlayManager] View not ready after ${TIMEOUT_MS}ms for: ${filePath}`,
 		);
-		callbacks.scheduleRecompute();
+		await callbacks.recompute();
 		callbacks.reattachUI();
 	}
 }

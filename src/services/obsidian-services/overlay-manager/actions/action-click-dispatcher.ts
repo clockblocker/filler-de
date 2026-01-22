@@ -18,17 +18,14 @@ export type ClickDispatcherDeps = {
 /**
  * Handle action click by ID.
  */
-export function handleActionClick(
+export async function handleActionClick(
 	deps: ClickDispatcherDeps,
 	actionId: string,
-): void {
+): Promise<void> {
 	const services = deps.getServices();
 	const context = deps.getCurrentContext();
 
 	if (!services || !context) {
-		logger.warn(
-			`[OverlayManager] handleActionClick early return: services=${!!services}, context=${!!context}`,
-		);
 		return;
 	}
 
@@ -44,7 +41,7 @@ export function handleActionClick(
 	}
 
 	// Execute the action
-	executeAction(action, {
+	await executeAction(action, {
 		apiService: services.apiService,
 		app: deps.app,
 		selectionService: services.selectionService,
@@ -59,14 +56,28 @@ export function setupDelegatedClickHandler(
 	plugin: Plugin,
 	deps: ClickDispatcherDeps,
 ): void {
-	plugin.registerDomEvent(document, "click", (evt: MouseEvent) => {
+	// Use mousedown instead of click because buttons may be re-rendered
+	// between mousedown and mouseup (e.g., after navigation), which prevents
+	// the click event from firing. mousedown always fires before any re-render.
+	const handler = (evt: MouseEvent) => {
+		// Only handle left mouse button
+		if (evt.button !== 0) return;
+
 		const target = evt.target as HTMLElement;
 		const button = target.closest("[data-action]") as HTMLElement | null;
 		if (!button) return;
 
+		// Skip disabled buttons
+		if (button.hasAttribute("disabled")) return;
+
 		const actionId = button.dataset.action;
 		if (!actionId) return;
 
-		handleActionClick(deps, actionId);
-	});
+		void handleActionClick(deps, actionId);
+	};
+
+	document.addEventListener("mousedown", handler, true); // capture: true
+	plugin.register(() =>
+		document.removeEventListener("mousedown", handler, true),
+	);
 }

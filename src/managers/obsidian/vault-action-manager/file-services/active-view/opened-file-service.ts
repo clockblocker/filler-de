@@ -38,9 +38,16 @@ export type SavedInlineTitleSelection = {
 	text: string;
 };
 
+/**
+ * Callback invoked before cd() opens a file.
+ * Used by OverlayManager to signal plugin-initiated navigation.
+ */
+export type OnBeforeNavigateCallback = (targetPath: string) => void;
+
 export class OpenedFileService {
 	private lastOpenedFiles: SplitPathToMdFile[] = [];
 	private reader: OpenedFileReader;
+	private onBeforeNavigate: OnBeforeNavigateCallback | null = null;
 
 	constructor(
 		private app: App,
@@ -48,6 +55,14 @@ export class OpenedFileService {
 	) {
 		this.reader = reader;
 		this.init();
+	}
+
+	/**
+	 * Set callback to be invoked before navigation.
+	 * Used by OverlayManager to signal plugin-initiated navigation.
+	 */
+	setOnBeforeNavigate(callback: OnBeforeNavigateCallback): void {
+		this.onBeforeNavigate = callback;
 	}
 
 	private async init() {
@@ -397,12 +412,22 @@ export class OpenedFileService {
 		}
 
 		try {
+			// Signal navigation start BEFORE opening file
+			// This allows OverlayManager to skip redundant event handlers
+			if (this.onBeforeNavigate) {
+				this.onBeforeNavigate(tfile.path);
+			}
+
 			const leaf = this.app.workspace.getLeaf(false);
 			await leaf.openFile(tfile);
 			// Ensure leaf is properly marked active so getActiveViewOfType() returns it immediately
 			this.app.workspace.setActiveLeaf(leaf, { focus: true });
 			// Reveal file in explorer sidebar. Using `as any` because `commands` is not in public Obsidian API types.
-			(this.app as unknown as { commands: { executeCommandById: (id: string) => void } }).commands.executeCommandById('file-explorer:reveal-active-file');
+			(
+				this.app as unknown as {
+					commands: { executeCommandById: (id: string) => void };
+				}
+			).commands.executeCommandById("file-explorer:reveal-active-file");
 			// Wait for view DOM to be ready before returning
 			await this.waitForViewReady(tfile);
 			// Trigger custom event so OverlayManager can reattach UI
@@ -426,8 +451,11 @@ export class OpenedFileService {
 	private waitForViewReady(tfile: TFile, timeoutMs = 500): Promise<void> {
 		return new Promise((resolve) => {
 			const checkView = () => {
-				const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-				const hasContainer = view?.contentEl.querySelector(".cm-contentContainer");
+				const view =
+					this.app.workspace.getActiveViewOfType(MarkdownView);
+				const hasContainer = view?.contentEl.querySelector(
+					".cm-contentContainer",
+				);
 				const pathMatch = view?.file?.path === tfile.path;
 				if (pathMatch && hasContainer) {
 					return true;

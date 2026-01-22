@@ -1,8 +1,8 @@
 export {
 	type EventCoordinatorCallbacks,
-	type EventCoordinatorState,
 	setupEventSubscriptions,
 } from "./event-coordinator";
+export { NavigationState } from "./navigation-state";
 export {
 	executeRecompute,
 	type OverlayManagerServices,

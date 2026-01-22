@@ -8,8 +8,10 @@ import {
 } from "obsidian";
 import { FileType } from "../../../../types/common-interface/enums";
 import { waitForDomCondition } from "../../../../utils/dom-waiter";
+import { logger } from "../../../../utils/logger";
 import { executeAction } from "../executor-registry";
 import { ActionKind, ActionPlacement, type OverlayContext } from "../types";
+import type { NavigationState } from "./navigation-state";
 import type { OverlayManagerServices } from "./recompute-coordinator";
 
 /**
@@ -21,17 +23,11 @@ export type EventCoordinatorCallbacks = {
 	recomputeForFile: (filePath: string) => Promise<void>;
 	reattachUI: () => void;
 	reattachUIForFile: (filePath: string) => void;
-	tryReattachWithRetry: (filePath: string) => void;
+	tryReattachWithRetry: (filePath: string) => Promise<void>;
+	completeNavigation: (filePath: string) => Promise<void>;
 	hideSelectionToolbar: () => void;
 	getContext: () => OverlayContext | null;
 	getServices: () => OverlayManagerServices | null;
-};
-
-/**
- * State for tracking pending file navigation.
- */
-export type EventCoordinatorState = {
-	pendingFilePath: string | null;
 };
 
 /**
@@ -51,16 +47,14 @@ async function waitForActiveViewReady(
 
 /**
  * Setup all event subscriptions for OverlayManager.
- * Returns state object that can be read/modified by callbacks.
+ * Uses NavigationState to prevent race conditions between events.
  */
 export function setupEventSubscriptions(
 	app: App,
 	plugin: Plugin,
 	callbacks: EventCoordinatorCallbacks,
-): EventCoordinatorState {
-	const state: EventCoordinatorState = {
-		pendingFilePath: null,
-	};
+	navState: NavigationState,
+): void {
 
 	// Initial recompute on layout ready - wait for view DOM to be ready
 	app.workspace.onLayoutReady(async () => {
@@ -70,37 +64,45 @@ export function setupEventSubscriptions(
 	});
 
 	// Reattach when user switches panes/notes
-	// Only reattach if the new leaf is a MarkdownView - otherwise skip to avoid detaching during transitions
+	// Skip if navigation in progress - file-ready or layout-change will handle it
 	plugin.registerEvent(
 		app.workspace.on("active-leaf-change", (leaf: WorkspaceLeaf | null) => {
+			if (navState.isNavigating()) {
+				logger.info(`[NAV] active-leaf-change SKIPPED (navigating)`);
+				return;
+			}
 			const view = leaf?.view;
 			const isMarkdown = view instanceof MarkdownView;
 			if (!isMarkdown) {
+				logger.info(`[NAV] active-leaf-change SKIPPED (not markdown)`);
 				return;
 			}
+			logger.info(`[NAV] active-leaf-change -> scheduleRecompute + reattachUI`);
 			callbacks.scheduleRecompute();
 			callbacks.reattachUI();
 		}),
 	);
 
-	// On file-open: record the path for layout-change to handle
-	// Don't try to reattach here - MarkdownView isn't ready yet
+	// On file-open: record path for external navigation (wikilinks, file explorer)
+	// No-op if plugin nav in progress (cd() already called startPluginNav)
 	plugin.registerEvent(
 		app.workspace.on("file-open", (file) => {
+			logger.info(`[NAV] file-open path=${file?.path ?? "null"}`);
 			if (!file) return;
-			state.pendingFilePath = file.path;
+			navState.startExternalNav(file.path);
 		}),
 	);
 
 	// Listen for custom event from cd() when view DOM is ready
-	// This handles navigation via plugin's page nav buttons
+	// This is the SINGLE AUTHORITY for plugin-initiated navigation
 	plugin.registerEvent(
 		// @ts-expect-error - custom event not in Obsidian types
-		app.workspace.on("textfresser:file-ready", (file: TFile) => {
-			// Clear pending since cd() already waited for view
-			state.pendingFilePath = null;
-			callbacks.reattachUIForFile(file.path);
-			void callbacks.recomputeForFile(file.path);
+		app.workspace.on("textfresser:file-ready", async (file: TFile) => {
+			logger.info(`[NAV] textfresser:file-ready path=${file.path}`);
+			navState.complete();
+			logger.info(`[NAV] textfresser:file-ready -> completeNavigation`);
+			await callbacks.completeNavigation(file.path);
+			logger.info(`[NAV] textfresser:file-ready DONE`);
 		}),
 	);
 
@@ -140,18 +142,28 @@ export function setupEventSubscriptions(
 	});
 
 	// Re-check after major layout changes (splits, etc.)
-	// Only reattach if there's a markdown view - skip during transitions to avoid detaching
+	// Skip if plugin nav - file-ready handles it
 	plugin.registerEvent(
-		app.workspace.on("layout-change", () => {
+		app.workspace.on("layout-change", async () => {
+			const isPluginNav = navState.isPluginNav();
+			const pendingPath = navState.getPendingPath();
+			logger.info(`[NAV] layout-change isPluginNav=${isPluginNav} pendingPath=${pendingPath}`);
+			if (isPluginNav) {
+				logger.info(`[NAV] layout-change SKIPPED (plugin nav)`);
+				return;
+			}
 			const view = app.workspace.getActiveViewOfType(MarkdownView);
-			if (state.pendingFilePath) {
-				const filePath = state.pendingFilePath;
-				state.pendingFilePath = null;
-				callbacks.tryReattachWithRetry(filePath);
+			if (pendingPath) {
+				logger.info(`[NAV] layout-change -> tryReattachWithRetry (external nav)`);
+				navState.complete();
+				await callbacks.tryReattachWithRetry(pendingPath);
+				logger.info(`[NAV] layout-change tryReattachWithRetry DONE`);
 			} else if (view) {
-				// Only reattach if there's a markdown view
+				logger.info(`[NAV] layout-change -> scheduleRecompute + reattachUI (no nav)`);
 				callbacks.scheduleRecompute();
 				callbacks.reattachUI();
+			} else {
+				logger.info(`[NAV] layout-change SKIPPED (no view, no pending)`);
 			}
 		}),
 	);
@@ -182,7 +194,7 @@ export function setupEventSubscriptions(
 						.onClick(() => {
 							const services = callbacks.getServices();
 							if (!services) return;
-							executeAction(
+							void executeAction(
 								{
 									id: "MakeText",
 									kind: ActionKind.MakeText,
@@ -205,5 +217,4 @@ export function setupEventSubscriptions(
 		}),
 	);
 
-	return state;
 }

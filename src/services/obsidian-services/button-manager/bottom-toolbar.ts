@@ -16,17 +16,8 @@ export class BottomToolbarService {
 	private attachedView: MarkdownView | null = null;
 	private actionConfigs: RenderedActionConfig[] = [];
 	private overflowMenuEl: HTMLElement | null = null;
-	private clickHandler: ((actionId: string) => void) | null = null;
 
 	constructor(private app: App) {}
-
-	/**
-	 * Set click handler for button actions.
-	 * Called by ButtonManager to inject action execution logic.
-	 */
-	public setClickHandler(handler: (actionId: string) => void): void {
-		this.clickHandler = handler;
-	}
 
 	public init(): void {
 		if (!this.overlayEl) this.overlayEl = this.createOverlay();
@@ -50,16 +41,14 @@ export class BottomToolbarService {
 	}
 
 	private reattachToView(view: MarkdownView | null): void {
-		const sameView = this.attachedView === view;
-		const isConnected = this.overlayEl?.isConnected ?? false;
-		const sameParent = this.overlayEl?.parentElement === view?.contentEl;
-		if (view && sameView && isConnected && sameParent) {
-			return;
-		}
-
+		const viewPath = view?.file?.path ?? "null";
+		logger.info(`[NAV] bottom.reattachToView START viewPath=${viewPath} hasOverlayEl=${!!this.overlayEl}`);
+		// Always detach and reattach - DOM may have changed even if "same view"
+		// The early return optimization was causing overlay to not appear after navigation
 		this.detach();
 
 		if (!view || !this.overlayEl) {
+			logger.info(`[NAV] bottom.reattachToView ABORT no view or overlayEl`);
 			this.attachedView = null;
 			return;
 		}
@@ -73,6 +62,7 @@ export class BottomToolbarService {
 		this.renderButtons(this.overlayEl);
 
 		this.attachedView = view;
+		logger.info(`[NAV] bottom.reattachToView DONE attached to ${viewPath} numButtons=${this.actionConfigs.length}`);
 	}
 
 	/**
@@ -238,16 +228,8 @@ export class BottomToolbarService {
 		if (actionConfig.disabled) {
 			b.disabled = true;
 			b.classList.add("is-disabled");
-		} else if (this.clickHandler) {
-			// Direct click handler for non-disabled buttons
-			// (delegated handler doesn't work reliably for button elements)
-			const handler = this.clickHandler;
-			b.addEventListener("click", () => handler(actionConfig.id));
-		} else {
-			logger.warn(
-				`[BottomToolbar] No clickHandler when creating button: ${actionConfig.id}`,
-			);
 		}
+		// Click handling via delegated handler in action-click-dispatcher.ts
 		return b;
 	}
 
@@ -275,15 +257,10 @@ export class BottomToolbarService {
 			if (action.disabled) {
 				item.disabled = true;
 				item.classList.add("is-disabled");
-			} else if (this.clickHandler) {
-				// Direct click handler for non-disabled buttons
-				item.addEventListener("click", () => {
-					this.clickHandler?.(action.id);
-					this.hideOverflowMenu();
-				});
-			} else {
-				item.addEventListener("click", () => this.hideOverflowMenu());
 			}
+			// Click handling via delegated handler in action-click-dispatcher.ts
+			// Close menu after any click
+			item.addEventListener("click", () => this.hideOverflowMenu());
 			menu.appendChild(item);
 		}
 

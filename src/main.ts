@@ -242,6 +242,11 @@ export default class TextEaterPlugin extends Plugin {
 			selectionService: this.selectionService,
 			vaultActionManager: this.vaultActionManager,
 		});
+
+		// Wire up navigation state: signal plugin nav before cd() opens file
+		this.vaultActionManager.setOnBeforeNavigate((targetPath) => {
+			this.overlayManager.getNavigationState().startPluginNav(targetPath);
+		});
 	}
 
 	override onunload() {
