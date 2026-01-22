@@ -62,7 +62,7 @@ export class ClickDetector implements Detector {
 
 		// Check if it's a property checkbox (frontmatter)
 		const propertyInfo = this.getPropertyCheckboxInfo(target);
-		logger.debug(
+		logger.info(
 			"[ClickDetector] propertyInfo:",
 			JSON.stringify(propertyInfo),
 		);

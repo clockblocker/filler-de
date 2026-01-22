@@ -7,6 +7,7 @@ import {
 	TFile,
 	TFolder,
 } from "obsidian";
+import { logger } from "../../../../../utils/logger";
 import {
 	errorFileStale,
 	errorGetEditor,
@@ -396,9 +397,22 @@ export class OpenedFileService {
 		}
 
 		try {
-			await this.app.workspace.getLeaf(false).openFile(tfile);
+			logger.info(`[OpenedFileService.cd] START for ${tfile.path}`);
+			const leaf = this.app.workspace.getLeaf(false);
+			await leaf.openFile(tfile);
+			logger.info(`[OpenedFileService.cd] openFile done`);
+			// Ensure leaf is properly marked active so getActiveViewOfType() returns it immediately
+			this.app.workspace.setActiveLeaf(leaf, { focus: true });
+			logger.info(`[OpenedFileService.cd] setActiveLeaf done`);
 			// Reveal file in explorer sidebar. Using `as any` because `commands` is not in public Obsidian API types.
 			(this.app as unknown as { commands: { executeCommandById: (id: string) => void } }).commands.executeCommandById('file-explorer:reveal-active-file');
+			// Wait for view DOM to be ready before returning
+			await this.waitForViewReady(tfile);
+			logger.info(`[OpenedFileService.cd] waitForViewReady done, triggering textfresser:file-ready`);
+			// Trigger custom event so OverlayManager can reattach UI
+			// @ts-ignore - custom event not in Obsidian types
+			this.app.workspace.trigger("textfresser:file-ready", tfile);
+			logger.info(`[OpenedFileService.cd] DONE`);
 			return ok(tfile);
 		} catch (error) {
 			return err(
@@ -410,6 +424,48 @@ export class OpenedFileService {
 	}
 
 	// Methods for Reader compatibility
+	/**
+	 * Wait for the view to be ready (DOM rendered) using MutationObserver.
+	 * Returns when `.cm-contentContainer` appears in the view's contentEl.
+	 */
+	private waitForViewReady(tfile: TFile, timeoutMs = 500): Promise<void> {
+		logger.info(`[OpenedFileService.waitForViewReady] START for ${tfile.path}`);
+		return new Promise((resolve) => {
+			const checkView = () => {
+				const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+				const hasContainer = view?.contentEl.querySelector(".cm-contentContainer");
+				const pathMatch = view?.file?.path === tfile.path;
+				logger.info(`[OpenedFileService.waitForViewReady] check: view=${!!view}, pathMatch=${pathMatch}, hasContainer=${!!hasContainer}`);
+				if (pathMatch && hasContainer) {
+					return true;
+				}
+				return false;
+			};
+
+			if (checkView()) {
+				logger.info(`[OpenedFileService.waitForViewReady] IMMEDIATE resolve`);
+				resolve();
+				return;
+			}
+
+			const observer = new MutationObserver(() => {
+				if (checkView()) {
+					logger.info(`[OpenedFileService.waitForViewReady] OBSERVER resolve`);
+					observer.disconnect();
+					resolve();
+				}
+			});
+
+			observer.observe(document.body, { childList: true, subtree: true });
+
+			setTimeout(() => {
+				logger.info(`[OpenedFileService.waitForViewReady] TIMEOUT resolve after ${timeoutMs}ms`);
+				observer.disconnect();
+				resolve();
+			}, timeoutMs);
+		});
+	}
+
 	async isInActiveView(splitPath: AnySplitPath): Promise<boolean> {
 		if (splitPath.kind !== "MdFile") return false;
 		const result = await this.isFileActive(splitPath);

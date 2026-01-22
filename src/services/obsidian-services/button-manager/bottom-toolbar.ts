@@ -34,13 +34,28 @@ export class BottomToolbarService {
 
 	public reattach(): void {
 		const view = this.getActiveMarkdownView();
-		if (
-			view &&
-			this.attachedView === view &&
-			this.overlayEl?.isConnected &&
-			this.overlayEl.parentElement === view.contentEl
-		)
+		this.reattachToView(view);
+	}
+
+	/**
+	 * Reattach to view for a specific file path.
+	 * Used when getActiveViewOfType fails but we know which file was opened.
+	 */
+	public reattachForFile(filePath: string): void {
+		let view = this.getActiveMarkdownView();
+		if (!view) {
+			view = this.getMarkdownViewForFile(filePath);
+		}
+		this.reattachToView(view);
+	}
+
+	private reattachToView(view: MarkdownView | null): void {
+		const sameView = this.attachedView === view;
+		const isConnected = this.overlayEl?.isConnected ?? false;
+		const sameParent = this.overlayEl?.parentElement === view?.contentEl;
+		if (view && sameView && isConnected && sameParent) {
 			return;
+		}
 
 		this.detach();
 
@@ -58,6 +73,20 @@ export class BottomToolbarService {
 		this.renderButtons(this.overlayEl);
 
 		this.attachedView = view;
+	}
+
+	/**
+	 * Find MarkdownView for a specific file path by iterating all markdown leaves.
+	 */
+	private getMarkdownViewForFile(filePath: string): MarkdownView | null {
+		const leaves = this.app.workspace.getLeavesOfType("markdown");
+		for (const leaf of leaves) {
+			const view = leaf.view;
+			if (view instanceof MarkdownView && view.file?.path === filePath) {
+				return view;
+			}
+		}
+		return null;
 	}
 
 	public detach(): void {

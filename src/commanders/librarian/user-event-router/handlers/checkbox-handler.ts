@@ -6,8 +6,8 @@ import { MD } from "../../../../managers/obsidian/vault-action-manager/types/lit
 import { logger } from "../../../../utils/logger";
 import type { CodecRules, Codecs } from "../../codecs";
 import type { ScrollNodeSegmentId } from "../../codecs/segment-id/types/segment-id";
-import { isCodexSplitPath } from "../../healer/library-tree/codex/helpers";
 import { parseCodexClickLineContent } from "../../healer/library-tree/codex";
+import { isCodexSplitPath } from "../../healer/library-tree/codex/helpers";
 import { tryParseAsInsideLibrarySplitPath } from "../../healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
 import { tryMakeTargetLocatorFromLibraryScopedSplitPath } from "../../healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/translators/helpers/split-path-to-locator";
 import type { TreeAction } from "../../healer/library-tree/tree-action/types/tree-action";
@@ -102,7 +102,7 @@ export function handlePropertyCheckboxClick(
 	codecs: Codecs,
 	rules: CodecRules,
 ): CheckboxHandlerResult {
-	logger.debug(
+	logger.info(
 		"[Librarian] PropertyClick event:",
 		JSON.stringify({
 			checked: event.checked,
@@ -138,7 +138,7 @@ export function handlePropertyCheckboxClick(
 	}
 
 	const locator = locatorResult.value;
-	logger.debug(
+	logger.info(
 		"[Librarian] Locator for property click:",
 		JSON.stringify({
 			segmentId: locator.segmentId,

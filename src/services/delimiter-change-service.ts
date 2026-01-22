@@ -69,7 +69,7 @@ export class DelimiterChangeService {
 		const chunks = this.chunkArray(actions, chunkSize);
 
 		for (const [i, chunk] of chunks.entries()) {
-			logger.debug(
+			logger.info(
 				`[DelimiterChangeService] Processing chunk ${i + 1}/${chunks.length} (${chunk.length} files)`,
 			);
 

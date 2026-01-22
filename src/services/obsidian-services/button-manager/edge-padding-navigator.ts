@@ -1,4 +1,4 @@
-import type { MarkdownView } from "obsidian";
+import { type MarkdownView, setIcon } from "obsidian";
 import type { RenderedActionConfig } from "../../wip-configs/actions/types";
 import { UserAction } from "../../wip-configs/actions/types";
 import type { NavigationLayoutState } from "./navigation-layout-coordinator";
@@ -207,10 +207,10 @@ export class EdgePaddingNavigator {
 		}
 
 		// Add icon
-		const icon = document.createElement("span");
-		icon.className = "edge-padding-icon";
-		icon.textContent = side === "left" ? "‹" : "›";
-		zone.appendChild(icon);
+		const iconEl = document.createElement("span");
+		iconEl.className = "edge-padding-icon";
+		setIcon(iconEl, side === "left" ? "chevron-left" : "chevron-right");
+		zone.appendChild(iconEl);
 
 		return zone;
 	}

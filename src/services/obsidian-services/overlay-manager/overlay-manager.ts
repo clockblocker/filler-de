@@ -2,6 +2,7 @@ import {
 	type App,
 	MarkdownView,
 	type Plugin,
+	type TFile,
 	type WorkspaceLeaf,
 } from "obsidian";
 import { z } from "zod";
@@ -72,6 +73,8 @@ export class OverlayManager {
 	private services: OverlayManagerServices | null = null;
 	private currentContext: OverlayContext | null = null;
 	private recomputeTimeout: ReturnType<typeof setTimeout> | null = null;
+	// Track pending navigation for retry on layout-change
+	private pendingFilePath: string | null = null;
 
 	constructor(
 		private app: App,
@@ -113,21 +116,73 @@ export class OverlayManager {
 		// Setup delegated click handler (for edge zones and other elements)
 		this.setupClickHandler();
 
-		// Initial recompute on layout ready
+		// Initial recompute on layout ready - wait for view DOM to be ready
 		this.app.workspace.onLayoutReady(async () => {
+			logger.info("[OverlayManager] onLayoutReady START");
+			await this.waitForActiveViewReady();
+			logger.info(
+				"[OverlayManager] onLayoutReady waitForActiveViewReady done",
+			);
 			await this.recompute();
+			logger.info("[OverlayManager] onLayoutReady recompute done");
 			this.reattachUI();
+			logger.info("[OverlayManager] onLayoutReady reattachUI done");
 		});
 
 		// Reattach when user switches panes/notes
+		// Only reattach if the new leaf is a MarkdownView - otherwise skip to avoid detaching during transitions
 		this.plugin.registerEvent(
 			this.app.workspace.on(
 				"active-leaf-change",
-				(_leaf: WorkspaceLeaf) => {
+				(leaf: WorkspaceLeaf | null) => {
+					const view = leaf?.view;
+					const isMarkdown = view instanceof MarkdownView;
+					logger.info(
+						`[OverlayManager] active-leaf-change: leaf=${!!leaf}, isMarkdown=${isMarkdown}, file=${isMarkdown ? (view as MarkdownView).file?.path : "N/A"}`,
+					);
+					if (!isMarkdown) {
+						logger.info(
+							"[OverlayManager] active-leaf-change: skipping reattach (not markdown)",
+						);
+						return;
+					}
 					this.scheduleRecompute();
 					this.reattachUI();
 				},
 			),
+		);
+
+		// On file-open: record the path for layout-change to handle
+		// Don't try to reattach here - MarkdownView isn't ready yet
+		this.plugin.registerEvent(
+			this.app.workspace.on("file-open", (file) => {
+				logger.info(
+					`[OverlayManager] file-open: file=${file?.path ?? "null"}`,
+				);
+				if (!file) return;
+				this.pendingFilePath = file.path;
+			}),
+		);
+
+		// Listen for custom event from cd() when view DOM is ready
+		// This handles navigation via plugin's page nav buttons
+		this.plugin.registerEvent(
+			// @ts-expect-error - custom event not in Obsidian types
+			this.app.workspace.on("textfresser:file-ready", (file: TFile) => {
+				logger.info(
+					`[OverlayManager] textfresser:file-ready received for ${file.path}`,
+				);
+				// Clear pending since cd() already waited for view
+				this.pendingFilePath = null;
+				this.reattachUIForFile(file.path);
+				logger.info(
+					"[OverlayManager] textfresser:file-ready reattachUIForFile done",
+				);
+				void this.recomputeForFile(file.path);
+				logger.info(
+					"[OverlayManager] textfresser:file-ready recomputeForFile started",
+				);
+			}),
 		);
 
 		// Show selection toolbar after drag
@@ -170,10 +225,27 @@ export class OverlayManager {
 		);
 
 		// Re-check after major layout changes (splits, etc.)
+		// Only reattach if there's a markdown view - skip during transitions to avoid detaching
 		this.plugin.registerEvent(
 			this.app.workspace.on("layout-change", () => {
-				this.scheduleRecompute();
-				this.reattachUI();
+				const view =
+					this.app.workspace.getActiveViewOfType(MarkdownView);
+				logger.info(
+					`[OverlayManager] layout-change: pendingFilePath=${this.pendingFilePath}, view=${!!view}, file=${view?.file?.path}`,
+				);
+				if (this.pendingFilePath) {
+					const filePath = this.pendingFilePath;
+					this.pendingFilePath = null;
+					this.tryReattachWithRetry(filePath);
+				} else if (view) {
+					// Only reattach if there's a markdown view
+					this.scheduleRecompute();
+					this.reattachUI();
+				} else {
+					logger.info(
+						"[OverlayManager] layout-change: skipping reattach (no markdown view)",
+					);
+				}
 			}),
 		);
 
@@ -423,14 +495,307 @@ export class OverlayManager {
 	 * Reattach UI elements to current view.
 	 */
 	private reattachUI(): void {
+		logger.info("[OverlayManager.reattachUI] START");
 		this.bottom.reattach();
 
 		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+		logger.info(
+			`[OverlayManager.reattachUI] view=${!!view}, file=${view?.file?.path}`,
+		);
 		if (view) {
 			this.layoutCoordinator.attach(view, this.bottom.isMobile());
+			logger.info(
+				"[OverlayManager.reattachUI] layoutCoordinator.attach done",
+			);
 		} else {
 			this.layoutCoordinator.detach();
+			logger.info(
+				"[OverlayManager.reattachUI] layoutCoordinator.detach done (no view)",
+			);
 		}
+	}
+
+	/**
+	 * Reattach UI elements for a specific file path.
+	 * Used when getActiveViewOfType returns null but we know which file was opened.
+	 */
+	private reattachUIForFile(filePath: string): void {
+		logger.info(`[OverlayManager.reattachUIForFile] START for ${filePath}`);
+		this.bottom.reattachForFile(filePath);
+
+		// Try getActiveViewOfType first
+		let view = this.app.workspace.getActiveViewOfType(MarkdownView);
+		logger.info(
+			`[OverlayManager.reattachUIForFile] getActiveViewOfType=${!!view}`,
+		);
+
+		// Fallback: find view by file path using getLeavesOfType
+		if (!view) {
+			view = this.getMarkdownViewForFile(filePath);
+			logger.info(
+				`[OverlayManager.reattachUIForFile] getMarkdownViewForFile fallback=${!!view}`,
+			);
+		}
+
+		if (view) {
+			this.layoutCoordinator.attach(view, this.bottom.isMobile());
+			logger.info(
+				"[OverlayManager.reattachUIForFile] layoutCoordinator.attach done",
+			);
+		} else {
+			this.layoutCoordinator.detach();
+			logger.info(
+				"[OverlayManager.reattachUIForFile] layoutCoordinator.detach done (no view)",
+			);
+		}
+	}
+
+	/**
+	 * Try to reattach UI with retry mechanism using requestAnimationFrame.
+	 * This handles the case where layout-change fires before view is fully ready.
+	 */
+	private tryReattachWithRetry(filePath: string, attempt = 0): void {
+		const MAX_ATTEMPTS = 5;
+
+		const view =
+			this.getMarkdownViewForFile(filePath) ??
+			this.app.workspace.getActiveViewOfType(MarkdownView);
+
+		if (view?.file?.path === filePath) {
+			// View is ready - reattach and recompute
+			this.reattachUIForFile(filePath);
+			void this.recomputeForFile(filePath);
+		} else if (attempt < MAX_ATTEMPTS) {
+			// Retry in next animation frame
+			requestAnimationFrame(() =>
+				this.tryReattachWithRetry(filePath, attempt + 1),
+			);
+		} else {
+			// Max retries reached - fall back to standard recompute
+			logger.warn(
+				`[OverlayManager] View not ready after ${MAX_ATTEMPTS} attempts for: ${filePath}`,
+			);
+			this.scheduleRecompute();
+			this.reattachUI();
+		}
+	}
+
+	/**
+	 * Find MarkdownView for a specific file path by iterating all markdown leaves.
+	 */
+	private getMarkdownViewForFile(filePath: string): MarkdownView | null {
+		const leaves = this.app.workspace.getLeavesOfType("markdown");
+		for (const leaf of leaves) {
+			const view = leaf.view;
+			if (view instanceof MarkdownView && view.file?.path === filePath) {
+				return view;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Wait for the active view to be ready (DOM rendered) using MutationObserver.
+	 * Returns when `.cm-contentContainer` appears in any active MarkdownView.
+	 */
+	private waitForActiveViewReady(timeoutMs = 500): Promise<void> {
+		logger.info("[OverlayManager.waitForActiveViewReady] START");
+		return new Promise((resolve) => {
+			const check = () => {
+				const view =
+					this.app.workspace.getActiveViewOfType(MarkdownView);
+				const hasContainer = view?.contentEl.querySelector(
+					".cm-contentContainer",
+				);
+				logger.info(
+					`[OverlayManager.waitForActiveViewReady] check: view=${!!view}, hasContainer=${!!hasContainer}`,
+				);
+				if (hasContainer) {
+					return true;
+				}
+				return false;
+			};
+
+			if (check()) {
+				logger.info(
+					"[OverlayManager.waitForActiveViewReady] IMMEDIATE resolve",
+				);
+				resolve();
+				return;
+			}
+
+			const observer = new MutationObserver(() => {
+				if (check()) {
+					logger.info(
+						"[OverlayManager.waitForActiveViewReady] OBSERVER resolve",
+					);
+					observer.disconnect();
+					resolve();
+				}
+			});
+
+			observer.observe(document.body, { childList: true, subtree: true });
+
+			setTimeout(() => {
+				logger.info(
+					`[OverlayManager.waitForActiveViewReady] TIMEOUT resolve after ${timeoutMs}ms`,
+				);
+				observer.disconnect();
+				resolve();
+			}, timeoutMs);
+		});
+	}
+
+	/**
+	 * Schedule recompute for a specific file.
+	 * Used when navigating to a file where getActiveViewOfType may return null.
+	 */
+	private scheduleRecomputeForFile(filePath: string): void {
+		if (this.recomputeTimeout) clearTimeout(this.recomputeTimeout);
+		this.recomputeTimeout = setTimeout(() => {
+			this.recomputeTimeout = null;
+			void this.recomputeForFile(filePath);
+		}, OverlayManager.DEBOUNCE_MS);
+	}
+
+	/**
+	 * Recompute with fallback to find view by file path.
+	 */
+	private async recomputeForFile(filePath: string): Promise<void> {
+		const ctx = await this.buildContextForFile(filePath);
+		this.currentContext = ctx;
+
+		// Query all providers for actions
+		const allActions = this.queryProviders(ctx);
+
+		// Filter by placement
+		const bottomActions = allActions.filter(
+			(a) => a.placement === ActionPlacement.Bottom,
+		);
+		const selectionActions = allActions.filter(
+			(a) => a.placement === ActionPlacement.Selection,
+		);
+
+		// Convert to rendered configs for toolbar services
+		const bottomConfigs = this.toRenderedConfigs(bottomActions);
+		const selectionConfigs = this.toRenderedConfigs(selectionActions);
+
+		// Update toolbar services
+		// biome-ignore lint/suspicious/noExplicitAny: <bridging type systems>
+		this.bottom.setActions(bottomConfigs as any);
+		// biome-ignore lint/suspicious/noExplicitAny: <bridging type systems>
+		this.layoutCoordinator.setActions(bottomConfigs as any);
+		// biome-ignore lint/suspicious/noExplicitAny: <bridging type systems>
+		this.selection.setActions(selectionConfigs as any);
+	}
+
+	/**
+	 * Build context with fallback to find view by file path.
+	 */
+	private async buildContextForFile(
+		filePath: string,
+	): Promise<OverlayContext> {
+		// Try getActiveViewOfType first
+		let view = this.app.workspace.getActiveViewOfType(MarkdownView);
+
+		// Fallback: find view by file path
+		if (!view) {
+			view = this.getMarkdownViewForFile(filePath);
+		}
+
+		const file = view?.file;
+
+		let path: OverlayContext["path"] = null;
+		let fileType: FileType | null = null;
+		let isInLibrary = false;
+		let wouldSplitToMultiplePages = false;
+		let pageIndex: number | null = null;
+		let hasNextPage = false;
+
+		if (file) {
+			const splitPath = makeSplitPath(file.path);
+			path = splitPath;
+
+			// Check if inside library
+			try {
+				const { splitPathToLibraryRoot } = getParsedUserSettings();
+				const libraryPath = splitPathToLibraryRoot.pathParts.join("/");
+				isInLibrary =
+					file.path.startsWith(`${libraryPath}/`) ||
+					file.path.startsWith(libraryPath);
+			} catch {
+				isInLibrary = false;
+			}
+
+			// Detect Page by filename pattern FIRST (before metadata read)
+			const pageMatch =
+				splitPath.kind === "MdFile"
+					? splitPath.basename.match(/_Page_(\d{3})/)
+					: null;
+
+			if (pageMatch?.[1] && splitPath.kind === "MdFile") {
+				fileType = FileType.Page;
+				pageIndex = Number.parseInt(pageMatch[1], 10);
+
+				// Check if next page exists
+				const nextPath = getNextPageSplitPath(splitPath);
+				if (nextPath) {
+					const systemPath = makeSystemPathForSplitPath(nextPath);
+					hasNextPage =
+						this.app.vault.getAbstractFileByPath(systemPath) !==
+						null;
+				}
+			} else if (isInLibrary) {
+				// For non-page files, read metadata to determine type
+				try {
+					const content = await this.app.vault.read(file);
+					const metaInfo = readMetadata(
+						content,
+						FileTypeMetadataSchema,
+					);
+					fileType = metaInfo?.noteKind ?? null;
+
+					// Check if scroll would split to multiple pages
+					if (fileType === FileType.Scroll) {
+						const settings = getParsedUserSettings();
+						const rules = makeCodecRulesFromSettings(settings);
+						wouldSplitToMultiplePages = checkWouldSplit(
+							content,
+							splitPath.basename,
+							rules,
+						);
+					}
+				} catch {
+					fileType = null;
+				}
+			}
+		}
+
+		// Check for text selection
+		const hasSelection = this.hasActiveSelection(view);
+
+		// Check mobile
+		// biome-ignore lint/suspicious/noExplicitAny: <isMobile is not in official types but exists>
+		const isMobile = (this.app as any).isMobile ?? false;
+
+		// Check source mode
+		const isSourceMode = view?.getMode() === "source";
+
+		// Get viewport width
+		const viewportWidth = window.innerWidth;
+
+		return {
+			fileType,
+			hasNextPage,
+			hasSelection,
+			isInLibrary,
+			isMobile,
+			isSourceMode,
+			pageIndex,
+			path,
+			viewportWidth,
+			wouldSplitToMultiplePages,
+		};
 	}
 
 	/**

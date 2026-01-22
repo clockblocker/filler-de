@@ -260,7 +260,7 @@ export function codexImpactToIncrementalRecreations(
 ): CodexAction[] {
 	const actions: CodexAction[] = [];
 
-	logger.debug(
+	logger.info(
 		"[Codex] impactedChains:",
 		JSON.stringify([...impact.impactedChains]),
 	);
@@ -269,7 +269,7 @@ export function codexImpactToIncrementalRecreations(
 	for (const chainKey of impact.impactedChains) {
 		const chain = chainKey.split("/") as SectionNodeSegmentId[];
 		const section = findSectionByChain(tree, chain);
-		logger.debug(
+		logger.info(
 			"[Codex] Chain lookup:",
 			JSON.stringify({ chainKey, found: !!section }),
 		);

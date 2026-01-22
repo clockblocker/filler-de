@@ -266,8 +266,19 @@ body.hide-status-bar .mod-root .workspace-split {
 }
 
 .edge-padding-zone:hover {
-	background-color: var(--background-modifier-hover);
 	opacity: 1;
+}
+
+.edge-padding-zone-left:hover {
+	background: linear-gradient(to right,
+		var(--background-modifier-hover) 0%,
+		transparent 100%);
+}
+
+.edge-padding-zone-right:hover {
+	background: linear-gradient(to left,
+		var(--background-modifier-hover) 0%,
+		transparent 100%);
 }
 
 .edge-padding-zone-left {
@@ -279,8 +290,12 @@ body.hide-status-bar .mod-root .workspace-split {
 }
 
 .edge-padding-icon {
-	font-size: 28px;
-	font-weight: bold;
 	color: var(--text-muted);
 	user-select: none;
+}
+
+.edge-padding-icon svg {
+	width: 24px;
+	height: 24px;
+	stroke-width: 2.5;
 }

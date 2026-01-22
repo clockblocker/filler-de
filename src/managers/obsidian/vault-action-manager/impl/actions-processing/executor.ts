@@ -68,14 +68,14 @@ export class Executor {
 					// File exists
 					if (content === null || content === undefined) {
 						// EnsureExist: don't overwrite existing content
-						logger.debug(
+						logger.info(
 							"[Executor.UpsertMdFile] File exists, skipping (EnsureExist)",
 							{ path },
 						);
 						return ok(fileResult.value);
 					}
 					// File exists - update content
-					logger.debug(
+					logger.info(
 						"[Executor.UpsertMdFile] File exists, updating",
 						{ path },
 					);
@@ -97,7 +97,7 @@ export class Executor {
 				// File doesn't exist - create it
 				const createContent =
 					content === null || content === undefined ? "" : content;
-				logger.debug(
+				logger.info(
 					"[Executor.UpsertMdFile] File doesn't exist, creating",
 					{
 						contentLength: createContent.length,
