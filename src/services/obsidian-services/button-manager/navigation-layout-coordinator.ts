@@ -1,4 +1,5 @@
 import type { MarkdownView } from "obsidian";
+import { DomSelectors } from "../../../utils/dom-selectors";
 import type { RenderedActionConfig } from "../../wip-configs/actions/types";
 import type { BottomToolbarService } from "./bottom-toolbar";
 import type { EdgePaddingNavigator } from "./edge-padding-navigator";
@@ -124,7 +125,7 @@ export class NavigationLayoutCoordinator {
 		contentRect: DOMRect | null;
 	} {
 		// Use cm-contentContainer as the content boundary
-		const contentEl = container.querySelector(".cm-contentContainer");
+		const contentEl = container.querySelector(DomSelectors.CM_CONTENT_CONTAINER);
 		if (!contentEl) {
 			return {
 				padding: { left: 0, right: 0 },
@@ -136,7 +137,7 @@ export class NavigationLayoutCoordinator {
 		const contentRect = contentEl.getBoundingClientRect();
 
 		// Find workspace-leaf ancestor
-		const leafEl = container.closest(".workspace-leaf");
+		const leafEl = container.closest(DomSelectors.WORKSPACE_LEAF);
 		const leafRect = leafEl ? leafEl.getBoundingClientRect() : null;
 
 		// Padding is the space between content and leaf edges

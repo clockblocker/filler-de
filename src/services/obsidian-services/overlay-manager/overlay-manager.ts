@@ -1,10 +1,19 @@
-import type { App, Plugin } from "obsidian";
+import type { App, Menu, Plugin } from "obsidian";
+import type {
+	LeafLifecycleEvent,
+	LifecycleTeardown,
+} from "../../../managers/obsidian/leaf-lifecycle-manager";
+import type {
+	Teardown,
+	UserEvent,
+} from "../../../managers/obsidian/user-event-interceptor/types/user-event";
+import { FileType } from "../../../types/common-interface/enums";
 import { DebounceScheduler } from "../../../utils/debounce-scheduler";
 import { BottomToolbarService } from "../button-manager/bottom-toolbar";
 import { EdgePaddingNavigator } from "../button-manager/edge-padding-navigator";
 import { NavigationLayoutCoordinator } from "../button-manager/navigation-layout-coordinator";
 import { AboveSelectionToolbarService } from "../button-manager/selection-toolbar";
-import { setupDelegatedClickHandler } from "./actions";
+import { handleActionClick } from "./actions";
 import {
 	buildOverlayContext,
 	buildOverlayContextForFile,
@@ -13,15 +22,18 @@ import {
 import {
 	reattachUI as doReattachUI,
 	reattachUIForFile as doReattachUIForFile,
-	tryReattachWithRetry as doTryReattachWithRetry,
 	executeRecompute,
 	type OverlayManagerServices,
 	type ReattachDeps,
-	setupEventSubscriptions,
 	type ToolbarServices,
 } from "./coordination";
-import { NavigationState } from "./coordination/navigation-state";
-import type { CommanderActionProvider, OverlayContext } from "./types";
+import { executeAction } from "./executor-registry";
+import {
+	ActionKind,
+	ActionPlacement,
+	type CommanderActionProvider,
+	type OverlayContext,
+} from "./types";
 
 export type { OverlayManagerServices };
 
@@ -51,7 +63,8 @@ export class OverlayManager {
 	private services: OverlayManagerServices | null = null;
 	private currentContext: OverlayContext | null = null;
 	private debouncer: DebounceScheduler;
-	private navState: NavigationState;
+	private lifecycleTeardown: LifecycleTeardown | null = null;
+	private userEventTeardown: Teardown | null = null;
 
 	// Cached deps
 	private contextBuilderDeps: ContextBuilderDeps;
@@ -71,7 +84,6 @@ export class OverlayManager {
 		);
 
 		this.debouncer = new DebounceScheduler(OverlayManager.DEBOUNCE_MS);
-		this.navState = new NavigationState();
 
 		// Cache deps
 		this.contextBuilderDeps = { app: this.app };
@@ -105,32 +117,143 @@ export class OverlayManager {
 		// Initialize bottom toolbar
 		this.bottom.init();
 
-		// Setup delegated click handler for all [data-action] buttons
-		// (bottom toolbar, edge zones, overflow menu, etc.)
-		setupDelegatedClickHandler(this.plugin, {
-			app: this.app,
-			getCurrentContext: () => this.currentContext,
-			getProviders: () => this.providers,
-			getServices: () => this.services,
-		});
+		// Subscribe to LeafLifecycleManager events
+		// Handles: view-ready, view-detaching, layout-changed
+		if (services.leafLifecycleManager) {
+			this.lifecycleTeardown = services.leafLifecycleManager.subscribe(
+				(event) => this.handleLifecycleEvent(event),
+			);
+		}
 
-		// Setup event subscriptions
-		setupEventSubscriptions(
-			this.app,
-			this.plugin,
-			{
-				completeNavigation: (path) => this.completeNavigation(path),
-				getContext: () => this.currentContext,
-				getServices: () => this.services,
-				hideSelectionToolbar: () => this.selection.hide(),
-				reattachUI: () => this.reattachUI(),
-				reattachUIForFile: (path) => this.reattachUIForFile(path),
-				recompute: () => this.recompute(),
-				recomputeForFile: (path) => this.recomputeForFile(path),
-				scheduleRecompute: () => this.scheduleRecompute(),
-				tryReattachWithRetry: (path) => this.tryReattachWithRetry(path),
-			},
-			this.navState,
+		// Subscribe to UserEventInterceptor events
+		// Handles: ActionClicked (toolbar buttons), SelectionChanged (recompute trigger)
+		if (services.userEventInterceptor) {
+			this.userEventTeardown = services.userEventInterceptor.subscribe(
+				(event) => this.handleUserEvent(event),
+			);
+		}
+
+		// Register context menu (Split into pages)
+		// This is kept here since it's UI-related and doesn't fit elsewhere
+		this.setupContextMenu();
+
+		// Handle CSS changes - hide selection toolbar
+		this.plugin.registerEvent(
+			this.app.workspace.on("css-change", () => this.selection.hide()),
+		);
+
+		// Initial recompute and reattach on layout ready
+		this.app.workspace.onLayoutReady(async () => {
+			await this.recompute();
+			this.reattachUI();
+		});
+	}
+
+	/**
+	 * Handle lifecycle events from LeafLifecycleManager.
+	 * This replaces the old event-coordinator approach.
+	 */
+	private handleLifecycleEvent(event: LeafLifecycleEvent): void {
+		switch (event.kind) {
+			case "view-ready":
+				// View DOM is ready - recompute and reattach UI
+				// For plugin nav: debouncer cancelled, recompute for specific file
+				// For external nav: just recompute and reattach
+				if (event.origin === "plugin") {
+					void this.completeNavigation(event.filePath);
+				} else {
+					this.scheduleRecompute();
+					this.reattachUI();
+				}
+				break;
+
+			case "view-detaching":
+				// View is about to change - nothing to do currently
+				// UI will be reattached when view-ready fires
+				break;
+
+			case "layout-changed":
+				// Layout changed without navigation - reattach may be needed
+				this.scheduleRecompute();
+				this.reattachUI();
+				break;
+		}
+	}
+
+	/**
+	 * Handle user events from UserEventInterceptor.
+	 * This replaces setupDelegatedClickHandler and event-coordinator selection handling.
+	 */
+	private handleUserEvent(event: UserEvent): void {
+		switch (event.kind) {
+			case "ActionClicked":
+				// Action button clicked - execute the action
+				void handleActionClick(
+					{
+						app: this.app,
+						getCurrentContext: () => this.currentContext,
+						getProviders: () => this.providers,
+						getServices: () => this.services,
+					},
+					event.actionId,
+				);
+				break;
+
+			case "SelectionChanged":
+				// Selection changed - trigger recompute to update selection toolbar
+				void this.recompute();
+				break;
+
+			// Other events are handled by Librarian, not OverlayManager
+			default:
+				break;
+		}
+	}
+
+	/**
+	 * Setup context menu for "Split into pages" action.
+	 */
+	private setupContextMenu(): void {
+		this.plugin.registerEvent(
+			this.app.workspace.on("editor-menu", (menu: Menu) => {
+				const ctx = this.currentContext;
+				if (!ctx) return;
+
+				const shouldShow =
+					ctx.isInLibrary &&
+					(ctx.fileType === null ||
+						(ctx.fileType === FileType.Scroll &&
+							ctx.wouldSplitToMultiplePages));
+
+				if (shouldShow) {
+					menu.addItem((item) =>
+						item
+							.setTitle("Split into pages")
+							.setIcon("split")
+							.onClick(() => {
+								if (!this.services) return;
+								void executeAction(
+									{
+										id: "MakeText",
+										kind: ActionKind.MakeText,
+										label: "Split into pages",
+										params: {},
+										placement: ActionPlacement.Bottom,
+										priority: 2,
+									},
+									{
+										apiService: this.services.apiService,
+										app: this.app,
+										selectionService:
+											this.services.selectionService,
+										vaultActionManager:
+											this.services.vaultActionManager,
+									},
+								);
+							}),
+					);
+				}
+			}),
 		);
 	}
 
@@ -177,18 +300,6 @@ export class OverlayManager {
 	}
 
 	/**
-	 * Try to reattach UI with retry mechanism.
-	 */
-	private async tryReattachWithRetry(filePath: string): Promise<void> {
-		await doTryReattachWithRetry(this.reattachDeps, filePath, {
-			reattachUI: () => this.reattachUI(),
-			reattachUIForFile: (p) => this.reattachUIForFile(p),
-			recompute: () => this.recompute(),
-			recomputeForFile: (p) => this.recomputeForFile(p),
-		});
-	}
-
-	/**
 	 * Complete navigation - single entry point for plugin-initiated navigation.
 	 * Cancels debouncer, awaits recompute, then reattaches UI.
 	 */
@@ -206,16 +317,17 @@ export class OverlayManager {
 	}
 
 	/**
-	 * Get navigation state (for opened-file-service to signal nav start).
-	 */
-	public getNavigationState(): NavigationState {
-		return this.navState;
-	}
-
-	/**
 	 * Cleanup - destroy all toolbar services.
 	 */
 	public destroy(): void {
+		if (this.lifecycleTeardown) {
+			this.lifecycleTeardown();
+			this.lifecycleTeardown = null;
+		}
+		if (this.userEventTeardown) {
+			this.userEventTeardown();
+			this.userEventTeardown = null;
+		}
 		this.debouncer.destroy();
 		this.bottom.detach();
 		this.selection.destroy();

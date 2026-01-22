@@ -13,10 +13,12 @@
 import type { App, Plugin } from "obsidian";
 import { logger } from "../../../utils/logger";
 import type { VaultActionManager } from "../vault-action-manager";
+import { ActionClickDetector } from "./detectors/action-click-detector";
 import { ClickDetector } from "./detectors/click-detector";
 import { ClipboardDetector } from "./detectors/clipboard-detector";
 import type { Detector } from "./detectors/detector";
 import { SelectAllDetector } from "./detectors/select-all-detector";
+import { SelectionDetector } from "./detectors/selection-detector";
 import { WikilinkDetector } from "./detectors/wikilink-detector";
 import type { Teardown, UserEvent, UserEventHandler } from "./types/user-event";
 
@@ -35,6 +37,8 @@ export class UserEventInterceptor {
 			new ClipboardDetector(app),
 			new SelectAllDetector(app),
 			new WikilinkDetector(plugin),
+			new ActionClickDetector(),
+			new SelectionDetector(app),
 		];
 	}
 

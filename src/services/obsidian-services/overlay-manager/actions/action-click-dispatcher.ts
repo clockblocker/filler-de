@@ -1,4 +1,5 @@
 import type { App, Plugin } from "obsidian";
+import { DomSelectors } from "../../../../utils/dom-selectors";
 import { logger } from "../../../../utils/logger";
 import type { TexfresserObsidianServices } from "../../interface";
 import { type OverlayManagerServices, queryProviders } from "../coordination";
@@ -64,13 +65,15 @@ export function setupDelegatedClickHandler(
 		if (evt.button !== 0) return;
 
 		const target = evt.target as HTMLElement;
-		const button = target.closest("[data-action]") as HTMLElement | null;
+		const button = target.closest(
+			DomSelectors.DATA_ACTION,
+		) as HTMLElement | null;
 		if (!button) return;
 
 		// Skip disabled buttons
 		if (button.hasAttribute("disabled")) return;
 
-		const actionId = button.dataset.action;
+		const actionId = button.dataset[DomSelectors.DATA_ACTION_ATTR];
 		if (!actionId) return;
 
 		void handleActionClick(deps, actionId);

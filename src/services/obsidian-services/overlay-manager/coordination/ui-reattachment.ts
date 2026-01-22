@@ -1,4 +1,5 @@
 import { type App, MarkdownView } from "obsidian";
+import { DomSelectors } from "../../../../utils/dom-selectors";
 import { waitForDomCondition } from "../../../../utils/dom-waiter";
 import { logger } from "../../../../utils/logger";
 import type { BottomToolbarService } from "../../button-manager/bottom-toolbar";
@@ -81,7 +82,7 @@ export async function tryReattachWithRetry(
 			deps.app.workspace.getActiveViewOfType(MarkdownView);
 		return (
 			view?.file?.path === filePath &&
-			!!view.contentEl.querySelector(".cm-contentContainer")
+			!!view.contentEl.querySelector(DomSelectors.CM_CONTENT_CONTAINER)
 		);
 	};
 

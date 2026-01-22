@@ -5,6 +5,7 @@ import {
 	type WorkspaceLeaf,
 } from "obsidian";
 import type { VaultActionManager } from "../../../managers/obsidian/vault-action-manager";
+import { DomSelectors } from "../../../utils/dom-selectors";
 import { ACTION_CONFIGS } from "../../wip-configs/actions/actions-config";
 import type { UserAction } from "../../wip-configs/actions/types";
 import type { ApiService } from "../atomic-services/api-service";
@@ -163,11 +164,13 @@ export class ButtonManager {
 			const target = evt.target as HTMLElement;
 			// Match both buttons and edge zone divs with data-action
 			const button = target.closest(
-				"[data-action]",
+				DomSelectors.DATA_ACTION,
 			) as HTMLElement | null;
 			if (!button) return;
 
-			const actionId = button.dataset.action as UserAction;
+			const actionId = button.dataset[
+				DomSelectors.DATA_ACTION_ATTR
+			] as UserAction;
 			if (!actionId) return;
 
 			this.executeAction(actionId);

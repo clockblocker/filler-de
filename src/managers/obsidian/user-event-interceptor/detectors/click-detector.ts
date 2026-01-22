@@ -8,7 +8,7 @@
 
 import type { App } from "obsidian";
 import { MarkdownView } from "obsidian";
-import { logger } from "../../../../utils/logger";
+import { DomSelectors } from "../../../../utils/dom-selectors";
 import type { VaultActionManager } from "../../vault-action-manager";
 import type { SplitPathToMdFile } from "../../vault-action-manager/types/split-path";
 import {
@@ -96,7 +96,7 @@ export class ClickDetector implements Detector {
 		return (
 			element.tagName === "INPUT" &&
 			(element as HTMLInputElement).type === "checkbox" &&
-			element.classList.contains("task-list-item-checkbox")
+			element.classList.contains(DomSelectors.TASK_CHECKBOX_CLASS)
 		);
 	}
 
@@ -107,13 +107,17 @@ export class ClickDetector implements Detector {
 		const input = element as HTMLInputElement;
 		if (input.type !== "checkbox") return null;
 
-		const metadataContainer = element.closest(".metadata-container");
+		const metadataContainer = element.closest(
+			DomSelectors.METADATA_CONTAINER,
+		);
 		if (!metadataContainer) return null;
 
-		const propertyRow = element.closest(".metadata-property");
+		const propertyRow = element.closest(DomSelectors.METADATA_PROPERTY);
 		if (!propertyRow) return null;
 
-		const keyElement = propertyRow.querySelector(".metadata-property-key");
+		const keyElement = propertyRow.querySelector(
+			DomSelectors.METADATA_PROPERTY_KEY,
+		);
 		if (!keyElement) return null;
 
 		const propertyName = keyElement.textContent?.trim();
@@ -127,7 +131,7 @@ export class ClickDetector implements Detector {
 
 	private extractLineContent(checkbox: HTMLInputElement): string | null {
 		const lineContainer =
-			checkbox.closest(".cm-line") ??
+			checkbox.closest(DomSelectors.CM_LINE) ??
 			checkbox.closest("li") ??
 			checkbox.parentElement;
 
@@ -151,10 +155,12 @@ export class ClickDetector implements Detector {
 		if (!view?.editor) return null;
 
 		const editor = view.editor;
-		const cmContent = lineElement.closest(".cm-content");
+		const cmContent = lineElement.closest(DomSelectors.CM_CONTENT);
 		if (!cmContent) return null;
 
-		const lines = Array.from(cmContent.querySelectorAll(".cm-line"));
+		const lines = Array.from(
+			cmContent.querySelectorAll(DomSelectors.CM_LINE),
+		);
 		const lineIndex = lines.indexOf(lineElement as Element);
 		if (lineIndex === -1) return null;
 

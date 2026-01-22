@@ -7,6 +7,7 @@ import {
 	TFile,
 	TFolder,
 } from "obsidian";
+import { DomSelectors } from "../../../../../utils/dom-selectors";
 import { logger } from "../../../../../utils/logger";
 import {
 	errorFileStale,
@@ -157,7 +158,7 @@ export class OpenedFileService {
 
 		// Find the inline title element
 		const inlineTitle = view.contentEl.querySelector(
-			".inline-title",
+			DomSelectors.INLINE_TITLE,
 		) as HTMLElement | null;
 		if (!inlineTitle) return ok(null);
 
@@ -202,7 +203,7 @@ export class OpenedFileService {
 		if (!view) return err("No active view");
 
 		const inlineTitle = view.contentEl.querySelector(
-			".inline-title",
+			DomSelectors.INLINE_TITLE,
 		) as HTMLElement | null;
 		if (!inlineTitle) return err("No inline title element");
 
@@ -454,7 +455,7 @@ export class OpenedFileService {
 				const view =
 					this.app.workspace.getActiveViewOfType(MarkdownView);
 				const hasContainer = view?.contentEl.querySelector(
-					".cm-contentContainer",
+					DomSelectors.CM_CONTENT_CONTAINER,
 				);
 				const pathMatch = view?.file?.path === tfile.path;
 				if (pathMatch && hasContainer) {

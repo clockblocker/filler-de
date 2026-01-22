@@ -12,6 +12,7 @@
 import { EditorSelection } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import { type App, MarkdownView, Platform } from "obsidian";
+import { DomSelectors } from "../../../../utils/dom-selectors";
 import {
 	InterceptableUserEventKind,
 	type SelectAllEvent,
@@ -60,7 +61,8 @@ export class SelectAllDetector implements Detector {
 
 		// Don't interfere when user is editing the file basename (inline title)
 		const activeEl = document.activeElement;
-		if (activeEl?.classList.contains("inline-title")) return;
+		if (activeEl?.classList.contains(DomSelectors.INLINE_TITLE_CLASS))
+			return;
 
 		// Get active markdown view
 		const view = this.app.workspace.getActiveViewOfType(MarkdownView);

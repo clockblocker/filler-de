@@ -7,6 +7,7 @@ import {
 	type WorkspaceLeaf,
 } from "obsidian";
 import { FileType } from "../../../../types/common-interface/enums";
+import { DomSelectors } from "../../../../utils/dom-selectors";
 import { waitForDomCondition } from "../../../../utils/dom-waiter";
 import { executeAction } from "../executor-registry";
 import { ActionKind, ActionPlacement, type OverlayContext } from "../types";
@@ -39,7 +40,9 @@ async function waitForActiveViewReady(
 ): Promise<void> {
 	const check = () => {
 		const view = app.workspace.getActiveViewOfType(MarkdownView);
-		return !!view?.contentEl.querySelector(".cm-contentContainer");
+		return !!view?.contentEl.querySelector(
+			DomSelectors.CM_CONTENT_CONTAINER,
+		);
 	};
 	await waitForDomCondition(check, { timeout: timeoutMs });
 }
@@ -54,7 +57,6 @@ export function setupEventSubscriptions(
 	callbacks: EventCoordinatorCallbacks,
 	navState: NavigationState,
 ): void {
-
 	// Initial recompute on layout ready - wait for view DOM to be ready
 	app.workspace.onLayoutReady(async () => {
 		await waitForActiveViewReady(app);
@@ -107,7 +109,7 @@ export function setupEventSubscriptions(
 	// Skip recompute if clicking on action buttons (prevents destroying button mid-click)
 	plugin.registerDomEvent(document, "mouseup", async (evt) => {
 		const target = evt.target as HTMLElement;
-		if (target.closest("[data-action]")) {
+		if (target.closest(DomSelectors.DATA_ACTION)) {
 			return; // Don't recompute when clicking action buttons
 		}
 		await callbacks.recompute();
@@ -200,5 +202,4 @@ export function setupEventSubscriptions(
 			}
 		}),
 	);
-
 }

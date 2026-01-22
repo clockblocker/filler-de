@@ -12,6 +12,7 @@ import {
 	initializeState,
 	updateParsedSettings,
 } from "./global-state/global-state";
+import { LeafLifecycleManager } from "./managers/obsidian/leaf-lifecycle-manager";
 import { UserEventInterceptor } from "./managers/obsidian/user-event-interceptor";
 import {
 	makeSplitPath,
@@ -64,6 +65,7 @@ export default class TextEaterPlugin extends Plugin {
 	userEventInterceptor: UserEventInterceptor;
 	selectionService: SelectionService;
 	overlayManager: OverlayManager;
+	leafLifecycleManager: LeafLifecycleManager;
 	delimiterChangeService: DelimiterChangeService | null = null;
 
 	// Commanders
@@ -234,18 +236,24 @@ export default class TextEaterPlugin extends Plugin {
 			}
 		}
 
+		// Initialize LeafLifecycleManager (single source of truth for view lifecycle)
+		this.leafLifecycleManager = new LeafLifecycleManager(this.app, this);
+		this.leafLifecycleManager.init();
+
 		// Initialize OverlayManager (unified UI overlay with commander-based actions)
 		this.overlayManager = new OverlayManager(this.app, this);
 		this.overlayManager.registerProvider(new LibrarianActionProvider());
 		this.overlayManager.init({
 			apiService: this.apiService,
+			leafLifecycleManager: this.leafLifecycleManager,
 			selectionService: this.selectionService,
+			userEventInterceptor: this.userEventInterceptor,
 			vaultActionManager: this.vaultActionManager,
 		});
 
 		// Wire up navigation state: signal plugin nav before cd() opens file
 		this.vaultActionManager.setOnBeforeNavigate((targetPath) => {
-			this.overlayManager.getNavigationState().startPluginNav(targetPath);
+			this.leafLifecycleManager.beginPluginNavigation(targetPath);
 		});
 	}
 

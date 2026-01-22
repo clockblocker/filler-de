@@ -18,6 +18,8 @@ const InterceptableUserEventKindSchema = z.enum([
 	"WikilinkCompleted",
 	"ClipboardCopy",
 	"SelectAll",
+	"ActionClicked",
+	"SelectionChanged",
 ]);
 export type InterceptableUserEventKind = z.infer<
 	typeof InterceptableUserEventKindSchema
@@ -95,6 +97,32 @@ export type SelectAllEvent = {
 	setSelection: (from: number, to: number) => void;
 };
 
+/**
+ * Emitted when an action button ([data-action]) is clicked.
+ * Includes toolbar buttons, edge zones, overflow menu items.
+ */
+export type ActionClickedEvent = {
+	kind: typeof InterceptableUserEventKind.ActionClicked;
+	/** The action ID from the data-action attribute */
+	actionId: string;
+	/** The button element that was clicked */
+	button: HTMLElement;
+};
+
+/**
+ * Emitted when text selection changes (mouseup, keyup with selection keys).
+ * Used to trigger toolbar recompute.
+ */
+export type SelectionChangedEvent = {
+	kind: typeof InterceptableUserEventKind.SelectionChanged;
+	/** True if there's currently a text selection */
+	hasSelection: boolean;
+	/** The selected text (empty string if no selection) */
+	selectedText: string;
+	/** Source of the selection change */
+	source: "mouse" | "keyboard" | "drag";
+};
+
 // ─── Union Type ───
 
 export type UserEvent =
@@ -102,7 +130,9 @@ export type UserEvent =
 	| PropertyCheckboxClickedEvent
 	| WikilinkCompletedEvent
 	| ClipboardCopyEvent
-	| SelectAllEvent;
+	| SelectAllEvent
+	| ActionClickedEvent
+	| SelectionChangedEvent;
 
 // ─── Handler ───
 
