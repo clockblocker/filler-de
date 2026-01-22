@@ -68,17 +68,9 @@ export class Executor {
 					// File exists
 					if (content === null || content === undefined) {
 						// EnsureExist: don't overwrite existing content
-						logger.info(
-							"[Executor.UpsertMdFile] File exists, skipping (EnsureExist)",
-							{ path },
-						);
 						return ok(fileResult.value);
 					}
 					// File exists - update content
-					logger.info(
-						"[Executor.UpsertMdFile] File exists, updating",
-						{ path },
-					);
 					const isActive = await this.checkFileActive(splitPath);
 					if (isActive) {
 						const result =
@@ -97,13 +89,6 @@ export class Executor {
 				// File doesn't exist - create it
 				const createContent =
 					content === null || content === undefined ? "" : content;
-				logger.info(
-					"[Executor.UpsertMdFile] File doesn't exist, creating",
-					{
-						contentLength: createContent.length,
-						path,
-					},
-				);
 				// INVARIANT: File should exist (ensured by dispatcher), but handle gracefully
 				const dto: MdFileWithContentDto = {
 					content: createContent,

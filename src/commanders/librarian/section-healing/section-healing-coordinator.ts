@@ -102,10 +102,6 @@ export async function triggerSectionHealing(
 	);
 
 	if (vaultActions.length > 0) {
-		logger.info(
-			"[SectionHealingCoordinator] Dispatching codex actions:",
-			JSON.stringify({ actionCount: vaultActions.length, chainKey }),
-		);
 		await dispatch(vaultActions);
 	}
 }

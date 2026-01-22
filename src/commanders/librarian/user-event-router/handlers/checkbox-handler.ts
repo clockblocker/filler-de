@@ -102,15 +102,6 @@ export function handlePropertyCheckboxClick(
 	codecs: Codecs,
 	rules: CodecRules,
 ): CheckboxHandlerResult {
-	logger.info(
-		"[Librarian] PropertyClick event:",
-		JSON.stringify({
-			checked: event.checked,
-			path: event.splitPath.pathParts,
-			propertyName: event.propertyName,
-		}),
-	);
-
 	// Only handle "status" property
 	if (event.propertyName !== "status") return null;
 
@@ -138,14 +129,6 @@ export function handlePropertyCheckboxClick(
 	}
 
 	const locator = locatorResult.value;
-	logger.info(
-		"[Librarian] Locator for property click:",
-		JSON.stringify({
-			segmentId: locator.segmentId,
-			segmentIdChainToParent: locator.segmentIdChainToParent,
-			targetKind: locator.targetKind,
-		}),
-	);
 
 	// Only handle scroll nodes
 	if (locator.targetKind !== TreeNodeKind.Scroll) return null;

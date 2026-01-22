@@ -119,15 +119,9 @@ export class OverlayManager {
 
 		// Initial recompute on layout ready - wait for view DOM to be ready
 		this.app.workspace.onLayoutReady(async () => {
-			logger.info("[OverlayManager] onLayoutReady START");
 			await this.waitForActiveViewReady();
-			logger.info(
-				"[OverlayManager] onLayoutReady waitForActiveViewReady done",
-			);
 			await this.recompute();
-			logger.info("[OverlayManager] onLayoutReady recompute done");
 			this.reattachUI();
-			logger.info("[OverlayManager] onLayoutReady reattachUI done");
 		});
 
 		// Reattach when user switches panes/notes
@@ -138,13 +132,7 @@ export class OverlayManager {
 				(leaf: WorkspaceLeaf | null) => {
 					const view = leaf?.view;
 					const isMarkdown = view instanceof MarkdownView;
-					logger.info(
-						`[OverlayManager] active-leaf-change: leaf=${!!leaf}, isMarkdown=${isMarkdown}, file=${isMarkdown ? (view as MarkdownView).file?.path : "N/A"}`,
-					);
 					if (!isMarkdown) {
-						logger.info(
-							"[OverlayManager] active-leaf-change: skipping reattach (not markdown)",
-						);
 						return;
 					}
 					this.scheduleRecompute();
@@ -157,9 +145,6 @@ export class OverlayManager {
 		// Don't try to reattach here - MarkdownView isn't ready yet
 		this.plugin.registerEvent(
 			this.app.workspace.on("file-open", (file) => {
-				logger.info(
-					`[OverlayManager] file-open: file=${file?.path ?? "null"}`,
-				);
 				if (!file) return;
 				this.pendingFilePath = file.path;
 			}),
@@ -170,19 +155,10 @@ export class OverlayManager {
 		this.plugin.registerEvent(
 			// @ts-expect-error - custom event not in Obsidian types
 			this.app.workspace.on("textfresser:file-ready", (file: TFile) => {
-				logger.info(
-					`[OverlayManager] textfresser:file-ready received for ${file.path}`,
-				);
 				// Clear pending since cd() already waited for view
 				this.pendingFilePath = null;
 				this.reattachUIForFile(file.path);
-				logger.info(
-					"[OverlayManager] textfresser:file-ready reattachUIForFile done",
-				);
 				void this.recomputeForFile(file.path);
-				logger.info(
-					"[OverlayManager] textfresser:file-ready recomputeForFile started",
-				);
 			}),
 		);
 
@@ -231,9 +207,6 @@ export class OverlayManager {
 			this.app.workspace.on("layout-change", () => {
 				const view =
 					this.app.workspace.getActiveViewOfType(MarkdownView);
-				logger.info(
-					`[OverlayManager] layout-change: pendingFilePath=${this.pendingFilePath}, view=${!!view}, file=${view?.file?.path}`,
-				);
 				if (this.pendingFilePath) {
 					const filePath = this.pendingFilePath;
 					this.pendingFilePath = null;
@@ -242,10 +215,6 @@ export class OverlayManager {
 					// Only reattach if there's a markdown view
 					this.scheduleRecompute();
 					this.reattachUI();
-				} else {
-					logger.info(
-						"[OverlayManager] layout-change: skipping reattach (no markdown view)",
-					);
 				}
 			}),
 		);
@@ -496,23 +465,13 @@ export class OverlayManager {
 	 * Reattach UI elements to current view.
 	 */
 	private reattachUI(): void {
-		logger.info("[OverlayManager.reattachUI] START");
 		this.bottom.reattach();
 
 		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-		logger.info(
-			`[OverlayManager.reattachUI] view=${!!view}, file=${view?.file?.path}`,
-		);
 		if (view) {
 			this.layoutCoordinator.attach(view, this.bottom.isMobile());
-			logger.info(
-				"[OverlayManager.reattachUI] layoutCoordinator.attach done",
-			);
 		} else {
 			this.layoutCoordinator.detach();
-			logger.info(
-				"[OverlayManager.reattachUI] layoutCoordinator.detach done (no view)",
-			);
 		}
 	}
 
@@ -521,33 +480,20 @@ export class OverlayManager {
 	 * Used when getActiveViewOfType returns null but we know which file was opened.
 	 */
 	private reattachUIForFile(filePath: string): void {
-		logger.info(`[OverlayManager.reattachUIForFile] START for ${filePath}`);
 		this.bottom.reattachForFile(filePath);
 
 		// Try getActiveViewOfType first
 		let view = this.app.workspace.getActiveViewOfType(MarkdownView);
-		logger.info(
-			`[OverlayManager.reattachUIForFile] getActiveViewOfType=${!!view}`,
-		);
 
 		// Fallback: find view by file path using getLeavesOfType
 		if (!view) {
 			view = this.getMarkdownViewForFile(filePath);
-			logger.info(
-				`[OverlayManager.reattachUIForFile] getMarkdownViewForFile fallback=${!!view}`,
-			);
 		}
 
 		if (view) {
 			this.layoutCoordinator.attach(view, this.bottom.isMobile());
-			logger.info(
-				"[OverlayManager.reattachUIForFile] layoutCoordinator.attach done",
-			);
 		} else {
 			this.layoutCoordinator.detach();
-			logger.info(
-				"[OverlayManager.reattachUIForFile] layoutCoordinator.detach done (no view)",
-			);
 		}
 	}
 
@@ -606,8 +552,6 @@ export class OverlayManager {
 		};
 
 		await waitForDomCondition(check, { timeout: timeoutMs });
-
-		logger.info("[OverlayManager.waitForActiveViewReady] DONE");
 	}
 
 	/**

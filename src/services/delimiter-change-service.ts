@@ -69,10 +69,6 @@ export class DelimiterChangeService {
 		const chunks = this.chunkArray(actions, chunkSize);
 
 		for (const [i, chunk] of chunks.entries()) {
-			logger.info(
-				`[DelimiterChangeService] Processing chunk ${i + 1}/${chunks.length} (${chunk.length} files)`,
-			);
-
 			const result = await this.vaultActionManager.dispatch(chunk);
 			if (result.isErr()) {
 				errors.push(
