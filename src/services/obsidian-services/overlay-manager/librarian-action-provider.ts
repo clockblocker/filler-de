@@ -31,14 +31,14 @@ export class LibrarianActionProvider implements CommanderActionProvider {
 
 		// ─── Bottom Actions ───
 
-		// PreviousPage: show on Page files, disabled if first page
+		// PreviousPage: show on Page files, disabled if no prev page
 		if (
 			ctx.isInLibrary &&
 			ctx.fileType === FileType.Page &&
 			ctx.pageIndex !== null
 		) {
 			actions.push({
-				disabled: ctx.pageIndex <= 0,
+				disabled: !ctx.hasPrevPage,
 				id: "PreviousPage",
 				kind: ActionKind.NavigatePage,
 				label: BACK_ARROW,

@@ -67,7 +67,7 @@ export class OverlayManager {
 	private userEventTeardown: Teardown | null = null;
 
 	// Cached deps
-	private contextBuilderDeps: ContextBuilderDeps;
+	private contextBuilderDeps: ContextBuilderDeps | null = null;
 	private toolbarServices: ToolbarServices;
 	private reattachDeps: ReattachDeps;
 
@@ -85,8 +85,7 @@ export class OverlayManager {
 
 		this.debouncer = new DebounceScheduler(OverlayManager.DEBOUNCE_MS);
 
-		// Cache deps
-		this.contextBuilderDeps = { app: this.app };
+		// Cache deps (contextBuilderDeps set in init when services available)
 		this.toolbarServices = {
 			bottom: this.bottom,
 			layoutCoordinator: this.layoutCoordinator,
@@ -113,6 +112,11 @@ export class OverlayManager {
 	 */
 	public init(services: OverlayManagerServices): void {
 		this.services = services;
+
+		// Initialize context builder deps with vaultActionManager
+		this.contextBuilderDeps = {
+			app: this.app,
+		};
 
 		// Initialize bottom toolbar
 		this.bottom.init();
@@ -201,7 +205,7 @@ export class OverlayManager {
 
 			case "SelectionChanged":
 				// Selection changed - trigger recompute to update selection toolbar
-				void this.recompute();
+				this.scheduleRecompute();
 				break;
 
 			// Other events are handled by Librarian, not OverlayManager
@@ -261,6 +265,7 @@ export class OverlayManager {
 	 * Recompute available actions and notify toolbar services.
 	 */
 	public async recompute(): Promise<void> {
+		if (!this.contextBuilderDeps) return;
 		const ctx = await buildOverlayContext(this.contextBuilderDeps);
 		this.currentContext = ctx;
 		executeRecompute(ctx, this.providers, this.toolbarServices);
@@ -270,6 +275,7 @@ export class OverlayManager {
 	 * Recompute with fallback to find view by file path.
 	 */
 	private async recomputeForFile(filePath: string): Promise<void> {
+		if (!this.contextBuilderDeps) return;
 		const ctx = await buildOverlayContextForFile(
 			this.contextBuilderDeps,
 			filePath,

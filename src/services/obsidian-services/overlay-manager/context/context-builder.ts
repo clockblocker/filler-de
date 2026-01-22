@@ -1,6 +1,9 @@
 import { type App, MarkdownView } from "obsidian";
 import { z } from "zod";
-import { getNextPageSplitPath } from "../../../../commanders/librarian/bookkeeper/page-codec";
+import {
+	getNextPageSplitPath,
+	getPrevPageSplitPath,
+} from "../../../../commanders/librarian/bookkeeper/page-codec";
 import { wouldSplitToMultiplePages as checkWouldSplit } from "../../../../commanders/librarian/bookkeeper/segmenter";
 import { makeCodecRulesFromSettings } from "../../../../commanders/librarian/codecs/rules";
 import { getParsedUserSettings } from "../../../../global-state/global-state";
@@ -70,6 +73,7 @@ async function buildContextCore(
 	let wouldSplitToMultiplePages = false;
 	let pageIndex: number | null = null;
 	let hasNextPage = false;
+	let hasPrevPage = false;
 
 	if (file) {
 		const splitPath = makeSplitPath(file.path);
@@ -102,6 +106,16 @@ async function buildContextCore(
 				const systemPath = makeSystemPathForSplitPath(nextPath);
 				hasNextPage =
 					app.vault.getAbstractFileByPath(systemPath) !== null;
+			}
+
+			// Check if prev page exists
+			if (pageIndex > 0) {
+				const prevPath = getPrevPageSplitPath(splitPath);
+				if (prevPath) {
+					const systemPath = makeSystemPathForSplitPath(prevPath);
+					hasPrevPage =
+						app.vault.getAbstractFileByPath(systemPath) !== null;
+				}
 			}
 		} else if (isInLibrary) {
 			// For non-page files, read metadata to determine type
@@ -142,6 +156,7 @@ async function buildContextCore(
 	return {
 		fileType,
 		hasNextPage,
+		hasPrevPage,
 		hasSelection,
 		isInLibrary,
 		isMobile,

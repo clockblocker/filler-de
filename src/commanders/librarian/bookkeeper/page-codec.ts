@@ -1,4 +1,9 @@
-import type { SplitPathToMdFile } from "../../../managers/obsidian/vault-action-manager/types/split-path";
+import type { VaultActionManager } from "../../../managers/obsidian/vault-action-manager";
+import {
+	SplitPathKind,
+	type SplitPathToFolder,
+	type SplitPathToMdFile,
+} from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import { serializeSeparatedSuffix } from "../codecs/internal/suffix/serialize";
 import type { CodecRules } from "../codecs/rules";
 import type { NodeName } from "../types/schemas/node-name";
@@ -113,4 +118,63 @@ export function getPrevPageSplitPath(
 	);
 
 	return { ...currentPage, basename: newBasename };
+}
+
+/**
+ * Find adjacent pages using VaultActionManager.list()
+ * Returns which pages exist (prev/next) based on actual folder contents.
+ */
+export async function getAdjacentPageInfo(
+	vaultActionManager: VaultActionManager,
+	currentPage: SplitPathToMdFile,
+): Promise<{ hasPrevPage: boolean; hasNextPage: boolean }> {
+	// Extract current page's coreName and index
+	const match = currentPage.basename.match(PAGE_INDEX_IN_BASENAME_PATTERN);
+	if (!match?.[1]) {
+		return { hasNextPage: false, hasPrevPage: false };
+	}
+	const currentIndex = Number.parseInt(match[1], 10);
+
+	// Extract coreName from basename (before _Page_)
+	const coreMatch = currentPage.basename.match(
+		new RegExp(`^(.+?)_${PAGE_PREFIX}_`),
+	);
+	if (!coreMatch?.[1]) {
+		return { hasNextPage: false, hasPrevPage: false };
+	}
+	const coreName = coreMatch[1];
+
+	// Build parent folder path from currentPage
+	const parentFolder: SplitPathToFolder = {
+		basename: currentPage.pathParts[currentPage.pathParts.length - 1] ?? "",
+		kind: SplitPathKind.Folder,
+		pathParts: currentPage.pathParts,
+	};
+
+	// List all files in parent folder
+	const listResult = await vaultActionManager.list(parentFolder);
+	if (listResult.isErr()) {
+		return { hasNextPage: false, hasPrevPage: false };
+	}
+
+	// Build page pattern: coreName_Page_NNN
+	const pagePattern = new RegExp(
+		`^${coreName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}_${PAGE_PREFIX}_(\\d{${PAGE_INDEX_DIGITS}})`,
+	);
+
+	// Collect all page indices for this coreName
+	const pageIndices: number[] = [];
+	for (const entry of listResult.value) {
+		if (entry.kind !== SplitPathKind.MdFile) continue;
+		const pageMatch = entry.basename.match(pagePattern);
+		if (pageMatch?.[1]) {
+			pageIndices.push(Number.parseInt(pageMatch[1], 10));
+		}
+	}
+
+	// Check if prev/next exist
+	const hasPrevPage = pageIndices.includes(currentIndex - 1);
+	const hasNextPage = pageIndices.includes(currentIndex + 1);
+
+	return { hasNextPage, hasPrevPage };
 }

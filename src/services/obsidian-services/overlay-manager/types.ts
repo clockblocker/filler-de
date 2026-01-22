@@ -81,6 +81,8 @@ export type OverlayContext = {
 	wouldSplitToMultiplePages: boolean;
 	/** Page index (0-999) for Page files, null otherwise */
 	pageIndex: number | null;
+	/** Whether previous page exists in vault (for Page files) */
+	hasPrevPage: boolean;
 	/** Whether next page exists in vault (for Page files) */
 	hasNextPage: boolean;
 	/** Current viewport width */
