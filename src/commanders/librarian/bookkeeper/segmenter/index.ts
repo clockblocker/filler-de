@@ -1,7 +1,7 @@
-import { stripGoBackLink } from "../../go-back-link";
 import { parseSeparatedSuffix } from "../../codecs/internal/suffix/parse";
 import type { SeparatedSuffixedBasename } from "../../codecs/internal/suffix/types";
 import type { CodecRules } from "../../codecs/rules";
+import { stripGoBackLink } from "../../go-back-link";
 import {
 	DEFAULT_SEGMENTATION_CONFIG,
 	type PageSegment,

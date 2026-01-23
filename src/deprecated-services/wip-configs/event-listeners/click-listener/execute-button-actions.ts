@@ -1,6 +1,6 @@
 import { ACTION_CONFIGS } from "../../../../managers/actions-manager/actions/actions-config";
 import {
-	type UserAction,
+	type UserActionKind,
 	UserActionSchema,
 } from "../../../../managers/actions-manager/actions/types";
 import { logger } from "../../../../utils/logger";
@@ -18,7 +18,7 @@ export const executeButtonAction = ({
 	const parsed = UserActionSchema.safeParse(actionId);
 
 	if (parsed.success) {
-		const action = parsed.data as UserAction;
+		const action = parsed.data as UserActionKind;
 		const cfg = ACTION_CONFIGS[action];
 		try {
 			cfg.execute(services);

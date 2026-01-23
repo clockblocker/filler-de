@@ -1,5 +1,5 @@
-import { adjektivOutputSchema } from "../../../zod/schemas";
 import { z } from "zod";
+import { adjektivOutputSchema } from "../../../zod/schemas";
 import { tests } from "./tests";
 
 export const makeEndgameAdjektivPrompt = () => {

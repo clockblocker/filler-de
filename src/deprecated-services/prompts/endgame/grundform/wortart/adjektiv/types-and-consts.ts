@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
 	Genus,
 	Kasus,
@@ -5,7 +6,6 @@ import {
 	Numerus,
 	Vergleichsgrad,
 } from "../../../zod/types";
-import { z } from "zod";
 
 const FormSchema = z.object({
 	agj: z.string(),

@@ -19,9 +19,9 @@ const USER_ACTION_PLACEMENT_LITERALS = [
 
 export const UserActionSchema = z.enum(USER_ACTION_LITERALS);
 
-export type UserAction = z.infer<typeof UserActionSchema>;
-export const UserAction = UserActionSchema.enum;
-export const ALL_USER_ACTIONS = UserActionSchema.options;
+export type UserActionKind = z.infer<typeof UserActionSchema>;
+export const UserActionKind = UserActionSchema.enum;
+export const ALL_USER_ACTION_KINDS = UserActionSchema.options;
 
 export const UserActionPlacementSchema = z.enum(USER_ACTION_PLACEMENT_LITERALS);
 
@@ -52,8 +52,8 @@ export type ButtonContext = {
 	hasNextPage: boolean;
 };
 
-export type ActionConfig<A extends UserAction> = {
-	id: A;
+export type ActionConfig<K extends UserActionKind> = {
+	kind: K;
 	execute: (
 		services: Partial<TexfresserObsidianServices>,
 	) => void | Promise<void>;
@@ -67,7 +67,7 @@ export type ActionConfig<A extends UserAction> = {
 	isEnabled?: (ctx: ButtonContext) => boolean;
 };
 
-export type AnyActionConfig = ActionConfig<UserAction>;
+export type AnyActionConfig = ActionConfig<UserActionKind>;
 
 /** Action config with computed disabled state for rendering */
 export type RenderedActionConfig = AnyActionConfig & {

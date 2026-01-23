@@ -100,7 +100,7 @@ export class DeprecatedAboveSelectionToolbarService {
 		this.toolbarEl.innerHTML = "";
 		for (const action of actions) {
 			const btn = document.createElement("button");
-			btn.dataset.action = action.id;
+			btn.dataset.action = action.kind;
 			btn.textContent = action.label;
 			btn.disabled = action.disabled ?? false;
 			Object.assign(btn.style, {

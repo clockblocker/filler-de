@@ -1,4 +1,5 @@
 import type { App, Menu, Plugin } from "obsidian";
+import { createActionExecutor } from "../../../managers/actions-manager/create-action-executor";
 import type {
 	Teardown,
 	UserEvent,
@@ -25,7 +26,6 @@ import {
 	type ReattachDeps,
 	type ToolbarServices,
 } from "./coordination";
-import { executeAction } from "./executor-registry";
 import {
 	ActionKind,
 	ActionPlacement,
@@ -195,10 +195,13 @@ export class DeprecatedOverlayManager {
 				// Action button clicked - execute the action
 				void handleActionClick(
 					{
-						app: this.app,
 						getCurrentContext: () => this.currentContext,
+						getLibrarian: () => this.services?.librarian ?? null,
 						getProviders: () => this.providers,
-						getServices: () => this.services,
+						getSelectionService: () =>
+							this.services?.selectionService ?? null,
+						getVaultActionManager: () =>
+							this.services!.vaultActionManager,
 					},
 					event.actionId,
 				);
@@ -237,24 +240,15 @@ export class DeprecatedOverlayManager {
 							.setIcon("split")
 							.onClick(() => {
 								if (!this.services) return;
-								void executeAction(
-									{
-										id: "MakeText",
-										kind: ActionKind.MakeText,
-										label: "Split into pages",
-										params: {},
-										placement: ActionPlacement.Bottom,
-										priority: 2,
-									},
-									{
-										apiService: this.services.apiService,
-										app: this.app,
-										selectionService:
-											this.services.selectionService,
-										vaultActionManager:
-											this.services.vaultActionManager,
-									},
-								);
+								const executor = createActionExecutor({
+									librarian: this.services.librarian ?? null,
+									vaultActionManager:
+										this.services.vaultActionManager,
+								});
+								void executor({
+									kind: ActionKind.MakeText,
+									payload: {},
+								});
 							}),
 					);
 				}

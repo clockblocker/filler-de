@@ -1,5 +1,5 @@
-import { morphemAnalysisOutputSchema } from "../../../zod/schemas";
 import { z } from "zod";
+import { morphemAnalysisOutputSchema } from "../../../zod/schemas";
 import { tests } from "./tests";
 
 export const makeEndgameMorhpemsPrompt = () => {

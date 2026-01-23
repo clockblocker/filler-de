@@ -1,7 +1,7 @@
 import { type App, MarkdownView } from "obsidian";
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import type { RenderedActionConfig } from "../../../managers/actions-manager/actions/types";
-import { UserAction } from "../../../managers/actions-manager/actions/types";
+import { UserActionKind } from "../../../managers/actions-manager/actions/types";
 import { logger } from "../../../utils/logger";
 
 /** Estimated width per button (including gap) */
@@ -174,13 +174,13 @@ export class DeprecatedBottomToolbarService {
 		// Split actions into nav vs non-nav
 		const navActions = bottomActions.filter(
 			(a) =>
-				a.id === UserAction.NavigatePage ||
-				a.id === UserAction.PreviousPage,
+				a.kind === UserActionKind.NavigatePage ||
+				a.kind === UserActionKind.PreviousPage,
 		);
 		const otherActions = bottomActions.filter(
 			(a) =>
-				a.id !== UserAction.NavigatePage &&
-				a.id !== UserAction.PreviousPage,
+				a.kind !== UserActionKind.NavigatePage &&
+				a.kind !== UserActionKind.PreviousPage,
 		);
 
 		// Get position setting
@@ -253,7 +253,7 @@ export class DeprecatedBottomToolbarService {
 		actionConfig: RenderedActionConfig,
 	): HTMLButtonElement {
 		const b = document.createElement("button");
-		b.dataset.action = actionConfig.id;
+		b.dataset.action = actionConfig.kind;
 		b.className = "my-bottom-overlay-btn";
 		b.textContent = actionConfig.label;
 		if (actionConfig.disabled) {
@@ -282,7 +282,7 @@ export class DeprecatedBottomToolbarService {
 
 		for (const action of actions) {
 			const item = document.createElement("button");
-			item.dataset.action = action.id;
+			item.dataset.action = action.kind;
 			item.className = "bottom-overflow-item";
 			item.textContent = action.label;
 			if (action.disabled) {

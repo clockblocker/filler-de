@@ -1,6 +1,6 @@
 import { type MarkdownView, setIcon } from "obsidian";
 import type { RenderedActionConfig } from "../../../managers/actions-manager/actions/types";
-import { UserAction } from "../../../managers/actions-manager/actions/types";
+import { UserActionKind } from "../../../managers/actions-manager/actions/types";
 import type { NavigationLayoutState } from "./navigation-layout-coordinator";
 
 /** Inset from edge of workspace-leaf (px) */
@@ -36,9 +36,9 @@ export class EdgePaddingNavigator {
 	 */
 	public setActions(actions: RenderedActionConfig[]): void {
 		this.prevAction =
-			actions.find((a) => a.id === UserAction.PreviousPage) ?? null;
+			actions.find((a) => a.kind === UserActionKind.PreviousPage) ?? null;
 		this.nextAction =
-			actions.find((a) => a.id === UserAction.NavigatePage) ?? null;
+			actions.find((a) => a.kind === UserActionKind.NavigatePage) ?? null;
 		this.updateZoneContent();
 	}
 
@@ -200,10 +200,10 @@ export class EdgePaddingNavigator {
 
 		if (side === "left") {
 			zone.style.left = `${leftOffset}px`;
-			zone.dataset.action = this.prevAction?.id ?? "";
+			zone.dataset.action = this.prevAction?.kind ?? "";
 		} else {
 			zone.style.right = `${rightOffset}px`;
-			zone.dataset.action = this.nextAction?.id ?? "";
+			zone.dataset.action = this.nextAction?.kind ?? "";
 		}
 
 		// Add icon
@@ -220,10 +220,10 @@ export class EdgePaddingNavigator {
 	 */
 	private updateZoneContent(): void {
 		if (this.leftZone) {
-			this.leftZone.dataset.action = this.prevAction?.id ?? "";
+			this.leftZone.dataset.action = this.prevAction?.kind ?? "";
 		}
 		if (this.rightZone) {
-			this.rightZone.dataset.action = this.nextAction?.id ?? "";
+			this.rightZone.dataset.action = this.nextAction?.kind ?? "";
 		}
 	}
 }

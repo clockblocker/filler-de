@@ -22,7 +22,7 @@ const FileTypeMetadataSchema = z.object({
 });
 
 import {
-	ALL_USER_ACTIONS,
+	ALL_USER_ACTION_KINDS,
 	type AnyActionConfig,
 	type ButtonContext,
 	type RenderedActionConfig,
@@ -160,7 +160,7 @@ export class DeprecatedButtonRegistry {
 		ctx: ButtonContext,
 		placement: (typeof UserActionPlacement)[keyof typeof UserActionPlacement],
 	): RenderedActionConfig[] {
-		return ALL_USER_ACTIONS.filter((action) => {
+		return ALL_USER_ACTION_KINDS.filter((action) => {
 			const config = ACTION_CONFIGS[action];
 			return config.placement === placement && config.isAvailable(ctx);
 		})

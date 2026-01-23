@@ -3,7 +3,6 @@
  */
 
 import { z } from "zod";
-import { buildGoBackLink } from "../go-back-link";
 import { MD } from "../../../managers/obsidian/vault-action-manager/types/literals";
 import type {
 	SplitPathToFolder,
@@ -24,6 +23,7 @@ import type {
 	ScrollNodeSegmentId,
 	SectionNodeSegmentId,
 } from "../codecs/segment-id/types/segment-id";
+import { buildGoBackLink } from "../go-back-link";
 import {
 	TreeNodeKind,
 	type TreeNodeStatus,

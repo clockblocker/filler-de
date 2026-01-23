@@ -1,1 +1,1 @@
-export { VaultActionQueue, type QueueItem } from "./vault-action-queue";
+export { type QueueItem, VaultActionQueue } from "./vault-action-queue";

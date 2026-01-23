@@ -15,12 +15,12 @@ import {
 	codexImpactToRecreations,
 	extractInvalidCodexesFromBulk,
 } from "../../../../../src/commanders/librarian/healer/library-tree/codex/codex-impact-to-actions";
-import type { TreeReader } from "../../../../../src/commanders/librarian/healer/library-tree/tree-interfaces";
 import type { CodexImpact } from "../../../../../src/commanders/librarian/healer/library-tree/codex/compute-codex-impact";
 import { mergeCodexImpacts } from "../../../../../src/commanders/librarian/healer/library-tree/codex/merge-codex-impacts";
 import type { CodexAction } from "../../../../../src/commanders/librarian/healer/library-tree/codex/types/codex-action";
 import { buildTreeActions } from "../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/index";
 import type { CreateTreeLeafAction, TreeAction } from "../../../../../src/commanders/librarian/healer/library-tree/tree-action/types/tree-action";
+import type { TreeReader } from "../../../../../src/commanders/librarian/healer/library-tree/tree-interfaces";
 import type { HealingAction } from "../../../../../src/commanders/librarian/healer/library-tree/types/healing-action";
 import type { BulkVaultEvent } from "../../../../../src/managers/obsidian/vault-action-manager";
 import { defaultSettingsForUnitTests } from "../../../common-utils/consts";

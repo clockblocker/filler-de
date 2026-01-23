@@ -1,4 +1,7 @@
-import type { AnySplitPath } from "../../../managers/obsidian/vault-action-manager/types/split-path";
+import type {
+	AnySplitPath,
+	SplitPathToMdFile,
+} from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { FileType } from "../../../types/common-interface/enums";
 
 /**
@@ -13,11 +16,9 @@ export type ActionPlacement =
 	(typeof ActionPlacement)[keyof typeof ActionPlacement];
 
 /**
- * All known action kinds with typed parameters.
- * Using discriminated union for type safety.
+ * All known action kinds.
  */
 export const ActionKind = {
-	Custom: "Custom",
 	ExplainGrammar: "ExplainGrammar",
 	Generate: "Generate",
 	MakeText: "MakeText",
@@ -29,8 +30,24 @@ export const ActionKind = {
 export type ActionKind = (typeof ActionKind)[keyof typeof ActionKind];
 
 /**
- * Typed parameters per action kind.
- * Each action kind has its own params shape.
+ * Typed payloads per action kind.
+ * Each executor receives only its typed payload.
+ */
+export type ActionPayloads = {
+	NavigatePage: {
+		direction: "prev" | "next";
+		currentFilePath: SplitPathToMdFile;
+	};
+	SplitInBlocks: { selection: string; fileContent: string };
+	MakeText: Record<string, never>;
+	SplitToPages: Record<string, never>;
+	TranslateSelection: { selection: string };
+	ExplainGrammar: { selection: string };
+	Generate: { selection: string };
+};
+
+/**
+ * @deprecated Use ActionPayloads instead. Kept for backward compatibility during migration.
  */
 export type ActionParams = {
 	NavigatePage: { direction: "next" | "prev" };
@@ -40,13 +57,10 @@ export type ActionParams = {
 	ExplainGrammar: Record<string, never>;
 	SplitInBlocks: Record<string, never>;
 	Generate: Record<string, never>;
-	Custom: { execute: () => void | Promise<void> };
 };
 
 /**
  * A commander action with typed params.
- * Standard actions have kind + params.
- * Custom actions use the escape hatch with inline execute callback.
  */
 export type CommanderAction<K extends ActionKind = ActionKind> = {
 	kind: K;

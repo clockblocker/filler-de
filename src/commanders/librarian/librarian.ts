@@ -7,6 +7,7 @@ import type {
 } from "../../managers/obsidian/vault-action-manager";
 import {
 	SplitPathKind,
+	type SplitPathToMdFile,
 	type SplitPathToMdFileWithReader,
 } from "../../managers/obsidian/vault-action-manager/types/split-path";
 import { decrementPending, incrementPending } from "../../utils/idle-tracker";
@@ -36,6 +37,10 @@ import {
 	processCodexImpacts,
 	processCodexImpactsForInit,
 } from "./librarian-init";
+import {
+	getNextPage as getNextPageImpl,
+	getPrevPage as getPrevPageImpl,
+} from "./page-navigation";
 import { triggerSectionHealing as triggerSectionHealingImpl } from "./section-healing";
 import { type UserEvent, UserEventRouter } from "./user-event-router";
 import { VaultActionQueue } from "./vault-action-queue";
@@ -391,5 +396,23 @@ export class Librarian {
 			},
 			info,
 		);
+	}
+
+	/**
+	 * Get previous page by looking up siblings in tree.
+	 * Returns null if current is first page or not a page file.
+	 */
+	getPrevPage(currentFilePath: SplitPathToMdFile): SplitPathToMdFile | null {
+		if (!this.healer) return null;
+		return getPrevPageImpl(this.healer, this.codecs, currentFilePath);
+	}
+
+	/**
+	 * Get next page by looking up siblings in tree.
+	 * Returns null if current is last page or not a page file.
+	 */
+	getNextPage(currentFilePath: SplitPathToMdFile): SplitPathToMdFile | null {
+		if (!this.healer) return null;
+		return getNextPageImpl(this.healer, this.codecs, currentFilePath);
 	}
 }

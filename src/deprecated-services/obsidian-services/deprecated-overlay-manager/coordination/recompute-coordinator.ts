@@ -1,3 +1,4 @@
+import type { Librarian } from "../../../../commanders/librarian/librarian";
 import type { LeafLifecycleManager } from "../../../../managers/obsidian/leaf-lifecycle-manager";
 import type { UserEventInterceptor } from "../../../../managers/obsidian/user-event-interceptor";
 import type { VaultActionManager } from "../../../../managers/obsidian/vault-action-manager";
@@ -20,6 +21,7 @@ import {
 export type DeprecatedOverlayManagerServices = {
 	apiService: ApiService;
 	leafLifecycleManager?: LeafLifecycleManager;
+	librarian?: Librarian | null;
 	selectionService: SelectionService;
 	userEventInterceptor?: UserEventInterceptor;
 	vaultActionManager: VaultActionManager;

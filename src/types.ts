@@ -35,8 +35,8 @@ export const SELECTION_ACTION_PLACEMENT_TEXT: Record<
 	SelectionActionPlacement,
 	string
 > = {
-	selection: "Above selection",
 	bottom: "In bottom toolbar",
+	selection: "Above selection",
 	"shortcut-only": "Shortcut only",
 };
 

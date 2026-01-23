@@ -1,23 +1,78 @@
-import type { App, Plugin } from "obsidian";
+import type { Plugin } from "obsidian";
+import type { Librarian } from "../../../../commanders/librarian/librarian";
+import {
+	type ActionExecutor,
+	createActionExecutor,
+} from "../../../../managers/actions-manager/create-action-executor";
+import type { VaultActionManager } from "../../../../managers/obsidian/vault-action-manager";
+import {
+	SplitPathKind,
+	type SplitPathToMdFile,
+} from "../../../../managers/obsidian/vault-action-manager/types/split-path";
 import { DomSelectors } from "../../../../utils/dom-selectors";
 import { logger } from "../../../../utils/logger";
-import type { TexfresserObsidianServices } from "../../interface";
+import type { SelectionService } from "../../atomic-services/selection-service";
+import { queryProviders } from "../coordination";
 import {
-	type DeprecatedOverlayManagerServices,
-	queryProviders,
-} from "../coordination";
-import { executeAction } from "../executor-registry";
-import type { CommanderActionProvider, OverlayContext } from "../types";
+	ActionKind,
+	type ActionPayloads,
+	type CommanderActionProvider,
+	type OverlayContext,
+} from "../types";
 
 /**
  * Dependencies for ActionClickDispatcher.
  */
 export type ClickDispatcherDeps = {
-	app: App;
 	getProviders: () => CommanderActionProvider[];
-	getServices: () => DeprecatedOverlayManagerServices | null;
+	getLibrarian: () => Librarian | null;
+	getVaultActionManager: () => VaultActionManager;
+	getSelectionService: () => SelectionService | null;
 	getCurrentContext: () => OverlayContext | null;
 };
+
+/**
+ * Build payload for action based on kind and context.
+ */
+function buildPayload<K extends ActionKind>(
+	kind: K,
+	context: OverlayContext,
+	selectionService: SelectionService | null,
+): ActionPayloads[K] | null {
+	switch (kind) {
+		case ActionKind.NavigatePage: {
+			if (!context.path || context.path.kind !== SplitPathKind.MdFile) {
+				return null;
+			}
+			// Direction comes from params, but we need currentFilePath from context
+			// This will be merged with params in handleActionClick
+			return {
+				currentFilePath: context.path as SplitPathToMdFile,
+				direction: "next", // placeholder, will be overwritten
+			} as ActionPayloads[K];
+		}
+
+		case ActionKind.SplitInBlocks:
+		case ActionKind.TranslateSelection:
+		case ActionKind.ExplainGrammar:
+		case ActionKind.Generate: {
+			const selection = selectionService?.getSelection() ?? "";
+			if (kind === ActionKind.SplitInBlocks) {
+				return { fileContent: "", selection } as ActionPayloads[K];
+			}
+			return { selection } as ActionPayloads[K];
+		}
+
+		case ActionKind.MakeText:
+		case ActionKind.SplitToPages:
+			return {} as ActionPayloads[K];
+
+		default: {
+			const _exhaustive: never = kind;
+			return null;
+		}
+	}
+}
 
 /**
  * Handle action click by ID.
@@ -26,10 +81,8 @@ export async function handleActionClick(
 	deps: ClickDispatcherDeps,
 	actionId: string,
 ): Promise<void> {
-	const services = deps.getServices();
 	const context = deps.getCurrentContext();
-
-	if (!services || !context) {
+	if (!context) {
 		return;
 	}
 
@@ -44,13 +97,31 @@ export async function handleActionClick(
 		return;
 	}
 
+	// Create executor with injected managers
+	const executor: ActionExecutor = createActionExecutor({
+		librarian: deps.getLibrarian(),
+		vaultActionManager: deps.getVaultActionManager(),
+	});
+
+	// Build payload from context
+	const basePayload = buildPayload(
+		action.kind,
+		context,
+		deps.getSelectionService(),
+	);
+
+	if (!basePayload) {
+		logger.warn(
+			`[OverlayManager] Could not build payload for: ${action.kind}`,
+		);
+		return;
+	}
+
+	// Merge with action params (for NavigatePage direction)
+	const payload = { ...basePayload, ...action.params };
+
 	// Execute the action
-	await executeAction(action, {
-		apiService: services.apiService,
-		app: deps.app,
-		selectionService: services.selectionService,
-		vaultActionManager: services.vaultActionManager,
-	} as Partial<TexfresserObsidianServices>);
+	await executor({ kind: action.kind, payload });
 }
 
 /**

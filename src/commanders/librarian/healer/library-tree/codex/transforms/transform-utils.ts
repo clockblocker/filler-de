@@ -3,8 +3,8 @@
  * Used by codex and scroll backlink transforms.
  */
 
-import { isGoBackLine } from "../../../../go-back-link";
 import { LINE_BREAK } from "../../../../../../types/literals";
+import { isGoBackLine } from "../../../../go-back-link";
 
 /**
  * Check if the first line looks like a backlink.

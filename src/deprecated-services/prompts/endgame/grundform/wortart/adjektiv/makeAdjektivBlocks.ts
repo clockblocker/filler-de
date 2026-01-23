@@ -1,5 +1,5 @@
-import type TextEaterPlugin from "../../../../../../main";
 import type { TFile } from "obsidian";
+import type TextEaterPlugin from "../../../../../../main";
 import { makeTagChain, Tag } from "../../../zod/consts";
 import { adjektivOutputSchema } from "../../../zod/schemas";
 import {

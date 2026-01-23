@@ -1,6 +1,5 @@
 import { type App, MarkdownView } from "obsidian";
 import { z } from "zod";
-import { logger } from "../../../../utils/logger";
 import {
 	getNextPageSplitPath,
 	getPrevPageSplitPath,
@@ -17,6 +16,7 @@ import {
 	FileType,
 	MdFileSubTypeSchema,
 } from "../../../../types/common-interface/enums";
+import { logger } from "../../../../utils/logger";
 import type { OverlayContext } from "../types";
 
 // Schema for reading noteKind from metadata
@@ -192,12 +192,14 @@ export async function buildOverlayContextForFile(
 	const activeViewPath = view?.file?.path;
 
 	logger.info(
-		`[ContextBuilder] buildOverlayContextForFile: ${JSON.stringify({ filePath, activeViewPath })}`,
+		`[ContextBuilder] buildOverlayContextForFile: ${JSON.stringify({ activeViewPath, filePath })}`,
 	);
 
 	// Only use active view if it matches expected file path
 	if (view?.file?.path !== filePath) {
-		logger.info("[ContextBuilder] buildOverlayContextForFile: active view mismatch, searching by path");
+		logger.info(
+			"[ContextBuilder] buildOverlayContextForFile: active view mismatch, searching by path",
+		);
 		view = getMarkdownViewForFile(deps.app, filePath);
 		logger.info(
 			`[ContextBuilder] buildOverlayContextForFile: found view by path: ${view?.file?.path ?? "null"}`,

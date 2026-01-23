@@ -10,8 +10,8 @@ import {
 	codexImpactToDeletions,
 	codexImpactToRecreations,
 } from "../../../../../src/commanders/librarian/healer/library-tree/codex/codex-impact-to-actions";
-import type { TreeReader } from "../../../../../src/commanders/librarian/healer/library-tree/tree-interfaces";
 import type { CodexImpact } from "../../../../../src/commanders/librarian/healer/library-tree/codex/compute-codex-impact";
+import type { TreeReader } from "../../../../../src/commanders/librarian/healer/library-tree/tree-interfaces";
 import {
 	TreeNodeKind,
 	TreeNodeStatus,
