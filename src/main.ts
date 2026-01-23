@@ -5,21 +5,21 @@ import {
 	Notice,
 	Plugin,
 } from "obsidian";
+import { DelimiterChangeService } from "./commanders/librarian/delimiter-change-service";
 import { Librarian } from "./commanders/librarian/librarian";
-import { DelimiterChangeService } from "./deprecated-services/delimiter-change-service";
 import { ApiService } from "./deprecated-services/obsidian-services/atomic-services/api-service";
-// import {
-// 	// DeprecatedOverlayManager,
-// 	// LibrarianActionProvider,
-// } from "./services/obsidian-services/overlay-manager";
-import { ACTION_CONFIGS } from "./deprecated-services/wip-configs/actions/actions-config";
-import { tagLineCopyEmbedAction } from "./deprecated-services/wip-configs/actions/new/tag-line-copy-embed-action";
-import addBacklinksToCurrentFile from "./deprecated-services/wip-configs/actions/old/addBacklinksToCurrentFile";
 import {
 	clearState,
 	initializeState,
 	updateParsedSettings,
 } from "./global-state/global-state";
+// import {
+// 	// DeprecatedOverlayManager,
+// 	// LibrarianActionProvider,
+// } from "./services/obsidian-services/overlay-manager";
+import { ACTION_CONFIGS } from "./managers/actions-manager/actions/actions-config";
+import { tagLineCopyEmbedAction } from "./managers/actions-manager/actions/new/tag-line-copy-embed-action";
+import addBacklinksToCurrentFile from "./managers/actions-manager/actions/old/addBacklinksToCurrentFile";
 // import { LeafLifecycleManager } from "./managers/obsidian/leaf-lifecycle-manager";
 import { UserEventInterceptor } from "./managers/obsidian/user-event-interceptor";
 import {

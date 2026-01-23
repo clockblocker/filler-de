@@ -1,9 +1,9 @@
 import { Notice } from "obsidian";
-import type { VaultActionManager } from "../../../../managers/obsidian/vault-action-manager";
 import {
 	formatQuotedLines,
 	segmentInQuotedLines,
-} from "../../../dto-services/quote-manager/interface";
+} from "../../../../deprecated-services/dto-services/quote-manager/interface";
+import type { VaultActionManager } from "../../../obsidian/vault-action-manager";
 
 export default async function wrapSentencesInQuoteAnchor(services: {
 	vaultActionManager: VaultActionManager;

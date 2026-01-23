@@ -1,6 +1,6 @@
 import { Notice } from "obsidian";
 import { splitStrInBlocks } from "../../../../commanders/librarian/bookkeeper/segmenter/block-marker";
-import type { VaultActionManager } from "../../../../managers/obsidian/vault-action-manager";
+import type { VaultActionManager } from "../../../obsidian/vault-action-manager";
 import { findHighestBlockNumber } from "./block-utils";
 
 /**

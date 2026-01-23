@@ -1,6 +1,6 @@
 import type { MarkdownView } from "obsidian";
+import type { RenderedActionConfig } from "../../../managers/actions-manager/actions/types";
 import { DomSelectors } from "../../../utils/dom-selectors";
-import type { RenderedActionConfig } from "../../wip-configs/actions/types";
 import type { DeprecatedBottomToolbarService } from "./bottom-toolbar";
 import type { EdgePaddingNavigator } from "./edge-padding-navigator";
 

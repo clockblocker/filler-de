@@ -1,5 +1,5 @@
 import { type App, MarkdownView, Notice } from "obsidian";
-import type { VaultActionManager } from "../../../../managers/obsidian/vault-action-manager";
+import type { VaultActionManager } from "../../../obsidian/vault-action-manager";
 import {
 	findHighestBlockNumber,
 	formatBlockEmbed,

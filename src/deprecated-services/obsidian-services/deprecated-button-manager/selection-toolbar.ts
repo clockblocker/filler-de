@@ -1,6 +1,6 @@
 import type { EditorView } from "@codemirror/view";
 import { type App, MarkdownView } from "obsidian";
-import type { RenderedActionConfig } from "../../wip-configs/actions/types";
+import type { RenderedActionConfig } from "../../../managers/actions-manager/actions/types";
 
 /**
  * Floating toolbar that appears above text selection.

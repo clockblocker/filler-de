@@ -1,5 +1,5 @@
-import { logError } from "../../../../managers/obsidian/vault-action-manager/helpers/issue-handlers";
-import type { TexfresserObsidianServices } from "../../../obsidian-services/interface";
+import type { TexfresserObsidianServices } from "../../../../deprecated-services/obsidian-services/interface";
+import { logError } from "../../../obsidian/vault-action-manager/helpers/issue-handlers";
 
 const SPLIT_TO_PAGES_COMMAND = "cbcr-text-eater-de:split-to-pages";
 

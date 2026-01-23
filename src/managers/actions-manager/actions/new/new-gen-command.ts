@@ -1,6 +1,6 @@
 import { Notice } from "obsidian";
+import type { TexfresserObsidianServices } from "../../../../deprecated-services/obsidian-services/interface";
 import { LONG_DASH } from "../../../../types/literals";
-import type { TexfresserObsidianServices } from "../../../obsidian-services/interface";
 
 export default async function newGenCommand(
 	services: Partial<TexfresserObsidianServices>,

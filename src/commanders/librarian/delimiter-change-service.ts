@@ -1,18 +1,18 @@
 import type { App, TFile } from "obsidian";
-import type { Librarian } from "../commanders/librarian/librarian";
-import type { VaultActionManager } from "../managers/obsidian/vault-action-manager";
-import { makeSplitPath } from "../managers/obsidian/vault-action-manager/impl/common/split-path-and-system-path";
-import type { SplitPathToMdFile } from "../managers/obsidian/vault-action-manager/types/split-path";
+import type { VaultActionManager } from "../../managers/obsidian/vault-action-manager";
+import { makeSplitPath } from "../../managers/obsidian/vault-action-manager/impl/common/split-path-and-system-path";
+import type { SplitPathToMdFile } from "../../managers/obsidian/vault-action-manager/types/split-path";
 import {
 	type VaultAction,
 	VaultActionKind,
-} from "../managers/obsidian/vault-action-manager/types/vault-action";
-import type { SuffixDelimiterConfig } from "../types";
+} from "../../managers/obsidian/vault-action-manager/types/vault-action";
+import type { SuffixDelimiterConfig } from "../../types";
 import {
 	buildCanonicalDelimiter,
 	buildFlexibleDelimiterPattern,
-} from "../utils/delimiter";
-import { logger } from "../utils/logger";
+} from "../../utils/delimiter";
+import { logger } from "../../utils/logger";
+import type { Librarian } from "./librarian";
 
 export interface DelimiterChangeResult {
 	success: boolean;
@@ -68,7 +68,7 @@ export class DelimiterChangeService {
 		const chunkSize = 50;
 		const chunks = this.chunkArray(actions, chunkSize);
 
-		for (const [i, chunk] of chunks.entries()) {
+		for (const [_i, chunk] of chunks.entries()) {
 			const result = await this.vaultActionManager.dispatch(chunk);
 			if (result.isErr()) {
 				errors.push(

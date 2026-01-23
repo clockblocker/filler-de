@@ -1,7 +1,10 @@
+import { ACTION_CONFIGS } from "../../../../managers/actions-manager/actions/actions-config";
+import {
+	type UserAction,
+	UserActionSchema,
+} from "../../../../managers/actions-manager/actions/types";
 import { logger } from "../../../../utils/logger";
 import type { TexfresserObsidianServices } from "../../../obsidian-services/interface";
-import { ACTION_CONFIGS } from "../../actions/actions-config";
-import { type UserAction, UserActionSchema } from "../../actions/types";
 
 export const executeButtonAction = ({
 	buttonElement,

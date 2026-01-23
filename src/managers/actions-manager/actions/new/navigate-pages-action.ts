@@ -2,9 +2,9 @@ import {
 	getNextPageSplitPath,
 	getPrevPageSplitPath,
 } from "../../../../commanders/librarian/bookkeeper/page-codec";
-import { logError } from "../../../../managers/obsidian/vault-action-manager/helpers/issue-handlers";
-import type { SplitPathToMdFile } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
-import type { TexfresserObsidianServices } from "../../../obsidian-services/interface";
+import type { TexfresserObsidianServices } from "../../../../deprecated-services/obsidian-services/interface";
+import { logError } from "../../../obsidian/vault-action-manager/helpers/issue-handlers";
+import type { SplitPathToMdFile } from "../../../obsidian/vault-action-manager/types/split-path";
 
 export async function navigatePageAction(
 	services: Partial<TexfresserObsidianServices>,

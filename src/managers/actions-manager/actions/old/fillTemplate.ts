@@ -1,7 +1,7 @@
 import { Editor, MarkdownView, Notice, TFile } from "obsidian";
+import { prompts } from "../../../../deprecated-services/prompts";
 import type TextEaterPluginStripped from "../../../../main-stripped";
 import { LONG_DASH } from "../../../../types/literals";
-import { prompts } from "../../../prompts";
 
 function extractFirstBracketedWord(text: string) {
 	const match = text.match(/\[\[([^\]]+)\]\]/);

@@ -1,8 +1,8 @@
 import { Notice } from "obsidian";
 import { z } from "zod";
-import type { OpenedFileService } from "../../../../managers/obsidian/vault-action-manager/file-services/active-view/opened-file-service";
-import type { ApiService } from "../../../obsidian-services/atomic-services/api-service";
-import { prompts } from "../../../prompts";
+import type { ApiService } from "../../../../deprecated-services/obsidian-services/atomic-services/api-service";
+import { prompts } from "../../../../deprecated-services/prompts";
+import type { OpenedFileService } from "../../../obsidian/vault-action-manager/file-services/active-view/opened-file-service";
 
 export default async function newTranslateSelection({
 	openedFileService,

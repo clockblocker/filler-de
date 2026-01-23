@@ -4,6 +4,7 @@ import { getNextPageSplitPath } from "../../../commanders/librarian/bookkeeper/p
 import { wouldSplitToMultiplePages as checkWouldSplit } from "../../../commanders/librarian/bookkeeper/segmenter";
 import { makeCodecRulesFromSettings } from "../../../commanders/librarian/codecs/rules";
 import { getParsedUserSettings } from "../../../global-state/global-state";
+import { ACTION_CONFIGS } from "../../../managers/actions-manager/actions/actions-config";
 import {
 	makeSplitPath,
 	makeSystemPathForSplitPath,
@@ -14,7 +15,6 @@ import {
 	FileType,
 	MdFileSubTypeSchema,
 } from "../../../types/common-interface/enums";
-import { ACTION_CONFIGS } from "../../wip-configs/actions/actions-config";
 
 // Schema for reading noteKind from metadata
 const FileTypeMetadataSchema = z.object({
@@ -27,7 +27,7 @@ import {
 	type ButtonContext,
 	type RenderedActionConfig,
 	UserActionPlacement,
-} from "../../wip-configs/actions/types";
+} from "../../../managers/actions-manager/actions/types";
 
 type ActionSubscriber = (actions: RenderedActionConfig[]) => void;
 

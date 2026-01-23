@@ -1,7 +1,7 @@
 import { z } from "zod";
-import type { AnySplitPath } from "../../../managers/obsidian/vault-action-manager/types/split-path";
+import type { TexfresserObsidianServices } from "../../../deprecated-services/obsidian-services/interface";
 import type { FileType } from "../../../types/common-interface/enums";
-import type { TexfresserObsidianServices } from "../../obsidian-services/interface";
+import type { AnySplitPath } from "../../obsidian/vault-action-manager/types/split-path";
 
 const USER_ACTION_LITERALS = [
 	"Generate",
