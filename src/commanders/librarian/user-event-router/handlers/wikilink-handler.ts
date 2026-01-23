@@ -1,5 +1,6 @@
 import type { WikilinkCompletedEvent } from "../../../../managers/obsidian/user-event-interceptor";
 import type { Codecs } from "../../codecs";
+import { CODEX_CORE_NAME } from "../../types/consts/literals";
 
 /**
  * Handle wikilink completion: add alias for library files.
@@ -18,7 +19,7 @@ export function handleWikilinkCompleted(
 	const { coreName, suffixParts } = parseResult.value;
 
 	// Skip codex files (start with __)
-	if (coreName.startsWith("__")) return;
+	if (coreName.startsWith(CODEX_CORE_NAME)) return;
 
 	// No suffix = not a library file (or root-level file without hierarchy)
 	if (suffixParts.length === 0) return;

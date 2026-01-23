@@ -2,8 +2,6 @@
  * UserEventInterceptor module - unified user event handling.
  */
 
-export { UserEventInterceptor } from "./user-event-interceptor";
-
 export type {
 	CheckboxClickedEvent,
 	ClipboardCopyEvent,
@@ -14,3 +12,4 @@ export type {
 	UserEventHandler,
 	WikilinkCompletedEvent,
 } from "./types/user-event";
+export { UserEventInterceptor } from "./user-event-interceptor";

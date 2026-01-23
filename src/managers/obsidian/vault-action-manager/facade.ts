@@ -304,6 +304,10 @@ export class VaultActionManagerImpl implements VaultActionManager {
 		return result.map(() => undefined);
 	}
 
+	get openedFileService(): OpenedFileService {
+		return this.opened;
+	}
+
 	// ─────────────────────────────────────────────────────────────────────────
 	// Debug API - for testing multi-batch scenarios
 	// ─────────────────────────────────────────────────────────────────────────

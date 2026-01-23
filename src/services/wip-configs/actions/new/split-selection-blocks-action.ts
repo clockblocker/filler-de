@@ -1,26 +1,22 @@
 import { Notice } from "obsidian";
 import { splitStrInBlocks } from "../../../../commanders/librarian/bookkeeper/segmenter/block-marker";
-import type { TexfresserObsidianServices } from "../../../obsidian-services/interface";
+import type { VaultActionManager } from "../../../../managers/obsidian/vault-action-manager";
 import { findHighestBlockNumber } from "./block-utils";
 
 /**
  * Splits selected text into blocks with Obsidian block markers (^N).
  * Finds highest existing block ID in file and continues numbering from there.
  */
-export async function splitSelectionInBlocksAction(
-	services: Partial<TexfresserObsidianServices>,
-): Promise<void> {
-	const { selectionService, vaultActionManager } = services;
-
-	if (!selectionService || !vaultActionManager) {
-		new Notice("Error: Missing required services");
-		return;
-	}
+export async function splitSelectionInBlocksAction(services: {
+	vaultActionManager: VaultActionManager;
+}): Promise<void> {
+	const { vaultActionManager } = services;
 
 	try {
-		const selection = await selectionService.getSelection();
+		const openedFileService = vaultActionManager.openedFileService;
+		const selection = openedFileService.getSelection();
 
-		if (!selection.trim()) {
+		if (!selection?.trim()) {
 			new Notice("No text selected");
 			return;
 		}
@@ -42,7 +38,7 @@ export async function splitSelectionInBlocksAction(
 		);
 
 		// Replace selection with marked text
-		await selectionService.replaceSelection(markedText);
+		openedFileService.replaceSelection(markedText);
 
 		new Notice(`Split into ${blockCount} blocks`);
 	} catch (error) {

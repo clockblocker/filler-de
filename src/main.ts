@@ -31,7 +31,6 @@ import { splitPathFromSystemPathInternal } from "./managers/obsidian/vault-actio
 import { Reader } from "./managers/obsidian/vault-action-manager/impl/reader";
 import { DelimiterChangeService } from "./services/delimiter-change-service";
 import { ApiService } from "./services/obsidian-services/atomic-services/api-service";
-import { SelectionService } from "./services/obsidian-services/atomic-services/selection-service";
 // import {
 // 	// DeprecatedOverlayManager,
 // 	// LibrarianActionProvider,
@@ -63,7 +62,6 @@ export default class TextEaterPlugin extends Plugin {
 	testingTFolderHelper: TFolderHelper;
 	vaultActionManager: VaultActionManagerImpl;
 	userEventInterceptor: UserEventInterceptor;
-	selectionService: SelectionService;
 	// overlayManager: DeprecatedOverlayManager;
 	// leafLifecycleManager: LeafLifecycleManager;
 	delimiterChangeService: DelimiterChangeService | null = null;
@@ -201,8 +199,6 @@ export default class TextEaterPlugin extends Plugin {
 			this,
 			this.vaultActionManager,
 		);
-
-		this.selectionService = new SelectionService(this.app);
 
 		// New Librarian (healing modes + unified user events)
 		this.librarian = new Librarian(
@@ -342,7 +338,10 @@ export default class TextEaterPlugin extends Plugin {
 
 		this.addCommand({
 			editorCheckCallback: () => {
-				ACTION_CONFIGS.TranslateSelection.execute(this);
+				ACTION_CONFIGS.TranslateSelection.execute({
+					apiService: this.apiService,
+					openedFileService: this.vaultActionManager.openedFileService,
+				});
 			},
 			id: "translate-selection",
 			name: "Translate selected text",
@@ -354,7 +353,6 @@ export default class TextEaterPlugin extends Plugin {
 					const selection = editor.getSelection();
 					if (selection) {
 						ACTION_CONFIGS.SplitInBlocks.execute({
-							selectionService: this.selectionService,
 							vaultActionManager: this.vaultActionManager,
 						});
 					} else {

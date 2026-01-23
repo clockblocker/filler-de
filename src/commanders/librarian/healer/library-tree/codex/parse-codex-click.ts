@@ -80,7 +80,6 @@ export function parseCodexLinkTarget(
 
 	const { coreName, suffixParts } = parseResult.value;
 
-	// Check if it's a section codex (coreName === "__")
 	if (coreName === CODEX_CORE_NAME) {
 		// Section codex: suffixParts are section names (deepest first)
 		// e.g., "__-Child-Parent" → ["Child", "Parent"]

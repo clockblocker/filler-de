@@ -4,17 +4,18 @@ import {
 	formatQuotedLines,
 	segmentInQuotedLines,
 } from "../../../services/dto-services/quote-manager/interface";
-import type { SelectionService } from "../../../services/obsidian-services/atomic-services/selection-service";
 
 export default async function wrapSentencesInQuoteAnchor({
-	selectionService,
 	openedFileService,
 }: {
-	selectionService: SelectionService;
 	openedFileService: OpenedFileService;
 }) {
 	try {
-		const selection = await selectionService.getSelection();
+		const selection = openedFileService.getSelection();
+		if (!selection) {
+			throw new Error("No selection");
+		}
+
 		const contentResult = await openedFileService.getContent();
 		if (contentResult.isErr()) {
 			throw new Error(contentResult.error);
@@ -29,7 +30,7 @@ export default async function wrapSentencesInQuoteAnchor({
 		}
 		const nameOfTheOpenendFile = tFileResult.value.name;
 
-		await selectionService.replaceSelection(
+		openedFileService.replaceSelection(
 			formatQuotedLines(
 				segmentInQuotedLines({
 					highestBlockNumber,

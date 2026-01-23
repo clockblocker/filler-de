@@ -217,6 +217,33 @@ export class OpenedFileService {
 		}
 	}
 
+	getSelection(): string | null {
+		const editorResult = this.getEditor();
+		if (editorResult.isErr()) return null;
+		const { editor } = editorResult.value;
+		const selection = editor.getSelection();
+		return selection || null;
+	}
+
+	replaceSelection(text: string): void {
+		const editorResult = this.getEditor();
+		if (editorResult.isErr()) return;
+		const { editor } = editorResult.value;
+		editor.replaceSelection(text);
+	}
+
+	insertBelowCursor(text: string): void {
+		const editorResult = this.getEditor();
+		if (editorResult.isErr()) return;
+		const { editor } = editorResult.value;
+
+		const sel = editor.listSelections?.()[0];
+		const cursor = sel?.head ?? editor.getCursor();
+		const insertLine = Math.max(cursor.line + 1, 0);
+
+		editor.replaceRange(`\n${text}\n`, { ch: 0, line: insertLine });
+	}
+
 	private getEditorAnyMode(): Result<
 		{ editor: Editor; view: MarkdownView },
 		string

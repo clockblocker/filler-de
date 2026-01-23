@@ -1,22 +1,23 @@
 import { Notice } from "obsidian";
+import type { VaultActionManager } from "../../../../managers/obsidian/vault-action-manager";
 import {
 	formatQuotedLines,
 	segmentInQuotedLines,
 } from "../../../dto-services/quote-manager/interface";
-import type { TexfresserObsidianServices } from "../../../obsidian-services/interface";
 
-export default async function wrapSentencesInQuoteAnchor(
-	services: Partial<TexfresserObsidianServices>,
-) {
-	const { selectionService, vaultActionManager } = services;
-
-	if (!selectionService || !vaultActionManager) {
-		new Notice("Error: Missing required services");
-		return;
-	}
+export default async function wrapSentencesInQuoteAnchor(services: {
+	vaultActionManager: VaultActionManager;
+}) {
+	const { vaultActionManager } = services;
+	const openedFileService = vaultActionManager.openedFileService;
 
 	try {
-		const selection = await selectionService.getSelection();
+		const selection = openedFileService.getSelection();
+		if (!selection) {
+			new Notice("No text selected");
+			return;
+		}
+
 		const contentResult = await vaultActionManager.getOpenedContent();
 		if (contentResult.isErr()) {
 			throw new Error(contentResult.error);
@@ -31,7 +32,7 @@ export default async function wrapSentencesInQuoteAnchor(
 		}
 		const nameOfTheOpenendFile = fileNameResult.value;
 
-		await selectionService.replaceSelection(
+		openedFileService.replaceSelection(
 			formatQuotedLines(
 				segmentInQuotedLines({
 					highestBlockNumber,

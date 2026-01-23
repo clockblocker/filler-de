@@ -1,6 +1,6 @@
-import { buildGoBackLinkPattern } from "../../go-back-link";
 import type { ClipboardCopyEvent } from "../../../../managers/obsidian/user-event-interceptor";
 import { META_SECTION_PATTERN } from "../../../../managers/pure/note-metadata-manager";
+import { buildGoBackLinkPattern } from "../../go-back-link";
 
 /**
  * Handle clipboard copy: strip metadata and go-back links from copied text.

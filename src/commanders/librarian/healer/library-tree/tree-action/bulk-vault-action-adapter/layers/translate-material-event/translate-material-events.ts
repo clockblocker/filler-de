@@ -40,7 +40,6 @@ export const translateMaterializedEvents = (
 	const out: TreeAction[] = [];
 
 	for (const ev of events) {
-		// Skip codex files (coreName === "__")
 		if (isCodexEvent(ev, codecs)) continue;
 
 		switch (ev.kind) {
