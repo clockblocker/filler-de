@@ -18,23 +18,20 @@ import type {
 	LeafLifecycleEvent,
 	LeafLifecycleHandler,
 	LifecycleTeardown,
-	NavigationOrigin,
 } from "./types";
 
 /**
  * Internal navigation state machine.
- * Tracks whether we're idle, navigating via plugin (cd), or navigating externally.
+ * Tracks whether we're idle or navigating.
  */
 type NavigationState = {
 	status: "idle" | "navigating";
-	origin: NavigationOrigin | null;
 	pendingPath: string | null;
 };
 
 export class LeafLifecycleManager {
 	private readonly subscribers = new Set<LeafLifecycleHandler>();
 	private navState: NavigationState = {
-		origin: null,
 		pendingPath: null,
 		status: "idle",
 	};
@@ -112,7 +109,6 @@ export class LeafLifecycleManager {
 		}
 
 		this.navState = {
-			origin: "plugin",
 			pendingPath: targetPath,
 			status: "navigating",
 		};
@@ -130,13 +126,6 @@ export class LeafLifecycleManager {
 	 */
 	isNavigating(): boolean {
 		return this.navState.status === "navigating";
-	}
-
-	/**
-	 * Check if current navigation is plugin-initiated.
-	 */
-	isPluginNavigation(): boolean {
-		return this.navState.origin === "plugin";
 	}
 
 	// ─── Private ───
@@ -161,19 +150,26 @@ export class LeafLifecycleManager {
 		this.emit({
 			filePath: view.file.path,
 			kind: "view-ready",
-			origin: "external",
 		});
 	}
 
 	private handleFileOpen(file: TFile | null): void {
+		logger.info(
+			`[LeafLifecycle] handleFileOpen: ${JSON.stringify({ filePath: file?.path, currentStatus: this.navState.status, currentFilePath: this.currentFilePath })}`,
+		);
+
 		if (!file) return;
 
 		// If plugin nav is in progress, ignore file-open
 		// The plugin will trigger textfresser:file-ready when done
-		if (
-			this.navState.status === "navigating" &&
-			this.navState.origin === "plugin"
-		) {
+		if (this.navState.status === "navigating") {
+			logger.info("[LeafLifecycle] handleFileOpen: already navigating, ignoring");
+			return;
+		}
+
+		// Same file click - no navigation needed
+		if (this.currentFilePath === file.path) {
+			logger.info("[LeafLifecycle] handleFileOpen: same file, ignoring");
 			return;
 		}
 
@@ -187,50 +183,52 @@ export class LeafLifecycleManager {
 		}
 
 		this.navState = {
-			origin: "external",
 			pendingPath: file.path,
 			status: "navigating",
 		};
+		logger.info(`[LeafLifecycle] handleFileOpen: set navigating to ${file.path}`);
 	}
 
 	private handleActiveLeafChange(leaf: unknown): void {
-		// If plugin nav in progress, skip - textfresser:file-ready handles it
-		if (
-			this.navState.status === "navigating" &&
-			this.navState.origin === "plugin"
-		) {
-			return;
-		}
-
 		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-		if (!view?.file) return;
+		const viewFilePath = view?.file?.path ?? null;
 
-		// For external navigation, complete it
-		if (
-			this.navState.status === "navigating" &&
-			this.navState.origin === "external"
-		) {
+		logger.info(
+			`[LeafLifecycle] handleActiveLeafChange: ${JSON.stringify({ viewFile: viewFilePath, status: this.navState.status, currentFilePath: this.currentFilePath })}`,
+		);
+
+		// Complete pending navigation if any
+		if (this.navState.status === "navigating") {
+			if (!view?.file) {
+				logger.info("[LeafLifecycle] handleActiveLeafChange: navigating but no view file, waiting");
+				return;
+			}
+			logger.info("[LeafLifecycle] handleActiveLeafChange: completing navigation");
 			void this.completeNavigation(view);
+		} else {
+			// Idle state - emit layout-changed to trigger UI reattachment
+			// Use currentFilePath as fallback when view.file is temporarily null (same file click)
+			const filePath = viewFilePath ?? this.currentFilePath;
+			if (filePath) {
+				logger.info(`[LeafLifecycle] handleActiveLeafChange: idle, emitting layout-changed for ${filePath}`);
+				this.emit({
+					currentFilePath: filePath,
+					kind: "layout-changed",
+				});
+			}
 		}
 	}
 
 	private handleLayoutChange(): void {
-		// If plugin nav in progress, skip
-		if (
-			this.navState.status === "navigating" &&
-			this.navState.origin === "plugin"
-		) {
-			return;
-		}
-
 		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+		logger.info(
+			`[LeafLifecycle] handleLayoutChange: ${JSON.stringify({ viewFile: view?.file?.path, status: this.navState.status })}`,
+		);
 
-		// For pending external navigation, try to complete
-		if (
-			this.navState.status === "navigating" &&
-			this.navState.origin === "external"
-		) {
+		// For pending navigation, try to complete
+		if (this.navState.status === "navigating") {
 			if (view?.file) {
+				logger.info("[LeafLifecycle] handleLayoutChange: completing pending navigation");
 				void this.completeNavigation(view);
 			}
 			return;
@@ -238,6 +236,7 @@ export class LeafLifecycleManager {
 
 		// Otherwise just emit layout-changed
 		const currentPath = view?.file?.path ?? null;
+		logger.info(`[LeafLifecycle] handleLayoutChange: emitting layout-changed for ${currentPath}`);
 		this.emit({
 			currentFilePath: currentPath,
 			kind: "layout-changed",
@@ -246,32 +245,33 @@ export class LeafLifecycleManager {
 
 	private handlePluginNavComplete(file: TFile): void {
 		// Complete plugin navigation
-		this.navState = { origin: null, pendingPath: null, status: "idle" };
+		this.navState = { pendingPath: null, status: "idle" };
 		this.currentFilePath = file.path;
 
 		this.emit({
 			filePath: file.path,
 			kind: "view-ready",
-			origin: "plugin",
 		});
 	}
 
 	private async completeNavigation(view: MarkdownView): Promise<void> {
 		const file = view.file;
+		logger.info(`[LeafLifecycle] completeNavigation: ${JSON.stringify({ viewFile: file?.path })}`);
+
 		if (!file) return;
 
 		// Wait for DOM ready
 		await this.waitForViewReady(view);
+		logger.info(`[LeafLifecycle] completeNavigation: DOM ready for ${file.path}`);
 
 		// Complete navigation state
-		const origin = this.navState.origin ?? "external";
-		this.navState = { origin: null, pendingPath: null, status: "idle" };
+		this.navState = { pendingPath: null, status: "idle" };
 		this.currentFilePath = file.path;
 
+		logger.info(`[LeafLifecycle] completeNavigation: emitting view-ready for ${file.path}`);
 		this.emit({
 			filePath: file.path,
 			kind: "view-ready",
-			origin,
 		});
 	}
 

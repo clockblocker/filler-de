@@ -4,7 +4,6 @@ export type {
 	LeafLifecycleEvent,
 	LeafLifecycleHandler,
 	LifecycleTeardown,
-	NavigationOrigin,
 	ViewDetachingEvent,
 	ViewReadyEvent,
 } from "./types";

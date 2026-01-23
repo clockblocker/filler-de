@@ -1,4 +1,14 @@
 /**
+ * Wait for Obsidian to finish rendering.
+ * Uses double-RAF pattern to ensure paint completion.
+ * Community-known fix for "UI doesn't attach until click" issues.
+ */
+export async function nextPaint(): Promise<void> {
+	await new Promise(requestAnimationFrame);
+	await new Promise(requestAnimationFrame);
+}
+
+/**
  * Wait for a DOM condition to become true using MutationObserver.
  * Resolves when check() returns true, or after timeout.
  *

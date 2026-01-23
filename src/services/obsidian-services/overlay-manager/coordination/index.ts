@@ -11,8 +11,6 @@ export {
 } from "./recompute-coordinator";
 export {
 	type ReattachDeps,
-	type RetryCallbacks,
 	reattachUI,
 	reattachUIForFile,
-	tryReattachWithRetry,
 } from "./ui-reattachment";

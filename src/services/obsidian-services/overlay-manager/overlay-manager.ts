@@ -9,6 +9,8 @@ import type {
 } from "../../../managers/obsidian/user-event-interceptor/types/user-event";
 import { FileType } from "../../../types/common-interface/enums";
 import { DebounceScheduler } from "../../../utils/debounce-scheduler";
+import { nextPaint } from "../../../utils/dom-waiter";
+import { logger } from "../../../utils/logger";
 import { BottomToolbarService } from "../button-manager/bottom-toolbar";
 import { EdgePaddingNavigator } from "../button-manager/edge-padding-navigator";
 import { NavigationLayoutCoordinator } from "../button-manager/navigation-layout-coordinator";
@@ -63,6 +65,7 @@ export class OverlayManager {
 	private services: OverlayManagerServices | null = null;
 	private currentContext: OverlayContext | null = null;
 	private debouncer: DebounceScheduler;
+	private recomputeDebouncer: DebounceScheduler;
 	private lifecycleTeardown: LifecycleTeardown | null = null;
 	private userEventTeardown: Teardown | null = null;
 
@@ -84,6 +87,7 @@ export class OverlayManager {
 		);
 
 		this.debouncer = new DebounceScheduler(OverlayManager.DEBOUNCE_MS);
+		this.recomputeDebouncer = new DebounceScheduler(OverlayManager.DEBOUNCE_MS);
 
 		// Cache deps (contextBuilderDeps set in init when services available)
 		this.toolbarServices = {
@@ -158,17 +162,12 @@ export class OverlayManager {
 	 * This replaces the old event-coordinator approach.
 	 */
 	private handleLifecycleEvent(event: LeafLifecycleEvent): void {
+		logger.info(`[OverlayManager] handleLifecycleEvent: ${JSON.stringify(event)}`);
+
 		switch (event.kind) {
 			case "view-ready":
-				// View DOM is ready - recompute and reattach UI
-				// For plugin nav: debouncer cancelled, recompute for specific file
-				// For external nav: just recompute and reattach
-				if (event.origin === "plugin") {
-					void this.completeNavigation(event.filePath);
-				} else {
-					this.scheduleRecompute();
-					this.reattachUI();
-				}
+				// View DOM is ready - use unified attachment flow
+				void this.attach(event.filePath);
 				break;
 
 			case "view-detaching":
@@ -177,9 +176,8 @@ export class OverlayManager {
 				break;
 
 			case "layout-changed":
-				// Layout changed without navigation - reattach may be needed
-				this.scheduleRecompute();
-				this.reattachUI();
+				// Layout changed without navigation - schedule attachment
+				this.scheduleAttachment(event.currentFilePath);
 				break;
 		}
 	}
@@ -275,10 +273,17 @@ export class OverlayManager {
 	 * Recompute with fallback to find view by file path.
 	 */
 	private async recomputeForFile(filePath: string): Promise<void> {
-		if (!this.contextBuilderDeps) return;
+		logger.info(`[OverlayManager] recomputeForFile: ${filePath}`);
+		if (!this.contextBuilderDeps) {
+			logger.info("[OverlayManager] recomputeForFile: no contextBuilderDeps");
+			return;
+		}
 		const ctx = await buildOverlayContextForFile(
 			this.contextBuilderDeps,
 			filePath,
+		);
+		logger.info(
+			`[OverlayManager] recomputeForFile: context computed - ${JSON.stringify({ fileType: ctx.fileType, hasNextPage: ctx.hasNextPage, hasPrevPage: ctx.hasPrevPage, path: ctx.path })}`,
 		);
 		this.currentContext = ctx;
 		executeRecompute(ctx, this.providers, this.toolbarServices);
@@ -286,9 +291,10 @@ export class OverlayManager {
 
 	/**
 	 * Schedule a debounced recompute.
+	 * Uses separate debouncer to avoid canceling attachment operations.
 	 */
 	public scheduleRecompute(): void {
-		this.debouncer.schedule(() => void this.recompute());
+		this.recomputeDebouncer.schedule(() => void this.recompute());
 	}
 
 	/**
@@ -306,13 +312,36 @@ export class OverlayManager {
 	}
 
 	/**
-	 * Complete navigation - single entry point for plugin-initiated navigation.
-	 * Cancels debouncer, awaits recompute, then reattaches UI.
+	 * Unified attachment - single entry point for all view-ready events.
+	 * Cancels debouncer, waits for Obsidian render, then recomputes and reattaches.
 	 */
-	private async completeNavigation(filePath: string): Promise<void> {
+	private async attach(filePath: string): Promise<void> {
+		logger.info(`[OverlayManager] attach: starting for ${filePath}`);
 		this.debouncer.cancel();
+		this.recomputeDebouncer.cancel(); // Cancel pending generic recompute that may see null view.file
+		await nextPaint(); // Wait for Obsidian to finish rendering
+		logger.info(`[OverlayManager] attach: nextPaint done for ${filePath}`);
 		await this.recomputeForFile(filePath);
+		logger.info(`[OverlayManager] attach: recompute done for ${filePath}`);
 		this.reattachUIForFile(filePath);
+		logger.info(`[OverlayManager] attach: reattach done for ${filePath}`);
+	}
+
+	/**
+	 * Schedule debounced attachment for layout changes.
+	 */
+	private scheduleAttachment(filePath: string | null): void {
+		this.recomputeDebouncer.cancel(); // Cancel pending generic recompute that may see null view.file
+		this.debouncer.schedule(async () => {
+			await nextPaint();
+			if (filePath) {
+				await this.recomputeForFile(filePath);
+				this.reattachUIForFile(filePath);
+			} else {
+				await this.recompute();
+				this.reattachUI();
+			}
+		});
 	}
 
 	/**
@@ -335,6 +364,7 @@ export class OverlayManager {
 			this.userEventTeardown = null;
 		}
 		this.debouncer.destroy();
+		this.recomputeDebouncer.destroy();
 		this.bottom.detach();
 		this.selection.destroy();
 		this.layoutCoordinator.detach();

@@ -1,6 +1,4 @@
 import { type App, MarkdownView } from "obsidian";
-import { DomSelectors } from "../../../../utils/dom-selectors";
-import { waitForDomCondition } from "../../../../utils/dom-waiter";
 import { logger } from "../../../../utils/logger";
 import type { BottomToolbarService } from "../../button-manager/bottom-toolbar";
 import type { NavigationLayoutCoordinator } from "../../button-manager/navigation-layout-coordinator";
@@ -34,71 +32,28 @@ export function reattachUI(deps: ReattachDeps): void {
  * Used when getActiveViewOfType returns null but we know which file was opened.
  */
 export function reattachUIForFile(deps: ReattachDeps, filePath: string): void {
+	logger.info(`[UIReattach] reattachUIForFile: ${filePath}`);
+
 	deps.bottom.reattachForFile(filePath);
 
-	// Try getActiveViewOfType first
+	// Try getActiveViewOfType first, but only use if it matches expected path
 	let view = deps.app.workspace.getActiveViewOfType(MarkdownView);
+	const activeViewPath = view?.file?.path;
 
-	// Fallback: find view by file path using getLeavesOfType
-	if (!view) {
+	logger.info(`[UIReattach] activeViewPath: ${activeViewPath ?? "null"}`);
+
+	// Only use active view if it matches expected file path
+	if (view?.file?.path !== filePath) {
+		logger.info("[UIReattach] active view mismatch, searching by path");
 		view = getMarkdownViewForFile(deps.app, filePath);
+		logger.info(`[UIReattach] found view by path: ${view?.file?.path ?? "null"}`);
 	}
 
 	if (view) {
+		logger.info("[UIReattach] attaching layoutCoordinator");
 		deps.layoutCoordinator.attach(view, deps.bottom.isMobile());
 	} else {
+		logger.info("[UIReattach] no view, detaching layoutCoordinator");
 		deps.layoutCoordinator.detach();
-	}
-}
-
-/**
- * Callbacks for retry operation.
- */
-export type RetryCallbacks = {
-	reattachUIForFile: (filePath: string) => void;
-	recomputeForFile: (filePath: string) => Promise<void>;
-	recompute: () => Promise<void>;
-	reattachUI: () => void;
-};
-
-/**
- * Try to reattach UI with retry mechanism using MutationObserver.
- * Waits for view DOM to be ready (`.cm-contentContainer` present) before reattaching.
- * This handles the case where layout-change fires before view is fully ready.
- *
- * IMPORTANT: This function is now async and awaits everything to prevent race conditions.
- */
-export async function tryReattachWithRetry(
-	deps: ReattachDeps,
-	filePath: string,
-	callbacks: RetryCallbacks,
-): Promise<void> {
-	const TIMEOUT_MS = 500;
-
-	// Check if view is ready: correct file AND DOM rendered
-	const isViewReady = () => {
-		const view =
-			getMarkdownViewForFile(deps.app, filePath) ??
-			deps.app.workspace.getActiveViewOfType(MarkdownView);
-		return (
-			view?.file?.path === filePath &&
-			!!view.contentEl.querySelector(DomSelectors.CM_CONTENT_CONTAINER)
-		);
-	};
-
-	// Wait for view DOM to be ready using MutationObserver
-	await waitForDomCondition(isViewReady, { timeout: TIMEOUT_MS });
-
-	if (isViewReady()) {
-		// Recompute FIRST to update actionConfigs, THEN reattach with correct buttons
-		await callbacks.recomputeForFile(filePath);
-		callbacks.reattachUIForFile(filePath);
-	} else {
-		// Timeout reached - fall back to standard recompute
-		logger.warn(
-			`[OverlayManager] View not ready after ${TIMEOUT_MS}ms for: ${filePath}`,
-		);
-		await callbacks.recompute();
-		callbacks.reattachUI();
 	}
 }

@@ -16,6 +16,7 @@ import type { OverlayManagerServices } from "./recompute-coordinator";
 
 /**
  * Callbacks provided by OverlayManager for event handling.
+ * NOTE: This is legacy code - overlay-manager now uses LeafLifecycleManager directly.
  */
 export type EventCoordinatorCallbacks = {
 	scheduleRecompute: () => void;
@@ -23,8 +24,6 @@ export type EventCoordinatorCallbacks = {
 	recomputeForFile: (filePath: string) => Promise<void>;
 	reattachUI: () => void;
 	reattachUIForFile: (filePath: string) => void;
-	tryReattachWithRetry: (filePath: string) => Promise<void>;
-	completeNavigation: (filePath: string) => Promise<void>;
 	hideSelectionToolbar: () => void;
 	getContext: () => OverlayContext | null;
 	getServices: () => OverlayManagerServices | null;
@@ -96,7 +95,8 @@ export function setupEventSubscriptions(
 		// @ts-expect-error - custom event not in Obsidian types
 		app.workspace.on("textfresser:file-ready", async (file: TFile) => {
 			navState.complete();
-			await callbacks.completeNavigation(file.path);
+			await callbacks.recomputeForFile(file.path);
+			callbacks.reattachUIForFile(file.path);
 		}),
 	);
 
@@ -146,7 +146,8 @@ export function setupEventSubscriptions(
 			const pendingPath = navState.getPendingPath();
 			if (pendingPath) {
 				navState.complete();
-				await callbacks.tryReattachWithRetry(pendingPath);
+				await callbacks.recomputeForFile(pendingPath);
+				callbacks.reattachUIForFile(pendingPath);
 			} else if (view) {
 				callbacks.scheduleRecompute();
 				callbacks.reattachUI();

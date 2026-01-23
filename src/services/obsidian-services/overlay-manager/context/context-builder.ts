@@ -1,5 +1,6 @@
 import { type App, MarkdownView } from "obsidian";
 import { z } from "zod";
+import { logger } from "../../../../utils/logger";
 import {
 	getNextPageSplitPath,
 	getPrevPageSplitPath,
@@ -181,18 +182,26 @@ export async function buildOverlayContext(
 
 /**
  * Build OverlayContext for a specific file path.
- * Falls back to finding view by file path if getActiveViewOfType returns null.
+ * Only uses active view if it matches expected file path, otherwise finds view by path.
  */
 export async function buildOverlayContextForFile(
 	deps: ContextBuilderDeps,
 	filePath: string,
 ): Promise<OverlayContext> {
-	// Try getActiveViewOfType first
 	let view = deps.app.workspace.getActiveViewOfType(MarkdownView);
+	const activeViewPath = view?.file?.path;
 
-	// Fallback: find view by file path
-	if (!view) {
+	logger.info(
+		`[ContextBuilder] buildOverlayContextForFile: ${JSON.stringify({ filePath, activeViewPath })}`,
+	);
+
+	// Only use active view if it matches expected file path
+	if (view?.file?.path !== filePath) {
+		logger.info("[ContextBuilder] buildOverlayContextForFile: active view mismatch, searching by path");
 		view = getMarkdownViewForFile(deps.app, filePath);
+		logger.info(
+			`[ContextBuilder] buildOverlayContextForFile: found view by path: ${view?.file?.path ?? "null"}`,
+		);
 	}
 
 	return buildContextCore(deps.app, view);

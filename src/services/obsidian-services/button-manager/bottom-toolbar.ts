@@ -1,5 +1,6 @@
 import { type App, MarkdownView } from "obsidian";
 import { getParsedUserSettings } from "../../../global-state/global-state";
+import { logger } from "../../../utils/logger";
 import type { RenderedActionConfig } from "../../wip-configs/actions/types";
 import { UserAction } from "../../wip-configs/actions/types";
 
@@ -32,30 +33,45 @@ export class BottomToolbarService {
 	 * Used when getActiveViewOfType fails but we know which file was opened.
 	 */
 	public reattachForFile(filePath: string): void {
+		logger.info(`[BottomToolbar] reattachForFile: ${filePath}`);
+
 		let view = this.getActiveMarkdownView();
-		if (!view) {
+		const activeViewPath = view?.file?.path;
+
+		logger.info(`[BottomToolbar] activeViewPath: ${activeViewPath ?? "null"}`);
+
+		// Only use active view if it matches expected file path
+		if (view?.file?.path !== filePath) {
+			logger.info("[BottomToolbar] active view mismatch, searching by path");
 			view = this.getMarkdownViewForFile(filePath);
+			logger.info(`[BottomToolbar] found view by path: ${view?.file?.path ?? "null"}`);
 		}
+
 		this.reattachToView(view);
 	}
 
 	private reattachToView(view: MarkdownView | null): void {
+		logger.info(`[BottomToolbar] reattachToView: view=${view?.file?.path ?? "null"}, overlayEl=${!!this.overlayEl}, actionConfigs=${this.actionConfigs.length}`);
+
 		// Always detach and reattach - DOM may have changed even if "same view"
 		// See: src/documentaion/insights-about-obsidian-quirks/overlay-navigation-race.md
 		this.detach();
 
 		if (!view || !this.overlayEl) {
+			logger.info("[BottomToolbar] reattachToView: no view or overlayEl, returning");
 			this.attachedView = null;
 			return;
 		}
 
 		const container = view.contentEl;
+		logger.info(`[BottomToolbar] reattachToView: container exists=${!!container}`);
 		container.addClass("bottom-overlay-host");
 		container.appendChild(this.overlayEl);
 		container.style.paddingBottom = "64px";
 
 		// Render bottom bar (coordinator will update layout state separately)
 		this.renderButtons(this.overlayEl);
+		logger.info(`[BottomToolbar] reattachToView: buttons rendered, display=${this.overlayEl.style.display}`);
 
 		this.attachedView = view;
 	}
@@ -102,6 +118,7 @@ export class BottomToolbarService {
 	}
 
 	public setActions(actionConfigs: RenderedActionConfig[]): void {
+		logger.info(`[BottomToolbar] setActions: ${actionConfigs.length} actions`);
 		this.actionConfigs = actionConfigs;
 		if (this.overlayEl) this.renderButtons(this.overlayEl);
 	}
