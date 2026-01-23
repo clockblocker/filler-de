@@ -1,7 +1,7 @@
 import { type App, MarkdownView } from "obsidian";
 import { logger } from "../../../../utils/logger";
-import type { DeprecatedBottomToolbarService } from "../../deprectad-button-manager/bottom-toolbar";
-import type { NavigationLayoutCoordinator } from "../../deprectad-button-manager/navigation-layout-coordinator";
+import type { DeprecatedBottomToolbarService } from "../../deprecated-button-manager/bottom-toolbar";
+import type { NavigationLayoutCoordinator } from "../../deprecated-button-manager/navigation-layout-coordinator";
 import { getMarkdownViewForFile } from "../context";
 
 /**

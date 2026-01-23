@@ -304,16 +304,6 @@ export class VaultActionManagerImpl implements VaultActionManager {
 		return result.map(() => undefined);
 	}
 
-	/**
-	 * Set callback invoked before cd() opens a file.
-	 * Used by OverlayManager to signal plugin-initiated navigation.
-	 */
-	setOnBeforeNavigate(
-		callback: (targetPath: string) => void,
-	): void {
-		this.opened.setOnBeforeNavigate(callback);
-	}
-
 	// ─────────────────────────────────────────────────────────────────────────
 	// Debug API - for testing multi-batch scenarios
 	// ─────────────────────────────────────────────────────────────────────────

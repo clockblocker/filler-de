@@ -1,4 +1,4 @@
-import { buildGoBackLinkPattern } from "../../../../managers/obsidian/navigation";
+import { buildGoBackLinkPattern } from "../../go-back-link";
 import type { ClipboardCopyEvent } from "../../../../managers/obsidian/user-event-interceptor";
 import { META_SECTION_PATTERN } from "../../../../managers/pure/note-metadata-manager";
 

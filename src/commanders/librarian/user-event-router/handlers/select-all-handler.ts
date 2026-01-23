@@ -1,4 +1,4 @@
-import { isGoBackLine } from "../../../../managers/obsidian/navigation";
+import { isGoBackLine } from "../../go-back-link";
 import type { SelectAllEvent } from "../../../../managers/obsidian/user-event-interceptor";
 import { META_SECTION_PATTERN } from "../../../../managers/pure/note-metadata-manager";
 import {

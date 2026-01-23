@@ -3,7 +3,7 @@
  */
 
 import { z } from "zod";
-import { buildGoBackLink } from "../../../managers/obsidian/navigation/go-back-link";
+import { buildGoBackLink } from "../go-back-link";
 import { MD } from "../../../managers/obsidian/vault-action-manager/types/literals";
 import type {
 	SplitPathToFolder,

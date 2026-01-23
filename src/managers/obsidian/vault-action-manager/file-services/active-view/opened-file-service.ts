@@ -8,7 +8,6 @@ import {
 	TFolder,
 } from "obsidian";
 import { DomSelectors } from "../../../../../utils/dom-selectors";
-import { logger } from "../../../../../utils/logger";
 import {
 	errorFileStale,
 	errorGetEditor,
@@ -39,16 +38,9 @@ export type SavedInlineTitleSelection = {
 	text: string;
 };
 
-/**
- * Callback invoked before cd() opens a file.
- * Used by OverlayManager to signal plugin-initiated navigation.
- */
-export type OnBeforeNavigateCallback = (targetPath: string) => void;
-
 export class OpenedFileService {
 	private lastOpenedFiles: SplitPathToMdFile[] = [];
 	private reader: OpenedFileReader;
-	private onBeforeNavigate: OnBeforeNavigateCallback | null = null;
 
 	constructor(
 		private app: App,
@@ -56,14 +48,6 @@ export class OpenedFileService {
 	) {
 		this.reader = reader;
 		this.init();
-	}
-
-	/**
-	 * Set callback to be invoked before navigation.
-	 * Used by OverlayManager to signal plugin-initiated navigation.
-	 */
-	setOnBeforeNavigate(callback: OnBeforeNavigateCallback): void {
-		this.onBeforeNavigate = callback;
 	}
 
 	private async init() {
@@ -413,12 +397,6 @@ export class OpenedFileService {
 		}
 
 		try {
-			// Signal navigation start BEFORE opening file
-			// This allows OverlayManager to skip redundant event handlers
-			if (this.onBeforeNavigate) {
-				this.onBeforeNavigate(tfile.path);
-			}
-
 			const leaf = this.app.workspace.getLeaf(false);
 			await leaf.openFile(tfile);
 			// Ensure leaf is properly marked active so getActiveViewOfType() returns it immediately
@@ -431,9 +409,6 @@ export class OpenedFileService {
 			).commands.executeCommandById("file-explorer:reveal-active-file");
 			// Wait for view DOM to be ready before returning
 			await this.waitForViewReady(tfile);
-			// Trigger custom event so OverlayManager can reattach UI
-			// @ts-ignore - custom event not in Obsidian types
-			this.app.workspace.trigger("textfresser:file-ready", tfile);
 			return ok(tfile);
 		} catch (error) {
 			return err(

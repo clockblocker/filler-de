@@ -1,5 +1,5 @@
 /**
- * Navigation module - go-back link utilities.
+ * Go-back link module - utilities for library navigation links.
  */
 
 export {

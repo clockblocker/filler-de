@@ -250,11 +250,6 @@ export default class TextEaterPlugin extends Plugin {
 		// 	userEventInterceptor: this.userEventInterceptor,
 		// 	vaultActionManager: this.vaultActionManager,
 		// });
-
-		// // Wire up navigation state: signal plugin nav before cd() opens file
-		// this.vaultActionManager.setOnBeforeNavigate((targetPath) => {
-		// 	this.leafLifecycleManager.beginPluginNavigation(targetPath);
-		// });
 	}
 
 	override onunload() {

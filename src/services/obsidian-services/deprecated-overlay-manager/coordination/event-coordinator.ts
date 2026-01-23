@@ -3,7 +3,6 @@ import {
 	MarkdownView,
 	type Menu,
 	type Plugin,
-	type TFile,
 	type WorkspaceLeaf,
 } from "obsidian";
 import { FileType } from "../../../../types/common-interface/enums";
@@ -86,17 +85,6 @@ export function setupEventSubscriptions(
 		app.workspace.on("file-open", (file) => {
 			if (!file) return;
 			navState.startExternalNav(file.path);
-		}),
-	);
-
-	// Listen for custom event from cd() when view DOM is ready
-	// This is the SINGLE AUTHORITY for plugin-initiated navigation
-	plugin.registerEvent(
-		// @ts-expect-error - custom event not in Obsidian types
-		app.workspace.on("textfresser:file-ready", async (file: TFile) => {
-			navState.complete();
-			await callbacks.recomputeForFile(file.path);
-			callbacks.reattachUIForFile(file.path);
 		}),
 	);
 

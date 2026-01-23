@@ -3,13 +3,13 @@
  * Used by codex and scroll backlink transforms.
  */
 
-import { isGoBackLine } from "../../../../../../managers/obsidian/navigation";
+import { isGoBackLine } from "../../../../go-back-link";
 import { LINE_BREAK } from "../../../../../../types/literals";
 
 /**
  * Check if the first line looks like a backlink.
- * Re-exported from navigation module for backwards compatibility.
- * @deprecated Use isGoBackLine from navigation module directly.
+ * Re-exported from go-back-link module for backwards compatibility.
+ * @deprecated Use isGoBackLine from go-back-link module directly.
  */
 export const isBacklinkLine = isGoBackLine;
 

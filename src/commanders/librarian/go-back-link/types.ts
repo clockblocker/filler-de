@@ -1,5 +1,5 @@
 /**
- * Types for navigation module.
+ * Types for go-back link module.
  */
 
 /**
