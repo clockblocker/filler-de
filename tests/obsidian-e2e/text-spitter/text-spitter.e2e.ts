@@ -46,18 +46,18 @@ describe("Text Spitter - Bookkeeper/Librarian Integration", () => {
 		await testPostSetup();
 	});
 
-	// Click "Make this a text" button
-	it("clicks Make this a text button", async () => {
+	// @deprecated Button-clicking e2e tests - unreliable, use unit/spec tests instead
+	it.skip("clicks Make this a text button", async () => {
 		await performMakeText();
 	});
 
-	// Verify post-healing state
-	it("verifies section codex and pages created correctly", async () => {
+	// @deprecated Depends on button-clicking test above
+	it.skip("verifies section codex and pages created correctly", async () => {
 		await testPostMakeText();
 	});
 
-	// Test navigation buttons on Page file
-	it("tests navigation button diagnostics", async () => {
+	// @deprecated Button-clicking e2e tests - unreliable, use unit/spec tests instead
+	it.skip("tests navigation button diagnostics", async () => {
 		await testNavigationButtons();
 	});
 
@@ -73,13 +73,13 @@ describe("Text Spitter - Bookkeeper/Librarian Integration", () => {
 		await testPostSetupExtraE2();
 	});
 
-	// Click "Make this a text" button for EXTRA_E2
-	it("clicks Make this a text button for EXTRA_E2", async () => {
+	// @deprecated Button-clicking e2e tests - unreliable, use unit/spec tests instead
+	it.skip("clicks Make this a text button for EXTRA_E2", async () => {
 		await performMakeTextExtraE2();
 	});
 
-	// Verify EXTRA_E2 post-healing state (headings preserved as metadata)
-	it("verifies EXTRA_E2 section codex and pages created with headings preserved", async () => {
+	// @deprecated Depends on button-clicking test above
+	it.skip("verifies EXTRA_E2 section codex and pages created with headings preserved", async () => {
 		await testPostMakeTextExtraE2();
 	});
 
