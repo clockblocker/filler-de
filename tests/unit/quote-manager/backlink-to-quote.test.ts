@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import {
 	extractFormattedBacklinkToQuote,
 	makeFormattedBacklinkToQuote,
-} from "../../../src/services/dto-services/quote-manager/functions/formatters/backlink-to-quote";
+} from "../../../src/deprecated-services/dto-services/quote-manager/functions/formatters/backlink-to-quote";
 import {
 	BIRD,
 	HASH,

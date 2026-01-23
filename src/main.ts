@@ -6,7 +6,15 @@ import {
 	Plugin,
 } from "obsidian";
 import { Librarian } from "./commanders/librarian/librarian";
-
+import { DelimiterChangeService } from "./deprecated-services/delimiter-change-service";
+import { ApiService } from "./deprecated-services/obsidian-services/atomic-services/api-service";
+// import {
+// 	// DeprecatedOverlayManager,
+// 	// LibrarianActionProvider,
+// } from "./services/obsidian-services/overlay-manager";
+import { ACTION_CONFIGS } from "./deprecated-services/wip-configs/actions/actions-config";
+import { tagLineCopyEmbedAction } from "./deprecated-services/wip-configs/actions/new/tag-line-copy-embed-action";
+import addBacklinksToCurrentFile from "./deprecated-services/wip-configs/actions/old/addBacklinksToCurrentFile";
 import {
 	clearState,
 	initializeState,
@@ -29,15 +37,6 @@ import { TFolderHelper } from "./managers/obsidian/vault-action-manager/file-ser
 import { logError } from "./managers/obsidian/vault-action-manager/helpers/issue-handlers";
 import { splitPathFromSystemPathInternal } from "./managers/obsidian/vault-action-manager/helpers/pathfinder/system-path-and-split-path-codec";
 import { Reader } from "./managers/obsidian/vault-action-manager/impl/reader";
-import { DelimiterChangeService } from "./services/delimiter-change-service";
-import { ApiService } from "./services/obsidian-services/atomic-services/api-service";
-// import {
-// 	// DeprecatedOverlayManager,
-// 	// LibrarianActionProvider,
-// } from "./services/obsidian-services/overlay-manager";
-import { ACTION_CONFIGS } from "./services/wip-configs/actions/actions-config";
-import { tagLineCopyEmbedAction } from "./services/wip-configs/actions/new/tag-line-copy-embed-action";
-import addBacklinksToCurrentFile from "./services/wip-configs/actions/old/addBacklinksToCurrentFile";
 import { SettingsTab } from "./settings";
 import {
 	DEFAULT_SETTINGS,
@@ -340,7 +339,8 @@ export default class TextEaterPlugin extends Plugin {
 			editorCheckCallback: () => {
 				ACTION_CONFIGS.TranslateSelection.execute({
 					apiService: this.apiService,
-					openedFileService: this.vaultActionManager.openedFileService,
+					openedFileService:
+						this.vaultActionManager.openedFileService,
 				});
 			},
 			id: "translate-selection",

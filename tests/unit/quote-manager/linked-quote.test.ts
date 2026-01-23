@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import {
 	extractFormattedLinkedQuote,
 	makeFormattedLinkedQuote,
-} from '../../../src/services/dto-services/quote-manager/functions/formatters/linked-quote';
+} from '../../../src/deprecated-services/dto-services/quote-manager/functions/formatters/linked-quote';
 import { BIRD } from '../../../src/types/literals';
 
 function expected(text: string, linkId: string | number): string {
