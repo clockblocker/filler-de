@@ -1,8 +1,8 @@
-import { makeTextAction } from "../../../managers/actions-manager/actions/new/make-text-action";
-import { navigatePageAction } from "../../../managers/actions-manager/actions/new/navigate-pages-action";
-import newGenCommand from "../../../managers/actions-manager/actions/new/new-gen-command";
-import { splitSelectionInBlocksAction } from "../../../managers/actions-manager/actions/new/split-selection-blocks-action";
-import newTranslateSelection from "../../../managers/actions-manager/actions/new/translateSelection";
+import { makeTextAction } from "../../../managers/actions-manager/actions/executors/make-text-action";
+import { navigatePageAction } from "../../../managers/actions-manager/actions/executors/navigate-pages-action";
+import newGenCommand from "../../../managers/actions-manager/actions/executors/new-gen-command";
+import { splitSelectionInBlocksAction } from "../../../managers/actions-manager/actions/executors/split-selection-blocks-action";
+import newTranslateSelection from "../../../managers/actions-manager/actions/executors/translateSelection";
 import { logger } from "../../../utils/logger";
 import type { TexfresserObsidianServices } from "../interface";
 import { ActionKind, type ActionParams, type CommanderAction } from "./types";

@@ -1,10 +1,9 @@
 import { FileType } from "../../../types/common-interface/enums";
 import { BACK_ARROW, FORWARD_ARROW } from "../../../types/literals";
-import { makeTextAction } from "./new/make-text-action";
-import { navigatePageAction } from "./new/navigate-pages-action";
-import newGenCommand from "./new/new-gen-command";
-import { splitSelectionInBlocksAction } from "./new/split-selection-blocks-action";
-import newTranslateSelection from "./new/translateSelection";
+import { makeTextAction } from "./executors/make-text-action";
+import { navigatePageAction } from "./executors/navigate-pages-action";
+import { splitIntoPagesAction } from "./executors/split-into-pages";
+import { splitSelectionInBlocksAction } from "./executors/split-selection-blocks-action";
 import {
 	type ActionConfig,
 	ALL_USER_ACTIONS,
@@ -19,40 +18,6 @@ import {
  * Priority determines button order (lower = higher priority).
  */
 export const ACTION_CONFIGS = {
-	[UserAction.Generate]: {
-		execute: newGenCommand,
-		id: UserAction.Generate,
-		isAvailable: (ctx: ButtonContext) =>
-			ctx.hasSelection && ctx.isInLibrary,
-		label: "Generate",
-		placement: UserActionPlacement.Bottom,
-		priority: 5,
-	},
-	[UserAction.AddContext]: {
-		execute: newGenCommand,
-		id: UserAction.AddContext,
-		isAvailable: () => false, // Shortcut only
-		label: "Add Context",
-		placement: UserActionPlacement.ShortcutOnly,
-		priority: 10,
-	},
-	[UserAction.ExplainGrammar]: {
-		execute: newGenCommand,
-		id: UserAction.ExplainGrammar,
-		isAvailable: (ctx: ButtonContext) =>
-			ctx.hasSelection && ctx.isInLibrary,
-		label: "Explain Grammar",
-		placement: UserActionPlacement.AboveSelection,
-		priority: 3,
-	},
-	[UserAction.SplitContexts]: {
-		execute: newGenCommand,
-		id: UserAction.SplitContexts,
-		isAvailable: () => false, // Shortcut only
-		label: "Sort Contexts",
-		placement: UserActionPlacement.ShortcutOnly,
-		priority: 10,
-	},
 	[UserAction.SplitInBlocks]: {
 		execute: splitSelectionInBlocksAction,
 		id: UserAction.SplitInBlocks,
@@ -63,10 +28,7 @@ export const ACTION_CONFIGS = {
 		priority: 2,
 	},
 	[UserAction.SplitToPages]: {
-		execute: () => {
-			// Command-only action, executed via main.ts command registration
-			// This stub exists to satisfy the type requirement
-		},
+		execute: splitIntoPagesAction,
 		id: UserAction.SplitToPages,
 		isAvailable: (ctx: ButtonContext) =>
 			ctx.isInLibrary &&
@@ -74,22 +36,6 @@ export const ACTION_CONFIGS = {
 			!ctx.hasSelection,
 		label: "Split to Pages",
 		placement: UserActionPlacement.Bottom,
-		priority: 1,
-	},
-	[UserAction.TranslateBlock]: {
-		execute: newGenCommand,
-		id: UserAction.TranslateBlock,
-		isAvailable: () => false, // Shortcut only
-		label: "Translate",
-		placement: UserActionPlacement.ShortcutOnly,
-		priority: 10,
-	},
-	[UserAction.TranslateSelection]: {
-		execute: newTranslateSelection,
-		id: UserAction.TranslateSelection,
-		isAvailable: (ctx: ButtonContext) => ctx.hasSelection,
-		label: "Translate",
-		placement: UserActionPlacement.AboveSelection,
 		priority: 1,
 	},
 	[UserAction.MakeText]: {

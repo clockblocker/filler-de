@@ -1,7 +1,7 @@
 import type { LeafLifecycleManager } from "../../../../managers/obsidian/leaf-lifecycle-manager";
 import type { UserEventInterceptor } from "../../../../managers/obsidian/user-event-interceptor";
 import type { VaultActionManager } from "../../../../managers/obsidian/vault-action-manager";
-import type { ApiService } from "../../atomic-services/api-service";
+import type { ApiService } from "../../../../stateless-services/api-service";
 import type { SelectionService } from "../../atomic-services/selection-service";
 import type { DeprecatedBottomToolbarService } from "../../deprecated-button-manager/bottom-toolbar";
 import type { NavigationLayoutCoordinator } from "../../deprecated-button-manager/navigation-layout-coordinator";

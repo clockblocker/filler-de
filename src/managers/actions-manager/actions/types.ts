@@ -4,14 +4,8 @@ import type { FileType } from "../../../types/common-interface/enums";
 import type { AnySplitPath } from "../../obsidian/vault-action-manager/types/split-path";
 
 const USER_ACTION_LITERALS = [
-	"Generate",
-	"AddContext",
-	"SplitContexts",
 	"SplitInBlocks",
 	"SplitToPages",
-	"TranslateSelection",
-	"TranslateBlock",
-	"ExplainGrammar",
 	"MakeText",
 	"NavigatePage",
 	"PreviousPage",

@@ -7,7 +7,6 @@ import {
 } from "obsidian";
 import { DelimiterChangeService } from "./commanders/librarian/delimiter-change-service";
 import { Librarian } from "./commanders/librarian/librarian";
-import { ApiService } from "./deprecated-services/obsidian-services/atomic-services/api-service";
 import {
 	clearState,
 	initializeState,
@@ -18,8 +17,7 @@ import {
 // 	// LibrarianActionProvider,
 // } from "./services/obsidian-services/overlay-manager";
 import { ACTION_CONFIGS } from "./managers/actions-manager/actions/actions-config";
-import { tagLineCopyEmbedAction } from "./managers/actions-manager/actions/new/tag-line-copy-embed-action";
-import addBacklinksToCurrentFile from "./managers/actions-manager/actions/old/addBacklinksToCurrentFile";
+import { tagLineCopyEmbedAction } from "./managers/actions-manager/actions/executors/tag-line-copy-embed-action";
 // import { LeafLifecycleManager } from "./managers/obsidian/leaf-lifecycle-manager";
 import { UserEventInterceptor } from "./managers/obsidian/user-event-interceptor";
 import {
@@ -38,6 +36,7 @@ import { logError } from "./managers/obsidian/vault-action-manager/helpers/issue
 import { splitPathFromSystemPathInternal } from "./managers/obsidian/vault-action-manager/helpers/pathfinder/system-path-and-split-path-codec";
 import { Reader } from "./managers/obsidian/vault-action-manager/impl/reader";
 import { SettingsTab } from "./settings";
+import { ApiService } from "./stateless-services/api-service";
 import {
 	DEFAULT_SETTINGS,
 	type SuffixDelimiterConfig,
@@ -281,34 +280,6 @@ export default class TextEaterPlugin extends Plugin {
 
 	private async addCommands() {
 		this.addCommand({
-			editorCheckCallback: (
-				checking: boolean,
-				editor: Editor,
-				view: MarkdownView,
-			) => {
-				const fileName = view.file?.name;
-				const backlink = view.file?.basename;
-
-				if (view.file && fileName && backlink) {
-					if (!checking) {
-						addBacklinksToCurrentFile(
-							view.file,
-							backlink,
-							this.app.vault,
-							this.app.metadataCache,
-							editor,
-						);
-					}
-					return true;
-				}
-
-				return false;
-			},
-			id: "backlink-all-to-current-file",
-			name: "Populate all referenced files with a backlink to the current file",
-		});
-
-		this.addCommand({
 			editorCheckCallback: () => {
 				return false;
 			},
@@ -407,18 +378,9 @@ export default class TextEaterPlugin extends Plugin {
 		this.addCommand({
 			editorCheckCallback: (checking: boolean) => {
 				if (!checking) {
-					import(
-						"./commanders/librarian/bookkeeper/split-to-pages-action"
-					).then(({ splitToPagesAction }) => {
-						splitToPagesAction({
-							onSectionCreated: (info) => {
-								// Notify librarian to create codex (bypasses self-event filtering)
-								this.librarian?.triggerSectionHealing(info);
-							},
-							openedFileService:
-								this.testingOpenedFileServiceWithResult,
-							vaultActionManager: this.vaultActionManager,
-						});
+					ACTION_CONFIGS.SplitToPages.execute({
+						librarian: this.librarian,
+						vaultActionManager: this.vaultActionManager,
 					});
 				}
 				return true;
