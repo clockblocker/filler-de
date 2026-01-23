@@ -1,9 +1,11 @@
 /**
- * ClickDetector - detects checkbox clicks in markdown files.
+ * CheckboxClickedDetector - detects checkbox clicks in markdown files.
  *
  * Handles:
  * - Task checkboxes (- [ ] / - [x])
  * - Property checkboxes (frontmatter)
+ *
+ * Subscribes to GenericClickDetector and filters for checkbox targets.
  */
 
 import type { App } from "obsidian";
@@ -17,41 +19,39 @@ import {
 	type PropertyCheckboxClickedEvent,
 } from "../types/user-event";
 import type { Detector, DetectorEmitter } from "./detector";
+import type { GenericClickDetector } from "./generic";
 
-export class ClickDetector implements Detector {
-	private clickHandler: ((evt: MouseEvent) => void) | null = null;
+export class CheckboxClickedDetector implements Detector {
+	private unsubscribe: (() => void) | null = null;
 	private emit: DetectorEmitter | null = null;
 
 	constructor(
+		private readonly genericClick: GenericClickDetector,
 		private readonly app: App,
 		private readonly vaultActionManager: VaultActionManager,
 	) {}
 
 	startListening(emit: DetectorEmitter): void {
-		if (this.clickHandler) return;
+		if (this.unsubscribe) return;
 
 		this.emit = emit;
-		this.clickHandler = (evt: MouseEvent) => {
-			void this.handleClick(evt);
-		};
-
-		document.addEventListener("click", this.clickHandler);
+		this.unsubscribe = this.genericClick.subscribe((target, _evt) => {
+			void this.handleClick(target);
+		});
 	}
 
 	stopListening(): void {
-		if (this.clickHandler) {
-			document.removeEventListener("click", this.clickHandler);
-			this.clickHandler = null;
+		if (this.unsubscribe) {
+			this.unsubscribe();
+			this.unsubscribe = null;
 			this.emit = null;
 		}
 	}
 
 	// ─── Private ───
 
-	private async handleClick(evt: MouseEvent): Promise<void> {
+	private async handleClick(target: HTMLElement): Promise<void> {
 		if (!this.emit) return;
-
-		const target = evt.target as HTMLElement;
 
 		// Get current file path
 		const pwdResult = await this.vaultActionManager.pwd();

@@ -4,8 +4,8 @@ export {
 } from "./event-coordinator";
 export { NavigationState } from "./navigation-state";
 export {
+	type DeprecatedOverlayManagerServices,
 	executeRecompute,
-	type OverlayManagerServices,
 	queryProviders,
 	type ToolbarServices,
 } from "./recompute-coordinator";

@@ -1,7 +1,7 @@
 import type { MarkdownView } from "obsidian";
 import { DomSelectors } from "../../../utils/dom-selectors";
 import type { RenderedActionConfig } from "../../wip-configs/actions/types";
-import type { BottomToolbarService } from "./bottom-toolbar";
+import type { DeprecatedBottomToolbarService } from "./bottom-toolbar";
 import type { EdgePaddingNavigator } from "./edge-padding-navigator";
 
 /** Minimum padding width to show edge zones (px) */
@@ -27,7 +27,7 @@ export class NavigationLayoutCoordinator {
 
 	constructor(
 		private edgePaddingNavigator: EdgePaddingNavigator,
-		private bottomToolbar: BottomToolbarService,
+		private bottomToolbar: DeprecatedBottomToolbarService,
 	) {}
 
 	/**
@@ -125,12 +125,14 @@ export class NavigationLayoutCoordinator {
 		contentRect: DOMRect | null;
 	} {
 		// Use cm-contentContainer as the content boundary
-		const contentEl = container.querySelector(DomSelectors.CM_CONTENT_CONTAINER);
+		const contentEl = container.querySelector(
+			DomSelectors.CM_CONTENT_CONTAINER,
+		);
 		if (!contentEl) {
 			return {
-				padding: { left: 0, right: 0 },
-				leafRect: null,
 				contentRect: null,
+				leafRect: null,
+				padding: { left: 0, right: 0 },
 			};
 		}
 
@@ -148,6 +150,6 @@ export class NavigationLayoutCoordinator {
 				}
 			: { left: 0, right: 0 };
 
-		return { padding, leafRect, contentRect };
+		return { contentRect, leafRect, padding };
 	}
 }

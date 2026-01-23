@@ -6,7 +6,7 @@
  * - Edge zone divs
  * - Overflow menu items
  *
- * Uses mousedown in capture phase to catch clicks before re-renders.
+ * Subscribes to GenericClickDetector and filters for [data-action] targets.
  */
 
 import { DomSelectors } from "../../../../utils/dom-selectors";
@@ -15,40 +15,36 @@ import {
 	InterceptableUserEventKind,
 } from "../types/user-event";
 import type { Detector, DetectorEmitter } from "./detector";
+import type { GenericClickDetector } from "./generic";
 
 export class ActionClickDetector implements Detector {
-	private handler: ((evt: MouseEvent) => void) | null = null;
+	private unsubscribe: (() => void) | null = null;
 	private emit: DetectorEmitter | null = null;
 
+	constructor(private readonly genericClick: GenericClickDetector) {}
+
 	startListening(emit: DetectorEmitter): void {
-		if (this.handler) return;
+		if (this.unsubscribe) return;
 
 		this.emit = emit;
-		this.handler = (evt) => this.handleMouseDown(evt);
-
-		// Use capture phase to intercept before re-renders
-		document.addEventListener("mousedown", this.handler, { capture: true });
+		this.unsubscribe = this.genericClick.subscribe((target, _evt) => {
+			this.handleClick(target);
+		});
 	}
 
 	stopListening(): void {
-		if (this.handler) {
-			document.removeEventListener("mousedown", this.handler, {
-				capture: true,
-			});
-			this.handler = null;
+		if (this.unsubscribe) {
+			this.unsubscribe();
+			this.unsubscribe = null;
 			this.emit = null;
 		}
 	}
 
 	// ─── Private ───
 
-	private handleMouseDown(evt: MouseEvent): void {
+	private handleClick(target: HTMLElement): void {
 		if (!this.emit) return;
 
-		// Only handle left mouse button
-		if (evt.button !== 0) return;
-
-		const target = evt.target as HTMLElement;
 		const button = target.closest(
 			DomSelectors.DATA_ACTION,
 		) as HTMLElement | null;

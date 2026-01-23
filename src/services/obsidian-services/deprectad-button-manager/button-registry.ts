@@ -34,8 +34,9 @@ type ActionSubscriber = (actions: RenderedActionConfig[]) => void;
 /**
  * Central registry that computes available actions based on context.
  * Services subscribe to receive action updates for their placement.
+ * @deprecated
  */
-export class ButtonRegistry {
+export class DeprecatedButtonRegistry {
 	private static readonly DEBOUNCE_MS = 50;
 	private bottomSubscribers: ActionSubscriber[] = [];
 	private selectionSubscribers: ActionSubscriber[] = [];

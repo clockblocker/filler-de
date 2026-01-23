@@ -3,9 +3,9 @@ import type { UserEventInterceptor } from "../../../../managers/obsidian/user-ev
 import type { VaultActionManager } from "../../../../managers/obsidian/vault-action-manager";
 import type { ApiService } from "../../atomic-services/api-service";
 import type { SelectionService } from "../../atomic-services/selection-service";
-import type { BottomToolbarService } from "../../button-manager/bottom-toolbar";
-import type { NavigationLayoutCoordinator } from "../../button-manager/navigation-layout-coordinator";
-import type { AboveSelectionToolbarService } from "../../button-manager/selection-toolbar";
+import type { DeprecatedBottomToolbarService } from "../../deprectad-button-manager/bottom-toolbar";
+import type { NavigationLayoutCoordinator } from "../../deprectad-button-manager/navigation-layout-coordinator";
+import type { DeprecatedAboveSelectionToolbarService } from "../../deprectad-button-manager/selection-toolbar";
 import {
 	ActionPlacement,
 	type CommanderAction,
@@ -15,8 +15,9 @@ import {
 
 /**
  * Services required by OverlayManager (re-exported for use by other modules).
+ * @deprecated
  */
-export type OverlayManagerServices = {
+export type DeprecatedOverlayManagerServices = {
 	apiService: ApiService;
 	leafLifecycleManager?: LeafLifecycleManager;
 	selectionService: SelectionService;
@@ -28,8 +29,8 @@ export type OverlayManagerServices = {
  * Toolbar services for rendering.
  */
 export type ToolbarServices = {
-	bottom: BottomToolbarService;
-	selection: AboveSelectionToolbarService;
+	bottom: DeprecatedBottomToolbarService;
+	selection: DeprecatedAboveSelectionToolbarService;
 	layoutCoordinator: NavigationLayoutCoordinator;
 };
 

@@ -5,8 +5,9 @@ import type { RenderedActionConfig } from "../../wip-configs/actions/types";
 /**
  * Floating toolbar that appears above text selection.
  * Reactive design: call update() with actions, toolbar shows/hides automatically.
+ * @deprecated
  */
-export class AboveSelectionToolbarService {
+export class DeprecatedAboveSelectionToolbarService {
 	private toolbarEl: HTMLDivElement | null = null;
 
 	constructor(private app: App) {}
@@ -75,15 +76,15 @@ export class AboveSelectionToolbarService {
 			this.toolbarEl = document.createElement("div");
 			this.toolbarEl.className = "selection-toolbar";
 			Object.assign(this.toolbarEl.style, {
-				position: "absolute",
-				display: "none",
-				zIndex: "1000",
-				pointerEvents: "auto",
 				background: "var(--background-secondary)",
 				borderRadius: "6px",
-				padding: "4px",
 				boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+				display: "none",
 				gap: "4px",
+				padding: "4px",
+				pointerEvents: "auto",
+				position: "absolute",
+				zIndex: "1000",
 			});
 			host.style.position ||= "relative";
 			host.appendChild(this.toolbarEl);
@@ -103,18 +104,18 @@ export class AboveSelectionToolbarService {
 			btn.textContent = action.label;
 			btn.disabled = action.disabled ?? false;
 			Object.assign(btn.style, {
-				padding: "4px 8px",
-				border: "none",
-				borderRadius: "4px",
 				background: action.disabled
 					? "var(--background-modifier-hover)"
 					: "var(--interactive-accent)",
+				border: "none",
+				borderRadius: "4px",
 				color: action.disabled
 					? "var(--text-muted)"
 					: "var(--text-on-accent)",
 				cursor: action.disabled ? "not-allowed" : "pointer",
 				fontSize: "12px",
 				fontWeight: "500",
+				padding: "4px 8px",
 			});
 			this.toolbarEl.appendChild(btn);
 		}

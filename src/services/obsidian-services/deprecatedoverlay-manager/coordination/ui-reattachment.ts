@@ -1,7 +1,7 @@
 import { type App, MarkdownView } from "obsidian";
 import { logger } from "../../../../utils/logger";
-import type { BottomToolbarService } from "../../button-manager/bottom-toolbar";
-import type { NavigationLayoutCoordinator } from "../../button-manager/navigation-layout-coordinator";
+import type { DeprecatedBottomToolbarService } from "../../deprectad-button-manager/bottom-toolbar";
+import type { NavigationLayoutCoordinator } from "../../deprectad-button-manager/navigation-layout-coordinator";
 import { getMarkdownViewForFile } from "../context";
 
 /**
@@ -9,7 +9,7 @@ import { getMarkdownViewForFile } from "../context";
  */
 export type ReattachDeps = {
 	app: App;
-	bottom: BottomToolbarService;
+	bottom: DeprecatedBottomToolbarService;
 	layoutCoordinator: NavigationLayoutCoordinator;
 };
 
@@ -46,7 +46,9 @@ export function reattachUIForFile(deps: ReattachDeps, filePath: string): void {
 	if (view?.file?.path !== filePath) {
 		logger.info("[UIReattach] active view mismatch, searching by path");
 		view = getMarkdownViewForFile(deps.app, filePath);
-		logger.info(`[UIReattach] found view by path: ${view?.file?.path ?? "null"}`);
+		logger.info(
+			`[UIReattach] found view by path: ${view?.file?.path ?? "null"}`,
+		);
 	}
 
 	if (view) {

@@ -12,7 +12,7 @@ import {
 	initializeState,
 	updateParsedSettings,
 } from "./global-state/global-state";
-import { LeafLifecycleManager } from "./managers/obsidian/leaf-lifecycle-manager";
+// import { LeafLifecycleManager } from "./managers/obsidian/leaf-lifecycle-manager";
 import { UserEventInterceptor } from "./managers/obsidian/user-event-interceptor";
 import {
 	makeSplitPath,
@@ -32,10 +32,10 @@ import { Reader } from "./managers/obsidian/vault-action-manager/impl/reader";
 import { DelimiterChangeService } from "./services/delimiter-change-service";
 import { ApiService } from "./services/obsidian-services/atomic-services/api-service";
 import { SelectionService } from "./services/obsidian-services/atomic-services/selection-service";
-import {
-	LibrarianActionProvider,
-	OverlayManager,
-} from "./services/obsidian-services/overlay-manager";
+// import {
+// 	// DeprecatedOverlayManager,
+// 	// LibrarianActionProvider,
+// } from "./services/obsidian-services/overlay-manager";
 import { ACTION_CONFIGS } from "./services/wip-configs/actions/actions-config";
 import { tagLineCopyEmbedAction } from "./services/wip-configs/actions/new/tag-line-copy-embed-action";
 import addBacklinksToCurrentFile from "./services/wip-configs/actions/old/addBacklinksToCurrentFile";
@@ -64,8 +64,8 @@ export default class TextEaterPlugin extends Plugin {
 	vaultActionManager: VaultActionManagerImpl;
 	userEventInterceptor: UserEventInterceptor;
 	selectionService: SelectionService;
-	overlayManager: OverlayManager;
-	leafLifecycleManager: LeafLifecycleManager;
+	// overlayManager: DeprecatedOverlayManager;
+	// leafLifecycleManager: LeafLifecycleManager;
 	delimiterChangeService: DelimiterChangeService | null = null;
 
 	// Commanders
@@ -236,29 +236,29 @@ export default class TextEaterPlugin extends Plugin {
 			}
 		}
 
-		// Initialize LeafLifecycleManager (single source of truth for view lifecycle)
-		this.leafLifecycleManager = new LeafLifecycleManager(this.app, this);
-		this.leafLifecycleManager.init();
+		// // Initialize LeafLifecycleManager (single source of truth for view lifecycle)
+		// this.leafLifecycleManager = new LeafLifecycleManager(this.app, this);
+		// this.leafLifecycleManager.init();
 
-		// Initialize OverlayManager (unified UI overlay with commander-based actions)
-		this.overlayManager = new OverlayManager(this.app, this);
-		this.overlayManager.registerProvider(new LibrarianActionProvider());
-		this.overlayManager.init({
-			apiService: this.apiService,
-			leafLifecycleManager: this.leafLifecycleManager,
-			selectionService: this.selectionService,
-			userEventInterceptor: this.userEventInterceptor,
-			vaultActionManager: this.vaultActionManager,
-		});
+		// // Initialize OverlayManager (unified UI overlay with commander-based actions)
+		// this.overlayManager = new DeprecatedOverlayManager(this.app, this);
+		// this.overlayManager.registerProvider(new LibrarianActionProvider());
+		// this.overlayManager.init({
+		// 	apiService: this.apiService,
+		// 	leafLifecycleManager: this.leafLifecycleManager,
+		// 	selectionService: this.selectionService,
+		// 	userEventInterceptor: this.userEventInterceptor,
+		// 	vaultActionManager: this.vaultActionManager,
+		// });
 
-		// Wire up navigation state: signal plugin nav before cd() opens file
-		this.vaultActionManager.setOnBeforeNavigate((targetPath) => {
-			this.leafLifecycleManager.beginPluginNavigation(targetPath);
-		});
+		// // Wire up navigation state: signal plugin nav before cd() opens file
+		// this.vaultActionManager.setOnBeforeNavigate((targetPath) => {
+		// 	this.leafLifecycleManager.beginPluginNavigation(targetPath);
+		// });
 	}
 
 	override onunload() {
-		if (this.overlayManager) this.overlayManager.destroy();
+		// if (this.overlayManager) this.overlayManager.destroy();
 		if (this.userEventInterceptor)
 			this.userEventInterceptor.stopListening();
 		if (this.librarian) this.librarian.unsubscribe();

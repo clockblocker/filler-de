@@ -2,7 +2,10 @@ import type { App, Plugin } from "obsidian";
 import { DomSelectors } from "../../../../utils/dom-selectors";
 import { logger } from "../../../../utils/logger";
 import type { TexfresserObsidianServices } from "../../interface";
-import { type OverlayManagerServices, queryProviders } from "../coordination";
+import {
+	type DeprecatedOverlayManagerServices,
+	queryProviders,
+} from "../coordination";
 import { executeAction } from "../executor-registry";
 import type { CommanderActionProvider, OverlayContext } from "../types";
 
@@ -12,7 +15,7 @@ import type { CommanderActionProvider, OverlayContext } from "../types";
 export type ClickDispatcherDeps = {
 	app: App;
 	getProviders: () => CommanderActionProvider[];
-	getServices: () => OverlayManagerServices | null;
+	getServices: () => DeprecatedOverlayManagerServices | null;
 	getCurrentContext: () => OverlayContext | null;
 };
 

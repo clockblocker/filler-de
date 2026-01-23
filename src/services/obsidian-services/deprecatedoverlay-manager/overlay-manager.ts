@@ -1,9 +1,5 @@
 import type { App, Menu, Plugin } from "obsidian";
 import type {
-	LeafLifecycleEvent,
-	LifecycleTeardown,
-} from "../../../managers/obsidian/leaf-lifecycle-manager";
-import type {
 	Teardown,
 	UserEvent,
 } from "../../../managers/obsidian/user-event-interceptor/types/user-event";
@@ -11,10 +7,10 @@ import { FileType } from "../../../types/common-interface/enums";
 import { DebounceScheduler } from "../../../utils/debounce-scheduler";
 import { nextPaint } from "../../../utils/dom-waiter";
 import { logger } from "../../../utils/logger";
-import { BottomToolbarService } from "../button-manager/bottom-toolbar";
-import { EdgePaddingNavigator } from "../button-manager/edge-padding-navigator";
-import { NavigationLayoutCoordinator } from "../button-manager/navigation-layout-coordinator";
-import { AboveSelectionToolbarService } from "../button-manager/selection-toolbar";
+import { DeprecatedBottomToolbarService } from "../deprectad-button-manager/bottom-toolbar";
+import { EdgePaddingNavigator } from "../deprectad-button-manager/edge-padding-navigator";
+import { NavigationLayoutCoordinator } from "../deprectad-button-manager/navigation-layout-coordinator";
+import type { DeprecatedAboveSelectionToolbarService } from "../deprectad-button-manager/selection-toolbar";
 import { handleActionClick } from "./actions";
 import {
 	buildOverlayContext,
@@ -22,10 +18,10 @@ import {
 	type ContextBuilderDeps,
 } from "./context";
 import {
+	type DeprecatedOverlayManagerServices,
 	reattachUI as doReattachUI,
 	reattachUIForFile as doReattachUIForFile,
 	executeRecompute,
-	type OverlayManagerServices,
 	type ReattachDeps,
 	type ToolbarServices,
 } from "./coordination";
@@ -37,7 +33,7 @@ import {
 	type OverlayContext,
 } from "./types";
 
-export type { OverlayManagerServices };
+export type { DeprecatedOverlayManagerServices as OverlayManagerServices };
 
 /**
  * OverlayManager - unified facade for all overlay UI.
@@ -48,13 +44,14 @@ export type { OverlayManagerServices };
  * - Query registered CommanderActionProviders for available actions
  * - Render appropriate UI (bottom bar, selection toolbar, edge zones)
  * - Handle clicks -> dispatch to ActionExecutorRegistry
+ * @deprecated
  */
-export class OverlayManager {
+export class DeprecatedOverlayManager {
 	private static readonly DEBOUNCE_MS = 50;
 
 	// Toolbar services
-	private bottom: BottomToolbarService;
-	private selection: AboveSelectionToolbarService;
+	private bottom: DeprecatedBottomToolbarService;
+	private selection: DeprecatedAboveSelectionToolbarService;
 	private edgePaddingNavigator: EdgePaddingNavigator;
 	private layoutCoordinator: NavigationLayoutCoordinator;
 
@@ -62,7 +59,7 @@ export class OverlayManager {
 	private providers: CommanderActionProvider[] = [];
 
 	// State
-	private services: OverlayManagerServices | null = null;
+	private services: DeprecatedOverlayManagerServices | null = null;
 	private currentContext: OverlayContext | null = null;
 	private debouncer: DebounceScheduler;
 	private recomputeDebouncer: DebounceScheduler;
@@ -78,7 +75,7 @@ export class OverlayManager {
 		private app: App,
 		private plugin: Plugin,
 	) {
-		this.bottom = new BottomToolbarService(this.app);
+		this.bottom = new DeprecatedBottomToolbarService(this.app);
 		this.selection = new AboveSelectionToolbarService(this.app);
 		this.edgePaddingNavigator = new EdgePaddingNavigator();
 		this.layoutCoordinator = new NavigationLayoutCoordinator(
@@ -86,8 +83,12 @@ export class OverlayManager {
 			this.bottom,
 		);
 
-		this.debouncer = new DebounceScheduler(OverlayManager.DEBOUNCE_MS);
-		this.recomputeDebouncer = new DebounceScheduler(OverlayManager.DEBOUNCE_MS);
+		this.debouncer = new DebounceScheduler(
+			DeprecatedOverlayManager.DEBOUNCE_MS,
+		);
+		this.recomputeDebouncer = new DebounceScheduler(
+			DeprecatedOverlayManager.DEBOUNCE_MS,
+		);
 
 		// Cache deps (contextBuilderDeps set in init when services available)
 		this.toolbarServices = {
@@ -114,7 +115,7 @@ export class OverlayManager {
 	/**
 	 * Initialize with services and wire up all event subscriptions.
 	 */
-	public init(services: OverlayManagerServices): void {
+	public init(services: DeprecatedOverlayManagerServices): void {
 		this.services = services;
 
 		// Initialize context builder deps with vaultActionManager
@@ -162,7 +163,9 @@ export class OverlayManager {
 	 * This replaces the old event-coordinator approach.
 	 */
 	private handleLifecycleEvent(event: LeafLifecycleEvent): void {
-		logger.info(`[OverlayManager] handleLifecycleEvent: ${JSON.stringify(event)}`);
+		logger.info(
+			`[OverlayManager] handleLifecycleEvent: ${JSON.stringify(event)}`,
+		);
 
 		switch (event.kind) {
 			case "view-ready":
@@ -275,7 +278,9 @@ export class OverlayManager {
 	private async recomputeForFile(filePath: string): Promise<void> {
 		logger.info(`[OverlayManager] recomputeForFile: ${filePath}`);
 		if (!this.contextBuilderDeps) {
-			logger.info("[OverlayManager] recomputeForFile: no contextBuilderDeps");
+			logger.info(
+				"[OverlayManager] recomputeForFile: no contextBuilderDeps",
+			);
 			return;
 		}
 		const ctx = await buildOverlayContextForFile(

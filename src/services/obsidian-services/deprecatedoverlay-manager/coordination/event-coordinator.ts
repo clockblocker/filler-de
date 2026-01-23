@@ -12,7 +12,7 @@ import { waitForDomCondition } from "../../../../utils/dom-waiter";
 import { executeAction } from "../executor-registry";
 import { ActionKind, ActionPlacement, type OverlayContext } from "../types";
 import type { NavigationState } from "./navigation-state";
-import type { OverlayManagerServices } from "./recompute-coordinator";
+import type { DeprecatedOverlayManagerServices } from "./recompute-coordinator";
 
 /**
  * Callbacks provided by OverlayManager for event handling.
@@ -26,7 +26,7 @@ export type EventCoordinatorCallbacks = {
 	reattachUIForFile: (filePath: string) => void;
 	hideSelectionToolbar: () => void;
 	getContext: () => OverlayContext | null;
-	getServices: () => OverlayManagerServices | null;
+	getServices: () => DeprecatedOverlayManagerServices | null;
 };
 
 /**
