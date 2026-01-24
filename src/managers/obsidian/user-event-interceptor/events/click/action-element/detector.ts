@@ -11,9 +11,7 @@
  * primarily exists for compatibility and future extension.
  */
 
-import type { App } from "obsidian";
 import { DomSelectors } from "../../../../../../utils/dom-selectors";
-import type { VaultActionManager } from "../../../../vault-action-manager";
 import { PayloadKind } from "../../../types/payload-base";
 import type { HandlerInvoker } from "../../../user-event-interceptor";
 import type { GenericClickDetector } from "../generic-click-detector";
@@ -26,9 +24,9 @@ export class ActionElementDetector {
 
 	constructor(
 		private readonly genericClick: GenericClickDetector,
-		private readonly app: App,
-		private readonly vaultActionManager: VaultActionManager,
-		createInvoker: (kind: PayloadKind) => HandlerInvoker<ActionElementPayload>,
+		createInvoker: (
+			kind: PayloadKind,
+		) => HandlerInvoker<ActionElementPayload>,
 	) {
 		this.invoker = createInvoker(PayloadKind.ActionElementClicked);
 	}

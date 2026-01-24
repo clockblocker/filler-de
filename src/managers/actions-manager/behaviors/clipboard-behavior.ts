@@ -1,9 +1,9 @@
 import { handleClipboardCopy } from "../../../commanders/librarian/user-event-router/handlers/clipboard-handler";
-import {
-	type ClipboardPayload,
-	type EventHandler,
-	HandlerOutcome,
+import type {
+	ClipboardPayload,
+	EventHandler,
 } from "../../obsidian/user-event-interceptor";
+import { HandlerOutcome } from "../../obsidian/user-event-interceptor/user-event-interceptor";
 
 /**
  * Create a handler that strips metadata from clipboard copy.

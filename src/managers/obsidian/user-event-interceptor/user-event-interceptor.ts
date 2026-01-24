@@ -18,7 +18,6 @@
  */
 
 import type { App, Plugin } from "obsidian";
-import { z } from "zod";
 
 import type { VaultActionManager } from "../vault-action-manager";
 import { ActionElementDetector } from "./events/click/action-element/detector";
@@ -29,10 +28,11 @@ import { ClipboardDetector } from "./events/clipboard/detector";
 import { SelectAllDetector } from "./events/select-all/detector";
 import { SelectionChangedDetector } from "./events/selection-changed/detector";
 import { WikilinkDetector } from "./events/wikilink/detector";
-import type {
-	EventHandler,
-	HandlerContext,
-	HandlerTeardown,
+import {
+	type EventHandler,
+	type HandlerContext,
+	HandlerOutcome,
+	type HandlerTeardown,
 } from "./types/handler";
 import type { AnyPayload, PayloadKind } from "./types/payload-base";
 
@@ -43,14 +43,6 @@ interface Detector {
 	startListening(): void;
 	stopListening(): void;
 }
-
-export const HandlerOutcomeEnum = z.enum([
-	"Handled",
-	"Passthrough",
-	"Modified",
-]);
-export type HandlerOutcome = z.infer<typeof HandlerOutcomeEnum>;
-export const HandlerOutcome = HandlerOutcomeEnum.enum;
 
 /**
  * Handler invoker function passed to detectors.
@@ -86,11 +78,7 @@ export class UserEventInterceptor {
 
 		// Create all detectors with handler invoker
 		this.detectors = [
-			new ClipboardDetector(
-				app,
-				vaultActionManager,
-				this.createInvoker.bind(this),
-			),
+			new ClipboardDetector(app, this.createInvoker.bind(this)),
 			new CheckboxClickedDetector(
 				this.genericClickDetector,
 				app,
@@ -99,32 +87,16 @@ export class UserEventInterceptor {
 			),
 			new CheckboxFrontmatterDetector(
 				this.genericClickDetector,
-				app,
 				vaultActionManager,
 				this.createInvoker.bind(this),
 			),
 			new ActionElementDetector(
 				this.genericClickDetector,
-				app,
-				vaultActionManager,
 				this.createInvoker.bind(this),
 			),
-			new SelectAllDetector(
-				app,
-				vaultActionManager,
-				this.createInvoker.bind(this),
-			),
-			new SelectionChangedDetector(
-				app,
-				vaultActionManager,
-				this.createInvoker.bind(this),
-			),
-			new WikilinkDetector(
-				plugin,
-				app,
-				vaultActionManager,
-				this.createInvoker.bind(this),
-			),
+			new SelectAllDetector(app, this.createInvoker.bind(this)),
+			new SelectionChangedDetector(app, this.createInvoker.bind(this)),
+			new WikilinkDetector(plugin, this.createInvoker.bind(this)),
 		];
 	}
 
@@ -196,7 +168,9 @@ export class UserEventInterceptor {
 			if (!handler) {
 				return {
 					applies: false,
-					invoke: async () => ({ outcome: HandlerOutcome.Passthrough }),
+					invoke: async () => ({
+						outcome: HandlerOutcome.Passthrough,
+					}),
 				};
 			}
 

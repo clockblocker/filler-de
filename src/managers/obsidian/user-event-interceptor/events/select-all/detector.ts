@@ -7,8 +7,8 @@
 import type { EditorView } from "@codemirror/view";
 import { type App, MarkdownView, Platform } from "obsidian";
 import { DomSelectors } from "../../../../../utils/dom-selectors";
-import type { VaultActionManager } from "../../../vault-action-manager";
 import type { SplitPathToMdFile } from "../../../vault-action-manager/types/split-path";
+import { HandlerOutcome } from "../../types/handler";
 import { PayloadKind } from "../../types/payload-base";
 import type { HandlerInvoker } from "../../user-event-interceptor";
 import { SelectAllCodec } from "./codec";
@@ -20,7 +20,6 @@ export class SelectAllDetector {
 
 	constructor(
 		private readonly app: App,
-		private readonly vaultActionManager: VaultActionManager,
 		createInvoker: (kind: PayloadKind) => HandlerInvoker<SelectAllPayload>,
 	) {
 		this.invoker = createInvoker(PayloadKind.SelectAll);
@@ -100,7 +99,7 @@ export class SelectAllDetector {
 		evt.stopPropagation();
 
 		void invoke().then((result) => {
-			if (result.outcome === "modified" && result.data) {
+			if (result.outcome === HandlerOutcome.Modified && result.data) {
 				// Apply custom selection from modified payload
 				SelectAllCodec.applySelection(result.data);
 			}

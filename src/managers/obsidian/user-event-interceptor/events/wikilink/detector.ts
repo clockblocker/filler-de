@@ -11,8 +11,8 @@
  */
 
 import { EditorView, type ViewUpdate } from "@codemirror/view";
-import type { App, Plugin } from "obsidian";
-import type { VaultActionManager } from "../../../vault-action-manager";
+import type { Plugin } from "obsidian";
+import { HandlerOutcome } from "../../types/handler";
 import { PayloadKind } from "../../types/payload-base";
 import type { HandlerInvoker } from "../../user-event-interceptor";
 import { WikilinkCodec } from "./codec";
@@ -26,8 +26,6 @@ export class WikilinkDetector {
 
 	constructor(
 		private readonly plugin: Plugin,
-		private readonly app: App,
-		private readonly vaultActionManager: VaultActionManager,
 		createInvoker: (kind: PayloadKind) => HandlerInvoker<WikilinkPayload>,
 	) {
 		this.invoker = createInvoker(PayloadKind.WikilinkCompleted);
@@ -100,7 +98,7 @@ export class WikilinkDetector {
 
 		// Invoke handler and apply result
 		void invoke().then((result) => {
-			if (result.outcome === "modified" && result.data) {
+			if (result.outcome === HandlerOutcome.Modified && result.data) {
 				// Insert alias if set by handler
 				WikilinkCodec.insertAlias(result.data);
 			}

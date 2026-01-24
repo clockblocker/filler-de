@@ -11,7 +11,6 @@
 
 import { type App, MarkdownView } from "obsidian";
 import { DomSelectors } from "../../../../../utils/dom-selectors";
-import type { VaultActionManager } from "../../../vault-action-manager";
 import type { SplitPathToMdFile } from "../../../vault-action-manager/types/split-path";
 import { PayloadKind } from "../../types/payload-base";
 import type { HandlerInvoker } from "../../user-event-interceptor";
@@ -26,8 +25,9 @@ export class SelectionChangedDetector {
 
 	constructor(
 		private readonly app: App,
-		private readonly vaultActionManager: VaultActionManager,
-		createInvoker: (kind: PayloadKind) => HandlerInvoker<SelectionChangedPayload>,
+		createInvoker: (
+			kind: PayloadKind,
+		) => HandlerInvoker<SelectionChangedPayload>,
 	) {
 		this.invoker = createInvoker(PayloadKind.SelectionChanged);
 	}

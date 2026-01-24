@@ -7,7 +7,6 @@
  * Subscribes to GenericClickDetector and filters for property checkbox targets.
  */
 
-import type { App } from "obsidian";
 import { DomSelectors } from "../../../../../../utils/dom-selectors";
 import type { VaultActionManager } from "../../../../vault-action-manager";
 import type { SplitPathToMdFile } from "../../../../vault-action-manager/types/split-path";
@@ -23,9 +22,10 @@ export class CheckboxFrontmatterDetector {
 
 	constructor(
 		private readonly genericClick: GenericClickDetector,
-		private readonly app: App,
 		private readonly vaultActionManager: VaultActionManager,
-		createInvoker: (kind: PayloadKind) => HandlerInvoker<CheckboxFrontmatterPayload>,
+		createInvoker: (
+			kind: PayloadKind,
+		) => HandlerInvoker<CheckboxFrontmatterPayload>,
 	) {
 		this.invoker = createInvoker(PayloadKind.CheckboxInFrontmatterClicked);
 	}

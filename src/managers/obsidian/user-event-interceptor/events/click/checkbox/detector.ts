@@ -10,7 +10,6 @@
 import { type App, MarkdownView } from "obsidian";
 import { DomSelectors } from "../../../../../../utils/dom-selectors";
 import type { VaultActionManager } from "../../../../vault-action-manager";
-import type { SplitPathToMdFile } from "../../../../vault-action-manager/types/split-path";
 import { PayloadKind } from "../../../types/payload-base";
 import type { HandlerInvoker } from "../../../user-event-interceptor";
 import type { GenericClickDetector } from "../generic-click-detector";
@@ -68,7 +67,7 @@ export class CheckboxClickedDetector {
 		const payload = CheckboxCodec.encode({
 			checked: checkbox.checked,
 			lineContent,
-			splitPath: splitPath as SplitPathToMdFile,
+			splitPath: splitPath,
 		});
 
 		// Check if handler applies

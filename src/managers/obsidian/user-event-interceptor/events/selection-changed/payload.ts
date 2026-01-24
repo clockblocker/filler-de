@@ -7,15 +7,15 @@ import { SplitPathToMdFileSchema } from "../../../vault-action-manager/types/spl
 import { PayloadKind } from "../../types/payload-base";
 
 export const SelectionChangedPayloadSchema = z.object({
-	kind: z.literal(PayloadKind.SelectionChanged),
-	/** File where selection changed (optional) */
-	splitPath: SplitPathToMdFileSchema.optional(),
 	/** True if there's currently a text selection */
 	hasSelection: z.boolean(),
+	kind: z.literal(PayloadKind.SelectionChanged),
 	/** The selected text (empty string if no selection) */
 	selectedText: z.string(),
 	/** Source of the selection change */
 	source: z.enum(["mouse", "keyboard", "drag"]),
+	/** File where selection changed (optional) */
+	splitPath: SplitPathToMdFileSchema.optional(),
 });
 
 export type SelectionChangedPayload = z.infer<

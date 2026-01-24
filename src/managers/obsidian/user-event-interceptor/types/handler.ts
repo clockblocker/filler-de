@@ -13,8 +13,17 @@
  */
 
 import type { App } from "obsidian";
+import z from "zod";
 import type { VaultActionManager } from "../../vault-action-manager";
 import type { AnyPayload } from "./payload-base";
+
+export const HandlerOutcomeEnum = z.enum([
+	"Handled",
+	"Passthrough",
+	"Modified",
+]);
+export type HandlerOutcome = z.infer<typeof HandlerOutcomeEnum>;
+export const HandlerOutcome = HandlerOutcomeEnum.enum;
 
 /**
  * Context available to handlers during execution.
@@ -31,9 +40,9 @@ export type HandlerContext = {
  * Discriminated by `outcome` field.
  */
 export type HandleResult<P extends AnyPayload = AnyPayload> =
-	| { outcome: "Handled" } // event fully consumed, no further action
-	| { outcome: "Passthrough" } // let native behavior happen
-	| { outcome: "Modified"; data: P }; // modify payload data (e.g., clipboard text)
+	| { outcome: typeof HandlerOutcome.Handled } // event fully consumed, no further action
+	| { outcome: typeof HandlerOutcome.Passthrough } // let native behavior happen
+	| { outcome: typeof HandlerOutcome.Modified; data: P }; // modify payload data (e.g., clipboard text)
 
 /**
  * Event handler for a specific payload type.

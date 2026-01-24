@@ -4,12 +4,12 @@ import {
 	handleCheckboxClick,
 	handlePropertyCheckboxClick,
 } from "../../../commanders/librarian/user-event-router/handlers/checkbox-handler";
-import {
-	type CheckboxFrontmatterPayload,
-	type CheckboxPayload,
-	type EventHandler,
-	HandlerOutcome,
+import type {
+	CheckboxFrontmatterPayload,
+	CheckboxPayload,
+	EventHandler,
 } from "../../obsidian/user-event-interceptor";
+import { HandlerOutcome } from "../../obsidian/user-event-interceptor/user-event-interceptor";
 
 /**
  * Function signature for enqueuing tree actions.

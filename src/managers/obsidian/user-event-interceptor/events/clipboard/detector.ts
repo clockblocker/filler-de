@@ -10,8 +10,8 @@
  */
 
 import { type App, MarkdownView } from "obsidian";
-import type { VaultActionManager } from "../../../vault-action-manager";
 import type { SplitPathToMdFile } from "../../../vault-action-manager/types/split-path";
+import { HandlerOutcome } from "../../types/handler";
 import { PayloadKind } from "../../types/payload-base";
 import type { HandlerInvoker } from "../../user-event-interceptor";
 import { ClipboardCodec } from "./codec";
@@ -26,7 +26,6 @@ export class ClipboardDetector {
 
 	constructor(
 		private readonly app: App,
-		private readonly vaultActionManager: VaultActionManager,
 		createInvoker: (kind: PayloadKind) => HandlerInvoker<ClipboardPayload>,
 	) {
 		this.invoker = createInvoker(PayloadKind.ClipboardCopy);
@@ -80,14 +79,18 @@ export class ClipboardDetector {
 		evt.preventDefault();
 
 		void invoke().then((result) => {
-			if (result.outcome === "passthrough") {
+			if (result.outcome === HandlerOutcome.Passthrough) {
 				// Handler decided to passthrough - but we already prevented default
 				// Set clipboard to original text
 				evt.clipboardData?.setData("text/plain", payload.originalText);
-			} else if (result.outcome === "modified" && result.data) {
+			} else if (
+				result.outcome === HandlerOutcome.Modified &&
+				result.data
+			) {
 				// Handler modified the payload - use modified text
-				ClipboardCodec.decode(result.data, evt.clipboardData!);
-			} else if (result.outcome === "handled") {
+				if (evt.clipboardData === null) return;
+				ClipboardCodec.decode(result.data, evt.clipboardData);
+			} else if (result.outcome === HandlerOutcome.Handled) {
 				// Handler consumed the event - do nothing
 			}
 		});

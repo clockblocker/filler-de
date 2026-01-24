@@ -12,9 +12,6 @@ import { PayloadKind } from "../../types/payload-base";
  * and add the view at runtime.
  */
 export const SelectAllPayloadSchemaPartial = z.object({
-	kind: z.literal(PayloadKind.SelectAll),
-	/** File where select-all was triggered (optional) */
-	splitPath: SplitPathToMdFileSchema.optional(),
 	/** Full document content */
 	content: z.string(),
 	/** Custom selection range set by behaviors (from, to) */
@@ -24,6 +21,9 @@ export const SelectAllPayloadSchemaPartial = z.object({
 			to: z.number(),
 		})
 		.optional(),
+	kind: z.literal(PayloadKind.SelectAll),
+	/** File where select-all was triggered (optional) */
+	splitPath: SplitPathToMdFileSchema.optional(),
 });
 
 export type SelectAllPayload = z.infer<typeof SelectAllPayloadSchemaPartial> & {
