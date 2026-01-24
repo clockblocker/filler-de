@@ -22,14 +22,14 @@ const FileTypeMetadataSchema = z.object({
 });
 
 import {
-	ALL_USER_ACTION_KINDS,
-	type AnyActionConfig,
+	ALL_USER_COMMAND_KINDS,
+	type AnyCommandConfig,
 	type ButtonContext,
-	type RenderedActionConfig,
-	UserActionPlacement,
+	type RenderedCommandConfig,
+	UserCommandPlacement,
 } from "../../../managers/actions-manager/types";
 
-type ActionSubscriber = (actions: RenderedActionConfig[]) => void;
+type CommandSubscriber = (commands: RenderedCommandConfig[]) => void;
 
 /**
  * Central registry that computes available actions based on context.
@@ -38,8 +38,8 @@ type ActionSubscriber = (actions: RenderedActionConfig[]) => void;
  */
 export class DeprecatedButtonRegistry {
 	private static readonly DEBOUNCE_MS = 50;
-	private bottomSubscribers: ActionSubscriber[] = [];
-	private selectionSubscribers: ActionSubscriber[] = [];
+	private bottomSubscribers: CommandSubscriber[] = [];
+	private selectionSubscribers: CommandSubscriber[] = [];
 	private currentContext: ButtonContext | null = null;
 	private recomputeTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -154,18 +154,18 @@ export class DeprecatedButtonRegistry {
 	}
 
 	/**
-	 * Filter actions by predicate and placement, computing disabled state.
+	 * Filter commands by predicate and placement, computing disabled state.
 	 */
-	private filterActions(
+	private filterCommands(
 		ctx: ButtonContext,
-		placement: (typeof UserActionPlacement)[keyof typeof UserActionPlacement],
-	): RenderedActionConfig[] {
-		return ALL_USER_ACTION_KINDS.filter((action) => {
-			const config = ACTION_CONFIGS[action];
+		placement: (typeof UserCommandPlacement)[keyof typeof UserCommandPlacement],
+	): RenderedCommandConfig[] {
+		return ALL_USER_COMMAND_KINDS.filter((command) => {
+			const config = ACTION_CONFIGS[command];
 			return config.placement === placement && config.isAvailable(ctx);
 		})
-			.map((action) => {
-				const config: AnyActionConfig = ACTION_CONFIGS[action];
+			.map((command) => {
+				const config: AnyCommandConfig = ACTION_CONFIGS[command];
 				const disabled = config.isEnabled
 					? !config.isEnabled(ctx)
 					: false;
@@ -175,26 +175,26 @@ export class DeprecatedButtonRegistry {
 	}
 
 	/**
-	 * Recompute available actions and notify subscribers.
+	 * Recompute available commands and notify subscribers.
 	 */
 	public async recompute(): Promise<void> {
 		const ctx = await this.buildContext();
 		this.currentContext = ctx;
 
-		const bottomActions = this.filterActions(
+		const bottomCommands = this.filterCommands(
 			ctx,
-			UserActionPlacement.Bottom,
+			UserCommandPlacement.Bottom,
 		);
-		const selectionActions = this.filterActions(
+		const selectionCommands = this.filterCommands(
 			ctx,
-			UserActionPlacement.AboveSelection,
+			UserCommandPlacement.AboveSelection,
 		);
 
 		for (const fn of this.bottomSubscribers) {
-			fn(bottomActions);
+			fn(bottomCommands);
 		}
 		for (const fn of this.selectionSubscribers) {
-			fn(selectionActions);
+			fn(selectionCommands);
 		}
 	}
 
@@ -206,20 +206,20 @@ export class DeprecatedButtonRegistry {
 		this.recomputeTimeout = setTimeout(() => {
 			this.recomputeTimeout = null;
 			void this.recompute();
-		}, ButtonRegistry.DEBOUNCE_MS);
+		}, DeprecatedButtonRegistry.DEBOUNCE_MS);
 	}
 
 	/**
-	 * Subscribe to bottom toolbar action changes.
+	 * Subscribe to bottom toolbar command changes.
 	 */
-	public subscribeBottom(fn: ActionSubscriber): void {
+	public subscribeBottom(fn: CommandSubscriber): void {
 		this.bottomSubscribers.push(fn);
 	}
 
 	/**
-	 * Subscribe to selection toolbar action changes.
+	 * Subscribe to selection toolbar command changes.
 	 */
-	public subscribeSelection(fn: ActionSubscriber): void {
+	public subscribeSelection(fn: CommandSubscriber): void {
 		this.selectionSubscribers.push(fn);
 	}
 

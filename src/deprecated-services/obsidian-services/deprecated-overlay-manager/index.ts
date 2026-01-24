@@ -1,9 +1,9 @@
 // New factory-based executor
 export {
-	type ActionExecutor,
-	type ActionExecutorManagers,
-	createActionExecutor,
-	type ExecuteActionInput,
+	type CommandExecutor,
+	type CommandExecutorManagers,
+	createCommandExecutor,
+	type ExecuteCommandInput,
 } from "../../../managers/actions-manager/create-action-executor";
 export { LibrarianActionProvider } from "./librarian-action-provider";
 export {

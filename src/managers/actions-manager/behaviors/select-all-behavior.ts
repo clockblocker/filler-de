@@ -1,9 +1,9 @@
+import { calculateSmartRange } from "../../../commanders/librarian/user-event-router/handlers/select-all-handler";
 import {
 	type EventHandler,
 	HandlerOutcome,
 	type SelectAllPayload,
 } from "../../obsidian/user-event-interceptor";
-import { calculateSmartRange } from "../../../commanders/librarian/user-event-router/handlers/select-all-handler";
 
 /**
  * Create a handler for smart select-all.
@@ -22,8 +22,8 @@ export function createSelectAllHandler(): EventHandler<SelectAllPayload> {
 
 			// Return modified payload with custom selection
 			return {
-				outcome: HandlerOutcome.Modified,
 				data: { ...payload, customSelection: { from, to } },
+				outcome: HandlerOutcome.Modified,
 			};
 		},
 	};

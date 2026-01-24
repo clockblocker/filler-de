@@ -1,6 +1,6 @@
 import { type MarkdownView, setIcon } from "obsidian";
-import type { RenderedActionConfig } from "../../../managers/actions-manager/types";
-import { UserActionKind } from "../../../managers/actions-manager/types";
+import type { RenderedCommandConfig } from "../../../managers/actions-manager/types";
+import { UserCommandKind } from "../../../managers/actions-manager/types";
 import type { NavigationLayoutState } from "./navigation-layout-coordinator";
 
 /** Inset from edge of workspace-leaf (px) */
@@ -16,8 +16,8 @@ const ZONE_INSET = 12;
 export class EdgePaddingNavigator {
 	private leftZone: HTMLElement | null = null;
 	private rightZone: HTMLElement | null = null;
-	private prevAction: RenderedActionConfig | null = null;
-	private nextAction: RenderedActionConfig | null = null;
+	private prevAction: RenderedCommandConfig | null = null;
+	private nextAction: RenderedCommandConfig | null = null;
 	private container: HTMLElement | null = null;
 
 	/**
@@ -34,11 +34,11 @@ export class EdgePaddingNavigator {
 	/**
 	 * Set navigation actions for the zones.
 	 */
-	public setActions(actions: RenderedActionConfig[]): void {
+	public setActions(actions: RenderedCommandConfig[]): void {
 		this.prevAction =
-			actions.find((a) => a.kind === UserActionKind.PreviousPage) ?? null;
+			actions.find((a) => a.kind === UserCommandKind.PreviousPage) ?? null;
 		this.nextAction =
-			actions.find((a) => a.kind === UserActionKind.NavigatePage) ?? null;
+			actions.find((a) => a.kind === UserCommandKind.NavigatePage) ?? null;
 		this.updateZoneContent();
 	}
 

@@ -29,26 +29,26 @@ import {
 } from "./commands/translate-selection-command";
 
 /**
- * Managers needed to build action executor.
+ * Managers needed to build command executor.
  */
-export type ActionExecutorManagers = {
+export type CommandExecutorManagers = {
 	librarian: Librarian | null;
 	vaultActionManager: VaultActionManager;
 };
 
 /**
- * Action to execute with typed payload.
+ * Command to execute with typed payload.
  */
-export type ExecuteActionInput<K extends ActionKind = ActionKind> = {
+export type ExecuteCommandInput<K extends ActionKind = ActionKind> = {
 	kind: K;
 	payload: ActionPayloads[K];
 };
 
 /**
- * Create action executor with injected managers.
- * Returns a function that executes actions by kind.
+ * Create command executor with injected managers.
+ * Returns a function that executes commands by kind.
  */
-export function createActionExecutor(managers: ActionExecutorManagers) {
+export function createCommandExecutor(managers: CommandExecutorManagers) {
 	const { librarian, vaultActionManager } = managers;
 
 	const notify = (message: string) => {
@@ -60,10 +60,10 @@ export function createActionExecutor(managers: ActionExecutorManagers) {
 		vaultActionManager,
 	);
 
-	return async function executeAction<K extends ActionKind>(
-		action: ExecuteActionInput<K>,
+	return async function executeCommand<K extends ActionKind>(
+		command: ExecuteCommandInput<K>,
 	): Promise<void> {
-		const { kind, payload } = action;
+		const { kind, payload } = command;
 
 		switch (kind) {
 			case ActionKind.NavigatePage: {
@@ -125,7 +125,7 @@ export function createActionExecutor(managers: ActionExecutorManagers) {
 			default: {
 				const exhaustiveCheck: never = kind;
 				logger.error(
-					`[ActionExecutor] Unknown action kind: ${exhaustiveCheck}`,
+					`[CommandExecutor] Unknown command kind: ${exhaustiveCheck}`,
 				);
 			}
 		}
@@ -135,4 +135,4 @@ export function createActionExecutor(managers: ActionExecutorManagers) {
 /**
  * Type for the returned executor function.
  */
-export type ActionExecutor = ReturnType<typeof createActionExecutor>;
+export type CommandExecutor = ReturnType<typeof createCommandExecutor>;

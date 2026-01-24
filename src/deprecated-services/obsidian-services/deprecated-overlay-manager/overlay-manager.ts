@@ -1,5 +1,5 @@
 import type { App, Menu, Plugin } from "obsidian";
-import { createActionExecutor } from "../../../managers/actions-manager/create-action-executor";
+import { createCommandExecutor } from "../../../managers/actions-manager/create-action-executor";
 import type {
 	Teardown,
 	UserEvent,
@@ -240,7 +240,7 @@ export class DeprecatedOverlayManager {
 							.setIcon("split")
 							.onClick(() => {
 								if (!this.services) return;
-								const executor = createActionExecutor({
+								const executor = createCommandExecutor({
 									librarian: this.services.librarian ?? null,
 									vaultActionManager:
 										this.services.vaultActionManager,

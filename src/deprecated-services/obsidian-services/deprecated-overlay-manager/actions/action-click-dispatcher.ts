@@ -1,8 +1,8 @@
 import type { Plugin } from "obsidian";
 import type { Librarian } from "../../../../commanders/librarian/librarian";
 import {
-	type ActionExecutor,
-	createActionExecutor,
+	type CommandExecutor,
+	createCommandExecutor,
 } from "../../../../managers/actions-manager/create-action-executor";
 import type { VaultActionManager } from "../../../../managers/obsidian/vault-action-manager";
 import {
@@ -98,7 +98,7 @@ export async function handleActionClick(
 	}
 
 	// Create executor with injected managers
-	const executor: ActionExecutor = createActionExecutor({
+	const executor: CommandExecutor = createCommandExecutor({
 		librarian: deps.getLibrarian(),
 		vaultActionManager: deps.getVaultActionManager(),
 	});

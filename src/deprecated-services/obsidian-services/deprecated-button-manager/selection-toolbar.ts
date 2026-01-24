@@ -1,6 +1,6 @@
 import type { EditorView } from "@codemirror/view";
 import { type App, MarkdownView } from "obsidian";
-import type { RenderedActionConfig } from "../../../managers/actions-manager/types";
+import type { RenderedCommandConfig } from "../../../managers/actions-manager/types";
 
 /**
  * Floating toolbar that appears above text selection.
@@ -15,7 +15,7 @@ export class DeprecatedAboveSelectionToolbarService {
 	/**
 	 * Update toolbar with new actions. Shows if actions exist + selection present, hides otherwise.
 	 */
-	public update(actions: RenderedActionConfig[]): void {
+	public update(actions: RenderedCommandConfig[]): void {
 		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 		if (!view || view.getMode() !== "source") {
 			this.hide();
@@ -94,7 +94,7 @@ export class DeprecatedAboveSelectionToolbarService {
 	/**
 	 * Render action buttons.
 	 */
-	private renderButtons(actions: RenderedActionConfig[]): void {
+	private renderButtons(actions: RenderedCommandConfig[]): void {
 		if (!this.toolbarEl) return;
 
 		this.toolbarEl.innerHTML = "";
@@ -167,7 +167,7 @@ export class DeprecatedAboveSelectionToolbarService {
 		// No-op, update() handles everything
 	}
 
-	public setActions(actions: RenderedActionConfig[]): void {
+	public setActions(actions: RenderedCommandConfig[]): void {
 		this.update(actions);
 	}
 

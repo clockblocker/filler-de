@@ -6,6 +6,7 @@ import {
 	createSelectAllHandler,
 	createWikilinkHandler,
 } from "../../managers/actions-manager/behaviors";
+import type { UserCommandKind } from "../../managers/actions-manager/types";
 import type { UserEventInterceptor } from "../../managers/obsidian/user-event-interceptor";
 import { PayloadKind } from "../../managers/obsidian/user-event-interceptor/types/payload-base";
 import type {
@@ -45,6 +46,7 @@ import {
 	processCodexImpacts,
 	processCodexImpactsForInit,
 } from "./librarian-init";
+import { listCommandsExecutableIn as listCommandsExecutableInImpl } from "./list-commands-executable";
 import {
 	getNextPage as getNextPageImpl,
 	getPrevPage as getPrevPageImpl,
@@ -273,7 +275,11 @@ export class Librarian {
 		this.handlerTeardowns.push(
 			this.userEventInterceptor.setHandler(
 				PayloadKind.CheckboxInFrontmatterClicked,
-				createCheckboxFrontmatterHandler(this.codecs, this.rules, enqueue),
+				createCheckboxFrontmatterHandler(
+					this.codecs,
+					this.rules,
+					enqueue,
+				),
 			),
 		);
 
@@ -451,5 +457,13 @@ export class Librarian {
 	getNextPage(currentFilePath: SplitPathToMdFile): SplitPathToMdFile | null {
 		if (!this.healer) return null;
 		return getNextPageImpl(this.healer, this.codecs, currentFilePath);
+	}
+
+	/**
+	 * List all commands that could be executable for a given file path.
+	 * Returns all possible commands for the file type; caller filters by selection state.
+	 */
+	listCommandsExecutableIn(splitPath: SplitPathToMdFile): UserCommandKind[] {
+		return listCommandsExecutableInImpl(this.codecs, splitPath);
 	}
 }

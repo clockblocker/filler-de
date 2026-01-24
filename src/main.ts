@@ -17,8 +17,8 @@ import {
 // 	// LibrarianActionProvider,
 // } from "./services/obsidian-services/overlay-manager";
 import {
-	createActionExecutor,
-	type ActionExecutor,
+	createCommandExecutor,
+	type CommandExecutor,
 } from "./managers/actions-manager/create-action-executor";
 import { ActionKind } from "./deprecated-services/obsidian-services/deprecated-overlay-manager/types";
 import { tagLineCopyEmbedBehavior } from "./managers/actions-manager/behaviors/tag-line-copy-embed-behavior";
@@ -72,7 +72,7 @@ export default class TextEaterPlugin extends Plugin {
 	librarian: Librarian | null = null;
 	// librarianLegacy: LibrarianLegacy; // Unplugged
 
-	private actionExecutor: ActionExecutor | null = null;
+	private commandExecutor: CommandExecutor | null = null;
 	private initialized = false;
 	private previousSettings: TextEaterSettings | null = null;
 
@@ -235,8 +235,8 @@ export default class TextEaterPlugin extends Plugin {
 			}
 		}
 
-		// Initialize action executor after librarian
-		this.actionExecutor = createActionExecutor({
+		// Initialize command executor after librarian
+		this.commandExecutor = createCommandExecutor({
 			librarian: this.librarian,
 			vaultActionManager: this.vaultActionManager,
 		});
@@ -322,7 +322,7 @@ export default class TextEaterPlugin extends Plugin {
 				if (!checking) {
 					const selection = editor.getSelection();
 					if (selection) {
-						void this.actionExecutor?.({
+						void this.commandExecutor?.({
 							kind: ActionKind.TranslateSelection,
 							payload: { selection },
 						});
@@ -339,7 +339,7 @@ export default class TextEaterPlugin extends Plugin {
 				if (!checking) {
 					const selection = editor.getSelection();
 					if (selection) {
-						void this.actionExecutor?.({
+						void this.commandExecutor?.({
 							kind: ActionKind.SplitInBlocks,
 							payload: { selection, fileContent: "" },
 						});
@@ -395,7 +395,7 @@ export default class TextEaterPlugin extends Plugin {
 		this.addCommand({
 			editorCheckCallback: (checking: boolean) => {
 				if (!checking) {
-					void this.actionExecutor?.({
+					void this.commandExecutor?.({
 						kind: ActionKind.SplitToPages,
 						payload: {},
 					});

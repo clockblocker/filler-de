@@ -1,7 +1,7 @@
 import { ACTION_CONFIGS } from "../../../../managers/actions-manager/actions/actions-config";
 import {
-	type UserActionKind,
-	UserActionSchema,
+	type UserCommandKind,
+	UserCommandSchema,
 } from "../../../../managers/actions-manager/types";
 import { logger } from "../../../../utils/logger";
 import type { TexfresserObsidianServices } from "../../../obsidian-services/interface";
@@ -15,15 +15,15 @@ export const executeButtonAction = ({
 }) => {
 	const actionId = buttonElement.getAttribute("data-action");
 
-	const parsed = UserActionSchema.safeParse(actionId);
+	const parsed = UserCommandSchema.safeParse(actionId);
 
 	if (parsed.success) {
-		const action = parsed.data as UserActionKind;
-		const cfg = ACTION_CONFIGS[action];
+		const command = parsed.data as UserCommandKind;
+		const cfg = ACTION_CONFIGS[command];
 		try {
 			cfg.execute(services);
 		} catch (err) {
-			logger.error("Failed to execute action", action, err);
+			logger.error("Failed to execute command", command, err);
 		}
 	} else {
 		logger.error("[executeButtonAction] Invalid action ID", actionId);

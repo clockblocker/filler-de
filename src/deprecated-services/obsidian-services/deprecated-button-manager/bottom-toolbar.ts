@@ -1,7 +1,7 @@
 import { type App, MarkdownView } from "obsidian";
 import { getParsedUserSettings } from "../../../global-state/global-state";
-import type { RenderedActionConfig } from "../../../managers/actions-manager/types";
-import { UserActionKind } from "../../../managers/actions-manager/types";
+import type { RenderedCommandConfig } from "../../../managers/actions-manager/types";
+import { UserCommandKind } from "../../../managers/actions-manager/types";
 import { logger } from "../../../utils/logger";
 
 /** Estimated width per button (including gap) */
@@ -17,7 +17,7 @@ const DEFAULT_MAX_BUTTONS = 4;
 export class DeprecatedBottomToolbarService {
 	private overlayEl: HTMLElement | null = null;
 	private attachedView: MarkdownView | null = null;
-	private actionConfigs: RenderedActionConfig[] = [];
+	private commandConfigs: RenderedCommandConfig[] = [];
 	private overflowMenuEl: HTMLElement | null = null;
 
 	constructor(private app: App) {}
@@ -134,11 +134,11 @@ export class DeprecatedBottomToolbarService {
 		return el;
 	}
 
-	public setActions(actionConfigs: RenderedActionConfig[]): void {
+	public setActions(commandConfigs: RenderedCommandConfig[]): void {
 		logger.info(
-			`[BottomToolbar] setActions: ${actionConfigs.length} actions`,
+			`[BottomToolbar] setActions: ${commandConfigs.length} commands`,
 		);
-		this.actionConfigs = actionConfigs;
+		this.commandConfigs = commandConfigs;
 		if (this.overlayEl) this.renderButtons(this.overlayEl);
 	}
 
@@ -154,7 +154,7 @@ export class DeprecatedBottomToolbarService {
 	private renderButtons(host: HTMLElement): void {
 		while (host.firstChild) host.removeChild(host.firstChild);
 
-		const bottomActions = this.actionConfigs;
+		const bottomActions = this.commandConfigs;
 
 		// Hide toolbar when no actions available
 		if (bottomActions.length === 0) {
@@ -171,16 +171,16 @@ export class DeprecatedBottomToolbarService {
 			host.parentElement.style.paddingBottom = "64px";
 		}
 
-		// Split actions into nav vs non-nav
+		// Split commands into nav vs non-nav
 		const navActions = bottomActions.filter(
 			(a) =>
-				a.kind === UserActionKind.NavigatePage ||
-				a.kind === UserActionKind.PreviousPage,
+				a.kind === UserCommandKind.NavigatePage ||
+				a.kind === UserCommandKind.PreviousPage,
 		);
 		const otherActions = bottomActions.filter(
 			(a) =>
-				a.kind !== UserActionKind.NavigatePage &&
-				a.kind !== UserActionKind.PreviousPage,
+				a.kind !== UserCommandKind.NavigatePage &&
+				a.kind !== UserCommandKind.PreviousPage,
 		);
 
 		// Get position setting
@@ -250,13 +250,13 @@ export class DeprecatedBottomToolbarService {
 	}
 
 	private createButton(
-		actionConfig: RenderedActionConfig,
+		commandConfig: RenderedCommandConfig,
 	): HTMLButtonElement {
 		const b = document.createElement("button");
-		b.dataset.action = actionConfig.kind;
+		b.dataset.action = commandConfig.kind;
 		b.className = "my-bottom-overlay-btn";
-		b.textContent = actionConfig.label;
-		if (actionConfig.disabled) {
+		b.textContent = commandConfig.label;
+		if (commandConfig.disabled) {
 			b.disabled = true;
 			b.classList.add("is-disabled");
 		}
@@ -268,7 +268,7 @@ export class DeprecatedBottomToolbarService {
 	 * Toggle overflow menu visibility.
 	 */
 	private toggleOverflowMenu(
-		actions: RenderedActionConfig[],
+		commands: RenderedCommandConfig[],
 		anchorBtn: HTMLElement,
 	): void {
 		if (this.overflowMenuEl) {
@@ -280,12 +280,12 @@ export class DeprecatedBottomToolbarService {
 		const menu = document.createElement("div");
 		menu.className = "bottom-overflow-menu";
 
-		for (const action of actions) {
+		for (const command of commands) {
 			const item = document.createElement("button");
-			item.dataset.action = action.kind;
+			item.dataset.action = command.kind;
 			item.className = "bottom-overflow-item";
-			item.textContent = action.label;
-			if (action.disabled) {
+			item.textContent = command.label;
+			if (command.disabled) {
 				item.disabled = true;
 				item.classList.add("is-disabled");
 			}

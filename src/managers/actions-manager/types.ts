@@ -3,7 +3,7 @@ import type { TexfresserObsidianServices } from "../../deprecated-services/obsid
 import type { FileType } from "../../types/common-interface/enums";
 import type { AnySplitPath } from "../obsidian/vault-action-manager/types/split-path";
 
-const USER_ACTION_LITERALS = [
+const USER_COMMAND_LITERALS = [
 	"SplitInBlocks",
 	"SplitToPages",
 	"MakeText",
@@ -11,23 +11,23 @@ const USER_ACTION_LITERALS = [
 	"PreviousPage",
 ] as const;
 
-const USER_ACTION_PLACEMENT_LITERALS = [
+const USER_COMMAND_PLACEMENT_LITERALS = [
 	"AboveSelection",
 	"Bottom",
 	"ShortcutOnly",
 ] as const;
 
-export const UserActionSchema = z.enum(USER_ACTION_LITERALS);
+export const UserCommandSchema = z.enum(USER_COMMAND_LITERALS);
 
-export type UserActionKind = z.infer<typeof UserActionSchema>;
-export const UserActionKind = UserActionSchema.enum;
-export const ALL_USER_ACTION_KINDS = UserActionSchema.options;
+export type UserCommandKind = z.infer<typeof UserCommandSchema>;
+export const UserCommandKind = UserCommandSchema.enum;
+export const ALL_USER_COMMAND_KINDS = UserCommandSchema.options;
 
-export const UserActionPlacementSchema = z.enum(USER_ACTION_PLACEMENT_LITERALS);
+export const UserCommandPlacementSchema = z.enum(USER_COMMAND_PLACEMENT_LITERALS);
 
-export type UserActionPlacement = z.infer<typeof UserActionPlacementSchema>;
-export const UserActionPlacement = UserActionPlacementSchema.enum;
-export const USER_ACTION_PLACEMENTS = UserActionPlacementSchema.options;
+export type UserCommandPlacement = z.infer<typeof UserCommandPlacementSchema>;
+export const UserCommandPlacement = UserCommandPlacementSchema.enum;
+export const USER_COMMAND_PLACEMENTS = UserCommandPlacementSchema.options;
 
 /**
  * Context available when evaluating button visibility.
@@ -52,24 +52,24 @@ export type ButtonContext = {
 	hasNextPage: boolean;
 };
 
-export type ActionConfig<K extends UserActionKind> = {
+export type CommandConfig<K extends UserCommandKind> = {
 	kind: K;
 	execute: (
 		services: Partial<TexfresserObsidianServices>,
 	) => void | Promise<void>;
 	label: string;
-	placement: UserActionPlacement;
+	placement: UserCommandPlacement;
 	/** Lower number = higher priority (1-10). Used for sorting and overflow. */
 	priority: number;
-	/** Predicate to determine if action is available in current context */
+	/** Predicate to determine if command is available in current context */
 	isAvailable: (ctx: ButtonContext) => boolean;
-	/** Optional predicate to determine if action is enabled (shown but inactive if false) */
+	/** Optional predicate to determine if command is enabled (shown but inactive if false) */
 	isEnabled?: (ctx: ButtonContext) => boolean;
 };
 
-export type AnyActionConfig = ActionConfig<UserActionKind>;
+export type AnyCommandConfig = CommandConfig<UserCommandKind>;
 
-/** Action config with computed disabled state for rendering */
-export type RenderedActionConfig = AnyActionConfig & {
+/** Command config with computed disabled state for rendering */
+export type RenderedCommandConfig = AnyCommandConfig & {
 	disabled: boolean;
 };

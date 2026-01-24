@@ -1,5 +1,5 @@
 import type { MarkdownView } from "obsidian";
-import type { RenderedActionConfig } from "../../../managers/actions-manager/types";
+import type { RenderedCommandConfig } from "../../../managers/actions-manager/types";
 import { DomSelectors } from "../../../utils/dom-selectors";
 import type { DeprecatedBottomToolbarService } from "./bottom-toolbar";
 import type { EdgePaddingNavigator } from "./edge-padding-navigator";
@@ -62,7 +62,7 @@ export class NavigationLayoutCoordinator {
 	/**
 	 * Update actions for both components.
 	 */
-	public setActions(actions: RenderedActionConfig[]): void {
+	public setActions(actions: RenderedCommandConfig[]): void {
 		this.edgePaddingNavigator.setActions(actions);
 		// Recalculate layout since action availability affects zone visibility
 		if (this.container && this.attachedView) {

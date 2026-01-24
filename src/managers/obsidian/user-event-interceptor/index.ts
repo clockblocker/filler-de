@@ -28,9 +28,10 @@ export type {
 	EventHandler,
 	HandleResult,
 	HandlerContext,
-	HandlerOutcome,
 	HandlerTeardown,
 } from "./types/handler";
+
+export { HandlerOutcome } from "./types/handler";
 
 // Payload types
 export {
