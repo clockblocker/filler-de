@@ -1,12 +1,7 @@
-import type {
-	CheckboxFrontmatterPayload,
-	CheckboxPayload,
-} from "../../../../managers/obsidian/user-event-interceptor";
-import { MD } from "../../../../managers/obsidian/vault-action-manager/types/literals";
+import type { CheckboxFrontmatterPayload } from "../../../../managers/obsidian/user-event-interceptor";
 import { logger } from "../../../../utils/logger";
 import type { CodecRules, Codecs } from "../../codecs";
 import type { ScrollNodeSegmentId } from "../../codecs/segment-id/types/segment-id";
-import { parseCodexClickLineContent } from "../../healer/library-tree/codex";
 import { isCodexSplitPath } from "../../healer/library-tree/codex/helpers";
 import { tryParseAsInsideLibrarySplitPath } from "../../healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
 import { tryMakeTargetLocatorFromLibraryScopedSplitPath } from "../../healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/translators/helpers/split-path-to-locator";
@@ -22,76 +17,6 @@ import {
 export type CheckboxHandlerResult = {
 	action: TreeAction;
 } | null;
-
-/**
- * Handle checkbox click in a codex file.
- * Returns a TreeAction to enqueue, or null if no action needed.
- */
-export function handleCheckboxClick(
-	payload: CheckboxPayload,
-	codecs: Codecs,
-): CheckboxHandlerResult {
-	// Check if file is a codex (basename starts with __)
-	if (!isCodexSplitPath(payload.splitPath)) {
-		// Not a codex file, ignore
-		return null;
-	}
-
-	// Parse line content to get target
-	const parseResult = parseCodexClickLineContent(payload.lineContent);
-	if (parseResult.isErr()) {
-		return null;
-	}
-
-	const target = parseResult.value;
-	const newStatus = payload.checked
-		? TreeNodeStatus.Done
-		: TreeNodeStatus.NotStarted;
-
-	// Build ChangeStatus action
-	let action: TreeAction;
-
-	if (target.kind === "Scroll") {
-		// Use serializeSegmentIdUnchecked for unsafe user input (validates and returns Result)
-		const segmentIdResult = codecs.segmentId.serializeSegmentIdUnchecked({
-			coreName: target.nodeName,
-			extension: MD,
-			targetKind: TreeNodeKind.Scroll,
-		});
-		if (segmentIdResult.isErr()) {
-			logger.error(
-				"[Librarian] Failed to serialize scroll segment ID:",
-				segmentIdResult.error,
-			);
-			return null;
-		}
-		action = {
-			actionType: "ChangeStatus",
-			newStatus,
-			targetLocator: {
-				segmentId: segmentIdResult.value as ScrollNodeSegmentId,
-				segmentIdChainToParent: target.parentChain,
-				targetKind: TreeNodeKind.Scroll,
-			},
-		};
-	} else {
-		// Section
-		const sectionName = target.sectionChain[target.sectionChain.length - 1];
-		if (!sectionName) return null;
-
-		action = {
-			actionType: "ChangeStatus",
-			newStatus,
-			targetLocator: {
-				segmentId: sectionName,
-				segmentIdChainToParent: target.sectionChain.slice(0, -1),
-				targetKind: TreeNodeKind.Section,
-			},
-		};
-	}
-
-	return { action };
-}
 
 /**
  * Handle property checkbox click (frontmatter status toggle).

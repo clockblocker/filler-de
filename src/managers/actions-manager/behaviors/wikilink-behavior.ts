@@ -1,5 +1,6 @@
 import type { Codecs } from "../../../commanders/librarian/codecs";
-import { handleWikilinkCompleted } from "../../../commanders/librarian/user-event-router/handlers/wikilink-handler";
+import { CODEX_CORE_NAME } from "../../../commanders/librarian/types/consts/literals";
+import { resolveAliasFromSuffix } from "../../../stateless-services/wikilink-alias-service";
 import {
 	type EventHandler,
 	HandlerOutcome,
@@ -18,11 +19,19 @@ export function createWikilinkHandler(
 	return {
 		doesApply: () => true, // Let the handler decide based on link content
 		handle: (payload) => {
-			const result = handleWikilinkCompleted(payload, codecs);
+			// Use the stateless service with codecs as suffix parser
+			const result = resolveAliasFromSuffix(
+				payload.linkContent,
+				codecs.suffix,
+				(name) => name.startsWith(CODEX_CORE_NAME),
+			);
 			if (result === null) {
 				return { outcome: HandlerOutcome.Passthrough };
 			}
-			return { data: result, outcome: HandlerOutcome.Modified };
+			return {
+				data: { ...payload, aliasToInsert: result.alias },
+				outcome: HandlerOutcome.Modified,
+			};
 		},
 	};
 }

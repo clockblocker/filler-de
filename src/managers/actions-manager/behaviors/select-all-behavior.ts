@@ -1,4 +1,4 @@
-import { calculateSmartRange } from "../../../commanders/librarian/user-event-router/handlers/select-all-handler";
+import { calculateSmartRange } from "../../../stateless-services/content-range-service";
 import {
 	type EventHandler,
 	HandlerOutcome,

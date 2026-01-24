@@ -1,9 +1,11 @@
-import { META_SECTION_PATTERN } from "../../../../managers/pure/note-metadata-manager";
-import { isGoBackLine } from "../../go-back-link";
-import {
-	splitFirstLine,
-	splitFrontmatter,
-} from "../../healer/library-tree/codex/transforms/transform-utils";
+/**
+ * Smart range calculation for select-all behavior.
+ * Calculates selection range excluding metadata and navigation links.
+ */
+
+import { META_SECTION_PATTERN } from "../note-metadata-manager";
+import { isGoBackLine } from "../go-back-link-service";
+import { splitFirstLine, splitFrontmatter } from "./text-utils";
 
 /**
  * Calculate smart selection range that excludes:

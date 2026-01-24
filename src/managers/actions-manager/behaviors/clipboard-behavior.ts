@@ -1,4 +1,4 @@
-import { handleClipboardCopy } from "../../../commanders/librarian/user-event-router/handlers/clipboard-handler";
+import { stripContentForClipboard } from "../../../stateless-services/content-range-service";
 import {
 	type ClipboardPayload,
 	type EventHandler,
@@ -13,11 +13,14 @@ export function createClipboardHandler(): EventHandler<ClipboardPayload> {
 	return {
 		doesApply: () => true, // Always try to handle clipboard events
 		handle: (payload) => {
-			const result = handleClipboardCopy(payload);
-			if (result === null) {
+			const strippedText = stripContentForClipboard(payload.originalText);
+			if (strippedText === null) {
 				return { outcome: HandlerOutcome.Passthrough };
 			}
-			return { data: result, outcome: HandlerOutcome.Modified };
+			return {
+				data: { ...payload, modifiedText: strippedText },
+				outcome: HandlerOutcome.Modified,
+			};
 		},
 	};
 }

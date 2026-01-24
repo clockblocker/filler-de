@@ -1,5 +1,6 @@
 /**
- * Go-back link module - utilities for library navigation links.
+ * @deprecated - Import from 'src/stateless-services/go-back-link-service' instead
+ * Re-export for temporary backwards compatibility
  */
 
 export {
@@ -10,5 +11,5 @@ export {
 	isGoBackLine,
 	parseGoBackLink,
 	stripGoBackLink,
-} from "./go-back-link";
-export type { GoBackLinkInfo } from "./types";
+} from "../../../stateless-services/go-back-link-service";
+export type { GoBackLinkInfo } from "../../../stateless-services/go-back-link-service";

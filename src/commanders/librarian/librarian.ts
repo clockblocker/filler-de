@@ -1,7 +1,6 @@
 import { getParsedUserSettings } from "../../global-state/global-state";
 import {
 	createCheckboxFrontmatterHandler,
-	createCheckboxHandler,
 	createClipboardHandler,
 	createSelectAllHandler,
 	createWikilinkHandler,
@@ -260,14 +259,6 @@ export class Librarian {
 			this.userEventInterceptor.setHandler(
 				PayloadKind.SelectAll,
 				createSelectAllHandler(),
-			),
-		);
-
-		// Checkbox handler
-		this.handlerTeardowns.push(
-			this.userEventInterceptor.setHandler(
-				PayloadKind.CheckboxClicked,
-				createCheckboxHandler(this.codecs, enqueue),
 			),
 		);
 
