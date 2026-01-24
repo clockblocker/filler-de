@@ -1,33 +1,54 @@
 /**
- * UserEventInterceptor - unified facade for all user event detectors.
+ * UserEventInterceptor - unified facade for user event detection with behavior chain.
  *
- * Combines:
- * - CheckboxClickedDetector: checkbox clicks (task + property)
+ * Architecture:
+ * - Raw DOM events are captured by detectors
+ * - Events are encoded into payloads via codecs
+ * - Behavior chain transforms payloads
+ * - Default actions apply final transformations
+ *
+ * Detectors:
  * - ClipboardDetector: copy/cut events
+ * - CheckboxClickedDetector: task checkbox clicks
+ * - CheckboxFrontmatterDetector: property checkbox clicks
+ * - ActionElementDetector: [data-action] button clicks
  * - SelectAllDetector: Ctrl/Cmd+A
+ * - SelectionChangedDetector: text selection changes
  * - WikilinkDetector: wikilink completions
- * - ActionClickDetector: [data-action] button clicks
  *
- * Provides single subscription point for all user events.
+ * Legacy Support:
+ * - subscribe() method bridges to old event pattern
+ * - LegacyBridge converts new payloads to old UserEvents
  */
 
 import type { App, Plugin } from "obsidian";
-import { logger } from "../../../utils/logger";
 import type { VaultActionManager } from "../vault-action-manager";
-import { ActionClickDetector } from "./detectors/action-click-detector";
-import { CheckboxClickedDetector } from "./detectors/checkbox-clicked-detector";
-import { ClipboardDetector } from "./detectors/clipboard-detector";
-import type { Detector } from "./detectors/detector";
-import { GenericClickDetector } from "./detectors/generic";
-import { SelectAllDetector } from "./detectors/select-all-detector";
-import { SelectionDetector } from "./detectors/selection-detector";
-import { WikilinkDetector } from "./detectors/wikilink-detector";
-import type { Teardown, UserEvent, UserEventHandler } from "./types/user-event";
+import type { BehaviorRegistry } from "./behavior-chain";
+import { getBehaviorRegistry } from "./behavior-chain";
+import { ActionElementDetector } from "./events/click/action-element/detector";
+import { CheckboxClickedDetector } from "./events/click/checkbox/detector";
+import { CheckboxFrontmatterDetector } from "./events/click/checkbox-frontmatter/detector";
+import { GenericClickDetector } from "./events/click/generic-click-detector";
+import { ClipboardDetector } from "./events/clipboard/detector";
+import { SelectAllDetector } from "./events/select-all/detector";
+import { SelectionChangedDetector } from "./events/selection-changed/detector";
+import { WikilinkDetector } from "./events/wikilink/detector";
+import { createLegacyBridge, type LegacyBridge } from "./legacy-bridge";
+import type { Teardown, UserEventHandler } from "./types/user-event";
+
+/**
+ * Detector interface for lifecycle management.
+ */
+interface Detector {
+	startListening(): void;
+	stopListening(): void;
+}
 
 export class UserEventInterceptor {
-	private readonly subscribers = new Set<UserEventHandler>();
-	private readonly detectors: Detector[];
 	private readonly genericClickDetector: GenericClickDetector;
+	private readonly detectors: Detector[];
+	private readonly behaviorRegistry: BehaviorRegistry;
+	private readonly legacyBridge: LegacyBridge;
 	private listening = false;
 
 	constructor(
@@ -35,30 +56,51 @@ export class UserEventInterceptor {
 		plugin: Plugin,
 		vaultActionManager: VaultActionManager,
 	) {
+		this.behaviorRegistry = getBehaviorRegistry();
+		this.legacyBridge = createLegacyBridge();
+
 		// Create shared generic click detector
 		this.genericClickDetector = new GenericClickDetector();
 
+		// Create all detectors
 		this.detectors = [
+			new ClipboardDetector(app, vaultActionManager),
 			new CheckboxClickedDetector(
 				this.genericClickDetector,
 				app,
 				vaultActionManager,
 			),
-			new ClipboardDetector(app),
-			new SelectAllDetector(app),
-			new WikilinkDetector(plugin),
-			new ActionClickDetector(this.genericClickDetector),
-			new SelectionDetector(app),
+			new CheckboxFrontmatterDetector(
+				this.genericClickDetector,
+				app,
+				vaultActionManager,
+			),
+			new ActionElementDetector(
+				this.genericClickDetector,
+				app,
+				vaultActionManager,
+			),
+			new SelectAllDetector(app, vaultActionManager),
+			new SelectionChangedDetector(app, vaultActionManager),
+			new WikilinkDetector(plugin, app, vaultActionManager),
 		];
 	}
 
 	/**
-	 * Subscribe to user events.
+	 * Get the behavior registry for registering behaviors.
+	 */
+	getBehaviorRegistry(): BehaviorRegistry {
+		return this.behaviorRegistry;
+	}
+
+	/**
+	 * Subscribe to user events (legacy pattern).
 	 * Returns teardown function to unsubscribe.
+	 *
+	 * @deprecated Use behavior registration instead for new code.
 	 */
 	subscribe(handler: UserEventHandler): Teardown {
-		this.subscribers.add(handler);
-		return () => this.subscribers.delete(handler);
+		return this.legacyBridge.subscribe(handler);
 	}
 
 	/**
@@ -68,14 +110,16 @@ export class UserEventInterceptor {
 		if (this.listening) return;
 
 		this.listening = true;
-		const emit = (event: UserEvent) => this.emit(event);
+
+		// Register legacy bridge behaviors
+		this.legacyBridge.registerBridgeBehaviors();
 
 		// Start generic click detector first
 		this.genericClickDetector.startListening();
 
 		// Then start specialized detectors
 		for (const detector of this.detectors) {
-			detector.startListening(emit);
+			detector.startListening();
 		}
 	}
 
@@ -94,17 +138,9 @@ export class UserEventInterceptor {
 
 		// Stop generic click detector last
 		this.genericClickDetector.stopListening();
-	}
 
-	// ─── Private ───
-
-	private emit(event: UserEvent): void {
-		for (const handler of this.subscribers) {
-			try {
-				handler(event);
-			} catch (error) {
-				logger.error("[UserEventInterceptor] Handler error:", error);
-			}
-		}
+		// Unregister legacy bridge behaviors
+		this.legacyBridge.unregisterBridgeBehaviors();
+		this.legacyBridge.clearSubscribers();
 	}
 }
