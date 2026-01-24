@@ -1,5 +1,5 @@
-import { splitStrInBlocks } from "../../../../commanders/librarian/bookkeeper/segmenter/block-marker";
-import { findHighestBlockNumber } from "./block-utils";
+import { splitStrInBlocks } from "../../../commanders/librarian/bookkeeper/segmenter/block-marker";
+import { findHighestBlockNumber } from "../../../stateless-services/block-service";
 
 export type SplitInBlocksPayload = {
 	selection: string;
@@ -15,7 +15,7 @@ export type SplitInBlocksDeps = {
  * Splits selected text into blocks with Obsidian block markers (^N).
  * Finds highest existing block ID in file and continues numbering from there.
  */
-export function splitSelectionInBlocksAction(
+export function splitSelectionBlocksCommand(
 	payload: SplitInBlocksPayload,
 	deps: SplitInBlocksDeps,
 ): void {

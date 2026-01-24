@@ -6,28 +6,27 @@ import {
 } from "../../deprecated-services/obsidian-services/deprecated-overlay-manager/types";
 import { logger } from "../../utils/logger";
 import type { VaultActionManager } from "../obsidian/vault-action-manager";
-import type { SplitPathToMdFile } from "../obsidian/vault-action-manager/types/split-path";
 import {
 	type ExplainGrammarPayload,
-	explainGrammarAction,
-} from "./actions/executors/explain-grammar-action";
+	explainGrammarCommand,
+} from "./commands/explain-grammar-command";
 import {
 	type GeneratePayload,
-	generateAction,
-} from "./actions/executors/generate-action";
+	generateCommand,
+} from "./commands/generate-command";
 import {
 	type NavigatePagePayload,
-	navigatePageAction,
-} from "./actions/executors/navigate-pages-action";
-import { splitIntoPagesAction } from "./actions/executors/split-into-pages";
+	makeNavigatePageCommand,
+} from "./commands/navigate-pages-command";
+import { splitIntoPagesCommand } from "./commands/split-into-pages-command";
 import {
 	type SplitInBlocksPayload,
-	splitSelectionInBlocksAction,
-} from "./actions/executors/split-selection-blocks-action";
+	splitSelectionBlocksCommand,
+} from "./commands/split-selection-blocks-command";
 import {
 	type TranslateSelectionPayload,
-	translateSelectionAction,
-} from "./actions/executors/translate-selection-action";
+	translateSelectionCommand,
+} from "./commands/translate-selection-command";
 
 /**
  * Managers needed to build action executor.
@@ -56,6 +55,11 @@ export function createActionExecutor(managers: ActionExecutorManagers) {
 		new Notice(message);
 	};
 
+	const navigatePageCommand = makeNavigatePageCommand(
+		librarian,
+		vaultActionManager,
+	);
+
 	return async function executeAction<K extends ActionKind>(
 		action: ExecuteActionInput<K>,
 	): Promise<void> {
@@ -64,24 +68,14 @@ export function createActionExecutor(managers: ActionExecutorManagers) {
 		switch (kind) {
 			case ActionKind.NavigatePage: {
 				const p = payload as NavigatePagePayload;
-				await navigatePageAction(p, {
-					getAdjacentPage: (path: SplitPathToMdFile, dir: -1 | 1) => {
-						if (!librarian) return null;
-						return dir === -1
-							? librarian.getPrevPage(path)
-							: librarian.getNextPage(path);
-					},
-					navigate: async (path: SplitPathToMdFile) => {
-						await vaultActionManager.cd(path);
-					},
-				});
+				await navigatePageCommand(p);
 				break;
 			}
 
 			case ActionKind.MakeText:
 			case ActionKind.SplitToPages: {
 				// Both actions do the same thing - split scroll into pages
-				await splitIntoPagesAction({
+				await splitIntoPagesCommand({
 					librarian,
 					vaultActionManager,
 				});
@@ -96,7 +90,7 @@ export function createActionExecutor(managers: ActionExecutorManagers) {
 					notify(`Error: ${contentResult.error}`);
 					break;
 				}
-				splitSelectionInBlocksAction(
+				splitSelectionBlocksCommand(
 					{ ...p, fileContent: contentResult.value },
 					{
 						notify,
@@ -112,19 +106,19 @@ export function createActionExecutor(managers: ActionExecutorManagers) {
 
 			case ActionKind.TranslateSelection: {
 				const p = payload as TranslateSelectionPayload;
-				await translateSelectionAction(p, {});
+				await translateSelectionCommand(p, {});
 				break;
 			}
 
 			case ActionKind.ExplainGrammar: {
 				const p = payload as ExplainGrammarPayload;
-				await explainGrammarAction(p, {});
+				await explainGrammarCommand(p, {});
 				break;
 			}
 
 			case ActionKind.Generate: {
 				const p = payload as GeneratePayload;
-				await generateAction(p, {});
+				await generateCommand(p, {});
 				break;
 			}
 

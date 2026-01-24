@@ -1,7 +1,7 @@
 import { type App, MarkdownView } from "obsidian";
 import { getParsedUserSettings } from "../../../global-state/global-state";
-import type { RenderedActionConfig } from "../../../managers/actions-manager/actions/types";
-import { UserActionKind } from "../../../managers/actions-manager/actions/types";
+import type { RenderedActionConfig } from "../../../managers/actions-manager/types";
+import { UserActionKind } from "../../../managers/actions-manager/types";
 import { logger } from "../../../utils/logger";
 
 /** Estimated width per button (including gap) */

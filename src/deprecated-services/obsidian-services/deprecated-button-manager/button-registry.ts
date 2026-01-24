@@ -27,7 +27,7 @@ import {
 	type ButtonContext,
 	type RenderedActionConfig,
 	UserActionPlacement,
-} from "../../../managers/actions-manager/actions/types";
+} from "../../../managers/actions-manager/types";
 
 type ActionSubscriber = (actions: RenderedActionConfig[]) => void;
 

@@ -1,10 +1,11 @@
 import { type App, MarkdownView, Notice } from "obsidian";
-import type { VaultActionManager } from "../../../obsidian/vault-action-manager";
 import {
 	findHighestBlockNumber,
 	formatBlockEmbed,
 	getBlockIdFromLine,
-} from "./block-utils";
+} from "../../../stateless-services/block-service";
+import type { VaultActionManager } from "../../obsidian/vault-action-manager";
+import { logError } from "../../obsidian/vault-action-manager/helpers/issue-handlers";
 
 type TagLineCopyEmbedServices = {
 	app: App;
@@ -15,7 +16,7 @@ type TagLineCopyEmbedServices = {
  * Tags the current line with a block marker (if missing) and copies the block embed to clipboard.
  * Does nothing silently on empty/blank lines.
  */
-export async function tagLineCopyEmbedAction(
+export async function tagLineCopyEmbedBehavior(
 	services: Partial<TagLineCopyEmbedServices>,
 ): Promise<void> {
 	const { app, vaultActionManager } = services;
@@ -65,10 +66,10 @@ export async function tagLineCopyEmbedAction(
 		// Format and copy embed to clipboard
 		const embed = formatBlockEmbed(basename, blockId);
 		await navigator.clipboard.writeText(embed);
-
-		new Notice("Block embed copied");
 	} catch (error) {
-		const message = error instanceof Error ? error.message : String(error);
-		new Notice(`Error: ${message}`);
+		logError({
+			description: `Error tagging line with block embed: ${error}`,
+			location: "tagLineCopyEmbedBehavior",
+		});
 	}
 }

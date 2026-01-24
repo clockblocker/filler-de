@@ -2,7 +2,7 @@ import { ACTION_CONFIGS } from "../../../../managers/actions-manager/actions/act
 import {
 	type UserActionKind,
 	UserActionSchema,
-} from "../../../../managers/actions-manager/actions/types";
+} from "../../../../managers/actions-manager/types";
 import { logger } from "../../../../utils/logger";
 import type { TexfresserObsidianServices } from "../../../obsidian-services/interface";
 

@@ -16,8 +16,12 @@ import {
 // 	// DeprecatedOverlayManager,
 // 	// LibrarianActionProvider,
 // } from "./services/obsidian-services/overlay-manager";
-import { ACTION_CONFIGS } from "./managers/actions-manager/actions/actions-config";
-import { tagLineCopyEmbedAction } from "./managers/actions-manager/actions/executors/tag-line-copy-embed-action";
+import {
+	createActionExecutor,
+	type ActionExecutor,
+} from "./managers/actions-manager/create-action-executor";
+import { ActionKind } from "./deprecated-services/obsidian-services/deprecated-overlay-manager/types";
+import { tagLineCopyEmbedBehavior } from "./managers/actions-manager/behaviors/tag-line-copy-embed-behavior";
 // import { LeafLifecycleManager } from "./managers/obsidian/leaf-lifecycle-manager";
 import { UserEventInterceptor } from "./managers/obsidian/user-event-interceptor";
 import {
@@ -68,6 +72,7 @@ export default class TextEaterPlugin extends Plugin {
 	librarian: Librarian | null = null;
 	// librarianLegacy: LibrarianLegacy; // Unplugged
 
+	private actionExecutor: ActionExecutor | null = null;
 	private initialized = false;
 	private previousSettings: TextEaterSettings | null = null;
 
@@ -230,6 +235,12 @@ export default class TextEaterPlugin extends Plugin {
 			}
 		}
 
+		// Initialize action executor after librarian
+		this.actionExecutor = createActionExecutor({
+			librarian: this.librarian,
+			vaultActionManager: this.vaultActionManager,
+		});
+
 		// // Initialize LeafLifecycleManager (single source of truth for view lifecycle)
 		// this.leafLifecycleManager = new LeafLifecycleManager(this.app, this);
 		// this.leafLifecycleManager.init();
@@ -307,12 +318,17 @@ export default class TextEaterPlugin extends Plugin {
 		});
 
 		this.addCommand({
-			editorCheckCallback: () => {
-				ACTION_CONFIGS.TranslateSelection.execute({
-					apiService: this.apiService,
-					openedFileService:
-						this.vaultActionManager.openedFileService,
-				});
+			editorCheckCallback: (checking: boolean, editor: Editor) => {
+				if (!checking) {
+					const selection = editor.getSelection();
+					if (selection) {
+						void this.actionExecutor?.({
+							kind: ActionKind.TranslateSelection,
+							payload: { selection },
+						});
+					}
+				}
+				return true;
 			},
 			id: "translate-selection",
 			name: "Translate selected text",
@@ -323,11 +339,12 @@ export default class TextEaterPlugin extends Plugin {
 				if (!checking) {
 					const selection = editor.getSelection();
 					if (selection) {
-						ACTION_CONFIGS.SplitInBlocks.execute({
-							vaultActionManager: this.vaultActionManager,
+						void this.actionExecutor?.({
+							kind: ActionKind.SplitInBlocks,
+							payload: { selection, fileContent: "" },
 						});
 					} else {
-						tagLineCopyEmbedAction({
+						tagLineCopyEmbedBehavior({
 							app: this.app,
 							vaultActionManager: this.vaultActionManager,
 						});
@@ -378,9 +395,9 @@ export default class TextEaterPlugin extends Plugin {
 		this.addCommand({
 			editorCheckCallback: (checking: boolean) => {
 				if (!checking) {
-					ACTION_CONFIGS.SplitToPages.execute({
-						librarian: this.librarian,
-						vaultActionManager: this.vaultActionManager,
+					void this.actionExecutor?.({
+						kind: ActionKind.SplitToPages,
+						payload: {},
 					});
 				}
 				return true;

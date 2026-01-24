@@ -1,6 +1,6 @@
 import { type MarkdownView, setIcon } from "obsidian";
-import type { RenderedActionConfig } from "../../../managers/actions-manager/actions/types";
-import { UserActionKind } from "../../../managers/actions-manager/actions/types";
+import type { RenderedActionConfig } from "../../../managers/actions-manager/types";
+import { UserActionKind } from "../../../managers/actions-manager/types";
 import type { NavigationLayoutState } from "./navigation-layout-coordinator";
 
 /** Inset from edge of workspace-leaf (px) */
