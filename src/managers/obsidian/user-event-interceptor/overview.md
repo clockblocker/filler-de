@@ -53,9 +53,9 @@ interceptor.setHandler(PayloadKind.ClipboardCopy, {
   handle: (payload, ctx) => {
     const stripped = stripMetadata(payload.originalText);
     if (stripped === payload.originalText) {
-      return { outcome: "passthrough" };
+      return { outcome: "Passthrough" };
     }
-    return { outcome: "modified", data: { ...payload, modifiedText: stripped } };
+    return { outcome: "Modified", data: { ...payload, modifiedText: stripped } };
   }
 });
 ```
@@ -69,9 +69,9 @@ type EventHandler<P extends AnyPayload> = {
 };
 
 type HandleResult<P> =
-  | { outcome: "handled" }
-  | { outcome: "passthrough" }
-  | { outcome: "modified"; data: P };
+  | { outcome: "Handled" }
+  | { outcome: "Passthrough" }
+  | { outcome: "Modified"; data: P };
 ```
 
 ## Architecture

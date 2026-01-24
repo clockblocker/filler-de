@@ -18,6 +18,8 @@
  */
 
 import type { App, Plugin } from "obsidian";
+import { z } from "zod";
+
 import type { VaultActionManager } from "../vault-action-manager";
 import { ActionElementDetector } from "./events/click/action-element/detector";
 import { CheckboxClickedDetector } from "./events/click/checkbox/detector";
@@ -42,6 +44,14 @@ interface Detector {
 	stopListening(): void;
 }
 
+export const HandlerOutcomeEnum = z.enum([
+	"Handled",
+	"Passthrough",
+	"Modified",
+]);
+export type HandlerOutcome = z.infer<typeof HandlerOutcomeEnum>;
+export const HandlerOutcome = HandlerOutcomeEnum.enum;
+
 /**
  * Handler invoker function passed to detectors.
  * Returns true if a handler exists and applies, false otherwise.
@@ -49,7 +59,7 @@ interface Detector {
 export type HandlerInvoker<P extends AnyPayload> = (payload: P) => {
 	applies: boolean;
 	invoke: () => Promise<{
-		outcome: "handled" | "passthrough" | "modified";
+		outcome: HandlerOutcome;
 		data?: P;
 	}>;
 };
@@ -65,9 +75,9 @@ export class UserEventInterceptor {
 	private listening = false;
 
 	constructor(
-		private readonly app: App,
+		app: App,
 		plugin: Plugin,
-		private readonly vaultActionManager: VaultActionManager,
+		vaultActionManager: VaultActionManager,
 	) {
 		this.ctx = { app, vaultActionManager };
 
@@ -186,7 +196,7 @@ export class UserEventInterceptor {
 			if (!handler) {
 				return {
 					applies: false,
-					invoke: async () => ({ outcome: "passthrough" as const }),
+					invoke: async () => ({ outcome: HandlerOutcome.Passthrough }),
 				};
 			}
 
@@ -196,13 +206,13 @@ export class UserEventInterceptor {
 				applies,
 				invoke: async () => {
 					if (!applies) {
-						return { outcome: "passthrough" as const };
+						return { outcome: HandlerOutcome.Passthrough };
 					}
 					const result = await handler.handle(payload, this.ctx);
-					if (result.outcome === "modified") {
+					if (result.outcome === HandlerOutcome.Modified) {
 						return {
 							data: result.data,
-							outcome: "modified" as const,
+							outcome: HandlerOutcome.Modified,
 						};
 					}
 					return { outcome: result.outcome };

@@ -31,9 +31,9 @@ export type HandlerContext = {
  * Discriminated by `outcome` field.
  */
 export type HandleResult<P extends AnyPayload = AnyPayload> =
-	| { outcome: "handled" } // event fully consumed, no further action
-	| { outcome: "passthrough" } // let native behavior happen
-	| { outcome: "modified"; data: P }; // modify payload data (e.g., clipboard text)
+	| { outcome: "Handled" } // event fully consumed, no further action
+	| { outcome: "Passthrough" } // let native behavior happen
+	| { outcome: "Modified"; data: P }; // modify payload data (e.g., clipboard text)
 
 /**
  * Event handler for a specific payload type.
