@@ -1,6 +1,6 @@
 import type {
-	CheckboxClickedEvent,
-	PropertyCheckboxClickedEvent,
+	CheckboxFrontmatterPayload,
+	CheckboxPayload,
 } from "../../../../managers/obsidian/user-event-interceptor";
 import { MD } from "../../../../managers/obsidian/vault-action-manager/types/literals";
 import { logger } from "../../../../utils/logger";
@@ -28,23 +28,23 @@ export type CheckboxHandlerResult = {
  * Returns a TreeAction to enqueue, or null if no action needed.
  */
 export function handleCheckboxClick(
-	event: CheckboxClickedEvent,
+	payload: CheckboxPayload,
 	codecs: Codecs,
 ): CheckboxHandlerResult {
 	// Check if file is a codex (basename starts with __)
-	if (!isCodexSplitPath(event.splitPath)) {
+	if (!isCodexSplitPath(payload.splitPath)) {
 		// Not a codex file, ignore
 		return null;
 	}
 
 	// Parse line content to get target
-	const parseResult = parseCodexClickLineContent(event.lineContent);
+	const parseResult = parseCodexClickLineContent(payload.lineContent);
 	if (parseResult.isErr()) {
 		return null;
 	}
 
 	const target = parseResult.value;
-	const newStatus = event.checked
+	const newStatus = payload.checked
 		? TreeNodeStatus.Done
 		: TreeNodeStatus.NotStarted;
 
@@ -98,19 +98,19 @@ export function handleCheckboxClick(
  * Returns a TreeAction to enqueue, or null if no action needed.
  */
 export function handlePropertyCheckboxClick(
-	event: PropertyCheckboxClickedEvent,
+	payload: CheckboxFrontmatterPayload,
 	codecs: Codecs,
 	rules: CodecRules,
 ): CheckboxHandlerResult {
 	// Only handle "status" property
-	if (event.propertyName !== "status") return null;
+	if (payload.propertyName !== "status") return null;
 
 	// Skip codex files
-	if (isCodexSplitPath(event.splitPath)) return null;
+	if (isCodexSplitPath(payload.splitPath)) return null;
 
 	// Try to parse as library-scoped path
 	const libraryScopedResult = tryParseAsInsideLibrarySplitPath(
-		event.splitPath,
+		payload.splitPath,
 		rules,
 	);
 	if (libraryScopedResult.isErr()) return null;
@@ -133,7 +133,7 @@ export function handlePropertyCheckboxClick(
 	// Only handle scroll nodes
 	if (locator.targetKind !== TreeNodeKind.Scroll) return null;
 
-	const newStatus = event.checked
+	const newStatus = payload.checked
 		? TreeNodeStatus.Done
 		: TreeNodeStatus.NotStarted;
 

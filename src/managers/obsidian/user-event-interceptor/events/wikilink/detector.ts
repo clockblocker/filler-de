@@ -1,5 +1,5 @@
 /**
- * WikilinkDetector - detects wikilink completions with behavior chain integration.
+ * WikilinkDetector - detects wikilink completions with handler pattern.
  *
  * Emits WikilinkPayload when user completes a wikilink (cursor right after ]]).
  * Uses registerEditorExtension which persists until plugin unload.
@@ -13,27 +13,25 @@
 import { EditorView, type ViewUpdate } from "@codemirror/view";
 import type { App, Plugin } from "obsidian";
 import type { VaultActionManager } from "../../../vault-action-manager";
-import {
-	anyApplicable,
-	executeChain,
-	getBehaviorRegistry,
-} from "../../behavior-chain";
-import type { BehaviorContext } from "../../types/behavior";
 import { PayloadKind } from "../../types/payload-base";
+import type { HandlerInvoker } from "../../user-event-interceptor";
 import { WikilinkCodec } from "./codec";
-import { executeWikilinkDefaultAction } from "./default-action";
 import type { WikilinkPayload } from "./payload";
 
 export class WikilinkDetector {
 	private extension: ReturnType<typeof EditorView.updateListener.of> | null =
 		null;
 	private listening = false;
+	private readonly invoker: HandlerInvoker<WikilinkPayload>;
 
 	constructor(
 		private readonly plugin: Plugin,
 		private readonly app: App,
 		private readonly vaultActionManager: VaultActionManager,
-	) {}
+		createInvoker: (kind: PayloadKind) => HandlerInvoker<WikilinkPayload>,
+	) {
+		this.invoker = createInvoker(PayloadKind.WikilinkCompleted);
+	}
 
 	startListening(): void {
 		this.listening = true;
@@ -92,27 +90,20 @@ export class WikilinkDetector {
 			view: vu.view,
 		});
 
-		// Get behaviors for wikilink events
-		const registry = getBehaviorRegistry();
-		const behaviors = registry.getBehaviors<WikilinkPayload>(
-			PayloadKind.WikilinkCompleted,
-		);
+		// Check if handler applies
+		const { applies, invoke } = this.invoker(payload);
 
-		// If no behaviors, nothing to do
-		if (behaviors.length === 0) return;
+		if (!applies) {
+			// No handler - nothing to do
+			return;
+		}
 
-		// Check if any behavior is applicable
-		if (!anyApplicable(payload, behaviors)) return;
-
-		// Build context
-		const baseCtx: Omit<BehaviorContext<WikilinkPayload>, "data"> = {
-			app: this.app,
-			vaultActionManager: this.vaultActionManager,
-		};
-
-		// Execute chain and default action
-		void executeChain(payload, behaviors, baseCtx).then((result) =>
-			executeWikilinkDefaultAction(result),
-		);
+		// Invoke handler and apply result
+		void invoke().then((result) => {
+			if (result.outcome === "modified" && result.data) {
+				// Insert alias if set by handler
+				WikilinkCodec.insertAlias(result.data);
+			}
+		});
 	}
 }

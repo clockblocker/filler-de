@@ -1,5 +1,5 @@
 /**
- * SelectAllDetector - detects Ctrl/Cmd+A with behavior chain integration.
+ * SelectAllDetector - detects Ctrl/Cmd+A with handler pattern.
  *
  * Emits SelectAllPayload when user presses select-all shortcut in source mode.
  */
@@ -9,24 +9,22 @@ import { type App, MarkdownView, Platform } from "obsidian";
 import { DomSelectors } from "../../../../../utils/dom-selectors";
 import type { VaultActionManager } from "../../../vault-action-manager";
 import type { SplitPathToMdFile } from "../../../vault-action-manager/types/split-path";
-import {
-	anyApplicable,
-	executeChain,
-	getBehaviorRegistry,
-} from "../../behavior-chain";
-import type { BehaviorContext } from "../../types/behavior";
 import { PayloadKind } from "../../types/payload-base";
+import type { HandlerInvoker } from "../../user-event-interceptor";
 import { SelectAllCodec } from "./codec";
-import { executeSelectAllDefaultAction } from "./default-action";
 import type { SelectAllPayload } from "./payload";
 
 export class SelectAllDetector {
 	private handler: ((evt: KeyboardEvent) => void) | null = null;
+	private readonly invoker: HandlerInvoker<SelectAllPayload>;
 
 	constructor(
 		private readonly app: App,
 		private readonly vaultActionManager: VaultActionManager,
-	) {}
+		createInvoker: (kind: PayloadKind) => HandlerInvoker<SelectAllPayload>,
+	) {
+		this.invoker = createInvoker(PayloadKind.SelectAll);
+	}
 
 	startListening(): void {
 		if (this.handler) return;
@@ -89,32 +87,26 @@ export class SelectAllDetector {
 			view: cm,
 		});
 
-		// Get behaviors for select-all events
-		const registry = getBehaviorRegistry();
-		const behaviors = registry.getBehaviors<SelectAllPayload>(
-			PayloadKind.SelectAll,
-		);
+		// Check if handler applies
+		const { applies, invoke } = this.invoker(payload);
 
-		// If no behaviors, let native behavior proceed
-		if (behaviors.length === 0) return;
+		if (!applies) {
+			// No handler applies - let native behavior proceed
+			return;
+		}
 
-		// Check if any behavior is applicable
-		if (!anyApplicable(payload, behaviors)) return;
-
-		// Behaviors apply - preventDefault and run chain
+		// Handler applies - preventDefault and invoke
 		evt.preventDefault();
 		evt.stopPropagation();
 
-		// Build context
-		const baseCtx: Omit<BehaviorContext<SelectAllPayload>, "data"> = {
-			app: this.app,
-			vaultActionManager: this.vaultActionManager,
-		};
-
-		// Execute chain and default action
-		void executeChain(payload, behaviors, baseCtx).then((result) =>
-			executeSelectAllDefaultAction(result),
-		);
+		void invoke().then((result) => {
+			if (result.outcome === "modified" && result.data) {
+				// Apply custom selection from modified payload
+				SelectAllCodec.applySelection(result.data);
+			}
+			// For "handled" or "passthrough", nothing more to do
+			// (passthrough after preventDefault means no selection change)
+		});
 	}
 
 	private getCurrentFilePath(): SplitPathToMdFile | undefined {

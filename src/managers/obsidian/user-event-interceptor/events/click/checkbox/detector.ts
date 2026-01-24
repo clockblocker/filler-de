@@ -11,26 +11,24 @@ import { type App, MarkdownView } from "obsidian";
 import { DomSelectors } from "../../../../../../utils/dom-selectors";
 import type { VaultActionManager } from "../../../../vault-action-manager";
 import type { SplitPathToMdFile } from "../../../../vault-action-manager/types/split-path";
-import {
-	anyApplicable,
-	executeChain,
-	getBehaviorRegistry,
-} from "../../../behavior-chain";
-import type { BehaviorContext } from "../../../types/behavior";
 import { PayloadKind } from "../../../types/payload-base";
+import type { HandlerInvoker } from "../../../user-event-interceptor";
 import type { GenericClickDetector } from "../generic-click-detector";
 import { CheckboxCodec } from "./codec";
-import { executeCheckboxDefaultAction } from "./default-action";
 import type { CheckboxPayload } from "./payload";
 
 export class CheckboxClickedDetector {
 	private unsubscribe: (() => void) | null = null;
+	private readonly invoker: HandlerInvoker<CheckboxPayload>;
 
 	constructor(
 		private readonly genericClick: GenericClickDetector,
 		private readonly app: App,
 		private readonly vaultActionManager: VaultActionManager,
-	) {}
+		createInvoker: (kind: PayloadKind) => HandlerInvoker<CheckboxPayload>,
+	) {
+		this.invoker = createInvoker(PayloadKind.CheckboxClicked);
+	}
 
 	startListening(): void {
 		if (this.unsubscribe) return;
@@ -73,26 +71,16 @@ export class CheckboxClickedDetector {
 			splitPath: splitPath as SplitPathToMdFile,
 		});
 
-		// Get behaviors for checkbox events
-		const registry = getBehaviorRegistry();
-		const behaviors = registry.getBehaviors<CheckboxPayload>(
-			PayloadKind.CheckboxClicked,
-		);
+		// Check if handler applies
+		const { applies, invoke } = this.invoker(payload);
 
-		// If no behaviors, nothing to do (Obsidian handles checkbox)
-		if (behaviors.length === 0) return;
+		if (!applies) {
+			// No handler - let Obsidian handle checkbox toggle
+			return;
+		}
 
-		// Check if any behavior is applicable
-		if (!anyApplicable(payload, behaviors)) return;
-
-		// Build context and execute chain
-		const baseCtx: Omit<BehaviorContext<CheckboxPayload>, "data"> = {
-			app: this.app,
-			vaultActionManager: this.vaultActionManager,
-		};
-
-		const result = await executeChain(payload, behaviors, baseCtx);
-		await executeCheckboxDefaultAction(result);
+		// Invoke handler (checkbox toggle handled by Obsidian)
+		await invoke();
 	}
 
 	private isTaskCheckbox(element: HTMLElement): element is HTMLInputElement {

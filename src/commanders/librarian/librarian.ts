@@ -1,5 +1,14 @@
 import { getParsedUserSettings } from "../../global-state/global-state";
-import type { UserEventInterceptor } from "../../managers/obsidian/user-event-interceptor";
+import type {
+	CheckboxFrontmatterPayload,
+	CheckboxPayload,
+	ClipboardPayload,
+	EventHandler,
+	SelectAllPayload,
+	UserEventInterceptor,
+	WikilinkPayload,
+} from "../../managers/obsidian/user-event-interceptor";
+import { PayloadKind } from "../../managers/obsidian/user-event-interceptor/types/payload-base";
 import type {
 	BulkVaultEvent,
 	VaultAction,
@@ -42,7 +51,13 @@ import {
 	getPrevPage as getPrevPageImpl,
 } from "./page-navigation";
 import { triggerSectionHealing as triggerSectionHealingImpl } from "./section-healing";
-import { type UserEvent, UserEventRouter } from "./user-event-router";
+import {
+	handleCheckboxClick,
+	handlePropertyCheckboxClick,
+} from "./user-event-router/handlers/checkbox-handler";
+import { handleClipboardCopy } from "./user-event-router/handlers/clipboard-handler";
+import { calculateSmartRange } from "./user-event-router/handlers/select-all-handler";
+import { handleWikilinkCompleted } from "./user-event-router/handlers/wikilink-handler";
 import { VaultActionQueue } from "./vault-action-queue";
 
 // ─── Queue Item ───
@@ -57,9 +72,8 @@ type LibrarianQueueItem = {
 export class Librarian {
 	private healer: Healer | null = null;
 	private eventTeardown: (() => void) | null = null;
-	private userEventTeardown: (() => void) | null = null;
+	private handlerTeardowns: (() => void)[] = [];
 	private actionQueue: VaultActionQueue<LibrarianQueueItem>;
-	private router: UserEventRouter | null = null;
 	private codecs: Codecs;
 	private rules: CodecRules;
 
@@ -174,7 +188,7 @@ export class Librarian {
 			this.subscribeToVaultEvents();
 
 			// Subscribe to user events (clicks, clipboard, select-all, wikilinks)
-			this.subscribeToUserEvents();
+			this.registerUserEventHandlers();
 
 			// Process codex impacts: merge, compute deletions and recreations
 			const { deletionHealingActions, codexRecreations } =
@@ -224,30 +238,140 @@ export class Librarian {
 	}
 
 	/**
-	 * Subscribe to user events (clicks, clipboard, select-all, wikilinks).
+	 * Register handlers for user events (clicks, clipboard, select-all, wikilinks).
 	 */
-	private subscribeToUserEvents(): void {
+	private registerUserEventHandlers(): void {
 		if (!this.userEventInterceptor) return;
 
-		// Create router with enqueue callback
-		this.router = new UserEventRouter({
-			codecs: this.codecs,
-			enqueue: (actions: TreeAction[]) => {
-				const p = this.actionQueue.enqueue({
-					actions,
-					bulkEvent: null,
-				});
-				this.pendingClicks.add(p);
-				p.finally(() => this.pendingClicks.delete(p));
-			},
-			rules: this.rules,
-		});
-
-		this.userEventTeardown = this.userEventInterceptor.subscribe(
-			(event: UserEvent) => {
-				this.router?.handle(event);
-			},
+		// Clipboard handler
+		this.handlerTeardowns.push(
+			this.userEventInterceptor.setHandler(
+				PayloadKind.ClipboardCopy,
+				this.createClipboardHandler(),
+			),
 		);
+
+		// Select-all handler
+		this.handlerTeardowns.push(
+			this.userEventInterceptor.setHandler(
+				PayloadKind.SelectAll,
+				this.createSelectAllHandler(),
+			),
+		);
+
+		// Checkbox handler
+		this.handlerTeardowns.push(
+			this.userEventInterceptor.setHandler(
+				PayloadKind.CheckboxClicked,
+				this.createCheckboxHandler(),
+			),
+		);
+
+		// Checkbox frontmatter handler
+		this.handlerTeardowns.push(
+			this.userEventInterceptor.setHandler(
+				PayloadKind.CheckboxInFrontmatterClicked,
+				this.createCheckboxFrontmatterHandler(),
+			),
+		);
+
+		// Wikilink handler
+		this.handlerTeardowns.push(
+			this.userEventInterceptor.setHandler(
+				PayloadKind.WikilinkCompleted,
+				this.createWikilinkHandler(),
+			),
+		);
+	}
+
+	// ─── Event Handlers ───
+
+	private createClipboardHandler(): EventHandler<ClipboardPayload> {
+		return {
+			doesApply: () => true, // Always try to handle clipboard events
+			handle: (payload) => {
+				const result = handleClipboardCopy(payload);
+				if (result === null) {
+					return { outcome: "passthrough" };
+				}
+				return { outcome: "modified", data: result };
+			},
+		};
+	}
+
+	private createSelectAllHandler(): EventHandler<SelectAllPayload> {
+		return {
+			doesApply: () => true, // Always try to handle select-all events
+			handle: (payload) => {
+				const { from, to } = calculateSmartRange(payload.content);
+
+				// If the range covers everything or nothing, passthrough
+				if ((from === 0 && to === payload.content.length) || from >= to) {
+					return { outcome: "passthrough" };
+				}
+
+				// Return modified payload with custom selection
+				return {
+					outcome: "modified",
+					data: { ...payload, customSelection: { from, to } },
+				};
+			},
+		};
+	}
+
+	private createCheckboxHandler(): EventHandler<CheckboxPayload> {
+		return {
+			doesApply: () => true, // Let the handler decide based on file type
+			handle: (payload) => {
+				const result = handleCheckboxClick(payload, this.codecs);
+				if (result) {
+					// Enqueue the tree action
+					const p = this.actionQueue.enqueue({
+						actions: [result.action],
+						bulkEvent: null,
+					});
+					this.pendingClicks.add(p);
+					p.finally(() => this.pendingClicks.delete(p));
+				}
+				return { outcome: "handled" };
+			},
+		};
+	}
+
+	private createCheckboxFrontmatterHandler(): EventHandler<CheckboxFrontmatterPayload> {
+		return {
+			doesApply: () => true, // Let the handler decide based on property name
+			handle: (payload) => {
+				const result = handlePropertyCheckboxClick(
+					payload,
+					this.codecs,
+					this.rules,
+				);
+				if (result) {
+					// Enqueue the tree action
+					const p = this.actionQueue.enqueue({
+						actions: [result.action],
+						bulkEvent: null,
+					});
+					this.pendingClicks.add(p);
+					p.finally(() => this.pendingClicks.delete(p));
+				}
+				return { outcome: "handled" };
+			},
+		};
+	}
+
+	private createWikilinkHandler(): EventHandler<WikilinkPayload> {
+		return {
+			doesApply: () => true, // Let the handler decide based on link content
+			handle: (payload) => {
+				const result = handleWikilinkCompleted(payload, this.codecs);
+				if (result === null) {
+					return { outcome: "passthrough" };
+				}
+				return { outcome: "modified", data: result };
+			},
+		};
 	}
 
 	/**
@@ -356,10 +480,11 @@ export class Librarian {
 			this.eventTeardown();
 			this.eventTeardown = null;
 		}
-		if (this.userEventTeardown) {
-			this.userEventTeardown();
-			this.userEventTeardown = null;
+		// Unregister all user event handlers
+		for (const teardown of this.handlerTeardowns) {
+			teardown();
 		}
+		this.handlerTeardowns = [];
 		// Wait for pending clicks to complete
 		await Promise.all(this.pendingClicks);
 	}

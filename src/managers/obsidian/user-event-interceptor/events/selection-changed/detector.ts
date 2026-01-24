@@ -13,13 +13,8 @@ import { type App, MarkdownView } from "obsidian";
 import { DomSelectors } from "../../../../../utils/dom-selectors";
 import type { VaultActionManager } from "../../../vault-action-manager";
 import type { SplitPathToMdFile } from "../../../vault-action-manager/types/split-path";
-import {
-	anyApplicable,
-	executeChain,
-	getBehaviorRegistry,
-} from "../../behavior-chain";
-import type { BehaviorContext } from "../../types/behavior";
 import { PayloadKind } from "../../types/payload-base";
+import type { HandlerInvoker } from "../../user-event-interceptor";
 import { SelectionChangedCodec } from "./codec";
 import type { SelectionChangedPayload } from "./payload";
 
@@ -27,11 +22,15 @@ export class SelectionChangedDetector {
 	private mouseupHandler: ((evt: MouseEvent) => void) | null = null;
 	private keyupHandler: ((evt: KeyboardEvent) => void) | null = null;
 	private dragendHandler: (() => void) | null = null;
+	private readonly invoker: HandlerInvoker<SelectionChangedPayload>;
 
 	constructor(
 		private readonly app: App,
 		private readonly vaultActionManager: VaultActionManager,
-	) {}
+		createInvoker: (kind: PayloadKind) => HandlerInvoker<SelectionChangedPayload>,
+	) {
+		this.invoker = createInvoker(PayloadKind.SelectionChanged);
+	}
 
 	startListening(): void {
 		if (this.mouseupHandler) return;
@@ -113,29 +112,16 @@ export class SelectionChangedDetector {
 			splitPath,
 		});
 
-		// Get behaviors for selection changed events
-		const registry = getBehaviorRegistry();
-		const behaviors = registry.getBehaviors<SelectionChangedPayload>(
-			PayloadKind.SelectionChanged,
-		);
+		// Check if handler applies
+		const { applies, invoke } = this.invoker(payload);
 
-		// If no behaviors, nothing to do
-		if (behaviors.length === 0) return;
+		if (!applies) {
+			// No handler - nothing to do
+			return;
+		}
 
-		// Check if any behavior is applicable
-		if (!anyApplicable(payload, behaviors)) return;
-
-		// Build context and execute chain
-		const baseCtx: Omit<
-			BehaviorContext<SelectionChangedPayload>,
-			"data"
-		> = {
-			app: this.app,
-			vaultActionManager: this.vaultActionManager,
-		};
-
-		// Execute chain (no default action for selection changed)
-		void executeChain(payload, behaviors, baseCtx);
+		// Invoke handler
+		void invoke();
 	}
 
 	private getCurrentFilePath(): SplitPathToMdFile | undefined {

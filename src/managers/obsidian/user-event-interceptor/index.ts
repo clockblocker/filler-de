@@ -1,59 +1,42 @@
 /**
- * UserEventInterceptor module - unified user event handling with behavior chains.
+ * UserEventInterceptor module - unified user event handling with handler pattern.
  *
  * Architecture:
  * - Detectors capture raw DOM events
  * - Codecs encode events into structural payloads
- * - Behavior chain transforms payloads
+ * - Single handler per event type transforms/handles payload
  * - Default actions apply final transformations
  *
  * Usage:
- * 1. Get the behavior registry from UserEventInterceptor
- * 2. Register behaviors for specific payload kinds
- * 3. Behaviors transform payloads in priority order
+ * 1. Get UserEventInterceptor instance
+ * 2. Register handlers for specific payload kinds with setHandler()
+ * 3. Handlers receive payloads and return HandleResult
  */
 
-// Main interceptor
-export { UserEventInterceptor } from "./user-event-interceptor";
-
-// Behavior chain
-export {
-	anyApplicable,
-	BehaviorRegistry,
-	executeChain,
-	getBehaviorRegistry,
-	resetBehaviorRegistry,
-} from "./behavior-chain";
-
-// Types
-export type { BehaviorContext, BehaviorRegistration } from "./types/behavior";
-export { defineBehavior } from "./types/behavior";
-export type { AnyPayload, PayloadKind, PayloadWithPath } from "./types/payload-base";
-export { PayloadKind as PayloadKindEnum } from "./types/payload-base";
-export type { ChainResult, TransformKind, TransformResult } from "./types/transform-kind";
-export { TransformKind as TransformKindEnum } from "./types/transform-kind";
-
-// Payload types
+export type { ActionElementPayload } from "./events/click/action-element/payload";
+// Event payloads
 export type { CheckboxPayload } from "./events/click/checkbox/payload";
 export type { CheckboxFrontmatterPayload } from "./events/click/checkbox-frontmatter/payload";
-export type { ActionElementPayload } from "./events/click/action-element/payload";
 export type { ClipboardPayload } from "./events/clipboard/payload";
 export type { SelectAllPayload } from "./events/select-all/payload";
 export type { SelectionChangedPayload } from "./events/selection-changed/payload";
 export type { WikilinkPayload } from "./events/wikilink/payload";
-
-// Legacy bridge
-export { createLegacyBridge, LegacyBridge } from "./legacy-bridge";
-
-// Legacy exports for backward compatibility (deprecated)
+// Handler types
 export type {
-	CheckboxClickedEvent,
-	ClipboardCopyEvent,
-	PropertyCheckboxClickedEvent,
-	SelectAllEvent,
-	Teardown,
-	UserEvent,
-	UserEventHandler,
-	WikilinkCompletedEvent,
-} from "./types/user-event";
-export { InterceptableUserEventKind } from "./types/user-event";
+	EventHandler,
+	HandleResult,
+	HandlerContext,
+	HandlerTeardown,
+} from "./types/handler";
+// Payload types
+export type {
+	AnyPayload,
+	PayloadKind,
+	PayloadWithPath,
+} from "./types/payload-base";
+export { PayloadKind as PayloadKindEnum } from "./types/payload-base";
+// Main interceptor
+export {
+	type HandlerInvoker,
+	UserEventInterceptor,
+} from "./user-event-interceptor";

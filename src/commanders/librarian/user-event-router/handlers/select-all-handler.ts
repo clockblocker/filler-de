@@ -1,27 +1,9 @@
-import type { SelectAllEvent } from "../../../../managers/obsidian/user-event-interceptor";
 import { META_SECTION_PATTERN } from "../../../../managers/pure/note-metadata-manager";
 import { isGoBackLine } from "../../go-back-link";
 import {
 	splitFirstLine,
 	splitFrontmatter,
 } from "../../healer/library-tree/codex/transforms/transform-utils";
-
-/**
- * Handle select-all: use smart range excluding frontmatter, go-back links, metadata.
- */
-export function handleSelectAll(event: SelectAllEvent): void {
-	const { content, preventDefault, setSelection } = event;
-
-	const { from, to } = calculateSmartRange(content);
-
-	// If the range covers everything or nothing, let default behavior handle it
-	if ((from === 0 && to === content.length) || from >= to) {
-		return;
-	}
-
-	preventDefault();
-	setSelection(from, to);
-}
 
 /**
  * Calculate smart selection range that excludes:

@@ -6,33 +6,32 @@
  * - Edge zone divs
  * - Overflow menu items
  *
- * Note: Action elements typically don't use behavior chains since they
+ * Note: Action elements typically don't use handlers since they
  * are already handled by the action executor system. This detector
  * primarily exists for compatibility and future extension.
  */
 
+import type { App } from "obsidian";
 import { DomSelectors } from "../../../../../../utils/dom-selectors";
 import type { VaultActionManager } from "../../../../vault-action-manager";
-import {
-	anyApplicable,
-	executeChain,
-	getBehaviorRegistry,
-} from "../../../behavior-chain";
-import type { BehaviorContext } from "../../../types/behavior";
 import { PayloadKind } from "../../../types/payload-base";
+import type { HandlerInvoker } from "../../../user-event-interceptor";
 import type { GenericClickDetector } from "../generic-click-detector";
 import { ActionElementCodec } from "./codec";
 import type { ActionElementPayload } from "./payload";
-import type { App } from "obsidian";
 
 export class ActionElementDetector {
 	private unsubscribe: (() => void) | null = null;
+	private readonly invoker: HandlerInvoker<ActionElementPayload>;
 
 	constructor(
 		private readonly genericClick: GenericClickDetector,
 		private readonly app: App,
 		private readonly vaultActionManager: VaultActionManager,
-	) {}
+		createInvoker: (kind: PayloadKind) => HandlerInvoker<ActionElementPayload>,
+	) {
+		this.invoker = createInvoker(PayloadKind.ActionElementClicked);
+	}
 
 	startListening(): void {
 		if (this.unsubscribe) return;
@@ -69,25 +68,15 @@ export class ActionElementDetector {
 			button,
 		});
 
-		// Get behaviors for action element events
-		const registry = getBehaviorRegistry();
-		const behaviors = registry.getBehaviors<ActionElementPayload>(
-			PayloadKind.ActionElementClicked,
-		);
+		// Check if handler applies
+		const { applies, invoke } = this.invoker(payload);
 
-		// If no behaviors, nothing to do (action executor handles actions)
-		if (behaviors.length === 0) return;
+		if (!applies) {
+			// No handler - action executor handles actions
+			return;
+		}
 
-		// Check if any behavior is applicable
-		if (!anyApplicable(payload, behaviors)) return;
-
-		// Build context and execute chain
-		const baseCtx: Omit<BehaviorContext<ActionElementPayload>, "data"> = {
-			app: this.app,
-			vaultActionManager: this.vaultActionManager,
-		};
-
-		// Execute chain (no default action for action elements)
-		void executeChain(payload, behaviors, baseCtx);
+		// Invoke handler
+		void invoke();
 	}
 }

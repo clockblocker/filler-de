@@ -1,26 +1,20 @@
 /**
- * ClipboardDetector - detects copy/cut events with behavior chain integration.
+ * ClipboardDetector - detects copy/cut events with handler pattern.
  *
  * Flow:
  * 1. Capture clipboard event
  * 2. Encode to ClipboardPayload via codec
- * 3. Check if any behavior is applicable (sync)
- * 4. If applicable: preventDefault, run behavior chain, execute default action
- * 5. If not applicable: let native behavior proceed
+ * 3. Check if handler applies (sync)
+ * 4. If applies: preventDefault, invoke handler, execute default action
+ * 5. If not: let native behavior proceed
  */
 
 import { type App, MarkdownView } from "obsidian";
 import type { VaultActionManager } from "../../../vault-action-manager";
 import type { SplitPathToMdFile } from "../../../vault-action-manager/types/split-path";
-import {
-	anyApplicable,
-	executeChain,
-	getBehaviorRegistry,
-} from "../../behavior-chain";
-import type { BehaviorContext } from "../../types/behavior";
 import { PayloadKind } from "../../types/payload-base";
+import type { HandlerInvoker } from "../../user-event-interceptor";
 import { ClipboardCodec } from "./codec";
-import { executeClipboardDefaultAction } from "./default-action";
 import type { ClipboardPayload } from "./payload";
 
 /** Pattern to match block reference at end of text */
@@ -28,11 +22,15 @@ const BLOCK_REF_PATTERN = /\s\^([a-zA-Z0-9-]+)\s*$/;
 
 export class ClipboardDetector {
 	private handler: ((evt: ClipboardEvent) => void) | null = null;
+	private readonly invoker: HandlerInvoker<ClipboardPayload>;
 
 	constructor(
 		private readonly app: App,
 		private readonly vaultActionManager: VaultActionManager,
-	) {}
+		createInvoker: (kind: PayloadKind) => HandlerInvoker<ClipboardPayload>,
+	) {
+		this.invoker = createInvoker(PayloadKind.ClipboardCopy);
+	}
 
 	startListening(): void {
 		if (this.handler) return;
@@ -70,31 +68,29 @@ export class ClipboardDetector {
 		// Encode to payload
 		const payload = ClipboardCodec.encode(evt, selection, splitPath);
 
-		// Get behaviors for clipboard events
-		const registry = getBehaviorRegistry();
-		const behaviors = registry.getBehaviors<ClipboardPayload>(
-			PayloadKind.ClipboardCopy,
-		);
+		// Check if handler applies
+		const { applies, invoke } = this.invoker(payload);
 
-		// Check if any behavior is applicable (sync check)
-		if (!anyApplicable(payload, behaviors)) {
-			// No behaviors apply - let native behavior proceed
+		if (!applies) {
+			// No handler applies - let native behavior proceed
 			return;
 		}
 
-		// Behaviors apply - preventDefault and run chain
+		// Handler applies - preventDefault and invoke
 		evt.preventDefault();
 
-		// Build context
-		const baseCtx: Omit<BehaviorContext<ClipboardPayload>, "data"> = {
-			app: this.app,
-			vaultActionManager: this.vaultActionManager,
-		};
-
-		// Execute chain and default action
-		void executeChain(payload, behaviors, baseCtx).then((result) =>
-			executeClipboardDefaultAction(result, evt),
-		);
+		void invoke().then((result) => {
+			if (result.outcome === "passthrough") {
+				// Handler decided to passthrough - but we already prevented default
+				// Set clipboard to original text
+				evt.clipboardData?.setData("text/plain", payload.originalText);
+			} else if (result.outcome === "modified" && result.data) {
+				// Handler modified the payload - use modified text
+				ClipboardCodec.decode(result.data, evt.clipboardData!);
+			} else if (result.outcome === "handled") {
+				// Handler consumed the event - do nothing
+			}
+		});
 	}
 
 	/**
@@ -125,7 +121,6 @@ export class ClipboardDetector {
 
 	private getCurrentFilePath(): SplitPathToMdFile | undefined {
 		// Synchronously get current file path if available
-		// This is a simplified version - behaviors can use vaultActionManager.pwd() for async
 		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 		if (!view?.file) return undefined;
 

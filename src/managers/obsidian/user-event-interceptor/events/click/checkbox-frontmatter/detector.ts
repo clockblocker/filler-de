@@ -11,26 +11,24 @@ import type { App } from "obsidian";
 import { DomSelectors } from "../../../../../../utils/dom-selectors";
 import type { VaultActionManager } from "../../../../vault-action-manager";
 import type { SplitPathToMdFile } from "../../../../vault-action-manager/types/split-path";
-import {
-	anyApplicable,
-	executeChain,
-	getBehaviorRegistry,
-} from "../../../behavior-chain";
-import type { BehaviorContext } from "../../../types/behavior";
 import { PayloadKind } from "../../../types/payload-base";
+import type { HandlerInvoker } from "../../../user-event-interceptor";
 import type { GenericClickDetector } from "../generic-click-detector";
 import { CheckboxFrontmatterCodec } from "./codec";
-import { executeCheckboxFrontmatterDefaultAction } from "./default-action";
 import type { CheckboxFrontmatterPayload } from "./payload";
 
 export class CheckboxFrontmatterDetector {
 	private unsubscribe: (() => void) | null = null;
+	private readonly invoker: HandlerInvoker<CheckboxFrontmatterPayload>;
 
 	constructor(
 		private readonly genericClick: GenericClickDetector,
 		private readonly app: App,
 		private readonly vaultActionManager: VaultActionManager,
-	) {}
+		createInvoker: (kind: PayloadKind) => HandlerInvoker<CheckboxFrontmatterPayload>,
+	) {
+		this.invoker = createInvoker(PayloadKind.CheckboxInFrontmatterClicked);
+	}
 
 	startListening(): void {
 		if (this.unsubscribe) return;
@@ -68,29 +66,16 @@ export class CheckboxFrontmatterDetector {
 			splitPath: splitPath as SplitPathToMdFile,
 		});
 
-		// Get behaviors for checkbox frontmatter events
-		const registry = getBehaviorRegistry();
-		const behaviors = registry.getBehaviors<CheckboxFrontmatterPayload>(
-			PayloadKind.CheckboxInFrontmatterClicked,
-		);
+		// Check if handler applies
+		const { applies, invoke } = this.invoker(payload);
 
-		// If no behaviors, nothing to do (Obsidian handles property)
-		if (behaviors.length === 0) return;
+		if (!applies) {
+			// No handler - let Obsidian handle property toggle
+			return;
+		}
 
-		// Check if any behavior is applicable
-		if (!anyApplicable(payload, behaviors)) return;
-
-		// Build context and execute chain
-		const baseCtx: Omit<
-			BehaviorContext<CheckboxFrontmatterPayload>,
-			"data"
-		> = {
-			app: this.app,
-			vaultActionManager: this.vaultActionManager,
-		};
-
-		const result = await executeChain(payload, behaviors, baseCtx);
-		await executeCheckboxFrontmatterDefaultAction(result);
+		// Invoke handler (property toggle handled by Obsidian)
+		await invoke();
 	}
 
 	private getPropertyCheckboxInfo(

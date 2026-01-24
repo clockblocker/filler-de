@@ -2,14 +2,17 @@
 
 ## Purpose
 
-Intercept DOM/editor events, transform them through a behavior chain, then execute default actions. Enables plugin features (metadata stripping, smart selection) without modifying Obsidian core.
+Intercept DOM/editor events, check if a handler applies, then execute transformations. Enables plugin features (metadata stripping, smart selection) without modifying Obsidian core.
 
 ## Flow
 
 ```
-DOM Event → Detector → Codec.encode() → Payload → Behavior Chain → Default Action
-                                            ↓
-                              [proceedWithDefault | continue | skip | replace]
+DOM Event → Detector → Codec.encode() → Payload → Handler.doesApply()?
+                                                      ↓
+                                            yes: preventDefault → Handler.handle()
+                                            no:  native behavior proceeds
+                                                      ↓
+                                            HandleResult → Codec.decode() / apply
 ```
 
 ## Key Concepts
@@ -17,17 +20,16 @@ DOM Event → Detector → Codec.encode() → Payload → Behavior Chain → Def
 | Concept | Role |
 |---------|------|
 | **Detector** | Captures raw DOM events (clicks, keyboard, clipboard) |
-| **Codec** | Encodes raw event → structured payload; decodes payload → DOM mutation |
+| **Codec** | Encodes raw event → structured payload; decodes result → DOM mutation |
 | **Payload** | Typed event data with `kind` discriminator and file context |
-| **Behavior** | Sync `isApplicable()` check + async `transform()` that returns chain instruction |
-| **Chain** | Runs behaviors by priority; stops on `skip`/`replace`, passes data on `continue` |
+| **Handler** | Sync `doesApply()` check + async `handle()` that returns result |
+| **HandleResult** | `handled` / `passthrough` / `modified` with optional data |
 
-## Transform Results
+## HandleResult Outcomes
 
-- `proceedWithDefault` — no change, next behavior
-- `continue` — pass transformed payload to next behavior
-- `skip` — stop chain, prevent default, do nothing
-- `replace` — stop chain, run custom action instead
+- `handled` — event consumed, no further action
+- `passthrough` — let native behavior happen (or do nothing if already prevented)
+- `modified` — apply transformed payload (e.g., modified clipboard text, custom selection)
 
 ## Events Handled
 
@@ -41,21 +43,51 @@ DOM Event → Detector → Codec.encode() → Payload → Behavior Chain → Def
 | SelectionChanged | mouse/keyboard | Toolbar visibility |
 | ActionElementClicked | [data-action] | Button handlers |
 
-## Registration
+## Handler Registration
+
+One handler per event type. Handler decides whether to intercept.
 
 ```typescript
-const registry = interceptor.getBehaviorRegistry();
-registry.register(PayloadKind.ClipboardCopy, {
-  id: "librarian:strip-metadata",
-  priority: 10,  // 1-50 core, 50-100 plugins
-  isApplicable: (p) => isInLibrary(p.splitPath),  // SYNC
-  transform: (ctx) => ({
-    kind: "continue",
-    data: { ...ctx.data, modifiedText: stripped }
-  })
+interceptor.setHandler(PayloadKind.ClipboardCopy, {
+  doesApply: (payload) => isInLibrary(payload.splitPath),  // SYNC
+  handle: (payload, ctx) => {
+    const stripped = stripMetadata(payload.originalText);
+    if (stripped === payload.originalText) {
+      return { outcome: "passthrough" };
+    }
+    return { outcome: "modified", data: { ...payload, modifiedText: stripped } };
+  }
 });
 ```
 
-## Legacy Support
+## Handler Interface
 
-`subscribe()` method bridges old event pattern via `LegacyBridge`. Behaviors registered at priority 100 convert new payloads to old `UserEvent` format.
+```typescript
+type EventHandler<P extends AnyPayload> = {
+  doesApply: (payload: P) => boolean;  // SYNC - checked before preventDefault
+  handle: (payload: P, ctx: HandlerContext) => HandleResult<P> | Promise<HandleResult<P>>;
+};
+
+type HandleResult<P> =
+  | { outcome: "handled" }
+  | { outcome: "passthrough" }
+  | { outcome: "modified"; data: P };
+```
+
+## Architecture
+
+```
+UserEventInterceptor
+├── setHandler(kind, handler) — register ONE handler per event kind
+├── startListening() / stopListening()
+└── Detectors (receive invoker callback)
+    ├── ClipboardDetector
+    ├── CheckboxClickedDetector
+    ├── CheckboxFrontmatterDetector
+    ├── SelectAllDetector
+    ├── SelectionChangedDetector
+    ├── WikilinkDetector
+    └── ActionElementDetector
+```
+
+Consumers (e.g., Librarian) register handlers; interceptor is pure detection layer.
