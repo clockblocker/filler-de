@@ -285,72 +285,65 @@ export class OpenedFileService {
 		editor: Editor,
 		newContent: string,
 	): void {
-		// Save cursor position + a simple anchor (line text) to find roughly same viewport
+		const oldContent = editor.getValue();
+		if (oldContent === newContent) return;
+
 		const cursor = editor.getCursor();
-		const cursorLineContent = editor.getLine(cursor.line) ?? "";
-
-		// Apply new content
-		editor.setValue(newContent);
-
+		const oldLines = oldContent.split("\n");
 		const newLines = newContent.split("\n");
-		const lineCount = newLines.length;
 
-		// Helper: clamp to valid editor position
-		const clampPos = (line: number, ch: number) => {
-			const clampedLine = Math.max(
-				0,
-				Math.min(line, Math.max(0, lineCount - 1)),
-			);
-			const lineText = editor.getLine(clampedLine) ?? "";
-			const clampedCh = Math.max(0, Math.min(ch, lineText.length));
-			return { ch: clampedCh, line: clampedLine };
+		// Find first differing line
+		let startLine = 0;
+		while (
+			startLine < oldLines.length &&
+			startLine < newLines.length &&
+			oldLines[startLine] === newLines[startLine]
+		) {
+			startLine++;
+		}
+
+		// Find last differing line (from end)
+		let oldEndLine = oldLines.length - 1;
+		let newEndLine = newLines.length - 1;
+		while (
+			oldEndLine > startLine &&
+			newEndLine > startLine &&
+			oldLines[oldEndLine] === newLines[newEndLine]
+		) {
+			oldEndLine--;
+			newEndLine--;
+		}
+
+		// Edge case: no actual diff found (shouldn't happen given early return above)
+		if (startLine > oldEndLine && startLine > newEndLine) {
+			return;
+		}
+
+		// Build replacement text from differing lines
+		const replacementLines = newLines.slice(startLine, newEndLine + 1);
+		const replacement = replacementLines.join("\n");
+
+		// Calculate positions for replaceRange
+		const fromPos = { ch: 0, line: startLine };
+		const toPos = {
+			ch: oldLines[oldEndLine]?.length ?? 0,
+			line: oldEndLine,
 		};
 
-		// 1) Try to find the same line text at/after the original cursor line
-		let targetLineIndex = -1;
-		for (let i = Math.min(cursor.line, lineCount - 1); i < lineCount; i++) {
-			if (newLines[i] === cursorLineContent) {
-				targetLineIndex = i;
-				break;
-			}
+		// Apply surgical edit - avoids full document replacement flicker
+		editor.replaceRange(replacement, fromPos, toPos);
+
+		// Adjust cursor if it was in or after the changed region
+		const lineDelta = newLines.length - oldLines.length;
+		if (cursor.line >= startLine) {
+			const newCursorLine = Math.max(
+				0,
+				Math.min(cursor.line + lineDelta, newLines.length - 1),
+			);
+			const newLineText = newLines[newCursorLine] ?? "";
+			const newCursorCh = Math.min(cursor.ch, newLineText.length);
+			editor.setCursor({ ch: newCursorCh, line: newCursorLine });
 		}
-
-		// 2) If not found, search backwards before the original cursor line
-		if (targetLineIndex === -1) {
-			for (
-				let i = Math.min(cursor.line - 1, lineCount - 1);
-				i >= 0;
-				i--
-			) {
-				if (newLines[i] === cursorLineContent) {
-					targetLineIndex = i;
-					break;
-				}
-			}
-		}
-
-		// 3) If still not found, search anywhere
-		if (targetLineIndex === -1) {
-			targetLineIndex = newLines.indexOf(cursorLineContent);
-		}
-
-		// 4) If never found, fall back to original line (clamped)
-		if (targetLineIndex === -1) {
-			targetLineIndex = Math.min(cursor.line, lineCount - 1);
-		}
-
-		// Restore cursor using the chosen target line, preserving column as much as possible
-		const pos = clampPos(targetLineIndex, cursor.ch);
-		editor.setCursor(pos);
-
-		// Scroll to the target line
-		editor.scrollIntoView(
-			{
-				from: { ch: 0, line: pos.line },
-				to: { ch: 0, line: pos.line },
-			},
-			true,
-		);
 	}
 
 	async processContent({
