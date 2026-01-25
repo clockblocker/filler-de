@@ -3,8 +3,8 @@
  * Removes metadata and navigation links from copied text.
  */
 
-import { META_SECTION_PATTERN } from "../note-metadata-manager";
 import { buildGoBackLinkPattern } from "../go-back-link-service";
+import { META_SECTION_PATTERN } from "../note-metadata-manager";
 
 /**
  * Strip metadata and go-back links from content for clipboard.

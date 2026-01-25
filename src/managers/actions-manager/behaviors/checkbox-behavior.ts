@@ -1,6 +1,9 @@
-import type { CodecRules, Codecs } from "../../../commanders/librarian/codecs";
-import type { TreeAction } from "../../../commanders/librarian/healer/library-tree/tree-action/types/tree-action";
-import { handlePropertyCheckboxClick } from "../../../commanders/librarian/user-event-router/handlers/checkbox-handler";
+/**
+ * Thin handler for frontmatter property checkbox clicks.
+ * Delegates to Librarian for all logic.
+ */
+
+import type { Librarian } from "../../../commanders/librarian/librarian";
 import {
 	type CheckboxFrontmatterPayload,
 	type EventHandler,
@@ -8,31 +11,16 @@ import {
 } from "../../obsidian/user-event-interceptor";
 
 /**
- * Function signature for enqueuing tree actions.
- */
-export type EnqueueFn = (action: TreeAction) => Promise<void>;
-
-/**
  * Create a handler for frontmatter property checkbox clicks.
- * Updates scroll status when clicking the status property checkbox.
- *
- * @param codecs - Codec instances for parsing
- * @param rules - Codec rules for path parsing
- * @param enqueue - Function to enqueue tree actions
+ * Thin routing layer - delegates to librarian methods.
  */
 export function createCheckboxFrontmatterHandler(
-	codecs: Codecs,
-	rules: CodecRules,
-	enqueue: EnqueueFn,
+	librarian: Librarian,
 ): EventHandler<CheckboxFrontmatterPayload> {
 	return {
-		doesApply: () => true, // Let the handler decide based on property name
+		doesApply: () => true,
 		handle: (payload) => {
-			const result = handlePropertyCheckboxClick(payload, codecs, rules);
-			if (result) {
-				// Enqueue the tree action (fire and forget)
-				enqueue(result.action);
-			}
+			librarian.handlePropertyCheckboxClick(payload);
 			return { outcome: HandlerOutcome.Handled };
 		},
 	};

@@ -23,7 +23,9 @@ export type UserCommandKind = z.infer<typeof UserCommandSchema>;
 export const UserCommandKind = UserCommandSchema.enum;
 export const ALL_USER_COMMAND_KINDS = UserCommandSchema.options;
 
-export const UserCommandPlacementSchema = z.enum(USER_COMMAND_PLACEMENT_LITERALS);
+export const UserCommandPlacementSchema = z.enum(
+	USER_COMMAND_PLACEMENT_LITERALS,
+);
 
 export type UserCommandPlacement = z.infer<typeof UserCommandPlacementSchema>;
 export const UserCommandPlacement = UserCommandPlacementSchema.enum;

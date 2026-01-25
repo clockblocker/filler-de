@@ -3,6 +3,7 @@
  * Re-export for temporary backwards compatibility
  */
 
+export type { GoBackLinkInfo } from "../../../stateless-services/go-back-link-service";
 export {
 	buildGoBackLink,
 	buildGoBackLinkCapturePattern,
@@ -12,4 +13,3 @@ export {
 	parseGoBackLink,
 	stripGoBackLink,
 } from "../../../stateless-services/go-back-link-service";
-export type { GoBackLinkInfo } from "../../../stateless-services/go-back-link-service";

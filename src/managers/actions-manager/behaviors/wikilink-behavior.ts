@@ -1,6 +1,9 @@
-import type { Codecs } from "../../../commanders/librarian/codecs";
-import { CODEX_CORE_NAME } from "../../../commanders/librarian/types/consts/literals";
-import { resolveAliasFromSuffix } from "../../../stateless-services/wikilink-alias-service";
+/**
+ * Thin handler for wikilink completion.
+ * Delegates to Librarian for alias resolution.
+ */
+
+import type { Librarian } from "../../../commanders/librarian/librarian";
 import {
 	type EventHandler,
 	HandlerOutcome,
@@ -9,27 +12,20 @@ import {
 
 /**
  * Create a handler for wikilink completion.
- * Adds aliases for library files (files with suffix parts).
- *
- * @param codecs - Codec instances for parsing
+ * Thin routing layer - delegates to librarian methods.
  */
 export function createWikilinkHandler(
-	codecs: Codecs,
+	librarian: Librarian,
 ): EventHandler<WikilinkPayload> {
 	return {
-		doesApply: () => true, // Let the handler decide based on link content
+		doesApply: () => true,
 		handle: (payload) => {
-			// Use the stateless service with codecs as suffix parser
-			const result = resolveAliasFromSuffix(
-				payload.linkContent,
-				codecs.suffix,
-				(name) => name.startsWith(CODEX_CORE_NAME),
-			);
-			if (result === null) {
+			const alias = librarian.resolveWikilinkAlias(payload.linkContent);
+			if (alias === null) {
 				return { outcome: HandlerOutcome.Passthrough };
 			}
 			return {
-				data: { ...payload, aliasToInsert: result.alias },
+				data: { ...payload, aliasToInsert: alias },
 				outcome: HandlerOutcome.Modified,
 			};
 		},

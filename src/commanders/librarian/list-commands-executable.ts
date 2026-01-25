@@ -1,6 +1,6 @@
 import {
-	type UserCommandKind,
 	UserCommandKind as UserCommand,
+	type UserCommandKind,
 } from "../../managers/actions-manager/types";
 import type { SplitPathToMdFile } from "../../managers/obsidian/vault-action-manager/types/split-path";
 import { parsePageIndex } from "./bookkeeper/page-codec";

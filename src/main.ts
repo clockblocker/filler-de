@@ -8,12 +8,12 @@ import {
 import { DelimiterChangeService } from "./commanders/librarian/delimiter-change-service";
 import { Librarian } from "./commanders/librarian/librarian";
 import { ActionKind } from "./deprecated-services/obsidian-services/deprecated-overlay-manager/types";
-import { createHandlers } from "./managers/actions-manager/behaviors";
 import {
 	clearState,
 	initializeState,
 	updateParsedSettings,
 } from "./global-state/global-state";
+import { createHandlers } from "./managers/actions-manager/behaviors";
 import { tagLineCopyEmbedBehavior } from "./managers/actions-manager/behaviors/tag-line-copy-embed-behavior";
 // import {
 // 	// DeprecatedOverlayManager,
@@ -228,11 +228,7 @@ export default class TextEaterPlugin extends Plugin {
 				await this.librarian.init();
 
 				// Register user event handlers after librarian is initialized
-				const handlers = createHandlers(
-					this.librarian,
-					this.librarian.getCodecs(),
-					this.librarian.getRules(),
-				);
+				const handlers = createHandlers(this.librarian);
 				for (const { kind, handler } of handlers) {
 					this.handlerTeardowns.push(
 						this.userEventInterceptor.setHandler(kind, handler),
@@ -674,11 +670,7 @@ export default class TextEaterPlugin extends Plugin {
 			await this.librarian.init();
 
 			// Register new handlers
-			const handlers = createHandlers(
-				this.librarian,
-				this.librarian.getCodecs(),
-				this.librarian.getRules(),
-			);
+			const handlers = createHandlers(this.librarian);
 			for (const { kind, handler } of handlers) {
 				this.handlerTeardowns.push(
 					this.userEventInterceptor.setHandler(kind, handler),

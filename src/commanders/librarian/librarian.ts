@@ -14,6 +14,7 @@ import {
 	type SplitPathToMdFile,
 	type SplitPathToMdFileWithReader,
 } from "../../managers/obsidian/vault-action-manager/types/split-path";
+import { resolveAliasFromSuffix } from "../../stateless-services/wikilink-alias-service";
 import { decrementPending, incrementPending } from "../../utils/idle-tracker";
 import { logger } from "../../utils/logger";
 import type { SplitHealingInfo } from "./bookkeeper/split-to-pages-action";
@@ -24,14 +25,13 @@ import {
 	makeCodecs,
 	type SplitPathToMdFileInsideLibrary,
 } from "./codecs";
-import {
-	NodeSegmentIdSeparator,
-	type ScrollNodeSegmentId,
-} from "./codecs/segment-id/types/segment-id";
+import { serializeSegmentId } from "./codecs/segment-id/internal/serialize";
+import type { SectionNodeSegmentId } from "./codecs/segment-id/types/segment-id";
 import { Healer } from "./healer/healer";
 import { HealingTransaction } from "./healer/healing-transaction";
 import type { CodexImpact } from "./healer/library-tree/codex";
 import { extractInvalidCodexesFromBulk } from "./healer/library-tree/codex";
+import { isCodexInsideLibrary as isCodexInsideLibraryHelper } from "./healer/library-tree/codex/helpers";
 import { parseCodexClickLineContent } from "./healer/library-tree/codex/parse-codex-click";
 import { Tree } from "./healer/library-tree/tree";
 import { buildTreeActions } from "./healer/library-tree/tree-action/bulk-vault-action-adapter";
@@ -56,6 +56,8 @@ import {
 	getPrevPage as getPrevPageImpl,
 } from "./page-navigation";
 import { triggerSectionHealing as triggerSectionHealingImpl } from "./section-healing";
+import { CODEX_CORE_NAME } from "./types/consts/literals";
+import type { NodeName } from "./types/schemas/node-name";
 import { handlePropertyCheckboxClick as handlePropertyCheckboxClickInternal } from "./user-event-router/handlers/checkbox-handler";
 import { VaultActionQueue } from "./vault-action-queue";
 
@@ -403,7 +405,7 @@ export class Librarian {
 		const parseResult = parseCodexClickLineContent(payload.lineContent);
 		if (parseResult.isErr()) {
 			logger.warn(
-				"[Librarian] Failed to parse codex click line:",
+				"[Librarian] Failed to parse codex click:",
 				parseResult.error,
 			);
 			return;
@@ -415,39 +417,37 @@ export class Librarian {
 			: TreeNodeStatus.NotStarted;
 
 		let action: TreeAction;
-
 		if (target.kind === "Scroll") {
-			// Build scroll segment ID from node name
-			const scrollSegmentId =
-				`${target.nodeName}${NodeSegmentIdSeparator}${TreeNodeKind.Scroll}${NodeSegmentIdSeparator}md` as ScrollNodeSegmentId;
-
-			action = {
-				actionType: "ChangeStatus",
-				newStatus,
-				targetLocator: {
-					segmentId: scrollSegmentId,
-					segmentIdChainToParent: target.parentChain,
-					targetKind: TreeNodeKind.Scroll,
-				},
-			};
-		} else {
-			// Section: propagate status to all descendants
-			const sectionChain = target.sectionChain;
-			const segmentId = sectionChain[sectionChain.length - 1];
-			const parentChain = sectionChain.slice(0, -1);
-
+			// Build scroll segment ID using serializeSegmentId
+			const segmentId = serializeSegmentId({
+				coreName: target.nodeName as NodeName,
+				extension: ".md",
+				targetKind: TreeNodeKind.Scroll,
+			});
 			action = {
 				actionType: "ChangeStatus",
 				newStatus,
 				targetLocator: {
 					segmentId,
-					segmentIdChainToParent: parentChain,
+					segmentIdChainToParent: target.parentChain,
+					targetKind: TreeNodeKind.Scroll,
+				},
+			};
+		} else {
+			// Section: last element is target, rest is parent chain
+			const sectionChain = target.sectionChain;
+			action = {
+				actionType: "ChangeStatus",
+				newStatus,
+				targetLocator: {
+					segmentId: sectionChain.at(-1) as SectionNodeSegmentId,
+					segmentIdChainToParent: sectionChain.slice(0, -1),
 					targetKind: TreeNodeKind.Section,
 				},
 			};
 		}
 
-		this.enqueueAction(action);
+		this.actionQueue.enqueue({ actions: [action], bulkEvent: null });
 	}
 
 	/**
@@ -461,31 +461,23 @@ export class Librarian {
 			this.rules,
 		);
 		if (result) {
-			this.enqueueAction(result.action);
+			this.actionQueue.enqueue({
+				actions: [result.action],
+				bulkEvent: null,
+			});
 		}
 	}
 
-	/**
-	 * Get codecs for external handler registration.
-	 */
-	getCodecs(): Codecs {
-		return this.codecs;
+	isCodexInsideLibrary(splitPath: SplitPathToMdFile): boolean {
+		return isCodexInsideLibraryHelper(splitPath, this.rules);
 	}
 
-	/**
-	 * Get rules for external handler registration.
-	 */
-	getRules(): CodecRules {
-		return this.rules;
-	}
-
-	/**
-	 * Enqueue a single tree action for processing.
-	 */
-	private enqueueAction(action: TreeAction): void {
-		this.actionQueue.enqueue({
-			actions: [action],
-			bulkEvent: null,
-		});
+	resolveWikilinkAlias(linkContent: string): string | null {
+		const result = resolveAliasFromSuffix(
+			linkContent,
+			this.codecs.suffix,
+			(name) => name.startsWith(CODEX_CORE_NAME),
+		);
+		return result?.alias ?? null;
 	}
 }

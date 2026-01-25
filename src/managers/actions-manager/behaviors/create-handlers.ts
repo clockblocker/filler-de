@@ -3,23 +3,19 @@
  * Creates handlers array that main.ts registers with UserEventInterceptor.
  *
  * Architecture:
- * - Stateless handlers (clipboard, select-all, wikilink) call services directly
- * - Librarian handlers call librarian methods for tree operations
+ * - Stateless handlers (clipboard, select-all) call services directly
+ * - All other handlers delegate to Librarian methods
  */
 
-import type { CodecRules, Codecs } from "../../../commanders/librarian/codecs";
-import { isCodexSplitPath } from "../../../commanders/librarian/healer/library-tree/codex/helpers";
-import { tryParseAsInsideLibrarySplitPath } from "../../../commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
 import type { Librarian } from "../../../commanders/librarian/librarian";
 import {
 	type AnyPayload,
-	type CheckboxFrontmatterPayload,
-	type CheckboxPayload,
 	type EventHandler,
-	HandlerOutcome,
 	PayloadKind,
 } from "../../obsidian/user-event-interceptor";
+import { createCheckboxFrontmatterHandler } from "./checkbox-behavior";
 import { createClipboardHandler } from "./clipboard-behavior";
+import { createCodexCheckboxHandler } from "./codex-checkbox-behavior";
 import { createSelectAllHandler } from "./select-all-behavior";
 import { createWikilinkHandler } from "./wikilink-behavior";
 
@@ -33,62 +29,40 @@ export type HandlerDef = {
 
 /**
  * Create all handlers for user event registration.
+ * All librarian-dependent handlers delegate to librarian methods.
  *
  * @param librarian - Librarian instance for tree operations
- * @param codecs - Codec instances for parsing
- * @param rules - Codec rules for path parsing
  */
-export function createHandlers(
-	librarian: Librarian,
-	codecs: Codecs,
-	rules: CodecRules,
-): HandlerDef[] {
+export function createHandlers(librarian: Librarian): HandlerDef[] {
 	return [
 		// Stateless handlers (call services directly)
 		{
-			kind: PayloadKind.ClipboardCopy,
 			handler: createClipboardHandler() as EventHandler<AnyPayload>,
+			kind: PayloadKind.ClipboardCopy,
 		},
 		{
-			kind: PayloadKind.SelectAll,
 			handler: createSelectAllHandler() as EventHandler<AnyPayload>,
-		},
-		{
-			kind: PayloadKind.WikilinkCompleted,
-			handler: createWikilinkHandler(codecs) as EventHandler<AnyPayload>,
+			kind: PayloadKind.SelectAll,
 		},
 
-		// Librarian handlers (call librarian methods)
+		// Librarian handlers (thin routing to librarian methods)
 		{
-			kind: PayloadKind.CheckboxInFrontmatterClicked,
-			handler: {
-				doesApply: () => true, // Let librarian method decide based on property name
-				handle: (payload) => {
-					librarian.handlePropertyCheckboxClick(
-						payload as CheckboxFrontmatterPayload,
-					);
-					return { outcome: HandlerOutcome.Handled };
-				},
-			} as EventHandler<AnyPayload>,
+			handler: createWikilinkHandler(
+				librarian,
+			) as EventHandler<AnyPayload>,
+			kind: PayloadKind.WikilinkCompleted,
 		},
 		{
+			handler: createCheckboxFrontmatterHandler(
+				librarian,
+			) as EventHandler<AnyPayload>,
+			kind: PayloadKind.CheckboxInFrontmatterClicked,
+		},
+		{
+			handler: createCodexCheckboxHandler(
+				librarian,
+			) as EventHandler<AnyPayload>,
 			kind: PayloadKind.CheckboxClicked,
-			handler: {
-				doesApply: (payload) => {
-					const p = payload as CheckboxPayload;
-					// Only handle codex files inside library
-					if (!isCodexSplitPath(p.splitPath)) return false;
-					const libraryScopedResult = tryParseAsInsideLibrarySplitPath(
-						p.splitPath,
-						rules,
-					);
-					return libraryScopedResult.isOk();
-				},
-				handle: (payload) => {
-					librarian.handleCodexCheckboxClick(payload as CheckboxPayload);
-					return { outcome: HandlerOutcome.Handled };
-				},
-			} as EventHandler<AnyPayload>,
 		},
 	];
 }

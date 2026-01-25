@@ -15,8 +15,8 @@ import {
 	generateCommand,
 } from "./commands/generate-command";
 import {
-	type NavigatePagePayload,
 	makeNavigatePageCommand,
+	type NavigatePagePayload,
 } from "./commands/navigate-pages-command";
 import { splitIntoPagesCommand } from "./commands/split-into-pages-command";
 import {

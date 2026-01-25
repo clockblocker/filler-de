@@ -1,3 +1,6 @@
+import type { SplitPathToMdFile } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import type { CodecRules } from "../../../codecs";
+import { tryParseAsInsideLibrarySplitPath } from "../tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
 import { CODEX_CORE_NAME } from "./literals";
 
 /**
@@ -7,4 +10,19 @@ import { CODEX_CORE_NAME } from "./literals";
  */
 export function isCodexSplitPath(splitPath: { basename: string }): boolean {
 	return splitPath.basename.startsWith(CODEX_CORE_NAME);
+}
+
+/**
+ * Check if a split path represents a codex file inside the library.
+ */
+export function isCodexInsideLibrary(
+	splitPath: SplitPathToMdFile,
+	rules: CodecRules,
+): boolean {
+	if (!isCodexSplitPath(splitPath)) return false;
+	const libraryScopedResult = tryParseAsInsideLibrarySplitPath(
+		splitPath,
+		rules,
+	);
+	return libraryScopedResult.isOk();
 }

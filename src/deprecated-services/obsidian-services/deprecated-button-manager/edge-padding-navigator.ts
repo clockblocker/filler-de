@@ -36,9 +36,11 @@ export class EdgePaddingNavigator {
 	 */
 	public setActions(actions: RenderedCommandConfig[]): void {
 		this.prevAction =
-			actions.find((a) => a.kind === UserCommandKind.PreviousPage) ?? null;
+			actions.find((a) => a.kind === UserCommandKind.PreviousPage) ??
+			null;
 		this.nextAction =
-			actions.find((a) => a.kind === UserCommandKind.NavigatePage) ?? null;
+			actions.find((a) => a.kind === UserCommandKind.NavigatePage) ??
+			null;
 		this.updateZoneContent();
 	}
 

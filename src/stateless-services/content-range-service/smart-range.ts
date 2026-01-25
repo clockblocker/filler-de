@@ -3,8 +3,8 @@
  * Calculates selection range excluding metadata and navigation links.
  */
 
-import { META_SECTION_PATTERN } from "../note-metadata-manager";
 import { isGoBackLine } from "../go-back-link-service";
+import { META_SECTION_PATTERN } from "../note-metadata-manager";
 import { splitFirstLine, splitFrontmatter } from "./text-utils";
 
 /**
