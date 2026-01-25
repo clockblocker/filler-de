@@ -1,14 +1,12 @@
 import { getParsedUserSettings } from "../../global-state/global-state";
 import type { UserCommandKind } from "../../managers/actions-manager/types";
-import type {
-	CheckboxFrontmatterPayload,
-	CheckboxPayload,
-} from "../../managers/obsidian/user-event-interceptor";
+import type { CheckboxPayload } from "../../managers/obsidian/user-event-interceptor";
 import type {
 	BulkVaultEvent,
 	VaultAction,
 	VaultActionManager,
 } from "../../managers/obsidian/vault-action-manager";
+import { MD } from "../../managers/obsidian/vault-action-manager/types/literals";
 import {
 	SplitPathKind,
 	type SplitPathToMdFile,
@@ -25,14 +23,29 @@ import {
 	makeCodecs,
 	type SplitPathToMdFileInsideLibrary,
 } from "./codecs";
+import type {
+	ScrollNodeLocator,
+	SectionNodeLocator,
+} from "./codecs/locator/types";
 import { Healer } from "./healer/healer";
 import { HealingTransaction } from "./healer/healing-transaction";
-import type { CodexImpact } from "./healer/library-tree/codex";
-import { extractInvalidCodexesFromBulk } from "./healer/library-tree/codex";
+import {
+	type CodexClickTarget,
+	type CodexImpact,
+	extractInvalidCodexesFromBulk,
+	parseCodexClickLineContent,
+} from "./healer/library-tree/codex";
 import { isCodexInsideLibrary as isCodexInsideLibraryHelper } from "./healer/library-tree/codex/helpers";
 import { Tree } from "./healer/library-tree/tree";
 import { buildTreeActions } from "./healer/library-tree/tree-action/bulk-vault-action-adapter";
-import type { TreeAction } from "./healer/library-tree/tree-action/types/tree-action";
+import type {
+	ChangeNodeStatusAction,
+	TreeAction,
+} from "./healer/library-tree/tree-action/types/tree-action";
+import {
+	TreeNodeKind,
+	TreeNodeStatus,
+} from "./healer/library-tree/tree-node/types/atoms";
 import type { HealingAction } from "./healer/library-tree/types/healing-action";
 import { extractScrollStatusActions } from "./healer/library-tree/utils/extract-scroll-status-actions";
 import { findInvalidCodexFiles } from "./healer/library-tree/utils/find-invalid-codex-files";
@@ -50,6 +63,7 @@ import {
 } from "./page-navigation";
 import { triggerSectionHealing as triggerSectionHealingImpl } from "./section-healing";
 import { CODEX_CORE_NAME } from "./types/consts/literals";
+import type { NodeName } from "./types/schemas/node-name";
 import { VaultActionQueue } from "./vault-action-queue";
 
 // ─── Queue Item ───
@@ -389,18 +403,6 @@ export class Librarian {
 		return listCommandsExecutableInImpl(this.codecs, splitPath);
 	}
 
-	/**
-	 * Handle codex checkbox click (task checkboxes in codex content).
-	 * Parses line to identify scroll/section and updates its status.
-	 */
-	handleCodexCheckboxClick(payload: CheckboxPayload): void {}
-
-	/**
-	 * Handle frontmatter property checkbox click.
-	 * Updates scroll status when clicking the status property checkbox.
-	 */
-	handlePropertyCheckboxClick(payload: CheckboxFrontmatterPayload): void {}
-
 	isCodexInsideLibrary(splitPath: SplitPathToMdFile): boolean {
 		return isCodexInsideLibraryHelper(splitPath, this.rules);
 	}
@@ -413,7 +415,91 @@ export class Librarian {
 		);
 		return result?.alias ?? null;
 	}
-}
 
-// handleCodexCheckboxClick
-// 62cb6eef67fc7a8417af2eadc2ff71f2fdcec61d
+	/**
+	 * Handle checkbox click in a codex file.
+	 * Parses the line content to determine the target (scroll or section),
+	 * builds a ChangeNodeStatusAction, and enqueues it for processing.
+	 */
+	async handleCodexCheckboxClick(payload: CheckboxPayload): Promise<void> {
+		if (!this.healer) {
+			logger.warn("[Librarian.handleCodexCheckboxClick] No healer");
+			return;
+		}
+
+		// 1. Parse line content to get click target
+		const parseResult = parseCodexClickLineContent(payload.lineContent);
+		if (parseResult.isErr()) {
+			logger.warn(
+				"[Librarian.handleCodexCheckboxClick] Parse failed:",
+				parseResult.error,
+			);
+			return;
+		}
+		const target = parseResult.value;
+
+		// 2. Determine new status from intended toggle
+		// payload.checked is the CURRENT state at mousedown time (before toggle)
+		// User clicked to TOGGLE, so intended new state is the opposite
+		const newStatus = payload.checked
+			? TreeNodeStatus.NotStarted // Currently checked -> user wants to uncheck
+			: TreeNodeStatus.Done; // Currently unchecked -> user wants to check
+
+		// 3. Build ChangeNodeStatusAction based on target type
+		const action = this.buildChangeStatusAction(target, newStatus);
+		if (!action) {
+			logger.warn(
+				"[Librarian.handleCodexCheckboxClick] Failed to build action",
+			);
+			return;
+		}
+
+		// 4. Enqueue for processing
+		await this.actionQueue.enqueue({
+			treeActions: [action],
+			invalidCodexActions: [],
+		});
+	}
+
+	private buildChangeStatusAction(
+		target: CodexClickTarget,
+		newStatus: TreeNodeStatus,
+	): ChangeNodeStatusAction | null {
+		if (target.kind === "Section") {
+			// Section click: propagate status to all descendants
+			const { sectionChain } = target;
+			if (sectionChain.length === 0) return null;
+
+			const segmentId = sectionChain[sectionChain.length - 1]!;
+			const parentChain = sectionChain.slice(0, -1);
+
+			return {
+				actionType: "ChangeStatus" as const,
+				targetLocator: {
+					segmentId,
+					segmentIdChainToParent: parentChain,
+					targetKind: TreeNodeKind.Section,
+				} as SectionNodeLocator,
+				newStatus,
+			};
+		}
+
+		// Scroll click: update single scroll status
+		const { parentChain, nodeName } = target;
+		const segmentId = this.codecs.segmentId.serializeSegmentId({
+			coreName: nodeName as NodeName,
+			extension: MD,
+			targetKind: TreeNodeKind.Scroll,
+		});
+
+		return {
+			actionType: "ChangeStatus" as const,
+			targetLocator: {
+				segmentId,
+				segmentIdChainToParent: parentChain,
+				targetKind: TreeNodeKind.Scroll,
+			} as ScrollNodeLocator,
+			newStatus,
+		};
+	}
+}

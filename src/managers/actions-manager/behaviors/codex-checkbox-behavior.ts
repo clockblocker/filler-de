@@ -20,8 +20,8 @@ export function createCodexCheckboxHandler(
 	return {
 		doesApply: (payload) =>
 			librarian.isCodexInsideLibrary(payload.splitPath),
-		handle: (payload) => {
-			librarian.handleCodexCheckboxClick(payload);
+		handle: async (payload) => {
+			await librarian.handleCodexCheckboxClick(payload);
 			return { outcome: HandlerOutcome.Handled };
 		},
 	};
