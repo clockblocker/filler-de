@@ -9,7 +9,6 @@ import type {
 	VaultAction,
 	VaultActionManager,
 } from "../../managers/obsidian/vault-action-manager";
-import { MD } from "../../managers/obsidian/vault-action-manager/types/literals";
 import {
 	SplitPathKind,
 	type SplitPathToMdFile,
@@ -26,21 +25,14 @@ import {
 	makeCodecs,
 	type SplitPathToMdFileInsideLibrary,
 } from "./codecs";
-import { serializeSegmentId } from "./codecs/segment-id/internal/serialize";
-import type { SectionNodeSegmentId } from "./codecs/segment-id/types/segment-id";
 import { Healer } from "./healer/healer";
 import { HealingTransaction } from "./healer/healing-transaction";
 import type { CodexImpact } from "./healer/library-tree/codex";
 import { extractInvalidCodexesFromBulk } from "./healer/library-tree/codex";
 import { isCodexInsideLibrary as isCodexInsideLibraryHelper } from "./healer/library-tree/codex/helpers";
-import { parseCodexClickLineContent } from "./healer/library-tree/codex/parse-codex-click";
 import { Tree } from "./healer/library-tree/tree";
 import { buildTreeActions } from "./healer/library-tree/tree-action/bulk-vault-action-adapter";
 import type { TreeAction } from "./healer/library-tree/tree-action/types/tree-action";
-import {
-	TreeNodeKind,
-	TreeNodeStatus,
-} from "./healer/library-tree/tree-node/types/atoms";
 import type { HealingAction } from "./healer/library-tree/types/healing-action";
 import { extractScrollStatusActions } from "./healer/library-tree/utils/extract-scroll-status-actions";
 import { findInvalidCodexFiles } from "./healer/library-tree/utils/find-invalid-codex-files";
@@ -58,8 +50,6 @@ import {
 } from "./page-navigation";
 import { triggerSectionHealing as triggerSectionHealingImpl } from "./section-healing";
 import { CODEX_CORE_NAME } from "./types/consts/literals";
-import type { NodeName } from "./types/schemas/node-name";
-import { handlePropertyCheckboxClick as handlePropertyCheckboxClickInternal } from "./user-event-router/handlers/checkbox-handler";
 import { VaultActionQueue } from "./vault-action-queue";
 
 // ─── Queue Item ───
@@ -402,73 +392,13 @@ export class Librarian {
 	 * Handle codex checkbox click (task checkboxes in codex content).
 	 * Parses line to identify scroll/section and updates its status.
 	 */
-	handleCodexCheckboxClick(payload: CheckboxPayload): void {
-		const parseResult = parseCodexClickLineContent(payload.lineContent);
-		if (parseResult.isErr()) {
-			logger.warn(
-				"[Librarian] Failed to parse codex click:",
-				parseResult.error,
-			);
-			return;
-		}
-
-		const target = parseResult.value;
-		const newStatus = payload.checked
-			? TreeNodeStatus.Done
-			: TreeNodeStatus.NotStarted;
-
-		let action: TreeAction;
-		if (target.kind === "Scroll") {
-			// Build scroll segment ID using serializeSegmentId
-			const segmentId = serializeSegmentId({
-				coreName: target.nodeName as NodeName,
-				extension: MD,
-				targetKind: TreeNodeKind.Scroll,
-			});
-
-			action = {
-				actionType: "ChangeStatus",
-				newStatus,
-				targetLocator: {
-					segmentId,
-					segmentIdChainToParent: target.parentChain,
-					targetKind: TreeNodeKind.Scroll,
-				},
-			};
-		} else {
-			// Section: last element is target, rest is parent chain
-			const sectionChain = target.sectionChain;
-			action = {
-				actionType: "ChangeStatus",
-				newStatus,
-				targetLocator: {
-					segmentId: sectionChain.at(-1) as SectionNodeSegmentId,
-					segmentIdChainToParent: sectionChain.slice(0, -1),
-					targetKind: TreeNodeKind.Section,
-				},
-			};
-		}
-
-		this.actionQueue.enqueue({ actions: [action], bulkEvent: null });
-	}
+	handleCodexCheckboxClick(payload: CheckboxPayload): void {}
 
 	/**
 	 * Handle frontmatter property checkbox click.
 	 * Updates scroll status when clicking the status property checkbox.
 	 */
-	handlePropertyCheckboxClick(payload: CheckboxFrontmatterPayload): void {
-		const result = handlePropertyCheckboxClickInternal(
-			payload,
-			this.codecs,
-			this.rules,
-		);
-		if (result) {
-			this.actionQueue.enqueue({
-				actions: [result.action],
-				bulkEvent: null,
-			});
-		}
-	}
+	handlePropertyCheckboxClick(payload: CheckboxFrontmatterPayload): void {}
 
 	isCodexInsideLibrary(splitPath: SplitPathToMdFile): boolean {
 		return isCodexInsideLibraryHelper(splitPath, this.rules);
@@ -483,3 +413,6 @@ export class Librarian {
 		return result?.alias ?? null;
 	}
 }
+
+// handleCodexCheckboxClick
+// 62cb6eef67fc7a8417af2eadc2ff71f2fdcec61d

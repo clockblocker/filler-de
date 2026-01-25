@@ -2,7 +2,6 @@
 export { chainHandlers } from "./chain-utils";
 export {
 	createCheckboxFrontmatterHandler,
-	type EnqueueFn,
 } from "./checkbox-behavior";
 // Behavior factories
 export { createClipboardHandler } from "./clipboard-behavior";

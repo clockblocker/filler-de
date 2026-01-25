@@ -293,23 +293,6 @@ Events include callbacks for DOM/editor actions, keeping detection separate from
 - `SelectAll`: `preventDefault()`, `setSelection(from, to)`
 - `WikilinkCompleted`: `insertAlias(alias)`
 
-### Librarian Handling
-
-User events are routed through **UserEventRouter** (`src/commanders/librarian/user-event-router/`):
-
-```
-UserEvent
-    ↓
-UserEventRouter.handle(event)
-    ├── CheckboxClicked → checkbox-handler → TreeAction → enqueue
-    ├── PropertyCheckboxClicked → checkbox-handler → TreeAction → enqueue
-    ├── ClipboardCopy → clipboard-handler → strip metadata, set clipboard
-    ├── SelectAll → select-all-handler → calculateSmartRange(), set selection
-    └── WikilinkCompleted → wikilink-handler → insertAlias if library file
-```
-
-Handlers are extracted to `user-event-router/handlers/` for testability.
-
 ### Smart Range Calculation
 
 `calculateSmartRange(content)` excludes from Ctrl+A selection:
