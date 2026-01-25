@@ -55,8 +55,8 @@ import { VaultActionQueue } from "./vault-action-queue";
 // ─── Queue Item ───
 
 type LibrarianQueueItem = {
-	actions: TreeAction[];
-	bulkEvent: BulkVaultEvent | null;
+	treeActions: TreeAction[];
+	invalidCodexActions: HealingAction[];
 };
 
 // ─── Librarian ───
@@ -76,7 +76,8 @@ export class Librarian {
 
 	constructor(private readonly vaultActionManager: VaultActionManager) {
 		this.actionQueue = new VaultActionQueue<LibrarianQueueItem>(
-			(item) => this.processActions(item.actions, item.bulkEvent),
+			(item) =>
+				this.processActions(item.treeActions, item.invalidCodexActions),
 			"[Librarian]",
 		);
 	}
@@ -236,17 +237,23 @@ export class Librarian {
 		// Build tree actions from bulk event
 		const treeActions = buildTreeActions(bulk, this.codecs, this.rules);
 
+		// Extract invalid codex deletions from bulk event
+		const invalidCodexActions = extractInvalidCodexesFromBulk(
+			bulk,
+			this.codecs,
+		);
+
 		// Store for debugging
 		this._debugLastTreeActions = treeActions;
 
-		if (treeActions.length === 0) {
+		if (treeActions.length === 0 && invalidCodexActions.length === 0) {
 			return;
 		}
 
 		// Queue and process
 		await this.actionQueue.enqueue({
-			actions: treeActions,
-			bulkEvent: bulk,
+			invalidCodexActions,
+			treeActions,
 		});
 	}
 
@@ -254,8 +261,8 @@ export class Librarian {
 	 * Process a batch of tree actions.
 	 */
 	private async processActions(
-		actions: TreeAction[],
-		bulkEvent: BulkVaultEvent | null,
+		treeActions: TreeAction[],
+		invalidCodexActions: HealingAction[],
 	): Promise<void> {
 		if (!this.healer) {
 			return;
@@ -263,7 +270,7 @@ export class Librarian {
 
 		// Apply all tree actions via HealingTransaction
 		const tx = new HealingTransaction(this.healer);
-		for (const action of actions) {
+		for (const action of treeActions) {
 			const result = tx.apply(action);
 			if (result.isErr()) {
 				tx.logSummary("error");
@@ -275,14 +282,8 @@ export class Librarian {
 		const allHealingActions: HealingAction[] = tx.getHealingActions();
 		const allCodexImpacts: CodexImpact[] = tx.getCodexImpacts();
 
-		// Extract invalid codexes from bulk event (after tree state updated)
-		if (bulkEvent) {
-			const invalidCodexDeletions = extractInvalidCodexesFromBulk(
-				bulkEvent,
-				this.codecs,
-			);
-			allHealingActions.push(...invalidCodexDeletions);
-		}
+		// Add pre-extracted invalid codex deletions
+		allHealingActions.push(...invalidCodexActions);
 
 		// Process codex impacts: merge, compute deletions and recreations
 		const { deletionHealingActions, codexRecreations } =
@@ -291,7 +292,7 @@ export class Librarian {
 
 		// Extract scroll status changes from actions
 		const scrollStatusActions = extractScrollStatusActions(
-			actions,
+			treeActions,
 			this.codecs,
 		);
 

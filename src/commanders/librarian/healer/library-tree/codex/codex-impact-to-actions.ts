@@ -27,6 +27,7 @@ import { computeCodexSplitPath } from "./codex-split-path";
 import type { CodexImpact } from "./compute-codex-impact";
 import { isCodexSplitPath } from "./helpers";
 import { CODEX_CORE_NAME } from "./literals";
+import { chainToKey } from "./section-chain-utils";
 import {
 	collectDescendantScrolls,
 	collectDescendantSectionChains,
@@ -307,6 +308,57 @@ export function codexImpactToIncrementalRecreations(
 					},
 				};
 				actions.push(scrollBacklinkAction);
+			}
+		}
+	}
+
+	// 1b. Process descendants of renamed/moved sections
+	// When a folder is moved/renamed, descendants need their codexes recreated
+	// and their scroll backlinks updated to point to the new parent codex paths
+	for (const { newChain } of impact.renamed) {
+		const section = findSectionByChain(tree, newChain);
+		if (!section) continue;
+
+		const descendantChains = collectDescendantSectionChains(section, newChain);
+		for (const descChain of descendantChains) {
+			// Skip if already in impactedChains
+			if (impact.impactedChains.has(chainToKey(descChain))) continue;
+
+			const descSection = findSectionByChain(tree, descChain);
+			if (!descSection) continue;
+
+			const splitPath = computeCodexSplitPath(descChain, codecs);
+
+			// Ensure codex file exists
+			const ensureAction: EnsureCodexFileExistsAction = {
+				kind: "EnsureCodexFileExists",
+				payload: { splitPath },
+			};
+			actions.push(ensureAction);
+
+			// Process codex (backlink + content combined)
+			const processAction: ProcessCodexAction = {
+				kind: "ProcessCodex",
+				payload: { section: descSection, sectionChain: descChain, splitPath },
+			};
+			actions.push(processAction);
+
+			// Scroll backlinks for direct children
+			for (const [_segId, child] of Object.entries(descSection.children)) {
+				if (child.kind === TreeNodeKind.Scroll) {
+					const scrollPath = computeScrollSplitPath(
+						child.nodeName,
+						descChain,
+						codecs,
+					);
+					if (scrollPath.isOk()) {
+						const scrollBacklinkAction: ProcessScrollBacklinkAction = {
+							kind: "ProcessScrollBacklink",
+							payload: { parentChain: descChain, splitPath: scrollPath.value },
+						};
+						actions.push(scrollBacklinkAction);
+					}
+				}
 			}
 		}
 	}
