@@ -329,3 +329,170 @@ export async function clickButton(actionId: string): Promise<Result<void, string
 	}
 }
 
+/**
+ * Click a codex checkbox that links to a specific target.
+ * Opens the codex file, finds the checkbox on the line containing the link target, and dispatches mousedown.
+ *
+ * @param codexPath - Path to the codex file (e.g., "Library/Recipe/Pie/Berry/__-Berry-Pie-Recipe.md")
+ * @param linkTarget - The wikilink target to find (e.g., "Steps-Berry-Pie-Recipe" or "__-Berry-Pie-Recipe")
+ * @param displayName - Optional display name (alias) to search for if linkTarget is not found directly
+ */
+export async function clickCodexCheckbox(
+	codexPath: string,
+	linkTarget: string,
+	displayName?: string,
+): Promise<Result<void, string>> {
+	// First open the file
+	const openResult = await openFile(codexPath);
+	if (openResult.isErr()) {
+		return err(`Failed to open codex: ${openResult.error}`);
+	}
+
+	// Wait for file to open and render
+	await browser.pause(500);
+
+	// Verify we're viewing the correct file
+	const verifyResult = await browser.executeObsidian(
+		async ({ app }, expectedPath) => {
+			const activeFile = app.workspace.getActiveFile();
+			if (!activeFile) {
+				return { actualPath: "no-active-file", ok: false };
+			}
+			if (activeFile.path !== expectedPath) {
+				return { actualPath: activeFile.path, ok: false };
+			}
+			return { ok: true };
+		},
+		codexPath,
+	);
+
+	if (verifyResult && typeof verifyResult === "object" && "ok" in verifyResult && !verifyResult.ok) {
+		const actualPath = "actualPath" in verifyResult ? verifyResult.actualPath : "unknown";
+		return err(`File not switched: expected ${codexPath}, got ${actualPath}`);
+	}
+
+	// Extract display name from linkTarget if not provided
+	// For "Steps-Berry-Pie-Recipe" -> "Steps"
+	// For "__-Berry-Pie-Recipe" -> "Berry" (special codex case)
+	const computedDisplayName = displayName ?? extractDisplayName(linkTarget);
+
+	try {
+		const result = await browser.executeObsidian(
+			async ({}, { displayName: dn, target }) => {
+				// Find all task checkboxes
+				const checkboxes = Array.from(
+					document.querySelectorAll<HTMLInputElement>("input.task-list-item-checkbox")
+				);
+
+				// Collect debug info for all checkboxes
+				const debugLines: string[] = [];
+
+				// Find the checkbox whose line/list-item contains the link target
+				for (const checkbox of checkboxes) {
+					// Get the parent line/list element
+					const lineEl = checkbox.closest(".cm-line") ?? checkbox.closest("li");
+					if (!lineEl) {
+						debugLines.push("checkbox-no-line");
+						continue;
+					}
+
+					// Collect debug info
+					const lineText = lineEl.textContent ?? "";
+					const internalLinks = Array.from(lineEl.querySelectorAll("a.internal-link"))
+						.map((a) => (a as HTMLAnchorElement).getAttribute("data-href"))
+						.filter(Boolean);
+					debugLines.push(`"${lineText.trim()}" [${internalLinks.join(",")}]`);
+
+					// Strategy 1: Check for internal link with matching data-href (reading mode)
+					let internalLink = lineEl.querySelector<HTMLAnchorElement>(
+						`a.internal-link[data-href="${target}"]`
+					);
+					if (!internalLink) {
+						internalLink = lineEl.querySelector<HTMLAnchorElement>(
+							`a.internal-link[data-href="${target}.md"]`
+						);
+					}
+					if (!internalLink) {
+						const allLinks = lineEl.querySelectorAll<HTMLAnchorElement>("a.internal-link");
+						for (const link of allLinks) {
+							const href = link.getAttribute("data-href") ?? "";
+							if (href.includes(target)) {
+								internalLink = link;
+								break;
+							}
+						}
+					}
+
+					if (internalLink) {
+						const mousedownEvent = new MouseEvent("mousedown", {
+							bubbles: true,
+							button: 0,
+							cancelable: true,
+							view: window,
+						});
+						checkbox.dispatchEvent(mousedownEvent);
+						return { ok: true };
+					}
+
+					// Strategy 2: Check raw text for [[target| or [[target]] (edit mode)
+					if (lineText.includes(`[[${target}|`) || lineText.includes(`[[${target}]]`)) {
+						const mousedownEvent = new MouseEvent("mousedown", {
+							bubbles: true,
+							button: 0,
+							cancelable: true,
+							view: window,
+						});
+						checkbox.dispatchEvent(mousedownEvent);
+						return { ok: true };
+					}
+
+					// Strategy 3: Check for display name in the rendered text (reading mode with aliases)
+					// The lineText would be just the alias like "Steps" or "Ingredients"
+					if (dn && lineText.trim() === dn) {
+						const mousedownEvent = new MouseEvent("mousedown", {
+							bubbles: true,
+							button: 0,
+							cancelable: true,
+							view: window,
+						});
+						checkbox.dispatchEvent(mousedownEvent);
+						return { ok: true };
+					}
+				}
+
+				const debugMsg = debugLines.length > 0 ? ` Lines: ${debugLines.join(" | ")}` : "";
+				return {
+					error: `Checkbox not found for link target: ${target} (displayName: ${dn}). Found ${checkboxes.length} checkboxes.${debugMsg}`,
+					ok: false,
+				};
+			},
+			{ displayName: computedDisplayName, target: linkTarget },
+		);
+
+		if (result && typeof result === "object" && "ok" in result && !result.ok) {
+			return err(result.error);
+		}
+		return ok(undefined);
+	} catch (error) {
+		return err(error instanceof Error ? error.message : String(error));
+	}
+}
+
+/**
+ * Extract display name from link target.
+ * "Steps-Berry-Pie-Recipe" -> "Steps"
+ * "__-Berry-Pie-Recipe" -> "Berry"
+ */
+function extractDisplayName(linkTarget: string): string {
+	// Special case for codex files: "__-Berry-Pie-Recipe" -> "Berry"
+	if (linkTarget.startsWith("__-")) {
+		const withoutPrefix = linkTarget.slice(3); // "Berry-Pie-Recipe"
+		const parts = withoutPrefix.split("-");
+		return parts[0] ?? linkTarget;
+	}
+
+	// Regular case: "Steps-Berry-Pie-Recipe" -> "Steps"
+	const parts = linkTarget.split("-");
+	return parts[0] ?? linkTarget;
+}
+

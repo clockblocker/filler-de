@@ -18,8 +18,18 @@ import {
 	testPostHealing003,
 } from "./chains/0-chain/003-create-and-rename-a-file";
 import {
-	performMutation004,
-	testPostHealing004,
+	performMutation004_scenario1,
+	performMutation004_scenario2,
+	performMutation004_scenario3,
+	performMutation004_scenario4,
+	testPostHealing004_scenario1,
+	testPostHealing004_scenario2,
+	testPostHealing004_scenario3,
+	testPostHealing004_scenario4,
+} from "./chains/0-chain/004-clicking-on-status-checkboxes";
+import {
+	performMutation004 as performMutation004_delete,
+	testPostHealing004 as testPostHealing004_delete,
 } from "./chains/1-chain/004-delete-file";
 import {
 	performMutation005,
@@ -80,15 +90,52 @@ describe("Librarian Full Suit", () => {
 		await testPostHealing003();
 	});
 
-	// 004: Delete file mutation
-	it("deletes file for 004", async () => {
-		await performMutation004();
+	// 004: Clicking on status checkboxes
+	// Scenario 1: Click one scroll checkbox
+	it("004-s1: clicks scroll checkbox in Berry codex", async () => {
+		await performMutation004_scenario1();
+		await waitForIdle();
+	});
+	it("004-s1: Steps scroll status updates in codex and file", async () => {
+		await testPostHealing004_scenario1();
+	});
+
+	// Scenario 2: Click remaining Berry scrolls -> section becomes done
+	it("004-s2: clicks remaining scroll checkboxes in Berry", async () => {
+		await performMutation004_scenario2();
+		await waitForIdle();
+	});
+	it("004-s2: all Berry scrolls done, Berry section marked done in Pie codex", async () => {
+		await testPostHealing004_scenario2();
+	});
+
+	// Scenario 3: Click section checkbox -> descendants become done
+	it("004-s3: clicks Fish section checkbox in Pie codex", async () => {
+		await performMutation004_scenario3();
+		await waitForIdle();
+	});
+	it("004-s3: all Fish descendants marked done", async () => {
+		await testPostHealing004_scenario3();
+	});
+
+	// Scenario 4: Uncheck section -> descendants become not started
+	it("004-s4: clicks Fish section checkbox again (uncheck)", async () => {
+		await performMutation004_scenario4();
+		await waitForIdle();
+	});
+	it("004-s4: all Fish descendants marked not started", async () => {
+		await testPostHealing004_scenario4();
+	});
+
+	// 004-delete: Delete file mutation (renamed from original 004)
+	it("deletes file for 004-delete", async () => {
+		await performMutation004_delete();
 		await waitForIdle();
 	});
 
-	// 004: Post-deletion healing
+	// 004-delete: Post-deletion healing
 	it("codex no longer refs deleted file", async () => {
-		await testPostHealing004();
+		await testPostHealing004_delete();
 	});
 
 	// 005: Delete folder mutation

@@ -9,6 +9,7 @@ import type {
 	VaultAction,
 	VaultActionManager,
 } from "../../managers/obsidian/vault-action-manager";
+import { MD } from "../../managers/obsidian/vault-action-manager/types/literals";
 import {
 	SplitPathKind,
 	type SplitPathToMdFile,
@@ -421,9 +422,10 @@ export class Librarian {
 			// Build scroll segment ID using serializeSegmentId
 			const segmentId = serializeSegmentId({
 				coreName: target.nodeName as NodeName,
-				extension: ".md",
+				extension: MD,
 				targetKind: TreeNodeKind.Scroll,
 			});
+
 			action = {
 				actionType: "ChangeStatus",
 				newStatus,
