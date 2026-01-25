@@ -15,7 +15,7 @@ import {
 	getContentBody,
 	readMetadata,
 	upsertMetadata,
-} from "../../../managers/pure/note-metadata-manager";
+} from "../../../stateless-services/note-metadata-manager";
 import { LINE_BREAK, SPACE_F } from "../../../types/literals";
 import type { CodecRules } from "../codecs/rules";
 import { serializeSegmentId } from "../codecs/segment-id/internal/serialize";

@@ -32,8 +32,8 @@ export class CheckboxClickedDetector {
 	startListening(): void {
 		if (this.unsubscribe) return;
 
-		this.unsubscribe = this.genericClick.subscribe((target, _evt) => {
-			void this.handleClick(target);
+		this.unsubscribe = this.genericClick.subscribe((target, evt) => {
+			void this.handleClick(target, evt);
 		});
 	}
 
@@ -46,7 +46,10 @@ export class CheckboxClickedDetector {
 
 	// ─── Private ───
 
-	private async handleClick(target: HTMLElement): Promise<void> {
+	private async handleClick(
+		target: HTMLElement,
+		evt: MouseEvent,
+	): Promise<void> {
 		// Check if it's a task checkbox
 		if (!this.isTaskCheckbox(target)) return;
 
@@ -78,7 +81,8 @@ export class CheckboxClickedDetector {
 			return;
 		}
 
-		// Invoke handler (checkbox toggle handled by Obsidian)
+		// Handler applies - prevent default and invoke
+		evt.preventDefault();
 		await invoke();
 	}
 

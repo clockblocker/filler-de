@@ -10,7 +10,7 @@ import {
 	makeSystemPathForSplitPath,
 } from "../../../managers/obsidian/vault-action-manager";
 import type { AnySplitPath } from "../../../managers/obsidian/vault-action-manager/types/split-path";
-import { readMetadata } from "../../../managers/pure/note-metadata-manager";
+import { readMetadata } from "../../../stateless-services/note-metadata-manager";
 import {
 	FileType,
 	MdFileSubTypeSchema,

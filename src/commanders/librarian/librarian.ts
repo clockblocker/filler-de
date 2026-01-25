@@ -1,13 +1,9 @@
 import { getParsedUserSettings } from "../../global-state/global-state";
-import {
-	createCheckboxFrontmatterHandler,
-	createClipboardHandler,
-	createSelectAllHandler,
-	createWikilinkHandler,
-} from "../../managers/actions-manager/behaviors";
 import type { UserCommandKind } from "../../managers/actions-manager/types";
-import type { UserEventInterceptor } from "../../managers/obsidian/user-event-interceptor";
-import { PayloadKind } from "../../managers/obsidian/user-event-interceptor/types/payload-base";
+import type {
+	CheckboxFrontmatterPayload,
+	CheckboxPayload,
+} from "../../managers/obsidian/user-event-interceptor";
 import type {
 	BulkVaultEvent,
 	VaultAction,
@@ -28,13 +24,22 @@ import {
 	makeCodecs,
 	type SplitPathToMdFileInsideLibrary,
 } from "./codecs";
+import {
+	NodeSegmentIdSeparator,
+	type ScrollNodeSegmentId,
+} from "./codecs/segment-id/types/segment-id";
 import { Healer } from "./healer/healer";
 import { HealingTransaction } from "./healer/healing-transaction";
 import type { CodexImpact } from "./healer/library-tree/codex";
 import { extractInvalidCodexesFromBulk } from "./healer/library-tree/codex";
+import { parseCodexClickLineContent } from "./healer/library-tree/codex/parse-codex-click";
 import { Tree } from "./healer/library-tree/tree";
 import { buildTreeActions } from "./healer/library-tree/tree-action/bulk-vault-action-adapter";
 import type { TreeAction } from "./healer/library-tree/tree-action/types/tree-action";
+import {
+	TreeNodeKind,
+	TreeNodeStatus,
+} from "./healer/library-tree/tree-node/types/atoms";
 import type { HealingAction } from "./healer/library-tree/types/healing-action";
 import { extractScrollStatusActions } from "./healer/library-tree/utils/extract-scroll-status-actions";
 import { findInvalidCodexFiles } from "./healer/library-tree/utils/find-invalid-codex-files";
@@ -51,6 +56,7 @@ import {
 	getPrevPage as getPrevPageImpl,
 } from "./page-navigation";
 import { triggerSectionHealing as triggerSectionHealingImpl } from "./section-healing";
+import { handlePropertyCheckboxClick as handlePropertyCheckboxClickInternal } from "./user-event-router/handlers/checkbox-handler";
 import { VaultActionQueue } from "./vault-action-queue";
 
 // ─── Queue Item ───
@@ -65,13 +71,9 @@ type LibrarianQueueItem = {
 export class Librarian {
 	private healer: Healer | null = null;
 	private eventTeardown: (() => void) | null = null;
-	private handlerTeardowns: (() => void)[] = [];
 	private actionQueue: VaultActionQueue<LibrarianQueueItem>;
-	private codecs: Codecs;
-	private rules: CodecRules;
-
-	// Track pending click operations for graceful unsubscribe
-	private pendingClicks: Set<Promise<void>> = new Set();
+	private codecs!: Codecs;
+	private rules!: CodecRules;
 
 	// Debug: store last events and actions for testing
 	public _debugLastBulkEvent: BulkVaultEvent | null = null;
@@ -79,10 +81,7 @@ export class Librarian {
 	public _debugLastHealingActions: HealingAction[] = [];
 	public _debugLastVaultActions: VaultAction[] = [];
 
-	constructor(
-		private readonly vaultActionManager: VaultActionManager,
-		private readonly userEventInterceptor?: UserEventInterceptor,
-	) {
+	constructor(private readonly vaultActionManager: VaultActionManager) {
 		this.actionQueue = new VaultActionQueue<LibrarianQueueItem>(
 			(item) => this.processActions(item.actions, item.bulkEvent),
 			"[Librarian]",
@@ -180,9 +179,6 @@ export class Librarian {
 			// This ensures we catch all events, including cascading healing from init actions
 			this.subscribeToVaultEvents();
 
-			// Subscribe to user events (clicks, clipboard, select-all, wikilinks)
-			this.registerUserEventHandlers();
-
 			// Process codex impacts: merge, compute deletions and recreations
 			const { deletionHealingActions, codexRecreations } =
 				processCodexImpactsForInit(
@@ -227,59 +223,6 @@ export class Librarian {
 			async (bulk: BulkVaultEvent) => {
 				await this.handleBulkEvent(bulk);
 			},
-		);
-	}
-
-	/**
-	 * Register handlers for user events (clicks, clipboard, select-all, wikilinks).
-	 */
-	private registerUserEventHandlers(): void {
-		if (!this.userEventInterceptor) return;
-
-		// Create enqueue function that tracks pending clicks
-		const enqueue = async (action: TreeAction): Promise<void> => {
-			const p = this.actionQueue.enqueue({
-				actions: [action],
-				bulkEvent: null,
-			});
-			this.pendingClicks.add(p);
-			p.finally(() => this.pendingClicks.delete(p));
-		};
-
-		// Clipboard handler
-		this.handlerTeardowns.push(
-			this.userEventInterceptor.setHandler(
-				PayloadKind.ClipboardCopy,
-				createClipboardHandler(),
-			),
-		);
-
-		// Select-all handler
-		this.handlerTeardowns.push(
-			this.userEventInterceptor.setHandler(
-				PayloadKind.SelectAll,
-				createSelectAllHandler(),
-			),
-		);
-
-		// Checkbox frontmatter handler
-		this.handlerTeardowns.push(
-			this.userEventInterceptor.setHandler(
-				PayloadKind.CheckboxInFrontmatterClicked,
-				createCheckboxFrontmatterHandler(
-					this.codecs,
-					this.rules,
-					enqueue,
-				),
-			),
-		);
-
-		// Wikilink handler
-		this.handlerTeardowns.push(
-			this.userEventInterceptor.setHandler(
-				PayloadKind.WikilinkCompleted,
-				createWikilinkHandler(this.codecs),
-			),
 		);
 	}
 
@@ -381,21 +324,15 @@ export class Librarian {
 	}
 
 	/**
-	 * Cleanup: unsubscribe from vault and user events.
-	 * Waits for any pending click operations to complete.
+	 * Cleanup: unsubscribe from vault events.
 	 */
 	async unsubscribe(): Promise<void> {
 		if (this.eventTeardown) {
 			this.eventTeardown();
 			this.eventTeardown = null;
 		}
-		// Unregister all user event handlers
-		for (const teardown of this.handlerTeardowns) {
-			teardown();
-		}
-		this.handlerTeardowns = [];
-		// Wait for pending clicks to complete
-		await Promise.all(this.pendingClicks);
+		// Wait for queue to drain
+		await this.actionQueue.waitForDrain();
 	}
 
 	/**
@@ -456,5 +393,99 @@ export class Librarian {
 	 */
 	listCommandsExecutableIn(splitPath: SplitPathToMdFile): UserCommandKind[] {
 		return listCommandsExecutableInImpl(this.codecs, splitPath);
+	}
+
+	/**
+	 * Handle codex checkbox click (task checkboxes in codex content).
+	 * Parses line to identify scroll/section and updates its status.
+	 */
+	handleCodexCheckboxClick(payload: CheckboxPayload): void {
+		const parseResult = parseCodexClickLineContent(payload.lineContent);
+		if (parseResult.isErr()) {
+			logger.warn(
+				"[Librarian] Failed to parse codex click line:",
+				parseResult.error,
+			);
+			return;
+		}
+
+		const target = parseResult.value;
+		const newStatus = payload.checked
+			? TreeNodeStatus.Done
+			: TreeNodeStatus.NotStarted;
+
+		let action: TreeAction;
+
+		if (target.kind === "Scroll") {
+			// Build scroll segment ID from node name
+			const scrollSegmentId =
+				`${target.nodeName}${NodeSegmentIdSeparator}${TreeNodeKind.Scroll}${NodeSegmentIdSeparator}md` as ScrollNodeSegmentId;
+
+			action = {
+				actionType: "ChangeStatus",
+				newStatus,
+				targetLocator: {
+					segmentId: scrollSegmentId,
+					segmentIdChainToParent: target.parentChain,
+					targetKind: TreeNodeKind.Scroll,
+				},
+			};
+		} else {
+			// Section: propagate status to all descendants
+			const sectionChain = target.sectionChain;
+			const segmentId = sectionChain[sectionChain.length - 1];
+			const parentChain = sectionChain.slice(0, -1);
+
+			action = {
+				actionType: "ChangeStatus",
+				newStatus,
+				targetLocator: {
+					segmentId,
+					segmentIdChainToParent: parentChain,
+					targetKind: TreeNodeKind.Section,
+				},
+			};
+		}
+
+		this.enqueueAction(action);
+	}
+
+	/**
+	 * Handle frontmatter property checkbox click.
+	 * Updates scroll status when clicking the status property checkbox.
+	 */
+	handlePropertyCheckboxClick(payload: CheckboxFrontmatterPayload): void {
+		const result = handlePropertyCheckboxClickInternal(
+			payload,
+			this.codecs,
+			this.rules,
+		);
+		if (result) {
+			this.enqueueAction(result.action);
+		}
+	}
+
+	/**
+	 * Get codecs for external handler registration.
+	 */
+	getCodecs(): Codecs {
+		return this.codecs;
+	}
+
+	/**
+	 * Get rules for external handler registration.
+	 */
+	getRules(): CodecRules {
+		return this.rules;
+	}
+
+	/**
+	 * Enqueue a single tree action for processing.
+	 */
+	private enqueueAction(action: TreeAction): void {
+		this.actionQueue.enqueue({
+			actions: [action],
+			bulkEvent: null,
+		});
 	}
 }

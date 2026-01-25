@@ -7,21 +7,22 @@ import {
 } from "obsidian";
 import { DelimiterChangeService } from "./commanders/librarian/delimiter-change-service";
 import { Librarian } from "./commanders/librarian/librarian";
+import { ActionKind } from "./deprecated-services/obsidian-services/deprecated-overlay-manager/types";
+import { createHandlers } from "./managers/actions-manager/behaviors";
 import {
 	clearState,
 	initializeState,
 	updateParsedSettings,
 } from "./global-state/global-state";
+import { tagLineCopyEmbedBehavior } from "./managers/actions-manager/behaviors/tag-line-copy-embed-behavior";
 // import {
 // 	// DeprecatedOverlayManager,
 // 	// LibrarianActionProvider,
 // } from "./services/obsidian-services/overlay-manager";
 import {
-	createCommandExecutor,
 	type CommandExecutor,
+	createCommandExecutor,
 } from "./managers/actions-manager/create-action-executor";
-import { ActionKind } from "./deprecated-services/obsidian-services/deprecated-overlay-manager/types";
-import { tagLineCopyEmbedBehavior } from "./managers/actions-manager/behaviors/tag-line-copy-embed-behavior";
 // import { LeafLifecycleManager } from "./managers/obsidian/leaf-lifecycle-manager";
 import { UserEventInterceptor } from "./managers/obsidian/user-event-interceptor";
 import {
@@ -75,6 +76,7 @@ export default class TextEaterPlugin extends Plugin {
 	private commandExecutor: CommandExecutor | null = null;
 	private initialized = false;
 	private previousSettings: TextEaterSettings | null = null;
+	private handlerTeardowns: (() => void)[] = [];
 
 	override async onload() {
 		try {
@@ -203,11 +205,8 @@ export default class TextEaterPlugin extends Plugin {
 			this.vaultActionManager,
 		);
 
-		// New Librarian (healing modes + unified user events)
-		this.librarian = new Librarian(
-			this.vaultActionManager,
-			this.userEventInterceptor,
-		);
+		// New Librarian (healing modes)
+		this.librarian = new Librarian(this.vaultActionManager);
 
 		// Start listening to file system events
 		// VaultActionManager will convert events to VaultEvent, filter self-events,
@@ -227,6 +226,18 @@ export default class TextEaterPlugin extends Plugin {
 		if (this.librarian) {
 			try {
 				await this.librarian.init();
+
+				// Register user event handlers after librarian is initialized
+				const handlers = createHandlers(
+					this.librarian,
+					this.librarian.getCodecs(),
+					this.librarian.getRules(),
+				);
+				for (const { kind, handler } of handlers) {
+					this.handlerTeardowns.push(
+						this.userEventInterceptor.setHandler(kind, handler),
+					);
+				}
 			} catch (error) {
 				logger.error(
 					"[TextEaterPlugin] Failed to initialize librarian:",
@@ -259,6 +270,11 @@ export default class TextEaterPlugin extends Plugin {
 
 	override onunload() {
 		// if (this.overlayManager) this.overlayManager.destroy();
+		// Unregister all user event handlers
+		for (const teardown of this.handlerTeardowns) {
+			teardown();
+		}
+		this.handlerTeardowns = [];
 		if (this.userEventInterceptor)
 			this.userEventInterceptor.stopListening();
 		if (this.librarian) this.librarian.unsubscribe();
@@ -341,7 +357,7 @@ export default class TextEaterPlugin extends Plugin {
 					if (selection) {
 						void this.commandExecutor?.({
 							kind: ActionKind.SplitInBlocks,
-							payload: { selection, fileContent: "" },
+							payload: { fileContent: "", selection },
 						});
 					} else {
 						tagLineCopyEmbedBehavior({
@@ -437,11 +453,6 @@ export default class TextEaterPlugin extends Plugin {
 			makeSplitPath,
 			manager: this.vaultActionManager,
 		};
-	}
-
-	getReadMetadata() {
-		// Import the new readMetadata function for testing API
-		return require("./managers/pure/note-metadata-manager").readMetadata;
 	}
 
 	getLibrarianTestingApi() {
@@ -649,15 +660,30 @@ export default class TextEaterPlugin extends Plugin {
 	 * Reinitialize the librarian with current settings.
 	 */
 	private async reinitLibrarian(): Promise<void> {
+		// Unregister old handlers
+		for (const teardown of this.handlerTeardowns) {
+			teardown();
+		}
+		this.handlerTeardowns = [];
+
 		if (this.librarian) {
 			await this.librarian.unsubscribe();
 		}
-		this.librarian = new Librarian(
-			this.vaultActionManager,
-			this.userEventInterceptor,
-		);
+		this.librarian = new Librarian(this.vaultActionManager);
 		try {
 			await this.librarian.init();
+
+			// Register new handlers
+			const handlers = createHandlers(
+				this.librarian,
+				this.librarian.getCodecs(),
+				this.librarian.getRules(),
+			);
+			for (const { kind, handler } of handlers) {
+				this.handlerTeardowns.push(
+					this.userEventInterceptor.setHandler(kind, handler),
+				);
+			}
 		} catch (error) {
 			logger.error(
 				"[TextEaterPlugin] Failed to reinitialize librarian:",

@@ -11,7 +11,7 @@ import {
 	makeSplitPath,
 	makeSystemPathForSplitPath,
 } from "../../../../managers/obsidian/vault-action-manager";
-import { readMetadata } from "../../../../managers/pure/note-metadata-manager";
+import { readMetadata } from "../../../../stateless-services/note-metadata-manager";
 import {
 	FileType,
 	MdFileSubTypeSchema,
