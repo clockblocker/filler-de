@@ -456,8 +456,8 @@ export class Librarian {
 
 		// 4. Enqueue for processing
 		await this.actionQueue.enqueue({
-			treeActions: [action],
 			invalidCodexActions: [],
+			treeActions: [action],
 		});
 	}
 
@@ -475,12 +475,12 @@ export class Librarian {
 
 			return {
 				actionType: "ChangeStatus" as const,
+				newStatus,
 				targetLocator: {
 					segmentId,
 					segmentIdChainToParent: parentChain,
 					targetKind: TreeNodeKind.Section,
 				} as SectionNodeLocator,
-				newStatus,
 			};
 		}
 
@@ -494,12 +494,12 @@ export class Librarian {
 
 		return {
 			actionType: "ChangeStatus" as const,
+			newStatus,
 			targetLocator: {
 				segmentId,
 				segmentIdChainToParent: parentChain,
 				targetKind: TreeNodeKind.Scroll,
 			} as ScrollNodeLocator,
-			newStatus,
 		};
 	}
 }

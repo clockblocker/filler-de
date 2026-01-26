@@ -319,7 +319,10 @@ export function codexImpactToIncrementalRecreations(
 		const section = findSectionByChain(tree, newChain);
 		if (!section) continue;
 
-		const descendantChains = collectDescendantSectionChains(section, newChain);
+		const descendantChains = collectDescendantSectionChains(
+			section,
+			newChain,
+		);
 		for (const descChain of descendantChains) {
 			// Skip if already in impactedChains
 			if (impact.impactedChains.has(chainToKey(descChain))) continue;
@@ -339,12 +342,18 @@ export function codexImpactToIncrementalRecreations(
 			// Process codex (backlink + content combined)
 			const processAction: ProcessCodexAction = {
 				kind: "ProcessCodex",
-				payload: { section: descSection, sectionChain: descChain, splitPath },
+				payload: {
+					section: descSection,
+					sectionChain: descChain,
+					splitPath,
+				},
 			};
 			actions.push(processAction);
 
 			// Scroll backlinks for direct children
-			for (const [_segId, child] of Object.entries(descSection.children)) {
+			for (const [_segId, child] of Object.entries(
+				descSection.children,
+			)) {
 				if (child.kind === TreeNodeKind.Scroll) {
 					const scrollPath = computeScrollSplitPath(
 						child.nodeName,
@@ -352,10 +361,14 @@ export function codexImpactToIncrementalRecreations(
 						codecs,
 					);
 					if (scrollPath.isOk()) {
-						const scrollBacklinkAction: ProcessScrollBacklinkAction = {
-							kind: "ProcessScrollBacklink",
-							payload: { parentChain: descChain, splitPath: scrollPath.value },
-						};
+						const scrollBacklinkAction: ProcessScrollBacklinkAction =
+							{
+								kind: "ProcessScrollBacklink",
+								payload: {
+									parentChain: descChain,
+									splitPath: scrollPath.value,
+								},
+							};
 						actions.push(scrollBacklinkAction);
 					}
 				}

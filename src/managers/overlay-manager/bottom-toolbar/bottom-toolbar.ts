@@ -7,7 +7,11 @@
 
 import { DomSelectors } from "../../../utils/dom-selectors";
 import type { SplitPathToMdFile } from "../../obsidian/vault-action-manager/types/split-path";
-import type { BottomToolbar, CreateBottomToolbarOptions } from "./types";
+import type {
+	ActionConfig,
+	BottomToolbar,
+	CreateBottomToolbarOptions,
+} from "./types";
 
 /**
  * Create a bottom toolbar instance.
@@ -18,32 +22,41 @@ export function createBottomToolbar(
 	const { container } = options;
 
 	let toolbarEl: HTMLElement | null = null;
-	let translateStubBtnEl: HTMLElement | null = null;
 	let currentFilePath: SplitPathToMdFile | null = null;
+	let currentActions: ActionConfig[] = [];
+	let hasSelection = false;
 
 	// ─── DOM Creation ───
 
 	function createToolbarElement(): HTMLElement {
 		const toolbar = document.createElement("div");
 		toolbar.className = "tf-bottom-toolbar";
-
-		// Create test button
-		const testButton = document.createElement("button");
-		testButton.className = "tf-bottom-toolbar-btn";
-		testButton.setAttribute("data-action", "TestButton");
-		testButton.textContent = "Test";
-		toolbar.appendChild(testButton);
-
-		// Create translate stub button (hidden by default)
-		const translateStubButton = document.createElement("button");
-		translateStubButton.className = "tf-bottom-toolbar-btn tf-contextual-btn";
-		translateStubButton.setAttribute("data-action", "TranslateStub");
-		translateStubButton.textContent = "Translate Stub";
-		translateStubButton.style.display = "none";
-		toolbar.appendChild(translateStubButton);
-		translateStubBtnEl = translateStubButton;
-
 		return toolbar;
+	}
+
+	function renderButtons(): void {
+		if (!toolbarEl) return;
+		toolbarEl.innerHTML = "";
+
+		for (const action of currentActions) {
+			const button = document.createElement("button");
+			button.className = "tf-bottom-toolbar-btn tf-contextual-btn";
+			button.setAttribute("data-action", action.id);
+			button.textContent = action.label;
+			// Hide contextual buttons when no selection
+			button.style.display = hasSelection ? "" : "none";
+			toolbarEl.appendChild(button);
+		}
+
+		updateToolbarVisibility();
+	}
+
+	function updateToolbarVisibility(): void {
+		if (!toolbarEl) return;
+		const hasVisibleButtons = toolbarEl.querySelector(
+			'.tf-bottom-toolbar-btn:not([style*="display: none"])',
+		);
+		toolbarEl.style.display = hasVisibleButtons ? "" : "none";
 	}
 
 	// ─── Public Methods ───
@@ -58,6 +71,7 @@ export function createBottomToolbar(
 		if (!toolbarEl) {
 			toolbarEl = createToolbarElement();
 			container.appendChild(toolbarEl);
+			renderButtons();
 		}
 	}
 
@@ -82,15 +96,32 @@ export function createBottomToolbar(
 		return currentFilePath;
 	}
 
-	function updateSelectionContext(hasSelection: boolean): void {
-		if (!translateStubBtnEl) return;
-		translateStubBtnEl.style.display = hasSelection ? "" : "none";
+	function updateSelectionContext(newHasSelection: boolean): void {
+		hasSelection = newHasSelection;
+		if (!toolbarEl) return;
+
+		// Update visibility of contextual buttons
+		const buttons = toolbarEl.querySelectorAll(".tf-contextual-btn");
+		for (const button of buttons) {
+			if (button instanceof HTMLElement) {
+				button.style.display = hasSelection ? "" : "none";
+			}
+		}
+		updateToolbarVisibility();
+	}
+
+	function setActions(actions: ActionConfig[]): void {
+		currentActions = actions;
+		if (toolbarEl) {
+			renderButtons();
+		}
 	}
 
 	return {
 		destroy,
 		getCurrentFilePath,
 		hide,
+		setActions,
 		show,
 		updateSelectionContext,
 	};

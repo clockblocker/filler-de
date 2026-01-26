@@ -1,6 +1,6 @@
 import {
 	type Editor,
-	MarkdownView,
+	type MarkdownView,
 	Modal,
 	Notice,
 	Plugin,
@@ -23,13 +23,8 @@ import {
 	type CommandExecutor,
 	createCommandExecutor,
 } from "./managers/actions-manager/create-action-executor";
-import { OverlayManager } from "./managers/overlay-manager";
 // import { LeafLifecycleManager } from "./managers/obsidian/leaf-lifecycle-manager";
-import {
-	HandlerOutcome,
-	PayloadKind,
-	UserEventInterceptor,
-} from "./managers/obsidian/user-event-interceptor";
+import { UserEventInterceptor } from "./managers/obsidian/user-event-interceptor";
 import {
 	makeSplitPath,
 	makeSystemPathForSplitPath,
@@ -45,6 +40,7 @@ import { TFolderHelper } from "./managers/obsidian/vault-action-manager/file-ser
 import { logError } from "./managers/obsidian/vault-action-manager/helpers/issue-handlers";
 import { splitPathFromSystemPathInternal } from "./managers/obsidian/vault-action-manager/helpers/pathfinder/system-path-and-split-path-codec";
 import { Reader } from "./managers/obsidian/vault-action-manager/impl/reader";
+import { OverlayManager } from "./managers/overlay-manager";
 import { SettingsTab } from "./settings";
 import { ApiService } from "./stateless-services/api-service";
 import {
@@ -253,41 +249,13 @@ export default class TextEaterPlugin extends Plugin {
 			vaultActionManager: this.vaultActionManager,
 		});
 
-		// Initialize OverlayManager
+		// Initialize OverlayManager with commandExecutor
 		this.overlayManager = new OverlayManager({
 			app: this.app,
+			commandExecutor: this.commandExecutor ?? undefined,
 			userEventInterceptor: this.userEventInterceptor,
 		});
 		this.overlayManager.init();
-
-		// Set ActionElementClicked handler to route to commandExecutor
-		this.handlerTeardowns.push(
-			this.userEventInterceptor.setHandler(
-				PayloadKind.ActionElementClicked,
-				{
-					doesApply: (payload) =>
-						payload.actionId === "TestButton" ||
-						payload.actionId === "TranslateStub",
-					handle: async (payload) => {
-						if (payload.actionId === "TestButton") {
-							const filePath = this.overlayManager?.getCurrentFilePath();
-							if (filePath && this.commandExecutor) {
-								await this.commandExecutor({
-									kind: ActionKind.TestButton,
-									payload: { filePath },
-								});
-							}
-						} else if (payload.actionId === "TranslateStub") {
-							const view =
-								this.app.workspace.getActiveViewOfType(MarkdownView);
-							const selection = view?.editor?.getSelection() ?? "";
-							console.log("[TranslateStub] Selection:", selection);
-						}
-						return { outcome: HandlerOutcome.Handled };
-					},
-				},
-			),
-		);
 
 		// // Initialize LeafLifecycleManager (single source of truth for view lifecycle)
 		// this.leafLifecycleManager = new LeafLifecycleManager(this.app, this);

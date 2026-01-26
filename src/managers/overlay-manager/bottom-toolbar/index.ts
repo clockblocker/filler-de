@@ -3,4 +3,8 @@
  */
 
 export { createBottomToolbar } from "./bottom-toolbar";
-export type { BottomToolbar, CreateBottomToolbarOptions } from "./types";
+export type {
+	ActionConfig,
+	BottomToolbar,
+	CreateBottomToolbarOptions,
+} from "./types";

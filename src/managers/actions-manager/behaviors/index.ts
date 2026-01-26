@@ -1,8 +1,6 @@
 // Chain utility
 export { chainHandlers } from "./chain-utils";
-export {
-	createCheckboxFrontmatterHandler,
-} from "./checkbox-behavior";
+export { createCheckboxFrontmatterHandler } from "./checkbox-behavior";
 // Behavior factories
 export { createClipboardHandler } from "./clipboard-behavior";
 export { createCodexCheckboxHandler } from "./codex-checkbox-behavior";

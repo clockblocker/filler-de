@@ -5,6 +5,16 @@
 import type { SplitPathToMdFile } from "../../obsidian/vault-action-manager/types/split-path";
 
 /**
+ * Action configuration for toolbar buttons.
+ */
+export type ActionConfig = {
+	/** Action ID used in data-action attribute */
+	id: string;
+	/** Display label for the button */
+	label: string;
+};
+
+/**
  * Bottom toolbar interface.
  */
 export interface BottomToolbar {
@@ -18,6 +28,8 @@ export interface BottomToolbar {
 	getCurrentFilePath(): SplitPathToMdFile | null;
 	/** Update visibility of selection-dependent buttons */
 	updateSelectionContext(hasSelection: boolean): void;
+	/** Set the actions to display */
+	setActions(actions: ActionConfig[]): void;
 }
 
 /**
