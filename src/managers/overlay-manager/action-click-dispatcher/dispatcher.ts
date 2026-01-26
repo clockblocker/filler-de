@@ -15,7 +15,7 @@ export async function dispatchActionClick(
 	actionId: string,
 	context: ActionClickContext,
 ): Promise<void> {
-	const { app, commandExecutor } = context;
+	const { app, commandExecutor, getCurrentFilePath } = context;
 
 	if (!commandExecutor) {
 		logger.warn("[dispatchActionClick] No commandExecutor provided");
@@ -59,6 +59,24 @@ export async function dispatchActionClick(
 				payload: {},
 			});
 			break;
+
+		case OverlayActionKind.NavPrev:
+		case OverlayActionKind.NavNext: {
+			const filePath = getCurrentFilePath();
+			if (filePath) {
+				await commandExecutor({
+					kind: ActionKind.NavigatePage,
+					payload: {
+						direction:
+							actionId === OverlayActionKind.NavPrev
+								? "prev"
+								: "next",
+						currentFilePath: filePath,
+					},
+				});
+			}
+			break;
+		}
 
 		default:
 			logger.warn(

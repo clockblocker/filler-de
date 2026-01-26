@@ -40,11 +40,16 @@ export function createBottomToolbar(
 
 		for (const action of currentActions) {
 			const button = document.createElement("button");
-			button.className = "tf-bottom-toolbar-btn tf-contextual-btn";
+			const isContextual = action.contextual !== false;
+			button.className = isContextual
+				? "tf-bottom-toolbar-btn tf-contextual-btn"
+				: "tf-bottom-toolbar-btn";
 			button.setAttribute("data-action", action.id);
 			button.textContent = action.label;
 			// Hide contextual buttons when no selection
-			button.style.display = hasSelection ? "" : "none";
+			if (isContextual) {
+				button.style.display = hasSelection ? "" : "none";
+			}
 			toolbarEl.appendChild(button);
 		}
 

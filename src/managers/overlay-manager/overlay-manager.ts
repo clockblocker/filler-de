@@ -106,6 +106,7 @@ export class OverlayManager {
 							await dispatchActionClick(payload.actionId, {
 								app: this.app,
 								commandExecutor: this.commandExecutor,
+								getCurrentFilePath: () => this.getCurrentFilePath(),
 							});
 							return { outcome: HandlerOutcome.Handled };
 						},

@@ -15,15 +15,10 @@ import {
 } from "./global-state/global-state";
 import { createHandlers } from "./managers/actions-manager/behaviors";
 import { tagLineCopyEmbedBehavior } from "./managers/actions-manager/behaviors/tag-line-copy-embed-behavior";
-// import {
-// 	// DeprecatedOverlayManager,
-// 	// LibrarianActionProvider,
-// } from "./services/obsidian-services/overlay-manager";
 import {
 	type CommandExecutor,
 	createCommandExecutor,
 } from "./managers/actions-manager/create-action-executor";
-// import { LeafLifecycleManager } from "./managers/obsidian/leaf-lifecycle-manager";
 import { UserEventInterceptor } from "./managers/obsidian/user-event-interceptor";
 import {
 	makeSplitPath,
@@ -67,12 +62,10 @@ export default class TextEaterPlugin extends Plugin {
 	vaultActionManager: VaultActionManagerImpl;
 	userEventInterceptor: UserEventInterceptor;
 	overlayManager: OverlayManager | null = null;
-	// leafLifecycleManager: LeafLifecycleManager;
 	delimiterChangeService: DelimiterChangeService | null = null;
 
 	// Commanders
 	librarian: Librarian | null = null;
-	// librarianLegacy: LibrarianLegacy; // Unplugged
 
 	private commandExecutor: CommandExecutor | null = null;
 	private initialized = false;
@@ -256,21 +249,6 @@ export default class TextEaterPlugin extends Plugin {
 			userEventInterceptor: this.userEventInterceptor,
 		});
 		this.overlayManager.init();
-
-		// // Initialize LeafLifecycleManager (single source of truth for view lifecycle)
-		// this.leafLifecycleManager = new LeafLifecycleManager(this.app, this);
-		// this.leafLifecycleManager.init();
-
-		// // Initialize OverlayManager (unified UI overlay with commander-based actions)
-		// this.overlayManager = new DeprecatedOverlayManager(this.app, this);
-		// this.overlayManager.registerProvider(new LibrarianActionProvider());
-		// this.overlayManager.init({
-		// 	apiService: this.apiService,
-		// 	leafLifecycleManager: this.leafLifecycleManager,
-		// 	selectionService: this.selectionService,
-		// 	userEventInterceptor: this.userEventInterceptor,
-		// 	vaultActionManager: this.vaultActionManager,
-		// });
 	}
 
 	override onunload() {
@@ -441,14 +419,6 @@ export default class TextEaterPlugin extends Plugin {
 		};
 	}
 
-	// getBackgroundFileServiceLegacyTestingApi() {
-	// 	return {
-	// 		backgroundFileService: this.testingBackgroundFileServiceLegacy,
-	// 		splitPath: splitPathForBackground,
-	// 		splitPathKey: splitPathKeyForBackground,
-	// 	};
-	// }
-
 	getReaderTestingApi() {
 		return {
 			makeSplitPath,
@@ -465,8 +435,6 @@ export default class TextEaterPlugin extends Plugin {
 	}
 
 	getLibrarianTestingApi() {
-		// Return instance directly like vaultActionManager
-		// Create on-demand to avoid storing reference
 		return {
 			librarian: new Librarian(this.vaultActionManager),
 			makeSplitPath,

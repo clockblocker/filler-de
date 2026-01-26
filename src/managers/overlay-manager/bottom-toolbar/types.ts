@@ -12,6 +12,8 @@ export type ActionConfig = {
 	id: string;
 	/** Display label for the button */
 	label: string;
+	/** Whether button visibility depends on selection (default: true) */
+	contextual?: boolean;
 };
 
 /**

@@ -29,6 +29,18 @@ export const ACTION_DEFINITIONS: Record<OverlayActionKind, ActionDefinition> = {
 		requiresSelection: false,
 		settingKey: "generatePlacement",
 	},
+	[OverlayActionKind.NavPrev]: {
+		id: OverlayActionKind.NavPrev,
+		label: "<",
+		requiresSelection: false,
+		settingKey: null,
+	},
+	[OverlayActionKind.NavNext]: {
+		id: OverlayActionKind.NavNext,
+		label: ">",
+		requiresSelection: false,
+		settingKey: null,
+	},
 };
 
 export const KNOWN_ACTION_IDS = new Set(Object.keys(ACTION_DEFINITIONS));

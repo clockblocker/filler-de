@@ -9,6 +9,8 @@ const OVERLAY_ACTION_KIND_LITERALS = [
 	"SplitInBlocks",
 	"ExplainGrammar",
 	"Generate",
+	"NavPrev",
+	"NavNext",
 ] as const;
 
 export const OverlayActionKindSchema = z.enum(OVERLAY_ACTION_KIND_LITERALS);
@@ -28,6 +30,6 @@ export const OverlayPlacement = OverlayPlacementSchema.enum;
 export type ActionDefinition = {
 	id: OverlayActionKind;
 	label: string;
-	settingKey: string;
+	settingKey: string | null;
 	requiresSelection: boolean;
 };

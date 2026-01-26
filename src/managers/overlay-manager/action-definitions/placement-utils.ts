@@ -6,7 +6,7 @@ import { getParsedUserSettings } from "../../../global-state/global-state";
 import type { SelectionActionPlacement } from "../../../types";
 import type { ActionConfig } from "../bottom-toolbar";
 import { ACTION_DEFINITIONS } from "./definitions";
-import { OverlayPlacement } from "./types";
+import { OverlayActionKind, OverlayPlacement } from "./types";
 
 /**
  * Computed actions for each toolbar placement.
@@ -25,6 +25,9 @@ export function computeAllowedActions(): ComputedActions {
 	const bottomActions: ActionConfig[] = [];
 
 	for (const def of Object.values(ACTION_DEFINITIONS)) {
+		// Skip nav buttons - they're added separately
+		if (def.settingKey === null) continue;
+
 		const placement = settings[
 			def.settingKey as keyof typeof settings
 		] as SelectionActionPlacement;
@@ -36,6 +39,12 @@ export function computeAllowedActions(): ComputedActions {
 		}
 		// ShortcutOnly actions go to neither toolbar
 	}
+
+	// Add navigation buttons (always visible, not configurable)
+	bottomActions.push(
+		{ id: OverlayActionKind.NavPrev, label: "<", contextual: false },
+		{ id: OverlayActionKind.NavNext, label: ">", contextual: false },
+	);
 
 	return { bottomActions, selectionActions };
 }
