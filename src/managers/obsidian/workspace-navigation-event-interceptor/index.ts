@@ -7,6 +7,7 @@ export type {
 	LayoutChangeEvent,
 	LayoutReadyEvent,
 	ResizeEvent,
+	ScrollEvent,
 	Teardown,
 	WorkspaceEvent,
 	WorkspaceEventHandler,

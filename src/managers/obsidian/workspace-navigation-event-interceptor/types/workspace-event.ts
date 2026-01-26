@@ -4,7 +4,6 @@
  * Unlike UserEvents, workspace events are notifications (no action callbacks).
  */
 
-import type { TFile } from "obsidian";
 import { z } from "zod";
 import type {
 	SplitPathToFile,
@@ -16,6 +15,7 @@ const WorkspaceEventKindSchema = z.enum([
 	"LayoutChange",
 	"FileOpen",
 	"Resize",
+	"Scroll",
 ]);
 export type WorkspaceEventKind = z.infer<typeof WorkspaceEventKindSchema>;
 export const WorkspaceEventKind = WorkspaceEventKindSchema.enum;
@@ -52,13 +52,21 @@ export type ResizeEvent = {
 	kind: typeof WorkspaceEventKind.Resize;
 };
 
+/**
+ * Emitted when user scrolls within any pane.
+ */
+export type ScrollEvent = {
+	kind: typeof WorkspaceEventKind.Scroll;
+};
+
 // ─── Union Type ───
 
 export type WorkspaceEvent =
 	| LayoutReadyEvent
 	| LayoutChangeEvent
 	| FileOpenEvent
-	| ResizeEvent;
+	| ResizeEvent
+	| ScrollEvent;
 
 // ─── Handler ───
 

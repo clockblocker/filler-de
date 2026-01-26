@@ -2,7 +2,7 @@
 
 ## Responsibility Boundary
 
-OverlayManager is a **pure UI reactor**. It responds to user behavior and places UI elements accordingly.
+OverlayManager is a **UI orchestrator**. It responds to user behavior, places UI elements, and routes action clicks to the command executor.
 
 ### What OverlayManager Does
 
@@ -12,20 +12,22 @@ OverlayManager is a **pure UI reactor**. It responds to user behavior and places
 - Shows/hides bottom toolbar with contextual actions
 - Manages toolbar lifecycles per leaf (create on open, destroy on close)
 - Hides selection toolbar on scroll
+- Routes action button clicks to `commandExecutor`
 
 ### What OverlayManager Does NOT Do
 
 - **Does NOT modify vault state** - Actions handle their own side effects via `commandExecutor`
 - **Does NOT clear selection after actions** - Actions decide whether to clear selection
-- **Does NOT execute business logic** - Routes action clicks to handlers in `main.ts`
+- **Does NOT implement business logic** - Delegates to `commandExecutor` for actual work
 - **Does NOT persist state** - Reads settings from global state, does not write
 
 ## Architecture
 
 ```
-User Settings (ParsedUserSettings)
-         │
-         ▼
+main.ts
+   │
+   │ passes commandExecutor
+   ▼
 ┌─────────────────────────────────────────────┐
 │              OverlayManager                 │
 │                                             │
@@ -45,12 +47,26 @@ User Settings (ParsedUserSettings)
 │  │ Selection    │    │ Bottom           │  │
 │  │ Toolbar      │    │ Toolbar          │  │
 │  │ (per leaf)   │    │ (per leaf)       │  │
-│  └──────────────┘    └──────────────────┘  │
+│  └──────┬───────┘    └────────┬─────────┘  │
+│         │                     │            │
+│         └─────────┬───────────┘            │
+│                   │                        │
+│                   ▼                        │
+│         ┌─────────────────┐                │
+│         │ handleActionClick()             │
+│         │ → commandExecutor               │
+│         └─────────────────┘                │
 └─────────────────────────────────────────────┘
-         │
-         │ Button clicks emit ActionElementClicked events
-         ▼
-    main.ts handlers → commandExecutor
+```
+
+## Dependencies
+
+```typescript
+type OverlayManagerDeps = {
+  app: App;
+  userEventInterceptor?: UserEventInterceptor;
+  commandExecutor?: CommandExecutor;  // routes action clicks
+};
 ```
 
 ## Placement Settings
@@ -78,4 +94,4 @@ Each action has a placement setting in `TextEaterSettings`:
 6. Updates bottom toolbar with "bottom" actions
 7. User clicks action button
 8. `UserEventInterceptor` emits `ActionElementClicked` event
-9. Handler in `main.ts` routes to `commandExecutor`
+9. `OverlayManager.handleActionClick()` routes to `commandExecutor`

@@ -11,6 +11,10 @@ const USER_COMMAND_LITERALS = [
 	"PreviousPage",
 ] as const;
 
+/**
+ * @deprecated Use OverlayPlacement from overlay-manager/action-definitions instead.
+ * This will be removed in a future version.
+ */
 const USER_COMMAND_PLACEMENT_LITERALS = [
 	"AboveSelection",
 	"Bottom",

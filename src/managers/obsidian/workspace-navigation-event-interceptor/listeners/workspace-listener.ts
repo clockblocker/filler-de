@@ -21,6 +21,7 @@ export class WorkspaceListener implements Listener {
 	private layoutChangeRef: EventRef | null = null;
 	private fileOpenRef: EventRef | null = null;
 	private resizeRef: EventRef | null = null;
+	private scrollHandler: (() => void) | null = null;
 
 	constructor(private readonly app: App) {}
 
@@ -48,6 +49,12 @@ export class WorkspaceListener implements Listener {
 		this.resizeRef = workspace.on("resize", () => {
 			this.emit?.({ kind: WorkspaceEventKind.Resize });
 		});
+
+		// Listen for scroll events (capture phase to catch all scrolls)
+		this.scrollHandler = () => {
+			this.emit?.({ kind: WorkspaceEventKind.Scroll });
+		};
+		window.addEventListener("scroll", this.scrollHandler, true);
 	}
 
 	stopListening(): void {
@@ -68,6 +75,11 @@ export class WorkspaceListener implements Listener {
 		if (this.resizeRef) {
 			workspace.offref(this.resizeRef);
 			this.resizeRef = null;
+		}
+
+		if (this.scrollHandler) {
+			window.removeEventListener("scroll", this.scrollHandler, true);
+			this.scrollHandler = null;
 		}
 
 		this.emit = null;

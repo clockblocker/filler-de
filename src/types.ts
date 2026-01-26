@@ -12,14 +12,14 @@ export type SuffixDelimiterConfig = {
 
 /**
  * Where a selection action appears.
- * - "selection": toolbar above selection (default)
- * - "bottom": in bottom toolbar
- * - "shortcut-only": no toolbar, keyboard shortcuts only
+ * - "AboveSelection": toolbar above selection (default)
+ * - "Bottom": in bottom toolbar
+ * - "ShortcutOnly": no toolbar, keyboard shortcuts only
  */
 const SELECTION_ACTION_PLACEMENT_LITERALS = [
-	"selection",
-	"bottom",
-	"shortcut-only",
+	"AboveSelection",
+	"Bottom",
+	"ShortcutOnly",
 ] as const;
 
 export const SelectionActionPlacementSchema = z.enum(
@@ -35,9 +35,9 @@ export const SELECTION_ACTION_PLACEMENT_TEXT: Record<
 	SelectionActionPlacement,
 	string
 > = {
-	bottom: "In bottom toolbar",
-	selection: "Above selection",
-	"shortcut-only": "Shortcut only",
+	AboveSelection: "Above selection",
+	Bottom: "In bottom toolbar",
+	ShortcutOnly: "Shortcut only",
 };
 
 export type TextEaterSettings = {
@@ -58,8 +58,8 @@ export type TextEaterSettings = {
 
 export const DEFAULT_SETTINGS: TextEaterSettings = {
 	apiProvider: "google",
-	explainGrammarPlacement: "selection",
-	generatePlacement: "bottom",
+	explainGrammarPlacement: "AboveSelection",
+	generatePlacement: "Bottom",
 	googleApiKey: "",
 	hideMetadata: true,
 	libraryRoot: "Library",
@@ -67,7 +67,7 @@ export const DEFAULT_SETTINGS: TextEaterSettings = {
 	navButtonsPosition: "left",
 	showScrollBacklinks: true,
 	showScrollsInCodexesForDepth: 1,
-	splitInBlocksPlacement: "selection",
+	splitInBlocksPlacement: "AboveSelection",
 	suffixDelimiter: { padded: false, symbol: "-" },
-	translatePlacement: "selection",
+	translatePlacement: "AboveSelection",
 };

@@ -68,7 +68,6 @@ function buildPayload<K extends ActionKind>(
 			return {} as ActionPayloads[K];
 
 		default: {
-			const _exhaustive: never = kind;
 			return null;
 		}
 	}
