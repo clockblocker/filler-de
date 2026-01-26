@@ -1,6 +1,6 @@
 import {
 	type Editor,
-	type MarkdownView,
+	MarkdownView,
 	Modal,
 	Notice,
 	Plugin,

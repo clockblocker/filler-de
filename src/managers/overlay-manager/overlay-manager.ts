@@ -184,15 +184,15 @@ export class OverlayManager {
 	}
 
 	private handleSelectionChanged(payload: SelectionChangedPayload): void {
-		// Update the active leaf's toolbar
+		// Get active leaf ID
 		const activeLeaf = this.app.workspace.activeLeaf;
 		// Obsidian leaf.id is not in public API, accessing via any
-		const leafId = (activeLeaf as any)?.id as string | undefined;
-		if (!leafId) return;
+		const activeLeafId = (activeLeaf as any)?.id as string | undefined;
 
-		const toolbar = this.toolbars.get(leafId);
-		if (toolbar) {
-			toolbar.updateSelectionContext(payload.hasSelection);
+		// Update ALL toolbars: show button only on active leaf if there's a selection
+		for (const [leafId, toolbar] of this.toolbars) {
+			const showButton = payload.hasSelection && leafId === activeLeafId;
+			toolbar.updateSelectionContext(showButton);
 		}
 	}
 }
