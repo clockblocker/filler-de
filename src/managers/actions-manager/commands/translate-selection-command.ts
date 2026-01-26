@@ -8,11 +8,13 @@ export type TranslateSelectionDeps = Record<string, never>;
 
 /**
  * Translate selected text.
- * TODO: Not yet implemented.
  */
 export async function translateSelectionCommand(
-	_payload: TranslateSelectionPayload,
+	payload: TranslateSelectionPayload,
 	_deps: TranslateSelectionDeps,
 ): Promise<void> {
-	logger.warn("[translateSelectionCommand] Not implemented");
+	const { selection } = payload;
+	logger.info(
+		`[translateSelectionCommand] selection: ${JSON.stringify(selection)}`,
+	);
 }

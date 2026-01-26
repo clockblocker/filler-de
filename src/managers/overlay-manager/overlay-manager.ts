@@ -159,7 +159,7 @@ export class OverlayManager {
 		}
 	}
 
-	private refreshToolbars(): void {
+	refreshToolbars(): void {
 		const actions = computeAllowedActions();
 		updateToolbarVisibility(
 			{

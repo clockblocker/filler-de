@@ -305,46 +305,12 @@ export default class TextEaterPlugin extends Plugin {
 			);
 		}
 
-		// Migrate old placement values to new naming
-		this.settings = this.migratePlacementSettings(this.settings);
-
 		// Initialize global state with parsed settings
 		initializeState(this.settings);
 		// Store initial settings for change detection (deep copy delimiter)
 		this.previousSettings = {
 			...this.settings,
 			suffixDelimiter: { ...this.settings.suffixDelimiter },
-		};
-	}
-
-	/**
-	 * Migrate old placement values ("selection"/"bottom"/"shortcut-only")
-	 * to new naming ("AboveSelection"/"Bottom"/"ShortcutOnly").
-	 */
-	private migratePlacementSettings(
-		settings: TextEaterSettings,
-	): TextEaterSettings {
-		const migratePlacement = (value: string): string => {
-			if (value === "selection") return "AboveSelection";
-			if (value === "bottom") return "Bottom";
-			if (value === "shortcut-only") return "ShortcutOnly";
-			return value;
-		};
-
-		return {
-			...settings,
-			explainGrammarPlacement: migratePlacement(
-				settings.explainGrammarPlacement,
-			) as TextEaterSettings["explainGrammarPlacement"],
-			generatePlacement: migratePlacement(
-				settings.generatePlacement,
-			) as TextEaterSettings["generatePlacement"],
-			splitInBlocksPlacement: migratePlacement(
-				settings.splitInBlocksPlacement,
-			) as TextEaterSettings["splitInBlocksPlacement"],
-			translatePlacement: migratePlacement(
-				settings.translatePlacement,
-			) as TextEaterSettings["translatePlacement"],
 		};
 	}
 
@@ -590,6 +556,17 @@ export default class TextEaterPlugin extends Plugin {
 				// Update global state BEFORE reinit so librarian uses new settings
 				updateParsedSettings(this.settings);
 				await this.reinitLibrarian();
+			}
+
+			// Check if placement settings changed
+			const placementChanged =
+				prev.translatePlacement !== curr.translatePlacement ||
+				prev.splitInBlocksPlacement !== curr.splitInBlocksPlacement ||
+				prev.explainGrammarPlacement !== curr.explainGrammarPlacement ||
+				prev.generatePlacement !== curr.generatePlacement;
+
+			if (placementChanged) {
+				this.overlayManager?.refreshToolbars();
 			}
 		}
 
