@@ -24,6 +24,10 @@ import {
 	splitSelectionBlocksCommand,
 } from "./commands/split-selection-blocks-command";
 import {
+	type TestButtonPayload,
+	testButtonCommand,
+} from "./commands/test-button-command";
+import {
 	type TranslateSelectionPayload,
 	translateSelectionCommand,
 } from "./commands/translate-selection-command";
@@ -119,6 +123,12 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 			case ActionKind.Generate: {
 				const p = payload as GeneratePayload;
 				await generateCommand(p, {});
+				break;
+			}
+
+			case ActionKind.TestButton: {
+				const p = payload as TestButtonPayload;
+				testButtonCommand(p);
 				break;
 			}
 

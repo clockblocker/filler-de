@@ -299,3 +299,40 @@ body.hide-status-bar .mod-root .workspace-split {
 	height: 24px;
 	stroke-width: 2.5;
 }
+
+/* ------ Textfresser Bottom Toolbar ------ */
+
+.tf-bottom-toolbar {
+	position: absolute;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	z-index: 20;
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	height: 56px;
+	padding: 8px 12px;
+	background: var(--background-primary);
+	border-top: 1px solid var(--background-modifier-border);
+	box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
+	backdrop-filter: blur(6px);
+}
+
+.tf-bottom-toolbar-btn {
+	padding: 6px 10px;
+	font: inherit;
+	cursor: pointer;
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+}
+
+.tf-bottom-toolbar-btn:hover:not(:disabled) {
+	background: var(--background-secondary-alt);
+}
+
+.tf-bottom-toolbar-btn:disabled {
+	cursor: not-allowed;
+	opacity: 0.4;
+}

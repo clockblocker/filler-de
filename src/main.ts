@@ -23,8 +23,13 @@ import {
 	type CommandExecutor,
 	createCommandExecutor,
 } from "./managers/actions-manager/create-action-executor";
+import { OverlayManager } from "./managers/overlay-manager";
 // import { LeafLifecycleManager } from "./managers/obsidian/leaf-lifecycle-manager";
-import { UserEventInterceptor } from "./managers/obsidian/user-event-interceptor";
+import {
+	HandlerOutcome,
+	PayloadKind,
+	UserEventInterceptor,
+} from "./managers/obsidian/user-event-interceptor";
 import {
 	makeSplitPath,
 	makeSystemPathForSplitPath,
@@ -65,7 +70,7 @@ export default class TextEaterPlugin extends Plugin {
 	testingTFolderHelper: TFolderHelper;
 	vaultActionManager: VaultActionManagerImpl;
 	userEventInterceptor: UserEventInterceptor;
-	// overlayManager: DeprecatedOverlayManager;
+	overlayManager: OverlayManager | null = null;
 	// leafLifecycleManager: LeafLifecycleManager;
 	delimiterChangeService: DelimiterChangeService | null = null;
 
@@ -248,6 +253,30 @@ export default class TextEaterPlugin extends Plugin {
 			vaultActionManager: this.vaultActionManager,
 		});
 
+		// Initialize OverlayManager
+		this.overlayManager = new OverlayManager({ app: this.app });
+		this.overlayManager.init();
+
+		// Set ActionElementClicked handler to route to commandExecutor
+		this.handlerTeardowns.push(
+			this.userEventInterceptor.setHandler(
+				PayloadKind.ActionElementClicked,
+				{
+					doesApply: (payload) => payload.actionId === "TestButton",
+					handle: async () => {
+						const filePath = this.overlayManager?.getCurrentFilePath();
+						if (filePath && this.commandExecutor) {
+							await this.commandExecutor({
+								kind: ActionKind.TestButton,
+								payload: { filePath },
+							});
+						}
+						return { outcome: HandlerOutcome.Handled };
+					},
+				},
+			),
+		);
+
 		// // Initialize LeafLifecycleManager (single source of truth for view lifecycle)
 		// this.leafLifecycleManager = new LeafLifecycleManager(this.app, this);
 		// this.leafLifecycleManager.init();
@@ -265,7 +294,11 @@ export default class TextEaterPlugin extends Plugin {
 	}
 
 	override onunload() {
-		// if (this.overlayManager) this.overlayManager.destroy();
+		// Destroy overlay manager
+		if (this.overlayManager) {
+			this.overlayManager.destroy();
+			this.overlayManager = null;
+		}
 		// Unregister all user event handlers
 		for (const teardown of this.handlerTeardowns) {
 			teardown();

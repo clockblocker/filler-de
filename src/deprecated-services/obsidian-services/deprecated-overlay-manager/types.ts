@@ -25,6 +25,7 @@ export const ActionKind = {
 	NavigatePage: "NavigatePage",
 	SplitInBlocks: "SplitInBlocks",
 	SplitToPages: "SplitToPages",
+	TestButton: "TestButton",
 	TranslateSelection: "TranslateSelection",
 } as const;
 export type ActionKind = (typeof ActionKind)[keyof typeof ActionKind];
@@ -41,6 +42,7 @@ export type ActionPayloads = {
 	SplitInBlocks: { selection: string; fileContent: string };
 	MakeText: Record<string, never>;
 	SplitToPages: Record<string, never>;
+	TestButton: { filePath: SplitPathToMdFile };
 	TranslateSelection: { selection: string };
 	ExplainGrammar: { selection: string };
 	Generate: { selection: string };
@@ -53,6 +55,7 @@ export type ActionParams = {
 	NavigatePage: { direction: "next" | "prev" };
 	MakeText: Record<string, never>;
 	SplitToPages: Record<string, never>;
+	TestButton: Record<string, never>;
 	TranslateSelection: Record<string, never>;
 	ExplainGrammar: Record<string, never>;
 	SplitInBlocks: Record<string, never>;
