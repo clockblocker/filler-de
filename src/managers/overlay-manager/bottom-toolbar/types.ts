@@ -16,6 +16,8 @@ export interface BottomToolbar {
 	destroy(): void;
 	/** Get the currently displayed file path */
 	getCurrentFilePath(): SplitPathToMdFile | null;
+	/** Update visibility of selection-dependent buttons */
+	updateSelectionContext(hasSelection: boolean): void;
 }
 
 /**

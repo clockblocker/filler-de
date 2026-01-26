@@ -16,6 +16,12 @@ import {
 	WorkspaceEventInterceptor,
 	WorkspaceEventKind,
 } from "../obsidian/workspace-navigation-event-interceptor";
+import {
+	HandlerOutcome,
+	PayloadKind,
+	type SelectionChangedPayload,
+	type UserEventInterceptor,
+} from "../obsidian/user-event-interceptor";
 import { type BottomToolbar, createBottomToolbar } from "./bottom-toolbar";
 
 /**
@@ -24,6 +30,8 @@ import { type BottomToolbar, createBottomToolbar } from "./bottom-toolbar";
 export type OverlayManagerDeps = {
 	/** Obsidian app instance */
 	app: App;
+	/** User event interceptor for selection events */
+	userEventInterceptor?: UserEventInterceptor;
 };
 
 /**
@@ -32,13 +40,16 @@ export type OverlayManagerDeps = {
 export class OverlayManager {
 	private readonly app: App;
 	private readonly workspaceInterceptor: WorkspaceEventInterceptor;
+	private readonly userEventInterceptor: UserEventInterceptor | null;
 	private workspaceTeardown: Teardown | null = null;
+	private selectionHandlerTeardown: (() => void) | null = null;
 	/** Toolbars per leaf, keyed by leaf ID */
 	private toolbars = new Map<string, BottomToolbar>();
 
 	constructor(deps: OverlayManagerDeps) {
 		this.app = deps.app;
 		this.workspaceInterceptor = new WorkspaceEventInterceptor(this.app);
+		this.userEventInterceptor = deps.userEventInterceptor ?? null;
 	}
 
 	/**
@@ -49,6 +60,20 @@ export class OverlayManager {
 		this.workspaceTeardown = this.workspaceInterceptor.subscribe(
 			this.handleWorkspaceEvent.bind(this),
 		);
+
+		// Subscribe to selection changed events
+		if (this.userEventInterceptor) {
+			this.selectionHandlerTeardown = this.userEventInterceptor.setHandler(
+				PayloadKind.SelectionChanged,
+				{
+					doesApply: () => true,
+					handle: async (payload: SelectionChangedPayload) => {
+						this.handleSelectionChanged(payload);
+						return { outcome: HandlerOutcome.Passthrough };
+					},
+				},
+			);
+		}
 
 		// Check current state on init
 		this.updateToolbarVisibility();
@@ -72,6 +97,11 @@ export class OverlayManager {
 		if (this.workspaceTeardown) {
 			this.workspaceTeardown();
 			this.workspaceTeardown = null;
+		}
+
+		if (this.selectionHandlerTeardown) {
+			this.selectionHandlerTeardown();
+			this.selectionHandlerTeardown = null;
 		}
 
 		this.workspaceInterceptor.stopListening();
@@ -151,5 +181,18 @@ export class OverlayManager {
 			extension: "md",
 			segments: parts,
 		};
+	}
+
+	private handleSelectionChanged(payload: SelectionChangedPayload): void {
+		// Update the active leaf's toolbar
+		const activeLeaf = this.app.workspace.activeLeaf;
+		// Obsidian leaf.id is not in public API, accessing via any
+		const leafId = (activeLeaf as any)?.id as string | undefined;
+		if (!leafId) return;
+
+		const toolbar = this.toolbars.get(leafId);
+		if (toolbar) {
+			toolbar.updateSelectionContext(payload.hasSelection);
+		}
 	}
 }

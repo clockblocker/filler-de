@@ -18,6 +18,7 @@ export function createBottomToolbar(
 	const { container } = options;
 
 	let toolbarEl: HTMLElement | null = null;
+	let translateStubBtnEl: HTMLElement | null = null;
 	let currentFilePath: SplitPathToMdFile | null = null;
 
 	// ─── DOM Creation ───
@@ -32,6 +33,15 @@ export function createBottomToolbar(
 		testButton.setAttribute("data-action", "TestButton");
 		testButton.textContent = "Test";
 		toolbar.appendChild(testButton);
+
+		// Create translate stub button (hidden by default)
+		const translateStubButton = document.createElement("button");
+		translateStubButton.className = "tf-bottom-toolbar-btn tf-contextual-btn";
+		translateStubButton.setAttribute("data-action", "TranslateStub");
+		translateStubButton.textContent = "Translate Stub";
+		translateStubButton.style.display = "none";
+		toolbar.appendChild(translateStubButton);
+		translateStubBtnEl = translateStubButton;
 
 		return toolbar;
 	}
@@ -72,10 +82,16 @@ export function createBottomToolbar(
 		return currentFilePath;
 	}
 
+	function updateSelectionContext(hasSelection: boolean): void {
+		if (!translateStubBtnEl) return;
+		translateStubBtnEl.style.display = hasSelection ? "" : "none";
+	}
+
 	return {
 		destroy,
 		getCurrentFilePath,
 		hide,
 		show,
+		updateSelectionContext,
 	};
 }

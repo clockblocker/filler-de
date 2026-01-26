@@ -254,7 +254,10 @@ export default class TextEaterPlugin extends Plugin {
 		});
 
 		// Initialize OverlayManager
-		this.overlayManager = new OverlayManager({ app: this.app });
+		this.overlayManager = new OverlayManager({
+			app: this.app,
+			userEventInterceptor: this.userEventInterceptor,
+		});
 		this.overlayManager.init();
 
 		// Set ActionElementClicked handler to route to commandExecutor
@@ -262,14 +265,23 @@ export default class TextEaterPlugin extends Plugin {
 			this.userEventInterceptor.setHandler(
 				PayloadKind.ActionElementClicked,
 				{
-					doesApply: (payload) => payload.actionId === "TestButton",
-					handle: async () => {
-						const filePath = this.overlayManager?.getCurrentFilePath();
-						if (filePath && this.commandExecutor) {
-							await this.commandExecutor({
-								kind: ActionKind.TestButton,
-								payload: { filePath },
-							});
+					doesApply: (payload) =>
+						payload.actionId === "TestButton" ||
+						payload.actionId === "TranslateStub",
+					handle: async (payload) => {
+						if (payload.actionId === "TestButton") {
+							const filePath = this.overlayManager?.getCurrentFilePath();
+							if (filePath && this.commandExecutor) {
+								await this.commandExecutor({
+									kind: ActionKind.TestButton,
+									payload: { filePath },
+								});
+							}
+						} else if (payload.actionId === "TranslateStub") {
+							const view =
+								this.app.workspace.getActiveViewOfType(MarkdownView);
+							const selection = view?.editor?.getSelection() ?? "";
+							console.log("[TranslateStub] Selection:", selection);
 						}
 						return { outcome: HandlerOutcome.Handled };
 					},
