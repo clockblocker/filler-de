@@ -32,6 +32,7 @@ import { dispatchActionClick } from "./action-click-dispatcher";
 import { computeAllowedActions, KNOWN_ACTION_IDS } from "./action-definitions";
 import { type BottomToolbar, createBottomToolbar } from "./bottom-toolbar";
 import { setupContextMenu } from "./context-menu";
+import { createEdgeZones, type EdgeZones } from "./edge-zones";
 import { handleSelectionChanged } from "./selection-handler";
 import {
 	createSelectionToolbar,
@@ -64,6 +65,7 @@ export class OverlayManager {
 	private contextMenuTeardown: (() => void) | null = null;
 	private bottomToolbars = new Map<string, BottomToolbar>();
 	private selectionToolbars = new Map<string, SelectionToolbar>();
+	private edgeZones = new Map<string, EdgeZones>();
 	private activeLeafId: string | null = null;
 
 	constructor(deps: OverlayManagerDeps) {
@@ -158,6 +160,9 @@ export class OverlayManager {
 		for (const toolbar of this.selectionToolbars.values())
 			toolbar.destroy();
 		this.selectionToolbars.clear();
+
+		for (const zones of this.edgeZones.values()) zones.destroy();
+		this.edgeZones.clear();
 	}
 
 	// ─── Private ───
@@ -185,8 +190,10 @@ export class OverlayManager {
 				bottomToolbars: this.bottomToolbars,
 				createBottomToolbar: (container) =>
 					createBottomToolbar({ container }),
+				createEdgeZones: (container) => createEdgeZones({ container }),
 				createSelectionToolbar: (container) =>
 					createSelectionToolbar({ container }),
+				edgeZones: this.edgeZones,
 				selectionToolbars: this.selectionToolbars,
 			},
 			actions,

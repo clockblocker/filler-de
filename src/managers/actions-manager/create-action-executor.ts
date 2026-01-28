@@ -1,10 +1,7 @@
 import { Notice } from "obsidian";
 import type { Librarian } from "../../commanders/librarian/librarian";
-import {
-	ActionKind,
-	type ActionPayloads,
-} from "../../deprecated-services/obsidian-services/deprecated-overlay-manager/types";
 import { logger } from "../../utils/logger";
+import { CommandKind, type CommandPayloads } from "./types";
 import type { VaultActionManager } from "../obsidian/vault-action-manager";
 import {
 	type ExplainGrammarPayload,
@@ -43,9 +40,9 @@ export type CommandExecutorManagers = {
 /**
  * Command to execute with typed payload.
  */
-export type ExecuteCommandInput<K extends ActionKind = ActionKind> = {
+export type ExecuteCommandInput<K extends CommandKind = CommandKind> = {
 	kind: K;
-	payload: ActionPayloads[K];
+	payload: CommandPayloads[K];
 };
 
 /**
@@ -64,20 +61,20 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 		vaultActionManager,
 	);
 
-	return async function executeCommand<K extends ActionKind>(
+	return async function executeCommand<K extends CommandKind>(
 		command: ExecuteCommandInput<K>,
 	): Promise<void> {
 		const { kind, payload } = command;
 
 		switch (kind) {
-			case ActionKind.NavigatePage: {
+			case CommandKind.NavigatePage: {
 				const p = payload as NavigatePagePayload;
 				await navigatePageCommand(p);
 				break;
 			}
 
-			case ActionKind.MakeText:
-			case ActionKind.SplitToPages: {
+			case CommandKind.MakeText:
+			case CommandKind.SplitToPages: {
 				// Both actions do the same thing - split scroll into pages
 				await splitIntoPagesCommand({
 					librarian,
@@ -86,7 +83,7 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 				break;
 			}
 
-			case ActionKind.SplitInBlocks: {
+			case CommandKind.SplitInBlocks: {
 				const p = payload as SplitInBlocksPayload;
 				const contentResult =
 					await vaultActionManager.getOpenedContent();
@@ -108,25 +105,25 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 				break;
 			}
 
-			case ActionKind.TranslateSelection: {
+			case CommandKind.TranslateSelection: {
 				const p = payload as TranslateSelectionPayload;
 				await translateSelectionCommand(p, {});
 				break;
 			}
 
-			case ActionKind.ExplainGrammar: {
+			case CommandKind.ExplainGrammar: {
 				const p = payload as ExplainGrammarPayload;
 				await explainGrammarCommand(p, {});
 				break;
 			}
 
-			case ActionKind.Generate: {
+			case CommandKind.Generate: {
 				const p = payload as GeneratePayload;
 				await generateCommand(p, {});
 				break;
 			}
 
-			case ActionKind.TestButton: {
+			case CommandKind.TestButton: {
 				const p = payload as TestButtonPayload;
 				testButtonCommand(p);
 				break;

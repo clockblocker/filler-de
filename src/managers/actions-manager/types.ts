@@ -1,7 +1,65 @@
 import { z } from "zod";
-import type { TexfresserObsidianServices } from "../../deprecated-services/obsidian-services/interface";
 import type { FileType } from "../../types/common-interface/enums";
-import type { AnySplitPath } from "../obsidian/vault-action-manager/types/split-path";
+import type {
+	AnySplitPath,
+	SplitPathToMdFile,
+} from "../obsidian/vault-action-manager/types/split-path";
+
+// ─── CommandKind - Command Executor Action Kinds ───
+
+/**
+ * All known command kinds for the command executor.
+ */
+export const CommandKind = {
+	ExplainGrammar: "ExplainGrammar",
+	Generate: "Generate",
+	MakeText: "MakeText",
+	NavigatePage: "NavigatePage",
+	SplitInBlocks: "SplitInBlocks",
+	SplitToPages: "SplitToPages",
+	TestButton: "TestButton",
+	TranslateSelection: "TranslateSelection",
+} as const;
+export type CommandKind = (typeof CommandKind)[keyof typeof CommandKind];
+
+/**
+ * Typed payloads per command kind.
+ * Each executor receives only its typed payload.
+ */
+export type CommandPayloads = {
+	NavigatePage: {
+		direction: "prev" | "next";
+		currentFilePath: SplitPathToMdFile;
+	};
+	SplitInBlocks: { selection: string; fileContent: string };
+	MakeText: Record<string, never>;
+	SplitToPages: Record<string, never>;
+	TestButton: { filePath: SplitPathToMdFile };
+	TranslateSelection: { selection: string };
+	ExplainGrammar: { selection: string };
+	Generate: { selection: string };
+};
+
+// ─── Deprecated Types (for backward compatibility) ───
+
+/**
+ * @deprecated Use CommandKind instead. Alias for backward compatibility.
+ */
+export const ActionKind = CommandKind;
+/**
+ * @deprecated Use CommandKind instead. Alias for backward compatibility.
+ */
+export type ActionKind = CommandKind;
+
+/**
+ * @deprecated Use CommandPayloads instead. Alias for backward compatibility.
+ */
+export type ActionPayloads = CommandPayloads;
+
+// ─── UserCommandKind - Legacy Button Types ───
+
+/** @deprecated Services interface - to be removed */
+export type TexfresserObsidianServices = Record<string, unknown>;
 
 const USER_COMMAND_LITERALS = [
 	"SplitInBlocks",

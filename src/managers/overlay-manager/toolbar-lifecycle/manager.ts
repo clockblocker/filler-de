@@ -42,8 +42,10 @@ export function updateToolbarVisibility(
 		app,
 		bottomToolbars,
 		selectionToolbars,
+		edgeZones,
 		createBottomToolbar,
 		createSelectionToolbar,
+		createEdgeZones,
 	} = context;
 	const { bottomActions, selectionActions } = config;
 
@@ -92,6 +94,16 @@ export function updateToolbarVisibility(
 			selectionToolbars.get(leafId)?.setActions(selectionActions);
 		}
 
+		// Create/update edge zones
+		if (!edgeZones.has(leafId)) {
+			const zones = createEdgeZones(container);
+			zones.attach(container, leaf.view as MarkdownView);
+			zones.setNavActions(navActions);
+			edgeZones.set(leafId, zones);
+		} else {
+			edgeZones.get(leafId)?.setNavActions(navActions);
+		}
+
 		const filePath = buildSplitPath(file.path);
 		if (filePath) {
 			bottomToolbars.get(leafId)?.show(filePath);
@@ -110,6 +122,14 @@ export function updateToolbarVisibility(
 		if (!activeLeafIds.has(leafId)) {
 			toolbar.destroy();
 			selectionToolbars.delete(leafId);
+		}
+	}
+
+	// Remove edge zones for closed leaves
+	for (const [leafId, zones] of edgeZones) {
+		if (!activeLeafIds.has(leafId)) {
+			zones.destroy();
+			edgeZones.delete(leafId);
 		}
 	}
 }

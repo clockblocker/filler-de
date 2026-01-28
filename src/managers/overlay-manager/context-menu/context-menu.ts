@@ -11,7 +11,6 @@ import { type App, MarkdownView, type Menu, type Plugin } from "obsidian";
 import { z } from "zod";
 import { wouldSplitToMultiplePages as checkWouldSplit } from "../../../commanders/librarian/bookkeeper/segmenter";
 import { makeCodecRulesFromSettings } from "../../../commanders/librarian/codecs/rules";
-import { ActionKind } from "../../../deprecated-services/obsidian-services/deprecated-overlay-manager/types";
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import { readMetadata } from "../../../stateless-services/note-metadata-manager";
 import {
@@ -19,6 +18,7 @@ import {
 	MdFileSubTypeSchema,
 } from "../../../types/common-interface/enums";
 import type { CommandExecutor } from "../../actions-manager/create-action-executor";
+import { CommandKind } from "../../actions-manager/types";
 import { makeSplitPath } from "../../obsidian/vault-action-manager";
 
 /** Schema for reading noteKind from file metadata. */
@@ -119,7 +119,7 @@ function handleEditorMenu(
 				.onClick(() => {
 					if (!commandExecutor) return;
 					void commandExecutor({
-						kind: ActionKind.MakeText,
+						kind: CommandKind.MakeText,
 						payload: {},
 					});
 				}),

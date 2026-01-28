@@ -3,7 +3,7 @@
  */
 
 import { MarkdownView } from "obsidian";
-import { ActionKind } from "../../../deprecated-services/obsidian-services/deprecated-overlay-manager/types";
+import { CommandKind } from "../../actions-manager/types";
 import { logger } from "../../../utils/logger";
 import { OverlayActionKind } from "../action-definitions";
 import type { ActionClickContext } from "./types";
@@ -29,7 +29,7 @@ export async function dispatchActionClick(
 		case OverlayActionKind.Translate:
 			if (selection) {
 				await commandExecutor({
-					kind: ActionKind.TranslateSelection,
+					kind: CommandKind.TranslateSelection,
 					payload: { selection },
 				});
 			}
@@ -38,7 +38,7 @@ export async function dispatchActionClick(
 		case OverlayActionKind.SplitInBlocks:
 			if (selection) {
 				await commandExecutor({
-					kind: ActionKind.SplitInBlocks,
+					kind: CommandKind.SplitInBlocks,
 					payload: { fileContent: "", selection },
 				});
 			}
@@ -47,7 +47,7 @@ export async function dispatchActionClick(
 		case OverlayActionKind.ExplainGrammar:
 			if (selection) {
 				await commandExecutor({
-					kind: ActionKind.ExplainGrammar,
+					kind: CommandKind.ExplainGrammar,
 					payload: { selection },
 				});
 			}
@@ -55,7 +55,7 @@ export async function dispatchActionClick(
 
 		case OverlayActionKind.Generate:
 			await commandExecutor({
-				kind: ActionKind.Generate,
+				kind: CommandKind.Generate,
 				payload: {},
 			});
 			break;
@@ -65,7 +65,7 @@ export async function dispatchActionClick(
 			const filePath = getCurrentFilePath();
 			if (filePath) {
 				await commandExecutor({
-					kind: ActionKind.NavigatePage,
+					kind: CommandKind.NavigatePage,
 					payload: {
 						currentFilePath: filePath,
 						direction:

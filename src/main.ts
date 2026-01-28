@@ -7,7 +7,7 @@ import {
 } from "obsidian";
 import { DelimiterChangeService } from "./commanders/librarian/delimiter-change-service";
 import { Librarian } from "./commanders/librarian/librarian";
-import { ActionKind } from "./deprecated-services/obsidian-services/deprecated-overlay-manager/types";
+import { CommandKind } from "./managers/actions-manager/types";
 import {
 	clearState,
 	initializeState,
@@ -327,7 +327,7 @@ export default class TextEaterPlugin extends Plugin {
 					const selection = editor.getSelection();
 					if (selection) {
 						void this.commandExecutor?.({
-							kind: ActionKind.TranslateSelection,
+							kind: CommandKind.TranslateSelection,
 							payload: { selection },
 						});
 					}
@@ -344,7 +344,7 @@ export default class TextEaterPlugin extends Plugin {
 					const selection = editor.getSelection();
 					if (selection) {
 						void this.commandExecutor?.({
-							kind: ActionKind.SplitInBlocks,
+							kind: CommandKind.SplitInBlocks,
 							payload: { fileContent: "", selection },
 						});
 					} else {
@@ -400,7 +400,7 @@ export default class TextEaterPlugin extends Plugin {
 			editorCheckCallback: (checking: boolean) => {
 				if (!checking) {
 					void this.commandExecutor?.({
-						kind: ActionKind.SplitToPages,
+						kind: CommandKind.SplitToPages,
 						payload: {},
 					});
 				}

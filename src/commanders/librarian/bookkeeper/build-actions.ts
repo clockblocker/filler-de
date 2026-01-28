@@ -127,6 +127,7 @@ export function buildPageSplitActions(
 			prevPageIdx,
 			nextPageIdx,
 		);
+
 		const pagePath =
 			page.pageIndex === 0
 				? firstPagePath
@@ -137,6 +138,7 @@ export function buildPageSplitActions(
 						newPathParts,
 						rules,
 					);
+
 		actions.push({
 			kind: VaultActionKind.UpsertMdFile,
 			payload: {
