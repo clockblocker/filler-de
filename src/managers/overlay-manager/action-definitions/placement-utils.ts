@@ -42,8 +42,8 @@ export function computeAllowedActions(): ComputedActions {
 
 	// Add navigation buttons (always visible, not configurable)
 	bottomActions.push(
-		{ id: OverlayActionKind.NavPrev, label: "<", contextual: false },
-		{ id: OverlayActionKind.NavNext, label: ">", contextual: false },
+		{ contextual: false, id: OverlayActionKind.NavPrev, label: "<" },
+		{ contextual: false, id: OverlayActionKind.NavNext, label: ">" },
 	);
 
 	return { bottomActions, selectionActions };

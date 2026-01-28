@@ -10,7 +10,7 @@
  * See about.md for responsibility boundary documentation.
  */
 
-import type { App } from "obsidian";
+import type { App, Plugin } from "obsidian";
 import type { CommandExecutor } from "../actions-manager/create-action-executor";
 import {
 	type ActionElementClickedPayload,
@@ -31,6 +31,7 @@ import {
 import { dispatchActionClick } from "./action-click-dispatcher";
 import { computeAllowedActions, KNOWN_ACTION_IDS } from "./action-definitions";
 import { type BottomToolbar, createBottomToolbar } from "./bottom-toolbar";
+import { setupContextMenu } from "./context-menu";
 import { handleSelectionChanged } from "./selection-handler";
 import {
 	createSelectionToolbar,
@@ -43,6 +44,7 @@ import { updateToolbarVisibility } from "./toolbar-lifecycle";
  */
 export type OverlayManagerDeps = {
 	app: App;
+	plugin?: Plugin;
 	userEventInterceptor?: UserEventInterceptor;
 	commandExecutor?: CommandExecutor;
 };
@@ -52,18 +54,21 @@ export type OverlayManagerDeps = {
  */
 export class OverlayManager {
 	private readonly app: App;
+	private readonly plugin: Plugin | null;
 	private readonly workspaceInterceptor: WorkspaceEventInterceptor;
 	private readonly userEventInterceptor: UserEventInterceptor | null;
 	private readonly commandExecutor: CommandExecutor | null;
 	private workspaceTeardown: Teardown | null = null;
 	private selectionHandlerTeardown: (() => void) | null = null;
 	private actionClickHandlerTeardown: (() => void) | null = null;
+	private contextMenuTeardown: (() => void) | null = null;
 	private bottomToolbars = new Map<string, BottomToolbar>();
 	private selectionToolbars = new Map<string, SelectionToolbar>();
 	private activeLeafId: string | null = null;
 
 	constructor(deps: OverlayManagerDeps) {
 		this.app = deps.app;
+		this.plugin = deps.plugin ?? null;
 		this.workspaceInterceptor = new WorkspaceEventInterceptor(this.app);
 		this.userEventInterceptor = deps.userEventInterceptor ?? null;
 		this.commandExecutor = deps.commandExecutor ?? null;
@@ -106,12 +111,22 @@ export class OverlayManager {
 							await dispatchActionClick(payload.actionId, {
 								app: this.app,
 								commandExecutor: this.commandExecutor,
-								getCurrentFilePath: () => this.getCurrentFilePath(),
+								getCurrentFilePath: () =>
+									this.getCurrentFilePath(),
 							});
 							return { outcome: HandlerOutcome.Handled };
 						},
 					},
 				);
+		}
+
+		// Setup context menu for "Split into pages"
+		if (this.plugin) {
+			this.contextMenuTeardown = setupContextMenu({
+				app: this.app,
+				commandExecutor: this.commandExecutor,
+				plugin: this.plugin,
+			});
 		}
 
 		this.refreshToolbars();
@@ -132,6 +147,8 @@ export class OverlayManager {
 		this.selectionHandlerTeardown = null;
 		this.actionClickHandlerTeardown?.();
 		this.actionClickHandlerTeardown = null;
+		this.contextMenuTeardown?.();
+		this.contextMenuTeardown = null;
 
 		this.workspaceInterceptor.stopListening();
 

@@ -67,11 +67,11 @@ export async function dispatchActionClick(
 				await commandExecutor({
 					kind: ActionKind.NavigatePage,
 					payload: {
+						currentFilePath: filePath,
 						direction:
 							actionId === OverlayActionKind.NavPrev
 								? "prev"
 								: "next",
-						currentFilePath: filePath,
 					},
 				});
 			}

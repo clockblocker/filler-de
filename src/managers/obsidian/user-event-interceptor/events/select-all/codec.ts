@@ -2,6 +2,7 @@
  * SelectAllCodec - encodes select-all event data into payload.
  */
 
+import { EditorSelection } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import type { SplitPathToMdFile } from "../../../vault-action-manager/types/split-path";
 import type { SelectAllPayload } from "./payload";
@@ -20,11 +21,8 @@ export const SelectAllCodec = {
 	applySelection(payload: SelectAllPayload): void {
 		if (payload.customSelection) {
 			const { from, to } = payload.customSelection;
-			// Use dynamic import to avoid circular dependency
-			import("@codemirror/state").then(({ EditorSelection }) => {
-				payload.view.dispatch({
-					selection: EditorSelection.single(from, to),
-				});
+			payload.view.dispatch({
+				selection: EditorSelection.single(from, to),
 			});
 		}
 	},
