@@ -15,7 +15,7 @@ export async function dispatchActionClick(
 	actionId: string,
 	context: ActionClickContext,
 ): Promise<void> {
-	const { app, commandExecutor, getCurrentFilePath } = context;
+	const { app, commandExecutor, vam } = context;
 
 	if (!commandExecutor) {
 		logger.warn("[dispatchActionClick] No commandExecutor provided");
@@ -62,18 +62,21 @@ export async function dispatchActionClick(
 
 		case OverlayActionKind.NavPrev:
 		case OverlayActionKind.NavNext: {
-			const filePath = getCurrentFilePath();
-			if (filePath) {
-				await commandExecutor({
-					kind: CommandKind.NavigatePage,
-					payload: {
-						currentFilePath: filePath,
-						direction:
-							actionId === OverlayActionKind.NavPrev
-								? "prev"
-								: "next",
-					},
-				});
+			const result = await vam.pwd();
+			if (result.isOk()) {
+				const path = result.value;
+				if (path.kind === "MdFile") {
+					await commandExecutor({
+						kind: CommandKind.NavigatePage,
+						payload: {
+							currentFilePath: path,
+							direction:
+								actionId === OverlayActionKind.NavPrev
+									? "prev"
+									: "next",
+						},
+					});
+				}
 			}
 			break;
 		}

@@ -421,18 +421,25 @@ export class OpenedFileService {
 			await leaf.openFile(tfile);
 			// Ensure leaf is properly marked active so getActiveViewOfType() returns it immediately
 			this.app.workspace.setActiveLeaf(leaf, { focus: true });
-			// Only reveal file in explorer if explorer is already open
-			const fileExplorerLeaves =
-				this.app.workspace.getLeavesOfType("file-explorer");
-			if (fileExplorerLeaves.length > 0) {
-				// Using `as unknown` because `commands` is not in public Obsidian API types
-				(
-					this.app as unknown as {
-						commands: { executeCommandById: (id: string) => void };
-					}
-				).commands.executeCommandById(
-					"file-explorer:reveal-active-file",
-				);
+			// Only reveal file in explorer if sidebar is visible and explorer exists
+			// Using `as unknown` because `leftSplit.collapsed` is not in public Obsidian API types
+			const leftSplit = this.app.workspace.leftSplit as unknown as {
+				collapsed: boolean;
+			} | null;
+			const sidebarVisible = leftSplit && !leftSplit.collapsed;
+			if (sidebarVisible) {
+				const fileExplorerLeaves =
+					this.app.workspace.getLeavesOfType("file-explorer");
+				if (fileExplorerLeaves.length > 0) {
+					// Using `as unknown` because `commands` is not in public Obsidian API types
+					(
+						this.app as unknown as {
+							commands: { executeCommandById: (id: string) => void };
+						}
+					).commands.executeCommandById(
+						"file-explorer:reveal-active-file",
+					);
+				}
 			}
 			// Wait for view DOM to be ready before returning
 			await this.waitForViewReady(tfile);

@@ -248,6 +248,7 @@ export default class TextEaterPlugin extends Plugin {
 			commandExecutor: this.commandExecutor ?? undefined,
 			plugin: this,
 			userEventInterceptor: this.userEventInterceptor,
+			vam: this.vaultActionManager,
 		});
 		this.overlayManager.init();
 	}

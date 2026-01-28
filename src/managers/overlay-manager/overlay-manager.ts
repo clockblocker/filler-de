@@ -13,13 +13,13 @@
 import type { App, Plugin } from "obsidian";
 import type { CommandExecutor } from "../actions-manager/create-action-executor";
 import {
-	type ActionElementClickedPayload,
+	type ActionElementPayload,
 	HandlerOutcome,
 	PayloadKind,
 	type SelectionChangedPayload,
 	type UserEventInterceptor,
 } from "../obsidian/user-event-interceptor";
-import type { SplitPathToMdFile } from "../obsidian/vault-action-manager/types/split-path";
+import type { VaultActionManager } from "../obsidian/vault-action-manager";
 import type {
 	Teardown,
 	WorkspaceEvent,
@@ -48,6 +48,7 @@ export type OverlayManagerDeps = {
 	plugin?: Plugin;
 	userEventInterceptor?: UserEventInterceptor;
 	commandExecutor?: CommandExecutor;
+	vam: VaultActionManager;
 };
 
 /**
@@ -59,6 +60,7 @@ export class OverlayManager {
 	private readonly workspaceInterceptor: WorkspaceEventInterceptor;
 	private readonly userEventInterceptor: UserEventInterceptor | null;
 	private readonly commandExecutor: CommandExecutor | null;
+	private readonly vam: VaultActionManager;
 	private workspaceTeardown: Teardown | null = null;
 	private selectionHandlerTeardown: (() => void) | null = null;
 	private actionClickHandlerTeardown: (() => void) | null = null;
@@ -74,6 +76,7 @@ export class OverlayManager {
 		this.workspaceInterceptor = new WorkspaceEventInterceptor(this.app);
 		this.userEventInterceptor = deps.userEventInterceptor ?? null;
 		this.commandExecutor = deps.commandExecutor ?? null;
+		this.vam = deps.vam;
 	}
 
 	init(): void {
@@ -105,16 +108,13 @@ export class OverlayManager {
 				this.userEventInterceptor.setHandler(
 					PayloadKind.ActionElementClicked,
 					{
-						doesApply: (payload: ActionElementClickedPayload) =>
+						doesApply: (payload: ActionElementPayload) =>
 							KNOWN_ACTION_IDS.has(payload.actionId),
-						handle: async (
-							payload: ActionElementClickedPayload,
-						) => {
+						handle: async (payload: ActionElementPayload) => {
 							await dispatchActionClick(payload.actionId, {
 								app: this.app,
 								commandExecutor: this.commandExecutor,
-								getCurrentFilePath: () =>
-									this.getCurrentFilePath(),
+								vam: this.vam,
 							});
 							return { outcome: HandlerOutcome.Handled };
 						},
@@ -132,14 +132,6 @@ export class OverlayManager {
 		}
 
 		this.refreshToolbars();
-	}
-
-	getCurrentFilePath(): SplitPathToMdFile | null {
-		const activeLeaf = this.app.workspace.activeLeaf;
-		// Obsidian leaf.id is not in public API
-		const leafId = (activeLeaf as any)?.id as string | undefined;
-		if (!leafId) return null;
-		return this.bottomToolbars.get(leafId)?.getCurrentFilePath() ?? null;
 	}
 
 	destroy(): void {

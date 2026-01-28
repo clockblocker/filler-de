@@ -4,10 +4,10 @@
 
 import type { App } from "obsidian";
 import type { CommandExecutor } from "../../actions-manager/create-action-executor";
-import type { SplitPathToMdFile } from "../../obsidian/vault-action-manager/types/split-path";
+import type { VaultActionManager } from "../../obsidian/vault-action-manager";
 
 export type ActionClickContext = {
 	app: App;
 	commandExecutor: CommandExecutor | null;
-	getCurrentFilePath: () => SplitPathToMdFile | null;
+	vam: VaultActionManager;
 };
