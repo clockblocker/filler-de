@@ -2,7 +2,10 @@
  * Path utilities for toolbar lifecycle.
  */
 
-import type { SplitPathToMdFile } from "../../obsidian/vault-action-manager/types/split-path";
+import {
+	SplitPathKind,
+	type SplitPathToMdFile,
+} from "../../obsidian/vault-action-manager/types/split-path";
 
 /**
  * Build a SplitPath from a file path string.
@@ -22,6 +25,7 @@ export function buildSplitPath(path: string): SplitPathToMdFile | null {
 	return {
 		basename: basenameWithoutExt,
 		extension: "md",
-		segments: parts,
+		kind: SplitPathKind.MdFile,
+		pathParts: parts,
 	};
 }

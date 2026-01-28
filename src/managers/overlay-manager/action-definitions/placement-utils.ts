@@ -17,7 +17,17 @@ export type ComputedActions = {
 };
 
 /**
+ * Page metadata for navigation buttons.
+ */
+export type PageNavMetadata = {
+	noteKind?: string;
+	prevPageIdx?: number;
+	nextPageIdx?: number;
+};
+
+/**
  * Compute which actions go to which toolbar based on current settings.
+ * Does NOT include navigation buttons - use computeNavActions() separately.
  */
 export function computeAllowedActions(): ComputedActions {
 	const settings = getParsedUserSettings();
@@ -25,7 +35,7 @@ export function computeAllowedActions(): ComputedActions {
 	const bottomActions: ActionConfig[] = [];
 
 	for (const def of Object.values(ACTION_DEFINITIONS)) {
-		// Skip nav buttons - they're added separately
+		// Skip nav buttons - they're computed separately with metadata
 		if (def.settingKey === null) continue;
 
 		const placement = settings[
@@ -40,11 +50,41 @@ export function computeAllowedActions(): ComputedActions {
 		// ShortcutOnly actions go to neither toolbar
 	}
 
-	// Add navigation buttons (always visible, not configurable)
-	bottomActions.push(
-		{ contextual: false, id: OverlayActionKind.NavPrev, label: "<" },
-		{ contextual: false, id: OverlayActionKind.NavNext, label: ">" },
-	);
-
 	return { bottomActions, selectionActions };
+}
+
+/**
+ * Compute navigation button actions based on page metadata.
+ * Returns nav buttons only if noteKind === "Page".
+ * Buttons are disabled based on prevPageIdx/nextPageIdx presence.
+ */
+export function computeNavActions(
+	metadata: PageNavMetadata | null,
+): ActionConfig[] {
+	// Only show nav buttons for Page notes
+	if (!metadata || metadata.noteKind !== "Page") {
+		return [];
+	}
+
+	// No buttons if neither index is present
+	const hasAnyIndex =
+		metadata.prevPageIdx !== undefined || metadata.nextPageIdx !== undefined;
+	if (!hasAnyIndex) {
+		return [];
+	}
+
+	return [
+		{
+			contextual: false,
+			disabled: metadata.prevPageIdx === undefined,
+			id: OverlayActionKind.NavPrev,
+			label: "<",
+		},
+		{
+			contextual: false,
+			disabled: metadata.nextPageIdx === undefined,
+			id: OverlayActionKind.NavNext,
+			label: ">",
+		},
+	];
 }

@@ -14,6 +14,8 @@ export type ActionConfig = {
 	label: string;
 	/** Whether button visibility depends on selection (default: true) */
 	contextual?: boolean;
+	/** Whether button should be disabled (default: false) */
+	disabled?: boolean;
 };
 
 /**

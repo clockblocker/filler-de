@@ -61,7 +61,10 @@ import {
 	getNextPage as getNextPageImpl,
 	getPrevPage as getPrevPageImpl,
 } from "./page-navigation";
-import { triggerSectionHealing as triggerSectionHealingImpl } from "./section-healing";
+import {
+	buildPageNavMigrationActions,
+	triggerSectionHealing as triggerSectionHealingImpl,
+} from "./section-healing";
 import { CODEX_CORE_NAME } from "./types/consts/literals";
 import type { NodeName } from "./types/schemas/node-name";
 import { VaultActionQueue } from "./vault-action-queue";
@@ -196,6 +199,12 @@ export class Librarian {
 				);
 			allHealingActions.push(...deletionHealingActions);
 
+			// Build page navigation migration actions
+			const pageNavMigrationActions = await buildPageNavMigrationActions(
+				allFiles,
+				this.rules,
+			);
+
 			// Combine all actions and dispatch once
 			const allVaultActions = [
 				...assembleVaultActions(
@@ -205,6 +214,7 @@ export class Librarian {
 					this.codecs,
 				),
 				...migrationActions, // Convert YAML frontmatter to internal format
+				...pageNavMigrationActions, // Add missing page navigation indices
 			];
 
 			if (allVaultActions.length > 0) {

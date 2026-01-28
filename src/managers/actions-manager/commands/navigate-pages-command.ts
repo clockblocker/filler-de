@@ -1,7 +1,18 @@
-import type { Librarian } from "../../../commanders/librarian/librarian";
+import { z } from "zod";
+import { getPageSplitPathByIndex } from "../../../commanders/librarian/bookkeeper/page-codec";
+import { readMetadata } from "../../../stateless-services/note-metadata-manager";
 import type { VaultActionManager } from "../../obsidian/vault-action-manager";
 import { logError } from "../../obsidian/vault-action-manager/helpers/issue-handlers";
 import type { SplitPathToMdFile } from "../../obsidian/vault-action-manager/types/split-path";
+
+/** Schema for reading page navigation metadata */
+const PageNavMetadataSchema = z
+	.object({
+		nextPageIdx: z.number().optional(),
+		noteKind: z.string().optional(),
+		prevPageIdx: z.number().optional(),
+	})
+	.passthrough();
 
 export type NavigatePagePayload = {
 	direction: "prev" | "next";
@@ -13,20 +24,44 @@ export type NavigatePageCommand = (
 ) => Promise<void>;
 
 export function makeNavigatePageCommand(
-	librarian: Librarian | null,
+	_librarian: unknown, // Kept for API compatibility, no longer used
 	vaultActionManager: VaultActionManager,
 ): NavigatePageCommand {
 	return async (payload: NavigatePagePayload): Promise<void> => {
 		const { direction, currentFilePath } = payload;
 
 		try {
-			const targetPage =
-				librarian === null
-					? null
-					: direction === "prev"
-						? librarian.getPrevPage(currentFilePath)
-						: librarian.getNextPage(currentFilePath);
+			// Read current file content to get navigation indices
+			const contentResult = await vaultActionManager.getOpenedContent();
+			if (contentResult.isErr()) {
+				logError({
+					description: `Error reading file content: ${contentResult.error}`,
+					location: "navigatePageCommand",
+				});
+				return;
+			}
 
+			const metadata = readMetadata(
+				contentResult.value,
+				PageNavMetadataSchema,
+			);
+			if (!metadata || metadata.noteKind !== "Page") {
+				return;
+			}
+
+			const targetIdx =
+				direction === "prev"
+					? metadata.prevPageIdx
+					: metadata.nextPageIdx;
+
+			if (targetIdx === undefined) {
+				return;
+			}
+
+			const targetPage = getPageSplitPathByIndex(
+				currentFilePath,
+				targetIdx,
+			);
 			if (targetPage) {
 				await vaultActionManager.cd(targetPage);
 			}

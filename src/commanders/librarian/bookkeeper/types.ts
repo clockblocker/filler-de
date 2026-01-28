@@ -101,6 +101,8 @@ export type SegmentationResult = {
 export type PageFrontmatter = {
 	noteKind: "Page";
 	status: TreeNodeStatusType;
+	prevPageIdx?: number; // undefined if first page
+	nextPageIdx?: number; // undefined if last page
 };
 
 export const PAGE_FRONTMATTER: PageFrontmatter = {

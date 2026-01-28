@@ -1,3 +1,4 @@
+export { buildPageNavMigrationActions } from "./page-nav-migration";
 export {
 	type SectionHealingDeps,
 	triggerSectionHealing,

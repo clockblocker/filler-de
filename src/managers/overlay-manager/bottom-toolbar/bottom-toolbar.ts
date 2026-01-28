@@ -46,6 +46,10 @@ export function createBottomToolbar(
 				: "tf-bottom-toolbar-btn";
 			button.setAttribute("data-action", action.id);
 			button.textContent = action.label;
+			// Set disabled state
+			if (action.disabled) {
+				button.disabled = true;
+			}
 			// Hide contextual buttons when no selection
 			if (isContextual) {
 				button.style.display = hasSelection ? "" : "none";

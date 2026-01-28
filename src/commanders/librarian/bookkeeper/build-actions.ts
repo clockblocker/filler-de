@@ -113,12 +113,19 @@ export function buildPageSplitActions(
 	);
 	const goBackLink = buildGoBackLink(codexBasename, result.sourceCoreName);
 
+	const totalPages = result.pages.length;
 	for (const page of result.pages) {
 		// Apply block markers to page content (each page resets at ^0)
 		const { markedText } = splitStrInBlocks(page.content, 0);
+		// Compute navigation indices
+		const prevPageIdx = page.pageIndex > 0 ? page.pageIndex - 1 : undefined;
+		const nextPageIdx =
+			page.pageIndex < totalPages - 1 ? page.pageIndex + 1 : undefined;
 		// Add go-back link at top, then formatted content with metadata
 		const pageContent = formatPageContent(
 			SPACE_F + goBackLink + LINE_BREAK + LINE_BREAK + markedText,
+			prevPageIdx,
+			nextPageIdx,
 		);
 		const pagePath =
 			page.pageIndex === 0
@@ -196,15 +203,30 @@ function buildCodexBasename(
 }
 
 /**
- * Formats page content with metadata.
+ * Formats page content with metadata including navigation indices.
  * Uses upsertMetadata to respect hideMetadata setting.
+ *
+ * @param content - The page content to format
+ * @param prevPageIdx - Index of previous page (undefined if first page)
+ * @param nextPageIdx - Index of next page (undefined if last page)
  */
-function formatPageContent(content: string): string {
+function formatPageContent(
+	content: string,
+	prevPageIdx: number | undefined,
+	nextPageIdx: number | undefined,
+): string {
 	// Transform is synchronous here, cast is safe
-	return upsertMetadata({
+	const metadata: Record<string, unknown> = {
 		noteKind: PAGE_FRONTMATTER.noteKind,
 		status: PAGE_FRONTMATTER.status,
-	})(content) as string;
+	};
+	if (prevPageIdx !== undefined) {
+		metadata.prevPageIdx = prevPageIdx;
+	}
+	if (nextPageIdx !== undefined) {
+		metadata.nextPageIdx = nextPageIdx;
+	}
+	return upsertMetadata(metadata)(content) as string;
 }
 
 /**

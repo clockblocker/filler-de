@@ -121,6 +121,28 @@ export function getPrevPageSplitPath(
 }
 
 /**
+ * Returns split path to a page with a specific target index.
+ * Uses the current page's basename pattern to build the target path.
+ */
+export function getPageSplitPathByIndex(
+	currentPage: SplitPathToMdFile,
+	targetIndex: number,
+): SplitPathToMdFile | null {
+	const match = currentPage.basename.match(PAGE_INDEX_IN_BASENAME_PATTERN);
+	if (!match?.[1]) return null;
+
+	if (targetIndex < 0 || targetIndex > MAX_PAGE_INDEX) return null;
+
+	const paddedTarget = String(targetIndex).padStart(PAGE_INDEX_DIGITS, "0");
+	const newBasename = currentPage.basename.replace(
+		PAGE_INDEX_IN_BASENAME_PATTERN,
+		`_${PAGE_PREFIX}_${paddedTarget}`,
+	);
+
+	return { ...currentPage, basename: newBasename };
+}
+
+/**
  * Find adjacent pages using VaultActionManager.list()
  * Returns which pages exist (prev/next) based on actual folder contents.
  */

@@ -2,8 +2,34 @@
  * Manager for toolbar lifecycle - create, update, and destroy toolbars.
  */
 
+import type { MarkdownView } from "obsidian";
+import { z } from "zod";
+import { readMetadata } from "../../../stateless-services/note-metadata-manager";
+import { computeNavActions, type PageNavMetadata } from "../action-definitions";
+import type { ActionConfig } from "../bottom-toolbar";
 import { buildSplitPath } from "./path-utils";
 import type { ToolbarLifecycleContext, ToolbarUpdateConfig } from "./types";
+
+/** Schema for reading page navigation metadata */
+const PageNavMetadataSchema = z
+	.object({
+		nextPageIdx: z.number().optional(),
+		noteKind: z.string().optional(),
+		prevPageIdx: z.number().optional(),
+	})
+	.passthrough();
+
+/**
+ * Read page metadata from editor content.
+ */
+function getPageMetadata(view: MarkdownView): PageNavMetadata | null {
+	// Get editor content synchronously
+	const editor = view.editor;
+	if (!editor) return null;
+
+	const content = editor.getValue();
+	return readMetadata(content, PageNavMetadataSchema);
+}
 
 /**
  * Update toolbar visibility - creates, updates, or destroys toolbars based on workspace state.
@@ -36,14 +62,24 @@ export function updateToolbarVisibility(
 		const container = leaf.view.containerEl?.querySelector(".view-content");
 		if (!container || !(container instanceof HTMLElement)) continue;
 
+		// Read page metadata for nav button state
+		const pageMetadata = getPageMetadata(leaf.view as MarkdownView);
+		const navActions = computeNavActions(pageMetadata);
+
+		// Combine base bottom actions with nav actions
+		const allBottomActions: ActionConfig[] = [
+			...bottomActions,
+			...navActions,
+		];
+
 		// Create bottom toolbar if not exists for this leaf
 		if (!bottomToolbars.has(leafId)) {
 			const toolbar = createBottomToolbar(container);
-			toolbar.setActions(bottomActions);
+			toolbar.setActions(allBottomActions);
 			bottomToolbars.set(leafId, toolbar);
 		} else {
 			// Update actions for existing toolbar
-			bottomToolbars.get(leafId)?.setActions(bottomActions);
+			bottomToolbars.get(leafId)?.setActions(allBottomActions);
 		}
 
 		// Create selection toolbar if not exists for this leaf

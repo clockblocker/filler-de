@@ -20,6 +20,7 @@ export {
 	buildPageBasename,
 	buildPageFolderBasename,
 	getNextPageSplitPath,
+	getPageSplitPathByIndex,
 	getPrevPageSplitPath,
 	PAGE_PREFIX_PATTERN,
 	parsePageIndex,
