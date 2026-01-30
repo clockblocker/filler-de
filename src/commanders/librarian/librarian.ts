@@ -480,7 +480,7 @@ export class Librarian {
 			const { sectionChain } = target;
 			if (sectionChain.length === 0) return null;
 
-			const segmentId = sectionChain[sectionChain.length - 1]!;
+			const segmentId = sectionChain[sectionChain.length - 1];
 			const parentChain = sectionChain.slice(0, -1);
 
 			return {

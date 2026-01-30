@@ -9,6 +9,10 @@
 
 import { type App, MarkdownView } from "obsidian";
 import { DomSelectors } from "../../../../../../utils/dom-selectors";
+import {
+	decrementPending,
+	incrementPending,
+} from "../../../../../../utils/idle-tracker";
 import type { VaultActionManager } from "../../../../vault-action-manager";
 import { PayloadKind } from "../../../types/payload-base";
 import type { HandlerInvoker } from "../../../user-event-interceptor";
@@ -33,7 +37,8 @@ export class CheckboxClickedDetector {
 		if (this.unsubscribe) return;
 
 		this.unsubscribe = this.genericClick.subscribe((target, evt) => {
-			void this.handleClick(target, evt);
+			incrementPending();
+			this.handleClick(target, evt).finally(() => decrementPending());
 		});
 	}
 

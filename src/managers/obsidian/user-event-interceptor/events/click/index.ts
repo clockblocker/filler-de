@@ -16,3 +16,7 @@ export { CheckboxFrontmatterDetector } from "./checkbox-frontmatter/detector";
 export type { CheckboxFrontmatterPayload } from "./checkbox-frontmatter/payload";
 export type { RawClickHandler } from "./generic-click-detector";
 export { GenericClickDetector } from "./generic-click-detector";
+export { WikilinkClickCodec } from "./wikilink-click/codec";
+// Wikilink click (internal link navigation)
+export { WikilinkClickDetector } from "./wikilink-click/detector";
+export type { WikilinkClickPayload } from "./wikilink-click/payload";

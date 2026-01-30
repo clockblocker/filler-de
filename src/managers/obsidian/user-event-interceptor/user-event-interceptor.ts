@@ -24,6 +24,7 @@ import { ActionElementDetector } from "./events/click/action-element/detector";
 import { CheckboxClickedDetector } from "./events/click/checkbox/detector";
 import { CheckboxFrontmatterDetector } from "./events/click/checkbox-frontmatter/detector";
 import { GenericClickDetector } from "./events/click/generic-click-detector";
+import { WikilinkClickDetector } from "./events/click/wikilink-click/detector";
 import { ClipboardDetector } from "./events/clipboard/detector";
 import { SelectAllDetector } from "./events/select-all/detector";
 import { SelectionChangedDetector } from "./events/selection-changed/detector";
@@ -92,6 +93,12 @@ export class UserEventInterceptor {
 			),
 			new ActionElementDetector(
 				this.genericClickDetector,
+				this.createInvoker.bind(this),
+			),
+			new WikilinkClickDetector(
+				this.genericClickDetector,
+				app,
+				vaultActionManager,
 				this.createInvoker.bind(this),
 			),
 			new SelectAllDetector(app, this.createInvoker.bind(this)),

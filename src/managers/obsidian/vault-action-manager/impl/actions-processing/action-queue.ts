@@ -22,13 +22,15 @@ export class ActionQueue {
 	private isExecuting = false; // "Call stack" state
 	private batchCount = 0;
 	private readonly maxBatches = 10;
+	/** Resolvers waiting for queue to drain */
+	private drainWaiters: Array<() => void> = [];
 
 	constructor(private readonly dispatcher: Dispatcher) {}
 
 	/**
 	 * Dispatch actions to queue.
-	 * If call stack is empty, executes immediately.
-	 * Otherwise, queues actions for later execution.
+	 * If call stack is empty, executes immediately and returns when done.
+	 * Otherwise, queues actions and returns when they are eventually processed.
 	 */
 	async dispatch(actions: readonly VaultAction[]): Promise<DispatchResult> {
 		// Add to queue (unlimited actions per batch)
@@ -39,8 +41,30 @@ export class ActionQueue {
 			return this.executeNextBatch();
 		}
 
-		// Otherwise, actions queued - will execute when current batch completes
+		// Otherwise, actions queued - wait for queue to drain
+		// This ensures callers wait for their actions to complete
+		await this.waitForDrain();
 		return ok(undefined);
+	}
+
+	/**
+	 * Wait for the queue to drain (all pending actions processed).
+	 */
+	private waitForDrain(): Promise<void> {
+		return new Promise((resolve) => {
+			this.drainWaiters.push(resolve);
+		});
+	}
+
+	/**
+	 * Signal all waiters that the queue has drained.
+	 */
+	private signalDrain(): void {
+		const waiters = this.drainWaiters;
+		this.drainWaiters = [];
+		for (const resolve of waiters) {
+			resolve();
+		}
 	}
 
 	/**
@@ -88,13 +112,26 @@ export class ActionQueue {
 				return this.executeNextBatch();
 			}
 
+			// Queue is empty - we're done
 			this.isExecuting = false;
-			return result;
-		} finally {
-			// Decrement only when all batches complete (isExecuting becomes false)
-			if (!this.isExecuting) {
+
+			// Decrement pending only for outermost call (the one that started execution)
+			if (!wasExecuting) {
 				decrementPending();
 			}
+
+			// Always signal waiters when queue drains (regardless of call depth)
+			this.signalDrain();
+
+			return result;
+		} catch (error) {
+			// On error, also clean up
+			this.isExecuting = false;
+			if (!wasExecuting) {
+				decrementPending();
+			}
+			this.signalDrain();
+			throw error;
 		}
 	}
 }

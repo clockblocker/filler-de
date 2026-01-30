@@ -34,12 +34,13 @@ function allDescendantsDone(nodes: TreeNode[]): boolean {
 			if (!allDescendantsDone(children)) {
 				return false;
 			}
-		} else {
-			// Scroll or File
+		} else if (node.kind === TreeNodeKind.Scroll) {
+			// Only scrolls affect section completion status
 			if (node.status !== TreeNodeStatus.Done) {
 				return false;
 			}
 		}
+		// Files are ignored - they don't have meaningful status
 	}
 	return true;
 }

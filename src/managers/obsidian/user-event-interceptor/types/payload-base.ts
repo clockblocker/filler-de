@@ -16,6 +16,7 @@ export const PayloadKindSchema = z.enum([
 	"ClipboardCopy",
 	"SelectAll",
 	"WikilinkCompleted",
+	"WikilinkClicked",
 	"SelectionChanged",
 ]);
 

@@ -8,6 +8,10 @@
  */
 
 import { DomSelectors } from "../../../../../../utils/dom-selectors";
+import {
+	decrementPending,
+	incrementPending,
+} from "../../../../../../utils/idle-tracker";
 import type { VaultActionManager } from "../../../../vault-action-manager";
 import type { SplitPathToMdFile } from "../../../../vault-action-manager/types/split-path";
 import { PayloadKind } from "../../../types/payload-base";
@@ -34,7 +38,8 @@ export class CheckboxFrontmatterDetector {
 		if (this.unsubscribe) return;
 
 		this.unsubscribe = this.genericClick.subscribe((target, _evt) => {
-			void this.handleClick(target);
+			incrementPending();
+			this.handleClick(target).finally(() => decrementPending());
 		});
 	}
 

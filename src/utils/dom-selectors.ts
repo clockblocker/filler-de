@@ -27,6 +27,8 @@ export const DomSelectors = {
 	// ─── CodeMirror (Editor) ───
 	/** CodeMirror 6 content container - used for view readiness detection */
 	CM_CONTENT_CONTAINER: ".cm-contentContainer",
+	/** CodeMirror internal link (edit mode) */
+	CM_INTERNAL_LINK: ".cm-hmd-internal-link",
 	/** CodeMirror editor line */
 	CM_LINE: ".cm-line",
 
@@ -35,6 +37,8 @@ export const DomSelectors = {
 	DATA_ACTION: "[data-action]",
 	/** Data attribute name (without brackets) for dataset access */
 	DATA_ACTION_ATTR: "action",
+	/** Data attribute for link target (href) */
+	DATA_HREF: "data-href",
 	/** Disabled button class */
 	DISABLED_CLASS: "is-disabled",
 
@@ -47,6 +51,12 @@ export const DomSelectors = {
 	INLINE_TITLE: ".inline-title",
 	/** Inline title class (for classList.contains check) */
 	INLINE_TITLE_CLASS: "inline-title",
+
+	// ─── Internal Links ───
+	/** Internal link in reading mode */
+	INTERNAL_LINK: "a.internal-link",
+	/** Internal link class (for classList.contains check) */
+	INTERNAL_LINK_CLASS: "internal-link",
 
 	// ─── Metadata (Frontmatter) ───
 	/** Frontmatter section container */

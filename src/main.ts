@@ -7,7 +7,6 @@ import {
 } from "obsidian";
 import { DelimiterChangeService } from "./commanders/librarian/delimiter-change-service";
 import { Librarian } from "./commanders/librarian/librarian";
-import { CommandKind } from "./managers/actions-manager/types";
 import {
 	clearState,
 	initializeState,
@@ -19,6 +18,7 @@ import {
 	type CommandExecutor,
 	createCommandExecutor,
 } from "./managers/actions-manager/create-action-executor";
+import { CommandKind } from "./managers/actions-manager/types";
 import { UserEventInterceptor } from "./managers/obsidian/user-event-interceptor";
 import {
 	makeSplitPath,
