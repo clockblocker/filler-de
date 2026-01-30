@@ -3,12 +3,12 @@
  */
 
 export {
-	goBackLinkHelper,
 	// Legacy exports for backwards compatibility
 	buildGoBackLink,
 	buildGoBackLinkCapturePattern,
 	buildGoBackLinkPattern,
 	getGoBackLinkPrefix,
+	goBackLinkHelper,
 	isGoBackLine,
 	parseGoBackLink,
 	stripGoBackLink,
