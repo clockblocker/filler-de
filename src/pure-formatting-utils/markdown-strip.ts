@@ -1,5 +1,5 @@
 /**
- * Strip markdown formatting for context display.
+ * Markdown stripping utilities for context display.
  */
 
 /**

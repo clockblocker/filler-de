@@ -3,15 +3,17 @@
  */
 
 import { err, ok, type Result } from "neverthrow";
-import { formatBlockEmbed } from "../../../stateless-services/block-service/block-utils";
-import { extractBlockIdFromLine } from "./block-id-extractor";
-import { stripMarkdownForContext } from "./markdown-stripper";
+import {
+	extractBlockIdFromLine,
+	findClickedWikilink,
+	formatBlockEmbed,
+	stripMarkdownForContext,
+} from "../../../pure-formatting-utils";
 import {
 	type ContextError,
 	type TextfresserContext,
 	wikilinkNotFoundError,
 } from "./types";
-import { findClickedWikilink } from "./wikilink-parser";
 
 export type ContextBuilderInput = {
 	/** Full line/block content where link is located */

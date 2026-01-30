@@ -9,6 +9,7 @@
  */
 
 import { type App, MarkdownView } from "obsidian";
+import { WIKILINK_REGEX } from "../../../../../../pure-formatting-utils";
 import { DomSelectors } from "../../../../../../utils/dom-selectors";
 import {
 	decrementPending,
@@ -179,8 +180,9 @@ export class WikilinkClickDetector {
 		const clickedText = clickedElement.textContent ?? "";
 
 		// Find all wikilinks in the line
-		const wikilinkRegex = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
-		let match: RegExpExecArray | null = wikilinkRegex.exec(lineText);
+		// Reset regex state before use
+		WIKILINK_REGEX.lastIndex = 0;
+		let match: RegExpExecArray | null = WIKILINK_REGEX.exec(lineText);
 
 		while (match !== null) {
 			const linkTarget = match[1];
@@ -194,7 +196,7 @@ export class WikilinkClickDetector {
 			) {
 				return { displayText, linkTarget };
 			}
-			match = wikilinkRegex.exec(lineText);
+			match = WIKILINK_REGEX.exec(lineText);
 		}
 
 		// Fallback: try to get any link from the line

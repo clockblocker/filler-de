@@ -1,5 +1,5 @@
 /**
- * Parse wikilinks from text and find clicked wikilinks.
+ * Wikilink parsing utilities.
  */
 
 export type ParsedWikilink = {
@@ -13,7 +13,8 @@ export type ParsedWikilink = {
 	surface: string;
 };
 
-const WIKILINK_REGEX = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
+/** Regex to match wikilinks: [[target]] or [[target|alias]] */
+export const WIKILINK_REGEX = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
 
 /**
  * Parse all wikilinks from text.
@@ -47,10 +48,15 @@ export function parseWikilinks(text: string): ParsedWikilink[] {
  * @param linkTarget - The target to search for
  * @returns The matched wikilink or null
  */
-export function findClickedWikilink(
+export function findWikilinkByTarget(
 	text: string,
 	linkTarget: string,
 ): ParsedWikilink | null {
 	const wikilinks = parseWikilinks(text);
 	return wikilinks.find((w) => w.target === linkTarget) ?? null;
 }
+
+/**
+ * @deprecated Use findWikilinkByTarget instead
+ */
+export const findClickedWikilink = findWikilinkByTarget;

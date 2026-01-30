@@ -4,7 +4,7 @@ import {
 	stripBlockRefs,
 	stripBoldMarkers,
 	stripMarkdownForContext,
-} from "../../../../src/commanders/textfresser/context/markdown-stripper";
+} from "../../../src/pure-formatting-utils";
 
 describe("stripBoldMarkers", () => {
 	it("removes bold markers", () => {

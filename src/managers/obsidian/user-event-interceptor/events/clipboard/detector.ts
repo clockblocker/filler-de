@@ -10,15 +10,16 @@
  */
 
 import { type App, MarkdownView } from "obsidian";
+import {
+	BLOCK_ID_PATTERN,
+	formatBlockEmbed,
+} from "../../../../../pure-formatting-utils";
 import type { SplitPathToMdFile } from "../../../vault-action-manager/types/split-path";
 import { HandlerOutcome } from "../../types/handler";
 import { PayloadKind } from "../../types/payload-base";
 import type { HandlerInvoker } from "../../user-event-interceptor";
 import { ClipboardCodec } from "./codec";
 import type { ClipboardPayload } from "./payload";
-
-/** Pattern to match block reference at end of text */
-const BLOCK_REF_PATTERN = /\s\^([a-zA-Z0-9-]+)\s*$/;
 
 export class ClipboardDetector {
 	private handler: ((evt: ClipboardEvent) => void) | null = null;
@@ -104,14 +105,14 @@ export class ClipboardDetector {
 		const clipboardText = evt.clipboardData?.getData("text/plain");
 		if (!clipboardText) return;
 
-		const match = clipboardText.match(BLOCK_REF_PATTERN);
+		const match = clipboardText.match(BLOCK_ID_PATTERN);
 		if (!match) return;
 
 		const blockId = match[1];
 		const basename = this.getActiveFileBasename();
 		if (!basename) return;
 
-		const wikilink = `![[${basename}#^${blockId}|^]]`;
+		const wikilink = formatBlockEmbed(basename, blockId);
 
 		evt.preventDefault();
 		evt.clipboardData?.setData("text/plain", wikilink);

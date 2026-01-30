@@ -2,25 +2,25 @@
  * TextfresserContext module - builds structured context from wikilink clicks.
  */
 
-export { extractBlockIdFromLine } from "./block-id-extractor";
+// Re-export from pure-formatting-utils for backwards compatibility
 export {
-	type ContextBuilderInput,
-	buildTextfresserContext,
-} from "./context-builder";
-export {
+	extractBlockIdFromLine,
+	type ParsedWikilink,
+	findClickedWikilink,
+	parseWikilinks,
 	replaceWikilinksWithSurface,
 	stripBlockRefs,
 	stripBoldMarkers,
 	stripMarkdownForContext,
-} from "./markdown-stripper";
+} from "../../../pure-formatting-utils";
+
+export {
+	type ContextBuilderInput,
+	buildTextfresserContext,
+} from "./context-builder";
 export type {
 	ContextError,
 	TargetMatchesBaseform,
 	TextfresserContext,
 } from "./types";
 export { noClickError, wikilinkNotFoundError } from "./types";
-export {
-	type ParsedWikilink,
-	findClickedWikilink,
-	parseWikilinks,
-} from "./wikilink-parser";

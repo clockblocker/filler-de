@@ -2,8 +2,9 @@ import { describe, expect, it } from "bun:test";
 import {
 	type ParsedWikilink,
 	findClickedWikilink,
+	findWikilinkByTarget,
 	parseWikilinks,
-} from "../../../../src/commanders/textfresser/context/wikilink-parser";
+} from "../../../src/pure-formatting-utils";
 
 describe("parseWikilinks", () => {
 	it("parses simple wikilink", () => {
@@ -53,9 +54,9 @@ describe("parseWikilinks", () => {
 	});
 });
 
-describe("findClickedWikilink", () => {
+describe("findWikilinkByTarget", () => {
 	it("finds wikilink by target (no alias)", () => {
-		const result = findClickedWikilink(
+		const result = findWikilinkByTarget(
 			"Text with [[schönen]] here",
 			"schönen",
 		);
@@ -65,7 +66,7 @@ describe("findClickedWikilink", () => {
 	});
 
 	it("finds wikilink by target when alias exists", () => {
-		const result = findClickedWikilink(
+		const result = findWikilinkByTarget(
 			"Text with [[schön|schönen]] here",
 			"schön",
 		);
@@ -76,22 +77,33 @@ describe("findClickedWikilink", () => {
 	});
 
 	it("returns null when target not found", () => {
-		const result = findClickedWikilink("Text with [[foo]] here", "bar");
+		const result = findWikilinkByTarget("Text with [[foo]] here", "bar");
 		expect(result).toBeNull();
 	});
 
 	it("finds correct wikilink among multiple", () => {
-		const result = findClickedWikilink("[[foo]] and [[bar]] and [[baz]]", "bar");
+		const result = findWikilinkByTarget("[[foo]] and [[bar]] and [[baz]]", "bar");
 		expect(result).not.toBeNull();
 		expect(result?.target).toBe("bar");
 	});
 
 	it("returns null for empty text", () => {
-		expect(findClickedWikilink("", "foo")).toBeNull();
+		expect(findWikilinkByTarget("", "foo")).toBeNull();
 	});
 
 	it("handles case-sensitive matching", () => {
-		const result = findClickedWikilink("[[Foo]]", "foo");
+		const result = findWikilinkByTarget("[[Foo]]", "foo");
 		expect(result).toBeNull();
+	});
+});
+
+describe("findClickedWikilink (deprecated alias)", () => {
+	it("works as alias for findWikilinkByTarget", () => {
+		const result = findClickedWikilink(
+			"Text with [[schönen]] here",
+			"schönen",
+		);
+		expect(result).not.toBeNull();
+		expect(result?.target).toBe("schönen");
 	});
 });
