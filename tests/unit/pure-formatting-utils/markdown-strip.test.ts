@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { markdown } from "../../../src/pure-formatting-utils";
+import { markdown } from "../../../src/stateless-services/pure-formatting-utils";
 
 describe("markdown.stripBold", () => {
 	it("removes bold markers", () => {

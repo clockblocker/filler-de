@@ -8,7 +8,7 @@ import {
 	markdown,
 	type ParsedWikilink,
 	wikilinkHelper,
-} from "../../../pure-formatting-utils";
+} from "../../../stateless-services/pure-formatting-utils";
 
 // Backwards-compatible re-exports using new API
 export const extractBlockIdFromLine = blockIdHelper.extractFromLine;
@@ -22,8 +22,8 @@ export const stripMarkdownForContext = markdown.stripAll;
 export type { ParsedWikilink };
 
 export {
-	type ContextBuilderInput,
 	buildTextfresserContext,
+	type ContextBuilderInput,
 } from "./context-builder";
 export type {
 	ContextError,

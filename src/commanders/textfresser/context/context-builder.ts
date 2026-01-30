@@ -3,7 +3,11 @@
  */
 
 import { err, ok, type Result } from "neverthrow";
-import { blockIdHelper, markdown, wikilinkHelper } from "../../../pure-formatting-utils";
+import {
+	blockIdHelper,
+	markdown,
+	wikilinkHelper,
+} from "../../../stateless-services/pure-formatting-utils";
 import {
 	type ContextError,
 	type TextfresserContext,
@@ -30,7 +34,10 @@ export function buildTextfresserContext(
 	const { blockContent, linkTarget, basename } = input;
 
 	// Find the clicked wikilink
-	const parsedWikilink = wikilinkHelper.findByTarget(blockContent, linkTarget);
+	const parsedWikilink = wikilinkHelper.findByTarget(
+		blockContent,
+		linkTarget,
+	);
 	if (!parsedWikilink) {
 		return err(wikilinkNotFoundError());
 	}

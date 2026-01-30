@@ -1,15 +1,15 @@
 import { describe, expect, it } from "bun:test";
-import { type ParsedWikilink, wikilinkHelper } from "../../../src/pure-formatting-utils";
+import { type ParsedWikilink, wikilinkHelper } from "../../../src/stateless-services/pure-formatting-utils";
 
 describe("wikilinkHelper.parse", () => {
 	it("parses simple wikilink", () => {
 		const result = wikilinkHelper.parse("Text with [[schönen]] here");
 		expect(result).toEqual([
 			{
-				fullMatch: "[[schönen]]",
-				target: "schönen",
 				alias: null,
+				fullMatch: "[[schönen]]",
 				surface: "schönen",
+				target: "schönen",
 			},
 		]);
 	});
@@ -18,10 +18,10 @@ describe("wikilinkHelper.parse", () => {
 		const result = wikilinkHelper.parse("Text with [[schön|schönen]] here");
 		expect(result).toEqual([
 			{
-				fullMatch: "[[schön|schönen]]",
-				target: "schön",
 				alias: "schönen",
+				fullMatch: "[[schön|schönen]]",
 				surface: "schönen",
+				target: "schön",
 			},
 		]);
 	});

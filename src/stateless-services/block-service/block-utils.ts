@@ -3,7 +3,7 @@
  * Re-exports from pure-formatting-utils for backwards compatibility.
  */
 
-import { blockIdHelper } from "../../pure-formatting-utils";
+import { blockIdHelper } from "../pure-formatting-utils";
 
 export const getBlockIdFromLine = blockIdHelper.extractNumeric;
 export const findHighestBlockNumber = blockIdHelper.findHighestNumber;
