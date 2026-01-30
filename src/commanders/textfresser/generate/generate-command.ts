@@ -23,21 +23,6 @@ export type GenerateDeps = {
 	vaultActionManager: VaultActionManager;
 };
 
-// ─── Dispatch Step ───
-
-function dispatch(ctx: GenerateContext): ResultAsync<void, GenerateError> {
-	return new ResultAsync(
-		ctx.vam.dispatch(ctx.actions).then((result) =>
-			result.isErr()
-				? err({
-						kind: GenerateErrorKind.DispatchFailed,
-						reason: result.error.message,
-					})
-				: ok(undefined),
-		),
-	);
-}
-
 // ─── Pipeline ───
 
 /**
@@ -77,7 +62,21 @@ export async function generateCommand(
 	const result = await checkEligibility(ctx)
 		.andThen(applyMeta)
 		.andThen(moveToWorter)
-		.asyncAndThen(dispatch);
+		.asyncAndThen(
+			(c) =>
+				new ResultAsync(
+					vaultActionManager.dispatch(c.actions).then((r) =>
+						r
+							.map(() => undefined)
+							.mapErr(
+								(errs): GenerateError => ({
+									kind: GenerateErrorKind.DispatchFailed,
+									reason: errs.map((e) => e.error).join(", "),
+								}),
+							),
+					),
+				),
+		);
 
 	if (result.isErr()) {
 		logger.warn("[generateCommand] Failed:", JSON.stringify(result.error));

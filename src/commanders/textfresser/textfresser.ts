@@ -1,14 +1,21 @@
 /**
  * Textfresser commander - listens to WikilinkClicked events
- * and stores the latest click info in state.
+ * and provides structured context from the latest click.
  */
 
+import { type Result, err } from "neverthrow";
 import type { WikilinkClickPayload } from "../../managers/obsidian/user-event-interceptor/events/click/wikilink-click/payload";
 import {
 	type EventHandler,
 	HandlerOutcome,
 } from "../../managers/obsidian/user-event-interceptor/types/handler";
 import { logger } from "../../utils/logger";
+import {
+	type ContextError,
+	type TextfresserContext,
+	buildTextfresserContext,
+	noClickError,
+} from "./context";
 
 export class Textfresser {
 	private lastWikilinkClick: WikilinkClickPayload | null = null;
@@ -28,7 +35,21 @@ export class Textfresser {
 		};
 	}
 
-	getLastWikilinkClick(): WikilinkClickPayload | null {
-		return this.lastWikilinkClick;
+	/**
+	 * Get structured context from the latest wikilink click.
+	 * @returns Result with TextfresserContext or ContextError
+	 */
+	getLatestContext(): Result<TextfresserContext, ContextError> {
+		if (!this.lastWikilinkClick) {
+			return err(noClickError());
+		}
+
+		const { blockContent, linkTarget, splitPath } = this.lastWikilinkClick;
+
+		return buildTextfresserContext({
+			blockContent,
+			linkTarget,
+			basename: splitPath.basename,
+		});
 	}
 }
