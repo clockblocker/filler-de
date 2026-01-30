@@ -7,7 +7,7 @@ import {
 	blockIdHelper,
 	markdown,
 	wikilinkHelper,
-} from "../../../stateless-services/pure-formatting-utils";
+} from "../../../stateless-helpers/pure-formatting-utils";
 import {
 	type ContextError,
 	type TextfresserContext,

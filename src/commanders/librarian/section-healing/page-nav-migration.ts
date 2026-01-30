@@ -16,7 +16,7 @@ import { VaultActionKind } from "../../../managers/obsidian/vault-action-manager
 import {
 	readMetadata,
 	upsertMetadata,
-} from "../../../stateless-services/note-metadata-service";
+} from "../../../stateless-helpers/note-metadata-service";
 import { logger } from "../../../utils/logger";
 import { parsePageIndex } from "../bookkeeper/page-codec";
 import { parseSeparatedSuffix } from "../codecs/internal/suffix/parse";

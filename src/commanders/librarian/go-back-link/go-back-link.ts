@@ -11,4 +11,4 @@ export {
 	isGoBackLine,
 	parseGoBackLink,
 	stripGoBackLink,
-} from "../../../stateless-services/go-back-link-service";
+} from "../../../stateless-helpers/go-back-link-service";

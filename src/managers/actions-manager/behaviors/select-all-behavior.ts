@@ -1,4 +1,4 @@
-import { calculateSmartRange } from "../../../stateless-services/content-range-service";
+import { calculateSmartRange } from "../../../stateless-helpers/content-range-service";
 import {
 	type EventHandler,
 	HandlerOutcome,

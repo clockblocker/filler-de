@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { blockIdHelper } from "../../../src/stateless-services/pure-formatting-utils";
+import { blockIdHelper } from "../../../src/stateless-helpers/pure-formatting-utils";
 
 describe("blockIdHelper.extractFromLine", () => {
 	it("extracts numeric block ID at end of line", () => {

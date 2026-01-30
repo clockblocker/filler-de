@@ -12,7 +12,7 @@ import { z } from "zod";
 import { wouldSplitToMultiplePages as checkWouldSplit } from "../../../commanders/librarian/bookkeeper/segmenter";
 import { makeCodecRulesFromSettings } from "../../../commanders/librarian/codecs/rules";
 import { getParsedUserSettings } from "../../../global-state/global-state";
-import { readMetadata } from "../../../stateless-services/note-metadata-service";
+import { readMetadata } from "../../../stateless-helpers/note-metadata-service";
 import {
 	FileType,
 	MdFileSubTypeSchema,

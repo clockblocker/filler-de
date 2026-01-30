@@ -3,7 +3,7 @@ import {
 	findHighestBlockNumber,
 	formatBlockEmbed,
 	getBlockIdFromLine,
-} from "../../../stateless-services/block-service";
+} from "../../../stateless-helpers/block-service";
 import type { VaultActionManager } from "../../obsidian/vault-action-manager";
 import { logError } from "../../obsidian/vault-action-manager/helpers/issue-handlers";
 

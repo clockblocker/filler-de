@@ -1,4 +1,4 @@
-import { stripContentForClipboard } from "../../../stateless-services/content-range-service";
+import { stripContentForClipboard } from "../../../stateless-helpers/content-range-service";
 import {
 	type ClipboardPayload,
 	type EventHandler,

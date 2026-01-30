@@ -1,5 +1,5 @@
 import { splitStrInBlocks } from "../../../commanders/librarian/bookkeeper/segmenter/block-marker";
-import { findHighestBlockNumber } from "../../../stateless-services/block-service";
+import { findHighestBlockNumber } from "../../../stateless-helpers/block-service";
 
 export type SplitInBlocksPayload = {
 	selection: string;

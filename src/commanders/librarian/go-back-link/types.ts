@@ -3,4 +3,4 @@
  * Re-export for temporary backwards compatibility
  */
 
-export type { GoBackLinkInfo } from "../../../stateless-services/go-back-link-service";
+export type { GoBackLinkInfo } from "../../../stateless-helpers/go-back-link-service";

@@ -38,7 +38,7 @@ import { splitPathFromSystemPathInternal } from "./managers/obsidian/vault-actio
 import { Reader } from "./managers/obsidian/vault-action-manager/impl/reader";
 import { OverlayManager } from "./managers/overlay-manager";
 import { SettingsTab } from "./settings";
-import { ApiService } from "./stateless-services/api-service";
+import { ApiService } from "./stateless-helpers/api-service";
 import {
 	DEFAULT_SETTINGS,
 	type SuffixDelimiterConfig,

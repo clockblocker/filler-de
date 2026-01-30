@@ -4,8 +4,8 @@ import {
 	getContentBody,
 	readMetadata,
 	upsertMetadata,
-} from "../../../src/stateless-services/note-metadata-service";
-import { stripJsonSection } from "../../../src/stateless-services/note-metadata-service/internal/json-section";
+} from "../../../src/stateless-helpers/note-metadata-service";
+import { stripJsonSection } from "../../../src/stateless-helpers/note-metadata-service/internal/json-section";
 
 // Mock the global state module
 const mockSettings = { hideMetadata: true };

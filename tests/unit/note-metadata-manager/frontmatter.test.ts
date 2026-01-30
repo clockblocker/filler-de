@@ -4,8 +4,8 @@ import {
 	internalToFrontmatter,
 	parseFrontmatter,
 	stripFrontmatter,
-} from "../../../src/stateless-services/note-metadata-service/internal/frontmatter";
-import { migrateFrontmatter } from "../../../src/stateless-services/note-metadata-service/internal/migration";
+} from "../../../src/stateless-helpers/note-metadata-service/internal/frontmatter";
+import { migrateFrontmatter } from "../../../src/stateless-helpers/note-metadata-service/internal/migration";
 
 describe("frontmatter", () => {
 	describe("parseFrontmatter", () => {

@@ -4,7 +4,7 @@
 
 import type { MarkdownView } from "obsidian";
 import { z } from "zod";
-import { readMetadata } from "../../../stateless-services/note-metadata-service";
+import { readMetadata } from "../../../stateless-helpers/note-metadata-service";
 import { computeNavActions, type PageNavMetadata } from "../action-definitions";
 import type { ActionConfig } from "../bottom-toolbar";
 import { buildSplitPath } from "./path-utils";
