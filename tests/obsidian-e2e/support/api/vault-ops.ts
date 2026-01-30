@@ -342,7 +342,22 @@ export async function clickCodexCheckbox(
 	linkTarget: string,
 	displayName?: string,
 ): Promise<Result<void, string>> {
-	// First open the file
+	// Close any existing view of the file to force fresh render
+	// This fixes issues where checkbox DOM state is stale after file content changes
+	await browser.executeObsidian(async ({ app }, path) => {
+		const leaves = app.workspace.getLeavesOfType("markdown");
+		for (const leaf of leaves) {
+			const file = (leaf.view as any)?.file;
+			if (file?.path === path) {
+				leaf.detach();
+			}
+		}
+	}, codexPath);
+
+	// Small delay after closing
+	await browser.pause(100);
+
+	// Now open the file fresh
 	const openResult = await openFile(codexPath);
 	if (openResult.isErr()) {
 		return err(`Failed to open codex: ${openResult.error}`);

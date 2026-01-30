@@ -9,4 +9,4 @@ export { createHandlers, type HandlerDef } from "./create-handlers";
 export { createSelectAllHandler } from "./select-all-behavior";
 // Existing behavior
 export { tagLineCopyEmbedBehavior } from "./tag-line-copy-embed-behavior";
-export { createWikilinkHandler } from "./wikilink-behavior";
+export { createWikilinkCompletionHandler as createWikilinkHandler } from "./wikilink-complition-behavior";

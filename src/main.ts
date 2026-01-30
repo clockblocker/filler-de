@@ -7,6 +7,7 @@ import {
 } from "obsidian";
 import { DelimiterChangeService } from "./commanders/librarian/delimiter-change-service";
 import { Librarian } from "./commanders/librarian/librarian";
+import { Textfresser } from "./commanders/textfresser";
 import {
 	clearState,
 	initializeState,
@@ -66,6 +67,7 @@ export default class TextEaterPlugin extends Plugin {
 
 	// Commanders
 	librarian: Librarian | null = null;
+	textfresser: Textfresser | null = null;
 
 	private commandExecutor: CommandExecutor | null = null;
 	private initialized = false;
@@ -192,6 +194,9 @@ export default class TextEaterPlugin extends Plugin {
 		);
 		this.vaultActionManager = new VaultActionManagerImpl(this.app);
 
+		// Textfresser commander (wikilink click tracking)
+		this.textfresser = new Textfresser();
+
 		// Unified user event interceptor (clicks, clipboard, select-all, wikilinks)
 		this.userEventInterceptor = new UserEventInterceptor(
 			this.app,
@@ -222,7 +227,10 @@ export default class TextEaterPlugin extends Plugin {
 				await this.librarian.init();
 
 				// Register user event handlers after librarian is initialized
-				const handlers = createHandlers(this.librarian);
+				const handlers = createHandlers(
+					this.librarian,
+					this.textfresser ?? undefined,
+				);
 				for (const { kind, handler } of handlers) {
 					this.handlerTeardowns.push(
 						this.userEventInterceptor.setHandler(kind, handler),
@@ -664,7 +672,10 @@ export default class TextEaterPlugin extends Plugin {
 			await this.librarian.init();
 
 			// Register new handlers
-			const handlers = createHandlers(this.librarian);
+			const handlers = createHandlers(
+				this.librarian,
+				this.textfresser ?? undefined,
+			);
 			for (const { kind, handler } of handlers) {
 				this.handlerTeardowns.push(
 					this.userEventInterceptor.setHandler(kind, handler),

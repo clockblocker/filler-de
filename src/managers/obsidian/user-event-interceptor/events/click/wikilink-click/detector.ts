@@ -15,6 +15,7 @@ import {
 	incrementPending,
 } from "../../../../../../utils/idle-tracker";
 import type { VaultActionManager } from "../../../../vault-action-manager";
+import { HandlerOutcome } from "../../../types/handler";
 import { PayloadKind } from "../../../types/payload-base";
 import type { HandlerInvoker } from "../../../user-event-interceptor";
 import type { GenericClickDetector } from "../generic-click-detector";
@@ -114,7 +115,12 @@ export class WikilinkClickDetector {
 
 		// Handler applies - prevent default and invoke
 		evt.preventDefault();
-		await invoke();
+		const result = await invoke();
+
+		if (result.outcome === HandlerOutcome.Passthrough) {
+			// Handler decided to passthrough - restore navigation that was prevented
+			this.app.workspace.openLinkText(linkData.linkTarget, splitPath.filePath, false);
+		}
 	}
 
 	private findLinkElement(target: HTMLElement): HTMLElement | null {

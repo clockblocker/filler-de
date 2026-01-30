@@ -14,7 +14,7 @@ import {
  * Create a handler for wikilink completion.
  * Thin routing layer - delegates to librarian methods.
  */
-export function createWikilinkHandler(
+export function createWikilinkCompletionHandler(
 	librarian: Librarian,
 ): EventHandler<WikilinkPayload> {
 	return {

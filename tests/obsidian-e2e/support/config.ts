@@ -1,6 +1,6 @@
 export const PLUGIN_ID = "cbcr-text-eater-de";
 
-export const TIMEOUT_DEFAULT_MS = 1000;
+export const TIMEOUT_DEFAULT_MS = 15000;
 export const INTERVAL_DEFAULT_MS = 200;
 export const MAX_ATTEMPTS_DEFAULT = 10;
 
