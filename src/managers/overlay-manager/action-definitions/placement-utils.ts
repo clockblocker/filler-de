@@ -45,7 +45,11 @@ export function computeAllowedActions(): ComputedActions {
 		if (placement === OverlayPlacement.AboveSelection) {
 			selectionActions.push({ id: def.id, label: def.label });
 		} else if (placement === OverlayPlacement.Bottom) {
-			bottomActions.push({ id: def.id, label: def.label });
+			bottomActions.push({
+				contextual: def.requiresSelection,
+				id: def.id,
+				label: def.label,
+			});
 		}
 		// ShortcutOnly actions go to neither toolbar
 	}
@@ -68,7 +72,8 @@ export function computeNavActions(
 
 	// No buttons if neither index is present
 	const hasAnyIndex =
-		metadata.prevPageIdx !== undefined || metadata.nextPageIdx !== undefined;
+		metadata.prevPageIdx !== undefined ||
+		metadata.nextPageIdx !== undefined;
 	if (!hasAnyIndex) {
 		return [];
 	}

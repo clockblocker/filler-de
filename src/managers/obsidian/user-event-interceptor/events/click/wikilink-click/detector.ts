@@ -119,7 +119,11 @@ export class WikilinkClickDetector {
 
 		if (result.outcome === HandlerOutcome.Passthrough) {
 			// Handler decided to passthrough - restore navigation that was prevented
-			this.app.workspace.openLinkText(linkData.linkTarget, splitPath.filePath, false);
+			this.app.workspace.openLinkText(
+				linkData.linkTarget,
+				splitPath.filePath,
+				false,
+			);
 		}
 	}
 

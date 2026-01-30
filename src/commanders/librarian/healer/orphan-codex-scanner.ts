@@ -10,7 +10,6 @@
  * and generates cleanup actions for mismatched codexes.
  */
 
-import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { Codecs, SplitPathToMdFileInsideLibrary } from "../codecs";
 import type { SectionNodeSegmentId } from "../codecs/segment-id/types/segment-id";
 import { computeCodexSplitPath } from "./library-tree/codex/codex-split-path";
@@ -151,27 +150,15 @@ export class OrphanCodexScanner {
 
 	/**
 	 * Generate recreation actions for missing sections.
+	 * Note: VAM auto-creates folders, so we only need file actions.
+	 * Actual codex content generation is handled by CodexAction processors.
 	 */
 	generateRecreationActions(
-		missingSections: SectionNodeSegmentId[][],
+		_missingSections: SectionNodeSegmentId[][],
 	): HealingAction[] {
-		const actions: HealingAction[] = [];
-
-		for (const chain of missingSections) {
-			const section = this.findSection(chain);
-			if (!section) continue;
-
-			const splitPath = computeCodexSplitPath(chain, this.codecs);
-
-			// Create folder (if needed) and codex file
-			// Note: Actual codex content generation is handled by CodexAction processors
-			actions.push({
-				kind: "CreateFolder",
-				payload: { splitPath: this.toFolderPath(splitPath) },
-			});
-		}
-
-		return actions;
+		// No folder creation needed - VAM auto-creates folders
+		// Codex files are created by CodexAction processors
+		return [];
 	}
 
 	// ─── Helpers ───
@@ -240,18 +227,6 @@ export class OrphanCodexScanner {
 		traverse([rootSegId], root);
 
 		return missing;
-	}
-
-	private toFolderPath(mdPath: SplitPathToMdFileInsideLibrary): {
-		kind: typeof SplitPathKind.Folder;
-		pathParts: string[];
-		basename: string;
-	} {
-		return {
-			basename: mdPath.pathParts[mdPath.pathParts.length - 1] ?? "",
-			kind: SplitPathKind.Folder,
-			pathParts: mdPath.pathParts.slice(0, -1),
-		};
 	}
 }
 

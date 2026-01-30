@@ -1,6 +1,7 @@
 /**
  * Library-scoped healing actions emitted by Healer.
  * Librarian converts these to VaultActions before dispatch.
+ * Note: No CreateFolder - VAM auto-creates folders.
  */
 
 import type {
@@ -12,17 +13,12 @@ import type {
 // ─── Healing Action Types ───
 
 export type HealingActionType =
-	| "CreateFolder"
 	| "RenameFolder"
 	| "RenameFile"
 	| "RenameMdFile"
 	| "DeleteMdFile";
 
 // ─── Payloads ───
-
-export type CreateFolderHealingPayload = {
-	splitPath: SplitPathToFolderInsideLibrary;
-};
 
 export type RenameFolderHealingPayload = {
 	from: SplitPathToFolderInsideLibrary;
@@ -45,11 +41,6 @@ export type DeleteMdFileHealingPayload = {
 
 // ─── Healing Actions ───
 
-export type CreateFolderHealingAction = {
-	kind: "CreateFolder";
-	payload: CreateFolderHealingPayload;
-};
-
 export type RenameFolderHealingAction = {
 	kind: "RenameFolder";
 	payload: RenameFolderHealingPayload;
@@ -71,7 +62,6 @@ export type DeleteMdFileHealingAction = {
 };
 
 export type HealingAction =
-	| CreateFolderHealingAction
 	| RenameFolderHealingAction
 	| RenameFileHealingAction
 	| RenameMdFileHealingAction

@@ -13,7 +13,9 @@ export function detectEditorPadding(
 	container: HTMLElement,
 ): PaddingDetectionResult {
 	// Use cm-contentContainer as the content boundary
-	const contentEl = container.querySelector(DomSelectors.CM_CONTENT_CONTAINER);
+	const contentEl = container.querySelector(
+		DomSelectors.CM_CONTENT_CONTAINER,
+	);
 	if (!contentEl) {
 		return {
 			contentRect: null,

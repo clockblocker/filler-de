@@ -15,16 +15,6 @@ export function healingActionToVaultAction(
 	rules: CodecRules,
 ): VaultAction {
 	switch (action.kind) {
-		case "CreateFolder":
-			return {
-				kind: VaultActionKind.CreateFolder,
-				payload: {
-					splitPath: makeVaultScopedSplitPath(
-						action.payload.splitPath,
-						rules,
-					),
-				},
-			};
 		case "RenameFolder":
 			return {
 				kind: VaultActionKind.RenameFolder,

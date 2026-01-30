@@ -4,10 +4,7 @@
 
 import { z } from "zod";
 import { MD } from "../../../managers/obsidian/vault-action-manager/types/literals";
-import type {
-	SplitPathToFolder,
-	SplitPathToMdFile,
-} from "../../../managers/obsidian/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { VaultAction } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { VaultActionKind } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
@@ -68,15 +65,8 @@ export function buildPageSplitActions(
 ): PageSplitResult {
 	const actions: VaultAction[] = [];
 
-	// Calculate folder path
+	// Calculate folder path - VAM auto-creates folders
 	const folderBasename = buildPageFolderBasename(result.sourceCoreName);
-	const folderPath: SplitPathToFolder = {
-		basename: folderBasename,
-		kind: SplitPathKind.Folder,
-		pathParts: sourcePath.pathParts,
-	};
-
-	// New path parts for items inside the folder
 	const newPathParts = [...sourcePath.pathParts, folderBasename];
 
 	// Build section chain for the new folder (all path parts including the new folder)
@@ -89,13 +79,8 @@ export function buildPageSplitActions(
 		targetKind: TreeNodeKind.Scroll,
 	}) as ScrollNodeSegmentId;
 
-	// 1. Create folder
-	actions.push({
-		kind: VaultActionKind.CreateFolder,
-		payload: { splitPath: folderPath },
-	});
-
-	// 2. Create pages (always at least one when this function is called)
+	// 1. Create pages (always at least one when this function is called)
+	// Note: VAM auto-creates folders when creating files inside them
 	// Note: Codex is created by Librarian based on page creation events
 	const firstPagePath = buildPageSplitPath(
 		0,

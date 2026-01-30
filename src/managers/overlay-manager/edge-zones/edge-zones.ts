@@ -55,7 +55,8 @@ export function createEdgeZones(options: CreateEdgeZonesOptions): EdgeZones {
 			return;
 		}
 
-		const { padding, leafRect, contentRect } = detectEditorPadding(container);
+		const { padding, leafRect, contentRect } =
+			detectEditorPadding(container);
 		const containerRect = container.getBoundingClientRect();
 
 		// Calculate zone widths: from leaf edge to ZONE_INSET before content
@@ -63,7 +64,10 @@ export function createEdgeZones(options: CreateEdgeZonesOptions): EdgeZones {
 		let rightZoneWidth = 0;
 
 		if (leafRect && contentRect) {
-			leftZoneWidth = Math.max(0, contentRect.left - leafRect.left - ZONE_INSET);
+			leftZoneWidth = Math.max(
+				0,
+				contentRect.left - leafRect.left - ZONE_INSET,
+			);
 			rightZoneWidth = Math.max(
 				0,
 				leafRect.right - contentRect.right - ZONE_INSET,
@@ -84,7 +88,13 @@ export function createEdgeZones(options: CreateEdgeZonesOptions): EdgeZones {
 			hasRightSpace && nextAction !== null && !nextAction.disabled;
 
 		// Update zones with calculated dimensions
-		updateZone("left", shouldShowLeft, leftZoneWidth, leafRect, containerRect);
+		updateZone(
+			"left",
+			shouldShowLeft,
+			leftZoneWidth,
+			leafRect,
+			containerRect,
+		);
 		updateZone(
 			"right",
 			shouldShowRight,
@@ -110,8 +120,12 @@ export function createEdgeZones(options: CreateEdgeZonesOptions): EdgeZones {
 
 		if (shouldShow && width > 0) {
 			// Calculate position relative to container
-			const leftOffset = leafRect ? leafRect.left - containerRect.left : 0;
-			const rightOffset = leafRect ? containerRect.right - leafRect.right : 0;
+			const leftOffset = leafRect
+				? leafRect.left - containerRect.left
+				: 0;
+			const rightOffset = leafRect
+				? containerRect.right - leafRect.right
+				: 0;
 
 			if (zone) {
 				// Update existing zone
@@ -124,7 +138,12 @@ export function createEdgeZones(options: CreateEdgeZonesOptions): EdgeZones {
 				}
 			} else {
 				// Create new zone
-				const newZone = createZone(side, width, leftOffset, rightOffset);
+				const newZone = createZone(
+					side,
+					width,
+					leftOffset,
+					rightOffset,
+				);
 				container.appendChild(newZone);
 				if (side === "left") {
 					leftZone = newZone;

@@ -209,23 +209,37 @@ export class SettingsTab extends PluginSettingTab {
 
 		for (const def of Object.values(ACTION_DEFINITIONS)) {
 			// Skip if no settingKey or only 1 placement option
-			if (!def.settingKey || def.selectablePlacements.length <= 1) continue;
+			if (!def.settingKey || def.selectablePlacements.length <= 1)
+				continue;
 
 			new Setting(containerEl)
 				.setName(def.label)
 				.setDesc(`Where to show the ${def.label} action`)
 				.addDropdown((dropdown) => {
 					for (const placement of def.selectablePlacements) {
-						dropdown.addOption(placement, SELECTION_ACTION_PLACEMENT_TEXT[placement as SelectionActionPlacementType]);
+						dropdown.addOption(
+							placement,
+							SELECTION_ACTION_PLACEMENT_TEXT[
+								placement as SelectionActionPlacementType
+							],
+						);
 					}
 					dropdown
-						.setValue(this.plugin.settings[def.settingKey as keyof typeof this.plugin.settings] as string)
-						.onChange(async (value: SelectionActionPlacementType) => {
-							// Type assertion needed: settingKey is dynamic but we know it's a placement key
-							// biome-ignore lint/suspicious/noExplicitAny: Dynamic settings key access
-							(this.plugin.settings as any)[def.settingKey as string] = value;
-							await this.plugin.saveSettings();
-						});
+						.setValue(
+							this.plugin.settings[
+								def.settingKey as keyof typeof this.plugin.settings
+							] as string,
+						)
+						.onChange(
+							async (value: SelectionActionPlacementType) => {
+								// Type assertion needed: settingKey is dynamic but we know it's a placement key
+								// biome-ignore lint/suspicious/noExplicitAny: Dynamic settings key access
+								(this.plugin.settings as any)[
+									def.settingKey as string
+								] = value;
+								await this.plugin.saveSettings();
+							},
+						);
 				});
 		}
 

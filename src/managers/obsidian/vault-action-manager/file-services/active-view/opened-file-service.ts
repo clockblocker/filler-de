@@ -434,7 +434,9 @@ export class OpenedFileService {
 					// Using `as unknown` because `commands` is not in public Obsidian API types
 					(
 						this.app as unknown as {
-							commands: { executeCommandById: (id: string) => void };
+							commands: {
+								executeCommandById: (id: string) => void;
+							};
 						}
 					).commands.executeCommandById(
 						"file-explorer:reveal-active-file",
