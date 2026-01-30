@@ -14,22 +14,21 @@ export type ParsedWikilink = {
 };
 
 /** Regex to match wikilinks: [[target]] or [[target|alias]] */
-export const WIKILINK_REGEX = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
+const WIKILINK_REGEX = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
 
 /**
  * Parse all wikilinks from text.
  * @param text - Text containing wikilinks
  * @returns Array of parsed wikilinks
  */
-export function parseWikilinks(text: string): ParsedWikilink[] {
+function parse(text: string): ParsedWikilink[] {
 	const results: ParsedWikilink[] = [];
-	let match: RegExpExecArray | null;
 
-	// Reset regex state
-	WIKILINK_REGEX.lastIndex = 0;
+	// Create new regex instance to avoid state issues
+	const regex = new RegExp(WIKILINK_REGEX.source, WIKILINK_REGEX.flags);
 
-	while ((match = WIKILINK_REGEX.exec(text)) !== null) {
-		const target = match[1];
+	for (const match of text.matchAll(regex)) {
+		const target = match[1]!;
 		const alias = match[2] ?? null;
 		results.push({
 			alias,
@@ -48,15 +47,43 @@ export function parseWikilinks(text: string): ParsedWikilink[] {
  * @param linkTarget - The target to search for
  * @returns The matched wikilink or null
  */
-export function findWikilinkByTarget(
-	text: string,
-	linkTarget: string,
-): ParsedWikilink | null {
-	const wikilinks = parseWikilinks(text);
+function findByTarget(text: string, linkTarget: string): ParsedWikilink | null {
+	const wikilinks = parse(text);
 	return wikilinks.find((w) => w.target === linkTarget) ?? null;
 }
 
 /**
- * @deprecated Use findWikilinkByTarget instead
+ * Check if text contains wikilinks. Alias for parse().
+ * @param text - Text to check
+ * @returns Array of parsed wikilinks (empty if none)
  */
-export const findClickedWikilink = findWikilinkByTarget;
+function matchesPattern(text: string): ParsedWikilink[] {
+	return parse(text);
+}
+
+/**
+ * Execute the wikilink regex on text (for iteration).
+ * Creates a fresh regex instance to avoid state issues.
+ * @param text - Text to match against
+ * @returns Iterator-compatible exec function
+ */
+function createMatcher(
+	text: string,
+): () => { target: string; alias: string | undefined } | null {
+	const regex = new RegExp(WIKILINK_REGEX.source, WIKILINK_REGEX.flags);
+	return () => {
+		const match = regex.exec(text);
+		if (!match) return null;
+		return { alias: match[2], target: match[1]! };
+	};
+}
+
+/**
+ * Wikilink helper object with grouped functions.
+ */
+export const wikilinkHelper = {
+	createMatcher,
+	findByTarget,
+	matchesPattern,
+	parse,
+};

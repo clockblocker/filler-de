@@ -83,7 +83,7 @@ function getLineKind(line: string): TextBlockKindType {
  */
 const OPENING_QUOTE_PATTERN = /[\u201E\u00BB]/g;
 const CLOSING_QUOTE_PATTERN = /[\u201D\u00AB]/g;
-const NEUTRAL_QUOTE_PATTERN = /\u0022/g;
+const _NEUTRAL_QUOTE_PATTERN = /\u0022/g;
 
 /**
  * Counts net open quotes in a line given current open count.

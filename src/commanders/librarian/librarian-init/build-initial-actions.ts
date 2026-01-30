@@ -7,14 +7,14 @@ import type {
 import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { VaultAction } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { VaultActionKind } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
-import { readMetadata } from "../../../stateless-services/note-metadata-manager";
-import { parseFrontmatter } from "../../../stateless-services/note-metadata-manager/internal/frontmatter";
-import { readJsonSection } from "../../../stateless-services/note-metadata-manager/internal/json-section";
+import { readMetadata } from "../../../stateless-services/note-metadata-service";
+import { parseFrontmatter } from "../../../stateless-services/note-metadata-service/internal/frontmatter";
+import { readJsonSection } from "../../../stateless-services/note-metadata-service/internal/json-section";
 import {
 	addFrontmatter,
 	migrateFrontmatter,
 	migrateToFrontmatter,
-} from "../../../stateless-services/note-metadata-manager/internal/migration";
+} from "../../../stateless-services/note-metadata-service/internal/migration";
 import { logger } from "../../../utils/logger";
 import type {
 	AnySplitPathInsideLibrary,

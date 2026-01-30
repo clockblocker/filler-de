@@ -5,14 +5,14 @@
 /**
  * Remove bold markers (**text** → text).
  */
-export function stripBoldMarkers(text: string): string {
+function stripBold(text: string): string {
 	return text.replace(/\*\*([^*]+)\*\*/g, "$1");
 }
 
 /**
  * Remove block references at end of line ( ^id → removed).
  */
-export function stripBlockRefs(text: string): string {
+function stripBlockRefs(text: string): string {
 	return text.replace(/\s\^[a-zA-Z0-9-]+\s*$/, "");
 }
 
@@ -21,7 +21,7 @@ export function stripBlockRefs(text: string): string {
  * [[target]] → target
  * [[target|alias]] → alias
  */
-export function replaceWikilinksWithSurface(text: string): string {
+function replaceWikilinks(text: string): string {
 	return text.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, target, alias) =>
 		alias ?? target,
 	);
@@ -31,10 +31,20 @@ export function replaceWikilinksWithSurface(text: string): string {
  * Strip all markdown formatting for context display.
  * Removes bold, block refs, replaces wikilinks with surface.
  */
-export function stripMarkdownForContext(text: string): string {
+function stripAll(text: string): string {
 	let result = text;
-	result = stripBoldMarkers(result);
-	result = replaceWikilinksWithSurface(result);
+	result = stripBold(result);
+	result = replaceWikilinks(result);
 	result = stripBlockRefs(result);
 	return result;
 }
+
+/**
+ * Markdown stripping helper object with grouped functions.
+ */
+export const markdown = {
+	replaceWikilinks,
+	stripAll,
+	stripBlockRefs,
+	stripBold,
+};

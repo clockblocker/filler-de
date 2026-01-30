@@ -4,7 +4,7 @@
  */
 
 import { buildGoBackLinkPattern } from "../go-back-link-service";
-import { META_SECTION_PATTERN } from "../note-metadata-manager";
+import { META_SECTION_PATTERN } from "../note-metadata-service";
 
 /**
  * Strip metadata and go-back links from content for clipboard.

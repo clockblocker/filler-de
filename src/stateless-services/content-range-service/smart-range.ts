@@ -4,7 +4,7 @@
  */
 
 import { isGoBackLine } from "../go-back-link-service";
-import { META_SECTION_PATTERN } from "../note-metadata-manager";
+import { META_SECTION_PATTERN } from "../note-metadata-service";
 import { splitFirstLine, splitFrontmatter } from "./text-utils";
 
 /**

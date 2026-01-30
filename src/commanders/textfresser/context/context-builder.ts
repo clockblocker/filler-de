@@ -3,12 +3,7 @@
  */
 
 import { err, ok, type Result } from "neverthrow";
-import {
-	extractBlockIdFromLine,
-	findClickedWikilink,
-	formatBlockEmbed,
-	stripMarkdownForContext,
-} from "../../../pure-formatting-utils";
+import { blockIdHelper, markdown, wikilinkHelper } from "../../../pure-formatting-utils";
 import {
 	type ContextError,
 	type TextfresserContext,
@@ -35,26 +30,26 @@ export function buildTextfresserContext(
 	const { blockContent, linkTarget, basename } = input;
 
 	// Find the clicked wikilink
-	const wikilink = findClickedWikilink(blockContent, linkTarget);
-	if (!wikilink) {
+	const parsedWikilink = wikilinkHelper.findByTarget(blockContent, linkTarget);
+	if (!parsedWikilink) {
 		return err(wikilinkNotFoundError());
 	}
 
 	// Extract block ID if present
-	const blockId = extractBlockIdFromLine(blockContent);
+	const extractedBlockId = blockIdHelper.extractFromLine(blockContent);
 
 	// The target is the surface (alias if exists, else link target)
-	const target = wikilink.surface;
+	const target = parsedWikilink.surface;
 
 	// Format the context: block embed if block ID exists, else raw block
-	const formattedContext = blockId
-		? formatBlockEmbed(basename, blockId)
+	const formattedContext = extractedBlockId
+		? blockIdHelper.formatEmbed(basename, extractedBlockId)
 		: blockContent;
 
 	// Build the highlighted context: strip markdown, highlight target
 	const contextWithOnlyTargetSurfaceHighlited = buildHighlightedContext(
 		blockContent,
-		wikilink.surface,
+		parsedWikilink.surface,
 	);
 
 	return ok({
@@ -75,7 +70,7 @@ function buildHighlightedContext(
 	targetSurface: string,
 ): string {
 	// First strip markdown (bold, block refs, wikilinks → surface)
-	const stripped = stripMarkdownForContext(blockContent);
+	const stripped = markdown.stripAll(blockContent);
 
 	// Replace the target surface with highlighted version
 	// Only replace first occurrence to avoid double-highlighting

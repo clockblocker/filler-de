@@ -4,7 +4,7 @@
 
 import { ok, type Result } from "neverthrow";
 import { VaultActionKind } from "../../../../managers/obsidian/vault-action-manager/types/vault-action";
-import { upsertMetadata } from "../../../../stateless-services/note-metadata-manager";
+import { upsertMetadata } from "../../../../stateless-services/note-metadata-service";
 import {
 	DICT_ENTRY_NOTE_KIND,
 	type GenerateContext,

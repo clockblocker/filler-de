@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { getPageSplitPathByIndex } from "../../../commanders/librarian/bookkeeper/page-codec";
-import { readMetadata } from "../../../stateless-services/note-metadata-manager";
+import { readMetadata } from "../../../stateless-services/note-metadata-service";
 import type { VaultActionManager } from "../../obsidian/vault-action-manager";
 import { logError } from "../../obsidian/vault-action-manager/helpers/issue-handlers";
 import type { SplitPathToMdFile } from "../../obsidian/vault-action-manager/types/split-path";

@@ -253,7 +253,11 @@ export function isRecoverableError(error: HealingError): boolean {
  */
 export function aggregateErrors(errors: HealingError[]): string {
 	if (errors.length === 0) return "No errors";
-	if (errors.length === 1) return formatHealingError(errors[0]!);
+	if (errors.length === 1) {
+		const first = errors[0];
+		if (first) return formatHealingError(first);
+		return "No errors";
+	}
 
 	const summary = errors.reduce(
 		(acc, e) => {

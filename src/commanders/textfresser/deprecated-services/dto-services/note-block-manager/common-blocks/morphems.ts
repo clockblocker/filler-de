@@ -14,7 +14,7 @@ import type {
 	MorphemKerl,
 } from "../../../prompts/endgame/zod/types";
 
-async function getZusammengesetztAusBlock(
+async function _getZusammengesetztAusBlock(
 	plugin: TextEaterPlugin,
 	file: TFile,
 	morphemAnalysis: MorphemAnalysisOutput,

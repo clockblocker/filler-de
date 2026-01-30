@@ -1,14 +1,9 @@
 import { describe, expect, it } from "bun:test";
-import {
-	type ParsedWikilink,
-	findClickedWikilink,
-	findWikilinkByTarget,
-	parseWikilinks,
-} from "../../../src/pure-formatting-utils";
+import { type ParsedWikilink, wikilinkHelper } from "../../../src/pure-formatting-utils";
 
-describe("parseWikilinks", () => {
+describe("wikilinkHelper.parse", () => {
 	it("parses simple wikilink", () => {
-		const result = parseWikilinks("Text with [[schönen]] here");
+		const result = wikilinkHelper.parse("Text with [[schönen]] here");
 		expect(result).toEqual([
 			{
 				fullMatch: "[[schönen]]",
@@ -20,7 +15,7 @@ describe("parseWikilinks", () => {
 	});
 
 	it("parses wikilink with alias", () => {
-		const result = parseWikilinks("Text with [[schön|schönen]] here");
+		const result = wikilinkHelper.parse("Text with [[schön|schönen]] here");
 		expect(result).toEqual([
 			{
 				fullMatch: "[[schön|schönen]]",
@@ -32,31 +27,31 @@ describe("parseWikilinks", () => {
 	});
 
 	it("parses multiple wikilinks", () => {
-		const result = parseWikilinks("[[foo]] and [[bar|baz]]");
+		const result = wikilinkHelper.parse("[[foo]] and [[bar|baz]]");
 		expect(result).toHaveLength(2);
-		expect(result[0].target).toBe("foo");
-		expect(result[1].target).toBe("bar");
-		expect(result[1].alias).toBe("baz");
+		expect(result[0]!.target).toBe("foo");
+		expect(result[1]!.target).toBe("bar");
+		expect(result[1]!.alias).toBe("baz");
 	});
 
 	it("returns empty array for text without wikilinks", () => {
-		const result = parseWikilinks("Plain text without links");
+		const result = wikilinkHelper.parse("Plain text without links");
 		expect(result).toEqual([]);
 	});
 
 	it("handles wikilinks with special characters", () => {
-		const result = parseWikilinks("[[über-weg]]");
-		expect(result[0].target).toBe("über-weg");
+		const result = wikilinkHelper.parse("[[über-weg]]");
+		expect(result[0]!.target).toBe("über-weg");
 	});
 
 	it("handles empty string", () => {
-		expect(parseWikilinks("")).toEqual([]);
+		expect(wikilinkHelper.parse("")).toEqual([]);
 	});
 });
 
-describe("findWikilinkByTarget", () => {
+describe("wikilinkHelper.findByTarget", () => {
 	it("finds wikilink by target (no alias)", () => {
-		const result = findWikilinkByTarget(
+		const result = wikilinkHelper.findByTarget(
 			"Text with [[schönen]] here",
 			"schönen",
 		);
@@ -66,7 +61,7 @@ describe("findWikilinkByTarget", () => {
 	});
 
 	it("finds wikilink by target when alias exists", () => {
-		const result = findWikilinkByTarget(
+		const result = wikilinkHelper.findByTarget(
 			"Text with [[schön|schönen]] here",
 			"schön",
 		);
@@ -77,33 +72,57 @@ describe("findWikilinkByTarget", () => {
 	});
 
 	it("returns null when target not found", () => {
-		const result = findWikilinkByTarget("Text with [[foo]] here", "bar");
+		const result = wikilinkHelper.findByTarget("Text with [[foo]] here", "bar");
 		expect(result).toBeNull();
 	});
 
 	it("finds correct wikilink among multiple", () => {
-		const result = findWikilinkByTarget("[[foo]] and [[bar]] and [[baz]]", "bar");
+		const result = wikilinkHelper.findByTarget("[[foo]] and [[bar]] and [[baz]]", "bar");
 		expect(result).not.toBeNull();
 		expect(result?.target).toBe("bar");
 	});
 
 	it("returns null for empty text", () => {
-		expect(findWikilinkByTarget("", "foo")).toBeNull();
+		expect(wikilinkHelper.findByTarget("", "foo")).toBeNull();
 	});
 
 	it("handles case-sensitive matching", () => {
-		const result = findWikilinkByTarget("[[Foo]]", "foo");
+		const result = wikilinkHelper.findByTarget("[[Foo]]", "foo");
 		expect(result).toBeNull();
 	});
 });
 
-describe("findClickedWikilink (deprecated alias)", () => {
-	it("works as alias for findWikilinkByTarget", () => {
-		const result = findClickedWikilink(
-			"Text with [[schönen]] here",
-			"schönen",
-		);
-		expect(result).not.toBeNull();
-		expect(result?.target).toBe("schönen");
+describe("wikilinkHelper.matchesPattern", () => {
+	it("returns parsed wikilinks (alias for parse)", () => {
+		const result = wikilinkHelper.matchesPattern("[[foo]] and [[bar]]");
+		expect(result).toHaveLength(2);
+	});
+
+	it("returns empty array for text without wikilinks", () => {
+		expect(wikilinkHelper.matchesPattern("plain text")).toEqual([]);
+	});
+});
+
+describe("wikilinkHelper.createMatcher", () => {
+	it("iterates through wikilinks", () => {
+		const nextMatch = wikilinkHelper.createMatcher("[[foo]] and [[bar|baz]]");
+
+		const first = nextMatch();
+		expect(first).not.toBeNull();
+		expect(first?.target).toBe("foo");
+		expect(first?.alias).toBeUndefined();
+
+		const second = nextMatch();
+		expect(second).not.toBeNull();
+		expect(second?.target).toBe("bar");
+		expect(second?.alias).toBe("baz");
+
+		const third = nextMatch();
+		expect(third).toBeNull();
+	});
+
+	it("returns null immediately for text without wikilinks", () => {
+		const nextMatch = wikilinkHelper.createMatcher("plain text");
+		expect(nextMatch()).toBeNull();
 	});
 });

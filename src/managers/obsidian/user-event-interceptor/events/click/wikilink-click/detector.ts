@@ -9,7 +9,7 @@
  */
 
 import { type App, MarkdownView } from "obsidian";
-import { WIKILINK_REGEX } from "../../../../../../pure-formatting-utils";
+import { wikilinkHelper } from "../../../../../../pure-formatting-utils";
 import { DomSelectors } from "../../../../../../utils/dom-selectors";
 import {
 	decrementPending,
@@ -179,14 +179,13 @@ export class WikilinkClickDetector {
 		// Get clicked text to match against links
 		const clickedText = clickedElement.textContent ?? "";
 
-		// Find all wikilinks in the line
-		// Reset regex state before use
-		WIKILINK_REGEX.lastIndex = 0;
-		let match: RegExpExecArray | null = WIKILINK_REGEX.exec(lineText);
+		// Find all wikilinks in the line using matcher
+		const nextMatch = wikilinkHelper.createMatcher(lineText);
+		let match = nextMatch();
 
 		while (match !== null) {
-			const linkTarget = match[1];
-			const alias = match[2];
+			const linkTarget = match.target;
+			const alias = match.alias;
 			const displayText = alias ?? linkTarget;
 
 			// Match by display text (may be partial due to CM spans)
@@ -196,7 +195,7 @@ export class WikilinkClickDetector {
 			) {
 				return { displayText, linkTarget };
 			}
-			match = WIKILINK_REGEX.exec(lineText);
+			match = nextMatch();
 		}
 
 		// Fallback: try to get any link from the line

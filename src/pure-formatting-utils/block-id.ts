@@ -1,10 +1,10 @@
 /**
- * Block ID extraction utilities.
+ * Block ID extraction and formatting utilities.
  * Supports both alphanumeric (e.g., ^abc-123) and numeric-only (e.g., ^6) block IDs.
  */
 
 /** Pattern to match alphanumeric block ID at end of line */
-export const BLOCK_ID_PATTERN = /\s\^([a-zA-Z0-9-]+)\s*$/;
+const BLOCK_ID_PATTERN = /\s\^([a-zA-Z0-9-]+)\s*$/;
 
 /** Pattern to match numeric-only block ID at end of line */
 const NUMERIC_BLOCK_ID_PATTERN = /\s\^(\d+)\s*$/;
@@ -15,9 +15,9 @@ const NUMERIC_BLOCK_ID_PATTERN = /\s\^(\d+)\s*$/;
  * @param line - The line text to check
  * @returns The block ID (without ^) or null if no block marker found
  */
-export function extractBlockIdFromLine(line: string): string | null {
+function extractFromLine(line: string): string | null {
 	const match = line.match(BLOCK_ID_PATTERN);
-	return match ? match[1] : null;
+	return match ? match[1]! : null;
 }
 
 /**
@@ -26,24 +26,56 @@ export function extractBlockIdFromLine(line: string): string | null {
  * @param line - The line text to check
  * @returns The block ID (without ^) or null if no block marker found
  */
-export function extractNumericBlockId(line: string): string | null {
+function extractNumeric(line: string): string | null {
 	const match = line.match(NUMERIC_BLOCK_ID_PATTERN);
-	return match ? match[1] : null;
+	return match ? match[1]! : null;
 }
 
 /**
  * Find the highest block ID number in file content.
  * Matches patterns like " ^0", " ^123", etc.
  */
-export function findHighestBlockNumber(content: string): number {
+function findHighestNumber(content: string): number {
 	// Match block markers at end of lines: " ^N" or "^N" at line end
 	const matches = content.match(/\s\^(\d+)(?:\s*$|\n)/gm);
 	if (!matches) return -1;
 
 	const numbers = matches.map((match) => {
 		const numMatch = match.match(/\^(\d+)/);
-		return numMatch ? Number.parseInt(numMatch[1], 10) : 0;
+		return numMatch ? Number.parseInt(numMatch[1]!, 10) : 0;
 	});
 
 	return Math.max(-1, ...numbers);
 }
+
+/**
+ * Format a block embed wikilink.
+ * @param basename - The file basename (without extension)
+ * @param id - The block ID (without ^)
+ * @returns Formatted embed like `![[basename#^id|^]]`
+ */
+function formatEmbed(basename: string, id: string): string {
+	return `![[${basename}#^${id}|^]]`;
+}
+
+/**
+ * Check if text ends with a block ID pattern.
+ * @param text - Text to check
+ * @returns Match info with id and index, or null if no match
+ */
+function matchesPattern(text: string): { id: string; index: number } | null {
+	const match = text.match(BLOCK_ID_PATTERN);
+	if (!match || match.index === undefined) return null;
+	return { id: match[1]!, index: match.index };
+}
+
+/**
+ * Block ID helper object with grouped functions.
+ */
+export const blockIdHelper = {
+	extractFromLine,
+	extractNumeric,
+	findHighestNumber,
+	formatEmbed,
+	matchesPattern,
+};

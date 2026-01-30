@@ -4,7 +4,7 @@
  */
 
 import { err, ok, type Result } from "neverthrow";
-import { readMetadata } from "../../../../stateless-services/note-metadata-manager";
+import { readMetadata } from "../../../../stateless-services/note-metadata-service";
 import {
 	DICT_ENTRY_NOTE_KIND,
 	EligibilitySchema,

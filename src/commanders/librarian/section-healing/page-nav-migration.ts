@@ -16,7 +16,7 @@ import { VaultActionKind } from "../../../managers/obsidian/vault-action-manager
 import {
 	readMetadata,
 	upsertMetadata,
-} from "../../../stateless-services/note-metadata-manager";
+} from "../../../stateless-services/note-metadata-service";
 import { logger } from "../../../utils/logger";
 import { parsePageIndex } from "../bookkeeper/page-codec";
 import { parseSeparatedSuffix } from "../codecs/internal/suffix/parse";
@@ -105,7 +105,7 @@ export async function buildPageNavMigrationActions(
 	}
 
 	// Process each group to compute and add missing indices
-	for (const [groupKey, pages] of pageGroups) {
+	for (const [_groupKey, pages] of pageGroups) {
 		// Sort by page index
 		pages.sort((a, b) => a.pageIndex - b.pageIndex);
 

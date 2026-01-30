@@ -10,10 +10,7 @@
  */
 
 import { type App, MarkdownView } from "obsidian";
-import {
-	BLOCK_ID_PATTERN,
-	formatBlockEmbed,
-} from "../../../../../pure-formatting-utils";
+import { blockIdHelper } from "../../../../../pure-formatting-utils";
 import type { SplitPathToMdFile } from "../../../vault-action-manager/types/split-path";
 import { HandlerOutcome } from "../../types/handler";
 import { PayloadKind } from "../../types/payload-base";
@@ -105,17 +102,16 @@ export class ClipboardDetector {
 		const clipboardText = evt.clipboardData?.getData("text/plain");
 		if (!clipboardText) return;
 
-		const match = clipboardText.match(BLOCK_ID_PATTERN);
+		const match = blockIdHelper.matchesPattern(clipboardText);
 		if (!match) return;
 
-		const blockId = match[1];
 		const basename = this.getActiveFileBasename();
 		if (!basename) return;
 
-		const wikilink = formatBlockEmbed(basename, blockId);
+		const wikilinkEmbed = blockIdHelper.formatEmbed(basename, match.id);
 
 		evt.preventDefault();
-		evt.clipboardData?.setData("text/plain", wikilink);
+		evt.clipboardData?.setData("text/plain", wikilinkEmbed);
 	}
 
 	private getActiveFileBasename(): string | null {
