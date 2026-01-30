@@ -64,10 +64,12 @@ export const EXPECTED_AFTER_SETUP_EXTRA_E2 = {
 	codexes: [
 		`Library/__${D}Library.md`,
 		`Library/Märchen/__${D}Märchen.md`,
-		`Library/Märchen/Aschenputtel/__${D}Aschenputtel${D}Märchen.md`,
+		// NOTE: Aschenputtel codex NOT expected - MakeText test is skipped
 		`Library/Dialog/__${D}Dialog.md`,
 	],
 	files: [
+		// Scroll file still exists (MakeText skipped, so not converted to section)
+		`Library/Märchen/Aschenputtel${D}Märchen.md`,
 		// Scroll file after healing
 		`Library/Dialog/ExtraE2${D}Dialog.md`,
 	],

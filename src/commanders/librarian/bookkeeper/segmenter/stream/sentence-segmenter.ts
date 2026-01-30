@@ -11,7 +11,6 @@ const SENTENCE_ENDING = /[.!?]["»«"']?\s*$/;
  * Colon-as-sentence-end pattern.
  * Colon followed by whitespace and then quote/uppercase/dash indicates sentence break.
  * Captures the whitespace to preserve it in the replacement.
- * Based on split-on-colon.ts logic.
  */
 const COLON_SENTENCE_BREAK =
 	/(?<!\p{Nd}):(\s+)(?!\/\/)(?=(\p{Quotation_Mark}|[\p{Lu}\p{Lt}]|[\p{Dash_Punctuation}—–-]))/gu;

@@ -11,6 +11,10 @@ import { collapseVaultEvents } from "./batteries/processing-chain/collapse";
 import { reduceRoots } from "./batteries/processing-chain/reduce-roots";
 import type { BulkVaultEvent } from "./types/bulk/bulk-vault-event";
 import { isDelete, isRename } from "./types/bulk/helpers";
+import {
+	decrementPending,
+	incrementPending,
+} from "../../../../../../utils/idle-tracker";
 
 export type BulkVaultEventHandler = (bulk: BulkVaultEvent) => Promise<void>;
 
@@ -61,7 +65,8 @@ export class BulkEventEmmiter {
 					roots,
 				};
 
-				void this.handler(bulk);
+				incrementPending();
+				this.handler(bulk).finally(() => decrementPending());
 			},
 			{
 				maxWindowMs: this.opts.maxWindowMs ?? 2000,
