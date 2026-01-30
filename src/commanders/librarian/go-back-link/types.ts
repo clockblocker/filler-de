@@ -1,6 +1,5 @@
 /**
- * @deprecated - Import from 'src/stateless-services/go-back-link-service' instead
- * Re-export for temporary backwards compatibility
+ * Re-export GoBackLinkInfo from stateless-helpers for librarian usage.
  */
 
-export type { GoBackLinkInfo } from "../../../stateless-helpers/go-back-link-service";
+export type { GoBackLinkInfo } from "../../../stateless-helpers/go-back-link";

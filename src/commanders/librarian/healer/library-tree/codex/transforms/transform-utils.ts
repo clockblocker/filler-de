@@ -4,14 +4,14 @@
  */
 
 import { LINE_BREAK } from "../../../../../../types/literals";
-import { isGoBackLine } from "../../../../go-back-link";
+import { goBackLinkHelper } from "../../../../go-back-link";
 
 /**
  * Check if the first line looks like a backlink.
  * Re-exported from go-back-link module for backwards compatibility.
- * @deprecated Use isGoBackLine from go-back-link module directly.
+ * @deprecated Use goBackLinkHelper.isMatch() from go-back-link module directly.
  */
-export const isBacklinkLine = isGoBackLine;
+export const isBacklinkLine = goBackLinkHelper.isMatch;
 
 /**
  * Split content into first line and rest.

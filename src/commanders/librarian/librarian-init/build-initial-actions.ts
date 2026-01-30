@@ -7,14 +7,14 @@ import type {
 import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { VaultAction } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { VaultActionKind } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
-import { readMetadata } from "../../../stateless-helpers/note-metadata-service";
-import { parseFrontmatter } from "../../../stateless-helpers/note-metadata-service/internal/frontmatter";
-import { readJsonSection } from "../../../stateless-helpers/note-metadata-service/internal/json-section";
+import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
+import { parseFrontmatter } from "../../../stateless-helpers/note-metadata/internal/frontmatter";
+import { readJsonSection } from "../../../stateless-helpers/note-metadata/internal/json-section";
 import {
 	addFrontmatter,
 	migrateFrontmatter,
 	migrateToFrontmatter,
-} from "../../../stateless-helpers/note-metadata-service/internal/migration";
+} from "../../../stateless-helpers/note-metadata/internal/migration";
 import { logger } from "../../../utils/logger";
 import type {
 	AnySplitPathInsideLibrary,
@@ -125,7 +125,7 @@ export async function buildInitialCreateActions(
 				const content = contentResult.value;
 
 				// Read metadata using unified API (tries JSON first, then YAML)
-				const meta = readMetadata(content, ScrollMetadataSchema);
+				const meta = noteMetadataHelper.read(content, ScrollMetadataSchema);
 				if (meta?.status === "Done") {
 					status = TreeNodeStatus.Done;
 				}

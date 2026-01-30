@@ -8,11 +8,7 @@ import type { SplitPathToMdFile } from "../../../managers/obsidian/vault-action-
 import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { VaultAction } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { VaultActionKind } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
-import {
-	getContentBody,
-	readMetadata,
-	upsertMetadata,
-} from "../../../stateless-helpers/note-metadata-service";
+import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
 import { LINE_BREAK, SPACE_F } from "../../../types/literals";
 import type { CodecRules } from "../codecs/rules";
 import { serializeSegmentId } from "../codecs/segment-id/internal/serialize";
@@ -20,7 +16,7 @@ import type {
 	ScrollNodeSegmentId,
 	SectionNodeSegmentId,
 } from "../codecs/segment-id/types/segment-id";
-import { buildGoBackLink } from "../go-back-link";
+import { goBackLinkHelper } from "../go-back-link";
 import {
 	TreeNodeKind,
 	type TreeNodeStatus,
@@ -96,7 +92,7 @@ export function buildPageSplitActions(
 		result.sourceSuffix,
 		rules,
 	);
-	const goBackLink = buildGoBackLink(codexBasename, result.sourceCoreName);
+	const goBackLink = goBackLinkHelper.build(codexBasename, result.sourceCoreName);
 
 	const totalPages = result.pages.length;
 	for (const page of result.pages) {
@@ -213,7 +209,7 @@ function formatPageContent(
 	if (nextPageIdx !== undefined) {
 		metadata.nextPageIdx = nextPageIdx;
 	}
-	return upsertMetadata(metadata)(content) as string;
+	return noteMetadataHelper.upsert(metadata)(content) as string;
 }
 
 /**
@@ -237,7 +233,7 @@ export function buildTooShortMetadataAction(
  */
 function addPageFrontmatter(content: string): string {
 	// Read existing metadata (from either format)
-	const existing = readMetadata(content, PageMetadataSchema);
+	const existing = noteMetadataHelper.read(content, PageMetadataSchema);
 
 	// Build new metadata, preserving existing fields
 	const meta = {
@@ -248,8 +244,8 @@ function addPageFrontmatter(content: string): string {
 
 	// Strip existing metadata and add new
 	// Transforms are synchronous here, casts are safe
-	const cleanContent = getContentBody()(content) as string;
-	return upsertMetadata(meta)(cleanContent) as string;
+	const cleanContent = noteMetadataHelper.getBody()(content) as string;
+	return noteMetadataHelper.upsert(meta)(cleanContent) as string;
 }
 
 /**

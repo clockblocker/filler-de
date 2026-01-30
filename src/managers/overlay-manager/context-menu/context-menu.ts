@@ -12,7 +12,7 @@ import { z } from "zod";
 import { wouldSplitToMultiplePages as checkWouldSplit } from "../../../commanders/librarian/bookkeeper/segmenter";
 import { makeCodecRulesFromSettings } from "../../../commanders/librarian/codecs/rules";
 import { getParsedUserSettings } from "../../../global-state/global-state";
-import { readMetadata } from "../../../stateless-helpers/note-metadata-service";
+import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
 import {
 	FileType,
 	MdFileSubTypeSchema,
@@ -87,7 +87,7 @@ function handleEditorMenu(
 	let wouldSplitToMultiplePages = false;
 
 	try {
-		const metaInfo = readMetadata(content, FileTypeMetadataSchema);
+		const metaInfo = noteMetadataHelper.read(content, FileTypeMetadataSchema);
 		fileType = metaInfo?.noteKind ?? null;
 
 		// Check if scroll would split to multiple pages

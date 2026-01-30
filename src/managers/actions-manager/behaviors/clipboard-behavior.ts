@@ -1,4 +1,4 @@
-import { stripContentForClipboard } from "../../../stateless-helpers/content-range-service";
+import { contentRangeHelper } from "../../../stateless-helpers/content-range";
 import {
 	type ClipboardPayload,
 	type EventHandler,
@@ -13,7 +13,7 @@ export function createClipboardHandler(): EventHandler<ClipboardPayload> {
 	return {
 		doesApply: () => true, // Always try to handle clipboard events
 		handle: (payload) => {
-			const strippedText = stripContentForClipboard(payload.originalText);
+			const strippedText = contentRangeHelper.stripForClipboard(payload.originalText);
 			if (strippedText === null) {
 				return { outcome: HandlerOutcome.Passthrough };
 			}

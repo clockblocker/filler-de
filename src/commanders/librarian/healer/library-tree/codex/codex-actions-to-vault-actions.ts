@@ -7,7 +7,7 @@ import {
 	type VaultAction,
 	VaultActionKind,
 } from "../../../../../managers/obsidian/vault-action-manager/types/vault-action";
-import { upsertMetadata } from "../../../../../stateless-helpers/note-metadata-service";
+import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metadata";
 import type { Codecs } from "../../../codecs";
 import type { CodecRules } from "../../../codecs/rules";
 import { makeVaultScopedSplitPath } from "../tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
@@ -55,7 +55,7 @@ export function codexActionToVaultAction(
 						action.payload.splitPath,
 						rules,
 					) as SplitPathToMdFile,
-					transform: upsertMetadata({ status: normalizedStatus }),
+					transform: noteMetadataHelper.upsert({ status: normalizedStatus }),
 				},
 			};
 		}

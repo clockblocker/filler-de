@@ -1,11 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import { z } from "zod";
-import {
-	getContentBody,
-	readMetadata,
-	upsertMetadata,
-} from "../../../src/stateless-helpers/note-metadata-service";
-import { stripJsonSection } from "../../../src/stateless-helpers/note-metadata-service/internal/json-section";
+import { noteMetadataHelper } from "../../../src/stateless-helpers/note-metadata";
+import { stripJsonSection } from "../../../src/stateless-helpers/note-metadata/internal/json-section";
 
 // Mock the global state module
 const mockSettings = { hideMetadata: true };
@@ -22,7 +18,7 @@ describe("note-metadata-manager", () => {
 	describe("readMetadata", () => {
 		it("returns null for content without metadata", () => {
 			const content = "Some note content";
-			expect(readMetadata(content, TestSchema)).toBeNull();
+			expect(noteMetadataHelper.read(content, TestSchema)).toBeNull();
 		});
 
 		it("parses valid metadata", () => {
@@ -33,7 +29,7 @@ describe("note-metadata-manager", () => {
 </section>
 
 `;
-			const result = readMetadata(content, TestSchema);
+			const result = noteMetadataHelper.read(content, TestSchema);
 			expect(result).toEqual({ fileType: "Scroll", status: "Done" });
 		});
 
@@ -41,14 +37,14 @@ describe("note-metadata-manager", () => {
 			const content = `<section id="textfresser_meta_keep_me_invisible">
 not json
 </section>`;
-			expect(readMetadata(content, TestSchema)).toBeNull();
+			expect(noteMetadataHelper.read(content, TestSchema)).toBeNull();
 		});
 
 		it("returns null for schema mismatch", () => {
 			const content = `<section id="textfresser_meta_keep_me_invisible">
 {"wrong":"data"}
 </section>`;
-			expect(readMetadata(content, TestSchema)).toBeNull();
+			expect(noteMetadataHelper.read(content, TestSchema)).toBeNull();
 		});
 
 		it("handles metadata with extra whitespace", () => {
@@ -61,7 +57,7 @@ not json
 
 
 `;
-			const result = readMetadata(content, TestSchema);
+			const result = noteMetadataHelper.read(content, TestSchema);
 			expect(result).toEqual({ fileType: "Scroll", status: "NotStarted" });
 		});
 	});
@@ -69,7 +65,7 @@ not json
 	describe("upsertMetadata", () => {
 		it("adds metadata to content without existing metadata", () => {
 			const content = "Some content";
-			const transform = upsertMetadata({ fileType: "Scroll", status: "Done" });
+			const transform = noteMetadataHelper.upsert({ fileType: "Scroll", status: "Done" });
 			const result = transform(content);
 
 			expect(result).toContain("Some content");
@@ -86,7 +82,7 @@ not json
 </section>
 
 `;
-			const transform = upsertMetadata({ fileType: "Scroll", status: "Done" });
+			const transform = noteMetadataHelper.upsert({ fileType: "Scroll", status: "Done" });
 			const result = transform(content) as string;
 
 			// Should have new status
@@ -99,7 +95,7 @@ not json
 
 		it("preserves content before metadata", () => {
 			const content = "Line 1\nLine 2\nLine 3";
-			const transform = upsertMetadata({ status: "Done" });
+			const transform = noteMetadataHelper.upsert({ status: "Done" });
 			const result = transform(content);
 
 			expect(result).toContain("Line 1\nLine 2\nLine 3");
@@ -107,7 +103,7 @@ not json
 
 		it("adds proper padding", () => {
 			const content = "Content";
-			const transform = upsertMetadata({ status: "Done" });
+			const transform = noteMetadataHelper.upsert({ status: "Done" });
 			const result = transform(content);
 
 			// Should have 20 newlines before metadata to push it below visible area
@@ -122,9 +118,9 @@ not json
 			const original = "My note content";
 			const metadata = { fileType: "Scroll" as const, status: "Done" as const };
 
-			const transform = upsertMetadata(metadata);
+			const transform = noteMetadataHelper.upsert(metadata);
 			const withMeta = transform(original) as string;
-			const readBack = readMetadata(withMeta, TestSchema);
+			const readBack = noteMetadataHelper.read(withMeta, TestSchema);
 
 			expect(readBack).toEqual(metadata);
 		});
@@ -139,7 +135,7 @@ not json
 {"status":"Done"}
 </section>
 `;
-			const transform = getContentBody();
+			const transform = noteMetadataHelper.getBody();
 			const result = transform(content);
 
 			expect(result).not.toContain('<section id="textfresser_meta_keep_me_invisible">');
@@ -149,7 +145,7 @@ not json
 
 		it("returns original if no metadata", () => {
 			const content = "Just content";
-			const transform = getContentBody();
+			const transform = noteMetadataHelper.getBody();
 			expect(transform(content)).toBe("Just content");
 		});
 
@@ -159,7 +155,7 @@ not json
 {"status":"Done"}
 </section>
 `;
-			const transform = getContentBody();
+			const transform = noteMetadataHelper.getBody();
 			const result = transform(content);
 
 			expect(result).toBe("Content");
@@ -175,7 +171,7 @@ Content here
 {"status":"Done"}
 </section>
 `;
-			const transform = getContentBody();
+			const transform = noteMetadataHelper.getBody();
 			const result = transform(content);
 
 			expect(result).not.toContain("---");

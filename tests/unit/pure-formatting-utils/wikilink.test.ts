@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { type ParsedWikilink, wikilinkHelper } from "../../../src/stateless-helpers/pure-formatting-utils";
+import { type ParsedWikilink, wikilinkHelper } from "../../../src/stateless-helpers/wikilink";
 
 describe("wikilinkHelper.parse", () => {
 	it("parses simple wikilink", () => {

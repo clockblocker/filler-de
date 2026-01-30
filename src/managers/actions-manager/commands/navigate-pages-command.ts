@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { getPageSplitPathByIndex } from "../../../commanders/librarian/bookkeeper/page-codec";
-import { readMetadata } from "../../../stateless-helpers/note-metadata-service";
+import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
 import type { VaultActionManager } from "../../obsidian/vault-action-manager";
 import { logError } from "../../obsidian/vault-action-manager/helpers/issue-handlers";
 import type { SplitPathToMdFile } from "../../obsidian/vault-action-manager/types/split-path";
@@ -41,7 +41,7 @@ export function makeNavigatePageCommand(
 				return;
 			}
 
-			const metadata = readMetadata(
+			const metadata = noteMetadataHelper.read(
 				contentResult.value,
 				PageNavMetadataSchema,
 			);

@@ -3,11 +3,9 @@
  */
 
 import { err, ok, type Result } from "neverthrow";
-import {
-	blockIdHelper,
-	markdown,
-	wikilinkHelper,
-} from "../../../stateless-helpers/pure-formatting-utils";
+import { blockIdHelper } from "../../../stateless-helpers/block-id";
+import { markdown } from "../../../stateless-helpers/markdown-strip";
+import { wikilinkHelper } from "../../../stateless-helpers/wikilink";
 import {
 	type ContextError,
 	type TextfresserContext,

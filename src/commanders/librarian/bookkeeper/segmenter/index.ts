@@ -1,7 +1,7 @@
 import { parseSeparatedSuffix } from "../../codecs/internal/suffix/parse";
 import type { SeparatedSuffixedBasename } from "../../codecs/internal/suffix/types";
 import type { CodecRules } from "../../codecs/rules";
-import { stripGoBackLink } from "../../go-back-link";
+import { goBackLinkHelper } from "../../go-back-link";
 import {
 	DEFAULT_SEGMENTATION_CONFIG,
 	type PageSegment,
@@ -53,7 +53,7 @@ export function segmentContent(
 	const { coreName, suffixParts } = sourceBasenameInfo;
 
 	// Strip navigation go-back link before processing
-	const cleanContent = stripGoBackLink(content);
+	const cleanContent = goBackLinkHelper.strip(content);
 
 	// Check if content is too short to split
 	if (cleanContent.length < config.minContentSizeChars) {

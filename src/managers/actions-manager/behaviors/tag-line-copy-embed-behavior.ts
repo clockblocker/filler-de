@@ -1,9 +1,5 @@
 import { type App, MarkdownView, Notice } from "obsidian";
-import {
-	findHighestBlockNumber,
-	formatBlockEmbed,
-	getBlockIdFromLine,
-} from "../../../stateless-helpers/block-service";
+import { blockIdHelper } from "../../../stateless-helpers/block-id";
 import type { VaultActionManager } from "../../obsidian/vault-action-manager";
 import { logError } from "../../obsidian/vault-action-manager/helpers/issue-handlers";
 
@@ -44,7 +40,7 @@ export async function tagLineCopyEmbedBehavior(
 			return;
 		}
 
-		let blockId = getBlockIdFromLine(lineText);
+		let blockId = blockIdHelper.extractNumeric(lineText);
 
 		if (!blockId) {
 			// Need to add block marker - find highest existing number
@@ -54,7 +50,7 @@ export async function tagLineCopyEmbedBehavior(
 			}
 			const fileContent = contentResult.value;
 
-			const highestBlockNumber = findHighestBlockNumber(fileContent);
+			const highestBlockNumber = blockIdHelper.findHighestNumber(fileContent);
 			const newBlockNumber = highestBlockNumber + 1;
 			blockId = String(newBlockNumber);
 
@@ -64,7 +60,7 @@ export async function tagLineCopyEmbedBehavior(
 		}
 
 		// Format and copy embed to clipboard
-		const embed = formatBlockEmbed(basename, blockId);
+		const embed = blockIdHelper.formatEmbed(basename, blockId);
 		await navigator.clipboard.writeText(embed);
 	} catch (error) {
 		logError({

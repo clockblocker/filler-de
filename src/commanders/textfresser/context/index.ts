@@ -2,13 +2,12 @@
  * TextfresserContext module - builds structured context from wikilink clicks.
  */
 
-// Re-export from pure-formatting-utils for backwards compatibility
+import { blockIdHelper } from "../../../stateless-helpers/block-id";
+import { markdown } from "../../../stateless-helpers/markdown-strip";
 import {
-	blockIdHelper,
-	markdown,
 	type ParsedWikilink,
 	wikilinkHelper,
-} from "../../../stateless-helpers/pure-formatting-utils";
+} from "../../../stateless-helpers/wikilink";
 
 // Backwards-compatible re-exports using new API
 export const extractBlockIdFromLine = blockIdHelper.extractFromLine;

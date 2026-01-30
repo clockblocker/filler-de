@@ -4,7 +4,7 @@
 
 import type { MarkdownView } from "obsidian";
 import { z } from "zod";
-import { readMetadata } from "../../../stateless-helpers/note-metadata-service";
+import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
 import { computeNavActions, type PageNavMetadata } from "../action-definitions";
 import type { ActionConfig } from "../bottom-toolbar";
 import { buildSplitPath } from "./path-utils";
@@ -28,7 +28,7 @@ function getPageMetadata(view: MarkdownView): PageNavMetadata | null {
 	if (!editor) return null;
 
 	const content = editor.getValue();
-	return readMetadata(content, PageNavMetadataSchema);
+	return noteMetadataHelper.read(content, PageNavMetadataSchema);
 }
 
 /**

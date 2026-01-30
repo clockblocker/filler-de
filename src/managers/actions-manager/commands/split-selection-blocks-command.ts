@@ -1,5 +1,5 @@
 import { splitStrInBlocks } from "../../../commanders/librarian/bookkeeper/segmenter/block-marker";
-import { findHighestBlockNumber } from "../../../stateless-helpers/block-service";
+import { blockIdHelper } from "../../../stateless-helpers/block-id";
 
 export type SplitInBlocksPayload = {
 	selection: string;
@@ -27,7 +27,7 @@ export function splitSelectionBlocksCommand(
 		return;
 	}
 
-	const highestBlockNumber = findHighestBlockNumber(fileContent);
+	const highestBlockNumber = blockIdHelper.findHighestNumber(fileContent);
 	const startIndex = highestBlockNumber + 1;
 
 	const { markedText, blockCount } = splitStrInBlocks(selection, startIndex);

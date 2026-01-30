@@ -30,7 +30,7 @@ import {
  * Tries internal JSON format first (authoritative), falls back to YAML frontmatter.
  * Returns null if no metadata or parse fails.
  */
-export function readMetadata<T extends Metadata>(
+function read<T extends Metadata>(
 	content: string,
 	schema: z.ZodSchema<T>,
 ): T | null {
@@ -52,7 +52,7 @@ export function readMetadata<T extends Metadata>(
  * Writes to appropriate format based on hideMetadata setting.
  * Returns Transform function for use with ProcessMdFile.
  */
-export function upsertMetadata(metadata: Metadata): Transform {
+function upsert(metadata: Metadata): Transform {
 	const { hideMetadata } = getParsedUserSettings();
 	return hideMetadata
 		? writeJsonSection(metadata)
@@ -64,7 +64,7 @@ export function upsertMetadata(metadata: Metadata): Transform {
  * Strips both internal JSON section and YAML frontmatter.
  * Returns Transform function for use with ProcessMdFile.
  */
-export function getContentBody(): Transform {
+function getBody(): Transform {
 	return (content: string) => {
 		const withoutJson = stripJsonSection(content);
 		const withoutFm = stripFrontmatter(withoutJson);
@@ -86,7 +86,7 @@ export type StatusValue = "Done" | "NotStarted";
  *
  * @param checked - The new checkbox state (true = Done, false = NotStarted)
  */
-export function toggleStatusProperty(checked: boolean): Transform {
+function toggleStatus(checked: boolean): Transform {
 	const status: StatusValue = checked ? "Done" : "NotStarted";
 	const { hideMetadata } = getParsedUserSettings();
 
@@ -97,6 +97,22 @@ export function toggleStatusProperty(checked: boolean): Transform {
 	// YAML frontmatter format
 	return upsertFrontmatterStatus(status);
 }
+
+/**
+ * Note metadata helper object with grouped functions.
+ */
+export const noteMetadataHelper = {
+	getBody,
+	read,
+	toggleStatus,
+	upsert,
+};
+
+// Legacy exports for backwards compatibility
+export const readMetadata = read;
+export const upsertMetadata = upsert;
+export const getContentBody = getBody;
+export const toggleStatusProperty = toggleStatus;
 
 // ─── Clipboard Support ───
 

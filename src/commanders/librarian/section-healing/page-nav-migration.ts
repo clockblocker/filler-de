@@ -13,10 +13,7 @@ import type {
 import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { VaultAction } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { VaultActionKind } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
-import {
-	readMetadata,
-	upsertMetadata,
-} from "../../../stateless-helpers/note-metadata-service";
+import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
 import { logger } from "../../../utils/logger";
 import { parsePageIndex } from "../bookkeeper/page-codec";
 import { parseSeparatedSuffix } from "../codecs/internal/suffix/parse";
@@ -73,7 +70,7 @@ export async function buildPageNavMigrationActions(
 		if (contentResult.isErr()) continue;
 
 		const content = contentResult.value;
-		const metadata = readMetadata(content, PageMetadataSchema);
+		const metadata = noteMetadataHelper.read(content, PageMetadataSchema);
 
 		// Only process files with noteKind: Page
 		if (!metadata || metadata.noteKind !== "Page") continue;
@@ -138,7 +135,7 @@ export async function buildPageNavMigrationActions(
 						splitPath: page.splitPath,
 						transform: (content: string) => {
 							// Read existing metadata
-							const existing = readMetadata(
+							const existing = noteMetadataHelper.read(
 								content,
 								PageMetadataSchema,
 							);
@@ -156,7 +153,7 @@ export async function buildPageNavMigrationActions(
 							}
 
 							// Apply metadata update
-							return upsertMetadata(updated)(content) as string;
+							return noteMetadataHelper.upsert(updated)(content) as string;
 						},
 					},
 				});

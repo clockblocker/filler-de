@@ -10,7 +10,7 @@
  */
 
 import { type App, MarkdownView } from "obsidian";
-import { blockIdHelper } from "../../../../../stateless-helpers/pure-formatting-utils";
+import { blockIdHelper } from "../../../../../stateless-helpers/block-id";
 import type { SplitPathToMdFile } from "../../../vault-action-manager/types/split-path";
 import { HandlerOutcome } from "../../types/handler";
 import { PayloadKind } from "../../types/payload-base";

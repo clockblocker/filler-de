@@ -1,4 +1,4 @@
-import { calculateSmartRange } from "../../../stateless-helpers/content-range-service";
+import { contentRangeHelper } from "../../../stateless-helpers/content-range";
 import {
 	type EventHandler,
 	HandlerOutcome,
@@ -13,7 +13,7 @@ export function createSelectAllHandler(): EventHandler<SelectAllPayload> {
 	return {
 		doesApply: () => true, // Always try to handle select-all events
 		handle: (payload) => {
-			const { from, to } = calculateSmartRange(payload.content);
+			const { from, to } = contentRangeHelper.calculateSmartRange(payload.content);
 
 			// If the range covers everything or nothing, passthrough
 			if ((from === 0 && to === payload.content.length) || from >= to) {

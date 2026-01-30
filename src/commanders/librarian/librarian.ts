@@ -12,7 +12,7 @@ import {
 	type SplitPathToMdFile,
 	type SplitPathToMdFileWithReader,
 } from "../../managers/obsidian/vault-action-manager/types/split-path";
-import { resolveAliasFromSuffix } from "../../stateless-helpers/wikilink-alias-service";
+import { resolveAliasFromSuffix } from "./wikilink-alias";
 import { decrementPending, incrementPending } from "../../utils/idle-tracker";
 import { logger } from "../../utils/logger";
 import type { SplitHealingInfo } from "./bookkeeper/split-to-pages-action";

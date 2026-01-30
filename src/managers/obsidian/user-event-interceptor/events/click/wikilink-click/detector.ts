@@ -9,7 +9,7 @@
  */
 
 import { type App, MarkdownView } from "obsidian";
-import { wikilinkHelper } from "../../../../../../stateless-helpers/pure-formatting-utils";
+import { wikilinkHelper } from "../../../../../../stateless-helpers/wikilink";
 import { DomSelectors } from "../../../../../../utils/dom-selectors";
 import {
 	decrementPending,

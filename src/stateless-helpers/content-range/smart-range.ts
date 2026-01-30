@@ -3,8 +3,8 @@
  * Calculates selection range excluding metadata and navigation links.
  */
 
-import { isGoBackLine } from "../go-back-link-service";
-import { META_SECTION_PATTERN } from "../note-metadata-service";
+import { goBackLinkHelper } from "../go-back-link";
+import { META_SECTION_PATTERN } from "../note-metadata";
 import { splitFirstLine, splitFrontmatter } from "./text-utils";
 
 /**
@@ -51,7 +51,7 @@ export function calculateSmartRange(content: string): {
 			}
 		}
 
-		if (isGoBackLine(currentLine)) {
+		if (goBackLinkHelper.isMatch(currentLine)) {
 			from += searchPos + currentLine.length;
 			if (from < content.length && content[from] === "\n") {
 				from += 1;

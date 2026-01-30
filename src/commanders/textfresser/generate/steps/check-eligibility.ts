@@ -4,7 +4,7 @@
  */
 
 import { err, ok, type Result } from "neverthrow";
-import { readMetadata } from "../../../../stateless-helpers/note-metadata-service";
+import { noteMetadataHelper } from "../../../../stateless-helpers/note-metadata";
 import {
 	DICT_ENTRY_NOTE_KIND,
 	EligibilitySchema,
@@ -20,7 +20,7 @@ import {
 export function checkEligibility(
 	ctx: GenerateContext,
 ): Result<GenerateContext, GenerateError> {
-	const metadata = readMetadata(ctx.content, EligibilitySchema);
+	const metadata = noteMetadataHelper.read(ctx.content, EligibilitySchema);
 	const noteKind = metadata?.noteKind;
 
 	// Eligible if no noteKind or already DictEntry

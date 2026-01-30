@@ -18,7 +18,7 @@ import type { GoBackLinkInfo } from "./types";
  *
  * @returns RegExp that matches go-back links at the start of content
  */
-export function buildGoBackLinkPattern(): RegExp {
+function buildPattern(): RegExp {
 	// Go-back links always start with [[__
 	// The suffix uses the user's delimiter pattern
 	// Display name is after the pipe and arrow
@@ -30,7 +30,7 @@ export function buildGoBackLinkPattern(): RegExp {
  * Build regex pattern for go-back links with capture groups.
  * Captures: (1) suffix, (2) display name
  */
-export function buildGoBackLinkCapturePattern(): RegExp {
+function buildCapturePattern(): RegExp {
 	// Capture groups: [[__(<suffix>)|←(<displayName>)]]
 	return /^\s*\[\[__([^\]|]+)\|←\s*([^\]]+)\]\]\s*/;
 }
@@ -39,7 +39,7 @@ export function buildGoBackLinkCapturePattern(): RegExp {
  * Check if a line is a go-back link.
  * Matches any link starting with [[__ and containing the back arrow.
  */
-export function isGoBackLine(line: string): boolean {
+function isMatch(line: string): boolean {
 	const pattern = /^\[\[__[^\]]+\]\]/;
 	return pattern.test(line.trim());
 }
@@ -48,8 +48,8 @@ export function isGoBackLine(line: string): boolean {
  * Strip go-back link from content start.
  * Returns content without the leading go-back link.
  */
-export function stripGoBackLink(content: string): string {
-	const pattern = buildGoBackLinkPattern();
+function strip(content: string): string {
+	const pattern = buildPattern();
 	return content.replace(pattern, "");
 }
 
@@ -57,8 +57,8 @@ export function stripGoBackLink(content: string): string {
  * Parse a go-back link line.
  * Returns null if the line is not a valid go-back link.
  */
-export function parseGoBackLink(line: string): GoBackLinkInfo | null {
-	const pattern = buildGoBackLinkCapturePattern();
+function parse(line: string): GoBackLinkInfo | null {
+	const pattern = buildCapturePattern();
 	const match = line.match(pattern);
 
 	if (!match || !match[2] || !match[1]) {
@@ -77,10 +77,7 @@ export function parseGoBackLink(line: string): GoBackLinkInfo | null {
  * @param targetBasename - The basename of the target file (without .md)
  * @param displayName - The name to display after the arrow
  */
-export function buildGoBackLink(
-	targetBasename: string,
-	displayName: string,
-): string {
+function build(targetBasename: string, displayName: string): string {
 	return `[[${targetBasename}|${BACK_ARROW} ${displayName}]]`;
 }
 
@@ -88,7 +85,29 @@ export function buildGoBackLink(
  * Get the go-back link prefix used in basenames.
  * This is the "__" followed by the delimiter.
  */
-export function getGoBackLinkPrefix(): string {
+function getPrefix(): string {
 	const { suffixDelimiter } = getParsedUserSettings();
 	return `__${suffixDelimiter}`;
 }
+
+/**
+ * Go-back link helper object with grouped functions.
+ */
+export const goBackLinkHelper = {
+	build,
+	buildCapturePattern,
+	buildPattern,
+	getPrefix,
+	isMatch,
+	parse,
+	strip,
+};
+
+// Legacy exports for backwards compatibility
+export const buildGoBackLink = build;
+export const buildGoBackLinkCapturePattern = buildCapturePattern;
+export const buildGoBackLinkPattern = buildPattern;
+export const getGoBackLinkPrefix = getPrefix;
+export const isGoBackLine = isMatch;
+export const parseGoBackLink = parse;
+export const stripGoBackLink = strip;
