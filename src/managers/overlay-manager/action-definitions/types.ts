@@ -32,4 +32,5 @@ export type ActionDefinition = {
 	label: string;
 	settingKey: string | null;
 	requiresSelection: boolean;
+	selectablePlacements: readonly OverlayPlacement[];
 };

@@ -8,7 +8,7 @@ import type { NodeName } from "../types/schemas/node-name";
 
 // ─── Zod Enums ───
 
-export const NoteKindSchema = z.enum(["Codex", "Page", "Scroll", "Unknown"]);
+export const NoteKindSchema = z.enum(["Codex", "Page", "Scroll", "Unknown", "DictEntry"]);
 export type NoteKind = z.infer<typeof NoteKindSchema>;
 export const NoteKind = NoteKindSchema.enum;
 

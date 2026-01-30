@@ -1,8 +1,8 @@
 import { type App, Notice, PluginSettingTab, Setting } from "obsidian";
 import type TextEaterPluginStripped from "./main-stripped";
+import { ACTION_DEFINITIONS } from "./managers/overlay-manager/action-definitions/definitions";
 import {
 	SELECTION_ACTION_PLACEMENT_TEXT,
-	SelectionActionPlacement,
 	type SelectionActionPlacement as SelectionActionPlacementType,
 } from "./types";
 
@@ -207,67 +207,27 @@ export class SettingsTab extends PluginSettingTab {
 		// Actions settings
 		new Setting(containerEl).setName("Actions").setHeading();
 
-		const addPlacementOptions = (
-			dropdown: import("obsidian").DropdownComponent,
-		) => {
-			for (const key of Object.keys(
-				SelectionActionPlacement,
-			) as SelectionActionPlacementType[]) {
-				dropdown.addOption(key, SELECTION_ACTION_PLACEMENT_TEXT[key]);
-			}
-		};
+		for (const def of Object.values(ACTION_DEFINITIONS)) {
+			// Skip if no settingKey or only 1 placement option
+			if (!def.settingKey || def.selectablePlacements.length <= 1) continue;
 
-		new Setting(containerEl)
-			.setName("Translate")
-			.setDesc("Where to show the Translate action")
-			.addDropdown((dropdown) => {
-				addPlacementOptions(dropdown);
-				dropdown
-					.setValue(this.plugin.settings.translatePlacement)
-					.onChange(async (value: SelectionActionPlacementType) => {
-						this.plugin.settings.translatePlacement = value;
-						await this.plugin.saveSettings();
-					});
-			});
-
-		new Setting(containerEl)
-			.setName("Split in Blocks")
-			.setDesc("Where to show the Split in Blocks action")
-			.addDropdown((dropdown) => {
-				addPlacementOptions(dropdown);
-				dropdown
-					.setValue(this.plugin.settings.splitInBlocksPlacement)
-					.onChange(async (value: SelectionActionPlacementType) => {
-						this.plugin.settings.splitInBlocksPlacement = value;
-						await this.plugin.saveSettings();
-					});
-			});
-
-		new Setting(containerEl)
-			.setName("Explain Grammar")
-			.setDesc("Where to show the Explain Grammar action")
-			.addDropdown((dropdown) => {
-				addPlacementOptions(dropdown);
-				dropdown
-					.setValue(this.plugin.settings.explainGrammarPlacement)
-					.onChange(async (value: SelectionActionPlacementType) => {
-						this.plugin.settings.explainGrammarPlacement = value;
-						await this.plugin.saveSettings();
-					});
-			});
-
-		new Setting(containerEl)
-			.setName("Generate")
-			.setDesc("Where to show the Generate action")
-			.addDropdown((dropdown) => {
-				addPlacementOptions(dropdown);
-				dropdown
-					.setValue(this.plugin.settings.generatePlacement)
-					.onChange(async (value: SelectionActionPlacementType) => {
-						this.plugin.settings.generatePlacement = value;
-						await this.plugin.saveSettings();
-					});
-			});
+			new Setting(containerEl)
+				.setName(def.label)
+				.setDesc(`Where to show the ${def.label} action`)
+				.addDropdown((dropdown) => {
+					for (const placement of def.selectablePlacements) {
+						dropdown.addOption(placement, SELECTION_ACTION_PLACEMENT_TEXT[placement as SelectionActionPlacementType]);
+					}
+					dropdown
+						.setValue(this.plugin.settings[def.settingKey as keyof typeof this.plugin.settings] as string)
+						.onChange(async (value: SelectionActionPlacementType) => {
+							// Type assertion needed: settingKey is dynamic but we know it's a placement key
+							// biome-ignore lint/suspicious/noExplicitAny: Dynamic settings key access
+							(this.plugin.settings as any)[def.settingKey as string] = value;
+							await this.plugin.saveSettings();
+						});
+				});
+		}
 
 		new Setting(containerEl)
 			.setName("Navigation buttons position")

@@ -119,7 +119,7 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 
 			case CommandKind.Generate: {
 				const p = payload as GeneratePayload;
-				await generateCommand(p, {});
+				await generateCommand(p, { vaultActionManager });
 				break;
 			}
 

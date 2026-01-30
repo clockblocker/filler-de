@@ -37,7 +37,7 @@ export type CommandPayloads = {
 	TestButton: { filePath: SplitPathToMdFile };
 	TranslateSelection: { selection: string };
 	ExplainGrammar: { selection: string };
-	Generate: { selection: string };
+	Generate: Record<string, never>;
 };
 
 // ─── Deprecated Types (for backward compatibility) ───

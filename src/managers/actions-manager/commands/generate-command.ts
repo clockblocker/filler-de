@@ -1,18 +1,11 @@
-import { logger } from "../../../utils/logger";
-
-export type GeneratePayload = {
-	selection: string;
-};
-
-export type GenerateDeps = Record<string, never>;
-
 /**
- * Generate content from selected text.
- * TODO: Not yet implemented.
+ * Generate command - re-export from textfresser commander.
  */
-export async function generateCommand(
-	_payload: GeneratePayload,
-	_deps: GenerateDeps,
-): Promise<void> {
-	logger.warn("[generateCommand] Not implemented");
-}
+
+export {
+	generateCommand,
+	type GenerateDeps,
+} from "../../../commanders/textfresser/generate";
+
+// Re-export payload type for backward compatibility
+export type GeneratePayload = Record<string, never>;
