@@ -49,6 +49,7 @@ export interface VaultActionManager {
 		splitPath: SplitPathToFolder,
 	): Promise<Result<SplitPathWithReader[], string>>;
 	pwd(): Promise<Result<SplitPathToFile | SplitPathToMdFile, string>>;
+	mdPwd(): Promise<SplitPathToMdFile | null>;
 
 	getAbstractFile<SP extends AnySplitPath>(
 		splitPath: SP,

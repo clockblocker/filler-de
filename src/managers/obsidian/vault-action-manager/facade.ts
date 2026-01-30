@@ -276,6 +276,13 @@ export class VaultActionManagerImpl implements VaultActionManager {
 		return this.reader.pwd();
 	}
 
+	async mdPwd(): Promise<SplitPathToMdFile | null> {
+		const result = await this.reader.pwd();
+		if (result.isErr()) return null;
+		const path = result.value;
+		return path.kind === "MdFile" ? path : null;
+	}
+
 	getAbstractFile<SP extends AnySplitPath>(
 		splitPathArg: SP,
 	): Promise<Result<SP["kind"] extends "Folder" ? TFolder : TFile, string>> {

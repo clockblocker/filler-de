@@ -127,6 +127,25 @@ bun test --test-name-pattern "pattern"
 
 **Result Types**: Uses `neverthrow` for error handling (`Result<T, E>`)
 
+**Result Chaining**: Prefer `andThen` over if-chains for pipelines. Log errors once at the end.
+```typescript
+// ❌ BAD - verbose, logs at each step
+const aResult = stepA(ctx);
+if (aResult.isErr()) { logger.warn(...); return aResult; }
+const bResult = stepB(aResult.value);
+if (bResult.isErr()) { logger.warn(...); return bResult; }
+
+// ✅ GOOD - chain with single error log
+const result = await stepA(ctx)
+    .andThen(stepB)
+    .asyncAndThen(stepC);  // use asyncAndThen for async steps
+
+if (result.isErr()) {
+    logger.warn("[fn] Failed:", JSON.stringify(result.error));
+    return result;
+}
+```
+
 **Event-Driven**: Components subscribe to vault events and bulk events for reactive updates
 
 **Tree Navigation**: Nodes use segment IDs (`NodeSegmentId`) with separators; paths canonicalized using locators

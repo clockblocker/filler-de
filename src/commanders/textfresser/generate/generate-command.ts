@@ -5,7 +5,7 @@
  * checkEligibility → applyMeta → moveToWorter → dispatch
  */
 
-import { err, ok, type Result } from "neverthrow";
+import { err, ok, type Result, ResultAsync } from "neverthrow";
 import type { VaultActionManager } from "../../../managers/obsidian/vault-action-manager";
 import { logger } from "../../../utils/logger";
 import { applyMeta } from "./steps/apply-meta";
@@ -25,17 +25,17 @@ export type GenerateDeps = {
 
 // ─── Dispatch Step ───
 
-async function dispatch(
-	ctx: GenerateContext,
-): Promise<Result<void, GenerateError>> {
-	const result = await ctx.vam.dispatch(ctx.actions);
-	if (result.isErr()) {
-		return err({
-			kind: GenerateErrorKind.DispatchFailed,
-			reason: result.error.message,
-		});
-	}
-	return ok(undefined);
+function dispatch(ctx: GenerateContext): ResultAsync<void, GenerateError> {
+	return new ResultAsync(
+		ctx.vam.dispatch(ctx.actions).then((result) =>
+			result.isErr()
+				? err({
+						kind: GenerateErrorKind.DispatchFailed,
+						reason: result.error.message,
+					})
+				: ok(undefined),
+		),
+	);
 }
 
 // ─── Pipeline ───
@@ -50,19 +50,11 @@ export async function generateCommand(
 ): Promise<Result<void, GenerateError>> {
 	const { vaultActionManager } = deps;
 
-	// Get current file path
-	const pwdResult = await vaultActionManager.pwd();
-	if (pwdResult.isErr()) {
-		const error: GenerateError = { kind: GenerateErrorKind.NotMdFile };
-		logger.warn("[generateCommand] No file open:", pwdResult.error);
-		return err(error);
-	}
-
-	const splitPath = pwdResult.value;
-	if (splitPath.kind !== "MdFile") {
-		const error: GenerateError = { kind: GenerateErrorKind.NotMdFile };
-		logger.warn("[generateCommand] Not a markdown file");
-		return err(error);
+	// Get current md file path
+	const splitPath = await vaultActionManager.mdPwd();
+	if (!splitPath) {
+		logger.warn("[generateCommand] No md file open");
+		return err({ kind: GenerateErrorKind.NotMdFile });
 	}
 
 	// Read content
@@ -82,40 +74,14 @@ export async function generateCommand(
 	};
 
 	// Execute pipeline: checkEligibility → applyMeta → moveToWorter → dispatch
-	const eligibilityResult = checkEligibility(ctx);
-	if (eligibilityResult.isErr()) {
-		logger.warn(
-			"[generateCommand] Not eligible:",
-			JSON.stringify(eligibilityResult.error),
-		);
-		return eligibilityResult;
-	}
+	const result = await checkEligibility(ctx)
+		.andThen(applyMeta)
+		.andThen(moveToWorter)
+		.asyncAndThen(dispatch);
 
-	const metaResult = applyMeta(eligibilityResult.value);
-	if (metaResult.isErr()) {
-		logger.warn(
-			"[generateCommand] Apply meta failed:",
-			JSON.stringify(metaResult.error),
-		);
-		return metaResult;
-	}
-
-	const moveResult = moveToWorter(metaResult.value);
-	if (moveResult.isErr()) {
-		logger.warn(
-			"[generateCommand] Move failed:",
-			JSON.stringify(moveResult.error),
-		);
-		return moveResult;
-	}
-
-	const dispatchResult = await dispatch(moveResult.value);
-	if (dispatchResult.isErr()) {
-		logger.warn(
-			"[generateCommand] Dispatch failed:",
-			JSON.stringify(dispatchResult.error),
-		);
-		return dispatchResult;
+	if (result.isErr()) {
+		logger.warn("[generateCommand] Failed:", JSON.stringify(result.error));
+		return result;
 	}
 
 	logger.info("[generateCommand] Success");
