@@ -10,7 +10,8 @@
 import { ok, type Result } from "neverthrow";
 import type { VaultAction } from "../../../../managers/obsidian/vault-action-manager";
 import { VaultActionKind } from "../../../../managers/obsidian/vault-action-manager/types/vault-action";
-import type { CommandError, CommandPayload } from "../types";
+import { logger } from "../../../../utils/logger";
+import type { CommandError, CommandInput, CommandPayload } from "../types";
 import { applyMeta } from "./steps/apply-meta";
 import { checkEligibility } from "./steps/check-eligibility";
 import { moveToWorter } from "./steps/move-to-worter";
@@ -21,12 +22,14 @@ import { moveToWorter } from "./steps/move-to-worter";
  * Generate vault actions for the given file context.
  * Pure function - no VAM access, no side effects.
  *
- * @param ctx - File path and content
+ * @param input - File path, content, and state
  * @returns Result with array of VaultActions or CommandError
  */
 export function generateCommand(
-	payload: CommandPayload,
+	input: CommandInput,
 ): Result<VaultAction[], CommandError> {
+	const payload: CommandPayload = { ...input, actions: [] };
+	logger.info("[generateCommand] payload:", payload);
 	// Execute pipeline: checkEligibility → applyMeta → moveToWorter → addWriteAction
 	return checkEligibility(payload)
 		.andThen(applyMeta)

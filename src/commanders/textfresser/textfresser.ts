@@ -27,17 +27,15 @@ import {
 	type CommandFn,
 	TextfresserCommandKind,
 } from "./commands/types";
-import {
-	buildTextfresserContext,
-	type ContextError,
-	noClickError,
-	type TextfresserContext,
-} from "./context";
+import { buildTextfresserContext } from "./context";
 import { type FsError, FsErrorKind, readCurrentFile } from "./fs-utils";
 import type { TextfresserState } from "./types";
 
 export class Textfresser {
-	private state: TextfresserState = { latestContext: null };
+	private state: TextfresserState = {
+		latestNavigatedContext: null,
+		latestSelectedContext: null,
+	};
 
 	constructor(private readonly vam: VaultActionManager) {}
 
@@ -91,12 +89,12 @@ export class Textfresser {
 				});
 
 				if (contextResult.isOk()) {
-					this.state.latestContext = contextResult.value;
+					this.state.latestNavigatedContext = contextResult.value;
 				}
 
 				logger.info(
 					"[Textfresser] Updated latestContext:",
-					JSON.stringify(this.state.latestContext),
+					JSON.stringify(this.state.latestNavigatedContext),
 				);
 				return { outcome: HandlerOutcome.Passthrough };
 			},
@@ -108,14 +106,6 @@ export class Textfresser {
 	/** Get the current state */
 	getState(): TextfresserState {
 		return this.state;
-	}
-
-	/** Get structured context from the latest wikilink click */
-	getLatestContext(): Result<TextfresserContext, ContextError> {
-		if (!this.state.latestContext) {
-			return err(noClickError());
-		}
-		return ok(this.state.latestContext);
 	}
 
 	// ─── Private ───

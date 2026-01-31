@@ -7,5 +7,6 @@ import type { TextfresserContext } from "./context/types";
 // ─── State ───
 
 export type TextfresserState = {
-	latestContext: TextfresserContext | null;
+	latestNavigatedContext: TextfresserContext | null;
+	latestSelectedContext: TextfresserContext | null;
 };
