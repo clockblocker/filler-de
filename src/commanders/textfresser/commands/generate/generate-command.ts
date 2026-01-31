@@ -6,8 +6,8 @@
  */
 
 import { err, ok, type Result, ResultAsync } from "neverthrow";
-import type { VaultActionManager } from "../../../managers/obsidian/vault-action-manager";
-import { logger } from "../../../utils/logger";
+import type { VaultActionManager } from "../../../../managers/obsidian/vault-action-manager";
+import { logger } from "../../../../utils/logger";
 import { applyMeta } from "./steps/apply-meta";
 import { checkEligibility } from "./steps/check-eligibility";
 import { moveToWorter } from "./steps/move-to-worter";

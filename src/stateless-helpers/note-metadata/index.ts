@@ -11,7 +11,7 @@ import type { Transform } from "../../managers/obsidian/vault-action-manager/typ
 import {
 	frontmatterToInternal,
 	parseFrontmatter,
-	stripFrontmatter as stripFm,
+	stripOnlyFrontmatter as stripFm,
 	upsertFrontmatterStatus,
 	writeFrontmatter,
 } from "./internal/frontmatter";
@@ -73,7 +73,7 @@ function strip(content: string): string {
  * Strip only YAML frontmatter from content (for position calculation).
  * Does NOT strip JSON section. Use strip() to remove all metadata.
  */
-function stripFrontmatter(content: string): string {
+function stripOnlyFrontmatter(content: string): string {
 	return stripFm(content).trimStart();
 }
 
@@ -110,7 +110,7 @@ export const noteMetadataHelper = {
 	findSectionStart: findMetaSectionStart,
 	read,
 	strip,
-	stripFrontmatter,
+	stripOnlyFrontmatter,
 	toggleStatus,
 	upsert,
 };

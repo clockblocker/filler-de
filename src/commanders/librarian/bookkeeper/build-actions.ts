@@ -8,15 +8,14 @@ import type { SplitPathToMdFile } from "../../../managers/obsidian/vault-action-
 import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { VaultAction } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { VaultActionKind } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
+import { goBackLinkHelper } from "../../../stateless-helpers/go-back-link";
 import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
-import { LINE_BREAK, SPACE_F } from "../../../types/literals";
 import type { CodecRules } from "../codecs/rules";
 import { serializeSegmentId } from "../codecs/segment-id/internal/serialize";
 import type {
 	ScrollNodeSegmentId,
 	SectionNodeSegmentId,
 } from "../codecs/segment-id/types/segment-id";
-import { goBackLinkHelper } from "../../../stateless-helpers/go-back-link";
 import {
 	TreeNodeKind,
 	type TreeNodeStatus,
@@ -86,13 +85,12 @@ export function buildPageSplitActions(
 		rules,
 	);
 
-	// Build go-back link to codex for all pages
+	// Build codex basename for go-back links
 	const codexBasename = buildCodexBasename(
 		result.sourceCoreName,
 		result.sourceSuffix,
 		rules,
 	);
-	const goBackLink = goBackLinkHelper.build(codexBasename, result.sourceCoreName);
 
 	const totalPages = result.pages.length;
 	for (const page of result.pages) {
@@ -102,9 +100,14 @@ export function buildPageSplitActions(
 		const prevPageIdx = page.pageIndex > 0 ? page.pageIndex - 1 : undefined;
 		const nextPageIdx =
 			page.pageIndex < totalPages - 1 ? page.pageIndex + 1 : undefined;
-		// Add go-back link at top, then formatted content with metadata
+		// Add go-back link at top (idempotent), then format with metadata
+		const contentWithGoBack = goBackLinkHelper.add({
+			content: markedText,
+			displayName: result.sourceCoreName,
+			targetBasename: codexBasename,
+		});
 		const pageContent = formatPageContent(
-			SPACE_F + goBackLink + LINE_BREAK + LINE_BREAK + markedText,
+			contentWithGoBack,
 			prevPageIdx,
 			nextPageIdx,
 		);

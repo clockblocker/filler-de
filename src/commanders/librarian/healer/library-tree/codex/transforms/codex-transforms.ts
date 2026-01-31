@@ -12,7 +12,6 @@ import { sectionChainToPathParts } from "../../../../paths/path-finder";
 import type { SectionNode } from "../../tree-node/types/tree-node";
 import { formatParentBacklink } from "../format-codex-line";
 import { generateChildrenList } from "../generate-codex-content";
-import { splitFirstLine } from "./transform-utils";
 
 /**
  * Create a single transform that updates both backlink and content for a codex.
@@ -59,10 +58,11 @@ export function makeCodexTransform(
 			return childrenContent;
 		}
 
-		const backlinkLine = `${formatParentBacklink(parentName, parentPathParts)}${SPACE_F}`;
+		const backlinkLine = formatParentBacklink(parentName, parentPathParts);
 
-		// Combine backlink + children content (newline before backlink)
-		return `${LINE_BREAK}${backlinkLine}${childrenContent}`;
+		// Format: \n[[backlink]]  \n\n<children content>
+		// Note: childrenContent already has proper formatting
+		return `${LINE_BREAK}${backlinkLine}${SPACE_F}${childrenContent}`;
 	};
 }
 
@@ -101,17 +101,13 @@ export function makeCodexBacklinkTransform(
 			return content;
 		}
 
-		const backlinkLine = `${formatParentBacklink(parentName, parentPathParts)}${SPACE_F}`;
+		const backlinkLine = formatParentBacklink(parentName, parentPathParts);
 
-		const { firstLine, rest } = splitFirstLine(content);
+		// Strip existing go-back link if present
+		const cleanContent = goBackLinkHelper.strip(content.trimStart());
 
-		if (goBackLinkHelper.isMatch(firstLine)) {
-			// Replace existing backlink
-			return `${backlinkLine}${LINE_BREAK}${rest}`;
-		}
-
-		// Prepend backlink (preserve existing content)
-		return `${backlinkLine}${LINE_BREAK}${content}`;
+		// Format: \n[[backlink]]  \n\n<content>
+		return `${LINE_BREAK}${backlinkLine}${SPACE_F}${LINE_BREAK}${LINE_BREAK}${cleanContent}`;
 	};
 }
 
@@ -137,10 +133,14 @@ export function makeCodexContentTransform(
 			codecs,
 		);
 
-		const { firstLine } = splitFirstLine(content);
+		// Check if first non-empty line is a backlink
+		const trimmed = content.trimStart();
+		const firstLineEnd = trimmed.indexOf("\n");
+		const firstLine =
+			firstLineEnd === -1 ? trimmed : trimmed.slice(0, firstLineEnd);
 
 		if (goBackLinkHelper.isMatch(firstLine)) {
-			// Preserve backlink, replace rest
+			// Preserve backlink line, replace rest with children content
 			return `${firstLine}${LINE_BREAK}${childrenContent}`;
 		}
 

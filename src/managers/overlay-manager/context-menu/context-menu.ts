@@ -87,7 +87,10 @@ function handleEditorMenu(
 	let wouldSplitToMultiplePages = false;
 
 	try {
-		const metaInfo = noteMetadataHelper.read(content, FileTypeMetadataSchema);
+		const metaInfo = noteMetadataHelper.read(
+			content,
+			FileTypeMetadataSchema,
+		);
 		fileType = metaInfo?.noteKind ?? null;
 
 		// Check if scroll would split to multiple pages

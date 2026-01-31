@@ -3,7 +3,7 @@
  * and provides structured context from the latest click.
  */
 
-import { type Result, err } from "neverthrow";
+import { err, type Result } from "neverthrow";
 import type { WikilinkClickPayload } from "../../managers/obsidian/user-event-interceptor/events/click/wikilink-click/payload";
 import {
 	type EventHandler,
@@ -11,10 +11,10 @@ import {
 } from "../../managers/obsidian/user-event-interceptor/types/handler";
 import { logger } from "../../utils/logger";
 import {
-	type ContextError,
-	type TextfresserContext,
 	buildTextfresserContext,
+	type ContextError,
 	noClickError,
+	type TextfresserContext,
 } from "./context";
 
 export class Textfresser {
@@ -47,9 +47,9 @@ export class Textfresser {
 		const { blockContent, linkTarget, splitPath } = this.lastWikilinkClick;
 
 		return buildTextfresserContext({
+			basename: splitPath.basename,
 			blockContent,
 			linkTarget,
-			basename: splitPath.basename,
 		});
 	}
 }

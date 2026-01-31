@@ -1,7 +1,6 @@
 import { Notice } from "obsidian";
 import type { Librarian } from "../../commanders/librarian/librarian";
 import { logger } from "../../utils/logger";
-import { CommandKind, type CommandPayloads } from "./types";
 import type { VaultActionManager } from "../obsidian/vault-action-manager";
 import {
 	type ExplainGrammarPayload,
@@ -28,6 +27,7 @@ import {
 	type TranslateSelectionPayload,
 	translateSelectionCommand,
 } from "./commands/translate-selection-command";
+import { CommandKind, type CommandPayloads } from "./types";
 
 /**
  * Managers needed to build command executor.

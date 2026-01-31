@@ -4,7 +4,7 @@
  */
 
 import { err, ok, type Result } from "neverthrow";
-import { noteMetadataHelper } from "../../../../stateless-helpers/note-metadata";
+import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metadata";
 import {
 	DICT_ENTRY_NOTE_KIND,
 	EligibilitySchema,

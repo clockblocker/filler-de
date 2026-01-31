@@ -153,7 +153,9 @@ export async function buildPageNavMigrationActions(
 							}
 
 							// Apply metadata update
-							return noteMetadataHelper.upsert(updated)(content) as string;
+							return noteMetadataHelper.upsert(updated)(
+								content,
+							) as string;
 						},
 					},
 				});

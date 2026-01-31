@@ -125,7 +125,10 @@ export async function buildInitialCreateActions(
 				const content = contentResult.value;
 
 				// Read metadata using unified API (tries JSON first, then YAML)
-				const meta = noteMetadataHelper.read(content, ScrollMetadataSchema);
+				const meta = noteMetadataHelper.read(
+					content,
+					ScrollMetadataSchema,
+				);
 				if (meta?.status === "Done") {
 					status = TreeNodeStatus.Done;
 				}

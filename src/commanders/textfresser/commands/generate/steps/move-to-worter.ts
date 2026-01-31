@@ -6,11 +6,11 @@ import { ok, type Result } from "neverthrow";
 import {
 	SplitPathKind,
 	type SplitPathToMdFile,
-} from "../../../../managers/obsidian/vault-action-manager/types/split-path";
+} from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import {
 	type VaultAction,
 	VaultActionKind,
-} from "../../../../managers/obsidian/vault-action-manager/types/vault-action";
+} from "../../../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { computeShardedFolderParts } from "../shard-path";
 import type { GenerateContext, GenerateError } from "../types";
 

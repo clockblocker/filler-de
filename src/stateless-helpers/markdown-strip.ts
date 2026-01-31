@@ -22,8 +22,9 @@ function stripBlockRefs(text: string): string {
  * [[target|alias]] → alias
  */
 function replaceWikilinks(text: string): string {
-	return text.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, target, alias) =>
-		alias ?? target,
+	return text.replace(
+		/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g,
+		(_, target, alias) => alias ?? target,
 	);
 }
 

@@ -135,7 +135,7 @@ export function parseFrontmatter(
  * Strip YAML frontmatter from content.
  * Returns original content if no frontmatter present.
  */
-export function stripFrontmatter(content: string): string {
+export function stripOnlyFrontmatter(content: string): string {
 	return content.replace(FRONTMATTER_PATTERN, "");
 }
 
@@ -154,6 +154,7 @@ export function frontmatterToInternal(
 		statusField === TreeNodeStatus.Done ||
 		statusField === "completed" ||
 		statusField === "Completed" ||
+		statusField === "true" ||
 		statusField === true;
 
 	return {
@@ -219,7 +220,7 @@ export function writeFrontmatter(meta: Record<string, unknown>): Transform {
 			TreeNodeStatus.NotStarted,
 	};
 	return (content: string) => {
-		const withoutFm = stripFrontmatter(content);
+		const withoutFm = stripOnlyFrontmatter(content);
 		const yaml = internalToFrontmatter(normalized);
 		return `${yaml}\n${withoutFm}`;
 	};
@@ -240,7 +241,7 @@ export function upsertFrontmatterStatus(status: TreeNodeStatusType): Transform {
 			// Update existing frontmatter
 			const updated: ScrollMetadataWithImport = { ...fm, status };
 			const newYaml = internalToFrontmatter(updated);
-			const withoutFm = stripFrontmatter(content);
+			const withoutFm = stripOnlyFrontmatter(content);
 			return `${newYaml}\n${withoutFm}`;
 		}
 		// No frontmatter - create one with just status

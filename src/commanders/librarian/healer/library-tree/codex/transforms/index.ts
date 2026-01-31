@@ -12,9 +12,3 @@ export {
 	makeScrollBacklinkTransform,
 	makeStripScrollBacklinkTransform,
 } from "./scroll-transforms";
-
-export {
-	ensureLeadingBlankLine,
-	splitFirstLine,
-	splitFrontmatter,
-} from "./transform-utils";

@@ -7,6 +7,7 @@ export {
 	buildPageSplitActions,
 	buildTooShortMetadataAction,
 } from "./build-actions";
+
 // Errors
 export {
 	handleSplitToPagesError,
@@ -15,6 +16,7 @@ export {
 	SplitToPagesErrorKind,
 	SplitToPagesErrorKindSchema,
 } from "./error";
+
 // Page codec
 export {
 	buildPageBasename,
@@ -25,11 +27,15 @@ export {
 	PAGE_PREFIX_PATTERN,
 	parsePageIndex,
 } from "./page-codec";
+
 // Segmenter
 export { segmentContent } from "./segmenter";
+
 // Command handler
 export type { SplitToPagesContext } from "./split-to-pages-action";
+
 export { splitToPagesAction } from "./split-to-pages-action";
+
 // Types
 export type {
 	DialoguePosition as DialoguePositionType,

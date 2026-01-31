@@ -45,7 +45,7 @@ function calculateSmartRange(content: string): { from: number; to: number } {
 	let to = content.length;
 
 	// Step 1: Skip YAML frontmatter (not JSON - that's at the end)
-	const afterFrontmatter = noteMetadataHelper.stripFrontmatter(content);
+	const afterFrontmatter = noteMetadataHelper.stripOnlyFrontmatter(content);
 	if (afterFrontmatter.length < content.length) {
 		from = content.length - afterFrontmatter.length;
 	}

@@ -55,7 +55,9 @@ export function codexActionToVaultAction(
 						action.payload.splitPath,
 						rules,
 					) as SplitPathToMdFile,
-					transform: noteMetadataHelper.upsert({ status: normalizedStatus }),
+					transform: noteMetadataHelper.upsert({
+						status: normalizedStatus,
+					}),
 				},
 			};
 		}

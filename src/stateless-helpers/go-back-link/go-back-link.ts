@@ -9,7 +9,8 @@
  */
 
 import { getParsedUserSettings } from "../../global-state/global-state";
-import { BACK_ARROW } from "../../types/literals";
+import { BACK_ARROW, LINE_BREAK, SPACE_F } from "../../types/literals";
+import { noteMetadataHelper } from "../note-metadata";
 import type { GoBackLinkInfo } from "./types";
 
 /**
@@ -91,9 +92,36 @@ function getPrefix(): string {
 }
 
 /**
+ * Add go-back link to content, stripping existing metadata and go-back links.
+ * Idempotent: calling multiple times produces the same result.
+ * Format: \n[[link]]  \n\n<clean body>
+ *
+ * @param content - The note content
+ * @param targetBasename - Basename of the target file (without .md)
+ * @param displayName - Name to display after the arrow
+ * @returns Content with go-back link prepended
+ */
+function add({
+	content,
+	targetBasename,
+	displayName,
+}: {
+	content: string;
+	targetBasename: string;
+	displayName: string;
+}): string {
+	// Strip frontmatter + JSON meta + existing go-back link
+	const clean = noteMetadataHelper.strip(content);
+	const body = strip(clean);
+	const link = build(targetBasename, displayName);
+	return `${LINE_BREAK}${link}${SPACE_F}${LINE_BREAK}${LINE_BREAK}${body}`;
+}
+
+/**
  * Go-back link helper object with grouped functions.
  */
 export const goBackLinkHelper = {
+	add,
 	build,
 	getPrefix,
 	isMatch,

@@ -3,7 +3,7 @@ import {
 	frontmatterToInternal,
 	internalToFrontmatter,
 	parseFrontmatter,
-	stripFrontmatter,
+	stripOnlyFrontmatter,
 } from "../../../src/stateless-helpers/note-metadata/internal/frontmatter";
 import { migrateFrontmatter } from "../../../src/stateless-helpers/note-metadata/internal/migration";
 
@@ -127,18 +127,18 @@ Content`;
 		});
 	});
 
-	describe("stripFrontmatter", () => {
+	describe("stripOnlyFrontmatter", () => {
 		it("removes frontmatter from start", () => {
 			const content = `---
 title: Test
 ---
 Content here`;
-			expect(stripFrontmatter(content)).toBe("Content here");
+			expect(stripOnlyFrontmatter(content)).toBe("Content here");
 		});
 
 		it("returns original if no frontmatter", () => {
 			const content = "Just content";
-			expect(stripFrontmatter(content)).toBe("Just content");
+			expect(stripOnlyFrontmatter(content)).toBe("Just content");
 		});
 
 		it("handles empty content after frontmatter", () => {
@@ -146,7 +146,7 @@ Content here`;
 title: Test
 ---
 `;
-			expect(stripFrontmatter(content)).toBe("");
+			expect(stripOnlyFrontmatter(content)).toBe("");
 		});
 	});
 

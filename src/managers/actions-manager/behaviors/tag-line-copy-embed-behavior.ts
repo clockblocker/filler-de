@@ -50,7 +50,8 @@ export async function tagLineCopyEmbedBehavior(
 			}
 			const fileContent = contentResult.value;
 
-			const highestBlockNumber = blockIdHelper.findHighestNumber(fileContent);
+			const highestBlockNumber =
+				blockIdHelper.findHighestNumber(fileContent);
 			const newBlockNumber = highestBlockNumber + 1;
 			blockId = String(newBlockNumber);
 

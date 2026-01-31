@@ -3,9 +3,9 @@
  */
 
 export {
-	generateCommand,
 	type GenerateDeps,
-} from "../../../commanders/textfresser/generate";
+	generateCommand,
+} from "../../../commanders/textfresser/commands/generate/generate-command";
 
 // Re-export payload type for backward compatibility
 export type GeneratePayload = Record<string, never>;

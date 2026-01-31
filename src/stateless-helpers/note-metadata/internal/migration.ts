@@ -9,7 +9,7 @@ import {
 	internalToFrontmatter,
 	parseFrontmatter,
 	type ScrollMetadataWithImport,
-	stripFrontmatter,
+	stripOnlyFrontmatter,
 } from "./frontmatter";
 import { stripJsonSection, writeJsonSection } from "./json-section";
 
@@ -35,7 +35,7 @@ export function migrateFrontmatter(
 		const fm = parseFrontmatter(content);
 		if (!fm) return content;
 
-		const baseContent = stripYaml ? stripFrontmatter(content) : content;
+		const baseContent = stripYaml ? stripOnlyFrontmatter(content) : content;
 		const meta = frontmatterToInternal(fm);
 		return writeJsonSection(meta)(baseContent);
 	};
@@ -50,7 +50,7 @@ export function migrateToFrontmatter(
 ): Transform {
 	return (content: string) => {
 		const stripped = stripJsonSection(content);
-		const withoutFm = stripFrontmatter(stripped);
+		const withoutFm = stripOnlyFrontmatter(stripped);
 		const yaml = internalToFrontmatter(meta);
 		return `${yaml}\n${withoutFm}`;
 	};
@@ -62,7 +62,7 @@ export function migrateToFrontmatter(
  */
 export function addFrontmatter(meta: ScrollMetadataWithImport): Transform {
 	return (content: string) => {
-		const withoutFm = stripFrontmatter(content);
+		const withoutFm = stripOnlyFrontmatter(content);
 		const yaml = internalToFrontmatter(meta);
 		return `${yaml}\n${withoutFm}`;
 	};
