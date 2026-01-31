@@ -3,9 +3,11 @@
  */
 
 import { z } from "zod";
-import type { VaultActionManager } from "../../../managers/obsidian/vault-action-manager";
-import type { SplitPathToMdFile } from "../../../managers/obsidian/vault-action-manager/types/split-path";
-import type { VaultAction } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
+import type {
+	VaultAction,
+	VaultActionManager,
+} from "../../../../managers/obsidian/vault-action-manager";
+import type { SplitPathToMdFile } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
 
 // ─── Context ───
 

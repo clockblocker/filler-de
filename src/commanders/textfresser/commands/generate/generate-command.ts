@@ -7,6 +7,7 @@
 
 import { err, ok, type Result, ResultAsync } from "neverthrow";
 import type { VaultActionManager } from "../../../../managers/obsidian/vault-action-manager";
+import { VaultActionKind } from "../../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { logger } from "../../../../utils/logger";
 import { applyMeta } from "./steps/apply-meta";
 import { checkEligibility } from "./steps/check-eligibility";
@@ -58,10 +59,20 @@ export async function generateCommand(
 		vam: vaultActionManager,
 	};
 
-	// Execute pipeline: checkEligibility → applyMeta → moveToWorter → dispatch
+	// Execute pipeline: checkEligibility → applyMeta → moveToWorter → addWriteAction → dispatch
 	const result = await checkEligibility(ctx)
 		.andThen(applyMeta)
 		.andThen(moveToWorter)
+		.andThen((c) => {
+			const writeAction = {
+				kind: VaultActionKind.ProcessMdFile,
+				payload: {
+					splitPath: c.splitPath,
+					transform: () => c.content,
+				},
+			} as const;
+			return ok({ ...c, actions: [...c.actions, writeAction] });
+		})
 		.asyncAndThen(
 			(c) =>
 				new ResultAsync(

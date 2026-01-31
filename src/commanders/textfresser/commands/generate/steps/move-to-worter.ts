@@ -39,6 +39,7 @@ export function moveToWorter(
 
 	return ok({
 		...ctx,
+		splitPath: newPath,
 		actions: [...ctx.actions, action],
 	});
 }
