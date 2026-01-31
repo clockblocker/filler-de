@@ -16,8 +16,7 @@ export function createClipboardHandler(): EventHandler<ClipboardPayload> {
 		handle: (payload) => {
 			const original = payload.originalText;
 			let strippedText = goBackLinkHelper.strip(original);
-			// getBody() returns sync transform despite Transform type allowing Promise
-			strippedText = noteMetadataHelper.getBody()(strippedText) as string;
+			strippedText = noteMetadataHelper.strip(strippedText);
 
 			// Only return modified if we actually stripped something
 			if (strippedText === original.trim()) {

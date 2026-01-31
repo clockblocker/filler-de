@@ -15,7 +15,6 @@ export {
 
 export {
 	ensureLeadingBlankLine,
-	isBacklinkLine,
 	splitFirstLine,
 	splitFrontmatter,
 } from "./transform-utils";

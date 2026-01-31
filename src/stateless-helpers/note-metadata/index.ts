@@ -11,12 +11,12 @@ import type { Transform } from "../../managers/obsidian/vault-action-manager/typ
 import {
 	frontmatterToInternal,
 	parseFrontmatter,
-	stripFrontmatter,
+	stripFrontmatter as stripFm,
 	upsertFrontmatterStatus,
 	writeFrontmatter,
 } from "./internal/frontmatter";
 import {
-	META_SECTION_PATTERN,
+	findMetaSectionStart,
 	type Metadata,
 	readJsonSection,
 	stripJsonSection,
@@ -60,16 +60,21 @@ function upsert(metadata: Metadata): Transform {
 }
 
 /**
- * Get clean content body without any metadata.
- * Strips both internal JSON section and YAML frontmatter.
- * Returns Transform function for use with ProcessMdFile.
+ * Strip all metadata from content (both JSON section and YAML frontmatter).
+ * Returns clean body text with leading whitespace trimmed.
  */
-function getBody(): Transform {
-	return (content: string) => {
-		const withoutJson = stripJsonSection(content);
-		const withoutFm = stripFrontmatter(withoutJson);
-		return withoutFm.trim();
-	};
+function strip(content: string): string {
+	const withoutJson = stripJsonSection(content);
+	const withoutFm = stripFm(withoutJson);
+	return withoutFm.trimStart();
+}
+
+/**
+ * Strip only YAML frontmatter from content (for position calculation).
+ * Does NOT strip JSON section. Use strip() to remove all metadata.
+ */
+function stripFrontmatter(content: string): string {
+	return stripFm(content).trimStart();
 }
 
 // ─── Status Toggle ───
@@ -102,19 +107,10 @@ function toggleStatus(checked: boolean): Transform {
  * Note metadata helper object with grouped functions.
  */
 export const noteMetadataHelper = {
-	getBody,
+	findSectionStart: findMetaSectionStart,
 	read,
+	strip,
+	stripFrontmatter,
 	toggleStatus,
 	upsert,
 };
-
-// Legacy exports for backwards compatibility
-export const readMetadata = read;
-export const upsertMetadata = upsert;
-export const getContentBody = getBody;
-export const toggleStatusProperty = toggleStatus;
-
-// ─── Clipboard Support ───
-
-/** Pattern for stripping metadata from copied text */
-export { META_SECTION_PATTERN };

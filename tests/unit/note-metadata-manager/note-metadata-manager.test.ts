@@ -126,7 +126,7 @@ not json
 		});
 	});
 
-	describe("getContentBody", () => {
+	describe("strip", () => {
 		it("removes metadata section from content", () => {
 			const content = `Content here
 
@@ -135,8 +135,7 @@ not json
 {"status":"Done"}
 </section>
 `;
-			const transform = noteMetadataHelper.getBody();
-			const result = transform(content);
+			const result = noteMetadataHelper.strip(content);
 
 			expect(result).not.toContain('<section id="textfresser_meta_keep_me_invisible">');
 			expect(result).not.toContain("</section>");
@@ -145,8 +144,7 @@ not json
 
 		it("returns original if no metadata", () => {
 			const content = "Just content";
-			const transform = noteMetadataHelper.getBody();
-			expect(transform(content)).toBe("Just content");
+			expect(noteMetadataHelper.strip(content)).toBe("Just content");
 		});
 
 		it("handles content with padding newlines", () => {
@@ -155,8 +153,7 @@ not json
 {"status":"Done"}
 </section>
 `;
-			const transform = noteMetadataHelper.getBody();
-			const result = transform(content);
+			const result = noteMetadataHelper.strip(content);
 
 			expect(result).toBe("Content");
 		});
@@ -171,8 +168,7 @@ Content here
 {"status":"Done"}
 </section>
 `;
-			const transform = noteMetadataHelper.getBody();
-			const result = transform(content);
+			const result = noteMetadataHelper.strip(content);
 
 			expect(result).not.toContain("---");
 			expect(result).not.toContain('<section id="textfresser_meta_keep_me_invisible">');

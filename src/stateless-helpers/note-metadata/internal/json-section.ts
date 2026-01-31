@@ -20,8 +20,18 @@ const PATTERN = new RegExp(
 	`\\n*<${SECTION}\\s+id=[\\{"]${reEscape(META_SECTION_ID)}[\\}"]>([\\s\\S]*?)<\\/${SECTION}>\\n*`,
 );
 
-/** Exported pattern for stripping metadata from copied text */
-export const META_SECTION_PATTERN = PATTERN;
+/** Find the start index of the metadata section (excluding preceding whitespace), or null if none. */
+export function findMetaSectionStart(content: string): number | null {
+	const match = content.match(PATTERN);
+	if (match?.index == null) return null;
+
+	// Skip preceding whitespace
+	let pos = match.index;
+	while (pos > 0 && /\s/.test(content[pos - 1] ?? "")) {
+		pos--;
+	}
+	return pos;
+}
 
 // ─── Types ───
 

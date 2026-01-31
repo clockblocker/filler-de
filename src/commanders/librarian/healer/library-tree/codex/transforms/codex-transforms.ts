@@ -4,6 +4,7 @@
  */
 
 import type { Transform } from "../../../../../../managers/obsidian/vault-action-manager/types/vault-action";
+import { goBackLinkHelper } from "../../../../../../stateless-helpers/go-back-link";
 import { LINE_BREAK, SPACE_F } from "../../../../../../types/literals";
 import type { Codecs } from "../../../../codecs";
 import type { SectionNodeSegmentId } from "../../../../codecs/segment-id";
@@ -11,7 +12,7 @@ import { sectionChainToPathParts } from "../../../../paths/path-finder";
 import type { SectionNode } from "../../tree-node/types/tree-node";
 import { formatParentBacklink } from "../format-codex-line";
 import { generateChildrenList } from "../generate-codex-content";
-import { isBacklinkLine, splitFirstLine } from "./transform-utils";
+import { splitFirstLine } from "./transform-utils";
 
 /**
  * Create a single transform that updates both backlink and content for a codex.
@@ -104,7 +105,7 @@ export function makeCodexBacklinkTransform(
 
 		const { firstLine, rest } = splitFirstLine(content);
 
-		if (isBacklinkLine(firstLine)) {
+		if (goBackLinkHelper.isMatch(firstLine)) {
 			// Replace existing backlink
 			return `${backlinkLine}${LINE_BREAK}${rest}`;
 		}
@@ -138,7 +139,7 @@ export function makeCodexContentTransform(
 
 		const { firstLine } = splitFirstLine(content);
 
-		if (isBacklinkLine(firstLine)) {
+		if (goBackLinkHelper.isMatch(firstLine)) {
 			// Preserve backlink, replace rest
 			return `${firstLine}${LINE_BREAK}${childrenContent}`;
 		}

@@ -46,11 +46,11 @@ function isMatch(line: string): boolean {
 
 /**
  * Strip go-back link from content start.
- * Returns content without the leading go-back link.
+ * Returns content without the leading go-back link (and trims leading whitespace).
  */
 function strip(content: string): string {
 	const pattern = buildPattern();
-	return content.replace(pattern, "");
+	return content.replace(pattern, "").trimStart();
 }
 
 /**
@@ -95,19 +95,8 @@ function getPrefix(): string {
  */
 export const goBackLinkHelper = {
 	build,
-	buildCapturePattern,
-	buildPattern,
 	getPrefix,
 	isMatch,
 	parse,
 	strip,
 };
-
-// Legacy exports for backwards compatibility
-export const buildGoBackLink = build;
-export const buildGoBackLinkCapturePattern = buildCapturePattern;
-export const buildGoBackLinkPattern = buildPattern;
-export const getGoBackLinkPrefix = getPrefix;
-export const isGoBackLine = isMatch;
-export const parseGoBackLink = parse;
-export const stripGoBackLink = strip;

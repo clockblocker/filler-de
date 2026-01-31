@@ -4,6 +4,7 @@
  */
 
 import type { Transform } from "../../../../../../managers/obsidian/vault-action-manager/types/vault-action";
+import { goBackLinkHelper } from "../../../../../../stateless-helpers/go-back-link";
 import { LINE_BREAK, SPACE_F } from "../../../../../../types/literals";
 import type { Codecs } from "../../../../codecs";
 import type { SectionNodeSegmentId } from "../../../../codecs/segment-id";
@@ -11,7 +12,6 @@ import { sectionChainToPathParts } from "../../../../paths/path-finder";
 import { formatParentBacklink } from "../format-codex-line";
 import {
 	ensureLeadingBlankLine,
-	isBacklinkLine,
 	splitFirstLine,
 	splitFrontmatter,
 } from "./transform-utils";
@@ -35,7 +35,7 @@ export function makeStripScrollBacklinkTransform(): Transform {
 		if (firstLine.trim() === "") {
 			const { firstLine: secondLine, rest: restAfterSecond } =
 				splitFirstLine(rest);
-			if (isBacklinkLine(secondLine)) {
+			if (goBackLinkHelper.isMatch(secondLine)) {
 				// Strip backlink
 				return frontmatter
 					? `${frontmatter}${restAfterSecond}`
@@ -44,7 +44,7 @@ export function makeStripScrollBacklinkTransform(): Transform {
 		}
 
 		// Check for format without leading newline: [[backlink]]\n...
-		if (isBacklinkLine(firstLine)) {
+		if (goBackLinkHelper.isMatch(firstLine)) {
 			return frontmatter ? `${frontmatter}${rest}` : rest;
 		}
 
@@ -104,7 +104,7 @@ export function makeScrollBacklinkTransform(
 			// First line is empty, check second line
 			const { firstLine: secondLine, rest: restAfterSecond } =
 				splitFirstLine(rest);
-			if (isBacklinkLine(secondLine)) {
+			if (goBackLinkHelper.isMatch(secondLine)) {
 				// Replace existing backlink, ensure blank line before content
 				const newContent = `${LINE_BREAK}${backlinkLine}${ensureLeadingBlankLine(restAfterSecond)}`;
 				return frontmatter ? `${frontmatter}${newContent}` : newContent;
@@ -112,7 +112,7 @@ export function makeScrollBacklinkTransform(
 		}
 
 		// Check for format without leading newline: [[backlink]]\n...
-		if (isBacklinkLine(firstLine)) {
+		if (goBackLinkHelper.isMatch(firstLine)) {
 			// Replace existing backlink, ensure blank line before content
 			const newContent = `${LINE_BREAK}${backlinkLine}${ensureLeadingBlankLine(rest)}`;
 			return frontmatter ? `${frontmatter}${newContent}` : newContent;

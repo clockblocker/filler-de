@@ -16,7 +16,7 @@ import type {
 	ScrollNodeSegmentId,
 	SectionNodeSegmentId,
 } from "../codecs/segment-id/types/segment-id";
-import { goBackLinkHelper } from "../go-back-link";
+import { goBackLinkHelper } from "../../../stateless-helpers/go-back-link";
 import {
 	TreeNodeKind,
 	type TreeNodeStatus,
@@ -243,8 +243,7 @@ function addPageFrontmatter(content: string): string {
 	};
 
 	// Strip existing metadata and add new
-	// Transforms are synchronous here, casts are safe
-	const cleanContent = noteMetadataHelper.getBody()(content) as string;
+	const cleanContent = noteMetadataHelper.strip(content);
 	return noteMetadataHelper.upsert(meta)(cleanContent) as string;
 }
 
