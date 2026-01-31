@@ -7,7 +7,7 @@ import {
 } from "obsidian";
 import { DelimiterChangeService } from "./commanders/librarian/delimiter-change-service";
 import { Librarian } from "./commanders/librarian/librarian";
-import { Textfresser } from "./commanders/textfresser";
+import { Textfresser } from "./commanders/textfresser/textfresser";
 import {
 	clearState,
 	initializeState,
@@ -194,8 +194,8 @@ export default class TextEaterPlugin extends Plugin {
 		);
 		this.vaultActionManager = new VaultActionManagerImpl(this.app);
 
-		// Textfresser commander (wikilink click tracking)
-		this.textfresser = new Textfresser();
+		// Textfresser commander (vocabulary commands orchestrator)
+		this.textfresser = new Textfresser(this.vaultActionManager);
 
 		// Unified user event interceptor (clicks, clipboard, select-all, wikilinks)
 		this.userEventInterceptor = new UserEventInterceptor(
@@ -247,6 +247,7 @@ export default class TextEaterPlugin extends Plugin {
 		// Initialize command executor after librarian
 		this.commandExecutor = createCommandExecutor({
 			librarian: this.librarian,
+			textfresser: this.textfresser,
 			vaultActionManager: this.vaultActionManager,
 		});
 

@@ -3,8 +3,8 @@
  */
 
 import { MarkdownView } from "obsidian";
-import { CommandKind } from "../../actions-manager/types";
 import { logger } from "../../../utils/logger";
+import { CommandKind } from "../../actions-manager/types";
 import { OverlayActionKind } from "../action-definitions";
 import type { ActionClickContext } from "./types";
 

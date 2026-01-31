@@ -1,15 +1,12 @@
 import { Notice } from "obsidian";
 import type { Librarian } from "../../commanders/librarian/librarian";
+import type { Textfresser } from "../../commanders/textfresser/textfresser";
 import { logger } from "../../utils/logger";
 import type { VaultActionManager } from "../obsidian/vault-action-manager";
 import {
 	type ExplainGrammarPayload,
 	explainGrammarCommand,
 } from "./commands/explain-grammar-command";
-import {
-	type GeneratePayload,
-	generateCommand,
-} from "./commands/generate-command";
 import {
 	makeNavigatePageCommand,
 	type NavigatePagePayload,
@@ -34,6 +31,7 @@ import { CommandKind, type CommandPayloads } from "./types";
  */
 export type CommandExecutorManagers = {
 	librarian: Librarian | null;
+	textfresser: Textfresser | null;
 	vaultActionManager: VaultActionManager;
 };
 
@@ -50,7 +48,7 @@ export type ExecuteCommandInput<K extends CommandKind = CommandKind> = {
  * Returns a function that executes commands by kind.
  */
 export function createCommandExecutor(managers: CommandExecutorManagers) {
-	const { librarian, vaultActionManager } = managers;
+	const { librarian, textfresser, vaultActionManager } = managers;
 
 	const notify = (message: string) => {
 		new Notice(message);
@@ -118,8 +116,11 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 			}
 
 			case CommandKind.Generate: {
-				const p = payload as GeneratePayload;
-				await generateCommand(p, { vaultActionManager });
+				if (!textfresser) {
+					logger.warn("[CommandExecutor] Textfresser not initialized");
+					break;
+				}
+				await textfresser.generate();
 				break;
 			}
 

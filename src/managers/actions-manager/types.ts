@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TextfresserCommandKind } from "../../commanders/textfresser/commands/types";
 import type { FileType } from "../../types/common-interface/enums";
 import type {
 	AnySplitPath,
@@ -9,10 +10,11 @@ import type {
 
 /**
  * All known command kinds for the command executor.
+ * Includes TextfresserCommandKind (Generate, Baseform) plus additional action kinds.
  */
 export const CommandKind = {
+	...TextfresserCommandKind,
 	ExplainGrammar: "ExplainGrammar",
-	Generate: "Generate",
 	MakeText: "MakeText",
 	NavigatePage: "NavigatePage",
 	SplitInBlocks: "SplitInBlocks",

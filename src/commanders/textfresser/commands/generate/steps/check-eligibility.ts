@@ -6,20 +6,20 @@
 import { err, ok, type Result } from "neverthrow";
 import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metadata";
 import {
+	type CommandError,
+	CommandErrorKind,
+	type CommandPayload,
 	DICT_ENTRY_NOTE_KIND,
 	EligibilitySchema,
-	type GenerateContext,
-	type GenerateError,
-	GenerateErrorKind,
-} from "../types";
+} from "../../types";
 
 /**
  * Verifies file is eligible for generation.
  * File must have noteKind undefined or DictEntry.
  */
 export function checkEligibility(
-	ctx: GenerateContext,
-): Result<GenerateContext, GenerateError> {
+	ctx: CommandPayload,
+): Result<CommandPayload, CommandError> {
 	const metadata = noteMetadataHelper.read(ctx.content, EligibilitySchema);
 	const noteKind = metadata?.noteKind;
 
@@ -29,7 +29,7 @@ export function checkEligibility(
 	}
 
 	return err({
-		kind: GenerateErrorKind.NotEligible,
+		kind: CommandErrorKind.NotEligible,
 		noteKind,
 	});
 }

@@ -8,7 +8,7 @@
  */
 
 import type { Librarian } from "../../../commanders/librarian/librarian";
-import type { Textfresser } from "../../../commanders/textfresser";
+import type { Textfresser } from "../../../commanders/textfresser/textfresser";
 import {
 	type AnyPayload,
 	type EventHandler,
