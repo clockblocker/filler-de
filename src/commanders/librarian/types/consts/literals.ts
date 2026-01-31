@@ -13,9 +13,9 @@ export const CODEX_NODE_TYPE = "Codex" as const;
 export type CODEX_NODE_TYPE = "Codex";
 
 /** Codex filename prefix */
-export const CodexCoreNameSchema = z.literal("__");
-export type CODEX_CORE_NAME = z.infer<typeof CodexCoreNameSchema>;
-export const CODEX_CORE_NAME = CodexCoreNameSchema.value;
+export const PrefixOfCodexSchema = z.literal("__");
+export type PREFIX_OF_CODEX = z.infer<typeof PrefixOfCodexSchema>;
+export const PREFIX_OF_CODEX = PrefixOfCodexSchema.value;
 
 export const DoneStatusSchema = z.literal("Done");
 export type DONE_STATUS = z.infer<typeof DoneStatusSchema>;

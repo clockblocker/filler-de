@@ -10,7 +10,7 @@ import type { SectionNodeSegmentId } from "../../../codecs/segment-id";
 import { NodeSegmentIdSeparator } from "../../../codecs/segment-id/types/segment-id";
 import { adaptCodecResult } from "../tree-action/bulk-vault-action-adapter/layers/translate-material-event/error-adapters";
 import { TreeNodeKind } from "../tree-node/types/atoms";
-import { CODEX_CORE_NAME } from "./literals";
+import { PREFIX_OF_CODEX } from "./literals";
 
 // ─── Types ───
 
@@ -80,7 +80,7 @@ export function parseCodexLinkTarget(
 
 	const { coreName, suffixParts } = parseResult.value;
 
-	if (coreName === CODEX_CORE_NAME) {
+	if (coreName === PREFIX_OF_CODEX) {
 		// Section codex: suffixParts are section names (deepest first)
 		// e.g., "__-Child-Parent" → ["Child", "Parent"]
 		// Chain: [Library, Parent, Child]

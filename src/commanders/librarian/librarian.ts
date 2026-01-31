@@ -12,7 +12,6 @@ import {
 	type SplitPathToMdFile,
 	type SplitPathToMdFileWithReader,
 } from "../../managers/obsidian/vault-action-manager/types/split-path";
-import { resolveAliasFromSuffix } from "./wikilink-alias";
 import { decrementPending, incrementPending } from "../../utils/idle-tracker";
 import { logger } from "../../utils/logger";
 import type { SplitHealingInfo } from "./bookkeeper/split-to-pages-action";
@@ -65,9 +64,10 @@ import {
 	buildPageNavMigrationActions,
 	triggerSectionHealing as triggerSectionHealingImpl,
 } from "./section-healing";
-import { CODEX_CORE_NAME } from "./types/consts/literals";
+import { PREFIX_OF_CODEX } from "./types/consts/literals";
 import type { NodeName } from "./types/schemas/node-name";
 import { VaultActionQueue } from "./vault-action-queue";
+import { resolveAliasFromSuffix } from "./wikilink-alias";
 
 // ─── Queue Item ───
 
@@ -421,7 +421,7 @@ export class Librarian {
 		const result = resolveAliasFromSuffix(
 			linkContent,
 			this.codecs.suffix,
-			(name) => name.startsWith(CODEX_CORE_NAME),
+			(name) => name.startsWith(PREFIX_OF_CODEX),
 		);
 		return result?.alias ?? null;
 	}

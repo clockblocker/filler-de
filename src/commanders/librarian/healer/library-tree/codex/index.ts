@@ -30,7 +30,7 @@ export {
 	generateChildrenList,
 	generateCodexContent,
 } from "./generate-codex-content";
-export { CODEX_CORE_NAME } from "./literals";
+export { PREFIX_OF_CODEX } from "./literals";
 export { mergeCodexImpacts } from "./merge-codex-impacts";
 export {
 	type CodexClickTarget,

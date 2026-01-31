@@ -26,7 +26,7 @@ import { computeScrollSplitPath } from "../utils/compute-scroll-split-path";
 import { computeCodexSplitPath } from "./codex-split-path";
 import type { CodexImpact } from "./compute-codex-impact";
 import { isCodexSplitPath } from "./helpers";
-import { CODEX_CORE_NAME } from "./literals";
+import { PREFIX_OF_CODEX } from "./literals";
 import { chainToKey } from "./section-chain-utils";
 import {
 	collectDescendantScrolls,
@@ -565,7 +565,7 @@ function buildIntermediateCodexPath(
 	const suffixParts = computeCodexSuffix(oldNodeNames);
 
 	const basename = codecs.suffix.serializeSeparatedSuffix({
-		coreName: CODEX_CORE_NAME,
+		coreName: PREFIX_OF_CODEX,
 		suffixParts,
 	});
 
@@ -601,7 +601,7 @@ function buildMovedCodexPath(
 	const suffixParts = computeCodexSuffix(oldNodeNames);
 
 	const basename = codecs.suffix.serializeSeparatedSuffix({
-		coreName: CODEX_CORE_NAME,
+		coreName: PREFIX_OF_CODEX,
 		suffixParts,
 	});
 

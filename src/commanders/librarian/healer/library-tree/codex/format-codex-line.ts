@@ -21,7 +21,7 @@ import {
 } from "../../../paths/path-finder";
 import type { TreeNodeStatus } from "../tree-node/types/atoms";
 import { TreeNodeStatus as Status } from "../tree-node/types/atoms";
-import { CODEX_CORE_NAME } from "./literals";
+import { PREFIX_OF_CODEX } from "./literals";
 
 // ─── Helpers ───
 
@@ -71,7 +71,7 @@ function makeCodexBasename(sectionPathParts: string[]): string {
 	const suffixParts = computeCodexSuffix(sectionPathParts);
 
 	return codecs.suffix.serializeSeparatedSuffix({
-		coreName: CODEX_CORE_NAME,
+		coreName: PREFIX_OF_CODEX,
 		suffixParts,
 	});
 }

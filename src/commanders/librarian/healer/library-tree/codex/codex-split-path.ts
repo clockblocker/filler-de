@@ -8,7 +8,7 @@
 import type { Codecs, SplitPathToMdFileInsideLibrary } from "../../../codecs";
 import type { SectionNodeSegmentId } from "../../../codecs/segment-id/types/segment-id";
 import { buildCodexSplitPath } from "../../../paths/path-finder";
-import { CODEX_CORE_NAME } from "./literals";
+import { PREFIX_OF_CODEX } from "./literals";
 
 /**
  * Compute codex split path from section chain.
@@ -27,7 +27,7 @@ export function computeCodexSplitPath(
 	sectionChain: SectionNodeSegmentId[],
 	codecs: Codecs,
 ): SplitPathToMdFileInsideLibrary {
-	const result = buildCodexSplitPath(sectionChain, CODEX_CORE_NAME, codecs);
+	const result = buildCodexSplitPath(sectionChain, PREFIX_OF_CODEX, codecs);
 
 	if (result.isErr()) {
 		throw new Error(

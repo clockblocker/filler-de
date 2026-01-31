@@ -1,5 +1,5 @@
 import type { Codecs } from "../../../../../../codecs";
-import { CODEX_CORE_NAME } from "../../../../codex/literals";
+import { PREFIX_OF_CODEX } from "../../../../codex/literals";
 import type { TreeAction } from "../../../types/tree-action";
 import {
 	MaterializedEventType,
@@ -75,5 +75,5 @@ function isCodexEvent(ev: MaterializedNodeEvent, codecs: Codecs): boolean {
 	const result = adaptCodecResult(
 		codecs.suffix.parseSeparatedSuffix(splitPath.basename),
 	);
-	return result.isOk() && result.value.coreName === CODEX_CORE_NAME;
+	return result.isOk() && result.value.coreName === PREFIX_OF_CODEX;
 }
