@@ -1,16 +1,16 @@
 import { describe, expect, it } from "bun:test";
 import {
-	type ContextBuilderInput,
 	buildTextfresserContext,
+	type ContextBuilderInput,
 } from "../../../../src/commanders/textfresser/context/context-builder";
 
 describe("buildTextfresserContext", () => {
 	describe("State 1: [[schönen]] without block ID", () => {
 		it("returns correct context", () => {
 			const input: ContextBuilderInput = {
+				basename: "Note",
 				blockContent: "Text with [[schönen]] here",
 				linkTarget: "schönen",
-				basename: "Note",
 			};
 			const result = buildTextfresserContext(input);
 
@@ -29,9 +29,9 @@ describe("buildTextfresserContext", () => {
 	describe("State 2: [[schönen]] with block ID", () => {
 		it("returns formatted context with block embed", () => {
 			const input: ContextBuilderInput = {
+				basename: "Note",
 				blockContent: "Text with [[schönen]] here ^6",
 				linkTarget: "schönen",
-				basename: "Note",
 			};
 			const result = buildTextfresserContext(input);
 
@@ -47,9 +47,9 @@ describe("buildTextfresserContext", () => {
 
 		it("handles alphanumeric block ID", () => {
 			const input: ContextBuilderInput = {
+				basename: "MyNote",
 				blockContent: "Text [[word]] ^abc-123",
 				linkTarget: "word",
-				basename: "MyNote",
 			};
 			const result = buildTextfresserContext(input);
 
@@ -62,9 +62,9 @@ describe("buildTextfresserContext", () => {
 	describe("State 3: [[schön|schönen]] without block ID", () => {
 		it("returns alias as target", () => {
 			const input: ContextBuilderInput = {
+				basename: "Note",
 				blockContent: "Text with [[schön|schönen]] here",
 				linkTarget: "schön",
-				basename: "Note",
 			};
 			const result = buildTextfresserContext(input);
 
@@ -82,9 +82,9 @@ describe("buildTextfresserContext", () => {
 	describe("State 4: [[schön|schönen]] with block ID", () => {
 		it("returns formatted context with block embed and alias as target", () => {
 			const input: ContextBuilderInput = {
+				basename: "Note",
 				blockContent: "Text with [[schön|schönen]] here ^6",
 				linkTarget: "schön",
-				basename: "Note",
 			};
 			const result = buildTextfresserContext(input);
 
@@ -102,9 +102,9 @@ describe("buildTextfresserContext", () => {
 	describe("Error cases", () => {
 		it("returns error when wikilink not found", () => {
 			const input: ContextBuilderInput = {
+				basename: "Note",
 				blockContent: "Text without matching link",
 				linkTarget: "schönen",
-				basename: "Note",
 			};
 			const result = buildTextfresserContext(input);
 
@@ -114,9 +114,9 @@ describe("buildTextfresserContext", () => {
 
 		it("returns error when linkTarget doesn't match any wikilink", () => {
 			const input: ContextBuilderInput = {
+				basename: "Note",
 				blockContent: "Text with [[foo]]",
 				linkTarget: "bar",
-				basename: "Note",
 			};
 			const result = buildTextfresserContext(input);
 
@@ -128,9 +128,9 @@ describe("buildTextfresserContext", () => {
 	describe("Edge cases", () => {
 		it("handles multiple wikilinks, finds correct one", () => {
 			const input: ContextBuilderInput = {
+				basename: "Note",
 				blockContent: "[[foo]] text [[bar]] more [[baz]]",
 				linkTarget: "bar",
-				basename: "Note",
 			};
 			const result = buildTextfresserContext(input);
 
@@ -144,9 +144,9 @@ describe("buildTextfresserContext", () => {
 
 		it("handles bold text in block content", () => {
 			const input: ContextBuilderInput = {
+				basename: "Note",
 				blockContent: "**Bold** text with [[word]] ^1",
 				linkTarget: "word",
-				basename: "Note",
 			};
 			const result = buildTextfresserContext(input);
 
@@ -159,9 +159,9 @@ describe("buildTextfresserContext", () => {
 
 		it("handles German umlauts correctly", () => {
 			const input: ContextBuilderInput = {
+				basename: "Übung",
 				blockContent: "Text [[über|überall]] ^2",
 				linkTarget: "über",
-				basename: "Übung",
 			};
 			const result = buildTextfresserContext(input);
 

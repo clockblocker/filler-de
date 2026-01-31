@@ -4,7 +4,7 @@
 
 import { err, ok, type Result } from "neverthrow";
 import { blockIdHelper } from "../../../stateless-helpers/block-id";
-import { markdown } from "../../../stateless-helpers/markdown-strip";
+import { markdownHelper } from "../../../stateless-helpers/markdown-strip";
 import { wikilinkHelper } from "../../../stateless-helpers/wikilink";
 import {
 	type ContextError,
@@ -75,7 +75,7 @@ function buildHighlightedContext(
 	targetSurface: string,
 ): string {
 	// First strip markdown (bold, block refs, wikilinks → surface)
-	const stripped = markdown.stripAll(blockContent);
+	const stripped = markdownHelper.stripAll(blockContent);
 
 	// Replace the target surface with highlighted version
 	// Only replace first occurrence to avoid double-highlighting

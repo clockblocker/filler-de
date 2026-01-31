@@ -43,7 +43,7 @@ function stripAll(text: string): string {
 /**
  * Markdown stripping helper object with grouped functions.
  */
-export const markdown = {
+export const markdownHelper = {
 	replaceWikilinks,
 	stripAll,
 	stripBlockRefs,

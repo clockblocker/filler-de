@@ -3,7 +3,7 @@
  */
 
 import { blockIdHelper } from "../../../stateless-helpers/block-id";
-import { markdown } from "../../../stateless-helpers/markdown-strip";
+import { markdownHelper } from "../../../stateless-helpers/markdown-strip";
 import {
 	type ParsedWikilink,
 	wikilinkHelper,
@@ -13,10 +13,10 @@ import {
 export const extractBlockIdFromLine = blockIdHelper.extractFromLine;
 export const findClickedWikilink = wikilinkHelper.findByTarget;
 export const parseWikilinks = wikilinkHelper.parse;
-export const replaceWikilinksWithSurface = markdown.replaceWikilinks;
-export const stripBlockRefs = markdown.stripBlockRefs;
-export const stripBoldMarkers = markdown.stripBold;
-export const stripMarkdownForContext = markdown.stripAll;
+export const replaceWikilinksWithSurface = markdownHelper.replaceWikilinks;
+export const stripBlockRefs = markdownHelper.stripBlockRefs;
+export const stripBoldMarkers = markdownHelper.stripBold;
+export const stripMarkdownForContext = markdownHelper.stripAll;
 
 export type { ParsedWikilink };
 

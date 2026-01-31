@@ -8,6 +8,7 @@
  *   - Custom delimiter: [[__ ;; Struwwelpeter ;; Chapter1|← Struwwelpeter]]
  */
 
+import { PREFIX_OF_CODEX } from "../../commanders/librarian/types/consts/literals";
 import { getParsedUserSettings } from "../../global-state/global-state";
 import { BACK_ARROW, LINE_BREAK, SPACE_F } from "../../types/literals";
 import type { GoBackLinkInfo } from "./types";
@@ -87,7 +88,7 @@ function build(targetBasename: string, displayName: string): string {
  */
 function getPrefix(): string {
 	const { suffixDelimiter } = getParsedUserSettings();
-	return `__${suffixDelimiter}`;
+	return `${PREFIX_OF_CODEX}${suffixDelimiter}`;
 }
 
 /**
