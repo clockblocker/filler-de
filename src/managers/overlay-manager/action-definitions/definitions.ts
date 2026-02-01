@@ -2,15 +2,16 @@
  * Action definitions map - single source of truth for overlay actions.
  */
 
+import { CommandKind } from "../../actions-manager/types";
 import {
 	type ActionDefinition,
-	OverlayActionKind,
+	type OverlayActionKind,
 	OverlayPlacement,
 } from "./types";
 
 export const ACTION_DEFINITIONS: Record<OverlayActionKind, ActionDefinition> = {
-	[OverlayActionKind.Translate]: {
-		id: OverlayActionKind.Translate,
+	[CommandKind.TranslateSelection]: {
+		id: CommandKind.TranslateSelection,
 		label: "Translate",
 		requiresSelection: true,
 		selectablePlacements: [
@@ -20,8 +21,8 @@ export const ACTION_DEFINITIONS: Record<OverlayActionKind, ActionDefinition> = {
 		],
 		settingKey: "translatePlacement",
 	},
-	[OverlayActionKind.SplitInBlocks]: {
-		id: OverlayActionKind.SplitInBlocks,
+	[CommandKind.SplitInBlocks]: {
+		id: CommandKind.SplitInBlocks,
 		label: "Split in Blocks",
 		requiresSelection: true,
 		selectablePlacements: [
@@ -31,19 +32,8 @@ export const ACTION_DEFINITIONS: Record<OverlayActionKind, ActionDefinition> = {
 		],
 		settingKey: "splitInBlocksPlacement",
 	},
-	[OverlayActionKind.ExplainGrammar]: {
-		id: OverlayActionKind.ExplainGrammar,
-		label: "Explain Grammar",
-		requiresSelection: true,
-		selectablePlacements: [
-			OverlayPlacement.AboveSelection,
-			OverlayPlacement.Bottom,
-			OverlayPlacement.ShortcutOnly,
-		],
-		settingKey: "explainGrammarPlacement",
-	},
-	[OverlayActionKind.Generate]: {
-		id: OverlayActionKind.Generate,
+	[CommandKind.Generate]: {
+		id: CommandKind.Generate,
 		label: "Generate",
 		requiresSelection: false,
 		selectablePlacements: [
@@ -52,15 +42,15 @@ export const ACTION_DEFINITIONS: Record<OverlayActionKind, ActionDefinition> = {
 		],
 		settingKey: "generatePlacement",
 	},
-	[OverlayActionKind.NavPrev]: {
-		id: OverlayActionKind.NavPrev,
+	[CommandKind.GoToPrevPage]: {
+		id: CommandKind.GoToPrevPage,
 		label: "<",
 		requiresSelection: false,
 		selectablePlacements: [],
 		settingKey: null,
 	},
-	[OverlayActionKind.NavNext]: {
-		id: OverlayActionKind.NavNext,
+	[CommandKind.GoToNextPage]: {
+		id: CommandKind.GoToNextPage,
 		label: ">",
 		requiresSelection: false,
 		selectablePlacements: [],

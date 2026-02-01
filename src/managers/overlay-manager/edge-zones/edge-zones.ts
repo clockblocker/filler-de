@@ -4,7 +4,7 @@
  */
 
 import { type MarkdownView, setIcon } from "obsidian";
-import { OverlayActionKind } from "../action-definitions";
+import { CommandKind } from "../../actions-manager/types";
 import type { ActionConfig } from "../bottom-toolbar";
 import { createLayoutObserver, detectEditorPadding } from "./layout-observer";
 import type {
@@ -169,10 +169,10 @@ export function createEdgeZones(options: CreateEdgeZonesOptions): EdgeZones {
 
 		if (side === "left") {
 			zone.style.left = `${leftOffset}px`;
-			zone.dataset.action = OverlayActionKind.NavPrev;
+			zone.dataset.action = CommandKind.GoToPrevPage;
 		} else {
 			zone.style.right = `${rightOffset}px`;
-			zone.dataset.action = OverlayActionKind.NavNext;
+			zone.dataset.action = CommandKind.GoToNextPage;
 		}
 
 		// Add icon
@@ -218,9 +218,9 @@ export function createEdgeZones(options: CreateEdgeZonesOptions): EdgeZones {
 
 	function setNavActions(navActions: ActionConfig[]): void {
 		prevAction =
-			navActions.find((a) => a.id === OverlayActionKind.NavPrev) ?? null;
+			navActions.find((a) => a.id === CommandKind.GoToPrevPage) ?? null;
 		nextAction =
-			navActions.find((a) => a.id === OverlayActionKind.NavNext) ?? null;
+			navActions.find((a) => a.id === CommandKind.GoToNextPage) ?? null;
 		updateZoneContent();
 
 		// Recalculate layout since action availability affects zone visibility

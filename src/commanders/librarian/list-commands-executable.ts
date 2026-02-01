@@ -1,7 +1,4 @@
-import {
-	UserCommandKind as UserCommand,
-	type UserCommandKind,
-} from "../../managers/actions-manager/types";
+import { CommandKind, type CommandKind as CommandKindType } from "../../managers/actions-manager/types";
 import type { SplitPathToMdFile } from "../../managers/obsidian/vault-action-manager/types/split-path";
 import { parsePageIndex } from "./bookkeeper/page-codec";
 import type { Codecs } from "./codecs";
@@ -12,18 +9,18 @@ import type { Codecs } from "./codecs";
  *
  * @param codecs - Codecs for parsing paths and suffixes
  * @param splitPath - Path to the file
- * @returns Array of UserCommandKind that are applicable
+ * @returns Array of CommandKind that are applicable
  */
 export function listCommandsExecutableIn(
 	codecs: Codecs,
 	splitPath: SplitPathToMdFile,
-): UserCommandKind[] {
+): CommandKindType[] {
 	// Check if inside library
 	if (!codecs.splitPathInsideLibrary.checkIfInsideLibrary(splitPath)) {
 		return [];
 	}
 
-	const commands: UserCommandKind[] = [];
+	const commands: CommandKindType[] = [];
 
 	// Parse suffix to get coreName for page detection
 	const parsedSuffix = codecs.suffix.parseSeparatedSuffix(splitPath.basename);
@@ -38,16 +35,16 @@ export function listCommandsExecutableIn(
 	const pageInfo = parsePageIndex(coreName);
 	if (pageInfo.isPage) {
 		// Page commands: navigation
-		commands.push(UserCommand.NavigatePage);
-		commands.push(UserCommand.PreviousPage);
+		commands.push(CommandKind.GoToPrevPage);
+		commands.push(CommandKind.GoToNextPage);
 	} else {
 		// Scroll commands: split into pages
-		commands.push(UserCommand.SplitToPages);
-		commands.push(UserCommand.MakeText);
+		commands.push(CommandKind.SplitToPages);
+		commands.push(CommandKind.MakeText);
 	}
 
 	// Selection-dependent commands available for any library file
-	commands.push(UserCommand.SplitInBlocks);
+	commands.push(CommandKind.SplitInBlocks);
 
 	return commands;
 }

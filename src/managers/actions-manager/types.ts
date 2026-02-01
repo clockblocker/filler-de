@@ -1,19 +1,12 @@
 import { z } from "zod";
+import { ALL_LIBRARIAN_COMMAND_KINDS } from "../../commanders/librarian/commands/types";
 import { ALL_TEXTFRESSER_COMMAND_KINDS } from "../../commanders/textfresser/commands/types";
-import type {
-	SplitPathToMdFile,
-} from "../obsidian/vault-action-manager/types/split-path";
 
 // ─── CommandKind - Command Executor Action Kinds ───
 
 const COMMAND_KIND_STR = [
 	...ALL_TEXTFRESSER_COMMAND_KINDS,
-	"MakeText",
-	"NavigatePage",
-	"SplitInBlocks",
-	"SplitToPages",
-	"TestButton",
-	"TranslateSelection",
+	...ALL_LIBRARIAN_COMMAND_KINDS,
 ] as const;
 
 export const CommandKindSchema = z.enum(COMMAND_KIND_STR);
@@ -25,16 +18,14 @@ export const CommandKind = CommandKindSchema.enum;
  * Each executor receives only its typed payload.
  */
 export type CommandPayloads = {
-	NavigatePage: {
-		direction: "prev" | "next";
-		currentFilePath: SplitPathToMdFile;
-	};
+	// Librarian commands
+	GoToNextPage: Record<string, never>;
+	GoToPrevPage: Record<string, never>;
 	SplitInBlocks: { selection: string; fileContent: string };
 	MakeText: Record<string, never>;
 	SplitToPages: Record<string, never>;
-	TestButton: { filePath: SplitPathToMdFile };
+	// Textfresser commands
 	TranslateSelection: { selection: string };
-	ExplainGrammar: { selection: string };
 	Generate: Record<string, never>;
 };
 
@@ -48,6 +39,15 @@ export const ActionKind = CommandKind;
  * @deprecated Use CommandKind instead. Alias for backward compatibility.
  */
 export type ActionKind = CommandKind;
+
+/**
+ * @deprecated Use CommandKind instead. Alias for backward compatibility.
+ */
+export const UserCommandKind = CommandKind;
+/**
+ * @deprecated Use CommandKind instead. Alias for backward compatibility.
+ */
+export type UserCommandKind = CommandKind;
 
 /**
  * @deprecated Use CommandPayloads instead. Alias for backward compatibility.

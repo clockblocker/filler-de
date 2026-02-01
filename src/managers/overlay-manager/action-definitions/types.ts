@@ -1,21 +1,22 @@
 /**
  * Types for overlay action definitions.
+ *
+ * OverlayActionKind is the subset of CommandKind that can appear in overlays.
  */
 
 import { z } from "zod";
+import { CommandKind } from "../../actions-manager/types";
 
-const OVERLAY_ACTION_KIND_LITERALS = [
-	"Translate",
+// Subset of CommandKind that can appear in overlay UI
+const OVERLAY_ACTION_KINDS = [
+	"TranslateSelection",
 	"SplitInBlocks",
-	"ExplainGrammar",
 	"Generate",
-	"NavPrev",
-	"NavNext",
-] as const;
+	"GoToPrevPage",
+	"GoToNextPage",
+] as const satisfies readonly (keyof typeof CommandKind)[];
 
-export const OverlayActionKindSchema = z.enum(OVERLAY_ACTION_KIND_LITERALS);
-export type OverlayActionKind = z.infer<typeof OverlayActionKindSchema>;
-export const OverlayActionKind = OverlayActionKindSchema.enum;
+export type OverlayActionKind = (typeof OVERLAY_ACTION_KINDS)[number];
 
 const OVERLAY_PLACEMENT_LITERALS = [
 	"AboveSelection",

@@ -4,9 +4,10 @@
 
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import type { SelectionActionPlacement } from "../../../types";
+import { CommandKind } from "../../actions-manager/types";
 import type { ActionConfig } from "../bottom-toolbar";
 import { ACTION_DEFINITIONS } from "./definitions";
-import { OverlayActionKind, OverlayPlacement } from "./types";
+import { OverlayPlacement } from "./types";
 
 /**
  * Computed actions for each toolbar placement.
@@ -82,13 +83,13 @@ export function computeNavActions(
 		{
 			contextual: false,
 			disabled: metadata.prevPageIdx === undefined,
-			id: OverlayActionKind.NavPrev,
+			id: CommandKind.GoToPrevPage,
 			label: "<",
 		},
 		{
 			contextual: false,
 			disabled: metadata.nextPageIdx === undefined,
-			id: OverlayActionKind.NavNext,
+			id: CommandKind.GoToNextPage,
 			label: ">",
 		},
 	];

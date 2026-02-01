@@ -4,18 +4,14 @@ import type { Textfresser } from "../../commanders/textfresser/textfresser";
 import { logger } from "../../utils/logger";
 import type { VaultActionManager } from "../obsidian/vault-action-manager";
 import {
-	makeNavigatePageCommand,
-	type NavigatePagePayload,
+	goToNextPageCommand,
+	goToPrevPageCommand,
 } from "./commands/navigate-pages-command";
 import { splitIntoPagesCommand } from "./commands/split-into-pages-command";
 import {
 	type SplitInBlocksPayload,
 	splitSelectionBlocksCommand,
 } from "./commands/split-selection-blocks-command";
-import {
-	type TestButtonPayload,
-	testButtonCommand,
-} from "./commands/test-button-command";
 import {
 	type TranslateSelectionPayload,
 	translateSelectionCommand,
@@ -50,22 +46,19 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 		new Notice(message);
 	};
 
-	const navigatePageCommand = makeNavigatePageCommand(
-		librarian,
-		vaultActionManager,
-	);
-
 	return async function executeCommand<K extends CommandKind>(
 		command: ExecuteCommandInput<K>,
 	): Promise<void> {
 		const { kind, payload } = command;
 
 		switch (kind) {
-			case CommandKind.NavigatePage: {
-				const p = payload as NavigatePagePayload;
-				await navigatePageCommand(p);
+			case CommandKind.GoToPrevPage:
+				await goToPrevPageCommand(vaultActionManager);
 				break;
-			}
+
+			case CommandKind.GoToNextPage:
+				await goToNextPageCommand(vaultActionManager);
+				break;
 
 			case CommandKind.MakeText:
 			case CommandKind.SplitToPages: {
@@ -124,12 +117,6 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 					break;
 				}
 				await textfresser.lemma();
-				break;
-			}
-
-			case CommandKind.TestButton: {
-				const p = payload as TestButtonPayload;
-				testButtonCommand(p);
 				break;
 			}
 

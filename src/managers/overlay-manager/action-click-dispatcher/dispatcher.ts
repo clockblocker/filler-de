@@ -1,11 +1,13 @@
 /**
  * Dispatcher for action button clicks.
+ *
+ * Since OverlayActionKind is now a subset of CommandKind, we can dispatch
+ * directly without translation (except for selection-based commands).
  */
 
 import { MarkdownView } from "obsidian";
 import { logger } from "../../../utils/logger";
 import { CommandKind } from "../../actions-manager/types";
-import { OverlayActionKind } from "../action-definitions";
 import type { ActionClickContext } from "./types";
 
 /**
@@ -15,7 +17,7 @@ export async function dispatchActionClick(
 	actionId: string,
 	context: ActionClickContext,
 ): Promise<void> {
-	const { app, commandExecutor, vam } = context;
+	const { app, commandExecutor } = context;
 
 	if (!commandExecutor) {
 		logger.warn("[dispatchActionClick] No commandExecutor provided");
@@ -26,7 +28,7 @@ export async function dispatchActionClick(
 	const selection = view?.editor?.getSelection() ?? "";
 
 	switch (actionId) {
-		case OverlayActionKind.Translate:
+		case CommandKind.TranslateSelection:
 			if (selection) {
 				await commandExecutor({
 					kind: CommandKind.TranslateSelection,
@@ -35,7 +37,7 @@ export async function dispatchActionClick(
 			}
 			break;
 
-		case OverlayActionKind.SplitInBlocks:
+		case CommandKind.SplitInBlocks:
 			if (selection) {
 				await commandExecutor({
 					kind: CommandKind.SplitInBlocks,
@@ -44,42 +46,26 @@ export async function dispatchActionClick(
 			}
 			break;
 
-		case OverlayActionKind.ExplainGrammar:
-			if (selection) {
-				await commandExecutor({
-					kind: CommandKind.ExplainGrammar,
-					payload: { selection },
-				});
-			}
-			break;
-
-		case OverlayActionKind.Generate:
+		case CommandKind.Generate:
 			await commandExecutor({
 				kind: CommandKind.Generate,
 				payload: {},
 			});
 			break;
 
-		case OverlayActionKind.NavPrev:
-		case OverlayActionKind.NavNext: {
-			const result = await vam.pwd();
-			if (result.isOk()) {
-				const path = result.value;
-				if (path.kind === "MdFile") {
-					await commandExecutor({
-						kind: CommandKind.NavigatePage,
-						payload: {
-							currentFilePath: path,
-							direction:
-								actionId === OverlayActionKind.NavPrev
-									? "prev"
-									: "next",
-						},
-					});
-				}
-			}
+		case CommandKind.GoToPrevPage:
+			await commandExecutor({
+				kind: CommandKind.GoToPrevPage,
+				payload: {},
+			});
 			break;
-		}
+
+		case CommandKind.GoToNextPage:
+			await commandExecutor({
+				kind: CommandKind.GoToNextPage,
+				payload: {},
+			});
+			break;
 
 		default:
 			logger.warn(
