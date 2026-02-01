@@ -3,9 +3,9 @@
  */
 
 import type { App } from "obsidian";
-import type { ActionConfig, BottomToolbar } from "../bottom-toolbar";
-import type { EdgeZones } from "../edge-zones";
-import type { SelectionToolbar } from "../selection-toolbar";
+import type { ActionConfig, BottomToolbar } from "../bottom-toolbar/types";
+import type { EdgeZones } from "../edge-zones/types";
+import type { SelectionToolbar } from "../selection-toolbar/types";
 
 export type ToolbarLifecycleContext = {
 	app: App;

@@ -3,8 +3,8 @@
  */
 
 import type { App } from "obsidian";
-import type { BottomToolbar } from "../bottom-toolbar";
-import type { SelectionToolbar } from "../selection-toolbar";
+import type { BottomToolbar } from "../bottom-toolbar/types";
+import type { SelectionToolbar } from "../selection-toolbar/types";
 
 export type SelectionHandlerContext = {
 	app: App;

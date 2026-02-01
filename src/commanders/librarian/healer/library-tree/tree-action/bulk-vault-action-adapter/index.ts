@@ -1,8 +1,8 @@
 import type { BulkVaultEvent } from "../../../../../../managers/obsidian/vault-action-manager";
 import type { CodecRules, Codecs } from "../../../../codecs";
 import type { TreeAction } from "../types/tree-action";
-import { makeLibraryScopedBulkVaultEvent } from "./layers/library-scope";
-import { materializeScopedBulk } from "./layers/materialized-node-events";
+import { makeLibraryScopedBulkVaultEvent } from "./layers/library-scope/codecs/make-library-scoped-bulk";
+import { materializeScopedBulk } from "./layers/materialized-node-events/materialize-scoped-bulk";
 import { translateMaterializedEvents } from "./layers/translate-material-event/translate-material-events";
 
 /**

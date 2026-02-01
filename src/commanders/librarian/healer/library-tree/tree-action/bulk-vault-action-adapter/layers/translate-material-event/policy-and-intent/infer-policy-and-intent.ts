@@ -1,8 +1,8 @@
 import type { Codecs } from "../../../../../../../codecs";
 import {
-	MaterializedEventType,
+	MaterializedEventKind as MaterializedEventType,
 	type MaterializedNodeEvent,
-} from "../../materialized-node-events";
+} from "../../materialized-node-events/types";
 import { inferRenameIntent } from "./intent/infer-intent";
 import { RenameIntent } from "./intent/types";
 import { inferCreatePolicy } from "./policy/infer-create";

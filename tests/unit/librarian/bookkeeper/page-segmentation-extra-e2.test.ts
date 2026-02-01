@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { splitStrInBlocks } from "../../../../src/commanders/librarian/bookkeeper/segmenter/block-marker";
+import { splitStrInBlocks } from "../../../../src/commanders/librarian/bookkeeper/segmenter/block-marker/split-str-in-blocks";
 import { EXTRA_E2_FULL_CONTENT } from "./testcases/extra-e2";
 
 describe("EXTRA_E2 page segmentation investigation", () => {

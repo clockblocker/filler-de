@@ -60,14 +60,12 @@ import {
 	getNextPage as getNextPageImpl,
 	getPrevPage as getPrevPageImpl,
 } from "./page-navigation";
-import {
-	buildPageNavMigrationActions,
-	triggerSectionHealing as triggerSectionHealingImpl,
-} from "./section-healing";
+import { buildPageNavMigrationActions } from "./section-healing/page-nav-migration";
+import { triggerSectionHealing as triggerSectionHealingImpl } from "./section-healing/section-healing-coordinator";
 import { PREFIX_OF_CODEX } from "./types/consts/literals";
 import type { NodeName } from "./types/schemas/node-name";
-import { VaultActionQueue } from "./vault-action-queue";
-import { resolveAliasFromSuffix } from "./wikilink-alias";
+import { VaultActionQueue } from "./vault-action-queue/vault-action-queue";
+import { resolveAliasFromSuffix } from "./wikilink-alias/wikilink-alias";
 
 // ─── Queue Item ───
 

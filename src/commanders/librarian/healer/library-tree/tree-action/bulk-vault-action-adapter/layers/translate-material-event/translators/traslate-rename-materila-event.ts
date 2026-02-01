@@ -10,7 +10,8 @@ import {
 	getParentLocator,
 } from "../../../../utils/locator/locator-utils";
 import type { RenameTreeNodeNodeMaterializedEvent } from "../../materialized-node-events/types";
-import { inferPolicyAndIntent, RenameIntent } from "../policy-and-intent";
+import { inferPolicyAndIntent } from "../policy-and-intent/infer-policy-and-intent";
+import { RenameIntent } from "../policy-and-intent/intent/types";
 import { tryMakeDestinationLocatorFromEvent } from "./helpers/event-to-locator";
 import { tryMakeTargetLocatorFromLibraryScopedSplitPath } from "./helpers/split-path-to-locator";
 

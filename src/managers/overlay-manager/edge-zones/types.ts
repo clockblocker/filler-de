@@ -3,7 +3,7 @@
  */
 
 import type { MarkdownView } from "obsidian";
-import type { ActionConfig } from "../bottom-toolbar";
+import type { ActionConfig } from "../bottom-toolbar/types";
 
 /**
  * Layout state indicating which edge zones are active.

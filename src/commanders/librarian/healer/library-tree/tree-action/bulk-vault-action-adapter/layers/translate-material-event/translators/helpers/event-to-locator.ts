@@ -13,7 +13,7 @@ import {
 	type TreeNodeLocatorForEvent,
 } from "../../../materialized-node-events/types";
 import { adaptCodecResult } from "../../error-adapters";
-import { inferPolicyAndIntent } from "../../policy-and-intent";
+import { inferPolicyAndIntent } from "../../policy-and-intent/infer-policy-and-intent";
 
 export function tryMakeDestinationLocatorFromEvent<
 	E extends MaterializedNodeEvent,

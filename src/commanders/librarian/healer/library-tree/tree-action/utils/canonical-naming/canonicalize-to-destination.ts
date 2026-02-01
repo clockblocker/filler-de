@@ -11,10 +11,8 @@ import type {
 } from "../../../../../codecs";
 import type { NodeName } from "../../../../../types/schemas/node-name";
 import { adaptCodecResult } from "../../bulk-vault-action-adapter/layers/translate-material-event/error-adapters";
-import {
-	ChangePolicy,
-	RenameIntent,
-} from "../../bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent";
+import { ChangePolicy } from "../../bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/types";
+import { RenameIntent } from "../../bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/intent/types";
 import {
 	buildCanonicalSeparatedSuffixedBasename,
 	canonizeSplitPathWithSeparatedSuffix,

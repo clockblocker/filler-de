@@ -2,9 +2,9 @@ import type { Codecs } from "../../../../../../codecs";
 import { PREFIX_OF_CODEX } from "../../../../codex/literals";
 import type { TreeAction } from "../../../types/tree-action";
 import {
-	MaterializedEventType,
+	MaterializedEventKind as MaterializedEventType,
 	type MaterializedNodeEvent,
-} from "../materialized-node-events";
+} from "../materialized-node-events/types";
 import { adaptCodecResult } from "./error-adapters";
 import { traslateCreateMaterializedEvent } from "./translators/translate-create-material-event";
 import { traslateDeleteMaterializedEvent } from "./translators/translate-delete-material-event";

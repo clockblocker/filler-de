@@ -5,7 +5,7 @@ import type {
 	SplitPathInsideLibraryOf,
 } from "../../../../../../../codecs";
 import type { CodecRules } from "../../../../../../../codecs/rules";
-import type { EnscopedSplitPath } from "../types/generics";
+import type { EnscopedSplitPath } from "../types/generics/scoped-split-path";
 import type { ExtractKind } from "../types/generics/scoped-split-path";
 
 /**

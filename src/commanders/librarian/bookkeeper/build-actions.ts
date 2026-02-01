@@ -8,7 +8,7 @@ import type { SplitPathToMdFile } from "../../../managers/obsidian/vault-action-
 import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { VaultAction } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { VaultActionKind } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
-import { goBackLinkHelper } from "../../../stateless-helpers/go-back-link";
+import { goBackLinkHelper } from "../../../stateless-helpers/go-back-link/go-back-link";
 import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
 import type { CodecRules } from "../codecs/rules";
 import { serializeSegmentId } from "../codecs/segment-id/internal/serialize";
@@ -22,7 +22,7 @@ import {
 } from "../healer/library-tree/tree-node/types/atoms";
 import type { NodeName } from "../types/schemas/node-name";
 import { buildPageBasename, buildPageFolderBasename } from "./page-codec";
-import { splitStrInBlocks } from "./segmenter/block-marker";
+import { splitStrInBlocks } from "./segmenter/block-marker/split-str-in-blocks";
 import type { SegmentationResult } from "./types";
 import { PAGE_FRONTMATTER, PAGE_INDEX_DIGITS, PAGE_PREFIX } from "./types";
 

@@ -28,17 +28,18 @@ import {
 	WorkspaceEventInterceptor,
 	WorkspaceEventKind,
 } from "../obsidian/workspace-navigation-event-interceptor";
-import { dispatchActionClick } from "./action-click-dispatcher";
-import { computeAllowedActions, KNOWN_ACTION_IDS } from "./action-definitions";
-import { type BottomToolbar, createBottomToolbar } from "./bottom-toolbar";
-import { setupContextMenu } from "./context-menu";
-import { createEdgeZones, type EdgeZones } from "./edge-zones";
-import { handleSelectionChanged } from "./selection-handler";
-import {
-	createSelectionToolbar,
-	type SelectionToolbar,
-} from "./selection-toolbar";
-import { updateToolbarVisibility } from "./toolbar-lifecycle";
+import { dispatchActionClick } from "./action-click-dispatcher/dispatcher";
+import { KNOWN_ACTION_IDS } from "./action-definitions/definitions";
+import { computeAllowedActions } from "./action-definitions/placement-utils";
+import { createBottomToolbar } from "./bottom-toolbar/bottom-toolbar";
+import type { BottomToolbar } from "./bottom-toolbar/types";
+import { setupContextMenu } from "./context-menu/context-menu";
+import { createEdgeZones } from "./edge-zones/edge-zones";
+import type { EdgeZones } from "./edge-zones/types";
+import { handleSelectionChanged } from "./selection-handler/handler";
+import { createSelectionToolbar } from "./selection-toolbar/selection-toolbar";
+import type { SelectionToolbar } from "./selection-toolbar/types";
+import { updateToolbarVisibility } from "./toolbar-lifecycle/manager";
 
 /**
  * Dependencies for OverlayManager.

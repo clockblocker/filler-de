@@ -4,7 +4,7 @@
  */
 
 import type { Transform } from "../../../../../../managers/obsidian/vault-action-manager/types/vault-action";
-import { goBackLinkHelper } from "../../../../../../stateless-helpers/go-back-link";
+import { goBackLinkHelper } from "../../../../../../stateless-helpers/go-back-link/go-back-link";
 import { noteMetadataHelper } from "../../../../../../stateless-helpers/note-metadata";
 import { LINE_BREAK, SPACE_F } from "../../../../../../types/literals";
 import type { Codecs } from "../../../../codecs";

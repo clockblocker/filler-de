@@ -1,4 +1,4 @@
-import { splitStrInBlocks } from "../../../commanders/librarian/bookkeeper/segmenter/block-marker";
+import { splitStrInBlocks } from "../../../commanders/librarian/bookkeeper/segmenter/block-marker/split-str-in-blocks";
 import { blockIdHelper } from "../../../stateless-helpers/block-id";
 
 export type SplitInBlocksPayload = {

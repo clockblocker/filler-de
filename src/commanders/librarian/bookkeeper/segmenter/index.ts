@@ -1,4 +1,4 @@
-import { goBackLinkHelper } from "../../../../stateless-helpers/go-back-link";
+import { goBackLinkHelper } from "../../../../stateless-helpers/go-back-link/go-back-link";
 import { parseSeparatedSuffix } from "../../codecs/internal/suffix/parse";
 import type { SeparatedSuffixedBasename } from "../../codecs/internal/suffix/types";
 import type { CodecRules } from "../../codecs/rules";
@@ -20,13 +20,11 @@ import {
 	DEFAULT_LANGUAGE_CONFIG,
 	type LanguageConfig,
 } from "./language-config";
-import {
-	annotateTokens,
-	groupTokens,
-	preprocessLargeGroups,
-	scanLines,
-	segmentToTokens,
-} from "./stream";
+import { annotateTokens } from "./stream/context-annotator";
+import { scanLines } from "./stream/line-scanner";
+import { preprocessLargeGroups } from "./stream/page-accumulator";
+import { groupTokens } from "./stream/region-grouper";
+import { segmentToTokens } from "./stream/sentence-segmenter";
 
 /**
  * Segments markdown content into pages using the sentence-stream pipeline.

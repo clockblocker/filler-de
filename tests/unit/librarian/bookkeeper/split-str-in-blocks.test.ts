@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { splitStrInBlocks } from "../../../../src/commanders/librarian/bookkeeper/segmenter/block-marker";
+import { splitStrInBlocks } from "../../../../src/commanders/librarian/bookkeeper/segmenter/block-marker/split-str-in-blocks";
 import {
 	ASCHENPUTTEL_FIRST_TWO_PARAGRAPHS,
 	EXPECTED_BLOCK_OUTPUT_WITH_PARAGRAPHS,

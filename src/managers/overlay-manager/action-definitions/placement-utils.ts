@@ -5,7 +5,7 @@
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import type { SelectionActionPlacement } from "../../../types";
 import { CommandKind } from "../../actions-manager/types";
-import type { ActionConfig } from "../bottom-toolbar";
+import type { ActionConfig } from "../bottom-toolbar/types";
 import { ACTION_DEFINITIONS } from "./definitions";
 import { OverlayPlacement } from "./types";
 
