@@ -24,32 +24,9 @@ export type CommandPayloads = {
 	SplitInBlocks: { selection: string; fileContent: string };
 	MakeText: Record<string, never>;
 	SplitToPages: Record<string, never>;
+
 	// Textfresser commands
 	TranslateSelection: { selection: string };
 	Generate: Record<string, never>;
+	Lemma: Record<string, never>;
 };
-
-// ─── Deprecated Types (for backward compatibility) ───
-
-/**
- * @deprecated Use CommandKind instead. Alias for backward compatibility.
- */
-export const ActionKind = CommandKind;
-/**
- * @deprecated Use CommandKind instead. Alias for backward compatibility.
- */
-export type ActionKind = CommandKind;
-
-/**
- * @deprecated Use CommandKind instead. Alias for backward compatibility.
- */
-export const UserCommandKind = CommandKind;
-/**
- * @deprecated Use CommandKind instead. Alias for backward compatibility.
- */
-export type UserCommandKind = CommandKind;
-
-/**
- * @deprecated Use CommandPayloads instead. Alias for backward compatibility.
- */
-export type ActionPayloads = CommandPayloads;

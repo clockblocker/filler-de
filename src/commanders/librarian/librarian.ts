@@ -1,5 +1,5 @@
 import { getParsedUserSettings } from "../../global-state/global-state";
-import type { UserCommandKind } from "../../managers/actions-manager/types";
+import type { CommandKind } from "../../managers/actions-manager/types";
 import type { CheckboxPayload } from "../../managers/obsidian/user-event-interceptor";
 import type {
 	BulkVaultEvent,
@@ -409,7 +409,7 @@ export class Librarian {
 	 * List all commands that could be executable for a given file path.
 	 * Returns all possible commands for the file type; caller filters by selection state.
 	 */
-	listCommandsExecutableIn(splitPath: SplitPathToMdFile): UserCommandKind[] {
+	listCommandsExecutableIn(splitPath: SplitPathToMdFile): CommandKind[] {
 		return listCommandsExecutableInImpl(this.codecs, splitPath);
 	}
 
