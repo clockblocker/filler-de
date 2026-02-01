@@ -11,32 +11,11 @@ import type {
 	FolderRenamedVaultEvent,
 } from "../../../../../../../../../../managers/obsidian/vault-action-manager/types/vault-event";
 import type { CodecRules } from "../../../../../../../../codecs/rules";
-import type {
-	LibraryScopedVaultEvent,
-	ScopedFileCreatedVaultEventInside,
-	ScopedFileCreatedVaultEventOutside,
-	ScopedFileDeletedVaultEventInside,
-	ScopedFileDeletedVaultEventOutside,
-	ScopedFileRenamedVaultEventInside,
-	ScopedFileRenamedVaultEventInsideToOutside,
-	ScopedFileRenamedVaultEventOutside,
-	ScopedFileRenamedVaultEventOutsideToInside,
-	ScopedFolderCreatedVaultEventInside,
-	ScopedFolderCreatedVaultEventOutside,
-	ScopedFolderDeletedVaultEventInside,
-	ScopedFolderDeletedVaultEventOutside,
-	ScopedFolderRenamedVaultEventInside,
-	ScopedFolderRenamedVaultEventInsideToOutside,
-	ScopedFolderRenamedVaultEventOutside,
-	ScopedFolderRenamedVaultEventOutsideToInside,
-} from "../../types/scoped-event";
+import type { LibraryScopedVaultEvent } from "../../types/scoped-event";
 import { Scope } from "../../types/scoped-event";
 import { tryParseAsInsideLibrarySplitPath } from "../split-path-inside-the-library";
 
-function scopeFileCreated(
-	event: FileCreatedVaultEvent,
-	rules: CodecRules,
-): ScopedFileCreatedVaultEventInside | ScopedFileCreatedVaultEventOutside {
+function scopeFileCreated(event: FileCreatedVaultEvent, rules: CodecRules) {
 	const result = tryParseAsInsideLibrarySplitPath(event.splitPath, rules);
 	if (result.isErr()) {
 		return {
@@ -52,10 +31,7 @@ function scopeFileCreated(
 	};
 }
 
-function scopeFileDeleted(
-	event: FileDeletedVaultEvent,
-	rules: CodecRules,
-): ScopedFileDeletedVaultEventInside | ScopedFileDeletedVaultEventOutside {
+function scopeFileDeleted(event: FileDeletedVaultEvent, rules: CodecRules) {
 	const result = tryParseAsInsideLibrarySplitPath(event.splitPath, rules);
 	if (result.isErr()) {
 		return {
@@ -71,10 +47,7 @@ function scopeFileDeleted(
 	};
 }
 
-function scopeFolderCreated(
-	event: FolderCreatedVaultEvent,
-	rules: CodecRules,
-): ScopedFolderCreatedVaultEventInside | ScopedFolderCreatedVaultEventOutside {
+function scopeFolderCreated(event: FolderCreatedVaultEvent, rules: CodecRules) {
 	const result = tryParseAsInsideLibrarySplitPath(event.splitPath, rules);
 	if (result.isErr()) {
 		return {
@@ -90,10 +63,7 @@ function scopeFolderCreated(
 	};
 }
 
-function scopeFolderDeleted(
-	event: FolderDeletedVaultEvent,
-	rules: CodecRules,
-): ScopedFolderDeletedVaultEventInside | ScopedFolderDeletedVaultEventOutside {
+function scopeFolderDeleted(event: FolderDeletedVaultEvent, rules: CodecRules) {
 	const result = tryParseAsInsideLibrarySplitPath(event.splitPath, rules);
 	if (result.isErr()) {
 		return {
@@ -109,14 +79,7 @@ function scopeFolderDeleted(
 	};
 }
 
-function scopeFileRenamed(
-	event: FileRenamedVaultEvent,
-	rules: CodecRules,
-):
-	| ScopedFileRenamedVaultEventInside
-	| ScopedFileRenamedVaultEventOutside
-	| ScopedFileRenamedVaultEventInsideToOutside
-	| ScopedFileRenamedVaultEventOutsideToInside {
+function scopeFileRenamed(event: FileRenamedVaultEvent, rules: CodecRules) {
 	const fromResult = tryParseAsInsideLibrarySplitPath(event.from, rules);
 	const toResult = tryParseAsInsideLibrarySplitPath(event.to, rules);
 
@@ -158,14 +121,7 @@ function scopeFileRenamed(
 	};
 }
 
-function scopeFolderRenamed(
-	event: FolderRenamedVaultEvent,
-	rules: CodecRules,
-):
-	| ScopedFolderRenamedVaultEventInside
-	| ScopedFolderRenamedVaultEventOutside
-	| ScopedFolderRenamedVaultEventInsideToOutside
-	| ScopedFolderRenamedVaultEventOutsideToInside {
+function scopeFolderRenamed(event: FolderRenamedVaultEvent, rules: CodecRules) {
 	const fromResult = tryParseAsInsideLibrarySplitPath(event.from, rules);
 	const toResult = tryParseAsInsideLibrarySplitPath(event.to, rules);
 
