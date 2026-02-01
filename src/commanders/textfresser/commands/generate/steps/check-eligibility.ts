@@ -6,15 +6,12 @@ import {
 	CommandErrorKind,
 	type CommandState,
 	EligibilitySchema,
-	type TextfresserCommandKind,
 } from "../../types";
-
-type Generate = typeof TextfresserCommandKind.Generate;
 
 /** Eligible if noteKind is undefined or DictEntry. */
 export function checkEligibility(
-	ctx: CommandState<Generate>,
-): Result<CommandState<Generate>, CommandError> {
+	ctx: CommandState<"Generate">,
+): Result<CommandState<"Generate">, CommandError> {
 	const metadata = noteMetadataHelper.read(
 		ctx.currentFileInfo.content,
 		EligibilitySchema,
