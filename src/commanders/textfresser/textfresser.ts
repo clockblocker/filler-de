@@ -9,8 +9,8 @@
  * - Handle and log errors
  */
 
-import { err, ok, type Result, ResultAsync } from "neverthrow";
-import type { WikilinkClickPayload } from "../../managers/obsidian/user-event-interceptor/events/click/wikilink-click/payload";
+import { err, ok, ResultAsync } from "neverthrow";
+import type { WikilinkClickPayload } from "../../managers/obsidian/user-event-interceptor/events";
 import {
 	type EventHandler,
 	HandlerOutcome,
@@ -33,7 +33,7 @@ import {
 	FsErrorKind,
 	readCurrentFile,
 } from "./common/fs-utils/read-current-file";
-import { type CommandError, CommandErrorKind } from "./errors";
+import { CommandErrorKind } from "./errors";
 
 // ─── State ───
 
@@ -53,7 +53,7 @@ export class Textfresser {
 	/**
 	 * Generate command - moves current file to sharded path and sets metadata.
 	 */
-	async generate(): Promise<Result<void, CommandError>> {
+	async generate() {
 		const attestation = this.state.attestationForLatestNavigated;
 		if (!attestation) {
 			return err({
@@ -81,14 +81,14 @@ export class Textfresser {
 	/**
 	 * Lemma command - Out of scope
 	 */
-	lemma(): Promise<Result<void, CommandError>> {
+	lemma() {
 		return Promise.resolve(ok(undefined));
 	}
 
 	/**
 	 * TranslateSelection command - Out of scope
 	 */
-	translateSelection(): Promise<Result<void, CommandError>> {
+	translateSelection() {
 		return Promise.resolve(ok(undefined));
 	}
 
@@ -116,7 +116,7 @@ export class Textfresser {
 	// ─── State Access ───
 
 	/** Get the current state */
-	getState(): TextfresserState {
+	getState() {
 		return this.state;
 	}
 
@@ -126,7 +126,7 @@ export class Textfresser {
 		commandName: K,
 		input: CommandInput<K>,
 		commandFn: CommandFn<K>,
-	): ResultAsync<void, CommandError> {
+	) {
 		return new ResultAsync(Promise.resolve(commandFn(input)))
 			.andThen((actions) => this.dispatchActions(actions))
 			.map(() => logger.info(`[Textfresser.${commandName}] Success`))
@@ -139,9 +139,7 @@ export class Textfresser {
 			});
 	}
 
-	private dispatchActions(
-		actions: VaultAction[],
-	): ResultAsync<void, CommandError> {
+	private dispatchActions(actions: VaultAction[]) {
 		return new ResultAsync(
 			this.vam.dispatch(actions).then((dispatchResult) => {
 				if (dispatchResult.isErr()) {
@@ -158,7 +156,7 @@ export class Textfresser {
 		);
 	}
 
-	private mapFsError(fsError: FsError): CommandError {
+	private mapFsError(fsError: FsError) {
 		switch (fsError.kind) {
 			case FsErrorKind.NoMdFile:
 				return { kind: CommandErrorKind.NotMdFile };

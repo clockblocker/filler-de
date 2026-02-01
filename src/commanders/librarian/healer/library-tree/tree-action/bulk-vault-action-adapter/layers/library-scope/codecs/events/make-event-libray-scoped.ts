@@ -1,5 +1,4 @@
 import type { VaultEvent } from "../../../../../../../../../../managers/obsidian/vault-action-manager";
-import { visitEvent } from "../../../../../../../../../../managers/obsidian/vault-action-manager/helpers/event-helpers";
 import type { AnySplitPath } from "../../../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { CodecRules } from "../../../../../../../../codecs/rules";
 import type { EnscopedEvent } from "../../types/generics";
@@ -13,7 +12,6 @@ function scopeSimpleEvent<E extends VaultEvent & { splitPath: unknown }>(
 	event: E,
 	rules: CodecRules,
 ): EnscopedEvent<E> {
-	// Cast through AnySplitPath - event.splitPath is unknown but we know it's a valid split path
 	const splitPathResult = tryParseAsInsideLibrarySplitPath(
 		event.splitPath as AnySplitPath,
 		rules,
@@ -38,7 +36,6 @@ function scopeSimpleEvent<E extends VaultEvent & { splitPath: unknown }>(
 function scopeRenameEvent<
 	E extends VaultEvent & { from: unknown; to: unknown },
 >(event: E, rules: CodecRules): EnscopedEvent<E> {
-	// Cast through AnySplitPath - from/to are unknown but we know they're valid split paths
 	const fromResult = tryParseAsInsideLibrarySplitPath(
 		event.from as AnySplitPath,
 		rules,
@@ -84,19 +81,13 @@ function scopeRenameEvent<
 	} as unknown as EnscopedEvent<E>;
 }
 
-export function makeEventLibraryScoped(
-	event: VaultEvent,
+export function makeEventLibraryScoped<E extends VaultEvent>(
+	event: E,
 	rules: CodecRules,
-): EnscopedEvent<VaultEvent> {
-	// visitEvent handlers return specific EnscopedEvent types that together form EnscopedEvent<VaultEvent>
-	// Each callback is typed to return the shared union type to satisfy the visitor pattern
-	type ScopedResult = EnscopedEvent<VaultEvent>;
-	return visitEvent(event, {
-		FileCreated: (e) => scopeSimpleEvent(e, rules) as ScopedResult,
-		FileDeleted: (e) => scopeSimpleEvent(e, rules) as ScopedResult,
-		FileRenamed: (e) => scopeRenameEvent(e, rules) as ScopedResult,
-		FolderCreated: (e) => scopeSimpleEvent(e, rules) as ScopedResult,
-		FolderDeleted: (e) => scopeSimpleEvent(e, rules) as ScopedResult,
-		FolderRenamed: (e) => scopeRenameEvent(e, rules) as ScopedResult,
-	});
+): EnscopedEvent<E> {
+	// 'in' check doesn't narrow generic E; cast is safe since dispatch is correct
+	if ("from" in event) {
+		return scopeRenameEvent(event, rules) as EnscopedEvent<E>;
+	}
+	return scopeSimpleEvent(event, rules) as EnscopedEvent<E>;
 }

@@ -10,6 +10,7 @@ export function applyMeta(
 	const transform = noteMetadataHelper.upsert({
 		noteKind: DICT_ENTRY_NOTE_KIND,
 	});
+
 	const content = transform(ctx.currentFileInfo.content) as string;
 
 	return ok({

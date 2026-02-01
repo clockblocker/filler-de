@@ -159,8 +159,27 @@ if (result.isErr()) {
 - Each exception must be commented
 - Use Zod for runtime validation
 
+### Don't Lie with `as`
+When `as` is necessary, cast to what the value *actually* is — never to what you wish it were:
+```typescript
+// ❌ BAD - lying: undefined is not FromSplitPathFor<K> when K is a rename kind
+if (isRenameEvent(event)) {
+    return event.from as FromSplitPathFor<K>;
+}
+return undefined as FromSplitPathFor<K>;  // lie
+
+// ✅ GOOD - let TS infer the union, cast only where narrowing is lost
+if (isRenameEvent(event)) {
+    return event.from as FromSplitPathFor<K>;  // TS loses K correlation
+}
+return undefined;  // inferred as FromSplitPathFor<K> | undefined
+```
+
 ### Type Inference
-- Prefer inference over explicit annotations; annotate only when inference fails or for public API clarity
+- Prefer inference over explicit annotations; annotate only when:
+  - Inference fails
+  - Public API clarity requires it
+  - Return type provides inference for callback params (see below)
 - Omit redundant generics when return type provides inference:
 ```typescript
 // ❌ BAD
@@ -180,6 +199,61 @@ const input = { kind: TextfresserCommandKind.Generate, ... };
 return this.executeCommand("Generate", input, generateCommand);
 ```
 - Use generic params in signatures for better inference (e.g., `commandName: K` not `commandName: string`)
+
+### Design for Hover Clarity
+Design function signatures so hovering at call sites shows narrow, specific types — not wide unions. This aids readability and debugging.
+```typescript
+// ❌ BAD - commandName: string loses inference anchor
+private executeCommand<K extends CommandKind>(
+    commandName: string,  // hover shows union of all CommandInput variants
+    input: CommandInput<K>,
+    commandFn: CommandFn<K>,
+)
+
+// ✅ GOOD - commandName: K anchors inference
+private executeCommand<K extends CommandKind>(
+    commandName: K,  // hover shows exact literal, e.g. "Generate"
+    input: CommandInput<K>,
+    commandFn: CommandFn<K>,
+)
+```
+General principle: if hovering shows a union where you expect a specific type, find an inference anchor (literal arg, const assertion, or explicit generic) to narrow it.
+
+### Keep Return Types for Callback Inference
+When a return type provides inference for callback parameters, keep the explicit annotation:
+```typescript
+// ❌ BAD - payload becomes `any`, inference doesn't flow into callbacks
+createHandler() {
+    return {
+        handle: (payload) => { ... }  // payload: any
+    };
+}
+
+// ✅ GOOD - return type flows into callback param
+createHandler(): EventHandler<WikilinkClickPayload> {
+    return {
+        handle: (payload) => { ... }  // payload: WikilinkClickPayload
+    };
+}
+```
+
+### Keep Return Types for Alias Clarity
+When a type alias exists for a union, keep the explicit return type — inference expands to structural noise:
+```typescript
+// ❌ BAD - inferred type expands alias into structural union
+function getEventFromSplitPath(event: VaultEvent) {
+    // hover shows:
+    // { basename: string; pathParts: string[]; kind: "Folder"; }
+    // | { basename: string; pathParts: string[]; extension: string; kind: "File"; }
+    // | { basename: string; pathParts: string[]; extension: "md"; kind: "MdFile"; }
+    // | undefined
+}
+
+// ✅ GOOD - alias preserves readability
+function getEventFromSplitPath(event: VaultEvent): AnySplitPath | undefined {
+    // hover shows: AnySplitPath | undefined
+}
+```
 
 ### Logging Rules (.cursor/rules/logging.mdc)
 - **Use** `log` from `src/utils/logger`, not `console.*`
