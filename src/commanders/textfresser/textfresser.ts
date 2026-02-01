@@ -20,12 +20,22 @@ import type {
 	VaultActionManager,
 } from "../../managers/obsidian/vault-action-manager";
 import { logger } from "../../utils/logger";
-import { generateCommand } from "./commands/generate";
+import { generateCommand } from "./commands/generate/generate-command";
 import { type CommandInput, TextfresserCommandKind } from "./commands/types";
-import { buildAttestationFromWikilinkClickPayload } from "./dtos/attestation/builders/build-from-wikilink-click-payload";
+import { buildAttestationFromWikilinkClickPayload } from "./common/attestation/builders/build-from-wikilink-click-payload";
+import type { Attestation } from "./common/attestation/types";
+import {
+	type FsError,
+	FsErrorKind,
+	readCurrentFile,
+} from "./common/fs-utils/read-current-file";
 import { type CommandError, CommandErrorKind } from "./errors";
-import { type FsError, FsErrorKind, readCurrentFile } from "./fs-utils";
-import type { TextfresserState } from "./types";
+
+// ─── State ───
+
+type TextfresserState = {
+	attestationForLatestNavigated: Attestation | null;
+};
 
 export class Textfresser {
 	private state: TextfresserState = {

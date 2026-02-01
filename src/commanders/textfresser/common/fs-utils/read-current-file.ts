@@ -4,8 +4,8 @@
  */
 
 import { err, ok, type Result } from "neverthrow";
-import type { VaultActionManager } from "../../managers/obsidian/vault-action-manager";
-import type { SplitPathToMdFile } from "../../managers/obsidian/vault-action-manager/types/split-path";
+import type { VaultActionManager } from "../../../../managers/obsidian/vault-action-manager";
+import type { SplitPathToMdFile } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
 
 // ─── Types ───
 

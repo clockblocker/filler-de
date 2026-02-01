@@ -7,7 +7,7 @@ import { z } from "zod";
 import type { VaultAction } from "../../../managers/obsidian/vault-action-manager";
 import type { SplitPathToMdFile } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { Prettify } from "../../../types/helpers";
-import type { Attestation } from "../dtos/attestation/types";
+import type { Attestation } from "../common/attestation/types";
 import type { CommandError } from "../errors";
 
 // Re-export for convenience
@@ -85,8 +85,3 @@ export const EligibilitySchema = z.looseObject({
 });
 
 export type Eligibility = z.infer<typeof EligibilitySchema>;
-
-// ─── DictEntry NoteKind ───
-
-export const DICT_ENTRY_NOTE_KIND = "DictEntry" as const;
-

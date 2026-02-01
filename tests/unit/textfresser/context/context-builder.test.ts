@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { buildAttestationFromWikilinkClickPayload } from "../../../../src/commanders/textfresser/dtos/attestation/builders/build-from-wikilink-click-payload";
+import { buildAttestationFromWikilinkClickPayload } from "../../../../src/commanders/textfresser/common/attestation/builders/build-from-wikilink-click-payload";
 import type { WikilinkClickPayload } from "../../../../src/managers/obsidian/user-event-interceptor/events/click/wikilink-click/payload";
 import { PayloadKind } from "../../../../src/managers/obsidian/user-event-interceptor/types/payload-base";
 import {

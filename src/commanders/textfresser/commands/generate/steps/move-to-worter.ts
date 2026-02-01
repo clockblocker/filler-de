@@ -1,7 +1,3 @@
-/**
- * Move file to sharded Worter/Ordered folder structure.
- */
-
 import { ok, type Result } from "neverthrow";
 import {
 	SplitPathKind,
@@ -11,26 +7,22 @@ import {
 	type VaultAction,
 	VaultActionKind,
 } from "../../../../../managers/obsidian/vault-action-manager/types/vault-action";
+import { computeShardedFolderParts } from "../../../common/sharded-path";
 import type {
 	CommandError,
 	CommandState,
 	TextfresserCommandKind,
 } from "../../types";
-import { computeShardedFolderParts } from "../shard-path";
 
 type Generate = typeof TextfresserCommandKind.Generate;
 
-/**
- * Appends RenameMdFile action to move file to sharded path.
- * VAM auto-creates folders.
- */
+/** Appends RenameMdFile action to move file to sharded path. */
 export function moveToWorter(
 	ctx: CommandState<Generate>,
 ): Result<CommandState<Generate>, CommandError> {
 	const splitPath = ctx.currentFileInfo.path;
 	const shardedParts = computeShardedFolderParts(splitPath.basename);
 
-	// Rename (move) file to new location - VAM auto-creates folders
 	const newPath: SplitPathToMdFile = {
 		basename: splitPath.basename,
 		extension: splitPath.extension,
