@@ -39,8 +39,11 @@ export async function readCurrentFile(
 
 	const contentResult = await vam.readContent(splitPath);
 	if (contentResult.isErr()) {
-		return err({ kind: FsErrorKind.ReadFailed, reason: contentResult.error });
+		return err({
+			kind: FsErrorKind.ReadFailed,
+			reason: contentResult.error,
+		});
 	}
 
-	return ok({ splitPath, content: contentResult.value });
+	return ok({ content: contentResult.value, splitPath });
 }

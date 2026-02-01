@@ -15,13 +15,16 @@ import {
 	decrementPending,
 	incrementPending,
 } from "../../../../../../utils/idle-tracker";
-import type { VaultActionManager } from "../../../../vault-action-manager";
+import {
+	makeSystemPathForSplitPath,
+	type VaultActionManager,
+} from "../../../../vault-action-manager";
 import { HandlerOutcome } from "../../../types/handler";
 import { PayloadKind } from "../../../types/payload-base";
 import type { HandlerInvoker } from "../../../user-event-interceptor";
 import type { GenericClickDetector } from "../generic-click-detector";
 import { WikilinkClickCodec } from "./codec";
-import type { Modifiers, WikilinkClickPayload } from "./payload";
+import type { Modifiers, WikilinkClickPayload, WikiTarget } from "./payload";
 
 export class WikilinkClickDetector {
 	private unsubscribe: (() => void) | null = null;
@@ -90,8 +93,8 @@ export class WikilinkClickDetector {
 		if (splitPath.kind !== "MdFile") return;
 
 		// Extract link data
-		const linkData = this.extractLinkData(linkElement, target);
-		if (!linkData) return;
+		const wikiTarget = this.extractLinkData(linkElement, target);
+		if (!wikiTarget) return;
 
 		// Extract line content
 		const blockContent = this.extractBlockContent(linkElement);
@@ -100,10 +103,9 @@ export class WikilinkClickDetector {
 		// Encode to payload
 		const payload = WikilinkClickCodec.encode({
 			blockContent,
-			displayText: linkData.displayText,
-			linkTarget: linkData.linkTarget,
 			modifiers,
 			splitPath,
+			wikiTarget,
 		});
 
 		// Check if handler applies
@@ -121,8 +123,8 @@ export class WikilinkClickDetector {
 		if (result.outcome === HandlerOutcome.Passthrough) {
 			// Handler decided to passthrough - restore navigation that was prevented
 			this.app.workspace.openLinkText(
-				linkData.linkTarget,
-				splitPath.filePath,
+				wikiTarget.basename,
+				makeSystemPathForSplitPath(splitPath),
 				false,
 			);
 		}
@@ -151,14 +153,16 @@ export class WikilinkClickDetector {
 	private extractLinkData(
 		linkElement: HTMLElement,
 		clickedElement: HTMLElement,
-	): { linkTarget: string; displayText: string } | null {
+	): WikiTarget | null {
 		// Reading mode: get from data-href attribute
 		if (linkElement.classList.contains(DomSelectors.INTERNAL_LINK_CLASS)) {
 			const href = linkElement.getAttribute(DomSelectors.DATA_HREF);
 			if (!href) return null;
 
 			const displayText = linkElement.textContent ?? href;
-			return { displayText, linkTarget: href };
+			// If displayText differs from href, it's an alias
+			const alias = displayText !== href ? displayText : undefined;
+			return { alias, basename: href };
 		}
 
 		// Edit mode: parse from line content
@@ -168,7 +172,7 @@ export class WikilinkClickDetector {
 	private extractLinkDataFromEditMode(
 		linkElement: HTMLElement,
 		clickedElement: HTMLElement,
-	): { linkTarget: string; displayText: string } | null {
+	): WikiTarget | null {
 		// In edit mode, the link spans might be split. Get the line and find the link.
 		const lineElement = linkElement.closest(DomSelectors.CM_LINE);
 		if (!lineElement) return null;
@@ -184,26 +188,26 @@ export class WikilinkClickDetector {
 		let match = nextMatch();
 
 		while (match !== null) {
-			const linkTarget = match.target;
+			const basename = match.target;
 			const alias = match.alias;
-			const displayText = alias ?? linkTarget;
+			const displayText = alias ?? basename;
 
 			// Match by display text (may be partial due to CM spans)
 			if (
 				displayText.includes(clickedText) ||
 				clickedText.includes(displayText)
 			) {
-				return { displayText, linkTarget };
+				return { alias, basename };
 			}
 			match = nextMatch();
 		}
 
 		// Fallback: try to get any link from the line
 		const simpleMatch = lineText.match(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/);
-		if (simpleMatch) {
-			const linkTarget = simpleMatch[1];
-			const alias = simpleMatch[2];
-			return { displayText: alias ?? linkTarget, linkTarget };
+		if (simpleMatch?.[1]) {
+			const basename = simpleMatch[1];
+			const alias = simpleMatch[2]; // undefined if no alias
+			return { alias, basename };
 		}
 
 		return null;

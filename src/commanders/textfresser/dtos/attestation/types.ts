@@ -20,10 +20,6 @@ type AttestationTarget = {
 	lemma?: string;
 };
 
-export type AttestationError =
-	| { kind: "WikilinkNotFound" }
-	| { kind: "BlockIdNotFound" };
-
 export type Attestation = {
 	source: AttestationSource;
 	target: AttestationTarget;

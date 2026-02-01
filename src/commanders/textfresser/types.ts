@@ -2,10 +2,10 @@
  * Textfresser types.
  */
 
-import type { TextfresserContext } from "./deprecated-context/types";
+import type { Attestation } from "./dtos/attestation/types";
 
 // ─── State ───
 
 export type TextfresserState = {
-	latestNavigatedContext: TextfresserContext | null;
+	attestationForLatestNavigated: Attestation | null;
 };

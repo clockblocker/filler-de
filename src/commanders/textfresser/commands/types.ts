@@ -8,6 +8,11 @@ import type { VaultAction } from "../../../managers/obsidian/vault-action-manage
 import type { SplitPathToMdFile } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { Prettify } from "../../../types/helpers";
 import type { Attestation } from "../dtos/attestation/types";
+import type { CommandError } from "../errors";
+
+// Re-export for convenience
+export type { CommandError } from "../errors";
+export { CommandErrorKind } from "../errors";
 
 // ─── Command Kind ───
 
@@ -57,20 +62,16 @@ export type CommandInput<
 	} & PayloadByKind[K]
 >;
 
-// ─── Command Error ───
-
-const COMMAND_ERROR_KIND_STR = [
-	"NotMdFile",
-	"NotEligible",
-	"DispatchFailed",
-] as const;
-
-export type CommandErrorKind = (typeof COMMAND_ERROR_KIND_STR)[number];
-
-export type CommandError =
-	| { kind: "NotMdFile" }
-	| { kind: "NotEligible"; reason: string }
-	| { kind: "DispatchFailed"; reason: string };
+/**
+ * Accumulating state that flows through a Textfresser command pipeline.
+ *
+ * Combines:
+ *  - the command-specific input for the given `kind` (`CommandInput<K>`), and
+ *  - `actions` accumulator that pipeline steps append to.
+ */
+export type CommandState<
+	K extends TextfresserCommandKind = TextfresserCommandKind,
+> = CommandInput<K> & { actions: VaultAction[] };
 
 /** Function signature for Textfresser commands */
 export type CommandFn<
@@ -88,3 +89,4 @@ export type Eligibility = z.infer<typeof EligibilitySchema>;
 // ─── DictEntry NoteKind ───
 
 export const DICT_ENTRY_NOTE_KIND = "DictEntry" as const;
+

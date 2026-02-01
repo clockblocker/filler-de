@@ -8,19 +8,25 @@ import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metada
 import {
 	type CommandError,
 	CommandErrorKind,
-	type CommandPayload,
+	type CommandState,
 	DICT_ENTRY_NOTE_KIND,
 	EligibilitySchema,
+	type TextfresserCommandKind,
 } from "../../types";
+
+type Generate = typeof TextfresserCommandKind.Generate;
 
 /**
  * Verifies file is eligible for generation.
  * File must have noteKind undefined or DictEntry.
  */
 export function checkEligibility(
-	ctx: CommandPayload,
-): Result<CommandPayload, CommandError> {
-	const metadata = noteMetadataHelper.read(ctx.content, EligibilitySchema);
+	ctx: CommandState<Generate>,
+): Result<CommandState<Generate>, CommandError> {
+	const metadata = noteMetadataHelper.read(
+		ctx.currentFileInfo.content,
+		EligibilitySchema,
+	);
 	const noteKind = metadata?.noteKind;
 
 	// Eligible if no noteKind or already DictEntry
@@ -30,6 +36,6 @@ export function checkEligibility(
 
 	return err({
 		kind: CommandErrorKind.NotEligible,
-		noteKind,
+		reason: `File has noteKind: ${noteKind}`,
 	});
 }

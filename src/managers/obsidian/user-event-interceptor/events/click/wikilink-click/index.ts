@@ -4,4 +4,4 @@
 
 export { WikilinkClickCodec } from "./codec";
 export { WikilinkClickDetector } from "./detector";
-export type { WikilinkClickPayload } from "./payload";
+export type { WikilinkClickPayload, WikiTarget } from "./payload";

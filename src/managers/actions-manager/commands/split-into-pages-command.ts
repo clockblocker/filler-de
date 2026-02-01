@@ -1,7 +1,7 @@
-import type { Librarian } from "../../../commanders/librarian/librarian";
 import { splitToPagesAction } from "../../../commanders/librarian/bookkeeper/split-to-pages-action";
-import { logError } from "../../obsidian/vault-action-manager/helpers/issue-handlers";
+import type { Librarian } from "../../../commanders/librarian/librarian";
 import type { VaultActionManager } from "../../obsidian/vault-action-manager";
+import { logError } from "../../obsidian/vault-action-manager/helpers/issue-handlers";
 
 type SplitIntoPagesServices = {
 	vaultActionManager?: VaultActionManager;

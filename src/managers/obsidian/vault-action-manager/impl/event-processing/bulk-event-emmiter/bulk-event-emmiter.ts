@@ -1,4 +1,8 @@
 import type { App, TAbstractFile } from "obsidian";
+import {
+	decrementPending,
+	incrementPending,
+} from "../../../../../../utils/idle-tracker";
 import { type VaultEvent, VaultEventKind } from "../../../types/vault-event";
 import type { SelfEventTracker } from "../self-event-tracker";
 import {
@@ -11,10 +15,6 @@ import { collapseVaultEvents } from "./batteries/processing-chain/collapse";
 import { reduceRoots } from "./batteries/processing-chain/reduce-roots";
 import type { BulkVaultEvent } from "./types/bulk/bulk-vault-event";
 import { isDelete, isRename } from "./types/bulk/helpers";
-import {
-	decrementPending,
-	incrementPending,
-} from "../../../../../../utils/idle-tracker";
 
 export type BulkVaultEventHandler = (bulk: BulkVaultEvent) => Promise<void>;
 

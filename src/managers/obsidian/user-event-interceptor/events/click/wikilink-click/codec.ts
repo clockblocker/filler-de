@@ -3,12 +3,11 @@
  */
 
 import type { SplitPathToMdFile } from "../../../../vault-action-manager/types/split-path";
-import type { Modifiers, WikilinkClickPayload } from "./payload";
+import type { Modifiers, WikilinkClickPayload, WikiTarget } from "./payload";
 import { createWikilinkClickPayload } from "./payload";
 
 export type WikilinkClickData = {
-	linkTarget: string;
-	displayText: string;
+	wikiTarget: WikiTarget;
 	blockContent: string;
 	splitPath: SplitPathToMdFile;
 	modifiers: Modifiers;
@@ -20,8 +19,7 @@ export const WikilinkClickCodec = {
 	 */
 	encode(data: WikilinkClickData): WikilinkClickPayload {
 		return createWikilinkClickPayload(
-			data.linkTarget,
-			data.displayText,
+			data.wikiTarget,
 			data.blockContent,
 			data.splitPath,
 			data.modifiers,

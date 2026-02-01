@@ -10,13 +10,11 @@
 import { ok, type Result } from "neverthrow";
 import type { VaultAction } from "../../../../managers/obsidian/vault-action-manager";
 import { VaultActionKind } from "../../../../managers/obsidian/vault-action-manager/types/vault-action";
-import { logger } from "../../../../utils/logger";
-import type { CommandError, CommandInput, CommandPayload } from "../types";
+
+import type { CommandError, CommandInput, CommandState } from "../types";
 import { applyMeta } from "./steps/apply-meta";
 import { checkEligibility } from "./steps/check-eligibility";
 import { moveToWorter } from "./steps/move-to-worter";
-
-// ─── Command ───
 
 /**
  * Generate vault actions for the given file context.
@@ -26,20 +24,19 @@ import { moveToWorter } from "./steps/move-to-worter";
  * @returns Result with array of VaultActions or CommandError
  */
 export function generateCommand(
-	input: CommandInput,
+	input: CommandInput<"Generate">,
 ): Result<VaultAction[], CommandError> {
-	const payload: CommandPayload = { ...input, actions: [] };
-	logger.info("[generateCommand] payload:", payload);
-	// Execute pipeline: checkEligibility → applyMeta → moveToWorter → addWriteAction
-	return checkEligibility(payload)
+	const state: CommandState<"Generate"> = { ...input, actions: [] };
+
+	return checkEligibility(state)
 		.andThen(applyMeta)
 		.andThen(moveToWorter)
 		.andThen((c) => {
 			const writeAction = {
 				kind: VaultActionKind.ProcessMdFile,
 				payload: {
-					splitPath: c.pathOfCurrentFile,
-					transform: () => c.content,
+					splitPath: c.currentFileInfo.path,
+					transform: () => c.currentFileInfo.content,
 				},
 			} as const;
 			return ok([...c.actions, writeAction]);

@@ -11,17 +11,23 @@ import {
 	type VaultAction,
 	VaultActionKind,
 } from "../../../../../managers/obsidian/vault-action-manager/types/vault-action";
-import type { CommandError, CommandPayload } from "../../types";
+import type {
+	CommandError,
+	CommandState,
+	TextfresserCommandKind,
+} from "../../types";
 import { computeShardedFolderParts } from "../shard-path";
+
+type Generate = typeof TextfresserCommandKind.Generate;
 
 /**
  * Appends RenameMdFile action to move file to sharded path.
  * VAM auto-creates folders.
  */
 export function moveToWorter(
-	ctx: CommandPayload,
-): Result<CommandPayload, CommandError> {
-	const { pathOfCurrentFile: splitPath } = ctx;
+	ctx: CommandState<Generate>,
+): Result<CommandState<Generate>, CommandError> {
+	const splitPath = ctx.currentFileInfo.path;
 	const shardedParts = computeShardedFolderParts(splitPath.basename);
 
 	// Rename (move) file to new location - VAM auto-creates folders
@@ -40,6 +46,6 @@ export function moveToWorter(
 	return ok({
 		...ctx,
 		actions: [...ctx.actions, action],
-		splitPath: newPath,
+		currentFileInfo: { ...ctx.currentFileInfo, path: newPath },
 	});
 }

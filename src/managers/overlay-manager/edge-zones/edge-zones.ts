@@ -4,8 +4,8 @@
  */
 
 import { type MarkdownView, setIcon } from "obsidian";
-import type { ActionConfig } from "../bottom-toolbar";
 import { OverlayActionKind } from "../action-definitions";
+import type { ActionConfig } from "../bottom-toolbar";
 import { createLayoutObserver, detectEditorPadding } from "./layout-observer";
 import type {
 	CreateEdgeZonesOptions,
@@ -239,8 +239,8 @@ export function createEdgeZones(options: CreateEdgeZonesOptions): EdgeZones {
 
 	return {
 		attach,
-		detach,
 		destroy,
+		detach,
 		getLayoutState,
 		setNavActions,
 	};

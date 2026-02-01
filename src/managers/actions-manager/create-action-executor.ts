@@ -117,7 +117,9 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 
 			case CommandKind.Generate: {
 				if (!textfresser) {
-					logger.warn("[CommandExecutor] Textfresser not initialized");
+					logger.warn(
+						"[CommandExecutor] Textfresser not initialized",
+					);
 					break;
 				}
 				await textfresser.generate();

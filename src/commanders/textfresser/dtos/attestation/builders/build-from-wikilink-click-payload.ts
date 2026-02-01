@@ -2,66 +2,49 @@
  * Build Attestation from wikilink click data.
  */
 
-import { err, ok, type Result } from "neverthrow";
+import { ok, type Result } from "neverthrow";
 import type { WikilinkClickPayload } from "../../../../../managers/obsidian/user-event-interceptor/events";
+import { blockIdHelper } from "../../../../../stateless-helpers/block-id";
+import { markdownHelper } from "../../../../../stateless-helpers/markdown-strip";
+import type { AttestationParsingError } from "../../../errors";
+import type { Attestation } from "../types";
 
 /**
  * Build Attestation from input data.
- * @param input - The wikilink click input data
- * @returns Result with Attestation or ContextError
+ * @param input - The wikilink click input data. Wikilinks are formatted either as [[surface]] or [[lemma|surface]]
+ * @returns Result with Attestation or AttestationError
  */
-export function buildAttestation(
+export function buildAttestationFromWikilinkClickPayload(
 	input: WikilinkClickPayload,
-): Result<Attestation, ContextError> {
-	const { blockContent, linkTarget, basename } = input;
-
-	// Find the clicked wikilink
-	const parsedWikilink = wikilinkHelper.findByTarget(
-		blockContent,
-		linkTarget,
-	);
-	if (!parsedWikilink) {
-		return err(wikilinkNotFoundError());
-	}
+): Result<Attestation, AttestationParsingError> {
+	const { blockContent, splitPath, wikiTarget } = input;
 
 	// Extract block ID if present
-	const extractedBlockId = blockIdHelper.extractFromLine(blockContent);
+	const blockId = blockIdHelper.extractFromLine(blockContent);
 
-	// The target is the surface (alias if exists, else link target)
-	const target = parsedWikilink.surface;
-
-	// Format the context: block embed if block ID exists, else raw block
-	const formattedContext = extractedBlockId
-		? blockIdHelper.formatEmbed(basename, extractedBlockId)
+	// ref: embed if block ID exists, else raw content
+	const ref = blockId
+		? blockIdHelper.formatEmbed(splitPath.basename, blockId)
 		: blockContent;
 
-	// Build the highlighted context: strip markdown, highlight target
-	const contextWithOnlyTargetSurfaceHighlited = buildHighlightedContext(
-		blockContent,
-		parsedWikilink.surface,
-	);
+	// surface = alias if exists, else basename (what user clicked)
+	const surface = wikiTarget.alias ?? wikiTarget.basename;
+
+	// Strip markdown and mark only the target surface with [brackets]
+	const stripped = markdownHelper.stripAll(blockContent);
+	const textWithOnlyTargetMarked = stripped.replace(surface, `[${surface}]`);
 
 	return ok({
-		contextWithOnlyTargetSurfaceHighlited,
-		formattedContext,
-		rawBlock: blockContent,
-		target,
-		targetMatchesLemma: "Unverified",
+		source: {
+			path: splitPath,
+			ref,
+			textRaw: blockContent,
+			textWithOnlyTargetMarked,
+		},
+		target: {
+			// lemma is the basename when alias exists (i.e., wikilink was [[lemma|surface]])
+			lemma: wikiTarget.alias ? wikiTarget.basename : undefined,
+			surface,
+		},
 	});
-}
-
-/**
- * Build context with only the target surface highlighted.
- * Strips markdown formatting and wraps the target surface in [brackets].
- */
-function buildHighlightedContext(
-	blockContent: string,
-	targetSurface: string,
-): string {
-	// First strip markdown (bold, block refs, wikilinks → surface)
-	const stripped = markdownHelper.stripAll(blockContent);
-
-	// Replace the target surface with highlighted version
-	// Only replace first occurrence to avoid double-highlighting
-	return stripped.replace(targetSurface, `[${targetSurface}]`);
 }

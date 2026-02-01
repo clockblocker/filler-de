@@ -15,18 +15,24 @@ export const ModifiersSchema = z.object({
 
 export type Modifiers = z.infer<typeof ModifiersSchema>;
 
+/** Wikilink target: [[basename]] or [[basename|alias]] */
+export const WikiTargetSchema = z.object({
+	alias: z.string().optional(),
+	basename: z.string(),
+});
+
+export type WikiTarget = z.infer<typeof WikiTargetSchema>;
+
 export const WikilinkClickPayloadSchema = z.object({
 	/** Full line/block content where link is located */
 	blockContent: z.string(),
-	/** Display text - alias or target */
-	displayText: z.string(),
 	kind: z.literal(PayloadKind.WikilinkClicked),
-	/** Link target - the [[target]] content */
-	linkTarget: z.string(),
 	/** Modifier keys held during click */
 	modifiers: ModifiersSchema,
 	/** File where link was clicked */
 	splitPath: SplitPathToMdFileSchema,
+	/** Wikilink target info */
+	wikiTarget: WikiTargetSchema,
 });
 
 export type WikilinkClickPayload = z.infer<typeof WikilinkClickPayloadSchema>;
@@ -35,18 +41,16 @@ export type WikilinkClickPayload = z.infer<typeof WikilinkClickPayloadSchema>;
  * Create a wikilink click payload.
  */
 export function createWikilinkClickPayload(
-	linkTarget: string,
-	displayText: string,
+	wikiTarget: WikiTarget,
 	blockContent: string,
 	splitPath: WikilinkClickPayload["splitPath"],
 	modifiers: Modifiers,
 ): WikilinkClickPayload {
 	return {
 		blockContent,
-		displayText,
 		kind: PayloadKind.WikilinkClicked,
-		linkTarget,
 		modifiers,
 		splitPath,
+		wikiTarget,
 	};
 }

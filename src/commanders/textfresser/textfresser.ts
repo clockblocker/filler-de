@@ -21,19 +21,15 @@ import type {
 } from "../../managers/obsidian/vault-action-manager";
 import { logger } from "../../utils/logger";
 import { generateCommand } from "./commands/generate";
-import {
-	type CommandError,
-	CommandErrorKind,
-	type CommandFn,
-	TextfresserCommandKind,
-} from "./commands/types";
-import { buildTextfresserContext } from "./deprecated-context";
+import { type CommandInput, TextfresserCommandKind } from "./commands/types";
+import { buildAttestationFromWikilinkClickPayload } from "./dtos/attestation/builders/build-from-wikilink-click-payload";
+import { type CommandError, CommandErrorKind } from "./errors";
 import { type FsError, FsErrorKind, readCurrentFile } from "./fs-utils";
 import type { TextfresserState } from "./types";
 
 export class Textfresser {
 	private state: TextfresserState = {
-		latestNavigatedContext: null,
+		attestationForLatestNavigated: null,
 	};
 
 	constructor(private readonly vam: VaultActionManager) {}
@@ -43,44 +39,62 @@ export class Textfresser {
 	/**
 	 * Generate command - moves current file to sharded path and sets metadata.
 	 */
-	generate(): Promise<Result<void, CommandError>> {
-		return this.executeCommand(
-			TextfresserCommandKind.Generate,
-			generateCommand,
-		);
+	async generate(): Promise<Result<void, CommandError>> {
+		const attestation = this.state.attestationForLatestNavigated;
+		if (!attestation) {
+			return err({
+				kind: CommandErrorKind.NotEligible,
+				reason: "No attestation context available",
+			});
+		}
+
+		const fsResult = await readCurrentFile(this.vam);
+		if (fsResult.isErr()) {
+			return err(this.mapFsError(fsResult.error));
+		}
+
+		const { splitPath, content } = fsResult.value;
+		const input: CommandInput<typeof TextfresserCommandKind.Generate> = {
+			attestation,
+			currentFileInfo: { content, path: splitPath },
+			kind: TextfresserCommandKind.Generate,
+			resultingActions: [],
+		};
+
+		const commandResult = generateCommand(input);
+		if (commandResult.isErr()) {
+			logger.warn(
+				"[Textfresser.Generate] Failed:",
+				JSON.stringify(commandResult.error),
+			);
+			return err(commandResult.error);
+		}
+
+		const dispatchResult = await this.dispatchActions(commandResult.value);
+		if (dispatchResult.isErr()) {
+			logger.warn(
+				"[Textfresser.Generate] Dispatch failed:",
+				JSON.stringify(dispatchResult.error),
+			);
+			return dispatchResult;
+		}
+
+		logger.info("[Textfresser.Generate] Success");
+		return ok(undefined);
 	}
 
 	/**
-	 * Generate command - moves current file to sharded path and sets metadata.
+	 * Lemma command - Out of scope
 	 */
-	basename(): Promise<Result<void, CommandError>> {
-		return this.executeCommand(
-			TextfresserCommandKind.Generate,
-			basenameCommand,
-		);
+	lemma(): Promise<Result<void, CommandError>> {
+		return Promise.resolve(ok(undefined));
 	}
 
-	// ─── Command Executor ───
-
-	private async executeCommand(
-		kind: TextfresserCommandKind,
-		commandFn: CommandFn,
-	): Promise<Result<void, CommandError>> {
-		const result = await (await readCurrentFile(this.vam))
-			.mapErr((e) => this.mapFsError(e))
-			.andThen((fs) => commandFn({ ...fs, state: this.state }))
-			.asyncAndThen((actions) => this.dispatchActions(actions));
-
-		if (result.isErr()) {
-			logger.warn(
-				`[Textfresser.${kind}] Failed:`,
-				JSON.stringify(result.error),
-			);
-			return result;
-		}
-
-		logger.info(`[Textfresser.${kind}] Success`);
-		return result;
+	/**
+	 * TranslateSelection command - Out of scope
+	 */
+	translateSelection(): Promise<Result<void, CommandError>> {
+		return Promise.resolve(ok(undefined));
 	}
 
 	// ─── Handlers ───
@@ -91,20 +105,14 @@ export class Textfresser {
 			doesApply: () => true,
 			handle: (payload) => {
 				// Update state with latest context
-				const contextResult = buildTextfresserContext({
-					basename: payload.splitPath.basename,
-					blockContent: payload.blockContent,
-					linkTarget: payload.linkTarget,
-				});
+				const attestationResult =
+					buildAttestationFromWikilinkClickPayload(payload);
 
-				if (contextResult.isOk()) {
-					this.state.latestNavigatedContext = contextResult.value;
+				if (attestationResult.isOk()) {
+					this.state.attestationForLatestNavigated =
+						attestationResult.value;
 				}
 
-				logger.info(
-					"[Textfresser] Updated latestContext:",
-					JSON.stringify(this.state.latestNavigatedContext),
-				);
 				return { outcome: HandlerOutcome.Passthrough };
 			},
 		};
