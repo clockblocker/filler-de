@@ -21,7 +21,11 @@ import type {
 } from "../../managers/obsidian/vault-action-manager";
 import { logger } from "../../utils/logger";
 import { generateCommand } from "./commands/generate/generate-command";
-import { type CommandInput, TextfresserCommandKind } from "./commands/types";
+import {
+	type CommandFn,
+	type CommandInput,
+	TextfresserCommandKind,
+} from "./commands/types";
 import { buildAttestationFromWikilinkClickPayload } from "./common/attestation/builders/build-from-wikilink-click-payload";
 import type { Attestation } from "./common/attestation/types";
 import {
@@ -64,33 +68,14 @@ export class Textfresser {
 		}
 
 		const { splitPath, content } = fsResult.value;
-		const input: CommandInput<typeof TextfresserCommandKind.Generate> = {
+		const input = {
 			attestation,
 			currentFileInfo: { content, path: splitPath },
 			kind: TextfresserCommandKind.Generate,
 			resultingActions: [],
 		};
 
-		const commandResult = generateCommand(input);
-		if (commandResult.isErr()) {
-			logger.warn(
-				"[Textfresser.Generate] Failed:",
-				JSON.stringify(commandResult.error),
-			);
-			return err(commandResult.error);
-		}
-
-		const dispatchResult = await this.dispatchActions(commandResult.value);
-		if (dispatchResult.isErr()) {
-			logger.warn(
-				"[Textfresser.Generate] Dispatch failed:",
-				JSON.stringify(dispatchResult.error),
-			);
-			return dispatchResult;
-		}
-
-		logger.info("[Textfresser.Generate] Success");
-		return ok(undefined);
+		return this.executeCommand("Generate", input, generateCommand);
 	}
 
 	/**
@@ -137,6 +122,23 @@ export class Textfresser {
 
 	// ─── Private ───
 
+	private executeCommand<K extends TextfresserCommandKind>(
+		commandName: K,
+		input: CommandInput<K>,
+		commandFn: CommandFn<K>,
+	): ResultAsync<void, CommandError> {
+		return new ResultAsync(Promise.resolve(commandFn(input)))
+			.andThen((actions) => this.dispatchActions(actions))
+			.map(() => logger.info(`[Textfresser.${commandName}] Success`))
+			.mapErr((e) => {
+				logger.warn(
+					`[Textfresser.${commandName}] Failed:`,
+					JSON.stringify(e),
+				);
+				return e;
+			});
+	}
+
 	private dispatchActions(
 		actions: VaultAction[],
 	): ResultAsync<void, CommandError> {
@@ -146,12 +148,12 @@ export class Textfresser {
 					const reason = dispatchResult.error
 						.map((e) => e.error)
 						.join(", ");
-					return err<void, CommandError>({
+					return err({
 						kind: CommandErrorKind.DispatchFailed,
 						reason,
 					});
 				}
-				return ok<void, CommandError>(undefined);
+				return ok(undefined);
 			}),
 		);
 	}

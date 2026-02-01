@@ -159,6 +159,28 @@ if (result.isErr()) {
 - Each exception must be commented
 - Use Zod for runtime validation
 
+### Type Inference
+- Prefer inference over explicit annotations; annotate only when inference fails or for public API clarity
+- Omit redundant generics when return type provides inference:
+```typescript
+// ❌ BAD
+return err<void, CommandError>({ kind: ... });
+
+// ✅ GOOD - inferred from return type
+return err({ kind: ... });
+```
+- Let callees infer types from arguments; don't annotate variables passed to generic functions:
+```typescript
+// ❌ BAD - redundant, executeCommand<K> infers K from input
+const input: CommandInput<"Generate"> = { kind: TextfresserCommandKind.Generate, ... };
+return this.executeCommand("Generate", input, generateCommand);
+
+// ✅ GOOD - K inferred from literal "Generate" and generateCommand's type
+const input = { kind: TextfresserCommandKind.Generate, ... };
+return this.executeCommand("Generate", input, generateCommand);
+```
+- Use generic params in signatures for better inference (e.g., `commandName: K` not `commandName: string`)
+
 ### Logging Rules (.cursor/rules/logging.mdc)
 - **Use** `log` from `src/utils/logger`, not `console.*`
 - **No object logging**: Always stringify with `JSON.stringify()`

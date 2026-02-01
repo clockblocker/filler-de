@@ -36,6 +36,7 @@
         "esbuild": "^0.25.11",
         "obsidian": "^1.10.2",
         "obsidian-launcher": "^2.1.6",
+        "prinfer": "^0.2.0",
         "tslib": "^2.8.1",
         "tsx": "^4.20.6",
         "typescript": "^5.9.3",
@@ -1256,6 +1257,8 @@
     "pretty-format": ["pretty-format@30.2.0", "", { "dependencies": { "@jest/schemas": "30.0.5", "ansi-styles": "^5.2.0", "react-is": "^18.3.1" } }, "sha512-9uBdv/B4EefsuAL+pWqueZyZS2Ba+LxfFeQ9DN14HU4bN8bhaxKdkpjpB6fs9+pSjIBu+FXQHImEg8j/Lw0+vA=="],
 
     "pretty-ms": ["pretty-ms@9.3.0", "", { "dependencies": { "parse-ms": "^4.0.0" } }, "sha512-gjVS5hOP+M3wMm5nmNOucbIrqudzs9v/57bWRHQWLYklXqoXKrVfYW2W9+glfGsqtPgpiz5WwyEEB+ksXIx3gQ=="],
+
+    "prinfer": ["prinfer@0.2.0", "", { "peerDependencies": { "typescript": ">=4.7.0" }, "bin": { "prinfer": "dist/cli.js" } }, "sha512-asJHmgJ+WaZrAp80vfQ7ND2AZfl6y1Zy0F7wQ7KJEFbGjZl9nijy9m31vRZ856nqtTi3EJ3pesfBgiRB9AKMLw=="],
 
     "process": ["process@0.11.10", "", {}, "sha512-cdGef/drWFoydD1JsMzuFf8100nZl+GT+yacc2bEced5f9Rjk4z+WtFUTBu9PhOi9j/jfmBPu0mMEY4wIdAF8A=="],
 
