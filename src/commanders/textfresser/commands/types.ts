@@ -6,54 +6,82 @@ import type { Result } from "neverthrow";
 import { z } from "zod";
 import type { VaultAction } from "../../../managers/obsidian/vault-action-manager";
 import type { SplitPathToMdFile } from "../../../managers/obsidian/vault-action-manager/types/split-path";
-import type { TextfresserState } from "../types";
+import type { Prettify } from "../../../types/helpers";
+import type { Attestation } from "../dtos/attestation/types";
 
 // ─── Command Kind ───
 
-export const TextfresserCommandKindSchema = z.enum(["Generate", "Baseform"]);
-export type TextfresserCommandKind = z.infer<typeof TextfresserCommandKindSchema>;
+const TEXTFRESSER_COMMAND_KIND_STR = [
+	"Generate",
+	"Lemma",
+	"TranslateSelection",
+] as const;
+
+export const TextfresserCommandKindSchema = z.enum(
+	TEXTFRESSER_COMMAND_KIND_STR,
+);
+export type TextfresserCommandKind = z.infer<
+	typeof TextfresserCommandKindSchema
+>;
 export const TextfresserCommandKind = TextfresserCommandKindSchema.enum;
 
-// ─── Command Input ───
+// ─── Common Command Input ───
 
-/** Input for command functions (from fs-utils + state) */
-export type CommandInput = {
-	splitPath: SplitPathToMdFile;
+type CurrentFileInfo = {
+	path: SplitPathToMdFile;
 	content: string;
-	state: TextfresserState;
 };
 
-/** Function signature for Textfresser commands */
-export type CommandFn = (input: CommandInput) => Result<VaultAction[], CommandError>;
-
-/** Internal payload passed through pipeline steps */
-export type CommandPayload = {
-	splitPath: SplitPathToMdFile;
-	content: string;
-	actions: VaultAction[];
-	state: TextfresserState;
+type PayloadByKind = {
+	[TextfresserCommandKind.Generate]: {
+		attestation: Attestation;
+	};
+	[TextfresserCommandKind.Lemma]: {
+		attestation: Attestation;
+	};
+	[TextfresserCommandKind.TranslateSelection]: {
+		selection: string;
+	};
 };
 
-// ─── Errors ───
+type CommonCommandInput = {
+	resultingActions: VaultAction[];
+	currentFileInfo: CurrentFileInfo;
+};
+
+export type CommandInput<
+	K extends TextfresserCommandKind = TextfresserCommandKind,
+> = Prettify<
+	CommonCommandInput & {
+		kind: K;
+	} & PayloadByKind[K]
+>;
+
+// ─── Command Error ───
+
+const COMMAND_ERROR_KIND_STR = [
+	"NotMdFile",
+	"NotEligible",
+	"DispatchFailed",
+] as const;
+
+export type CommandErrorKind = (typeof COMMAND_ERROR_KIND_STR)[number];
 
 export type CommandError =
 	| { kind: "NotMdFile" }
-	| { kind: "NotEligible"; noteKind: string }
+	| { kind: "NotEligible"; reason: string }
 	| { kind: "DispatchFailed"; reason: string };
 
-export const CommandErrorKind = {
-	DispatchFailed: "DispatchFailed",
-	NotEligible: "NotEligible",
-	NotMdFile: "NotMdFile",
-} as const;
+/** Function signature for Textfresser commands */
+export type CommandFn<
+	K extends TextfresserCommandKind = TextfresserCommandKind,
+> = (input: CommandInput<K>) => Result<VaultAction[], CommandError>;
 
 // ─── Eligibility Schema ───
 
-export const EligibilitySchema = z
-	.object({
-		noteKind: z.string().optional(),
-	})
-	.passthrough();
+export const EligibilitySchema = z.looseObject({
+	noteKind: z.string().optional(),
+});
 
 export type Eligibility = z.infer<typeof EligibilitySchema>;
 

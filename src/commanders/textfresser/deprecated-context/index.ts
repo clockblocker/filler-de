@@ -15,7 +15,6 @@ export const findClickedWikilink = wikilinkHelper.findByTarget;
 export const parseWikilinks = wikilinkHelper.parse;
 export const replaceWikilinksWithSurface = markdownHelper.replaceWikilinks;
 export const stripBlockRefs = markdownHelper.stripBlockRefs;
-export const stripBoldMarkers = markdownHelper.stripBold;
 export const stripMarkdownForContext = markdownHelper.stripAll;
 
 export type { ParsedWikilink };
@@ -26,7 +25,7 @@ export {
 } from "./context-builder";
 export type {
 	ContextError,
-	TargetMatchesBaseform,
+	TargetMatchesLemma,
 	TextfresserContext,
 } from "./types";
 export { noClickError, wikilinkNotFoundError } from "./types";

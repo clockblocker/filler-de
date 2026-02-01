@@ -10,7 +10,7 @@ import type {
 
 /**
  * All known command kinds for the command executor.
- * Includes TextfresserCommandKind (Generate, Baseform) plus additional action kinds.
+ * Includes TextfresserCommandKind (Generate, Lemma) plus additional action kinds.
  */
 export const CommandKind = {
 	...TextfresserCommandKind,

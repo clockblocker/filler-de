@@ -38,7 +38,7 @@ export function generateCommand(
 			const writeAction = {
 				kind: VaultActionKind.ProcessMdFile,
 				payload: {
-					splitPath: c.splitPath,
+					splitPath: c.pathOfCurrentFile,
 					transform: () => c.content,
 				},
 			} as const;

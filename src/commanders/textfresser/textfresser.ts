@@ -27,14 +27,13 @@ import {
 	type CommandFn,
 	TextfresserCommandKind,
 } from "./commands/types";
-import { buildTextfresserContext } from "./context";
+import { buildTextfresserContext } from "./deprecated-context";
 import { type FsError, FsErrorKind, readCurrentFile } from "./fs-utils";
 import type { TextfresserState } from "./types";
 
 export class Textfresser {
 	private state: TextfresserState = {
 		latestNavigatedContext: null,
-		latestSelectedContext: null,
 	};
 
 	constructor(private readonly vam: VaultActionManager) {}
@@ -48,6 +47,16 @@ export class Textfresser {
 		return this.executeCommand(
 			TextfresserCommandKind.Generate,
 			generateCommand,
+		);
+	}
+
+	/**
+	 * Generate command - moves current file to sharded path and sets metadata.
+	 */
+	basename(): Promise<Result<void, CommandError>> {
+		return this.executeCommand(
+			TextfresserCommandKind.Generate,
+			basenameCommand,
 		);
 	}
 

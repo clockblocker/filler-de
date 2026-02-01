@@ -21,7 +21,7 @@ import { computeShardedFolderParts } from "../shard-path";
 export function moveToWorter(
 	ctx: CommandPayload,
 ): Result<CommandPayload, CommandError> {
-	const { splitPath } = ctx;
+	const { pathOfCurrentFile: splitPath } = ctx;
 	const shardedParts = computeShardedFolderParts(splitPath.basename);
 
 	// Rename (move) file to new location - VAM auto-creates folders

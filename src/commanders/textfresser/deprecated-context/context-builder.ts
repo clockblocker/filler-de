@@ -62,7 +62,7 @@ export function buildTextfresserContext(
 		formattedContext,
 		rawBlock: blockContent,
 		target,
-		targetMatchesBaseform: "Unverified",
+		targetMatchesLemma: "Unverified",
 	});
 }
 

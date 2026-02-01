@@ -2,7 +2,7 @@
  * Types for TextfresserContext - the structured context from a wikilink click.
  */
 
-export type TargetMatchesBaseform = "Yes" | "No" | "Unverified";
+export type TargetMatchesLemma = "Yes" | "No" | "Unverified";
 
 export type TextfresserContext = {
 	/** Formatted context: ![[basename#^blockId|^]] if block ID exists, else rawBlock */
@@ -14,7 +14,7 @@ export type TextfresserContext = {
 	/** The clicked word - alias if exists, else link target */
 	target: string;
 	/** Whether target matches the baseform */
-	targetMatchesBaseform: TargetMatchesBaseform;
+	targetMatchesLemma: TargetMatchesLemma;
 };
 
 export type ContextError =

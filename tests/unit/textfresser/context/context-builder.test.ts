@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import {
 	buildTextfresserContext,
 	type ContextBuilderInput,
-} from "../../../../src/commanders/textfresser/context/context-builder";
+} from "../../../../src/commanders/textfresser/deprecated-context/context-builder";
 
 describe("buildTextfresserContext", () => {
 	describe("State 1: [[schönen]] without block ID", () => {
@@ -22,7 +22,7 @@ describe("buildTextfresserContext", () => {
 			expect(ctx.contextWithOnlyTargetSurfaceHighlited).toBe(
 				"Text with [schönen] here",
 			);
-			expect(ctx.targetMatchesBaseform).toBe("Unverified");
+			expect(ctx.targetMatchesLemma).toBe("Unverified");
 		});
 	});
 
