@@ -4,10 +4,6 @@ import type { Textfresser } from "../../commanders/textfresser/textfresser";
 import { logger } from "../../utils/logger";
 import type { VaultActionManager } from "../obsidian/vault-action-manager";
 import {
-	type ExplainGrammarPayload,
-	explainGrammarCommand,
-} from "./commands/explain-grammar-command";
-import {
 	makeNavigatePageCommand,
 	type NavigatePagePayload,
 } from "./commands/navigate-pages-command";
@@ -109,12 +105,6 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 				break;
 			}
 
-			case CommandKind.ExplainGrammar: {
-				const p = payload as ExplainGrammarPayload;
-				await explainGrammarCommand(p, {});
-				break;
-			}
-
 			case CommandKind.Generate: {
 				if (!textfresser) {
 					logger.warn(
@@ -123,6 +113,17 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 					break;
 				}
 				await textfresser.generate();
+				break;
+			}
+
+			case CommandKind.Lemma: {
+				if (!textfresser) {
+					logger.warn(
+						"[CommandExecutor] Textfresser not initialized",
+					);
+					break;
+				}
+				await textfresser.lemma();
 				break;
 			}
 

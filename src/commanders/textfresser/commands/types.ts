@@ -29,6 +29,8 @@ export type TextfresserCommandKind = z.infer<
 	typeof TextfresserCommandKindSchema
 >;
 export const TextfresserCommandKind = TextfresserCommandKindSchema.enum;
+export const ALL_TEXTFRESSER_COMMAND_KINDS =
+	TextfresserCommandKindSchema.options;
 
 // ─── Common Command Input ───
 

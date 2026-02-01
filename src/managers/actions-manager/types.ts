@@ -1,28 +1,24 @@
 import { z } from "zod";
-import { TextfresserCommandKind } from "../../commanders/textfresser/commands/types";
-import type { FileType } from "../../types/common-interface/enums";
+import { ALL_TEXTFRESSER_COMMAND_KINDS } from "../../commanders/textfresser/commands/types";
 import type {
-	AnySplitPath,
 	SplitPathToMdFile,
 } from "../obsidian/vault-action-manager/types/split-path";
 
 // ─── CommandKind - Command Executor Action Kinds ───
 
-/**
- * All known command kinds for the command executor.
- * Includes TextfresserCommandKind (Generate, Lemma) plus additional action kinds.
- */
-export const CommandKind = {
-	...TextfresserCommandKind,
-	ExplainGrammar: "ExplainGrammar",
-	MakeText: "MakeText",
-	NavigatePage: "NavigatePage",
-	SplitInBlocks: "SplitInBlocks",
-	SplitToPages: "SplitToPages",
-	TestButton: "TestButton",
-	TranslateSelection: "TranslateSelection",
-} as const;
-export type CommandKind = (typeof CommandKind)[keyof typeof CommandKind];
+const COMMAND_KIND_STR = [
+	...ALL_TEXTFRESSER_COMMAND_KINDS,
+	"MakeText",
+	"NavigatePage",
+	"SplitInBlocks",
+	"SplitToPages",
+	"TestButton",
+	"TranslateSelection",
+] as const;
+
+export const CommandKindSchema = z.enum(COMMAND_KIND_STR);
+export type CommandKind = z.infer<typeof CommandKindSchema>;
+export const CommandKind = CommandKindSchema.enum;
 
 /**
  * Typed payloads per command kind.
@@ -57,85 +53,3 @@ export type ActionKind = CommandKind;
  * @deprecated Use CommandPayloads instead. Alias for backward compatibility.
  */
 export type ActionPayloads = CommandPayloads;
-
-// ─── UserCommandKind - Legacy Button Types ───
-
-/** @deprecated Services interface - to be removed */
-export type TexfresserObsidianServices = Record<string, unknown>;
-
-const USER_COMMAND_LITERALS = [
-	"SplitInBlocks",
-	"SplitToPages",
-	"MakeText",
-	"NavigatePage",
-	"PreviousPage",
-] as const;
-
-/**
- * @deprecated Use OverlayPlacement from overlay-manager/action-definitions instead.
- * This will be removed in a future version.
- */
-const USER_COMMAND_PLACEMENT_LITERALS = [
-	"AboveSelection",
-	"Bottom",
-	"ShortcutOnly",
-] as const;
-
-export const UserCommandSchema = z.enum(USER_COMMAND_LITERALS);
-
-export type UserCommandKind = z.infer<typeof UserCommandSchema>;
-export const UserCommandKind = UserCommandSchema.enum;
-export const ALL_USER_COMMAND_KINDS = UserCommandSchema.options;
-
-export const UserCommandPlacementSchema = z.enum(
-	USER_COMMAND_PLACEMENT_LITERALS,
-);
-
-export type UserCommandPlacement = z.infer<typeof UserCommandPlacementSchema>;
-export const UserCommandPlacement = UserCommandPlacementSchema.enum;
-export const USER_COMMAND_PLACEMENTS = UserCommandPlacementSchema.options;
-
-/**
- * Context available when evaluating button visibility.
- * Built from current active file and selection state.
- */
-export type ButtonContext = {
-	/** Current file path, or null if no file open */
-	path: AnySplitPath | null;
-	/** Parsed file type from metadata (Page, Scroll, Text, etc.) */
-	fileType: FileType | null;
-	/** Whether there is an active text selection */
-	hasSelection: boolean;
-	/** Whether running on mobile device */
-	isMobile: boolean;
-	/** Whether file is inside the library folder */
-	isInLibrary: boolean;
-	/** Whether scroll content would split into >1 page */
-	wouldSplitToMultiplePages: boolean;
-	/** Page index (0-999) for Page files, null otherwise */
-	pageIndex: number | null;
-	/** Whether next page exists in vault (for Page files) */
-	hasNextPage: boolean;
-};
-
-export type CommandConfig<K extends UserCommandKind> = {
-	kind: K;
-	execute: (
-		services: Partial<TexfresserObsidianServices>,
-	) => void | Promise<void>;
-	label: string;
-	placement: UserCommandPlacement;
-	/** Lower number = higher priority (1-10). Used for sorting and overflow. */
-	priority: number;
-	/** Predicate to determine if command is available in current context */
-	isAvailable: (ctx: ButtonContext) => boolean;
-	/** Optional predicate to determine if command is enabled (shown but inactive if false) */
-	isEnabled?: (ctx: ButtonContext) => boolean;
-};
-
-export type AnyCommandConfig = CommandConfig<UserCommandKind>;
-
-/** Command config with computed disabled state for rendering */
-export type RenderedCommandConfig = AnyCommandConfig & {
-	disabled: boolean;
-};
