@@ -131,64 +131,12 @@ export type HealingError =
 
 // ─── Error Constructors ───
 
-export function makeParseError(
-	segmentId: string,
-	reason: string,
-	context?: Record<string, unknown>,
-): ParseError {
-	return { context, kind: "ParseFailed", reason, segmentId };
-}
-
-export function makePathMismatchError(
-	expected: PathMismatchError["expected"],
-	actual: PathMismatchError["actual"],
-	reason: string,
-): PathMismatchError {
-	return { actual, expected, kind: "PathMismatch", reason };
-}
-
 export function makeVaultOperationError(
 	action: VaultAction | HealingAction,
 	error: string,
 	recoverable = false,
 ): VaultOperationError {
 	return { action, error, kind: "VaultFailed", recoverable };
-}
-
-export function makeTreeInconsistencyError(
-	details: string,
-	nodeLocator?: string,
-): TreeInconsistencyError {
-	return { details, kind: "TreeInconsistent", nodeLocator };
-}
-
-export function makeNodeNotFoundError(
-	locator: string,
-	reason: string,
-): NodeNotFoundError {
-	return { kind: "NodeNotFound", locator, reason };
-}
-
-export function makeInvalidChainError(
-	chain: string[],
-	reason: string,
-): InvalidChainError {
-	return { chain, kind: "InvalidChain", reason };
-}
-
-export function makeCodexComputationError(
-	sectionChain: string[],
-	reason: string,
-): CodexComputationError {
-	return { kind: "CodexComputationFailed", reason, sectionChain };
-}
-
-export function makeValidationError(
-	field: string,
-	value: unknown,
-	reason: string,
-): ValidationError {
-	return { field, kind: "ValidationFailed", reason, value };
 }
 
 export function makeInternalError(
@@ -223,28 +171,6 @@ export function formatHealingError(error: HealingError): string {
 			return `Validation failed for '${error.field}': ${error.reason}`;
 		case "InternalError":
 			return `Internal error: ${error.message}${error.cause ? ` (caused by: ${error.cause.message})` : ""}`;
-	}
-}
-
-/**
- * Check if an error is recoverable (can retry or continue).
- */
-export function isRecoverableError(error: HealingError): boolean {
-	switch (error.kind) {
-		case "VaultFailed":
-			return error.recoverable;
-		case "NodeNotFound":
-		case "PathMismatch":
-			// These might be recoverable by re-syncing state
-			return true;
-		case "ParseFailed":
-		case "TreeInconsistent":
-		case "InvalidChain":
-		case "CodexComputationFailed":
-		case "ValidationFailed":
-		case "InternalError":
-			// These indicate bugs or corruption
-			return false;
 	}
 }
 

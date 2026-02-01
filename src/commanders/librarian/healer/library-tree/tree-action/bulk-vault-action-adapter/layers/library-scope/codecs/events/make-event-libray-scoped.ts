@@ -1,49 +1,124 @@
-import type { VaultEvent } from "../../../../../../../../../../managers/obsidian/vault-action-manager";
-import type { AnySplitPath } from "../../../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import {
+	type VaultEvent,
+	VaultEventKind,
+} from "../../../../../../../../../../managers/obsidian/vault-action-manager";
+import type {
+	FileCreatedVaultEvent,
+	FileDeletedVaultEvent,
+	FileRenamedVaultEvent,
+	FolderCreatedVaultEvent,
+	FolderDeletedVaultEvent,
+	FolderRenamedVaultEvent,
+} from "../../../../../../../../../../managers/obsidian/vault-action-manager/types/vault-event";
 import type { CodecRules } from "../../../../../../../../codecs/rules";
-import type { EnscopedEvent } from "../../types/generics";
+import type {
+	LibraryScopedVaultEvent,
+	ScopedFileCreatedVaultEventInside,
+	ScopedFileCreatedVaultEventOutside,
+	ScopedFileDeletedVaultEventInside,
+	ScopedFileDeletedVaultEventOutside,
+	ScopedFileRenamedVaultEventInside,
+	ScopedFileRenamedVaultEventInsideToOutside,
+	ScopedFileRenamedVaultEventOutside,
+	ScopedFileRenamedVaultEventOutsideToInside,
+	ScopedFolderCreatedVaultEventInside,
+	ScopedFolderCreatedVaultEventOutside,
+	ScopedFolderDeletedVaultEventInside,
+	ScopedFolderDeletedVaultEventOutside,
+	ScopedFolderRenamedVaultEventInside,
+	ScopedFolderRenamedVaultEventInsideToOutside,
+	ScopedFolderRenamedVaultEventOutside,
+	ScopedFolderRenamedVaultEventOutsideToInside,
+} from "../../types/scoped-event";
 import { Scope } from "../../types/scoped-event";
 import { tryParseAsInsideLibrarySplitPath } from "../split-path-inside-the-library";
 
-/**
- * Scopes a simple (non-rename) event based on whether its path is inside the library.
- */
-function scopeSimpleEvent<E extends VaultEvent & { splitPath: unknown }>(
-	event: E,
+function scopeFileCreated(
+	event: FileCreatedVaultEvent,
 	rules: CodecRules,
-): EnscopedEvent<E> {
-	const splitPathResult = tryParseAsInsideLibrarySplitPath(
-		event.splitPath as AnySplitPath,
-		rules,
-	);
-	if (splitPathResult.isErr()) {
+): ScopedFileCreatedVaultEventInside | ScopedFileCreatedVaultEventOutside {
+	const result = tryParseAsInsideLibrarySplitPath(event.splitPath, rules);
+	if (result.isErr()) {
 		return {
+			kind: VaultEventKind.FileCreated,
 			scope: Scope.Outside,
-			...event,
-		} as unknown as EnscopedEvent<E>;
+			splitPath: event.splitPath,
+		};
 	}
 	return {
-		...event,
+		kind: VaultEventKind.FileCreated,
 		scope: Scope.Inside,
-		splitPath: splitPathResult.value,
-	} as unknown as EnscopedEvent<E>;
+		splitPath: result.value,
+	};
 }
 
-/**
- * Scopes a rename event based on whether from/to paths are inside the library.
- * Determines the crossing type: Inside, Outside, InsideToOutside, OutsideToInside.
- */
-function scopeRenameEvent<
-	E extends VaultEvent & { from: unknown; to: unknown },
->(event: E, rules: CodecRules): EnscopedEvent<E> {
-	const fromResult = tryParseAsInsideLibrarySplitPath(
-		event.from as AnySplitPath,
-		rules,
-	);
-	const toResult = tryParseAsInsideLibrarySplitPath(
-		event.to as AnySplitPath,
-		rules,
-	);
+function scopeFileDeleted(
+	event: FileDeletedVaultEvent,
+	rules: CodecRules,
+): ScopedFileDeletedVaultEventInside | ScopedFileDeletedVaultEventOutside {
+	const result = tryParseAsInsideLibrarySplitPath(event.splitPath, rules);
+	if (result.isErr()) {
+		return {
+			kind: VaultEventKind.FileDeleted,
+			scope: Scope.Outside,
+			splitPath: event.splitPath,
+		};
+	}
+	return {
+		kind: VaultEventKind.FileDeleted,
+		scope: Scope.Inside,
+		splitPath: result.value,
+	};
+}
+
+function scopeFolderCreated(
+	event: FolderCreatedVaultEvent,
+	rules: CodecRules,
+): ScopedFolderCreatedVaultEventInside | ScopedFolderCreatedVaultEventOutside {
+	const result = tryParseAsInsideLibrarySplitPath(event.splitPath, rules);
+	if (result.isErr()) {
+		return {
+			kind: VaultEventKind.FolderCreated,
+			scope: Scope.Outside,
+			splitPath: event.splitPath,
+		};
+	}
+	return {
+		kind: VaultEventKind.FolderCreated,
+		scope: Scope.Inside,
+		splitPath: result.value,
+	};
+}
+
+function scopeFolderDeleted(
+	event: FolderDeletedVaultEvent,
+	rules: CodecRules,
+): ScopedFolderDeletedVaultEventInside | ScopedFolderDeletedVaultEventOutside {
+	const result = tryParseAsInsideLibrarySplitPath(event.splitPath, rules);
+	if (result.isErr()) {
+		return {
+			kind: VaultEventKind.FolderDeleted,
+			scope: Scope.Outside,
+			splitPath: event.splitPath,
+		};
+	}
+	return {
+		kind: VaultEventKind.FolderDeleted,
+		scope: Scope.Inside,
+		splitPath: result.value,
+	};
+}
+
+function scopeFileRenamed(
+	event: FileRenamedVaultEvent,
+	rules: CodecRules,
+):
+	| ScopedFileRenamedVaultEventInside
+	| ScopedFileRenamedVaultEventOutside
+	| ScopedFileRenamedVaultEventInsideToOutside
+	| ScopedFileRenamedVaultEventOutsideToInside {
+	const fromResult = tryParseAsInsideLibrarySplitPath(event.from, rules);
+	const toResult = tryParseAsInsideLibrarySplitPath(event.to, rules);
 
 	const fromInside = fromResult.isOk();
 	const toInside = toResult.isOk();
@@ -51,43 +126,103 @@ function scopeRenameEvent<
 	if (fromInside && toInside) {
 		return {
 			from: fromResult.value,
-			kind: event.kind,
+			kind: VaultEventKind.FileRenamed,
 			scope: Scope.Inside,
 			to: toResult.value,
-		} as unknown as EnscopedEvent<E>;
+		};
 	}
 
 	if (fromInside && !toInside) {
 		return {
 			from: fromResult.value,
-			kind: event.kind,
+			kind: VaultEventKind.FileRenamed,
 			scope: Scope.InsideToOutside,
 			to: event.to,
-		} as unknown as EnscopedEvent<E>;
+		};
 	}
 
 	if (!fromInside && toInside) {
 		return {
 			from: event.from,
-			kind: event.kind,
+			kind: VaultEventKind.FileRenamed,
 			scope: Scope.OutsideToInside,
 			to: toResult.value,
-		} as unknown as EnscopedEvent<E>;
+		};
 	}
 
 	return {
-		...event,
+		from: event.from,
+		kind: VaultEventKind.FileRenamed,
 		scope: Scope.Outside,
-	} as unknown as EnscopedEvent<E>;
+		to: event.to,
+	};
 }
 
-export function makeEventLibraryScoped<E extends VaultEvent>(
-	event: E,
+function scopeFolderRenamed(
+	event: FolderRenamedVaultEvent,
 	rules: CodecRules,
-): EnscopedEvent<E> {
-	// 'in' check doesn't narrow generic E; cast is safe since dispatch is correct
-	if ("from" in event) {
-		return scopeRenameEvent(event, rules) as EnscopedEvent<E>;
+):
+	| ScopedFolderRenamedVaultEventInside
+	| ScopedFolderRenamedVaultEventOutside
+	| ScopedFolderRenamedVaultEventInsideToOutside
+	| ScopedFolderRenamedVaultEventOutsideToInside {
+	const fromResult = tryParseAsInsideLibrarySplitPath(event.from, rules);
+	const toResult = tryParseAsInsideLibrarySplitPath(event.to, rules);
+
+	const fromInside = fromResult.isOk();
+	const toInside = toResult.isOk();
+
+	if (fromInside && toInside) {
+		return {
+			from: fromResult.value,
+			kind: VaultEventKind.FolderRenamed,
+			scope: Scope.Inside,
+			to: toResult.value,
+		};
 	}
-	return scopeSimpleEvent(event, rules) as EnscopedEvent<E>;
+
+	if (fromInside && !toInside) {
+		return {
+			from: fromResult.value,
+			kind: VaultEventKind.FolderRenamed,
+			scope: Scope.InsideToOutside,
+			to: event.to,
+		};
+	}
+
+	if (!fromInside && toInside) {
+		return {
+			from: event.from,
+			kind: VaultEventKind.FolderRenamed,
+			scope: Scope.OutsideToInside,
+			to: toResult.value,
+		};
+	}
+
+	return {
+		from: event.from,
+		kind: VaultEventKind.FolderRenamed,
+		scope: Scope.Outside,
+		to: event.to,
+	};
+}
+
+export function makeEventLibraryScoped(
+	event: VaultEvent,
+	rules: CodecRules,
+): LibraryScopedVaultEvent {
+	switch (event.kind) {
+		case VaultEventKind.FileCreated:
+			return scopeFileCreated(event, rules);
+		case VaultEventKind.FileDeleted:
+			return scopeFileDeleted(event, rules);
+		case VaultEventKind.FolderCreated:
+			return scopeFolderCreated(event, rules);
+		case VaultEventKind.FolderDeleted:
+			return scopeFolderDeleted(event, rules);
+		case VaultEventKind.FileRenamed:
+			return scopeFileRenamed(event, rules);
+		case VaultEventKind.FolderRenamed:
+			return scopeFolderRenamed(event, rules);
+	}
 }

@@ -382,17 +382,3 @@ export function wouldSplitToMultiplePages(
 }
 
 export type { LanguageConfig } from "./language-config";
-// Re-exports for compatibility
-export {
-	DEFAULT_LANGUAGE_CONFIG,
-	ENGLISH_CONFIG,
-	GERMAN_CONFIG,
-} from "./language-config";
-
-// Legacy exports (deprecated - kept for compatibility)
-export { blocksCharCount, blocksToContent, parseBlocks } from "./parse-blocks";
-export {
-	canSplitBetweenBlocks,
-	isPreferredSplitPoint,
-	type SegmentationRule,
-} from "./rules";

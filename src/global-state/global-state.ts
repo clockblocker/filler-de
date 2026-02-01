@@ -1,14 +1,14 @@
 import type { TextEaterSettings } from "../types";
 import { type ParsedUserSettings, parseSettings } from "./parsed-settings";
 
-export type GlobalState = {
+type GlobalState = {
 	parsedUserSettings?: ParsedUserSettings;
 };
 
 const EMPTY_GLOBAL_STATE: GlobalState = {} as const;
 let globalState: GlobalState = {};
 
-export function getState(): GlobalState {
+function getState(): GlobalState {
 	return globalState;
 }
 
@@ -22,7 +22,7 @@ export function getParsedUserSettings(): ParsedUserSettings {
 	return parsedUserSettings;
 }
 
-export function setState(state: Partial<GlobalState>): void {
+function setState(state: Partial<GlobalState>): void {
 	const currentState = getState();
 	globalState = {
 		...currentState,

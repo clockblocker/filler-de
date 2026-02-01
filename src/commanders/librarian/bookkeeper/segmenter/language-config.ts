@@ -48,25 +48,6 @@ export const GERMAN_CONFIG: LanguageConfig = {
 };
 
 /**
- * English language configuration (for future use).
- */
-export const ENGLISH_CONFIG: LanguageConfig = {
-	locale: "en",
-	poemIndicators: {
-		linePatterns: [/ {2}$/],
-		maxLineLength: 60,
-	},
-	quotes: {
-		// U+201D RIGHT DOUBLE QUOTATION MARK, U+2019 RIGHT SINGLE QUOTATION MARK
-		closing: ["\u201D", "\u2019"],
-		// U+0022 ASCII double quote, U+0027 ASCII single quote
-		neutral: ["\u0022", "\u0027"],
-		// U+201C LEFT DOUBLE QUOTATION MARK, U+2018 LEFT SINGLE QUOTATION MARK
-		opening: ["\u201C", "\u2018"],
-	},
-};
-
-/**
  * Default configuration.
  */
 export const DEFAULT_LANGUAGE_CONFIG = GERMAN_CONFIG;

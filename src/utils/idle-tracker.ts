@@ -5,13 +5,12 @@
  */
 
 let pendingCount = 0;
-const idleWaiters: Array<() => void> = [];
 
 /**
  * Check if E2E mode is enabled.
  * Enabled via E2E=1 env var or build flag.
  */
-export function isE2E(): boolean {
+function isE2E(): boolean {
 	// Check env var (set by test runner)
 	if (typeof process !== "undefined" && process.env.E2E === "1") {
 		return true;
@@ -100,17 +99,3 @@ export async function whenIdle(
 	}
 }
 
-/**
- * Get current pending count (for debugging).
- */
-export function getPendingCount(): number {
-	return pendingCount;
-}
-
-/**
- * Reset tracker (for test cleanup).
- */
-export function reset(): void {
-	pendingCount = 0;
-	idleWaiters.length = 0;
-}

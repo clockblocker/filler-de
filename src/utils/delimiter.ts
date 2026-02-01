@@ -31,38 +31,6 @@ export function buildFlexibleDelimiterPattern(
 }
 
 /**
- * Check if basename needs delimiter normalization.
- * Returns true if basename contains the symbol with wrong spacing.
- */
-export function needsDelimiterNormalization(
-	basename: string,
-	config: SuffixDelimiterConfig,
-): boolean {
-	const canonical = buildCanonicalDelimiter(config);
-	const pattern = buildFlexibleDelimiterPattern(config);
-
-	// Find all matches of the pattern
-	const matches = basename.match(new RegExp(pattern.source, "g"));
-	if (!matches) return false;
-
-	// Check if any match differs from canonical
-	return matches.some((match) => match !== canonical);
-}
-
-/**
- * Normalize delimiter spacing in basename to canonical form.
- * @example normalizeDelimiter("foo - bar", { symbol: "-", paddingBefore: false, paddingAfter: false }) → "foo-bar"
- */
-export function normalizeDelimiter(
-	basename: string,
-	config: SuffixDelimiterConfig,
-): string {
-	const canonical = buildCanonicalDelimiter(config);
-	const pattern = buildFlexibleDelimiterPattern(config);
-	return basename.replace(new RegExp(pattern.source, "g"), canonical);
-}
-
-/**
  * Migrate old string delimiter format to new config format.
  * Parses spacing from the string to determine padding.
  */
