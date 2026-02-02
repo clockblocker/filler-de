@@ -1,19 +1,12 @@
-import { err, ok, type Result, type ResultAsync } from "neverthrow";
-import { type App, MarkdownView, TFile } from "obsidian";
-import { DomSelectors } from "../../../../../utils/dom-selectors";
-import {
-	errorInvalidCdArgument,
-	errorNoTFileFound,
-	errorOpenFileFailed,
-} from "../../errors";
-import { makeSystemPathForSplitPath } from "../../impl/common/split-path-and-system-path";
+import type { Result, ResultAsync } from "neverthrow";
+import type { App, TFile } from "obsidian";
 import type {
 	AnySplitPath,
 	SplitPathToAnyFile,
-	SplitPathToFile,
 	SplitPathToMdFile,
 } from "../../types/split-path";
 import type { Transform } from "../../types/vault-action";
+import { cd } from "./navigation/cd";
 import {
 	OpenedFileWriter,
 	type SavedInlineTitleSelection,
@@ -112,7 +105,7 @@ export class OpenedFileService {
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────
-	// Navigation (will move to Navigator later)
+	// Navigation
 	// ─────────────────────────────────────────────────────────────────────────
 
 	public async cd(file: TFile): Promise<Result<TFile, string>>;
@@ -120,98 +113,6 @@ export class OpenedFileService {
 	public async cd(
 		file: TFile | SplitPathToAnyFile,
 	): Promise<Result<TFile, string>> {
-		let tfile: TFile;
-		if (
-			typeof (file as TFile).path === "string" &&
-			(file as TFile).extension !== undefined
-		) {
-			tfile = file as TFile;
-		} else if (
-			typeof (file as SplitPathToFile | SplitPathToMdFile).basename ===
-				"string" &&
-			Array.isArray(
-				(file as SplitPathToFile | SplitPathToMdFile).pathParts,
-			)
-		) {
-			const splitPath = file as SplitPathToFile | SplitPathToMdFile;
-			const systemPath = makeSystemPathForSplitPath(splitPath);
-
-			const tfileMaybeLegacy =
-				this.app.vault.getAbstractFileByPath(systemPath);
-			if (!tfileMaybeLegacy || !(tfileMaybeLegacy instanceof TFile)) {
-				return err(errorNoTFileFound(systemPath));
-			}
-			tfile = tfileMaybeLegacy;
-		} else {
-			return err(errorInvalidCdArgument());
-		}
-
-		try {
-			const leaf = this.app.workspace.getLeaf(false);
-			await leaf.openFile(tfile);
-			this.app.workspace.setActiveLeaf(leaf, { focus: true });
-			// Using `as unknown` because `leftSplit.collapsed` is not in public Obsidian API types
-			const leftSplit = this.app.workspace.leftSplit as unknown as {
-				collapsed: boolean;
-			} | null;
-			const sidebarVisible = leftSplit && !leftSplit.collapsed;
-			if (sidebarVisible) {
-				const fileExplorerLeaves =
-					this.app.workspace.getLeavesOfType("file-explorer");
-				if (fileExplorerLeaves.length > 0) {
-					// Using `as unknown` because `commands` is not in public Obsidian API types
-					(
-						this.app as unknown as {
-							commands: {
-								executeCommandById: (id: string) => void;
-							};
-						}
-					).commands.executeCommandById(
-						"file-explorer:reveal-active-file",
-					);
-				}
-			}
-			await this.waitForViewReady(tfile);
-			return ok(tfile);
-		} catch (error) {
-			return err(
-				errorOpenFileFailed(
-					error instanceof Error ? error.message : String(error),
-				),
-			);
-		}
-	}
-
-	private waitForViewReady(tfile: TFile, timeoutMs = 500): Promise<void> {
-		return new Promise((resolve) => {
-			const checkView = () => {
-				const view =
-					this.app.workspace.getActiveViewOfType(MarkdownView);
-				const hasContainer = view?.contentEl.querySelector(
-					DomSelectors.CM_CONTENT_CONTAINER,
-				);
-				const pathMatch = view?.file?.path === tfile.path;
-				return pathMatch && hasContainer;
-			};
-
-			if (checkView()) {
-				resolve();
-				return;
-			}
-
-			const observer = new MutationObserver(() => {
-				if (checkView()) {
-					observer.disconnect();
-					resolve();
-				}
-			});
-
-			observer.observe(document.body, { childList: true, subtree: true });
-
-			setTimeout(() => {
-				observer.disconnect();
-				resolve();
-			}, timeoutMs);
-		});
+		return cd(this.app, file);
 	}
 }
