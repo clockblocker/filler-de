@@ -10,7 +10,6 @@ import { makeSystemPathForSplitPath } from "../../impl/common/split-path-and-sys
 import type {
 	AnySplitPath,
 	SplitPathToFile,
-	SplitPathToFolder,
 	SplitPathToMdFile,
 } from "../../types/split-path";
 import type { Transform } from "../../types/vault-action";
@@ -67,24 +66,6 @@ export class OpenedFileService {
 
 	getSelection(): string | null {
 		return this.reader.getSelection();
-	}
-
-	readContent(splitPath: SplitPathToMdFile): string {
-		return this.reader.readContent(splitPath);
-	}
-
-	exists(splitPath: AnySplitPath): boolean {
-		return this.reader.exists(splitPath);
-	}
-
-	list(folder: SplitPathToFolder): AnySplitPath[] {
-		return this.reader.list(folder);
-	}
-
-	getAbstractFile<SP extends AnySplitPath>(
-		splitPath: SP,
-	): SP["kind"] extends "Folder" ? TFolder : TFile {
-		return this.reader.getAbstractFile(splitPath);
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────

@@ -84,45 +84,6 @@ export class OpenedFileReader {
 		return editor.getSelection() || null;
 	}
 
-	readContent(__splitPath: SplitPathToMdFile): string {
-		const contentResult = this.getContent();
-		if (contentResult.isErr()) {
-			throw new Error(contentResult.error);
-		}
-		return contentResult.value;
-	}
-
-	exists(splitPath: AnySplitPath): boolean {
-		if (splitPath.kind === "Folder") return false;
-		if (this.isInActiveView(splitPath)) return true;
-		const systemPath = makeSystemPathForSplitPath(splitPath);
-		return this.app.vault.getAbstractFileByPath(systemPath) !== null;
-	}
-
-	list(folder: SplitPathToFolder): AnySplitPath[] {
-		const folderPath = makeSystemPathForSplitPath(folder);
-		const tFolder = this.app.vault.getAbstractFileByPath(folderPath);
-		if (!(tFolder instanceof TFolder)) return [];
-		return tFolder.children.map(getSplitPathForAbstractFile);
-	}
-
-	getAbstractFile<SP extends AnySplitPath>(
-		splitPath: SP,
-	): SP["kind"] extends "Folder" ? TFolder : TFile {
-		const systemPath = makeSystemPathForSplitPath(splitPath);
-		const file = this.app.vault.getAbstractFileByPath(systemPath);
-		if (!file) {
-			throw new Error(`File not found: ${systemPath}`);
-		}
-		if (splitPath.kind === "Folder" && !(file instanceof TFolder)) {
-			throw new Error(`Expected folder but got file: ${systemPath}`);
-		}
-		if (splitPath.kind !== "Folder" && !(file instanceof TFile)) {
-			throw new Error(`Expected file but got folder: ${systemPath}`);
-		}
-		return file as SP["kind"] extends "Folder" ? TFolder : TFile;
-	}
-
 	private getActiveView(): Result<MarkdownView, string> {
 		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 		return view ? ok(view) : err(errorNoActiveView());

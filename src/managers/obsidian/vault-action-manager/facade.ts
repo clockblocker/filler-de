@@ -14,7 +14,7 @@ import { Executor } from "./impl/actions-processing/executor";
 import { BulkEventEmmiter } from "./impl/event-processing/bulk-event-emmiter/bulk-event-emmiter";
 import { SelfEventTracker } from "./impl/event-processing/self-event-tracker";
 import { SingleEventEmmiter } from "./impl/event-processing/single-event-emmiter";
-import { Reader } from "./impl/reader";
+import { VaultReader } from "./impl/vault-reader";
 import type {
 	BulkVaultEventHandler,
 	DispatchResult,
@@ -33,7 +33,7 @@ import type { VaultAction } from "./types/vault-action";
 
 export class VaultActionManagerImpl implements VaultActionManager {
 	private readonly opened: OpenedFileService;
-	private readonly reader: Reader;
+	private readonly reader: VaultReader;
 	private readonly dispatcher: Dispatcher;
 	private readonly selfEventTracker: SelfEventTracker;
 	private readonly actionQueue: ActionQueue;
@@ -65,7 +65,7 @@ export class VaultActionManagerImpl implements VaultActionManager {
 			this.opened,
 			app.vault,
 		);
-		this.reader = new Reader(
+		this.reader = new VaultReader(
 			this.opened,
 			tfileHelper,
 			tfolderHelper,
