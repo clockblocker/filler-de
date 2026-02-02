@@ -13,88 +13,62 @@ import type { SplitPathToMdFile } from "../../types/split-path";
 export class OpenedFileReader {
 	constructor(private app: App) {}
 
-	async pwd(): Promise<Result<SplitPathToMdFile, string>> {
-		const fileResult = await this.getOpenedTFile();
-		if (fileResult.isErr()) {
-			return err(fileResult.error);
-		}
-		return ok(getSplitPathForAbstractFile(fileResult.value));
+	pwd(): Result<SplitPathToMdFile, string> {
+		return this.getOpenedTFile().map((file) =>
+			getSplitPathForAbstractFile(file),
+		);
 	}
 
-	async getContent(): Promise<Result<string, string>> {
-		try {
-			const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-			if (!view?.file) {
-				return err(errorGetEditor());
-			}
-
-			// Verify file still exists in vault (may be deleted/renamed while open)
-			// Note: On rename, Obsidian may update view.file to a new TFile object,
-			// so we check path existence rather than object identity
-			const fileInVault = this.app.vault.getAbstractFileByPath(
-				view.file.path,
-			);
-			if (!fileInVault) {
-				return err(errorGetEditor(errorFileStale(view.file.path)));
-			}
-
-			if (view.getMode() !== "source") {
-				return err(errorGetEditor(errorNotInSourceMode()));
-			}
-
-			const content = view.editor.getValue();
-			return ok(content ?? "");
-		} catch (error) {
-			return err(
-				errorGetEditor(
-					error instanceof Error ? error.message : String(error),
-				),
-			);
-		}
+	getContent(): Result<string, string> {
+		return this.getActiveView()
+			.andThen((view) => this.validateFileExists(view))
+			.andThen((view) => this.validateSourceMode(view))
+			.map((view) => view.editor.getValue() ?? "");
 	}
 
-	async getParent(): Promise<Result<TFolder, string>> {
-		const fileResult = await this.getOpenedTFile();
-		if (fileResult.isErr()) {
-			return err(fileResult.error);
-		}
-
-		const parent = fileResult.value.parent;
-		if (!parent) {
-			return err(errorNoFileParent());
-		}
-
-		return ok(parent);
+	getParent(): Result<TFolder, string> {
+		return this.getOpenedTFile().andThen((file) =>
+			file.parent ? ok(file.parent) : err(errorNoFileParent()),
+		);
 	}
 
-	async getOpenedTFile(): Promise<Result<TFile, string>> {
-		try {
-			const activeView =
-				this.app.workspace.getActiveViewOfType(MarkdownView);
+	getOpenedTFile(): Result<TFile, string> {
+		return this.getActiveView()
+			.andThen((view) =>
+				view.file ? ok(view.file) : err(errorNoActiveView()),
+			)
+			.andThen((file) => this.validateFileInVault(file));
+	}
 
-			if (!activeView) {
-				return err(errorNoActiveView());
-			}
+	private getActiveView(): Result<MarkdownView, string> {
+		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+		return view ? ok(view) : err(errorNoActiveView());
+	}
 
-			const file = activeView.file;
-
-			if (!file) {
-				return err(errorNoActiveView());
-			}
-
-			// Verify file still exists in vault (may be deleted/renamed while open)
-			// Note: On rename, Obsidian may update view.file to a new TFile object,
-			// so we check path existence rather than object identity
-			const fileInVault = this.app.vault.getAbstractFileByPath(file.path);
-			if (!fileInVault) {
-				return err(errorFileStale(file.path));
-			}
-			// If object identity differs but path matches, file was likely renamed
-			// and view.file was updated - this is acceptable
-
-			return ok(file);
-		} catch (error) {
-			return err(error instanceof Error ? error.message : String(error));
+	private validateFileExists(
+		view: MarkdownView,
+	): Result<MarkdownView, string> {
+		if (!view.file) {
+			return err(errorGetEditor());
 		}
+		const fileInVault = this.app.vault.getAbstractFileByPath(
+			view.file.path,
+		);
+		return fileInVault
+			? ok(view)
+			: err(errorGetEditor(errorFileStale(view.file.path)));
+	}
+
+	private validateSourceMode(
+		view: MarkdownView,
+	): Result<MarkdownView, string> {
+		return view.getMode() === "source"
+			? ok(view)
+			: err(errorGetEditor(errorNotInSourceMode()));
+	}
+
+	private validateFileInVault(file: TFile): Result<TFile, string> {
+		const fileInVault = this.app.vault.getAbstractFileByPath(file.path);
+		return fileInVault ? ok(file) : err(errorFileStale(file.path));
 	}
 }
