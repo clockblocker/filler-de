@@ -5,7 +5,7 @@
  * Consumers don't know if metadata is stored as YAML frontmatter or internal JSON.
  */
 
-import type { z } from "zod";
+import { z } from "zod";
 import { getParsedUserSettings } from "../../global-state/global-state";
 import type { Transform } from "../../managers/obsidian/vault-action-manager/types/vault-action";
 import {
@@ -22,6 +22,9 @@ import {
 	stripJsonSection,
 	writeJsonSection,
 } from "./internal/json-section";
+
+/** Schema for reading any metadata (used for merging) - passthrough allows extra keys */
+const AnyMetadataSchema = z.object({}).passthrough();
 
 // ─── Public API ───
 
@@ -87,6 +90,7 @@ export type StatusValue = "Done" | "NotStarted";
 /**
  * Toggle status property in note metadata.
  * Works with both YAML frontmatter and internal JSON formats.
+ * PRESERVES all existing metadata fields (e.g., prevPageIdx, nextPageIdx).
  * Returns Transform function for use with ProcessMdFile.
  *
  * @param checked - The new checkbox state (true = Done, false = NotStarted)
@@ -96,10 +100,14 @@ function toggleStatus(checked: boolean): Transform {
 	const { hideMetadata } = getParsedUserSettings();
 
 	if (hideMetadata) {
-		// Internal JSON format
-		return writeJsonSection({ status });
+		// Internal JSON format - read existing metadata and merge with new status
+		return (content: string) => {
+			const existing = readJsonSection(content, AnyMetadataSchema);
+			const merged = { ...(existing ?? {}), status };
+			return writeJsonSection(merged)(content);
+		};
 	}
-	// YAML frontmatter format
+	// YAML frontmatter format (upsertFrontmatterStatus already preserves existing)
 	return upsertFrontmatterStatus(status);
 }
 

@@ -12,6 +12,10 @@ import type { SectionNodeSegmentId } from "../../../../codecs/segment-id";
 import { sectionChainToPathParts } from "../../../../paths/path-finder";
 import { formatParentBacklink } from "../format-codex-line";
 
+/** Pattern to match JSON metadata section at end of file */
+const JSON_META_PATTERN =
+	/(\n*<section\s+id=[{"]textfresser_meta_keep_me_invisible[}"]>[\s\S]*?<\/section>\n*)$/;
+
 /**
  * Create transform that strips backlink from a scroll.
  * Removes the go-back link from the file, preserving frontmatter/metadata.
@@ -20,24 +24,37 @@ import { formatParentBacklink } from "../format-codex-line";
  */
 export function makeStripScrollBacklinkTransform(): Transform {
 	return (content: string): string => {
+		// Extract JSON metadata section (at end of file) to preserve it
+		const jsonMetaMatch = content.match(JSON_META_PATTERN);
+		const jsonMeta = jsonMetaMatch?.[1] ?? "";
+		const contentWithoutJsonMeta = jsonMeta
+			? content.slice(0, -jsonMeta.length)
+			: content;
+
 		// Use goBackLinkHelper.strip to remove go-back link
 		// noteMetadataHelper.stripOnlyFrontmatter preserves JSON meta
-		const withoutFm = noteMetadataHelper.stripOnlyFrontmatter(content);
+		const withoutFm = noteMetadataHelper.stripOnlyFrontmatter(
+			contentWithoutJsonMeta,
+		);
 		const stripped = goBackLinkHelper.strip(withoutFm);
 
 		// Re-extract frontmatter from original to preserve it
-		const fmMatch = content.match(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/);
+		const fmMatch = contentWithoutJsonMeta.match(
+			/^---\r?\n[\s\S]*?\r?\n---\r?\n?/,
+		);
 		if (fmMatch) {
-			return `${fmMatch[0]}${stripped}`;
+			return `${fmMatch[0]}${stripped}${jsonMeta}`;
 		}
-		return stripped;
+		return `${stripped}${jsonMeta}`;
 	};
 }
 
 /**
  * Create transform that updates backlink on a scroll.
  * Scrolls link back to their parent section's codex.
- * Format: [frontmatter]\n[[backlink]]  \n\n<content>
+ * Format: [frontmatter]\n[[backlink]]  \n\n<content>\n[json-meta]
+ *
+ * IMPORTANT: Preserves JSON metadata section at end of file (contains status, navIdx, etc.)
  *
  * @param parentChain - Chain to parent section
  * @param codecs - Codec API
@@ -68,20 +85,29 @@ export function makeScrollBacklinkTransform(
 			return content;
 		}
 
+		// Extract JSON metadata section (at end of file) to preserve it
+		const jsonMetaMatch = content.match(JSON_META_PATTERN);
+		const jsonMeta = jsonMetaMatch?.[1] ?? "";
+		const contentWithoutJsonMeta = jsonMeta
+			? content.slice(0, -jsonMeta.length)
+			: content;
+
 		// Build backlink to parent section's codex
 		const backlinkLine = formatParentBacklink(parentName, parentPathParts);
 
 		// Extract frontmatter if present
-		const fmMatch = content.match(/^(---\r?\n[\s\S]*?\r?\n---\r?\n?)/);
+		const fmMatch = contentWithoutJsonMeta.match(
+			/^(---\r?\n[\s\S]*?\r?\n---\r?\n?)/,
+		);
 		const frontmatter = fmMatch?.[1] ?? "";
 		const afterFrontmatter = fmMatch
-			? content.slice(frontmatter.length)
-			: content;
+			? contentWithoutJsonMeta.slice(frontmatter.length)
+			: contentWithoutJsonMeta;
 
-		// Strip existing go-back link and metadata (except frontmatter which we handle separately)
+		// Strip existing go-back link (but not JSON metadata - that's already extracted)
 		const cleanBody = goBackLinkHelper.strip(afterFrontmatter.trimStart());
 
-		// Format: [frontmatter]\n[[backlink]]  \n\n<body>
-		return `${frontmatter}${LINE_BREAK}${backlinkLine}${SPACE_F}${LINE_BREAK}${LINE_BREAK}${cleanBody}`;
+		// Format: [frontmatter]\n[[backlink]]  \n\n<body>\n[json-meta]
+		return `${frontmatter}${LINE_BREAK}${backlinkLine}${SPACE_F}${LINE_BREAK}${LINE_BREAK}${cleanBody}${jsonMeta}`;
 	};
 }

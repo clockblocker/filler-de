@@ -41,12 +41,14 @@ export function codexActionToVaultAction(
 			};
 
 		case "WriteScrollStatus": {
-			// ProcessMdFile with transform to update metadata
-			// upsertMetadata internally uses hideMetadata setting to choose format
+			// ProcessMdFile with transform to update status while preserving other metadata
 			const status = action.payload.status;
 			// For frontmatter, "Unknown" status is treated as "NotStarted"
 			const normalizedStatus =
 				status === "Unknown" ? ("NotStarted" as const) : status;
+			// Use toggleStatus which properly merges with existing frontmatter
+			// (internally calls upsertFrontmatterStatus which reads existing metadata first)
+			const checked = normalizedStatus === "Done";
 			return {
 				kind: VaultActionKind.ProcessMdFile,
 				payload: {
@@ -55,9 +57,7 @@ export function codexActionToVaultAction(
 						action.payload.splitPath,
 						rules,
 					) as SplitPathToMdFile,
-					transform: noteMetadataHelper.upsert({
-						status: normalizedStatus,
-					}),
+					transform: noteMetadataHelper.toggleStatus(checked),
 				},
 			};
 		}

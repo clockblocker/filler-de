@@ -14,7 +14,6 @@ import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/t
 import type { VaultAction } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { VaultActionKind } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
-import { logger } from "../../../utils/logger";
 import { parsePageIndex } from "../bookkeeper/page-codec";
 import { parseSeparatedSuffix } from "../codecs/internal/suffix/parse";
 import type { CodecRules } from "../codecs/rules";
@@ -35,6 +34,7 @@ type PageInfo = {
 	coreName: string;
 	hasPrevIdx: boolean;
 	hasNextIdx: boolean;
+	needsNoteKind: boolean;
 };
 
 /**
@@ -72,8 +72,9 @@ export async function buildPageNavMigrationActions(
 		const content = contentResult.value;
 		const metadata = noteMetadataHelper.read(content, PageMetadataSchema);
 
-		// Only process files with noteKind: Page
-		if (!metadata || metadata.noteKind !== "Page") continue;
+		// Page files identified by filename pattern, not by noteKind
+		// Initialize missing/partial metadata
+		const normalizedMeta = metadata ?? {};
 
 		// Build group key: folder path + page coreName (from parsePageIndex)
 		const folderPath = file.pathParts.join("/");
@@ -89,8 +90,9 @@ export async function buildPageNavMigrationActions(
 
 		const pageInfo: PageInfo = {
 			coreName: parseResult.coreName,
-			hasNextIdx: metadata.nextPageIdx !== undefined,
-			hasPrevIdx: metadata.prevPageIdx !== undefined,
+			hasNextIdx: normalizedMeta.nextPageIdx !== undefined,
+			hasPrevIdx: normalizedMeta.prevPageIdx !== undefined,
+			needsNoteKind: normalizedMeta.noteKind !== "Page",
 			pageIndex: parseResult.pageIndex,
 			splitPath: vaultPath,
 		};
@@ -122,28 +124,25 @@ export async function buildPageNavMigrationActions(
 			// Check if migration is needed
 			const needsPrev = expectedPrevIdx !== undefined && !page.hasPrevIdx;
 			const needsNext = expectedNextIdx !== undefined && !page.hasNextIdx;
+			const needsNoteKind = page.needsNoteKind;
 
-			if (needsPrev || needsNext) {
-				logger.debug(
-					`[PageNavMigration] Migrating ${page.splitPath.basename}: ` +
-						`prev=${expectedPrevIdx}, next=${expectedNextIdx}`,
-				);
-
+			if (needsPrev || needsNext || needsNoteKind) {
 				migrationActions.push({
 					kind: VaultActionKind.ProcessMdFile,
 					payload: {
 						splitPath: page.splitPath,
 						transform: (content: string) => {
-							// Read existing metadata
-							const existing = noteMetadataHelper.read(
-								content,
-								PageMetadataSchema,
-							);
-							if (!existing) return content;
+							// Read existing metadata (may be null/partial)
+							const existing =
+								noteMetadataHelper.read(
+									content,
+									PageMetadataSchema,
+								) ?? {};
 
-							// Build updated metadata
+							// Build updated metadata with noteKind always set
 							const updated: Record<string, unknown> = {
 								...existing,
+								noteKind: "Page", // Always ensure noteKind is set
 							};
 							if (needsPrev && expectedPrevIdx !== undefined) {
 								updated.prevPageIdx = expectedPrevIdx;
