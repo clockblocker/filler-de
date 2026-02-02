@@ -16,24 +16,6 @@ export type CommandKind = z.infer<typeof CommandKindSchema>;
 export const CommandKind = CommandKindSchema.enum;
 
 /**
- * Typed payloads per command kind.
- * Each executor receives only its typed payload.
- */
-export type CommandPayloads = {
-	// Librarian commands
-	GoToNextPage: Record<string, never>;
-	GoToPrevPage: Record<string, never>;
-	SplitInBlocks: Record<string, never>; // uses context.selection
-	MakeText: Record<string, never>;
-	SplitToPages: Record<string, never>;
-
-	// Textfresser commands
-	TranslateSelection: Record<string, never>; // uses context.selection
-	Generate: Record<string, never>;
-	Lemma: Record<string, never>;
-};
-
-/**
  * Context collected once at command invocation.
  * Passed to all commands by default.
  */

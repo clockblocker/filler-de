@@ -6,17 +6,14 @@ import type { OpenedFileService } from "./opened-file-service";
 
 /**
  * Selection information from the active editor.
- * All character positions are relative to the full document content.
  */
 export type SelectionInfo = {
 	/** Selected text */
 	text: string;
 	/** File containing the selection */
-	splitPath: SplitPathToMdFile;
-	/** Character positions in document (0-indexed) */
-	range: { from: number; to: number };
+	splitPathToFileWithSelection: SplitPathToMdFile;
 	/** Full paragraph/block containing the selection (delimited by blank lines) */
-	paragraph: string;
+	surroundingBlock: string;
 };
 
 /**
@@ -55,16 +52,13 @@ export class SelectionService {
 		const selectionStart = content.indexOf(selection);
 		if (selectionStart === -1) return null;
 
-		const selectionEnd = selectionStart + selection.length;
-
-		// Extract paragraph
-		const paragraph = this.extractParagraph(content, selectionStart);
+		// Extract surrounding block
+		const surroundingBlock = this.extractParagraph(content, selectionStart);
 
 		return {
+			splitPathToFileWithSelection: splitPath,
+			surroundingBlock,
 			text: selection,
-			splitPath,
-			range: { from: selectionStart, to: selectionEnd },
-			paragraph,
 		};
 	}
 
@@ -75,26 +69,34 @@ export class SelectionService {
 	 * @returns ResultAsync indicating success/failure
 	 */
 	replace(newText: string): ResultAsync<void, string> {
-		const info = this.getInfo();
-		if (!info) {
+		// Get current active file path
+		const splitPath = this.openedFileService.mdPwd();
+		if (!splitPath) {
+			return ResultAsync.fromPromise(
+				Promise.reject(new Error("No active file")),
+				() => "No active file",
+			);
+		}
+
+		// Get selection text
+		const selection = this.openedFileService.getSelection();
+		if (!selection) {
 			return ResultAsync.fromPromise(
 				Promise.reject(new Error("No selection to replace")),
 				() => "No selection to replace",
 			);
 		}
 
-		const { splitPath, range } = info;
-
 		const action: VaultAction = {
 			kind: VaultActionKind.ProcessMdFile,
 			payload: {
 				splitPath,
 				transform: (content: string) => {
-					return (
-						content.slice(0, range.from) +
-						newText +
-						content.slice(range.to)
-					);
+					// Compute range inside transform to get fresh position
+					const from = content.indexOf(selection);
+					if (from === -1) return content; // selection not found
+					const to = from + selection.length;
+					return content.slice(0, from) + newText + content.slice(to);
 				},
 			},
 		};

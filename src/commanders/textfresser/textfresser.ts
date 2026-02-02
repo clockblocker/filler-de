@@ -10,6 +10,7 @@
  */
 
 import { err, ok, ResultAsync } from "neverthrow";
+import type { CommandContext } from "../../managers/actions-manager/types";
 import type { WikilinkClickPayload } from "../../managers/obsidian/user-event-interceptor/events";
 import {
 	type EventHandler,
@@ -53,7 +54,7 @@ export class Textfresser {
 	/**
 	 * Generate command - moves current file to sharded path and sets metadata.
 	 */
-	async generate() {
+	async generate(_context: CommandContext) {
 		const attestation = this.state.attestationForLatestNavigated;
 		if (!attestation) {
 			return err({
@@ -81,14 +82,14 @@ export class Textfresser {
 	/**
 	 * Lemma command - Out of scope
 	 */
-	lemma() {
+	lemma(_context: CommandContext) {
 		return Promise.resolve(ok(undefined));
 	}
 
 	/**
 	 * TranslateSelection command - Out of scope
 	 */
-	translateSelection() {
+	translateSelection(_context: CommandContext) {
 		return Promise.resolve(ok(undefined));
 	}
 

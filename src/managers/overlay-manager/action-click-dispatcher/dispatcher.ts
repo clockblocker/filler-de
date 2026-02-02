@@ -26,38 +26,23 @@ export async function dispatchActionClick(
 
 	switch (actionId) {
 		case CommandKind.TranslateSelection:
-			await commandExecutor({
-				kind: CommandKind.TranslateSelection,
-				payload: {},
-			});
+			await commandExecutor(CommandKind.TranslateSelection);
 			break;
 
 		case CommandKind.SplitInBlocks:
-			await commandExecutor({
-				kind: CommandKind.SplitInBlocks,
-				payload: {},
-			});
+			await commandExecutor(CommandKind.SplitInBlocks);
 			break;
 
 		case CommandKind.Generate:
-			await commandExecutor({
-				kind: CommandKind.Generate,
-				payload: {},
-			});
+			await commandExecutor(CommandKind.Generate);
 			break;
 
 		case CommandKind.GoToPrevPage:
-			await commandExecutor({
-				kind: CommandKind.GoToPrevPage,
-				payload: {},
-			});
+			await commandExecutor(CommandKind.GoToPrevPage);
 			break;
 
 		case CommandKind.GoToNextPage:
-			await commandExecutor({
-				kind: CommandKind.GoToNextPage,
-				payload: {},
-			});
+			await commandExecutor(CommandKind.GoToNextPage);
 			break;
 
 		default:

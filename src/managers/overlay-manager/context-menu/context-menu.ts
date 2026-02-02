@@ -125,10 +125,7 @@ function handleEditorMenu(
 				.setIcon("split")
 				.onClick(() => {
 					if (!commandExecutor) return;
-					void commandExecutor({
-						kind: CommandKind.MakeText,
-						payload: {},
-					});
+					void commandExecutor(CommandKind.MakeText);
 				}),
 		);
 	}

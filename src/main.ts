@@ -1,10 +1,4 @@
-import {
-	type Editor,
-	type MarkdownView,
-	Modal,
-	Notice,
-	Plugin,
-} from "obsidian";
+import { Modal, Notice, Plugin } from "obsidian";
 import { DelimiterChangeService } from "./commanders/librarian/delimiter-change-service";
 import { Librarian } from "./commanders/librarian/librarian";
 import { Textfresser } from "./commanders/textfresser/textfresser";
@@ -305,18 +299,8 @@ export default class TextEaterPlugin extends Plugin {
 		});
 
 		this.addCommand({
-			editorCheckCallback: (
-				checking: boolean,
-				editor: Editor,
-				view: MarkdownView,
-			) => {
-				const selection = editor.getSelection();
-				if (selection && view.file) {
-					if (!checking) {
-						// normalizeSelection(this, editor, view.file, selection);
-					}
-					return true;
-				}
+			editorCheckCallback: () => {
+				// TODO: normalizeSelection - command handles selection internally
 				return false;
 			},
 			id: "duplicate-selection",
@@ -327,10 +311,7 @@ export default class TextEaterPlugin extends Plugin {
 			editorCheckCallback: (checking: boolean) => {
 				if (!checking) {
 					// Selection is collected by CommandContext in executor
-					void this.commandExecutor?.({
-						kind: CommandKind.TranslateSelection,
-						payload: {},
-					});
+					void this.commandExecutor?.(CommandKind.TranslateSelection);
 				}
 				return true;
 			},
@@ -345,10 +326,7 @@ export default class TextEaterPlugin extends Plugin {
 					const selection = this.vam?.selection.getInfo();
 					if (selection) {
 						// Selection is collected by CommandContext in executor
-						void this.commandExecutor?.({
-							kind: CommandKind.SplitInBlocks,
-							payload: {},
-						});
+						void this.commandExecutor?.(CommandKind.SplitInBlocks);
 					} else {
 						tagLineCopyEmbedBehavior({
 							app: this.app,
@@ -363,14 +341,8 @@ export default class TextEaterPlugin extends Plugin {
 		});
 
 		this.addCommand({
-			editorCheckCallback: (checking: boolean, editor: Editor) => {
-				const selection = editor.getSelection();
-				if (selection) {
-					if (!checking) {
-						// insertReplyFromKeymaker(this, editor, selection);
-					}
-					return true;
-				}
+			editorCheckCallback: () => {
+				// TODO: insertReplyFromKeymaker - command handles selection internally
 				return false;
 			},
 			id: "check-ru-de-translation",
@@ -378,14 +350,8 @@ export default class TextEaterPlugin extends Plugin {
 		});
 
 		this.addCommand({
-			editorCheckCallback: (checking: boolean, editor: Editor) => {
-				const selection = editor.getSelection();
-				if (selection) {
-					if (!checking) {
-						// this.librarian.ls();
-					}
-					return true;
-				}
+			editorCheckCallback: () => {
+				// TODO: librarian.ls - command handles selection internally
 				return false;
 			},
 			id: "check-schriben",
@@ -401,10 +367,7 @@ export default class TextEaterPlugin extends Plugin {
 		this.addCommand({
 			editorCheckCallback: (checking: boolean) => {
 				if (!checking) {
-					void this.commandExecutor?.({
-						kind: CommandKind.SplitToPages,
-						payload: {},
-					});
+					void this.commandExecutor?.(CommandKind.SplitToPages);
 				}
 				return true;
 			},
