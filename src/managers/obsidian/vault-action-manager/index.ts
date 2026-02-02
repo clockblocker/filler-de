@@ -1,6 +1,6 @@
 import type { Result } from "neverthrow";
 import type { TFile, TFolder } from "obsidian";
-import type { OpenedFileService } from "./file-services/active-view/opened-file-service";
+import type { OpenedFileService } from "./file-services/active-view/writer/opened-file-writer";
 import type { DispatchResult } from "./impl/actions-processing/dispatcher";
 import {
 	makeSplitPath,
@@ -43,7 +43,7 @@ export interface VaultActionManager {
 	// Read-only operations
 	readContent(splitPath: SplitPathToMdFile): Promise<Result<string, string>>;
 	exists(splitPath: AnySplitPath): Promise<boolean>;
-	isInActiveView(splitPath: AnySplitPath): Promise<boolean>;
+	isInActiveView(splitPath: AnySplitPath): boolean;
 	list(splitPath: SplitPathToFolder): Promise<Result<AnySplitPath[], string>>;
 	listAllFilesWithMdReaders(
 		splitPath: SplitPathToFolder,
@@ -57,8 +57,8 @@ export interface VaultActionManager {
 
 	// Opened file operations (high-level, no TFile leakage)
 	getOpenedFileName(): Promise<Result<string, string>>;
-	getOpenedContent(): Promise<Result<string, string>>;
-	replaceOpenedContent(content: string): Promise<Result<string, string>>;
+	getOpenedContent(): Result<string, string>;
+	replaceOpenedContent(content: string): Result<string, string>;
 	cd(splitPath: SplitPathToMdFile): Promise<Result<void, string>>;
 
 	// Direct access to opened file service for selection operations

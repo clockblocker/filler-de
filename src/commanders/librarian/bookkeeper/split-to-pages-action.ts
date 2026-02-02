@@ -7,7 +7,7 @@ import { err, ok, type Result } from "neverthrow";
 import { Notice } from "obsidian";
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import type { VaultActionManager } from "../../../managers/obsidian/vault-action-manager";
-import type { OpenedFileService } from "../../../managers/obsidian/vault-action-manager/file-services/active-view/opened-file-service";
+import type { OpenedFileService } from "../../../managers/obsidian/vault-action-manager/file-services/active-view/writer/opened-file-writer";
 import type { SplitPathToMdFile } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import { parseSeparatedSuffix } from "../codecs/internal/suffix/parse";
 import type { CodecRules } from "../codecs/rules";

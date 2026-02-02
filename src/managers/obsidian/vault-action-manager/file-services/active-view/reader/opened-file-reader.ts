@@ -1,14 +1,25 @@
 import { err, ok, type Result } from "neverthrow";
-import { type App, MarkdownView, type TFile, type TFolder } from "obsidian";
+import {
+	type App,
+	type Editor,
+	MarkdownView,
+	type TFile,
+	type TFolder,
+} from "obsidian";
 import {
 	errorFileStale,
 	errorGetEditor,
 	errorNoActiveView,
 	errorNoFileParent,
 	errorNotInSourceMode,
-} from "../../errors";
-import { getSplitPathForAbstractFile } from "../../helpers/pathfinder";
-import type { SplitPathToMdFile } from "../../types/split-path";
+} from "../../../errors";
+import { getSplitPathForAbstractFile } from "../../../helpers/pathfinder";
+import type {
+	AnySplitPath,
+	SplitPathToMdFile,
+} from "../../../types/split-path";
+
+export type EditorWithView = { editor: Editor; view: MarkdownView };
 
 export class OpenedFileReader {
 	constructor(private app: App) {}
@@ -38,6 +49,38 @@ export class OpenedFileReader {
 				view.file ? ok(view.file) : err(errorNoActiveView()),
 			)
 			.andThen((file) => this.validateFileInVault(file));
+	}
+
+	getEditor(): Result<EditorWithView, string> {
+		return this.getActiveView()
+			.andThen((view) => this.validateFileExists(view))
+			.andThen((view) => this.validateSourceMode(view))
+			.map((view) => ({ editor: view.editor, view }));
+	}
+
+	getEditorAnyMode(): Result<EditorWithView, string> {
+		return this.getActiveView().andThen((view) =>
+			view.file
+				? ok({ editor: view.editor, view })
+				: err(errorGetEditor()),
+		);
+	}
+
+	isFileActive(splitPath: SplitPathToMdFile): Result<boolean, string> {
+		return this.pwd().map(
+			(pwd) =>
+				pwd.pathParts.length === splitPath.pathParts.length &&
+				pwd.pathParts.every(
+					(part, index) => part === splitPath.pathParts[index],
+				) &&
+				pwd.basename === splitPath.basename,
+		);
+	}
+
+	isInActiveView(splitPath: AnySplitPath): boolean {
+		if (splitPath.kind !== "MdFile") return false;
+		const result = this.isFileActive(splitPath);
+		return result.isOk() && result.value;
 	}
 
 	private getActiveView(): Result<MarkdownView, string> {

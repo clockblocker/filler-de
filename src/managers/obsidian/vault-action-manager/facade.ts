@@ -1,9 +1,9 @@
 import type { Result } from "neverthrow";
 import type { App, TFile, TFolder } from "obsidian";
 import { logger } from "../../../utils/logger";
-import { OpenedFileReader } from "./file-services/active-view/opened-file-reader";
-import type { OpenedFileService } from "./file-services/active-view/opened-file-service";
-import { OpenedFileService as OpenedFileServiceImpl } from "./file-services/active-view/opened-file-service";
+import { OpenedFileReader } from "./file-services/active-view/reader/opened-file-reader";
+import type { OpenedFileService } from "./file-services/active-view/writer/opened-file-writer";
+import { OpenedFileService as OpenedFileServiceImpl } from "./file-services/active-view/writer/opened-file-writer";
 import { TFileHelper } from "./file-services/background/helpers/tfile-helper";
 import { TFolderHelper } from "./file-services/background/helpers/tfolder-helper";
 import { ActionQueue } from "./impl/actions-processing/action-queue";
@@ -256,7 +256,7 @@ export class VaultActionManagerImpl implements VaultActionManager {
 		return this.reader.exists(splitPathArg);
 	}
 
-	isInActiveView(splitPathArg: AnySplitPath): Promise<boolean> {
+	isInActiveView(splitPathArg: AnySplitPath): boolean {
 		return this.opened.isInActiveView(splitPathArg);
 	}
 
@@ -298,11 +298,11 @@ export class VaultActionManagerImpl implements VaultActionManager {
 		return result.map((f) => f.name);
 	}
 
-	getOpenedContent(): Promise<Result<string, string>> {
+	getOpenedContent(): Result<string, string> {
 		return this.opened.getContent();
 	}
 
-	replaceOpenedContent(content: string): Promise<Result<string, string>> {
+	replaceOpenedContent(content: string): Result<string, string> {
 		return this.opened.replaceAllContentInOpenedFile(content);
 	}
 

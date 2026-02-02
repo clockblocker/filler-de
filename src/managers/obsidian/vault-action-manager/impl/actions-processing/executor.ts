@@ -1,7 +1,7 @@
 import { err, ok } from "neverthrow";
 import type { Vault } from "obsidian";
 import { logger } from "../../../../../utils/logger";
-import type { OpenedFileService } from "../../file-services/active-view/opened-file-service";
+import type { OpenedFileService } from "../../file-services/active-view/writer/opened-file-writer";
 import type { TFileHelper } from "../../file-services/background/helpers/tfile-helper";
 import type { TFolderHelper } from "../../file-services/background/helpers/tfolder-helper";
 import {

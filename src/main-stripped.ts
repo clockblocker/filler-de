@@ -3,7 +3,7 @@
  * Used by settings and legacy code that doesn't need the full plugin.
  */
 import type { Plugin } from "obsidian";
-import type { OpenedFileService } from "./managers/obsidian/vault-action-manager/file-services/active-view/opened-file-service";
+import type { OpenedFileService } from "./managers/obsidian/vault-action-manager/file-services/active-view/writer/opened-file-writer";
 import type { TextEaterSettings } from "./types";
 
 /**
