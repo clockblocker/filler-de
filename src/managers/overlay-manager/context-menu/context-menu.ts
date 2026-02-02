@@ -7,7 +7,7 @@
  * - Scroll would split to multiple pages
  */
 
-import { type App, MarkdownView, type Menu, type Plugin } from "obsidian";
+import { type App, type Menu, type Plugin } from "obsidian";
 import { z } from "zod";
 import { wouldSplitToMultiplePages as checkWouldSplit } from "../../../commanders/librarian/bookkeeper/segmenter";
 import { makeCodecRulesFromSettings } from "../../../commanders/librarian/codecs/rules";
@@ -19,7 +19,7 @@ import {
 } from "../../../types/common-interface/enums";
 import type { CommandExecutor } from "../../actions-manager/create-command-executor";
 import { CommandKind } from "../../actions-manager/types";
-import { makeSplitPath } from "../../obsidian/vault-action-manager";
+import type { VaultActionManager } from "../../obsidian/vault-action-manager";
 
 /** Schema for reading noteKind from file metadata. */
 const FileTypeMetadataSchema = z.object({
@@ -30,6 +30,7 @@ export type ContextMenuDeps = {
 	app: App;
 	plugin: Plugin;
 	commandExecutor: CommandExecutor | null;
+	vam: VaultActionManager;
 };
 
 /**
@@ -37,10 +38,10 @@ export type ContextMenuDeps = {
  * Returns teardown function for cleanup.
  */
 export function setupContextMenu(deps: ContextMenuDeps): () => void {
-	const { app, plugin, commandExecutor } = deps;
+	const { app, plugin, commandExecutor, vam } = deps;
 
 	const eventRef = app.workspace.on("editor-menu", (menu: Menu) => {
-		handleEditorMenu(menu, app, commandExecutor);
+		handleEditorMenu(menu, vam, commandExecutor);
 	});
 
 	plugin.registerEvent(eventRef);
@@ -53,34 +54,38 @@ export function setupContextMenu(deps: ContextMenuDeps): () => void {
 
 /**
  * Handle editor menu event synchronously.
- * Uses editor.getValue() for synchronous content access.
+ * Uses vam.getOpenedContent() for content access.
  */
 function handleEditorMenu(
 	menu: Menu,
-	app: App,
+	vam: VaultActionManager,
 	commandExecutor: CommandExecutor | null,
 ): void {
-	const view = app.workspace.getActiveViewOfType(MarkdownView);
-	const file = view?.file;
-	const editor = view?.editor;
-	if (!file || !editor) return;
+	const splitPath = vam.mdPwd();
+	if (!splitPath) return;
 
 	// Check if in library
 	let isInLibrary = false;
 	try {
 		const { splitPathToLibraryRoot } = getParsedUserSettings();
-		const libraryPath = splitPathToLibraryRoot.pathParts.join("/");
+		const libraryPathParts = splitPathToLibraryRoot.pathParts;
+		// Check if splitPath starts with library path parts
 		isInLibrary =
-			file.path.startsWith(`${libraryPath}/`) ||
-			file.path.startsWith(libraryPath);
+			splitPath.pathParts.length >= libraryPathParts.length &&
+			libraryPathParts.every(
+				(part, i) => splitPath.pathParts[i] === part,
+			);
 	} catch {
 		isInLibrary = false;
 	}
 
 	if (!isInLibrary) return;
 
-	// Get file content synchronously from editor
-	const content = editor.getValue();
+	// Get file content from VAM
+	const contentResult = vam.getOpenedContent();
+	if (contentResult.isErr()) return;
+
+	const content = contentResult.value;
 
 	// Read file metadata to determine type
 	let fileType: FileType | null = null;
@@ -97,7 +102,6 @@ function handleEditorMenu(
 		if (fileType === FileType.Scroll || fileType === null) {
 			const settings = getParsedUserSettings();
 			const rules = makeCodecRulesFromSettings(settings);
-			const splitPath = makeSplitPath(file.path);
 			wouldSplitToMultiplePages = checkWouldSplit(
 				content,
 				splitPath.basename,

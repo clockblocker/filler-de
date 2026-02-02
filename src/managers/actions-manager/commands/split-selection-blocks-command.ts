@@ -1,37 +1,52 @@
 import { splitStrInBlocks } from "../../../commanders/librarian/bookkeeper/segmenter/block-marker/split-str-in-blocks";
 import { blockIdHelper } from "../../../stateless-helpers/block-id";
-
-export type SplitInBlocksPayload = {
-	selection: string;
-	fileContent: string;
-};
+import type { VaultActionManager } from "../../obsidian/vault-action-manager";
+import type { CommandContext } from "../types";
 
 export type SplitInBlocksDeps = {
-	replaceSelection: (text: string) => void;
+	vam: VaultActionManager;
 	notify: (message: string) => void;
 };
 
 /**
  * Splits selected text into blocks with Obsidian block markers (^N).
  * Finds highest existing block ID in file and continues numbering from there.
+ * Uses vam.selection.replace() for action-based replacement.
  */
-export function splitSelectionBlocksCommand(
-	payload: SplitInBlocksPayload,
+export async function splitSelectionBlocksCommand(
+	context: CommandContext,
 	deps: SplitInBlocksDeps,
-): void {
-	const { selection, fileContent } = payload;
-	const { replaceSelection, notify } = deps;
+): Promise<void> {
+	const { vam, notify } = deps;
+	const { selection } = context;
 
-	if (!selection?.trim()) {
+	if (!selection?.text?.trim()) {
 		notify("No text selected");
 		return;
 	}
 
+	// Get file content for finding highest block ID
+	const contentResult = vam.getOpenedContent();
+	if (contentResult.isErr()) {
+		notify(`Error: ${contentResult.error}`);
+		return;
+	}
+
+	const fileContent = contentResult.value;
 	const highestBlockNumber = blockIdHelper.findHighestNumber(fileContent);
 	const startIndex = highestBlockNumber + 1;
 
-	const { markedText, blockCount } = splitStrInBlocks(selection, startIndex);
+	const { markedText, blockCount } = splitStrInBlocks(
+		selection.text,
+		startIndex,
+	);
 
-	replaceSelection(markedText);
+	const result = await vam.selection.replace(markedText);
+
+	if (result.isErr()) {
+		notify(`Error: ${result.error}`);
+		return;
+	}
+
 	notify(`Split into ${blockCount} blocks`);
 }

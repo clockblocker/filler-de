@@ -1,6 +1,6 @@
-import type { Result, ResultAsync } from "neverthrow";
+import type { Result } from "neverthrow";
 import type { OpenedFileService } from "./file-services/active-view/opened-file-service";
-import type { DiscriminatedTAbstractFile } from "./helpers/pathfinder/types";
+import type { SelectionService } from "./file-services/active-view/selection-service";
 import type { DispatchResult } from "./impl/actions-processing/dispatcher";
 import {
 	makeSplitPath,
@@ -51,24 +51,22 @@ export interface VaultActionManager {
 	pwd(): Result<SplitPathToAnyFile, string>;
 	mdPwd(): SplitPathToMdFile | null;
 
-	getAbstractFile<SP extends AnySplitPath>(
-		splitPath: SP,
-	): Result<DiscriminatedTAbstractFile<SP>, string>;
-
 	// Opened file operations (high-level, no TFile leakage)
-	getOpenedFileName(): Promise<Result<string, string>>;
 	getOpenedContent(): Result<string, string>;
-	replaceOpenedContent(content: string): ResultAsync<string, string>;
 	cd(splitPath: SplitPathToMdFile): Promise<Result<void, string>>;
 
 	// Direct access to opened file service for selection operations
 	readonly openedFileService: OpenedFileService;
+
+	// Selection operations
+	readonly selection: SelectionService;
 }
 
 export { makeSystemPathForSplitPath };
 export { makeSplitPath };
 
 export { VaultActionManagerImpl } from "./facade";
+export type { SelectionInfo } from "./file-services/active-view/selection-service";
 export type {
 	DebugTraceEntry,
 	DispatchError,

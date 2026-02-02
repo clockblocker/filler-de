@@ -1,19 +1,17 @@
 import { logger } from "../../../utils/logger";
-
-export type TranslateSelectionPayload = {
-	selection: string;
-};
+import type { CommandContext } from "../types";
 
 export type TranslateSelectionDeps = Record<string, never>;
 
 /**
  * Translate selected text.
+ * Uses context.selection from VAM.
  */
 export async function translateSelectionCommand(
-	payload: TranslateSelectionPayload,
+	context: CommandContext,
 	_deps: TranslateSelectionDeps,
 ): Promise<void> {
-	const { selection } = payload;
+	const selection = context.selection?.text;
 	logger.info(
 		`[translateSelectionCommand] selection: ${JSON.stringify(selection)}`,
 	);

@@ -129,6 +129,7 @@ export class OverlayManager {
 				app: this.app,
 				commandExecutor: this.commandExecutor,
 				plugin: this.plugin,
+				vam: this.vam,
 			});
 		}
 

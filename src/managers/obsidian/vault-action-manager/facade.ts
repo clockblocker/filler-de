@@ -1,10 +1,10 @@
-import type { Result, ResultAsync } from "neverthrow";
+import type { Result } from "neverthrow";
 import type { App } from "obsidian";
 import { logger } from "../../../utils/logger";
 import { OpenedFileService } from "./file-services/active-view/opened-file-service";
+import { SelectionService } from "./file-services/active-view/selection-service";
 import { TFileHelper } from "./file-services/background/helpers/tfile-helper";
 import { TFolderHelper } from "./file-services/background/helpers/tfolder-helper";
-import type { DiscriminatedTAbstractFile } from "./helpers/pathfinder/types";
 import { ActionQueue } from "./impl/actions-processing/action-queue";
 import type {
 	DispatcherDebugState,
@@ -48,6 +48,8 @@ export class VaultActionManagerImpl implements VaultActionManager {
 	private isBulkListening = false;
 	private listeningRequested = false;
 	private readonly app: App;
+
+	private readonly _selection: SelectionService;
 
 	constructor(app: App) {
 		this.app = app;
@@ -94,6 +96,9 @@ export class VaultActionManagerImpl implements VaultActionManager {
 		this.bulkEventEmmiter = new BulkEventEmmiter(
 			app,
 			this.selfEventTracker,
+		);
+		this._selection = new SelectionService(this.opened, (actions) =>
+			this.dispatch(actions),
 		);
 	}
 
@@ -274,27 +279,12 @@ export class VaultActionManagerImpl implements VaultActionManager {
 		return this.opened.mdPwd();
 	}
 
-	getAbstractFile<SP extends AnySplitPath>(
-		splitPathArg: SP,
-	): Result<DiscriminatedTAbstractFile<SP>, string> {
-		return this.reader.getAbstractFile(splitPathArg);
-	}
-
 	// ─────────────────────────────────────────────────────────────────────────
 	// Opened file operations (high-level, no TFile leakage)
 	// ─────────────────────────────────────────────────────────────────────────
 
-	async getOpenedFileName(): Promise<Result<string, string>> {
-		const result = await this.opened.getOpenedTFile();
-		return result.map((f) => f.name);
-	}
-
 	getOpenedContent(): Result<string, string> {
 		return this.opened.getContent();
-	}
-
-	replaceOpenedContent(content: string): ResultAsync<string, string> {
-		return this.opened.replaceAllContentInOpenedFile(content);
 	}
 
 	async cd(splitPath: SplitPathToMdFile): Promise<Result<void, string>> {
@@ -304,6 +294,10 @@ export class VaultActionManagerImpl implements VaultActionManager {
 
 	get openedFileService(): OpenedFileService {
 		return this.opened;
+	}
+
+	get selection(): SelectionService {
+		return this._selection;
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────

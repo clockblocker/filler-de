@@ -324,15 +324,13 @@ export default class TextEaterPlugin extends Plugin {
 		});
 
 		this.addCommand({
-			editorCheckCallback: (checking: boolean, editor: Editor) => {
+			editorCheckCallback: (checking: boolean) => {
 				if (!checking) {
-					const selection = editor.getSelection();
-					if (selection) {
-						void this.commandExecutor?.({
-							kind: CommandKind.TranslateSelection,
-							payload: { selection },
-						});
-					}
+					// Selection is collected by CommandContext in executor
+					void this.commandExecutor?.({
+						kind: CommandKind.TranslateSelection,
+						payload: {},
+					});
 				}
 				return true;
 			},
@@ -341,13 +339,15 @@ export default class TextEaterPlugin extends Plugin {
 		});
 
 		this.addCommand({
-			editorCheckCallback: (checking: boolean, editor: Editor) => {
+			editorCheckCallback: (checking: boolean) => {
 				if (!checking) {
-					const selection = editor.getSelection();
+					// Check if there's a selection via VAM
+					const selection = this.vam?.selection.getInfo();
 					if (selection) {
+						// Selection is collected by CommandContext in executor
 						void this.commandExecutor?.({
 							kind: CommandKind.SplitInBlocks,
-							payload: { fileContent: "", selection },
+							payload: {},
 						});
 					} else {
 						tagLineCopyEmbedBehavior({
