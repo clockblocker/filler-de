@@ -4,7 +4,10 @@ import { logger } from "../../../../../utils/logger";
 import type { OpenedFileService } from "../../file-services/active-view/opened-file-service";
 import type { TFileHelper } from "../../file-services/background/helpers/tfile-helper";
 import type { TFolderHelper } from "../../file-services/background/helpers/tfolder-helper";
-import { pathfinder, type MdFileWithContentDto } from "../../helpers/pathfinder";
+import {
+	type MdFileWithContentDto,
+	pathfinder,
+} from "../../helpers/pathfinder";
 import type { SplitPathToMdFile } from "../../types/split-path";
 import { type VaultAction, VaultActionKind } from "../../types/vault-action";
 import { makeSystemPathForSplitPath } from "../common/split-path-and-system-path";

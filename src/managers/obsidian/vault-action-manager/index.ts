@@ -9,6 +9,7 @@ import {
 import type { BulkVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk/bulk-vault-event";
 import type {
 	AnySplitPath,
+	SplitPathToAnyFile,
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
@@ -48,7 +49,7 @@ export interface VaultActionManager {
 	listAllFilesWithMdReaders(
 		splitPath: SplitPathToFolder,
 	): Result<SplitPathWithReader[], string>;
-	pwd(): Result<SplitPathToFile | SplitPathToMdFile, string>;
+	pwd(): Result<SplitPathToAnyFile, string>;
 	mdPwd(): SplitPathToMdFile | null;
 
 	getAbstractFile<SP extends AnySplitPath>(

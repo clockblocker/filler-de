@@ -1,4 +1,4 @@
-import { err, ok, type Result } from "neverthrow";
+import { err, ok, type Result, type ResultAsync } from "neverthrow";
 import { type App, MarkdownView, TFile } from "obsidian";
 import { DomSelectors } from "../../../../../utils/dom-selectors";
 import {
@@ -107,7 +107,7 @@ export class OpenedFileService {
 	processContent(args: {
 		splitPath: SplitPathToMdFile;
 		transform: Transform;
-	}): Promise<Result<string, string>> {
+	}): ResultAsync<string, string> {
 		return this.writer.processContent(args);
 	}
 
@@ -116,11 +116,9 @@ export class OpenedFileService {
 	// ─────────────────────────────────────────────────────────────────────────
 
 	public async cd(file: TFile): Promise<Result<TFile, string>>;
+	public async cd(file: SplitPathToAnyFile): Promise<Result<TFile, string>>;
 	public async cd(
-		file: SplitPathToFile | SplitPathToMdFile,
-	): Promise<Result<TFile, string>>;
-	public async cd(
-		file: TFile | SplitPathToFile | SplitPathToMdFile,
+		file: TFile | SplitPathToAnyFile,
 	): Promise<Result<TFile, string>> {
 		let tfile: TFile;
 		if (

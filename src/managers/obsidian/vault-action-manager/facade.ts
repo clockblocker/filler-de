@@ -26,7 +26,6 @@ import type {
 import type {
 	AnySplitPath,
 	SplitPathToAnyFile,
-	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
 	SplitPathWithReader,
