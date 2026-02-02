@@ -67,7 +67,11 @@ async function gatherInput(
 	if (pwdResult.isErr()) {
 		return err(makeSplitToPagesError.noPwd(String(pwdResult.error)));
 	}
-	const sourcePath = pwdResult.value;
+	const maybePath = pwdResult.value;
+	if (maybePath.kind !== "MdFile") {
+		return err(makeSplitToPagesError.noPwd("Active file is not a markdown file"));
+	}
+	const sourcePath = maybePath;
 
 	const contentResult = await openedFileService.getContent();
 	if (contentResult.isErr()) {

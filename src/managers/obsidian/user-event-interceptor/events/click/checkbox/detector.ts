@@ -59,11 +59,8 @@ export class CheckboxClickedDetector {
 		if (!this.isTaskCheckbox(target)) return;
 
 		// Get current file path
-		const pwdResult = await this.vam.pwd();
-		if (pwdResult.isErr()) return;
-
-		const splitPath = pwdResult.value;
-		if (splitPath.kind !== "MdFile") return;
+		const splitPath = this.vam.mdPwd();
+		if (!splitPath) return;
 
 		const checkbox = target as HTMLInputElement;
 

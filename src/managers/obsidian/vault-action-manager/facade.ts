@@ -25,6 +25,7 @@ import type {
 } from "./index";
 import type {
 	AnySplitPath,
+	SplitPathToAnyFile,
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
@@ -266,7 +267,7 @@ export class VaultActionManagerImpl implements VaultActionManager {
 		return this.reader.listAllFilesWithMdReaders(splitPathArg);
 	}
 
-	pwd(): Result<SplitPathToFile | SplitPathToMdFile, string> {
+	pwd(): Result<SplitPathToAnyFile, string> {
 		return this.opened.pwd();
 	}
 

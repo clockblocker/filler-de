@@ -86,11 +86,8 @@ export class WikilinkClickDetector {
 		}
 
 		// Get current file path
-		const pwdResult = await this.vam.pwd();
-		if (pwdResult.isErr()) return;
-
-		const splitPath = pwdResult.value;
-		if (splitPath.kind !== "MdFile") return;
+		const splitPath = this.vam.mdPwd();
+		if (!splitPath) return;
 
 		// Extract link data
 		const wikiTarget = this.extractLinkData(linkElement, target);

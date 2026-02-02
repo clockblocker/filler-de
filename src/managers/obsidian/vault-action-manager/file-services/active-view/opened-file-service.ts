@@ -1,5 +1,5 @@
 import { err, ok, type Result } from "neverthrow";
-import { type App, MarkdownView, TFile, type TFolder } from "obsidian";
+import { type App, MarkdownView, TFile } from "obsidian";
 import { DomSelectors } from "../../../../../utils/dom-selectors";
 import {
 	errorInvalidCdArgument,
@@ -9,6 +9,7 @@ import {
 import { makeSystemPathForSplitPath } from "../../impl/common/split-path-and-system-path";
 import type {
 	AnySplitPath,
+	SplitPathToAnyFile,
 	SplitPathToFile,
 	SplitPathToMdFile,
 } from "../../types/split-path";
@@ -35,7 +36,7 @@ export class OpenedFileService {
 	// Reader delegations
 	// ─────────────────────────────────────────────────────────────────────────
 
-	pwd(): Result<SplitPathToMdFile, string> {
+	pwd(): Result<SplitPathToAnyFile, string> {
 		return this.reader.pwd();
 	}
 
