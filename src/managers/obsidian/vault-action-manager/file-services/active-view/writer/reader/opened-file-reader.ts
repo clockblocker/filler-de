@@ -24,7 +24,7 @@ export type EditorWithView = { editor: Editor; view: MarkdownView };
 export class OpenedFileReader {
 	constructor(private app: App) {}
 
-	pwd(): Result<SplitPathToMdFile, string> {
+	pwd() {
 		return this.getOpenedTFile().map((file) =>
 			pathfinder.splitPathFromAbstract(file),
 		);

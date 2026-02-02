@@ -94,7 +94,9 @@ export class SelfEventTracker {
 			case VaultActionKind.TrashFolder:
 				// TrashFolder needs prefix matching to filter child file delete events
 				return [
-					pathfinder.systemPathFromSplitPath(action.payload.splitPath),
+					pathfinder.systemPathFromSplitPath(
+						action.payload.splitPath,
+					),
 				];
 
 			case VaultActionKind.RenameFolder:
@@ -102,7 +104,9 @@ export class SelfEventTracker {
 				// Obsidian emits rename events with oldPath under the source prefix.
 				// Tracking the destination prefix would incorrectly filter out
 				// user-created files in the renamed folder.
-				return [pathfinder.systemPathFromSplitPath(action.payload.from)];
+				return [
+					pathfinder.systemPathFromSplitPath(action.payload.from),
+				];
 
 			default:
 				return [];
@@ -152,14 +156,18 @@ export class SelfEventTracker {
 				// Parent folders either already exist or are explicitly created via CreateFolder.
 				// Tracking parent folders caused user folder operations to be incorrectly filtered.
 				return [
-					pathfinder.systemPathFromSplitPath(action.payload.splitPath),
+					pathfinder.systemPathFromSplitPath(
+						action.payload.splitPath,
+					),
 				];
 
 			case VaultActionKind.TrashFolder:
 			case VaultActionKind.TrashFile:
 			case VaultActionKind.TrashMdFile:
 				return [
-					pathfinder.systemPathFromSplitPath(action.payload.splitPath),
+					pathfinder.systemPathFromSplitPath(
+						action.payload.splitPath,
+					),
 				];
 
 			case VaultActionKind.RenameFolder:
@@ -199,7 +207,8 @@ export class SelfEventTracker {
 		const { pathParts } = splitPath;
 		for (let i = 1; i < pathParts.length; i++) {
 			const parentPathParts = pathParts.slice(0, i);
-			const parentPath = pathfinder.pathToFolderFromPathParts(parentPathParts);
+			const parentPath =
+				pathfinder.pathToFolderFromPathParts(parentPathParts);
 			if (parentPath) {
 				paths.push(parentPath);
 			}

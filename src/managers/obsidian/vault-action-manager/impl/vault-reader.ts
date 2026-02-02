@@ -1,5 +1,5 @@
 import { err, ok, type Result, ResultAsync } from "neverthrow";
-import { type TFile, TFolder, type Vault } from "obsidian";
+import type { TFile, TFolder, Vault } from "obsidian";
 import { logger } from "../../../../utils/logger";
 import type { OpenedFileService } from "../file-services/active-view/opened-file-service";
 import type { TFileHelper } from "../file-services/background/helpers/tfile-helper";
@@ -8,7 +8,6 @@ import { pathfinder } from "../helpers/pathfinder";
 import type { DiscriminatedTAbstractFile } from "../helpers/pathfinder/types";
 import type {
 	AnySplitPath,
-	SplitPathToFile,
 	SplitPathToFileWithTRef,
 	SplitPathToFolder,
 	SplitPathToFolderWithTRef,
@@ -117,10 +116,6 @@ export class VaultReader {
 		}
 
 		return ok(all);
-	}
-
-	pwd(): Result<SplitPathToFile | SplitPathToMdFile, string> {
-		return this.opened.pwd();
 	}
 
 	async getAbstractFile<SP extends AnySplitPath>(

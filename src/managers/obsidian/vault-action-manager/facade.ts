@@ -271,14 +271,11 @@ export class VaultActionManagerImpl implements VaultActionManager {
 	}
 
 	pwd(): Result<SplitPathToFile | SplitPathToMdFile, string> {
-		return this.reader.pwd();
+		return this.opened.pwd();
 	}
 
 	mdPwd(): SplitPathToMdFile | null {
-		const result = this.reader.pwd();
-		if (result.isErr()) return null;
-		const path = result.value;
-		return path.kind === "MdFile" ? path : null;
+		return this.opened.mdPwd();
 	}
 
 	getAbstractFile<SP extends AnySplitPath>(

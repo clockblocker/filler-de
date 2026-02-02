@@ -12,11 +12,14 @@ import {
 	errorTypeMismatch,
 	errorWriteFailed,
 } from "../../../errors";
-import { pathfinder, type MdFileWithContentDto } from "../../../helpers/pathfinder";
+import {
+	type MdFileWithContentDto,
+	pathfinder,
+} from "../../../helpers/pathfinder";
 import {
 	type SplitPathFromTo,
 	SplitPathKind,
-	type SplitPathToFile,
+	type SplitPathToAnyFile,
 	type SplitPathToMdFile,
 } from "../../../types/split-path";
 import type { Transform } from "../../../types/vault-action";
@@ -39,7 +42,7 @@ export class TFileHelper {
 		this.fileManager = fileManager;
 	}
 
-	async getFile<SPF extends SplitPathToMdFile | SplitPathToFile>(
+	async getFile<SPF extends SplitPathToAnyFile>(
 		splitPath: SPF,
 	): Promise<Result<TFile, string>> {
 		const systemPath = pathfinder.systemPathFromSplitPath(splitPath);
@@ -91,7 +94,7 @@ export class TFileHelper {
 		}
 	}
 
-	async trashFile<SPF extends SplitPathToMdFile | SplitPathToFile>(
+	async trashFile<SPF extends SplitPathToAnyFile>(
 		splitPath: SPF,
 	): Promise<Result<void, string>> {
 		const fileResult = await this.getFile(splitPath);
@@ -103,7 +106,7 @@ export class TFileHelper {
 		return ok(undefined);
 	}
 
-	async renameFile<SPF extends SplitPathToMdFile | SplitPathToFile>({
+	async renameFile<SPF extends SplitPathToAnyFile>({
 		from,
 		to,
 		collisionStrategy = "rename",

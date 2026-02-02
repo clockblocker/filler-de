@@ -48,6 +48,13 @@ export class OpenedFileService {
 		return this.reader.pwd();
 	}
 
+	mdPwd(): SplitPathToMdFile | null {
+		const result = this.reader.pwd();
+		if (result.isErr()) return null;
+		const path = result.value;
+		return path.kind === "MdFile" ? path : null;
+	}
+
 	getOpenedTFile(): Result<TFile, string> {
 		return this.reader.getOpenedTFile();
 	}
