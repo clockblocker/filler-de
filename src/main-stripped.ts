@@ -3,7 +3,7 @@
  * Used by settings and legacy code that doesn't need the full plugin.
  */
 import type { Plugin } from "obsidian";
-import type { OpenedFileWriter } from "./managers/obsidian/vault-action-manager/file-services/active-view/writer/opened-file-writer";
+import type { OpenedFileService } from "./managers/obsidian/vault-action-manager/file-services/active-view/opened-file-service";
 import type { TextEaterSettings } from "./types";
 
 /**
@@ -12,6 +12,6 @@ import type { TextEaterSettings } from "./types";
  */
 export default interface TextEaterPluginStripped extends Plugin {
 	settings: TextEaterSettings;
-	openedFileService?: OpenedFileWriter;
+	openedFileService?: OpenedFileService;
 	saveSettings(): Promise<void>;
 }

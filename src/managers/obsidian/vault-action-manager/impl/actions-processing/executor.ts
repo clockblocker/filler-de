@@ -1,7 +1,7 @@
 import { err, ok } from "neverthrow";
 import type { Vault } from "obsidian";
 import { logger } from "../../../../../utils/logger";
-import type { OpenedFileWriter } from "../../file-services/active-view/writer/opened-file-writer";
+import type { OpenedFileService } from "../../file-services/active-view/opened-file-service";
 import type { TFileHelper } from "../../file-services/background/helpers/tfile-helper";
 import type { TFolderHelper } from "../../file-services/background/helpers/tfolder-helper";
 import {
@@ -16,7 +16,7 @@ export class Executor {
 	constructor(
 		private readonly tfileHelper: TFileHelper,
 		private readonly tfolderHelper: TFolderHelper,
-		private readonly opened: OpenedFileWriter,
+		private readonly opened: OpenedFileService,
 		private readonly vault: Vault,
 	) {}
 

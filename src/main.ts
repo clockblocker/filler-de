@@ -26,11 +26,7 @@ import {
 	makeSystemPathForSplitPath,
 	VaultActionManagerImpl,
 } from "./managers/obsidian/vault-action-manager";
-import {
-	OpenedFileWriter as OpenedFileServiceWithResult,
-	OpenedFileWriter,
-} from "./managers/obsidian/vault-action-manager/file-services/active-view/writer/opened-file-writer";
-import { OpenedFileReader } from "./managers/obsidian/vault-action-manager/file-services/active-view/writer/reader/opened-file-reader";
+import { OpenedFileService } from "./managers/obsidian/vault-action-manager/file-services/active-view/opened-file-service";
 import { TFileHelper } from "./managers/obsidian/vault-action-manager/file-services/background/helpers/tfile-helper";
 import { TFolderHelper } from "./managers/obsidian/vault-action-manager/file-services/background/helpers/tfolder-helper";
 import { logError } from "./managers/obsidian/vault-action-manager/helpers/issue-handlers";
@@ -56,7 +52,7 @@ import { logger } from "./utils/logger";
 export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;
 	apiService: ApiService;
-	testingOpenedFileServiceWithResult: OpenedFileServiceWithResult;
+	testingOpenedFileServiceWithResult: OpenedFileService;
 	testingReader: Reader;
 	testingTFileHelper: TFileHelper;
 	testingTFolderHelper: TFolderHelper;
@@ -171,9 +167,7 @@ export default class TextEaterPlugin extends Plugin {
 
 		this.apiService = new ApiService(this.settings);
 
-		const testingOpenedFileReader = new OpenedFileReader(this.app);
-		this.testingOpenedFileServiceWithResult =
-			new OpenedFileServiceWithResult(this.app, testingOpenedFileReader);
+		this.testingOpenedFileServiceWithResult = new OpenedFileService(this.app);
 		this.testingTFileHelper = new TFileHelper({
 			fileManager: this.app.fileManager,
 			vault: this.app.vault,
@@ -182,12 +176,8 @@ export default class TextEaterPlugin extends Plugin {
 			fileManager: this.app.fileManager,
 			vault: this.app.vault,
 		});
-		const testingOpenedFileService = new OpenedFileWriter(
-			this.app,
-			testingOpenedFileReader,
-		);
 		this.testingReader = new Reader(
-			testingOpenedFileService,
+			this.testingOpenedFileServiceWithResult,
 			this.testingTFileHelper,
 			this.testingTFolderHelper,
 			this.app.vault,

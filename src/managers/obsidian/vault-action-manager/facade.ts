@@ -1,9 +1,7 @@
 import type { Result } from "neverthrow";
 import type { App, TFile, TFolder } from "obsidian";
 import { logger } from "../../../utils/logger";
-import type { OpenedFileWriter } from "./file-services/active-view/writer/opened-file-writer";
-import { OpenedFileWriter as OpenedFileServiceImpl } from "./file-services/active-view/writer/opened-file-writer";
-import { OpenedFileReader } from "./file-services/active-view/writer/reader/opened-file-reader";
+import { OpenedFileService } from "./file-services/active-view/opened-file-service";
 import { TFileHelper } from "./file-services/background/helpers/tfile-helper";
 import { TFolderHelper } from "./file-services/background/helpers/tfolder-helper";
 import { ActionQueue } from "./impl/actions-processing/action-queue";
@@ -34,7 +32,7 @@ import type {
 import type { VaultAction } from "./types/vault-action";
 
 export class VaultActionManagerImpl implements VaultActionManager {
-	private readonly opened: OpenedFileWriter;
+	private readonly opened: OpenedFileService;
 	private readonly reader: Reader;
 	private readonly dispatcher: Dispatcher;
 	private readonly selfEventTracker: SelfEventTracker;
@@ -52,8 +50,7 @@ export class VaultActionManagerImpl implements VaultActionManager {
 
 	constructor(app: App) {
 		this.app = app;
-		const openedFileReader = new OpenedFileReader(app);
-		this.opened = new OpenedFileServiceImpl(app, openedFileReader);
+		this.opened = new OpenedFileService(app);
 		const tfileHelper = new TFileHelper({
 			fileManager: app.fileManager,
 			vault: app.vault,
@@ -311,7 +308,7 @@ export class VaultActionManagerImpl implements VaultActionManager {
 		return result.map(() => undefined);
 	}
 
-	get openedFileService(): OpenedFileWriter {
+	get openedFileService(): OpenedFileService {
 		return this.opened;
 	}
 
