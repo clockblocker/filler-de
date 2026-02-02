@@ -1,9 +1,9 @@
 import { err, ok, type Result } from "neverthrow";
-import { type App, MarkdownView, type TFile } from "obsidian";
-import { DomSelectors } from "../../../../../../utils/dom-selectors";
+import type { App, TFile } from "obsidian";
 import { errorNoTFileFound, errorOpenFileFailed } from "../../../errors";
 import { pathfinder } from "../../../helpers/pathfinder";
 import type { SplitPathToAnyFile } from "../../../types/split-path";
+import { waitForViewReady } from "../view-utils/wait-for-view-ready";
 
 function isTFile(file: TFile | SplitPathToAnyFile): file is TFile {
 	return "vault" in file && "stat" in file;
@@ -70,40 +70,4 @@ export async function cd(
 			),
 		);
 	}
-}
-
-function waitForViewReady(
-	app: App,
-	tfile: TFile,
-	timeoutMs = 500,
-): Promise<void> {
-	return new Promise((resolve) => {
-		const checkView = () => {
-			const view = app.workspace.getActiveViewOfType(MarkdownView);
-			const hasContainer = view?.contentEl.querySelector(
-				DomSelectors.CM_CONTENT_CONTAINER,
-			);
-			const pathMatch = view?.file?.path === tfile.path;
-			return pathMatch && hasContainer;
-		};
-
-		if (checkView()) {
-			resolve();
-			return;
-		}
-
-		const observer = new MutationObserver(() => {
-			if (checkView()) {
-				observer.disconnect();
-				resolve();
-			}
-		});
-
-		observer.observe(document.body, { childList: true, subtree: true });
-
-		setTimeout(() => {
-			observer.disconnect();
-			resolve();
-		}, timeoutMs);
-	});
 }
