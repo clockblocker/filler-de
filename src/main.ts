@@ -26,11 +26,11 @@ import {
 	makeSystemPathForSplitPath,
 	VaultActionManagerImpl,
 } from "./managers/obsidian/vault-action-manager";
-import { OpenedFileReader } from "./managers/obsidian/vault-action-manager/file-services/active-view/reader/opened-file-reader";
 import {
 	OpenedFileService,
 	OpenedFileService as OpenedFileServiceWithResult,
 } from "./managers/obsidian/vault-action-manager/file-services/active-view/writer/opened-file-writer";
+import { OpenedFileReader } from "./managers/obsidian/vault-action-manager/file-services/active-view/writer/reader/opened-file-reader";
 import { TFileHelper } from "./managers/obsidian/vault-action-manager/file-services/background/helpers/tfile-helper";
 import { TFolderHelper } from "./managers/obsidian/vault-action-manager/file-services/background/helpers/tfolder-helper";
 import { logError } from "./managers/obsidian/vault-action-manager/helpers/issue-handlers";

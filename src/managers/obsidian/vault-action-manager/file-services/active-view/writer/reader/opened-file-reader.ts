@@ -12,12 +12,12 @@ import {
 	errorNoActiveView,
 	errorNoFileParent,
 	errorNotInSourceMode,
-} from "../../../errors";
-import { getSplitPathForAbstractFile } from "../../../helpers/pathfinder";
+} from "../../../../errors";
+import { getSplitPathForAbstractFile } from "../../../../helpers/pathfinder";
 import type {
 	AnySplitPath,
 	SplitPathToMdFile,
-} from "../../../types/split-path";
+} from "../../../../types/split-path";
 
 export type EditorWithView = { editor: Editor; view: MarkdownView };
 

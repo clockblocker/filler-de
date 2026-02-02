@@ -7,7 +7,7 @@ import {
 	TFile,
 	TFolder,
 } from "obsidian";
-import { DomSelectors } from "../../../../../../utils/dom-selectors";
+import { DomSelectors } from "../../../../../../../../utils/dom-selectors";
 import {
 	errorFileStale,
 	errorGetEditor,
@@ -15,17 +15,17 @@ import {
 	errorNoTFileFound,
 	errorNotInSourceMode,
 	errorOpenFileFailed,
-} from "../../../errors";
-import { getSplitPathForAbstractFile } from "../../../helpers/pathfinder";
-import { makeSystemPathForSplitPath } from "../../../impl/common/split-path-and-system-path";
+} from "../../../../../errors";
+import { getSplitPathForAbstractFile } from "../../../../../helpers/pathfinder";
+import { makeSystemPathForSplitPath } from "../../../../../impl/common/split-path-and-system-path";
 import type {
 	AnySplitPath,
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
-} from "../../../types/split-path";
-import type { Transform } from "../../../types/vault-action";
-import type { OpenedFileReader } from "../reader/opened-file-reader";
+} from "../../../../../types/split-path";
+import type { Transform } from "../../../../../types/vault-action";
+import type { OpenedFileReader } from "../opened-file-reader";
 
 export type SavedSelection = {
 	anchor: EditorPosition;

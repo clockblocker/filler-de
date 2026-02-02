@@ -1,9 +1,9 @@
 import type { Result } from "neverthrow";
 import type { App, TFile, TFolder } from "obsidian";
 import { logger } from "../../../utils/logger";
-import { OpenedFileReader } from "./file-services/active-view/reader/opened-file-reader";
 import type { OpenedFileService } from "./file-services/active-view/writer/opened-file-writer";
 import { OpenedFileService as OpenedFileServiceImpl } from "./file-services/active-view/writer/opened-file-writer";
+import { OpenedFileReader } from "./file-services/active-view/writer/reader/opened-file-reader";
 import { TFileHelper } from "./file-services/background/helpers/tfile-helper";
 import { TFolderHelper } from "./file-services/background/helpers/tfolder-helper";
 import { ActionQueue } from "./impl/actions-processing/action-queue";

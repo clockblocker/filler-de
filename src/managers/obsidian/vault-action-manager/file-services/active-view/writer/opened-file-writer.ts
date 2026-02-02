@@ -22,7 +22,7 @@ import type {
 	SplitPathToMdFile,
 } from "../../../types/split-path";
 import type { Transform } from "../../../types/vault-action";
-import type { OpenedFileReader } from "../reader/opened-file-reader";
+import type { OpenedFileReader } from "./reader/opened-file-reader";
 
 export type SavedSelection = {
 	anchor: EditorPosition;
