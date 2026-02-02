@@ -288,62 +288,21 @@ export class OpenedFileService {
 		const oldContent = editor.getValue();
 		if (oldContent === newContent) return;
 
+		// Save cursor and scroll position
 		const cursor = editor.getCursor();
-		const oldLines = oldContent.split("\n");
+		const scrollInfo = editor.getScrollInfo();
+
+		// Full content replacement - ensures proper decoration refresh
+		editor.setValue(newContent);
+
+		// Restore cursor (clamped to valid position)
 		const newLines = newContent.split("\n");
+		const newLine = Math.min(cursor.line, newLines.length - 1);
+		const newCh = Math.min(cursor.ch, (newLines[newLine] ?? "").length);
+		editor.setCursor({ ch: newCh, line: newLine });
 
-		// Find first differing line
-		let startLine = 0;
-		while (
-			startLine < oldLines.length &&
-			startLine < newLines.length &&
-			oldLines[startLine] === newLines[startLine]
-		) {
-			startLine++;
-		}
-
-		// Find last differing line (from end)
-		let oldEndLine = oldLines.length - 1;
-		let newEndLine = newLines.length - 1;
-		while (
-			oldEndLine > startLine &&
-			newEndLine > startLine &&
-			oldLines[oldEndLine] === newLines[newEndLine]
-		) {
-			oldEndLine--;
-			newEndLine--;
-		}
-
-		// Edge case: no actual diff found (shouldn't happen given early return above)
-		if (startLine > oldEndLine && startLine > newEndLine) {
-			return;
-		}
-
-		// Build replacement text from differing lines
-		const replacementLines = newLines.slice(startLine, newEndLine + 1);
-		const replacement = replacementLines.join("\n");
-
-		// Calculate positions for replaceRange
-		const fromPos = { ch: 0, line: startLine };
-		const toPos = {
-			ch: oldLines[oldEndLine]?.length ?? 0,
-			line: oldEndLine,
-		};
-
-		// Apply surgical edit - avoids full document replacement flicker
-		editor.replaceRange(replacement, fromPos, toPos);
-
-		// Adjust cursor if it was in or after the changed region
-		const lineDelta = newLines.length - oldLines.length;
-		if (cursor.line >= startLine) {
-			const newCursorLine = Math.max(
-				0,
-				Math.min(cursor.line + lineDelta, newLines.length - 1),
-			);
-			const newLineText = newLines[newCursorLine] ?? "";
-			const newCursorCh = Math.min(cursor.ch, newLineText.length);
-			editor.setCursor({ ch: newCursorCh, line: newCursorLine });
-		}
+		// Restore scroll position
+		editor.scrollTo(scrollInfo.left, scrollInfo.top);
 	}
 
 	async processContent({
@@ -367,16 +326,33 @@ export class OpenedFileService {
 			return err(editorResult.error);
 		}
 
-		const { editor } = editorResult.value;
-
 		try {
+			const { editor } = editorResult.value;
 			const before = editor.getValue();
 			const after = await transform(before);
 
 			if (after !== before) {
-				this.setContentWithPositionPreservation(editor, after);
-			}
+				// Save cursor and scroll position
+				const cursor = editor.getCursor();
+				const scrollInfo = editor.getScrollInfo();
 
+				// Option B: setValue + rebuildView for proper re-render
+				editor.setValue(after);
+				await new Promise((r) => requestAnimationFrame(r));
+				const leaf = this.app.workspace.activeLeaf as unknown as {
+					rebuildView?: () => void;
+				} | null;
+				leaf?.rebuildView?.();
+
+				// Restore cursor (clamped to valid position)
+				const newLines = after.split("\n");
+				const newLine = Math.min(cursor.line, newLines.length - 1);
+				const newCh = Math.min(cursor.ch, (newLines[newLine] ?? "").length);
+				editor.setCursor({ ch: newCh, line: newLine });
+
+				// Restore scroll position
+				editor.scrollTo(scrollInfo.left, scrollInfo.top);
+			}
 			return ok(after);
 		} catch (error) {
 			return err(error instanceof Error ? error.message : String(error));
