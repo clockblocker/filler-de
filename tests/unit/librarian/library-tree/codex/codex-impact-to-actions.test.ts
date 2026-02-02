@@ -8,6 +8,7 @@ import type {
 } from "../../../../../src/commanders/librarian/codecs/segment-id/types/segment-id";
 import {
 	codexImpactToDeletions,
+	codexImpactToIncrementalRecreations,
 	codexImpactToRecreations,
 } from "../../../../../src/commanders/librarian/healer/library-tree/codex/codex-impact-to-actions";
 import type { CodexImpact } from "../../../../../src/commanders/librarian/healer/library-tree/codex/compute-codex-impact";
@@ -283,5 +284,152 @@ describe("codexImpactToRecreations", () => {
 			// Scroll basename includes parent section suffix (e.g., "scroll1-A")
 			expect(writeStatus.payload.splitPath.basename).toContain("scroll1");
 		}
+	});
+});
+
+describe("codexImpactToIncrementalRecreations", () => {
+	it("generates ProcessCodex for all descendant sections when descendantsChanged", () => {
+		// Tree: Library > A > B > scroll1
+		// When A's checkbox is clicked and descendantsChanged includes A,
+		// B's codex should also be regenerated
+		const root = section("Library", {
+			"A﹘Section﹘": section("A", {
+				"B﹘Section﹘": section("B", {
+					"scroll1﹘Scroll﹘md": scroll("scroll1", TreeNodeStatus.Done),
+				}),
+			}),
+		});
+		const tree = makeTreeAccessor(root);
+
+		const impact: CodexImpact = {
+			contentChanged: [],
+			deleted: [],
+			// A's checkbox was clicked, propagating Done to all descendants
+			descendantsChanged: [
+				{
+					newStatus: TreeNodeStatus.Done,
+					sectionChain: [sec("Library"), sec("A")],
+				},
+			],
+			// Only A and Library were marked as impacted (ancestors)
+			impactedChains: new Set([
+				"Library﹘Section﹘",
+				"Library﹘Section﹘/A﹘Section﹘",
+			]),
+			renamed: [],
+		};
+
+		const actions = codexImpactToIncrementalRecreations(impact, tree, codecs);
+
+		// Should have ProcessCodex for B (the descendant section)
+		const bProcessCodex = actions.find(
+			(a) =>
+				a.kind === "ProcessCodex" &&
+				a.payload.splitPath.pathParts.join("/") === "Library/A/B",
+		);
+		expect(bProcessCodex).toBeDefined();
+
+		// Should have EnsureCodexFileExists for B
+		const bEnsureCodex = actions.find(
+			(a) =>
+				a.kind === "EnsureCodexFileExists" &&
+				a.payload.splitPath.pathParts.join("/") === "Library/A/B",
+		);
+		expect(bEnsureCodex).toBeDefined();
+
+		// Should also have WriteScrollStatus for scroll1 in B
+		const writeStatus = actions.find(
+			(a) =>
+				a.kind === "WriteScrollStatus" &&
+				a.payload.splitPath.pathParts.join("/") === "Library/A/B" &&
+				a.payload.splitPath.basename.includes("scroll1"),
+		);
+		expect(writeStatus).toBeDefined();
+	});
+
+	it("skips descendant sections already in impactedChains", () => {
+		// If B is already in impactedChains, it should not be processed again
+		const root = section("Library", {
+			"A﹘Section﹘": section("A", {
+				"B﹘Section﹘": section("B"),
+			}),
+		});
+		const tree = makeTreeAccessor(root);
+
+		const impact: CodexImpact = {
+			contentChanged: [],
+			deleted: [],
+			descendantsChanged: [
+				{
+					newStatus: TreeNodeStatus.Done,
+					sectionChain: [sec("Library"), sec("A")],
+				},
+			],
+			// B is already in impactedChains
+			impactedChains: new Set([
+				"Library﹘Section﹘",
+				"Library﹘Section﹘/A﹘Section﹘",
+				"Library﹘Section﹘/A﹘Section﹘/B﹘Section﹘",
+			]),
+			renamed: [],
+		};
+
+		const actions = codexImpactToIncrementalRecreations(impact, tree, codecs);
+
+		// Count ProcessCodex actions for B - should be exactly 1 (from impactedChains, not from descendantsChanged)
+		const bProcessActions = actions.filter(
+			(a) =>
+				a.kind === "ProcessCodex" &&
+				a.payload.splitPath.pathParts.join("/") === "Library/A/B",
+		);
+		expect(bProcessActions.length).toBe(1);
+	});
+
+	it("handles deeply nested descendants", () => {
+		// Tree: Library > A > B > C > scroll1
+		const root = section("Library", {
+			"A﹘Section﹘": section("A", {
+				"B﹘Section﹘": section("B", {
+					"C﹘Section﹘": section("C", {
+						"scroll1﹘Scroll﹘md": scroll("scroll1"),
+					}),
+				}),
+			}),
+		});
+		const tree = makeTreeAccessor(root);
+
+		const impact: CodexImpact = {
+			contentChanged: [],
+			deleted: [],
+			descendantsChanged: [
+				{
+					newStatus: TreeNodeStatus.Done,
+					sectionChain: [sec("Library"), sec("A")],
+				},
+			],
+			impactedChains: new Set([
+				"Library﹘Section﹘",
+				"Library﹘Section﹘/A﹘Section﹘",
+			]),
+			renamed: [],
+		};
+
+		const actions = codexImpactToIncrementalRecreations(impact, tree, codecs);
+
+		// B should be processed
+		const bProcessCodex = actions.find(
+			(a) =>
+				a.kind === "ProcessCodex" &&
+				a.payload.splitPath.pathParts.join("/") === "Library/A/B",
+		);
+		expect(bProcessCodex).toBeDefined();
+
+		// C should be processed
+		const cProcessCodex = actions.find(
+			(a) =>
+				a.kind === "ProcessCodex" &&
+				a.payload.splitPath.pathParts.join("/") === "Library/A/B/C",
+		);
+		expect(cProcessCodex).toBeDefined();
 	});
 });

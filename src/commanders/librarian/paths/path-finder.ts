@@ -20,7 +20,7 @@ import type {
 	SectionNodeSegmentId,
 	TreeNodeSegmentId,
 } from "../codecs/segment-id/types/segment-id";
-import { TreeNodeKind } from "../healer/library-tree/tree-node/types/atoms";
+import type { TreeNodeKind } from "../healer/library-tree/tree-node/types/atoms";
 import type { NodeName } from "../types/schemas/node-name";
 
 // ─── Types ───

@@ -44,7 +44,7 @@ export const buildNameWithDuplicateMarker = (
  * @param suffixParts - The suffix parts to append to the coreName
  * @param extension - The file extension (including dot, e.g., ".md")
  * @param suffixDelimiter - The delimiter used in suffixes
- * @param vaultActionManager - Manager to list files
+ * @param vam - Manager to list files
  * @returns The coreName to use (may have incremented duplicate number)
  */
 export async function resolveUniqueDuplicateName(
@@ -53,7 +53,7 @@ export async function resolveUniqueDuplicateName(
 	suffixParts: NodeName[],
 	extension: string,
 	suffixDelimiter: string,
-	vaultActionManager: VaultActionManager,
+	vam: VaultActionManager,
 ): Promise<Result<NodeName, string>> {
 	// Extract duplicate marker from target coreName
 	const { cleanName, number } = extractDuplicateMarker(targetCoreName);
@@ -64,7 +64,7 @@ export async function resolveUniqueDuplicateName(
 	}
 
 	// List files in the folder
-	const filesResult = await vaultActionManager.list(folderPath);
+	const filesResult = await vam.list(folderPath);
 	if (filesResult.isErr()) {
 		// If we can't list, just use the target name
 		return ok(targetCoreName);

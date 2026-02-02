@@ -147,7 +147,7 @@ export function getPageSplitPathByIndex(
  * Returns which pages exist (prev/next) based on actual folder contents.
  */
 export async function getAdjacentPageInfo(
-	vaultActionManager: VaultActionManager,
+	vam: VaultActionManager,
 	currentPage: SplitPathToMdFile,
 ): Promise<{ hasPrevPage: boolean; hasNextPage: boolean }> {
 	// Extract current page's coreName and index
@@ -174,7 +174,7 @@ export async function getAdjacentPageInfo(
 	};
 
 	// List all files in parent folder
-	const listResult = await vaultActionManager.list(parentFolder);
+	const listResult = await vam.list(parentFolder);
 	if (listResult.isErr()) {
 		return { hasNextPage: false, hasPrevPage: false };
 	}

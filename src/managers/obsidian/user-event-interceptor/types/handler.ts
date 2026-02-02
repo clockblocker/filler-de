@@ -32,7 +32,7 @@ export type HandlerContext = {
 	/** Obsidian App instance */
 	app: App;
 	/** Vault action manager for file operations */
-	vaultActionManager: VaultActionManager;
+	vam: VaultActionManager;
 };
 
 /**

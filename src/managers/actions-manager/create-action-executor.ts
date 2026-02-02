@@ -24,7 +24,7 @@ import { CommandKind, type CommandPayloads } from "./types";
 export type CommandExecutorManagers = {
 	librarian: Librarian | null;
 	textfresser: Textfresser | null;
-	vaultActionManager: VaultActionManager;
+	vam: VaultActionManager;
 };
 
 /**
@@ -40,7 +40,7 @@ export type ExecuteCommandInput<K extends CommandKind = CommandKind> = {
  * Returns a function that executes commands by kind.
  */
 export function createCommandExecutor(managers: CommandExecutorManagers) {
-	const { librarian, textfresser, vaultActionManager } = managers;
+	const { librarian, textfresser, vam } = managers;
 
 	const notify = (message: string) => {
 		new Notice(message);
@@ -53,11 +53,11 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 
 		switch (kind) {
 			case CommandKind.GoToPrevPage:
-				await goToPrevPageCommand(vaultActionManager);
+				await goToPrevPageCommand(vam);
 				break;
 
 			case CommandKind.GoToNextPage:
-				await goToNextPageCommand(vaultActionManager);
+				await goToNextPageCommand(vam);
 				break;
 
 			case CommandKind.MakeText:
@@ -65,15 +65,14 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 				// Both actions do the same thing - split scroll into pages
 				await splitIntoPagesCommand({
 					librarian,
-					vaultActionManager,
+					vam,
 				});
 				break;
 			}
 
 			case CommandKind.SplitInBlocks: {
 				const p = payload as SplitInBlocksPayload;
-				const contentResult =
-					await vaultActionManager.getOpenedContent();
+				const contentResult = await vam.getOpenedContent();
 				if (contentResult.isErr()) {
 					notify(`Error: ${contentResult.error}`);
 					break;
@@ -83,9 +82,7 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 					{
 						notify,
 						replaceSelection: (text: string) => {
-							vaultActionManager.openedFileService.replaceSelection(
-								text,
-							);
+							vam.openedFileService.replaceSelection(text);
 						},
 					},
 				);

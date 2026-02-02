@@ -1,4 +1,7 @@
-import { CommandKind, type CommandKind as CommandKindType } from "../../managers/actions-manager/types";
+import {
+	CommandKind,
+	type CommandKind as CommandKindType,
+} from "../../managers/actions-manager/types";
 import type { SplitPathToMdFile } from "../../managers/obsidian/vault-action-manager/types/split-path";
 import { parsePageIndex } from "./bookkeeper/page-codec";
 import type { Codecs } from "./codecs";

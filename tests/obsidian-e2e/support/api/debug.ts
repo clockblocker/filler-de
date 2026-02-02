@@ -103,7 +103,7 @@ export async function gatherPluginDebugInfo(
 				};
 
 				// Get VaultActionManager debug info
-				const vam = plugin.vaultActionManager;
+				const vam = plugin.vam;
 				const selfTrackerState = vam?._getDebugSelfTrackerState?.() ?? {
 					trackedPaths: [],
 					trackedPrefixes: [],

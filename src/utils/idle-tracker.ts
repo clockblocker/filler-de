@@ -98,4 +98,3 @@ export async function whenIdle(
 		await waitForObsidian();
 	}
 }
-

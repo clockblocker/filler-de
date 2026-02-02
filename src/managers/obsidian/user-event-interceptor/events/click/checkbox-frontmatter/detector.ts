@@ -26,7 +26,7 @@ export class CheckboxFrontmatterDetector {
 
 	constructor(
 		private readonly genericClick: GenericClickDetector,
-		private readonly vaultActionManager: VaultActionManager,
+		private readonly vam: VaultActionManager,
 		createInvoker: (
 			kind: PayloadKind,
 		) => HandlerInvoker<CheckboxFrontmatterPayload>,
@@ -58,7 +58,7 @@ export class CheckboxFrontmatterDetector {
 		if (!propertyInfo) return;
 
 		// Get current file path
-		const pwdResult = await this.vaultActionManager.pwd();
+		const pwdResult = await this.vam.pwd();
 		if (pwdResult.isErr()) return;
 
 		const splitPath = pwdResult.value;

@@ -4,18 +4,18 @@ import type { VaultActionManager } from "../../obsidian/vault-action-manager";
 import { logError } from "../../obsidian/vault-action-manager/helpers/issue-handlers";
 
 type SplitIntoPagesServices = {
-	vaultActionManager?: VaultActionManager;
+	vam?: VaultActionManager;
 	librarian?: Librarian | null;
 };
 
 export async function splitIntoPagesCommand(
 	services: SplitIntoPagesServices,
 ): Promise<void> {
-	const { vaultActionManager, librarian } = services;
+	const { vam, librarian } = services;
 
-	if (!vaultActionManager) {
+	if (!vam) {
 		logError({
-			description: "Missing vaultActionManager for splitIntoPagesCommand",
+			description: "Missing vam for splitIntoPagesCommand",
 			location: "splitIntoPagesCommand",
 		});
 		return;
@@ -26,7 +26,7 @@ export async function splitIntoPagesCommand(
 			// Notify librarian to create codex (bypasses self-event filtering)
 			librarian?.triggerSectionHealing(info);
 		},
-		openedFileService: vaultActionManager.openedFileService,
-		vaultActionManager,
+		openedFileService: vam.openedFileService,
+		vam,
 	});
 }

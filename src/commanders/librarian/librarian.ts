@@ -89,7 +89,7 @@ export class Librarian {
 	public _debugLastHealingActions: HealingAction[] = [];
 	public _debugLastVaultActions: VaultAction[] = [];
 
-	constructor(private readonly vaultActionManager: VaultActionManager) {
+	constructor(private readonly vam: VaultActionManager) {
 		this.actionQueue = new VaultActionQueue<LibrarianQueueItem>(
 			(item) =>
 				this.processActions(item.treeActions, item.invalidCodexActions),
@@ -117,9 +117,7 @@ export class Librarian {
 
 			// Read all files from library
 			const allFilesResult =
-				await this.vaultActionManager.listAllFilesWithMdReaders(
-					rootSplitPath,
-				);
+				await this.vam.listAllFilesWithMdReaders(rootSplitPath);
 
 			if (allFilesResult.isErr()) {
 				logger.error(
@@ -216,7 +214,7 @@ export class Librarian {
 			];
 
 			if (allVaultActions.length > 0) {
-				await this.vaultActionManager.dispatch(allVaultActions);
+				await this.vam.dispatch(allVaultActions);
 			}
 
 			// Commit transaction after successful dispatch
@@ -235,7 +233,7 @@ export class Librarian {
 	 * Subscribe to file system events from VaultActionManager.
 	 */
 	private subscribeToVaultEvents(): void {
-		this.eventTeardown = this.vaultActionManager.subscribeToBulk(
+		this.eventTeardown = this.vam.subscribeToBulk(
 			async (bulk: BulkVaultEvent) => {
 				await this.handleBulkEvent(bulk);
 			},
@@ -331,7 +329,7 @@ export class Librarian {
 		this._debugLastVaultActions = allVaultActions;
 
 		if (allVaultActions.length > 0) {
-			await this.vaultActionManager.dispatch(allVaultActions);
+			await this.vam.dispatch(allVaultActions);
 		}
 
 		// Commit transaction after successful dispatch
@@ -376,7 +374,7 @@ export class Librarian {
 			{
 				codecs: this.codecs,
 				dispatch: async (actions) => {
-					await this.vaultActionManager.dispatch(actions);
+					await this.vam.dispatch(actions);
 				},
 				healer: this.healer,
 				rules: this.rules,

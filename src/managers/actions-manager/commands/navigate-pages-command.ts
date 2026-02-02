@@ -16,19 +16,19 @@ const PageNavMetadataSchema = z
 type Direction = "prev" | "next";
 
 async function navigateToPage(
-	vaultActionManager: VaultActionManager,
+	vam: VaultActionManager,
 	direction: Direction,
 ): Promise<void> {
 	try {
 		// Get current file path
-		const pwdResult = await vaultActionManager.pwd();
+		const pwdResult = await vam.pwd();
 		if (pwdResult.isErr() || pwdResult.value.kind !== "MdFile") {
 			return;
 		}
 		const currentFilePath = pwdResult.value;
 
 		// Read current file content to get navigation indices
-		const contentResult = await vaultActionManager.getOpenedContent();
+		const contentResult = await vam.getOpenedContent();
 		if (contentResult.isErr()) {
 			logError({
 				description: `Error reading file content: ${contentResult.error}`,
@@ -54,7 +54,7 @@ async function navigateToPage(
 
 		const targetPage = getPageSplitPathByIndex(currentFilePath, targetIdx);
 		if (targetPage) {
-			await vaultActionManager.cd(targetPage);
+			await vam.cd(targetPage);
 		}
 	} catch (error) {
 		logError({
@@ -65,13 +65,13 @@ async function navigateToPage(
 }
 
 export async function goToPrevPageCommand(
-	vaultActionManager: VaultActionManager,
+	vam: VaultActionManager,
 ): Promise<void> {
-	await navigateToPage(vaultActionManager, "prev");
+	await navigateToPage(vam, "prev");
 }
 
 export async function goToNextPageCommand(
-	vaultActionManager: VaultActionManager,
+	vam: VaultActionManager,
 ): Promise<void> {
-	await navigateToPage(vaultActionManager, "next");
+	await navigateToPage(vam, "next");
 }

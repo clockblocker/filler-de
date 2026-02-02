@@ -30,7 +30,10 @@ export type { WikilinkClickPayload } from "./click/wikilink-click/payload";
 export { ClipboardCodec } from "./clipboard/codec";
 export { ClipboardDetector } from "./clipboard/detector";
 export type { ClipboardPayload } from "./clipboard/payload";
-export { ClipboardPayloadSchema, createClipboardPayload } from "./clipboard/payload";
+export {
+	ClipboardPayloadSchema,
+	createClipboardPayload,
+} from "./clipboard/payload";
 
 // Select-all events
 export { SelectAllCodec } from "./select-all/codec";

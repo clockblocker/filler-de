@@ -67,12 +67,8 @@ export class UserEventInterceptor {
 	private readonly ctx: HandlerContext;
 	private listening = false;
 
-	constructor(
-		app: App,
-		plugin: Plugin,
-		vaultActionManager: VaultActionManager,
-	) {
-		this.ctx = { app, vaultActionManager };
+	constructor(app: App, plugin: Plugin, vam: VaultActionManager) {
+		this.ctx = { app, vam };
 
 		// Create shared generic click detector
 		this.genericClickDetector = new GenericClickDetector();
@@ -83,12 +79,12 @@ export class UserEventInterceptor {
 			new CheckboxClickedDetector(
 				this.genericClickDetector,
 				app,
-				vaultActionManager,
+				vam,
 				this.createInvoker.bind(this),
 			),
 			new CheckboxFrontmatterDetector(
 				this.genericClickDetector,
-				vaultActionManager,
+				vam,
 				this.createInvoker.bind(this),
 			),
 			new ActionElementDetector(
@@ -98,7 +94,7 @@ export class UserEventInterceptor {
 			new WikilinkClickDetector(
 				this.genericClickDetector,
 				app,
-				vaultActionManager,
+				vam,
 				this.createInvoker.bind(this),
 			),
 			new SelectAllDetector(app, this.createInvoker.bind(this)),

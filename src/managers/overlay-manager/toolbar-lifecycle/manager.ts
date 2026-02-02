@@ -5,7 +5,10 @@
 import type { MarkdownView } from "obsidian";
 import { z } from "zod";
 import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
-import { computeNavActions, type PageNavMetadata } from "../action-definitions/placement-utils";
+import {
+	computeNavActions,
+	type PageNavMetadata,
+} from "../action-definitions/placement-utils";
 import type { ActionConfig } from "../bottom-toolbar/types";
 import { buildSplitPath } from "./path-utils";
 import type { ToolbarLifecycleContext, ToolbarUpdateConfig } from "./types";

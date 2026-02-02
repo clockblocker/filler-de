@@ -43,7 +43,7 @@ export type SplitHealingInfo = {
 
 export type SplitToPagesContext = {
 	openedFileService: OpenedFileService;
-	vaultActionManager: VaultActionManager;
+	vam: VaultActionManager;
 	/** Called after pages are created, bypasses self-event filtering */
 	onSectionCreated?: (info: SplitHealingInfo) => void;
 };
@@ -104,14 +104,14 @@ type DispatchResult =
 	  };
 
 async function executeDispatch(
-	vaultActionManager: VaultActionManager,
+	vam: VaultActionManager,
 	input: SplitInput,
 ): Promise<Result<DispatchResult, SplitToPagesError>> {
 	const { sourcePath, rules, segmentation } = input;
 
 	if (segmentation.tooShortToSplit) {
 		const action = buildTooShortMetadataAction(sourcePath);
-		const result = await vaultActionManager.dispatch([action]);
+		const result = await vam.dispatch([action]);
 		if (result.isErr()) {
 			return err(
 				makeSplitToPagesError.dispatchFailed(String(result.error)),
@@ -127,7 +127,7 @@ async function executeDispatch(
 		pageNodeNames,
 		sectionChain,
 	} = buildPageSplitActions(segmentation, sourcePath, rules);
-	const result = await vaultActionManager.dispatch(actions);
+	const result = await vam.dispatch(actions);
 	if (result.isErr()) {
 		return err(makeSplitToPagesError.dispatchFailed(String(result.error)));
 	}
@@ -155,7 +155,7 @@ export async function splitToPagesAction(
 	}
 
 	const dispatchResult = await executeDispatch(
-		context.vaultActionManager,
+		context.vam,
 		inputResult.value,
 	);
 	if (dispatchResult.isErr()) {

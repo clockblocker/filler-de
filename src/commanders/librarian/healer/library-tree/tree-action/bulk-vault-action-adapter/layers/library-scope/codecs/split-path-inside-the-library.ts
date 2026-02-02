@@ -5,8 +5,10 @@ import type {
 	SplitPathInsideLibraryOf,
 } from "../../../../../../../codecs";
 import type { CodecRules } from "../../../../../../../codecs/rules";
-import type { EnscopedSplitPath } from "../types/generics/scoped-split-path";
-import type { ExtractKind } from "../types/generics/scoped-split-path";
+import type {
+	EnscopedSplitPath,
+	ExtractKind,
+} from "../types/generics/scoped-split-path";
 
 /**
  * Converts a vault SplitPath into a **SplitPathInsideLibrary**.

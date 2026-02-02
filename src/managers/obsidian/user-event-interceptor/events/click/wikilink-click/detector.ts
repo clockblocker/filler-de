@@ -33,7 +33,7 @@ export class WikilinkClickDetector {
 	constructor(
 		private readonly genericClick: GenericClickDetector,
 		private readonly app: App,
-		private readonly vaultActionManager: VaultActionManager,
+		private readonly vam: VaultActionManager,
 		createInvoker: (
 			kind: PayloadKind,
 		) => HandlerInvoker<WikilinkClickPayload>,
@@ -86,7 +86,7 @@ export class WikilinkClickDetector {
 		}
 
 		// Get current file path
-		const pwdResult = await this.vaultActionManager.pwd();
+		const pwdResult = await this.vam.pwd();
 		if (pwdResult.isErr()) return;
 
 		const splitPath = pwdResult.value;

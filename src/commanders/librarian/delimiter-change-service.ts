@@ -27,7 +27,7 @@ export interface DelimiterChangeResult {
 export class DelimiterChangeService {
 	constructor(
 		private readonly app: App,
-		private readonly vaultActionManager: VaultActionManager,
+		private readonly vam: VaultActionManager,
 	) {}
 
 	/**
@@ -69,7 +69,7 @@ export class DelimiterChangeService {
 		const chunks = this.chunkArray(actions, chunkSize);
 
 		for (const [_i, chunk] of chunks.entries()) {
-			const result = await this.vaultActionManager.dispatch(chunk);
+			const result = await this.vam.dispatch(chunk);
 			if (result.isErr()) {
 				errors.push(
 					...result.error.map((e) => `${e.action.kind}: ${e.error}`),
@@ -77,7 +77,7 @@ export class DelimiterChangeService {
 			}
 
 			// Wait for Obsidian to process all events from this chunk
-			await this.vaultActionManager.waitForObsidianEvents();
+			await this.vam.waitForObsidianEvents();
 		}
 
 		const renamedCount = actions.length - errors.length;

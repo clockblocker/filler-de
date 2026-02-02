@@ -5,7 +5,7 @@ import { logError } from "../../obsidian/vault-action-manager/helpers/issue-hand
 
 type TagLineCopyEmbedServices = {
 	app: App;
-	vaultActionManager: VaultActionManager;
+	vam: VaultActionManager;
 };
 
 /**
@@ -15,9 +15,9 @@ type TagLineCopyEmbedServices = {
 export async function tagLineCopyEmbedBehavior(
 	services: Partial<TagLineCopyEmbedServices>,
 ): Promise<void> {
-	const { app, vaultActionManager } = services;
+	const { app, vam } = services;
 
-	if (!app || !vaultActionManager) {
+	if (!app || !vam) {
 		new Notice("Error: Missing required services");
 		return;
 	}
@@ -44,7 +44,7 @@ export async function tagLineCopyEmbedBehavior(
 
 		if (!blockId) {
 			// Need to add block marker - find highest existing number
-			const contentResult = await vaultActionManager.getOpenedContent();
+			const contentResult = await vam.getOpenedContent();
 			if (contentResult.isErr()) {
 				throw new Error(contentResult.error);
 			}

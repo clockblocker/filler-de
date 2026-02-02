@@ -410,6 +410,61 @@ export function codexImpactToIncrementalRecreations(
 		}
 	}
 
+	// 3. Regenerate descendant SECTION codexes when status propagated
+	// When section checkbox clicked, propagateStatus updates all descendant scrolls,
+	// but descendant sections' codexes also need regeneration to reflect new checkbox states
+	for (const { sectionChain } of impact.descendantsChanged) {
+		const section = findSectionByChain(tree, sectionChain);
+		if (!section) continue;
+
+		const descendantSectionChains = collectDescendantSectionChains(
+			section,
+			sectionChain,
+		);
+		for (const descChain of descendantSectionChains) {
+			// Skip if already processed in impactedChains
+			if (impact.impactedChains.has(chainToKey(descChain))) continue;
+
+			const descSection = findSectionByChain(tree, descChain);
+			if (!descSection) continue;
+
+			const splitPath = computeCodexSplitPath(descChain, codecs);
+
+			actions.push({
+				kind: "EnsureCodexFileExists",
+				payload: { splitPath },
+			});
+			actions.push({
+				kind: "ProcessCodex",
+				payload: {
+					section: descSection,
+					sectionChain: descChain,
+					splitPath,
+				},
+			});
+
+			// Scroll backlinks for direct children
+			for (const child of Object.values(descSection.children)) {
+				if (child.kind === TreeNodeKind.Scroll) {
+					const scrollPath = computeScrollSplitPath(
+						child.nodeName,
+						descChain,
+						codecs,
+					);
+					if (scrollPath.isOk()) {
+						actions.push({
+							kind: "ProcessScrollBacklink",
+							payload: {
+								parentChain: descChain,
+								splitPath: scrollPath.value,
+							},
+						});
+					}
+				}
+			}
+		}
+	}
+
 	return actions;
 }
 

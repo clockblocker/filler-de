@@ -1,8 +1,8 @@
 {
 	"$schema": "https://unpkg.com/knip@5/schema.json",
 	"entry": ["src/main.ts"],
-	"project": ["src/**/*.ts"],
 	"ignore": ["**/*.d.ts", "src/deprecated-services/**"],
+	"ignoreBinaries": ["bun"],
 	"ignoreDependencies": ["obsidian", "electron", "@codemirror/*", "tslib"],
-	"ignoreBinaries": ["bun"]
+	"project": ["src/**/*.ts"]
 }

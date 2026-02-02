@@ -23,7 +23,7 @@ import {
  */
 export async function resolveDuplicateHealingActions(
 	actions: HealingAction[],
-	vaultActionManager: VaultActionManager,
+	vam: VaultActionManager,
 ): Promise<HealingAction[]> {
 	const settings = getParsedUserSettings();
 	const resolved: HealingAction[] = [];
@@ -33,7 +33,7 @@ export async function resolveDuplicateHealingActions(
 			const resolvedAction = await resolveFileRenameAction(
 				action,
 				settings.suffixDelimiter,
-				vaultActionManager,
+				vam,
 			);
 			resolved.push(resolvedAction);
 		} else {
@@ -47,7 +47,7 @@ export async function resolveDuplicateHealingActions(
 async function resolveFileRenameAction(
 	action: HealingAction & { kind: "RenameFile" | "RenameMdFile" },
 	suffixDelimiter: string,
-	vaultActionManager: VaultActionManager,
+	vam: VaultActionManager,
 ): Promise<HealingAction> {
 	const { to } = action.payload;
 
@@ -79,7 +79,7 @@ async function resolveFileRenameAction(
 		suffixParts as NodeName[],
 		extension,
 		suffixDelimiter,
-		vaultActionManager,
+		vam,
 	);
 
 	if (resolvedCoreNameResult.isErr()) {

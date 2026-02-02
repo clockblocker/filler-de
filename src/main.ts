@@ -60,7 +60,7 @@ export default class TextEaterPlugin extends Plugin {
 	testingReader: Reader;
 	testingTFileHelper: TFileHelper;
 	testingTFolderHelper: TFolderHelper;
-	vaultActionManager: VaultActionManagerImpl;
+	vam: VaultActionManagerImpl;
 	userEventInterceptor: UserEventInterceptor;
 	overlayManager: OverlayManager | null = null;
 	delimiterChangeService: DelimiterChangeService | null = null;
@@ -192,25 +192,25 @@ export default class TextEaterPlugin extends Plugin {
 			this.testingTFolderHelper,
 			this.app.vault,
 		);
-		this.vaultActionManager = new VaultActionManagerImpl(this.app);
+		this.vam = new VaultActionManagerImpl(this.app);
 
 		// Textfresser commander (vocabulary commands orchestrator)
-		this.textfresser = new Textfresser(this.vaultActionManager);
+		this.textfresser = new Textfresser(this.vam);
 
 		// Unified user event interceptor (clicks, clipboard, select-all, wikilinks)
 		this.userEventInterceptor = new UserEventInterceptor(
 			this.app,
 			this,
-			this.vaultActionManager,
+			this.vam,
 		);
 
 		// New Librarian (healing modes)
-		this.librarian = new Librarian(this.vaultActionManager);
+		this.librarian = new Librarian(this.vam);
 
 		// Start listening to file system events
 		// VaultActionManager will convert events to VaultEvent, filter self-events,
 		// and notify subscribers (e.g., Librarian)
-		this.vaultActionManager.startListening();
+		this.vam.startListening();
 
 		// Start listening to user events (clicks, clipboard, select-all, wikilinks)
 		this.userEventInterceptor.startListening();
@@ -218,7 +218,7 @@ export default class TextEaterPlugin extends Plugin {
 		// Initialize delimiter change service (does not require librarian)
 		this.delimiterChangeService = new DelimiterChangeService(
 			this.app,
-			this.vaultActionManager,
+			this.vam,
 		);
 
 		// Initialize librarian: read tree, heal mismatches, regenerate codexes
@@ -248,7 +248,7 @@ export default class TextEaterPlugin extends Plugin {
 		this.commandExecutor = createCommandExecutor({
 			librarian: this.librarian,
 			textfresser: this.textfresser,
-			vaultActionManager: this.vaultActionManager,
+			vam: this.vam,
 		});
 
 		// Initialize OverlayManager with commandExecutor
@@ -257,7 +257,7 @@ export default class TextEaterPlugin extends Plugin {
 			commandExecutor: this.commandExecutor ?? undefined,
 			plugin: this,
 			userEventInterceptor: this.userEventInterceptor,
-			vam: this.vaultActionManager,
+			vam: this.vam,
 		});
 		this.overlayManager.init();
 	}
@@ -360,7 +360,7 @@ export default class TextEaterPlugin extends Plugin {
 					} else {
 						tagLineCopyEmbedBehavior({
 							app: this.app,
-							vaultActionManager: this.vaultActionManager,
+							vam: this.vam,
 						});
 					}
 				}
@@ -441,13 +441,13 @@ export default class TextEaterPlugin extends Plugin {
 	getVaultActionManagerTestingApi() {
 		return {
 			makeSplitPath,
-			manager: this.vaultActionManager,
+			manager: this.vam,
 		};
 	}
 
 	getLibrarianTestingApi() {
 		return {
-			librarian: new Librarian(this.vaultActionManager),
+			librarian: new Librarian(this.vam),
 			makeSplitPath,
 		};
 	}
@@ -465,9 +465,7 @@ export default class TextEaterPlugin extends Plugin {
 	 * Resolves when all queues are drained, pending tasks are done, and Obsidian has registered all actions.
 	 */
 	async whenIdle(): Promise<void> {
-		return whenIdleTracker(() =>
-			this.vaultActionManager.waitForObsidianEvents(),
-		);
+		return whenIdleTracker(() => this.vam.waitForObsidianEvents());
 	}
 
 	/**
@@ -668,7 +666,7 @@ export default class TextEaterPlugin extends Plugin {
 		if (this.librarian) {
 			await this.librarian.unsubscribe();
 		}
-		this.librarian = new Librarian(this.vaultActionManager);
+		this.librarian = new Librarian(this.vam);
 		try {
 			await this.librarian.init();
 
