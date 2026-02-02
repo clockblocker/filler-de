@@ -49,9 +49,6 @@ const winstonLogger = winston.createLogger({
 });
 
 export const logger = {
-	debug: (message: string, ...args: unknown[]): void => {
-		winstonLogger.debug(formatMessage(message, ...args));
-	},
 	error: (message: string, ...args: unknown[]): void => {
 		winstonLogger.error(formatMessage(message, ...args));
 	},

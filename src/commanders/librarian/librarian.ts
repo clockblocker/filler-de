@@ -219,7 +219,7 @@ export class Librarian {
 
 			// Commit transaction after successful dispatch
 			tx.commit();
-			tx.logSummary("debug");
+			tx.logSummary("info");
 
 			// Wait for queue to drain (events trigger handleBulkEvent which enqueues actions)
 			// This ensures all cascading healing is queued and processed
@@ -334,7 +334,7 @@ export class Librarian {
 
 		// Commit transaction after successful dispatch
 		tx.commit();
-		tx.logSummary("debug");
+		tx.logSummary("info");
 	}
 
 	/**
@@ -444,12 +444,12 @@ export class Librarian {
 		}
 		const target = parseResult.value;
 
-		// 2. Determine new status from intended toggle
-		// payload.checked is the CURRENT state at mousedown time (before toggle)
-		// User clicked to TOGGLE, so intended new state is the opposite
+		// 2. Determine new status from checkbox state
+		// payload.checked = PRE-toggle state (what user saw before clicking)
+		// User clicked to TOGGLE, so new state is the opposite
 		const newStatus = payload.checked
-			? TreeNodeStatus.NotStarted // Currently checked -> user wants to uncheck
-			: TreeNodeStatus.Done; // Currently unchecked -> user wants to check
+			? TreeNodeStatus.NotStarted // Was checked → user wants to uncheck
+			: TreeNodeStatus.Done; // Was unchecked → user wants to check
 
 		// 3. Build ChangeNodeStatusAction based on target type
 		const action = this.buildChangeStatusAction(target, newStatus);

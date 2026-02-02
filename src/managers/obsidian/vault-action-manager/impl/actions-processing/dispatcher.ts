@@ -80,7 +80,6 @@ export class Dispatcher {
 		this._debugBatchCounter = 0;
 		this._debugExecutionTrace = [];
 		this._debugAllSortedActions = [];
-		this._debugLastSortedActions = [];
 		this._debugLastErrors = [];
 	}
 
@@ -117,7 +116,6 @@ export class Dispatcher {
 		// Store sorted actions for debugging - ACCUMULATE across batches
 		this._debugBatchCounter++;
 		const currentBatch = this._debugBatchCounter;
-		this._debugLastSortedActions = sorted;
 		this._debugAllSortedActions.push(sorted);
 		this._debugLastErrors = [];
 		// Don't clear trace - accumulate across batches

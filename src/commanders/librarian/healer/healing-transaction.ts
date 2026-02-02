@@ -186,7 +186,7 @@ export class HealingTransaction {
 	/**
 	 * Log transaction summary.
 	 */
-	logSummary(level: "debug" | "info" | "warn" | "error" = "debug"): void {
+	logSummary(level: "info" | "warn" | "error" = "info"): void {
 		const summary = this.getSummary();
 		// Workaround: bun-types may not properly type Number.prototype.toFixed
 		const avgMs = Math.round(summary.avgDurationPerAction * 10) / 10;
