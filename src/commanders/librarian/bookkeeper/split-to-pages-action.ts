@@ -69,7 +69,9 @@ async function gatherInput(
 	}
 	const maybePath = pwdResult.value;
 	if (maybePath.kind !== "MdFile") {
-		return err(makeSplitToPagesError.noPwd("Active file is not a markdown file"));
+		return err(
+			makeSplitToPagesError.noPwd("Active file is not a markdown file"),
+		);
 	}
 	const sourcePath = maybePath;
 

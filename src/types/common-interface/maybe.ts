@@ -4,15 +4,13 @@ export type MaybeLegacy<T> =
 
 export function unwrapMaybeLegacyByThrowing<T>(
 	maybe: MaybeLegacy<T>,
-	whoCalled?: string,
+	_whoCalled?: string,
 	additionalInfo?: string,
 ): T {
 	if (maybe.error) {
 		const description = [additionalInfo ?? "", maybe.description ?? ""]
 			.filter(Boolean)
 			.join(": ");
-
-		console.error(`${whoCalled ?? ""} ${description}`);
 		throw new Error(description);
 	}
 

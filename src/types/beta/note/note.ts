@@ -16,7 +16,7 @@ type AbstractNote<T extends NoteType = NoteType> = {
 
 type AbstactMetaNote = AbstractNote<MetaNoteType>;
 
-const a = LinguisticUnit.Inflection;
+const _a = LinguisticUnit.Inflection;
 
 type InflectionNote = AbstractNote<INFLECTION> & {
 	baseForm: string;

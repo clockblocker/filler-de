@@ -7,7 +7,6 @@ export async function addLinksToRelatedToBlock(
 ): Promise<void> {
 	const file = vault.getAbstractFileByPath(filePath);
 	if (!file || !(file instanceof TFile)) {
-		console.error("File not found or is not a valid file");
 		return;
 	}
 
@@ -23,7 +22,7 @@ export async function addLinksToRelatedToBlock(
 		if (tagBlockRegex.test(currentContent)) {
 			content = currentContent.replace(
 				tagBlockRegex,
-				(match, prefix, existingTags) => {
+				(_match, prefix, existingTags) => {
 					const existingTagsArr = existingTags
 						.split(/\s+/)
 						.filter((t: string) => t.trim() !== "");
@@ -63,7 +62,7 @@ export async function addTagsToTagBlock(
 		if (tagBlockRegex.test(currentContent)) {
 			content = currentContent.replace(
 				tagBlockRegex,
-				(match, prefix, existingTags) => {
+				(_match, prefix, existingTags) => {
 					const existingTagsArr = existingTags
 						.split(/\s+/)
 						.filter((t: string) => t.trim() !== "");
@@ -94,7 +93,6 @@ export default async function populateBacklinks(
 	try {
 		const file = vault.getAbstractFileByPath(filePath);
 		if (!file || !(file instanceof TFile)) {
-			console.error("File not found or is not a valid file");
 			return;
 		}
 		// const file = vault.getAbstractFileByPath(filePath);

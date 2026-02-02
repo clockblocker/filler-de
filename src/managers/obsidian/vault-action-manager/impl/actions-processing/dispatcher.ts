@@ -62,14 +62,6 @@ export type ExistenceChecker = {
 };
 
 export class Dispatcher {
-	/**
-	 * INVARIANT: When actions are passed to executor, all requirements are met:
-	 * - Files/folders that need to exist have been created
-	 * - Delete actions only execute if target exists
-	 */
-
-	// Debug state - accumulates across batches, call resetDebugState() to clear
-	private _debugLastSortedActions: VaultAction[] = [];
 	private _debugAllSortedActions: VaultAction[][] = [];
 	private _debugLastErrors: DispatchError[] = [];
 	private _debugBatchCounter = 0;

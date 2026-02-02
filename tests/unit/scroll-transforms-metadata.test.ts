@@ -12,11 +12,11 @@ mock.module("../../src/global-state/global-state", () => ({
 
 // Now import modules that depend on global-state
 import { makeCodecs } from "../../src/commanders/librarian/codecs";
+import type { SectionNodeSegmentId } from "../../src/commanders/librarian/codecs/segment-id";
 import {
 	makeScrollBacklinkTransform,
 	makeStripScrollBacklinkTransform,
 } from "../../src/commanders/librarian/healer/library-tree/codex/transforms/scroll-transforms";
-import type { SectionNodeSegmentId } from "../../src/commanders/librarian/codecs/segment-id";
 import { noteMetadataHelper } from "../../src/stateless-helpers/note-metadata";
 
 // Simple mock codecs with parseSegmentId that extracts section name
@@ -25,8 +25,8 @@ const mockCodecs = {
 		suffixDelimiter: "-",
 	}),
 	parseSegmentId: (id: string) => ({
-		isOk: () => true,
 		isErr: () => false,
+		isOk: () => true,
 		value: {
 			coreName: id.split("::")[0] ?? id,
 			extension: undefined,

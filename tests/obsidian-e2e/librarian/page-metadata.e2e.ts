@@ -2,12 +2,12 @@
 import { obsidianPage } from "wdio-obsidian-service";
 import { waitForIdle } from "../support/api/idle";
 import {
+	performMutation007_togglePage1,
+	performMutation007_untogglePage1,
 	testCodexesCreatedOnInit007,
 	testPageMetadataOnInit007,
 	testPageMetadataPreservedAfterToggle007,
 	testPageMetadataPreservedAfterUntoggle007,
-	performMutation007_togglePage1,
-	performMutation007_untogglePage1,
 } from "./chains/2-chain/007-page-metadata-preservation";
 
 const VAULT_PATH = "tests/obsidian-e2e/vaults/page-metadata-test";

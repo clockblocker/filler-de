@@ -15,14 +15,9 @@ export async function appendToExistingFile(
 	file: TFile,
 	text: string,
 ): Promise<void> {
-	try {
-		await vault.process(file, (currentContent) => {
-			return currentContent + text;
-		});
-	} catch (error) {
-		console.error(`Failed to append to file ${file.path}: ${error}`);
-		throw error;
-	}
+	await vault.process(file, (currentContent) => {
+		return currentContent + text;
+	});
 }
 
 export async function doesExistingFileContainContent(
@@ -33,8 +28,7 @@ export async function doesExistingFileContainContent(
 	try {
 		const fileContent = await vault.read(file);
 		return fileContent.includes(content);
-	} catch (error) {
-		console.error(`Failed to check file content ${file.path}: ${error}`);
+	} catch (_error) {
 		return null;
 	}
 }

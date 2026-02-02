@@ -1,4 +1,4 @@
-import type { Result } from "neverthrow";
+import type { Result, ResultAsync } from "neverthrow";
 import type { OpenedFileService } from "./file-services/active-view/opened-file-service";
 import type { DiscriminatedTAbstractFile } from "./helpers/pathfinder/types";
 import type { DispatchResult } from "./impl/actions-processing/dispatcher";
@@ -10,7 +10,6 @@ import type { BulkVaultEvent } from "./impl/event-processing/bulk-event-emmiter/
 import type {
 	AnySplitPath,
 	SplitPathToAnyFile,
-	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
 	SplitPathWithReader,
@@ -59,7 +58,7 @@ export interface VaultActionManager {
 	// Opened file operations (high-level, no TFile leakage)
 	getOpenedFileName(): Promise<Result<string, string>>;
 	getOpenedContent(): Result<string, string>;
-	replaceOpenedContent(content: string): Result<string, string>;
+	replaceOpenedContent(content: string): ResultAsync<string, string>;
 	cd(splitPath: SplitPathToMdFile): Promise<Result<void, string>>;
 
 	// Direct access to opened file service for selection operations

@@ -2,8 +2,8 @@
 import { createTestContext } from "../../../../support/api";
 import { HEALING_POLL_OPTIONS } from "../../../../support/config";
 import {
-	CONTENT_CHECKS_007_INIT,
 	CONTENT_CHECKS_007_AFTER_TOGGLE,
+	CONTENT_CHECKS_007_INIT,
 	CONTENT_MUST_NOT_CONTAIN_007_AFTER_TOGGLE,
 	EXPECTED_CODEXES,
 	PAGE_FILES,
@@ -30,8 +30,8 @@ export async function testPageMetadataOnInit007(): Promise<void> {
 	await t.expectPostHealing(
 		{
 			codexes: [],
-			files: [...PAGE_FILES],
 			contentChecks: scenarioToContentChecks(CONTENT_CHECKS_007_INIT),
+			files: [...PAGE_FILES],
 		},
 		{
 			...HEALING_POLL_OPTIONS,
@@ -52,9 +52,9 @@ export async function testPageMetadataPreservedAfterToggle007(): Promise<void> {
 	await t.expectPostHealing(
 		{
 			codexes: [],
-			files: [...PAGE_FILES],
 			contentChecks: scenarioToContentChecks(CONTENT_CHECKS_007_AFTER_TOGGLE),
 			contentMustNotContain: scenarioToContentChecks(CONTENT_MUST_NOT_CONTAIN_007_AFTER_TOGGLE),
+			files: [...PAGE_FILES],
 		},
 		{
 			...HEALING_POLL_OPTIONS,
@@ -81,8 +81,8 @@ export async function testPageMetadataPreservedAfterUntoggle007(): Promise<void>
 	await t.expectPostHealing(
 		{
 			codexes: [],
-			files: [...PAGE_FILES],
 			contentChecks,
+			files: [...PAGE_FILES],
 		},
 		{
 			...HEALING_POLL_OPTIONS,

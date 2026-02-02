@@ -1,3 +1,4 @@
+import type { EditorView } from "@codemirror/view";
 import { err, errAsync, ok, type Result, ResultAsync } from "neverthrow";
 import {
 	type App,
@@ -31,11 +32,19 @@ export class OpenedFileWriter {
 		private reader: OpenedFileReader,
 	) {}
 
-	replaceAllContentInOpenedFile(content: string): Result<string, string> {
-		return this.reader.getEditor().map(({ editor }) => {
-			this.setContentWithPositionPreservation(editor, content);
-			return content;
-		});
+	replaceAllContentInOpenedFile(
+		content: string,
+	): ResultAsync<string, string> {
+		return this.reader
+			.pwd()
+			.andThen((path) =>
+				path.kind === "MdFile"
+					? ok(path)
+					: err("Active file is not a markdown file"),
+			)
+			.asyncAndThen((splitPath) =>
+				this.processContent({ splitPath, transform: () => content }),
+			);
 	}
 
 	saveSelection(): Result<SavedSelection | null, string> {
@@ -106,26 +115,6 @@ export class OpenedFileWriter {
 			return errAsync(validated.error);
 		}
 		return this.applyTransformToEditor(validated.value.editor, transform);
-	}
-
-	private setContentWithPositionPreservation(
-		editor: Editor,
-		newContent: string,
-	): void {
-		const oldContent = editor.getValue();
-		if (oldContent === newContent) return;
-
-		const cursor = editor.getCursor();
-		const scrollInfo = editor.getScrollInfo();
-
-		editor.setValue(newContent);
-
-		const newLines = newContent.split("\n");
-		const newLine = Math.min(cursor.line, newLines.length - 1);
-		const newCh = Math.min(cursor.ch, (newLines[newLine] ?? "").length);
-		editor.setCursor({ ch: newCh, line: newLine });
-
-		editor.scrollTo(scrollInfo.left, scrollInfo.top);
 	}
 
 	// --- Validators for saveSelection ---
@@ -263,21 +252,123 @@ export class OpenedFileWriter {
 			const cursor = editor.getCursor();
 			const scrollInfo = editor.getScrollInfo();
 
-			editor.setValue(after);
-			await new Promise((r) => requestAnimationFrame(r));
-			// undocumented Obsidian API
-			const leaf = this.app.workspace.activeLeaf as unknown as {
-				rebuildView?: () => void;
-			} | null;
-			leaf?.rebuildView?.();
+			// Using `as unknown` because `cm` is not in public Obsidian API types
+			const cm = (editor as unknown as { cm?: EditorView }).cm;
+			if (cm) {
+				// Surgical edit: only change the affected lines
+				const changes = this.computeLineChanges(before, after);
+				if (changes) {
+					cm.dispatch({ changes });
+				}
+				await this.waitForEditorStable(cm);
+			} else {
+				editor.setValue(after);
+				await new Promise((r) => requestAnimationFrame(r));
+			}
 
-			const newLines = after.split("\n");
-			const newLine = Math.min(cursor.line, newLines.length - 1);
-			const newCh = Math.min(cursor.ch, (newLines[newLine] ?? "").length);
-			editor.setCursor({ ch: newCh, line: newLine });
-
-			editor.scrollTo(scrollInfo.left, scrollInfo.top);
+			this.restoreCursorPosition(editor, cursor, scrollInfo, after);
 		}
 		return after;
+	}
+
+	/**
+	 * Compute minimal CM6 changes between old and new content.
+	 * Finds first/last differing lines and returns a single change for that range.
+	 */
+	private computeLineChanges(
+		before: string,
+		after: string,
+	): { from: number; to: number; insert: string } | null {
+		const oldLines = before.split("\n");
+		const newLines = after.split("\n");
+
+		// Find first differing line
+		let firstDiff = 0;
+		while (
+			firstDiff < oldLines.length &&
+			firstDiff < newLines.length &&
+			oldLines[firstDiff] === newLines[firstDiff]
+		) {
+			firstDiff++;
+		}
+
+		// If no diff found, nothing to change
+		if (firstDiff === oldLines.length && firstDiff === newLines.length) {
+			return null;
+		}
+
+		// Find last differing line (from end)
+		let oldEndOffset = oldLines.length - 1;
+		let newEndOffset = newLines.length - 1;
+		while (
+			oldEndOffset > firstDiff &&
+			newEndOffset > firstDiff &&
+			oldLines[oldEndOffset] === newLines[newEndOffset]
+		) {
+			oldEndOffset--;
+			newEndOffset--;
+		}
+
+		// Compute character offsets
+		let fromChar = 0;
+		for (let i = 0; i < firstDiff; i++) {
+			fromChar += (oldLines[i]?.length ?? 0) + 1; // +1 for newline
+		}
+
+		let toChar = fromChar;
+		for (let i = firstDiff; i <= oldEndOffset; i++) {
+			toChar +=
+				(oldLines[i]?.length ?? 0) + (i < oldLines.length - 1 ? 1 : 0);
+		}
+
+		// Build insert string from new lines
+		const insertLines = newLines.slice(firstDiff, newEndOffset + 1);
+		const insert = insertLines.join("\n");
+
+		return { from: fromChar, insert, to: toChar };
+	}
+
+	private waitForEditorStable(
+		cm: EditorView,
+		timeoutMs = 200,
+	): Promise<void> {
+		const container = cm.contentDOM;
+
+		return new Promise((resolve) => {
+			let debounceTimer: ReturnType<typeof setTimeout>;
+
+			const observer = new MutationObserver(() => {
+				clearTimeout(debounceTimer);
+				debounceTimer = setTimeout(() => {
+					observer.disconnect();
+					resolve();
+				}, 16); // 1 frame of no mutations = stable
+			});
+
+			observer.observe(container, {
+				characterData: true,
+				childList: true,
+				subtree: true,
+			});
+
+			// Fallback timeout
+			debounceTimer = setTimeout(() => {
+				observer.disconnect();
+				resolve();
+			}, timeoutMs);
+		});
+	}
+
+	private restoreCursorPosition(
+		editor: Editor,
+		cursor: EditorPosition,
+		scrollInfo: { left: number; top: number },
+		newContent: string,
+	): void {
+		const newLines = newContent.split("\n");
+		const newLine = Math.min(cursor.line, newLines.length - 1);
+		const newCh = Math.min(cursor.ch, (newLines[newLine] ?? "").length);
+		editor.setCursor({ ch: newCh, line: newLine });
+		editor.scrollTo(scrollInfo.left, scrollInfo.top);
 	}
 }

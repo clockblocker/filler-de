@@ -60,7 +60,7 @@ export class Executor {
 			case VaultActionKind.UpsertMdFile: {
 				// INVARIANT: Parent folders exist (ensured by dispatcher)
 				const { splitPath, content } = action.payload;
-				const path = makeSystemPathForSplitPath(splitPath);
+				const _path = makeSystemPathForSplitPath(splitPath);
 
 				// Check if file already exists
 				const fileResult = await this.tfileHelper.getFile(splitPath);

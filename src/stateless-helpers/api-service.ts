@@ -58,9 +58,8 @@ export class ApiService {
 				const headers = normalizeHeaders(init?.headers);
 
 				// Ensure Authorization header is there for Google Gemini
-				if (!headers["authorization"]) {
-					headers["authorization"] =
-						`Bearer ${this.settings.googleApiKey}`;
+				if (!headers.authorization) {
+					headers.authorization = `Bearer ${this.settings.googleApiKey}`;
 				}
 
 				if (init?.body && !headers["content-type"]) {

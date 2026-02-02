@@ -51,6 +51,7 @@
 		"clearTestLogs": "bun ./tests/tracing/scripts/clear-test-logs.ts",
 		"coverage": "bun run clearTestLogs && bun test --coverage --preload ./tests/unit/setup.ts",
 		"dev": "bun run esbuild.config.mjs",
+		"fix": "bun x biome check --write --unsafe .",
 		"format": "bun x biome format --write .",
 		"knip": "knip",
 		"lint": "bun x biome check .",

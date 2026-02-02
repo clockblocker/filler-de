@@ -1,4 +1,4 @@
-import type { Result } from "neverthrow";
+import type { Result, ResultAsync } from "neverthrow";
 import type { App } from "obsidian";
 import { logger } from "../../../utils/logger";
 import { OpenedFileService } from "./file-services/active-view/opened-file-service";
@@ -293,7 +293,7 @@ export class VaultActionManagerImpl implements VaultActionManager {
 		return this.opened.getContent();
 	}
 
-	replaceOpenedContent(content: string): Result<string, string> {
+	replaceOpenedContent(content: string): ResultAsync<string, string> {
 		return this.opened.replaceAllContentInOpenedFile(content);
 	}
 

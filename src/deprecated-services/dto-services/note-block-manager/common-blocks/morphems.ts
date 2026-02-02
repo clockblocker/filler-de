@@ -51,7 +51,7 @@ async function _getZusammengesetztAusBlock(
 	return { backlinks, repr: reprs.join(" + ") };
 }
 
-function getMorphemischeZerlegungBlock(
+function _getMorphemischeZerlegungBlock(
 	morphemAnalysis: MorphemAnalysisOutput,
 ): Block {
 	const kerls = morphemAnalysis.morphemischeZerlegung.map((r) => ({

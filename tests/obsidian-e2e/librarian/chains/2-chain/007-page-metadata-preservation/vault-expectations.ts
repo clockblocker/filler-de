@@ -40,15 +40,15 @@ export const CONTENT_CHECKS_007_INIT = {
 
 // Content checks AFTER clicking checkbox on page 1 (should toggle status but preserve nav indices)
 export const CONTENT_CHECKS_007_AFTER_TOGGLE = {
-	// Page 1 should now have status:Done AND still have prevPageIdx/nextPageIdx
-	page1HasStatusDoneAndNavIdx: [
-		"Library/Märchen/Aschenputtel/Aschenputtel_Page_001-Aschenputtel-Märchen.md",
-		['"status":"Done"', '"prevPageIdx":0', '"nextPageIdx":2', '"noteKind":"Page"'],
-	] as const,
 	// Codex should show checked checkbox
 	codexShowsPage1Checked: [
 		"Library/Märchen/Aschenputtel/__-Aschenputtel-Märchen.md",
 		["- [x]"],
+	] as const,
+	// Page 1 should now have status:Done AND still have prevPageIdx/nextPageIdx
+	page1HasStatusDoneAndNavIdx: [
+		"Library/Märchen/Aschenputtel/Aschenputtel_Page_001-Aschenputtel-Märchen.md",
+		['"status":"Done"', '"prevPageIdx":0', '"nextPageIdx":2', '"noteKind":"Page"'],
 	] as const,
 };
 

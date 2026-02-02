@@ -9,9 +9,9 @@ import {
 
 type AbstractInflection = Record<InflectionalDimension, string>;
 
-const DePerson = z.enum([Person.First, Person.Second, Person.Third]);
-const DeNumber = z.enum([Number.Singular, Number.Plural]);
-const DeCase = z.enum([
+const _DePerson = z.enum([Person.First, Person.Second, Person.Third]);
+const _DeNumber = z.enum([Number.Singular, Number.Plural]);
+const _DeCase = z.enum([
 	Case.Nominative,
 	Case.Dative,
 	Case.Accusative,
@@ -66,7 +66,7 @@ export const posTagFormFromPos: Record<PartOfSpeech, InflectionalDimension[]> =
 // streuen
 // über jN
 
-const a = {
+const _a = {
 	auxiliaries: ["hätte"],
 	governedPhrases: ["auf den großen Moment"],
 	mainVerb: "vorbereiten",

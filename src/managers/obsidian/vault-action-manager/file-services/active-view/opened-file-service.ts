@@ -64,7 +64,9 @@ export class OpenedFileService {
 	// Writer delegations
 	// ─────────────────────────────────────────────────────────────────────────
 
-	replaceAllContentInOpenedFile(content: string): Result<string, string> {
+	replaceAllContentInOpenedFile(
+		content: string,
+	): ResultAsync<string, string> {
 		return this.writer.replaceAllContentInOpenedFile(content);
 	}
 

@@ -4,7 +4,7 @@ import {
 	PhrasemeType,
 } from "../../linguistics/general-linguistic-enums/linguistics-enums";
 
-const noteTree = {
+const _noteTree = {
 	[LinguisticUnit.Phrasem]: {
 		[PhrasemeType.Collocation]: {},
 		[PhrasemeType.CulturalQuotation]: {},
