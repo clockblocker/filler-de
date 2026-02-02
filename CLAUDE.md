@@ -284,7 +284,7 @@ function getEventFromSplitPath(event: VaultEvent): AnySplitPath | undefined {
 ### Logging Rules (.cursor/rules/logging.mdc)
 - **Use** `log` from `src/utils/logger`, not `console.*`
 - **No object logging**: Always stringify with `JSON.stringify()`
-- Log levels: `debug()`, `info()`, `warn()`, `error()`
+- Log levels: `info()`, `warn()`, `error()`
 - Example:
 ```typescript
 // ❌ BAD

@@ -18,7 +18,7 @@ import { tagLineCopyEmbedBehavior } from "./managers/actions-manager/behaviors/t
 import {
 	type CommandExecutor,
 	createCommandExecutor,
-} from "./managers/actions-manager/create-action-executor";
+} from "./managers/actions-manager/create-command-executor";
 import { CommandKind } from "./managers/actions-manager/types";
 import { UserEventInterceptor } from "./managers/obsidian/user-event-interceptor";
 import {

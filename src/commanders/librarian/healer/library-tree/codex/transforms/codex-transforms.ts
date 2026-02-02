@@ -5,6 +5,7 @@
 
 import type { Transform } from "../../../../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { goBackLinkHelper } from "../../../../../../stateless-helpers/go-back-link/go-back-link";
+import { noteMetadataHelper } from "../../../../../../stateless-helpers/note-metadata";
 import { LINE_BREAK, SPACE_F } from "../../../../../../types/literals";
 import type { Codecs } from "../../../../codecs";
 import type { SectionNodeSegmentId } from "../../../../codecs/segment-id";
@@ -17,6 +18,7 @@ import { generateChildrenList } from "../generate-codex-content";
  * Create a single transform that updates both backlink and content for a codex.
  * This is the primary transform for codex healing - combines backlink + content
  * into one atomic operation to avoid dependency graph conflicts.
+ * Also adds fileType: Codex metadata (respects hideMetadata setting).
  *
  * @param section - Section node to generate content for
  * @param sectionChain - Full chain including this section
@@ -28,7 +30,9 @@ export function makeCodexTransform(
 	sectionChain: SectionNodeSegmentId[],
 	codecs: Codecs,
 ): Transform {
-	return (_content: string): string => {
+	const metaTransform = noteMetadataHelper.upsert({ fileType: "Codex" });
+
+	return (_content: string) => {
 		// Generate children content
 		const childrenContent = generateChildrenList(
 			section,
@@ -36,33 +40,39 @@ export function makeCodexTransform(
 			codecs,
 		);
 
+		let codexContent: string;
+
 		// For root section (chain length 1), no backlink
 		if (sectionChain.length <= 1) {
-			return childrenContent;
+			codexContent = childrenContent;
+		} else {
+			// Generate backlink for non-root sections
+			const parentChain = sectionChain.slice(0, -1);
+			const parentPathPartsResult = sectionChainToPathParts(
+				parentChain,
+				codecs,
+			);
+			if (parentPathPartsResult.isErr()) {
+				// Fall back to just children content
+				codexContent = childrenContent;
+			} else {
+				const parentPathParts = parentPathPartsResult.value;
+				const parentName = parentPathParts[parentPathParts.length - 1];
+				if (!parentName) {
+					codexContent = childrenContent;
+				} else {
+					const backlinkLine = formatParentBacklink(
+						parentName,
+						parentPathParts,
+					);
+					// Format: \n[[backlink]]  \n\n<children content>
+					codexContent = `${LINE_BREAK}${backlinkLine}${SPACE_F}${childrenContent}`;
+				}
+			}
 		}
 
-		// Generate backlink for non-root sections
-		const parentChain = sectionChain.slice(0, -1);
-		const parentPathPartsResult = sectionChainToPathParts(
-			parentChain,
-			codecs,
-		);
-		if (parentPathPartsResult.isErr()) {
-			// Fall back to just children content
-			return childrenContent;
-		}
-
-		const parentPathParts = parentPathPartsResult.value;
-		const parentName = parentPathParts[parentPathParts.length - 1];
-		if (!parentName) {
-			return childrenContent;
-		}
-
-		const backlinkLine = formatParentBacklink(parentName, parentPathParts);
-
-		// Format: \n[[backlink]]  \n\n<children content>
-		// Note: childrenContent already has proper formatting
-		return `${LINE_BREAK}${backlinkLine}${SPACE_F}${childrenContent}`;
+		// Apply metadata transform
+		return metaTransform(codexContent);
 	};
 }
 

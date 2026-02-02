@@ -3,7 +3,7 @@
  */
 
 import type { App } from "obsidian";
-import type { CommandExecutor } from "../../actions-manager/create-action-executor";
+import type { CommandExecutor } from "../../actions-manager/create-command-executor";
 import type { VaultActionManager } from "../../obsidian/vault-action-manager";
 
 export type ActionClickContext = {

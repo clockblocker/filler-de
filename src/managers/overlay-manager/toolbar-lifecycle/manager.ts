@@ -59,6 +59,9 @@ export function updateToolbarVisibility(
 		const file = leaf.view?.file;
 		if (!file || file.extension !== "md") continue;
 
+		// Skip codex files - no toolbars for them
+		if (file.basename.startsWith("__")) continue;
+
 		// Obsidian leaf.id is not in public API, accessing via any
 		const leafId = (leaf as any).id as string | undefined;
 		if (!leafId) continue;

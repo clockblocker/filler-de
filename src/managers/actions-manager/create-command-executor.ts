@@ -1,4 +1,5 @@
 import { Notice } from "obsidian";
+import { isCodexSplitPath } from "../../commanders/librarian/healer/library-tree/codex/helpers";
 import type { Librarian } from "../../commanders/librarian/librarian";
 import type { Textfresser } from "../../commanders/textfresser/textfresser";
 import { logger } from "../../utils/logger";
@@ -50,6 +51,17 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 		command: ExecuteCommandInput<K>,
 	): Promise<void> {
 		const { kind, payload } = command;
+
+		// Block non-nav commands on codex files
+		const isNavCommand =
+			kind === CommandKind.GoToPrevPage ||
+			kind === CommandKind.GoToNextPage;
+		if (!isNavCommand) {
+			const currentFile = vam.mdPwd();
+			if (currentFile && isCodexSplitPath(currentFile)) {
+				return; // silently skip on codex
+			}
+		}
 
 		switch (kind) {
 			case CommandKind.GoToPrevPage:
