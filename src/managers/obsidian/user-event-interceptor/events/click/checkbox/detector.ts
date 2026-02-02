@@ -68,9 +68,14 @@ export class CheckboxClickedDetector {
 		const lineContent = this.extractLineContent(checkbox);
 		if (lineContent === null) return;
 
+		// GenericClickDetector uses MOUSEDOWN in capture phase
+		// mousedown fires BEFORE browser toggles checkbox
+		// So checkbox.checked is PRE-toggle state (what user sees right now)
+		const wasChecked = checkbox.checked;
+
 		// Encode to payload
 		const payload = CheckboxCodec.encode({
-			checked: checkbox.checked,
+			checked: wasChecked,
 			lineContent,
 			splitPath: splitPath,
 		});
@@ -83,8 +88,12 @@ export class CheckboxClickedDetector {
 			return;
 		}
 
-		// Handler applies - prevent default and invoke
+		// Handler applies - BLOCK Obsidian and browser completely
+		// Block mousedown - GenericClickDetector will also block mouseup/click
 		evt.preventDefault();
+		evt.stopPropagation();
+		evt.stopImmediatePropagation();
+
 		await invoke();
 	}
 
