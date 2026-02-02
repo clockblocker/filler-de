@@ -1,84 +1,10 @@
-import type { TFile } from "obsidian";
-import { TFolder } from "obsidian";
-import { MD } from "../../types/literals";
-import type {
-	AnySplitPath,
-	CommonSplitPath,
-	SplitPathToFolder,
-	SplitPathToMdFile,
-} from "../../types/split-path";
+import type { AnySplitPath, SplitPathToFolder, SplitPathToMdFile } from "../../types/split-path";
 import { SplitPathKind } from "../../types/split-path";
 
-export function splitPathToMdFileFromCore(
-	core: CommonSplitPath,
-): SplitPathToMdFile {
-	return {
-		...core,
-		extension: MD,
-		kind: SplitPathKind.MdFile,
-	};
-}
-
-export function splitPathToFolderFromCore(
-	core: CommonSplitPath,
-): SplitPathToFolder {
-	return {
-		...core,
-		kind: SplitPathKind.Folder,
-	};
-}
-
-export function getSplitPathForAbstractFile(file: TFile): SplitPathToMdFile;
-export function getSplitPathForAbstractFile(folder: TFolder): SplitPathToFolder;
-export function getSplitPathForAbstractFile<SP extends AnySplitPath>(
-	abstractFile: AbstractFileForSplitPath<SP>,
-): SP {
-	const path = abstractFile.path;
-	const fullPath = path.split("/").filter(Boolean);
-	const title = fullPath.pop() ?? "";
-
-	if (abstractFile instanceof TFolder) {
-		return {
-			basename: title,
-			kind: SplitPathKind.Folder,
-			pathParts: fullPath,
-		} as SP;
-	}
-
-	const extension = abstractFile.extension ?? "";
-	if (extension === MD) {
-		return {
-			basename: abstractFile.basename,
-			extension: MD,
-			kind: SplitPathKind.MdFile,
-			pathParts: fullPath,
-		} as SP;
-	}
-
-	return {
-		basename: abstractFile.basename,
-		extension,
-		kind: SplitPathKind.File,
-		pathParts: fullPath,
-	} as SP;
-}
-
-export function safeFileName(s: string): string {
-	// Replace truly invalid filename characters with spaces
-	// Path separators must be sanitized: \ /
-	// Other characters are preserved - Obsidian's behavior is the golden source
-	// Obsidian accepts: ! @ # $ % and many other special chars
-	return s.replace(/[\\/]/g, " ").trim();
-}
-
 export function pathToFolderFromPathParts(pathParts: string[]): string {
-	return joinPosix(...pathParts);
-}
-
-export function joinPosix(...parts: string[]): string {
-	const cleaned = parts
+	const cleaned = pathParts
 		.filter(Boolean)
-		.map((p) => p.replace(/(^[\\/]+)|([\\/]+$)/g, "")) // trim leading/trailing slashes/backslashes
+		.map((p) => p.replace(/(^[\\/]+)|([\\/]+$)/g, ""))
 		.filter((p) => p.length > 0);
 	return cleaned.join("/");
 }

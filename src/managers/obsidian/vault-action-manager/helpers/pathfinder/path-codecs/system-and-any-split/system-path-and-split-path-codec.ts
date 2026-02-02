@@ -1,18 +1,28 @@
 import z from "zod";
-import { MD } from "../../types/literals";
+import { MD } from "../../../../types/literals";
 import {
 	type AnySplitPath,
 	SplitPathKind,
 	SplitPathSchema,
-} from "../../types/split-path";
+} from "../../../../types/split-path";
 import {
-	joinPosix,
 	pathToFolderFromPathParts,
 	SPLIT_PATH_TO_ROOT_FOLDER,
-	safeFileName,
-} from "./path-utils";
+} from "../../path-utils";
 
-const systemPathToSplitPath = z.codec(z.string(), SplitPathSchema, {
+function joinPosix(...parts: string[]): string {
+	const cleaned = parts
+		.filter(Boolean)
+		.map((p) => p.replace(/(^[\\/]+)|([\\/]+$)/g, ""))
+		.filter((p) => p.length > 0);
+	return cleaned.join("/");
+}
+
+function safeFileName(s: string): string {
+	return s.replace(/[\\/]/g, " ").trim();
+}
+
+export const systemPathToSplitPath = z.codec(z.string(), SplitPathSchema, {
 	decode: (systemPath: string): AnySplitPath => {
 		const normalized = systemPath.replace(/^[\\/]+|[\\/]+$/g, "");
 		if (!normalized) {

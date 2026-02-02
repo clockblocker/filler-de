@@ -30,7 +30,7 @@ import { OpenedFileService } from "./managers/obsidian/vault-action-manager/file
 import { TFileHelper } from "./managers/obsidian/vault-action-manager/file-services/background/helpers/tfile-helper";
 import { TFolderHelper } from "./managers/obsidian/vault-action-manager/file-services/background/helpers/tfolder-helper";
 import { logError } from "./managers/obsidian/vault-action-manager/helpers/issue-handlers";
-import { splitPathFromSystemPathInternal } from "./managers/obsidian/vault-action-manager/helpers/pathfinder/system-path-and-split-path-codec";
+import { splitPathFromSystemPathInternal } from "./managers/obsidian/vault-action-manager/helpers/pathfinder/path-codecs/system-and-any-split/system-path-and-split-path-codec";
 import { VaultReader } from "./managers/obsidian/vault-action-manager/impl/vault-reader";
 import { OverlayManager } from "./managers/overlay-manager";
 import { SettingsTab } from "./settings";
@@ -167,7 +167,9 @@ export default class TextEaterPlugin extends Plugin {
 
 		this.apiService = new ApiService(this.settings);
 
-		this.testingOpenedFileServiceWithResult = new OpenedFileService(this.app);
+		this.testingOpenedFileServiceWithResult = new OpenedFileService(
+			this.app,
+		);
 		this.testingTFileHelper = new TFileHelper({
 			fileManager: this.app.fileManager,
 			vault: this.app.vault,
