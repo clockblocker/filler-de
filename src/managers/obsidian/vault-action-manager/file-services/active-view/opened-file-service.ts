@@ -23,21 +23,12 @@ import { OpenedFileReader } from "./writer/reader/opened-file-reader";
 export type { SavedInlineTitleSelection, SavedSelection };
 
 export class OpenedFileService {
-	private lastOpenedFiles: SplitPathToMdFile[] = [];
 	private readonly reader: OpenedFileReader;
 	private readonly writer: OpenedFileWriter;
 
 	constructor(private app: App) {
 		this.reader = new OpenedFileReader(app);
 		this.writer = new OpenedFileWriter(app, this.reader);
-		this.init();
-	}
-
-	private init() {
-		const pwdResult = this.reader.pwd();
-		if (pwdResult.isOk()) {
-			this.lastOpenedFiles.push(pwdResult.value);
-		}
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────
