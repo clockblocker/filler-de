@@ -159,6 +159,32 @@ if (result.isErr()) {
 - Each exception must be commented
 - Use Zod for runtime validation
 
+### Prefer Overloads Over `as` Casts for Discriminated Returns
+For core functions returning discriminated types based on input, use overloads instead of `as` casts:
+```typescript
+// ❌ BAD - casts in implementation
+function splitPath<T extends TAbstractFile>(file: T): DiscriminatedSplitPath<T> {
+    if (file instanceof TFolder) {
+        return { kind: "Folder", ... } as DiscriminatedSplitPath<T>;  // cast
+    }
+    return { kind: "File", ... } as DiscriminatedSplitPath<T>;  // cast
+}
+
+// ✅ GOOD - overloads provide type safety, implementation uses broad type
+function splitPath<T extends TAbstractFile>(file: T): DiscriminatedSplitPath<T>;
+function splitPath(file: TFolder): SplitPathToFolder;
+function splitPath(file: TFile): SplitPathToAnyFile;
+function splitPath(file: TAbstractFile): AnySplitPath;
+
+function splitPath(file: TAbstractFile): AnySplitPath {
+    if (file instanceof TFolder) {
+        return { kind: "Folder", ... };  // no cast needed
+    }
+    return { kind: "File", ... };  // no cast needed
+}
+```
+Overload order: generic first, then specific types, then fallback.
+
 ### Don't Lie with `as`
 When `as` is necessary, cast to what the value *actually* is — never to what you wish it were:
 ```typescript

@@ -1,6 +1,6 @@
 import type { Result } from "neverthrow";
-import type { TFile, TFolder } from "obsidian";
 import type { OpenedFileService } from "./file-services/active-view/opened-file-service";
+import type { DiscriminatedTAbstractFile } from "./helpers/pathfinder/types";
 import type { DispatchResult } from "./impl/actions-processing/dispatcher";
 import {
 	makeSplitPath,
@@ -48,12 +48,12 @@ export interface VaultActionManager {
 	listAllFilesWithMdReaders(
 		splitPath: SplitPathToFolder,
 	): Promise<Result<SplitPathWithReader[], string>>;
-	pwd(): Promise<Result<SplitPathToFile | SplitPathToMdFile, string>>;
-	mdPwd(): Promise<SplitPathToMdFile | null>;
+	pwd(): Result<SplitPathToFile | SplitPathToMdFile, string>;
+	mdPwd(): SplitPathToMdFile | null;
 
 	getAbstractFile<SP extends AnySplitPath>(
 		splitPath: SP,
-	): Promise<Result<SP["kind"] extends "Folder" ? TFolder : TFile, string>>;
+	): Promise<Result<DiscriminatedTAbstractFile<SP>, string>>;
 
 	// Opened file operations (high-level, no TFile leakage)
 	getOpenedFileName(): Promise<Result<string, string>>;

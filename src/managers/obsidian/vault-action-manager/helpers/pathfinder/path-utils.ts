@@ -83,16 +83,6 @@ export function joinPosix(...parts: string[]): string {
 	return cleaned.join("/");
 }
 
-export type AbstractFileForSplitPath<SP extends AnySplitPath> = SP extends {
-	kind: "Folder";
-}
-	? TFolder
-	: SP extends { kind: "MdFile" }
-		? TFile
-		: SP extends { kind: "File" }
-			? TFile
-			: never;
-
 export type MdFileWithContentDto = {
 	splitPath: SplitPathToMdFile;
 	content?: string;

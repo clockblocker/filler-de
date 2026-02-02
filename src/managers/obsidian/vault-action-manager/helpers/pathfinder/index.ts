@@ -5,6 +5,11 @@ export type {
 	MdFileWithContentDto,
 } from "./path-utils";
 
+export type {
+	DiscriminatedSplitPath,
+	DiscriminatedTAbstractFile,
+} from "./types";
+
 // Path utilities
 export {
 	findFirstAvailableIndexedPath,

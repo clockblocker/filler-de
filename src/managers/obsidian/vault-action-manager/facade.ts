@@ -1,9 +1,10 @@
 import type { Result } from "neverthrow";
-import type { App, TFile, TFolder } from "obsidian";
+import type { App } from "obsidian";
 import { logger } from "../../../utils/logger";
 import { OpenedFileService } from "./file-services/active-view/opened-file-service";
 import { TFileHelper } from "./file-services/background/helpers/tfile-helper";
 import { TFolderHelper } from "./file-services/background/helpers/tfolder-helper";
+import type { DiscriminatedTAbstractFile } from "./helpers/pathfinder/types";
 import { ActionQueue } from "./impl/actions-processing/action-queue";
 import type {
 	DispatcherDebugState,
@@ -269,12 +270,12 @@ export class VaultActionManagerImpl implements VaultActionManager {
 		return this.reader.listAllFilesWithMdReaders(splitPathArg);
 	}
 
-	pwd(): Promise<Result<SplitPathToFile | SplitPathToMdFile, string>> {
+	pwd(): Result<SplitPathToFile | SplitPathToMdFile, string> {
 		return this.reader.pwd();
 	}
 
-	async mdPwd(): Promise<SplitPathToMdFile | null> {
-		const result = await this.reader.pwd();
+	mdPwd(): SplitPathToMdFile | null {
+		const result = this.reader.pwd();
 		if (result.isErr()) return null;
 		const path = result.value;
 		return path.kind === "MdFile" ? path : null;
@@ -282,7 +283,7 @@ export class VaultActionManagerImpl implements VaultActionManager {
 
 	getAbstractFile<SP extends AnySplitPath>(
 		splitPathArg: SP,
-	): Promise<Result<SP["kind"] extends "Folder" ? TFolder : TFile, string>> {
+	): Promise<Result<DiscriminatedTAbstractFile<SP>, string>> {
 		return this.reader.getAbstractFile(splitPathArg);
 	}
 

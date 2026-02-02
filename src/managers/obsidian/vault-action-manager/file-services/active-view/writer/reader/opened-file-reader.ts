@@ -1,5 +1,11 @@
 import { err, ok, type Result } from "neverthrow";
-import { type App, type Editor, MarkdownView, TFile, TFolder } from "obsidian";
+import {
+	type App,
+	type Editor,
+	MarkdownView,
+	type TFile,
+	type TFolder,
+} from "obsidian";
 import {
 	errorFileStale,
 	errorGetEditor,

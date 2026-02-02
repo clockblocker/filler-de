@@ -1,10 +1,11 @@
-import { err, ok, type Result } from "neverthrow";
+import { err, ok, type Result, ResultAsync } from "neverthrow";
 import { type TFile, TFolder, type Vault } from "obsidian";
 import { logger } from "../../../../utils/logger";
 import type { OpenedFileService } from "../file-services/active-view/opened-file-service";
 import type { TFileHelper } from "../file-services/background/helpers/tfile-helper";
 import type { TFolderHelper } from "../file-services/background/helpers/tfolder-helper";
 import { splitPathFromAbstractInternal } from "../helpers/pathfinder";
+import type { DiscriminatedTAbstractFile } from "../helpers/pathfinder/types";
 import type {
 	AnySplitPath,
 	SplitPathToFile,
@@ -28,21 +29,16 @@ export class VaultReader {
 	async readContent(
 		target: SplitPathToMdFile,
 	): Promise<Result<string, string>> {
-		// Check if file is in active view - use editor content directly
 		if (this.opened.isInActiveView(target)) {
 			return this.opened.getContent();
 		}
-		// Otherwise read from vault
-		const fileResult = await this.tfileHelper.getFile(target);
-		if (fileResult.isErr()) {
-			return err(`File not found: ${fileResult.error}`);
-		}
-		try {
-			const content = await this.vault.read(fileResult.value);
-			return ok(content);
-		} catch (error) {
-			return err(error instanceof Error ? error.message : String(error));
-		}
+		return ResultAsync.fromSafePromise(this.tfileHelper.getFile(target))
+			.andThen((res) => res.mapErr((e) => `File not found: ${e}`))
+			.andThen((file) =>
+				ResultAsync.fromPromise(this.vault.read(file), (e) =>
+					e instanceof Error ? e.message : String(e),
+				),
+			);
 	}
 
 	async exists(target: AnySplitPath): Promise<boolean> {
@@ -57,21 +53,13 @@ export class VaultReader {
 	async list(
 		folder: SplitPathToFolder,
 	): Promise<Result<AnySplitPath[], string>> {
-		const folderResult = await this.tfolderHelper.getFolder(folder);
-		if (folderResult.isErr()) {
-			return err(`Folder not found: ${folderResult.error}`);
-		}
-		const children: AnySplitPath[] = folderResult.value.children.map(
-			(child) => {
-				if (child instanceof TFolder) {
-					return splitPathFromAbstractInternal(
-						child,
-					) as SplitPathToFolder;
-				}
-				return splitPathFromAbstractInternal(child) as SplitPathToFile;
-			},
-		);
-		return ok(children);
+		return (await this.tfolderHelper.getFolder(folder))
+			.mapErr((e) => `Folder not found: ${e}`)
+			.map((tfolder) =>
+				tfolder.children.map((child) =>
+					splitPathFromAbstractInternal(child),
+				),
+			);
 	}
 
 	async listAll(
@@ -131,33 +119,22 @@ export class VaultReader {
 		return ok(all);
 	}
 
-	async pwd(): Promise<Result<SplitPathToFile | SplitPathToMdFile, string>> {
-		const result = await this.opened.pwd();
-		if (result.isErr()) {
-			return err(result.error);
-		}
-		return ok(result.value);
+	pwd(): Result<SplitPathToFile | SplitPathToMdFile, string> {
+		return this.opened.pwd();
 	}
 
 	async getAbstractFile<SP extends AnySplitPath>(
 		target: SP,
-	): Promise<Result<SP["kind"] extends "Folder" ? TFolder : TFile, string>> {
+	): Promise<Result<DiscriminatedTAbstractFile<SP>, string>> {
+		type ReturnT = DiscriminatedTAbstractFile<SP>;
 		if (target.kind === "Folder") {
-			const result = await this.tfolderHelper.getFolder(target);
-			if (result.isErr()) {
-				return err(`Folder not found: ${result.error}`);
-			}
-			return ok(
-				result.value as SP["kind"] extends "Folder" ? TFolder : TFile,
-			);
+			return (await this.tfolderHelper.getFolder(target))
+				.mapErr((e) => `Folder not found: ${e}`)
+				.map((v) => v as ReturnT);
 		}
-		const result = await this.tfileHelper.getFile(target);
-		if (result.isErr()) {
-			return err(`File not found: ${result.error}`);
-		}
-		return ok(
-			result.value as SP["kind"] extends "Folder" ? TFolder : TFile,
-		);
+		return (await this.tfileHelper.getFile(target))
+			.mapErr((e) => `File not found: ${e}`)
+			.map((v) => v as ReturnT);
 	}
 
 	async listAllFilesWithMdReaders(

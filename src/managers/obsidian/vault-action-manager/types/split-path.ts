@@ -58,8 +58,10 @@ export type SplitPath<K extends SplitPathKind> = Extract<
 >;
 
 export type SplitPathToFolder = SplitPath<typeof SplitPathKind.Folder>;
+
 export type SplitPathToFile = SplitPath<typeof SplitPathKind.File>;
 export type SplitPathToMdFile = SplitPath<typeof SplitPathKind.MdFile>;
+export type SplitPathToAnyFile = SplitPathToFile | SplitPathToMdFile;
 
 export type SplitPathFromTo<T extends AnySplitPath> = { from: T; to: T };
 
