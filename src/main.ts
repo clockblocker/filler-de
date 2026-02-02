@@ -27,8 +27,8 @@ import {
 	VaultActionManagerImpl,
 } from "./managers/obsidian/vault-action-manager";
 import {
-	OpenedFileService,
-	OpenedFileService as OpenedFileServiceWithResult,
+	OpenedFileWriter as OpenedFileServiceWithResult,
+	OpenedFileWriter,
 } from "./managers/obsidian/vault-action-manager/file-services/active-view/writer/opened-file-writer";
 import { OpenedFileReader } from "./managers/obsidian/vault-action-manager/file-services/active-view/writer/reader/opened-file-reader";
 import { TFileHelper } from "./managers/obsidian/vault-action-manager/file-services/background/helpers/tfile-helper";
@@ -182,7 +182,7 @@ export default class TextEaterPlugin extends Plugin {
 			fileManager: this.app.fileManager,
 			vault: this.app.vault,
 		});
-		const testingOpenedFileService = new OpenedFileService(
+		const testingOpenedFileService = new OpenedFileWriter(
 			this.app,
 			testingOpenedFileReader,
 		);

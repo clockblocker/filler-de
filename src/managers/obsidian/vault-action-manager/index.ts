@@ -1,6 +1,6 @@
 import type { Result } from "neverthrow";
 import type { TFile, TFolder } from "obsidian";
-import type { OpenedFileService } from "./file-services/active-view/writer/opened-file-writer";
+import type { OpenedFileWriter } from "./file-services/active-view/writer/opened-file-writer";
 import type { DispatchResult } from "./impl/actions-processing/dispatcher";
 import {
 	makeSplitPath,
@@ -62,7 +62,7 @@ export interface VaultActionManager {
 	cd(splitPath: SplitPathToMdFile): Promise<Result<void, string>>;
 
 	// Direct access to opened file service for selection operations
-	readonly openedFileService: OpenedFileService;
+	readonly openedFileService: OpenedFileWriter;
 }
 
 export { makeSystemPathForSplitPath };

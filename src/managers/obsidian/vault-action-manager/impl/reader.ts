@@ -1,7 +1,7 @@
 import { err, ok, type Result } from "neverthrow";
 import { type TFile, TFolder, type Vault } from "obsidian";
 import { logger } from "../../../../utils/logger";
-import type { OpenedFileService } from "../file-services/active-view/writer/opened-file-writer";
+import type { OpenedFileWriter } from "../file-services/active-view/writer/opened-file-writer";
 import type { TFileHelper } from "../file-services/background/helpers/tfile-helper";
 import type { TFolderHelper } from "../file-services/background/helpers/tfolder-helper";
 import { splitPathFromAbstractInternal } from "../helpers/pathfinder";
@@ -20,7 +20,7 @@ import { makeSystemPathForSplitPath } from "./common/split-path-and-system-path"
 
 export class Reader {
 	constructor(
-		private readonly opened: OpenedFileService,
+		private readonly opened: OpenedFileWriter,
 		private readonly tfileHelper: TFileHelper,
 		private readonly tfolderHelper: TFolderHelper,
 		private readonly vault: Vault,

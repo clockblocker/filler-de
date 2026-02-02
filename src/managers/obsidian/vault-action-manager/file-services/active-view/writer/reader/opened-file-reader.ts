@@ -66,7 +66,7 @@ export class OpenedFileReader {
 		);
 	}
 
-	isFileActive(splitPath: SplitPathToMdFile): Result<boolean, string> {
+	isFileActive(splitPath: SplitPathToMdFile) {
 		return this.pwd().map(
 			(pwd) =>
 				pwd.pathParts.length === splitPath.pathParts.length &&
@@ -94,9 +94,11 @@ export class OpenedFileReader {
 		if (!view.file) {
 			return err(errorGetEditor());
 		}
+
 		const fileInVault = this.app.vault.getAbstractFileByPath(
 			view.file.path,
 		);
+
 		return fileInVault
 			? ok(view)
 			: err(errorGetEditor(errorFileStale(view.file.path)));

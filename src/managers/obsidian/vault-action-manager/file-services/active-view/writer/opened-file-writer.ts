@@ -35,7 +35,7 @@ export type SavedInlineTitleSelection = {
 	text: string;
 };
 
-export class OpenedFileService {
+export class OpenedFileWriter {
 	private lastOpenedFiles: SplitPathToMdFile[] = [];
 	private reader: OpenedFileReader;
 
