@@ -1,5 +1,6 @@
-import { err, ok, type Result } from "neverthrow";
+import { err, ok, type Result, ResultAsync } from "neverthrow";
 import { type FileManager, TFolder, type Vault } from "obsidian";
+import { logger } from "../../../../../../utils/logger";
 import {
 	errorBothSourceAndTargetNotFound,
 	errorCreateFailed,
@@ -31,9 +32,7 @@ export class TFolderHelper {
 		this.fileManager = fileManager;
 	}
 
-	async getFolder(
-		splitPath: SplitPathToFolder,
-	): Promise<Result<TFolder, string>> {
+	getFolder(splitPath: SplitPathToFolder): Result<TFolder, string> {
 		const systemPath = pathfinder.systemPathFromSplitPath(splitPath);
 		const tAbstractFile = this.vault.getAbstractFileByPath(systemPath);
 		if (!tAbstractFile) {
@@ -54,11 +53,16 @@ export class TFolderHelper {
 	async createFolder(
 		splitPath: SplitPathToFolder,
 	): Promise<Result<TFolder, string>> {
-		const folderResult = await this.getFolder(splitPath);
-		if (folderResult.isOk()) {
-			return ok(folderResult.value); // Already exists
+		const existing = this.getFolder(splitPath);
+		if (existing.isOk()) {
+			return existing;
 		}
+		return this.tryVaultCreateFolder(splitPath);
+	}
 
+	private async tryVaultCreateFolder(
+		splitPath: SplitPathToFolder,
+	): Promise<Result<TFolder, string>> {
 		const systemPath = pathfinder.systemPathFromSplitPath(splitPath);
 		try {
 			const createdFolder = await this.vault.createFolder(systemPath);
@@ -66,18 +70,8 @@ export class TFolderHelper {
 		} catch (error) {
 			if (error.message?.includes("already exists")) {
 				// Race condition: folder was created by another process
-				const existingResult = await this.getFolder(splitPath);
-
-				if (existingResult.isOk()) {
-					return ok(existingResult.value);
-				}
-
-				return err(
-					errorCreationRaceCondition(
-						"folder",
-						systemPath,
-						existingResult.error,
-					),
+				return this.getFolder(splitPath).mapErr((getErr) =>
+					errorCreationRaceCondition("folder", systemPath, getErr),
 				);
 			}
 			return err(errorCreateFailed("folder", systemPath, error.message));
@@ -87,13 +81,14 @@ export class TFolderHelper {
 	async trashFolder(
 		splitPath: SplitPathToFolder,
 	): Promise<Result<void, string>> {
-		const folderResult = await this.getFolder(splitPath);
+		const folderResult = this.getFolder(splitPath);
 		if (folderResult.isErr()) {
-			// Folder already trashed
-			return ok(undefined);
+			return ok(undefined); // Folder already gone
 		}
-		await this.fileManager.trashFile(folderResult.value);
-		return ok(undefined);
+		return ResultAsync.fromPromise(
+			this.fileManager.trashFile(folderResult.value),
+			() => "Failed to trash folder",
+		).map(() => undefined);
 	}
 
 	/**
@@ -106,8 +101,8 @@ export class TFolderHelper {
 	}: SplitPathFromTo<SplitPathToFolder> & {
 		collisionStrategy?: CollisionStrategy;
 	}): Promise<Result<TFolder, string>> {
-		const fromResult = await this.getFolder(from);
-		const toResult = await this.getFolder(to);
+		const fromResult = this.getFolder(from);
+		const toResult = this.getFolder(to);
 
 		if (fromResult.isErr()) {
 			if (toResult.isErr()) {
@@ -136,71 +131,82 @@ export class TFolderHelper {
 			if (collisionStrategy === "skip") {
 				return ok(toResult.value);
 			}
-
-			// collisionStrategy === "rename" - find first available indexed name
-			const existingBasenames = await getExistingBasenamesInFolder(
-				to,
-				this.vault,
-			);
-
-			const indexedPath = await pathfinder.findFirstAvailableIndexedPath(
-				to,
-				existingBasenames,
-			);
-
-			try {
-				await this.fileManager.renameFile(
-					fromResult.value,
-					pathfinder.systemPathFromSplitPath(indexedPath),
-				);
-				const renamedResult = await this.getFolder(indexedPath);
-				if (renamedResult.isErr()) {
-					return err(
-						errorRetrieveRenamed(
-							"folder",
-							pathfinder.systemPathFromSplitPath(indexedPath),
-							renamedResult.error,
-						),
-					);
-				}
-				return ok(renamedResult.value);
-			} catch (error) {
-				return err(
-					errorRenameFailed(
-						"folder",
-						pathfinder.systemPathFromSplitPath(from),
-						pathfinder.systemPathFromSplitPath(indexedPath),
-						error.message,
-					),
-				);
-			}
+			// collisionStrategy === "rename"
+			return this.renameToIndexedPath(fromResult.value, from, to);
 		}
 
-		try {
-			await this.fileManager.renameFile(
-				fromResult.value,
-				pathfinder.systemPathFromSplitPath(to),
-			);
-			const renamedResult = await this.getFolder(to);
-			if (renamedResult.isErr()) {
-				return err(
-					errorRetrieveRenamed(
-						"folder",
-						pathfinder.systemPathFromSplitPath(to),
-						renamedResult.error,
-					),
+		return this.performRename(fromResult.value, to);
+	}
+
+	private async renameToIndexedPath(
+		fromFolder: TFolder,
+		from: SplitPathToFolder,
+		to: SplitPathToFolder,
+	): Promise<Result<TFolder, string>> {
+		const existingBasenames = await getExistingBasenamesInFolder(
+			to,
+			this.vault,
+		);
+		const indexedPath = await pathfinder.findFirstAvailableIndexedPath(
+			to,
+			existingBasenames,
+		);
+
+		const renameResult = await this.tryVaultRename(
+			fromFolder,
+			indexedPath,
+			from,
+		);
+		if (renameResult.isErr()) {
+			return err(renameResult.error);
+		}
+
+		return this.getFolder(indexedPath).mapErr((getErr) =>
+			errorRetrieveRenamed(
+				"folder",
+				pathfinder.systemPathFromSplitPath(indexedPath),
+				getErr,
+			),
+		);
+	}
+
+	private performRename(
+		fromFolder: TFolder,
+		to: SplitPathToFolder,
+	): ResultAsync<TFolder, string> {
+		return this.tryVaultRename(fromFolder, to, to).andThen(() =>
+			this.getFolder(to).mapErr((getErr) =>
+				errorRetrieveRenamed(
+					"folder",
+					pathfinder.systemPathFromSplitPath(to),
+					getErr,
+				),
+			),
+		);
+	}
+
+	private tryVaultRename(
+		folder: TFolder,
+		to: SplitPathToFolder,
+		from: SplitPathToFolder,
+	): ResultAsync<void, string> {
+		const toPath = pathfinder.systemPathFromSplitPath(to);
+		return ResultAsync.fromPromise(
+			this.fileManager.renameFile(folder, toPath),
+			(error) => {
+				const msg =
+					error instanceof Error ? error.message : String(error);
+				logger.error(
+					"[TFolderHelper.renameFolder] vault.rename threw",
+					JSON.stringify({ error: msg, to: toPath }),
 				);
-			}
-			return ok(renamedResult.value);
-		} catch (error) {
-			return err(
-				errorRenameFailed(
+				return errorRenameFailed(
 					"folder",
 					pathfinder.systemPathFromSplitPath(from),
-					pathfinder.systemPathFromSplitPath(to),
-					error.message,
-				),
-			);
-		}
+					toPath,
+					msg,
+				);
+			},
+		);
 	}
 }

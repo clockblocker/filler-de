@@ -64,7 +64,7 @@ export async function resolveUniqueDuplicateName(
 	}
 
 	// List files in the folder
-	const filesResult = await vam.list(folderPath);
+	const filesResult = vam.list(folderPath);
 	if (filesResult.isErr()) {
 		// If we can't list, just use the target name
 		return ok(targetCoreName);

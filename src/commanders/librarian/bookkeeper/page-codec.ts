@@ -174,7 +174,7 @@ export async function getAdjacentPageInfo(
 	};
 
 	// List all files in parent folder
-	const listResult = await vam.list(parentFolder);
+	const listResult = vam.list(parentFolder);
 	if (listResult.isErr()) {
 		return { hasNextPage: false, hasPrevPage: false };
 	}

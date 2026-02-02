@@ -117,7 +117,7 @@ export class Librarian {
 
 			// Read all files from library
 			const allFilesResult =
-				await this.vam.listAllFilesWithMdReaders(rootSplitPath);
+				this.vam.listAllFilesWithMdReaders(rootSplitPath);
 
 			if (allFilesResult.isErr()) {
 				logger.error(

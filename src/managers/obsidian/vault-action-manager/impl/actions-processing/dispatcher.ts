@@ -58,7 +58,7 @@ export type DispatcherDebugState = {
  * Service to check if files/folders exist.
  */
 export type ExistenceChecker = {
-	exists(splitPath: AnySplitPath): Promise<boolean>;
+	exists(splitPath: AnySplitPath): boolean;
 };
 
 export class Dispatcher {
@@ -236,10 +236,7 @@ export class Dispatcher {
 				action.kind === VaultActionKind.TrashFile ||
 				action.kind === VaultActionKind.TrashMdFile
 			) {
-				const exists = await this.existenceChecker.exists(
-					action.payload.splitPath,
-				);
-				if (!exists) {
+				if (!this.existenceChecker.exists(action.payload.splitPath)) {
 					// Target doesn't exist - skip delete action
 					continue;
 				}

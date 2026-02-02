@@ -74,13 +74,11 @@ export class VaultActionManagerImpl implements VaultActionManager {
 		);
 		this.selfEventTracker = new SelfEventTracker();
 		const existenceChecker: ExistenceChecker = {
-			exists: async (splitPath) => {
+			exists: (splitPath) => {
 				if (splitPath.kind === "Folder") {
-					const result = await tfolderHelper.getFolder(splitPath);
-					return result.isOk();
+					return tfolderHelper.getFolder(splitPath).isOk();
 				}
-				const result = await tfileHelper.getFile(splitPath);
-				return result.isOk();
+				return tfileHelper.getFile(splitPath).isOk();
 			},
 		};
 		this.dispatcher = new Dispatcher(
@@ -250,7 +248,7 @@ export class VaultActionManagerImpl implements VaultActionManager {
 		return this.reader.readContent(splitPathArg);
 	}
 
-	exists(splitPathArg: AnySplitPath): Promise<boolean> {
+	exists(splitPathArg: AnySplitPath): boolean {
 		return this.reader.exists(splitPathArg);
 	}
 
@@ -258,15 +256,13 @@ export class VaultActionManagerImpl implements VaultActionManager {
 		return this.opened.isInActiveView(splitPathArg);
 	}
 
-	list(
-		splitPathArg: SplitPathToFolder,
-	): Promise<Result<AnySplitPath[], string>> {
+	list(splitPathArg: SplitPathToFolder): Result<AnySplitPath[], string> {
 		return this.reader.list(splitPathArg);
 	}
 
 	listAllFilesWithMdReaders(
 		splitPathArg: SplitPathToFolder,
-	): Promise<Result<SplitPathWithReader[], string>> {
+	): Result<SplitPathWithReader[], string> {
 		return this.reader.listAllFilesWithMdReaders(splitPathArg);
 	}
 
@@ -280,7 +276,7 @@ export class VaultActionManagerImpl implements VaultActionManager {
 
 	getAbstractFile<SP extends AnySplitPath>(
 		splitPathArg: SP,
-	): Promise<Result<DiscriminatedTAbstractFile<SP>, string>> {
+	): Result<DiscriminatedTAbstractFile<SP>, string> {
 		return this.reader.getAbstractFile(splitPathArg);
 	}
 

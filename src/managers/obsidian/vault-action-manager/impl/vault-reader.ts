@@ -31,28 +31,26 @@ export class VaultReader {
 		if (this.opened.isInActiveView(target)) {
 			return this.opened.getContent();
 		}
-		return ResultAsync.fromSafePromise(this.tfileHelper.getFile(target))
-			.andThen((res) => res.mapErr((e) => `File not found: ${e}`))
-			.andThen((file) =>
+		return this.tfileHelper
+			.getFile(target)
+			.mapErr((e) => `File not found: ${e}`)
+			.asyncAndThen((file) =>
 				ResultAsync.fromPromise(this.vault.read(file), (e) =>
 					e instanceof Error ? e.message : String(e),
 				),
 			);
 	}
 
-	async exists(target: AnySplitPath): Promise<boolean> {
+	exists(target: AnySplitPath): boolean {
 		if (target.kind === "Folder") {
-			const result = await this.tfolderHelper.getFolder(target);
-			return result.isOk();
+			return this.tfolderHelper.getFolder(target).isOk();
 		}
-		const result = await this.tfileHelper.getFile(target);
-		return result.isOk();
+		return this.tfileHelper.getFile(target).isOk();
 	}
 
-	async list(
-		folder: SplitPathToFolder,
-	): Promise<Result<AnySplitPath[], string>> {
-		return (await this.tfolderHelper.getFolder(folder))
+	list(folder: SplitPathToFolder): Result<AnySplitPath[], string> {
+		return this.tfolderHelper
+			.getFolder(folder)
 			.mapErr((e) => `Folder not found: ${e}`)
 			.map((tfolder) =>
 				tfolder.children.map((child) =>
@@ -61,9 +59,7 @@ export class VaultReader {
 			);
 	}
 
-	async listAll(
-		folder: SplitPathToFolder,
-	): Promise<Result<SplitPathWithTRef[], string>> {
+	listAll(folder: SplitPathToFolder): Result<SplitPathWithTRef[], string> {
 		const all: SplitPathWithTRef[] = [];
 		const stack: SplitPathToFolder[] = [folder];
 
@@ -71,7 +67,7 @@ export class VaultReader {
 			const current = stack.pop();
 			if (!current) continue;
 
-			const childrenResult = await this.list(current);
+			const childrenResult = this.list(current);
 			if (childrenResult.isErr()) {
 				// Skip on error, continue with other folders
 				logger.warn(
@@ -83,7 +79,7 @@ export class VaultReader {
 			}
 			const children = childrenResult.value;
 			for (const child of children) {
-				const tRefResult = await this.getAbstractFile(child);
+				const tRefResult = this.getAbstractFile(child);
 				if (tRefResult.isErr()) {
 					// Skip files that can't be resolved (stale refs, deleted files)
 					logger.warn(
@@ -118,23 +114,25 @@ export class VaultReader {
 		return ok(all);
 	}
 
-	async getAbstractFile<SP extends AnySplitPath>(
+	getAbstractFile<SP extends AnySplitPath>(
 		target: SP,
-	): Promise<Result<DiscriminatedTAbstractFile<SP>, string>> {
+	): Result<DiscriminatedTAbstractFile<SP>, string> {
 		type ReturnT = DiscriminatedTAbstractFile<SP>;
 		if (target.kind === "Folder") {
-			return (await this.tfolderHelper.getFolder(target))
+			return this.tfolderHelper
+				.getFolder(target)
 				.mapErr((e) => `Folder not found: ${e}`)
 				.map((v) => v as ReturnT);
 		}
-		return (await this.tfileHelper.getFile(target))
+		return this.tfileHelper
+			.getFile(target)
 			.mapErr((e) => `File not found: ${e}`)
 			.map((v) => v as ReturnT);
 	}
 
-	async listAllFilesWithMdReaders(
+	listAllFilesWithMdReaders(
 		folder: SplitPathToFolder,
-	): Promise<Result<SplitPathWithReader[], string>> {
+	): Result<SplitPathWithReader[], string> {
 		const all: SplitPathWithReader[] = [];
 		const stack: SplitPathToFolder[] = [folder];
 
@@ -142,7 +140,7 @@ export class VaultReader {
 			const current = stack.pop();
 			if (!current) continue;
 
-			const childrenResult = await this.list(current);
+			const childrenResult = this.list(current);
 			if (childrenResult.isErr()) {
 				return err(childrenResult.error);
 			}

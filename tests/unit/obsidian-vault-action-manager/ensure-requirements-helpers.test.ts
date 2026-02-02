@@ -390,7 +390,7 @@ describe("ensureDestinationsExist", () => {
 		};
 
 		const existenceChecker: ExistenceChecker = {
-			exists: async () => false, // Doesn't exist
+			exists: () => false, // Doesn't exist
 		};
 
 		const result = await ensureDestinationsExist(
@@ -417,7 +417,7 @@ describe("ensureDestinationsExist", () => {
 		};
 
 		const existenceChecker: ExistenceChecker = {
-			exists: async () => true, // Exists
+			exists: () => true, // Exists
 		};
 
 		const result = await ensureDestinationsExist(
@@ -440,7 +440,7 @@ describe("ensureDestinationsExist", () => {
 		};
 
 		const existenceChecker: ExistenceChecker = {
-			exists: async () => false, // Doesn't exist
+			exists: () => false, // Doesn't exist
 		};
 
 		const result = await ensureDestinationsExist(
@@ -474,7 +474,7 @@ describe("ensureDestinationsExist", () => {
 		];
 
 		const existenceChecker: ExistenceChecker = {
-			exists: async () => false,
+			exists: () => false,
 		};
 
 		const result = await ensureDestinationsExist(
@@ -498,7 +498,7 @@ describe("ensureDestinationsExist", () => {
 
 		let callCount = 0;
 		const existenceChecker: ExistenceChecker = {
-			exists: async () => {
+			exists: () => {
 				callCount++;
 				return false;
 			},
@@ -525,7 +525,7 @@ describe("ensureDestinationsExist", () => {
 		};
 
 		const existenceChecker: ExistenceChecker = {
-			exists: async () => false,
+			exists: () => false,
 		};
 
 		const result = await ensureDestinationsExist(
@@ -549,7 +549,7 @@ describe("ensureDestinationsExist", () => {
 		};
 
 		const existenceChecker: ExistenceChecker = {
-			exists: async () => false,
+			exists: () => false,
 		};
 
 		const result = await ensureDestinationsExist(

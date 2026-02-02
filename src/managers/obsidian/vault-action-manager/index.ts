@@ -42,18 +42,18 @@ export interface VaultActionManager {
 
 	// Read-only operations
 	readContent(splitPath: SplitPathToMdFile): Promise<Result<string, string>>;
-	exists(splitPath: AnySplitPath): Promise<boolean>;
+	exists(splitPath: AnySplitPath): boolean;
 	isInActiveView(splitPath: AnySplitPath): boolean;
-	list(splitPath: SplitPathToFolder): Promise<Result<AnySplitPath[], string>>;
+	list(splitPath: SplitPathToFolder): Result<AnySplitPath[], string>;
 	listAllFilesWithMdReaders(
 		splitPath: SplitPathToFolder,
-	): Promise<Result<SplitPathWithReader[], string>>;
+	): Result<SplitPathWithReader[], string>;
 	pwd(): Result<SplitPathToFile | SplitPathToMdFile, string>;
 	mdPwd(): SplitPathToMdFile | null;
 
 	getAbstractFile<SP extends AnySplitPath>(
 		splitPath: SP,
-	): Promise<Result<DiscriminatedTAbstractFile<SP>, string>>;
+	): Result<DiscriminatedTAbstractFile<SP>, string>;
 
 	// Opened file operations (high-level, no TFile leakage)
 	getOpenedFileName(): Promise<Result<string, string>>;
