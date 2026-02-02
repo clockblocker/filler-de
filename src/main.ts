@@ -30,7 +30,7 @@ import { OpenedFileService } from "./managers/obsidian/vault-action-manager/file
 import { TFileHelper } from "./managers/obsidian/vault-action-manager/file-services/background/helpers/tfile-helper";
 import { TFolderHelper } from "./managers/obsidian/vault-action-manager/file-services/background/helpers/tfolder-helper";
 import { logError } from "./managers/obsidian/vault-action-manager/helpers/issue-handlers";
-import { splitPathFromSystemPathInternal } from "./managers/obsidian/vault-action-manager/helpers/pathfinder/path-codecs/system-and-any-split/system-path-and-split-path-codec";
+import { pathfinder } from "./managers/obsidian/vault-action-manager/helpers/pathfinder";
 import { VaultReader } from "./managers/obsidian/vault-action-manager/impl/vault-reader";
 import { OverlayManager } from "./managers/overlay-manager";
 import { SettingsTab } from "./settings";
@@ -446,7 +446,7 @@ export default class TextEaterPlugin extends Plugin {
 
 	getHelpersTestingApi() {
 		return {
-			splitPath: splitPathFromSystemPathInternal,
+			splitPath: pathfinder.splitPathFromSystemPath,
 			tfileHelper: this.testingTFileHelper,
 			tfolderHelper: this.testingTFolderHelper,
 		};

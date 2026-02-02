@@ -1,4 +1,4 @@
-import { pathToFolderFromPathParts } from "../../helpers/pathfinder";
+import { pathfinder } from "../../helpers/pathfinder";
 import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,
@@ -58,7 +58,7 @@ export function collectRequirements(actions: readonly VaultAction[]): {
 				for (let i = 1; i <= splitPath.pathParts.length; i++) {
 					const parentPathParts = splitPath.pathParts.slice(0, i);
 					const parentPath =
-						pathToFolderFromPathParts(parentPathParts);
+						pathfinder.pathToFolderFromPathParts(parentPathParts);
 					if (parentPath) {
 						folderKeys.add(parentPath);
 					}
@@ -82,7 +82,7 @@ export function collectRequirements(actions: readonly VaultAction[]): {
 				for (let i = 1; i <= to.pathParts.length; i++) {
 					const parentPathParts = to.pathParts.slice(0, i);
 					const parentPath =
-						pathToFolderFromPathParts(parentPathParts);
+						pathfinder.pathToFolderFromPathParts(parentPathParts);
 					if (parentPath) {
 						folderKeys.add(parentPath);
 					}

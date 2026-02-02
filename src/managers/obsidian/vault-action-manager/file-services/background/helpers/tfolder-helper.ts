@@ -9,10 +9,7 @@ import {
 	errorRetrieveRenamed,
 	errorTypeMismatch,
 } from "../../../errors";
-import {
-	findFirstAvailableIndexedPath,
-	systemPathFromSplitPathInternal,
-} from "../../../helpers/pathfinder";
+import { pathfinder } from "../../../helpers/pathfinder";
 import type {
 	SplitPathFromTo,
 	SplitPathToFolder,
@@ -37,7 +34,7 @@ export class TFolderHelper {
 	async getFolder(
 		splitPath: SplitPathToFolder,
 	): Promise<Result<TFolder, string>> {
-		const systemPath = systemPathFromSplitPathInternal(splitPath);
+		const systemPath = pathfinder.systemPathFromSplitPath(splitPath);
 		const tAbstractFile = this.vault.getAbstractFileByPath(systemPath);
 		if (!tAbstractFile) {
 			return err(errorGetByPath("folder", systemPath));
@@ -62,7 +59,7 @@ export class TFolderHelper {
 			return ok(folderResult.value); // Already exists
 		}
 
-		const systemPath = systemPathFromSplitPathInternal(splitPath);
+		const systemPath = pathfinder.systemPathFromSplitPath(splitPath);
 		try {
 			const createdFolder = await this.vault.createFolder(systemPath);
 			return ok(createdFolder);
@@ -114,8 +111,8 @@ export class TFolderHelper {
 
 		if (fromResult.isErr()) {
 			if (toResult.isErr()) {
-				const fromPath = systemPathFromSplitPathInternal(from);
-				const toPath = systemPathFromSplitPathInternal(to);
+				const fromPath = pathfinder.systemPathFromSplitPath(from);
+				const toPath = pathfinder.systemPathFromSplitPath(to);
 				return err(
 					errorBothSourceAndTargetNotFound(
 						"folder",
@@ -146,7 +143,7 @@ export class TFolderHelper {
 				this.vault,
 			);
 
-			const indexedPath = await findFirstAvailableIndexedPath(
+			const indexedPath = await pathfinder.findFirstAvailableIndexedPath(
 				to,
 				existingBasenames,
 			);
@@ -154,14 +151,14 @@ export class TFolderHelper {
 			try {
 				await this.fileManager.renameFile(
 					fromResult.value,
-					systemPathFromSplitPathInternal(indexedPath),
+					pathfinder.systemPathFromSplitPath(indexedPath),
 				);
 				const renamedResult = await this.getFolder(indexedPath);
 				if (renamedResult.isErr()) {
 					return err(
 						errorRetrieveRenamed(
 							"folder",
-							systemPathFromSplitPathInternal(indexedPath),
+							pathfinder.systemPathFromSplitPath(indexedPath),
 							renamedResult.error,
 						),
 					);
@@ -171,8 +168,8 @@ export class TFolderHelper {
 				return err(
 					errorRenameFailed(
 						"folder",
-						systemPathFromSplitPathInternal(from),
-						systemPathFromSplitPathInternal(indexedPath),
+						pathfinder.systemPathFromSplitPath(from),
+						pathfinder.systemPathFromSplitPath(indexedPath),
 						error.message,
 					),
 				);
@@ -182,14 +179,14 @@ export class TFolderHelper {
 		try {
 			await this.fileManager.renameFile(
 				fromResult.value,
-				systemPathFromSplitPathInternal(to),
+				pathfinder.systemPathFromSplitPath(to),
 			);
 			const renamedResult = await this.getFolder(to);
 			if (renamedResult.isErr()) {
 				return err(
 					errorRetrieveRenamed(
 						"folder",
-						systemPathFromSplitPathInternal(to),
+						pathfinder.systemPathFromSplitPath(to),
 						renamedResult.error,
 					),
 				);
@@ -199,8 +196,8 @@ export class TFolderHelper {
 			return err(
 				errorRenameFailed(
 					"folder",
-					systemPathFromSplitPathInternal(from),
-					systemPathFromSplitPathInternal(to),
+					pathfinder.systemPathFromSplitPath(from),
+					pathfinder.systemPathFromSplitPath(to),
 					error.message,
 				),
 			);

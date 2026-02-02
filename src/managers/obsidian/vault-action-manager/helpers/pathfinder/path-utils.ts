@@ -1,4 +1,4 @@
-import type { AnySplitPath, SplitPathToFolder, SplitPathToMdFile } from "../../types/split-path";
+import type { AnySplitPath, SplitPathToFolder } from "../../types/split-path";
 import { SplitPathKind } from "../../types/split-path";
 
 export function pathToFolderFromPathParts(pathParts: string[]): string {
@@ -8,11 +8,6 @@ export function pathToFolderFromPathParts(pathParts: string[]): string {
 		.filter((p) => p.length > 0);
 	return cleaned.join("/");
 }
-
-export type MdFileWithContentDto = {
-	splitPath: SplitPathToMdFile;
-	content?: string;
-};
 
 export const SPLIT_PATH_TO_ROOT_FOLDER: SplitPathToFolder = {
 	basename: "",

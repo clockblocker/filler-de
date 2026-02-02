@@ -4,7 +4,7 @@ import { logger } from "../../../../utils/logger";
 import type { OpenedFileService } from "../file-services/active-view/opened-file-service";
 import type { TFileHelper } from "../file-services/background/helpers/tfile-helper";
 import type { TFolderHelper } from "../file-services/background/helpers/tfolder-helper";
-import { splitPathFromAbstractInternal } from "../helpers/pathfinder";
+import { pathfinder } from "../helpers/pathfinder";
 import type { DiscriminatedTAbstractFile } from "../helpers/pathfinder/types";
 import type {
 	AnySplitPath,
@@ -57,7 +57,7 @@ export class VaultReader {
 			.mapErr((e) => `Folder not found: ${e}`)
 			.map((tfolder) =>
 				tfolder.children.map((child) =>
-					splitPathFromAbstractInternal(child),
+					pathfinder.splitPathFromAbstract(child),
 				),
 			);
 	}

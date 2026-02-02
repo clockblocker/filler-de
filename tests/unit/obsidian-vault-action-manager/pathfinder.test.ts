@@ -1,26 +1,22 @@
 import { describe, expect, it } from "bun:test";
-import {
-	SPLIT_PATH_TO_ROOT_FOLDER,
-	splitPathFromSystemPathInternal,
-	systemPathFromSplitPathInternal,
-} from "../../../src/managers/obsidian/vault-action-manager/helpers/pathfinder";
+import { pathfinder } from "../../../src/managers/obsidian/vault-action-manager/helpers/pathfinder";
 import { MD } from "../../../src/managers/obsidian/vault-action-manager/types/literals";
 import { SplitPathKind, type SplitPathToFile, type SplitPathToFolder, type SplitPathToMdFile } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
 
-describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", () => {
+describe("pathfinder.systemPathFromSplitPath | pathfinder.splitPathFromSystemPath", () => {
 	describe("decode (string → SplitPath)", () => {
 		it("decodes root path to root folder", () => {
-			const result = splitPathFromSystemPathInternal("");
-			expect(result).toEqual(SPLIT_PATH_TO_ROOT_FOLDER);
+			const result = pathfinder.splitPathFromSystemPath("");
+			expect(result).toEqual(pathfinder.SPLIT_PATH_TO_ROOT_FOLDER);
 		});
 
 		it("decodes normalized root path to root folder", () => {
-			const result = splitPathFromSystemPathInternal("///");
-			expect(result).toEqual(SPLIT_PATH_TO_ROOT_FOLDER);
+			const result = pathfinder.splitPathFromSystemPath("///");
+			expect(result).toEqual(pathfinder.SPLIT_PATH_TO_ROOT_FOLDER);
 		});
 
 		it("decodes md file path", () => {
-			const result = splitPathFromSystemPathInternal("root/notes/file.md");
+			const result = pathfinder.splitPathFromSystemPath("root/notes/file.md");
 			expect(result).toEqual({
 				basename: "file",
 				extension: MD,
@@ -30,7 +26,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 		});
 
 		it("decodes nested md file path", () => {
-			const result = splitPathFromSystemPathInternal(
+			const result = pathfinder.splitPathFromSystemPath(
 				"Library/Section/Note-Section.md",
 			);
 			expect(result).toEqual({
@@ -42,7 +38,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 		});
 
 		it("decodes non-md file path", () => {
-			const result = splitPathFromSystemPathInternal("root/assets/image.png");
+			const result = pathfinder.splitPathFromSystemPath("root/assets/image.png");
 			expect(result).toEqual({
 				basename: "image",
 				extension: "png",
@@ -52,7 +48,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 		});
 
 		it("decodes folder path", () => {
-			const result = splitPathFromSystemPathInternal("root/library/Section");
+			const result = pathfinder.splitPathFromSystemPath("root/library/Section");
 			expect(result).toEqual({
 				basename: "Section",
 				kind: SplitPathKind.Folder,
@@ -61,7 +57,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 		});
 
 		it("decodes single-segment folder", () => {
-			const result = splitPathFromSystemPathInternal("Library");
+			const result = pathfinder.splitPathFromSystemPath("Library");
 			expect(result).toEqual({
 				basename: "Library",
 				kind: SplitPathKind.Folder,
@@ -70,7 +66,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 		});
 
 		it("normalizes leading slashes", () => {
-			const result = splitPathFromSystemPathInternal("///root/file.md");
+			const result = pathfinder.splitPathFromSystemPath("///root/file.md");
 			expect(result).toEqual({
 				basename: "file",
 				extension: MD,
@@ -80,7 +76,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 		});
 
 		it("normalizes trailing slashes", () => {
-			const result = splitPathFromSystemPathInternal("root/folder///");
+			const result = pathfinder.splitPathFromSystemPath("root/folder///");
 			expect(result).toEqual({
 				basename: "folder",
 				kind: SplitPathKind.Folder,
@@ -89,7 +85,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 		});
 
 		it("handles file with multiple dots in name", () => {
-			const result = splitPathFromSystemPathInternal("root/file.name.md");
+			const result = pathfinder.splitPathFromSystemPath("root/file.name.md");
 			expect(result).toEqual({
 				basename: "file.name",
 				extension: MD,
@@ -99,7 +95,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 		});
 
 		it("handles empty path parts", () => {
-			const result = splitPathFromSystemPathInternal("//root//file.md//");
+			const result = pathfinder.splitPathFromSystemPath("//root//file.md//");
 			expect(result).toEqual({
 				basename: "file",
 				extension: MD,
@@ -111,7 +107,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 
 	describe("encode (SplitPath → string)", () => {
 		it("encodes root folder", () => {
-			const result = systemPathFromSplitPathInternal(SPLIT_PATH_TO_ROOT_FOLDER);
+			const result = pathfinder.systemPathFromSplitPath(pathfinder.SPLIT_PATH_TO_ROOT_FOLDER);
 			expect(result).toBe("");
 		});
 
@@ -122,7 +118,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 				kind: SplitPathKind.MdFile,
 				pathParts: ["root", "notes"],
 			} as SplitPathToMdFile;
-			const result = systemPathFromSplitPathInternal(splitPath);
+			const result = pathfinder.systemPathFromSplitPath(splitPath);
 			expect(result).toBe("root/notes/file.md");
 		});
 
@@ -133,7 +129,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 				kind: SplitPathKind.MdFile,
 				pathParts: ["Library", "Section"],
 			} as SplitPathToMdFile;
-			const result = systemPathFromSplitPathInternal(splitPath);
+			const result = pathfinder.systemPathFromSplitPath(splitPath);
 			expect(result).toBe("Library/Section/Note-Section.md");
 		});
 
@@ -144,7 +140,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 				kind: SplitPathKind.File,
 				pathParts: ["root", "assets"],
 			};
-			const result = systemPathFromSplitPathInternal(splitPath);
+			const result = pathfinder.systemPathFromSplitPath(splitPath);
 			expect(result).toBe("root/assets/image.png");
 		});
 
@@ -154,7 +150,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 				kind: SplitPathKind.Folder,
 				pathParts: ["root", "library"],
 			};
-			const result = systemPathFromSplitPathInternal(splitPath);
+			const result = pathfinder.systemPathFromSplitPath(splitPath);
 			expect(result).toBe("root/library/Section");
 		});
 
@@ -164,7 +160,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 				kind: SplitPathKind.Folder,
 				pathParts: [],
 			};
-			const result = systemPathFromSplitPathInternal(splitPath);
+			const result = pathfinder.systemPathFromSplitPath(splitPath);
 			expect(result).toBe("Library");
 		});
 
@@ -175,7 +171,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 				kind: SplitPathKind.MdFile,
 				pathParts: ["root"],
 			} as SplitPathToMdFile;
-			const result = systemPathFromSplitPathInternal(splitPath);
+			const result = pathfinder.systemPathFromSplitPath(splitPath);
 			expect(result).toBe("root/file name.md");
 		});
 
@@ -186,7 +182,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 				kind: SplitPathKind.MdFile,
 				pathParts: ["root"],
 			} as SplitPathToMdFile;
-			const result = systemPathFromSplitPathInternal(splitPath);
+			const result = pathfinder.systemPathFromSplitPath(splitPath);
 			expect(result).toBe("root/file name.md");
 		});
 
@@ -197,7 +193,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 				kind: SplitPathKind.MdFile,
 				pathParts: ["root"],
 			} as SplitPathToMdFile;
-			const result = systemPathFromSplitPathInternal(splitPath);
+			const result = pathfinder.systemPathFromSplitPath(splitPath);
 			// Obsidian accepts these characters - they should be preserved
 			expect(result).toBe("root/file-with-!@#$%.md");
 		});
@@ -209,7 +205,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 				kind: SplitPathKind.MdFile,
 				pathParts: ["root"],
 			} as SplitPathToMdFile;
-			const result = systemPathFromSplitPathInternal(splitPath);
+			const result = pathfinder.systemPathFromSplitPath(splitPath);
 			expect(result).toBe("root/file with spaces.md");
 		});
 
@@ -220,16 +216,16 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 				kind: SplitPathKind.MdFile,
 				pathParts: ["root"],
 			} as SplitPathToMdFile;
-			const result = systemPathFromSplitPathInternal(splitPath);
+			const result = pathfinder.systemPathFromSplitPath(splitPath);
 			expect(result).toBe("root/file.md");
 		});
 	});
 
 	describe("round-trip (encode/decode)", () => {
 		it("round-trips root folder", () => {
-			const original = SPLIT_PATH_TO_ROOT_FOLDER;
-			const encoded = systemPathFromSplitPathInternal(original);
-			const decoded = splitPathFromSystemPathInternal(encoded);
+			const original = pathfinder.SPLIT_PATH_TO_ROOT_FOLDER;
+			const encoded = pathfinder.systemPathFromSplitPath(original);
+			const decoded = pathfinder.splitPathFromSystemPath(encoded);
 			expect(decoded).toEqual(original);
 		});
 
@@ -240,8 +236,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 				kind: SplitPathKind.MdFile,
 				pathParts: ["root", "notes"],
 			} as SplitPathToMdFile;
-			const encoded = systemPathFromSplitPathInternal(original);
-			const decoded = splitPathFromSystemPathInternal(encoded);
+			const encoded = pathfinder.systemPathFromSplitPath(original);
+			const decoded = pathfinder.splitPathFromSystemPath(encoded);
 			expect(decoded).toEqual(original);
 		});
 
@@ -252,8 +248,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 				kind: SplitPathKind.MdFile,
 				pathParts: ["Library", "Section", "Subsection"],
 			} as SplitPathToMdFile;
-			const encoded = systemPathFromSplitPathInternal(original);
-			const decoded = splitPathFromSystemPathInternal(encoded);
+			const encoded = pathfinder.systemPathFromSplitPath(original);
+			const decoded = pathfinder.splitPathFromSystemPath(encoded);
 			expect(decoded).toEqual(original);
 		});
 
@@ -264,8 +260,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 				kind: SplitPathKind.File,
 				pathParts: ["root", "assets"],
 			} as SplitPathToFile;
-			const encoded = systemPathFromSplitPathInternal(original);
-			const decoded = splitPathFromSystemPathInternal(encoded);
+			const encoded = pathfinder.systemPathFromSplitPath(original);
+			const decoded = pathfinder.splitPathFromSystemPath(encoded);
 			expect(decoded).toEqual(original);
 		});
 
@@ -275,8 +271,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 				kind: SplitPathKind.Folder,
 				pathParts: ["root", "library"],
 			} as SplitPathToFolder;
-			const encoded = systemPathFromSplitPathInternal(original);
-			const decoded = splitPathFromSystemPathInternal(encoded);
+			const encoded = pathfinder.systemPathFromSplitPath(original);
+			const decoded = pathfinder.splitPathFromSystemPath(encoded);
 			expect(decoded).toEqual(original);
 		});
 
@@ -286,8 +282,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 				kind: SplitPathKind.Folder,
 				pathParts: [],
 			};
-			const encoded = systemPathFromSplitPathInternal(original);
-			const decoded = splitPathFromSystemPathInternal(encoded);
+			const encoded = pathfinder.systemPathFromSplitPath(original);
+			const decoded = pathfinder.splitPathFromSystemPath(encoded);
 			expect(decoded).toEqual(original);
 		});
 
@@ -298,15 +294,15 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 				kind: SplitPathKind.MdFile,
 				pathParts: ["root"],
 			} as SplitPathToMdFile;
-			const encoded = systemPathFromSplitPathInternal(original);
-			const decoded = splitPathFromSystemPathInternal(encoded);
+			const encoded = pathfinder.systemPathFromSplitPath(original);
+			const decoded = pathfinder.splitPathFromSystemPath(encoded);
 			expect(decoded).toEqual(original);
 		});
 	});
 
 	describe("edge cases", () => {
 		it("handles file with only extension", () => {
-			const result = splitPathFromSystemPathInternal(".md");
+			const result = pathfinder.splitPathFromSystemPath(".md");
 			expect(result).toEqual({
 				basename: "",
 				extension: MD,
@@ -316,7 +312,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 		});
 
 		it("handles deeply nested paths", () => {
-			const result = splitPathFromSystemPathInternal(
+			const result = pathfinder.splitPathFromSystemPath(
 				"a/b/c/d/e/f/g/h/file.md",
 			);
 			expect(result).toEqual({
@@ -334,8 +330,8 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 				kind: SplitPathKind.MdFile,
 				pathParts: ["répertoire"],
 			} as SplitPathToMdFile;
-			const encoded = systemPathFromSplitPathInternal(splitPath);
-			const decoded = splitPathFromSystemPathInternal(encoded);
+			const encoded = pathfinder.systemPathFromSplitPath(splitPath);
+			const decoded = pathfinder.splitPathFromSystemPath(encoded);
 			expect(decoded).toEqual(splitPath);
 		});
 
@@ -346,7 +342,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 				kind: SplitPathKind.MdFile,
 				pathParts: ["root"],
 			} as SplitPathToMdFile;
-			const encoded = systemPathFromSplitPathInternal(splitPath);
+			const encoded = pathfinder.systemPathFromSplitPath(splitPath);
 			// Only path separators (/ and \) are sanitized to spaces
 			// Other special chars are preserved (Obsidian's behavior is golden source)
 			expect(encoded).toBe("root/file name with-separators.md");
@@ -359,7 +355,7 @@ describe("systemPathFromSplitPathInternal | splitPathFromSystemPathInternal", ()
 				kind: SplitPathKind.MdFile,
 				pathParts: ["root"],
 			} as SplitPathToMdFile;
-			const encoded = systemPathFromSplitPathInternal(splitPath);
+			const encoded = pathfinder.systemPathFromSplitPath(splitPath);
 			// Obsidian accepts these characters - they should be preserved
 			expect(encoded).toBe("root/file!@#$%with-special.md");
 		});

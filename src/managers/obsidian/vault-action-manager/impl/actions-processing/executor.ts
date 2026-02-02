@@ -4,10 +4,7 @@ import { logger } from "../../../../../utils/logger";
 import type { OpenedFileService } from "../../file-services/active-view/opened-file-service";
 import type { TFileHelper } from "../../file-services/background/helpers/tfile-helper";
 import type { TFolderHelper } from "../../file-services/background/helpers/tfolder-helper";
-import {
-	type MdFileWithContentDto,
-	systemPathFromSplitPathInternal,
-} from "../../helpers/pathfinder";
+import { pathfinder, type MdFileWithContentDto } from "../../helpers/pathfinder";
 import type { SplitPathToMdFile } from "../../types/split-path";
 import { type VaultAction, VaultActionKind } from "../../types/vault-action";
 import { makeSystemPathForSplitPath } from "../common/split-path-and-system-path";
@@ -42,7 +39,7 @@ export class Executor {
 				return result;
 			}
 			case VaultActionKind.CreateFile: {
-				const systemPath = systemPathFromSplitPathInternal(
+				const systemPath = pathfinder.systemPathFromSplitPath(
 					action.payload.splitPath,
 				);
 				try {
@@ -99,10 +96,10 @@ export class Executor {
 			}
 			case VaultActionKind.RenameFile:
 			case VaultActionKind.RenameMdFile: {
-				const fromPath = systemPathFromSplitPathInternal(
+				const fromPath = pathfinder.systemPathFromSplitPath(
 					action.payload.from,
 				);
-				const toPath = systemPathFromSplitPathInternal(
+				const toPath = pathfinder.systemPathFromSplitPath(
 					action.payload.to,
 				);
 

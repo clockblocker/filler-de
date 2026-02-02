@@ -1,7 +1,4 @@
-import {
-	pathToFolderFromPathParts,
-	systemPathFromSplitPathInternal,
-} from "../../helpers/pathfinder";
+import { pathfinder } from "../../helpers/pathfinder";
 import type { AnySplitPath } from "../../types/split-path";
 import type { VaultAction } from "../../types/vault-action";
 import { VaultActionKind } from "../../types/vault-action";
@@ -97,7 +94,7 @@ export class SelfEventTracker {
 			case VaultActionKind.TrashFolder:
 				// TrashFolder needs prefix matching to filter child file delete events
 				return [
-					systemPathFromSplitPathInternal(action.payload.splitPath),
+					pathfinder.systemPathFromSplitPath(action.payload.splitPath),
 				];
 
 			case VaultActionKind.RenameFolder:
@@ -105,7 +102,7 @@ export class SelfEventTracker {
 				// Obsidian emits rename events with oldPath under the source prefix.
 				// Tracking the destination prefix would incorrectly filter out
 				// user-created files in the renamed folder.
-				return [systemPathFromSplitPathInternal(action.payload.from)];
+				return [pathfinder.systemPathFromSplitPath(action.payload.from)];
 
 			default:
 				return [];
@@ -155,21 +152,21 @@ export class SelfEventTracker {
 				// Parent folders either already exist or are explicitly created via CreateFolder.
 				// Tracking parent folders caused user folder operations to be incorrectly filtered.
 				return [
-					systemPathFromSplitPathInternal(action.payload.splitPath),
+					pathfinder.systemPathFromSplitPath(action.payload.splitPath),
 				];
 
 			case VaultActionKind.TrashFolder:
 			case VaultActionKind.TrashFile:
 			case VaultActionKind.TrashMdFile:
 				return [
-					systemPathFromSplitPathInternal(action.payload.splitPath),
+					pathfinder.systemPathFromSplitPath(action.payload.splitPath),
 				];
 
 			case VaultActionKind.RenameFolder:
 				// For folder renames, track source with parents and just the destination folder
 				return [
 					...this.extractPathsWithParents(action.payload.from),
-					systemPathFromSplitPathInternal(action.payload.to),
+					pathfinder.systemPathFromSplitPath(action.payload.to),
 				];
 
 			case VaultActionKind.RenameFile:
@@ -180,8 +177,8 @@ export class SelfEventTracker {
 				// either already exist (for in-place renames) or should be created via
 				// explicit CreateFolder actions if they don't exist.
 				return [
-					systemPathFromSplitPathInternal(action.payload.from),
-					systemPathFromSplitPathInternal(action.payload.to),
+					pathfinder.systemPathFromSplitPath(action.payload.from),
+					pathfinder.systemPathFromSplitPath(action.payload.to),
 				];
 
 			default:
@@ -202,14 +199,14 @@ export class SelfEventTracker {
 		const { pathParts } = splitPath;
 		for (let i = 1; i < pathParts.length; i++) {
 			const parentPathParts = pathParts.slice(0, i);
-			const parentPath = pathToFolderFromPathParts(parentPathParts);
+			const parentPath = pathfinder.pathToFolderFromPathParts(parentPathParts);
 			if (parentPath) {
 				paths.push(parentPath);
 			}
 		}
 
 		// Then add the target path (file or folder being created)
-		const targetPath = systemPathFromSplitPathInternal(splitPath);
+		const targetPath = pathfinder.systemPathFromSplitPath(splitPath);
 		paths.push(targetPath);
 
 		return paths;

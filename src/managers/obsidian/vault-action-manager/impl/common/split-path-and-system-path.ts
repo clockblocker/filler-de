@@ -1,9 +1,5 @@
 import type { TAbstractFile, TFile, TFolder } from "obsidian";
-import {
-	splitPathFromAbstractInternal,
-	splitPathFromSystemPathInternal,
-	systemPathFromSplitPathInternal,
-} from "../../helpers/pathfinder";
+import { pathfinder } from "../../helpers/pathfinder";
 import type {
 	AnySplitPath,
 	SplitPathToFile,
@@ -24,7 +20,7 @@ import type {
  * // "root/folder"
  */
 export function makeSystemPathForSplitPath(splitPath: AnySplitPath): string {
-	return systemPathFromSplitPathInternal(splitPath);
+	return pathfinder.systemPathFromSplitPath(splitPath);
 }
 
 /**
@@ -39,11 +35,11 @@ export function makeSplitPath(
 	input: string | TAbstractFile,
 ): AnySplitPath | SplitPathToFile | SplitPathToMdFile | SplitPathToFolder {
 	if (typeof input === "string") {
-		const result = splitPathFromSystemPathInternal(input);
+		const result = pathfinder.splitPathFromSystemPath(input);
 		// Convert SplitPathKind enum to string literals for external API compatibility
 		return convertToExternalFormat(result);
 	}
-	const result = splitPathFromAbstractInternal(input);
+	const result = pathfinder.splitPathFromAbstract(input);
 	return convertToExternalFormat(result);
 }
 

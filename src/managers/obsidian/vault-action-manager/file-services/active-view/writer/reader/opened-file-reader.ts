@@ -13,7 +13,7 @@ import {
 	errorNoFileParent,
 	errorNotInSourceMode,
 } from "../../../../errors";
-import { splitPathFromAbstractInternal } from "../../../../helpers/pathfinder";
+import { pathfinder } from "../../../../helpers/pathfinder";
 import type {
 	AnySplitPath,
 	SplitPathToMdFile,
@@ -26,7 +26,7 @@ export class OpenedFileReader {
 
 	pwd(): Result<SplitPathToMdFile, string> {
 		return this.getOpenedTFile().map((file) =>
-			splitPathFromAbstractInternal(file),
+			pathfinder.splitPathFromAbstract(file),
 		);
 	}
 

@@ -3,6 +3,7 @@ import type {
 	AnySplitPath,
 	SplitPathToAnyFile,
 	SplitPathToFolder,
+	SplitPathToMdFile,
 } from "../../types/split-path";
 
 /**
@@ -35,3 +36,8 @@ export type DiscriminatedTAbstractFile<SP extends AnySplitPath> = SP extends {
 export type DiscriminatedSplitPath<T extends TAbstractFile> = T extends TFolder
 	? SplitPathToFolder
 	: SplitPathToAnyFile;
+
+export type MdFileWithContentDto = {
+	splitPath: SplitPathToMdFile;
+	content?: string;
+};

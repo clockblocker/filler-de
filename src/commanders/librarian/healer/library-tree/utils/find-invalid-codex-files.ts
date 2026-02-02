@@ -1,4 +1,4 @@
-import { systemPathFromSplitPathInternal } from "../../../../../managers/obsidian/vault-action-manager/helpers/pathfinder";
+import { pathfinder } from "../../../../../managers/obsidian/vault-action-manager/helpers/pathfinder";
 import type { SplitPathWithReader } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { CodecRules, Codecs } from "../../../codecs";
@@ -37,7 +37,7 @@ export function findInvalidCodexFiles(
 		);
 		if (libraryScopedResult.isErr()) continue;
 
-		const filePath = systemPathFromSplitPathInternal(
+		const filePath = pathfinder.systemPathFromSplitPath(
 			libraryScopedResult.value,
 		);
 

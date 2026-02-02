@@ -12,11 +12,7 @@ import {
 	errorTypeMismatch,
 	errorWriteFailed,
 } from "../../../errors";
-import type { MdFileWithContentDto } from "../../../helpers/pathfinder";
-import {
-	findFirstAvailableIndexedPath,
-	systemPathFromSplitPathInternal,
-} from "../../../helpers/pathfinder";
+import { pathfinder, type MdFileWithContentDto } from "../../../helpers/pathfinder";
 import {
 	type SplitPathFromTo,
 	SplitPathKind,
@@ -46,7 +42,7 @@ export class TFileHelper {
 	async getFile<SPF extends SplitPathToMdFile | SplitPathToFile>(
 		splitPath: SPF,
 	): Promise<Result<TFile, string>> {
-		const systemPath = systemPathFromSplitPathInternal(splitPath);
+		const systemPath = pathfinder.systemPathFromSplitPath(splitPath);
 		const tAbstractFile = this.vault.getAbstractFileByPath(systemPath);
 		if (!tAbstractFile) {
 			return err(errorGetByPath("file", systemPath));
@@ -69,7 +65,7 @@ export class TFileHelper {
 			return ok(fileResult.value); // Already exists
 		}
 
-		const systemPath = systemPathFromSplitPathInternal(splitPath);
+		const systemPath = pathfinder.systemPathFromSplitPath(splitPath);
 		try {
 			const createdFile = await this.vault.create(
 				systemPath,
@@ -114,8 +110,8 @@ export class TFileHelper {
 	}: SplitPathFromTo<SPF> & {
 		collisionStrategy?: CollisionStrategy;
 	}): Promise<Result<TFile, string>> {
-		const fromPath = systemPathFromSplitPathInternal(from);
-		const toPath = systemPathFromSplitPathInternal(to);
+		const fromPath = pathfinder.systemPathFromSplitPath(from);
+		const toPath = pathfinder.systemPathFromSplitPath(to);
 
 		// Poll-wait for source file to be available (Obsidian index may lag after folder renames)
 		let fromResult = await this.getFile(from);
@@ -178,7 +174,7 @@ export class TFileHelper {
 					} catch (error) {
 						return err(
 							errorTrashDuplicateFile(
-								systemPathFromSplitPathInternal(from),
+								pathfinder.systemPathFromSplitPath(from),
 								error.message,
 							),
 						);
@@ -197,7 +193,7 @@ export class TFileHelper {
 				this.vault,
 			);
 
-			const indexedPath = await findFirstAvailableIndexedPath(
+			const indexedPath = await pathfinder.findFirstAvailableIndexedPath(
 				to,
 				existingBasenames,
 			);
@@ -205,14 +201,14 @@ export class TFileHelper {
 			try {
 				await this.fileManager.renameFile(
 					fromResult.value,
-					systemPathFromSplitPathInternal(indexedPath),
+					pathfinder.systemPathFromSplitPath(indexedPath),
 				);
 				const renamedResult = await this.getFile(indexedPath);
 				if (renamedResult.isErr()) {
 					return err(
 						errorRetrieveRenamed(
 							"file",
-							systemPathFromSplitPathInternal(indexedPath),
+							pathfinder.systemPathFromSplitPath(indexedPath),
 							renamedResult.error,
 						),
 					);
@@ -222,8 +218,8 @@ export class TFileHelper {
 				return err(
 					errorRenameFailed(
 						"file",
-						systemPathFromSplitPathInternal(from),
-						systemPathFromSplitPathInternal(indexedPath),
+						pathfinder.systemPathFromSplitPath(from),
+						pathfinder.systemPathFromSplitPath(indexedPath),
 						error.message,
 					),
 				);
@@ -233,7 +229,7 @@ export class TFileHelper {
 		try {
 			await this.fileManager.renameFile(
 				fromResult.value,
-				systemPathFromSplitPathInternal(to),
+				pathfinder.systemPathFromSplitPath(to),
 			);
 
 			const renamedResult = await this.getFile(to);
@@ -241,7 +237,7 @@ export class TFileHelper {
 				return err(
 					errorRetrieveRenamed(
 						"file",
-						systemPathFromSplitPathInternal(to),
+						pathfinder.systemPathFromSplitPath(to),
 						renamedResult.error,
 					),
 				);
@@ -256,8 +252,8 @@ export class TFileHelper {
 			return err(
 				errorRenameFailed(
 					"file",
-					systemPathFromSplitPathInternal(from),
-					systemPathFromSplitPathInternal(to),
+					pathfinder.systemPathFromSplitPath(from),
+					pathfinder.systemPathFromSplitPath(to),
 					error.message,
 				),
 			);
@@ -280,7 +276,7 @@ export class TFileHelper {
 			return err(
 				errorWriteFailed(
 					"file",
-					systemPathFromSplitPathInternal(splitPath),
+					pathfinder.systemPathFromSplitPath(splitPath),
 					error instanceof Error ? error.message : String(error),
 				),
 			);
@@ -312,7 +308,7 @@ export class TFileHelper {
 			return err(
 				errorWriteFailed(
 					"file",
-					systemPathFromSplitPathInternal(splitPath),
+					pathfinder.systemPathFromSplitPath(splitPath),
 					error instanceof Error ? error.message : String(error),
 				),
 			);
