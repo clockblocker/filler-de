@@ -14,36 +14,68 @@ Editing content in Live Preview mode breaks rendering — checkboxes/wikilinks s
 | `cm.dispatch()` + `rebuildView()` | Same as above |
 | `cm.dispatch()` + `requestMeasure()` | Still flickers |
 | `vault.modify()` | Flickers, async transform incompatible |
+| `cm.dispatch()` + surgical edit | Works but requires CM6 access + MutationObserver waiting |
 
-## Working Solution: Surgical Line Edit ✅
+## Working Solution: Native `editor.transaction()` ✅
 
-Only edit the changed lines, not the whole document. Unchanged lines keep their decorations.
+Use Obsidian's native `Editor.transaction()` with line-based `EditorChange[]`. No direct CM6 access needed.
 
 ```typescript
-// 1. Compute minimal diff
-const changes = computeLineChanges(before, after);
+const oldLines = before.split("\n");
+const newLines = after.split("\n");
+const changes: EditorChange[] = [];
 
-// 2. Dispatch only the changed range
-cm.dispatch({ changes });
+// Collect changes for differing lines
+for (let i = 0; i < Math.max(oldLines.length, newLines.length); i++) {
+  const oldLine = oldLines[i] ?? "";
+  const newLine = newLines[i];
 
-// 3. Wait for DOM to stabilize
-await waitForEditorStable(cm); // MutationObserver, 16ms debounce
+  if (newLine === undefined) {
+    // Lines deleted — replace from here to end
+    changes.push({
+      from: { ch: 0, line: i },
+      to: { ch: oldLines.at(-1)?.length ?? 0, line: oldLines.length - 1 },
+      text: ""
+    });
+    break;
+  }
 
-// 4. Restore cursor/scroll
-editor.setCursor(savedCursor);
-editor.scrollTo(savedScroll);
+  if (oldLine !== newLine) {
+    changes.push({
+      from: { ch: 0, line: i },
+      to: { ch: oldLine.length, line: i },
+      text: newLine
+    });
+  }
+}
+
+// Handle added lines at end
+if (newLines.length > oldLines.length) {
+  changes.push({
+    from: { ch: oldLines.at(-1)?.length ?? 0, line: oldLines.length - 1 },
+    text: "\n" + newLines.slice(oldLines.length).join("\n")
+  });
+}
+
+editor.transaction({ changes });
 ```
+
+### Benefits
+
+- No direct CM6 access (`cm.dispatch`)
+- No MutationObserver waiting
+- Cursor/scroll handled automatically by Obsidian
+- Simpler, less code
 
 ### Implementation
 
-`computeLineChanges()` finds first/last differing lines, computes char offsets, returns minimal `{ from, to, insert }`.
+See `OpenedFileWriter.doApplyTransform()` in `writer/opened-file-writer.ts`.
 
-### Known Issues
+## Historical: CM6 Surgical Edit (Deprecated)
 
-- Off-by-one errors in line offset calculation (fixable)
+Previous approach used `computeLineChanges()` for character-level diff + `cm.dispatch()` + `waitForEditorStable()` MutationObserver. Removed in favor of native API.
 
 ## Sources
 
-- [CM6 dispatch](https://codemirror.net/docs/ref/#state.EditorState.update)
-- [rebuildView pattern](https://forum.obsidian.md/t/creating-command-to-reload-page/57906)
-- [Vault.process docs](https://docs.obsidian.md/Reference/TypeScript+API/Vault/process)
+- [Editor.transaction](https://docs.obsidian.md/Reference/TypeScript+API/Editor/transaction)
+- [EditorChange](https://docs.obsidian.md/Reference/TypeScript+API/EditorChange)

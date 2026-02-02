@@ -1,8 +1,8 @@
-import type { EditorView } from "@codemirror/view";
 import { err, errAsync, ok, type Result, ResultAsync } from "neverthrow";
 import {
 	type App,
 	type Editor,
+	type EditorChange,
 	type EditorPosition,
 	MarkdownView,
 } from "obsidian";
@@ -248,127 +248,56 @@ export class OpenedFileWriter {
 		const before = editor.getValue();
 		const after = await transform(before);
 
-		if (after !== before) {
-			const cursor = editor.getCursor();
-			const scrollInfo = editor.getScrollInfo();
+		if (after === before) return after;
 
-			// Using `as unknown` because `cm` is not in public Obsidian API types
-			const cm = (editor as unknown as { cm?: EditorView }).cm;
-			if (cm) {
-				// Surgical edit: only change the affected lines
-				const changes = this.computeLineChanges(before, after);
-				if (changes) {
-					cm.dispatch({ changes });
-				}
-				await this.waitForEditorStable(cm);
-			} else {
-				editor.setValue(after);
-				await new Promise((r) => requestAnimationFrame(r));
-			}
-
-			this.restoreCursorPosition(editor, cursor, scrollInfo, after);
-		}
-		return after;
-	}
-
-	/**
-	 * Compute minimal CM6 changes between old and new content.
-	 * Finds first/last differing lines and returns a single change for that range.
-	 */
-	private computeLineChanges(
-		before: string,
-		after: string,
-	): { from: number; to: number; insert: string } | null {
 		const oldLines = before.split("\n");
 		const newLines = after.split("\n");
 
-		// Find first differing line
-		let firstDiff = 0;
-		while (
-			firstDiff < oldLines.length &&
-			firstDiff < newLines.length &&
-			oldLines[firstDiff] === newLines[firstDiff]
-		) {
-			firstDiff++;
+		const changes: EditorChange[] = [];
+		const maxLines = Math.max(oldLines.length, newLines.length);
+
+		for (let i = 0; i < maxLines; i++) {
+			const oldLine = oldLines[i] ?? "";
+			const newLine = newLines[i];
+
+			if (newLine === undefined) {
+				// Lines deleted — replace from start of this line to end of doc
+				changes.push({
+					from: { ch: 0, line: i },
+					text: "",
+					to: {
+						ch: oldLines[oldLines.length - 1]?.length ?? 0,
+						line: oldLines.length - 1,
+					},
+				});
+				break;
+			}
+
+			if (oldLine !== newLine) {
+				changes.push({
+					from: { ch: 0, line: i },
+					text: newLine,
+					to: { ch: oldLine.length, line: i },
+				});
+			}
 		}
 
-		// If no diff found, nothing to change
-		if (firstDiff === oldLines.length && firstDiff === newLines.length) {
-			return null;
-		}
-
-		// Find last differing line (from end)
-		let oldEndOffset = oldLines.length - 1;
-		let newEndOffset = newLines.length - 1;
-		while (
-			oldEndOffset > firstDiff &&
-			newEndOffset > firstDiff &&
-			oldLines[oldEndOffset] === newLines[newEndOffset]
-		) {
-			oldEndOffset--;
-			newEndOffset--;
-		}
-
-		// Compute character offsets
-		let fromChar = 0;
-		for (let i = 0; i < firstDiff; i++) {
-			fromChar += (oldLines[i]?.length ?? 0) + 1; // +1 for newline
-		}
-
-		let toChar = fromChar;
-		for (let i = firstDiff; i <= oldEndOffset; i++) {
-			toChar +=
-				(oldLines[i]?.length ?? 0) + (i < oldLines.length - 1 ? 1 : 0);
-		}
-
-		// Build insert string from new lines
-		const insertLines = newLines.slice(firstDiff, newEndOffset + 1);
-		const insert = insertLines.join("\n");
-
-		return { from: fromChar, insert, to: toChar };
-	}
-
-	private waitForEditorStable(
-		cm: EditorView,
-		timeoutMs = 200,
-	): Promise<void> {
-		const container = cm.contentDOM;
-
-		return new Promise((resolve) => {
-			let debounceTimer: ReturnType<typeof setTimeout>;
-
-			const observer = new MutationObserver(() => {
-				clearTimeout(debounceTimer);
-				debounceTimer = setTimeout(() => {
-					observer.disconnect();
-					resolve();
-				}, 16); // 1 frame of no mutations = stable
+		// Handle added lines at end
+		if (newLines.length > oldLines.length) {
+			const lastOldLine = oldLines.length - 1;
+			changes.push({
+				from: {
+					ch: oldLines[lastOldLine]?.length ?? 0,
+					line: lastOldLine,
+				},
+				text: `\n${newLines.slice(oldLines.length).join("\n")}`,
 			});
+		}
 
-			observer.observe(container, {
-				characterData: true,
-				childList: true,
-				subtree: true,
-			});
+		if (changes.length) {
+			editor.transaction({ changes });
+		}
 
-			// Fallback timeout
-			debounceTimer = setTimeout(() => {
-				observer.disconnect();
-				resolve();
-			}, timeoutMs);
-		});
-	}
-
-	private restoreCursorPosition(
-		editor: Editor,
-		cursor: EditorPosition,
-		scrollInfo: { left: number; top: number },
-		newContent: string,
-	): void {
-		const newLines = newContent.split("\n");
-		const newLine = Math.min(cursor.line, newLines.length - 1);
-		const newCh = Math.min(cursor.ch, (newLines[newLine] ?? "").length);
-		editor.setCursor({ ch: newCh, line: newLine });
-		editor.scrollTo(scrollInfo.left, scrollInfo.top);
+		return after;
 	}
 }
