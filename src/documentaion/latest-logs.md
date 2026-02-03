@@ -1,28 +1,17 @@
 info: [codexImpactToIncrementalRecreations] CALLED {
   "descendantsChangedCount": 0,
-  "impactedChainsCount": 3,
+  "impactedChainsCount": 0,
   "renamedCount": 0
 }
 [Librarian.processActions] ProcessMdFile keys before dispatch {
-  "duplicatePaths": [
-    [
-      "Library/Text/__;;Text.md",
-      2
-    ],
-    [
-      "Library/Text/Das Sagt Mann So/__;;Das Sagt Mann So;;Text.md",
-      2
-    ]
-  ],
   "keys": [
-    "Library/__;;Library.md",
-    "Library/Text/__;;Text.md",
-    "Library/Text/Das Sagt Mann So/__;;Das Sagt Mann So;;Text.md",
     "Library/Textfresser/__;;Textfresser.md",
     "Library/Textfresser/issue/__;;issue;;Textfresser.md",
     "Library/Textfresser/issue/split/__;;split;;issue;;Textfresser.md",
     "Library/Textfresser/design/__;;design;;Textfresser.md",
     "Library/Textfresser/Prompt/__;;Prompt;;Textfresser.md",
+    "Library/Text/__;;Text.md",
+    "Library/Text/Das Sagt Mann So/__;;Das Sagt Mann So;;Text.md",
     "Library/Personal/__;;Personal.md",
     "Library/Personal/Family/__;;Family;;Personal.md",
     "Library/Personal/Family/Retrospective/__;;Retrospective;;Family;;Personal.md",
@@ -41,11 +30,10 @@ info: [codexImpactToIncrementalRecreations] CALLED {
     "Library/Google/System/Ganpati_Graph/__;;Ganpati_Graph;;System;;Google.md",
     "Library/Google/System/Ganpati_Graph/Part/__;;Part;;Ganpati_Graph;;System;;Google.md",
     "Library/Google/System/Ganpati_Graph/Action/__;;Action;;Ganpati_Graph;;System;;Google.md",
-    "Library/Text/__;;Text.md",
-    "Library/Text/Das Sagt Mann So/__;;Das Sagt Mann So;;Text.md",
     "Library/Textfresser/issue/split/1;;split;;issue;;Textfresser.md",
     "Library/Textfresser/design/Untitled 1;;design;;Textfresser.md",
     "Library/Textfresser/Prompt/getLatestContext;;Prompt;;Textfresser.md",
+    "Library/Text/Das Sagt Mann So/Untitled;;Das Sagt Mann So;;Text.md",
     "Library/Personal/Untitled;;Personal.md",
     "Library/Personal/Family/Retrospective/31.01.2026;;Retrospective;;Family;;Personal.md",
     "Library/Personal/Family/Retrospective/31.01.2026_Drawing;;Retrospective;;Family;;Personal.md",
@@ -64,21 +52,15 @@ info: [codexImpactToIncrementalRecreations] CALLED {
     "Library/Google/System/Ganpati_Graph/About;;Ganpati_Graph;;System;;Google.md",
     "Library/Google/System/Ganpati_Graph/Part/Edge;;Part;;Ganpati_Graph;;System;;Google.md",
     "Library/Google/System/Ganpati_Graph/Part/Node;;Part;;Ganpati_Graph;;System;;Google.md",
-    "Library/Google/System/Ganpati_Graph/Action/Access_remidiation;;Action;;Ganpati_Graph;;System;;Google.md",
-    "Library/Text/Das Sagt Mann So/Untitled;;Das Sagt Mann So;;Text.md"
+    "Library/Google/System/Ganpati_Graph/Action/Access_remidiation;;Action;;Ganpati_Graph;;System;;Google.md"
   ],
-  "processCount": 51,
-  "uniqueKeys": 49
+  "processCount": 48,
+  "uniqueKeys": 48
 }
 [Dispatcher] dispatch() CALLED {
-  "actionCount": 55,
-  "dispatchTimestamp": 1770136121103,
-  "renameActions": [
-    {
-      "kind": "RenameMdFile",
-      "path": "Library/Text/Das Sagt Mann So/Untitled.md → Library/Text/Das Sagt Mann So/Untitled;;Das Sagt Mann So;;Text.md"
-    }
-  ],
+  "actionCount": 48,
+  "dispatchTimestamp": 1770136740681,
+  "renameActions": [],
   "scrollActions": [
     {
       "kind": "ProcessMdFile",
@@ -87,28 +69,27 @@ info: [codexImpactToIncrementalRecreations] CALLED {
     },
     {
       "kind": "ProcessMdFile",
-      "path": "Library/Personal/Untitled;;Personal.md",
+      "path": "Library/Text/Das Sagt Mann So/Untitled;;Das Sagt Mann So;;Text.md",
       "transformName": ""
     },
     {
       "kind": "ProcessMdFile",
-      "path": "Library/Text/Das Sagt Mann So/Untitled;;Das Sagt Mann So;;Text.md",
+      "path": "Library/Personal/Untitled;;Personal.md",
       "transformName": ""
     }
   ],
   "scrollRelatedCount": 3
 }
 [Collapse] === INPUT === {
-  "processActions": 51,
+  "processActions": 48,
   "processPaths": [
-    "Library/__;;Library.md",
-    "Library/Text/__;;Text.md",
-    "Library/Text/Das Sagt Mann So/__;;Das Sagt Mann So;;Text.md",
     "Library/Textfresser/__;;Textfresser.md",
     "Library/Textfresser/issue/__;;issue;;Textfresser.md",
     "Library/Textfresser/issue/split/__;;split;;issue;;Textfresser.md",
     "Library/Textfresser/design/__;;design;;Textfresser.md",
     "Library/Textfresser/Prompt/__;;Prompt;;Textfresser.md",
+    "Library/Text/__;;Text.md",
+    "Library/Text/Das Sagt Mann So/__;;Das Sagt Mann So;;Text.md",
     "Library/Personal/__;;Personal.md",
     "Library/Personal/Family/__;;Family;;Personal.md",
     "Library/Personal/Family/Retrospective/__;;Retrospective;;Family;;Personal.md",
@@ -127,11 +108,10 @@ info: [codexImpactToIncrementalRecreations] CALLED {
     "Library/Google/System/Ganpati_Graph/__;;Ganpati_Graph;;System;;Google.md",
     "Library/Google/System/Ganpati_Graph/Part/__;;Part;;Ganpati_Graph;;System;;Google.md",
     "Library/Google/System/Ganpati_Graph/Action/__;;Action;;Ganpati_Graph;;System;;Google.md",
-    "Library/Text/__;;Text.md",
-    "Library/Text/Das Sagt Mann So/__;;Das Sagt Mann So;;Text.md",
     "Library/Textfresser/issue/split/1;;split;;issue;;Textfresser.md",
     "Library/Textfresser/design/Untitled 1;;design;;Textfresser.md",
     "Library/Textfresser/Prompt/getLatestContext;;Prompt;;Textfresser.md",
+    "Library/Text/Das Sagt Mann So/Untitled;;Das Sagt Mann So;;Text.md",
     "Library/Personal/Untitled;;Personal.md",
     "Library/Personal/Family/Retrospective/31.01.2026;;Retrospective;;Family;;Personal.md",
     "Library/Personal/Family/Retrospective/31.01.2026_Drawing;;Retrospective;;Family;;Personal.md",
@@ -150,35 +130,21 @@ info: [codexImpactToIncrementalRecreations] CALLED {
     "Library/Google/System/Ganpati_Graph/About;;Ganpati_Graph;;System;;Google.md",
     "Library/Google/System/Ganpati_Graph/Part/Edge;;Part;;Ganpati_Graph;;System;;Google.md",
     "Library/Google/System/Ganpati_Graph/Part/Node;;Part;;Ganpati_Graph;;System;;Google.md",
-    "Library/Google/System/Ganpati_Graph/Action/Access_remidiation;;Action;;Ganpati_Graph;;System;;Google.md",
-    "Library/Text/Das Sagt Mann So/Untitled;;Das Sagt Mann So;;Text.md"
+    "Library/Google/System/Ganpati_Graph/Action/Access_remidiation;;Action;;Ganpati_Graph;;System;;Google.md"
   ],
-  "totalActions": 55
-}
-[Collapse] Adding ProcessMdFile to additionalActions (first) {
-  "key": "Library/__;;Library.md"
-}
-[Collapse] Adding ProcessMdFile to additionalActions (first) {
-  "key": "Library/Text/__;;Text.md"
-}
-[Collapse] Adding ProcessMdFile to additionalActions (first) {
-  "key": "Library/Text/Das Sagt Mann So/__;;Das Sagt Mann So;;Text.md"
-}
-[Collapse] COMPOSING ProcessMdFile in additionalActions {
-  "key": "Library/Text/__;;Text.md"
-}
-[Collapse] COMPOSING ProcessMdFile in additionalActions {
-  "key": "Library/Text/Das Sagt Mann So/__;;Das Sagt Mann So;;Text.md"
+  "totalActions": 48
 }
 [Collapse] === OUTPUT === {
-  "additionalActionsCount": 3,
-  "processActions": 49,
+  "additionalActionsCount": 0,
+  "processActions": 48,
   "processPaths": [
     "Library/Textfresser/__;;Textfresser.md",
     "Library/Textfresser/issue/__;;issue;;Textfresser.md",
     "Library/Textfresser/issue/split/__;;split;;issue;;Textfresser.md",
     "Library/Textfresser/design/__;;design;;Textfresser.md",
     "Library/Textfresser/Prompt/__;;Prompt;;Textfresser.md",
+    "Library/Text/__;;Text.md",
+    "Library/Text/Das Sagt Mann So/__;;Das Sagt Mann So;;Text.md",
     "Library/Personal/__;;Personal.md",
     "Library/Personal/Family/__;;Family;;Personal.md",
     "Library/Personal/Family/Retrospective/__;;Retrospective;;Family;;Personal.md",
@@ -200,6 +166,7 @@ info: [codexImpactToIncrementalRecreations] CALLED {
     "Library/Textfresser/issue/split/1;;split;;issue;;Textfresser.md",
     "Library/Textfresser/design/Untitled 1;;design;;Textfresser.md",
     "Library/Textfresser/Prompt/getLatestContext;;Prompt;;Textfresser.md",
+    "Library/Text/Das Sagt Mann So/Untitled;;Das Sagt Mann So;;Text.md",
     "Library/Personal/Untitled;;Personal.md",
     "Library/Personal/Family/Retrospective/31.01.2026;;Retrospective;;Family;;Personal.md",
     "Library/Personal/Family/Retrospective/31.01.2026_Drawing;;Retrospective;;Family;;Personal.md",
@@ -218,13 +185,9 @@ info: [codexImpactToIncrementalRecreations] CALLED {
     "Library/Google/System/Ganpati_Graph/About;;Ganpati_Graph;;System;;Google.md",
     "Library/Google/System/Ganpati_Graph/Part/Edge;;Part;;Ganpati_Graph;;System;;Google.md",
     "Library/Google/System/Ganpati_Graph/Part/Node;;Part;;Ganpati_Graph;;System;;Google.md",
-    "Library/Google/System/Ganpati_Graph/Action/Access_remidiation;;Action;;Ganpati_Graph;;System;;Google.md",
-    "Library/Text/Das Sagt Mann So/Untitled;;Das Sagt Mann So;;Text.md",
-    "Library/__;;Library.md",
-    "Library/Text/__;;Text.md",
-    "Library/Text/Das Sagt Mann So/__;;Das Sagt Mann So;;Text.md"
+    "Library/Google/System/Ganpati_Graph/Action/Access_remidiation;;Action;;Ganpati_Graph;;System;;Google.md"
   ],
-  "totalActions": 53
+  "totalActions": 48
 }
 [Dispatcher] ProcessMdFile keys after collapse {
   "keys": [
@@ -233,6 +196,8 @@ info: [codexImpactToIncrementalRecreations] CALLED {
     "Library/Textfresser/issue/split/__;;split;;issue;;Textfresser.md",
     "Library/Textfresser/design/__;;design;;Textfresser.md",
     "Library/Textfresser/Prompt/__;;Prompt;;Textfresser.md",
+    "Library/Text/__;;Text.md",
+    "Library/Text/Das Sagt Mann So/__;;Das Sagt Mann So;;Text.md",
     "Library/Personal/__;;Personal.md",
     "Library/Personal/Family/__;;Family;;Personal.md",
     "Library/Personal/Family/Retrospective/__;;Retrospective;;Family;;Personal.md",
@@ -254,6 +219,7 @@ info: [codexImpactToIncrementalRecreations] CALLED {
     "Library/Textfresser/issue/split/1;;split;;issue;;Textfresser.md",
     "Library/Textfresser/design/Untitled 1;;design;;Textfresser.md",
     "Library/Textfresser/Prompt/getLatestContext;;Prompt;;Textfresser.md",
+    "Library/Text/Das Sagt Mann So/Untitled;;Das Sagt Mann So;;Text.md",
     "Library/Personal/Untitled;;Personal.md",
     "Library/Personal/Family/Retrospective/31.01.2026;;Retrospective;;Family;;Personal.md",
     "Library/Personal/Family/Retrospective/31.01.2026_Drawing;;Retrospective;;Family;;Personal.md",
@@ -272,67 +238,50 @@ info: [codexImpactToIncrementalRecreations] CALLED {
     "Library/Google/System/Ganpati_Graph/About;;Ganpati_Graph;;System;;Google.md",
     "Library/Google/System/Ganpati_Graph/Part/Edge;;Part;;Ganpati_Graph;;System;;Google.md",
     "Library/Google/System/Ganpati_Graph/Part/Node;;Part;;Ganpati_Graph;;System;;Google.md",
-    "Library/Google/System/Ganpati_Graph/Action/Access_remidiation;;Action;;Ganpati_Graph;;System;;Google.md",
-    "Library/Text/Das Sagt Mann So/Untitled;;Das Sagt Mann So;;Text.md",
-    "Library/__;;Library.md",
-    "Library/Text/__;;Text.md",
-    "Library/Text/Das Sagt Mann So/__;;Das Sagt Mann So;;Text.md"
+    "Library/Google/System/Ganpati_Graph/Action/Access_remidiation;;Action;;Ganpati_Graph;;System;;Google.md"
   ],
-  "processCount": 49,
-  "uniqueKeys": 49
+  "processCount": 48,
+  "uniqueKeys": 48
 }
 [Dispatcher] BEFORE ProcessMdFile execution {
-  "batch": 2,
-  "index": 9,
+  "batch": 3,
+  "index": 7,
   "path": "Library/Personal/Untitled;;Personal.md",
-  "timestamp": 1770136121127,
+  "timestamp": 1770136740695,
   "transformName": ""
 }
 [Dispatcher] AFTER ProcessMdFile execution {
-  "batch": 2,
-  "index": 9,
+  "batch": 3,
+  "index": 7,
   "path": "Library/Personal/Untitled;;Personal.md",
   "result": "ok",
-  "timestamp": 1770136121128
-}
-[Dispatcher] BEFORE Rename execution {
-  "batch": 2,
-  "index": 11,
-  "path": "Library/Text/Das Sagt Mann So/Untitled.md → Library/Text/Das Sagt Mann So/Untitled;;Das Sagt Mann So;;Text.md",
-  "timestamp": 1770136121130
-}
-[Dispatcher] AFTER Rename execution {
-  "batch": 2,
-  "index": 11,
-  "path": "Library/Text/Das Sagt Mann So/Untitled.md → Library/Text/Das Sagt Mann So/Untitled;;Das Sagt Mann So;;Text.md",
-  "result": "ok",
-  "timestamp": 1770136121189
+  "timestamp": 1770136740695
 }
 [Dispatcher] BEFORE ProcessMdFile execution {
-  "batch": 2,
-  "index": 23,
+  "batch": 3,
+  "index": 19,
   "path": "Library/Textfresser/design/Untitled 1;;design;;Textfresser.md",
-  "timestamp": 1770136121197,
+  "timestamp": 1770136740700,
   "transformName": ""
 }
 [Dispatcher] AFTER ProcessMdFile execution {
-  "batch": 2,
-  "index": 23,
+  "batch": 3,
+  "index": 19,
   "path": "Library/Textfresser/design/Untitled 1;;design;;Textfresser.md",
   "result": "ok",
-  "timestamp": 1770136121199
+  "timestamp": 1770136740701
 }
 [Dispatcher] BEFORE ProcessMdFile execution {
-  "batch": 2,
-  "index": 33,
+  "batch": 3,
+  "index": 21,
   "path": "Library/Text/Das Sagt Mann So/Untitled;;Das Sagt Mann So;;Text.md",
-  "timestamp": 1770136121209,
+  "timestamp": 1770136740702,
   "transformName": ""
 }
 [Dispatcher] AFTER ProcessMdFile execution {
-  "batch": 2,
-  "index": 33,
+  "batch": 3,
+  "index": 21,
   "path": "Library/Text/Das Sagt Mann So/Untitled;;Das Sagt Mann So;;Text.md",
   "result": "ok",
-  "timestamp": 1770136121213
+  "timestamp": 1770136740703
 }

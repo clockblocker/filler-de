@@ -30,6 +30,7 @@ import type {
 	RenameNodeAction,
 	TreeAction,
 } from "./library-tree/tree-action/types/tree-action";
+import { TreeActionType } from "./library-tree/tree-action/types/tree-action";
 import type { TreeReader } from "./library-tree/tree-interfaces";
 import { makeNodeSegmentId } from "./library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import { TreeNodeKind } from "./library-tree/tree-node/types/atoms";
@@ -38,7 +39,14 @@ import type {
 	TreeNode,
 } from "./library-tree/tree-node/types/tree-node";
 import type { HealingAction } from "./library-tree/types/healing-action";
-import { buildCanonicalLeafSplitPath } from "./library-tree/utils/split-path-utils";
+import {
+	getRootBaseName,
+	resolveNextAvailableNameInSection,
+} from "./library-tree/utils/duplicate-name-resolver";
+import {
+	buildCanonicalLeafSplitPath,
+	splitPathsEqual,
+} from "./library-tree/utils/split-path-utils";
 import { parseOldSectionPath } from "./utils/old-section-path";
 
 // ─── Result Type ───
@@ -79,10 +87,120 @@ export class Healer implements TreeReader {
 	 * Key change for idempotency: codex impact and healing are only computed
 	 * if the tree actually changed. This prevents infinite loops when events
 	 * fire for already-applied actions.
+	 *
+	 * Create collision: if a Create would target a segment id that already has
+	 * a node with a different observed path, we rewrite the action to use a
+	 * disambiguated name (e.g. "Untitled 1") so the new file gets its own node.
+	 * Nested duplicate: if coreName is "Untitled 2 1" (Obsidian duplicate), we
+	 * rewrite to next in root sequence (e.g. "Untitled 3").
 	 */
 	getHealingActionsFor(action: TreeAction): HealerApplyResult {
+		let actionToApply = action;
+
+		if (action.actionType === TreeActionType.Create) {
+			const createAction = action as CreateTreeLeafAction;
+			const parentSection = this.tree.findSection(
+				createAction.targetLocator.segmentIdChainToParent,
+			);
+			const existingNode = parentSection?.children[
+				createAction.targetLocator.segmentId
+			] as TreeNode | undefined;
+
+			if (existingNode) {
+				const canonicalResult = buildCanonicalLeafSplitPath(
+					createAction.targetLocator as
+						| ScrollNodeLocator
+						| FileNodeLocator,
+					this.codecs,
+				);
+				if (
+					canonicalResult.isOk() &&
+					!splitPathsEqual(
+						canonicalResult.value,
+						createAction.observedSplitPath,
+					)
+				) {
+					// Collision: different file, same segment id. Disambiguate.
+					const parsed = this.codecs.segmentId.parseSegmentId(
+						createAction.targetLocator.segmentId,
+					);
+					if (parsed.isOk() && parentSection) {
+						const { coreName, targetKind } = parsed.value;
+						const extension =
+							"extension" in parsed.value
+								? parsed.value.extension
+								: undefined;
+						if (extension !== undefined) {
+							const newName = resolveNextAvailableNameInSection(
+								parentSection,
+								coreName,
+							);
+							const newSegmentIdResult =
+								this.codecs.segmentId.serializeSegmentIdUnchecked(
+									{
+										coreName: newName,
+										extension,
+										targetKind,
+									},
+								);
+							if (newSegmentIdResult.isOk()) {
+								// segmentId built from same targetKind+extension; locator variant unchanged
+								actionToApply = {
+									...createAction,
+									targetLocator: {
+										...createAction.targetLocator,
+										segmentId: newSegmentIdResult.value,
+									},
+								} as CreateTreeLeafAction;
+							}
+						}
+					}
+				}
+			} else if (parentSection) {
+				// No collision; normalize nested duplicate (e.g. "Untitled 2 1" → "Untitled 3")
+				const parsed = this.codecs.segmentId.parseSegmentId(
+					createAction.targetLocator.segmentId,
+				);
+				if (parsed.isOk()) {
+					const { coreName, targetKind } = parsed.value;
+					const extension =
+						"extension" in parsed.value
+							? parsed.value.extension
+							: undefined;
+					if (
+						extension !== undefined &&
+						getRootBaseName(coreName) !== coreName
+					) {
+						const newName = resolveNextAvailableNameInSection(
+							parentSection,
+							coreName,
+						);
+						if (newName !== coreName) {
+							const newSegmentIdResult =
+								this.codecs.segmentId.serializeSegmentIdUnchecked(
+									{
+										coreName: newName,
+										extension,
+										targetKind,
+									},
+								);
+							if (newSegmentIdResult.isOk()) {
+								actionToApply = {
+									...createAction,
+									targetLocator: {
+										...createAction.targetLocator,
+										segmentId: newSegmentIdResult.value,
+									},
+								} as CreateTreeLeafAction;
+							}
+						}
+					}
+				}
+			}
+		}
+
 		// Apply action to tree (modifies tree structure), get change indicator
-		const { changed, node: mutatedNode } = this.tree.apply(action);
+		const { changed, node: mutatedNode } = this.tree.apply(actionToApply);
 
 		// If tree didn't change, skip healing - action was already applied
 		if (!changed) {
@@ -94,11 +212,11 @@ export class Healer implements TreeReader {
 		}
 
 		// Compute codex impact AFTER applying (only if state changed)
-		const codexImpact = computeCodexImpact(action);
+		const codexImpact = computeCodexImpact(actionToApply);
 
 		// Compute healing actions based on action type
 		const healingActions = this.computeHealingForAction(
-			action,
+			actionToApply,
 			mutatedNode,
 		);
 

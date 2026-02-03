@@ -79,6 +79,7 @@ onSectionCreated(SplitHealingInfo) → Librarian.triggerSectionHealing()
 - Filters out system-triggered events (prevents feedback loops)
 - Normalizes/collapses redundant events
 - Extracts semantic root events (folder rename covers descendants)
+- **ProcessMdFile**: If the target file is open in the active editor, applies the transform via `OpenedFileWriter` (editor transaction); otherwise reads/modifies/writes via `TFileHelper`. Collapse composes multiple ProcessMdFile actions for the same path into one.
 
 #### Self-Event Filtering (SelfEventTracker)
 
@@ -293,6 +294,14 @@ Events include callbacks for DOM/editor actions, keeping detection separate from
 - `SelectAll`: `preventDefault()`, `setSelection(from, to)`
 - `WikilinkCompleted`: `insertAlias(alias)`
 
+### Go-back links and backlink healing
+
+**Format:** `[[__<suffix>|← DisplayName]]` (e.g. `[[__;;Das Sagt Mann So;;Text|← Das Sagt Mann So]]`). Scrolls get one go-back link at the top pointing to the parent section’s codex.
+
+**Backlink healing** (`getBacklinkHealingVaultActions`): runs after healing + codex actions; emits one `ProcessMdFile` per library md file (codexes + scrolls) to set or strip the go-back link. Uses `goBackLinkHelper` in `src/stateless-helpers/go-back-link/`; strip regex is permissive (any single-line `[[__...]]` at start) so second-run strip always removes first-run output.
+
+**ProcessMdFile when file is open:** Executor uses `OpenedFileWriter.processContent()` (editor path) when the file is active; otherwise `TFileHelper.processContent()` (read/modify/write on disk). The opened-file path applies the transform via a line-diff and one “added lines at end” block; per-line changes are only applied for **existing** lines so new lines (e.g. adding a go-back link to an empty file) are not applied twice. See `src/managers/obsidian/vault-action-manager/file-services/active-view/writer/opened-file-writer.ts`.
+
 ### Smart Range Calculation
 
 `calculateSmartRange(content)` excludes from Ctrl+A selection:
@@ -303,7 +312,7 @@ Events include callbacks for DOM/editor actions, keeping detection separate from
 ### Clipboard Stripping
 
 Strips from copied text:
-1. Go-back links: `[[__-L4-L3-L2-L1|← L4]]`
+1. Go-back links: `[[__...]]` (any format)
 2. Metadata section: `<section id="textfresser_meta_keep_me_invisible">...</section>`
 
 ## Conventions
