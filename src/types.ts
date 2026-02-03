@@ -1,5 +1,29 @@
 import { z } from "zod";
 
+// ===== Language Configuration =====
+
+export const LanguageSchema = z.enum(["Russian", "English", "German"]);
+export type Language = z.infer<typeof LanguageSchema>;
+export const Language = LanguageSchema.enum;
+
+/** Display names for languages in settings UI */
+export const ReprForLanguage: Record<Language, string> = {
+	[Language.Russian]: "Русский",
+	[Language.English]: "English",
+	[Language.German]: "Deutsch",
+};
+
+export const KnownLanguageSchema = z.enum(["Russian", "English"]);
+export type KnownLanguage = z.infer<typeof KnownLanguageSchema>;
+
+export const TargetLanguageSchema = z.enum(["English", "German"]);
+export type TargetLanguage = z.infer<typeof TargetLanguageSchema>;
+
+export type LanguagesConfig = {
+	known: KnownLanguage;
+	target: TargetLanguage;
+};
+
 /**
  * Suffix delimiter configuration.
  * Symbol: 1-3 non-space chars (e.g., "-", "~")
@@ -54,6 +78,7 @@ export type TextEaterSettings = {
 	explainGrammarPlacement: SelectionActionPlacement;
 	generatePlacement: SelectionActionPlacement;
 	navButtonsPosition: "left" | "right";
+	languages: LanguagesConfig;
 };
 
 export const DEFAULT_SETTINGS: TextEaterSettings = {
@@ -62,6 +87,7 @@ export const DEFAULT_SETTINGS: TextEaterSettings = {
 	generatePlacement: "Bottom",
 	googleApiKey: "",
 	hideMetadata: true,
+	languages: { known: "Russian", target: "German" },
 	libraryRoot: "Library",
 	maxSectionDepth: 6,
 	navButtonsPosition: "left",

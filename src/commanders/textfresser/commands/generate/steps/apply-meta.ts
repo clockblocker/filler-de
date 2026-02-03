@@ -7,7 +7,7 @@ import type { CommandError, CommandState } from "../../types";
 export function applyMeta(
 	ctx: CommandState,
 ): Result<CommandState, CommandError> {
-	const activeFile = ctx.commandContext.activeFile!;
+	const activeFile = ctx.commandContext.activeFile;
 	const transform = noteMetadataHelper.upsert({
 		noteKind: DICT_ENTRY_NOTE_KIND,
 	});

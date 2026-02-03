@@ -1,5 +1,5 @@
 import type { ParsedUserSettings } from "../../../global-state/parsed-settings";
-import type { SuffixDelimiterConfig } from "../../../types";
+import type { LanguagesConfig, SuffixDelimiterConfig } from "../../../types";
 
 /**
  * Codec configuration rules.
@@ -20,6 +20,8 @@ export type CodecRules = {
 	showScrollBacklinks: boolean;
 	/** Store metadata invisibly at end of file. When false, uses YAML frontmatter. */
 	hideMetadata: boolean;
+	/** User's known and target languages */
+	languages: LanguagesConfig;
 };
 
 /**
@@ -31,6 +33,7 @@ export function makeCodecRulesFromSettings(
 ): CodecRules {
 	return {
 		hideMetadata: settings.hideMetadata,
+		languages: settings.languages,
 		libraryRootName: settings.splitPathToLibraryRoot.basename,
 		libraryRootPathParts: settings.splitPathToLibraryRoot.pathParts,
 		showScrollBacklinks: settings.showScrollBacklinks,

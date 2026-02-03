@@ -13,7 +13,7 @@ export function checkEligibility(
 	ctx: CommandState,
 ): Result<CommandState, CommandError> {
 	const metadata = noteMetadataHelper.read(
-		ctx.commandContext.activeFile!.content,
+		ctx.commandContext.activeFile.content,
 		EligibilitySchema,
 	);
 	const noteKind = metadata?.noteKind;

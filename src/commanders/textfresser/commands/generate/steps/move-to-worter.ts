@@ -14,8 +14,10 @@ import type { CommandError, CommandState } from "../../types";
 export function moveToWorter(
 	ctx: CommandState,
 ): Result<CommandState, CommandError> {
-	const activeFile = ctx.commandContext.activeFile!;
-	const shardedParts = computeShardedFolderParts(activeFile.splitPath.basename);
+	const activeFile = ctx.commandContext.activeFile;
+	const shardedParts = computeShardedFolderParts(
+		activeFile.splitPath.basename,
+	);
 
 	const newPath: SplitPathToMdFile = {
 		basename: activeFile.splitPath.basename,

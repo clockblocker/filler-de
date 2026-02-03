@@ -2,8 +2,13 @@ import { type App, Notice, PluginSettingTab, Setting } from "obsidian";
 import type TextEaterPluginStripped from "./main-stripped";
 import { ACTION_DEFINITIONS } from "./managers/overlay-manager/action-definitions/definitions";
 import {
+	type KnownLanguage,
+	KnownLanguageSchema,
+	ReprForLanguage,
 	SELECTION_ACTION_PLACEMENT_TEXT,
 	type SelectionActionPlacement as SelectionActionPlacementType,
+	type TargetLanguage,
+	TargetLanguageSchema,
 } from "./types";
 
 const FORBIDDEN_DELIMITER_CHARS = [
@@ -55,6 +60,45 @@ export class SettingsTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.apiProvider)
 					.onChange(async (value: "google") => {
 						this.plugin.settings.apiProvider = value;
+						await this.plugin.saveSettings();
+					});
+			});
+
+		// Languages settings
+		new Setting(containerEl).setName("Languages").setHeading();
+
+		new Setting(containerEl)
+			.setName("Language you know")
+			.setDesc("Your native or known language for translations")
+			.addDropdown((dropdown) => {
+				for (const lang of KnownLanguageSchema.options) {
+					dropdown.addOption(lang, ReprForLanguage[lang]);
+				}
+				dropdown
+					.setValue(this.plugin.settings.languages.known)
+					.onChange(async (value: KnownLanguage) => {
+						this.plugin.settings.languages = {
+							...this.plugin.settings.languages,
+							known: value,
+						};
+						await this.plugin.saveSettings();
+					});
+			});
+
+		new Setting(containerEl)
+			.setName("Language to learn")
+			.setDesc("The language you are studying")
+			.addDropdown((dropdown) => {
+				for (const lang of TargetLanguageSchema.options) {
+					dropdown.addOption(lang, ReprForLanguage[lang]);
+				}
+				dropdown
+					.setValue(this.plugin.settings.languages.target)
+					.onChange(async (value: TargetLanguage) => {
+						this.plugin.settings.languages = {
+							...this.plugin.settings.languages,
+							target: value,
+						};
 						await this.plugin.saveSettings();
 					});
 			});
