@@ -13,3 +13,5 @@ export const PromptFor = {
 		Translate: germanTranslatePrompt,
 	},
 } satisfies AvaliablePromptDict;
+
+export { SchemasFor, type UserInput, type AgentOutput } from "./schemas";

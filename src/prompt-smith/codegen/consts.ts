@@ -10,4 +10,8 @@ export const ALL_PROMPT_KINDS = PromptKindSchema.options;
 
 // Take supported languages from types.ts
 
-export const PromptPartKind = z.enum(["AgentRole", "TaskDescription", "Example"]);
+export const PromptPartKind = z.enum([
+	"AgentRole",
+	"TaskDescription",
+	"Example",
+]);

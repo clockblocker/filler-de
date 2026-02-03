@@ -19,9 +19,11 @@ async function loadParts(
 	const { taskDescription } = await import(
 		path.join(partsPath, "task-description.ts")
 	);
-	const { examples } = await import(path.join(partsPath, "examples/to-use.ts"));
+	const { examples } = await import(
+		path.join(partsPath, "examples/to-use.ts")
+	);
 
-	return { agentRole, taskDescription, examples };
+	return { agentRole, examples, taskDescription };
 }
 
 function formatExamples(examples: { input: string; output: string }[]): string {
@@ -45,8 +47,6 @@ export function buildSystemPrompt(parts: PromptParts): string {
 
 export interface CombinedPrompt {
 	systemPrompt: string;
-	userInputSchemaPath: string;
-	agentOutputSchemaPath: string;
 }
 
 export async function combineParts(
@@ -56,11 +56,5 @@ export async function combineParts(
 	const parts = await loadParts(language, promptKind);
 	const systemPrompt = buildSystemPrompt(parts);
 
-	const partsPath = getPartsPath(language, promptKind);
-
-	return {
-		systemPrompt,
-		userInputSchemaPath: path.join(partsPath, "schemas/user-input.ts"),
-		agentOutputSchemaPath: path.join(partsPath, "schemas/agent-output.ts"),
-	};
+	return { systemPrompt };
 }

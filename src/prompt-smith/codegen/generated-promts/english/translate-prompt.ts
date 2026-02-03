@@ -1,11 +1,6 @@
 // AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY
 // Run: bun run codegen:prompts
 
-import { agentOutputSchema } from "../../../parts/english/translate/schemas/agent-output";
-import { userInputSchema } from "../../../parts/english/translate/schemas/user-input";
-
-export { userInputSchema, agentOutputSchema };
-
 export const systemPrompt = `<agent-role>
 You are a professional English-to-Russian translator specializing in accurate, natural translations that preserve the original meaning and tone.
 </agent-role>

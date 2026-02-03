@@ -4,7 +4,8 @@ import { ALL_TARGET_LANGUAGES, type TargetLanguage } from "../../../types";
 import { logger } from "../../../utils/logger";
 import { ALL_PROMPT_KINDS, type PromptKind } from "../consts";
 import { combineParts } from "./combine-parts";
-import { validateAllPartsPresent } from "./enshure-all-parts-are-present";
+import { ensureAllExamplesMatchSchema } from "./enshure-all-examples-match-schema";
+import { ensureAllPartsArePresent } from "./enshure-all-parts-are-present";
 import {
 	GENERATED_DIR,
 	getGeneratedFileName,
@@ -12,21 +13,9 @@ import {
 	toKebabCase,
 } from "./utils";
 
-function generatePromptFile(
-	language: TargetLanguage,
-	promptKind: PromptKind,
-	systemPrompt: string,
-): string {
-	const langLower = toKebabCase(language);
-	const kindLower = toKebabCase(promptKind);
-
+function generatePromptFile(systemPrompt: string): string {
 	return `// AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY
 // Run: bun run codegen:prompts
-
-import { userInputSchema } from "../../../parts/${langLower}/${kindLower}/schemas/user-input";
-import { agentOutputSchema } from "../../../parts/${langLower}/${kindLower}/schemas/agent-output";
-
-export { userInputSchema, agentOutputSchema };
 
 export const systemPrompt = \`${systemPrompt.replace(/`/g, "\\`").replace(/\$/g, "\\$")}\`;
 `;
@@ -37,11 +26,7 @@ async function generateForLanguage(
 	promptKind: PromptKind,
 ): Promise<void> {
 	const combined = await combineParts(language, promptKind);
-	const fileContent = generatePromptFile(
-		language,
-		promptKind,
-		combined.systemPrompt,
-	);
+	const fileContent = generatePromptFile(combined.systemPrompt);
 
 	const outputDir = getGeneratedPath(language);
 	const fileName = getGeneratedFileName(promptKind);
@@ -59,7 +44,6 @@ async function generateIndex(): Promise<void> {
 
 	for (const language of ALL_TARGET_LANGUAGES) {
 		for (const promptKind of ALL_PROMPT_KINDS) {
-			const kindLower = toKebabCase(promptKind);
 			const langLower = toKebabCase(language);
 			const varName = `${langLower}${promptKind}Prompt`;
 			const fileName = getGeneratedFileName(promptKind);
@@ -83,6 +67,8 @@ ${ALL_TARGET_LANGUAGES.map(
 		`\t${lang}: {\n${ALL_PROMPT_KINDS.map((kind) => `\t\t${kind}: ${toKebabCase(lang)}${kind}Prompt,`).join("\n")}\n\t},`,
 ).join("\n")}
 } satisfies AvaliablePromptDict;
+
+export { SchemasFor, type UserInput, type AgentOutput } from "./schemas";
 `;
 
 	const indexPath = path.join(GENERATED_DIR, "..", "..", "index.ts");
@@ -90,7 +76,15 @@ ${ALL_TARGET_LANGUAGES.map(
 }
 
 async function main(): Promise<void> {
-	validateAllPartsPresent();
+	const partsResult = ensureAllPartsArePresent();
+	if (partsResult.isErr()) {
+		process.exit(1);
+	}
+
+	const examplesResult = await ensureAllExamplesMatchSchema();
+	if (examplesResult.isErr()) {
+		process.exit(1);
+	}
 
 	for (const language of ALL_TARGET_LANGUAGES) {
 		for (const promptKind of ALL_PROMPT_KINDS) {

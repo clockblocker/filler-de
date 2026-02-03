@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { err, ok, type Result } from "neverthrow";
 import { ALL_TARGET_LANGUAGES } from "../../../types";
 import { logger } from "../../../utils/logger";
 import { ALL_PROMPT_KINDS } from "../consts";
@@ -8,18 +9,16 @@ import { getPartsPath } from "./utils";
 const REQUIRED_FILES = [
 	"agent-role.ts",
 	"task-description.ts",
-	"schemas/user-input.ts",
-	"schemas/agent-output.ts",
 	"examples/to-use.ts",
 ];
 
-interface MissingPart {
+export interface MissingPart {
 	promptKind: string;
 	language: string;
 	file: string;
 }
 
-export function ensureAllPartsArePresent(): MissingPart[] {
+export function ensureAllPartsArePresent(): Result<void, MissingPart[]> {
 	const missing: MissingPart[] = [];
 
 	for (const language of ALL_TARGET_LANGUAGES) {
@@ -35,19 +34,14 @@ export function ensureAllPartsArePresent(): MissingPart[] {
 		}
 	}
 
-	return missing;
-}
-
-export function validateAllPartsPresent(): void {
-	const missing = ensureAllPartsArePresent();
-
 	if (missing.length > 0) {
 		logger.error("Missing prompt parts:");
 		for (const m of missing) {
 			logger.error(`  - ${m.language}/${m.promptKind}/${m.file}`);
 		}
-		throw new Error(`Missing ${missing.length} prompt part(s)`);
+		return err(missing);
 	}
 
 	logger.info("✓ All prompt parts present");
+	return ok(undefined);
 }

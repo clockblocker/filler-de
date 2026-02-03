@@ -1,9 +1,70 @@
-// Reserved for future schema validation of examples
-// Will validate that examples match userInputSchema and agentOutputSchema
-
+import * as path from "node:path";
+import { err, ok, type Result } from "neverthrow";
+import { ALL_TARGET_LANGUAGES, type TargetLanguage } from "../../../types";
 import { logger } from "../../../utils/logger";
+import { SchemasFor } from "../../schemas";
+import { ALL_PROMPT_KINDS, type PromptKind } from "../consts";
+import { getPartsPath } from "./utils";
 
-export function ensureAllExamplesMatchSchema(): void {
-	// TODO: Implement when needed
-	logger.info("✓ Example schema validation (not yet implemented)");
+export interface InvalidExample {
+	language: TargetLanguage;
+	promptKind: PromptKind;
+	index: number;
+	field: "input" | "output";
+	error: string;
+}
+
+export async function ensureAllExamplesMatchSchema(): Promise<
+	Result<void, InvalidExample[]>
+> {
+	const invalid: InvalidExample[] = [];
+
+	for (const language of ALL_TARGET_LANGUAGES) {
+		for (const promptKind of ALL_PROMPT_KINDS) {
+			const partsPath = getPartsPath(language, promptKind);
+			const { examples } = await import(
+				path.join(partsPath, "examples/to-use.ts")
+			);
+			const schemas = SchemasFor[promptKind];
+
+			for (let i = 0; i < examples.length; i++) {
+				const ex = examples[i];
+				const inputResult = schemas.userInputSchema.safeParse(ex.input);
+				if (!inputResult.success) {
+					invalid.push({
+						error: inputResult.error.message,
+						field: "input",
+						index: i,
+						language,
+						promptKind,
+					});
+				}
+				const outputResult = schemas.agentOutputSchema.safeParse(
+					ex.output,
+				);
+				if (!outputResult.success) {
+					invalid.push({
+						error: outputResult.error.message,
+						field: "output",
+						index: i,
+						language,
+						promptKind,
+					});
+				}
+			}
+		}
+	}
+
+	if (invalid.length > 0) {
+		logger.error("Invalid examples:");
+		for (const e of invalid) {
+			logger.error(
+				`  - ${e.language}/${e.promptKind}[${e.index}].${e.field}: ${e.error}`,
+			);
+		}
+		return err(invalid);
+	}
+
+	logger.info("✓ All examples match schemas");
+	return ok(undefined);
 }
