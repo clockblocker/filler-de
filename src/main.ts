@@ -130,13 +130,6 @@ export default class TextEaterPlugin extends Plugin {
 		return new Promise((resolve) => {
 			let resolved = false;
 
-			// this.app.metadataCache.on("resolved", () => {
-			// 	if (resolved) return;
-			// 	resolved = true;
-			// 	this.app.metadataCache.off("resolved", () => null);
-			// 	resolve();
-			// });
-
 			queueMicrotask(() => {
 				if (!resolved && this.hasUsableMetadataSignal()) {
 					resolved = true;
@@ -300,7 +293,6 @@ export default class TextEaterPlugin extends Plugin {
 
 		this.addCommand({
 			editorCheckCallback: () => {
-				// TODO: normalizeSelection - command handles selection internally
 				return false;
 			},
 			id: "duplicate-selection",

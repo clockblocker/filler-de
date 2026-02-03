@@ -4,9 +4,25 @@ import {
 	isTrashAction,
 	isUpsertMdFileAction,
 } from "../../helpers/action-helpers";
-import type { VaultAction } from "../../types/vault-action";
+import type { Transform, VaultAction } from "../../types/vault-action";
 import { sameRename } from "../common/collapse-helpers";
 import { makeKeyForAction } from "./helpers/make-key-for-action";
+
+/**
+ * Extract transform function from ProcessMdFile payload.
+ * Normalizes before/after variant to transform function.
+ */
+function getTransform(
+	payload:
+		| { transform: Transform }
+		| { before: string; after: string },
+): Transform {
+	if ("transform" in payload) {
+		return payload.transform;
+	}
+	return (content: string) => content.replace(payload.before, payload.after);
+}
+
 export async function collapseActions(
 	actions: readonly VaultAction[],
 ): Promise<VaultAction[]> {
@@ -75,8 +91,8 @@ export async function collapseActions(
 					}
 
 					// UpsertMdFile(content) + ProcessMdFile: apply transform to content, keep as Upsert
-					const transformed =
-						await action.payload.transform(upsertContent);
+					const transform = getTransform(action.payload);
+					const transformed = await transform(upsertContent);
 					byPath.set(key, {
 						...existing,
 						payload: { ...existing.payload, content: transformed },
@@ -88,13 +104,15 @@ export async function collapseActions(
 
 				if (isProcessAction(existing)) {
 					// Compose transforms: existing then action
+					const existingTransform = getTransform(existing.payload);
+					const actionTransform = getTransform(action.payload);
 					const combined = async (content: string) => {
-						const first = await existing.payload.transform(content);
-						return await action.payload.transform(first);
+						const first = await existingTransform(content);
+						return await actionTransform(first);
 					};
 					byPath.set(key, {
 						...existing,
-						payload: { ...existing.payload, transform: combined },
+						payload: { splitPath: existing.payload.splitPath, transform: combined },
 					});
 					continue;
 				}

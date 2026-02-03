@@ -219,7 +219,6 @@ export class Librarian {
 
 			// Commit transaction after successful dispatch
 			tx.commit();
-			tx.logSummary("info");
 
 			// Wait for queue to drain (events trigger handleBulkEvent which enqueues actions)
 			// This ensures all cascading healing is queued and processed
@@ -334,7 +333,6 @@ export class Librarian {
 
 		// Commit transaction after successful dispatch
 		tx.commit();
-		tx.logSummary("info");
 	}
 
 	/**

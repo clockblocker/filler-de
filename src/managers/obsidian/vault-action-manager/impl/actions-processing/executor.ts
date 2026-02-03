@@ -153,19 +153,27 @@ export class Executor {
 			}
 			case VaultActionKind.ProcessMdFile: {
 				// INVARIANT: File exists (ensured by dispatcher)
-				const isActive = await this.checkFileActive(
-					action.payload.splitPath,
-				);
+				const payload = action.payload;
+				const { splitPath } = payload;
+
+				// Normalize payload to transform function
+				const transform =
+					"transform" in payload
+						? payload.transform
+						: (content: string) =>
+								content.replace(payload.before, payload.after);
+
+				const isActive = await this.checkFileActive(splitPath);
 				if (isActive) {
 					const result = await this.opened.processContent({
-						splitPath: action.payload.splitPath,
-						transform: action.payload.transform,
+						splitPath,
+						transform,
 					});
 					return result;
 				}
 				const result = await this.tfileHelper.processContent({
-					splitPath: action.payload.splitPath,
-					transform: action.payload.transform,
+					splitPath,
+					transform,
 				});
 				return result;
 			}

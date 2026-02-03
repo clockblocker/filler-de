@@ -18,7 +18,7 @@ import type { VaultAction } from "./types/vault-action";
 import type { VaultEvent } from "./types/vault-event";
 
 export type { BulkVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk/bulk-vault-event";
-export type { VaultAction } from "./types/vault-action";
+export { type VaultAction, VaultActionKind } from "./types/vault-action";
 export { type VaultEvent, VaultEventKind } from "./types/vault-event";
 
 export type VaultEventHandler = (event: VaultEvent) => Promise<void>;

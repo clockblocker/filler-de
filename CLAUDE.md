@@ -56,7 +56,7 @@ bun run clearTestLogs
 bun run lint
 
 # Lint with auto-fix
-bun run lint:fix
+bun fix
 
 # Format code
 bun run format
@@ -82,11 +82,6 @@ bun test --test-name-pattern "pattern"
 - **Event System**: Emits bulk vault events after dispatching actions; filters self-generated events
 - **SplitPath**: Internal path representation separating directory segments and basename
 - Manages dependencies between file operations to ensure correct execution order
-- **ActionHelpers** (`helpers/action-helpers.ts`): Utility functions eliminating switch statements over VaultAction types
-
-**Managers** (`src/managers/`)
-- `obsidian/`: Obsidian-specific services (vault, clicks, files)
-- `pure/`: Framework-agnostic business logic (metadata parsing)
 
 **UserEventInterceptor** (`src/managers/obsidian/user-event-interceptor/`)
 - Unified facade for DOM/editor events; Librarian subscribes to single stream
@@ -117,12 +112,6 @@ bun test --test-name-pattern "pattern"
 - **LibrarianActionProvider**: Default provider for library-related actions
 - See `src/documentaion/overlay-manager.md` for full architecture
 
-**Services** (`src/services/`)
-- `prompts/`: LLM prompt definitions for German word processing (verbs, nouns, adjectives, morphemes)
-- `dto-services/`: Data transformation for notes and quotes
-- `obsidian-services/`: UI toolbars and selection handling
-- `wip-configs/`: Action configurations and event listeners
-
 ### Key Patterns
 
 **Result Types**: Uses `neverthrow` for error handling (`Result<T, E>`)
@@ -141,7 +130,7 @@ const result = await stepA(ctx)
     .asyncAndThen(stepC);  // use asyncAndThen for async steps
 
 if (result.isErr()) {
-    logger.warn("[fn] Failed:", JSON.stringify(result.error));
+    logger.warn("[fn] Failed:", result.error);
     return result;
 }
 ```
@@ -282,17 +271,18 @@ function getEventFromSplitPath(event: VaultEvent): AnySplitPath | undefined {
 ```
 
 ### Logging Rules (.cursor/rules/logging.mdc)
-- **Use** `log` from `src/utils/logger`, not `console.*`
-- **No object logging**: Always stringify with `JSON.stringify()`
+- **Use** `logger` from `src/utils/logger`, not `console.*`
+- **No manual stringify**: Logger handles object serialization internally
 - Log levels: `info()`, `warn()`, `error()`
 - Example:
 ```typescript
 // ❌ BAD
 console.log("event", event);
+logger.info("event", JSON.stringify(event));  // redundant stringify
 
 // ✅ GOOD
-log.debug("event", JSON.stringify({ kind: event.kind }));
-log.error("Failed:", error instanceof Error ? error.message : String(error));
+logger.info("[myFn] event:", event);
+logger.error("Failed:", error instanceof Error ? error.message : String(error));
 ```
 
 ## Testing Infrastructure
@@ -345,55 +335,10 @@ log.error("Failed:", error instanceof Error ? error.message : String(error));
 - Convert to system paths via `makeSystemPathForSplitPath()` when needed
 - Library-scoped paths use special codecs for tree operations
 
-### LLM Integration
-- Prompts in `src/services/prompts/` define structured outputs
-- Zod schemas validate LLM responses
-- Handles German linguistic structures (verbs, nouns, adjectives, morphemes)
-
 ## Refactoring Infrastructure
 
 ### New Modules Added
 These modules consolidate duplicated logic and improve error handling:
-
-**PathFinder** (`src/commanders/librarian-new/paths/path-finder.ts`)
-- Single source of truth for suffix/path computation
-- Key functions: `computeCodexSuffix()`, `buildCodexSplitPath()`, `sectionChainToPathParts()`, `parseSectionChainToNodeNames()`
-
-**HealingError** (`src/commanders/librarian-new/errors/healing-error.ts`)
-- Unified error type for all healing operations
-- Discriminated union with error constructors and utilities
-- Use with `Result<T, HealingError>` instead of throwing
-
-**ActionHelpers** (`src/managers/obsidian/vault-action-manager/helpers/action-helpers.ts`)
-- Eliminates switch statements over VaultAction types
-- Use `isCreateAction()`, `getActionPath()`, `asRenameAction()` etc.
-
-**TreeReader/TreeWriter/TreeFacade** (`src/commanders/librarian-new/healer/library-tree/tree-interfaces.ts`)
-- Clean separation of read/write concerns for LibraryTree
-- `TreeReader`: Read-only access (`findSection`, `getRoot`)
-- `TreeWriter`: Mutation access (`apply`, `ensureSectionChain`)
-- `TreeFacade`: Combined interface (Tree class implements this)
-
-**HealingTransaction** (`src/commanders/librarian-new/healer/healing-transaction.ts`)
-- Wraps healing operations with verification and audit
-- Collects healing actions, tracks errors, logs audit info
-- Use `executeHealingTransaction()` for automatic commit/rollback
-
-**HealingAuditLog** (`src/commanders/librarian-new/healer/healing-audit-log.ts`)
-- In-memory rolling log for debugging healing issues
-- Tracks success/failure rates, error types, durations
-- Use `getHealingAuditLog()` for singleton access
-
-**OrphanCodexScanner** (`src/commanders/librarian-new/healer/orphan-codex-scanner.ts`)
-- Scans vault for codexes with wrong suffixes
-- Generates cleanup and recreation actions
-- Use `scanAndGenerateOrphanActions()` for full scan
-
-### Codex Module (`src/commanders/librarian-new/healer/library-tree/codex/`)
-- `tree-collectors.ts`: Tree traversal (`collectDescendantSectionChains`, `collectTreeData`)
-- `section-chain-utils.ts`: `dedupeByKey<T>`, `chainToKey`, `dedupeChains`
-- `transforms/`: Subdirectory with `codex-transforms.ts`, `scroll-transforms.ts`, `transform-utils.ts`
-- All path/suffix computation delegated to PathFinder
 
 ### Test Coverage
 Tests added in `tests/unit/paths/`, `tests/specs/healing/`, `tests/specs/vault-actions/`, `tests/specs/tree/`

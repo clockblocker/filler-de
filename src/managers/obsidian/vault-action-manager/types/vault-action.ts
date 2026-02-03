@@ -64,10 +64,9 @@ type UpsertMdFilePayload = {
 };
 type RenameMdFilePayload = SplitPathFromTo<SplitPathToMdFile>;
 type TrashMdFilePayload = { splitPath: SplitPathToMdFile };
-type ProcessMdFilePayload = {
-	splitPath: SplitPathToMdFile;
-	transform: Transform;
-};
+type ProcessMdFilePayload =
+	| { splitPath: SplitPathToMdFile; transform: Transform }
+	| { splitPath: SplitPathToMdFile; before: string; after: string };
 
 export type VaultAction =
 	| {

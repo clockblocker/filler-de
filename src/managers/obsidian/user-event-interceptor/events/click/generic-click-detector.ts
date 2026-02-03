@@ -87,7 +87,9 @@ export class GenericClickDetector {
 		document.addEventListener("mouseup", this.mouseupHandler, {
 			capture: true,
 		});
-		document.addEventListener("click", this.clickHandler, { capture: true });
+		document.addEventListener("click", this.clickHandler, {
+			capture: true,
+		});
 	}
 
 	/**

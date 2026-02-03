@@ -22,6 +22,7 @@ import type {
 } from "../../managers/obsidian/vault-action-manager";
 import { logger } from "../../utils/logger";
 import { generateCommand } from "./commands/generate/generate-command";
+import { translateCommand } from "./commands/translate/translate-command";
 import {
 	type CommandFn,
 	type CommandInput,
@@ -87,10 +88,32 @@ export class Textfresser {
 	}
 
 	/**
-	 * TranslateSelection command - Out of scope
+	 * TranslateSelection command - translates selected text.
 	 */
-	translateSelection(_context: CommandContext) {
-		return Promise.resolve(ok(undefined));
+	async translateSelection(context: CommandContext) {
+		const selection = context.selection?.text;
+		if (!selection) {
+			return err({ kind: CommandErrorKind.NoSelection });
+		}
+
+		const fsResult = await readCurrentFile(this.vam);
+		if (fsResult.isErr()) {
+			return err(this.mapFsError(fsResult.error));
+		}
+
+		const { splitPath, content } = fsResult.value;
+		const input = {
+			currentFileInfo: { content, path: splitPath },
+			kind: TextfresserCommandKind.TranslateSelection,
+			resultingActions: [],
+			selection,
+		};
+
+		return this.executeCommand(
+			"TranslateSelection",
+			input,
+			translateCommand,
+		);
 	}
 
 	// ─── Handlers ───

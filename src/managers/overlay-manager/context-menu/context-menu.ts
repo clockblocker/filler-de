@@ -7,7 +7,7 @@
  * - Scroll would split to multiple pages
  */
 
-import { type App, type Menu, type Plugin } from "obsidian";
+import type { App, Menu, Plugin } from "obsidian";
 import { z } from "zod";
 import { wouldSplitToMultiplePages as checkWouldSplit } from "../../../commanders/librarian/bookkeeper/segmenter";
 import { makeCodecRulesFromSettings } from "../../../commanders/librarian/codecs/rules";

@@ -90,6 +90,14 @@ export class OpenedFileReader {
 		return editor.getSelection() || null;
 	}
 
+	getCursorOffset(): number | null {
+		const editorResult = this.getEditor();
+		if (editorResult.isErr()) return null;
+		const { editor } = editorResult.value;
+		const cursor = editor.getCursor();
+		return editor.posToOffset(cursor);
+	}
+
 	private getActiveView(): Result<MarkdownView, string> {
 		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 		return view ? ok(view) : err(errorNoActiveView());

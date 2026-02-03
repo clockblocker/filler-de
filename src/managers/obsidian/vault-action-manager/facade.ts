@@ -97,9 +97,7 @@ export class VaultActionManagerImpl implements VaultActionManager {
 			app,
 			this.selfEventTracker,
 		);
-		this._selection = new SelectionService(this.opened, (actions) =>
-			this.dispatch(actions),
-		);
+		this._selection = new SelectionService(this.opened);
 	}
 
 	startListening(): void {

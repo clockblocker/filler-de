@@ -10,18 +10,16 @@ import {
 } from "./commands/navigate-pages-command";
 import { splitIntoPagesCommand } from "./commands/split-into-pages-command";
 import { splitSelectionBlocksCommand } from "./commands/split-selection-blocks-command";
-import { translateSelectionCommand } from "./commands/translate-selection-command";
 import { type CommandContext, CommandKind } from "./types";
 
 /**
  * Managers needed to build command executor.
  */
 export type CommandExecutorManagers = {
-	librarian: Librarian | null;
-	textfresser: Textfresser | null;
+	librarian: Librarian;
+	textfresser: Textfresser;
 	vam: VaultActionManager;
 };
-
 
 /**
  * Create command executor with injected managers.
@@ -84,28 +82,16 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 			}
 
 			case CommandKind.TranslateSelection: {
-				await translateSelectionCommand(context, {});
+				await textfresser.translateSelection(context);
 				break;
 			}
 
 			case CommandKind.Generate: {
-				if (!textfresser) {
-					logger.warn(
-						"[CommandExecutor] Textfresser not initialized",
-					);
-					break;
-				}
 				await textfresser.generate(context);
 				break;
 			}
 
 			case CommandKind.Lemma: {
-				if (!textfresser) {
-					logger.warn(
-						"[CommandExecutor] Textfresser not initialized",
-					);
-					break;
-				}
 				await textfresser.lemma(context);
 				break;
 			}

@@ -60,6 +60,10 @@ export class OpenedFileService {
 		return this.reader.getSelection();
 	}
 
+	getCursorOffset(): number | null {
+		return this.reader.getCursorOffset();
+	}
+
 	// ─────────────────────────────────────────────────────────────────────────
 	// Writer delegations
 	// ─────────────────────────────────────────────────────────────────────────
