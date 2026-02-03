@@ -1,3 +1,5 @@
+import type { AgentOutput, UserInput } from "../../../../schemas";
+
 export const examples = [
 	{
 		input: "Good morning! How are you today?",
@@ -7,4 +9,4 @@ export const examples = [
 		input: "The weather is very nice today.",
 		output: "Сегодня очень хорошая погода.",
 	},
-];
+] satisfies { input: UserInput<"Translate">; output: AgentOutput<"Translate"> }[];

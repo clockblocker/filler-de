@@ -6,6 +6,7 @@ import { ALL_PROMPT_KINDS, type PromptKind } from "../consts";
 import { combineParts } from "./combine-parts";
 import { ensureAllExamplesMatchSchema } from "./enshure-all-examples-match-schema";
 import { ensureAllPartsArePresent } from "./enshure-all-parts-are-present";
+import { ensurePartsFormat } from "./enshure-parts-format";
 import {
 	GENERATED_DIR,
 	getGeneratedFileName,
@@ -76,11 +77,19 @@ export { SchemasFor, type UserInput, type AgentOutput } from "./schemas";
 }
 
 async function main(): Promise<void> {
+	// 1. Format validation (first!)
+	const formatResult = ensurePartsFormat();
+	if (formatResult.isErr()) {
+		process.exit(1);
+	}
+
+	// 2. Parts presence
 	const partsResult = ensureAllPartsArePresent();
 	if (partsResult.isErr()) {
 		process.exit(1);
 	}
 
+	// 3. Schema validation
 	const examplesResult = await ensureAllExamplesMatchSchema();
 	if (examplesResult.isErr()) {
 		process.exit(1);

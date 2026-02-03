@@ -1,2 +1,3 @@
-// Reserved for future test examples
-export const testExamples: { input: string; output: string }[] = [];
+import type { AgentOutput, UserInput } from "../../../../schemas";
+
+export const testExamples = [] satisfies { input: UserInput<"Translate">; output: AgentOutput<"Translate"> }[];
