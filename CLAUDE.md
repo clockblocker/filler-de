@@ -52,15 +52,18 @@ bun run clearTestLogs
 
 ### Code Quality
 ```bash
-# Lint
+# Check lint/format (no fix)
 bun run lint
 
-# Lint with auto-fix
+# Fix lint + format
 bun fix
 
-# Format code
-bun run format
+# Typecheck only changed files (vs master)
+bun run typecheck:changed
 ```
+
+### Before Finishing Work
+Run `bun run typecheck:changed` before calling it a day. Fix any type errors in files you touched.
 
 ### Running Single Tests
 ```bash

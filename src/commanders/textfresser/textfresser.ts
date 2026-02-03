@@ -65,7 +65,7 @@ export class Textfresser {
 
 		const commandFn = commandFnForCommandKind[commandName];
 		const input = {
-			commandContext: context,
+			commandContext: { ...context, activeFile: context.activeFile },
 			resultingActions: [],
 			textfresserState: this.state,
 		};

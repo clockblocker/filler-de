@@ -7,5 +7,7 @@ export function translateCommand(
 	input: CommandInput,
 ): ResultAsync<VaultAction[], CommandError> {
 	const state: CommandState = { ...input, actions: [] };
-	return ResultAsync.fromResult(logSelection(state).andThen((c) => ok(c.actions)));
+	return new ResultAsync(
+		Promise.resolve(logSelection(state).andThen((c) => ok(c.actions))),
+	);
 }

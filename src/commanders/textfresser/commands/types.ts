@@ -35,7 +35,9 @@ export const ALL_TEXTFRESSER_COMMAND_KINDS =
 
 export type CommandInput = {
 	resultingActions: VaultAction[];
-	commandContext: CommandContext;
+	commandContext: CommandContext & {
+		activeFile: NonNullable<CommandContext["activeFile"]>;
+	};
 	textfresserState: TextfresserState;
 };
 

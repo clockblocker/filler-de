@@ -14,21 +14,23 @@ export function generateCommand(
 ): ResultAsync<VaultAction[], CommandError> {
 	const state: CommandState = { ...input, actions: [] };
 
-	return ResultAsync.fromResult(
-		checkAttestation(state)
-			.andThen(checkEligibility)
-			.andThen(applyMeta)
-			.andThen(moveToWorter)
-			.andThen((c) => {
-				const activeFile = c.commandContext.activeFile!;
-				const writeAction = {
-					kind: VaultActionKind.ProcessMdFile,
-					payload: {
-						splitPath: activeFile.splitPath,
-						transform: () => activeFile.content,
-					},
-				} as const;
-				return ok([...c.actions, writeAction]);
-			}),
+	return new ResultAsync(
+		Promise.resolve(
+			checkAttestation(state)
+				.andThen(checkEligibility)
+				.andThen(applyMeta)
+				.andThen(moveToWorter)
+				.andThen((c) => {
+					const activeFile = c.commandContext.activeFile;
+					const writeAction = {
+						kind: VaultActionKind.ProcessMdFile,
+						payload: {
+							splitPath: activeFile.splitPath,
+							transform: () => activeFile.content,
+						},
+					} as const;
+					return ok([...c.actions, writeAction]);
+				}),
+		),
 	);
 }
