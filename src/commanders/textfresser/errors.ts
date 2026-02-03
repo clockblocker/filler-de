@@ -7,6 +7,7 @@ const COMMAND_ERROR_KIND_STR = [
 	"NotEligible",
 	"DispatchFailed",
 	"NoSelection",
+	"ApiError",
 	"UNUSED_STUB",
 ] as const;
 
@@ -19,6 +20,7 @@ export type CommandError =
 	| { kind: typeof CommandErrorKind.NotEligible; reason: string }
 	| { kind: typeof CommandErrorKind.DispatchFailed; reason: string }
 	| { kind: typeof CommandErrorKind.NoSelection }
+	| { kind: typeof CommandErrorKind.ApiError; reason: string }
 	| { kind: typeof CommandErrorKind.UNUSED_STUB };
 
 // ─── Attestation Parsing Error ───

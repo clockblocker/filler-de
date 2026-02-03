@@ -73,6 +73,12 @@ export class ApiService {
 					throw: false,
 					url,
 				}).then((r) => {
+					if (r.status >= 400) {
+						logError({
+							description: `fetchViaObsidian error: ${r.status} - ${r.text}`,
+							location: "ApiService",
+						});
+					}
 					return new Response(r.text, {
 						headers: r.headers as any,
 						status: r.status,
@@ -115,14 +121,17 @@ export class ApiService {
 
 			throw new Error(`Google API error: ${res.status}: ${res.text}`);
 		} catch (error: any) {
-			const errObj = {
-				description: error?.message || "Failed to call Google API",
-				location: "ApiService",
-			};
+			const message = error?.message || "Failed to call Google API";
 
-			logError(errObj);
+			// "Cached content is too small" is expected when prompt < 2048 tokens
+			const isExpectedCacheError = message.includes(
+				"Cached content is too small",
+			);
+			if (!isExpectedCacheError) {
+				logError({ description: message, location: "ApiService" });
+			}
 
-			throw new Error(formatError(errObj));
+			throw error;
 		}
 	}
 

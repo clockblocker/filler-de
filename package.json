@@ -52,7 +52,7 @@
 		"codegen:prompts": "bun src/prompt-smith/codegen/skript/run.ts",
 		"coverage": "bun run clearTestLogs && bun test --coverage --preload ./tests/unit/setup.ts",
 		"dev": "bun run esbuild.config.mjs",
-		"fix": "bun x biome check --write --unsafe .",
+		"fix": "bun x biome check --write --unsafe . 2>/dev/null || true",
 		"knip": "knip",
 		"lint": "bun x biome check .",
 		"test": "bun run test:unit && bun run test:e2e",

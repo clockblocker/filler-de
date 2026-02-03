@@ -20,6 +20,7 @@ import type {
 	VaultAction,
 	VaultActionManager,
 } from "../../managers/obsidian/vault-action-manager";
+import type { ApiService } from "../../stateless-helpers/api-service";
 import type { LanguagesConfig } from "../../types";
 import { logger } from "../../utils/logger";
 import { generateCommand } from "./commands/generate/generate-command";
@@ -28,6 +29,7 @@ import type { CommandFn, TextfresserCommandKind } from "./commands/types";
 import { buildAttestationFromWikilinkClickPayload } from "./common/attestation/builders/build-from-wikilink-click-payload";
 import type { Attestation } from "./common/attestation/types";
 import { CommandErrorKind } from "./errors";
+import { PromptRunner } from "./prompt-runner";
 
 // ─── Command Function Mapping ───
 
@@ -46,6 +48,7 @@ const commandFnForCommandKind: Record<TextfresserCommandKind, CommandFn> = {
 export type TextfresserState = {
 	attestationForLatestNavigated: Attestation | null;
 	languages: LanguagesConfig;
+	promptRunner: PromptRunner;
 };
 
 export class Textfresser {
@@ -54,10 +57,12 @@ export class Textfresser {
 	constructor(
 		private readonly vam: VaultActionManager,
 		languages: LanguagesConfig,
+		apiService: ApiService,
 	) {
 		this.state = {
 			attestationForLatestNavigated: null,
 			languages,
+			promptRunner: new PromptRunner(languages, apiService),
 		};
 	}
 

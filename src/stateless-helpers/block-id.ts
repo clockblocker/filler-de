@@ -70,6 +70,15 @@ function matchesPattern(text: string): { id: string; index: number } | null {
 }
 
 /**
+ * Strip block ID from end of text if present.
+ * @param text - Text to process
+ * @returns Text with trailing block ID removed
+ */
+function stripFromEnd(text: string): string {
+	return text.replace(BLOCK_ID_PATTERN, "");
+}
+
+/**
  * Block ID helper object with grouped functions.
  */
 export const blockIdHelper = {
@@ -78,4 +87,5 @@ export const blockIdHelper = {
 	findHighestNumber,
 	formatEmbed,
 	matchesPattern,
+	stripFromEnd,
 };
