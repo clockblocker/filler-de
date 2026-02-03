@@ -51,7 +51,18 @@ export const examples = [
 		input: "Aber dann freut sie **sich**, dass ihr bester Freund wieder verliebt ist und dieses Mal *keinen Korb* bekommen hat.",
 		output: "Но потом она **сама** радуется, что её лучший друг снова влюблён и на этот раз *ему не отказали*.",
 	},
+	// Separable verb: zu|stimmen prefix preserved via под-
+	{
+		input: "Du stimmst mir *zu*, richtig?",
+		output: "Ты *под*держиваешь меня, да?",
+	},
+	// Two identical words, different roles: preposition vs separable prefix
+	{
+		input: "Pass ~~auf~~ dich **auf**",
+		output: "**При**глядывай ~~за~~ собой",
+	},
 ] satisfies {
 	input: UserInput<"Translate">;
 	output: AgentOutput<"Translate">;
 }[];
+

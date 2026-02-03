@@ -3,6 +3,7 @@
 
 import * as englishToEnglishTranslatePrompt from "./codegen/generated-promts/english/english/translate-prompt";
 import * as germanToEnglishTranslatePrompt from "./codegen/generated-promts/german/english/translate-prompt";
+import * as germanToRussianTranslatePrompt from "./codegen/generated-promts/german/russian/translate-prompt";
 import type { AvaliablePromptDict } from "./types";
 
 export const PROMPT_FOR = {
@@ -19,7 +20,7 @@ export const PROMPT_FOR = {
 			Translate: germanToEnglishTranslatePrompt,
 		},
 		Russian: {
-			Translate: germanToEnglishTranslatePrompt,
+			Translate: germanToRussianTranslatePrompt,
 		},
 	},
 } satisfies AvaliablePromptDict;

@@ -52,6 +52,16 @@ export const examples = [
 		input: "Aber dann freut sie **sich**, dass ihr bester Freund wieder verliebt ist und dieses Mal *keinen Korb* bekommen hat.",
 		output: "But then she finds **herself** happy that her best friend is in love again and this time *wasn't rejected*.",
 	},
+	// Separable verb: zu|stimmen prefix preserved via "go along"
+	{
+		input: "Du stimmst mir *zu*, richtig?",
+		output: "You go *along* with me, right?",
+	},
+	// Two identical words, different roles: preposition vs separable prefix
+	{
+		input: "Pass ~~auf~~ dich **auf**",
+		output: "Watch **out** ~~for~~ yourself",
+	},
 ] satisfies {
 	input: UserInput<"Translate">;
 	output: AgentOutput<"Translate">;
