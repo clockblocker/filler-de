@@ -16,6 +16,7 @@ If a word/phrase is decorated, find the **same concept** in translation and deco
 Decorated concept > exact grammar. Minor restructuring allowed to keep decorated word intact.
 For idioms: decorate the equivalent expression, not literal words.
 Bend grammar to preserve decorated grammar quirks (e.g., reflexive → find oneself).
+Separable verbs: preserve prefix via equivalent construction (e.g., zu|stimmen → go *along*).
 </task-description>
 
 <examples>
@@ -108,4 +109,22 @@ Aber dann freut sie **sich**, dass ihr bester Freund wieder verliebt ist und die
 But then she finds **herself** happy that her best friend is in love again and this time *wasn't rejected*.
 </output>
 </example-10>
+
+<example-11>
+<input>
+Du stimmst mir *zu*, richtig?
+</input>
+<output>
+You go *along* with me, right?
+</output>
+</example-11>
+
+<example-12>
+<input>
+Pass ~~auf~~ dich **auf**
+</input>
+<output>
+Watch **out** ~~for~~ yourself
+</output>
+</example-12>
 </examples>`;

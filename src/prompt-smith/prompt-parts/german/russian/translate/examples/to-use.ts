@@ -65,4 +65,3 @@ export const examples = [
 	input: UserInput<"Translate">;
 	output: AgentOutput<"Translate">;
 }[];
-

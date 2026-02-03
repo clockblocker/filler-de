@@ -39,6 +39,10 @@ import {
 	performMutation006,
 	testPostHealing006,
 } from "./chains/1-chain/006-rename-corename";
+import {
+	performMutation007,
+	testPostHealing007,
+} from "./chains/1-chain/007-create-file-basename-healing";
 
 const VAULT_PATH = "tests/obsidian-e2e/vaults/librarian-chain-0";
 
@@ -158,6 +162,17 @@ describe("Librarian Full Suit", () => {
 	// 006: Post-rename healing - BUG: codex should update display name
 	it("codex should show new coreName after rename", async () => {
 		await testPostHealing006();
+	});
+
+	// 007: Create file without suffix - verify basename healing
+	it("creates a new file without suffix for 007", async () => {
+		await performMutation007();
+		await waitForIdle();
+	});
+
+	// 007: Post-creation healing - file should be renamed to include suffix
+	it("new file should be renamed to include suffix", async () => {
+		await testPostHealing007();
 	});
 
 	// after(async () => {

@@ -46,12 +46,18 @@ function isMatch(line: string): boolean {
 }
 
 /**
- * Strip go-back link from content start.
- * Returns content without the leading go-back link (and trims leading whitespace).
+ * Strip ALL go-back links from content start.
+ * Returns content without any leading go-back links (and trims leading whitespace).
+ * Handles edge case where multiple go-back links exist (e.g., from bugs or manual edits).
  */
 function strip(content: string): string {
 	const pattern = buildPattern();
-	return content.replace(pattern, "").trimStart();
+	let result = content;
+	// Keep stripping while there are go-back links at the start
+	while (pattern.test(result)) {
+		result = result.replace(pattern, "").trimStart();
+	}
+	return result;
 }
 
 /**

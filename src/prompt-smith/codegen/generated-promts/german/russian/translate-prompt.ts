@@ -15,7 +15,8 @@ CRITICAL: Preserve markdown decorations (**, *, ==, ~~, \`, []) in output.
 If a word/phrase is decorated, find the **same concept** in translation and decorate it.
 Decorated concept > exact grammar. Minor restructuring allowed to keep decorated word intact.
 For idioms: decorate the equivalent expression, not literal words.
-Bend grammar to preserve decorated grammar quirks (e.g., reflexive → find oneself).
+Bend grammar to preserve decorated grammar quirks (e.g., reflexive → сама).
+Separable verbs: preserve prefix via equivalent construction (e.g., zu|stimmen → *под*держивать).
 </task-description>
 
 <examples>
@@ -108,4 +109,22 @@ Aber dann freut sie **sich**, dass ihr bester Freund wieder verliebt ist und die
 Но потом она **сама** радуется, что её лучший друг снова влюблён и на этот раз *ему не отказали*.
 </output>
 </example-10>
+
+<example-11>
+<input>
+Du stimmst mir *zu*, richtig?
+</input>
+<output>
+Ты *под*держиваешь меня, да?
+</output>
+</example-11>
+
+<example-12>
+<input>
+Pass ~~auf~~ dich **auf**
+</input>
+<output>
+**При**глядывай ~~за~~ собой
+</output>
+</example-12>
 </examples>`;

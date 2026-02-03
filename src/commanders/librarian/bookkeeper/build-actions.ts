@@ -22,7 +22,10 @@ import {
 } from "../healer/library-tree/tree-node/types/atoms";
 import type { NodeName } from "../types/schemas/node-name";
 import { buildPageBasename, buildPageFolderBasename } from "./page-codec";
-import { splitStrInBlocks } from "./segmenter/block-marker/split-str-in-blocks";
+import {
+	splitStrInBlocks,
+	stripBlockMarkers,
+} from "./segmenter/block-marker/split-str-in-blocks";
 import type { SegmentationResult } from "./types";
 import { PAGE_FRONTMATTER, PAGE_INDEX_DIGITS, PAGE_PREFIX } from "./types";
 
@@ -94,8 +97,9 @@ export function buildPageSplitActions(
 
 	const totalPages = result.pages.length;
 	for (const page of result.pages) {
-		// Apply block markers to page content (each page resets at ^0)
-		const { markedText } = splitStrInBlocks(page.content, 0);
+		// Strip existing markers for idempotency, then apply fresh block markers
+		const withoutMarkers = stripBlockMarkers(page.content);
+		const { markedText } = splitStrInBlocks(withoutMarkers, 0);
 		// Compute navigation indices
 		const prevPageIdx = page.pageIndex > 0 ? page.pageIndex - 1 : undefined;
 		const nextPageIdx =
@@ -233,6 +237,7 @@ export function buildTooShortMetadataAction(
 /**
  * Adds noteKind: Page metadata to content.
  * Uses upsertMetadata to respect hideMetadata setting.
+ * Also applies block markers for consistency with multi-page splits.
  */
 function addPageFrontmatter(content: string): string {
 	// Read existing metadata (from either format)
@@ -245,9 +250,11 @@ function addPageFrontmatter(content: string): string {
 		status: (existing?.status as TreeNodeStatus) ?? PAGE_FRONTMATTER.status,
 	};
 
-	// Strip existing metadata and add new
+	// Strip existing metadata and markers, then apply fresh block markers
 	const cleanContent = noteMetadataHelper.strip(content);
-	return noteMetadataHelper.upsert(meta)(cleanContent) as string;
+	const withoutMarkers = stripBlockMarkers(cleanContent);
+	const { markedText } = splitStrInBlocks(withoutMarkers, 0);
+	return noteMetadataHelper.upsert(meta)(markedText) as string;
 }
 
 /**

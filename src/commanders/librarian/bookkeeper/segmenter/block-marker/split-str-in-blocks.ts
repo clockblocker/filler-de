@@ -8,6 +8,14 @@ import { scanLines } from "../stream/line-scanner";
 import { segmentSentences } from "../stream/sentence-segmenter";
 
 /**
+ * Strip existing block markers (` ^N`) to ensure idempotent re-marking.
+ * Matches markers anywhere, not just at end of line, to handle malformed content.
+ */
+export function stripBlockMarkers(text: string): string {
+	return text.replace(/ \^\d+/g, "");
+}
+
+/**
  * A heading extracted from content with its position info.
  */
 export type ExtractedHeading = {
