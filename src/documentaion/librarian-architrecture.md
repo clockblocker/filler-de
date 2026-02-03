@@ -220,7 +220,7 @@ All healing actions are batched into a single `VaultActionManager.dispatch()` ca
 
 **Codex deletions for Move actions**: When a folder is moved (e.g., `L2 → L3-L2` interpreted as move to `L2/L3/`), old codexes must be deleted at their **intermediate location** (where Obsidian moved them), not the final canonical location (where the healing RenameFolder will put them). This is because DeleteMdFile executes before RenameFolder in the batch.
 
-See `src/commanders/librarian-new/healer/library-tree/codex/architecture.md` for details on the `observedPathParts` mechanism.
+See `src/commanders/librarian/healer/library-tree/codex/architecture.md` for details on the `observedPathParts` mechanism.
 
 ## Canonicalization: Move-by-Name
 

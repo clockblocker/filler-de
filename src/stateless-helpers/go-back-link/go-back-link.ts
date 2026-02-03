@@ -20,11 +20,9 @@ import type { GoBackLinkInfo } from "./types";
  * @returns RegExp that matches go-back links at the start of content
  */
 function buildPattern(): RegExp {
-	// Go-back links always start with [[__
-	// The suffix uses the user's delimiter pattern
-	// Display name is after the pipe and arrow
-	// Pattern: [[__<anything>|←<anything>]]
-	return /^\s*\[\[__[^\]]+\|←[^\]]+\]\]\s*/;
+	// Match any single-line [[__...]] at start (permissive so second-run always strips first-run output).
+	// Handles format variations (spacing, unicode, etc.) that could cause duplicate links.
+	return /^\s*\[\[__[^\n\r]*?\]\]\s*/;
 }
 
 /**
@@ -32,8 +30,8 @@ function buildPattern(): RegExp {
  * Captures: (1) suffix, (2) display name
  */
 function buildCapturePattern(): RegExp {
-	// Capture groups: [[__(<suffix>)|←(<displayName>)]]
-	return /^\s*\[\[__([^\]|]+)\|←\s*([^\]]+)\]\]\s*/;
+	// Capture groups: [[__(<suffix>)|←(<displayName>)]] with optional spaces around | and ←
+	return /^\s*\[\[__([^\]|]+)\s*\|\s*←\s*([^\]]+)\]\]\s*/;
 }
 
 /**

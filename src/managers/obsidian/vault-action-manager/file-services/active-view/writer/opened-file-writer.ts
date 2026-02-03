@@ -273,7 +273,9 @@ export class OpenedFileWriter {
 				break;
 			}
 
-			if (oldLine !== newLine) {
+			// Only replace existing lines in the loop; new lines are added by "Handle added lines at end"
+			// (otherwise we double-apply when after has more lines than before, e.g. adding go-back link to empty file)
+			if (i < oldLines.length && oldLine !== newLine) {
 				changes.push({
 					from: { ch: 0, line: i },
 					text: newLine,

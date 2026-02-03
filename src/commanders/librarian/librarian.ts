@@ -6,6 +6,10 @@ import type {
 	VaultAction,
 	VaultActionManager,
 } from "../../managers/obsidian/vault-action-manager";
+import {
+	makeSystemPathForSplitPath,
+	VaultActionKind,
+} from "../../managers/obsidian/vault-action-manager";
 import { MD } from "../../managers/obsidian/vault-action-manager/types/literals";
 import {
 	SplitPathKind,
@@ -339,6 +343,33 @@ export class Librarian {
 		// Store for debugging
 		this._debugLastHealingActions = allHealingActions;
 		this._debugLastVaultActions = allVaultActions;
+
+		// Log ProcessMdFile keys before dispatch (for duplicated go-back investigation)
+		const processActions = allVaultActions.filter(
+			(a) => a.kind === VaultActionKind.ProcessMdFile,
+		);
+		if (processActions.length > 0) {
+			const processKeys = processActions.map((a) =>
+				makeSystemPathForSplitPath(a.payload.splitPath),
+			);
+			const keyCounts = new Map<string, number>();
+			for (const k of processKeys) {
+				keyCounts.set(k, (keyCounts.get(k) ?? 0) + 1);
+			}
+			const duplicates = [...keyCounts.entries()].filter(
+				([_, n]) => n > 1,
+			);
+			logger.info(
+				"[Librarian.processActions] ProcessMdFile keys before dispatch",
+				{
+					duplicatePaths:
+						duplicates.length > 0 ? duplicates : undefined,
+					keys: processKeys,
+					processCount: processActions.length,
+					uniqueKeys: keyCounts.size,
+				},
+			);
+		}
 
 		if (allVaultActions.length > 0) {
 			await this.vam.dispatch(allVaultActions);

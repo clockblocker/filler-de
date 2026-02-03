@@ -7,6 +7,7 @@ import type { Transform } from "../../../../../../managers/obsidian/vault-action
 import { goBackLinkHelper } from "../../../../../../stateless-helpers/go-back-link/go-back-link";
 import { noteMetadataHelper } from "../../../../../../stateless-helpers/note-metadata";
 import { LINE_BREAK, SPACE_F } from "../../../../../../types/literals";
+import { logger } from "../../../../../../utils/logger";
 import type { Codecs } from "../../../../codecs";
 import type { SectionNodeSegmentId } from "../../../../codecs/segment-id";
 import { sectionChainToPathParts } from "../../../../paths/path-finder";
@@ -109,6 +110,18 @@ export function makeScrollBacklinkTransform(
 
 		// Strip existing go-back link (but not JSON metadata - that's already extracted)
 		const cleanBody = goBackLinkHelper.strip(afterFrontmatter.trimStart());
+
+		// Defensive: log if strip left a go-back link (regex mismatch, can cause duplicates)
+		const firstNonEmptyLine = cleanBody
+			.split("\n")
+			.map((l) => l.trim())
+			.find((l) => l.length > 0);
+		if (firstNonEmptyLine && goBackLinkHelper.isMatch(firstNonEmptyLine)) {
+			logger.warn(
+				"[makeScrollBacklinkTransform] strip left a go-back link; regex may not match on-disk format",
+				{ firstLine: firstNonEmptyLine.slice(0, 80) },
+			);
+		}
 
 		// Format: [frontmatter]\n[[backlink]]  \n\n<body>\n[json-meta]
 		const result = `${frontmatter}${LINE_BREAK}${backlinkLine}${SPACE_F}${LINE_BREAK}${LINE_BREAK}${cleanBody}${jsonMeta}`;
