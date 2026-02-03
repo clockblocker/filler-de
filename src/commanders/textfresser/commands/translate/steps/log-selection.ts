@@ -3,8 +3,8 @@ import { logger } from "../../../../../utils/logger";
 import type { CommandError, CommandState } from "../../types";
 
 export function logSelection(
-	ctx: CommandState<"TranslateSelection">,
-): Result<CommandState<"TranslateSelection">, CommandError> {
-	logger.info("[translateCommand] selection:", ctx.selection);
+	ctx: CommandState,
+): Result<CommandState, CommandError> {
+	logger.info("[translateCommand] selection:", ctx.commandContext.selection);
 	return ok(ctx);
 }

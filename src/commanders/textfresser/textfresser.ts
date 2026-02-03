@@ -9,7 +9,7 @@
  * - Handle and log errors
  */
 
-import { err, ok, ResultAsync } from "neverthrow";
+import { err, errAsync, ok, ResultAsync } from "neverthrow";
 import type { CommandContext } from "../../managers/actions-manager/types";
 import type { WikilinkClickPayload } from "../../managers/obsidian/user-event-interceptor/events";
 import {
@@ -23,18 +23,26 @@ import type {
 import { logger } from "../../utils/logger";
 import { generateCommand } from "./commands/generate/generate-command";
 import { translateCommand } from "./commands/translate/translate-command";
-import {
-	type CommandFn,
-	type CommandInput,
-	TextfresserCommandKind,
-} from "./commands/types";
+import type { CommandFn, TextfresserCommandKind } from "./commands/types";
 import { buildAttestationFromWikilinkClickPayload } from "./common/attestation/builders/build-from-wikilink-click-payload";
 import type { Attestation } from "./common/attestation/types";
 import { CommandErrorKind } from "./errors";
 
+// ─── Command Function Mapping ───
+
+function lemmaCommand(): ResultAsync<VaultAction[], never> {
+	return ResultAsync.fromSafePromise(Promise.resolve([]));
+}
+
+const commandFnForCommandKind: Record<TextfresserCommandKind, CommandFn> = {
+	Generate: generateCommand,
+	Lemma: lemmaCommand,
+	TranslateSelection: translateCommand,
+};
+
 // ─── State ───
 
-type TextfresserState = {
+export type TextfresserState = {
 	attestationForLatestNavigated: Attestation | null;
 };
 
@@ -47,66 +55,31 @@ export class Textfresser {
 
 	// ─── Commands ───
 
-	/**
-	 * Generate command - moves current file to sharded path and sets metadata.
-	 */
-	async generate(context: CommandContext) {
+	executeCommand(
+		commandName: TextfresserCommandKind,
+		context: CommandContext,
+	) {
 		if (!context.activeFile) {
-			return err({ kind: CommandErrorKind.NotMdFile });
+			return errAsync({ kind: CommandErrorKind.NotMdFile });
 		}
 
-		const attestation = this.state.attestationForLatestNavigated;
-		if (!attestation) {
-			return err({
-				kind: CommandErrorKind.NotEligible,
-				reason: "No attestation context available",
+		const commandFn = commandFnForCommandKind[commandName];
+		const input = {
+			commandContext: context,
+			resultingActions: [],
+			textfresserState: this.state,
+		};
+
+		return commandFn(input)
+			.andThen((actions) => this.dispatchActions(actions))
+			.map(() => logger.info(`[Textfresser.${commandName}] Success`))
+			.mapErr((e) => {
+				logger.warn(
+					`[Textfresser.${commandName}] Failed:`,
+					JSON.stringify(e),
+				);
+				return e;
 			});
-		}
-
-		const { splitPath, content } = context.activeFile;
-		const input = {
-			attestation,
-			currentFileInfo: { content, path: splitPath },
-			kind: TextfresserCommandKind.Generate,
-			resultingActions: [],
-		};
-
-		return this.executeCommand("Generate", input, generateCommand);
-	}
-
-	/**
-	 * Lemma command - Out of scope
-	 */
-	lemma(_context: CommandContext) {
-		return Promise.resolve(ok(undefined));
-	}
-
-	/**
-	 * TranslateSelection command - translates selected text.
-	 */
-	async translateSelection(context: CommandContext) {
-		if (!context.activeFile) {
-			return err({ kind: CommandErrorKind.NotMdFile });
-		}
-
-		const selection = context.selection?.text;
-		if (!selection) {
-			return err({ kind: CommandErrorKind.NoSelection });
-		}
-
-		const { splitPath, content } = context.activeFile;
-		const input = {
-			currentFileInfo: { content, path: splitPath },
-			kind: TextfresserCommandKind.TranslateSelection,
-			resultingActions: [],
-			selection,
-		};
-
-		return this.executeCommand(
-			"TranslateSelection",
-			input,
-			translateCommand,
-		);
 	}
 
 	// ─── Handlers ───
@@ -139,23 +112,6 @@ export class Textfresser {
 
 	// ─── Private ───
 
-	private executeCommand<K extends TextfresserCommandKind>(
-		commandName: K,
-		input: CommandInput<K>,
-		commandFn: CommandFn<K>,
-	) {
-		return new ResultAsync(Promise.resolve(commandFn(input)))
-			.andThen((actions) => this.dispatchActions(actions))
-			.map(() => logger.info(`[Textfresser.${commandName}] Success`))
-			.mapErr((e) => {
-				logger.warn(
-					`[Textfresser.${commandName}] Failed:`,
-					JSON.stringify(e),
-				);
-				return e;
-			});
-	}
-
 	private dispatchActions(actions: VaultAction[]) {
 		return new ResultAsync(
 			this.vam.dispatch(actions).then((dispatchResult) => {
@@ -172,5 +128,4 @@ export class Textfresser {
 			}),
 		);
 	}
-
 }

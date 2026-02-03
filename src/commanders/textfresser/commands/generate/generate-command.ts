@@ -1,29 +1,34 @@
-import { ok, type Result } from "neverthrow";
+import { ok, ResultAsync } from "neverthrow";
 import type { VaultAction } from "../../../../managers/obsidian/vault-action-manager";
 import { VaultActionKind } from "../../../../managers/obsidian/vault-action-manager/types/vault-action";
 
 import type { CommandError, CommandInput, CommandState } from "../types";
 import { applyMeta } from "./steps/apply-meta";
+import { checkAttestation } from "./steps/check-attestation";
 import { checkEligibility } from "./steps/check-eligibility";
 import { moveToWorter } from "./steps/move-to-worter";
 
-/** Pipeline: checkEligibility → applyMeta → moveToWorter → addWriteAction */
+/** Pipeline: checkAttestation → checkEligibility → applyMeta → moveToWorter → addWriteAction */
 export function generateCommand(
-	input: CommandInput<"Generate">,
-): Result<VaultAction[], CommandError> {
-	const state: CommandState<"Generate"> = { ...input, actions: [] };
+	input: CommandInput,
+): ResultAsync<VaultAction[], CommandError> {
+	const state: CommandState = { ...input, actions: [] };
 
-	return checkEligibility(state)
-		.andThen(applyMeta)
-		.andThen(moveToWorter)
-		.andThen((c) => {
-			const writeAction = {
-				kind: VaultActionKind.ProcessMdFile,
-				payload: {
-					splitPath: c.currentFileInfo.path,
-					transform: () => c.currentFileInfo.content,
-				},
-			} as const;
-			return ok([...c.actions, writeAction]);
-		});
+	return ResultAsync.fromResult(
+		checkAttestation(state)
+			.andThen(checkEligibility)
+			.andThen(applyMeta)
+			.andThen(moveToWorter)
+			.andThen((c) => {
+				const activeFile = c.commandContext.activeFile!;
+				const writeAction = {
+					kind: VaultActionKind.ProcessMdFile,
+					payload: {
+						splitPath: activeFile.splitPath,
+						transform: () => activeFile.content,
+					},
+				} as const;
+				return ok([...c.actions, writeAction]);
+			}),
+	);
 }

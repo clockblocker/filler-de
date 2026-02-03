@@ -2,13 +2,12 @@
  * Types for Textfresser commands.
  */
 
-import type { Result } from "neverthrow";
+import type { ResultAsync } from "neverthrow";
 import { z } from "zod";
+import type { CommandContext } from "../../../managers/actions-manager/types";
 import type { VaultAction } from "../../../managers/obsidian/vault-action-manager";
-import type { SplitPathToMdFile } from "../../../managers/obsidian/vault-action-manager/types/split-path";
-import type { Prettify } from "../../../types/helpers";
-import type { Attestation } from "../common/attestation/types";
 import type { CommandError } from "../errors";
+import type { TextfresserState } from "../textfresser";
 
 // Re-export for convenience
 export type { CommandError } from "../errors";
@@ -32,53 +31,21 @@ export const TextfresserCommandKind = TextfresserCommandKindSchema.enum;
 export const ALL_TEXTFRESSER_COMMAND_KINDS =
 	TextfresserCommandKindSchema.options;
 
-// ─── Common Command Input ───
+// ─── Command Input ───
 
-type CurrentFileInfo = {
-	path: SplitPathToMdFile;
-	content: string;
-};
-
-type PayloadByKind = {
-	[TextfresserCommandKind.Generate]: {
-		attestation: Attestation;
-	};
-	[TextfresserCommandKind.Lemma]: {
-		attestation: Attestation;
-	};
-	[TextfresserCommandKind.TranslateSelection]: {
-		selection: string;
-	};
-};
-
-type CommonCommandInput = {
+export type CommandInput = {
 	resultingActions: VaultAction[];
-	currentFileInfo: CurrentFileInfo;
+	commandContext: CommandContext;
+	textfresserState: TextfresserState;
 };
 
-export type CommandInput<
-	K extends TextfresserCommandKind = TextfresserCommandKind,
-> = Prettify<
-	CommonCommandInput & {
-		kind: K;
-	} & PayloadByKind[K]
->;
-
-/**
- * Accumulating state that flows through a Textfresser command pipeline.
- *
- * Combines:
- *  - the command-specific input for the given `kind` (`CommandInput<K>`), and
- *  - `actions` accumulator that pipeline steps append to.
- */
-export type CommandState<
-	K extends TextfresserCommandKind = TextfresserCommandKind,
-> = CommandInput<K> & { actions: VaultAction[] };
+/** Accumulating state that flows through a Textfresser command pipeline. */
+export type CommandState = CommandInput & { actions: VaultAction[] };
 
 /** Function signature for Textfresser commands */
-export type CommandFn<
-	K extends TextfresserCommandKind = TextfresserCommandKind,
-> = (input: CommandInput<K>) => Result<VaultAction[], CommandError>;
+export type CommandFn = (
+	input: CommandInput,
+) => ResultAsync<VaultAction[], CommandError>;
 
 // ─── Eligibility Schema ───
 

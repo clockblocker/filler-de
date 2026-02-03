@@ -10,10 +10,10 @@ import {
 
 /** Eligible if noteKind is undefined or DictEntry. */
 export function checkEligibility(
-	ctx: CommandState<"Generate">,
-): Result<CommandState<"Generate">, CommandError> {
+	ctx: CommandState,
+): Result<CommandState, CommandError> {
 	const metadata = noteMetadataHelper.read(
-		ctx.currentFileInfo.content,
+		ctx.commandContext.activeFile!.content,
 		EligibilitySchema,
 	);
 	const noteKind = metadata?.noteKind;

@@ -12,26 +12,29 @@ import type { CommandError, CommandState } from "../../types";
 
 /** Appends RenameMdFile action to move file to sharded path. */
 export function moveToWorter(
-	ctx: CommandState<"Generate">,
-): Result<CommandState<"Generate">, CommandError> {
-	const splitPath = ctx.currentFileInfo.path;
-	const shardedParts = computeShardedFolderParts(splitPath.basename);
+	ctx: CommandState,
+): Result<CommandState, CommandError> {
+	const activeFile = ctx.commandContext.activeFile!;
+	const shardedParts = computeShardedFolderParts(activeFile.splitPath.basename);
 
 	const newPath: SplitPathToMdFile = {
-		basename: splitPath.basename,
-		extension: splitPath.extension,
+		basename: activeFile.splitPath.basename,
+		extension: activeFile.splitPath.extension,
 		kind: SplitPathKind.MdFile,
 		pathParts: shardedParts,
 	};
 
 	const action: VaultAction = {
 		kind: VaultActionKind.RenameMdFile,
-		payload: { from: splitPath, to: newPath },
+		payload: { from: activeFile.splitPath, to: newPath },
 	};
 
 	return ok({
 		...ctx,
 		actions: [...ctx.actions, action],
-		currentFileInfo: { ...ctx.currentFileInfo, path: newPath },
+		commandContext: {
+			...ctx.commandContext,
+			activeFile: { ...activeFile, splitPath: newPath },
+		},
 	});
 }

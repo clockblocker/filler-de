@@ -147,6 +147,7 @@ if (result.isErr()) {
 - Avoid `as` and `any` except for undocumented Obsidian APIs
 - Each exception must be commented
 - Use Zod for runtime validation
+- **Before writing `as`, hover first** — TS may have already narrowed the type via switch/if/guards
 
 ### Prefer Overloads Over `as` Casts for Discriminated Returns
 For core functions returning discriminated types based on input, use overloads instead of `as` casts:
@@ -188,6 +189,25 @@ if (isRenameEvent(event)) {
     return event.from as FromSplitPathFor<K>;  // TS loses K correlation
 }
 return undefined;  // inferred as FromSplitPathFor<K> | undefined
+```
+
+### Trust Switch Narrowing
+Switch cases narrow union types — no cast needed when passing to functions expecting a subset:
+```typescript
+// ❌ BAD - unnecessary cast
+case CommandKind.Generate:
+case CommandKind.Lemma:
+case CommandKind.TranslateSelection: {
+    const textfresserKind = kind as TextfresserCommandKind;  // redundant
+    await textfresser.executeCommand(textfresserKind, context);
+}
+
+// ✅ GOOD - switch already narrowed kind to "Generate" | "Lemma" | "TranslateSelection"
+case CommandKind.Generate:
+case CommandKind.Lemma:
+case CommandKind.TranslateSelection: {
+    await textfresser.executeCommand(kind, context);  // TS knows
+}
 ```
 
 ### Type Inference

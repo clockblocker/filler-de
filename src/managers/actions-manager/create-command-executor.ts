@@ -41,7 +41,7 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 		if (splitPath) {
 			const contentResult = vam.getOpenedContent();
 			if (contentResult.isOk()) {
-				activeFile = { splitPath, content: contentResult.value };
+				activeFile = { content: contentResult.value, splitPath };
 			}
 		}
 		return {
@@ -59,7 +59,10 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 			kind === CommandKind.GoToNextPage;
 
 		if (!isNavCommand) {
-			if (context.activeFile && isCodexSplitPath(context.activeFile.splitPath)) {
+			if (
+				context.activeFile &&
+				isCodexSplitPath(context.activeFile.splitPath)
+			) {
 				return; // silently skip on codex
 			}
 		}
@@ -88,18 +91,10 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 				break;
 			}
 
-			case CommandKind.TranslateSelection: {
-				await textfresser.translateSelection(context);
-				break;
-			}
-
-			case CommandKind.Generate: {
-				await textfresser.generate(context);
-				break;
-			}
-
+			case CommandKind.TranslateSelection:
+			case CommandKind.Generate:
 			case CommandKind.Lemma: {
-				await textfresser.lemma(context);
+				await textfresser.executeCommand(kind, context);
 				break;
 			}
 

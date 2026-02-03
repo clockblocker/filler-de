@@ -7,6 +7,7 @@ const COMMAND_ERROR_KIND_STR = [
 	"NotEligible",
 	"DispatchFailed",
 	"NoSelection",
+	"UNUSED_STUB",
 ] as const;
 
 export const CommandErrorKindSchema = z.enum(COMMAND_ERROR_KIND_STR);
@@ -17,7 +18,8 @@ export type CommandError =
 	| { kind: typeof CommandErrorKind.NotMdFile }
 	| { kind: typeof CommandErrorKind.NotEligible; reason: string }
 	| { kind: typeof CommandErrorKind.DispatchFailed; reason: string }
-	| { kind: typeof CommandErrorKind.NoSelection };
+	| { kind: typeof CommandErrorKind.NoSelection }
+	| { kind: typeof CommandErrorKind.UNUSED_STUB };
 
 // ─── Attestation Parsing Error ───
 
