@@ -9,7 +9,7 @@ import {
 import { logger } from "../../../utils/logger";
 import { SchemasFor } from "../../schemas";
 import { ALL_PROMPT_KINDS, type PromptKind } from "../consts";
-import { getPartsPath } from "./utils";
+import { getPartsPath, partsExist } from "./utils";
 
 export interface InvalidExample {
 	targetLanguage: TargetLanguage;
@@ -28,6 +28,11 @@ export async function ensureAllExamplesMatchSchema(): Promise<
 	for (const targetLanguage of ALL_TARGET_LANGUAGES) {
 		for (const knownLanguage of ALL_KNOWN_LANGUAGES) {
 			for (const promptKind of ALL_PROMPT_KINDS) {
+				// Skip if parts don't exist (optional languages)
+				if (!partsExist(targetLanguage, knownLanguage, promptKind)) {
+					continue;
+				}
+
 				const partsPath = getPartsPath(
 					targetLanguage,
 					knownLanguage,

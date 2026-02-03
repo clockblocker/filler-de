@@ -9,7 +9,7 @@ import {
 } from "../../../types";
 import { logger } from "../../../utils/logger";
 import { ALL_PROMPT_KINDS, type PromptKind } from "../consts";
-import { getPartsPath } from "./utils";
+import { getPartsPath, partsExist } from "./utils";
 
 interface FormatError {
 	targetLanguage: TargetLanguage;
@@ -32,6 +32,11 @@ export function ensurePartsFormat(): Result<void, FormatError[]> {
 	for (const targetLanguage of ALL_TARGET_LANGUAGES) {
 		for (const knownLanguage of ALL_KNOWN_LANGUAGES) {
 			for (const promptKind of ALL_PROMPT_KINDS) {
+				// Skip if parts don't exist (optional languages)
+				if (!partsExist(targetLanguage, knownLanguage, promptKind)) {
+					continue;
+				}
+
 				const partsPath = getPartsPath(
 					targetLanguage,
 					knownLanguage,
@@ -42,7 +47,7 @@ export function ensurePartsFormat(): Result<void, FormatError[]> {
 					FILE_EXPORT_NAMES,
 				)) {
 					const filePath = path.join(partsPath, file);
-					if (!fs.existsSync(filePath)) continue; // handled by ensureAllPartsArePresent
+					if (!fs.existsSync(filePath)) continue;
 
 					const content = fs.readFileSync(filePath, "utf-8");
 

@@ -20,6 +20,7 @@ import type {
 	VaultAction,
 	VaultActionManager,
 } from "../../managers/obsidian/vault-action-manager";
+import type { LanguagesConfig } from "../../types";
 import { logger } from "../../utils/logger";
 import { generateCommand } from "./commands/generate/generate-command";
 import { translateCommand } from "./commands/translate/translate-command";
@@ -27,7 +28,6 @@ import type { CommandFn, TextfresserCommandKind } from "./commands/types";
 import { buildAttestationFromWikilinkClickPayload } from "./common/attestation/builders/build-from-wikilink-click-payload";
 import type { Attestation } from "./common/attestation/types";
 import { CommandErrorKind } from "./errors";
-import type { LanguagesConfig } from "../../types";
 
 // ─── Command Function Mapping ───
 

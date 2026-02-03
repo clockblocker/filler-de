@@ -13,9 +13,7 @@ import { makeKeyForAction } from "./helpers/make-key-for-action";
  * Normalizes before/after variant to transform function.
  */
 function getTransform(
-	payload:
-		| { transform: Transform }
-		| { before: string; after: string },
+	payload: { transform: Transform } | { before: string; after: string },
 ): Transform {
 	if ("transform" in payload) {
 		return payload.transform;
@@ -112,7 +110,10 @@ export async function collapseActions(
 					};
 					byPath.set(key, {
 						...existing,
-						payload: { splitPath: existing.payload.splitPath, transform: combined },
+						payload: {
+							splitPath: existing.payload.splitPath,
+							transform: combined,
+						},
 					});
 					continue;
 				}

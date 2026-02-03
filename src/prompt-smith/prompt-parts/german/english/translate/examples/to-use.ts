@@ -9,4 +9,7 @@ export const examples = [
 		input: "Das Wetter ist heute sehr schön.",
 		output: "The weather is very nice today.",
 	},
-] satisfies { input: UserInput<"Translate">; output: AgentOutput<"Translate"> }[];
+] satisfies {
+	input: UserInput<"Translate">;
+	output: AgentOutput<"Translate">;
+}[];

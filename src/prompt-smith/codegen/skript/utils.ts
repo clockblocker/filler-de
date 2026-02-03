@@ -1,3 +1,4 @@
+import * as fs from "node:fs";
 import * as path from "node:path";
 
 export function toKebabCase(str: string): string {
@@ -44,4 +45,13 @@ export function getGeneratedPath(
 
 export function getGeneratedFileName(promptKind: string): string {
 	return `${toKebabCase(promptKind)}-prompt.ts`;
+}
+
+export function partsExist(
+	targetLanguage: string,
+	knownLanguage: string,
+	promptKind: string,
+): boolean {
+	const partsPath = getPartsPath(targetLanguage, knownLanguage, promptKind);
+	return fs.existsSync(partsPath);
 }
