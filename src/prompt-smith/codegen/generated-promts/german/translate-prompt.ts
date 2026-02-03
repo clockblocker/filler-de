@@ -1,8 +1,8 @@
 // AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY
 // Run: bun run codegen:prompts
 
-import { userInputSchema } from "../../../parts/translate/german/schemas/user-input";
-import { agentOutputSchema } from "../../../parts/translate/german/schemas/agent-output";
+import { agentOutputSchema } from "../../../parts/german/translate/schemas/agent-output";
+import { userInputSchema } from "../../../parts/german/translate/schemas/user-input";
 
 export { userInputSchema, agentOutputSchema };
 

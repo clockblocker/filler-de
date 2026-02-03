@@ -22,9 +22,9 @@ interface MissingPart {
 export function ensureAllPartsArePresent(): MissingPart[] {
 	const missing: MissingPart[] = [];
 
-	for (const promptKind of ALL_PROMPT_KINDS) {
-		for (const language of ALL_TARGET_LANGUAGES) {
-			const partsPath = getPartsPath(promptKind, language);
+	for (const language of ALL_TARGET_LANGUAGES) {
+		for (const promptKind of ALL_PROMPT_KINDS) {
+			const partsPath = getPartsPath(language, promptKind);
 
 			for (const file of REQUIRED_FILES) {
 				const filePath = path.join(partsPath, file);
@@ -44,7 +44,7 @@ export function validateAllPartsPresent(): void {
 	if (missing.length > 0) {
 		logger.error("Missing prompt parts:");
 		for (const m of missing) {
-			logger.error(`  - ${m.promptKind}/${m.language}/${m.file}`);
+			logger.error(`  - ${m.language}/${m.promptKind}/${m.file}`);
 		}
 		throw new Error(`Missing ${missing.length} prompt part(s)`);
 	}

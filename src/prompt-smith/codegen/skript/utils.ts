@@ -22,16 +22,16 @@ export const GENERATED_DIR = path.resolve(
 );
 
 export function getPartsPath(
-	promptKind: string,
 	language: string,
+	promptKind: string,
 ): string {
-	return path.join(PARTS_DIR, toKebabCase(promptKind), toKebabCase(language));
+	return path.join(PARTS_DIR, toKebabCase(language), toKebabCase(promptKind));
 }
 
-export function getGeneratedPath(promptKind: string): string {
-	return path.join(GENERATED_DIR, toKebabCase(promptKind));
+export function getGeneratedPath(language: string): string {
+	return path.join(GENERATED_DIR, toKebabCase(language));
 }
 
-export function getGeneratedFileName(language: string, promptKind: string): string {
-	return `${toKebabCase(language)}-${toKebabCase(promptKind)}-prompt.ts`;
+export function getGeneratedFileName(promptKind: string): string {
+	return `${toKebabCase(promptKind)}-prompt.ts`;
 }

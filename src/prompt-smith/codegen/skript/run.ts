@@ -23,8 +23,8 @@ function generatePromptFile(
 	return `// AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY
 // Run: bun run codegen:prompts
 
-import { userInputSchema } from "../../../parts/${kindLower}/${langLower}/schemas/user-input";
-import { agentOutputSchema } from "../../../parts/${kindLower}/${langLower}/schemas/agent-output";
+import { userInputSchema } from "../../../parts/${langLower}/${kindLower}/schemas/user-input";
+import { agentOutputSchema } from "../../../parts/${langLower}/${kindLower}/schemas/agent-output";
 
 export { userInputSchema, agentOutputSchema };
 
@@ -33,18 +33,18 @@ export const systemPrompt = \`${systemPrompt.replace(/`/g, "\\`").replace(/\$/g,
 }
 
 async function generateForLanguage(
-	promptKind: PromptKind,
 	language: TargetLanguage,
+	promptKind: PromptKind,
 ): Promise<void> {
-	const combined = await combineParts(promptKind, language);
+	const combined = await combineParts(language, promptKind);
 	const fileContent = generatePromptFile(
 		language,
 		promptKind,
 		combined.systemPrompt,
 	);
 
-	const outputDir = getGeneratedPath(promptKind);
-	const fileName = getGeneratedFileName(language, promptKind);
+	const outputDir = getGeneratedPath(language);
+	const fileName = getGeneratedFileName(promptKind);
 	const outputPath = path.join(outputDir, fileName);
 
 	fs.mkdirSync(outputDir, { recursive: true });
@@ -57,15 +57,15 @@ async function generateIndex(): Promise<void> {
 	const imports: string[] = [];
 	const entries: string[] = [];
 
-	for (const promptKind of ALL_PROMPT_KINDS) {
-		for (const language of ALL_TARGET_LANGUAGES) {
+	for (const language of ALL_TARGET_LANGUAGES) {
+		for (const promptKind of ALL_PROMPT_KINDS) {
 			const kindLower = toKebabCase(promptKind);
 			const langLower = toKebabCase(language);
 			const varName = `${langLower}${promptKind}Prompt`;
-			const fileName = getGeneratedFileName(language, promptKind);
+			const fileName = getGeneratedFileName(promptKind);
 
 			imports.push(
-				`import * as ${varName} from "./codegen/generated-promts/${kindLower}/${fileName.replace(".ts", "")}";`,
+				`import * as ${varName} from "./codegen/generated-promts/${langLower}/${fileName.replace(".ts", "")}";`,
 			);
 			entries.push(`\t\t${language}: ${varName},`);
 		}
@@ -78,9 +78,9 @@ ${imports.join("\n")}
 import type { AvaliablePromptDict } from "./types";
 
 export const PromptFor = {
-${ALL_PROMPT_KINDS.map(
-	(kind) =>
-		`\t${kind}: {\n${ALL_TARGET_LANGUAGES.map((lang) => `\t\t${lang}: ${toKebabCase(lang)}${kind}Prompt,`).join("\n")}\n\t},`,
+${ALL_TARGET_LANGUAGES.map(
+	(lang) =>
+		`\t${lang}: {\n${ALL_PROMPT_KINDS.map((kind) => `\t\t${kind}: ${toKebabCase(lang)}${kind}Prompt,`).join("\n")}\n\t},`,
 ).join("\n")}
 } satisfies AvaliablePromptDict;
 `;
@@ -92,9 +92,9 @@ ${ALL_PROMPT_KINDS.map(
 async function main(): Promise<void> {
 	validateAllPartsPresent();
 
-	for (const promptKind of ALL_PROMPT_KINDS) {
-		for (const language of ALL_TARGET_LANGUAGES) {
-			await generateForLanguage(promptKind, language);
+	for (const language of ALL_TARGET_LANGUAGES) {
+		for (const promptKind of ALL_PROMPT_KINDS) {
+			await generateForLanguage(language, promptKind);
 		}
 	}
 

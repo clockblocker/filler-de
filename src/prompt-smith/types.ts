@@ -3,9 +3,9 @@ import type { TargetLanguage } from "../types";
 import type { PromptKind } from "./codegen/consts";
 
 export type AvaliablePromptDict = Record<
-	PromptKind,
+	TargetLanguage,
 	Record<
-		TargetLanguage,
+		PromptKind,
 		{
 			userInputSchema: z.ZodTypeAny;
 			agentOutputSchema: z.ZodTypeAny;

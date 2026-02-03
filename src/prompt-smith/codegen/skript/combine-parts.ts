@@ -10,10 +10,10 @@ interface PromptParts {
 }
 
 async function loadParts(
-	promptKind: PromptKind,
 	language: TargetLanguage,
+	promptKind: PromptKind,
 ): Promise<PromptParts> {
-	const partsPath = getPartsPath(promptKind, language);
+	const partsPath = getPartsPath(language, promptKind);
 
 	const { agentRole } = await import(path.join(partsPath, "agent-role.ts"));
 	const { taskDescription } = await import(
@@ -50,13 +50,13 @@ export interface CombinedPrompt {
 }
 
 export async function combineParts(
-	promptKind: PromptKind,
 	language: TargetLanguage,
+	promptKind: PromptKind,
 ): Promise<CombinedPrompt> {
-	const parts = await loadParts(promptKind, language);
+	const parts = await loadParts(language, promptKind);
 	const systemPrompt = buildSystemPrompt(parts);
 
-	const partsPath = getPartsPath(promptKind, language);
+	const partsPath = getPartsPath(language, promptKind);
 
 	return {
 		systemPrompt,
