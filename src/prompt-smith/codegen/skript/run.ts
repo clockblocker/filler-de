@@ -1,6 +1,11 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { ALL_TARGET_LANGUAGES, type TargetLanguage } from "../../../types";
+import {
+	ALL_KNOWN_LANGUAGES,
+	ALL_TARGET_LANGUAGES,
+	type KnownLanguage,
+	type TargetLanguage,
+} from "../../../types";
 import { logger } from "../../../utils/logger";
 import { ALL_PROMPT_KINDS, type PromptKind } from "../consts";
 import { combineParts } from "./combine-parts";
@@ -23,36 +28,42 @@ export const systemPrompt = \`${systemPrompt.replace(/`/g, "\\`").replace(/\$/g,
 }
 
 async function generateForLanguage(
-	language: TargetLanguage,
+	targetLanguage: TargetLanguage,
+	knownLanguage: KnownLanguage,
 	promptKind: PromptKind,
 ): Promise<void> {
-	const combined = await combineParts(language, promptKind);
+	const combined = await combineParts(
+		targetLanguage,
+		knownLanguage,
+		promptKind,
+	);
 	const fileContent = generatePromptFile(combined.systemPrompt);
 
-	const outputDir = getGeneratedPath(language);
+	const outputDir = getGeneratedPath(targetLanguage, knownLanguage);
 	const fileName = getGeneratedFileName(promptKind);
 	const outputPath = path.join(outputDir, fileName);
 
 	fs.mkdirSync(outputDir, { recursive: true });
 	fs.writeFileSync(outputPath, fileContent);
 
-	logger.info(`  ✓ Generated: ${fileName}`);
+	logger.info(`  ✓ Generated: ${toKebabCase(targetLanguage)}/${toKebabCase(knownLanguage)}/${fileName}`);
 }
 
 async function generateIndex(): Promise<void> {
 	const imports: string[] = [];
-	const entries: string[] = [];
 
-	for (const language of ALL_TARGET_LANGUAGES) {
-		for (const promptKind of ALL_PROMPT_KINDS) {
-			const langLower = toKebabCase(language);
-			const varName = `${langLower}${promptKind}Prompt`;
-			const fileName = getGeneratedFileName(promptKind);
+	for (const targetLang of ALL_TARGET_LANGUAGES) {
+		for (const knownLang of ALL_KNOWN_LANGUAGES) {
+			for (const promptKind of ALL_PROMPT_KINDS) {
+				const targetLower = toKebabCase(targetLang);
+				const knownLower = toKebabCase(knownLang);
+				const varName = `${targetLower}To${knownLang}${promptKind}Prompt`;
+				const fileName = getGeneratedFileName(promptKind);
 
-			imports.push(
-				`import * as ${varName} from "./codegen/generated-promts/${langLower}/${fileName.replace(".ts", "")}";`,
-			);
-			entries.push(`\t\t${language}: ${varName},`);
+				imports.push(
+					`import * as ${varName} from "./codegen/generated-promts/${targetLower}/${knownLower}/${fileName.replace(".ts", "")}";`,
+				);
+			}
 		}
 	}
 
@@ -64,8 +75,14 @@ import type { AvaliablePromptDict } from "./types";
 
 export const PromptFor = {
 ${ALL_TARGET_LANGUAGES.map(
-	(lang) =>
-		`\t${lang}: {\n${ALL_PROMPT_KINDS.map((kind) => `\t\t${kind}: ${toKebabCase(lang)}${kind}Prompt,`).join("\n")}\n\t},`,
+	(targetLang) =>
+		`\t${targetLang}: {\n${ALL_KNOWN_LANGUAGES.map(
+			(knownLang) =>
+				`\t\t${knownLang}: {\n${ALL_PROMPT_KINDS.map(
+					(kind) =>
+						`\t\t\t${kind}: ${toKebabCase(targetLang)}To${knownLang}${kind}Prompt,`,
+				).join("\n")}\n\t\t},`,
+		).join("\n")}\n\t},`,
 ).join("\n")}
 } satisfies AvaliablePromptDict;
 
@@ -95,9 +112,15 @@ async function main(): Promise<void> {
 		process.exit(1);
 	}
 
-	for (const language of ALL_TARGET_LANGUAGES) {
-		for (const promptKind of ALL_PROMPT_KINDS) {
-			await generateForLanguage(language, promptKind);
+	for (const targetLanguage of ALL_TARGET_LANGUAGES) {
+		for (const knownLanguage of ALL_KNOWN_LANGUAGES) {
+			for (const promptKind of ALL_PROMPT_KINDS) {
+				await generateForLanguage(
+					targetLanguage,
+					knownLanguage,
+					promptKind,
+				);
+			}
 		}
 	}
 

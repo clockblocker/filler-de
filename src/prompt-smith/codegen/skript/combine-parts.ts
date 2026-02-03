@@ -1,5 +1,5 @@
 import * as path from "node:path";
-import type { TargetLanguage } from "../../../types";
+import type { KnownLanguage, TargetLanguage } from "../../../types";
 import type { PromptKind } from "../consts";
 import { getPartsPath, wrapInXmlTag } from "./utils";
 
@@ -10,10 +10,11 @@ interface PromptParts {
 }
 
 async function loadParts(
-	language: TargetLanguage,
+	targetLanguage: TargetLanguage,
+	knownLanguage: KnownLanguage,
 	promptKind: PromptKind,
 ): Promise<PromptParts> {
-	const partsPath = getPartsPath(language, promptKind);
+	const partsPath = getPartsPath(targetLanguage, knownLanguage, promptKind);
 
 	const { agentRole } = await import(path.join(partsPath, "agent-role.ts"));
 	const { taskDescription } = await import(
@@ -50,10 +51,11 @@ export interface CombinedPrompt {
 }
 
 export async function combineParts(
-	language: TargetLanguage,
+	targetLanguage: TargetLanguage,
+	knownLanguage: KnownLanguage,
 	promptKind: PromptKind,
 ): Promise<CombinedPrompt> {
-	const parts = await loadParts(language, promptKind);
+	const parts = await loadParts(targetLanguage, knownLanguage, promptKind);
 	const systemPrompt = buildSystemPrompt(parts);
 
 	return { systemPrompt };

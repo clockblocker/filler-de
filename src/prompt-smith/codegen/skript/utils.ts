@@ -18,12 +18,28 @@ export const GENERATED_DIR = path.resolve(
 	"../generated-promts",
 );
 
-export function getPartsPath(language: string, promptKind: string): string {
-	return path.join(PARTS_DIR, toKebabCase(language), toKebabCase(promptKind));
+export function getPartsPath(
+	targetLanguage: string,
+	knownLanguage: string,
+	promptKind: string,
+): string {
+	return path.join(
+		PARTS_DIR,
+		toKebabCase(targetLanguage),
+		toKebabCase(knownLanguage),
+		toKebabCase(promptKind),
+	);
 }
 
-export function getGeneratedPath(language: string): string {
-	return path.join(GENERATED_DIR, toKebabCase(language));
+export function getGeneratedPath(
+	targetLanguage: string,
+	knownLanguage: string,
+): string {
+	return path.join(
+		GENERATED_DIR,
+		toKebabCase(targetLanguage),
+		toKebabCase(knownLanguage),
+	);
 }
 
 export function getGeneratedFileName(promptKind: string): string {

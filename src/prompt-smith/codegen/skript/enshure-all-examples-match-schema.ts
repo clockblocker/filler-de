@@ -1,13 +1,19 @@
 import * as path from "node:path";
 import { err, ok, type Result } from "neverthrow";
-import { ALL_TARGET_LANGUAGES, type TargetLanguage } from "../../../types";
+import {
+	ALL_KNOWN_LANGUAGES,
+	ALL_TARGET_LANGUAGES,
+	type KnownLanguage,
+	type TargetLanguage,
+} from "../../../types";
 import { logger } from "../../../utils/logger";
 import { SchemasFor } from "../../schemas";
 import { ALL_PROMPT_KINDS, type PromptKind } from "../consts";
 import { getPartsPath } from "./utils";
 
 export interface InvalidExample {
-	language: TargetLanguage;
+	targetLanguage: TargetLanguage;
+	knownLanguage: KnownLanguage;
 	promptKind: PromptKind;
 	index: number;
 	field: "input" | "output";
@@ -19,37 +25,47 @@ export async function ensureAllExamplesMatchSchema(): Promise<
 > {
 	const invalid: InvalidExample[] = [];
 
-	for (const language of ALL_TARGET_LANGUAGES) {
-		for (const promptKind of ALL_PROMPT_KINDS) {
-			const partsPath = getPartsPath(language, promptKind);
-			const { examples } = await import(
-				path.join(partsPath, "examples/to-use.ts")
-			);
-			const schemas = SchemasFor[promptKind];
-
-			for (let i = 0; i < examples.length; i++) {
-				const ex = examples[i];
-				const inputResult = schemas.userInputSchema.safeParse(ex.input);
-				if (!inputResult.success) {
-					invalid.push({
-						error: inputResult.error.message,
-						field: "input",
-						index: i,
-						language,
-						promptKind,
-					});
-				}
-				const outputResult = schemas.agentOutputSchema.safeParse(
-					ex.output,
+	for (const targetLanguage of ALL_TARGET_LANGUAGES) {
+		for (const knownLanguage of ALL_KNOWN_LANGUAGES) {
+			for (const promptKind of ALL_PROMPT_KINDS) {
+				const partsPath = getPartsPath(
+					targetLanguage,
+					knownLanguage,
+					promptKind,
 				);
-				if (!outputResult.success) {
-					invalid.push({
-						error: outputResult.error.message,
-						field: "output",
-						index: i,
-						language,
-						promptKind,
-					});
+				const { examples } = await import(
+					path.join(partsPath, "examples/to-use.ts")
+				);
+				const schemas = SchemasFor[promptKind];
+
+				for (let i = 0; i < examples.length; i++) {
+					const ex = examples[i];
+					const inputResult = schemas.userInputSchema.safeParse(
+						ex.input,
+					);
+					if (!inputResult.success) {
+						invalid.push({
+							error: inputResult.error.message,
+							field: "input",
+							index: i,
+							knownLanguage,
+							promptKind,
+							targetLanguage,
+						});
+					}
+					const outputResult = schemas.agentOutputSchema.safeParse(
+						ex.output,
+					);
+					if (!outputResult.success) {
+						invalid.push({
+							error: outputResult.error.message,
+							field: "output",
+							index: i,
+							knownLanguage,
+							promptKind,
+							targetLanguage,
+						});
+					}
 				}
 			}
 		}
@@ -59,7 +75,7 @@ export async function ensureAllExamplesMatchSchema(): Promise<
 		logger.error("Invalid examples:");
 		for (const e of invalid) {
 			logger.error(
-				`  - ${e.language}/${e.promptKind}[${e.index}].${e.field}: ${e.error}`,
+				`  - ${e.targetLanguage}/${e.knownLanguage}/${e.promptKind}[${e.index}].${e.field}: ${e.error}`,
 			);
 		}
 		return err(invalid);
