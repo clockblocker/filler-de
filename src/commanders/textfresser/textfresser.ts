@@ -30,11 +30,6 @@ import {
 } from "./commands/types";
 import { buildAttestationFromWikilinkClickPayload } from "./common/attestation/builders/build-from-wikilink-click-payload";
 import type { Attestation } from "./common/attestation/types";
-import {
-	type FsError,
-	FsErrorKind,
-	readCurrentFile,
-} from "./common/fs-utils/read-current-file";
 import { CommandErrorKind } from "./errors";
 
 // ─── State ───
@@ -55,7 +50,11 @@ export class Textfresser {
 	/**
 	 * Generate command - moves current file to sharded path and sets metadata.
 	 */
-	async generate(_context: CommandContext) {
+	async generate(context: CommandContext) {
+		if (!context.activeFile) {
+			return err({ kind: CommandErrorKind.NotMdFile });
+		}
+
 		const attestation = this.state.attestationForLatestNavigated;
 		if (!attestation) {
 			return err({
@@ -64,12 +63,7 @@ export class Textfresser {
 			});
 		}
 
-		const fsResult = await readCurrentFile(this.vam);
-		if (fsResult.isErr()) {
-			return err(this.mapFsError(fsResult.error));
-		}
-
-		const { splitPath, content } = fsResult.value;
+		const { splitPath, content } = context.activeFile;
 		const input = {
 			attestation,
 			currentFileInfo: { content, path: splitPath },
@@ -91,17 +85,16 @@ export class Textfresser {
 	 * TranslateSelection command - translates selected text.
 	 */
 	async translateSelection(context: CommandContext) {
+		if (!context.activeFile) {
+			return err({ kind: CommandErrorKind.NotMdFile });
+		}
+
 		const selection = context.selection?.text;
 		if (!selection) {
 			return err({ kind: CommandErrorKind.NoSelection });
 		}
 
-		const fsResult = await readCurrentFile(this.vam);
-		if (fsResult.isErr()) {
-			return err(this.mapFsError(fsResult.error));
-		}
-
-		const { splitPath, content } = fsResult.value;
+		const { splitPath, content } = context.activeFile;
 		const input = {
 			currentFileInfo: { content, path: splitPath },
 			kind: TextfresserCommandKind.TranslateSelection,
@@ -180,12 +173,4 @@ export class Textfresser {
 		);
 	}
 
-	private mapFsError(fsError: FsError) {
-		switch (fsError.kind) {
-			case FsErrorKind.NoMdFile:
-				return { kind: CommandErrorKind.NotMdFile };
-			case FsErrorKind.ReadFailed:
-				return { kind: CommandErrorKind.NotMdFile };
-		}
-	}
 }

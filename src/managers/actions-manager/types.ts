@@ -20,8 +20,8 @@ export const CommandKind = CommandKindSchema.enum;
  * Passed to all commands by default.
  */
 export type CommandContext = {
+	/** Active file with content, or null if no md file open */
+	activeFile: { splitPath: SplitPathToMdFile; content: string } | null;
 	/** Selection info from vam.selection.getInfo() */
 	selection: SelectionInfo | null;
-	/** Current md file path from vam.mdPwd() */
-	splitPath: SplitPathToMdFile | null;
 };

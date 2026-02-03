@@ -36,9 +36,17 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 	 * Collect command context once at invocation.
 	 */
 	function collectContext(): CommandContext {
+		const splitPath = vam.mdPwd();
+		let activeFile: CommandContext["activeFile"] = null;
+		if (splitPath) {
+			const contentResult = vam.getOpenedContent();
+			if (contentResult.isOk()) {
+				activeFile = { splitPath, content: contentResult.value };
+			}
+		}
 		return {
+			activeFile,
 			selection: vam.selection.getInfo(),
-			splitPath: vam.mdPwd(),
 		};
 	}
 
@@ -51,8 +59,7 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 			kind === CommandKind.GoToNextPage;
 
 		if (!isNavCommand) {
-			const currentFile = vam.mdPwd();
-			if (currentFile && isCodexSplitPath(currentFile)) {
+			if (context.activeFile && isCodexSplitPath(context.activeFile.splitPath)) {
 				return; // silently skip on codex
 			}
 		}
