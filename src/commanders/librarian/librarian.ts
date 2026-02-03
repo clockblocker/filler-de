@@ -26,6 +26,7 @@ import type {
 	ScrollNodeLocator,
 	SectionNodeLocator,
 } from "./codecs/locator/types";
+import { getBacklinkHealingVaultActions } from "./healer/backlink-healing";
 import { Healer } from "./healer/healer";
 import { HealingTransaction } from "./healer/healing-transaction";
 import {
@@ -201,13 +202,18 @@ export class Librarian {
 				this.rules,
 			);
 
-			// Combine all actions and dispatch once
+			// Combine all actions and dispatch once (healing → codex → backlink → migration)
 			const allVaultActions = [
 				...assembleVaultActions(
 					allHealingActions,
 					codexRecreations,
 					this.rules,
 					this.codecs,
+				),
+				...getBacklinkHealingVaultActions(
+					this.healer,
+					this.codecs,
+					this.rules,
 				),
 				...migrationActions, // Convert YAML frontmatter to internal format
 				...pageNavMigrationActions, // Add missing page navigation indices
@@ -315,13 +321,20 @@ export class Librarian {
 			this.codecs,
 		);
 
-		// Combine all actions and dispatch once
-		const allVaultActions = assembleVaultActions(
-			allHealingActions,
-			[...codexRecreations, ...scrollStatusActions],
-			this.rules,
-			this.codecs,
-		);
+		// Combine all actions and dispatch once (healing → codex → backlink → scroll status)
+		const allVaultActions = [
+			...assembleVaultActions(
+				allHealingActions,
+				[...codexRecreations, ...scrollStatusActions],
+				this.rules,
+				this.codecs,
+			),
+			...getBacklinkHealingVaultActions(
+				this.healer,
+				this.codecs,
+				this.rules,
+			),
+		];
 
 		// Store for debugging
 		this._debugLastHealingActions = allHealingActions;

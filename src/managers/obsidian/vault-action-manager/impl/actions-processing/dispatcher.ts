@@ -96,6 +96,32 @@ export class Dispatcher {
 	}
 
 	async dispatch(actions: readonly VaultAction[]): Promise<DispatchResult> {
+		const dispatchTimestamp = Date.now();
+		const scrollRelatedActions = actions.filter(
+			(a) =>
+				a.kind === VaultActionKind.ProcessMdFile &&
+				"splitPath" in a.payload &&
+				a.payload.splitPath.basename.includes("Untitled"),
+		);
+
+		logger.info("[Dispatcher] dispatch() CALLED", {
+			actionCount: actions.length,
+			dispatchTimestamp,
+			scrollActions: scrollRelatedActions.map((a) => ({
+				kind: a.kind,
+				path:
+					"splitPath" in a.payload
+						? makeSystemPathForSplitPath(a.payload.splitPath)
+						: "unknown",
+				transformName:
+					a.kind === VaultActionKind.ProcessMdFile &&
+					"transform" in a.payload
+						? a.payload.transform.name
+						: undefined,
+			})),
+			scrollRelatedCount: scrollRelatedActions.length,
+		});
+
 		if (actions.length === 0) {
 			return ok(undefined);
 		}
@@ -139,6 +165,25 @@ export class Dispatcher {
 								.splitPath,
 						);
 
+			// Extra logging for ProcessMdFile to debug race conditions
+			const isScrollRelated =
+				action.kind === VaultActionKind.ProcessMdFile &&
+				"splitPath" in action.payload &&
+				action.payload.splitPath.basename.includes("Untitled");
+
+			if (isScrollRelated) {
+				logger.info("[Dispatcher] BEFORE ProcessMdFile execution", {
+					batch: currentBatch,
+					index: i,
+					path: actionPath,
+					timestamp: Date.now(),
+					transformName:
+						"transform" in action.payload
+							? action.payload.transform.name
+							: "before/after",
+				});
+			}
+
 			try {
 				const result = await this.executor.execute(action);
 				if (result.isErr()) {
@@ -164,6 +209,18 @@ export class Dispatcher {
 						result: "err",
 					});
 				} else {
+					if (isScrollRelated) {
+						logger.info(
+							"[Dispatcher] AFTER ProcessMdFile execution",
+							{
+								batch: currentBatch,
+								index: i,
+								path: actionPath,
+								result: "ok",
+								timestamp: Date.now(),
+							},
+						);
+					}
 					// Add to execution trace
 					this._debugExecutionTrace.push({
 						batch: currentBatch,

@@ -14,7 +14,6 @@ import { computeSectionStatus } from "./compute-section-status";
 import {
 	formatChildSectionLine,
 	formatFileLine,
-	formatParentBacklink,
 	formatScrollLine,
 } from "./format-codex-line";
 
@@ -79,12 +78,10 @@ export function generateChildrenList(
 // ─── Full Codex Generation ───
 
 /**
- * Generate codex content for a section.
+ * Generate codex content for a section (children list only).
+ * Backlink to parent is added by backlink-healing flow.
  *
- * Structure:
- * - Backlink to parent (if not root)
- * - Own direct children (scrolls with checkbox, files without)
- * - Nested sections with their children (up to maxDepth)
+ * Structure: direct children + nested sections with their children (up to maxDepth).
  *
  * @param section - The section node to generate codex for
  * @param sectionChain - Full chain including Library root, e.g. ["Library﹘Section﹘", "A﹘Section﹘"]
@@ -100,25 +97,13 @@ export function generateCodexContent(
 	const maxDepth = settings.maxSectionDepth;
 	const showScrollsForDepth = settings.showScrollsInCodexesForDepth;
 
-	const lines: string[] = [];
-
-	// Parse once, reuse for both pathParts and parent
 	const pathParts = parseChainOrThrow(sectionChain, codecs);
-
-	// Parent backlink (if not root)
-	if (sectionChain.length > 1) {
-		const parentPathParts = pathParts.slice(0, -1);
-		const parentName = parentPathParts[parentPathParts.length - 1];
-
-		if (parentName) {
-			lines.push(formatParentBacklink(parentName, parentPathParts));
-		}
-	}
-	// Root library (chain length 1, name is library root) - no backlink
-
-	// Generate items for children
-	lines.push(
-		...generateItems(section, pathParts, 0, maxDepth, showScrollsForDepth),
+	const lines = generateItems(
+		section,
+		pathParts,
+		0,
+		maxDepth,
+		showScrollsForDepth,
 	);
 
 	if (lines.length === 0) {

@@ -11,13 +11,12 @@ import type { Codecs } from "../../../../codecs";
 import type { SectionNodeSegmentId } from "../../../../codecs/segment-id";
 import { sectionChainToPathParts } from "../../../../paths/path-finder";
 import type { SectionNode } from "../../tree-node/types/tree-node";
-import { formatParentBacklink } from "../format-codex-line";
+import { makeCodexBasename } from "../format-codex-line";
 import { generateChildrenList } from "../generate-codex-content";
 
 /**
- * Create a single transform that updates both backlink and content for a codex.
- * This is the primary transform for codex healing - combines backlink + content
- * into one atomic operation to avoid dependency graph conflicts.
+ * Create a single transform that updates codex content (children list only).
+ * Backlink line is added by backlink-healing flow, not here.
  * Also adds fileType: Codex metadata (respects hideMetadata setting).
  *
  * @param section - Section node to generate content for
@@ -33,46 +32,12 @@ export function makeCodexTransform(
 	const metaTransform = noteMetadataHelper.upsert({ fileType: "Codex" });
 
 	return (_content: string) => {
-		// Generate children content
 		const childrenContent = generateChildrenList(
 			section,
 			sectionChain,
 			codecs,
 		);
-
-		let codexContent: string;
-
-		// For root section (chain length 1), no backlink
-		if (sectionChain.length <= 1) {
-			codexContent = childrenContent;
-		} else {
-			// Generate backlink for non-root sections
-			const parentChain = sectionChain.slice(0, -1);
-			const parentPathPartsResult = sectionChainToPathParts(
-				parentChain,
-				codecs,
-			);
-			if (parentPathPartsResult.isErr()) {
-				// Fall back to just children content
-				codexContent = childrenContent;
-			} else {
-				const parentPathParts = parentPathPartsResult.value;
-				const parentName = parentPathParts[parentPathParts.length - 1];
-				if (!parentName) {
-					codexContent = childrenContent;
-				} else {
-					const backlinkLine = formatParentBacklink(
-						parentName,
-						parentPathParts,
-					);
-					// Format: \n[[backlink]]  \n\n<children content>
-					codexContent = `${LINE_BREAK}${backlinkLine}${SPACE_F}${childrenContent}`;
-				}
-			}
-		}
-
-		// Apply metadata transform
-		return metaTransform(codexContent);
+		return metaTransform(childrenContent);
 	};
 }
 
@@ -111,7 +76,10 @@ export function makeCodexBacklinkTransform(
 			return content;
 		}
 
-		const backlinkLine = formatParentBacklink(parentName, parentPathParts);
+		const backlinkLine = goBackLinkHelper.build(
+			makeCodexBasename(parentPathParts),
+			parentName,
+		);
 
 		// Strip existing go-back link if present
 		const cleanContent = goBackLinkHelper.strip(content.trimStart());

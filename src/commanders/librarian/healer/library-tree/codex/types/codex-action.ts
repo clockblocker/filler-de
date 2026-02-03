@@ -14,8 +14,7 @@ export type CodexActionType =
 	| "UpsertCodex"
 	| "WriteScrollStatus"
 	| "EnsureCodexFileExists"
-	| "ProcessCodex"
-	| "ProcessScrollBacklink";
+	| "ProcessCodex";
 
 // ─── Payloads ───
 
@@ -49,7 +48,7 @@ export type EnsureCodexFileExistsPayload = {
 	splitPath: SplitPathToMdFileInsideLibrary;
 };
 
-/** Process codex (backlink + children list combined) */
+/** Process codex (children list only; backlink from backlink-healing) */
 export type ProcessCodexPayload = {
 	/** Target codex path */
 	splitPath: SplitPathToMdFileInsideLibrary;
@@ -57,14 +56,6 @@ export type ProcessCodexPayload = {
 	section: SectionNode;
 	/** Full section chain */
 	sectionChain: SectionNodeSegmentId[];
-};
-
-/** Process scroll backlink (line 1) */
-export type ProcessScrollBacklinkPayload = {
-	/** Target scroll path */
-	splitPath: SplitPathToMdFileInsideLibrary;
-	/** Parent chain for backlink generation */
-	parentChain: SectionNodeSegmentId[];
 };
 
 // ─── Actions ───
@@ -89,14 +80,8 @@ export type ProcessCodexAction = {
 	payload: ProcessCodexPayload;
 };
 
-export type ProcessScrollBacklinkAction = {
-	kind: "ProcessScrollBacklink";
-	payload: ProcessScrollBacklinkPayload;
-};
-
 export type CodexAction =
 	| UpsertCodexAction
 	| WriteScrollStatusAction
 	| EnsureCodexFileExistsAction
-	| ProcessCodexAction
-	| ProcessScrollBacklinkAction;
+	| ProcessCodexAction;

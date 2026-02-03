@@ -37,7 +37,6 @@ import type {
 	CodexAction,
 	EnsureCodexFileExistsAction,
 	ProcessCodexAction,
-	ProcessScrollBacklinkAction,
 	WriteScrollStatusAction,
 } from "./types/codex-action";
 
@@ -160,8 +159,8 @@ export function codexImpactToRecreations(
 ): CodexAction[] {
 	const actions: CodexAction[] = [];
 
-	// 1. Single traversal to collect all section chains AND all scrolls
-	const { sectionChains, scrollInfos } = collectTreeData(tree, codecs);
+	// 1. Single traversal to collect all section chains
+	const { sectionChains } = collectTreeData(tree, codecs);
 
 	// 2. Generate codex actions for all sections (2 actions per codex)
 	for (const chain of sectionChains) {
@@ -177,7 +176,7 @@ export function codexImpactToRecreations(
 		};
 		actions.push(ensureAction);
 
-		// 2b. Process codex (backlink + content combined)
+		// 2b. Process codex (content only; backlink from backlink-healing)
 		const processAction: ProcessCodexAction = {
 			kind: "ProcessCodex",
 			payload: { section, sectionChain: chain, splitPath },
@@ -218,30 +217,6 @@ export function codexImpactToRecreations(
 		}
 	}
 
-	// 4. Generate scroll backlink actions for ALL scrolls in the tree
-	// (Already collected in single traversal above)
-	for (const { nodeName, parentChain } of scrollInfos) {
-		const splitPathResult = computeScrollSplitPath(
-			nodeName,
-			parentChain,
-			codecs,
-		);
-		if (splitPathResult.isErr()) {
-			logger.warn(
-				"[Codex] Failed to compute scroll split path for backlink:",
-				splitPathResult.error,
-			);
-			continue;
-		}
-		const splitPath = splitPathResult.value;
-
-		const scrollBacklinkAction: ProcessScrollBacklinkAction = {
-			kind: "ProcessScrollBacklink",
-			payload: { parentChain, splitPath },
-		};
-		actions.push(scrollBacklinkAction);
-	}
-
 	return actions;
 }
 
@@ -259,6 +234,12 @@ export function codexImpactToIncrementalRecreations(
 	tree: TreeReader,
 	codecs: Codecs,
 ): CodexAction[] {
+	logger.info("[codexImpactToIncrementalRecreations] CALLED", {
+		descendantsChangedCount: impact.descendantsChanged.length,
+		impactedChainsCount: impact.impactedChains.size,
+		renamedCount: impact.renamed.length,
+	});
+
 	const actions: CodexAction[] = [];
 
 	// 1. Convert impactedChains Set to actual chains and process only those
@@ -277,44 +258,16 @@ export function codexImpactToIncrementalRecreations(
 		};
 		actions.push(ensureAction);
 
-		// 1b. Process codex (backlink + content combined)
+		// 1b. Process codex (content only; backlink from backlink-healing)
 		const processAction: ProcessCodexAction = {
 			kind: "ProcessCodex",
 			payload: { section, sectionChain: chain, splitPath },
 		};
 		actions.push(processAction);
-
-		// 1c. Generate scroll backlink actions for scrolls in this section (direct children only)
-		for (const [_segId, child] of Object.entries(section.children)) {
-			if (child.kind === TreeNodeKind.Scroll) {
-				const splitPathResult = computeScrollSplitPath(
-					child.nodeName,
-					chain,
-					codecs,
-				);
-				if (splitPathResult.isErr()) {
-					logger.warn(
-						"[Codex] Failed to compute scroll split path for backlink:",
-						splitPathResult.error,
-					);
-					continue;
-				}
-
-				const scrollBacklinkAction: ProcessScrollBacklinkAction = {
-					kind: "ProcessScrollBacklink",
-					payload: {
-						parentChain: chain,
-						splitPath: splitPathResult.value,
-					},
-				};
-				actions.push(scrollBacklinkAction);
-			}
-		}
 	}
 
 	// 1b. Process descendants of renamed/moved sections
 	// When a folder is moved/renamed, descendants need their codexes recreated
-	// and their scroll backlinks updated to point to the new parent codex paths
 	for (const { newChain } of impact.renamed) {
 		const section = findSectionByChain(tree, newChain);
 		if (!section) continue;
@@ -339,7 +292,7 @@ export function codexImpactToIncrementalRecreations(
 			};
 			actions.push(ensureAction);
 
-			// Process codex (backlink + content combined)
+			// Process codex (content only; backlink from backlink-healing)
 			const processAction: ProcessCodexAction = {
 				kind: "ProcessCodex",
 				payload: {
@@ -349,30 +302,6 @@ export function codexImpactToIncrementalRecreations(
 				},
 			};
 			actions.push(processAction);
-
-			// Scroll backlinks for direct children
-			for (const [_segId, child] of Object.entries(
-				descSection.children,
-			)) {
-				if (child.kind === TreeNodeKind.Scroll) {
-					const scrollPath = computeScrollSplitPath(
-						child.nodeName,
-						descChain,
-						codecs,
-					);
-					if (scrollPath.isOk()) {
-						const scrollBacklinkAction: ProcessScrollBacklinkAction =
-							{
-								kind: "ProcessScrollBacklink",
-								payload: {
-									parentChain: descChain,
-									splitPath: scrollPath.value,
-								},
-							};
-						actions.push(scrollBacklinkAction);
-					}
-				}
-			}
 		}
 	}
 
@@ -442,26 +371,6 @@ export function codexImpactToIncrementalRecreations(
 					splitPath,
 				},
 			});
-
-			// Scroll backlinks for direct children
-			for (const child of Object.values(descSection.children)) {
-				if (child.kind === TreeNodeKind.Scroll) {
-					const scrollPath = computeScrollSplitPath(
-						child.nodeName,
-						descChain,
-						codecs,
-					);
-					if (scrollPath.isOk()) {
-						actions.push({
-							kind: "ProcessScrollBacklink",
-							payload: {
-								parentChain: descChain,
-								splitPath: scrollPath.value,
-							},
-						});
-					}
-				}
-			}
 		}
 	}
 

@@ -1,3 +1,4 @@
+import { logger } from "../../../../../utils/logger";
 import {
 	isProcessAction,
 	isRenameAction,
@@ -24,6 +25,16 @@ function getTransform(
 export async function collapseActions(
 	actions: readonly VaultAction[],
 ): Promise<VaultAction[]> {
+	// DEBUG: Log incoming actions
+	const processActions = actions.filter(isProcessAction);
+	if (processActions.length > 0) {
+		logger.info("[Collapse] === INPUT ===", {
+			processActions: processActions.length,
+			processPaths: processActions.map((a) => makeKeyForAction(a)),
+			totalActions: actions.length,
+		});
+	}
+
 	const byPath = new Map<string, VaultAction>();
 
 	// Track actions that must be kept even when they share a key with another action
@@ -41,6 +52,18 @@ export async function collapseActions(
 			}
 		}
 		for (const a of toDelete) additionalActions.delete(a);
+	};
+
+	// Helper: find existing Process action in additionalActions for a key
+	const findAdditionalProcessByKey = (
+		key: string,
+	): VaultAction | undefined => {
+		for (const a of additionalActions) {
+			if (isProcessAction(a) && makeKeyForAction(a) === key) {
+				return a;
+			}
+		}
+		return undefined;
 	};
 
 	for (const action of actions) {
@@ -82,9 +105,48 @@ export async function collapseActions(
 
 					if (upsertContent === null || upsertContent === undefined) {
 						// EnsureExist + ProcessMdFile: keep both
-						// Keep UpsertMdFile in map; keep Process as additional action.
+						// Keep UpsertMdFile in map; compose Process in additionalActions.
 						byPath.set(key, existing);
-						additionalActions.add(action);
+
+						// Check if there's already a Process in additionalActions for this key
+						const existingAdditional =
+							findAdditionalProcessByKey(key);
+						if (
+							existingAdditional &&
+							isProcessAction(existingAdditional)
+						) {
+							logger.info(
+								"[Collapse] COMPOSING ProcessMdFile in additionalActions",
+								{ key },
+							);
+							// Compose: existing additional then new action
+							const existingTransform = getTransform(
+								existingAdditional.payload,
+							);
+							const actionTransform = getTransform(
+								action.payload,
+							);
+							const combined = async (content: string) => {
+								const first = await existingTransform(content);
+								return await actionTransform(first);
+							};
+							// Remove old, add composed
+							additionalActions.delete(existingAdditional);
+							additionalActions.add({
+								...existingAdditional,
+								payload: {
+									splitPath:
+										existingAdditional.payload.splitPath,
+									transform: combined,
+								},
+							});
+						} else {
+							logger.info(
+								"[Collapse] Adding ProcessMdFile to additionalActions (first)",
+								{ key },
+							);
+							additionalActions.add(action);
+						}
 						continue;
 					}
 
@@ -95,7 +157,7 @@ export async function collapseActions(
 						...existing,
 						payload: { ...existing.payload, content: transformed },
 					});
-					// If any prior additional Process exists for this key, it’s now superseded by the merge.
+					// If any prior additional Process exists for this key, it's now superseded by the merge.
 					removeAdditionalProcessByKey(key);
 					continue;
 				}
@@ -176,5 +238,18 @@ export async function collapseActions(
 	}
 
 	// Combine actions from map + additional actions
-	return [...byPath.values(), ...additionalActions];
+	const result = [...byPath.values(), ...additionalActions];
+
+	// DEBUG: Log output
+	const outputProcessActions = result.filter(isProcessAction);
+	if (outputProcessActions.length > 0) {
+		logger.info("[Collapse] === OUTPUT ===", {
+			additionalActionsCount: additionalActions.size,
+			processActions: outputProcessActions.length,
+			processPaths: outputProcessActions.map((a) => makeKeyForAction(a)),
+			totalActions: result.length,
+		});
+	}
+
+	return result;
 }

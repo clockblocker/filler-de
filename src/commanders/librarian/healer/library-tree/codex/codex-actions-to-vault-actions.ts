@@ -11,11 +11,7 @@ import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metada
 import type { Codecs } from "../../../codecs";
 import type { CodecRules } from "../../../codecs/rules";
 import { makeVaultScopedSplitPath } from "../tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
-import {
-	makeCodexTransform,
-	makeScrollBacklinkTransform,
-	makeStripScrollBacklinkTransform,
-} from "./backlink-transforms";
+import { makeCodexTransform } from "./backlink-transforms";
 import type { CodexAction } from "./types/codex-action";
 
 /**
@@ -88,23 +84,6 @@ export function codexActionToVaultAction(
 						action.payload.sectionChain,
 						codecs,
 					),
-				},
-			};
-
-		case "ProcessScrollBacklink":
-			return {
-				kind: VaultActionKind.ProcessMdFile,
-				payload: {
-					splitPath: makeVaultScopedSplitPath(
-						action.payload.splitPath,
-						rules,
-					) as SplitPathToMdFile,
-					transform: rules.showScrollBacklinks
-						? makeScrollBacklinkTransform(
-								action.payload.parentChain,
-								codecs,
-							)
-						: makeStripScrollBacklinkTransform(),
 				},
 			};
 	}

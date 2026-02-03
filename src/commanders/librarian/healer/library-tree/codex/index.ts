@@ -1,8 +1,4 @@
-export {
-	makeCodexTransform,
-	makeScrollBacklinkTransform,
-	makeStripScrollBacklinkTransform,
-} from "./backlink-transforms";
+export { makeCodexTransform } from "./backlink-transforms";
 export {
 	codexActionsToVaultActions,
 	codexActionToVaultAction,
@@ -23,7 +19,6 @@ export { computeSectionStatus } from "./compute-section-status";
 export {
 	formatChildSectionLine,
 	formatFileLine,
-	formatParentBacklink,
 	formatScrollLine,
 } from "./format-codex-line";
 export {
@@ -55,7 +50,6 @@ export type {
 	CodexAction,
 	EnsureCodexFileExistsAction,
 	ProcessCodexAction,
-	ProcessScrollBacklinkAction,
 	UpsertCodexAction,
 	WriteScrollStatusAction,
 } from "./types/codex-action";

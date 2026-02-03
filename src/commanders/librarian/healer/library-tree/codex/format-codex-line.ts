@@ -5,7 +5,6 @@
 
 import { getParsedUserSettings } from "../../../../../global-state/global-state";
 import {
-	BACK_ARROW,
 	DASH,
 	DONE_CHECKBOX,
 	NOT_STARTED_CHECKBOX,
@@ -27,13 +26,6 @@ import { PREFIX_OF_CODEX } from "./literals";
 
 function formatBacklink(basename: string, displayName: string): string {
 	return `${OBSIDIAN_LINK_OPEN}${basename}${PIPE}${displayName}${OBSIDIAN_LINK_CLOSE}`;
-}
-
-function formatParentBacklinkStr(
-	basename: string,
-	displayName: string,
-): string {
-	return formatBacklink(basename, `${BACK_ARROW}${SPACE_F}${displayName}`);
 }
 
 function checkbox(status: TreeNodeStatus): string {
@@ -64,7 +56,7 @@ function makeLeafBasename(nodeName: string, pathParts: string[]): string {
  * - ["Library", "A"] → "__-A"
  * - ["Library", "A", "B"] → "__-B-A"
  */
-function makeCodexBasename(sectionPathParts: string[]): string {
+export function makeCodexBasename(sectionPathParts: string[]): string {
 	const settings = getParsedUserSettings();
 	const rules = makeCodecRulesFromSettings(settings);
 	const codecs = makeCodecs(rules);
@@ -128,20 +120,4 @@ export function formatChildSectionLine(
 	const codexBasename = makeCodexBasename(sectionPathParts);
 	const backlink = formatBacklink(codexBasename, sectionName);
 	return `${checkbox(status)}${SPACE_F}${backlink}`;
-}
-
-/**
- * Format a parent backlink for codex.
- * Used at top of codex to link back to parent section's codex.
- *
- * @param parentName - display name of the parent section
- * @param parentPathParts - full path to parent (including Library root)
- * @returns e.g. "[[__-A|← A]]"
- */
-export function formatParentBacklink(
-	parentName: string,
-	parentPathParts: string[],
-): string {
-	const codexBasename = makeCodexBasename(parentPathParts);
-	return formatParentBacklinkStr(codexBasename, parentName);
 }

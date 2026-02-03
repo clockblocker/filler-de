@@ -10,7 +10,7 @@ import { LINE_BREAK, SPACE_F } from "../../../../../../types/literals";
 import type { Codecs } from "../../../../codecs";
 import type { SectionNodeSegmentId } from "../../../../codecs/segment-id";
 import { sectionChainToPathParts } from "../../../../paths/path-finder";
-import { formatParentBacklink } from "../format-codex-line";
+import { makeCodexBasename } from "../format-codex-line";
 
 /** Pattern to match JSON metadata section at end of file */
 const JSON_META_PATTERN =
@@ -92,8 +92,11 @@ export function makeScrollBacklinkTransform(
 			? content.slice(0, -jsonMeta.length)
 			: content;
 
-		// Build backlink to parent section's codex
-		const backlinkLine = formatParentBacklink(parentName, parentPathParts);
+		// Build backlink to parent section's codex (goBackLinkHelper only)
+		const backlinkLine = goBackLinkHelper.build(
+			makeCodexBasename(parentPathParts),
+			parentName,
+		);
 
 		// Extract frontmatter if present
 		const fmMatch = contentWithoutJsonMeta.match(
@@ -108,6 +111,7 @@ export function makeScrollBacklinkTransform(
 		const cleanBody = goBackLinkHelper.strip(afterFrontmatter.trimStart());
 
 		// Format: [frontmatter]\n[[backlink]]  \n\n<body>\n[json-meta]
-		return `${frontmatter}${LINE_BREAK}${backlinkLine}${SPACE_F}${LINE_BREAK}${LINE_BREAK}${cleanBody}${jsonMeta}`;
+		const result = `${frontmatter}${LINE_BREAK}${backlinkLine}${SPACE_F}${LINE_BREAK}${LINE_BREAK}${cleanBody}${jsonMeta}`;
+		return result;
 	};
 }

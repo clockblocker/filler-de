@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import {
 	formatChildSectionLine,
 	formatFileLine,
-	formatParentBacklink,
 	formatScrollLine,
 } from "../../../../../src/commanders/librarian/healer/library-tree/codex/format-codex-line";
 import { TreeNodeStatus } from "../../../../../src/commanders/librarian/healer/library-tree/tree-node/types/atoms";
@@ -110,29 +109,6 @@ describe("format-codex-line", () => {
 				TreeNodeStatus.NotStarted,
 			);
 			expect(result).toBe("- [ ] [[__-B-A|B]]");
-		});
-	});
-
-	describe("formatParentBacklink", () => {
-		it("formats backlink to library root", () => {
-			// Parent is Library root
-			// codex basename = "__-Library"
-			const result = formatParentBacklink("Library", ["Library"]);
-			expect(result).toBe("[[__-Library|← Library]]");
-		});
-
-		it("formats backlink to first-level section", () => {
-			// Parent is section "A" at ["Library"]
-			// codex basename = "__-A"
-			const result = formatParentBacklink("A", ["Library", "A"]);
-			expect(result).toBe("[[__-A|← A]]");
-		});
-
-		it("formats backlink to nested section", () => {
-			// Parent is section "B" at ["Library", "A"]
-			// codex basename = "__-B-A"
-			const result = formatParentBacklink("B", ["Library", "A", "B"]);
-			expect(result).toBe("[[__-B-A|← B]]");
 		});
 	});
 });
