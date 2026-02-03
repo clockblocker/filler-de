@@ -46,7 +46,8 @@
 	"main": "main.js",
 	"name": "cbcr-text-eater-de",
 	"scripts": {
-		"build": "bun build ./src/main.ts --outfile=main.js --platform=node --format=cjs --external obsidian --external electron --external @codemirror/*",
+		"build": "bun run codegen:prompts && bun build ./src/main.ts --outfile=main.js --platform=node --format=cjs --external obsidian --external electron --external @codemirror/*",
+		"codegen:prompts": "bun src/prompt-smith/codegen/skript/run.ts",
 		"build:dev": "bun x tsc -noEmit -skipLibCheck && bun run esbuild.config.mjs development",
 		"clearTestLogs": "bun ./tests/tracing/scripts/clear-test-logs.ts",
 		"coverage": "bun run clearTestLogs && bun test --coverage --preload ./tests/unit/setup.ts",

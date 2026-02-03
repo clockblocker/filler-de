@@ -7,8 +7,8 @@ export type AvaliablePromptDict = Record<
 	Record<
 		TargetLanguage,
 		{
-			userInputShema: z.ZodTypeAny;
-			outputSchema: z.ZodTypeAny;
+			userInputSchema: z.ZodTypeAny;
+			agentOutputSchema: z.ZodTypeAny;
 			systemPrompt: string;
 		}
 	>
