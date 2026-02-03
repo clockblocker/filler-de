@@ -27,6 +27,7 @@ import type { CommandFn, TextfresserCommandKind } from "./commands/types";
 import { buildAttestationFromWikilinkClickPayload } from "./common/attestation/builders/build-from-wikilink-click-payload";
 import type { Attestation } from "./common/attestation/types";
 import { CommandErrorKind } from "./errors";
+import type { LanguagesConfig } from "../../types";
 
 // ─── Command Function Mapping ───
 
@@ -44,14 +45,21 @@ const commandFnForCommandKind: Record<TextfresserCommandKind, CommandFn> = {
 
 export type TextfresserState = {
 	attestationForLatestNavigated: Attestation | null;
+	languages: LanguagesConfig;
 };
 
 export class Textfresser {
-	private state: TextfresserState = {
-		attestationForLatestNavigated: null,
-	};
+	private state: TextfresserState;
 
-	constructor(private readonly vam: VaultActionManager) {}
+	constructor(
+		private readonly vam: VaultActionManager,
+		languages: LanguagesConfig,
+	) {
+		this.state = {
+			attestationForLatestNavigated: null,
+			languages,
+		};
+	}
 
 	// ─── Commands ───
 

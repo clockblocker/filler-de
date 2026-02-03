@@ -174,7 +174,7 @@ export default class TextEaterPlugin extends Plugin {
 		this.vam = new VaultActionManagerImpl(this.app);
 
 		// Textfresser commander (vocabulary commands orchestrator)
-		this.textfresser = new Textfresser(this.vam);
+		this.textfresser = new Textfresser(this.vam, this.settings.languages);
 
 		// Unified user event interceptor (clicks, clipboard, select-all, wikilinks)
 		this.userEventInterceptor = new UserEventInterceptor(
