@@ -43,6 +43,7 @@ todos:
     status: pending
     dependencies:
       - consolidate-compute-scroll-split-path
+isProject: false
 ---
 
 # Librarian.ts Refactoring Plan
@@ -55,7 +56,7 @@ Refactor `librarian.ts` to replace manual logic with existing codecs and extract
 
 ### 1. Replace Manual Path Construction
 
-**Files**: [`src/commanders/librarian-new/librarian.ts`](src/commanders/librarian-new/librarian.ts)
+**Files**: `[src/commanders/librarian-new/librarian.ts](src/commanders/librarian-new/librarian.ts)`
 
 - **Lines 308-311** (`findInvalidCodexFiles`): Replace manual `join("/")` with `systemPathFromSplitPathInternal`
 - **Lines 338-341** (`collectValidCodexPaths`): Replace manual `join("/")` with `systemPathFromSplitPathInternal`
@@ -66,7 +67,7 @@ Refactor `librarian.ts` to replace manual logic with existing codecs and extract
 
 ### 2. Extract Codex Checking Helper
 
-**New file**: [`src/commanders/librarian-new/healer/library-tree/codex/helpers.ts`](src/commanders/librarian-new/healer/library-tree/codex/helpers.ts)
+**New file**: `[src/commanders/librarian-new/healer/library-tree/codex/helpers.ts](src/commanders/librarian-new/healer/library-tree/codex/helpers.ts)`
 
 Create `isCodexSplitPath(splitPath: { basename: string }, codecs: Codecs): boolean` helper.
 
@@ -82,7 +83,7 @@ Create `isCodexSplitPath(splitPath: { basename: string }, codecs: Codecs): boole
 
 ### 3. Extract `extractScrollStatusActions`
 
-**New file**: [`src/commanders/librarian-new/healer/library-tree/utils/extract-scroll-status-actions.ts`](src/commanders/librarian-new/healer/library-tree/utils/extract-scroll-status-actions.ts)
+**New file**: `[src/commanders/librarian-new/healer/library-tree/utils/extract-scroll-status-actions.ts](src/commanders/librarian-new/healer/library-tree/utils/extract-scroll-status-actions.ts)`
 
 Move from **lines 596-645** in `librarian.ts`. Accept `codecs` as parameter instead of using `this.codecs`.
 
@@ -90,13 +91,13 @@ Move from **lines 596-645** in `librarian.ts`. Accept `codecs` as parameter inst
 
 ### 4. Extract `extractNodeNameFromScrollSegmentId`
 
-**New file**: [`src/commanders/librarian-new/healer/library-tree/utils/segment-id-helpers.ts`](src/commanders/librarian-new/healer/library-tree/utils/segment-id-helpers.ts)
+**New file**: `[src/commanders/librarian-new/healer/library-tree/utils/segment-id-helpers.ts](src/commanders/librarian-new/healer/library-tree/utils/segment-id-helpers.ts)`
 
 Move from **lines 650-659** in `librarian.ts`. Accept `codecs` as parameter.
 
 ### 5. Consolidate `computeScrollSplitPath`
 
-**New file**: [`src/commanders/librarian-new/healer/library-tree/utils/compute-scroll-split-path.ts`](src/commanders/librarian-new/healer/library-tree/utils/compute-scroll-split-path.ts)
+**New file**: `[src/commanders/librarian-new/healer/library-tree/utils/compute-scroll-split-path.ts](src/commanders/librarian-new/healer/library-tree/utils/compute-scroll-split-path.ts)`
 
 Consolidate two implementations:
 
@@ -117,12 +118,11 @@ Consolidate two implementations:
   }
   const splitPath = splitPathResult.value;
   ```
-
 - This maintains current behavior while adding observability for debugging tree state issues
 
 ### 6. Extract `collectValidCodexPaths`
 
-**New file**: [`src/commanders/librarian-new/healer/library-tree/utils/collect-codex-paths.ts`](src/commanders/librarian-new/healer/library-tree/utils/collect-codex-paths.ts)
+**New file**: `[src/commanders/librarian-new/healer/library-tree/utils/collect-codex-paths.ts](src/commanders/librarian-new/healer/library-tree/utils/collect-codex-paths.ts)`
 
 Move from **lines 327-350** in `librarian.ts`. Accept `codecs` as parameter. Return `Set<string>` (already does via `paths` parameter).
 
@@ -130,7 +130,7 @@ Move from **lines 327-350** in `librarian.ts`. Accept `codecs` as parameter. Ret
 
 ### 7. Make `findInvalidCodexFiles` Pure
 
-**New file**: [`src/commanders/librarian-new/healer/library-tree/utils/find-invalid-codex-files.ts`](src/commanders/librarian-new/healer/library-tree/utils/find-invalid-codex-files.ts)
+**New file**: `[src/commanders/librarian-new/healer/library-tree/utils/find-invalid-codex-files.ts](src/commanders/librarian-new/healer/library-tree/utils/find-invalid-codex-files.ts)`
 
 Move from **lines 279-322** in `librarian.ts`. Accept `healer`, `codecs`, and `rules` as parameters instead of using `this.*`.
 
@@ -188,7 +188,7 @@ Move from **lines 279-322** in `librarian.ts`. Accept `healer`, `codecs`, and `r
 
 ### 5. Type Safety Improvements
 
-**`extractScrollStatusActions`**: Currently uses type assertion on line 717. The consolidated `computeScrollSplitPath` should preserve types better through the codec chain, reducing need for assertions.
+`**extractScrollStatusActions**`: Currently uses type assertion on line 717. The consolidated `computeScrollSplitPath` should preserve types better through the codec chain, reducing need for assertions.
 
 ### 6. Testing Considerations
 
@@ -239,12 +239,13 @@ Move from **lines 279-322** in `librarian.ts`. Accept `healer`, `codecs`, and `r
 
 ### 10. Potential Issues
 
-**`findInvalidCodexFiles`**:
+`**findInvalidCodexFiles**`:
 
 - Currently depends on `this.healer.getRoot()`. After extraction, needs `healer: Healer` parameter.
 - Verify `Healer` type is exported or use `TreeAccessor` interface if available.
 
-**`collectValidCodexPaths`**:
+`**collectValidCodexPaths**`:
 
 - Recursive function. Ensure extracted version maintains same behavior.
 - Uses `computeCodexSplitPath` - verify import path is correct.
+

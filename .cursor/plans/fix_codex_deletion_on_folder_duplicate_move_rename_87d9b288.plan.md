@@ -33,6 +33,7 @@ todos:
     status: pending
     dependencies:
       - review-move-rename-logic
+isProject: false
 ---
 
 # Fix Codex Deletion on Folder Duplicate/Move/Rename
@@ -84,50 +85,39 @@ The bulk events already contain codex file creation events (e.g., `FileCreated` 
 
 ### Phase 1: Extract and Validate Codex Files from Bulk Events
 
-1. Create new function `extractInvalidCodexesFromBulk` in [`codex-impact-to-actions.ts`](src/commanders/librarian-new/healer/library-tree/codex/codex-impact-to-actions.ts):
-
-   - Extract `FileCreated` and `FileRenamed` events for codex files from bulk event
-   - For each codex file, parse its path to get section chain
-   - Compute expected codex path using `computeCodexSplitPath` for that section chain
-   - Compare observed basename with expected basename
-   - If mismatch, return deletion action
-
-2. Update pipeline in [`helpers.ts`](tests/unit/librarian/library-tree/pipeline/helpers.ts):
-
-   - Call `extractInvalidCodexesFromBulk` after building tree actions but before `codexImpactToDeletions`
-   - Merge invalid codex deletions with codex impact deletions
-
+1. Create new function `extractInvalidCodexesFromBulk` in `[codex-impact-to-actions.ts](src/commanders/librarian-new/healer/library-tree/codex/codex-impact-to-actions.ts)`:
+  - Extract `FileCreated` and `FileRenamed` events for codex files from bulk event
+  - For each codex file, parse its path to get section chain
+  - Compute expected codex path using `computeCodexSplitPath` for that section chain
+  - Compare observed basename with expected basename
+  - If mismatch, return deletion action
+2. Update pipeline in `[helpers.ts](tests/unit/librarian/library-tree/pipeline/helpers.ts)`:
+  - Call `extractInvalidCodexesFromBulk` after building tree actions but before `codexImpactToDeletions`
+  - Merge invalid codex deletions with codex impact deletions
 3. Integration point:
-
-   - Pass bulk event to pipeline (already available in `processBulkEvent`)
-   - Extract codex events before they're skipped in translation
-   - Validate against tree state after tree actions are applied
+  - Pass bulk event to pipeline (already available in `processBulkEvent`)
+  - Extract codex events before they're skipped in translation
+  - Validate against tree state after tree actions are applied
 
 ### Phase 2: Fix Move/Rename Edge Cases
 
-1. Review `buildMovedCodexPath` logic in [`codex-impact-to-actions.ts`](src/commanders/librarian-new/healer/library-tree/codex/codex-impact-to-actions.ts):
-
-   - Verify descendant codex deletion handles all nested cases
-   - The new `extractInvalidCodexesFromBulk` should also catch moved codexes with wrong suffixes
-   - Add tests for complex nested moves
-
+1. Review `buildMovedCodexPath` logic in `[codex-impact-to-actions.ts](src/commanders/librarian-new/healer/library-tree/codex/codex-impact-to-actions.ts)`:
+  - Verify descendant codex deletion handles all nested cases
+  - The new `extractInvalidCodexesFromBulk` should also catch moved codexes with wrong suffixes
+  - Add tests for complex nested moves
 2. Ensure `extractInvalidCodexesFromBulk` handles all codex events:
-
-   - `FileCreated` events (duplicates, new codexes)
-   - `FileRenamed` events (moved codexes with old suffix)
-   - Both should be validated against current tree state
+  - `FileCreated` events (duplicates, new codexes)
+  - `FileRenamed` events (moved codexes with old suffix)
+  - Both should be validated against current tree state
 
 ### Phase 3: Testing
 
-1. Update test in [`observed-bulks.test.ts`](tests/unit/librarian/library-tree/pipeline/observed-bulks.test.ts):
-
-   - Verify 002-duplicate generates deletion for `__-kid1-mommy-parents.md` in `kid1 1` folder
-
+1. Update test in `[observed-bulks.test.ts](tests/unit/librarian/library-tree/pipeline/observed-bulks.test.ts)`:
+  - Verify 002-duplicate generates deletion for `__-kid1-mommy-parents.md` in `kid1 1` folder
 2. Add tests for:
-
-   - Nested folder moves with multiple codexes
-   - Complex rename chains
-   - Multiple codexes in same folder scenarios
+  - Nested folder moves with multiple codexes
+  - Complex rename chains
+  - Multiple codexes in same folder scenarios
 
 ## Implementation Details
 
@@ -178,7 +168,8 @@ const deletionActions = [
 
 ## Files to Modify
 
-1. [`codex-impact-to-actions.ts`](src/commanders/librarian-new/healer/library-tree/codex/codex-impact-to-actions.ts) - Add `extractInvalidCodexesFromBulk` function
-2. [`helpers.ts`](tests/unit/librarian/library-tree/pipeline/helpers.ts) - Integrate invalid codex extraction into pipeline
-3. [`librarian.ts`](src/commanders/librarian-new/librarian.ts) - Integrate invalid codex extraction into `handleBulkEvent` (if needed)
+1. `[codex-impact-to-actions.ts](src/commanders/librarian-new/healer/library-tree/codex/codex-impact-to-actions.ts)` - Add `extractInvalidCodexesFromBulk` function
+2. `[helpers.ts](tests/unit/librarian/library-tree/pipeline/helpers.ts)` - Integrate invalid codex extraction into pipeline
+3. `[librarian.ts](src/commanders/librarian-new/librarian.ts)` - Integrate invalid codex extraction into `handleBulkEvent` (if needed)
 4. Test files - Add/update tests
+
