@@ -8,7 +8,6 @@ import type { SplitPathToMdFile } from "../../../managers/obsidian/vault-action-
 import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { VaultAction } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { VaultActionKind } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
-import { goBackLinkHelper } from "../../../stateless-helpers/go-back-link/go-back-link";
 import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
 import type { CodecRules } from "../codecs/rules";
 import { serializeSegmentId } from "../codecs/segment-id/internal/serialize";
@@ -88,30 +87,18 @@ export function buildPageSplitActions(
 		rules,
 	);
 
-	// Build codex basename for go-back links
-	const codexBasename = buildCodexBasename(
-		result.sourceCoreName,
-		result.sourceSuffix,
-		rules,
-	);
-
 	const totalPages = result.pages.length;
 	for (const page of result.pages) {
 		// Strip existing markers for idempotency, then apply fresh block markers
 		const withoutMarkers = stripBlockMarkers(page.content);
 		const { markedText } = splitStrInBlocks(withoutMarkers, 0);
+
 		// Compute navigation indices
 		const prevPageIdx = page.pageIndex > 0 ? page.pageIndex - 1 : undefined;
 		const nextPageIdx =
 			page.pageIndex < totalPages - 1 ? page.pageIndex + 1 : undefined;
-		// Add go-back link at top (idempotent), then format with metadata
-		const contentWithGoBack = goBackLinkHelper.add({
-			content: markedText,
-			displayName: result.sourceCoreName,
-			targetBasename: codexBasename,
-		});
 		const pageContent = formatPageContent(
-			contentWithGoBack,
+			markedText,
 			prevPageIdx,
 			nextPageIdx,
 		);
@@ -177,19 +164,6 @@ function buildPageSplitPath(
 		kind: SplitPathKind.MdFile,
 		pathParts,
 	};
-}
-
-/**
- * Builds the codex basename.
- * Codex naming follows pattern: __-coreName-suffix
- */
-function buildCodexBasename(
-	coreName: NodeName,
-	suffixParts: NodeName[],
-	rules: CodecRules,
-): string {
-	const codexSuffixParts = [coreName, ...suffixParts];
-	return ["__", ...codexSuffixParts].join(rules.suffixDelimiter);
 }
 
 /**

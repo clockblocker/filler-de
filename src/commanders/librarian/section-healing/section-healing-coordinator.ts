@@ -3,6 +3,7 @@ import { MD } from "../../../managers/obsidian/vault-action-manager/types/litera
 import type { SplitHealingInfo } from "../bookkeeper/split-to-pages-action";
 import type { CodecRules, Codecs } from "../codecs";
 import type { ScrollNodeSegmentId } from "../codecs/segment-id/types/segment-id";
+import { getBacklinkHealingVaultActions } from "../healer/backlink-healing/get-backlink-healing-vault-actions";
 import type { Healer } from "../healer/healer";
 import type { CodexImpact } from "../healer/library-tree/codex";
 import {
@@ -100,7 +101,15 @@ export async function triggerSectionHealing(
 		codecs,
 	);
 
-	if (vaultActions.length > 0) {
-		await dispatch(vaultActions);
+	// Generate backlink healing for all affected scrolls/codexes
+	const backlinkActions = getBacklinkHealingVaultActions(
+		healer,
+		codecs,
+		rules,
+	);
+
+	const allActions = [...vaultActions, ...backlinkActions];
+	if (allActions.length > 0) {
+		await dispatch(allActions);
 	}
 }
