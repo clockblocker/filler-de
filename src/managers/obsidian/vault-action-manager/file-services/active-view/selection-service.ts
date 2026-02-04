@@ -1,5 +1,5 @@
 import type { SplitPathToMdFile } from "../../types/split-path";
-import type { OpenedFileService } from "./opened-file-service";
+import type { ActiveFileService } from "./active-file-service";
 
 /**
  * Selection information from the active editor.
@@ -18,7 +18,7 @@ export type SelectionInfo = {
  * Provides a VAM-level abstraction over direct editor access.
  */
 export class SelectionService {
-	constructor(private readonly openedFileService: OpenedFileService) {}
+	constructor(private readonly activeFileService: ActiveFileService) {}
 
 	/**
 	 * Get current selection info from the active editor.
@@ -27,16 +27,16 @@ export class SelectionService {
 	 */
 	getInfo(): SelectionInfo | null {
 		// Get active md file path
-		const splitPath = this.openedFileService.mdPwd();
+		const splitPath = this.activeFileService.mdPwd();
 		if (!splitPath) return null;
 
 		// Get full content for position calculation
-		const contentResult = this.openedFileService.getContent();
+		const contentResult = this.activeFileService.getContent();
 		if (contentResult.isErr()) return null;
 		const content = contentResult.value;
 
 		// Get selection text (may be null if just caret)
-		const selection = this.openedFileService.getSelection();
+		const selection = this.activeFileService.getSelection();
 
 		let position: number;
 		if (selection) {
@@ -46,7 +46,7 @@ export class SelectionService {
 			position = idx;
 		} else {
 			// No selection -> use cursor offset
-			const offset = this.openedFileService.getCursorOffset();
+			const offset = this.activeFileService.getCursorOffset();
 			if (offset === null) return null;
 			position = offset;
 		}

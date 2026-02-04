@@ -21,7 +21,7 @@ import type {
 
 export type EditorWithView = { editor: Editor; view: MarkdownView };
 
-export class OpenedFileReader {
+export class ActiveFileReader {
 	constructor(private app: App) {}
 
 	pwd() {

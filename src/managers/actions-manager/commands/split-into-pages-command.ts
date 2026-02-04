@@ -26,7 +26,7 @@ export async function splitIntoPagesCommand(
 			// Notify librarian to create codex (bypasses self-event filtering)
 			librarian?.triggerSectionHealing(info);
 		},
-		openedFileService: vam.openedFileService,
+		activeFileService: vam.activeFileService,
 		vam,
 	});
 }

@@ -91,7 +91,7 @@ export function errorNoTFileFound(path: string): string {
 }
 
 export function errorInvalidCdArgument(): string {
-	return "Invalid argument to OpenedFileService.cd";
+	return "Invalid argument to ActiveFileService.cd";
 }
 
 export function errorOpenFileFailed(errorMessage: string): string {

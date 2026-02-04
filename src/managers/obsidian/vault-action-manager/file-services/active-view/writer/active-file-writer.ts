@@ -11,9 +11,9 @@ import { errorNoActiveView } from "../../../errors";
 import type { SplitPathToMdFile } from "../../../types/split-path";
 import type { Transform } from "../../../types/vault-action";
 import type {
+	ActiveFileReader,
 	EditorWithView,
-	OpenedFileReader,
-} from "./reader/opened-file-reader";
+} from "./reader/active-file-reader";
 
 export type SavedSelection = {
 	anchor: EditorPosition;
@@ -26,13 +26,13 @@ export type SavedInlineTitleSelection = {
 	text: string;
 };
 
-export class OpenedFileWriter {
+export class ActiveFileWriter {
 	constructor(
 		private app: App,
-		private reader: OpenedFileReader,
+		private reader: ActiveFileReader,
 	) {}
 
-	replaceAllContentInOpenedFile(
+	replaceAllContentInActiveFile(
 		content: string,
 	): ResultAsync<string, string> {
 		return this.reader

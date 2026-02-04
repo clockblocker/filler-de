@@ -318,24 +318,6 @@ createHandler(): EventHandler<WikilinkClickPayload> {
 }
 ```
 
-### Keep Return Types for Alias Clarity
-When a type alias exists for a union, keep the explicit return type — inference expands to structural noise:
-```typescript
-// ❌ BAD - inferred type expands alias into structural union
-function getEventFromSplitPath(event: VaultEvent) {
-    // hover shows:
-    // { basename: string; pathParts: string[]; kind: "Folder"; }
-    // | { basename: string; pathParts: string[]; extension: string; kind: "File"; }
-    // | { basename: string; pathParts: string[]; extension: "md"; kind: "MdFile"; }
-    // | undefined
-}
-
-// ✅ GOOD - alias preserves readability
-function getEventFromSplitPath(event: VaultEvent): AnySplitPath | undefined {
-    // hover shows: AnySplitPath | undefined
-}
-```
-
 ### Logging Rules (.cursor/rules/logging.mdc)
 - **Use** `logger` from `src/utils/logger`, not `console.*`
 - **No manual stringify**: Logger handles object serialization internally

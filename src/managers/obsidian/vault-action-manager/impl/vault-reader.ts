@@ -1,7 +1,7 @@
 import { err, ok, type Result, ResultAsync } from "neverthrow";
 import type { TFile, TFolder, Vault } from "obsidian";
 import { logger } from "../../../../utils/logger";
-import type { OpenedFileService } from "../file-services/active-view/opened-file-service";
+import type { ActiveFileService } from "../file-services/active-view/active-file-service";
 import type { TFileHelper } from "../file-services/background/helpers/tfile-helper";
 import type { TFolderHelper } from "../file-services/background/helpers/tfolder-helper";
 import { pathfinder } from "../helpers/pathfinder";
@@ -19,7 +19,7 @@ import type {
 
 export class VaultReader {
 	constructor(
-		private readonly opened: OpenedFileService,
+		private readonly active: ActiveFileService,
 		private readonly tfileHelper: TFileHelper,
 		private readonly tfolderHelper: TFolderHelper,
 		private readonly vault: Vault,
@@ -28,8 +28,8 @@ export class VaultReader {
 	async readContent(
 		target: SplitPathToMdFile,
 	): Promise<Result<string, string>> {
-		if (this.opened.isInActiveView(target)) {
-			return this.opened.getContent();
+		if (this.active.isInActiveView(target)) {
+			return this.active.getContent();
 		}
 		return this.tfileHelper
 			.getFile(target)

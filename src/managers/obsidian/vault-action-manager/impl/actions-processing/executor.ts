@@ -1,7 +1,7 @@
 import { err, ok } from "neverthrow";
 import type { Vault } from "obsidian";
 import { logger } from "../../../../../utils/logger";
-import type { OpenedFileService } from "../../file-services/active-view/opened-file-service";
+import type { ActiveFileService } from "../../file-services/active-view/active-file-service";
 import type { TFileHelper } from "../../file-services/background/helpers/tfile-helper";
 import type { TFolderHelper } from "../../file-services/background/helpers/tfolder-helper";
 import {
@@ -16,7 +16,7 @@ export class Executor {
 	constructor(
 		private readonly tfileHelper: TFileHelper,
 		private readonly tfolderHelper: TFolderHelper,
-		private readonly opened: OpenedFileService,
+		private readonly active: ActiveFileService,
 		private readonly vault: Vault,
 	) {}
 
@@ -74,7 +74,7 @@ export class Executor {
 					const isActive = await this.checkFileActive(splitPath);
 					if (isActive) {
 						const result =
-							await this.opened.replaceAllContentInOpenedFile(
+							await this.active.replaceAllContentInActiveFile(
 								content,
 							);
 						return result.map(() => fileResult.value);
@@ -107,7 +107,7 @@ export class Executor {
 				);
 
 				// Save inline title selection (for newly created files being renamed)
-				const savedInlineTitleSelection = this.opened
+				const savedInlineTitleSelection = this.active
 					.saveInlineTitleSelection()
 					.unwrapOr(null);
 
@@ -120,7 +120,7 @@ export class Executor {
 				if (result.isOk() && savedInlineTitleSelection) {
 					// Small delay for Obsidian to update view after rename
 					await new Promise((resolve) => setTimeout(resolve, 50));
-					this.opened.restoreInlineTitleSelection(
+					this.active.restoreInlineTitleSelection(
 						savedInlineTitleSelection,
 					);
 				}
@@ -165,7 +165,7 @@ export class Executor {
 
 				const isActive = await this.checkFileActive(splitPath);
 				if (isActive) {
-					const result = await this.opened.processContent({
+					const result = await this.active.processContent({
 						splitPath,
 						transform,
 					});
@@ -183,7 +183,7 @@ export class Executor {
 	private async checkFileActive(
 		splitPath: SplitPathToMdFile,
 	): Promise<boolean> {
-		const result = await this.opened.isFileActive(splitPath);
+		const result = await this.active.isFileActive(splitPath);
 		return result.isOk() && result.value;
 	}
 }

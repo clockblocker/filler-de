@@ -1,7 +1,7 @@
 import type { Result } from "neverthrow";
 import type { App } from "obsidian";
 import { logger } from "../../../utils/logger";
-import { OpenedFileService } from "./file-services/active-view/opened-file-service";
+import { ActiveFileService } from "./file-services/active-view/active-file-service";
 import { SelectionService } from "./file-services/active-view/selection-service";
 import { TFileHelper } from "./file-services/background/helpers/tfile-helper";
 import { TFolderHelper } from "./file-services/background/helpers/tfolder-helper";
@@ -33,7 +33,7 @@ import type {
 import type { VaultAction } from "./types/vault-action";
 
 export class VaultActionManagerImpl implements VaultActionManager {
-	private readonly opened: OpenedFileService;
+	private readonly active: ActiveFileService;
 	private readonly reader: VaultReader;
 	private readonly dispatcher: Dispatcher;
 	private readonly selfEventTracker: SelfEventTracker;
@@ -53,7 +53,7 @@ export class VaultActionManagerImpl implements VaultActionManager {
 
 	constructor(app: App) {
 		this.app = app;
-		this.opened = new OpenedFileService(app);
+		this.active = new ActiveFileService(app);
 		const tfileHelper = new TFileHelper({
 			fileManager: app.fileManager,
 			vault: app.vault,
@@ -65,11 +65,11 @@ export class VaultActionManagerImpl implements VaultActionManager {
 		const executor = new Executor(
 			tfileHelper,
 			tfolderHelper,
-			this.opened,
+			this.active,
 			app.vault,
 		);
 		this.reader = new VaultReader(
-			this.opened,
+			this.active,
 			tfileHelper,
 			tfolderHelper,
 			app.vault,
@@ -97,7 +97,7 @@ export class VaultActionManagerImpl implements VaultActionManager {
 			app,
 			this.selfEventTracker,
 		);
-		this._selection = new SelectionService(this.opened);
+		this._selection = new SelectionService(this.active);
 	}
 
 	startListening(): void {
@@ -256,7 +256,7 @@ export class VaultActionManagerImpl implements VaultActionManager {
 	}
 
 	isInActiveView(splitPathArg: AnySplitPath): boolean {
-		return this.opened.isInActiveView(splitPathArg);
+		return this.active.isInActiveView(splitPathArg);
 	}
 
 	list(splitPathArg: SplitPathToFolder): Result<AnySplitPath[], string> {
@@ -270,28 +270,28 @@ export class VaultActionManagerImpl implements VaultActionManager {
 	}
 
 	pwd(): Result<SplitPathToAnyFile, string> {
-		return this.opened.pwd();
+		return this.active.pwd();
 	}
 
 	mdPwd(): SplitPathToMdFile | null {
-		return this.opened.mdPwd();
+		return this.active.mdPwd();
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────
-	// Opened file operations (high-level, no TFile leakage)
+	// Active file operations (high-level, no TFile leakage)
 	// ─────────────────────────────────────────────────────────────────────────
 
 	getOpenedContent(): Result<string, string> {
-		return this.opened.getContent();
+		return this.active.getContent();
 	}
 
 	async cd(splitPath: SplitPathToMdFile): Promise<Result<void, string>> {
-		const result = await this.opened.cd(splitPath);
+		const result = await this.active.cd(splitPath);
 		return result.map(() => undefined);
 	}
 
-	get openedFileService(): OpenedFileService {
-		return this.opened;
+	get activeFileService(): ActiveFileService {
+		return this.active;
 	}
 
 	get selection(): SelectionService {

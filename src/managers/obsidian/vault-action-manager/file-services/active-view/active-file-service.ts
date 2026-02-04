@@ -8,21 +8,21 @@ import type {
 import type { Transform } from "../../types/vault-action";
 import { cd } from "./navigation/cd";
 import {
-	OpenedFileWriter,
+	ActiveFileWriter,
 	type SavedInlineTitleSelection,
 	type SavedSelection,
-} from "./writer/opened-file-writer";
-import { OpenedFileReader } from "./writer/reader/opened-file-reader";
+} from "./writer/active-file-writer";
+import { ActiveFileReader } from "./writer/reader/active-file-reader";
 
 export type { SavedInlineTitleSelection, SavedSelection };
 
-export class OpenedFileService {
-	private readonly reader: OpenedFileReader;
-	private readonly writer: OpenedFileWriter;
+export class ActiveFileService {
+	private readonly reader: ActiveFileReader;
+	private readonly writer: ActiveFileWriter;
 
 	constructor(private app: App) {
-		this.reader = new OpenedFileReader(app);
-		this.writer = new OpenedFileWriter(app, this.reader);
+		this.reader = new ActiveFileReader(app);
+		this.writer = new ActiveFileWriter(app, this.reader);
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────
@@ -68,10 +68,10 @@ export class OpenedFileService {
 	// Writer delegations
 	// ─────────────────────────────────────────────────────────────────────────
 
-	replaceAllContentInOpenedFile(
+	replaceAllContentInActiveFile(
 		content: string,
 	): ResultAsync<string, string> {
-		return this.writer.replaceAllContentInOpenedFile(content);
+		return this.writer.replaceAllContentInActiveFile(content);
 	}
 
 	saveSelection(): Result<SavedSelection | null, string> {

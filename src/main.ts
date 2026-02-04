@@ -20,7 +20,7 @@ import {
 	makeSystemPathForSplitPath,
 	VaultActionManagerImpl,
 } from "./managers/obsidian/vault-action-manager";
-import { OpenedFileService } from "./managers/obsidian/vault-action-manager/file-services/active-view/opened-file-service";
+import { ActiveFileService } from "./managers/obsidian/vault-action-manager/file-services/active-view/active-file-service";
 import { TFileHelper } from "./managers/obsidian/vault-action-manager/file-services/background/helpers/tfile-helper";
 import { TFolderHelper } from "./managers/obsidian/vault-action-manager/file-services/background/helpers/tfolder-helper";
 import { logError } from "./managers/obsidian/vault-action-manager/helpers/issue-handlers";
@@ -46,7 +46,7 @@ import { logger } from "./utils/logger";
 export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;
 	apiService: ApiService;
-	testingOpenedFileServiceWithResult: OpenedFileService;
+	testingActiveFileService: ActiveFileService;
 	testingReader: VaultReader;
 	testingTFileHelper: TFileHelper;
 	testingTFolderHelper: TFolderHelper;
@@ -154,7 +154,7 @@ export default class TextEaterPlugin extends Plugin {
 
 		this.apiService = new ApiService(this.settings);
 
-		this.testingOpenedFileServiceWithResult = new OpenedFileService(
+		this.testingActiveFileService = new ActiveFileService(
 			this.app,
 		);
 		this.testingTFileHelper = new TFileHelper({
@@ -166,7 +166,7 @@ export default class TextEaterPlugin extends Plugin {
 			vault: this.app.vault,
 		});
 		this.testingReader = new VaultReader(
-			this.testingOpenedFileServiceWithResult,
+			this.testingActiveFileService,
 			this.testingTFileHelper,
 			this.testingTFolderHelper,
 			this.app.vault,
@@ -372,12 +372,12 @@ export default class TextEaterPlugin extends Plugin {
 		});
 	}
 
-	getOpenedFileServiceTestingApi() {
+	getActiveFileServiceTestingApi() {
 		return {
 			makeSplitPath,
 			makeSystemPathForSplitPath,
-			openedFileServiceWithResult:
-				this.testingOpenedFileServiceWithResult,
+			activeFileService:
+				this.testingActiveFileService,
 		};
 	}
 

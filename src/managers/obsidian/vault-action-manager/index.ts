@@ -1,5 +1,5 @@
 import type { Result } from "neverthrow";
-import type { OpenedFileService } from "./file-services/active-view/opened-file-service";
+import type { ActiveFileService } from "./file-services/active-view/active-file-service";
 import type { SelectionService } from "./file-services/active-view/selection-service";
 import type { DispatchResult } from "./impl/actions-processing/dispatcher";
 import {
@@ -55,8 +55,8 @@ export interface VaultActionManager {
 	getOpenedContent(): Result<string, string>;
 	cd(splitPath: SplitPathToMdFile): Promise<Result<void, string>>;
 
-	// Direct access to opened file service for selection operations
-	readonly openedFileService: OpenedFileService;
+	// Direct access to active file service for selection operations
+	readonly activeFileService: ActiveFileService;
 
 	// Selection operations
 	readonly selection: SelectionService;

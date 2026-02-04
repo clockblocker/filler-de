@@ -7,7 +7,7 @@ import { err, ok, type Result } from "neverthrow";
 import { Notice } from "obsidian";
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import type { VaultActionManager } from "../../../managers/obsidian/vault-action-manager";
-import type { OpenedFileService } from "../../../managers/obsidian/vault-action-manager/file-services/active-view/opened-file-service";
+import type { ActiveFileService } from "../../../managers/obsidian/vault-action-manager/file-services/active-view/active-file-service";
 import type { SplitPathToMdFile } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import { parseSeparatedSuffix } from "../codecs/internal/suffix/parse";
 import type { CodecRules } from "../codecs/rules";
@@ -42,7 +42,7 @@ export type SplitHealingInfo = {
 };
 
 export type SplitToPagesContext = {
-	openedFileService: OpenedFileService;
+	activeFileService: ActiveFileService;
 	vam: VaultActionManager;
 	/** Called after pages are created, bypasses self-event filtering */
 	onSectionCreated?: (info: SplitHealingInfo) => void;
@@ -61,9 +61,9 @@ async function gatherInput(
 	context: SplitToPagesContext,
 	config: SegmentationConfig,
 ): Promise<Result<SplitInput, SplitToPagesError>> {
-	const { openedFileService } = context;
+	const { activeFileService } = context;
 
-	const pwdResult = await openedFileService.pwd();
+	const pwdResult = await activeFileService.pwd();
 	if (pwdResult.isErr()) {
 		return err(makeSplitToPagesError.noPwd(String(pwdResult.error)));
 	}
@@ -75,7 +75,7 @@ async function gatherInput(
 	}
 	const sourcePath = maybePath;
 
-	const contentResult = await openedFileService.getContent();
+	const contentResult = await activeFileService.getContent();
 	if (contentResult.isErr()) {
 		return err(
 			makeSplitToPagesError.noContent(String(contentResult.error)),
@@ -187,5 +187,5 @@ export async function splitToPagesAction(
 	}
 
 	new Notice(`Split into ${result.pageCount} pages`);
-	await context.openedFileService.cd(result.firstPagePath);
+	await context.activeFileService.cd(result.firstPagePath);
 }
