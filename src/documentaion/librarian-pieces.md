@@ -52,8 +52,8 @@ Located at `codex/transforms/`:
 
 | File | Exports |
 |------|---------|
-| `codex-transforms.ts` | `makeCodexTransform()`, `makeCodexBacklinkTransform()`, `makeCodexContentTransform()` |
-| `scroll-transforms.ts` | `makeScrollBacklinkTransform()`, `makeStripScrollBacklinkTransform()` |
+| `codex-transforms.ts` | `makeCodexTransform()`, `makeCodexContentTransform()` |
+| `scroll-transforms.ts` | `makeBacklinkTransform()`, `makeStripScrollBacklinkTransform()` |
 | `transform-utils.ts` | `isBacklinkLine()`, `splitFirstLine()`, `splitFrontmatter()`, `ensureLeadingBlankLine()` |
 
 ### Import Patterns

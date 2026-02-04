@@ -50,17 +50,19 @@ export function makeStripScrollBacklinkTransform(): Transform {
 }
 
 /**
- * Create transform that updates backlink on a scroll.
- * Scrolls link back to their parent section's codex.
+ * Create transform that updates backlink on a codex or scroll.
+ * Both file types link back to their parent section's codex.
  * Format: [frontmatter]\n[[backlink]]  \n\n<content>\n[json-meta]
  *
- * IMPORTANT: Preserves JSON metadata section at end of file (contains status, navIdx, etc.)
+ * Works correctly for:
+ * - Codexes: have `fileType: Codex` frontmatter, no JSON meta (harmless empty match)
+ * - Scrolls: may have frontmatter and JSON metadata section
  *
  * @param parentChain - Chain to parent section
  * @param codecs - Codec API
  * @returns Transform function
  */
-export function makeScrollBacklinkTransform(
+export function makeBacklinkTransform(
 	parentChain: SectionNodeSegmentId[],
 	codecs: Codecs,
 ): Transform {
@@ -120,7 +122,7 @@ export function makeScrollBacklinkTransform(
 			.find((l) => l.length > 0);
 		if (firstNonEmptyLine && goBackLinkHelper.isMatch(firstNonEmptyLine)) {
 			logger.warn(
-				"[makeScrollBacklinkTransform] strip left a go-back link; regex may not match on-disk format",
+				"[makeBacklinkTransform] strip left a go-back link; regex may not match on-disk format",
 				{ firstLine: firstNonEmptyLine.slice(0, 80) },
 			);
 		}

@@ -11,9 +11,8 @@ import {
 import type { Codecs } from "../../codecs";
 import type { CodecRules } from "../../codecs/rules";
 import { computeCodexSplitPath } from "../library-tree/codex/codex-split-path";
-import { makeCodexBacklinkTransform } from "../library-tree/codex/transforms/codex-transforms";
 import {
-	makeScrollBacklinkTransform,
+	makeBacklinkTransform,
 	makeStripScrollBacklinkTransform,
 } from "../library-tree/codex/transforms/scroll-transforms";
 import { collectTreeData } from "../library-tree/codex/tree-collectors";
@@ -49,7 +48,7 @@ export function getBacklinkHealingVaultActions(
 					splitPath,
 					rules,
 				) as SplitPathToMdFile,
-				transform: makeCodexBacklinkTransform(parentChain, codecs),
+				transform: makeBacklinkTransform(parentChain, codecs),
 			},
 		});
 	}
@@ -71,7 +70,7 @@ export function getBacklinkHealingVaultActions(
 					rules,
 				) as SplitPathToMdFile,
 				transform: rules.showScrollBacklinks
-					? makeScrollBacklinkTransform(parentChain, codecs)
+					? makeBacklinkTransform(parentChain, codecs)
 					: makeStripScrollBacklinkTransform(),
 			},
 		});

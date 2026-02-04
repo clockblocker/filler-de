@@ -14,7 +14,7 @@ mock.module("../../src/global-state/global-state", () => ({
 import { makeCodecs } from "../../src/commanders/librarian/codecs";
 import type { SectionNodeSegmentId } from "../../src/commanders/librarian/codecs/segment-id";
 import {
-	makeScrollBacklinkTransform,
+	makeBacklinkTransform,
 	makeStripScrollBacklinkTransform,
 } from "../../src/commanders/librarian/healer/library-tree/codex/transforms/scroll-transforms";
 import { noteMetadataHelper } from "../../src/stateless-helpers/note-metadata";
@@ -52,10 +52,10 @@ This is the middle page.
 ${JSON_META_SECTION}
 `;
 
-	it("makeScrollBacklinkTransform preserves JSON metadata at end of file", () => {
+	it("makeBacklinkTransform preserves JSON metadata at end of file", () => {
 		const parentChain = ["Library::Section", "Märchen::Section"] as SectionNodeSegmentId[];
 
-		const transform = makeScrollBacklinkTransform(parentChain, mockCodecs);
+		const transform = makeBacklinkTransform(parentChain, mockCodecs);
 		const result = transform(contentWithMeta);
 
 		// Should contain the JSON metadata section
@@ -76,7 +76,7 @@ ${JSON_META_SECTION}
 		expect(result).toContain('"nextPageIdx":2');
 	});
 
-	it("toggleStatus then makeScrollBacklinkTransform preserves all metadata", () => {
+	it("toggleStatus then makeBacklinkTransform preserves all metadata", () => {
 		// Simulate the real flow: first toggleStatus, then ProcessScrollBacklink
 		// Step 1: toggleStatus to Done (this should merge with existing metadata)
 		const toggleTransform = noteMetadataHelper.toggleStatus(true);
@@ -89,7 +89,7 @@ ${JSON_META_SECTION}
 
 		// Step 2: Apply scroll backlink transform
 		const parentChain = ["Library::Section", "Märchen::Section"] as SectionNodeSegmentId[];
-		const backlinkTransform = makeScrollBacklinkTransform(parentChain, mockCodecs);
+		const backlinkTransform = makeBacklinkTransform(parentChain, mockCodecs);
 		const afterBacklink = backlinkTransform(afterToggle);
 
 		// Should still have all metadata

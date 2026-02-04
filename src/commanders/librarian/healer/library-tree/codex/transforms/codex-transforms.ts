@@ -9,9 +9,7 @@ import { noteMetadataHelper } from "../../../../../../stateless-helpers/note-met
 import { LINE_BREAK } from "../../../../../../types/literals";
 import type { Codecs } from "../../../../codecs";
 import type { SectionNodeSegmentId } from "../../../../codecs/segment-id";
-import { sectionChainToPathParts } from "../../../../paths/path-finder";
 import type { SectionNode } from "../../tree-node/types/tree-node";
-import { makeCodexBasename } from "../format-codex-line";
 import { generateChildrenList } from "../generate-codex-content";
 
 /**
@@ -38,50 +36,6 @@ export function makeCodexTransform(
 			codecs,
 		);
 		return metaTransform(childrenContent);
-	};
-}
-
-/**
- * Create transform that updates backlink on first line of a codex.
- * - If line 1 is a backlink: replace it
- * - If line 1 is not a backlink: prepend backlink + newline
- *
- * @param parentChain - Chain to parent section (for backlink target)
- * @param codecs - Codec API for segment ID parsing
- * @returns Transform function
- */
-export function makeCodexBacklinkTransform(
-	parentChain: SectionNodeSegmentId[],
-	codecs: Codecs,
-): Transform {
-	return (content: string): string => {
-		// Root codex has no parent backlink
-		if (parentChain.length === 0) {
-			return content;
-		}
-
-		// Parse parent name from chain
-		const parentPathPartsResult = sectionChainToPathParts(
-			parentChain,
-			codecs,
-		);
-		if (parentPathPartsResult.isErr()) {
-			// Skip if parsing fails - return content unchanged
-			return content;
-		}
-
-		const parentPathParts = parentPathPartsResult.value;
-		const parentName = parentPathParts[parentPathParts.length - 1];
-		if (!parentName) {
-			return content;
-		}
-
-		// Use goBackLinkHelper.add() for centralized formatting
-		return goBackLinkHelper.add({
-			content: content.trimStart(),
-			displayName: parentName,
-			targetBasename: makeCodexBasename(parentPathParts),
-		});
 	};
 }
 

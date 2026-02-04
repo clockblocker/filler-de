@@ -7,12 +7,11 @@
  */
 
 export {
-	makeCodexBacklinkTransform,
 	makeCodexContentTransform,
 	makeCodexTransform,
 } from "./transforms/codex-transforms";
 
 export {
-	makeScrollBacklinkTransform,
+	makeBacklinkTransform,
 	makeStripScrollBacklinkTransform,
 } from "./transforms/scroll-transforms";
