@@ -11,6 +11,7 @@
 
 import { type App, MarkdownView } from "obsidian";
 import { blockIdHelper } from "../../../../../stateless-helpers/block-id";
+import type { VaultActionManager } from "../../../vault-action-manager";
 import type { SplitPathToMdFile } from "../../../vault-action-manager/types/split-path";
 import { HandlerOutcome } from "../../types/handler";
 import { PayloadKind } from "../../types/payload-base";
@@ -24,6 +25,7 @@ export class ClipboardDetector {
 
 	constructor(
 		private readonly app: App,
+		private readonly vam: VaultActionManager,
 		createInvoker: (kind: PayloadKind) => HandlerInvoker<ClipboardPayload>,
 	) {
 		this.invoker = createInvoker(PayloadKind.ClipboardCopy);
@@ -49,7 +51,11 @@ export class ClipboardDetector {
 	// ─── Private ───
 
 	private handleClipboard(evt: ClipboardEvent): void {
-		const selection = window.getSelection()?.toString();
+		// Use VAM to get selection - handles CodeMirror virtualization properly
+		// (window.getSelection() only gets text from rendered DOM nodes, missing scrolled content)
+		const selection =
+			this.vam.activeFileService.getSelection() ??
+			window.getSelection()?.toString();
 
 		// No selection: handle block reference copy (copy only, not cut)
 		if (!selection) {

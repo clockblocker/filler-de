@@ -75,7 +75,7 @@ export class UserEventInterceptor {
 
 		// Create all detectors with handler invoker
 		this.detectors = [
-			new ClipboardDetector(app, this.createInvoker.bind(this)),
+			new ClipboardDetector(app, vam, this.createInvoker.bind(this)),
 			new CheckboxClickedDetector(
 				this.genericClickDetector,
 				app,

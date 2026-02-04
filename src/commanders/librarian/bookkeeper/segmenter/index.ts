@@ -127,16 +127,23 @@ function runPipeline(
 	// Pre-process: split any oversized groups
 	const processedGroups = preprocessLargeGroups(groups, config);
 
-	// Stage 5: Accumulate groups into pages with heading awareness
-	const pages = accumulatePagesWithHeadings(
+	// Restore protected content in groups BEFORE heading insertion.
+	// This is critical: the offset map only accounts for heading removal.
+	// If we insert headings while text contains placeholders, offsets are wrong
+	// because placeholder lengths differ from original content lengths.
+	const groupsWithRestoredContent = restoreGroupsContent(
 		processedGroups,
+		protectedItems,
+	);
+
+	// Stage 5: Accumulate groups into pages with heading awareness
+	// Content is already restored, so no need for restoreProtectedInPages after
+	return accumulatePagesWithHeadings(
+		groupsWithRestoredContent,
 		config,
 		headings,
 		offsetMap,
 	);
-
-	// Restore protected content in final pages
-	return restoreProtectedInPages(pages, protectedItems);
 }
 
 /**
@@ -201,6 +208,90 @@ function groupsToContent(groups: SentenceGroup[]): string {
 		}
 	}
 	return result;
+}
+
+/**
+ * Creates a mapping function from protected-text offsets to filtered-text offsets.
+ * (Same logic as in split-str-in-blocks.ts)
+ */
+function createProtectedToFilteredMap(
+	protectedItems: ProtectedContent[],
+): (protectedOffset: number) => number {
+	if (protectedItems.length === 0) {
+		return (offset) => offset;
+	}
+
+	const sorted = [...protectedItems].sort(
+		(a, b) => a.startOffset - b.startOffset,
+	);
+
+	type Replacement = {
+		protectedStart: number;
+		protectedEnd: number;
+		filteredStart: number;
+		cumulativeAdjustment: number;
+	};
+
+	const replacements: Replacement[] = [];
+	let cumulativeShift = 0;
+
+	for (const item of sorted) {
+		const placeholderLen = item.placeholder.length;
+		const originalLen = item.original.length;
+		const protectedStart = item.startOffset - cumulativeShift;
+		const protectedEnd = protectedStart + placeholderLen;
+		cumulativeShift += originalLen - placeholderLen;
+
+		replacements.push({
+			cumulativeAdjustment: cumulativeShift,
+			filteredStart: item.startOffset,
+			protectedEnd,
+			protectedStart,
+		});
+	}
+
+	return (protectedOffset: number) => {
+		for (let i = replacements.length - 1; i >= 0; i--) {
+			const r = replacements[i]!;
+			if (protectedOffset >= r.protectedEnd) {
+				return protectedOffset + r.cumulativeAdjustment;
+			}
+			if (protectedOffset >= r.protectedStart) {
+				return r.filteredStart;
+			}
+		}
+		return protectedOffset;
+	};
+}
+
+/**
+ * Restore protected markdown content within sentence texts in groups.
+ * Also adjusts sourceOffset to map from protected-space to filtered-space,
+ * so that the heading offset map works correctly.
+ */
+function restoreGroupsContent(
+	groups: SentenceGroup[],
+	protectedItems: ProtectedContent[],
+): SentenceGroup[] {
+	if (protectedItems.length === 0) return groups;
+
+	const protectedToFiltered = createProtectedToFilteredMap(protectedItems);
+
+	return groups.map((group) => ({
+		...group,
+		sentences: group.sentences.map((s) => {
+			const restoredText = restoreProtectedContent(
+				s.text,
+				protectedItems,
+			);
+			return {
+				...s,
+				charCount: restoredText.length,
+				sourceOffset: protectedToFiltered(s.sourceOffset),
+				text: restoredText,
+			};
+		}) as typeof group.sentences,
+	}));
 }
 
 /**

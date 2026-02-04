@@ -6,6 +6,7 @@ import {
 import { annotateSentences } from "../stream/context-annotator";
 import { scanLines } from "../stream/line-scanner";
 import {
+	type ProtectedContent,
 	protectMarkdownSyntax,
 	restoreProtectedContent,
 } from "../stream/markdown-protector";
@@ -141,7 +142,9 @@ export function findPrecedingHeading(
 		const heading = headings[i];
 		if (!heading) continue;
 		// Skip already-used headings
-		if (usedHeadings.has(i)) continue;
+		if (usedHeadings.has(i)) {
+			continue;
+		}
 
 		// Heading must end before or at sentence start
 		if (heading.endOffset <= sentenceOriginalOffset) {
@@ -229,13 +232,23 @@ const ORPHAN_MARKER_PATTERN = /^\s*[*_]{1,3}\s*$/;
  */
 const HORIZONTAL_RULE_PATTERN = /^\s*(?:[-]{3,}|[*]{3,}|[_]{3,})\s*$/;
 
+/**
+ * Placeholder for protected horizontal rules (from markdown-protector).
+ * Pattern: ␜HR<n>␜ where ␜ is \uFFFC (Object Replacement Character)
+ */
+const HR_PLACEHOLDER_PATTERN = /^\s*\uFFFCHR\d+\uFFFC\s*$/;
+
 function isOrphanedMarker(text: string): boolean {
 	return ORPHAN_MARKER_PATTERN.test(text.trim());
 }
 
 function isHorizontalRule(text: string): boolean {
 	const trimmed = text.trim();
-	return trimmed.length >= 3 && HORIZONTAL_RULE_PATTERN.test(trimmed);
+	// Check both real HR and protected HR placeholder
+	return (
+		(trimmed.length >= 3 && HORIZONTAL_RULE_PATTERN.test(trimmed)) ||
+		HR_PLACEHOLDER_PATTERN.test(trimmed)
+	);
 }
 
 /**
@@ -247,13 +260,6 @@ function isShortSpeechIntro(
 ): boolean {
 	const text = sentence.text.trim();
 	return text.endsWith(":") && countWords(text) <= threshold;
-}
-
-/**
- * Combine sentences into text.
- */
-function combineSentences(sentences: AnnotatedSentence[]): string {
-	return sentences.map((s) => s.text).join("");
 }
 
 /**
@@ -502,51 +508,248 @@ type FormatContext = {
 	headings: ExtractedHeading[];
 	horizontalRules: HorizontalRuleInfo[];
 	offsetMap: (filtered: number) => number;
+	protectedToFiltered: (prot: number) => number;
+	protectedItems: ProtectedContent[];
 };
 
 /**
- * Get the end offset of a block (after its last sentence).
+ * Creates a mapping function from protected-text offsets to filtered-text offsets.
+ * This is needed because:
+ * - Sentences have sourceOffset relative to protected text (with placeholders)
+ * - The heading offset map expects offsets relative to filtered text (before protection)
+ * - Placeholders are shorter/longer than original content, shifting positions
+ *
+ * Example: URL "https://example.com" (19 chars) → placeholder "␜URL0␜" (6 chars)
+ * If URL was at filtered offset 10, after protection:
+ * - Placeholder is at protected offset 10
+ * - Text after the URL shifts by (6 - 19) = -13 chars
+ * - So protected offset 30 → filtered offset 30 + 13 = 43
+ *
+ * @param protectedItems - Items that were replaced with placeholders
+ * @returns Function that maps protected-space offset to filtered-space offset
  */
-function getBlockEndOffset(block: Block): number {
-	const lastSentence = block.sentences[block.sentences.length - 1];
-	if (!lastSentence) return 0;
-	return lastSentence.sourceOffset + lastSentence.charCount;
+function createProtectedToFilteredMap(
+	protectedItems: ProtectedContent[],
+): (protectedOffset: number) => number {
+	if (protectedItems.length === 0) {
+		return (offset) => offset;
+	}
+
+	// Sort by startOffset (position in filtered text where original content was)
+	const sorted = [...protectedItems].sort(
+		(a, b) => a.startOffset - b.startOffset,
+	);
+
+	// Pre-calculate where each placeholder starts/ends in protected text
+	// and the cumulative offset adjustment after each
+	type Replacement = {
+		protectedStart: number; // Where placeholder starts in protected text
+		protectedEnd: number; // Where placeholder ends in protected text
+		filteredStart: number; // Where original started in filtered text
+		filteredEnd: number; // Where original ended in filtered text
+		cumulativeAdjustment: number; // Total adjustment for positions AFTER this replacement
+	};
+
+	const replacements: Replacement[] = [];
+	let cumulativeShift = 0; // Total (originalLen - placeholderLen) for all prior replacements
+
+	for (const item of sorted) {
+		const placeholderLen = item.placeholder.length;
+		const originalLen = item.original.length;
+
+		// In protected text, this placeholder starts at:
+		// filteredStart minus the cumulative shrinkage from prior replacements
+		// (placeholders are typically shorter than originals, so positions shift left)
+		const protectedStart = item.startOffset - cumulativeShift;
+		const protectedEnd = protectedStart + placeholderLen;
+
+		// Update cumulative shift with this replacement's contribution
+		const thisAdjustment = originalLen - placeholderLen;
+		cumulativeShift += thisAdjustment;
+
+		replacements.push({
+			cumulativeAdjustment: cumulativeShift,
+			filteredEnd: item.startOffset + originalLen,
+			filteredStart: item.startOffset,
+			protectedEnd,
+			protectedStart,
+		});
+	}
+
+	return (protectedOffset: number) => {
+		// Walk through replacements to find the right adjustment
+		for (let i = replacements.length - 1; i >= 0; i--) {
+			const r = replacements[i]!;
+
+			if (protectedOffset >= r.protectedEnd) {
+				// Position is after this replacement - apply cumulative adjustment
+				return protectedOffset + r.cumulativeAdjustment;
+			}
+
+			if (protectedOffset >= r.protectedStart) {
+				// Position is inside a placeholder - map to start of original content
+				return r.filteredStart;
+			}
+		}
+
+		// Position is before all replacements - no adjustment needed
+		return protectedOffset;
+	};
 }
 
 /**
- * Get the start offset of a block (before its first sentence).
+ * Restore protected markdown content within sentence texts in blocks.
+ * Also adjusts sourceOffset to map from protected-space to filtered-space,
+ * so that the heading offset map works correctly.
  */
-function getBlockStartOffset(block: Block): number {
-	const firstSentence = block.sentences[0];
-	return firstSentence?.sourceOffset ?? 0;
+function restoreBlocksContent(
+	blocks: Block[],
+	protectedItems: ProtectedContent[],
+): Block[] {
+	if (protectedItems.length === 0) return blocks;
+
+	const protectedToFiltered = createProtectedToFilteredMap(protectedItems);
+
+	return blocks.map((block) => ({
+		...block,
+		sentences: block.sentences.map((s) => {
+			const restoredText = restoreProtectedContent(s.text, protectedItems);
+			return {
+				...s,
+				charCount: restoredText.length,
+				sourceOffset: protectedToFiltered(s.sourceOffset),
+				text: restoredText,
+			};
+		}),
+	}));
 }
 
 /**
- * Find horizontal rules that should appear between two blocks.
+ * Element that can be inserted: either a heading or a horizontal rule.
  */
-function findHRsBetween(
-	prevBlockEnd: number,
-	nextBlockStart: number,
-	hrs: HorizontalRuleInfo[],
+type InsertableElement = {
+	kind: "heading" | "hr";
+	text: string;
+	originalOffset: number; // Where it ends in original text (for headings) or where it is (for HRs)
+};
+
+/**
+ * Find all headings and HRs that precede a given offset and haven't been used yet.
+ * Returns them sorted by position in original document.
+ */
+function findAllPrecedingElements(
+	sentenceOriginalOffset: number,
+	headings: ExtractedHeading[],
+	horizontalRules: HorizontalRuleInfo[],
+	offsetMap: (filtered: number) => number,
+	protectedToFiltered: (prot: number) => number,
+	usedHeadings: Set<number>,
 	usedHRs: Set<number>,
-): HorizontalRuleInfo[] {
-	const result: HorizontalRuleInfo[] = [];
-	for (let i = 0; i < hrs.length; i++) {
+	protectedItems: ProtectedContent[],
+): InsertableElement[] {
+	const result: InsertableElement[] = [];
+
+	// Find all preceding headings
+	for (let i = 0; i < headings.length; i++) {
+		const heading = headings[i];
+		if (!heading) continue;
+		if (usedHeadings.has(i)) continue;
+
+		if (heading.endOffset <= sentenceOriginalOffset) {
+			result.push({
+				kind: "heading",
+				originalOffset: heading.endOffset,
+				text: heading.text,
+			});
+			usedHeadings.add(i);
+		}
+	}
+
+	// Find all preceding HRs
+	for (let i = 0; i < horizontalRules.length; i++) {
 		if (usedHRs.has(i)) continue;
-		const hr = hrs[i]!;
-		const hrStart = hr.sentence.sourceOffset;
-		if (hrStart >= prevBlockEnd && hrStart < nextBlockStart) {
-			result.push(hr);
+		const hr = horizontalRules[i];
+		if (!hr) continue;
+
+		// Convert HR offset: protected -> filtered -> original
+		const hrFilteredOffset = protectedToFiltered(hr.sentence.sourceOffset);
+		const hrOriginalOffset = offsetMap(hrFilteredOffset);
+
+		if (hrOriginalOffset <= sentenceOriginalOffset) {
+			// Restore the HR text from placeholder
+			const hrText = restoreProtectedContent(
+				hr.sentence.text.trim(),
+				protectedItems,
+			);
+			result.push({
+				kind: "hr",
+				originalOffset: hrOriginalOffset,
+				text: hrText,
+			});
 			usedHRs.add(i);
 		}
 	}
+
+	// Sort by original offset to maintain document order
+	result.sort((a, b) => a.originalOffset - b.originalOffset);
 	return result;
+}
+
+/**
+ * Build block text with headings and HRs inserted before their corresponding sentences.
+ * This handles the case where multiple elements should appear within a single block,
+ * and also captures "orphaned" headings/HRs whose original content was filtered out.
+ */
+function buildBlockTextWithHeadings(
+	sentences: AnnotatedSentence[],
+	context: FormatContext | undefined,
+	usedHeadings: Set<number>,
+	usedHRs: Set<number>,
+): string {
+	if (sentences.length === 0) return "";
+
+	const parts: string[] = [];
+
+	for (let i = 0; i < sentences.length; i++) {
+		const sentence = sentences[i];
+		if (!sentence) continue;
+
+		// Find ALL headings and HRs that precede this sentence
+		let precedingElements: InsertableElement[] = [];
+		if (context) {
+			const originalOffset = context.offsetMap(sentence.sourceOffset);
+			precedingElements = findAllPrecedingElements(
+				originalOffset,
+				context.headings,
+				context.horizontalRules,
+				context.offsetMap,
+				context.protectedToFiltered,
+				usedHeadings,
+				usedHRs,
+				context.protectedItems,
+			);
+		}
+
+		if (precedingElements.length > 0) {
+			// Add all elements before this sentence
+			const elementsText = precedingElements.map((e) => e.text).join("\n");
+			if (i === 0) {
+				parts.push(`${elementsText}\n${sentence.text}`);
+			} else {
+				parts.push(`\n${elementsText}\n${sentence.text}`);
+			}
+		} else {
+			parts.push(sentence.text);
+		}
+	}
+
+	return parts.join("");
 }
 
 /**
  * Format blocks into marked text with block IDs.
  * Preserves paragraph spacing by adding extra blank lines between paragraph-crossing blocks.
- * Reinserts headings before their corresponding content blocks.
+ * Reinserts headings before their corresponding content.
  * Reinserts horizontal rules between blocks (without block markers).
  */
 function formatBlocksWithMarkers(
@@ -564,29 +767,18 @@ function formatBlocksWithMarkers(
 		const block = blocks[i];
 		if (!block) continue;
 
-		const blockText = combineSentences(block.sentences).trim();
+		// Build block text with headings and HRs inserted for each sentence
+		const blockText = buildBlockTextWithHeadings(
+			block.sentences,
+			context,
+			usedHeadings,
+			usedHRs,
+		).trim();
 		const blockId = startIndex + i;
 		const markedBlock = `${blockText} ^${blockId}`;
 
-		// Find preceding heading for this block
-		let precedingHeading: ExtractedHeading | null = null;
-		if (context && block.sentences[0]) {
-			const firstSentenceOffset = block.sentences[0].sourceOffset;
-			// Map back to original offset to find the correct heading
-			const originalOffset = context.offsetMap(firstSentenceOffset);
-			precedingHeading = findPrecedingHeading(
-				originalOffset,
-				context.headings,
-				usedHeadings,
-			);
-		}
-
 		if (i === 0) {
-			if (precedingHeading) {
-				parts.push(`${precedingHeading.text}\n${markedBlock}`);
-			} else {
-				parts.push(markedBlock);
-			}
+			parts.push(markedBlock);
 			continue;
 		}
 
@@ -594,33 +786,7 @@ function formatBlocksWithMarkers(
 		const firstSentence = block.sentences[0];
 		const startsNewParagraph = firstSentence?.startsNewParagraph ?? false;
 
-		// Find HRs between previous block and this one
-		const prevBlock = blocks[i - 1];
-		let hrsBetween: HorizontalRuleInfo[] = [];
-		if (context && prevBlock) {
-			hrsBetween = findHRsBetween(
-				getBlockEndOffset(prevBlock),
-				getBlockStartOffset(block),
-				context.horizontalRules,
-				usedHRs,
-			);
-		}
-
-		const separator = startsNewParagraph ? "\n\n\n\n" : "\n\n";
-
-		// Insert HRs if any
-		let hrText = "";
-		for (const hr of hrsBetween) {
-			hrText += `\n\n${hr.sentence.text.trim()}`;
-		}
-
-		if (precedingHeading) {
-			parts.push(
-				`${separator}${hrText}${precedingHeading.text}\n${markedBlock}`,
-			);
-		} else if (hrText) {
-			parts.push(`${hrText}\n\n${markedBlock}`);
-		} else if (startsNewParagraph) {
+		if (startsNewParagraph) {
 			// Extra blank lines for paragraph boundary (3 blank lines = 4 newlines)
 			parts.push(`\n\n\n\n${markedBlock}`);
 		} else {
@@ -721,23 +887,31 @@ export function splitStrInBlocks(
 	// Group sentences into blocks
 	const blocks = groupSentencesIntoBlocks(withOrphansMerged, fullConfig);
 
+	// Restore protected content in blocks BEFORE heading insertion.
+	// This is critical: the offset map only accounts for heading removal.
+	// If we insert headings while text contains placeholders, offsets are wrong
+	// because placeholder lengths differ from original content lengths.
+	const blocksWithRestoredContent = restoreBlocksContent(blocks, protectedItems);
+
+	// Create protected-to-filtered offset map for HR placement
+	const protectedToFiltered = createProtectedToFilteredMap(protectedItems);
+
 	// Format with markers and reinsert headings/horizontal rules
 	const formatContext: FormatContext = {
 		headings,
 		horizontalRules,
 		offsetMap,
+		protectedItems,
+		protectedToFiltered,
 	};
 	const markedText = formatBlocksWithMarkers(
-		blocks,
+		blocksWithRestoredContent,
 		startIndex,
 		formatContext,
 	);
 
-	// Restore protected content in final output
-	const restoredText = restoreProtectedContent(markedText, protectedItems);
-
 	return {
-		blockCount: blocks.length,
-		markedText: restoredText,
+		blockCount: blocksWithRestoredContent.length,
+		markedText,
 	};
 }
