@@ -1,3 +1,8 @@
+import {
+	offsetMapperHelper,
+	type ReplacedItem,
+	type RemovedItem,
+} from "../../../../stateless-helpers/offset-mapper";
 import type { SeparatedSuffixedBasename } from "../../codecs/internal/suffix/types";
 import {
 	DEFAULT_SEGMENTATION_CONFIG,
@@ -7,12 +12,11 @@ import {
 	type SentenceGroup,
 } from "../types";
 import {
-	createOffsetMap,
 	type ExtractedHeading,
 	extractHeadings,
 	filterHeadingsFromText,
-	findPrecedingHeading,
-} from "./block-marker/split-str-in-blocks";
+} from "./block-marker/heading-extraction";
+import { findPrecedingHeading } from "./block-marker/heading-insertion";
 import {
 	DEFAULT_LANGUAGE_CONFIG,
 	type LanguageConfig,
@@ -103,7 +107,11 @@ function runPipeline(
 
 	// Filter heading content before sentence segmentation
 	const filteredContent = filterHeadingsFromText(content, headings);
-	const offsetMap = createOffsetMap(headings);
+	const removedItems: RemovedItem[] = headings.map((h) => ({
+		endOffset: h.endOffset,
+		startOffset: h.startOffset,
+	}));
+	const offsetMap = offsetMapperHelper.createRemovalMap(removedItems);
 
 	// Protect markdown syntax (URLs, wikilinks, etc.) before segmentation
 	const { safeText, protectedItems } = protectMarkdownSyntax(filteredContent);
@@ -212,56 +220,16 @@ function groupsToContent(groups: SentenceGroup[]): string {
 
 /**
  * Creates a mapping function from protected-text offsets to filtered-text offsets.
- * (Same logic as in split-str-in-blocks.ts)
  */
 function createProtectedToFilteredMap(
 	protectedItems: ProtectedContent[],
 ): (protectedOffset: number) => number {
-	if (protectedItems.length === 0) {
-		return (offset) => offset;
-	}
-
-	const sorted = [...protectedItems].sort(
-		(a, b) => a.startOffset - b.startOffset,
-	);
-
-	type Replacement = {
-		protectedStart: number;
-		protectedEnd: number;
-		filteredStart: number;
-		cumulativeAdjustment: number;
-	};
-
-	const replacements: Replacement[] = [];
-	let cumulativeShift = 0;
-
-	for (const item of sorted) {
-		const placeholderLen = item.placeholder.length;
-		const originalLen = item.original.length;
-		const protectedStart = item.startOffset - cumulativeShift;
-		const protectedEnd = protectedStart + placeholderLen;
-		cumulativeShift += originalLen - placeholderLen;
-
-		replacements.push({
-			cumulativeAdjustment: cumulativeShift,
-			filteredStart: item.startOffset,
-			protectedEnd,
-			protectedStart,
-		});
-	}
-
-	return (protectedOffset: number) => {
-		for (let i = replacements.length - 1; i >= 0; i--) {
-			const r = replacements[i]!;
-			if (protectedOffset >= r.protectedEnd) {
-				return protectedOffset + r.cumulativeAdjustment;
-			}
-			if (protectedOffset >= r.protectedStart) {
-				return r.filteredStart;
-			}
-		}
-		return protectedOffset;
-	};
+	const replacedItems: ReplacedItem[] = protectedItems.map((item) => ({
+		original: item.original,
+		placeholder: item.placeholder,
+		startOffset: item.startOffset,
+	}));
+	return offsetMapperHelper.createReplacementMap(replacedItems);
 }
 
 /**
