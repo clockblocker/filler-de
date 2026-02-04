@@ -9,6 +9,7 @@ import { getParsedUserSettings } from "../../../global-state/global-state";
 import type { VaultActionManager } from "../../../managers/obsidian/vault-action-manager";
 import type { ActiveFileService } from "../../../managers/obsidian/vault-action-manager/file-services/active-view/active-file-service";
 import type { SplitPathToMdFile } from "../../../managers/obsidian/vault-action-manager/types/split-path";
+import { goBackLinkHelper } from "../../../stateless-helpers/go-back-link/go-back-link";
 import { parseSeparatedSuffix } from "../codecs/internal/suffix/parse";
 import type { CodecRules } from "../codecs/rules";
 import { makeCodecRulesFromSettings } from "../codecs/rules";
@@ -93,7 +94,13 @@ async function gatherInput(
 		);
 	}
 
-	const segmentation = segmentContent(content, basenameResult.value, config);
+	// Strip go-back links before segmentation
+	const cleanContent = goBackLinkHelper.strip(content);
+	const segmentation = segmentContent(
+		cleanContent,
+		basenameResult.value,
+		config,
+	);
 
 	return ok({ content, rules, segmentation, sourcePath });
 }
@@ -188,4 +195,22 @@ export async function splitToPagesAction(
 
 	new Notice(`Split into ${result.pageCount} pages`);
 	await context.activeFileService.cd(result.firstPagePath);
+}
+
+/**
+ * Quick check if content would segment into multiple pages.
+ * Useful for UI decisions (e.g., showing "Split into pages" menu item).
+ */
+export function wouldSplitToMultiplePages(
+	content: string,
+	basename: string,
+	rules: CodecRules,
+	config: SegmentationConfig = DEFAULT_SEGMENTATION_CONFIG,
+): boolean {
+	const basenameResult = parseSeparatedSuffix(rules, basename);
+	if (basenameResult.isErr()) return false;
+
+	const cleanContent = goBackLinkHelper.strip(content);
+	const result = segmentContent(cleanContent, basenameResult.value, config);
+	return result.pages.length > 1;
 }

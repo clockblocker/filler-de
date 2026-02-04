@@ -186,4 +186,57 @@ Groß, schlank .. ein cooler Amerikaner.`;
 			}
 		}
 	});
+
+	test("lone asterisk from italics merges with previous content", () => {
+		// When italics span multiple sentences, the segmenter may split them
+		// and create an orphaned closing asterisk as its own "sentence"
+		// e.g., "*First sentence.* *Second sentence.*" could segment with orphaned "*"
+		// We simulate this by checking that lone asterisks don't get their own block
+		const text = `*Sie haben einen Nachbarn - Nic.*`;
+		const result = splitStrInBlocks(text);
+		expect(result.blockCount).toBe(1);
+		// The asterisk should be part of the content, not a separate block
+		expect(result.markedText).toContain("Nic.*");
+	});
+
+	test("orphaned markdown markers merge with previous sentence", () => {
+		// Text where a lone * or ** might be segmented separately
+		const text = `Das ist *wichtig* für uns.`;
+		const result = splitStrInBlocks(text);
+		expect(result.blockCount).toBe(1);
+	});
+
+	test("horizontal rule preserved without block ID", () => {
+		const text = `Content before this rule.\n\n---\n\nContent after the rule.`;
+		const result = splitStrInBlocks(text);
+		expect(result.markedText).toContain("---");
+		// HR should NOT have a block marker
+		expect(result.markedText).not.toMatch(/---\s*\^\d+/);
+		// Should have 2 content blocks
+		expect(result.blockCount).toBe(2);
+	});
+
+	test("horizontal rule with asterisks preserved without block ID", () => {
+		const text = `Before.\n\n***\n\nAfter.`;
+		const result = splitStrInBlocks(text);
+		expect(result.markedText).toContain("***");
+		expect(result.markedText).not.toMatch(/\*\*\*\s*\^\d+/);
+		expect(result.blockCount).toBe(2);
+	});
+
+	test("horizontal rule with underscores preserved without block ID", () => {
+		const text = `Before.\n\n___\n\nAfter.`;
+		const result = splitStrInBlocks(text);
+		expect(result.markedText).toContain("___");
+		expect(result.markedText).not.toMatch(/___\s*\^\d+/);
+		expect(result.blockCount).toBe(2);
+	});
+
+	test("multiple horizontal rules are all preserved", () => {
+		const text = `First.\n\n---\n\nSecond.\n\n***\n\nThird.`;
+		const result = splitStrInBlocks(text);
+		expect(result.markedText).toContain("---");
+		expect(result.markedText).toContain("***");
+		expect(result.blockCount).toBe(3);
+	});
 });

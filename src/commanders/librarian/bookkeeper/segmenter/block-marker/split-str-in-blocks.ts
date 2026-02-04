@@ -215,6 +215,26 @@ function countWords(text: string): number {
 }
 
 /**
+ * Lone asterisks/underscores from italics/bold spanning sentences.
+ * Pattern: `*`, `**`, `_`, `__`, `***`, `___`
+ */
+const ORPHAN_MARKER_PATTERN = /^\s*[*_]{1,3}\s*$/;
+
+/**
+ * Horizontal rules: 3+ of `-`, `*`, or `_` on their own line.
+ */
+const HORIZONTAL_RULE_PATTERN = /^\s*(?:[-]{3,}|[*]{3,}|[_]{3,})\s*$/;
+
+function isOrphanedMarker(text: string): boolean {
+	return ORPHAN_MARKER_PATTERN.test(text.trim());
+}
+
+function isHorizontalRule(text: string): boolean {
+	const trimmed = text.trim();
+	return trimmed.length >= 3 && HORIZONTAL_RULE_PATTERN.test(trimmed);
+}
+
+/**
  * Check if sentence is a short speech intro (ends with ":" and ≤4 words).
  */
 function isShortSpeechIntro(
@@ -284,6 +304,32 @@ function newBlock(
 function appendToBlock(block: Block, sentence: AnnotatedSentence): void {
 	block.sentences.push(sentence);
 	block.wordCount += countWords(sentence.text);
+}
+
+/**
+ * Merge orphaned markdown markers (lone `*`, `**`, etc.) with the previous sentence.
+ * These are artifacts from italics/bold spanning multiple sentences.
+ */
+function mergeOrphanedMarkers(
+	sentences: AnnotatedSentence[],
+): AnnotatedSentence[] {
+	const result: AnnotatedSentence[] = [];
+	for (const sentence of sentences) {
+		if (isOrphanedMarker(sentence.text.trim())) {
+			if (result.length > 0) {
+				const prev = result[result.length - 1]!;
+				result[result.length - 1] = {
+					...prev,
+					charCount: prev.charCount + sentence.charCount,
+					text: prev.text + sentence.text,
+				};
+			}
+			// Drop orphan at start (edge case)
+		} else {
+			result.push(sentence);
+		}
+	}
+	return result;
 }
 
 /**
@@ -438,17 +484,66 @@ function groupSentencesIntoBlocks(
 }
 
 /**
- * Context for formatting blocks with headings.
+ * Horizontal rule with position info.
+ */
+type HorizontalRuleInfo = {
+	sentence: AnnotatedSentence;
+	originalIndex: number;
+};
+
+/**
+ * Context for formatting blocks with headings and horizontal rules.
  */
 type FormatContext = {
 	headings: ExtractedHeading[];
+	horizontalRules: HorizontalRuleInfo[];
 	offsetMap: (filtered: number) => number;
 };
+
+/**
+ * Get the end offset of a block (after its last sentence).
+ */
+function getBlockEndOffset(block: Block): number {
+	const lastSentence = block.sentences[block.sentences.length - 1];
+	if (!lastSentence) return 0;
+	return lastSentence.sourceOffset + lastSentence.charCount;
+}
+
+/**
+ * Get the start offset of a block (before its first sentence).
+ */
+function getBlockStartOffset(block: Block): number {
+	const firstSentence = block.sentences[0];
+	return firstSentence?.sourceOffset ?? 0;
+}
+
+/**
+ * Find horizontal rules that should appear between two blocks.
+ */
+function findHRsBetween(
+	prevBlockEnd: number,
+	nextBlockStart: number,
+	hrs: HorizontalRuleInfo[],
+	usedHRs: Set<number>,
+): HorizontalRuleInfo[] {
+	const result: HorizontalRuleInfo[] = [];
+	for (let i = 0; i < hrs.length; i++) {
+		if (usedHRs.has(i)) continue;
+		const hr = hrs[i]!;
+		const hrStart = hr.sentence.sourceOffset;
+		if (hrStart >= prevBlockEnd && hrStart < nextBlockStart) {
+			result.push(hr);
+			usedHRs.add(i);
+		}
+	}
+	return result;
+}
 
 /**
  * Format blocks into marked text with block IDs.
  * Preserves paragraph spacing by adding extra blank lines between paragraph-crossing blocks.
  * Reinserts headings before their corresponding content blocks.
+ * Reinserts horizontal rules between blocks (without block markers).
  */
 function formatBlocksWithMarkers(
 	blocks: Block[],
@@ -459,6 +554,7 @@ function formatBlocksWithMarkers(
 
 	const parts: string[] = [];
 	const usedHeadings = new Set<number>();
+	const usedHRs = new Set<number>();
 
 	for (let i = 0; i < blocks.length; i++) {
 		const block = blocks[i];
@@ -494,10 +590,32 @@ function formatBlocksWithMarkers(
 		const firstSentence = block.sentences[0];
 		const startsNewParagraph = firstSentence?.startsNewParagraph ?? false;
 
+		// Find HRs between previous block and this one
+		const prevBlock = blocks[i - 1];
+		let hrsBetween: HorizontalRuleInfo[] = [];
+		if (context && prevBlock) {
+			hrsBetween = findHRsBetween(
+				getBlockEndOffset(prevBlock),
+				getBlockStartOffset(block),
+				context.horizontalRules,
+				usedHRs,
+			);
+		}
+
 		const separator = startsNewParagraph ? "\n\n\n\n" : "\n\n";
 
+		// Insert HRs if any
+		let hrText = "";
+		for (const hr of hrsBetween) {
+			hrText += `\n\n${hr.sentence.text.trim()}`;
+		}
+
 		if (precedingHeading) {
-			parts.push(`${separator}${precedingHeading.text}\n${markedBlock}`);
+			parts.push(
+				`${separator}${hrText}${precedingHeading.text}\n${markedBlock}`,
+			);
+		} else if (hrText) {
+			parts.push(`${hrText}\n\n${markedBlock}`);
 		} else if (startsNewParagraph) {
 			// Extra blank lines for paragraph boundary (3 blank lines = 4 newlines)
 			parts.push(`\n\n\n\n${markedBlock}`);
@@ -566,20 +684,42 @@ export function splitStrInBlocks(
 		fullConfig.languageConfig,
 	);
 
-	// Filter out blank "sentences" (whitespace-only)
-	const filtered = annotated.filter((s) => s.text.trim().length > 0);
+	// Filter out blank "sentences" (whitespace-only) and horizontal rules
+	// Horizontal rules will be reinserted during formatting
+	const horizontalRules: {
+		sentence: AnnotatedSentence;
+		originalIndex: number;
+	}[] = [];
+	const filtered: AnnotatedSentence[] = [];
+
+	for (let i = 0; i < annotated.length; i++) {
+		const s = annotated[i]!;
+		const trimmed = s.text.trim();
+		if (trimmed.length === 0) {
+			continue; // Skip blank
+		}
+		if (isHorizontalRule(trimmed)) {
+			horizontalRules.push({ originalIndex: i, sentence: s });
+			continue; // Skip HR from main pipeline
+		}
+		filtered.push(s);
+	}
 
 	// Re-detect paragraph boundaries after filtering
 	const withParagraphs = detectParagraphsAfterFilter(filtered, filteredText);
 
-	// Group sentences into blocks
-	const blocks = groupSentencesIntoBlocks(withParagraphs, fullConfig);
+	// Merge orphaned markdown markers with previous sentence
+	const withOrphansMerged = mergeOrphanedMarkers(withParagraphs);
 
-	// Format with markers and reinsert headings
-	const formatContext: FormatContext =
-		headings.length > 0
-			? { headings, offsetMap }
-			: { headings: [], offsetMap };
+	// Group sentences into blocks
+	const blocks = groupSentencesIntoBlocks(withOrphansMerged, fullConfig);
+
+	// Format with markers and reinsert headings/horizontal rules
+	const formatContext: FormatContext = {
+		headings,
+		horizontalRules,
+		offsetMap,
+	};
 	const markedText = formatBlocksWithMarkers(
 		blocks,
 		startIndex,

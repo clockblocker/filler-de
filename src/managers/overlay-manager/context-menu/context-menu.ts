@@ -9,7 +9,7 @@
 
 import type { App, Menu, Plugin } from "obsidian";
 import { z } from "zod";
-import { wouldSplitToMultiplePages as checkWouldSplit } from "../../../commanders/librarian/bookkeeper/segmenter";
+import { wouldSplitToMultiplePages as checkWouldSplit } from "../../../commanders/librarian/bookkeeper/split-to-pages-action";
 import { makeCodecRulesFromSettings } from "../../../commanders/librarian/codecs/rules";
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";

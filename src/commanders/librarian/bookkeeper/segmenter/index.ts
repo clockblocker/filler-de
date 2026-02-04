@@ -1,7 +1,4 @@
-import { goBackLinkHelper } from "../../../../stateless-helpers/go-back-link/go-back-link";
-import { parseSeparatedSuffix } from "../../codecs/internal/suffix/parse";
 import type { SeparatedSuffixedBasename } from "../../codecs/internal/suffix/types";
-import type { CodecRules } from "../../codecs/rules";
 import {
 	DEFAULT_SEGMENTATION_CONFIG,
 	type PageSegment,
@@ -50,16 +47,14 @@ export function segmentContent(
 ): SegmentationResult {
 	const { coreName, suffixParts } = sourceBasenameInfo;
 
-	// Strip navigation go-back link before processing
-	const cleanContent = goBackLinkHelper.strip(content);
-
 	// Check if content is too short to split
-	if (cleanContent.length < config.minContentSizeChars) {
+	// NOTE: Caller is responsible for stripping go-back links before calling
+	if (content.length < config.minContentSizeChars) {
 		return {
 			pages: [
 				{
-					charCount: cleanContent.length,
-					content: cleanContent,
+					charCount: content.length,
+					content: content,
 					pageIndex: 0,
 				},
 			],
@@ -70,7 +65,7 @@ export function segmentContent(
 	}
 
 	// Run the pipeline
-	const pages = runPipeline(cleanContent, config, langConfig);
+	const pages = runPipeline(content, config, langConfig);
 
 	// Filter out empty pages
 	const nonEmpty = filterEmptyPages(pages);
@@ -360,23 +355,6 @@ function filterEmptyPages(pages: PageSegment[]): PageSegment[] {
 	const nonEmpty = pages.filter((p) => p.content.trim().length > 0);
 	// Re-index to ensure consecutive page numbers
 	return nonEmpty.map((p, i) => ({ ...p, pageIndex: i }));
-}
-
-/**
- * Quick check if content would segment into multiple pages.
- * Useful for UI decisions (e.g., showing "Make this a text" button).
- */
-export function wouldSplitToMultiplePages(
-	content: string,
-	basename: string,
-	rules: CodecRules,
-	config: SegmentationConfig = DEFAULT_SEGMENTATION_CONFIG,
-): boolean {
-	const basenameResult = parseSeparatedSuffix(rules, basename);
-	if (basenameResult.isErr()) return false;
-
-	const result = segmentContent(content, basenameResult.value, config);
-	return result.pages.length > 1;
 }
 
 export type { LanguageConfig } from "./language-config";
