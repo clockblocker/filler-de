@@ -18,12 +18,20 @@ export type HorizontalRuleInfo = {
 };
 
 /**
- * Element that can be inserted: either a heading or a horizontal rule.
+ * Code block with position info.
+ */
+export type CodeBlockInfo = {
+	sentence: AnnotatedSentence;
+	originalIndex: number;
+};
+
+/**
+ * Element that can be inserted: heading, horizontal rule, or code block.
  */
 export type InsertableElement = {
-	kind: "heading" | "hr";
+	kind: "heading" | "hr" | "codeblock";
 	text: string;
-	originalOffset: number; // Where it ends in original text (for headings) or where it is (for HRs)
+	originalOffset: number; // Where it ends in original text (for headings) or where it is (for HRs/code blocks)
 };
 
 /**
@@ -65,7 +73,7 @@ export function findPrecedingHeading(
 }
 
 /**
- * Find all headings and HRs that precede a given offset and haven't been used yet.
+ * Find all headings, HRs, and code blocks that precede a given offset and haven't been used yet.
  * Returns them sorted by position in original document.
  */
 export function findAllPrecedingElements(
@@ -77,6 +85,8 @@ export function findAllPrecedingElements(
 	usedHeadings: Set<number>,
 	usedHRs: Set<number>,
 	protectedItems: ProtectedContent[],
+	codeBlocks?: CodeBlockInfo[],
+	usedCodeBlocks?: Set<number>,
 ): InsertableElement[] {
 	const result: InsertableElement[] = [];
 
@@ -121,6 +131,35 @@ export function findAllPrecedingElements(
 		}
 	}
 
+	// Find all preceding code blocks
+	if (codeBlocks && usedCodeBlocks) {
+		for (let i = 0; i < codeBlocks.length; i++) {
+			if (usedCodeBlocks.has(i)) continue;
+			const cb = codeBlocks[i];
+			if (!cb) continue;
+
+			// Convert code block offset: protected -> filtered -> original
+			const cbFilteredOffset = protectedToFiltered(
+				cb.sentence.sourceOffset,
+			);
+			const cbOriginalOffset = offsetMap(cbFilteredOffset);
+
+			if (cbOriginalOffset <= sentenceOriginalOffset) {
+				// Restore the code block text from placeholder
+				const cbText = restoreProtectedContent(
+					cb.sentence.text.trim(),
+					protectedItems,
+				);
+				result.push({
+					kind: "codeblock",
+					originalOffset: cbOriginalOffset,
+					text: cbText,
+				});
+				usedCodeBlocks.add(i);
+			}
+		}
+	}
+
 	// Sort by original offset to maintain document order
 	result.sort((a, b) => a.originalOffset - b.originalOffset);
 	return result;
@@ -132,21 +171,86 @@ export function findAllPrecedingElements(
 export type HeadingInsertionContext = {
 	headings: ExtractedHeading[];
 	horizontalRules: HorizontalRuleInfo[];
+	codeBlocks: CodeBlockInfo[];
 	offsetMap: (filtered: number) => number;
 	protectedToFiltered: (prot: number) => number;
 	protectedItems: ProtectedContent[];
 };
 
 /**
- * Build block text with headings and HRs inserted before their corresponding sentences.
+ * Collect all remaining unused elements (HRs, code blocks) that weren't inserted
+ * before any sentence. These are "trailing" elements that come at the end of content.
+ * Returns them sorted by original offset.
+ */
+export function collectTrailingElements(
+	context: HeadingInsertionContext,
+	usedHRs: Set<number>,
+	usedCodeBlocks: Set<number>,
+): InsertableElement[] {
+	const result: InsertableElement[] = [];
+
+	// Collect unused HRs
+	for (let i = 0; i < context.horizontalRules.length; i++) {
+		if (usedHRs.has(i)) continue;
+		const hr = context.horizontalRules[i];
+		if (!hr) continue;
+
+		const hrFilteredOffset = context.protectedToFiltered(
+			hr.sentence.sourceOffset,
+		);
+		const hrOriginalOffset = context.offsetMap(hrFilteredOffset);
+
+		const hrText = restoreProtectedContent(
+			hr.sentence.text.trim(),
+			context.protectedItems,
+		);
+		result.push({
+			kind: "hr",
+			originalOffset: hrOriginalOffset,
+			text: hrText,
+		});
+		usedHRs.add(i);
+	}
+
+	// Collect unused code blocks
+	for (let i = 0; i < context.codeBlocks.length; i++) {
+		if (usedCodeBlocks.has(i)) continue;
+		const cb = context.codeBlocks[i];
+		if (!cb) continue;
+
+		const cbFilteredOffset = context.protectedToFiltered(
+			cb.sentence.sourceOffset,
+		);
+		const cbOriginalOffset = context.offsetMap(cbFilteredOffset);
+
+		const cbText = restoreProtectedContent(
+			cb.sentence.text.trim(),
+			context.protectedItems,
+		);
+		result.push({
+			kind: "codeblock",
+			originalOffset: cbOriginalOffset,
+			text: cbText,
+		});
+		usedCodeBlocks.add(i);
+	}
+
+	// Sort by original offset to maintain document order
+	result.sort((a, b) => a.originalOffset - b.originalOffset);
+	return result;
+}
+
+/**
+ * Build block text with headings, HRs, and code blocks inserted before their corresponding sentences.
  * This handles the case where multiple elements should appear within a single block,
- * and also captures "orphaned" headings/HRs whose original content was filtered out.
+ * and also captures "orphaned" headings/HRs/code blocks whose original content was filtered out.
  */
 export function buildBlockTextWithHeadings(
 	sentences: AnnotatedSentence[],
 	context: HeadingInsertionContext | undefined,
 	usedHeadings: Set<number>,
 	usedHRs: Set<number>,
+	usedCodeBlocks?: Set<number>,
 ): string {
 	if (sentences.length === 0) return "";
 
@@ -156,7 +260,7 @@ export function buildBlockTextWithHeadings(
 		const sentence = sentences[i];
 		if (!sentence) continue;
 
-		// Find ALL headings and HRs that precede this sentence
+		// Find ALL headings, HRs, and code blocks that precede this sentence
 		let precedingElements: InsertableElement[] = [];
 		if (context) {
 			const originalOffset = context.offsetMap(sentence.sourceOffset);
@@ -169,6 +273,8 @@ export function buildBlockTextWithHeadings(
 				usedHeadings,
 				usedHRs,
 				context.protectedItems,
+				context.codeBlocks,
+				usedCodeBlocks,
 			);
 		}
 

@@ -25,6 +25,7 @@ data.json
 prompt.ts
 
 /tests/tracing/logs/**/*
+/tests/splitter-logs
 /.wdio-logs
 
 .obsidian-cache

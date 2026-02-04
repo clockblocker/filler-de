@@ -34,8 +34,8 @@ import {
 	extractHeadings,
 	filterHeadingsFromText,
 } from "./heading-extraction";
-import type { HorizontalRuleInfo } from "./heading-insertion";
-import { isHorizontalRule } from "./text-patterns";
+import type { CodeBlockInfo, HorizontalRuleInfo } from "./heading-insertion";
+import { isCodeBlock, isHorizontalRule } from "./text-patterns";
 import {
 	type BlockMarkerConfig,
 	type BlockSplitResult,
@@ -144,6 +144,7 @@ export function splitStrInBlocksWithIntermediate(
 			blockCount: 0,
 			blocks: [],
 			formatContext: {
+				codeBlocks: [],
 				headings: [],
 				horizontalRules: [],
 				offsetMap: (n: number) => n,
@@ -197,9 +198,10 @@ export function splitStrInBlocksWithIntermediate(
 		fullConfig.languageConfig,
 	);
 
-	// Filter out blank "sentences" (whitespace-only) and horizontal rules
-	// Horizontal rules will be reinserted during formatting
+	// Filter out blank "sentences" (whitespace-only), horizontal rules, and code blocks
+	// These will be reinserted during formatting without block markers
 	const horizontalRules: HorizontalRuleInfo[] = [];
+	const codeBlocks: CodeBlockInfo[] = [];
 	const filtered = annotated.filter((s, i) => {
 		const trimmed = s.text.trim();
 		if (trimmed.length === 0) {
@@ -208,6 +210,10 @@ export function splitStrInBlocksWithIntermediate(
 		if (isHorizontalRule(trimmed)) {
 			horizontalRules.push({ originalIndex: i, sentence: s });
 			return false; // Skip HR from main pipeline
+		}
+		if (isCodeBlock(trimmed)) {
+			codeBlocks.push({ originalIndex: i, sentence: s });
+			return false; // Skip code block from main pipeline
 		}
 		return true;
 	});
@@ -246,6 +252,7 @@ export function splitStrInBlocksWithIntermediate(
 
 	// Build format context for later formatting
 	const formatContext: FormatContext = {
+		codeBlocks,
 		headings,
 		horizontalRules,
 		offsetMap,

@@ -9,6 +9,7 @@
  *
  * Protected patterns:
  * - Fenced code blocks (```...```)
+ * - German abbreviations (z.B., d.h., usw., etc.)
  * - URLs (https://... or http://...)
  * - Horizontal rules (---, ***, ___)
  * - Wikilinks ([[...]])
@@ -45,11 +46,19 @@ export type ProtectionResult = {
 
 /**
  * Pattern definitions with their tag prefixes.
- * Order matters: fenced code blocks first (most greedy), then others.
+ * Order matters: fenced code blocks first (most greedy), then abbreviations
+ * (before URLs to avoid false matches), then other patterns.
  */
 const PATTERNS: { regex: RegExp; tag: string }[] = [
 	// Fenced code blocks (multiline) - must come first
 	{ regex: /```[\s\S]*?```/g, tag: "CB" },
+
+	// German abbreviations - BEFORE URLs to avoid conflicts
+	// Two-letter patterns: z.B., d.h., u.a., s.o., etc. (with optional space between)
+	{ regex: /\b([dzus])\.[\s]?([A-Za-zäöüÄÖÜß])\./gi, tag: "AB" },
+	// Common single-word abbreviations: usw., bzw., ca., Nr., Dr., Prof., Mio., Mrd.
+	{ regex: /\b(usw|bzw|ca|Nr|Dr|Prof|Mio|Mrd)\./gi, tag: "AB" },
+
 	// URLs - match http/https, stop at whitespace, closing brackets, or angle brackets
 	// Handle parentheses: allow balanced parens (common in Wikipedia URLs)
 	// The pattern allows one level of balanced parens anywhere in the URL

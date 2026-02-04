@@ -24,6 +24,18 @@ export const HORIZONTAL_RULE_PATTERN = /^\s*(?:[-]{3,}|[*]{3,}|[_]{3,})\s*$/;
 export const HR_PLACEHOLDER_PATTERN = /^\s*\uFFFCHR\d+\uFFFC\s*$/;
 
 /**
+ * Placeholder for protected code blocks (from markdown-protector).
+ * Pattern: ␜CB<n>␜ where ␜ is \uFFFC (Object Replacement Character)
+ */
+export const CODE_BLOCK_PLACEHOLDER_PATTERN = /^\s*\uFFFCCB\d+\uFFFC\s*$/;
+
+/**
+ * Real fenced code block pattern.
+ * Matches content that starts and ends with ``` (with optional language specifier).
+ */
+export const FENCED_CODE_BLOCK_PATTERN = /^```[\s\S]*```$/;
+
+/**
  * Check if text is an orphaned markdown marker (lone asterisks/underscores).
  */
 export function isOrphanedMarker(text: string): boolean {
@@ -39,6 +51,19 @@ export function isHorizontalRule(text: string): boolean {
 	return (
 		(trimmed.length >= 3 && HORIZONTAL_RULE_PATTERN.test(trimmed)) ||
 		HR_PLACEHOLDER_PATTERN.test(trimmed)
+	);
+}
+
+/**
+ * Check if text is a code block (placeholder or real fenced code block).
+ * - Placeholder: ␜CB<n>␜ (from markdown-protector)
+ * - Real: content starting with ``` and ending with ```
+ */
+export function isCodeBlock(text: string): boolean {
+	const trimmed = text.trim();
+	return (
+		CODE_BLOCK_PLACEHOLDER_PATTERN.test(trimmed) ||
+		FENCED_CODE_BLOCK_PATTERN.test(trimmed)
 	);
 }
 

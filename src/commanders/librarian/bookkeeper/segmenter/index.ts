@@ -164,6 +164,12 @@ export function segmentContentWithBlockMarkers(
 	// Group blocks into pages
 	const pageGroups = groupBlocksIntoPages(blocks, config);
 
+	// Persistent tracking for headings/HRs/code blocks across pages
+	// Without this, each page would re-insert ALL preceding elements
+	const usedHeadings = new Set<number>();
+	const usedHRs = new Set<number>();
+	const usedCodeBlocks = new Set<number>();
+
 	// Format each page group with block markers
 	// Each page starts block IDs at 0
 	const pages: PageSegment[] = pageGroups.map((group, pageIndex) => {
@@ -171,6 +177,9 @@ export function segmentContentWithBlockMarkers(
 			group.blocks,
 			0, // Each page starts at block ^0
 			formatContext,
+			usedHeadings, // Persist across pages
+			usedHRs, // Persist across pages
+			usedCodeBlocks, // Persist across pages
 		);
 		return {
 			charCount: markedText.length,

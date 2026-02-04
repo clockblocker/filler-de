@@ -6,6 +6,126 @@ import {
 
 describe("markdown-protector", () => {
 	describe("protectMarkdownSyntax", () => {
+		describe("German abbreviations", () => {
+			it("protects z.B. (without space)", () => {
+				const text = "Er hat Wünsche, z.B. zu lesen.";
+				const result = protectMarkdownSyntax(text);
+
+				expect(result.protectedItems).toHaveLength(1);
+				expect(result.protectedItems[0]?.original).toBe("z.B.");
+				expect(result.safeText).not.toContain("z.B.");
+			});
+
+			it("protects z. B. (with space)", () => {
+				const text = "Er hat Wünsche, z. B. zu lesen.";
+				const result = protectMarkdownSyntax(text);
+
+				expect(result.protectedItems).toHaveLength(1);
+				expect(result.protectedItems[0]?.original).toBe("z. B.");
+				expect(result.safeText).not.toContain("z. B.");
+			});
+
+			it("protects d.h. and d. h.", () => {
+				const text = "Das ist wichtig, d.h. man muss aufpassen.";
+				const result = protectMarkdownSyntax(text);
+
+				expect(result.protectedItems).toHaveLength(1);
+				expect(result.protectedItems[0]?.original).toBe("d.h.");
+			});
+
+			it("protects u.a. (unter anderem)", () => {
+				const text = "Er spricht u.a. Deutsch und Englisch.";
+				const result = protectMarkdownSyntax(text);
+
+				expect(result.protectedItems).toHaveLength(1);
+				expect(result.protectedItems[0]?.original).toBe("u.a.");
+			});
+
+			it("protects s.o. and s.u. (see above/below)", () => {
+				const text = "Siehe s.o. für Details und s.u. für Beispiele.";
+				const result = protectMarkdownSyntax(text);
+
+				expect(result.protectedItems).toHaveLength(2);
+				expect(result.protectedItems[0]?.original).toBe("s.o.");
+				expect(result.protectedItems[1]?.original).toBe("s.u.");
+			});
+
+			it("protects usw. (und so weiter)", () => {
+				const text = "Äpfel, Birnen, Bananen usw. sind Obst.";
+				const result = protectMarkdownSyntax(text);
+
+				expect(result.protectedItems).toHaveLength(1);
+				expect(result.protectedItems[0]?.original).toBe("usw.");
+			});
+
+			it("protects bzw. (beziehungsweise)", () => {
+				const text = "Rot bzw. blau sind Farben.";
+				const result = protectMarkdownSyntax(text);
+
+				expect(result.protectedItems).toHaveLength(1);
+				expect(result.protectedItems[0]?.original).toBe("bzw.");
+			});
+
+			it("protects ca. (circa)", () => {
+				const text = "Das kostet ca. 50 Euro.";
+				const result = protectMarkdownSyntax(text);
+
+				expect(result.protectedItems).toHaveLength(1);
+				expect(result.protectedItems[0]?.original).toBe("ca.");
+			});
+
+			it("protects Nr., Dr., Prof.", () => {
+				const text = "Nr. 5 wurde von Dr. Müller und Prof. Schmidt verfasst.";
+				const result = protectMarkdownSyntax(text);
+
+				expect(result.protectedItems).toHaveLength(3);
+				expect(result.protectedItems.map((p) => p.original)).toEqual([
+					"Nr.",
+					"Dr.",
+					"Prof.",
+				]);
+			});
+
+			it("protects Mio. and Mrd.", () => {
+				const text = "Das Projekt kostet 5 Mio. bzw. 2 Mrd. Euro.";
+				const result = protectMarkdownSyntax(text);
+
+				// Mio., bzw., Mrd.
+				expect(result.protectedItems).toHaveLength(3);
+				expect(result.protectedItems.map((p) => p.original)).toContain(
+					"Mio.",
+				);
+				expect(result.protectedItems.map((p) => p.original)).toContain(
+					"Mrd.",
+				);
+			});
+
+			it("handles multiple abbreviations in one sentence", () => {
+				const text =
+					"Außerdem hat er zahlreiche Wünsche, z. B. zu lesen, d.h. Bücher usw.";
+				const result = protectMarkdownSyntax(text);
+
+				expect(result.protectedItems).toHaveLength(3);
+				expect(result.protectedItems.map((p) => p.original)).toEqual([
+					"z. B.",
+					"d.h.",
+					"usw.",
+				]);
+			});
+
+			it("round-trips abbreviations correctly", () => {
+				const original =
+					"Außerdem hat er zahlreiche Wünsche, z. B. zu lesen.";
+				const { safeText, protectedItems } =
+					protectMarkdownSyntax(original);
+				const restored = restoreProtectedContent(
+					safeText,
+					protectedItems,
+				);
+				expect(restored).toBe(original);
+			});
+		});
+
 		it("protects URLs with query parameters", () => {
 			const text =
 				"Check https://www.youtube.com/watch?v=YYFOKZrvO-w&index=2 for video.";
