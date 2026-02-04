@@ -83,7 +83,7 @@ function parse(line: string): GoBackLinkInfo | null {
  * @param displayName - The name to display after the arrow
  */
 function build(targetBasename: string, displayName: string): string {
-	return `[[${targetBasename}|${BACK_ARROW} ${displayName}]]`;
+	return `[[${targetBasename}|${BACK_ARROW}${SPACE_F}${displayName}]]`;
 }
 
 /**
@@ -116,7 +116,7 @@ function add({
 }): string {
 	const body = strip(content);
 	const link = build(targetBasename, displayName);
-	return `${LINE_BREAK}${link}${SPACE_F}${LINE_BREAK}${LINE_BREAK}${body}`;
+	return `${LINE_BREAK}${SPACE_F}${SPACE_F}${link}${SPACE_F}${LINE_BREAK}${LINE_BREAK}${body}`;
 }
 
 /**

@@ -6,7 +6,7 @@
 import type { Transform } from "../../../../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { goBackLinkHelper } from "../../../../../../stateless-helpers/go-back-link/go-back-link";
 import { noteMetadataHelper } from "../../../../../../stateless-helpers/note-metadata";
-import { LINE_BREAK, SPACE_F } from "../../../../../../types/literals";
+import { LINE_BREAK } from "../../../../../../types/literals";
 import type { Codecs } from "../../../../codecs";
 import type { SectionNodeSegmentId } from "../../../../codecs/segment-id";
 import { sectionChainToPathParts } from "../../../../paths/path-finder";
@@ -76,16 +76,12 @@ export function makeCodexBacklinkTransform(
 			return content;
 		}
 
-		const backlinkLine = goBackLinkHelper.build(
-			makeCodexBasename(parentPathParts),
-			parentName,
-		);
-
-		// Strip existing go-back link if present
-		const cleanContent = goBackLinkHelper.strip(content.trimStart());
-
-		// Format: \n[[backlink]]  \n\n<content>
-		return `${LINE_BREAK}${backlinkLine}${SPACE_F}${LINE_BREAK}${LINE_BREAK}${cleanContent}`;
+		// Use goBackLinkHelper.add() for centralized formatting
+		return goBackLinkHelper.add({
+			content: content.trimStart(),
+			displayName: parentName,
+			targetBasename: makeCodexBasename(parentPathParts),
+		});
 	};
 }
 

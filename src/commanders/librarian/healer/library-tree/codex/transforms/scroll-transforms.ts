@@ -6,7 +6,6 @@
 import type { Transform } from "../../../../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { goBackLinkHelper } from "../../../../../../stateless-helpers/go-back-link/go-back-link";
 import { noteMetadataHelper } from "../../../../../../stateless-helpers/note-metadata";
-import { LINE_BREAK, SPACE_F } from "../../../../../../types/literals";
 import { logger } from "../../../../../../utils/logger";
 import type { Codecs } from "../../../../codecs";
 import type { SectionNodeSegmentId } from "../../../../codecs/segment-id";
@@ -93,12 +92,6 @@ export function makeScrollBacklinkTransform(
 			? content.slice(0, -jsonMeta.length)
 			: content;
 
-		// Build backlink to parent section's codex (goBackLinkHelper only)
-		const backlinkLine = goBackLinkHelper.build(
-			makeCodexBasename(parentPathParts),
-			parentName,
-		);
-
 		// Extract frontmatter if present
 		const fmMatch = contentWithoutJsonMeta.match(
 			/^(---\r?\n[\s\S]*?\r?\n---\r?\n?)/,
@@ -108,11 +101,20 @@ export function makeScrollBacklinkTransform(
 			? contentWithoutJsonMeta.slice(frontmatter.length)
 			: contentWithoutJsonMeta;
 
-		// Strip existing go-back link (but not JSON metadata - that's already extracted)
-		const cleanBody = goBackLinkHelper.strip(afterFrontmatter.trimStart());
+		// Use goBackLinkHelper.add() for centralized formatting
+		// It handles stripping existing go-back links internally
+		const contentWithGoBack = goBackLinkHelper.add({
+			content: afterFrontmatter.trimStart(),
+			displayName: parentName,
+			targetBasename: makeCodexBasename(parentPathParts),
+		});
 
-		// Defensive: log if strip left a go-back link (regex mismatch, can cause duplicates)
-		const firstNonEmptyLine = cleanBody
+		// Defensive: check if strip left a go-back link (regex mismatch, can cause duplicates)
+		// Need to check the body after goBackLinkHelper.add() stripped it
+		const bodyAfterLink = goBackLinkHelper.strip(
+			afterFrontmatter.trimStart(),
+		);
+		const firstNonEmptyLine = bodyAfterLink
 			.split("\n")
 			.map((l) => l.trim())
 			.find((l) => l.length > 0);
@@ -123,8 +125,7 @@ export function makeScrollBacklinkTransform(
 			);
 		}
 
-		// Format: [frontmatter]\n[[backlink]]  \n\n<body>\n[json-meta]
-		const result = `${frontmatter}${LINE_BREAK}${backlinkLine}${SPACE_F}${LINE_BREAK}${LINE_BREAK}${cleanBody}${jsonMeta}`;
-		return result;
+		// Re-assemble: [frontmatter]<contentWithGoBack>[json-meta]
+		return `${frontmatter}${contentWithGoBack}${jsonMeta}`;
 	};
 }
