@@ -66,14 +66,24 @@ export class SelectionService {
 	 * Line boundaries are newlines (\n) or document edges.
 	 */
 	private extractLine(content: string, position: number): string {
-		// Find start: scan backward to newline or doc start
-		let start = content.lastIndexOf("\n", position);
-		start = start === -1 ? 0 : start + 1; // +1 to skip the \n
-
-		// Find end: scan forward to newline or doc end
-		let end = content.indexOf("\n", position);
-		end = end === -1 ? content.length : end;
-
-		return content.slice(start, end);
+		return extractLine(content, position);
 	}
+}
+
+/**
+ * Extract the line containing a given position.
+ * Line boundaries are newlines (\n) or document edges.
+ *
+ * This is a pure function - no editor/DOM dependencies.
+ */
+export function extractLine(content: string, position: number): string {
+	// Find start: scan backward to newline or doc start
+	let start = content.lastIndexOf("\n", position);
+	start = start === -1 ? 0 : start + 1; // +1 to skip the \n
+
+	// Find end: scan forward to newline or doc end
+	let end = content.indexOf("\n", position);
+	end = end === -1 ? content.length : end;
+
+	return content.slice(start, end);
 }

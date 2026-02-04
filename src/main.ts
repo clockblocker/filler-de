@@ -154,9 +154,7 @@ export default class TextEaterPlugin extends Plugin {
 
 		this.apiService = new ApiService(this.settings);
 
-		this.testingActiveFileService = new ActiveFileService(
-			this.app,
-		);
+		this.testingActiveFileService = new ActiveFileService(this.app);
 		this.testingTFileHelper = new TFileHelper({
 			fileManager: this.app.fileManager,
 			vault: this.app.vault,
@@ -374,10 +372,9 @@ export default class TextEaterPlugin extends Plugin {
 
 	getActiveFileServiceTestingApi() {
 		return {
+			activeFileService: this.testingActiveFileService,
 			makeSplitPath,
 			makeSystemPathForSplitPath,
-			activeFileService:
-				this.testingActiveFileService,
 		};
 	}
 
