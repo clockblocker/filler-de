@@ -239,4 +239,152 @@ Groß, schlank .. ein cooler Amerikaner.`;
 		expect(result.markedText).toContain("***");
 		expect(result.blockCount).toBe(3);
 	});
+
+	describe("decoration stripping and restoration", () => {
+		describe("italics (*)", () => {
+			test("splits sentences inside italics and wraps each", () => {
+				const text = `*Das ist die Geschichte von Sascha und Anna aus Berlin. Sie wohnen zusammen in Berlin.*`;
+				const result = splitStrInBlocks(text);
+				expect(result.blockCount).toBe(2);
+				// Each sentence should have its own complete *...* wrapper
+				expect(result.markedText).toMatch(
+					/\*Das ist die Geschichte von Sascha und Anna aus Berlin\.\*/,
+				);
+				expect(result.markedText).toMatch(/\*Sie wohnen zusammen in Berlin\.\*/);
+			});
+
+			test("handles three sentences inside italics", () => {
+				const text = `*First sentence here. Second sentence here. Third sentence here.*`;
+				const result = splitStrInBlocks(text);
+				// Short sentences may merge, but each should still have *...* wrapper
+				expect(result.markedText).toMatch(/\*First sentence here\.\*/);
+				expect(result.markedText).toMatch(/\*Second sentence here\.\*/);
+				expect(result.markedText).toMatch(/\*Third sentence here\.\*/);
+			});
+
+			test("preserves already-balanced italics", () => {
+				const text = `*This is complete.* Normal text here.`;
+				const result = splitStrInBlocks(text);
+				expect(result.markedText).toContain("*This is complete.*");
+				// Normal text should not have asterisks
+				expect(result.markedText).toMatch(/Normal text here\./);
+			});
+
+			test("mixed italics and normal text", () => {
+				const text = `Normal start. *Italics sentence one. Italics sentence two.* Normal end.`;
+				const result = splitStrInBlocks(text);
+				// Each italics sentence should have *...* wrapper
+				expect(result.markedText).toMatch(/\*Italics sentence one\.\*/);
+				expect(result.markedText).toMatch(/\*Italics sentence two\.\*/);
+				// Normal text should NOT be wrapped in italics
+				expect(result.markedText).not.toMatch(/\*Normal start\./);
+				expect(result.markedText).not.toMatch(/Normal end\.\*/);
+			});
+		});
+
+		describe("bold (**)", () => {
+			test("single bold sentence unchanged", () => {
+				const text = `**This is bold text here.**`;
+				const result = splitStrInBlocks(text);
+				expect(result.blockCount).toBe(1);
+				expect(result.markedText).toContain("**This is bold text here.**");
+			});
+
+			test("bold: each sentence gets own wrapper", () => {
+				const text = `**Bold sentence one is here. Bold sentence two is here.**`;
+				const result = splitStrInBlocks(text);
+				expect(result.markedText).toMatch(/\*\*Bold sentence one is here\.\*\*/);
+				expect(result.markedText).toMatch(/\*\*Bold sentence two is here\.\*\*/);
+			});
+		});
+
+		describe("strikethrough (~~)", () => {
+			test("strikethrough: each sentence gets own wrapper", () => {
+				const text = `~~Strike sentence one here. Strike sentence two here.~~`;
+				const result = splitStrInBlocks(text);
+				expect(result.markedText).toMatch(/~~Strike sentence one here\.~~/);
+				expect(result.markedText).toMatch(/~~Strike sentence two here\.~~/);
+			});
+		});
+
+		describe("highlight (==)", () => {
+			test("highlight: each sentence gets own wrapper", () => {
+				const text = `==Highlight sentence one. Highlight sentence two.==`;
+				const result = splitStrInBlocks(text);
+				expect(result.markedText).toMatch(/==Highlight sentence one\.==/);
+				expect(result.markedText).toMatch(/==Highlight sentence two\.==/);
+			});
+		});
+
+		describe("nested decorations", () => {
+			test("nested decorations: outer stripped, inner preserved", () => {
+				const text = `*Text with **bold** inside here.*`;
+				const result = splitStrInBlocks(text);
+				expect(result.markedText).toContain("**bold**");
+				// The outer italics should wrap the sentence
+				expect(result.markedText).toMatch(
+					/\*Text with \*\*bold\*\* inside here\.\*/,
+				);
+			});
+		});
+
+		describe("consecutive spans", () => {
+			test("consecutive balanced spans with whitespace gap are merged", () => {
+				const text = `*First sentence here.*
+*Second sentence here.*
+*Third sentence here.*`;
+				const result = splitStrInBlocks(text);
+				// All should be wrapped with same decoration
+				expect(result.markedText).toMatch(/\*First sentence here\.\*/);
+				expect(result.markedText).toMatch(/\*Second sentence here\.\*/);
+				expect(result.markedText).toMatch(/\*Third sentence here\.\*/);
+			});
+
+			test("consecutive with paragraph gap - separate regions", () => {
+				const text = `*Italic region one.*
+
+Plain text paragraph.
+
+*Italic region two.*`;
+				const result = splitStrInBlocks(text);
+				expect(result.markedText).toMatch(/\*Italic region one\.\*/);
+				expect(result.markedText).not.toMatch(/\*Plain text/);
+				expect(result.markedText).toMatch(/\*Italic region two\.\*/);
+			});
+
+			test("handles multiple italicized lines (merged regions)", () => {
+				const text = `*First line sentence one. First line sentence two.*
+
+*Second line has one sentence.*`;
+				const result = splitStrInBlocks(text);
+				// Each sentence in each italics block should have its own wrapper
+				expect(result.markedText).toMatch(/\*First line sentence one\.\*/);
+				expect(result.markedText).toMatch(/\*First line sentence two\.\*/);
+				expect(result.markedText).toMatch(/\*Second line has one sentence\.\*/);
+				// Should have paragraph break between the two italicized lines
+				expect(result.blockCount).toBeGreaterThanOrEqual(2);
+			});
+		});
+
+		describe("edge cases", () => {
+			test("inline decoration in the middle of sentence unchanged", () => {
+				// Decoration that doesn't span multiple sentences should stay as-is
+				const text = `Das ist *wichtig* für uns.`;
+				const result = splitStrInBlocks(text);
+				expect(result.blockCount).toBe(1);
+				expect(result.markedText).toContain("*wichtig*");
+			});
+
+			test("mixed decorated and plain text in complex order", () => {
+				const text = `Plain one. *Italic one. Italic two.* Plain two.`;
+				const result = splitStrInBlocks(text);
+				// Italics should be wrapped
+				expect(result.markedText).toMatch(/\*Italic one\.\*/);
+				expect(result.markedText).toMatch(/\*Italic two\.\*/);
+				// Plain should not be wrapped
+				expect(result.markedText).not.toMatch(/\*Plain one/);
+				expect(result.markedText).not.toMatch(/Plain two\.\*/);
+			});
+		});
+	});
 });

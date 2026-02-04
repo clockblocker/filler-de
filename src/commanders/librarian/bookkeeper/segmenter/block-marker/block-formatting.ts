@@ -4,12 +4,12 @@
  * Formats blocks with markers and restores protected content.
  */
 
-import type { ProtectedContent } from "../stream/markdown-protector";
-import { restoreProtectedContent } from "../stream/markdown-protector";
 import {
 	offsetMapperHelper,
 	type ReplacedItem,
 } from "../../../../../stateless-helpers/offset-mapper";
+import type { ProtectedContent } from "../stream/markdown-protector";
+import { restoreProtectedContent } from "../stream/markdown-protector";
 import type { Block } from "./block-grouping";
 import type { ExtractedHeading } from "./heading-extraction";
 import {
@@ -115,7 +115,10 @@ export function restoreBlocksContent(
 	return blocks.map((block) => ({
 		...block,
 		sentences: block.sentences.map((s) => {
-			const restoredText = restoreProtectedContent(s.text, protectedItems);
+			const restoredText = restoreProtectedContent(
+				s.text,
+				protectedItems,
+			);
 			return {
 				...s,
 				charCount: restoredText.length,

@@ -36,7 +36,7 @@ Du kannst mich Cha Cha nennen.
 Sam – du kannst mich Cha Cha nennen…
 
 ###### **ANNA:**
-Muss Schluss machen! Bis bald! A x
+Muss Schluss machen! Bis bald!
 
 ###### **SASCHA:**
 Schläft – Sam – immer noch? (NIEST DOCH NICHT)

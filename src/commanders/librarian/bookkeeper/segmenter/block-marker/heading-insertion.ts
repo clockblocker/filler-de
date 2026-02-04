@@ -4,9 +4,9 @@
  * Reinserts headings and horizontal rules into formatted output.
  */
 
+import type { AnnotatedSentence } from "../../types";
 import type { ProtectedContent } from "../stream/markdown-protector";
 import { restoreProtectedContent } from "../stream/markdown-protector";
-import type { AnnotatedSentence } from "../../types";
 import type { ExtractedHeading } from "./heading-extraction";
 
 /**

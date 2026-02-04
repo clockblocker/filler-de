@@ -11,13 +11,17 @@ import {
 	type ReplacedItem,
 } from "../../../../../stateless-helpers/offset-mapper";
 import { annotateSentences } from "../stream/context-annotator";
+import {
+	restoreDecorations,
+	stripDecorations,
+} from "../stream/decoration-stripper";
 import { scanLines } from "../stream/line-scanner";
 import { protectMarkdownSyntax } from "../stream/markdown-protector";
 import { segmentSentences } from "../stream/sentence-segmenter";
 import {
+	type FormatContext,
 	formatBlocksWithMarkers,
 	restoreBlocksContent,
-	type FormatContext,
 } from "./block-formatting";
 import {
 	detectParagraphsAfterFilter,
@@ -25,16 +29,16 @@ import {
 	mergeOrphanedMarkers,
 } from "./block-grouping";
 import {
+	type ExtractedHeading,
 	extractHeadings,
 	filterHeadingsFromText,
-	type ExtractedHeading,
 } from "./heading-extraction";
 import type { HorizontalRuleInfo } from "./heading-insertion";
 import { isHorizontalRule } from "./text-patterns";
 import {
-	DEFAULT_BLOCK_MARKER_CONFIG,
 	type BlockMarkerConfig,
 	type BlockSplitResult,
+	DEFAULT_BLOCK_MARKER_CONFIG,
 } from "./types";
 
 // Re-export types that are part of public API
@@ -103,20 +107,27 @@ export function splitStrInBlocks(
 	// Protect markdown syntax (URLs, wikilinks, etc.) before segmentation
 	const { safeText, protectedItems } = protectMarkdownSyntax(filteredText);
 
+	// Strip decorations (*, **, ~~, ==) before segmentation
+	// They'll be restored to each sentence individually after segmentation
+	const { strippedText, spans: decorationSpans } = stripDecorations(safeText);
+
 	// Create offset mapping for later heading placement
 	const offsetMap = offsetMapperHelper.createRemovalMap(
 		headingsToRemovedItems(headings),
 	);
 
-	// Scan the protected text for proper line metadata
-	const filteredLines = scanLines(safeText, fullConfig.languageConfig);
+	// Scan the stripped text for proper line metadata
+	const filteredLines = scanLines(strippedText, fullConfig.languageConfig);
 
-	// Run pipeline stages 2-3 on protected text
-	const sentenceTokens = segmentSentences(safeText, fullConfig.languageConfig);
+	// Run pipeline stages 2-3 on stripped text
+	const sentenceTokens = segmentSentences(
+		strippedText,
+		fullConfig.languageConfig,
+	);
 	const annotated = annotateSentences(
 		sentenceTokens,
 		filteredLines,
-		safeText,
+		strippedText,
 		fullConfig.languageConfig,
 	);
 
@@ -136,16 +147,25 @@ export function splitStrInBlocks(
 	});
 
 	// Re-detect paragraph boundaries after filtering
-	const withParagraphs = detectParagraphsAfterFilter(filtered, safeText);
+	const withParagraphs = detectParagraphsAfterFilter(filtered, strippedText);
 
 	// Merge orphaned markdown markers with previous sentence
 	const withOrphansMerged = mergeOrphanedMarkers(withParagraphs);
 
+	// Restore decorations to each sentence individually
+	const withDecorations = restoreDecorations(
+		withOrphansMerged,
+		decorationSpans,
+	);
+
 	// Group sentences into blocks
-	const blocks = groupSentencesIntoBlocks(withOrphansMerged, fullConfig);
+	const blocks = groupSentencesIntoBlocks(withDecorations, fullConfig);
 
 	// Restore protected content in blocks BEFORE heading insertion
-	const blocksWithRestoredContent = restoreBlocksContent(blocks, protectedItems);
+	const blocksWithRestoredContent = restoreBlocksContent(
+		blocks,
+		protectedItems,
+	);
 
 	// Create protected-to-filtered offset map for HR placement
 	const replacedItems: ReplacedItem[] = protectedItems.map((item) => ({
@@ -185,5 +205,7 @@ export function splitStrInBlocks(
 export function createOffsetMap(
 	headings: ExtractedHeading[],
 ): (filtered: number) => number {
-	return offsetMapperHelper.createRemovalMap(headingsToRemovedItems(headings));
+	return offsetMapperHelper.createRemovalMap(
+		headingsToRemovedItems(headings),
+	);
 }

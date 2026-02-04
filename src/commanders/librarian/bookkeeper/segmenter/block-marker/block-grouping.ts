@@ -5,7 +5,11 @@
  */
 
 import type { AnnotatedSentence } from "../../types";
-import { countWords, isOrphanedMarker, isShortSpeechIntro } from "./text-patterns";
+import {
+	countWords,
+	isOrphanedMarker,
+	isShortSpeechIntro,
+} from "./text-patterns";
 import type { BlockMarkerConfig } from "./types";
 
 /**
