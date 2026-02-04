@@ -26,7 +26,7 @@ import {
 	makeSplitToPagesError,
 	type SplitToPagesError,
 } from "./error";
-import { segmentContent } from "./segmenter";
+import { segmentContent, segmentContentWithBlockMarkers } from "./segmenter";
 import type { SegmentationConfig, SegmentationResult } from "./types";
 import { DEFAULT_SEGMENTATION_CONFIG } from "./types";
 
@@ -96,7 +96,7 @@ async function gatherInput(
 
 	// Strip go-back links before segmentation
 	const cleanContent = goBackLinkHelper.strip(content);
-	const segmentation = segmentContent(
+	const segmentation = segmentContentWithBlockMarkers(
 		cleanContent,
 		basenameResult.value,
 		config,

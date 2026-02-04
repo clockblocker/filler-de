@@ -1,7 +1,7 @@
 import {
 	offsetMapperHelper,
-	type ReplacedItem,
 	type RemovedItem,
+	type ReplacedItem,
 } from "../../../../stateless-helpers/offset-mapper";
 import type { SeparatedSuffixedBasename } from "../../codecs/internal/suffix/types";
 import type {
@@ -16,9 +16,15 @@ import {
 	filterHeadingsFromText,
 } from "./block-marker/heading-extraction";
 import {
+	formatBlocksWithMarkers,
+	splitStrInBlocksWithIntermediate,
+	stripBlockMarkers,
+} from "./block-marker/split-str-in-blocks";
+import {
 	DEFAULT_LANGUAGE_CONFIG,
 	type LanguageConfig,
 } from "./language-config";
+import { groupBlocksIntoPages } from "./page-formatter/block-page-accumulator";
 import {
 	accumulatePagesWithHeadingsAndHRs,
 	accumulatePagesWithHRs,
@@ -104,6 +110,87 @@ export function segmentContent(
 }
 
 /**
+ * Unified segmentation that produces pages WITH block markers.
+ *
+ * This is the optimized pipeline that:
+ * 1. Runs splitStrInBlocksWithIntermediate once to get blocks
+ * 2. Groups blocks into pages
+ * 3. Formats each page with block markers
+ *
+ * Unlike segmentContent + splitStrInBlocks per page, this runs O(N) instead of O(N × pages).
+ *
+ * @param content - The markdown content to segment
+ * @param sourceBasenameInfo - Parsed basename info (coreName + suffixParts)
+ * @param config - Segmentation configuration
+ * @returns Segmentation result with pages containing block markers
+ */
+export function segmentContentWithBlockMarkers(
+	content: string,
+	sourceBasenameInfo: SeparatedSuffixedBasename,
+	config: SegmentationConfig = DEFAULT_SEGMENTATION_CONFIG,
+): SegmentationResult {
+	const { coreName, suffixParts } = sourceBasenameInfo;
+
+	// Strip existing block markers for idempotency
+	const withoutMarkers = stripBlockMarkers(content);
+
+	// Check if content is too short to split
+	if (withoutMarkers.length < config.minContentSizeChars) {
+		// For too-short content, still apply block markers
+		const { markedText, blockCount } = splitStrInBlocksWithIntermediate(
+			withoutMarkers,
+			0,
+		);
+		return {
+			pages: [
+				{
+					charCount: markedText.length,
+					content: markedText,
+					pageIndex: 0,
+				},
+			],
+			sourceCoreName: coreName,
+			sourceSuffix: suffixParts,
+			tooShortToSplit: true,
+		};
+	}
+
+	// Run unified pipeline: blocks → pages → marked pages
+	const { blocks, formatContext } = splitStrInBlocksWithIntermediate(
+		withoutMarkers,
+		0,
+	);
+
+	// Group blocks into pages
+	const pageGroups = groupBlocksIntoPages(blocks, config);
+
+	// Format each page group with block markers
+	// Each page starts block IDs at 0
+	const pages: PageSegment[] = pageGroups.map((group, pageIndex) => {
+		const markedText = formatBlocksWithMarkers(
+			group.blocks,
+			0, // Each page starts at block ^0
+			formatContext,
+		);
+		return {
+			charCount: markedText.length,
+			content: markedText,
+			pageIndex,
+		};
+	});
+
+	// Filter out empty pages and re-index
+	const nonEmpty = filterEmptyPages(pages);
+
+	return {
+		pages: nonEmpty,
+		sourceCoreName: coreName,
+		sourceSuffix: suffixParts,
+		tooShortToSplit: false,
+	};
+}
+
+/**
  * Runs the token-based pipeline with explicit paragraph break markers.
  * Extracts headings before segmentation and reinserts them into pages.
  */
@@ -143,13 +230,18 @@ function runPipeline(
 	const rawTokens = segmentToTokens(strippedText, langConfig);
 
 	// Stage 3: Annotate tokens with context
-	const annotatedTokens = annotateTokens(rawTokens, filteredLines, langConfig);
+	const annotatedTokens = annotateTokens(
+		rawTokens,
+		filteredLines,
+		langConfig,
+	);
 
 	// Filter out HR placeholders from tokens, tracking them for later reinsertion
 	const { filteredTokens, hrInfos } = filterHRPlaceholders(annotatedTokens);
 
 	// Merge orphaned decoration markers (lone *, **, etc.) with adjacent sentences
-	const tokensWithMergedOrphans = mergeOrphanedMarkersInTokens(filteredTokens);
+	const tokensWithMergedOrphans =
+		mergeOrphanedMarkersInTokens(filteredTokens);
 
 	// Stage 4: Group tokens (paragraph breaks force boundaries)
 	const groups = groupTokens(tokensWithMergedOrphans);
@@ -217,7 +309,8 @@ function runPipelineSimple(
 	const { filteredTokens, hrInfos } = filterHRPlaceholders(annotatedTokens);
 
 	// Merge orphaned decoration markers (lone *, **, etc.) with adjacent sentences
-	const tokensWithMergedOrphans = mergeOrphanedMarkersInTokens(filteredTokens);
+	const tokensWithMergedOrphans =
+		mergeOrphanedMarkersInTokens(filteredTokens);
 
 	const groups = groupTokens(tokensWithMergedOrphans);
 	const processedGroups = preprocessLargeGroups(groups, config);
@@ -305,7 +398,10 @@ function restoreGroupsContent(
 	return groups.map((group) => ({
 		...group,
 		sentences: group.sentences.map((s) => {
-			const restoredText = restoreProtectedContent(s.text, protectedItems);
+			const restoredText = restoreProtectedContent(
+				s.text,
+				protectedItems,
+			);
 			return {
 				...s,
 				charCount: restoredText.length,

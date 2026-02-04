@@ -19,6 +19,8 @@ import type { BlockMarkerConfig } from "./types";
 export type Block = {
 	sentences: AnnotatedSentence[];
 	wordCount: number;
+	/** Character count of all sentences in block (for page accumulation) */
+	charCount: number;
 	/** True if this block is a short speech intro waiting for next sentence */
 	pendingSpeechIntro: boolean;
 };
@@ -31,6 +33,7 @@ export function newBlock(
 	pendingSpeechIntro = false,
 ): Block {
 	return {
+		charCount: sentence.charCount,
 		pendingSpeechIntro,
 		sentences: [sentence],
 		wordCount: countWords(sentence.text),
@@ -43,6 +46,7 @@ export function newBlock(
 export function appendToBlock(block: Block, sentence: AnnotatedSentence): void {
 	block.sentences.push(sentence);
 	block.wordCount += countWords(sentence.text);
+	block.charCount += sentence.charCount;
 }
 
 /**

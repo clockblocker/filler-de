@@ -42,12 +42,32 @@ import {
 	DEFAULT_BLOCK_MARKER_CONFIG,
 } from "./types";
 
+export {
+	type FormatContext,
+	formatBlocksWithMarkers,
+} from "./block-formatting";
+export type { Block } from "./block-grouping";
 // Re-export types that are part of public API
 export type { ExtractedHeading } from "./heading-extraction";
 export { extractHeadings, filterHeadingsFromText } from "./heading-extraction";
 export { findPrecedingHeading } from "./heading-insertion";
 export type { BlockMarkerConfig, BlockSplitResult } from "./types";
 export { DEFAULT_BLOCK_MARKER_CONFIG } from "./types";
+
+/**
+ * Extended result that includes intermediate blocks for page accumulation.
+ * This enables the unified pipeline: blocks → pages → marked pages.
+ */
+export type BlockSplitResultWithIntermediate = {
+	/** Text with block markers appended */
+	markedText: string;
+	/** Number of blocks created */
+	blockCount: number;
+	/** Intermediate block representation for page accumulation */
+	blocks: import("./block-grouping").Block[];
+	/** Context needed for formatting blocks with headings/HRs */
+	formatContext: FormatContext;
+};
 
 /**
  * Strip existing block markers (` ^N`) to ensure idempotent re-marking.
@@ -86,6 +106,33 @@ export function splitStrInBlocks(
 	startIndex = 0,
 	config: Partial<BlockMarkerConfig> = {},
 ): BlockSplitResult {
+	const result = splitStrInBlocksWithIntermediate(text, startIndex, config);
+	return {
+		blockCount: result.blockCount,
+		markedText: result.markedText,
+	};
+}
+
+/**
+ * Split text into blocks with intermediate data for page accumulation.
+ *
+ * This is the unified pipeline entry point that:
+ * 1. Runs sentence segmentation once
+ * 2. Groups into blocks
+ * 3. Returns both the formatted result AND intermediate blocks
+ *
+ * Use this when you need to further group blocks into pages.
+ *
+ * @param text - Input text to split
+ * @param startIndex - Starting block ID (default 0)
+ * @param config - Configuration options
+ * @returns Extended result with blocks and formatContext for page accumulation
+ */
+export function splitStrInBlocksWithIntermediate(
+	text: string,
+	startIndex = 0,
+	config: Partial<BlockMarkerConfig> = {},
+): BlockSplitResultWithIntermediate {
 	const fullConfig: BlockMarkerConfig = {
 		...DEFAULT_BLOCK_MARKER_CONFIG,
 		...config,
@@ -93,7 +140,18 @@ export function splitStrInBlocks(
 
 	// Skip empty or whitespace-only text
 	if (!text.trim()) {
-		return { blockCount: 0, markedText: "" };
+		return {
+			blockCount: 0,
+			blocks: [],
+			formatContext: {
+				headings: [],
+				horizontalRules: [],
+				offsetMap: (n: number) => n,
+				protectedItems: [],
+				protectedToFiltered: (n: number) => n,
+			},
+			markedText: "",
+		};
 	}
 
 	// Pre-process: Heal unclosed decorations (Obsidian treats *text same as *text*)
@@ -186,7 +244,7 @@ export function splitStrInBlocks(
 	const protectedToFiltered =
 		offsetMapperHelper.createReplacementMap(replacedItems);
 
-	// Format with markers and reinsert headings/horizontal rules
+	// Build format context for later formatting
 	const formatContext: FormatContext = {
 		headings,
 		horizontalRules,
@@ -194,6 +252,8 @@ export function splitStrInBlocks(
 		protectedItems,
 		protectedToFiltered,
 	};
+
+	// Format with markers and reinsert headings/horizontal rules
 	const markedText = formatBlocksWithMarkers(
 		blocksWithRestoredContent,
 		startIndex,
@@ -202,6 +262,8 @@ export function splitStrInBlocks(
 
 	return {
 		blockCount: blocksWithRestoredContent.length,
+		blocks: blocksWithRestoredContent,
+		formatContext,
 		markedText,
 	};
 }

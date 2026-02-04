@@ -89,16 +89,13 @@ export function buildPageSplitActions(
 
 	const totalPages = result.pages.length;
 	for (const page of result.pages) {
-		// Strip existing markers for idempotency, then apply fresh block markers
-		const withoutMarkers = stripBlockMarkers(page.content);
-		const { markedText } = splitStrInBlocks(withoutMarkers, 0);
-
+		// Pages from segmentContentWithBlockMarkers already have block markers
 		// Compute navigation indices
 		const prevPageIdx = page.pageIndex > 0 ? page.pageIndex - 1 : undefined;
 		const nextPageIdx =
 			page.pageIndex < totalPages - 1 ? page.pageIndex + 1 : undefined;
 		const pageContent = formatPageContent(
-			markedText,
+			page.content,
 			prevPageIdx,
 			nextPageIdx,
 		);
