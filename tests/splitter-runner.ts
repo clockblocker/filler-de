@@ -61,7 +61,9 @@ function run() {
 
 		for (const page of pageResult.pages) {
 			const pageFile = `page_${String(page.pageIndex + 1).padStart(3, "0")}.md`;
-			writeFileSync(join(pageOutDir, pageFile), page.content);
+			// Also add block markers to each page
+			const pageWithBlocks = splitStrInBlocks(page.content);
+			writeFileSync(join(pageOutDir, pageFile), pageWithBlocks.markedText);
 		}
 		console.log(
 			`[pages] ${name}: ${pageResult.pages.length} pages (tooShort: ${pageResult.tooShortToSplit})`,

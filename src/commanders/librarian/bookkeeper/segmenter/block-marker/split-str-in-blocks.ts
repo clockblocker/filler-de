@@ -5,6 +5,10 @@ import {
 } from "../language-config";
 import { annotateSentences } from "../stream/context-annotator";
 import { scanLines } from "../stream/line-scanner";
+import {
+	protectMarkdownSyntax,
+	restoreProtectedContent,
+} from "../stream/markdown-protector";
 import { segmentSentences } from "../stream/sentence-segmenter";
 
 /**
@@ -666,21 +670,24 @@ export function splitStrInBlocks(
 	// Filter out heading content before sentence segmentation
 	const filteredText = filterHeadingsFromText(text, headings);
 
+	// Protect markdown syntax (URLs, wikilinks, etc.) before segmentation
+	const { safeText, protectedItems } = protectMarkdownSyntax(filteredText);
+
 	// Create offset mapping for later heading placement
 	const offsetMap = createOffsetMap(headings);
 
-	// Scan the filtered text for proper line metadata
-	const filteredLines = scanLines(filteredText, fullConfig.languageConfig);
+	// Scan the protected text for proper line metadata
+	const filteredLines = scanLines(safeText, fullConfig.languageConfig);
 
-	// Run pipeline stages 2-3 on filtered text
+	// Run pipeline stages 2-3 on protected text
 	const sentenceTokens = segmentSentences(
-		filteredText,
+		safeText,
 		fullConfig.languageConfig,
 	);
 	const annotated = annotateSentences(
 		sentenceTokens,
 		filteredLines,
-		filteredText,
+		safeText,
 		fullConfig.languageConfig,
 	);
 
@@ -706,7 +713,7 @@ export function splitStrInBlocks(
 	}
 
 	// Re-detect paragraph boundaries after filtering
-	const withParagraphs = detectParagraphsAfterFilter(filtered, filteredText);
+	const withParagraphs = detectParagraphsAfterFilter(filtered, safeText);
 
 	// Merge orphaned markdown markers with previous sentence
 	const withOrphansMerged = mergeOrphanedMarkers(withParagraphs);
@@ -726,8 +733,11 @@ export function splitStrInBlocks(
 		formatContext,
 	);
 
+	// Restore protected content in final output
+	const restoredText = restoreProtectedContent(markedText, protectedItems);
+
 	return {
 		blockCount: blocks.length,
-		markedText,
+		markedText: restoredText,
 	};
 }

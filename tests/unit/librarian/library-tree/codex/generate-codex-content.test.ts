@@ -107,7 +107,7 @@ describe("generateCodexContent", () => {
 	});
 
 	describe("first-level section codex", () => {
-		it("generates codex with parent backlink to library", () => {
+		it("generates codex with scroll entries", () => {
 			const sectionA = section("A", {
 				"Note﹘Scroll﹘md": scroll("Note"),
 			});
@@ -115,15 +115,15 @@ describe("generateCodexContent", () => {
 
 			const result = generateCodexContent(sectionA, chain, codecs);
 
-			// Parent backlink to Library root codex
-			expect(result).toContain("[[__-Library|← Library]]");
-			// Scroll
+			// Scroll with suffix
 			expect(result).toContain("- [ ] [[Note-A|Note]]");
+			// No backlink - deferred to healing
+			expect(result).not.toContain("←");
 		});
 	});
 
 	describe("nested section codex", () => {
-		it("generates codex with parent backlink to parent section", () => {
+		it("generates codex with scroll entries and correct suffix", () => {
 			const sectionB = section("B", {
 				"Note﹘Scroll﹘md": scroll("Note"),
 			});
@@ -131,10 +131,10 @@ describe("generateCodexContent", () => {
 
 			const result = generateCodexContent(sectionB, chain, codecs);
 
-			// Parent backlink to section A
-			expect(result).toContain("[[__-A|← A]]");
-			// Scroll with suffix
+			// Scroll with full suffix chain
 			expect(result).toContain("- [ ] [[Note-B-A|Note]]");
+			// No backlink - deferred to healing
+			expect(result).not.toContain("←");
 		});
 	});
 

@@ -19,6 +19,11 @@ import {
 } from "./language-config";
 import { annotateTokens } from "./stream/context-annotator";
 import { scanLines } from "./stream/line-scanner";
+import {
+	type ProtectedContent,
+	protectMarkdownSyntax,
+	restoreProtectedContent,
+} from "./stream/markdown-protector";
 import { preprocessLargeGroups } from "./stream/page-accumulator";
 import { groupTokens } from "./stream/region-grouper";
 import { segmentToTokens } from "./stream/sentence-segmenter";
@@ -100,11 +105,14 @@ function runPipeline(
 	const filteredContent = filterHeadingsFromText(content, headings);
 	const offsetMap = createOffsetMap(headings);
 
-	// Scan filtered content for proper line metadata
-	const filteredLines = scanLines(filteredContent, langConfig);
+	// Protect markdown syntax (URLs, wikilinks, etc.) before segmentation
+	const { safeText, protectedItems } = protectMarkdownSyntax(filteredContent);
+
+	// Scan protected content for proper line metadata
+	const filteredLines = scanLines(safeText, langConfig);
 
 	// Stage 2: Segment into tokens (sentences + paragraph breaks)
-	const rawTokens = segmentToTokens(filteredContent, langConfig);
+	const rawTokens = segmentToTokens(safeText, langConfig);
 
 	// Stage 3: Annotate tokens with context
 	const annotatedTokens = annotateTokens(
@@ -127,7 +135,8 @@ function runPipeline(
 		offsetMap,
 	);
 
-	return pages;
+	// Restore protected content in final pages
+	return restoreProtectedInPages(pages, protectedItems);
 }
 
 /**
@@ -138,12 +147,40 @@ function runPipelineSimple(
 	config: SegmentationConfig,
 	langConfig: LanguageConfig,
 ): PageSegment[] {
-	const lines = scanLines(content, langConfig);
-	const rawTokens = segmentToTokens(content, langConfig);
+	// Protect markdown syntax (URLs, wikilinks, etc.) before segmentation
+	const { safeText, protectedItems } = protectMarkdownSyntax(content);
+
+	const lines = scanLines(safeText, langConfig);
+	const rawTokens = segmentToTokens(safeText, langConfig);
 	const annotatedTokens = annotateTokens(rawTokens, lines, langConfig);
 	const groups = groupTokens(annotatedTokens);
 	const processedGroups = preprocessLargeGroups(groups, config);
-	return accumulatePagesSimple(processedGroups, config);
+	const pages = accumulatePagesSimple(processedGroups, config);
+
+	// Restore protected content in final pages
+	return restoreProtectedInPages(pages, protectedItems);
+}
+
+/**
+ * Restores protected markdown content in all pages.
+ */
+function restoreProtectedInPages(
+	pages: PageSegment[],
+	protectedItems: ProtectedContent[],
+): PageSegment[] {
+	if (protectedItems.length === 0) return pages;
+
+	return pages.map((page) => {
+		const restoredContent = restoreProtectedContent(
+			page.content,
+			protectedItems,
+		);
+		return {
+			...page,
+			charCount: restoredContent.length,
+			content: restoredContent,
+		};
+	});
 }
 
 /**
