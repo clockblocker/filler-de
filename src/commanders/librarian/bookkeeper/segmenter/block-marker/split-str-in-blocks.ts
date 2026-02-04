@@ -613,7 +613,10 @@ function restoreBlocksContent(
 	return blocks.map((block) => ({
 		...block,
 		sentences: block.sentences.map((s) => {
-			const restoredText = restoreProtectedContent(s.text, protectedItems);
+			const restoredText = restoreProtectedContent(
+				s.text,
+				protectedItems,
+			);
 			return {
 				...s,
 				charCount: restoredText.length,
@@ -732,7 +735,9 @@ function buildBlockTextWithHeadings(
 
 		if (precedingElements.length > 0) {
 			// Add all elements before this sentence
-			const elementsText = precedingElements.map((e) => e.text).join("\n");
+			const elementsText = precedingElements
+				.map((e) => e.text)
+				.join("\n");
 			if (i === 0) {
 				parts.push(`${elementsText}\n${sentence.text}`);
 			} else {
@@ -891,7 +896,10 @@ export function splitStrInBlocks(
 	// This is critical: the offset map only accounts for heading removal.
 	// If we insert headings while text contains placeholders, offsets are wrong
 	// because placeholder lengths differ from original content lengths.
-	const blocksWithRestoredContent = restoreBlocksContent(blocks, protectedItems);
+	const blocksWithRestoredContent = restoreBlocksContent(
+		blocks,
+		protectedItems,
+	);
 
 	// Create protected-to-filtered offset map for HR placement
 	const protectedToFiltered = createProtectedToFilteredMap(protectedItems);
