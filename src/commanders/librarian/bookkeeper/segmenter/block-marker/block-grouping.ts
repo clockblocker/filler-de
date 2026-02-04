@@ -9,6 +9,7 @@ import {
 	countWords,
 	isOrphanedMarker,
 	isShortSpeechIntro,
+	isStandaloneUrl,
 } from "./text-patterns";
 import type { BlockMarkerConfig } from "./types";
 
@@ -213,6 +214,14 @@ export function groupSentencesIntoBlocks(
 		if (isShortSpeechIntro(sentence, config.shortSentenceWords)) {
 			if (current) blocks.push(current);
 			current = newBlock(sentence, true);
+			continue;
+		}
+
+		// Standalone URLs get their own block - never merge with adjacent content
+		if (isStandaloneUrl(sentence.text)) {
+			if (current) blocks.push(current);
+			blocks.push(newBlock(sentence));
+			current = null;
 			continue;
 		}
 

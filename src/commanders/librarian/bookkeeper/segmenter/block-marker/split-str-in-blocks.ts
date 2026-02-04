@@ -12,6 +12,7 @@ import {
 } from "../../../../../stateless-helpers/offset-mapper";
 import { annotateSentences } from "../stream/context-annotator";
 import {
+	healUnclosedDecorations,
 	restoreDecorations,
 	stripDecorations,
 } from "../stream/decoration-stripper";
@@ -95,14 +96,17 @@ export function splitStrInBlocks(
 		return { blockCount: 0, markedText: "" };
 	}
 
+	// Pre-process: Heal unclosed decorations (Obsidian treats *text same as *text*)
+	const healedText = healUnclosedDecorations(text);
+
 	// Stage 1: Scan lines to detect headings and other line metadata
-	const lines = scanLines(text, fullConfig.languageConfig);
+	const lines = scanLines(healedText, fullConfig.languageConfig);
 
 	// Extract headings for later reinsertion
 	const headings = extractHeadings(lines);
 
 	// Filter out heading content before sentence segmentation
-	const filteredText = filterHeadingsFromText(text, headings);
+	const filteredText = filterHeadingsFromText(healedText, headings);
 
 	// Protect markdown syntax (URLs, wikilinks, etc.) before segmentation
 	const { safeText, protectedItems } = protectMarkdownSyntax(filteredText);

@@ -15,6 +15,42 @@
 import type { AnnotatedSentence } from "../../types";
 
 /**
+ * Decoration markers ordered by length (longest first) for proper matching.
+ */
+const DECORATION_MARKERS = ["***", "**", "*", "~~", "=="] as const;
+
+/**
+ * Heal unclosed decorations like Obsidian does.
+ * Obsidian treats `*text` the same as `*text*` when the decoration is unclosed.
+ *
+ * Processes line by line: if a line starts with a decoration marker but doesn't
+ * end with it, the closing marker is appended.
+ *
+ * @param text - Input text
+ * @returns Text with unclosed decorations healed
+ */
+export function healUnclosedDecorations(text: string): string {
+	return text
+		.split("\n")
+		.map((line) => {
+			const trimmed = line.trim();
+			if (!trimmed) return line;
+
+			// Check each decoration marker (longest first to avoid partial matches)
+			for (const marker of DECORATION_MARKERS) {
+				if (trimmed.startsWith(marker) && !trimmed.endsWith(marker)) {
+					// Line starts with marker but doesn't end with it
+					// Add closing marker (preserve trailing whitespace from original line)
+					const trailingWs = line.match(/\s*$/)?.[0] ?? "";
+					return line.trimEnd() + marker + trailingWs;
+				}
+			}
+			return line;
+		})
+		.join("\n");
+}
+
+/**
  * Represents a span of decorated text.
  */
 export type DecorationSpan = {
@@ -141,17 +177,18 @@ function findDecorationSpans(text: string): DecorationSpan[] {
 			// Check if this span has an internal boundary
 			let shouldStrip = hasBoundary;
 
-			// Also strip if this span is followed by another span
+			// Also strip if this span is followed by another span of the same type
 			// Pattern: *<content>* *<next>* means spans are adjacent
 			if (!shouldStrip) {
 				const afterSpan = text.slice(
 					closePos + marker.length,
-					closePos + marker.length + 3,
+					closePos + marker.length + marker.length + 2, // Enough for whitespace + marker
 				);
 				// Adjacent if followed by whitespace + same marker
-				const isFollowedByAdjacent =
-					/^\s*\*/.test(afterSpan) && marker === "*";
-				if (isFollowedByAdjacent) {
+				// Build a regex that matches optional whitespace followed by the marker
+				const escapedMarker = marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+				const adjacentPattern = new RegExp(`^\\s*${escapedMarker}`);
+				if (adjacentPattern.test(afterSpan)) {
 					shouldStrip = true;
 				}
 			}

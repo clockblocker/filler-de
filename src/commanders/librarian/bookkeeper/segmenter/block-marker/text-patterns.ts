@@ -61,3 +61,24 @@ export function countWords(text: string): number {
 	if (trimmed.length === 0) return 0;
 	return trimmed.split(/\s+/).length;
 }
+
+/**
+ * URL placeholder pattern from markdown-protector.
+ * Format: \uFFFC + URL + number + \uFFFC (e.g., "\uFFFCURL0\uFFFC")
+ */
+const URL_PLACEHOLDER_PATTERN = /^\uFFFCURL\d+\uFFFC$/;
+
+/**
+ * Check if text is a standalone URL line.
+ * A standalone URL is a line that contains only a URL (http/https) or a URL placeholder.
+ * These should get their own block markers rather than being merged with adjacent content.
+ */
+export function isStandaloneUrl(text: string): boolean {
+	const trimmed = text.trim();
+	// Match either:
+	// 1. Real URL: http:// or https:// followed by non-whitespace
+	// 2. URL placeholder: \uFFFCURLn\uFFFC (from markdown-protector)
+	return (
+		/^https?:\/\/\S+$/.test(trimmed) || URL_PLACEHOLDER_PATTERN.test(trimmed)
+	);
+}

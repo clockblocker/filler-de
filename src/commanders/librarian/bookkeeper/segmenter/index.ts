@@ -30,6 +30,7 @@ import {
 import { annotateTokens } from "./stream/context-annotator";
 import {
 	type DecorationSpan,
+	healUnclosedDecorations,
 	restoreDecorations,
 	stripDecorations,
 } from "./stream/decoration-stripper";
@@ -67,14 +68,17 @@ export function segmentContent(
 ): SegmentationResult {
 	const { coreName, suffixParts } = sourceBasenameInfo;
 
+	// Pre-process: Heal unclosed decorations (Obsidian treats *text same as *text*)
+	const healedContent = healUnclosedDecorations(content);
+
 	// Check if content is too short to split
 	// NOTE: Caller is responsible for stripping go-back links before calling
-	if (content.length < config.minContentSizeChars) {
+	if (healedContent.length < config.minContentSizeChars) {
 		return {
 			pages: [
 				{
-					charCount: content.length,
-					content: content,
+					charCount: healedContent.length,
+					content: healedContent,
 					pageIndex: 0,
 				},
 			],
@@ -85,7 +89,7 @@ export function segmentContent(
 	}
 
 	// Run the pipeline
-	const pages = runPipeline(content, config, langConfig);
+	const pages = runPipeline(healedContent, config, langConfig);
 
 	// Filter out empty pages
 	const nonEmpty = filterEmptyPages(pages);

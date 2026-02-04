@@ -19,6 +19,31 @@ import {
 } from "./heading-insertion";
 
 /**
+ * Merge adjacent decorations within a block.
+ * When multiple decorated sentences end up in the same block, merge them:
+ * `*text1* *text2*` → `*text1 text2*`
+ *
+ * Handles all decoration types: *, **, ***, ~~, ==
+ */
+function mergeAdjacentDecorations(text: string): string {
+	return (
+		text
+			// Must match longer markers first to avoid partial replacements
+			// Bold+italic: *** + whitespace + ***
+			.replace(/\*\*\*\s+\*\*\*/g, " ")
+			// Bold: ** + whitespace + **
+			.replace(/\*\*\s+\*\*/g, " ")
+			// Italic: * + whitespace + * (but not ** or ***)
+			// Use negative lookbehind/lookahead to avoid matching ** or ***
+			.replace(/(?<!\*)\*(?!\*)\s+(?<!\*)\*(?!\*)/g, " ")
+			// Strikethrough: ~~ + whitespace + ~~
+			.replace(/~~\s+~~/g, " ")
+			// Highlight: == + whitespace + ==
+			.replace(/==\s+==/g, " ")
+	);
+}
+
+/**
  * Context for formatting blocks with headings and horizontal rules.
  */
 export type FormatContext = {
@@ -62,12 +87,14 @@ export function formatBlocksWithMarkers(
 		if (!block) continue;
 
 		// Build block text with headings and HRs inserted for each sentence
-		const blockText = buildBlockTextWithHeadings(
+		const rawBlockText = buildBlockTextWithHeadings(
 			block.sentences,
 			insertionContext,
 			usedHeadings,
 			usedHRs,
 		).trim();
+		// Merge adjacent decorations: *a* *b* → *a b*
+		const blockText = mergeAdjacentDecorations(rawBlockText);
 		const blockId = startIndex + i;
 		const markedBlock = `${blockText} ^${blockId}`;
 
