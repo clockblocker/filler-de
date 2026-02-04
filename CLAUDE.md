@@ -1,148 +1,191 @@
-# CLAUDE.md
+# Textfresser - German Vocabulary Dictionary Plugin for Obsidian
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Obsidian plugin for building a German vocabulary dictionary with AI-powered translations via Gemini API.
 
-Read the high-level descripton of the project in docs/**
+## Commands
 
-If you change anything maningful, modify the files for those who come after.
-
-## Plan Mode
-
-- Make the plan extremely concise. Sacrifice grammar for the sake of concision.
-- At the end of each plan, give me a list of unresolved questions to answer, if any.
-
-## Project Overview
-
-Textfresser is an Obsidian plugin for building personal German vocabulary dictionaries. 
-It: 
-- maintans a currated folder for user library of texts
-- generates structured dictionary entries with conjugations/declensions, maintains bidirectional links between word forms, and integrates with Google Gemini API for language processing.
-
-## Build & Development Commands
-
-### Building
 ```bash
-# Production build
-bun run build
+# Build
+bun run build        # production
+bun run dev          # watch mode
+bun run build:dev    # dev + typecheck
 
-# Development build with watch mode
-bun run dev
+# Test
+bun test             # all (unit + e2e)
+bun run test:unit    # unit only
+bun run test:e2e     # e2e (builds first, launches Obsidian)
+bun test path/to/test.test.ts  # single file
 
-# Development build with type checking
-bun run build:dev
-```
-
-### Testing
-```bash
-# Run all tests (unit + e2e)
-bun test
-
-# Unit tests only
-bun run test:unit
-
-# E2E tests only (builds plugin first)
-bun run test:e2e
-
-# Coverage report
-bun run coverage
-
-# Clear test logs
-bun run clearTestLogs
-```
-
-### Code Quality
-```bash
-# Check lint/format (no fix)
-bun run lint
-
-# Fix lint + format
-bun fix
-
-# Typecheck only changed files (vs master)
-bun run typecheck:changed
-```
-
-### Before Finishing Work
-Run `bun run typecheck:changed` before calling it a day. Fix any type errors in files you touched.
-
-### Running Single Tests
-```bash
-# Run specific test file
-bun test path/to/test.test.ts
-
-# Run with pattern
-bun test --test-name-pattern "pattern"
+# Code quality
+bun run lint         # check only
+bun fix              # fix lint + format
+bun run typecheck:changed  # typecheck vs master (RUN BEFORE FINISHING WORK)
 ```
 
 ## Architecture
 
-### Core Components
+### Entry Point
+`src/main.ts` → `TextEaterPlugin` → deferred init via `initWhenObsidianIsReady()`
 
-**VaultActionManager** (`src/managers/obsidian/vault-action-manager/`)
-- Abstraction layer over Obsidian's file system API
-- **Actions**: Declarative file operations (create, write, rename, trash, process content)
-- **Dispatcher**: Queues, collapses, and topologically sorts actions before execution
-- **Event System**: Emits bulk vault events after dispatching actions; filters self-generated events
-- **SplitPath**: Internal path representation separating directory segments and basename
-- Manages dependencies between file operations to ensure correct execution order
+### Managers (src/managers/)
+| Manager | Path | Purpose |
+|---------|------|---------|
+| VaultActionManager | `obsidian/vault-action-manager/` | FS abstraction, action dispatch, bulk events |
+| UserEventInterceptor | `obsidian/user-event-interceptor/` | DOM/editor events (click, clipboard, select-all, wikilink) |
+| WorkspaceEventInterceptor | `obsidian/workspace-navigation-event-interceptor/` | Workspace events (file open, layout, scroll) |
+| OverlayManager | `overlay-manager/` | UI overlays (toolbars, edge zones, context menu) |
+| ActionsManager | `actions-manager/` | Command executor factory |
 
-**UserEventInterceptor** (`src/managers/obsidian/user-event-interceptor/`)
-- Unified facade for DOM/editor events; Librarian subscribes to single stream
-- **Detectors**: ClickDetector, ClipboardDetector, SelectAllDetector, WikilinkDetector
-- **Events**: CheckboxClicked, PropertyCheckboxClicked, ClipboardCopy, SelectAll, WikilinkCompleted
-- Events include callbacks (`insertAlias`, `setClipboardData`, `setSelection`) for action delegation
+### Commanders (src/commanders/)
+| Commander | Files | Purpose |
+|-----------|-------|---------|
+| Librarian | ~270 files | Tree management, healing, codex generation |
+| Textfresser | ~17 files | Vocabulary commands (Generate, Translate) |
 
-**NoteMetadataManager** (`src/managers/pure/note-metadata-manager/`)
-- See `src/documentaion/librarian-architrecture.md` → Metadata → NoteMetadataManager
+### Stateless Helpers (src/stateless-helpers/)
+- `note-metadata/` - Format-agnostic metadata read/write
+- `go-back-link/` - Go-back link helpers
+- `api-service.ts` - Gemini API wrapper
+- `block-id.ts`, `wikilink.ts`, `markdown-strip.ts`
 
-**Librarian System** (`src/commanders/librarian/`)
-- The central orchestrator managing a hierarchical library tree structure
-- `Librarian`: Thin orchestrator + state holder; delegates to extracted modules
-- `LibraryTree`: In-memory tree representation with nodes, codexes (index files), and status tracking
-- **Healing**: Reconciles discrepancies between vault state and tree state through healing actions
-- **Codex**: Special index files that track children nodes and their completion status via clickable checkboxes
-- **Extracted Modules**:
-  - `VaultActionQueue` (`vault-action-queue/`): Serializes async processing of TreeActions
-  - `UserEventRouter` (`user-event-router/`): Routes user events to handlers (checkbox, clipboard, select-all, wikilink)
-  - `SectionHealingCoordinator` (`section-healing/`): Coordinates section healing for split-to-pages
-- **PathFinder** (`paths/path-finder.ts`): Single source of truth for all suffix/path computation logic
-- **HealingError** (`errors/healing-error.ts`): Unified error types for healing operations
+#### Stateless Helpers Philosophy
+- Consolidate small/generally applicable formatting and utils under `xxxHelper` facade
+- Access methods via `xxxHelper.methodName()` pattern
+- If functionality related to xxx is needed, implement it in the xxxHelper - don't scatter logic
+- Avoid magic casts and regexes in main codebase - encapsulate them in helpers
 
-**OverlayManager** (`src/services/obsidian-services/overlay-manager/`)
-- Unified facade for UI overlays (bottom toolbar, selection toolbar, edge zones)
-- **CommanderActionProvider interface**: Commanders provide actions via `getAvailableActions(context)`
-- **ActionExecutorRegistry**: Maps action kinds to typed execution logic
-- **LibrarianActionProvider**: Default provider for library-related actions
-- See `src/documentaion/overlay-manager.md` for full architecture
-
-### Key Patterns
-
-**Result Types**: Uses `neverthrow` for error handling (`Result<T, E>`)
-
-**Result Chaining**: Prefer `andThen` over if-chains for pipelines. Log errors once at the end.
+Example - `wikilinkHelper` encapsulates wikilink regex parsing:
 ```typescript
-// ❌ BAD - verbose, logs at each step
-const aResult = stepA(ctx);
-if (aResult.isErr()) { logger.warn(...); return aResult; }
-const bResult = stepB(aResult.value);
-if (bResult.isErr()) { logger.warn(...); return bResult; }
+// ❌ BAD - regex scattered in main code
+const match = text.match(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g);
 
-// ✅ GOOD - chain with single error log
+// ✅ GOOD - clean facade method
+const links = wikilinkHelper.parse(text);  // returns ParsedWikilink[]
+const link = wikilinkHelper.findByTarget(text, "MyNote");
+```
+
+### Documentation (src/documentaion/)
+- `librarian-architrecture.md` - Main architecture doc
+- `librarian-pieces.md` - Refactoring details
+- `e2e-architecture.md` - E2E test architecture
+
+## Non-Obvious Flows
+
+### 1. Event Flow: Interceptor → Handler → Commander
+
+**TLDR**: DOM events get encoded into typed payloads, handlers decide sync if they apply, then async delegate to commanders.
+
+```
+DOM Event → Detector (encode) → Handler.doesApply (SYNC gate) → Handler.handle (ASYNC) → Commander
+```
+
+**Key mechanics:**
+- **Detectors** (`user-event-interceptor/events/`) capture raw events, encode into `Payload` via `Codec`
+- **Two-phase handler**: `doesApply()` is SYNC (for `preventDefault`), `handle()` is ASYNC
+- **Three outcomes**: `Handled` (consumed), `Passthrough` (native + clipboard), `Modified` (transform payload)
+- **Handler registration**: `createHandlers()` in `actions-manager/behaviors/` maps `PayloadKind` → handler
+- **Stateless handlers**: clipboard, select-all (pure transforms, no commander)
+- **Stateful handlers**: route to Librarian (checkbox, wikilink) or Textfresser (wikilink click tracking)
+
+**Example - Checkbox click**:
+1. `CheckboxClickedDetector` captures mousedown, extracts line content + checkbox state
+2. `CheckboxCodec.encode()` → `CheckboxPayload { kind, checked, lineContent, splitPath }`
+3. `createCodexCheckboxHandler.doesApply()` checks `librarian.isCodexInsideLibrary()`
+4. If applies: `preventDefault()`, then `librarian.handleCodexCheckboxClick(payload)`
+5. Librarian parses line, builds `ChangeStatusAction`, enqueues to `actionQueue`
+
+### 2. VAM Dispatch Processing
+
+**TLDR**: Actions go through queue → ensure requirements → collapse → dependency sort → execute → filter self-events.
+
+```
+dispatch(actions) → ActionQueue → Dispatcher Pipeline → Execute → SelfEventTracker filters echoes
+```
+
+**Dispatcher pipeline stages:**
+1. **Ensure requirements**: Auto-insert `CreateFolder` for missing parents, filter invalid deletes
+2. **Collapse**: Dedupe by path, compose multiple `ProcessMdFile` transforms, "trash wins" semantics
+3. **Dependency graph**: `ProcessMdFile` depends on `UpsertMdFile`, files depend on parent folders
+4. **Topological sort**: Kahn's algorithm, tie-break by path depth (shallow first)
+5. **Execute**: Sequential execution respecting sort order, collect errors
+
+**Event coalescing (BulkEventAccumulator):**
+- Quiet window: 250ms (flush when no new events)
+- Max window: 2000ms (force flush)
+- Collapse rename chains: A→B + B→C = A→C
+- Reduce roots: folder rename covers descendant renames, folder delete covers descendant deletes
+
+**Self-event filtering:**
+- Register all paths before execution with TTL=5s
+- On Obsidian event: check `shouldIgnore()` → exact match (pop) or prefix match (for folders)
+- Prevents feedback loops from our own dispatches
+
+### 3. Librarian Healing & Codex Generation
+
+**TLDR**: Healing enforces filename⇄path invariant. Codex = auto-generated section index with checkboxes.
+
+```
+BulkVaultEvent → TreeActions → Healer.apply() → HealingActions + CodexImpact → VaultActions
+```
+
+**What is healing?**
+- **Invariant**: File basename suffix must match folder path chain
+- Example: `Library/A/B/Note.md` → canonical name `Note-B-A.md`
+- User renames/moves file → system computes canonical path → generates rename action
+
+**Healing flow:**
+1. `buildTreeActions()` converts vault events with **policy inference**:
+   - **NameKing**: suffix defines path (flat files)
+   - **PathKing**: folder path defines suffix (nested files)
+2. `Healer.getHealingActionsFor(action)` returns `{ healingActions, codexImpact }`
+3. For rename/move: compute descendant suffix healing recursively
+4. `HealingTransaction` wraps operations, collects actions atomically
+
+**What is a codex?**
+- Auto-generated markdown index for each section folder
+- Filename: `__-SectionSuffix.md` (e.g., `__-Pie-Recipe.md`)
+- Content: checkbox list of children (scrolls, files, nested sections)
+- Status aggregation: section checkbox = all descendants done?
+
+**Codex generation:**
+1. `EnsureCodexFileExists` - create if missing
+2. `ProcessCodex` - regenerate children list via `generateCodexContent()`
+3. `WriteScrollStatus` - update descendant scroll metadata on status change
+4. Backlink healing (separate phase) - adds `[[__suffix|← Parent]]` go-back links
+
+**Incremental updates**: Only impacted sections regenerated (O(k) not O(n))
+
+## Key Patterns
+
+### Result Types (neverthrow)
+```typescript
+// Chain with andThen, single error log at end
 const result = await stepA(ctx)
     .andThen(stepB)
-    .asyncAndThen(stepC);  // use asyncAndThen for async steps
-
+    .asyncAndThen(stepC);
 if (result.isErr()) {
     logger.warn("[fn] Failed:", result.error);
     return result;
 }
 ```
 
-**Event-Driven**: Components subscribe to vault events and bulk events for reactive updates
+### Type Safety
+- Avoid `as`/`any` except undocumented Obsidian APIs (must comment why)
+- Use Zod for runtime validation
+- Trust switch narrowing - no redundant casts
 
-**Tree Navigation**: Nodes use segment IDs (`NodeSegmentId`) with separators; paths canonicalized using locators
+### Logging
+- Use `logger` from `src/utils/logger`, NOT console.*
+- Stringify objects: `logger.info("data:", JSON.stringify(obj))`
 
-**Type Safety**: Zod schemas validate LLM outputs and metadata structures
+## Plan Mode
+
+When entering plan mode for implementation tasks:
+- Keep plans concise - bullet points, not essays
+- List unresolved questions explicitly before exiting
+- Reference specific files that will be modified
+
+
 
 ## TypeScript Patterns
 
@@ -308,60 +351,3 @@ logger.info("[myFn] event:", event);
 logger.error("Failed:", error instanceof Error ? error.message : String(error));
 ```
 
-## Testing Infrastructure
-
-**Unit Tests** (`tests/unit/`): Pure business logic tests using Bun's test runner
-
-**Spec Tests** (`tests/specs/`): Integration tests for VaultActionManager, dispatcher, librarian healing, and file helpers
-
-**E2E Tests** (`tests/obsidian-e2e/`): WebdriverIO tests running against real Obsidian instances
-- Uses `wdio-obsidian-service` to launch Obsidian
-- Tests both desktop and mobile (emulated) modes
-- Vault: `tests/simple`
-
-**Test Utilities**:
-- `tests/unit/setup.ts`: Preload setup for unit tests
-- `tests/tracing/`: Test logging infrastructure
-
-## Important Files
-
-- `src/main.ts`: Plugin entry point; initializes services and commanders
-- `src/global-state/global-state.ts`: Plugin-wide state and settings access
-- `src/settings.ts`: Settings UI and schema
-- `src/types/`: Shared type definitions and linguistic models
-- `manifest.json`: Plugin metadata for Obsidian
-- `biome.json`: Linter/formatter configuration
-
-## Development Notes
-
-### Plugin Initialization
-- Deferred init via `initWhenObsidianIsReady()` waits for layout and metadata
-- Services initialized in specific order due to dependencies
-- Librarian auto-starts healing on init
-
-### VaultActionManager Dispatch Flow
-1. Actions submitted to dispatcher
-2. Dependency detection and topological sort
-3. Action collapsing (merge redundant operations)
-4. Sequential execution with Obsidian API
-5. Bulk event emission (filtered to exclude self-generated events)
-
-### Librarian Healing Flow
-1. Tree built from vault files during init
-2. Mismatches detected (missing nodes, incorrect status, moved files)
-3. Healing actions generated (create, write, rename operations)
-4. Actions dispatched via VaultActionManager
-5. Tree updated with new state
-
-### Path Handling
-- Use `SplitPath` types for internal paths
-- Convert to system paths via `makeSystemPathForSplitPath()` when needed
-- Library-scoped paths use special codecs for tree operations
-
-## Refactoring Infrastructure
-
-### New Modules Added
-These modules consolidate duplicated logic and improve error handling:
-
-### Test Coverage
-Tests added in `tests/unit/paths/`, `tests/specs/healing/`, `tests/specs/vault-actions/`, `tests/specs/tree/`
