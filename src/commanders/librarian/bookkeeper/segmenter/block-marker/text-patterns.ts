@@ -79,6 +79,7 @@ export function isStandaloneUrl(text: string): boolean {
 	// 1. Real URL: http:// or https:// followed by non-whitespace
 	// 2. URL placeholder: \uFFFCURLn\uFFFC (from markdown-protector)
 	return (
-		/^https?:\/\/\S+$/.test(trimmed) || URL_PLACEHOLDER_PATTERN.test(trimmed)
+		/^https?:\/\/\S+$/.test(trimmed) ||
+		URL_PLACEHOLDER_PATTERN.test(trimmed)
 	);
 }

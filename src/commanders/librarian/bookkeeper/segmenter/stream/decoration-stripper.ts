@@ -186,7 +186,10 @@ function findDecorationSpans(text: string): DecorationSpan[] {
 				);
 				// Adjacent if followed by whitespace + same marker
 				// Build a regex that matches optional whitespace followed by the marker
-				const escapedMarker = marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+				const escapedMarker = marker.replace(
+					/[.*+?^${}()|[\]\\]/g,
+					"\\$&",
+				);
 				const adjacentPattern = new RegExp(`^\\s*${escapedMarker}`);
 				if (adjacentPattern.test(afterSpan)) {
 					shouldStrip = true;

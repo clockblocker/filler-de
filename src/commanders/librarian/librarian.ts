@@ -1,5 +1,9 @@
+import { errAsync, okAsync, type ResultAsync } from "neverthrow";
 import { getParsedUserSettings } from "../../global-state/global-state";
-import type { CommandKind } from "../../managers/actions-manager/types";
+import type {
+	CommandContext,
+	CommandKind,
+} from "../../managers/actions-manager/types";
 import type { CheckboxPayload } from "../../managers/obsidian/user-event-interceptor";
 import type {
 	BulkVaultEvent,
@@ -26,6 +30,12 @@ import type {
 	ScrollNodeLocator,
 	SectionNodeLocator,
 } from "./codecs/locator/types";
+import { commandFnForCommandKind } from "./commands";
+import type {
+	CommandError,
+	LibrarianCommandInput,
+	LibrarianCommandKind,
+} from "./commands/types";
 import { getBacklinkHealingVaultActions } from "./healer/backlink-healing";
 import { Healer } from "./healer/healer";
 import { HealingTransaction } from "./healer/healing-transaction";
@@ -35,7 +45,10 @@ import {
 	extractInvalidCodexesFromBulk,
 	parseCodexClickLineContent,
 } from "./healer/library-tree/codex";
-import { isCodexInsideLibrary as isCodexInsideLibraryHelper } from "./healer/library-tree/codex/helpers";
+import {
+	isCodexInsideLibrary as isCodexInsideLibraryHelper,
+	isCodexSplitPath,
+} from "./healer/library-tree/codex/helpers";
 import { Tree } from "./healer/library-tree/tree";
 import { buildTreeActions } from "./healer/library-tree/tree-action/bulk-vault-action-adapter";
 import type {
@@ -417,7 +430,43 @@ export class Librarian {
 	 * Returns all possible commands for the file type; caller filters by selection state.
 	 */
 	listCommandsExecutableIn(splitPath: SplitPathToMdFile): CommandKind[] {
-		return listCommandsExecutableInImpl(this.codecs, splitPath);
+		return listCommandsExecutableInImpl(
+			this.codecs,
+			this.healer,
+			splitPath,
+		);
+	}
+
+	/**
+	 * Execute a librarian command.
+	 * Handles codex guard internally - nav commands allowed on codex, others silently skip.
+	 */
+	executeCommand(
+		commandName: LibrarianCommandKind,
+		context: CommandContext,
+		notify: (message: string) => void,
+	): ResultAsync<void, CommandError> {
+		if (!context.activeFile) {
+			return errAsync({ kind: "NotMdFile" });
+		}
+
+		// Codex guard - only nav commands allowed on codex files
+		const isNavCommand =
+			commandName === "GoToPrevPage" || commandName === "GoToNextPage";
+		if (!isNavCommand && isCodexSplitPath(context.activeFile.splitPath)) {
+			return okAsync(undefined); // silently skip
+		}
+
+		const commandFn = commandFnForCommandKind[commandName];
+		const input: LibrarianCommandInput = {
+			commandContext: { ...context, activeFile: context.activeFile },
+			librarianState: { librarian: this, notify, vam: this.vam },
+		};
+
+		return commandFn(input).mapErr((e) => {
+			logger.warn(`[Librarian.${commandName}] Failed:`, e);
+			return e;
+		});
 	}
 
 	isCodexInsideLibrary(splitPath: SplitPathToMdFile): boolean {

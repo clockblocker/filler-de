@@ -1,15 +1,9 @@
 import { Notice } from "obsidian";
-import { isCodexSplitPath } from "../../commanders/librarian/healer/library-tree/codex/helpers";
+import type { LibrarianCommandKind } from "../../commanders/librarian/commands/types";
 import type { Librarian } from "../../commanders/librarian/librarian";
 import type { Textfresser } from "../../commanders/textfresser/textfresser";
 import { logger } from "../../utils/logger";
 import type { VaultActionManager } from "../obsidian/vault-action-manager";
-import {
-	goToNextPageCommand,
-	goToPrevPageCommand,
-} from "./commands/navigate-pages-command";
-import { splitIntoPagesCommand } from "./commands/split-into-pages-command";
-import { splitSelectionBlocksCommand } from "./commands/split-selection-blocks-command";
 import { type CommandContext, CommandKind } from "./types";
 
 /**
@@ -53,41 +47,15 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 	return async function executeCommand(kind: CommandKind): Promise<void> {
 		const context = collectContext();
 
-		// Block non-nav commands on codex files
-		const isNavCommand =
-			kind === CommandKind.GoToPrevPage ||
-			kind === CommandKind.GoToNextPage;
-
-		if (!isNavCommand) {
-			if (
-				context.activeFile &&
-				isCodexSplitPath(context.activeFile.splitPath)
-			) {
-				return; // silently skip on codex
-			}
-		}
-
 		switch (kind) {
 			case CommandKind.GoToPrevPage:
-				await goToPrevPageCommand(vam);
-				break;
-
 			case CommandKind.GoToNextPage:
-				await goToNextPageCommand(vam);
-				break;
-
 			case CommandKind.MakeText:
-			case CommandKind.SplitToPages: {
-				// Both actions do the same thing - split scroll into pages
-				await splitIntoPagesCommand({
-					librarian,
-					vam,
-				});
-				break;
-			}
-
+			case CommandKind.SplitToPages:
 			case CommandKind.SplitInBlocks: {
-				await splitSelectionBlocksCommand(context, { notify, vam });
+				// Delegate to librarian - codex guard handled internally
+				const librarianKind = kind as LibrarianCommandKind;
+				await librarian.executeCommand(librarianKind, context, notify);
 				break;
 			}
 
