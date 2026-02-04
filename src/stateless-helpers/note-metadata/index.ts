@@ -9,6 +9,7 @@ import { z } from "zod";
 import { getParsedUserSettings } from "../../global-state/global-state";
 import type { Transform } from "../../managers/obsidian/vault-action-manager/types/vault-action";
 import {
+	extractFrontmatter,
 	frontmatterToInternal,
 	parseFrontmatter,
 	stripOnlyFrontmatter as stripFm,
@@ -16,6 +17,7 @@ import {
 	writeFrontmatter,
 } from "./internal/frontmatter";
 import {
+	extractJsonSection,
 	findMetaSectionStart,
 	type Metadata,
 	readJsonSection,
@@ -80,6 +82,22 @@ function stripOnlyFrontmatter(content: string): string {
 	return stripFm(content).trimStart();
 }
 
+// ─── Decompose ───
+
+/**
+ * Decompose note content into its three parts: frontmatter, body, and JSON section.
+ * Useful for transforms that need to modify body while preserving metadata.
+ */
+function decompose(content: string): {
+	frontmatter: string;
+	body: string;
+	jsonSection: string;
+} {
+	const { body: withoutJson, jsonSection } = extractJsonSection(content);
+	const { frontmatter, body } = extractFrontmatter(withoutJson);
+	return { body, frontmatter, jsonSection };
+}
+
 // ─── Status Toggle ───
 
 /**
@@ -115,6 +133,7 @@ function toggleStatus(checked: boolean): Transform {
  * Note metadata helper object with grouped functions.
  */
 export const noteMetadataHelper = {
+	decompose,
 	findSectionStart: findMetaSectionStart,
 	read,
 	strip,

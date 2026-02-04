@@ -33,6 +33,25 @@ export function findMetaSectionStart(content: string): number | null {
 	return pos;
 }
 
+// ─── Extract ───
+
+/**
+ * Extract JSON section as raw string.
+ * Returns the body without JSON section and the JSON section itself.
+ */
+export function extractJsonSection(content: string): {
+	body: string;
+	jsonSection: string;
+} {
+	const match = content.match(PATTERN);
+	if (!match || match.index === undefined)
+		return { body: content, jsonSection: "" };
+	return {
+		body: content.slice(0, match.index),
+		jsonSection: match[0],
+	};
+}
+
 // ─── Types ───
 
 export type Metadata = Record<string, unknown>;

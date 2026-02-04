@@ -6,15 +6,10 @@
 import type { Transform } from "../../../../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { goBackLinkHelper } from "../../../../../../stateless-helpers/go-back-link/go-back-link";
 import { noteMetadataHelper } from "../../../../../../stateless-helpers/note-metadata";
-import { logger } from "../../../../../../utils/logger";
 import type { Codecs } from "../../../../codecs";
 import type { SectionNodeSegmentId } from "../../../../codecs/segment-id";
 import { sectionChainToPathParts } from "../../../../paths/path-finder";
 import { makeCodexBasename } from "../format-codex-line";
-
-/** Pattern to match JSON metadata section at end of file */
-const JSON_META_PATTERN =
-	/(\n*<section\s+id=[{"]textfresser_meta_keep_me_invisible[}"]>[\s\S]*?<\/section>\n*)$/;
 
 /**
  * Create transform that strips backlink from a scroll.
@@ -24,28 +19,10 @@ const JSON_META_PATTERN =
  */
 export function makeStripScrollBacklinkTransform(): Transform {
 	return (content: string): string => {
-		// Extract JSON metadata section (at end of file) to preserve it
-		const jsonMetaMatch = content.match(JSON_META_PATTERN);
-		const jsonMeta = jsonMetaMatch?.[1] ?? "";
-		const contentWithoutJsonMeta = jsonMeta
-			? content.slice(0, -jsonMeta.length)
-			: content;
-
-		// Use goBackLinkHelper.strip to remove go-back link
-		// noteMetadataHelper.stripOnlyFrontmatter preserves JSON meta
-		const withoutFm = noteMetadataHelper.stripOnlyFrontmatter(
-			contentWithoutJsonMeta,
-		);
-		const stripped = goBackLinkHelper.strip(withoutFm);
-
-		// Re-extract frontmatter from original to preserve it
-		const fmMatch = contentWithoutJsonMeta.match(
-			/^---\r?\n[\s\S]*?\r?\n---\r?\n?/,
-		);
-		if (fmMatch) {
-			return `${fmMatch[0]}${stripped}${jsonMeta}`;
-		}
-		return `${stripped}${jsonMeta}`;
+		const { frontmatter, body, jsonSection } =
+			noteMetadataHelper.decompose(content);
+		const stripped = goBackLinkHelper.strip(body);
+		return `${frontmatter}${stripped}${jsonSection}`;
 	};
 }
 
@@ -87,47 +64,15 @@ export function makeBacklinkTransform(
 			return content;
 		}
 
-		// Extract JSON metadata section (at end of file) to preserve it
-		const jsonMetaMatch = content.match(JSON_META_PATTERN);
-		const jsonMeta = jsonMetaMatch?.[1] ?? "";
-		const contentWithoutJsonMeta = jsonMeta
-			? content.slice(0, -jsonMeta.length)
-			: content;
+		const { frontmatter, body, jsonSection } =
+			noteMetadataHelper.decompose(content);
 
-		// Extract frontmatter if present
-		const fmMatch = contentWithoutJsonMeta.match(
-			/^(---\r?\n[\s\S]*?\r?\n---\r?\n?)/,
-		);
-		const frontmatter = fmMatch?.[1] ?? "";
-		const afterFrontmatter = fmMatch
-			? contentWithoutJsonMeta.slice(frontmatter.length)
-			: contentWithoutJsonMeta;
-
-		// Use goBackLinkHelper.add() for centralized formatting
-		// It handles stripping existing go-back links internally
-		const contentWithGoBack = goBackLinkHelper.add({
-			content: afterFrontmatter.trimStart(),
+		const contentWithGoBack = goBackLinkHelper.upsert({
+			content: body.trimStart(),
 			displayName: parentName,
 			targetBasename: makeCodexBasename(parentPathParts),
 		});
 
-		// Defensive: check if strip left a go-back link (regex mismatch, can cause duplicates)
-		// Need to check the body after goBackLinkHelper.add() stripped it
-		const bodyAfterLink = goBackLinkHelper.strip(
-			afterFrontmatter.trimStart(),
-		);
-		const firstNonEmptyLine = bodyAfterLink
-			.split("\n")
-			.map((l) => l.trim())
-			.find((l) => l.length > 0);
-		if (firstNonEmptyLine && goBackLinkHelper.isMatch(firstNonEmptyLine)) {
-			logger.warn(
-				"[makeBacklinkTransform] strip left a go-back link; regex may not match on-disk format",
-				{ firstLine: firstNonEmptyLine.slice(0, 80) },
-			);
-		}
-
-		// Re-assemble: [frontmatter]<contentWithGoBack>[json-meta]
-		return `${frontmatter}${contentWithGoBack}${jsonMeta}`;
+		return `${frontmatter}${contentWithGoBack}${jsonSection}`;
 	};
 }

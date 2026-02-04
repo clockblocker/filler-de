@@ -115,6 +115,21 @@ function parseValue(raw: string): unknown {
 	return raw;
 }
 
+// ─── Extract ───
+
+/**
+ * Extract frontmatter as raw string (not parsed).
+ * Returns the frontmatter block including delimiters and the remaining body.
+ */
+export function extractFrontmatter(content: string): {
+	frontmatter: string;
+	body: string;
+} {
+	const match = content.match(FRONTMATTER_PATTERN);
+	if (!match) return { body: content, frontmatter: "" };
+	return { body: content.slice(match[0].length), frontmatter: match[0] };
+}
+
 // ─── Read ───
 
 /**

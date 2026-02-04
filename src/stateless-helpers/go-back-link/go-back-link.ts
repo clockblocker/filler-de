@@ -11,6 +11,7 @@
 import { PREFIX_OF_CODEX } from "../../commanders/librarian/types/consts/literals";
 import { getParsedUserSettings } from "../../global-state/global-state";
 import { BACK_ARROW, LINE_BREAK, SPACE_F } from "../../types/literals";
+import { logger } from "../../utils/logger";
 import type { GoBackLinkInfo } from "./types";
 
 /**
@@ -120,6 +121,39 @@ function add({
 }
 
 /**
+ * Upsert go-back link with defensive check.
+ * Like add(), but logs a warning if strip() failed to remove existing go-back link
+ * (indicates regex mismatch that could cause duplicate links).
+ */
+function upsert({
+	content,
+	targetBasename,
+	displayName,
+}: {
+	content: string;
+	targetBasename: string;
+	displayName: string;
+}): string {
+	const body = strip(content);
+
+	// Defensive: check if strip left a go-back link (regex mismatch can cause duplicates)
+	const firstNonEmptyLine = body
+		.split("\n")
+		.map((l) => l.trim())
+		.find((l) => l.length > 0);
+
+	if (firstNonEmptyLine && isMatch(firstNonEmptyLine)) {
+		logger.warn(
+			"[goBackLinkHelper.upsert] strip left a go-back link; regex may not match on-disk format",
+			{ firstLine: firstNonEmptyLine.slice(0, 80) },
+		);
+	}
+
+	const link = build(targetBasename, displayName);
+	return `${LINE_BREAK}${SPACE_F}${link}${SPACE_F}${LINE_BREAK}${LINE_BREAK}${body}`;
+}
+
+/**
  * Go-back link helper object with grouped functions.
  */
 export const goBackLinkHelper = {
@@ -129,4 +163,5 @@ export const goBackLinkHelper = {
 	isMatch,
 	parse,
 	strip,
+	upsert,
 };
