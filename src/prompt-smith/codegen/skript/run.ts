@@ -56,9 +56,6 @@ async function generateForLanguage(
 	fs.mkdirSync(outputDir, { recursive: true });
 	fs.writeFileSync(outputPath, fileContent);
 
-	logger.info(
-		`  ✓ Generated: ${toKebabCase(targetLanguage)}/${toKebabCase(knownLanguage)}/${fileName}`,
-	);
 	return true;
 }
 
@@ -183,7 +180,6 @@ async function main(): Promise<void> {
 	generateIndex(generated);
 
 	// Run bun fix to format generated files
-	logger.info("Running bun fix...");
 	try {
 		execSync("bun fix", { stdio: "inherit" });
 	} catch {

@@ -12,7 +12,11 @@ import {
  */
 export function createSelectAllHandler(): EventHandler<SelectAllPayload> {
 	return {
-		doesApply: () => true, // Always try to handle select-all events
+		doesApply: (payload) => {
+			const { from, to } = calculateSmartRange(payload.content);
+			// Only intercept when we would set a custom selection (not passthrough)
+			return (from !== 0 || to !== payload.content.length) && from < to;
+		},
 		handle: (payload) => {
 			const { from, to } = calculateSmartRange(payload.content);
 

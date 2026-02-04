@@ -110,6 +110,5 @@ export function ensurePartsFormat(): Result<void, FormatError[]> {
 		return err(errors);
 	}
 
-	logger.info("✓ All prompt parts correctly formatted");
 	return ok(undefined);
 }

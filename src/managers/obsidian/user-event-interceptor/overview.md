@@ -38,7 +38,7 @@ DOM Event → Detector → Codec.encode() → Payload → Handler.doesApply()?
 | ClipboardCopy | copy/cut | Strip metadata from copied text |
 | CheckboxClicked | task checkbox | Update codex completion status |
 | CheckboxInFrontmatterClicked | property checkbox | Toggle node completion |
-| SelectAll | Cmd+A | Exclude frontmatter from selection |
+| SelectAll | Cmd+A | Exclude frontmatter/go-back/meta from selection; only intercepted when note has exclusions, else native runs |
 | WikilinkCompleted | `]]` typed | Auto-insert display alias |
 | SelectionChanged | mouse/keyboard | Toolbar visibility |
 | ActionElementClicked | [data-action] | Button handlers |

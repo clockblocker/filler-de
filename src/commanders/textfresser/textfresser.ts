@@ -85,7 +85,7 @@ export class Textfresser {
 
 		return commandFn(input)
 			.andThen((actions) => this.dispatchActions(actions))
-			.map(() => logger.info(`[Textfresser.${commandName}] Success`))
+			.map(() => undefined)
 			.mapErr((e) => {
 				logger.warn(
 					`[Textfresser.${commandName}] Failed:`,

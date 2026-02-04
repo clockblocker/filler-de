@@ -96,47 +96,6 @@ export class Dispatcher {
 	}
 
 	async dispatch(actions: readonly VaultAction[]): Promise<DispatchResult> {
-		const dispatchTimestamp = Date.now();
-		const scrollRelatedActions = actions.filter(
-			(a) =>
-				a.kind === VaultActionKind.ProcessMdFile &&
-				"splitPath" in a.payload &&
-				a.payload.splitPath.basename.includes("Untitled"),
-		);
-		const renameActions = actions.filter(
-			(a) =>
-				(a.kind === VaultActionKind.RenameMdFile ||
-					a.kind === VaultActionKind.RenameFile ||
-					a.kind === VaultActionKind.RenameFolder) &&
-				"from" in a.payload &&
-				"to" in a.payload,
-		);
-
-		logger.info("[Dispatcher] dispatch() CALLED", {
-			actionCount: actions.length,
-			dispatchTimestamp,
-			renameActions: renameActions.map((a) => {
-				const p = a.payload as { from: AnySplitPath; to: AnySplitPath };
-				return {
-					kind: a.kind,
-					path: `${makeSystemPathForSplitPath(p.from)} → ${makeSystemPathForSplitPath(p.to)}`,
-				};
-			}),
-			scrollActions: scrollRelatedActions.map((a) => ({
-				kind: a.kind,
-				path:
-					"splitPath" in a.payload
-						? makeSystemPathForSplitPath(a.payload.splitPath)
-						: "unknown",
-				transformName:
-					a.kind === VaultActionKind.ProcessMdFile &&
-					"transform" in a.payload
-						? a.payload.transform.name
-						: undefined,
-			})),
-			scrollRelatedCount: scrollRelatedActions.length,
-		});
-
 		if (actions.length === 0) {
 			return ok(undefined);
 		}
@@ -144,30 +103,6 @@ export class Dispatcher {
 		// Ensure all requirements are met: check existence, filter invalid deletes, add missing creates
 		const withEnsured = await this.ensureAllRequirementsMet(actions);
 		const collapsed = await collapseActions(withEnsured);
-
-		// Log ProcessMdFile keys after collapse (for duplicated go-back investigation)
-		const collapsedProcess = collapsed.filter(
-			(a) => a.kind === VaultActionKind.ProcessMdFile,
-		);
-		if (collapsedProcess.length > 0) {
-			const keys = collapsedProcess.map((a) =>
-				makeSystemPathForSplitPath(a.payload.splitPath),
-			);
-			const keyCounts = new Map<string, number>();
-			for (const k of keys) {
-				keyCounts.set(k, (keyCounts.get(k) ?? 0) + 1);
-			}
-			const duplicatePaths = [...keyCounts.entries()].filter(
-				([_, n]) => n > 1,
-			);
-			logger.info("[Dispatcher] ProcessMdFile keys after collapse", {
-				duplicatePaths:
-					duplicatePaths.length > 0 ? duplicatePaths : undefined,
-				keys,
-				processCount: collapsedProcess.length,
-				uniqueKeys: keyCounts.size,
-			});
-		}
 
 		// Sort by dependencies using topological sort
 		// Note: Dependency graph is built AFTER ensureDestinationsExist, so newly added
@@ -204,45 +139,6 @@ export class Dispatcher {
 								.splitPath,
 						);
 
-			// Extra logging for ProcessMdFile to debug race conditions
-			const isScrollRelated =
-				action.kind === VaultActionKind.ProcessMdFile &&
-				"splitPath" in action.payload &&
-				action.payload.splitPath.basename.includes("Untitled");
-			const isRenameInvolvingUntitled =
-				(action.kind === VaultActionKind.RenameMdFile ||
-					action.kind === VaultActionKind.RenameFile ||
-					action.kind === VaultActionKind.RenameFolder) &&
-				"from" in action.payload &&
-				"to" in action.payload &&
-				((
-					action.payload as { from: AnySplitPath }
-				).from.basename.includes("Untitled") ||
-					(
-						action.payload as { to: AnySplitPath }
-					).to.basename.includes("Untitled"));
-
-			if (isScrollRelated) {
-				logger.info("[Dispatcher] BEFORE ProcessMdFile execution", {
-					batch: currentBatch,
-					index: i,
-					path: actionPath,
-					timestamp: Date.now(),
-					transformName:
-						"transform" in action.payload
-							? action.payload.transform.name
-							: "before/after",
-				});
-			}
-			if (isRenameInvolvingUntitled) {
-				logger.info("[Dispatcher] BEFORE Rename execution", {
-					batch: currentBatch,
-					index: i,
-					path: actionPath,
-					timestamp: Date.now(),
-				});
-			}
-
 			try {
 				const result = await this.executor.execute(action);
 				if (result.isErr()) {
@@ -268,27 +164,6 @@ export class Dispatcher {
 						result: "err",
 					});
 				} else {
-					if (isScrollRelated) {
-						logger.info(
-							"[Dispatcher] AFTER ProcessMdFile execution",
-							{
-								batch: currentBatch,
-								index: i,
-								path: actionPath,
-								result: "ok",
-								timestamp: Date.now(),
-							},
-						);
-					}
-					if (isRenameInvolvingUntitled) {
-						logger.info("[Dispatcher] AFTER Rename execution", {
-							batch: currentBatch,
-							index: i,
-							path: actionPath,
-							result: "ok",
-							timestamp: Date.now(),
-						});
-					}
 					// Add to execution trace
 					this._debugExecutionTrace.push({
 						batch: currentBatch,

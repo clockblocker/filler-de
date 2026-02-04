@@ -1,4 +1,3 @@
-import { logger } from "../../../../../utils/logger";
 import {
 	isProcessAction,
 	isRenameAction,
@@ -25,16 +24,6 @@ function getTransform(
 export async function collapseActions(
 	actions: readonly VaultAction[],
 ): Promise<VaultAction[]> {
-	// DEBUG: Log incoming actions
-	const processActions = actions.filter(isProcessAction);
-	if (processActions.length > 0) {
-		logger.info("[Collapse] === INPUT ===", {
-			processActions: processActions.length,
-			processPaths: processActions.map((a) => makeKeyForAction(a)),
-			totalActions: actions.length,
-		});
-	}
-
 	const byPath = new Map<string, VaultAction>();
 
 	// Track actions that must be kept even when they share a key with another action
@@ -115,10 +104,6 @@ export async function collapseActions(
 							existingAdditional &&
 							isProcessAction(existingAdditional)
 						) {
-							logger.info(
-								"[Collapse] COMPOSING ProcessMdFile in additionalActions",
-								{ key },
-							);
 							// Compose: existing additional then new action
 							const existingTransform = getTransform(
 								existingAdditional.payload,
@@ -141,10 +126,6 @@ export async function collapseActions(
 								},
 							});
 						} else {
-							logger.info(
-								"[Collapse] Adding ProcessMdFile to additionalActions (first)",
-								{ key },
-							);
 							additionalActions.add(action);
 						}
 						continue;
@@ -239,17 +220,6 @@ export async function collapseActions(
 
 	// Combine actions from map + additional actions
 	const result = [...byPath.values(), ...additionalActions];
-
-	// DEBUG: Log output
-	const outputProcessActions = result.filter(isProcessAction);
-	if (outputProcessActions.length > 0) {
-		logger.info("[Collapse] === OUTPUT ===", {
-			additionalActionsCount: additionalActions.size,
-			processActions: outputProcessActions.length,
-			processPaths: outputProcessActions.map((a) => makeKeyForAction(a)),
-			totalActions: result.length,
-		});
-	}
 
 	return result;
 }

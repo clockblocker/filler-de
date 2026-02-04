@@ -6,7 +6,6 @@ import {
 	type KnownLanguage,
 	type TargetLanguage,
 } from "../../../types";
-import { logger } from "../../../utils/logger";
 import { SchemasFor } from "../../schemas";
 import { ALL_PROMPT_KINDS, type PromptKind } from "../consts";
 import { getPartsPath, partsExist } from "./utils";
@@ -86,6 +85,5 @@ export async function ensureAllExamplesMatchSchema(): Promise<
 		return err(invalid);
 	}
 
-	logger.info("✓ All examples match schemas");
 	return ok(undefined);
 }

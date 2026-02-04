@@ -234,12 +234,6 @@ export function codexImpactToIncrementalRecreations(
 	tree: TreeReader,
 	codecs: Codecs,
 ): CodexAction[] {
-	logger.info("[codexImpactToIncrementalRecreations] CALLED", {
-		descendantsChangedCount: impact.descendantsChanged.length,
-		impactedChainsCount: impact.impactedChains.size,
-		renamedCount: impact.renamed.length,
-	});
-
 	const actions: CodexAction[] = [];
 
 	// 1. Convert impactedChains Set to actual chains and process only those

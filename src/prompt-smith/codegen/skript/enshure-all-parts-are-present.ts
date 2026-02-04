@@ -2,7 +2,6 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { err, ok, type Result } from "neverthrow";
 import { ALL_TARGET_LANGUAGES, KnownLanguage } from "../../../types";
-import { logger } from "../../../utils/logger";
 import { ALL_PROMPT_KINDS } from "../consts";
 import { getPartsPath } from "./utils";
 
@@ -58,6 +57,5 @@ export function ensureAllPartsArePresent(): Result<void, MissingPart[]> {
 		return err(missing);
 	}
 
-	logger.info("✓ All required prompt parts present (xxx->English)");
 	return ok(undefined);
 }

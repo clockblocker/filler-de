@@ -283,7 +283,7 @@ UserEventInterceptor (facade)
 | `CheckboxClicked` | DOM click on task checkbox | Toggle node status in codex |
 | `PropertyCheckboxClicked` | DOM click on frontmatter checkbox | Toggle scroll status |
 | `ClipboardCopy` | copy/cut events | Strip metadata from clipboard |
-| `SelectAll` | Ctrl/Cmd+A | Smart selection excluding frontmatter/metadata |
+| `SelectAll` | Ctrl/Cmd+A | Smart selection excluding frontmatter/go-back/meta; intercepted only when note has those exclusions, else native Cmd+A runs |
 | `WikilinkCompleted` | Editor `]]` typed | Auto-insert alias for library links |
 
 ### Event Callbacks
