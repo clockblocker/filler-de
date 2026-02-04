@@ -113,7 +113,11 @@ export function splitStrInBlocks(
 
 	// Strip decorations (*, **, ~~, ==) before segmentation
 	// They'll be restored to each sentence individually after segmentation
-	const { strippedText, spans: decorationSpans } = stripDecorations(safeText);
+	const {
+		strippedText,
+		spans: decorationSpans,
+		strippedToOriginalOffset,
+	} = stripDecorations(safeText);
 
 	// Create offset mapping for later heading placement
 	const offsetMap = offsetMapperHelper.createRemovalMap(
@@ -166,9 +170,11 @@ export function splitStrInBlocks(
 	const blocks = groupSentencesIntoBlocks(withDecorations, fullConfig);
 
 	// Restore protected content in blocks BEFORE heading insertion
+	// Pass strippedToOriginalOffset to map: stripped → protected → filtered
 	const blocksWithRestoredContent = restoreBlocksContent(
 		blocks,
 		protectedItems,
+		strippedToOriginalOffset,
 	);
 
 	// Create protected-to-filtered offset map for HR placement

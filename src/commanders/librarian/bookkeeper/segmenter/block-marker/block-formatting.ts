@@ -121,14 +121,21 @@ export function formatBlocksWithMarkers(
 
 /**
  * Restore protected markdown content within sentence texts in blocks.
- * Also adjusts sourceOffset to map from protected-space to filtered-space,
+ * Also adjusts sourceOffset to map from stripped-space to filtered-space,
  * so that the heading offset map works correctly.
+ *
+ * Offset conversion chain: stripped → protected → filtered
+ *
+ * @param strippedToProtected - Maps offsets from stripped space (after decoration removal)
+ *                              to protected space (before decoration removal). If not provided,
+ *                              assumes no decoration stripping occurred (identity mapping).
  */
 export function restoreBlocksContent(
 	blocks: Block[],
 	protectedItems: ProtectedContent[],
+	strippedToProtected?: (offset: number) => number,
 ): Block[] {
-	if (protectedItems.length === 0) return blocks;
+	if (protectedItems.length === 0 && !strippedToProtected) return blocks;
 
 	// Convert ProtectedContent[] to ReplacedItem[] for the helper
 	const replacedItems: ReplacedItem[] = protectedItems.map((item) => ({
@@ -146,10 +153,15 @@ export function restoreBlocksContent(
 				s.text,
 				protectedItems,
 			);
+			// Convert: stripped → protected → filtered
+			const protectedOffset = strippedToProtected
+				? strippedToProtected(s.sourceOffset)
+				: s.sourceOffset;
+			const filteredOffset = protectedToFiltered(protectedOffset);
 			return {
 				...s,
 				charCount: restoredText.length,
-				sourceOffset: protectedToFiltered(s.sourceOffset),
+				sourceOffset: filteredOffset,
 				text: restoredText,
 			};
 		}),
