@@ -174,6 +174,14 @@ if (result.isErr()) {
 - Use Zod for runtime validation
 - Trust switch narrowing - no redundant casts
 
+### Zod: Use v3 Import
+The project uses Zod v4, but all application code imports **v3** compat:
+```typescript
+import { z } from "zod/v3";  // ✅ always use this
+import { z } from "zod";     // ❌ this is v4 — don't use
+```
+Reason: `prompt-smith` / AI API code relies on v3 semantics (e.g. `z.record(valueSchema)` takes one arg for value, `.passthrough()` not deprecated).
+
 ### Logging
 - Use `logger` from `src/utils/logger`, NOT console.*
 - Stringify objects: `logger.info("data:", JSON.stringify(obj))`
