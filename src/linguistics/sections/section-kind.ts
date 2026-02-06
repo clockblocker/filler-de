@@ -32,5 +32,8 @@ export const TitleReprFor = {
 		German: "Abweichungen",
 	},
 	[DictSectionKind.Inflection]: { English: "Inflection", German: "Flexion" },
-	[DictSectionKind.Translation]: { English: "Translation", German: "Übersetzung" },
+	[DictSectionKind.Translation]: {
+		English: "Translation",
+		German: "Übersetzung",
+	},
 } satisfies Record<DictSectionKind, Record<TargetLanguage, string>>;

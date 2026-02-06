@@ -6,7 +6,7 @@ import { getPartsPath, wrapInXmlTag } from "./utils";
 interface PromptParts {
 	agentRole: string;
 	taskDescription: string;
-	examples: { input: string; output: string }[];
+	examples: { input: unknown; output: unknown }[];
 }
 
 async function loadParts(
@@ -27,11 +27,17 @@ async function loadParts(
 	return { agentRole, examples, taskDescription };
 }
 
-function formatExamples(examples: { input: string; output: string }[]): string {
+function serialize(value: unknown): string {
+	return typeof value === "string" ? value : JSON.stringify(value);
+}
+
+function formatExamples(
+	examples: { input: unknown; output: unknown }[],
+): string {
 	return examples
 		.map(
 			(ex, i) =>
-				`<example-${i + 1}>\n<input>\n${ex.input}\n</input>\n<output>\n${ex.output}\n</output>\n</example-${i + 1}>`,
+				`<example-${i + 1}>\n<input>\n${serialize(ex.input)}\n</input>\n<output>\n${serialize(ex.output)}\n</output>\n</example-${i + 1}>`,
 		)
 		.join("\n\n");
 }

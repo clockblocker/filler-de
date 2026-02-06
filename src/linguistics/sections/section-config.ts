@@ -35,11 +35,18 @@ type SectionQuery =
 	| { unit: "Morphem" | "Phrasem" }
 	| { unit: "Lexem"; pos: POS };
 
-export function getSectionsFor(query: { unit: "Lexem"; pos: POS }): readonly DictSectionKind[];
-export function getSectionsFor(query: { unit: "Morphem" | "Phrasem" }): readonly DictSectionKind[];
+export function getSectionsFor(query: {
+	unit: "Lexem";
+	pos: POS;
+}): readonly DictSectionKind[];
+export function getSectionsFor(query: {
+	unit: "Morphem" | "Phrasem";
+}): readonly DictSectionKind[];
 export function getSectionsFor(query: SectionQuery): readonly DictSectionKind[];
 
-export function getSectionsFor(query: SectionQuery): readonly DictSectionKind[] {
+export function getSectionsFor(
+	query: SectionQuery,
+): readonly DictSectionKind[] {
 	switch (query.unit) {
 		case "Lexem":
 			return sectionsForLexemPos[query.pos];

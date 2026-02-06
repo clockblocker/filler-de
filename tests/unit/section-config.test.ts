@@ -68,7 +68,7 @@ describe("sectionsForMorphem", () => {
 
 describe("getSectionsFor", () => {
 	test("returns correct sections for Lexem+Noun", () => {
-		expect(getSectionsFor({ unit: "Lexem", pos: "Noun" })).toBe(
+		expect(getSectionsFor({ pos: "Noun", unit: "Lexem" })).toBe(
 			sectionsForLexemPos.Noun,
 		);
 	});

@@ -4,10 +4,12 @@ import {
 	type PromptKind,
 	PromptKind as PromptKindEnum,
 } from "../codegen/consts";
+import { morphemSchemas } from "./morphem";
 import { translateSchemas } from "./translate";
 
 export const SchemasFor = {
 	[PromptKindEnum.Translate]: translateSchemas,
+	[PromptKindEnum.Morphem]: morphemSchemas,
 } satisfies Record<
 	PromptKind,
 	{ userInputSchema: z.ZodTypeAny; agentOutputSchema: z.ZodTypeAny }

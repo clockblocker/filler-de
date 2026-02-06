@@ -678,7 +678,18 @@ type LanguagesConfig = {
 // Default: { known: "Russian", target: "German" }
 ```
 
-### 10.7 Adding a New Language or PromptKind
+### 10.7 Bilingual vs Target-Language-Only Prompts
+
+Some PromptKinds depend on both the target language and the user's known language (**bilingual**), while others only depend on the target language (**target-language-only**):
+
+| Category | Example PromptKinds | Depends on known language? |
+|----------|-------------------|---------------------------|
+| **Bilingual** | Translate | Yes — output language varies by user's known language |
+| **Target-language-only** | Morphem | No — morpheme analysis is purely about target language structure |
+
+For **target-language-only** prompts, only the mandatory `english/` known-language path is created. The codegen fallback mechanism automatically reuses this English prompt for other known languages (e.g., Russian), since the prompt content is identical regardless of the user's native language.
+
+### 10.8 Adding a New Language or PromptKind
 
 **New language pair** (e.g., French→English):
 ```bash
@@ -694,7 +705,7 @@ bun run codegen:prompts
 4. Create prompt-parts for each language pair
 5. Run codegen
 
-### 10.8 API Integration
+### 10.9 API Integration
 
 **API Service** (`src/stateless-helpers/api-service.ts`):
 - Model: `gemini-2.5-flash-lite`

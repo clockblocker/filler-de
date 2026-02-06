@@ -1,5 +1,5 @@
 import { z } from "zod/v3";
-
+import type { LinguisticUnitKind, SurfaceKind } from "../enums/core";
 import {
 	type POS,
 	POS_TAGS,
@@ -8,8 +8,6 @@ import {
 	posFormFromPosTag,
 	posTagFormFromPos,
 } from "../enums/linguistic-units/lexem/pos";
-import type { LinguisticUnitKind } from "../enums/core";
-import type { SurfaceKind } from "../enums/core";
 import {
 	LINGUISTIC_UNIT_KIND_TAGS,
 	type LinguisticUnitKindTag,
