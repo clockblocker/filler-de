@@ -353,9 +353,25 @@ export default class TextEaterPlugin extends Plugin {
 		});
 
 		this.addCommand({
-			editorCheckCallback: () => {},
+			editorCheckCallback: (checking: boolean) => {
+				if (!checking) {
+					void this.commandExecutor?.(CommandKind.Lemma);
+				}
+				return true;
+			},
+			id: "lemma",
+			name: "Classify word (Lemma)",
+		});
+
+		this.addCommand({
+			editorCheckCallback: (checking: boolean) => {
+				if (!checking) {
+					void this.commandExecutor?.(CommandKind.Generate);
+				}
+				return true;
+			},
 			id: "new-gen-command",
-			name: "new-gen-command",
+			name: "Generate dictionary entry",
 		});
 
 		this.addCommand({

@@ -1,23 +1,59 @@
 import { errAsync, ok, ResultAsync } from "neverthrow";
-import type { VaultAction } from "../../../../managers/obsidian/vault-action-manager";
+import {
+	type VaultAction,
+	VaultActionKind,
+} from "../../../../managers/obsidian/vault-action-manager";
 import { PromptKind } from "../../../../prompt-smith/codegen/consts";
+import { buildAttestationFromSelection } from "../../common/attestation/builders/build-from-selection";
+import type { Attestation } from "../../common/attestation/types";
 import {
 	type CommandError,
 	CommandErrorKind,
 	type CommandInput,
 } from "../types";
 
-/** Lemma command: classify a word and store result in state (recon only, no vault actions). */
+/**
+ * Resolve attestation: prefer wikilink click context, fall back to text selection.
+ */
+function resolveAttestation(input: CommandInput): Attestation | null {
+	const { textfresserState, commandContext } = input;
+
+	if (textfresserState.attestationForLatestNavigated) {
+		return textfresserState.attestationForLatestNavigated;
+	}
+
+	const selection = commandContext.selection;
+	if (selection?.text) {
+		return buildAttestationFromSelection(
+			selection as typeof selection & { text: string },
+		);
+	}
+
+	return null;
+}
+
+/**
+ * Build a wikilink from surface and lemma.
+ * If lemma differs from surface: [[lemma|surface]], else [[surface]].
+ */
+function buildWikilink(surface: string, lemma: string): string {
+	return lemma !== surface ? `[[${lemma}|${surface}]]` : `[[${surface}]]`;
+}
+
+/**
+ * Lemma command: classify a word, store result in state, and wrap the
+ * surface text in a wikilink inside the source block.
+ */
 export function lemmaCommand(
 	input: CommandInput,
 ): ResultAsync<VaultAction[], CommandError> {
-	const { textfresserState } = input;
-	const attestation = textfresserState.attestationForLatestNavigated;
+	const { textfresserState, commandContext } = input;
+	const attestation = resolveAttestation(input);
 
 	if (!attestation) {
 		return errAsync({
 			kind: CommandErrorKind.NotEligible,
-			reason: "No attestation context available",
+			reason: "No attestation context available — select a word or click a wikilink first",
 		});
 	}
 
@@ -38,6 +74,22 @@ export function lemmaCommand(
 			...apiResult,
 			attestation,
 		};
-		return ok([] as VaultAction[]);
+
+		const wikilink = buildWikilink(surface, apiResult.lemma);
+		const rawBlock = attestation.source.textRaw;
+		const updatedBlock = rawBlock.replace(surface, wikilink);
+
+		const actions: VaultAction[] = [
+			{
+				kind: VaultActionKind.ProcessMdFile,
+				payload: {
+					after: updatedBlock,
+					before: rawBlock,
+					splitPath: attestation.source.path,
+				},
+			},
+		];
+
+		return ok(actions);
 	});
 }

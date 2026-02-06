@@ -7,7 +7,7 @@ const userInputSchema = z.object({
 });
 
 const agentOutputSchema = z.object({
-	article: z.string().optional(),
+	article: z.string().nullable().optional(),
 	emoji: z.string(),
 	ipa: z.string(),
 });

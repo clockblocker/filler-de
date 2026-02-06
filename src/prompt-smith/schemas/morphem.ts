@@ -11,9 +11,9 @@ const agentOutputSchema = z.object({
 	morphemes: z.array(
 		z.object({
 			kind: MorphemeKindSchema,
-			lemma: z.string().optional(),
+			lemma: z.string().nullable().optional(),
 			surf: z.string(),
-			tags: z.array(MorphemeTagSchema).optional(),
+			tags: z.array(MorphemeTagSchema).nullable().optional(),
 		}),
 	),
 });

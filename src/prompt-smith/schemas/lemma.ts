@@ -17,7 +17,7 @@ const userInputSchema = z.object({
 const agentOutputSchema = z.object({
 	lemma: z.string(),
 	linguisticUnit: LinguisticUnitKindSchema,
-	pos: POSSchemaV3.optional(),
+	pos: POSSchemaV3.nullable().optional(),
 	surfaceKind: SurfaceKindSchema,
 });
 

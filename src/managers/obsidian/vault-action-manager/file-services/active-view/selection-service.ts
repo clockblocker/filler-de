@@ -38,18 +38,11 @@ export class SelectionService {
 		// Get selection text (may be null if just caret)
 		const selection = this.activeFileService.getSelection();
 
-		let position: number;
-		if (selection) {
-			// Has selection -> find position via indexOf
-			const idx = content.indexOf(selection);
-			if (idx === -1) return null;
-			position = idx;
-		} else {
-			// No selection -> use cursor offset
-			const offset = this.activeFileService.getCursorOffset();
-			if (offset === null) return null;
-			position = offset;
-		}
+		// Always use cursor offset for position — indexOf(selection) is
+		// wrong when the same text appears multiple times in the file.
+		const offset = this.activeFileService.getCursorOffset();
+		if (offset === null) return null;
+		const position = offset;
 
 		// Extract surrounding block
 		const surroundingRawBlock = this.extractLine(content, position);
