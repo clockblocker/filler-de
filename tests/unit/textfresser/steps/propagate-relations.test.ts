@@ -1,36 +1,36 @@
 import { describe, expect, it } from "bun:test";
-import { propagateRelations } from "../../../../src/commanders/textfresser/commands/generate/steps/propagate-relations";
 import type { GenerateSectionsResult } from "../../../../src/commanders/textfresser/commands/generate/steps/generate-sections";
-import { VaultActionKind } from "../../../../src/managers/obsidian/vault-action-manager/types/vault-action";
+import { propagateRelations } from "../../../../src/commanders/textfresser/commands/generate/steps/propagate-relations";
 import type { TextfresserState } from "../../../../src/commanders/textfresser/textfresser";
+import { VaultActionKind } from "../../../../src/managers/obsidian/vault-action-manager/types/vault-action";
 
 function makeCtx(
 	relations: GenerateSectionsResult["relations"],
 	lemma = "Kohlekraftwerk",
 ): GenerateSectionsResult {
 	return {
-		relations,
-		allEntries: [],
-		existingEntries: [],
-		matchedEntry: null,
-		nextIndex: 1,
-		inflectionCells: [],
-		failedSections: [],
 		actions: [],
-		resultingActions: [],
+		allEntries: [],
 		commandContext: {
 			activeFile: { content: "", splitPath: { basename: lemma, extension: "md", kind: "MdFile", pathParts: [] } },
 		},
+		existingEntries: [],
+		failedSections: [],
+		inflectionCells: [],
+		matchedEntry: null,
+		nextIndex: 1,
+		relations,
+		resultingActions: [],
 		textfresserState: {
+			languages: { known: "English", target: "German" },
 			latestLemmaResult: {
+				attestation: { source: { ref: "![[Test#^1|^]]" } },
+				disambiguationResult: null,
 				lemma,
 				linguisticUnit: "Lexem",
 				pos: "Noun",
 				surfaceKind: "Lemma",
-				attestation: { source: { ref: "![[Test#^1|^]]" } },
-				disambiguationResult: null,
 			},
-			languages: { known: "English", target: "German" },
 		} as unknown as TextfresserState,
 	} as unknown as GenerateSectionsResult;
 }

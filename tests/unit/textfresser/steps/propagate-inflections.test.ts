@@ -1,31 +1,24 @@
 import { describe, expect, it } from "bun:test";
-import { propagateInflections } from "../../../../src/commanders/textfresser/commands/generate/steps/propagate-inflections";
 import type { GenerateSectionsResult } from "../../../../src/commanders/textfresser/commands/generate/steps/generate-sections";
+import { propagateInflections } from "../../../../src/commanders/textfresser/commands/generate/steps/propagate-inflections";
+import type { TextfresserState } from "../../../../src/commanders/textfresser/textfresser";
 import type { NounInflectionCell } from "../../../../src/linguistics/german/inflection/noun";
 import { VaultActionKind } from "../../../../src/managers/obsidian/vault-action-manager/types/vault-action";
-import type { TextfresserState } from "../../../../src/commanders/textfresser/textfresser";
 
 function makeCtx(
 	inflectionCells: NounInflectionCell[],
 	lemma = "Kraftwerk",
 ): GenerateSectionsResult {
 	return {
-		inflectionCells,
+		actions: [],
 		allEntries: [
 			{
-				id: "LX-LM-NOUN-1",
 				headerContent: `[[${lemma}]]`,
-				sections: [],
+				id: "LX-LM-NOUN-1",
 				meta: {},
+				sections: [],
 			},
 		],
-		existingEntries: [],
-		matchedEntry: null,
-		nextIndex: 1,
-		relations: [],
-		failedSections: [],
-		actions: [],
-		resultingActions: [],
 		commandContext: {
 			activeFile: {
 				content: "",
@@ -37,16 +30,23 @@ function makeCtx(
 				},
 			},
 		},
+		existingEntries: [],
+		failedSections: [],
+		inflectionCells,
+		matchedEntry: null,
+		nextIndex: 1,
+		relations: [],
+		resultingActions: [],
 		textfresserState: {
+			languages: { known: "English", target: "German" },
 			latestLemmaResult: {
+				attestation: { source: { ref: "![[Test#^1|^]]" } },
+				disambiguationResult: null,
 				lemma,
 				linguisticUnit: "Lexem",
 				pos: "Noun",
 				surfaceKind: "Lemma",
-				attestation: { source: { ref: "![[Test#^1|^]]" } },
-				disambiguationResult: null,
 			},
-			languages: { known: "English", target: "German" },
 		} as unknown as TextfresserState,
 	} as unknown as GenerateSectionsResult;
 }
@@ -61,7 +61,7 @@ describe("propagateInflections", () => {
 
 	it("creates UpsertMdFile + ProcessMdFile for forms different from lemma", () => {
 		const cells: NounInflectionCell[] = [
-			{ case: "Nominative", number: "Plural", article: "die", form: "Kraftwerke" },
+			{ article: "die", case: "Nominative", form: "Kraftwerke", number: "Plural" },
 		];
 		const ctx = makeCtx(cells);
 		const result = propagateInflections(ctx);
@@ -75,8 +75,8 @@ describe("propagateInflections", () => {
 
 	it("appends same-note entry when form equals lemma", () => {
 		const cells: NounInflectionCell[] = [
-			{ case: "Nominative", number: "Singular", article: "das", form: "Kraftwerk" },
-			{ case: "Accusative", number: "Singular", article: "das", form: "Kraftwerk" },
+			{ article: "das", case: "Nominative", form: "Kraftwerk", number: "Singular" },
+			{ article: "das", case: "Accusative", form: "Kraftwerk", number: "Singular" },
 		];
 		const ctx = makeCtx(cells);
 		const result = propagateInflections(ctx);
@@ -98,10 +98,10 @@ describe("propagateInflections", () => {
 
 	it("groups multiple cells by form word", () => {
 		const cells: NounInflectionCell[] = [
-			{ case: "Nominative", number: "Plural", article: "die", form: "Kraftwerke" },
-			{ case: "Accusative", number: "Plural", article: "die", form: "Kraftwerke" },
-			{ case: "Genitive", number: "Plural", article: "der", form: "Kraftwerke" },
-			{ case: "Dative", number: "Plural", article: "den", form: "Kraftwerken" },
+			{ article: "die", case: "Nominative", form: "Kraftwerke", number: "Plural" },
+			{ article: "die", case: "Accusative", form: "Kraftwerke", number: "Plural" },
+			{ article: "der", case: "Genitive", form: "Kraftwerke", number: "Plural" },
+			{ article: "den", case: "Dative", form: "Kraftwerken", number: "Plural" },
 		];
 		const ctx = makeCtx(cells);
 		const result = propagateInflections(ctx);
@@ -114,8 +114,8 @@ describe("propagateInflections", () => {
 
 	it("builds combined header with case/number tags in correct order", () => {
 		const cells: NounInflectionCell[] = [
-			{ case: "Dative", number: "Plural", article: "den", form: "Kraftwerken" },
-			{ case: "Genitive", number: "Plural", article: "der", form: "Kraftwerken" },
+			{ article: "den", case: "Dative", form: "Kraftwerken", number: "Plural" },
+			{ article: "der", case: "Genitive", form: "Kraftwerken", number: "Plural" },
 		];
 		const ctx = makeCtx(cells);
 		const result = propagateInflections(ctx);

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { ok, okAsync, errAsync } from "neverthrow";
+import { errAsync, ok, okAsync } from "neverthrow";
 import { disambiguateSense } from "../../../../src/commanders/textfresser/commands/lemma/steps/disambiguate-sense";
-import type { VaultActionManager } from "../../../../src/managers/obsidian/vault-action-manager";
 import type { PromptRunner } from "../../../../src/commanders/textfresser/prompt-runner";
+import type { VaultActionManager } from "../../../../src/managers/obsidian/vault-action-manager";
 import type { SplitPathToMdFile } from "../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 
 const MOCK_SPLIT_PATH: SplitPathToMdFile = {
@@ -40,8 +40,8 @@ function makeFailingPromptRunner(): PromptRunner {
 const API_RESULT_NOUN = {
 	lemma: "Bank",
 	linguisticUnit: "Lexem",
-	surfaceKind: "Lemma",
 	pos: "Noun",
+	surfaceKind: "Lemma",
 };
 
 /**
@@ -84,7 +84,7 @@ describe("disambiguateSense", () => {
 		const content = buildNoteContent([
 			{ id: "LX-LM-VERB-1", semantics: "to bank" },
 		]);
-		const vam = makeVam({ files: [MOCK_SPLIT_PATH], content });
+		const vam = makeVam({ content, files: [MOCK_SPLIT_PATH] });
 		const runner = makePromptRunner(null);
 		const result = await disambiguateSense(vam, runner, API_RESULT_NOUN, "context");
 		expect(result.isOk()).toBe(true);
@@ -95,7 +95,7 @@ describe("disambiguateSense", () => {
 		const content = buildNoteContent([
 			{ id: "LX-LM-NOUN-1", semantics: "Geldinstitut" },
 		]);
-		const vam = makeVam({ files: [MOCK_SPLIT_PATH], content });
+		const vam = makeVam({ content, files: [MOCK_SPLIT_PATH] });
 		const runner = makePromptRunner(1);
 		const result = await disambiguateSense(vam, runner, API_RESULT_NOUN, "Ich gehe zur Bank");
 		expect(result.isOk()).toBe(true);
@@ -106,7 +106,7 @@ describe("disambiguateSense", () => {
 		const content = buildNoteContent([
 			{ id: "LX-LM-NOUN-1", semantics: "Geldinstitut" },
 		]);
-		const vam = makeVam({ files: [MOCK_SPLIT_PATH], content });
+		const vam = makeVam({ content, files: [MOCK_SPLIT_PATH] });
 		const runner = makePromptRunner(null, "Sitzgelegenheit");
 		const result = await disambiguateSense(vam, runner, API_RESULT_NOUN, "Sitz auf der Bank");
 		expect(result.isOk()).toBe(true);
@@ -121,7 +121,7 @@ describe("disambiguateSense", () => {
 		const content = buildNoteContent([
 			{ id: "LX-LM-NOUN-1", semantics: "Geldinstitut" },
 		]);
-		const vam = makeVam({ files: [MOCK_SPLIT_PATH], content });
+		const vam = makeVam({ content, files: [MOCK_SPLIT_PATH] });
 		// LLM returns matchedIndex 99 — not a valid index
 		const runner = makePromptRunner(99, "invalid");
 		const result = await disambiguateSense(vam, runner, API_RESULT_NOUN, "context");
@@ -136,7 +136,7 @@ describe("disambiguateSense", () => {
 		const content = buildNoteContent([
 			{ id: "LX-LM-NOUN-1" },
 		]);
-		const vam = makeVam({ files: [MOCK_SPLIT_PATH], content });
+		const vam = makeVam({ content, files: [MOCK_SPLIT_PATH] });
 		const runner = makePromptRunner(null);
 		const result = await disambiguateSense(vam, runner, API_RESULT_NOUN, "context");
 		expect(result.isOk()).toBe(true);
@@ -149,7 +149,7 @@ describe("disambiguateSense", () => {
 		const content = buildNoteContent([
 			{ id: "LX-LM-NOUN-1", semantics: "Geldinstitut" },
 		]);
-		const vam = makeVam({ files: [MOCK_SPLIT_PATH], content });
+		const vam = makeVam({ content, files: [MOCK_SPLIT_PATH] });
 		const runner = makeFailingPromptRunner();
 		const result = await disambiguateSense(vam, runner, API_RESULT_NOUN, "context");
 		expect(result.isErr()).toBe(true);
@@ -160,7 +160,7 @@ describe("disambiguateSense", () => {
 		const body = "[[Bank]] ^invalid-id-format";
 		const meta = `<section id="textfresser_meta_keep_me_invisible">\n{"entries":{}}\n</section>`;
 		const content = `${body}\n\n${meta}`;
-		const vam = makeVam({ files: [MOCK_SPLIT_PATH], content });
+		const vam = makeVam({ content, files: [MOCK_SPLIT_PATH] });
 		const runner = makePromptRunner(null);
 		const result = await disambiguateSense(vam, runner, API_RESULT_NOUN, "context");
 		expect(result.isOk()).toBe(true);

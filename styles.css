@@ -166,6 +166,22 @@ body.hide-status-bar .mod-root .workspace-split {
     opacity: 0;
 }
 
+/* Remove underline from links — entries are link-heavy */
+a {
+    text-decoration: none !important;
+}
+a:hover {
+    text-decoration: none !important;
+}
+a:visited {
+    text-decoration: none !important;
+}
+
+/* Remove underline from wikilinks in Live Preview */
+.markdown-source-view.mod-cm6 .cm-underline {
+    text-decoration-line: none !important;
+}
+
 /* ------ Edge Navigation Buttons ------ */
 
 .edge-nav-btn {

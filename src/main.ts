@@ -23,13 +23,13 @@ import {
 	VaultActionKind,
 	VaultActionManagerImpl,
 } from "./managers/obsidian/vault-action-manager";
-import type { SplitPathToMdFile } from "./managers/obsidian/vault-action-manager/types/split-path";
 import { ActiveFileService } from "./managers/obsidian/vault-action-manager/file-services/active-view/active-file-service";
 import { TFileHelper } from "./managers/obsidian/vault-action-manager/file-services/background/helpers/tfile-helper";
 import { TFolderHelper } from "./managers/obsidian/vault-action-manager/file-services/background/helpers/tfolder-helper";
 import { logError } from "./managers/obsidian/vault-action-manager/helpers/issue-handlers";
 import { pathfinder } from "./managers/obsidian/vault-action-manager/helpers/pathfinder";
 import { VaultReader } from "./managers/obsidian/vault-action-manager/impl/vault-reader";
+import type { SplitPathToMdFile } from "./managers/obsidian/vault-action-manager/types/split-path";
 import { OverlayManager } from "./managers/overlay-manager";
 import { SettingsTab } from "./settings";
 import { ApiService } from "./stateless-helpers/api-service";
@@ -208,7 +208,9 @@ export default class TextEaterPlugin extends Plugin {
 							kind: VaultActionKind.ProcessMdFile,
 							payload: {
 								// Safe cast: file.extension === "md" verified above
-								splitPath: makeSplitPath(file) as SplitPathToMdFile,
+								splitPath: makeSplitPath(
+									file,
+								) as SplitPathToMdFile,
 								transform: () => cleaned,
 							},
 						},
