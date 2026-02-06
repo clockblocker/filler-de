@@ -104,13 +104,13 @@ export function propagateInflections(
 			];
 			const prefix = dictEntryIdHelper.buildPrefix(
 				"Lexem",
-				"Single",
+				"Inflected",
 				"Noun",
 			);
 			const entryId = dictEntryIdHelper.build({
 				index: dictEntryIdHelper.nextIndex(existingIds, prefix),
 				pos: "Noun",
-				surfaceKind: "Single",
+				surfaceKind: "Inflected",
 				unitKind: "Lexem",
 			});
 
@@ -146,13 +146,13 @@ export function propagateInflections(
 					const existingIds = existingEntries.map((e) => e.id);
 					const prefix = dictEntryIdHelper.buildPrefix(
 						"Lexem",
-						"Single",
+						"Inflected",
 						"Noun",
 					);
 					const entryId = dictEntryIdHelper.build({
 						index: dictEntryIdHelper.nextIndex(existingIds, prefix),
 						pos: "Noun",
-						surfaceKind: "Single",
+						surfaceKind: "Inflected",
 						unitKind: "Lexem",
 					});
 

@@ -1,5 +1,6 @@
+import { errAsync, ResultAsync } from "neverthrow";
 import { Notice, requestUrl } from "obsidian";
-import OpenAI from "openai";
+import OpenAI, { APIConnectionError, APIError } from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
 import type { z } from "zod";
 import {
@@ -8,6 +9,7 @@ import {
 	logWarning,
 } from "../managers/obsidian/vault-action-manager/helpers/issue-handlers";
 import type { TextEaterSettings } from "../types";
+import { withRetry } from "./retry";
 
 function normalizeHeaders(initHeaders?: HeadersInit): Record<string, string> {
 	if (!initHeaders) {
@@ -33,6 +35,25 @@ function normalizeHeaders(initHeaders?: HeadersInit): Record<string, string> {
 
 // 7 days
 const TTL_SECONDS = 604800;
+
+export type ApiServiceError = { reason: string };
+
+function isRetryableApiError(error: unknown): boolean {
+	if (error instanceof APIConnectionError) return true;
+	if (error instanceof APIError) {
+		return error.status === 429 || (error.status ?? 0) >= 500;
+	}
+	return false;
+}
+
+function toApiServiceError(error: unknown): ApiServiceError {
+	return {
+		reason:
+			error instanceof Error
+				? error.message
+				: `API call failed: ${String(error)}`,
+	};
+}
 
 export class ApiService {
 	private openai: OpenAI | null = null;
@@ -172,7 +193,7 @@ export class ApiService {
 		return null;
 	}
 
-	async generate<T extends z.ZodTypeAny>({
+	generate<T extends z.ZodTypeAny>({
 		systemPrompt,
 		userInput,
 		schema,
@@ -182,66 +203,75 @@ export class ApiService {
 		userInput: string;
 		schema: T;
 		withCache: boolean;
-	}): Promise<z.infer<T>> {
+	}): ResultAsync<z.infer<T>, ApiServiceError> {
 		if (!this.openai) {
-			throw new Error(
-				"OpenAI client not initialized. Make shure that you have configured the API key in the settings.",
-			);
-		}
-
-		systemPrompt = systemPrompt.replace(/^\t+/gm, "");
-
-		const cachedId = withCache
-			? await this.ensureCachedContentIdForSystemPrompt(systemPrompt)
-			: null;
-
-		const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] =
-			[];
-		if (!cachedId) {
-			messages.push({ content: systemPrompt, role: "system" });
-		}
-		messages.push({ content: userInput, role: "user" });
-
-		try {
-			const completion = await this.openai.chat.completions.parse({
-				messages,
-				model: this.model,
-				// Type assertion needed due to Zod version mismatch between our deps and OpenAI SDK
-				response_format: zodResponseFormat(
-					schema as unknown as Parameters<
-						typeof zodResponseFormat
-					>[0],
-					"data",
-				),
-				temperature: 0,
-				top_p: 0.95,
-				...(cachedId
-					? {
-							extra_body: {
-								google: { cached_content: cachedId },
-							},
-						}
-					: {}),
+			return errAsync({
+				reason: "OpenAI client not initialized. Make sure that you have configured the API key in the settings.",
 			});
-
-			const parsed = completion.choices?.[0]?.message?.parsed;
-
-			if (parsed) return parsed;
-
-			throw new Error(
-				formatError({
-					description:
-						"Failed to parse response: parsed is undefined",
-					location: "ApiService",
-				}),
-			);
-		} catch (err) {
-			throw new Error(
-				formatError({
-					description: `Failed to generate: ${err instanceof Error ? err.message : String(err)}`,
-					location: "ApiService",
-				}),
-			);
 		}
+
+		const client = this.openai;
+		const model = this.model;
+		const cleanedPrompt = systemPrompt.replace(/^\t+/gm, "");
+
+		// Cache lookup runs once before the retry loop
+		const cachePromise = withCache
+			? this.ensureCachedContentIdForSystemPrompt(cleanedPrompt)
+			: Promise.resolve(null);
+
+		return ResultAsync.fromPromise(cachePromise, toApiServiceError).andThen(
+			(cachedId) => {
+				const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] =
+					[];
+				if (!cachedId) {
+					messages.push({
+						content: cleanedPrompt,
+						role: "system",
+					});
+				}
+				messages.push({ content: userInput, role: "user" });
+
+				return withRetry(
+					async () => {
+						const completion = await client.chat.completions.parse({
+							messages,
+							model,
+							// Type assertion needed due to Zod version mismatch between our deps and OpenAI SDK
+							response_format: zodResponseFormat(
+								schema as unknown as Parameters<
+									typeof zodResponseFormat
+								>[0],
+								"data",
+							),
+							temperature: 0,
+							top_p: 0.95,
+							...(cachedId
+								? {
+										extra_body: {
+											google: {
+												cached_content: cachedId,
+											},
+										},
+									}
+								: {}),
+						});
+
+						const parsed = completion.choices?.[0]?.message?.parsed;
+
+						if (parsed) return parsed;
+
+						throw new Error(
+							formatError({
+								description:
+									"Failed to parse response: parsed is undefined",
+								location: "ApiService",
+							}),
+						);
+					},
+					isRetryableApiError,
+					toApiServiceError,
+				);
+			},
+		);
 	}
 }

@@ -10,7 +10,7 @@ Produce a short distinguishing gloss for the given German word in context.
 
 You receive:
 - word: a German word in its lemma (dictionary) form
-- pos: part of speech (Noun, Verb, Adjective, etc.)
+- pos: part of speech (Noun, Verb, Adjective, etc.) or linguistic unit type ("Phrasem" for multi-word expressions, "Morphem" for sub-word units)
 - context: the sentence where the word was encountered
 
 Return:

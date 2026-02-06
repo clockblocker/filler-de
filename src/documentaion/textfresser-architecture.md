@@ -355,8 +355,9 @@ type Attestation = {
     path: SplitPathToMdFile;        // path to the source file
   };
   target: {
-    surface: string;  // the word as it appears in text
-    lemma?: string;   // if wikilink is [[lemma|surface]], the lemma
+    surface: string;       // the word as it appears in text
+    lemma?: string;        // if wikilink is [[lemma|surface]], the lemma
+    offsetInBlock?: number; // char offset of surface within textRaw (for positional replacement)
   };
 };
 ```
@@ -386,7 +387,8 @@ Lemma command resolves attestation:
   1. Check state.attestationForLatestNavigated → null
   2. Fall back to buildAttestationFromSelection(commandContext.selection)
   ↓
-Uses selection.text as surface, selection.surroundingRawBlock for context
+Uses selection.text as surface, selection.surroundingRawBlock for context,
+selection.selectionStartInBlock for positional offset (avoids wrong-occurrence bugs)
 ```
 
 **Builder**: `src/commanders/textfresser/common/attestation/builders/build-from-selection.ts`
@@ -499,6 +501,8 @@ After classification, Lemma wraps the surface in a wikilink in the source block:
 - Same lemma: `Schuck` → `[[Schuck]]`
 - Different lemma: `lief` → `[[laufen|lief]]`
 
+When `attestation.target.offsetInBlock` is available (selection-based attestation), uses **positional slice-based replacement** (`rawBlock.slice(0, offset) + wikilink + rawBlock.slice(offset + surface.length)`) to avoid replacing the wrong occurrence when the same word appears multiple times in a line. Falls back to `String.replace()` when offset is unavailable (wikilink-click attestation).
+
 Uses `ProcessMdFile` with `before: rawBlock` / `after: blockWithWikilink`.
 
 #### State Update
@@ -587,7 +591,7 @@ Matching ignores surfaceKind so that inflected encounters (e.g., "Schlosses" →
 
 **Path B (new entry)**: Determines applicable sections via `getSectionsFor()`, filtered to the **V3 set**: Header, Semantics, Morphem, Relation, Inflection, Translation, Attestation.
 
-For each applicable section:
+All LLM calls are fired in parallel via `Promise.allSettled` (none depend on each other's results). **Critical sections** (Header, Translation) throw on failure; **optional sections** (Semantics, Morphem, Relation, Inflection) degrade gracefully — failures are logged and the entry is still created. Results are assembled in correct section order after all promises settle. Applicable sections:
 
 | Section | LLM? | PromptKind | Formatter | Output |
 |---------|------|-----------|-----------|--------|
@@ -729,7 +733,7 @@ Propagation VaultActions added to ctx.actions
 
 **Stub entry format**: Header-only DictEntry with no sections:
 ```markdown
-#Nominativ/Akkusativ/Genitiv/Plural for: [[Kraftwerk]] ^LX-SNG-NOUN-1
+#Nominativ/Akkusativ/Genitiv/Plural for: [[Kraftwerk]] ^LX-IN-NOUN-1
 ```
 
 **Key design decisions**:
@@ -828,10 +832,11 @@ Translate the text between German and Russian:
 ```typescript
 // src/commanders/textfresser/prompt-runner.ts
 class PromptRunner {
-  async generate<K extends PromptKind>(kind: K, input: UserInput<K>): Promise<AgentOutput<K>> {
+  generate<K extends PromptKind>(kind: K, input: UserInput<K>): ResultAsync<AgentOutput<K>, ApiServiceError> {
     const prompt = PROMPT_FOR[this.languages.target][this.languages.known][kind];
     const schema = SchemasFor[kind].agentOutputSchema;
-    return this.apiService.generate({ schema, systemPrompt: prompt.systemPrompt, userInput: input });
+    return this.apiService.generate({ schema, systemPrompt: prompt.systemPrompt, userInput: input })
+      .map(result => result as AgentOutput<K>);
   }
 }
 ```
@@ -883,6 +888,8 @@ bun run codegen:prompts
 - Temperature: 0 (deterministic)
 - **Prompt caching**: system prompts > 2048 tokens get 7-day cached content
 - **Structured output**: `zodResponseFormat()` for type-safe JSON responses
+- **Returns** `ResultAsync<T, ApiServiceError>` — no throwing; callers chain with `.mapErr()`
+- **Retry with exponential backoff** (`src/stateless-helpers/retry.ts`): 3 attempts, 1s base delay, 2× multiplier, ±20% jitter. Retries on `APIConnectionError`, HTTP 429 (rate limit), and 5xx (server errors). Cache lookup runs once before the retry loop. Non-retryable errors (e.g., 400, 401) fail immediately.
 
 ---
 
@@ -1008,7 +1015,8 @@ To add support for a new target language (e.g., Japanese):
 | `src/managers/obsidian/vault-action-manager/` | V3: `getSplitPathsToExistingFilesWithBasename()` — find existing files by basename (vault-wide or scoped to folder) |
 | `src/stateless-helpers/dict-note/` | Parse/serialize dictionary notes |
 | `src/stateless-helpers/morpheme-formatter.ts` | Morpheme → wikilink display formatter |
-| `src/stateless-helpers/api-service.ts` | Gemini API wrapper |
+| `src/stateless-helpers/api-service.ts` | Gemini API wrapper (returns `ResultAsync`, retry on transient errors) |
+| `src/stateless-helpers/retry.ts` | Generic retry with exponential backoff (`withRetry()`) |
 | **Linguistics** | |
 | `src/linguistics/enums/core.ts` | LinguisticUnitKind, SurfaceKind |
 | `src/linguistics/enums/linguistic-units/lexem/pos.ts` | POS, PosTag |

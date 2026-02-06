@@ -26,6 +26,8 @@ export const sectionsForLexemPos: Record<POS, readonly DictSectionKind[]> = {
 
 export const sectionsForPhrasem: readonly DictSectionKind[] = [
 	S.Header,
+	S.Semantics,
+	S.Translation,
 	S.Attestation,
 	S.Relation,
 	S.FreeForm,

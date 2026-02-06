@@ -18,6 +18,8 @@ type AttestationSource = {
 type AttestationTarget = {
 	surface: string;
 	lemma?: string;
+	/** Character offset of the surface within the raw block text. Used for positional replacement. */
+	offsetInBlock?: number;
 };
 
 export type Attestation = {

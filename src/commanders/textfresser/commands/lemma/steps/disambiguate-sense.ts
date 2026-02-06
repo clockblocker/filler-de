@@ -97,7 +97,9 @@ export function disambiguateSense(
 
 		if (senses.length === 0) {
 			// All entries failed to parse — treat as new entry
-			logger.info("[disambiguate] All entries failed to parse — new entry");
+			logger.info(
+				"[disambiguate] All entries failed to parse — new entry",
+			);
 			return ResultAsync.fromSafePromise(
 				Promise.resolve(null as DisambiguationResult),
 			);
@@ -111,7 +113,9 @@ export function disambiguateSense(
 		);
 
 		if (sensesWithSemantics.length === 0) {
-			logger.info("[disambiguate] V2 legacy path — no semantics on any sense");
+			logger.info(
+				"[disambiguate] V2 legacy path — no semantics on any sense",
+			);
 			return ResultAsync.fromSafePromise(
 				Promise.resolve({
 					matchedIndex: senses[0]?.index,
@@ -121,22 +125,26 @@ export function disambiguateSense(
 
 		// Call Disambiguate prompt
 		logger.info("[disambiguate] Calling Disambiguate prompt");
-		return ResultAsync.fromPromise(
-			promptRunner.generate(PromptKind.Disambiguate, {
+		return promptRunner
+			.generate(PromptKind.Disambiguate, {
 				context,
 				lemma: apiResult.lemma,
 				senses: sensesWithSemantics,
-			}),
-			(e): CommandError => ({
-				kind: CommandErrorKind.ApiError,
-				reason: e instanceof Error ? e.message : String(e),
-			}),
-		).map((output: AgentOutput<"Disambiguate">): DisambiguationResult => {
-			logger.info(
-				`[disambiguate] Prompt returned matchedIndex=${output.matchedIndex}`,
+			})
+			.mapErr(
+				(e): CommandError => ({
+					kind: CommandErrorKind.ApiError,
+					reason: e.reason,
+				}),
+			)
+			.map(
+				(output: AgentOutput<"Disambiguate">): DisambiguationResult => {
+					logger.info(
+						`[disambiguate] Prompt returned matchedIndex=${output.matchedIndex}`,
+					);
+					if (output.matchedIndex === null) return null;
+					return { matchedIndex: output.matchedIndex };
+				},
 			);
-			if (output.matchedIndex === null) return null;
-			return { matchedIndex: output.matchedIndex };
-		});
 	});
 }

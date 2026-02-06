@@ -13,10 +13,12 @@ export function serializeEntry(
 	const { body, meta } = dictNoteHelper.serialize(ctx.allEntries);
 
 	const fullMeta = { ...meta, noteKind: DICT_ENTRY_NOTE_KIND };
-	logger.info(`[serialize] meta keys: ${JSON.stringify(Object.keys(fullMeta))}`);
+	logger.info(
+		`[serialize] meta keys: ${JSON.stringify(Object.keys(fullMeta))}`,
+	);
 
 	const transform = noteMetadataHelper.upsert(fullMeta);
-	let content = transform(body) as string;
+	const content = transform(body) as string;
 
 	return ok({
 		...ctx,

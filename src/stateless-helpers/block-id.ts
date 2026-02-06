@@ -3,11 +3,11 @@
  * Supports both alphanumeric (e.g., ^abc-123) and numeric-only (e.g., ^6) block IDs.
  */
 
-/** Pattern to match alphanumeric block ID at end of line */
-const BLOCK_ID_PATTERN = /\s\^([a-zA-Z0-9-]+)\s*$/;
+/** Pattern to match alphanumeric block ID at end of line (space before ^ optional) */
+const BLOCK_ID_PATTERN = /\s?\^([a-zA-Z0-9-]+)\s*$/;
 
-/** Pattern to match numeric-only block ID at end of line */
-const NUMERIC_BLOCK_ID_PATTERN = /\s\^(\d+)\s*$/;
+/** Pattern to match numeric-only block ID at end of line (space before ^ optional) */
+const NUMERIC_BLOCK_ID_PATTERN = /\s?\^(\d+)\s*$/;
 
 /**
  * Extract block ID from end of line if present.
@@ -36,8 +36,8 @@ function extractNumeric(line: string): string | null {
  * Matches patterns like " ^0", " ^123", etc.
  */
 function findHighestNumber(content: string): number {
-	// Match block markers at end of lines: " ^N" or "^N" at line end
-	const matches = content.match(/\s\^(\d+)(?:\s*$|\n)/gm);
+	// Match block markers at end of lines: " ^N" or "^N" at line end (space optional)
+	const matches = content.match(/\s?\^(\d+)(?:\s*$|\n)/gm);
 	if (!matches) return -1;
 
 	const numbers = matches.map((match) => {

@@ -1,4 +1,4 @@
-import { errAsync, ok, ResultAsync } from "neverthrow";
+import { errAsync, ok, type ResultAsync } from "neverthrow";
 import {
 	type VaultAction,
 	VaultActionKind,
@@ -61,16 +61,17 @@ export function lemmaCommand(
 	const surface = attestation.target.surface;
 	const context = attestation.source.textWithOnlyTargetMarked;
 
-	return ResultAsync.fromPromise(
-		textfresserState.promptRunner.generate(PromptKind.Lemma, {
+	return textfresserState.promptRunner
+		.generate(PromptKind.Lemma, {
 			context,
 			surface,
-		}),
-		(e): CommandError => ({
-			kind: CommandErrorKind.ApiError,
-			reason: e instanceof Error ? e.message : String(e),
-		}),
-	)
+		})
+		.mapErr(
+			(e): CommandError => ({
+				kind: CommandErrorKind.ApiError,
+				reason: e.reason,
+			}),
+		)
 		.andThen((apiResult) =>
 			disambiguateSense(
 				textfresserState.vam,
@@ -94,7 +95,14 @@ export function lemmaCommand(
 
 			const wikilink = buildWikilink(surface, result.lemma);
 			const rawBlock = attestation.source.textRaw;
-			const updatedBlock = rawBlock.replace(surface, wikilink);
+
+			const offset = attestation.target.offsetInBlock;
+			const updatedBlock =
+				offset !== undefined
+					? rawBlock.slice(0, offset) +
+						wikilink +
+						rawBlock.slice(offset + surface.length)
+					: rawBlock.replace(surface, wikilink);
 
 			const actions: VaultAction[] = [
 				{

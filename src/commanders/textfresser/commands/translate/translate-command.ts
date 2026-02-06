@@ -1,4 +1,4 @@
-import { errAsync, ok, ResultAsync } from "neverthrow";
+import { errAsync, ok, type ResultAsync } from "neverthrow";
 import {
 	type VaultAction,
 	VaultActionKind,
@@ -30,26 +30,28 @@ export function translateCommand(
 	// Strip wikilinks to surface text before API call
 	const apiInput = markdownHelper.replaceWikilinks(withoutBlockId);
 
-	return ResultAsync.fromPromise(
-		promptRunner.generate(PromptKind.Translate, apiInput),
-		(e) => ({
-			kind: CommandErrorKind.ApiError,
-			reason: e instanceof Error ? e.message : String(e),
-		}),
-	).andThen((translation) => {
-		// Build replacement: keep blockId with original text
-		const separator = blockIdMatch ? "\n\n" : "\n";
-		const replacement = `${rawInput}${separator}${translation}`;
+	return promptRunner
+		.generate(PromptKind.Translate, apiInput)
+		.mapErr(
+			(e): CommandError => ({
+				kind: CommandErrorKind.ApiError,
+				reason: e.reason,
+			}),
+		)
+		.andThen((translation) => {
+			// Build replacement: keep blockId with original text
+			const separator = blockIdMatch ? "\n\n" : "\n";
+			const replacement = `${rawInput}${separator}${translation}`;
 
-		return ok([
-			{
-				kind: VaultActionKind.ProcessMdFile,
-				payload: {
-					after: replacement,
-					before: rawInput,
-					splitPath: input.commandContext.activeFile.splitPath,
+			return ok([
+				{
+					kind: VaultActionKind.ProcessMdFile,
+					payload: {
+						after: replacement,
+						before: rawInput,
+						splitPath: input.commandContext.activeFile.splitPath,
+					},
 				},
-			},
-		]);
-	});
+			]);
+		});
 }

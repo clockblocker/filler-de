@@ -23,8 +23,9 @@ describe("blockIdHelper.extractFromLine", () => {
 		expect(blockIdHelper.extractFromLine("Some text with [[wikilink]]")).toBeNull();
 	});
 
-	it("returns null for block ID without leading space", () => {
-		expect(blockIdHelper.extractFromLine("text^6")).toBeNull();
+	it("extracts block ID without leading space", () => {
+		expect(blockIdHelper.extractFromLine("text^6")).toBe("6");
+		expect(blockIdHelper.extractFromLine("text.^13")).toBe("13");
 	});
 
 	it("returns null for block ID not at end of line", () => {
@@ -99,6 +100,11 @@ describe("blockIdHelper.matchesPattern", () => {
 
 	it("returns null when no pattern found", () => {
 		expect(blockIdHelper.matchesPattern("Some text")).toBeNull();
-		expect(blockIdHelper.matchesPattern("text^6")).toBeNull();
+	});
+
+	it("matches block ID without leading space", () => {
+		const result = blockIdHelper.matchesPattern("text^6");
+		expect(result).not.toBeNull();
+		expect(result?.id).toBe("6");
 	});
 });

@@ -64,6 +64,10 @@ export class ActiveFileService {
 		return this.reader.getCursorOffset();
 	}
 
+	getSelectionStartOffset(): number | null {
+		return this.reader.getSelectionStartOffset();
+	}
+
 	// ─────────────────────────────────────────────────────────────────────────
 	// Writer delegations
 	// ─────────────────────────────────────────────────────────────────────────

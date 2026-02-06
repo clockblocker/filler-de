@@ -5,6 +5,7 @@
 import type { SelectionInfo } from "../../../../../managers/obsidian/vault-action-manager";
 import { blockIdHelper } from "../../../../../stateless-helpers/block-id";
 import { markdownHelper } from "../../../../../stateless-helpers/markdown-strip";
+import { logger } from "../../../../../utils/logger";
 import type { Attestation } from "../types";
 
 /**
@@ -23,6 +24,10 @@ export function buildAttestationFromSelection(
 		? blockIdHelper.formatEmbed(splitPath.basename, blockId)
 		: blockContent;
 
+	logger.info(`[attestation] blockContent: "${blockContent}"`);
+	logger.info(`[attestation] blockId: ${blockId}`);
+	logger.info(`[attestation] ref: "${ref}"`);
+
 	const stripped = markdownHelper.stripAll(blockContent);
 	const textWithOnlyTargetMarked = stripped.replace(surface, `[${surface}]`);
 
@@ -34,6 +39,7 @@ export function buildAttestationFromSelection(
 			textWithOnlyTargetMarked,
 		},
 		target: {
+			offsetInBlock: selection.selectionStartInBlock ?? undefined,
 			surface,
 		},
 	};

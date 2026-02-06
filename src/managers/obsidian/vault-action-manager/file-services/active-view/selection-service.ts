@@ -11,6 +11,8 @@ export type SelectionInfo = {
 	splitPathToFileWithSelection: SplitPathToMdFile;
 	/** Line containing the selection/caret (delimited by newlines), raw text without processing */
 	surroundingRawBlock: string;
+	/** Character offset of the selection start within `surroundingRawBlock`. Null when no selection. */
+	selectionStartInBlock: number | null;
 };
 
 /**
@@ -47,7 +49,21 @@ export class SelectionService {
 		// Extract surrounding block
 		const surroundingRawBlock = this.extractLine(content, position);
 
+		// Compute selection start offset within the block
+		let selectionStartInBlock: number | null = null;
+		if (selection) {
+			const selStartOffset =
+				this.activeFileService.getSelectionStartOffset();
+			if (selStartOffset !== null) {
+				// Line start in the document
+				let lineStart = content.lastIndexOf("\n", position);
+				lineStart = lineStart === -1 ? 0 : lineStart + 1;
+				selectionStartInBlock = selStartOffset - lineStart;
+			}
+		}
+
 		return {
+			selectionStartInBlock,
 			splitPathToFileWithSelection: splitPath,
 			surroundingRawBlock,
 			text: selection,

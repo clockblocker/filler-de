@@ -7,15 +7,16 @@ import {
 	TitleReprFor,
 } from "../../../../../linguistics/common/sections/section-kind";
 import type { NounInflectionCell } from "../../../../../linguistics/german/inflection/noun";
-import type { AgentOutput } from "../../../../../prompt-smith";
 import { PromptKind } from "../../../../../prompt-smith/codegen/consts";
 import type { RelationSubKind } from "../../../../../prompt-smith/schemas/relation";
+import type { ApiServiceError } from "../../../../../stateless-helpers/api-service";
 import type {
 	DictEntry,
 	EntrySection,
 } from "../../../../../stateless-helpers/dict-note/types";
 import { markdownHelper } from "../../../../../stateless-helpers/markdown-strip";
 import { morphemeFormatterHelper } from "../../../../../stateless-helpers/morpheme-formatter";
+import { logger } from "../../../../../utils/logger";
 import type { LemmaResult } from "../../lemma/types";
 import type { CommandError } from "../../types";
 import { CommandErrorKind } from "../../types";
@@ -56,7 +57,45 @@ export type GenerateSectionsResult = ResolvedEntryState & {
 	relations: ParsedRelation[];
 	/** Structured noun inflection cells — used by propagate-inflections step. Empty for non-nouns / re-encounters. */
 	inflectionCells: NounInflectionCell[];
+	/** Section names that failed LLM generation but were optional — entry was still created. */
+	failedSections: string[];
 };
+
+/** Convert a ResultAsync to a Promise that rejects on err (for use with Promise.allSettled). */
+function unwrapResultAsync<T>(ra: ResultAsync<T, ApiServiceError>): Promise<T> {
+	return ra.match(
+		(v) => v,
+		(e) => {
+			throw new Error(e.reason);
+		},
+	);
+}
+
+/** Unwrap a settled result for a critical section — throws if rejected. */
+function unwrapCritical<T>(
+	result: PromiseSettledResult<T>,
+	sectionName: string,
+): T {
+	if (result.status === "fulfilled") return result.value;
+	throw new Error(
+		`Critical section "${sectionName}" failed: ${result.reason}`,
+	);
+}
+
+/** Unwrap a settled result for an optional section — returns null and logs if rejected. */
+function unwrapOptional<T>(
+	result: PromiseSettledResult<T>,
+	sectionName: string,
+	failedSections: string[],
+): T | null {
+	if (result.status === "fulfilled") return result.value;
+	failedSections.push(sectionName);
+	logger.warn(
+		`[generateSections] Optional section "${sectionName}" failed:`,
+		result.reason,
+	);
+	return null;
+}
 
 /**
  * Generate dictionary entry sections via LLM calls, or append attestation to existing entry.
@@ -97,6 +136,7 @@ export function generateSections(
 			Promise.resolve({
 				...ctx,
 				allEntries: existingEntries,
+				failedSections: [],
 				inflectionCells: [],
 				relations: [],
 			}),
@@ -111,7 +151,11 @@ export function generateSections(
 	const v3Applicable = applicableSections.filter((s) => V3_SECTIONS.has(s));
 
 	const word = lemmaResult.lemma;
-	const pos = lemmaResult.pos ?? "";
+	const pos =
+		lemmaResult.pos ??
+		(lemmaResult.linguisticUnit !== "Lexem"
+			? lemmaResult.linguisticUnit
+			: "");
 	const context = lemmaResult.attestation.source.textWithOnlyTargetMarked;
 
 	return ResultAsync.fromPromise(
@@ -121,71 +165,124 @@ export function generateSections(
 			let relations: ParsedRelation[] = [];
 			let inflectionCells: NounInflectionCell[] = [];
 			let semanticsValue = "";
+			const failedSections: string[] = [];
 
-			for (const sectionKind of v3Applicable) {
-				switch (sectionKind) {
-					case DictSectionKind.Header: {
-						const headerOutput: AgentOutput<"Header"> =
-							await promptRunner.generate(PromptKind.Header, {
+			// Fire all independent LLM calls in parallel
+			const sectionSet = new Set(v3Applicable);
+
+			const settled = await Promise.allSettled([
+				sectionSet.has(DictSectionKind.Header)
+					? unwrapResultAsync(
+							promptRunner.generate(PromptKind.Header, {
 								context,
 								pos,
 								word,
-							});
-						headerContent = formatHeaderLine(
-							headerOutput,
-							word,
-							targetLang,
-						);
+							}),
+						)
+					: null,
+				sectionSet.has(DictSectionKind.Semantics)
+					? unwrapResultAsync(
+							promptRunner.generate(PromptKind.Semantics, {
+								context,
+								pos,
+								word,
+							}),
+						)
+					: null,
+				sectionSet.has(DictSectionKind.Morphem)
+					? unwrapResultAsync(
+							promptRunner.generate(PromptKind.Morphem, {
+								context,
+								word,
+							}),
+						)
+					: null,
+				sectionSet.has(DictSectionKind.Relation)
+					? unwrapResultAsync(
+							promptRunner.generate(PromptKind.Relation, {
+								context,
+								pos,
+								word,
+							}),
+						)
+					: null,
+				sectionSet.has(DictSectionKind.Inflection) && pos === "Noun"
+					? unwrapResultAsync(
+							promptRunner.generate(PromptKind.NounInflection, {
+								context,
+								word,
+							}),
+						)
+					: null,
+				sectionSet.has(DictSectionKind.Inflection) && pos !== "Noun"
+					? unwrapResultAsync(
+							promptRunner.generate(PromptKind.Inflection, {
+								context,
+								pos,
+								word,
+							}),
+						)
+					: null,
+				sectionSet.has(DictSectionKind.Translation)
+					? unwrapResultAsync(
+							promptRunner.generate(
+								PromptKind.Translate,
+								markdownHelper.replaceWikilinks(context),
+							),
+						)
+					: null,
+			]);
+
+			// Unwrap: critical sections throw on failure, optional ones degrade to null
+			const headerOutput = unwrapCritical(settled[0], "Header");
+			const semanticsOutput = unwrapOptional(
+				settled[1],
+				"Semantics",
+				failedSections,
+			);
+			const morphemOutput = unwrapOptional(
+				settled[2],
+				"Morphem",
+				failedSections,
+			);
+			const relationOutput = unwrapOptional(
+				settled[3],
+				"Relation",
+				failedSections,
+			);
+			const nounInflectionOutput = unwrapOptional(
+				settled[4],
+				"Inflection",
+				failedSections,
+			);
+			const otherInflectionOutput = unwrapOptional(
+				settled[5],
+				"Inflection",
+				failedSections,
+			);
+			const translationOutput = unwrapCritical(settled[6], "Translation");
+
+			// Assemble sections in correct order from parallel results
+			for (const sectionKind of v3Applicable) {
+				switch (sectionKind) {
+					case DictSectionKind.Header: {
+						if (headerOutput) {
+							headerContent = formatHeaderLine(
+								headerOutput,
+								word,
+								targetLang,
+							);
+						}
 						break;
 					}
 
 					case DictSectionKind.Semantics: {
-						const semanticsOutput = await promptRunner.generate(
-							PromptKind.Semantics,
-							{ context, pos, word },
-						);
-						semanticsValue = semanticsOutput.semantics;
-						sections.push({
-							content: semanticsValue,
-							kind: cssSuffixFor[DictSectionKind.Semantics],
-							title: TitleReprFor[DictSectionKind.Semantics][
-								targetLang
-							],
-						});
-						break;
-					}
-
-					case DictSectionKind.Morphem: {
-						const morphemOutput = await promptRunner.generate(
-							PromptKind.Morphem,
-							{ context, word },
-						);
-						const content = morphemeFormatterHelper.formatSection(
-							morphemOutput.morphemes,
-							targetLang,
-						);
-						sections.push({
-							content,
-							kind: cssSuffixFor[DictSectionKind.Morphem],
-							title: TitleReprFor[DictSectionKind.Morphem][
-								targetLang
-							],
-						});
-						break;
-					}
-
-					case DictSectionKind.Relation: {
-						const relationOutput = await promptRunner.generate(
-							PromptKind.Relation,
-							{ context, pos, word },
-						);
-						relations = relationOutput.relations;
-						const content = formatRelationSection(relationOutput);
-						if (content) {
+						if (semanticsOutput) {
+							semanticsValue = semanticsOutput.semantics;
 							sections.push({
-								content,
-								kind: cssSuffixFor[DictSectionKind.Relation],
-								title: TitleReprFor[DictSectionKind.Relation][
+								content: semanticsValue,
+								kind: cssSuffixFor[DictSectionKind.Semantics],
+								title: TitleReprFor[DictSectionKind.Semantics][
 									targetLang
 								],
 							});
@@ -193,25 +290,56 @@ export function generateSections(
 						break;
 					}
 
-					case DictSectionKind.Inflection: {
-						let inflectionContent: string;
+					case DictSectionKind.Morphem: {
+						if (morphemOutput) {
+							const content =
+								morphemeFormatterHelper.formatSection(
+									morphemOutput.morphemes,
+									targetLang,
+								);
+							sections.push({
+								content,
+								kind: cssSuffixFor[DictSectionKind.Morphem],
+								title: TitleReprFor[DictSectionKind.Morphem][
+									targetLang
+								],
+							});
+						}
+						break;
+					}
 
-						if (pos === "Noun") {
-							const nounOutput = await promptRunner.generate(
-								PromptKind.NounInflection,
-								{ context, word },
-							);
-							const result = formatNounInflection(nounOutput);
+					case DictSectionKind.Relation: {
+						if (relationOutput) {
+							relations = relationOutput.relations;
+							const content =
+								formatRelationSection(relationOutput);
+							if (content) {
+								sections.push({
+									content,
+									kind: cssSuffixFor[
+										DictSectionKind.Relation
+									],
+									title: TitleReprFor[
+										DictSectionKind.Relation
+									][targetLang],
+								});
+							}
+						}
+						break;
+					}
+
+					case DictSectionKind.Inflection: {
+						let inflectionContent: string | undefined;
+
+						if (pos === "Noun" && nounInflectionOutput) {
+							const result =
+								formatNounInflection(nounInflectionOutput);
 							inflectionContent = result.formattedSection;
 							inflectionCells = result.cells;
-						} else {
-							const inflectionOutput =
-								await promptRunner.generate(
-									PromptKind.Inflection,
-									{ context, pos, word },
-								);
-							inflectionContent =
-								formatInflectionSection(inflectionOutput);
+						} else if (pos !== "Noun" && otherInflectionOutput) {
+							inflectionContent = formatInflectionSection(
+								otherInflectionOutput,
+							);
 						}
 
 						if (inflectionContent) {
@@ -227,19 +355,15 @@ export function generateSections(
 					}
 
 					case DictSectionKind.Translation: {
-						const cleanedContext =
-							markdownHelper.replaceWikilinks(context);
-						const translation = await promptRunner.generate(
-							PromptKind.Translate,
-							cleanedContext,
-						);
-						sections.push({
-							content: translation,
-							kind: cssSuffixFor[DictSectionKind.Translation],
-							title: TitleReprFor[DictSectionKind.Translation][
-								targetLang
-							],
-						});
+						if (translationOutput) {
+							sections.push({
+								content: translationOutput,
+								kind: cssSuffixFor[DictSectionKind.Translation],
+								title: TitleReprFor[
+									DictSectionKind.Translation
+								][targetLang],
+							});
+						}
 						break;
 					}
 
@@ -281,9 +405,13 @@ export function generateSections(
 				sections,
 			};
 
+			// Publish failed sections to state for notification
+			ctx.textfresserState.latestFailedSections = failedSections;
+
 			return {
 				...ctx,
 				allEntries: [...existingEntries, newEntry],
+				failedSections,
 				inflectionCells,
 				relations,
 			};

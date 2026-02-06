@@ -98,6 +98,14 @@ export class ActiveFileReader {
 		return editor.posToOffset(cursor);
 	}
 
+	/** Offset of the selection start ("from" = earlier of anchor/head). */
+	getSelectionStartOffset(): number | null {
+		const editorResult = this.getEditor();
+		if (editorResult.isErr()) return null;
+		const { editor } = editorResult.value;
+		return editor.posToOffset(editor.getCursor("from"));
+	}
+
 	private getActiveView(): Result<MarkdownView, string> {
 		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 		return view ? ok(view) : err(errorNoActiveView());

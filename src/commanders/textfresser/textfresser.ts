@@ -36,6 +36,8 @@ import { PromptRunner } from "./prompt-runner";
 export type TextfresserState = {
 	attestationForLatestNavigated: Attestation | null;
 	latestLemmaResult: LemmaResult | null;
+	/** Section names that failed during the latest Generate command (optional sections only). */
+	latestFailedSections: string[];
 	languages: LanguagesConfig;
 	promptRunner: PromptRunner;
 	vam: VaultActionManager;
@@ -52,6 +54,7 @@ export class Textfresser {
 		this.state = {
 			attestationForLatestNavigated: null,
 			languages,
+			latestFailedSections: [],
 			latestLemmaResult: null,
 			promptRunner: new PromptRunner(languages, apiService),
 			vam,
@@ -84,7 +87,14 @@ export class Textfresser {
 					const pos = lemma.pos ? ` (${lemma.pos})` : "";
 					notify(`✓ ${lemma.lemma}${pos}`);
 				} else if (commandName === "Generate" && lemma) {
-					notify(`✓ Entry created for ${lemma.lemma}`);
+					const failed = this.state.latestFailedSections;
+					if (failed?.length) {
+						notify(
+							`⚠ Entry created for ${lemma.lemma} (failed: ${failed.join(", ")})`,
+						);
+					} else {
+						notify(`✓ Entry created for ${lemma.lemma}`);
+					}
 				}
 			})
 			.mapErr((e) => {
