@@ -4,6 +4,7 @@ import type { VaultActionManager } from "../../../../../managers/obsidian/vault-
 import type { AgentOutput } from "../../../../../prompt-smith";
 import { PromptKind } from "../../../../../prompt-smith/codegen/consts";
 import { dictNoteHelper } from "../../../../../stateless-helpers/dict-note";
+import { logger } from "../../../../../utils/logger";
 import type { PromptRunner } from "../../../prompt-runner";
 import type { CommandError } from "../../types";
 import { CommandErrorKind } from "../../types";
@@ -31,8 +32,11 @@ export function disambiguateSense(
 	context: string,
 ): ResultAsync<DisambiguationResult, CommandError> {
 	const files = vam.findByBasename(apiResult.lemma);
+	logger.info(
+		`[disambiguate] Found ${files.length} files for "${apiResult.lemma}"`,
+	);
 	if (files.length === 0) {
-		// First encounter — no existing note
+		logger.info("[disambiguate] First encounter — no existing note");
 		return ResultAsync.fromSafePromise(Promise.resolve(null));
 	}
 
@@ -50,20 +54,22 @@ export function disambiguateSense(
 	).andThen((content) => {
 		const existingEntries = dictNoteHelper.parse(content);
 
-		const prefix = dictEntryIdHelper.buildPrefix(
-			apiResult.linguisticUnit as "Lexem" | "Phrasem" | "Morphem",
-			apiResult.surfaceKind as "Lemma" | "Inflected" | "Variant",
-			(apiResult.pos as Parameters<
-				typeof dictEntryIdHelper.buildPrefix
-			>[2]) ?? undefined,
-		);
+		// Match by unitKind + POS, ignoring surfaceKind so that
+		// inflected forms (LX-IN-NOUN-*) match lemma entries (LX-LM-NOUN-*)
+		const matchingEntries = existingEntries.filter((e) => {
+			const parsed = dictEntryIdHelper.parse(e.id);
+			if (!parsed) return false;
+			if (parsed.unitKind !== apiResult.linguisticUnit) return false;
+			if (apiResult.pos && parsed.pos !== apiResult.pos) return false;
+			return true;
+		});
 
-		const matchingEntries = existingEntries.filter((e) =>
-			e.id.startsWith(prefix),
+		logger.info(
+			`[disambiguate] Parsed ${existingEntries.length} entries, matching=${matchingEntries.length} (unitKind=${apiResult.linguisticUnit}, pos=${apiResult.pos ?? "none"})`,
 		);
 
 		if (matchingEntries.length === 0) {
-			// No entries with this POS prefix — new entry
+			logger.info("[disambiguate] No matching entries — new entry");
 			return ResultAsync.fromSafePromise(
 				Promise.resolve(null as DisambiguationResult),
 			);
@@ -85,8 +91,13 @@ export function disambiguateSense(
 					s !== null,
 			);
 
+		logger.info(
+			`[disambiguate] Senses: ${JSON.stringify(senses)}, withSemantics: ${senses.filter((s) => s.semantics !== null).length}`,
+		);
+
 		if (senses.length === 0) {
 			// All entries failed to parse — treat as new entry
+			logger.info("[disambiguate] All entries failed to parse — new entry");
 			return ResultAsync.fromSafePromise(
 				Promise.resolve(null as DisambiguationResult),
 			);
@@ -100,6 +111,7 @@ export function disambiguateSense(
 		);
 
 		if (sensesWithSemantics.length === 0) {
+			logger.info("[disambiguate] V2 legacy path — no semantics on any sense");
 			return ResultAsync.fromSafePromise(
 				Promise.resolve({
 					matchedIndex: senses[0]?.index,
@@ -108,6 +120,7 @@ export function disambiguateSense(
 		}
 
 		// Call Disambiguate prompt
+		logger.info("[disambiguate] Calling Disambiguate prompt");
 		return ResultAsync.fromPromise(
 			promptRunner.generate(PromptKind.Disambiguate, {
 				context,
@@ -119,6 +132,9 @@ export function disambiguateSense(
 				reason: e instanceof Error ? e.message : String(e),
 			}),
 		).map((output: AgentOutput<"Disambiguate">): DisambiguationResult => {
+			logger.info(
+				`[disambiguate] Prompt returned matchedIndex=${output.matchedIndex}`,
+			);
 			if (output.matchedIndex === null) return null;
 			return { matchedIndex: output.matchedIndex };
 		});

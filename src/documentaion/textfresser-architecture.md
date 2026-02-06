@@ -461,7 +461,7 @@ The dictionary pipeline is split into two user-facing commands with distinct res
 │      Call Disambiguate prompt      │    │ 4. Store semantics in metadata          │
 │      → matchedIndex or null        │    │ 5. Propagate inverse relations to targets│
 │    Else: null (new sense)          │    │ 6. Propagate noun inflections            │
-│ 4. Wrap surface in wikilink        │    │ 7. Serialize → applyMeta → moveToWörter │
+│ 4. Wrap surface in wikilink        │    │ 7. Serialize (+ noteKind) → moveToWörter│
 │ 5. Store result in state           │    │ 8. Single vam.dispatch()                 │
 │ 6. Notify: "✓ lemma (POS)"        │    │                                          │
 └───────────────────────────────────┘    └──────────────────────────────────────────┘
@@ -531,7 +531,7 @@ If no note → disambiguationResult = null (first encounter, done)
   ↓
 Read note content → noteMetadataHelper.parse() → extract entries metadata
   ↓
-Filter entries by matching POS (from ID: LX-LM-{POS}-{index})
+Filter entries by matching unitKind + POS (ignoring surfaceKind, so LX-LM-NOUN-* and LX-IN-NOUN-* both match)
   ↓
 If no entries for this POS → disambiguationResult = null (new sense, skip Disambiguate call)
   ↓
@@ -565,7 +565,7 @@ checkAttestation → checkEligibility → checkLemmaResult
   → resolveExistingEntry (parse existing entries, use Lemma's disambiguationResult for re-encounter detection)
   → generateSections (async: LLM calls including Semantics, or attestation append for re-encounters)
   → propagateRelations → propagateInflections
-  → serializeEntry → applyMeta (includes semantics in metadata) → moveToWorter → addWriteAction
+  → serializeEntry (includes noteKind + semantics in single metadata upsert) → moveToWorter → addWriteAction
 ```
 
 Sync `Result` checks transition to async `ResultAsync` at `generateSections`.
@@ -574,10 +574,10 @@ Sync `Result` checks transition to async `ResultAsync` at `generateSections`.
 
 `resolveExistingEntry` parses the active file via `dictNoteHelper.parse()` and uses `lemmaResult.disambiguationResult` (set during Lemma's disambiguation step) to determine the path:
 
-- **`disambiguationResult.matchedIndex` set** → find entry by index, set `matchedEntry`, take `isExistingEntry` path in `generateSections`
+- **`disambiguationResult.matchedIndex` set** → find entry by unitKind + POS + index (ignoring surfaceKind), set `matchedEntry`, take `isExistingEntry` path in `generateSections`
 - **`disambiguationResult` is null** → new sense; `nextIndex` computed via `dictEntryIdHelper.nextIndex()` for the new entry
 
-This replaces V2's ID prefix matching — Lemma has already done the semantic disambiguation via the Disambiguate prompt.
+Matching ignores surfaceKind so that inflected encounters (e.g., "Schlosses" → `LX-IN-NOUN-`) correctly resolve to the existing lemma entry (`LX-LM-NOUN-`).
 
 #### Section Generation (V2)
 
@@ -611,8 +611,7 @@ Built via `dictEntryIdHelper.build()`. V2 uses `nextIndex` computed from existin
 
 #### Serialization & Dispatch
 
-`serializeEntry` → `dictNoteHelper.serialize(allEntries)` → note body (serializes ALL entries, existing + new)
-`applyMeta` → `noteMetadataHelper.upsert(meta)` → metadata section
+`serializeEntry` → `dictNoteHelper.serialize(allEntries)` → note body (serializes ALL entries, existing + new), then merges `noteKind` into the entry metadata and calls `noteMetadataHelper.upsert(fullMeta)` in a **single** upsert (avoids metadata overwrite bug where a second `upsert` call would discard the `entries` key written by the first).
 `moveToWorter` → `RenameMdFile` action to sharded Wörter folder
 Final `ProcessMdFile` writes the content → all actions (including propagation actions) dispatched via `vam.dispatch()`
 
@@ -985,7 +984,7 @@ To add support for a new target language (e.g., Japanese):
 | `src/commanders/textfresser/errors.ts` | CommandError, AttestationParsingError |
 | **Commands** | |
 | `src/commanders/textfresser/commands/lemma/lemma-command.ts` | Lemma pipeline: classify + disambiguate + wrap in wikilink |
-| `src/commanders/textfresser/commands/lemma/steps/disambiguate-sense.ts` | V3: look up existing note, read metadata, call Disambiguate prompt if POS match exists |
+| `src/commanders/textfresser/commands/lemma/steps/disambiguate-sense.ts` | V3: look up existing note, match entries by unitKind+POS (ignoring surfaceKind), call Disambiguate prompt if match exists |
 | `src/commanders/textfresser/commands/lemma/types.ts` | LemmaResult type (V3: includes disambiguationResult) |
 | `src/commanders/textfresser/commands/generate/generate-command.ts` | Generate pipeline orchestrator |
 | `src/commanders/textfresser/commands/generate/steps/check-attestation.ts` | Sync check: attestation available |
@@ -994,7 +993,7 @@ To add support for a new target language (e.g., Japanese):
 | `src/commanders/textfresser/commands/generate/steps/generate-sections.ts` | Async: LLM calls per section (or append attestation for re-encounters) |
 | `src/commanders/textfresser/commands/generate/steps/propagate-relations.ts` | Cross-ref: compute inverse relations, generate actions for target notes |
 | `src/commanders/textfresser/commands/generate/steps/propagate-inflections.ts` | Noun inflection propagation: create stub entries in inflected-form notes |
-| `src/commanders/textfresser/commands/generate/steps/serialize-entry.ts` | Serialize ALL DictEntries to note body |
+| `src/commanders/textfresser/commands/generate/steps/serialize-entry.ts` | Serialize ALL DictEntries to note body + apply noteKind metadata (single upsert) |
 | `src/commanders/textfresser/commands/generate/section-formatters/header-formatter.ts` | Header LLM output → header line |
 | `src/commanders/textfresser/commands/generate/section-formatters/relation-formatter.ts` | Relation LLM output → symbol notation |
 | `src/commanders/textfresser/commands/generate/section-formatters/inflection-formatter.ts` | Generic inflection LLM output → `{label}: {forms}` lines |

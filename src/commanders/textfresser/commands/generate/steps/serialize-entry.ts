@@ -1,20 +1,22 @@
 import { ok, type Result } from "neverthrow";
 import { dictNoteHelper } from "../../../../../stateless-helpers/dict-note";
 import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metadata";
+import { logger } from "../../../../../utils/logger";
+import { DICT_ENTRY_NOTE_KIND } from "../../../common/metadata";
 import type { CommandError, CommandState } from "../../types";
 import type { GenerateSectionsResult } from "./generate-sections";
 
-/** Serialize all DictEntries into file content and update activeFile. */
+/** Serialize all DictEntries into file content, apply noteKind metadata, and update activeFile. */
 export function serializeEntry(
 	ctx: GenerateSectionsResult,
 ): Result<CommandState, CommandError> {
 	const { body, meta } = dictNoteHelper.serialize(ctx.allEntries);
 
-	let content = body;
-	if (Object.keys(meta).length > 0) {
-		const transform = noteMetadataHelper.upsert(meta);
-		content = transform(content) as string;
-	}
+	const fullMeta = { ...meta, noteKind: DICT_ENTRY_NOTE_KIND };
+	logger.info(`[serialize] meta keys: ${JSON.stringify(Object.keys(fullMeta))}`);
+
+	const transform = noteMetadataHelper.upsert(fullMeta);
+	let content = transform(body) as string;
 
 	return ok({
 		...ctx,

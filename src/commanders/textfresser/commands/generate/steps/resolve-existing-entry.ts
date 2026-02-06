@@ -4,6 +4,7 @@ import {
 	type DictEntry,
 	dictNoteHelper,
 } from "../../../../../stateless-helpers/dict-note";
+import { logger } from "../../../../../utils/logger";
 import type { CommandError, CommandState } from "../../types";
 
 export type ResolvedEntryState = CommandState & {
@@ -38,19 +39,29 @@ export function resolveExistingEntry(
 	const disambResult = lemmaResult.disambiguationResult;
 	let matchedEntry: DictEntry | null = null;
 
+	logger.info(
+		`[resolveEntry] disambResult=${disambResult ? `matchedIndex=${disambResult.matchedIndex}` : "null"}`,
+	);
+
 	if (disambResult) {
-		// Use disambiguation result to find the exact entry by index
+		// Match by unitKind + POS + index, ignoring surfaceKind so that
+		// inflected forms find lemma entries and vice versa
 		matchedEntry =
 			existingEntries.find((e) => {
 				const parsed = dictEntryIdHelper.parse(e.id);
 				return (
 					parsed !== undefined &&
-					e.id.startsWith(prefix) &&
-					parsed.index === disambResult.matchedIndex
+					parsed.index === disambResult.matchedIndex &&
+					parsed.unitKind === lemmaResult.linguisticUnit &&
+					(!lemmaResult.pos || parsed.pos === lemmaResult.pos)
 				);
 			}) ?? null;
 	}
 	// If no disambResult → matchedEntry stays null (new entry)
+
+	logger.info(
+		`[resolveEntry] matchedEntry=${matchedEntry ? matchedEntry.id : "null"}`,
+	);
 
 	const nextIndex = dictEntryIdHelper.nextIndex(existingIds, prefix);
 

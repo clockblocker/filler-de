@@ -3,7 +3,6 @@ import type { VaultAction } from "../../../../managers/obsidian/vault-action-man
 import { VaultActionKind } from "../../../../managers/obsidian/vault-action-manager/types/vault-action";
 
 import type { CommandError, CommandInput, CommandState } from "../types";
-import { applyMeta } from "./steps/apply-meta";
 import { checkAttestation } from "./steps/check-attestation";
 import { checkEligibility } from "./steps/check-eligibility";
 import { checkLemmaResult } from "./steps/check-lemma-result";
@@ -21,7 +20,7 @@ import { serializeEntry } from "./steps/serialize-entry";
  * → generateSections (async: LLM calls or append attestation)
  * → propagateRelations (cross-ref inverse relations to target notes)
  * → propagateInflections (create stub entries for inflected noun forms)
- * → serializeEntry → applyMeta → moveToWorter → addWriteAction
+ * → serializeEntry (includes noteKind meta) → moveToWorter → addWriteAction
  */
 export function generateCommand(
 	input: CommandInput,
@@ -40,7 +39,6 @@ export function generateCommand(
 		.andThen(propagateRelations)
 		.andThen(propagateInflections)
 		.andThen(serializeEntry)
-		.andThen(applyMeta)
 		.andThen(moveToWorter)
 		.andThen((c) => {
 			const activeFile = c.commandContext.activeFile;
