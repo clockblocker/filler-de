@@ -11,6 +11,7 @@ import {
 	CommandErrorKind,
 	type CommandInput,
 } from "../types";
+import { disambiguateSense } from "./steps/disambiguate-sense";
 
 /**
  * Resolve attestation: prefer wikilink click context, fall back to text selection.
@@ -47,7 +48,7 @@ function buildWikilink(surface: string, lemma: string): string {
 export function lemmaCommand(
 	input: CommandInput,
 ): ResultAsync<VaultAction[], CommandError> {
-	const { textfresserState, commandContext } = input;
+	const { textfresserState } = input;
 	const attestation = resolveAttestation(input);
 
 	if (!attestation) {
@@ -69,27 +70,43 @@ export function lemmaCommand(
 			kind: CommandErrorKind.ApiError,
 			reason: e instanceof Error ? e.message : String(e),
 		}),
-	).andThen((apiResult) => {
-		textfresserState.latestLemmaResult = {
-			...apiResult,
-			attestation,
-		};
+	)
+		.andThen((apiResult) =>
+			disambiguateSense(
+				textfresserState.vam,
+				textfresserState.promptRunner,
+				apiResult,
+				context,
+			).map((disambiguationResult) => ({
+				...apiResult,
+				disambiguationResult,
+			})),
+		)
+		.andThen((result) => {
+			textfresserState.latestLemmaResult = {
+				attestation,
+				disambiguationResult: result.disambiguationResult,
+				lemma: result.lemma,
+				linguisticUnit: result.linguisticUnit,
+				pos: result.pos ?? undefined,
+				surfaceKind: result.surfaceKind,
+			};
 
-		const wikilink = buildWikilink(surface, apiResult.lemma);
-		const rawBlock = attestation.source.textRaw;
-		const updatedBlock = rawBlock.replace(surface, wikilink);
+			const wikilink = buildWikilink(surface, result.lemma);
+			const rawBlock = attestation.source.textRaw;
+			const updatedBlock = rawBlock.replace(surface, wikilink);
 
-		const actions: VaultAction[] = [
-			{
-				kind: VaultActionKind.ProcessMdFile,
-				payload: {
-					after: updatedBlock,
-					before: rawBlock,
-					splitPath: attestation.source.path,
+			const actions: VaultAction[] = [
+				{
+					kind: VaultActionKind.ProcessMdFile,
+					payload: {
+						after: updatedBlock,
+						before: rawBlock,
+						splitPath: attestation.source.path,
+					},
 				},
-			},
-		];
+			];
 
-		return ok(actions);
-	});
+			return ok(actions);
+		});
 }

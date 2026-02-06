@@ -30,9 +30,10 @@ export type ParsedRelation = {
 	words: string[];
 };
 
-/** V2 sections — the ones we generate in this version. */
-const V2_SECTIONS = new Set<DictSectionKind>([
+/** V3 sections — the ones we generate in this version. */
+const V3_SECTIONS = new Set<DictSectionKind>([
 	DictSectionKind.Header,
+	DictSectionKind.Semantics,
 	DictSectionKind.Morphem,
 	DictSectionKind.Relation,
 	DictSectionKind.Inflection,
@@ -107,7 +108,7 @@ export function generateSections(
 	const targetLang = languages.target;
 
 	const applicableSections = getSectionsFor(buildSectionQuery(lemmaResult));
-	const v2Applicable = applicableSections.filter((s) => V2_SECTIONS.has(s));
+	const v3Applicable = applicableSections.filter((s) => V3_SECTIONS.has(s));
 
 	const word = lemmaResult.lemma;
 	const pos = lemmaResult.pos ?? "";
@@ -119,8 +120,9 @@ export function generateSections(
 			const sections: EntrySection[] = [];
 			let relations: ParsedRelation[] = [];
 			let inflectionCells: NounInflectionCell[] = [];
+			let semanticsValue = "";
 
-			for (const sectionKind of v2Applicable) {
+			for (const sectionKind of v3Applicable) {
 				switch (sectionKind) {
 					case DictSectionKind.Header: {
 						const headerOutput: AgentOutput<"Header"> =
@@ -134,6 +136,22 @@ export function generateSections(
 							word,
 							targetLang,
 						);
+						break;
+					}
+
+					case DictSectionKind.Semantics: {
+						const semanticsOutput = await promptRunner.generate(
+							PromptKind.Semantics,
+							{ context, pos, word },
+						);
+						semanticsValue = semanticsOutput.semantics;
+						sections.push({
+							content: semanticsValue,
+							kind: cssSuffixFor[DictSectionKind.Semantics],
+							title: TitleReprFor[DictSectionKind.Semantics][
+								targetLang
+							],
+						});
 						break;
 					}
 
@@ -259,7 +277,7 @@ export function generateSections(
 			const newEntry: DictEntry = {
 				headerContent,
 				id: entryId,
-				meta: {},
+				meta: { semantics: semanticsValue || undefined },
 				sections,
 			};
 

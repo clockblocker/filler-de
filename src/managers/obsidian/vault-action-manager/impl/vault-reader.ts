@@ -130,6 +130,27 @@ export class VaultReader {
 			.map((v) => v as ReturnT);
 	}
 
+	findByBasename(
+		basename: string,
+		opts?: { folder?: SplitPathToFolder },
+	): SplitPathToMdFile[] {
+		const folderPrefix = opts?.folder
+			? `${pathfinder.systemPathFromSplitPath(opts.folder)}/`
+			: undefined;
+
+		return this.vault
+			.getMarkdownFiles()
+			.filter((f) => {
+				if (f.basename !== basename) return false;
+				if (folderPrefix && !f.path.startsWith(folderPrefix))
+					return false;
+				return true;
+			})
+			.map(
+				(f) => pathfinder.splitPathFromAbstract(f) as SplitPathToMdFile,
+			);
+	}
+
 	listAllFilesWithMdReaders(
 		folder: SplitPathToFolder,
 	): Result<SplitPathWithReader[], string> {

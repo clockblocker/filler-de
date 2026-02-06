@@ -4,12 +4,14 @@ import {
 	type PromptKind,
 	PromptKind as PromptKindEnum,
 } from "../codegen/consts";
+import { disambiguateSchemas } from "./disambiguate";
 import { headerSchemas } from "./header";
 import { inflectionSchemas } from "./inflection";
 import { lemmaSchemas } from "./lemma";
 import { morphemSchemas } from "./morphem";
 import { nounInflectionSchemas } from "./noun-inflection";
 import { relationSchemas } from "./relation";
+import { semanticsSchemas } from "./semantics";
 import { translateSchemas } from "./translate";
 
 export const SchemasFor = {
@@ -20,6 +22,8 @@ export const SchemasFor = {
 	[PromptKindEnum.Relation]: relationSchemas,
 	[PromptKindEnum.Inflection]: inflectionSchemas,
 	[PromptKindEnum.NounInflection]: nounInflectionSchemas,
+	[PromptKindEnum.Disambiguate]: disambiguateSchemas,
+	[PromptKindEnum.Semantics]: semanticsSchemas,
 } satisfies Record<
 	PromptKind,
 	{ userInputSchema: z.ZodTypeAny; agentOutputSchema: z.ZodTypeAny }

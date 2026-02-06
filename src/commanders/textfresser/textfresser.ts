@@ -38,6 +38,7 @@ export type TextfresserState = {
 	latestLemmaResult: LemmaResult | null;
 	languages: LanguagesConfig;
 	promptRunner: PromptRunner;
+	vam: VaultActionManager;
 };
 
 export class Textfresser {
@@ -53,6 +54,7 @@ export class Textfresser {
 			languages,
 			latestLemmaResult: null,
 			promptRunner: new PromptRunner(languages, apiService),
+			vam,
 		};
 	}
 

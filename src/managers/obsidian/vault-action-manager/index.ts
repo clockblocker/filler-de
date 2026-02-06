@@ -43,6 +43,10 @@ export interface VaultActionManager {
 	// Read-only operations
 	readContent(splitPath: SplitPathToMdFile): Promise<Result<string, string>>;
 	exists(splitPath: AnySplitPath): boolean;
+	findByBasename(
+		basename: string,
+		opts?: { folder?: SplitPathToFolder },
+	): SplitPathToMdFile[];
 	isInActiveView(splitPath: AnySplitPath): boolean;
 	list(splitPath: SplitPathToFolder): Result<AnySplitPath[], string>;
 	listAllFilesWithMdReaders(

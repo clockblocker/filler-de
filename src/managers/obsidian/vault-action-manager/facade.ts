@@ -255,6 +255,13 @@ export class VaultActionManagerImpl implements VaultActionManager {
 		return this.reader.exists(splitPathArg);
 	}
 
+	findByBasename(
+		basename: string,
+		opts?: { folder?: SplitPathToFolder },
+	): SplitPathToMdFile[] {
+		return this.reader.findByBasename(basename, opts);
+	}
+
 	isInActiveView(splitPathArg: AnySplitPath): boolean {
 		return this.active.isInActiveView(splitPathArg);
 	}

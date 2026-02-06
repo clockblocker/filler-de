@@ -13,7 +13,8 @@ export type ResolvedEntryState = CommandState & {
 };
 
 /**
- * Parse existing note content into DictEntry[], find matching entry by ID prefix.
+ * Parse existing note content into DictEntry[], find matching entry using
+ * disambiguation result from Lemma step.
  *
  * Two outcomes:
  * A) matchedEntry != null → existing entry found, Generate should just append attestation
@@ -34,8 +35,23 @@ export function resolveExistingEntry(
 		lemmaResult.pos,
 	);
 
-	const matchedEntry =
-		existingEntries.find((e) => e.id.startsWith(prefix)) ?? null;
+	const disambResult = lemmaResult.disambiguationResult;
+	let matchedEntry: DictEntry | null = null;
+
+	if (disambResult) {
+		// Use disambiguation result to find the exact entry by index
+		matchedEntry =
+			existingEntries.find((e) => {
+				const parsed = dictEntryIdHelper.parse(e.id);
+				return (
+					parsed !== undefined &&
+					e.id.startsWith(prefix) &&
+					parsed.index === disambResult.matchedIndex
+				);
+			}) ?? null;
+	}
+	// If no disambResult → matchedEntry stays null (new entry)
+
 	const nextIndex = dictEntryIdHelper.nextIndex(existingIds, prefix);
 
 	return ok({

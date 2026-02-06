@@ -5,6 +5,7 @@ const S = DictSectionKind;
 
 const CORE_SECTIONS = [
 	S.Header,
+	S.Semantics,
 	S.Translation,
 	S.Attestation,
 	S.FreeForm,

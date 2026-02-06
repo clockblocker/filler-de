@@ -11,4 +11,6 @@ export type LemmaResult = {
 	surfaceKind: SurfaceKind;
 	lemma: string;
 	attestation: Attestation;
+	/** null = new sense or first encounter */
+	disambiguationResult: { matchedIndex: number } | null;
 };
