@@ -2,6 +2,11 @@
 
 Obsidian plugin for building a German vocabulary dictionary with AI-powered translations via Gemini API.
 
+## Core Rules
+
+- Always read files before editing them. Never attempt to edit a file you haven't read in the current session.
+- For multi-part requests, complete each part fully before moving to the next. If a session may end, prioritize finishing the current subtask over starting the next one.
+
 ## Commands
 
 ```bash
@@ -341,3 +346,10 @@ logger.info("[myFn] event:", event);
 logger.error("Failed:", error instanceof Error ? error.message : String(error));
 ```
 
+## TypeScript / Refactoring
+
+When refactoring across module boundaries, verify type compatibility at integration points before committing. Pay special attention to version mismatches (e.g., Zod v3 vs v4 types) and add explicit type assertions with comments when bridging version boundaries.
+
+## Implementation Guidelines
+
+When implementing algorithms with numeric thresholds (e.g., merge distances, similarity scores), default to more aggressive/generous values and note the threshold as a tunable parameter with a TODO comment. Ask the user for sample data to calibrate if possible.

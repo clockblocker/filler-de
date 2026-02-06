@@ -5,15 +5,15 @@ import {
 	CollocationType,
 	CollocationTypeSchema,
 	DiscourseFormulaRoleSchema,
-	PartOfSpeech,
-	PartOfSpeechSchema,
 	PhrasemeType,
-} from "../general-linguistic-enums/linguistics-enums";
+	POS,
+	POSSchema,
+} from "../../../../linguistics/old-enums";
 
 const PhrasemeComponentSchema = z.object({
 	baseForm: z.string(),
 	isAnchor: z.boolean().optional(),
-	pos: PartOfSpeechSchema,
+	pos: POSSchema,
 	surface: z.string(),
 });
 
@@ -74,13 +74,13 @@ export const collocationExamples: Record<Phraseme["surface"], Phraseme> = {
 		phrasemeComponents: [
 			{
 				baseForm: "triftig",
-				pos: PartOfSpeech.Adjective,
+				pos: POS.Adjective,
 				surface: "triftige",
 			},
 			{
 				baseForm: "Grund",
 				isAnchor: true,
-				pos: PartOfSpeech.Noun,
+				pos: POS.Noun,
 				surface: "Gründe",
 			},
 		],

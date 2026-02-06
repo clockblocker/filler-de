@@ -8,40 +8,40 @@ import type { DictEntry } from "./types";
 const KOHLEKRAFTWERK_ENTRY = [
 	"🏭 das [[Kohlekraftwerk]], [ˈkoːləˌkraftvɛɐ̯k ♫](https://youglish.com/pronounce/Kohlekraftwerk/german) ^l-nom-n-m1",
 	" ",
-	'<span class="note_block_title note_block_title_kontexte">Deine Kontexte</span>',
+	'<span class="entry_section_title entry_section_title_kontexte">Deine Kontexte</span>',
 	"![[Atom#^13|^]]",
 	"",
 	"![[Atom#^14|^]]",
-	'<span class="note_block_title note_block_title_kontexte">Note</span>',
+	'<span class="entry_section_title entry_section_title_kontexte">Note</span>',
 	" *You can write here*",
 	"",
 	"",
-	'<span class="note_block_title note_block_title_synonyme">Semantische Beziehungen</span>',
+	'<span class="entry_section_title entry_section_title_synonyme">Semantische Beziehungen</span>',
 	"= [[Kraftwerk]], [[Stromerzeugungsanlage]], [[Stromerzeugungsanlage]]",
 	"≈ [[Industrieanlage]], [[Fabrik]]",
 	"≠ [[Windrad]], [[Solaranlage]]",
-	'<span class="note_block_title note_block_title_morpheme">Morpheme</span>',
+	'<span class="entry_section_title entry_section_title_morpheme">Morpheme</span>',
 	" [[Kohle]]|[[kraft]]|[[werk]]",
 	" [[Kohle]] + [[Kraftwerk]]",
-	'<span class="note_block_title note_block_title_translations">Übersetzung</span>',
+	'<span class="entry_section_title entry_section_title_translations">Übersetzung</span>',
 	"coal-fired power plant",
-	'<span class="note_block_title note_block_title_related">Verweise</span>',
+	'<span class="entry_section_title entry_section_title_related">Verweise</span>',
 	" [[Kohle]], [[Kraftwerk]]",
-	'<span class="note_block_title note_block_title_flexion">Flexion</span>',
+	'<span class="entry_section_title entry_section_title_flexion">Flexion</span>',
 	"N: das [[Kohlekraftwerk]], die [[Kohlekraftwerke]]",
 	"A: das [[Kohlekraftwerk]], die [[Kohlekraftwerke]]",
 	"G: des [[Kohlekraftwerkes]], der [[Kohlekraftwerke]]",
 	"D: dem [[Kohlekraftwerk]], den [[Kohlekraftwerken]]",
-	'<span class="note_block_title note_block_title_tags">Tags</span>',
+	'<span class="entry_section_title entry_section_title_tags">Tags</span>',
 	"#Ablaut  #Ableitung  #Abtönung",
 ].join("\n");
 
 const WINDRAD_ENTRY = [
 	"🌬️ das [[Windrad]] ^l-nom-n-w2",
 	" ",
-	'<span class="note_block_title note_block_title_kontexte">Deine Kontexte</span>',
+	'<span class="entry_section_title entry_section_title_kontexte">Deine Kontexte</span>',
 	"![[Energie#^5|^]]",
-	'<span class="note_block_title note_block_title_translations">Übersetzung</span>',
+	'<span class="entry_section_title entry_section_title_translations">Übersetzung</span>',
 	"wind turbine",
 ].join("\n");
 
@@ -165,7 +165,7 @@ describe("dictNoteHelper.serialize", () => {
 			"🏭 das [[Kohlekraftwerk]], [ˈkoːləˌkraftvɛɐ̯k ♫](https://youglish.com/pronounce/Kohlekraftwerk/german) ^l-nom-n-m1",
 		);
 		expect(body).toContain(
-			'<span class="note_block_title note_block_title_kontexte">Deine Kontexte</span>',
+			'<span class="entry_section_title entry_section_title_kontexte">Deine Kontexte</span>',
 		);
 		expect(body).toContain("![[Atom#^13|^]]");
 		expect(body).toContain("coal-fired power plant");

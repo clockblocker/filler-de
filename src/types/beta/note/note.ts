@@ -1,9 +1,9 @@
-import type { INFLECTION } from "../../literals";
 import {
 	LinguisticUnit,
-	type PartOfSpeech,
 	type PhrasemeType,
-} from "../linguistics/general-linguistic-enums/linguistics-enums";
+	type POS,
+} from "../../../linguistics/old-enums";
+import type { INFLECTION } from "../../literals";
 import type {
 	MetaNoteType,
 	NoteType,
@@ -20,11 +20,11 @@ const _a = LinguisticUnit.Inflection;
 
 type InflectionNote = AbstractNote<INFLECTION> & {
 	baseForm: string;
-	pos: PartOfSpeech;
+	pos: POS;
 };
 
 type AbstractLinguisticNote = AbstractNote<LinguisticUnit> & {
 	phrasemeType: PhrasemeType;
 	baseForm: string;
-	pos: PartOfSpeech;
+	pos: POS;
 };

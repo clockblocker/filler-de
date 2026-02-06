@@ -208,29 +208,29 @@ export const RequiredSetOfNoteBlockIdsFromWortart = {
 
 export const noteExample = `
 
-<span class="note_block_title note_block_title_formen">Als 
+<span class="entry_section_title entry_section_title_formen">Als 
 Nomen</span>
 🏭 das [[Kohlekraftwerk]], [ˈkoːləˌkraftvɛɐ̯k ♫](https://youglish.com/pronounce/Kohlekraftwerk/german)
-<span class="note_block_title note_block_title_kontexte">Deine Kontexte</span>
+<span class="entry_section_title entry_section_title_kontexte">Deine Kontexte</span>
 ![[Atom#^13|^]]
 
 ![[Atom#^14|^]]
-<span class="note_block_title note_block_title_synonyme">Semantische Beziehungen</span>
+<span class="entry_section_title entry_section_title_synonyme">Semantische Beziehungen</span>
 = [[Kraftwerk]], [[Stromerzeugungsanlage]], [[Stromerzeugungsanlage]] 
 ≈ [[Industrieanlage]], [[Fabrik]] 
 ≠ [[Windrad]], [[Solaranlage]] 
-<span class="note_block_title note_block_title_morpheme">Morpheme</span>
+<span class="entry_section_title entry_section_title_morpheme">Morpheme</span>
  [[Kohle]]|[[kraft]]|[[werk]]|[[e]] 
  [[Kohle]] + [[Kraftwerke]] 
-<span class="note_block_title note_block_title_translations">Übersetzung</span>
+<span class="entry_section_title entry_section_title_translations">Übersetzung</span>
 coal-fired power plant 
-<span class="note_block_title note_block_title_related">Verweise</span>
+<span class="entry_section_title entry_section_title_related">Verweise</span>
  [[Kohle]], [[Kraftwerk]]
-<span class="note_block_title note_block_title_flexion">Flexion</span>
+<span class="entry_section_title entry_section_title_flexion">Flexion</span>
 N: das [[Kohlekraftwerk]], die [[Kohlekraftwerke]]   
 A: das [[Kohlekraftwerk]], die [[Kohlekraftwerke]]   
 G: des [[Kohlekraftwerkes]], der [[Kohlekraftwerke]]   
 D: dem [[Kohlekraftwerk]], den [[Kohlekraftwerken]] 
-<span class="note_block_title note_block_title_tags">Tags</span>
+<span class="entry_section_title entry_section_title_tags">Tags</span>
 #Ablaut  #Ableitung  #Abtönung  
 `;

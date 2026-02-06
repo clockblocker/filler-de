@@ -1,6 +1,6 @@
 import { z } from "zod";
+import { LINGUISTIC_UNIT_KINDS_STR_TYPES } from "../../../../linguistics/old-enums";
 import { UNKNOWN } from "../../../literals";
-import { LINGUISTIC_UNIT_STR_TYPES } from "../../linguistics/general-linguistic-enums/linguistics-enums";
 
 // Meta note types
 export const NavigationSchema = z.literal("Navigation");
@@ -18,7 +18,7 @@ export const GRAMMAR = GrammarSchema.value;
 export const META_NOTE_STR_TYPES = [NAVIGATION, GRAMMAR, UNKNOWN] as const;
 
 export const NOTE_STR_TYPES = [
-	...LINGUISTIC_UNIT_STR_TYPES,
+	...LINGUISTIC_UNIT_KINDS_STR_TYPES,
 	...META_NOTE_STR_TYPES,
 ] as const;
 

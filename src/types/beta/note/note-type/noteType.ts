@@ -2,7 +2,7 @@ import {
 	CollocationStrength,
 	LinguisticUnit,
 	PhrasemeType,
-} from "../../linguistics/general-linguistic-enums/linguistics-enums";
+} from "../../../../linguistics/old-enums";
 
 const _noteTree = {
 	[LinguisticUnit.Phrasem]: {

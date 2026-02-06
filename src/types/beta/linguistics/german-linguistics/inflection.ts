@@ -2,15 +2,15 @@ import { z } from "zod";
 import {
 	Case,
 	InflectionalDimension,
-	Number,
-	PartOfSpeech,
+	NumberKind,
 	Person,
-} from "../general-linguistic-enums/linguistics-enums";
+	POS,
+} from "../../../../linguistics/old-enums";
 
 type AbstractInflection = Record<InflectionalDimension, string>;
 
 const _DePerson = z.enum([Person.First, Person.Second, Person.Third]);
-const _DeNumber = z.enum([Number.Singular, Number.Plural]);
+const _DeNumber = z.enum([NumberKind.Singular, NumberKind.Plural]);
 const _DeCase = z.enum([
 	Case.Nominative,
 	Case.Dative,
@@ -23,42 +23,41 @@ const _DeCase = z.enum([
 // 	[InflectionalDimension.Case]: Case.;
 // };
 
-export const posTagFormFromPos: Record<PartOfSpeech, InflectionalDimension[]> =
-	{
-		[PartOfSpeech.Noun]: [
-			InflectionalDimension.Case,
-			InflectionalDimension.Gender,
-			InflectionalDimension.Number,
-		],
-		[PartOfSpeech.Pronoun]: [
-			InflectionalDimension.Case,
-			InflectionalDimension.Gender,
-			InflectionalDimension.Number,
-		],
-		[PartOfSpeech.Article]: [
-			InflectionalDimension.Case,
-			InflectionalDimension.Gender,
-			InflectionalDimension.Number,
-		],
-		[PartOfSpeech.Adjective]: [
-			InflectionalDimension.Case,
-			InflectionalDimension.Gender,
-			InflectionalDimension.Number,
-			InflectionalDimension.Comparison,
-		],
-		[PartOfSpeech.Verb]: [
-			InflectionalDimension.Person,
-			InflectionalDimension.Number,
-			InflectionalDimension.Tense,
-			InflectionalDimension.Mood,
-			InflectionalDimension.Voice,
-		],
-		[PartOfSpeech.Preposition]: [],
-		[PartOfSpeech.Adverb]: [],
-		[PartOfSpeech.Particle]: [],
-		[PartOfSpeech.Conjunction]: [],
-		[PartOfSpeech.InteractionalUnit]: [],
-	} as const;
+export const posTagFormFromPos: Record<POS, InflectionalDimension[]> = {
+	[POS.Noun]: [
+		InflectionalDimension.Case,
+		InflectionalDimension.Gender,
+		InflectionalDimension.Number,
+	],
+	[POS.Pronoun]: [
+		InflectionalDimension.Case,
+		InflectionalDimension.Gender,
+		InflectionalDimension.Number,
+	],
+	[POS.Article]: [
+		InflectionalDimension.Case,
+		InflectionalDimension.Gender,
+		InflectionalDimension.Number,
+	],
+	[POS.Adjective]: [
+		InflectionalDimension.Case,
+		InflectionalDimension.Gender,
+		InflectionalDimension.Number,
+		InflectionalDimension.Comparison,
+	],
+	[POS.Verb]: [
+		InflectionalDimension.Person,
+		InflectionalDimension.Number,
+		InflectionalDimension.Tense,
+		InflectionalDimension.Mood,
+		InflectionalDimension.Voice,
+	],
+	[POS.Preposition]: [],
+	[POS.Adverb]: [],
+	[POS.Particle]: [],
+	[POS.Conjunction]: [],
+	[POS.InteractionalUnit]: [],
+} as const;
 
 // isTechnicalTerm?: boolean;
 // domain?: 'medicine' | 'physics' | 'law' | ...;

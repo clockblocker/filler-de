@@ -2,16 +2,10 @@ import { z } from "zod";
 import {
 	ACCUSATIVE,
 	ACKNOWLEDGMENT,
-	ADJECTIVE,
-	ADJECTIVE_TAG,
-	ADVERB,
-	ADVERB_TAG,
 	AGENT,
 	AMOUNT,
 	ANIMACY,
 	APOLOGY,
-	ARTICLE,
-	ARTICLE_TAG,
 	ASPECT,
 	BENEFICIARY,
 	BOUND,
@@ -19,20 +13,14 @@ import {
 	CASUAL,
 	CAUSE,
 	CERTAINTY,
-	CIRCUMFIX,
 	CLUSIVITY,
 	COLLECTIVE,
-	COLLOCATION,
 	COLLOQUIAL,
 	COMMON,
 	COMPARATIVE,
 	COMPARISON,
-	CONJUNCTION,
-	CONJUNCTION_TAG,
-	CULTURAL_QUOTATION,
 	DATIVE,
 	DEGREE,
-	DISCOURSE_FORMULA,
 	DUAL,
 	EVIDENTIALITY,
 	EXPERIENCER,
@@ -50,18 +38,11 @@ import {
 	GOAL,
 	GREETING,
 	HONORIFIC,
-	IDIOM,
 	IMPERATIVE,
 	INDICATIVE,
-	INFIX,
-	INFLECTION,
 	INITIATION,
 	INTENSE,
 	INTENSITY,
-	INTERACTIONAL_UNIT,
-	INTERACTIONAL_UNIT_TAG,
-	LEXEM,
-	LINKING_ELEMENT,
 	LOCATION,
 	LOW,
 	MANNER,
@@ -72,20 +53,14 @@ import {
 	MINIMAL,
 	MODERATE,
 	MOOD,
-	MORPHEM,
 	NEGLIGIBLE,
 	NEUTRAL,
 	NOMINATIVE,
-	NOUN,
-	NOUN_TAG,
 	NUMBER,
 	OBLIGATION,
-	PARTICLE,
-	PARTICLE_TAG,
 	PERFECT,
 	PERSON,
 	PHRASE,
-	PHRASEM,
 	PLUPERFECT,
 	PLURAL,
 	PLUS_DELIMETER,
@@ -94,19 +69,12 @@ import {
 	POSITIVE,
 	POSSESSED,
 	POSSESSOR,
-	PREFIX,
-	PREPOSITION,
-	PREPOSITION_TAG,
 	PRESENT,
 	PRETERITE,
-	PRONOUN,
-	PRONOUN_TAG,
 	PROPER,
-	PROVERB,
 	REACTION,
 	REFUSAL,
 	REQUEST,
-	ROOT,
 	SECOND,
 	SINGULAR,
 	SOFTENED,
@@ -114,7 +82,6 @@ import {
 	STRONG,
 	SUBJUNCTIVE_I,
 	SUBJUNCTIVE_II,
-	SUFFIX,
 	SUPERLATIVE,
 	TABOO_PRONE,
 	TENSE,
@@ -122,116 +89,11 @@ import {
 	THEME,
 	THIRD,
 	TRANSITION,
-	VERB,
-	VERB_TAG,
 	VOICE,
 	VULGAR,
 	WEAK,
-} from "../../../literals";
-
-export const MORPHEME_TYPES_STR = [
-	ROOT, // core lexical base (e.g. "book", "write")
-	PREFIX, // attaches before the root (e.g. "un-", "re-")
-	SUFFIX, // attaches after the root (e.g. "-ness", "-able")
-	INFIX, // inserted within the root (e.g. Tagalog "-um-")
-	CIRCUMFIX, // wraps around the root (e.g. German "ge-...-t")
-	LINKING_ELEMENT, // joins compound parts (e.g. "Arbeitszeit", "Liebeserklärung")
-] as const;
-
-export const MorphemeTypeSchema = z.enum(MORPHEME_TYPES_STR);
-
-export type MorphemeType = z.infer<typeof MorphemeTypeSchema>;
-export const MorphemeType = MorphemeTypeSchema.enum;
-export const MORPHEME_TYPES = MorphemeTypeSchema.options;
-
-export const LINGUISTIC_UNIT_STR_TYPES = [
-	PHRASEM,
-	LEXEM,
-	MORPHEM,
-	INFLECTION,
-] as const;
-
-export const LinguisticUnitSchema = z.enum(LINGUISTIC_UNIT_STR_TYPES);
-export type LinguisticUnit = z.infer<typeof LinguisticUnitSchema>;
-export const LinguisticUnit = LinguisticUnitSchema.enum;
-export const LINGUISTIC_UNITS = LinguisticUnitSchema.options;
-
-export const PARTS_OF_SPEECH_STR = [
-	NOUN, // [Nomen] – lexical noun, incl. count/mass, common/proper
-	PRONOUN, // [Pronomen] – includes personal, reflexive, demonstrative, etc.
-	ARTICLE, // [Artikel] – definite/indefinite/possessive/etc.
-	ADJECTIVE, // [Adjektiv] – attributive or predicative
-	VERB, // [Verb] – includes full, modal, auxiliary
-	PREPOSITION, // [Präposition] – links phrases via case
-	ADVERB, // [Adverb] – modifies verbs, adjectives, clauses
-	PARTICLE, // [Partikel] – modal, focus, negation, etc.
-	CONJUNCTION, // [Junktor] – coordinating, subordinating, etc.
-	INTERACTIONAL_UNIT, // [[interaktive Einheit]] – interjections, response tokens, vocatives, etc.
-] as const;
-
-export const PartOfSpeechSchema = z.enum(PARTS_OF_SPEECH_STR);
-
-export type PartOfSpeech = z.infer<typeof PartOfSpeechSchema>;
-export const PartOfSpeech = PartOfSpeechSchema.enum;
-export const PARTS_OF_SPEECH = PartOfSpeechSchema.options;
-
-export const POS_TAGS_STR = [
-	NOUN_TAG, // [Nomen]
-	PRONOUN_TAG, // [Pronomen]
-	ARTICLE_TAG, // [Artikel]
-	ADJECTIVE_TAG, // [Adjektiv]
-	VERB_TAG, // [Verb]
-	PREPOSITION_TAG, // [Präposition]
-	ADVERB_TAG, // [Adverb]
-	PARTICLE_TAG, // [Partikel]
-	CONJUNCTION_TAG, // [Junktor]
-	INTERACTIONAL_UNIT_TAG, // [[interaktive Einheit]]
-] as const;
-
-export const PosTagSchema = z.enum(POS_TAGS_STR);
-export type PosTag = z.infer<typeof PosTagSchema>;
-export const PosTag = PosTagSchema.enum;
-export const POS_TAGS = PosTagSchema.options;
-
-export const posTagFormFromPos: Record<PartOfSpeech, PosTag> = {
-	[PartOfSpeech.Noun]: NOUN_TAG,
-	[PartOfSpeech.Pronoun]: PRONOUN_TAG,
-	[PartOfSpeech.Article]: ARTICLE_TAG,
-	[PartOfSpeech.Adjective]: ADJECTIVE_TAG,
-	[PartOfSpeech.Verb]: VERB_TAG,
-	[PartOfSpeech.Preposition]: PREPOSITION_TAG,
-	[PartOfSpeech.Adverb]: ADVERB_TAG,
-	[PartOfSpeech.Particle]: PARTICLE_TAG,
-	[PartOfSpeech.Conjunction]: CONJUNCTION_TAG,
-	[PartOfSpeech.InteractionalUnit]: INTERACTIONAL_UNIT_TAG,
-} as const;
-
-export const posFormFromPosTag: Record<PosTag, PartOfSpeech> = {
-	[NOUN_TAG]: PartOfSpeech.Noun,
-	[PRONOUN_TAG]: PartOfSpeech.Pronoun,
-	[ARTICLE_TAG]: PartOfSpeech.Article,
-	[ADJECTIVE_TAG]: PartOfSpeech.Adjective,
-	[VERB_TAG]: PartOfSpeech.Verb,
-	[PREPOSITION_TAG]: PartOfSpeech.Preposition,
-	[ADVERB_TAG]: PartOfSpeech.Adverb,
-	[PARTICLE_TAG]: PartOfSpeech.Particle,
-	[CONJUNCTION_TAG]: PartOfSpeech.Conjunction,
-	[INTERACTIONAL_UNIT_TAG]: PartOfSpeech.InteractionalUnit,
-} as const;
-
-export const PHRASEM_TYPES_STR = [
-	IDIOM, // non-literal, fixed expression (e.g. "kick the bucket"). The meaning of the whole cannot be inferred from its parts
-	COLLOCATION, // productive template with open slot (e.g. "[modifier] + reasons")
-	DISCOURSE_FORMULA, // fixed social routines (e.g. "thank you", "excuse me")
-	PROVERB, // full-sentence folk wisdom (e.g. "A stitch in time saves nine")
-	CULTURAL_QUOTATION, // well-known literary or public quotes (e.g. "To be or not to be")
-] as const;
-
-export const PhrasemeTypeSchema = z.enum(PHRASEM_TYPES_STR);
-
-export type PhrasemeType = z.infer<typeof PhrasemeTypeSchema>;
-export const PhrasemeType = PhrasemeTypeSchema.enum;
-export const PHRASEM_TYPES = PhrasemeTypeSchema.options;
+} from "../types/literals";
+import { PosTag } from "./enums/linguistic-units/lexem/pos";
 
 export const DEFINED_DISCOURSE_FORMULA_ROLES_STR = [
 	GREETING,
@@ -398,10 +260,10 @@ export const NUMBER_VALUES_STR = [
 	DUAL,
 ] as const;
 
-export const NumberSchema = z.enum(NUMBER_VALUES_STR);
-export type Number = z.infer<typeof NumberSchema>;
-export const Number = NumberSchema.enum;
-export const NUMBERS = NumberSchema.options;
+export const NumberKindSchema = z.enum(NUMBER_VALUES_STR);
+export type NumberKind = z.infer<typeof NumberKindSchema>;
+export const NumberKind = NumberKindSchema.enum;
+export const NUMBER_KINDS = NumberKindSchema.options;
 
 export const CASE_VALUES_STR = [
 	NOMINATIVE, // subject position

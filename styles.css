@@ -1,4 +1,4 @@
-.note_block_title {
+.entry_section_title {
 	float: right;
 
 	display: flex;
@@ -16,18 +16,18 @@
 	opacity: 0.1;
 }
 
-.cm-html-embed > .note_block_title {
+.cm-html-embed > .entry_section_title {
 	font-size: 12px;
 	line-height: 12px;
 }
 
-.note_block_title.note_block_title_formen {
+.entry_section_title.entry_section_title_formen {
 	border-top: 1px solid white;
 	border-bottom: none;
 	opacity: 0.2;
 }
 
-.note_block_title.note_block_title_kontexte {
+.entry_section_title.entry_section_title_kontexte {
 	margin-bottom: 12px;
 }
 
