@@ -61,6 +61,7 @@ export class Textfresser {
 	executeCommand(
 		commandName: TextfresserCommandKind,
 		context: CommandContext,
+		notify: (message: string) => void,
 	) {
 		if (!context.activeFile) {
 			return errAsync({ kind: CommandErrorKind.NotMdFile });
@@ -75,8 +76,19 @@ export class Textfresser {
 
 		return commandFn(input)
 			.andThen((actions) => this.dispatchActions(actions))
-			.map(() => undefined)
+			.map(() => {
+				const lemma = this.state.latestLemmaResult;
+				if (commandName === "Lemma" && lemma) {
+					const pos = lemma.pos ? ` (${lemma.pos})` : "";
+					notify(`✓ ${lemma.lemma}${pos}`);
+				} else if (commandName === "Generate" && lemma) {
+					notify(`✓ Entry created for ${lemma.lemma}`);
+				}
+			})
 			.mapErr((e) => {
+				const reason =
+					"reason" in e ? e.reason : `Command failed: ${e.kind}`;
+				notify(`⚠ ${reason}`);
 				logger.warn(
 					`[Textfresser.${commandName}] Failed:`,
 					JSON.stringify(e),

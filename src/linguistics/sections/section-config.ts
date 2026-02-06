@@ -3,7 +3,12 @@ import { DictSectionKind } from "./section-kind";
 
 const S = DictSectionKind;
 
-const CORE_SECTIONS = [S.Header, S.Attestation, S.FreeForm] as const;
+const CORE_SECTIONS = [
+	S.Header,
+	S.Translation,
+	S.Attestation,
+	S.FreeForm,
+] as const;
 
 export const sectionsForLexemPos: Record<POS, readonly DictSectionKind[]> = {
 	Adjective: [...CORE_SECTIONS, S.Relation, S.Inflection],

@@ -2,11 +2,13 @@
 // Run: bun run codegen:prompts
 
 import * as englishToEnglishHeaderPrompt from "./codegen/generated-promts/english/english/header-prompt";
+import * as englishToEnglishInflectionPrompt from "./codegen/generated-promts/english/english/inflection-prompt";
 import * as englishToEnglishLemmaPrompt from "./codegen/generated-promts/english/english/lemma-prompt";
 import * as englishToEnglishMorphemPrompt from "./codegen/generated-promts/english/english/morphem-prompt";
 import * as englishToEnglishRelationPrompt from "./codegen/generated-promts/english/english/relation-prompt";
 import * as englishToEnglishTranslatePrompt from "./codegen/generated-promts/english/english/translate-prompt";
 import * as germanToEnglishHeaderPrompt from "./codegen/generated-promts/german/english/header-prompt";
+import * as germanToEnglishInflectionPrompt from "./codegen/generated-promts/german/english/inflection-prompt";
 import * as germanToEnglishLemmaPrompt from "./codegen/generated-promts/german/english/lemma-prompt";
 import * as germanToEnglishMorphemPrompt from "./codegen/generated-promts/german/english/morphem-prompt";
 import * as germanToEnglishRelationPrompt from "./codegen/generated-promts/german/english/relation-prompt";
@@ -18,6 +20,7 @@ export const PROMPT_FOR = {
 	English: {
 		English: {
 			Header: englishToEnglishHeaderPrompt,
+			Inflection: englishToEnglishInflectionPrompt,
 			Lemma: englishToEnglishLemmaPrompt,
 			Morphem: englishToEnglishMorphemPrompt,
 			Relation: englishToEnglishRelationPrompt,
@@ -25,6 +28,7 @@ export const PROMPT_FOR = {
 		},
 		Russian: {
 			Header: englishToEnglishHeaderPrompt,
+			Inflection: englishToEnglishInflectionPrompt,
 			Lemma: englishToEnglishLemmaPrompt,
 			Morphem: englishToEnglishMorphemPrompt,
 			Relation: englishToEnglishRelationPrompt,
@@ -34,6 +38,7 @@ export const PROMPT_FOR = {
 	German: {
 		English: {
 			Header: germanToEnglishHeaderPrompt,
+			Inflection: germanToEnglishInflectionPrompt,
 			Lemma: germanToEnglishLemmaPrompt,
 			Morphem: germanToEnglishMorphemPrompt,
 			Relation: germanToEnglishRelationPrompt,
@@ -41,6 +46,7 @@ export const PROMPT_FOR = {
 		},
 		Russian: {
 			Header: germanToEnglishHeaderPrompt,
+			Inflection: germanToEnglishInflectionPrompt,
 			Lemma: germanToEnglishLemmaPrompt,
 			Morphem: germanToEnglishMorphemPrompt,
 			Relation: germanToEnglishRelationPrompt,

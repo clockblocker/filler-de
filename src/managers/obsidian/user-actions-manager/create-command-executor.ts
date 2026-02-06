@@ -62,7 +62,7 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 			case CommandKind.TranslateSelection:
 			case CommandKind.Generate:
 			case CommandKind.Lemma: {
-				await textfresser.executeCommand(kind, context);
+				await textfresser.executeCommand(kind, context, notify);
 				break;
 			}
 

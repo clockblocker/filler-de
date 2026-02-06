@@ -9,13 +9,17 @@ import { checkEligibility } from "./steps/check-eligibility";
 import { checkLemmaResult } from "./steps/check-lemma-result";
 import { generateSections } from "./steps/generate-sections";
 import { moveToWorter } from "./steps/move-to-worter";
+import { propagateRelations } from "./steps/propagate-relations";
+import { resolveExistingEntry } from "./steps/resolve-existing-entry";
 import { serializeEntry } from "./steps/serialize-entry";
 
 /**
  * Pipeline:
  * checkAttestation → checkEligibility → checkLemmaResult
- * → generateSections (async: LLM calls) → serializeEntry
- * → applyMeta → moveToWorter → addWriteAction
+ * → resolveExistingEntry (parse existing entries)
+ * → generateSections (async: LLM calls or append attestation)
+ * → propagateRelations (cross-ref inverse relations to target notes)
+ * → serializeEntry → applyMeta → moveToWorter → addWriteAction
  */
 export function generateCommand(
 	input: CommandInput,
@@ -26,10 +30,12 @@ export function generateCommand(
 		Promise.resolve(
 			checkAttestation(state)
 				.andThen(checkEligibility)
-				.andThen(checkLemmaResult),
+				.andThen(checkLemmaResult)
+				.andThen(resolveExistingEntry),
 		),
 	)
 		.andThen(generateSections)
+		.andThen(propagateRelations)
 		.andThen(serializeEntry)
 		.andThen(applyMeta)
 		.andThen(moveToWorter)

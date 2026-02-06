@@ -22,20 +22,25 @@ User reads a sentence, finds an unknown word
 User selects it, calls "Lemma"
   ↓
 Lemma (recon):
-  LLM classifies: LinguisticUnitKind + POS + lemma form
-  Finds/creates the dictionary note
-  Checks existing entries → do we already have this semantic/grammatical instance?
+  LLM classifies: LinguisticUnitKind + POS + SurfaceKind + lemma form
+  Wraps the selected word in a [[wikilink]] in the source text
+  Stores classification + attestation in state
+  ↓
+User clicks the wikilink → navigates to the dictionary note
   ↓
 User calls "Generate"
   ↓
 Generate (heavy lifting):
-  Existing entry? → just append the new context ref to its Attestation section
-  New entry? → launch an LLM request PER section (Relations, Inflection, Morphemes, ...)
-  Collect all FS operations (Note updates + cross-reference propagation)
+  Reads Lemma result from state
+  LLM request PER section (Header, Morphemes, Relations)
+  Adds Attestation section (no LLM — uses source ref from Lemma)
+  Builds full DictEntry, serializes to note, moves to Wörter folder
   Single vam.dispatch()
   ↓
 User gets a tailor-made dictionary that grows with their reading
 ```
+
+> **V1 scope**: German target only, 4 generated sections (Header, Morphem, Relation, Attestation), always creates new entry (no meaning resolution), no cross-reference propagation.
 
 **Properties of the resulting dictionary:**
 
@@ -108,6 +113,7 @@ Note (Obsidian .md file, named after a Surface)
 │  ├─ enums/.../morpheme-kind — MorphemeKind              │
 │  ├─ enums/.../morpheme-tag  — MorphemeTag (Sep/Insep)  │
 │  ├─ sections/section-kind   — DictSectionKind           │
+│  ├─ sections/section-css-kind — DictSectionKind → CSS suffix │
 │  └─ old-enums.ts            — detailed inflectional enums │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -191,7 +197,7 @@ Each DictEntry is divided into **DictEntrySections**, categorized by `DictSectio
 
 ```
 DictSectionKind = "Relation" | "FreeForm" | "Attestation" | "Morphem"
-               | "Header" | "Deviation" | "Inflection"
+               | "Header" | "Deviation" | "Inflection" | "Translation"
 ```
 
 | Kind | German title | Purpose | Has SubSections? |
@@ -326,40 +332,54 @@ const { body, meta } = dictNoteHelper.serialize(entries); // DictEntry[] → { b
 
 **Location**: `src/commanders/textfresser/common/attestation/`
 
-When a user clicks a `[[wikilink]]` in a text they're reading, the system captures the **attestation** — the context in which the word appeared:
+When a user encounters a word, the system captures the **attestation** — the context in which the word appeared. Attestations can be built from two sources:
 
 ```typescript
 type Attestation = {
   source: {
     ref: string;                    // "![[Atom#^13|^]]" — embed reference
-    textRaw: string;                // raw paragraph content
+    textRaw: string;                // raw paragraph/line content
     textWithOnlyTargetMarked: string; // stripped, only [target] marked
     path: SplitPathToMdFile;        // path to the source file
   };
   target: {
-    surface: string;  // the clicked word as it appears in text
+    surface: string;  // the word as it appears in text
     lemma?: string;   // if wikilink is [[lemma|surface]], the lemma
   };
 };
 ```
 
-This attestation is stored in `TextfresserState.attestationForLatestNavigated` and consumed by subsequent commands (Generate, Lemma).
+### 6.1 Attestation from Wikilink Click
 
-**Flow**:
+Stored in `TextfresserState.attestationForLatestNavigated`:
+
 ```
 User clicks [[Kohlekraftwerk]] in a text paragraph
   ↓
 UserEventInterceptor fires WikilinkClickPayload
   ↓
-Textfresser.createHandler() processes it
+Textfresser.createHandler() → buildAttestationFromWikilinkClickPayload()
   ↓
-buildAttestationFromWikilinkClickPayload() extracts:
-  - source.ref = "![[Atom#^13|^]]"
-  - source.textRaw = "Das Kohlekraftwerk erzeugt Strom aus Kohle."
-  - target.surface = "Kohlekraftwerk"
-  ↓
-Stored in state, ready for the next command
+Stored in state.attestationForLatestNavigated
 ```
+
+### 6.2 Attestation from Text Selection
+
+Built on-demand by the Lemma command when no wikilink attestation exists:
+
+```
+User selects "Kohlekraftwerk" in a text paragraph and calls Lemma
+  ↓
+Lemma command resolves attestation:
+  1. Check state.attestationForLatestNavigated → null
+  2. Fall back to buildAttestationFromSelection(commandContext.selection)
+  ↓
+Uses selection.text as surface, selection.surroundingRawBlock for context
+```
+
+**Builder**: `src/commanders/textfresser/common/attestation/builders/build-from-selection.ts`
+
+Both flows extract block IDs from the source line for embed references (`![[file#^blockId|^]]`).
 
 ---
 
@@ -388,8 +408,8 @@ commandFn(input) → VaultAction[] → vam.dispatch(actions)
 
 | Command | Status | Purpose |
 |---------|--------|---------|
-| `Lemma` | Stub (planned) | Recon: classify word, find/create note, resolve meaning |
-| `Generate` | Partially implemented | Heavy lifting: fill DictEntrySections via LLM, propagate cross-references, dispatch FS ops |
+| `Lemma` | V1 implemented | Recon: classify word via LLM, wrap in wikilink, store result |
+| `Generate` | V1 implemented | Build DictEntry: LLM-generated sections (Header, Morphem, Relation) + Attestation, serialize, move to Wörter |
 | `TranslateSelection` | Implemented | Translate selected text via LLM |
 
 **Source**: `src/commanders/textfresser/textfresser.ts`, `src/commanders/textfresser/commands/types.ts`
@@ -409,104 +429,117 @@ Translates selected text using the prompt-smith system:
 
 ## 8. The Dictionary Pipeline — Lemma + Generate
 
-> **Status**: Planned. Lemma is a stub; Generate is partially implemented (currently handles note move + meta, not yet the per-section LLM flow).
-
 The dictionary pipeline is split into two user-facing commands with distinct responsibilities:
 
 ```
          Lemma (recon)                          Generate (heavy lifting)
 ┌─────────────────────────────┐    ┌──────────────────────────────────────────┐
-│ 1. LLM classification       │    │ Existing entry?                          │
-│    → LinguisticUnit + POS   │    │   → just append context ref              │
-│ 2. Note lookup / creation   │    │                                          │
-│ 3. Meaning resolution       │    │ New entry?                               │
-│    → existing or new entry? │───→│   → LLM request PER section              │
-│                             │    │   → build full DictEntry                 │
-│ Light, fast, single LLM call│    │                                          │
-└─────────────────────────────┘    │ Cross-reference propagation              │
-                                   │ Collect all ProcessMdFile actions        │
-                                   │ Single vam.dispatch()                    │
+│ 1. Resolve attestation       │    │ 1. Check attestation + lemma result      │
+│    (wikilink click or        │    │ 2. Determine applicable sections         │
+│     text selection)          │    │    (via getSectionsFor + V1 filter)      │
+│ 2. LLM classification       │    │ 3. LLM request PER section:              │
+│    → LinguisticUnit + POS   │───→│    Header → formatHeaderLine()           │
+│    → SurfaceKind + lemma    │    │    Morphem → morphemeFormatterHelper()   │
+│ 3. Wrap surface in wikilink  │    │    Relation → formatRelationSection()   │
+│ 4. Store result in state     │    │    Attestation → source ref (no LLM)    │
+│                              │    │ 4. Build DictEntry + serialize           │
+│ Light, single LLM call       │    │ 5. Apply meta, move to Wörter           │
+└─────────────────────────────┘    │ 6. Single vam.dispatch()                │
                                    └──────────────────────────────────────────┘
 ```
 
-### 8.1 Lemma Command (Recon)
+### 8.1 Lemma Command (V1)
 
 The user selects a word and calls "Lemma". This is the lightweight classification step.
 
-#### Step 1 — LLM Classification
+**Source**: `src/commanders/textfresser/commands/lemma/lemma-command.ts`
 
-**Input**: selected text + surrounding sentence context (from attestation).
+#### Attestation Resolution
 
-**Expected structured output** (via Zod schema):
+Lemma tries two sources (in order):
+1. `state.attestationForLatestNavigated` — from a prior wikilink click
+2. `buildAttestationFromSelection(selection)` — from the current text selection
+
+#### LLM Classification
+
+**Input** (via `PromptKind.Lemma`): `{ surface: string, context: string }`
+
+**Structured output** (Zod schema in `schemas/lemma.ts`):
 ```typescript
 {
-  linguisticUnit: "Lexem" | "Phrasem" | "Morphem",
-  pos?: POS,                    // only for Lexem
-  phrasemeKind?: PhrasemeKind,   // only for Phrasem
-  lemma: string,                // dictionary form
-  surfaces: Surface[],          // inflected forms referenced
+  linguisticUnit: LinguisticUnitKind,  // "Lexem" | "Phrasem" | "Morphem"
+  pos?: POS | null,                    // only for Lexem
+  surfaceKind: SurfaceKind,            // "Lemma" | "Inflected" | "Variant"
+  lemma: string,                       // dictionary form
 }
 ```
 
-This narrows the type: `LinguisticUnitKind` → `POS` (for lexems) → determines which sections and prompts apply for Generate.
+#### Wikilink Wrapping
 
-#### Step 2 — Note Lookup
+After classification, Lemma wraps the surface in a wikilink in the source block:
+- Same lemma: `Schuck` → `[[Schuck]]`
+- Different lemma: `lief` → `[[laufen|lief]]`
 
-The lemma maps to a note path in the dictionary folder. If the note exists, parse it with `dictNoteHelper.parse()` to get existing entries.
+Uses `ProcessMdFile` with `before: rawBlock` / `after: blockWithWikilink`.
 
-#### Step 3 — Meaning Resolution
+#### State Update
 
-**Problem**: "коса" can mean (1) a braid, (2) a scythe, (3) a spit of land. Each meaning is a separate entry in the same note.
-
-The system needs to:
-1. Get existing entries from the note
-2. Bundle them with the new context
-3. Query the LLM: "Given these existing meanings and this new context, is this a known meaning or a new one?"
-
-**Expected structured output**:
+Result stored as `TextfresserState.latestLemmaResult`:
 ```typescript
-{
-  isNewMeaning: boolean,
-  matchedEntryId?: string,     // if existing meaning
-}
+type LemmaResult = {
+  linguisticUnit: LinguisticUnitKind;
+  pos?: POS;
+  surfaceKind: SurfaceKind;
+  lemma: string;
+  attestation: Attestation;  // captured context
+};
 ```
 
-Lemma pushes this result into `TextfresserState.recentLemmaResults` (ring buffer, last 5–10). Generate consumes the most recent entry.
+### 8.2 Generate Command (V1)
 
-### 8.2 Generate Command (Heavy Lifting)
+The user navigates to the dictionary note (via the wikilink Lemma created) and calls "Generate".
 
-The user calls "Generate" after Lemma. Generate takes the classification from Lemma and does the actual work.
+**Source**: `src/commanders/textfresser/commands/generate/generate-command.ts`
 
-#### Path A — Existing Entry
+#### Pipeline
 
-If Lemma resolved to an existing entry (`isNewMeaning = false`):
-- Find the entry by `matchedEntryId`
-- Append the new attestation ref (`![[File#^blockId|^]]`) to its `Attestation` section
-- Serialize → `ProcessMdFile` action
+```
+checkAttestation → checkEligibility → checkLemmaResult
+  → generateSections (async: LLM calls)
+  → serializeEntry → applyMeta → moveToWorter → addWriteAction
+```
 
-This is fast — no LLM calls needed.
+Sync `Result` checks transition to async `ResultAsync` at `generateSections`.
 
-#### Path B — New Entry
+#### Section Generation (V1)
 
-If Lemma found no matching entry (`isNewMeaning = true`):
-1. **LLM request PER section** — for each applicable `DictSectionKind` (determined by the unit + POS from Lemma), send a separate structured prompt:
-   - Relation DictEntrySection prompt → fills SubSections (synonyms, antonyms, hypernyms, etc.)
-   - Inflection DictEntrySection prompt → declension/conjugation table
-   - Morphem DictEntrySection prompt → word decomposition
-   - Header DictEntrySection prompt → pronunciation, article, emoji
-   - etc.
-2. **Build full `DictEntry`** — assemble all section results into a new entry with a fresh block ID
-3. **Append to note** — add entry with `ENTRY_SEPARATOR`
+`generateSections` determines applicable sections via `getSectionsFor()`, then filters to the **V1 set**: Header, Morphem, Relation, Attestation.
 
-#### After both paths — Cross-Reference Propagation
+For each applicable section:
 
-For every reference surfaced in the LLM output (DictEntrySubSections like synonyms, meronyms, etc.):
-- Apply propagation rules to update the referenced Notes' DictEntries (see section 9)
-- Each propagation produces a `ProcessMdFile` action on the target Note
+| Section | LLM? | PromptKind | Formatter | Output |
+|---------|------|-----------|-----------|--------|
+| **Header** | Yes | `Header` | `formatHeaderLine()` | `{emoji} {article} [[lemma]], [{ipa} ♫](youglish_url)` → `DictEntry.headerContent` |
+| **Morphem** | Yes | `Morphem` | `morphemeFormatterHelper.formatSection()` | `[[kohle]]\|[[kraft]]\|[[werk]]` → `EntrySection` |
+| **Relation** | Yes | `Relation` | `formatRelationSection()` | `= [[Synonym]], ⊃ [[Hypernym]]` → `EntrySection` |
+| **Attestation** | No | — | — | `![[file#^blockId\|^]]` from `lemmaResult.attestation.source.ref` → `EntrySection` |
 
-#### Dispatch
+Each `EntrySection` gets:
+- `kind`: CSS suffix from `cssSuffixFor[DictSectionKind]` (e.g., `"synonyme"`, `"morpheme"`)
+- `title`: Localized from `TitleReprFor[sectionKind][targetLang]`
 
-All `ProcessMdFile` actions (source Note update + all cross-reference propagated updates) are collected into a **single `vam.dispatch()` call**. This ensures atomicity and prevents event feedback loops (via self-event tracking).
+#### Entry ID
+
+Built via `dictEntryIdHelper.build()`. V1 always uses index 1:
+- Lexem: `LX-{SurfaceTag}-{PosTag}-1` (e.g., `LX-LM-NOUN-1`)
+- Phrasem/Morphem: `{UnitTag}-{SurfaceTag}-1`
+
+#### Serialization & Dispatch
+
+`serializeEntry` → `dictNoteHelper.serialize([entry])` → note body
+`applyMeta` → `noteMetadataHelper.upsert(meta)` → metadata section
+`moveToWorter` → `RenameMdFile` action to sharded Wörter folder
+Final `ProcessMdFile` writes the content → all actions dispatched via `vam.dispatch()`
 
 ### 8.3 Prompt Configuration Matrix
 
@@ -516,25 +549,16 @@ Different prompts are needed depending on:
 |-----------|--------|--------|
 | **TargetLanguage** | German, English, ... | Language of the dictionary |
 | **KnownLanguage** | Russian, English, ... | User's native language |
-| **DictSectionKind** | Relation, Inflection, ... | What section we're filling |
-| **LinguisticUnitKind** | Lexem, Phrasem, Morphem | What kind of thing |
-| **POS** | Noun, Verb, Adj, ... | Part of speech (for lexems) |
+| **PromptKind** | Lemma, Header, Morphem, Relation, Translate | What task the LLM performs |
 
-Prompts know about specifics. The system thinks in generics.
+Section applicability (which sections a DictEntry gets) is determined by `LinguisticUnitKind` + `POS` via `getSectionsFor()` in `src/linguistics/sections/section-config.ts`.
 
-### 8.4 Generate — Current Implementation
+### 8.4 Future Enhancements (Not in V1)
 
-The current Generate command handles a simpler pipeline (pre-dating the Lemma split):
-
-Pipeline: `checkAttestation → checkEligibility → applyMeta → moveToWorter → addWriteAction`
-
-1. **checkAttestation** — verify we have a stored attestation from a wikilink click
-2. **checkEligibility** — check the active file is eligible for generation
-3. **applyMeta** — write metadata to the note
-4. **moveToWorter** — move the file to the Wörter (dictionary) folder
-5. **addWriteAction** — emit a `ProcessMdFile` vault action
-
-**Source**: `src/commanders/textfresser/commands/generate/generate-command.ts`
+- **Meaning resolution**: Note lookup + LLM query to distinguish polysemy (existing entry → append context ref vs new entry → full generation)
+- **Cross-reference propagation**: Bidirectional updates when relations are created (see section 9)
+- **Multi-word selection**: Lemma handling phrasem attestations from multi-word selections
+- **Inflection/Deviation sections**: Additional LLM-generated sections
 
 ---
 
@@ -622,7 +646,7 @@ src/prompt-smith/
 │           └── to-test.ts           # Extra examples for validation only
 │
 ├── codegen/
-│   ├── consts.ts                    # PromptKind enum (currently: "Translate")
+│   ├── consts.ts                    # PromptKind enum ("Translate","Morphem","Lemma","Header","Relation")
 │   ├── generated-promts/            # AUTO-GENERATED compiled prompts
 │   └── skript/                      # Codegen pipeline scripts
 │       ├── run.ts                   # Orchestrator
@@ -633,7 +657,11 @@ src/prompt-smith/
 │
 ├── schemas/                         # Zod I/O schemas per PromptKind
 │   ├── index.ts                     # SchemasFor registry
-│   └── translate.ts                 # Translate: string → string
+│   ├── translate.ts                 # Translate: string → string
+│   ├── morphem.ts                   # Morphem: {word,context} → {morphemes[]}
+│   ├── lemma.ts                     # Lemma: {surface,context} → {linguisticUnit,pos?,surfaceKind,lemma}
+│   ├── header.ts                    # Header: {word,pos,context} → {emoji,article?,ipa}
+│   └── relation.ts                  # Relation: {word,pos,context} → {relations[{kind,words[]}]}
 │
 ├── index.ts                         # GENERATED: PROMPT_FOR lookup table
 └── types.ts                         # AvaliablePromptDict type
@@ -701,10 +729,10 @@ type LanguagesConfig = {
 
 Some PromptKinds depend on both the target language and the user's known language (**bilingual**), while others only depend on the target language (**target-language-only**):
 
-| Category | Example PromptKinds | Depends on known language? |
-|----------|-------------------|---------------------------|
+| Category | PromptKinds | Depends on known language? |
+|----------|-------------|---------------------------|
 | **Bilingual** | Translate | Yes — output language varies by user's known language |
-| **Target-language-only** | Morphem | No — morpheme analysis is purely about target language structure |
+| **Target-language-only** | Morphem, Lemma, Header, Relation | No — linguistic analysis is purely about target language structure |
 
 For **target-language-only** prompts, only the mandatory `english/` known-language path is created. The codegen fallback mechanism automatically reuses this English prompt for other known languages (e.g., Russian), since the prompt content is identical regardless of the user's native language.
 
@@ -744,13 +772,13 @@ bun run codegen:prompts
 ```typescript
 type TextfresserState = {
   attestationForLatestNavigated: Attestation | null;  // from last wikilink click
-  recentLemmaResults: LemmaResult[];                   // last 5-10 Lemma results (ring buffer)
+  latestLemmaResult: LemmaResult | null;              // from last Lemma command
   languages: LanguagesConfig;                          // { known, target }
   promptRunner: PromptRunner;                          // LLM interface
 };
 ```
 
-`recentLemmaResults` holds the last 5–10 Lemma command outputs. Generate consumes the latest one, but the buffer also lets the user review/undo recent lookups and gives context for future UX (e.g., "recent words" panel).
+`latestLemmaResult` holds the most recent Lemma command output. Generate reads it for classification + attestation data. Both fields are checked when validating attestation availability (wikilink click OR prior Lemma).
 
 ### 11.2 Command Execution Flow
 
@@ -790,7 +818,7 @@ createHandler(): EventHandler<WikilinkClickPayload> {
 }
 ```
 
-This is how context flows from reading to the Lemma command: the user clicks a wikilink → attestation is stored → user triggers Lemma → the command uses the stored attestation.
+This is one of two ways context flows to commands. The other: user selects text → calls Lemma → `buildAttestationFromSelection()` creates attestation on-the-fly from the selection (see section 6.2).
 
 ---
 
@@ -823,26 +851,46 @@ To add support for a new target language (e.g., Japanese):
 
 | File | Purpose |
 |------|---------|
+| **Textfresser Commander** | |
 | `src/commanders/textfresser/textfresser.ts` | Commander: state, command dispatch, wikilink handler |
 | `src/commanders/textfresser/commands/types.ts` | CommandFn, CommandInput, TextfresserCommandKind |
-| `src/commanders/textfresser/commands/generate/generate-command.ts` | Generate pipeline |
-| `src/commanders/textfresser/commands/translate/translate-command.ts` | Translate pipeline |
 | `src/commanders/textfresser/prompt-runner.ts` | PromptRunner: LLM call wrapper |
-| `src/commanders/textfresser/common/attestation/types.ts` | Attestation type |
-| `src/commanders/textfresser/common/attestation/builders/` | Attestation construction |
 | `src/commanders/textfresser/errors.ts` | CommandError, AttestationParsingError |
+| **Commands** | |
+| `src/commanders/textfresser/commands/lemma/lemma-command.ts` | Lemma pipeline: classify + wrap in wikilink |
+| `src/commanders/textfresser/commands/lemma/types.ts` | LemmaResult type |
+| `src/commanders/textfresser/commands/generate/generate-command.ts` | Generate pipeline orchestrator |
+| `src/commanders/textfresser/commands/generate/steps/check-attestation.ts` | Sync check: attestation available |
+| `src/commanders/textfresser/commands/generate/steps/check-lemma-result.ts` | Sync check: lemma result available |
+| `src/commanders/textfresser/commands/generate/steps/generate-sections.ts` | Async: LLM calls per section, builds DictEntry |
+| `src/commanders/textfresser/commands/generate/steps/serialize-entry.ts` | Serialize DictEntry to note body |
+| `src/commanders/textfresser/commands/generate/section-formatters/header-formatter.ts` | Header LLM output → header line |
+| `src/commanders/textfresser/commands/generate/section-formatters/relation-formatter.ts` | Relation LLM output → symbol notation |
+| `src/commanders/textfresser/commands/translate/translate-command.ts` | Translate pipeline |
+| **Attestation** | |
+| `src/commanders/textfresser/common/attestation/types.ts` | Attestation type |
+| `src/commanders/textfresser/common/attestation/builders/build-from-wikilink-click-payload.ts` | Build from wikilink click |
+| `src/commanders/textfresser/common/attestation/builders/build-from-selection.ts` | Build from text selection |
+| **Stateless Helpers** | |
 | `src/stateless-helpers/dict-note/` | Parse/serialize dictionary notes |
 | `src/stateless-helpers/morpheme-formatter.ts` | Morpheme → wikilink display formatter |
 | `src/stateless-helpers/api-service.ts` | Gemini API wrapper |
+| **Linguistics** | |
 | `src/linguistics/enums/core.ts` | LinguisticUnitKind, SurfaceKind |
 | `src/linguistics/enums/linguistic-units/lexem/pos.ts` | POS, PosTag |
 | `src/linguistics/enums/linguistic-units/phrasem/phrasem-kind.ts` | PhrasemeKind |
 | `src/linguistics/enums/linguistic-units/morphem/morpheme-kind.ts` | MorphemeKind |
 | `src/linguistics/enums/linguistic-units/morphem/morpheme-tag.ts` | MorphemeTag (Separable/Inseparable) |
 | `src/linguistics/sections/section-kind.ts` | DictSectionKind, TitleReprFor |
+| `src/linguistics/sections/section-css-kind.ts` | DictSectionKind → CSS suffix mapping |
+| `src/linguistics/sections/section-config.ts` | getSectionsFor(): applicable sections per unit+POS |
+| `src/linguistics/dict-entry-id/dict-entry-id.ts` | DictEntryId builder/parser |
 | `src/linguistics/old-enums.ts` | Inflectional dimensions, theta roles, tones |
+| **Prompt-Smith** | |
 | `src/prompt-smith/index.ts` | PROMPT_FOR registry (generated) |
-| `src/prompt-smith/schemas/` | Zod I/O schemas per PromptKind |
+| `src/prompt-smith/schemas/` | Zod I/O schemas: translate, morphem, lemma, header, relation |
+| `src/prompt-smith/codegen/consts.ts` | PromptKind enum |
 | `src/prompt-smith/codegen/skript/run.ts` | Codegen orchestrator |
-| `src/prompt-smith/prompt-parts/` | Human-written prompt sources |
+| `src/prompt-smith/prompt-parts/` | Human-written prompt sources (3 kinds × 2 lang pairs) |
+| **Types** | |
 | `src/types.ts` | LanguagesConfig, KnownLanguage, TargetLanguage |

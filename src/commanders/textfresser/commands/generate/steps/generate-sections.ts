@@ -8,22 +8,33 @@ import {
 } from "../../../../../linguistics/sections/section-kind";
 import type { AgentOutput } from "../../../../../prompt-smith";
 import { PromptKind } from "../../../../../prompt-smith/codegen/consts";
+import type { RelationSubKind } from "../../../../../prompt-smith/schemas/relation";
 import type {
 	DictEntry,
 	EntrySection,
 } from "../../../../../stateless-helpers/dict-note/types";
+import { markdownHelper } from "../../../../../stateless-helpers/markdown-strip";
 import { morphemeFormatterHelper } from "../../../../../stateless-helpers/morpheme-formatter";
 import type { LemmaResult } from "../../lemma/types";
-import type { CommandError, CommandState } from "../../types";
+import type { CommandError } from "../../types";
 import { CommandErrorKind } from "../../types";
 import { formatHeaderLine } from "../section-formatters/header-formatter";
+import { formatInflectionSection } from "../section-formatters/inflection-formatter";
 import { formatRelationSection } from "../section-formatters/relation-formatter";
+import type { ResolvedEntryState } from "./resolve-existing-entry";
 
-/** V1 sections — the ones we generate in this version. */
-const V1_SECTIONS = new Set<DictSectionKind>([
+export type ParsedRelation = {
+	kind: RelationSubKind;
+	words: string[];
+};
+
+/** V2 sections — the ones we generate in this version. */
+const V2_SECTIONS = new Set<DictSectionKind>([
 	DictSectionKind.Header,
 	DictSectionKind.Morphem,
 	DictSectionKind.Relation,
+	DictSectionKind.Inflection,
+	DictSectionKind.Translation,
 	DictSectionKind.Attestation,
 ]);
 
@@ -36,19 +47,62 @@ function buildSectionQuery(lemmaResult: LemmaResult) {
 	};
 }
 
+export type GenerateSectionsResult = ResolvedEntryState & {
+	allEntries: DictEntry[];
+	/** Raw relation data from LLM — used by propagate-relations step. Empty for re-encounters. */
+	relations: ParsedRelation[];
+};
+
 /**
- * Generate dictionary entry sections via LLM calls.
- * Returns a CommandState with the DictEntry built and content set.
+ * Generate dictionary entry sections via LLM calls, or append attestation to existing entry.
+ *
+ * Path A (re-encounter): matchedEntry exists → append attestation ref, skip LLM calls
+ * Path B (new entry): full LLM pipeline → build new DictEntry with computed nextIndex
  */
 export function generateSections(
-	ctx: CommandState,
-): ResultAsync<CommandState & { dictEntry: DictEntry }, CommandError> {
+	ctx: ResolvedEntryState,
+): ResultAsync<GenerateSectionsResult, CommandError> {
 	const lemmaResult = ctx.textfresserState.latestLemmaResult!;
+	const { matchedEntry, existingEntries, nextIndex } = ctx;
+
+	// Path A: re-encounter — just append attestation ref to existing entry
+	if (matchedEntry) {
+		const attestationRef = lemmaResult.attestation.source.ref;
+		const attestationCssSuffix = cssSuffixFor[DictSectionKind.Attestation];
+		const attestationSection = matchedEntry.sections.find(
+			(s) => s.kind === attestationCssSuffix,
+		);
+
+		if (attestationSection) {
+			// Append new ref on a new line (avoid duplicates)
+			if (!attestationSection.content.includes(attestationRef)) {
+				attestationSection.content += `\n${attestationRef}`;
+			}
+		} else {
+			// No Attestation section yet — create one
+			const targetLang = ctx.textfresserState.languages.target;
+			matchedEntry.sections.push({
+				content: attestationRef,
+				kind: attestationCssSuffix,
+				title: TitleReprFor[DictSectionKind.Attestation][targetLang],
+			});
+		}
+
+		return ResultAsync.fromSafePromise(
+			Promise.resolve({
+				...ctx,
+				allEntries: existingEntries,
+				relations: [],
+			}),
+		);
+	}
+
+	// Path B: new entry — full LLM pipeline
 	const { promptRunner, languages } = ctx.textfresserState;
 	const targetLang = languages.target;
 
 	const applicableSections = getSectionsFor(buildSectionQuery(lemmaResult));
-	const v1Applicable = applicableSections.filter((s) => V1_SECTIONS.has(s));
+	const v2Applicable = applicableSections.filter((s) => V2_SECTIONS.has(s));
 
 	const word = lemmaResult.lemma;
 	const pos = lemmaResult.pos ?? "";
@@ -58,8 +112,9 @@ export function generateSections(
 		(async () => {
 			let headerContent = `[[${word}]]`;
 			const sections: EntrySection[] = [];
+			let relations: ParsedRelation[] = [];
 
-			for (const sectionKind of v1Applicable) {
+			for (const sectionKind of v2Applicable) {
 				switch (sectionKind) {
 					case DictSectionKind.Header: {
 						const headerOutput: AgentOutput<"Header"> =
@@ -100,6 +155,7 @@ export function generateSections(
 							PromptKind.Relation,
 							{ context, pos, word },
 						);
+						relations = relationOutput.relations;
 						const content = formatRelationSection(relationOutput);
 						if (content) {
 							sections.push({
@@ -110,6 +166,42 @@ export function generateSections(
 								],
 							});
 						}
+						break;
+					}
+
+					case DictSectionKind.Inflection: {
+						const inflectionOutput = await promptRunner.generate(
+							PromptKind.Inflection,
+							{ context, pos, word },
+						);
+						const inflectionContent =
+							formatInflectionSection(inflectionOutput);
+						if (inflectionContent) {
+							sections.push({
+								content: inflectionContent,
+								kind: cssSuffixFor[DictSectionKind.Inflection],
+								title: TitleReprFor[DictSectionKind.Inflection][
+									targetLang
+								],
+							});
+						}
+						break;
+					}
+
+					case DictSectionKind.Translation: {
+						const cleanedContext =
+							markdownHelper.replaceWikilinks(context);
+						const translation = await promptRunner.generate(
+							PromptKind.Translate,
+							cleanedContext,
+						);
+						sections.push({
+							content: translation,
+							kind: cssSuffixFor[DictSectionKind.Translation],
+							title: TitleReprFor[DictSectionKind.Translation][
+								targetLang
+							],
+						});
 						break;
 					}
 
@@ -126,17 +218,16 @@ export function generateSections(
 				}
 			}
 
-			// Build entry ID (V1: always index 1)
 			const entryId = dictEntryIdHelper.build(
 				lemmaResult.linguisticUnit === "Lexem" && lemmaResult.pos
 					? {
-							index: 1,
+							index: nextIndex,
 							pos: lemmaResult.pos,
 							surfaceKind: lemmaResult.surfaceKind,
 							unitKind: "Lexem",
 						}
 					: {
-							index: 1,
+							index: nextIndex,
 							surfaceKind: lemmaResult.surfaceKind,
 							unitKind: lemmaResult.linguisticUnit as Exclude<
 								typeof lemmaResult.linguisticUnit,
@@ -145,7 +236,7 @@ export function generateSections(
 						},
 			);
 
-			const dictEntry: DictEntry = {
+			const newEntry: DictEntry = {
 				headerContent,
 				id: entryId,
 				meta: {},
@@ -154,7 +245,8 @@ export function generateSections(
 
 			return {
 				...ctx,
-				dictEntry,
+				allEntries: [...existingEntries, newEntry],
+				relations,
 			};
 		})(),
 		(e): CommandError => ({
