@@ -1,9 +1,9 @@
 import { ok, type Result } from "neverthrow";
-import { cssSuffixFor } from "../../../../../linguistics/sections/section-css-kind";
+import { cssSuffixFor } from "../../../../../linguistics/common/sections/section-css-kind";
 import {
 	DictSectionKind,
 	TitleReprFor,
-} from "../../../../../linguistics/sections/section-kind";
+} from "../../../../../linguistics/common/sections/section-kind";
 import type { VaultAction } from "../../../../../managers/obsidian/vault-action-manager";
 import {
 	SplitPathKind,

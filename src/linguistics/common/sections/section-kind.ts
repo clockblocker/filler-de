@@ -1,5 +1,5 @@
 import { z } from "zod/v3";
-import type { TargetLanguage } from "../../types";
+import type { TargetLanguage } from "../../../types";
 
 const DICT_SECTION_KIND_STR = [
 	"Relation",

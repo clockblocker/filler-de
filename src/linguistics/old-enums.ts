@@ -93,7 +93,7 @@ import {
 	VULGAR,
 	WEAK,
 } from "../types/literals";
-import { PosTag } from "./enums/linguistic-units/lexem/pos";
+import { PosTag } from "./common/enums/linguistic-units/lexem/pos";
 
 export const DEFINED_DISCOURSE_FORMULA_ROLES_STR = [
 	GREETING,

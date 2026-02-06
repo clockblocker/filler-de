@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { PARTS_OF_SPEECH } from "../../src/linguistics/enums/linguistic-units/lexem/pos";
+import { PARTS_OF_SPEECH } from "../../src/linguistics/common/enums/linguistic-units/lexem/pos";
 import {
 	getSectionsFor,
 	sectionsForLexemPos,
 	sectionsForMorphem,
 	sectionsForPhrasem,
-} from "../../src/linguistics/sections/section-config";
-import { DictSectionKind } from "../../src/linguistics/sections/section-kind";
+} from "../../src/linguistics/common/sections/section-config";
+import { DictSectionKind } from "../../src/linguistics/common/sections/section-kind";
 
 const CORE = [
 	DictSectionKind.Header,

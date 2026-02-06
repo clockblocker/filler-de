@@ -1,6 +1,6 @@
 import { z } from "zod/v3";
-import { MorphemeKindSchema } from "../../linguistics/enums/linguistic-units/morphem/morpheme-kind";
-import { MorphemeTagSchema } from "../../linguistics/enums/linguistic-units/morphem/morpheme-tag";
+import { MorphemeKindSchema } from "../../linguistics/common/enums/linguistic-units/morphem/morpheme-kind";
+import { MorphemeTagSchema } from "../../linguistics/common/enums/linguistic-units/morphem/morpheme-tag";
 
 const userInputSchema = z.object({
 	context: z.string(),

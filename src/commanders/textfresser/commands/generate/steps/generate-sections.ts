@@ -1,11 +1,11 @@
 import { ResultAsync } from "neverthrow";
-import { dictEntryIdHelper } from "../../../../../linguistics/dict-entry-id/dict-entry-id";
-import { getSectionsFor } from "../../../../../linguistics/sections/section-config";
-import { cssSuffixFor } from "../../../../../linguistics/sections/section-css-kind";
+import { dictEntryIdHelper } from "../../../../../linguistics/common/dict-entry-id/dict-entry-id";
+import { getSectionsFor } from "../../../../../linguistics/common/sections/section-config";
+import { cssSuffixFor } from "../../../../../linguistics/common/sections/section-css-kind";
 import {
 	DictSectionKind,
 	TitleReprFor,
-} from "../../../../../linguistics/sections/section-kind";
+} from "../../../../../linguistics/common/sections/section-kind";
 import type { AgentOutput } from "../../../../../prompt-smith";
 import { PromptKind } from "../../../../../prompt-smith/codegen/consts";
 import type { RelationSubKind } from "../../../../../prompt-smith/schemas/relation";

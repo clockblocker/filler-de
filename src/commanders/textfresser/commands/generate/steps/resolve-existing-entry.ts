@@ -1,5 +1,5 @@
 import { ok, type Result } from "neverthrow";
-import { dictEntryIdHelper } from "../../../../../linguistics/dict-entry-id/dict-entry-id";
+import { dictEntryIdHelper } from "../../../../../linguistics/common/dict-entry-id/dict-entry-id";
 import {
 	type DictEntry,
 	dictNoteHelper,

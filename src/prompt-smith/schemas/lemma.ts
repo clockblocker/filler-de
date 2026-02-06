@@ -2,8 +2,8 @@ import { z } from "zod/v3";
 import {
 	LinguisticUnitKindSchema,
 	SurfaceKindSchema,
-} from "../../linguistics/enums/core";
-import { PARTS_OF_SPEECH_STR } from "../../linguistics/enums/linguistic-units/lexem/pos";
+} from "../../linguistics/common/enums/core";
+import { PARTS_OF_SPEECH_STR } from "../../linguistics/common/enums/linguistic-units/lexem/pos";
 
 // Re-create POSSchema with zod/v3 to avoid v3/v4 runtime mismatch
 // (pos.ts uses `import z from "zod"` which is v4)

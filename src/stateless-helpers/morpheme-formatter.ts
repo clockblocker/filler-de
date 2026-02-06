@@ -3,8 +3,8 @@
  * Converts structured LLM morpheme output into wikilink display strings.
  */
 
-import type { MorphemeKind } from "../linguistics/enums/linguistic-units/morphem/morpheme-kind";
-import type { MorphemeTag } from "../linguistics/enums/linguistic-units/morphem/morpheme-tag";
+import type { MorphemeKind } from "../linguistics/common/enums/linguistic-units/morphem/morpheme-kind";
+import type { MorphemeTag } from "../linguistics/common/enums/linguistic-units/morphem/morpheme-tag";
 import type { TargetLanguage } from "../types";
 
 type MorphemeItem = {
