@@ -3,12 +3,12 @@
  * Delegates to Librarian for alias resolution.
  */
 
-import type { Librarian } from "../../../commanders/librarian/librarian";
+import type { Librarian } from "../../../../commanders/librarian/librarian";
 import {
 	type EventHandler,
 	HandlerOutcome,
 	type WikilinkPayload,
-} from "../../obsidian/user-event-interceptor";
+} from "../../user-event-interceptor";
 
 /**
  * Create a handler for wikilink completion.

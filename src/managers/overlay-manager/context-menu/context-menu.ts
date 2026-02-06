@@ -17,8 +17,8 @@ import {
 	FileType,
 	MdFileSubTypeSchema,
 } from "../../../types/common-interface/enums";
-import type { CommandExecutor } from "../../actions-manager/create-command-executor";
-import { CommandKind } from "../../actions-manager/types";
+import type { CommandExecutor } from "../../obsidian/user-actions-manager/create-command-executor";
+import { CommandKind } from "../../obsidian/user-actions-manager/types";
 import type { VaultActionManager } from "../../obsidian/vault-action-manager";
 
 /** Schema for reading noteKind from file metadata. */

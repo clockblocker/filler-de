@@ -4,7 +4,7 @@ import {
 	type HandleResult,
 	type HandlerContext,
 	HandlerOutcome,
-} from "../../obsidian/user-event-interceptor";
+} from "../../user-event-interceptor";
 
 /**
  * Chain multiple handlers for the same event type.
