@@ -23,7 +23,7 @@ function parseSections(text: string): EntrySection[] {
 			text.slice(marker.index).indexOf("</span>") +
 			"</span>".length;
 		const contentEnd =
-			i + 1 < markers.length ? markers[i + 1]!.index : text.length;
+			i + 1 < markers.length ? markers[i + 1]?.index : text.length;
 		const content = text.slice(contentStart, contentEnd).trim();
 		return { content, kind: marker.kind, title: marker.title };
 	});
@@ -61,9 +61,10 @@ export function parse(noteText: string): DictEntry[] {
 	const { body } = noteMetadataHelper.decompose(noteText);
 	// zod v3/v4 boundary: read() expects v4 ZodSchema, our schema is v3 — runtime-compatible
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const meta = noteMetadataHelper.read(noteText, EntriesMetaSchema as any) as
-		| z.infer<typeof EntriesMetaSchema>
-		| null;
+	const meta = noteMetadataHelper.read(
+		noteText,
+		EntriesMetaSchema as any,
+	) as z.infer<typeof EntriesMetaSchema> | null;
 	const metaByEntryId = meta?.entries ?? {};
 
 	const chunks = body.split(ENTRY_SEPARATOR);
