@@ -175,8 +175,6 @@ export function generateSections(
 			// Fire all independent LLM calls in parallel
 			const sectionSet = new Set(v3Applicable);
 
-			const hasPrecomputedSemantics = !!lemmaResult.precomputedSemantics;
-
 			const settled = await Promise.allSettled([
 				sectionSet.has(DictSectionKind.Header)
 					? unwrapResultAsync(
@@ -187,8 +185,7 @@ export function generateSections(
 							}),
 						)
 					: null,
-				sectionSet.has(DictSectionKind.Definition) &&
-				!hasPrecomputedSemantics
+				sectionSet.has(DictSectionKind.Definition)
 					? unwrapResultAsync(
 							promptRunner.generate(PromptKind.Semantics, {
 								context,
@@ -287,13 +284,19 @@ export function generateSections(
 					}
 
 					case DictSectionKind.Definition: {
-						semanticsValue =
+						// Section content: always from full Semantics prompt
+						const definitionContent =
 							semanticsOutput?.semantics ??
 							lemmaResult.precomputedSemantics ??
 							"";
-						if (semanticsValue) {
+						// Meta: prefer concise disambiguate gloss, fall back to full definition
+						semanticsValue =
+							lemmaResult.precomputedSemantics ??
+							semanticsOutput?.semantics ??
+							"";
+						if (definitionContent) {
 							sections.push({
-								content: semanticsValue,
+								content: definitionContent,
 								kind: cssSuffixFor[DictSectionKind.Definition],
 								title: TitleReprFor[DictSectionKind.Definition][
 									targetLang

@@ -47,6 +47,30 @@ export const examples = [
 			ipa: "ʃnɛl",
 		},
 	},
+	{
+		input: {
+			context: "Wir besichtigten das Schloss am Rhein.",
+			pos: "Noun",
+			word: "Schloss",
+		},
+		output: {
+			article: "das",
+			emoji: "🏰",
+			ipa: "ʃlɔs",
+		},
+	},
+	{
+		input: {
+			context: "Das Schloss am Fahrrad war aufgebrochen.",
+			pos: "Noun",
+			word: "Schloss",
+		},
+		output: {
+			article: "das",
+			emoji: "🔒",
+			ipa: "ʃlɔs",
+		},
+	},
 ] satisfies {
 	input: UserInput<"Header">;
 	output: AgentOutput<"Header">;

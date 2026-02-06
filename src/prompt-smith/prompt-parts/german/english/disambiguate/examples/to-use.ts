@@ -33,7 +33,7 @@ export const examples = [
 		},
 		output: {
 			matchedIndex: null,
-			semantics: "Türschloss",
+			semantics: "Schließvorrichtung",
 		},
 	},
 	{
@@ -42,11 +42,22 @@ export const examples = [
 			lemma: "Schloss",
 			senses: [
 				{ index: 1, semantics: "Gebäude" },
-				{ index: 2, semantics: "Türschloss" },
+				{ index: 2, semantics: "Schließvorrichtung" },
 			],
 		},
 		output: {
 			matchedIndex: 1,
+		},
+	},
+	{
+		input: {
+			context: "Das Schloss am Fahrrad war aufgebrochen.",
+			lemma: "Schloss",
+			senses: [{ index: 1, semantics: "Gebäude" }],
+		},
+		output: {
+			matchedIndex: null,
+			semantics: "Schließvorrichtung",
 		},
 	},
 ] satisfies {

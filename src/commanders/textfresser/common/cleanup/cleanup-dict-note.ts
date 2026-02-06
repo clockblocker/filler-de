@@ -1,3 +1,4 @@
+import { compareSectionsByWeight } from "../../../../linguistics/common/sections/section-config";
 import { dictNoteHelper } from "../../../../stateless-helpers/dict-note";
 import type { DictEntry } from "../../../../stateless-helpers/dict-note/types";
 import { noteMetadataHelper } from "../../../../stateless-helpers/note-metadata";
@@ -27,6 +28,17 @@ function normalizeAttestationSpacing(entry: DictEntry): boolean {
 }
 
 /**
+ * Reorder sections within an entry according to SECTION_DISPLAY_WEIGHT.
+ * Returns true if the order changed.
+ */
+function reorderSections(entry: DictEntry): boolean {
+	const sorted = [...entry.sections].sort(compareSectionsByWeight);
+	const changed = sorted.some((s, i) => s.kind !== entry.sections[i]?.kind);
+	if (changed) entry.sections = sorted;
+	return changed;
+}
+
+/**
  * Check if entries need reordering: LM entries first, IN entries last.
  * Returns true if current order differs from desired order.
  */
@@ -47,11 +59,9 @@ export function cleanupDictNote(content: string): string | null {
 
 	let changed = false;
 
-	// Normalize attestation spacing in each entry
 	for (const entry of entries) {
-		if (normalizeAttestationSpacing(entry)) {
-			changed = true;
-		}
+		if (normalizeAttestationSpacing(entry)) changed = true;
+		if (reorderSections(entry)) changed = true;
 	}
 
 	// Reorder: LM entries first, IN entries last

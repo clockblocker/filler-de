@@ -24,6 +24,7 @@ Rules:
 - Return the index of the best-matching sense if the meaning clearly aligns
 - Return null only when the word in context has a genuinely different meaning from ALL listed senses
 - When in doubt between a close match and a new sense, prefer the existing match
+- The semantics gloss should describe the general meaning of the sense, not the specific context (e.g., for a bicycle lock context, return "Schließvorrichtung" not "Fahrradschloss")
 </task-description>
 
 <examples>
@@ -50,16 +51,25 @@ Rules:
 {"context":"Das Schloss an der Tür war kaputt.","lemma":"Schloss","senses":[{"index":1,"semantics":"Gebäude"}]}
 </input>
 <output>
-{"matchedIndex":null,"semantics":"Türschloss"}
+{"matchedIndex":null,"semantics":"Schließvorrichtung"}
 </output>
 </example-3>
 
 <example-4>
 <input>
-{"context":"Wir besichtigten das Schloss am Rhein.","lemma":"Schloss","senses":[{"index":1,"semantics":"Gebäude"},{"index":2,"semantics":"Türschloss"}]}
+{"context":"Wir besichtigten das Schloss am Rhein.","lemma":"Schloss","senses":[{"index":1,"semantics":"Gebäude"},{"index":2,"semantics":"Schließvorrichtung"}]}
 </input>
 <output>
 {"matchedIndex":1}
 </output>
 </example-4>
+
+<example-5>
+<input>
+{"context":"Das Schloss am Fahrrad war aufgebrochen.","lemma":"Schloss","senses":[{"index":1,"semantics":"Gebäude"}]}
+</input>
+<output>
+{"matchedIndex":null,"semantics":"Schließvorrichtung"}
+</output>
+</example-5>
 </examples>`;

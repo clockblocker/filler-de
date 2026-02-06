@@ -1,4 +1,5 @@
 import { ok, type Result } from "neverthrow";
+import { compareSectionsByWeight } from "../../../../../linguistics/common/sections/section-config";
 import { dictNoteHelper } from "../../../../../stateless-helpers/dict-note";
 import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metadata";
 import { logger } from "../../../../../utils/logger";
@@ -10,6 +11,10 @@ import type { GenerateSectionsResult } from "./generate-sections";
 export function serializeEntry(
 	ctx: GenerateSectionsResult,
 ): Result<CommandState, CommandError> {
+	for (const entry of ctx.allEntries) {
+		entry.sections.sort(compareSectionsByWeight);
+	}
+
 	const { body, meta } = dictNoteHelper.serialize(ctx.allEntries);
 
 	const fullMeta = { ...meta, noteKind: DICT_ENTRY_NOTE_KIND };

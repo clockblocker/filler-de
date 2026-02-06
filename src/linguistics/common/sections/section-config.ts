@@ -1,5 +1,6 @@
 import type { POS } from "../enums/linguistic-units/lexem/pos";
-import { DictSectionKind } from "./section-kind";
+import { cssSuffixFor } from "./section-css-kind";
+import { ALL_DICT_SECTION_KINDS, DictSectionKind } from "./section-kind";
 
 const S = DictSectionKind;
 
@@ -38,6 +39,38 @@ export const sectionsForMorphem: readonly DictSectionKind[] = [
 	S.Attestation,
 	S.FreeForm,
 ];
+
+/** Display order weight for each section kind (lower = earlier in the note). */
+export const SECTION_DISPLAY_WEIGHT: Record<DictSectionKind, number> = {
+	[S.Header]: 0,
+	[S.Attestation]: 1,
+	[S.Relation]: 2,
+	[S.Definition]: 3,
+	[S.Translation]: 4,
+	[S.Morphem]: 5,
+	[S.Inflection]: 6,
+	[S.Deviation]: 7,
+	[S.FreeForm]: 8,
+};
+
+/** Weight lookup by CSS suffix — for sorting parsed EntrySection[]. */
+const cssSuffixWeight = new Map<string, number>(
+	ALL_DICT_SECTION_KINDS.map((kind) => [
+		cssSuffixFor[kind],
+		SECTION_DISPLAY_WEIGHT[kind],
+	]),
+);
+
+/** Compare two sections by display weight. Unknown kinds sort to the end. */
+export function compareSectionsByWeight(
+	a: { kind: string },
+	b: { kind: string },
+): number {
+	return (
+		(cssSuffixWeight.get(a.kind) ?? 99) -
+		(cssSuffixWeight.get(b.kind) ?? 99)
+	);
+}
 
 type SectionQuery =
 	| { unit: "Morphem" | "Phrasem" }

@@ -15,4 +15,5 @@ Rules:
 - Compare the contextual meaning against each sense's semantics gloss
 - Return the index of the best-matching sense if the meaning clearly aligns
 - Return null only when the word in context has a genuinely different meaning from ALL listed senses
-- When in doubt between a close match and a new sense, prefer the existing match`;
+- When in doubt between a close match and a new sense, prefer the existing match
+- The semantics gloss should describe the general meaning of the sense, not the specific context (e.g., for a bicycle lock context, return "Schließvorrichtung" not "Fahrradschloss")`;

@@ -49,9 +49,11 @@ User gets a tailor-made dictionary that grows with their reading
 
 > **V3 scope**: Polysemy disambiguation — new Definition section (originally "Semantics", renamed in V5; short distinguishing gloss per entry, e.g., "Geldinstitut" vs "Sitzgelegenheit" for *Bank*), new Disambiguate prompt in Lemma command, enriched note metadata (`semantics` per entry ID for fast lookup without note parsing), VAM API expansion (`getSplitPathsToExistingFilesWithBasename`), Lemma-side sense matching before Generate.
 
-> **V5 scope**: Pipeline hardening — tighter LLM output schemas (`article` restricted to `der|die|das` enum, length caps on `semantics`/`emoji`/`inflection` fields), Disambiguate prompt hardening (bounds-check `matchedIndex` against valid indices, log parse failures), precomputed semantics (Disambiguate returns gloss for new senses → saves one Semantics LLM call in Generate), scroll-to-entry after Generate dispatch, 37 unit tests covering formatters + disambiguate-sense + propagation steps. Also: `DictSectionKind.Semantics` renamed to `DictSectionKind.Definition`, title changed from "Im Sinne von" to "Definition".
+> **V5 scope**: Pipeline hardening — tighter LLM output schemas (`article` restricted to `der|die|das` enum, length caps on `semantics`/`emoji`/`inflection` fields), Disambiguate prompt hardening (bounds-check `matchedIndex` against valid indices, log parse failures), precomputed semantics (Disambiguate returns gloss for new senses → stored as `meta.semantics`; ~~V5 skipped Semantics LLM~~ V7 restored: full Definition LLM always fires), scroll-to-entry after Generate dispatch, 37 unit tests covering formatters + disambiguate-sense + propagation steps. Also: `DictSectionKind.Semantics` renamed to `DictSectionKind.Definition`, title changed from "Im Sinne von" to "Definition".
 
-> **V6 scope**: Translation now uses dedicated `PromptKind.WordTranslation` (translates the lemma word, not the attestation sentence; uses context only for disambiguation). Definition section upgraded from 1-3 word gloss to 5-15 word German dictionary-style definition. Attestation refs now separated by blank lines (`\n\n`) for visual spacing. Dict note cleanup on file open: reorders entries (LM first, IN last), normalizes attestation spacing.
+> **V7 scope**: Polysemy quality fixes — Definition LLM call now **always fires** for new entries (precomputedSemantics no longer short-circuits it; the concise gloss is still stored in `meta.semantics` for Disambiguate lookup, but the Definition section always uses the full Semantics prompt output). Header emoji prompt changed to reflect the specific sense in context (not "primary/most common meaning"). Disambiguate gloss rule added: must be context-independent (e.g., "Schließvorrichtung" not "Fahrradschloss"). New polysemous examples in Header and Disambiguate prompts (Schloss castle vs lock).
+
+> **V6 scope**: Translation now uses dedicated `PromptKind.WordTranslation` (translates the lemma word, not the attestation sentence; uses context only for disambiguation). Definition section upgraded from 1-3 word gloss to 5-15 word German dictionary-style definition. Attestation refs now separated by blank lines (`\n\n`) for visual spacing. Dict note cleanup on file open: reorders entries (LM first, IN last), normalizes attestation spacing, reorders sections within each entry by `SECTION_DISPLAY_WEIGHT`. Generate pipeline also sorts sections by weight before serializing. Entry separator widened to `\n\n\n---\n---\n\n\n`.
 
 **Properties of the resulting dictionary:**
 
@@ -229,7 +231,7 @@ Section titles are localized per `TargetLanguage` via `TitleReprFor`.
 
 **FreeForm — the catch-all section**: Any content in a DictEntry that doesn't match our structured format (i.e., doesn't belong to a recognized DictEntrySection) gets collected into the FreeForm section. This keeps the structured sections clean while preserving user-written or unrecognized content. **Auto-cleanup** happens on Note open/close — the system scans the DictEntry, moves stray content into FreeForm, and re-serializes.
 
-**Dict note cleanup on open (V6)**: When a dict note is opened (`file-open` event in `main.ts`), `cleanupDictNote()` runs two normalizations: (1) reorder entries so LM (lemma) entries come before IN (inflected) entries, and (2) normalize attestation ref spacing to `\n\n`-separated. Returns `null` if no changes needed (skips write). Uses VAM `ProcessMdFile` dispatch with self-event tracking to prevent feedback loops. Detection: checks note content for `noteKind: "DictEntry"` metadata string.
+**Dict note cleanup on open (V6)**: When a dict note is opened (`file-open` event in `main.ts`), `cleanupDictNote()` runs three normalizations: (1) normalize attestation ref spacing to `\n\n`-separated, (2) reorder sections within each entry by `SECTION_DISPLAY_WEIGHT` (Attestation → Relation → Definition → Translation → Morphem → Inflection → Deviation → FreeForm), and (3) reorder entries so LM (lemma) entries come before IN (inflected) entries. Returns `null` if no changes needed (skips write). Uses VAM `ProcessMdFile` dispatch with self-event tracking to prevent feedback loops. Detection: checks note content for `noteKind: "DictEntry"` metadata string. The Generate pipeline also applies section weight sorting in `serializeEntry` before writing.
 
 **Source**: `src/linguistics/sections/section-kind.ts`
 
@@ -301,7 +303,7 @@ D: dem [[Kohlekraftwerk]], den [[Kohlekraftwerken]]
 - **Header line**: emoji + article + `[[Surface]]` + pronunciation link + ` ^blockId`
 - **DictEntryId format** (validated by `DictEntryIdSchema`): `^{LinguisticUnitKindTag}-{SurfaceKindTag}(-{PosTag}-{index})` — the PosTag+index suffix is Lexem-only. E.g., `^lx-lm-nom-1` (Lexem, Lemma surface, Noun, 1st meaning). Final format TBD.
 - **DictEntrySections**: marked with `<span class="entry_section_title entry_section_title_{kind}">Title</span>`
-- **Multiple DictEntries** (different meanings of the same Surface) separated by `\n\n---\n---\n\n` (parser also accepts legacy `\n---\n---\n---\n`)
+- **Multiple DictEntries** (different meanings of the same Surface) separated by `\n\n\n---\n---\n\n\n` (parser also accepts older `\n\n---\n---\n\n` and legacy `\n---\n---\n---\n`)
 
 ### 5.2 Parsed Representation
 
@@ -461,7 +463,7 @@ The dictionary pipeline is split into two user-facing commands with distinct res
 │ 2. LLM classification             │    │ 3. If re-encounter: append attestation   │
 │    → LinguisticUnit + POS         │───→│    If new: LLM request PER section:      │
 │    → SurfaceKind + lemma          │    │      Header → formatHeaderLine()         │
-│ 3. Disambiguate (V3):             │    │      Definition → short gloss (LLM/precomputed) │
+│ 3. Disambiguate (V3):             │    │      Definition → full LLM definition (always)  │
 │    Find existing note for lemma    │    │      Morphem → morphemeFormatterHelper() │
 │    (vam.getSplitPathsToExisting    │    │      Relation → formatRelationSection()  │
 │     FilesWithBasename)             │    │      Inflection → formatInflectionSection│
@@ -563,7 +565,7 @@ V5 bounds check: if matchedIndex is not in validIndices → treat as new sense
 
 **Key optimizations**:
 - The Disambiguate LLM call is skipped entirely when no note exists (first encounter) or no entries with matching POS exist (first sense for this POS)
-- **V5**: When Disambiguate returns `matchedIndex: null` (new sense), it also returns a `semantics` gloss (1-3 word German description). This is stored as `LemmaResult.precomputedSemantics` and used by Generate to skip the separate Definition LLM call.
+- **V5**: When Disambiguate returns `matchedIndex: null` (new sense), it also returns a `semantics` gloss (1-3 word context-independent German description). This is stored as `LemmaResult.precomputedSemantics` and used by Generate as fallback for `meta.semantics` (concise gloss for future disambiguation). **V7**: The full Definition LLM call now always fires — the precomputed gloss no longer short-circuits it.
 - **V5**: `matchedIndex` is bounds-checked against `validIndices` — out-of-range values are treated as new sense (prevents LLM hallucinating invalid indices)
 
 The disambiguation result is stored in `LemmaResult.disambiguationResult` and consumed by Generate's `resolveExistingEntry` step, which no longer needs to re-parse or re-match.
@@ -605,12 +607,12 @@ Matching ignores surfaceKind so that inflected encounters (e.g., "Schlosses" →
 
 **Path B (new entry)**: Determines applicable sections via `getSectionsFor()`, filtered to the **V3 set**: Header, Definition, Morphem, Relation, Inflection, Translation, Attestation.
 
-All LLM calls are fired in parallel via `Promise.allSettled` (none depend on each other's results). **Critical sections** (Header, Translation) throw on failure; **optional sections** (Definition, Morphem, Relation, Inflection) degrade gracefully — failures are logged and the entry is still created. **V5 optimization**: When `LemmaResult.precomputedSemantics` is set (Disambiguate already returned the gloss), the Definition LLM call is skipped entirely — the precomputed value is used directly. Results are assembled in correct section order after all promises settle. Applicable sections:
+All LLM calls are fired in parallel via `Promise.allSettled` (none depend on each other's results). **Critical sections** (Header, Translation) throw on failure; **optional sections** (Definition, Morphem, Relation, Inflection) degrade gracefully — failures are logged and the entry is still created. **V7**: The Definition LLM call always fires for new entries (V5 previously skipped it when `precomputedSemantics` existed). `precomputedSemantics` is still used for `meta.semantics` (concise gloss for future Disambiguate lookups). Results are assembled in correct section order after all promises settle. Applicable sections:
 
 | Section | LLM? | PromptKind | Formatter | Output |
 |---------|------|-----------|-----------|--------|
 | **Header** | Yes | `Header` | `formatHeaderLine()` | `{emoji} {article} [[lemma]], [{ipa} ♫](youglish_url)` → `DictEntry.headerContent` |
-| **Definition** | Yes (or skipped) | `Semantics` | — (string pass-through) | 5-15 word German dictionary-style definition → `EntrySection`. **Also stored in note metadata** per entry ID for Lemma disambiguation lookup. **V5**: Skipped when `precomputedSemantics` is available from Disambiguate. |
+| **Definition** | Yes | `Semantics` | — (string pass-through) | 5-15 word German dictionary-style definition → `EntrySection`. **Also stored in note metadata** per entry ID for Lemma disambiguation lookup. **V7**: Always fires; `meta.semantics` prefers concise `precomputedSemantics` gloss when available. |
 | **Morphem** | Yes | `Morphem` | `morphemeFormatterHelper.formatSection()` | `[[kohle]]\|[[kraft]]\|[[werk]]` → `EntrySection` |
 | **Relation** | Yes | `Relation` | `formatRelationSection()` | `= [[Synonym]], ⊃ [[Hypernym]]` → `EntrySection`. Raw output also stored for propagation. |
 | **Inflection** | Yes | `NounInflection` (nouns) or `Inflection` (other POS) | `formatNounInflection()` / `formatInflectionSection()` | `N: das [[Kohlekraftwerk]], die [[Kohlekraftwerke]]` → `EntrySection`. Nouns use structured cells (case×number with article+form); other POS use generic rows. Noun cells also feed `propagateInflections`. |
@@ -656,7 +658,7 @@ For non-Lexem units, `pos` is passed to LLM prompts as the `linguisticUnit` name
 - **Multi-word selection**: Lemma handling phrasem attestations from multi-word selections
 - **Deviation section**: Additional LLM-generated section for irregular forms and exceptions
 - ~~**Scroll to latest updated entry**~~: Implemented in V5. After Generate dispatch, `scrollToTargetBlock()` finds `^{blockId}` line and calls `ActiveFileService.scrollToLine()`.
-- ~~**Disambiguate prompt returning translation/sense instead of null**~~: Implemented in V5. Disambiguate returns `semantics` gloss for new senses → stored as `precomputedSemantics` → Definition LLM call skipped in Generate.
+- ~~**Disambiguate prompt returning translation/sense instead of null**~~: Implemented in V5. Disambiguate returns `semantics` gloss for new senses → stored as `precomputedSemantics` → used for `meta.semantics`. V7: Definition LLM always fires (precomputed gloss no longer short-circuits it).
 
 ---
 
@@ -1029,7 +1031,7 @@ To add support for a new target language (e.g., Japanese):
 | `src/commanders/textfresser/commands/generate/steps/check-attestation.ts` | Sync check: attestation available |
 | `src/commanders/textfresser/commands/generate/steps/check-lemma-result.ts` | Sync check: lemma result available |
 | `src/commanders/textfresser/commands/generate/steps/resolve-existing-entry.ts` | Parse existing entries, use Lemma's disambiguationResult for re-encounter detection |
-| `src/commanders/textfresser/commands/generate/steps/generate-sections.ts` | Async: LLM calls per section (or append attestation for re-encounters). V5: skips Definition LLM when precomputedSemantics exists, sets targetBlockId |
+| `src/commanders/textfresser/commands/generate/steps/generate-sections.ts` | Async: LLM calls per section (or append attestation for re-encounters). V7: Definition LLM always fires; precomputedSemantics used only for meta. Sets targetBlockId |
 | `src/commanders/textfresser/commands/generate/steps/propagate-relations.ts` | Cross-ref: compute inverse relations, generate actions for target notes |
 | `src/commanders/textfresser/commands/generate/steps/propagate-inflections.ts` | Noun inflection propagation: create stub entries in inflected-form notes |
 | `src/commanders/textfresser/commands/generate/steps/serialize-entry.ts` | Serialize ALL DictEntries to note body + apply noteKind metadata (single upsert) |
@@ -1058,7 +1060,7 @@ To add support for a new target language (e.g., Japanese):
 | `src/linguistics/enums/linguistic-units/morphem/morpheme-tag.ts` | MorphemeTag (Separable/Inseparable) |
 | `src/linguistics/sections/section-kind.ts` | DictSectionKind, TitleReprFor |
 | `src/linguistics/sections/section-css-kind.ts` | DictSectionKind → CSS suffix mapping |
-| `src/linguistics/sections/section-config.ts` | getSectionsFor(): applicable sections per unit+POS |
+| `src/linguistics/sections/section-config.ts` | getSectionsFor(): applicable sections per unit+POS; SECTION_DISPLAY_WEIGHT + compareSectionsByWeight(): section display ordering |
 | `src/linguistics/dict-entry-id/dict-entry-id.ts` | DictEntryId builder/parser |
 | `src/linguistics/common/enums/inflection/feature-values.ts` | CaseValue, NumberValue Zod enums |
 | `src/linguistics/german/inflection/noun.ts` | NounInflectionCell type, German case/number tags, display order |
@@ -1090,7 +1092,7 @@ To add support for a new target language (e.g., Japanese):
 
 - Tightened LLM output schemas (article enum, length caps, min lengths)
 - Disambiguate hardening (bounds check, parse failure logging)
-- Disambiguate returns semantics upfront (saves one LLM call for new senses)
+- Disambiguate returns semantics upfront (used for `meta.semantics`; V7 restored full Definition LLM)
 - Scroll to updated entry after re-encounter
 - Unit tests for formatters, disambiguate-sense, propagation steps
 
