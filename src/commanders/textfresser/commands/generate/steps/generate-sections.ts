@@ -6,6 +6,7 @@ import {
 	DictSectionKind,
 	TitleReprFor,
 } from "../../../../../linguistics/common/sections/section-kind";
+import type { NounInflectionCell } from "../../../../../linguistics/german/inflection/noun";
 import type { AgentOutput } from "../../../../../prompt-smith";
 import { PromptKind } from "../../../../../prompt-smith/codegen/consts";
 import type { RelationSubKind } from "../../../../../prompt-smith/schemas/relation";
@@ -20,6 +21,7 @@ import type { CommandError } from "../../types";
 import { CommandErrorKind } from "../../types";
 import { formatHeaderLine } from "../section-formatters/header-formatter";
 import { formatInflectionSection } from "../section-formatters/inflection-formatter";
+import { formatNounInflection } from "../section-formatters/noun-inflection-formatter";
 import { formatRelationSection } from "../section-formatters/relation-formatter";
 import type { ResolvedEntryState } from "./resolve-existing-entry";
 
@@ -51,6 +53,8 @@ export type GenerateSectionsResult = ResolvedEntryState & {
 	allEntries: DictEntry[];
 	/** Raw relation data from LLM — used by propagate-relations step. Empty for re-encounters. */
 	relations: ParsedRelation[];
+	/** Structured noun inflection cells — used by propagate-inflections step. Empty for non-nouns / re-encounters. */
+	inflectionCells: NounInflectionCell[];
 };
 
 /**
@@ -92,6 +96,7 @@ export function generateSections(
 			Promise.resolve({
 				...ctx,
 				allEntries: existingEntries,
+				inflectionCells: [],
 				relations: [],
 			}),
 		);
@@ -113,6 +118,7 @@ export function generateSections(
 			let headerContent = `[[${word}]]`;
 			const sections: EntrySection[] = [];
 			let relations: ParsedRelation[] = [];
+			let inflectionCells: NounInflectionCell[] = [];
 
 			for (const sectionKind of v2Applicable) {
 				switch (sectionKind) {
@@ -170,12 +176,26 @@ export function generateSections(
 					}
 
 					case DictSectionKind.Inflection: {
-						const inflectionOutput = await promptRunner.generate(
-							PromptKind.Inflection,
-							{ context, pos, word },
-						);
-						const inflectionContent =
-							formatInflectionSection(inflectionOutput);
+						let inflectionContent: string;
+
+						if (pos === "Noun") {
+							const nounOutput = await promptRunner.generate(
+								PromptKind.NounInflection,
+								{ context, word },
+							);
+							const result = formatNounInflection(nounOutput);
+							inflectionContent = result.formattedSection;
+							inflectionCells = result.cells;
+						} else {
+							const inflectionOutput =
+								await promptRunner.generate(
+									PromptKind.Inflection,
+									{ context, pos, word },
+								);
+							inflectionContent =
+								formatInflectionSection(inflectionOutput);
+						}
+
 						if (inflectionContent) {
 							sections.push({
 								content: inflectionContent,
@@ -246,6 +266,7 @@ export function generateSections(
 			return {
 				...ctx,
 				allEntries: [...existingEntries, newEntry],
+				inflectionCells,
 				relations,
 			};
 		})(),

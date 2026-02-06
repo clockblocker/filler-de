@@ -7,6 +7,7 @@ const supportedPromptKinds = [
 	"Header",
 	"Relation",
 	"Inflection",
+	"NounInflection",
 ] as const;
 
 export const PromptKindSchema = z.enum(supportedPromptKinds);

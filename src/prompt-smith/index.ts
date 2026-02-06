@@ -5,12 +5,14 @@ import * as englishToEnglishHeaderPrompt from "./codegen/generated-promts/englis
 import * as englishToEnglishInflectionPrompt from "./codegen/generated-promts/english/english/inflection-prompt";
 import * as englishToEnglishLemmaPrompt from "./codegen/generated-promts/english/english/lemma-prompt";
 import * as englishToEnglishMorphemPrompt from "./codegen/generated-promts/english/english/morphem-prompt";
+import * as englishToEnglishNounInflectionPrompt from "./codegen/generated-promts/english/english/noun-inflection-prompt";
 import * as englishToEnglishRelationPrompt from "./codegen/generated-promts/english/english/relation-prompt";
 import * as englishToEnglishTranslatePrompt from "./codegen/generated-promts/english/english/translate-prompt";
 import * as germanToEnglishHeaderPrompt from "./codegen/generated-promts/german/english/header-prompt";
 import * as germanToEnglishInflectionPrompt from "./codegen/generated-promts/german/english/inflection-prompt";
 import * as germanToEnglishLemmaPrompt from "./codegen/generated-promts/german/english/lemma-prompt";
 import * as germanToEnglishMorphemPrompt from "./codegen/generated-promts/german/english/morphem-prompt";
+import * as germanToEnglishNounInflectionPrompt from "./codegen/generated-promts/german/english/noun-inflection-prompt";
 import * as germanToEnglishRelationPrompt from "./codegen/generated-promts/german/english/relation-prompt";
 import * as germanToEnglishTranslatePrompt from "./codegen/generated-promts/german/english/translate-prompt";
 import * as germanToRussianTranslatePrompt from "./codegen/generated-promts/german/russian/translate-prompt";
@@ -23,6 +25,7 @@ export const PROMPT_FOR = {
 			Inflection: englishToEnglishInflectionPrompt,
 			Lemma: englishToEnglishLemmaPrompt,
 			Morphem: englishToEnglishMorphemPrompt,
+			NounInflection: englishToEnglishNounInflectionPrompt,
 			Relation: englishToEnglishRelationPrompt,
 			Translate: englishToEnglishTranslatePrompt,
 		},
@@ -31,6 +34,7 @@ export const PROMPT_FOR = {
 			Inflection: englishToEnglishInflectionPrompt,
 			Lemma: englishToEnglishLemmaPrompt,
 			Morphem: englishToEnglishMorphemPrompt,
+			NounInflection: englishToEnglishNounInflectionPrompt,
 			Relation: englishToEnglishRelationPrompt,
 			Translate: englishToEnglishTranslatePrompt,
 		},
@@ -41,6 +45,7 @@ export const PROMPT_FOR = {
 			Inflection: germanToEnglishInflectionPrompt,
 			Lemma: germanToEnglishLemmaPrompt,
 			Morphem: germanToEnglishMorphemPrompt,
+			NounInflection: germanToEnglishNounInflectionPrompt,
 			Relation: germanToEnglishRelationPrompt,
 			Translate: germanToEnglishTranslatePrompt,
 		},
@@ -49,6 +54,7 @@ export const PROMPT_FOR = {
 			Inflection: germanToEnglishInflectionPrompt,
 			Lemma: germanToEnglishLemmaPrompt,
 			Morphem: germanToEnglishMorphemPrompt,
+			NounInflection: germanToEnglishNounInflectionPrompt,
 			Relation: germanToEnglishRelationPrompt,
 			Translate: germanToRussianTranslatePrompt,
 		},

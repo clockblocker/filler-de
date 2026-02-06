@@ -37,6 +37,7 @@ Generate (heavy lifting):
   If new: LLM request PER section (Header, Morphem, Relation, Inflection, Translation)
   Adds Attestation section (no LLM — uses source ref from Lemma)
   Propagates inverse relations to referenced notes
+  Propagates noun inflection stubs to inflected-form notes
   Builds full DictEntry, serializes to note, moves to Wörter folder
   Notifies user of success/failure
   Single vam.dispatch()
@@ -44,7 +45,7 @@ Generate (heavy lifting):
 User gets a tailor-made dictionary that grows with their reading
 ```
 
-> **V2 scope**: German target, 6 generated sections (Header, Morphem, Relation, Inflection, Translation, Attestation), re-encounter detection (append attestation vs new entry), cross-reference propagation for relations, user-facing notices.
+> **V2 scope**: German target, 6 generated sections (Header, Morphem, Relation, Inflection, Translation, Attestation), re-encounter detection (append attestation vs new entry), cross-reference propagation for relations, noun inflection propagation (stub entries in inflected-form notes), user-facing notices.
 
 **Properties of the resulting dictionary:**
 
@@ -116,8 +117,10 @@ Note (Obsidian .md file, named after a Surface)
 │  ├─ enums/.../phrasem-kind  — PhrasemeKind              │
 │  ├─ enums/.../morpheme-kind — MorphemeKind              │
 │  ├─ enums/.../morpheme-tag  — MorphemeTag (Sep/Insep)  │
+│  ├─ enums/inflection/feature-values — CaseValue, NumberValue │
 │  ├─ sections/section-kind   — DictSectionKind           │
 │  ├─ sections/section-css-kind — DictSectionKind → CSS suffix │
+│  ├─ german/inflection/noun  — NounInflectionCell, case/number tags │
 │  └─ old-enums.ts            — detailed inflectional enums │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -286,7 +289,7 @@ D: dem [[Kohlekraftwerk]], den [[Kohlekraftwerken]]
 - **Header line**: emoji + article + `[[Surface]]` + pronunciation link + ` ^blockId`
 - **DictEntryId format** (validated by `DictEntryIdSchema`): `^{LinguisticUnitKindTag}-{SurfaceKindTag}(-{PosTag}-{index})` — the PosTag+index suffix is Lexem-only. E.g., `^lx-lm-nom-1` (Lexem, Lemma surface, Noun, 1st meaning). Final format TBD.
 - **DictEntrySections**: marked with `<span class="entry_section_title entry_section_title_{kind}">Title</span>`
-- **Multiple DictEntries** (different meanings of the same Surface) separated by `\n---\n---\n---\n`
+- **Multiple DictEntries** (different meanings of the same Surface) separated by `\n\n---\n---\n\n` (parser also accepts legacy `\n---\n---\n---\n`)
 
 ### 5.2 Parsed Representation
 
@@ -516,6 +519,7 @@ checkAttestation → checkEligibility → checkLemmaResult
   → resolveExistingEntry (parse existing entries, detect re-encounter)
   → generateSections (async: LLM calls or attestation append)
   → propagateRelations (cross-ref inverse relations to target notes)
+  → propagateInflections (create stub entries for inflected noun forms)
   → serializeEntry → applyMeta → moveToWorter → addWriteAction
 ```
 
@@ -543,7 +547,7 @@ For each applicable section:
 | **Header** | Yes | `Header` | `formatHeaderLine()` | `{emoji} {article} [[lemma]], [{ipa} ♫](youglish_url)` → `DictEntry.headerContent` |
 | **Morphem** | Yes | `Morphem` | `morphemeFormatterHelper.formatSection()` | `[[kohle]]\|[[kraft]]\|[[werk]]` → `EntrySection` |
 | **Relation** | Yes | `Relation` | `formatRelationSection()` | `= [[Synonym]], ⊃ [[Hypernym]]` → `EntrySection`. Raw output also stored for propagation. |
-| **Inflection** | Yes | `Inflection` | `formatInflectionSection()` | `N: das [[Kohlekraftwerk]], die [[Kohlekraftwerke]]` → `EntrySection`. POS-adaptive (case table for nouns, tenses for verbs, degrees for adjectives). |
+| **Inflection** | Yes | `NounInflection` (nouns) or `Inflection` (other POS) | `formatNounInflection()` / `formatInflectionSection()` | `N: das [[Kohlekraftwerk]], die [[Kohlekraftwerke]]` → `EntrySection`. Nouns use structured cells (case×number with article+form); other POS use generic rows. Noun cells also feed `propagateInflections`. |
 | **Translation** | Yes | `Translate` | — (string pass-through) | Translates the attestation sentence context → `EntrySection` |
 | **Attestation** | No | — | — | `![[file#^blockId\|^]]` from `lemmaResult.attestation.source.ref` → `EntrySection` |
 
@@ -572,7 +576,7 @@ Different prompts are needed depending on:
 |-----------|--------|--------|
 | **TargetLanguage** | German, English, ... | Language of the dictionary |
 | **KnownLanguage** | Russian, English, ... | User's native language |
-| **PromptKind** | Lemma, Header, Morphem, Relation, Inflection, Translate | What task the LLM performs |
+| **PromptKind** | Lemma, Header, Morphem, Relation, Inflection, NounInflection, Translate | What task the LLM performs |
 
 Section applicability (which sections a DictEntry gets) is determined by `LinguisticUnitKind` + `POS` via `getSectionsFor()` in `src/linguistics/sections/section-config.ts`.
 
@@ -619,7 +623,7 @@ Not all DictEntrySections participate in cross-reference propagation:
 - **Relation**: Full bidirectional propagation with inverse rules (see 9.2). This is where most SubSections live.
 - **Morphem**: If `Kohlekraftwerk` decomposes into `[[Kohle]] + [[Kraftwerk]]`, then `Kohle.md` could list `Kohlekraftwerk` under "compounds" — simpler, potentially one-directional.
 - **Attestation**: No propagation — contexts are per-encounter.
-- **Inflection**: No propagation — forms are per-lemma.
+- **Inflection**: **Noun propagation** via `propagateInflections` — creates stub entries in inflected-form notes (see section 9.5). Other POS: no propagation.
 - **Header, FreeForm, Deviation**: No propagation.
 
 ### 9.4 Implementation
@@ -653,6 +657,38 @@ All dispatched in single vam.dispatch() alongside source note actions
 - Skips propagation for re-encounters (no new relations generated)
 - Deduplicates: won't add `= [[Schuck]]` if it already exists in the target's relation section
 
+### 9.5 Inflection Propagation (Nouns)
+
+**Source**: `src/commanders/textfresser/commands/generate/steps/propagate-inflections.ts`
+
+When Generate processes a noun, the `NounInflection` prompt returns structured cells (case × number × article × form). After formatting the Inflection section, `propagateInflections` creates **stub entries** in the notes of inflected forms.
+
+```
+generateSections captures NounInflectionCell[] (8 cells: 4 cases × 2 numbers)
+  ↓
+propagateInflections:
+  Group cells by form word
+  For each form:
+    Build combined header: "#Nominativ/Akkusativ/Genitiv/Plural for: [[lemma]]"
+    If form === lemma → append entry to ctx.allEntries (same note)
+    If form !== lemma:
+      1. UpsertMdFile (ensure target note exists)
+      2. ProcessMdFile with transform: parse existing entries, dedup by header, append stub
+  ↓
+Propagation VaultActions added to ctx.actions
+```
+
+**Stub entry format**: Header-only DictEntry with no sections:
+```markdown
+#Nominativ/Akkusativ/Genitiv/Plural for: [[Kraftwerk]] ^LX-SNG-NOUN-1
+```
+
+**Key design decisions**:
+- **One entry per form**: Cells sharing the same inflected word are merged into a single entry with `/`-chained tags (e.g., `#Nominativ/Akkusativ` when Nom and Acc share the same form)
+- Tags ordered: cases in N/A/G/D order, then number (Singular/Plural)
+- Same dedup + UpsertMdFile + ProcessMdFile pattern as relation propagation
+- Skipped for re-encounters and non-noun POS
+
 ---
 
 ## 10. Prompt-Smith System
@@ -680,7 +716,7 @@ src/prompt-smith/
 │           └── to-test.ts           # Extra examples for validation only
 │
 ├── codegen/
-│   ├── consts.ts                    # PromptKind enum ("Translate","Morphem","Lemma","Header","Relation","Inflection")
+│   ├── consts.ts                    # PromptKind enum ("Translate","Morphem","Lemma","Header","Relation","Inflection","NounInflection")
 │   ├── generated-promts/            # AUTO-GENERATED compiled prompts
 │   └── skript/                      # Codegen pipeline scripts
 │       ├── run.ts                   # Orchestrator
@@ -696,7 +732,8 @@ src/prompt-smith/
 │   ├── lemma.ts                     # Lemma: {surface,context} → {linguisticUnit,pos?,surfaceKind,lemma}
 │   ├── header.ts                    # Header: {word,pos,context} → {emoji,article?,ipa}
 │   ├── relation.ts                  # Relation: {word,pos,context} → {relations[{kind,words[]}]}
-│   └── inflection.ts                # Inflection: {word,pos,context} → {rows[{label,forms}]}
+│   ├── inflection.ts                # Inflection: {word,pos,context} → {rows[{label,forms}]}
+│   └── noun-inflection.ts           # NounInflection: {word,context} → {cells[{case,number,article,form}]}
 │
 ├── index.ts                         # GENERATED: PROMPT_FOR lookup table
 └── types.ts                         # AvaliablePromptDict type
@@ -767,7 +804,7 @@ Some PromptKinds depend on both the target language and the user's known languag
 | Category | PromptKinds | Depends on known language? |
 |----------|-------------|---------------------------|
 | **Bilingual** | Translate | Yes — output language varies by user's known language |
-| **Target-language-only** | Morphem, Lemma, Header, Relation, Inflection | No — linguistic analysis is purely about target language structure |
+| **Target-language-only** | Morphem, Lemma, Header, Relation, Inflection, NounInflection | No — linguistic analysis is purely about target language structure |
 
 For **target-language-only** prompts, only the mandatory `english/` known-language path is created. The codegen fallback mechanism automatically reuses this English prompt for other known languages (e.g., Russian), since the prompt content is identical regardless of the user's native language.
 
@@ -903,10 +940,12 @@ To add support for a new target language (e.g., Japanese):
 | `src/commanders/textfresser/commands/generate/steps/resolve-existing-entry.ts` | Parse existing entries, detect re-encounter by ID prefix |
 | `src/commanders/textfresser/commands/generate/steps/generate-sections.ts` | Async: LLM calls per section (or append attestation for re-encounters) |
 | `src/commanders/textfresser/commands/generate/steps/propagate-relations.ts` | Cross-ref: compute inverse relations, generate actions for target notes |
+| `src/commanders/textfresser/commands/generate/steps/propagate-inflections.ts` | Noun inflection propagation: create stub entries in inflected-form notes |
 | `src/commanders/textfresser/commands/generate/steps/serialize-entry.ts` | Serialize ALL DictEntries to note body |
 | `src/commanders/textfresser/commands/generate/section-formatters/header-formatter.ts` | Header LLM output → header line |
 | `src/commanders/textfresser/commands/generate/section-formatters/relation-formatter.ts` | Relation LLM output → symbol notation |
-| `src/commanders/textfresser/commands/generate/section-formatters/inflection-formatter.ts` | Inflection LLM output → `{label}: {forms}` lines |
+| `src/commanders/textfresser/commands/generate/section-formatters/inflection-formatter.ts` | Generic inflection LLM output → `{label}: {forms}` lines |
+| `src/commanders/textfresser/commands/generate/section-formatters/noun-inflection-formatter.ts` | Noun inflection: structured cells → `N: das [[Kraftwerk]], die [[Kraftwerke]]` + raw cells for propagation |
 | `src/commanders/textfresser/commands/translate/translate-command.ts` | Translate pipeline |
 | **Attestation** | |
 | `src/commanders/textfresser/common/attestation/types.ts` | Attestation type |
@@ -926,10 +965,12 @@ To add support for a new target language (e.g., Japanese):
 | `src/linguistics/sections/section-css-kind.ts` | DictSectionKind → CSS suffix mapping |
 | `src/linguistics/sections/section-config.ts` | getSectionsFor(): applicable sections per unit+POS |
 | `src/linguistics/dict-entry-id/dict-entry-id.ts` | DictEntryId builder/parser |
+| `src/linguistics/common/enums/inflection/feature-values.ts` | CaseValue, NumberValue Zod enums |
+| `src/linguistics/german/inflection/noun.ts` | NounInflectionCell type, German case/number tags, display order |
 | `src/linguistics/old-enums.ts` | Inflectional dimensions, theta roles, tones |
 | **Prompt-Smith** | |
 | `src/prompt-smith/index.ts` | PROMPT_FOR registry (generated) |
-| `src/prompt-smith/schemas/` | Zod I/O schemas: translate, morphem, lemma, header, relation, inflection |
+| `src/prompt-smith/schemas/` | Zod I/O schemas: translate, morphem, lemma, header, relation, inflection, noun-inflection |
 | `src/prompt-smith/codegen/consts.ts` | PromptKind enum |
 | `src/prompt-smith/codegen/skript/run.ts` | Codegen orchestrator |
 | `src/prompt-smith/prompt-parts/` | Human-written prompt sources (3 kinds × 2 lang pairs) |

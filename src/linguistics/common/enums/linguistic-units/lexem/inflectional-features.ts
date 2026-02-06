@@ -1,4 +1,4 @@
-import z from "zod/v3";
+import { z } from "zod/v3";
 
 const inflectionalFeatures = [
 	"Number",
@@ -9,7 +9,6 @@ const inflectionalFeatures = [
 	"Tense",
 	"Mood",
 	"Voice",
-	"Aspect",
 	"Aspect",
 ] as const;
 

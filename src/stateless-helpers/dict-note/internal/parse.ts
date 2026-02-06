@@ -2,7 +2,7 @@ import { z } from "zod/v3";
 import { blockIdHelper } from "../../block-id";
 import { noteMetadataHelper } from "../../note-metadata";
 import type { DictEntry, EntrySection } from "../types";
-import { ENTRY_SECTION_MARKER_RE, ENTRY_SEPARATOR } from "./constants";
+import { ENTRY_SECTION_MARKER_RE, ENTRY_SEPARATOR_RE } from "./constants";
 
 /** Passthrough schema — accepts any JSON object, preserves all keys */
 const AnyObjectSchema = z.record(z.unknown());
@@ -67,7 +67,7 @@ export function parse(noteText: string): DictEntry[] {
 	) as z.infer<typeof EntriesMetaSchema> | null;
 	const metaByEntryId = meta?.entries ?? {};
 
-	const chunks = body.split(ENTRY_SEPARATOR);
+	const chunks = body.split(ENTRY_SEPARATOR_RE);
 	const entries: DictEntry[] = [];
 	for (const chunk of chunks) {
 		if (chunk.trim() === "") continue;
