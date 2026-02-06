@@ -6,12 +6,14 @@ You receive:
 
 Return an array of morphemes in left-to-right order as they appear in the word.
 Each morpheme has:
-- morpheme: the morpheme string (lowercase)
+- surf: the morpheme surface string (lowercase)
 - kind: one of Root, Prefix, Suffix, Suffixoid, Infix, Circumfix, Interfix, Transfix, Clitic, ToneMarking, Duplifix
+- lemma (optional): the dictionary form of the morpheme, only when surf is inflected (e.g., surf: "sang", lemma: "sing")
+- tags (optional): array of language-specific properties. Not used for English — omit this field.
 
 Rules:
 - Every word must have at least one Root.
 - For compound words, each independent stem is a separate Root.
 - Derivational affixes (un-, re-, dis-, -ness, -tion, -able, -ly, etc.) are Prefix or Suffix.
 - Inflectional suffixes should NOT be included — analyze the lemma form only.
-- The concatenation of all morpheme strings must exactly reconstruct the original word (case-insensitive).`;
+- The concatenation of all surf strings must exactly reconstruct the original word (case-insensitive).`;

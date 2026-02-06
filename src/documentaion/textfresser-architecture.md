@@ -92,6 +92,7 @@ Note (Obsidian .md file, named after a Surface)
 │  ├─ note-metadata    — format-agnostic YAML/JSON meta   │
 │  ├─ block-id         — ^blockId extraction/injection    │
 │  ├─ wikilink         — [[wikilink]] parsing             │
+│  ├─ morpheme-formatter — morpheme → wikilink display    │
 │  └─ api-service      — Gemini API wrapper               │
 ├─────────────────────────────────────────────────────────┤
 │  Prompt-Smith (LLM prompt management)                   │
@@ -105,6 +106,7 @@ Note (Obsidian .md file, named after a Surface)
 │  ├─ enums/.../pos.ts        — POS, PosTag               │
 │  ├─ enums/.../phrasem-kind  — PhrasemeKind              │
 │  ├─ enums/.../morpheme-kind — MorphemeKind              │
+│  ├─ enums/.../morpheme-tag  — MorphemeTag (Sep/Insep)  │
 │  ├─ sections/section-kind   — DictSectionKind           │
 │  └─ old-enums.ts            — detailed inflectional enums │
 └─────────────────────────────────────────────────────────┘
@@ -166,7 +168,24 @@ Each kind has further sub-classifications (e.g., collocation strength: `Free | B
 
 **Source**: `src/linguistics/enums/linguistic-units/phrasem/phrasem-kind.ts`, `src/linguistics/old-enums.ts`
 
-### 4.5 DictEntrySection Kinds
+### 4.5 Morpheme Tags
+
+Language-specific properties for morphemes (currently: prefix separability in German):
+
+```
+MorphemeTag = "Separable" | "Inseparable"
+```
+
+| Tag | Meaning | German examples |
+|-----|---------|----------------|
+| **Separable** | Prefix detaches in main clauses (trennbar) | *auf-*, *an-*, *ein-*, *mit-*, *vor-*, *zu-* |
+| **Inseparable** | Prefix stays attached (untrennbar) | *be-*, *emp-*, *ent-*, *er-*, *ge-*, *ver-*, *zer-* |
+
+Some prefixes (*über-*, *unter-*, *um-*, *durch-*) are dual-use — separable or inseparable depending on context.
+
+**Source**: `src/linguistics/enums/linguistic-units/morphem/morpheme-tag.ts`
+
+### 4.6 DictEntrySection Kinds
 
 Each DictEntry is divided into **DictEntrySections**, categorized by `DictSectionKind`:
 
@@ -180,7 +199,7 @@ DictSectionKind = "Relation" | "FreeForm" | "Attestation" | "Morphem"
 | `Header` | Formen | Lemma display, pronunciation, article | No |
 | `Attestation` | Kontexte | User's encountered contexts (`![[File#^blockId\|^]]`) | No |
 | `Relation` | Semantische Beziehungen | Lexical relations | **Yes** (see below) |
-| `Morphem` | Morpheme | Word decomposition (`[[Kohle]]\|[[kraft]]\|[[werk]]`) | No |
+| `Morphem` | Morpheme | Word decomposition. LLM returns structured data (`surf`/`lemma`/`tags`/`kind`), `morphemeFormatterHelper` converts to wikilink display (`[[auf\|>auf]]\|[[passen]]`) | No |
 | `Inflection` | Flexion | Declension/conjugation tables | No |
 | `Deviation` | Abweichungen | Irregular forms, exceptions | No |
 | `FreeForm` | Notizen | Catch-all for unstructured content (see below) | No |
@@ -191,7 +210,7 @@ Section titles are localized per `TargetLanguage` via `TitleReprFor`.
 
 **Source**: `src/linguistics/sections/section-kind.ts`
 
-### 4.6 DictEntrySubSections
+### 4.7 DictEntrySubSections
 
 Some DictEntrySections contain **DictEntrySubSections** — finer-grained items within the section. The Relation section is the primary example:
 
@@ -207,7 +226,7 @@ Some DictEntrySections contain **DictEntrySubSections** — finer-grained items 
 
 DictEntrySubSections are the unit at which cross-reference propagation operates (see section 9).
 
-### 4.7 Detailed Inflectional Enums
+### 4.8 Detailed Inflectional Enums
 
 `src/linguistics/old-enums.ts` defines a rich set of grammatical categories for German (extensible to other languages):
 
@@ -813,11 +832,13 @@ To add support for a new target language (e.g., Japanese):
 | `src/commanders/textfresser/common/attestation/builders/` | Attestation construction |
 | `src/commanders/textfresser/errors.ts` | CommandError, AttestationParsingError |
 | `src/stateless-helpers/dict-note/` | Parse/serialize dictionary notes |
+| `src/stateless-helpers/morpheme-formatter.ts` | Morpheme → wikilink display formatter |
 | `src/stateless-helpers/api-service.ts` | Gemini API wrapper |
 | `src/linguistics/enums/core.ts` | LinguisticUnitKind, SurfaceKind |
 | `src/linguistics/enums/linguistic-units/lexem/pos.ts` | POS, PosTag |
 | `src/linguistics/enums/linguistic-units/phrasem/phrasem-kind.ts` | PhrasemeKind |
 | `src/linguistics/enums/linguistic-units/morphem/morpheme-kind.ts` | MorphemeKind |
+| `src/linguistics/enums/linguistic-units/morphem/morpheme-tag.ts` | MorphemeTag (Separable/Inseparable) |
 | `src/linguistics/sections/section-kind.ts` | DictSectionKind, TitleReprFor |
 | `src/linguistics/old-enums.ts` | Inflectional dimensions, theta roles, tones |
 | `src/prompt-smith/index.ts` | PROMPT_FOR registry (generated) |

@@ -8,7 +8,7 @@ export const examples = [
 			word: "hand",
 		},
 		output: {
-			morphemes: [{ kind: "Root", morpheme: "hand" }],
+			morphemes: [{ kind: "Root", surf: "hand" }],
 		},
 	},
 	// Prefix + root: un- + happy
@@ -19,8 +19,8 @@ export const examples = [
 		},
 		output: {
 			morphemes: [
-				{ kind: "Prefix", morpheme: "un" },
-				{ kind: "Root", morpheme: "happy" },
+				{ kind: "Prefix", surf: "un" },
+				{ kind: "Root", surf: "happy" },
 			],
 		},
 	},
@@ -32,8 +32,8 @@ export const examples = [
 		},
 		output: {
 			morphemes: [
-				{ kind: "Root", morpheme: "friend" },
-				{ kind: "Suffix", morpheme: "ship" },
+				{ kind: "Root", surf: "friend" },
+				{ kind: "Suffix", surf: "ship" },
 			],
 		},
 	},

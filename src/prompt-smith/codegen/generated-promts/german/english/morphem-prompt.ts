@@ -14,8 +14,13 @@ You receive:
 
 Return an array of morphemes in left-to-right order as they appear in the word.
 Each morpheme has:
-- morpheme: the morpheme string (lowercase)
+- surf: the morpheme surface string (lowercase)
 - kind: one of Root, Prefix, Suffix, Suffixoid, Infix, Circumfix, Interfix, Transfix, Clitic, ToneMarking, Duplifix
+- lemma (optional): the dictionary form of the morpheme, only when surf is inflected (e.g., surf: "sang", lemma: "sing")
+- tags (optional): array of language-specific properties. Only applies to Prefix-kind morphemes:
+  - "Separable" — the prefix detaches in main clauses (trennbar): ab-, an-, auf-, aus-, bei-, ein-, mit-, nach-, vor-, zu-, etc.
+  - "Inseparable" — the prefix stays attached (untrennbar): be-, emp-, ent-, er-, ge-, miss-, ver-, zer-
+  - Dual-use prefixes (context-dependent): über-, unter-, um-, durch-, wider-, wieder-
 
 Rules:
 - Every word must have at least one Root.
@@ -23,7 +28,8 @@ Rules:
 - For compound words, each independent stem is a separate Root.
 - Derivational affixes (un-, ver-, be-, -keit, -ung, -lich, -bar, etc.) are Prefix or Suffix.
 - Inflectional suffixes should NOT be included — analyze the lemma form only.
-- The concatenation of all morpheme strings must exactly reconstruct the original word (case-insensitive).
+- The concatenation of all surf strings must exactly reconstruct the original word (case-insensitive).
+- Only Prefix-kind morphemes should have Separable/Inseparable tags.
 </task-description>
 
 <examples>
@@ -32,7 +38,7 @@ Rules:
 {"context":"Das Kohlekraftwerk erzeugt Strom aus Kohle.","word":"Kohlekraftwerk"}
 </input>
 <output>
-{"morphemes":[{"kind":"Root","morpheme":"kohle"},{"kind":"Root","morpheme":"kraft"},{"kind":"Root","morpheme":"werk"}]}
+{"morphemes":[{"kind":"Root","surf":"kohle"},{"kind":"Root","surf":"kraft"},{"kind":"Root","surf":"werk"}]}
 </output>
 </example-1>
 
@@ -41,7 +47,7 @@ Rules:
 {"context":"Das ist unmöglich zu schaffen.","word":"unmöglich"}
 </input>
 <output>
-{"morphemes":[{"kind":"Prefix","morpheme":"un"},{"kind":"Root","morpheme":"möglich"}]}
+{"morphemes":[{"kind":"Prefix","surf":"un"},{"kind":"Root","surf":"möglich"}]}
 </output>
 </example-2>
 
@@ -50,7 +56,7 @@ Rules:
 {"context":"Ihre Freundschaft hält seit der Kindheit.","word":"Freundschaft"}
 </input>
 <output>
-{"morphemes":[{"kind":"Root","morpheme":"freund"},{"kind":"Suffix","morpheme":"schaft"}]}
+{"morphemes":[{"kind":"Root","surf":"freund"},{"kind":"Suffix","surf":"schaft"}]}
 </output>
 </example-3>
 
@@ -59,7 +65,7 @@ Rules:
 {"context":"Er hat seinen Arbeitsplatz verloren.","word":"Arbeitsplatz"}
 </input>
 <output>
-{"morphemes":[{"kind":"Root","morpheme":"arbeit"},{"kind":"Interfix","morpheme":"s"},{"kind":"Root","morpheme":"platz"}]}
+{"morphemes":[{"kind":"Root","surf":"arbeit"},{"kind":"Interfix","surf":"s"},{"kind":"Root","surf":"platz"}]}
 </output>
 </example-4>
 
@@ -68,7 +74,7 @@ Rules:
 {"context":"Er trägt die Verantwortung für das Projekt.","word":"Verantwortung"}
 </input>
 <output>
-{"morphemes":[{"kind":"Prefix","morpheme":"ver"},{"kind":"Root","morpheme":"antwort"},{"kind":"Suffix","morpheme":"ung"}]}
+{"morphemes":[{"kind":"Prefix","surf":"ver","tags":["Inseparable"]},{"kind":"Root","surf":"antwort"},{"kind":"Suffix","surf":"ung"}]}
 </output>
 </example-5>
 
@@ -77,7 +83,25 @@ Rules:
 {"context":"Sie nahm ihn an der Hand.","word":"Hand"}
 </input>
 <output>
-{"morphemes":[{"kind":"Root","morpheme":"hand"}]}
+{"morphemes":[{"kind":"Root","surf":"hand"}]}
 </output>
 </example-6>
+
+<example-7>
+<input>
+{"context":"Du musst besser aufpassen.","word":"aufpassen"}
+</input>
+<output>
+{"morphemes":[{"kind":"Prefix","surf":"auf","tags":["Separable"]},{"kind":"Root","surf":"passen"}]}
+</output>
+</example-7>
+
+<example-8>
+<input>
+{"context":"Ich kann das nicht verstehen.","word":"verstehen"}
+</input>
+<output>
+{"morphemes":[{"kind":"Prefix","surf":"ver","tags":["Inseparable"]},{"kind":"Root","surf":"stehen"}]}
+</output>
+</example-8>
 </examples>`;

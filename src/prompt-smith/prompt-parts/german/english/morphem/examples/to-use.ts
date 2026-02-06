@@ -9,9 +9,9 @@ export const examples = [
 		},
 		output: {
 			morphemes: [
-				{ kind: "Root", morpheme: "kohle" },
-				{ kind: "Root", morpheme: "kraft" },
-				{ kind: "Root", morpheme: "werk" },
+				{ kind: "Root", surf: "kohle" },
+				{ kind: "Root", surf: "kraft" },
+				{ kind: "Root", surf: "werk" },
 			],
 		},
 	},
@@ -23,8 +23,8 @@ export const examples = [
 		},
 		output: {
 			morphemes: [
-				{ kind: "Prefix", morpheme: "un" },
-				{ kind: "Root", morpheme: "möglich" },
+				{ kind: "Prefix", surf: "un" },
+				{ kind: "Root", surf: "möglich" },
 			],
 		},
 	},
@@ -36,8 +36,8 @@ export const examples = [
 		},
 		output: {
 			morphemes: [
-				{ kind: "Root", morpheme: "freund" },
-				{ kind: "Suffix", morpheme: "schaft" },
+				{ kind: "Root", surf: "freund" },
+				{ kind: "Suffix", surf: "schaft" },
 			],
 		},
 	},
@@ -49,13 +49,13 @@ export const examples = [
 		},
 		output: {
 			morphemes: [
-				{ kind: "Root", morpheme: "arbeit" },
-				{ kind: "Interfix", morpheme: "s" },
-				{ kind: "Root", morpheme: "platz" },
+				{ kind: "Root", surf: "arbeit" },
+				{ kind: "Interfix", surf: "s" },
+				{ kind: "Root", surf: "platz" },
 			],
 		},
 	},
-	// Prefix + root + suffix: ver- + antwort + -ung
+	// Prefix (inseparable) + root + suffix: ver- + antwort + -ung
 	{
 		input: {
 			context: "Er trägt die Verantwortung für das Projekt.",
@@ -63,9 +63,9 @@ export const examples = [
 		},
 		output: {
 			morphemes: [
-				{ kind: "Prefix", morpheme: "ver" },
-				{ kind: "Root", morpheme: "antwort" },
-				{ kind: "Suffix", morpheme: "ung" },
+				{ kind: "Prefix", surf: "ver", tags: ["Inseparable"] },
+				{ kind: "Root", surf: "antwort" },
+				{ kind: "Suffix", surf: "ung" },
 			],
 		},
 	},
@@ -76,7 +76,33 @@ export const examples = [
 			word: "Hand",
 		},
 		output: {
-			morphemes: [{ kind: "Root", morpheme: "hand" }],
+			morphemes: [{ kind: "Root", surf: "hand" }],
+		},
+	},
+	// Separable prefix: auf + passen
+	{
+		input: {
+			context: "Du musst besser aufpassen.",
+			word: "aufpassen",
+		},
+		output: {
+			morphemes: [
+				{ kind: "Prefix", surf: "auf", tags: ["Separable"] },
+				{ kind: "Root", surf: "passen" },
+			],
+		},
+	},
+	// Inseparable prefix: ver + stehen
+	{
+		input: {
+			context: "Ich kann das nicht verstehen.",
+			word: "verstehen",
+		},
+		output: {
+			morphemes: [
+				{ kind: "Prefix", surf: "ver", tags: ["Inseparable"] },
+				{ kind: "Root", surf: "stehen" },
+			],
 		},
 	},
 ] satisfies {
