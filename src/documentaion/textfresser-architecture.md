@@ -53,6 +53,8 @@ User gets a tailor-made dictionary that grows with their reading
 
 > **V7 scope**: Polysemy quality fixes — Definition LLM call now **always fires** for new entries (precomputedSemantics no longer short-circuits it; the concise gloss is still stored in `meta.semantics` for Disambiguate lookup, but the Definition section always uses the full Semantics prompt output). Header emoji prompt changed to reflect the specific sense in context (not "primary/most common meaning"). Disambiguate gloss rule added: must be context-independent (e.g., "Schließvorrichtung" not "Fahrradschloss"). New polysemous examples in Header and Disambiguate prompts (Schloss castle vs lock).
 
+> **V8 scope**: Eigenname (proper noun) support — Lemma LLM returns `nounClass` ("Common" | "Proper") and `fullSurface` (when proper noun extends beyond selected text, e.g., selecting "Bank" in "Deutsche Bank"). Wikilink wrapping expands to cover full proper noun via `expandOffsetForFullSurface()` with verification fallback. Section config: proper nouns get reduced sections (core only — no Inflection, Morphem, Relation) via `sectionsForProperNoun`. `nounClass` threaded through `LemmaResult` → `buildSectionQuery()` → `getSectionsFor()`.
+
 > **V6 scope**: Translation now uses dedicated `PromptKind.WordTranslation` (translates the lemma word, not the attestation sentence; uses context only for disambiguation). Definition section upgraded from 1-3 word gloss to 5-15 word German dictionary-style definition. Attestation refs now separated by blank lines (`\n\n`) for visual spacing. Dict note cleanup on file open: reorders entries (LM first, IN last), normalizes attestation spacing, reorders sections within each entry by `SECTION_DISPLAY_WEIGHT`. Generate pipeline also sorts sections by weight before serializing. Entry separator widened to `\n\n\n---\n---\n\n\n`.
 
 **Properties of the resulting dictionary:**
@@ -431,7 +433,7 @@ commandFn(input) → VaultAction[] → vam.dispatch(actions)
 
 | Command | Status | Purpose |
 |---------|--------|---------|
-| `Lemma` | V3 | Recon: classify word via LLM, disambiguate sense against existing entries (metadata `semantics` lookup + Disambiguate prompt), wrap in wikilink, store result, notify user. V5: bounds-check, precomputedSemantics |
+| `Lemma` | V3 | Recon: classify word via LLM, disambiguate sense against existing entries (metadata `semantics` lookup + Disambiguate prompt), wrap in wikilink, store result, notify user. V5: bounds-check, precomputedSemantics. V8: proper noun detection (nounClass), fullSurface expansion for multi-word proper nouns |
 | `Generate` | V3 | Build DictEntry: LLM-generated sections (Header, Definition, Morphem, Relation, Inflection, Translation) + Attestation; re-encounter detection (via Lemma's disambiguationResult); cross-ref propagation; serialize, move to Wörter, notify user. V5: scroll-to-entry after dispatch |
 | `TranslateSelection` | V1 | Translate selected text via LLM |
 
@@ -501,6 +503,8 @@ Lemma tries two sources (in order):
   pos?: POS | null,                    // only for Lexem
   surfaceKind: SurfaceKind,            // "Lemma" | "Inflected" | "Variant"
   lemma: string,                       // dictionary form
+  nounClass?: "Common" | "Proper" | null, // V8: only for pos: "Noun"
+  fullSurface?: string | null,         // V8: full proper noun span when it extends beyond selected surface
 }
 ```
 
@@ -509,8 +513,11 @@ Lemma tries two sources (in order):
 After classification, Lemma wraps the surface in a wikilink in the source block:
 - Same lemma: `Schuck` → `[[Schuck]]`
 - Different lemma: `lief` → `[[laufen|lief]]`
+- V8 proper noun expansion: `Bank` (selected) in "Deutsche Bank" → `[[Deutsche Bank]]` (wraps full proper noun)
 
 When `attestation.target.offsetInBlock` is available (selection-based attestation), uses **positional slice-based replacement** (`rawBlock.slice(0, offset) + wikilink + rawBlock.slice(offset + surface.length)`) to avoid replacing the wrong occurrence when the same word appears multiple times in a line. Falls back to `String.replace()` when offset is unavailable (wikilink-click attestation).
+
+**V8 fullSurface expansion**: When the LLM returns `fullSurface` (proper noun extending beyond selected surface), `expandOffsetForFullSurface()` computes the expanded offset by finding the surface position within `fullSurface`, then verifies the expanded span matches in the raw block. On verification failure (e.g., text mismatch), gracefully falls back to wrapping just the selected surface.
 
 Uses `ProcessMdFile` with `before: rawBlock` / `after: blockWithWikilink`.
 
@@ -528,6 +535,7 @@ type LemmaResult = {
     matchedIndex: number;             // index of existing entry (re-encounter)
   } | null;                           // null = new sense or first encounter
   precomputedSemantics?: string;      // V5: gloss from Disambiguate when new sense detected
+  nounClass?: "Common" | "Proper";   // V8: only for Nouns — controls section config
 };
 ```
 
@@ -645,8 +653,9 @@ Different prompts are needed depending on:
 | **KnownLanguage** | Russian, English, ... | User's native language |
 | **PromptKind** | Lemma, Disambiguate, Header, Semantics, Morphem, Relation, Inflection, NounInflection, Translate, WordTranslation | What task the LLM performs |
 
-Section applicability (which sections a DictEntry gets) is determined by `LinguisticUnitKind` + `POS` via `getSectionsFor()` in `src/linguistics/sections/section-config.ts`:
+Section applicability (which sections a DictEntry gets) is determined by `LinguisticUnitKind` + `POS` + optional `nounClass` via `getSectionsFor()` in `src/linguistics/sections/section-config.ts`:
 - **Lexem**: POS-dependent (e.g., Nouns get Morphem + Inflection + Relation; Conjunctions get core only)
+- **Lexem + Noun + Proper** (V8): Core sections only (Header, Definition, Translation, Attestation, FreeForm) — no Inflection, Morphem, Relation
 - **Phrasem**: Header, Definition, Translation, Attestation, Relation, FreeForm
 - **Morphem**: Header, Attestation, FreeForm
 
@@ -803,7 +812,7 @@ src/prompt-smith/
 │   ├── index.ts                     # SchemasFor registry
 │   ├── translate.ts                 # Translate: string → string
 │   ├── morphem.ts                   # Morphem: {word,context} → {morphemes[]}
-│   ├── lemma.ts                     # Lemma: {surface,context} → {linguisticUnit,pos?,surfaceKind,lemma}
+│   ├── lemma.ts                     # Lemma: {surface,context} → {linguisticUnit,pos?,surfaceKind,lemma,nounClass?,fullSurface?}
 │   ├── disambiguate.ts              # Disambiguate: {lemma,context,senses[{index,semantics}]} → {matchedIndex:number|null, semantics?:string|null}
 │   ├── header.ts                    # Header: {word,pos,context} → {emoji,article?,ipa}
 │   ├── semantics.ts                 # Semantics: {word,pos,context} → {semantics:string}
@@ -1024,9 +1033,9 @@ To add support for a new target language (e.g., Japanese):
 | `src/commanders/textfresser/prompt-runner.ts` | PromptRunner: LLM call wrapper |
 | `src/commanders/textfresser/errors.ts` | CommandError, AttestationParsingError |
 | **Commands** | |
-| `src/commanders/textfresser/commands/lemma/lemma-command.ts` | Lemma pipeline: classify + disambiguate + wrap in wikilink |
+| `src/commanders/textfresser/commands/lemma/lemma-command.ts` | Lemma pipeline: classify + disambiguate + wrap in wikilink. V8: `expandOffsetForFullSurface()` for proper noun expansion |
 | `src/commanders/textfresser/commands/lemma/steps/disambiguate-sense.ts` | V3: look up existing note, match entries by unitKind+POS (ignoring surfaceKind), call Disambiguate prompt. V5: bounds-check matchedIndex, log parse failures, return precomputedSemantics |
-| `src/commanders/textfresser/commands/lemma/types.ts` | LemmaResult type (V3: disambiguationResult, V5: precomputedSemantics) |
+| `src/commanders/textfresser/commands/lemma/types.ts` | LemmaResult type (V3: disambiguationResult, V5: precomputedSemantics, V8: nounClass) |
 | `src/commanders/textfresser/commands/generate/generate-command.ts` | Generate pipeline orchestrator |
 | `src/commanders/textfresser/commands/generate/steps/check-attestation.ts` | Sync check: attestation available |
 | `src/commanders/textfresser/commands/generate/steps/check-lemma-result.ts` | Sync check: lemma result available |
@@ -1060,7 +1069,7 @@ To add support for a new target language (e.g., Japanese):
 | `src/linguistics/enums/linguistic-units/morphem/morpheme-tag.ts` | MorphemeTag (Separable/Inseparable) |
 | `src/linguistics/sections/section-kind.ts` | DictSectionKind, TitleReprFor |
 | `src/linguistics/sections/section-css-kind.ts` | DictSectionKind → CSS suffix mapping |
-| `src/linguistics/sections/section-config.ts` | getSectionsFor(): applicable sections per unit+POS; SECTION_DISPLAY_WEIGHT + compareSectionsByWeight(): section display ordering |
+| `src/linguistics/sections/section-config.ts` | getSectionsFor(): applicable sections per unit+POS+nounClass; `sectionsForProperNoun` (V8); SECTION_DISPLAY_WEIGHT + compareSectionsByWeight(): section display ordering |
 | `src/linguistics/dict-entry-id/dict-entry-id.ts` | DictEntryId builder/parser |
 | `src/linguistics/common/enums/inflection/feature-values.ts` | CaseValue, NumberValue Zod enums |
 | `src/linguistics/german/inflection/noun.ts` | NounInflectionCell type, German case/number tags, display order |
@@ -1079,6 +1088,7 @@ To add support for a new target language (e.g., Japanese):
 | `tests/unit/textfresser/steps/disambiguate-sense.test.ts` | Disambiguate: mock VAM + PromptRunner, bounds check, precomputed semantics, V2 legacy |
 | `tests/unit/textfresser/steps/propagate-relations.test.ts` | Relation propagation: inverse kinds, self-ref skip, dedup, VaultAction shapes |
 | `tests/unit/textfresser/steps/propagate-inflections.test.ts` | Inflection propagation: form grouping, same-note entries, combined headers |
+| `tests/unit/textfresser/steps/lemma-expansion.test.ts` | V8: `expandOffsetForFullSurface()` — expansion math, verification, fallback on mismatch |
 | **Types** | |
 | `src/types.ts` | LanguagesConfig, KnownLanguage, TargetLanguage |
 

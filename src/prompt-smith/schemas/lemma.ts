@@ -14,9 +14,14 @@ const userInputSchema = z.object({
 	surface: z.string(),
 });
 
+// Re-create NounClassSchema with zod/v3 to avoid v3/v4 runtime mismatch
+const NounClassSchemaV3 = z.enum(["Common", "Proper"]);
+
 const agentOutputSchema = z.object({
+	fullSurface: z.string().nullable().optional(),
 	lemma: z.string(),
 	linguisticUnit: LinguisticUnitKindSchema,
+	nounClass: NounClassSchemaV3.nullable().optional(),
 	pos: POSSchemaV3.nullable().optional(),
 	surfaceKind: SurfaceKindSchema,
 });

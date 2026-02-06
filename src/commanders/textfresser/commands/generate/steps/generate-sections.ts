@@ -44,7 +44,11 @@ const V3_SECTIONS = new Set<DictSectionKind>([
 
 function buildSectionQuery(lemmaResult: LemmaResult) {
 	if (lemmaResult.linguisticUnit === "Lexem" && lemmaResult.pos) {
-		return { pos: lemmaResult.pos, unit: "Lexem" as const };
+		return {
+			nounClass: lemmaResult.nounClass,
+			pos: lemmaResult.pos,
+			unit: "Lexem" as const,
+		};
 	}
 	return {
 		unit: lemmaResult.linguisticUnit as "Morphem" | "Phrasem",

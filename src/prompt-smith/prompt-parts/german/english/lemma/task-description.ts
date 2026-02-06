@@ -9,6 +9,8 @@ Return:
 - pos: part of speech (only for Lexem). One of: Noun, Pronoun, Article, Adjective, Verb, Preposition, Adverb, Particle, Conjunction, InteractionalUnit
 - surfaceKind: "Lemma" (already dictionary form), "Inflected" (conjugated/declined), or "Variant" (spelling variant)
 - lemma: the dictionary/citation form of the word
+- nounClass: "Common" (default) or "Proper" (named entity — person, place, organization, brand). Only for pos: "Noun". Omit for non-nouns.
+- fullSurface: the full proper noun as it appears in the text, only when it extends beyond the selected surface. Omit when the surface already covers the full proper noun or when the noun is Common.
 
 Rules:
 - For nouns: lemma is nominative singular (e.g., "Häuser" → "Haus")
@@ -17,4 +19,6 @@ Rules:
 - For separable verbs: include prefix in lemma (e.g., "fing...an" → "anfangen")
 - Phrasem: multi-word fixed expression (e.g., "auf jeden Fall" → lemma: "auf jeden Fall")
 - If the surface IS the lemma, surfaceKind is "Lemma"
-- pos is omitted for Phrasem and Morphem`;
+- pos is omitted for Phrasem and Morphem
+- For proper nouns: articles are NOT part of the lemma ("der Rhein" → lemma: "Rhein"). The lemma is the proper name itself.
+- fullSurface must match the exact text span in the context sentence (case-sensitive)`;

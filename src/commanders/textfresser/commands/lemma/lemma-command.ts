@@ -4,6 +4,7 @@ import {
 	VaultActionKind,
 } from "../../../../managers/obsidian/vault-action-manager";
 import { PromptKind } from "../../../../prompt-smith/codegen/consts";
+import { logger } from "../../../../utils/logger";
 import { buildAttestationFromSelection } from "../../common/attestation/builders/build-from-selection";
 import type { Attestation } from "../../common/attestation/types";
 import {
@@ -12,6 +13,7 @@ import {
 	type CommandInput,
 } from "../types";
 import { disambiguateSense } from "./steps/disambiguate-sense";
+import type { NounClass } from "./types";
 
 /**
  * Resolve attestation: prefer wikilink click context, fall back to text selection.
@@ -39,6 +41,41 @@ function resolveAttestation(input: CommandInput): Attestation | null {
  */
 function buildWikilink(surface: string, lemma: string): string {
 	return lemma !== surface ? `[[${lemma}|${surface}]]` : `[[${surface}]]`;
+}
+
+/**
+ * Expand offset and surface when fullSurface extends beyond the selected surface.
+ * Returns the expanded offset and the full surface string to replace, or falls back
+ * to the original surface/offset if verification fails.
+ */
+export function expandOffsetForFullSurface(
+	rawBlock: string,
+	surface: string,
+	offset: number,
+	fullSurface: string,
+): { replaceSurface: string; replaceOffset: number } {
+	const surfaceIdxInFull = fullSurface.indexOf(surface);
+	if (surfaceIdxInFull === -1) {
+		logger.warn(
+			`[expandOffset] surface "${surface}" not found in fullSurface "${fullSurface}" — falling back`,
+		);
+		return { replaceOffset: offset, replaceSurface: surface };
+	}
+
+	const expandedOffset = offset - surfaceIdxInFull;
+	const candidate = rawBlock.slice(
+		expandedOffset,
+		expandedOffset + fullSurface.length,
+	);
+
+	if (candidate !== fullSurface) {
+		logger.warn(
+			`[expandOffset] verification failed: expected "${fullSurface}" at offset ${expandedOffset}, got "${candidate}" — falling back`,
+		);
+		return { replaceOffset: offset, replaceSurface: surface };
+	}
+
+	return { replaceOffset: expandedOffset, replaceSurface: fullSurface };
 }
 
 /**
@@ -100,25 +137,52 @@ export function lemmaCommand(
 								result.disambiguationResult.matchedIndex,
 						};
 
+			const nounClass: NounClass | undefined =
+				result.pos === "Noun" && result.nounClass
+					? result.nounClass
+					: undefined;
+
 			textfresserState.latestLemmaResult = {
 				attestation,
 				disambiguationResult,
 				lemma: result.lemma,
 				linguisticUnit: result.linguisticUnit,
+				nounClass,
 				pos: result.pos ?? undefined,
 				precomputedSemantics,
 				surfaceKind: result.surfaceKind,
 			};
 
-			const wikilink = buildWikilink(surface, result.lemma);
 			const rawBlock = attestation.source.textRaw;
-
 			const offset = attestation.target.offsetInBlock;
-			const updatedBlock =
+
+			// Expand surface when fullSurface extends beyond the selected text
+			const fullSurface = result.fullSurface;
+			let replaceSurface = surface;
+			let replaceOffset = offset;
+
+			if (
+				fullSurface &&
+				fullSurface !== surface &&
 				offset !== undefined
-					? rawBlock.slice(0, offset) +
+			) {
+				const expanded = expandOffsetForFullSurface(
+					rawBlock,
+					surface,
+					offset,
+					fullSurface,
+				);
+				replaceSurface = expanded.replaceSurface;
+				replaceOffset = expanded.replaceOffset;
+			}
+
+			const wikilink = buildWikilink(replaceSurface, result.lemma);
+
+			const updatedBlock =
+				replaceOffset !== undefined
+					? rawBlock.slice(0, replaceOffset) +
 						wikilink +
-						rawBlock.slice(offset + surface.length)
+						rawBlock.slice(replaceOffset + replaceSurface.length)
 					: rawBlock.replace(surface, wikilink);
 
 			const actions: VaultAction[] = [

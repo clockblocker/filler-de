@@ -21,6 +21,7 @@ export const examples = [
 		output: {
 			lemma: "Haus",
 			linguisticUnit: "Lexem",
+			nounClass: "Common",
 			pos: "Noun",
 			surfaceKind: "Lemma",
 		},
@@ -57,6 +58,46 @@ export const examples = [
 		output: {
 			lemma: "auf jeden Fall",
 			linguisticUnit: "Phrasem",
+			surfaceKind: "Lemma",
+		},
+	},
+	{
+		input: {
+			context: "Die Deutsche Bank hat ihren Sitz in Frankfurt.",
+			surface: "Bank",
+		},
+		output: {
+			fullSurface: "Deutsche Bank",
+			lemma: "Deutsche Bank",
+			linguisticUnit: "Lexem",
+			nounClass: "Proper",
+			pos: "Noun",
+			surfaceKind: "Lemma",
+		},
+	},
+	{
+		input: {
+			context: "Ich habe bei einer deutschen Bank ein Konto eröffnet.",
+			surface: "Bank",
+		},
+		output: {
+			lemma: "Bank",
+			linguisticUnit: "Lexem",
+			nounClass: "Common",
+			pos: "Noun",
+			surfaceKind: "Lemma",
+		},
+	},
+	{
+		input: {
+			context: "Ich wohne in Berlin.",
+			surface: "Berlin",
+		},
+		output: {
+			lemma: "Berlin",
+			linguisticUnit: "Lexem",
+			nounClass: "Proper",
+			pos: "Noun",
 			surfaceKind: "Lemma",
 		},
 	},

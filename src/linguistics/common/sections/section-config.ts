@@ -40,6 +40,10 @@ export const sectionsForMorphem: readonly DictSectionKind[] = [
 	S.FreeForm,
 ];
 
+export const sectionsForProperNoun: readonly DictSectionKind[] = [
+	...CORE_SECTIONS,
+];
+
 /** Display order weight for each section kind (lower = earlier in the note). */
 export const SECTION_DISPLAY_WEIGHT: Record<DictSectionKind, number> = {
 	[S.Header]: 0,
@@ -72,13 +76,16 @@ export function compareSectionsByWeight(
 	);
 }
 
+type NounClass = "Common" | "Proper";
+
 type SectionQuery =
 	| { unit: "Morphem" | "Phrasem" }
-	| { unit: "Lexem"; pos: POS };
+	| { unit: "Lexem"; pos: POS; nounClass?: NounClass };
 
 export function getSectionsFor(query: {
 	unit: "Lexem";
 	pos: POS;
+	nounClass?: NounClass;
 }): readonly DictSectionKind[];
 export function getSectionsFor(query: {
 	unit: "Morphem" | "Phrasem";
@@ -90,6 +97,9 @@ export function getSectionsFor(
 ): readonly DictSectionKind[] {
 	switch (query.unit) {
 		case "Lexem":
+			if (query.pos === "Noun" && query.nounClass === "Proper") {
+				return sectionsForProperNoun;
+			}
 			return sectionsForLexemPos[query.pos];
 		case "Phrasem":
 			return sectionsForPhrasem;
