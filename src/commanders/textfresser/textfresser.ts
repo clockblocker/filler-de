@@ -23,30 +23,19 @@ import type {
 import type { ApiService } from "../../stateless-helpers/api-service";
 import type { LanguagesConfig } from "../../types";
 import { logger } from "../../utils/logger";
-import { generateCommand } from "./commands/generate/generate-command";
-import { translateCommand } from "./commands/translate/translate-command";
-import type { CommandFn, TextfresserCommandKind } from "./commands/types";
+import { commandFnForCommandKind } from "./commands";
+import type { LemmaResult } from "./commands/lemma/types";
+import type { TextfresserCommandKind } from "./commands/types";
 import { buildAttestationFromWikilinkClickPayload } from "./common/attestation/builders/build-from-wikilink-click-payload";
 import type { Attestation } from "./common/attestation/types";
 import { CommandErrorKind } from "./errors";
 import { PromptRunner } from "./prompt-runner";
 
-// ─── Command Function Mapping ───
-
-function lemmaCommand(): ResultAsync<VaultAction[], never> {
-	return ResultAsync.fromSafePromise(Promise.resolve([]));
-}
-
-const commandFnForCommandKind: Record<TextfresserCommandKind, CommandFn> = {
-	Generate: generateCommand,
-	Lemma: lemmaCommand,
-	TranslateSelection: translateCommand,
-};
-
 // ─── State ───
 
 export type TextfresserState = {
 	attestationForLatestNavigated: Attestation | null;
+	latestLemmaResult: LemmaResult | null;
 	languages: LanguagesConfig;
 	promptRunner: PromptRunner;
 };
@@ -62,6 +51,7 @@ export class Textfresser {
 		this.state = {
 			attestationForLatestNavigated: null,
 			languages,
+			latestLemmaResult: null,
 			promptRunner: new PromptRunner(languages, apiService),
 		};
 	}

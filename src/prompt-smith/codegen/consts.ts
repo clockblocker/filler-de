@@ -1,6 +1,12 @@
 import { z } from "zod/v3";
 
-const supportedPromptKinds = ["Translate", "Morphem"] as const;
+const supportedPromptKinds = [
+	"Translate",
+	"Morphem",
+	"Lemma",
+	"Header",
+	"Relation",
+] as const;
 
 export const PromptKindSchema = z.enum(supportedPromptKinds);
 

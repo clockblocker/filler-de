@@ -28,7 +28,8 @@ export class PromptRunner {
 			// biome-ignore lint/suspicious/noExplicitAny: Zod v3/v4 type mismatch
 			schema: schema as any,
 			systemPrompt: prompt.systemPrompt,
-			userInput: input as string,
+			userInput:
+				typeof input === "string" ? input : JSON.stringify(input),
 			withCache: true,
 		});
 

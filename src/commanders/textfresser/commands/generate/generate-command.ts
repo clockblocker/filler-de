@@ -6,9 +6,17 @@ import type { CommandError, CommandInput, CommandState } from "../types";
 import { applyMeta } from "./steps/apply-meta";
 import { checkAttestation } from "./steps/check-attestation";
 import { checkEligibility } from "./steps/check-eligibility";
+import { checkLemmaResult } from "./steps/check-lemma-result";
+import { generateSections } from "./steps/generate-sections";
 import { moveToWorter } from "./steps/move-to-worter";
+import { serializeEntry } from "./steps/serialize-entry";
 
-/** Pipeline: checkAttestation → checkEligibility → applyMeta → moveToWorter → addWriteAction */
+/**
+ * Pipeline:
+ * checkAttestation → checkEligibility → checkLemmaResult
+ * → generateSections (async: LLM calls) → serializeEntry
+ * → applyMeta → moveToWorter → addWriteAction
+ */
 export function generateCommand(
 	input: CommandInput,
 ): ResultAsync<VaultAction[], CommandError> {
@@ -18,19 +26,22 @@ export function generateCommand(
 		Promise.resolve(
 			checkAttestation(state)
 				.andThen(checkEligibility)
-				.andThen(applyMeta)
-				.andThen(moveToWorter)
-				.andThen((c) => {
-					const activeFile = c.commandContext.activeFile;
-					const writeAction = {
-						kind: VaultActionKind.ProcessMdFile,
-						payload: {
-							splitPath: activeFile.splitPath,
-							transform: () => activeFile.content,
-						},
-					} as const;
-					return ok([...c.actions, writeAction]);
-				}),
+				.andThen(checkLemmaResult),
 		),
-	);
+	)
+		.andThen(generateSections)
+		.andThen(serializeEntry)
+		.andThen(applyMeta)
+		.andThen(moveToWorter)
+		.andThen((c) => {
+			const activeFile = c.commandContext.activeFile;
+			const writeAction = {
+				kind: VaultActionKind.ProcessMdFile,
+				payload: {
+					splitPath: activeFile.splitPath,
+					transform: () => activeFile.content,
+				},
+			} as const;
+			return ok([...c.actions, writeAction]);
+		});
 }
