@@ -1,6 +1,8 @@
-import { Modal, Notice, Plugin } from "obsidian";
+import { Modal, Notice, Plugin, TFile } from "obsidian";
 import { DelimiterChangeService } from "./commanders/librarian/delimiter-change-service";
 import { Librarian } from "./commanders/librarian/librarian";
+import { cleanupDictNote } from "./commanders/textfresser/common/cleanup/cleanup-dict-note";
+import { DICT_ENTRY_NOTE_KIND } from "./commanders/textfresser/common/metadata";
 import { Textfresser } from "./commanders/textfresser/textfresser";
 import {
 	clearState,
@@ -18,8 +20,10 @@ import { UserEventInterceptor } from "./managers/obsidian/user-event-interceptor
 import {
 	makeSplitPath,
 	makeSystemPathForSplitPath,
+	VaultActionKind,
 	VaultActionManagerImpl,
 } from "./managers/obsidian/vault-action-manager";
+import type { SplitPathToMdFile } from "./managers/obsidian/vault-action-manager/types/split-path";
 import { ActiveFileService } from "./managers/obsidian/vault-action-manager/file-services/active-view/active-file-service";
 import { TFileHelper } from "./managers/obsidian/vault-action-manager/file-services/background/helpers/tfile-helper";
 import { TFolderHelper } from "./managers/obsidian/vault-action-manager/file-services/background/helpers/tfolder-helper";
@@ -176,6 +180,41 @@ export default class TextEaterPlugin extends Plugin {
 			this.vam,
 			this.settings.languages,
 			this.apiService,
+		);
+
+		// Dict note cleanup on file open (reorder entries, normalize attestation spacing)
+		this.registerEvent(
+			this.app.workspace.on("file-open", (file) => {
+				if (!(file instanceof TFile) || file.extension !== "md") return;
+				void this.app.vault.read(file).then((content) => {
+					if (
+						!content.includes(
+							`"noteKind":"${DICT_ENTRY_NOTE_KIND}"`,
+						)
+					) {
+						// Also check YAML frontmatter style
+						if (
+							!content.includes(
+								`noteKind: ${DICT_ENTRY_NOTE_KIND}`,
+							)
+						) {
+							return;
+						}
+					}
+					const cleaned = cleanupDictNote(content);
+					if (cleaned === null) return;
+					void this.vam.dispatch([
+						{
+							kind: VaultActionKind.ProcessMdFile,
+							payload: {
+								// Safe cast: file.extension === "md" verified above
+								splitPath: makeSplitPath(file) as SplitPathToMdFile,
+								transform: () => cleaned,
+							},
+						},
+					]);
+				});
+			}),
 		);
 
 		// Unified user event interceptor (clicks, clipboard, select-all, wikilinks)

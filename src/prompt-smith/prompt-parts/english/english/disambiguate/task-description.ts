@@ -9,6 +9,7 @@ You receive:
 
 Return:
 - matchedIndex: the index of the matching sense, or null if the word in context represents a NEW sense not covered by any existing entry
+- semantics: when matchedIndex is null (new sense), provide a 1-3 word English gloss distinguishing this sense from the existing ones. When matchedIndex is not null, omit or set to null.
 
 Rules:
 - Compare the contextual meaning against each sense's semantics gloss

@@ -17,6 +17,7 @@ You receive:
 
 Return:
 - matchedIndex: the index of the matching sense, or null if the word in context represents a NEW sense not covered by any existing entry
+- semantics: when matchedIndex is null (new sense), provide a 1-3 word German gloss distinguishing this sense from the existing ones. When matchedIndex is not null, omit or set to null.
 
 Rules:
 - Compare the contextual meaning against each sense's semantics gloss
@@ -31,7 +32,7 @@ Rules:
 {"context":"Er setzte sich auf die Bank im Park.","lemma":"Bank","senses":[{"index":1,"semantics":"Geldinstitut"}]}
 </input>
 <output>
-{"matchedIndex":null}
+{"matchedIndex":null,"semantics":"Sitzgelegenheit"}
 </output>
 </example-1>
 
@@ -49,7 +50,7 @@ Rules:
 {"context":"Das Schloss an der Tür war kaputt.","lemma":"Schloss","senses":[{"index":1,"semantics":"Gebäude"}]}
 </input>
 <output>
-{"matchedIndex":null}
+{"matchedIndex":null,"semantics":"Türschloss"}
 </output>
 </example-3>
 

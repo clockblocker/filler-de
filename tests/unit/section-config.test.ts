@@ -10,7 +10,7 @@ import { DictSectionKind } from "../../src/linguistics/common/sections/section-k
 
 const CORE = [
 	DictSectionKind.Header,
-	DictSectionKind.Semantics,
+	DictSectionKind.Definition,
 	DictSectionKind.Translation,
 	DictSectionKind.Attestation,
 	DictSectionKind.FreeForm,

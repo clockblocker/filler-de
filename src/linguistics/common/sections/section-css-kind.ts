@@ -10,5 +10,5 @@ export const cssSuffixFor: Record<DictSectionKind, string> = {
 	[DictSectionKind.Deviation]: "abweichungen",
 	[DictSectionKind.Inflection]: "flexion",
 	[DictSectionKind.Translation]: "translations",
-	[DictSectionKind.Semantics]: "semantics",
+	[DictSectionKind.Definition]: "definition",
 };

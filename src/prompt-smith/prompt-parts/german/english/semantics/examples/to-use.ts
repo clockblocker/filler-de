@@ -8,7 +8,8 @@ export const examples = [
 			word: "Bank",
 		},
 		output: {
-			semantics: "Geldinstitut",
+			semantics:
+				"Einrichtung, die Geld verwaltet und Finanzdienstleistungen anbietet",
 		},
 	},
 	{
@@ -18,7 +19,8 @@ export const examples = [
 			word: "Bank",
 		},
 		output: {
-			semantics: "Sitzgelegenheit",
+			semantics:
+				"Längliche Sitzgelegenheit für mehrere Personen im Freien",
 		},
 	},
 	{
@@ -28,7 +30,8 @@ export const examples = [
 			word: "Schloss",
 		},
 		output: {
-			semantics: "Gebäude",
+			semantics:
+				"Repräsentatives Wohngebäude des Adels, oft mit historischer Bedeutung",
 		},
 	},
 	{
@@ -38,7 +41,8 @@ export const examples = [
 			word: "Schloss",
 		},
 		output: {
-			semantics: "Türschloss",
+			semantics:
+				"Mechanische Vorrichtung zum Verschließen einer Tür oder eines Behälters",
 		},
 	},
 	{
@@ -48,7 +52,8 @@ export const examples = [
 			word: "Hund",
 		},
 		output: {
-			semantics: "Haustier",
+			semantics:
+				"Domestiziertes Säugetier, das als Haustier oder Nutztier gehalten wird",
 		},
 	},
 ] satisfies {

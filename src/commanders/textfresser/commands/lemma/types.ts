@@ -13,4 +13,6 @@ export type LemmaResult = {
 	attestation: Attestation;
 	/** null = new sense or first encounter */
 	disambiguationResult: { matchedIndex: number } | null;
+	/** Semantics gloss precomputed by Disambiguate prompt when it detects a new sense. */
+	precomputedSemantics?: string;
 };

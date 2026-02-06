@@ -7,7 +7,7 @@ const userInputSchema = z.object({
 });
 
 const agentOutputSchema = z.object({
-	semantics: z.string(),
+	semantics: z.string().min(1).max(80),
 });
 
 export const semanticsSchemas = { agentOutputSchema, userInputSchema };

@@ -84,12 +84,29 @@ export function lemmaCommand(
 			})),
 		)
 		.andThen((result) => {
+			const precomputedSemantics =
+				result.disambiguationResult &&
+				"precomputedSemantics" in result.disambiguationResult
+					? result.disambiguationResult.precomputedSemantics
+					: undefined;
+
+			// Normalize disambiguationResult: strip precomputedSemantics, keep only matchedIndex shape
+			const disambiguationResult =
+				result.disambiguationResult === null ||
+				result.disambiguationResult.matchedIndex === null
+					? null
+					: {
+							matchedIndex:
+								result.disambiguationResult.matchedIndex,
+						};
+
 			textfresserState.latestLemmaResult = {
 				attestation,
-				disambiguationResult: result.disambiguationResult,
+				disambiguationResult,
 				lemma: result.lemma,
 				linguisticUnit: result.linguisticUnit,
 				pos: result.pos ?? undefined,
+				precomputedSemantics,
 				surfaceKind: result.surfaceKind,
 			};
 

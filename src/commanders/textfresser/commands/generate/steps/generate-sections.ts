@@ -34,7 +34,7 @@ export type ParsedRelation = {
 /** V3 sections — the ones we generate in this version. */
 const V3_SECTIONS = new Set<DictSectionKind>([
 	DictSectionKind.Header,
-	DictSectionKind.Semantics,
+	DictSectionKind.Definition,
 	DictSectionKind.Morphem,
 	DictSectionKind.Relation,
 	DictSectionKind.Inflection,
@@ -59,6 +59,8 @@ export type GenerateSectionsResult = ResolvedEntryState & {
 	inflectionCells: NounInflectionCell[];
 	/** Section names that failed LLM generation but were optional — entry was still created. */
 	failedSections: string[];
+	/** Block ID of the entry to scroll to after dispatch. */
+	targetBlockId?: string;
 };
 
 /** Convert a ResultAsync to a Promise that rejects on err (for use with Promise.allSettled). */
@@ -120,7 +122,7 @@ export function generateSections(
 		if (attestationSection) {
 			// Append new ref on a new line (avoid duplicates)
 			if (!attestationSection.content.includes(attestationRef)) {
-				attestationSection.content += `\n${attestationRef}`;
+				attestationSection.content += `\n\n${attestationRef}`;
 			}
 		} else {
 			// No Attestation section yet — create one
@@ -132,6 +134,8 @@ export function generateSections(
 			});
 		}
 
+		ctx.textfresserState.targetBlockId = matchedEntry.id;
+
 		return ResultAsync.fromSafePromise(
 			Promise.resolve({
 				...ctx,
@@ -139,6 +143,7 @@ export function generateSections(
 				failedSections: [],
 				inflectionCells: [],
 				relations: [],
+				targetBlockId: matchedEntry.id,
 			}),
 		);
 	}
@@ -170,6 +175,8 @@ export function generateSections(
 			// Fire all independent LLM calls in parallel
 			const sectionSet = new Set(v3Applicable);
 
+			const hasPrecomputedSemantics = !!lemmaResult.precomputedSemantics;
+
 			const settled = await Promise.allSettled([
 				sectionSet.has(DictSectionKind.Header)
 					? unwrapResultAsync(
@@ -180,7 +187,8 @@ export function generateSections(
 							}),
 						)
 					: null,
-				sectionSet.has(DictSectionKind.Semantics)
+				sectionSet.has(DictSectionKind.Definition) &&
+				!hasPrecomputedSemantics
 					? unwrapResultAsync(
 							promptRunner.generate(PromptKind.Semantics, {
 								context,
@@ -225,10 +233,12 @@ export function generateSections(
 					: null,
 				sectionSet.has(DictSectionKind.Translation)
 					? unwrapResultAsync(
-							promptRunner.generate(
-								PromptKind.Translate,
-								markdownHelper.replaceWikilinks(context),
-							),
+							promptRunner.generate(PromptKind.WordTranslation, {
+								context:
+									markdownHelper.replaceWikilinks(context),
+								pos,
+								word,
+							}),
 						)
 					: null,
 			]);
@@ -276,13 +286,16 @@ export function generateSections(
 						break;
 					}
 
-					case DictSectionKind.Semantics: {
-						if (semanticsOutput) {
-							semanticsValue = semanticsOutput.semantics;
+					case DictSectionKind.Definition: {
+						semanticsValue =
+							semanticsOutput?.semantics ??
+							lemmaResult.precomputedSemantics ??
+							"";
+						if (semanticsValue) {
 							sections.push({
 								content: semanticsValue,
-								kind: cssSuffixFor[DictSectionKind.Semantics],
-								title: TitleReprFor[DictSectionKind.Semantics][
+								kind: cssSuffixFor[DictSectionKind.Definition],
+								title: TitleReprFor[DictSectionKind.Definition][
 									targetLang
 								],
 							});
@@ -405,8 +418,9 @@ export function generateSections(
 				sections,
 			};
 
-			// Publish failed sections to state for notification
+			// Publish failed sections and target block ID to state
 			ctx.textfresserState.latestFailedSections = failedSections;
+			ctx.textfresserState.targetBlockId = entryId;
 
 			return {
 				...ctx,
@@ -414,6 +428,7 @@ export function generateSections(
 				failedSections,
 				inflectionCells,
 				relations,
+				targetBlockId: entryId,
 			};
 		})(),
 		(e): CommandError => ({

@@ -14,8 +14,8 @@ const userInputSchema = z.object({
 const agentOutputSchema = z.object({
 	rows: z.array(
 		z.object({
-			forms: z.string(),
-			label: z.string(),
+			forms: z.string().min(1),
+			label: z.string().min(1).max(60),
 		}),
 	),
 });

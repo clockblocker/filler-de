@@ -13,6 +13,7 @@ import { nounInflectionSchemas } from "./noun-inflection";
 import { relationSchemas } from "./relation";
 import { semanticsSchemas } from "./semantics";
 import { translateSchemas } from "./translate";
+import { wordTranslationSchemas } from "./word-translation";
 
 export const SchemasFor = {
 	[PromptKindEnum.Translate]: translateSchemas,
@@ -24,6 +25,7 @@ export const SchemasFor = {
 	[PromptKindEnum.NounInflection]: nounInflectionSchemas,
 	[PromptKindEnum.Disambiguate]: disambiguateSchemas,
 	[PromptKindEnum.Semantics]: semanticsSchemas,
+	[PromptKindEnum.WordTranslation]: wordTranslationSchemas,
 } satisfies Record<
 	PromptKind,
 	{ userInputSchema: z.ZodTypeAny; agentOutputSchema: z.ZodTypeAny }

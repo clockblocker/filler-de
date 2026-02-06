@@ -10,6 +10,7 @@ import * as englishToEnglishNounInflectionPrompt from "./codegen/generated-promt
 import * as englishToEnglishRelationPrompt from "./codegen/generated-promts/english/english/relation-prompt";
 import * as englishToEnglishSemanticsPrompt from "./codegen/generated-promts/english/english/semantics-prompt";
 import * as englishToEnglishTranslatePrompt from "./codegen/generated-promts/english/english/translate-prompt";
+import * as englishToEnglishWordTranslationPrompt from "./codegen/generated-promts/english/english/word-translation-prompt";
 import * as germanToEnglishDisambiguatePrompt from "./codegen/generated-promts/german/english/disambiguate-prompt";
 import * as germanToEnglishHeaderPrompt from "./codegen/generated-promts/german/english/header-prompt";
 import * as germanToEnglishInflectionPrompt from "./codegen/generated-promts/german/english/inflection-prompt";
@@ -19,7 +20,9 @@ import * as germanToEnglishNounInflectionPrompt from "./codegen/generated-promts
 import * as germanToEnglishRelationPrompt from "./codegen/generated-promts/german/english/relation-prompt";
 import * as germanToEnglishSemanticsPrompt from "./codegen/generated-promts/german/english/semantics-prompt";
 import * as germanToEnglishTranslatePrompt from "./codegen/generated-promts/german/english/translate-prompt";
+import * as germanToEnglishWordTranslationPrompt from "./codegen/generated-promts/german/english/word-translation-prompt";
 import * as germanToRussianTranslatePrompt from "./codegen/generated-promts/german/russian/translate-prompt";
+import * as germanToRussianWordTranslationPrompt from "./codegen/generated-promts/german/russian/word-translation-prompt";
 import type { AvaliablePromptDict } from "./types";
 
 export const PROMPT_FOR = {
@@ -34,6 +37,7 @@ export const PROMPT_FOR = {
 			Relation: englishToEnglishRelationPrompt,
 			Semantics: englishToEnglishSemanticsPrompt,
 			Translate: englishToEnglishTranslatePrompt,
+			WordTranslation: englishToEnglishWordTranslationPrompt,
 		},
 		Russian: {
 			Disambiguate: englishToEnglishDisambiguatePrompt,
@@ -45,6 +49,7 @@ export const PROMPT_FOR = {
 			Relation: englishToEnglishRelationPrompt,
 			Semantics: englishToEnglishSemanticsPrompt,
 			Translate: englishToEnglishTranslatePrompt,
+			WordTranslation: englishToEnglishWordTranslationPrompt,
 		},
 	},
 	German: {
@@ -58,6 +63,7 @@ export const PROMPT_FOR = {
 			Relation: germanToEnglishRelationPrompt,
 			Semantics: germanToEnglishSemanticsPrompt,
 			Translate: germanToEnglishTranslatePrompt,
+			WordTranslation: germanToEnglishWordTranslationPrompt,
 		},
 		Russian: {
 			Disambiguate: germanToEnglishDisambiguatePrompt,
@@ -69,6 +75,7 @@ export const PROMPT_FOR = {
 			Relation: germanToEnglishRelationPrompt,
 			Semantics: germanToEnglishSemanticsPrompt,
 			Translate: germanToRussianTranslatePrompt,
+			WordTranslation: germanToRussianWordTranslationPrompt,
 		},
 	},
 } satisfies AvaliablePromptDict;

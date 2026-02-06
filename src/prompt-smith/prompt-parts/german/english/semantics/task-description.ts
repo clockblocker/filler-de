@@ -1,4 +1,4 @@
-export const taskDescription = `Produce a short distinguishing gloss for the given German word in context.
+export const taskDescription = `Produce a concise German dictionary-style definition for the given German word in context.
 
 You receive:
 - word: a German word in its lemma (dictionary) form
@@ -6,11 +6,11 @@ You receive:
 - context: the sentence where the word was encountered
 
 Return:
-- semantics: a 1-3 word German gloss that uniquely identifies this particular sense of the word
+- semantics: a 5-15 word German definition that captures the meaning of this particular sense
 
 Rules:
-- The gloss must be in German
-- Keep it as short as possible (1-3 words), like a dictionary sense label
+- The definition must be in German
+- Write a proper dictionary-style definition (5-15 words), not just a synonym or gloss
 - It should distinguish this sense from other common senses of the same word
-- Use a hypernym, synonym, or defining characteristic — whichever is most concise and clear
-- For words with only one common sense, still provide a distinguishing label`;
+- Use the context to determine which sense is meant
+- For words with only one common sense, still provide a proper definition`;

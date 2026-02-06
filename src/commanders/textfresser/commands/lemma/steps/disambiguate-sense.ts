@@ -16,7 +16,10 @@ type LemmaApiResult = {
 	pos?: string | null;
 };
 
-type DisambiguationResult = { matchedIndex: number } | null;
+type DisambiguationResult =
+	| { matchedIndex: number }
+	| { matchedIndex: null; precomputedSemantics?: string }
+	| null;
 
 /**
  * Disambiguate sense for a lemma against existing dictionary entries.
@@ -58,7 +61,12 @@ export function disambiguateSense(
 		// inflected forms (LX-IN-NOUN-*) match lemma entries (LX-LM-NOUN-*)
 		const matchingEntries = existingEntries.filter((e) => {
 			const parsed = dictEntryIdHelper.parse(e.id);
-			if (!parsed) return false;
+			if (!parsed) {
+				logger.warn(
+					`[disambiguate] Failed to parse entry ID: "${e.id}"`,
+				);
+				return false;
+			}
 			if (parsed.unitKind !== apiResult.linguisticUnit) return false;
 			if (apiResult.pos && parsed.pos !== apiResult.pos) return false;
 			return true;
@@ -142,7 +150,26 @@ export function disambiguateSense(
 					logger.info(
 						`[disambiguate] Prompt returned matchedIndex=${output.matchedIndex}`,
 					);
-					if (output.matchedIndex === null) return null;
+					if (output.matchedIndex === null) {
+						return {
+							matchedIndex: null,
+							precomputedSemantics: output.semantics ?? undefined,
+						};
+					}
+
+					const validIndices = sensesWithSemantics.map(
+						(s) => s.index,
+					);
+					if (!validIndices.includes(output.matchedIndex)) {
+						logger.warn(
+							`[disambiguate] matchedIndex ${output.matchedIndex} not in valid indices ${JSON.stringify(validIndices)} — treating as new sense`,
+						);
+						return {
+							matchedIndex: null,
+							precomputedSemantics: output.semantics ?? undefined,
+						};
+					}
+
 					return { matchedIndex: output.matchedIndex };
 				},
 			);

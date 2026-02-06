@@ -9,6 +9,7 @@ export const examples = [
 		},
 		output: {
 			matchedIndex: null,
+			semantics: "financial institution",
 		},
 	},
 	{

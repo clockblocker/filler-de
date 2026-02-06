@@ -7,9 +7,9 @@ const userInputSchema = z.object({
 });
 
 const agentOutputSchema = z.object({
-	article: z.string().nullable().optional(),
-	emoji: z.string(),
-	ipa: z.string(),
+	article: z.enum(["der", "die", "das"]).nullable().optional(),
+	emoji: z.string().min(1).max(4),
+	ipa: z.string().min(1),
 });
 
 export const headerSchemas = { agentOutputSchema, userInputSchema };

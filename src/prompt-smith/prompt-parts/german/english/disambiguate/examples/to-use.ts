@@ -9,6 +9,7 @@ export const examples = [
 		},
 		output: {
 			matchedIndex: null,
+			semantics: "Sitzgelegenheit",
 		},
 	},
 	{
@@ -32,6 +33,7 @@ export const examples = [
 		},
 		output: {
 			matchedIndex: null,
+			semantics: "Türschloss",
 		},
 	},
 	{

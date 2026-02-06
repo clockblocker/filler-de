@@ -5,7 +5,7 @@ const S = DictSectionKind;
 
 const CORE_SECTIONS = [
 	S.Header,
-	S.Semantics,
+	S.Definition,
 	S.Translation,
 	S.Attestation,
 	S.FreeForm,
@@ -26,7 +26,7 @@ export const sectionsForLexemPos: Record<POS, readonly DictSectionKind[]> = {
 
 export const sectionsForPhrasem: readonly DictSectionKind[] = [
 	S.Header,
-	S.Semantics,
+	S.Definition,
 	S.Translation,
 	S.Attestation,
 	S.Relation,

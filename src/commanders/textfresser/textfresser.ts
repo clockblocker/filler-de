@@ -38,6 +38,8 @@ export type TextfresserState = {
 	latestLemmaResult: LemmaResult | null;
 	/** Section names that failed during the latest Generate command (optional sections only). */
 	latestFailedSections: string[];
+	/** Block ID of the entry to scroll to after Generate dispatch. */
+	targetBlockId?: string;
 	languages: LanguagesConfig;
 	promptRunner: PromptRunner;
 	vam: VaultActionManager;
@@ -95,6 +97,7 @@ export class Textfresser {
 					} else {
 						notify(`✓ Entry created for ${lemma.lemma}`);
 					}
+					this.scrollToTargetBlock();
 				}
 			})
 			.mapErr((e) => {
@@ -138,6 +141,24 @@ export class Textfresser {
 	}
 
 	// ─── Private ───
+
+	/** Scroll the editor to the line containing ^{targetBlockId}. Fire-and-forget UX convenience. */
+	private scrollToTargetBlock(): void {
+		const blockId = this.state.targetBlockId;
+		if (!blockId) return;
+		this.state.targetBlockId = undefined;
+
+		const contentResult = this.vam.activeFileService.getContent();
+		if (contentResult.isErr()) return;
+
+		const marker = `^${blockId}`;
+		const lineIndex = contentResult.value
+			.split("\n")
+			.findIndex((line) => line.includes(marker));
+		if (lineIndex < 0) return;
+
+		this.vam.activeFileService.scrollToLine(lineIndex);
+	}
 
 	private dispatchActions(actions: VaultAction[]) {
 		return new ResultAsync(

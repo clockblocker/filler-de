@@ -114,6 +114,14 @@ export class ActiveFileService {
 		return this.writer.processContent(args);
 	}
 
+	/** Scroll the editor to bring the given line into view. No-op if editor is unavailable. */
+	scrollToLine(line: number): void {
+		const result = this.reader.getEditorAnyMode();
+		if (result.isErr()) return;
+		const pos = { ch: 0, line };
+		result.value.editor.scrollIntoView({ from: pos, to: pos }, true);
+	}
+
 	// ─────────────────────────────────────────────────────────────────────────
 	// Navigation
 	// ─────────────────────────────────────────────────────────────────────────
