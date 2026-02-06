@@ -34,7 +34,7 @@ Generate (heavy lifting):
   Reads Lemma result from state
   Resolves existing entries (re-encounter detection)
   If re-encounter: appends attestation ref, skips LLM
-  If new: LLM request PER section (Header, Morphem, Relation, Inflection, Translation)
+  If new: LLM request PER section (Header, Semantics, Morphem, Relation, Inflection, Translation)
   Adds Attestation section (no LLM — uses source ref from Lemma)
   Propagates inverse relations to referenced notes
   Propagates noun inflection stubs to inflected-form notes
@@ -629,7 +629,12 @@ Different prompts are needed depending on:
 | **KnownLanguage** | Russian, English, ... | User's native language |
 | **PromptKind** | Lemma, Disambiguate, Header, Semantics, Morphem, Relation, Inflection, NounInflection, Translate | What task the LLM performs |
 
-Section applicability (which sections a DictEntry gets) is determined by `LinguisticUnitKind` + `POS` via `getSectionsFor()` in `src/linguistics/sections/section-config.ts`.
+Section applicability (which sections a DictEntry gets) is determined by `LinguisticUnitKind` + `POS` via `getSectionsFor()` in `src/linguistics/sections/section-config.ts`:
+- **Lexem**: POS-dependent (e.g., Nouns get Morphem + Inflection + Relation; Conjunctions get core only)
+- **Phrasem**: Header, Semantics, Translation, Attestation, Relation, FreeForm
+- **Morphem**: Header, Attestation, FreeForm
+
+For non-Lexem units, `pos` is passed to LLM prompts as the `linguisticUnit` name (e.g., `"Phrasem"`) so the LLM understands the input is a multi-word expression rather than a single word.
 
 ### 8.4 Future Enhancements (Not in V3)
 
@@ -903,12 +908,15 @@ bun run codegen:prompts
 type TextfresserState = {
   attestationForLatestNavigated: Attestation | null;  // from last wikilink click
   latestLemmaResult: LemmaResult | null;              // from last Lemma command
+  latestFailedSections: string[];                      // optional sections that failed in last Generate
   languages: LanguagesConfig;                          // { known, target }
   promptRunner: PromptRunner;                          // LLM interface
 };
 ```
 
 `latestLemmaResult` holds the most recent Lemma command output. Generate reads it for classification + attestation data. Both fields are checked when validating attestation availability (wikilink click OR prior Lemma).
+
+`latestFailedSections` is populated by `generateSections` when optional LLM calls fail (graceful degradation). Used by the notification logic to show partial-success warnings.
 
 ### 11.2 Command Execution Flow
 
@@ -926,6 +934,7 @@ ResultAsync<VaultAction[], CommandError>
 dispatchActions(actions) → vam.dispatch()
   ↓
 On success: notify("✓ {lemma} ({pos})" or "✓ Entry created for {lemma}")
+On partial success: notify("⚠ Entry created for {lemma} (failed: {sections})") — when optional sections failed
 On error: notify("⚠ {reason}") + logger.warn
 ```
 
