@@ -32,15 +32,19 @@ User calls "Generate"
   ↓
 Generate (heavy lifting):
   Reads Lemma result from state
-  LLM request PER section (Header, Morphemes, Relations)
+  Resolves existing entries (re-encounter detection)
+  If re-encounter: appends attestation ref, skips LLM
+  If new: LLM request PER section (Header, Morphem, Relation, Inflection, Translation)
   Adds Attestation section (no LLM — uses source ref from Lemma)
+  Propagates inverse relations to referenced notes
   Builds full DictEntry, serializes to note, moves to Wörter folder
+  Notifies user of success/failure
   Single vam.dispatch()
   ↓
 User gets a tailor-made dictionary that grows with their reading
 ```
 
-> **V1 scope**: German target only, 4 generated sections (Header, Morphem, Relation, Attestation), always creates new entry (no meaning resolution), no cross-reference propagation.
+> **V2 scope**: German target, 6 generated sections (Header, Morphem, Relation, Inflection, Translation, Attestation), re-encounter detection (append attestation vs new entry), cross-reference propagation for relations, user-facing notices.
 
 **Properties of the resulting dictionary:**
 
@@ -408,9 +412,9 @@ commandFn(input) → VaultAction[] → vam.dispatch(actions)
 
 | Command | Status | Purpose |
 |---------|--------|---------|
-| `Lemma` | V1 implemented | Recon: classify word via LLM, wrap in wikilink, store result |
-| `Generate` | V1 implemented | Build DictEntry: LLM-generated sections (Header, Morphem, Relation) + Attestation, serialize, move to Wörter |
-| `TranslateSelection` | Implemented | Translate selected text via LLM |
+| `Lemma` | V2 | Recon: classify word via LLM, wrap in wikilink, store result, notify user |
+| `Generate` | V2 | Build DictEntry: LLM-generated sections (Header, Morphem, Relation, Inflection, Translation) + Attestation; re-encounter detection; cross-ref propagation; serialize, move to Wörter, notify user |
+| `TranslateSelection` | V1 | Translate selected text via LLM |
 
 **Source**: `src/commanders/textfresser/textfresser.ts`, `src/commanders/textfresser/commands/types.ts`
 
@@ -435,16 +439,20 @@ The dictionary pipeline is split into two user-facing commands with distinct res
          Lemma (recon)                          Generate (heavy lifting)
 ┌─────────────────────────────┐    ┌──────────────────────────────────────────┐
 │ 1. Resolve attestation       │    │ 1. Check attestation + lemma result      │
-│    (wikilink click or        │    │ 2. Determine applicable sections         │
-│     text selection)          │    │    (via getSectionsFor + V1 filter)      │
-│ 2. LLM classification       │    │ 3. LLM request PER section:              │
-│    → LinguisticUnit + POS   │───→│    Header → formatHeaderLine()           │
-│    → SurfaceKind + lemma    │    │    Morphem → morphemeFormatterHelper()   │
-│ 3. Wrap surface in wikilink  │    │    Relation → formatRelationSection()   │
-│ 4. Store result in state     │    │    Attestation → source ref (no LLM)    │
-│                              │    │ 4. Build DictEntry + serialize           │
-│ Light, single LLM call       │    │ 5. Apply meta, move to Wörter           │
-└─────────────────────────────┘    │ 6. Single vam.dispatch()                │
+│    (wikilink click or        │    │ 2. Resolve existing entries (re-encounter│
+│     text selection)          │    │    detection via ID prefix match)        │
+│ 2. LLM classification       │    │ 3. If re-encounter: append attestation   │
+│    → LinguisticUnit + POS   │───→│    If new: LLM request PER section:      │
+│    → SurfaceKind + lemma    │    │      Header → formatHeaderLine()         │
+│ 3. Wrap surface in wikilink  │    │      Morphem → morphemeFormatterHelper() │
+│ 4. Store result in state     │    │      Relation → formatRelationSection()  │
+│ 5. Notify: "✓ lemma (POS)"  │    │      Inflection → formatInflectionSection│
+│                              │    │      Translation → PromptKind.Translate  │
+│ Light, single LLM call       │    │      Attestation → source ref (no LLM)  │
+└─────────────────────────────┘    │ 4. Propagate inverse relations to targets│
+                                   │ 5. Serialize ALL entries + apply meta     │
+                                   │ 6. Move to Wörter, notify user            │
+                                   │ 7. Single vam.dispatch()                  │
                                    └──────────────────────────────────────────┘
 ```
 
@@ -495,7 +503,7 @@ type LemmaResult = {
 };
 ```
 
-### 8.2 Generate Command (V1)
+### 8.2 Generate Command (V2)
 
 The user navigates to the dictionary note (via the wikilink Lemma created) and calls "Generate".
 
@@ -505,15 +513,28 @@ The user navigates to the dictionary note (via the wikilink Lemma created) and c
 
 ```
 checkAttestation → checkEligibility → checkLemmaResult
-  → generateSections (async: LLM calls)
+  → resolveExistingEntry (parse existing entries, detect re-encounter)
+  → generateSections (async: LLM calls or attestation append)
+  → propagateRelations (cross-ref inverse relations to target notes)
   → serializeEntry → applyMeta → moveToWorter → addWriteAction
 ```
 
 Sync `Result` checks transition to async `ResultAsync` at `generateSections`.
 
-#### Section Generation (V1)
+#### Re-Encounter Detection
 
-`generateSections` determines applicable sections via `getSectionsFor()`, then filters to the **V1 set**: Header, Morphem, Relation, Attestation.
+`resolveExistingEntry` parses the active file via `dictNoteHelper.parse()`, builds an ID prefix from the lemma result, and searches for a matching entry:
+
+- **Match found** → `matchedEntry` set, `isExistingEntry` path in `generateSections`
+- **No match** → `nextIndex` computed via `dictEntryIdHelper.nextIndex()` for the new entry
+
+#### Section Generation (V2)
+
+`generateSections` has two paths:
+
+**Path A (re-encounter)**: If `matchedEntry` exists, skip all LLM calls. Find or create the Attestation section in the matched entry, append the new attestation ref (deduped). Returns existing entries unchanged except for the appended ref.
+
+**Path B (new entry)**: Determines applicable sections via `getSectionsFor()`, filtered to the **V2 set**: Header, Morphem, Relation, Inflection, Translation, Attestation.
 
 For each applicable section:
 
@@ -521,25 +542,27 @@ For each applicable section:
 |---------|------|-----------|-----------|--------|
 | **Header** | Yes | `Header` | `formatHeaderLine()` | `{emoji} {article} [[lemma]], [{ipa} ♫](youglish_url)` → `DictEntry.headerContent` |
 | **Morphem** | Yes | `Morphem` | `morphemeFormatterHelper.formatSection()` | `[[kohle]]\|[[kraft]]\|[[werk]]` → `EntrySection` |
-| **Relation** | Yes | `Relation` | `formatRelationSection()` | `= [[Synonym]], ⊃ [[Hypernym]]` → `EntrySection` |
+| **Relation** | Yes | `Relation` | `formatRelationSection()` | `= [[Synonym]], ⊃ [[Hypernym]]` → `EntrySection`. Raw output also stored for propagation. |
+| **Inflection** | Yes | `Inflection` | `formatInflectionSection()` | `N: das [[Kohlekraftwerk]], die [[Kohlekraftwerke]]` → `EntrySection`. POS-adaptive (case table for nouns, tenses for verbs, degrees for adjectives). |
+| **Translation** | Yes | `Translate` | — (string pass-through) | Translates the attestation sentence context → `EntrySection` |
 | **Attestation** | No | — | — | `![[file#^blockId\|^]]` from `lemmaResult.attestation.source.ref` → `EntrySection` |
 
 Each `EntrySection` gets:
-- `kind`: CSS suffix from `cssSuffixFor[DictSectionKind]` (e.g., `"synonyme"`, `"morpheme"`)
+- `kind`: CSS suffix from `cssSuffixFor[DictSectionKind]` (e.g., `"synonyme"`, `"morpheme"`, `"flexion"`, `"translations"`)
 - `title`: Localized from `TitleReprFor[sectionKind][targetLang]`
 
 #### Entry ID
 
-Built via `dictEntryIdHelper.build()`. V1 always uses index 1:
-- Lexem: `LX-{SurfaceTag}-{PosTag}-1` (e.g., `LX-LM-NOUN-1`)
-- Phrasem/Morphem: `{UnitTag}-{SurfaceTag}-1`
+Built via `dictEntryIdHelper.build()`. V2 uses `nextIndex` computed from existing entries:
+- Lexem: `LX-{SurfaceTag}-{PosTag}-{nextIndex}` (e.g., `LX-LM-NOUN-1`, `LX-LM-NOUN-2`)
+- Phrasem/Morphem: `{UnitTag}-{SurfaceTag}-{nextIndex}`
 
 #### Serialization & Dispatch
 
-`serializeEntry` → `dictNoteHelper.serialize([entry])` → note body
+`serializeEntry` → `dictNoteHelper.serialize(allEntries)` → note body (serializes ALL entries, existing + new)
 `applyMeta` → `noteMetadataHelper.upsert(meta)` → metadata section
 `moveToWorter` → `RenameMdFile` action to sharded Wörter folder
-Final `ProcessMdFile` writes the content → all actions dispatched via `vam.dispatch()`
+Final `ProcessMdFile` writes the content → all actions (including propagation actions) dispatched via `vam.dispatch()`
 
 ### 8.3 Prompt Configuration Matrix
 
@@ -549,22 +572,21 @@ Different prompts are needed depending on:
 |-----------|--------|--------|
 | **TargetLanguage** | German, English, ... | Language of the dictionary |
 | **KnownLanguage** | Russian, English, ... | User's native language |
-| **PromptKind** | Lemma, Header, Morphem, Relation, Translate | What task the LLM performs |
+| **PromptKind** | Lemma, Header, Morphem, Relation, Inflection, Translate | What task the LLM performs |
 
 Section applicability (which sections a DictEntry gets) is determined by `LinguisticUnitKind` + `POS` via `getSectionsFor()` in `src/linguistics/sections/section-config.ts`.
 
-### 8.4 Future Enhancements (Not in V1)
+### 8.4 Future Enhancements (Not in V2)
 
-- **Meaning resolution**: Note lookup + LLM query to distinguish polysemy (existing entry → append context ref vs new entry → full generation)
-- **Cross-reference propagation**: Bidirectional updates when relations are created (see section 9)
+- **Full meaning resolution**: Current re-encounter detection matches by ID prefix (unit+surface+POS). Future: LLM query to distinguish polysemy within the same prefix (e.g., "Bank" as financial institution vs bench).
 - **Multi-word selection**: Lemma handling phrasem attestations from multi-word selections
-- **Inflection/Deviation sections**: Additional LLM-generated sections
+- **Deviation section**: Additional LLM-generated section for irregular forms and exceptions
 
 ---
 
 ## 9. Cross-Reference Propagation
 
-> **Status**: Planned. This section describes the intended design.
+> **Status**: V2 implemented.
 
 When Generate fills DictEntrySections for a new DictEntry, the LLM output contains references to other Surfaces. Cross-reference propagation ensures those references are **bidirectional** — if A references B, then B's Note is updated to reference A back.
 
@@ -600,24 +622,36 @@ Not all DictEntrySections participate in cross-reference propagation:
 - **Inflection**: No propagation — forms are per-lemma.
 - **Header, FreeForm, Deviation**: No propagation.
 
-### 9.4 Implementation Sketch
+### 9.4 Implementation
+
+**Source**: `src/commanders/textfresser/commands/generate/steps/propagate-relations.ts`
+
+The `propagateRelations` step runs after `generateSections` in the Generate pipeline. It uses the raw `relations` output captured during section generation (not re-parsed from markdown).
 
 ```
-Generate collects LLM DictEntrySection outputs
+generateSections captures raw relation output (ParsedRelation[])
   ↓
-For each DictEntrySection that has propagation rules:
-  For each DictEntrySubSection referencing another Surface:
-    1. Resolve Surface → target Note path
-    2. Parse target Note with dictNoteHelper.parse()
-    3. Find or create the appropriate DictEntry
-    4. Compute inverse SubSection type (propagation rule)
-    5. Update the target DictEntry's DictEntrySection
-    6. Serialize → ProcessMdFile action
+propagateRelations:
+  For each relation { kind, words[] }:
+    Compute inverseKind via INVERSE_KIND map
+    For each target word (skip self-references):
+      1. Build target SplitPath via computeShardedFolderParts(word)
+      2. Create UpsertMdFile action (ensures target note exists)
+      3. Create ProcessMdFile with transform function that:
+         a. Finds existing relation section marker in target note
+         b. Appends inverse relation line (deduped)
+         c. Or creates new relation section if none exists
   ↓
-Collect all ProcessMdFile actions (source Note + all target Notes)
+Propagation VaultActions added to ctx.actions
   ↓
-Single vam.dispatch()
+All dispatched in single vam.dispatch() alongside source note actions
 ```
+
+**Key design decisions**:
+- Uses `ProcessMdFile` with `transform` function for atomic read-then-write on target notes
+- `UpsertMdFile` with `content: null` ensures target file exists before processing
+- Skips propagation for re-encounters (no new relations generated)
+- Deduplicates: won't add `= [[Schuck]]` if it already exists in the target's relation section
 
 ---
 
@@ -646,7 +680,7 @@ src/prompt-smith/
 │           └── to-test.ts           # Extra examples for validation only
 │
 ├── codegen/
-│   ├── consts.ts                    # PromptKind enum ("Translate","Morphem","Lemma","Header","Relation")
+│   ├── consts.ts                    # PromptKind enum ("Translate","Morphem","Lemma","Header","Relation","Inflection")
 │   ├── generated-promts/            # AUTO-GENERATED compiled prompts
 │   └── skript/                      # Codegen pipeline scripts
 │       ├── run.ts                   # Orchestrator
@@ -661,7 +695,8 @@ src/prompt-smith/
 │   ├── morphem.ts                   # Morphem: {word,context} → {morphemes[]}
 │   ├── lemma.ts                     # Lemma: {surface,context} → {linguisticUnit,pos?,surfaceKind,lemma}
 │   ├── header.ts                    # Header: {word,pos,context} → {emoji,article?,ipa}
-│   └── relation.ts                  # Relation: {word,pos,context} → {relations[{kind,words[]}]}
+│   ├── relation.ts                  # Relation: {word,pos,context} → {relations[{kind,words[]}]}
+│   └── inflection.ts                # Inflection: {word,pos,context} → {rows[{label,forms}]}
 │
 ├── index.ts                         # GENERATED: PROMPT_FOR lookup table
 └── types.ts                         # AvaliablePromptDict type
@@ -732,7 +767,7 @@ Some PromptKinds depend on both the target language and the user's known languag
 | Category | PromptKinds | Depends on known language? |
 |----------|-------------|---------------------------|
 | **Bilingual** | Translate | Yes — output language varies by user's known language |
-| **Target-language-only** | Morphem, Lemma, Header, Relation | No — linguistic analysis is purely about target language structure |
+| **Target-language-only** | Morphem, Lemma, Header, Relation, Inflection | No — linguistic analysis is purely about target language structure |
 
 For **target-language-only** prompts, only the mandatory `english/` known-language path is created. The codegen fallback mechanism automatically reuses this English prompt for other known languages (e.g., Russian), since the prompt content is identical regardless of the user's native language.
 
@@ -783,7 +818,7 @@ type TextfresserState = {
 ### 11.2 Command Execution Flow
 
 ```
-Textfresser.executeCommand(commandName, context)
+Textfresser.executeCommand(commandName, context, notify)
   ↓
 Validate activeFile exists
   ↓
@@ -795,8 +830,11 @@ ResultAsync<VaultAction[], CommandError>
   ↓
 dispatchActions(actions) → vam.dispatch()
   ↓
-Log errors via mapErr
+On success: notify("✓ {lemma} ({pos})" or "✓ Entry created for {lemma}")
+On error: notify("⚠ {reason}") + logger.warn
 ```
+
+The `notify` callback is injected from `createCommandExecutor` (which creates an Obsidian `Notice`).
 
 ### 11.3 Wikilink Click Handler
 
@@ -862,10 +900,13 @@ To add support for a new target language (e.g., Japanese):
 | `src/commanders/textfresser/commands/generate/generate-command.ts` | Generate pipeline orchestrator |
 | `src/commanders/textfresser/commands/generate/steps/check-attestation.ts` | Sync check: attestation available |
 | `src/commanders/textfresser/commands/generate/steps/check-lemma-result.ts` | Sync check: lemma result available |
-| `src/commanders/textfresser/commands/generate/steps/generate-sections.ts` | Async: LLM calls per section, builds DictEntry |
-| `src/commanders/textfresser/commands/generate/steps/serialize-entry.ts` | Serialize DictEntry to note body |
+| `src/commanders/textfresser/commands/generate/steps/resolve-existing-entry.ts` | Parse existing entries, detect re-encounter by ID prefix |
+| `src/commanders/textfresser/commands/generate/steps/generate-sections.ts` | Async: LLM calls per section (or append attestation for re-encounters) |
+| `src/commanders/textfresser/commands/generate/steps/propagate-relations.ts` | Cross-ref: compute inverse relations, generate actions for target notes |
+| `src/commanders/textfresser/commands/generate/steps/serialize-entry.ts` | Serialize ALL DictEntries to note body |
 | `src/commanders/textfresser/commands/generate/section-formatters/header-formatter.ts` | Header LLM output → header line |
 | `src/commanders/textfresser/commands/generate/section-formatters/relation-formatter.ts` | Relation LLM output → symbol notation |
+| `src/commanders/textfresser/commands/generate/section-formatters/inflection-formatter.ts` | Inflection LLM output → `{label}: {forms}` lines |
 | `src/commanders/textfresser/commands/translate/translate-command.ts` | Translate pipeline |
 | **Attestation** | |
 | `src/commanders/textfresser/common/attestation/types.ts` | Attestation type |
@@ -888,7 +929,7 @@ To add support for a new target language (e.g., Japanese):
 | `src/linguistics/old-enums.ts` | Inflectional dimensions, theta roles, tones |
 | **Prompt-Smith** | |
 | `src/prompt-smith/index.ts` | PROMPT_FOR registry (generated) |
-| `src/prompt-smith/schemas/` | Zod I/O schemas: translate, morphem, lemma, header, relation |
+| `src/prompt-smith/schemas/` | Zod I/O schemas: translate, morphem, lemma, header, relation, inflection |
 | `src/prompt-smith/codegen/consts.ts` | PromptKind enum |
 | `src/prompt-smith/codegen/skript/run.ts` | Codegen orchestrator |
 | `src/prompt-smith/prompt-parts/` | Human-written prompt sources (3 kinds × 2 lang pairs) |
