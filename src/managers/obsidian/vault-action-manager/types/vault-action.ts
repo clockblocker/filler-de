@@ -1,5 +1,8 @@
 // ─── Vault Action Definitions (moved here for platform boundary) ───
 
+// NOTE: Must stay v4 — VaultActionKindSchema uses z.enum with mapped template
+// literals that only infer correctly in v4. Switching to v3 breaks discriminated
+// union narrowing in all consuming files (collapse.ts, executor.ts, etc.).
 import z from "zod";
 import {
 	CREATE,

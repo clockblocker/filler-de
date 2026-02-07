@@ -315,6 +315,7 @@ export class VaultActionManagerImpl implements VaultActionManager {
 	 */
 	resetDebugState(): void {
 		this.dispatcher.resetDebugState();
+		this.bulkEventEmmiter.resetDebugState();
 	}
 
 	/**

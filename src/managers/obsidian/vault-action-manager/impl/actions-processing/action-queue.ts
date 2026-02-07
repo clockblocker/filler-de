@@ -1,10 +1,16 @@
-import { ok } from "neverthrow";
+import { err, ok } from "neverthrow";
 import {
 	decrementPending,
 	incrementPending,
 } from "../../../../../utils/idle-tracker";
+import { logger } from "../../../../../utils/logger";
 import type { VaultAction } from "../../types/vault-action";
 import type { Dispatcher, DispatchResult } from "./dispatcher";
+
+export type ActionQueueOpts = {
+	/** Max recursive batches before overflow (default: 10) */
+	maxBatches?: number;
+};
 
 /**
  * ActionQueue implements call stack + event queue pattern.
@@ -21,11 +27,16 @@ export class ActionQueue {
 	private queue: VaultAction[] = []; // Simple FIFO queue
 	private isExecuting = false; // "Call stack" state
 	private batchCount = 0;
-	private readonly maxBatches = 10;
+	private readonly maxBatches: number;
 	/** Resolvers waiting for queue to drain */
 	private drainWaiters: Array<() => void> = [];
 
-	constructor(private readonly dispatcher: Dispatcher) {}
+	constructor(
+		private readonly dispatcher: Dispatcher,
+		opts?: ActionQueueOpts,
+	) {
+		this.maxBatches = opts?.maxBatches ?? 10;
+	}
 
 	/**
 	 * Dispatch actions to queue.
@@ -77,12 +88,23 @@ export class ActionQueue {
 			return ok(undefined);
 		}
 
-		// Check batch limit
+		// Check batch limit — overflow: log, drain, return err
 		if (this.batchCount >= this.maxBatches) {
-			// Drop oldest half of queue to make room
-			const dropCount = Math.floor(this.queue.length / 2);
-			this.queue.splice(0, dropCount);
-			// Could return error here, but dropping is safer for now
+			const droppedCount = this.queue.length;
+			const representative = this.queue[0];
+			logger.warn(
+				`[ActionQueue] Batch limit (${this.maxBatches}) reached, dropping ${droppedCount} queued actions`,
+			);
+			this.queue = [];
+			this.isExecuting = false;
+			decrementPending();
+			this.signalDrain();
+			return err([
+				{
+					action: representative ?? ({} as VaultAction),
+					error: `ActionQueue overflow: batch limit ${this.maxBatches} reached, ${droppedCount} actions dropped`,
+				},
+			]);
 		}
 
 		const wasExecuting = this.isExecuting;

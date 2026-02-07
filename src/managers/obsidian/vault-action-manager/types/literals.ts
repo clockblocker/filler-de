@@ -1,3 +1,5 @@
+// NOTE: Must stay v4 — MdSchema is imported by split-path.ts which uses v4
+// z.codec(). Mixing v3 schemas in v4 .extend() causes _zod.run errors.
 import z from "zod";
 
 // Vault Actions

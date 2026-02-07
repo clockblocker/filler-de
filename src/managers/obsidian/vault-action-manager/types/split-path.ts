@@ -1,5 +1,7 @@
 import type { Result } from "neverthrow";
 import type { TFile, TFolder } from "obsidian";
+// NOTE: Must stay v4 — SplitPathSchema is consumed by z.codec() in
+// system-path-and-split-path-codec.ts which is a v4-only API.
 import { z } from "zod";
 import { FILE, FOLDER, MD_FILE, MdSchema } from "./literals";
 

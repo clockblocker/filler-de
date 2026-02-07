@@ -103,6 +103,10 @@ export class BulkEventEmmiter {
 		this.handler = null;
 	}
 
+	resetDebugState(): void {
+		this._debugAllRawEvents = [];
+	}
+
 	private push(event: VaultEvent): void {
 		if (!this.handler) return; // drop events if stopped
 		this.acc.push(event);

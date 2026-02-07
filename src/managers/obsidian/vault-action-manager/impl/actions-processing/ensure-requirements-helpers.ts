@@ -199,6 +199,8 @@ export function buildEnsureExistKeys(
 /**
  * Check if an action already exists in the batch for a given key.
  * For folders, also checks if a RenameFolder action creates the folder at the destination.
+ *
+ * @deprecated Use `buildActionKeyIndex` for O(1) lookups instead of O(N) scans.
  */
 export function hasActionForKey(
 	actions: readonly VaultAction[],
@@ -225,6 +227,39 @@ export function hasActionForKey(
 			(a.kind === VaultActionKind.ProcessMdFile &&
 				makeSystemPathForSplitPath(a.payload.splitPath) === key),
 	);
+}
+
+/**
+ * Pre-compute an index of folder and file keys from actions.
+ * Replaces O(N) `hasActionForKey` with O(1) Set lookups.
+ */
+export function buildActionKeyIndex(actions: readonly VaultAction[]): {
+	folderKeys: Set<string>;
+	fileKeys: Set<string>;
+} {
+	const folderKeys = new Set<string>();
+	const fileKeys = new Set<string>();
+
+	for (const action of actions) {
+		switch (action.kind) {
+			case VaultActionKind.CreateFolder:
+				folderKeys.add(
+					makeSystemPathForSplitPath(action.payload.splitPath),
+				);
+				break;
+			case VaultActionKind.RenameFolder:
+				folderKeys.add(makeSystemPathForSplitPath(action.payload.to));
+				break;
+			case VaultActionKind.UpsertMdFile:
+			case VaultActionKind.ProcessMdFile:
+				fileKeys.add(
+					makeSystemPathForSplitPath(action.payload.splitPath),
+				);
+				break;
+		}
+	}
+
+	return { fileKeys, folderKeys };
 }
 
 /**
@@ -291,6 +326,9 @@ export async function ensureDestinationsExist(
 ): Promise<VaultAction[]> {
 	const actionsToAdd: VaultAction[] = [];
 
+	// Pre-compute index for O(1) "already in batch" lookups
+	const actionIndex = buildActionKeyIndex(existingActions);
+
 	// Performance: Cache existence checks to avoid redundant file ops
 	const checkedFolders = new Set<string>();
 	const checkedFiles = new Set<string>();
@@ -316,8 +354,8 @@ export async function ensureDestinationsExist(
 			}
 		}
 
-		// Check if already in batch
-		if (!hasActionForKey(existingActions, folderKey, "folder")) {
+		// Check if already in batch (O(1) via index)
+		if (!actionIndex.folderKeys.has(folderKey)) {
 			actionsToAdd.push({
 				kind: VaultActionKind.CreateFolder,
 				payload: { splitPath: folderSplitPath },
@@ -343,8 +381,8 @@ export async function ensureDestinationsExist(
 			}
 		}
 
-		// Check if already in batch
-		if (!hasActionForKey(existingActions, fileKey, "file")) {
+		// Check if already in batch (O(1) via index)
+		if (!actionIndex.fileKeys.has(fileKey)) {
 			actionsToAdd.push({
 				kind: VaultActionKind.UpsertMdFile,
 				payload: { content: null, splitPath: fileSplitPath },
@@ -372,8 +410,8 @@ export async function ensureDestinationsExist(
 			}
 		}
 
-		// Check if already in batch
-		if (!hasActionForKey(existingActions, folderKey, "folder")) {
+		// Check if already in batch (O(1) via index)
+		if (!actionIndex.folderKeys.has(folderKey)) {
 			actionsToAdd.push({
 				kind: VaultActionKind.CreateFolder,
 				payload: { splitPath: folderSplitPath },
@@ -400,8 +438,8 @@ export async function ensureDestinationsExist(
 			}
 		}
 
-		// Check if UpsertMdFile already exists in the batch
-		if (!hasActionForKey(existingActions, fileKey, "file")) {
+		// Check if UpsertMdFile already exists in the batch (O(1) via index)
+		if (!actionIndex.fileKeys.has(fileKey)) {
 			// Use content: null (EnsureExist) so collapse keeps both ProcessMdFile + UpsertMdFile(null)
 			// Dependency graph ensures UpsertMdFile executes first, then ProcessMdFile processes it
 			actionsToAdd.push({

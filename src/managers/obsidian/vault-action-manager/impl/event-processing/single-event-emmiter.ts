@@ -53,13 +53,19 @@ export class SingleEventEmmiter {
 		oldPath: string,
 		handler: VaultEventHandler,
 	): void {
-		const res = tryMakeVaultEventForFileRenamed(tAbstractFile, oldPath);
+		// Evaluate both BEFORE the if — JS || short-circuits, so if
+		// shouldIgnore(newPath) returns true, shouldIgnore(oldPath)
+		// would never run, leaving oldPath stale in the tracker.
+		const newPathIgnored = this.selfEventTracker.shouldIgnore(
+			tAbstractFile.path,
+		);
+		const oldPathIgnored = this.selfEventTracker.shouldIgnore(oldPath);
+		if (newPathIgnored || oldPathIgnored) {
+			return;
+		}
 
-		if (
-			this.selfEventTracker.shouldIgnore(tAbstractFile.path) ||
-			this.selfEventTracker.shouldIgnore(oldPath) ||
-			res.isErr()
-		) {
+		const res = tryMakeVaultEventForFileRenamed(tAbstractFile, oldPath);
+		if (res.isErr()) {
 			return;
 		}
 		void handler(res.value);

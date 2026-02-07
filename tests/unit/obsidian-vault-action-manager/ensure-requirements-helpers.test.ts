@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import type { ExistenceChecker } from "../../../src/managers/obsidian/vault-action-manager/impl/actions-processing/dispatcher";
 import {
+	buildActionKeyIndex,
 	buildEnsureExistKeys,
 	buildParentFolderKeys,
 	collectRequirements,
@@ -570,3 +571,138 @@ describe("ensureDestinationsExist", () => {
 	});
 });
 
+describe("buildActionKeyIndex", () => {
+	it("returns empty sets for empty actions", () => {
+		const index = buildActionKeyIndex([]);
+
+		expect(index.folderKeys.size).toBe(0);
+		expect(index.fileKeys.size).toBe(0);
+	});
+
+	it("indexes CreateFolder by system path", () => {
+		const actions: VaultAction[] = [
+			{
+				kind: VaultActionKind.CreateFolder,
+				payload: { splitPath: folder("notes", ["root"]) },
+			},
+		];
+
+		const index = buildActionKeyIndex(actions);
+
+		expect(index.folderKeys.has("root/notes")).toBe(true);
+		expect(index.fileKeys.size).toBe(0);
+	});
+
+	it("indexes RenameFolder destination", () => {
+		const actions: VaultAction[] = [
+			{
+				kind: VaultActionKind.RenameFolder,
+				payload: {
+					from: folder("old", ["root"]),
+					to: folder("new", ["root"]),
+				},
+			},
+		];
+
+		const index = buildActionKeyIndex(actions);
+
+		expect(index.folderKeys.has("root/new")).toBe(true);
+		// Source is NOT indexed — only destinations matter for "already in batch"
+		expect(index.folderKeys.has("root/old")).toBe(false);
+	});
+
+	it("indexes UpsertMdFile and ProcessMdFile", () => {
+		const actions: VaultAction[] = [
+			{
+				kind: VaultActionKind.UpsertMdFile,
+				payload: { splitPath: mdFile("note1", ["root"]) },
+			},
+			{
+				kind: VaultActionKind.ProcessMdFile,
+				payload: {
+					splitPath: mdFile("note2", ["root"]),
+					transform: (c) => c,
+				},
+			},
+		];
+
+		const index = buildActionKeyIndex(actions);
+
+		expect(index.fileKeys.has("root/note1.md")).toBe(true);
+		expect(index.fileKeys.has("root/note2.md")).toBe(true);
+		expect(index.folderKeys.size).toBe(0);
+	});
+
+	it("ignores TrashFolder, TrashFile, TrashMdFile", () => {
+		const actions: VaultAction[] = [
+			{
+				kind: VaultActionKind.TrashFolder,
+				payload: { splitPath: folder("a", ["root"]) },
+			},
+			{
+				kind: VaultActionKind.TrashFile,
+				payload: { splitPath: { basename: "b", extension: "txt", kind: "File", pathParts: ["root"] } },
+			},
+			{
+				kind: VaultActionKind.TrashMdFile,
+				payload: { splitPath: mdFile("c", ["root"]) },
+			},
+		];
+
+		const index = buildActionKeyIndex(actions);
+
+		expect(index.folderKeys.size).toBe(0);
+		expect(index.fileKeys.size).toBe(0);
+	});
+
+	it("matches hasActionForKey results for all existing test scenarios", () => {
+		const actions: VaultAction[] = [
+			{
+				kind: VaultActionKind.CreateFolder,
+				payload: { splitPath: folder("a", ["root"]) },
+			},
+			{
+				kind: VaultActionKind.UpsertMdFile,
+				payload: { splitPath: mdFile("file", ["root"]) },
+			},
+			{
+				kind: VaultActionKind.ProcessMdFile,
+				payload: {
+					splitPath: mdFile("processed", ["root"]),
+					transform: (c) => c,
+				},
+			},
+			{
+				kind: VaultActionKind.RenameFolder,
+				payload: {
+					from: folder("old", ["root"]),
+					to: folder("new", ["root"]),
+				},
+			},
+		];
+
+		const index = buildActionKeyIndex(actions);
+
+		// Folder checks — behavioral equivalence with hasActionForKey
+		expect(index.folderKeys.has("root/a")).toBe(
+			hasActionForKey(actions, "root/a", "folder"),
+		);
+		expect(index.folderKeys.has("root/b")).toBe(
+			hasActionForKey(actions, "root/b", "folder"),
+		);
+		expect(index.folderKeys.has("root/new")).toBe(
+			hasActionForKey(actions, "root/new", "folder"),
+		);
+
+		// File checks — behavioral equivalence with hasActionForKey
+		expect(index.fileKeys.has("root/file.md")).toBe(
+			hasActionForKey(actions, "root/file.md", "file"),
+		);
+		expect(index.fileKeys.has("root/processed.md")).toBe(
+			hasActionForKey(actions, "root/processed.md", "file"),
+		);
+		expect(index.fileKeys.has("root/other.md")).toBe(
+			hasActionForKey(actions, "root/other.md", "file"),
+		);
+	});
+});

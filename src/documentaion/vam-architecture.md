@@ -196,8 +196,10 @@ class ActionQueue {
     private queue: VaultAction[] = [];
     private isExecuting = false;
     private batchCount = 0;
-    private readonly maxBatches = 10;
+    private readonly maxBatches: number;   // default 10, configurable via ActionQueueOpts
     private drainWaiters: Array<() => void> = [];
+
+    constructor(dispatcher: Dispatcher, opts?: ActionQueueOpts);
 }
 ```
 
@@ -210,7 +212,7 @@ class ActionQueue {
 
 **Key properties**:
 - **Unlimited actions per batch**: entire queue taken as one batch
-- **Max 10 batches**: safety valve. If exceeded, drops oldest 50% of queue
+- **Max batches** (default 10): safety valve. If exceeded, logs a warning, drops all queued actions, signals drain waiters, and returns `err(DispatchError[])` so callers know their actions were not applied.
 - **Pending tracking**: only outermost call increments/decrements the idle tracker (prevents double-counting nested calls). This enables E2E test synchronization via `whenIdle()`.
 
 ### 6.2 Stage 1: Ensure Requirements
@@ -239,7 +241,7 @@ For each required path:
         UpsertMdFile(content: null) (for files — EnsureExist mode)
 ```
 
-**Performance**: Existence checks are cached in-memory (`checkedFolders`, `checkedFiles` sets) to avoid redundant Obsidian API calls within the same batch.
+**Performance**: Existence checks are cached in-memory (`checkedFolders`, `checkedFiles` sets) to avoid redundant Obsidian API calls within the same batch. "Already in batch" checks use `buildActionKeyIndex()` which pre-computes `Set<string>` indexes for O(1) lookups instead of linear scans.
 
 **INVARIANT**: After `ensureAllRequirementsMet()`, executor can assume all parent folders exist and all ProcessMdFile targets exist.
 
@@ -377,7 +379,7 @@ SelfEventTracker.shouldIgnore(path)  ─── filtered ───→ drop
 
 Forwards individual `VaultEvent` objects to subscribers with no buffering or coalescing. Each Obsidian event that passes the self-event filter is immediately dispatched.
 
-**Rename handling**: checks `shouldIgnore()` for both `newPath` and `oldPath`. Drops if either matches.
+**Rename handling**: evaluates `shouldIgnore()` for both `newPath` and `oldPath` into separate variables BEFORE the `if` check (matching the BulkEventEmmiter pattern). This prevents JS `||` short-circuit from skipping the `oldPath` pop when `newPath` matches. Event creation (`tryMakeVaultEventForFileRenamed`) runs only after both paths pass the filter.
 
 ### 7.2 Bulk Event Emitter
 
@@ -658,6 +660,8 @@ _getDebugAllRawEvents(): Array<{
 }>
 ```
 
+The `_debugAllRawEvents` array is cleared when `resetDebugState()` is called on the facade (which delegates to both `Dispatcher.resetDebugState()` and `BulkEventEmmiter.resetDebugState()`).
+
 ### 11.4 Queryability Verification
 
 After `waitForObsidianEvents()`, the facade polls Obsidian's `vault.getAbstractFileByPath()` to verify dispatched files are queryable. Uses exponential backoff (50ms → 200ms) with a 10-second timeout. This addresses Obsidian's eventual consistency — events fire before the API fully indexes the new file.
@@ -754,11 +758,16 @@ The executor detects whether the target file is currently open in the editor. If
 
 ## 14. Issues & Concerns
 
-### 14.1 Zod v4 Import in `literals.ts` and `vault-action.ts`
+### 14.1 Zod v4 Import in `literals.ts` and `vault-action.ts` — PARTIALLY RESOLVED
 
-`types/literals.ts` uses `import z from "zod"` (v4 default export) and `types/vault-action.ts` also uses `import z from "zod"`. Per the project-wide CLAUDE.md rule, all code should use `import { z } from "zod/v3"`. While these schemas are not mixed with the v3-based prompt-smith schemas at runtime (they operate in separate domains), the inconsistency is a latent risk. If any VAM type is ever validated against a v3 schema (e.g., in tests or serialization), the v3/v4 mismatch trap documented in MEMORY.md would trigger.
+`vault-event.ts` was migrated to `zod/v3` (safe — only uses string extraction via `.enum`).
 
-**Files affected**: `types/literals.ts` (line 1), `types/vault-action.ts` (line 3), `types/vault-event.ts` (line 1), `types/split-path.ts` (line 3 — this one uses `{ z }` named import but from `"zod"` not `"zod/v3"`).
+The remaining three files **must stay v4** due to runtime dependencies on v4-only features:
+- `types/literals.ts` — `MdSchema` (v4 `ZodLiteral`) is consumed by `split-path.ts`'s `.extend()`. Passing a v3 schema into v4 `.extend()` causes `_zod.run is not a function`.
+- `types/split-path.ts` — `SplitPathSchema` is consumed by `z.codec()` in `system-path-and-split-path-codec.ts`, a v4-only API.
+- `types/vault-action.ts` — `z.enum()` with `.options.map()` template literals only infers correctly in v4. Switching to v3 breaks discriminated union narrowing in all consuming files.
+
+Each file has an explanatory comment documenting why it must stay v4. The latent risk is mitigated by the fact that these schemas operate in a separate domain from the v3-based prompt-smith schemas.
 
 ### 14.2 Typo: "Emmiter" → "Emitter"
 
@@ -768,26 +777,27 @@ The executor detects whether the target file is currently open in the editor. If
 
 `collapseActions()` is `async` and returns `Promise<VaultAction[]>` because the UpsertMdFile(content) + ProcessMdFile path eagerly applies the transform (`const transformed = await transform(upsertContent)`). This makes the entire function async even though most collapse paths are synchronous. The async overhead is negligible, but it's a slightly unusual signature for what's conceptually a pure data transform.
 
-### 14.4 ActionQueue Batch Overflow: Silent Drop
+### 14.4 ActionQueue Batch Overflow: Silent Drop — RESOLVED
 
-When `batchCount >= maxBatches`, the queue silently drops the oldest 50% of queued actions (line 83 of `action-queue.ts`). There's a comment `// Could return error here, but dropping is safer for now`. This is a safety valve, but:
-- No error is returned to callers whose actions were dropped
-- No log is emitted
-- Callers waiting via `waitForDrain()` will resolve without knowing their actions were dropped
+The overflow path now:
+1. Logs a warning via `logger.warn("[ActionQueue] Batch limit (N) reached, dropping M queued actions")`
+2. Drops ALL queued actions (not just 50%)
+3. Returns `err(DispatchError[])` so callers know their actions were not applied
+4. Signals drain waiters so no promises hang indefinitely
 
-In practice, 10 recursive batches is unlikely outside pathological feedback loops, but the silent drop could make debugging difficult if it ever triggers.
+The `maxBatches` limit (default 10) is configurable via `ActionQueueOpts` for testing.
 
-### 14.5 SingleEventEmmiter: shouldIgnore Order for Renames
+### 14.5 SingleEventEmmiter: shouldIgnore Order for Renames — RESOLVED
 
-In `single-event-emmiter.ts`, the `emitFileRenamed` method calls `tryMakeVaultEventForFileRenamed` BEFORE checking `shouldIgnore`. If the event creation fails (returns Err), the path is never checked against `shouldIgnore`, so it won't be popped from the tracker. Compare with `BulkEventEmmiter.onRename` which checks `shouldIgnore` FIRST. The mismatch means that in the single-event path, a failed rename encoding could leave a stale path in the tracker (eventually cleaned up by TTL, but the asymmetry is suspicious).
+Fixed to match the `BulkEventEmmiter` pattern: both `shouldIgnore(newPath)` and `shouldIgnore(oldPath)` are now evaluated into separate variables BEFORE the `if` check. This prevents JS `||` short-circuit from skipping the `oldPath` pop when `newPath` matches first. Event creation (`tryMakeVaultEventForFileRenamed`) now runs only after both paths pass the filter, avoiding wasted work.
 
 ### 14.6 Topological Sort Re-sorts Entire Queue on Each Addition
 
 In `topological-sort.ts`, `sortQueue(queue)` is called every time a new zero-degree action is added to the queue (line 73). The sort operates on the entire remaining queue, not just the insertion point. For typical batch sizes (tens of actions) this is negligible, but it's O(k log k) per newly-unblocked action where k is the queue length — total O(n * k log k) in the worst case. A priority queue / binary heap would reduce this to O(n log n) total but is likely overkill for current workloads.
 
-### 14.7 BulkEventEmmiter's `_debugAllRawEvents` Grows Without Bound
+### 14.7 BulkEventEmmiter's `_debugAllRawEvents` Grows Without Bound — RESOLVED
 
-`BulkEventEmmiter._debugAllRawEvents` is a simple array that pushes on every Obsidian event. It is never cleared except by replacing the emitter instance. In long-running sessions with many vault operations, this array could accumulate thousands of entries. Consider clearing it periodically or at least on `resetDebugState()`.
+Added `BulkEventEmmiter.resetDebugState()` which clears the `_debugAllRawEvents` array. The facade's `resetDebugState()` now delegates to both `Dispatcher.resetDebugState()` and `BulkEventEmmiter.resetDebugState()`, so calling it at the start of each E2E test clears all debug state including the raw events array.
 
 ### 14.8 Executor's 50ms Sleep After Rename
 
@@ -805,9 +815,9 @@ If action #3 of 10 fails, actions #1 and #2 have already been executed. There's 
 
 `vault-reader.ts` `listAll()` (lines 96-109) uses `as unknown as TFolder` and `as SplitPathToFolderWithTRef` casts when building internal types. These bypass TypeScript's type system and could mask bugs if the underlying data shape changes.
 
-### 14.12 `hasActionForKey` is O(N) Linear Scan
+### 14.12 `hasActionForKey` is O(N) Linear Scan — RESOLVED
 
-`ensure-requirements-helpers.ts`'s `hasActionForKey()` does a linear scan through the entire action array for each required path. With M required paths and N actions, this is O(M × N). For typical batch sizes this is fine, but for large batches (e.g., bulk operations generating hundreds of actions) it could become noticeable. A Set-based index would make this O(1) per lookup.
+Added `buildActionKeyIndex(actions)` which pre-computes `{ folderKeys: Set<string>, fileKeys: Set<string> }` in a single O(N) pass. All 4 call sites in `ensureDestinationsExist()` now use `actionIndex.folderKeys.has(key)` / `actionIndex.fileKeys.has(key)` for O(1) lookups. The original `hasActionForKey()` is kept (deprecated) for backward compatibility in existing tests.
 
 ### 14.13 Event Accumulator's `maxWindow` Check Happens on `push()`
 
