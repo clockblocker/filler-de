@@ -9,7 +9,6 @@ const supportedPromptKinds = [
 	"Inflection",
 	"NounInflection",
 	"Disambiguate",
-	"Semantics",
 	"WordTranslation",
 ] as const;
 

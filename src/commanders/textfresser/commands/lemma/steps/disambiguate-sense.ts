@@ -18,7 +18,7 @@ type LemmaApiResult = {
 
 type DisambiguationResult =
 	| { matchedIndex: number }
-	| { matchedIndex: null; precomputedSemantics?: string }
+	| { matchedIndex: null; precomputedEmojiDescription?: string[] }
 	| null;
 
 /**
@@ -88,19 +88,30 @@ export function disambiguateSense(
 			.map((e) => {
 				const parsed = dictEntryIdHelper.parse(e.id);
 				if (!parsed) return null;
-				const semantics = e.meta.semantics;
+				const emojiDescription = e.meta.emojiDescription;
+				// Extract genus from linguisticUnit if available
+				const lu = e.meta.linguisticUnit;
+				let genus: string | undefined;
+				if (lu?.kind === "Lexem") {
+					const features = lu.surface.features;
+					if (features.pos === "Noun" && "genus" in features) {
+						genus = features.genus;
+					}
+				}
 				return {
+					emojiDescription: Array.isArray(emojiDescription)
+						? emojiDescription
+						: null,
+					genus,
 					index: parsed.index,
-					semantics: typeof semantics === "string" ? semantics : null,
+					pos: parsed.pos,
+					unitKind: parsed.unitKind,
 				};
 			})
-			.filter(
-				(s): s is { index: number; semantics: string | null } =>
-					s !== null,
-			);
+			.filter((s) => s !== null);
 
 		logger.info(
-			`[disambiguate] Senses: ${JSON.stringify(senses)}, withSemantics: ${senses.filter((s) => s.semantics !== null).length}`,
+			`[disambiguate] Senses: ${JSON.stringify(senses)}, withEmojiDescription: ${senses.filter((s) => s.emojiDescription !== null).length}`,
 		);
 
 		if (senses.length === 0) {
@@ -113,16 +124,15 @@ export function disambiguateSense(
 			);
 		}
 
-		// Edge case: all matching entries lack semantics (V2 legacy)
+		// Edge case: all matching entries lack emojiDescription (V2 legacy)
 		// → backward compat: treat as re-encounter of the first match
-		const sensesWithSemantics = senses.filter(
-			(s): s is { index: number; semantics: string } =>
-				s.semantics !== null,
-		);
+		const sensesWithEmoji = senses.filter(
+			(s) => s.emojiDescription !== null,
+		) as Array<(typeof senses)[number] & { emojiDescription: string[] }>;
 
-		if (sensesWithSemantics.length === 0) {
+		if (sensesWithEmoji.length === 0) {
 			logger.info(
-				"[disambiguate] V2 legacy path — no semantics on any sense",
+				"[disambiguate] V2 legacy path — no emojiDescription on any sense",
 			);
 			return ResultAsync.fromSafePromise(
 				Promise.resolve({
@@ -137,7 +147,13 @@ export function disambiguateSense(
 			.generate(PromptKind.Disambiguate, {
 				context,
 				lemma: apiResult.lemma,
-				senses: sensesWithSemantics,
+				senses: sensesWithEmoji.map((s) => ({
+					emojiDescription: s.emojiDescription,
+					genus: s.genus,
+					index: s.index,
+					pos: s.pos,
+					unitKind: s.unitKind,
+				})),
 			})
 			.mapErr(
 				(e): CommandError => ({
@@ -153,20 +169,20 @@ export function disambiguateSense(
 					if (output.matchedIndex === null) {
 						return {
 							matchedIndex: null,
-							precomputedSemantics: output.semantics ?? undefined,
+							precomputedEmojiDescription:
+								output.emojiDescription ?? undefined,
 						};
 					}
 
-					const validIndices = sensesWithSemantics.map(
-						(s) => s.index,
-					);
+					const validIndices = sensesWithEmoji.map((s) => s.index);
 					if (!validIndices.includes(output.matchedIndex)) {
 						logger.warn(
 							`[disambiguate] matchedIndex ${output.matchedIndex} not in valid indices ${JSON.stringify(validIndices)} — treating as new sense`,
 						);
 						return {
 							matchedIndex: null,
-							precomputedSemantics: output.semantics ?? undefined,
+							precomputedEmojiDescription:
+								output.emojiDescription ?? undefined,
 						};
 					}
 

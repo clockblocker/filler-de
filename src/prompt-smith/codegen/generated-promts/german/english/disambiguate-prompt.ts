@@ -13,33 +13,36 @@ You receive:
 - context: the sentence where the word was encountered
 - senses: array of existing sense descriptors, each with:
   - index: numeric identifier of the existing entry
-  - semantics: a short distinguishing gloss (1-3 words) for that sense
+  - emojiDescription: 1-3 emojis capturing the core semantic concept of that sense
+  - unitKind: the linguistic unit type ("Lexem", "Phrasem", "Morphem")
+  - pos: part of speech (optional, e.g. "Noun", "Verb")
+  - genus: grammatical gender (optional, e.g. "Maskulinum", "Femininum", "Neutrum")
 
 Return:
 - matchedIndex: the index of the matching sense, or null if the word in context represents a NEW sense not covered by any existing entry
-- semantics: when matchedIndex is null (new sense), provide a 1-3 word German gloss distinguishing this sense from the existing ones. When matchedIndex is not null, omit or set to null.
+- emojiDescription: when matchedIndex is null (new sense), provide 1-3 emojis that capture the core semantic concept of this new sense, distinguishing it from the existing ones. When matchedIndex is not null, omit or set to null.
 
 Rules:
-- Compare the contextual meaning against each sense's semantics gloss
+- Compare the contextual meaning against each sense's emojiDescription emojis and linguistic features (unitKind, pos, genus)
 - Return the index of the best-matching sense if the meaning clearly aligns
 - Return null only when the word in context has a genuinely different meaning from ALL listed senses
 - When in doubt between a close match and a new sense, prefer the existing match
-- The semantics gloss should describe the general meaning of the sense, not the specific context (e.g., for a bicycle lock context, return "Schließvorrichtung" not "Fahrradschloss")
+- The emojiDescription should capture the general meaning of the sense, not the specific context
 </task-description>
 
 <examples>
 <example-1>
 <input>
-{"context":"Er setzte sich auf die Bank im Park.","lemma":"Bank","senses":[{"index":1,"semantics":"Geldinstitut"}]}
+{"context":"Er setzte sich auf die Bank im Park.","lemma":"Bank","senses":[{"emojiDescription":["🏦","💰"],"genus":"Femininum","index":1,"pos":"Noun","unitKind":"Lexem"}]}
 </input>
 <output>
-{"matchedIndex":null,"semantics":"Sitzgelegenheit"}
+{"emojiDescription":["🪑","🌳"],"matchedIndex":null}
 </output>
 </example-1>
 
 <example-2>
 <input>
-{"context":"Ich muss zur Bank, um Geld abzuheben.","lemma":"Bank","senses":[{"index":1,"semantics":"Geldinstitut"},{"index":2,"semantics":"Sitzgelegenheit"}]}
+{"context":"Ich muss zur Bank, um Geld abzuheben.","lemma":"Bank","senses":[{"emojiDescription":["🏦","💰"],"genus":"Femininum","index":1,"pos":"Noun","unitKind":"Lexem"},{"emojiDescription":["🪑","🌳"],"genus":"Femininum","index":2,"pos":"Noun","unitKind":"Lexem"}]}
 </input>
 <output>
 {"matchedIndex":1}
@@ -48,16 +51,16 @@ Rules:
 
 <example-3>
 <input>
-{"context":"Das Schloss an der Tür war kaputt.","lemma":"Schloss","senses":[{"index":1,"semantics":"Gebäude"}]}
+{"context":"Das Schloss an der Tür war kaputt.","lemma":"Schloss","senses":[{"emojiDescription":["🏰"],"genus":"Neutrum","index":1,"pos":"Noun","unitKind":"Lexem"}]}
 </input>
 <output>
-{"matchedIndex":null,"semantics":"Schließvorrichtung"}
+{"emojiDescription":["🔒","🔑"],"matchedIndex":null}
 </output>
 </example-3>
 
 <example-4>
 <input>
-{"context":"Wir besichtigten das Schloss am Rhein.","lemma":"Schloss","senses":[{"index":1,"semantics":"Gebäude"},{"index":2,"semantics":"Schließvorrichtung"}]}
+{"context":"Wir besichtigten das Schloss am Rhein.","lemma":"Schloss","senses":[{"emojiDescription":["🏰"],"genus":"Neutrum","index":1,"pos":"Noun","unitKind":"Lexem"},{"emojiDescription":["🔒","🔑"],"genus":"Neutrum","index":2,"pos":"Noun","unitKind":"Lexem"}]}
 </input>
 <output>
 {"matchedIndex":1}
@@ -66,10 +69,10 @@ Rules:
 
 <example-5>
 <input>
-{"context":"Das Schloss am Fahrrad war aufgebrochen.","lemma":"Schloss","senses":[{"index":1,"semantics":"Gebäude"}]}
+{"context":"Das Schloss am Fahrrad war aufgebrochen.","lemma":"Schloss","senses":[{"emojiDescription":["🏰"],"genus":"Neutrum","index":1,"pos":"Noun","unitKind":"Lexem"}]}
 </input>
 <output>
-{"matchedIndex":null,"semantics":"Schließvorrichtung"}
+{"emojiDescription":["🔒","🔑"],"matchedIndex":null}
 </output>
 </example-5>
 </examples>`;

@@ -4,7 +4,7 @@ import { formatHeaderLine } from "../../../../src/commanders/textfresser/command
 describe("formatHeaderLine", () => {
 	it("formats a noun header with genus", () => {
 		const result = formatHeaderLine(
-			{ emoji: "🏭", genus: "Neutrum", ipa: "ˈkoːləˌkraftvɛɐ̯k" },
+			{ emoji: "🏭", emojiDescription: ["🏭"], genus: "Neutrum", ipa: "ˈkoːləˌkraftvɛɐ̯k" },
 			"Kohlekraftwerk",
 			"German",
 		);
@@ -15,7 +15,7 @@ describe("formatHeaderLine", () => {
 
 	it("formats without article when genus is null", () => {
 		const result = formatHeaderLine(
-			{ emoji: "🏃", genus: null, ipa: "ˈlaʊ̯fn̩" },
+			{ emoji: "🏃", emojiDescription: ["🏃"], genus: null, ipa: "ˈlaʊ̯fn̩" },
 			"laufen",
 			"German",
 		);
@@ -26,7 +26,7 @@ describe("formatHeaderLine", () => {
 
 	it("formats without article when genus is undefined", () => {
 		const result = formatHeaderLine(
-			{ emoji: "⚡", ipa: "ʃnɛl" },
+			{ emoji: "⚡", emojiDescription: ["⚡", "💨"], ipa: "ʃnɛl" },
 			"schnell",
 			"German",
 		);
@@ -37,7 +37,7 @@ describe("formatHeaderLine", () => {
 
 	it("encodes special characters in youglish URL", () => {
 		const result = formatHeaderLine(
-			{ emoji: "🏠", genus: "Femininum", ipa: "ˈʃtʁaːsə" },
+			{ emoji: "🏠", emojiDescription: ["🏠"], genus: "Femininum", ipa: "ˈʃtʁaːsə" },
 			"Straße",
 			"German",
 		);
@@ -46,21 +46,21 @@ describe("formatHeaderLine", () => {
 
 	it("derives correct article from each genus", () => {
 		const maskulinum = formatHeaderLine(
-			{ emoji: "🐕", genus: "Maskulinum", ipa: "hʊnt" },
+			{ emoji: "🐕", emojiDescription: ["🐕"], genus: "Maskulinum", ipa: "hʊnt" },
 			"Hund",
 			"German",
 		);
 		expect(maskulinum).toContain("der [[Hund]]");
 
 		const femininum = formatHeaderLine(
-			{ emoji: "🐈", genus: "Femininum", ipa: "ˈkatsə" },
+			{ emoji: "🐈", emojiDescription: ["🐈"], genus: "Femininum", ipa: "ˈkatsə" },
 			"Katze",
 			"German",
 		);
 		expect(femininum).toContain("die [[Katze]]");
 
 		const neutrum = formatHeaderLine(
-			{ emoji: "🏠", genus: "Neutrum", ipa: "haʊ̯s" },
+			{ emoji: "🏠", emojiDescription: ["🏠"], genus: "Neutrum", ipa: "haʊ̯s" },
 			"Haus",
 			"German",
 		);
@@ -69,7 +69,7 @@ describe("formatHeaderLine", () => {
 
 	it("uses lowercase target language in URL", () => {
 		const result = formatHeaderLine(
-			{ emoji: "🌍", genus: null, ipa: "test" },
+			{ emoji: "🌍", emojiDescription: ["🌍"], genus: null, ipa: "test" },
 			"hello",
 			"English",
 		);

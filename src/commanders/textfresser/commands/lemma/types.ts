@@ -15,8 +15,8 @@ export type LemmaResult = {
 	attestation: Attestation;
 	/** null = new sense or first encounter */
 	disambiguationResult: { matchedIndex: number } | null;
-	/** Semantics gloss precomputed by Disambiguate prompt when it detects a new sense. */
-	precomputedSemantics?: string;
+	/** Emoji description precomputed by Disambiguate prompt when it detects a new sense. */
+	precomputedEmojiDescription?: string[];
 	/** "Common" (default) or "Proper" (named entity). Only meaningful for Nouns. */
 	nounClass?: NounClass;
 };

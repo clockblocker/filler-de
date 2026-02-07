@@ -13,14 +13,16 @@ You receive:
 - context: the sentence where the word was encountered
 - senses: array of existing sense descriptors, each with:
   - index: numeric identifier of the existing entry
-  - semantics: a short distinguishing gloss (1-3 words) for that sense
+  - emojiDescription: 1-3 emojis capturing the core semantic concept of that sense
+  - unitKind: the linguistic unit type ("Lexem", "Phrasem", "Morphem")
+  - pos: part of speech (optional, e.g. "Noun", "Verb")
 
 Return:
 - matchedIndex: the index of the matching sense, or null if the word in context represents a NEW sense not covered by any existing entry
-- semantics: when matchedIndex is null (new sense), provide a 1-3 word English gloss distinguishing this sense from the existing ones. When matchedIndex is not null, omit or set to null.
+- emojiDescription: when matchedIndex is null (new sense), provide 1-3 emojis that capture the core semantic concept of this new sense, distinguishing it from the existing ones. When matchedIndex is not null, omit or set to null.
 
 Rules:
-- Compare the contextual meaning against each sense's semantics gloss
+- Compare the contextual meaning against each sense's emojiDescription emojis and linguistic features
 - Return the index of the best-matching sense if the meaning clearly aligns
 - Return null only when the word in context has a genuinely different meaning from ALL listed senses
 - When in doubt between a close match and a new sense, prefer the existing match
@@ -29,16 +31,16 @@ Rules:
 <examples>
 <example-1>
 <input>
-{"context":"I went to the bank to withdraw money.","lemma":"bank","senses":[{"index":1,"semantics":"riverbank"}]}
+{"context":"I went to the bank to withdraw money.","lemma":"bank","senses":[{"emojiDescription":["🏞️","🌊"],"index":1,"pos":"Noun","unitKind":"Lexem"}]}
 </input>
 <output>
-{"matchedIndex":null,"semantics":"financial institution"}
+{"emojiDescription":["🏦","💰"],"matchedIndex":null}
 </output>
 </example-1>
 
 <example-2>
 <input>
-{"context":"We sat on the bank of the river.","lemma":"bank","senses":[{"index":1,"semantics":"riverbank"},{"index":2,"semantics":"financial institution"}]}
+{"context":"We sat on the bank of the river.","lemma":"bank","senses":[{"emojiDescription":["🏞️","🌊"],"index":1,"pos":"Noun","unitKind":"Lexem"},{"emojiDescription":["🏦","💰"],"index":2,"pos":"Noun","unitKind":"Lexem"}]}
 </input>
 <output>
 {"matchedIndex":1}

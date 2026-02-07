@@ -15,11 +15,14 @@ You receive:
 
 Return:
 - emoji: a single emoji that visually represents the word's core meaning
+- emojiDescription: 1-3 emojis that capture the core semantic concept of the word's meaning in context. Used to visually distinguish between different senses of the same word (e.g., Schloss-castle [🏰] vs Schloss-lock [🔒🔑])
 - genus: the grammatical gender as a linguistic term (only for nouns: "Maskulinum", "Femininum", or "Neutrum"). Omit for non-nouns.
 - ipa: the IPA pronunciation of the word (without slashes or brackets, just the transcription)
 
 Rules:
 - Choose an emoji that represents the specific meaning of the word as used in the given context
+- emoji is the single display emoji for the header line. emojiDescription is a list of 1-3 emojis for semantic disambiguation — they may overlap or be different
+- For polysemous words, choose emojiDescription emojis that distinguish this sense from other common senses
 - For nouns, always provide the correct grammatical gender via genus
 - For non-nouns (verbs, adjectives, adverbs, etc.), omit the genus field entirely
 - IPA should reflect standard High German (Hochdeutsch) pronunciation
@@ -32,7 +35,7 @@ Rules:
 {"context":"Das Haus steht am Ende der Straße.","pos":"Noun","word":"Haus"}
 </input>
 <output>
-{"genus":"Neutrum","emoji":"🏠","ipa":"haʊ̯s"}
+{"emoji":"🏠","emojiDescription":["🏠"],"genus":"Neutrum","ipa":"haʊ̯s"}
 </output>
 </example-1>
 
@@ -41,7 +44,7 @@ Rules:
 {"context":"Wir gehen morgen ins Kino.","pos":"Verb","word":"gehen"}
 </input>
 <output>
-{"emoji":"🚶","ipa":"ˈɡeːən"}
+{"emoji":"🚶","emojiDescription":["🚶"],"ipa":"ˈɡeːən"}
 </output>
 </example-2>
 
@@ -50,7 +53,7 @@ Rules:
 {"context":"Ein Schmetterling flog über die Wiese.","pos":"Noun","word":"Schmetterling"}
 </input>
 <output>
-{"genus":"Maskulinum","emoji":"🦋","ipa":"ˈʃmɛtɐlɪŋ"}
+{"emoji":"🦋","emojiDescription":["🦋"],"genus":"Maskulinum","ipa":"ˈʃmɛtɐlɪŋ"}
 </output>
 </example-3>
 
@@ -59,7 +62,7 @@ Rules:
 {"context":"Der schnelle Zug kam pünktlich an.","pos":"Adjective","word":"schnell"}
 </input>
 <output>
-{"emoji":"⚡","ipa":"ʃnɛl"}
+{"emoji":"⚡","emojiDescription":["⚡","💨"],"ipa":"ʃnɛl"}
 </output>
 </example-4>
 
@@ -68,7 +71,7 @@ Rules:
 {"context":"Wir besichtigten das Schloss am Rhein.","pos":"Noun","word":"Schloss"}
 </input>
 <output>
-{"genus":"Neutrum","emoji":"🏰","ipa":"ʃlɔs"}
+{"emoji":"🏰","emojiDescription":["🏰"],"genus":"Neutrum","ipa":"ʃlɔs"}
 </output>
 </example-5>
 
@@ -77,7 +80,7 @@ Rules:
 {"context":"Das Schloss am Fahrrad war aufgebrochen.","pos":"Noun","word":"Schloss"}
 </input>
 <output>
-{"genus":"Neutrum","emoji":"🔒","ipa":"ʃlɔs"}
+{"emoji":"🔒","emojiDescription":["🔒","🔑"],"genus":"Neutrum","ipa":"ʃlɔs"}
 </output>
 </example-6>
 </examples>`;

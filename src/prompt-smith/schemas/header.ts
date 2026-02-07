@@ -9,6 +9,7 @@ const userInputSchema = z.object({
 
 const agentOutputSchema = z.object({
 	emoji: z.string().min(1).max(4),
+	emojiDescription: z.array(z.string().min(1).max(4)).min(1).max(3),
 	genus: GermanGenusSchema.nullable().optional(),
 	ipa: z.string().min(1),
 });

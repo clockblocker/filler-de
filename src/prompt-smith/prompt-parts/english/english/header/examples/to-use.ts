@@ -9,6 +9,7 @@ export const examples = [
 		},
 		output: {
 			emoji: "🏠",
+			emojiDescription: ["🏠"],
 			ipa: "haʊs",
 		},
 	},
@@ -20,6 +21,7 @@ export const examples = [
 		},
 		output: {
 			emoji: "🏃",
+			emojiDescription: ["🏃"],
 			ipa: "ɹʌn",
 		},
 	},

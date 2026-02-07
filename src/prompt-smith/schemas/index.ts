@@ -11,7 +11,6 @@ import { lemmaSchemas } from "./lemma";
 import { morphemSchemas } from "./morphem";
 import { nounInflectionSchemas } from "./noun-inflection";
 import { relationSchemas } from "./relation";
-import { semanticsSchemas } from "./semantics";
 import { translateSchemas } from "./translate";
 import { wordTranslationSchemas } from "./word-translation";
 
@@ -24,7 +23,6 @@ export const SchemasFor = {
 	[PromptKindEnum.Inflection]: inflectionSchemas,
 	[PromptKindEnum.NounInflection]: nounInflectionSchemas,
 	[PromptKindEnum.Disambiguate]: disambiguateSchemas,
-	[PromptKindEnum.Semantics]: semanticsSchemas,
 	[PromptKindEnum.WordTranslation]: wordTranslationSchemas,
 } satisfies Record<
 	PromptKind,

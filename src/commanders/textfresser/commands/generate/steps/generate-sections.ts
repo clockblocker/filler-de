@@ -36,7 +36,6 @@ export type ParsedRelation = {
 /** V3 sections — the ones we generate in this version. */
 const V3_SECTIONS = new Set<DictSectionKind>([
 	DictSectionKind.Header,
-	DictSectionKind.Definition,
 	DictSectionKind.Morphem,
 	DictSectionKind.Relation,
 	DictSectionKind.Inflection,
@@ -208,7 +207,6 @@ export function generateSections(
 			const sections: EntrySection[] = [];
 			let relations: ParsedRelation[] = [];
 			let inflectionCells: NounInflectionCell[] = [];
-			let semanticsValue = "";
 			const failedSections: string[] = [];
 
 			// Fire all independent LLM calls in parallel
@@ -218,15 +216,6 @@ export function generateSections(
 				sectionSet.has(DictSectionKind.Header)
 					? unwrapResultAsync(
 							promptRunner.generate(PromptKind.Header, {
-								context,
-								pos,
-								word,
-							}),
-						)
-					: null,
-				sectionSet.has(DictSectionKind.Definition)
-					? unwrapResultAsync(
-							promptRunner.generate(PromptKind.Semantics, {
 								context,
 								pos,
 								word,
@@ -281,32 +270,27 @@ export function generateSections(
 
 			// Unwrap: critical sections throw on failure, optional ones degrade to null
 			const headerOutput = unwrapCritical(settled[0], "Header");
-			const semanticsOutput = unwrapOptional(
-				settled[1],
-				"Semantics",
-				failedSections,
-			);
 			const morphemOutput = unwrapOptional(
-				settled[2],
+				settled[1],
 				"Morphem",
 				failedSections,
 			);
 			const relationOutput = unwrapOptional(
-				settled[3],
+				settled[2],
 				"Relation",
 				failedSections,
 			);
 			const nounInflectionOutput = unwrapOptional(
-				settled[4],
+				settled[3],
 				"Inflection",
 				failedSections,
 			);
 			const otherInflectionOutput = unwrapOptional(
-				settled[5],
+				settled[4],
 				"Inflection",
 				failedSections,
 			);
-			const translationOutput = unwrapCritical(settled[6], "Translation");
+			const translationOutput = unwrapCritical(settled[5], "Translation");
 
 			// Assemble sections in correct order from parallel results
 			for (const sectionKind of v3Applicable) {
@@ -318,29 +302,6 @@ export function generateSections(
 								word,
 								targetLang,
 							);
-						}
-						break;
-					}
-
-					case DictSectionKind.Definition: {
-						// Section content: always from full Semantics prompt
-						const definitionContent =
-							semanticsOutput?.semantics ??
-							lemmaResult.precomputedSemantics ??
-							"";
-						// Meta: prefer concise disambiguate gloss, fall back to full definition
-						semanticsValue =
-							lemmaResult.precomputedSemantics ??
-							semanticsOutput?.semantics ??
-							"";
-						if (definitionContent) {
-							sections.push({
-								content: definitionContent,
-								kind: cssSuffixFor[DictSectionKind.Definition],
-								title: TitleReprFor[DictSectionKind.Definition][
-									targetLang
-								],
-							});
 						}
 						break;
 					}
@@ -462,8 +423,11 @@ export function generateSections(
 				headerContent,
 				id: entryId,
 				meta: {
+					emojiDescription:
+						headerOutput?.emojiDescription ??
+						lemmaResult.precomputedEmojiDescription ??
+						undefined,
 					linguisticUnit,
-					semantics: semanticsValue || undefined,
 				},
 				sections,
 			};

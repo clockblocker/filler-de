@@ -23,10 +23,10 @@ function makeVam(opts: {
 	} as unknown as VaultActionManager;
 }
 
-function makePromptRunner(matchedIndex: number | null, semantics?: string | null): PromptRunner {
+function makePromptRunner(matchedIndex: number | null, emojiDescription?: string[] | null): PromptRunner {
 	return {
 		generate: () =>
-			okAsync({ matchedIndex, semantics: semantics ?? null }),
+			okAsync({ emojiDescription: emojiDescription ?? null, matchedIndex }),
 	} as unknown as PromptRunner;
 }
 
@@ -46,26 +46,23 @@ const API_RESULT_NOUN = {
 
 /**
  * Build a minimal note with entries for testing.
- * Each entry has: header line with ^blockId, optional semantics section, metadata.
+ * Each entry has: header line with ^blockId, metadata with optional emojiDescription.
  */
 function buildNoteContent(
 	entries: Array<{
 		id: string;
-		semantics?: string;
+		emojiDescription?: string[];
 	}>,
 ): string {
 	const entryBlocks = entries.map((e) => {
 		const header = `[[Bank]] ^${e.id}`;
-		const sectionPart = e.semantics
-			? `\n<span class="entry_section_title entry_section_title_semantics">Im Sinne von</span>\n${e.semantics}`
-			: "";
-		return header + sectionPart;
+		return header;
 	});
 	const body = entryBlocks.join("\n\n---\n---\n\n");
 
-	const meta: Record<string, { semantics?: string }> = {};
+	const meta: Record<string, { emojiDescription?: string[] }> = {};
 	for (const e of entries) {
-		meta[e.id.toUpperCase()] = e.semantics ? { semantics: e.semantics } : {};
+		meta[e.id.toUpperCase()] = e.emojiDescription ? { emojiDescription: e.emojiDescription } : {};
 	}
 
 	return `${body}\n\n<section id="textfresser_meta_keep_me_invisible">\n${JSON.stringify({ entries: meta })}\n</section>`;
@@ -82,7 +79,7 @@ describe("disambiguateSense", () => {
 
 	it("returns null when note exists but has no matching entries", async () => {
 		const content = buildNoteContent([
-			{ id: "LX-LM-VERB-1", semantics: "to bank" },
+			{ emojiDescription: ["🏦"], id: "LX-LM-VERB-1" },
 		]);
 		const vam = makeVam({ content, files: [MOCK_SPLIT_PATH] });
 		const runner = makePromptRunner(null);
@@ -93,7 +90,7 @@ describe("disambiguateSense", () => {
 
 	it("returns matchedIndex when prompt matches existing sense", async () => {
 		const content = buildNoteContent([
-			{ id: "LX-LM-NOUN-1", semantics: "Geldinstitut" },
+			{ emojiDescription: ["🏦"], id: "LX-LM-NOUN-1" },
 		]);
 		const vam = makeVam({ content, files: [MOCK_SPLIT_PATH] });
 		const runner = makePromptRunner(1);
@@ -102,37 +99,37 @@ describe("disambiguateSense", () => {
 		expect(result._unsafeUnwrap()).toEqual({ matchedIndex: 1 });
 	});
 
-	it("returns null with precomputedSemantics when prompt says new sense", async () => {
+	it("returns null with precomputedEmojiDescription when prompt says new sense", async () => {
 		const content = buildNoteContent([
-			{ id: "LX-LM-NOUN-1", semantics: "Geldinstitut" },
+			{ emojiDescription: ["🏦"], id: "LX-LM-NOUN-1" },
 		]);
 		const vam = makeVam({ content, files: [MOCK_SPLIT_PATH] });
-		const runner = makePromptRunner(null, "Sitzgelegenheit");
+		const runner = makePromptRunner(null, ["🪑", "🌳"]);
 		const result = await disambiguateSense(vam, runner, API_RESULT_NOUN, "Sitz auf der Bank");
 		expect(result.isOk()).toBe(true);
 		const value = result._unsafeUnwrap();
 		expect(value).toEqual({
 			matchedIndex: null,
-			precomputedSemantics: "Sitzgelegenheit",
+			precomputedEmojiDescription: ["🪑", "🌳"],
 		});
 	});
 
 	it("bounds-checks matchedIndex — out-of-range treated as new sense", async () => {
 		const content = buildNoteContent([
-			{ id: "LX-LM-NOUN-1", semantics: "Geldinstitut" },
+			{ emojiDescription: ["🏦"], id: "LX-LM-NOUN-1" },
 		]);
 		const vam = makeVam({ content, files: [MOCK_SPLIT_PATH] });
 		// LLM returns matchedIndex 99 — not a valid index
-		const runner = makePromptRunner(99, "invalid");
+		const runner = makePromptRunner(99, ["❓"]);
 		const result = await disambiguateSense(vam, runner, API_RESULT_NOUN, "context");
 		expect(result.isOk()).toBe(true);
 		const value = result._unsafeUnwrap();
-		// Should be treated as new sense with precomputedSemantics
+		// Should be treated as new sense with precomputedEmojiDescription
 		expect(value).not.toBeNull();
 		expect(value!.matchedIndex).toBeNull();
 	});
 
-	it("returns first entry index for V2 legacy (all entries lack semantics)", async () => {
+	it("returns first entry index for V2 legacy (all entries lack emojiDescription)", async () => {
 		const content = buildNoteContent([
 			{ id: "LX-LM-NOUN-1" },
 		]);
@@ -147,7 +144,7 @@ describe("disambiguateSense", () => {
 
 	it("returns error when prompt runner fails", async () => {
 		const content = buildNoteContent([
-			{ id: "LX-LM-NOUN-1", semantics: "Geldinstitut" },
+			{ emojiDescription: ["🏦"], id: "LX-LM-NOUN-1" },
 		]);
 		const vam = makeVam({ content, files: [MOCK_SPLIT_PATH] });
 		const runner = makeFailingPromptRunner();

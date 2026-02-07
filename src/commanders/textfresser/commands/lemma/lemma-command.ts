@@ -121,13 +121,13 @@ export function lemmaCommand(
 			})),
 		)
 		.andThen((result) => {
-			const precomputedSemantics =
+			const precomputedEmojiDescription =
 				result.disambiguationResult &&
-				"precomputedSemantics" in result.disambiguationResult
-					? result.disambiguationResult.precomputedSemantics
+				"precomputedEmojiDescription" in result.disambiguationResult
+					? result.disambiguationResult.precomputedEmojiDescription
 					: undefined;
 
-			// Normalize disambiguationResult: strip precomputedSemantics, keep only matchedIndex shape
+			// Normalize disambiguationResult: strip precomputedEmojiDescription, keep only matchedIndex shape
 			const disambiguationResult =
 				result.disambiguationResult === null ||
 				result.disambiguationResult.matchedIndex === null
@@ -149,7 +149,7 @@ export function lemmaCommand(
 				linguisticUnit: result.linguisticUnit,
 				nounClass,
 				pos: result.pos ?? undefined,
-				precomputedSemantics,
+				precomputedEmojiDescription,
 				surfaceKind: result.surfaceKind,
 			};
 

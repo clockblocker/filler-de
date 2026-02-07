@@ -5,15 +5,18 @@ You receive:
 - context: the sentence where the word was encountered
 - senses: array of existing sense descriptors, each with:
   - index: numeric identifier of the existing entry
-  - semantics: a short distinguishing gloss (1-3 words) for that sense
+  - emojiDescription: 1-3 emojis capturing the core semantic concept of that sense
+  - unitKind: the linguistic unit type ("Lexem", "Phrasem", "Morphem")
+  - pos: part of speech (optional, e.g. "Noun", "Verb")
+  - genus: grammatical gender (optional, e.g. "Maskulinum", "Femininum", "Neutrum")
 
 Return:
 - matchedIndex: the index of the matching sense, or null if the word in context represents a NEW sense not covered by any existing entry
-- semantics: when matchedIndex is null (new sense), provide a 1-3 word German gloss distinguishing this sense from the existing ones. When matchedIndex is not null, omit or set to null.
+- emojiDescription: when matchedIndex is null (new sense), provide 1-3 emojis that capture the core semantic concept of this new sense, distinguishing it from the existing ones. When matchedIndex is not null, omit or set to null.
 
 Rules:
-- Compare the contextual meaning against each sense's semantics gloss
+- Compare the contextual meaning against each sense's emojiDescription emojis and linguistic features (unitKind, pos, genus)
 - Return the index of the best-matching sense if the meaning clearly aligns
 - Return null only when the word in context has a genuinely different meaning from ALL listed senses
 - When in doubt between a close match and a new sense, prefer the existing match
-- The semantics gloss should describe the general meaning of the sense, not the specific context (e.g., for a bicycle lock context, return "Schließvorrichtung" not "Fahrradschloss")`;
+- The emojiDescription should capture the general meaning of the sense, not the specific context`;

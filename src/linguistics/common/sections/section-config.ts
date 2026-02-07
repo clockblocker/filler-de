@@ -6,7 +6,6 @@ const S = DictSectionKind;
 
 const CORE_SECTIONS = [
 	S.Header,
-	S.Definition,
 	S.Translation,
 	S.Attestation,
 	S.FreeForm,
@@ -27,7 +26,6 @@ export const sectionsForLexemPos: Record<POS, readonly DictSectionKind[]> = {
 
 export const sectionsForPhrasem: readonly DictSectionKind[] = [
 	S.Header,
-	S.Definition,
 	S.Translation,
 	S.Attestation,
 	S.Relation,
@@ -49,12 +47,11 @@ export const SECTION_DISPLAY_WEIGHT: Record<DictSectionKind, number> = {
 	[S.Header]: 0,
 	[S.Attestation]: 1,
 	[S.Relation]: 2,
-	[S.Definition]: 3,
-	[S.Translation]: 4,
-	[S.Morphem]: 5,
-	[S.Inflection]: 6,
-	[S.Deviation]: 7,
-	[S.FreeForm]: 8,
+	[S.Translation]: 3,
+	[S.Morphem]: 4,
+	[S.Inflection]: 5,
+	[S.Deviation]: 6,
+	[S.FreeForm]: 7,
 };
 
 /** Weight lookup by CSS suffix — for sorting parsed EntrySection[]. */

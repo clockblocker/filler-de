@@ -11,7 +11,6 @@ import { DictSectionKind } from "../../src/linguistics/common/sections/section-k
 
 const CORE = [
 	DictSectionKind.Header,
-	DictSectionKind.Definition,
 	DictSectionKind.Translation,
 	DictSectionKind.Attestation,
 	DictSectionKind.FreeForm,
@@ -72,7 +71,6 @@ describe("sectionsForMorphem", () => {
 describe("sectionsForProperNoun", () => {
 	test("contains only core sections (no Inflection, Morphem, Relation)", () => {
 		expect(sectionsForProperNoun).toContain(DictSectionKind.Header);
-		expect(sectionsForProperNoun).toContain(DictSectionKind.Definition);
 		expect(sectionsForProperNoun).toContain(DictSectionKind.Translation);
 		expect(sectionsForProperNoun).toContain(DictSectionKind.Attestation);
 		expect(sectionsForProperNoun).toContain(DictSectionKind.FreeForm);

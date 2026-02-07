@@ -5,11 +5,18 @@ export const examples = [
 		input: {
 			context: "I went to the bank to withdraw money.",
 			lemma: "bank",
-			senses: [{ index: 1, semantics: "riverbank" }],
+			senses: [
+				{
+					emojiDescription: ["🏞️", "🌊"],
+					index: 1,
+					pos: "Noun",
+					unitKind: "Lexem",
+				},
+			],
 		},
 		output: {
+			emojiDescription: ["🏦"],
 			matchedIndex: null,
-			semantics: "financial institution",
 		},
 	},
 	{
@@ -17,8 +24,18 @@ export const examples = [
 			context: "We sat on the bank of the river.",
 			lemma: "bank",
 			senses: [
-				{ index: 1, semantics: "riverbank" },
-				{ index: 2, semantics: "financial institution" },
+				{
+					emojiDescription: ["🏞️", "🌊"],
+					index: 1,
+					pos: "Noun",
+					unitKind: "Lexem",
+				},
+				{
+					emojiDescription: ["🏦"],
+					index: 2,
+					pos: "Noun",
+					unitKind: "Lexem",
+				},
 			],
 		},
 		output: {

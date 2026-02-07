@@ -8,7 +8,7 @@ export type EntrySection = {
 
 export type DictEntryMeta = {
 	linguisticUnit?: GermanLinguisticUnit;
-	semantics?: string;
+	emojiDescription?: string[];
 } & Record<string, unknown>;
 
 export type DictEntry = {

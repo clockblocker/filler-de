@@ -5,11 +5,19 @@ export const examples = [
 		input: {
 			context: "Er setzte sich auf die Bank im Park.",
 			lemma: "Bank",
-			senses: [{ index: 1, semantics: "Geldinstitut" }],
+			senses: [
+				{
+					emojiDescription: ["🏦"],
+					genus: "Femininum",
+					index: 1,
+					pos: "Noun",
+					unitKind: "Lexem",
+				},
+			],
 		},
 		output: {
+			emojiDescription: ["🪑", "🌳"],
 			matchedIndex: null,
-			semantics: "Sitzgelegenheit",
 		},
 	},
 	{
@@ -17,8 +25,20 @@ export const examples = [
 			context: "Ich muss zur Bank, um Geld abzuheben.",
 			lemma: "Bank",
 			senses: [
-				{ index: 1, semantics: "Geldinstitut" },
-				{ index: 2, semantics: "Sitzgelegenheit" },
+				{
+					emojiDescription: ["🏦"],
+					genus: "Femininum",
+					index: 1,
+					pos: "Noun",
+					unitKind: "Lexem",
+				},
+				{
+					emojiDescription: ["🪑", "🌳"],
+					genus: "Femininum",
+					index: 2,
+					pos: "Noun",
+					unitKind: "Lexem",
+				},
 			],
 		},
 		output: {
@@ -29,11 +49,19 @@ export const examples = [
 		input: {
 			context: "Das Schloss an der Tür war kaputt.",
 			lemma: "Schloss",
-			senses: [{ index: 1, semantics: "Gebäude" }],
+			senses: [
+				{
+					emojiDescription: ["🏰"],
+					genus: "Neutrum",
+					index: 1,
+					pos: "Noun",
+					unitKind: "Lexem",
+				},
+			],
 		},
 		output: {
+			emojiDescription: ["🔒"],
 			matchedIndex: null,
-			semantics: "Schließvorrichtung",
 		},
 	},
 	{
@@ -41,8 +69,20 @@ export const examples = [
 			context: "Wir besichtigten das Schloss am Rhein.",
 			lemma: "Schloss",
 			senses: [
-				{ index: 1, semantics: "Gebäude" },
-				{ index: 2, semantics: "Schließvorrichtung" },
+				{
+					emojiDescription: ["🏰"],
+					genus: "Neutrum",
+					index: 1,
+					pos: "Noun",
+					unitKind: "Lexem",
+				},
+				{
+					emojiDescription: ["🔒"],
+					genus: "Neutrum",
+					index: 2,
+					pos: "Noun",
+					unitKind: "Lexem",
+				},
 			],
 		},
 		output: {
@@ -53,11 +93,19 @@ export const examples = [
 		input: {
 			context: "Das Schloss am Fahrrad war aufgebrochen.",
 			lemma: "Schloss",
-			senses: [{ index: 1, semantics: "Gebäude" }],
+			senses: [
+				{
+					emojiDescription: ["🏰"],
+					genus: "Neutrum",
+					index: 1,
+					pos: "Noun",
+					unitKind: "Lexem",
+				},
+			],
 		},
 		output: {
+			emojiDescription: ["🔒"],
 			matchedIndex: null,
-			semantics: "Schließvorrichtung",
 		},
 	},
 ] satisfies {

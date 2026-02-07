@@ -9,6 +9,7 @@ export const examples = [
 		},
 		output: {
 			emoji: "🏠",
+			emojiDescription: ["🏠"],
 			genus: "Neutrum" as const,
 			ipa: "haʊ̯s",
 		},
@@ -21,6 +22,7 @@ export const examples = [
 		},
 		output: {
 			emoji: "🚶",
+			emojiDescription: ["🚶"],
 			ipa: "ˈɡeːən",
 		},
 	},
@@ -32,6 +34,7 @@ export const examples = [
 		},
 		output: {
 			emoji: "🦋",
+			emojiDescription: ["🦋"],
 			genus: "Maskulinum" as const,
 			ipa: "ˈʃmɛtɐlɪŋ",
 		},
@@ -44,6 +47,7 @@ export const examples = [
 		},
 		output: {
 			emoji: "⚡",
+			emojiDescription: ["⚡", "💨"],
 			ipa: "ʃnɛl",
 		},
 	},
@@ -55,6 +59,7 @@ export const examples = [
 		},
 		output: {
 			emoji: "🏰",
+			emojiDescription: ["🏰"],
 			genus: "Neutrum" as const,
 			ipa: "ʃlɔs",
 		},
@@ -67,6 +72,7 @@ export const examples = [
 		},
 		output: {
 			emoji: "🔒",
+			emojiDescription: ["🔒"],
 			genus: "Neutrum" as const,
 			ipa: "ʃlɔs",
 		},
