@@ -34,7 +34,7 @@ Generate (heavy lifting):
   Reads Lemma result from state
   Resolves existing entries (re-encounter detection)
   If re-encounter: appends attestation ref, skips LLM
-  If new: LLM request PER section (Header, Definition, Morphem, Relation, Inflection, Translation)
+  If new: LLM request PER section (Header, Morphem, Relation, Inflection, Translation)
   Adds Attestation section (no LLM — uses source ref from Lemma)
   Propagates inverse relations to referenced notes
   Propagates noun inflection stubs to inflected-form notes
@@ -47,11 +47,13 @@ User gets a tailor-made dictionary that grows with their reading
 
 > **V2 scope**: German target, 6 generated sections (Header, Morphem, Relation, Inflection, Translation, Attestation), re-encounter detection (append attestation vs new entry), cross-reference propagation for relations, noun inflection propagation (stub entries in inflected-form notes), user-facing notices.
 
-> **V3 scope**: Polysemy disambiguation — new Definition section (originally "Semantics", renamed in V5; short distinguishing gloss per entry, e.g., "Geldinstitut" vs "Sitzgelegenheit" for *Bank*), new Disambiguate prompt in Lemma command, enriched note metadata (`semantics` per entry ID for fast lookup without note parsing), VAM API expansion (`getSplitPathsToExistingFilesWithBasename`), Lemma-side sense matching before Generate.
+> **V3 scope**: Polysemy disambiguation — new Disambiguate prompt in Lemma command, enriched note metadata per entry ID for fast lookup without note parsing, VAM API expansion (`getSplitPathsToExistingFilesWithBasename`), Lemma-side sense matching before Generate.
 
-> **V5 scope**: Pipeline hardening — tighter LLM output schemas (`genus` for grammatical gender, length caps on `semantics`/`emoji`/`inflection` fields), Disambiguate prompt hardening (bounds-check `matchedIndex` against valid indices, log parse failures), precomputed semantics (Disambiguate returns gloss for new senses → stored as `meta.semantics`; ~~V5 skipped Semantics LLM~~ V7 restored: full Definition LLM always fires), scroll-to-entry after Generate dispatch, 37 unit tests covering formatters + disambiguate-sense + propagation steps. Also: `DictSectionKind.Semantics` renamed to `DictSectionKind.Definition`, title changed from "Im Sinne von" to "Definition".
+> **V5 scope**: Pipeline hardening — tighter LLM output schemas (`genus` for grammatical gender, length caps on `emoji`/`inflection` fields), Disambiguate prompt hardening (bounds-check `matchedIndex` against valid indices, log parse failures), scroll-to-entry after Generate dispatch, 37 unit tests covering formatters + disambiguate-sense + propagation steps.
 
-> **V7 scope**: Polysemy quality fixes — Definition LLM call now **always fires** for new entries (precomputedSemantics no longer short-circuits it; the concise gloss is still stored in `meta.semantics` for Disambiguate lookup, but the Definition section always uses the full Semantics prompt output). Header emoji prompt changed to reflect the specific sense in context (not "primary/most common meaning"). Disambiguate gloss rule added: must be context-independent (e.g., "Schließvorrichtung" not "Fahrradschloss"). New polysemous examples in Header and Disambiguate prompts (Schloss castle vs lock).
+> **V7 scope**: Polysemy quality fixes — Header emoji prompt changed to reflect the specific sense in context (not "primary/most common meaning"). Disambiguate gloss rule added: must be context-independent (e.g., "Schließvorrichtung" not "Fahrradschloss"). New polysemous examples in Header and Disambiguate prompts (Schloss castle vs lock).
+
+> **V10 scope**: Emoji-as-semantic-differentiator — **Definition section dropped entirely** (along with `PromptKind.Semantics`). Homonym disambiguation now uses **emoji arrays** instead of text glosses. Header prompt returns `emojiDescription: string[]` (1-3 emojis capturing the sense, e.g., `["🏰"]` vs `["🔒","🔑"]` for *Schloss*). Disambiguate prompt receives `emojiDescription` + `unitKind` + `pos` + `genus` per sense (richer context than the old text gloss). `meta.semantics` replaced by `meta.emojiDescription: string[]`. `LemmaResult.precomputedSemantics` replaced by `precomputedEmojiDescription: string[]`. Old entries without `emojiDescription` hit V2 legacy path (first-match fallback). CORE_SECTIONS reduced to `[Header, Translation, Attestation, FreeForm]`.
 
 > **V9 scope**: LinguisticUnit DTO — Zod-schema-based type system as source of truth for DictEntries. German + Noun fully featured (`genus`, `nounClass`); all other POS/unit kinds have stubs. `GermanLinguisticUnit` built during Generate and stored in `meta.linguisticUnit`. Header prompt now returns `genus` ("Maskulinum"/"Femininum"/"Neutrum") instead of `article` ("der"/"die"/"das"); formatter derives article via `articleFromGenus`. New files: `surface-factory.ts`, `genus.ts`, `noun.ts`, `pos-features.ts`, `lexem-surface.ts`, `phrasem-surface.ts`, `morphem-surface.ts`, `linguistic-unit.ts`. 21 new DTO tests.
 
@@ -221,13 +223,11 @@ Each DictEntry is divided into **DictEntrySections**, categorized by `DictSectio
 ```
 DictSectionKind = "Relation" | "FreeForm" | "Attestation" | "Morphem"
                | "Header" | "Deviation" | "Inflection" | "Translation"
-               | "Definition"
 ```
 
 | Kind | German title | Purpose | Has SubSections? |
 |------|-------------|---------|-----------------|
-| `Header` | Formen | Lemma display, pronunciation, genus→article | No |
-| `Definition` | Definition | 5-15 word German dictionary-style definition for polysemy disambiguation (e.g., "Einrichtung, die Geld verwaltet und Finanzdienstleistungen anbietet" for *Bank* as financial institution). Generated via `PromptKind.Semantics` LLM call, or precomputed by Disambiguate prompt (V5). Also stored in note metadata per entry ID for fast Lemma-side lookup. | No |
+| `Header` | Formen | Lemma display, pronunciation, genus→article. Also returns `emojiDescription` (1-3 emojis for sense disambiguation, stored in metadata). | No |
 | `Attestation` | Kontexte | User's encountered contexts (`![[File#^blockId\|^]]`) | No |
 | `Relation` | Semantische Beziehungen | Lexical relations | **Yes** (see below) |
 | `Morphem` | Morpheme | Word decomposition. LLM returns structured data (`surf`/`lemma`/`tags`/`kind`), `morphemeFormatterHelper` converts to wikilink display (`[[auf\|>auf]]\|[[passen]]`) | No |
@@ -239,7 +239,7 @@ Section titles are localized per `TargetLanguage` via `TitleReprFor`.
 
 **FreeForm — the catch-all section**: Any content in a DictEntry that doesn't match our structured format (i.e., doesn't belong to a recognized DictEntrySection) gets collected into the FreeForm section. This keeps the structured sections clean while preserving user-written or unrecognized content. **Auto-cleanup** happens on Note open/close — the system scans the DictEntry, moves stray content into FreeForm, and re-serializes.
 
-**Dict note cleanup on open (V6)**: When a dict note is opened (`file-open` event in `main.ts`), `cleanupDictNote()` runs three normalizations: (1) normalize attestation ref spacing to `\n\n`-separated, (2) reorder sections within each entry by `SECTION_DISPLAY_WEIGHT` (Attestation → Relation → Definition → Translation → Morphem → Inflection → Deviation → FreeForm), and (3) reorder entries so LM (lemma) entries come before IN (inflected) entries. Returns `null` if no changes needed (skips write). Uses VAM `ProcessMdFile` dispatch with self-event tracking to prevent feedback loops. Detection: checks note content for `noteKind: "DictEntry"` metadata string. The Generate pipeline also applies section weight sorting in `serializeEntry` before writing.
+**Dict note cleanup on open (V6)**: When a dict note is opened (`file-open` event in `main.ts`), `cleanupDictNote()` runs three normalizations: (1) normalize attestation ref spacing to `\n\n`-separated, (2) reorder sections within each entry by `SECTION_DISPLAY_WEIGHT` (Attestation → Relation → Translation → Morphem → Inflection → Deviation → FreeForm), and (3) reorder entries so LM (lemma) entries come before IN (inflected) entries. Returns `null` if no changes needed (skips write). Uses VAM `ProcessMdFile` dispatch with self-event tracking to prevent feedback loops. Detection: checks note content for `noteKind: "DictEntry"` metadata string. The Generate pipeline also applies section weight sorting in `serializeEntry` before writing.
 
 **Source**: `src/linguistics/sections/section-kind.ts`
 
@@ -287,8 +287,6 @@ A Note is an Obsidian markdown file named after a Surface. It contains one or mo
 ```markdown
 🏭 das [[Kohlekraftwerk]], [ˈkoːləˌkraftvɛɐ̯k ♫](https://youglish.com/pronounce/Kohlekraftwerk/german) ^l-nom-n-m1
 
-<span class="entry_section_title entry_section_title_definition">Definition</span>
-Stromerzeugungsanlage mit Kohlefeuerung
 <span class="entry_section_title entry_section_title_kontexte">Deine Kontexte</span>
 ![[Atom#^13|^]]
 ![[Atom#^14|^]]
@@ -318,7 +316,7 @@ D: dem [[Kohlekraftwerk]], den [[Kohlekraftwerken]]
 ```typescript
 type DictEntryMeta = {
   linguisticUnit?: GermanLinguisticUnit;  // V9: typed DTO (see section 15)
-  semantics?: string;
+  emojiDescription?: string[];            // V10: 1-3 emojis for sense disambiguation
 } & Record<string, unknown>;
 
 type DictEntry = {
@@ -343,7 +341,7 @@ Per-DictEntry metadata is stored in a hidden `<section>` at the bottom of the No
 
 ```html
 <section id="textfresser_meta_keep_me_invisible">
-{"entries":{"LX-LM-NOUN-1":{"status":"Done","semantics":"Stromerzeugungsanlage mit Kohlefeuerung"},"LX-LM-NOUN-2":{"status":"NotStarted","semantics":"historisches Gebäude"}}}
+{"entries":{"LX-LM-NOUN-1":{"status":"Done","emojiDescription":["🏭","⚡"]},"LX-LM-NOUN-2":{"status":"NotStarted","emojiDescription":["🏰"]}}}
 </section>
 ```
 
@@ -444,8 +442,8 @@ commandFn(input) → VaultAction[] → vam.dispatch(actions)
 
 | Command | Status | Purpose |
 |---------|--------|---------|
-| `Lemma` | V3 | Recon: classify word via LLM, disambiguate sense against existing entries (metadata `semantics` lookup + Disambiguate prompt), wrap in wikilink, store result, notify user. V5: bounds-check, precomputedSemantics. V8: proper noun detection (nounClass), fullSurface expansion for multi-word proper nouns |
-| `Generate` | V3 | Build DictEntry: LLM-generated sections (Header, Definition, Morphem, Relation, Inflection, Translation) + Attestation; re-encounter detection (via Lemma's disambiguationResult); cross-ref propagation; serialize, move to Wörter, notify user. V5: scroll-to-entry after dispatch |
+| `Lemma` | V3 | Recon: classify word via LLM, disambiguate sense against existing entries (metadata `emojiDescription` lookup + Disambiguate prompt), wrap in wikilink, store result, notify user. V5: bounds-check. V8: proper noun detection (nounClass), fullSurface expansion for multi-word proper nouns. V10: emoji-based disambiguation |
+| `Generate` | V3 | Build DictEntry: LLM-generated sections (Header, Morphem, Relation, Inflection, Translation) + Attestation; re-encounter detection (via Lemma's disambiguationResult); cross-ref propagation; serialize, move to Wörter, notify user. V5: scroll-to-entry after dispatch |
 | `TranslateSelection` | V1 | Translate selected text via LLM |
 
 **Source**: `src/commanders/textfresser/textfresser.ts`, `src/commanders/textfresser/commands/types.ts`
@@ -476,14 +474,14 @@ The dictionary pipeline is split into two user-facing commands with distinct res
 │ 2. LLM classification             │    │ 3. If re-encounter: append attestation   │
 │    → LinguisticUnit + POS         │───→│    If new: LLM request PER section:      │
 │    → SurfaceKind + lemma          │    │      Header → formatHeaderLine()         │
-│ 3. Disambiguate (V3):             │    │      Definition → full LLM definition (always)  │
-│    Find existing note for lemma    │    │      Morphem → morphemeFormatterHelper() │
-│    (vam.getSplitPathsToExisting    │    │      Relation → formatRelationSection()  │
-│     FilesWithBasename)             │    │      Inflection → formatInflectionSection│
-│    Read metadata → match POS       │    │      Translation → PromptKind.WordTranslation │
-│    If entries exist for this POS:  │    │      Attestation → source ref (no LLM)  │
-│      Call Disambiguate prompt      │    │ 4. Store semantics in metadata          │
-│      → matchedIndex or null        │    │ 5. Propagate inverse relations to targets│
+│ 3. Disambiguate (V3):             │    │      Morphem → morphemeFormatterHelper() │
+│    Find existing note for lemma    │    │      Relation → formatRelationSection()  │
+│    (vam.getSplitPathsToExisting    │    │      Inflection → formatInflectionSection│
+│     FilesWithBasename)             │    │      Translation → PromptKind.WordTranslation │
+│    Read metadata → match POS       │    │      Attestation → source ref (no LLM)  │
+│    If entries exist for this POS:  │    │ 4. Store emojiDescription in metadata   │
+│      Call Disambiguate prompt      │    │ 5. Propagate inverse relations to targets│
+│      → matchedIndex or null        │    │                                          │
 │    Else: null (new sense)          │    │ 6. Propagate noun inflections            │
 │ 4. Wrap surface in wikilink        │    │ 7. Serialize (+ noteKind) → moveToWörter│
 │ 5. Store result in state           │    │ 8. Single vam.dispatch()                 │
@@ -545,7 +543,7 @@ type LemmaResult = {
   disambiguationResult: {             // V3: sense matching outcome
     matchedIndex: number;             // index of existing entry (re-encounter)
   } | null;                           // null = new sense or first encounter
-  precomputedSemantics?: string;      // V5: gloss from Disambiguate when new sense detected
+  precomputedEmojiDescription?: string[];  // V10: emoji description from Disambiguate when new sense detected
   nounClass?: "Common" | "Proper";   // V8: only for Nouns — controls section config
 };
 ```
@@ -569,22 +567,23 @@ Filter entries by matching unitKind + POS (ignoring surfaceKind, so LX-LM-NOUN-*
   ↓
 If no entries for this POS → disambiguationResult = null (new sense, skip Disambiguate call)
   ↓
-Build senses: Array<{ index: number, semantics: string }> from metadata
+Build senses: Array<{ index, emojiDescription, unitKind, pos?, genus? }> from metadata + parsed entry IDs
+  (V10: entries without emojiDescription → V2 legacy path: treat as re-encounter of first match)
   ↓
 Call PromptKind.Disambiguate with { lemma, context, senses }
   ↓
-Returns { matchedIndex: number | null, semantics?: string | null }
+Returns { matchedIndex: number | null, emojiDescription?: string[] | null }
   ↓
 V5 bounds check: if matchedIndex is not in validIndices → treat as new sense
   ↓
   matchedIndex (in range) → re-encounter (disambiguationResult = { matchedIndex })
   null (or out of range) → new sense (disambiguationResult = null)
-    + if semantics returned → store as LemmaResult.precomputedSemantics
+    + if emojiDescription returned → store as LemmaResult.precomputedEmojiDescription
 ```
 
 **Key optimizations**:
 - The Disambiguate LLM call is skipped entirely when no note exists (first encounter) or no entries with matching POS exist (first sense for this POS)
-- **V5**: When Disambiguate returns `matchedIndex: null` (new sense), it also returns a `semantics` gloss (1-3 word context-independent German description). This is stored as `LemmaResult.precomputedSemantics` and used by Generate as fallback for `meta.semantics` (concise gloss for future disambiguation). **V7**: The full Definition LLM call now always fires — the precomputed gloss no longer short-circuits it.
+- **V10**: When Disambiguate returns `matchedIndex: null` (new sense), it also returns an `emojiDescription` (1-3 emojis). This is stored as `LemmaResult.precomputedEmojiDescription` and used by Generate as fallback for `meta.emojiDescription` when Header LLM output is unavailable.
 - **V5**: `matchedIndex` is bounds-checked against `validIndices` — out-of-range values are treated as new sense (prevents LLM hallucinating invalid indices)
 
 The disambiguation result is stored in `LemmaResult.disambiguationResult` and consumed by Generate's `resolveExistingEntry` step, which no longer needs to re-parse or re-match.
@@ -602,9 +601,9 @@ The user navigates to the dictionary note (via the wikilink Lemma created) and c
 ```
 checkAttestation → checkEligibility → checkLemmaResult
   → resolveExistingEntry (parse existing entries, use Lemma's disambiguationResult for re-encounter detection)
-  → generateSections (async: LLM calls including Definition, or attestation append for re-encounters)
+  → generateSections (async: LLM calls, or attestation append for re-encounters)
   → propagateRelations → propagateInflections
-  → serializeEntry (includes noteKind + semantics in single metadata upsert) → moveToWorter → addWriteAction
+  → serializeEntry (includes noteKind + emojiDescription in single metadata upsert) → moveToWorter → addWriteAction
 ```
 
 Sync `Result` checks transition to async `ResultAsync` at `generateSections`.
@@ -624,14 +623,13 @@ Matching ignores surfaceKind so that inflected encounters (e.g., "Schlosses" →
 
 **Path A (re-encounter)**: If `matchedEntry` exists, skip all LLM calls. Find or create the Attestation section in the matched entry, append the new attestation ref (deduped). Returns existing entries unchanged except for the appended ref.
 
-**Path B (new entry)**: Determines applicable sections via `getSectionsFor()`, filtered to the **V3 set**: Header, Definition, Morphem, Relation, Inflection, Translation, Attestation.
+**Path B (new entry)**: Determines applicable sections via `getSectionsFor()`, filtered to the **V3 set**: Header, Morphem, Relation, Inflection, Translation, Attestation.
 
-All LLM calls are fired in parallel via `Promise.allSettled` (none depend on each other's results). **Critical sections** (Header, Translation) throw on failure; **optional sections** (Definition, Morphem, Relation, Inflection) degrade gracefully — failures are logged and the entry is still created. **V7**: The Definition LLM call always fires for new entries (V5 previously skipped it when `precomputedSemantics` existed). `precomputedSemantics` is still used for `meta.semantics` (concise gloss for future Disambiguate lookups). Results are assembled in correct section order after all promises settle. Applicable sections:
+All LLM calls are fired in parallel via `Promise.allSettled` (none depend on each other's results). **Critical sections** (Header, Translation) throw on failure; **optional sections** (Morphem, Relation, Inflection) degrade gracefully — failures are logged and the entry is still created. Results are assembled in correct section order after all promises settle. Applicable sections:
 
 | Section | LLM? | PromptKind | Formatter | Output |
 |---------|------|-----------|-----------|--------|
-| **Header** | Yes | `Header` | `formatHeaderLine()` | `{emoji} {article} [[lemma]], [{ipa} ♫](youglish_url)` → `DictEntry.headerContent`. LLM returns `genus` (Maskulinum/Femininum/Neutrum); formatter derives article via `articleFromGenus`. |
-| **Definition** | Yes | `Semantics` | — (string pass-through) | 5-15 word German dictionary-style definition → `EntrySection`. **Also stored in note metadata** per entry ID for Lemma disambiguation lookup. **V7**: Always fires; `meta.semantics` prefers concise `precomputedSemantics` gloss when available. |
+| **Header** | Yes | `Header` | `formatHeaderLine()` | `{emoji} {article} [[lemma]], [{ipa} ♫](youglish_url)` → `DictEntry.headerContent`. LLM returns `genus` (Maskulinum/Femininum/Neutrum); formatter derives article via `articleFromGenus`. Also returns `emojiDescription` (1-3 emojis) stored in `meta.emojiDescription` for Disambiguate lookups. |
 | **Morphem** | Yes | `Morphem` | `morphemeFormatterHelper.formatSection()` | `[[kohle]]\|[[kraft]]\|[[werk]]` → `EntrySection` |
 | **Relation** | Yes | `Relation` | `formatRelationSection()` | `= [[Synonym]], ⊃ [[Hypernym]]` → `EntrySection`. Raw output also stored for propagation. |
 | **Inflection** | Yes | `NounInflection` (nouns) or `Inflection` (other POS) | `formatNounInflection()` / `formatInflectionSection()` | `N: das [[Kohlekraftwerk]], die [[Kohlekraftwerke]]` → `EntrySection`. Nouns use structured cells (case×number with article+form); other POS use generic rows. Noun cells also feed `propagateInflections`. |
@@ -662,23 +660,23 @@ Different prompts are needed depending on:
 |-----------|--------|--------|
 | **TargetLanguage** | German, English, ... | Language of the dictionary |
 | **KnownLanguage** | Russian, English, ... | User's native language |
-| **PromptKind** | Lemma, Disambiguate, Header, Semantics, Morphem, Relation, Inflection, NounInflection, Translate, WordTranslation | What task the LLM performs |
+| **PromptKind** | Lemma, Disambiguate, Header, Morphem, Relation, Inflection, NounInflection, Translate, WordTranslation | What task the LLM performs |
 
 Section applicability (which sections a DictEntry gets) is determined by `LinguisticUnitKind` + `POS` + optional `nounClass` via `getSectionsFor()` in `src/linguistics/sections/section-config.ts`:
 - **Lexem**: POS-dependent (e.g., Nouns get Morphem + Inflection + Relation; Conjunctions get core only)
-- **Lexem + Noun + Proper** (V8): Core sections only (Header, Definition, Translation, Attestation, FreeForm) — no Inflection, Morphem, Relation
-- **Phrasem**: Header, Definition, Translation, Attestation, Relation, FreeForm
+- **Lexem + Noun + Proper** (V8): Core sections only (Header, Translation, Attestation, FreeForm) — no Inflection, Morphem, Relation
+- **Phrasem**: Header, Translation, Attestation, Relation, FreeForm
 - **Morphem**: Header, Attestation, FreeForm
 
 For non-Lexem units, `pos` is passed to LLM prompts as the `linguisticUnit` name (e.g., `"Phrasem"`) so the LLM understands the input is a multi-word expression rather than a single word.
 
 ### 8.4 Future Enhancements (Not in V3)
 
-- ~~**Full meaning resolution**~~: Implemented in V3 as Semantics + Disambiguate prompt.
+- ~~**Full meaning resolution**~~: Implemented in V3 as Disambiguate prompt. V10: replaced text-based `semantics` with emoji-based differentiation (`emojiDescription`).
 - **Multi-word selection**: Lemma handling phrasem attestations from multi-word selections
 - **Deviation section**: Additional LLM-generated section for irregular forms and exceptions
 - ~~**Scroll to latest updated entry**~~: Implemented in V5. After Generate dispatch, `scrollToTargetBlock()` finds `^{blockId}` line and calls `ActiveFileService.scrollToLine()`.
-- ~~**Disambiguate prompt returning translation/sense instead of null**~~: Implemented in V5. Disambiguate returns `semantics` gloss for new senses → stored as `precomputedSemantics` → used for `meta.semantics`. V7: Definition LLM always fires (precomputed gloss no longer short-circuits it).
+- ~~**Disambiguate prompt returning semantic info for new senses**~~: V5: returned text `semantics` gloss. V10: replaced with `emojiDescription` (1-3 emoji array) — Header prompt now also returns `emojiDescription`, stored in `meta.emojiDescription`.
 
 ---
 
@@ -810,7 +808,7 @@ src/prompt-smith/
 │           └── to-test.ts           # Extra examples for validation only
 │
 ├── codegen/
-│   ├── consts.ts                    # PromptKind enum ("Translate","Morphem","Lemma","Disambiguate","Header","Semantics","Relation","Inflection","NounInflection","WordTranslation")
+│   ├── consts.ts                    # PromptKind enum ("Translate","Morphem","Lemma","Disambiguate","Header","Relation","Inflection","NounInflection","WordTranslation")
 │   ├── generated-promts/            # AUTO-GENERATED compiled prompts
 │   └── skript/                      # Codegen pipeline scripts
 │       ├── run.ts                   # Orchestrator
@@ -824,9 +822,8 @@ src/prompt-smith/
 │   ├── translate.ts                 # Translate: string → string
 │   ├── morphem.ts                   # Morphem: {word,context} → {morphemes[]}
 │   ├── lemma.ts                     # Lemma: {surface,context} → {linguisticUnit,pos?,surfaceKind,lemma,nounClass?,fullSurface?}
-│   ├── disambiguate.ts              # Disambiguate: {lemma,context,senses[{index,semantics}]} → {matchedIndex:number|null, semantics?:string|null}
-│   ├── header.ts                    # Header: {word,pos,context} → {emoji,genus?,ipa}
-│   ├── semantics.ts                 # Semantics: {word,pos,context} → {semantics:string}
+│   ├── disambiguate.ts              # Disambiguate: {lemma,context,senses[{index,emojiDescription,unitKind,pos?,genus?}]} → {matchedIndex:number|null, emojiDescription?:string[]|null}
+│   ├── header.ts                    # Header: {word,pos,context} → {emoji,emojiDescription,genus?,ipa}
 │   ├── word-translation.ts          # WordTranslation: {word,pos,context} → string
 │   ├── relation.ts                  # Relation: {word,pos,context} → {relations[{kind,words[]}]}
 │   ├── inflection.ts                # Inflection: {word,pos,context} → {rows[{label,forms}]}
@@ -902,7 +899,7 @@ Some PromptKinds depend on both the target language and the user's known languag
 | Category | PromptKinds | Depends on known language? |
 |----------|-------------|---------------------------|
 | **Bilingual** | Translate, WordTranslation | Yes — output language varies by user's known language |
-| **Target-language-only** | Morphem, Lemma, Disambiguate, Semantics, Header, Relation, Inflection, NounInflection | No — linguistic analysis is purely about target language structure |
+| **Target-language-only** | Morphem, Lemma, Disambiguate, Header, Relation, Inflection, NounInflection | No — linguistic analysis is purely about target language structure |
 
 For **target-language-only** prompts, only the mandatory `english/` known-language path is created. The codegen fallback mechanism automatically reuses this English prompt for other known languages (e.g., Russian), since the prompt content is identical regardless of the user's native language.
 
@@ -1045,13 +1042,13 @@ To add support for a new target language (e.g., Japanese):
 | `src/commanders/textfresser/errors.ts` | CommandError, AttestationParsingError |
 | **Commands** | |
 | `src/commanders/textfresser/commands/lemma/lemma-command.ts` | Lemma pipeline: classify + disambiguate + wrap in wikilink. V8: `expandOffsetForFullSurface()` for proper noun expansion |
-| `src/commanders/textfresser/commands/lemma/steps/disambiguate-sense.ts` | V3: look up existing note, match entries by unitKind+POS (ignoring surfaceKind), call Disambiguate prompt. V5: bounds-check matchedIndex, log parse failures, return precomputedSemantics |
-| `src/commanders/textfresser/commands/lemma/types.ts` | LemmaResult type (V3: disambiguationResult, V5: precomputedSemantics, V8: nounClass) |
+| `src/commanders/textfresser/commands/lemma/steps/disambiguate-sense.ts` | V3: look up existing note, match entries by unitKind+POS (ignoring surfaceKind), call Disambiguate prompt. V5: bounds-check matchedIndex, log parse failures. V10: emoji-based senses with emojiDescription+unitKind+pos+genus, returns precomputedEmojiDescription |
+| `src/commanders/textfresser/commands/lemma/types.ts` | LemmaResult type (V3: disambiguationResult, V10: precomputedEmojiDescription, V8: nounClass) |
 | `src/commanders/textfresser/commands/generate/generate-command.ts` | Generate pipeline orchestrator |
 | `src/commanders/textfresser/commands/generate/steps/check-attestation.ts` | Sync check: attestation available |
 | `src/commanders/textfresser/commands/generate/steps/check-lemma-result.ts` | Sync check: lemma result available |
 | `src/commanders/textfresser/commands/generate/steps/resolve-existing-entry.ts` | Parse existing entries, use Lemma's disambiguationResult for re-encounter detection |
-| `src/commanders/textfresser/commands/generate/steps/generate-sections.ts` | Async: LLM calls per section (or append attestation for re-encounters). V7: Definition LLM always fires; precomputedSemantics used only for meta. V9: builds `GermanLinguisticUnit` DTO from LemmaResult + header output, stores in `meta.linguisticUnit`. Sets targetBlockId |
+| `src/commanders/textfresser/commands/generate/steps/generate-sections.ts` | Async: LLM calls per section (or append attestation for re-encounters). V9: builds `GermanLinguisticUnit` DTO from LemmaResult + header output, stores in `meta.linguisticUnit`. V10: stores `meta.emojiDescription` from Header output or precomputedEmojiDescription. Sets targetBlockId |
 | `src/commanders/textfresser/commands/generate/steps/propagate-relations.ts` | Cross-ref: compute inverse relations, generate actions for target notes |
 | `src/commanders/textfresser/commands/generate/steps/propagate-inflections.ts` | Noun inflection propagation: create stub entries in inflected-form notes |
 | `src/commanders/textfresser/commands/generate/steps/serialize-entry.ts` | Serialize ALL DictEntries to note body + apply noteKind metadata (single upsert) |
@@ -1098,7 +1095,7 @@ To add support for a new target language (e.g., Japanese):
 | `src/linguistics/old-enums.ts` | Inflectional dimensions, theta roles, tones |
 | **Prompt-Smith** | |
 | `src/prompt-smith/index.ts` | PROMPT_FOR registry (generated) |
-| `src/prompt-smith/schemas/` | Zod I/O schemas: translate, word-translation, morphem, lemma, disambiguate, header, semantics, relation, inflection, noun-inflection |
+| `src/prompt-smith/schemas/` | Zod I/O schemas: translate, word-translation, morphem, lemma, disambiguate, header, relation, inflection, noun-inflection |
 | `src/prompt-smith/codegen/consts.ts` | PromptKind enum |
 | `src/prompt-smith/codegen/skript/run.ts` | Codegen orchestrator |
 | `src/prompt-smith/prompt-parts/` | Human-written prompt sources (3 kinds × 2 lang pairs) |
@@ -1108,7 +1105,7 @@ To add support for a new target language (e.g., Japanese):
 | `tests/unit/textfresser/formatters/relation-formatter.test.ts` | Relation formatter: symbol notation, grouping, dedup |
 | `tests/unit/textfresser/formatters/inflection-formatter.test.ts` | Generic inflection formatter: label/forms rows |
 | `tests/unit/textfresser/formatters/noun-inflection-formatter.test.ts` | Noun inflection: case grouping, N/A/G/D order, cells pass-through |
-| `tests/unit/textfresser/steps/disambiguate-sense.test.ts` | Disambiguate: mock VAM + PromptRunner, bounds check, precomputed semantics, V2 legacy |
+| `tests/unit/textfresser/steps/disambiguate-sense.test.ts` | Disambiguate: mock VAM + PromptRunner, bounds check, precomputed emojiDescription, V2 legacy |
 | `tests/unit/textfresser/steps/propagate-relations.test.ts` | Relation propagation: inverse kinds, self-ref skip, dedup, VaultAction shapes |
 | `tests/unit/textfresser/steps/propagate-inflections.test.ts` | Inflection propagation: form grouping, same-note entries, combined headers |
 | `tests/unit/textfresser/steps/lemma-expansion.test.ts` | V8: `expandOffsetForFullSurface()` — expansion math, verification, fallback on mismatch |
@@ -1121,13 +1118,14 @@ To add support for a new target language (e.g., Japanese):
 
 ### Current Focus
 
-**V5 — Pipeline Hardening & Tests**: Make the Noun+German pipeline pristine before expanding to other POS.
+**V10 — Emoji-as-Semantic-Differentiator**: Replaced text-based `semantics`/`Definition` with emoji-based differentiation.
 
-- Tightened LLM output schemas (article enum, length caps, min lengths)
-- Disambiguate hardening (bounds check, parse failure logging)
-- Disambiguate returns semantics upfront (used for `meta.semantics`; V7 restored full Definition LLM)
-- Scroll to updated entry after re-encounter
-- Unit tests for formatters, disambiguate-sense, propagation steps
+- Dropped `DictSectionKind.Definition` and `PromptKind.Semantics` entirely
+- Header prompt now returns `emojiDescription` (1-3 emojis) alongside `emoji`
+- Disambiguate prompt uses emoji-based senses (emojiDescription + unitKind + pos + genus)
+- `meta.emojiDescription: string[]` replaces `meta.semantics: string`
+- `LemmaResult.precomputedEmojiDescription` replaces `precomputedSemantics`
+- V2 legacy path: entries without `emojiDescription` fall back to first-match
 
 ### Deferred Items
 
@@ -1310,7 +1308,7 @@ const linguisticUnit = buildLinguisticUnit(lemmaResult, headerOutput);
 const newEntry: DictEntry = {
   headerContent,
   id: entryId,
-  meta: { linguisticUnit, semantics: semanticsValue || undefined },
+  meta: { linguisticUnit, emojiDescription: headerOutput?.emojiDescription ?? lemmaResult.precomputedEmojiDescription ?? undefined },
   sections,
 };
 ```
