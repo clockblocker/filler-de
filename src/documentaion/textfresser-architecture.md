@@ -49,9 +49,11 @@ User gets a tailor-made dictionary that grows with their reading
 
 > **V3 scope**: Polysemy disambiguation — new Definition section (originally "Semantics", renamed in V5; short distinguishing gloss per entry, e.g., "Geldinstitut" vs "Sitzgelegenheit" for *Bank*), new Disambiguate prompt in Lemma command, enriched note metadata (`semantics` per entry ID for fast lookup without note parsing), VAM API expansion (`getSplitPathsToExistingFilesWithBasename`), Lemma-side sense matching before Generate.
 
-> **V5 scope**: Pipeline hardening — tighter LLM output schemas (`article` restricted to `der|die|das` enum, length caps on `semantics`/`emoji`/`inflection` fields), Disambiguate prompt hardening (bounds-check `matchedIndex` against valid indices, log parse failures), precomputed semantics (Disambiguate returns gloss for new senses → stored as `meta.semantics`; ~~V5 skipped Semantics LLM~~ V7 restored: full Definition LLM always fires), scroll-to-entry after Generate dispatch, 37 unit tests covering formatters + disambiguate-sense + propagation steps. Also: `DictSectionKind.Semantics` renamed to `DictSectionKind.Definition`, title changed from "Im Sinne von" to "Definition".
+> **V5 scope**: Pipeline hardening — tighter LLM output schemas (`genus` for grammatical gender, length caps on `semantics`/`emoji`/`inflection` fields), Disambiguate prompt hardening (bounds-check `matchedIndex` against valid indices, log parse failures), precomputed semantics (Disambiguate returns gloss for new senses → stored as `meta.semantics`; ~~V5 skipped Semantics LLM~~ V7 restored: full Definition LLM always fires), scroll-to-entry after Generate dispatch, 37 unit tests covering formatters + disambiguate-sense + propagation steps. Also: `DictSectionKind.Semantics` renamed to `DictSectionKind.Definition`, title changed from "Im Sinne von" to "Definition".
 
 > **V7 scope**: Polysemy quality fixes — Definition LLM call now **always fires** for new entries (precomputedSemantics no longer short-circuits it; the concise gloss is still stored in `meta.semantics` for Disambiguate lookup, but the Definition section always uses the full Semantics prompt output). Header emoji prompt changed to reflect the specific sense in context (not "primary/most common meaning"). Disambiguate gloss rule added: must be context-independent (e.g., "Schließvorrichtung" not "Fahrradschloss"). New polysemous examples in Header and Disambiguate prompts (Schloss castle vs lock).
+
+> **V9 scope**: LinguisticUnit DTO — Zod-schema-based type system as source of truth for DictEntries. German + Noun fully featured (`genus`, `nounClass`); all other POS/unit kinds have stubs. `GermanLinguisticUnit` built during Generate and stored in `meta.linguisticUnit`. Header prompt now returns `genus` ("Maskulinum"/"Femininum"/"Neutrum") instead of `article` ("der"/"die"/"das"); formatter derives article via `articleFromGenus`. New files: `surface-factory.ts`, `genus.ts`, `noun.ts`, `pos-features.ts`, `lexem-surface.ts`, `phrasem-surface.ts`, `morphem-surface.ts`, `linguistic-unit.ts`. 21 new DTO tests.
 
 > **V8 scope**: Eigenname (proper noun) support — Lemma LLM returns `nounClass` ("Common" | "Proper") and `fullSurface` (when proper noun extends beyond selected text, e.g., selecting "Bank" in "Deutsche Bank"). Wikilink wrapping expands to cover full proper noun via `expandOffsetForFullSurface()` with verification fallback. Section config: proper nouns get reduced sections (core only — no Inflection, Morphem, Relation) via `sectionsForProperNoun`. `nounClass` threaded through `LemmaResult` → `buildSectionQuery()` → `getSectionsFor()`.
 
@@ -121,17 +123,21 @@ Note (Obsidian .md file, named after a Surface)
 │  ├─ schemas/         — Zod I/O schemas per PromptKind   │
 │  └─ generated-promts/ — compiled system prompts         │
 ├─────────────────────────────────────────────────────────┤
-│  Linguistics (Type system)                              │
-│  ├─ enums/core.ts           — LinguisticUnitKind, SurfaceKind │
-│  ├─ enums/.../pos.ts        — POS, PosTag               │
-│  ├─ enums/.../phrasem-kind  — PhrasemeKind              │
-│  ├─ enums/.../morpheme-kind — MorphemeKind              │
-│  ├─ enums/.../morpheme-tag  — MorphemeTag (Sep/Insep)  │
-│  ├─ enums/inflection/feature-values — CaseValue, NumberValue │
-│  ├─ sections/section-kind   — DictSectionKind           │
-│  ├─ sections/section-css-kind — DictSectionKind → CSS suffix │
-│  ├─ german/inflection/noun  — NounInflectionCell, case/number tags │
-│  └─ old-enums.ts            — detailed inflectional enums │
+│  Linguistics (Type system + DTO)                        │
+│  ├─ common/enums/core.ts        — LinguisticUnitKind, SurfaceKind │
+│  ├─ common/enums/.../pos.ts     — POS, PosTag           │
+│  ├─ common/enums/.../phrasem-kind  — PhrasemeKind       │
+│  ├─ common/enums/.../morpheme-kind — MorphemeKind       │
+│  ├─ common/dto/surface-factory  — makeSurfaceSchema()   │
+│  ├─ common/dto/phrasem-surface  — PhrasemSurfaceSchema  │
+│  ├─ german/enums/genus          — GermanGenus + articleFromGenus │
+│  ├─ german/features/noun        — Noun Full/Ref features │
+│  ├─ german/features/pos-features — all POS feature unions │
+│  ├─ german/schemas/             — GermanLinguisticUnitSchema │
+│  ├─ common/sections/section-kind   — DictSectionKind    │
+│  ├─ common/sections/section-css-kind — kind → CSS suffix │
+│  ├─ german/inflection/noun      — NounInflectionCell    │
+│  └─ old-enums.ts                — detailed inflectional enums │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -220,7 +226,7 @@ DictSectionKind = "Relation" | "FreeForm" | "Attestation" | "Morphem"
 
 | Kind | German title | Purpose | Has SubSections? |
 |------|-------------|---------|-----------------|
-| `Header` | Formen | Lemma display, pronunciation, article | No |
+| `Header` | Formen | Lemma display, pronunciation, genus→article | No |
 | `Definition` | Definition | 5-15 word German dictionary-style definition for polysemy disambiguation (e.g., "Einrichtung, die Geld verwaltet und Finanzdienstleistungen anbietet" for *Bank* as financial institution). Generated via `PromptKind.Semantics` LLM call, or precomputed by Disambiguate prompt (V5). Also stored in note metadata per entry ID for fast Lemma-side lookup. | No |
 | `Attestation` | Kontexte | User's encountered contexts (`![[File#^blockId\|^]]`) | No |
 | `Relation` | Semantische Beziehungen | Lexical relations | **Yes** (see below) |
@@ -302,7 +308,7 @@ D: dem [[Kohlekraftwerk]], den [[Kohlekraftwerken]]
 ```
 
 **Key elements:**
-- **Header line**: emoji + article + `[[Surface]]` + pronunciation link + ` ^blockId`
+- **Header line**: emoji + article (derived from `genus` via `articleFromGenus`) + `[[Surface]]` + pronunciation link + ` ^blockId`
 - **DictEntryId format** (validated by `DictEntryIdSchema`): `^{LinguisticUnitKindTag}-{SurfaceKindTag}(-{PosTag}-{index})` — the PosTag+index suffix is Lexem-only. E.g., `^lx-lm-nom-1` (Lexem, Lemma surface, Noun, 1st meaning). Final format TBD.
 - **DictEntrySections**: marked with `<span class="entry_section_title entry_section_title_{kind}">Title</span>`
 - **Multiple DictEntries** (different meanings of the same Surface) separated by `\n\n\n---\n---\n\n\n` (parser also accepts older `\n\n---\n---\n\n` and legacy `\n---\n---\n---\n`)
@@ -310,11 +316,16 @@ D: dem [[Kohlekraftwerk]], den [[Kohlekraftwerken]]
 ### 5.2 Parsed Representation
 
 ```typescript
+type DictEntryMeta = {
+  linguisticUnit?: GermanLinguisticUnit;  // V9: typed DTO (see section 15)
+  semantics?: string;
+} & Record<string, unknown>;
+
 type DictEntry = {
   id: string;                       // "l-nom-n-m1"
   headerContent: string;            // header line without ^blockId
   sections: DictEntrySection[];     // (code type: EntrySection)
-  meta: Record<string, unknown>;    // from hidden <section> at note bottom
+  meta: DictEntryMeta;              // typed fields + extensible
 };
 
 type DictEntrySection = {           // (code type: EntrySection)
@@ -619,7 +630,7 @@ All LLM calls are fired in parallel via `Promise.allSettled` (none depend on eac
 
 | Section | LLM? | PromptKind | Formatter | Output |
 |---------|------|-----------|-----------|--------|
-| **Header** | Yes | `Header` | `formatHeaderLine()` | `{emoji} {article} [[lemma]], [{ipa} ♫](youglish_url)` → `DictEntry.headerContent` |
+| **Header** | Yes | `Header` | `formatHeaderLine()` | `{emoji} {article} [[lemma]], [{ipa} ♫](youglish_url)` → `DictEntry.headerContent`. LLM returns `genus` (Maskulinum/Femininum/Neutrum); formatter derives article via `articleFromGenus`. |
 | **Definition** | Yes | `Semantics` | — (string pass-through) | 5-15 word German dictionary-style definition → `EntrySection`. **Also stored in note metadata** per entry ID for Lemma disambiguation lookup. **V7**: Always fires; `meta.semantics` prefers concise `precomputedSemantics` gloss when available. |
 | **Morphem** | Yes | `Morphem` | `morphemeFormatterHelper.formatSection()` | `[[kohle]]\|[[kraft]]\|[[werk]]` → `EntrySection` |
 | **Relation** | Yes | `Relation` | `formatRelationSection()` | `= [[Synonym]], ⊃ [[Hypernym]]` → `EntrySection`. Raw output also stored for propagation. |
@@ -814,7 +825,7 @@ src/prompt-smith/
 │   ├── morphem.ts                   # Morphem: {word,context} → {morphemes[]}
 │   ├── lemma.ts                     # Lemma: {surface,context} → {linguisticUnit,pos?,surfaceKind,lemma,nounClass?,fullSurface?}
 │   ├── disambiguate.ts              # Disambiguate: {lemma,context,senses[{index,semantics}]} → {matchedIndex:number|null, semantics?:string|null}
-│   ├── header.ts                    # Header: {word,pos,context} → {emoji,article?,ipa}
+│   ├── header.ts                    # Header: {word,pos,context} → {emoji,genus?,ipa}
 │   ├── semantics.ts                 # Semantics: {word,pos,context} → {semantics:string}
 │   ├── word-translation.ts          # WordTranslation: {word,pos,context} → string
 │   ├── relation.ts                  # Relation: {word,pos,context} → {relations[{kind,words[]}]}
@@ -1040,11 +1051,11 @@ To add support for a new target language (e.g., Japanese):
 | `src/commanders/textfresser/commands/generate/steps/check-attestation.ts` | Sync check: attestation available |
 | `src/commanders/textfresser/commands/generate/steps/check-lemma-result.ts` | Sync check: lemma result available |
 | `src/commanders/textfresser/commands/generate/steps/resolve-existing-entry.ts` | Parse existing entries, use Lemma's disambiguationResult for re-encounter detection |
-| `src/commanders/textfresser/commands/generate/steps/generate-sections.ts` | Async: LLM calls per section (or append attestation for re-encounters). V7: Definition LLM always fires; precomputedSemantics used only for meta. Sets targetBlockId |
+| `src/commanders/textfresser/commands/generate/steps/generate-sections.ts` | Async: LLM calls per section (or append attestation for re-encounters). V7: Definition LLM always fires; precomputedSemantics used only for meta. V9: builds `GermanLinguisticUnit` DTO from LemmaResult + header output, stores in `meta.linguisticUnit`. Sets targetBlockId |
 | `src/commanders/textfresser/commands/generate/steps/propagate-relations.ts` | Cross-ref: compute inverse relations, generate actions for target notes |
 | `src/commanders/textfresser/commands/generate/steps/propagate-inflections.ts` | Noun inflection propagation: create stub entries in inflected-form notes |
 | `src/commanders/textfresser/commands/generate/steps/serialize-entry.ts` | Serialize ALL DictEntries to note body + apply noteKind metadata (single upsert) |
-| `src/commanders/textfresser/commands/generate/section-formatters/header-formatter.ts` | Header LLM output → header line |
+| `src/commanders/textfresser/commands/generate/section-formatters/header-formatter.ts` | Header LLM output → header line. Derives article from `genus` via `articleFromGenus`. |
 | `src/commanders/textfresser/commands/generate/section-formatters/relation-formatter.ts` | Relation LLM output → symbol notation |
 | `src/commanders/textfresser/commands/generate/section-formatters/inflection-formatter.ts` | Generic inflection LLM output → `{label}: {forms}` lines |
 | `src/commanders/textfresser/commands/generate/section-formatters/noun-inflection-formatter.ts` | Noun inflection: structured cells → `N: das [[Kraftwerk]], die [[Kraftwerke]]` + raw cells for propagation |
@@ -1061,17 +1072,28 @@ To add support for a new target language (e.g., Japanese):
 | `src/stateless-helpers/morpheme-formatter.ts` | Morpheme → wikilink display formatter |
 | `src/stateless-helpers/api-service.ts` | Gemini API wrapper (returns `ResultAsync`, retry on transient errors) |
 | `src/stateless-helpers/retry.ts` | Generic retry with exponential backoff (`withRetry()`) |
-| **Linguistics** | |
-| `src/linguistics/enums/core.ts` | LinguisticUnitKind, SurfaceKind |
-| `src/linguistics/enums/linguistic-units/lexem/pos.ts` | POS, PosTag |
-| `src/linguistics/enums/linguistic-units/phrasem/phrasem-kind.ts` | PhrasemeKind |
-| `src/linguistics/enums/linguistic-units/morphem/morpheme-kind.ts` | MorphemeKind |
-| `src/linguistics/enums/linguistic-units/morphem/morpheme-tag.ts` | MorphemeTag (Separable/Inseparable) |
-| `src/linguistics/sections/section-kind.ts` | DictSectionKind, TitleReprFor |
-| `src/linguistics/sections/section-css-kind.ts` | DictSectionKind → CSS suffix mapping |
-| `src/linguistics/sections/section-config.ts` | getSectionsFor(): applicable sections per unit+POS+nounClass; `sectionsForProperNoun` (V8); SECTION_DISPLAY_WEIGHT + compareSectionsByWeight(): section display ordering |
-| `src/linguistics/dict-entry-id/dict-entry-id.ts` | DictEntryId builder/parser |
+| **Linguistics — Enums** | |
+| `src/linguistics/common/enums/core.ts` | LinguisticUnitKind, SurfaceKind |
+| `src/linguistics/common/enums/linguistic-units/lexem/pos.ts` | POS, PosTag |
+| `src/linguistics/common/enums/linguistic-units/phrasem/phrasem-kind.ts` | PhrasemeKind |
+| `src/linguistics/common/enums/linguistic-units/morphem/morpheme-kind.ts` | MorphemeKind |
+| `src/linguistics/common/enums/linguistic-units/morphem/morpheme-tag.ts` | MorphemeTag (Separable/Inseparable) |
 | `src/linguistics/common/enums/inflection/feature-values.ts` | CaseValue, NumberValue Zod enums |
+| **Linguistics — DTO (V9)** | |
+| `src/linguistics/common/dto/surface-factory.ts` | `makeSurfaceSchema()` — produces surfaceKind discriminated union from Full + Ref features |
+| `src/linguistics/common/dto/phrasem-surface.ts` | Language-independent PhrasemSurfaceSchema (Collocation with strength, stubs for Idiom/Proverb/etc.) |
+| `src/linguistics/german/enums/genus.ts` | GermanGenusSchema ("Maskulinum"\|"Femininum"\|"Neutrum"), `articleFromGenus` mapping |
+| `src/linguistics/german/features/noun.ts` | GermanNounFull/RefFeaturesSchema (genus, nounClass for Full; just POS for Ref) |
+| `src/linguistics/german/features/pos-features.ts` | GermanLexemFull/RefFeaturesSchema — all POS in discriminated union (Noun real, rest stubs) |
+| `src/linguistics/german/schemas/lexem-surface.ts` | GermanLexemSurfaceSchema via `makeSurfaceSchema` |
+| `src/linguistics/german/schemas/morphem-surface.ts` | GermanMorphemSurfaceSchema (Prefix with separability, stubs for rest) |
+| `src/linguistics/german/schemas/linguistic-unit.ts` | GermanLinguisticUnitSchema — top-level `kind` discriminated union |
+| `src/linguistics/german/schemas/index.ts` | Barrel exports for all German schemas + types |
+| **Linguistics — Sections & Inflection** | |
+| `src/linguistics/common/sections/section-kind.ts` | DictSectionKind, TitleReprFor |
+| `src/linguistics/common/sections/section-css-kind.ts` | DictSectionKind → CSS suffix mapping |
+| `src/linguistics/common/sections/section-config.ts` | getSectionsFor(): applicable sections per unit+POS+nounClass; `sectionsForProperNoun` (V8); SECTION_DISPLAY_WEIGHT + compareSectionsByWeight(): section display ordering |
+| `src/linguistics/common/dict-entry-id/dict-entry-id.ts` | DictEntryId builder/parser |
 | `src/linguistics/german/inflection/noun.ts` | NounInflectionCell type, German case/number tags, display order |
 | `src/linguistics/old-enums.ts` | Inflectional dimensions, theta roles, tones |
 | **Prompt-Smith** | |
@@ -1081,7 +1103,8 @@ To add support for a new target language (e.g., Japanese):
 | `src/prompt-smith/codegen/skript/run.ts` | Codegen orchestrator |
 | `src/prompt-smith/prompt-parts/` | Human-written prompt sources (3 kinds × 2 lang pairs) |
 | **Tests (V5)** | |
-| `tests/unit/textfresser/formatters/header-formatter.test.ts` | Header formatter: emoji/article/ipa/wikilink assembly |
+| `tests/unit/textfresser/formatters/header-formatter.test.ts` | Header formatter: emoji/genus→article/ipa/wikilink assembly |
+| `tests/unit/linguistics/german-linguistic-unit.test.ts` | V9: GermanLinguisticUnit DTO — Lexem+Noun, POS stubs, Phrasem, Morphem, rejection cases (21 tests) |
 | `tests/unit/textfresser/formatters/relation-formatter.test.ts` | Relation formatter: symbol notation, grouping, dedup |
 | `tests/unit/textfresser/formatters/inflection-formatter.test.ts` | Generic inflection formatter: label/forms rows |
 | `tests/unit/textfresser/formatters/noun-inflection-formatter.test.ts` | Noun inflection: case grouping, N/A/G/D order, cells pass-through |
@@ -1112,3 +1135,205 @@ To add support for a new target language (e.g., Japanese):
 - **PhrasemeKind enrichment**: Sub-classification of phrasemes (collocation strength, type)
 - **Multi-word selection**: Lemma handling phrasem attestations from multi-word selections
 - **Other POS inflection propagation**: Extend inflection propagation beyond nouns
+
+---
+
+## 15. LinguisticUnit DTO — Source of Truth Type System
+
+> **Status**: V9 — implemented (German + Noun full features; all other POS/unit kinds have stubs). DTO is built during Generate and stored in `DictEntry.meta.linguisticUnit`.
+
+### 15.1 Problem
+
+The `DictEntry` type was originally a **serialization artifact**, not a domain model:
+
+```typescript
+// Before V9 — stringly typed, no structure
+type DictEntry = {
+  id: string;                       // has ParsedDictEntryId... but it's string here
+  headerContent: string;            // emoji + article + [[lemma]] + IPA — all flattened
+  sections: EntrySection[];         // kind: string, content: string — all structure lost
+  meta: Record<string, unknown>;    // no schema
+};
+```
+
+LLM outputs are typed (`AgentOutput<"Header">` → `{ emoji, genus, ipa }`), but formatters convert them to strings, and all structure is lost. V9 introduces a Zod-schema-based DTO as the source of truth for what a DictEntry represents.
+
+### 15.2 Architecture: Symmetric Discriminated Unions
+
+Every DictEntry describes a **LinguisticUnit**. The type system is built on three levels of discrimination:
+
+```
+LinguisticUnit<L>
+  ├── kind (1st discriminant: "Lexem" | "Phrasem" | "Morphem")
+  │    └── surface
+  │        ├── surfaceKind (2nd discriminant: "Lemma" | "Inflected" | "Variant")
+  │        │    └── features
+  │        │        └── (3rd discriminant: pos | phrasemeKind | morphemeKind)
+  │        │             └── language-specific feature fields
+```
+
+All three unit kinds follow the **same structural pattern**:
+
+| UnitKind | 3rd discriminant | Example Full features | Example Ref features |
+|----------|-----------------|----------------------|---------------------|
+| **Lexem** | `pos` | `{ pos: "Noun", genus: "Neutrum", nounClass: "Common" }` | `{ pos: "Noun" }` |
+| **Phrasem** | `phrasemeKind` | `{ phrasemeKind: "Collocation", strength: "Bound" }` | `{ phrasemeKind: "Collocation" }` |
+| **Morphem** | `morphemeKind` | `{ morphemeKind: "Prefix", separability: "Inseparable" }` | `{ morphemeKind: "Prefix" }` |
+
+### 15.3 SurfaceKind Controls Feature Depth
+
+`surfaceKind` determines whether `features` is **Full** (all fields) or **Ref** (just the discriminant):
+
+- **Lemma** → Full features: `{ pos: "Noun", genus: "Neutrum", nounClass: "Common" }`
+- **Inflected** → Ref features: `{ pos: "Noun" }` (genus/nounClass live on the lemma entry)
+- **Variant** → Ref features: `{ pos: "Noun" }` (same as Inflected)
+
+### 15.4 Language Scoping
+
+**TargetLanguage** is the outermost scope. It defines:
+
+1. **What feature fields exist per POS/morphemeKind** — German Noun has `genus`, English Noun does not
+2. **What feature values are available** — German `genus`: `"Maskulinum"|"Femininum"|"Neutrum"`
+3. **What morpheme kinds exist** — Hebrew has vowel patterns, German has separable prefixes
+
+**Phrasem is language-independent** — `phrasemeKind` and its features (e.g., collocation `strength`) are universal. No `L` param needed.
+
+Layer structure (implemented):
+```
+src/linguistics/
+├── common/                 ← shared infrastructure
+│   ├── enums/core.ts           — LinguisticUnitKind, SurfaceKind
+│   ├── enums/.../pos.ts        — POS, PosTag (10 parts of speech)
+│   ├── enums/.../phrasem-kind  — PhrasemeKind (5 kinds)
+│   ├── enums/.../morpheme-kind — MorphemeKind (10 kinds)
+│   └── dto/
+│       ├── surface-factory.ts  — makeSurfaceSchema(Full, Ref) → surfaceKind discriminated union
+│       └── phrasem-surface.ts  — language-independent PhrasemSurface (Collocation with strength, etc.)
+│
+├── german/                 ← picks from common, builds concrete schemas
+│   ├── enums/
+│   │   └── genus.ts            — GermanGenusSchema + articleFromGenus mapping
+│   ├── features/
+│   │   ├── noun.ts             — GermanNounFull/RefFeaturesSchema (genus, nounClass)
+│   │   └── pos-features.ts     — GermanLexemFull/RefFeaturesSchema (all POS, Noun has real features)
+│   ├── schemas/
+│   │   ├── lexem-surface.ts    — GermanLexemSurfaceSchema (via makeSurfaceSchema)
+│   │   ├── morphem-surface.ts  — GermanMorphemSurfaceSchema (Prefix with separability, etc.)
+│   │   ├── linguistic-unit.ts  — GermanLinguisticUnitSchema (top-level discriminated union)
+│   │   └── index.ts            — barrel exports
+│   └── inflection/noun.ts      — NounInflectionCell, case/number tags
+```
+
+### 15.5 Zod Schema Design
+
+Everything is **Zod-schema-based** — types derived via `z.infer<>`. The same schemas are reused by:
+- **Prompt-smith** — LLM output schemas reference the feature enums directly
+- **Dict-note serialization** — parse/serialize validates against the schemas
+- **Runtime validation** — anywhere a LinguisticUnit crosses a boundary
+
+#### Noun features (Full vs Ref)
+
+```typescript
+// src/linguistics/german/features/noun.ts
+const GermanNounFullFeaturesSchema = z.object({
+  pos: z.literal("Noun"),
+  genus: GermanGenusSchema,      // "Maskulinum"|"Femininum"|"Neutrum"
+  nounClass: NounClassSchema,    // "Common"|"Proper"
+});
+const GermanNounRefFeaturesSchema = z.object({ pos: z.literal("Noun") });
+```
+
+#### POS features assembly (stubs for non-Noun)
+
+```typescript
+// src/linguistics/german/features/pos-features.ts
+// POS literals re-declared in v3 to avoid v4 import trap from pos.ts
+const fullStubs = ["Verb", "Adjective", ...].map(pos => z.object({ pos: z.literal(pos) }));
+
+const GermanLexemFullFeaturesSchema = z.discriminatedUnion("pos", [
+  GermanNounFullFeaturesSchema, ...fullStubs,
+]);
+const GermanLexemRefFeaturesSchema = z.discriminatedUnion("pos", [
+  GermanNounRefFeaturesSchema, ...refStubs,
+]);
+```
+
+#### Surface factory
+
+```typescript
+// src/linguistics/common/dto/surface-factory.ts
+function makeSurfaceSchema<F extends z.ZodTypeAny, R extends z.ZodTypeAny>(
+  fullFeatures: F, refFeatures: R,
+) {
+  return z.discriminatedUnion("surfaceKind", [
+    z.object({ surfaceKind: z.literal("Lemma"),     lemma: z.string(), features: fullFeatures }),
+    z.object({ surfaceKind: z.literal("Inflected"),  surface: z.string(), lemma: z.string(),
+               lemmaRef: z.string(), features: refFeatures }),
+    z.object({ surfaceKind: z.literal("Variant"),    surface: z.string(), lemma: z.string(),
+               lemmaRef: z.string(), features: refFeatures }),
+  ]);
+}
+```
+
+#### Assembly
+
+```typescript
+// src/linguistics/german/schemas/lexem-surface.ts
+const GermanLexemSurfaceSchema = makeSurfaceSchema(
+  GermanLexemFullFeaturesSchema, GermanLexemRefFeaturesSchema,
+);
+
+// src/linguistics/common/dto/phrasem-surface.ts (language-independent)
+const PhrasemSurfaceSchema = makeSurfaceSchema(PhrasemFullFeatures, PhrasemRefFeatures);
+
+// src/linguistics/german/schemas/morphem-surface.ts
+const GermanMorphemSurfaceSchema = makeSurfaceSchema(
+  GermanMorphemFullFeatures, GermanMorphemRefFeatures,
+);
+
+// src/linguistics/german/schemas/linguistic-unit.ts
+const GermanLinguisticUnitSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("Lexem"),   surface: GermanLexemSurfaceSchema }),
+  z.object({ kind: z.literal("Phrasem"), surface: PhrasemSurfaceSchema }),
+  z.object({ kind: z.literal("Morphem"), surface: GermanMorphemSurfaceSchema }),
+]);
+type GermanLinguisticUnit = z.infer<typeof GermanLinguisticUnitSchema>;
+```
+
+### 15.6 Pipeline Integration
+
+In `generateSections` (Path B — new entry), after LLM calls resolve, `buildLinguisticUnit()` constructs a `GermanLinguisticUnit` DTO from `LemmaResult` + header output and stores it in `newEntry.meta.linguisticUnit`. MVP scope: only builds for **Lexem + Noun + Lemma** surface kind (where `genus` is available from the Header LLM output).
+
+```typescript
+// generate-sections.ts
+const linguisticUnit = buildLinguisticUnit(lemmaResult, headerOutput);
+const newEntry: DictEntry = {
+  headerContent,
+  id: entryId,
+  meta: { linguisticUnit, semantics: semanticsValue || undefined },
+  sections,
+};
+```
+
+The `genus` field in the Header prompt schema (`GermanGenusSchema`) is the proof-of-concept for prompt-smith schemas reusing linguistic DTOs. The LLM returns `genus: "Neutrum"` and the formatter derives the article via `articleFromGenus[genus]`.
+
+### 15.7 Key Design Decisions
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| `article` field on Noun | **No** — store `genus` ("Maskulinum"\|"Femininum"\|"Neutrum") | `der/die/das` is a surface representation; `genus` is the linguistic property. Formatter derives article via `articleFromGenus`. |
+| Morpheme "tags" | **No** — store `features` like `separability` | Tags are a representation abstraction. Features are named key-value linguistic properties. |
+| `features` field naming | Uniform `features` across all unit kinds | Factory pattern produces `surface.features` uniformly. The discriminant inside (`pos`/`phrasemeKind`/`morphemeKind`) provides domain-specific naming. |
+| Feature depth by surfaceKind | Full (Lemma) vs Ref (Inflected/Variant) | Inflected entries don't duplicate genus/nounClass — that data lives on the lemma entry. Ref carries just enough to identify the classification. |
+| Phrasem language scoping | **Language-independent** | PhrasemeKind and its features (collocation strength, etc.) are universal. No `L` param. |
+| Schema technology | **Zod v3** with `z.infer<>` | Single source of truth consumed by prompt-smith, serialization, and runtime validation. All DTO schemas use `import { z } from "zod/v3"`. POS literals re-declared in v3 to avoid v4 import trap from `pos.ts`. |
+| Non-Noun POS | **Stubs** — `{ pos: z.literal("Verb") }` etc. | Real features deferred to Phase 2+. Stubs ensure the discriminated union covers all POS values. |
+
+### 15.8 Out of Scope (Phase 2+)
+
+- Verb/Adjective/other POS real features (currently stubs)
+- Hebrew/English language schemas
+- `lemmaRef` resolution logic for Inflected entries
+- Replacing `DictEntry.headerContent` string with DTO-derived formatting
+- Replacing `DictEntry.sections[].content` strings with structured section DTOs
+- Query layer ("find all Neutrum nouns")

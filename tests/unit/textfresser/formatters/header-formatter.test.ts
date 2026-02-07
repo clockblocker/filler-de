@@ -2,9 +2,9 @@ import { describe, expect, it } from "bun:test";
 import { formatHeaderLine } from "../../../../src/commanders/textfresser/commands/generate/section-formatters/header-formatter";
 
 describe("formatHeaderLine", () => {
-	it("formats a noun header with article", () => {
+	it("formats a noun header with genus", () => {
 		const result = formatHeaderLine(
-			{ article: "das", emoji: "🏭", ipa: "ˈkoːləˌkraftvɛɐ̯k" },
+			{ emoji: "🏭", genus: "Neutrum", ipa: "ˈkoːləˌkraftvɛɐ̯k" },
 			"Kohlekraftwerk",
 			"German",
 		);
@@ -13,9 +13,9 @@ describe("formatHeaderLine", () => {
 		);
 	});
 
-	it("formats without article when null", () => {
+	it("formats without article when genus is null", () => {
 		const result = formatHeaderLine(
-			{ article: null, emoji: "🏃", ipa: "ˈlaʊ̯fn̩" },
+			{ emoji: "🏃", genus: null, ipa: "ˈlaʊ̯fn̩" },
 			"laufen",
 			"German",
 		);
@@ -24,7 +24,7 @@ describe("formatHeaderLine", () => {
 		);
 	});
 
-	it("formats without article when undefined", () => {
+	it("formats without article when genus is undefined", () => {
 		const result = formatHeaderLine(
 			{ emoji: "⚡", ipa: "ʃnɛl" },
 			"schnell",
@@ -37,16 +37,39 @@ describe("formatHeaderLine", () => {
 
 	it("encodes special characters in youglish URL", () => {
 		const result = formatHeaderLine(
-			{ article: "die", emoji: "🏠", ipa: "ˈʃtʁaːsə" },
+			{ emoji: "🏠", genus: "Femininum", ipa: "ˈʃtʁaːsə" },
 			"Straße",
 			"German",
 		);
 		expect(result).toContain("Stra%C3%9Fe");
 	});
 
+	it("derives correct article from each genus", () => {
+		const maskulinum = formatHeaderLine(
+			{ emoji: "🐕", genus: "Maskulinum", ipa: "hʊnt" },
+			"Hund",
+			"German",
+		);
+		expect(maskulinum).toContain("der [[Hund]]");
+
+		const femininum = formatHeaderLine(
+			{ emoji: "🐈", genus: "Femininum", ipa: "ˈkatsə" },
+			"Katze",
+			"German",
+		);
+		expect(femininum).toContain("die [[Katze]]");
+
+		const neutrum = formatHeaderLine(
+			{ emoji: "🏠", genus: "Neutrum", ipa: "haʊ̯s" },
+			"Haus",
+			"German",
+		);
+		expect(neutrum).toContain("das [[Haus]]");
+	});
+
 	it("uses lowercase target language in URL", () => {
 		const result = formatHeaderLine(
-			{ article: null, emoji: "🌍", ipa: "test" },
+			{ emoji: "🌍", genus: null, ipa: "test" },
 			"hello",
 			"English",
 		);

@@ -47,7 +47,7 @@ Rules:
 {"context":"Das Haus steht am Ende der Straße.","surface":"Haus"}
 </input>
 <output>
-{"lemma":"Haus","linguisticUnit":"Lexem","pos":"Noun","surfaceKind":"Lemma","nounClass":"Common"}
+{"lemma":"Haus","linguisticUnit":"Lexem","nounClass":"Common","pos":"Noun","surfaceKind":"Lemma"}
 </output>
 </example-2>
 
@@ -83,7 +83,7 @@ Rules:
 {"context":"Die Deutsche Bank hat ihren Sitz in Frankfurt.","surface":"Bank"}
 </input>
 <output>
-{"lemma":"Deutsche Bank","linguisticUnit":"Lexem","pos":"Noun","surfaceKind":"Lemma","nounClass":"Proper","fullSurface":"Deutsche Bank"}
+{"fullSurface":"Deutsche Bank","lemma":"Deutsche Bank","linguisticUnit":"Lexem","nounClass":"Proper","pos":"Noun","surfaceKind":"Lemma"}
 </output>
 </example-6>
 
@@ -92,7 +92,7 @@ Rules:
 {"context":"Ich habe bei einer deutschen Bank ein Konto eröffnet.","surface":"Bank"}
 </input>
 <output>
-{"lemma":"Bank","linguisticUnit":"Lexem","pos":"Noun","surfaceKind":"Lemma","nounClass":"Common"}
+{"lemma":"Bank","linguisticUnit":"Lexem","nounClass":"Common","pos":"Noun","surfaceKind":"Lemma"}
 </output>
 </example-7>
 
@@ -101,7 +101,7 @@ Rules:
 {"context":"Ich wohne in Berlin.","surface":"Berlin"}
 </input>
 <output>
-{"lemma":"Berlin","linguisticUnit":"Lexem","pos":"Noun","surfaceKind":"Lemma","nounClass":"Proper"}
+{"lemma":"Berlin","linguisticUnit":"Lexem","nounClass":"Proper","pos":"Noun","surfaceKind":"Lemma"}
 </output>
 </example-8>
 </examples>`;

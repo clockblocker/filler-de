@@ -8,8 +8,8 @@ export const examples = [
 			word: "Haus",
 		},
 		output: {
-			article: "das",
 			emoji: "🏠",
+			genus: "Neutrum" as const,
 			ipa: "haʊ̯s",
 		},
 	},
@@ -31,8 +31,8 @@ export const examples = [
 			word: "Schmetterling",
 		},
 		output: {
-			article: "der",
 			emoji: "🦋",
+			genus: "Maskulinum" as const,
 			ipa: "ˈʃmɛtɐlɪŋ",
 		},
 	},
@@ -54,8 +54,8 @@ export const examples = [
 			word: "Schloss",
 		},
 		output: {
-			article: "das",
 			emoji: "🏰",
+			genus: "Neutrum" as const,
 			ipa: "ʃlɔs",
 		},
 	},
@@ -66,8 +66,8 @@ export const examples = [
 			word: "Schloss",
 		},
 		output: {
-			article: "das",
 			emoji: "🔒",
+			genus: "Neutrum" as const,
 			ipa: "ʃlɔs",
 		},
 	},

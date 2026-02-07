@@ -7,6 +7,8 @@ import {
 	TitleReprFor,
 } from "../../../../../linguistics/common/sections/section-kind";
 import type { NounInflectionCell } from "../../../../../linguistics/german/inflection/noun";
+import type { GermanLinguisticUnit } from "../../../../../linguistics/german/schemas/linguistic-unit";
+import type { AgentOutput } from "../../../../../prompt-smith";
 import { PromptKind } from "../../../../../prompt-smith/codegen/consts";
 import type { RelationSubKind } from "../../../../../prompt-smith/schemas/relation";
 import type { ApiServiceError } from "../../../../../stateless-helpers/api-service";
@@ -52,6 +54,39 @@ function buildSectionQuery(lemmaResult: LemmaResult) {
 	}
 	return {
 		unit: lemmaResult.linguisticUnit as "Morphem" | "Phrasem",
+	};
+}
+
+/**
+ * Build a GermanLinguisticUnit DTO from LemmaResult + header output.
+ * MVP: only builds for Lexem + Noun + Lemma surface kind.
+ */
+function buildLinguisticUnit(
+	lemmaResult: LemmaResult,
+	headerOutput: AgentOutput<"Header"> | null,
+): GermanLinguisticUnit | undefined {
+	if (
+		lemmaResult.linguisticUnit !== "Lexem" ||
+		lemmaResult.pos !== "Noun" ||
+		lemmaResult.surfaceKind !== "Lemma"
+	) {
+		return undefined;
+	}
+
+	const genus = headerOutput?.genus;
+	if (!genus) return undefined;
+
+	return {
+		kind: "Lexem",
+		surface: {
+			features: {
+				genus,
+				nounClass: lemmaResult.nounClass ?? "Common",
+				pos: "Noun",
+			},
+			lemma: lemmaResult.lemma,
+			surfaceKind: "Lemma",
+		},
 	};
 }
 
@@ -418,10 +453,18 @@ export function generateSections(
 						},
 			);
 
+			const linguisticUnit = buildLinguisticUnit(
+				lemmaResult,
+				headerOutput,
+			);
+
 			const newEntry: DictEntry = {
 				headerContent,
 				id: entryId,
-				meta: { semantics: semanticsValue || undefined },
+				meta: {
+					linguisticUnit,
+					semantics: semanticsValue || undefined,
+				},
 				sections,
 			};
 

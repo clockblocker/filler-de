@@ -7,12 +7,12 @@ You receive:
 
 Return:
 - emoji: a single emoji that visually represents the word's core meaning
-- article: the German definite article (only for nouns: "der", "die", or "das"). Omit for non-nouns.
+- genus: the grammatical gender as a linguistic term (only for nouns: "Maskulinum", "Femininum", or "Neutrum"). Omit for non-nouns.
 - ipa: the IPA pronunciation of the word (without slashes or brackets, just the transcription)
 
 Rules:
 - Choose an emoji that represents the specific meaning of the word as used in the given context
-- For nouns, always provide the correct grammatical gender via article
-- For non-nouns (verbs, adjectives, adverbs, etc.), omit the article field entirely
+- For nouns, always provide the correct grammatical gender via genus
+- For non-nouns (verbs, adjectives, adverbs, etc.), omit the genus field entirely
 - IPA should reflect standard High German (Hochdeutsch) pronunciation
 - Use narrow IPA transcription`;

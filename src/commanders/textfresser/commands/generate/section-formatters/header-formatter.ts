@@ -1,3 +1,4 @@
+import { articleFromGenus } from "../../../../../linguistics/german/enums/genus";
 import type { AgentOutput } from "../../../../../prompt-smith";
 
 const YOUGLISH_BASE = "https://youglish.com/pronounce";
@@ -13,8 +14,8 @@ export function formatHeaderLine(
 ): string {
 	const parts: string[] = [output.emoji];
 
-	if (output.article) {
-		parts.push(output.article);
+	if (output.genus) {
+		parts.push(articleFromGenus[output.genus]);
 	}
 
 	parts.push(`[[${lemma}]],`);

@@ -15,12 +15,12 @@ You receive:
 
 Return:
 - emoji: a single emoji that visually represents the word's core meaning
-- article: omit for English (English has no grammatical gender articles)
+- genus: omit for English (English has no grammatical gender)
 - ipa: the IPA pronunciation of the word (without slashes or brackets)
 
 Rules:
 - Choose an emoji that captures the primary meaning of the word
-- Always omit article for English
+- Always omit genus for English
 - IPA should reflect standard General American or RP pronunciation
 </task-description>
 

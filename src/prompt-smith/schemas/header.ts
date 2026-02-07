@@ -1,4 +1,5 @@
 import { z } from "zod/v3";
+import { GermanGenusSchema } from "../../linguistics/german/enums/genus";
 
 const userInputSchema = z.object({
 	context: z.string(),
@@ -7,8 +8,8 @@ const userInputSchema = z.object({
 });
 
 const agentOutputSchema = z.object({
-	article: z.enum(["der", "die", "das"]).nullable().optional(),
 	emoji: z.string().min(1).max(4),
+	genus: GermanGenusSchema.nullable().optional(),
 	ipa: z.string().min(1),
 });
 
