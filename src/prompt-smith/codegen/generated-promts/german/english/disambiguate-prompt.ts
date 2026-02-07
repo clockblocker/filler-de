@@ -33,7 +33,7 @@ Rules:
 <examples>
 <example-1>
 <input>
-{"context":"Er setzte sich auf die Bank im Park.","lemma":"Bank","senses":[{"emojiDescription":["🏦","💰"],"genus":"Femininum","index":1,"pos":"Noun","unitKind":"Lexem"}]}
+{"context":"Er setzte sich auf die Bank im Park.","lemma":"Bank","senses":[{"emojiDescription":["🏦"],"genus":"Femininum","index":1,"pos":"Noun","unitKind":"Lexem"}]}
 </input>
 <output>
 {"emojiDescription":["🪑","🌳"],"matchedIndex":null}
@@ -42,7 +42,7 @@ Rules:
 
 <example-2>
 <input>
-{"context":"Ich muss zur Bank, um Geld abzuheben.","lemma":"Bank","senses":[{"emojiDescription":["🏦","💰"],"genus":"Femininum","index":1,"pos":"Noun","unitKind":"Lexem"},{"emojiDescription":["🪑","🌳"],"genus":"Femininum","index":2,"pos":"Noun","unitKind":"Lexem"}]}
+{"context":"Ich muss zur Bank, um Geld abzuheben.","lemma":"Bank","senses":[{"emojiDescription":["🏦"],"genus":"Femininum","index":1,"pos":"Noun","unitKind":"Lexem"},{"emojiDescription":["🪑","🌳"],"genus":"Femininum","index":2,"pos":"Noun","unitKind":"Lexem"}]}
 </input>
 <output>
 {"matchedIndex":1}
@@ -54,13 +54,13 @@ Rules:
 {"context":"Das Schloss an der Tür war kaputt.","lemma":"Schloss","senses":[{"emojiDescription":["🏰"],"genus":"Neutrum","index":1,"pos":"Noun","unitKind":"Lexem"}]}
 </input>
 <output>
-{"emojiDescription":["🔒","🔑"],"matchedIndex":null}
+{"emojiDescription":["🔒"],"matchedIndex":null}
 </output>
 </example-3>
 
 <example-4>
 <input>
-{"context":"Wir besichtigten das Schloss am Rhein.","lemma":"Schloss","senses":[{"emojiDescription":["🏰"],"genus":"Neutrum","index":1,"pos":"Noun","unitKind":"Lexem"},{"emojiDescription":["🔒","🔑"],"genus":"Neutrum","index":2,"pos":"Noun","unitKind":"Lexem"}]}
+{"context":"Wir besichtigten das Schloss am Rhein.","lemma":"Schloss","senses":[{"emojiDescription":["🏰"],"genus":"Neutrum","index":1,"pos":"Noun","unitKind":"Lexem"},{"emojiDescription":["🔒"],"genus":"Neutrum","index":2,"pos":"Noun","unitKind":"Lexem"}]}
 </input>
 <output>
 {"matchedIndex":1}
@@ -72,7 +72,7 @@ Rules:
 {"context":"Das Schloss am Fahrrad war aufgebrochen.","lemma":"Schloss","senses":[{"emojiDescription":["🏰"],"genus":"Neutrum","index":1,"pos":"Noun","unitKind":"Lexem"}]}
 </input>
 <output>
-{"emojiDescription":["🔒","🔑"],"matchedIndex":null}
+{"emojiDescription":["🔒"],"matchedIndex":null}
 </output>
 </example-5>
 </examples>`;

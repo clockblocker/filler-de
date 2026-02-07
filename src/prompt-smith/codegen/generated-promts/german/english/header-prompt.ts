@@ -80,7 +80,7 @@ Rules:
 {"context":"Das Schloss am Fahrrad war aufgebrochen.","pos":"Noun","word":"Schloss"}
 </input>
 <output>
-{"emoji":"🔒","emojiDescription":["🔒","🔑"],"genus":"Neutrum","ipa":"ʃlɔs"}
+{"emoji":"🔒","emojiDescription":["🔒"],"genus":"Neutrum","ipa":"ʃlɔs"}
 </output>
 </example-6>
 </examples>`;

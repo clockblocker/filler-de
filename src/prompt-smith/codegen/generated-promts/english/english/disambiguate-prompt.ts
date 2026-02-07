@@ -34,13 +34,13 @@ Rules:
 {"context":"I went to the bank to withdraw money.","lemma":"bank","senses":[{"emojiDescription":["🏞️","🌊"],"index":1,"pos":"Noun","unitKind":"Lexem"}]}
 </input>
 <output>
-{"emojiDescription":["🏦","💰"],"matchedIndex":null}
+{"emojiDescription":["🏦"],"matchedIndex":null}
 </output>
 </example-1>
 
 <example-2>
 <input>
-{"context":"We sat on the bank of the river.","lemma":"bank","senses":[{"emojiDescription":["🏞️","🌊"],"index":1,"pos":"Noun","unitKind":"Lexem"},{"emojiDescription":["🏦","💰"],"index":2,"pos":"Noun","unitKind":"Lexem"}]}
+{"context":"We sat on the bank of the river.","lemma":"bank","senses":[{"emojiDescription":["🏞️","🌊"],"index":1,"pos":"Noun","unitKind":"Lexem"},{"emojiDescription":["🏦"],"index":2,"pos":"Noun","unitKind":"Lexem"}]}
 </input>
 <output>
 {"matchedIndex":1}
