@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { formatRelationSection } from "../../../../src/commanders/textfresser/commands/generate/section-formatters/relation-formatter";
+import { formatRelationSection } from "../../../../../src/commanders/textfresser/commands/generate/section-formatters/common/relation-formatter";
 
 describe("formatRelationSection", () => {
 	it("formats synonyms with = symbol", () => {

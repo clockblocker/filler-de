@@ -1,4 +1,4 @@
-import type { AgentOutput } from "../../../../../prompt-smith";
+import type { AgentOutput } from "../../../../../../prompt-smith";
 
 /**
  * Format LLM inflection output into markdown lines.

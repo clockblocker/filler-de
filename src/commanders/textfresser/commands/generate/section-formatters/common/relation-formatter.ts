@@ -1,5 +1,5 @@
-import type { AgentOutput } from "../../../../../prompt-smith";
-import type { RelationSubKind } from "../../../../../prompt-smith/schemas/relation";
+import type { AgentOutput } from "../../../../../../prompt-smith";
+import type { RelationSubKind } from "../../../../../../prompt-smith/schemas/relation";
 
 const SYMBOL_FOR_KIND: Record<RelationSubKind, string> = {
 	Antonym: "≠",

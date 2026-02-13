@@ -1,10 +1,10 @@
-import type { CaseValue } from "../../../../../linguistics/common/enums/inflection/feature-values";
+import type { CaseValue } from "../../../../../../../../linguistics/common/enums/inflection/feature-values";
 import {
 	CASE_ORDER,
 	CASE_SHORT_LABEL,
 	type NounInflectionCell,
-} from "../../../../../linguistics/de/lexem/noun";
-import type { AgentOutput } from "../../../../../prompt-smith";
+} from "../../../../../../../../linguistics/de/lexem/noun";
+import type { AgentOutput } from "../../../../../../../../prompt-smith";
 
 /**
  * Group cells by case, then format each case line as:
@@ -12,7 +12,7 @@ import type { AgentOutput } from "../../../../../prompt-smith";
  *
  * Returns both the formatted section string and the raw cells for propagation.
  */
-export function formatNounInflection(output: AgentOutput<"NounInflection">): {
+export function formatInflection(output: AgentOutput<"NounInflection">): {
 	formattedSection: string;
 	cells: NounInflectionCell[];
 } {

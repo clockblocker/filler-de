@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { formatHeaderLine } from "../../../../src/commanders/textfresser/commands/generate/section-formatters/header-formatter";
+import { formatHeaderLine } from "../../../../../src/commanders/textfresser/commands/generate/section-formatters/common/header-formatter";
 
 describe("formatHeaderLine", () => {
 	it("formats header with emoji derived from emojiDescription[0]", () => {

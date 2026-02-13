@@ -1,9 +1,9 @@
 import { describe, expect, it } from "bun:test";
-import { formatNounInflection } from "../../../../src/commanders/textfresser/commands/generate/section-formatters/noun-inflection-formatter";
+import { formatInflection } from "../../../../../../../src/commanders/textfresser/commands/generate/section-formatters/de/lexem/noun/inflection-formatter";
 
-describe("formatNounInflection", () => {
+describe("formatInflection", () => {
 	it("formats cells grouped by case in N/A/G/D order", () => {
-		const { formattedSection } = formatNounInflection({
+		const { formattedSection } = formatInflection({
 			cells: [
 				{ article: "das", case: "Nominative", form: "Kraftwerk", number: "Singular" },
 				{ article: "die", case: "Nominative", form: "Kraftwerke", number: "Plural" },
@@ -25,7 +25,7 @@ describe("formatNounInflection", () => {
 	});
 
 	it("returns raw cells for propagation", () => {
-		const { cells } = formatNounInflection({
+		const { cells } = formatInflection({
 			cells: [
 				{ article: "der", case: "Nominative", form: "Mann", number: "Singular" },
 				{ article: "die", case: "Nominative", form: "Männer", number: "Plural" },
@@ -48,7 +48,7 @@ describe("formatNounInflection", () => {
 	});
 
 	it("skips missing cases", () => {
-		const { formattedSection } = formatNounInflection({
+		const { formattedSection } = formatInflection({
 			cells: [
 				{ article: "das", case: "Nominative", form: "Kind", number: "Singular" },
 				{ article: "die", case: "Nominative", form: "Kinder", number: "Plural" },
@@ -59,7 +59,7 @@ describe("formatNounInflection", () => {
 	});
 
 	it("handles all four cases with only singular", () => {
-		const { formattedSection } = formatNounInflection({
+		const { formattedSection } = formatInflection({
 			cells: [
 				{ article: "der", case: "Nominative", form: "Tisch", number: "Singular" },
 				{ article: "den", case: "Accusative", form: "Tisch", number: "Singular" },
@@ -77,7 +77,7 @@ describe("formatNounInflection", () => {
 	});
 
 	it("handles empty cells", () => {
-		const { formattedSection, cells } = formatNounInflection({ cells: [] });
+		const { formattedSection, cells } = formatInflection({ cells: [] });
 		expect(formattedSection).toBe("");
 		expect(cells).toHaveLength(0);
 	});

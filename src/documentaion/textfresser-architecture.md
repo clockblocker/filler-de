@@ -639,7 +639,7 @@ All LLM calls are fired in parallel via `Promise.allSettled` (none depend on eac
 | **Header** | No | — | `formatHeaderLine()` | `{emoji} [[lemma]], [{ipa}](youglish_url)` → `DictEntry.headerContent`. For nouns: `{emoji} {article} [[lemma]], [{ipa}](youglish_url)` where article derived from `lemmaResult.genus` via `articleFromGenus`. Built from LemmaResult fields (`emojiDescription`, `ipa`, `genus`). `emoji` derived from `emojiDescription[0]`. No LLM call. `emojiDescription` stored in `meta.emojiDescription` for Disambiguate lookups. |
 | **Morphem** | Yes | `Morphem` | `morphemeFormatterHelper.formatSection()` | `[[kohle]]\|[[kraft]]\|[[werk]]` → `EntrySection` |
 | **Relation** | Yes | `Relation` | `formatRelationSection()` | `= [[Synonym]], ⊃ [[Hypernym]]` → `EntrySection`. Raw output also stored for propagation. |
-| **Inflection** | Yes | `NounInflection` (nouns) or `Inflection` (other POS) | `formatNounInflection()` / `formatInflectionSection()` | `N: das [[Kohlekraftwerk]], die [[Kohlekraftwerke]]` → `EntrySection`. Nouns use structured cells (case×number with article+form); other POS use generic rows. Noun cells also feed `propagateInflections`. |
+| **Inflection** | Yes | `NounInflection` (nouns) or `Inflection` (other POS) | `formatInflection()` / `formatInflectionSection()` | `N: das [[Kohlekraftwerk]], die [[Kohlekraftwerke]]` → `EntrySection`. Nouns use structured cells (case×number with article+form); other POS use generic rows. Noun cells also feed `propagateInflections`. |
 | **Translation** | Yes | `WordTranslation` | — (string pass-through) | Translates the lemma word (using attestation context for disambiguation only) → `EntrySection`. V6: changed from `PromptKind.Translate` (which translated the full sentence) to `WordTranslation` (input: `{word, pos, context}`, output: concise 1-3 word translation). |
 | **Attestation** | No | — | — | `![[file#^blockId\|^]]` from `lemmaResult.attestation.source.ref` → `EntrySection` |
 | **Tags** | Yes | `Features` | — (compound tag string) | `#pos/feature1/feature2` → `EntrySection`. V12: non-inflectional grammatical features from `PromptKind.Features` (e.g., maskulin, transitiv/stark). Optional — entry still created if Features prompt fails. Only for Lexem POS. |
@@ -1128,10 +1128,10 @@ To add support for a new target language (e.g., Japanese):
 | `src/commanders/textfresser/common/target-path-resolver.ts` | Shared path resolution for propagation: two-source lookup (VAM → Librarian → computed sharded path), inflected→lemma healing, `buildPropagationActionPair` helper |
 | `src/commanders/textfresser/common/sharded-path.ts` | Sharded path computation for Worter entries; exports `SURFACE_KIND_PATH_INDEX` for healing checks |
 | `src/commanders/textfresser/commands/generate/steps/serialize-entry.ts` | Serialize ALL DictEntries to note body + apply noteKind metadata (single upsert) |
-| `src/commanders/textfresser/commands/generate/section-formatters/header-formatter.ts` | LemmaResult fields → header line. Derives emoji from `emojiDescription[0]`. V12: optional `article` param prepends der/die/das for nouns. |
-| `src/commanders/textfresser/commands/generate/section-formatters/relation-formatter.ts` | Relation LLM output → symbol notation |
-| `src/commanders/textfresser/commands/generate/section-formatters/inflection-formatter.ts` | Generic inflection LLM output → `{label}: {forms}` lines |
-| `src/commanders/textfresser/commands/generate/section-formatters/noun-inflection-formatter.ts` | Noun inflection: structured cells → `N: das [[Kraftwerk]], die [[Kraftwerke]]` + raw cells for propagation |
+| `src/commanders/textfresser/commands/generate/section-formatters/common/header-formatter.ts` | LemmaResult fields → header line. Derives emoji from `emojiDescription[0]`. V12: optional `article` param prepends der/die/das for nouns. |
+| `src/commanders/textfresser/commands/generate/section-formatters/common/relation-formatter.ts` | Relation LLM output → symbol notation |
+| `src/commanders/textfresser/commands/generate/section-formatters/common/inflection-formatter.ts` | Generic inflection LLM output → `{label}: {forms}` lines |
+| `src/commanders/textfresser/commands/generate/section-formatters/de/lexem/noun/inflection-formatter.ts` | Noun inflection: structured cells → `N: das [[Kraftwerk]], die [[Kraftwerke]]` + raw cells for propagation |
 | `src/commanders/textfresser/commands/translate/translate-command.ts` | Translate pipeline |
 | `src/commanders/textfresser/common/cleanup/cleanup-dict-note.ts` | V6: Dict note cleanup on file open — reorder entries (LM first, IN last), normalize attestation spacing |
 | **Attestation** | |
@@ -1180,7 +1180,7 @@ To add support for a new target language (e.g., Japanese):
 | `tests/unit/linguistics/german-linguistic-unit.test.ts` | V9: GermanLinguisticUnit DTO — Lexem+Noun, POS stubs, Phrasem, Morphem, rejection cases (21 tests) |
 | `tests/unit/textfresser/formatters/relation-formatter.test.ts` | Relation formatter: symbol notation, grouping, dedup |
 | `tests/unit/textfresser/formatters/inflection-formatter.test.ts` | Generic inflection formatter: label/forms rows |
-| `tests/unit/textfresser/formatters/noun-inflection-formatter.test.ts` | Noun inflection: case grouping, N/A/G/D order, cells pass-through |
+| `tests/unit/textfresser/formatters/de/lexem/noun/inflection-formatter.test.ts` | Noun inflection: case grouping, N/A/G/D order, cells pass-through |
 | `tests/unit/textfresser/steps/disambiguate-sense.test.ts` | Disambiguate: mock VAM + PromptRunner, bounds check, precomputed emojiDescription, V2 legacy |
 | `tests/unit/textfresser/steps/propagate-relations.test.ts` | Relation propagation: inverse kinds, self-ref skip, dedup, VaultAction shapes, healing when target in inflected/ |
 | `tests/unit/textfresser/steps/propagate-inflections.test.ts` | Inflection propagation: form grouping, same-note skip, per-cell headers, header dedup, VAM path reuse |

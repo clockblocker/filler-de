@@ -21,10 +21,10 @@ import { logger } from "../../../../../utils/logger";
 import type { LemmaResult } from "../../lemma/types";
 import type { CommandError } from "../../types";
 import { CommandErrorKind } from "../../types";
-import { formatHeaderLine } from "../section-formatters/header-formatter";
-import { formatInflectionSection } from "../section-formatters/inflection-formatter";
-import { formatNounInflection } from "../section-formatters/noun-inflection-formatter";
-import { formatRelationSection } from "../section-formatters/relation-formatter";
+import { formatHeaderLine } from "../section-formatters/common/header-formatter";
+import { formatInflectionSection } from "../section-formatters/common/inflection-formatter";
+import { formatRelationSection } from "../section-formatters/common/relation-formatter";
+import { formatInflection } from "../section-formatters/de/lexem/noun/inflection-formatter";
 import type { ResolvedEntryState } from "./resolve-existing-entry";
 
 export type ParsedRelation = {
@@ -323,7 +323,7 @@ export function generateSections(
 
 						if (pos === "Noun" && nounInflectionOutput) {
 							const result =
-								formatNounInflection(nounInflectionOutput);
+								formatInflection(nounInflectionOutput);
 							inflectionContent = result.formattedSection;
 							inflectionCells = result.cells;
 						} else if (pos !== "Noun" && otherInflectionOutput) {

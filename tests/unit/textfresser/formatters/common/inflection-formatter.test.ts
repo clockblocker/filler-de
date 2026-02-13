@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { formatInflectionSection } from "../../../../src/commanders/textfresser/commands/generate/section-formatters/inflection-formatter";
+import { formatInflectionSection } from "../../../../../src/commanders/textfresser/commands/generate/section-formatters/common/inflection-formatter";
 
 describe("formatInflectionSection", () => {
 	it("formats rows as label: forms lines", () => {

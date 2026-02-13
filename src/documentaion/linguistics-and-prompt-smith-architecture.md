@@ -824,7 +824,7 @@ For each applicable section, parallel PromptRunner.generate() calls:
     └─ WordTranslation: generate(WordTranslation, { context, word }) → string
     ↓
 Section formatters consume typed outputs + German display constants:
-    ├─ noun-inflection-formatter uses NounInflectionCell, CASE_ORDER, articleFromGenus
+    ├─ de/lexem/noun/inflection-formatter uses NounInflectionCell, CASE_ORDER, CASE_SHORT_LABEL
     ├─ inflection-formatter uses rows[].label + rows[].forms
     ├─ relation-formatter uses RelationSubKind → wikilinks
     └─ header-formatter uses emojiDescription, IPA from LemmaResult
