@@ -73,6 +73,10 @@ const link = wikilinkHelper.findByTarget(text, "MyNote");
 - `librarian-architrecture.md` - Main architecture doc
 - `librarian-pieces.md` - Refactoring details
 - `e2e-architecture.md` - E2E test architecture
+- `vam-architecture.md` - VAM dispatch, event pipeline, self-event tracking
+- `textfresser-architecture.md` - Textfresser commands, generate pipeline
+
+**Keep these docs up to date**: when changing behavior documented in `src/documentaion/`, update the relevant doc in the same PR.
 
 ## Non-Obvious Flows
 

@@ -379,7 +379,7 @@ SelfEventTracker.shouldIgnore(path)  ─── filtered ───→ drop
 
 Forwards individual `VaultEvent` objects to subscribers with no buffering or coalescing. Each Obsidian event that passes the self-event filter is immediately dispatched.
 
-**Rename handling**: evaluates `shouldIgnore()` for both `newPath` and `oldPath` into separate variables BEFORE the `if` check (matching the BulkEventEmmiter pattern). This prevents JS `||` short-circuit from skipping the `oldPath` pop when `newPath` matches. Event creation (`tryMakeVaultEventForFileRenamed`) runs only after both paths pass the filter.
+**Rename handling**: evaluates `shouldIgnore()` for both `newPath` and `oldPath` into separate variables BEFORE the `if` check. Both paths are always checked (popping any matches from the tracker). The event is only filtered when **both** paths match (`&&`), confirming a genuine self-event rename. If only one path matches (e.g., from a stale or coincidental entry), the event passes through — the idempotent tree acts as a safety net.
 
 ### 7.2 Bulk Event Emitter
 
@@ -511,7 +511,8 @@ As of the idempotent tree changes, `SelfEventTracker` is a **performance optimiz
 | Action Kind | Exact Paths Tracked | Prefix Tracked |
 |-------------|-------------------|----------------|
 | `CreateFolder` | Folder path + all parent folders (Obsidian auto-creates parents) | — |
-| `CreateFile`, `UpsertMdFile`, `ProcessMdFile` | File path only (NOT parents — parents handled by explicit CreateFolder) | — |
+| `CreateFile`, `UpsertMdFile` | File path only (NOT parents — parents handled by explicit CreateFolder) | — |
+| `ProcessMdFile` | **Not tracked** — triggers `modify` events which emitters don't listen for; stale entries caused user renames/deletes to be dropped | — |
 | `TrashFolder` | Folder path | Source folder path (catches child delete events) |
 | `TrashFile`, `TrashMdFile` | File path | — |
 | `RenameFolder` | Source + all source parents, destination folder | Source folder path (catches child rename events) |
@@ -787,9 +788,15 @@ The overflow path now:
 
 The `maxBatches` limit (default 10) is configurable via `ActionQueueOpts` for testing.
 
-### 14.5 SingleEventEmmiter: shouldIgnore Order for Renames — RESOLVED
+### 14.5 Rename Event Filtering: OR→AND and ProcessMdFile Stale Paths — RESOLVED
 
-Fixed to match the `BulkEventEmmiter` pattern: both `shouldIgnore(newPath)` and `shouldIgnore(oldPath)` are now evaluated into separate variables BEFORE the `if` check. This prevents JS `||` short-circuit from skipping the `oldPath` pop when `newPath` matches first. Event creation (`tryMakeVaultEventForFileRenamed`) now runs only after both paths pass the filter, avoiding wasted work.
+Two interacting bugs caused user renames/moves to be silently dropped:
+
+1. **Stale ProcessMdFile entries**: `ProcessMdFile` calls `vault.modify()` which triggers `modify` events, but emitters only listen for `create`/`rename`/`delete`. Tracked paths were never popped and lingered for the 5s TTL, causing subsequent user events on the same path to be incorrectly filtered. **Fix**: `ProcessMdFile` paths are no longer registered in `extractPaths()`.
+
+2. **OR logic in rename handlers**: `if (newPathIgnored || oldPathIgnored)` was too aggressive — a single stale path match would drop the entire rename event. A genuine self-event rename has BOTH paths registered. **Fix**: Changed to `&&` in both `BulkEventEmmiter` and `SingleEventEmmiter`. If only one path matches (stale/coincidental), the event passes through. The idempotent tree (`changed: false` for already-applied actions) acts as a safety net.
+
+Both `shouldIgnore()` calls are still evaluated into separate variables before the `if` check to ensure both paths are popped from the tracker regardless of the filter outcome.
 
 ### 14.6 Topological Sort Re-sorts Entire Queue on Each Addition
 
