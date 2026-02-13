@@ -723,9 +723,24 @@ Not all DictEntrySections participate in cross-reference propagation:
 
 ### 9.4 Implementation
 
-**Source**: `src/commanders/textfresser/commands/generate/steps/propagate-relations.ts`
+**Source**: `src/commanders/textfresser/commands/generate/steps/propagate-relations.ts`, `src/commanders/textfresser/common/target-path-resolver.ts`
 
 The `propagateRelations` step runs after `generateSections` in the Generate pipeline. It uses the raw `relations` output captured during section generation (not re-parsed from markdown).
+
+Both `propagateRelations` and `propagateInflections` use a **shared path resolver** (`resolveTargetPath`) that performs two-source lookup with healing:
+
+```
+resolveTargetPath(word, desiredSurfaceKind, vamLookup, librarianLookup):
+  1. vamLookup(word)         → if found, use existing path
+  2. librarianLookup(word)   → if found, use as-is (Library has own invariants)
+  3. computeShardedFolderParts(word) → fallback: compute new sharded path
+
+  Healing (Worter paths only):
+    If existing is in inflected/ but desired is lemma → RenameMdFile to lemma path
+    If existing is in lemma/ but desired is inflected → use as-is (lemma files can hold both)
+```
+
+The `librarianLookup` callback is wired in `main.ts` after Librarian init via `Textfresser.setLibrarianLookup()`, converting `LeafMatch[]` → `SplitPathToMdFile[]`. Before Librarian init, defaults to `() => []`.
 
 ```
 generateSections captures raw relation output (ParsedRelation[])
@@ -734,14 +749,15 @@ propagateRelations:
   For each relation { kind, words[] }:
     Compute inverseKind via INVERSE_KIND map
     For each target word (skip self-references):
-      1. Build target SplitPath via computeShardedFolderParts(word)
-      2. Create UpsertMdFile action (ensures target note exists)
-      3. Create ProcessMdFile with transform function that:
-         a. Finds existing relation section marker in target note
-         b. Appends inverse relation line (deduped)
-         c. Or creates new relation section if none exists
+      1. resolveTargetPath(word) → { splitPath, healingActions }
+      2. Emit healingActions (RenameMdFile if inflected→lemma healing needed)
+      3. buildPropagationActionPair(splitPath, transform) → [UpsertMdFile, ProcessMdFile]
+         transform function:
+           a. Finds existing relation section marker in target note
+           b. Appends inverse relation line (deduped)
+           c. Or creates new relation section if none exists
   ↓
-Propagation VaultActions added to ctx.actions
+Propagation VaultActions (including healing) added to ctx.actions
   ↓
 All dispatched in single vam.dispatch() alongside source note actions
 ```
@@ -751,6 +767,8 @@ All dispatched in single vam.dispatch() alongside source note actions
 - `UpsertMdFile` with `content: null` ensures target file exists before processing
 - Skips propagation for re-encounters (no new relations generated)
 - Deduplicates: won't add `= [[Schuck]]` if it already exists in the target's relation section
+- **Two-source lookup**: VAM → Librarian → computed path. Reuses existing file location instead of blindly computing sharded paths
+- **inflected→lemma healing**: If a target word is found in `inflected/` but needs a lemma entry (e.g., relation propagation), the file is renamed to the lemma path. The invariant: `inflected/` folders contain ONLY inflection entries
 
 ### 9.5 Inflection Propagation (Nouns)
 
@@ -767,10 +785,12 @@ propagateInflections:
     Build combined header: "#Nominativ/Akkusativ/Genitiv/Plural for: [[lemma]]"
     If form === lemma → append entry to ctx.allEntries (same note)
     If form !== lemma:
-      1. UpsertMdFile (ensure target note exists)
-      2. ProcessMdFile with transform: parse existing entries, dedup by header, append stub
+      1. resolveTargetPath(form, desiredSurfaceKind: Inflected) → { splitPath, healingActions }
+      2. Emit healingActions (if any)
+      3. buildPropagationActionPair(splitPath, transform) → [UpsertMdFile, ProcessMdFile]
+         transform: parse existing entries, dedup by header, append stub
   ↓
-Propagation VaultActions added to ctx.actions
+Propagation VaultActions (including healing) added to ctx.actions
 ```
 
 **Stub entry format**: Header-only DictEntry with no sections:
@@ -953,6 +973,7 @@ type TextfresserState = {
   targetBlockId?: string;                              // V5: entry ^blockId to scroll to after Generate
   inFlightGenerate: InFlightGenerate | null;           // background Generate in progress (set after Lemma)
   languages: LanguagesConfig;                          // { known, target }
+  lookupInLibrary: PathLookupFn;                       // Librarian corename index lookup (wired after init, default: () => [])
   promptRunner: PromptRunner;                          // LLM interface
   vam: VaultActionManager;                             // for scrollToTargetBlock()
 };
@@ -965,6 +986,8 @@ type TextfresserState = {
 `targetBlockId` (V5) is set by `generateSections` — to `matchedEntry.id` for re-encounters, or the newly created entry ID for new entries. Used by deferred scroll after background Generate finishes (see 11.2).
 
 `inFlightGenerate` tracks the background Generate launched after a successful Lemma. Guarded: only one in-flight Generate at a time. Cleared in `.finally()`. The wikilink click handler checks this field to trigger deferred scroll (see 11.3).
+
+`lookupInLibrary` is a `PathLookupFn` callback wired after Librarian init via `Textfresser.setLibrarianLookup()`. It wraps `Librarian.findMatchingLeavesByCoreName()` to convert `LeafMatch[]` → `SplitPathToMdFile[]`. Used by propagation steps (via `resolveTargetPath`) as a fallback when VAM lookup returns no results. Defaults to `() => []` before Librarian is initialized — safe because propagation only runs after both commanders are initialized.
 
 ### 11.2 Command Execution Flow
 
@@ -1079,7 +1102,7 @@ To add support for a new target language (e.g., Japanese):
 | File | Purpose |
 |------|---------|
 | **Textfresser Commander** | |
-| `src/commanders/textfresser/textfresser.ts` | Commander: state, command dispatch, wikilink handler, V5: scrollToTargetBlock(), background Generate (fireBackgroundGenerate/runBackgroundGenerate), deferred scroll (awaitGenerateAndScroll) |
+| `src/commanders/textfresser/textfresser.ts` | Commander: state, command dispatch, wikilink handler, V5: scrollToTargetBlock(), background Generate (fireBackgroundGenerate/runBackgroundGenerate), deferred scroll (awaitGenerateAndScroll), `setLibrarianLookup()` for propagation path resolution |
 | `src/commanders/textfresser/commands/types.ts` | CommandFn, CommandInput, TextfresserCommandKind |
 | `src/commanders/textfresser/prompt-runner.ts` | PromptRunner: LLM call wrapper |
 | `src/commanders/textfresser/errors.ts` | CommandError, AttestationParsingError |
@@ -1092,8 +1115,10 @@ To add support for a new target language (e.g., Japanese):
 | `src/commanders/textfresser/commands/generate/steps/check-lemma-result.ts` | Sync check: lemma result available |
 | `src/commanders/textfresser/commands/generate/steps/resolve-existing-entry.ts` | Parse existing entries, use Lemma's disambiguationResult for re-encounter detection |
 | `src/commanders/textfresser/commands/generate/steps/generate-sections.ts` | Async: LLM calls per section (or append attestation for re-encounters). V11: `buildLinguisticUnit()` removed, `meta.linguisticUnit` no longer populated. Stores `meta.emojiDescription` from precomputedEmojiDescription or lemmaResult.emojiDescription. Header built from LemmaResult fields. Sets targetBlockId |
-| `src/commanders/textfresser/commands/generate/steps/propagate-relations.ts` | Cross-ref: compute inverse relations, generate actions for target notes |
-| `src/commanders/textfresser/commands/generate/steps/propagate-inflections.ts` | Noun inflection propagation: create stub entries in inflected-form notes |
+| `src/commanders/textfresser/commands/generate/steps/propagate-relations.ts` | Cross-ref: compute inverse relations, resolve target paths via shared resolver, generate actions for target notes |
+| `src/commanders/textfresser/commands/generate/steps/propagate-inflections.ts` | Noun inflection propagation: resolve target paths via shared resolver, create stub entries in inflected-form notes |
+| `src/commanders/textfresser/common/target-path-resolver.ts` | Shared path resolution for propagation: two-source lookup (VAM → Librarian → computed sharded path), inflected→lemma healing, `buildPropagationActionPair` helper |
+| `src/commanders/textfresser/common/sharded-path.ts` | Sharded path computation for Worter entries; exports `SURFACE_KIND_PATH_INDEX` for healing checks |
 | `src/commanders/textfresser/commands/generate/steps/serialize-entry.ts` | Serialize ALL DictEntries to note body + apply noteKind metadata (single upsert) |
 | `src/commanders/textfresser/commands/generate/section-formatters/header-formatter.ts` | LemmaResult fields → header line. Derives emoji from `emojiDescription[0]`, no genus/article logic. |
 | `src/commanders/textfresser/commands/generate/section-formatters/relation-formatter.ts` | Relation LLM output → symbol notation |
@@ -1149,8 +1174,9 @@ To add support for a new target language (e.g., Japanese):
 | `tests/unit/textfresser/formatters/inflection-formatter.test.ts` | Generic inflection formatter: label/forms rows |
 | `tests/unit/textfresser/formatters/noun-inflection-formatter.test.ts` | Noun inflection: case grouping, N/A/G/D order, cells pass-through |
 | `tests/unit/textfresser/steps/disambiguate-sense.test.ts` | Disambiguate: mock VAM + PromptRunner, bounds check, precomputed emojiDescription, V2 legacy |
-| `tests/unit/textfresser/steps/propagate-relations.test.ts` | Relation propagation: inverse kinds, self-ref skip, dedup, VaultAction shapes |
-| `tests/unit/textfresser/steps/propagate-inflections.test.ts` | Inflection propagation: form grouping, same-note entries, combined headers |
+| `tests/unit/textfresser/steps/propagate-relations.test.ts` | Relation propagation: inverse kinds, self-ref skip, dedup, VaultAction shapes, healing when target in inflected/ |
+| `tests/unit/textfresser/steps/propagate-inflections.test.ts` | Inflection propagation: form grouping, same-note entries, combined headers, VAM path reuse |
+| `tests/unit/textfresser/common/target-path-resolver.test.ts` | Path resolver: VAM/librarian lookup, computed fallback, inflected→lemma healing, no-heal cases, `buildPropagationActionPair` |
 | `tests/unit/textfresser/steps/lemma-expansion.test.ts` | V8: `expandOffsetForFullSurface()` — expansion math, verification, fallback on mismatch |
 | **Types** | |
 | `src/types.ts` | LanguagesConfig, KnownLanguage, TargetLanguage |
