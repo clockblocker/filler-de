@@ -18,6 +18,8 @@ export const WikilinkPayloadSchemaPartial = z.object({
 	kind: z.literal(PayloadKind.WikilinkCompleted),
 	/** Raw content between [[ and ]] */
 	linkContent: z.string(),
+	/** Resolved wikilink target basename (set by behaviors for corename resolution) */
+	resolvedTarget: z.string().optional(),
 });
 
 export type WikilinkPayload = z.infer<typeof WikilinkPayloadSchemaPartial> & {

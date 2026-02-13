@@ -55,6 +55,7 @@
 		"fix": "bun x biome check --write --unsafe . 2>/dev/null || true",
 		"knip": "knip",
 		"lint": "bun x biome check .",
+		"prompt:test": "bun tests/prompt-test/runner.ts",
 		"splitter:run": "bun tests/splitter-runner.ts",
 		"test": "bun run test:unit && bun run test:e2e",
 		"test:e2e": "./scripts/run-e2e.sh",

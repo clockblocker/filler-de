@@ -49,6 +49,7 @@ import {
 	isCodexInsideLibrary as isCodexInsideLibraryHelper,
 	isCodexSplitPath,
 } from "./healer/library-tree/codex/helpers";
+import type { LeafMatch } from "./healer/library-tree/tree";
 import { Tree } from "./healer/library-tree/tree";
 import { buildTreeActions } from "./healer/library-tree/tree-action/bulk-vault-action-adapter";
 import type {
@@ -480,6 +481,15 @@ export class Librarian {
 			(name) => name.startsWith(PREFIX_OF_CODEX),
 		);
 		return result?.alias ?? null;
+	}
+
+	/**
+	 * Find all leaves in the library tree matching a corename.
+	 * Returns empty array if healer not initialized or no matches.
+	 */
+	findMatchingLeavesByCoreName(coreName: string): LeafMatch[] {
+		if (!this.healer) return [];
+		return this.healer.getLeavesByCoreName(coreName);
 	}
 
 	/**

@@ -99,8 +99,13 @@ export class WikilinkDetector {
 		// Invoke handler and apply result
 		void invoke().then((result) => {
 			if (result.outcome === HandlerOutcome.Modified && result.data) {
-				// Insert alias if set by handler
-				WikilinkCodec.insertAlias(result.data);
+				if (result.data.resolvedTarget) {
+					// Replace link content with resolved target + alias
+					WikilinkCodec.replaceTarget(result.data);
+				} else {
+					// Insert alias if set by handler
+					WikilinkCodec.insertAlias(result.data);
+				}
 			}
 		});
 	}

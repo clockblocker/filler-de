@@ -31,6 +31,8 @@ prompt.ts
 .obsidian-cache
 .env
 
+/tests/prompt-test/logs
+
 
 # Bun
 bun.lockb

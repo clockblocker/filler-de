@@ -37,4 +37,23 @@ export const WikilinkCodec = {
 			});
 		}
 	},
+
+	/**
+	 * Replace link content with resolved target + alias.
+	 * Replaces the text between [[ and ]] with "resolvedTarget|aliasToInsert".
+	 */
+	replaceTarget(payload: WikilinkPayload): void {
+		if (!payload.resolvedTarget) return;
+
+		const from = payload.closePos - payload.linkContent.length;
+		const to = payload.closePos;
+		const alias = payload.aliasToInsert;
+		const insert = alias
+			? `${payload.resolvedTarget}|${alias}`
+			: payload.resolvedTarget;
+
+		payload.view.dispatch({
+			changes: { from, insert, to },
+		});
+	},
 };

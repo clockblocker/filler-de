@@ -5,6 +5,7 @@ import type {
 	SectionNodeSegmentId,
 	TreeNodeSegmentId,
 } from "../../codecs/segment-id/types/segment-id";
+import { PREFIX_OF_CODEX } from "../../types/consts/literals";
 import type { NodeName } from "../../types/schemas/node-name";
 import type {
 	ChangeNodeStatusAction,
@@ -24,6 +25,9 @@ import type {
 	SectionNode,
 	TreeNode,
 } from "./tree-node/types/tree-node";
+import type { LeafMatch } from "./types/leaf-match";
+
+export type { LeafMatch } from "./types/leaf-match";
 
 // ─── Helpers ───
 
@@ -63,6 +67,7 @@ export type ApplyResult = {
 export class Tree implements TreeFacade {
 	private root: SectionNode;
 	private codecs: Codecs;
+	private coreNameIndex: Map<string, LeafMatch[]> | null = null;
 
 	constructor(libraryRootName: NodeName, codecs: Codecs) {
 		this.codecs = codecs;
@@ -80,6 +85,7 @@ export class Tree implements TreeFacade {
 	 * - node: the affected node (or null for delete)
 	 */
 	apply(action: TreeAction): ApplyResult {
+		this.coreNameIndex = null;
 		const actionType = action.actionType;
 
 		if (actionType === "Create") {
@@ -376,6 +382,56 @@ export class Tree implements TreeFacade {
 			);
 		}
 		return parseResult.value.coreName;
+	}
+
+	// ─── Corename Index ───
+
+	/** Look up leaves by corename. Lazily builds index on first call after mutation. */
+	getLeavesByCoreName(coreName: string): LeafMatch[] {
+		if (!this.coreNameIndex) {
+			this.coreNameIndex = this.buildCoreNameIndex();
+		}
+		return this.coreNameIndex.get(coreName) ?? [];
+	}
+
+	private buildCoreNameIndex(): Map<string, LeafMatch[]> {
+		const index = new Map<string, LeafMatch[]>();
+		this.collectLeaves(this.root, [this.root.nodeName], index);
+		return index;
+	}
+
+	private collectLeaves(
+		section: SectionNode,
+		pathParts: string[],
+		index: Map<string, LeafMatch[]>,
+	): void {
+		for (const child of Object.values(section.children)) {
+			if (child.kind === TreeNodeKind.Section) {
+				this.collectLeaves(
+					child,
+					[...pathParts, child.nodeName],
+					index,
+				);
+				continue;
+			}
+			// Leaf node (Scroll or File) — skip codex nodes
+			if (child.nodeName.startsWith(PREFIX_OF_CODEX)) continue;
+
+			const suffixParts =
+				this.codecs.suffix.pathPartsWithRootToSuffixParts(pathParts);
+			const basename = this.codecs.suffix.serializeSeparatedSuffix({
+				coreName: child.nodeName,
+				suffixParts,
+			});
+
+			const match: LeafMatch = { basename, pathParts: [...pathParts] };
+			const existing = index.get(child.nodeName);
+			if (existing) {
+				existing.push(match);
+			} else {
+				index.set(child.nodeName, [match]);
+			}
+		}
 	}
 
 	// ─── Test Helpers ───

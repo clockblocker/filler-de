@@ -21,7 +21,7 @@ import {
 	type CodexImpact,
 	computeCodexImpact,
 } from "./library-tree/codex/compute-codex-impact";
-import type { Tree } from "./library-tree/tree";
+import type { LeafMatch, Tree } from "./library-tree/tree";
 import type {
 	ChangeNodeStatusAction,
 	CreateTreeLeafAction,
@@ -231,6 +231,10 @@ export class Healer implements TreeReader {
 
 	getRoot(): SectionNode {
 		return this.tree.getRoot();
+	}
+
+	getLeavesByCoreName(coreName: string): LeafMatch[] {
+		return this.tree.getLeavesByCoreName(coreName);
 	}
 
 	/**

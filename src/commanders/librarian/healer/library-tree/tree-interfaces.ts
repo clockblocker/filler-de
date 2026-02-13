@@ -10,6 +10,7 @@
 import type { SectionNodeSegmentId } from "../../codecs/segment-id/types/segment-id";
 import type { TreeAction } from "./tree-action/types/tree-action";
 import type { SectionNode, TreeNode } from "./tree-node/types/tree-node";
+import type { LeafMatch } from "./types/leaf-match";
 
 // ─── Read Interface ───
 
@@ -23,6 +24,9 @@ export type TreeReader = {
 
 	/** Get the root section node. */
 	getRoot(): SectionNode;
+
+	/** Find all leaves matching a corename. */
+	getLeavesByCoreName(coreName: string): LeafMatch[];
 };
 
 // ─── Write Interface ───

@@ -79,6 +79,9 @@ function makeTreeAccessor(root: SectionNode): TreeReader {
 			}
 			return current;
 		},
+		getLeavesByCoreName() {
+			return [];
+		},
 		getRoot() {
 			return root;
 		},
