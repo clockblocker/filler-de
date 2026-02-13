@@ -17,7 +17,7 @@ const NUMERIC_BLOCK_ID_PATTERN = /\s?\^(\d+)\s*$/;
  */
 function extractFromLine(line: string): string | null {
 	const match = line.match(BLOCK_ID_PATTERN);
-	return match ? match[1]! : null;
+	return match?.[1] ?? null;
 }
 
 /**
@@ -28,7 +28,7 @@ function extractFromLine(line: string): string | null {
  */
 function extractNumeric(line: string): string | null {
 	const match = line.match(NUMERIC_BLOCK_ID_PATTERN);
-	return match ? match[1]! : null;
+	return match?.[1] ?? null;
 }
 
 /**
@@ -42,7 +42,7 @@ function findHighestNumber(content: string): number {
 
 	const numbers = matches.map((match) => {
 		const numMatch = match.match(/\^(\d+)/);
-		return numMatch ? Number.parseInt(numMatch[1]!, 10) : 0;
+		return numMatch?.[1] ? Number.parseInt(numMatch[1], 10) : 0;
 	});
 
 	return Math.max(-1, ...numbers);
@@ -65,8 +65,9 @@ function formatEmbed(basename: string, id: string): string {
  */
 function matchesPattern(text: string): { id: string; index: number } | null {
 	const match = text.match(BLOCK_ID_PATTERN);
-	if (!match || match.index === undefined) return null;
-	return { id: match[1]!, index: match.index };
+	const id = match?.[1];
+	if (!id || match.index === undefined) return null;
+	return { id, index: match.index };
 }
 
 /**

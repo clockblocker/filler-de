@@ -185,6 +185,13 @@ if (result.isErr()) {
 - Use Zod for runtime validation
 - Trust switch narrowing - no redundant casts
 
+### Avoiding Non-Null Assertions (`!`)
+Never use `!` — the linter bans `noNonNullAssertion`. Patterns to use instead:
+- **Array after length check**: accept `NonEmptyArray<T>` (from `types/helpers`) so `arr[0]` is `T` not `T | undefined`. Callers use `nonEmptyArrayResult()` (from `types/utils`) to narrow.
+- **Array index in loop**: `const x = arr[i]; if (!x) continue;` — truthiness guard.
+- **Regex capture groups**: `match?.[1] ?? null` instead of `match[1]!`.
+- **Pipeline-guaranteed state**: narrow the type at the validation step's return type (e.g. `checkLemmaResult` returns `CommandStateWithLemma` where `latestLemmaResult: LemmaResult` is non-optional). Downstream steps accept the narrowed type — no `!` needed.
+
 ### Zod: Use v3 Import
 The project uses Zod v4, but all application code imports **v3** compat:
 ```typescript

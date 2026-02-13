@@ -147,7 +147,8 @@ function createReplacementMap(
 	return (protectedOffset: number) => {
 		// Walk through replacements to find the right adjustment
 		for (let i = replacements.length - 1; i >= 0; i--) {
-			const r = replacements[i]!;
+			const r = replacements[i];
+			if (!r) continue;
 
 			if (protectedOffset >= r.protectedEnd) {
 				// Position is after this replacement - apply cumulative adjustment

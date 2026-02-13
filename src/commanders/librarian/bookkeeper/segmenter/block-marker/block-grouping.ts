@@ -59,8 +59,8 @@ export function mergeOrphanedMarkers(
 	const result: AnnotatedSentence[] = [];
 	for (const sentence of sentences) {
 		if (isOrphanedMarker(sentence.text.trim())) {
-			if (result.length > 0) {
-				const prev = result[result.length - 1]!;
+			const prev = result[result.length - 1];
+			if (prev) {
 				result[result.length - 1] = {
 					...prev,
 					charCount: prev.charCount + sentence.charCount,

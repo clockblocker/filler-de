@@ -3,17 +3,18 @@ import {
 	type CommandError,
 	CommandErrorKind,
 	type CommandState,
+	type CommandStateWithLemma,
 } from "../../types";
 
 /** Check that lemma result is available (Lemma command must run first). */
 export function checkLemmaResult(
 	ctx: CommandState,
-): Result<CommandState, CommandError> {
+): Result<CommandStateWithLemma, CommandError> {
 	if (!ctx.textfresserState.latestLemmaResult) {
 		return err({
 			kind: CommandErrorKind.NotEligible,
 			reason: "No lemma result available — run Lemma command first",
 		});
 	}
-	return ok(ctx);
+	return ok(ctx as CommandStateWithLemma);
 }

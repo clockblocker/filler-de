@@ -9,6 +9,7 @@
  */
 
 import type { Librarian } from "../../../commanders/librarian/librarian";
+import { nonEmptyArrayResult } from "../../../types/utils";
 import {
 	type EventHandler,
 	type HandlerContext,
@@ -54,7 +55,8 @@ export function createWikilinkCompletionHandler(
 			const matches = librarian.findMatchingLeavesByCoreName(
 				payload.linkContent,
 			);
-			if (matches.length === 0) {
+			const nonEmpty = nonEmptyArrayResult(matches);
+			if (nonEmpty.isErr()) {
 				return { outcome: HandlerOutcome.Passthrough };
 			}
 
@@ -62,10 +64,7 @@ export function createWikilinkCompletionHandler(
 			// Drop filename to get folder path parts
 			currentPathParts.pop();
 
-			const best =
-				matches.length === 1
-					? matches[0]!
-					: pickClosestLeaf(matches, currentPathParts);
+			const best = pickClosestLeaf(nonEmpty.value, currentPathParts);
 
 			return {
 				data: {

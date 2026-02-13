@@ -14,7 +14,11 @@ function parseSections(text: string): EntrySection[] {
 	const markers: { index: number; kind: string; title: string }[] = [];
 	const re = new RegExp(ENTRY_SECTION_MARKER_RE.source, "g");
 	for (let m = re.exec(text); m !== null; m = re.exec(text)) {
-		markers.push({ index: m.index, kind: m[1]!, title: m[2]! });
+		const kind = m[1];
+		const title = m[2];
+		if (kind && title) {
+			markers.push({ index: m.index, kind, title });
+		}
 	}
 
 	return markers.map((marker, i) => {
@@ -45,7 +49,8 @@ function parseEntryChunk(
 	}
 	if (!headerLine) return null;
 
-	const id = blockIdHelper.extractFromLine(headerLine)!;
+	const id = blockIdHelper.extractFromLine(headerLine);
+	if (!id) return null;
 	const headerContent = blockIdHelper.stripFromEnd(headerLine).trim();
 
 	// Everything after the header line is section territory

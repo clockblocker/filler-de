@@ -7,6 +7,7 @@ import { z } from "zod";
 import type { CommandContext } from "../../../managers/obsidian/command-executor";
 import type { VaultAction } from "../../../managers/obsidian/vault-action-manager";
 import type { CommandError } from "../errors";
+import type { LemmaResult } from "./lemma/types";
 import type { TextfresserState } from "../textfresser";
 
 // Re-export for convenience
@@ -43,6 +44,16 @@ export type CommandInput = {
 
 /** Accumulating state that flows through a Textfresser command pipeline. */
 export type CommandState = CommandInput & { actions: VaultAction[] };
+
+/** CommandState after checkLemmaResult — latestLemmaResult guaranteed non-null. */
+export type CommandStateWithLemma = Omit<CommandState, "textfresserState"> & {
+	textfresserState: Omit<
+		CommandState["textfresserState"],
+		"latestLemmaResult"
+	> & {
+		latestLemmaResult: LemmaResult;
+	};
+};
 
 /** Function signature for Textfresser commands */
 export type CommandFn = (

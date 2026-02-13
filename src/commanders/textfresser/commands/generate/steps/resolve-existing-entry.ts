@@ -5,9 +5,9 @@ import {
 	dictNoteHelper,
 } from "../../../../../stateless-helpers/dict-note";
 import { logger } from "../../../../../utils/logger";
-import type { CommandError, CommandState } from "../../types";
+import type { CommandError, CommandStateWithLemma } from "../../types";
 
-export type ResolvedEntryState = CommandState & {
+export type ResolvedEntryState = CommandStateWithLemma & {
 	existingEntries: DictEntry[];
 	matchedEntry: DictEntry | null;
 	nextIndex: number;
@@ -22,9 +22,9 @@ export type ResolvedEntryState = CommandState & {
  * B) matchedEntry == null → new entry, Generate should run full LLM pipeline
  */
 export function resolveExistingEntry(
-	ctx: CommandState,
+	ctx: CommandStateWithLemma,
 ): Result<ResolvedEntryState, CommandError> {
-	const lemmaResult = ctx.textfresserState.latestLemmaResult!;
+	const lemmaResult = ctx.textfresserState.latestLemmaResult;
 	const content = ctx.commandContext.activeFile.content;
 
 	const existingEntries = dictNoteHelper.parse(content);

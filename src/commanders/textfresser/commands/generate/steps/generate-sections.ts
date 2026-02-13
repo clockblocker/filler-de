@@ -110,7 +110,7 @@ function unwrapOptional<T>(
 export function generateSections(
 	ctx: ResolvedEntryState,
 ): ResultAsync<GenerateSectionsResult, CommandError> {
-	const lemmaResult = ctx.textfresserState.latestLemmaResult!;
+	const lemmaResult = ctx.textfresserState.latestLemmaResult;
 	const { matchedEntry, existingEntries, nextIndex } = ctx;
 
 	// Path A: re-encounter — just append attestation ref to existing entry

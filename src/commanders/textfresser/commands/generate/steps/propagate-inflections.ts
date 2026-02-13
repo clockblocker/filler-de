@@ -81,7 +81,7 @@ export function propagateInflections(
 		return ok(ctx);
 	}
 
-	const lemmaResult = ctx.textfresserState.latestLemmaResult!;
+	const lemmaResult = ctx.textfresserState.latestLemmaResult;
 	const lemma = lemmaResult.lemma;
 
 	const byForm = groupByForm(inflectionCells);

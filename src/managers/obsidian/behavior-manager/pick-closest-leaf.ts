@@ -4,6 +4,7 @@
  */
 
 import type { LeafMatch } from "../../../commanders/librarian/healer/library-tree/tree";
+import type { NonEmptyArray } from "../../../types/helpers";
 
 /**
  * Pick the leaf whose pathParts share the longest common prefix with currentPathParts.
@@ -13,16 +14,17 @@ import type { LeafMatch } from "../../../commanders/librarian/healer/library-tre
  * @param currentPathParts - Path parts of the active file (e.g. ["Library", "word", "german"])
  */
 export function pickClosestLeaf(
-	matches: LeafMatch[],
+	matches: NonEmptyArray<LeafMatch>,
 	currentPathParts: string[],
 ): LeafMatch {
-	if (matches.length === 1) return matches[0]!;
+	if (matches.length === 1) return matches[0];
 
-	let best = matches[0]!;
+	let best = matches[0];
 	let bestPrefix = commonPrefixLength(best.pathParts, currentPathParts);
 
 	for (let i = 1; i < matches.length; i++) {
-		const m = matches[i]!;
+		const m = matches[i];
+		if (!m) continue;
 		const prefix = commonPrefixLength(m.pathParts, currentPathParts);
 
 		if (

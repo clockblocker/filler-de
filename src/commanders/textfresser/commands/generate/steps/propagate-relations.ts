@@ -88,7 +88,7 @@ export function propagateRelations(
 		return ok(ctx);
 	}
 
-	const lemmaResult = ctx.textfresserState.latestLemmaResult!;
+	const lemmaResult = ctx.textfresserState.latestLemmaResult;
 	const sourceWord = lemmaResult.lemma;
 	const targetLang = ctx.textfresserState.languages.target;
 	const pairs = collectInversePairs(relations);

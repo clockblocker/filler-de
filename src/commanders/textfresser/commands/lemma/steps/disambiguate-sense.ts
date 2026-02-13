@@ -38,12 +38,12 @@ export function disambiguateSense(
 	logger.info(
 		`[disambiguate] Found ${files.length} files for "${apiResult.lemma}"`,
 	);
-	if (files.length === 0) {
+
+	const filePath = files[0];
+	if (!filePath) {
 		logger.info("[disambiguate] First encounter — no existing note");
 		return ResultAsync.fromSafePromise(Promise.resolve(null));
 	}
-
-	const filePath = files[0]!;
 
 	return ResultAsync.fromPromise(
 		vam.readContent(filePath).then((r) => {
