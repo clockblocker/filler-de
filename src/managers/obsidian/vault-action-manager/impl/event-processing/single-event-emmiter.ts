@@ -53,14 +53,14 @@ export class SingleEventEmmiter {
 		oldPath: string,
 		handler: VaultEventHandler,
 	): void {
-		// Evaluate both BEFORE the if — JS || short-circuits, so if
-		// shouldIgnore(newPath) returns true, shouldIgnore(oldPath)
-		// would never run, leaving oldPath stale in the tracker.
+		// Evaluate both BEFORE the if — both paths must be checked to
+		// pop them from the tracker (pop-on-match). Only ignore when
+		// BOTH match, confirming this is a genuine self-event rename.
 		const newPathIgnored = this.selfEventTracker.shouldIgnore(
 			tAbstractFile.path,
 		);
 		const oldPathIgnored = this.selfEventTracker.shouldIgnore(oldPath);
-		if (newPathIgnored || oldPathIgnored) {
+		if (newPathIgnored && oldPathIgnored) {
 			return;
 		}
 

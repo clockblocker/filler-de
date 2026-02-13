@@ -132,7 +132,7 @@ export class BulkEventEmmiter {
 		);
 		const oldPathIgnored = this.selfEventTracker.shouldIgnore(oldPath);
 
-		if (newPathIgnored || oldPathIgnored) {
+		if (newPathIgnored && oldPathIgnored) {
 			this._debugAllRawEvents.push({
 				event: `onRename: ${oldPath} → ${tAbstractFile.path}`,
 				ignored: true,

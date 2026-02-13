@@ -151,7 +151,6 @@ export class SelfEventTracker {
 
 			case VaultActionKind.CreateFile:
 			case VaultActionKind.UpsertMdFile:
-			case VaultActionKind.ProcessMdFile:
 				// For file creation, only track the file itself, NOT parent folders.
 				// Parent folders either already exist or are explicitly created via CreateFolder.
 				// Tracking parent folders caused user folder operations to be incorrectly filtered.
@@ -160,6 +159,13 @@ export class SelfEventTracker {
 						action.payload.splitPath,
 					),
 				];
+
+			// ProcessMdFile: intentionally NOT tracked.
+			// It calls vault.modify() which triggers "modify" events, not create/rename/delete.
+			// Since emitters don't listen for "modify", these paths are never popped
+			// and linger as stale entries that incorrectly filter user events.
+			case VaultActionKind.ProcessMdFile:
+				return [];
 
 			case VaultActionKind.TrashFolder:
 			case VaultActionKind.TrashFile:
@@ -240,9 +246,12 @@ export class SelfEventTracker {
 		switch (action.kind) {
 			case VaultActionKind.CreateFile:
 			case VaultActionKind.UpsertMdFile:
-			case VaultActionKind.ProcessMdFile:
 				// Target file path is the last one (after parent folders)
 				return paths[paths.length - 1];
+
+			// ProcessMdFile returns [] from extractPaths, nothing to verify
+			case VaultActionKind.ProcessMdFile:
+				return undefined;
 
 			case VaultActionKind.RenameFile:
 			case VaultActionKind.RenameMdFile: {

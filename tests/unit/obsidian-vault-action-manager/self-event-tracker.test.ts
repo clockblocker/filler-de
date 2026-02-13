@@ -137,4 +137,39 @@ describe("SelfEventTracker", () => {
 		// After exact pop, prefix still works for descendants
 		expect(tracker.shouldIgnore("Library/target/yet-another.md")).toBe(true);
 	});
+
+	it("ProcessMdFile paths are NOT registered", () => {
+		const tracker = new SelfEventTracker();
+		const actions: VaultAction[] = [
+			{
+				kind: VaultActionKind.ProcessMdFile,
+				payload: {
+					splitPath: mdFile("note", ["Library"]),
+					transform: (content: string) => content,
+				},
+			},
+		];
+
+		tracker.register(actions);
+
+		// ProcessMdFile should NOT cause the path to be tracked
+		expect(tracker.shouldIgnore("Library/note.md")).toBe(false);
+	});
+
+	it("ProcessMdFile does not appear in registered file paths", () => {
+		const tracker = new SelfEventTracker();
+		const actions: VaultAction[] = [
+			{
+				kind: VaultActionKind.ProcessMdFile,
+				payload: {
+					splitPath: mdFile("note", ["Library"]),
+					transform: (content: string) => content,
+				},
+			},
+		];
+
+		tracker.register(actions);
+
+		expect(tracker.getRegisteredFilePaths()).toEqual([]);
+	});
 });
