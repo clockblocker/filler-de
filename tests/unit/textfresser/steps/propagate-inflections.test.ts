@@ -75,7 +75,7 @@ describe("propagateInflections", () => {
 		expect(actions[1]!.kind).toBe(VaultActionKind.ProcessMdFile);
 	});
 
-	it("appends same-note entry when form equals lemma", () => {
+	it("skips cells when form equals lemma (no actions, allEntries unchanged)", () => {
 		const cells: NounInflectionCell[] = [
 			{ article: "das", case: "Nominative", form: "Kraftwerk", number: "Singular" },
 			{ article: "das", case: "Accusative", form: "Kraftwerk", number: "Singular" },
@@ -84,21 +84,11 @@ describe("propagateInflections", () => {
 		const result = propagateInflections(ctx);
 		expect(result.isOk()).toBe(true);
 
-		// No new VaultActions (same-note entries don't need separate file operations)
 		expect(result._unsafeUnwrap().actions).toHaveLength(0);
-
-		// But allEntries should have a new entry appended
-		const entries = result._unsafeUnwrap().allEntries;
-		expect(entries.length).toBeGreaterThan(1);
-
-		// The appended entry header should combine cases
-		const stubEntry = entries[entries.length - 1]!;
-		expect(stubEntry.headerContent).toContain("Nominativ");
-		expect(stubEntry.headerContent).toContain("Akkusativ");
-		expect(stubEntry.headerContent).toContain("[[Kraftwerk]]");
+		expect(result._unsafeUnwrap().allEntries).toEqual(ctx.allEntries);
 	});
 
-	it("groups multiple cells by form word", () => {
+	it("groups multiple cells by form word and produces per-cell entries", () => {
 		const cells: NounInflectionCell[] = [
 			{ article: "die", case: "Nominative", form: "Kraftwerke", number: "Plural" },
 			{ article: "die", case: "Accusative", form: "Kraftwerke", number: "Plural" },
@@ -112,6 +102,18 @@ describe("propagateInflections", () => {
 		// 2 distinct forms: "Kraftwerke" and "Kraftwerken" → 2 × (Upsert + Process) = 4 actions
 		const actions = result._unsafeUnwrap().actions;
 		expect(actions).toHaveLength(4);
+
+		// Verify "Kraftwerke" transform produces 3 separate entries (Nom, Akk, Gen)
+		const processKraftwerke = actions.find(
+			(a) => a.kind === VaultActionKind.ProcessMdFile
+				&& (a.payload as { splitPath: { basename: string } }).splitPath.basename === "Kraftwerke",
+		);
+		expect(processKraftwerke).toBeDefined();
+		const transformKraftwerke = (processKraftwerke!.payload as { transform: (c: string) => string }).transform;
+		const outputKraftwerke = transformKraftwerke("");
+		expect(outputKraftwerke).toContain("#Nominativ/Plural for: [[Kraftwerk]]");
+		expect(outputKraftwerke).toContain("#Akkusativ/Plural for: [[Kraftwerk]]");
+		expect(outputKraftwerke).toContain("#Genitiv/Plural for: [[Kraftwerk]]");
 	});
 
 	it("uses existing path from VAM when file already exists", () => {
@@ -140,7 +142,7 @@ describe("propagateInflections", () => {
 		expect(upsertPayload.splitPath).toBe(existingPath);
 	});
 
-	it("builds combined header with case/number tags in correct order", () => {
+	it("builds per-cell headers (one per case/number combo, not combined)", () => {
 		const cells: NounInflectionCell[] = [
 			{ article: "den", case: "Dative", form: "Kraftwerken", number: "Plural" },
 			{ article: "der", case: "Genitive", form: "Kraftwerken", number: "Plural" },
@@ -155,7 +157,31 @@ describe("propagateInflections", () => {
 		const transform = (processAction.payload as { transform: (c: string) => string }).transform;
 
 		const output = transform("");
-		// Cases should be in N/A/G/D order → Genitiv before Dativ
-		expect(output).toContain("#Genitiv/Dativ/Plural for: [[Kraftwerk]]");
+		// Each cell gets its own header
+		expect(output).toContain("#Dativ/Plural for: [[Kraftwerk]]");
+		expect(output).toContain("#Genitiv/Plural for: [[Kraftwerk]]");
+		// No combined header
+		expect(output).not.toContain("#Genitiv/Dativ/Plural");
+	});
+
+	it("deduplicates identical cell headers", () => {
+		const cells: NounInflectionCell[] = [
+			{ article: "die", case: "Nominative", form: "Kraftwerke", number: "Plural" },
+			{ article: "die", case: "Nominative", form: "Kraftwerke", number: "Plural" },
+		];
+		const ctx = makeCtx(cells);
+		const result = propagateInflections(ctx);
+		expect(result.isOk()).toBe(true);
+
+		const actions = result._unsafeUnwrap().actions;
+		const processAction = actions.find(
+			(a) => a.kind === VaultActionKind.ProcessMdFile,
+		)!;
+		const transform = (processAction.payload as { transform: (c: string) => string }).transform;
+
+		const output = transform("");
+		// Should only appear once despite two identical cells
+		const matches = output.match(/#Nominativ\/Plural for: \[\[Kraftwerk\]\]/g);
+		expect(matches).toHaveLength(1);
 	});
 });

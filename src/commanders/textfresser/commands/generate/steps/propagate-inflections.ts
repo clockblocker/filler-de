@@ -1,10 +1,8 @@
 import { ok, type Result } from "neverthrow";
 import { dictEntryIdHelper } from "../../../../../linguistics/common/dict-entry-id/dict-entry-id";
 import { SurfaceKind } from "../../../../../linguistics/common/enums/core";
-import type { CaseValue } from "../../../../../linguistics/common/enums/inflection/feature-values";
 import type { NounInflectionCell } from "../../../../../linguistics/german/inflection/noun";
 import {
-	CASE_ORDER,
 	GERMAN_CASE_TAG,
 	GERMAN_NUMBER_TAG,
 } from "../../../../../linguistics/german/inflection/noun";
@@ -19,28 +17,11 @@ import {
 import type { CommandError } from "../../types";
 import type { GenerateSectionsResult } from "./generate-sections";
 
-/**
- * Build a combined header for all inflection cells sharing the same form.
- * Collects unique case tags (in CASE_ORDER) and number tags, then formats:
- *   `#Nominativ #Akkusativ #Genitiv #Plural for: [[lemma]]`
- */
-function buildCombinedHeader(
-	cells: NounInflectionCell[],
-	lemma: string,
-): string {
-	const caseSet = new Set<CaseValue>(cells.map((c) => c.case));
-	const caseParts = CASE_ORDER.filter((c) => caseSet.has(c)).map(
-		(c) => GERMAN_CASE_TAG[c],
-	);
-
-	const numberParts: string[] = [];
-	if (cells.some((c) => c.number === "Singular"))
-		numberParts.push(GERMAN_NUMBER_TAG.Singular);
-	if (cells.some((c) => c.number === "Plural"))
-		numberParts.push(GERMAN_NUMBER_TAG.Plural);
-
-	const tag = [...caseParts, ...numberParts].join("/");
-	return `#${tag} for: [[${lemma}]]`;
+/** Build a per-cell header: `#Nominativ/Singular for: [[lemma]]` */
+function buildCellHeader(cell: NounInflectionCell, lemma: string): string {
+	const caseTag = GERMAN_CASE_TAG[cell.case];
+	const numberTag = GERMAN_NUMBER_TAG[cell.number];
+	return `#${caseTag}/${numberTag} for: [[${lemma}]]`;
 }
 
 /** Group cells by form word. */
@@ -59,9 +40,9 @@ function groupByForm(
 /**
  * Propagate noun inflection cells to target notes.
  *
- * For each inflected form, creates a single stub entry with combined case/number tags.
+ * For each inflected form, creates one stub entry per cell (case/number combo).
  * Forms that differ from the lemma → UpsertMdFile + ProcessMdFile actions.
- * Forms equal to the lemma → appended directly to ctx.allEntries (same note).
+ * Forms equal to the lemma → skipped (the main entry already lives on that note).
  */
 export function propagateInflections(
 	ctx: GenerateSectionsResult,
@@ -76,42 +57,11 @@ export function propagateInflections(
 
 	const byForm = groupByForm(inflectionCells);
 	const propagationActions: VaultAction[] = [];
-	const sameNoteEntries: DictEntry[] = [];
 
 	for (const [form, cells] of byForm) {
-		const headerContent = buildCombinedHeader(cells, lemma);
+		if (form === lemma) continue;
 
-		if (form === lemma) {
-			// Same note — check dedup, then append one combined entry
-			const alreadyExists = ctx.allEntries.some(
-				(e) => e.headerContent === headerContent,
-			);
-			if (alreadyExists) continue;
-
-			const existingIds = [
-				...ctx.allEntries.map((e) => e.id),
-				...sameNoteEntries.map((e) => e.id),
-			];
-			const prefix = dictEntryIdHelper.buildPrefix(
-				"Lexem",
-				"Inflected",
-				"Noun",
-			);
-			const entryId = dictEntryIdHelper.build({
-				index: dictEntryIdHelper.nextIndex(existingIds, prefix),
-				pos: "Noun",
-				surfaceKind: "Inflected",
-				unitKind: "Lexem",
-			});
-
-			sameNoteEntries.push({
-				headerContent,
-				id: entryId,
-				meta: {},
-				sections: [],
-			});
-			continue;
-		}
+		const cellHeaders = cells.map((c) => buildCellHeader(c, lemma));
 
 		// Different note — resolve path + create UpsertMdFile + ProcessMdFile
 		const resolved = resolveTargetPath({
@@ -129,29 +79,41 @@ export function propagateInflections(
 				existingEntries.map((e) => e.headerContent),
 			);
 
-			if (existingHeaders.has(headerContent)) return content;
+			const newEntries: DictEntry[] = [];
+			const addedHeaders = new Set<string>();
 
-			const existingIds = existingEntries.map((e) => e.id);
-			const prefix = dictEntryIdHelper.buildPrefix(
-				"Lexem",
-				"Inflected",
-				"Noun",
-			);
-			const entryId = dictEntryIdHelper.build({
-				index: dictEntryIdHelper.nextIndex(existingIds, prefix),
-				pos: "Noun",
-				surfaceKind: "Inflected",
-				unitKind: "Lexem",
-			});
+			for (const header of cellHeaders) {
+				if (existingHeaders.has(header)) continue;
+				if (addedHeaders.has(header)) continue;
 
-			const newEntry: DictEntry = {
-				headerContent,
-				id: entryId,
-				meta: {},
-				sections: [],
-			};
+				const existingIds = [
+					...existingEntries.map((e) => e.id),
+					...newEntries.map((e) => e.id),
+				];
+				const prefix = dictEntryIdHelper.buildPrefix(
+					"Lexem",
+					"Inflected",
+					"Noun",
+				);
+				const entryId = dictEntryIdHelper.build({
+					index: dictEntryIdHelper.nextIndex(existingIds, prefix),
+					pos: "Noun",
+					surfaceKind: "Inflected",
+					unitKind: "Lexem",
+				});
 
-			const allEntries = [...existingEntries, newEntry];
+				newEntries.push({
+					headerContent: header,
+					id: entryId,
+					meta: {},
+					sections: [],
+				});
+				addedHeaders.add(header);
+			}
+
+			if (newEntries.length === 0) return content;
+
+			const allEntries = [...existingEntries, ...newEntries];
 			const { body, meta } = dictNoteHelper.serialize(allEntries);
 
 			if (Object.keys(meta).length > 0) {
@@ -170,6 +132,5 @@ export function propagateInflections(
 	return ok({
 		...ctx,
 		actions: [...ctx.actions, ...propagationActions],
-		allEntries: [...ctx.allEntries, ...sameNoteEntries],
 	});
 }

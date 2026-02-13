@@ -782,25 +782,28 @@ generateSections captures NounInflectionCell[] (8 cells: 4 cases × 2 numbers)
 propagateInflections:
   Group cells by form word
   For each form:
-    Build combined header: "#Nominativ/Akkusativ/Genitiv/Plural for: [[lemma]]"
-    If form === lemma → append entry to ctx.allEntries (same note)
+    If form === lemma → skip (main entry already lives on that note)
     If form !== lemma:
+      Build per-cell headers: "#Nominativ/Plural for: [[lemma]]" (one per cell)
       1. resolveTargetPath(form, desiredSurfaceKind: Inflected) → { splitPath, healingActions }
       2. Emit healingActions (if any)
       3. buildPropagationActionPair(splitPath, transform) → [UpsertMdFile, ProcessMdFile]
-         transform: parse existing entries, dedup by header, append stub
+         transform: iterate cell headers, dedup against existing + already-added, append one stub per unique header
   ↓
 Propagation VaultActions (including healing) added to ctx.actions
 ```
 
-**Stub entry format**: Header-only DictEntry with no sections:
+**Stub entry format**: Header-only DictEntry with no sections (one per case/number combo):
 ```markdown
-#Nominativ/Akkusativ/Genitiv/Plural for: [[Kraftwerk]] ^LX-IN-NOUN-1
+#Nominativ/Plural for: [[Kraftwerk]] ^LX-IN-NOUN-1
+#Akkusativ/Plural for: [[Kraftwerk]] ^LX-IN-NOUN-2
+#Genitiv/Plural for: [[Kraftwerk]] ^LX-IN-NOUN-3
 ```
 
 **Key design decisions**:
-- **One entry per form**: Cells sharing the same inflected word are merged into a single entry with `/`-chained tags (e.g., `#Nominativ/Akkusativ` when Nom and Acc share the same form)
-- Tags ordered: cases in N/A/G/D order, then number (Singular/Plural)
+- **One entry per cell**: Each case/number combo gets its own stub entry (e.g., `#Nominativ/Plural`, `#Akkusativ/Plural`) — no collapsing
+- **Same-note skip**: When form === lemma, cells are skipped entirely (the main entry already covers this note)
+- Dedup within a single transform: identical cell headers (e.g., duplicate cells) produce only one entry
 - Same dedup + UpsertMdFile + ProcessMdFile pattern as relation propagation
 - Skipped for re-encounters and non-noun POS
 
@@ -1175,7 +1178,7 @@ To add support for a new target language (e.g., Japanese):
 | `tests/unit/textfresser/formatters/noun-inflection-formatter.test.ts` | Noun inflection: case grouping, N/A/G/D order, cells pass-through |
 | `tests/unit/textfresser/steps/disambiguate-sense.test.ts` | Disambiguate: mock VAM + PromptRunner, bounds check, precomputed emojiDescription, V2 legacy |
 | `tests/unit/textfresser/steps/propagate-relations.test.ts` | Relation propagation: inverse kinds, self-ref skip, dedup, VaultAction shapes, healing when target in inflected/ |
-| `tests/unit/textfresser/steps/propagate-inflections.test.ts` | Inflection propagation: form grouping, same-note entries, combined headers, VAM path reuse |
+| `tests/unit/textfresser/steps/propagate-inflections.test.ts` | Inflection propagation: form grouping, same-note skip, per-cell headers, header dedup, VAM path reuse |
 | `tests/unit/textfresser/common/target-path-resolver.test.ts` | Path resolver: VAM/librarian lookup, computed fallback, inflected→lemma healing, no-heal cases, `buildPropagationActionPair` |
 | `tests/unit/textfresser/steps/lemma-expansion.test.ts` | V8: `expandOffsetForFullSurface()` — expansion math, verification, fallback on mismatch |
 | **Types** | |
