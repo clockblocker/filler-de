@@ -17,8 +17,8 @@
 }
 
 .cm-html-embed > .entry_section_title {
-	font-size: 12px;
-	line-height: 12px;
+	font-size: 0;
+	line-height: 0px;
 }
 
 .entry_section_title.entry_section_title_formen {

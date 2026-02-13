@@ -47,6 +47,8 @@ function makeCtx(
 				pos: "Noun",
 				surfaceKind: "Lemma",
 			},
+			lookupInLibrary: () => [],
+			vam: { findByBasename: () => [] },
 		} as unknown as TextfresserState,
 	} as unknown as GenerateSectionsResult;
 }
@@ -110,6 +112,32 @@ describe("propagateInflections", () => {
 		// 2 distinct forms: "Kraftwerke" and "Kraftwerken" → 2 × (Upsert + Process) = 4 actions
 		const actions = result._unsafeUnwrap().actions;
 		expect(actions).toHaveLength(4);
+	});
+
+	it("uses existing path from VAM when file already exists", () => {
+		const existingPath = {
+			basename: "Kraftwerke",
+			extension: "md" as const,
+			kind: "MdFile" as const,
+			pathParts: ["Worter", "de", "lexem", "inflected", "k", "kra", "kraft"],
+		};
+		const cells: NounInflectionCell[] = [
+			{ article: "die", case: "Nominative", form: "Kraftwerke", number: "Plural" },
+		];
+		const ctx = makeCtx(cells);
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		(ctx.textfresserState as any).vam = {
+			findByBasename: (name: string) => name === "Kraftwerke" ? [existingPath] : [],
+		};
+
+		const result = propagateInflections(ctx);
+		expect(result.isOk()).toBe(true);
+
+		const actions = result._unsafeUnwrap().actions;
+		// UpsertMdFile + ProcessMdFile (no healing since inflected→inflected)
+		expect(actions).toHaveLength(2);
+		const upsertPayload = actions[0]!.payload as { splitPath: typeof existingPath };
+		expect(upsertPayload.splitPath).toBe(existingPath);
 	});
 
 	it("builds combined header with case/number tags in correct order", () => {

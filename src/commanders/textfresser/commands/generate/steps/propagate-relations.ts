@@ -1,5 +1,4 @@
 import { ok, type Result } from "neverthrow";
-import type { LinguisticUnitKind } from "../../../../../linguistics/common/enums/core";
 import { SurfaceKind } from "../../../../../linguistics/common/enums/core";
 import { cssSuffixFor } from "../../../../../linguistics/common/sections/section-css-kind";
 import {
@@ -7,14 +6,11 @@ import {
 	TitleReprFor,
 } from "../../../../../linguistics/common/sections/section-kind";
 import type { VaultAction } from "../../../../../managers/obsidian/vault-action-manager";
-import {
-	SplitPathKind,
-	type SplitPathToMdFile,
-} from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
-import { VaultActionKind } from "../../../../../managers/obsidian/vault-action-manager/types/vault-action";
 import type { RelationSubKind } from "../../../../../prompt-smith/schemas/relation";
-import type { TargetLanguage } from "../../../../../types";
-import { computeShardedFolderParts } from "../../../common/sharded-path";
+import {
+	buildPropagationActionPair,
+	resolveTargetPath,
+} from "../../../common/target-path-resolver";
 import type { CommandError } from "../../types";
 import type {
 	GenerateSectionsResult,
@@ -40,24 +36,6 @@ const SYMBOL_FOR_KIND: Record<RelationSubKind, string> = {
 	NearSynonym: "≈",
 	Synonym: "=",
 };
-
-function buildTargetSplitPath(
-	word: string,
-	targetLanguage: TargetLanguage,
-	unitKind: LinguisticUnitKind,
-): SplitPathToMdFile {
-	return {
-		basename: word,
-		extension: "md",
-		kind: SplitPathKind.MdFile,
-		pathParts: computeShardedFolderParts(
-			word,
-			targetLanguage,
-			unitKind,
-			SurfaceKind.Lemma,
-		),
-	};
-}
 
 /**
  * Build a formatted inverse relation line: `{symbol} [[source]]`
@@ -127,69 +105,59 @@ export function propagateRelations(
 	const sectionMarker = `<span class="entry_section_title entry_section_title_${relationCssSuffix}">${relationTitle}</span>`;
 
 	for (const [targetWord, entries] of byTarget) {
-		const splitPath = buildTargetSplitPath(
-			targetWord,
-			targetLang,
+		const resolved = resolveTargetPath({
+			desiredSurfaceKind: SurfaceKind.Lemma,
+			librarianLookup: ctx.textfresserState.lookupInLibrary,
+			targetLanguage: targetLang,
 			unitKind,
-		);
+			vamLookup: (w) => ctx.textfresserState.vam.findByBasename(w),
+			word: targetWord,
+		});
 		const newLines = entries.map((e) => e.line);
 
-		// ProcessMdFile with transform — reads existing content and appends inverse relation.
-		// If the file doesn't exist, VAM will fail gracefully and UpsertMdFile below handles it.
-		const processAction: VaultAction = {
-			kind: VaultActionKind.ProcessMdFile,
-			payload: {
-				splitPath,
-				transform: (content: string) => {
-					// Check if relation section marker exists
-					if (content.includes(sectionMarker)) {
-						// Append lines to existing section (before next section or end)
-						const markerIdx = content.indexOf(sectionMarker);
-						const afterMarker = markerIdx + sectionMarker.length;
-						const rest = content.slice(afterMarker);
+		const transform = (content: string) => {
+			// Check if relation section marker exists
+			if (content.includes(sectionMarker)) {
+				// Append lines to existing section (before next section or end)
+				const markerIdx = content.indexOf(sectionMarker);
+				const afterMarker = markerIdx + sectionMarker.length;
+				const rest = content.slice(afterMarker);
 
-						// Find end of current section (next section marker or end of content)
-						const nextSectionMatch = rest.match(
-							/<span class="entry_section_title /,
-						);
-						const insertPoint = nextSectionMatch?.index
-							? afterMarker + nextSectionMatch.index
-							: content.length;
+				// Find end of current section (next section marker or end of content)
+				const nextSectionMatch = rest.match(
+					/<span class="entry_section_title /,
+				);
+				const insertPoint = nextSectionMatch?.index
+					? afterMarker + nextSectionMatch.index
+					: content.length;
 
-						// Get existing section content to avoid duplicates
-						const existingSection = content.slice(
-							afterMarker,
-							insertPoint,
-						);
-						const linesToAdd = newLines.filter(
-							(l) => !existingSection.includes(l),
-						);
-						if (linesToAdd.length === 0) return content;
+				// Get existing section content to avoid duplicates
+				const existingSection = content.slice(
+					afterMarker,
+					insertPoint,
+				);
+				const linesToAdd = newLines.filter(
+					(l) => !existingSection.includes(l),
+				);
+				if (linesToAdd.length === 0) return content;
 
-						return (
-							content.slice(0, insertPoint).trimEnd() +
-							"\n" +
-							linesToAdd.join("\n") +
-							content.slice(insertPoint)
-						);
-					}
+				return (
+					content.slice(0, insertPoint).trimEnd() +
+					"\n" +
+					linesToAdd.join("\n") +
+					content.slice(insertPoint)
+				);
+			}
 
-					// No relation section — append one at the end
-					const linesToAdd = newLines.join("\n");
-					return `${content.trimEnd()}\n${sectionMarker}\n${linesToAdd}`;
-				},
-			},
+			// No relation section — append one at the end
+			const linesToAdd = newLines.join("\n");
+			return `${content.trimEnd()}\n${sectionMarker}\n${linesToAdd}`;
 		};
 
-		// Also create UpsertMdFile as a fallback — ensures the file exists first.
-		// UpsertMdFile with content=null just creates the file if it doesn't exist.
-		const upsertAction: VaultAction = {
-			kind: VaultActionKind.UpsertMdFile,
-			payload: { content: null, splitPath },
-		};
-
-		// Upsert first (ensure file exists), then process
-		propagationActions.push(upsertAction, processAction);
+		propagationActions.push(...resolved.healingActions);
+		propagationActions.push(
+			...buildPropagationActionPair(resolved.splitPath, transform),
+		);
 	}
 
 	return ok({

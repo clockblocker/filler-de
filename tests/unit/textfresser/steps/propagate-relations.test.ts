@@ -31,6 +31,8 @@ function makeCtx(
 				pos: "Noun",
 				surfaceKind: "Lemma",
 			},
+			lookupInLibrary: () => [],
+			vam: { findByBasename: () => [] },
 		} as unknown as TextfresserState,
 	} as unknown as GenerateSectionsResult;
 }
@@ -89,6 +91,33 @@ describe("propagateRelations", () => {
 		const output = transform("");
 		// Hypernym → inverse is Hyponym (⊂)
 		expect(output).toContain("⊂ [[Kohlekraftwerk]]");
+	});
+
+	it("generates healing action when target found in inflected folder", () => {
+		const inflectedPath = {
+			basename: "Anlage",
+			extension: "md" as const,
+			kind: "MdFile" as const,
+			pathParts: ["Worter", "de", "lexem", "inflected", "a", "anl", "anlag"],
+		};
+		const ctx = makeCtx([
+			{ kind: "Synonym", words: ["Anlage"] },
+		]);
+		// Override vam to return inflected path
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		(ctx.textfresserState as any).vam = {
+			findByBasename: (name: string) => name === "Anlage" ? [inflectedPath] : [],
+		};
+
+		const result = propagateRelations(ctx);
+		expect(result.isOk()).toBe(true);
+
+		const actions = result._unsafeUnwrap().actions;
+		// Should have: RenameMdFile (healing) + UpsertMdFile + ProcessMdFile = 3
+		expect(actions).toHaveLength(3);
+		expect(actions[0]!.kind).toBe(VaultActionKind.RenameMdFile);
+		expect(actions[1]!.kind).toBe(VaultActionKind.UpsertMdFile);
+		expect(actions[2]!.kind).toBe(VaultActionKind.ProcessMdFile);
 	});
 
 	it("ProcessMdFile transform deduplicates existing relations", () => {

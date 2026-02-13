@@ -250,6 +250,21 @@ export default class TextEaterPlugin extends Plugin {
 			try {
 				await this.librarian.init();
 
+				// Wire librarian corename lookup into Textfresser for propagation path resolution
+				if (this.textfresser) {
+					const lib = this.librarian;
+					this.textfresser.setLibrarianLookup((name) =>
+						lib.findMatchingLeavesByCoreName(name).map(
+							(m): SplitPathToMdFile => ({
+								basename: m.basename,
+								extension: "md",
+								kind: "MdFile",
+								pathParts: m.pathParts,
+							}),
+						),
+					);
+				}
+
 				// Register user event handlers after librarian is initialized
 				const handlers = createHandlers(
 					this.librarian,

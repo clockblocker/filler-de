@@ -29,6 +29,7 @@ import type { LemmaResult } from "./commands/lemma/types";
 import type { CommandInput, TextfresserCommandKind } from "./commands/types";
 import { buildAttestationFromWikilinkClickPayload } from "./common/attestation/builders/build-from-wikilink-click-payload";
 import type { Attestation } from "./common/attestation/types";
+import type { PathLookupFn } from "./common/target-path-resolver";
 import { CommandErrorKind } from "./errors";
 import { PromptRunner } from "./prompt-runner";
 
@@ -49,6 +50,8 @@ export type TextfresserState = {
 	/** Background Generate in progress (set after successful Lemma). */
 	inFlightGenerate: InFlightGenerate | null;
 	languages: LanguagesConfig;
+	/** Lookup files in Librarian's corename index (set after Librarian init). */
+	lookupInLibrary: PathLookupFn;
 	promptRunner: PromptRunner;
 	vam: VaultActionManager;
 };
@@ -67,6 +70,7 @@ export class Textfresser {
 			languages,
 			latestFailedSections: [],
 			latestLemmaResult: null,
+			lookupInLibrary: () => [],
 			promptRunner: new PromptRunner(languages, apiService),
 			vam,
 		};
@@ -163,6 +167,11 @@ export class Textfresser {
 	/** Get the current state */
 	getState() {
 		return this.state;
+	}
+
+	/** Wire librarian corename lookup (called after Librarian init). */
+	setLibrarianLookup(fn: PathLookupFn): void {
+		this.state.lookupInLibrary = fn;
 	}
 
 	// ─── Private ───

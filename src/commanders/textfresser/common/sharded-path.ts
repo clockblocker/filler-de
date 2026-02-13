@@ -18,6 +18,9 @@ const WORTER_ROOT = "Worter";
 const PREFIX_LENGTH = 3;
 const SHARD_LENGTH = 5;
 
+/** Index of the surface-kind segment in the path parts array (e.g. "lemma" or "inflected"). */
+export const SURFACE_KIND_PATH_INDEX = 3;
+
 /**
  * Computes the shard segments (first char, prefix, shard) for a word.
  *

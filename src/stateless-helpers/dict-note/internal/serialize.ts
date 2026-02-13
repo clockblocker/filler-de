@@ -11,7 +11,7 @@ function serializeEntry(entry: DictEntry): string {
 
 	const sectionParts = entry.sections.map((s) => {
 		const marker = `<span class="${ENTRY_SECTION_CSS_CLASS} ${ENTRY_SECTION_CSS_CLASS}_${s.kind}">${s.title}</span>`;
-		return `${marker}\n${s.content}`;
+		return `\n${marker}\n${s.content}`;
 	});
 
 	if (sectionParts.length === 0) return headerLine;

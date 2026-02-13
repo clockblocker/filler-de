@@ -9,35 +9,15 @@ import {
 	GERMAN_NUMBER_TAG,
 } from "../../../../../linguistics/german/inflection/noun";
 import type { VaultAction } from "../../../../../managers/obsidian/vault-action-manager";
-import {
-	SplitPathKind,
-	type SplitPathToMdFile,
-} from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
-import { VaultActionKind } from "../../../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { dictNoteHelper } from "../../../../../stateless-helpers/dict-note";
 import type { DictEntry } from "../../../../../stateless-helpers/dict-note/types";
 import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metadata";
-import { computeShardedFolderParts } from "../../../common/sharded-path";
+import {
+	buildPropagationActionPair,
+	resolveTargetPath,
+} from "../../../common/target-path-resolver";
 import type { CommandError } from "../../types";
 import type { GenerateSectionsResult } from "./generate-sections";
-
-function buildTargetSplitPath(
-	ctx: GenerateSectionsResult,
-	word: string,
-): SplitPathToMdFile {
-	const lemmaResult = ctx.textfresserState.latestLemmaResult;
-	return {
-		basename: word,
-		extension: "md",
-		kind: SplitPathKind.MdFile,
-		pathParts: computeShardedFolderParts(
-			word,
-			ctx.textfresserState.languages.target,
-			lemmaResult.linguisticUnit,
-			SurfaceKind.Inflected,
-		),
-	};
-}
 
 /**
  * Build a combined header for all inflection cells sharing the same form.
@@ -133,59 +113,58 @@ export function propagateInflections(
 			continue;
 		}
 
-		// Different note — create UpsertMdFile + ProcessMdFile
-		const splitPath = buildTargetSplitPath(ctx, form);
+		// Different note — resolve path + create UpsertMdFile + ProcessMdFile
+		const resolved = resolveTargetPath({
+			desiredSurfaceKind: SurfaceKind.Inflected,
+			librarianLookup: ctx.textfresserState.lookupInLibrary,
+			targetLanguage: ctx.textfresserState.languages.target,
+			unitKind: lemmaResult.linguisticUnit,
+			vamLookup: (w) => ctx.textfresserState.vam.findByBasename(w),
+			word: form,
+		});
 
-		const upsertAction: VaultAction = {
-			kind: VaultActionKind.UpsertMdFile,
-			payload: { content: null, splitPath },
+		const transform = (content: string) => {
+			const existingEntries = dictNoteHelper.parse(content);
+			const existingHeaders = new Set(
+				existingEntries.map((e) => e.headerContent),
+			);
+
+			if (existingHeaders.has(headerContent)) return content;
+
+			const existingIds = existingEntries.map((e) => e.id);
+			const prefix = dictEntryIdHelper.buildPrefix(
+				"Lexem",
+				"Inflected",
+				"Noun",
+			);
+			const entryId = dictEntryIdHelper.build({
+				index: dictEntryIdHelper.nextIndex(existingIds, prefix),
+				pos: "Noun",
+				surfaceKind: "Inflected",
+				unitKind: "Lexem",
+			});
+
+			const newEntry: DictEntry = {
+				headerContent,
+				id: entryId,
+				meta: {},
+				sections: [],
+			};
+
+			const allEntries = [...existingEntries, newEntry];
+			const { body, meta } = dictNoteHelper.serialize(allEntries);
+
+			if (Object.keys(meta).length > 0) {
+				const metaTransform = noteMetadataHelper.upsert(meta);
+				return metaTransform(body) as string;
+			}
+			return body;
 		};
 
-		const processAction: VaultAction = {
-			kind: VaultActionKind.ProcessMdFile,
-			payload: {
-				splitPath,
-				transform: (content: string) => {
-					const existingEntries = dictNoteHelper.parse(content);
-					const existingHeaders = new Set(
-						existingEntries.map((e) => e.headerContent),
-					);
-
-					if (existingHeaders.has(headerContent)) return content;
-
-					const existingIds = existingEntries.map((e) => e.id);
-					const prefix = dictEntryIdHelper.buildPrefix(
-						"Lexem",
-						"Inflected",
-						"Noun",
-					);
-					const entryId = dictEntryIdHelper.build({
-						index: dictEntryIdHelper.nextIndex(existingIds, prefix),
-						pos: "Noun",
-						surfaceKind: "Inflected",
-						unitKind: "Lexem",
-					});
-
-					const newEntry: DictEntry = {
-						headerContent,
-						id: entryId,
-						meta: {},
-						sections: [],
-					};
-
-					const allEntries = [...existingEntries, newEntry];
-					const { body, meta } = dictNoteHelper.serialize(allEntries);
-
-					if (Object.keys(meta).length > 0) {
-						const transform = noteMetadataHelper.upsert(meta);
-						return transform(body) as string;
-					}
-					return body;
-				},
-			},
-		};
-
-		propagationActions.push(upsertAction, processAction);
+		propagationActions.push(...resolved.healingActions);
+		propagationActions.push(
+			...buildPropagationActionPair(resolved.splitPath, transform),
+		);
 	}
 
 	return ok({
