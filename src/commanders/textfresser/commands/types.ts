@@ -4,7 +4,7 @@
 
 import type { ResultAsync } from "neverthrow";
 import { z } from "zod";
-import type { CommandContext } from "../../../managers/obsidian/user-actions-manager";
+import type { CommandContext } from "../../../managers/obsidian/command-executor";
 import type { VaultAction } from "../../../managers/obsidian/vault-action-manager";
 import type { CommandError } from "../errors";
 import type { TextfresserState } from "../textfresser";

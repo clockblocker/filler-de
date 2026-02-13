@@ -1,10 +1,10 @@
-import { goBackLinkHelper } from "../../../../stateless-helpers/go-back-link/go-back-link";
-import { noteMetadataHelper } from "../../../../stateless-helpers/note-metadata";
+import { goBackLinkHelper } from "../../../stateless-helpers/go-back-link/go-back-link";
+import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
 import {
 	type ClipboardPayload,
 	type EventHandler,
 	HandlerOutcome,
-} from "../../user-event-interceptor";
+} from "../user-event-interceptor";
 
 /**
  * Create a handler that strips metadata from clipboard copy.

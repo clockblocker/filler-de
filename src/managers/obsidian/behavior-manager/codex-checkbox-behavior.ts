@@ -3,12 +3,12 @@
  * Delegates to Librarian for all logic.
  */
 
-import type { Librarian } from "../../../../commanders/librarian/librarian";
+import type { Librarian } from "../../../commanders/librarian/librarian";
 import {
 	type CheckboxPayload,
 	type EventHandler,
 	HandlerOutcome,
-} from "../../user-event-interceptor";
+} from "../user-event-interceptor";
 
 /**
  * Create a handler for task checkbox clicks in codex files.

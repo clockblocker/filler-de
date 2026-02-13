@@ -3,7 +3,7 @@
  * Uses longest common path prefix with the active file to determine proximity.
  */
 
-import type { LeafMatch } from "../../../../commanders/librarian/healer/library-tree/tree";
+import type { LeafMatch } from "../../../commanders/librarian/healer/library-tree/tree";
 
 /**
  * Pick the leaf whose pathParts share the longest common prefix with currentPathParts.

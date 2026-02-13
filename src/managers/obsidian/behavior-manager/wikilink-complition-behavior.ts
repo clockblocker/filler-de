@@ -8,13 +8,13 @@
  * 3. Corename lookup in tree → replace target with suffixed basename + alias
  */
 
-import type { Librarian } from "../../../../commanders/librarian/librarian";
+import type { Librarian } from "../../../commanders/librarian/librarian";
 import {
 	type EventHandler,
 	type HandlerContext,
 	HandlerOutcome,
 	type WikilinkPayload,
-} from "../../user-event-interceptor";
+} from "../user-event-interceptor";
 import { pickClosestLeaf } from "./pick-closest-leaf";
 
 /**

@@ -39,7 +39,8 @@ bun run typecheck:changed  # typecheck vs master (RUN BEFORE FINISHING WORK)
 | UserEventInterceptor | `obsidian/user-event-interceptor/` | DOM/editor events (click, clipboard, select-all, wikilink) |
 | WorkspaceEventInterceptor | `obsidian/workspace-navigation-event-interceptor/` | Workspace events (file open, layout, scroll) |
 | OverlayManager | `overlay-manager/` | UI overlays (toolbars, edge zones, context menu) |
-| ActionsManager | `actions-manager/` | Command executor factory |
+| CommandExecutor | `obsidian/command-executor/` | CommandKind dispatch to commanders |
+| BehaviorManager | `obsidian/behavior-manager/` | DOM-event handlers (checkbox, clipboard, select-all, wikilink) |
 
 ### Commanders (src/commanders/)
 | Commander | Files | Purpose |
@@ -75,6 +76,7 @@ const link = wikilinkHelper.findByTarget(text, "MyNote");
 - `e2e-architecture.md` - E2E test architecture
 - `vam-architecture.md` - VAM dispatch, event pipeline, self-event tracking
 - `textfresser-architecture.md` - Textfresser commands, generate pipeline
+- `commands-and-behaviors-architecture.md` - Command executor + behavior manager
 
 **Keep these docs up to date**: when changing behavior documented in `src/documentaion/`, update the relevant doc in the same PR.
 

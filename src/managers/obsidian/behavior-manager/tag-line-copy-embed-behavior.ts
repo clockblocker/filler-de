@@ -1,7 +1,7 @@
 import { type App, MarkdownView, Notice } from "obsidian";
-import { blockIdHelper } from "../../../../stateless-helpers/block-id";
-import type { VaultActionManager } from "../../vault-action-manager";
-import { logError } from "../../vault-action-manager/helpers/issue-handlers";
+import { blockIdHelper } from "../../../stateless-helpers/block-id";
+import type { VaultActionManager } from "../vault-action-manager";
+import { logError } from "../vault-action-manager/helpers/issue-handlers";
 
 type TagLineCopyEmbedServices = {
 	app: App;

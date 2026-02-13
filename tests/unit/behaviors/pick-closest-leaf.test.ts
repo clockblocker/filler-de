@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import type { LeafMatch } from "../../../src/commanders/librarian/healer/library-tree/types/leaf-match";
-import { pickClosestLeaf } from "../../../src/managers/obsidian/user-actions-manager/behaviors/pick-closest-leaf";
+import { pickClosestLeaf } from "../../../src/managers/obsidian/behavior-manager/pick-closest-leaf";
 
 describe("pickClosestLeaf", () => {
 	it("returns single match directly", () => {

@@ -10,7 +10,7 @@
  */
 
 import { err, errAsync, ok, ResultAsync } from "neverthrow";
-import type { CommandContext } from "../../managers/obsidian/user-actions-manager";
+import type { CommandContext } from "../../managers/obsidian/command-executor";
 import type { WikilinkClickPayload } from "../../managers/obsidian/user-event-interceptor/events";
 import {
 	type EventHandler,

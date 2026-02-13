@@ -7,13 +7,13 @@
  * - All other handlers delegate to Librarian or Textfresser methods
  */
 
-import type { Librarian } from "../../../../commanders/librarian/librarian";
-import type { Textfresser } from "../../../../commanders/textfresser/textfresser";
+import type { Librarian } from "../../../commanders/librarian/librarian";
+import type { Textfresser } from "../../../commanders/textfresser/textfresser";
 import {
 	type AnyPayload,
 	type EventHandler,
 	PayloadKind,
-} from "../../user-event-interceptor";
+} from "../user-event-interceptor";
 import { createCheckboxFrontmatterHandler } from "./checkbox-behavior";
 import { createClipboardHandler } from "./clipboard-behavior";
 import { createCodexCheckboxHandler } from "./codex-checkbox-behavior";

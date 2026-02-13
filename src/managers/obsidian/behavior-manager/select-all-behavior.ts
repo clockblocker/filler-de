@@ -1,10 +1,10 @@
-import { goBackLinkHelper } from "../../../../stateless-helpers/go-back-link/go-back-link";
-import { noteMetadataHelper } from "../../../../stateless-helpers/note-metadata";
+import { goBackLinkHelper } from "../../../stateless-helpers/go-back-link/go-back-link";
+import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
 import {
 	type EventHandler,
 	HandlerOutcome,
 	type SelectAllPayload,
-} from "../../user-event-interceptor";
+} from "../user-event-interceptor";
 
 /**
  * Create a handler for smart select-all.

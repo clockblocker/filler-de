@@ -4,7 +4,7 @@
  */
 
 import { type MarkdownView, setIcon } from "obsidian";
-import { CommandKind } from "../../obsidian/user-actions-manager";
+import { CommandKind } from "../../obsidian/command-executor";
 import type { ActionConfig } from "../bottom-toolbar/types";
 import { createLayoutObserver, detectEditorPadding } from "./layout-observer";
 import type {

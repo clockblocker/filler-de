@@ -10,12 +10,14 @@ import {
 	updateParsedSettings,
 } from "./global-state/global-state";
 import {
+	createHandlers,
+	tagLineCopyEmbedBehavior,
+} from "./managers/obsidian/behavior-manager";
+import {
 	type CommandExecutor,
 	CommandKind,
 	createCommandExecutor,
-	createHandlers,
-	tagLineCopyEmbedBehavior,
-} from "./managers/obsidian/user-actions-manager";
+} from "./managers/obsidian/command-executor";
 import { UserEventInterceptor } from "./managers/obsidian/user-event-interceptor";
 import {
 	makeSplitPath,

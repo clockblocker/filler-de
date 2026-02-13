@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { ALL_LIBRARIAN_COMMAND_KINDS } from "../../../../commanders/librarian/commands/types";
-import { ALL_TEXTFRESSER_COMMAND_KINDS } from "../../../../commanders/textfresser/commands/types";
-import type { SelectionInfo } from "../../vault-action-manager";
-import type { SplitPathToMdFile } from "../../vault-action-manager/types/split-path";
+import { ALL_LIBRARIAN_COMMAND_KINDS } from "../../../commanders/librarian/commands/types";
+import { ALL_TEXTFRESSER_COMMAND_KINDS } from "../../../commanders/textfresser/commands/types";
+import type { SelectionInfo } from "../vault-action-manager";
+import type { SplitPathToMdFile } from "../vault-action-manager/types/split-path";
 
 // ─── CommandKind - Command Executor Action Kinds ───
 

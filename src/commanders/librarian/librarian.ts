@@ -3,7 +3,7 @@ import { getParsedUserSettings } from "../../global-state/global-state";
 import type {
 	CommandContext,
 	CommandKind,
-} from "../../managers/obsidian/user-actions-manager";
+} from "../../managers/obsidian/command-executor";
 import type { CheckboxPayload } from "../../managers/obsidian/user-event-interceptor";
 import type {
 	BulkVaultEvent,
