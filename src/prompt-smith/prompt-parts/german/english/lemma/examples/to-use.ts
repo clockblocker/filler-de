@@ -93,7 +93,7 @@ export const examples = [
 			surface: "Bank",
 		},
 		output: {
-			emojiDescription: ["🏦", "💰"],
+			emojiDescription: ["🏦"],
 			ipa: "baŋk",
 			lemma: "Bank",
 			linguisticUnit: "Lexem",

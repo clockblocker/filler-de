@@ -16,22 +16,28 @@ import {
 	type EventHandler,
 	HandlerOutcome,
 } from "../../managers/obsidian/user-event-interceptor/types/handler";
-import type {
-	VaultAction,
-	VaultActionManager,
+import {
+	type VaultAction,
+	VaultActionKind,
+	type VaultActionManager,
 } from "../../managers/obsidian/vault-action-manager";
 import type { ApiService } from "../../stateless-helpers/api-service";
 import type { LanguagesConfig } from "../../types";
 import { logger } from "../../utils/logger";
 import { commandFnForCommandKind } from "./commands";
 import type { LemmaResult } from "./commands/lemma/types";
-import type { TextfresserCommandKind } from "./commands/types";
+import type { CommandInput, TextfresserCommandKind } from "./commands/types";
 import { buildAttestationFromWikilinkClickPayload } from "./common/attestation/builders/build-from-wikilink-click-payload";
 import type { Attestation } from "./common/attestation/types";
 import { CommandErrorKind } from "./errors";
 import { PromptRunner } from "./prompt-runner";
 
 // ─── State ───
+
+export type InFlightGenerate = {
+	lemma: string;
+	promise: Promise<void>;
+};
 
 export type TextfresserState = {
 	attestationForLatestNavigated: Attestation | null;
@@ -40,6 +46,8 @@ export type TextfresserState = {
 	latestFailedSections: string[];
 	/** Block ID of the entry to scroll to after Generate dispatch. */
 	targetBlockId?: string;
+	/** Background Generate in progress (set after successful Lemma). */
+	inFlightGenerate: InFlightGenerate | null;
 	languages: LanguagesConfig;
 	promptRunner: PromptRunner;
 	vam: VaultActionManager;
@@ -55,6 +63,7 @@ export class Textfresser {
 	) {
 		this.state = {
 			attestationForLatestNavigated: null,
+			inFlightGenerate: null,
 			languages,
 			latestFailedSections: [],
 			latestLemmaResult: null,
@@ -81,7 +90,7 @@ export class Textfresser {
 			textfresserState: this.state,
 		};
 
-		return commandFn(input)
+		const resultChain = commandFn(input)
 			.andThen((actions) => this.dispatchActions(actions))
 			.map(() => {
 				const lemma = this.state.latestLemmaResult;
@@ -110,6 +119,13 @@ export class Textfresser {
 				);
 				return e;
 			});
+
+		if (commandName === "Lemma") {
+			return resultChain.map(() => {
+				this.fireBackgroundGenerate(notify);
+			});
+		}
+		return resultChain;
 	}
 
 	// ─── Handlers ───
@@ -126,6 +142,15 @@ export class Textfresser {
 				if (attestationResult.isOk()) {
 					this.state.attestationForLatestNavigated =
 						attestationResult.value;
+				}
+
+				// If background Generate is in flight for this target, wait and scroll after navigation
+				const inFlight = this.state.inFlightGenerate;
+				if (
+					inFlight &&
+					payload.wikiTarget.basename === inFlight.lemma
+				) {
+					void this.awaitGenerateAndScroll(inFlight);
 				}
 
 				return { outcome: HandlerOutcome.Passthrough };
@@ -158,6 +183,110 @@ export class Textfresser {
 		if (lineIndex < 0) return;
 
 		this.vam.activeFileService.scrollToLine(lineIndex);
+	}
+
+	/** Fire-and-forget: launch background Generate after successful Lemma. */
+	private fireBackgroundGenerate(notify: (message: string) => void): void {
+		if (this.state.inFlightGenerate) return;
+
+		const lemma = this.state.latestLemmaResult;
+		if (!lemma) return;
+
+		const promise = this.runBackgroundGenerate(lemma.lemma, notify)
+			.catch((e) => {
+				const reason = e instanceof Error ? e.message : String(e);
+				logger.warn("[Textfresser.backgroundGenerate] Failed:", reason);
+				notify(`⚠ Background generate failed: ${reason}`);
+			})
+			.finally(() => {
+				this.state.inFlightGenerate = null;
+			});
+
+		this.state.inFlightGenerate = { lemma: lemma.lemma, promise };
+	}
+
+	/** Run the Generate pipeline for a target note without navigating to it. */
+	private async runBackgroundGenerate(
+		lemma: string,
+		notify: (message: string) => void,
+	): Promise<void> {
+		// 1. Find existing file or construct root-level path for new file
+		const existingPaths = this.vam.findByBasename(lemma);
+		const targetPath = existingPaths[0] ?? {
+			basename: lemma,
+			extension: "md" as const,
+			kind: "MdFile" as const,
+			pathParts: [] as string[],
+		};
+
+		// 2. Read content (empty string if file doesn't exist yet)
+		const contentResult = await this.vam.readContent(targetPath);
+		const content = contentResult.isOk() ? contentResult.value : "";
+
+		// 3. Build synthetic command input
+		const input: CommandInput = {
+			commandContext: {
+				activeFile: { content, splitPath: targetPath },
+				selection: null,
+			},
+			resultingActions: [],
+			textfresserState: this.state,
+		};
+
+		// 4. Run generate pipeline
+		const generateResult = await commandFnForCommandKind.Generate(input);
+		if (generateResult.isErr()) {
+			const error = generateResult.error;
+			const reason =
+				"reason" in error
+					? error.reason
+					: `Command failed: ${error.kind}`;
+			throw new Error(reason);
+		}
+
+		// 5. Prepend UpsertMdFile to ensure file exists before process/rename
+		const upsertAction: VaultAction = {
+			kind: VaultActionKind.UpsertMdFile,
+			payload: { splitPath: targetPath },
+		};
+		const allActions = [upsertAction, ...generateResult.value];
+
+		// 6. Dispatch
+		const dispatchResult = await this.vam.dispatch(allActions);
+		if (dispatchResult.isErr()) {
+			const reason = dispatchResult.error.map((e) => e.error).join(", ");
+			throw new Error(reason);
+		}
+
+		// 7. Notify success (don't scroll — user isn't viewing the target file)
+		const failed = this.state.latestFailedSections;
+		if (failed?.length) {
+			notify(
+				`⚠ Entry created for ${lemma} (failed: ${failed.join(", ")})`,
+			);
+		} else {
+			notify(`✓ Entry created for ${lemma}`);
+		}
+	}
+
+	/** Wait for in-flight Generate to finish, then scroll to the entry if user is on the target note. */
+	private async awaitGenerateAndScroll(
+		inFlight: InFlightGenerate,
+	): Promise<void> {
+		try {
+			await inFlight.promise;
+		} catch {
+			return; // Generate already logged/notified the error
+		}
+
+		// Let openLinkText navigation settle
+		await new Promise((resolve) => setTimeout(resolve, 300));
+
+		// Only scroll if user is still viewing the target note
+		const currentFile = this.vam.mdPwd();
+		if (!currentFile || currentFile.basename !== inFlight.lemma) return;
+
+		this.scrollToTargetBlock();
 	}
 
 	private dispatchActions(actions: VaultAction[]) {

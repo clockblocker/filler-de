@@ -10,7 +10,7 @@ Textfresser builds a **personal, encounter-driven dictionary** for language lear
 
 **Core premise**: A dictionary that only contains words the user has actually encountered, in contexts they've actually read, is more useful than a generic one.
 
-The flow (two commands: **Lemma** → **Generate**):
+The flow (two commands: **Lemma** → **Generate**, automated):
 
 ```
 User dumps a book/script into the vault
@@ -26,21 +26,16 @@ Lemma (recon):
   Wraps the selected word in a [[wikilink]] in the source text
   Stores classification + attestation in state
   ↓
-User clicks the wikilink → navigates to the dictionary note
-  ↓
-User calls "Generate"
-  ↓
-Generate (heavy lifting):
-  Reads Lemma result from state
-  Resolves existing entries (re-encounter detection)
-  If re-encounter: appends attestation ref, skips LLM
-  If new: header from Lemma output + LLM request PER section (Morphem, Relation, Inflection, Translation)
-  Adds Attestation section (no LLM — uses source ref from Lemma)
-  Propagates inverse relations to referenced notes
-  Propagates noun inflection stubs to inflected-form notes
-  Builds full DictEntry, serializes to note, moves to Wörter folder
+Background Generate fires automatically (user stays on source text):
+  Finds or creates target dict note (via vam.findByBasename)
+  Reads existing content (empty if new file)
+  Runs full Generate pipeline: resolve existing entries, LLM sections, propagation
+  Dispatches all actions via VAM (ProcessMdFile auto-detects open/closed file)
   Notifies user of success/failure
-  Single vam.dispatch()
+  ↓
+User clicks the wikilink → navigates to the dictionary note
+  If Generate still running: handler awaits completion, then scrolls to entry
+  If Generate already done: scrolls to entry immediately
   ↓
 User gets a tailor-made dictionary that grows with their reading
 ```
@@ -444,8 +439,8 @@ commandFn(input) → VaultAction[] → vam.dispatch(actions)
 
 | Command | Status | Purpose |
 |---------|--------|---------|
-| `Lemma` | V3 | Recon: classify word via LLM, disambiguate sense against existing entries (metadata `emojiDescription` lookup + Disambiguate prompt), wrap in wikilink, store result, notify user. V5: bounds-check. V8: proper noun detection (nounClass), fullSurface expansion for multi-word proper nouns. V10: emoji-based disambiguation |
-| `Generate` | V3 | Build DictEntry: LLM-generated sections (Morphem, Relation, Inflection, Translation) + header from Lemma output + Attestation; re-encounter detection (via Lemma's disambiguationResult); cross-ref propagation; serialize, move to Wörter, notify user. V5: scroll-to-entry after dispatch |
+| `Lemma` | V3 | Recon: classify word via LLM, disambiguate sense against existing entries (metadata `emojiDescription` lookup + Disambiguate prompt), wrap in wikilink, store result, notify user, fire background Generate. V5: bounds-check. V8: proper noun detection (nounClass), fullSurface expansion for multi-word proper nouns. V10: emoji-based disambiguation |
+| `Generate` | V3 | Build DictEntry: LLM-generated sections (Morphem, Relation, Inflection, Translation) + header from Lemma output + Attestation; re-encounter detection (via Lemma's disambiguationResult); cross-ref propagation; serialize, move to Wörter, notify user. Fires automatically in background after Lemma (user stays on source text); also callable manually. V5: scroll-to-entry (deferred via wikilink click handler when running in background) |
 | `TranslateSelection` | V1 | Translate selected text via LLM |
 
 **Source**: `src/commanders/textfresser/textfresser.ts`, `src/commanders/textfresser/commands/types.ts`
@@ -465,17 +460,17 @@ Translates selected text using the prompt-smith system:
 
 ## 8. The Dictionary Pipeline — Lemma + Generate
 
-The dictionary pipeline is split into two user-facing commands with distinct responsibilities:
+The dictionary pipeline is split into two commands — **Lemma** (user-facing) and **Generate** (fires automatically in background after Lemma):
 
 ```
-     Lemma (recon + disambiguation)                Generate (heavy lifting)
+     Lemma (recon + disambiguation)                Generate (background, automatic)
 ┌───────────────────────────────────┐    ┌──────────────────────────────────────────┐
 │ 1. Resolve attestation             │    │ 1. Check attestation + lemma result      │
 │    (wikilink click or              │    │ 2. Resolve existing entries (uses Lemma's │
 │     text selection)                │    │    disambiguationResult — no re-parsing)  │
 │ 2. LLM classification             │    │ 3. If re-encounter: append attestation   │
 │    → LinguisticUnit + POS         │───→│    If new: LLM request PER section:      │
-│    → SurfaceKind + lemma          │    │      Header → formatHeaderLine()         │
+│    → SurfaceKind + lemma          │ bg │      Header → formatHeaderLine()         │
 │ 3. Disambiguate (V3):             │    │      Morphem → morphemeFormatterHelper() │
 │    Find existing note for lemma    │    │      Relation → formatRelationSection()  │
 │    (vam.getSplitPathsToExisting    │    │      Inflection → formatInflectionSection│
@@ -488,6 +483,8 @@ The dictionary pipeline is split into two user-facing commands with distinct res
 │ 4. Wrap surface in wikilink        │    │ 7. Serialize (+ noteKind) → moveToWörter│
 │ 5. Store result in state           │    │ 8. Single vam.dispatch()                 │
 │ 6. Notify: "✓ lemma (POS)"        │    │                                          │
+│ 7. Fire background Generate ──────│───→│ User stays on source text.               │
+│    (fire-and-forget)               │    │ Deferred scroll on wikilink click.       │
 └───────────────────────────────────┘    └──────────────────────────────────────────┘
 ```
 
@@ -598,7 +595,7 @@ The disambiguation result is stored in `LemmaResult.disambiguationResult` and co
 
 ### 8.2 Generate Command (V3)
 
-The user navigates to the dictionary note (via the wikilink Lemma created) and calls "Generate".
+Generate fires automatically in the background after a successful Lemma command. The user stays on the source text — no manual navigation or command invocation needed. The Textfresser commander finds (or creates) the target dict note via `vam.findByBasename()`, reads its content, builds a synthetic `CommandInput`, and runs the Generate pipeline. Generate can also be called manually for standalone use.
 
 **Source**: `src/commanders/textfresser/commands/generate/generate-command.ts`
 
@@ -681,7 +678,7 @@ For non-Lexem units, `pos` is passed to LLM prompts as the `linguisticUnit` name
 - ~~**Full meaning resolution**~~: Implemented in V3 as Disambiguate prompt. V10: replaced text-based `semantics` with emoji-based differentiation (`emojiDescription`).
 - **Multi-word selection**: Lemma handling phrasem attestations from multi-word selections
 - **Deviation section**: Additional LLM-generated section for irregular forms and exceptions
-- ~~**Scroll to latest updated entry**~~: Implemented in V5. After Generate dispatch, `scrollToTargetBlock()` finds `^{blockId}` line and calls `ActiveFileService.scrollToLine()`.
+- ~~**Scroll to latest updated entry**~~: Implemented in V5. `scrollToTargetBlock()` finds `^{blockId}` line and calls `ActiveFileService.scrollToLine()`. For background Generate: deferred via wikilink click handler — `awaitGenerateAndScroll()` waits for the in-flight promise, then scrolls if user is on the target note.
 - ~~**Disambiguate prompt returning semantic info for new senses**~~: V5: returned text `semantics` gloss. V10: replaced with `emojiDescription` (1-3 emoji array). V11: `emojiDescription` moved to Lemma prompt output (Header prompt eliminated), stored in `meta.emojiDescription`.
 
 ---
@@ -944,11 +941,17 @@ bun run codegen:prompts
 ### 11.1 State
 
 ```typescript
+type InFlightGenerate = {
+  lemma: string;             // basename of the target note
+  promise: Promise<void>;    // resolves when background Generate finishes
+};
+
 type TextfresserState = {
   attestationForLatestNavigated: Attestation | null;  // from last wikilink click
   latestLemmaResult: LemmaResult | null;              // from last Lemma command
   latestFailedSections: string[];                      // optional sections that failed in last Generate
   targetBlockId?: string;                              // V5: entry ^blockId to scroll to after Generate
+  inFlightGenerate: InFlightGenerate | null;           // background Generate in progress (set after Lemma)
   languages: LanguagesConfig;                          // { known, target }
   promptRunner: PromptRunner;                          // LLM interface
   vam: VaultActionManager;                             // for scrollToTargetBlock()
@@ -959,7 +962,9 @@ type TextfresserState = {
 
 `latestFailedSections` is populated by `generateSections` when optional LLM calls fail (graceful degradation). Used by the notification logic to show partial-success warnings.
 
-`targetBlockId` (V5) is set by `generateSections` — to `matchedEntry.id` for re-encounters, or the newly created entry ID for new entries. After successful Generate dispatch, `scrollToTargetBlock()` finds the line containing `^{blockId}` and scrolls the editor to it.
+`targetBlockId` (V5) is set by `generateSections` — to `matchedEntry.id` for re-encounters, or the newly created entry ID for new entries. Used by deferred scroll after background Generate finishes (see 11.2).
+
+`inFlightGenerate` tracks the background Generate launched after a successful Lemma. Guarded: only one in-flight Generate at a time. Cleared in `.finally()`. The wikilink click handler checks this field to trigger deferred scroll (see 11.3).
 
 ### 11.2 Command Execution Flow
 
@@ -980,10 +985,33 @@ On success: notify("✓ {lemma} ({pos})" or "✓ Entry created for {lemma}")
 On partial success: notify("⚠ Entry created for {lemma} (failed: {sections})") — when optional sections failed
 On error: notify("⚠ {reason}") + logger.warn
   ↓
-V5: After Generate success → scrollToTargetBlock()
-  reads state.targetBlockId, finds ^{blockId} line in active file,
-  calls ActiveFileService.scrollToLine() to scroll editor
+If Lemma: fireBackgroundGenerate(notify) — fire-and-forget
+  ↓
+If Generate (manual): scrollToTargetBlock()
 ```
+
+#### Background Generate (after Lemma)
+
+After a successful Lemma, `fireBackgroundGenerate` launches `runBackgroundGenerate` as a fire-and-forget promise stored in `state.inFlightGenerate`:
+
+```
+fireBackgroundGenerate(notify)
+  Guard: skip if inFlightGenerate already set (no concurrent generates)
+  ↓
+runBackgroundGenerate(lemma, notify):
+  1. vam.findByBasename(lemma) → use existing path, or construct root-level SplitPathToMdFile
+  2. vam.readContent(targetPath) → content (empty string if file doesn't exist)
+  3. Build synthetic CommandInput with target file's splitPath + content
+  4. commandFnForCommandKind.Generate(input) → ResultAsync<VaultAction[], CommandError>
+  5. Prepend UpsertMdFile action (ensures file exists before process/rename)
+  6. vam.dispatch(allActions)
+  7. Notify success/failure (same format as manual Generate)
+  ↓
+.catch → notify("⚠ Background generate failed: {reason}")
+.finally → clear state.inFlightGenerate
+```
+
+The user stays on the source text throughout. No navigation, no manual Generate invocation.
 
 The `notify` callback is injected from `createCommandExecutor` (which creates an Obsidian `Notice`).
 
@@ -1001,11 +1029,21 @@ createHandler(): EventHandler<WikilinkClickPayload> {
       if (attestation.isOk()) {
         this.state.attestationForLatestNavigated = attestation.value;
       }
+
+      // Deferred scroll: if background Generate is in flight for this target,
+      // wait for it to finish and then scroll to the entry
+      const inFlight = this.state.inFlightGenerate;
+      if (inFlight && payload.wikiTarget.basename === inFlight.lemma) {
+        void this.awaitGenerateAndScroll(inFlight);  // fire-and-forget
+      }
+
       return { outcome: HandlerOutcome.Passthrough }; // don't consume the event
     },
   };
 }
 ```
+
+**Deferred scroll** (`awaitGenerateAndScroll`): awaits the in-flight Generate promise, then after a 300ms delay (letting `openLinkText` navigation settle), checks `vam.mdPwd()` — if user is still on the target note, calls `scrollToTargetBlock()`. If user navigated away, `targetBlockId` stays in state for potential future use. The handler must NOT block — the detector awaits the handler, then calls `openLinkText()` to navigate. Using `void` ensures the async scroll is fire-and-forget.
 
 This is one of two ways context flows to commands. The other: user selects text → calls Lemma → `buildAttestationFromSelection()` creates attestation on-the-fly from the selection (see section 6.2).
 
@@ -1041,7 +1079,7 @@ To add support for a new target language (e.g., Japanese):
 | File | Purpose |
 |------|---------|
 | **Textfresser Commander** | |
-| `src/commanders/textfresser/textfresser.ts` | Commander: state, command dispatch, wikilink handler, V5: scrollToTargetBlock() |
+| `src/commanders/textfresser/textfresser.ts` | Commander: state, command dispatch, wikilink handler, V5: scrollToTargetBlock(), background Generate (fireBackgroundGenerate/runBackgroundGenerate), deferred scroll (awaitGenerateAndScroll) |
 | `src/commanders/textfresser/commands/types.ts` | CommandFn, CommandInput, TextfresserCommandKind |
 | `src/commanders/textfresser/prompt-runner.ts` | PromptRunner: LLM call wrapper |
 | `src/commanders/textfresser/errors.ts` | CommandError, AttestationParsingError |

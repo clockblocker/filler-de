@@ -7,8 +7,8 @@ import { z } from "zod";
 import type { CommandContext } from "../../../managers/obsidian/command-executor";
 import type { VaultAction } from "../../../managers/obsidian/vault-action-manager";
 import type { CommandError } from "../errors";
-import type { LemmaResult } from "./lemma/types";
 import type { TextfresserState } from "../textfresser";
+import type { LemmaResult } from "./lemma/types";
 
 // Re-export for convenience
 export type { CommandError } from "../errors";
