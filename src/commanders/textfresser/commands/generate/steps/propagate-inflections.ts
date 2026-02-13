@@ -1,5 +1,6 @@
 import { ok, type Result } from "neverthrow";
 import { dictEntryIdHelper } from "../../../../../linguistics/common/dict-entry-id/dict-entry-id";
+import { SurfaceKind } from "../../../../../linguistics/common/enums/core";
 import type { CaseValue } from "../../../../../linguistics/common/enums/inflection/feature-values";
 import type { NounInflectionCell } from "../../../../../linguistics/german/inflection/noun";
 import {
@@ -20,12 +21,21 @@ import { computeShardedFolderParts } from "../../../common/sharded-path";
 import type { CommandError } from "../../types";
 import type { GenerateSectionsResult } from "./generate-sections";
 
-function buildTargetSplitPath(word: string): SplitPathToMdFile {
+function buildTargetSplitPath(
+	ctx: GenerateSectionsResult,
+	word: string,
+): SplitPathToMdFile {
+	const lemmaResult = ctx.textfresserState.latestLemmaResult;
 	return {
 		basename: word,
 		extension: "md",
 		kind: SplitPathKind.MdFile,
-		pathParts: computeShardedFolderParts(word),
+		pathParts: computeShardedFolderParts(
+			word,
+			ctx.textfresserState.languages.target,
+			lemmaResult.linguisticUnit,
+			SurfaceKind.Inflected,
+		),
 	};
 }
 
@@ -124,7 +134,7 @@ export function propagateInflections(
 		}
 
 		// Different note — create UpsertMdFile + ProcessMdFile
-		const splitPath = buildTargetSplitPath(form);
+		const splitPath = buildTargetSplitPath(ctx, form);
 
 		const upsertAction: VaultAction = {
 			kind: VaultActionKind.UpsertMdFile,

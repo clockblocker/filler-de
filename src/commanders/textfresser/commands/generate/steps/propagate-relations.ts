@@ -1,4 +1,6 @@
 import { ok, type Result } from "neverthrow";
+import type { LinguisticUnitKind } from "../../../../../linguistics/common/enums/core";
+import { SurfaceKind } from "../../../../../linguistics/common/enums/core";
 import { cssSuffixFor } from "../../../../../linguistics/common/sections/section-css-kind";
 import {
 	DictSectionKind,
@@ -11,6 +13,7 @@ import {
 } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import { VaultActionKind } from "../../../../../managers/obsidian/vault-action-manager/types/vault-action";
 import type { RelationSubKind } from "../../../../../prompt-smith/schemas/relation";
+import type { TargetLanguage } from "../../../../../types";
 import { computeShardedFolderParts } from "../../../common/sharded-path";
 import type { CommandError } from "../../types";
 import type {
@@ -38,12 +41,21 @@ const SYMBOL_FOR_KIND: Record<RelationSubKind, string> = {
 	Synonym: "=",
 };
 
-function buildTargetSplitPath(word: string): SplitPathToMdFile {
+function buildTargetSplitPath(
+	word: string,
+	targetLanguage: TargetLanguage,
+	unitKind: LinguisticUnitKind,
+): SplitPathToMdFile {
 	return {
 		basename: word,
 		extension: "md",
 		kind: SplitPathKind.MdFile,
-		pathParts: computeShardedFolderParts(word),
+		pathParts: computeShardedFolderParts(
+			word,
+			targetLanguage,
+			unitKind,
+			SurfaceKind.Lemma,
+		),
 	};
 }
 
@@ -91,6 +103,7 @@ export function propagateRelations(
 	const lemmaResult = ctx.textfresserState.latestLemmaResult;
 	const sourceWord = lemmaResult.lemma;
 	const targetLang = ctx.textfresserState.languages.target;
+	const unitKind = lemmaResult.linguisticUnit;
 	const pairs = collectInversePairs(relations);
 
 	// Group pairs by target word (a word may appear in multiple relation kinds)
@@ -114,7 +127,11 @@ export function propagateRelations(
 	const sectionMarker = `<span class="entry_section_title entry_section_title_${relationCssSuffix}">${relationTitle}</span>`;
 
 	for (const [targetWord, entries] of byTarget) {
-		const splitPath = buildTargetSplitPath(targetWord);
+		const splitPath = buildTargetSplitPath(
+			targetWord,
+			targetLang,
+			unitKind,
+		);
 		const newLines = entries.map((e) => e.line);
 
 		// ProcessMdFile with transform — reads existing content and appends inverse relation.

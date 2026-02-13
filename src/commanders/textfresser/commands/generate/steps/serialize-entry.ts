@@ -4,13 +4,13 @@ import { dictNoteHelper } from "../../../../../stateless-helpers/dict-note";
 import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metadata";
 import { logger } from "../../../../../utils/logger";
 import { DICT_ENTRY_NOTE_KIND } from "../../../common/metadata";
-import type { CommandError, CommandState } from "../../types";
+import type { CommandError, CommandStateWithLemma } from "../../types";
 import type { GenerateSectionsResult } from "./generate-sections";
 
 /** Serialize all DictEntries into file content, apply noteKind metadata, and update activeFile. */
 export function serializeEntry(
 	ctx: GenerateSectionsResult,
-): Result<CommandState, CommandError> {
+): Result<CommandStateWithLemma, CommandError> {
 	for (const entry of ctx.allEntries) {
 		entry.sections.sort(compareSectionsByWeight);
 	}

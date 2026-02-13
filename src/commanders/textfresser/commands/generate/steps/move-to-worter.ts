@@ -8,15 +8,19 @@ import {
 	VaultActionKind,
 } from "../../../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { computeShardedFolderParts } from "../../../common/sharded-path";
-import type { CommandError, CommandState } from "../../types";
+import type { CommandError, CommandStateWithLemma } from "../../types";
 
 /** Appends RenameMdFile action to move file to sharded path. */
 export function moveToWorter(
-	ctx: CommandState,
-): Result<CommandState, CommandError> {
+	ctx: CommandStateWithLemma,
+): Result<CommandStateWithLemma, CommandError> {
 	const activeFile = ctx.commandContext.activeFile;
+	const lemmaResult = ctx.textfresserState.latestLemmaResult;
 	const shardedParts = computeShardedFolderParts(
 		activeFile.splitPath.basename,
+		ctx.textfresserState.languages.target,
+		lemmaResult.linguisticUnit,
+		lemmaResult.surfaceKind,
 	);
 
 	const newPath: SplitPathToMdFile = {

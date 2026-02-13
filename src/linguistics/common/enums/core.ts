@@ -1,4 +1,10 @@
 import { z } from "zod/v3";
+import type { TargetLanguage } from "../../../types";
+
+export const LANGUAGE_ISO_CODE: Record<TargetLanguage, string> = {
+	German: "de",
+	English: "en",
+};
 
 const linguisticUnitKinds = ["Phrasem", "Lexem", "Morphem"] as const;
 
