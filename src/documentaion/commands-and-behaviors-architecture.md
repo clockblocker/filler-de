@@ -113,7 +113,7 @@ Three possible outcomes: `Handled` (consumed), `Passthrough` (native behavior), 
 
 | Behavior | PayloadKind | Source |
 |----------|-------------|--------|
-| **wikilink-click** | `WikilinkClicked` | Registered only if `textfresser` is provided. Handler created by `textfresser.createHandler()`. Tracks wikilink clicks for Lemma→Generate flow. |
+| **wikilink-click** | `WikilinkClicked` | Registered only if `textfresser` is provided. Handler created by `textfresser.createHandler()`. Tracks wikilink clicks for attestation context. Also triggers deferred scroll: if a background Generate is in flight for the clicked target, `awaitGenerateAndScroll()` waits for completion and scrolls to entry. |
 
 ### 4.5 Standalone Behavior
 
