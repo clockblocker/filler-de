@@ -1,4 +1,4 @@
-import type { GermanLinguisticUnit } from "../../linguistics/german/schemas/linguistic-unit";
+import type { GermanLinguisticUnit } from "../../linguistics/de";
 
 export type EntrySection = {
 	kind: string; // CSS suffix: "kontexte", "synonyme", "morpheme", etc.

@@ -18,6 +18,7 @@ Return:
 - surfaceKind: "Lemma" (already dictionary form), "Inflected" (conjugated/declined), or "Variant" (spelling variant)
 - lemma: the dictionary/citation form of the word
 - nounClass: "Common" (default) or "Proper" (named entity — person, place, organization, brand). Only for pos: "Noun". Omit for non-nouns.
+- genus: grammatical gender for nouns — one of "Maskulinum", "Femininum", "Neutrum". Only for pos: "Noun". Omit for non-nouns.
 - fullSurface: the full proper noun as it appears in the text, only when it extends beyond the selected surface. Omit when the surface already covers the full proper noun or when the noun is Common.
 - emojiDescription: 1-3 emojis that capture the core semantic concept of the word's meaning in context. Used to visually distinguish between different senses of the same word (e.g., Schloss-castle ["🏰"] vs Schloss-lock ["🔒"]). For polysemous words, choose emojis that distinguish this sense from other common senses.
 - ipa: the IPA pronunciation of the lemma form (without slashes or brackets, just the transcription). Use narrow IPA transcription reflecting standard High German (Hochdeutsch) pronunciation.
@@ -49,7 +50,7 @@ Rules:
 {"context":"Das Haus steht am Ende der Straße.","surface":"Haus"}
 </input>
 <output>
-{"emojiDescription":["🏠"],"ipa":"haʊ̯s","lemma":"Haus","linguisticUnit":"Lexem","nounClass":"Common","pos":"Noun","surfaceKind":"Lemma"}
+{"emojiDescription":["🏠"],"genus":"Neutrum","ipa":"haʊ̯s","lemma":"Haus","linguisticUnit":"Lexem","nounClass":"Common","pos":"Noun","surfaceKind":"Lemma"}
 </output>
 </example-2>
 
@@ -85,7 +86,7 @@ Rules:
 {"context":"Die Deutsche Bank hat ihren Sitz in Frankfurt.","surface":"Bank"}
 </input>
 <output>
-{"emojiDescription":["🏦"],"fullSurface":"Deutsche Bank","ipa":"ˈdɔʏ̯tʃə baŋk","lemma":"Deutsche Bank","linguisticUnit":"Lexem","nounClass":"Proper","pos":"Noun","surfaceKind":"Lemma"}
+{"emojiDescription":["🏦"],"fullSurface":"Deutsche Bank","genus":"Femininum","ipa":"ˈdɔʏ̯tʃə baŋk","lemma":"Deutsche Bank","linguisticUnit":"Lexem","nounClass":"Proper","pos":"Noun","surfaceKind":"Lemma"}
 </output>
 </example-6>
 
@@ -94,7 +95,7 @@ Rules:
 {"context":"Ich habe bei einer deutschen Bank ein Konto eröffnet.","surface":"Bank"}
 </input>
 <output>
-{"emojiDescription":["🏦"],"ipa":"baŋk","lemma":"Bank","linguisticUnit":"Lexem","nounClass":"Common","pos":"Noun","surfaceKind":"Lemma"}
+{"emojiDescription":["🏦"],"genus":"Femininum","ipa":"baŋk","lemma":"Bank","linguisticUnit":"Lexem","nounClass":"Common","pos":"Noun","surfaceKind":"Lemma"}
 </output>
 </example-7>
 
@@ -103,7 +104,7 @@ Rules:
 {"context":"Ich wohne in Berlin.","surface":"Berlin"}
 </input>
 <output>
-{"emojiDescription":["🐻","🏙️"],"ipa":"bɛʁˈliːn","lemma":"Berlin","linguisticUnit":"Lexem","nounClass":"Proper","pos":"Noun","surfaceKind":"Lemma"}
+{"emojiDescription":["🐻","🏙️"],"genus":"Neutrum","ipa":"bɛʁˈliːn","lemma":"Berlin","linguisticUnit":"Lexem","nounClass":"Proper","pos":"Noun","surfaceKind":"Lemma"}
 </output>
 </example-8>
 </examples>`;

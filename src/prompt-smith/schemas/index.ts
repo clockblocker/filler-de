@@ -5,6 +5,7 @@ import {
 	PromptKind as PromptKindEnum,
 } from "../codegen/consts";
 import { disambiguateSchemas } from "./disambiguate";
+import { featuresSchemas } from "./features";
 import { inflectionSchemas } from "./inflection";
 import { lemmaSchemas } from "./lemma";
 import { morphemSchemas } from "./morphem";
@@ -22,6 +23,7 @@ export const SchemasFor = {
 	[PromptKindEnum.NounInflection]: nounInflectionSchemas,
 	[PromptKindEnum.Disambiguate]: disambiguateSchemas,
 	[PromptKindEnum.WordTranslation]: wordTranslationSchemas,
+	[PromptKindEnum.Features]: featuresSchemas,
 } satisfies Record<
 	PromptKind,
 	{ userInputSchema: z.ZodTypeAny; agentOutputSchema: z.ZodTypeAny }

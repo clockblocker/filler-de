@@ -52,6 +52,8 @@ User gets a tailor-made dictionary that grows with their reading
 
 > **V11 scope**: Kill Header Prompt — `PromptKind.Header` eliminated. `emojiDescription` (1-3 emojis) and `ipa` (IPA pronunciation) moved into Lemma prompt output. Header line built from LemmaResult fields (`formatHeaderLine()` takes `{ emojiDescription, ipa }` instead of `AgentOutput<"Header">`). `emoji` derived from `emojiDescription[0]`. `genus` and article (der/die/das) dropped from header line. `buildLinguisticUnit()` removed — `meta.linguisticUnit` no longer populated during Generate. One fewer API call per new entry.
 
+> **V12 scope**: POS features as tags + custom header formatting — New `PromptKind.Features` returns non-inflectional grammatical features (e.g., maskulin, transitiv, stark) as tag path components. Tags rendered as `DictSectionKind.Tags` section (`#pos/feature1/feature2`). Lemma prompt now returns `genus` ("Maskulinum"/"Femininum"/"Neutrum") for nouns. Header formatter prepends article (der/die/das) for nouns via `articleFromGenus`. `CORE_SECTIONS` expanded to include Tags.
+
 > **V9 scope**: LinguisticUnit DTO — Zod-schema-based type system as source of truth for DictEntries. German + Noun fully featured (`genus`, `nounClass`); all other POS/unit kinds have stubs. `GermanLinguisticUnit` built during Generate and stored in `meta.linguisticUnit`. Header prompt now returns `genus` ("Maskulinum"/"Femininum"/"Neutrum") instead of `article` ("der"/"die"/"das"); formatter derives article via `articleFromGenus`. New files: `surface-factory.ts`, `genus.ts`, `noun.ts`, `pos-features.ts`, `lexem-surface.ts`, `phrasem-surface.ts`, `morphem-surface.ts`, `linguistic-unit.ts`. 21 new DTO tests.
 
 > **V8 scope**: Eigenname (proper noun) support — Lemma LLM returns `nounClass` ("Common" | "Proper") and `fullSurface` (when proper noun extends beyond selected text, e.g., selecting "Bank" in "Deutsche Bank"). Wikilink wrapping expands to cover full proper noun via `expandOffsetForFullSurface()` with verification fallback. Section config: proper nouns get reduced sections (core only — no Inflection, Morphem, Relation) via `sectionsForProperNoun`. `nounClass` threaded through `LemmaResult` → `buildSectionQuery()` → `getSectionsFor()`.
@@ -219,7 +221,7 @@ Each DictEntry is divided into **DictEntrySections**, categorized by `DictSectio
 
 ```
 DictSectionKind = "Relation" | "FreeForm" | "Attestation" | "Morphem"
-               | "Header" | "Deviation" | "Inflection" | "Translation"
+               | "Header" | "Deviation" | "Inflection" | "Translation" | "Tags"
 ```
 
 | Kind | German title | Purpose | Has SubSections? |
@@ -230,6 +232,7 @@ DictSectionKind = "Relation" | "FreeForm" | "Attestation" | "Morphem"
 | `Morphem` | Morpheme | Word decomposition. LLM returns structured data (`surf`/`lemma`/`tags`/`kind`), `morphemeFormatterHelper` converts to wikilink display (`[[auf\|>auf]]\|[[passen]]`) | No |
 | `Inflection` | Flexion | Declension/conjugation tables | No |
 | `Deviation` | Abweichungen | Irregular forms, exceptions | No |
+| `Tags` | Tags | POS feature tags (`#noun/maskulin`, `#verb/transitiv/stark`). V12: generated from `PromptKind.Features` output. | No |
 | `FreeForm` | Notizen | Catch-all for unstructured content (see below) | No |
 
 Section titles are localized per `TargetLanguage` via `TitleReprFor`.
@@ -512,6 +515,7 @@ Lemma tries two sources (in order):
   surfaceKind: SurfaceKind,            // "Lemma" | "Inflected" | "Variant"
   lemma: string,                       // dictionary form
   nounClass?: "Common" | "Proper" | null, // V8: only for pos: "Noun"
+  genus?: "Maskulinum" | "Femininum" | "Neutrum" | null, // V12: only for pos: "Noun"
   fullSurface?: string | null,         // V8: full proper noun span when it extends beyond selected surface
   emojiDescription: string[],          // V11: 1-3 emojis for sense disambiguation
   ipa: string,                         // V11: IPA pronunciation of lemma
@@ -626,18 +630,19 @@ Matching ignores surfaceKind so that inflected encounters (e.g., "Schlosses" →
 
 **Path A (re-encounter)**: If `matchedEntry` exists, skip all LLM calls. Find or create the Attestation section in the matched entry, append the new attestation ref (deduped). Returns existing entries unchanged except for the appended ref.
 
-**Path B (new entry)**: Determines applicable sections via `getSectionsFor()`, filtered to the **V3 set**: Header, Morphem, Relation, Inflection, Translation, Attestation. Header is built from LemmaResult fields (no LLM call).
+**Path B (new entry)**: Determines applicable sections via `getSectionsFor()`, filtered to the **V3 set**: Header, Tags, Morphem, Relation, Inflection, Translation, Attestation. Header is built from LemmaResult fields (no LLM call).
 
 All LLM calls are fired in parallel via `Promise.allSettled` (none depend on each other's results). **Critical sections** (Translation) throw on failure; **optional sections** (Morphem, Relation, Inflection) degrade gracefully — failures are logged and the entry is still created. Results are assembled in correct section order after all promises settle. Applicable sections:
 
 | Section | LLM? | PromptKind | Formatter | Output |
 |---------|------|-----------|-----------|--------|
-| **Header** | No | — | `formatHeaderLine()` | `{emoji} [[lemma]], [{ipa}](youglish_url)` → `DictEntry.headerContent`. Built from LemmaResult fields (`emojiDescription`, `ipa`). `emoji` derived from `emojiDescription[0]`. No LLM call. `emojiDescription` stored in `meta.emojiDescription` for Disambiguate lookups. |
+| **Header** | No | — | `formatHeaderLine()` | `{emoji} [[lemma]], [{ipa}](youglish_url)` → `DictEntry.headerContent`. For nouns: `{emoji} {article} [[lemma]], [{ipa}](youglish_url)` where article derived from `lemmaResult.genus` via `articleFromGenus`. Built from LemmaResult fields (`emojiDescription`, `ipa`, `genus`). `emoji` derived from `emojiDescription[0]`. No LLM call. `emojiDescription` stored in `meta.emojiDescription` for Disambiguate lookups. |
 | **Morphem** | Yes | `Morphem` | `morphemeFormatterHelper.formatSection()` | `[[kohle]]\|[[kraft]]\|[[werk]]` → `EntrySection` |
 | **Relation** | Yes | `Relation` | `formatRelationSection()` | `= [[Synonym]], ⊃ [[Hypernym]]` → `EntrySection`. Raw output also stored for propagation. |
 | **Inflection** | Yes | `NounInflection` (nouns) or `Inflection` (other POS) | `formatNounInflection()` / `formatInflectionSection()` | `N: das [[Kohlekraftwerk]], die [[Kohlekraftwerke]]` → `EntrySection`. Nouns use structured cells (case×number with article+form); other POS use generic rows. Noun cells also feed `propagateInflections`. |
 | **Translation** | Yes | `WordTranslation` | — (string pass-through) | Translates the lemma word (using attestation context for disambiguation only) → `EntrySection`. V6: changed from `PromptKind.Translate` (which translated the full sentence) to `WordTranslation` (input: `{word, pos, context}`, output: concise 1-3 word translation). |
 | **Attestation** | No | — | — | `![[file#^blockId\|^]]` from `lemmaResult.attestation.source.ref` → `EntrySection` |
+| **Tags** | Yes | `Features` | — (compound tag string) | `#pos/feature1/feature2` → `EntrySection`. V12: non-inflectional grammatical features from `PromptKind.Features` (e.g., maskulin, transitiv/stark). Optional — entry still created if Features prompt fails. Only for Lexem POS. |
 
 Each `EntrySection` gets:
 - `kind`: CSS suffix from `cssSuffixFor[DictSectionKind]` (e.g., `"definition"`, `"synonyme"`, `"morpheme"`, `"flexion"`, `"translations"`)
@@ -663,7 +668,7 @@ Different prompts are needed depending on:
 |-----------|--------|--------|
 | **TargetLanguage** | German, English, ... | Language of the dictionary |
 | **KnownLanguage** | Russian, English, ... | User's native language |
-| **PromptKind** | Lemma, Disambiguate, Morphem, Relation, Inflection, NounInflection, Translate, WordTranslation | What task the LLM performs |
+| **PromptKind** | Lemma, Disambiguate, Morphem, Relation, Inflection, NounInflection, Translate, WordTranslation, Features | What task the LLM performs |
 
 Section applicability (which sections a DictEntry gets) is determined by `LinguisticUnitKind` + `POS` + optional `nounClass` via `getSectionsFor()` in `src/linguistics/sections/section-config.ts`:
 - **Lexem**: POS-dependent (e.g., Nouns get Morphem + Inflection + Relation; Conjunctions get core only)
@@ -1117,13 +1122,13 @@ To add support for a new target language (e.g., Japanese):
 | `src/commanders/textfresser/commands/generate/steps/check-attestation.ts` | Sync check: attestation available |
 | `src/commanders/textfresser/commands/generate/steps/check-lemma-result.ts` | Sync check: lemma result available |
 | `src/commanders/textfresser/commands/generate/steps/resolve-existing-entry.ts` | Parse existing entries, use Lemma's disambiguationResult for re-encounter detection |
-| `src/commanders/textfresser/commands/generate/steps/generate-sections.ts` | Async: LLM calls per section (or append attestation for re-encounters). V11: `buildLinguisticUnit()` removed, `meta.linguisticUnit` no longer populated. Stores `meta.emojiDescription` from precomputedEmojiDescription or lemmaResult.emojiDescription. Header built from LemmaResult fields. Sets targetBlockId |
+| `src/commanders/textfresser/commands/generate/steps/generate-sections.ts` | Async: LLM calls per section (or append attestation for re-encounters). V11: `buildLinguisticUnit()` removed, `meta.linguisticUnit` no longer populated. V12: Features prompt + Tags section, article in header for nouns. Stores `meta.emojiDescription` from precomputedEmojiDescription or lemmaResult.emojiDescription. Header built from LemmaResult fields. Sets targetBlockId |
 | `src/commanders/textfresser/commands/generate/steps/propagate-relations.ts` | Cross-ref: compute inverse relations, resolve target paths via shared resolver, generate actions for target notes |
 | `src/commanders/textfresser/commands/generate/steps/propagate-inflections.ts` | Noun inflection propagation: resolve target paths via shared resolver, create stub entries in inflected-form notes |
 | `src/commanders/textfresser/common/target-path-resolver.ts` | Shared path resolution for propagation: two-source lookup (VAM → Librarian → computed sharded path), inflected→lemma healing, `buildPropagationActionPair` helper |
 | `src/commanders/textfresser/common/sharded-path.ts` | Sharded path computation for Worter entries; exports `SURFACE_KIND_PATH_INDEX` for healing checks |
 | `src/commanders/textfresser/commands/generate/steps/serialize-entry.ts` | Serialize ALL DictEntries to note body + apply noteKind metadata (single upsert) |
-| `src/commanders/textfresser/commands/generate/section-formatters/header-formatter.ts` | LemmaResult fields → header line. Derives emoji from `emojiDescription[0]`, no genus/article logic. |
+| `src/commanders/textfresser/commands/generate/section-formatters/header-formatter.ts` | LemmaResult fields → header line. Derives emoji from `emojiDescription[0]`. V12: optional `article` param prepends der/die/das for nouns. |
 | `src/commanders/textfresser/commands/generate/section-formatters/relation-formatter.ts` | Relation LLM output → symbol notation |
 | `src/commanders/textfresser/commands/generate/section-formatters/inflection-formatter.ts` | Generic inflection LLM output → `{label}: {forms}` lines |
 | `src/commanders/textfresser/commands/generate/section-formatters/noun-inflection-formatter.ts` | Noun inflection: structured cells → `N: das [[Kraftwerk]], die [[Kraftwerke]]` + raw cells for propagation |
@@ -1171,7 +1176,7 @@ To add support for a new target language (e.g., Japanese):
 | `src/prompt-smith/codegen/skript/run.ts` | Codegen orchestrator |
 | `src/prompt-smith/prompt-parts/` | Human-written prompt sources (3 kinds × 2 lang pairs) |
 | **Tests (V5)** | |
-| `tests/unit/textfresser/formatters/header-formatter.test.ts` | Header formatter: emoji (from emojiDescription[0])/ipa/wikilink assembly, no genus/article |
+| `tests/unit/textfresser/formatters/header-formatter.test.ts` | Header formatter: emoji (from emojiDescription[0])/ipa/wikilink assembly. V12: with/without article param |
 | `tests/unit/linguistics/german-linguistic-unit.test.ts` | V9: GermanLinguisticUnit DTO — Lexem+Noun, POS stubs, Phrasem, Morphem, rejection cases (21 tests) |
 | `tests/unit/textfresser/formatters/relation-formatter.test.ts` | Relation formatter: symbol notation, grouping, dedup |
 | `tests/unit/textfresser/formatters/inflection-formatter.test.ts` | Generic inflection formatter: label/forms rows |

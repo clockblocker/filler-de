@@ -10,6 +10,7 @@ Return:
 - surfaceKind: "Lemma" (already dictionary form), "Inflected" (conjugated/declined), or "Variant" (spelling variant)
 - lemma: the dictionary/citation form of the word
 - nounClass: "Common" (default) or "Proper" (named entity — person, place, organization, brand). Only for pos: "Noun". Omit for non-nouns.
+- genus: grammatical gender for nouns — one of "Maskulinum", "Femininum", "Neutrum". Only for pos: "Noun". Omit for non-nouns.
 - fullSurface: the full proper noun as it appears in the text, only when it extends beyond the selected surface. Omit when the surface already covers the full proper noun or when the noun is Common.
 - emojiDescription: 1-3 emojis that capture the core semantic concept of the word's meaning in context. Used to visually distinguish between different senses of the same word (e.g., Schloss-castle ["🏰"] vs Schloss-lock ["🔒"]). For polysemous words, choose emojis that distinguish this sense from other common senses.
 - ipa: the IPA pronunciation of the lemma form (without slashes or brackets, just the transcription). Use narrow IPA transcription reflecting standard High German (Hochdeutsch) pronunciation.

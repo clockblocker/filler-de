@@ -3,7 +3,7 @@ import {
 	CASE_ORDER,
 	CASE_SHORT_LABEL,
 	type NounInflectionCell,
-} from "../../../../../linguistics/german/inflection/noun";
+} from "../../../../../linguistics/de/lexem/noun";
 import type { AgentOutput } from "../../../../../prompt-smith";
 
 /**

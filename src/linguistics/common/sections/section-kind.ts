@@ -10,6 +10,7 @@ const DICT_SECTION_KIND_STR = [
 	"Deviation",
 	"Inflection",
 	"Translation",
+	"Tags",
 ] as const;
 
 export const DictSectionKindSchema = z.enum(DICT_SECTION_KIND_STR);
@@ -36,4 +37,5 @@ export const TitleReprFor = {
 		English: "Translation",
 		German: "Übersetzung",
 	},
+	[DictSectionKind.Tags]: { English: "Tags", German: "Tags" },
 } satisfies Record<DictSectionKind, Record<TargetLanguage, string>>;

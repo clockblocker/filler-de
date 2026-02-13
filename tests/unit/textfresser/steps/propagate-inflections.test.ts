@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import type { GenerateSectionsResult } from "../../../../src/commanders/textfresser/commands/generate/steps/generate-sections";
 import { propagateInflections } from "../../../../src/commanders/textfresser/commands/generate/steps/propagate-inflections";
 import type { TextfresserState } from "../../../../src/commanders/textfresser/textfresser";
-import type { NounInflectionCell } from "../../../../src/linguistics/german/inflection/noun";
+import type { NounInflectionCell } from "../../../../src/linguistics/de/lexem/noun";
 import { VaultActionKind } from "../../../../src/managers/obsidian/vault-action-manager/types/vault-action";
 
 function makeCtx(

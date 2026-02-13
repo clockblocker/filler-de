@@ -17,9 +17,13 @@ const userInputSchema = z.object({
 // Re-create NounClassSchema with zod/v3 to avoid v3/v4 runtime mismatch
 const NounClassSchemaV3 = z.enum(["Common", "Proper"]);
 
+// Re-create GermanGenusSchema with zod/v3 (features.ts uses v3 too, but keep local for consistency)
+const GermanGenusSchemaV3 = z.enum(["Maskulinum", "Femininum", "Neutrum"]);
+
 const agentOutputSchema = z.object({
 	emojiDescription: z.array(z.string().min(1).max(4)).min(1).max(3),
 	fullSurface: z.string().nullable().optional(),
+	genus: GermanGenusSchemaV3.nullable().optional(),
 	ipa: z.string().min(1),
 	lemma: z.string(),
 	linguisticUnit: LinguisticUnitKindSchema,

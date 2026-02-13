@@ -1,4 +1,5 @@
 import { errAsync, ok, type ResultAsync } from "neverthrow";
+import type { GermanGenus } from "../../../../linguistics/de/lexem/noun/features";
 import {
 	type VaultAction,
 	VaultActionKind,
@@ -142,10 +143,16 @@ export function lemmaCommand(
 					? result.nounClass
 					: undefined;
 
+			const genus: GermanGenus | undefined =
+				result.pos === "Noun" && result.genus
+					? result.genus
+					: undefined;
+
 			textfresserState.latestLemmaResult = {
 				attestation,
 				disambiguationResult,
 				emojiDescription: result.emojiDescription,
+				genus,
 				ipa: result.ipa,
 				lemma: result.lemma,
 				linguisticUnit: result.linguisticUnit,

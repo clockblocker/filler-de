@@ -6,6 +6,7 @@ const S = DictSectionKind;
 
 const CORE_SECTIONS = [
 	S.Header,
+	S.Tags,
 	S.Translation,
 	S.Attestation,
 	S.FreeForm,
@@ -45,13 +46,14 @@ export const sectionsForProperNoun: readonly DictSectionKind[] = [
 /** Display order weight for each section kind (lower = earlier in the note). */
 export const SECTION_DISPLAY_WEIGHT: Record<DictSectionKind, number> = {
 	[S.Header]: 0,
-	[S.Attestation]: 1,
-	[S.Relation]: 2,
-	[S.Translation]: 3,
-	[S.Morphem]: 4,
-	[S.Inflection]: 5,
-	[S.Deviation]: 6,
-	[S.FreeForm]: 7,
+	[S.Tags]: 1,
+	[S.Attestation]: 2,
+	[S.Relation]: 3,
+	[S.Translation]: 4,
+	[S.Morphem]: 5,
+	[S.Inflection]: 6,
+	[S.Deviation]: 7,
+	[S.FreeForm]: 8,
 };
 
 /** Weight lookup by CSS suffix — for sorting parsed EntrySection[]. */

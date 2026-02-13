@@ -22,6 +22,7 @@ export const examples = [
 		},
 		output: {
 			emojiDescription: ["🏠"],
+			genus: "Neutrum",
 			ipa: "haʊ̯s",
 			lemma: "Haus",
 			linguisticUnit: "Lexem",
@@ -79,6 +80,7 @@ export const examples = [
 		output: {
 			emojiDescription: ["🏦"],
 			fullSurface: "Deutsche Bank",
+			genus: "Femininum",
 			ipa: "ˈdɔʏ̯tʃə baŋk",
 			lemma: "Deutsche Bank",
 			linguisticUnit: "Lexem",
@@ -94,6 +96,7 @@ export const examples = [
 		},
 		output: {
 			emojiDescription: ["🏦"],
+			genus: "Femininum",
 			ipa: "baŋk",
 			lemma: "Bank",
 			linguisticUnit: "Lexem",
@@ -109,6 +112,7 @@ export const examples = [
 		},
 		output: {
 			emojiDescription: ["🐻", "🏙️"],
+			genus: "Neutrum",
 			ipa: "bɛʁˈliːn",
 			lemma: "Berlin",
 			linguisticUnit: "Lexem",

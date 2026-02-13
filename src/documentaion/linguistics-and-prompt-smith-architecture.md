@@ -398,7 +398,7 @@ ParsedNonLexemId = {
 
 ```typescript
 DictSectionKind = "Relation" | "FreeForm" | "Attestation" | "Morphem"
-               | "Header" | "Deviation" | "Inflection" | "Translation"
+               | "Header" | "Deviation" | "Inflection" | "Translation" | "Tags"
 ```
 
 Each kind has display titles in English and German:
@@ -413,6 +413,7 @@ Each kind has display titles in English and German:
 | Inflection | Inflection | Flexion |
 | Deviation | Deviations | Abweichungen |
 | FreeForm | Notes | Notizen |
+| Tags | Tags | Tags |
 
 #### CSS suffixes
 
@@ -423,7 +424,7 @@ Maps each `DictSectionKind` to a CSS class suffix used in `entry_section_title_{
 ```
 Header -> "formen", Attestation -> "kontexte", FreeForm -> "notizen",
 Relation -> "synonyme", Morphem -> "morpheme", Deviation -> "abweichungen",
-Inflection -> "flexion", Translation -> "translations"
+Inflection -> "flexion", Translation -> "translations", Tags -> "tags"
 ```
 
 #### Section selection
@@ -433,7 +434,7 @@ Inflection -> "flexion", Translation -> "translations"
 **CORE_SECTIONS** (always included):
 
 ```typescript
-[Header, Translation, Attestation, FreeForm]
+[Header, Tags, Translation, Attestation, FreeForm]
 ```
 
 **Per-POS sections** (`sectionsForLexemPos`):
@@ -470,13 +471,14 @@ When `unit: "Lexem"` with `pos: "Noun"` and `nounClass: "Proper"`, returns `sect
 | Kind | Weight |
 |---|---|
 | Header | 0 |
-| Attestation | 1 |
-| Relation | 2 |
-| Translation | 3 |
-| Morphem | 4 |
-| Inflection | 5 |
-| Deviation | 6 |
-| FreeForm | 7 |
+| Tags | 1 |
+| Attestation | 2 |
+| Relation | 3 |
+| Translation | 4 |
+| Morphem | 5 |
+| Inflection | 6 |
+| Deviation | 7 |
+| FreeForm | 8 |
 
 Lower weight = earlier in the note. Unknown kinds sort to weight 99. `compareSectionsByWeight()` provides a comparator for sorting.
 
@@ -501,10 +503,11 @@ src/prompt-smith/
 │   ├── inflection.ts
 │   ├── noun-inflection.ts
 │   ├── disambiguate.ts
-│   └── word-translation.ts
+│   ├── word-translation.ts
+│   └── features.ts
 ├── prompt-parts/                     # Human-authored prompt sources
 │   ├── german/
-│   │   ├── english/                  # German->English: all 8 prompt kinds
+│   │   ├── english/                  # German->English: all 9 prompt kinds
 │   │   │   ├── lemma/
 │   │   │   │   ├── agent-role.ts
 │   │   │   │   ├── task-description.ts
@@ -515,13 +518,13 @@ src/prompt-smith/
 │   │   │   └── ...                   # One dir per PromptKind
 │   │   └── russian/                  # German->Russian: only Translate & WordTranslation
 │   └── english/
-│       └── english/                  # English->English: all 8 kinds (fallback)
+│       └── english/                  # English->English: all 9 kinds (fallback)
 └── codegen/
     ├── consts.ts                     # PromptKind enum, PromptPartKind enum
     ├── generated-promts/             # Auto-generated compiled prompts
-    │   ├── german/english/           # 8 *-prompt.ts files
+    │   ├── german/english/           # 9 *-prompt.ts files
     │   ├── german/russian/           # 2 *-prompt.ts files
-    │   └── english/english/          # 8 *-prompt.ts files (fallback)
+    │   └── english/english/          # 9 *-prompt.ts files (fallback)
     └── skript/
         ├── run.ts                    # Main codegen entry point
         ├── combine-parts.ts          # Assemble parts into XML-tagged system prompt
@@ -551,6 +554,7 @@ export const SchemasFor = {
     [PromptKind.NounInflection]:  nounInflectionSchemas,
     [PromptKind.Disambiguate]:    disambiguateSchemas,
     [PromptKind.WordTranslation]: wordTranslationSchemas,
+    [PromptKind.Features]: featuresSchemas,
 } satisfies Record<PromptKind, { userInputSchema: z.ZodTypeAny; agentOutputSchema: z.ZodTypeAny }>;
 ```
 
@@ -567,14 +571,14 @@ type AgentOutput<K extends PromptKind> = z.infer<SchemasFor[K]["agentOutputSchem
 
 ```typescript
 PromptKind = "Lemma" | "Morphem" | "Relation" | "Translate"
-           | "Inflection" | "NounInflection" | "Disambiguate" | "WordTranslation"
+           | "Inflection" | "NounInflection" | "Disambiguate" | "WordTranslation" | "Features"
 ```
 
 #### Schema catalog
 
 | PromptKind | userInputSchema | agentOutputSchema | Linguistics enums used |
 |---|---|---|---|
-| **Lemma** | `{ context, surface }` | `{ lemma, ipa, linguisticUnit, surfaceKind, pos?, nounClass?, fullSurface?, emojiDescription }` | `LinguisticUnitKindSchema`, `SurfaceKindSchema`, `PARTS_OF_SPEECH_STR` (as v3 re-creation), `NounClass` (v3) |
+| **Lemma** | `{ context, surface }` | `{ lemma, ipa, linguisticUnit, surfaceKind, pos?, nounClass?, genus?, fullSurface?, emojiDescription }` | `LinguisticUnitKindSchema`, `SurfaceKindSchema`, `PARTS_OF_SPEECH_STR` (as v3 re-creation), `NounClass` (v3), `GermanGenus` (v3) |
 | **Morphem** | `{ context, word }` | `{ morphemes: [{ kind, surf, lemma?, tags? }] }` | `MorphemeKindSchema`, `MorphemeTagSchema` |
 | **Relation** | `{ context, pos, word }` | `{ relations: [{ kind, words[] }] }` | Own `RelationSubKindSchema` (Synonym, NearSynonym, Antonym, Hypernym, Hyponym, Meronym, Holonym) |
 | **Translate** | `string` | `string` | None |
@@ -582,6 +586,7 @@ PromptKind = "Lemma" | "Morphem" | "Relation" | "Translate"
 | **NounInflection** | `{ context, word }` | `{ cells: [{ case, number, article, form }] }` | `CaseValueSchema`, `NumberValueSchema` |
 | **Disambiguate** | `{ context, lemma, senses: [{ index, emojiDescription, unitKind, pos?, genus? }] }` | `{ matchedIndex: number | null, emojiDescription? }` | None (senses use plain strings) |
 | **WordTranslation** | `{ context, pos, word }` | `string` | None |
+| **Features** | `{ context, pos, word }` | `{ tags: string[] }` (1-5 short lowercase tag components) | None |
 
 **v3/v4 bridging in schemas**: Where a common enum uses Zod v4 (e.g., `POSSchema`), schemas re-create it with v3:
 
@@ -647,7 +652,7 @@ prompt-parts/ sources
 
 **Step 1 — Format validation**: Checks that all prompt-part files have the correct export names (`agentRole`, `taskDescription`, `examples`) and that example files have proper `satisfies` clauses.
 
-**Step 2 — Presence check**: German-English must have all 8 kinds. Other language pairs are checked for existence but not required.
+**Step 2 — Presence check**: German-English must have all 9 kinds. Other language pairs are checked for existence but not required.
 
 **Step 3 — Schema validation**: Loads each `to-use.ts` examples array, validates every `input` against `userInputSchema` and every `output` against `agentOutputSchema`. Reports failures by target/known/kind/index/field.
 
@@ -691,18 +696,18 @@ export const PROMPT_FOR = {
         English: {
             Lemma: germanToEnglishLemmaPrompt,            // native
             Morphem: germanToEnglishMorphemPrompt,        // native
-            // ... all 8 kinds present
+            // ... all 9 kinds present
         },
         Russian: {
             Translate: germanToRussianTranslatePrompt,    // native
             WordTranslation: germanToRussianWordTranslationPrompt, // native
             Lemma: germanToEnglishLemmaPrompt,            // fallback to English
             Morphem: germanToEnglishMorphemPrompt,        // fallback to English
-            // ... remaining 6 kinds fall back to German->English
+            // ... remaining 7 kinds fall back to German->English
         },
     },
     English: {
-        English: { ... },                                  // all 8 kinds
+        English: { ... },                                  // all 9 kinds
         Russian: { ... },                                  // all fallback to English->English
     },
 } satisfies AvaliablePromptDict;

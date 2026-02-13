@@ -6,7 +6,8 @@ import {
 	DictSectionKind,
 	TitleReprFor,
 } from "../../../../../linguistics/common/sections/section-kind";
-import type { NounInflectionCell } from "../../../../../linguistics/german/inflection/noun";
+import type { NounInflectionCell } from "../../../../../linguistics/de/lexem/noun";
+import { articleFromGenus } from "../../../../../linguistics/de/lexem/noun/features";
 import { PromptKind } from "../../../../../prompt-smith/codegen/consts";
 import type { RelationSubKind } from "../../../../../prompt-smith/schemas/relation";
 import type { ApiServiceError } from "../../../../../stateless-helpers/api-service";
@@ -38,6 +39,7 @@ const V3_SECTIONS = new Set<DictSectionKind>([
 	DictSectionKind.Inflection,
 	DictSectionKind.Translation,
 	DictSectionKind.Attestation,
+	DictSectionKind.Tags,
 ]);
 
 function buildSectionQuery(lemmaResult: LemmaResult) {
@@ -168,6 +170,9 @@ export function generateSections(
 	return ResultAsync.fromPromise(
 		(async () => {
 			// Build header from LemmaResult (no LLM call needed)
+			const article = lemmaResult.genus
+				? articleFromGenus[lemmaResult.genus]
+				: undefined;
 			const headerContent = formatHeaderLine(
 				{
 					emojiDescription:
@@ -177,6 +182,7 @@ export function generateSections(
 				},
 				word,
 				targetLang,
+				article,
 			);
 			const sections: EntrySection[] = [];
 			let relations: ParsedRelation[] = [];
@@ -231,6 +237,16 @@ export function generateSections(
 							}),
 						)
 					: null,
+				// Features prompt — fires for all Lexem POS (non-critical)
+				lemmaResult.linguisticUnit === "Lexem" && pos
+					? unwrapResultAsync(
+							promptRunner.generate(PromptKind.Features, {
+								context,
+								pos,
+								word,
+							}),
+						)
+					: null,
 			]);
 
 			// Unwrap: critical sections throw on failure, optional ones degrade to null
@@ -255,6 +271,11 @@ export function generateSections(
 				failedSections,
 			);
 			const translationOutput = unwrapCritical(settled[4], "Translation");
+			const featuresOutput = unwrapOptional(
+				settled[5],
+				"Features",
+				failedSections,
+			);
 
 			// Assemble sections in correct order from parallel results
 			for (const sectionKind of v3Applicable) {
@@ -331,6 +352,23 @@ export function generateSections(
 								title: TitleReprFor[
 									DictSectionKind.Translation
 								][targetLang],
+							});
+						}
+						break;
+					}
+
+					case DictSectionKind.Tags: {
+						if (featuresOutput && pos) {
+							const tagPath = [
+								pos.toLowerCase(),
+								...featuresOutput.tags,
+							].join("/");
+							sections.push({
+								content: `#${tagPath}`,
+								kind: cssSuffixFor[DictSectionKind.Tags],
+								title: TitleReprFor[DictSectionKind.Tags][
+									targetLang
+								],
 							});
 						}
 						break;

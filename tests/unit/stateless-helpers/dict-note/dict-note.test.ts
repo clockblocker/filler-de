@@ -207,6 +207,74 @@ describe("dictNoteHelper.serialize", () => {
 	});
 });
 
+describe("tags as section", () => {
+	test("parses tags section from entry", () => {
+		const note = [
+			"☁️ der [[Himmel]] ^LX-LM-NOUN-1",
+			'<span class="entry_section_title entry_section_title_tags">Tags</span>',
+			"#noun/maskulin",
+		].join("\n");
+
+		const entries = dictNoteHelper.parse(note);
+
+		expect(entries).toHaveLength(1);
+		const tagsSection = entries[0]?.sections.find((s) => s.kind === "tags");
+		expect(tagsSection).toBeDefined();
+		expect(tagsSection?.content).toBe("#noun/maskulin");
+	});
+
+	test("serializes tags section like any other section", () => {
+		const entry: DictEntry = {
+			headerContent: "☁️ der [[Himmel]]",
+			id: "LX-LM-NOUN-1",
+			meta: {},
+			sections: [
+				{
+					content: "#noun/maskulin",
+					kind: "tags",
+					title: "Tags",
+				},
+			],
+		};
+
+		const { body } = dictNoteHelper.serialize([entry]);
+
+		expect(body).toContain("☁️ der [[Himmel]] ^LX-LM-NOUN-1");
+		expect(body).toContain(
+			'<span class="entry_section_title entry_section_title_tags">Tags</span>',
+		);
+		expect(body).toContain("#noun/maskulin");
+	});
+
+	test("round-trips entry with tags section", () => {
+		const original: DictEntry[] = [
+			{
+				headerContent: "☁️ der [[Himmel]]",
+				id: "LX-LM-NOUN-1",
+				meta: {},
+				sections: [
+					{
+						content: "#noun/maskulin",
+						kind: "tags",
+						title: "Tags",
+					},
+					{
+						content: "sky, heaven",
+						kind: "translations",
+						title: "Übersetzung",
+					},
+				],
+			},
+		];
+
+		const { body } = dictNoteHelper.serialize(original);
+		const parsed = dictNoteHelper.parse(body);
+
+		expect(parsed).toHaveLength(1);
+		expect(parsed[0]?.sections).toEqual(original[0]?.sections);
+	});
+});
+
 describe("round-trip", () => {
 	test("serialize → parse round-trips body (without meta)", () => {
 		const original: DictEntry[] = [

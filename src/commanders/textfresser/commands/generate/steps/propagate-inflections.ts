@@ -1,11 +1,11 @@
 import { ok, type Result } from "neverthrow";
 import { dictEntryIdHelper } from "../../../../../linguistics/common/dict-entry-id/dict-entry-id";
 import { SurfaceKind } from "../../../../../linguistics/common/enums/core";
-import type { NounInflectionCell } from "../../../../../linguistics/german/inflection/noun";
 import {
 	GERMAN_CASE_TAG,
 	GERMAN_NUMBER_TAG,
-} from "../../../../../linguistics/german/inflection/noun";
+	type NounInflectionCell,
+} from "../../../../../linguistics/de/lexem/noun";
 import type { VaultAction } from "../../../../../managers/obsidian/vault-action-manager";
 import { dictNoteHelper } from "../../../../../stateless-helpers/dict-note";
 import type { DictEntry } from "../../../../../stateless-helpers/dict-note/types";

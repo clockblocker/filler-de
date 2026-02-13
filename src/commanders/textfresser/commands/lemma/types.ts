@@ -3,6 +3,7 @@ import type {
 	SurfaceKind,
 } from "../../../../linguistics/common/enums/core";
 import type { POS } from "../../../../linguistics/common/enums/linguistic-units/lexem/pos";
+import type { GermanGenus } from "../../../../linguistics/de/lexem/noun/features";
 import type { Attestation } from "../../common/attestation/types";
 
 export type NounClass = "Common" | "Proper";
@@ -23,4 +24,6 @@ export type LemmaResult = {
 	precomputedEmojiDescription?: string[];
 	/** "Common" (default) or "Proper" (named entity). Only meaningful for Nouns. */
 	nounClass?: NounClass;
+	/** Grammatical gender. Only meaningful for Nouns. */
+	genus?: GermanGenus;
 };
