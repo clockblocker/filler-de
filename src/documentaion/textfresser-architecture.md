@@ -282,7 +282,7 @@ A Note is an Obsidian markdown file named after a Surface. It contains one or mo
 ### 5.1 DictEntry Structure
 
 ```markdown
-🏭 [[Kohlekraftwerk]], [ˈkoːləˌkraftvɛɐ̯k ♫](https://youglish.com/pronounce/Kohlekraftwerk/german) ^l-nom-n-m1
+🏭 [[Kohlekraftwerk]], [ˈkoːləˌkraftvɛɐ̯k](https://youglish.com/pronounce/Kohlekraftwerk/german) ^l-nom-n-m1
 
 <span class="entry_section_title entry_section_title_kontexte">Deine Kontexte</span>
 ![[Atom#^13|^]]
@@ -632,7 +632,7 @@ All LLM calls are fired in parallel via `Promise.allSettled` (none depend on eac
 
 | Section | LLM? | PromptKind | Formatter | Output |
 |---------|------|-----------|-----------|--------|
-| **Header** | No | — | `formatHeaderLine()` | `{emoji} [[lemma]], [{ipa} ♫](youglish_url)` → `DictEntry.headerContent`. Built from LemmaResult fields (`emojiDescription`, `ipa`). `emoji` derived from `emojiDescription[0]`. No LLM call. `emojiDescription` stored in `meta.emojiDescription` for Disambiguate lookups. |
+| **Header** | No | — | `formatHeaderLine()` | `{emoji} [[lemma]], [{ipa}](youglish_url)` → `DictEntry.headerContent`. Built from LemmaResult fields (`emojiDescription`, `ipa`). `emoji` derived from `emojiDescription[0]`. No LLM call. `emojiDescription` stored in `meta.emojiDescription` for Disambiguate lookups. |
 | **Morphem** | Yes | `Morphem` | `morphemeFormatterHelper.formatSection()` | `[[kohle]]\|[[kraft]]\|[[werk]]` → `EntrySection` |
 | **Relation** | Yes | `Relation` | `formatRelationSection()` | `= [[Synonym]], ⊃ [[Hypernym]]` → `EntrySection`. Raw output also stored for propagation. |
 | **Inflection** | Yes | `NounInflection` (nouns) or `Inflection` (other POS) | `formatNounInflection()` / `formatInflectionSection()` | `N: das [[Kohlekraftwerk]], die [[Kohlekraftwerke]]` → `EntrySection`. Nouns use structured cells (case×number with article+form); other POS use generic rows. Noun cells also feed `propagateInflections`. |

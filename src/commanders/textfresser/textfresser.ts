@@ -29,6 +29,7 @@ import type { LemmaResult } from "./commands/lemma/types";
 import type { CommandInput, TextfresserCommandKind } from "./commands/types";
 import { buildAttestationFromWikilinkClickPayload } from "./common/attestation/builders/build-from-wikilink-click-payload";
 import type { Attestation } from "./common/attestation/types";
+import { computeShardedFolderParts } from "./common/sharded-path";
 import type { PathLookupFn } from "./common/target-path-resolver";
 import { CommandErrorKind } from "./errors";
 import { PromptRunner } from "./prompt-runner";
@@ -219,13 +220,21 @@ export class Textfresser {
 		lemma: string,
 		notify: (message: string) => void,
 	): Promise<void> {
-		// 1. Find existing file or construct root-level path for new file
+		// 1. Find existing file or construct sharded Worter path for new file
 		const existingPaths = this.vam.findByBasename(lemma);
+		const lemmaResult = this.state.latestLemmaResult;
 		const targetPath = existingPaths[0] ?? {
 			basename: lemma,
 			extension: "md" as const,
 			kind: "MdFile" as const,
-			pathParts: [] as string[],
+			pathParts: lemmaResult
+				? computeShardedFolderParts(
+						lemma,
+						this.state.languages.target,
+						lemmaResult.linguisticUnit,
+						lemmaResult.surfaceKind,
+					)
+				: ([] as string[]),
 		};
 
 		// 2. Read content (empty string if file doesn't exist yet)

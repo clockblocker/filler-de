@@ -23,6 +23,16 @@ export function moveToWorter(
 		lemmaResult.surfaceKind,
 	);
 
+	// Skip rename if already at the correct destination (e.g. background generate pre-computed path)
+	const currentParts = activeFile.splitPath.pathParts;
+	const alreadyAtDestination =
+		currentParts.length === shardedParts.length &&
+		currentParts.every((p, i) => p === shardedParts[i]);
+
+	if (alreadyAtDestination) {
+		return ok(ctx);
+	}
+
 	const newPath: SplitPathToMdFile = {
 		basename: activeFile.splitPath.basename,
 		extension: activeFile.splitPath.extension,

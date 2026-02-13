@@ -9,7 +9,7 @@ describe("formatHeaderLine", () => {
 			"German",
 		);
 		expect(result).toBe(
-			"🏭 [[Kohlekraftwerk]], [ˈkoːləˌkraftvɛɐ̯k ♫](https://youglish.com/pronounce/Kohlekraftwerk/german)",
+			"🏭 [[Kohlekraftwerk]], [ˈkoːləˌkraftvɛɐ̯k](https://youglish.com/pronounce/Kohlekraftwerk/german)",
 		);
 	});
 
@@ -20,7 +20,7 @@ describe("formatHeaderLine", () => {
 			"German",
 		);
 		expect(result).toBe(
-			"🏃 [[laufen]], [ˈlaʊ̯fn̩ ♫](https://youglish.com/pronounce/laufen/german)",
+			"🏃 [[laufen]], [ˈlaʊ̯fn̩](https://youglish.com/pronounce/laufen/german)",
 		);
 	});
 
@@ -31,7 +31,7 @@ describe("formatHeaderLine", () => {
 			"German",
 		);
 		expect(result).toBe(
-			"⚡ [[schnell]], [ʃnɛl ♫](https://youglish.com/pronounce/schnell/german)",
+			"⚡ [[schnell]], [ʃnɛl](https://youglish.com/pronounce/schnell/german)",
 		);
 	});
 

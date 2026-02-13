@@ -210,7 +210,7 @@ export const noteExample = `
 
 <span class="entry_section_title entry_section_title_formen">Als 
 Nomen</span>
-🏭 das [[Kohlekraftwerk]], [ˈkoːləˌkraftvɛɐ̯k ♫](https://youglish.com/pronounce/Kohlekraftwerk/german)
+🏭 das [[Kohlekraftwerk]], [ˈkoːləˌkraftvɛɐ̯k](https://youglish.com/pronounce/Kohlekraftwerk/german)
 <span class="entry_section_title entry_section_title_kontexte">Deine Kontexte</span>
 ![[Atom#^13|^]]
 

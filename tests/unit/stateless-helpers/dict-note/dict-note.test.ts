@@ -6,7 +6,7 @@ import type { DictEntry } from "../../../../src/stateless-helpers/dict-note/type
 
 /** Real format: header line is content + ^blockId, then blank line, then sections */
 const KOHLEKRAFTWERK_ENTRY = [
-	"🏭 das [[Kohlekraftwerk]], [ˈkoːləˌkraftvɛɐ̯k ♫](https://youglish.com/pronounce/Kohlekraftwerk/german) ^l-nom-n-m1",
+	"🏭 das [[Kohlekraftwerk]], [ˈkoːləˌkraftvɛɐ̯k](https://youglish.com/pronounce/Kohlekraftwerk/german) ^l-nom-n-m1",
 	" ",
 	'<span class="entry_section_title entry_section_title_kontexte">Deine Kontexte</span>',
 	"![[Atom#^13|^]]",
@@ -67,7 +67,7 @@ describe("dictNoteHelper.parse", () => {
 		const e = entries[0]!;
 		expect(e.id).toBe("l-nom-n-m1");
 		expect(e.headerContent).toBe(
-			"🏭 das [[Kohlekraftwerk]], [ˈkoːləˌkraftvɛɐ̯k ♫](https://youglish.com/pronounce/Kohlekraftwerk/german)",
+			"🏭 das [[Kohlekraftwerk]], [ˈkoːləˌkraftvɛɐ̯k](https://youglish.com/pronounce/Kohlekraftwerk/german)",
 		);
 		expect(e.sections).toHaveLength(8);
 		expect(e.sections[0]?.kind).toBe("kontexte");
@@ -142,7 +142,7 @@ describe("dictNoteHelper.serialize", () => {
 	test("returns body and meta separately", () => {
 		const entry: DictEntry = {
 			headerContent:
-				"🏭 das [[Kohlekraftwerk]], [ˈkoːləˌkraftvɛɐ̯k ♫](https://youglish.com/pronounce/Kohlekraftwerk/german)",
+				"🏭 das [[Kohlekraftwerk]], [ˈkoːləˌkraftvɛɐ̯k](https://youglish.com/pronounce/Kohlekraftwerk/german)",
 			id: "l-nom-n-m1",
 			meta: { status: "Done" },
 			sections: [
@@ -162,7 +162,7 @@ describe("dictNoteHelper.serialize", () => {
 		const { body, meta } = dictNoteHelper.serialize([entry]);
 
 		expect(body).toContain(
-			"🏭 das [[Kohlekraftwerk]], [ˈkoːləˌkraftvɛɐ̯k ♫](https://youglish.com/pronounce/Kohlekraftwerk/german) ^l-nom-n-m1",
+			"🏭 das [[Kohlekraftwerk]], [ˈkoːləˌkraftvɛɐ̯k](https://youglish.com/pronounce/Kohlekraftwerk/german) ^l-nom-n-m1",
 		);
 		expect(body).toContain(
 			'<span class="entry_section_title entry_section_title_kontexte">Deine Kontexte</span>',
@@ -212,7 +212,7 @@ describe("round-trip", () => {
 		const original: DictEntry[] = [
 			{
 				headerContent:
-					"🏭 das [[Kohlekraftwerk]], [ˈkoːləˌkraftvɛɐ̯k ♫](https://youglish.com/pronounce/Kohlekraftwerk/german)",
+					"🏭 das [[Kohlekraftwerk]], [ˈkoːləˌkraftvɛɐ̯k](https://youglish.com/pronounce/Kohlekraftwerk/german)",
 				id: "l-nom-n-m1",
 				meta: {},
 				sections: [

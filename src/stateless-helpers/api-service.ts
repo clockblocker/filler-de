@@ -159,6 +159,8 @@ export class ApiService {
 	private async ensureCachedContentIdForSystemPrompt(
 		systemPrompt: string,
 	): Promise<string | null> {
+		const CACHE_TIMEOUT_MS = 3000;
+
 		try {
 			const existing = this.cachedContentIds[systemPrompt];
 			if (existing) {
@@ -173,10 +175,12 @@ export class ApiService {
 				ttl: `${TTL_SECONDS}s`,
 			};
 
-			const created = await this.postGoogleApi<{ name?: string }>(
-				"cachedContents",
-				body,
-			);
+			const created = await Promise.race([
+				this.postGoogleApi<{ name?: string }>("cachedContents", body),
+				new Promise<null>((resolve) =>
+					setTimeout(() => resolve(null), CACHE_TIMEOUT_MS),
+				),
+			]);
 
 			const id = created?.name;
 			if (id) {
