@@ -52,7 +52,7 @@ User gets a tailor-made dictionary that grows with their reading
 
 > **V11 scope**: Kill Header Prompt — `PromptKind.Header` eliminated. `emojiDescription` (1-3 emojis) and `ipa` (IPA pronunciation) moved into Lemma prompt output. Header line built from LemmaResult fields (`formatHeaderLine()` takes `{ emojiDescription, ipa }` instead of `AgentOutput<"Header">`). `emoji` derived from `emojiDescription[0]`. `genus` and article (der/die/das) dropped from header line. `buildLinguisticUnit()` removed — `meta.linguisticUnit` no longer populated during Generate. One fewer API call per new entry.
 
-> **V12 scope**: POS features as tags + custom header formatting — New `PromptKind.Features` returns non-inflectional grammatical features (e.g., maskulin, transitiv, stark) as tag path components. Tags rendered as `DictSectionKind.Tags` section (`#pos/feature1/feature2`). Lemma prompt now returns `genus` ("Maskulinum"/"Femininum"/"Neutrum") for nouns. Header formatter prepends article (der/die/das) for nouns via `articleFromGenus`. `CORE_SECTIONS` expanded to include Tags.
+> **V12 scope**: POS features as tags + custom header formatting — New `PromptKind.Features` returns non-inflectional grammatical features (e.g., maskulin, transitiv, stark) as tag path components. Tags rendered as `DictSectionKind.Tags` section (`#pos/feature1/feature2`). Lemma prompt now returns `genus` ("Maskulinum"/"Femininum"/"Neutrum") for nouns. Header formatting split per-POS: `dispatchHeaderFormatter()` routes Noun+genus to `de/lexem/noun/header-formatter` (prepends der/die/das), all other POS to common formatter. `CORE_SECTIONS` expanded to include Tags.
 
 > **V9 scope**: LinguisticUnit DTO — Zod-schema-based type system as source of truth for DictEntries. German + Noun fully featured (`genus`, `nounClass`); all other POS/unit kinds have stubs. `GermanLinguisticUnit` built during Generate and stored in `meta.linguisticUnit`. Header prompt now returns `genus` ("Maskulinum"/"Femininum"/"Neutrum") instead of `article` ("der"/"die"/"das"); formatter derives article via `articleFromGenus`. New files: `surface-factory.ts`, `genus.ts`, `noun.ts`, `pos-features.ts`, `lexem-surface.ts`, `phrasem-surface.ts`, `morphem-surface.ts`, `linguistic-unit.ts`. 21 new DTO tests.
 
@@ -473,7 +473,7 @@ The dictionary pipeline is split into two commands — **Lemma** (user-facing) a
 │     text selection)                │    │    disambiguationResult — no re-parsing)  │
 │ 2. LLM classification             │    │ 3. If re-encounter: append attestation   │
 │    → LinguisticUnit + POS         │───→│    If new: LLM request PER section:      │
-│    → SurfaceKind + lemma          │ bg │      Header → formatHeaderLine()         │
+│    → SurfaceKind + lemma          │ bg │      Header → dispatchHeaderFormatter()  │
 │ 3. Disambiguate (V3):             │    │      Morphem → morphemeFormatterHelper() │
 │    Find existing note for lemma    │    │      Relation → formatRelationSection()  │
 │    (vam.getSplitPathsToExisting    │    │      Inflection → formatInflectionSection│
@@ -636,7 +636,7 @@ All LLM calls are fired in parallel via `Promise.allSettled` (none depend on eac
 
 | Section | LLM? | PromptKind | Formatter | Output |
 |---------|------|-----------|-----------|--------|
-| **Header** | No | — | `formatHeaderLine()` | `{emoji} [[lemma]], [{ipa}](youglish_url)` → `DictEntry.headerContent`. For nouns: `{emoji} {article} [[lemma]], [{ipa}](youglish_url)` where article derived from `lemmaResult.genus` via `articleFromGenus`. Built from LemmaResult fields (`emojiDescription`, `ipa`, `genus`). `emoji` derived from `emojiDescription[0]`. No LLM call. `emojiDescription` stored in `meta.emojiDescription` for Disambiguate lookups. |
+| **Header** | No | — | `dispatchHeaderFormatter()` | `{emoji} [[lemma]], [{ipa}](youglish_url)` → `DictEntry.headerContent`. For nouns with genus: `{emoji} {article} [[lemma]], [{ipa}](youglish_url)` via `de/lexem/noun/header-formatter`. Dispatch routes by POS; common formatter for non-nouns. `emoji` derived from `emojiDescription[0]`. No LLM call. `emojiDescription` stored in `meta.emojiDescription` for Disambiguate lookups. |
 | **Morphem** | Yes | `Morphem` | `morphemeFormatterHelper.formatSection()` | `[[kohle]]\|[[kraft]]\|[[werk]]` → `EntrySection` |
 | **Relation** | Yes | `Relation` | `formatRelationSection()` | `= [[Synonym]], ⊃ [[Hypernym]]` → `EntrySection`. Raw output also stored for propagation. |
 | **Inflection** | Yes | `NounInflection` (nouns) or `Inflection` (other POS) | `formatInflection()` / `formatInflectionSection()` | `N: das [[Kohlekraftwerk]], die [[Kohlekraftwerke]]` → `EntrySection`. Nouns use structured cells (case×number with article+form); other POS use generic rows. Noun cells also feed `propagateInflections`. |
@@ -1128,7 +1128,10 @@ To add support for a new target language (e.g., Japanese):
 | `src/commanders/textfresser/common/target-path-resolver.ts` | Shared path resolution for propagation: two-source lookup (VAM → Librarian → computed sharded path), inflected→lemma healing, `buildPropagationActionPair` helper |
 | `src/commanders/textfresser/common/sharded-path.ts` | Sharded path computation for Worter entries; exports `SURFACE_KIND_PATH_INDEX` for healing checks |
 | `src/commanders/textfresser/commands/generate/steps/serialize-entry.ts` | Serialize ALL DictEntries to note body + apply noteKind metadata (single upsert) |
-| `src/commanders/textfresser/commands/generate/section-formatters/common/header-formatter.ts` | LemmaResult fields → header line. Derives emoji from `emojiDescription[0]`. V12: optional `article` param prepends der/die/das for nouns. |
+| `src/commanders/textfresser/commands/generate/section-formatters/common/header-formatter.ts` | Common header line: emoji + wikilink + IPA/Youglish URL. No article — POS-neutral. Exports `buildYouglishUrl` for reuse. |
+| `src/commanders/textfresser/commands/generate/section-formatters/de/lexem/noun/header-formatter.ts` | Noun-specific header: prepends article derived from `genus` via `articleFromGenus`. |
+| `src/commanders/textfresser/commands/generate/section-formatters/de/lexem/{pos}/header-formatter.ts` | Re-export from common (verb, adjective, pronoun, article, preposition, adverb, particle, conjunction, interactional-unit). |
+| `src/commanders/textfresser/commands/generate/section-formatters/header-dispatch.ts` | POS-aware header dispatch: Noun+genus → noun formatter, everything else → common. Absorbs `precomputedEmojiDescription` fallback. |
 | `src/commanders/textfresser/commands/generate/section-formatters/common/relation-formatter.ts` | Relation LLM output → symbol notation |
 | `src/commanders/textfresser/commands/generate/section-formatters/common/inflection-formatter.ts` | Generic inflection LLM output → `{label}: {forms}` lines |
 | `src/commanders/textfresser/commands/generate/section-formatters/de/lexem/noun/inflection-formatter.ts` | Noun inflection: structured cells → `N: das [[Kraftwerk]], die [[Kraftwerke]]` + raw cells for propagation |
@@ -1176,7 +1179,9 @@ To add support for a new target language (e.g., Japanese):
 | `src/prompt-smith/codegen/skript/run.ts` | Codegen orchestrator |
 | `src/prompt-smith/prompt-parts/` | Human-written prompt sources (3 kinds × 2 lang pairs) |
 | **Tests (V5)** | |
-| `tests/unit/textfresser/formatters/header-formatter.test.ts` | Header formatter: emoji (from emojiDescription[0])/ipa/wikilink assembly. V12: with/without article param |
+| `tests/unit/textfresser/formatters/common/header-formatter.test.ts` | Common header formatter: emoji/ipa/wikilink assembly (no article) |
+| `tests/unit/textfresser/formatters/de/lexem/noun/header-formatter.test.ts` | Noun header formatter: genus → der/die/das article |
+| `tests/unit/textfresser/formatters/header-dispatch.test.ts` | Header dispatch: Noun+genus → noun formatter, Verb/Morphem → common, precomputedEmoji fallback |
 | `tests/unit/linguistics/german-linguistic-unit.test.ts` | V9: GermanLinguisticUnit DTO — Lexem+Noun, POS stubs, Phrasem, Morphem, rejection cases (21 tests) |
 | `tests/unit/textfresser/formatters/relation-formatter.test.ts` | Relation formatter: symbol notation, grouping, dedup |
 | `tests/unit/textfresser/formatters/inflection-formatter.test.ts` | Generic inflection formatter: label/forms rows |
@@ -1377,7 +1382,7 @@ type GermanLinguisticUnit = z.infer<typeof GermanLinguisticUnitSchema>;
 
 ### 15.6 Pipeline Integration
 
-In `generateSections` (Path B — new entry), after LLM calls resolve, the header line is built from LemmaResult fields (`emojiDescription`, `ipa`) via `formatHeaderLine()`. V11: `buildLinguisticUnit()` was removed — `meta.linguisticUnit` is no longer populated during Generate (deferred to a future phase when more POS features are available).
+In `generateSections` (Path B — new entry), after LLM calls resolve, the header line is built via `dispatchHeaderFormatter(lemmaResult, targetLang)` which routes to the appropriate per-POS formatter (noun with genus → noun formatter with article, everything else → common formatter). V11: `buildLinguisticUnit()` was removed — `meta.linguisticUnit` is no longer populated during Generate (deferred to a future phase when more POS features are available).
 
 ```typescript
 // generate-sections.ts
@@ -1393,7 +1398,7 @@ const newEntry: DictEntry = {
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| `article` field on Noun | **No** — store `genus` ("Maskulinum"\|"Femininum"\|"Neutrum") | `der/die/das` is a surface representation; `genus` is the linguistic property. Formatter derives article via `articleFromGenus`. |
+| `article` field on Noun | **No** — store `genus` ("Maskulinum"\|"Femininum"\|"Neutrum") | `der/die/das` is a surface representation; `genus` is the linguistic property. Noun header-formatter derives article via `articleFromGenus`. |
 | Morpheme "tags" | **No** — store `features` like `separability` | Tags are a representation abstraction. Features are named key-value linguistic properties. |
 | `features` field naming | Uniform `features` across all unit kinds | Factory pattern produces `surface.features` uniformly. The discriminant inside (`pos`/`phrasemeKind`/`morphemeKind`) provides domain-specific naming. |
 | Feature depth by surfaceKind | Full (Lemma) vs Ref (Inflected/Variant) | Inflected entries don't duplicate genus/nounClass — that data lives on the lemma entry. Ref carries just enough to identify the classification. |

@@ -52,48 +52,4 @@ describe("formatHeaderLine", () => {
 		);
 		expect(result).toContain("/english)");
 	});
-
-	it("prepends article for nouns when article is provided", () => {
-		const result = formatHeaderLine(
-			{ emojiDescription: ["☁️"], ipa: "ˈhɪml̩" },
-			"Himmel",
-			"German",
-			"der",
-		);
-		expect(result).toBe(
-			"☁️ der [[Himmel]], [ˈhɪml̩](https://youglish.com/pronounce/Himmel/german)",
-		);
-	});
-
-	it("does not prepend article when article is undefined", () => {
-		const result = formatHeaderLine(
-			{ emojiDescription: ["🏃"], ipa: "ˈlaʊ̯fn̩" },
-			"laufen",
-			"German",
-			undefined,
-		);
-		expect(result).toBe(
-			"🏃 [[laufen]], [ˈlaʊ̯fn̩](https://youglish.com/pronounce/laufen/german)",
-		);
-	});
-
-	it("formats feminine noun with die article", () => {
-		const result = formatHeaderLine(
-			{ emojiDescription: ["🏦"], ipa: "baŋk" },
-			"Bank",
-			"German",
-			"die",
-		);
-		expect(result).toContain("die [[Bank]]");
-	});
-
-	it("formats neuter noun with das article", () => {
-		const result = formatHeaderLine(
-			{ emojiDescription: ["🏠"], ipa: "haʊ̯s" },
-			"Haus",
-			"German",
-			"das",
-		);
-		expect(result).toContain("das [[Haus]]");
-	});
 });

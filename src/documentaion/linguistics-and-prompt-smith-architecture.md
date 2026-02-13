@@ -827,7 +827,7 @@ Section formatters consume typed outputs + German display constants:
     ├─ de/lexem/noun/inflection-formatter uses NounInflectionCell, CASE_ORDER, CASE_SHORT_LABEL
     ├─ inflection-formatter uses rows[].label + rows[].forms
     ├─ relation-formatter uses RelationSubKind → wikilinks
-    └─ header-formatter uses emojiDescription, IPA from LemmaResult
+    └─ dispatchHeaderFormatter routes by POS (noun → genus article, rest → common)
     ↓
 serializeEntry() → markdown string
     ↓

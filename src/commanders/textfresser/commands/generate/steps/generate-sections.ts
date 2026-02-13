@@ -7,7 +7,7 @@ import {
 	TitleReprFor,
 } from "../../../../../linguistics/common/sections/section-kind";
 import type { NounInflectionCell } from "../../../../../linguistics/de/lexem/noun";
-import { articleFromGenus } from "../../../../../linguistics/de/lexem/noun/features";
+
 import { PromptKind } from "../../../../../prompt-smith/codegen/consts";
 import type { RelationSubKind } from "../../../../../prompt-smith/schemas/relation";
 import type { ApiServiceError } from "../../../../../stateless-helpers/api-service";
@@ -21,10 +21,10 @@ import { logger } from "../../../../../utils/logger";
 import type { LemmaResult } from "../../lemma/types";
 import type { CommandError } from "../../types";
 import { CommandErrorKind } from "../../types";
-import { formatHeaderLine } from "../section-formatters/common/header-formatter";
 import { formatInflectionSection } from "../section-formatters/common/inflection-formatter";
 import { formatRelationSection } from "../section-formatters/common/relation-formatter";
 import { formatInflection } from "../section-formatters/de/lexem/noun/inflection-formatter";
+import { dispatchHeaderFormatter } from "../section-formatters/header-dispatch";
 import type { ResolvedEntryState } from "./resolve-existing-entry";
 
 export type ParsedRelation = {
@@ -170,19 +170,9 @@ export function generateSections(
 	return ResultAsync.fromPromise(
 		(async () => {
 			// Build header from LemmaResult (no LLM call needed)
-			const article = lemmaResult.genus
-				? articleFromGenus[lemmaResult.genus]
-				: undefined;
-			const headerContent = formatHeaderLine(
-				{
-					emojiDescription:
-						lemmaResult.precomputedEmojiDescription ??
-						lemmaResult.emojiDescription,
-					ipa: lemmaResult.ipa,
-				},
-				word,
+			const headerContent = dispatchHeaderFormatter(
+				lemmaResult,
 				targetLang,
-				article,
 			);
 			const sections: EntrySection[] = [];
 			let relations: ParsedRelation[] = [];
