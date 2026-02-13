@@ -6,7 +6,10 @@
  * generates a RenameMdFile healing action to move the file.
  */
 
-import type { LinguisticUnitKind, SurfaceKind } from "../../../linguistics/common/enums/core";
+import type {
+	LinguisticUnitKind,
+	SurfaceKind,
+} from "../../../linguistics/common/enums/core";
 import type { VaultAction } from "../../../managers/obsidian/vault-action-manager";
 import {
 	SplitPathKind,
@@ -50,15 +53,31 @@ type ResolveTargetPathParams = {
  * a RenameMdFile healing action is generated to move the file.
  * The inverse (writing inflection to a lemma file) is fine — no healing needed.
  */
-export function resolveTargetPath(params: ResolveTargetPathParams): ResolvedTargetPath {
-	const { word, targetLanguage, unitKind, desiredSurfaceKind, vamLookup, librarianLookup } = params;
+export function resolveTargetPath(
+	params: ResolveTargetPathParams,
+): ResolvedTargetPath {
+	const {
+		word,
+		targetLanguage,
+		unitKind,
+		desiredSurfaceKind,
+		vamLookup,
+		librarianLookup,
+	} = params;
 
 	// 1. Try VAM lookup
 	const vamResults = vamLookup(word);
 	if (vamResults.length > 0) {
 		const existing = vamResults[0];
 		if (existing) {
-			return healIfNeeded(existing, word, targetLanguage, unitKind, desiredSurfaceKind, true);
+			return healIfNeeded(
+				existing,
+				word,
+				targetLanguage,
+				unitKind,
+				desiredSurfaceKind,
+				true,
+			);
 		}
 	}
 
@@ -73,7 +92,12 @@ export function resolveTargetPath(params: ResolveTargetPathParams): ResolvedTarg
 	}
 
 	// 3. Compute sharded path
-	const splitPath = buildComputedSplitPath(word, targetLanguage, unitKind, desiredSurfaceKind);
+	const splitPath = buildComputedSplitPath(
+		word,
+		targetLanguage,
+		unitKind,
+		desiredSurfaceKind,
+	);
 	return { healingActions: [], splitPath };
 }
 
@@ -106,7 +130,12 @@ function buildComputedSplitPath(
 		basename: word,
 		extension: "md",
 		kind: SplitPathKind.MdFile,
-		pathParts: computeShardedFolderParts(word, targetLanguage, unitKind, surfaceKind),
+		pathParts: computeShardedFolderParts(
+			word,
+			targetLanguage,
+			unitKind,
+			surfaceKind,
+		),
 	};
 }
 
@@ -135,7 +164,12 @@ function healIfNeeded(
 		existingSurfaceKind === "inflected" &&
 		desiredSurfaceKind.toLowerCase() === "lemma"
 	) {
-		const newSplitPath = buildComputedSplitPath(word, targetLanguage, unitKind, desiredSurfaceKind);
+		const newSplitPath = buildComputedSplitPath(
+			word,
+			targetLanguage,
+			unitKind,
+			desiredSurfaceKind,
+		);
 		const renameAction: VaultAction = {
 			kind: VaultActionKind.RenameMdFile,
 			payload: { from: existing, to: newSplitPath },

@@ -132,10 +132,7 @@ export function propagateRelations(
 					: content.length;
 
 				// Get existing section content to avoid duplicates
-				const existingSection = content.slice(
-					afterMarker,
-					insertPoint,
-				);
+				const existingSection = content.slice(afterMarker, insertPoint);
 				const linesToAdd = newLines.filter(
 					(l) => !existingSection.includes(l),
 				);

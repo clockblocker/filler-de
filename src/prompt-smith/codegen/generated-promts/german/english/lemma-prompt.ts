@@ -94,7 +94,7 @@ Rules:
 {"context":"Ich habe bei einer deutschen Bank ein Konto eröffnet.","surface":"Bank"}
 </input>
 <output>
-{"emojiDescription":["🏦","💰"],"ipa":"baŋk","lemma":"Bank","linguisticUnit":"Lexem","nounClass":"Common","pos":"Noun","surfaceKind":"Lemma"}
+{"emojiDescription":["🏦"],"ipa":"baŋk","lemma":"Bank","linguisticUnit":"Lexem","nounClass":"Common","pos":"Noun","surfaceKind":"Lemma"}
 </output>
 </example-7>
 
