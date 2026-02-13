@@ -2,7 +2,7 @@
  * Action definitions map - single source of truth for overlay actions.
  */
 
-import { CommandKind } from "../../obsidian/user-actions-manager/types";
+import { CommandKind } from "../../obsidian/user-actions-manager";
 import {
 	type ActionDefinition,
 	type OverlayActionKind,

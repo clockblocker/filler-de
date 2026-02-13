@@ -6,7 +6,7 @@
  */
 
 import { logger } from "../../../utils/logger";
-import { CommandKind } from "../../obsidian/user-actions-manager/types";
+import { CommandKind } from "../../obsidian/user-actions-manager";
 import type { ActionClickContext } from "./types";
 
 /**

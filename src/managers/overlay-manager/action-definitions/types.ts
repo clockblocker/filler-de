@@ -5,7 +5,7 @@
  */
 
 import { z } from "zod";
-import type { CommandKind } from "../../obsidian/user-actions-manager/types";
+import type { CommandKind } from "../../obsidian/user-actions-manager";
 
 // Subset of CommandKind that can appear in overlay UI
 const OVERLAY_ACTION_KINDS = [

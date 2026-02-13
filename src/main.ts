@@ -9,13 +9,13 @@ import {
 	initializeState,
 	updateParsedSettings,
 } from "./global-state/global-state";
-import { createHandlers } from "./managers/obsidian/user-actions-manager/behaviors";
-import { tagLineCopyEmbedBehavior } from "./managers/obsidian/user-actions-manager/behaviors/tag-line-copy-embed-behavior";
 import {
 	type CommandExecutor,
+	CommandKind,
 	createCommandExecutor,
-} from "./managers/obsidian/user-actions-manager/create-command-executor";
-import { CommandKind } from "./managers/obsidian/user-actions-manager/types";
+	createHandlers,
+	tagLineCopyEmbedBehavior,
+} from "./managers/obsidian/user-actions-manager";
 import { UserEventInterceptor } from "./managers/obsidian/user-event-interceptor";
 import {
 	makeSplitPath,

@@ -11,7 +11,7 @@
  */
 
 import type { App, Plugin } from "obsidian";
-import type { CommandExecutor } from "../obsidian/user-actions-manager/create-command-executor";
+import type { CommandExecutor } from "../obsidian/user-actions-manager";
 import {
 	type ActionElementPayload,
 	HandlerOutcome,

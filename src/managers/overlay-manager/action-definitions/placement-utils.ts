@@ -4,7 +4,7 @@
 
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import type { SelectionActionPlacement } from "../../../types";
-import { CommandKind } from "../../obsidian/user-actions-manager/types";
+import { CommandKind } from "../../obsidian/user-actions-manager";
 import type { ActionConfig } from "../bottom-toolbar/types";
 import { ACTION_DEFINITIONS } from "./definitions";
 import { OverlayPlacement } from "./types";

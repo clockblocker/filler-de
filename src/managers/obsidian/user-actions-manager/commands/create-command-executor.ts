@@ -1,9 +1,9 @@
 import { Notice } from "obsidian";
-import type { LibrarianCommandKind } from "../../../commanders/librarian/commands/types";
-import type { Librarian } from "../../../commanders/librarian/librarian";
-import type { Textfresser } from "../../../commanders/textfresser/textfresser";
-import { logger } from "../../../utils/logger";
-import type { VaultActionManager } from "../vault-action-manager";
+import type { LibrarianCommandKind } from "../../../../commanders/librarian/commands/types";
+import type { Librarian } from "../../../../commanders/librarian/librarian";
+import type { Textfresser } from "../../../../commanders/textfresser/textfresser";
+import { logger } from "../../../../utils/logger";
+import type { VaultActionManager } from "../../vault-action-manager";
 import { type CommandContext, CommandKind } from "./types";
 
 /**
