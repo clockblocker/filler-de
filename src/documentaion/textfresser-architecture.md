@@ -34,7 +34,7 @@ Generate (heavy lifting):
   Reads Lemma result from state
   Resolves existing entries (re-encounter detection)
   If re-encounter: appends attestation ref, skips LLM
-  If new: LLM request PER section (Header, Morphem, Relation, Inflection, Translation)
+  If new: header from Lemma output + LLM request PER section (Morphem, Relation, Inflection, Translation)
   Adds Attestation section (no LLM — uses source ref from Lemma)
   Propagates inverse relations to referenced notes
   Propagates noun inflection stubs to inflected-form notes
@@ -54,6 +54,8 @@ User gets a tailor-made dictionary that grows with their reading
 > **V7 scope**: Polysemy quality fixes — Header emoji prompt changed to reflect the specific sense in context (not "primary/most common meaning"). Disambiguate gloss rule added: must be context-independent (e.g., "Schließvorrichtung" not "Fahrradschloss"). New polysemous examples in Header and Disambiguate prompts (Schloss castle vs lock).
 
 > **V10 scope**: Emoji-as-semantic-differentiator — **Definition section dropped entirely** (along with `PromptKind.Semantics`). Homonym disambiguation now uses **emoji arrays** instead of text glosses. Header prompt returns `emojiDescription: string[]` (1-3 emojis capturing the sense, e.g., `["🏰"]` vs `["🔒","🔑"]` for *Schloss*). Disambiguate prompt receives `emojiDescription` + `unitKind` + `pos` + `genus` per sense (richer context than the old text gloss). `meta.semantics` replaced by `meta.emojiDescription: string[]`. `LemmaResult.precomputedSemantics` replaced by `precomputedEmojiDescription: string[]`. Old entries without `emojiDescription` hit V2 legacy path (first-match fallback). CORE_SECTIONS reduced to `[Header, Translation, Attestation, FreeForm]`.
+
+> **V11 scope**: Kill Header Prompt — `PromptKind.Header` eliminated. `emojiDescription` (1-3 emojis) and `ipa` (IPA pronunciation) moved into Lemma prompt output. Header line built from LemmaResult fields (`formatHeaderLine()` takes `{ emojiDescription, ipa }` instead of `AgentOutput<"Header">`). `emoji` derived from `emojiDescription[0]`. `genus` and article (der/die/das) dropped from header line. `buildLinguisticUnit()` removed — `meta.linguisticUnit` no longer populated during Generate. One fewer API call per new entry.
 
 > **V9 scope**: LinguisticUnit DTO — Zod-schema-based type system as source of truth for DictEntries. German + Noun fully featured (`genus`, `nounClass`); all other POS/unit kinds have stubs. `GermanLinguisticUnit` built during Generate and stored in `meta.linguisticUnit`. Header prompt now returns `genus` ("Maskulinum"/"Femininum"/"Neutrum") instead of `article` ("der"/"die"/"das"); formatter derives article via `articleFromGenus`. New files: `surface-factory.ts`, `genus.ts`, `noun.ts`, `pos-features.ts`, `lexem-surface.ts`, `phrasem-surface.ts`, `morphem-surface.ts`, `linguistic-unit.ts`. 21 new DTO tests.
 
@@ -227,7 +229,7 @@ DictSectionKind = "Relation" | "FreeForm" | "Attestation" | "Morphem"
 
 | Kind | German title | Purpose | Has SubSections? |
 |------|-------------|---------|-----------------|
-| `Header` | Formen | Lemma display, pronunciation, genus→article. Also returns `emojiDescription` (1-3 emojis for sense disambiguation, stored in metadata). | No |
+| `Header` | Formen | Lemma display, pronunciation. Emoji derived from `emojiDescription[0]` (from Lemma output). No LLM call — built from LemmaResult. | No |
 | `Attestation` | Kontexte | User's encountered contexts (`![[File#^blockId\|^]]`) | No |
 | `Relation` | Semantische Beziehungen | Lexical relations | **Yes** (see below) |
 | `Morphem` | Morpheme | Word decomposition. LLM returns structured data (`surf`/`lemma`/`tags`/`kind`), `morphemeFormatterHelper` converts to wikilink display (`[[auf\|>auf]]\|[[passen]]`) | No |
@@ -285,7 +287,7 @@ A Note is an Obsidian markdown file named after a Surface. It contains one or mo
 ### 5.1 DictEntry Structure
 
 ```markdown
-🏭 das [[Kohlekraftwerk]], [ˈkoːləˌkraftvɛɐ̯k ♫](https://youglish.com/pronounce/Kohlekraftwerk/german) ^l-nom-n-m1
+🏭 [[Kohlekraftwerk]], [ˈkoːləˌkraftvɛɐ̯k ♫](https://youglish.com/pronounce/Kohlekraftwerk/german) ^l-nom-n-m1
 
 <span class="entry_section_title entry_section_title_kontexte">Deine Kontexte</span>
 ![[Atom#^13|^]]
@@ -306,7 +308,7 @@ D: dem [[Kohlekraftwerk]], den [[Kohlekraftwerken]]
 ```
 
 **Key elements:**
-- **Header line**: emoji + article (derived from `genus` via `articleFromGenus`) + `[[Surface]]` + pronunciation link + ` ^blockId`
+- **Header line**: emoji (from `emojiDescription[0]`) + `[[Surface]]` + pronunciation link + ` ^blockId`
 - **DictEntryId format** (validated by `DictEntryIdSchema`): `^{LinguisticUnitKindTag}-{SurfaceKindTag}(-{PosTag}-{index})` — the PosTag+index suffix is Lexem-only. E.g., `^lx-lm-nom-1` (Lexem, Lemma surface, Noun, 1st meaning). Final format TBD.
 - **DictEntrySections**: marked with `<span class="entry_section_title entry_section_title_{kind}">Title</span>`
 - **Multiple DictEntries** (different meanings of the same Surface) separated by `\n\n\n---\n---\n\n\n` (parser also accepts older `\n\n---\n---\n\n` and legacy `\n---\n---\n---\n`)
@@ -443,7 +445,7 @@ commandFn(input) → VaultAction[] → vam.dispatch(actions)
 | Command | Status | Purpose |
 |---------|--------|---------|
 | `Lemma` | V3 | Recon: classify word via LLM, disambiguate sense against existing entries (metadata `emojiDescription` lookup + Disambiguate prompt), wrap in wikilink, store result, notify user. V5: bounds-check. V8: proper noun detection (nounClass), fullSurface expansion for multi-word proper nouns. V10: emoji-based disambiguation |
-| `Generate` | V3 | Build DictEntry: LLM-generated sections (Header, Morphem, Relation, Inflection, Translation) + Attestation; re-encounter detection (via Lemma's disambiguationResult); cross-ref propagation; serialize, move to Wörter, notify user. V5: scroll-to-entry after dispatch |
+| `Generate` | V3 | Build DictEntry: LLM-generated sections (Morphem, Relation, Inflection, Translation) + header from Lemma output + Attestation; re-encounter detection (via Lemma's disambiguationResult); cross-ref propagation; serialize, move to Wörter, notify user. V5: scroll-to-entry after dispatch |
 | `TranslateSelection` | V1 | Translate selected text via LLM |
 
 **Source**: `src/commanders/textfresser/textfresser.ts`, `src/commanders/textfresser/commands/types.ts`
@@ -514,6 +516,8 @@ Lemma tries two sources (in order):
   lemma: string,                       // dictionary form
   nounClass?: "Common" | "Proper" | null, // V8: only for pos: "Noun"
   fullSurface?: string | null,         // V8: full proper noun span when it extends beyond selected surface
+  emojiDescription: string[],          // V11: 1-3 emojis for sense disambiguation
+  ipa: string,                         // V11: IPA pronunciation of lemma
 }
 ```
 
@@ -539,6 +543,8 @@ type LemmaResult = {
   pos?: POS;
   surfaceKind: SurfaceKind;
   lemma: string;
+  emojiDescription: string[];         // V11: 1-3 emojis from Lemma LLM output
+  ipa: string;                        // V11: IPA pronunciation from Lemma LLM output
   attestation: Attestation;           // captured context
   disambiguationResult: {             // V3: sense matching outcome
     matchedIndex: number;             // index of existing entry (re-encounter)
@@ -583,7 +589,7 @@ V5 bounds check: if matchedIndex is not in validIndices → treat as new sense
 
 **Key optimizations**:
 - The Disambiguate LLM call is skipped entirely when no note exists (first encounter) or no entries with matching POS exist (first sense for this POS)
-- **V10**: When Disambiguate returns `matchedIndex: null` (new sense), it also returns an `emojiDescription` (1-3 emojis). This is stored as `LemmaResult.precomputedEmojiDescription` and used by Generate as fallback for `meta.emojiDescription` when Header LLM output is unavailable.
+- **V10**: When Disambiguate returns `matchedIndex: null` (new sense), it also returns an `emojiDescription` (1-3 emojis). This is stored as `LemmaResult.precomputedEmojiDescription` and used by Generate as the preferred source for `meta.emojiDescription` (falling back to `lemmaResult.emojiDescription` from Lemma LLM output).
 - **V5**: `matchedIndex` is bounds-checked against `validIndices` — out-of-range values are treated as new sense (prevents LLM hallucinating invalid indices)
 
 The disambiguation result is stored in `LemmaResult.disambiguationResult` and consumed by Generate's `resolveExistingEntry` step, which no longer needs to re-parse or re-match.
@@ -623,13 +629,13 @@ Matching ignores surfaceKind so that inflected encounters (e.g., "Schlosses" →
 
 **Path A (re-encounter)**: If `matchedEntry` exists, skip all LLM calls. Find or create the Attestation section in the matched entry, append the new attestation ref (deduped). Returns existing entries unchanged except for the appended ref.
 
-**Path B (new entry)**: Determines applicable sections via `getSectionsFor()`, filtered to the **V3 set**: Header, Morphem, Relation, Inflection, Translation, Attestation.
+**Path B (new entry)**: Determines applicable sections via `getSectionsFor()`, filtered to the **V3 set**: Header, Morphem, Relation, Inflection, Translation, Attestation. Header is built from LemmaResult fields (no LLM call).
 
-All LLM calls are fired in parallel via `Promise.allSettled` (none depend on each other's results). **Critical sections** (Header, Translation) throw on failure; **optional sections** (Morphem, Relation, Inflection) degrade gracefully — failures are logged and the entry is still created. Results are assembled in correct section order after all promises settle. Applicable sections:
+All LLM calls are fired in parallel via `Promise.allSettled` (none depend on each other's results). **Critical sections** (Translation) throw on failure; **optional sections** (Morphem, Relation, Inflection) degrade gracefully — failures are logged and the entry is still created. Results are assembled in correct section order after all promises settle. Applicable sections:
 
 | Section | LLM? | PromptKind | Formatter | Output |
 |---------|------|-----------|-----------|--------|
-| **Header** | Yes | `Header` | `formatHeaderLine()` | `{emoji} {article} [[lemma]], [{ipa} ♫](youglish_url)` → `DictEntry.headerContent`. LLM returns `genus` (Maskulinum/Femininum/Neutrum); formatter derives article via `articleFromGenus`. Also returns `emojiDescription` (1-3 emojis) stored in `meta.emojiDescription` for Disambiguate lookups. |
+| **Header** | No | — | `formatHeaderLine()` | `{emoji} [[lemma]], [{ipa} ♫](youglish_url)` → `DictEntry.headerContent`. Built from LemmaResult fields (`emojiDescription`, `ipa`). `emoji` derived from `emojiDescription[0]`. No LLM call. `emojiDescription` stored in `meta.emojiDescription` for Disambiguate lookups. |
 | **Morphem** | Yes | `Morphem` | `morphemeFormatterHelper.formatSection()` | `[[kohle]]\|[[kraft]]\|[[werk]]` → `EntrySection` |
 | **Relation** | Yes | `Relation` | `formatRelationSection()` | `= [[Synonym]], ⊃ [[Hypernym]]` → `EntrySection`. Raw output also stored for propagation. |
 | **Inflection** | Yes | `NounInflection` (nouns) or `Inflection` (other POS) | `formatNounInflection()` / `formatInflectionSection()` | `N: das [[Kohlekraftwerk]], die [[Kohlekraftwerke]]` → `EntrySection`. Nouns use structured cells (case×number with article+form); other POS use generic rows. Noun cells also feed `propagateInflections`. |
@@ -660,7 +666,7 @@ Different prompts are needed depending on:
 |-----------|--------|--------|
 | **TargetLanguage** | German, English, ... | Language of the dictionary |
 | **KnownLanguage** | Russian, English, ... | User's native language |
-| **PromptKind** | Lemma, Disambiguate, Header, Morphem, Relation, Inflection, NounInflection, Translate, WordTranslation | What task the LLM performs |
+| **PromptKind** | Lemma, Disambiguate, Morphem, Relation, Inflection, NounInflection, Translate, WordTranslation | What task the LLM performs |
 
 Section applicability (which sections a DictEntry gets) is determined by `LinguisticUnitKind` + `POS` + optional `nounClass` via `getSectionsFor()` in `src/linguistics/sections/section-config.ts`:
 - **Lexem**: POS-dependent (e.g., Nouns get Morphem + Inflection + Relation; Conjunctions get core only)
@@ -676,7 +682,7 @@ For non-Lexem units, `pos` is passed to LLM prompts as the `linguisticUnit` name
 - **Multi-word selection**: Lemma handling phrasem attestations from multi-word selections
 - **Deviation section**: Additional LLM-generated section for irregular forms and exceptions
 - ~~**Scroll to latest updated entry**~~: Implemented in V5. After Generate dispatch, `scrollToTargetBlock()` finds `^{blockId}` line and calls `ActiveFileService.scrollToLine()`.
-- ~~**Disambiguate prompt returning semantic info for new senses**~~: V5: returned text `semantics` gloss. V10: replaced with `emojiDescription` (1-3 emoji array) — Header prompt now also returns `emojiDescription`, stored in `meta.emojiDescription`.
+- ~~**Disambiguate prompt returning semantic info for new senses**~~: V5: returned text `semantics` gloss. V10: replaced with `emojiDescription` (1-3 emoji array). V11: `emojiDescription` moved to Lemma prompt output (Header prompt eliminated), stored in `meta.emojiDescription`.
 
 ---
 
@@ -808,7 +814,7 @@ src/prompt-smith/
 │           └── to-test.ts           # Extra examples for validation only
 │
 ├── codegen/
-│   ├── consts.ts                    # PromptKind enum ("Translate","Morphem","Lemma","Disambiguate","Header","Relation","Inflection","NounInflection","WordTranslation")
+│   ├── consts.ts                    # PromptKind enum ("Translate","Morphem","Lemma","Disambiguate","Relation","Inflection","NounInflection","WordTranslation")
 │   ├── generated-promts/            # AUTO-GENERATED compiled prompts
 │   └── skript/                      # Codegen pipeline scripts
 │       ├── run.ts                   # Orchestrator
@@ -823,7 +829,6 @@ src/prompt-smith/
 │   ├── morphem.ts                   # Morphem: {word,context} → {morphemes[]}
 │   ├── lemma.ts                     # Lemma: {surface,context} → {linguisticUnit,pos?,surfaceKind,lemma,nounClass?,fullSurface?}
 │   ├── disambiguate.ts              # Disambiguate: {lemma,context,senses[{index,emojiDescription,unitKind,pos?,genus?}]} → {matchedIndex:number|null, emojiDescription?:string[]|null}
-│   ├── header.ts                    # Header: {word,pos,context} → {emoji,emojiDescription,genus?,ipa}
 │   ├── word-translation.ts          # WordTranslation: {word,pos,context} → string
 │   ├── relation.ts                  # Relation: {word,pos,context} → {relations[{kind,words[]}]}
 │   ├── inflection.ts                # Inflection: {word,pos,context} → {rows[{label,forms}]}
@@ -899,7 +904,7 @@ Some PromptKinds depend on both the target language and the user's known languag
 | Category | PromptKinds | Depends on known language? |
 |----------|-------------|---------------------------|
 | **Bilingual** | Translate, WordTranslation | Yes — output language varies by user's known language |
-| **Target-language-only** | Morphem, Lemma, Disambiguate, Header, Relation, Inflection, NounInflection | No — linguistic analysis is purely about target language structure |
+| **Target-language-only** | Morphem, Lemma, Disambiguate, Relation, Inflection, NounInflection | No — linguistic analysis is purely about target language structure |
 
 For **target-language-only** prompts, only the mandatory `english/` known-language path is created. The codegen fallback mechanism automatically reuses this English prompt for other known languages (e.g., Russian), since the prompt content is identical regardless of the user's native language.
 
@@ -1048,11 +1053,11 @@ To add support for a new target language (e.g., Japanese):
 | `src/commanders/textfresser/commands/generate/steps/check-attestation.ts` | Sync check: attestation available |
 | `src/commanders/textfresser/commands/generate/steps/check-lemma-result.ts` | Sync check: lemma result available |
 | `src/commanders/textfresser/commands/generate/steps/resolve-existing-entry.ts` | Parse existing entries, use Lemma's disambiguationResult for re-encounter detection |
-| `src/commanders/textfresser/commands/generate/steps/generate-sections.ts` | Async: LLM calls per section (or append attestation for re-encounters). V9: builds `GermanLinguisticUnit` DTO from LemmaResult + header output, stores in `meta.linguisticUnit`. V10: stores `meta.emojiDescription` from Header output or precomputedEmojiDescription. Sets targetBlockId |
+| `src/commanders/textfresser/commands/generate/steps/generate-sections.ts` | Async: LLM calls per section (or append attestation for re-encounters). V11: `buildLinguisticUnit()` removed, `meta.linguisticUnit` no longer populated. Stores `meta.emojiDescription` from precomputedEmojiDescription or lemmaResult.emojiDescription. Header built from LemmaResult fields. Sets targetBlockId |
 | `src/commanders/textfresser/commands/generate/steps/propagate-relations.ts` | Cross-ref: compute inverse relations, generate actions for target notes |
 | `src/commanders/textfresser/commands/generate/steps/propagate-inflections.ts` | Noun inflection propagation: create stub entries in inflected-form notes |
 | `src/commanders/textfresser/commands/generate/steps/serialize-entry.ts` | Serialize ALL DictEntries to note body + apply noteKind metadata (single upsert) |
-| `src/commanders/textfresser/commands/generate/section-formatters/header-formatter.ts` | Header LLM output → header line. Derives article from `genus` via `articleFromGenus`. |
+| `src/commanders/textfresser/commands/generate/section-formatters/header-formatter.ts` | LemmaResult fields → header line. Derives emoji from `emojiDescription[0]`, no genus/article logic. |
 | `src/commanders/textfresser/commands/generate/section-formatters/relation-formatter.ts` | Relation LLM output → symbol notation |
 | `src/commanders/textfresser/commands/generate/section-formatters/inflection-formatter.ts` | Generic inflection LLM output → `{label}: {forms}` lines |
 | `src/commanders/textfresser/commands/generate/section-formatters/noun-inflection-formatter.ts` | Noun inflection: structured cells → `N: das [[Kraftwerk]], die [[Kraftwerke]]` + raw cells for propagation |
@@ -1095,12 +1100,12 @@ To add support for a new target language (e.g., Japanese):
 | `src/linguistics/old-enums.ts` | Inflectional dimensions, theta roles, tones |
 | **Prompt-Smith** | |
 | `src/prompt-smith/index.ts` | PROMPT_FOR registry (generated) |
-| `src/prompt-smith/schemas/` | Zod I/O schemas: translate, word-translation, morphem, lemma, disambiguate, header, relation, inflection, noun-inflection |
+| `src/prompt-smith/schemas/` | Zod I/O schemas: translate, word-translation, morphem, lemma, disambiguate, relation, inflection, noun-inflection |
 | `src/prompt-smith/codegen/consts.ts` | PromptKind enum |
 | `src/prompt-smith/codegen/skript/run.ts` | Codegen orchestrator |
 | `src/prompt-smith/prompt-parts/` | Human-written prompt sources (3 kinds × 2 lang pairs) |
 | **Tests (V5)** | |
-| `tests/unit/textfresser/formatters/header-formatter.test.ts` | Header formatter: emoji/genus→article/ipa/wikilink assembly |
+| `tests/unit/textfresser/formatters/header-formatter.test.ts` | Header formatter: emoji (from emojiDescription[0])/ipa/wikilink assembly, no genus/article |
 | `tests/unit/linguistics/german-linguistic-unit.test.ts` | V9: GermanLinguisticUnit DTO — Lexem+Noun, POS stubs, Phrasem, Morphem, rejection cases (21 tests) |
 | `tests/unit/textfresser/formatters/relation-formatter.test.ts` | Relation formatter: symbol notation, grouping, dedup |
 | `tests/unit/textfresser/formatters/inflection-formatter.test.ts` | Generic inflection formatter: label/forms rows |
@@ -1121,7 +1126,7 @@ To add support for a new target language (e.g., Japanese):
 **V10 — Emoji-as-Semantic-Differentiator**: Replaced text-based `semantics`/`Definition` with emoji-based differentiation.
 
 - Dropped `DictSectionKind.Definition` and `PromptKind.Semantics` entirely
-- Header prompt now returns `emojiDescription` (1-3 emojis) alongside `emoji`
+- V11: Header prompt eliminated — `emojiDescription` and `ipa` moved to Lemma prompt output
 - Disambiguate prompt uses emoji-based senses (emojiDescription + unitKind + pos + genus)
 - `meta.emojiDescription: string[]` replaces `meta.semantics: string`
 - `LemmaResult.precomputedEmojiDescription` replaces `precomputedSemantics`
@@ -1154,7 +1159,7 @@ type DictEntry = {
 };
 ```
 
-LLM outputs are typed (`AgentOutput<"Header">` → `{ emoji, genus, ipa }`), but formatters convert them to strings, and all structure is lost. V9 introduces a Zod-schema-based DTO as the source of truth for what a DictEntry represents.
+LLM outputs are typed (e.g., `AgentOutput<"Morphem">` → `{ morphemes[] }`), but formatters convert them to strings, and all structure is lost. V9 introduces a Zod-schema-based DTO as the source of truth for what a DictEntry represents. (V11: Header is no longer an LLM call — built from LemmaResult fields.)
 
 ### 15.2 Architecture: Symmetric Discriminated Unions
 
@@ -1300,20 +1305,17 @@ type GermanLinguisticUnit = z.infer<typeof GermanLinguisticUnitSchema>;
 
 ### 15.6 Pipeline Integration
 
-In `generateSections` (Path B — new entry), after LLM calls resolve, `buildLinguisticUnit()` constructs a `GermanLinguisticUnit` DTO from `LemmaResult` + header output and stores it in `newEntry.meta.linguisticUnit`. MVP scope: only builds for **Lexem + Noun + Lemma** surface kind (where `genus` is available from the Header LLM output).
+In `generateSections` (Path B — new entry), after LLM calls resolve, the header line is built from LemmaResult fields (`emojiDescription`, `ipa`) via `formatHeaderLine()`. V11: `buildLinguisticUnit()` was removed — `meta.linguisticUnit` is no longer populated during Generate (deferred to a future phase when more POS features are available).
 
 ```typescript
 // generate-sections.ts
-const linguisticUnit = buildLinguisticUnit(lemmaResult, headerOutput);
 const newEntry: DictEntry = {
   headerContent,
   id: entryId,
-  meta: { linguisticUnit, emojiDescription: headerOutput?.emojiDescription ?? lemmaResult.precomputedEmojiDescription ?? undefined },
+  meta: { emojiDescription: lemmaResult.precomputedEmojiDescription ?? lemmaResult.emojiDescription },
   sections,
 };
 ```
-
-The `genus` field in the Header prompt schema (`GermanGenusSchema`) is the proof-of-concept for prompt-smith schemas reusing linguistic DTOs. The LLM returns `genus: "Neutrum"` and the formatter derives the article via `articleFromGenus[genus]`.
 
 ### 15.7 Key Design Decisions
 

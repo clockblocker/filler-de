@@ -7,6 +7,8 @@ export const examples = [
 			surface: "went",
 		},
 		output: {
+			emojiDescription: ["🚶"],
+			ipa: "ɡoʊ",
 			lemma: "go",
 			linguisticUnit: "Lexem",
 			pos: "Verb",
@@ -19,6 +21,8 @@ export const examples = [
 			surface: "house",
 		},
 		output: {
+			emojiDescription: ["🏠"],
+			ipa: "haʊs",
 			lemma: "house",
 			linguisticUnit: "Lexem",
 			pos: "Noun",

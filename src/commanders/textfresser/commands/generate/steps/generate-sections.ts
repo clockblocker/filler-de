@@ -7,8 +7,6 @@ import {
 	TitleReprFor,
 } from "../../../../../linguistics/common/sections/section-kind";
 import type { NounInflectionCell } from "../../../../../linguistics/german/inflection/noun";
-import type { GermanLinguisticUnit } from "../../../../../linguistics/german/schemas/linguistic-unit";
-import type { AgentOutput } from "../../../../../prompt-smith";
 import { PromptKind } from "../../../../../prompt-smith/codegen/consts";
 import type { RelationSubKind } from "../../../../../prompt-smith/schemas/relation";
 import type { ApiServiceError } from "../../../../../stateless-helpers/api-service";
@@ -33,9 +31,8 @@ export type ParsedRelation = {
 	words: string[];
 };
 
-/** V3 sections — the ones we generate in this version. */
+/** V3 sections — the ones we generate in this version. Header is built from LemmaResult (no LLM call). */
 const V3_SECTIONS = new Set<DictSectionKind>([
-	DictSectionKind.Header,
 	DictSectionKind.Morphem,
 	DictSectionKind.Relation,
 	DictSectionKind.Inflection,
@@ -53,39 +50,6 @@ function buildSectionQuery(lemmaResult: LemmaResult) {
 	}
 	return {
 		unit: lemmaResult.linguisticUnit as "Morphem" | "Phrasem",
-	};
-}
-
-/**
- * Build a GermanLinguisticUnit DTO from LemmaResult + header output.
- * MVP: only builds for Lexem + Noun + Lemma surface kind.
- */
-function buildLinguisticUnit(
-	lemmaResult: LemmaResult,
-	headerOutput: AgentOutput<"Header"> | null,
-): GermanLinguisticUnit | undefined {
-	if (
-		lemmaResult.linguisticUnit !== "Lexem" ||
-		lemmaResult.pos !== "Noun" ||
-		lemmaResult.surfaceKind !== "Lemma"
-	) {
-		return undefined;
-	}
-
-	const genus = headerOutput?.genus;
-	if (!genus) return undefined;
-
-	return {
-		kind: "Lexem",
-		surface: {
-			features: {
-				genus,
-				nounClass: lemmaResult.nounClass ?? "Common",
-				pos: "Noun",
-			},
-			lemma: lemmaResult.lemma,
-			surfaceKind: "Lemma",
-		},
 	};
 }
 
@@ -203,7 +167,17 @@ export function generateSections(
 
 	return ResultAsync.fromPromise(
 		(async () => {
-			let headerContent = `[[${word}]]`;
+			// Build header from LemmaResult (no LLM call needed)
+			const headerContent = formatHeaderLine(
+				{
+					emojiDescription:
+						lemmaResult.precomputedEmojiDescription ??
+						lemmaResult.emojiDescription,
+					ipa: lemmaResult.ipa,
+				},
+				word,
+				targetLang,
+			);
 			const sections: EntrySection[] = [];
 			let relations: ParsedRelation[] = [];
 			let inflectionCells: NounInflectionCell[] = [];
@@ -213,15 +187,6 @@ export function generateSections(
 			const sectionSet = new Set(v3Applicable);
 
 			const settled = await Promise.allSettled([
-				sectionSet.has(DictSectionKind.Header)
-					? unwrapResultAsync(
-							promptRunner.generate(PromptKind.Header, {
-								context,
-								pos,
-								word,
-							}),
-						)
-					: null,
 				sectionSet.has(DictSectionKind.Morphem)
 					? unwrapResultAsync(
 							promptRunner.generate(PromptKind.Morphem, {
@@ -269,43 +234,31 @@ export function generateSections(
 			]);
 
 			// Unwrap: critical sections throw on failure, optional ones degrade to null
-			const headerOutput = unwrapCritical(settled[0], "Header");
 			const morphemOutput = unwrapOptional(
-				settled[1],
+				settled[0],
 				"Morphem",
 				failedSections,
 			);
 			const relationOutput = unwrapOptional(
-				settled[2],
+				settled[1],
 				"Relation",
 				failedSections,
 			);
 			const nounInflectionOutput = unwrapOptional(
-				settled[3],
+				settled[2],
 				"Inflection",
 				failedSections,
 			);
 			const otherInflectionOutput = unwrapOptional(
-				settled[4],
+				settled[3],
 				"Inflection",
 				failedSections,
 			);
-			const translationOutput = unwrapCritical(settled[5], "Translation");
+			const translationOutput = unwrapCritical(settled[4], "Translation");
 
 			// Assemble sections in correct order from parallel results
 			for (const sectionKind of v3Applicable) {
 				switch (sectionKind) {
-					case DictSectionKind.Header: {
-						if (headerOutput) {
-							headerContent = formatHeaderLine(
-								headerOutput,
-								word,
-								targetLang,
-							);
-						}
-						break;
-					}
-
 					case DictSectionKind.Morphem: {
 						if (morphemOutput) {
 							const content =
@@ -414,20 +367,13 @@ export function generateSections(
 						},
 			);
 
-			const linguisticUnit = buildLinguisticUnit(
-				lemmaResult,
-				headerOutput,
-			);
-
 			const newEntry: DictEntry = {
 				headerContent,
 				id: entryId,
 				meta: {
 					emojiDescription:
-						headerOutput?.emojiDescription ??
 						lemmaResult.precomputedEmojiDescription ??
-						undefined,
-					linguisticUnit,
+						lemmaResult.emojiDescription,
 				},
 				sections,
 			};

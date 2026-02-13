@@ -2,20 +2,20 @@ import { describe, expect, it } from "bun:test";
 import { formatHeaderLine } from "../../../../src/commanders/textfresser/commands/generate/section-formatters/header-formatter";
 
 describe("formatHeaderLine", () => {
-	it("formats a noun header with genus", () => {
+	it("formats header with emoji derived from emojiDescription[0]", () => {
 		const result = formatHeaderLine(
-			{ emoji: "🏭", emojiDescription: ["🏭"], genus: "Neutrum", ipa: "ˈkoːləˌkraftvɛɐ̯k" },
+			{ emojiDescription: ["🏭"], ipa: "ˈkoːləˌkraftvɛɐ̯k" },
 			"Kohlekraftwerk",
 			"German",
 		);
 		expect(result).toBe(
-			"🏭 das [[Kohlekraftwerk]], [ˈkoːləˌkraftvɛɐ̯k ♫](https://youglish.com/pronounce/Kohlekraftwerk/german)",
+			"🏭 [[Kohlekraftwerk]], [ˈkoːləˌkraftvɛɐ̯k ♫](https://youglish.com/pronounce/Kohlekraftwerk/german)",
 		);
 	});
 
-	it("formats without article when genus is null", () => {
+	it("formats header for a verb (no article)", () => {
 		const result = formatHeaderLine(
-			{ emoji: "🏃", emojiDescription: ["🏃"], genus: null, ipa: "ˈlaʊ̯fn̩" },
+			{ emojiDescription: ["🏃"], ipa: "ˈlaʊ̯fn̩" },
 			"laufen",
 			"German",
 		);
@@ -24,9 +24,9 @@ describe("formatHeaderLine", () => {
 		);
 	});
 
-	it("formats without article when genus is undefined", () => {
+	it("uses first emoji from multi-emoji description", () => {
 		const result = formatHeaderLine(
-			{ emoji: "⚡", emojiDescription: ["⚡", "💨"], ipa: "ʃnɛl" },
+			{ emojiDescription: ["⚡", "💨"], ipa: "ʃnɛl" },
 			"schnell",
 			"German",
 		);
@@ -37,39 +37,16 @@ describe("formatHeaderLine", () => {
 
 	it("encodes special characters in youglish URL", () => {
 		const result = formatHeaderLine(
-			{ emoji: "🏠", emojiDescription: ["🏠"], genus: "Femininum", ipa: "ˈʃtʁaːsə" },
+			{ emojiDescription: ["🏠"], ipa: "ˈʃtʁaːsə" },
 			"Straße",
 			"German",
 		);
 		expect(result).toContain("Stra%C3%9Fe");
 	});
 
-	it("derives correct article from each genus", () => {
-		const maskulinum = formatHeaderLine(
-			{ emoji: "🐕", emojiDescription: ["🐕"], genus: "Maskulinum", ipa: "hʊnt" },
-			"Hund",
-			"German",
-		);
-		expect(maskulinum).toContain("der [[Hund]]");
-
-		const femininum = formatHeaderLine(
-			{ emoji: "🐈", emojiDescription: ["🐈"], genus: "Femininum", ipa: "ˈkatsə" },
-			"Katze",
-			"German",
-		);
-		expect(femininum).toContain("die [[Katze]]");
-
-		const neutrum = formatHeaderLine(
-			{ emoji: "🏠", emojiDescription: ["🏠"], genus: "Neutrum", ipa: "haʊ̯s" },
-			"Haus",
-			"German",
-		);
-		expect(neutrum).toContain("das [[Haus]]");
-	});
-
 	it("uses lowercase target language in URL", () => {
 		const result = formatHeaderLine(
-			{ emoji: "🌍", emojiDescription: ["🌍"], genus: null, ipa: "test" },
+			{ emojiDescription: ["🌍"], ipa: "test" },
 			"hello",
 			"English",
 		);

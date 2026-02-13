@@ -1,7 +1,11 @@
 /**
  * WikilinkDetector - detects wikilink completions with handler pattern.
  *
- * Emits WikilinkPayload when user completes a wikilink (cursor right after ]]).
+ * Detects two scenarios:
+ * 1. Cursor right after ]] (user typed closing brackets manually)
+ * 2. Selection wrapped in [[...]] (user selected text and typed [ twice,
+ *    Obsidian auto-wraps selection in brackets each time)
+ *
  * Uses registerEditorExtension which persists until plugin unload.
  *
  * Skips:
@@ -52,61 +56,82 @@ export class WikilinkDetector {
 	// ─── Private ───
 
 	private handleUpdate(vu: ViewUpdate): void {
-		// Guard: only process when listening
 		if (!this.listening) return;
-
 		if (!vu.docChanged) return;
 
-		const cursor = vu.state.selection.main.head;
-		const text = vu.state.doc.toString();
-		const charsBeforeCursor = text.slice(cursor - 2, cursor);
+		const detected =
+			this.detectCursorAfterClose(vu) ?? this.detectWrappedSelection(vu);
 
-		// Check if we just completed a wikilink (cursor right after ]])
-		if (charsBeforeCursor !== "]]") return;
+		if (!detected) return;
 
-		// Find matching [[
-		const closePos = cursor - 2;
-		const openPos = text.lastIndexOf("[[", closePos);
+		const { closePos, linkContent } = detected;
 
-		if (openPos === -1) return;
-
-		// Ensure no nested [[ between open and close
-		const between = text.slice(openPos + 2, closePos);
-
-		if (between.includes("[[")) return;
-
-		// Skip if already has an alias
-		if (between.includes("|")) return;
-
-		const linkContent = between.trim();
-		if (!linkContent) return;
-
-		// Encode to payload
 		const payload = WikilinkCodec.encode({
 			closePos,
 			linkContent,
 			view: vu.view,
 		});
 
-		// Check if handler applies
 		const { applies, invoke } = this.invoker(payload);
 
-		if (!applies) {
-			// No handler - nothing to do
-			return;
-		}
+		if (!applies) return;
 
-		// Invoke handler and apply result
 		void invoke().then((result) => {
 			if (result.outcome === HandlerOutcome.Modified && result.data) {
 				if (result.data.resolvedTarget) {
-					// Replace link content with resolved target + alias
 					WikilinkCodec.replaceTarget(result.data);
 				} else {
-					// Insert alias if set by handler
 					WikilinkCodec.insertAlias(result.data);
 				}
 			}
 		});
+	}
+
+	/** Case 1: cursor positioned right after ]] (manual typing) */
+	private detectCursorAfterClose(
+		vu: ViewUpdate,
+	): { closePos: number; linkContent: string } | null {
+		const cursor = vu.state.selection.main.head;
+		const text = vu.state.doc.toString();
+
+		if (text.slice(cursor - 2, cursor) !== "]]") return null;
+
+		const closePos = cursor - 2;
+		return this.extractLinkContent(text, closePos);
+	}
+
+	/** Case 2: selection wrapped in [[...]] (Obsidian bracket-wraps selected text) */
+	private detectWrappedSelection(
+		vu: ViewUpdate,
+	): { closePos: number; linkContent: string } | null {
+		const sel = vu.state.selection.main;
+		if (sel.from === sel.to) return null; // no selection
+
+		const text = vu.state.doc.toString();
+
+		if (text.slice(sel.from - 2, sel.from) !== "[[") return null;
+		if (text.slice(sel.to, sel.to + 2) !== "]]") return null;
+
+		const closePos = sel.to;
+		return this.extractLinkContent(text, closePos);
+	}
+
+	/** Validate and extract link content from text ending at closePos */
+	private extractLinkContent(
+		text: string,
+		closePos: number,
+	): { closePos: number; linkContent: string } | null {
+		const openPos = text.lastIndexOf("[[", closePos);
+		if (openPos === -1) return null;
+
+		const between = text.slice(openPos + 2, closePos);
+
+		if (between.includes("[[")) return null;
+		if (between.includes("|")) return null;
+
+		const linkContent = between.trim();
+		if (!linkContent) return null;
+
+		return { closePos, linkContent };
 	}
 }

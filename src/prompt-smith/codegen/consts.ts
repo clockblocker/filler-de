@@ -4,7 +4,6 @@ const supportedPromptKinds = [
 	"Translate",
 	"Morphem",
 	"Lemma",
-	"Header",
 	"Relation",
 	"Inflection",
 	"NounInflection",

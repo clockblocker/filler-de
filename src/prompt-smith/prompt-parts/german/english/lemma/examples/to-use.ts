@@ -7,6 +7,8 @@ export const examples = [
 			surface: "ging",
 		},
 		output: {
+			emojiDescription: ["🚶"],
+			ipa: "ˈɡeːən",
 			lemma: "gehen",
 			linguisticUnit: "Lexem",
 			pos: "Verb",
@@ -19,6 +21,8 @@ export const examples = [
 			surface: "Haus",
 		},
 		output: {
+			emojiDescription: ["🏠"],
+			ipa: "haʊ̯s",
 			lemma: "Haus",
 			linguisticUnit: "Lexem",
 			nounClass: "Common",
@@ -32,6 +36,8 @@ export const examples = [
 			surface: "schönes",
 		},
 		output: {
+			emojiDescription: ["✨"],
+			ipa: "ʃøːn",
 			lemma: "schön",
 			linguisticUnit: "Lexem",
 			pos: "Adjective",
@@ -44,6 +50,8 @@ export const examples = [
 			surface: "aufgefallen",
 		},
 		output: {
+			emojiDescription: ["💡"],
+			ipa: "ˈaʊ̯fˌfalən",
 			lemma: "auffallen",
 			linguisticUnit: "Lexem",
 			pos: "Verb",
@@ -53,9 +61,11 @@ export const examples = [
 	{
 		input: {
 			context: "Das machen wir auf jeden Fall morgen.",
-			surface: "auf jeden Fall",
+			surface: "Fall",
 		},
 		output: {
+			emojiDescription: ["✅"],
+			ipa: "aʊ̯f ˈjeːdn̩ fal",
 			lemma: "auf jeden Fall",
 			linguisticUnit: "Phrasem",
 			surfaceKind: "Lemma",
@@ -67,7 +77,9 @@ export const examples = [
 			surface: "Bank",
 		},
 		output: {
+			emojiDescription: ["🏦"],
 			fullSurface: "Deutsche Bank",
+			ipa: "ˈdɔʏ̯tʃə baŋk",
 			lemma: "Deutsche Bank",
 			linguisticUnit: "Lexem",
 			nounClass: "Proper",
@@ -81,6 +93,8 @@ export const examples = [
 			surface: "Bank",
 		},
 		output: {
+			emojiDescription: ["🏦", "💰"],
+			ipa: "baŋk",
 			lemma: "Bank",
 			linguisticUnit: "Lexem",
 			nounClass: "Common",
@@ -94,6 +108,8 @@ export const examples = [
 			surface: "Berlin",
 		},
 		output: {
+			emojiDescription: ["🐻", "🏙️"],
+			ipa: "bɛʁˈliːn",
 			lemma: "Berlin",
 			linguisticUnit: "Lexem",
 			nounClass: "Proper",

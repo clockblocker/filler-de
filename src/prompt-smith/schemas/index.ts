@@ -5,7 +5,6 @@ import {
 	PromptKind as PromptKindEnum,
 } from "../codegen/consts";
 import { disambiguateSchemas } from "./disambiguate";
-import { headerSchemas } from "./header";
 import { inflectionSchemas } from "./inflection";
 import { lemmaSchemas } from "./lemma";
 import { morphemSchemas } from "./morphem";
@@ -18,7 +17,6 @@ export const SchemasFor = {
 	[PromptKindEnum.Translate]: translateSchemas,
 	[PromptKindEnum.Morphem]: morphemSchemas,
 	[PromptKindEnum.Lemma]: lemmaSchemas,
-	[PromptKindEnum.Header]: headerSchemas,
 	[PromptKindEnum.Relation]: relationSchemas,
 	[PromptKindEnum.Inflection]: inflectionSchemas,
 	[PromptKindEnum.NounInflection]: nounInflectionSchemas,

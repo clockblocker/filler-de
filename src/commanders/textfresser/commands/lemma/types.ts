@@ -13,6 +13,10 @@ export type LemmaResult = {
 	surfaceKind: SurfaceKind;
 	lemma: string;
 	attestation: Attestation;
+	/** 1-3 emojis capturing the core semantic concept, from Lemma LLM output. */
+	emojiDescription: string[];
+	/** IPA pronunciation from Lemma LLM output. */
+	ipa: string;
 	/** null = new sense or first encounter */
 	disambiguationResult: { matchedIndex: number } | null;
 	/** Emoji description precomputed by Disambiguate prompt when it detects a new sense. */

@@ -145,6 +145,8 @@ export function lemmaCommand(
 			textfresserState.latestLemmaResult = {
 				attestation,
 				disambiguationResult,
+				emojiDescription: result.emojiDescription,
+				ipa: result.ipa,
 				lemma: result.lemma,
 				linguisticUnit: result.linguisticUnit,
 				nounClass,

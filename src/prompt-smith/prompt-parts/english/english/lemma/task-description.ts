@@ -9,6 +9,8 @@ Return:
 - pos: part of speech (only for Lexem). One of: Noun, Pronoun, Article, Adjective, Verb, Preposition, Adverb, Particle, Conjunction, InteractionalUnit
 - surfaceKind: "Lemma" (already dictionary form), "Inflected" (conjugated/declined), or "Variant" (spelling variant)
 - lemma: the dictionary/citation form of the word
+- emojiDescription: 1-3 emojis that capture the core semantic concept of the word's meaning in context. Used to visually distinguish between different senses of the same word (e.g., bank-financial ["🏦"] vs bank-river ["🌊"]). For polysemous words, choose emojis that distinguish this sense from other common senses.
+- ipa: the IPA pronunciation of the lemma form (without slashes or brackets, just the transcription). Use narrow IPA transcription.
 
 Rules:
 - For nouns: lemma is singular form (e.g., "houses" → "house")

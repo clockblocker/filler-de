@@ -18,7 +18,9 @@ const userInputSchema = z.object({
 const NounClassSchemaV3 = z.enum(["Common", "Proper"]);
 
 const agentOutputSchema = z.object({
+	emojiDescription: z.array(z.string().min(1).max(4)).min(1).max(3),
 	fullSurface: z.string().nullable().optional(),
+	ipa: z.string().min(1),
 	lemma: z.string(),
 	linguisticUnit: LinguisticUnitKindSchema,
 	nounClass: NounClassSchemaV3.nullable().optional(),

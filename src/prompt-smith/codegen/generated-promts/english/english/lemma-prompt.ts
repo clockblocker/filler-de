@@ -17,6 +17,8 @@ Return:
 - pos: part of speech (only for Lexem). One of: Noun, Pronoun, Article, Adjective, Verb, Preposition, Adverb, Particle, Conjunction, InteractionalUnit
 - surfaceKind: "Lemma" (already dictionary form), "Inflected" (conjugated/declined), or "Variant" (spelling variant)
 - lemma: the dictionary/citation form of the word
+- emojiDescription: 1-3 emojis that capture the core semantic concept of the word's meaning in context. Used to visually distinguish between different senses of the same word (e.g., bank-financial ["🏦"] vs bank-river ["🌊"]). For polysemous words, choose emojis that distinguish this sense from other common senses.
+- ipa: the IPA pronunciation of the lemma form (without slashes or brackets, just the transcription). Use narrow IPA transcription.
 
 Rules:
 - For nouns: lemma is singular form (e.g., "houses" → "house")
@@ -31,7 +33,7 @@ Rules:
 {"context":"She went to the store yesterday.","surface":"went"}
 </input>
 <output>
-{"lemma":"go","linguisticUnit":"Lexem","pos":"Verb","surfaceKind":"Inflected"}
+{"emojiDescription":["🚶"],"ipa":"ɡoʊ","lemma":"go","linguisticUnit":"Lexem","pos":"Verb","surfaceKind":"Inflected"}
 </output>
 </example-1>
 
@@ -40,7 +42,7 @@ Rules:
 {"context":"The house was painted blue.","surface":"house"}
 </input>
 <output>
-{"lemma":"house","linguisticUnit":"Lexem","pos":"Noun","surfaceKind":"Lemma"}
+{"emojiDescription":["🏠"],"ipa":"haʊs","lemma":"house","linguisticUnit":"Lexem","pos":"Noun","surfaceKind":"Lemma"}
 </output>
 </example-2>
 </examples>`;
