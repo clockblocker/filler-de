@@ -200,20 +200,20 @@ Each kind has further sub-classifications (e.g., collocation strength: `Free | B
 
 ### 4.5 Morpheme Tags
 
-Language-specific properties for morphemes (currently: prefix separability in German):
+Prefix separability for German morphemes (kind-specific field, only on Prefix-kind morphemes):
 
 ```
-MorphemeTag = "Separable" | "Inseparable"
+Separability = "Separable" | "Inseparable"
 ```
 
-| Tag | Meaning | German examples |
+| Value | Meaning | German examples |
 |-----|---------|----------------|
 | **Separable** | Prefix detaches in main clauses (trennbar) | *auf-*, *an-*, *ein-*, *mit-*, *vor-*, *zu-* |
 | **Inseparable** | Prefix stays attached (untrennbar) | *be-*, *emp-*, *ent-*, *er-*, *ge-*, *ver-*, *zer-* |
 
 Some prefixes (*über-*, *unter-*, *um-*, *durch-*) are dual-use — separable or inseparable depending on context.
 
-**Source**: `src/linguistics/enums/linguistic-units/morphem/morpheme-tag.ts`
+**Source**: `src/linguistics/de/morphem/prefix/features.ts`
 
 ### 4.6 DictEntrySection Kinds
 
@@ -1153,7 +1153,7 @@ To add support for a new target language (e.g., Japanese):
 | `src/linguistics/common/enums/linguistic-units/lexem/pos.ts` | POS, PosTag |
 | `src/linguistics/common/enums/linguistic-units/phrasem/phrasem-kind.ts` | PhrasemeKind |
 | `src/linguistics/common/enums/linguistic-units/morphem/morpheme-kind.ts` | MorphemeKind |
-| `src/linguistics/common/enums/linguistic-units/morphem/morpheme-tag.ts` | MorphemeTag (Separable/Inseparable) |
+| `src/linguistics/de/morphem/prefix/features.ts` | SeparabilitySchema (Separable/Inseparable) |
 | `src/linguistics/common/enums/inflection/feature-values.ts` | CaseValue, NumberValue Zod enums |
 | **Linguistics — DTO (V9)** | |
 | `src/linguistics/common/dto/surface-factory.ts` | `makeSurfaceSchema()` — produces surfaceKind discriminated union from Full + Ref features |

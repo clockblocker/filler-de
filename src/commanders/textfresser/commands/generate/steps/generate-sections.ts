@@ -7,7 +7,6 @@ import {
 	TitleReprFor,
 } from "../../../../../linguistics/common/sections/section-kind";
 import type { NounInflectionCell } from "../../../../../linguistics/de/lexem/noun";
-
 import { PromptKind } from "../../../../../prompt-smith/codegen/consts";
 import type { RelationSubKind } from "../../../../../prompt-smith/schemas/relation";
 import type { ApiServiceError } from "../../../../../stateless-helpers/api-service";
@@ -16,8 +15,10 @@ import type {
 	EntrySection,
 } from "../../../../../stateless-helpers/dict-note/types";
 import { markdownHelper } from "../../../../../stateless-helpers/markdown-strip";
+import type { MorphemeItem } from "../../../../../stateless-helpers/morpheme-formatter";
 import { morphemeFormatterHelper } from "../../../../../stateless-helpers/morpheme-formatter";
 import { logger } from "../../../../../utils/logger";
+import { resolveMorphemeItems } from "../../../common/morpheme-link-target";
 import type { LemmaResult } from "../../lemma/types";
 import type { CommandError } from "../../types";
 import { CommandErrorKind } from "../../types";
@@ -61,6 +62,8 @@ export type GenerateSectionsResult = ResolvedEntryState & {
 	relations: ParsedRelation[];
 	/** Structured noun inflection cells — used by propagate-inflections step. Empty for non-nouns / re-encounters. */
 	inflectionCells: NounInflectionCell[];
+	/** Resolved morpheme items — used by propagate-morphemes step. Empty for re-encounters. */
+	morphemes: MorphemeItem[];
 	/** Section names that failed LLM generation but were optional — entry was still created. */
 	failedSections: string[];
 	/** Block ID of the entry to scroll to after dispatch. */
@@ -146,6 +149,7 @@ export function generateSections(
 				allEntries: existingEntries,
 				failedSections: [],
 				inflectionCells: [],
+				morphemes: [],
 				relations: [],
 				targetBlockId: matchedEntry.id,
 			}),
@@ -177,6 +181,7 @@ export function generateSections(
 			const sections: EntrySection[] = [];
 			let relations: ParsedRelation[] = [];
 			let inflectionCells: NounInflectionCell[] = [];
+			let morphemes: MorphemeItem[] = [];
 			const failedSections: string[] = [];
 
 			// Fire all independent LLM calls in parallel
@@ -272,9 +277,14 @@ export function generateSections(
 				switch (sectionKind) {
 					case DictSectionKind.Morphem: {
 						if (morphemOutput) {
+							const resolved = resolveMorphemeItems(
+								morphemOutput.morphemes,
+								targetLang,
+							);
+							morphemes = resolved;
 							const content =
 								morphemeFormatterHelper.formatSection(
-									morphemOutput.morphemes,
+									resolved,
 									targetLang,
 								);
 							sections.push({
@@ -415,6 +425,7 @@ export function generateSections(
 				allEntries: [...existingEntries, newEntry],
 				failedSections,
 				inflectionCells,
+				morphemes,
 				relations,
 				targetBlockId: entryId,
 			};
