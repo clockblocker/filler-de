@@ -6,16 +6,29 @@ export type SerializeResult = {
 	meta: Record<string, unknown>;
 };
 
+/** CSS suffixes whose content should NOT get trailing spaces. */
+const NO_TRAILING_SPACE = new Set(["kontexte", "notizen"]);
+
+function addTrailingSpaces(content: string): string {
+	return content
+		.split("\n")
+		.map((line) => `${line} `)
+		.join("\n");
+}
+
 function serializeEntry(entry: DictEntry): string {
 	const headerLine = `${entry.headerContent} ^${entry.id}`;
 
 	const sectionParts = entry.sections.map((s) => {
 		const marker = `<span class="${ENTRY_SECTION_CSS_CLASS} ${ENTRY_SECTION_CSS_CLASS}_${s.kind}">${s.title}</span>`;
-		return `\n${marker}\n${s.content}`;
+		const content = NO_TRAILING_SPACE.has(s.kind)
+			? s.content
+			: addTrailingSpaces(s.content);
+		return `\n${marker}\n${content}`;
 	});
 
-	if (sectionParts.length === 0) return headerLine;
-	return `${headerLine}\n${sectionParts.join("\n")}`;
+	if (sectionParts.length === 0) return `\n${headerLine}\n`;
+	return `\n${headerLine}\n\n${sectionParts.join("\n")}`;
 }
 
 export function serialize(entries: DictEntry[]): SerializeResult {

@@ -63,7 +63,7 @@ export const examples = [
 		},
 		output: {
 			morphemes: [
-				{ kind: "Prefix", surf: "ver", tags: ["Inseparable"] },
+				{ kind: "Prefix", separability: "Inseparable", surf: "ver" },
 				{ kind: "Root", surf: "antwort" },
 				{ kind: "Suffix", surf: "ung" },
 			],
@@ -87,7 +87,7 @@ export const examples = [
 		},
 		output: {
 			morphemes: [
-				{ kind: "Prefix", surf: "auf", tags: ["Separable"] },
+				{ kind: "Prefix", separability: "Separable", surf: "auf" },
 				{ kind: "Root", surf: "passen" },
 			],
 		},
@@ -100,8 +100,22 @@ export const examples = [
 		},
 		output: {
 			morphemes: [
-				{ kind: "Prefix", surf: "ver", tags: ["Inseparable"] },
+				{ kind: "Prefix", separability: "Inseparable", surf: "ver" },
 				{ kind: "Root", surf: "stehen" },
+			],
+		},
+	},
+	// Compound diminutive: Turtel + täub + chen
+	{
+		input: {
+			context: "Die Turteltäubchen gurrten auf dem Dach.",
+			word: "Turteltäubchen",
+		},
+		output: {
+			morphemes: [
+				{ kind: "Root", surf: "turtel" },
+				{ kind: "Root", lemma: "taub", surf: "täub" },
+				{ kind: "Suffix", surf: "chen" },
 			],
 		},
 	},

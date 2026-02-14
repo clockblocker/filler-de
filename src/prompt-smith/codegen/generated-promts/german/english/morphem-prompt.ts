@@ -17,9 +17,9 @@ Each morpheme has:
 - surf: the morpheme surface string (lowercase)
 - kind: one of Root, Prefix, Suffix, Suffixoid, Infix, Circumfix, Interfix, Transfix, Clitic, ToneMarking, Duplifix
 - lemma (optional): the dictionary form of the morpheme, only when surf is inflected (e.g., surf: "sang", lemma: "sing")
-- tags (optional): array of language-specific properties. Only applies to Prefix-kind morphemes:
-  - "Separable" — the prefix detaches in main clauses (trennbar): ab-, an-, auf-, aus-, bei-, ein-, mit-, nach-, vor-, zu-, etc.
-  - "Inseparable" — the prefix stays attached (untrennbar): be-, emp-, ent-, er-, ge-, miss-, ver-, zer-
+- separability (optional, Prefix-kind only): "Separable" or "Inseparable"
+  - "Separable" — prefix detaches in main clauses (trennbar): ab-, an-, auf-, aus-, bei-, ein-, etc.
+  - "Inseparable" — prefix stays attached (untrennbar): be-, emp-, ent-, er-, ge-, miss-, ver-, zer-
   - Dual-use prefixes (context-dependent): über-, unter-, um-, durch-, wider-, wieder-
 
 Rules:
@@ -29,7 +29,7 @@ Rules:
 - Derivational affixes (un-, ver-, be-, -keit, -ung, -lich, -bar, etc.) are Prefix or Suffix.
 - Inflectional suffixes should NOT be included — analyze the lemma form only.
 - The concatenation of all surf strings must exactly reconstruct the original word (case-insensitive).
-- Only Prefix-kind morphemes should have Separable/Inseparable tags.
+- Only Prefix-kind morphemes should have the separability field.
 </task-description>
 
 <examples>
@@ -74,7 +74,7 @@ Rules:
 {"context":"Er trägt die Verantwortung für das Projekt.","word":"Verantwortung"}
 </input>
 <output>
-{"morphemes":[{"kind":"Prefix","surf":"ver","tags":["Inseparable"]},{"kind":"Root","surf":"antwort"},{"kind":"Suffix","surf":"ung"}]}
+{"morphemes":[{"kind":"Prefix","separability":"Inseparable","surf":"ver"},{"kind":"Root","surf":"antwort"},{"kind":"Suffix","surf":"ung"}]}
 </output>
 </example-5>
 
@@ -92,7 +92,7 @@ Rules:
 {"context":"Du musst besser aufpassen.","word":"aufpassen"}
 </input>
 <output>
-{"morphemes":[{"kind":"Prefix","surf":"auf","tags":["Separable"]},{"kind":"Root","surf":"passen"}]}
+{"morphemes":[{"kind":"Prefix","separability":"Separable","surf":"auf"},{"kind":"Root","surf":"passen"}]}
 </output>
 </example-7>
 
@@ -101,7 +101,16 @@ Rules:
 {"context":"Ich kann das nicht verstehen.","word":"verstehen"}
 </input>
 <output>
-{"morphemes":[{"kind":"Prefix","surf":"ver","tags":["Inseparable"]},{"kind":"Root","surf":"stehen"}]}
+{"morphemes":[{"kind":"Prefix","separability":"Inseparable","surf":"ver"},{"kind":"Root","surf":"stehen"}]}
 </output>
 </example-8>
+
+<example-9>
+<input>
+{"context":"Die Turteltäubchen gurrten auf dem Dach.","word":"Turteltäubchen"}
+</input>
+<output>
+{"morphemes":[{"kind":"Root","surf":"turtel"},{"kind":"Root","lemma":"taub","surf":"täub"},{"kind":"Suffix","surf":"chen"}]}
+</output>
+</example-9>
 </examples>`;

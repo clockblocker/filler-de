@@ -46,11 +46,11 @@ export const sectionsForProperNoun: readonly DictSectionKind[] = [
 /** Display order weight for each section kind (lower = earlier in the note). */
 export const SECTION_DISPLAY_WEIGHT: Record<DictSectionKind, number> = {
 	[S.Header]: 0,
-	[S.Tags]: 1,
-	[S.Attestation]: 2,
-	[S.Relation]: 3,
-	[S.Translation]: 4,
-	[S.Morphem]: 5,
+	[S.Attestation]: 1,
+	[S.Relation]: 2,
+	[S.Translation]: 3,
+	[S.Morphem]: 4,
+	[S.Tags]: 5,
 	[S.Inflection]: 6,
 	[S.Deviation]: 7,
 	[S.FreeForm]: 8,

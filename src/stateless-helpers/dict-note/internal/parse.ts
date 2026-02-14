@@ -28,7 +28,12 @@ function parseSections(text: string): EntrySection[] {
 			"</span>".length;
 		const contentEnd =
 			i + 1 < markers.length ? markers[i + 1]?.index : text.length;
-		const content = text.slice(contentStart, contentEnd).trim();
+		const content = text
+			.slice(contentStart, contentEnd)
+			.trim()
+			.split("\n")
+			.map((line) => line.trimEnd())
+			.join("\n");
 		return { content, kind: marker.kind, title: marker.title };
 	});
 }

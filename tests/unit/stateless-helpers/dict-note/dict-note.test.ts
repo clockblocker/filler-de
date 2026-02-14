@@ -194,7 +194,7 @@ describe("dictNoteHelper.serialize", () => {
 
 		const { body } = dictNoteHelper.serialize(entries);
 		expect(body).toContain(
-			"das [[Wort]] ^a1\n\n\n---\n---\n\n\ndas [[Ding]] ^b2",
+			"das [[Wort]] ^a1\n\n\n\n---\n---\n\n\n\ndas [[Ding]] ^b2",
 		);
 	});
 

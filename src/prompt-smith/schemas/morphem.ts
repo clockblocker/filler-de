@@ -1,6 +1,6 @@
 import { z } from "zod/v3";
 import { MorphemeKindSchema } from "../../linguistics/common/enums/linguistic-units/morphem/morpheme-kind";
-import { MorphemeTagSchema } from "../../linguistics/common/enums/linguistic-units/morphem/morpheme-tag";
+import { SeparabilitySchema } from "../../linguistics/de/morphem/prefix/features";
 
 const userInputSchema = z.object({
 	context: z.string(),
@@ -12,10 +12,14 @@ const agentOutputSchema = z.object({
 		z.object({
 			kind: MorphemeKindSchema,
 			lemma: z.string().nullable().optional(),
+			separability: SeparabilitySchema.nullable().optional(),
 			surf: z.string(),
-			tags: z.array(MorphemeTagSchema).nullable().optional(),
 		}),
 	),
 });
+
+export type LlmMorpheme = z.infer<
+	typeof agentOutputSchema
+>["morphemes"][number];
 
 export const morphemSchemas = { agentOutputSchema, userInputSchema };

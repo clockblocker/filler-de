@@ -4,67 +4,55 @@
  */
 
 import type { MorphemeKind } from "../linguistics/common/enums/linguistic-units/morphem/morpheme-kind";
-import type { MorphemeTag } from "../linguistics/common/enums/linguistic-units/morphem/morpheme-tag";
 import type { TargetLanguage } from "../types";
 
-type MorphemeItem = {
+export type MorphemeItem = {
 	kind: MorphemeKind;
 	surf: string;
 	lemma?: string;
-	tags?: MorphemeTag[];
+	separability?: "Separable" | "Inseparable";
+	/** Resolved note basename for wikilink. Overrides default lemma/surf target. */
+	linkTarget?: string;
 };
 
 /**
- * Per-language surface decoration transforms.
+ * Apply notation decoration to a morpheme surface based on separability.
  * `>surf` on a prefix = separable (trennbar) — "I can detach"
  * `surf<` on a prefix = inseparable (untrennbar) — "I stay attached"
  */
-const TRANSFORMS: Record<
-	TargetLanguage,
-	Partial<Record<MorphemeTag, (s: string) => string>>
-> = {
-	English: {},
-	German: {
-		Inseparable: (s) => `${s}<`,
-		Separable: (s) => `>${s}`,
-	},
-};
-
-/**
- * Apply notation decoration to a morpheme surface based on its tags.
- * Returns the first matching tag transform, or the raw surface if no tags match.
- */
 function decorateSurface(
 	surf: string,
-	tags: MorphemeTag[] | undefined,
+	separability: "Separable" | "Inseparable" | undefined,
 	targetLang: TargetLanguage,
 ): string {
-	if (!tags || tags.length === 0) return surf;
+	if (!separability || targetLang !== "German") return surf;
 
-	const langTransforms = TRANSFORMS[targetLang];
-	for (const tag of tags) {
-		const transform = langTransforms[tag];
-		if (transform) return transform(surf);
+	switch (separability) {
+		case "Separable":
+			return `>${surf}`;
+		case "Inseparable":
+			return `${surf}<`;
 	}
-	return surf;
 }
 
 /**
  * Format a single morpheme as a wikilink string.
  *
- * - No lemma, no tags → `[[surf]]`
+ * - No lemma, no separability → `[[surf]]`
  * - With lemma (different from surf) → `[[lemma|surf]]`
- * - With tags → `[[surf|>surf]]` (decorated surface as alias)
- * - With both lemma and tags → `[[lemma|>surf]]`
+ * - With separability → `[[surf|>surf]]` (decorated surface as alias)
+ * - With both lemma and separability → `[[lemma|>surf]]`
+ * - With linkTarget → overrides default target: `[[linkTarget|decorated]]`
  * - lemma === surf → treated as no lemma
  */
 function formatAsWikilink(
 	item: MorphemeItem,
 	targetLang: TargetLanguage,
 ): string {
-	const decorated = decorateSurface(item.surf, item.tags, targetLang);
+	const decorated = decorateSurface(item.surf, item.separability, targetLang);
 	const target =
-		item.lemma && item.lemma !== item.surf ? item.lemma : item.surf;
+		item.linkTarget ??
+		(item.lemma && item.lemma !== item.surf ? item.lemma : item.surf);
 
 	if (target === decorated) return `[[${target}]]`;
 	return `[[${target}|${decorated}]]`;
@@ -73,7 +61,7 @@ function formatAsWikilink(
 /**
  * Format a full morphemes array into a pipe-separated wikilink string.
  *
- * Example: aufpassen → `[[auf|>auf]]|[[passen]]`
+ * Example: aufpassen → `[[auf-prefix-de|>auf]]|[[passen]]`
  */
 function formatSection(
 	morphemes: MorphemeItem[],

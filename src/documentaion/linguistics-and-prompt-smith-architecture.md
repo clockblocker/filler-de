@@ -94,10 +94,10 @@ MorphemeKind = "Root" | "Prefix" | "Suffix" | "Suffixoid" | "Infix"
              | "ToneMarking" | "Duplifix"
 ```
 
-**Source**: `common/enums/linguistic-units/morphem/morpheme-tag.ts`
+**Source**: `de/morphem/prefix/features.ts`
 
 ```typescript
-MorphemeTag = "Separable" | "Inseparable"
+Separability = "Separable" | "Inseparable"
 ```
 
 #### Phrasem enums
@@ -151,7 +151,7 @@ export const FOO_OPTIONS  = FooSchema.options;    // Readonly string array
 | `common/enums/linguistic-units/lexem/pos.ts` | `POSSchema`, `PosTagSchema`, `posTagFormFromPos`, `posFormFromPosTag` |
 | `common/enums/linguistic-units/lexem/inflectional-features.ts` | `InflectionalFeatureSchema` |
 | `common/enums/linguistic-units/morphem/morpheme-kind.ts` | `MorphemeKindSchema` |
-| `common/enums/linguistic-units/morphem/morpheme-tag.ts` | `MorphemeTagSchema` |
+| `de/morphem/prefix/features.ts` | `SeparabilitySchema` |
 | `common/enums/linguistic-units/phrasem/phrasem-kind.ts` | `PhrasemeKindSchema` |
 | `common/enums/inflection/feature-values.ts` | `CaseValueSchema`, `NumberValueSchema` |
 
@@ -579,7 +579,7 @@ PromptKind = "Lemma" | "Morphem" | "Relation" | "Translate"
 | PromptKind | userInputSchema | agentOutputSchema | Linguistics enums used |
 |---|---|---|---|
 | **Lemma** | `{ context, surface }` | `{ lemma, ipa, linguisticUnit, surfaceKind, pos?, nounClass?, genus?, fullSurface?, emojiDescription }` | `LinguisticUnitKindSchema`, `SurfaceKindSchema`, `PARTS_OF_SPEECH_STR` (as v3 re-creation), `NounClass` (v3), `GermanGenus` (v3) |
-| **Morphem** | `{ context, word }` | `{ morphemes: [{ kind, surf, lemma?, tags? }] }` | `MorphemeKindSchema`, `MorphemeTagSchema` |
+| **Morphem** | `{ context, word }` | `{ morphemes: [{ kind, surf, lemma?, separability? }] }` | `MorphemeKindSchema`, `SeparabilitySchema` |
 | **Relation** | `{ context, pos, word }` | `{ relations: [{ kind, words[] }] }` | Own `RelationSubKindSchema` (Synonym, NearSynonym, Antonym, Hypernym, Hyponym, Meronym, Holonym) |
 | **Translate** | `string` | `string` | None |
 | **Inflection** | `{ context, pos, word }` | `{ rows: [{ label, forms }] }` | None (label/forms are free-form strings) |
@@ -724,7 +724,7 @@ Type: `AvaliablePromptDict = Record<TargetLanguage, Record<KnownLanguage, Record
 **Safe imports from linguistics**:
 - `PARTS_OF_SPEECH_STR` — plain `readonly string[]`, no Zod runtime involved
 - `LinguisticUnitKindSchema`, `SurfaceKindSchema` — defined with v3 in `core.ts`
-- `MorphemeKindSchema`, `MorphemeTagSchema` — defined with v3
+- `MorphemeKindSchema`, `SeparabilitySchema` — defined with v3
 - `CaseValueSchema`, `NumberValueSchema` — defined with v3
 
 **Unsafe imports (re-created instead)**:

@@ -9,6 +9,7 @@ import { checkLemmaResult } from "./steps/check-lemma-result";
 import { generateSections } from "./steps/generate-sections";
 import { moveToWorter } from "./steps/move-to-worter";
 import { propagateInflections } from "./steps/propagate-inflections";
+import { propagateMorphemes } from "./steps/propagate-morphemes";
 import { propagateRelations } from "./steps/propagate-relations";
 import { resolveExistingEntry } from "./steps/resolve-existing-entry";
 import { serializeEntry } from "./steps/serialize-entry";
@@ -19,6 +20,7 @@ import { serializeEntry } from "./steps/serialize-entry";
  * → resolveExistingEntry (parse existing entries)
  * → generateSections (async: LLM calls or append attestation)
  * → propagateRelations (cross-ref inverse relations to target notes)
+ * → propagateMorphemes (back-ref morpheme notes for multi-morpheme words)
  * → propagateInflections (create stub entries for inflected noun forms)
  * → serializeEntry (includes noteKind meta) → moveToWorter → addWriteAction
  */
@@ -37,6 +39,7 @@ export function generateCommand(
 	)
 		.andThen(generateSections)
 		.andThen(propagateRelations)
+		.andThen(propagateMorphemes)
 		.andThen(propagateInflections)
 		.andThen(serializeEntry)
 		.andThen(moveToWorter)
