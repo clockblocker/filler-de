@@ -1,5 +1,5 @@
 import { z } from "zod/v3";
-import { MorphemeKindSchema } from "../../linguistics/common/enums/linguistic-units/morphem/morpheme-kind";
+import { GermanMorphemeKindSchema } from "../../linguistics/de/morphem/de-morphem-kind";
 import { SeparabilitySchema } from "../../linguistics/de/morphem/prefix/features";
 
 const userInputSchema = z.object({
@@ -10,7 +10,7 @@ const userInputSchema = z.object({
 const agentOutputSchema = z.object({
 	morphemes: z.array(
 		z.object({
-			kind: MorphemeKindSchema,
+			kind: GermanMorphemeKindSchema,
 			lemma: z.string().nullable().optional(),
 			separability: SeparabilitySchema.nullable().optional(),
 			surf: z.string(),

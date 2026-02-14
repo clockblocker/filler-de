@@ -89,9 +89,14 @@ InflectionalFeature = "Number" | "Gender" | "Case" | "Degree"
 **Source**: `common/enums/linguistic-units/morphem/morpheme-kind.ts`
 
 ```typescript
+// Universal (11 kinds)
 MorphemeKind = "Root" | "Prefix" | "Suffix" | "Suffixoid" | "Infix"
              | "Circumfix" | "Interfix" | "Transfix" | "Clitic"
              | "ToneMarking" | "Duplifix"
+
+// German subset (7 kinds) — see de/morphem/de-morphem-kind.ts
+GermanMorphemeKind = "Root" | "Prefix" | "Suffix" | "Suffixoid"
+                   | "Circumfix" | "Interfix" | "Duplifix"
 ```
 
 **Source**: `de/morphem/prefix/features.ts`
@@ -175,7 +180,17 @@ type GermanPosStub = Exclude<POS, "Noun">;
 // Each stub schema is just: z.object({ pos: z.literal("Verb") })
 ```
 
-Only `Noun` has specialized features. The same pattern applies to morpheme kinds — only `Prefix` has specialized features (separability); the rest are stubs.
+Only `Noun` has specialized features.
+
+#### Morpheme kinds — explicit folder per kind
+
+Unlike lexem POS stubs (dynamic), each German morpheme kind has an explicit `{kind}/features.ts` file. Only `Prefix` has specialized features (separability); the rest export a minimal schema with just the `morphemeKind` discriminant. The German subset is 7 of the 11 universal kinds (excluding Infix, Transfix, Clitic, ToneMarking).
+
+```typescript
+// de/morphem/de-morphem-kind.ts
+GermanMorphemeKind = "Root" | "Prefix" | "Suffix" | "Suffixoid"
+                   | "Circumfix" | "Interfix" | "Duplifix"
+```
 
 #### Noun features
 
@@ -235,7 +250,7 @@ GermanPrefixFullFeaturesSchema = z.object({
 
 #### Verb / Root features
 
-`de/lexem/verb/features.ts` and `de/morphem/root/features.ts` are empty placeholders with TODO comments.
+`de/lexem/verb/features.ts` is an empty placeholder with a TODO comment. `de/morphem/root/features.ts` exports `GermanRootFullFeaturesSchema` (discriminant-only, no extra features).
 
 #### Top-level German DTO
 
@@ -261,7 +276,7 @@ Type: `GermanLinguisticUnit` — the complete grammatical identity of any German
 | `de/lexem/noun/features.ts` | `GermanGenusSchema`, `NounClassSchema`, `articleFromGenus`, `NounInflectionCell`, display constants |
 | `de/lexem/noun/index.ts` | `GermanNounSurfaceSchema`, `GermanNounLemma`, `GermanNounInflection` |
 | `de/morphem/index.ts` | `GermanMorphemSurfaceSchema`, `GermanMorphemSurface` |
-| `de/morphem/de-morphem-kind.ts` | `GERMAN_MORPHEM_KIND_STUBS` |
+| `de/morphem/de-morphem-kind.ts` | `GermanMorphemeKindSchema`, `GermanMorphemeKind`, `GERMAN_MORPHEME_KINDS` |
 | `de/morphem/prefix/features.ts` | `SeparabilitySchema`, `GermanPrefixFullFeaturesSchema` |
 | `de/phrasem/index.ts` | Re-exports `PhrasemSurface`, `PhrasemSurfaceSchema` from common |
 
@@ -579,7 +594,7 @@ PromptKind = "Lemma" | "Morphem" | "Relation" | "Translate"
 | PromptKind | userInputSchema | agentOutputSchema | Linguistics enums used |
 |---|---|---|---|
 | **Lemma** | `{ context, surface }` | `{ lemma, ipa, linguisticUnit, surfaceKind, pos?, nounClass?, genus?, fullSurface?, emojiDescription }` | `LinguisticUnitKindSchema`, `SurfaceKindSchema`, `PARTS_OF_SPEECH_STR` (as v3 re-creation), `NounClass` (v3), `GermanGenus` (v3) |
-| **Morphem** | `{ context, word }` | `{ morphemes: [{ kind, surf, lemma?, separability? }] }` | `MorphemeKindSchema`, `SeparabilitySchema` |
+| **Morphem** | `{ context, word }` | `{ morphemes: [{ kind, surf, lemma?, separability? }] }` | `GermanMorphemeKindSchema`, `SeparabilitySchema` |
 | **Relation** | `{ context, pos, word }` | `{ relations: [{ kind, words[] }] }` | Own `RelationSubKindSchema` (Synonym, NearSynonym, Antonym, Hypernym, Hyponym, Meronym, Holonym) |
 | **Translate** | `string` | `string` | None |
 | **Inflection** | `{ context, pos, word }` | `{ rows: [{ label, forms }] }` | None (label/forms are free-form strings) |
@@ -724,7 +739,7 @@ Type: `AvaliablePromptDict = Record<TargetLanguage, Record<KnownLanguage, Record
 **Safe imports from linguistics**:
 - `PARTS_OF_SPEECH_STR` — plain `readonly string[]`, no Zod runtime involved
 - `LinguisticUnitKindSchema`, `SurfaceKindSchema` — defined with v3 in `core.ts`
-- `MorphemeKindSchema`, `SeparabilitySchema` — defined with v3
+- `MorphemeKindSchema`, `GermanMorphemeKindSchema`, `SeparabilitySchema` — defined with v3
 - `CaseValueSchema`, `NumberValueSchema` — defined with v3
 
 **Unsafe imports (re-created instead)**:

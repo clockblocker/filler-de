@@ -1,9 +1,16 @@
-import { MORPHEME_KINDS } from "../../common/enums/linguistic-units/morphem/morpheme-kind";
+import { z } from "zod/v3";
+import { MorphemeKind } from "../../common/enums/linguistic-units/morphem/morpheme-kind";
 
-type SpecializedKind = "Prefix";
-type StubKind = Exclude<(typeof MORPHEME_KINDS)[number], SpecializedKind>;
+const GERMAN_MORPHEME_KIND_VALUES = [
+	MorphemeKind.Root,
+	MorphemeKind.Prefix,
+	MorphemeKind.Suffix,
+	MorphemeKind.Suffixoid,
+	MorphemeKind.Circumfix,
+	MorphemeKind.Interfix,
+	MorphemeKind.Duplifix,
+] as const;
 
-/** All morpheme kinds except those with specialized features (Prefix). */
-export const GERMAN_MORPHEM_KIND_STUBS = MORPHEME_KINDS.filter(
-	(k): k is StubKind => k !== "Prefix",
-);
+export const GermanMorphemeKindSchema = z.enum(GERMAN_MORPHEME_KIND_VALUES);
+export type GermanMorphemeKind = z.infer<typeof GermanMorphemeKindSchema>;
+export const GERMAN_MORPHEME_KINDS = GermanMorphemeKindSchema.options;

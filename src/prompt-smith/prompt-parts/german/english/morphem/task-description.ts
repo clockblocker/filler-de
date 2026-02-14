@@ -7,7 +7,7 @@ You receive:
 Return an array of morphemes in left-to-right order as they appear in the word.
 Each morpheme has:
 - surf: the morpheme surface string (lowercase)
-- kind: one of Root, Prefix, Suffix, Suffixoid, Infix, Circumfix, Interfix, Transfix, Clitic, ToneMarking, Duplifix
+- kind: one of Root, Prefix, Suffix, Suffixoid, Circumfix, Interfix, Duplifix
 - lemma (optional): the dictionary form of the morpheme, when it differs from surf.
   Use for: inflected roots (surf: "sang", lemma: "sing"), noun roots in compounds
   where capitalization differs (surf: "küche", lemma: "Küche")
