@@ -9,9 +9,9 @@ export const examples = [
 		},
 		output: {
 			morphemes: [
-				{ kind: "Root", surf: "kohle" },
-				{ kind: "Root", surf: "kraft" },
-				{ kind: "Root", surf: "werk" },
+				{ kind: "Root", lemma: "Kohle", surf: "kohle" },
+				{ kind: "Root", lemma: "Kraft", surf: "kraft" },
+				{ kind: "Root", lemma: "Werk", surf: "werk" },
 			],
 		},
 	},
@@ -36,7 +36,7 @@ export const examples = [
 		},
 		output: {
 			morphemes: [
-				{ kind: "Root", surf: "freund" },
+				{ kind: "Root", lemma: "Freund", surf: "freund" },
 				{ kind: "Suffix", surf: "schaft" },
 			],
 		},
@@ -49,9 +49,9 @@ export const examples = [
 		},
 		output: {
 			morphemes: [
-				{ kind: "Root", surf: "arbeit" },
+				{ kind: "Root", lemma: "Arbeit", surf: "arbeit" },
 				{ kind: "Interfix", surf: "s" },
-				{ kind: "Root", surf: "platz" },
+				{ kind: "Root", lemma: "Platz", surf: "platz" },
 			],
 		},
 	},
@@ -64,7 +64,7 @@ export const examples = [
 		output: {
 			morphemes: [
 				{ kind: "Prefix", separability: "Inseparable", surf: "ver" },
-				{ kind: "Root", surf: "antwort" },
+				{ kind: "Root", lemma: "Antwort", surf: "antwort" },
 				{ kind: "Suffix", surf: "ung" },
 			],
 		},
@@ -76,7 +76,7 @@ export const examples = [
 			word: "Hand",
 		},
 		output: {
-			morphemes: [{ kind: "Root", surf: "hand" }],
+			morphemes: [{ kind: "Root", lemma: "Hand", surf: "hand" }],
 		},
 	},
 	// Separable prefix: auf + passen
@@ -114,8 +114,22 @@ export const examples = [
 		output: {
 			morphemes: [
 				{ kind: "Root", surf: "turtel" },
-				{ kind: "Root", lemma: "taub", surf: "täub" },
+				{ kind: "Root", lemma: "Taube", surf: "täub" },
 				{ kind: "Suffix", surf: "chen" },
+			],
+		},
+	},
+	// Compound with Fugenlaut -n-: Küche + -n- + Fenster
+	{
+		input: {
+			context: "Das Küchenfenster war offen.",
+			word: "Küchenfenster",
+		},
+		output: {
+			morphemes: [
+				{ kind: "Root", lemma: "Küche", surf: "küche" },
+				{ kind: "Interfix", surf: "n" },
+				{ kind: "Root", lemma: "Fenster", surf: "fenster" },
 			],
 		},
 	},

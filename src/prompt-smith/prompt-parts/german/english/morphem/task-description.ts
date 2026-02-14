@@ -8,7 +8,9 @@ Return an array of morphemes in left-to-right order as they appear in the word.
 Each morpheme has:
 - surf: the morpheme surface string (lowercase)
 - kind: one of Root, Prefix, Suffix, Suffixoid, Infix, Circumfix, Interfix, Transfix, Clitic, ToneMarking, Duplifix
-- lemma (optional): the dictionary form of the morpheme, only when surf is inflected (e.g., surf: "sang", lemma: "sing")
+- lemma (optional): the dictionary form of the morpheme, when it differs from surf.
+  Use for: inflected roots (surf: "sang", lemma: "sing"), noun roots in compounds
+  where capitalization differs (surf: "küche", lemma: "Küche")
 - separability (optional, Prefix-kind only): "Separable" or "Inseparable"
   - "Separable" — prefix detaches in main clauses (trennbar): ab-, an-, auf-, aus-, bei-, ein-, etc.
   - "Inseparable" — prefix stays attached (untrennbar): be-, emp-, ent-, er-, ge-, miss-, ver-, zer-

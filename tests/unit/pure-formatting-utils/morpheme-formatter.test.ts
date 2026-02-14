@@ -107,10 +107,19 @@ describe("morphemeFormatterHelper.formatAsWikilink", () => {
 	it("formats root with lemma (no linkTarget)", () => {
 		expect(
 			morphemeFormatterHelper.formatAsWikilink(
-				{ kind: "Root", lemma: "taub", surf: "täub" },
+				{ kind: "Root", lemma: "Taube", surf: "täub" },
 				"German",
 			),
-		).toBe("[[taub|täub]]");
+		).toBe("[[Taube|täub]]");
+	});
+
+	it("skips alias when lemma differs only in case", () => {
+		expect(
+			morphemeFormatterHelper.formatAsWikilink(
+				{ kind: "Root", lemma: "Hand", surf: "hand" },
+				"German",
+			),
+		).toBe("[[Hand]]");
 	});
 
 	it("linkTarget overrides lemma for target (no decoration in section)", () => {
@@ -136,17 +145,17 @@ describe("morphemeFormatterHelper.formatSection", () => {
 		).toBe("[[auf]]|[[passen]]");
 	});
 
-	it("formats Kohlekraftwerk (simple compound)", () => {
+	it("formats Kohlekraftwerk (simple compound with noun lemmas)", () => {
 		expect(
 			morphemeFormatterHelper.formatSection(
 				[
-					{ kind: "Root", surf: "kohle" },
-					{ kind: "Root", surf: "kraft" },
-					{ kind: "Root", surf: "werk" },
+					{ kind: "Root", lemma: "Kohle", surf: "kohle" },
+					{ kind: "Root", lemma: "Kraft", surf: "kraft" },
+					{ kind: "Root", lemma: "Werk", surf: "werk" },
 				],
 				"German",
 			),
-		).toBe("[[kohle]]|[[kraft]]|[[werk]]");
+		).toBe("[[Kohle]]|[[Kraft]]|[[Werk]]");
 	});
 
 	it("formats verstehen with inseparable prefix (no decoration in section)", () => {
@@ -187,12 +196,25 @@ describe("morphemeFormatterHelper.formatSection", () => {
 			morphemeFormatterHelper.formatSection(
 				[
 					{ kind: "Root", surf: "turtel" },
-					{ kind: "Root", lemma: "taub", surf: "täub" },
+					{ kind: "Root", lemma: "Taube", surf: "täub" },
 					{ kind: "Suffix", surf: "chen" },
 				],
 				"German",
 			),
-		).toBe("[[turtel]]|[[taub|täub]]|[[chen]]");
+		).toBe("[[turtel]]|[[Taube|täub]]|[[chen]]");
+	});
+
+	it("formats Küchenfenster with Fugenlaut", () => {
+		expect(
+			morphemeFormatterHelper.formatSection(
+				[
+					{ kind: "Root", lemma: "Küche", surf: "küche" },
+					{ kind: "Interfix", surf: "n" },
+					{ kind: "Root", lemma: "Fenster", surf: "fenster" },
+				],
+				"German",
+			),
+		).toBe("[[Küche]]|[[n]]|[[Fenster]]");
 	});
 
 	it("formats aufpassen with linkTarget on prefix (no decoration in section)", () => {

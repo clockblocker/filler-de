@@ -16,7 +16,9 @@ Return an array of morphemes in left-to-right order as they appear in the word.
 Each morpheme has:
 - surf: the morpheme surface string (lowercase)
 - kind: one of Root, Prefix, Suffix, Suffixoid, Infix, Circumfix, Interfix, Transfix, Clitic, ToneMarking, Duplifix
-- lemma (optional): the dictionary form of the morpheme, only when surf is inflected (e.g., surf: "sang", lemma: "sing")
+- lemma (optional): the dictionary form of the morpheme, when it differs from surf.
+  Use for: inflected roots (surf: "sang", lemma: "sing"), noun roots in compounds
+  where capitalization differs (surf: "küche", lemma: "Küche")
 - separability (optional, Prefix-kind only): "Separable" or "Inseparable"
   - "Separable" — prefix detaches in main clauses (trennbar): ab-, an-, auf-, aus-, bei-, ein-, etc.
   - "Inseparable" — prefix stays attached (untrennbar): be-, emp-, ent-, er-, ge-, miss-, ver-, zer-
@@ -38,7 +40,7 @@ Rules:
 {"context":"Das Kohlekraftwerk erzeugt Strom aus Kohle.","word":"Kohlekraftwerk"}
 </input>
 <output>
-{"morphemes":[{"kind":"Root","surf":"kohle"},{"kind":"Root","surf":"kraft"},{"kind":"Root","surf":"werk"}]}
+{"morphemes":[{"kind":"Root","lemma":"Kohle","surf":"kohle"},{"kind":"Root","lemma":"Kraft","surf":"kraft"},{"kind":"Root","lemma":"Werk","surf":"werk"}]}
 </output>
 </example-1>
 
@@ -56,7 +58,7 @@ Rules:
 {"context":"Ihre Freundschaft hält seit der Kindheit.","word":"Freundschaft"}
 </input>
 <output>
-{"morphemes":[{"kind":"Root","surf":"freund"},{"kind":"Suffix","surf":"schaft"}]}
+{"morphemes":[{"kind":"Root","lemma":"Freund","surf":"freund"},{"kind":"Suffix","surf":"schaft"}]}
 </output>
 </example-3>
 
@@ -65,7 +67,7 @@ Rules:
 {"context":"Er hat seinen Arbeitsplatz verloren.","word":"Arbeitsplatz"}
 </input>
 <output>
-{"morphemes":[{"kind":"Root","surf":"arbeit"},{"kind":"Interfix","surf":"s"},{"kind":"Root","surf":"platz"}]}
+{"morphemes":[{"kind":"Root","lemma":"Arbeit","surf":"arbeit"},{"kind":"Interfix","surf":"s"},{"kind":"Root","lemma":"Platz","surf":"platz"}]}
 </output>
 </example-4>
 
@@ -74,7 +76,7 @@ Rules:
 {"context":"Er trägt die Verantwortung für das Projekt.","word":"Verantwortung"}
 </input>
 <output>
-{"morphemes":[{"kind":"Prefix","separability":"Inseparable","surf":"ver"},{"kind":"Root","surf":"antwort"},{"kind":"Suffix","surf":"ung"}]}
+{"morphemes":[{"kind":"Prefix","separability":"Inseparable","surf":"ver"},{"kind":"Root","lemma":"Antwort","surf":"antwort"},{"kind":"Suffix","surf":"ung"}]}
 </output>
 </example-5>
 
@@ -83,7 +85,7 @@ Rules:
 {"context":"Sie nahm ihn an der Hand.","word":"Hand"}
 </input>
 <output>
-{"morphemes":[{"kind":"Root","surf":"hand"}]}
+{"morphemes":[{"kind":"Root","lemma":"Hand","surf":"hand"}]}
 </output>
 </example-6>
 
@@ -110,7 +112,16 @@ Rules:
 {"context":"Die Turteltäubchen gurrten auf dem Dach.","word":"Turteltäubchen"}
 </input>
 <output>
-{"morphemes":[{"kind":"Root","surf":"turtel"},{"kind":"Root","lemma":"taub","surf":"täub"},{"kind":"Suffix","surf":"chen"}]}
+{"morphemes":[{"kind":"Root","surf":"turtel"},{"kind":"Root","lemma":"Taube","surf":"täub"},{"kind":"Suffix","surf":"chen"}]}
 </output>
 </example-9>
+
+<example-10>
+<input>
+{"context":"Das Küchenfenster war offen.","word":"Küchenfenster"}
+</input>
+<output>
+{"morphemes":[{"kind":"Root","lemma":"Küche","surf":"küche"},{"kind":"Interfix","surf":"n"},{"kind":"Root","lemma":"Fenster","surf":"fenster"}]}
+</output>
+</example-10>
 </examples>`;

@@ -54,7 +54,7 @@ function formatAsWikilink(
 		item.linkTarget ??
 		(item.lemma && item.lemma !== item.surf ? item.lemma : item.surf);
 
-	if (target === display) return `[[${target}]]`;
+	if (target.toLowerCase() === display.toLowerCase()) return `[[${target}]]`;
 	return `[[${target}|${display}]]`;
 }
 
