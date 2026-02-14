@@ -1,15 +1,20 @@
 /**
  * Propagate morpheme back-references to target notes.
  *
- * For each morpheme in a multi-morpheme word, creates an attestation
- * back-reference on the morpheme's target note (e.g., prefix note in Library,
- * or root/suffix note in Wörter).
+ * For each morpheme in a multi-morpheme word, creates a structured DictEntry
+ * on the morpheme's target note (e.g., prefix note in Library, or root/suffix
+ * note in Wörter). Entries include header, tags, and attestation sections.
+ *
+ * Prefix entries are discriminated by separability: "aufpassen" (separable)
+ * and "aufgrund" (inseparable) produce separate entries with different headers
+ * (`>auf` vs `auf<`) and different tag sections.
  *
  * Skips single-morpheme words (simple roots like "Hand") since there's nothing
  * to cross-reference.
  */
 
 import { ok, type Result } from "neverthrow";
+import { dictEntryIdHelper } from "../../../../../linguistics/common/dict-entry-id/dict-entry-id";
 import { SurfaceKind } from "../../../../../linguistics/common/enums/core";
 import { cssSuffixFor } from "../../../../../linguistics/common/sections/section-css-kind";
 import {
@@ -21,11 +26,21 @@ import {
 	SplitPathKind,
 	type SplitPathToMdFile,
 } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
-import type { MorphemeItem } from "../../../../../stateless-helpers/morpheme-formatter";
+import { dictNoteHelper } from "../../../../../stateless-helpers/dict-note";
+import type {
+	DictEntry,
+	EntrySection,
+} from "../../../../../stateless-helpers/dict-note/types";
+import {
+	morphemeFormatterHelper,
+	type MorphemeItem,
+} from "../../../../../stateless-helpers/morpheme-formatter";
+import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metadata";
 import {
 	buildPropagationActionPair,
 	resolveTargetPath,
 } from "../../../common/target-path-resolver";
+import type { TargetLanguage } from "../../../../../types";
 import type { CommandError } from "../../types";
 import type { GenerateSectionsResult } from "./generate-sections";
 
@@ -94,9 +109,33 @@ function resolveMorphemePath(
 	});
 }
 
+/** Build the header string for a morpheme entry. */
+function buildMorphemeHeader(
+	item: MorphemeItem,
+	targetLang: TargetLanguage,
+): string {
+	if (item.kind === "Prefix") {
+		return morphemeFormatterHelper.decorateSurface(
+			item.surf,
+			item.separability,
+			targetLang,
+		);
+	}
+	return item.lemma ?? item.surf;
+}
+
+/** Build the tag content for a morpheme entry (e.g. `#prefix/separable`). */
+function buildMorphemeTagContent(item: MorphemeItem): string {
+	const kindTag = item.kind.toLowerCase();
+	if (item.kind === "Prefix" && item.separability) {
+		return `#${kindTag}/${item.separability.toLowerCase()}`;
+	}
+	return `#${kindTag}`;
+}
+
 /**
- * For each morpheme in a multi-morpheme word, generate actions that append
- * a back-reference attestation line to the morpheme's target note.
+ * For each morpheme in a multi-morpheme word, generate actions that create
+ * or update structured DictEntry on the morpheme's target note.
  */
 export function propagateMorphemes(
 	ctx: GenerateSectionsResult,
@@ -110,10 +149,12 @@ export function propagateMorphemes(
 	const lemmaResult = ctx.textfresserState.latestLemmaResult;
 	const sourceWord = lemmaResult.lemma;
 	const targetLang = ctx.textfresserState.languages.target;
+
 	const attestationCssSuffix = cssSuffixFor[DictSectionKind.Attestation];
 	const attestationTitle =
 		TitleReprFor[DictSectionKind.Attestation][targetLang];
-	const sectionMarker = `<span class="entry_section_title entry_section_title_${attestationCssSuffix}">${attestationTitle}</span>`;
+	const tagsCssSuffix = cssSuffixFor[DictSectionKind.Tags];
+	const tagsTitle = TitleReprFor[DictSectionKind.Tags][targetLang];
 
 	const propagationActions: VaultAction[] = [];
 
@@ -123,36 +164,77 @@ export function propagateMorphemes(
 		if (morphemeWord === sourceWord) continue;
 
 		const resolved = resolveMorphemePath(item, ctx);
+		const targetHeader = buildMorphemeHeader(item, targetLang);
 		const refLine = `[[${sourceWord}]]`;
 
 		const transform = (content: string) => {
-			// Already has this back-reference — skip
-			if (content.includes(refLine)) return content;
+			const existingEntries = dictNoteHelper.parse(content);
+			const matchedEntry = existingEntries.find(
+				(e) => e.headerContent === targetHeader,
+			);
 
-			// Check if attestation section marker exists
-			if (content.includes(sectionMarker)) {
-				const markerIdx = content.indexOf(sectionMarker);
-				const afterMarker = markerIdx + sectionMarker.length;
-				const rest = content.slice(afterMarker);
-
-				// Find end of current section (next section marker or end)
-				const nextSectionMatch = rest.match(
-					/<span class="entry_section_title /,
+			if (matchedEntry) {
+				// Re-encounter: append attestation reference if not already present
+				const attestationSection = matchedEntry.sections.find(
+					(s) => s.kind === attestationCssSuffix,
 				);
-				const insertPoint = nextSectionMatch?.index
-					? afterMarker + nextSectionMatch.index
-					: content.length;
+				if (attestationSection) {
+					if (attestationSection.content.includes(refLine)) {
+						return content;
+					}
+					attestationSection.content =
+						`${attestationSection.content.trimEnd()}\n${refLine}`;
+				} else {
+					matchedEntry.sections.push({
+						content: refLine,
+						kind: attestationCssSuffix,
+						title: attestationTitle,
+					});
+				}
 
-				return (
-					content.slice(0, insertPoint).trimEnd() +
-					"\n" +
-					refLine +
-					content.slice(insertPoint)
-				);
+				const { body, meta } = dictNoteHelper.serialize(existingEntries);
+				if (Object.keys(meta).length > 0) {
+					return noteMetadataHelper.upsert(meta)(body) as string;
+				}
+				return body;
 			}
 
-			// No attestation section — append one at the end
-			return `${content.trimEnd()}\n${sectionMarker}\n${refLine}`;
+			// New entry — build structured DictEntry
+			const existingIds = existingEntries.map((e) => e.id);
+			const prefix = dictEntryIdHelper.buildPrefix("Morphem", "Lemma");
+			const entryId = dictEntryIdHelper.build({
+				index: dictEntryIdHelper.nextIndex(existingIds, prefix),
+				surfaceKind: "Lemma",
+				unitKind: "Morphem",
+			});
+
+			const sections: EntrySection[] = [
+				{
+					content: buildMorphemeTagContent(item),
+					kind: tagsCssSuffix,
+					title: tagsTitle,
+				},
+				{
+					content: refLine,
+					kind: attestationCssSuffix,
+					title: attestationTitle,
+				},
+			];
+
+			const newEntry: DictEntry = {
+				headerContent: targetHeader,
+				id: entryId,
+				meta: {},
+				sections,
+			};
+
+			const allEntries = [...existingEntries, newEntry];
+			const { body, meta } = dictNoteHelper.serialize(allEntries);
+
+			if (Object.keys(meta).length > 0) {
+				return noteMetadataHelper.upsert(meta)(body) as string;
+			}
+			return body;
 		};
 
 		propagationActions.push(...resolved.healingActions);
