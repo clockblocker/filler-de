@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
-	multiSpanHelper,
 	type BracketedSpan,
+	multiSpanHelper,
 	type ResolvedSpan,
 } from "../../../src/stateless-helpers/multi-span";
 
@@ -11,7 +11,7 @@ describe("parseBracketedSpans", () => {
 	test("parses single bracketed span", () => {
 		const result = multiSpanHelper.parseBracketedSpans("[Pass] auf dich");
 		expect(result).toEqual([
-			{ text: "Pass", strippedStart: 0, strippedEnd: 4 },
+			{ strippedEnd: 4, strippedStart: 0, text: "Pass" },
 		]);
 	});
 
@@ -20,8 +20,8 @@ describe("parseBracketedSpans", () => {
 			"[Pass] auf dich [auf]",
 		);
 		expect(result).toEqual([
-			{ text: "Pass", strippedStart: 0, strippedEnd: 4 },
-			{ text: "auf", strippedStart: 14, strippedEnd: 17 },
+			{ strippedEnd: 4, strippedStart: 0, text: "Pass" },
+			{ strippedEnd: 17, strippedStart: 14, text: "auf" },
 		]);
 	});
 
@@ -30,9 +30,9 @@ describe("parseBracketedSpans", () => {
 			"Das machen wir [auf] [jeden] [Fall] morgen.",
 		);
 		expect(result).toEqual([
-			{ text: "auf", strippedStart: 15, strippedEnd: 18 },
-			{ text: "jeden", strippedStart: 19, strippedEnd: 24 },
-			{ text: "Fall", strippedStart: 25, strippedEnd: 29 },
+			{ strippedEnd: 18, strippedStart: 15, text: "auf" },
+			{ strippedEnd: 24, strippedStart: 19, text: "jeden" },
+			{ strippedEnd: 29, strippedStart: 25, text: "Fall" },
 		]);
 	});
 
@@ -84,8 +84,8 @@ describe("mapSpansToRawBlock", () => {
 	test("resolves spans in plain text (separable verb)", () => {
 		const rawBlock = "Pass auf dich auf";
 		const spans: BracketedSpan[] = [
-			{ text: "Pass", strippedStart: 0, strippedEnd: 4 },
-			{ text: "auf", strippedStart: 14, strippedEnd: 17 },
+			{ strippedEnd: 4, strippedStart: 0, text: "Pass" },
+			{ strippedEnd: 17, strippedStart: 14, text: "auf" },
 		];
 
 		const result = multiSpanHelper.mapSpansToRawBlock(
@@ -96,8 +96,8 @@ describe("mapSpansToRawBlock", () => {
 		);
 
 		expect(result).toEqual([
-			{ text: "Pass", rawStart: 0, rawEnd: 4 },
-			{ text: "auf", rawStart: 14, rawEnd: 17 },
+			{ rawEnd: 4, rawStart: 0, text: "Pass" },
+			{ rawEnd: 17, rawStart: 14, text: "auf" },
 		]);
 	});
 
@@ -107,8 +107,8 @@ describe("mapSpansToRawBlock", () => {
 		// The anchor "Pass" is at raw offset 2 (inside **)
 		const rawBlock = "**Pass** auf dich auf";
 		const spans: BracketedSpan[] = [
-			{ text: "Pass", strippedStart: 0, strippedEnd: 4 },
-			{ text: "auf", strippedStart: 14, strippedEnd: 17 },
+			{ strippedEnd: 4, strippedStart: 0, text: "Pass" },
+			{ strippedEnd: 17, strippedStart: 14, text: "auf" },
 		];
 
 		const result = multiSpanHelper.mapSpansToRawBlock(
@@ -121,17 +121,17 @@ describe("mapSpansToRawBlock", () => {
 		expect(result).not.toBeNull();
 		expect(result).toHaveLength(2);
 		// Anchor at known position
-		expect(result![0]).toEqual({ text: "Pass", rawStart: 2, rawEnd: 6 });
+		expect(result![0]).toEqual({ rawEnd: 6, rawStart: 2, text: "Pass" });
 		// "auf" (the separated prefix) at end
-		expect(result![1]).toEqual({ text: "auf", rawStart: 18, rawEnd: 21 });
+		expect(result![1]).toEqual({ rawEnd: 21, rawStart: 18, text: "auf" });
 	});
 
 	test("resolves phrasem spans (3 words)", () => {
 		const rawBlock = "Das machen wir auf jeden Fall morgen.";
 		const spans: BracketedSpan[] = [
-			{ text: "auf", strippedStart: 15, strippedEnd: 18 },
-			{ text: "jeden", strippedStart: 19, strippedEnd: 24 },
-			{ text: "Fall", strippedStart: 25, strippedEnd: 29 },
+			{ strippedEnd: 18, strippedStart: 15, text: "auf" },
+			{ strippedEnd: 24, strippedStart: 19, text: "jeden" },
+			{ strippedEnd: 29, strippedStart: 25, text: "Fall" },
 		];
 
 		const result = multiSpanHelper.mapSpansToRawBlock(
@@ -142,9 +142,9 @@ describe("mapSpansToRawBlock", () => {
 		);
 
 		expect(result).toEqual([
-			{ text: "auf", rawStart: 15, rawEnd: 18 },
-			{ text: "jeden", rawStart: 19, rawEnd: 24 },
-			{ text: "Fall", rawStart: 25, rawEnd: 29 },
+			{ rawEnd: 18, rawStart: 15, text: "auf" },
+			{ rawEnd: 24, rawStart: 19, text: "jeden" },
+			{ rawEnd: 29, rawStart: 25, text: "Fall" },
 		]);
 	});
 
@@ -153,9 +153,9 @@ describe("mapSpansToRawBlock", () => {
 		// The LLM marked only the second "auf" (the separable prefix)
 		const rawBlock = "Pass auf dich auf";
 		const spans: BracketedSpan[] = [
-			{ text: "Pass", strippedStart: 0, strippedEnd: 4 },
+			{ strippedEnd: 4, strippedStart: 0, text: "Pass" },
 			// This "auf" is at stripped position 14, not 5
-			{ text: "auf", strippedStart: 14, strippedEnd: 17 },
+			{ strippedEnd: 17, strippedStart: 14, text: "auf" },
 		];
 
 		const result = multiSpanHelper.mapSpansToRawBlock(
@@ -179,8 +179,8 @@ describe("mapSpansToRawBlock", () => {
 		//  0123456789...                   ^32
 		const rawBlock = "Er [[aufpassen|passt]] auf dich auf";
 		const spans: BracketedSpan[] = [
-			{ text: "passt", strippedStart: 3, strippedEnd: 8 },
-			{ text: "auf", strippedStart: 23, strippedEnd: 26 },
+			{ strippedEnd: 8, strippedStart: 3, text: "passt" },
+			{ strippedEnd: 26, strippedStart: 23, text: "auf" },
 		];
 
 		const result = multiSpanHelper.mapSpansToRawBlock(
@@ -198,7 +198,7 @@ describe("mapSpansToRawBlock", () => {
 
 	test("returns null when anchor surface not found in spans", () => {
 		const spans: BracketedSpan[] = [
-			{ text: "Pass", strippedStart: 0, strippedEnd: 4 },
+			{ strippedEnd: 4, strippedStart: 0, text: "Pass" },
 		];
 
 		const result = multiSpanHelper.mapSpansToRawBlock(
@@ -213,7 +213,7 @@ describe("mapSpansToRawBlock", () => {
 
 	test("returns null when anchor verification fails", () => {
 		const spans: BracketedSpan[] = [
-			{ text: "Pass", strippedStart: 0, strippedEnd: 4 },
+			{ strippedEnd: 4, strippedStart: 0, text: "Pass" },
 		];
 
 		// Offset 10 doesn't have "Pass"
@@ -244,8 +244,8 @@ describe("applyMultiSpanReplacement", () => {
 	test("replaces two spans with wikilinks (separable verb)", () => {
 		const rawBlock = "Pass auf dich auf";
 		const resolved: ResolvedSpan[] = [
-			{ text: "Pass", rawStart: 0, rawEnd: 4 },
-			{ text: "auf", rawStart: 14, rawEnd: 17 },
+			{ rawEnd: 4, rawStart: 0, text: "Pass" },
+			{ rawEnd: 17, rawStart: 14, text: "auf" },
 		];
 
 		const result = multiSpanHelper.applyMultiSpanReplacement(
@@ -262,9 +262,9 @@ describe("applyMultiSpanReplacement", () => {
 	test("replaces three spans with wikilinks (phrasem)", () => {
 		const rawBlock = "Das machen wir auf jeden Fall morgen.";
 		const resolved: ResolvedSpan[] = [
-			{ text: "auf", rawStart: 15, rawEnd: 18 },
-			{ text: "jeden", rawStart: 19, rawEnd: 24 },
-			{ text: "Fall", rawStart: 25, rawEnd: 29 },
+			{ rawEnd: 18, rawStart: 15, text: "auf" },
+			{ rawEnd: 24, rawStart: 19, text: "jeden" },
+			{ rawEnd: 29, rawStart: 25, text: "Fall" },
 		];
 
 		const result = multiSpanHelper.applyMultiSpanReplacement(
@@ -281,8 +281,8 @@ describe("applyMultiSpanReplacement", () => {
 	test("preserves right-to-left replacement order (offsets stay valid)", () => {
 		const rawBlock = "A B C";
 		const resolved: ResolvedSpan[] = [
-			{ text: "A", rawStart: 0, rawEnd: 1 },
-			{ text: "C", rawStart: 4, rawEnd: 5 },
+			{ rawEnd: 1, rawStart: 0, text: "A" },
+			{ rawEnd: 5, rawStart: 4, text: "C" },
 		];
 
 		const result = multiSpanHelper.applyMultiSpanReplacement(
@@ -297,7 +297,7 @@ describe("applyMultiSpanReplacement", () => {
 	test("handles span where text matches lemma (no alias needed)", () => {
 		const rawBlock = "x aufpassen y";
 		const resolved: ResolvedSpan[] = [
-			{ text: "aufpassen", rawStart: 2, rawEnd: 11 },
+			{ rawEnd: 11, rawStart: 2, text: "aufpassen" },
 		];
 
 		const result = multiSpanHelper.applyMultiSpanReplacement(

@@ -32,15 +32,15 @@ import type {
 	EntrySection,
 } from "../../../../../stateless-helpers/dict-note/types";
 import {
-	morphemeFormatterHelper,
 	type MorphemeItem,
+	morphemeFormatterHelper,
 } from "../../../../../stateless-helpers/morpheme-formatter";
 import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metadata";
+import type { TargetLanguage } from "../../../../../types";
 import {
 	buildPropagationActionPair,
 	resolveTargetPath,
 } from "../../../common/target-path-resolver";
-import type { TargetLanguage } from "../../../../../types";
 import type { CommandError } from "../../types";
 import type { GenerateSectionsResult } from "./generate-sections";
 
@@ -182,8 +182,7 @@ export function propagateMorphemes(
 					if (attestationSection.content.includes(refLine)) {
 						return content;
 					}
-					attestationSection.content =
-						`${attestationSection.content.trimEnd()}\n${refLine}`;
+					attestationSection.content = `${attestationSection.content.trimEnd()}\n${refLine}`;
 				} else {
 					matchedEntry.sections.push({
 						content: refLine,
@@ -192,7 +191,8 @@ export function propagateMorphemes(
 					});
 				}
 
-				const { body, meta } = dictNoteHelper.serialize(existingEntries);
+				const { body, meta } =
+					dictNoteHelper.serialize(existingEntries);
 				if (Object.keys(meta).length > 0) {
 					return noteMetadataHelper.upsert(meta)(body) as string;
 				}

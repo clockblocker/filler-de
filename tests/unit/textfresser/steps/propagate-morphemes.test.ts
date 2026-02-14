@@ -2,8 +2,8 @@ import { describe, expect, it } from "bun:test";
 import type { GenerateSectionsResult } from "../../../../src/commanders/textfresser/commands/generate/steps/generate-sections";
 import { propagateMorphemes } from "../../../../src/commanders/textfresser/commands/generate/steps/propagate-morphemes";
 import type { TextfresserState } from "../../../../src/commanders/textfresser/textfresser";
-import type { MorphemeItem } from "../../../../src/stateless-helpers/morpheme-formatter";
 import { VaultActionKind } from "../../../../src/managers/obsidian/vault-action-manager/types/vault-action";
+import type { MorphemeItem } from "../../../../src/stateless-helpers/morpheme-formatter";
 
 function makeCtx(
 	morphemes: MorphemeItem[],

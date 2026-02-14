@@ -6,6 +6,7 @@ import type { CommandError, CommandInput, CommandState } from "../types";
 import { checkAttestation } from "./steps/check-attestation";
 import { checkEligibility } from "./steps/check-eligibility";
 import { checkLemmaResult } from "./steps/check-lemma-result";
+import { decorateAttestationSeparability } from "./steps/decorate-attestation-separability";
 import { generateSections } from "./steps/generate-sections";
 import { moveToWorter } from "./steps/move-to-worter";
 import { propagateInflections } from "./steps/propagate-inflections";
@@ -40,6 +41,7 @@ export function generateCommand(
 		.andThen(generateSections)
 		.andThen(propagateRelations)
 		.andThen(propagateMorphemes)
+		.andThen(decorateAttestationSeparability)
 		.andThen(propagateInflections)
 		.andThen(serializeEntry)
 		.andThen(moveToWorter)

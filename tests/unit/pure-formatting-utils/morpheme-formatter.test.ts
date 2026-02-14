@@ -59,22 +59,22 @@ describe("morphemeFormatterHelper.formatAsWikilink", () => {
 		).toBe("[[hand]]");
 	});
 
-	it("formats morpheme with Separable separability", () => {
+	it("formats morpheme with Separable separability (no decoration in section)", () => {
 		expect(
 			morphemeFormatterHelper.formatAsWikilink(
 				{ kind: "Prefix", separability: "Separable", surf: "auf" },
 				"German",
 			),
-		).toBe("[[auf|>auf]]");
+		).toBe("[[auf]]");
 	});
 
-	it("formats morpheme with Inseparable separability", () => {
+	it("formats morpheme with Inseparable separability (no decoration in section)", () => {
 		expect(
 			morphemeFormatterHelper.formatAsWikilink(
 				{ kind: "Prefix", separability: "Inseparable", surf: "ver" },
 				"German",
 			),
-		).toBe("[[ver|ver<]]");
+		).toBe("[[ver]]");
 	});
 
 	it("formats morpheme with both lemma and separability", () => {
@@ -83,7 +83,7 @@ describe("morphemeFormatterHelper.formatAsWikilink", () => {
 				{ kind: "Prefix", lemma: "auf-", separability: "Separable", surf: "auf" },
 				"German",
 			),
-		).toBe("[[auf-|>auf]]");
+		).toBe("[[auf-|auf]]");
 	});
 
 	it("ignores separability for English", () => {
@@ -95,13 +95,13 @@ describe("morphemeFormatterHelper.formatAsWikilink", () => {
 		).toBe("[[un]]");
 	});
 
-	it("formats prefix with linkTarget", () => {
+	it("formats prefix with linkTarget (no decoration in section)", () => {
 		expect(
 			morphemeFormatterHelper.formatAsWikilink(
 				{ kind: "Prefix", linkTarget: "ver-prefix-de", separability: "Inseparable", surf: "ver" },
 				"German",
 			),
-		).toBe("[[ver-prefix-de|ver<]]");
+		).toBe("[[ver-prefix-de|ver]]");
 	});
 
 	it("formats root with lemma (no linkTarget)", () => {
@@ -113,18 +113,18 @@ describe("morphemeFormatterHelper.formatAsWikilink", () => {
 		).toBe("[[taub|täub]]");
 	});
 
-	it("linkTarget overrides lemma for target", () => {
+	it("linkTarget overrides lemma for target (no decoration in section)", () => {
 		expect(
 			morphemeFormatterHelper.formatAsWikilink(
 				{ kind: "Prefix", linkTarget: "auf-prefix-de", separability: "Separable", surf: "auf" },
 				"German",
 			),
-		).toBe("[[auf-prefix-de|>auf]]");
+		).toBe("[[auf-prefix-de|auf]]");
 	});
 });
 
 describe("morphemeFormatterHelper.formatSection", () => {
-	it("formats aufpassen with separable prefix", () => {
+	it("formats aufpassen with separable prefix (no decoration in section)", () => {
 		expect(
 			morphemeFormatterHelper.formatSection(
 				[
@@ -133,7 +133,7 @@ describe("morphemeFormatterHelper.formatSection", () => {
 				],
 				"German",
 			),
-		).toBe("[[auf|>auf]]|[[passen]]");
+		).toBe("[[auf]]|[[passen]]");
 	});
 
 	it("formats Kohlekraftwerk (simple compound)", () => {
@@ -149,7 +149,7 @@ describe("morphemeFormatterHelper.formatSection", () => {
 		).toBe("[[kohle]]|[[kraft]]|[[werk]]");
 	});
 
-	it("formats verstehen with inseparable prefix", () => {
+	it("formats verstehen with inseparable prefix (no decoration in section)", () => {
 		expect(
 			morphemeFormatterHelper.formatSection(
 				[
@@ -158,7 +158,7 @@ describe("morphemeFormatterHelper.formatSection", () => {
 				],
 				"German",
 			),
-		).toBe("[[ver|ver<]]|[[stehen]]");
+		).toBe("[[ver]]|[[stehen]]");
 	});
 
 	it("formats single morpheme", () => {
@@ -195,7 +195,7 @@ describe("morphemeFormatterHelper.formatSection", () => {
 		).toBe("[[turtel]]|[[taub|täub]]|[[chen]]");
 	});
 
-	it("formats aufpassen with linkTarget on prefix", () => {
+	it("formats aufpassen with linkTarget on prefix (no decoration in section)", () => {
 		expect(
 			morphemeFormatterHelper.formatSection(
 				[
@@ -204,6 +204,6 @@ describe("morphemeFormatterHelper.formatSection", () => {
 				],
 				"German",
 			),
-		).toBe("[[auf-prefix-de|>auf]]|[[passen]]");
+		).toBe("[[auf-prefix-de|auf]]|[[passen]]");
 	});
 });

@@ -47,15 +47,15 @@ function decorateSurface(
  */
 function formatAsWikilink(
 	item: MorphemeItem,
-	targetLang: TargetLanguage,
+	_targetLang: TargetLanguage,
 ): string {
-	const decorated = decorateSurface(item.surf, item.separability, targetLang);
+	const display = item.surf;
 	const target =
 		item.linkTarget ??
 		(item.lemma && item.lemma !== item.surf ? item.lemma : item.surf);
 
-	if (target === decorated) return `[[${target}]]`;
-	return `[[${target}|${decorated}]]`;
+	if (target === display) return `[[${target}]]`;
+	return `[[${target}|${display}]]`;
 }
 
 /**
