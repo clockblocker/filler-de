@@ -17,6 +17,7 @@ Return:
 
 Rules:
 - For nouns: lemma is nominative singular (e.g., "Häuser" → "Haus")
+- Diminutives (-chen, -lein) and other derivational forms are independent lemmas — do NOT reduce to the base noun (e.g., "Turteltäubchen" → "Turteltäubchen", NOT "Turteltaube")
 - For verbs: lemma is infinitive (e.g., "ging" → "gehen")
 - For adjectives: lemma is base form without endings (e.g., "schönes" → "schön")
 - For separable verbs: include prefix in lemma (e.g., "fing...an" → "anfangen")

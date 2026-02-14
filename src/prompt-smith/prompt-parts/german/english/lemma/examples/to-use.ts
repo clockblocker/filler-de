@@ -121,6 +121,22 @@ export const examples = [
 			surfaceKind: "Lemma",
 		},
 	},
+	{
+		input: {
+			context: "Die Turteltäubchen gurrten auf dem Dach.",
+			surface: "Turteltäubchen",
+		},
+		output: {
+			emojiDescription: ["🕊️", "💕"],
+			genus: "Neutrum",
+			ipa: "ˈtʊʁtl̩ˌtɔʏ̯pçən",
+			lemma: "Turteltäubchen",
+			linguisticUnit: "Lexem",
+			nounClass: "Common",
+			pos: "Noun",
+			surfaceKind: "Lemma",
+		},
+	},
 ] satisfies {
 	input: UserInput<"Lemma">;
 	output: AgentOutput<"Lemma">;

@@ -25,6 +25,7 @@ Return:
 
 Rules:
 - For nouns: lemma is nominative singular (e.g., "Häuser" → "Haus")
+- Diminutives (-chen, -lein) and other derivational forms are independent lemmas — do NOT reduce to the base noun (e.g., "Turteltäubchen" → "Turteltäubchen", NOT "Turteltaube")
 - For verbs: lemma is infinitive (e.g., "ging" → "gehen")
 - For adjectives: lemma is base form without endings (e.g., "schönes" → "schön")
 - For separable verbs: include prefix in lemma (e.g., "fing...an" → "anfangen")
@@ -107,4 +108,13 @@ Rules:
 {"emojiDescription":["🐻","🏙️"],"genus":"Neutrum","ipa":"bɛʁˈliːn","lemma":"Berlin","linguisticUnit":"Lexem","nounClass":"Proper","pos":"Noun","surfaceKind":"Lemma"}
 </output>
 </example-8>
+
+<example-9>
+<input>
+{"context":"Die Turteltäubchen gurrten auf dem Dach.","surface":"Turteltäubchen"}
+</input>
+<output>
+{"emojiDescription":["🕊️","💕"],"genus":"Neutrum","ipa":"ˈtʊʁtl̩ˌtɔʏ̯pçən","lemma":"Turteltäubchen","linguisticUnit":"Lexem","nounClass":"Common","pos":"Noun","surfaceKind":"Lemma"}
+</output>
+</example-9>
 </examples>`;
