@@ -5,6 +5,8 @@ import {
 	VaultActionKind,
 } from "../../../../managers/obsidian/vault-action-manager";
 import { PromptKind } from "../../../../prompt-smith/codegen/consts";
+import { markdownHelper } from "../../../../stateless-helpers/markdown-strip";
+import { multiSpanHelper } from "../../../../stateless-helpers/multi-span";
 import { logger } from "../../../../utils/logger";
 import { buildAttestationFromSelection } from "../../common/attestation/builders/build-from-selection";
 import type { Attestation } from "../../common/attestation/types";
@@ -165,34 +167,78 @@ export function lemmaCommand(
 			const rawBlock = attestation.source.textRaw;
 			const offset = attestation.target.offsetInBlock;
 
-			// Expand surface when fullSurface extends beyond the selected text
-			const fullSurface = result.fullSurface;
-			let replaceSurface = surface;
-			let replaceOffset = offset;
+			// Try multi-span replacement for separable verbs / phrasems
+			let updatedBlock: string | null = null;
 
-			if (
-				fullSurface &&
-				fullSurface !== surface &&
-				offset !== undefined
-			) {
-				const expanded = expandOffsetForFullSurface(
-					rawBlock,
-					surface,
-					offset,
-					fullSurface,
+			if (result.contextWithLinkedParts && offset !== undefined) {
+				const stripped = multiSpanHelper.stripBrackets(
+					result.contextWithLinkedParts,
 				);
-				replaceSurface = expanded.replaceSurface;
-				replaceOffset = expanded.replaceOffset;
+				const expectedStripped = markdownHelper.stripAll(rawBlock);
+
+				if (stripped === expectedStripped) {
+					const spans = multiSpanHelper.parseBracketedSpans(
+						result.contextWithLinkedParts,
+					);
+					if (spans.length > 1) {
+						const resolved = multiSpanHelper.mapSpansToRawBlock(
+							rawBlock,
+							spans,
+							surface,
+							offset,
+						);
+						if (resolved && resolved.length > 1) {
+							updatedBlock =
+								multiSpanHelper.applyMultiSpanReplacement(
+									rawBlock,
+									resolved,
+									result.lemma,
+								);
+
+							// Update attestation context to show all linked parts
+							attestation.source.textWithOnlyTargetMarked =
+								result.contextWithLinkedParts;
+						}
+					}
+				} else {
+					logger.warn(
+						"[lemma] contextWithLinkedParts stripped text mismatch — falling back to single-span",
+					);
+				}
 			}
 
-			const wikilink = buildWikilink(replaceSurface, result.lemma);
+			// Fall back to single-span replacement
+			if (updatedBlock === null) {
+				const fullSurface = result.fullSurface;
+				let replaceSurface = surface;
+				let replaceOffset = offset;
 
-			const updatedBlock =
-				replaceOffset !== undefined
-					? rawBlock.slice(0, replaceOffset) +
-						wikilink +
-						rawBlock.slice(replaceOffset + replaceSurface.length)
-					: rawBlock.replace(surface, wikilink);
+				if (
+					fullSurface &&
+					fullSurface !== surface &&
+					offset !== undefined
+				) {
+					const expanded = expandOffsetForFullSurface(
+						rawBlock,
+						surface,
+						offset,
+						fullSurface,
+					);
+					replaceSurface = expanded.replaceSurface;
+					replaceOffset = expanded.replaceOffset;
+				}
+
+				const wikilink = buildWikilink(replaceSurface, result.lemma);
+
+				updatedBlock =
+					replaceOffset !== undefined
+						? rawBlock.slice(0, replaceOffset) +
+							wikilink +
+							rawBlock.slice(
+								replaceOffset + replaceSurface.length,
+							)
+						: rawBlock.replace(surface, wikilink);
+			}
 
 			const actions: VaultAction[] = [
 				{

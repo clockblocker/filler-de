@@ -61,15 +61,32 @@ export const examples = [
 	},
 	{
 		input: {
-			context: "Das machen wir auf jeden Fall morgen.",
+			context: "Das machen wir auf jeden [Fall] morgen.",
 			surface: "Fall",
 		},
 		output: {
+			contextWithLinkedParts:
+				"Das machen wir [auf] [jeden] [Fall] morgen.",
 			emojiDescription: ["✅"],
 			ipa: "aʊ̯f ˈjeːdn̩ fal",
 			lemma: "auf jeden Fall",
 			linguisticUnit: "Phrasem",
 			surfaceKind: "Lemma",
+		},
+	},
+	{
+		input: {
+			context: "[Pass] auf dich auf",
+			surface: "Pass",
+		},
+		output: {
+			contextWithLinkedParts: "[Pass] auf dich [auf]",
+			emojiDescription: ["👀"],
+			ipa: "ˈaʊ̯fˌpasn̩",
+			lemma: "aufpassen",
+			linguisticUnit: "Lexem",
+			pos: "Verb",
+			surfaceKind: "Inflected",
 		},
 	},
 	{

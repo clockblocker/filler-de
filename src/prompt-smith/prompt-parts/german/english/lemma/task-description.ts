@@ -14,6 +14,7 @@ Return:
 - fullSurface: the full proper noun as it appears in the text, only when it extends beyond the selected surface. Omit when the surface already covers the full proper noun or when the noun is Common.
 - emojiDescription: 1-3 emojis that capture the core semantic concept of the word's meaning in context. Used to visually distinguish between different senses of the same word (e.g., Schloss-castle ["🏰"] vs Schloss-lock ["🔒"]). For polysemous words, choose emojis that distinguish this sense from other common senses.
 - ipa: the IPA pronunciation of the lemma form (without slashes or brackets, just the transcription). Use narrow IPA transcription reflecting standard High German (Hochdeutsch) pronunciation.
+- contextWithLinkedParts: when the lemma consists of multiple parts in the context (e.g., separable prefix verb in separated position, or phrasem words), re-emit the full context with ALL parts of the lemma wrapped in [square brackets]. The originally marked surface must remain marked. Omit when the surface already covers the full lemma (single contiguous word, or fullSurface handles it).
 
 Rules:
 - For nouns: lemma is nominative singular (e.g., "Häuser" → "Haus")
@@ -25,4 +26,7 @@ Rules:
 - If the surface IS the lemma, surfaceKind is "Lemma"
 - pos is omitted for Phrasem and Morphem
 - For proper nouns: articles are NOT part of the lemma ("der Rhein" → lemma: "Rhein"). The lemma is the proper name itself.
-- fullSurface must match the exact text span in the context sentence (case-sensitive)`;
+- fullSurface must match the exact text span in the context sentence (case-sensitive)
+- For separable verbs in separated position: return contextWithLinkedParts with both the conjugated verb stem and the separated prefix marked.
+- For phrasems where the user selected only one word: return contextWithLinkedParts with ALL words of the phrasem marked.
+- contextWithLinkedParts text (with brackets stripped) must be identical to the input context text (with brackets stripped).`;

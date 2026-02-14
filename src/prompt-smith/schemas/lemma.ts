@@ -21,6 +21,7 @@ const NounClassSchemaV3 = z.enum(["Common", "Proper"]);
 const GermanGenusSchemaV3 = z.enum(["Maskulinum", "Femininum", "Neutrum"]);
 
 const agentOutputSchema = z.object({
+	contextWithLinkedParts: z.string().nullable().optional(),
 	emojiDescription: z.array(z.string().min(1).max(4)).min(1).max(3),
 	fullSurface: z.string().nullable().optional(),
 	genus: GermanGenusSchemaV3.nullable().optional(),
