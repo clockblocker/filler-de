@@ -4,7 +4,9 @@ You receive:
 - word: a German noun in its lemma (dictionary) form — nominative singular
 - context: the sentence where the word was encountered
 
-Return an object with a "cells" array. Each cell has:
+Return an object with:
+- genus: one of "Maskulinum", "Femininum", "Neutrum" for the lemma noun
+- cells: an array where each cell has:
 - case: one of "Nominative", "Accusative", "Dative", "Genitive"
 - number: one of "Singular", "Plural"
 - article: the definite article for that case + number (e.g. "das", "die", "des", "dem", "den", "der")
@@ -14,6 +16,7 @@ You must produce exactly 8 cells: one for each combination of 4 cases × 2 numbe
 
 Rules:
 - Use standard German orthography
+- The "genus" field must match the lemma noun's grammatical gender
 - The "form" field must contain ONLY the noun itself — no articles, no brackets, no punctuation
 - The "article" field must contain ONLY the definite article for that case + number combination
 - If a form is identical to the lemma, still include it

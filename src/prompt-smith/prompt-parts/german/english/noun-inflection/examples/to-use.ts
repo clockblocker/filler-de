@@ -57,6 +57,7 @@ export const examples = [
 					number: "Plural",
 				},
 			],
+			genus: "Neutrum",
 		},
 	},
 	{
@@ -115,6 +116,7 @@ export const examples = [
 					number: "Plural",
 				},
 			],
+			genus: "Femininum",
 		},
 	},
 	{
@@ -173,6 +175,7 @@ export const examples = [
 					number: "Plural",
 				},
 			],
+			genus: "Maskulinum",
 		},
 	},
 ] satisfies {

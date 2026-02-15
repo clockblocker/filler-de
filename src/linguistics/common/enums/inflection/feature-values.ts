@@ -45,7 +45,10 @@ export const CASE_LABEL_FOR_TARGET_LANGUAGE = {
 	},
 } satisfies Record<TargetLanguage, Record<CaseValue, string>>;
 
-type LabelRecord<TValue extends string> = Record<TargetLanguage, Record<TValue, string>>;
+type LabelRecord<TValue extends string> = Record<
+	TargetLanguage,
+	Record<TValue, string>
+>;
 
 function buildValueByLocalizedLabel<TValue extends string>(
 	labelsByLanguage: LabelRecord<TValue>,

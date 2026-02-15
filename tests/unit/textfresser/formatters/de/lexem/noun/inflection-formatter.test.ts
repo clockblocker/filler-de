@@ -14,6 +14,7 @@ describe("formatInflection", () => {
 				{ article: "dem", case: "Dative", form: "Kraftwerk", number: "Singular" },
 				{ article: "den", case: "Dative", form: "Kraftwerken", number: "Plural" },
 			],
+			genus: "Neutrum",
 		});
 
 		const lines = formattedSection.split("\n");
@@ -30,6 +31,7 @@ describe("formatInflection", () => {
 				{ article: "der", case: "Nominative", form: "Mann", number: "Singular" },
 				{ article: "die", case: "Nominative", form: "Männer", number: "Plural" },
 			],
+			genus: "Maskulinum",
 		});
 
 		expect(cells).toHaveLength(2);
@@ -53,6 +55,7 @@ describe("formatInflection", () => {
 				{ article: "das", case: "Nominative", form: "Kind", number: "Singular" },
 				{ article: "die", case: "Nominative", form: "Kinder", number: "Plural" },
 			],
+			genus: "Neutrum",
 		});
 
 		expect(formattedSection).toBe("N: das [[Kind]], die [[Kinder]]");
@@ -66,6 +69,7 @@ describe("formatInflection", () => {
 				{ article: "des", case: "Genitive", form: "Tisches", number: "Singular" },
 				{ article: "dem", case: "Dative", form: "Tisch", number: "Singular" },
 			],
+			genus: "Maskulinum",
 		});
 
 		const lines = formattedSection.split("\n");
@@ -77,7 +81,10 @@ describe("formatInflection", () => {
 	});
 
 	it("handles empty cells", () => {
-		const { formattedSection, cells } = formatInflection({ cells: [] });
+		const { formattedSection, cells } = formatInflection({
+			cells: [],
+			genus: "Neutrum",
+		});
 		expect(formattedSection).toBe("");
 		expect(cells).toHaveLength(0);
 	});

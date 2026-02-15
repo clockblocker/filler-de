@@ -15,7 +15,7 @@ export function formatHeaderLine(
 	targetLanguage: string,
 	genus: GermanGenus,
 ): string {
-	const emoji = output.emojiDescription[0];
+	const emoji = output.emojiDescription.join(" ");
 	const article = articleFromGenus[genus];
 	const youglishUrl = buildYouglishUrl(lemma, targetLanguage);
 

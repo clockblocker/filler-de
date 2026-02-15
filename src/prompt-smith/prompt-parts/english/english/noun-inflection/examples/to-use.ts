@@ -57,6 +57,7 @@ export const examples = [
 					number: "Plural",
 				},
 			],
+			genus: "Neutrum",
 		},
 	},
 ] satisfies {

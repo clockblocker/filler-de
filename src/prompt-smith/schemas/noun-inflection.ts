@@ -3,6 +3,7 @@ import {
 	CaseValueSchema,
 	NumberValueSchema,
 } from "../../linguistics/common/enums/inflection/feature-values";
+import { GermanGenusSchema } from "../../linguistics/de/lexem/noun/features";
 
 const userInputSchema = z.object({
 	context: z.string(),
@@ -18,6 +19,7 @@ const agentOutputSchema = z.object({
 			number: NumberValueSchema,
 		}),
 	),
+	genus: GermanGenusSchema,
 });
 
 export const nounInflectionSchemas = { agentOutputSchema, userInputSchema };

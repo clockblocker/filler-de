@@ -53,7 +53,9 @@ function makeVerbEnrichment(): AgentOutput<"LexemEnrichment"> {
 	};
 }
 
-function makeNounEnrichment(): AgentOutput<"LexemEnrichment"> {
+function makeNounEnrichment(
+	overrides: Partial<AgentOutput<"LexemEnrichment">> = {},
+): AgentOutput<"LexemEnrichment"> {
 	return {
 		emojiDescription: ["🔧"],
 		genus: "Maskulinum",
@@ -61,6 +63,7 @@ function makeNounEnrichment(): AgentOutput<"LexemEnrichment"> {
 		linguisticUnit: "Lexem",
 		nounClass: "Common",
 		posLikeKind: "Noun",
+		...overrides,
 	};
 }
 
@@ -111,6 +114,28 @@ describe("dispatchHeaderFormatter", () => {
 		expect(result).not.toContain("die ");
 		expect(result).not.toContain("das ");
 		expect(result).toContain("[[Test]]");
+	});
+
+	it("uses fallback noun genus when enrichment genus is missing", () => {
+		const result = dispatchHeaderFormatter(
+			makeLexemLemmaResult({ posLikeKind: "Noun" }),
+			makeNounEnrichment({ genus: undefined }),
+			"German",
+			"Maskulinum",
+		);
+		expect(result).toContain("der [[Test]]");
+	});
+
+	it("ignores fallback genus for non-noun entries", () => {
+		const result = dispatchHeaderFormatter(
+			makeLexemLemmaResult({ posLikeKind: "Verb" }),
+			makeVerbEnrichment(),
+			"German",
+			"Femininum",
+		);
+		expect(result).toBe(
+			"🔧 [[Test]], [tɛst](https://youglish.com/pronounce/Test/german)",
+		);
 	});
 
 	it("uses precomputedEmojiDescription when available", () => {

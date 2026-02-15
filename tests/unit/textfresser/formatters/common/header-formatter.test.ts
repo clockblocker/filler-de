@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { formatHeaderLine } from "../../../../../src/commanders/textfresser/commands/generate/section-formatters/common/header-formatter";
 
 describe("formatHeaderLine", () => {
-	it("formats header with emoji derived from emojiDescription[0]", () => {
+	it("formats header with emoji sequence from emojiDescription", () => {
 		const result = formatHeaderLine(
 			{ emojiDescription: ["🏭"], ipa: "ˈkoːləˌkraftvɛɐ̯k" },
 			"Kohlekraftwerk",
@@ -24,14 +24,14 @@ describe("formatHeaderLine", () => {
 		);
 	});
 
-	it("uses first emoji from multi-emoji description", () => {
+	it("uses all emojis from multi-emoji description", () => {
 		const result = formatHeaderLine(
 			{ emojiDescription: ["⚡", "💨"], ipa: "ʃnɛl" },
 			"schnell",
 			"German",
 		);
 		expect(result).toBe(
-			"⚡ [[schnell]], [ʃnɛl](https://youglish.com/pronounce/schnell/german)",
+			"⚡ 💨 [[schnell]], [ʃnɛl](https://youglish.com/pronounce/schnell/german)",
 		);
 	});
 

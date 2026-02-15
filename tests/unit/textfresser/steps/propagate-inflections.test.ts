@@ -2,10 +2,10 @@ import { describe, expect, it } from "bun:test";
 import type { GenerateSectionsResult } from "../../../../src/commanders/textfresser/commands/generate/steps/generate-sections";
 import { propagateInflections } from "../../../../src/commanders/textfresser/commands/generate/steps/propagate-inflections";
 import type { TextfresserState } from "../../../../src/commanders/textfresser/textfresser";
-import { dictNoteHelper } from "../../../../src/stateless-helpers/dict-note";
-import type { DictEntry } from "../../../../src/stateless-helpers/dict-note/types";
 import type { NounInflectionCell } from "../../../../src/linguistics/de/lexem/noun";
 import { VaultActionKind } from "../../../../src/managers/obsidian/vault-action-manager/types/vault-action";
+import { dictNoteHelper } from "../../../../src/stateless-helpers/dict-note";
+import type { DictEntry } from "../../../../src/stateless-helpers/dict-note/types";
 
 function makeCtx(
 	inflectionCells: NounInflectionCell[],
@@ -351,7 +351,7 @@ describe("propagateInflections", () => {
 		}
 	});
 
-	it("skips propagation when noun genus is unresolved", () => {
+	it("propagates with fallback header when noun genus is unresolved", () => {
 		const cells: NounInflectionCell[] = [
 			{
 				article: "die",
@@ -366,6 +366,54 @@ describe("propagateInflections", () => {
 		const result = propagateInflections(ctx);
 
 		expect(result.isOk()).toBe(true);
-		expect(result._unsafeUnwrap().actions).toHaveLength(0);
+		expect(result._unsafeUnwrap().actions).toHaveLength(2);
+
+		const transform = getProcessTransform(ctx, "Kraftwerke");
+		expect(transform).toBeDefined();
+		if (!transform) return;
+
+		const output = transform("");
+		const entries = dictNoteHelper.parse(output);
+
+		expect(entries).toHaveLength(1);
+		expect(entries[0]?.headerContent).toBe(
+			"#Inflection/Noun for: [[Kraftwerk]]",
+		);
+	});
+
+	it("upgrades fallback header to genus header when genus becomes available", () => {
+		const cells: NounInflectionCell[] = [
+			{
+				article: "die",
+				case: "Nominative",
+				form: "Kraftwerke",
+				number: "Plural",
+			},
+		];
+		const withoutGenusCtx = makeCtx(cells, "Kraftwerk", {
+			nounInflectionGenus: undefined,
+		});
+		const withGenusCtx = makeCtx(cells, "Kraftwerk", {
+			nounInflectionGenus: "Maskulinum",
+		});
+
+		const createFallbackTransform = getProcessTransform(
+			withoutGenusCtx,
+			"Kraftwerke",
+		);
+		expect(createFallbackTransform).toBeDefined();
+		if (!createFallbackTransform) return;
+
+		const fallbackOutput = createFallbackTransform("");
+		const upgradeTransform = getProcessTransform(withGenusCtx, "Kraftwerke");
+		expect(upgradeTransform).toBeDefined();
+		if (!upgradeTransform) return;
+
+		const upgradedOutput = upgradeTransform(fallbackOutput);
+		const entries = dictNoteHelper.parse(upgradedOutput);
+		expect(entries).toHaveLength(1);
+		expect(entries[0]?.headerContent).toBe(
+			"#Inflection/Noun/Maskulin for: [[Kraftwerk]]",
+		);
 	});
 });

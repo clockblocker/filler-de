@@ -56,6 +56,7 @@ const V3_SECTIONS = new Set<DictSectionKind>([
 
 type LexemEnrichmentOutput = AgentOutput<"LexemEnrichment">;
 type PhrasemEnrichmentOutput = AgentOutput<"PhrasemEnrichment">;
+type NounInflectionOutput = AgentOutput<"NounInflection">;
 type EnrichmentOutput = LexemEnrichmentOutput | PhrasemEnrichmentOutput;
 type FeaturesOutput = AgentOutput<"FeaturesNoun">;
 
@@ -76,6 +77,25 @@ export function getFeaturesPromptKindForPos(pos: DeLexemPos): PromptKindType {
 	return FEATURES_PROMPT_KIND_BY_POS[pos];
 }
 
+export function buildFeatureTagPath(pos: DeLexemPos, tags: string[]): string {
+	const parts = [
+		pos.toLowerCase(),
+		...tags
+			.map((tag) => tag.trim().toLowerCase())
+			.filter((tag) => tag.length > 0),
+	];
+	const seen = new Set<string>();
+	const dedupedParts: string[] = [];
+
+	for (const part of parts) {
+		if (seen.has(part)) continue;
+		seen.add(part);
+		dedupedParts.push(part);
+	}
+
+	return `#${dedupedParts.join("/")}`;
+}
+
 function buildSectionQuery(
 	lemmaResult: LemmaResult,
 	enrichmentOutput: EnrichmentOutput,
@@ -85,7 +105,7 @@ function buildSectionQuery(
 			lemmaResult.posLikeKind === "Noun" &&
 			enrichmentOutput.linguisticUnit === "Lexem" &&
 			enrichmentOutput.posLikeKind === "Noun"
-				? enrichmentOutput.nounClass ?? undefined
+				? (enrichmentOutput.nounClass ?? undefined)
 				: undefined;
 
 		return {
@@ -103,9 +123,11 @@ function buildSectionQuery(
 function resolveNounInflectionGenus(
 	lemmaResult: LemmaResult,
 	enrichmentOutput: EnrichmentOutput,
+	nounInflectionOutput: NounInflectionOutput | null,
 ): GermanGenus | undefined {
 	if (lemmaResult.linguisticUnit !== "Lexem") return undefined;
 	if (lemmaResult.posLikeKind !== "Noun") return undefined;
+	if (nounInflectionOutput) return nounInflectionOutput.genus;
 	if (enrichmentOutput.linguisticUnit !== "Lexem") return undefined;
 	if (enrichmentOutput.posLikeKind !== "Noun") return undefined;
 	return enrichmentOutput.genus ?? undefined;
@@ -341,8 +363,8 @@ export function generateSections(
 				allEntries: existingEntries,
 				failedSections: [],
 				inflectionCells: [],
-				nounInflectionGenus: undefined,
 				morphemes: [],
+				nounInflectionGenus: undefined,
 				relations: [],
 				targetBlockId: matchedEntry.id,
 			}),
@@ -398,19 +420,9 @@ export function generateSections(
 					? getFeaturesPromptKindForPos(lemmaResult.posLikeKind)
 					: null;
 
-			// Build header from enrichment output (+ precomputed emoji override)
-			const headerContent = dispatchHeaderFormatter(
-				lemmaResult,
-				enrichmentOutput,
-				targetLang,
-			);
 			const sections: EntrySection[] = [];
 			let relations: ParsedRelation[] = [];
 			let inflectionCells: NounInflectionCell[] = [];
-			const nounInflectionGenus = resolveNounInflectionGenus(
-				lemmaResult,
-				enrichmentOutput,
-			);
 			let morphemes: MorphemeItem[] = [];
 			const failedSections: string[] = [];
 
@@ -490,7 +502,7 @@ export function generateSections(
 				settled[2],
 				"Inflection",
 				failedSections,
-			);
+			) as NounInflectionOutput | null;
 			const otherInflectionOutput = unwrapOptional(
 				settled[3],
 				"Inflection",
@@ -502,6 +514,19 @@ export function generateSections(
 				"Features",
 				failedSections,
 			) as FeaturesOutput | null;
+			const nounInflectionGenus = resolveNounInflectionGenus(
+				lemmaResult,
+				enrichmentOutput,
+				nounInflectionOutput,
+			);
+			// Build header from enrichment output (+ precomputed emoji override).
+			// For nouns, inflection genus can backfill missing enrichment genus.
+			const headerContent = dispatchHeaderFormatter(
+				lemmaResult,
+				enrichmentOutput,
+				targetLang,
+				nounInflectionGenus,
+			);
 
 			// Assemble sections in correct order from parallel results
 			for (const sectionKind of v3Applicable) {
@@ -601,12 +626,11 @@ export function generateSections(
 							featuresOutput &&
 							lemmaResult.linguisticUnit === "Lexem"
 						) {
-							const tagPath = [
-								lemmaResult.posLikeKind.toLowerCase(),
-								...featuresOutput.tags,
-							].join("/");
 							sections.push({
-								content: `#${tagPath}`,
+								content: buildFeatureTagPath(
+									lemmaResult.posLikeKind,
+									featuresOutput.tags,
+								),
 								kind: cssSuffixFor[DictSectionKind.Tags],
 								title: TitleReprFor[DictSectionKind.Tags][
 									targetLang
@@ -678,8 +702,8 @@ export function generateSections(
 				allEntries: [...existingEntries, newEntry],
 				failedSections,
 				inflectionCells,
-				nounInflectionGenus,
 				morphemes,
+				nounInflectionGenus,
 				relations,
 				targetBlockId: entryId,
 			};

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { getFeaturesPromptKindForPos } from "../../../../src/commanders/textfresser/commands/generate/steps/generate-sections";
+import {
+	buildFeatureTagPath,
+	getFeaturesPromptKindForPos,
+} from "../../../../src/commanders/textfresser/commands/generate/steps/generate-sections";
 import { PromptKind } from "../../../../src/prompt-smith/codegen/consts";
 
 describe("getFeaturesPromptKindForPos", () => {
@@ -30,5 +33,30 @@ describe("getFeaturesPromptKindForPos", () => {
 		expect(getFeaturesPromptKindForPos("InteractionalUnit")).toBe(
 			PromptKind.FeaturesInteractionalUnit,
 		);
+	});
+});
+
+describe("buildFeatureTagPath", () => {
+	it("dedupes repeated tags globally while preserving first occurrence", () => {
+		expect(
+			buildFeatureTagPath("Noun", [
+				"masculine",
+				"common",
+				"common",
+				"masculine",
+			]),
+		).toBe("#noun/masculine/common");
+	});
+
+	it("dedupes tags that repeat the POS root", () => {
+		expect(buildFeatureTagPath("Noun", ["noun", "common", "NOUN"])).toBe(
+			"#noun/common",
+		);
+	});
+
+	it("trims and normalizes tags to lowercase", () => {
+		expect(
+			buildFeatureTagPath("Verb", [" TransitIV ", " ", "STARK"]),
+		).toBe("#verb/transitiv/stark");
 	});
 });

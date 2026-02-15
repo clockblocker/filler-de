@@ -24,6 +24,7 @@ import {
 	buildLocalizedInflectionTagsFromCells,
 	buildNounInflectionPropagationHeader,
 	extractHashTags,
+	isNounInflectionPropagationHeaderForLemma,
 	mergeLocalizedInflectionTags,
 	parseLegacyInflectionHeaderTag,
 } from "../section-formatters/common/inflection-propagation-helper";
@@ -78,13 +79,16 @@ export function propagateInflections(
 	const lemma = lemmaResult.lemma;
 	const targetLanguage = ctx.textfresserState.languages.target;
 	const nounInflectionGenus = ctx.nounInflectionGenus;
-
+	const desiredHeader = buildNounInflectionPropagationHeader(
+		lemma,
+		nounInflectionGenus,
+		targetLanguage,
+	);
 	if (!nounInflectionGenus) {
 		logger.warn(
-			"[propagateInflections] Skip propagation: noun genus was not resolved from enrichment output",
-			{ lemma },
+			"[propagateInflections] Noun genus missing, using fallback header without genus",
+			{ header: desiredHeader, lemma },
 		);
-		return ok(ctx);
 	}
 
 	const byForm = groupByForm(inflectionCells);
@@ -93,11 +97,6 @@ export function propagateInflections(
 	for (const [form, cells] of byForm) {
 		if (form === lemma) continue;
 
-		const header = buildNounInflectionPropagationHeader(
-			lemma,
-			nounInflectionGenus,
-			targetLanguage,
-		);
 		const tagsFromCells = buildLocalizedInflectionTagsFromCells(
 			cells,
 			targetLanguage,
@@ -124,7 +123,12 @@ export function propagateInflections(
 				const entry = existingEntries[index];
 				if (!entry) continue;
 
-				if (entry.headerContent === header) {
+				if (
+					isNounInflectionPropagationHeaderForLemma(
+						entry.headerContent,
+						lemma,
+					)
+				) {
 					matchingEntryIndexes.push(index);
 					const tagsSection = findTagsSection(entry);
 					if (tagsSection) {
@@ -184,7 +188,7 @@ export function propagateInflections(
 				});
 
 				const newEntry: DictEntry = {
-					headerContent: header,
+					headerContent: desiredHeader,
 					id: entryId,
 					meta: {},
 					sections: [createTagsSection("", targetLanguage)],
@@ -211,6 +215,10 @@ export function propagateInflections(
 				targetEntry.sections.push(
 					createTagsSection(mergedTagContent, targetLanguage),
 				);
+				didChange = true;
+			}
+			if (targetEntry.headerContent !== desiredHeader) {
+				targetEntry.headerContent = desiredHeader;
 				didChange = true;
 			}
 

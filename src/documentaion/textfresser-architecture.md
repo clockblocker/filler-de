@@ -51,13 +51,13 @@ User gets a tailor-made dictionary that grows with their reading
 
 > **V10 scope**: Emoji-as-semantic-differentiator — **Definition section dropped entirely** (along with `PromptKind.Semantics`). Homonym disambiguation now uses **emoji arrays** instead of text glosses. Header prompt returns `emojiDescription: string[]` (1-3 emojis capturing the sense, e.g., `["🏰"]` vs `["🔒","🔑"]` for *Schloss*). Disambiguate prompt receives `emojiDescription` + `unitKind` + `pos` + `genus` (+ optional `phrasemeKind`) per sense (richer context than the old text gloss). `meta.semantics` replaced by `meta.emojiDescription: string[]`. `LemmaResult.precomputedSemantics` replaced by `precomputedEmojiDescription: string[]`. Old entries without `emojiDescription` hit V2 legacy path (first-match fallback). CORE_SECTIONS reduced to `[Header, Translation, Attestation, FreeForm]`.
 
-> **V11 scope**: Kill Header Prompt — `PromptKind.Header` eliminated. `emojiDescription` (1-3 emojis) and `ipa` (IPA pronunciation) moved into Lemma prompt output. Header line built from LemmaResult fields (`formatHeaderLine()` takes `{ emojiDescription, ipa }` instead of `AgentOutput<"Header">`). `emoji` derived from `emojiDescription[0]`. `genus` and article (der/die/das) dropped from header line. `buildLinguisticUnit()` removed — `meta.linguisticUnit` no longer populated during Generate. One fewer API call per new entry.
+> **V11 scope**: Kill Header Prompt — `PromptKind.Header` eliminated. `emojiDescription` (1-3 emojis) and `ipa` (IPA pronunciation) moved into Lemma prompt output. Header line built from LemmaResult fields (`formatHeaderLine()` takes `{ emojiDescription, ipa }` instead of `AgentOutput<"Header">`). Header emoji display uses the full `emojiDescription` sequence in order. `genus` and article (der/die/das) dropped from header line. `buildLinguisticUnit()` removed — `meta.linguisticUnit` no longer populated during Generate. One fewer API call per new entry.
 
 > **V12 scope**: POS features as tags + custom header formatting — New `PromptKind.Features` returns non-inflectional grammatical features (e.g., maskulin, transitiv, stark) as tag path components. Tags rendered as `DictSectionKind.Tags` section (`#pos/feature1/feature2`). Lemma prompt now returns `genus` ("Maskulinum"/"Femininum"/"Neutrum") for nouns. Header formatting split per-POS: `dispatchHeaderFormatter()` routes Noun+genus to `de/lexem/noun/header-formatter` (prepends der/die/das), all other POS to common formatter. `CORE_SECTIONS` expanded to include Tags.
 
 > **V13 scope**: Phraseme-kind threading + linguisticUnit metadata restore — Lemma output now includes `phrasemeKind` for `linguisticUnit: "Phrasem"`. `generateSections` restores `meta.linguisticUnit` for `Lexem` and `Phrasem` entries. Disambiguate senses now forward optional `phrasemeKind` hints extracted from `meta.linguisticUnit`.
 
-> **V14 scope**: Minimal Lemma + Generate enrichment cutover — `PromptKind.Lemma` now returns only classifier fields (`lemma`, `linguisticUnit`, `posLikeKind`, `surfaceKind`, optional `contextWithLinkedParts`). Core metadata (`emojiDescription`, `ipa`, noun-only `genus` + `nounClass`) moved to Generate via `PromptKind.LexemEnrichment` / `PromptKind.PhrasemEnrichment`. Features prompt is now POS-specific (`FeaturesNoun` ... `FeaturesInteractionalUnit`), and legacy `PromptKind.Features` is removed. Proper-noun/separable span expansion relies on `contextWithLinkedParts`; legacy `fullSurface` is removed. Runtime parsing remains backward-compatible with legacy Lemma keys (`pos` / `phrasemeKind`) by normalizing them to `posLikeKind`. Noun enrichment metadata (`genus`, `nounClass`) is treated as best-effort at parse time; missing values degrade to common header/metadata paths instead of aborting Generate.
+> **V14 scope**: Minimal Lemma + Generate enrichment cutover — `PromptKind.Lemma` now returns only classifier fields (`lemma`, `linguisticUnit`, `posLikeKind`, `surfaceKind`, optional `contextWithLinkedParts`). Core metadata (`emojiDescription`, `ipa`, noun-only `genus` + `nounClass`) moved to Generate via `PromptKind.LexemEnrichment` / `PromptKind.PhrasemEnrichment`. Features prompt is now POS-specific (`FeaturesNoun` ... `FeaturesInteractionalUnit`), and legacy `PromptKind.Features` is removed. Proper-noun/separable span expansion relies on `contextWithLinkedParts`; legacy `fullSurface` is removed. Runtime parsing remains backward-compatible with legacy Lemma keys (`pos` / `phrasemeKind`) by normalizing them to `posLikeKind`. Noun enrichment metadata (`genus`, `nounClass`) is treated as best-effort at parse time; header formatting first falls back to noun-inflection genus, then degrades to common header when genus is still missing.
 
 > **V9 scope**: LinguisticUnit DTO — Zod-schema-based type system as source of truth for DictEntries. German + Noun fully featured (`genus`, `nounClass`); all other POS/unit kinds have stubs. `GermanLinguisticUnit` built during Generate and stored in `meta.linguisticUnit`. Header prompt now returns `genus` ("Maskulinum"/"Femininum"/"Neutrum") instead of `article` ("der"/"die"/"das"); formatter derives article via `articleFromGenus`. New files: `surface-factory.ts`, `genus.ts`, `noun.ts`, `pos-features.ts`, `lexem-surface.ts`, `phrasem-surface.ts`, `morphem-surface.ts`, `linguistic-unit.ts`. 21 new DTO tests.
 
@@ -231,13 +231,13 @@ DictSectionKind = "Relation" | "FreeForm" | "Attestation" | "Morphem"
 
 | Kind | German title | Purpose | Has SubSections? |
 |------|-------------|---------|-----------------|
-| `Header` | Formen | Lemma display, pronunciation. Emoji derived from `emojiDescription[0]` (from Lemma output). No LLM call — built from LemmaResult. | No |
+| `Header` | Formen | Lemma display, pronunciation. Emoji sequence derived from `emojiDescription` (from Lemma output). No LLM call — built from LemmaResult. | No |
 | `Attestation` | Kontexte | User's encountered contexts (`![[File#^blockId\|^]]`) | No |
 | `Relation` | Semantische Beziehungen | Lexical relations | **Yes** (see below) |
 | `Morphem` | Morpheme | Word decomposition. LLM returns structured data (`surf`/`lemma`/`tags`/`kind`), `morphemeFormatterHelper` converts to wikilink display (`[[auf\|>auf]]\|[[passen]]`) | No |
 | `Inflection` | Flexion | Declension/conjugation tables | No |
 | `Deviation` | Abweichungen | Irregular forms, exceptions | No |
-| `Tags` | Tags | POS feature tags (`#noun/maskulin`, `#verb/transitiv/stark`). V12: generated from `PromptKind.Features` output. | No |
+| `Tags` | Tags | POS feature tags (`#noun/maskulin`, `#verb/transitiv/stark`). Generated from POS-specific Features prompts; tag parts are trim/lowercase-normalized and deduplicated when composing `#pos/...`. | No |
 | `FreeForm` | Notizen | Catch-all for unstructured content (see below) | No |
 
 Section titles are localized per `TargetLanguage` via `TitleReprFor`.
@@ -311,7 +311,7 @@ D: dem [[Kohlekraftwerk]], den [[Kohlekraftwerken]]
 ```
 
 **Key elements:**
-- **Header line**: emoji (from `emojiDescription[0]`) + `[[Surface]]` + pronunciation link + ` ^blockId`
+- **Header line**: emoji sequence (from `emojiDescription`) + `[[Surface]]` + pronunciation link + ` ^blockId`
 - **DictEntryId format** (validated by `DictEntryIdSchema`): `^{LinguisticUnitKindTag}-{SurfaceKindTag}(-{PosTag}-{index})` — the PosTag+index suffix is Lexem-only. E.g., `^lx-lm-nom-1` (Lexem, Lemma surface, Noun, 1st meaning). Final format TBD.
 - **DictEntrySections**: marked with `<span class="entry_section_title entry_section_title_{kind}">Title</span>`
 - **Multiple DictEntries** (different meanings of the same Surface) separated by `\n\n\n---\n---\n\n\n` (parser also accepts older `\n\n---\n---\n\n` and legacy `\n---\n---\n---\n`)
@@ -538,7 +538,7 @@ When `attestation.target.offsetInBlock` is available (selection-based attestatio
 
 **V8 fullSurface expansion**: When the LLM returns `fullSurface` (proper noun extending beyond selected surface), `expandOffsetForFullSurface()` computes the expanded offset by finding the surface position within `fullSurface`, then verifies the expanded span matches in the raw block. On verification failure (e.g., text mismatch), gracefully falls back to wrapping just the selected surface.
 
-Uses `ProcessMdFile` with `before: rawBlock` / `after: blockWithWikilink`.
+Uses `ProcessMdFile` with a transform function: exact `rawBlock` replacement first, then block-ID/surface fallbacks to avoid losing wikilink insertion when the captured raw line differs slightly from current file content.
 
 #### State Update
 
@@ -641,13 +641,13 @@ All LLM calls are fired in parallel via `Promise.allSettled` (none depend on eac
 
 | Section | LLM? | PromptKind | Formatter | Output |
 |---------|------|-----------|-----------|--------|
-| **Header** | No | — | `dispatchHeaderFormatter()` | `{emoji} [[lemma]], [{ipa}](youglish_url)` → `DictEntry.headerContent`. For nouns with genus: `{emoji} {article} [[lemma]], [{ipa}](youglish_url)` via `de/lexem/noun/header-formatter`. Dispatch routes by POS; common formatter for non-nouns. `emoji` derived from `emojiDescription[0]`. No LLM call. `emojiDescription` stored in `meta.emojiDescription` for Disambiguate lookups. |
+| **Header** | No | — | `dispatchHeaderFormatter()` | `{emoji} [[lemma]], [{ipa}](youglish_url)` → `DictEntry.headerContent`. For nouns, article genus priority is: LexemEnrichment genus, then noun-inflection genus fallback; when resolved, output is `{emoji} {article} [[lemma]], [{ipa}](youglish_url)` via `de/lexem/noun/header-formatter`. Dispatch routes by POS; common formatter for non-nouns or unresolved noun genus. `emoji` is rendered from the full `emojiDescription` sequence in order. No LLM call. `emojiDescription` stored in `meta.emojiDescription` for Disambiguate lookups. |
 | **Morphem** | Yes | `Morphem` | `morphemeFormatterHelper.formatSection()` | `[[kohle]]\|[[kraft]]\|[[werk]]` → `EntrySection` |
 | **Relation** | Yes | `Relation` | `formatRelationSection()` | `= [[Synonym]], ⊃ [[Hypernym]]` → `EntrySection`. Raw output also stored for propagation. |
 | **Inflection** | Yes | `NounInflection` (nouns) or `Inflection` (other POS) | `formatInflection()` / `formatInflectionSection()` | `N: das [[Kohlekraftwerk]], die [[Kohlekraftwerke]]` → `EntrySection`. Nouns use structured cells (case×number with article+form); other POS use generic rows. Noun cells also feed `propagateInflections`. |
 | **Translation** | Yes | `WordTranslation` | — (string pass-through) | Translates the lemma word (using attestation context for disambiguation only) → `EntrySection`. V6: changed from `PromptKind.Translate` (which translated the full sentence) to `WordTranslation` (input: `{word, pos, context}`, output: concise 1-3 word translation). |
 | **Attestation** | No | — | — | `![[file#^blockId\|^]]` from `lemmaResult.attestation.source.ref` → `EntrySection` |
-| **Tags** | Yes | `Features` | — (compound tag string) | `#pos/feature1/feature2` → `EntrySection`. V12: non-inflectional grammatical features from `PromptKind.Features` (e.g., maskulin, transitiv/stark). Optional — entry still created if Features prompt fails. Only for Lexem POS. |
+| **Tags** | Yes | POS-specific `Features*` prompt (`FeaturesNoun`, `FeaturesVerb`, ...) | — (compound tag string) | `#pos/feature1/feature2` → `EntrySection`. Non-inflectional grammatical features (e.g., maskulin, transitiv/stark), with trim/lowercase normalization and global dedupe of path parts. Optional — entry still created if Features prompt fails. Only for Lexem POS. |
 
 Each `EntrySection` gets:
 - `kind`: CSS suffix from `cssSuffixFor[DictSectionKind]` (e.g., `"definition"`, `"synonyme"`, `"morpheme"`, `"flexion"`, `"translations"`)
@@ -784,17 +784,18 @@ All dispatched in single vam.dispatch() alongside source note actions
 
 **Source**: `src/commanders/textfresser/commands/generate/steps/propagate-inflections.ts`
 
-When Generate processes a noun, the `NounInflection` prompt returns structured cells (case × number × article × form). After formatting the Inflection section, `propagateInflections` creates or updates **one inflection entry per target form** in inflected-form notes.
+When Generate processes a noun, the `NounInflection` prompt returns noun `genus` plus structured cells (case × number × article × form). After formatting the Inflection section, `propagateInflections` creates or updates **one inflection entry per target form** in inflected-form notes.
 
 ```
-generateSections captures NounInflectionCell[] (8 cells: 4 cases × 2 numbers)
+generateSections captures NounInflection output { genus, cells[] } (8 cells: 4 cases × 2 numbers)
   ↓
 propagateInflections:
   Group cells by form word
   For each form:
     If form === lemma → skip (main entry already lives on that note)
-    If form !== lemma AND noun genus resolved from LexemEnrichment:
-      Build one header: "#Inflection/Noun/<genusLabel> for: [[lemma]]"
+    If form !== lemma:
+      Build one header: "#Inflection/Noun/<genusLabel?> for: [[lemma]]"
+      (fallback to "#Inflection/Noun for: [[lemma]]" when genus is missing)
       Build deduped/sorted tags: "#Nominativ/Plural #Akkusativ/Plural ..."
       1. resolveTargetPath(form, desiredSurfaceKind: Inflected) → { splitPath, healingActions }
       2. Emit healingActions (if any)
@@ -816,7 +817,7 @@ Propagation VaultActions (including healing) added to ctx.actions
 
 **Key design decisions**:
 - **One entry per form/POS**: All case/number combos are represented as tags in one entry
-- **Genus gating**: propagation runs only when noun genus is present in `LexemEnrichment` output
+- **Genus source + fallback**: propagation prefers genus from `NounInflection` output, falls back to `LexemEnrichment` when needed, and still degrades to `#Inflection/Noun for: [[lemma]]` if both are missing
 - **Same-note skip**: When form === lemma, cells are skipped entirely (the main entry already covers this note)
 - **Legacy migration in-place**: old per-cell stubs are collapsed into the new entry format when a target note is touched
 - Deterministic tag ordering: case order + number order, with dedup + localization normalization
@@ -1199,7 +1200,7 @@ To add support for a new target language (e.g., Japanese):
 | `tests/unit/textfresser/formatters/de/lexem/noun/inflection-formatter.test.ts` | Noun inflection: case grouping, N/A/G/D order, cells pass-through |
 | `tests/unit/textfresser/steps/disambiguate-sense.test.ts` | Disambiguate: mock VAM + PromptRunner, bounds check, precomputed emojiDescription, V2 legacy |
 | `tests/unit/textfresser/steps/propagate-relations.test.ts` | Relation propagation: inverse kinds, self-ref skip, dedup, VaultAction shapes, healing when target in inflected/ |
-| `tests/unit/textfresser/steps/propagate-inflections.test.ts` | Inflection propagation: form grouping, same-note skip, single-entry tags merge, legacy stub collapse, genus gating, VAM path reuse |
+| `tests/unit/textfresser/steps/propagate-inflections.test.ts` | Inflection propagation: form grouping, same-note skip, single-entry tags merge, legacy stub collapse, genus fallback + header upgrade, VAM path reuse |
 | `tests/unit/textfresser/common/target-path-resolver.test.ts` | Path resolver: VAM/librarian lookup, computed fallback, inflected→lemma healing, no-heal cases, `buildPropagationActionPair` |
 | `tests/unit/textfresser/steps/lemma-expansion.test.ts` | V8: `expandOffsetForFullSurface()` — expansion math, verification, fallback on mismatch |
 | **Types** | |

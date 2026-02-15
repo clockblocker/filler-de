@@ -4,6 +4,7 @@ import {
 	VaultActionKind,
 } from "../../../../managers/obsidian/vault-action-manager";
 import { PromptKind } from "../../../../prompt-smith/codegen/consts";
+import { blockIdHelper } from "../../../../stateless-helpers/block-id";
 import { markdownHelper } from "../../../../stateless-helpers/markdown-strip";
 import { multiSpanHelper } from "../../../../stateless-helpers/multi-span";
 import { logger } from "../../../../utils/logger";
@@ -42,6 +43,118 @@ function resolveAttestation(input: CommandInput): Attestation | null {
  */
 function buildWikilink(surface: string, lemma: string): string {
 	return lemma !== surface ? `[[${lemma}|${surface}]]` : `[[${surface}]]`;
+}
+
+function replaceAt(
+	text: string,
+	offset: number,
+	length: number,
+	replacement: string,
+): string {
+	return text.slice(0, offset) + replacement + text.slice(offset + length);
+}
+
+function isInsideWikilink(text: string, index: number): boolean {
+	const open = text.lastIndexOf("[[", index);
+	if (open === -1) return false;
+	const closedBefore = text.lastIndexOf("]]", index);
+	if (closedBefore > open) return false;
+	const closedAfter = text.indexOf("]]", index);
+	return closedAfter !== -1;
+}
+
+function findReplaceableSurfaceIndex(text: string, surface: string): number {
+	let start = 0;
+	for (;;) {
+		const idx = text.indexOf(surface, start);
+		if (idx === -1) return -1;
+		if (!isInsideWikilink(text, idx)) return idx;
+		start = idx + surface.length;
+	}
+}
+
+function replaceFirstSurfaceOutsideWikilink(
+	text: string,
+	surface: string,
+	wikilink: string,
+): string | null {
+	const idx = findReplaceableSurfaceIndex(text, surface);
+	if (idx === -1) return null;
+	return replaceAt(text, idx, surface.length, wikilink);
+}
+
+function replaceSurfaceByOffset(
+	text: string,
+	surface: string,
+	wikilink: string,
+	offset: number | undefined,
+): string | null {
+	if (offset === undefined || offset < 0) return null;
+	const candidate = text.slice(offset, offset + surface.length);
+	if (candidate !== surface) return null;
+	if (isInsideWikilink(text, offset)) return null;
+	return replaceAt(text, offset, surface.length, wikilink);
+}
+
+export function rewriteAttestationSourceContent(params: {
+	content: string;
+	offsetInBlock?: number;
+	rawBlock: string;
+	surface: string;
+	updatedBlock: string;
+	wikilink: string;
+}): string {
+	const {
+		content,
+		offsetInBlock,
+		rawBlock,
+		surface,
+		updatedBlock,
+		wikilink,
+	} = params;
+
+	if (content.includes(rawBlock)) {
+		return content.replace(rawBlock, updatedBlock);
+	}
+
+	const blockId = blockIdHelper.extractFromLine(rawBlock);
+	if (blockId) {
+		const marker = `^${blockId}`;
+		const lines = content.split("\n");
+		for (let i = 0; i < lines.length; i++) {
+			const line = lines[i];
+			if (!line || !line.includes(marker)) continue;
+
+			const byOffset = replaceSurfaceByOffset(
+				line,
+				surface,
+				wikilink,
+				offsetInBlock,
+			);
+			if (byOffset) {
+				lines[i] = byOffset;
+				return lines.join("\n");
+			}
+
+			const bySearch = replaceFirstSurfaceOutsideWikilink(
+				line,
+				surface,
+				wikilink,
+			);
+			if (bySearch) {
+				lines[i] = bySearch;
+				return lines.join("\n");
+			}
+			break;
+		}
+	}
+
+	const fallback = replaceFirstSurfaceOutsideWikilink(
+		content,
+		surface,
+		wikilink,
+	);
+	return fallback ?? content;
 }
 
 export function expandOffsetForLinkedSpan(
@@ -264,9 +377,16 @@ export function lemmaCommand(
 				{
 					kind: VaultActionKind.ProcessMdFile,
 					payload: {
-						after: updatedBlock,
-						before: rawBlock,
 						splitPath: attestation.source.path,
+						transform: (content: string) =>
+							rewriteAttestationSourceContent({
+								content,
+								offsetInBlock: offset ?? undefined,
+								rawBlock,
+								surface,
+								updatedBlock,
+								wikilink: buildWikilink(surface, result.lemma),
+							}),
 					},
 				},
 			];

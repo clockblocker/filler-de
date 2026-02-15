@@ -33,4 +33,16 @@ describe("noun formatHeaderLine", () => {
 		);
 		expect(result).toContain("das [[Haus]]");
 	});
+
+	it("formats noun header with all emojis in sequence", () => {
+		const result = formatHeaderLine(
+			{ emojiDescription: ["💨", "✨"], ipa: "ˈʃtaʊ̯p" },
+			"Staub",
+			"German",
+			"Maskulinum",
+		);
+		expect(result).toBe(
+			"💨 ✨ der [[Staub]], [ˈʃtaʊ̯p](https://youglish.com/pronounce/Staub/german)",
+		);
+	});
 });

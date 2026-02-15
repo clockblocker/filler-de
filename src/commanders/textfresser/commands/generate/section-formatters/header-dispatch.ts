@@ -1,3 +1,4 @@
+import type { GermanGenus } from "../../../../../linguistics/de";
 import type { AgentOutput } from "../../../../../prompt-smith";
 import type { LemmaResult } from "../../lemma/types";
 import { formatHeaderLine as formatCommonHeader } from "./common/header-formatter";
@@ -15,6 +16,7 @@ export function dispatchHeaderFormatter(
 	lemmaResult: LemmaResult,
 	enrichmentOutput: EnrichmentOutput,
 	targetLanguage: string,
+	fallbackNounGenus?: GermanGenus,
 ): string {
 	const output = {
 		emojiDescription:
@@ -27,15 +29,17 @@ export function dispatchHeaderFormatter(
 		lemmaResult.linguisticUnit === "Lexem" &&
 		enrichmentOutput.linguisticUnit === "Lexem" &&
 		lemmaResult.posLikeKind === "Noun" &&
-		enrichmentOutput.posLikeKind === "Noun" &&
-		enrichmentOutput.genus
+		enrichmentOutput.posLikeKind === "Noun"
 	) {
-		return formatNounHeader(
-			output,
-			lemmaResult.lemma,
-			targetLanguage,
-			enrichmentOutput.genus,
-		);
+		const resolvedNounGenus = enrichmentOutput.genus ?? fallbackNounGenus;
+		if (resolvedNounGenus) {
+			return formatNounHeader(
+				output,
+				lemmaResult.lemma,
+				targetLanguage,
+				resolvedNounGenus,
+			);
+		}
 	}
 
 	return formatCommonHeader(output, lemmaResult.lemma, targetLanguage);
