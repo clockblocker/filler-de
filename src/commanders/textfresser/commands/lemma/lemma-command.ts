@@ -16,7 +16,7 @@ import {
 	type CommandInput,
 } from "../types";
 import { disambiguateSense } from "./steps/disambiguate-sense";
-import type { NounClass } from "./types";
+import type { NounClass, PhrasemeFeatures } from "./types";
 
 /**
  * Resolve attestation: prefer wikilink click context, fall back to text selection.
@@ -150,6 +150,11 @@ export function lemmaCommand(
 					? result.genus
 					: undefined;
 
+			const phrasemeFeatures: PhrasemeFeatures | undefined =
+				result.linguisticUnit === "Phrasem"
+					? { phrasemeKind: result.phrasemeKind }
+					: undefined;
+
 			textfresserState.latestLemmaResult = {
 				attestation,
 				disambiguationResult,
@@ -159,6 +164,7 @@ export function lemmaCommand(
 				lemma: result.lemma,
 				linguisticUnit: result.linguisticUnit,
 				nounClass,
+				phrasemeFeatures,
 				pos: result.pos ?? undefined,
 				precomputedEmojiDescription,
 				surfaceKind: result.surfaceKind,

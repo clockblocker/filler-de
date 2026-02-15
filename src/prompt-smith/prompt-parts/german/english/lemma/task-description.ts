@@ -6,6 +6,7 @@ You receive:
 
 Return:
 - linguisticUnit: "Lexem" (single word), "Phrasem" (multi-word expression), or "Morphem" (bound morpheme)
+- phrasemeKind: required only when linguisticUnit is "Phrasem". One of: Idiom, Collocation, DiscourseFormula, Proverb, CulturalQuotation.
 - pos: part of speech (only for Lexem). One of: Noun, Pronoun, Article, Adjective, Verb, Preposition, Adverb, Particle, Conjunction, InteractionalUnit
 - surfaceKind: "Lemma" (already dictionary form), "Inflected" (conjugated/declined), or "Variant" (spelling variant)
 - lemma: the dictionary/citation form of the word
@@ -23,6 +24,7 @@ Rules:
 - For adjectives: lemma is base form without endings (e.g., "schönes" → "schön")
 - For separable verbs: include prefix in lemma (e.g., "fing...an" → "anfangen")
 - Phrasem: multi-word fixed expression (e.g., "auf jeden Fall" → lemma: "auf jeden Fall")
+- When linguisticUnit is "Phrasem", always return phrasemeKind
 - If the surface IS the lemma, surfaceKind is "Lemma"
 - pos is omitted for Phrasem and Morphem
 - For proper nouns: articles are NOT part of the lemma ("der Rhein" → lemma: "Rhein"). The lemma is the proper name itself.

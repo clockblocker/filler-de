@@ -1,23 +1,24 @@
 import { z } from "zod/v3";
+import { CollocationStrengthSchema } from "../enums/linguistic-units/phrasem/collocation-strength";
+import { CollocationTypeSchema } from "../enums/linguistic-units/phrasem/collocation-type";
+import { DiscourseFormulaRoleSchema } from "../enums/linguistic-units/phrasem/discourse-formula-role";
 import { makeSurfaceSchema } from "./surface-factory";
-
-const collocationStrengthValues = ["Weak", "Medium", "Strong"] as const;
-export const CollocationStrengthSchema = z.enum(collocationStrengthValues);
 
 /**
  * Phraseme kind literals re-declared in v3 to avoid importing v4 phrasem-kind.ts.
  * Must stay in sync with `phrasemeKinds` from `linguistics/common/enums/linguistic-units/phrasem/phrasem-kind.ts`.
  */
-const phrasemStubs = [
-	"Idiom",
-	"DiscourseFormula",
-	"Proverb",
-	"CulturalQuotation",
-] as const;
+const phrasemStubs = ["Idiom", "Proverb", "CulturalQuotation"] as const;
 
 const fullCollocation = z.object({
+	collocationType: CollocationTypeSchema.optional(),
 	phrasemeKind: z.literal("Collocation"),
 	strength: CollocationStrengthSchema.optional(),
+});
+
+const fullDiscourseFormula = z.object({
+	phrasemeKind: z.literal("DiscourseFormula"),
+	role: DiscourseFormulaRoleSchema.optional(),
 });
 
 const fullStubs = phrasemStubs.map((kind) =>
@@ -26,6 +27,7 @@ const fullStubs = phrasemStubs.map((kind) =>
 
 const PhrasemFullFeaturesSchema = z.discriminatedUnion("phrasemeKind", [
 	fullCollocation,
+	fullDiscourseFormula,
 	...fullStubs,
 ]);
 
@@ -34,12 +36,17 @@ const refCollocation = z.object({
 	phrasemeKind: z.literal("Collocation"),
 });
 
+const refDiscourseFormula = z.object({
+	phrasemeKind: z.literal("DiscourseFormula"),
+});
+
 const refStubs = phrasemStubs.map((kind) =>
 	z.object({ phrasemeKind: z.literal(kind) }),
 );
 
 const PhrasemRefFeaturesSchema = z.discriminatedUnion("phrasemeKind", [
 	refCollocation,
+	refDiscourseFormula,
 	...refStubs,
 ]);
 

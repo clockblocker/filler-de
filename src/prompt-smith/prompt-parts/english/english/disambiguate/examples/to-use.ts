@@ -42,6 +42,29 @@ export const examples = [
 			matchedIndex: 1,
 		},
 	},
+	{
+		input: {
+			context: "To be honest, I did not expect that.",
+			lemma: "to be honest",
+			senses: [
+				{
+					emojiDescription: ["🗣️"],
+					index: 1,
+					phrasemeKind: "DiscourseFormula",
+					unitKind: "Phrasem",
+				},
+				{
+					emojiDescription: ["🤝"],
+					index: 2,
+					phrasemeKind: "Collocation",
+					unitKind: "Phrasem",
+				},
+			],
+		},
+		output: {
+			matchedIndex: 1,
+		},
+	},
 ] satisfies {
 	input: UserInput<"Disambiguate">;
 	output: AgentOutput<"Disambiguate">;

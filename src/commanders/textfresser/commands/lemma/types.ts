@@ -3,10 +3,38 @@ import type {
 	SurfaceKind,
 } from "../../../../linguistics/common/enums/core";
 import type { POS } from "../../../../linguistics/common/enums/linguistic-units/lexem/pos";
+import type { CollocationStrength } from "../../../../linguistics/common/enums/linguistic-units/phrasem/collocation-strength";
+import type { CollocationType } from "../../../../linguistics/common/enums/linguistic-units/phrasem/collocation-type";
+import type { DiscourseFormulaRole } from "../../../../linguistics/common/enums/linguistic-units/phrasem/discourse-formula-role";
+import type { PhrasemeKind } from "../../../../linguistics/common/enums/linguistic-units/phrasem/phrasem-kind";
 import type { GermanGenus } from "../../../../linguistics/de/lexem/noun/features";
 import type { Attestation } from "../../common/attestation/types";
 
 export type NounClass = "Common" | "Proper";
+
+type PhrasemeFeaturesByKind = {
+	Collocation: {
+		collocationType?: CollocationType;
+		phrasemeKind: "Collocation";
+		strength?: CollocationStrength;
+	};
+	CulturalQuotation: {
+		phrasemeKind: "CulturalQuotation";
+	};
+	DiscourseFormula: {
+		phrasemeKind: "DiscourseFormula";
+		role?: DiscourseFormulaRole;
+	};
+	Idiom: {
+		phrasemeKind: "Idiom";
+	};
+	Proverb: {
+		phrasemeKind: "Proverb";
+	};
+};
+
+export type PhrasemeFeatures<K extends PhrasemeKind = PhrasemeKind> =
+	PhrasemeFeaturesByKind[K];
 
 export type LemmaResult = {
 	linguisticUnit: LinguisticUnitKind;
@@ -26,4 +54,6 @@ export type LemmaResult = {
 	nounClass?: NounClass;
 	/** Grammatical gender. Only meaningful for Nouns. */
 	genus?: GermanGenus;
+	/** Phraseme kind and optional kind-specific features. */
+	phrasemeFeatures?: PhrasemeFeatures;
 };

@@ -318,11 +318,14 @@ GermanLinguisticUnit (discriminated union by kind)
 **Phrasem surface** (`common/dto/phrasem-surface.ts`):
 
 ```typescript
-CollocationStrength = "Weak" | "Medium" | "Strong"
+CollocationStrength = "Free" | "Bound" | "Frozen"
+CollocationType = "AdjectiveNoun" | "NounNoun" | "NounVerb" | ...
+DiscourseFormulaRole = "Greeting" | "Farewell" | "Apology" | ...
 
 // Phrasem full features: discriminated by phrasemeKind
-//   Collocation adds optional `strength: CollocationStrength`
-//   All others: just the discriminant
+//   Collocation adds optional `strength` + `collocationType`
+//   DiscourseFormula adds optional `role`
+//   Others: just the discriminant
 
 PhrasemSurfaceSchema = makeSurfaceSchema(PhrasemFullFeaturesSchema, PhrasemRefFeaturesSchema)
 ```

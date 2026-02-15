@@ -108,6 +108,29 @@ export const examples = [
 			matchedIndex: null,
 		},
 	},
+	{
+		input: {
+			context: "Auf jeden Fall komme ich mit.",
+			lemma: "auf jeden Fall",
+			senses: [
+				{
+					emojiDescription: ["✅"],
+					index: 1,
+					phrasemeKind: "DiscourseFormula",
+					unitKind: "Phrasem",
+				},
+				{
+					emojiDescription: ["📚"],
+					index: 2,
+					phrasemeKind: "Collocation",
+					unitKind: "Phrasem",
+				},
+			],
+		},
+		output: {
+			matchedIndex: 1,
+		},
+	},
 ] satisfies {
 	input: UserInput<"Disambiguate">;
 	output: AgentOutput<"Disambiguate">;

@@ -58,6 +58,7 @@ export const testExamples = [
 			ipa: "aʊ̯f ˈjeːdn̩ fal",
 			lemma: "auf jeden Fall",
 			linguisticUnit: "Phrasem",
+			phrasemeKind: "DiscourseFormula",
 			surfaceKind: "Lemma",
 		},
 	},

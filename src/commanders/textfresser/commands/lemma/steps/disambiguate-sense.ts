@@ -1,5 +1,6 @@
 import { ResultAsync } from "neverthrow";
 import { dictEntryIdHelper } from "../../../../../linguistics/common/dict-entry-id/dict-entry-id";
+import type { PhrasemeKind } from "../../../../../linguistics/common/enums/linguistic-units/phrasem/phrasem-kind";
 import type { VaultActionManager } from "../../../../../managers/obsidian/vault-action-manager";
 import type { AgentOutput } from "../../../../../prompt-smith";
 import { PromptKind } from "../../../../../prompt-smith/codegen/consts";
@@ -12,6 +13,7 @@ import { CommandErrorKind } from "../../types";
 type LemmaApiResult = {
 	lemma: string;
 	linguisticUnit: string;
+	phrasemeKind?: PhrasemeKind | null;
 	surfaceKind: string;
 	pos?: string | null;
 };
@@ -92,11 +94,14 @@ export function disambiguateSense(
 				// Extract genus from linguisticUnit if available
 				const lu = e.meta.linguisticUnit;
 				let genus: string | undefined;
+				let phrasemeKind: PhrasemeKind | undefined;
 				if (lu?.kind === "Lexem") {
 					const features = lu.surface.features;
 					if (features.pos === "Noun" && "genus" in features) {
 						genus = features.genus;
 					}
+				} else if (lu?.kind === "Phrasem") {
+					phrasemeKind = lu.surface.features.phrasemeKind;
 				}
 				return {
 					emojiDescription: Array.isArray(emojiDescription)
@@ -104,6 +109,7 @@ export function disambiguateSense(
 						: null,
 					genus,
 					index: parsed.index,
+					phrasemeKind,
 					pos: parsed.pos,
 					unitKind: parsed.unitKind,
 				};
@@ -151,6 +157,7 @@ export function disambiguateSense(
 					emojiDescription: s.emojiDescription,
 					genus: s.genus,
 					index: s.index,
+					phrasemeKind: s.phrasemeKind,
 					pos: s.pos,
 					unitKind: s.unitKind,
 				})),

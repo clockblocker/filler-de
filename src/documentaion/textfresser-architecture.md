@@ -48,11 +48,13 @@ User gets a tailor-made dictionary that grows with their reading
 
 > **V7 scope**: Polysemy quality fixes — Header emoji prompt changed to reflect the specific sense in context (not "primary/most common meaning"). Disambiguate gloss rule added: must be context-independent (e.g., "Schließvorrichtung" not "Fahrradschloss"). New polysemous examples in Header and Disambiguate prompts (Schloss castle vs lock).
 
-> **V10 scope**: Emoji-as-semantic-differentiator — **Definition section dropped entirely** (along with `PromptKind.Semantics`). Homonym disambiguation now uses **emoji arrays** instead of text glosses. Header prompt returns `emojiDescription: string[]` (1-3 emojis capturing the sense, e.g., `["🏰"]` vs `["🔒","🔑"]` for *Schloss*). Disambiguate prompt receives `emojiDescription` + `unitKind` + `pos` + `genus` per sense (richer context than the old text gloss). `meta.semantics` replaced by `meta.emojiDescription: string[]`. `LemmaResult.precomputedSemantics` replaced by `precomputedEmojiDescription: string[]`. Old entries without `emojiDescription` hit V2 legacy path (first-match fallback). CORE_SECTIONS reduced to `[Header, Translation, Attestation, FreeForm]`.
+> **V10 scope**: Emoji-as-semantic-differentiator — **Definition section dropped entirely** (along with `PromptKind.Semantics`). Homonym disambiguation now uses **emoji arrays** instead of text glosses. Header prompt returns `emojiDescription: string[]` (1-3 emojis capturing the sense, e.g., `["🏰"]` vs `["🔒","🔑"]` for *Schloss*). Disambiguate prompt receives `emojiDescription` + `unitKind` + `pos` + `genus` (+ optional `phrasemeKind`) per sense (richer context than the old text gloss). `meta.semantics` replaced by `meta.emojiDescription: string[]`. `LemmaResult.precomputedSemantics` replaced by `precomputedEmojiDescription: string[]`. Old entries without `emojiDescription` hit V2 legacy path (first-match fallback). CORE_SECTIONS reduced to `[Header, Translation, Attestation, FreeForm]`.
 
 > **V11 scope**: Kill Header Prompt — `PromptKind.Header` eliminated. `emojiDescription` (1-3 emojis) and `ipa` (IPA pronunciation) moved into Lemma prompt output. Header line built from LemmaResult fields (`formatHeaderLine()` takes `{ emojiDescription, ipa }` instead of `AgentOutput<"Header">`). `emoji` derived from `emojiDescription[0]`. `genus` and article (der/die/das) dropped from header line. `buildLinguisticUnit()` removed — `meta.linguisticUnit` no longer populated during Generate. One fewer API call per new entry.
 
 > **V12 scope**: POS features as tags + custom header formatting — New `PromptKind.Features` returns non-inflectional grammatical features (e.g., maskulin, transitiv, stark) as tag path components. Tags rendered as `DictSectionKind.Tags` section (`#pos/feature1/feature2`). Lemma prompt now returns `genus` ("Maskulinum"/"Femininum"/"Neutrum") for nouns. Header formatting split per-POS: `dispatchHeaderFormatter()` routes Noun+genus to `de/lexem/noun/header-formatter` (prepends der/die/das), all other POS to common formatter. `CORE_SECTIONS` expanded to include Tags.
+
+> **V13 scope**: Phraseme-kind threading + linguisticUnit metadata restore — Lemma output now includes `phrasemeKind` for `linguisticUnit: "Phrasem"`. `generateSections` restores `meta.linguisticUnit` for `Lexem` and `Phrasem` entries. Disambiguate senses now forward optional `phrasemeKind` hints extracted from `meta.linguisticUnit`.
 
 > **V9 scope**: LinguisticUnit DTO — Zod-schema-based type system as source of truth for DictEntries. German + Noun fully featured (`genus`, `nounClass`); all other POS/unit kinds have stubs. `GermanLinguisticUnit` built during Generate and stored in `meta.linguisticUnit`. Header prompt now returns `genus` ("Maskulinum"/"Femininum"/"Neutrum") instead of `article` ("der"/"die"/"das"); formatter derives article via `articleFromGenus`. New files: `surface-factory.ts`, `genus.ts`, `noun.ts`, `pos-features.ts`, `lexem-surface.ts`, `phrasem-surface.ts`, `morphem-surface.ts`, `linguistic-unit.ts`. 21 new DTO tests.
 
@@ -1116,13 +1118,13 @@ To add support for a new target language (e.g., Japanese):
 | `src/commanders/textfresser/errors.ts` | CommandError, AttestationParsingError |
 | **Commands** | |
 | `src/commanders/textfresser/commands/lemma/lemma-command.ts` | Lemma pipeline: classify + disambiguate + wrap in wikilink. V8: `expandOffsetForFullSurface()` for proper noun expansion |
-| `src/commanders/textfresser/commands/lemma/steps/disambiguate-sense.ts` | V3: look up existing note, match entries by unitKind+POS (ignoring surfaceKind), call Disambiguate prompt. V5: bounds-check matchedIndex, log parse failures. V10: emoji-based senses with emojiDescription+unitKind+pos+genus, returns precomputedEmojiDescription |
+| `src/commanders/textfresser/commands/lemma/steps/disambiguate-sense.ts` | V3: look up existing note, match entries by unitKind+POS (ignoring surfaceKind), call Disambiguate prompt. V5: bounds-check matchedIndex, log parse failures. V10+: emoji-based senses with emojiDescription+unitKind+pos+genus, plus optional phrasemeKind hints from `meta.linguisticUnit`; returns precomputedEmojiDescription |
 | `src/commanders/textfresser/commands/lemma/types.ts` | LemmaResult type (V3: disambiguationResult, V10: precomputedEmojiDescription, V8: nounClass) |
 | `src/commanders/textfresser/commands/generate/generate-command.ts` | Generate pipeline orchestrator |
 | `src/commanders/textfresser/commands/generate/steps/check-attestation.ts` | Sync check: attestation available |
 | `src/commanders/textfresser/commands/generate/steps/check-lemma-result.ts` | Sync check: lemma result available |
 | `src/commanders/textfresser/commands/generate/steps/resolve-existing-entry.ts` | Parse existing entries, use Lemma's disambiguationResult for re-encounter detection |
-| `src/commanders/textfresser/commands/generate/steps/generate-sections.ts` | Async: LLM calls per section (or append attestation for re-encounters). V11: `buildLinguisticUnit()` removed, `meta.linguisticUnit` no longer populated. V12: Features prompt + Tags section, article in header for nouns. Stores `meta.emojiDescription` from precomputedEmojiDescription or lemmaResult.emojiDescription. Header built from LemmaResult fields. Sets targetBlockId |
+| `src/commanders/textfresser/commands/generate/steps/generate-sections.ts` | Async: LLM calls per section (or append attestation for re-encounters). V12: Features prompt + Tags section, article in header for nouns. V13: `meta.linguisticUnit` restored for Lexem/Phrasem entries (`Morphem` still out of scope). Stores `meta.emojiDescription` from precomputedEmojiDescription or lemmaResult.emojiDescription. Header built from LemmaResult fields. Sets targetBlockId |
 | `src/commanders/textfresser/commands/generate/steps/propagate-relations.ts` | Cross-ref: compute inverse relations, resolve target paths via shared resolver, generate actions for target notes |
 | `src/commanders/textfresser/commands/generate/steps/propagate-inflections.ts` | Noun inflection propagation: resolve target paths via shared resolver, create stub entries in inflected-form notes |
 | `src/commanders/textfresser/common/target-path-resolver.ts` | Shared path resolution for propagation: two-source lookup (VAM → Librarian → computed sharded path), inflected→lemma healing, `buildPropagationActionPair` helper |
@@ -1382,14 +1384,17 @@ type GermanLinguisticUnit = z.infer<typeof GermanLinguisticUnitSchema>;
 
 ### 15.6 Pipeline Integration
 
-In `generateSections` (Path B — new entry), after LLM calls resolve, the header line is built via `dispatchHeaderFormatter(lemmaResult, targetLang)` which routes to the appropriate per-POS formatter (noun with genus → noun formatter with article, everything else → common formatter). V11: `buildLinguisticUnit()` was removed — `meta.linguisticUnit` is no longer populated during Generate (deferred to a future phase when more POS features are available).
+In `generateSections` (Path B — new entry), after LLM calls resolve, the header line is built via `dispatchHeaderFormatter(lemmaResult, targetLang)` which routes to the appropriate per-POS formatter (noun with genus → noun formatter with article, everything else → common formatter). V13 restores `meta.linguisticUnit` for Lexem/Phrasem entries (Morphem remains deferred).
 
 ```typescript
 // generate-sections.ts
 const newEntry: DictEntry = {
   headerContent,
   id: entryId,
-  meta: { emojiDescription: lemmaResult.precomputedEmojiDescription ?? lemmaResult.emojiDescription },
+  meta: {
+    emojiDescription: lemmaResult.precomputedEmojiDescription ?? lemmaResult.emojiDescription,
+    ...(linguisticUnit ? { linguisticUnit } : {}),
+  },
   sections,
 };
 ```

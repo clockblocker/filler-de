@@ -6,6 +6,7 @@ import {
 	DictSectionKind,
 	TitleReprFor,
 } from "../../../../../linguistics/common/sections/section-kind";
+import type { GermanLinguisticUnit } from "../../../../../linguistics/de";
 import type { NounInflectionCell } from "../../../../../linguistics/de/lexem/noun";
 import { PromptKind } from "../../../../../prompt-smith/codegen/consts";
 import type { RelationSubKind } from "../../../../../prompt-smith/schemas/relation";
@@ -104,6 +105,131 @@ function unwrapOptional<T>(
 		result.reason,
 	);
 	return null;
+}
+
+function buildLemmaRefId(entryId: string): string {
+	const parsed = dictEntryIdHelper.parse(entryId);
+	if (!parsed || parsed.surfaceKind === "Lemma") return entryId;
+
+	if (parsed.unitKind === "Lexem" && parsed.pos) {
+		return dictEntryIdHelper.build({
+			index: parsed.index,
+			pos: parsed.pos,
+			surfaceKind: "Lemma",
+			unitKind: "Lexem",
+		});
+	}
+
+	return dictEntryIdHelper.build({
+		index: parsed.index,
+		surfaceKind: "Lemma",
+		unitKind: parsed.unitKind,
+	});
+}
+
+function buildLexemLinguisticUnit(
+	entryId: string,
+	lemmaResult: LemmaResult,
+): GermanLinguisticUnit | null {
+	if (lemmaResult.linguisticUnit !== "Lexem" || !lemmaResult.pos) {
+		return null;
+	}
+
+	if (lemmaResult.surfaceKind === "Lemma") {
+		if (lemmaResult.pos === "Noun") {
+			if (!lemmaResult.genus || !lemmaResult.nounClass) {
+				logger.warn(
+					"[generateSections] Missing genus/nounClass for noun lemma; skipping linguisticUnit metadata",
+				);
+				return null;
+			}
+
+			return {
+				kind: "Lexem",
+				surface: {
+					features: {
+						genus: lemmaResult.genus,
+						nounClass: lemmaResult.nounClass,
+						pos: lemmaResult.pos,
+					},
+					lemma: lemmaResult.lemma,
+					surfaceKind: "Lemma",
+				},
+			};
+		}
+
+		return {
+			kind: "Lexem",
+			surface: {
+				features: { pos: lemmaResult.pos },
+				lemma: lemmaResult.lemma,
+				surfaceKind: "Lemma",
+			},
+		};
+	}
+
+	return {
+		kind: "Lexem",
+		surface: {
+			features: { pos: lemmaResult.pos },
+			lemma: lemmaResult.lemma,
+			lemmaRef: buildLemmaRefId(entryId),
+			surface: lemmaResult.attestation.target.surface,
+			surfaceKind: lemmaResult.surfaceKind,
+		},
+	};
+}
+
+function buildPhrasemLinguisticUnit(
+	entryId: string,
+	lemmaResult: LemmaResult,
+): GermanLinguisticUnit | null {
+	if (lemmaResult.linguisticUnit !== "Phrasem") {
+		return null;
+	}
+
+	const phrasemeFeatures = lemmaResult.phrasemeFeatures;
+	if (!phrasemeFeatures) {
+		logger.warn(
+			"[generateSections] Missing phrasemeFeatures for Phrasem lemma result",
+		);
+		return null;
+	}
+
+	if (lemmaResult.surfaceKind === "Lemma") {
+		return {
+			kind: "Phrasem",
+			surface: {
+				features: phrasemeFeatures,
+				lemma: lemmaResult.lemma,
+				surfaceKind: "Lemma",
+			},
+		};
+	}
+
+	return {
+		kind: "Phrasem",
+		surface: {
+			features: { phrasemeKind: phrasemeFeatures.phrasemeKind },
+			lemma: lemmaResult.lemma,
+			lemmaRef: buildLemmaRefId(entryId),
+			surface: lemmaResult.attestation.target.surface,
+			surfaceKind: lemmaResult.surfaceKind,
+		},
+	};
+}
+
+export function buildLinguisticUnitMeta(
+	entryId: string,
+	lemmaResult: LemmaResult,
+): GermanLinguisticUnit | undefined {
+	const lexem = buildLexemLinguisticUnit(entryId, lemmaResult);
+	if (lexem) return lexem;
+
+	const phrasem = buildPhrasemLinguisticUnit(entryId, lemmaResult);
+	if (phrasem) return phrasem;
+
+	return undefined;
 }
 
 /**
@@ -387,22 +513,32 @@ export function generateSections(
 				}
 			}
 
-			const entryId = dictEntryIdHelper.build(
+			const entryId =
 				lemmaResult.linguisticUnit === "Lexem" && lemmaResult.pos
-					? {
+					? dictEntryIdHelper.build({
 							index: nextIndex,
 							pos: lemmaResult.pos,
 							surfaceKind: lemmaResult.surfaceKind,
 							unitKind: "Lexem",
-						}
-					: {
-							index: nextIndex,
-							surfaceKind: lemmaResult.surfaceKind,
-							unitKind: lemmaResult.linguisticUnit as Exclude<
-								typeof lemmaResult.linguisticUnit,
-								"Lexem"
-							>,
-						},
+						})
+					: lemmaResult.linguisticUnit === "Phrasem" ||
+							lemmaResult.linguisticUnit === "Morphem"
+						? dictEntryIdHelper.build({
+								index: nextIndex,
+								surfaceKind: lemmaResult.surfaceKind,
+								unitKind: lemmaResult.linguisticUnit,
+							})
+						: "";
+
+			if (!entryId) {
+				throw new Error(
+					`Unexpected linguisticUnit for entry ID: ${lemmaResult.linguisticUnit}`,
+				);
+			}
+
+			const linguisticUnit = buildLinguisticUnitMeta(
+				entryId,
+				lemmaResult,
 			);
 
 			const newEntry: DictEntry = {
@@ -412,6 +548,7 @@ export function generateSections(
 					emojiDescription:
 						lemmaResult.precomputedEmojiDescription ??
 						lemmaResult.emojiDescription,
+					...(linguisticUnit ? { linguisticUnit } : {}),
 				},
 				sections,
 			};

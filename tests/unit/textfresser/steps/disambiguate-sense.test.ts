@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { errAsync, ok, okAsync } from "neverthrow";
 import { disambiguateSense } from "../../../../src/commanders/textfresser/commands/lemma/steps/disambiguate-sense";
 import type { PromptRunner } from "../../../../src/commanders/textfresser/prompt-runner";
+import type { GermanLinguisticUnit } from "../../../../src/linguistics/de";
 import type { VaultActionManager } from "../../../../src/managers/obsidian/vault-action-manager";
 import type { SplitPathToMdFile } from "../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 
@@ -23,10 +24,19 @@ function makeVam(opts: {
 	} as unknown as VaultActionManager;
 }
 
-function makePromptRunner(matchedIndex: number | null, emojiDescription?: string[] | null): PromptRunner {
+function makePromptRunner(
+	matchedIndex: number | null,
+	emojiDescription?: string[] | null,
+	onGenerate?: (input: unknown) => void,
+): PromptRunner {
 	return {
-		generate: () =>
-			okAsync({ emojiDescription: emojiDescription ?? null, matchedIndex }),
+		generate: (_kind, input) => {
+			onGenerate?.(input);
+			return okAsync({
+				emojiDescription: emojiDescription ?? null,
+				matchedIndex,
+			});
+		},
 	} as unknown as PromptRunner;
 }
 
@@ -44,6 +54,12 @@ const API_RESULT_NOUN = {
 	surfaceKind: "Lemma",
 };
 
+const API_RESULT_PHRASEM = {
+	lemma: "auf jeden Fall",
+	linguisticUnit: "Phrasem",
+	surfaceKind: "Lemma",
+};
+
 /**
  * Build a minimal note with entries for testing.
  * Each entry has: header line with ^blockId, metadata with optional emojiDescription.
@@ -52,6 +68,7 @@ function buildNoteContent(
 	entries: Array<{
 		id: string;
 		emojiDescription?: string[];
+		linguisticUnit?: GermanLinguisticUnit;
 	}>,
 ): string {
 	const entryBlocks = entries.map((e) => {
@@ -60,9 +77,21 @@ function buildNoteContent(
 	});
 	const body = entryBlocks.join("\n\n---\n---\n\n");
 
-	const meta: Record<string, { emojiDescription?: string[] }> = {};
+	const meta: Record<
+		string,
+		{
+			emojiDescription?: string[];
+			linguisticUnit?: GermanLinguisticUnit;
+		}
+	> = {};
 	for (const e of entries) {
-		meta[e.id.toUpperCase()] = e.emojiDescription ? { emojiDescription: e.emojiDescription } : {};
+		const entryMeta: {
+			emojiDescription?: string[];
+			linguisticUnit?: GermanLinguisticUnit;
+		} = {};
+		if (e.emojiDescription) entryMeta.emojiDescription = e.emojiDescription;
+		if (e.linguisticUnit) entryMeta.linguisticUnit = e.linguisticUnit;
+		meta[e.id.toUpperCase()] = entryMeta;
 	}
 
 	return `${body}\n\n<section id="textfresser_meta_keep_me_invisible">\n${JSON.stringify({ entries: meta })}\n</section>`;
@@ -150,6 +179,47 @@ describe("disambiguateSense", () => {
 		const runner = makeFailingPromptRunner();
 		const result = await disambiguateSense(vam, runner, API_RESULT_NOUN, "context");
 		expect(result.isErr()).toBe(true);
+	});
+
+	it("forwards phrasemeKind hint from metadata to disambiguate prompt senses", async () => {
+		const content = buildNoteContent([
+			{
+				emojiDescription: ["✅"],
+				id: "PH-LM-1",
+				linguisticUnit: {
+					kind: "Phrasem",
+					surface: {
+						features: { phrasemeKind: "DiscourseFormula" },
+						lemma: "auf jeden Fall",
+						surfaceKind: "Lemma",
+					},
+				},
+			},
+		]);
+		const vam = makeVam({
+			content,
+			files: [
+				{
+					...MOCK_SPLIT_PATH,
+					basename: "auf jeden Fall",
+				},
+			],
+		});
+		let capturedInput: unknown;
+		const runner = makePromptRunner(1, null, (input) => {
+			capturedInput = input;
+		});
+		const result = await disambiguateSense(
+			vam,
+			runner,
+			API_RESULT_PHRASEM,
+			"context",
+		);
+		expect(result.isOk()).toBe(true);
+		const inputObj = capturedInput as {
+			senses?: Array<{ phrasemeKind?: string }>;
+		};
+		expect(inputObj.senses?.[0]?.phrasemeKind).toBe("DiscourseFormula");
 	});
 
 	it("returns null when all entries fail to parse", async () => {

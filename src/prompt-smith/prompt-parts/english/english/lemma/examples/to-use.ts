@@ -29,6 +29,20 @@ export const examples = [
 			surfaceKind: "Lemma",
 		},
 	},
+	{
+		input: {
+			context: "I will, [by and] [large], agree with that.",
+			surface: "large",
+		},
+		output: {
+			emojiDescription: ["📊"],
+			ipa: "baɪ ən lɑrdʒ",
+			lemma: "by and large",
+			linguisticUnit: "Phrasem",
+			phrasemeKind: "DiscourseFormula",
+			surfaceKind: "Lemma",
+		},
+	},
 ] satisfies {
 	input: UserInput<"Lemma">;
 	output: AgentOutput<"Lemma">;

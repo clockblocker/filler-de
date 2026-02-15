@@ -76,6 +76,54 @@ describe("GermanLinguisticUnitSchema", () => {
 		});
 	});
 
+	describe("Phrasem", () => {
+		it("parses Lemma with collocation features", () => {
+			const result = GermanLinguisticUnitSchema.safeParse({
+				kind: "Phrasem",
+				surface: {
+					features: {
+						collocationType: "VerbNoun",
+						phrasemeKind: "Collocation",
+						strength: "Bound",
+					},
+					lemma: "eine Entscheidung treffen",
+					surfaceKind: "Lemma",
+				},
+			});
+			expect(result.success).toBe(true);
+		});
+
+		it("parses DiscourseFormula with role", () => {
+			const result = GermanLinguisticUnitSchema.safeParse({
+				kind: "Phrasem",
+				surface: {
+					features: {
+						phrasemeKind: "DiscourseFormula",
+						role: "Greeting",
+					},
+					lemma: "guten Tag",
+					surfaceKind: "Lemma",
+				},
+			});
+			expect(result.success).toBe(true);
+		});
+
+		it("rejects legacy collocation strength values", () => {
+			const result = GermanLinguisticUnitSchema.safeParse({
+				kind: "Phrasem",
+				surface: {
+					features: {
+						phrasemeKind: "Collocation",
+						strength: "Strong",
+					},
+					lemma: "starker Kaffee",
+					surfaceKind: "Lemma",
+				},
+			});
+			expect(result.success).toBe(false);
+		});
+	});
+
 	describe("rejection", () => {
 		it("rejects unknown kind", () => {
 			const result = GermanLinguisticUnitSchema.safeParse({
