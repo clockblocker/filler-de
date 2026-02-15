@@ -46,13 +46,18 @@ bun run typecheck:changed  # typecheck vs master (RUN BEFORE FINISHING WORK)
 | Commander | Files | Purpose |
 |-----------|-------|---------|
 | Librarian | ~270 files | Tree management, healing, codex generation |
-| Textfresser | ~17 files | Vocabulary commands (Generate, Translate) |
+| Textfresser | ~47 files | Vocabulary commands (Generate, Lemma, Translate) |
 
 ### Stateless Helpers (src/stateless-helpers/)
 - `note-metadata/` - Format-agnostic metadata read/write
 - `go-back-link/` - Go-back link helpers
+- `dict-note/` - Dict note parsing and serialization
 - `api-service.ts` - Gemini API wrapper
 - `block-id.ts`, `wikilink.ts`, `markdown-strip.ts`
+- `morpheme-formatter.ts` - Formats morpheme output as wikilinks with separability decorations
+- `multi-span.ts` - Multi-span selection/offset handling
+- `offset-mapper.ts` - Char-to-line/column mapping
+- `retry.ts` - Retry with exponential backoff
 
 #### Stateless Helpers Philosophy
 - Consolidate small/generally applicable formatting and utils under `xxxHelper` facade
@@ -71,12 +76,12 @@ const link = wikilinkHelper.findByTarget(text, "MyNote");
 ```
 
 ### Documentation (src/documentaion/)
-- `librarian-architrecture.md` - Main architecture doc
-- `librarian-pieces.md` - Refactoring details
+- `librarian-architecture.md` - Main architecture doc
 - `e2e-architecture.md` - E2E test architecture
 - `vam-architecture.md` - VAM dispatch, event pipeline, self-event tracking
 - `textfresser-architecture.md` - Textfresser commands, generate pipeline
 - `commands-and-behaviors-architecture.md` - Command executor + behavior manager
+- `linguistics-and-prompt-smith-architecture.md` - Linguistics type system + prompt management
 
 **Keep these docs up to date**: when changing behavior documented in `src/documentaion/`, update the relevant doc in the same PR.
 
@@ -202,7 +207,7 @@ Reason: `prompt-smith` / AI API code relies on v3 semantics (e.g. `z.record(valu
 
 ### Logging
 - Use `logger` from `src/utils/logger`, NOT console.*
-- Stringify objects: `logger.info("data:", JSON.stringify(obj))`
+- Logger auto-stringifies objects — no manual `JSON.stringify()` needed
 
 ## Plan Mode
 
