@@ -846,6 +846,7 @@ Move and Create actions may target sections that don't exist yet. `ensureSection
 |------|---------|
 | **Librarian Core** | |
 | `librarian.ts` | Orchestrator: init, event loop, command dispatch, checkbox handler |
+| `../base-command-error.ts` | Shared BaseCommandError used by LibrarianCommandError and TextfresserCommandError |
 | `vault-action-queue/vault-action-queue.ts` | Serialized async processing queue |
 | `librarian-init/build-initial-actions.ts` | Bootstrap: build Create actions from vault state |
 | `librarian-init/process-codex-impacts.ts` | Merge and process codex impacts |

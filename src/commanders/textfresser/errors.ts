@@ -1,12 +1,13 @@
 import z from "zod";
+import {
+	type BaseCommandError,
+	BASE_COMMAND_ERROR_KIND_STR,
+} from "../base-command-error";
 
 // ─── Command Error ───
 
 const COMMAND_ERROR_KIND_STR = [
-	"NotMdFile",
-	"NotEligible",
-	"DispatchFailed",
-	"NoSelection",
+	...BASE_COMMAND_ERROR_KIND_STR,
 	"ApiError",
 	"UNUSED_STUB",
 ] as const;
@@ -15,13 +16,14 @@ export const CommandErrorKindSchema = z.enum(COMMAND_ERROR_KIND_STR);
 export type CommandErrorKind = z.infer<typeof CommandErrorKindSchema>;
 export const CommandErrorKind = CommandErrorKindSchema.enum;
 
-export type CommandError =
-	| { kind: typeof CommandErrorKind.NotMdFile }
-	| { kind: typeof CommandErrorKind.NotEligible; reason: string }
-	| { kind: typeof CommandErrorKind.DispatchFailed; reason: string }
-	| { kind: typeof CommandErrorKind.NoSelection }
+type TextfresserSpecificCommandError =
 	| { kind: typeof CommandErrorKind.ApiError; reason: string }
 	| { kind: typeof CommandErrorKind.UNUSED_STUB };
+
+export type TextfresserCommandError =
+	| BaseCommandError
+	| TextfresserSpecificCommandError;
+export type CommandError = TextfresserCommandError;
 
 // ─── Attestation Parsing Error ───
 

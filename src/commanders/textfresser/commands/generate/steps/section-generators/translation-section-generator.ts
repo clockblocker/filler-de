@@ -1,0 +1,27 @@
+import { cssSuffixFor } from "../../../../../../linguistics/common/sections/section-css-kind";
+import {
+	DictSectionKind,
+	TitleReprFor,
+} from "../../../../../../linguistics/common/sections/section-kind";
+import type { EntrySection } from "../../../../../../stateless-helpers/dict-note/types";
+import type {
+	GenerationTargetLanguage,
+	WordTranslationOutput,
+} from "../section-generation-types";
+
+export type TranslationSectionContext = {
+	output: WordTranslationOutput;
+	targetLang: GenerationTargetLanguage;
+};
+
+export function generateTranslationSection(
+	ctx: TranslationSectionContext,
+): EntrySection | null {
+	if (!ctx.output) return null;
+
+	return {
+		content: ctx.output,
+		kind: cssSuffixFor[DictSectionKind.Translation],
+		title: TitleReprFor[DictSectionKind.Translation][ctx.targetLang],
+	};
+}

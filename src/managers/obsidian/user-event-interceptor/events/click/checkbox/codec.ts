@@ -3,6 +3,7 @@
  */
 
 import type { SplitPathToMdFile } from "../../../../vault-action-manager/types/split-path";
+import { createEventCodec } from "../../codec-factory";
 import type { CheckboxPayload } from "./payload";
 import { createCheckboxPayload } from "./payload";
 
@@ -12,15 +13,10 @@ export type CheckboxClickData = {
 	lineContent: string;
 };
 
-export const CheckboxCodec = {
+export const CheckboxCodec = createEventCodec(
 	/**
 	 * Encode checkbox click data into a payload.
 	 */
-	encode(data: CheckboxClickData): CheckboxPayload {
-		return createCheckboxPayload(
-			data.splitPath,
-			data.checked,
-			data.lineContent,
-		);
-	},
-};
+	(data: CheckboxClickData): CheckboxPayload =>
+		createCheckboxPayload(data.splitPath, data.checked, data.lineContent),
+);

@@ -12,9 +12,7 @@ import type { SegmentIdCodecs } from "../segment-id";
 import type { SectionNodeSegmentId } from "../segment-id/types/segment-id";
 import type {
 	AnySplitPathInsideLibrary,
-	SplitPathToFileInsideLibrary,
-	SplitPathToFolderInsideLibrary,
-	SplitPathToMdFileInsideLibrary,
+	SplitPathInsideLibraryOf,
 } from "../split-path-inside-library";
 
 // ─── Types ───
@@ -57,39 +55,42 @@ export function getBasename(p: LibraryPath): string {
  * Get parent path parts (all segments except the last).
  */
 export function getParentPathParts(p: LibraryPath): string[] {
-	return p.segments.slice(0, -1) as string[];
+	return p.segments.slice(0, -1);
 }
 
 /**
  * Convert LibraryPath to AnySplitPathInsideLibrary.
  * Used at boundaries when interfacing with VaultActionManager.
  */
+export function toSplitPath<SK extends SplitPathKind>(
+	p: LibraryPath & { kind: SK },
+): SplitPathInsideLibraryOf<SK>;
 export function toSplitPath(p: LibraryPath): AnySplitPathInsideLibrary {
 	const pathParts = getParentPathParts(p);
 	const basename = getBasename(p);
 
-	if (p.kind === SplitPathKindEnum.Folder) {
-		return {
-			basename,
-			kind: SplitPathKindEnum.Folder,
-			pathParts,
-		} as SplitPathToFolderInsideLibrary;
+	switch (p.kind) {
+		case SplitPathKindEnum.Folder:
+			return {
+				basename,
+				kind: SplitPathKindEnum.Folder,
+				pathParts,
+			};
+		case SplitPathKindEnum.MdFile:
+			return {
+				basename,
+				extension: MD,
+				kind: SplitPathKindEnum.MdFile,
+				pathParts,
+			};
+		case SplitPathKindEnum.File:
+			return {
+				basename,
+				extension: p.extension ?? "",
+				kind: SplitPathKindEnum.File,
+				pathParts,
+			};
 	}
-	if (p.kind === SplitPathKindEnum.MdFile) {
-		return {
-			basename,
-			extension: MD,
-			kind: SplitPathKindEnum.MdFile,
-			pathParts,
-		} as SplitPathToMdFileInsideLibrary;
-	}
-	// File
-	return {
-		basename,
-		extension: p.extension ?? "",
-		kind: SplitPathKindEnum.File,
-		pathParts,
-	} as SplitPathToFileInsideLibrary;
 }
 
 /**

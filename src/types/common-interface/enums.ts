@@ -8,7 +8,7 @@ import {
 	PAGE,
 	SCROLL,
 	UNKNOWN,
-} from "../literals";
+} from "../literals/infrastructure";
 
 export const LibraryMdFileSubTypeSchema = z.enum([
 	CODEX,

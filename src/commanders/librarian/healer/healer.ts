@@ -316,8 +316,7 @@ export class Healer implements TreeReader {
 		const node = mutatedNode;
 
 		// Compute new segment ID
-		// biome-ignore lint/suspicious/noExplicitAny: Type assertion needed: makeNodeSegmentId overloads require specific node types, but TypeScript can't narrow union for overload resolution
-		const newSegmentId = makeNodeSegmentId(node as any);
+		const newSegmentId = makeNodeSegmentId(node);
 
 		// If section renamed, update descendant suffixes
 		if (node.kind === TreeNodeKind.Section) {

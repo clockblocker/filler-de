@@ -8,7 +8,7 @@
  *   - Custom delimiter: [[__ ;; Struwwelpeter ;; Chapter1|← Struwwelpeter]]
  */
 
-import { BACK_ARROW, LINE_BREAK, SPACE_F } from "../../types/literals";
+import { BACK_ARROW, LINE_BREAK, SPACE_F } from "../../types/literals/ui";
 import { logger } from "../../utils/logger";
 
 /**

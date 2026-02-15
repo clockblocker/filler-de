@@ -1,0 +1,17 @@
+{
+  "description": "Create a standalone Bun script (scripts/knowledge-silo.ts) that analyzes git history to detect knowledge silos — modules where only one contributor has meaningful ownership. The script parses git log --numstat output to compute per-file authorship, aggregates by module directory, calculates bus factor per module, and flags silos where a single author dominates with no recent contributions from others. Output is a Markdown report to stdout. A package.json script entry 'silo' is added for convenience.",
+  "files": [
+    "scripts/knowledge-silo.ts",
+    "package.json"
+  ],
+  "steps": [
+    "Record current branch (nightshift) and create new branch nightshift-knowledge-silo from nightshift",
+    "Create scripts/knowledge-silo.ts — a standalone Bun script that analyzes git log --numstat to compute per-file and per-directory authorship metrics (lines added/deleted per author, commit count, recency)",
+    "Implement module-level aggregation: group files by top-level src/ directories (commanders/librarian, commanders/textfresser, managers/*, stateless-helpers/*, etc.) and compute bus factor (number of contributors who account for >50% of changes) per module",
+    "Implement silo detection heuristics: flag modules where a single author owns >80% of commits AND no other author has touched the module in the last 90 days",
+    "Implement report output: generate a Markdown report (printed to stdout) with sections for (a) per-module bus factor table, (b) identified knowledge silos with risk level, (c) recommended cross-training areas",
+    "Add 'silo' script to package.json scripts: \"silo\": \"bun scripts/knowledge-silo.ts\"",
+    "Run the script against the current repo to validate output",
+    "Commit changes with Nightshift-Task trailer and create PR to master"
+  ]
+}
