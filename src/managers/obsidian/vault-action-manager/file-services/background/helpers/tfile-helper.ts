@@ -80,13 +80,15 @@ export class TFileHelper {
 			const createdFile = await this.vault.create(systemPath, content);
 			return ok(createdFile);
 		} catch (error) {
-			if (error.message?.includes("already exists")) {
+			const msg =
+				error instanceof Error ? error.message : String(error);
+			if (msg.includes("already exists")) {
 				// Race condition: file was created by another process
 				return this.getFile(splitPath).mapErr((getErr) =>
 					errorCreationRaceCondition("file", systemPath, getErr),
 				);
 			}
-			return err(errorCreateFailed("file", systemPath, error.message));
+			return err(errorCreateFailed("file", systemPath, msg));
 		}
 	}
 

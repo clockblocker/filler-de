@@ -91,7 +91,7 @@ export default class TextEaterPlugin extends Plugin {
 			});
 		} catch (error) {
 			logError({
-				description: `Error during plugin initialization: ${error.message}`,
+				description: `Error during plugin onload: ${error instanceof Error ? error.message : String(error)}`,
 				location: "TextEaterPlugin",
 			});
 		}
@@ -108,7 +108,7 @@ export default class TextEaterPlugin extends Plugin {
 			this.initialized = true;
 		} catch (error) {
 			logError({
-				description: `Error during plugin initialization: ${error.message}`,
+				description: `Error during plugin initialization: ${error instanceof Error ? error.message : String(error)}`,
 				location: "TextEaterPlugin",
 			});
 		}
@@ -134,15 +134,17 @@ export default class TextEaterPlugin extends Plugin {
 	 */
 	private whenMetadataResolved(): Promise<void> {
 		return new Promise((resolve) => {
-			let resolved = false;
+			// Already resolved — nothing to wait for
+			if (this.hasUsableMetadataSignal()) {
+				resolve();
+				return;
+			}
 
-			queueMicrotask(() => {
-				if (!resolved && this.hasUsableMetadataSignal()) {
-					resolved = true;
-					this.app.metadataCache.off("resolved", () => null);
-					resolve();
-				}
-			});
+			const onResolved = () => {
+				this.app.metadataCache.off("resolved", onResolved);
+				resolve();
+			};
+			this.app.metadataCache.on("resolved", onResolved);
 		});
 	}
 
