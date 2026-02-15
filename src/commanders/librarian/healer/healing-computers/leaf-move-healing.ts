@@ -42,8 +42,7 @@ export function computeLeafMoveHealing(
 ): HealingAction[] {
 	const { node, newParentChain, observedSplitPath, codecs } = params;
 
-	// biome-ignore lint/suspicious/noExplicitAny: Type assertion needed: makeNodeSegmentId overloads require specific node types
-	const newSegmentId = makeNodeSegmentId(node as any);
+	const newSegmentId = makeNodeSegmentId(node);
 
 	if (node.kind === TreeNodeKind.Scroll) {
 		const newLocator: ScrollNodeLocator = {

@@ -1113,7 +1113,8 @@ To add support for a new target language (e.g., Japanese):
 | `src/commanders/textfresser/textfresser.ts` | Commander: state, command dispatch, wikilink handler, V5: scrollToTargetBlock(), background Generate (fireBackgroundGenerate/runBackgroundGenerate), deferred scroll (awaitGenerateAndScroll), `setLibrarianLookup()` for propagation path resolution |
 | `src/commanders/textfresser/commands/types.ts` | CommandFn, CommandInput, TextfresserCommandKind |
 | `src/commanders/textfresser/prompt-runner.ts` | PromptRunner: LLM call wrapper |
-| `src/commanders/textfresser/errors.ts` | CommandError, AttestationParsingError |
+| `src/commanders/base-command-error.ts` | Shared BaseCommandError for commander-level command failures |
+| `src/commanders/textfresser/errors.ts` | TextfresserCommandError (extends BaseCommandError), AttestationParsingError |
 | **Commands** | |
 | `src/commanders/textfresser/commands/lemma/lemma-command.ts` | Lemma pipeline: classify + disambiguate + wrap in wikilink. V8: `expandOffsetForFullSurface()` for proper noun expansion |
 | `src/commanders/textfresser/commands/lemma/steps/disambiguate-sense.ts` | V3: look up existing note, match entries by unitKind+POS (ignoring surfaceKind), call Disambiguate prompt. V5: bounds-check matchedIndex, log parse failures. V10+: emoji-based senses with emojiDescription+unitKind+pos+genus, plus optional phrasemeKind hints from `meta.linguisticUnit`; returns precomputedEmojiDescription |

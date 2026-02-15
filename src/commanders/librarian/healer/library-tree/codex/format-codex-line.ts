@@ -12,7 +12,7 @@ import {
 	OBSIDIAN_LINK_OPEN,
 	PIPE,
 	SPACE_F,
-} from "../../../../../types/literals";
+} from "../../../../../types/literals/ui";
 import { makeCodecRulesFromSettings, makeCodecs } from "../../../codecs";
 import {
 	computeCodexSuffix,

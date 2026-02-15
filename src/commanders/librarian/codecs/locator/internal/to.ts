@@ -63,41 +63,42 @@ export function locatorToCanonicalSplitPathInsideLibrary(
 			),
 		);
 	}
-	const { coreName, targetKind, extension } = segmentIdResult.value;
+	const segmentIdComponents = segmentIdResult.value;
 
 	// Build canonical separated suffixed basename
 	// Use suffix codecs to build expected canonical format
 	const pathPartsSansRoot = suffix.pathPartsWithRootToSuffixParts(pathParts);
-	const suffixParts =
-		targetKind === TreeNodeKind.Section ? [] : pathPartsSansRoot;
 
 	// Build split path with separated suffix directly (assumes canonical I/O as invariant)
-	const separatedSuffixedBasename = { coreName, suffixParts };
-	let splitPathWithSeparatedSuffix: AnyCanonicalSplitPathInsideLibrary;
-
-	if (targetKind === TreeNodeKind.Section) {
-		splitPathWithSeparatedSuffix = {
-			kind: SplitPathKind.Folder,
-			pathParts,
-			separatedSuffixedBasename,
-		} as AnyCanonicalSplitPathInsideLibrary;
-	} else if (targetKind === TreeNodeKind.Scroll) {
-		splitPathWithSeparatedSuffix = {
-			extension: MD,
-			kind: SplitPathKind.MdFile,
-			pathParts,
-			separatedSuffixedBasename,
-		} as AnyCanonicalSplitPathInsideLibrary;
-	} else {
-		splitPathWithSeparatedSuffix = {
-			extension: extension,
-			kind: SplitPathKind.File,
-			pathParts,
-			separatedSuffixedBasename,
-		} as AnyCanonicalSplitPathInsideLibrary;
+	switch (segmentIdComponents.targetKind) {
+		case TreeNodeKind.Section:
+			return ok({
+				kind: SplitPathKind.Folder,
+				pathParts,
+				separatedSuffixedBasename: {
+					coreName: segmentIdComponents.coreName,
+					suffixParts: [],
+				},
+			});
+		case TreeNodeKind.Scroll:
+			return ok({
+				extension: MD,
+				kind: SplitPathKind.MdFile,
+				pathParts,
+				separatedSuffixedBasename: {
+					coreName: segmentIdComponents.coreName,
+					suffixParts: pathPartsSansRoot,
+				},
+			});
+		case TreeNodeKind.File:
+			return ok({
+				extension: segmentIdComponents.extension,
+				kind: SplitPathKind.File,
+				pathParts,
+				separatedSuffixedBasename: {
+					coreName: segmentIdComponents.coreName,
+					suffixParts: pathPartsSansRoot,
+				},
+			});
 	}
-
-	// Return as CanonicalSplitPathInsideLibraryOf (type alias, structure is same)
-	// No validation - locator codec assumes canonical input/output
-	return ok(splitPathWithSeparatedSuffix);
 }

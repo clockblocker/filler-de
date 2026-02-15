@@ -3,6 +3,7 @@
  */
 
 import type { SplitPathToMdFile } from "../../../vault-action-manager/types/split-path";
+import { createEventCodec } from "../codec-factory";
 import type { SelectionChangedPayload } from "./payload";
 import { createSelectionChangedPayload } from "./payload";
 
@@ -13,16 +14,15 @@ export type SelectionChangedData = {
 	splitPath?: SplitPathToMdFile;
 };
 
-export const SelectionChangedCodec = {
+export const SelectionChangedCodec = createEventCodec(
 	/**
 	 * Encode selection change data into a payload.
 	 */
-	encode(data: SelectionChangedData): SelectionChangedPayload {
-		return createSelectionChangedPayload(
+	(data: SelectionChangedData): SelectionChangedPayload =>
+		createSelectionChangedPayload(
 			data.hasSelection,
 			data.selectedText,
 			data.source,
 			data.splitPath,
-		);
-	},
-};
+		),
+);

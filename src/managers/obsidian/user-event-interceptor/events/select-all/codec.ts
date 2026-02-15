@@ -5,6 +5,7 @@
 import { EditorSelection } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import type { SplitPathToMdFile } from "../../../vault-action-manager/types/split-path";
+import { createEventCodec } from "../codec-factory";
 import type { SelectAllPayload } from "./payload";
 import { createSelectAllPayload } from "./payload";
 
@@ -14,22 +15,23 @@ export type SelectAllData = {
 	splitPath?: SplitPathToMdFile;
 };
 
-export const SelectAllCodec = {
-	/**
-	 * Apply the selection from payload to the editor.
-	 */
-	applySelection(payload: SelectAllPayload): void {
-		if (payload.customSelection) {
-			const { from, to } = payload.customSelection;
-			payload.view.dispatch({
-				selection: EditorSelection.single(from, to),
-			});
-		}
-	},
+export const SelectAllCodec = createEventCodec(
 	/**
 	 * Encode select-all data into a payload.
 	 */
-	encode(data: SelectAllData): SelectAllPayload {
-		return createSelectAllPayload(data.content, data.view, data.splitPath);
+	(data: SelectAllData): SelectAllPayload =>
+		createSelectAllPayload(data.content, data.view, data.splitPath),
+	{
+		/**
+		 * Apply the selection from payload to the editor.
+		 */
+		applySelection(payload: SelectAllPayload): void {
+			if (payload.customSelection) {
+				const { from, to } = payload.customSelection;
+				payload.view.dispatch({
+					selection: EditorSelection.single(from, to),
+				});
+			}
+		},
 	},
-};
+);

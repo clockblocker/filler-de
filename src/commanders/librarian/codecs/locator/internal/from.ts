@@ -4,11 +4,13 @@ import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-man
 import { makeNodeSegmentId } from "../../../healer/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import { TreeNodeKind } from "../../../healer/library-tree/tree-node/types/atoms";
 import type { CodecError } from "../../errors";
-import { makeLocatorError } from "../../errors";
+import { makeLocatorError, makeZodError } from "../../errors";
+import {
+	FileNodeSegmentIdSchema,
+	ScrollNodeSegmentIdSchema,
+	SectionNodeSegmentIdSchema,
+} from "../../segment-id";
 import type {
-	FileNodeSegmentId,
-	ScrollNodeSegmentId,
-	SectionNodeSegmentId,
 	SegmentIdCodecs,
 } from "../../segment-id";
 import type {
@@ -75,10 +77,25 @@ export function canonicalSplitPathInsideLibraryToLocator(
 					),
 				);
 			}
+			const fileSegmentIdResult = FileNodeSegmentIdSchema.safeParse(
+				segmentIdResult.value,
+			);
+			if (!fileSegmentIdResult.success) {
+				return err(
+					makeLocatorError(
+						"InvalidSegmentId",
+						"Serialized file segment ID does not match File schema",
+						{ segmentId: segmentIdResult.value },
+						makeZodError(
+							fileSegmentIdResult.error.issues,
+							"FileNodeSegmentId validation failed",
+							{ segmentId: segmentIdResult.value },
+						),
+					),
+				);
+			}
 			return ok({
-				// Type assertion: serializeSegmentIdUnchecked returns TreeNodeSegmentId union,
-				// but we know it's FileNodeSegmentId because targetKind is File
-				segmentId: segmentIdResult.value as FileNodeSegmentId,
+				segmentId: fileSegmentIdResult.data,
 				segmentIdChainToParent,
 				targetKind: TreeNodeKind.File,
 			});
@@ -100,10 +117,25 @@ export function canonicalSplitPathInsideLibraryToLocator(
 					),
 				);
 			}
+			const scrollSegmentIdResult = ScrollNodeSegmentIdSchema.safeParse(
+				segmentIdResult.value,
+			);
+			if (!scrollSegmentIdResult.success) {
+				return err(
+					makeLocatorError(
+						"InvalidSegmentId",
+						"Serialized scroll segment ID does not match Scroll schema",
+						{ segmentId: segmentIdResult.value },
+						makeZodError(
+							scrollSegmentIdResult.error.issues,
+							"ScrollNodeSegmentId validation failed",
+							{ segmentId: segmentIdResult.value },
+						),
+					),
+				);
+			}
 			return ok({
-				// Type assertion: serializeSegmentIdUnchecked returns TreeNodeSegmentId union,
-				// but we know it's ScrollNodeSegmentId because targetKind is Scroll
-				segmentId: segmentIdResult.value as ScrollNodeSegmentId,
+				segmentId: scrollSegmentIdResult.data,
 				segmentIdChainToParent,
 				targetKind: TreeNodeKind.Scroll,
 			});
@@ -124,10 +156,25 @@ export function canonicalSplitPathInsideLibraryToLocator(
 					),
 				);
 			}
+			const sectionSegmentIdResult = SectionNodeSegmentIdSchema.safeParse(
+				segmentIdResult.value,
+			);
+			if (!sectionSegmentIdResult.success) {
+				return err(
+					makeLocatorError(
+						"InvalidSegmentId",
+						"Serialized section segment ID does not match Section schema",
+						{ segmentId: segmentIdResult.value },
+						makeZodError(
+							sectionSegmentIdResult.error.issues,
+							"SectionNodeSegmentId validation failed",
+							{ segmentId: segmentIdResult.value },
+						),
+					),
+				);
+			}
 			return ok({
-				// Type assertion: serializeSegmentIdUnchecked returns TreeNodeSegmentId union,
-				// but we know it's SectionNodeSegmentId because targetKind is Section
-				segmentId: segmentIdResult.value as SectionNodeSegmentId,
+				segmentId: sectionSegmentIdResult.data,
 				segmentIdChainToParent,
 				targetKind: TreeNodeKind.Section,
 			});

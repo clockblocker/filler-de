@@ -4,7 +4,7 @@
  */
 
 import { getParsedUserSettings } from "../../../../../global-state/global-state";
-import { LINE_BREAK, SPACE_F, TAB } from "../../../../../types/literals";
+import { LINE_BREAK, SPACE_F, TAB } from "../../../../../types/literals/ui";
 import type { Codecs } from "../../../codecs";
 import type { SectionNodeSegmentId } from "../../../codecs/segment-id";
 import { sectionChainToPathParts } from "../../../paths/path-finder";

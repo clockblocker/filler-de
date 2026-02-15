@@ -4,6 +4,7 @@ import { NodeSegmentIdSeparator } from "../../../../../codecs/segment-id/types/s
 import { TreeNodeKind } from "../../types/atoms";
 import type {
 	FileNode,
+	LeafNode,
 	ScrollNode,
 	SectionNode,
 	TreeNode,
@@ -18,6 +19,12 @@ export function makeNodeSegmentId(
 export function makeNodeSegmentId(
 	node: FileNode,
 ): SegmentIdOf<typeof TreeNodeKind.File>;
+export function makeNodeSegmentId(
+	node: LeafNode,
+):
+	| SegmentIdOf<typeof TreeNodeKind.Scroll>
+	| SegmentIdOf<typeof TreeNodeKind.File>;
+export function makeNodeSegmentId(node: TreeNode): TreeNodeSegmentId;
 export function makeNodeSegmentId(node: TreeNode): TreeNodeSegmentId {
 	switch (node.kind) {
 		case TreeNodeKind.Section: {

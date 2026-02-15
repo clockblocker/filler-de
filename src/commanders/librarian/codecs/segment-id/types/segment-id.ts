@@ -2,7 +2,7 @@ import z from "zod";
 import {
 	SMALL_EM_DASH,
 	SmallEmDashSchema,
-} from "../../../../../types/literals";
+} from "../../../../../types/literals/ui";
 import {
 	FileExtensionSchema,
 	MdExtensionSchema,
