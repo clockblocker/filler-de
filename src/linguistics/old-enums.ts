@@ -137,7 +137,7 @@ export const COLLOCATION_STRENGTHS = CollocationStrengthSchema.options;
 
 // Phrasems/Collocation/Type
 
-const COLLOCATION_TYPES_STR = [
+const COLLOCATION_KINDS_STR = [
 	`${PosTag.ADJ}${PLUS_DELIMETER}${PosTag.NOUN}`, // ADJ_plus_NOUN e.g. "strong tea", "deep sleep"
 	`${PosTag.NOUN}${PLUS_DELIMETER}${PosTag.NOUN}`, // NOUN_plus_NOUN e.g. "chicken soup", "data center"
 	`${PosTag.NOUN}${PLUS_DELIMETER}${PosTag.VERB}`, // NOUN_plus_VERB e.g. "dogs bark", "alarms ring"
@@ -147,11 +147,11 @@ const COLLOCATION_TYPES_STR = [
 	`${PosTag.PREP}_${PHRASE},`,
 ] as const;
 
-export const CollocationTypeSchema = z.enum(COLLOCATION_TYPES_STR);
+export const CollocationKindSchema = z.enum(COLLOCATION_KINDS_STR);
 
-export type CollocationType = z.infer<typeof CollocationTypeSchema>;
-export const CollocationType = CollocationTypeSchema.enum;
-export const COLLOCATION_TYPES = CollocationTypeSchema.options;
+export type CollocationKind = z.infer<typeof CollocationKindSchema>;
+export const CollocationKind = CollocationKindSchema.enum;
+export const COLLOCATION_KINDS = CollocationKindSchema.options;
 
 export const STYLISTIC_TONE_STR = [
 	NEUTRAL, // default, unmarked

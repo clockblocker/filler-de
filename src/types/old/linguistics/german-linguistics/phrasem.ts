@@ -1,9 +1,9 @@
 import { z } from "zod";
 import {
+	CollocationKind,
+	CollocationKindSchema,
 	CollocationStrength,
 	CollocationStrengthSchema,
-	CollocationType,
-	CollocationTypeSchema,
 	DiscourseFormulaRoleSchema,
 	PhrasemeType,
 	POS,
@@ -33,7 +33,7 @@ export const PhrasemeBaseSchema = z.object({
 });
 
 export const CollocationSchema = z.object({
-	collocationType: CollocationTypeSchema,
+	collocationType: CollocationKindSchema,
 	phrasemeType: z.literal(PhrasemeType.Collocation),
 	strength: CollocationStrengthSchema,
 });
@@ -70,7 +70,7 @@ export type Phraseme = z.infer<typeof PhrasemeSchema>;
 
 export const collocationExamples: Record<Phraseme["surface"], Phraseme> = {
 	"triftige Gründe": {
-		collocationType: CollocationType.ADJ_plus_NOUN,
+		collocationType: CollocationKind.ADJ_plus_NOUN,
 		phrasemeComponents: [
 			{
 				baseForm: "triftig",
