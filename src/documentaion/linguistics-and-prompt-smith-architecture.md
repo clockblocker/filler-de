@@ -886,23 +886,8 @@ To add a new `PromptKind` (e.g., `"Etymology"`):
 
 ## 5. Deprecated / Migration
 
-### old-enums.ts
+### old-enums.ts — DELETED
 
-**Source**: `src/linguistics/old-enums.ts`
+`src/linguistics/old-enums.ts` has been deleted. It contained legacy enum definitions (discourse formula roles, collocation types, stylistic tones, scalar degrees, theta roles, noun classes, verb moods, comparison degrees) that were never imported by active code. The only consumers were files in `src/types/old/`, which were also deleted as dead code.
 
-This file contains legacy enum definitions from before the linguistics module was restructured. It includes detailed enums that the current system either doesn't use or has simplified:
-
-| Legacy enum | Status |
-|---|---|
-| Discourse formula roles (Greeting, Farewell, Apology, ...) | Not used in current pipeline |
-| Collocation types (ADJ+NOUN, VERB+NOUN, ...) | Simplified to `CollocationStrength` in `phrasem-surface.ts` |
-| Stylistic tone (Neutral, Casual, Formal, Vulgar, ...) | Not used |
-| Scalar degree (Negligible, Minimal, Weak, ..., Maximal) | Not used |
-| Theta roles (Agent, Cause, Experiencer, ...) | Not used |
-| Noun classes (Common, Mass, Proper, Collective) | Simplified to `NounClass = "Common" | "Proper"` |
-| Verb mood (Indicative, Subjunctive-I, Subjunctive-II, Imperative) | Not used in current schemas |
-| Comparison degrees (Positive, Comparative, Superlative) | Not used in current schemas |
-
-**Migration path**: As new POS features are implemented (verb conjugation, adjective declension), relevant enums will be promoted from `old-enums.ts` into the proper `common/enums/` or `de/` structure. The old file will shrink over time and eventually be deleted.
-
-**Do not import from `old-enums.ts` in new code** — use the structured `common/` and `de/` modules instead.
+Relevant enums that are actually used live in the structured `common/enums/` and `de/` modules.

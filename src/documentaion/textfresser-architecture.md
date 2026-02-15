@@ -142,8 +142,7 @@ Note (Obsidian .md file, named after a Surface)
 │  ├─ german/schemas/             — GermanLinguisticUnitSchema │
 │  ├─ common/sections/section-kind   — DictSectionKind    │
 │  ├─ common/sections/section-css-kind — kind → CSS suffix │
-│  ├─ german/inflection/noun      — NounInflectionCell    │
-│  └─ old-enums.ts                — detailed inflectional enums │
+│  └─ german/inflection/noun      — NounInflectionCell    │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -201,7 +200,7 @@ PhrasemeKind = "Idiom" | "Collocation" | "DiscourseFormula" | "Proverb" | "Cultu
 
 Each kind has further sub-classifications (e.g., collocation strength: `Free | Bound | Frozen`, collocation type: `ADJ+NOUN`, `VERB+NOUN`, etc.).
 
-**Source**: `src/linguistics/enums/linguistic-units/phrasem/phrasem-kind.ts`, `src/linguistics/old-enums.ts`
+**Source**: `src/linguistics/enums/linguistic-units/phrasem/phrasem-kind.ts`
 
 ### 4.5 Morpheme Tags
 
@@ -266,18 +265,7 @@ DictEntrySubSections are the unit at which cross-reference propagation operates 
 
 ### 4.8 Detailed Inflectional Enums
 
-`src/linguistics/old-enums.ts` defines a rich set of grammatical categories for German (extensible to other languages):
-
-- **Person**: 1st, 2nd, 3rd
-- **Number**: Singular, Plural, Dual
-- **Case**: Nominative, Accusative, Dative, Genitive
-- **Tense**: Present, Preterite, Perfect, Pluperfect, Future I, Future II
-- **Verb Mood**: Indicative, Subjunctive I, Subjunctive II, Imperative
-- **Noun Class**: Common, Mass, Proper, Collective
-- **Comparison Degree**: Positive, Comparative, Superlative
-- **Theta Roles**: Agent, Cause, Experiencer, Location, Goal, Beneficiary, etc.
-- **Stylistic Tone**: Neutral, Casual, Colloquial, Formal, Vulgar, Poetic, etc.
-- **Scalar Degree**: 11-point scale from Negligible (-5) to Maximal (+5)
+> **Deleted**: The legacy `src/linguistics/old-enums.ts` that previously defined detailed grammatical categories (Person, Number, Case, Tense, Verb Mood, Noun Class, Comparison Degree, Theta Roles, Stylistic Tone, Scalar Degree) has been removed as dead code. Currently used inflectional enums live in `src/linguistics/common/enums/` and `src/linguistics/german/`.
 
 ---
 
@@ -1183,7 +1171,7 @@ To add support for a new target language (e.g., Japanese):
 | `src/linguistics/common/sections/section-config.ts` | getSectionsFor(): applicable sections per unit+POS+nounClass; `sectionsForProperNoun` (V8); SECTION_DISPLAY_WEIGHT + compareSectionsByWeight(): section display ordering |
 | `src/linguistics/common/dict-entry-id/dict-entry-id.ts` | DictEntryId builder/parser |
 | `src/linguistics/german/inflection/noun.ts` | NounInflectionCell type, German case/number tags, display order |
-| `src/linguistics/old-enums.ts` | Inflectional dimensions, theta roles, tones |
+| ~~`src/linguistics/old-enums.ts`~~ | Deleted — was dead code (inflectional dimensions, theta roles, tones) |
 | **Prompt-Smith** | |
 | `src/prompt-smith/index.ts` | PROMPT_FOR registry (generated) |
 | `src/prompt-smith/schemas/` | Zod I/O schemas: translate, word-translation, morphem, lemma, disambiguate, relation, inflection, noun-inflection |
