@@ -13,10 +13,9 @@ import type {
 	DictEntry,
 	EntrySection,
 } from "../../../../../stateless-helpers/dict-note/types";
-import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metadata";
 import { logger } from "../../../../../utils/logger";
 import {
-	buildPropagationActionPair,
+	collectPropagationActions,
 	resolveTargetPath,
 } from "../../../common/target-path-resolver";
 import type { CommandError } from "../../types";
@@ -224,19 +223,10 @@ export function propagateInflections(
 
 			if (!didChange) return content;
 
-			const { body, meta } = dictNoteHelper.serialize(compactedEntries);
-
-			if (Object.keys(meta).length > 0) {
-				const metaTransform = noteMetadataHelper.upsert(meta);
-				return metaTransform(body) as string;
-			}
-			return body;
+			return dictNoteHelper.serializeToString(compactedEntries);
 		};
 
-		propagationActions.push(...resolved.healingActions);
-		propagationActions.push(
-			...buildPropagationActionPair(resolved.splitPath, transform),
-		);
+		collectPropagationActions(propagationActions, resolved, transform);
 	}
 
 	return ok({

@@ -120,6 +120,19 @@ export function buildPropagationActionPair(
 	];
 }
 
+/**
+ * Collect healing actions + propagation action pair from a resolved path into a target array.
+ * Replaces the repeated push-healing-then-push-pair pattern in propagation steps.
+ */
+export function collectPropagationActions(
+	target: VaultAction[],
+	resolved: ResolvedTargetPath,
+	transform: (content: string) => string,
+): void {
+	target.push(...resolved.healingActions);
+	target.push(...buildPropagationActionPair(resolved.splitPath, transform));
+}
+
 function buildComputedSplitPath(
 	word: string,
 	targetLanguage: TargetLanguage,

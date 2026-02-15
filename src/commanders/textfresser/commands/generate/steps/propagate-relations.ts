@@ -8,7 +8,7 @@ import {
 import type { VaultAction } from "../../../../../managers/obsidian/vault-action-manager";
 import type { RelationSubKind } from "../../../../../prompt-smith/schemas/relation";
 import {
-	buildPropagationActionPair,
+	collectPropagationActions,
 	resolveTargetPath,
 } from "../../../common/target-path-resolver";
 import type { CommandError } from "../../types";
@@ -151,10 +151,7 @@ export function propagateRelations(
 			return `${content.trimEnd()}\n${sectionMarker}\n${linesToAdd}`;
 		};
 
-		propagationActions.push(...resolved.healingActions);
-		propagationActions.push(
-			...buildPropagationActionPair(resolved.splitPath, transform),
-		);
+		collectPropagationActions(propagationActions, resolved, transform);
 	}
 
 	return ok({

@@ -38,14 +38,22 @@ function reorderSections(entry: DictEntry): boolean {
 	return changed;
 }
 
+/** Partition entries into lemma (LM) and inflected (IN) groups. */
+function partitionByInflectionMarker(
+	entries: DictEntry[],
+): { lm: DictEntry[]; inflected: DictEntry[] } {
+	const lm = entries.filter((e) => !e.id.includes("-IN-"));
+	const inflected = entries.filter((e) => e.id.includes("-IN-"));
+	return { inflected, lm };
+}
+
 /**
  * Check if entries need reordering: LM entries first, IN entries last.
  * Returns true if current order differs from desired order.
  */
 function needsReorder(entries: DictEntry[]): boolean {
-	const lmEntries = entries.filter((e) => !e.id.includes("-IN-"));
-	const inEntries = entries.filter((e) => e.id.includes("-IN-"));
-	const desired = [...lmEntries, ...inEntries];
+	const { lm, inflected } = partitionByInflectionMarker(entries);
+	const desired = [...lm, ...inflected];
 	return entries.some((e, i) => e.id !== desired[i]?.id);
 }
 
@@ -66,10 +74,9 @@ export function cleanupDictNote(content: string): string | null {
 
 	// Reorder: LM entries first, IN entries last
 	if (needsReorder(entries)) {
-		const lmEntries = entries.filter((e) => !e.id.includes("-IN-"));
-		const inEntries = entries.filter((e) => e.id.includes("-IN-"));
+		const { lm, inflected } = partitionByInflectionMarker(entries);
 		entries.length = 0;
-		entries.push(...lmEntries, ...inEntries);
+		entries.push(...lm, ...inflected);
 		changed = true;
 	}
 

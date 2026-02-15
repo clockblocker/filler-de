@@ -35,10 +35,9 @@ import {
 	type MorphemeItem,
 	morphemeFormatterHelper,
 } from "../../../../../stateless-helpers/morpheme-formatter";
-import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metadata";
 import type { TargetLanguage } from "../../../../../types";
 import {
-	buildPropagationActionPair,
+	collectPropagationActions,
 	resolveTargetPath,
 } from "../../../common/target-path-resolver";
 import type { CommandError } from "../../types";
@@ -191,12 +190,7 @@ export function propagateMorphemes(
 					});
 				}
 
-				const { body, meta } =
-					dictNoteHelper.serialize(existingEntries);
-				if (Object.keys(meta).length > 0) {
-					return noteMetadataHelper.upsert(meta)(body) as string;
-				}
-				return body;
+				return dictNoteHelper.serializeToString(existingEntries);
 			}
 
 			// New entry — build structured DictEntry
@@ -229,18 +223,10 @@ export function propagateMorphemes(
 			};
 
 			const allEntries = [...existingEntries, newEntry];
-			const { body, meta } = dictNoteHelper.serialize(allEntries);
-
-			if (Object.keys(meta).length > 0) {
-				return noteMetadataHelper.upsert(meta)(body) as string;
-			}
-			return body;
+			return dictNoteHelper.serializeToString(allEntries);
 		};
 
-		propagationActions.push(...resolved.healingActions);
-		propagationActions.push(
-			...buildPropagationActionPair(resolved.splitPath, transform),
-		);
+		collectPropagationActions(propagationActions, resolved, transform);
 	}
 
 	return ok({
