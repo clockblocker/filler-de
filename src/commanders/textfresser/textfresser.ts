@@ -100,7 +100,10 @@ export class Textfresser {
 			.map(() => {
 				const lemma = this.state.latestLemmaResult;
 				if (commandName === "Lemma" && lemma) {
-					const pos = lemma.pos ? ` (${lemma.pos})` : "";
+					const pos =
+						lemma.linguisticUnit === "Lexem"
+							? ` (${lemma.posLikeKind})`
+							: "";
 					notify(`✓ ${lemma.lemma}${pos}`);
 				} else if (commandName === "Generate" && lemma) {
 					const failed = this.state.latestFailedSections;

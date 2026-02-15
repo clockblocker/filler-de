@@ -1,6 +1,7 @@
 import { ResultAsync } from "neverthrow";
 import { dictEntryIdHelper } from "../../../../../linguistics/common/dict-entry-id/dict-entry-id";
 import type { PhrasemeKind } from "../../../../../linguistics/common/enums/linguistic-units/phrasem/phrasem-kind";
+import type { DeLexemPos } from "../../../../../linguistics/de/lemma";
 import type { VaultActionManager } from "../../../../../managers/obsidian/vault-action-manager";
 import type { AgentOutput } from "../../../../../prompt-smith";
 import { PromptKind } from "../../../../../prompt-smith/codegen/consts";
@@ -10,13 +11,21 @@ import type { PromptRunner } from "../../../prompt-runner";
 import type { CommandError } from "../../types";
 import { CommandErrorKind } from "../../types";
 
-type LemmaApiResult = {
-	lemma: string;
-	linguisticUnit: string;
-	phrasemeKind?: PhrasemeKind | null;
-	surfaceKind: string;
-	pos?: string | null;
-};
+type LemmaApiResult =
+	| {
+			lemma: string;
+			linguisticUnit: "Lexem";
+			phrasemeKind?: undefined;
+			pos: DeLexemPos;
+			surfaceKind: string;
+	  }
+	| {
+			lemma: string;
+			linguisticUnit: "Phrasem";
+			phrasemeKind: PhrasemeKind;
+			pos?: undefined;
+			surfaceKind: string;
+	  };
 
 type DisambiguationResult =
 	| { matchedIndex: number }
@@ -70,12 +79,21 @@ export function disambiguateSense(
 				return false;
 			}
 			if (parsed.unitKind !== apiResult.linguisticUnit) return false;
-			if (apiResult.pos && parsed.pos !== apiResult.pos) return false;
+			if (
+				apiResult.linguisticUnit === "Lexem" &&
+				parsed.pos !== apiResult.pos
+			) {
+				return false;
+			}
 			return true;
 		});
 
+		const kindLabel =
+			apiResult.linguisticUnit === "Lexem"
+				? apiResult.pos
+				: apiResult.phrasemeKind;
 		logger.info(
-			`[disambiguate] Parsed ${existingEntries.length} entries, matching=${matchingEntries.length} (unitKind=${apiResult.linguisticUnit}, pos=${apiResult.pos ?? "none"})`,
+			`[disambiguate] Parsed ${existingEntries.length} entries, matching=${matchingEntries.length} (unitKind=${apiResult.linguisticUnit}, kind=${kindLabel})`,
 		);
 
 		if (matchingEntries.length === 0) {

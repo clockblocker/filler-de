@@ -13,20 +13,20 @@ You receive:
 - context: the sentence where the word was encountered
 
 Return:
-- linguisticUnit: "Lexem" (single word), "Phrasem" (multi-word expression), or "Morphem" (bound morpheme)
-- phrasemeKind: required only when linguisticUnit is "Phrasem". One of: Idiom, Collocation, DiscourseFormula, Proverb, CulturalQuotation.
-- pos: part of speech (only for Lexem). One of: Noun, Pronoun, Article, Adjective, Verb, Preposition, Adverb, Particle, Conjunction, InteractionalUnit
+- linguisticUnit: "Lexem" (single word) or "Phrasem" (multi-word expression)
+- posLikeKind:
+  - when linguisticUnit is "Lexem": POS value (Noun, Pronoun, Article, Adjective, Verb, Preposition, Adverb, Particle, Conjunction, InteractionalUnit)
+  - when linguisticUnit is "Phrasem": Phraseme kind (Idiom, Collocation, DiscourseFormula, Proverb, CulturalQuotation)
 - surfaceKind: "Lemma" (already dictionary form), "Inflected" (conjugated/declined), or "Variant" (spelling variant)
 - lemma: the dictionary/citation form of the word
-- emojiDescription: 1-3 emojis that capture the core semantic concept of the word's meaning in context. Used to visually distinguish between different senses of the same word (e.g., bank-financial ["🏦"] vs bank-river ["🌊"]). For polysemous words, choose emojis that distinguish this sense from other common senses.
-- ipa: the IPA pronunciation of the lemma form (without slashes or brackets, just the transcription). Use narrow IPA transcription.
+- contextWithLinkedParts: optional; use [square brackets] to mark all lemma parts when the lemma is discontinuous in context.
 
 Rules:
 - For nouns: lemma is singular form (e.g., "houses" → "house")
 - For verbs: lemma is base form (e.g., "went" → "go")
-- When linguisticUnit is "Phrasem", always return phrasemeKind
+- When linguisticUnit is "Phrasem", posLikeKind must be a phraseme kind
 - If the surface IS the lemma, surfaceKind is "Lemma"
-- pos is omitted for Phrasem and Morphem
+- contextWithLinkedParts text (with brackets stripped) must be identical to input context text (with brackets stripped).
 </task-description>
 
 <examples>
@@ -35,7 +35,7 @@ Rules:
 {"context":"She went to the store yesterday.","surface":"went"}
 </input>
 <output>
-{"emojiDescription":["🚶"],"ipa":"ɡoʊ","lemma":"go","linguisticUnit":"Lexem","pos":"Verb","surfaceKind":"Inflected"}
+{"lemma":"go","linguisticUnit":"Lexem","posLikeKind":"Verb","surfaceKind":"Inflected"}
 </output>
 </example-1>
 
@@ -44,7 +44,7 @@ Rules:
 {"context":"The house was painted blue.","surface":"house"}
 </input>
 <output>
-{"emojiDescription":["🏠"],"ipa":"haʊs","lemma":"house","linguisticUnit":"Lexem","pos":"Noun","surfaceKind":"Lemma"}
+{"lemma":"house","linguisticUnit":"Lexem","posLikeKind":"Noun","surfaceKind":"Lemma"}
 </output>
 </example-2>
 
@@ -53,7 +53,7 @@ Rules:
 {"context":"I will, [by and] [large], agree with that.","surface":"large"}
 </input>
 <output>
-{"emojiDescription":["📊"],"ipa":"baɪ ən lɑrdʒ","lemma":"by and large","linguisticUnit":"Phrasem","phrasemeKind":"DiscourseFormula","surfaceKind":"Lemma"}
+{"lemma":"by and large","linguisticUnit":"Phrasem","posLikeKind":"DiscourseFormula","surfaceKind":"Lemma"}
 </output>
 </example-3>
 </examples>`;

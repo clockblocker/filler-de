@@ -1,6 +1,11 @@
+import type { AgentOutput } from "../../../../../prompt-smith";
 import type { LemmaResult } from "../../lemma/types";
 import { formatHeaderLine as formatCommonHeader } from "./common/header-formatter";
 import { formatHeaderLine as formatNounHeader } from "./de/lexem/noun/header-formatter";
+
+type EnrichmentOutput =
+	| AgentOutput<"LexemEnrichment">
+	| AgentOutput<"PhrasemEnrichment">;
 
 /**
  * Dispatch header formatting by POS.
@@ -8,21 +13,28 @@ import { formatHeaderLine as formatNounHeader } from "./de/lexem/noun/header-for
  */
 export function dispatchHeaderFormatter(
 	lemmaResult: LemmaResult,
+	enrichmentOutput: EnrichmentOutput,
 	targetLanguage: string,
 ): string {
 	const output = {
 		emojiDescription:
 			lemmaResult.precomputedEmojiDescription ??
-			lemmaResult.emojiDescription,
-		ipa: lemmaResult.ipa,
+			enrichmentOutput.emojiDescription,
+		ipa: enrichmentOutput.ipa,
 	};
 
-	if (lemmaResult.pos === "Noun" && lemmaResult.genus) {
+	if (
+		lemmaResult.linguisticUnit === "Lexem" &&
+		enrichmentOutput.linguisticUnit === "Lexem" &&
+		lemmaResult.posLikeKind === "Noun" &&
+		enrichmentOutput.posLikeKind === "Noun" &&
+		enrichmentOutput.genus
+	) {
 		return formatNounHeader(
 			output,
 			lemmaResult.lemma,
 			targetLanguage,
-			lemmaResult.genus,
+			enrichmentOutput.genus,
 		);
 	}
 

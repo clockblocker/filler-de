@@ -28,7 +28,7 @@ function makeCtx(
 				disambiguationResult: null,
 				lemma,
 				linguisticUnit: "Lexem",
-				pos: "Noun",
+				posLikeKind: "Noun",
 				surfaceKind: "Lemma",
 			},
 			lookupInLibrary: () => [],

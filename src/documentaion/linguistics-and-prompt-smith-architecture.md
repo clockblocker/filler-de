@@ -271,6 +271,9 @@ Type: `GermanLinguisticUnit` — the complete grammatical identity of any German
 | File | Exports |
 |---|---|
 | `de/index.ts` | `GermanLinguisticUnitSchema`, `GermanLinguisticUnit` |
+| `de/lemma/de-lemma-result.ts` | `DeLemmaResultSchema`, `DeLexemLemmaResultSchema`, `DePhrasemLemmaResultSchema`, `DePosLikeKindSchema` |
+| `de/lemma/generate-contracts.ts` | `DeLexicalTargetSchema`, `DeEnrichment*`, `DeRelation*`, `DeInflection*`, `DeFeatures*`, `DeWordTranslation*` |
+| `de/lemma/index.ts` | Barrel exports for vNext lemma/generate contracts |
 | `de/lexem/index.ts` | `GermanLexemSurfaceSchema`, `GermanLexemSurface` |
 | `de/lexem/de-pos.ts` | `GERMAN_POS_STUBS` |
 | `de/lexem/noun/features.ts` | `GermanGenusSchema`, `NounClassSchema`, `articleFromGenus`, `NounInflectionCell`, display constants |
@@ -522,10 +525,13 @@ src/prompt-smith/
 │   ├── noun-inflection.ts
 │   ├── disambiguate.ts
 │   ├── word-translation.ts
-│   └── features.ts
+│   ├── lexem-enrichment.ts
+│   ├── phrasem-enrichment.ts
+│   ├── feature-shared.ts
+│   └── features-*.ts            # per-POS feature contracts
 ├── prompt-parts/                     # Human-authored prompt sources
 │   ├── german/
-│   │   ├── english/                  # German->English: all 9 prompt kinds
+│   │   ├── english/                  # German->English: full runtime prompt set
 │   │   │   ├── lemma/
 │   │   │   │   ├── agent-role.ts
 │   │   │   │   ├── task-description.ts
@@ -536,13 +542,13 @@ src/prompt-smith/
 │   │   │   └── ...                   # One dir per PromptKind
 │   │   └── russian/                  # German->Russian: only Translate & WordTranslation
 │   └── english/
-│       └── english/                  # English->English: all 9 kinds (fallback)
+│       └── english/                  # English->English: fallback prompt set
 └── codegen/
     ├── consts.ts                     # PromptKind enum, PromptPartKind enum
     ├── generated-promts/             # Auto-generated compiled prompts
-    │   ├── german/english/           # 9 *-prompt.ts files
+    │   ├── german/english/           # one *-prompt.ts per PromptKind
     │   ├── german/russian/           # 2 *-prompt.ts files
-    │   └── english/english/          # 9 *-prompt.ts files (fallback)
+    │   └── english/english/          # fallback prompts for required kinds
     └── skript/
         ├── run.ts                    # Main codegen entry point
         ├── combine-parts.ts          # Assemble parts into XML-tagged system prompt
@@ -560,51 +566,53 @@ src/prompt-smith/
 
 **Source**: `schemas/index.ts`
 
-The `SchemasFor` registry maps every `PromptKind` to its input/output schemas:
+The `SchemasFor` registry maps each `PromptKind` to `{ userInputSchema, agentOutputSchema }`.
+Current runtime kinds:
 
 ```typescript
-export const SchemasFor = {
-    [PromptKind.Lemma]:           lemmaSchemas,
-    [PromptKind.Morphem]:         morphemSchemas,
-    [PromptKind.Relation]:        relationSchemas,
-    [PromptKind.Translate]:       translateSchemas,
-    [PromptKind.Inflection]:      inflectionSchemas,
-    [PromptKind.NounInflection]:  nounInflectionSchemas,
-    [PromptKind.Disambiguate]:    disambiguateSchemas,
-    [PromptKind.WordTranslation]: wordTranslationSchemas,
-    [PromptKind.Features]: featuresSchemas,
-} satisfies Record<PromptKind, { userInputSchema: z.ZodTypeAny; agentOutputSchema: z.ZodTypeAny }>;
+"Translate" | "Morphem" | "Lemma"
+| "LexemEnrichment" | "PhrasemEnrichment"
+| "Relation" | "Inflection" | "NounInflection"
+| "Disambiguate" | "WordTranslation"
+| "FeaturesNoun" | "FeaturesPronoun" | "FeaturesArticle" | "FeaturesAdjective"
+| "FeaturesVerb" | "FeaturesPreposition" | "FeaturesAdverb" | "FeaturesParticle"
+| "FeaturesConjunction" | "FeaturesInteractionalUnit"
 ```
 
-Type helpers extract inferred types per kind:
+Type helpers still extract inferred per-kind I/O:
 
 ```typescript
 type UserInput<K extends PromptKind>  = z.infer<SchemasFor[K]["userInputSchema"]>
 type AgentOutput<K extends PromptKind> = z.infer<SchemasFor[K]["agentOutputSchema"]>
 ```
 
-#### PromptKind enum
+#### Runtime schema catalog (cutover)
 
-**Source**: `codegen/consts.ts`
+- `Lemma`: minimal classifier result (`lemma`, `linguisticUnit`, `posLikeKind`, `surfaceKind`, optional `contextWithLinkedParts`).
+- `LexemEnrichment` / `PhrasemEnrichment`: core metadata retrieval in Generate (`emojiDescription`, `ipa`, noun-only `genus` + `nounClass`).
+- `Features*` (10 prompt kinds): POS-specific lexical tag extraction (`tags: string[]`).
+- Existing `Morphem`, `Relation`, `Inflection`, `NounInflection`, `Disambiguate`, `WordTranslation`, `Translate` remain.
 
-```typescript
-PromptKind = "Lemma" | "Morphem" | "Relation" | "Translate"
-           | "Inflection" | "NounInflection" | "Disambiguate" | "WordTranslation" | "Features"
-```
+`PromptKind.Features` is removed.
 
-#### Schema catalog
+#### De linguistics contracts (now wired)
 
-| PromptKind | userInputSchema | agentOutputSchema | Linguistics enums used |
-|---|---|---|---|
-| **Lemma** | `{ context, surface }` | `{ lemma, ipa, linguisticUnit, surfaceKind, pos?, nounClass?, genus?, fullSurface?, emojiDescription }` | `LinguisticUnitKindSchema`, `SurfaceKindSchema`, `PARTS_OF_SPEECH_STR` (as v3 re-creation), `NounClass` (v3), `GermanGenus` (v3) |
-| **Morphem** | `{ context, word }` | `{ morphemes: [{ kind, surf, lemma?, separability? }] }` | `GermanMorphemeKindSchema`, `SeparabilitySchema` |
-| **Relation** | `{ context, pos, word }` | `{ relations: [{ kind, words[] }] }` | Own `RelationSubKindSchema` (Synonym, NearSynonym, Antonym, Hypernym, Hyponym, Meronym, Holonym) |
-| **Translate** | `string` | `string` | None |
-| **Inflection** | `{ context, pos, word }` | `{ rows: [{ label, forms }] }` | None (label/forms are free-form strings) |
-| **NounInflection** | `{ context, word }` | `{ cells: [{ case, number, article, form }] }` | `CaseValueSchema`, `NumberValueSchema` |
-| **Disambiguate** | `{ context, lemma, senses: [{ index, emojiDescription, unitKind, pos?, genus? }] }` | `{ matchedIndex: number | null, emojiDescription? }` | None (senses use plain strings) |
-| **WordTranslation** | `{ context, pos, word }` | `string` | None |
-| **Features** | `{ context, pos, word }` | `{ tags: string[] }` (1-5 short lowercase tag components) | None |
+Contracts in `src/linguistics/de/lemma/` are now the runtime source for lemma classification and enrichment/route input shapes.
+
+- `DeLemmaResultSchema` narrows lemma classification to:
+  - `linguisticUnit: "Lexem" | "Phrasem"` (Morphem excluded in this phase)
+  - `posLikeKind` with compatibility guaranteed by schema branch (`POS` for Lexem, `PhrasemeKind` for Phrasem)
+  - required `surfaceKind`
+  - optional `contextWithLinkedParts` for multi-span attestation replacement
+- `generate-contracts.ts` defines core v1 prompt contracts:
+  - shared target (`DeLexicalTargetSchema`)
+  - enrichment (`DeEnrichmentInputSchema` / `DeEnrichmentOutputSchema`)
+  - relation (`DeRelationInputSchema` / `DeRelationOutputSchema`)
+  - inflection (`DeInflectionInputSchema` / `DeInflectionOutputSchema`)
+  - features (`DeFeaturesInputSchema` / `DeFeaturesOutputSchema`)
+  - word translation (`DeWordTranslationInputSchema` / `DeWordTranslationOutputSchema`)
+
+`src/prompt-smith/schemas/lemma.ts` now uses `DeLemmaResultSchema` directly at runtime.
 
 **v3/v4 bridging in schemas**: Where a common enum uses Zod v4 (e.g., `POSSchema`), schemas re-create it with v3:
 
@@ -670,7 +678,7 @@ prompt-parts/ sources
 
 **Step 1 — Format validation**: Checks that all prompt-part files have the correct export names (`agentRole`, `taskDescription`, `examples`) and that example files have proper `satisfies` clauses.
 
-**Step 2 — Presence check**: German-English must have all 9 kinds. Other language pairs are checked for existence but not required.
+**Step 2 — Presence check**: German-English must have all required `PromptKind` parts. Other language pairs are checked for existence but not required.
 
 **Step 3 — Schema validation**: Loads each `to-use.ts` examples array, validates every `input` against `userInputSchema` and every `output` against `agentOutputSchema`. Reports failures by target/known/kind/index/field.
 

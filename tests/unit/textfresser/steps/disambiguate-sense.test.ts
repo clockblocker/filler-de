@@ -52,13 +52,14 @@ const API_RESULT_NOUN = {
 	linguisticUnit: "Lexem",
 	pos: "Noun",
 	surfaceKind: "Lemma",
-};
+} as const;
 
 const API_RESULT_PHRASEM = {
 	lemma: "auf jeden Fall",
 	linguisticUnit: "Phrasem",
+	phrasemeKind: "DiscourseFormula",
 	surfaceKind: "Lemma",
-};
+} as const;
 
 /**
  * Build a minimal note with entries for testing.

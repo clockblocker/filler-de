@@ -1,10 +1,14 @@
 import { describe, expect, it } from "bun:test";
 import { dispatchHeaderFormatter } from "../../../../src/commanders/textfresser/commands/generate/section-formatters/header-dispatch";
 import type { LemmaResult } from "../../../../src/commanders/textfresser/commands/lemma/types";
+import type { AgentOutput } from "../../../../src/prompt-smith";
 
-function makeLemmaResult(
-	overrides: Partial<LemmaResult> = {},
-): LemmaResult {
+type LexemLemmaResult = Extract<LemmaResult, { linguisticUnit: "Lexem" }>;
+type PhrasemLemmaResult = Extract<LemmaResult, { linguisticUnit: "Phrasem" }>;
+
+function makeLexemLemmaResult(
+	overrides: Partial<LexemLemmaResult> = {},
+): LexemLemmaResult {
 	return {
 		attestation: {
 			source: {
@@ -13,19 +17,58 @@ function makeLemmaResult(
 			},
 		} as LemmaResult["attestation"],
 		disambiguationResult: null,
-		emojiDescription: ["🔧"],
-		ipa: "tɛst",
 		lemma: "Test",
 		linguisticUnit: "Lexem",
+		posLikeKind: "Verb",
 		surfaceKind: "Lemma",
 		...overrides,
+	};
+}
+
+function makePhrasemLemmaResult(
+	overrides: Partial<PhrasemLemmaResult> = {},
+): PhrasemLemmaResult {
+	return {
+		attestation: {
+			source: {
+				ref: "ref",
+				textWithOnlyTargetMarked: "context",
+			},
+		} as LemmaResult["attestation"],
+		disambiguationResult: null,
+		lemma: "Test",
+		linguisticUnit: "Phrasem",
+		posLikeKind: "DiscourseFormula",
+		surfaceKind: "Lemma",
+		...overrides,
+	};
+}
+
+function makeVerbEnrichment(): AgentOutput<"LexemEnrichment"> {
+	return {
+		emojiDescription: ["🔧"],
+		ipa: "tɛst",
+		linguisticUnit: "Lexem",
+		posLikeKind: "Verb",
+	};
+}
+
+function makeNounEnrichment(): AgentOutput<"LexemEnrichment"> {
+	return {
+		emojiDescription: ["🔧"],
+		genus: "Maskulinum",
+		ipa: "tɛst",
+		linguisticUnit: "Lexem",
+		nounClass: "Common",
+		posLikeKind: "Noun",
 	};
 }
 
 describe("dispatchHeaderFormatter", () => {
 	it("dispatches Noun with genus to noun formatter (article in output)", () => {
 		const result = dispatchHeaderFormatter(
-			makeLemmaResult({ genus: "Maskulinum", pos: "Noun" }),
+			makeLexemLemmaResult({ posLikeKind: "Noun" }),
+			makeNounEnrichment(),
 			"German",
 		);
 		expect(result).toContain("der [[Test]]");
@@ -33,7 +76,8 @@ describe("dispatchHeaderFormatter", () => {
 
 	it("dispatches Verb to common formatter (no article)", () => {
 		const result = dispatchHeaderFormatter(
-			makeLemmaResult({ pos: "Verb" }),
+			makeLexemLemmaResult({ posLikeKind: "Verb" }),
+			makeVerbEnrichment(),
 			"German",
 		);
 		expect(result).toBe(
@@ -41,9 +85,15 @@ describe("dispatchHeaderFormatter", () => {
 		);
 	});
 
-	it("dispatches Morphem (no POS) to common formatter", () => {
+	it("dispatches Phrasem to common formatter", () => {
 		const result = dispatchHeaderFormatter(
-			makeLemmaResult({ linguisticUnit: "Morphem", pos: undefined }),
+			makePhrasemLemmaResult(),
+			{
+				emojiDescription: ["🔧"],
+				ipa: "tɛst",
+				linguisticUnit: "Phrasem",
+				posLikeKind: "DiscourseFormula",
+			},
 			"German",
 		);
 		expect(result).toBe(
@@ -51,9 +101,10 @@ describe("dispatchHeaderFormatter", () => {
 		);
 	});
 
-	it("falls back to common when Noun has no genus", () => {
+	it("falls back to common when enrichment is not noun-compatible", () => {
 		const result = dispatchHeaderFormatter(
-			makeLemmaResult({ genus: undefined, pos: "Noun" }),
+			makeLexemLemmaResult({ posLikeKind: "Noun" }),
+			makeVerbEnrichment(),
 			"German",
 		);
 		expect(result).not.toContain("der ");
@@ -64,11 +115,16 @@ describe("dispatchHeaderFormatter", () => {
 
 	it("uses precomputedEmojiDescription when available", () => {
 		const result = dispatchHeaderFormatter(
-			makeLemmaResult({
-				emojiDescription: ["🔧"],
-				pos: "Verb",
+			makeLexemLemmaResult({
+				posLikeKind: "Verb",
 				precomputedEmojiDescription: ["🚀"],
 			}),
+			{
+				emojiDescription: ["🔧"],
+				ipa: "tɛst",
+				linguisticUnit: "Lexem",
+				posLikeKind: "Verb",
+			},
 			"German",
 		);
 		expect(result).toContain("🚀");

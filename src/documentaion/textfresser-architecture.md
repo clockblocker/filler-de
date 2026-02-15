@@ -22,7 +22,8 @@ User reads a sentence, finds an unknown word
 User selects it, calls "Lemma"
   ↓
 Lemma (recon):
-  LLM classifies: LinguisticUnitKind + POS + SurfaceKind + lemma form
+  LLM classifies minimal target: lemma + linguisticUnit (Lexem/Phrasem) + posLikeKind + surfaceKind
+  Optionally returns contextWithLinkedParts for multi-span/separable linking
   Wraps the selected word in a [[wikilink]] in the source text
   Stores classification + attestation in state
   ↓
@@ -55,6 +56,8 @@ User gets a tailor-made dictionary that grows with their reading
 > **V12 scope**: POS features as tags + custom header formatting — New `PromptKind.Features` returns non-inflectional grammatical features (e.g., maskulin, transitiv, stark) as tag path components. Tags rendered as `DictSectionKind.Tags` section (`#pos/feature1/feature2`). Lemma prompt now returns `genus` ("Maskulinum"/"Femininum"/"Neutrum") for nouns. Header formatting split per-POS: `dispatchHeaderFormatter()` routes Noun+genus to `de/lexem/noun/header-formatter` (prepends der/die/das), all other POS to common formatter. `CORE_SECTIONS` expanded to include Tags.
 
 > **V13 scope**: Phraseme-kind threading + linguisticUnit metadata restore — Lemma output now includes `phrasemeKind` for `linguisticUnit: "Phrasem"`. `generateSections` restores `meta.linguisticUnit` for `Lexem` and `Phrasem` entries. Disambiguate senses now forward optional `phrasemeKind` hints extracted from `meta.linguisticUnit`.
+
+> **V14 scope**: Minimal Lemma + Generate enrichment cutover — `PromptKind.Lemma` now returns only classifier fields (`lemma`, `linguisticUnit`, `posLikeKind`, `surfaceKind`, optional `contextWithLinkedParts`). Core metadata (`emojiDescription`, `ipa`, noun-only `genus` + `nounClass`) moved to Generate via `PromptKind.LexemEnrichment` / `PromptKind.PhrasemEnrichment`. Features prompt is now POS-specific (`FeaturesNoun` ... `FeaturesInteractionalUnit`), and legacy `PromptKind.Features` is removed. Proper-noun/separable span expansion relies on `contextWithLinkedParts`; legacy `fullSurface` is removed.
 
 > **V9 scope**: LinguisticUnit DTO — Zod-schema-based type system as source of truth for DictEntries. German + Noun fully featured (`genus`, `nounClass`); all other POS/unit kinds have stubs. `GermanLinguisticUnit` built during Generate and stored in `meta.linguisticUnit`. Header prompt now returns `genus` ("Maskulinum"/"Femininum"/"Neutrum") instead of `article` ("der"/"die"/"das"); formatter derives article via `articleFromGenus`. New files: `surface-factory.ts`, `genus.ts`, `noun.ts`, `pos-features.ts`, `lexem-surface.ts`, `phrasem-surface.ts`, `morphem-surface.ts`, `linguistic-unit.ts`. 21 new DTO tests.
 

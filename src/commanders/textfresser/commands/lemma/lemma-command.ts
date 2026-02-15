@@ -1,5 +1,4 @@
 import { errAsync, ok, type ResultAsync } from "neverthrow";
-import type { GermanGenus } from "../../../../linguistics/de/lexem/noun/features";
 import {
 	type VaultAction,
 	VaultActionKind,
@@ -16,7 +15,6 @@ import {
 	type CommandInput,
 } from "../types";
 import { disambiguateSense } from "./steps/disambiguate-sense";
-import type { NounClass, PhrasemeFeatures } from "./types";
 
 /**
  * Resolve attestation: prefer wikilink click context, fall back to text selection.
@@ -46,39 +44,27 @@ function buildWikilink(surface: string, lemma: string): string {
 	return lemma !== surface ? `[[${lemma}|${surface}]]` : `[[${surface}]]`;
 }
 
-/**
- * Expand offset and surface when fullSurface extends beyond the selected surface.
- * Returns the expanded offset and the full surface string to replace, or falls back
- * to the original surface/offset if verification fails.
- */
-export function expandOffsetForFullSurface(
+export function expandOffsetForLinkedSpan(
 	rawBlock: string,
 	surface: string,
 	offset: number,
-	fullSurface: string,
-): { replaceSurface: string; replaceOffset: number } {
-	const surfaceIdxInFull = fullSurface.indexOf(surface);
-	if (surfaceIdxInFull === -1) {
-		logger.warn(
-			`[expandOffset] surface "${surface}" not found in fullSurface "${fullSurface}" — falling back`,
-		);
+	linkedSurface: string,
+): { replaceOffset: number; replaceSurface: string } {
+	const idxInLinked = linkedSurface.indexOf(surface);
+	if (idxInLinked === -1) {
 		return { replaceOffset: offset, replaceSurface: surface };
 	}
 
-	const expandedOffset = offset - surfaceIdxInFull;
+	const replaceOffset = offset - idxInLinked;
 	const candidate = rawBlock.slice(
-		expandedOffset,
-		expandedOffset + fullSurface.length,
+		replaceOffset,
+		replaceOffset + linkedSurface.length,
 	);
-
-	if (candidate !== fullSurface) {
-		logger.warn(
-			`[expandOffset] verification failed: expected "${fullSurface}" at offset ${expandedOffset}, got "${candidate}" — falling back`,
-		);
+	if (candidate !== linkedSurface) {
 		return { replaceOffset: offset, replaceSurface: surface };
 	}
 
-	return { replaceOffset: expandedOffset, replaceSurface: fullSurface };
+	return { replaceOffset, replaceSurface: linkedSurface };
 }
 
 /**
@@ -112,17 +98,39 @@ export function lemmaCommand(
 				reason: e.reason,
 			}),
 		)
-		.andThen((apiResult) =>
-			disambiguateSense(
+		.andThen((lemmaResult) => {
+			if (lemmaResult.linguisticUnit === "Lexem") {
+				return disambiguateSense(
+					textfresserState.vam,
+					textfresserState.promptRunner,
+					{
+						lemma: lemmaResult.lemma,
+						linguisticUnit: "Lexem",
+						pos: lemmaResult.posLikeKind,
+						surfaceKind: lemmaResult.surfaceKind,
+					},
+					context,
+				).map((disambiguationResult) => ({
+					...lemmaResult,
+					disambiguationResult,
+				}));
+			}
+
+			return disambiguateSense(
 				textfresserState.vam,
 				textfresserState.promptRunner,
-				apiResult,
+				{
+					lemma: lemmaResult.lemma,
+					linguisticUnit: "Phrasem",
+					phrasemeKind: lemmaResult.posLikeKind,
+					surfaceKind: lemmaResult.surfaceKind,
+				},
 				context,
 			).map((disambiguationResult) => ({
-				...apiResult,
+				...lemmaResult,
 				disambiguationResult,
-			})),
-		)
+			}));
+		})
 		.andThen((result) => {
 			const precomputedEmojiDescription =
 				result.disambiguationResult &&
@@ -140,35 +148,27 @@ export function lemmaCommand(
 								result.disambiguationResult.matchedIndex,
 						};
 
-			const nounClass: NounClass | undefined =
-				result.pos === "Noun" && result.nounClass
-					? result.nounClass
-					: undefined;
-
-			const genus: GermanGenus | undefined =
-				result.pos === "Noun" && result.genus
-					? result.genus
-					: undefined;
-
-			const phrasemeFeatures: PhrasemeFeatures | undefined =
-				result.linguisticUnit === "Phrasem"
-					? { phrasemeKind: result.phrasemeKind }
-					: undefined;
-
-			textfresserState.latestLemmaResult = {
-				attestation,
-				disambiguationResult,
-				emojiDescription: result.emojiDescription,
-				genus,
-				ipa: result.ipa,
-				lemma: result.lemma,
-				linguisticUnit: result.linguisticUnit,
-				nounClass,
-				phrasemeFeatures,
-				pos: result.pos ?? undefined,
-				precomputedEmojiDescription,
-				surfaceKind: result.surfaceKind,
-			};
+			if (result.linguisticUnit === "Lexem") {
+				textfresserState.latestLemmaResult = {
+					attestation,
+					disambiguationResult,
+					lemma: result.lemma,
+					linguisticUnit: "Lexem",
+					posLikeKind: result.posLikeKind,
+					precomputedEmojiDescription,
+					surfaceKind: result.surfaceKind,
+				};
+			} else {
+				textfresserState.latestLemmaResult = {
+					attestation,
+					disambiguationResult,
+					lemma: result.lemma,
+					linguisticUnit: "Phrasem",
+					posLikeKind: result.posLikeKind,
+					precomputedEmojiDescription,
+					surfaceKind: result.surfaceKind,
+				};
+			}
 
 			const rawBlock = attestation.source.textRaw;
 			const offset = attestation.target.offsetInBlock;
@@ -206,6 +206,34 @@ export function lemmaCommand(
 								result.contextWithLinkedParts;
 						}
 					}
+
+					// Single expanded span (e.g., proper noun / contiguous phrasem)
+					if (updatedBlock === null && spans.length === 1) {
+						const span = spans[0];
+						if (span && span.text !== surface) {
+							const expanded = expandOffsetForLinkedSpan(
+								rawBlock,
+								surface,
+								offset,
+								span.text,
+							);
+							if (expanded.replaceSurface !== surface) {
+								const wikilink = buildWikilink(
+									expanded.replaceSurface,
+									result.lemma,
+								);
+								updatedBlock =
+									rawBlock.slice(0, expanded.replaceOffset) +
+									wikilink +
+									rawBlock.slice(
+										expanded.replaceOffset +
+											expanded.replaceSurface.length,
+									);
+								attestation.source.textWithOnlyTargetMarked =
+									result.contextWithLinkedParts;
+							}
+						}
+					}
 				} else {
 					logger.warn(
 						"[lemma] contextWithLinkedParts stripped text mismatch — falling back to single-span",
@@ -215,34 +243,13 @@ export function lemmaCommand(
 
 			// Fall back to single-span replacement
 			if (updatedBlock === null) {
-				const fullSurface = result.fullSurface;
-				let replaceSurface = surface;
-				let replaceOffset = offset;
-
-				if (
-					fullSurface &&
-					fullSurface !== surface &&
-					offset !== undefined
-				) {
-					const expanded = expandOffsetForFullSurface(
-						rawBlock,
-						surface,
-						offset,
-						fullSurface,
-					);
-					replaceSurface = expanded.replaceSurface;
-					replaceOffset = expanded.replaceOffset;
-				}
-
-				const wikilink = buildWikilink(replaceSurface, result.lemma);
+				const wikilink = buildWikilink(surface, result.lemma);
 
 				updatedBlock =
-					replaceOffset !== undefined
-						? rawBlock.slice(0, replaceOffset) +
+					offset !== undefined
+						? rawBlock.slice(0, offset) +
 							wikilink +
-							rawBlock.slice(
-								replaceOffset + replaceSurface.length,
-							)
+							rawBlock.slice(offset + surface.length)
 						: rawBlock.replace(surface, wikilink);
 			}
 

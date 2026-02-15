@@ -1,14 +1,14 @@
 import { describe, expect, test } from "bun:test";
-import { expandOffsetForFullSurface } from "../../../../src/commanders/textfresser/commands/lemma/lemma-command";
+import { expandOffsetForLinkedSpan } from "../../../../src/commanders/textfresser/commands/lemma/lemma-command";
 
-describe("expandOffsetForFullSurface", () => {
-	test("expands offset when fullSurface extends before the surface", () => {
+describe("expandOffsetForLinkedSpan", () => {
+	test("expands offset when linked span extends before the selected surface", () => {
 		const rawBlock = "bei der Deutsche Bank eröffnet";
 		//                         ^^^^^^^^^^^^^^^
 		//                         offset 8 for "Deutsche Bank"
 		//                                      ^^^^
 		//                                      offset 17 for "Bank"
-		const result = expandOffsetForFullSurface(
+		const result = expandOffsetForLinkedSpan(
 			rawBlock,
 			"Bank",
 			17,
@@ -20,25 +20,24 @@ describe("expandOffsetForFullSurface", () => {
 		});
 	});
 
-	test("returns original surface when fullSurface matches surface position exactly", () => {
+	test("returns original offset/surface when linked surface equals selected surface", () => {
 		const rawBlock = "Ich wohne in Berlin.";
-		const result = expandOffsetForFullSurface(
+		const result = expandOffsetForLinkedSpan(
 			rawBlock,
 			"Berlin",
 			13,
 			"Berlin",
 		);
-		// fullSurface === surface, so surfaceIdxInFull = 0, expandedOffset = 13
 		expect(result).toEqual({
 			replaceOffset: 13,
 			replaceSurface: "Berlin",
 		});
 	});
 
-	test("falls back when verification fails (text mismatch)", () => {
+	test("falls back when verification fails (text mismatch in raw block)", () => {
 		const rawBlock = "bei einer deutschen Bank eröffnet";
-		// fullSurface "Deutsche Bank" won't match at the computed offset
-		const result = expandOffsetForFullSurface(
+		// linked span "Deutsche Bank" won't match at the computed offset
+		const result = expandOffsetForLinkedSpan(
 			rawBlock,
 			"Bank",
 			20,
@@ -50,9 +49,9 @@ describe("expandOffsetForFullSurface", () => {
 		});
 	});
 
-	test("falls back when surface is not found in fullSurface", () => {
+	test("falls back when selected surface is not found in linked span", () => {
 		const rawBlock = "bei der Deutsche Bank eröffnet";
-		const result = expandOffsetForFullSurface(
+		const result = expandOffsetForLinkedSpan(
 			rawBlock,
 			"Foo",
 			8,
@@ -64,13 +63,13 @@ describe("expandOffsetForFullSurface", () => {
 		});
 	});
 
-	test("handles fullSurface where surface is at the beginning", () => {
+	test("handles linked span where selected surface is at the beginning", () => {
 		const rawBlock = "Die Bank of America ist groß.";
 		//                    ^^^^^^^^^^^^^^^^^
 		//                    offset 4 for "Bank of America"
 		//                    ^^^^
 		//                    offset 4 for "Bank"
-		const result = expandOffsetForFullSurface(
+		const result = expandOffsetForLinkedSpan(
 			rawBlock,
 			"Bank",
 			4,
@@ -82,13 +81,13 @@ describe("expandOffsetForFullSurface", () => {
 		});
 	});
 
-	test("handles fullSurface where surface is in the middle", () => {
+	test("handles linked span where selected surface is in the middle", () => {
 		const rawBlock = "Der New York Times Artikel war gut.";
 		//                    ^^^^^^^^^^^^^^^
 		//                    offset 4 for "New York Times"
 		//                        ^^^^
 		//                        offset 8 for "York"
-		const result = expandOffsetForFullSurface(
+		const result = expandOffsetForLinkedSpan(
 			rawBlock,
 			"York",
 			8,

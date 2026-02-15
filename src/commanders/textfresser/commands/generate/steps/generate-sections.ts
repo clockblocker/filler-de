@@ -6,9 +6,16 @@ import {
 	DictSectionKind,
 	TitleReprFor,
 } from "../../../../../linguistics/common/sections/section-kind";
-import type { GermanLinguisticUnit } from "../../../../../linguistics/de";
+import type {
+	DeLexemPos,
+	GermanLinguisticUnit,
+} from "../../../../../linguistics/de";
 import type { NounInflectionCell } from "../../../../../linguistics/de/lexem/noun";
-import { PromptKind } from "../../../../../prompt-smith/codegen/consts";
+import type { AgentOutput } from "../../../../../prompt-smith";
+import {
+	PromptKind,
+	type PromptKind as PromptKindType,
+} from "../../../../../prompt-smith/codegen/consts";
 import type { RelationSubKind } from "../../../../../prompt-smith/schemas/relation";
 import type { ApiServiceError } from "../../../../../stateless-helpers/api-service";
 import type {
@@ -34,7 +41,7 @@ export type ParsedRelation = {
 	words: string[];
 };
 
-/** V3 sections — the ones we generate in this version. Header is built from LemmaResult (no LLM call). */
+/** V3 sections — the ones generated in the current pipeline. */
 const V3_SECTIONS = new Set<DictSectionKind>([
 	DictSectionKind.Morphem,
 	DictSectionKind.Relation,
@@ -44,16 +51,49 @@ const V3_SECTIONS = new Set<DictSectionKind>([
 	DictSectionKind.Tags,
 ]);
 
-function buildSectionQuery(lemmaResult: LemmaResult) {
-	if (lemmaResult.linguisticUnit === "Lexem" && lemmaResult.pos) {
+type LexemEnrichmentOutput = AgentOutput<"LexemEnrichment">;
+type PhrasemEnrichmentOutput = AgentOutput<"PhrasemEnrichment">;
+type EnrichmentOutput = LexemEnrichmentOutput | PhrasemEnrichmentOutput;
+type FeaturesOutput = AgentOutput<"FeaturesNoun">;
+
+const FEATURES_PROMPT_KIND_BY_POS: Record<DeLexemPos, PromptKindType> = {
+	Adjective: PromptKind.FeaturesAdjective,
+	Adverb: PromptKind.FeaturesAdverb,
+	Article: PromptKind.FeaturesArticle,
+	Conjunction: PromptKind.FeaturesConjunction,
+	InteractionalUnit: PromptKind.FeaturesInteractionalUnit,
+	Noun: PromptKind.FeaturesNoun,
+	Particle: PromptKind.FeaturesParticle,
+	Preposition: PromptKind.FeaturesPreposition,
+	Pronoun: PromptKind.FeaturesPronoun,
+	Verb: PromptKind.FeaturesVerb,
+};
+
+export function getFeaturesPromptKindForPos(pos: DeLexemPos): PromptKindType {
+	return FEATURES_PROMPT_KIND_BY_POS[pos];
+}
+
+function buildSectionQuery(
+	lemmaResult: LemmaResult,
+	enrichmentOutput: EnrichmentOutput,
+) {
+	if (lemmaResult.linguisticUnit === "Lexem") {
+		const nounClass =
+			lemmaResult.posLikeKind === "Noun" &&
+			enrichmentOutput.linguisticUnit === "Lexem" &&
+			enrichmentOutput.posLikeKind === "Noun"
+				? enrichmentOutput.nounClass
+				: undefined;
+
 		return {
-			nounClass: lemmaResult.nounClass,
-			pos: lemmaResult.pos,
+			nounClass,
+			pos: lemmaResult.posLikeKind,
 			unit: "Lexem" as const,
 		};
 	}
+
 	return {
-		unit: lemmaResult.linguisticUnit as "Morphem" | "Phrasem",
+		unit: "Phrasem" as const,
 	};
 }
 
@@ -129,39 +169,41 @@ function buildLemmaRefId(entryId: string): string {
 
 function buildLexemLinguisticUnit(
 	entryId: string,
-	lemmaResult: LemmaResult,
+	lemmaResult: Extract<LemmaResult, { linguisticUnit: "Lexem" }>,
+	enrichmentOutput: LexemEnrichmentOutput,
 ): GermanLinguisticUnit | null {
-	if (lemmaResult.linguisticUnit !== "Lexem" || !lemmaResult.pos) {
-		return null;
-	}
-
 	if (lemmaResult.surfaceKind === "Lemma") {
-		if (lemmaResult.pos === "Noun") {
-			if (!lemmaResult.genus || !lemmaResult.nounClass) {
-				logger.warn(
-					"[generateSections] Missing genus/nounClass for noun lemma; skipping linguisticUnit metadata",
-				);
-				return null;
+		if (lemmaResult.posLikeKind === "Noun") {
+			if (
+				enrichmentOutput.posLikeKind === "Noun" &&
+				enrichmentOutput.genus &&
+				enrichmentOutput.nounClass
+			) {
+				return {
+					kind: "Lexem",
+					surface: {
+						features: {
+							genus: enrichmentOutput.genus,
+							nounClass: enrichmentOutput.nounClass,
+							pos: lemmaResult.posLikeKind,
+						},
+						lemma: lemmaResult.lemma,
+						surfaceKind: "Lemma",
+					},
+				};
 			}
 
-			return {
-				kind: "Lexem",
-				surface: {
-					features: {
-						genus: lemmaResult.genus,
-						nounClass: lemmaResult.nounClass,
-						pos: lemmaResult.pos,
-					},
-					lemma: lemmaResult.lemma,
-					surfaceKind: "Lemma",
-				},
-			};
+			logger.warn(
+				"[generateSections] Missing noun genus/nounClass for Lexem lemma metadata",
+				{ enrichmentOutput, lemmaResult },
+			);
+			return null;
 		}
 
 		return {
 			kind: "Lexem",
 			surface: {
-				features: { pos: lemmaResult.pos },
+				features: { pos: lemmaResult.posLikeKind },
 				lemma: lemmaResult.lemma,
 				surfaceKind: "Lemma",
 			},
@@ -171,7 +213,7 @@ function buildLexemLinguisticUnit(
 	return {
 		kind: "Lexem",
 		surface: {
-			features: { pos: lemmaResult.pos },
+			features: { pos: lemmaResult.posLikeKind },
 			lemma: lemmaResult.lemma,
 			lemmaRef: buildLemmaRefId(entryId),
 			surface: lemmaResult.attestation.target.surface,
@@ -182,19 +224,9 @@ function buildLexemLinguisticUnit(
 
 function buildPhrasemLinguisticUnit(
 	entryId: string,
-	lemmaResult: LemmaResult,
-): GermanLinguisticUnit | null {
-	if (lemmaResult.linguisticUnit !== "Phrasem") {
-		return null;
-	}
-
-	const phrasemeFeatures = lemmaResult.phrasemeFeatures;
-	if (!phrasemeFeatures) {
-		logger.warn(
-			"[generateSections] Missing phrasemeFeatures for Phrasem lemma result",
-		);
-		return null;
-	}
+	lemmaResult: Extract<LemmaResult, { linguisticUnit: "Phrasem" }>,
+): GermanLinguisticUnit {
+	const phrasemeFeatures = { phrasemeKind: lemmaResult.posLikeKind };
 
 	if (lemmaResult.surfaceKind === "Lemma") {
 		return {
@@ -210,7 +242,7 @@ function buildPhrasemLinguisticUnit(
 	return {
 		kind: "Phrasem",
 		surface: {
-			features: { phrasemeKind: phrasemeFeatures.phrasemeKind },
+			features: phrasemeFeatures,
 			lemma: lemmaResult.lemma,
 			lemmaRef: buildLemmaRefId(entryId),
 			surface: lemmaResult.attestation.target.surface,
@@ -222,13 +254,31 @@ function buildPhrasemLinguisticUnit(
 export function buildLinguisticUnitMeta(
 	entryId: string,
 	lemmaResult: LemmaResult,
+	enrichmentOutput: EnrichmentOutput,
 ): GermanLinguisticUnit | undefined {
-	const lexem = buildLexemLinguisticUnit(entryId, lemmaResult);
-	if (lexem) return lexem;
+	if (
+		lemmaResult.linguisticUnit === "Lexem" &&
+		enrichmentOutput.linguisticUnit === "Lexem"
+	) {
+		const lexem = buildLexemLinguisticUnit(
+			entryId,
+			lemmaResult,
+			enrichmentOutput,
+		);
+		return lexem ?? undefined;
+	}
 
-	const phrasem = buildPhrasemLinguisticUnit(entryId, lemmaResult);
-	if (phrasem) return phrasem;
+	if (
+		lemmaResult.linguisticUnit === "Phrasem" &&
+		enrichmentOutput.linguisticUnit === "Phrasem"
+	) {
+		return buildPhrasemLinguisticUnit(entryId, lemmaResult);
+	}
 
+	logger.warn(
+		"[generateSections] Enrichment output linguisticUnit mismatched lemma result",
+		{ enrichmentUnit: enrichmentOutput.linguisticUnit, lemmaResult },
+	);
 	return undefined;
 }
 
@@ -286,22 +336,55 @@ export function generateSections(
 	const { promptRunner, languages } = ctx.textfresserState;
 	const targetLang = languages.target;
 
-	const applicableSections = getSectionsFor(buildSectionQuery(lemmaResult));
-	const v3Applicable = applicableSections.filter((s) => V3_SECTIONS.has(s));
-
 	const word = lemmaResult.lemma;
-	const pos =
-		lemmaResult.pos ??
-		(lemmaResult.linguisticUnit !== "Lexem"
-			? lemmaResult.linguisticUnit
-			: "");
+	const posOrKind = lemmaResult.posLikeKind;
 	const context = lemmaResult.attestation.source.textWithOnlyTargetMarked;
 
 	return ResultAsync.fromPromise(
 		(async () => {
-			// Build header from LemmaResult (no LLM call needed)
+			let enrichmentOutput: EnrichmentOutput;
+			if (lemmaResult.linguisticUnit === "Lexem") {
+				enrichmentOutput = await unwrapResultAsync(
+					promptRunner.generate(PromptKind.LexemEnrichment, {
+						context,
+						target: {
+							lemma: lemmaResult.lemma,
+							linguisticUnit: "Lexem",
+							posLikeKind: lemmaResult.posLikeKind,
+							surfaceKind: lemmaResult.surfaceKind,
+						},
+					}),
+				);
+			} else {
+				enrichmentOutput = await unwrapResultAsync(
+					promptRunner.generate(PromptKind.PhrasemEnrichment, {
+						context,
+						target: {
+							lemma: lemmaResult.lemma,
+							linguisticUnit: "Phrasem",
+							posLikeKind: lemmaResult.posLikeKind,
+							surfaceKind: lemmaResult.surfaceKind,
+						},
+					}),
+				);
+			}
+
+			const applicableSections = getSectionsFor(
+				buildSectionQuery(lemmaResult, enrichmentOutput),
+			);
+			const v3Applicable = applicableSections.filter((s) =>
+				V3_SECTIONS.has(s),
+			);
+			const sectionSet = new Set(v3Applicable);
+			const featuresPromptKind =
+				lemmaResult.linguisticUnit === "Lexem"
+					? getFeaturesPromptKindForPos(lemmaResult.posLikeKind)
+					: null;
+
+			// Build header from enrichment output (+ precomputed emoji override)
 			const headerContent = dispatchHeaderFormatter(
 				lemmaResult,
+				enrichmentOutput,
 				targetLang,
 			);
 			const sections: EntrySection[] = [];
@@ -311,8 +394,6 @@ export function generateSections(
 			const failedSections: string[] = [];
 
 			// Fire all independent LLM calls in parallel
-			const sectionSet = new Set(v3Applicable);
-
 			const settled = await Promise.allSettled([
 				sectionSet.has(DictSectionKind.Morphem)
 					? unwrapResultAsync(
@@ -326,12 +407,14 @@ export function generateSections(
 					? unwrapResultAsync(
 							promptRunner.generate(PromptKind.Relation, {
 								context,
-								pos,
+								pos: posOrKind,
 								word,
 							}),
 						)
 					: null,
-				sectionSet.has(DictSectionKind.Inflection) && pos === "Noun"
+				sectionSet.has(DictSectionKind.Inflection) &&
+				lemmaResult.linguisticUnit === "Lexem" &&
+				lemmaResult.posLikeKind === "Noun"
 					? unwrapResultAsync(
 							promptRunner.generate(PromptKind.NounInflection, {
 								context,
@@ -339,11 +422,13 @@ export function generateSections(
 							}),
 						)
 					: null,
-				sectionSet.has(DictSectionKind.Inflection) && pos !== "Noun"
+				sectionSet.has(DictSectionKind.Inflection) &&
+				lemmaResult.linguisticUnit === "Lexem" &&
+				lemmaResult.posLikeKind !== "Noun"
 					? unwrapResultAsync(
 							promptRunner.generate(PromptKind.Inflection, {
 								context,
-								pos,
+								pos: posOrKind,
 								word,
 							}),
 						)
@@ -353,17 +438,16 @@ export function generateSections(
 							promptRunner.generate(PromptKind.WordTranslation, {
 								context:
 									markdownHelper.replaceWikilinks(context),
-								pos,
+								pos: posOrKind,
 								word,
 							}),
 						)
 					: null,
 				// Features prompt — fires for all Lexem POS (non-critical)
-				lemmaResult.linguisticUnit === "Lexem" && pos
+				sectionSet.has(DictSectionKind.Tags) && featuresPromptKind
 					? unwrapResultAsync(
-							promptRunner.generate(PromptKind.Features, {
+							promptRunner.generate(featuresPromptKind, {
 								context,
-								pos,
 								word,
 							}),
 						)
@@ -396,7 +480,7 @@ export function generateSections(
 				settled[5],
 				"Features",
 				failedSections,
-			);
+			) as FeaturesOutput | null;
 
 			// Assemble sections in correct order from parallel results
 			for (const sectionKind of v3Applicable) {
@@ -447,12 +531,20 @@ export function generateSections(
 					case DictSectionKind.Inflection: {
 						let inflectionContent: string | undefined;
 
-						if (pos === "Noun" && nounInflectionOutput) {
+						if (
+							lemmaResult.linguisticUnit === "Lexem" &&
+							lemmaResult.posLikeKind === "Noun" &&
+							nounInflectionOutput
+						) {
 							const result =
 								formatInflection(nounInflectionOutput);
 							inflectionContent = result.formattedSection;
 							inflectionCells = result.cells;
-						} else if (pos !== "Noun" && otherInflectionOutput) {
+						} else if (
+							lemmaResult.linguisticUnit === "Lexem" &&
+							lemmaResult.posLikeKind !== "Noun" &&
+							otherInflectionOutput
+						) {
 							inflectionContent = formatInflectionSection(
 								otherInflectionOutput,
 							);
@@ -484,9 +576,12 @@ export function generateSections(
 					}
 
 					case DictSectionKind.Tags: {
-						if (featuresOutput && pos) {
+						if (
+							featuresOutput &&
+							lemmaResult.linguisticUnit === "Lexem"
+						) {
 							const tagPath = [
-								pos.toLowerCase(),
+								lemmaResult.posLikeKind.toLowerCase(),
 								...featuresOutput.tags,
 							].join("/");
 							sections.push({
@@ -514,15 +609,14 @@ export function generateSections(
 			}
 
 			const entryId =
-				lemmaResult.linguisticUnit === "Lexem" && lemmaResult.pos
+				lemmaResult.linguisticUnit === "Lexem"
 					? dictEntryIdHelper.build({
 							index: nextIndex,
-							pos: lemmaResult.pos,
+							pos: lemmaResult.posLikeKind,
 							surfaceKind: lemmaResult.surfaceKind,
 							unitKind: "Lexem",
 						})
-					: lemmaResult.linguisticUnit === "Phrasem" ||
-							lemmaResult.linguisticUnit === "Morphem"
+					: lemmaResult.linguisticUnit === "Phrasem"
 						? dictEntryIdHelper.build({
 								index: nextIndex,
 								surfaceKind: lemmaResult.surfaceKind,
@@ -539,6 +633,7 @@ export function generateSections(
 			const linguisticUnit = buildLinguisticUnitMeta(
 				entryId,
 				lemmaResult,
+				enrichmentOutput,
 			);
 
 			const newEntry: DictEntry = {
@@ -547,7 +642,7 @@ export function generateSections(
 				meta: {
 					emojiDescription:
 						lemmaResult.precomputedEmojiDescription ??
-						lemmaResult.emojiDescription,
+						enrichmentOutput.emojiDescription,
 					...(linguisticUnit ? { linguisticUnit } : {}),
 				},
 				sections,

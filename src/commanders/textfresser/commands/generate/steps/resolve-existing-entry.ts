@@ -33,7 +33,9 @@ export function resolveExistingEntry(
 	const prefix = dictEntryIdHelper.buildPrefix(
 		lemmaResult.linguisticUnit,
 		lemmaResult.surfaceKind,
-		lemmaResult.pos,
+		lemmaResult.linguisticUnit === "Lexem"
+			? lemmaResult.posLikeKind
+			: undefined,
 	);
 
 	const disambResult = lemmaResult.disambiguationResult;
@@ -53,7 +55,8 @@ export function resolveExistingEntry(
 					parsed !== undefined &&
 					parsed.index === disambResult.matchedIndex &&
 					parsed.unitKind === lemmaResult.linguisticUnit &&
-					(!lemmaResult.pos || parsed.pos === lemmaResult.pos)
+					(lemmaResult.linguisticUnit !== "Lexem" ||
+						parsed.pos === lemmaResult.posLikeKind)
 				);
 			}) ?? null;
 	}
