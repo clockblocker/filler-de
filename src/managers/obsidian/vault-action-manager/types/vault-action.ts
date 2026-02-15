@@ -1,0 +1,99 @@
+// ─── Vault Action Definitions (moved here for platform boundary) ───
+
+// NOTE: Must stay v4 — VaultActionKindSchema uses z.enum with mapped template
+// literals that only infer correctly in v4. Switching to v3 breaks discriminated
+// union narrowing in all consuming files (collapse.ts, executor.ts, etc.).
+import z from "zod";
+import {
+	CREATE,
+	FILE,
+	FOLDER,
+	MD_FILE,
+	PROCESS,
+	RENAME,
+	TRASH,
+	UPSERT,
+} from "./literals";
+import type {
+	SplitPathFromTo,
+	SplitPathToFile,
+	SplitPathToFolder,
+	SplitPathToMdFile,
+} from "./split-path";
+
+// Operations allowed per target
+const FolderOps = z.enum([CREATE, RENAME, TRASH] as const);
+const FileOps = z.enum([CREATE, RENAME, TRASH] as const);
+const MdFileOps = z.enum([UPSERT, PROCESS, RENAME, TRASH] as const);
+
+const TargetSchema = z.enum([FOLDER, FILE, MD_FILE] as const);
+const Target = TargetSchema.enum;
+
+export const VaultActionKindSchema = z.enum([
+	...FolderOps.options.map((op) => `${op}${Target.Folder}` as const),
+	...FileOps.options.map((op) => `${op}${Target.File}` as const),
+	...MdFileOps.options.map((op) => `${op}${Target.MdFile}` as const),
+] as const);
+
+export const VaultActionKind = VaultActionKindSchema.enum;
+export type VaultActionKind = z.infer<typeof VaultActionKindSchema>;
+
+export type Transform = (content: string) => string | Promise<string>;
+
+// Folder payloads
+type CreateFolderPayload = {
+	splitPath: SplitPathToFolder;
+	content?: string;
+};
+type RenameFolderPayload = SplitPathFromTo<SplitPathToFolder>;
+type TrashFolderPayload = { splitPath: SplitPathToFolder };
+
+// File payloads
+type CreateFilePayload = {
+	splitPath: SplitPathToFile;
+	content?: string;
+};
+type RenameFilePayload = SplitPathFromTo<SplitPathToFile>;
+type TrashFilePayload = { splitPath: SplitPathToFile };
+
+// MdFile payloads
+type UpsertMdFilePayload = {
+	splitPath: SplitPathToMdFile;
+	/**
+	 * Content to write. If null or undefined, ensures file exists without overwriting existing content.
+	 * If empty string, creates with empty content.
+	 */
+	content?: string | null;
+};
+type RenameMdFilePayload = SplitPathFromTo<SplitPathToMdFile>;
+type TrashMdFilePayload = { splitPath: SplitPathToMdFile };
+type ProcessMdFilePayload =
+	| { splitPath: SplitPathToMdFile; transform: Transform }
+	| { splitPath: SplitPathToMdFile; before: string; after: string };
+
+export type VaultAction =
+	| {
+			kind: typeof VaultActionKind.CreateFolder;
+			payload: CreateFolderPayload;
+	  }
+	| {
+			kind: typeof VaultActionKind.RenameFolder;
+			payload: RenameFolderPayload;
+	  }
+	| { kind: typeof VaultActionKind.TrashFolder; payload: TrashFolderPayload }
+	| { kind: typeof VaultActionKind.CreateFile; payload: CreateFilePayload }
+	| { kind: typeof VaultActionKind.RenameFile; payload: RenameFilePayload }
+	| { kind: typeof VaultActionKind.TrashFile; payload: TrashFilePayload }
+	| {
+			kind: typeof VaultActionKind.UpsertMdFile;
+			payload: UpsertMdFilePayload;
+	  }
+	| {
+			kind: typeof VaultActionKind.RenameMdFile;
+			payload: RenameMdFilePayload;
+	  }
+	| { kind: typeof VaultActionKind.TrashMdFile; payload: TrashMdFilePayload }
+	| {
+			kind: typeof VaultActionKind.ProcessMdFile;
+			payload: ProcessMdFilePayload;
+	  };

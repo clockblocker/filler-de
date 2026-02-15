@@ -1,0 +1,354 @@
+.entry_section_title {
+	float: right;
+
+	display: flex;
+	justify-content: flex-end;
+	width: 100%;
+	padding-top: 4px;
+
+	padding-bottom: 2px;
+	margin-bottom: 8px;
+
+	font-size: 12px;
+	line-height: 12px;
+	border-bottom: 1px dashed white;
+
+	opacity: 0.1;
+}
+
+.cm-html-embed > .entry_section_title {
+	font-size: 0;
+	line-height: 0px;
+}
+
+.entry_section_title.entry_section_title_formen {
+	border-top: 1px solid white;
+	border-bottom: none;
+	opacity: 0.2;
+}
+
+.entry_section_title.entry_section_title_kontexte {
+	margin-bottom: 12px;
+}
+
+.inline-title {
+	margin: 0;
+}
+
+/* Ref to block */
+.markdown-preview-sizer.markdown-preview-section > .el-p > p {
+	padding-right: 20px;
+}
+
+.markdown-embed-link {
+	opacity: 0.2;
+}
+
+.embed-title.markdown-embed-title {
+	display: none;
+}
+
+.hidden {
+	flex: 1;
+	padding: 0; /* Remove padding if needed */
+	margin: 0; /* Remove margin if needed */
+	color: transparent !important; /* Hides text */
+	outline: none !important; /* No focus outline */
+	background-color: transparent !important;
+	border: none; /* No border */
+	box-shadow: none !important; /* No shadow */
+	box-shadow: transparent !important;
+}
+
+.note_block {
+	display: flex;
+	width: 100%;
+	padding-bottom: 4px;
+	border-bottom: 1px dashed hsla(0, 0%, 100%, 0.3);
+}
+
+span.cm-html-embed {
+	display: inline-block;
+	width: 100%;
+}
+
+/* --- */
+
+/* Host marks the content area that currently has an overlay */
+.bottom-overlay-host {
+	position: relative; /* allows absolute child to anchor to bottom of the note area */
+}
+
+/* The overlay bar itself */
+.my-bottom-overlay {
+	position: absolute; /* anchored inside the note pane, not global */
+	right: 0;
+	bottom: 0;
+	left: 0;
+	z-index: 20; /* above edge zones (z-index 15), below app headers */
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	height: 56px;
+	padding: 8px 12px;
+	background: var(--background-primary);
+	border-top: 1px solid var(--background-modifier-border);
+	box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
+	backdrop-filter: blur(6px); /* above note content, below app headers */
+}
+
+/* Buttons */
+.my-bottom-overlay-btn {
+	padding: 6px 10px;
+	font: inherit;
+	cursor: pointer;
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+}
+.my-bottom-overlay-btn:hover:not(:disabled) {
+	background: var(--background-secondary-alt);
+}
+.my-bottom-overlay-btn:disabled,
+.my-bottom-overlay-btn.is-disabled {
+	cursor: not-allowed;
+	opacity: 0.4;
+}
+
+/* Separator between nav buttons and other buttons */
+.bottom-toolbar-separator {
+	color: var(--text-muted);
+	user-select: none;
+	opacity: 0.5;
+}
+
+/* Toggle this class from your plugin if you want */
+body.hide-status-bar .status-bar {
+	display: none !important;
+}
+
+/* Remove any bottom spacing when status bar is hidden */
+body.hide-status-bar .mod-root .workspace-split {
+	padding-bottom: max(0px, env(safe-area-inset-bottom));
+}
+
+/* ------ */
+
+.selection-toolbar {
+	z-index: 10000; /* above selection and status popups */
+	display: flex;
+	gap: 6px;
+	padding: 6px;
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 10px;
+	box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.selection-toolbar-btn {
+	padding: 4px 8px;
+	font: inherit;
+	cursor: pointer;
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+}
+.selection-toolbar-btn:hover:not(:disabled) {
+	background: var(--background-secondary-alt);
+}
+.selection-toolbar-btn:disabled,
+.selection-toolbar-btn.is-disabled {
+	cursor: not-allowed;
+	opacity: 0.4;
+}
+
+#textfresser_meta_keep_me_invisible {
+    opacity: 0;
+}
+
+/* Remove underline from links — entries are link-heavy */
+a {
+    text-decoration: none !important;
+}
+a:hover {
+    text-decoration: none !important;
+}
+a:visited {
+    text-decoration: none !important;
+}
+
+/* Remove underline from wikilinks in Live Preview */
+.markdown-source-view.mod-cm6 .cm-underline {
+    text-decoration-line: none !important;
+}
+
+/* ------ Edge Navigation Buttons ------ */
+
+.edge-nav-btn {
+	position: absolute;
+	top: 50%;
+	z-index: 15;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 40px;
+	height: 60px;
+	font-size: 20px;
+	font-weight: bold;
+	cursor: pointer;
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	opacity: 0.6;
+	transform: translateY(-50%);
+	transition: opacity 0.2s, background 0.2s;
+}
+
+.edge-nav-btn:hover {
+	background: var(--background-secondary-alt);
+	opacity: 1;
+}
+
+.edge-nav-left {
+	left: 8px;
+}
+
+.edge-nav-right {
+	right: 8px;
+}
+
+/* Hide edge buttons on narrow viewports */
+@media (max-width: 600px) {
+	.edge-nav-btn {
+		display: none;
+	}
+}
+
+/* ------ Overflow Menu ------ */
+
+.bottom-overflow-menu {
+	z-index: 100;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 140px;
+	padding: 8px;
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.bottom-overflow-item {
+	width: 100%;
+	padding: 8px 12px;
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+	background: transparent;
+	border: none;
+	border-radius: 4px;
+}
+
+.bottom-overflow-item:hover:not(:disabled) {
+	background: var(--background-secondary);
+}
+
+.bottom-overflow-item:disabled,
+.bottom-overflow-item.is-disabled {
+	cursor: not-allowed;
+	opacity: 0.4;
+}
+
+/* Overflow button styling */
+.overflow-btn {
+	min-width: 40px;
+	font-size: 18px;
+}
+
+/* ------ Edge Padding Zones ------ */
+
+.edge-padding-zone {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	z-index: 15;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	opacity: 0;
+	transition: opacity 0.2s, background-color 0.2s;
+}
+
+.edge-padding-zone:hover {
+	opacity: 1;
+}
+
+.edge-padding-zone-left:hover {
+	background: linear-gradient(to right,
+		var(--background-modifier-hover) 0%,
+		transparent 100%);
+}
+
+.edge-padding-zone-right:hover {
+	background: linear-gradient(to left,
+		var(--background-modifier-hover) 0%,
+		transparent 100%);
+}
+
+.edge-padding-zone-left {
+	left: 0;
+}
+
+.edge-padding-zone-right {
+	right: 0;
+}
+
+.edge-padding-icon {
+	color: var(--text-muted);
+	user-select: none;
+}
+
+.edge-padding-icon svg {
+	width: 24px;
+	height: 24px;
+	stroke-width: 2.5;
+}
+
+/* ------ Textfresser Bottom Toolbar ------ */
+
+.tf-bottom-toolbar {
+	position: absolute;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	z-index: 20;
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	height: 56px;
+	padding: 8px 12px;
+	background: var(--background-primary);
+	border-top: 1px solid var(--background-modifier-border);
+	box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
+	backdrop-filter: blur(6px);
+}
+
+.tf-bottom-toolbar-btn {
+	padding: 6px 10px;
+	font: inherit;
+	cursor: pointer;
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+}
+
+.tf-bottom-toolbar-btn:hover:not(:disabled) {
+	background: var(--background-secondary-alt);
+}
+
+.tf-bottom-toolbar-btn:disabled {
+	cursor: not-allowed;
+	opacity: 0.4;
+}

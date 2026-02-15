@@ -1,0 +1,38 @@
+import { z } from "zod/v3";
+
+const supportedPromptKinds = [
+	"Translate",
+	"Morphem",
+	"Lemma",
+	"LexemEnrichment",
+	"PhrasemEnrichment",
+	"Relation",
+	"Inflection",
+	"NounInflection",
+	"Disambiguate",
+	"WordTranslation",
+	"FeaturesNoun",
+	"FeaturesPronoun",
+	"FeaturesArticle",
+	"FeaturesAdjective",
+	"FeaturesVerb",
+	"FeaturesPreposition",
+	"FeaturesAdverb",
+	"FeaturesParticle",
+	"FeaturesConjunction",
+	"FeaturesInteractionalUnit",
+] as const;
+
+export const PromptKindSchema = z.enum(supportedPromptKinds);
+
+export type PromptKind = z.infer<typeof PromptKindSchema>;
+export const PromptKind = PromptKindSchema.enum;
+export const ALL_PROMPT_KINDS = PromptKindSchema.options;
+
+// Take supported languages from types.ts
+
+export const PromptPartKind = z.enum([
+	"AgentRole",
+	"TaskDescription",
+	"Example",
+]);

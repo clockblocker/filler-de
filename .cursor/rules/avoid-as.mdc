@@ -1,0 +1,12 @@
+---
+alwaysApply: true
+---
+This is a ts-based + zod-pilled project.
+
+The type safety is a priority.
+
+Use "as" or "any" in the exeptional cases (i.e. undocument, yet exposed Obsidian API)
+
+Each use shall be commented.
+
+If you want to add "as" or "any", it is better to stop and think about it.

@@ -1,0 +1,103 @@
+/**
+ * Convert CodexAction[] to VaultAction[].
+ */
+
+import type { SplitPathToMdFile } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import {
+	type VaultAction,
+	VaultActionKind,
+} from "../../../../../managers/obsidian/vault-action-manager/types/vault-action";
+import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metadata";
+import type { Codecs } from "../../../codecs";
+import type { CodecRules } from "../../../codecs/rules";
+import { makeVaultScopedSplitPath } from "../tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
+import { makeCodexTransform } from "./backlink-transforms";
+import type { CodexAction } from "./types/codex-action";
+
+/**
+ * Convert a single CodexAction to VaultAction.
+ */
+export function codexActionToVaultAction(
+	action: CodexAction,
+	rules: CodecRules,
+	codecs: Codecs,
+): VaultAction {
+	switch (action.kind) {
+		case "UpsertCodex":
+			return {
+				kind: VaultActionKind.UpsertMdFile,
+				payload: {
+					content: action.payload.content,
+					// Type assertion: SplitPathToMdFileInsideLibrary → SplitPathToMdFile via EnscopedSplitPath
+					splitPath: makeVaultScopedSplitPath(
+						action.payload.splitPath,
+						rules,
+					) as SplitPathToMdFile,
+				},
+			};
+
+		case "WriteScrollStatus": {
+			// ProcessMdFile with transform to update status while preserving other metadata
+			const status = action.payload.status;
+			// For frontmatter, "Unknown" status is treated as "NotStarted"
+			const normalizedStatus =
+				status === "Unknown" ? ("NotStarted" as const) : status;
+			// Use toggleStatus which properly merges with existing frontmatter
+			// (internally calls upsertFrontmatterStatus which reads existing metadata first)
+			const checked = normalizedStatus === "Done";
+			return {
+				kind: VaultActionKind.ProcessMdFile,
+				payload: {
+					// Type assertion: SplitPathToMdFileInsideLibrary → SplitPathToMdFile via EnscopedSplitPath
+					splitPath: makeVaultScopedSplitPath(
+						action.payload.splitPath,
+						rules,
+					) as SplitPathToMdFile,
+					transform: noteMetadataHelper.toggleStatus(checked),
+				},
+			};
+		}
+
+		case "EnsureCodexFileExists":
+			// UpsertMdFile with null content = ensure exists without overwrite
+			return {
+				kind: VaultActionKind.UpsertMdFile,
+				payload: {
+					content: null,
+					splitPath: makeVaultScopedSplitPath(
+						action.payload.splitPath,
+						rules,
+					) as SplitPathToMdFile,
+				},
+			};
+
+		case "ProcessCodex":
+			return {
+				kind: VaultActionKind.ProcessMdFile,
+				payload: {
+					splitPath: makeVaultScopedSplitPath(
+						action.payload.splitPath,
+						rules,
+					) as SplitPathToMdFile,
+					transform: makeCodexTransform(
+						action.payload.section,
+						action.payload.sectionChain,
+						codecs,
+					),
+				},
+			};
+	}
+}
+
+/**
+ * Convert CodexAction[] to VaultAction[].
+ */
+export function codexActionsToVaultActions(
+	actions: CodexAction[],
+	rules: CodecRules,
+	codecs: Codecs,
+): VaultAction[] {
+	return actions.map((action) =>
+		codexActionToVaultAction(action, rules, codecs),
+	);
+}

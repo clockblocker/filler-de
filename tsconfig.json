@@ -1,19 +1,40 @@
 {
 	"compilerOptions": {
-		"baseUrl": "src",
-		"inlineSourceMap": true,
-		"inlineSources": true,
-		"module": "ESNext",
-		"target": "ES6",
+		"allowImportingTsExtensions": true,
 		"allowJs": true,
-		"noImplicitAny": true,
-		"moduleResolution": "node",
-		"importHelpers": true,
-		"isolatedModules": true,
-		"strictNullChecks": true,
-		"lib": ["DOM", "ES5", "ES6", "ES7", "ES2021"],
+
+		// Override Bun's default settings that might affect discriminated unions
+		"isolatedModules": false,
+		// Environment setup & latest features
+		"lib": ["ESNext", "DOM"],
+		"module": "Preserve",
+		"moduleDetection": "force",
+
+		// Bundler mode
+		"moduleResolution": "bundler",
+		"noEmit": true,
+		"noFallthroughCasesInSwitch": true,
+		"noImplicitOverride": true,
+		"noPropertyAccessFromIndexSignature": false,
+		"noUncheckedIndexedAccess": true,
+
+		// Some stricter flags (disabled by default)
+		"noUnusedLocals": false,
+		"noUnusedParameters": false,
 		"skipLibCheck": true,
-		"types": ["node", "codemirror", "tern"]
+		"strictNullChecks": true,
+
+		// Best practices
+		"strictPropertyInitialization": false,
+		"target": "ESNext",
+		"types": ["obsidian", "bun-types", "mocha"],
+		"verbatimModuleSyntax": true
 	},
-	"include": ["**/*.ts"]
+	"plugins": [
+		{
+			"moveDownPatterns": ["dist"],
+			"moveUpPatterns": ["@/", "\\.{1,2}/"],
+			"name": "ts-plugin-sort-import-suggestions"
+		}
+	]
 }

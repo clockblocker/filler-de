@@ -1,0 +1,59 @@
+import { ok, ResultAsync } from "neverthrow";
+import type { VaultAction } from "../../../../managers/obsidian/vault-action-manager";
+import { VaultActionKind } from "../../../../managers/obsidian/vault-action-manager/types/vault-action";
+
+import type { CommandError, CommandInput, CommandState } from "../types";
+import { checkAttestation } from "./steps/check-attestation";
+import { checkEligibility } from "./steps/check-eligibility";
+import { checkLemmaResult } from "./steps/check-lemma-result";
+import { decorateAttestationSeparability } from "./steps/decorate-attestation-separability";
+import { generateSections } from "./steps/generate-sections";
+import { moveToWorter } from "./steps/move-to-worter";
+import { propagateInflections } from "./steps/propagate-inflections";
+import { propagateMorphemes } from "./steps/propagate-morphemes";
+import { propagateRelations } from "./steps/propagate-relations";
+import { resolveExistingEntry } from "./steps/resolve-existing-entry";
+import { serializeEntry } from "./steps/serialize-entry";
+
+/**
+ * Pipeline:
+ * checkAttestation → checkEligibility → checkLemmaResult
+ * → resolveExistingEntry (parse existing entries)
+ * → generateSections (async: LLM calls or append attestation)
+ * → propagateRelations (cross-ref inverse relations to target notes)
+ * → propagateMorphemes (back-ref morpheme notes for multi-morpheme words)
+ * → propagateInflections (create/update one inflection entry per noun form)
+ * → serializeEntry (includes noteKind meta) → moveToWorter → addWriteAction
+ */
+export function generateCommand(
+	input: CommandInput,
+): ResultAsync<VaultAction[], CommandError> {
+	const state: CommandState = { ...input, actions: [] };
+
+	return new ResultAsync(
+		Promise.resolve(
+			checkAttestation(state)
+				.andThen(checkEligibility)
+				.andThen(checkLemmaResult)
+				.andThen(resolveExistingEntry),
+		),
+	)
+		.andThen(generateSections)
+		.andThen(propagateRelations)
+		.andThen(propagateMorphemes)
+		.andThen(decorateAttestationSeparability)
+		.andThen(propagateInflections)
+		.andThen(serializeEntry)
+		.andThen(moveToWorter)
+		.andThen((c) => {
+			const activeFile = c.commandContext.activeFile;
+			const writeAction = {
+				kind: VaultActionKind.ProcessMdFile,
+				payload: {
+					splitPath: activeFile.splitPath,
+					transform: () => activeFile.content,
+				},
+			} as const;
+			return ok([...c.actions, writeAction]);
+		});
+}

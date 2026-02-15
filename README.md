@@ -26,6 +26,7 @@ The "Generate" command will take the name of the opened file and:
 - if it's a _normal form_, will generate the structured dictionary entry
 
 ### Makes a dictionary entry with all forms of the word
+
 ![A dictionary entry](img/new-note.png)
 
 The "Populate" command will:

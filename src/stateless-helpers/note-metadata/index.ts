@@ -1,0 +1,143 @@
+/**
+ * Note Metadata Manager - Public API
+ *
+ * Format-agnostic API for reading and writing note metadata.
+ * Consumers don't know if metadata is stored as YAML frontmatter or internal JSON.
+ */
+
+import { z } from "zod";
+import { getParsedUserSettings } from "../../global-state/global-state";
+import type { Transform } from "../../managers/obsidian/vault-action-manager/types/vault-action";
+import {
+	extractFrontmatter,
+	frontmatterToInternal,
+	parseFrontmatter,
+	stripOnlyFrontmatter as stripFm,
+	upsertFrontmatterStatus,
+	writeFrontmatter,
+} from "./internal/frontmatter";
+import {
+	extractJsonSection,
+	findMetaSectionStart,
+	type Metadata,
+	readJsonSection,
+	stripJsonSection,
+	writeJsonSection,
+} from "./internal/json-section";
+
+/** Schema for reading any metadata (used for merging) - passthrough allows extra keys */
+const AnyMetadataSchema = z.object({}).passthrough();
+
+// ─── Public API ───
+
+/**
+ * Read metadata from note content.
+ * Tries internal JSON format first (authoritative), falls back to YAML frontmatter.
+ * Returns null if no metadata or parse fails.
+ */
+function read<T extends Metadata>(
+	content: string,
+	schema: z.ZodSchema<T>,
+): T | null {
+	// Try internal JSON first (authoritative)
+	const internal = readJsonSection(content, schema);
+	if (internal) return internal;
+
+	// Fallback to frontmatter
+	const fm = parseFrontmatter(content);
+	if (!fm) return null;
+
+	const converted = frontmatterToInternal(fm);
+	const parsed = schema.safeParse(converted);
+	return parsed.success ? parsed.data : null;
+}
+
+/**
+ * Upsert metadata in note content.
+ * Writes to appropriate format based on hideMetadata setting.
+ * Returns Transform function for use with ProcessMdFile.
+ */
+function upsert(metadata: Metadata): Transform {
+	const { hideMetadata } = getParsedUserSettings();
+	return hideMetadata
+		? writeJsonSection(metadata)
+		: writeFrontmatter(metadata);
+}
+
+/**
+ * Strip all metadata from content (both JSON section and YAML frontmatter).
+ * Returns clean body text with leading whitespace trimmed.
+ */
+function strip(content: string): string {
+	const withoutJson = stripJsonSection(content);
+	const withoutFm = stripFm(withoutJson);
+	return withoutFm.trimStart();
+}
+
+/**
+ * Strip only YAML frontmatter from content (for position calculation).
+ * Does NOT strip JSON section. Use strip() to remove all metadata.
+ */
+function stripOnlyFrontmatter(content: string): string {
+	return stripFm(content).trimStart();
+}
+
+// ─── Decompose ───
+
+/**
+ * Decompose note content into its three parts: frontmatter, body, and JSON section.
+ * Useful for transforms that need to modify body while preserving metadata.
+ */
+function decompose(content: string): {
+	frontmatter: string;
+	body: string;
+	jsonSection: string;
+} {
+	const { body: withoutJson, jsonSection } = extractJsonSection(content);
+	const { frontmatter, body } = extractFrontmatter(withoutJson);
+	return { body, frontmatter, jsonSection };
+}
+
+// ─── Status Toggle ───
+
+/**
+ * Status type for tree nodes.
+ */
+export type StatusValue = "Done" | "NotStarted";
+
+/**
+ * Toggle status property in note metadata.
+ * Works with both YAML frontmatter and internal JSON formats.
+ * PRESERVES all existing metadata fields (e.g., prevPageIdx, nextPageIdx).
+ * Returns Transform function for use with ProcessMdFile.
+ *
+ * @param checked - The new checkbox state (true = Done, false = NotStarted)
+ */
+function toggleStatus(checked: boolean): Transform {
+	const status: StatusValue = checked ? "Done" : "NotStarted";
+	const { hideMetadata } = getParsedUserSettings();
+
+	if (hideMetadata) {
+		// Internal JSON format - read existing metadata and merge with new status
+		return (content: string) => {
+			const existing = readJsonSection(content, AnyMetadataSchema);
+			const merged = { ...(existing ?? {}), status };
+			return writeJsonSection(merged)(content);
+		};
+	}
+	// YAML frontmatter format (upsertFrontmatterStatus already preserves existing)
+	return upsertFrontmatterStatus(status);
+}
+
+/**
+ * Note metadata helper object with grouped functions.
+ */
+export const noteMetadataHelper = {
+	decompose,
+	findSectionStart: findMetaSectionStart,
+	read,
+	strip,
+	stripOnlyFrontmatter,
+	toggleStatus,
+	upsert,
+};

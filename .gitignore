@@ -1,5 +1,6 @@
 # vscode
 .vscode 
+.hotreload
 
 # Intellij
 *.iml
@@ -22,3 +23,16 @@ data.json
 .DS_Store
 
 prompt.ts
+
+/tests/tracing/logs/**/*
+/tests/splitter-logs
+/.wdio-logs
+
+.obsidian-cache
+.env
+
+/tests/prompt-test/logs
+
+
+# Bun
+bun.lockb

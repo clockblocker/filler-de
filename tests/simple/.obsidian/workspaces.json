@@ -1,0 +1,180 @@
+{
+	"active": "saved-layout",
+	"workspaces": {
+		"saved-layout": {
+			"active": "bdc690dedf590256",
+			"left": {
+				"children": [
+					{
+						"children": [
+							{
+								"id": "8382719edfff37a3",
+								"state": {
+									"icon": "lucide-folder-closed",
+									"state": {
+										"autoReveal": false,
+										"sortOrder": "alphabetical"
+									},
+									"title": "Files",
+									"type": "file-explorer"
+								},
+								"type": "leaf"
+							},
+							{
+								"id": "9f168764fee8a688",
+								"state": {
+									"icon": "lucide-search",
+									"state": {
+										"collapseAll": false,
+										"explainSearch": false,
+										"extraContext": false,
+										"matchingCase": false,
+										"query": "",
+										"sortOrder": "alphabetical"
+									},
+									"title": "Search",
+									"type": "search"
+								},
+								"type": "leaf"
+							},
+							{
+								"id": "e3fc38c96662f5f2",
+								"state": {
+									"icon": "lucide-bookmark",
+									"state": {},
+									"title": "Bookmarks",
+									"type": "bookmarks"
+								},
+								"type": "leaf"
+							}
+						],
+						"id": "b8909642261238c9",
+						"type": "tabs"
+					}
+				],
+				"collapsed": true,
+				"direction": "horizontal",
+				"id": "68442114d9d89e84",
+				"type": "split",
+				"width": 300
+			},
+			"left-ribbon": {
+				"hiddenItems": {
+					"canvas:Create new canvas": false,
+					"command-palette:Open command palette": false,
+					"daily-notes:Open today's daily note": false,
+					"graph:Open graph view": false,
+					"switcher:Open quick switcher": false,
+					"templates:Insert template": false,
+					"workspaces:Manage workspace layouts": false
+				}
+			},
+			"main": {
+				"children": [
+					{
+						"children": [
+							{
+								"id": "bdc690dedf590256",
+								"state": {
+									"icon": "lucide-file",
+									"state": {
+										"file": "Welcome.md",
+										"mode": "source",
+										"source": false
+									},
+									"title": "Welcome",
+									"type": "markdown"
+								},
+								"type": "leaf"
+							}
+						],
+						"id": "469ce9eee89b0c00",
+						"type": "tabs"
+					}
+				],
+				"direction": "vertical",
+				"id": "fef2eda48b5c2c17",
+				"type": "split"
+			},
+			"mtime": "2025-03-22T13:15:14-04:00",
+			"right": {
+				"children": [
+					{
+						"children": [
+							{
+								"id": "cb62eb1495660db7",
+								"state": {
+									"icon": "links-coming-in",
+									"state": {
+										"backlinkCollapsed": false,
+										"collapseAll": false,
+										"extraContext": false,
+										"file": "Welcome.md",
+										"searchQuery": "",
+										"showSearch": false,
+										"sortOrder": "alphabetical",
+										"unlinkedCollapsed": true
+									},
+									"title": "Backlinks for Welcome",
+									"type": "backlink"
+								},
+								"type": "leaf"
+							},
+							{
+								"id": "815ea9588a965093",
+								"state": {
+									"icon": "links-going-out",
+									"state": {
+										"file": "Welcome.md",
+										"linksCollapsed": false,
+										"unlinkedCollapsed": true
+									},
+									"title": "Outgoing links from Welcome",
+									"type": "outgoing-link"
+								},
+								"type": "leaf"
+							},
+							{
+								"id": "7865224da2fb3f63",
+								"state": {
+									"icon": "lucide-tags",
+									"state": {
+										"searchQuery": "",
+										"showSearch": false,
+										"sortOrder": "frequency",
+										"useHierarchy": true
+									},
+									"title": "Tags",
+									"type": "tag"
+								},
+								"type": "leaf"
+							},
+							{
+								"id": "dce2a9144d4df80b",
+								"state": {
+									"icon": "lucide-list",
+									"state": {
+										"file": "Welcome.md",
+										"followCursor": false,
+										"searchQuery": "",
+										"showSearch": false
+									},
+									"title": "Outline of Welcome",
+									"type": "outline"
+								},
+								"type": "leaf"
+							}
+						],
+						"id": "8496919f0983cfb9",
+						"type": "tabs"
+					}
+				],
+				"collapsed": true,
+				"direction": "horizontal",
+				"id": "3c11c81099626f30",
+				"type": "split",
+				"width": 300
+			}
+		}
+	}
+}

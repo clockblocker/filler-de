@@ -1,0 +1,139 @@
+import type { AgentOutput, UserInput } from "../../../../../schemas";
+
+export const examples = [
+	// Simple compound: Kohle + Kraft + Werk
+	{
+		input: {
+			context: "Das Kohlekraftwerk erzeugt Strom aus Kohle.",
+			word: "Kohlekraftwerk",
+		},
+		output: {
+			morphemes: [
+				{ kind: "Root", lemma: "Kohle", surf: "kohle" },
+				{ kind: "Root", lemma: "Kraft", surf: "kraft" },
+				{ kind: "Root", lemma: "Werk", surf: "werk" },
+			],
+		},
+	},
+	// Prefix + root: un- + möglich
+	{
+		input: {
+			context: "Das ist unmöglich zu schaffen.",
+			word: "unmöglich",
+		},
+		output: {
+			morphemes: [
+				{ kind: "Prefix", surf: "un" },
+				{ kind: "Root", surf: "möglich" },
+			],
+		},
+	},
+	// Root + derivational suffix: Freund + -schaft
+	{
+		input: {
+			context: "Ihre Freundschaft hält seit der Kindheit.",
+			word: "Freundschaft",
+		},
+		output: {
+			morphemes: [
+				{ kind: "Root", lemma: "Freund", surf: "freund" },
+				{ kind: "Suffix", surf: "schaft" },
+			],
+		},
+	},
+	// Compound with interfix: Arbeit + -s- + Platz
+	{
+		input: {
+			context: "Er hat seinen Arbeitsplatz verloren.",
+			word: "Arbeitsplatz",
+		},
+		output: {
+			morphemes: [
+				{ kind: "Root", lemma: "Arbeit", surf: "arbeit" },
+				{ kind: "Interfix", surf: "s" },
+				{ kind: "Root", lemma: "Platz", surf: "platz" },
+			],
+		},
+	},
+	// Prefix (inseparable) + root + suffix: ver- + antwort + -ung
+	{
+		input: {
+			context: "Er trägt die Verantwortung für das Projekt.",
+			word: "Verantwortung",
+		},
+		output: {
+			morphemes: [
+				{ kind: "Prefix", separability: "Inseparable", surf: "ver" },
+				{ kind: "Root", lemma: "Antwort", surf: "antwort" },
+				{ kind: "Suffix", surf: "ung" },
+			],
+		},
+	},
+	// Simple root: Hand
+	{
+		input: {
+			context: "Sie nahm ihn an der Hand.",
+			word: "Hand",
+		},
+		output: {
+			morphemes: [{ kind: "Root", lemma: "Hand", surf: "hand" }],
+		},
+	},
+	// Separable prefix: auf + passen
+	{
+		input: {
+			context: "Du musst besser aufpassen.",
+			word: "aufpassen",
+		},
+		output: {
+			morphemes: [
+				{ kind: "Prefix", separability: "Separable", surf: "auf" },
+				{ kind: "Root", surf: "passen" },
+			],
+		},
+	},
+	// Inseparable prefix: ver + stehen
+	{
+		input: {
+			context: "Ich kann das nicht verstehen.",
+			word: "verstehen",
+		},
+		output: {
+			morphemes: [
+				{ kind: "Prefix", separability: "Inseparable", surf: "ver" },
+				{ kind: "Root", surf: "stehen" },
+			],
+		},
+	},
+	// Compound diminutive: Turtel + täub + chen
+	{
+		input: {
+			context: "Die Turteltäubchen gurrten auf dem Dach.",
+			word: "Turteltäubchen",
+		},
+		output: {
+			morphemes: [
+				{ kind: "Root", surf: "turtel" },
+				{ kind: "Root", lemma: "Taube", surf: "täub" },
+				{ kind: "Suffix", surf: "chen" },
+			],
+		},
+	},
+	// Compound with Fugenlaut -n-: Küche + -n- + Fenster
+	{
+		input: {
+			context: "Das Küchenfenster war offen.",
+			word: "Küchenfenster",
+		},
+		output: {
+			morphemes: [
+				{ kind: "Root", lemma: "Küche", surf: "küche" },
+				{ kind: "Interfix", surf: "n" },
+				{ kind: "Root", lemma: "Fenster", surf: "fenster" },
+			],
+		},
+	},
+] satisfies {
+	input: UserInput<"Morphem">;
+	output: AgentOutput<"Morphem">;
+}[];

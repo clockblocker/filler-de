@@ -1,0 +1,36 @@
+export type { ExpectFilesGoneOptions } from "../internal/types";
+export { type GatherDebugInfoOptions, gatherPluginDebugInfo, type PluginDebugInfo } from "./debug";
+export {
+	expectExactCodexes,
+	expectFilesToBeGone,
+	expectFilesToExist,
+	expectPostHealingFiles,
+	type PostHealingExpectations,
+	waitForFile,
+	waitForFileGone,
+	waitForFiles,
+} from "./files";
+export { whenIdle } from "./idle";
+export { clickButton, clickCodexCheckbox, createFile, createFiles, createFolder, deletePath, listAllFiles, listFilesUnder, openFile, renamePath } from "./vault-ops";
+
+import type { ExpectFilesGoneOptions, ExpectFilesOptions } from "../internal/types";
+import { type GatherDebugInfoOptions, gatherPluginDebugInfo } from "./debug";
+import { expectExactCodexes, expectFilesToBeGone, expectFilesToExist, expectPostHealingFiles, type PostHealingExpectations } from "./files";
+
+/**
+ * Create a test context with bound callerContext for cleaner test code.
+ */
+export function createTestContext(testName: string) {
+	return {
+		expectExactCodexes: (codexes: readonly string[], opts?: Omit<ExpectFilesOptions & { libraryRoot?: string }, "callerContext">) =>
+			expectExactCodexes(codexes, { ...opts, callerContext: `[${testName}]` }),
+		expectFiles: (paths: readonly string[], opts?: Omit<ExpectFilesOptions, "callerContext">) =>
+			expectFilesToExist(paths, { ...opts, callerContext: `[${testName}]` }),
+		expectFilesGone: (paths: readonly string[], opts?: Omit<ExpectFilesGoneOptions, "callerContext">) =>
+			expectFilesToBeGone(paths, { ...opts, callerContext: `[${testName}]` }),
+		expectPostHealing: (expectations: PostHealingExpectations, opts?: Omit<ExpectFilesOptions, "callerContext">) =>
+			expectPostHealingFiles(expectations, { ...opts, callerContext: `[${testName}]` }),
+		gatherDebug: (folderFilter?: string, opts?: Omit<GatherDebugInfoOptions, "folderFilter" | "logPath">) =>
+			gatherPluginDebugInfo({ ...opts, folderFilter, logPath: `/tmp/debug-${testName}.log` }),
+	};
+}

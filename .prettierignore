@@ -1,0 +1,7 @@
+**/*.md
+**/*.MD
+**/*.markdown
+**/*.jsonc
+README.md
+CHANGELOG.md
+
