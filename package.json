@@ -56,6 +56,7 @@
 		"knip": "knip",
 		"lint": "bun x biome check .",
 		"prompt:test": "bun tests/prompt-test/runner.ts",
+		"silo": "bun scripts/knowledge-silo.ts",
 		"splitter:run": "bun tests/splitter-runner.ts",
 		"test": "bun run test:unit && bun run test:e2e",
 		"test:e2e": "./scripts/run-e2e.sh",
