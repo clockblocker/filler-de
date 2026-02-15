@@ -26,6 +26,16 @@ describe("Enrichment schemas", () => {
 		expect(outResult.success).toBe(true);
 	});
 
+	it("accepts noun Lexem enrichment output without genus/nounClass", () => {
+		const outResult = lexemEnrichmentSchemas.agentOutputSchema.safeParse({
+			emojiDescription: ["🏠"],
+			ipa: "haʊ̯s",
+			linguisticUnit: "Lexem",
+			posLikeKind: "Noun",
+		});
+		expect(outResult.success).toBe(true);
+	});
+
 	it("accepts Phrasem enrichment input/output", () => {
 		const inResult = phrasemEnrichmentSchemas.userInputSchema.safeParse({
 			context: "Das machen wir auf jeden Fall morgen.",

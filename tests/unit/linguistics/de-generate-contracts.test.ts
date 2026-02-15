@@ -63,7 +63,7 @@ describe("De generate contracts", () => {
 		expect(result.success).toBe(true);
 	});
 
-	it("rejects noun enrichment output without genus", () => {
+	it("accepts noun enrichment output without genus (best-effort metadata)", () => {
 		const result = DeEnrichmentOutputSchema.safeParse({
 			emojiDescription: ["🏠"],
 			ipa: "haʊ̯s",
@@ -72,7 +72,19 @@ describe("De generate contracts", () => {
 			posLikeKind: "Noun",
 		});
 
-		expect(result.success).toBe(false);
+		expect(result.success).toBe(true);
+	});
+
+	it("accepts noun enrichment output without nounClass (best-effort metadata)", () => {
+		const result = DeEnrichmentOutputSchema.safeParse({
+			emojiDescription: ["🏠"],
+			genus: "Neutrum",
+			ipa: "haʊ̯s",
+			linguisticUnit: "Lexem",
+			posLikeKind: "Noun",
+		});
+
+		expect(result.success).toBe(true);
 	});
 
 	it("rejects non-noun enrichment output with noun fields", () => {

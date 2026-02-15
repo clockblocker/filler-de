@@ -41,7 +41,7 @@ User clicks the wikilink → navigates to the dictionary note
 User gets a tailor-made dictionary that grows with their reading
 ```
 
-> **V2 scope**: German target, 6 generated sections (Header, Morphem, Relation, Inflection, Translation, Attestation), re-encounter detection (append attestation vs new entry), cross-reference propagation for relations, noun inflection propagation (stub entries in inflected-form notes), user-facing notices.
+> **V2 scope**: German target, 6 generated sections (Header, Morphem, Relation, Inflection, Translation, Attestation), re-encounter detection (append attestation vs new entry), cross-reference propagation for relations, noun inflection propagation in inflected-form notes, user-facing notices.
 
 > **V3 scope**: Polysemy disambiguation — new Disambiguate prompt in Lemma command, enriched note metadata per entry ID for fast lookup without note parsing, VAM API expansion (`getSplitPathsToExistingFilesWithBasename`), Lemma-side sense matching before Generate.
 
@@ -57,7 +57,7 @@ User gets a tailor-made dictionary that grows with their reading
 
 > **V13 scope**: Phraseme-kind threading + linguisticUnit metadata restore — Lemma output now includes `phrasemeKind` for `linguisticUnit: "Phrasem"`. `generateSections` restores `meta.linguisticUnit` for `Lexem` and `Phrasem` entries. Disambiguate senses now forward optional `phrasemeKind` hints extracted from `meta.linguisticUnit`.
 
-> **V14 scope**: Minimal Lemma + Generate enrichment cutover — `PromptKind.Lemma` now returns only classifier fields (`lemma`, `linguisticUnit`, `posLikeKind`, `surfaceKind`, optional `contextWithLinkedParts`). Core metadata (`emojiDescription`, `ipa`, noun-only `genus` + `nounClass`) moved to Generate via `PromptKind.LexemEnrichment` / `PromptKind.PhrasemEnrichment`. Features prompt is now POS-specific (`FeaturesNoun` ... `FeaturesInteractionalUnit`), and legacy `PromptKind.Features` is removed. Proper-noun/separable span expansion relies on `contextWithLinkedParts`; legacy `fullSurface` is removed.
+> **V14 scope**: Minimal Lemma + Generate enrichment cutover — `PromptKind.Lemma` now returns only classifier fields (`lemma`, `linguisticUnit`, `posLikeKind`, `surfaceKind`, optional `contextWithLinkedParts`). Core metadata (`emojiDescription`, `ipa`, noun-only `genus` + `nounClass`) moved to Generate via `PromptKind.LexemEnrichment` / `PromptKind.PhrasemEnrichment`. Features prompt is now POS-specific (`FeaturesNoun` ... `FeaturesInteractionalUnit`), and legacy `PromptKind.Features` is removed. Proper-noun/separable span expansion relies on `contextWithLinkedParts`; legacy `fullSurface` is removed. Runtime parsing remains backward-compatible with legacy Lemma keys (`pos` / `phrasemeKind`) by normalizing them to `posLikeKind`. Noun enrichment metadata (`genus`, `nounClass`) is treated as best-effort at parse time; missing values degrade to common header/metadata paths instead of aborting Generate.
 
 > **V9 scope**: LinguisticUnit DTO — Zod-schema-based type system as source of truth for DictEntries. German + Noun fully featured (`genus`, `nounClass`); all other POS/unit kinds have stubs. `GermanLinguisticUnit` built during Generate and stored in `meta.linguisticUnit`. Header prompt now returns `genus` ("Maskulinum"/"Femininum"/"Neutrum") instead of `article` ("der"/"die"/"das"); formatter derives article via `articleFromGenus`. New files: `surface-factory.ts`, `genus.ts`, `noun.ts`, `pos-features.ts`, `lexem-surface.ts`, `phrasem-surface.ts`, `morphem-surface.ts`, `linguistic-unit.ts`. 21 new DTO tests.
 
@@ -728,7 +728,7 @@ Not all DictEntrySections participate in cross-reference propagation:
 - **Relation**: Full bidirectional propagation with inverse rules (see 9.2). This is where most SubSections live.
 - **Morphem**: If `Kohlekraftwerk` decomposes into `[[Kohle]] + [[Kraftwerk]]`, then `Kohle.md` could list `Kohlekraftwerk` under "compounds" — simpler, potentially one-directional.
 - **Attestation**: No propagation — contexts are per-encounter.
-- **Inflection**: **Noun propagation** via `propagateInflections` — creates stub entries in inflected-form notes (see section 9.5). Other POS: no propagation.
+- **Inflection**: **Noun propagation** via `propagateInflections` — creates/updates one inflection entry per form with merged tags in inflected-form notes (see section 9.5). Other POS: no propagation.
 - **Header, FreeForm, Deviation**: No propagation.
 
 ### 9.4 Implementation
@@ -784,7 +784,7 @@ All dispatched in single vam.dispatch() alongside source note actions
 
 **Source**: `src/commanders/textfresser/commands/generate/steps/propagate-inflections.ts`
 
-When Generate processes a noun, the `NounInflection` prompt returns structured cells (case × number × article × form). After formatting the Inflection section, `propagateInflections` creates **stub entries** in the notes of inflected forms.
+When Generate processes a noun, the `NounInflection` prompt returns structured cells (case × number × article × form). After formatting the Inflection section, `propagateInflections` creates or updates **one inflection entry per target form** in inflected-form notes.
 
 ```
 generateSections captures NounInflectionCell[] (8 cells: 4 cases × 2 numbers)
@@ -793,28 +793,34 @@ propagateInflections:
   Group cells by form word
   For each form:
     If form === lemma → skip (main entry already lives on that note)
-    If form !== lemma:
-      Build per-cell headers: "#Nominativ/Plural for: [[lemma]]" (one per cell)
+    If form !== lemma AND noun genus resolved from LexemEnrichment:
+      Build one header: "#Inflection/Noun/<genusLabel> for: [[lemma]]"
+      Build deduped/sorted tags: "#Nominativ/Plural #Akkusativ/Plural ..."
       1. resolveTargetPath(form, desiredSurfaceKind: Inflected) → { splitPath, healingActions }
       2. Emit healingActions (if any)
       3. buildPropagationActionPair(splitPath, transform) → [UpsertMdFile, ProcessMdFile]
-         transform: iterate cell headers, dedup against existing + already-added, append one stub per unique header
+         transform:
+           a. merge tags into existing new-format entry (same header)
+           b. auto-collapse legacy per-cell stubs: "#<Case>/<Number> for: [[lemma]]"
+           c. ensure/update Tags section with normalized tag line
   ↓
 Propagation VaultActions (including healing) added to ctx.actions
 ```
 
-**Stub entry format**: Header-only DictEntry with no sections (one per case/number combo):
+**Propagated entry format**: Single DictEntry per target form:
 ```markdown
-#Nominativ/Plural for: [[Kraftwerk]] ^LX-IN-NOUN-1
-#Akkusativ/Plural for: [[Kraftwerk]] ^LX-IN-NOUN-2
-#Genitiv/Plural for: [[Kraftwerk]] ^LX-IN-NOUN-3
+#Inflection/Noun/Maskulin for: [[Kraftwerk]] ^LX-IN-NOUN-1
+<span class="entry_section_title entry_section_title_tags">Tags</span>
+#Nominativ/Plural #Akkusativ/Plural #Genitiv/Plural
 ```
 
 **Key design decisions**:
-- **One entry per cell**: Each case/number combo gets its own stub entry (e.g., `#Nominativ/Plural`, `#Akkusativ/Plural`) — no collapsing
+- **One entry per form/POS**: All case/number combos are represented as tags in one entry
+- **Genus gating**: propagation runs only when noun genus is present in `LexemEnrichment` output
 - **Same-note skip**: When form === lemma, cells are skipped entirely (the main entry already covers this note)
-- Dedup within a single transform: identical cell headers (e.g., duplicate cells) produce only one entry
-- Same dedup + UpsertMdFile + ProcessMdFile pattern as relation propagation
+- **Legacy migration in-place**: old per-cell stubs are collapsed into the new entry format when a target note is touched
+- Deterministic tag ordering: case order + number order, with dedup + localization normalization
+- Same UpsertMdFile + ProcessMdFile pattern as relation propagation
 - Skipped for re-encounters and non-noun POS
 
 ---
@@ -1129,7 +1135,7 @@ To add support for a new target language (e.g., Japanese):
 | `src/commanders/textfresser/commands/generate/steps/resolve-existing-entry.ts` | Parse existing entries, use Lemma's disambiguationResult for re-encounter detection |
 | `src/commanders/textfresser/commands/generate/steps/generate-sections.ts` | Async: LLM calls per section (or append attestation for re-encounters). V12: Features prompt + Tags section, article in header for nouns. V13: `meta.linguisticUnit` restored for Lexem/Phrasem entries (`Morphem` still out of scope). Stores `meta.emojiDescription` from precomputedEmojiDescription or lemmaResult.emojiDescription. Header built from LemmaResult fields. Sets targetBlockId |
 | `src/commanders/textfresser/commands/generate/steps/propagate-relations.ts` | Cross-ref: compute inverse relations, resolve target paths via shared resolver, generate actions for target notes |
-| `src/commanders/textfresser/commands/generate/steps/propagate-inflections.ts` | Noun inflection propagation: resolve target paths via shared resolver, create stub entries in inflected-form notes |
+| `src/commanders/textfresser/commands/generate/steps/propagate-inflections.ts` | Noun inflection propagation: resolve target paths via shared resolver, create/update one inflection entry per form, merge tags, collapse legacy per-cell stubs |
 | `src/commanders/textfresser/common/target-path-resolver.ts` | Shared path resolution for propagation: two-source lookup (VAM → Librarian → computed sharded path), inflected→lemma healing, `buildPropagationActionPair` helper |
 | `src/commanders/textfresser/common/sharded-path.ts` | Sharded path computation for Worter entries; exports `SURFACE_KIND_PATH_INDEX` for healing checks |
 | `src/commanders/textfresser/commands/generate/steps/serialize-entry.ts` | Serialize ALL DictEntries to note body + apply noteKind metadata (single upsert) |
@@ -1193,7 +1199,7 @@ To add support for a new target language (e.g., Japanese):
 | `tests/unit/textfresser/formatters/de/lexem/noun/inflection-formatter.test.ts` | Noun inflection: case grouping, N/A/G/D order, cells pass-through |
 | `tests/unit/textfresser/steps/disambiguate-sense.test.ts` | Disambiguate: mock VAM + PromptRunner, bounds check, precomputed emojiDescription, V2 legacy |
 | `tests/unit/textfresser/steps/propagate-relations.test.ts` | Relation propagation: inverse kinds, self-ref skip, dedup, VaultAction shapes, healing when target in inflected/ |
-| `tests/unit/textfresser/steps/propagate-inflections.test.ts` | Inflection propagation: form grouping, same-note skip, per-cell headers, header dedup, VAM path reuse |
+| `tests/unit/textfresser/steps/propagate-inflections.test.ts` | Inflection propagation: form grouping, same-note skip, single-entry tags merge, legacy stub collapse, genus gating, VAM path reuse |
 | `tests/unit/textfresser/common/target-path-resolver.test.ts` | Path resolver: VAM/librarian lookup, computed fallback, inflected→lemma healing, no-heal cases, `buildPropagationActionPair` |
 | `tests/unit/textfresser/steps/lemma-expansion.test.ts` | V8: `expandOffsetForFullSurface()` — expansion math, verification, fallback on mismatch |
 | **Types** | |

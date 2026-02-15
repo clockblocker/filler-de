@@ -10,7 +10,10 @@ import type {
 	DeLexemPos,
 	GermanLinguisticUnit,
 } from "../../../../../linguistics/de";
-import type { NounInflectionCell } from "../../../../../linguistics/de/lexem/noun";
+import type {
+	GermanGenus,
+	NounInflectionCell,
+} from "../../../../../linguistics/de/lexem/noun";
 import type { AgentOutput } from "../../../../../prompt-smith";
 import {
 	PromptKind,
@@ -82,7 +85,7 @@ function buildSectionQuery(
 			lemmaResult.posLikeKind === "Noun" &&
 			enrichmentOutput.linguisticUnit === "Lexem" &&
 			enrichmentOutput.posLikeKind === "Noun"
-				? enrichmentOutput.nounClass
+				? enrichmentOutput.nounClass ?? undefined
 				: undefined;
 
 		return {
@@ -97,12 +100,25 @@ function buildSectionQuery(
 	};
 }
 
+function resolveNounInflectionGenus(
+	lemmaResult: LemmaResult,
+	enrichmentOutput: EnrichmentOutput,
+): GermanGenus | undefined {
+	if (lemmaResult.linguisticUnit !== "Lexem") return undefined;
+	if (lemmaResult.posLikeKind !== "Noun") return undefined;
+	if (enrichmentOutput.linguisticUnit !== "Lexem") return undefined;
+	if (enrichmentOutput.posLikeKind !== "Noun") return undefined;
+	return enrichmentOutput.genus ?? undefined;
+}
+
 export type GenerateSectionsResult = ResolvedEntryState & {
 	allEntries: DictEntry[];
 	/** Raw relation data from LLM — used by propagate-relations step. Empty for re-encounters. */
 	relations: ParsedRelation[];
 	/** Structured noun inflection cells — used by propagate-inflections step. Empty for non-nouns / re-encounters. */
 	inflectionCells: NounInflectionCell[];
+	/** Noun genus from LexemEnrichment — required for noun inflection propagation headers. */
+	nounInflectionGenus?: GermanGenus;
 	/** Resolved morpheme items — used by propagate-morphemes step. Empty for re-encounters. */
 	morphemes: MorphemeItem[];
 	/** Section names that failed LLM generation but were optional — entry was still created. */
@@ -325,6 +341,7 @@ export function generateSections(
 				allEntries: existingEntries,
 				failedSections: [],
 				inflectionCells: [],
+				nounInflectionGenus: undefined,
 				morphemes: [],
 				relations: [],
 				targetBlockId: matchedEntry.id,
@@ -390,6 +407,10 @@ export function generateSections(
 			const sections: EntrySection[] = [];
 			let relations: ParsedRelation[] = [];
 			let inflectionCells: NounInflectionCell[] = [];
+			const nounInflectionGenus = resolveNounInflectionGenus(
+				lemmaResult,
+				enrichmentOutput,
+			);
 			let morphemes: MorphemeItem[] = [];
 			const failedSections: string[] = [];
 
@@ -657,6 +678,7 @@ export function generateSections(
 				allEntries: [...existingEntries, newEntry],
 				failedSections,
 				inflectionCells,
+				nounInflectionGenus,
 				morphemes,
 				relations,
 				targetBlockId: entryId,

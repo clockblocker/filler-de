@@ -77,9 +77,9 @@ export const DeLexemEnrichmentOutputSchema = z.discriminatedUnion(
 	"posLikeKind",
 	[
 		deEnrichmentOutputBaseSchema.extend({
-			genus: GermanGenusSchema,
+			genus: GermanGenusSchema.nullable().optional(),
 			linguisticUnit: z.literal("Lexem"),
-			nounClass: NounClassSchema,
+			nounClass: NounClassSchema.nullable().optional(),
 			posLikeKind: z.literal("Noun"),
 		}),
 		...DeLexemPosSchema.options

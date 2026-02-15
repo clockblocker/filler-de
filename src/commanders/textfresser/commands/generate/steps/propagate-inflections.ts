@@ -1,28 +1,33 @@
 import { ok, type Result } from "neverthrow";
 import { dictEntryIdHelper } from "../../../../../linguistics/common/dict-entry-id/dict-entry-id";
 import { SurfaceKind } from "../../../../../linguistics/common/enums/core";
+import { cssSuffixFor } from "../../../../../linguistics/common/sections/section-css-kind";
 import {
-	GERMAN_CASE_TAG,
-	GERMAN_NUMBER_TAG,
-	type NounInflectionCell,
-} from "../../../../../linguistics/de/lexem/noun";
+	DictSectionKind,
+	TitleReprFor,
+} from "../../../../../linguistics/common/sections/section-kind";
+import type { NounInflectionCell } from "../../../../../linguistics/de/lexem/noun";
 import type { VaultAction } from "../../../../../managers/obsidian/vault-action-manager";
 import { dictNoteHelper } from "../../../../../stateless-helpers/dict-note";
-import type { DictEntry } from "../../../../../stateless-helpers/dict-note/types";
+import type {
+	DictEntry,
+	EntrySection,
+} from "../../../../../stateless-helpers/dict-note/types";
 import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metadata";
+import { logger } from "../../../../../utils/logger";
 import {
 	buildPropagationActionPair,
 	resolveTargetPath,
 } from "../../../common/target-path-resolver";
 import type { CommandError } from "../../types";
+import {
+	buildLocalizedInflectionTagsFromCells,
+	buildNounInflectionPropagationHeader,
+	extractHashTags,
+	mergeLocalizedInflectionTags,
+	parseLegacyInflectionHeaderTag,
+} from "../section-formatters/common/inflection-propagation-helper";
 import type { GenerateSectionsResult } from "./generate-sections";
-
-/** Build a per-cell header: `#Nominativ/Singular for: [[lemma]]` */
-function buildCellHeader(cell: NounInflectionCell, lemma: string): string {
-	const caseTag = GERMAN_CASE_TAG[cell.case];
-	const numberTag = GERMAN_NUMBER_TAG[cell.number];
-	return `#${caseTag}/${numberTag} for: [[${lemma}]]`;
-}
 
 /** Group cells by form word. */
 function groupByForm(
@@ -37,12 +42,29 @@ function groupByForm(
 	return map;
 }
 
+function createTagsSection(
+	content: string,
+	targetLanguage: GenerateSectionsResult["textfresserState"]["languages"]["target"],
+): EntrySection {
+	return {
+		content,
+		kind: cssSuffixFor[DictSectionKind.Tags],
+		title: TitleReprFor[DictSectionKind.Tags][targetLanguage],
+	};
+}
+
+function findTagsSection(entry: DictEntry): EntrySection | undefined {
+	return entry.sections.find(
+		(section) => section.kind === cssSuffixFor[DictSectionKind.Tags],
+	);
+}
+
 /**
  * Propagate noun inflection cells to target notes.
  *
- * For each inflected form, creates one stub entry per cell (case/number combo).
- * Forms that differ from the lemma → UpsertMdFile + ProcessMdFile actions.
- * Forms equal to the lemma → skipped (the main entry already lives on that note).
+ * For each inflected form, creates or updates one inflection entry per lemma/POS
+ * and stores all case/number variants as tags in a tags section.
+ * Also auto-collapses legacy per-cell entries into the single-entry format.
  */
 export function propagateInflections(
 	ctx: GenerateSectionsResult,
@@ -54,6 +76,16 @@ export function propagateInflections(
 
 	const lemmaResult = ctx.textfresserState.latestLemmaResult;
 	const lemma = lemmaResult.lemma;
+	const targetLanguage = ctx.textfresserState.languages.target;
+	const nounInflectionGenus = ctx.nounInflectionGenus;
+
+	if (!nounInflectionGenus) {
+		logger.warn(
+			"[propagateInflections] Skip propagation: noun genus was not resolved from enrichment output",
+			{ lemma },
+		);
+		return ok(ctx);
+	}
 
 	const byForm = groupByForm(inflectionCells);
 	const propagationActions: VaultAction[] = [];
@@ -61,13 +93,21 @@ export function propagateInflections(
 	for (const [form, cells] of byForm) {
 		if (form === lemma) continue;
 
-		const cellHeaders = cells.map((c) => buildCellHeader(c, lemma));
+		const header = buildNounInflectionPropagationHeader(
+			lemma,
+			nounInflectionGenus,
+			targetLanguage,
+		);
+		const tagsFromCells = buildLocalizedInflectionTagsFromCells(
+			cells,
+			targetLanguage,
+		);
 
 		// Different note — resolve path + create UpsertMdFile + ProcessMdFile
 		const resolved = resolveTargetPath({
 			desiredSurfaceKind: SurfaceKind.Inflected,
 			librarianLookup: ctx.textfresserState.lookupInLibrary,
-			targetLanguage: ctx.textfresserState.languages.target,
+			targetLanguage,
 			unitKind: lemmaResult.linguisticUnit,
 			vamLookup: (w) => ctx.textfresserState.vam.findByBasename(w),
 			word: form,
@@ -75,21 +115,62 @@ export function propagateInflections(
 
 		const transform = (content: string) => {
 			const existingEntries = dictNoteHelper.parse(content);
-			const existingHeaders = new Set(
-				existingEntries.map((e) => e.headerContent),
+			const legacyEntryIndexes: number[] = [];
+			const matchingEntryIndexes: number[] = [];
+			const tagsFromLegacyHeaders: string[] = [];
+			const tagsFromExistingMatches: string[] = [];
+
+			for (let index = 0; index < existingEntries.length; index++) {
+				const entry = existingEntries[index];
+				if (!entry) continue;
+
+				if (entry.headerContent === header) {
+					matchingEntryIndexes.push(index);
+					const tagsSection = findTagsSection(entry);
+					if (tagsSection) {
+						tagsFromExistingMatches.push(
+							...extractHashTags(tagsSection.content),
+						);
+					}
+					continue;
+				}
+
+				const legacyTag = parseLegacyInflectionHeaderTag(
+					entry.headerContent,
+					lemma,
+					targetLanguage,
+				);
+				if (legacyTag) {
+					legacyEntryIndexes.push(index);
+					tagsFromLegacyHeaders.push(legacyTag);
+				}
+			}
+
+			const indexesToRemove = new Set<number>([
+				...legacyEntryIndexes,
+				...matchingEntryIndexes.slice(1),
+			]);
+			const compactedEntries = existingEntries.filter(
+				(_, index) => !indexesToRemove.has(index),
 			);
+			let didChange = indexesToRemove.size > 0;
+			let targetEntry: DictEntry | undefined;
 
-			const newEntries: DictEntry[] = [];
-			const addedHeaders = new Set<string>();
+			if (matchingEntryIndexes.length > 0) {
+				const firstMatchIndex = matchingEntryIndexes[0];
+				if (firstMatchIndex !== undefined) {
+					targetEntry = existingEntries[firstMatchIndex];
+				}
+			}
 
-			for (const header of cellHeaders) {
-				if (existingHeaders.has(header)) continue;
-				if (addedHeaders.has(header)) continue;
+			const tagsToMerge = [
+				...tagsFromCells,
+				...tagsFromLegacyHeaders,
+				...tagsFromExistingMatches,
+			];
 
-				const existingIds = [
-					...existingEntries.map((e) => e.id),
-					...newEntries.map((e) => e.id),
-				];
+			if (!targetEntry) {
+				const existingIds = compactedEntries.map((entry) => entry.id);
 				const prefix = dictEntryIdHelper.buildPrefix(
 					"Lexem",
 					"Inflected",
@@ -102,19 +183,40 @@ export function propagateInflections(
 					unitKind: "Lexem",
 				});
 
-				newEntries.push({
+				const newEntry: DictEntry = {
 					headerContent: header,
 					id: entryId,
 					meta: {},
-					sections: [],
-				});
-				addedHeaders.add(header);
+					sections: [createTagsSection("", targetLanguage)],
+				};
+				compactedEntries.push(newEntry);
+				targetEntry = newEntry;
+				didChange = true;
 			}
 
-			if (newEntries.length === 0) return content;
+			const tagsSection = findTagsSection(targetEntry);
+			const existingTagContent = tagsSection?.content ?? "";
+			const mergedTagContent = mergeLocalizedInflectionTags(
+				existingTagContent,
+				tagsToMerge,
+				targetLanguage,
+			);
 
-			const allEntries = [...existingEntries, ...newEntries];
-			const { body, meta } = dictNoteHelper.serialize(allEntries);
+			if (tagsSection) {
+				if (tagsSection.content !== mergedTagContent) {
+					tagsSection.content = mergedTagContent;
+					didChange = true;
+				}
+			} else {
+				targetEntry.sections.push(
+					createTagsSection(mergedTagContent, targetLanguage),
+				);
+				didChange = true;
+			}
+
+			if (!didChange) return content;
+
+			const { body, meta } = dictNoteHelper.serialize(compactedEntries);
 
 			if (Object.keys(meta).length > 0) {
 				const metaTransform = noteMetadataHelper.upsert(meta);

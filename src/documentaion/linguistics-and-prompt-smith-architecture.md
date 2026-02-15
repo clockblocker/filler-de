@@ -221,6 +221,9 @@ Full features live on Lemma surfaces; Inflected/Variant surfaces carry only ref 
 |---|---|---|
 | `GERMAN_CASE_TAG` | `Record<CaseValue, string>` | Nominative -> "Nominativ", Accusative -> "Akkusativ", Genitive -> "Genitiv", Dative -> "Dativ" |
 | `GERMAN_NUMBER_TAG` | `Record<NumberValue, string>` | Singular -> "Singular", Plural -> "Plural" |
+| `CASE_LABEL_FOR_TARGET_LANGUAGE` | `Record<TargetLanguage, Record<CaseValue, string>>` | German: Nominativ/Akkusativ/Genitiv/Dativ; English: Nominative/Accusative/Genitive/Dative |
+| `NUMBER_LABEL_FOR_TARGET_LANGUAGE` | `Record<TargetLanguage, Record<NumberValue, string>>` | German + English: Singular/Plural |
+| `GERMAN_GENUS_LABEL_FOR_TARGET_LANGUAGE` | `Record<TargetLanguage, Record<GermanGenus, string>>` | German: Maskulin/Feminin/Neutrum; English: Masculine/Feminine/Neuter |
 | `CASE_SHORT_LABEL` | `Record<CaseValue, string>` | N, A, G, D |
 | `CASE_ORDER` | `CaseValue[]` | Nominative, Accusative, Genitive, Dative |
 
@@ -588,8 +591,8 @@ type AgentOutput<K extends PromptKind> = z.infer<SchemasFor[K]["agentOutputSchem
 
 #### Runtime schema catalog (cutover)
 
-- `Lemma`: minimal classifier result (`lemma`, `linguisticUnit`, `posLikeKind`, `surfaceKind`, optional `contextWithLinkedParts`).
-- `LexemEnrichment` / `PhrasemEnrichment`: core metadata retrieval in Generate (`emojiDescription`, `ipa`, noun-only `genus` + `nounClass`).
+- `Lemma`: minimal classifier result (`lemma`, `linguisticUnit`, `posLikeKind`, `surfaceKind`, optional `contextWithLinkedParts`), with runtime alias compatibility for legacy keys (`pos` / `phrasemeKind`) normalized to `posLikeKind`.
+- `LexemEnrichment` / `PhrasemEnrichment`: core metadata retrieval in Generate (`emojiDescription`, `ipa`, noun-only `genus` + `nounClass`, best-effort for noun enrichment outputs).
 - `Features*` (10 prompt kinds): POS-specific lexical tag extraction (`tags: string[]`).
 - Existing `Morphem`, `Relation`, `Inflection`, `NounInflection`, `Disambiguate`, `WordTranslation`, `Translate` remain.
 
@@ -604,6 +607,7 @@ Contracts in `src/linguistics/de/lemma/` are now the runtime source for lemma cl
   - `posLikeKind` with compatibility guaranteed by schema branch (`POS` for Lexem, `PhrasemeKind` for Phrasem)
   - required `surfaceKind`
   - optional `contextWithLinkedParts` for multi-span attestation replacement
+  - legacy compatibility input aliases: `pos` (Lexem) and `phrasemeKind` (Phrasem), normalized to canonical `posLikeKind`
 - `generate-contracts.ts` defines core v1 prompt contracts:
   - shared target (`DeLexicalTargetSchema`)
   - enrichment (`DeEnrichmentInputSchema` / `DeEnrichmentOutputSchema`)
@@ -861,7 +865,7 @@ VAM dispatch (ProcessMdFile / UpsertMdFile)
     ↓
 Propagation steps:
     ├─ propagateRelations → ProcessMdFile on target notes (cross-refs)
-    └─ propagateInflections → UpsertMdFile for inflected-form stub notes
+    └─ propagateInflections → UpsertMdFile + ProcessMdFile for single inflection entries (tags-merged, legacy stubs auto-collapsed)
 ```
 
 ### 4.4 Adding a New Prompt (recipe)

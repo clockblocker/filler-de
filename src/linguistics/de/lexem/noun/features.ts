@@ -1,4 +1,5 @@
 import { z } from "zod/v3";
+import type { TargetLanguage } from "../../../../types";
 import type {
 	CaseValue,
 	NumberValue,
@@ -19,6 +20,26 @@ export const articleFromGenus: Record<GermanGenus, "der" | "die" | "das"> = {
 	Maskulinum: "der",
 	Neutrum: "das",
 };
+
+export const GERMAN_GENUS_LABEL_FOR_TARGET_LANGUAGE = {
+	English: {
+		Femininum: "Feminine",
+		Maskulinum: "Masculine",
+		Neutrum: "Neuter",
+	},
+	German: {
+		Femininum: "Feminin",
+		Maskulinum: "Maskulin",
+		Neutrum: "Neutrum",
+	},
+} satisfies Record<TargetLanguage, Record<GermanGenus, string>>;
+
+export function getGermanGenusLabelForTargetLanguage(
+	genus: GermanGenus,
+	targetLanguage: TargetLanguage,
+): string {
+	return GERMAN_GENUS_LABEL_FOR_TARGET_LANGUAGE[targetLanguage][genus];
+}
 
 // -- Noun class --
 

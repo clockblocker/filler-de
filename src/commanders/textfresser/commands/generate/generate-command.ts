@@ -22,7 +22,7 @@ import { serializeEntry } from "./steps/serialize-entry";
  * → generateSections (async: LLM calls or append attestation)
  * → propagateRelations (cross-ref inverse relations to target notes)
  * → propagateMorphemes (back-ref morpheme notes for multi-morpheme words)
- * → propagateInflections (create stub entries for inflected noun forms)
+ * → propagateInflections (create/update one inflection entry per noun form)
  * → serializeEntry (includes noteKind meta) → moveToWorter → addWriteAction
  */
 export function generateCommand(

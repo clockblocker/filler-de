@@ -15,6 +15,32 @@ describe("Lemma schema", () => {
 		expect(result.success).toBe(true);
 	});
 
+	it("accepts legacy Lexem output with pos and normalizes to posLikeKind", () => {
+		const result = agentOutputSchema.safeParse({
+			lemma: "Haus",
+			linguisticUnit: "Lexem",
+			pos: "Noun",
+			surfaceKind: "Lemma",
+		});
+
+		expect(result.success).toBe(true);
+		if (!result.success) return;
+		expect(result.data.posLikeKind).toBe("Noun");
+	});
+
+	it("accepts legacy Phrasem output with phrasemeKind and normalizes to posLikeKind", () => {
+		const result = agentOutputSchema.safeParse({
+			lemma: "auf jeden Fall",
+			linguisticUnit: "Phrasem",
+			phrasemeKind: "DiscourseFormula",
+			surfaceKind: "Lemma",
+		});
+
+		expect(result.success).toBe(true);
+		if (!result.success) return;
+		expect(result.data.posLikeKind).toBe("DiscourseFormula");
+	});
+
 	it("rejects Phrasem output without posLikeKind", () => {
 		const result = agentOutputSchema.safeParse({
 			lemma: "auf jeden Fall",

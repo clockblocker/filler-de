@@ -92,12 +92,19 @@ export function lemmaCommand(
 			context,
 			surface,
 		})
-		.mapErr(
-			(e): CommandError => ({
+		.mapErr((e): CommandError => {
+			logger.warn(
+				"[lemma] Lemma prompt failed before dispatching actions",
+				{
+					reason: e.reason,
+					surface,
+				},
+			);
+			return {
 				kind: CommandErrorKind.ApiError,
 				reason: e.reason,
-			}),
-		)
+			};
+		})
 		.andThen((lemmaResult) => {
 			if (lemmaResult.linguisticUnit === "Lexem") {
 				return disambiguateSense(
