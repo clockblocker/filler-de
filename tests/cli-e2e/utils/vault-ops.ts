@@ -1,21 +1,48 @@
-import { CliError, obsidian } from "./cli";
+import { obsidian, obsidianEval } from "./cli";
+
+/**
+ * Ensure all ancestor folders exist for the given file path.
+ * Uses Obsidian API `vault.createFolder()` via eval.
+ */
+async function ensureParentFolders(filePath: string): Promise<void> {
+	const parts = filePath.split("/");
+	if (parts.length <= 1) return; // root-level file, no folders needed
+
+	// Build each ancestor path and create if missing
+	const folders: string[] = [];
+	for (let i = 1; i < parts.length; i++) {
+		folders.push(parts.slice(0, i).join("/"));
+	}
+
+	const escapedFolders = folders
+		.map((f) => `'${f.replace(/'/g, "\\'")}'`)
+		.join(",");
+	const code = `(async()=>{for(const f of [${escapedFolders}]){try{await app.vault.createFolder(f)}catch(e){}}return 'ok'})()`;
+	await obsidianEval(code);
+}
 
 /**
  * Create a file in the vault via CLI.
- * Auto-creates parent folders.
+ * Auto-creates parent folders via eval.
  */
 export async function createFile(
 	path: string,
 	content = "",
 ): Promise<void> {
-	// Escape content for shell: use base64 to avoid quoting issues
+	await ensureParentFolders(path);
+
 	if (content === "") {
 		await obsidian(`create name="${path}" content="" silent`);
 	} else {
-		// Use eval to create files with content to avoid shell quoting issues
-		const escaped = content.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/`/g, "\\`").replace(/\$/g, "\\$");
-		await obsidian(
-			`eval code="(async()=>{await app.vault.create('${path.replace(/'/g, "\\'")}','${escaped.replace(/'/g, "\\'")}');return 'ok'})()"`,
+		// Escape for single-quoted JS string inside eval
+		const contentEscaped = content
+			.replace(/\\/g, "\\\\")
+			.replace(/'/g, "\\'")
+			.replace(/\n/g, "\\n")
+			.replace(/\r/g, "\\r");
+		const pathEscaped = path.replace(/'/g, "\\'");
+		await obsidianEval(
+			`(async()=>{await app.vault.create('${pathEscaped}','${contentEscaped}');return 'ok'})()`,
 		);
 	}
 }
@@ -24,7 +51,7 @@ export async function createFile(
  * Create multiple files sequentially.
  */
 export async function createFiles(
-	files: readonly { path: string; content?: string }[],
+	files: readonly { content?: string; path: string }[],
 ): Promise<void> {
 	for (const file of files) {
 		await createFile(file.path, file.content ?? "");
@@ -40,36 +67,40 @@ export async function readFile(path: string): Promise<string> {
 }
 
 /**
- * Rename or move a file/folder via CLI.
+ * Rename or move a file/folder.
+ * Uses fileManager.renameFile via eval (CLI `move` only handles files).
  */
 export async function renamePath(
 	oldPath: string,
 	newPath: string,
 ): Promise<void> {
-	await obsidian(`move path="${oldPath}" to="${newPath}"`);
+	const oldEscaped = oldPath.replace(/'/g, "\\'");
+	const newEscaped = newPath.replace(/'/g, "\\'");
+	await obsidianEval(
+		`(async()=>{const f=app.vault.getAbstractFileByPath('${oldEscaped}');if(!f)throw new Error('Not found: ${oldEscaped}');await app.fileManager.renameFile(f,'${newEscaped}');return 'ok'})()`,
+	);
 }
 
 /**
- * Delete a file or folder via CLI.
+ * Delete a file or folder via eval (CLI `delete` only handles files).
  */
 export async function deletePath(path: string): Promise<void> {
-	await obsidian(`delete path="${path}"`);
+	const pathEscaped = path.replace(/'/g, "\\'");
+	await obsidianEval(
+		`(async()=>{const f=app.vault.getAbstractFileByPath('${pathEscaped}');if(f)await app.vault.trash(f,true);return 'ok'})()`,
+	);
 }
 
 /**
- * Check if a file exists via CLI.
- * Uses `file path=X` — errors if not found.
+ * Check if a file/folder exists via Obsidian API.
+ * Uses eval (CLI `file` returns exit 0 even on "not found").
  */
 export async function fileExists(path: string): Promise<boolean> {
-	try {
-		await obsidian(`file path="${path}"`);
-		return true;
-	} catch (e) {
-		if (e instanceof CliError && e.result.exitCode !== 0) {
-			return false;
-		}
-		throw e;
-	}
+	const pathEscaped = path.replace(/'/g, "\\'");
+	const result = await obsidianEval(
+		`(async()=>{const f=app.vault.getAbstractFileByPath('${pathEscaped}');return f?'yes':'no'})()`,
+	);
+	return result === "yes";
 }
 
 /**
@@ -89,21 +120,8 @@ export async function listFiles(
 
 /**
  * Delete all files under a folder (for cleanup).
- * Lists all files then deletes them one by one.
+ * Deletes the folder and all its contents via Obsidian API.
  */
 export async function deleteAllUnder(folder: string): Promise<void> {
-	const files = await listFiles(folder);
-	for (const file of files) {
-		try {
-			await deletePath(file);
-		} catch {
-			// Ignore errors (file may have been deleted by parent folder delete)
-		}
-	}
-	// Try deleting the folder itself
-	try {
-		await deletePath(folder);
-	} catch {
-		// Folder may already be gone
-	}
+	await deletePath(folder);
 }

@@ -37,7 +37,7 @@ import {
 describe("Librarian CLI E2E", () => {
 	beforeAll(async () => {
 		await setupTestVault();
-	}, 30_000);
+	});
 
 	// 000: Initial healing
 	it("creates all codex files on init", testAllCodexesCreatedOnInit);
