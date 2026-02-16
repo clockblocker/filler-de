@@ -525,6 +525,22 @@ Lemma tries two sources (in order):
 1. `state.attestationForLatestNavigated` — from a prior wikilink click
 2. `buildAttestationFromSelection(selection)` — from the current text selection
 
+#### Lemma Idempotence Cache (10s)
+
+Before running Phase A/Phase B, Lemma builds an invocation key from:
+- source file path
+- source ref (`![[file#^block|^]]`)
+- selected surface
+- target offset in block
+
+If the same key was processed successfully in the last 10 seconds, Lemma does not re-run source rewrites or LLM classification. Instead it:
+1. hydrates `latestLemmaResult` + `latestResolvedLemmaTargetPath` from cache
+2. reads the target dict note and checks expected V3 sections on the matched entry
+3. if complete: silently no-op
+4. if incomplete: silently re-trigger background Generate to backfill missing sections
+
+The cooldown starts only after successful Lemma completion.
+
 #### LLM Classification
 
 **Input** (via `PromptKind.Lemma`): `{ surface: string, context: string }`
@@ -653,7 +669,7 @@ Matching ignores surfaceKind so that inflected encounters (e.g., "Schlosses" →
 
 `generateSections` has two paths:
 
-**Path A (re-encounter)**: If `matchedEntry` exists, skip all LLM calls. Find or create the Attestation section in the matched entry, append the new attestation ref (deduped). Returns existing entries unchanged except for the appended ref.
+**Path A (re-encounter)**: If `matchedEntry` exists, append attestation ref (deduped), then check expected V3 sections. If sections are complete, keep fast path (no LLM). If some V3 sections are missing, Generate calls only the missing section generators and merges only those missing sections into the existing entry.
 
 **Path B (new entry)**: Determines applicable sections via `getSectionsFor()`, filtered to the **V3 set**: Header, Tags, Morphem, Relation, Inflection, Translation, Attestation. Header is built from LemmaResult fields (no LLM call).
 
@@ -1007,11 +1023,20 @@ type InFlightGenerate = {
   promise: Promise<void>;    // resolves when background Generate finishes
 };
 
+type LemmaInvocationCache = {
+  key: string;                               // sourcePath + ref + surface + offset
+  cachedAtMs: number;                        // success timestamp
+  lemmaResult: LemmaResult;                  // last successful Lemma output for this key
+  resolvedTargetPath: SplitPathToMdFile;     // target note used for completeness checks
+  generatedEntryId?: string;                 // captured after successful Generate
+};
+
 type TextfresserState = {
   attestationForLatestNavigated: Attestation | null;  // from last wikilink click
   latestLemmaResult: LemmaResult | null;              // from last Lemma command
   latestResolvedLemmaTargetPath?: SplitPathToMdFile;  // final resolved target from Lemma phase B
   latestLemmaPlaceholderPath?: SplitPathToMdFile;     // optional placeholder tracking between Lemma phases
+  latestLemmaInvocationCache: LemmaInvocationCache | null; // 10s idempotence cache
   latestFailedSections: string[];                      // optional sections that failed in last Generate
   targetBlockId?: string;                              // V5: entry ^blockId to scroll to after Generate
   inFlightGenerate: InFlightGenerate | null;           // background Generate in progress (set after Lemma)
@@ -1027,6 +1052,8 @@ type TextfresserState = {
 `latestResolvedLemmaTargetPath` is written by Lemma phase B and is the canonical target used by background Generate. This avoids ambiguous basename lookup when multiple notes share the same basename in different roots.
 
 `latestLemmaPlaceholderPath` tracks the pre-prompt placeholder note (if created) so phase B can rename/delete it safely and optionally navigate away from it.
+
+`latestLemmaInvocationCache` stores the latest successful Lemma invocation for 10-second idempotence. Cache-hit path is silent: complete entries no-op, incomplete entries trigger silent background Generate backfill.
 
 `latestFailedSections` is populated by `generateSections` when optional LLM calls fail (graceful degradation). Used by the notification logic to show partial-success warnings.
 
@@ -1046,10 +1073,17 @@ Validate activeFile exists
 Build CommandInput { commandContext, resultingActions, textfresserState }
   ↓
 If commandName === Lemma:
-  runLemmaTwoPhase(input):
-    Phase A dispatch (safe pre-link + optional placeholder upsert)
-    Prompt + disambiguate
-    Phase B dispatch (final rewrite + placeholder move/cleanup)
+  resolve attestation + invocation key
+  if cache-hit (<=10s for same key):
+    hydrate latest lemma state
+    if target entry has all expected V3 sections: silent no-op
+    else: silent background Generate refetch
+  else:
+    runLemmaTwoPhase(input):
+      Phase A dispatch (safe pre-link + optional placeholder upsert)
+      Prompt + disambiguate
+      Phase B dispatch (final rewrite + placeholder move/cleanup)
+    persist cache entry (key + timestamp + lemmaResult + resolvedTargetPath)
 Else:
   commandFnForCommandKind[commandName](input)
   ↓
@@ -1082,7 +1116,8 @@ runBackgroundGenerate(targetPath, lemma, notify):
   4. commandFnForCommandKind.Generate(input) → ResultAsync<VaultAction[], CommandError>
   5. Prepend UpsertMdFile action (ensures file exists before process/rename)
   6. vam.dispatch(allActions)
-  7. Notify success/failure (same format as manual Generate)
+  7. Capture generatedEntryId from targetBlockId into Lemma cache (when target path matches)
+  8. Notify success/failure (same format as manual Generate)
   ↓
 .catch → notify("⚠ Background generate failed: {reason}")
 .finally → clear state.inFlightGenerate

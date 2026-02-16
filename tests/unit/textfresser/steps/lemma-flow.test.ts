@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { ok, okAsync } from "neverthrow";
+import { errAsync, ok, okAsync } from "neverthrow";
 import type { PromptRunner } from "../../../../src/commanders/textfresser/llm/prompt-runner";
 import { Textfresser } from "../../../../src/commanders/textfresser/textfresser";
 import type { CommandContext } from "../../../../src/managers/obsidian/command-executor";
@@ -12,10 +12,13 @@ import type { ApiService } from "../../../../src/stateless-helpers/api-service";
 
 type HarnessOptions = {
 	lemma: string;
+	disableAutomaticBackgroundGenerate?: boolean;
 	finalExists?: boolean;
+	lemmaFailuresBeforeSuccess?: number;
 	lookupInLibrary?: (surface: string) => SplitPathToMdFile[];
 	mdPwd?: SplitPathToMdFile | null;
 	placeholderContent?: string;
+	readContent?: (splitPath: SplitPathToMdFile) => string | undefined;
 };
 
 const SOURCE_PATH: SplitPathToMdFile = {
@@ -28,6 +31,7 @@ const SOURCE_PATH: SplitPathToMdFile = {
 function makeHarness(options: HarnessOptions) {
 	const dispatches: Array<readonly unknown[]> = [];
 	const cdCalls: SplitPathToMdFile[] = [];
+	let lemmaFailuresLeft = options.lemmaFailuresBeforeSuccess ?? 0;
 
 	const vam = {
 		activeFileService: {
@@ -48,9 +52,10 @@ function makeHarness(options: HarnessOptions) {
 		mdPwd: () => options.mdPwd ?? null,
 		readContent: async (splitPath: SplitPathToMdFile) =>
 			ok(
-				splitPath.basename === "geht"
-					? options.placeholderContent ?? ""
-					: "",
+				options.readContent?.(splitPath) ??
+					(splitPath.basename === "geht"
+						? options.placeholderContent ?? ""
+						: ""),
 			),
 		resolveLinkpathDest: () => null,
 		selection: { getInfo: () => null },
@@ -65,6 +70,11 @@ function makeHarness(options: HarnessOptions) {
 	textfresser.getState().promptRunner = {
 		generate: (kind) => {
 			if (kind === "Lemma") {
+				if (lemmaFailuresLeft > 0) {
+					lemmaFailuresLeft -= 1;
+					return errAsync({ reason: "lemma failed" });
+				}
+
 				return okAsync({
 					lemma: options.lemma,
 					linguisticUnit: "Lexem",
@@ -76,14 +86,29 @@ function makeHarness(options: HarnessOptions) {
 		},
 	} as unknown as PromptRunner;
 
-	// Disable automatic background-generate during tests.
-	textfresser.getState().inFlightGenerate = {
-		lemma: "__inflight__",
-		promise: Promise.resolve(),
-		targetPath: SOURCE_PATH,
-	};
+	// Disable automatic background-generate during tests by default.
+	if (options.disableAutomaticBackgroundGenerate ?? true) {
+		textfresser.getState().inFlightGenerate = {
+			lemma: "__inflight__",
+			promise: Promise.resolve(),
+			targetPath: SOURCE_PATH,
+		};
+	}
 
 	return { cdCalls, dispatches, textfresser };
+}
+
+function buildDictEntryContent(params: {
+	entryId: string;
+	sectionKinds: string[];
+}): string {
+	const sectionBlocks = params.sectionKinds
+		.map(
+			(kind) =>
+				`<span class="entry_section_title entry_section_title_${kind}">${kind}</span>\ncontent`,
+		)
+		.join("\n");
+	return `Header ^${params.entryId}\n\n${sectionBlocks}\n`;
 }
 
 function makeLemmaContext(): CommandContext {
@@ -195,5 +220,96 @@ describe("lemma two-phase flow", () => {
 		expect(result.isOk()).toBe(true);
 		expect(cdCalls).toHaveLength(1);
 		expect(cdCalls[0]?.basename).toBe("gehen");
+	});
+
+	it("repeated same-token Lemma call within cooldown does not rerun lemma phases", async () => {
+		const { dispatches, textfresser } = makeHarness({ lemma: "gehen" });
+		const notify = () => {};
+
+		const first = await textfresser.executeCommand(
+			"Lemma",
+			makeLemmaContext(),
+			notify,
+		);
+		expect(first.isOk()).toBe(true);
+		expect(dispatches).toHaveLength(2);
+
+		const second = await textfresser.executeCommand(
+			"Lemma",
+			makeLemmaContext(),
+			notify,
+		);
+		expect(second.isOk()).toBe(true);
+		expect(dispatches).toHaveLength(2);
+	});
+
+	it("cooldown starts only after a successful Lemma call", async () => {
+		const { dispatches, textfresser } = makeHarness({
+			lemma: "gehen",
+			lemmaFailuresBeforeSuccess: 1,
+		});
+
+		const failed = await textfresser.executeCommand(
+			"Lemma",
+			makeLemmaContext(),
+			() => {},
+		);
+		expect(failed.isErr()).toBe(true);
+		expect(dispatches).toHaveLength(1);
+
+		const succeeded = await textfresser.executeCommand(
+			"Lemma",
+			makeLemmaContext(),
+			() => {},
+		);
+		expect(succeeded.isOk()).toBe(true);
+		expect(dispatches).toHaveLength(3);
+	});
+
+	it("cache-hit complete path is silent", async () => {
+		const notifications: string[] = [];
+		const entryId = "LX-LM-VERB-1";
+		const completeEntry = buildDictEntryContent({
+			entryId,
+			sectionKinds: [
+				"kontexte",
+				"synonyme",
+				"morpheme",
+				"flexion",
+				"translations",
+				"tags",
+			],
+		});
+		const { dispatches, textfresser } = makeHarness({
+			lemma: "gehen",
+			readContent: (splitPath) =>
+				splitPath.basename === "gehen" ? completeEntry : undefined,
+		});
+
+		const first = await textfresser.executeCommand(
+			"Lemma",
+			makeLemmaContext(),
+			(message) => notifications.push(message),
+		);
+		expect(first.isOk()).toBe(true);
+
+		const cache = textfresser.getState().latestLemmaInvocationCache;
+		expect(cache).toBeTruthy();
+		if (cache) {
+			textfresser.getState().latestLemmaInvocationCache = {
+				...cache,
+				generatedEntryId: entryId,
+			};
+		}
+
+		const beforeSecond = notifications.length;
+		const second = await textfresser.executeCommand(
+			"Lemma",
+			makeLemmaContext(),
+			(message) => notifications.push(message),
+		);
+		expect(second.isOk()).toBe(true);
+		expect(notifications.length).toBe(beforeSecond);
+		expect(dispatches).toHaveLength(2);
 	});
 });

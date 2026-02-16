@@ -30,6 +30,10 @@ import type { LanguagesConfig } from "../../types";
 import { logger } from "../../utils/logger";
 import { commandFnForCommandKind } from "./commands";
 import {
+	computeMissingV3SectionKinds,
+	findEntryForLemmaResult,
+} from "./commands/generate/steps/reencounter-sections";
+import {
 	buildWikilinkForTarget,
 	expandOffsetForLinkedSpan,
 	resolveAttestation,
@@ -50,6 +54,7 @@ import {
 	computePrePromptTarget,
 } from "./common/lemma-link-routing";
 import type { PathLookupFn } from "./common/target-path-resolver";
+import { dictNoteHelper } from "./domain/dict-note";
 import { CommandErrorKind } from "./errors";
 import { PromptRunner } from "./llm/prompt-runner";
 
@@ -61,11 +66,20 @@ export type InFlightGenerate = {
 	promise: Promise<void>;
 };
 
+type LemmaInvocationCache = {
+	key: string;
+	cachedAtMs: number;
+	lemmaResult: LemmaResult;
+	resolvedTargetPath: SplitPathToMdFile;
+	generatedEntryId?: string;
+};
+
 export type TextfresserState = {
 	attestationForLatestNavigated: Attestation | null;
 	latestLemmaResult: LemmaResult | null;
 	latestResolvedLemmaTargetPath?: SplitPathToMdFile;
 	latestLemmaPlaceholderPath?: SplitPathToMdFile;
+	latestLemmaInvocationCache: LemmaInvocationCache | null;
 	/** Section names that failed during the latest Generate command (optional sections only). */
 	latestFailedSections: string[];
 	/** Block ID of the entry to scroll to after Generate dispatch. */
@@ -86,6 +100,8 @@ type RewritePlan = {
 	replaceSurface?: string;
 };
 
+const LEMMA_IDEMPOTENCE_WINDOW_MS = 10_000;
+
 function areSameSplitPath(a: SplitPathToMdFile, b: SplitPathToMdFile): boolean {
 	return (
 		a.basename === b.basename &&
@@ -93,6 +109,24 @@ function areSameSplitPath(a: SplitPathToMdFile, b: SplitPathToMdFile): boolean {
 		a.pathParts.length === b.pathParts.length &&
 		a.pathParts.every((part, index) => part === b.pathParts[index])
 	);
+}
+
+function stringifySplitPath(splitPath: SplitPathToMdFile): string {
+	return [
+		...splitPath.pathParts,
+		`${splitPath.basename}.${splitPath.extension}`,
+	].join("/");
+}
+
+function buildLemmaInvocationKey(attestation: Attestation): string {
+	const sourcePath = stringifySplitPath(attestation.source.path);
+	const offset = attestation.target.offsetInBlock;
+	return [
+		sourcePath,
+		attestation.source.ref,
+		attestation.target.surface,
+		String(offset ?? "none"),
+	].join("::");
 }
 
 function buildUpdatedBlock(
@@ -215,6 +249,7 @@ export class Textfresser {
 			inFlightGenerate: null,
 			languages,
 			latestFailedSections: [],
+			latestLemmaInvocationCache: null,
 			latestLemmaResult: null,
 			lookupInLibrary: () => [],
 			promptRunner: new PromptRunner(languages, apiService),
@@ -337,11 +372,54 @@ export class Textfresser {
 			resultingActions: [],
 			textfresserState: this.state,
 		};
+		const attestation = resolveAttestation(input);
+		if (!attestation) {
+			return errAsync({
+				kind: CommandErrorKind.NotEligible,
+				reason: "No attestation context available — select a word or click a wikilink first",
+			});
+		}
+		const invocationKey = buildLemmaInvocationKey(attestation);
+		const cachedInvocation =
+			this.getValidLemmaInvocationCache(invocationKey);
 
-		return new ResultAsync(this.runLemmaTwoPhase(input))
+		if (cachedInvocation) {
+			return new ResultAsync(this.handleLemmaCacheHit(cachedInvocation))
+				.mapErr((error) => {
+					const reason =
+						"reason" in error
+							? error.reason
+							: `Command failed: ${error.kind}`;
+					notify(`⚠ ${reason}`);
+					logger.warn("[Textfresser.Lemma] Failed:", error);
+					return error;
+				});
+		}
+
+		return new ResultAsync(this.runLemmaTwoPhase(input, attestation))
 			.map(() => {
 				const lemma = this.state.latestLemmaResult;
-				if (!lemma) return;
+				if (!lemma) {
+					return;
+				}
+
+				this.state.latestLemmaInvocationCache = {
+					cachedAtMs: Date.now(),
+					key: invocationKey,
+					lemmaResult: lemma,
+					resolvedTargetPath:
+						this.state.latestResolvedLemmaTargetPath ??
+						buildPolicyDestinationPath({
+							lemma: lemma.lemma,
+							linguisticUnit: lemma.linguisticUnit,
+							posLikeKind:
+								lemma.linguisticUnit === "Lexem"
+									? lemma.posLikeKind
+									: null,
+							surfaceKind: lemma.surfaceKind,
+							targetLanguage: this.state.languages.target,
+						}),
+				};
 
 				const pos =
 					lemma.linguisticUnit === "Lexem"
@@ -361,10 +439,60 @@ export class Textfresser {
 			});
 	}
 
+	private getValidLemmaInvocationCache(
+		key: string,
+	): LemmaInvocationCache | null {
+		const cache = this.state.latestLemmaInvocationCache;
+		if (!cache) return null;
+		if (cache.key !== key) return null;
+		const elapsed = Date.now() - cache.cachedAtMs;
+		return elapsed <= LEMMA_IDEMPOTENCE_WINDOW_MS ? cache : null;
+	}
+
+	private async handleLemmaCacheHit(
+		cache: LemmaInvocationCache,
+	): Promise<Result<void, CommandError>> {
+		this.state.latestLemmaResult = cache.lemmaResult;
+		this.state.latestResolvedLemmaTargetPath = cache.resolvedTargetPath;
+
+		const contentResult = await this.vam.readContent(cache.resolvedTargetPath);
+		if (contentResult.isErr()) {
+			logger.info("[Textfresser.Lemma] cache-hit read failed, refetching");
+			this.fireBackgroundGenerate(() => {});
+			return ok(undefined);
+		}
+
+		const entries = dictNoteHelper.parse(contentResult.value);
+		const matchedEntry = findEntryForLemmaResult({
+			entries,
+			generatedEntryId: cache.generatedEntryId,
+			lemmaResult: cache.lemmaResult,
+		});
+		if (!matchedEntry) {
+			logger.info("[Textfresser.Lemma] cache-hit missing entry, refetching");
+			this.fireBackgroundGenerate(() => {});
+			return ok(undefined);
+		}
+
+		const missingSections = computeMissingV3SectionKinds({
+			entry: matchedEntry,
+			lemmaResult: cache.lemmaResult,
+		});
+		if (missingSections.length === 0) {
+			logger.info("[Textfresser.Lemma] cache-hit complete, skipping");
+			return ok(undefined);
+		}
+
+		logger.info("[Textfresser.Lemma] cache-hit incomplete, refetching");
+		this.fireBackgroundGenerate(() => {});
+		return ok(undefined);
+	}
+
 	private async runLemmaTwoPhase(
 		input: CommandInput,
+		preResolvedAttestation?: Attestation,
 	): Promise<Result<void, CommandError>> {
-		const attestation = resolveAttestation(input);
+		const attestation = preResolvedAttestation ?? resolveAttestation(input);
 		if (!attestation) {
 			return err({
 				kind: CommandErrorKind.NotEligible,
@@ -717,6 +845,19 @@ export class Textfresser {
 		if (dispatchResult.isErr()) {
 			const reason = dispatchResult.error.map((e) => e.error).join(", ");
 			throw new Error(reason);
+		}
+
+		const cache = this.state.latestLemmaInvocationCache;
+		const generatedEntryId = this.state.targetBlockId;
+		if (
+			cache &&
+			generatedEntryId &&
+			areSameSplitPath(cache.resolvedTargetPath, targetPath)
+		) {
+			this.state.latestLemmaInvocationCache = {
+				...cache,
+				generatedEntryId,
+			};
 		}
 
 		const failed = this.state.latestFailedSections;

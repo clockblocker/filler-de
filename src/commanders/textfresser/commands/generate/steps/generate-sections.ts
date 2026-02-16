@@ -22,6 +22,7 @@ import {
 	buildVerbEntryIdentityFromFeatures,
 	isVerbFeaturesOutput,
 } from "./verb-features";
+import { computeMissingV3SectionKinds } from "./reencounter-sections";
 
 export {
 	buildEntityMeta,
@@ -53,11 +54,12 @@ function appendAttestation(entry: DictEntry, ctx: ResolvedEntryState): void {
 	}
 }
 
-function buildReEncounterResult(
+async function buildReEncounterResult(
 	ctx: ResolvedEntryState,
-): GenerateSectionsResult {
+): Promise<GenerateSectionsResult> {
 	const { matchedEntry, existingEntries } = ctx;
 	if (!matchedEntry) {
+		ctx.textfresserState.latestFailedSections = [];
 		return {
 			...ctx,
 			allEntries: existingEntries,
@@ -71,17 +73,52 @@ function buildReEncounterResult(
 	}
 
 	appendAttestation(matchedEntry, ctx);
+	const missingSectionKinds = computeMissingV3SectionKinds({
+		entry: matchedEntry,
+		lemmaResult: ctx.textfresserState.latestLemmaResult,
+	});
 
+	if (missingSectionKinds.length === 0) {
+		ctx.textfresserState.latestFailedSections = [];
+		ctx.textfresserState.targetBlockId = matchedEntry.id;
+
+		return {
+			...ctx,
+			allEntries: existingEntries,
+			failedSections: [],
+			inflectionCells: [],
+			morphemes: [],
+			nounInflectionGenus: undefined,
+			relations: [],
+			targetBlockId: matchedEntry.id,
+		};
+	}
+
+	const generated = await generateNewEntrySections(ctx, {
+		onlySections: new Set(missingSectionKinds),
+	});
+	const missingCssKinds = new Set(
+		missingSectionKinds.map((sectionKind) => cssSuffixFor[sectionKind]),
+	);
+	for (const section of generated.sections) {
+		const alreadyExists = matchedEntry.sections.some(
+			(existing) => existing.kind === section.kind,
+		);
+		if (!alreadyExists && missingCssKinds.has(section.kind)) {
+			matchedEntry.sections.push(section);
+		}
+	}
+
+	ctx.textfresserState.latestFailedSections = generated.failedSections;
 	ctx.textfresserState.targetBlockId = matchedEntry.id;
-
 	return {
 		...ctx,
 		allEntries: existingEntries,
-		failedSections: [],
-		inflectionCells: [],
-		morphemes: [],
-		nounInflectionGenus: undefined,
-		relations: [],
+		failedSections: generated.failedSections,
+		inflectionCells: generated.inflectionCells,
+		morphemes: generated.morphemes,
+		nounInflectionGenus: generated.nounInflectionGenus,
+		relations: generated.relations,
 		targetBlockId: matchedEntry.id,
 	};
 }
@@ -111,15 +148,19 @@ function getVerbEntryIdentity(entry: DictEntry): string | null {
 /**
  * Generate dictionary entry sections via LLM calls, or append attestation to existing entry.
  *
- * Path A (re-encounter): matchedEntry exists → append attestation ref, skip LLM calls
+ * Path A (re-encounter): matchedEntry exists → append attestation ref, regenerate only missing V3 sections
  * Path B (new entry): full LLM pipeline → build new DictEntry with computed nextIndex
  */
 export function generateSections(
 	ctx: ResolvedEntryState,
 ): ResultAsync<GenerateSectionsResult, CommandError> {
 	if (ctx.matchedEntry) {
-		return ResultAsync.fromSafePromise(
-			Promise.resolve(buildReEncounterResult(ctx)),
+		return ResultAsync.fromPromise(
+			buildReEncounterResult(ctx),
+			(error): CommandError => ({
+				kind: CommandErrorKind.ApiError,
+				reason: error instanceof Error ? error.message : String(error),
+			}),
 		);
 	}
 
