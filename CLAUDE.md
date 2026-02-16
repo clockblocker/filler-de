@@ -16,9 +16,9 @@ bun run dev          # watch mode
 bun run build:dev    # dev + typecheck
 
 # Test
-bun test             # all (unit + e2e)
-bun run test:unit    # unit only
-bun run test:e2e     # e2e (builds first, launches Obsidian)
+bun test             # unit tests
+bun run test:unit    # unit only (same as above)
+bun run test:cli-e2e # CLI-based E2E (requires running Obsidian + .env.cli-e2e)
 bun test path/to/test.test.ts  # single file
 
 # Code quality
