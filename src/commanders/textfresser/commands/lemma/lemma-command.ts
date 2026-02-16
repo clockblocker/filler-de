@@ -158,7 +158,12 @@ function replaceFirstWikilinkByDisplayedSurface(
 	const matches = iterWikilinks(text);
 	for (const match of matches) {
 		if (match.surface !== surface) continue;
-		return replaceAt(text, match.index, match.fullMatch.length, replacement);
+		return replaceAt(
+			text,
+			match.index,
+			match.fullMatch.length,
+			replacement,
+		);
 	}
 	return null;
 }
@@ -307,8 +312,11 @@ export function rewriteAttestationSourceContent(params: {
 			if (!line || !line.includes(marker)) continue;
 
 			const normalizedLine =
-				replaceFirstWikilinkByDisplayedSurface(line, surface, surface) ??
-				line;
+				replaceFirstWikilinkByDisplayedSurface(
+					line,
+					surface,
+					surface,
+				) ?? line;
 			if (
 				normalizedLine === rawBlock ||
 				markdownHelper.stripAll(normalizedLine) ===

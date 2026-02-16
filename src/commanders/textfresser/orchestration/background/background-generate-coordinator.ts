@@ -5,16 +5,22 @@ import type {
 } from "../../../../managers/obsidian/vault-action-manager";
 import { VaultActionKind } from "../../../../managers/obsidian/vault-action-manager";
 import type { SplitPathToMdFile } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
-import { decrementPending, incrementPending } from "../../../../utils/idle-tracker";
+import {
+	decrementPending,
+	incrementPending,
+} from "../../../../utils/idle-tracker";
 import { logger } from "../../../../utils/logger";
-import { buildPolicyDestinationPath } from "../../common/lemma-link-routing";
 import type { CommandError, CommandInput } from "../../commands/types";
+import { buildPolicyDestinationPath } from "../../common/lemma-link-routing";
 import type {
 	InFlightGenerate,
 	PendingGenerate,
 	TextfresserState,
 } from "../../state/textfresser-state";
-import { areSameSplitPath, stringifySplitPath } from "../shared/split-path-utils";
+import {
+	areSameSplitPath,
+	stringifySplitPath,
+} from "../shared/split-path-utils";
 
 type GenerateCommandFn = (
 	input: CommandInput,
@@ -33,7 +39,9 @@ export function createBackgroundGenerateCoordinator(params: {
 }): BackgroundGenerateCoordinator {
 	const { runGenerateCommand, scrollToTargetBlock, state, vam } = params;
 
-	function requestBackgroundGenerate(notify: (message: string) => void): void {
+	function requestBackgroundGenerate(
+		notify: (message: string) => void,
+	): void {
 		const lemmaResult = state.latestLemmaResult;
 		if (!lemmaResult) return;
 
@@ -182,7 +190,9 @@ export function createBackgroundGenerateCoordinator(params: {
 
 		const failed = state.latestFailedSections;
 		if (failed.length > 0) {
-			notify(`⚠ Entry created for ${lemma} (failed: ${failed.join(", ")})`);
+			notify(
+				`⚠ Entry created for ${lemma} (failed: ${failed.join(", ")})`,
+			);
 		} else {
 			notify(`✓ Entry created for ${lemma}`);
 		}
@@ -200,7 +210,10 @@ export function createBackgroundGenerateCoordinator(params: {
 		await new Promise((resolve) => setTimeout(resolve, 300));
 
 		const currentFile = vam.mdPwd();
-		if (!currentFile || !areSameSplitPath(currentFile, inFlight.targetPath)) {
+		if (
+			!currentFile ||
+			!areSameSplitPath(currentFile, inFlight.targetPath)
+		) {
 			return;
 		}
 

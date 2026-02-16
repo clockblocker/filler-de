@@ -11,23 +11,20 @@ import type { ApiService } from "../../stateless-helpers/api-service";
 import type { LanguagesConfig } from "../../types";
 import { logger } from "../../utils/logger";
 import { actionCommandFnForCommandKind } from "./commands";
-import type {
-	CommandInput,
-	TextfresserCommandKind,
-} from "./commands/types";
-import { executeLemmaFlow } from "./orchestration/lemma/execute-lemma-flow";
-import { createWikilinkClickHandler } from "./orchestration/handlers/wikilink-click-handler";
-import { dispatchActions } from "./orchestration/shared/dispatch-actions";
-import { CommandErrorKind } from "./errors";
+import type { CommandInput, TextfresserCommandKind } from "./commands/types";
 import type { PathLookupFn } from "./common/target-path-resolver";
+import { CommandErrorKind } from "./errors";
+import {
+	type BackgroundGenerateCoordinator,
+	createBackgroundGenerateCoordinator,
+} from "./orchestration/background/background-generate-coordinator";
+import { createWikilinkClickHandler } from "./orchestration/handlers/wikilink-click-handler";
+import { executeLemmaFlow } from "./orchestration/lemma/execute-lemma-flow";
+import { dispatchActions } from "./orchestration/shared/dispatch-actions";
 import {
 	createInitialTextfresserState,
 	type TextfresserState,
 } from "./state/textfresser-state";
-import {
-	createBackgroundGenerateCoordinator,
-	type BackgroundGenerateCoordinator,
-} from "./orchestration/background/background-generate-coordinator";
 
 export type {
 	InFlightGenerate,
@@ -51,12 +48,13 @@ export class Textfresser {
 			vam,
 		});
 
-		this.backgroundGenerateCoordinator = createBackgroundGenerateCoordinator({
-			runGenerateCommand: actionCommandFnForCommandKind.Generate,
-			scrollToTargetBlock: () => this.scrollToTargetBlock(),
-			state: this.state,
-			vam: this.vam,
-		});
+		this.backgroundGenerateCoordinator =
+			createBackgroundGenerateCoordinator({
+				runGenerateCommand: actionCommandFnForCommandKind.Generate,
+				scrollToTargetBlock: () => this.scrollToTargetBlock(),
+				state: this.state,
+				vam: this.vam,
+			});
 	}
 
 	executeCommand(
@@ -76,7 +74,8 @@ export class Textfresser {
 				},
 				notify,
 				requestBackgroundGenerate:
-					this.backgroundGenerateCoordinator.requestBackgroundGenerate,
+					this.backgroundGenerateCoordinator
+						.requestBackgroundGenerate,
 				state: this.state,
 				vam: this.vam,
 			});

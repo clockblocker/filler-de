@@ -1,13 +1,13 @@
 import { ok, type Result } from "neverthrow";
 import type { SplitPathToMdFile } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
 import { logger } from "../../../../utils/logger";
-import { dictNoteHelper } from "../../domain/dict-note";
 import {
 	computeMissingV3SectionKinds,
 	findEntryForLemmaResult,
 } from "../../commands/generate/steps/reencounter-sections";
-import type { Attestation } from "../../common/attestation/types";
 import type { CommandError } from "../../commands/types";
+import type { Attestation } from "../../common/attestation/types";
+import { dictNoteHelper } from "../../domain/dict-note";
 import type {
 	LemmaInvocationCache,
 	TextfresserState,
@@ -42,9 +42,9 @@ export async function handleLemmaCacheHit(params: {
 	cache: LemmaInvocationCache;
 	onRefetch: () => void;
 	state: TextfresserState;
-	readContent: (splitPath: SplitPathToMdFile) => Promise<
-		Result<string, string>
-	>;
+	readContent: (
+		splitPath: SplitPathToMdFile,
+	) => Promise<Result<string, string>>;
 }): Promise<Result<void, CommandError>> {
 	const { cache, onRefetch, readContent, state } = params;
 	state.latestLemmaResult = cache.lemmaResult;

@@ -2,12 +2,12 @@ import { markdownHelper } from "../../../../stateless-helpers/markdown-strip";
 import { multiSpanHelper } from "../../../../stateless-helpers/multi-span";
 import { wikilinkHelper } from "../../../../stateless-helpers/wikilink";
 import { logger } from "../../../../utils/logger";
-import type { Attestation } from "../../common/attestation/types";
 import {
 	buildWikilinkForTarget,
 	expandOffsetForLinkedSpan,
 	hasNestedWikilinkStructure,
 } from "../../commands/lemma/lemma-command";
+import type { Attestation } from "../../common/attestation/types";
 
 export type RewritePlan = {
 	updatedBlock: string;

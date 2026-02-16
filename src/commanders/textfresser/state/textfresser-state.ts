@@ -1,11 +1,11 @@
-import type { SplitPathToMdFile } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { VaultActionManager } from "../../../managers/obsidian/vault-action-manager";
+import type { SplitPathToMdFile } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { ApiService } from "../../../stateless-helpers/api-service";
 import type { LanguagesConfig } from "../../../types";
-import { PromptRunner } from "../llm/prompt-runner";
 import type { LemmaResult } from "../commands/lemma/types";
 import type { Attestation } from "../common/attestation/types";
 import type { PathLookupFn } from "../common/target-path-resolver";
+import { PromptRunner } from "../llm/prompt-runner";
 
 export type InFlightGenerate = {
 	lemma: string;

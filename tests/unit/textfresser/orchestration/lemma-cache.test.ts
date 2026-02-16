@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { ok } from "neverthrow";
 import type { LemmaResult } from "../../../../src/commanders/textfresser/commands/lemma/types";
+import type { Attestation } from "../../../../src/commanders/textfresser/common/attestation/types";
 import {
 	buildLemmaInvocationKey,
 	getValidLemmaInvocationCache,
@@ -8,7 +9,6 @@ import {
 	LEMMA_IDEMPOTENCE_WINDOW_MS,
 } from "../../../../src/commanders/textfresser/orchestration/lemma/lemma-cache";
 import type { TextfresserState } from "../../../../src/commanders/textfresser/state/textfresser-state";
-import type { Attestation } from "../../../../src/commanders/textfresser/common/attestation/types";
 import type { SplitPathToMdFile } from "../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 
 const SOURCE_PATH: SplitPathToMdFile = {
