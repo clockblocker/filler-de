@@ -35,6 +35,7 @@ import type { SplitPathToMdFile } from "./managers/obsidian/vault-action-manager
 import { OverlayManager } from "./managers/overlay-manager";
 import { SettingsTab } from "./settings";
 import { ApiService } from "./stateless-helpers/api-service";
+import { getMdFilesInLibrary } from "./stateless-helpers/library-files";
 import {
 	DEFAULT_SETTINGS,
 	type SuffixDelimiterConfig,
@@ -605,11 +606,7 @@ export default class TextEaterPlugin extends Plugin {
 		}
 
 		// Count files that will be affected
-		const mdFiles = this.app.vault.getFiles().filter((f) => {
-			return (
-				f.path.startsWith(`${libraryRoot}/`) && f.path.endsWith(".md")
-			);
-		});
+		const mdFiles = getMdFilesInLibrary(this.app.vault, libraryRoot);
 
 		const filesToRename = mdFiles.filter((f) =>
 			oldPattern.test(f.basename),

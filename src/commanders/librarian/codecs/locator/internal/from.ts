@@ -22,6 +22,46 @@ import type { NodeLocatorOf } from "../../types";
 import type { CorrespondingTreeNodeKind } from "../../types/type-mappings";
 import type { TreeNodeLocator } from "../types";
 
+type SegmentIdForKind = {
+	[TreeNodeKind.File]: FileNodeSegmentId;
+	[TreeNodeKind.Scroll]: ScrollNodeSegmentId;
+	[TreeNodeKind.Section]: SectionNodeSegmentId;
+};
+
+function serializeAndBuildLocator<NK extends TreeNodeKind>(
+	segmentId: SegmentIdCodecs,
+	components: { coreName: string; targetKind: NK; extension?: string },
+	segmentIdChainToParent: ReturnType<typeof makeNodeSegmentId>[],
+	errorContext: Record<string, unknown>,
+): Result<
+	{
+		segmentId: SegmentIdForKind[NK];
+		segmentIdChainToParent: typeof segmentIdChainToParent;
+		targetKind: NK;
+	},
+	CodecError
+> {
+	const segmentIdResult = segmentId.serializeSegmentIdUnchecked(components);
+
+	if (segmentIdResult.isErr()) {
+		return err(
+			makeLocatorError(
+				"InvalidSegmentId",
+				`Failed to serialize ${components.targetKind.toLowerCase()} segment ID`,
+				errorContext,
+				segmentIdResult.error,
+			),
+		);
+	}
+	return ok({
+		// Type assertion: serializeSegmentIdUnchecked returns TreeNodeSegmentId union,
+		// but we know it matches NK because targetKind constrains the output
+		segmentId: segmentIdResult.value as SegmentIdForKind[NK],
+		segmentIdChainToParent,
+		targetKind: components.targetKind,
+	});
+}
+
 /**
  * Converts canonical split path inside library to locator.
  * Returns Result instead of throwing.
@@ -58,79 +98,39 @@ export function canonicalSplitPathInsideLibraryToLocator(
 	);
 
 	switch (sp.kind) {
-		case SplitPathKind.File: {
-			const segmentIdResult = segmentId.serializeSegmentIdUnchecked({
-				coreName: sp.separatedSuffixedBasename.coreName,
-				extension: sp.extension,
-				targetKind: TreeNodeKind.File,
-			});
-
-			if (segmentIdResult.isErr()) {
-				return err(
-					makeLocatorError(
-						"InvalidSegmentId",
-						"Failed to serialize file segment ID",
-						{ extension: sp.extension },
-						segmentIdResult.error,
-					),
-				);
-			}
-			return ok({
-				// Type assertion: serializeSegmentIdUnchecked returns TreeNodeSegmentId union,
-				// but we know it's FileNodeSegmentId because targetKind is File
-				segmentId: segmentIdResult.value as FileNodeSegmentId,
+		case SplitPathKind.File:
+			return serializeAndBuildLocator(
+				segmentId,
+				{
+					coreName: sp.separatedSuffixedBasename.coreName,
+					extension: sp.extension,
+					targetKind: TreeNodeKind.File,
+				},
 				segmentIdChainToParent,
-				targetKind: TreeNodeKind.File,
-			});
-		}
+				{ extension: sp.extension },
+			);
 
-		case SplitPathKind.MdFile: {
-			const segmentIdResult = segmentId.serializeSegmentIdUnchecked({
-				coreName: sp.separatedSuffixedBasename.coreName,
-				extension: MD,
-				targetKind: TreeNodeKind.Scroll,
-			});
-			if (segmentIdResult.isErr()) {
-				return err(
-					makeLocatorError(
-						"InvalidSegmentId",
-						"Failed to serialize scroll segment ID",
-						{},
-						segmentIdResult.error,
-					),
-				);
-			}
-			return ok({
-				// Type assertion: serializeSegmentIdUnchecked returns TreeNodeSegmentId union,
-				// but we know it's ScrollNodeSegmentId because targetKind is Scroll
-				segmentId: segmentIdResult.value as ScrollNodeSegmentId,
+		case SplitPathKind.MdFile:
+			return serializeAndBuildLocator(
+				segmentId,
+				{
+					coreName: sp.separatedSuffixedBasename.coreName,
+					extension: MD,
+					targetKind: TreeNodeKind.Scroll,
+				},
 				segmentIdChainToParent,
-				targetKind: TreeNodeKind.Scroll,
-			});
-		}
+				{},
+			);
 
-		case SplitPathKind.Folder: {
-			const segmentIdResult = segmentId.serializeSegmentIdUnchecked({
-				coreName: sp.separatedSuffixedBasename.coreName,
-				targetKind: TreeNodeKind.Section,
-			});
-			if (segmentIdResult.isErr()) {
-				return err(
-					makeLocatorError(
-						"InvalidSegmentId",
-						"Failed to serialize section segment ID",
-						{},
-						segmentIdResult.error,
-					),
-				);
-			}
-			return ok({
-				// Type assertion: serializeSegmentIdUnchecked returns TreeNodeSegmentId union,
-				// but we know it's SectionNodeSegmentId because targetKind is Section
-				segmentId: segmentIdResult.value as SectionNodeSegmentId,
+		case SplitPathKind.Folder:
+			return serializeAndBuildLocator(
+				segmentId,
+				{
+					coreName: sp.separatedSuffixedBasename.coreName,
+					targetKind: TreeNodeKind.Section,
+				},
 				segmentIdChainToParent,
-				targetKind: TreeNodeKind.Section,
-			});
-		}
+				{},
+			);
 	}
 }
