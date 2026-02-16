@@ -19,9 +19,9 @@ import type {
 	TextfresserState,
 } from "../../state/textfresser-state";
 import {
-	areSameSplitPath,
+	splitPathsEqual,
 	stringifySplitPath,
-} from "../shared/split-path-utils";
+} from "../../../../stateless-helpers/split-path-comparison";
 
 type GenerateCommandFn = (
 	input: CommandInput,
@@ -97,7 +97,7 @@ export function createBackgroundGenerateCoordinator(params: {
 				state.pendingGenerate = null;
 				if (
 					pending &&
-					!areSameSplitPath(pending.targetPath, request.targetPath)
+					!splitPathsEqual(pending.targetPath, request.targetPath)
 				) {
 					launchBackgroundGenerate(pending);
 				}
@@ -205,7 +205,7 @@ export function createBackgroundGenerateCoordinator(params: {
 		if (
 			cache &&
 			generatedEntryId &&
-			areSameSplitPath(cache.resolvedTargetPath, targetPath)
+			splitPathsEqual(cache.resolvedTargetPath, targetPath)
 		) {
 			state.latestLemmaInvocationCache = {
 				...cache,
@@ -237,7 +237,7 @@ export function createBackgroundGenerateCoordinator(params: {
 		const currentFile = vam.mdPwd();
 		if (
 			!currentFile ||
-			!areSameSplitPath(currentFile, inFlight.targetPath)
+			!splitPathsEqual(currentFile, inFlight.targetPath)
 		) {
 			return;
 		}

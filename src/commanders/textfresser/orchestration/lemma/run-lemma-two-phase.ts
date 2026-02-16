@@ -22,7 +22,7 @@ import {
 import { CommandErrorKind } from "../../errors";
 import type { TextfresserState } from "../../state/textfresser-state";
 import { dispatchActions } from "../shared/dispatch-actions";
-import { areSameSplitPath } from "../shared/split-path-utils";
+import { splitPathsEqual } from "../../../../stateless-helpers/split-path-comparison";
 import {
 	chooseBestEffortLemmaOutput,
 	evaluateLemmaOutputGuardrails,
@@ -272,8 +272,8 @@ export async function runLemmaTwoPhase(params: {
 	const shouldNavigateToFinal =
 		placeholderPath !== null &&
 		currentPath !== null &&
-		!areSameSplitPath(placeholderPath, finalTarget.splitPath) &&
-		areSameSplitPath(currentPath, placeholderPath);
+		!splitPathsEqual(placeholderPath, finalTarget.splitPath) &&
+		splitPathsEqual(currentPath, placeholderPath);
 
 	let placeholderWasCleaned = false;
 	let placeholderWasRenamed = false;
@@ -282,14 +282,14 @@ export async function runLemmaTwoPhase(params: {
 
 	if (
 		placeholderPath &&
-		areSameSplitPath(placeholderPath, finalTarget.splitPath)
+		splitPathsEqual(placeholderPath, finalTarget.splitPath)
 	) {
 		finalTargetOwnedByInvocation = !placeholderExistedBeforePhaseA;
 	}
 
 	if (
 		placeholderPath &&
-		!areSameSplitPath(placeholderPath, finalTarget.splitPath)
+		!splitPathsEqual(placeholderPath, finalTarget.splitPath)
 	) {
 		const finalExists = vam.exists(finalTarget.splitPath);
 		if (!finalExists) {

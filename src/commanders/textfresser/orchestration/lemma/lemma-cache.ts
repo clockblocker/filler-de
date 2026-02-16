@@ -12,7 +12,7 @@ import type {
 	LemmaInvocationCache,
 	TextfresserState,
 } from "../../state/textfresser-state";
-import { stringifySplitPath } from "../shared/split-path-utils";
+import { stringifySplitPath } from "../../../../stateless-helpers/split-path-comparison";
 
 export const LEMMA_IDEMPOTENCE_WINDOW_MS = 10_000;
 
