@@ -72,8 +72,8 @@ Wrapper utilities: `tests/cli-e2e/utils/` — `cli.ts` (obsidian/obsidianEval), 
 ### Commanders (src/commanders/)
 | Commander | Files | Purpose |
 |-----------|-------|---------|
-| Librarian | ~270 files | Tree management, healing, codex generation |
-| Textfresser | ~17 files | Vocabulary commands (Generate, Translate) |
+| Librarian | ~170 files | Tree management, healing, codex generation |
+| Textfresser | ~90 files | Vocabulary commands (Generate, Translate) |
 
 ### Stateless Helpers (src/stateless-helpers/)
 - `note-metadata/` - Format-agnostic metadata read/write
@@ -98,12 +98,12 @@ const link = wikilinkHelper.findByTarget(text, "MyNote");
 ```
 
 ### Documentation (src/documentaion/)
-- `librarian-architrecture.md` - Main architecture doc
-- `librarian-pieces.md` - Refactoring details
+- `librarian-architecture.md` - Main architecture doc
 - `e2e-architecture.md` - E2E test architecture
 - `vam-architecture.md` - VAM dispatch, event pipeline, self-event tracking
 - `textfresser-architecture.md` - Textfresser commands, generate pipeline
 - `commands-and-behaviors-architecture.md` - Command executor + behavior manager
+- `linguistics-and-prompt-smith-architecture.md` - Linguistics and prompt generation
 
 **Keep these docs up to date**: when changing behavior documented in `src/documentaion/`, update the relevant doc in the same PR.
 
@@ -121,7 +121,7 @@ DOM Event → Detector (encode) → Handler.doesApply (SYNC gate) → Handler.ha
 - **Detectors** (`user-event-interceptor/events/`) capture raw events, encode into `Payload` via `Codec`
 - **Two-phase handler**: `doesApply()` is SYNC (for `preventDefault`), `handle()` is ASYNC
 - **Three outcomes**: `Handled` (consumed), `Passthrough` (native + clipboard), `Modified` (transform payload)
-- **Handler registration**: `createHandlers()` in `actions-manager/behaviors/` maps `PayloadKind` → handler
+- **Handler registration**: `createHandlers()` in `managers/obsidian/behavior-manager/` maps `PayloadKind` → handler
 - **Stateless handlers**: clipboard, select-all (pure transforms, no commander)
 - **Stateful handlers**: route to Librarian (checkbox, wikilink) or Textfresser (wikilink click tracking)
 
@@ -229,7 +229,8 @@ Reason: `prompt-smith` / AI API code relies on v3 semantics (e.g. `z.record(valu
 
 ### Logging
 - Use `logger` from `src/utils/logger`, NOT console.*
-- Stringify objects: `logger.info("data:", JSON.stringify(obj))`
+- No manual stringify — logger handles object serialization internally
+- Log levels: `info()`, `warn()`, `error()`
 
 ## Plan Mode
 
