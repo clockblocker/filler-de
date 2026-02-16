@@ -9,10 +9,8 @@ import type {
 	ScrollNodeLocator,
 } from "../../codecs/locator/types";
 import type { HealingAction } from "../library-tree/types/healing-action";
-import {
-	buildCanonicalLeafSplitPath,
-	splitPathsEqual,
-} from "../library-tree/utils/split-path-utils";
+import { buildCanonicalLeafSplitPath } from "../library-tree/utils/split-path-utils";
+import { splitPathsEqual } from "../../../../stateless-helpers/split-path-comparison";
 
 /**
  * Compute healing actions for a leaf node (Scroll or File).

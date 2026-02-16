@@ -9,7 +9,7 @@ import type {
 	InFlightGenerate,
 	TextfresserState,
 } from "../../state/textfresser-state";
-import { areSameSplitPath } from "../shared/split-path-utils";
+import { splitPathsEqual } from "../../../../stateless-helpers/split-path-comparison";
 
 export function createWikilinkClickHandler(params: {
 	awaitGenerateAndScroll: (inFlight: InFlightGenerate) => Promise<void>;
@@ -35,7 +35,7 @@ export function createWikilinkClickHandler(params: {
 					payload.splitPath,
 				);
 				const isInFlightTarget = clickedTarget
-					? areSameSplitPath(clickedTarget, inFlight.targetPath)
+					? splitPathsEqual(clickedTarget, inFlight.targetPath)
 					: payload.wikiTarget.basename ===
 						inFlight.targetPath.basename;
 				if (isInFlightTarget) {
