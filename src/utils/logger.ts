@@ -2,7 +2,7 @@ import winston from "winston";
 
 /**
  * Logger utility with winston + console transports.
- * Rule: No object logging - stringify important parts only.
+ * Objects are auto-serialized via formatMessage — no manual stringify needed.
  */
 
 const formatMessage = (message: string, ...args: unknown[]): string => {

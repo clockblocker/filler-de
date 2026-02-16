@@ -1,19 +1,19 @@
 # Logging Rules
 
-- Use `log` from `src/utils/logger` instead of `console.log/error/warn/info/debug`
-- **No object logging**: Always stringify important parts only. Use `JSON.stringify()` for objects/arrays
+- Use `logger` from `src/utils/logger` instead of `console.log/error/warn/info/debug`
+- **No manual stringify**: Logger handles object serialization internally via `formatMessage`
 - Use appropriate log levels:
-  - `log.info()` - general information
-  - `log.warn()` - warnings
-  - `log.error()` - errors (with error messages, not full objects)
+  - `logger.info()` - general information
+  - `logger.warn()` - warnings
+  - `logger.error()` - errors (with error messages, not full objects)
 
 Examples:
 ```typescript
 // ❌ BAD
 console.log("event", event);
-log.info("chains:", chains);
+logger.info("chains:", JSON.stringify(chains));  // redundant stringify
 
 // ✅ GOOD
-logger.info("chains:", JSON.stringify(chains));
+logger.info("[myFn] chains:", chains);
 logger.error("Failed:", error instanceof Error ? error.message : String(error));
 ```
