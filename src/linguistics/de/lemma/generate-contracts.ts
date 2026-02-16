@@ -69,11 +69,13 @@ export const DeEnrichmentInputSchema = buildContextualInputSchema(
 export type DeEnrichmentInput = z.infer<typeof DeEnrichmentInputSchema>;
 
 const emojiDescriptionSchema = z.array(z.string().min(1).max(4)).min(1).max(3);
+const senseGlossSchema = z.string().min(3).max(120);
 
 const deEnrichmentOutputBaseSchema = z
 	.object({
 		emojiDescription: emojiDescriptionSchema,
 		ipa: z.string().min(1),
+		senseGloss: senseGlossSchema.optional(),
 	})
 	.strict();
 

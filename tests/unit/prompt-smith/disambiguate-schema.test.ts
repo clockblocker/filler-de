@@ -13,6 +13,7 @@ describe("Disambiguate schema", () => {
 					emojiDescription: ["✅"],
 					index: 1,
 					phrasemeKind: "DiscourseFormula",
+					senseGloss: "certainly definitely",
 					unitKind: "Phrasem",
 				},
 			],
@@ -38,6 +39,31 @@ describe("Disambiguate schema", () => {
 					index: 2,
 					ipa: "ˈzamək",
 					pos: "Noun",
+					unitKind: "Lexem",
+				},
+			],
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("accepts optional senseGloss hints per sense", () => {
+		const result = userInputSchema.safeParse({
+			context: "Das Schloss an der Tür war kaputt.",
+			lemma: "Schloss",
+			senses: [
+				{
+					emojiDescription: ["🏰"],
+					index: 1,
+					pos: "Noun",
+					senseGloss: "castle palace",
+					unitKind: "Lexem",
+				},
+				{
+					emojiDescription: ["🔒"],
+					index: 2,
+					pos: "Noun",
+					senseGloss: "door lock",
 					unitKind: "Lexem",
 				},
 			],

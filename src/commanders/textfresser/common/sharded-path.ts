@@ -28,7 +28,7 @@ export const SURFACE_KIND_PATH_INDEX = 3;
  * @returns Shard segments: [first, prefix, shard]
  */
 export function computeShardSegments(name: string): string[] {
-	const normalized = name.toLowerCase();
+	const normalized = name.toLowerCase().replace(/\s+/g, "");
 
 	const first = normalized.charAt(0) || "_";
 	const prefix = normalized.slice(0, PREFIX_LENGTH) || first;

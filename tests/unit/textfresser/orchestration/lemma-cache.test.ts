@@ -65,6 +65,7 @@ function makeState(cacheAtMs: number): TextfresserState {
 			resolvedTargetPath,
 		},
 		latestLemmaResult: null,
+		latestLemmaTargetOwnedByInvocation: false,
 		lookupInLibrary: () => [],
 		pendingGenerate: null,
 		promptRunner: {} as TextfresserState["promptRunner"],

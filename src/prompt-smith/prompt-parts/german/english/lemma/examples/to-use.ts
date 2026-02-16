@@ -7,6 +7,7 @@ export const examples = [
 			surface: "ging",
 		},
 		output: {
+			contextWithLinkedParts: undefined,
 			lemma: "gehen",
 			linguisticUnit: "Lexem",
 			posLikeKind: "Verb",
@@ -19,6 +20,7 @@ export const examples = [
 			surface: "Haus",
 		},
 		output: {
+			contextWithLinkedParts: undefined,
 			lemma: "Haus",
 			linguisticUnit: "Lexem",
 			posLikeKind: "Noun",
@@ -49,6 +51,58 @@ export const examples = [
 			lemma: "aufpassen",
 			linguisticUnit: "Lexem",
 			posLikeKind: "Verb",
+			surfaceKind: "Inflected",
+		},
+	},
+	{
+		input: {
+			context: "Er [macht] die Tür auf.",
+			surface: "macht",
+		},
+		output: {
+			contextWithLinkedParts: "Er [macht] die Tür [auf].",
+			lemma: "aufmachen",
+			linguisticUnit: "Lexem",
+			posLikeKind: "Verb",
+			surfaceKind: "Inflected",
+		},
+	},
+	{
+		input: {
+			context: "Wann [fängst] du damit an?",
+			surface: "fängst",
+		},
+		output: {
+			contextWithLinkedParts: "Wann [fängst] du damit [an]?",
+			lemma: "anfangen",
+			linguisticUnit: "Lexem",
+			posLikeKind: "Verb",
+			surfaceKind: "Inflected",
+		},
+	},
+	{
+		input: {
+			context: "Morgen wird es noch [schöner].",
+			surface: "schöner",
+		},
+		output: {
+			contextWithLinkedParts: undefined,
+			lemma: "schön",
+			linguisticUnit: "Lexem",
+			posLikeKind: "Adjective",
+			surfaceKind: "Inflected",
+		},
+	},
+	{
+		input: {
+			context: "Sie ist [klüger] als ihr Bruder.",
+			surface: "klüger",
+		},
+		output: {
+			contextWithLinkedParts: undefined,
+			lemma: "klug",
+			linguisticUnit: "Lexem",
+			posLikeKind: "Adjective",
 			surfaceKind: "Inflected",
 		},
 	},

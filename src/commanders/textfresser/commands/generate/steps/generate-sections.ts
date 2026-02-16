@@ -221,6 +221,8 @@ export function generateSections(
 				entity?.emojiDescription ??
 				lemmaResult.precomputedEmojiDescription ??
 				generated.enrichmentOutput.emojiDescription;
+			const senseGloss =
+				entity?.senseGloss ?? generated.enrichmentOutput.senseGloss;
 
 			const newEntry: DictEntry = {
 				headerContent: generated.headerContent,
@@ -228,6 +230,7 @@ export function generateSections(
 				meta: {
 					...(entity ? { entity } : {}),
 					emojiDescription,
+					...(senseGloss ? { senseGloss } : {}),
 					...(verbEntryIdentity ? { verbEntryIdentity } : {}),
 					...(linguisticUnit ? { linguisticUnit } : {}),
 				},

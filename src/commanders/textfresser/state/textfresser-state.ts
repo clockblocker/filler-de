@@ -9,12 +9,15 @@ import { PromptRunner } from "../llm/prompt-runner";
 
 export type InFlightGenerate = {
 	lemma: string;
+	targetOwnedByInvocation: boolean;
 	targetPath: SplitPathToMdFile;
 	promise: Promise<void>;
 };
 
 export type PendingGenerate = {
 	lemma: string;
+	lemmaResult: LemmaResult;
+	targetOwnedByInvocation: boolean;
 	targetPath: SplitPathToMdFile;
 	notify: (message: string) => void;
 };
@@ -31,6 +34,7 @@ export type TextfresserState = {
 	attestationForLatestNavigated: Attestation | null;
 	latestLemmaResult: LemmaResult | null;
 	latestResolvedLemmaTargetPath?: SplitPathToMdFile;
+	latestLemmaTargetOwnedByInvocation: boolean;
 	latestLemmaPlaceholderPath?: SplitPathToMdFile;
 	latestLemmaInvocationCache: LemmaInvocationCache | null;
 	latestFailedSections: string[];
@@ -57,6 +61,7 @@ export function createInitialTextfresserState(params: {
 		latestFailedSections: [],
 		latestLemmaInvocationCache: null,
 		latestLemmaResult: null,
+		latestLemmaTargetOwnedByInvocation: false,
 		lookupInLibrary: () => [],
 		pendingGenerate: null,
 		promptRunner: new PromptRunner(languages, apiService),

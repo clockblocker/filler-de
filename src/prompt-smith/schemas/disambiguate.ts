@@ -13,6 +13,7 @@ const userInputSchema = z.object({
 			ipa: z.string().min(1).optional(),
 			phrasemeKind: PhrasemeKindSchema.optional(),
 			pos: z.string().optional(),
+			senseGloss: z.string().min(3).max(120).optional(),
 			unitKind: LinguisticUnitKindSchema,
 		}),
 	),

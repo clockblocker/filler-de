@@ -16,6 +16,7 @@ export const examples = [
 			ipa: "ˈɡeːən",
 			linguisticUnit: "Lexem",
 			posLikeKind: "Verb",
+			senseGloss: "to walk",
 		},
 	},
 	{
@@ -35,6 +36,7 @@ export const examples = [
 			linguisticUnit: "Lexem",
 			nounClass: "Proper",
 			posLikeKind: "Noun",
+			senseGloss: "financial institution",
 		},
 	},
 ] satisfies {
