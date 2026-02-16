@@ -1,14 +1,14 @@
-import { dictEntryIdHelper } from "../../../../../linguistics/common/dict-entry-id/dict-entry-id";
-import { getSectionsFor } from "../../../../../linguistics/common/sections/section-config";
-import { DictSectionKind } from "../../../../../linguistics/common/sections/section-kind";
+import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
+import { getSectionsFor } from "../../../targets/de/sections/section-config";
+import { DictSectionKind } from "../../../targets/de/sections/section-kind";
 import type {
 	GermanGenus,
 	NounInflectionCell,
 } from "../../../../../linguistics/de/lexem/noun";
 import { PromptKind } from "../../../../../prompt-smith/codegen/consts";
-import type { EntrySection } from "../../../../../stateless-helpers/dict-note/types";
+import type { EntrySection } from "../../../domain/dict-note/types";
 import { markdownHelper } from "../../../../../stateless-helpers/markdown-strip";
-import type { MorphemeItem } from "../../../../../stateless-helpers/morpheme-formatter";
+import type { MorphemeItem } from "../../../domain/morpheme/morpheme-formatter";
 import type { LemmaResult } from "../../lemma/types";
 import { dispatchHeaderFormatter } from "../section-formatters/header-dispatch";
 import { getFeaturesPromptKindForPos } from "./features-prompt-dispatch";

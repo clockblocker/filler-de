@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { errAsync, ok, okAsync } from "neverthrow";
 import { disambiguateSense } from "../../../../src/commanders/textfresser/commands/lemma/steps/disambiguate-sense";
-import type { PromptRunner } from "../../../../src/commanders/textfresser/prompt-runner";
+import type { PromptRunner } from "../../../../src/commanders/textfresser/llm/prompt-runner";
 import type { GermanLinguisticUnit } from "../../../../src/linguistics/de";
 import type { VaultActionManager } from "../../../../src/managers/obsidian/vault-action-manager";
 import type { SplitPathToMdFile } from "../../../../src/managers/obsidian/vault-action-manager/types/split-path";
@@ -13,14 +13,22 @@ const MOCK_SPLIT_PATH: SplitPathToMdFile = {
 	pathParts: ["Worter"],
 };
 
+function splitPathKey(path: SplitPathToMdFile): string {
+	return [...path.pathParts, `${path.basename}.${path.extension}`].join("/");
+}
+
 function makeVam(opts: {
 	files?: SplitPathToMdFile[];
 	content?: string;
+	contentByPath?: Record<string, string>;
 }): VaultActionManager {
 	return {
 		findByBasename: () => opts.files ?? [],
-		readContent: () =>
-			Promise.resolve(ok(opts.content ?? "")),
+		readContent: (splitPath: SplitPathToMdFile) => {
+			const key = splitPathKey(splitPath);
+			const mapped = opts.contentByPath?.[key];
+			return Promise.resolve(ok(mapped ?? opts.content ?? ""));
+		},
 	} as unknown as VaultActionManager;
 }
 
@@ -233,5 +241,40 @@ describe("disambiguateSense", () => {
 		const result = await disambiguateSense(vam, runner, API_RESULT_NOUN, "context");
 		expect(result.isOk()).toBe(true);
 		expect(result._unsafeUnwrap()).toBeNull();
+	});
+
+	it("uses preferred target path before basename fallback", async () => {
+		const fallbackPath: SplitPathToMdFile = {
+			...MOCK_SPLIT_PATH,
+			pathParts: ["Worter", "de", "lexem", "lemma", "b", "ban", "bank"],
+		};
+		const preferredPath: SplitPathToMdFile = {
+			...MOCK_SPLIT_PATH,
+			pathParts: ["Library", "de", "noun"],
+		};
+		const fallbackContent = buildNoteContent([
+			{ emojiDescription: ["🏦"], id: "LX-LM-NOUN-1" },
+		]);
+		const preferredContent = buildNoteContent([
+			{ emojiDescription: ["💺"], id: "LX-LM-NOUN-2" },
+		]);
+		const vam = makeVam({
+			contentByPath: {
+				[splitPathKey(fallbackPath)]: fallbackContent,
+				[splitPathKey(preferredPath)]: preferredContent,
+			},
+			files: [fallbackPath],
+		});
+		const runner = makePromptRunner(2);
+		const result = await disambiguateSense(
+			vam,
+			runner,
+			API_RESULT_NOUN,
+			"context",
+			preferredPath,
+		);
+
+		expect(result.isOk()).toBe(true);
+		expect(result._unsafeUnwrap()).toEqual({ matchedIndex: 2 });
 	});
 });

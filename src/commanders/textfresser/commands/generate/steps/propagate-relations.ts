@@ -1,10 +1,10 @@
 import { ok, type Result } from "neverthrow";
 import { SurfaceKind } from "../../../../../linguistics/common/enums/core";
-import { cssSuffixFor } from "../../../../../linguistics/common/sections/section-css-kind";
+import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
 import {
 	DictSectionKind,
 	TitleReprFor,
-} from "../../../../../linguistics/common/sections/section-kind";
+} from "../../../targets/de/sections/section-kind";
 import type { VaultAction } from "../../../../../managers/obsidian/vault-action-manager";
 import type { RelationSubKind } from "../../../../../prompt-smith/schemas/relation";
 import {

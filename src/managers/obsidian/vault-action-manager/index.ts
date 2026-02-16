@@ -47,6 +47,10 @@ export interface VaultActionManager {
 		basename: string,
 		opts?: { folder?: SplitPathToFolder },
 	): SplitPathToMdFile[];
+	resolveLinkpathDest(
+		linkpath: string,
+		from: SplitPathToMdFile,
+	): SplitPathToMdFile | null;
 	isInActiveView(splitPath: AnySplitPath): boolean;
 	list(splitPath: SplitPathToFolder): Result<AnySplitPath[], string>;
 	listAllFilesWithMdReaders(

@@ -1,10 +1,6 @@
-import { parse } from "./internal/parse";
-import { serialize } from "./internal/serialize";
-
-export type { SerializeResult } from "./internal/serialize";
-export type { DictEntry, EntrySection } from "./types";
-
-export const dictNoteHelper = {
-	parse,
-	serialize,
-};
+export {
+	dictNoteHelper,
+	type DictEntry,
+	type EntrySection,
+	type SerializeResult,
+} from "../../commanders/textfresser/domain/dict-note";

@@ -73,8 +73,8 @@ async function ensureVaultOpen(): Promise<void> {
 		await proc.exited;
 
 		// Wait for Obsidian to load the vault
-		const maxWait = 15_000;
-		const interval = 1_000;
+		const maxWait = 10_000;
+		const interval = 500;
 		const start = Date.now();
 		while (Date.now() - start < maxWait) {
 			await new Promise((r) => setTimeout(r, interval));

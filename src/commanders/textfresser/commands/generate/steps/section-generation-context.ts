@@ -1,4 +1,4 @@
-import { DictSectionKind } from "../../../../../linguistics/common/sections/section-kind";
+import { DictSectionKind } from "../../../targets/de/sections/section-kind";
 import type { LemmaResult } from "../../lemma/types";
 import type {
 	EnrichmentOutput,

@@ -4,8 +4,8 @@ import { propagateInflections } from "../../../../src/commanders/textfresser/com
 import type { TextfresserState } from "../../../../src/commanders/textfresser/textfresser";
 import type { NounInflectionCell } from "../../../../src/linguistics/de/lexem/noun";
 import { VaultActionKind } from "../../../../src/managers/obsidian/vault-action-manager/types/vault-action";
-import { dictNoteHelper } from "../../../../src/stateless-helpers/dict-note";
-import type { DictEntry } from "../../../../src/stateless-helpers/dict-note/types";
+import { dictNoteHelper } from "../../../../src/commanders/textfresser/domain/dict-note";
+import type { DictEntry } from "../../../../src/commanders/textfresser/domain/dict-note/types";
 
 function makeCtx(
 	inflectionCells: NounInflectionCell[],

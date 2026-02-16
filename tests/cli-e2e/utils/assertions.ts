@@ -3,7 +3,7 @@ import type { PostHealingExpectations } from "./types";
 import { fileExists, listFiles, readFile } from "./vault-ops";
 
 const POLL_INTERVAL_MS = 300;
-const POLL_TIMEOUT_MS = 15_000;
+const POLL_TIMEOUT_MS = 8_000;
 
 /**
  * Retry `fn` until it doesn't throw or timeout is reached.

@@ -1,6 +1,6 @@
 import { z } from "zod/v3";
-import { blockIdHelper } from "../../block-id";
-import { noteMetadataHelper } from "../../note-metadata";
+import { blockIdHelper } from "../../../../../stateless-helpers/block-id";
+import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metadata";
 import type { DictEntry, EntrySection } from "../types";
 import { ENTRY_SECTION_MARKER_RE, ENTRY_SEPARATOR_RE } from "./constants";
 

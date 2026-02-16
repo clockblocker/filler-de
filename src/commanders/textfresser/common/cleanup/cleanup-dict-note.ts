@@ -1,6 +1,6 @@
-import { compareSectionsByWeight } from "../../../../linguistics/common/sections/section-config";
-import { dictNoteHelper } from "../../../../stateless-helpers/dict-note";
-import type { DictEntry } from "../../../../stateless-helpers/dict-note/types";
+import { compareSectionsByWeight } from "../../targets/de/sections/section-config";
+import { dictNoteHelper } from "../../domain/dict-note";
+import type { DictEntry } from "../../domain/dict-note/types";
 import { noteMetadataHelper } from "../../../../stateless-helpers/note-metadata";
 import { DICT_ENTRY_NOTE_KIND } from "../metadata";
 

@@ -1,10 +1,10 @@
 import { ResultAsync } from "neverthrow";
-import { cssSuffixFor } from "../../../../../linguistics/common/sections/section-css-kind";
+import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
 import {
 	DictSectionKind,
 	TitleReprFor,
-} from "../../../../../linguistics/common/sections/section-kind";
-import type { DictEntry } from "../../../../../stateless-helpers/dict-note/types";
+} from "../../../targets/de/sections/section-kind";
+import type { DictEntry } from "../../../domain/dict-note/types";
 import type { CommandError } from "../../types";
 import { CommandErrorKind } from "../../types";
 import { buildLinguisticUnitMeta } from "./build-linguistic-unit-meta";

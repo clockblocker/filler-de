@@ -1,44 +1,41 @@
 import { ok, type Result } from "neverthrow";
-import {
-	SplitPathKind,
-	type SplitPathToMdFile,
-} from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import {
 	type VaultAction,
 	VaultActionKind,
 } from "../../../../../managers/obsidian/vault-action-manager/types/vault-action";
-import { computeShardedFolderParts } from "../../../common/sharded-path";
+import { buildPolicyDestinationPath } from "../../../common/lemma-link-routing";
 import type { CommandError, CommandStateWithLemma } from "../../types";
 
-/** Appends RenameMdFile action to move file to sharded path. */
+/** Appends RenameMdFile action to move file to the policy destination. */
 export function moveToWorter(
 	ctx: CommandStateWithLemma,
 ): Result<CommandStateWithLemma, CommandError> {
 	const activeFile = ctx.commandContext.activeFile;
 	const lemmaResult = ctx.textfresserState.latestLemmaResult;
-	const shardedParts = computeShardedFolderParts(
-		activeFile.splitPath.basename,
-		ctx.textfresserState.languages.target,
-		lemmaResult.linguisticUnit,
-		lemmaResult.surfaceKind,
-	);
+	const destination = buildPolicyDestinationPath({
+		lemma: lemmaResult.lemma,
+		linguisticUnit: lemmaResult.linguisticUnit,
+		posLikeKind:
+			lemmaResult.linguisticUnit === "Lexem"
+				? lemmaResult.posLikeKind
+				: null,
+		surfaceKind: lemmaResult.surfaceKind,
+		targetLanguage: ctx.textfresserState.languages.target,
+	});
 
-	// Skip rename if already at the correct destination (e.g. background generate pre-computed path)
+	// Skip rename if already at destination.
 	const currentParts = activeFile.splitPath.pathParts;
 	const alreadyAtDestination =
-		currentParts.length === shardedParts.length &&
-		currentParts.every((p, i) => p === shardedParts[i]);
+		activeFile.splitPath.basename === destination.basename &&
+		currentParts.length === destination.pathParts.length &&
+		currentParts.every((part, index) => part === destination.pathParts[index]);
 
 	if (alreadyAtDestination) {
 		return ok(ctx);
 	}
 
-	const newPath: SplitPathToMdFile = {
-		basename: activeFile.splitPath.basename,
-		extension: activeFile.splitPath.extension,
-		kind: SplitPathKind.MdFile,
-		pathParts: shardedParts,
-	};
+	const newPath: SplitPathToMdFile = destination;
 
 	const action: VaultAction = {
 		kind: VaultActionKind.RenameMdFile,

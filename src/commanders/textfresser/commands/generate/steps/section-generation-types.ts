@@ -4,7 +4,7 @@ import type {
 } from "../../../../../linguistics/de/lexem/noun";
 import type { AgentOutput } from "../../../../../prompt-smith";
 import type { RelationSubKind } from "../../../../../prompt-smith/schemas/relation";
-import type { MorphemeItem } from "../../../../../stateless-helpers/morpheme-formatter";
+import type { MorphemeItem } from "../../../domain/morpheme/morpheme-formatter";
 import type { TargetLanguage } from "../../../../../types";
 
 export type ParsedRelation = {

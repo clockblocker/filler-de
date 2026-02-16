@@ -22,13 +22,14 @@ User reads a sentence, finds an unknown word
 User selects it, calls "Lemma"
   ↓
 Lemma (recon):
+  Phase A: resolve/create safe pre-target and insert clickable wikilink immediately
   LLM classifies minimal target: lemma + linguisticUnit (Lexem/Phrasem) + posLikeKind + surfaceKind
   Optionally returns contextWithLinkedParts for multi-span/separable linking
-  Wraps the selected word in a [[wikilink]] in the source text
+  Phase B: resolve final target by policy, rewrite source link(s), move/cleanup placeholder
   Stores classification + attestation in state
   ↓
 Background Generate fires automatically (user stays on source text):
-  Finds or creates target dict note (via vam.findByBasename)
+  Uses latest resolved lemma target path as primary destination
   Reads existing content (empty if new file)
   Runs full Generate pipeline: resolve existing entries, LLM sections, propagation
   Dispatches all actions via VAM (ProcessMdFile auto-detects open/closed file)
@@ -58,6 +59,8 @@ User gets a tailor-made dictionary that grows with their reading
 > **V13 scope**: Phraseme-kind threading + linguisticUnit metadata restore — Lemma output now includes `phrasemeKind` for `linguisticUnit: "Phrasem"`. `generateSections` restores `meta.linguisticUnit` for `Lexem` and `Phrasem` entries. Disambiguate senses now forward optional `phrasemeKind` hints extracted from `meta.linguisticUnit`.
 
 > **V14 scope**: Minimal Lemma + Generate enrichment cutover — `PromptKind.Lemma` now returns only classifier fields (`lemma`, `linguisticUnit`, `posLikeKind`, `surfaceKind`, optional `contextWithLinkedParts`). Core metadata (`emojiDescription`, `ipa`, noun-only `genus` + `nounClass`) moved to Generate via `PromptKind.LexemEnrichment` / `PromptKind.PhrasemEnrichment`. Features prompt is now POS-specific (`FeaturesNoun` ... `FeaturesInteractionalUnit`), and legacy `PromptKind.Features` is removed. Proper-noun/separable span expansion relies on `contextWithLinkedParts`; legacy `fullSurface` is removed. Runtime parsing remains backward-compatible with legacy Lemma keys (`pos` / `phrasemeKind`) by normalizing them to `posLikeKind`. Noun enrichment metadata (`genus`, `nounClass`) is treated as best-effort at parse time; header formatting first falls back to noun-inflection genus, then degrades to common header when genus is still missing.
+
+> **V15 scope**: Lemma safe-linking + deterministic target routing — Lemma now runs in two dispatch phases: pre-prompt safe link insertion (with optional Worter placeholder) and post-prompt final routing rewrite. Closed-set Lexem POS (`Pronoun`, `Article`, `Preposition`, `Conjunction`, `Particle`, `InteractionalUnit`) route to `Library/<lang>/<pos-kebab>/<lemma>.md`; all other entries route to Worter sharded paths. Post-prompt phase can rename placeholder to final target, delete placeholder only when empty and final exists, retarget temporary links (including multi-span expansion), and navigate from placeholder to final note when needed. Background Generate now uses the latest resolved target path as its primary source of truth.
 
 > **V9 scope**: LinguisticUnit DTO — Zod-schema-based type system as source of truth for DictEntries. German + Noun fully featured (`genus`, `nounClass`); all other POS/unit kinds have stubs. `GermanLinguisticUnit` built during Generate and stored in `meta.linguisticUnit`. Header prompt now returns `genus` ("Maskulinum"/"Femininum"/"Neutrum") instead of `article` ("der"/"die"/"das"); formatter derives article via `articleFromGenus`. New files: `surface-factory.ts`, `genus.ts`, `noun.ts`, `pos-features.ts`, `lexem-surface.ts`, `phrasem-surface.ts`, `morphem-surface.ts`, `linguistic-unit.ts`. 21 new DTO tests.
 
@@ -114,13 +117,14 @@ Note (Obsidian .md file, named after a Surface)
 │  Commanders (Business logic)                            │
 │  ├─ Librarian   — tree, healing, codex                  │
 │  └─ Textfresser — vocabulary commands                   │
+│     ├─ domain/     — dict-note, dict-entry-id, morpheme │
+│     ├─ targets/de/ — section config + CSS/title mapping │
+│     └─ llm/        — prompt catalog + prompt runner      │
 ├─────────────────────────────────────────────────────────┤
 │  Stateless Helpers (Pure functions)                     │
-│  ├─ dict-note        — parse/serialize dictionary notes │
 │  ├─ note-metadata    — format-agnostic YAML/JSON meta   │
 │  ├─ block-id         — ^blockId extraction/injection    │
 │  ├─ wikilink         — [[wikilink]] parsing             │
-│  ├─ morpheme-formatter — morpheme → wikilink display    │
 │  └─ api-service      — Gemini API wrapper               │
 ├─────────────────────────────────────────────────────────┤
 │  Prompt-Smith (LLM prompt management)                   │
@@ -140,8 +144,8 @@ Note (Obsidian .md file, named after a Surface)
 │  ├─ german/features/noun        — Noun Full/Ref features │
 │  ├─ german/features/pos-features — all POS feature unions │
 │  ├─ german/schemas/             — GermanLinguisticUnitSchema │
-│  ├─ common/sections/section-kind   — DictSectionKind    │
-│  ├─ common/sections/section-css-kind — kind → CSS suffix │
+│  ├─ commanders/textfresser/targets/de/sections/section-kind   — DictSectionKind    │
+│  ├─ commanders/textfresser/targets/de/sections/section-css-kind — kind → CSS suffix │
 │  └─ german/inflection/noun      — NounInflectionCell    │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -245,7 +249,7 @@ Section titles are localized per `TargetLanguage` via `TitleReprFor`.
 
 **Dict note cleanup on open (V6)**: When a dict note is opened (`file-open` event in `main.ts`), `cleanupDictNote()` runs three normalizations: (1) normalize attestation ref spacing to `\n\n`-separated, (2) reorder sections within each entry by `SECTION_DISPLAY_WEIGHT` (Attestation → Relation → Translation → Morphem → Inflection → Deviation → FreeForm), and (3) reorder entries so LM (lemma) entries come before IN (inflected) entries. Returns `null` if no changes needed (skips write). Uses VAM `ProcessMdFile` dispatch with self-event tracking to prevent feedback loops. Detection: checks note content for `noteKind: "DictEntry"` metadata string. The Generate pipeline also applies section weight sorting in `serializeEntry` before writing.
 
-**Source**: `src/linguistics/sections/section-kind.ts`
+**Source**: `src/commanders/textfresser/targets/de/sections/section-kind.ts`
 
 ### 4.7 DictEntrySubSections
 
@@ -271,7 +275,7 @@ DictEntrySubSections are the unit at which cross-reference propagation operates 
 
 ## 5. Note & DictEntry Format
 
-**Location**: `src/stateless-helpers/dict-note/`
+**Location**: `src/commanders/textfresser/domain/dict-note/` (compat re-export remains at `src/stateless-helpers/dict-note/`)
 
 A Note is an Obsidian markdown file named after a Surface. It contains one or more **DictEntries** — each representing a distinct semantic/grammatical meaning of that Surface.
 
@@ -343,13 +347,13 @@ Per-DictEntry metadata is stored in a hidden `<section>` at the bottom of the No
 `dictNoteHelper` provides round-trip-stable parse and serialize:
 
 ```typescript
-import { dictNoteHelper } from "src/stateless-helpers/dict-note";
+import { dictNoteHelper } from "src/commanders/textfresser/domain/dict-note";
 
 const entries = dictNoteHelper.parse(noteText);      // string → DictEntry[]
 const { body, meta } = dictNoteHelper.serialize(entries); // DictEntry[] → { body, meta }
 ```
 
-**Source**: `src/stateless-helpers/dict-note/internal/parse.ts`, `serialize.ts`
+**Source**: `src/commanders/textfresser/domain/dict-note/internal/parse.ts`, `serialize.ts`
 
 ---
 
@@ -458,6 +462,10 @@ Translates selected text using the prompt-smith system:
 
 The dictionary pipeline is split into two commands — **Lemma** (user-facing) and **Generate** (fires automatically in background after Lemma):
 
+**V15 update**: Lemma is now a two-phase flow with two separate dispatches:
+1. **Phase A (pre-prompt)**: resolve/create a safe pre-target and insert a clickable wikilink immediately (`[[surface]]` or `[[target|surface]]`), optionally creating a placeholder note in Worter.
+2. **Phase B (post-prompt)**: classify + disambiguate, resolve final policy target (closed-set → Library, otherwise Worter), rewrite source links to final target (including temporary-link retarget + multi-span), then move/cleanup placeholder.
+
 ```
      Lemma (recon + disambiguation)                Generate (background, automatic)
 ┌───────────────────────────────────┐    ┌──────────────────────────────────────────┐
@@ -489,6 +497,26 @@ The dictionary pipeline is split into two commands — **Lemma** (user-facing) a
 The user selects a word and calls "Lemma". This is the classification + disambiguation step.
 
 **Source**: `src/commanders/textfresser/commands/lemma/lemma-command.ts`
+
+#### V15 Safe-Linking Flow
+
+Lemma now runs in two dispatch phases to avoid dead links:
+
+1. **Phase A (pre-prompt)**:
+   - Resolve pre-target via `vam.resolveLinkpathDest(surface, from)` (Obsidian native resolver).
+   - Fallback to Librarian corename lookup.
+   - If unresolved, create a Worter placeholder note and link to it immediately.
+   - Dispatch: optional `UpsertMdFile(placeholder)` + source `ProcessMdFile` with temporary wikilink.
+2. **Phase B (post-prompt)**:
+   - Run `PromptKind.Lemma` + `disambiguateSense` (preferred path = resolved final target).
+   - Resolve final target with deterministic policy:
+     - Closed-set Lexem POS (`Pronoun`, `Article`, `Preposition`, `Conjunction`, `Particle`, `InteractionalUnit`) → `Library/<lang>/<pos-kebab>/<lemma>.md`.
+     - Otherwise → Worter sharded path.
+   - If placeholder exists and final differs:
+     - rename placeholder to final when final does not exist;
+     - else delete placeholder only when placeholder content is empty/whitespace.
+   - Rewrite source wikilink(s) to final target, including second-pass temporary-link retargeting and multi-span expansion.
+   - If user is currently on placeholder note and final target differs, navigate to final target.
 
 #### Attestation Resolution
 
@@ -606,6 +634,8 @@ checkAttestation → checkEligibility → checkLemmaResult
   → serializeEntry (includes noteKind + emojiDescription in single metadata upsert) → moveToWorter → addWriteAction
 ```
 
+`moveToWorter` is now policy-based: closed-set Lexem POS routes to Library, all other entries route to Worter sharded folders. It skips rename when the active file is already at destination.
+
 Sync `Result` checks transition to async `ResultAsync` at `generateSections`.
 
 #### Re-Encounter Detection (V3)
@@ -663,7 +693,7 @@ Different prompts are needed depending on:
 | **KnownLanguage** | Russian, English, ... | User's native language |
 | **PromptKind** | Lemma, Disambiguate, Morphem, Relation, Inflection, NounInflection, Translate, WordTranslation, Features | What task the LLM performs |
 
-Section applicability (which sections a DictEntry gets) is determined by `LinguisticUnitKind` + `POS` + optional `nounClass` via `getSectionsFor()` in `src/linguistics/sections/section-config.ts`:
+Section applicability (which sections a DictEntry gets) is determined by `LinguisticUnitKind` + `POS` + optional `nounClass` via `getSectionsFor()` in `src/commanders/textfresser/targets/de/sections/section-config.ts`:
 - **Lexem**: POS-dependent (e.g., Nouns get Morphem + Inflection + Relation; Conjunctions get core only)
 - **Lexem + Noun + Proper** (V8): Core sections only (Header, Translation, Attestation, FreeForm) — no Inflection, Morphem, Relation
 - **Phrasem**: Header, Translation, Attestation, Relation, FreeForm
@@ -899,7 +929,7 @@ Translate the text between German and Russian:
 ### 10.5 Runtime Usage
 
 ```typescript
-// src/commanders/textfresser/prompt-runner.ts
+// src/commanders/textfresser/llm/prompt-runner.ts
 class PromptRunner {
   generate<K extends PromptKind>(kind: K, input: UserInput<K>): ResultAsync<AgentOutput<K>, ApiServiceError> {
     const prompt = PROMPT_FOR[this.languages.target][this.languages.known][kind];
@@ -970,13 +1000,16 @@ bun run codegen:prompts
 
 ```typescript
 type InFlightGenerate = {
-  lemma: string;             // basename of the target note
+  lemma: string;
+  targetPath: SplitPathToMdFile;
   promise: Promise<void>;    // resolves when background Generate finishes
 };
 
 type TextfresserState = {
   attestationForLatestNavigated: Attestation | null;  // from last wikilink click
   latestLemmaResult: LemmaResult | null;              // from last Lemma command
+  latestResolvedLemmaTargetPath?: SplitPathToMdFile;  // final resolved target from Lemma phase B
+  latestLemmaPlaceholderPath?: SplitPathToMdFile;     // optional placeholder tracking between Lemma phases
   latestFailedSections: string[];                      // optional sections that failed in last Generate
   targetBlockId?: string;                              // V5: entry ^blockId to scroll to after Generate
   inFlightGenerate: InFlightGenerate | null;           // background Generate in progress (set after Lemma)
@@ -989,11 +1022,15 @@ type TextfresserState = {
 
 `latestLemmaResult` holds the most recent Lemma command output. Generate reads it for classification + attestation data. Both fields are checked when validating attestation availability (wikilink click OR prior Lemma).
 
+`latestResolvedLemmaTargetPath` is written by Lemma phase B and is the canonical target used by background Generate. This avoids ambiguous basename lookup when multiple notes share the same basename in different roots.
+
+`latestLemmaPlaceholderPath` tracks the pre-prompt placeholder note (if created) so phase B can rename/delete it safely and optionally navigate away from it.
+
 `latestFailedSections` is populated by `generateSections` when optional LLM calls fail (graceful degradation). Used by the notification logic to show partial-success warnings.
 
 `targetBlockId` (V5) is set by `generateSections` — to `matchedEntry.id` for re-encounters, or the newly created entry ID for new entries. Used by deferred scroll after background Generate finishes (see 11.2).
 
-`inFlightGenerate` tracks the background Generate launched after a successful Lemma. Guarded: only one in-flight Generate at a time. Cleared in `.finally()`. The wikilink click handler checks this field to trigger deferred scroll (see 11.3).
+`inFlightGenerate` tracks the background Generate launched after a successful Lemma. Guarded: only one in-flight Generate at a time. Cleared in `.finally()`. The wikilink click handler matches clicks against `targetPath` (not only basename) before triggering deferred scroll (see 11.3).
 
 `lookupInLibrary` is a `PathLookupFn` callback wired after Librarian init via `Textfresser.setLibrarianLookup()`. It wraps `Librarian.findMatchingLeavesByCoreName()` to convert `LeafMatch[]` → `SplitPathToMdFile[]`. Used by propagation steps (via `resolveTargetPath`) as a fallback when VAM lookup returns no results. Defaults to `() => []` before Librarian is initialized — safe because propagation only runs after both commanders are initialized.
 
@@ -1006,7 +1043,13 @@ Validate activeFile exists
   ↓
 Build CommandInput { commandContext, resultingActions, textfresserState }
   ↓
-commandFnForCommandKind[commandName](input)
+If commandName === Lemma:
+  runLemmaTwoPhase(input):
+    Phase A dispatch (safe pre-link + optional placeholder upsert)
+    Prompt + disambiguate
+    Phase B dispatch (final rewrite + placeholder move/cleanup)
+Else:
+  commandFnForCommandKind[commandName](input)
   ↓
 ResultAsync<VaultAction[], CommandError>
   ↓
@@ -1029,8 +1072,9 @@ After a successful Lemma, `fireBackgroundGenerate` launches `runBackgroundGenera
 fireBackgroundGenerate(notify)
   Guard: skip if inFlightGenerate already set (no concurrent generates)
   ↓
-runBackgroundGenerate(lemma, notify):
-  1. vam.findByBasename(lemma) → use existing path, or construct root-level SplitPathToMdFile
+runBackgroundGenerate(targetPath, lemma, notify):
+  1. Resolve targetPath from state.latestResolvedLemmaTargetPath
+     (fallback: deterministic policy path from latestLemmaResult)
   2. vam.readContent(targetPath) → content (empty string if file doesn't exist)
   3. Build synthetic CommandInput with target file's splitPath + content
   4. commandFnForCommandKind.Generate(input) → ResultAsync<VaultAction[], CommandError>
@@ -1064,7 +1108,8 @@ createHandler(): EventHandler<WikilinkClickPayload> {
       // Deferred scroll: if background Generate is in flight for this target,
       // wait for it to finish and then scroll to the entry
       const inFlight = this.state.inFlightGenerate;
-      if (inFlight && payload.wikiTarget.basename === inFlight.lemma) {
+      const clickedTarget = this.vam.resolveLinkpathDest(payload.wikiTarget.basename, payload.splitPath);
+      if (inFlight && clickedTarget && areSameSplitPath(clickedTarget, inFlight.targetPath)) {
         void this.awaitGenerateAndScroll(inFlight);  // fire-and-forget
       }
 
@@ -1110,13 +1155,14 @@ To add support for a new target language (e.g., Japanese):
 | File | Purpose |
 |------|---------|
 | **Textfresser Commander** | |
-| `src/commanders/textfresser/textfresser.ts` | Commander: state, command dispatch, wikilink handler, V5: scrollToTargetBlock(), background Generate (fireBackgroundGenerate/runBackgroundGenerate), deferred scroll (awaitGenerateAndScroll), `setLibrarianLookup()` for propagation path resolution |
+| `src/commanders/textfresser/textfresser.ts` | Commander: Lemma two-phase orchestration (pre-prompt + post-prompt dispatch), state, wikilink handler, background Generate using resolved target path, deferred scroll, `setLibrarianLookup()` |
 | `src/commanders/textfresser/commands/types.ts` | CommandFn, CommandInput, TextfresserCommandKind |
-| `src/commanders/textfresser/prompt-runner.ts` | PromptRunner: LLM call wrapper |
+| `src/commanders/textfresser/llm/prompt-runner.ts` | PromptRunner: LLM call wrapper |
+| `src/commanders/textfresser/llm/prompt-catalog.ts` | Prompt lookup + schema lookup facade (`PROMPT_FOR` + `SchemasFor`) |
 | `src/commanders/base-command-error.ts` | Shared BaseCommandError for commander-level command failures |
 | `src/commanders/textfresser/errors.ts` | TextfresserCommandError (extends BaseCommandError), AttestationParsingError |
 | **Commands** | |
-| `src/commanders/textfresser/commands/lemma/lemma-command.ts` | Lemma pipeline: classify + disambiguate + wrap in wikilink. V8: `expandOffsetForFullSurface()` for proper noun expansion |
+| `src/commanders/textfresser/commands/lemma/lemma-command.ts` | Lemma rewrite helpers: attestation resolution, wikilink formatting, robust two-pass source rewrite (`temporary → final`, block-id fallback, multi-span retargeting) |
 | `src/commanders/textfresser/commands/lemma/steps/disambiguate-sense.ts` | V3: look up existing note, match entries by unitKind+POS (ignoring surfaceKind), call Disambiguate prompt. V5: bounds-check matchedIndex, log parse failures. V10+: emoji-based senses with emojiDescription+unitKind+pos+genus, plus optional phrasemeKind hints from `meta.linguisticUnit`; returns precomputedEmojiDescription |
 | `src/commanders/textfresser/commands/lemma/types.ts` | LemmaResult type (V3: disambiguationResult, V10: precomputedEmojiDescription, V8: nounClass) |
 | `src/commanders/textfresser/commands/generate/generate-command.ts` | Generate pipeline orchestrator |
@@ -1126,6 +1172,8 @@ To add support for a new target language (e.g., Japanese):
 | `src/commanders/textfresser/commands/generate/steps/generate-sections.ts` | Async: LLM calls per section (or append attestation for re-encounters). V12: Features prompt + Tags section, article in header for nouns. V13: `meta.linguisticUnit` restored for Lexem/Phrasem entries (`Morphem` still out of scope). Stores `meta.emojiDescription` from precomputedEmojiDescription or lemmaResult.emojiDescription. Header built from LemmaResult fields. Sets targetBlockId |
 | `src/commanders/textfresser/commands/generate/steps/propagate-relations.ts` | Cross-ref: compute inverse relations, resolve target paths via shared resolver, generate actions for target notes |
 | `src/commanders/textfresser/commands/generate/steps/propagate-inflections.ts` | Noun inflection propagation: resolve target paths via shared resolver, create/update one inflection entry per form, merge tags, collapse legacy per-cell stubs |
+| `src/commanders/textfresser/commands/generate/steps/move-to-worter.ts` | Final destination policy step: closed-set Lexem POS → Library path, others → Worter sharded path, rename skipped when already at destination |
+| `src/commanders/textfresser/common/lemma-link-routing.ts` | Link-target policy helper: closed-set detection, pre-prompt target resolution, final target resolution, link-target formatting |
 | `src/commanders/textfresser/common/target-path-resolver.ts` | Shared path resolution for propagation: two-source lookup (VAM → Librarian → computed sharded path), inflected→lemma healing, `buildPropagationActionPair` helper |
 | `src/commanders/textfresser/common/sharded-path.ts` | Sharded path computation for Worter entries; exports `SURFACE_KIND_PATH_INDEX` for healing checks |
 | `src/commanders/textfresser/commands/generate/steps/serialize-entry.ts` | Serialize ALL DictEntries to note body + apply noteKind metadata (single upsert) |
@@ -1144,9 +1192,11 @@ To add support for a new target language (e.g., Japanese):
 | `src/commanders/textfresser/common/attestation/builders/build-from-selection.ts` | Build from text selection |
 | **Stateless Helpers** | |
 | **VAM (V3 addition)** | |
-| `src/managers/obsidian/vault-action-manager/` | V3: `getSplitPathsToExistingFilesWithBasename()` — find existing files by basename. V5: `activeFileService.scrollToLine()` for scroll-to-entry |
-| `src/stateless-helpers/dict-note/` | Parse/serialize dictionary notes |
-| `src/stateless-helpers/morpheme-formatter.ts` | Morpheme → wikilink display formatter |
+| `src/managers/obsidian/vault-action-manager/` | Read APIs for basename lookup + linkpath resolution (`resolveLinkpathDest`) and active-view scroll helpers |
+| `src/commanders/textfresser/domain/dict-note/` | Parse/serialize dictionary notes (canonical module) |
+| `src/commanders/textfresser/domain/morpheme/morpheme-formatter.ts` | Morpheme → wikilink display formatter (canonical module) |
+| `src/stateless-helpers/dict-note/` | Compatibility re-export for dict-note helper |
+| `src/stateless-helpers/morpheme-formatter.ts` | Compatibility re-export for morpheme formatter |
 | `src/stateless-helpers/api-service.ts` | Gemini API wrapper (returns `ResultAsync`, retry on transient errors) |
 | `src/stateless-helpers/retry.ts` | Generic retry with exponential backoff (`withRetry()`) |
 | **Linguistics — Enums** | |
@@ -1167,10 +1217,12 @@ To add support for a new target language (e.g., Japanese):
 | `src/linguistics/german/schemas/linguistic-unit.ts` | GermanLinguisticUnitSchema — top-level `kind` discriminated union |
 | `src/linguistics/german/schemas/index.ts` | Barrel exports for all German schemas + types |
 | **Linguistics — Sections & Inflection** | |
-| `src/linguistics/common/sections/section-kind.ts` | DictSectionKind, TitleReprFor |
-| `src/linguistics/common/sections/section-css-kind.ts` | DictSectionKind → CSS suffix mapping |
-| `src/linguistics/common/sections/section-config.ts` | getSectionsFor(): applicable sections per unit+POS+nounClass; `sectionsForProperNoun` (V8); SECTION_DISPLAY_WEIGHT + compareSectionsByWeight(): section display ordering |
-| `src/linguistics/common/dict-entry-id/dict-entry-id.ts` | DictEntryId builder/parser |
+| `src/commanders/textfresser/targets/de/sections/section-kind.ts` | DictSectionKind, TitleReprFor (canonical module) |
+| `src/commanders/textfresser/targets/de/sections/section-css-kind.ts` | DictSectionKind → CSS suffix mapping (canonical module) |
+| `src/commanders/textfresser/targets/de/sections/section-config.ts` | getSectionsFor(): applicable sections per unit+POS+nounClass; `sectionsForProperNoun` (V8); SECTION_DISPLAY_WEIGHT + compareSectionsByWeight(): section display ordering |
+| `src/commanders/textfresser/domain/dict-entry-id/dict-entry-id.ts` | DictEntryId builder/parser (canonical module) |
+| `src/linguistics/common/sections/` | Compatibility re-exports for section config/kind/css-kind |
+| `src/linguistics/common/dict-entry-id/` | Compatibility re-exports for DictEntryId + tags |
 | `src/linguistics/german/inflection/noun.ts` | NounInflectionCell type, German case/number tags, display order |
 | ~~`src/linguistics/old-enums.ts`~~ | Deleted — was dead code (inflectional dimensions, theta roles, tones) |
 | **Prompt-Smith** | |

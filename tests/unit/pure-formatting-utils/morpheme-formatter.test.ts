@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { morphemeFormatterHelper } from "../../../src/stateless-helpers/morpheme-formatter";
+import { morphemeFormatterHelper } from "../../../src/commanders/textfresser/domain/morpheme/morpheme-formatter";
 
 describe("morphemeFormatterHelper.decorateSurface", () => {
 	it("returns raw surf when no separability", () => {

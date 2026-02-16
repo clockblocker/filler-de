@@ -20,7 +20,7 @@ import { disambiguateSense } from "./steps/disambiguate-sense";
 /**
  * Resolve attestation: prefer wikilink click context, fall back to text selection.
  */
-function resolveAttestation(input: CommandInput): Attestation | null {
+export function resolveAttestation(input: CommandInput): Attestation | null {
 	const { textfresserState, commandContext } = input;
 
 	if (textfresserState.attestationForLatestNavigated) {
@@ -38,11 +38,16 @@ function resolveAttestation(input: CommandInput): Attestation | null {
 }
 
 /**
- * Build a wikilink from surface and lemma.
- * If lemma differs from surface: [[lemma|surface]], else [[surface]].
+ * Build a wikilink from displayed surface and target.
+ * If target differs from surface: [[target|surface]], else [[surface]].
  */
-function buildWikilink(surface: string, lemma: string): string {
-	return lemma !== surface ? `[[${lemma}|${surface}]]` : `[[${surface}]]`;
+export function buildWikilinkForTarget(
+	surface: string,
+	linkTarget: string,
+): string {
+	return linkTarget !== surface
+		? `[[${linkTarget}|${surface}]]`
+		: `[[${surface}]]`;
 }
 
 function replaceAt(
@@ -96,9 +101,152 @@ function replaceSurfaceByOffset(
 	return replaceAt(text, offset, surface.length, wikilink);
 }
 
+function iterWikilinks(text: string): Array<{
+	index: number;
+	fullMatch: string;
+	surface: string;
+}> {
+	const regex = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
+	const matches: Array<{ index: number; fullMatch: string; surface: string }> = [];
+
+	for (const match of text.matchAll(regex)) {
+		const index = match.index;
+		const fullMatch = match[0];
+		const target = match[1];
+		const alias = match[2];
+		if (
+			index === undefined ||
+			typeof fullMatch !== "string" ||
+			typeof target !== "string"
+		) {
+			continue;
+		}
+
+		matches.push({
+			fullMatch,
+			index,
+			surface: alias ?? target,
+		});
+	}
+
+	return matches;
+}
+
+function replaceFirstWikilinkByDisplayedSurface(
+	text: string,
+	surface: string,
+	replacement: string,
+): string | null {
+	const matches = iterWikilinks(text);
+	for (const match of matches) {
+		if (match.surface !== surface) continue;
+		return replaceAt(
+			text,
+			match.index,
+			match.fullMatch.length,
+			replacement,
+		);
+	}
+	return null;
+}
+
+function replaceWikilinkByOffset(
+	text: string,
+	surface: string,
+	replacement: string,
+	offset: number | undefined,
+): string | null {
+	if (offset === undefined || offset < 0) return null;
+
+	const matches = iterWikilinks(text);
+	for (const match of matches) {
+		const start = match.index;
+		const end = start + match.fullMatch.length;
+		if (offset < start || offset >= end) continue;
+		if (match.surface !== surface) continue;
+		return replaceAt(text, start, match.fullMatch.length, replacement);
+	}
+
+	return null;
+}
+
+function tryRewriteLine(params: {
+	line: string;
+	primarySurface: string;
+	fallbackSurface: string;
+	replacement: string;
+	replaceOffset: number | undefined;
+}): string | null {
+	const { line, primarySurface, fallbackSurface, replacement, replaceOffset } =
+		params;
+
+	const byOffsetPlain = replaceSurfaceByOffset(
+		line,
+		primarySurface,
+		replacement,
+		replaceOffset,
+	);
+	if (byOffsetPlain) return byOffsetPlain;
+
+	const byOffsetWikilink = replaceWikilinkByOffset(
+		line,
+		primarySurface,
+		replacement,
+		replaceOffset,
+	);
+	if (byOffsetWikilink) return byOffsetWikilink;
+
+	const bySearchPlain = replaceFirstSurfaceOutsideWikilink(
+		line,
+		primarySurface,
+		replacement,
+	);
+	if (bySearchPlain) return bySearchPlain;
+
+	const bySearchWikilink = replaceFirstWikilinkByDisplayedSurface(
+		line,
+		primarySurface,
+		replacement,
+	);
+	if (bySearchWikilink) return bySearchWikilink;
+
+	if (fallbackSurface === primarySurface) return null;
+
+	const byOffsetFallbackPlain = replaceSurfaceByOffset(
+		line,
+		fallbackSurface,
+		replacement,
+		replaceOffset,
+	);
+	if (byOffsetFallbackPlain) return byOffsetFallbackPlain;
+
+	const byOffsetFallbackWikilink = replaceWikilinkByOffset(
+		line,
+		fallbackSurface,
+		replacement,
+		replaceOffset,
+	);
+	if (byOffsetFallbackWikilink) return byOffsetFallbackWikilink;
+
+	const bySearchFallbackPlain = replaceFirstSurfaceOutsideWikilink(
+		line,
+		fallbackSurface,
+		replacement,
+	);
+	if (bySearchFallbackPlain) return bySearchFallbackPlain;
+
+	return replaceFirstWikilinkByDisplayedSurface(
+		line,
+		fallbackSurface,
+		replacement,
+	);
+}
+
 export function rewriteAttestationSourceContent(params: {
 	content: string;
 	offsetInBlock?: number;
+	replaceOffsetInBlock?: number;
+	replaceSurface?: string;
 	rawBlock: string;
 	surface: string;
 	updatedBlock: string;
@@ -107,11 +255,15 @@ export function rewriteAttestationSourceContent(params: {
 	const {
 		content,
 		offsetInBlock,
+		replaceOffsetInBlock,
+		replaceSurface,
 		rawBlock,
 		surface,
 		updatedBlock,
 		wikilink,
 	} = params;
+	const finalSurface = replaceSurface ?? surface;
+	const finalOffset = replaceOffsetInBlock ?? offsetInBlock;
 
 	if (content.includes(rawBlock)) {
 		return content.replace(rawBlock, updatedBlock);
@@ -125,35 +277,43 @@ export function rewriteAttestationSourceContent(params: {
 			const line = lines[i];
 			if (!line || !line.includes(marker)) continue;
 
-			const byOffset = replaceSurfaceByOffset(
-				line,
-				surface,
-				wikilink,
-				offsetInBlock,
-			);
-			if (byOffset) {
-				lines[i] = byOffset;
+			const normalizedLine =
+				replaceFirstWikilinkByDisplayedSurface(line, surface, surface) ??
+				line;
+			if (
+				normalizedLine === rawBlock ||
+				markdownHelper.stripAll(normalizedLine) ===
+					markdownHelper.stripAll(rawBlock)
+			) {
+				lines[i] = updatedBlock;
 				return lines.join("\n");
 			}
 
-			const bySearch = replaceFirstSurfaceOutsideWikilink(
+			const rewritten = tryRewriteLine({
+				fallbackSurface: surface,
 				line,
-				surface,
-				wikilink,
-			);
-			if (bySearch) {
-				lines[i] = bySearch;
+				primarySurface: finalSurface,
+				replaceOffset: finalOffset,
+				replacement: wikilink,
+			});
+			if (rewritten) {
+				lines[i] = rewritten;
 				return lines.join("\n");
 			}
 			break;
 		}
 	}
 
-	const fallback = replaceFirstSurfaceOutsideWikilink(
-		content,
-		surface,
-		wikilink,
-	);
+	const fallback =
+		tryRewriteLine({
+			fallbackSurface: surface,
+			line: content,
+			primarySurface: finalSurface,
+			replaceOffset: finalOffset,
+			replacement: wikilink,
+		}) ??
+		replaceFirstSurfaceOutsideWikilink(content, finalSurface, wikilink) ??
+		replaceFirstSurfaceOutsideWikilink(content, surface, wikilink);
 	return fallback ?? content;
 }
 
@@ -338,7 +498,7 @@ export function lemmaCommand(
 								span.text,
 							);
 							if (expanded.replaceSurface !== surface) {
-								const wikilink = buildWikilink(
+								const wikilink = buildWikilinkForTarget(
 									expanded.replaceSurface,
 									result.lemma,
 								);
@@ -363,7 +523,10 @@ export function lemmaCommand(
 
 			// Fall back to single-span replacement
 			if (updatedBlock === null) {
-				const wikilink = buildWikilink(surface, result.lemma);
+				const wikilink = buildWikilinkForTarget(
+					surface,
+					result.lemma,
+				);
 
 				updatedBlock =
 					offset !== undefined
@@ -385,7 +548,10 @@ export function lemmaCommand(
 								rawBlock,
 								surface,
 								updatedBlock,
-								wikilink: buildWikilink(surface, result.lemma),
+								wikilink: buildWikilinkForTarget(
+									surface,
+									result.lemma,
+								),
 							}),
 					},
 				},

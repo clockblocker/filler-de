@@ -6,7 +6,7 @@ const PLUGIN_ID = "cbcr-text-eater-de";
  * Wait for the plugin to finish all async work via its `whenIdle()` hook.
  * Uses the CLI `eval` command to call into the running Obsidian instance.
  */
-export async function waitForIdle(timeoutMs = 15_000): Promise<void> {
+export async function waitForIdle(timeoutMs = 5_000): Promise<void> {
 	const code = `(async()=>{await app.plugins.plugins['${PLUGIN_ID}'].whenIdle();return 'idle'})()`;
 	await obsidianEval(code, timeoutMs);
 }

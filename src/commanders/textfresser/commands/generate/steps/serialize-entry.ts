@@ -1,6 +1,6 @@
 import { ok, type Result } from "neverthrow";
-import { compareSectionsByWeight } from "../../../../../linguistics/common/sections/section-config";
-import { dictNoteHelper } from "../../../../../stateless-helpers/dict-note";
+import { compareSectionsByWeight } from "../../../targets/de/sections/section-config";
+import { dictNoteHelper } from "../../../domain/dict-note";
 import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metadata";
 import { logger } from "../../../../../utils/logger";
 import { DICT_ENTRY_NOTE_KIND } from "../../../common/metadata";

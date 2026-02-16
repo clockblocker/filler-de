@@ -1,9 +1,9 @@
-import { cssSuffixFor } from "../../../../../../linguistics/common/sections/section-css-kind";
+import { cssSuffixFor } from "../../../../targets/de/sections/section-css-kind";
 import {
 	DictSectionKind,
 	TitleReprFor,
-} from "../../../../../../linguistics/common/sections/section-kind";
-import type { EntrySection } from "../../../../../../stateless-helpers/dict-note/types";
+} from "../../../../targets/de/sections/section-kind";
+import type { EntrySection } from "../../../../domain/dict-note/types";
 import type {
 	GenerationTargetLanguage,
 	WordTranslationOutput,
