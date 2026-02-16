@@ -41,6 +41,10 @@ import {
 	performMutation009,
 	testPostHealing009,
 } from "./chains/2-chain/009-toggle-section-checkbox";
+import {
+	performMutation010,
+	testPostHealing010,
+} from "./chains/3-chain/010-lemma-manne";
 
 describe("Librarian CLI E2E", () => {
 	beforeAll(async () => {
@@ -113,4 +117,11 @@ describe("Librarian CLI E2E", () => {
 		await waitForIdle();
 	});
 	it("Berry scrolls all checked, Pie codex shows checked Berry", testPostHealing009);
+
+	// 010: Lemma command on selected noun in source text
+	it("copies Aschenputtel page and runs Lemma for selected noun", async () => {
+		await performMutation010();
+		await waitForIdle(120_000);
+	});
+	it("rewrites selected noun with a lemma wikilink", testPostHealing010);
 });
