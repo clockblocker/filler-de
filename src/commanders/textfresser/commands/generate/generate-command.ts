@@ -23,7 +23,7 @@ import { serializeEntry } from "./steps/serialize-entry";
  * → propagateRelations (cross-ref inverse relations to target notes)
  * → propagateMorphemes (back-ref morpheme notes for multi-morpheme words)
  * → propagateInflections (create/update one inflection entry per noun form)
- * → serializeEntry (includes noteKind meta) → moveToWorter → addWriteAction
+ * → serializeEntry (includes noteKind meta) → moveToWorter(policy destination) → addWriteAction
  */
 export function generateCommand(
 	input: CommandInput,

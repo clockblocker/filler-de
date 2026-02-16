@@ -1,9 +1,9 @@
 import { ok, type Result } from "neverthrow";
-import { dictEntryIdHelper } from "../../../../../linguistics/common/dict-entry-id/dict-entry-id";
+import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import {
 	type DictEntry,
 	dictNoteHelper,
-} from "../../../../../stateless-helpers/dict-note";
+} from "../../../domain/dict-note";
 import { logger } from "../../../../../utils/logger";
 import type { CommandError, CommandStateWithLemma } from "../../types";
 

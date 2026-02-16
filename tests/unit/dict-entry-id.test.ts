@@ -4,7 +4,7 @@ import {
 	DictEntryIdSchema,
 	dictEntryIdHelper,
 	parseDictEntryId,
-} from "../../src/linguistics/common/dict-entry-id/dict-entry-id";
+} from "../../src/commanders/textfresser/domain/dict-entry-id/dict-entry-id";
 
 describe("DictEntryIdSchema", () => {
 	test("accepts valid Lexem IDs", () => {

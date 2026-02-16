@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { dictNoteHelper } from "../../../../src/stateless-helpers/dict-note/index";
-import type { DictEntry } from "../../../../src/stateless-helpers/dict-note/types";
+import { dictNoteHelper } from "../../../../src/commanders/textfresser/domain/dict-note/index";
+import type { DictEntry } from "../../../../src/commanders/textfresser/domain/dict-note/types";
 
 // ─── Fixtures ───
 

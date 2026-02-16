@@ -2,7 +2,6 @@ export {
 	DE_LEMMA_LINGUISTIC_UNITS,
 	DE_LEXEM_POS,
 	DeLemmaLinguisticUnit,
-	type DeLemmaLinguisticUnit,
 	DeLemmaLinguisticUnitSchema,
 	type DeLemmaResult,
 	DeLemmaResultSchema,

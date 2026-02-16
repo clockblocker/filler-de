@@ -1,6 +1,6 @@
 import type { CliResult } from "./types";
 
-const DEFAULT_TIMEOUT_MS = 10_000;
+const DEFAULT_TIMEOUT_MS = 5_000;
 
 const OBSIDIAN_BIN =
 	process.env.OBSIDIAN_CLI_PATH ??

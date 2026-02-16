@@ -3,7 +3,7 @@ import { decorateAttestationSeparability } from "../../../../src/commanders/text
 import type { GenerateSectionsResult } from "../../../../src/commanders/textfresser/commands/generate/steps/generate-sections";
 import type { TextfresserState } from "../../../../src/commanders/textfresser/textfresser";
 import { VaultActionKind } from "../../../../src/managers/obsidian/vault-action-manager/types/vault-action";
-import type { MorphemeItem } from "../../../../src/stateless-helpers/morpheme-formatter";
+import type { MorphemeItem } from "../../../../src/commanders/textfresser/domain/morpheme/morpheme-formatter";
 
 const SOURCE_PATH = {
 	basename: "chapter-1",

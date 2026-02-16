@@ -391,7 +391,8 @@ PhrasemSurfaceSchema = makeSurfaceSchema(PhrasemFullFeaturesSchema, PhrasemRefFe
 
 ### 2.4 Dict Entry ID System
 
-**Source**: `common/dict-entry-id/`
+**Canonical source**: `src/commanders/textfresser/domain/dict-entry-id/`  
+**Compatibility re-export**: `src/linguistics/common/dict-entry-id/`
 
 Every dictionary entry has a structured ID that encodes its linguistic classification.
 
@@ -416,7 +417,7 @@ Every dictionary entry has a structured ID that encodes its linguistic classific
 
 #### Tags
 
-**Source**: `common/dict-entry-id/tags.ts`
+**Source**: `src/commanders/textfresser/domain/dict-entry-id/tags.ts`
 
 ```typescript
 LinguisticUnitKindTag = "LX" | "PH" | "MO"
@@ -431,7 +432,7 @@ Bidirectional maps:
 
 #### Parsed ID types
 
-**Source**: `common/dict-entry-id/dict-entry-id.ts`
+**Source**: `src/commanders/textfresser/domain/dict-entry-id/dict-entry-id.ts`
 
 `ParsedDictEntryId` is a discriminated union by `unitKindTag`:
 
@@ -465,11 +466,12 @@ ParsedNonLexemId = {
 
 ### 2.5 Section Configuration
 
-**Source**: `common/sections/`
+**Canonical source**: `src/commanders/textfresser/targets/de/sections/`  
+**Compatibility re-export**: `src/linguistics/common/sections/`
 
 #### DictSectionKind
 
-**Source**: `common/sections/section-kind.ts`
+**Source**: `src/commanders/textfresser/targets/de/sections/section-kind.ts`
 
 ```typescript
 DictSectionKind = "Relation" | "FreeForm" | "Attestation" | "Morphem"
@@ -492,7 +494,7 @@ Each kind has display titles in English and German:
 
 #### CSS suffixes
 
-**Source**: `common/sections/section-css-kind.ts`
+**Source**: `src/commanders/textfresser/targets/de/sections/section-css-kind.ts`
 
 Maps each `DictSectionKind` to a CSS class suffix used in `entry_section_title_{suffix}`:
 
@@ -504,7 +506,7 @@ Inflection -> "flexion", Translation -> "translations", Tags -> "tags"
 
 #### Section selection
 
-**Source**: `common/sections/section-config.ts`
+**Source**: `src/commanders/textfresser/targets/de/sections/section-config.ts`
 
 **CORE_SECTIONS** (always included):
 
@@ -820,7 +822,7 @@ Type: `AvaliablePromptDict = Record<TargetLanguage, Record<KnownLanguage, Record
 
 ### 4.1 PromptRunner
 
-**Source**: `src/commanders/textfresser/prompt-runner.ts`
+**Source**: `src/commanders/textfresser/llm/prompt-runner.ts` (with prompt lookup extracted to `src/commanders/textfresser/llm/prompt-catalog.ts`)
 
 PromptRunner is the **type-safe facade** that connects the prompt-smith registry to the API client:
 

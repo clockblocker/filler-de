@@ -2,8 +2,8 @@ import type {
 	GermanGenus,
 	NounInflectionCell,
 } from "../../../../../linguistics/de/lexem/noun";
-import type { DictEntry } from "../../../../../stateless-helpers/dict-note/types";
-import type { MorphemeItem } from "../../../../../stateless-helpers/morpheme-formatter";
+import type { DictEntry } from "../../../domain/dict-note/types";
+import type { MorphemeItem } from "../../../domain/morpheme/morpheme-formatter";
 import type { ResolvedEntryState } from "./resolve-existing-entry";
 import type { ParsedRelation } from "./section-generation-types";
 

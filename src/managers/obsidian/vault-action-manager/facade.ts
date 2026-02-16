@@ -15,6 +15,10 @@ import { Executor } from "./impl/actions-processing/executor";
 import { BulkEventEmmiter } from "./impl/event-processing/bulk-event-emmiter/bulk-event-emmiter";
 import { SelfEventTracker } from "./impl/event-processing/self-event-tracker";
 import { SingleEventEmmiter } from "./impl/event-processing/single-event-emmiter";
+import {
+	makeSplitPath,
+	makeSystemPathForSplitPath,
+} from "./impl/common/split-path-and-system-path";
 import { VaultReader } from "./impl/vault-reader";
 import type {
 	BulkVaultEventHandler,
@@ -260,6 +264,21 @@ export class VaultActionManagerImpl implements VaultActionManager {
 		opts?: { folder?: SplitPathToFolder },
 	): SplitPathToMdFile[] {
 		return this.reader.findByBasename(basename, opts);
+	}
+
+	resolveLinkpathDest(
+		linkpath: string,
+		from: SplitPathToMdFile,
+	): SplitPathToMdFile | null {
+		const sourcePath = makeSystemPathForSplitPath(from);
+		const file = this.app.metadataCache.getFirstLinkpathDest(
+			linkpath,
+			sourcePath,
+		);
+		if (!file) return null;
+
+		const splitPath = makeSplitPath(file);
+		return splitPath.kind === "MdFile" ? splitPath : null;
 	}
 
 	isInActiveView(splitPathArg: AnySplitPath): boolean {

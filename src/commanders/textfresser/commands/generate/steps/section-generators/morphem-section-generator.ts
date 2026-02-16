@@ -1,11 +1,11 @@
-import { cssSuffixFor } from "../../../../../../linguistics/common/sections/section-css-kind";
+import { cssSuffixFor } from "../../../../targets/de/sections/section-css-kind";
 import {
 	DictSectionKind,
 	TitleReprFor,
-} from "../../../../../../linguistics/common/sections/section-kind";
-import type { EntrySection } from "../../../../../../stateless-helpers/dict-note/types";
-import type { MorphemeItem } from "../../../../../../stateless-helpers/morpheme-formatter";
-import { morphemeFormatterHelper } from "../../../../../../stateless-helpers/morpheme-formatter";
+} from "../../../../targets/de/sections/section-kind";
+import type { EntrySection } from "../../../../domain/dict-note/types";
+import type { MorphemeItem } from "../../../../domain/morpheme/morpheme-formatter";
+import { morphemeFormatterHelper } from "../../../../domain/morpheme/morpheme-formatter";
 import { resolveMorphemeItems } from "../../../../common/morpheme-link-target";
 import type {
 	GenerationTargetLanguage,

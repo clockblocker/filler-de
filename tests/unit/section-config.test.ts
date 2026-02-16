@@ -5,7 +5,7 @@ import {
 	sectionsForMorphem,
 	sectionsForPhrasem,
 	sectionsForProperNoun,
-} from "../../src/linguistics/common/sections/section-config";
+} from "../../src/commanders/textfresser/targets/de/sections/section-config";
 
 describe("getSectionsFor", () => {
 	test("returns correct sections for Lexem+Noun", () => {

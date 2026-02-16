@@ -3,7 +3,7 @@ import type { GenerateSectionsResult } from "../../../../src/commanders/textfres
 import { propagateMorphemes } from "../../../../src/commanders/textfresser/commands/generate/steps/propagate-morphemes";
 import type { TextfresserState } from "../../../../src/commanders/textfresser/textfresser";
 import { VaultActionKind } from "../../../../src/managers/obsidian/vault-action-manager/types/vault-action";
-import type { MorphemeItem } from "../../../../src/stateless-helpers/morpheme-formatter";
+import type { MorphemeItem } from "../../../../src/commanders/textfresser/domain/morpheme/morpheme-formatter";
 
 function makeCtx(
 	morphemes: MorphemeItem[],

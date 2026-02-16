@@ -1,18 +1,18 @@
 import { ok, type Result } from "neverthrow";
-import { dictEntryIdHelper } from "../../../../../linguistics/common/dict-entry-id/dict-entry-id";
+import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import { SurfaceKind } from "../../../../../linguistics/common/enums/core";
-import { cssSuffixFor } from "../../../../../linguistics/common/sections/section-css-kind";
+import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
 import {
 	DictSectionKind,
 	TitleReprFor,
-} from "../../../../../linguistics/common/sections/section-kind";
+} from "../../../targets/de/sections/section-kind";
 import type { NounInflectionCell } from "../../../../../linguistics/de/lexem/noun";
 import type { VaultAction } from "../../../../../managers/obsidian/vault-action-manager";
-import { dictNoteHelper } from "../../../../../stateless-helpers/dict-note";
+import { dictNoteHelper } from "../../../domain/dict-note";
 import type {
 	DictEntry,
 	EntrySection,
-} from "../../../../../stateless-helpers/dict-note/types";
+} from "../../../domain/dict-note/types";
 import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metadata";
 import { logger } from "../../../../../utils/logger";
 import {

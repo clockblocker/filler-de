@@ -1,13 +1,14 @@
 import { ResultAsync } from "neverthrow";
-import { dictEntryIdHelper } from "../../../../../linguistics/common/dict-entry-id/dict-entry-id";
+import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import type { PhrasemeKind } from "../../../../../linguistics/common/enums/linguistic-units/phrasem/phrasem-kind";
 import type { DeLexemPos } from "../../../../../linguistics/de/lemma";
 import type { VaultActionManager } from "../../../../../managers/obsidian/vault-action-manager";
+import type { SplitPathToMdFile } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { AgentOutput } from "../../../../../prompt-smith";
 import { PromptKind } from "../../../../../prompt-smith/codegen/consts";
-import { dictNoteHelper } from "../../../../../stateless-helpers/dict-note";
+import { dictNoteHelper } from "../../../domain/dict-note";
 import { logger } from "../../../../../utils/logger";
-import type { PromptRunner } from "../../../prompt-runner";
+import type { PromptRunner } from "../../../llm/prompt-runner";
 import type { CommandError } from "../../types";
 import { CommandErrorKind } from "../../types";
 
@@ -44,28 +45,23 @@ export function disambiguateSense(
 	promptRunner: PromptRunner,
 	apiResult: LemmaApiResult,
 	context: string,
+	preferredPath?: SplitPathToMdFile,
 ): ResultAsync<DisambiguationResult, CommandError> {
-	const files = vam.findByBasename(apiResult.lemma);
-	logger.info(
-		`[disambiguate] Found ${files.length} files for "${apiResult.lemma}"`,
-	);
+	const readExistingNote = (
+		filePath: SplitPathToMdFile,
+	): ResultAsync<string, CommandError> =>
+		ResultAsync.fromPromise(
+			vam.readContent(filePath).then((r) => {
+				if (r.isErr()) throw new Error(r.error);
+				return r.value;
+			}),
+			(e): CommandError => ({
+				kind: CommandErrorKind.ApiError,
+				reason: e instanceof Error ? e.message : String(e),
+			}),
+		);
 
-	const filePath = files[0];
-	if (!filePath) {
-		logger.info("[disambiguate] First encounter — no existing note");
-		return ResultAsync.fromSafePromise(Promise.resolve(null));
-	}
-
-	return ResultAsync.fromPromise(
-		vam.readContent(filePath).then((r) => {
-			if (r.isErr()) throw new Error(r.error);
-			return r.value;
-		}),
-		(e): CommandError => ({
-			kind: CommandErrorKind.ApiError,
-			reason: e instanceof Error ? e.message : String(e),
-		}),
-	).andThen((content) => {
+	const runWithContent = (content: string): ResultAsync<DisambiguationResult, CommandError> => {
 		const existingEntries = dictNoteHelper.parse(content);
 
 		// Match by unitKind + POS, ignoring surfaceKind so that
@@ -214,5 +210,42 @@ export function disambiguateSense(
 					return { matchedIndex: output.matchedIndex };
 				},
 			);
-	});
+	};
+
+	const files = vam.findByBasename(apiResult.lemma);
+	logger.info(
+		`[disambiguate] Found ${files.length} files for "${apiResult.lemma}"`,
+	);
+
+	if (preferredPath) {
+		return readExistingNote(preferredPath)
+			.andThen(runWithContent)
+			.orElse(() => {
+				logger.warn(
+					"[disambiguate] Preferred path could not be read, falling back to basename search",
+					{
+						lemma: apiResult.lemma,
+						preferredPath,
+					},
+				);
+				const fallbackPath = files[0];
+				if (!fallbackPath) {
+					logger.info(
+						"[disambiguate] First encounter — no existing note",
+					);
+					return ResultAsync.fromSafePromise(
+						Promise.resolve(null as DisambiguationResult),
+					);
+				}
+				return readExistingNote(fallbackPath).andThen(runWithContent);
+			});
+	}
+
+	const filePath = files[0];
+	if (!filePath) {
+		logger.info("[disambiguate] First encounter — no existing note");
+		return ResultAsync.fromSafePromise(Promise.resolve(null));
+	}
+
+	return readExistingNote(filePath).andThen(runWithContent);
 }

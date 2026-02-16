@@ -22,7 +22,8 @@ VaultActionManager is a **transactional file system abstraction** over Obsidian'
 ┌───────────────────────────────────────────────────────────────────────────┐
 │  Public Interface (VaultActionManager)                                    │
 │    dispatch() · subscribeToSingle() · subscribeToBulk()                  │
-│    readContent() · exists() · findByBasename() · list() · cd()           │
+│    readContent() · exists() · findByBasename() · resolveLinkpathDest()   │
+│    list() · cd()                                                          │
 ├───────────────────────────────────────────────────────────────────────────┤
 │  Facade (VaultActionManagerImpl)                                          │
 │    ├─ ActionQueue           → call-stack pattern, FIFO batching          │
@@ -567,6 +568,11 @@ exists(target: AnySplitPath): boolean
 findByBasename(basename: string, opts?: { folder?: SplitPathToFolder }): SplitPathToMdFile[]
 // Vault-wide or folder-scoped search for markdown files by basename
 // Used by Lemma command for polysemy disambiguation (V3)
+
+resolveLinkpathDest(linkpath: string, from: SplitPathToMdFile): SplitPathToMdFile | null
+// Uses Obsidian metadataCache.getFirstLinkpathDest(linkpath, sourcePath)
+// Converts resolved TFile to SplitPathToMdFile; returns null when unresolved/non-md
+// Used by Lemma pre-prompt safe-linking to avoid dead temporary links
 
 list(folder: SplitPathToFolder): Result<AnySplitPath[], string>
 // List immediate children of folder

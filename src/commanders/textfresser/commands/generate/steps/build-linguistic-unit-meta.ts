@@ -1,4 +1,4 @@
-import { dictEntryIdHelper } from "../../../../../linguistics/common/dict-entry-id/dict-entry-id";
+import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import type { GermanLinguisticUnit } from "../../../../../linguistics/de";
 import { logger } from "../../../../../utils/logger";
 import type { LemmaResult } from "../../lemma/types";
