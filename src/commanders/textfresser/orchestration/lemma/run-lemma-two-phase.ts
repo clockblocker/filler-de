@@ -6,12 +6,6 @@ import type {
 import { VaultActionKind } from "../../../../managers/obsidian/vault-action-manager";
 import { PromptKind } from "../../../../prompt-smith/codegen/consts";
 import { logger } from "../../../../utils/logger";
-import type { Attestation } from "../../common/attestation/types";
-import {
-	buildPolicyDestinationPath,
-	computeFinalTarget,
-	computePrePromptTarget,
-} from "../../common/lemma-link-routing";
 import {
 	buildWikilinkForTarget,
 	hasNestedWikilinkStructure,
@@ -19,7 +13,12 @@ import {
 	rewriteAttestationSourceContent,
 } from "../../commands/lemma/lemma-command";
 import { disambiguateSense } from "../../commands/lemma/steps/disambiguate-sense";
-import type { CommandInput, CommandError } from "../../commands/types";
+import type { CommandError, CommandInput } from "../../commands/types";
+import type { Attestation } from "../../common/attestation/types";
+import {
+	computeFinalTarget,
+	computePrePromptTarget,
+} from "../../common/lemma-link-routing";
 import { CommandErrorKind } from "../../errors";
 import type { TextfresserState } from "../../state/textfresser-state";
 import { dispatchActions } from "../shared/dispatch-actions";
@@ -67,7 +66,9 @@ export async function runLemmaTwoPhase(params: {
 		surface,
 		temporaryWikilink,
 	);
-	const safePhaseAUpdatedBlock = hasNestedWikilinkStructure(phaseAUpdatedBlock)
+	const safePhaseAUpdatedBlock = hasNestedWikilinkStructure(
+		phaseAUpdatedBlock,
+	)
 		? rawBlock
 		: phaseAUpdatedBlock;
 	const phaseAActions: VaultAction[] = [
@@ -226,7 +227,8 @@ export async function runLemmaTwoPhase(params: {
 			placeholderWasCleaned = true;
 			placeholderWasRenamed = true;
 		} else {
-			const placeholderContentResult = await vam.readContent(placeholderPath);
+			const placeholderContentResult =
+				await vam.readContent(placeholderPath);
 			if (
 				placeholderContentResult.isOk() &&
 				placeholderContentResult.value.trim().length === 0

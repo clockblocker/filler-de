@@ -1,10 +1,11 @@
+import { errAsync, ResultAsync } from "neverthrow";
 import type { CommandContext } from "../../../../managers/obsidian/command-executor";
 import type { VaultActionManager } from "../../../../managers/obsidian/vault-action-manager";
-import { errAsync, ResultAsync } from "neverthrow";
 import { logger } from "../../../../utils/logger";
+import { resolveAttestation } from "../../commands/lemma/lemma-command";
 import type { CommandError, CommandInput } from "../../commands/types";
-import { CommandErrorKind } from "../../errors";
 import { buildPolicyDestinationPath } from "../../common/lemma-link-routing";
+import { CommandErrorKind } from "../../errors";
 import type { TextfresserState } from "../../state/textfresser-state";
 import {
 	buildLemmaInvocationKey,
@@ -12,7 +13,6 @@ import {
 	handleLemmaCacheHit,
 } from "./lemma-cache";
 import { runLemmaTwoPhase } from "./run-lemma-two-phase";
-import { resolveAttestation } from "../../commands/lemma/lemma-command";
 
 export function executeLemmaFlow(params: {
 	context: CommandContext & {
@@ -51,7 +51,9 @@ export function executeLemmaFlow(params: {
 			}),
 		).mapErr((error) => {
 			const reason =
-				"reason" in error ? error.reason : `Command failed: ${error.kind}`;
+				"reason" in error
+					? error.reason
+					: `Command failed: ${error.kind}`;
 			notify(`⚠ ${reason}`);
 			logger.warn("[Textfresser.Lemma] Failed:", error);
 			return error;
@@ -90,13 +92,18 @@ export function executeLemmaFlow(params: {
 					}),
 			};
 
-			const pos = lemma.linguisticUnit === "Lexem" ? ` (${lemma.posLikeKind})` : "";
+			const pos =
+				lemma.linguisticUnit === "Lexem"
+					? ` (${lemma.posLikeKind})`
+					: "";
 			notify(`✓ ${lemma.lemma}${pos}`);
 			requestBackgroundGenerate(notify);
 		})
 		.mapErr((error) => {
 			const reason =
-				"reason" in error ? error.reason : `Command failed: ${error.kind}`;
+				"reason" in error
+					? error.reason
+					: `Command failed: ${error.kind}`;
 			notify(`⚠ ${reason}`);
 			logger.warn("[Textfresser.Lemma] Failed:", error);
 			return error;

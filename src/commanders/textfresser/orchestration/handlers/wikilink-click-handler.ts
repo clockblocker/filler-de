@@ -1,8 +1,8 @@
+import type { WikilinkClickPayload } from "../../../../managers/obsidian/user-event-interceptor/events";
 import {
 	type EventHandler,
 	HandlerOutcome,
 } from "../../../../managers/obsidian/user-event-interceptor/types/handler";
-import type { WikilinkClickPayload } from "../../../../managers/obsidian/user-event-interceptor/events";
 import type { VaultActionManager } from "../../../../managers/obsidian/vault-action-manager";
 import { buildAttestationFromWikilinkClickPayload } from "../../common/attestation/builders/build-from-wikilink-click-payload";
 import type {
@@ -36,7 +36,8 @@ export function createWikilinkClickHandler(params: {
 				);
 				const isInFlightTarget = clickedTarget
 					? areSameSplitPath(clickedTarget, inFlight.targetPath)
-					: payload.wikiTarget.basename === inFlight.targetPath.basename;
+					: payload.wikiTarget.basename ===
+						inFlight.targetPath.basename;
 				if (isInFlightTarget) {
 					void awaitGenerateAndScroll(inFlight);
 				}
