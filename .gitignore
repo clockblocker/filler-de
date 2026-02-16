@@ -30,6 +30,7 @@ prompt.ts
 
 .obsidian-cache
 .env
+.env.cli-e2e
 
 /tests/prompt-test/logs
 

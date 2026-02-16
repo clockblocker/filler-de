@@ -1,4 +1,4 @@
-import { obsidian } from "./cli";
+import { obsidian, obsidianEval } from "./cli";
 
 const PLUGIN_ID = "cbcr-text-eater-de";
 
@@ -8,7 +8,7 @@ const PLUGIN_ID = "cbcr-text-eater-de";
  */
 export async function waitForIdle(timeoutMs = 15_000): Promise<void> {
 	const code = `(async()=>{await app.plugins.plugins['${PLUGIN_ID}'].whenIdle();return 'idle'})()`;
-	await obsidian(`eval code="${code}"`, timeoutMs);
+	await obsidianEval(code, timeoutMs);
 }
 
 /**

@@ -59,7 +59,7 @@
 		"silo": "bun scripts/knowledge-silo.ts",
 		"splitter:run": "bun tests/splitter-runner.ts",
 		"test": "bun run test:unit && bun run test:e2e",
-		"test:cli-e2e": "bun test tests/cli-e2e/ --timeout 60000",
+		"test:cli-e2e": "bun run build && bun test --env-file=.env.cli-e2e tests/cli-e2e/ --timeout 60000",
 		"test:e2e": "./scripts/run-e2e.sh",
 		"test:e2e:raw": "bun run build && bun x wdio run ./wdio.conf.mts",
 		"test:unit": "bun run clearTestLogs && bun test --reporter=dot --preload ./tests/unit/setup.ts",
