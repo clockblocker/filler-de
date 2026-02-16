@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import type { GenerateSectionsResult } from "../../../../src/commanders/textfresser/commands/generate/steps/generate-sections";
 import { propagateRelations } from "../../../../src/commanders/textfresser/commands/generate/steps/propagate-relations";
-import type { TextfresserState } from "../../../../src/commanders/textfresser/textfresser";
+import type { TextfresserState } from "../../../../src/commanders/textfresser/state/textfresser-state";
 import { VaultActionKind } from "../../../../src/managers/obsidian/vault-action-manager/types/vault-action";
 
 function makeCtx(

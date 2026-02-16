@@ -1,309 +1,63 @@
 /**
  * Textfresser commander - thin orchestrator for vocabulary commands.
- *
- * Responsibilities:
- * - Hold state (latestContext from wikilink clicks)
- * - Read file context via fs-utils
- * - Call pure command functions
- * - Dispatch actions via VAM
- * - Handle and log errors
  */
 
-import { err, errAsync, ok, type Result, ResultAsync } from "neverthrow";
+import { errAsync } from "neverthrow";
 import type { CommandContext } from "../../managers/obsidian/command-executor";
 import type { WikilinkClickPayload } from "../../managers/obsidian/user-event-interceptor/events";
-import {
-	type EventHandler,
-	HandlerOutcome,
-} from "../../managers/obsidian/user-event-interceptor/types/handler";
-import {
-	type VaultAction,
-	VaultActionKind,
-	type VaultActionManager,
-} from "../../managers/obsidian/vault-action-manager";
-import type { SplitPathToMdFile } from "../../managers/obsidian/vault-action-manager/types/split-path";
-import { PromptKind } from "../../prompt-smith/codegen/consts";
+import type { EventHandler } from "../../managers/obsidian/user-event-interceptor/types/handler";
+import type { VaultActionManager } from "../../managers/obsidian/vault-action-manager";
 import type { ApiService } from "../../stateless-helpers/api-service";
-import { markdownHelper } from "../../stateless-helpers/markdown-strip";
-import { multiSpanHelper } from "../../stateless-helpers/multi-span";
-import { wikilinkHelper } from "../../stateless-helpers/wikilink";
 import type { LanguagesConfig } from "../../types";
-import { decrementPending, incrementPending } from "../../utils/idle-tracker";
 import { logger } from "../../utils/logger";
-import { commandFnForCommandKind } from "./commands";
-import {
-	computeMissingV3SectionKinds,
-	findEntryForLemmaResult,
-} from "./commands/generate/steps/reencounter-sections";
-import {
-	buildWikilinkForTarget,
-	expandOffsetForLinkedSpan,
-	hasNestedWikilinkStructure,
-	resolveAttestation,
-	rewriteAttestationSourceContent,
-} from "./commands/lemma/lemma-command";
-import { disambiguateSense } from "./commands/lemma/steps/disambiguate-sense";
-import type { LemmaResult } from "./commands/lemma/types";
+import { actionCommandFnForCommandKind } from "./commands";
 import type {
-	CommandError,
 	CommandInput,
 	TextfresserCommandKind,
 } from "./commands/types";
-import { buildAttestationFromWikilinkClickPayload } from "./common/attestation/builders/build-from-wikilink-click-payload";
-import type { Attestation } from "./common/attestation/types";
-import {
-	buildPolicyDestinationPath,
-	computeFinalTarget,
-	computePrePromptTarget,
-} from "./common/lemma-link-routing";
-import type { PathLookupFn } from "./common/target-path-resolver";
-import { dictNoteHelper } from "./domain/dict-note";
+import { executeLemmaFlow } from "./orchestration/lemma/execute-lemma-flow";
+import { createWikilinkClickHandler } from "./orchestration/handlers/wikilink-click-handler";
+import { dispatchActions } from "./orchestration/shared/dispatch-actions";
 import { CommandErrorKind } from "./errors";
-import { PromptRunner } from "./llm/prompt-runner";
+import type { PathLookupFn } from "./common/target-path-resolver";
+import {
+	createInitialTextfresserState,
+	type TextfresserState,
+} from "./state/textfresser-state";
+import {
+	createBackgroundGenerateCoordinator,
+	type BackgroundGenerateCoordinator,
+} from "./orchestration/background/background-generate-coordinator";
 
-// ─── State ───
-
-export type InFlightGenerate = {
-	lemma: string;
-	targetPath: SplitPathToMdFile;
-	promise: Promise<void>;
-};
-
-export type PendingGenerate = {
-	lemma: string;
-	targetPath: SplitPathToMdFile;
-	notify: (message: string) => void;
-};
-
-type LemmaInvocationCache = {
-	key: string;
-	cachedAtMs: number;
-	lemmaResult: LemmaResult;
-	resolvedTargetPath: SplitPathToMdFile;
-	generatedEntryId?: string;
-};
-
-export type TextfresserState = {
-	attestationForLatestNavigated: Attestation | null;
-	latestLemmaResult: LemmaResult | null;
-	latestResolvedLemmaTargetPath?: SplitPathToMdFile;
-	latestLemmaPlaceholderPath?: SplitPathToMdFile;
-	latestLemmaInvocationCache: LemmaInvocationCache | null;
-	/** Section names that failed during the latest Generate command (optional sections only). */
-	latestFailedSections: string[];
-	/** Block ID of the entry to scroll to after Generate dispatch. */
-	targetBlockId?: string;
-	/** Background Generate in progress (set after successful Lemma). */
-	inFlightGenerate: InFlightGenerate | null;
-	/** Latest requested Generate while another one is running. */
-	pendingGenerate: PendingGenerate | null;
-	languages: LanguagesConfig;
-	/** Lookup files in Librarian's corename index (set after Librarian init). */
-	lookupInLibrary: PathLookupFn;
-	promptRunner: PromptRunner;
-	vam: VaultActionManager;
-};
-
-type RewritePlan = {
-	updatedBlock: string;
-	wikilink: string;
-	replaceOffsetInBlock?: number;
-	replaceSurface?: string;
-};
-
-const LEMMA_IDEMPOTENCE_WINDOW_MS = 10_000;
-
-function areSameSplitPath(a: SplitPathToMdFile, b: SplitPathToMdFile): boolean {
-	return (
-		a.basename === b.basename &&
-		a.extension === b.extension &&
-		a.pathParts.length === b.pathParts.length &&
-		a.pathParts.every((part, index) => part === b.pathParts[index])
-	);
-}
-
-function stringifySplitPath(splitPath: SplitPathToMdFile): string {
-	return [
-		...splitPath.pathParts,
-		`${splitPath.basename}.${splitPath.extension}`,
-	].join("/");
-}
-
-function buildLemmaInvocationKey(attestation: Attestation): string {
-	const sourcePath = stringifySplitPath(attestation.source.path);
-	const offset = attestation.target.offsetInBlock;
-	return [
-		sourcePath,
-		attestation.source.ref,
-		attestation.target.surface,
-		String(offset ?? "none"),
-	].join("::");
-}
-
-function buildUpdatedBlock(
-	rawBlock: string,
-	offset: number | undefined,
-	surface: string,
-	wikilink: string,
-): string {
-	if (offset === undefined) {
-		return rawBlock.replace(surface, wikilink);
-	}
-
-	return (
-		rawBlock.slice(0, offset) +
-		wikilink +
-		rawBlock.slice(offset + surface.length)
-	);
-}
-
-function buildLemmaRewritePlan(params: {
-	attestation: Attestation;
-	contextWithLinkedParts?: string;
-	linkTarget: string;
-}): RewritePlan {
-	const { attestation, contextWithLinkedParts, linkTarget } = params;
-	const rawBlock = attestation.source.textRaw;
-	const surface = attestation.target.surface;
-	const offset = attestation.target.offsetInBlock;
-
-	let updatedBlock: string | null = null;
-	let replaceSurface = surface;
-	let replaceOffsetInBlock = offset ?? undefined;
-	const enclosingWikilink =
-		offset !== undefined
-			? wikilinkHelper.findEnclosingByOffset(rawBlock, offset)
-			: null;
-	const linkedTarget =
-		enclosingWikilink?.surface === surface
-			? enclosingWikilink.target
-			: (attestation.target.lemma ??
-				wikilinkHelper.findBySurface(rawBlock, surface)?.target ??
-				null);
-
-	// Idempotence guard: if selection already points to final target, keep source unchanged.
-	if (linkedTarget === linkTarget) {
-		return {
-			replaceOffsetInBlock,
-			replaceSurface,
-			updatedBlock: rawBlock,
-			wikilink: buildWikilinkForTarget(replaceSurface, linkTarget),
-		};
-	}
-
-	if (contextWithLinkedParts && offset !== undefined) {
-		const stripped = multiSpanHelper.stripBrackets(contextWithLinkedParts);
-		const expectedStripped = markdownHelper.stripAll(rawBlock);
-
-		if (stripped === expectedStripped) {
-			const spans = multiSpanHelper.parseBracketedSpans(
-				contextWithLinkedParts,
-			);
-
-			if (spans.length > 1) {
-				const resolved = multiSpanHelper.mapSpansToRawBlock(
-					rawBlock,
-					spans,
-					surface,
-					offset,
-				);
-				if (resolved && resolved.length > 1) {
-					updatedBlock = multiSpanHelper.applyMultiSpanReplacement(
-						rawBlock,
-						resolved,
-						linkTarget,
-					);
-					attestation.source.textWithOnlyTargetMarked =
-						contextWithLinkedParts;
-				}
-			}
-
-			if (updatedBlock === null && spans.length === 1) {
-				const span = spans[0];
-				if (span && span.text !== surface) {
-					const expanded = expandOffsetForLinkedSpan(
-						rawBlock,
-						surface,
-						offset,
-						span.text,
-					);
-					if (expanded.replaceSurface !== surface) {
-						replaceSurface = expanded.replaceSurface;
-						replaceOffsetInBlock = expanded.replaceOffset;
-						updatedBlock = buildUpdatedBlock(
-							rawBlock,
-							expanded.replaceOffset,
-							expanded.replaceSurface,
-							buildWikilinkForTarget(
-								expanded.replaceSurface,
-								linkTarget,
-							),
-						);
-						attestation.source.textWithOnlyTargetMarked =
-							contextWithLinkedParts;
-					}
-				}
-			}
-		} else {
-			logger.warn(
-				"[lemma] contextWithLinkedParts stripped text mismatch — falling back to single-span",
-			);
-		}
-	}
-
-	const wikilink = buildWikilinkForTarget(replaceSurface, linkTarget);
-	const resolvedUpdatedBlock =
-		updatedBlock ??
-		buildUpdatedBlock(
-			rawBlock,
-			replaceOffsetInBlock,
-			replaceSurface,
-			wikilink,
-		);
-
-	if (hasNestedWikilinkStructure(resolvedUpdatedBlock)) {
-		logger.warn(
-			"[lemma] nested wikilink rewrite plan detected — keeping source unchanged",
-		);
-		return {
-			replaceOffsetInBlock,
-			replaceSurface,
-			updatedBlock: rawBlock,
-			wikilink,
-		};
-	}
-
-	return {
-		replaceOffsetInBlock,
-		replaceSurface,
-		updatedBlock: resolvedUpdatedBlock,
-		wikilink,
-	};
-}
+export type {
+	InFlightGenerate,
+	LemmaInvocationCache,
+	PendingGenerate,
+	TextfresserState,
+} from "./state/textfresser-state";
 
 export class Textfresser {
 	private state: TextfresserState;
+	private backgroundGenerateCoordinator: BackgroundGenerateCoordinator;
 
 	constructor(
 		private readonly vam: VaultActionManager,
 		languages: LanguagesConfig,
 		apiService: ApiService,
 	) {
-		this.state = {
-			attestationForLatestNavigated: null,
-			inFlightGenerate: null,
+		this.state = createInitialTextfresserState({
+			apiService,
 			languages,
-			latestFailedSections: [],
-			latestLemmaInvocationCache: null,
-			latestLemmaResult: null,
-			lookupInLibrary: () => [],
-			pendingGenerate: null,
-			promptRunner: new PromptRunner(languages, apiService),
 			vam,
-		};
-	}
+		});
 
-	// ─── Commands ───
+		this.backgroundGenerateCoordinator = createBackgroundGenerateCoordinator({
+			runGenerateCommand: actionCommandFnForCommandKind.Generate,
+			scrollToTargetBlock: () => this.scrollToTargetBlock(),
+			state: this.state,
+			vam: this.vam,
+		});
+	}
 
 	executeCommand(
 		commandName: TextfresserCommandKind,
@@ -315,24 +69,28 @@ export class Textfresser {
 		}
 
 		if (commandName === "Lemma") {
-			return this.executeLemmaCommand(
-				{
+			return executeLemmaFlow({
+				context: {
 					...context,
 					activeFile: context.activeFile,
 				},
 				notify,
-			);
+				requestBackgroundGenerate:
+					this.backgroundGenerateCoordinator.requestBackgroundGenerate,
+				state: this.state,
+				vam: this.vam,
+			});
 		}
 
-		const commandFn = commandFnForCommandKind[commandName];
-		const input = {
+		const commandFn = actionCommandFnForCommandKind[commandName];
+		const input: CommandInput = {
 			commandContext: { ...context, activeFile: context.activeFile },
 			resultingActions: [],
 			textfresserState: this.state,
 		};
 
 		return commandFn(input)
-			.andThen((actions) => this.dispatchActions(actions))
+			.andThen((actions) => dispatchActions(this.vam, actions))
 			.map(() => {
 				const lemma = this.state.latestLemmaResult;
 				if (commandName === "Generate" && lemma) {
@@ -358,455 +116,23 @@ export class Textfresser {
 			});
 	}
 
-	// ─── Handlers ───
-
-	/** EventHandler for UserEventInterceptor */
 	createHandler(): EventHandler<WikilinkClickPayload> {
-		return {
-			doesApply: () => true,
-			handle: (payload) => {
-				const attestationResult =
-					buildAttestationFromWikilinkClickPayload(payload);
-
-				if (attestationResult.isOk()) {
-					this.state.attestationForLatestNavigated =
-						attestationResult.value;
-				}
-
-				const inFlight = this.state.inFlightGenerate;
-				if (inFlight) {
-					const clickedTarget = this.vam.resolveLinkpathDest(
-						payload.wikiTarget.basename,
-						payload.splitPath,
-					);
-					const isInFlightTarget = clickedTarget
-						? areSameSplitPath(clickedTarget, inFlight.targetPath)
-						: payload.wikiTarget.basename ===
-							inFlight.targetPath.basename;
-					if (isInFlightTarget) {
-						void this.awaitGenerateAndScroll(inFlight);
-					}
-				}
-
-				return { outcome: HandlerOutcome.Passthrough };
-			},
-		};
+		return createWikilinkClickHandler({
+			awaitGenerateAndScroll:
+				this.backgroundGenerateCoordinator.awaitGenerateAndScroll,
+			state: this.state,
+			vam: this.vam,
+		});
 	}
 
-	// ─── State Access ───
-
-	/** Get the current state */
 	getState() {
 		return this.state;
 	}
 
-	/** Wire librarian corename lookup (called after Librarian init). */
 	setLibrarianLookup(fn: PathLookupFn): void {
 		this.state.lookupInLibrary = fn;
 	}
 
-	// ─── Private ───
-
-	private executeLemmaCommand(
-		context: CommandContext & {
-			activeFile: NonNullable<CommandContext["activeFile"]>;
-		},
-		notify: (message: string) => void,
-	) {
-		const input: CommandInput = {
-			commandContext: context,
-			resultingActions: [],
-			textfresserState: this.state,
-		};
-		const attestation = resolveAttestation(input);
-		if (!attestation) {
-			return errAsync({
-				kind: CommandErrorKind.NotEligible,
-				reason: "No attestation context available — select a word or click a wikilink first",
-			});
-		}
-		const invocationKey = buildLemmaInvocationKey(attestation);
-		const cachedInvocation =
-			this.getValidLemmaInvocationCache(invocationKey);
-
-		if (cachedInvocation) {
-			return new ResultAsync(
-				this.handleLemmaCacheHit(cachedInvocation),
-			).mapErr((error) => {
-				const reason =
-					"reason" in error
-						? error.reason
-						: `Command failed: ${error.kind}`;
-				notify(`⚠ ${reason}`);
-				logger.warn("[Textfresser.Lemma] Failed:", error);
-				return error;
-			});
-		}
-
-		return new ResultAsync(this.runLemmaTwoPhase(input, attestation))
-			.map(() => {
-				const lemma = this.state.latestLemmaResult;
-				if (!lemma) {
-					return;
-				}
-
-				this.state.latestLemmaInvocationCache = {
-					cachedAtMs: Date.now(),
-					key: invocationKey,
-					lemmaResult: lemma,
-					resolvedTargetPath:
-						this.state.latestResolvedLemmaTargetPath ??
-						buildPolicyDestinationPath({
-							lemma: lemma.lemma,
-							linguisticUnit: lemma.linguisticUnit,
-							posLikeKind:
-								lemma.linguisticUnit === "Lexem"
-									? lemma.posLikeKind
-									: null,
-							surfaceKind: lemma.surfaceKind,
-							targetLanguage: this.state.languages.target,
-						}),
-				};
-
-				const pos =
-					lemma.linguisticUnit === "Lexem"
-						? ` (${lemma.posLikeKind})`
-						: "";
-				notify(`✓ ${lemma.lemma}${pos}`);
-				this.fireBackgroundGenerate(notify);
-			})
-			.mapErr((error) => {
-				const reason =
-					"reason" in error
-						? error.reason
-						: `Command failed: ${error.kind}`;
-				notify(`⚠ ${reason}`);
-				logger.warn("[Textfresser.Lemma] Failed:", error);
-				return error;
-			});
-	}
-
-	private getValidLemmaInvocationCache(
-		key: string,
-	): LemmaInvocationCache | null {
-		const cache = this.state.latestLemmaInvocationCache;
-		if (!cache) return null;
-		if (cache.key !== key) return null;
-		const elapsed = Date.now() - cache.cachedAtMs;
-		return elapsed <= LEMMA_IDEMPOTENCE_WINDOW_MS ? cache : null;
-	}
-
-	private async handleLemmaCacheHit(
-		cache: LemmaInvocationCache,
-	): Promise<Result<void, CommandError>> {
-		this.state.latestLemmaResult = cache.lemmaResult;
-		this.state.latestResolvedLemmaTargetPath = cache.resolvedTargetPath;
-
-		const contentResult = await this.vam.readContent(
-			cache.resolvedTargetPath,
-		);
-		if (contentResult.isErr()) {
-			logger.info(
-				"[Textfresser.Lemma] cache-hit read failed, refetching",
-			);
-			this.fireBackgroundGenerate(() => {});
-			return ok(undefined);
-		}
-
-		const entries = dictNoteHelper.parse(contentResult.value);
-		const matchedEntry = findEntryForLemmaResult({
-			entries,
-			generatedEntryId: cache.generatedEntryId,
-			lemmaResult: cache.lemmaResult,
-		});
-		if (!matchedEntry) {
-			logger.info(
-				"[Textfresser.Lemma] cache-hit missing entry, refetching",
-			);
-			this.fireBackgroundGenerate(() => {});
-			return ok(undefined);
-		}
-
-		const missingSections = computeMissingV3SectionKinds({
-			entry: matchedEntry,
-			lemmaResult: cache.lemmaResult,
-		});
-		if (missingSections.length === 0) {
-			logger.info("[Textfresser.Lemma] cache-hit complete, skipping");
-			return ok(undefined);
-		}
-
-		logger.info("[Textfresser.Lemma] cache-hit incomplete, refetching");
-		this.fireBackgroundGenerate(() => {});
-		return ok(undefined);
-	}
-
-	private async runLemmaTwoPhase(
-		input: CommandInput,
-		preResolvedAttestation?: Attestation,
-	): Promise<Result<void, CommandError>> {
-		const attestation = preResolvedAttestation ?? resolveAttestation(input);
-		if (!attestation) {
-			return err({
-				kind: CommandErrorKind.NotEligible,
-				reason: "No attestation context available — select a word or click a wikilink first",
-			});
-		}
-
-		const surface = attestation.target.surface;
-		const prePromptTarget = computePrePromptTarget({
-			lookupInLibrary: this.state.lookupInLibrary,
-			resolveLinkpathDest: (linkpath, from) =>
-				this.vam.resolveLinkpathDest(linkpath, from),
-			sourcePath: attestation.source.path,
-			surface,
-			targetLanguage: this.state.languages.target,
-		});
-		const placeholderPath = prePromptTarget.shouldCreatePlaceholder
-			? prePromptTarget.splitPath
-			: null;
-		this.state.latestLemmaPlaceholderPath = placeholderPath ?? undefined;
-
-		const rawBlock = attestation.source.textRaw;
-		const offsetInBlock = attestation.target.offsetInBlock ?? undefined;
-		const temporaryWikilink = buildWikilinkForTarget(
-			surface,
-			prePromptTarget.linkTarget,
-		);
-		const phaseAUpdatedBlock = buildUpdatedBlock(
-			rawBlock,
-			offsetInBlock,
-			surface,
-			temporaryWikilink,
-		);
-		const safePhaseAUpdatedBlock = hasNestedWikilinkStructure(
-			phaseAUpdatedBlock,
-		)
-			? rawBlock
-			: phaseAUpdatedBlock;
-		const phaseAActions: VaultAction[] = [
-			...(placeholderPath
-				? [
-						{
-							kind: VaultActionKind.UpsertMdFile,
-							payload: { splitPath: placeholderPath },
-						} as const,
-					]
-				: []),
-			{
-				kind: VaultActionKind.ProcessMdFile,
-				payload: {
-					splitPath: attestation.source.path,
-					transform: (content: string) =>
-						rewriteAttestationSourceContent({
-							content,
-							offsetInBlock,
-							rawBlock,
-							surface,
-							updatedBlock: safePhaseAUpdatedBlock,
-							wikilink: temporaryWikilink,
-						}),
-				},
-			},
-		];
-
-		const phaseADispatch = await this.dispatchActions(phaseAActions);
-		if (phaseADispatch.isErr()) {
-			return err(phaseADispatch.error);
-		}
-
-		const context = attestation.source.textWithOnlyTargetMarked;
-		const lemmaPromptResult = await this.state.promptRunner.generate(
-			PromptKind.Lemma,
-			{ context, surface },
-		);
-		if (lemmaPromptResult.isErr()) {
-			return err({
-				kind: CommandErrorKind.ApiError,
-				reason: lemmaPromptResult.error.reason,
-			});
-		}
-		const lemmaPromptOutput = lemmaPromptResult.value;
-
-		const finalTarget = computeFinalTarget({
-			findByBasename: (basename) => this.vam.findByBasename(basename),
-			lemma: lemmaPromptOutput.lemma,
-			linguisticUnit: lemmaPromptOutput.linguisticUnit,
-			lookupInLibrary: this.state.lookupInLibrary,
-			posLikeKind:
-				lemmaPromptOutput.linguisticUnit === "Lexem"
-					? lemmaPromptOutput.posLikeKind
-					: null,
-			surfaceKind: lemmaPromptOutput.surfaceKind,
-			targetLanguage: this.state.languages.target,
-		});
-
-		const disambiguation =
-			lemmaPromptOutput.linguisticUnit === "Lexem"
-				? await disambiguateSense(
-						this.vam,
-						this.state.promptRunner,
-						{
-							lemma: lemmaPromptOutput.lemma,
-							linguisticUnit: "Lexem",
-							pos: lemmaPromptOutput.posLikeKind,
-							surfaceKind: lemmaPromptOutput.surfaceKind,
-						},
-						context,
-						finalTarget.splitPath,
-					)
-				: await disambiguateSense(
-						this.vam,
-						this.state.promptRunner,
-						{
-							lemma: lemmaPromptOutput.lemma,
-							linguisticUnit: "Phrasem",
-							phrasemeKind: lemmaPromptOutput.posLikeKind,
-							surfaceKind: lemmaPromptOutput.surfaceKind,
-						},
-						context,
-						finalTarget.splitPath,
-					);
-		if (disambiguation.isErr()) {
-			return err(disambiguation.error);
-		}
-
-		const disambiguationResult = disambiguation.value;
-		const precomputedEmojiDescription =
-			disambiguationResult &&
-			"precomputedEmojiDescription" in disambiguationResult
-				? disambiguationResult.precomputedEmojiDescription
-				: undefined;
-		const normalizedDisambiguation =
-			disambiguationResult === null ||
-			disambiguationResult.matchedIndex === null
-				? null
-				: { matchedIndex: disambiguationResult.matchedIndex };
-
-		if (lemmaPromptOutput.linguisticUnit === "Lexem") {
-			this.state.latestLemmaResult = {
-				attestation,
-				disambiguationResult: normalizedDisambiguation,
-				lemma: lemmaPromptOutput.lemma,
-				linguisticUnit: "Lexem",
-				posLikeKind: lemmaPromptOutput.posLikeKind,
-				precomputedEmojiDescription,
-				surfaceKind: lemmaPromptOutput.surfaceKind,
-			};
-		} else {
-			this.state.latestLemmaResult = {
-				attestation,
-				disambiguationResult: normalizedDisambiguation,
-				lemma: lemmaPromptOutput.lemma,
-				linguisticUnit: "Phrasem",
-				posLikeKind: lemmaPromptOutput.posLikeKind,
-				precomputedEmojiDescription,
-				surfaceKind: lemmaPromptOutput.surfaceKind,
-			};
-		}
-		this.state.latestResolvedLemmaTargetPath = finalTarget.splitPath;
-
-		const rewritePlan = buildLemmaRewritePlan({
-			attestation,
-			contextWithLinkedParts:
-				lemmaPromptOutput.contextWithLinkedParts ?? undefined,
-			linkTarget: finalTarget.linkTarget,
-		});
-
-		const currentPath = this.vam.mdPwd();
-		const shouldNavigateToFinal =
-			placeholderPath !== null &&
-			currentPath !== null &&
-			!areSameSplitPath(placeholderPath, finalTarget.splitPath) &&
-			areSameSplitPath(currentPath, placeholderPath);
-
-		let placeholderWasCleaned = false;
-		let placeholderWasRenamed = false;
-		const phaseBActions: VaultAction[] = [];
-
-		if (
-			placeholderPath &&
-			!areSameSplitPath(placeholderPath, finalTarget.splitPath)
-		) {
-			const finalExists = this.vam.exists(finalTarget.splitPath);
-			if (!finalExists) {
-				phaseBActions.push({
-					kind: VaultActionKind.RenameMdFile,
-					payload: {
-						from: placeholderPath,
-						to: finalTarget.splitPath,
-					},
-				});
-				placeholderWasCleaned = true;
-				placeholderWasRenamed = true;
-			} else {
-				const placeholderContentResult =
-					await this.vam.readContent(placeholderPath);
-				if (
-					placeholderContentResult.isOk() &&
-					placeholderContentResult.value.trim().length === 0
-				) {
-					phaseBActions.push({
-						kind: VaultActionKind.TrashMdFile,
-						payload: { splitPath: placeholderPath },
-					});
-					placeholderWasCleaned = true;
-				}
-			}
-		}
-
-		if (!placeholderWasRenamed && !this.vam.exists(finalTarget.splitPath)) {
-			phaseBActions.push({
-				kind: VaultActionKind.UpsertMdFile,
-				payload: { splitPath: finalTarget.splitPath },
-			});
-		}
-
-		phaseBActions.push({
-			kind: VaultActionKind.ProcessMdFile,
-			payload: {
-				splitPath: attestation.source.path,
-				transform: (content: string) =>
-					rewriteAttestationSourceContent({
-						content,
-						offsetInBlock,
-						rawBlock,
-						replaceOffsetInBlock: rewritePlan.replaceOffsetInBlock,
-						replaceSurface: rewritePlan.replaceSurface,
-						surface,
-						updatedBlock: rewritePlan.updatedBlock,
-						wikilink: rewritePlan.wikilink,
-					}),
-			},
-		});
-
-		const phaseBDispatch = await this.dispatchActions(phaseBActions);
-		if (phaseBDispatch.isErr()) {
-			return err(phaseBDispatch.error);
-		}
-
-		this.state.latestLemmaPlaceholderPath = placeholderWasCleaned
-			? undefined
-			: (placeholderPath ?? undefined);
-
-		if (shouldNavigateToFinal) {
-			const cdResult = await this.vam.cd(finalTarget.splitPath);
-			if (cdResult.isErr()) {
-				logger.warn(
-					"[Textfresser.Lemma] Failed to navigate from placeholder to final target",
-					{
-						error: cdResult.error,
-						finalTarget: finalTarget.splitPath,
-						placeholderPath,
-					},
-				);
-			}
-		}
-
-		return ok(undefined);
-	}
-
-	/** Scroll the editor to the line containing ^{targetBlockId}. Fire-and-forget UX convenience. */
 	private scrollToTargetBlock(): void {
 		const blockId = this.state.targetBlockId;
 		if (!blockId) return;
@@ -822,204 +148,5 @@ export class Textfresser {
 		if (lineIndex < 0) return;
 
 		this.vam.activeFileService.scrollToLine(lineIndex);
-	}
-
-	/** Fire-and-forget: launch background Generate after successful Lemma. */
-	private fireBackgroundGenerate(notify: (message: string) => void): void {
-		const lemmaResult = this.state.latestLemmaResult;
-		if (!lemmaResult) return;
-
-		const targetPath =
-			this.state.latestResolvedLemmaTargetPath ??
-			buildPolicyDestinationPath({
-				lemma: lemmaResult.lemma,
-				linguisticUnit: lemmaResult.linguisticUnit,
-				posLikeKind:
-					lemmaResult.linguisticUnit === "Lexem"
-						? lemmaResult.posLikeKind
-						: null,
-				surfaceKind: lemmaResult.surfaceKind,
-				targetLanguage: this.state.languages.target,
-			});
-		const request: PendingGenerate = {
-			lemma: lemmaResult.lemma,
-			notify,
-			targetPath,
-		};
-
-		if (this.state.inFlightGenerate) {
-			this.state.pendingGenerate = request;
-			return;
-		}
-
-		this.launchBackgroundGenerate(request);
-	}
-
-	private launchBackgroundGenerate(request: PendingGenerate): void {
-		incrementPending();
-		const promise = this.runBackgroundGenerate(
-			request.targetPath,
-			request.lemma,
-			request.notify,
-		)
-			.catch((error) => {
-				const reason =
-					error instanceof Error ? error.message : String(error);
-				logger.warn("[Textfresser.backgroundGenerate] Failed:", reason);
-				request.notify(`⚠ Background generate failed: ${reason}`);
-			})
-			.finally(() => {
-				decrementPending();
-				this.state.inFlightGenerate = null;
-
-				const pending = this.state.pendingGenerate;
-				this.state.pendingGenerate = null;
-				if (
-					pending &&
-					!areSameSplitPath(pending.targetPath, request.targetPath)
-				) {
-					this.launchBackgroundGenerate(pending);
-				}
-			});
-
-		this.state.inFlightGenerate = {
-			lemma: request.lemma,
-			promise,
-			targetPath: request.targetPath,
-		};
-	}
-
-	/** Run the Generate pipeline for a target note without navigating to it. */
-	private async runBackgroundGenerate(
-		targetPath: SplitPathToMdFile,
-		lemma: string,
-		notify: (message: string) => void,
-	): Promise<void> {
-		const targetExistedBefore = this.vam.exists(targetPath);
-		const contentResult = await this.vam.readContent(targetPath);
-		const content = contentResult.isOk() ? contentResult.value : "";
-
-		const input: CommandInput = {
-			commandContext: {
-				activeFile: { content, splitPath: targetPath },
-				selection: null,
-			},
-			resultingActions: [],
-			textfresserState: this.state,
-		};
-
-		const generateResult = await commandFnForCommandKind.Generate(input);
-		if (generateResult.isErr()) {
-			const error = generateResult.error;
-			const reason =
-				"reason" in error
-					? error.reason
-					: `Command failed: ${error.kind}`;
-			throw new Error(reason);
-		}
-
-		const upsertAction: VaultAction = {
-			kind: VaultActionKind.UpsertMdFile,
-			payload: { splitPath: targetPath },
-		};
-		const allActions = [upsertAction, ...generateResult.value];
-
-		const dispatchResult = await this.vam.dispatch(allActions);
-		if (dispatchResult.isErr()) {
-			const reason = dispatchResult.error.map((e) => e.error).join(", ");
-			throw new Error(reason);
-		}
-
-		const finalContentResult = await this.vam.readContent(targetPath);
-		if (finalContentResult.isErr()) {
-			throw new Error(
-				"Background generate finished but target note could not be read",
-			);
-		}
-		if (finalContentResult.value.trim().length === 0) {
-			if (!targetExistedBefore) {
-				const rollbackResult = await this.vam.dispatch([
-					{
-						kind: VaultActionKind.TrashMdFile,
-						payload: { splitPath: targetPath },
-					},
-				]);
-				if (rollbackResult.isErr()) {
-					logger.warn(
-						"[Textfresser.backgroundGenerate] Failed to rollback empty generated note",
-						{
-							error: rollbackResult.error,
-							targetPath,
-						},
-					);
-				}
-			}
-
-			throw new Error(
-				`Background generate produced empty target note: ${stringifySplitPath(targetPath)}`,
-			);
-		}
-
-		const cache = this.state.latestLemmaInvocationCache;
-		const generatedEntryId = this.state.targetBlockId;
-		if (
-			cache &&
-			generatedEntryId &&
-			areSameSplitPath(cache.resolvedTargetPath, targetPath)
-		) {
-			this.state.latestLemmaInvocationCache = {
-				...cache,
-				generatedEntryId,
-			};
-		}
-
-		const failed = this.state.latestFailedSections;
-		if (failed.length > 0) {
-			notify(
-				`⚠ Entry created for ${lemma} (failed: ${failed.join(", ")})`,
-			);
-		} else {
-			notify(`✓ Entry created for ${lemma}`);
-		}
-	}
-
-	/** Wait for in-flight Generate to finish, then scroll to the entry if user is on the target note. */
-	private async awaitGenerateAndScroll(
-		inFlight: InFlightGenerate,
-	): Promise<void> {
-		try {
-			await inFlight.promise;
-		} catch {
-			return;
-		}
-
-		await new Promise((resolve) => setTimeout(resolve, 300));
-
-		const currentFile = this.vam.mdPwd();
-		if (
-			!currentFile ||
-			!areSameSplitPath(currentFile, inFlight.targetPath)
-		) {
-			return;
-		}
-
-		this.scrollToTargetBlock();
-	}
-
-	private dispatchActions(actions: VaultAction[]) {
-		return new ResultAsync(
-			this.vam.dispatch(actions).then((dispatchResult) => {
-				if (dispatchResult.isErr()) {
-					const reason = dispatchResult.error
-						.map((e) => e.error)
-						.join(", ");
-					return err({
-						kind: CommandErrorKind.DispatchFailed,
-						reason,
-					});
-				}
-				return ok(undefined);
-			}),
-		);
 	}
 }
