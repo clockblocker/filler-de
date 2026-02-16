@@ -1,10 +1,7 @@
 import { ok, type Result } from "neverthrow";
-import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
-import {
-	type DictEntry,
-	dictNoteHelper,
-} from "../../../domain/dict-note";
 import { logger } from "../../../../../utils/logger";
+import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
+import { type DictEntry, dictNoteHelper } from "../../../domain/dict-note";
 import type { CommandError, CommandStateWithLemma } from "../../types";
 
 export type ResolvedEntryState = CommandStateWithLemma & {

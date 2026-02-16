@@ -1,9 +1,9 @@
 import { describe, expect, it } from "bun:test";
 import { decorateAttestationSeparability } from "../../../../src/commanders/textfresser/commands/generate/steps/decorate-attestation-separability";
 import type { GenerateSectionsResult } from "../../../../src/commanders/textfresser/commands/generate/steps/generate-sections";
+import type { MorphemeItem } from "../../../../src/commanders/textfresser/domain/morpheme/morpheme-formatter";
 import type { TextfresserState } from "../../../../src/commanders/textfresser/textfresser";
 import { VaultActionKind } from "../../../../src/managers/obsidian/vault-action-manager/types/vault-action";
-import type { MorphemeItem } from "../../../../src/commanders/textfresser/domain/morpheme/morpheme-formatter";
 
 const SOURCE_PATH = {
 	basename: "chapter-1",

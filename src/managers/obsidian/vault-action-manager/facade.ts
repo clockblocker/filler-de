@@ -12,13 +12,13 @@ import type {
 } from "./impl/actions-processing/dispatcher";
 import { Dispatcher } from "./impl/actions-processing/dispatcher";
 import { Executor } from "./impl/actions-processing/executor";
-import { BulkEventEmmiter } from "./impl/event-processing/bulk-event-emmiter/bulk-event-emmiter";
-import { SelfEventTracker } from "./impl/event-processing/self-event-tracker";
-import { SingleEventEmmiter } from "./impl/event-processing/single-event-emmiter";
 import {
 	makeSplitPath,
 	makeSystemPathForSplitPath,
 } from "./impl/common/split-path-and-system-path";
+import { BulkEventEmmiter } from "./impl/event-processing/bulk-event-emmiter/bulk-event-emmiter";
+import { SelfEventTracker } from "./impl/event-processing/self-event-tracker";
+import { SingleEventEmmiter } from "./impl/event-processing/single-event-emmiter";
 import { VaultReader } from "./impl/vault-reader";
 import type {
 	BulkVaultEventHandler,

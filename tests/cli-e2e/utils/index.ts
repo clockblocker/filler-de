@@ -16,4 +16,5 @@ export {
 	listFiles,
 	readFile,
 	renamePath,
+	toggleCodexCheckbox,
 } from "./vault-ops";

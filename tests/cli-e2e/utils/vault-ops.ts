@@ -125,3 +125,22 @@ export async function listFiles(
 export async function deleteAllUnder(folder: string): Promise<void> {
 	await deletePath(folder);
 }
+
+/**
+ * Toggle a checkbox in a codex file by calling librarian.handleCodexCheckboxClick().
+ * Bypasses DOM/CodeMirror — exercises the full business pipeline directly.
+ *
+ * @param codexPath - Vault-relative path, e.g. "Library/Recipe/Pie/Fish/__-Fish-Pie-Recipe.md"
+ * @param lineContent - Text after "- [ ] " prefix, e.g. "[[Steps-Fish-Pie-Recipe|Steps]]"
+ * @param wasChecked - PRE-toggle state: false = was unchecked (user wants to check → Done)
+ */
+export async function toggleCodexCheckbox(
+	codexPath: string,
+	lineContent: string,
+	wasChecked: boolean,
+): Promise<void> {
+	const codexPathEscaped = codexPath.replace(/'/g, "\\'");
+	const lineContentEscaped = lineContent.replace(/'/g, "\\'");
+	const code = `(async()=>{const plugin=app.plugins.plugins['cbcr-text-eater-de'];const parts='${codexPathEscaped}'.replace(/\\.md$/,'').split('/');const basename=parts.pop();const payload={checked:${wasChecked},kind:'CheckboxClicked',lineContent:'${lineContentEscaped}',splitPath:{basename,pathParts:parts,extension:'md',kind:'MdFile'}};await plugin.librarian.handleCodexCheckboxClick(payload);return 'ok'})()`;
+	await obsidianEval(code);
+}

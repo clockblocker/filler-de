@@ -21,6 +21,31 @@ describe("Disambiguate schema", () => {
 		expect(result.success).toBe(true);
 	});
 
+	it("accepts optional ipa hints per sense", () => {
+		const result = userInputSchema.safeParse({
+			context: "Я потерял ключ от замка.",
+			lemma: "замок",
+			senses: [
+				{
+					emojiDescription: ["🔒"],
+					index: 1,
+					ipa: "zɐˈmok",
+					pos: "Noun",
+					unitKind: "Lexem",
+				},
+				{
+					emojiDescription: ["🏰"],
+					index: 2,
+					ipa: "ˈzamək",
+					pos: "Noun",
+					unitKind: "Lexem",
+				},
+			],
+		});
+
+		expect(result.success).toBe(true);
+	});
+
 	it("rejects invalid phrasemeKind values", () => {
 		const result = userInputSchema.safeParse({
 			context: "Auf jeden Fall komme ich mit.",

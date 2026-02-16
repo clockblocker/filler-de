@@ -33,6 +33,14 @@ import {
 	performMutation007,
 	testPostHealing007,
 } from "./chains/1-chain/007-create-file-basename-healing";
+import {
+	performMutation008,
+	testPostHealing008,
+} from "./chains/2-chain/008-toggle-scroll-checkbox";
+import {
+	performMutation009,
+	testPostHealing009,
+} from "./chains/2-chain/009-toggle-section-checkbox";
 
 describe("Librarian CLI E2E", () => {
 	beforeAll(async () => {
@@ -91,4 +99,18 @@ describe("Librarian CLI E2E", () => {
 		await waitForIdle();
 	});
 	it("new file should be renamed to include suffix", testPostHealing007);
+
+	// 008: Toggle scroll checkbox to Done
+	it("toggles Steps checkbox in Fish codex", async () => {
+		await performMutation008();
+		await waitForIdle();
+	});
+	it("Fish codex shows checked Steps, Pie codex shows checked Fish", testPostHealing008);
+
+	// 009: Toggle section checkbox to Done (propagation)
+	it("toggles Berry section checkbox in Pie codex", async () => {
+		await performMutation009();
+		await waitForIdle();
+	});
+	it("Berry scrolls all checked, Pie codex shows checked Berry", testPostHealing009);
 });

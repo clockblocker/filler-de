@@ -1,4 +1,7 @@
-import type { GermanLinguisticUnit } from "../../../../linguistics/de";
+import type {
+	DeEntity,
+	GermanLinguisticUnit,
+} from "../../../../linguistics/de";
 
 export type EntrySection = {
 	kind: string; // CSS suffix: "kontexte", "synonyme", "morpheme", etc.
@@ -7,6 +10,7 @@ export type EntrySection = {
 };
 
 export type DictEntryMeta = {
+	entity?: DeEntity;
 	linguisticUnit?: GermanLinguisticUnit;
 	emojiDescription?: string[];
 } & Record<string, unknown>;

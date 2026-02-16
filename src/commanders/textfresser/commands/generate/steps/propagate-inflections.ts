@@ -1,24 +1,21 @@
 import { ok, type Result } from "neverthrow";
-import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import { SurfaceKind } from "../../../../../linguistics/common/enums/core";
-import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
-import {
-	DictSectionKind,
-	TitleReprFor,
-} from "../../../targets/de/sections/section-kind";
 import type { NounInflectionCell } from "../../../../../linguistics/de/lexem/noun";
 import type { VaultAction } from "../../../../../managers/obsidian/vault-action-manager";
-import { dictNoteHelper } from "../../../domain/dict-note";
-import type {
-	DictEntry,
-	EntrySection,
-} from "../../../domain/dict-note/types";
 import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metadata";
 import { logger } from "../../../../../utils/logger";
 import {
 	buildPropagationActionPair,
 	resolveTargetPath,
 } from "../../../common/target-path-resolver";
+import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
+import { dictNoteHelper } from "../../../domain/dict-note";
+import type { DictEntry, EntrySection } from "../../../domain/dict-note/types";
+import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
+import {
+	DictSectionKind,
+	TitleReprFor,
+} from "../../../targets/de/sections/section-kind";
 import type { CommandError } from "../../types";
 import {
 	buildLocalizedInflectionTagsFromCells,

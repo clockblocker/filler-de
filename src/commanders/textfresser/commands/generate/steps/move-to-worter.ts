@@ -29,7 +29,9 @@ export function moveToWorter(
 	const alreadyAtDestination =
 		activeFile.splitPath.basename === destination.basename &&
 		currentParts.length === destination.pathParts.length &&
-		currentParts.every((part, index) => part === destination.pathParts[index]);
+		currentParts.every(
+			(part, index) => part === destination.pathParts[index],
+		);
 
 	if (alreadyAtDestination) {
 		return ok(ctx);

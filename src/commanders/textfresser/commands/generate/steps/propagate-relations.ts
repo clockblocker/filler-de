@@ -1,16 +1,16 @@
 import { ok, type Result } from "neverthrow";
 import { SurfaceKind } from "../../../../../linguistics/common/enums/core";
-import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
-import {
-	DictSectionKind,
-	TitleReprFor,
-} from "../../../targets/de/sections/section-kind";
 import type { VaultAction } from "../../../../../managers/obsidian/vault-action-manager";
 import type { RelationSubKind } from "../../../../../prompt-smith/schemas/relation";
 import {
 	buildPropagationActionPair,
 	resolveTargetPath,
 } from "../../../common/target-path-resolver";
+import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
+import {
+	DictSectionKind,
+	TitleReprFor,
+} from "../../../targets/de/sections/section-kind";
 import type { CommandError } from "../../types";
 import type {
 	GenerateSectionsResult,

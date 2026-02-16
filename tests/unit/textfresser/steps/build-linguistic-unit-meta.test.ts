@@ -1,5 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { buildLinguisticUnitMeta } from "../../../../src/commanders/textfresser/commands/generate/steps/generate-sections";
+import {
+	buildEntityMeta,
+	buildLinguisticUnitMeta,
+} from "../../../../src/commanders/textfresser/commands/generate/steps/generate-sections";
 import type { LemmaResult } from "../../../../src/commanders/textfresser/commands/lemma/types";
 import type { AgentOutput } from "../../../../src/prompt-smith";
 
@@ -283,6 +286,93 @@ describe("buildLinguisticUnitMeta", () => {
 				lemma: "stolz",
 				surfaceKind: "Lemma",
 			},
+		});
+	});
+});
+
+describe("buildEntityMeta", () => {
+	it("builds Lexem lemma entity with lexical genus and nounClass", () => {
+		const result = buildEntityMeta(
+			makeLexemLemmaResult(),
+			makeLexemEnrichment(),
+			null,
+		);
+
+		expect(result).toEqual({
+			emojiDescription: ["🏠"],
+			features: {
+				inflectional: {},
+				lexical: {
+					genus: "Neutrum",
+					nounClass: "Common",
+					pos: "Noun",
+				},
+			},
+			ipa: "haʊ̯s",
+			language: "German",
+			lemma: "Haus",
+			linguisticUnit: "Lexem",
+			posLikeKind: "Noun",
+			surfaceKind: "Lemma",
+		});
+	});
+
+	it("builds Lexem inflected entity with lexical POS only and surface", () => {
+		const result = buildEntityMeta(
+			makeLexemLemmaResult({
+				surfaceKind: "Inflected",
+			}),
+			makeLexemEnrichment(),
+			null,
+		);
+
+		expect(result).toEqual({
+			emojiDescription: ["🏠"],
+			features: {
+				inflectional: {},
+				lexical: { pos: "Noun" },
+			},
+			ipa: "haʊ̯s",
+			language: "German",
+			lemma: "Haus",
+			linguisticUnit: "Lexem",
+			posLikeKind: "Noun",
+			surface: "Häuser",
+			surfaceKind: "Inflected",
+		});
+	});
+
+	it("prefers precomputedEmojiDescription for entity signal", () => {
+		const result = buildEntityMeta(
+			makeLexemLemmaResult({
+				precomputedEmojiDescription: ["🪑", "🌳"],
+			}),
+			makeLexemEnrichment(),
+			null,
+		);
+
+		expect(result?.emojiDescription).toEqual(["🪑", "🌳"]);
+	});
+
+	it("builds Phrasem entity with lexical phrasemeKind", () => {
+		const result = buildEntityMeta(
+			makePhrasemLemmaResult(),
+			makePhrasemEnrichment(),
+			null,
+		);
+
+		expect(result).toEqual({
+			emojiDescription: ["✅"],
+			features: {
+				inflectional: {},
+				lexical: { phrasemeKind: "Collocation" },
+			},
+			ipa: "aʊ̯f ˈjeːdn̩ fal",
+			language: "German",
+			lemma: "auf jeden Fall",
+			linguisticUnit: "Phrasem",
+			posLikeKind: "Collocation",
+			surfaceKind: "Lemma",
 		});
 	});
 });

@@ -1,9 +1,9 @@
 export {
+	type BuildDictEntryIdParts,
 	buildDictEntryId,
+	type DictEntryId,
 	DictEntryIdSchema,
 	dictEntryIdHelper,
-	parseDictEntryId,
-	type BuildDictEntryIdParts,
-	type DictEntryId,
 	type ParsedDictEntryId,
+	parseDictEntryId,
 } from "./dict-entry-id";

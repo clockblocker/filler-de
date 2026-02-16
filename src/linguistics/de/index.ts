@@ -1,5 +1,20 @@
 import { z } from "zod/v3";
 import { PhrasemSurfaceSchema } from "../common/dto/phrasem-surface";
+
+export type {
+	DeEntity,
+	DePosLikeDiscriminator,
+	EnEntity,
+	EngEntity,
+	EngPosLikeDiscriminator,
+	EnPosLikeDiscriminator,
+	Entity,
+	FeatureSet,
+	InflectionalFeatureSet,
+	LexicalFeatureSet,
+	PosLikeDiscriminator,
+} from "../common/entity";
+
 import { GermanLexemSurfaceSchema } from "./lexem";
 import { GermanMorphemSurfaceSchema } from "./morphem";
 

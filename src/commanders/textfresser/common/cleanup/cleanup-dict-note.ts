@@ -1,7 +1,7 @@
-import { compareSectionsByWeight } from "../../targets/de/sections/section-config";
+import { noteMetadataHelper } from "../../../../stateless-helpers/note-metadata";
 import { dictNoteHelper } from "../../domain/dict-note";
 import type { DictEntry } from "../../domain/dict-note/types";
-import { noteMetadataHelper } from "../../../../stateless-helpers/note-metadata";
+import { compareSectionsByWeight } from "../../targets/de/sections/section-config";
 import { DICT_ENTRY_NOTE_KIND } from "../metadata";
 
 const ATTESTATION_CSS_KIND = "kontexte";

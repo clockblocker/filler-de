@@ -1,13 +1,16 @@
 import { ResultAsync } from "neverthrow";
+import type { DictEntry } from "../../../domain/dict-note/types";
 import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
 import {
 	DictSectionKind,
 	TitleReprFor,
 } from "../../../targets/de/sections/section-kind";
-import type { DictEntry } from "../../../domain/dict-note/types";
 import type { CommandError } from "../../types";
 import { CommandErrorKind } from "../../types";
-import { buildLinguisticUnitMeta } from "./build-linguistic-unit-meta";
+import {
+	buildEntityMeta,
+	buildLinguisticUnitMeta,
+} from "./build-linguistic-unit-meta";
 import {
 	buildFeatureTagPath,
 	getFeaturesPromptKindForPos,
@@ -20,7 +23,10 @@ import {
 	isVerbFeaturesOutput,
 } from "./verb-features";
 
-export { buildLinguisticUnitMeta } from "./build-linguistic-unit-meta";
+export {
+	buildEntityMeta,
+	buildLinguisticUnitMeta,
+} from "./build-linguistic-unit-meta";
 export { buildFeatureTagPath, getFeaturesPromptKindForPos };
 export type { GenerateSectionsResult } from "./generate-sections-result";
 export type { ParsedRelation } from "./section-generation-types";
@@ -165,14 +171,22 @@ export function generateSections(
 				generated.enrichmentOutput,
 				generated.featuresOutput,
 			);
+			const entity = buildEntityMeta(
+				lemmaResult,
+				generated.enrichmentOutput,
+				generated.featuresOutput,
+			);
+			const emojiDescription =
+				entity?.emojiDescription ??
+				lemmaResult.precomputedEmojiDescription ??
+				generated.enrichmentOutput.emojiDescription;
 
 			const newEntry: DictEntry = {
 				headerContent: generated.headerContent,
 				id: generated.entryId,
 				meta: {
-					emojiDescription:
-						lemmaResult.precomputedEmojiDescription ??
-						generated.enrichmentOutput.emojiDescription,
+					...(entity ? { entity } : {}),
+					emojiDescription,
 					...(verbEntryIdentity ? { verbEntryIdentity } : {}),
 					...(linguisticUnit ? { linguisticUnit } : {}),
 				},

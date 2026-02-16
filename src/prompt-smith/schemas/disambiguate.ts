@@ -10,6 +10,7 @@ const userInputSchema = z.object({
 			emojiDescription: z.array(z.string()),
 			genus: z.string().optional(),
 			index: z.number(),
+			ipa: z.string().min(1).optional(),
 			phrasemeKind: PhrasemeKindSchema.optional(),
 			pos: z.string().optional(),
 			unitKind: LinguisticUnitKindSchema,

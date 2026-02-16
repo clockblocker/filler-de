@@ -6,8 +6,8 @@
  */
 
 import type { LlmMorpheme } from "../../../prompt-smith/schemas/morphem";
-import type { MorphemeItem } from "../domain/morpheme/morpheme-formatter";
 import type { TargetLanguage } from "../../../types";
+import type { MorphemeItem } from "../domain/morpheme/morpheme-formatter";
 
 export function resolveMorphemeItems(
 	morphemes: LlmMorpheme[],
