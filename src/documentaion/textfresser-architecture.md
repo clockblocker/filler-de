@@ -1161,7 +1161,7 @@ To add support for a new target language (e.g., Japanese):
 | `src/linguistics/common/dto/phrasem-surface.ts` | Language-independent PhrasemSurfaceSchema (Collocation with strength, stubs for Idiom/Proverb/etc.) |
 | `src/linguistics/german/enums/genus.ts` | GermanGenusSchema ("Maskulinum"\|"Femininum"\|"Neutrum"), `articleFromGenus` mapping |
 | `src/linguistics/german/features/noun.ts` | GermanNounFull/RefFeaturesSchema (genus, nounClass for Full; just POS for Ref) |
-| `src/linguistics/german/features/pos-features.ts` | GermanLexemFull/RefFeaturesSchema — all POS in discriminated union (Noun real, rest stubs) |
+| `src/linguistics/german/features/pos-features.ts` | GermanLexemFull/RefFeaturesSchema — all POS in discriminated union (Noun/Verb/Adjective specialized, rest stubs) |
 | `src/linguistics/german/schemas/lexem-surface.ts` | GermanLexemSurfaceSchema via `makeSurfaceSchema` |
 | `src/linguistics/german/schemas/morphem-surface.ts` | GermanMorphemSurfaceSchema (Prefix with separability, stubs for rest) |
 | `src/linguistics/german/schemas/linguistic-unit.ts` | GermanLinguisticUnitSchema — top-level `kind` discriminated union |
@@ -1183,7 +1183,7 @@ To add support for a new target language (e.g., Japanese):
 | `tests/unit/textfresser/formatters/common/header-formatter.test.ts` | Common header formatter: emoji/ipa/wikilink assembly (no article) |
 | `tests/unit/textfresser/formatters/de/lexem/noun/header-formatter.test.ts` | Noun header formatter: genus → der/die/das article |
 | `tests/unit/textfresser/formatters/header-dispatch.test.ts` | Header dispatch: Noun+genus → noun formatter, Verb/Morphem → common, precomputedEmoji fallback |
-| `tests/unit/linguistics/german-linguistic-unit.test.ts` | V9: GermanLinguisticUnit DTO — Lexem+Noun, POS stubs, Phrasem, Morphem, rejection cases (21 tests) |
+| `tests/unit/linguistics/german-linguistic-unit.test.ts` | GermanLinguisticUnit DTO — Lexem+Noun/Verb/Adjective, stub POS coverage, Phrasem, Morphem, rejection cases |
 | `tests/unit/textfresser/formatters/relation-formatter.test.ts` | Relation formatter: symbol notation, grouping, dedup |
 | `tests/unit/textfresser/formatters/inflection-formatter.test.ts` | Generic inflection formatter: label/forms rows |
 | `tests/unit/textfresser/formatters/de/lexem/noun/inflection-formatter.test.ts` | Noun inflection: case grouping, N/A/G/D order, cells pass-through |
@@ -1221,7 +1221,7 @@ To add support for a new target language (e.g., Japanese):
 
 ## 15. LinguisticUnit DTO — Source of Truth Type System
 
-> **Status**: V9 — implemented (German + Noun full features; all other POS/unit kinds have stubs). DTO is built during Generate and stored in `DictEntry.meta.linguisticUnit`.
+> **Status**: V9+ — implemented (German + Noun/Verb/Adjective full features; remaining POS/unit kinds are stubs). DTO is built during Generate and stored in `DictEntry.meta.linguisticUnit`.
 
 ### 15.1 Problem
 
@@ -1324,18 +1324,24 @@ const GermanNounFullFeaturesSchema = z.object({
 const GermanNounRefFeaturesSchema = z.object({ pos: z.literal("Noun") });
 ```
 
-#### POS features assembly (stubs for non-Noun)
+#### POS features assembly (stubs for non-specialized POS)
 
 ```typescript
 // src/linguistics/german/features/pos-features.ts
 // POS literals re-declared in v3 to avoid v4 import trap from pos.ts
-const fullStubs = ["Verb", "Adjective", ...].map(pos => z.object({ pos: z.literal(pos) }));
+const fullStubs = ["Pronoun", "Article", "Preposition", ...].map(pos => z.object({ pos: z.literal(pos) }));
 
 const GermanLexemFullFeaturesSchema = z.discriminatedUnion("pos", [
-  GermanNounFullFeaturesSchema, ...fullStubs,
+  GermanNounFullFeaturesSchema,
+  GermanVerbFullFeaturesSchema,
+  GermanAdjectiveFullFeaturesSchema,
+  ...fullStubs,
 ]);
 const GermanLexemRefFeaturesSchema = z.discriminatedUnion("pos", [
-  GermanNounRefFeaturesSchema, ...refStubs,
+  GermanNounRefFeaturesSchema,
+  GermanVerbRefFeaturesSchema,
+  GermanAdjectiveRefFeaturesSchema,
+  ...refStubs,
 ]);
 ```
 
@@ -1408,11 +1414,11 @@ const newEntry: DictEntry = {
 | Feature depth by surfaceKind | Full (Lemma) vs Ref (Inflected/Variant) | Inflected entries don't duplicate genus/nounClass — that data lives on the lemma entry. Ref carries just enough to identify the classification. |
 | Phrasem language scoping | **Language-independent** | PhrasemeKind and its features (collocation strength, etc.) are universal. No `L` param. |
 | Schema technology | **Zod v3** with `z.infer<>` | Single source of truth consumed by prompt-smith, serialization, and runtime validation. All DTO schemas use `import { z } from "zod/v3"`. POS literals re-declared in v3 to avoid v4 import trap from `pos.ts`. |
-| Non-Noun POS | **Stubs** — `{ pos: z.literal("Verb") }` etc. | Real features deferred to Phase 2+. Stubs ensure the discriminated union covers all POS values. |
+| Non-specialized POS | **Stubs** — `{ pos: z.literal("Pronoun") }` etc. | Stubs ensure the discriminated union covers all POS values without forcing speculative feature models. |
 
 ### 15.8 Out of Scope (Phase 2+)
 
-- Verb/Adjective/other POS real features (currently stubs)
+- Remaining POS real features beyond Noun/Verb/Adjective
 - Hebrew/English language schemas
 - `lemmaRef` resolution logic for Inflected entries
 - Replacing `DictEntry.headerContent` string with DTO-derived formatting

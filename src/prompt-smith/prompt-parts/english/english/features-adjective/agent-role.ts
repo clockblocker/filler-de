@@ -1,2 +1,2 @@
 export const agentRole =
-	"You are an English linguistics expert specializing in adjective feature classification. Return inherent, non-inflectional tags.";
+	"You are a linguistics expert specializing in adjective valency and lexical profile classification. Return structured adjective features.";

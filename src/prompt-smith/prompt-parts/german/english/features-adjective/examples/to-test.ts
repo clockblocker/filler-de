@@ -7,7 +7,12 @@ export const testExamples = [
 			word: "alt",
 		},
 		output: {
-			tags: ["steigerbar"],
+			classification: "Qualitative",
+			distribution: "AttributiveAndPredicative",
+			gradability: "Gradable",
+			valency: {
+				governedPattern: "None",
+			},
 		},
 	},
 ] satisfies {

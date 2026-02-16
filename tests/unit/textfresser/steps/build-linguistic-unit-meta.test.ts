@@ -74,6 +74,16 @@ function makeVerbLemmaResult(
 	});
 }
 
+function makeAdjectiveLemmaResult(
+	overrides: Partial<LexemLemmaResult> = {},
+): LexemLemmaResult {
+	return makeLexemLemmaResult({
+		lemma: "stolz",
+		posLikeKind: "Adjective",
+		...overrides,
+	});
+}
+
 function makeLexemEnrichment(
 	overrides: Partial<AgentOutput<"LexemEnrichment">> = {},
 ): AgentOutput<"LexemEnrichment"> {
@@ -100,15 +110,21 @@ function makePhrasemEnrichment(
 	};
 }
 
-function makeVerbLexemEnrichment(
-	overrides: Partial<Extract<AgentOutput<"LexemEnrichment">, { posLikeKind: "Verb" }>> = {},
-): Extract<AgentOutput<"LexemEnrichment">, { posLikeKind: "Verb" }> {
+function makeVerbLexemEnrichment(): AgentOutput<"LexemEnrichment"> {
 	return {
 		emojiDescription: ["🚪"],
 		ipa: "ˈaʊ̯fˌmaxn̩",
 		linguisticUnit: "Lexem",
 		posLikeKind: "Verb",
-		...overrides,
+	};
+}
+
+function makeAdjectiveLexemEnrichment(): AgentOutput<"LexemEnrichment"> {
+	return {
+		emojiDescription: ["😌"],
+		ipa: "ʃtɔlts",
+		linguisticUnit: "Lexem",
+		posLikeKind: "Adjective",
 	};
 }
 
@@ -120,6 +136,21 @@ function makeVerbFeatures(
 		valency: {
 			reflexivity: "NonReflexive",
 			separability: "Separable",
+		},
+		...overrides,
+	};
+}
+
+function makeAdjectiveFeatures(
+	overrides: Partial<AgentOutput<"FeaturesAdjective">> = {},
+): AgentOutput<"FeaturesAdjective"> {
+	return {
+		classification: "Qualitative",
+		distribution: "AttributiveAndPredicative",
+		gradability: "Gradable",
+		valency: {
+			governedPattern: "Prepositional",
+			governedPreposition: "auf",
 		},
 		...overrides,
 	};
@@ -223,6 +254,33 @@ describe("buildLinguisticUnitMeta", () => {
 					},
 				},
 				lemma: "aufmachen",
+				surfaceKind: "Lemma",
+			},
+		});
+	});
+
+	it("builds Lexem lemma metadata with full adjective features", () => {
+		const result = buildLinguisticUnitMeta(
+			"LX-LM-ADJ-1",
+			makeAdjectiveLemmaResult(),
+			makeAdjectiveLexemEnrichment(),
+			makeAdjectiveFeatures(),
+		);
+
+		expect(result).toEqual({
+			kind: "Lexem",
+			surface: {
+				features: {
+					classification: "Qualitative",
+					distribution: "AttributiveAndPredicative",
+					gradability: "Gradable",
+					pos: "Adjective",
+					valency: {
+						governedPattern: "Prepositional",
+						governedPreposition: "auf",
+					},
+				},
+				lemma: "stolz",
 				surfaceKind: "Lemma",
 			},
 		});

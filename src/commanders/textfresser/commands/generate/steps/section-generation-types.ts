@@ -21,9 +21,13 @@ export type RelationOutput = AgentOutput<"Relation">;
 export type NounInflectionOutput = AgentOutput<"NounInflection">;
 export type InflectionOutput = AgentOutput<"Inflection">;
 export type WordTranslationOutput = AgentOutput<"WordTranslation">;
-export type GenericFeaturesOutput = AgentOutput<"FeaturesNoun">;
+export type TagFeaturesOutput = AgentOutput<"FeaturesNoun">;
+export type AdjectiveFeaturesOutput = AgentOutput<"FeaturesAdjective">;
 export type VerbFeaturesOutput = AgentOutput<"FeaturesVerb">;
-export type FeaturesOutput = GenericFeaturesOutput | VerbFeaturesOutput;
+export type FeaturesOutput =
+	| TagFeaturesOutput
+	| AdjectiveFeaturesOutput
+	| VerbFeaturesOutput;
 
 export type GeneratedSectionArtifacts = {
 	inflectionCells: NounInflectionCell[];
