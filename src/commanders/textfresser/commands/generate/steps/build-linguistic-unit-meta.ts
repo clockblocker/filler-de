@@ -2,6 +2,7 @@ import { dictEntryIdHelper } from "../../../../../linguistics/common/dict-entry-
 import type { GermanLinguisticUnit } from "../../../../../linguistics/de";
 import { logger } from "../../../../../utils/logger";
 import type { LemmaResult } from "../../lemma/types";
+import { isAdjectiveFeaturesOutput } from "./adjective-features";
 import type {
 	EnrichmentOutput,
 	FeaturesOutput,
@@ -81,6 +82,31 @@ function buildLexemLinguisticUnit(
 
 			logger.warn(
 				"[generateSections] Missing verb features for Lexem lemma metadata",
+				{ enrichmentOutput, featuresOutput, lemmaResult },
+			);
+			return null;
+		}
+
+		if (lemmaResult.posLikeKind === "Adjective") {
+			if (isAdjectiveFeaturesOutput(featuresOutput)) {
+				return {
+					kind: "Lexem",
+					surface: {
+						features: {
+							classification: featuresOutput.classification,
+							distribution: featuresOutput.distribution,
+							gradability: featuresOutput.gradability,
+							pos: "Adjective",
+							valency: featuresOutput.valency,
+						},
+						lemma: lemmaResult.lemma,
+						surfaceKind: "Lemma",
+					},
+				};
+			}
+
+			logger.warn(
+				"[generateSections] Missing adjective features for Lexem lemma metadata",
 				{ enrichmentOutput, featuresOutput, lemmaResult },
 			);
 			return null;

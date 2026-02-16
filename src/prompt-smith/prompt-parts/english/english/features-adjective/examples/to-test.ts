@@ -7,7 +7,12 @@ export const testExamples = [
 			word: "smooth",
 		},
 		output: {
-			tags: ["gradable", "descriptive"],
+			classification: "Qualitative",
+			distribution: "AttributiveAndPredicative",
+			gradability: "Gradable",
+			valency: {
+				governedPattern: "None",
+			},
 		},
 	},
 ] satisfies {

@@ -51,7 +51,18 @@ function buildReEncounterResult(
 	ctx: ResolvedEntryState,
 ): GenerateSectionsResult {
 	const { matchedEntry, existingEntries } = ctx;
-	if (!matchedEntry) return ctx;
+	if (!matchedEntry) {
+		return {
+			...ctx,
+			allEntries: existingEntries,
+			failedSections: [],
+			inflectionCells: [],
+			morphemes: [],
+			nounInflectionGenus: undefined,
+			relations: [],
+			targetBlockId: undefined,
+		};
+	}
 
 	appendAttestation(matchedEntry, ctx);
 

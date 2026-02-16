@@ -170,17 +170,17 @@ The German-specific layer derives from common enums, adding features only where 
 
 #### Stub pattern
 
-Most POS values are stubs — they carry only the `pos` discriminant with no extra features:
+Only POS values without specialized schemas remain stubs — they carry only the `pos` discriminant with no extra fields:
 
 ```typescript
 // de/lexem/de-pos.ts
-type GermanPosStub = Exclude<POS, "Noun">;
-// = "Pronoun" | "Article" | "Adjective" | "Verb" | ...
+type GermanPosStub = Exclude<POS, "Noun" | "Verb" | "Adjective">;
+// = "Pronoun" | "Article" | "Preposition" | ...
 
 // Each stub schema is just: z.object({ pos: z.literal("Verb") })
 ```
 
-Only `Noun` has specialized features.
+Specialized POS schemas currently exist for `Noun`, `Verb`, and `Adjective`.
 
 #### Morpheme kinds — explicit folder per kind
 
@@ -276,6 +276,34 @@ GermanVerbRefFeaturesSchema = z.object({ pos: z.literal("Verb") })
 
 The module also exports `buildGermanVerbEntryIdentity(profile)` — a deterministic identity string built from conjugation + valency (including separability).
 
+#### Adjective features
+
+`de/lexem/adjective/features.ts` defines structured lemma-only adjective features:
+
+```typescript
+GermanAdjectiveClassification = "Qualitative" | "Relational" | "Participial"
+GermanAdjectiveGradability = "Gradable" | "NonGradable"
+GermanAdjectiveDistribution =
+    "AttributiveAndPredicative" | "AttributiveOnly" | "PredicativeOnly"
+GermanAdjectiveGovernedPattern =
+    "None" | "Dative" | "Accusative" | "Genitive" | "Prepositional"
+  | "ZuInfinitive" | "DassClause"
+
+GermanAdjectiveValency = {
+    governedPattern: GermanAdjectiveGovernedPattern
+    governedPreposition?: string // required only for "Prepositional"
+}
+
+GermanAdjectiveFullFeaturesSchema = z.object({
+    pos: z.literal("Adjective"),
+    classification: GermanAdjectiveClassificationSchema,
+    gradability: GermanAdjectiveGradabilitySchema,
+    distribution: GermanAdjectiveDistributionSchema,
+    valency: GermanAdjectiveValencySchema,
+})
+GermanAdjectiveRefFeaturesSchema = z.object({ pos: z.literal("Adjective") })
+```
+
 #### Top-level German DTO
 
 **Source**: `de/index.ts`
@@ -302,6 +330,7 @@ Type: `GermanLinguisticUnit` — the complete grammatical identity of any German
 | `de/lexem/de-pos.ts` | `GERMAN_POS_STUBS` |
 | `de/lexem/noun/features.ts` | `GermanGenusSchema`, `NounClassSchema`, `articleFromGenus`, `NounInflectionCell`, display constants |
 | `de/lexem/noun/index.ts` | `GermanNounSurfaceSchema`, `GermanNounLemma`, `GermanNounInflection` |
+| `de/lexem/adjective/features.ts` | `GermanAdjective*Schema`, `GermanAdjective*` types |
 | `de/lexem/verb/features.ts` | `GermanVerb*Schema`, `GermanVerb*` types, `buildGermanVerbEntryIdentity` |
 | `de/morphem/index.ts` | `GermanMorphemSurfaceSchema`, `GermanMorphemSurface` |
 | `de/morphem/de-morphem-kind.ts` | `GermanMorphemeKindSchema`, `GermanMorphemeKind`, `GERMAN_MORPHEME_KINDS` |

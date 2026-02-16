@@ -7,7 +7,27 @@ export const examples = [
 			word: "alt",
 		},
 		output: {
-			tags: ["steigerbar"],
+			classification: "Qualitative",
+			distribution: "AttributiveAndPredicative",
+			gradability: "Gradable",
+			valency: {
+				governedPattern: "None",
+			},
+		},
+	},
+	{
+		input: {
+			context: "Er ist stolz auf seine Tochter.",
+			word: "stolz",
+		},
+		output: {
+			classification: "Qualitative",
+			distribution: "AttributiveAndPredicative",
+			gradability: "Gradable",
+			valency: {
+				governedPattern: "Prepositional",
+				governedPreposition: "auf",
+			},
 		},
 	},
 ] satisfies {

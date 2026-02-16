@@ -68,6 +68,22 @@ export {
 	type GermanLexemSurface,
 	GermanLexemSurfaceSchema,
 } from "./lexem";
+export {
+	type GermanAdjectiveClassification,
+	GermanAdjectiveClassificationSchema,
+	type GermanAdjectiveDistribution,
+	GermanAdjectiveDistributionSchema,
+	type GermanAdjectiveFullFeatures,
+	GermanAdjectiveFullFeaturesSchema,
+	type GermanAdjectiveGovernedPattern,
+	GermanAdjectiveGovernedPatternSchema,
+	type GermanAdjectiveGradability,
+	GermanAdjectiveGradabilitySchema,
+	type GermanAdjectiveRefFeatures,
+	GermanAdjectiveRefFeaturesSchema,
+	type GermanAdjectiveValency,
+	GermanAdjectiveValencySchema,
+} from "./lexem/adjective/features";
 // Barrel exports
 export {
 	articleFromGenus,

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { featuresAdjectiveSchemas } from "../../../src/prompt-smith/schemas/features-adjective";
 import { featuresNounSchemas } from "../../../src/prompt-smith/schemas/features-noun";
 import { featuresVerbSchemas } from "../../../src/prompt-smith/schemas/features-verb";
 
@@ -34,6 +35,19 @@ describe("Features schema", () => {
 				valency: {
 					reflexivity: "NonReflexive",
 					separability: "Separable",
+				},
+			});
+			expect(result.success).toBe(true);
+		});
+
+		it("accepts structured adjective output", () => {
+			const result = featuresAdjectiveSchemas.agentOutputSchema.safeParse({
+				classification: "Qualitative",
+				distribution: "AttributiveAndPredicative",
+				gradability: "Gradable",
+				valency: {
+					governedPattern: "Prepositional",
+					governedPreposition: "auf",
 				},
 			});
 			expect(result.success).toBe(true);
@@ -77,6 +91,31 @@ describe("Features schema", () => {
 				valency: {
 					reflexivity: "NonReflexive",
 					separability: "Separable",
+				},
+			});
+			expect(result.success).toBe(false);
+		});
+
+		it("rejects adjective prepositional valency without preposition", () => {
+			const result = featuresAdjectiveSchemas.agentOutputSchema.safeParse({
+				classification: "Qualitative",
+				distribution: "AttributiveAndPredicative",
+				gradability: "Gradable",
+				valency: {
+					governedPattern: "Prepositional",
+				},
+			});
+			expect(result.success).toBe(false);
+		});
+
+		it("rejects adjective extra preposition when not prepositional", () => {
+			const result = featuresAdjectiveSchemas.agentOutputSchema.safeParse({
+				classification: "Qualitative",
+				distribution: "AttributiveAndPredicative",
+				gradability: "Gradable",
+				valency: {
+					governedPattern: "None",
+					governedPreposition: "auf",
 				},
 			});
 			expect(result.success).toBe(false);

@@ -1,5 +1,9 @@
 import { z } from "zod/v3";
 import { makeSurfaceSchema } from "../../common/dto/surface-factory";
+import {
+	GermanAdjectiveFullFeaturesSchema,
+	GermanAdjectiveRefFeaturesSchema,
+} from "./adjective/features";
 import { GERMAN_POS_STUBS } from "./de-pos";
 import {
 	GermanNounFullFeaturesSchema,
@@ -20,9 +24,10 @@ const refStubs = GERMAN_POS_STUBS.map((pos) =>
 	z.object({ pos: z.literal(pos) }),
 );
 
-/** Full features across all German POS values (Noun/Verb specialized, rest are stubs). */
+/** Full features across all German POS values (Noun/Verb/Adjective specialized, rest are stubs). */
 export const GermanLexemFullFeaturesSchema = z.discriminatedUnion("pos", [
 	GermanNounFullFeaturesSchema,
+	GermanAdjectiveFullFeaturesSchema,
 	GermanVerbFullFeaturesSchema,
 	...fullStubs,
 ]);
@@ -33,6 +38,7 @@ export type GermanLexemFullFeatures = z.infer<
 /** Ref features across all German POS values (specialized + discriminant-only refs). */
 export const GermanLexemRefFeaturesSchema = z.discriminatedUnion("pos", [
 	GermanNounRefFeaturesSchema,
+	GermanAdjectiveRefFeaturesSchema,
 	GermanVerbRefFeaturesSchema,
 	...refStubs,
 ]);

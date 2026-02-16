@@ -7,16 +7,27 @@ export const examples = [
 			word: "smooth",
 		},
 		output: {
-			tags: ["gradable", "descriptive"],
+			classification: "Qualitative",
+			distribution: "AttributiveAndPredicative",
+			gradability: "Gradable",
+			valency: {
+				governedPattern: "None",
+			},
 		},
 	},
 	{
 		input: {
-			context: "The final proposal sounds feasible.",
-			word: "feasible",
+			context: "She is proud of her work.",
+			word: "proud",
 		},
 		output: {
-			tags: ["non-gradable", "evaluative"],
+			classification: "Qualitative",
+			distribution: "AttributiveAndPredicative",
+			gradability: "Gradable",
+			valency: {
+				governedPattern: "Prepositional",
+				governedPreposition: "of",
+			},
 		},
 	},
 ] satisfies {

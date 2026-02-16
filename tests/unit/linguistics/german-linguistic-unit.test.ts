@@ -126,6 +126,60 @@ describe("GermanLinguisticUnitSchema", () => {
 		});
 	});
 
+	describe("Lexem + Adjective", () => {
+		it("parses Lemma with full adjective features", () => {
+			const result = GermanLinguisticUnitSchema.safeParse({
+				kind: "Lexem",
+				surface: {
+					features: {
+						classification: "Qualitative",
+						distribution: "AttributiveAndPredicative",
+						gradability: "Gradable",
+						pos: "Adjective",
+						valency: {
+							governedPattern: "Prepositional",
+							governedPreposition: "auf",
+						},
+					},
+					lemma: "stolz",
+					surfaceKind: "Lemma",
+				},
+			});
+			expect(result.success).toBe(true);
+		});
+
+		it("parses Inflected with ref features", () => {
+			const result = GermanLinguisticUnitSchema.safeParse({
+				kind: "Lexem",
+				surface: {
+					features: { pos: "Adjective" },
+					lemma: "stolz",
+					lemmaRef: "LX-LM-ADJ-1",
+					surface: "stolzer",
+					surfaceKind: "Inflected",
+				},
+			});
+			expect(result.success).toBe(true);
+		});
+
+		it("rejects Adjective Lemma without valency", () => {
+			const result = GermanLinguisticUnitSchema.safeParse({
+				kind: "Lexem",
+				surface: {
+					features: {
+						classification: "Qualitative",
+						distribution: "AttributiveAndPredicative",
+						gradability: "Gradable",
+						pos: "Adjective",
+					},
+					lemma: "stolz",
+					surfaceKind: "Lemma",
+				},
+			});
+			expect(result.success).toBe(false);
+		});
+	});
+
 	describe("Phrasem", () => {
 		it("parses Lemma with collocation features", () => {
 			const result = GermanLinguisticUnitSchema.safeParse({

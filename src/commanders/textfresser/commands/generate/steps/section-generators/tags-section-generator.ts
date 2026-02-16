@@ -5,6 +5,10 @@ import {
 } from "../../../../../../linguistics/common/sections/section-kind";
 import type { EntrySection } from "../../../../../../stateless-helpers/dict-note/types";
 import type { LemmaResult } from "../../../lemma/types";
+import {
+	buildAdjectiveFeatureTags,
+	isAdjectiveFeaturesOutput,
+} from "../adjective-features";
 import { buildFeatureTagPath } from "../features-prompt-dispatch";
 import type {
 	FeaturesOutput,
@@ -24,9 +28,15 @@ export function generateTagsSection(
 	if (!ctx.featuresOutput) return null;
 	if (ctx.lemmaResult.linguisticUnit !== "Lexem") return null;
 
-	const tags = isVerbFeaturesOutput(ctx.featuresOutput)
-		? buildVerbFeatureTags(ctx.featuresOutput)
-		: ctx.featuresOutput.tags;
+	let tags: string[];
+
+	if (isVerbFeaturesOutput(ctx.featuresOutput)) {
+		tags = buildVerbFeatureTags(ctx.featuresOutput);
+	} else if (isAdjectiveFeaturesOutput(ctx.featuresOutput)) {
+		tags = buildAdjectiveFeatureTags(ctx.featuresOutput);
+	} else {
+		tags = ctx.featuresOutput.tags;
+	}
 
 	return {
 		content: buildFeatureTagPath(ctx.lemmaResult.posLikeKind, tags),
