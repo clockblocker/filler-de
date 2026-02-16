@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { errAsync, ok, okAsync } from "neverthrow";
+import { commandFnForCommandKind } from "../../../../src/commanders/textfresser/commands";
 import type { PromptRunner } from "../../../../src/commanders/textfresser/llm/prompt-runner";
 import { Textfresser } from "../../../../src/commanders/textfresser/textfresser";
 import type { CommandContext } from "../../../../src/managers/obsidian/command-executor";
@@ -26,6 +27,51 @@ const SOURCE_PATH: SplitPathToMdFile = {
 	extension: "md",
 	kind: "MdFile",
 	pathParts: ["Books"],
+};
+
+function buildTargetPath(basename: string): SplitPathToMdFile {
+	return {
+		basename,
+		extension: "md",
+		kind: "MdFile",
+		pathParts: ["Worter", "de", "lexem", "lemma"],
+	};
+}
+
+function setLatestLemmaState(
+	textfresser: Textfresser,
+	lemma: string,
+	targetPath: SplitPathToMdFile,
+): void {
+	textfresser.getState().latestLemmaResult = {
+		attestation: {
+			source: {
+				path: SOURCE_PATH,
+				ref: "![[Source#^1|^]]",
+				textRaw: "Er geht schnell. ^1",
+				textWithOnlyTargetMarked: "Er [geht] schnell. ^1",
+			},
+			target: {
+				offsetInBlock: 3,
+				surface: "geht",
+			},
+		},
+		disambiguationResult: null,
+		lemma,
+		linguisticUnit: "Lexem",
+		posLikeKind: "Verb",
+		surfaceKind: "Lemma",
+	};
+	textfresser.getState().latestResolvedLemmaTargetPath = targetPath;
+}
+
+type TextfresserPrivate = {
+	fireBackgroundGenerate: (notify: (message: string) => void) => void;
+	runBackgroundGenerate: (
+		targetPath: SplitPathToMdFile,
+		lemma: string,
+		notify: (message: string) => void,
+	) => Promise<void>;
 };
 
 function makeHarness(options: HarnessOptions) {
@@ -311,5 +357,86 @@ describe("lemma two-phase flow", () => {
 		expect(second.isOk()).toBe(true);
 		expect(notifications.length).toBe(beforeSecond);
 		expect(dispatches).toHaveLength(2);
+	});
+
+	it("queues latest background generate while one is in flight", async () => {
+		const { textfresser } = makeHarness({
+			disableAutomaticBackgroundGenerate: false,
+			lemma: "gehen",
+		});
+		const textfresserPrivate = textfresser as unknown as TextfresserPrivate;
+
+		const launches: string[] = [];
+		let resolveFirst: (() => void) | null = null;
+		const firstDone = new Promise<void>((resolve) => {
+			resolveFirst = resolve;
+		});
+
+		textfresserPrivate.runBackgroundGenerate = async (targetPath) => {
+			launches.push(targetPath.basename);
+			if (launches.length === 1) {
+				await firstDone;
+			}
+		};
+
+		setLatestLemmaState(textfresser, "alpha", buildTargetPath("alpha"));
+		textfresserPrivate.fireBackgroundGenerate(() => {});
+
+		setLatestLemmaState(textfresser, "beta", buildTargetPath("beta"));
+		textfresserPrivate.fireBackgroundGenerate(() => {});
+
+		setLatestLemmaState(textfresser, "gamma", buildTargetPath("gamma"));
+		textfresserPrivate.fireBackgroundGenerate(() => {});
+
+		expect(textfresser.getState().pendingGenerate?.targetPath.basename).toBe(
+			"gamma",
+		);
+
+		resolveFirst?.();
+		await new Promise((resolve) => setTimeout(resolve, 0));
+
+		const remainingInFlight = textfresser.getState().inFlightGenerate;
+		if (remainingInFlight) {
+			await remainingInFlight.promise;
+		}
+
+		expect(launches).toEqual(["alpha", "gamma"]);
+		expect(textfresser.getState().inFlightGenerate).toBeNull();
+		expect(textfresser.getState().pendingGenerate).toBeNull();
+	});
+
+	it("rolls back a brand-new target note when background generate leaves it empty", async () => {
+		const { dispatches, textfresser } = makeHarness({
+			disableAutomaticBackgroundGenerate: true,
+			lemma: "leer",
+			readContent: () => "",
+		});
+		const textfresserPrivate = textfresser as unknown as TextfresserPrivate;
+
+		const originalGenerate = commandFnForCommandKind.Generate;
+		commandFnForCommandKind.Generate = () => okAsync([]);
+
+		try {
+			const targetPath = buildTargetPath("leer");
+			await expect(
+				textfresserPrivate.runBackgroundGenerate(
+					targetPath,
+					"leer",
+					() => {},
+				),
+			).rejects.toThrow("empty target note");
+		} finally {
+			commandFnForCommandKind.Generate = originalGenerate;
+		}
+
+		expect(dispatches).toHaveLength(2);
+
+		const rollbackDispatch = dispatches[1];
+		expect(rollbackDispatch).toBeDefined();
+		const rollbackAction = rollbackDispatch?.find(
+			(action) =>
+				(action as { kind?: string }).kind === VaultActionKind.TrashMdFile,
+		) as { payload?: { splitPath?: SplitPathToMdFile } } | undefined;
+		expect(rollbackAction?.payload?.splitPath?.basename).toBe("leer");
 	});
 });

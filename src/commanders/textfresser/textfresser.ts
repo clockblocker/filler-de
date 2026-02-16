@@ -26,7 +26,9 @@ import { PromptKind } from "../../prompt-smith/codegen/consts";
 import type { ApiService } from "../../stateless-helpers/api-service";
 import { markdownHelper } from "../../stateless-helpers/markdown-strip";
 import { multiSpanHelper } from "../../stateless-helpers/multi-span";
+import { wikilinkHelper } from "../../stateless-helpers/wikilink";
 import type { LanguagesConfig } from "../../types";
+import { decrementPending, incrementPending } from "../../utils/idle-tracker";
 import { logger } from "../../utils/logger";
 import { commandFnForCommandKind } from "./commands";
 import {
@@ -36,6 +38,7 @@ import {
 import {
 	buildWikilinkForTarget,
 	expandOffsetForLinkedSpan,
+	hasNestedWikilinkStructure,
 	resolveAttestation,
 	rewriteAttestationSourceContent,
 } from "./commands/lemma/lemma-command";
@@ -66,6 +69,12 @@ export type InFlightGenerate = {
 	promise: Promise<void>;
 };
 
+export type PendingGenerate = {
+	lemma: string;
+	targetPath: SplitPathToMdFile;
+	notify: (message: string) => void;
+};
+
 type LemmaInvocationCache = {
 	key: string;
 	cachedAtMs: number;
@@ -86,6 +95,8 @@ export type TextfresserState = {
 	targetBlockId?: string;
 	/** Background Generate in progress (set after successful Lemma). */
 	inFlightGenerate: InFlightGenerate | null;
+	/** Latest requested Generate while another one is running. */
+	pendingGenerate: PendingGenerate | null;
 	languages: LanguagesConfig;
 	/** Lookup files in Librarian's corename index (set after Librarian init). */
 	lookupInLibrary: PathLookupFn;
@@ -159,6 +170,26 @@ function buildLemmaRewritePlan(params: {
 	let updatedBlock: string | null = null;
 	let replaceSurface = surface;
 	let replaceOffsetInBlock = offset ?? undefined;
+	const enclosingWikilink =
+		offset !== undefined
+			? wikilinkHelper.findEnclosingByOffset(rawBlock, offset)
+			: null;
+	const linkedTarget =
+		enclosingWikilink?.surface === surface
+			? enclosingWikilink.target
+			: (attestation.target.lemma ??
+				wikilinkHelper.findBySurface(rawBlock, surface)?.target ??
+				null);
+
+	// Idempotence guard: if selection already points to final target, keep source unchanged.
+	if (linkedTarget === linkTarget) {
+		return {
+			replaceOffsetInBlock,
+			replaceSurface,
+			updatedBlock: rawBlock,
+			wikilink: buildWikilinkForTarget(replaceSurface, linkTarget),
+		};
+	}
 
 	if (contextWithLinkedParts && offset !== undefined) {
 		const stripped = multiSpanHelper.stripBrackets(contextWithLinkedParts);
@@ -221,17 +252,31 @@ function buildLemmaRewritePlan(params: {
 	}
 
 	const wikilink = buildWikilinkForTarget(replaceSurface, linkTarget);
+	const resolvedUpdatedBlock =
+		updatedBlock ??
+		buildUpdatedBlock(
+			rawBlock,
+			replaceOffsetInBlock,
+			replaceSurface,
+			wikilink,
+		);
+
+	if (hasNestedWikilinkStructure(resolvedUpdatedBlock)) {
+		logger.warn(
+			"[lemma] nested wikilink rewrite plan detected — keeping source unchanged",
+		);
+		return {
+			replaceOffsetInBlock,
+			replaceSurface,
+			updatedBlock: rawBlock,
+			wikilink,
+		};
+	}
+
 	return {
 		replaceOffsetInBlock,
 		replaceSurface,
-		updatedBlock:
-			updatedBlock ??
-			buildUpdatedBlock(
-				rawBlock,
-				replaceOffsetInBlock,
-				replaceSurface,
-				wikilink,
-			),
+		updatedBlock: resolvedUpdatedBlock,
 		wikilink,
 	};
 }
@@ -252,6 +297,7 @@ export class Textfresser {
 			latestLemmaInvocationCache: null,
 			latestLemmaResult: null,
 			lookupInLibrary: () => [],
+			pendingGenerate: null,
 			promptRunner: new PromptRunner(languages, apiService),
 			vam,
 		};
@@ -384,16 +430,17 @@ export class Textfresser {
 			this.getValidLemmaInvocationCache(invocationKey);
 
 		if (cachedInvocation) {
-			return new ResultAsync(this.handleLemmaCacheHit(cachedInvocation))
-				.mapErr((error) => {
-					const reason =
-						"reason" in error
-							? error.reason
-							: `Command failed: ${error.kind}`;
-					notify(`⚠ ${reason}`);
-					logger.warn("[Textfresser.Lemma] Failed:", error);
-					return error;
-				});
+			return new ResultAsync(
+				this.handleLemmaCacheHit(cachedInvocation),
+			).mapErr((error) => {
+				const reason =
+					"reason" in error
+						? error.reason
+						: `Command failed: ${error.kind}`;
+				notify(`⚠ ${reason}`);
+				logger.warn("[Textfresser.Lemma] Failed:", error);
+				return error;
+			});
 		}
 
 		return new ResultAsync(this.runLemmaTwoPhase(input, attestation))
@@ -455,9 +502,13 @@ export class Textfresser {
 		this.state.latestLemmaResult = cache.lemmaResult;
 		this.state.latestResolvedLemmaTargetPath = cache.resolvedTargetPath;
 
-		const contentResult = await this.vam.readContent(cache.resolvedTargetPath);
+		const contentResult = await this.vam.readContent(
+			cache.resolvedTargetPath,
+		);
 		if (contentResult.isErr()) {
-			logger.info("[Textfresser.Lemma] cache-hit read failed, refetching");
+			logger.info(
+				"[Textfresser.Lemma] cache-hit read failed, refetching",
+			);
 			this.fireBackgroundGenerate(() => {});
 			return ok(undefined);
 		}
@@ -469,7 +520,9 @@ export class Textfresser {
 			lemmaResult: cache.lemmaResult,
 		});
 		if (!matchedEntry) {
-			logger.info("[Textfresser.Lemma] cache-hit missing entry, refetching");
+			logger.info(
+				"[Textfresser.Lemma] cache-hit missing entry, refetching",
+			);
 			this.fireBackgroundGenerate(() => {});
 			return ok(undefined);
 		}
@@ -520,6 +573,17 @@ export class Textfresser {
 			surface,
 			prePromptTarget.linkTarget,
 		);
+		const phaseAUpdatedBlock = buildUpdatedBlock(
+			rawBlock,
+			offsetInBlock,
+			surface,
+			temporaryWikilink,
+		);
+		const safePhaseAUpdatedBlock = hasNestedWikilinkStructure(
+			phaseAUpdatedBlock,
+		)
+			? rawBlock
+			: phaseAUpdatedBlock;
 		const phaseAActions: VaultAction[] = [
 			...(placeholderPath
 				? [
@@ -539,12 +603,7 @@ export class Textfresser {
 							offsetInBlock,
 							rawBlock,
 							surface,
-							updatedBlock: buildUpdatedBlock(
-								rawBlock,
-								offsetInBlock,
-								surface,
-								temporaryWikilink,
-							),
+							updatedBlock: safePhaseAUpdatedBlock,
 							wikilink: temporaryWikilink,
 						}),
 				},
@@ -767,8 +826,6 @@ export class Textfresser {
 
 	/** Fire-and-forget: launch background Generate after successful Lemma. */
 	private fireBackgroundGenerate(notify: (message: string) => void): void {
-		if (this.state.inFlightGenerate) return;
-
 		const lemmaResult = this.state.latestLemmaResult;
 		if (!lemmaResult) return;
 
@@ -784,26 +841,51 @@ export class Textfresser {
 				surfaceKind: lemmaResult.surfaceKind,
 				targetLanguage: this.state.languages.target,
 			});
-
-		const promise = this.runBackgroundGenerate(
-			targetPath,
-			lemmaResult.lemma,
+		const request: PendingGenerate = {
+			lemma: lemmaResult.lemma,
 			notify,
+			targetPath,
+		};
+
+		if (this.state.inFlightGenerate) {
+			this.state.pendingGenerate = request;
+			return;
+		}
+
+		this.launchBackgroundGenerate(request);
+	}
+
+	private launchBackgroundGenerate(request: PendingGenerate): void {
+		incrementPending();
+		const promise = this.runBackgroundGenerate(
+			request.targetPath,
+			request.lemma,
+			request.notify,
 		)
 			.catch((error) => {
 				const reason =
 					error instanceof Error ? error.message : String(error);
 				logger.warn("[Textfresser.backgroundGenerate] Failed:", reason);
-				notify(`⚠ Background generate failed: ${reason}`);
+				request.notify(`⚠ Background generate failed: ${reason}`);
 			})
 			.finally(() => {
+				decrementPending();
 				this.state.inFlightGenerate = null;
+
+				const pending = this.state.pendingGenerate;
+				this.state.pendingGenerate = null;
+				if (
+					pending &&
+					!areSameSplitPath(pending.targetPath, request.targetPath)
+				) {
+					this.launchBackgroundGenerate(pending);
+				}
 			});
 
 		this.state.inFlightGenerate = {
-			lemma: lemmaResult.lemma,
+			lemma: request.lemma,
 			promise,
-			targetPath,
+			targetPath: request.targetPath,
 		};
 	}
 
@@ -813,6 +895,7 @@ export class Textfresser {
 		lemma: string,
 		notify: (message: string) => void,
 	): Promise<void> {
+		const targetExistedBefore = this.vam.exists(targetPath);
 		const contentResult = await this.vam.readContent(targetPath);
 		const content = contentResult.isOk() ? contentResult.value : "";
 
@@ -845,6 +928,36 @@ export class Textfresser {
 		if (dispatchResult.isErr()) {
 			const reason = dispatchResult.error.map((e) => e.error).join(", ");
 			throw new Error(reason);
+		}
+
+		const finalContentResult = await this.vam.readContent(targetPath);
+		if (finalContentResult.isErr()) {
+			throw new Error(
+				"Background generate finished but target note could not be read",
+			);
+		}
+		if (finalContentResult.value.trim().length === 0) {
+			if (!targetExistedBefore) {
+				const rollbackResult = await this.vam.dispatch([
+					{
+						kind: VaultActionKind.TrashMdFile,
+						payload: { splitPath: targetPath },
+					},
+				]);
+				if (rollbackResult.isErr()) {
+					logger.warn(
+						"[Textfresser.backgroundGenerate] Failed to rollback empty generated note",
+						{
+							error: rollbackResult.error,
+							targetPath,
+						},
+					);
+				}
+			}
+
+			throw new Error(
+				`Background generate produced empty target note: ${stringifySplitPath(targetPath)}`,
+			);
 		}
 
 		const cache = this.state.latestLemmaInvocationCache;

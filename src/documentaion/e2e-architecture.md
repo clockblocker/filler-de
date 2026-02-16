@@ -148,7 +148,7 @@ return result === "yes";
 
 ### 5.1 Plugin-Side: Idle Tracker
 
-`src/utils/idle-tracker.ts` tracks in-flight async work via a `pendingCount` counter. `whenIdle()` waits for the counter to reach 0, then applies a 1000ms grace period to catch cascading work (healing → more events → more healing).
+`src/utils/idle-tracker.ts` tracks in-flight async work via a `pendingCount` counter. This now includes Textfresser background Generate lifecycle (increment on launch, decrement in `finally`). `whenIdle()` waits for the counter to reach 0, then applies a 1000ms grace period to catch cascading work (healing → more events → more healing, or Lemma → background Generate).
 
 ### 5.2 Test-Side: `waitForIdle()`
 

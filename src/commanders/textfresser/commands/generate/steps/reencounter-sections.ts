@@ -1,9 +1,9 @@
 import type { NounClass } from "../../../../../linguistics/de/lexem/noun/features";
 import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import type { DictEntry } from "../../../domain/dict-note/types";
+import { getSectionsFor } from "../../../targets/de/sections/section-config";
 import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
 import type { DictSectionKind } from "../../../targets/de/sections/section-kind";
-import { getSectionsFor } from "../../../targets/de/sections/section-config";
 import type { LemmaResult } from "../../lemma/types";
 import { V3_SECTIONS } from "./section-generation-context";
 
@@ -102,4 +102,3 @@ export function findEntryForLemmaResult(params: {
 		}) ?? null
 	);
 }
-

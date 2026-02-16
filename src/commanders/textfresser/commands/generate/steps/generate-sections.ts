@@ -17,12 +17,12 @@ import {
 } from "./features-prompt-dispatch";
 import { generateNewEntrySections } from "./generate-new-entry-sections";
 import type { GenerateSectionsResult } from "./generate-sections-result";
+import { computeMissingV3SectionKinds } from "./reencounter-sections";
 import type { ResolvedEntryState } from "./resolve-existing-entry";
 import {
 	buildVerbEntryIdentityFromFeatures,
 	isVerbFeaturesOutput,
 } from "./verb-features";
-import { computeMissingV3SectionKinds } from "./reencounter-sections";
 
 export {
 	buildEntityMeta,

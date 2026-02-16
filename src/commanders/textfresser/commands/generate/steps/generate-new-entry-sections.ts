@@ -134,9 +134,10 @@ export async function generateNewEntrySections(
 		buildSectionQuery(lemmaResult, enrichmentOutput),
 	);
 	const onlySections = options.onlySections;
-	const v3Applicable = applicableSections.filter((sectionKind) =>
-		V3_SECTIONS.has(sectionKind) &&
-		(onlySections ? onlySections.has(sectionKind) : true),
+	const v3Applicable = applicableSections.filter(
+		(sectionKind) =>
+			V3_SECTIONS.has(sectionKind) &&
+			(onlySections ? onlySections.has(sectionKind) : true),
 	);
 	const sectionSet = new Set(v3Applicable);
 	const featuresPromptKind =
