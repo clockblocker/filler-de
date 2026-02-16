@@ -1,4 +1,13 @@
+import { readFileSync } from "node:fs";
 import { obsidian, obsidianEval } from "./cli";
+
+function escapeForSingleQuotedJs(value: string): string {
+	return value
+		.replace(/\\/g, "\\\\")
+		.replace(/'/g, "\\'")
+		.replace(/\n/g, "\\n")
+		.replace(/\r/g, "\\r");
+}
 
 /**
  * Ensure all ancestor folders exist for the given file path.
@@ -34,17 +43,24 @@ export async function createFile(
 	if (content === "") {
 		await obsidian(`create name="${path}" content="" silent`);
 	} else {
-		// Escape for single-quoted JS string inside eval
-		const contentEscaped = content
-			.replace(/\\/g, "\\\\")
-			.replace(/'/g, "\\'")
-			.replace(/\n/g, "\\n")
-			.replace(/\r/g, "\\r");
-		const pathEscaped = path.replace(/'/g, "\\'");
+		const contentEscaped = escapeForSingleQuotedJs(content);
+		const pathEscaped = escapeForSingleQuotedJs(path);
 		await obsidianEval(
 			`(async()=>{await app.vault.create('${pathEscaped}','${contentEscaped}');return 'ok'})()`,
 		);
 	}
+}
+
+/**
+ * Copy a UTF-8 file from local disk into the test vault.
+ * Destination is vault-relative path.
+ */
+export async function copyLocalFileToVault(
+	sourceAbsolutePath: string,
+	destinationVaultPath: string,
+): Promise<void> {
+	const content = readFileSync(sourceAbsolutePath, "utf8");
+	await createFile(destinationVaultPath, content);
 }
 
 /**
@@ -142,5 +158,24 @@ export async function toggleCodexCheckbox(
 	const codexPathEscaped = codexPath.replace(/'/g, "\\'");
 	const lineContentEscaped = lineContent.replace(/'/g, "\\'");
 	const code = `(async()=>{const plugin=app.plugins.plugins['cbcr-text-eater-de'];const parts='${codexPathEscaped}'.replace(/\\.md$/,'').split('/');const basename=parts.pop();const payload={checked:${wasChecked},kind:'CheckboxClicked',lineContent:'${lineContentEscaped}',splitPath:{basename,pathParts:parts,extension:'md',kind:'MdFile'}};await plugin.librarian.handleCodexCheckboxClick(payload);return 'ok'})()`;
+	await obsidianEval(code);
+}
+
+/**
+ * Open a markdown file, select first occurrence of text, and execute a command.
+ * Selection + command invocation happen inside a single eval for consistency.
+ */
+export async function executeCommandOnSelection(params: {
+	commandId: string;
+	path: string;
+	selectedText: string;
+}): Promise<void> {
+	const { commandId, path, selectedText } = params;
+	const commandIdEscaped = escapeForSingleQuotedJs(commandId);
+	const pathEscaped = escapeForSingleQuotedJs(path);
+	const selectedTextEscaped = escapeForSingleQuotedJs(selectedText);
+
+	const code = `(async()=>{const file=app.vault.getAbstractFileByPath('${pathEscaped}');if(!file)throw new Error('File not found: ${pathEscaped}');const leaf=app.workspace.getMostRecentLeaf()??app.workspace.getLeaf(true);await leaf.openFile(file,{active:true});const view=leaf.view;if(view&&typeof view.getMode==='function'&&typeof view.setMode==='function'&&view.getMode()!=='source'){await view.setMode('source')}const editor=(view&&'editor' in view&&view.editor)?view.editor:app.workspace.activeEditor?.editor;if(!editor)throw new Error('No active markdown editor for: ${pathEscaped}');const content=editor.getValue();const start=content.indexOf('${selectedTextEscaped}');if(start===-1)throw new Error('Selected text not found: ${selectedTextEscaped}');const offsetToPos=(offset)=>{const prefix=content.slice(0,offset);const lines=prefix.split('\\n');const line=lines.length-1;const ch=lines[line]?.length??0;return {line,ch}};const from=offsetToPos(start);const to=offsetToPos(start+'${selectedTextEscaped}'.length);editor.setSelection(from,to);if(typeof editor.focus==='function'){editor.focus()}const ok=app.commands.executeCommandById('${commandIdEscaped}');if(!ok)throw new Error('Command failed or not found: ${commandIdEscaped}');return 'ok'})()`;
+
 	await obsidianEval(code);
 }
