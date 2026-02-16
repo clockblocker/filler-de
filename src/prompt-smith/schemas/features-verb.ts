@@ -1,9 +1,19 @@
+import { z } from "zod/v3";
 import {
-	featurePromptAgentOutputSchema,
-	featurePromptUserInputSchema,
-} from "./feature-shared";
+	GermanVerbConjugationSchema,
+	GermanVerbValencySchema,
+} from "../../linguistics/de/lexem/verb/features";
+import { featurePromptUserInputSchema } from "./feature-shared";
 
 const userInputSchema = featurePromptUserInputSchema;
-const agentOutputSchema = featurePromptAgentOutputSchema;
+const agentOutputSchema = z
+	.object({
+		conjugation: GermanVerbConjugationSchema,
+		valency: GermanVerbValencySchema,
+	})
+	.strict();
 
-export const featuresVerbSchemas = { agentOutputSchema, userInputSchema };
+export const featuresVerbSchemas = {
+	agentOutputSchema,
+	userInputSchema,
+};

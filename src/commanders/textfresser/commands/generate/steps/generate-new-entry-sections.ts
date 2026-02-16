@@ -48,6 +48,7 @@ export type GeneratedEntrySectionsData = {
 	entryId: string;
 	enrichmentOutput: EnrichmentOutput;
 	failedSections: string[];
+	featuresOutput: FeaturesOutput | null;
 	headerContent: string;
 	inflectionCells: NounInflectionCell[];
 	morphemes: MorphemeItem[];
@@ -345,6 +346,7 @@ export async function generateNewEntrySections(
 		enrichmentOutput,
 		entryId,
 		failedSections,
+		featuresOutput,
 		headerContent,
 		inflectionCells,
 		morphemes,

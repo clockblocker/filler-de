@@ -15,22 +15,21 @@ import {
 import { generateNewEntrySections } from "./generate-new-entry-sections";
 import type { GenerateSectionsResult } from "./generate-sections-result";
 import type { ResolvedEntryState } from "./resolve-existing-entry";
+import {
+	buildVerbEntryIdentityFromFeatures,
+	isVerbFeaturesOutput,
+} from "./verb-features";
 
 export { buildLinguisticUnitMeta } from "./build-linguistic-unit-meta";
 export { buildFeatureTagPath, getFeaturesPromptKindForPos };
 export type { GenerateSectionsResult } from "./generate-sections-result";
 export type { ParsedRelation } from "./section-generation-types";
 
-function buildReEncounterResult(
-	ctx: ResolvedEntryState,
-): GenerateSectionsResult {
-	const { matchedEntry, existingEntries } = ctx;
-	if (!matchedEntry) return ctx;
-
+function appendAttestation(entry: DictEntry, ctx: ResolvedEntryState): void {
 	const lemmaResult = ctx.textfresserState.latestLemmaResult;
 	const attestationRef = lemmaResult.attestation.source.ref;
 	const attestationCssSuffix = cssSuffixFor[DictSectionKind.Attestation];
-	const attestationSection = matchedEntry.sections.find(
+	const attestationSection = entry.sections.find(
 		(section) => section.kind === attestationCssSuffix,
 	);
 
@@ -40,12 +39,21 @@ function buildReEncounterResult(
 		}
 	} else {
 		const targetLang = ctx.textfresserState.languages.target;
-		matchedEntry.sections.push({
+		entry.sections.push({
 			content: attestationRef,
 			kind: attestationCssSuffix,
 			title: TitleReprFor[DictSectionKind.Attestation][targetLang],
 		});
 	}
+}
+
+function buildReEncounterResult(
+	ctx: ResolvedEntryState,
+): GenerateSectionsResult {
+	const { matchedEntry, existingEntries } = ctx;
+	if (!matchedEntry) return ctx;
+
+	appendAttestation(matchedEntry, ctx);
 
 	ctx.textfresserState.targetBlockId = matchedEntry.id;
 
@@ -59,6 +67,28 @@ function buildReEncounterResult(
 		relations: [],
 		targetBlockId: matchedEntry.id,
 	};
+}
+
+function getVerbEntryIdentity(entry: DictEntry): string | null {
+	const fromMeta = entry.meta.verbEntryIdentity;
+	if (typeof fromMeta === "string" && fromMeta.length > 0) {
+		return fromMeta;
+	}
+
+	const linguisticUnit = entry.meta.linguisticUnit;
+	if (!linguisticUnit || linguisticUnit.kind !== "Lexem") {
+		return null;
+	}
+
+	const surface = linguisticUnit.surface;
+	if (surface.surfaceKind !== "Lemma" || surface.features.pos !== "Verb") {
+		return null;
+	}
+
+	return buildVerbEntryIdentityFromFeatures({
+		conjugation: surface.features.conjugation,
+		valency: surface.features.valency,
+	});
 }
 
 /**
@@ -79,10 +109,50 @@ export function generateSections(
 	return ResultAsync.fromPromise(
 		(async () => {
 			const generated = await generateNewEntrySections(ctx);
+			const lemmaResult = ctx.textfresserState.latestLemmaResult;
+			const isVerbLexem =
+				lemmaResult.linguisticUnit === "Lexem" &&
+				lemmaResult.posLikeKind === "Verb";
+			const verbEntryIdentity =
+				isVerbLexem && isVerbFeaturesOutput(generated.featuresOutput)
+					? buildVerbEntryIdentityFromFeatures(
+							generated.featuresOutput,
+						)
+					: undefined;
+
+			if (verbEntryIdentity) {
+				const matchedByVerbIdentity = ctx.existingEntries.find(
+					(entry) =>
+						getVerbEntryIdentity(entry) === verbEntryIdentity,
+				);
+
+				if (matchedByVerbIdentity) {
+					appendAttestation(matchedByVerbIdentity, ctx);
+					matchedByVerbIdentity.meta.verbEntryIdentity =
+						verbEntryIdentity;
+					ctx.textfresserState.latestFailedSections =
+						generated.failedSections;
+					ctx.textfresserState.targetBlockId =
+						matchedByVerbIdentity.id;
+
+					return {
+						...ctx,
+						allEntries: ctx.existingEntries,
+						failedSections: generated.failedSections,
+						inflectionCells: [],
+						morphemes: [],
+						nounInflectionGenus: undefined,
+						relations: [],
+						targetBlockId: matchedByVerbIdentity.id,
+					};
+				}
+			}
+
 			const linguisticUnit = buildLinguisticUnitMeta(
 				generated.entryId,
-				ctx.textfresserState.latestLemmaResult,
+				lemmaResult,
 				generated.enrichmentOutput,
+				generated.featuresOutput,
 			);
 
 			const newEntry: DictEntry = {
@@ -90,9 +160,9 @@ export function generateSections(
 				id: generated.entryId,
 				meta: {
 					emojiDescription:
-						ctx.textfresserState.latestLemmaResult
-							.precomputedEmojiDescription ??
+						lemmaResult.precomputedEmojiDescription ??
 						generated.enrichmentOutput.emojiDescription,
+					...(verbEntryIdentity ? { verbEntryIdentity } : {}),
 					...(linguisticUnit ? { linguisticUnit } : {}),
 				},
 				sections: generated.sections,

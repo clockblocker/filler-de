@@ -1,13 +1,18 @@
-export const taskDescription = `Return inherent (non-inflectional) lexical features for an English verb as short lowercase tag parts.
+export const taskDescription = `Return inherent (non-inflectional) lexical features for a verb.
 
 You receive:
 - word: lemma
 - context: sentence where the word occurred
 
 Return:
-- tags: ordered array of 1-5 short lowercase strings
+- conjugation: one of "Irregular" | "Rregular"
+- valency:
+  - separability: one of "Separable" | "Inseparable" | "None"
+  - reflexivity: one of "NonReflexive" | "ReflexiveOnly" | "OptionalReflexive"
+  - governedPreposition?: optional preposition string (for lexically governed prepositions only)
 
 Rules:
 - Return only stable lexical features, not inflectional values.
-- Keep tags concise (1-2 words).
-- Most general feature first, then more specific ones.`;
+- Choose exactly one separability value (never "Both").
+- Provide governedPreposition only when the verb lexically requires it.
+- Do not include extra keys.`;

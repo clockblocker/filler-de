@@ -4,8 +4,10 @@ import { logger } from "../../../../../utils/logger";
 import type { LemmaResult } from "../../lemma/types";
 import type {
 	EnrichmentOutput,
+	FeaturesOutput,
 	LexemEnrichmentOutput,
 } from "./section-generation-types";
+import { isVerbFeaturesOutput } from "./verb-features";
 
 function buildLemmaRefId(entryId: string): string {
 	const parsed = dictEntryIdHelper.parse(entryId);
@@ -31,6 +33,7 @@ function buildLexemLinguisticUnit(
 	entryId: string,
 	lemmaResult: Extract<LemmaResult, { linguisticUnit: "Lexem" }>,
 	enrichmentOutput: LexemEnrichmentOutput,
+	featuresOutput: FeaturesOutput | null,
 ): GermanLinguisticUnit | null {
 	if (lemmaResult.surfaceKind === "Lemma") {
 		if (lemmaResult.posLikeKind === "Noun") {
@@ -56,6 +59,29 @@ function buildLexemLinguisticUnit(
 			logger.warn(
 				"[generateSections] Missing noun genus/nounClass for Lexem lemma metadata",
 				{ enrichmentOutput, lemmaResult },
+			);
+			return null;
+		}
+
+		if (lemmaResult.posLikeKind === "Verb") {
+			if (isVerbFeaturesOutput(featuresOutput)) {
+				return {
+					kind: "Lexem",
+					surface: {
+						features: {
+							conjugation: featuresOutput.conjugation,
+							pos: "Verb",
+							valency: featuresOutput.valency,
+						},
+						lemma: lemmaResult.lemma,
+						surfaceKind: "Lemma",
+					},
+				};
+			}
+
+			logger.warn(
+				"[generateSections] Missing verb features for Lexem lemma metadata",
+				{ enrichmentOutput, featuresOutput, lemmaResult },
 			);
 			return null;
 		}
@@ -115,6 +141,7 @@ export function buildLinguisticUnitMeta(
 	entryId: string,
 	lemmaResult: LemmaResult,
 	enrichmentOutput: EnrichmentOutput,
+	featuresOutput: FeaturesOutput | null,
 ): GermanLinguisticUnit | undefined {
 	if (
 		lemmaResult.linguisticUnit === "Lexem" &&
@@ -124,6 +151,7 @@ export function buildLinguisticUnitMeta(
 			entryId,
 			lemmaResult,
 			enrichmentOutput,
+			featuresOutput,
 		);
 		return lexem ?? undefined;
 	}

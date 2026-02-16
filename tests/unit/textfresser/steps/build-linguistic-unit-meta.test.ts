@@ -64,6 +64,16 @@ function makePhrasemLemmaResult(
 	};
 }
 
+function makeVerbLemmaResult(
+	overrides: Partial<LexemLemmaResult> = {},
+): LexemLemmaResult {
+	return makeLexemLemmaResult({
+		lemma: "aufmachen",
+		posLikeKind: "Verb",
+		...overrides,
+	});
+}
+
 function makeLexemEnrichment(
 	overrides: Partial<AgentOutput<"LexemEnrichment">> = {},
 ): AgentOutput<"LexemEnrichment"> {
@@ -90,12 +100,38 @@ function makePhrasemEnrichment(
 	};
 }
 
+function makeVerbLexemEnrichment(
+	overrides: Partial<Extract<AgentOutput<"LexemEnrichment">, { posLikeKind: "Verb" }>> = {},
+): Extract<AgentOutput<"LexemEnrichment">, { posLikeKind: "Verb" }> {
+	return {
+		emojiDescription: ["🚪"],
+		ipa: "ˈaʊ̯fˌmaxn̩",
+		linguisticUnit: "Lexem",
+		posLikeKind: "Verb",
+		...overrides,
+	};
+}
+
+function makeVerbFeatures(
+	overrides: Partial<AgentOutput<"FeaturesVerb">> = {},
+): AgentOutput<"FeaturesVerb"> {
+	return {
+		conjugation: "Rregular",
+		valency: {
+			reflexivity: "NonReflexive",
+			separability: "Separable",
+		},
+		...overrides,
+	};
+}
+
 describe("buildLinguisticUnitMeta", () => {
 	it("builds Lexem lemma metadata with full noun features", () => {
 		const result = buildLinguisticUnitMeta(
 			"LX-LM-NOUN-1",
 			makeLexemLemmaResult(),
 			makeLexemEnrichment(),
+			null,
 		);
 
 		expect(result).toEqual({
@@ -119,6 +155,7 @@ describe("buildLinguisticUnitMeta", () => {
 				surfaceKind: "Inflected",
 			}),
 			makeLexemEnrichment(),
+			null,
 		);
 
 		expect(result).toEqual({
@@ -140,6 +177,7 @@ describe("buildLinguisticUnitMeta", () => {
 			makePhrasemEnrichment({
 				posLikeKind: "Collocation",
 			}),
+			null,
 		);
 
 		expect(result).toEqual({
@@ -159,8 +197,34 @@ describe("buildLinguisticUnitMeta", () => {
 			"LX-LM-NOUN-1",
 			makeLexemLemmaResult(),
 			makePhrasemEnrichment(),
+			null,
 		);
 
 		expect(result).toBeUndefined();
+	});
+
+	it("builds Lexem lemma metadata with full verb features", () => {
+		const result = buildLinguisticUnitMeta(
+			"LX-LM-VRB-1",
+			makeVerbLemmaResult(),
+			makeVerbLexemEnrichment(),
+			makeVerbFeatures(),
+		);
+
+		expect(result).toEqual({
+			kind: "Lexem",
+			surface: {
+				features: {
+					conjugation: "Rregular",
+					pos: "Verb",
+					valency: {
+						reflexivity: "NonReflexive",
+						separability: "Separable",
+					},
+				},
+				lemma: "aufmachen",
+				surfaceKind: "Lemma",
+			},
+		});
 	});
 });
