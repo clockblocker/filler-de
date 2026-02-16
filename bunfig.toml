@@ -1,3 +1,3 @@
 [test]
 preload = ["./tests/unit/setup.ts"]
-exclude = ["tests/cli-e2e/**"]
+exclude = ["tests/cli-e2e"]
