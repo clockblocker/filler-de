@@ -3,7 +3,7 @@ import type { GenerateSectionsResult } from "../../../../src/commanders/textfres
 import { propagateInflections } from "../../../../src/commanders/textfresser/commands/generate/steps/propagate-inflections";
 import { dictNoteHelper } from "../../../../src/commanders/textfresser/domain/dict-note";
 import type { DictEntry } from "../../../../src/commanders/textfresser/domain/dict-note/types";
-import type { TextfresserState } from "../../../../src/commanders/textfresser/textfresser";
+import type { TextfresserState } from "../../../../src/commanders/textfresser/state/textfresser-state";
 import type { NounInflectionCell } from "../../../../src/linguistics/de/lexem/noun";
 import { VaultActionKind } from "../../../../src/managers/obsidian/vault-action-manager/types/vault-action";
 

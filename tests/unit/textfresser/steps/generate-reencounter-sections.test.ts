@@ -6,7 +6,7 @@ import type {
 	DictEntry,
 	EntrySection,
 } from "../../../../src/commanders/textfresser/domain/dict-note/types";
-import type { TextfresserState } from "../../../../src/commanders/textfresser/textfresser";
+import type { TextfresserState } from "../../../../src/commanders/textfresser/state/textfresser-state";
 
 const PHRASEM_ENTRY_ID = "PH-LM-1";
 const NOUN_ENTRY_ID = "LX-LM-NOUN-1";

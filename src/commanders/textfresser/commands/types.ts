@@ -7,7 +7,7 @@ import { z } from "zod";
 import type { CommandContext } from "../../../managers/obsidian/command-executor";
 import type { VaultAction } from "../../../managers/obsidian/vault-action-manager";
 import type { CommandError } from "../errors";
-import type { TextfresserState } from "../textfresser";
+import type { TextfresserState } from "../state/textfresser-state";
 import type { LemmaResult } from "./lemma/types";
 
 // Re-export for convenience
@@ -31,6 +31,7 @@ export type TextfresserCommandKind = z.infer<
 export const TextfresserCommandKind = TextfresserCommandKindSchema.enum;
 export const ALL_TEXTFRESSER_COMMAND_KINDS =
 	TextfresserCommandKindSchema.options;
+export type ActionCommandKind = Exclude<TextfresserCommandKind, "Lemma">;
 
 // ─── Command Input ───
 

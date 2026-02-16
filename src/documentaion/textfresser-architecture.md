@@ -1012,174 +1012,79 @@ bun run codegen:prompts
 
 ## 11. Textfresser Commander Internals
 
-**Source**: `src/commanders/textfresser/textfresser.ts`
+**Sources**:
+- `src/commanders/textfresser/textfresser.ts` (thin public orchestrator)
+- `src/commanders/textfresser/state/textfresser-state.ts` (state types + initialization)
+- `src/commanders/textfresser/orchestration/` (Lemma flow, background generate, handlers)
 
-### 11.1 State
+### 11.1 Thin Orchestrator Split
 
-```typescript
-type InFlightGenerate = {
-  lemma: string;
-  targetPath: SplitPathToMdFile;
-  promise: Promise<void>;    // resolves when background Generate finishes
-};
+`Textfresser` now keeps only public API wiring:
 
-type PendingGenerate = {
-  lemma: string;
-  targetPath: SplitPathToMdFile;
-  notify: (message: string) => void;
-};
+- constructor creates state via `createInitialTextfresserState(...)`
+- `executeCommand(...)`:
+  - `Lemma` delegates to `executeLemmaFlow(...)`
+  - `Generate` / `TranslateSelection` delegate to `actionCommandFnForCommandKind`
+- `createHandler()` delegates to `createWikilinkClickHandler(...)`
+- `getState()` + `setLibrarianLookup(...)`
+- private `scrollToTargetBlock()` UX helper
 
-type LemmaInvocationCache = {
-  key: string;                               // sourcePath + ref + surface + offset
-  cachedAtMs: number;                        // success timestamp
-  lemmaResult: LemmaResult;                  // last successful Lemma output for this key
-  resolvedTargetPath: SplitPathToMdFile;     // target note used for completeness checks
-  generatedEntryId?: string;                 // captured after successful Generate
-};
+State is owned by `TextfresserState` in `state/textfresser-state.ts`:
 
-type TextfresserState = {
-  attestationForLatestNavigated: Attestation | null;  // from last wikilink click
-  latestLemmaResult: LemmaResult | null;              // from last Lemma command
-  latestResolvedLemmaTargetPath?: SplitPathToMdFile;  // final resolved target from Lemma phase B
-  latestLemmaPlaceholderPath?: SplitPathToMdFile;     // optional placeholder tracking between Lemma phases
-  latestLemmaInvocationCache: LemmaInvocationCache | null; // 10s idempotence cache
-  latestFailedSections: string[];                      // optional sections that failed in last Generate
-  targetBlockId?: string;                              // V5: entry ^blockId to scroll to after Generate
-  inFlightGenerate: InFlightGenerate | null;           // background Generate in progress (set after Lemma)
-  pendingGenerate: PendingGenerate | null;             // latest queued background Generate while one is in flight
-  languages: LanguagesConfig;                          // { known, target }
-  lookupInLibrary: PathLookupFn;                       // Librarian corename index lookup (wired after init, default: () => [])
-  promptRunner: PromptRunner;                          // LLM interface
-  vam: VaultActionManager;                             // for scrollToTargetBlock()
-};
-```
+- `latestLemmaResult`
+- `latestResolvedLemmaTargetPath`
+- `latestLemmaPlaceholderPath`
+- `latestLemmaInvocationCache`
+- `inFlightGenerate` / `pendingGenerate`
+- `targetBlockId`
+- `latestFailedSections`
 
-`latestLemmaResult` holds the most recent Lemma command output. Generate reads it for classification + attestation data. Both fields are checked when validating attestation availability (wikilink click OR prior Lemma).
+### 11.2 Unified Lemma Path
 
-`latestResolvedLemmaTargetPath` is written by Lemma phase B and is the canonical target used by background Generate. This avoids ambiguous basename lookup when multiple notes share the same basename in different roots.
-
-`latestLemmaPlaceholderPath` tracks the pre-prompt placeholder note (if created) so phase B can rename/delete it safely and optionally navigate away from it.
-
-`latestLemmaInvocationCache` stores the latest successful Lemma invocation for 10-second idempotence. Cache-hit path is silent: complete entries no-op, incomplete entries trigger silent background Generate backfill.
-
-`latestFailedSections` is populated by `generateSections` when optional LLM calls fail (graceful degradation). Used by the notification logic to show partial-success warnings.
-
-`targetBlockId` (V5) is set by `generateSections` — to `matchedEntry.id` for re-encounters, or the newly created entry ID for new entries. Used by deferred scroll after background Generate finishes (see 11.2).
-
-`inFlightGenerate` tracks the background Generate launched after a successful Lemma. Only one Generate runs at a time.
-
-`pendingGenerate` is a latest-only queue slot: when a new Lemma arrives during an in-flight Generate, the newest request overwrites the pending slot. After the current run finishes, pending work is launched only if it targets a different note path than the completed run.
-
-`lookupInLibrary` is a `PathLookupFn` callback wired after Librarian init via `Textfresser.setLibrarianLookup()`. It wraps `Librarian.findMatchingLeavesByCoreName()` to convert `LeafMatch[]` → `SplitPathToMdFile[]`. Used by propagation steps (via `resolveTargetPath`) as a fallback when VAM lookup returns no results. Defaults to `() => []` before Librarian is initialized — safe because propagation only runs after both commanders are initialized.
-
-### 11.2 Command Execution Flow
+There is one Lemma execution path:
 
 ```
-Textfresser.executeCommand(commandName, context, notify)
-  ↓
-Validate activeFile exists
-  ↓
-Build CommandInput { commandContext, resultingActions, textfresserState }
-  ↓
-If commandName === Lemma:
-  resolve attestation + invocation key
-  if cache-hit (<=10s for same key):
-    hydrate latest lemma state
-    if target entry has all expected V3 sections: silent no-op
-    else: silent background Generate refetch
-  else:
-    runLemmaTwoPhase(input):
-      Phase A dispatch (safe pre-link + optional placeholder upsert)
-      Prompt + disambiguate
-      Phase B dispatch (final rewrite + placeholder move/cleanup)
-      Rewrite planning includes an idempotence guard:
-        if selected span is already linked to the final target, source rewrite is no-op
-      Nested-wikilink safety:
-        if planned updatedBlock contains nested [[...[[...]]...]] structure, rewrite is aborted
-    persist cache entry (key + timestamp + lemmaResult + resolvedTargetPath)
-Else:
-  commandFnForCommandKind[commandName](input)
-  ↓
-ResultAsync<VaultAction[], CommandError>
-  ↓
-dispatchActions(actions) → vam.dispatch()
-  ↓
-On success: notify("✓ {lemma} ({pos})" or "✓ Entry created for {lemma}")
-On partial success: notify("⚠ Entry created for {lemma} (failed: {sections})") — when optional sections failed
-On error: notify("⚠ {reason}") + logger.warn
-  ↓
-If Lemma: fireBackgroundGenerate(notify) — fire-and-forget
-  ↓
-If Generate (manual): scrollToTargetBlock()
+Textfresser.executeCommand("Lemma", ...)
+  -> executeLemmaFlow(...)
+     -> cache key / idempotence check (lemma-cache.ts)
+     -> runLemmaTwoPhase(...) (run-lemma-two-phase.ts)
+       Phase A: pre-prompt safe link + optional placeholder
+       Phase B: final target rewrite + placeholder rename/delete
+     -> persist cache entry
+     -> requestBackgroundGenerate(...)
 ```
 
-#### Background Generate (after Lemma)
+Legacy command-map Lemma execution was removed from `commands/index.ts`; the action command map now includes only:
 
-After a successful Lemma, `fireBackgroundGenerate` launches `runBackgroundGenerate` as a fire-and-forget promise stored in `state.inFlightGenerate`:
+- `Generate`
+- `TranslateSelection`
 
-```
-fireBackgroundGenerate(notify)
-  Guard: one in-flight Generate max
-  If in-flight exists: overwrite pendingGenerate with latest request and return
-  ↓
-runBackgroundGenerate(targetPath, lemma, notify):
-  0. incrementPending() for E2E idle tracking
-  1. Resolve targetPath from state.latestResolvedLemmaTargetPath
-     (fallback: deterministic policy path from latestLemmaResult)
-  2. Record target existence, then vam.readContent(targetPath) → content (empty string if file doesn't exist)
-  3. Build synthetic CommandInput with target file's splitPath + content
-  4. commandFnForCommandKind.Generate(input) → ResultAsync<VaultAction[], CommandError>
-  5. Prepend UpsertMdFile action (ensures file exists before process/rename)
-  6. vam.dispatch(allActions)
-  7. Postcondition check: read target note and require non-empty content
-     - if empty and note did not exist before this run: rollback via TrashMdFile
-     - then fail through existing error/notice path
-  8. Capture generatedEntryId from targetBlockId into Lemma cache (when target path matches)
-  9. Notify success/failure (same format as manual Generate)
-  ↓
-.catch → notify("⚠ Background generate failed: {reason}")
-.finally
-  decrementPending()
-  clear state.inFlightGenerate
-  if pendingGenerate exists and target differs from completed target: launch pendingGenerate
-```
+### 11.3 Background Generate Coordinator
 
-The user stays on the source text throughout. No navigation, no manual Generate invocation.
+Background generation is encapsulated in:
 
-The `notify` callback is injected from `createCommandExecutor` (which creates an Obsidian `Notice`).
+- `orchestration/background/background-generate-coordinator.ts`
 
-### 11.3 Wikilink Click Handler
+Key behavior is unchanged:
 
-The Textfresser registers an `EventHandler<WikilinkClickPayload>` with the UserEventInterceptor:
+- single in-flight Generate
+- latest-only pending queue slot
+- postcondition: generated note must be non-empty
+- rollback new empty targets via `TrashMdFile`
+- propagate generated entry id back into `latestLemmaInvocationCache`
+- deferred-scroll support via `awaitGenerateAndScroll(...)`
 
-```typescript
-createHandler(): EventHandler<WikilinkClickPayload> {
-  return {
-    doesApply: () => true,  // always listen
-    handle: (payload) => {
-      // Extract attestation from the click context
-      const attestation = buildAttestationFromWikilinkClickPayload(payload);
-      if (attestation.isOk()) {
-        this.state.attestationForLatestNavigated = attestation.value;
-      }
+### 11.4 Wikilink Click Handler
 
-      // Deferred scroll: if background Generate is in flight for this target,
-      // wait for it to finish and then scroll to the entry
-      const inFlight = this.state.inFlightGenerate;
-      const clickedTarget = this.vam.resolveLinkpathDest(payload.wikiTarget.basename, payload.splitPath);
-      if (inFlight && clickedTarget && areSameSplitPath(clickedTarget, inFlight.targetPath)) {
-        void this.awaitGenerateAndScroll(inFlight);  // fire-and-forget
-      }
+Wikilink click handling moved to:
 
-      return { outcome: HandlerOutcome.Passthrough }; // don't consume the event
-    },
-  };
-}
-```
+- `orchestration/handlers/wikilink-click-handler.ts`
 
-**Deferred scroll** (`awaitGenerateAndScroll`): awaits the in-flight Generate promise, then after a 300ms delay (letting `openLinkText` navigation settle), checks `vam.mdPwd()` — if user is still on the target note, calls `scrollToTargetBlock()`. If user navigated away, `targetBlockId` stays in state for potential future use. The handler must NOT block — the detector awaits the handler, then calls `openLinkText()` to navigate. Using `void` ensures the async scroll is fire-and-forget.
+Behavior is unchanged:
 
-This is one of two ways context flows to commands. The other: user selects text → calls Lemma → `buildAttestationFromSelection()` creates attestation on-the-fly from the selection (see section 6.2).
+- update `attestationForLatestNavigated`
+- if clicked target matches in-flight background Generate target, trigger deferred `awaitGenerateAndScroll(...)`
+- return `HandlerOutcome.Passthrough`
 
 ---
 
@@ -1213,7 +1118,12 @@ To add support for a new target language (e.g., Japanese):
 | File | Purpose |
 |------|---------|
 | **Textfresser Commander** | |
-| `src/commanders/textfresser/textfresser.ts` | Commander: Lemma two-phase orchestration (pre-prompt + post-prompt dispatch), state, wikilink handler, background Generate using resolved target path, deferred scroll, `setLibrarianLookup()` |
+| `src/commanders/textfresser/textfresser.ts` | Thin public orchestrator: constructor wiring, command delegation, handler delegation, `setLibrarianLookup()`, and `scrollToTargetBlock()` |
+| `src/commanders/textfresser/state/textfresser-state.ts` | TextfresserState + `InFlightGenerate` / `PendingGenerate` / `LemmaInvocationCache` + `createInitialTextfresserState()` |
+| `src/commanders/textfresser/orchestration/lemma/execute-lemma-flow.ts` | Unified Lemma execution path (cache check, two-phase run, notifications, cache persistence, background trigger) |
+| `src/commanders/textfresser/orchestration/lemma/run-lemma-two-phase.ts` | Phase A/Phase B Lemma routing and source rewrite orchestration |
+| `src/commanders/textfresser/orchestration/background/background-generate-coordinator.ts` | Background Generate queueing, execution, rollback, deferred scroll hook |
+| `src/commanders/textfresser/orchestration/handlers/wikilink-click-handler.ts` | Wikilink click handler factory for attestation tracking + deferred scroll trigger |
 | `src/commanders/textfresser/commands/types.ts` | CommandFn, CommandInput, TextfresserCommandKind |
 | `src/commanders/textfresser/llm/prompt-runner.ts` | PromptRunner: LLM call wrapper |
 | `src/commanders/textfresser/llm/prompt-catalog.ts` | Prompt lookup + schema lookup facade (`PROMPT_FOR` + `SchemasFor`) |

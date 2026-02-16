@@ -113,7 +113,7 @@ Three possible outcomes: `Handled` (consumed), `Passthrough` (native behavior), 
 
 | Behavior | PayloadKind | Source |
 |----------|-------------|--------|
-| **wikilink-click** | `WikilinkClicked` | Registered only if `textfresser` is provided. Handler created by `textfresser.createHandler()`. Tracks wikilink clicks for attestation context. Also triggers deferred scroll: if a background Generate is in flight for the clicked target, `awaitGenerateAndScroll()` waits for completion and scrolls to entry. |
+| **wikilink-click** | `WikilinkClicked` | Registered only if `textfresser` is provided. `textfresser.createHandler()` delegates to `orchestration/handlers/wikilink-click-handler.ts`. Tracks wikilink clicks for attestation context and triggers deferred scroll via background-generate coordinator when the clicked target matches the in-flight Generate target. |
 
 ### 4.5 Standalone Behavior
 
