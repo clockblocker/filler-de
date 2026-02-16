@@ -57,6 +57,10 @@ export type GeneratedEntrySectionsData = {
 	sections: EntrySection[];
 };
 
+type GenerateNewEntrySectionsOptions = {
+	onlySections?: ReadonlySet<DictSectionKind>;
+};
+
 async function generateEnrichmentOutput(
 	lemmaResult: LemmaResult,
 	promptRunner: PromptRunner,
@@ -112,6 +116,7 @@ function buildEntryId(nextIndex: number, lemmaResult: LemmaResult): string {
 
 export async function generateNewEntrySections(
 	ctx: ResolvedEntryState,
+	options: GenerateNewEntrySectionsOptions = {},
 ): Promise<GeneratedEntrySectionsData> {
 	const lemmaResult = ctx.textfresserState.latestLemmaResult;
 	const { promptRunner, languages } = ctx.textfresserState;
@@ -128,8 +133,10 @@ export async function generateNewEntrySections(
 	const applicableSections = getSectionsFor(
 		buildSectionQuery(lemmaResult, enrichmentOutput),
 	);
+	const onlySections = options.onlySections;
 	const v3Applicable = applicableSections.filter((sectionKind) =>
-		V3_SECTIONS.has(sectionKind),
+		V3_SECTIONS.has(sectionKind) &&
+		(onlySections ? onlySections.has(sectionKind) : true),
 	);
 	const sectionSet = new Set(v3Applicable);
 	const featuresPromptKind =
