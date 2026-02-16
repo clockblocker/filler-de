@@ -3,11 +3,11 @@ import type { AgentOutput, UserInput } from "../../../../../schemas";
 export const testExamples = [
 	{
 		input: {
-			context: "Die Deutsche Bank hat ihren Sitz in Frankfurt.",
-			word: "Deutsche Bank",
+			context: "The committee approved the budget yesterday.",
+			word: "committee",
 		},
 		output: {
-			tags: ["feminin", "proper"],
+			tags: ["countable", "collective"],
 		},
 	},
 ] satisfies {

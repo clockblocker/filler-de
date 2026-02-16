@@ -6,7 +6,7 @@ You are an English linguistics expert specializing in verb feature classificatio
 </agent-role>
 
 <task-description>
-Return inherent (non-inflectional) lexical features for a verb as short lowercase tag parts.
+Return inherent (non-inflectional) lexical features for an English verb as short lowercase tag parts.
 
 You receive:
 - word: lemma
@@ -24,10 +24,19 @@ Rules:
 <examples>
 <example-1>
 <input>
-{"context":"Kannst du bitte die Tür aufmachen?","word":"aufmachen"}
+{"context":"Please transfer the file before noon.","word":"transfer"}
 </input>
 <output>
-{"tags":["transitiv","trennbar"]}
+{"tags":["transitive","dynamic"]}
 </output>
 </example-1>
+
+<example-2>
+<input>
+{"context":"We carried on despite the heavy rain.","word":"carry on"}
+</input>
+<output>
+{"tags":["phrasal","intransitive"]}
+</output>
+</example-2>
 </examples>`;

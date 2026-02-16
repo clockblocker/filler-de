@@ -29,7 +29,9 @@ export function fromSplitPathInsideLibraryWithSeparatedSuffix<
 ): SplitPathInsideLibraryOf<SK>;
 export function fromSplitPathInsideLibraryWithSeparatedSuffix(
 	suffix: SuffixCodecs,
-	sp: SplitPathInsideLibraryWithSeparatedSuffixOf<typeof SplitPathKind.Folder>,
+	sp: SplitPathInsideLibraryWithSeparatedSuffixOf<
+		typeof SplitPathKind.Folder
+	>,
 ): SplitPathToFolderInsideLibrary;
 export function fromSplitPathInsideLibraryWithSeparatedSuffix(
 	suffix: SuffixCodecs,
@@ -37,7 +39,9 @@ export function fromSplitPathInsideLibraryWithSeparatedSuffix(
 ): SplitPathToFileInsideLibrary;
 export function fromSplitPathInsideLibraryWithSeparatedSuffix(
 	suffix: SuffixCodecs,
-	sp: SplitPathInsideLibraryWithSeparatedSuffixOf<typeof SplitPathKind.MdFile>,
+	sp: SplitPathInsideLibraryWithSeparatedSuffixOf<
+		typeof SplitPathKind.MdFile
+	>,
 ): SplitPathToMdFileInsideLibrary;
 export function fromSplitPathInsideLibraryWithSeparatedSuffix(
 	suffix: SuffixCodecs,

@@ -3,34 +3,34 @@ import type { AgentOutput, UserInput } from "../../../../../schemas";
 export const examples = [
 	{
 		input: {
-			context: "Das machen wir auf jeden Fall morgen.",
+			context: "By and large, the rollout was successful.",
 			target: {
-				lemma: "auf jeden Fall",
+				lemma: "by and large",
 				linguisticUnit: "Phrasem",
 				posLikeKind: "DiscourseFormula",
 				surfaceKind: "Lemma",
 			},
 		},
 		output: {
-			emojiDescription: ["✅"],
-			ipa: "aʊ̯f ˈjeːdn̩ fal",
+			emojiDescription: ["📊", "👍"],
+			ipa: "baɪ ən lɑːrdʒ",
 			linguisticUnit: "Phrasem",
 			posLikeKind: "DiscourseFormula",
 		},
 	},
 	{
 		input: {
-			context: "Er hat den Löffel abgegeben.",
+			context: "After three hours of meetings, we called it a day.",
 			target: {
-				lemma: "den Löffel abgeben",
+				lemma: "call it a day",
 				linguisticUnit: "Phrasem",
 				posLikeKind: "Idiom",
 				surfaceKind: "Lemma",
 			},
 		},
 		output: {
-			emojiDescription: ["💀"],
-			ipa: "deːn ˈlœfl̩ ˈapɡeːbn̩",
+			emojiDescription: ["🛑", "📅"],
+			ipa: "kɔːl ɪt ə deɪ",
 			linguisticUnit: "Phrasem",
 			posLikeKind: "Idiom",
 		},

@@ -1,4 +1,4 @@
-export const taskDescription = `Return inherent (non-inflectional) lexical features for a verb as short lowercase tag parts.
+export const taskDescription = `Return inherent (non-inflectional) lexical features for an English verb as short lowercase tag parts.
 
 You receive:
 - word: lemma

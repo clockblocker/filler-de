@@ -6,7 +6,7 @@ You are an English linguistics expert specializing in noun feature classificatio
 </agent-role>
 
 <task-description>
-Return inherent (non-inflectional) lexical features for a noun as short lowercase tag parts.
+Return inherent (non-inflectional) lexical features for an English noun as short lowercase tag parts.
 
 You receive:
 - word: lemma
@@ -24,10 +24,19 @@ Rules:
 <examples>
 <example-1>
 <input>
-{"context":"Die Deutsche Bank hat ihren Sitz in Frankfurt.","word":"Deutsche Bank"}
+{"context":"The committee approved the budget yesterday.","word":"committee"}
 </input>
 <output>
-{"tags":["feminin","proper"]}
+{"tags":["countable","collective"]}
 </output>
 </example-1>
+
+<example-2>
+<input>
+{"context":"Oxford University announced a new scholarship.","word":"Oxford University"}
+</input>
+<output>
+{"tags":["proper","institution"]}
+</output>
+</example-2>
 </examples>`;

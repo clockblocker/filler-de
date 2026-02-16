@@ -3,11 +3,20 @@ import type { AgentOutput, UserInput } from "../../../../../schemas";
 export const examples = [
 	{
 		input: {
-			context: "Kannst du bitte die Tür aufmachen?",
-			word: "aufmachen",
+			context: "Please transfer the file before noon.",
+			word: "transfer",
 		},
 		output: {
-			tags: ["transitiv", "trennbar"],
+			tags: ["transitive", "dynamic"],
+		},
+	},
+	{
+		input: {
+			context: "We carried on despite the heavy rain.",
+			word: "carry on",
+		},
+		output: {
+			tags: ["phrasal", "intransitive"],
 		},
 	},
 ] satisfies {

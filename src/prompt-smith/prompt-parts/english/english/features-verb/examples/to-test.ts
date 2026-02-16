@@ -3,11 +3,11 @@ import type { AgentOutput, UserInput } from "../../../../../schemas";
 export const testExamples = [
 	{
 		input: {
-			context: "Kannst du bitte die Tür aufmachen?",
-			word: "aufmachen",
+			context: "Please transfer the file before noon.",
+			word: "transfer",
 		},
 		output: {
-			tags: ["transitiv", "trennbar"],
+			tags: ["transitive", "dynamic"],
 		},
 	},
 ] satisfies {

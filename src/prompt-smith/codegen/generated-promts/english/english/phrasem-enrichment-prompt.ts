@@ -8,7 +8,7 @@ You are an English linguistics expert for phraseological enrichment. Return pron
 <task-description>
 You receive:
 - context: sentence where the target was found
-- target: { lemma, linguisticUnit: "Phrasem", posLikeKind, surfaceKind }
+- target: { lemma, linguisticUnit: "Phrasem", posLikeKind, surfaceKind } for an English multi-word expression
 
 Return:
 - linguisticUnit: "Phrasem"
@@ -23,19 +23,19 @@ Rules:
 <examples>
 <example-1>
 <input>
-{"context":"Das machen wir auf jeden Fall morgen.","target":{"lemma":"auf jeden Fall","linguisticUnit":"Phrasem","posLikeKind":"DiscourseFormula","surfaceKind":"Lemma"}}
+{"context":"By and large, the rollout was successful.","target":{"lemma":"by and large","linguisticUnit":"Phrasem","posLikeKind":"DiscourseFormula","surfaceKind":"Lemma"}}
 </input>
 <output>
-{"emojiDescription":["✅"],"ipa":"aʊ̯f ˈjeːdn̩ fal","linguisticUnit":"Phrasem","posLikeKind":"DiscourseFormula"}
+{"emojiDescription":["📊","👍"],"ipa":"baɪ ən lɑːrdʒ","linguisticUnit":"Phrasem","posLikeKind":"DiscourseFormula"}
 </output>
 </example-1>
 
 <example-2>
 <input>
-{"context":"Er hat den Löffel abgegeben.","target":{"lemma":"den Löffel abgeben","linguisticUnit":"Phrasem","posLikeKind":"Idiom","surfaceKind":"Lemma"}}
+{"context":"After three hours of meetings, we called it a day.","target":{"lemma":"call it a day","linguisticUnit":"Phrasem","posLikeKind":"Idiom","surfaceKind":"Lemma"}}
 </input>
 <output>
-{"emojiDescription":["💀"],"ipa":"deːn ˈlœfl̩ ˈapɡeːbn̩","linguisticUnit":"Phrasem","posLikeKind":"Idiom"}
+{"emojiDescription":["🛑","📅"],"ipa":"kɔːl ɪt ə deɪ","linguisticUnit":"Phrasem","posLikeKind":"Idiom"}
 </output>
 </example-2>
 </examples>`;

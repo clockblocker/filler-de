@@ -5,13 +5,11 @@ import { makeNodeSegmentId } from "../../../healer/library-tree/tree-node/codecs
 import { TreeNodeKind } from "../../../healer/library-tree/tree-node/types/atoms";
 import type { CodecError } from "../../errors";
 import { makeLocatorError, makeZodError } from "../../errors";
+import type { SegmentIdCodecs } from "../../segment-id";
 import {
 	FileNodeSegmentIdSchema,
 	ScrollNodeSegmentIdSchema,
 	SectionNodeSegmentIdSchema,
-} from "../../segment-id";
-import type {
-	SegmentIdCodecs,
 } from "../../segment-id";
 import type {
 	AnyCanonicalSplitPathInsideLibrary,
