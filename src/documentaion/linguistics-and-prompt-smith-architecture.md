@@ -391,8 +391,7 @@ PhrasemSurfaceSchema = makeSurfaceSchema(PhrasemFullFeaturesSchema, PhrasemRefFe
 
 ### 2.4 Dict Entry ID System
 
-**Canonical source**: `src/commanders/textfresser/domain/dict-entry-id/`  
-**Compatibility re-export**: `src/linguistics/common/dict-entry-id/`
+**Canonical source**: `src/commanders/textfresser/domain/dict-entry-id/`
 
 Every dictionary entry has a structured ID that encodes its linguistic classification.
 
@@ -466,8 +465,7 @@ ParsedNonLexemId = {
 
 ### 2.5 Section Configuration
 
-**Canonical source**: `src/commanders/textfresser/targets/de/sections/`  
-**Compatibility re-export**: `src/linguistics/common/sections/`
+**Canonical source**: `src/commanders/textfresser/targets/de/sections/`
 
 #### DictSectionKind
 
