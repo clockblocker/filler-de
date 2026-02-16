@@ -107,7 +107,11 @@ function iterWikilinks(text: string): Array<{
 	surface: string;
 }> {
 	const regex = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
-	const matches: Array<{ index: number; fullMatch: string; surface: string }> = [];
+	const matches: Array<{
+		index: number;
+		fullMatch: string;
+		surface: string;
+	}> = [];
 
 	for (const match of text.matchAll(regex)) {
 		const index = match.index;
@@ -177,8 +181,13 @@ function tryRewriteLine(params: {
 	replacement: string;
 	replaceOffset: number | undefined;
 }): string | null {
-	const { line, primarySurface, fallbackSurface, replacement, replaceOffset } =
-		params;
+	const {
+		line,
+		primarySurface,
+		fallbackSurface,
+		replacement,
+		replaceOffset,
+	} = params;
 
 	const byOffsetPlain = replaceSurfaceByOffset(
 		line,
@@ -278,8 +287,11 @@ export function rewriteAttestationSourceContent(params: {
 			if (!line || !line.includes(marker)) continue;
 
 			const normalizedLine =
-				replaceFirstWikilinkByDisplayedSurface(line, surface, surface) ??
-				line;
+				replaceFirstWikilinkByDisplayedSurface(
+					line,
+					surface,
+					surface,
+				) ?? line;
 			if (
 				normalizedLine === rawBlock ||
 				markdownHelper.stripAll(normalizedLine) ===
@@ -293,8 +305,8 @@ export function rewriteAttestationSourceContent(params: {
 				fallbackSurface: surface,
 				line,
 				primarySurface: finalSurface,
-				replaceOffset: finalOffset,
 				replacement: wikilink,
+				replaceOffset: finalOffset,
 			});
 			if (rewritten) {
 				lines[i] = rewritten;
@@ -309,8 +321,8 @@ export function rewriteAttestationSourceContent(params: {
 			fallbackSurface: surface,
 			line: content,
 			primarySurface: finalSurface,
-			replaceOffset: finalOffset,
 			replacement: wikilink,
+			replaceOffset: finalOffset,
 		}) ??
 		replaceFirstSurfaceOutsideWikilink(content, finalSurface, wikilink) ??
 		replaceFirstSurfaceOutsideWikilink(content, surface, wikilink);
@@ -523,10 +535,7 @@ export function lemmaCommand(
 
 			// Fall back to single-span replacement
 			if (updatedBlock === null) {
-				const wikilink = buildWikilinkForTarget(
-					surface,
-					result.lemma,
-				);
+				const wikilink = buildWikilinkForTarget(surface, result.lemma);
 
 				updatedBlock =
 					offset !== undefined

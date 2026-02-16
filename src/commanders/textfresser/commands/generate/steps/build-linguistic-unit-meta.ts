@@ -1,6 +1,9 @@
-import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
-import type { GermanLinguisticUnit } from "../../../../../linguistics/de";
+import type {
+	DeEntity,
+	GermanLinguisticUnit,
+} from "../../../../../linguistics/de";
 import { logger } from "../../../../../utils/logger";
+import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import type { LemmaResult } from "../../lemma/types";
 import { isAdjectiveFeaturesOutput } from "./adjective-features";
 import type {
@@ -161,6 +164,187 @@ function buildPhrasemLinguisticUnit(
 			surfaceKind: lemmaResult.surfaceKind,
 		},
 	};
+}
+
+function buildLexemEntity(
+	lemmaResult: Extract<LemmaResult, { linguisticUnit: "Lexem" }>,
+	enrichmentOutput: LexemEnrichmentOutput,
+	featuresOutput: FeaturesOutput | null,
+): DeEntity<"Lexem"> {
+	const buildPosOnlyLexicalFeature = (
+		pos: Extract<LemmaResult, { linguisticUnit: "Lexem" }>["posLikeKind"],
+	) => {
+		switch (pos) {
+			case "Noun":
+				return { pos: "Noun" as const };
+			case "Pronoun":
+				return { pos: "Pronoun" as const };
+			case "Article":
+				return { pos: "Article" as const };
+			case "Adjective":
+				return { pos: "Adjective" as const };
+			case "Verb":
+				return { pos: "Verb" as const };
+			case "Preposition":
+				return { pos: "Preposition" as const };
+			case "Adverb":
+				return { pos: "Adverb" as const };
+			case "Particle":
+				return { pos: "Particle" as const };
+			case "Conjunction":
+				return { pos: "Conjunction" as const };
+			case "InteractionalUnit":
+				return { pos: "InteractionalUnit" as const };
+		}
+	};
+
+	const commonFields = {
+		emojiDescription:
+			lemmaResult.precomputedEmojiDescription ??
+			enrichmentOutput.emojiDescription,
+		ipa: enrichmentOutput.ipa,
+		language: "German" as const,
+		lemma: lemmaResult.lemma,
+		linguisticUnit: "Lexem" as const,
+		posLikeKind: lemmaResult.posLikeKind,
+		surfaceKind: lemmaResult.surfaceKind,
+	};
+
+	if (lemmaResult.surfaceKind === "Lemma") {
+		if (
+			lemmaResult.posLikeKind === "Noun" &&
+			enrichmentOutput.posLikeKind === "Noun" &&
+			enrichmentOutput.genus &&
+			enrichmentOutput.nounClass
+		) {
+			return {
+				...commonFields,
+				features: {
+					inflectional: {},
+					lexical: {
+						genus: enrichmentOutput.genus,
+						nounClass: enrichmentOutput.nounClass,
+						pos: "Noun",
+					},
+				},
+			} satisfies DeEntity<"Lexem">;
+		}
+
+		if (
+			lemmaResult.posLikeKind === "Verb" &&
+			isVerbFeaturesOutput(featuresOutput)
+		) {
+			return {
+				...commonFields,
+				features: {
+					inflectional: {},
+					lexical: {
+						conjugation: featuresOutput.conjugation,
+						pos: "Verb",
+						valency: featuresOutput.valency,
+					},
+				},
+			} satisfies DeEntity<"Lexem">;
+		}
+
+		if (
+			lemmaResult.posLikeKind === "Adjective" &&
+			isAdjectiveFeaturesOutput(featuresOutput)
+		) {
+			return {
+				...commonFields,
+				features: {
+					inflectional: {},
+					lexical: {
+						classification: featuresOutput.classification,
+						distribution: featuresOutput.distribution,
+						gradability: featuresOutput.gradability,
+						pos: "Adjective",
+						valency: featuresOutput.valency,
+					},
+				},
+			} satisfies DeEntity<"Lexem">;
+		}
+
+		return {
+			...commonFields,
+			features: {
+				inflectional: {},
+				lexical: buildPosOnlyLexicalFeature(lemmaResult.posLikeKind),
+			},
+		} satisfies DeEntity<"Lexem">;
+	}
+
+	return {
+		...commonFields,
+		features: {
+			inflectional: {},
+			lexical: buildPosOnlyLexicalFeature(lemmaResult.posLikeKind),
+		},
+		surface: lemmaResult.attestation.target.surface,
+	} satisfies DeEntity<"Lexem">;
+}
+
+function buildPhrasemEntity(
+	lemmaResult: Extract<LemmaResult, { linguisticUnit: "Phrasem" }>,
+	enrichmentOutput: EnrichmentOutput,
+): DeEntity<"Phrasem"> {
+	const commonFields = {
+		emojiDescription:
+			lemmaResult.precomputedEmojiDescription ??
+			enrichmentOutput.emojiDescription,
+		ipa: enrichmentOutput.ipa,
+		language: "German" as const,
+		lemma: lemmaResult.lemma,
+		linguisticUnit: "Phrasem" as const,
+		posLikeKind: lemmaResult.posLikeKind,
+		surfaceKind: lemmaResult.surfaceKind,
+	};
+
+	if (lemmaResult.surfaceKind === "Lemma") {
+		return {
+			...commonFields,
+			features: {
+				inflectional: {},
+				lexical: { phrasemeKind: lemmaResult.posLikeKind },
+			},
+		} satisfies DeEntity<"Phrasem">;
+	}
+
+	return {
+		...commonFields,
+		features: {
+			inflectional: {},
+			lexical: { phrasemeKind: lemmaResult.posLikeKind },
+		},
+		surface: lemmaResult.attestation.target.surface,
+	} satisfies DeEntity<"Phrasem">;
+}
+
+export function buildEntityMeta(
+	lemmaResult: LemmaResult,
+	enrichmentOutput: EnrichmentOutput,
+	featuresOutput: FeaturesOutput | null,
+): DeEntity | undefined {
+	if (
+		lemmaResult.linguisticUnit === "Lexem" &&
+		enrichmentOutput.linguisticUnit === "Lexem"
+	) {
+		return buildLexemEntity(lemmaResult, enrichmentOutput, featuresOutput);
+	}
+
+	if (
+		lemmaResult.linguisticUnit === "Phrasem" &&
+		enrichmentOutput.linguisticUnit === "Phrasem"
+	) {
+		return buildPhrasemEntity(lemmaResult, enrichmentOutput);
+	}
+
+	logger.warn(
+		"[generateSections] Enrichment output linguisticUnit mismatched lemma result for entity metadata",
+		{ enrichmentUnit: enrichmentOutput.linguisticUnit, lemmaResult },
+	);
+	return undefined;
 }
 
 export function buildLinguisticUnitMeta(

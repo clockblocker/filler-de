@@ -1,9 +1,9 @@
+import type { EntrySection } from "../../../../domain/dict-note/types";
 import { cssSuffixFor } from "../../../../targets/de/sections/section-css-kind";
 import {
 	DictSectionKind,
 	TitleReprFor,
 } from "../../../../targets/de/sections/section-kind";
-import type { EntrySection } from "../../../../domain/dict-note/types";
 import { formatRelationSection } from "../../section-formatters/common/relation-formatter";
 import type {
 	GenerationTargetLanguage,

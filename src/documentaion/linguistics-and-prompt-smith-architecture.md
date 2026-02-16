@@ -12,7 +12,7 @@ Every word the user encounters flows through a pipeline that starts with LLM cla
 
 - **LLM output validation** — agent responses are parsed against Zod schemas that reference linguistics enums
 - **Section formatters** — formatters consume typed DTOs (e.g., `NounInflectionCell`) rather than raw JSON
-- **Domain model** — `GermanLinguisticUnit` captures the full grammatical identity of every encountered word
+- **Domain model** — `Entity<L,U,S,P>` captures language/unit/surface identity with split `features.lexical` and `features.inflectional` (German binding: `DeEntity`)
 - **Dict entry IDs** — structured IDs like `LX-LM-NOUN-1` encode unit kind, surface kind, POS, and index
 
 ### Why a prompt management layer?
@@ -316,7 +316,11 @@ GermanLinguisticUnitSchema = z.discriminatedUnion("kind", [
 ])
 ```
 
-Type: `GermanLinguisticUnit` — the complete grammatical identity of any German word/phrase/morpheme.
+Type: `GermanLinguisticUnit` — legacy compatibility DTO.
+
+Canonical propagation DTO: `DeEntity<U,S> = Entity<"German", U, S, DePosLikeDiscriminator<U>>`, with top-level `emojiDescription` + `ipa` and split features:
+- `features.lexical` — inherent lexical properties (`genus`, `nounClass`, valency, etc.)
+- `features.inflectional` — realized/variable inflectional data (lemma entries are typically empty here)
 
 #### Key files — German
 

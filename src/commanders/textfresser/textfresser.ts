@@ -9,7 +9,7 @@
  * - Handle and log errors
  */
 
-import { err, errAsync, ok, ResultAsync, type Result } from "neverthrow";
+import { err, errAsync, ok, type Result, ResultAsync } from "neverthrow";
 import type { CommandContext } from "../../managers/obsidian/command-executor";
 import type { WikilinkClickPayload } from "../../managers/obsidian/user-event-interceptor/events";
 import {
@@ -23,9 +23,9 @@ import {
 } from "../../managers/obsidian/vault-action-manager";
 import type { SplitPathToMdFile } from "../../managers/obsidian/vault-action-manager/types/split-path";
 import { PromptKind } from "../../prompt-smith/codegen/consts";
+import type { ApiService } from "../../stateless-helpers/api-service";
 import { markdownHelper } from "../../stateless-helpers/markdown-strip";
 import { multiSpanHelper } from "../../stateless-helpers/multi-span";
-import type { ApiService } from "../../stateless-helpers/api-service";
 import type { LanguagesConfig } from "../../types";
 import { logger } from "../../utils/logger";
 import { commandFnForCommandKind } from "./commands";
@@ -37,7 +37,11 @@ import {
 } from "./commands/lemma/lemma-command";
 import { disambiguateSense } from "./commands/lemma/steps/disambiguate-sense";
 import type { LemmaResult } from "./commands/lemma/types";
-import type { CommandError, CommandInput, TextfresserCommandKind } from "./commands/types";
+import type {
+	CommandError,
+	CommandInput,
+	TextfresserCommandKind,
+} from "./commands/types";
 import { buildAttestationFromWikilinkClickPayload } from "./common/attestation/builders/build-from-wikilink-click-payload";
 import type { Attestation } from "./common/attestation/types";
 import {
@@ -91,7 +95,12 @@ function areSameSplitPath(a: SplitPathToMdFile, b: SplitPathToMdFile): boolean {
 	);
 }
 
-function buildUpdatedBlock(rawBlock: string, offset: number | undefined, surface: string, wikilink: string): string {
+function buildUpdatedBlock(
+	rawBlock: string,
+	offset: number | undefined,
+	surface: string,
+	wikilink: string,
+): string {
 	if (offset === undefined) {
 		return rawBlock.replace(surface, wikilink);
 	}
@@ -160,7 +169,10 @@ function buildLemmaRewritePlan(params: {
 							rawBlock,
 							expanded.replaceOffset,
 							expanded.replaceSurface,
-							buildWikilinkForTarget(expanded.replaceSurface, linkTarget),
+							buildWikilinkForTarget(
+								expanded.replaceSurface,
+								linkTarget,
+							),
 						);
 						attestation.source.textWithOnlyTargetMarked =
 							contextWithLinkedParts;
@@ -180,7 +192,12 @@ function buildLemmaRewritePlan(params: {
 		replaceSurface,
 		updatedBlock:
 			updatedBlock ??
-			buildUpdatedBlock(rawBlock, replaceOffsetInBlock, replaceSurface, wikilink),
+			buildUpdatedBlock(
+				rawBlock,
+				replaceOffsetInBlock,
+				replaceSurface,
+				wikilink,
+			),
 		wikilink,
 	};
 }
@@ -504,7 +521,8 @@ export class Textfresser {
 
 		const rewritePlan = buildLemmaRewritePlan({
 			attestation,
-			contextWithLinkedParts: lemmaPromptOutput.contextWithLinkedParts ?? undefined,
+			contextWithLinkedParts:
+				lemmaPromptOutput.contextWithLinkedParts ?? undefined,
 			linkTarget: finalTarget.linkTarget,
 		});
 
@@ -527,14 +545,16 @@ export class Textfresser {
 			if (!finalExists) {
 				phaseBActions.push({
 					kind: VaultActionKind.RenameMdFile,
-					payload: { from: placeholderPath, to: finalTarget.splitPath },
+					payload: {
+						from: placeholderPath,
+						to: finalTarget.splitPath,
+					},
 				});
 				placeholderWasCleaned = true;
 				placeholderWasRenamed = true;
 			} else {
-				const placeholderContentResult = await this.vam.readContent(
-					placeholderPath,
-				);
+				const placeholderContentResult =
+					await this.vam.readContent(placeholderPath);
 				if (
 					placeholderContentResult.isOk() &&
 					placeholderContentResult.value.trim().length === 0
@@ -580,7 +600,7 @@ export class Textfresser {
 
 		this.state.latestLemmaPlaceholderPath = placeholderWasCleaned
 			? undefined
-			: placeholderPath ?? undefined;
+			: (placeholderPath ?? undefined);
 
 		if (shouldNavigateToFinal) {
 			const cdResult = await this.vam.cd(finalTarget.splitPath);
@@ -701,7 +721,9 @@ export class Textfresser {
 
 		const failed = this.state.latestFailedSections;
 		if (failed.length > 0) {
-			notify(`⚠ Entry created for ${lemma} (failed: ${failed.join(", ")})`);
+			notify(
+				`⚠ Entry created for ${lemma} (failed: ${failed.join(", ")})`,
+			);
 		} else {
 			notify(`✓ Entry created for ${lemma}`);
 		}
@@ -720,7 +742,10 @@ export class Textfresser {
 		await new Promise((resolve) => setTimeout(resolve, 300));
 
 		const currentFile = this.vam.mdPwd();
-		if (!currentFile || !areSameSplitPath(currentFile, inFlight.targetPath)) {
+		if (
+			!currentFile ||
+			!areSameSplitPath(currentFile, inFlight.targetPath)
+		) {
 			return;
 		}
 

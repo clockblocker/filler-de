@@ -14,33 +14,30 @@
  */
 
 import { ok, type Result } from "neverthrow";
-import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import { SurfaceKind } from "../../../../../linguistics/common/enums/core";
-import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
-import {
-	DictSectionKind,
-	TitleReprFor,
-} from "../../../targets/de/sections/section-kind";
 import type { VaultAction } from "../../../../../managers/obsidian/vault-action-manager";
 import {
 	SplitPathKind,
 	type SplitPathToMdFile,
 } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
-import { dictNoteHelper } from "../../../domain/dict-note";
-import type {
-	DictEntry,
-	EntrySection,
-} from "../../../domain/dict-note/types";
-import {
-	type MorphemeItem,
-	morphemeFormatterHelper,
-} from "../../../domain/morpheme/morpheme-formatter";
 import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metadata";
 import type { TargetLanguage } from "../../../../../types";
 import {
 	buildPropagationActionPair,
 	resolveTargetPath,
 } from "../../../common/target-path-resolver";
+import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
+import { dictNoteHelper } from "../../../domain/dict-note";
+import type { DictEntry, EntrySection } from "../../../domain/dict-note/types";
+import {
+	type MorphemeItem,
+	morphemeFormatterHelper,
+} from "../../../domain/morpheme/morpheme-formatter";
+import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
+import {
+	DictSectionKind,
+	TitleReprFor,
+} from "../../../targets/de/sections/section-kind";
 import type { CommandError } from "../../types";
 import type { GenerateSectionsResult } from "./generate-sections";
 

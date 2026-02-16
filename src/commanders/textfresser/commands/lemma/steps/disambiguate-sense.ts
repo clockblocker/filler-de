@@ -1,13 +1,14 @@
 import { ResultAsync } from "neverthrow";
-import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import type { PhrasemeKind } from "../../../../../linguistics/common/enums/linguistic-units/phrasem/phrasem-kind";
+import type { DeEntity } from "../../../../../linguistics/de";
 import type { DeLexemPos } from "../../../../../linguistics/de/lemma";
 import type { VaultActionManager } from "../../../../../managers/obsidian/vault-action-manager";
 import type { SplitPathToMdFile } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { AgentOutput } from "../../../../../prompt-smith";
 import { PromptKind } from "../../../../../prompt-smith/codegen/consts";
-import { dictNoteHelper } from "../../../domain/dict-note";
 import { logger } from "../../../../../utils/logger";
+import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
+import { dictNoteHelper } from "../../../domain/dict-note";
 import type { PromptRunner } from "../../../llm/prompt-runner";
 import type { CommandError } from "../../types";
 import { CommandErrorKind } from "../../types";
@@ -32,6 +33,38 @@ type DisambiguationResult =
 	| { matchedIndex: number }
 	| { matchedIndex: null; precomputedEmojiDescription?: string[] }
 	| null;
+
+function extractIpaFromHeaderContent(
+	headerContent: string,
+): string | undefined {
+	const match = headerContent.match(
+		/\[([^[\]]+)\]\(https?:\/\/youglish\.com\/pronounce\/[^)]+\)/,
+	);
+	return match?.[1];
+}
+
+function extractGenusFromEntity(
+	entity: DeEntity | undefined,
+): string | undefined {
+	if (
+		entity?.linguisticUnit === "Lexem" &&
+		entity.posLikeKind === "Noun" &&
+		"genus" in entity.features.lexical
+	) {
+		const genus = entity.features.lexical.genus;
+		return typeof genus === "string" ? genus : undefined;
+	}
+	return undefined;
+}
+
+function extractPhrasemeKindFromEntity(
+	entity: DeEntity | undefined,
+): PhrasemeKind | undefined {
+	if (entity?.linguisticUnit === "Phrasem") {
+		return entity.posLikeKind;
+	}
+	return undefined;
+}
 
 /**
  * Disambiguate sense for a lemma against existing dictionary entries.
@@ -61,7 +94,9 @@ export function disambiguateSense(
 			}),
 		);
 
-	const runWithContent = (content: string): ResultAsync<DisambiguationResult, CommandError> => {
+	const runWithContent = (
+		content: string,
+	): ResultAsync<DisambiguationResult, CommandError> => {
 		const existingEntries = dictNoteHelper.parse(content);
 
 		// Match by unitKind + POS, ignoring surfaceKind so that
@@ -104,17 +139,36 @@ export function disambiguateSense(
 			.map((e) => {
 				const parsed = dictEntryIdHelper.parse(e.id);
 				if (!parsed) return null;
-				const emojiDescription = e.meta.emojiDescription;
-				// Extract genus from linguisticUnit if available
+				const entity = e.meta.entity;
+				const emojiDescription =
+					Array.isArray(entity?.emojiDescription) &&
+					entity.emojiDescription.length > 0
+						? entity.emojiDescription
+						: e.meta.emojiDescription;
+				const ipaFromLegacyMeta = e.meta.ipa;
+				const ipa =
+					typeof entity?.ipa === "string" && entity.ipa.length > 0
+						? entity.ipa
+						: typeof ipaFromLegacyMeta === "string" &&
+								ipaFromLegacyMeta.length > 0
+							? ipaFromLegacyMeta
+							: extractIpaFromHeaderContent(e.headerContent);
+
+				let genus = extractGenusFromEntity(entity);
+				let phrasemeKind = extractPhrasemeKindFromEntity(entity);
+
+				// Extract genus/phraseme kind from legacy linguisticUnit metadata if needed.
 				const lu = e.meta.linguisticUnit;
-				let genus: string | undefined;
-				let phrasemeKind: PhrasemeKind | undefined;
 				if (lu?.kind === "Lexem") {
 					const features = lu.surface.features;
-					if (features.pos === "Noun" && "genus" in features) {
+					if (
+						!genus &&
+						features.pos === "Noun" &&
+						"genus" in features
+					) {
 						genus = features.genus;
 					}
-				} else if (lu?.kind === "Phrasem") {
+				} else if (!phrasemeKind && lu?.kind === "Phrasem") {
 					phrasemeKind = lu.surface.features.phrasemeKind;
 				}
 				return {
@@ -123,6 +177,7 @@ export function disambiguateSense(
 						: null,
 					genus,
 					index: parsed.index,
+					ipa,
 					phrasemeKind,
 					pos: parsed.pos,
 					unitKind: parsed.unitKind,
@@ -171,6 +226,7 @@ export function disambiguateSense(
 					emojiDescription: s.emojiDescription,
 					genus: s.genus,
 					index: s.index,
+					ipa: s.ipa,
 					phrasemeKind: s.phrasemeKind,
 					pos: s.pos,
 					unitKind: s.unitKind,

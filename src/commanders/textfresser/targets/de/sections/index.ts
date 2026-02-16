@@ -1,4 +1,3 @@
-export { cssSuffixFor } from "./section-css-kind";
 export {
 	compareSectionsByWeight,
 	getSectionsFor,
@@ -8,6 +7,7 @@ export {
 	sectionsForPhrasem,
 	sectionsForProperNoun,
 } from "./section-config";
+export { cssSuffixFor } from "./section-css-kind";
 export {
 	ALL_DICT_SECTION_KINDS,
 	DictSectionKind,

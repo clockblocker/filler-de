@@ -1,9 +1,9 @@
 import { ok, type Result } from "neverthrow";
-import { compareSectionsByWeight } from "../../../targets/de/sections/section-config";
-import { dictNoteHelper } from "../../../domain/dict-note";
 import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metadata";
 import { logger } from "../../../../../utils/logger";
 import { DICT_ENTRY_NOTE_KIND } from "../../../common/metadata";
+import { dictNoteHelper } from "../../../domain/dict-note";
+import { compareSectionsByWeight } from "../../../targets/de/sections/section-config";
 import type { CommandError, CommandStateWithLemma } from "../../types";
 import type { GenerateSectionsResult } from "./generate-sections";
 

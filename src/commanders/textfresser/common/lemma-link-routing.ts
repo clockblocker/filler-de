@@ -72,7 +72,11 @@ export function buildClosedSetLibraryPath(
 		basename: lemma,
 		extension: "md",
 		kind: SplitPathKind.MdFile,
-		pathParts: ["Library", LANGUAGE_ISO_CODE[targetLanguage], toPosKebab(pos)],
+		pathParts: [
+			"Library",
+			LANGUAGE_ISO_CODE[targetLanguage],
+			toPosKebab(pos),
+		],
 	};
 }
 
@@ -101,7 +105,11 @@ export function buildPolicyDestinationPath(
 	const { lemma, linguisticUnit, posLikeKind, surfaceKind, targetLanguage } =
 		params;
 
-	if (linguisticUnit === "Lexem" && posLikeKind && isClosedSetPos(posLikeKind)) {
+	if (
+		linguisticUnit === "Lexem" &&
+		posLikeKind &&
+		isClosedSetPos(posLikeKind)
+	) {
 		return buildClosedSetLibraryPath(lemma, targetLanguage, posLikeKind);
 	}
 
@@ -169,7 +177,9 @@ export function computePrePromptTarget(
 	};
 }
 
-export function computeFinalTarget(params: FinalTargetParams): ComputedLinkTarget {
+export function computeFinalTarget(
+	params: FinalTargetParams,
+): ComputedLinkTarget {
 	const {
 		lemma,
 		linguisticUnit,

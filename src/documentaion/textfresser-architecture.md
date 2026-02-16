@@ -312,8 +312,9 @@ D: dem [[Kohlekraftwerk]], den [[Kohlekraftwerken]]
 
 ```typescript
 type DictEntryMeta = {
+  entity?: DeEntity;                        // canonical DTO for generation/propagation
   linguisticUnit?: GermanLinguisticUnit;  // V9: typed DTO (see section 15)
-  emojiDescription?: string[];            // V10: 1-3 emojis for sense disambiguation
+  emojiDescription?: string[];            // legacy mirror for compatibility
 } & Record<string, unknown>;
 
 type DictEntry = {
@@ -595,7 +596,8 @@ Filter entries by matching unitKind + POS (ignoring surfaceKind, so LX-LM-NOUN-*
   ↓
 If no entries for this POS → disambiguationResult = null (new sense, skip Disambiguate call)
   ↓
-Build senses: Array<{ index, emojiDescription, unitKind, pos?, genus? }> from metadata + parsed entry IDs
+Build senses: Array<{ index, emojiDescription, ipa?, unitKind, pos?, genus? }> from metadata + parsed entry IDs
+  (prefer `meta.entity`; fallback to legacy `meta.emojiDescription` / `meta.linguisticUnit`)
   (V10: entries without emojiDescription → V2 legacy path: treat as re-encounter of first match)
   ↓
 Call PromptKind.Disambiguate with { lemma, context, senses }
@@ -659,7 +661,7 @@ All LLM calls are fired in parallel via `Promise.allSettled` (none depend on eac
 
 | Section | LLM? | PromptKind | Formatter | Output |
 |---------|------|-----------|-----------|--------|
-| **Header** | No | — | `dispatchHeaderFormatter()` | `{emoji} [[lemma]], [{ipa}](youglish_url)` → `DictEntry.headerContent`. For nouns, article genus priority is: LexemEnrichment genus, then noun-inflection genus fallback; when resolved, output is `{emoji} {article} [[lemma]], [{ipa}](youglish_url)` via `de/lexem/noun/header-formatter`. Dispatch routes by POS; common formatter for non-nouns or unresolved noun genus. `emoji` is rendered from the full `emojiDescription` sequence in order. No LLM call. `emojiDescription` stored in `meta.emojiDescription` for Disambiguate lookups. |
+| **Header** | No | — | `dispatchHeaderFormatter()` | `{emoji} [[lemma]], [{ipa}](youglish_url)` → `DictEntry.headerContent`. For nouns, article genus priority is: LexemEnrichment genus, then noun-inflection genus fallback; when resolved, output is `{emoji} {article} [[lemma]], [{ipa}](youglish_url)` via `de/lexem/noun/header-formatter`. Dispatch routes by POS; common formatter for non-nouns or unresolved noun genus. `emoji` is rendered from the full `emojiDescription` sequence in order. No LLM call. Sense signals are stored on `meta.entity` (`emojiDescription`, `ipa`) with legacy mirror `meta.emojiDescription` for compatibility. |
 | **Morphem** | Yes | `Morphem` | `morphemeFormatterHelper.formatSection()` | `[[kohle]]\|[[kraft]]\|[[werk]]` → `EntrySection` |
 | **Relation** | Yes | `Relation` | `formatRelationSection()` | `= [[Synonym]], ⊃ [[Hypernym]]` → `EntrySection`. Raw output also stored for propagation. |
 | **Inflection** | Yes | `NounInflection` (nouns) or `Inflection` (other POS) | `formatInflection()` / `formatInflectionSection()` | `N: das [[Kohlekraftwerk]], die [[Kohlekraftwerke]]` → `EntrySection`. Nouns use structured cells (case×number with article+form); other POS use generic rows. Noun cells also feed `propagateInflections`. |
@@ -1269,7 +1271,7 @@ To add support for a new target language (e.g., Japanese):
 
 ## 15. LinguisticUnit DTO — Source of Truth Type System
 
-> **Status**: V9+ — implemented (German + Noun/Verb/Adjective full features; remaining POS/unit kinds are stubs). DTO is built during Generate and stored in `DictEntry.meta.linguisticUnit`.
+> **Status**: V9+ — implemented (German + Noun/Verb/Adjective full features; remaining POS/unit kinds are stubs). Canonical DTO is `DictEntry.meta.entity` (`Entity<L,U,S,P>` with `features.lexical` + `features.inflectional`), while `meta.linguisticUnit` remains as a compatibility mirror.
 
 ### 15.1 Problem
 

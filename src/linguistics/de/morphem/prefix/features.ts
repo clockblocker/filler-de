@@ -3,6 +3,7 @@ import { MorphemeKind } from "../../../common/enums/linguistic-units/morphem/mor
 
 const separabilityValues = ["Separable", "Inseparable"] as const;
 export const SeparabilitySchema = z.enum(separabilityValues);
+export type Separability = z.infer<typeof SeparabilitySchema>;
 
 export const GermanPrefixFullFeaturesSchema = z.object({
 	morphemeKind: z.literal(MorphemeKind.Prefix),

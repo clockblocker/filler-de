@@ -1,4 +1,4 @@
 export {
-	morphemeFormatterHelper,
 	type MorphemeItem,
+	morphemeFormatterHelper,
 } from "./morpheme-formatter";

@@ -1,4 +1,9 @@
 import type { ResultAsync } from "neverthrow";
+import type {
+	ApiService,
+	ApiServiceError,
+} from "../../../stateless-helpers/api-service";
+import type { LanguagesConfig } from "../../../types";
 import {
 	getPromptOutputSchema,
 	getPromptSystemPrompt,
@@ -6,11 +11,6 @@ import {
 	type PromptKind,
 	type PromptOutput,
 } from "./prompt-catalog";
-import type {
-	ApiService,
-	ApiServiceError,
-} from "../../../stateless-helpers/api-service";
-import type { LanguagesConfig } from "../../../types";
 
 export class PromptRunner {
 	constructor(

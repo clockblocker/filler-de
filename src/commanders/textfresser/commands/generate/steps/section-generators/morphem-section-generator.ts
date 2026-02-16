@@ -1,12 +1,12 @@
+import { resolveMorphemeItems } from "../../../../common/morpheme-link-target";
+import type { EntrySection } from "../../../../domain/dict-note/types";
+import type { MorphemeItem } from "../../../../domain/morpheme/morpheme-formatter";
+import { morphemeFormatterHelper } from "../../../../domain/morpheme/morpheme-formatter";
 import { cssSuffixFor } from "../../../../targets/de/sections/section-css-kind";
 import {
 	DictSectionKind,
 	TitleReprFor,
 } from "../../../../targets/de/sections/section-kind";
-import type { EntrySection } from "../../../../domain/dict-note/types";
-import type { MorphemeItem } from "../../../../domain/morpheme/morpheme-formatter";
-import { morphemeFormatterHelper } from "../../../../domain/morpheme/morpheme-formatter";
-import { resolveMorphemeItems } from "../../../../common/morpheme-link-target";
 import type {
 	GenerationTargetLanguage,
 	MorphemOutput,

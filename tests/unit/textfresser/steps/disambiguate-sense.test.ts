@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { errAsync, ok, okAsync } from "neverthrow";
 import { disambiguateSense } from "../../../../src/commanders/textfresser/commands/lemma/steps/disambiguate-sense";
 import type { PromptRunner } from "../../../../src/commanders/textfresser/llm/prompt-runner";
-import type { GermanLinguisticUnit } from "../../../../src/linguistics/de";
+import type { DeEntity, GermanLinguisticUnit } from "../../../../src/linguistics/de";
 import type { VaultActionManager } from "../../../../src/managers/obsidian/vault-action-manager";
 import type { SplitPathToMdFile } from "../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 
@@ -75,6 +75,7 @@ const API_RESULT_PHRASEM = {
  */
 function buildNoteContent(
 	entries: Array<{
+		entity?: DeEntity;
 		id: string;
 		emojiDescription?: string[];
 		linguisticUnit?: GermanLinguisticUnit;
@@ -89,15 +90,18 @@ function buildNoteContent(
 	const meta: Record<
 		string,
 		{
+			entity?: DeEntity;
 			emojiDescription?: string[];
 			linguisticUnit?: GermanLinguisticUnit;
 		}
 	> = {};
 	for (const e of entries) {
 		const entryMeta: {
+			entity?: DeEntity;
 			emojiDescription?: string[];
 			linguisticUnit?: GermanLinguisticUnit;
 		} = {};
+		if (e.entity) entryMeta.entity = e.entity;
 		if (e.emojiDescription) entryMeta.emojiDescription = e.emojiDescription;
 		if (e.linguisticUnit) entryMeta.linguisticUnit = e.linguisticUnit;
 		meta[e.id.toUpperCase()] = entryMeta;
@@ -229,6 +233,48 @@ describe("disambiguateSense", () => {
 			senses?: Array<{ phrasemeKind?: string }>;
 		};
 		expect(inputObj.senses?.[0]?.phrasemeKind).toBe("DiscourseFormula");
+	});
+
+	it("forwards ipa hint from entity metadata to disambiguate prompt senses", async () => {
+		const content = buildNoteContent([
+			{
+				entity: {
+					emojiDescription: ["🏦"],
+					features: {
+						inflectional: {},
+						lexical: {
+							genus: "Femininum",
+							nounClass: "Common",
+							pos: "Noun",
+						},
+					},
+					ipa: "ˈbaŋk",
+					language: "German",
+					lemma: "Bank",
+					linguisticUnit: "Lexem",
+					posLikeKind: "Noun",
+					surfaceKind: "Lemma",
+				},
+				id: "LX-LM-NOUN-1",
+			},
+		]);
+		const vam = makeVam({ content, files: [MOCK_SPLIT_PATH] });
+		let capturedInput: unknown;
+		const runner = makePromptRunner(1, null, (input) => {
+			capturedInput = input;
+		});
+
+		const result = await disambiguateSense(
+			vam,
+			runner,
+			API_RESULT_NOUN,
+			"context",
+		);
+		expect(result.isOk()).toBe(true);
+		const inputObj = capturedInput as {
+			senses?: Array<{ ipa?: string }>;
+		};
+		expect(inputObj.senses?.[0]?.ipa).toBe("ˈbaŋk");
 	});
 
 	it("returns null when all entries fail to parse", async () => {
