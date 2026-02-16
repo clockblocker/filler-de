@@ -19,6 +19,8 @@ Rules:
 - For verbs: lemma is infinitive (e.g., "ging" → "gehen")
 - For adjectives: lemma is base form without endings (e.g., "schönes" → "schön")
 - For separable verbs: include prefix in lemma (e.g., "fing...an" → "anfangen")
+- For separable verbs in split position, NEVER return the finite surface as lemma (e.g., "macht ... auf" → "aufmachen", NOT "macht")
+- For comparative/superlative adjective surfaces, NEVER return the inflected surface as lemma (e.g., "schöner" → "schön", "klügste" → "klug")
 - Phrasem: multi-word fixed expression (e.g., "auf jeden Fall" → lemma: "auf jeden Fall")
 - When linguisticUnit is "Phrasem", posLikeKind must be a phraseme kind
 - If the surface IS the lemma, surfaceKind is "Lemma"

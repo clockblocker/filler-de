@@ -6,8 +6,8 @@ const OBSIDIAN_BIN =
 	process.env.OBSIDIAN_CLI_PATH ??
 	"/Applications/Obsidian.app/Contents/MacOS/Obsidian";
 
-/** Noise lines emitted by the CLI that we strip from stderr. */
-const STDERR_NOISE = ["Loading updated app package"];
+/** Noise lines emitted by the CLI that we strip from command output streams. */
+const CLI_NOISE_LINES = ["Loading updated app package"];
 
 export class CliError extends Error {
 	constructor(
@@ -31,10 +31,12 @@ function getVaultName(): string {
 	return name;
 }
 
-function stripNoise(stderr: string): string {
-	return stderr
+export function stripCliNoise(text: string): string {
+	return text
 		.split("\n")
-		.filter((line) => !STDERR_NOISE.some((noise) => line.includes(noise)))
+		.filter(
+			(line) => !CLI_NOISE_LINES.some((noise) => line.includes(noise)),
+		)
 		.join("\n")
 		.trim();
 }
@@ -71,8 +73,8 @@ export async function obsidian(
 
 	const result: CliResult = {
 		exitCode,
-		stderr: stripNoise(stderr),
-		stdout: stdout.trim(),
+		stderr: stripCliNoise(stderr),
+		stdout: stripCliNoise(stdout),
 	};
 
 	if (exitCode !== 0) {
@@ -110,16 +112,15 @@ export async function obsidianEval(
 	await proc.exited;
 	clearTimeout(timer);
 
-	// Without shell, the "Loading..." noise goes to stdout — strip it
-	const meaningful = stdout
-		.split("\n")
-		.filter((line) => !STDERR_NOISE.some((noise) => line.includes(noise)))
-		.join("\n")
-		.trim();
+	// Without shell, "Loading..." noise may go to stdout — strip from both streams.
+	const meaningful = stripCliNoise(stdout);
+	const meaningfulStderr = stripCliNoise(stderr);
 
 	// Obsidian CLI eval returns exit 0 even on error — detect via output prefix
 	if (meaningful.startsWith("Error:")) {
-		throw new Error(`eval failed: ${meaningful}\ncode: ${code}`);
+		throw new Error(
+			`eval failed: ${meaningful}\nstderr: ${meaningfulStderr}\ncode: ${code}`,
+		);
 	}
 
 	// Successful eval output is prefixed with "=> "

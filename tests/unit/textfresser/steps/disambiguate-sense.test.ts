@@ -79,11 +79,16 @@ function buildNoteContent(
 		id: string;
 		emojiDescription?: string[];
 		linguisticUnit?: GermanLinguisticUnit;
+		senseGloss?: string;
+		translationFirstLine?: string;
 	}>,
 ): string {
 	const entryBlocks = entries.map((e) => {
 		const header = `[[Bank]] ^${e.id}`;
-		return header;
+		const translationSection = e.translationFirstLine
+			? `\n\n<span class="entry_section_title entry_section_title_translations">Übersetzung</span>\n${e.translationFirstLine}`
+			: "";
+		return `${header}${translationSection}`;
 	});
 	const body = entryBlocks.join("\n\n---\n---\n\n");
 
@@ -93,6 +98,7 @@ function buildNoteContent(
 			entity?: DeEntity;
 			emojiDescription?: string[];
 			linguisticUnit?: GermanLinguisticUnit;
+			senseGloss?: string;
 		}
 	> = {};
 	for (const e of entries) {
@@ -100,10 +106,12 @@ function buildNoteContent(
 			entity?: DeEntity;
 			emojiDescription?: string[];
 			linguisticUnit?: GermanLinguisticUnit;
+			senseGloss?: string;
 		} = {};
 		if (e.entity) entryMeta.entity = e.entity;
 		if (e.emojiDescription) entryMeta.emojiDescription = e.emojiDescription;
 		if (e.linguisticUnit) entryMeta.linguisticUnit = e.linguisticUnit;
+		if (e.senseGloss) entryMeta.senseGloss = e.senseGloss;
 		meta[e.id.toUpperCase()] = entryMeta;
 	}
 
@@ -275,6 +283,76 @@ describe("disambiguateSense", () => {
 			senses?: Array<{ ipa?: string }>;
 		};
 		expect(inputObj.senses?.[0]?.ipa).toBe("ˈbaŋk");
+	});
+
+	it("forwards senseGloss from entity metadata to disambiguate prompt senses", async () => {
+		const content = buildNoteContent([
+			{
+				entity: {
+					emojiDescription: ["🏰"],
+					features: {
+						inflectional: {},
+						lexical: {
+							genus: "Neutrum",
+							nounClass: "Common",
+							pos: "Noun",
+						},
+					},
+					ipa: "ʃlɔs",
+					language: "German",
+					lemma: "Schloss",
+					linguisticUnit: "Lexem",
+					posLikeKind: "Noun",
+					senseGloss: "castle palace",
+					surfaceKind: "Lemma",
+				},
+				id: "LX-LM-NOUN-1",
+			},
+		]);
+		const vam = makeVam({ content, files: [MOCK_SPLIT_PATH] });
+		let capturedInput: unknown;
+		const runner = makePromptRunner(1, null, (input) => {
+			capturedInput = input;
+		});
+
+		const result = await disambiguateSense(
+			vam,
+			runner,
+			API_RESULT_NOUN,
+			"context",
+		);
+		expect(result.isOk()).toBe(true);
+		const inputObj = capturedInput as {
+			senses?: Array<{ senseGloss?: string }>;
+		};
+		expect(inputObj.senses?.[0]?.senseGloss).toBe("castle palace");
+	});
+
+	it("derives senseGloss from translation section when metadata gloss is missing", async () => {
+		const content = buildNoteContent([
+			{
+				emojiDescription: ["🔒"],
+				id: "LX-LM-NOUN-1",
+				translationFirstLine: "door lock",
+			},
+		]);
+		const vam = makeVam({ content, files: [MOCK_SPLIT_PATH] });
+		let capturedInput: unknown;
+		const runner = makePromptRunner(1, null, (input) => {
+			capturedInput = input;
+		});
+
+		const result = await disambiguateSense(
+			vam,
+			runner,
+			API_RESULT_NOUN,
+			"context",
+		);
+		expect(result.isOk()).toBe(true);
+		const inputObj = capturedInput as {
+			senses?: Array<{ senseGloss?: string }>;
+		};
+		expect(inputObj.senses?.[0]?.senseGloss).toBe("door lock");
 	});
 
 	it("returns null when all entries fail to parse", async () => {

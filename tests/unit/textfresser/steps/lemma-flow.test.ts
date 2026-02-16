@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { errAsync, ok, okAsync } from "neverthrow";
+import type { PromptOutput } from "../../../../src/commanders/textfresser/llm/prompt-catalog";
 import type { PromptRunner } from "../../../../src/commanders/textfresser/llm/prompt-runner";
 import { Textfresser } from "../../../../src/commanders/textfresser/textfresser";
 import type { CommandContext } from "../../../../src/managers/obsidian/command-executor";
@@ -15,6 +16,7 @@ type HarnessOptions = {
 	disableAutomaticBackgroundGenerate?: boolean;
 	finalExists?: boolean;
 	lemmaFailuresBeforeSuccess?: number;
+	lemmaOutputs?: PromptOutput<"Lemma">[];
 	lookupInLibrary?: (surface: string) => SplitPathToMdFile[];
 	mdPwd?: SplitPathToMdFile | null;
 	placeholderContent?: string;
@@ -32,6 +34,7 @@ function makeHarness(options: HarnessOptions) {
 	const dispatches: Array<readonly unknown[]> = [];
 	const cdCalls: SplitPathToMdFile[] = [];
 	let lemmaFailuresLeft = options.lemmaFailuresBeforeSuccess ?? 0;
+	let lemmaCallCount = 0;
 
 	const vam = {
 		activeFileService: {
@@ -74,6 +77,17 @@ function makeHarness(options: HarnessOptions) {
 					lemmaFailuresLeft -= 1;
 					return errAsync({ reason: "lemma failed" });
 				}
+				const configuredOutput = options.lemmaOutputs?.[
+					Math.min(
+						lemmaCallCount,
+						Math.max((options.lemmaOutputs?.length ?? 1) - 1, 0),
+					)
+				];
+				lemmaCallCount += 1;
+
+				if (configuredOutput) {
+					return okAsync(configuredOutput);
+				}
 
 				return okAsync({
 					lemma: options.lemma,
@@ -91,11 +105,17 @@ function makeHarness(options: HarnessOptions) {
 		textfresser.getState().inFlightGenerate = {
 			lemma: "__inflight__",
 			promise: Promise.resolve(),
+			targetOwnedByInvocation: false,
 			targetPath: SOURCE_PATH,
 		};
 	}
 
-	return { cdCalls, dispatches, textfresser };
+	return {
+		cdCalls,
+		dispatches,
+		getLemmaCallCount: () => lemmaCallCount,
+		textfresser,
+	};
 }
 
 function buildDictEntryContent(params: {
@@ -112,17 +132,23 @@ function buildDictEntryContent(params: {
 }
 
 function makeLemmaContext(): CommandContext {
-	const rawBlock = "Er geht schnell. ^1";
+	return makeLemmaContextFor("Er geht schnell. ^1", "geht");
+}
+
+function makeLemmaContextFor(
+	rawBlock: string,
+	surface: string,
+): CommandContext {
 	return {
 		activeFile: {
 			content: `A\n${rawBlock}\nB`,
 			splitPath: SOURCE_PATH,
 		},
 		selection: {
-			selectionStartInBlock: rawBlock.indexOf("geht"),
+			selectionStartInBlock: rawBlock.indexOf(surface),
 			splitPathToFileWithSelection: SOURCE_PATH,
 			surroundingRawBlock: rawBlock,
-			text: "geht",
+			text: surface,
 		},
 	};
 }
@@ -171,6 +197,9 @@ describe("lemma two-phase flow", () => {
 			| undefined;
 		expect(rename?.payload?.from?.basename).toBe("geht");
 		expect(rename?.payload?.to?.basename).toBe("gehen");
+		expect(textfresser.getState().latestLemmaTargetOwnedByInvocation).toBe(
+			true,
+		);
 	});
 
 	it("deletes placeholder only when it is empty and final target already exists", async () => {
@@ -199,6 +228,80 @@ describe("lemma two-phase flow", () => {
 				(action as { kind?: string }).kind === VaultActionKind.RenameMdFile,
 		);
 		expect(rename).toBeUndefined();
+		expect(textfresser.getState().latestLemmaTargetOwnedByInvocation).toBe(
+			false,
+		);
+	});
+
+	it("retries Lemma once when guardrail rejects same-surface inflected separable verb", async () => {
+		const { getLemmaCallCount, textfresser } = makeHarness({
+			lemma: "anfangen",
+			lemmaOutputs: [
+				{
+					contextWithLinkedParts: undefined,
+					lemma: "fängst",
+					linguisticUnit: "Lexem",
+					posLikeKind: "Verb",
+					surfaceKind: "Inflected",
+				},
+				{
+					contextWithLinkedParts:
+						"Du [fängst] morgen mit der Arbeit [an]. ^1",
+					lemma: "anfangen",
+					linguisticUnit: "Lexem",
+					posLikeKind: "Verb",
+					surfaceKind: "Inflected",
+				},
+			],
+		});
+
+		const context = makeLemmaContextFor(
+			"Du fängst morgen mit der Arbeit an. ^1",
+			"fängst",
+		);
+		const result = await textfresser.executeCommand(
+			"Lemma",
+			context,
+			() => {},
+		);
+
+		expect(result.isOk()).toBe(true);
+		expect(getLemmaCallCount()).toBe(2);
+		expect(textfresser.getState().latestLemmaResult?.lemma).toBe(
+			"anfangen",
+		);
+	});
+
+	it("drops mismatched contextWithLinkedParts and keeps original attestation markup", async () => {
+		const { textfresser } = makeHarness({
+			lemma: "anfangen",
+			lemmaOutputs: [
+				{
+					contextWithLinkedParts:
+						"Du [fängst] morgen mit der Arbeit [an] EXTRA",
+					lemma: "anfangen",
+					linguisticUnit: "Lexem",
+					posLikeKind: "Verb",
+					surfaceKind: "Inflected",
+				},
+			],
+		});
+
+		const context = makeLemmaContextFor(
+			"Du fängst morgen mit der Arbeit an. ^1",
+			"fängst",
+		);
+		const result = await textfresser.executeCommand(
+			"Lemma",
+			context,
+			() => {},
+		);
+
+		expect(result.isOk()).toBe(true);
+		expect(
+			textfresser.getState().latestLemmaResult?.attestation.source
+				.textWithOnlyTargetMarked,
+		).toBe("Du [fängst] morgen mit der Arbeit an.");
 	});
 
 	it("navigates to final target when user is currently on placeholder note", async () => {

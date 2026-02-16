@@ -81,17 +81,23 @@ describe("Textfresser thin orchestrator", () => {
 		expect(actions?.[0]?.kind).toBe(VaultActionKind.ProcessMdFile);
 	});
 
-	it("createHandler tracks attestation context from wikilink click payload", () => {
+	it("createHandler tracks attestation context from wikilink click payload", async () => {
 		const { textfresser } = makeHarness();
 		const handler = textfresser.createHandler();
 
-		const outcome = handler.handle({
-			blockContent: "Er sieht [[gehen|geht]] schnell. ^1",
-			kind: PayloadKind.WikilinkClicked,
-			modifiers: { alt: false, ctrl: false, meta: false, shift: false },
-			splitPath: SOURCE_PATH,
-			wikiTarget: { alias: "geht", basename: "gehen" },
-		});
+		const outcome = await handler.handle(
+			{
+				blockContent: "Er sieht [[gehen|geht]] schnell. ^1",
+				kind: PayloadKind.WikilinkClicked,
+				modifiers: { alt: false, ctrl: false, meta: false, shift: false },
+				splitPath: SOURCE_PATH,
+				wikiTarget: { alias: "geht", basename: "gehen" },
+			},
+			{
+				app: {} as Parameters<typeof handler.handle>[1]["app"],
+				vam: {} as Parameters<typeof handler.handle>[1]["vam"],
+			},
+		);
 
 		expect(outcome.outcome).toBe("Passthrough");
 		const attestation = textfresser.getState().attestationForLatestNavigated;

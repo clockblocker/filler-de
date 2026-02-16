@@ -74,8 +74,17 @@ export function buildLemmaRewritePlan(params: {
 			const spans = multiSpanHelper.parseBracketedSpans(
 				contextWithLinkedParts,
 			);
+			const hasSelectedAnchor = spans.some(
+				(span) => span.text === surface || span.text.includes(surface),
+			);
 
-			if (spans.length > 1) {
+			if (!hasSelectedAnchor) {
+				logger.warn(
+					"[lemma] contextWithLinkedParts missing selected-surface anchor — falling back to single-span",
+				);
+			}
+
+			if (hasSelectedAnchor && spans.length > 1) {
 				const resolved = multiSpanHelper.mapSpansToRawBlock(
 					rawBlock,
 					spans,
@@ -93,7 +102,11 @@ export function buildLemmaRewritePlan(params: {
 				}
 			}
 
-			if (updatedBlock === null && spans.length === 1) {
+			if (
+				hasSelectedAnchor &&
+				updatedBlock === null &&
+				spans.length === 1
+			) {
 				const span = spans[0];
 				if (span && span.text !== surface) {
 					const expanded = expandOffsetForLinkedSpan(

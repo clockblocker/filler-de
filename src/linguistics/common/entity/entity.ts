@@ -174,6 +174,7 @@ export type Entity<
 	lemma: string;
 	linguisticUnit: U;
 	posLikeKind: P;
+	senseGloss?: string;
 	surface?: string;
 	surfaceKind: S;
 };

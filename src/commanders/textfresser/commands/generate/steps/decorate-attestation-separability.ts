@@ -1,10 +1,9 @@
 /**
- * Decorate attestation wikilinks in the source reading note with separability markers.
+ * Decorate attestation wikilinks in the source reading note for separable verbs.
  *
  * For separable verbs with multi-span wikilinks (e.g., [[aufpassen|Pass]] ... [[aufpassen|auf]]),
- * decorates aliases:
- * - Prefix span → `[[aufpassen|auf<]]` (detached prefix)
- * - Stem span  → `[[aufpassen|>Pass]]` (stem/root)
+ * the multi-span structure itself (2+ wikilinks targeting the same lemma) conveys separability.
+ * No visual markers are added to aliases.
  *
  * Only runs when:
  * - A separable prefix morpheme exists in ctx.morphemes
@@ -29,7 +28,7 @@ export function decorateAttestationSeparability(
 
 	const lemmaResult = ctx.textfresserState.latestLemmaResult;
 	const lemma = lemmaResult.lemma;
-	const prefixSurf = separablePrefix.surf;
+	const _prefixSurf = separablePrefix.surf;
 	const sourcePath = lemmaResult.attestation.source.path;
 
 	const transform = (content: string): string => {
@@ -45,17 +44,10 @@ export function decorateAttestationSeparability(
 		for (const link of targetLinks) {
 			if (!link.alias) continue;
 
-			// Skip if already decorated (idempotency guard)
-			if (link.alias.startsWith(">") || link.alias.endsWith("<"))
-				continue;
-
-			const isPrefix =
-				link.alias.toLowerCase() === prefixSurf.toLowerCase();
-			const decorated = isPrefix
-				? `[[${lemma}|${link.alias}<]]`
-				: `[[${lemma}|>${link.alias}]]`;
-
-			result = result.replace(link.fullMatch, decorated);
+			const decorated = `[[${lemma}|${link.alias}]]`;
+			if (link.fullMatch !== decorated) {
+				result = result.replace(link.fullMatch, decorated);
+			}
 		}
 		return result;
 	};

@@ -22,6 +22,7 @@ describe("Enrichment schemas", () => {
 			linguisticUnit: "Lexem",
 			nounClass: "Common",
 			posLikeKind: "Noun",
+			senseGloss: "dwelling building",
 		});
 		expect(outResult.success).toBe(true);
 	});
@@ -53,6 +54,7 @@ describe("Enrichment schemas", () => {
 			ipa: "aʊ̯f ˈjeːdn̩ fal",
 			linguisticUnit: "Phrasem",
 			posLikeKind: "DiscourseFormula",
+			senseGloss: "definitely / certainly",
 		});
 		expect(outResult.success).toBe(true);
 	});
