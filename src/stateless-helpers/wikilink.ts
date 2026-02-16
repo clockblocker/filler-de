@@ -13,8 +13,53 @@ export type ParsedWikilink = {
 	surface: string;
 };
 
+export type ParsedWikilinkRange = ParsedWikilink & {
+	/** Start offset (inclusive) in the original text */
+	start: number;
+	/** End offset (exclusive) in the original text */
+	end: number;
+};
+
 /** Regex to match wikilinks: [[target]] or [[target|alias]] */
 const WIKILINK_REGEX = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
+
+/**
+ * Parse all wikilinks from text with offsets.
+ * @param text - Text containing wikilinks
+ * @returns Array of parsed wikilinks with start/end positions
+ */
+function parseWithRanges(text: string): ParsedWikilinkRange[] {
+	const results: ParsedWikilinkRange[] = [];
+
+	// Create new regex instance to avoid state issues
+	const regex = new RegExp(WIKILINK_REGEX.source, WIKILINK_REGEX.flags);
+
+	for (const match of text.matchAll(regex)) {
+		const index = match.index;
+		const fullMatch = match[0];
+		const target = match[1];
+		const alias = match[2] ?? null;
+
+		if (
+			index === undefined ||
+			typeof fullMatch !== "string" ||
+			typeof target !== "string"
+		) {
+			continue;
+		}
+
+		results.push({
+			alias,
+			end: index + fullMatch.length,
+			fullMatch,
+			start: index,
+			surface: alias ?? target,
+			target,
+		});
+	}
+
+	return results;
+}
 
 /**
  * Parse all wikilinks from text.
@@ -22,23 +67,9 @@ const WIKILINK_REGEX = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
  * @returns Array of parsed wikilinks
  */
 function parse(text: string): ParsedWikilink[] {
-	const results: ParsedWikilink[] = [];
-
-	// Create new regex instance to avoid state issues
-	const regex = new RegExp(WIKILINK_REGEX.source, WIKILINK_REGEX.flags);
-
-	for (const match of text.matchAll(regex)) {
-		const target = match[1]!;
-		const alias = match[2] ?? null;
-		results.push({
-			alias,
-			fullMatch: match[0],
-			surface: alias ?? target,
-			target,
-		});
-	}
-
-	return results;
+	return parseWithRanges(text).map(
+		({ end: _, start: __, ...wikilink }) => wikilink,
+	);
 }
 
 /**
@@ -50,6 +81,34 @@ function parse(text: string): ParsedWikilink[] {
 function findByTarget(text: string, linkTarget: string): ParsedWikilink | null {
 	const wikilinks = parse(text);
 	return wikilinks.find((w) => w.target === linkTarget) ?? null;
+}
+
+/**
+ * Find first wikilink by its displayed surface.
+ */
+function findBySurface(text: string, surface: string): ParsedWikilink | null {
+	const wikilinks = parse(text);
+	return wikilinks.find((w) => w.surface === surface) ?? null;
+}
+
+/**
+ * Find the wikilink enclosing the given offset.
+ */
+function findEnclosingByOffset(
+	text: string,
+	offset: number,
+): ParsedWikilinkRange | null {
+	if (offset < 0) {
+		return null;
+	}
+
+	const wikilinks = parseWithRanges(text);
+	for (const wikilink of wikilinks) {
+		if (offset >= wikilink.start && offset < wikilink.end) {
+			return wikilink;
+		}
+	}
+	return null;
 }
 
 /**
@@ -83,7 +142,10 @@ function createMatcher(
  */
 export const wikilinkHelper = {
 	createMatcher,
+	findBySurface,
 	findByTarget,
+	findEnclosingByOffset,
 	matchesPattern,
 	parse,
+	parseWithRanges,
 };

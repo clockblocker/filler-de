@@ -50,6 +50,32 @@ export function buildWikilinkForTarget(
 		: `[[${surface}]]`;
 }
 
+/**
+ * Detect malformed nested wikilinks like [[a|[[b]]]].
+ */
+export function hasNestedWikilinkStructure(text: string): boolean {
+	let depth = 0;
+
+	for (let i = 0; i < text.length - 1; i++) {
+		const token = text.slice(i, i + 2);
+		if (token === "[[") {
+			if (depth > 0) {
+				return true;
+			}
+			depth += 1;
+			i += 1;
+			continue;
+		}
+
+		if (token === "]]" && depth > 0) {
+			depth -= 1;
+			i += 1;
+		}
+	}
+
+	return false;
+}
+
 function replaceAt(
 	text: string,
 	offset: number,
@@ -271,6 +297,17 @@ export function rewriteAttestationSourceContent(params: {
 		updatedBlock,
 		wikilink,
 	} = params;
+	if (updatedBlock === rawBlock) {
+		return content;
+	}
+
+	if (hasNestedWikilinkStructure(updatedBlock)) {
+		logger.warn(
+			"[lemma] nested wikilink detected in updatedBlock — keeping source unchanged",
+		);
+		return content;
+	}
+
 	const finalSurface = replaceSurface ?? surface;
 	const finalOffset = replaceOffsetInBlock ?? offsetInBlock;
 

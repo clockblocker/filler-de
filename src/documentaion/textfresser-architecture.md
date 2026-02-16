@@ -1023,6 +1023,12 @@ type InFlightGenerate = {
   promise: Promise<void>;    // resolves when background Generate finishes
 };
 
+type PendingGenerate = {
+  lemma: string;
+  targetPath: SplitPathToMdFile;
+  notify: (message: string) => void;
+};
+
 type LemmaInvocationCache = {
   key: string;                               // sourcePath + ref + surface + offset
   cachedAtMs: number;                        // success timestamp
@@ -1040,6 +1046,7 @@ type TextfresserState = {
   latestFailedSections: string[];                      // optional sections that failed in last Generate
   targetBlockId?: string;                              // V5: entry ^blockId to scroll to after Generate
   inFlightGenerate: InFlightGenerate | null;           // background Generate in progress (set after Lemma)
+  pendingGenerate: PendingGenerate | null;             // latest queued background Generate while one is in flight
   languages: LanguagesConfig;                          // { known, target }
   lookupInLibrary: PathLookupFn;                       // Librarian corename index lookup (wired after init, default: () => [])
   promptRunner: PromptRunner;                          // LLM interface
@@ -1059,7 +1066,9 @@ type TextfresserState = {
 
 `targetBlockId` (V5) is set by `generateSections` — to `matchedEntry.id` for re-encounters, or the newly created entry ID for new entries. Used by deferred scroll after background Generate finishes (see 11.2).
 
-`inFlightGenerate` tracks the background Generate launched after a successful Lemma. Guarded: only one in-flight Generate at a time. Cleared in `.finally()`. The wikilink click handler matches clicks against `targetPath` (not only basename) before triggering deferred scroll (see 11.3).
+`inFlightGenerate` tracks the background Generate launched after a successful Lemma. Only one Generate runs at a time.
+
+`pendingGenerate` is a latest-only queue slot: when a new Lemma arrives during an in-flight Generate, the newest request overwrites the pending slot. After the current run finishes, pending work is launched only if it targets a different note path than the completed run.
 
 `lookupInLibrary` is a `PathLookupFn` callback wired after Librarian init via `Textfresser.setLibrarianLookup()`. It wraps `Librarian.findMatchingLeavesByCoreName()` to convert `LeafMatch[]` → `SplitPathToMdFile[]`. Used by propagation steps (via `resolveTargetPath`) as a fallback when VAM lookup returns no results. Defaults to `() => []` before Librarian is initialized — safe because propagation only runs after both commanders are initialized.
 
@@ -1083,6 +1092,10 @@ If commandName === Lemma:
       Phase A dispatch (safe pre-link + optional placeholder upsert)
       Prompt + disambiguate
       Phase B dispatch (final rewrite + placeholder move/cleanup)
+      Rewrite planning includes an idempotence guard:
+        if selected span is already linked to the final target, source rewrite is no-op
+      Nested-wikilink safety:
+        if planned updatedBlock contains nested [[...[[...]]...]] structure, rewrite is aborted
     persist cache entry (key + timestamp + lemmaResult + resolvedTargetPath)
 Else:
   commandFnForCommandKind[commandName](input)
@@ -1106,21 +1119,29 @@ After a successful Lemma, `fireBackgroundGenerate` launches `runBackgroundGenera
 
 ```
 fireBackgroundGenerate(notify)
-  Guard: skip if inFlightGenerate already set (no concurrent generates)
+  Guard: one in-flight Generate max
+  If in-flight exists: overwrite pendingGenerate with latest request and return
   ↓
 runBackgroundGenerate(targetPath, lemma, notify):
+  0. incrementPending() for E2E idle tracking
   1. Resolve targetPath from state.latestResolvedLemmaTargetPath
      (fallback: deterministic policy path from latestLemmaResult)
-  2. vam.readContent(targetPath) → content (empty string if file doesn't exist)
+  2. Record target existence, then vam.readContent(targetPath) → content (empty string if file doesn't exist)
   3. Build synthetic CommandInput with target file's splitPath + content
   4. commandFnForCommandKind.Generate(input) → ResultAsync<VaultAction[], CommandError>
   5. Prepend UpsertMdFile action (ensures file exists before process/rename)
   6. vam.dispatch(allActions)
-  7. Capture generatedEntryId from targetBlockId into Lemma cache (when target path matches)
-  8. Notify success/failure (same format as manual Generate)
+  7. Postcondition check: read target note and require non-empty content
+     - if empty and note did not exist before this run: rollback via TrashMdFile
+     - then fail through existing error/notice path
+  8. Capture generatedEntryId from targetBlockId into Lemma cache (when target path matches)
+  9. Notify success/failure (same format as manual Generate)
   ↓
 .catch → notify("⚠ Background generate failed: {reason}")
-.finally → clear state.inFlightGenerate
+.finally
+  decrementPending()
+  clear state.inFlightGenerate
+  if pendingGenerate exists and target differs from completed target: launch pendingGenerate
 ```
 
 The user stays on the source text throughout. No navigation, no manual Generate invocation.

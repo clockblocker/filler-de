@@ -122,4 +122,61 @@ describe("rewriteAttestationSourceContent", () => {
 		expect(out).toBe(line);
 		expect(out).not.toContain("[[[");
 	});
+
+	it("keeps already-final single-span wikilink unchanged on rerun", () => {
+		const line = "Er will [[lernen|Lernen]] heute. ^1";
+		const out = rewriteAttestationSourceContent({
+			content: line,
+			offsetInBlock: undefined,
+			rawBlock: line,
+			surface: "Lernen",
+			updatedBlock: line,
+			wikilink: "[[lernen|Lernen]]",
+		});
+
+		expect(out).toBe(line);
+	});
+
+	it("keeps already-final separable-verb wikilinks unchanged on rerun", () => {
+		const line = "Er [[anfangen|fängt]] gleich [[anfangen|an]]. ^1";
+		const out = rewriteAttestationSourceContent({
+			content: line,
+			offsetInBlock: undefined,
+			rawBlock: line,
+			surface: "fängt",
+			updatedBlock: line,
+			wikilink: "[[anfangen|fängt]]",
+		});
+
+		expect(out).toBe(line);
+	});
+
+	it("keeps already-final phrasem wikilinks unchanged on rerun", () => {
+		const line =
+			"Das ist [[auf jeden Fall|Auf]] [[auf jeden Fall|jeden]] Fall. ^1";
+		const out = rewriteAttestationSourceContent({
+			content: line,
+			offsetInBlock: undefined,
+			rawBlock: line,
+			surface: "Auf",
+			updatedBlock: line,
+			wikilink: "[[auf jeden Fall|Auf]]",
+		});
+
+		expect(out).toBe(line);
+	});
+
+	it("aborts rewrite when updatedBlock contains nested wikilinks", () => {
+		const line = "Er sieht [[lernen|Lernen]] schnell. ^1";
+		const out = rewriteAttestationSourceContent({
+			content: line,
+			offsetInBlock: undefined,
+			rawBlock: line,
+			surface: "Lernen",
+			updatedBlock: "Er sieht [[lernen|[[Lernen]]]] schnell. ^1",
+			wikilink: "[[Lernen]]",
+		});
+
+		expect(out).toBe(line);
+	});
 });
