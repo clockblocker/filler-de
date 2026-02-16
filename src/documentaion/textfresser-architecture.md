@@ -275,7 +275,7 @@ DictEntrySubSections are the unit at which cross-reference propagation operates 
 
 ## 5. Note & DictEntry Format
 
-**Location**: `src/commanders/textfresser/domain/dict-note/` (compat re-export remains at `src/stateless-helpers/dict-note/`)
+**Location**: `src/commanders/textfresser/domain/dict-note/`
 
 A Note is an Obsidian markdown file named after a Surface. It contains one or more **DictEntries** — each representing a distinct semantic/grammatical meaning of that Surface.
 
@@ -1195,8 +1195,6 @@ To add support for a new target language (e.g., Japanese):
 | `src/managers/obsidian/vault-action-manager/` | Read APIs for basename lookup + linkpath resolution (`resolveLinkpathDest`) and active-view scroll helpers |
 | `src/commanders/textfresser/domain/dict-note/` | Parse/serialize dictionary notes (canonical module) |
 | `src/commanders/textfresser/domain/morpheme/morpheme-formatter.ts` | Morpheme → wikilink display formatter (canonical module) |
-| `src/stateless-helpers/dict-note/` | Compatibility re-export for dict-note helper |
-| `src/stateless-helpers/morpheme-formatter.ts` | Compatibility re-export for morpheme formatter |
 | `src/stateless-helpers/api-service.ts` | Gemini API wrapper (returns `ResultAsync`, retry on transient errors) |
 | `src/stateless-helpers/retry.ts` | Generic retry with exponential backoff (`withRetry()`) |
 | **Linguistics — Enums** | |
@@ -1221,8 +1219,6 @@ To add support for a new target language (e.g., Japanese):
 | `src/commanders/textfresser/targets/de/sections/section-css-kind.ts` | DictSectionKind → CSS suffix mapping (canonical module) |
 | `src/commanders/textfresser/targets/de/sections/section-config.ts` | getSectionsFor(): applicable sections per unit+POS+nounClass; `sectionsForProperNoun` (V8); SECTION_DISPLAY_WEIGHT + compareSectionsByWeight(): section display ordering |
 | `src/commanders/textfresser/domain/dict-entry-id/dict-entry-id.ts` | DictEntryId builder/parser (canonical module) |
-| `src/linguistics/common/sections/` | Compatibility re-exports for section config/kind/css-kind |
-| `src/linguistics/common/dict-entry-id/` | Compatibility re-exports for DictEntryId + tags |
 | `src/linguistics/german/inflection/noun.ts` | NounInflectionCell type, German case/number tags, display order |
 | ~~`src/linguistics/old-enums.ts`~~ | Deleted — was dead code (inflectional dimensions, theta roles, tones) |
 | **Prompt-Smith** | |
