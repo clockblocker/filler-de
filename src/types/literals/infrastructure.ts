@@ -54,4 +54,3 @@ export const NOT_STARTED = NotStartedSchema.value;
 export const InProgressSchema = z.literal("InProgress");
 export type IN_PROGRESS = z.infer<typeof InProgressSchema>;
 export const IN_PROGRESS = InProgressSchema.value;
-

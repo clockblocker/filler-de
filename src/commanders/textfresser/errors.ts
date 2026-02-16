@@ -1,7 +1,7 @@
 import z from "zod";
 import {
-	type BaseCommandError,
 	BASE_COMMAND_ERROR_KIND_STR,
+	type BaseCommandError,
 } from "../base-command-error";
 
 // ─── Command Error ───

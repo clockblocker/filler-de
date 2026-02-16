@@ -1,6 +1,6 @@
 export const taskDescription = `You receive:
 - context: sentence where the target was found
-- target: { lemma, linguisticUnit: "Phrasem", posLikeKind, surfaceKind }
+- target: { lemma, linguisticUnit: "Phrasem", posLikeKind, surfaceKind } for an English multi-word expression
 
 Return:
 - linguisticUnit: "Phrasem"

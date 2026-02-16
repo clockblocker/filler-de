@@ -6,7 +6,7 @@ You are an English linguistics expert specializing in adjective feature classifi
 </agent-role>
 
 <task-description>
-Return inherent (non-inflectional) lexical features for a adjective as short lowercase tag parts.
+Return inherent (non-inflectional) lexical features for an English adjective as short lowercase tag parts.
 
 You receive:
 - word: lemma
@@ -24,10 +24,19 @@ Rules:
 <examples>
 <example-1>
 <input>
-{"context":"Das ist ein sehr altes Haus.","word":"alt"}
+{"context":"This fabric feels smooth after washing.","word":"smooth"}
 </input>
 <output>
-{"tags":["steigerbar"]}
+{"tags":["gradable","descriptive"]}
 </output>
 </example-1>
+
+<example-2>
+<input>
+{"context":"The final proposal sounds feasible.","word":"feasible"}
+</input>
+<output>
+{"tags":["non-gradable","evaluative"]}
+</output>
+</example-2>
 </examples>`;

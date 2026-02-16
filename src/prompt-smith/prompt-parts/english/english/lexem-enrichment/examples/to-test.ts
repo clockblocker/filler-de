@@ -3,21 +3,54 @@ import type { AgentOutput, UserInput } from "../../../../../schemas";
 export const testExamples = [
 	{
 		input: {
-			context: "Das Haus steht am Ende der Straße.",
+			context: "London remains a major financial center.",
 			target: {
-				lemma: "Haus",
+				lemma: "London",
 				linguisticUnit: "Lexem",
 				posLikeKind: "Noun",
 				surfaceKind: "Lemma",
 			},
 		},
 		output: {
-			emojiDescription: ["🏠"],
-			genus: "Neutrum",
-			ipa: "haʊ̯s",
+			emojiDescription: ["🏙️"],
+			ipa: "ˈlʌndən",
 			linguisticUnit: "Lexem",
-			nounClass: "Common",
+			nounClass: "Proper",
 			posLikeKind: "Noun",
+		},
+	},
+	{
+		input: {
+			context: "She runs every morning before work.",
+			target: {
+				lemma: "run",
+				linguisticUnit: "Lexem",
+				posLikeKind: "Verb",
+				surfaceKind: "Lemma",
+			},
+		},
+		output: {
+			emojiDescription: ["🏃"],
+			ipa: "rʌn",
+			linguisticUnit: "Lexem",
+			posLikeKind: "Verb",
+		},
+	},
+	{
+		input: {
+			context: "The ancient temple stands on the hill.",
+			target: {
+				lemma: "ancient",
+				linguisticUnit: "Lexem",
+				posLikeKind: "Adjective",
+				surfaceKind: "Lemma",
+			},
+		},
+		output: {
+			emojiDescription: ["🏛️"],
+			ipa: "ˈeɪnʃənt",
+			linguisticUnit: "Lexem",
+			posLikeKind: "Adjective",
 		},
 	},
 ] satisfies {

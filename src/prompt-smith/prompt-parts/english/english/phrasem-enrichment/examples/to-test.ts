@@ -3,17 +3,17 @@ import type { AgentOutput, UserInput } from "../../../../../schemas";
 export const testExamples = [
 	{
 		input: {
-			context: "Das machen wir auf jeden Fall morgen.",
+			context: "By and large, the rollout was successful.",
 			target: {
-				lemma: "auf jeden Fall",
+				lemma: "by and large",
 				linguisticUnit: "Phrasem",
 				posLikeKind: "DiscourseFormula",
 				surfaceKind: "Lemma",
 			},
 		},
 		output: {
-			emojiDescription: ["✅"],
-			ipa: "aʊ̯f ˈjeːdn̩ fal",
+			emojiDescription: ["📊", "👍"],
+			ipa: "baɪ ən lɑːrdʒ",
 			linguisticUnit: "Phrasem",
 			posLikeKind: "DiscourseFormula",
 		},

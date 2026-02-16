@@ -114,4 +114,3 @@ export const SPACE_LIKE_CHARS = [
 	"\u205F", // MEDIUM MATHEMATICAL SPACE
 	"\u3000", // IDEOGRAPHIC SPACE
 ] as const;
-

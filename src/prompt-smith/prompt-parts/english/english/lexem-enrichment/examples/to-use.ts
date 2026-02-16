@@ -3,38 +3,54 @@ import type { AgentOutput, UserInput } from "../../../../../schemas";
 export const examples = [
 	{
 		input: {
-			context: "Er ging gestern in den Park.",
+			context: "She runs every morning before work.",
 			target: {
-				lemma: "gehen",
+				lemma: "run",
 				linguisticUnit: "Lexem",
 				posLikeKind: "Verb",
-				surfaceKind: "Inflected",
+				surfaceKind: "Lemma",
 			},
 		},
 		output: {
-			emojiDescription: ["🚶"],
-			ipa: "ˈɡeːən",
+			emojiDescription: ["🏃"],
+			ipa: "rʌn",
 			linguisticUnit: "Lexem",
 			posLikeKind: "Verb",
 		},
 	},
 	{
 		input: {
-			context: "Die Deutsche Bank hat ihren Sitz in Frankfurt.",
+			context: "London remains a major financial center.",
 			target: {
-				lemma: "Deutsche Bank",
+				lemma: "London",
 				linguisticUnit: "Lexem",
 				posLikeKind: "Noun",
 				surfaceKind: "Lemma",
 			},
 		},
 		output: {
-			emojiDescription: ["🏦"],
-			genus: "Femininum",
-			ipa: "ˈdɔʏ̯tʃə baŋk",
+			emojiDescription: ["🏙️"],
+			ipa: "ˈlʌndən",
 			linguisticUnit: "Lexem",
 			nounClass: "Proper",
 			posLikeKind: "Noun",
+		},
+	},
+	{
+		input: {
+			context: "The ancient temple stands on the hill.",
+			target: {
+				lemma: "ancient",
+				linguisticUnit: "Lexem",
+				posLikeKind: "Adjective",
+				surfaceKind: "Lemma",
+			},
+		},
+		output: {
+			emojiDescription: ["🏛️"],
+			ipa: "ˈeɪnʃənt",
+			linguisticUnit: "Lexem",
+			posLikeKind: "Adjective",
 		},
 	},
 ] satisfies {
