@@ -253,7 +253,28 @@ GermanPrefixFullFeaturesSchema = z.object({
 
 #### Verb / Root features
 
-`de/lexem/verb/features.ts` is an empty placeholder with a TODO comment. `de/morphem/root/features.ts` exports `GermanRootFullFeaturesSchema` (discriminant-only, no extra features).
+`de/lexem/verb/features.ts` defines structured lemma-only verb features:
+
+```typescript
+GermanVerbConjugation = "Irregular" | "Rregular"
+GermanVerbSeparability = "Separable" | "Inseparable" | "None"
+GermanVerbReflexivity = "NonReflexive" | "ReflexiveOnly" | "OptionalReflexive"
+
+GermanVerbValency = {
+    separability: GermanVerbSeparability
+    reflexivity: GermanVerbReflexivity
+    governedPreposition?: string
+}
+
+GermanVerbFullFeaturesSchema = z.object({
+    pos: z.literal("Verb"),
+    conjugation: GermanVerbConjugationSchema,
+    valency: GermanVerbValencySchema,
+})
+GermanVerbRefFeaturesSchema = z.object({ pos: z.literal("Verb") })
+```
+
+The module also exports `buildGermanVerbEntryIdentity(profile)` — a deterministic identity string built from conjugation + valency (including separability).
 
 #### Top-level German DTO
 
@@ -281,6 +302,7 @@ Type: `GermanLinguisticUnit` — the complete grammatical identity of any German
 | `de/lexem/de-pos.ts` | `GERMAN_POS_STUBS` |
 | `de/lexem/noun/features.ts` | `GermanGenusSchema`, `NounClassSchema`, `articleFromGenus`, `NounInflectionCell`, display constants |
 | `de/lexem/noun/index.ts` | `GermanNounSurfaceSchema`, `GermanNounLemma`, `GermanNounInflection` |
+| `de/lexem/verb/features.ts` | `GermanVerb*Schema`, `GermanVerb*` types, `buildGermanVerbEntryIdentity` |
 | `de/morphem/index.ts` | `GermanMorphemSurfaceSchema`, `GermanMorphemSurface` |
 | `de/morphem/de-morphem-kind.ts` | `GermanMorphemeKindSchema`, `GermanMorphemeKind`, `GERMAN_MORPHEME_KINDS` |
 | `de/morphem/prefix/features.ts` | `SeparabilitySchema`, `GermanPrefixFullFeaturesSchema` |

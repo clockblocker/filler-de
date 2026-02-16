@@ -10,6 +10,7 @@ import type {
 	FeaturesOutput,
 	GenerationTargetLanguage,
 } from "../section-generation-types";
+import { buildVerbFeatureTags, isVerbFeaturesOutput } from "../verb-features";
 
 export type TagsSectionContext = {
 	featuresOutput: FeaturesOutput | null;
@@ -23,11 +24,12 @@ export function generateTagsSection(
 	if (!ctx.featuresOutput) return null;
 	if (ctx.lemmaResult.linguisticUnit !== "Lexem") return null;
 
+	const tags = isVerbFeaturesOutput(ctx.featuresOutput)
+		? buildVerbFeatureTags(ctx.featuresOutput)
+		: ctx.featuresOutput.tags;
+
 	return {
-		content: buildFeatureTagPath(
-			ctx.lemmaResult.posLikeKind,
-			ctx.featuresOutput.tags,
-		),
+		content: buildFeatureTagPath(ctx.lemmaResult.posLikeKind, tags),
 		kind: cssSuffixFor[DictSectionKind.Tags],
 		title: TitleReprFor[DictSectionKind.Tags][ctx.targetLang],
 	};

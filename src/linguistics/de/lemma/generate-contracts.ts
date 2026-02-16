@@ -1,5 +1,9 @@
 import { z } from "zod/v3";
 import { GermanGenusSchema, NounClassSchema } from "../lexem/noun/features";
+import {
+	GermanVerbConjugationSchema,
+	GermanVerbValencySchema,
+} from "../lexem/verb/features";
 import type { DeLemmaResult } from "./de-lemma-result";
 import {
 	DeLexemLemmaResultSchema,
@@ -152,9 +156,20 @@ export const DeFeaturesInputSchema =
 	buildContextualInputSchema(DeLexemTargetSchema);
 export type DeFeaturesInput = z.infer<typeof DeFeaturesInputSchema>;
 
-export const DeFeaturesOutputSchema = z.object({
+const deFeatureTagOutputSchema = z.object({
 	tags: z.array(z.string().min(1).max(30)).min(1).max(5),
 });
+const deVerbFeatureOutputSchema = z
+	.object({
+		conjugation: GermanVerbConjugationSchema,
+		valency: GermanVerbValencySchema,
+	})
+	.strict();
+
+export const DeFeaturesOutputSchema = z.union([
+	deFeatureTagOutputSchema,
+	deVerbFeatureOutputSchema,
+]);
 export type DeFeaturesOutput = z.infer<typeof DeFeaturesOutputSchema>;
 
 export const DeWordTranslationInputSchema = buildContextualInputSchema(

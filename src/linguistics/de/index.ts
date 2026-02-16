@@ -75,6 +75,21 @@ export {
 	GermanGenusSchema,
 } from "./lexem/noun/features";
 export {
+	buildGermanVerbEntryIdentity,
+	type GermanVerbConjugation,
+	GermanVerbConjugationSchema,
+	type GermanVerbFullFeatures,
+	GermanVerbFullFeaturesSchema,
+	type GermanVerbRefFeatures,
+	GermanVerbRefFeaturesSchema,
+	type GermanVerbReflexivity,
+	GermanVerbReflexivitySchema,
+	type GermanVerbSeparability,
+	GermanVerbSeparabilitySchema,
+	type GermanVerbValency,
+	GermanVerbValencySchema,
+} from "./lexem/verb/features";
+export {
 	type GermanMorphemSurface,
 	GermanMorphemSurfaceSchema,
 } from "./morphem";

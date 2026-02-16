@@ -3,20 +3,29 @@ import type { AgentOutput, UserInput } from "../../../../../schemas";
 export const examples = [
 	{
 		input: {
-			context: "Please transfer the file before noon.",
-			word: "transfer",
+			context: "Can you open the door, please?",
+			word: "open up",
 		},
 		output: {
-			tags: ["transitive", "dynamic"],
+			conjugation: "Rregular",
+			valency: {
+				reflexivity: "NonReflexive",
+				separability: "Separable",
+			},
 		},
 	},
 	{
 		input: {
-			context: "We carried on despite the heavy rain.",
-			word: "carry on",
+			context: "She relies on her team.",
+			word: "rely",
 		},
 		output: {
-			tags: ["phrasal", "intransitive"],
+			conjugation: "Rregular",
+			valency: {
+				governedPreposition: "on",
+				reflexivity: "NonReflexive",
+				separability: "None",
+			},
 		},
 	},
 ] satisfies {

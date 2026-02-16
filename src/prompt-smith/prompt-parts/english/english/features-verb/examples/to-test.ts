@@ -3,11 +3,15 @@ import type { AgentOutput, UserInput } from "../../../../../schemas";
 export const testExamples = [
 	{
 		input: {
-			context: "Please transfer the file before noon.",
-			word: "transfer",
+			context: "Can you open the door, please?",
+			word: "open up",
 		},
 		output: {
-			tags: ["transitive", "dynamic"],
+			conjugation: "Rregular",
+			valency: {
+				reflexivity: "NonReflexive",
+				separability: "Separable",
+			},
 		},
 	},
 ] satisfies {

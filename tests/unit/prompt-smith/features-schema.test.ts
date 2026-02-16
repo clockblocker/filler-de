@@ -28,9 +28,13 @@ describe("Features schema", () => {
 			expect(result.success).toBe(true);
 		});
 
-		it("accepts multiple tags", () => {
+		it("accepts structured verb output", () => {
 			const result = featuresVerbSchemas.agentOutputSchema.safeParse({
-				tags: ["transitiv", "trennbar"],
+				conjugation: "Rregular",
+				valency: {
+					reflexivity: "NonReflexive",
+					separability: "Separable",
+				},
 			});
 			expect(result.success).toBe(true);
 		});
@@ -56,16 +60,24 @@ describe("Features schema", () => {
 			expect(result.success).toBe(false);
 		});
 
-		it("rejects empty string tag", () => {
-			const result = featuresNounSchemas.agentOutputSchema.safeParse({
-				tags: [""],
+		it("rejects unknown separability", () => {
+			const result = featuresVerbSchemas.agentOutputSchema.safeParse({
+				conjugation: "Rregular",
+				valency: {
+					reflexivity: "NonReflexive",
+					separability: "Both",
+				},
 			});
 			expect(result.success).toBe(false);
 		});
 
-		it("rejects tag exceeding 30 chars", () => {
+		it("rejects unknown conjugation", () => {
 			const result = featuresVerbSchemas.agentOutputSchema.safeParse({
-				tags: ["a".repeat(31)],
+				conjugation: "Regular",
+				valency: {
+					reflexivity: "NonReflexive",
+					separability: "Separable",
+				},
 			});
 			expect(result.success).toBe(false);
 		});

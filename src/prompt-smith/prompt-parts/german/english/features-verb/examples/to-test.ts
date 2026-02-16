@@ -7,7 +7,11 @@ export const testExamples = [
 			word: "aufmachen",
 		},
 		output: {
-			tags: ["transitiv", "trennbar"],
+			conjugation: "Rregular",
+			valency: {
+				reflexivity: "NonReflexive",
+				separability: "Separable",
+			},
 		},
 	},
 ] satisfies {

@@ -5,6 +5,10 @@ import {
 	GermanNounFullFeaturesSchema,
 	GermanNounRefFeaturesSchema,
 } from "./noun/features";
+import {
+	GermanVerbFullFeaturesSchema,
+	GermanVerbRefFeaturesSchema,
+} from "./verb/features";
 
 // Full feature stubs: just the discriminant, no extra fields
 const fullStubs = GERMAN_POS_STUBS.map((pos) =>
@@ -16,18 +20,20 @@ const refStubs = GERMAN_POS_STUBS.map((pos) =>
 	z.object({ pos: z.literal(pos) }),
 );
 
-/** Full features across all German POS values (Noun has real fields, rest are stubs). */
+/** Full features across all German POS values (Noun/Verb specialized, rest are stubs). */
 export const GermanLexemFullFeaturesSchema = z.discriminatedUnion("pos", [
 	GermanNounFullFeaturesSchema,
+	GermanVerbFullFeaturesSchema,
 	...fullStubs,
 ]);
 export type GermanLexemFullFeatures = z.infer<
 	typeof GermanLexemFullFeaturesSchema
 >;
 
-/** Ref features across all German POS values (just discriminant for each). */
+/** Ref features across all German POS values (specialized + discriminant-only refs). */
 export const GermanLexemRefFeaturesSchema = z.discriminatedUnion("pos", [
 	GermanNounRefFeaturesSchema,
+	GermanVerbRefFeaturesSchema,
 	...refStubs,
 ]);
 export type GermanLexemRefFeatures = z.infer<

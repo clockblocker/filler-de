@@ -76,6 +76,56 @@ describe("GermanLinguisticUnitSchema", () => {
 		});
 	});
 
+	describe("Lexem + Verb", () => {
+		it("parses Lemma with full verb features", () => {
+			const result = GermanLinguisticUnitSchema.safeParse({
+				kind: "Lexem",
+				surface: {
+					features: {
+						conjugation: "Rregular",
+						pos: "Verb",
+						valency: {
+							reflexivity: "NonReflexive",
+							separability: "Separable",
+						},
+					},
+					lemma: "aufmachen",
+					surfaceKind: "Lemma",
+				},
+			});
+			expect(result.success).toBe(true);
+		});
+
+		it("parses Inflected with ref features", () => {
+			const result = GermanLinguisticUnitSchema.safeParse({
+				kind: "Lexem",
+				surface: {
+					features: { pos: "Verb" },
+					lemma: "aufmachen",
+					lemmaRef: "LX-LM-VRB-1",
+					surface: "macht ... auf",
+					surfaceKind: "Inflected",
+				},
+			});
+			expect(result.success).toBe(true);
+		});
+
+		it("rejects Verb Lemma without valency", () => {
+			const result = GermanLinguisticUnitSchema.safeParse({
+				kind: "Lexem",
+				surface: {
+					features: {
+						conjugation: "Rregular",
+						pos: "Verb",
+					},
+					lemma: "aufmachen",
+					surfaceKind: "Lemma",
+				},
+			});
+			expect(result.success).toBe(false);
+		});
+	});
+
 	describe("Phrasem", () => {
 		it("parses Lemma with collocation features", () => {
 			const result = GermanLinguisticUnitSchema.safeParse({

@@ -179,6 +179,18 @@ describe("De generate contracts", () => {
 		expect(output.success).toBe(true);
 	});
 
+	it("accepts structured verb features output", () => {
+		const output = DeFeaturesOutputSchema.safeParse({
+			conjugation: "Rregular",
+			valency: {
+				reflexivity: "NonReflexive",
+				separability: "Separable",
+			},
+		});
+
+		expect(output.success).toBe(true);
+	});
+
 	it("rejects features input for Phrasem", () => {
 		const input = DeFeaturesInputSchema.safeParse({
 			context: "Das ist [auf jeden Fall] klar.",
