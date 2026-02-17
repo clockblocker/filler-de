@@ -1,4 +1,5 @@
 import { SplitPathKind } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
+import { splitPathsEqual } from "../../../../stateless-helpers/split-path-comparison";
 import type {
 	Codecs,
 	SplitPathToFileInsideLibrary,
@@ -10,7 +11,6 @@ import type {
 } from "../../codecs/locator/types";
 import type { HealingAction } from "../library-tree/types/healing-action";
 import { buildCanonicalLeafSplitPath } from "../library-tree/utils/split-path-utils";
-import { splitPathsEqual } from "../../../../stateless-helpers/split-path-comparison";
 
 /**
  * Compute healing actions for a leaf node (Scroll or File).

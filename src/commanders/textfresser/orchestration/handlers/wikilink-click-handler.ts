@@ -4,12 +4,12 @@ import {
 	HandlerOutcome,
 } from "../../../../managers/obsidian/user-event-interceptor/types/handler";
 import type { VaultActionManager } from "../../../../managers/obsidian/vault-action-manager";
+import { splitPathsEqual } from "../../../../stateless-helpers/split-path-comparison";
 import { buildAttestationFromWikilinkClickPayload } from "../../common/attestation/builders/build-from-wikilink-click-payload";
 import type {
 	InFlightGenerate,
 	TextfresserState,
 } from "../../state/textfresser-state";
-import { splitPathsEqual } from "../../../../stateless-helpers/split-path-comparison";
 
 export function createWikilinkClickHandler(params: {
 	awaitGenerateAndScroll: (inFlight: InFlightGenerate) => Promise<void>;

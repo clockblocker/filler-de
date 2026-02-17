@@ -1,5 +1,6 @@
 import { ok, type Result } from "neverthrow";
 import type { SplitPathToMdFile } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
+import { stringifySplitPath } from "../../../../stateless-helpers/split-path-comparison";
 import { logger } from "../../../../utils/logger";
 import {
 	computeMissingV3SectionKinds,
@@ -12,7 +13,6 @@ import type {
 	LemmaInvocationCache,
 	TextfresserState,
 } from "../../state/textfresser-state";
-import { stringifySplitPath } from "../../../../stateless-helpers/split-path-comparison";
 
 export const LEMMA_IDEMPOTENCE_WINDOW_MS = 10_000;
 

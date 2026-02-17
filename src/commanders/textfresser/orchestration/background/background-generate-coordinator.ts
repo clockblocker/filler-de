@@ -6,6 +6,10 @@ import type {
 import { VaultActionKind } from "../../../../managers/obsidian/vault-action-manager";
 import type { SplitPathToMdFile } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
 import {
+	splitPathsEqual,
+	stringifySplitPath,
+} from "../../../../stateless-helpers/split-path-comparison";
+import {
 	decrementPending,
 	incrementPending,
 } from "../../../../utils/idle-tracker";
@@ -18,10 +22,6 @@ import type {
 	PendingGenerate,
 	TextfresserState,
 } from "../../state/textfresser-state";
-import {
-	splitPathsEqual,
-	stringifySplitPath,
-} from "../../../../stateless-helpers/split-path-comparison";
 
 type GenerateCommandFn = (
 	input: CommandInput,

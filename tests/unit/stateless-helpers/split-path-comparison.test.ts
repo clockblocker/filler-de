@@ -1,13 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import {
-	splitPathsEqual,
-	stringifySplitPath,
-} from "../../../src/stateless-helpers/split-path-comparison";
 import type {
 	AnySplitPath,
 	SplitPathToMdFile,
 } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { SplitPathKind } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import {
+	splitPathsEqual,
+	stringifySplitPath,
+} from "../../../src/stateless-helpers/split-path-comparison";
 
 // ─── splitPathsEqual ───
 

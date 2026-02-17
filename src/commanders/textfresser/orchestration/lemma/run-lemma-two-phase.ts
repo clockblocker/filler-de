@@ -5,6 +5,7 @@ import type {
 } from "../../../../managers/obsidian/vault-action-manager";
 import { VaultActionKind } from "../../../../managers/obsidian/vault-action-manager";
 import { PromptKind } from "../../../../prompt-smith/codegen/consts";
+import { splitPathsEqual } from "../../../../stateless-helpers/split-path-comparison";
 import { logger } from "../../../../utils/logger";
 import {
 	buildWikilinkForTarget,
@@ -22,7 +23,6 @@ import {
 import { CommandErrorKind } from "../../errors";
 import type { TextfresserState } from "../../state/textfresser-state";
 import { dispatchActions } from "../shared/dispatch-actions";
-import { splitPathsEqual } from "../../../../stateless-helpers/split-path-comparison";
 import {
 	chooseBestEffortLemmaOutput,
 	evaluateLemmaOutputGuardrails,
