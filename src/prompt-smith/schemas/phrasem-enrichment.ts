@@ -8,7 +8,7 @@ const userInputSchema = z.object({
 
 const agentOutputSchema = z
 	.object({
-		emojiDescription: z.array(z.string().min(1).max(4)).min(1).max(3),
+		emojiDescription: z.array(z.string().min(1).max(20)).min(1).max(3),
 		ipa: z.string().min(1),
 		senseGloss: z.string().min(3).max(120).nullable().optional(),
 	})

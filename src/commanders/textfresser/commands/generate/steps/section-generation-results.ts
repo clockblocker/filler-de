@@ -22,9 +22,11 @@ export function unwrapOptional<T>(
 ): T | null {
 	if (result.status === "fulfilled") return result.value;
 	failedSections.push(sectionName);
+	const reason =
+		result.reason instanceof Error ? result.reason.message : result.reason;
 	logger.warn(
 		`[generateSections] Optional section "${sectionName}" failed:`,
-		result.reason,
+		reason,
 	);
 	return null;
 }
