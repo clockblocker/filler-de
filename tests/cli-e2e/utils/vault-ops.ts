@@ -75,11 +75,13 @@ export async function createFiles(
 }
 
 /**
- * Read file content via CLI.
+ * Read file content via Obsidian API eval (bypasses CLI stdout noise).
  */
 export async function readFile(path: string): Promise<string> {
-	const result = await obsidian(`read path="${path}"`);
-	return result.stdout;
+	const pathEscaped = path.replace(/'/g, "\\'");
+	return obsidianEval(
+		`(async()=>{const f=app.vault.getAbstractFileByPath('${pathEscaped}');if(!f)throw new Error('Not found: ${pathEscaped}');return await app.vault.read(f)})()`,
+	);
 }
 
 /**

@@ -7,7 +7,10 @@ const OBSIDIAN_BIN =
 	"/Applications/Obsidian.app/Contents/MacOS/Obsidian";
 
 /** Noise lines emitted by the CLI that we strip from command output streams. */
-const CLI_NOISE_LINES = ["Loading updated app package"];
+const CLI_NOISE_LINES = [
+	"Loading updated app package",
+	"Checking for updates",
+];
 
 export class CliError extends Error {
 	constructor(

@@ -119,6 +119,35 @@ export function createBackgroundGenerateCoordinator(params: {
 		notify: (message: string) => void,
 	): Promise<void> {
 		const targetExistedBefore = vam.exists(targetPath);
+
+		async function cleanupIfEmpty(): Promise<string> {
+			const shouldCleanup =
+				targetOwnedByInvocation || !targetExistedBefore;
+			if (!shouldCleanup) return "skipped";
+
+			const currentContent = await vam.readContent(targetPath);
+			if (currentContent.isErr()) return "gone";
+			if (currentContent.value.trim().length > 0) return "has-content";
+
+			const rollbackResult = await vam.dispatch([
+				{
+					kind: VaultActionKind.TrashMdFile,
+					payload: { splitPath: targetPath },
+				},
+			]);
+			if (rollbackResult.isErr()) {
+				const rollbackReason = rollbackResult.error
+					.map((e) => e.error)
+					.join(", ");
+				logger.warn(
+					"[Textfresser.backgroundGenerate] Failed to rollback empty generated note",
+					{ error: rollbackResult.error, targetPath },
+				);
+				return `failed (${rollbackReason})`;
+			}
+			return "deleted";
+		}
+
 		const contentResult = await vam.readContent(targetPath);
 		const content = contentResult.isOk() ? contentResult.value : "";
 
@@ -137,12 +166,15 @@ export function createBackgroundGenerateCoordinator(params: {
 
 		const generateResult = await runGenerateCommand(input);
 		if (generateResult.isErr()) {
+			const cleanupSummary = await cleanupIfEmpty();
 			const error = generateResult.error;
 			const reason =
 				"reason" in error
 					? error.reason
 					: `Command failed: ${error.kind}`;
-			throw new Error(reason);
+			throw new Error(
+				`${reason} (cleanup=${cleanupSummary}, owned=${targetOwnedByInvocation}, existedBefore=${targetExistedBefore})`,
+			);
 		}
 
 		const upsertAction: VaultAction = {
@@ -153,8 +185,11 @@ export function createBackgroundGenerateCoordinator(params: {
 
 		const dispatchResult = await vam.dispatch(allActions);
 		if (dispatchResult.isErr()) {
+			const cleanupSummary = await cleanupIfEmpty();
 			const reason = dispatchResult.error.map((e) => e.error).join(", ");
-			throw new Error(reason);
+			throw new Error(
+				`${reason} (cleanup=${cleanupSummary}, owned=${targetOwnedByInvocation}, existedBefore=${targetExistedBefore})`,
+			);
 		}
 
 		const finalContentResult = await vam.readContent(targetPath);
@@ -164,33 +199,7 @@ export function createBackgroundGenerateCoordinator(params: {
 			);
 		}
 		if (finalContentResult.value.trim().length === 0) {
-			const shouldCleanup =
-				targetOwnedByInvocation || !targetExistedBefore;
-			let cleanupSummary = "skipped";
-			if (shouldCleanup) {
-				const rollbackResult = await vam.dispatch([
-					{
-						kind: VaultActionKind.TrashMdFile,
-						payload: { splitPath: targetPath },
-					},
-				]);
-				if (rollbackResult.isErr()) {
-					const rollbackReason = rollbackResult.error
-						.map((e) => e.error)
-						.join(", ");
-					cleanupSummary = `failed (${rollbackReason})`;
-					logger.warn(
-						"[Textfresser.backgroundGenerate] Failed to rollback empty generated note",
-						{
-							error: rollbackResult.error,
-							targetPath,
-						},
-					);
-				} else {
-					cleanupSummary = "deleted";
-				}
-			}
-
+			const cleanupSummary = await cleanupIfEmpty();
 			throw new Error(
 				`Background generate produced empty target note: ${stringifySplitPath(targetPath)} (cleanup=${cleanupSummary}, owned=${targetOwnedByInvocation}, existedBefore=${targetExistedBefore})`,
 			);

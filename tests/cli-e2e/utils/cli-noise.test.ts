@@ -13,6 +13,25 @@ describe("stripCliNoise", () => {
 		);
 	});
 
+	it("removes 'Checking for updates' noise", () => {
+		const output = [
+			"Checking for updates...",
+			"=> some result",
+		].join("\n");
+
+		expect(stripCliNoise(output)).toBe("=> some result");
+	});
+
+	it("removes multiple noise lines mixed with content", () => {
+		const output = [
+			"Loading updated app package /path/to/obsidian.asar",
+			"Checking for updates",
+			"actual content line",
+		].join("\n");
+
+		expect(stripCliNoise(output)).toBe("actual content line");
+	});
+
 	it("keeps normal output unchanged except trimming", () => {
 		expect(stripCliNoise("  hello world  ")).toBe("hello world");
 	});

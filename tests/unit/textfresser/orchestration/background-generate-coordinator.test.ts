@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { ok, okAsync, ResultAsync } from "neverthrow";
+import { errAsync, ok, okAsync, ResultAsync } from "neverthrow";
 import {
 	createBackgroundGenerateCoordinator,
 } from "../../../../src/commanders/textfresser/orchestration/background/background-generate-coordinator";
@@ -273,5 +273,111 @@ describe("background generate coordinator", () => {
 			(action) => action.kind === VaultActionKind.TrashMdFile,
 		);
 		expect(rollbackAction?.payload?.splitPath?.basename).toBe("renamed");
+	});
+
+	it("cleans up empty placeholder when generate command fails", async () => {
+		const dispatches: Array<readonly unknown[]> = [];
+		const notifications: string[] = [];
+		const vam = {
+			dispatch: async (actions: readonly unknown[]) => {
+				dispatches.push(actions);
+				return ok(undefined);
+			},
+			exists: () => false,
+			mdPwd: () => null,
+			readContent: async () => ok(""),
+		} as unknown as VaultActionManager;
+
+		const state = createInitialTextfresserState({
+			apiService: {} as ApiService,
+			languages: { known: "English", target: "German" },
+			vam,
+		});
+
+		const coordinator = createBackgroundGenerateCoordinator({
+			runGenerateCommand: () =>
+				errAsync({ kind: "ApiError", reason: "phrasem not supported" }),
+			scrollToTargetBlock: () => {},
+			state,
+			vam,
+		});
+
+		setLatestLemmaState(
+			state,
+			"auf keinen Fall",
+			buildTargetPath("auf-keinen-Fall"),
+		);
+		coordinator.requestBackgroundGenerate((message) => {
+			notifications.push(message);
+		});
+
+		const inFlight = state.inFlightGenerate;
+		if (inFlight) {
+			await inFlight.promise;
+		}
+
+		// Should have dispatched a TrashMdFile cleanup action
+		expect(dispatches).toHaveLength(1);
+		const cleanupDispatch = dispatches[0] as
+			| Array<{ kind?: string; payload?: { splitPath?: SplitPathToMdFile } }>
+			| undefined;
+		const trashAction = cleanupDispatch?.find(
+			(action) => action.kind === VaultActionKind.TrashMdFile,
+		);
+		expect(trashAction?.payload?.splitPath?.basename).toBe(
+			"auf-keinen-Fall",
+		);
+		expect(
+			notifications.some((m) => m.includes("Background generate failed")),
+		).toBe(true);
+	});
+
+	it("does NOT clean up non-empty target when generate command fails", async () => {
+		const dispatches: Array<readonly unknown[]> = [];
+		const notifications: string[] = [];
+		const vam = {
+			dispatch: async (actions: readonly unknown[]) => {
+				dispatches.push(actions);
+				return ok(undefined);
+			},
+			exists: () => true,
+			mdPwd: () => null,
+			readContent: async () => ok("# Existing entry content\nSome data"),
+		} as unknown as VaultActionManager;
+
+		const state = createInitialTextfresserState({
+			apiService: {} as ApiService,
+			languages: { known: "English", target: "German" },
+			vam,
+		});
+
+		const coordinator = createBackgroundGenerateCoordinator({
+			runGenerateCommand: () =>
+				errAsync({ kind: "ApiError", reason: "transient failure" }),
+			scrollToTargetBlock: () => {},
+			state,
+			vam,
+		});
+
+		setLatestLemmaState(
+			state,
+			"existing",
+			buildTargetPath("existing"),
+			true,
+		);
+		coordinator.requestBackgroundGenerate((message) => {
+			notifications.push(message);
+		});
+
+		const inFlight = state.inFlightGenerate;
+		if (inFlight) {
+			await inFlight.promise;
+		}
+
+		// No dispatch should happen — file has content, cleanup skipped
+		expect(dispatches).toHaveLength(0);
+		expect(
+			notifications.some((m) => m.includes("Background generate failed")),
+		).toBe(true);
 	});
 });
