@@ -11,9 +11,9 @@
 
 import { type App, MarkdownView } from "obsidian";
 import { DomSelectors } from "../../../../../utils/dom-selectors";
-import type { SplitPathToMdFile } from "../../../vault-action-manager/types/split-path";
 import { PayloadKind } from "../../types/payload-base";
 import type { HandlerInvoker } from "../../user-event-interceptor";
+import { getCurrentFilePath } from "../get-current-file-path";
 import { SelectionChangedCodec } from "./codec";
 import type { SelectionChangedPayload } from "./payload";
 
@@ -102,7 +102,7 @@ export class SelectionChangedDetector {
 		const hasSelection = selectedText.length > 0;
 
 		// Get current file path
-		const splitPath = this.getCurrentFilePath();
+		const splitPath = getCurrentFilePath(this.app);
 
 		// Encode to payload
 		const payload = SelectionChangedCodec.encode({
@@ -122,22 +122,5 @@ export class SelectionChangedDetector {
 
 		// Invoke handler
 		void invoke();
-	}
-
-	private getCurrentFilePath(): SplitPathToMdFile | undefined {
-		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-		if (!view?.file) return undefined;
-
-		const path = view.file.path;
-		const parts = path.split("/");
-		const filename = parts.pop() ?? "";
-		const basename = filename.replace(/\.md$/, "");
-
-		return {
-			basename,
-			extension: "md",
-			kind: "MdFile",
-			pathParts: parts,
-		};
 	}
 }

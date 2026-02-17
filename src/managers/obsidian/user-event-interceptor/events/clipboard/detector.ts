@@ -12,10 +12,10 @@
 import { type App, MarkdownView } from "obsidian";
 import { blockIdHelper } from "../../../../../stateless-helpers/block-id";
 import type { VaultActionManager } from "../../../vault-action-manager";
-import type { SplitPathToMdFile } from "../../../vault-action-manager/types/split-path";
 import { HandlerOutcome } from "../../types/handler";
 import { PayloadKind } from "../../types/payload-base";
 import type { HandlerInvoker } from "../../user-event-interceptor";
+import { getCurrentFilePath } from "../get-current-file-path";
 import { ClipboardCodec } from "./codec";
 import type { ClipboardPayload } from "./payload";
 
@@ -66,7 +66,7 @@ export class ClipboardDetector {
 		}
 
 		// Get current file path (may be null if no file open)
-		const splitPath = this.getCurrentFilePath();
+		const splitPath = getCurrentFilePath(this.app);
 
 		// Encode to payload
 		const payload = ClipboardCodec.encode(evt, selection, splitPath);
@@ -123,23 +123,5 @@ export class ClipboardDetector {
 	private getActiveFileBasename(): string | null {
 		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 		return view?.file?.basename ?? null;
-	}
-
-	private getCurrentFilePath(): SplitPathToMdFile | undefined {
-		// Synchronously get current file path if available
-		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-		if (!view?.file) return undefined;
-
-		const path = view.file.path;
-		const parts = path.split("/");
-		const filename = parts.pop() ?? "";
-		const basename = filename.replace(/\.md$/, "");
-
-		return {
-			basename,
-			extension: "md",
-			kind: "MdFile",
-			pathParts: parts,
-		};
 	}
 }

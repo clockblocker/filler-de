@@ -6,6 +6,7 @@ import {
 	type VaultAction,
 	VaultActionKind,
 } from "../../managers/obsidian/vault-action-manager/types/vault-action";
+import { getMdFilesInLibrary } from "../../stateless-helpers/library-files";
 import type { SuffixDelimiterConfig } from "../../types";
 import {
 	buildCanonicalDelimiter,
@@ -96,9 +97,6 @@ export class DelimiterChangeService {
 		};
 	}
 
-	/**
-	 * Collect all .md files in the library folder.
-	 */
 	private collectMdFilesInLibrary(libraryRoot: string): TFile[] {
 		const rootFolder = this.app.vault.getAbstractFileByPath(libraryRoot);
 		if (!rootFolder) {
@@ -108,11 +106,7 @@ export class DelimiterChangeService {
 			return [];
 		}
 
-		return this.app.vault.getFiles().filter((f) => {
-			return (
-				f.path.startsWith(`${libraryRoot}/`) && f.path.endsWith(".md")
-			);
-		});
+		return getMdFilesInLibrary(this.app.vault, libraryRoot);
 	}
 
 	/**
