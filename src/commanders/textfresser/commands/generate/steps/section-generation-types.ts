@@ -12,6 +12,19 @@ export type ParsedRelation = {
 	words: string[];
 };
 
+export type PrefixEquationPayload = {
+	baseLemma: string;
+	prefixDisplay: string;
+	prefixTarget: string;
+	sourceLemma: string;
+};
+
+export type MorphologyPayload = {
+	compoundedFromLemmas: string[];
+	derivedFromLemma?: string;
+	prefixEquation?: PrefixEquationPayload;
+};
+
 export type LexemEnrichmentOutput = AgentOutput<"LexemEnrichment">;
 export type PhrasemEnrichmentOutput = AgentOutput<"PhrasemEnrichment">;
 export type EnrichmentOutput = LexemEnrichmentOutput | PhrasemEnrichmentOutput;
@@ -31,9 +44,11 @@ export type FeaturesOutput =
 
 export type GeneratedSectionArtifacts = {
 	inflectionCells: NounInflectionCell[];
+	morphology?: MorphologyPayload;
 	morphemes: MorphemeItem[];
 	nounInflectionGenus?: GermanGenus;
 	relations: ParsedRelation[];
+	sourceTranslation?: string;
 };
 
 export type GenerationTargetLanguage = TargetLanguage;

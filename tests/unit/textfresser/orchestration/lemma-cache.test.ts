@@ -122,6 +122,7 @@ describe("lemma cache", () => {
 				"kontexte",
 				"synonyme",
 				"morpheme",
+				"morphologie",
 				"flexion",
 				"translations",
 				"tags",

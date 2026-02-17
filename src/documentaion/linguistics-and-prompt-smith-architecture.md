@@ -476,7 +476,7 @@ ParsedNonLexemId = {
 **Source**: `src/commanders/textfresser/targets/de/sections/section-kind.ts`
 
 ```typescript
-DictSectionKind = "Relation" | "FreeForm" | "Attestation" | "Morphem"
+DictSectionKind = "Relation" | "FreeForm" | "Attestation" | "Morphem" | "Morphology"
                | "Header" | "Deviation" | "Inflection" | "Translation" | "Tags"
 ```
 
@@ -489,6 +489,7 @@ Each kind has display titles in English and German:
 | Translation | Translation | Ubersetzung |
 | Relation | Relations | Semantische Beziehungen |
 | Morphem | Morphemes | Morpheme |
+| Morphology | Morphological Relations | Morphologische Relationen |
 | Inflection | Inflection | Flexion |
 | Deviation | Deviations | Abweichungen |
 | FreeForm | Notes | Notizen |
@@ -502,7 +503,7 @@ Maps each `DictSectionKind` to a CSS class suffix used in `entry_section_title_{
 
 ```
 Header -> "formen", Attestation -> "kontexte", FreeForm -> "notizen",
-Relation -> "synonyme", Morphem -> "morpheme", Deviation -> "abweichungen",
+Relation -> "synonyme", Morphem -> "morpheme", Morphology -> "morphologie", Deviation -> "abweichungen",
 Inflection -> "flexion", Translation -> "translations", Tags -> "tags"
 ```
 
@@ -520,8 +521,8 @@ Inflection -> "flexion", Translation -> "translations", Tags -> "tags"
 
 | POS | Sections |
 |---|---|
-| Noun | CORE + Relation, Morphem, Inflection |
-| Verb | CORE + Relation, Morphem, Inflection, Deviation |
+| Noun | CORE + Relation, Morphem, Morphology, Inflection |
+| Verb | CORE + Relation, Morphem, Morphology, Inflection, Deviation |
 | Adjective | CORE + Relation, Inflection |
 | Adverb | CORE + Relation |
 | Article | CORE + Inflection |
@@ -532,7 +533,7 @@ Inflection -> "flexion", Translation -> "translations", Tags -> "tags"
 | InteractionalUnit | CORE only |
 
 **Special-case sections**:
-- `sectionsForProperNoun` = CORE only (no Inflection, Morphem, Relation)
+- `sectionsForProperNoun` = CORE only (no Inflection, Morphem, Morphology, Relation)
 - `sectionsForPhrasem` = Header, Translation, Attestation, Relation, FreeForm
 - `sectionsForMorphem` = Header, Attestation, FreeForm
 
@@ -554,10 +555,12 @@ When `unit: "Lexem"` with `pos: "Noun"` and `nounClass: "Proper"`, returns `sect
 | Attestation | 2 |
 | Relation | 3 |
 | Translation | 4 |
-| Morphem | 5 |
-| Inflection | 6 |
-| Deviation | 7 |
-| FreeForm | 8 |
+| Morphem | 4 |
+| Morphology | 5 |
+| Tags | 6 |
+| Inflection | 7 |
+| Deviation | 8 |
+| FreeForm | 9 |
 
 Lower weight = earlier in the note. Unknown kinds sort to weight 99. `compareSectionsByWeight()` provides a comparator for sorting.
 
@@ -904,7 +907,7 @@ LemmaResult stored in TextfresserState
 Generate cmd → getSectionsFor(pos, unit) → applicable DictSectionKind[]
     ↓
 For each applicable section, parallel PromptRunner.generate() calls:
-    ├─ Morphem:         generate(Morphem, { context, word })         → morphemes[]
+    ├─ Morphem:         generate(Morphem, { context, word })         → morphemes[] + derived_from? + compounded_from?
     ├─ Relation:        generate(Relation, { context, pos, word })   → relations[]
     ├─ NounInflection:  generate(NounInflection, { context, word })  → cells[]
     ├─ Inflection:      generate(Inflection, { context, pos, word }) → rows[]
@@ -921,7 +924,8 @@ serializeEntry() → markdown string
 VAM dispatch (ProcessMdFile / UpsertMdFile)
     ↓
 Propagation steps:
-    ├─ propagateRelations → ProcessMdFile on target notes (cross-refs)
+    ├─ propagateRelations → ProcessMdFile on target notes (cross-refs, shared dedupe append helper)
+    ├─ propagateMorphologyRelations → `<used_in>` backlinks + prefix equations
     └─ propagateInflections → UpsertMdFile + ProcessMdFile for single inflection entries (tags-merged, legacy stubs auto-collapsed)
 ```
 

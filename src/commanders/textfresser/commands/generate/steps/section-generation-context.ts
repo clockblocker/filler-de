@@ -8,6 +8,7 @@ import type {
 /** V3 sections — the ones generated in the current pipeline. */
 export const V3_SECTIONS = new Set<DictSectionKind>([
 	DictSectionKind.Morphem,
+	DictSectionKind.Morphology,
 	DictSectionKind.Relation,
 	DictSectionKind.Inflection,
 	DictSectionKind.Translation,

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
 	getSectionsFor,
+	SECTION_DISPLAY_WEIGHT,
 	sectionsForLexemPos,
 	sectionsForMorphem,
 	sectionsForPhrasem,
@@ -12,6 +13,7 @@ describe("getSectionsFor", () => {
 		expect(getSectionsFor({ pos: "Noun", unit: "Lexem" })).toBe(
 			sectionsForLexemPos.Noun,
 		);
+		expect(sectionsForLexemPos.Noun).toContain("Morphology");
 	});
 
 	test("returns correct sections for Lexem+Noun (Common) — same as default", () => {
@@ -30,6 +32,13 @@ describe("getSectionsFor", () => {
 		expect(
 			getSectionsFor({ nounClass: "Proper", pos: "Noun", unit: "Lexem" }),
 		).toBe(sectionsForProperNoun);
+		expect(sectionsForProperNoun).not.toContain("Morphology");
+	});
+
+	test("includes morphology for every Lexem POS", () => {
+		for (const sections of Object.values(sectionsForLexemPos)) {
+			expect(sections).toContain("Morphology");
+		}
 	});
 
 	test("nounClass is ignored for non-Noun POS", () => {
@@ -48,5 +57,11 @@ describe("getSectionsFor", () => {
 
 	test("returns correct sections for Morphem", () => {
 		expect(getSectionsFor({ unit: "Morphem" })).toBe(sectionsForMorphem);
+	});
+
+	test("places morphology right after morphemes in section order", () => {
+		expect(SECTION_DISPLAY_WEIGHT.Morphology).toBe(
+			SECTION_DISPLAY_WEIGHT.Morphem + 1,
+		);
 	});
 });

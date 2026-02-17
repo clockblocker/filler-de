@@ -6,6 +6,7 @@ const DICT_SECTION_KIND_STR = [
 	"FreeForm",
 	"Attestation",
 	"Morphem",
+	"Morphology",
 	"Header",
 	"Deviation",
 	"Inflection",
@@ -27,6 +28,10 @@ export const TitleReprFor = {
 	[DictSectionKind.FreeForm]: { English: "Notes", German: "Notizen" },
 	[DictSectionKind.Attestation]: { English: "Contexts", German: "Kontexte" },
 	[DictSectionKind.Morphem]: { English: "Morphemes", German: "Morpheme" },
+	[DictSectionKind.Morphology]: {
+		English: "Morphological Relations",
+		German: "Morphologische Relationen",
+	},
 	[DictSectionKind.Header]: { English: "Forms", German: "Formen" },
 	[DictSectionKind.Deviation]: {
 		English: "Deviations",

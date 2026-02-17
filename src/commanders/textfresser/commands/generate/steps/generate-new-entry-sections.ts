@@ -28,6 +28,7 @@ import type {
 	FeaturesOutput,
 	InflectionOutput,
 	MorphemOutput,
+	MorphologyPayload,
 	NounInflectionOutput,
 	ParsedRelation,
 	RelationOutput,
@@ -37,6 +38,7 @@ import {
 	generateAttestationSection,
 	generateInflectionSection,
 	generateMorphemSection,
+	generateMorphologySection,
 	generateRelationSection,
 	generateTagsSection,
 	generateTranslationSection,
@@ -51,10 +53,12 @@ export type GeneratedEntrySectionsData = {
 	featuresOutput: FeaturesOutput | null;
 	headerContent: string;
 	inflectionCells: NounInflectionCell[];
+	morphology?: MorphologyPayload;
 	morphemes: MorphemeItem[];
 	nounInflectionGenus?: GermanGenus;
 	relations: ParsedRelation[];
 	sections: EntrySection[];
+	sourceTranslation?: string;
 };
 
 type GenerateNewEntrySectionsOptions = {
@@ -140,14 +144,20 @@ export async function generateNewEntrySections(
 			(onlySections ? onlySections.has(sectionKind) : true),
 	);
 	const sectionSet = new Set(v3Applicable);
+	const shouldRunPropagation =
+		sectionSet.has(DictSectionKind.Relation) ||
+		sectionSet.has(DictSectionKind.Morphem) ||
+		sectionSet.has(DictSectionKind.Morphology) ||
+		sectionSet.has(DictSectionKind.Inflection);
 	const featuresPromptKind =
 		lemmaResult.linguisticUnit === "Lexem"
 			? getFeaturesPromptKindForPos(lemmaResult.posLikeKind)
 			: null;
 
-	const morphemTask: Promise<MorphemOutput> | null = sectionSet.has(
-		DictSectionKind.Morphem,
-	)
+	const shouldGenerateMorphem =
+		sectionSet.has(DictSectionKind.Morphem) ||
+		sectionSet.has(DictSectionKind.Morphology);
+	const morphemTask: Promise<MorphemOutput> | null = shouldGenerateMorphem
 		? unwrapResultAsync(
 				promptRunner.generate(PromptKind.Morphem, {
 					context,
@@ -189,8 +199,10 @@ export async function generateNewEntrySections(
 					}),
 				)
 			: null;
+	const shouldGenerateTranslation =
+		sectionSet.has(DictSectionKind.Translation) || shouldRunPropagation;
 	const translationTask: Promise<WordTranslationOutput> | null =
-		sectionSet.has(DictSectionKind.Translation)
+		shouldGenerateTranslation
 			? unwrapResultAsync(
 					promptRunner.generate(PromptKind.WordTranslation, {
 						context: markdownHelper.replaceWikilinks(context),
@@ -243,7 +255,13 @@ export async function generateNewEntrySections(
 		"Inflection",
 		failedSections,
 	);
-	const translationOutput = unwrapCritical(settled[4], "Translation");
+	let translationOutput: WordTranslationOutput | null = null;
+	if (shouldGenerateTranslation) {
+		const criticalTranslation = unwrapCritical(settled[4], "Translation");
+		if (criticalTranslation !== null) {
+			translationOutput = criticalTranslation;
+		}
+	}
 	const featuresOutput = unwrapOptional(
 		settled[5],
 		"Features",
@@ -266,17 +284,44 @@ export async function generateNewEntrySections(
 	let relations: ParsedRelation[] = [];
 	let inflectionCells: NounInflectionCell[] = [];
 	let morphemes: MorphemeItem[] = [];
+	let morphology: MorphologyPayload | undefined;
+
+	const morphemSectionResult = morphemOutput
+		? generateMorphemSection({
+				output: morphemOutput,
+				targetLang,
+			})
+		: null;
+	if (morphemSectionResult) {
+		morphemes = morphemSectionResult.morphemes;
+	}
+
+	const sourceTranslation = translationOutput
+		?.split("\n")
+		.map((line) => line.trim())
+		.find((line) => line.length > 0);
 
 	for (const sectionKind of v3Applicable) {
 		switch (sectionKind) {
 			case DictSectionKind.Morphem: {
+				if (!morphemSectionResult) break;
+				sections.push(morphemSectionResult.section);
+				break;
+			}
+
+			case DictSectionKind.Morphology: {
 				if (!morphemOutput) break;
-				const result = generateMorphemSection({
+				const result = generateMorphologySection({
+					morphemes,
 					output: morphemOutput,
+					sourceLemma: lemmaResult.lemma,
+					sourceTranslation,
 					targetLang,
 				});
-				morphemes = result.morphemes;
-				sections.push(result.section);
+				morphology = result.morphology;
+				if (result.section) {
+					sections.push(result.section);
+				}
 				break;
 			}
 
@@ -358,8 +403,10 @@ export async function generateNewEntrySections(
 		headerContent,
 		inflectionCells,
 		morphemes,
+		morphology,
 		nounInflectionGenus,
 		relations,
 		sections,
+		sourceTranslation: sourceTranslation ?? undefined,
 	};
 }

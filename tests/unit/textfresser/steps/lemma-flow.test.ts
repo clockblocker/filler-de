@@ -378,6 +378,7 @@ describe("lemma two-phase flow", () => {
 				"kontexte",
 				"synonyme",
 				"morpheme",
+				"morphologie",
 				"flexion",
 				"translations",
 				"tags",

@@ -11,6 +11,7 @@ import { generateSections } from "./steps/generate-sections";
 import { moveToWorter } from "./steps/move-to-worter";
 import { propagateInflections } from "./steps/propagate-inflections";
 import { propagateMorphemes } from "./steps/propagate-morphemes";
+import { propagateMorphologyRelations } from "./steps/propagate-morphology-relations";
 import { propagateRelations } from "./steps/propagate-relations";
 import { resolveExistingEntry } from "./steps/resolve-existing-entry";
 import { serializeEntry } from "./steps/serialize-entry";
@@ -21,6 +22,7 @@ import { serializeEntry } from "./steps/serialize-entry";
  * → resolveExistingEntry (parse existing entries)
  * → generateSections (async: LLM calls or append attestation)
  * → propagateRelations (cross-ref inverse relations to target notes)
+ * → propagateMorphologyRelations (derived/compound backlinks + prefix equations)
  * → propagateMorphemes (back-ref morpheme notes for multi-morpheme words)
  * → propagateInflections (create/update one inflection entry per noun form)
  * → serializeEntry (includes noteKind meta) → moveToWorter(policy destination) → addWriteAction
@@ -40,6 +42,7 @@ export function generateCommand(
 	)
 		.andThen(generateSections)
 		.andThen(propagateRelations)
+		.andThen(propagateMorphologyRelations)
 		.andThen(propagateMorphemes)
 		.andThen(decorateAttestationSeparability)
 		.andThen(propagateInflections)

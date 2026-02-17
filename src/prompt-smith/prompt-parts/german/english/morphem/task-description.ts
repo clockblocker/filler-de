@@ -5,7 +5,13 @@ You receive:
 - context: the sentence where the word was encountered
 
 Return an array of morphemes in left-to-right order as they appear in the word.
-Each morpheme has:
+Return object shape:
+- morphemes: array of morphemes in left-to-right order
+- derived_from (optional): one immediate derivational base
+  - { lemma: string, derivation_type: string }
+- compounded_from (optional): immediate compound constituents in order (array of lemmas)
+
+Each morpheme item has:
 - surf: the morpheme surface string (lowercase)
 - kind: one of Root, Prefix, Suffix, Suffixoid, Circumfix, Interfix, Duplifix
 - lemma (optional): the dictionary form of the morpheme, when it differs from surf.
@@ -21,6 +27,10 @@ Rules:
 - Interfixes (Fugenelemente like -s-, -n-, -es-, -er-, -e-, -ens-) connect compound parts — mark them as Interfix.
 - For compound words, each independent stem is a separate Root.
 - Derivational affixes (un-, ver-, be-, -keit, -ung, -lich, -bar, etc.) are Prefix or Suffix.
-- Inflectional suffixes should NOT be included — analyze the lemma form only.
+- derived_from must contain at most one immediate base lemma.
+- compounded_from must contain only immediate constituents (no deep decomposition).
+- Use canonical lemma forms in lemma, derived_from.lemma, and compounded_from.
+- If relation is uncertain or non-obvious, omit derived_from / compounded_from entirely.
+- Inflectional morphology is out of scope — analyze lemma form only.
 - The concatenation of all surf strings must exactly reconstruct the original word (case-insensitive).
 - Only Prefix-kind morphemes should have the separability field.`;

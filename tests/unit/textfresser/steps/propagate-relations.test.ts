@@ -141,4 +141,30 @@ describe("propagateRelations", () => {
 		const matches = second.match(/= \[\[Kohlekraftwerk\]\]/g);
 		expect(matches).toHaveLength(1);
 	});
+
+	it("does not append when target section already references source lemma", () => {
+		const ctx = makeCtx([
+			{ kind: "Synonym", words: ["Anlage"] },
+		]);
+		const result = propagateRelations(ctx);
+		const actions = result._unsafeUnwrap().actions;
+
+		const processAction = actions.find(
+			(a) => a.kind === VaultActionKind.ProcessMdFile,
+		);
+		expect(processAction).toBeDefined();
+		if (!processAction) return;
+		const transform = (
+			processAction.payload as {
+				transform: (content: string) => string;
+			}
+		).transform;
+
+		const existing = [
+			'<span class="entry_section_title entry_section_title_synonyme">Semantische Beziehungen</span>',
+			"≈ [[Kohlekraftwerk|Kohle-Kraftwerk]]",
+		].join("\n");
+		const output = transform(existing);
+		expect(output).toBe(existing);
+	});
 });

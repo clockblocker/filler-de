@@ -21,6 +21,7 @@ import {
 	type SplitPathToMdFile,
 } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metadata";
+import { wikilinkHelper } from "../../../../../stateless-helpers/wikilink";
 import type { TargetLanguage } from "../../../../../types";
 import {
 	buildPropagationActionPair,
@@ -176,7 +177,10 @@ export function propagateMorphemes(
 					(s) => s.kind === attestationCssSuffix,
 				);
 				if (attestationSection) {
-					if (attestationSection.content.includes(refLine)) {
+					const hasReference = wikilinkHelper
+						.parse(attestationSection.content)
+						.some((wikilink) => wikilink.target === sourceWord);
+					if (hasReference) {
 						return content;
 					}
 					attestationSection.content = `${attestationSection.content.trimEnd()}\n${refLine}`;

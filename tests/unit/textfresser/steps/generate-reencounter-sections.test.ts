@@ -138,6 +138,52 @@ describe("generateSections re-encounter behavior", () => {
 		expect(translationSection?.content).toBe("idiom translation");
 	});
 
+	it("still requests WordTranslation before relation regeneration", async () => {
+		const promptCalls: string[] = [];
+		const matchedEntry: DictEntry = {
+			headerContent: "Entry",
+			id: PHRASEM_ENTRY_ID,
+			meta: {},
+			sections: [
+				section("kontexte", "![[Other#^2|^]]"),
+				section("translations", "existing translation"),
+			],
+		};
+		const ctx = makePhrasemCtx({
+			matchedEntry,
+			promptGenerate: (kind) => {
+				promptCalls.push(kind);
+				if (kind === "PhrasemEnrichment") {
+					return okAsync({
+						emojiDescription: ["💬"],
+						ipa: "ipa",
+						linguisticUnit: "Phrasem",
+						posLikeKind: "Idiom",
+					});
+				}
+				if (kind === "Relation") {
+					return okAsync({
+						relations: [{ kind: "Synonym", words: ["nah"] }],
+					});
+				}
+				if (kind === "WordTranslation") {
+					return okAsync("fresh translation");
+				}
+				return okAsync("unused");
+			},
+		});
+
+		const result = await generateSections(ctx);
+		expect(result.isOk()).toBe(true);
+		expect(promptCalls).toContain("Relation");
+		expect(promptCalls).toContain("WordTranslation");
+
+		const relationSection = matchedEntry.sections.find(
+			(s) => s.kind === "synonyme",
+		);
+		expect(relationSection?.content).toContain("= [[nah]]");
+	});
+
 	it("does not require morphem/inflection for proper-noun re-encounter", async () => {
 		const promptCalls: string[] = [];
 		const matchedEntry: DictEntry = {

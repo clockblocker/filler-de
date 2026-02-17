@@ -13,16 +13,23 @@ const CORE_SECTIONS = [
 ] as const;
 
 export const sectionsForLexemPos: Record<POS, readonly DictSectionKind[]> = {
-	Adjective: [...CORE_SECTIONS, S.Relation, S.Inflection],
-	Adverb: [...CORE_SECTIONS, S.Relation],
-	Article: [...CORE_SECTIONS, S.Inflection],
-	Conjunction: [...CORE_SECTIONS],
-	InteractionalUnit: [...CORE_SECTIONS],
-	Noun: [...CORE_SECTIONS, S.Relation, S.Morphem, S.Inflection],
-	Particle: [...CORE_SECTIONS, S.Relation],
-	Preposition: [...CORE_SECTIONS, S.Relation],
-	Pronoun: [...CORE_SECTIONS, S.Inflection],
-	Verb: [...CORE_SECTIONS, S.Relation, S.Morphem, S.Inflection, S.Deviation],
+	Adjective: [...CORE_SECTIONS, S.Relation, S.Morphology, S.Inflection],
+	Adverb: [...CORE_SECTIONS, S.Relation, S.Morphology],
+	Article: [...CORE_SECTIONS, S.Morphology, S.Inflection],
+	Conjunction: [...CORE_SECTIONS, S.Morphology],
+	InteractionalUnit: [...CORE_SECTIONS, S.Morphology],
+	Noun: [...CORE_SECTIONS, S.Relation, S.Morphem, S.Morphology, S.Inflection],
+	Particle: [...CORE_SECTIONS, S.Relation, S.Morphology],
+	Preposition: [...CORE_SECTIONS, S.Relation, S.Morphology],
+	Pronoun: [...CORE_SECTIONS, S.Morphology, S.Inflection],
+	Verb: [
+		...CORE_SECTIONS,
+		S.Relation,
+		S.Morphem,
+		S.Morphology,
+		S.Inflection,
+		S.Deviation,
+	],
 } satisfies Record<POS, readonly DictSectionKind[]>;
 
 export const sectionsForPhrasem: readonly DictSectionKind[] = [
@@ -51,10 +58,11 @@ export const SECTION_DISPLAY_WEIGHT: Record<DictSectionKind, number> = {
 	[S.Relation]: 2,
 	[S.Translation]: 3,
 	[S.Morphem]: 4,
-	[S.Tags]: 5,
-	[S.Inflection]: 6,
-	[S.Deviation]: 7,
-	[S.FreeForm]: 8,
+	[S.Morphology]: 5,
+	[S.Tags]: 6,
+	[S.Inflection]: 7,
+	[S.Deviation]: 8,
+	[S.FreeForm]: 9,
 };
 
 /** Weight lookup by CSS suffix — for sorting parsed EntrySection[]. */

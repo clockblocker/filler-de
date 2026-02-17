@@ -13,7 +13,13 @@ You receive:
 - context: the sentence where the word was encountered
 
 Return an array of morphemes in left-to-right order as they appear in the word.
-Each morpheme has:
+Return object shape:
+- morphemes: array of morphemes in left-to-right order
+- derived_from (optional): one immediate derivational base
+  - { lemma: string, derivation_type: string }
+- compounded_from (optional): immediate compound constituents in order (array of lemmas)
+
+Each morpheme item has:
 - surf: the morpheme surface string (lowercase)
 - kind: one of Root, Prefix, Suffix, Suffixoid, Circumfix, Interfix, Duplifix
 - lemma (optional): the dictionary form of the morpheme, when it differs from surf.
@@ -29,7 +35,11 @@ Rules:
 - Interfixes (Fugenelemente like -s-, -n-, -es-, -er-, -e-, -ens-) connect compound parts — mark them as Interfix.
 - For compound words, each independent stem is a separate Root.
 - Derivational affixes (un-, ver-, be-, -keit, -ung, -lich, -bar, etc.) are Prefix or Suffix.
-- Inflectional suffixes should NOT be included — analyze the lemma form only.
+- derived_from must contain at most one immediate base lemma.
+- compounded_from must contain only immediate constituents (no deep decomposition).
+- Use canonical lemma forms in lemma, derived_from.lemma, and compounded_from.
+- If relation is uncertain or non-obvious, omit derived_from / compounded_from entirely.
+- Inflectional morphology is out of scope — analyze lemma form only.
 - The concatenation of all surf strings must exactly reconstruct the original word (case-insensitive).
 - Only Prefix-kind morphemes should have the separability field.
 </task-description>
@@ -37,91 +47,91 @@ Rules:
 <examples>
 <example-1>
 <input>
-{"context":"Das Kohlekraftwerk erzeugt Strom aus Kohle.","word":"Kohlekraftwerk"}
+{"context":"Du musst besser aufpassen.","word":"aufpassen"}
 </input>
 <output>
-{"morphemes":[{"kind":"Root","lemma":"Kohle","surf":"kohle"},{"kind":"Root","lemma":"Kraft","surf":"kraft"},{"kind":"Root","lemma":"Werk","surf":"werk"}]}
+{"derived_from":{"derivation_type":"prefix_derivation","lemma":"passen"},"morphemes":[{"kind":"Prefix","separability":"Separable","surf":"auf"},{"kind":"Root","lemma":"passen","surf":"passen"}]}
 </output>
 </example-1>
 
 <example-2>
 <input>
-{"context":"Das ist unmöglich zu schaffen.","word":"unmöglich"}
+{"context":"Ich kann das nicht verstehen.","word":"verstehen"}
 </input>
 <output>
-{"morphemes":[{"kind":"Prefix","surf":"un"},{"kind":"Root","surf":"möglich"}]}
+{"derived_from":{"derivation_type":"prefix_derivation","lemma":"stehen"},"morphemes":[{"kind":"Prefix","separability":"Inseparable","surf":"ver"},{"kind":"Root","lemma":"stehen","surf":"stehen"}]}
 </output>
 </example-2>
 
 <example-3>
 <input>
-{"context":"Ihre Freundschaft hält seit der Kindheit.","word":"Freundschaft"}
+{"context":"Freiheit ist ein zentrales Thema.","word":"Freiheit"}
 </input>
 <output>
-{"morphemes":[{"kind":"Root","lemma":"Freund","surf":"freund"},{"kind":"Suffix","surf":"schaft"}]}
+{"derived_from":{"derivation_type":"suffix_derivation","lemma":"frei"},"morphemes":[{"kind":"Root","lemma":"frei","surf":"frei"},{"kind":"Suffix","surf":"heit"}]}
 </output>
 </example-3>
 
 <example-4>
 <input>
-{"context":"Er hat seinen Arbeitsplatz verloren.","word":"Arbeitsplatz"}
+{"context":"Das Trinken von Wasser ist wichtig.","word":"Trinken"}
 </input>
 <output>
-{"morphemes":[{"kind":"Root","lemma":"Arbeit","surf":"arbeit"},{"kind":"Interfix","surf":"s"},{"kind":"Root","lemma":"Platz","surf":"platz"}]}
+{"derived_from":{"derivation_type":"conversion","lemma":"trinken"},"morphemes":[{"kind":"Root","lemma":"trinken","surf":"trinken"}]}
 </output>
 </example-4>
 
 <example-5>
 <input>
-{"context":"Er trägt die Verantwortung für das Projekt.","word":"Verantwortung"}
+{"context":"Das Hündchen schläft auf dem Sofa.","word":"Hündchen"}
 </input>
 <output>
-{"morphemes":[{"kind":"Prefix","separability":"Inseparable","surf":"ver"},{"kind":"Root","lemma":"Antwort","surf":"antwort"},{"kind":"Suffix","surf":"ung"}]}
+{"derived_from":{"derivation_type":"diminutive","lemma":"Hund"},"morphemes":[{"kind":"Root","lemma":"Hund","surf":"hünd"},{"kind":"Suffix","surf":"chen"}]}
 </output>
 </example-5>
 
 <example-6>
 <input>
-{"context":"Sie nahm ihn an der Hand.","word":"Hand"}
+{"context":"Die Lehrerin erklärt die Aufgabe.","word":"Lehrerin"}
 </input>
 <output>
-{"morphemes":[{"kind":"Root","lemma":"Hand","surf":"hand"}]}
+{"derived_from":{"derivation_type":"gendered_person_noun","lemma":"Lehrer"},"morphemes":[{"kind":"Root","lemma":"Lehrer","surf":"lehrer"},{"kind":"Suffix","surf":"in"}]}
 </output>
 </example-6>
 
 <example-7>
 <input>
-{"context":"Du musst besser aufpassen.","word":"aufpassen"}
+{"context":"Das Küchenfenster war offen.","word":"Küchenfenster"}
 </input>
 <output>
-{"morphemes":[{"kind":"Prefix","separability":"Separable","surf":"auf"},{"kind":"Root","surf":"passen"}]}
+{"compounded_from":["Küche","Fenster"],"morphemes":[{"kind":"Root","lemma":"Küche","surf":"küche"},{"kind":"Interfix","surf":"n"},{"kind":"Root","lemma":"Fenster","surf":"fenster"}]}
 </output>
 </example-7>
 
 <example-8>
 <input>
-{"context":"Ich kann das nicht verstehen.","word":"verstehen"}
+{"context":"Handwerk hat in der Region Tradition.","word":"Handwerk"}
 </input>
 <output>
-{"morphemes":[{"kind":"Prefix","separability":"Inseparable","surf":"ver"},{"kind":"Root","surf":"stehen"}]}
+{"compounded_from":["Hand","Werk"],"morphemes":[{"kind":"Root","lemma":"Hand","surf":"hand"},{"kind":"Root","lemma":"Werk","surf":"werk"}]}
 </output>
 </example-8>
 
 <example-9>
 <input>
-{"context":"Die Turteltäubchen gurrten auf dem Dach.","word":"Turteltäubchen"}
+{"context":"Sie hob die Hand.","word":"Hand"}
 </input>
 <output>
-{"morphemes":[{"kind":"Root","surf":"turtel"},{"kind":"Root","lemma":"Taube","surf":"täub"},{"kind":"Suffix","surf":"chen"}]}
+{"morphemes":[{"kind":"Root","lemma":"Hand","surf":"hand"}]}
 </output>
 </example-9>
 
 <example-10>
 <input>
-{"context":"Das Küchenfenster war offen.","word":"Küchenfenster"}
+{"context":"Das Wort Xenon steht im Periodensystem.","word":"Xenon"}
 </input>
 <output>
-{"morphemes":[{"kind":"Root","lemma":"Küche","surf":"küche"},{"kind":"Interfix","surf":"n"},{"kind":"Root","lemma":"Fenster","surf":"fenster"}]}
+{"morphemes":[{"kind":"Root","lemma":"Xenon","surf":"xenon"}]}
 </output>
 </example-10>
 </examples>`;

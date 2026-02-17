@@ -16,6 +16,10 @@ import type {
 	GenerateSectionsResult,
 	ParsedRelation,
 } from "./generate-sections";
+import {
+	appendUniqueLinesToSection,
+	blockHasWikilinkTarget,
+} from "./propagation-line-append";
 
 const INVERSE_KIND: Record<RelationSubKind, RelationSubKind> = {
 	Antonym: "Antonym",
@@ -116,39 +120,13 @@ export function propagateRelations(
 		const newLines = entries.map((e) => e.line);
 
 		const transform = (content: string) => {
-			// Check if relation section marker exists
-			if (content.includes(sectionMarker)) {
-				// Append lines to existing section (before next section or end)
-				const markerIdx = content.indexOf(sectionMarker);
-				const afterMarker = markerIdx + sectionMarker.length;
-				const rest = content.slice(afterMarker);
-
-				// Find end of current section (next section marker or end of content)
-				const nextSectionMatch = rest.match(
-					/<span class="entry_section_title /,
-				);
-				const insertPoint = nextSectionMatch?.index
-					? afterMarker + nextSectionMatch.index
-					: content.length;
-
-				// Get existing section content to avoid duplicates
-				const existingSection = content.slice(afterMarker, insertPoint);
-				const linesToAdd = newLines.filter(
-					(l) => !existingSection.includes(l),
-				);
-				if (linesToAdd.length === 0) return content;
-
-				return (
-					content.slice(0, insertPoint).trimEnd() +
-					"\n" +
-					linesToAdd.join("\n") +
-					content.slice(insertPoint)
-				);
-			}
-
-			// No relation section — append one at the end
-			const linesToAdd = newLines.join("\n");
-			return `${content.trimEnd()}\n${sectionMarker}\n${linesToAdd}`;
+			return appendUniqueLinesToSection({
+				content,
+				lines: newLines,
+				sectionMarker,
+				shouldSkipLine: ({ currentBlockContent }) =>
+					blockHasWikilinkTarget(currentBlockContent, sourceWord),
+			});
 		};
 
 		propagationActions.push(...resolved.healingActions);

@@ -64,6 +64,8 @@ User gets a tailor-made dictionary that grows with their reading
 
 > **V16 scope**: Prompt-stability + pipeline hardening — Lemma adds runtime output guardrails with one controlled retry for suspicious same-surface outputs (separable inflected verbs, comparative/superlative-like inflected adjectives). Unsafe `contextWithLinkedParts` rewrites are dropped when stripped text does not match source context. Background Generate cleanup is now ownership-aware: empty targets are auto-trashed only when invocation-owned (or truly newly created in this run). Disambiguate senses now include optional `senseGloss` (short text gloss) alongside emoji signals.
 
+> **V17 scope**: Morphological relations v1 — Morphem output now supports optional top-level `derived_from` (single base) and `compounded_from` (immediate constituents). New DictSectionKind `Morphology` (`Morphologische Relationen`) is generated for Lexem entries (except proper nouns), ordered right after Morphem. Generate now enforces a 3-phase model (`lemma -> generation -> propagation`) by waiting for `WordTranslation` before all propagation steps. New `propagateMorphologyRelations` writes `<used_in>` backlinks for derivation/compounding and prefix equations to prefix notes; relation propagation now shares append/dedupe utilities and skips when source lemma is already referenced.
+
 > **V9 scope**: LinguisticUnit DTO — Zod-schema-based type system as source of truth for DictEntries. German + Noun fully featured (`genus`, `nounClass`); all other POS/unit kinds have stubs. `GermanLinguisticUnit` built during Generate and stored in `meta.linguisticUnit`. Header prompt now returns `genus` ("Maskulinum"/"Femininum"/"Neutrum") instead of `article` ("der"/"die"/"das"); formatter derives article via `articleFromGenus`. New files: `surface-factory.ts`, `genus.ts`, `noun.ts`, `pos-features.ts`, `lexem-surface.ts`, `phrasem-surface.ts`, `morphem-surface.ts`, `linguistic-unit.ts`. 21 new DTO tests.
 
 > **V8 scope**: Eigenname (proper noun) support — Lemma LLM returns `nounClass` ("Common" | "Proper") and `fullSurface` (when proper noun extends beyond selected text, e.g., selecting "Bank" in "Deutsche Bank"). Wikilink wrapping expands to cover full proper noun via `expandOffsetForFullSurface()` with verification fallback. Section config: proper nouns get reduced sections (core only — no Inflection, Morphem, Relation) via `sectionsForProperNoun`. `nounClass` threaded through `LemmaResult` → `buildSectionQuery()` → `getSectionsFor()`.
@@ -230,7 +232,7 @@ Some prefixes (*über-*, *unter-*, *um-*, *durch-*) are dual-use — separable o
 Each DictEntry is divided into **DictEntrySections**, categorized by `DictSectionKind`:
 
 ```
-DictSectionKind = "Relation" | "FreeForm" | "Attestation" | "Morphem"
+DictSectionKind = "Relation" | "FreeForm" | "Attestation" | "Morphem" | "Morphology"
                | "Header" | "Deviation" | "Inflection" | "Translation" | "Tags"
 ```
 
@@ -240,6 +242,7 @@ DictSectionKind = "Relation" | "FreeForm" | "Attestation" | "Morphem"
 | `Attestation` | Kontexte | User's encountered contexts (`![[File#^blockId\|^]]`) | No |
 | `Relation` | Semantische Beziehungen | Lexical relations | **Yes** (see below) |
 | `Morphem` | Morpheme | Word decomposition. LLM returns structured data (`surf`/`lemma`/`tags`/`kind`), `morphemeFormatterHelper` converts to wikilink display (`[[auf\|>auf]]\|[[passen]]`) | No |
+| `Morphology` | Morphologische Relationen | Derivation/compounding structure (`<derived_from>`, `<consists_of>`, prefix equations, propagated `<used_in>`) | No |
 | `Inflection` | Flexion | Declension/conjugation tables | No |
 | `Deviation` | Abweichungen | Irregular forms, exceptions | No |
 | `Tags` | Tags | POS feature tags (`#noun/maskulin`, `#verb/transitiv/stark`). Generated from POS-specific Features prompts; tag parts are trim/lowercase-normalized and deduplicated when composing `#pos/...`. | No |
@@ -249,7 +252,7 @@ Section titles are localized per `TargetLanguage` via `TitleReprFor`.
 
 **FreeForm — the catch-all section**: Any content in a DictEntry that doesn't match our structured format (i.e., doesn't belong to a recognized DictEntrySection) gets collected into the FreeForm section. This keeps the structured sections clean while preserving user-written or unrecognized content. **Auto-cleanup** happens on Note open/close — the system scans the DictEntry, moves stray content into FreeForm, and re-serializes.
 
-**Dict note cleanup on open (V6)**: When a dict note is opened (`file-open` event in `main.ts`), `cleanupDictNote()` runs three normalizations: (1) normalize attestation ref spacing to `\n\n`-separated, (2) reorder sections within each entry by `SECTION_DISPLAY_WEIGHT` (Attestation → Relation → Translation → Morphem → Inflection → Deviation → FreeForm), and (3) reorder entries so LM (lemma) entries come before IN (inflected) entries. Returns `null` if no changes needed (skips write). Uses VAM `ProcessMdFile` dispatch with self-event tracking to prevent feedback loops. Detection: checks note content for `noteKind: "DictEntry"` metadata string. The Generate pipeline also applies section weight sorting in `serializeEntry` before writing.
+**Dict note cleanup on open (V6+)**: When a dict note is opened (`file-open` event in `main.ts`), `cleanupDictNote()` runs three normalizations: (1) normalize attestation ref spacing to `\n\n`-separated, (2) reorder sections within each entry by `SECTION_DISPLAY_WEIGHT` (Attestation → Relation → Translation → Morphem → Morphology → Tags → Inflection → Deviation → FreeForm), and (3) reorder entries so LM (lemma) entries come before IN (inflected) entries. Returns `null` if no changes needed (skips write). Uses VAM `ProcessMdFile` dispatch with self-event tracking to prevent feedback loops. Detection: checks note content for `noteKind: "DictEntry"` metadata string. The Generate pipeline also applies section weight sorting in `serializeEntry` before writing.
 
 **Source**: `src/commanders/textfresser/targets/de/sections/section-kind.ts`
 
@@ -658,7 +661,7 @@ Generate fires automatically in the background after a successful Lemma command.
 checkAttestation → checkEligibility → checkLemmaResult
   → resolveExistingEntry (parse existing entries, use Lemma's disambiguationResult for re-encounter detection)
   → generateSections (async: LLM calls, or attestation append for re-encounters)
-  → propagateRelations → propagateInflections
+  → propagateRelations → propagateMorphologyRelations → propagateInflections
   → serializeEntry (includes noteKind + emojiDescription in single metadata upsert) → moveToWorter → addWriteAction
 ```
 
@@ -681,14 +684,15 @@ Matching ignores surfaceKind so that inflected encounters (e.g., "Schlosses" →
 
 **Path A (re-encounter)**: If `matchedEntry` exists, append attestation ref (deduped), then check expected V3 sections. If sections are complete, keep fast path (no LLM). If some V3 sections are missing, Generate calls only the missing section generators and merges only those missing sections into the existing entry.
 
-**Path B (new entry)**: Determines applicable sections via `getSectionsFor()`, filtered to the **V3 set**: Header, Tags, Morphem, Relation, Inflection, Translation, Attestation. Header is built from LemmaResult fields (no LLM call).
+**Path B (new entry)**: Determines applicable sections via `getSectionsFor()`, filtered to the **V3 set**: Header, Tags, Morphem, Morphology, Relation, Inflection, Translation, Attestation. Header is built from LemmaResult fields (no LLM call).
 
-All LLM calls are fired in parallel via `Promise.allSettled` (none depend on each other's results). **Critical sections** (Translation) throw on failure; **optional sections** (Morphem, Relation, Inflection) degrade gracefully — failures are logged and the entry is still created. Results are assembled in correct section order after all promises settle. Applicable sections:
+All LLM calls are fired in parallel via `Promise.allSettled` (none depend on each other's results). **Critical sections** (Translation) throw on failure; **optional sections** (Morphem, Relation, Inflection, Morphology) degrade gracefully — failures are logged and the entry is still created. Results are assembled in correct section order after all promises settle. Translation is always awaited before propagation so Generate keeps the strict `lemma -> generation -> propagation` sequence. Applicable sections:
 
 | Section | LLM? | PromptKind | Formatter | Output |
 |---------|------|-----------|-----------|--------|
 | **Header** | No | — | `dispatchHeaderFormatter()` | `{emoji} [[lemma]], [{ipa}](youglish_url)` → `DictEntry.headerContent`. For nouns, article genus priority is: LexemEnrichment genus, then noun-inflection genus fallback; when resolved, output is `{emoji} {article} [[lemma]], [{ipa}](youglish_url)` via `de/lexem/noun/header-formatter`. Dispatch routes by POS; common formatter for non-nouns or unresolved noun genus. `emoji` is rendered from the full `emojiDescription` sequence in order. No LLM call. Sense signals are stored on `meta.entity` (`emojiDescription`, `ipa`) with legacy mirror `meta.emojiDescription` for compatibility. |
 | **Morphem** | Yes | `Morphem` | `morphemeFormatterHelper.formatSection()` | `[[kohle]]\|[[kraft]]\|[[werk]]` → `EntrySection` |
+| **Morphology** | No extra LLM call (reuses `Morphem` output) | — | `generateMorphologySection()` | `<derived_from>`, `<consists_of>`, prefix equation lines; structured payload also captured for propagation |
 | **Relation** | Yes | `Relation` | `formatRelationSection()` | `= [[Synonym]], ⊃ [[Hypernym]]` → `EntrySection`. Raw output also stored for propagation. |
 | **Inflection** | Yes | `NounInflection` (nouns) or `Inflection` (other POS) | `formatInflection()` / `formatInflectionSection()` | `N: das [[Kohlekraftwerk]], die [[Kohlekraftwerke]]` → `EntrySection`. Nouns use structured cells (case×number with article+form); other POS use generic rows. Noun cells also feed `propagateInflections`. |
 | **Translation** | Yes | `WordTranslation` | — (string pass-through) | Translates the lemma word (using attestation context for disambiguation only) → `EntrySection`. V6: changed from `PromptKind.Translate` (which translated the full sentence) to `WordTranslation` (input: `{word, pos, context}`, output: concise 1-3 word translation). |
@@ -722,8 +726,8 @@ Different prompts are needed depending on:
 | **PromptKind** | Lemma, Disambiguate, Morphem, Relation, Inflection, NounInflection, Translate, WordTranslation, Features | What task the LLM performs |
 
 Section applicability (which sections a DictEntry gets) is determined by `LinguisticUnitKind` + `POS` + optional `nounClass` via `getSectionsFor()` in `src/commanders/textfresser/targets/de/sections/section-config.ts`:
-- **Lexem**: POS-dependent (e.g., Nouns get Morphem + Inflection + Relation; Conjunctions get core only)
-- **Lexem + Noun + Proper** (V8): Core sections only (Header, Translation, Attestation, FreeForm) — no Inflection, Morphem, Relation
+- **Lexem**: POS-dependent with `Morphology` enabled for all POS (e.g., Nouns get Morphem + Morphology + Inflection + Relation; Conjunctions get core + Morphology)
+- **Lexem + Noun + Proper** (V8): Core sections only (Header, Translation, Attestation, FreeForm) — no Inflection, Morphem, Morphology, Relation
 - **Phrasem**: Header, Translation, Attestation, Relation, FreeForm
 - **Morphem**: Header, Attestation, FreeForm
 

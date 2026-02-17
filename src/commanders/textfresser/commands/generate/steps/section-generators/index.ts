@@ -13,6 +13,11 @@ export {
 	type MorphemSectionResult,
 } from "./morphem-section-generator";
 export {
+	generateMorphologySection,
+	type MorphologySectionContext,
+	type MorphologySectionResult,
+} from "./morphology-section-generator";
+export {
 	generateRelationSection,
 	type RelationSectionContext,
 	type RelationSectionResult,

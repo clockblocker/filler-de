@@ -66,8 +66,10 @@ async function buildReEncounterResult(
 			failedSections: [],
 			inflectionCells: [],
 			morphemes: [],
+			morphology: undefined,
 			nounInflectionGenus: undefined,
 			relations: [],
+			sourceTranslation: undefined,
 			targetBlockId: undefined,
 		};
 	}
@@ -88,8 +90,10 @@ async function buildReEncounterResult(
 			failedSections: [],
 			inflectionCells: [],
 			morphemes: [],
+			morphology: undefined,
 			nounInflectionGenus: undefined,
 			relations: [],
+			sourceTranslation: undefined,
 			targetBlockId: matchedEntry.id,
 		};
 	}
@@ -117,8 +121,10 @@ async function buildReEncounterResult(
 		failedSections: generated.failedSections,
 		inflectionCells: generated.inflectionCells,
 		morphemes: generated.morphemes,
+		morphology: generated.morphology,
 		nounInflectionGenus: generated.nounInflectionGenus,
 		relations: generated.relations,
+		sourceTranslation: generated.sourceTranslation,
 		targetBlockId: matchedEntry.id,
 	};
 }
@@ -199,8 +205,10 @@ export function generateSections(
 						failedSections: generated.failedSections,
 						inflectionCells: [],
 						morphemes: [],
+						morphology: undefined,
 						nounInflectionGenus: undefined,
 						relations: [],
+						sourceTranslation: undefined,
 						targetBlockId: matchedByVerbIdentity.id,
 					};
 				}
@@ -247,8 +255,10 @@ export function generateSections(
 				failedSections: generated.failedSections,
 				inflectionCells: generated.inflectionCells,
 				morphemes: generated.morphemes,
+				morphology: generated.morphology,
 				nounInflectionGenus: generated.nounInflectionGenus,
 				relations: generated.relations,
+				sourceTranslation: generated.sourceTranslation,
 				targetBlockId: generated.entryId,
 			};
 		})(),

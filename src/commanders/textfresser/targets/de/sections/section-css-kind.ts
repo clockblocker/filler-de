@@ -7,6 +7,7 @@ export const cssSuffixFor: Record<DictSectionKind, string> = {
 	[DictSectionKind.FreeForm]: "notizen",
 	[DictSectionKind.Relation]: "synonyme",
 	[DictSectionKind.Morphem]: "morpheme",
+	[DictSectionKind.Morphology]: "morphologie",
 	[DictSectionKind.Deviation]: "abweichungen",
 	[DictSectionKind.Inflection]: "flexion",
 	[DictSectionKind.Translation]: "translations",
