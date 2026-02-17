@@ -1,0 +1,24 @@
+# Code Ownership Boundaries for filler-de (TextEater Plugin)
+#
+# Each line maps a file pattern to a logical ownership domain.
+# See docs/ARCHITECTURE.md for domain descriptions and dependency rules.
+
+# plugin-core — Plugin lifecycle, configuration, and shared types
+/src/main.ts        @domain/plugin-core
+/src/types.ts       @domain/plugin-core
+/src/settings.ts    @domain/plugin-core
+
+# commands — Editor commands that orchestrate AI and filesystem operations
+/src/commands/      @domain/commands
+
+# ai-api — API client and prompt definitions for LLM interaction
+/src/api.ts         @domain/ai-api
+/src/prompts/       @domain/ai-api
+/src/prompt.ts      @domain/ai-api
+
+# filesystem — Vault file/folder manipulation and markdown utilities
+/src/file.ts        @domain/filesystem
+/src/utils.ts       @domain/filesystem
+
+# prompt-engineering — Individual prompt templates (subset of ai-api)
+/src/prompts/*.ts   @domain/prompt-engineering
