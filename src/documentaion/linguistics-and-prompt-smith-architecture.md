@@ -523,14 +523,14 @@ Inflection -> "flexion", Translation -> "translations", Tags -> "tags"
 |---|---|
 | Noun | CORE + Relation, Morphem, Morphology, Inflection |
 | Verb | CORE + Relation, Morphem, Morphology, Inflection, Deviation |
-| Adjective | CORE + Relation, Inflection |
-| Adverb | CORE + Relation |
-| Article | CORE + Inflection |
-| Pronoun | CORE + Inflection |
-| Preposition | CORE + Relation |
-| Particle | CORE + Relation |
-| Conjunction | CORE only |
-| InteractionalUnit | CORE only |
+| Adjective | CORE + Relation, Morphology, Inflection |
+| Adverb | CORE + Relation, Morphology |
+| Article | CORE + Morphology, Inflection |
+| Pronoun | CORE + Morphology, Inflection |
+| Preposition | CORE + Relation, Morphology |
+| Particle | CORE + Relation, Morphology |
+| Conjunction | CORE + Morphology |
+| InteractionalUnit | CORE + Morphology |
 
 **Special-case sections**:
 - `sectionsForProperNoun` = CORE only (no Inflection, Morphem, Morphology, Relation)

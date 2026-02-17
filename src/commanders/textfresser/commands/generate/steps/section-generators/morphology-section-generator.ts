@@ -124,7 +124,7 @@ export function generateMorphologySection(
 	const compoundedFromLemmas = dedupeLemmas(ctx.output.compounded_from ?? []);
 
 	const lines: string[] = [];
-	if (derivedFromLemma) {
+	if (derivedFromLemma && !inferredPrefixEquation) {
 		lines.push("<derived_from>", `[[${derivedFromLemma}]]`);
 	}
 

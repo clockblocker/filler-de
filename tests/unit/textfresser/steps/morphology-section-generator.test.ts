@@ -71,8 +71,7 @@ describe("generateMorphologySection", () => {
 			targetLang: "German",
 		});
 
-		expect(result.section?.content).toContain("<derived_from>");
-		expect(result.section?.content).toContain("[[passen]]");
+		expect(result.section?.content).not.toContain("<derived_from>");
 		expect(result.section?.content).toContain("<consists_of>");
 		expect(result.section?.content).toContain(
 			"[[auf-prefix-de|>auf]] + [[passen]] = [[aufpassen]] *(to pay attention)*",
@@ -103,6 +102,7 @@ describe("generateMorphologySection", () => {
 		expect(result.section?.content).toContain(
 			"[[ver-prefix-de|ver<]] + [[stehen]] = [[verstehen]]",
 		);
+		expect(result.section?.content).not.toContain("<derived_from>");
 	});
 
 	it("omits section when no morphology fields are available", () => {
