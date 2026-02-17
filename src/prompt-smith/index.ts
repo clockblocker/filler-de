@@ -16,6 +16,7 @@ import * as englishToEnglishInflectionPrompt from "./codegen/generated-promts/en
 import * as englishToEnglishLemmaPrompt from "./codegen/generated-promts/english/english/lemma-prompt";
 import * as englishToEnglishLexemEnrichmentPrompt from "./codegen/generated-promts/english/english/lexem-enrichment-prompt";
 import * as englishToEnglishMorphemPrompt from "./codegen/generated-promts/english/english/morphem-prompt";
+import * as englishToEnglishNounEnrichmentPrompt from "./codegen/generated-promts/english/english/noun-enrichment-prompt";
 import * as englishToEnglishNounInflectionPrompt from "./codegen/generated-promts/english/english/noun-inflection-prompt";
 import * as englishToEnglishPhrasemEnrichmentPrompt from "./codegen/generated-promts/english/english/phrasem-enrichment-prompt";
 import * as englishToEnglishRelationPrompt from "./codegen/generated-promts/english/english/relation-prompt";
@@ -36,6 +37,7 @@ import * as germanToEnglishInflectionPrompt from "./codegen/generated-promts/ger
 import * as germanToEnglishLemmaPrompt from "./codegen/generated-promts/german/english/lemma-prompt";
 import * as germanToEnglishLexemEnrichmentPrompt from "./codegen/generated-promts/german/english/lexem-enrichment-prompt";
 import * as germanToEnglishMorphemPrompt from "./codegen/generated-promts/german/english/morphem-prompt";
+import * as germanToEnglishNounEnrichmentPrompt from "./codegen/generated-promts/german/english/noun-enrichment-prompt";
 import * as germanToEnglishNounInflectionPrompt from "./codegen/generated-promts/german/english/noun-inflection-prompt";
 import * as germanToEnglishPhrasemEnrichmentPrompt from "./codegen/generated-promts/german/english/phrasem-enrichment-prompt";
 import * as germanToEnglishRelationPrompt from "./codegen/generated-promts/german/english/relation-prompt";
@@ -64,6 +66,7 @@ export const PROMPT_FOR = {
 			Lemma: englishToEnglishLemmaPrompt,
 			LexemEnrichment: englishToEnglishLexemEnrichmentPrompt,
 			Morphem: englishToEnglishMorphemPrompt,
+			NounEnrichment: englishToEnglishNounEnrichmentPrompt,
 			NounInflection: englishToEnglishNounInflectionPrompt,
 			PhrasemEnrichment: englishToEnglishPhrasemEnrichmentPrompt,
 			Relation: englishToEnglishRelationPrompt,
@@ -87,6 +90,7 @@ export const PROMPT_FOR = {
 			Lemma: englishToEnglishLemmaPrompt,
 			LexemEnrichment: englishToEnglishLexemEnrichmentPrompt,
 			Morphem: englishToEnglishMorphemPrompt,
+			NounEnrichment: englishToEnglishNounEnrichmentPrompt,
 			NounInflection: englishToEnglishNounInflectionPrompt,
 			PhrasemEnrichment: englishToEnglishPhrasemEnrichmentPrompt,
 			Relation: englishToEnglishRelationPrompt,
@@ -112,6 +116,7 @@ export const PROMPT_FOR = {
 			Lemma: germanToEnglishLemmaPrompt,
 			LexemEnrichment: germanToEnglishLexemEnrichmentPrompt,
 			Morphem: germanToEnglishMorphemPrompt,
+			NounEnrichment: germanToEnglishNounEnrichmentPrompt,
 			NounInflection: germanToEnglishNounInflectionPrompt,
 			PhrasemEnrichment: germanToEnglishPhrasemEnrichmentPrompt,
 			Relation: germanToEnglishRelationPrompt,
@@ -135,6 +140,7 @@ export const PROMPT_FOR = {
 			Lemma: germanToEnglishLemmaPrompt,
 			LexemEnrichment: germanToEnglishLexemEnrichmentPrompt,
 			Morphem: germanToEnglishMorphemPrompt,
+			NounEnrichment: germanToEnglishNounEnrichmentPrompt,
 			NounInflection: germanToEnglishNounInflectionPrompt,
 			PhrasemEnrichment: germanToEnglishPhrasemEnrichmentPrompt,
 			Relation: germanToEnglishRelationPrompt,

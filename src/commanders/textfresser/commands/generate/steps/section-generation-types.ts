@@ -25,7 +25,9 @@ export type MorphologyPayload = {
 	prefixEquation?: PrefixEquationPayload;
 };
 
-export type LexemEnrichmentOutput = AgentOutput<"LexemEnrichment">;
+export type LexemEnrichmentOutput =
+	| AgentOutput<"LexemEnrichment">
+	| AgentOutput<"NounEnrichment">;
 export type PhrasemEnrichmentOutput = AgentOutput<"PhrasemEnrichment">;
 export type EnrichmentOutput = LexemEnrichmentOutput | PhrasemEnrichmentOutput;
 

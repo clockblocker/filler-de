@@ -48,21 +48,17 @@ function makeVerbEnrichment(): AgentOutput<"LexemEnrichment"> {
 	return {
 		emojiDescription: ["🔧"],
 		ipa: "tɛst",
-		linguisticUnit: "Lexem",
-		posLikeKind: "Verb",
 	};
 }
 
 function makeNounEnrichment(
-	overrides: Partial<AgentOutput<"LexemEnrichment">> = {},
-): AgentOutput<"LexemEnrichment"> {
+	overrides: Partial<AgentOutput<"NounEnrichment">> = {},
+): AgentOutput<"NounEnrichment"> {
 	return {
 		emojiDescription: ["🔧"],
 		genus: "Maskulinum",
 		ipa: "tɛst",
-		linguisticUnit: "Lexem",
 		nounClass: "Common",
-		posLikeKind: "Noun",
 		...overrides,
 	};
 }
@@ -94,8 +90,6 @@ describe("dispatchHeaderFormatter", () => {
 			{
 				emojiDescription: ["🔧"],
 				ipa: "tɛst",
-				linguisticUnit: "Phrasem",
-				posLikeKind: "DiscourseFormula",
 			},
 			"German",
 		);
@@ -147,8 +141,6 @@ describe("dispatchHeaderFormatter", () => {
 			{
 				emojiDescription: ["🔧"],
 				ipa: "tɛst",
-				linguisticUnit: "Lexem",
-				posLikeKind: "Verb",
 			},
 			"German",
 		);

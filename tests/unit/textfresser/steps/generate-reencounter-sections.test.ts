@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { okAsync, type ResultAsync } from "neverthrow";
+import { errAsync, okAsync, type ResultAsync } from "neverthrow";
 import { generateSections } from "../../../../src/commanders/textfresser/commands/generate/steps/generate-sections";
 import type { ResolvedEntryState } from "../../../../src/commanders/textfresser/commands/generate/steps/resolve-existing-entry";
 import type {
@@ -116,8 +116,6 @@ describe("generateSections re-encounter behavior", () => {
 					return okAsync({
 						emojiDescription: ["💬"],
 						ipa: "ipa",
-						linguisticUnit: "Phrasem",
-						posLikeKind: "Idiom",
 					});
 				}
 				if (kind === "WordTranslation") {
@@ -157,8 +155,6 @@ describe("generateSections re-encounter behavior", () => {
 					return okAsync({
 						emojiDescription: ["💬"],
 						ipa: "ipa",
-						linguisticUnit: "Phrasem",
-						posLikeKind: "Idiom",
 					});
 				}
 				if (kind === "Relation") {
@@ -256,5 +252,71 @@ describe("generateSections re-encounter behavior", () => {
 		const result = await generateSections(ctx);
 		expect(result.isOk()).toBe(true);
 		expect(promptCalls).toHaveLength(0);
+	});
+});
+
+describe("generateSections new-entry resilience", () => {
+	it("creates a non-empty entry when enrichment and other sections fail", async () => {
+		const promptCalls: string[] = [];
+		const ctx = {
+			actions: [],
+			commandContext: {
+				activeFile: {
+					content: "",
+					splitPath: {
+						basename: "ja",
+						extension: "md",
+						kind: "MdFile",
+						pathParts: ["Worter"],
+					},
+				},
+			},
+			existingEntries: [],
+			matchedEntry: null,
+			nextIndex: 1,
+			resultingActions: [],
+			textfresserState: {
+				inFlightGenerate: null,
+				languages: { known: "English", target: "German" },
+				latestFailedSections: [],
+				latestLemmaInvocationCache: null,
+				latestLemmaResult: {
+					attestation: {
+						source: {
+							ref: "![[Src#^1|^]]",
+							textRaw: "Ja, das stimmt.",
+							textWithOnlyTargetMarked: "[Ja], das stimmt.",
+						},
+						target: { surface: "Ja" },
+					},
+					disambiguationResult: null,
+					lemma: "ja",
+					linguisticUnit: "Lexem",
+					posLikeKind: "InteractionalUnit",
+					surfaceKind: "Lemma",
+				},
+				lookupInLibrary: () => [],
+				promptRunner: {
+					generate: (kind: string) => {
+						promptCalls.push(kind);
+						return errAsync({ reason: `${kind} failed` });
+					},
+				},
+				vam: {},
+			} as unknown as TextfresserState,
+		} as unknown as ResolvedEntryState;
+
+		const result = await generateSections(ctx);
+		expect(result.isOk()).toBe(true);
+		if (result.isErr()) return;
+
+		expect(promptCalls).toContain("LexemEnrichment");
+		expect(result.value.allEntries).toHaveLength(1);
+		const onlyEntry = result.value.allEntries[0];
+		expect(onlyEntry?.sections).toHaveLength(1);
+		expect(onlyEntry?.sections[0]?.kind).toBe("kontexte");
+		expect(onlyEntry?.sections[0]?.content).toBe("![[Src#^1|^]]");
+		expect(result.value.failedSections).toContain("Enrichment");
+		expect(result.value.failedSections).toContain("Translation");
 	});
 });

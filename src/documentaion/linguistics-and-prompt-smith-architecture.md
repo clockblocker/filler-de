@@ -632,7 +632,7 @@ Current runtime kinds:
 
 ```typescript
 "Translate" | "Morphem" | "Lemma"
-| "LexemEnrichment" | "PhrasemEnrichment"
+| "LexemEnrichment" | "NounEnrichment" | "PhrasemEnrichment"
 | "Relation" | "Inflection" | "NounInflection"
 | "Disambiguate" | "WordTranslation"
 | "FeaturesNoun" | "FeaturesPronoun" | "FeaturesArticle" | "FeaturesAdjective"
@@ -650,7 +650,9 @@ type AgentOutput<K extends PromptKind> = z.infer<SchemasFor[K]["agentOutputSchem
 #### Runtime schema catalog (cutover)
 
 - `Lemma`: minimal classifier result (`lemma`, `linguisticUnit`, `posLikeKind`, `surfaceKind`, optional `contextWithLinkedParts`), with runtime alias compatibility for legacy keys (`pos` / `phrasemeKind`) normalized to `posLikeKind`.
-- `LexemEnrichment` / `PhrasemEnrichment`: core metadata retrieval in Generate (`emojiDescription`, `ipa`, optional `senseGloss`, noun-only `genus` + `nounClass`, best-effort for noun enrichment outputs).
+- `LexemEnrichment`: lightweight non-noun lexical metadata (`word` + `pos` input; output `emojiDescription`, `ipa`, optional `senseGloss`).
+- `NounEnrichment`: noun-only metadata (`word` input; output `emojiDescription`, `ipa`, optional `senseGloss`, optional `genus` + `nounClass`).
+- `PhrasemEnrichment`: lightweight phrasem metadata (`word` + `kind` input; output `emojiDescription`, `ipa`, optional `senseGloss`).
 - `Features*` (10 prompt kinds): POS-specific lexical tag extraction (`tags: string[]`).
 - `Disambiguate`: senses payload includes optional `senseGloss` (`3..120` chars) in addition to emoji, IPA, and grammatical hints.
 - Existing `Morphem`, `Relation`, `Inflection`, `NounInflection`, `Disambiguate`, `WordTranslation`, `Translate` remain.
@@ -659,7 +661,7 @@ type AgentOutput<K extends PromptKind> = z.infer<SchemasFor[K]["agentOutputSchem
 
 #### De linguistics contracts (now wired)
 
-Contracts in `src/linguistics/de/lemma/` are now the runtime source for lemma classification and enrichment/route input shapes.
+Contracts in `src/linguistics/de/lemma/` are the runtime source for lemma classification and internal enrichment/route shapes.
 
 - `DeLemmaResultSchema` narrows lemma classification to:
   - `linguisticUnit: "Lexem" | "Phrasem"` (Morphem excluded in this phase)

@@ -18,7 +18,7 @@ export type GenerateSectionsResult = ResolvedEntryState & {
 	morphology?: MorphologyPayload;
 	/** Structured noun inflection cells — used by propagate-inflections step. Empty for non-nouns / re-encounters. */
 	inflectionCells: NounInflectionCell[];
-	/** Noun genus from LexemEnrichment — required for noun inflection propagation headers. */
+	/** Noun genus from NounEnrichment (or noun-inflection fallback) — used by noun inflection propagation headers. */
 	nounInflectionGenus?: GermanGenus;
 	/** Resolved morpheme items — used by propagate-morphemes step. Empty for re-encounters. */
 	morphemes: MorphemeItem[];
