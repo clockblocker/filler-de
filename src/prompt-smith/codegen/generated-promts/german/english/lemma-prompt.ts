@@ -27,6 +27,8 @@ Rules:
 - For verbs: lemma is infinitive (e.g., "ging" → "gehen")
 - For adjectives: lemma is base form without endings (e.g., "schönes" → "schön")
 - For separable verbs: include prefix in lemma (e.g., "fing...an" → "anfangen")
+- For separable verbs in split position, NEVER return the finite surface as lemma (e.g., "macht ... auf" → "aufmachen", NOT "macht")
+- For comparative/superlative adjective surfaces, NEVER return the inflected surface as lemma (e.g., "schöner" → "schön", "klügste" → "klug")
 - Phrasem: multi-word fixed expression (e.g., "auf jeden Fall" → lemma: "auf jeden Fall")
 - When linguisticUnit is "Phrasem", posLikeKind must be a phraseme kind
 - If the surface IS the lemma, surfaceKind is "Lemma"
@@ -71,4 +73,40 @@ Rules:
 {"contextWithLinkedParts":"[Pass] auf dich [auf]","lemma":"aufpassen","linguisticUnit":"Lexem","posLikeKind":"Verb","surfaceKind":"Inflected"}
 </output>
 </example-4>
+
+<example-5>
+<input>
+{"context":"Er [macht] die Tür auf.","surface":"macht"}
+</input>
+<output>
+{"contextWithLinkedParts":"Er [macht] die Tür [auf].","lemma":"aufmachen","linguisticUnit":"Lexem","posLikeKind":"Verb","surfaceKind":"Inflected"}
+</output>
+</example-5>
+
+<example-6>
+<input>
+{"context":"Wann [fängst] du damit an?","surface":"fängst"}
+</input>
+<output>
+{"contextWithLinkedParts":"Wann [fängst] du damit [an]?","lemma":"anfangen","linguisticUnit":"Lexem","posLikeKind":"Verb","surfaceKind":"Inflected"}
+</output>
+</example-6>
+
+<example-7>
+<input>
+{"context":"Morgen wird es noch [schöner].","surface":"schöner"}
+</input>
+<output>
+{"lemma":"schön","linguisticUnit":"Lexem","posLikeKind":"Adjective","surfaceKind":"Inflected"}
+</output>
+</example-7>
+
+<example-8>
+<input>
+{"context":"Sie ist [klüger] als ihr Bruder.","surface":"klüger"}
+</input>
+<output>
+{"lemma":"klug","linguisticUnit":"Lexem","posLikeKind":"Adjective","surfaceKind":"Inflected"}
+</output>
+</example-8>
 </examples>`;

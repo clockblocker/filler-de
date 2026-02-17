@@ -18,6 +18,7 @@ export const testExamples = [
 			linguisticUnit: "Lexem",
 			nounClass: "Common",
 			posLikeKind: "Noun",
+			senseGloss: "dwelling building",
 		},
 	},
 ] satisfies {

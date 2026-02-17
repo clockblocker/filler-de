@@ -6,10 +6,13 @@ import type { VaultActionManager } from "../../../../../managers/obsidian/vault-
 import type { SplitPathToMdFile } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { AgentOutput } from "../../../../../prompt-smith";
 import { PromptKind } from "../../../../../prompt-smith/codegen/consts";
+import { markdownHelper } from "../../../../../stateless-helpers/markdown-strip";
 import { logger } from "../../../../../utils/logger";
 import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import { dictNoteHelper } from "../../../domain/dict-note";
 import type { PromptRunner } from "../../../llm/prompt-runner";
+import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
+import { DictSectionKind } from "../../../targets/de/sections/section-kind";
 import type { CommandError } from "../../types";
 import { CommandErrorKind } from "../../types";
 
@@ -33,6 +36,8 @@ type DisambiguationResult =
 	| { matchedIndex: number }
 	| { matchedIndex: null; precomputedEmojiDescription?: string[] }
 	| null;
+
+const TRANSLATION_SECTION_CSS_KIND = cssSuffixFor[DictSectionKind.Translation];
 
 function extractIpaFromHeaderContent(
 	headerContent: string,
@@ -64,6 +69,36 @@ function extractPhrasemeKindFromEntity(
 		return entity.posLikeKind;
 	}
 	return undefined;
+}
+
+function extractSenseGlossFromEntity(
+	entity: DeEntity | undefined,
+): string | undefined {
+	const senseGloss = entity?.senseGloss;
+	return typeof senseGloss === "string" && senseGloss.length > 0
+		? senseGloss
+		: undefined;
+}
+
+function extractSenseGlossFromTranslationSection(entry: {
+	sections: Array<{ content: string; kind: string }>;
+}): string | undefined {
+	const translationSection = entry.sections.find(
+		(section) => section.kind === TRANSLATION_SECTION_CSS_KIND,
+	);
+	if (!translationSection) {
+		return undefined;
+	}
+
+	const firstLine = translationSection.content
+		.split("\n")
+		.map((line) => markdownHelper.stripAll(line).trim())
+		.find((line) => line.length > 0);
+	if (!firstLine) {
+		return undefined;
+	}
+
+	return firstLine.slice(0, 120);
 }
 
 /**
@@ -153,6 +188,17 @@ export function disambiguateSense(
 								ipaFromLegacyMeta.length > 0
 							? ipaFromLegacyMeta
 							: extractIpaFromHeaderContent(e.headerContent);
+				const senseGlossFromEntity =
+					extractSenseGlossFromEntity(entity);
+				const senseGlossFromLegacyMeta =
+					typeof e.meta.senseGloss === "string" &&
+					e.meta.senseGloss.length > 0
+						? e.meta.senseGloss
+						: undefined;
+				const senseGloss =
+					senseGlossFromEntity ??
+					senseGlossFromLegacyMeta ??
+					extractSenseGlossFromTranslationSection(e);
 
 				let genus = extractGenusFromEntity(entity);
 				let phrasemeKind = extractPhrasemeKindFromEntity(entity);
@@ -180,13 +226,14 @@ export function disambiguateSense(
 					ipa,
 					phrasemeKind,
 					pos: parsed.pos,
+					senseGloss,
 					unitKind: parsed.unitKind,
 				};
 			})
 			.filter((s) => s !== null);
 
 		logger.info(
-			`[disambiguate] Senses: ${JSON.stringify(senses)}, withEmojiDescription: ${senses.filter((s) => s.emojiDescription !== null).length}`,
+			`[disambiguate] Senses: ${JSON.stringify(senses)}, withEmojiDescription: ${senses.filter((s) => s.emojiDescription !== null).length}, withSenseGloss: ${senses.filter((s) => typeof s.senseGloss === "string" && s.senseGloss.length > 0).length}`,
 		);
 
 		if (senses.length === 0) {
@@ -229,6 +276,7 @@ export function disambiguateSense(
 					ipa: s.ipa,
 					phrasemeKind: s.phrasemeKind,
 					pos: s.pos,
+					senseGloss: s.senseGloss,
 					unitKind: s.unitKind,
 				})),
 			})

@@ -22,7 +22,11 @@ import {
 import { CommandErrorKind } from "../../errors";
 import type { TextfresserState } from "../../state/textfresser-state";
 import { dispatchActions } from "../shared/dispatch-actions";
-import { areSameSplitPath } from "../shared/split-path-utils";
+import { splitPathsEqual } from "../../../../stateless-helpers/split-path-comparison";
+import {
+	chooseBestEffortLemmaOutput,
+	evaluateLemmaOutputGuardrails,
+} from "./lemma-output-guardrails";
 import { buildLemmaRewritePlan, buildUpdatedBlock } from "./lemma-rewrite-plan";
 
 export async function runLemmaTwoPhase(params: {
@@ -52,6 +56,9 @@ export async function runLemmaTwoPhase(params: {
 	const placeholderPath = prePromptTarget.shouldCreatePlaceholder
 		? prePromptTarget.splitPath
 		: null;
+	const placeholderExistedBeforePhaseA =
+		placeholderPath !== null && vam.exists(placeholderPath);
+	state.latestLemmaTargetOwnedByInvocation = false;
 	state.latestLemmaPlaceholderPath = placeholderPath ?? undefined;
 
 	const rawBlock = attestation.source.textRaw;
@@ -113,7 +120,68 @@ export async function runLemmaTwoPhase(params: {
 			reason: lemmaPromptResult.error.reason,
 		});
 	}
-	const lemmaPromptOutput = lemmaPromptResult.value;
+	const firstGuardrailEvaluation = evaluateLemmaOutputGuardrails({
+		context,
+		output: lemmaPromptResult.value,
+		surface,
+	});
+	let selectedGuardrailEvaluation = firstGuardrailEvaluation;
+
+	if (firstGuardrailEvaluation.coreIssues.length > 0) {
+		logger.warn(
+			"[Textfresser.Lemma] Guardrail rejected first lemma output; retrying once",
+			{
+				coreIssues: firstGuardrailEvaluation.coreIssues,
+				firstOutput: firstGuardrailEvaluation.output,
+				surface,
+			},
+		);
+		const retryPromptResult = await state.promptRunner.generate(
+			PromptKind.Lemma,
+			{ context, surface },
+		);
+		if (retryPromptResult.isErr()) {
+			return err({
+				kind: CommandErrorKind.ApiError,
+				reason: retryPromptResult.error.reason,
+			});
+		}
+
+		const secondGuardrailEvaluation = evaluateLemmaOutputGuardrails({
+			context,
+			output: retryPromptResult.value,
+			surface,
+		});
+		selectedGuardrailEvaluation = chooseBestEffortLemmaOutput({
+			first: firstGuardrailEvaluation,
+			second: secondGuardrailEvaluation,
+		});
+
+		if (secondGuardrailEvaluation.coreIssues.length > 0) {
+			logger.warn(
+				"[Textfresser.Lemma] Guardrail retry exhausted; continuing with best-effort output",
+				{
+					firstCoreIssues: firstGuardrailEvaluation.coreIssues,
+					firstOutput: firstGuardrailEvaluation.output,
+					secondCoreIssues: secondGuardrailEvaluation.coreIssues,
+					secondOutput: secondGuardrailEvaluation.output,
+					selectedOutput: selectedGuardrailEvaluation.output,
+					surface,
+				},
+			);
+		}
+	}
+
+	if (selectedGuardrailEvaluation.droppedContextWithLinkedParts) {
+		logger.warn(
+			"[Textfresser.Lemma] Dropping unsafe contextWithLinkedParts due stripped-text mismatch",
+			{
+				output: selectedGuardrailEvaluation.output,
+				surface,
+			},
+		);
+	}
+	const lemmaPromptOutput = selectedGuardrailEvaluation.output;
 
 	const finalTarget = computeFinalTarget({
 		findByBasename: (basename) => vam.findByBasename(basename),
@@ -204,16 +272,24 @@ export async function runLemmaTwoPhase(params: {
 	const shouldNavigateToFinal =
 		placeholderPath !== null &&
 		currentPath !== null &&
-		!areSameSplitPath(placeholderPath, finalTarget.splitPath) &&
-		areSameSplitPath(currentPath, placeholderPath);
+		!splitPathsEqual(placeholderPath, finalTarget.splitPath) &&
+		splitPathsEqual(currentPath, placeholderPath);
 
 	let placeholderWasCleaned = false;
 	let placeholderWasRenamed = false;
+	let finalTargetOwnedByInvocation = false;
 	const phaseBActions: VaultAction[] = [];
 
 	if (
 		placeholderPath &&
-		!areSameSplitPath(placeholderPath, finalTarget.splitPath)
+		splitPathsEqual(placeholderPath, finalTarget.splitPath)
+	) {
+		finalTargetOwnedByInvocation = !placeholderExistedBeforePhaseA;
+	}
+
+	if (
+		placeholderPath &&
+		!splitPathsEqual(placeholderPath, finalTarget.splitPath)
 	) {
 		const finalExists = vam.exists(finalTarget.splitPath);
 		if (!finalExists) {
@@ -226,6 +302,7 @@ export async function runLemmaTwoPhase(params: {
 			});
 			placeholderWasCleaned = true;
 			placeholderWasRenamed = true;
+			finalTargetOwnedByInvocation = !placeholderExistedBeforePhaseA;
 		} else {
 			const placeholderContentResult =
 				await vam.readContent(placeholderPath);
@@ -247,6 +324,7 @@ export async function runLemmaTwoPhase(params: {
 			kind: VaultActionKind.UpsertMdFile,
 			payload: { splitPath: finalTarget.splitPath },
 		});
+		finalTargetOwnedByInvocation = true;
 	}
 
 	phaseBActions.push({
@@ -275,6 +353,7 @@ export async function runLemmaTwoPhase(params: {
 	state.latestLemmaPlaceholderPath = placeholderWasCleaned
 		? undefined
 		: (placeholderPath ?? undefined);
+	state.latestLemmaTargetOwnedByInvocation = finalTargetOwnedByInvocation;
 
 	if (shouldNavigateToFinal) {
 		const cdResult = await vam.cd(finalTarget.splitPath);

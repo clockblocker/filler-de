@@ -10,6 +10,7 @@ import {
 	incrementPending,
 } from "../../../../utils/idle-tracker";
 import { logger } from "../../../../utils/logger";
+import type { LemmaResult } from "../../commands/lemma/types";
 import type { CommandError, CommandInput } from "../../commands/types";
 import { buildPolicyDestinationPath } from "../../common/lemma-link-routing";
 import type {
@@ -18,9 +19,9 @@ import type {
 	TextfresserState,
 } from "../../state/textfresser-state";
 import {
-	areSameSplitPath,
+	splitPathsEqual,
 	stringifySplitPath,
-} from "../shared/split-path-utils";
+} from "../../../../stateless-helpers/split-path-comparison";
 
 type GenerateCommandFn = (
 	input: CommandInput,
@@ -59,7 +60,9 @@ export function createBackgroundGenerateCoordinator(params: {
 			});
 		const request: PendingGenerate = {
 			lemma: lemmaResult.lemma,
+			lemmaResult,
 			notify,
+			targetOwnedByInvocation: state.latestLemmaTargetOwnedByInvocation,
 			targetPath,
 		};
 
@@ -76,6 +79,8 @@ export function createBackgroundGenerateCoordinator(params: {
 		const promise = runBackgroundGenerate(
 			request.targetPath,
 			request.lemma,
+			request.lemmaResult,
+			request.targetOwnedByInvocation,
 			request.notify,
 		)
 			.catch((error) => {
@@ -92,7 +97,7 @@ export function createBackgroundGenerateCoordinator(params: {
 				state.pendingGenerate = null;
 				if (
 					pending &&
-					!areSameSplitPath(pending.targetPath, request.targetPath)
+					!splitPathsEqual(pending.targetPath, request.targetPath)
 				) {
 					launchBackgroundGenerate(pending);
 				}
@@ -101,6 +106,7 @@ export function createBackgroundGenerateCoordinator(params: {
 		state.inFlightGenerate = {
 			lemma: request.lemma,
 			promise,
+			targetOwnedByInvocation: request.targetOwnedByInvocation,
 			targetPath: request.targetPath,
 		};
 	}
@@ -108,19 +114,25 @@ export function createBackgroundGenerateCoordinator(params: {
 	async function runBackgroundGenerate(
 		targetPath: SplitPathToMdFile,
 		lemma: string,
+		lemmaResult: LemmaResult,
+		targetOwnedByInvocation: boolean,
 		notify: (message: string) => void,
 	): Promise<void> {
 		const targetExistedBefore = vam.exists(targetPath);
 		const contentResult = await vam.readContent(targetPath);
 		const content = contentResult.isOk() ? contentResult.value : "";
 
+		const stateSnapshot: TextfresserState = {
+			...state,
+			latestLemmaResult: lemmaResult,
+		};
 		const input: CommandInput = {
 			commandContext: {
 				activeFile: { content, splitPath: targetPath },
 				selection: null,
 			},
 			resultingActions: [],
-			textfresserState: state,
+			textfresserState: stateSnapshot,
 		};
 
 		const generateResult = await runGenerateCommand(input);
@@ -152,7 +164,10 @@ export function createBackgroundGenerateCoordinator(params: {
 			);
 		}
 		if (finalContentResult.value.trim().length === 0) {
-			if (!targetExistedBefore) {
+			const shouldCleanup =
+				targetOwnedByInvocation || !targetExistedBefore;
+			let cleanupSummary = "skipped";
+			if (shouldCleanup) {
 				const rollbackResult = await vam.dispatch([
 					{
 						kind: VaultActionKind.TrashMdFile,
@@ -160,6 +175,10 @@ export function createBackgroundGenerateCoordinator(params: {
 					},
 				]);
 				if (rollbackResult.isErr()) {
+					const rollbackReason = rollbackResult.error
+						.map((e) => e.error)
+						.join(", ");
+					cleanupSummary = `failed (${rollbackReason})`;
 					logger.warn(
 						"[Textfresser.backgroundGenerate] Failed to rollback empty generated note",
 						{
@@ -167,20 +186,26 @@ export function createBackgroundGenerateCoordinator(params: {
 							targetPath,
 						},
 					);
+				} else {
+					cleanupSummary = "deleted";
 				}
 			}
 
 			throw new Error(
-				`Background generate produced empty target note: ${stringifySplitPath(targetPath)}`,
+				`Background generate produced empty target note: ${stringifySplitPath(targetPath)} (cleanup=${cleanupSummary}, owned=${targetOwnedByInvocation}, existedBefore=${targetExistedBefore})`,
 			);
 		}
 
+		// Propagate output side-effects from snapshot back to live state
+		state.targetBlockId = stateSnapshot.targetBlockId;
+		state.latestFailedSections = stateSnapshot.latestFailedSections;
+
 		const cache = state.latestLemmaInvocationCache;
-		const generatedEntryId = state.targetBlockId;
+		const generatedEntryId = stateSnapshot.targetBlockId;
 		if (
 			cache &&
 			generatedEntryId &&
-			areSameSplitPath(cache.resolvedTargetPath, targetPath)
+			splitPathsEqual(cache.resolvedTargetPath, targetPath)
 		) {
 			state.latestLemmaInvocationCache = {
 				...cache,
@@ -188,7 +213,7 @@ export function createBackgroundGenerateCoordinator(params: {
 			};
 		}
 
-		const failed = state.latestFailedSections;
+		const failed = stateSnapshot.latestFailedSections;
 		if (failed.length > 0) {
 			notify(
 				`⚠ Entry created for ${lemma} (failed: ${failed.join(", ")})`,
@@ -212,7 +237,7 @@ export function createBackgroundGenerateCoordinator(params: {
 		const currentFile = vam.mdPwd();
 		if (
 			!currentFile ||
-			!areSameSplitPath(currentFile, inFlight.targetPath)
+			!splitPathsEqual(currentFile, inFlight.targetPath)
 		) {
 			return;
 		}

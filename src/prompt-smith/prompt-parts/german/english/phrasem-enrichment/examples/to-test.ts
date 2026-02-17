@@ -16,6 +16,7 @@ export const testExamples = [
 			ipa: "aʊ̯f ˈjeːdn̩ fal",
 			linguisticUnit: "Phrasem",
 			posLikeKind: "DiscourseFormula",
+			senseGloss: "definitely / certainly",
 		},
 	},
 ] satisfies {

@@ -43,10 +43,8 @@ import {
 	getRootBaseName,
 	resolveNextAvailableNameInSection,
 } from "./library-tree/utils/duplicate-name-resolver";
-import {
-	buildCanonicalLeafSplitPath,
-	splitPathsEqual,
-} from "./library-tree/utils/split-path-utils";
+import { buildCanonicalLeafSplitPath } from "./library-tree/utils/split-path-utils";
+import { splitPathsEqual } from "../../../stateless-helpers/split-path-comparison";
 import { parseOldSectionPath } from "./utils/old-section-path";
 
 // ─── Result Type ───

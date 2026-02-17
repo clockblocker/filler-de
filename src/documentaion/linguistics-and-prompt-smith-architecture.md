@@ -318,7 +318,7 @@ GermanLinguisticUnitSchema = z.discriminatedUnion("kind", [
 
 Type: `GermanLinguisticUnit` — legacy compatibility DTO.
 
-Canonical propagation DTO: `DeEntity<U,S> = Entity<"German", U, S, DePosLikeDiscriminator<U>>`, with top-level `emojiDescription` + `ipa` and split features:
+Canonical propagation DTO: `DeEntity<U,S> = Entity<"German", U, S, DePosLikeDiscriminator<U>>`, with top-level `emojiDescription` + `ipa` + optional `senseGloss` and split features:
 - `features.lexical` — inherent lexical properties (`genus`, `nounClass`, valency, etc.)
 - `features.inflectional` — realized/variable inflectional data (lemma entries are typically empty here)
 
@@ -647,8 +647,9 @@ type AgentOutput<K extends PromptKind> = z.infer<SchemasFor[K]["agentOutputSchem
 #### Runtime schema catalog (cutover)
 
 - `Lemma`: minimal classifier result (`lemma`, `linguisticUnit`, `posLikeKind`, `surfaceKind`, optional `contextWithLinkedParts`), with runtime alias compatibility for legacy keys (`pos` / `phrasemeKind`) normalized to `posLikeKind`.
-- `LexemEnrichment` / `PhrasemEnrichment`: core metadata retrieval in Generate (`emojiDescription`, `ipa`, noun-only `genus` + `nounClass`, best-effort for noun enrichment outputs).
+- `LexemEnrichment` / `PhrasemEnrichment`: core metadata retrieval in Generate (`emojiDescription`, `ipa`, optional `senseGloss`, noun-only `genus` + `nounClass`, best-effort for noun enrichment outputs).
 - `Features*` (10 prompt kinds): POS-specific lexical tag extraction (`tags: string[]`).
+- `Disambiguate`: senses payload includes optional `senseGloss` (`3..120` chars) in addition to emoji, IPA, and grammatical hints.
 - Existing `Morphem`, `Relation`, `Inflection`, `NounInflection`, `Disambiguate`, `WordTranslation`, `Translate` remain.
 
 `PromptKind.Features` is removed.
@@ -663,9 +664,10 @@ Contracts in `src/linguistics/de/lemma/` are now the runtime source for lemma cl
   - required `surfaceKind`
   - optional `contextWithLinkedParts` for multi-span attestation replacement
   - legacy compatibility input aliases: `pos` (Lexem) and `phrasemeKind` (Phrasem), normalized to canonical `posLikeKind`
+  - normalized output always includes `contextWithLinkedParts` key (`string | undefined`) after schema transform
 - `generate-contracts.ts` defines core v1 prompt contracts:
   - shared target (`DeLexicalTargetSchema`)
-  - enrichment (`DeEnrichmentInputSchema` / `DeEnrichmentOutputSchema`)
+  - enrichment (`DeEnrichmentInputSchema` / `DeEnrichmentOutputSchema`, including optional `senseGloss`)
   - relation (`DeRelationInputSchema` / `DeRelationOutputSchema`)
   - inflection (`DeInflectionInputSchema` / `DeInflectionOutputSchema`)
   - features (`DeFeaturesInputSchema` / `DeFeaturesOutputSchema`)

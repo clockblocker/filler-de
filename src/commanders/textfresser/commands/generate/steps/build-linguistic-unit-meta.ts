@@ -207,6 +207,10 @@ function buildLexemEntity(
 		lemma: lemmaResult.lemma,
 		linguisticUnit: "Lexem" as const,
 		posLikeKind: lemmaResult.posLikeKind,
+		...(typeof enrichmentOutput.senseGloss === "string" &&
+		enrichmentOutput.senseGloss.length > 0
+			? { senseGloss: enrichmentOutput.senseGloss }
+			: {}),
 		surfaceKind: lemmaResult.surfaceKind,
 	};
 
@@ -298,6 +302,10 @@ function buildPhrasemEntity(
 		lemma: lemmaResult.lemma,
 		linguisticUnit: "Phrasem" as const,
 		posLikeKind: lemmaResult.posLikeKind,
+		...(typeof enrichmentOutput.senseGloss === "string" &&
+		enrichmentOutput.senseGloss.length > 0
+			? { senseGloss: enrichmentOutput.senseGloss }
+			: {}),
 		surfaceKind: lemmaResult.surfaceKind,
 	};
 

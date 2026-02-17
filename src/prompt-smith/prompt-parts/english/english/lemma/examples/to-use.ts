@@ -7,6 +7,7 @@ export const examples = [
 			surface: "went",
 		},
 		output: {
+			contextWithLinkedParts: undefined,
 			lemma: "go",
 			linguisticUnit: "Lexem",
 			posLikeKind: "Verb",
@@ -19,6 +20,7 @@ export const examples = [
 			surface: "house",
 		},
 		output: {
+			contextWithLinkedParts: undefined,
 			lemma: "house",
 			linguisticUnit: "Lexem",
 			posLikeKind: "Noun",
@@ -31,6 +33,7 @@ export const examples = [
 			surface: "large",
 		},
 		output: {
+			contextWithLinkedParts: undefined,
 			lemma: "by and large",
 			linguisticUnit: "Phrasem",
 			posLikeKind: "DiscourseFormula",

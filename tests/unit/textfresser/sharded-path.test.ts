@@ -40,6 +40,30 @@ describe("computeShardSegments", () => {
 	it("handles umlauts", () => {
 		expect(computeShardSegments("Übergang")).toEqual(["ü", "übe", "überg"]);
 	});
+
+	it("strips spaces from multi-word expressions", () => {
+		expect(computeShardSegments("Hals über Kopf")).toEqual([
+			"h",
+			"hal",
+			"halsü",
+		]);
+	});
+
+	it("strips spaces from two-word expression", () => {
+		expect(computeShardSegments("in Ordnung")).toEqual([
+			"i",
+			"ino",
+			"inord",
+		]);
+	});
+
+	it("strips spaces from three-word expression", () => {
+		expect(computeShardSegments("auf jeden Fall")).toEqual([
+			"a",
+			"auf",
+			"aufje",
+		]);
+	});
 });
 
 describe("computeShardedFolderParts", () => {

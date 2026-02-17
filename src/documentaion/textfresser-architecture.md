@@ -62,6 +62,8 @@ User gets a tailor-made dictionary that grows with their reading
 
 > **V15 scope**: Lemma safe-linking + deterministic target routing — Lemma now runs in two dispatch phases: pre-prompt safe link insertion (with optional Worter placeholder) and post-prompt final routing rewrite. Closed-set Lexem POS (`Pronoun`, `Article`, `Preposition`, `Conjunction`, `Particle`, `InteractionalUnit`) route to `Library/<lang>/<pos-kebab>/<lemma>.md`; all other entries route to Worter sharded paths. Post-prompt phase can rename placeholder to final target, delete placeholder only when empty and final exists, retarget temporary links (including multi-span expansion), and navigate from placeholder to final note when needed. Background Generate now uses the latest resolved target path as its primary source of truth.
 
+> **V16 scope**: Prompt-stability + pipeline hardening — Lemma adds runtime output guardrails with one controlled retry for suspicious same-surface outputs (separable inflected verbs, comparative/superlative-like inflected adjectives). Unsafe `contextWithLinkedParts` rewrites are dropped when stripped text does not match source context. Background Generate cleanup is now ownership-aware: empty targets are auto-trashed only when invocation-owned (or truly newly created in this run). Disambiguate senses now include optional `senseGloss` (short text gloss) alongside emoji signals.
+
 > **V9 scope**: LinguisticUnit DTO — Zod-schema-based type system as source of truth for DictEntries. German + Noun fully featured (`genus`, `nounClass`); all other POS/unit kinds have stubs. `GermanLinguisticUnit` built during Generate and stored in `meta.linguisticUnit`. Header prompt now returns `genus` ("Maskulinum"/"Femininum"/"Neutrum") instead of `article` ("der"/"die"/"das"); formatter derives article via `articleFromGenus`. New files: `surface-factory.ts`, `genus.ts`, `noun.ts`, `pos-features.ts`, `lexem-surface.ts`, `phrasem-surface.ts`, `morphem-surface.ts`, `linguistic-unit.ts`. 21 new DTO tests.
 
 > **V8 scope**: Eigenname (proper noun) support — Lemma LLM returns `nounClass` ("Common" | "Proper") and `fullSurface` (when proper noun extends beyond selected text, e.g., selecting "Bank" in "Deutsche Bank"). Wikilink wrapping expands to cover full proper noun via `expandOffsetForFullSurface()` with verification fallback. Section config: proper nouns get reduced sections (core only — no Inflection, Morphem, Relation) via `sectionsForProperNoun`. `nounClass` threaded through `LemmaResult` → `buildSectionQuery()` → `getSectionsFor()`.
@@ -463,9 +465,10 @@ Translates selected text using the prompt-smith system:
 
 The dictionary pipeline is split into two commands — **Lemma** (user-facing) and **Generate** (fires automatically in background after Lemma):
 
-**V15 update**: Lemma is now a two-phase flow with two separate dispatches:
+**V15/V16 update**: Lemma is now a two-phase flow with guarded prompt handling:
 1. **Phase A (pre-prompt)**: resolve/create a safe pre-target and insert a clickable wikilink immediately (`[[surface]]` or `[[target|surface]]`), optionally creating a placeholder note in Worter.
-2. **Phase B (post-prompt)**: classify + disambiguate, resolve final policy target (closed-set → Library, otherwise Worter), rewrite source links to final target (including temporary-link retarget + multi-span), then move/cleanup placeholder.
+2. **Prompt guardrail stage**: run `PromptKind.Lemma`, validate output, and retry once on core guardrail violations.
+3. **Phase B (post-prompt)**: disambiguate, resolve final policy target (closed-set → Library, otherwise Worter), rewrite source links to final target (including temporary-link retarget + multi-span), then move/cleanup placeholder.
 
 ```
      Lemma (recon + disambiguation)                Generate (background, automatic)
@@ -509,13 +512,19 @@ Lemma now runs in two dispatch phases to avoid dead links:
    - If unresolved, create a Worter placeholder note and link to it immediately.
    - Dispatch: optional `UpsertMdFile(placeholder)` + source `ProcessMdFile` with temporary wikilink.
 2. **Phase B (post-prompt)**:
-   - Run `PromptKind.Lemma` + `disambiguateSense` (preferred path = resolved final target).
+   - Run `PromptKind.Lemma` and apply guardrails:
+     - reject same-surface `lemma` for `Lexem + Verb + Inflected` when separable-prefix evidence exists in context;
+     - reject same-surface `lemma` for `Lexem + Adjective + Inflected` when comparative/superlative-like surface is detected;
+     - drop `contextWithLinkedParts` if stripped text differs from source context.
+   - If core guardrail fails, run exactly one retry; if still invalid, continue with best-effort output and warning logs.
+   - Run `disambiguateSense` (preferred path = resolved final target).
    - Resolve final target with deterministic policy:
      - Closed-set Lexem POS (`Pronoun`, `Article`, `Preposition`, `Conjunction`, `Particle`, `InteractionalUnit`) → `Library/<lang>/<pos-kebab>/<lemma>.md`.
      - Otherwise → Worter sharded path.
    - If placeholder exists and final differs:
      - rename placeholder to final when final does not exist;
      - else delete placeholder only when placeholder content is empty/whitespace.
+   - Track `latestLemmaTargetOwnedByInvocation` for the resolved final target and pass it into background-generate cleanup policy.
    - Rewrite source wikilink(s) to final target, including second-pass temporary-link retargeting and multi-span expansion.
    - If user is currently on placeholder note and final target differs, navigate to final target.
 
@@ -612,8 +621,9 @@ Filter entries by matching unitKind + POS (ignoring surfaceKind, so LX-LM-NOUN-*
   ↓
 If no entries for this POS → disambiguationResult = null (new sense, skip Disambiguate call)
   ↓
-Build senses: Array<{ index, emojiDescription, ipa?, unitKind, pos?, genus? }> from metadata + parsed entry IDs
+Build senses: Array<{ index, emojiDescription, ipa?, senseGloss?, unitKind, pos?, genus? }> from metadata + parsed entry IDs
   (prefer `meta.entity`; fallback to legacy `meta.emojiDescription` / `meta.linguisticUnit`)
+  (`senseGloss` fallback order: `meta.entity.senseGloss` → `meta.senseGloss` → first non-empty Translation line)
   (V10: entries without emojiDescription → V2 legacy path: treat as re-encounter of first match)
   ↓
 Call PromptKind.Disambiguate with { lemma, context, senses }
@@ -1033,6 +1043,7 @@ State is owned by `TextfresserState` in `state/textfresser-state.ts`:
 
 - `latestLemmaResult`
 - `latestResolvedLemmaTargetPath`
+- `latestLemmaTargetOwnedByInvocation`
 - `latestLemmaPlaceholderPath`
 - `latestLemmaInvocationCache`
 - `inFlightGenerate` / `pendingGenerate`
@@ -1065,12 +1076,13 @@ Background generation is encapsulated in:
 
 - `orchestration/background/background-generate-coordinator.ts`
 
-Key behavior is unchanged:
+Key behavior:
 
 - single in-flight Generate
 - latest-only pending queue slot
+- **state snapshot**: `PendingGenerate` captures `lemmaResult` at request time; `runBackgroundGenerate` creates a shallow copy of `TextfresserState` with the frozen `latestLemmaResult`, preventing the next Lemma from overwriting state before the current Generate reads it. Output side-effects (`targetBlockId`, `latestFailedSections`) are propagated back to live state after execution.
 - postcondition: generated note must be non-empty
-- rollback new empty targets via `TrashMdFile`
+- rollback empty targets via `TrashMdFile` only when cleanup policy allows it (`targetOwnedByInvocation || !targetExistedBefore`)
 - propagate generated entry id back into `latestLemmaInvocationCache`
 - deferred-scroll support via `awaitGenerateAndScroll(...)`
 
@@ -1122,6 +1134,7 @@ To add support for a new target language (e.g., Japanese):
 | `src/commanders/textfresser/state/textfresser-state.ts` | TextfresserState + `InFlightGenerate` / `PendingGenerate` / `LemmaInvocationCache` + `createInitialTextfresserState()` |
 | `src/commanders/textfresser/orchestration/lemma/execute-lemma-flow.ts` | Unified Lemma execution path (cache check, two-phase run, notifications, cache persistence, background trigger) |
 | `src/commanders/textfresser/orchestration/lemma/run-lemma-two-phase.ts` | Phase A/Phase B Lemma routing and source rewrite orchestration |
+| `src/commanders/textfresser/orchestration/lemma/lemma-output-guardrails.ts` | Lemma output guardrails: separable-verb/adjective checks, `contextWithLinkedParts` stripped-text validation, best-effort retry selection |
 | `src/commanders/textfresser/orchestration/background/background-generate-coordinator.ts` | Background Generate queueing, execution, rollback, deferred scroll hook |
 | `src/commanders/textfresser/orchestration/handlers/wikilink-click-handler.ts` | Wikilink click handler factory for attestation tracking + deferred scroll trigger |
 | `src/commanders/textfresser/commands/types.ts` | CommandFn, CommandInput, TextfresserCommandKind |
@@ -1131,7 +1144,7 @@ To add support for a new target language (e.g., Japanese):
 | `src/commanders/textfresser/errors.ts` | TextfresserCommandError (extends BaseCommandError), AttestationParsingError |
 | **Commands** | |
 | `src/commanders/textfresser/commands/lemma/lemma-command.ts` | Lemma rewrite helpers: attestation resolution, wikilink formatting, robust two-pass source rewrite (`temporary → final`, block-id fallback, multi-span retargeting) |
-| `src/commanders/textfresser/commands/lemma/steps/disambiguate-sense.ts` | V3: look up existing note, match entries by unitKind+POS (ignoring surfaceKind), call Disambiguate prompt. V5: bounds-check matchedIndex, log parse failures. V10+: emoji-based senses with emojiDescription+unitKind+pos+genus, plus optional phrasemeKind hints from `meta.linguisticUnit`; returns precomputedEmojiDescription |
+| `src/commanders/textfresser/commands/lemma/steps/disambiguate-sense.ts` | V3: look up existing note, match entries by unitKind+POS (ignoring surfaceKind), call Disambiguate prompt. V5: bounds-check matchedIndex, log parse failures. V10+: emoji-based senses with emojiDescription+unitKind+pos+genus, plus optional phrasemeKind hints from `meta.linguisticUnit`. V16: adds optional `senseGloss` per sense (`entity`/legacy/meta+translation fallback) for homonym quality. Returns precomputedEmojiDescription for new-sense path. |
 | `src/commanders/textfresser/commands/lemma/types.ts` | LemmaResult type (V3: disambiguationResult, V10: precomputedEmojiDescription, V8: nounClass) |
 | `src/commanders/textfresser/commands/generate/generate-command.ts` | Generate pipeline orchestrator |
 | `src/commanders/textfresser/commands/generate/steps/check-attestation.ts` | Sync check: attestation available |

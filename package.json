@@ -45,6 +45,7 @@
 		"fix": "bun x biome check --write --unsafe . 2>/dev/null || true",
 		"knip": "knip",
 		"lint": "bun x biome check .",
+		"prompt:stability": "bun tests/prompt-test/stability-runner.ts",
 		"prompt:test": "bun tests/prompt-test/runner.ts",
 		"silo": "bun scripts/knowledge-silo.ts",
 		"splitter:run": "bun tests/splitter-runner.ts",

@@ -15,9 +15,11 @@ Return:
 - posLikeKind: exactly the same phraseme kind as in input target
 - ipa: IPA pronunciation for the lemma
 - emojiDescription: 1-3 emojis for the current sense
+- senseGloss: short sense label (2-8 words) that distinguishes this sense from homonyms
 
 Rules:
 - Preserve target classification: do not change linguisticUnit or posLikeKind.
+- senseGloss must be context-independent (e.g., "certainly / definitely"), not a full sentence.
 </task-description>
 
 <examples>
@@ -26,7 +28,7 @@ Rules:
 {"context":"Das machen wir auf jeden Fall morgen.","target":{"lemma":"auf jeden Fall","linguisticUnit":"Phrasem","posLikeKind":"DiscourseFormula","surfaceKind":"Lemma"}}
 </input>
 <output>
-{"emojiDescription":["✅"],"ipa":"aʊ̯f ˈjeːdn̩ fal","linguisticUnit":"Phrasem","posLikeKind":"DiscourseFormula"}
+{"emojiDescription":["✅"],"ipa":"aʊ̯f ˈjeːdn̩ fal","linguisticUnit":"Phrasem","posLikeKind":"DiscourseFormula","senseGloss":"definitely / certainly"}
 </output>
 </example-1>
 
@@ -35,7 +37,7 @@ Rules:
 {"context":"Er hat den Löffel abgegeben.","target":{"lemma":"den Löffel abgeben","linguisticUnit":"Phrasem","posLikeKind":"Idiom","surfaceKind":"Lemma"}}
 </input>
 <output>
-{"emojiDescription":["💀"],"ipa":"deːn ˈlœfl̩ ˈapɡeːbn̩","linguisticUnit":"Phrasem","posLikeKind":"Idiom"}
+{"emojiDescription":["💀"],"ipa":"deːn ˈlœfl̩ ˈapɡeːbn̩","linguisticUnit":"Phrasem","posLikeKind":"Idiom","senseGloss":"to die"}
 </output>
 </example-2>
 </examples>`;

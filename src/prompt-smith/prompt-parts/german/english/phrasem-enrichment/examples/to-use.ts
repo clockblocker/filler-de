@@ -16,6 +16,7 @@ export const examples = [
 			ipa: "aʊ̯f ˈjeːdn̩ fal",
 			linguisticUnit: "Phrasem",
 			posLikeKind: "DiscourseFormula",
+			senseGloss: "definitely / certainly",
 		},
 	},
 	{
@@ -33,6 +34,7 @@ export const examples = [
 			ipa: "deːn ˈlœfl̩ ˈapɡeːbn̩",
 			linguisticUnit: "Phrasem",
 			posLikeKind: "Idiom",
+			senseGloss: "to die",
 		},
 	},
 ] satisfies {

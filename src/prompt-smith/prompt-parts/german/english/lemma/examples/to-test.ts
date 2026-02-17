@@ -29,6 +29,32 @@ export const testExamples = [
 	},
 	{
 		input: {
+			context: "Er [macht] die Tür auf.",
+			surface: "macht",
+		},
+		output: {
+			contextWithLinkedParts: "Er [macht] die Tür [auf].",
+			lemma: "aufmachen",
+			linguisticUnit: "Lexem",
+			posLikeKind: "Verb",
+			surfaceKind: "Inflected",
+		},
+	},
+	{
+		input: {
+			context: "Sie [kauft] im Supermarkt ein.",
+			surface: "kauft",
+		},
+		output: {
+			contextWithLinkedParts: "Sie [kauft] im Supermarkt [ein].",
+			lemma: "einkaufen",
+			linguisticUnit: "Lexem",
+			posLikeKind: "Verb",
+			surfaceKind: "Inflected",
+		},
+	},
+	{
+		input: {
 			context: "Er [rief] seine Mutter an",
 			surface: "rief",
 		},
@@ -60,9 +86,36 @@ export const testExamples = [
 			surface: "aufgefallen",
 		},
 		output: {
+			contextWithLinkedParts: undefined,
 			lemma: "auffallen",
 			linguisticUnit: "Lexem",
 			posLikeKind: "Verb",
+			surfaceKind: "Inflected",
+		},
+	},
+	{
+		input: {
+			context: "Morgen wird es noch [schöner].",
+			surface: "schöner",
+		},
+		output: {
+			contextWithLinkedParts: undefined,
+			lemma: "schön",
+			linguisticUnit: "Lexem",
+			posLikeKind: "Adjective",
+			surfaceKind: "Inflected",
+		},
+	},
+	{
+		input: {
+			context: "Sie ist [klüger] als ihr Bruder.",
+			surface: "klüger",
+		},
+		output: {
+			contextWithLinkedParts: undefined,
+			lemma: "klug",
+			linguisticUnit: "Lexem",
+			posLikeKind: "Adjective",
 			surfaceKind: "Inflected",
 		},
 	},
